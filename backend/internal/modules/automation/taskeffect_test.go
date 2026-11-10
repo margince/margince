@@ -17,7 +17,7 @@ import (
 func TestATaskForADisappearedTargetIsSkipped(t *testing.T) {
 	ex := Executors{Provider: &fakeReadProvider{err: apperrors.ErrNotFound}}
 	effect, err := ownedTaskEffect(context.Background(), ex, workflow.Event{}, "Follow up", time.Time{}, nil)
-	var declined declinedFiring
+	var declined *workflow.DeclinedError
 	if !errors.As(err, &declined) || len(effect.Actions) != 0 {
 		t.Fatalf("stale target planned work: %+v, %v", effect, err)
 	}

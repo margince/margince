@@ -76,6 +76,10 @@ var setupFixtures = map[string]func(p *recordPool) map[string]any{
 		return versioned(p, "automation", map[string]any{"name": "Sweep rule"})
 	},
 	"preview_automation": func(p *recordPool) map[string]any { return map[string]any{"id": p.take("automation")} },
+	"preview_website_inquiries": func(p *recordPool) map[string]any {
+		form := p.take("versioned_web_form")
+		return map[string]any{"id": form, "request_body": map[string]any{"policy": map[string]any{"form_id": form, "mode": "coordinator", "routing": map[string]any{}, "coordinator_id": p.take("user"), "task_title": "Review the website inquiry", "due_in_days": 1, "timezone": "Etc/UTC"}, "selected": []any{}}}
+	},
 	"create_automation": func(*recordPool) map[string]any {
 		return map[string]any{"request_body": map[string]any{"key": "assign_lead_owner", "name": "Sweep rule", "params": map[string]any{}}}
 	},

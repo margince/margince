@@ -16295,6 +16295,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "inquiry.fieldUnavailable": "Trường không còn khả dụng",
   "inquiry.fieldsFailed":
     "Không tải được các trường loại yêu cầu. Bạn có thể giữ nguyên thiết lập tùy chọn này.",
+  "inquiry.deadlinePreview": "Đang tính hạn chót…",
+  "inquiry.deadlineExample":
+    "Yêu cầu nhận lúc {received} có nhiệm vụ đến hạn lúc {due} ({zone}).",
   "inquiry.handling": "Xử lý yêu cầu",
   "inquiry.review": "Xem lại cách xử lý",
   "inquiry.savePaused": "Lưu và tạm dừng",

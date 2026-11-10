@@ -17,6 +17,7 @@ type InquiryRouting interface {
 	Within(context.Context, ids.UUID, func(context.Context) error) error
 	Validate(context.Context, crmcontracts.WebsiteInquiryPolicy) error
 	Choose(context.Context, context.Context, crmcontracts.WebsiteInquiryPolicy, datasource.EntityRef) (ids.UUID, string, error)
+	Preview(context.Context, context.Context, crmcontracts.WebsiteInquiryPolicy, datasource.EntityRef) (ids.UUID, string, error)
 	CheckRecipient(context.Context, ids.UUID, datasource.EntityRef, ids.UUID) error
 	ReuseArrivalTask(context.Context, context.Context, string, ids.UUID, ids.UUID, time.Time) (bool, error)
 }

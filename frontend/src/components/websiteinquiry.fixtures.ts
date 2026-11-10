@@ -87,3 +87,10 @@ export const INQUIRY_REQUEST_FIELD: components["schemas"]["CustomField"] = {
   updated_at: "2026-09-01T09:00:00Z",
   options: ["Quote", "Support"],
 };
+
+export const INQUIRY_DEADLINE_PREVIEW: components["schemas"]["WebsiteInquiryHandlingPreview"] =
+  {
+    received_at: "2026-03-28T15:00:00Z",
+    example_due_at: "2026-03-29T21:59:59.999999Z",
+    items: [],
+  };

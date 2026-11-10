@@ -47,7 +47,11 @@ func (w websiteInquiry) Plan(ctx context.Context, ev workflow.Event) (workflow.E
 	if err != nil {
 		return workflow.Effect{}, err
 	}
-	due, err := taskDueAt(ev.Params, receipt.Activity.CreatedAt, 1)
+	return planInquiryTask(ctx, ev, policy, receipt)
+}
+
+func planInquiryTask(ctx context.Context, ev workflow.Event, policy crmcontracts.WebsiteInquiryPolicy, receipt inquiryReceipt) (workflow.Effect, error) {
+	due, err := InquiryDueAt(policy, receipt.Activity.CreatedAt)
 	if err != nil {
 		return workflow.Effect{}, err
 	}

@@ -233,7 +233,7 @@ type dealOwnerFields struct {
 // would meet the same record — so the run lands 'skipped' with this reason
 // (visible history, no phantom recipient) rather than a 'failed' that would
 // leave the event re-delivering forever and poison its sibling handlers.
-var errDealHasNoOwner = declineFiring("the moved deal has no assigned owner to notify")
+var errDealHasNoOwner = workflow.Declined("the moved deal has no assigned owner to notify")
 
 // stageChangeNotifyName is the catalog key Task 6 seeds this starter
 // under — CatalogEntry.Key must equal the backing handler's Spec().Name
@@ -276,7 +276,7 @@ func (w stageChangeNotify) Plan(ctx context.Context, ev workflow.Event) (workflo
 	ownerID := deal.OwnerID.String()
 	if ev.Actor.Type == string(principal.PrincipalHuman) &&
 		(strings.EqualFold(ev.Actor.ID, ownerID) || strings.EqualFold(ev.Actor.ID, principal.HumanIDPrefix+ownerID)) {
-		return workflow.Effect{}, declineFiring("the owner made this stage change")
+		return workflow.Effect{}, workflow.Declined("the owner made this stage change")
 	}
 	metadata := &systemtext.Message{Body: systemtext.Sentence("automation.stage_unavailable")}
 	dealName := deal.Name

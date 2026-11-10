@@ -16602,6 +16602,9 @@ export const en = {
   "inquiry.fieldUnavailable": "Field no longer available",
   "inquiry.fieldsFailed":
     "Request type fields could not be loaded. You can keep this optional setting unchanged.",
+  "inquiry.deadlinePreview": "Calculating the deadline…",
+  "inquiry.deadlineExample":
+    "A question received at {received} has a task due at {due} ({zone}).",
   "inquiry.handling": "Inquiry handling",
   "inquiry.review": "Review handling",
   "inquiry.savePaused": "Save paused",

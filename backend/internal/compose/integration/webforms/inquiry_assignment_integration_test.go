@@ -14,6 +14,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/automation"
 	"github.com/margince/margince/backend/internal/modules/contacts"
@@ -75,10 +77,32 @@ func TestInquiryAssignmentAndItsDurableChoiceCommitTogether(t *testing.T) {
 	claims := automation.NewEffectClaims(e.DB())
 	router := contacts.NewStore(e.DB())
 	cfg := contacts.RoutingConfig{Owners: []ids.UserID{ids.From[ids.UserKind](colleague)}}
+	var beforeAudit, beforeEvents, beforeVersion int64
+	if err := e.Owner.QueryRow(ctx, `SELECT (SELECT count(*) FROM audit_log), (SELECT count(*) FROM event_outbox), version FROM lead WHERE id=@id`, pgx.NamedArgs{"id": lead}).Scan(&beforeAudit, &beforeEvents, &beforeVersion); err != nil {
+		t.Fatal(err)
+	}
+	preview, err := router.PreviewLeadRouting(admit, ids.From[ids.LeadKind](lead), cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !preview.Assigned || preview.OwnerID.UUID != colleague {
+		t.Fatalf("preview recipient: %+v", preview)
+	}
+	var afterAudit, afterEvents, afterVersion int64
+	var previewOwner *ids.UUID
+	if err := e.Owner.QueryRow(ctx, `SELECT (SELECT count(*) FROM audit_log), (SELECT count(*) FROM event_outbox), version, owner_id FROM lead WHERE id=@id`, pgx.NamedArgs{"id": lead}).Scan(&afterAudit, &afterEvents, &afterVersion, &previewOwner); err != nil {
+		t.Fatal(err)
+	}
+	if beforeAudit != afterAudit || beforeEvents != afterEvents || beforeVersion != afterVersion || previewOwner != nil {
+		t.Fatalf("preview wrote data: audit %d/%d, events %d/%d, version %d/%d, owner %v", beforeAudit, afterAudit, beforeEvents, afterEvents, beforeVersion, afterVersion, previewOwner)
+	}
 	choose := func(bound context.Context) (automation.InquiryPlan, error) {
 		decision, err := router.RouteLeadAs(bound, admit, ids.From[ids.LeadKind](lead), cfg)
 		if err != nil {
 			return automation.InquiryPlan{}, err
+		}
+		if decision != preview {
+			return automation.InquiryPlan{}, errors.New("live routing disagrees with preview")
 		}
 		if !decision.Assigned {
 			return automation.InquiryPlan{}, errors.New("lead was not assigned")

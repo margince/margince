@@ -112,7 +112,7 @@ func (s *InquiryService) choose(ctx context.Context, ex Executors, ev workflow.E
 		return plan, err
 	}
 	plan.PolicyID, plan.SourceActivityID, plan.Target = ev.AutomationID, ev.Entity.ID, receipt.Target
-	plan.DueAt, err = taskDueAt(ev.Params, receipt.Activity.CreatedAt, 1)
+	plan.DueAt, err = InquiryDueAt(policy, receipt.Activity.CreatedAt)
 	if err != nil {
 		return plan, err
 	}

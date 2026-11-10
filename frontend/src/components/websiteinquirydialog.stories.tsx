@@ -15,6 +15,7 @@ import {
   INQUIRY_AUTHORIZER,
   INQUIRY_AUTOMATION,
   INQUIRY_COORDINATOR,
+  INQUIRY_DEADLINE_PREVIEW,
   INQUIRY_FORM,
   INQUIRY_GRANTS,
   INQUIRY_MEMBERS,
@@ -33,6 +34,8 @@ function setup(policy: Automation | null, failure?: number) {
     };
     installFetchStub({
       "GET /me": meRoute(INQUIRY_GRANTS),
+      [`POST /web-forms/${INQUIRY_FORM.id}/handling/preview`]: () =>
+        jsonResponse(INQUIRY_DEADLINE_PREVIEW),
       "GET /custom-fields": () =>
         jsonResponse({ data: [INQUIRY_REQUEST_FIELD] }),
       "GET /users": () => jsonResponse({ data: INQUIRY_MEMBERS }),
@@ -91,6 +94,7 @@ export const Review: Story = {
     await userEvent.click(
       screen.getByRole("button", { name: "Review handling" }),
     );
+    await screen.findByText(/^A question received at /);
   },
 };
 
@@ -111,6 +115,8 @@ export const Fields: Story = {
   render: () => {
     installFetchStub({
       "GET /me": meRoute(INQUIRY_GRANTS),
+      [`POST /web-forms/${INQUIRY_FORM.id}/handling/preview`]: () =>
+        jsonResponse(INQUIRY_DEADLINE_PREVIEW),
       "GET /custom-fields": () =>
         jsonResponse({ data: [INQUIRY_REQUEST_FIELD] }),
       "GET /users": () => jsonResponse({ data: INQUIRY_MEMBERS }),

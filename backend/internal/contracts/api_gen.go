@@ -25834,6 +25834,51 @@ func (e WebsiteInquiryMode) Valid() bool {
 	}
 }
 
+// Defines values for WebsiteInquiryPreviewItemStatus.
+const (
+	WebsiteInquiryPreviewItemStatusAlreadyHandled WebsiteInquiryPreviewItemStatus = "already_handled"
+	WebsiteInquiryPreviewItemStatusChanged        WebsiteInquiryPreviewItemStatus = "changed"
+	WebsiteInquiryPreviewItemStatusEligible       WebsiteInquiryPreviewItemStatus = "eligible"
+	WebsiteInquiryPreviewItemStatusFailed         WebsiteInquiryPreviewItemStatus = "failed"
+	WebsiteInquiryPreviewItemStatusUnavailable    WebsiteInquiryPreviewItemStatus = "unavailable"
+)
+
+// Valid indicates whether the value is a known member of the WebsiteInquiryPreviewItemStatus enum.
+func (e WebsiteInquiryPreviewItemStatus) Valid() bool {
+	switch e {
+	case WebsiteInquiryPreviewItemStatusAlreadyHandled:
+		return true
+	case WebsiteInquiryPreviewItemStatusChanged:
+		return true
+	case WebsiteInquiryPreviewItemStatusEligible:
+		return true
+	case WebsiteInquiryPreviewItemStatusFailed:
+		return true
+	case WebsiteInquiryPreviewItemStatusUnavailable:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for WebsiteInquiryPreviewItemTargetType.
+const (
+	WebsiteInquiryPreviewItemTargetTypeContact WebsiteInquiryPreviewItemTargetType = "contact"
+	WebsiteInquiryPreviewItemTargetTypeLead    WebsiteInquiryPreviewItemTargetType = "lead"
+)
+
+// Valid indicates whether the value is a known member of the WebsiteInquiryPreviewItemTargetType enum.
+func (e WebsiteInquiryPreviewItemTargetType) Valid() bool {
+	switch e {
+	case WebsiteInquiryPreviewItemTargetTypeContact:
+		return true
+	case WebsiteInquiryPreviewItemTargetTypeLead:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for WeeklyFigureCoverageStatus.
 const (
 	WeeklyFigureCoverageStatusNotRecorded WeeklyFigureCoverageStatus = "not_recorded"
@@ -66731,6 +66776,15 @@ type WebsiteInquiryHandling struct {
 	Form WebForm `json:"form"`
 }
 
+// WebsiteInquiryHandlingPreview defines model for WebsiteInquiryHandlingPreview.
+type WebsiteInquiryHandlingPreview struct {
+	ExampleDueAt time.Time                   `json:"example_due_at"`
+	Items        []WebsiteInquiryPreviewItem `json:"items"`
+
+	// ReceivedAt Server clock used for the deadline example.
+	ReceivedAt time.Time `json:"received_at"`
+}
+
 // WebsiteInquiryHandlingRequest defines model for WebsiteInquiryHandlingRequest.
 type WebsiteInquiryHandlingRequest struct {
 	AutomationId *openapi_types.UUID `json:"automation_id,omitempty"`
@@ -66767,6 +66821,54 @@ type WebsiteInquiryPolicy struct {
 
 	// Timezone Saved IANA timezone for calendar-day deadlines.
 	Timezone string `json:"timezone"`
+}
+
+// WebsiteInquiryPreviewItem defines model for WebsiteInquiryPreviewItem.
+type WebsiteInquiryPreviewItem struct {
+	DueAt       *time.Time                           `json:"due_at,omitempty"`
+	Id          openapi_types.UUID                   `json:"id"`
+	Reason      *string                              `json:"reason,omitempty"`
+	RecipientId *openapi_types.UUID                  `json:"recipient_id,omitempty"`
+	Status      WebsiteInquiryPreviewItemStatus      `json:"status"`
+	TargetId    *openapi_types.UUID                  `json:"target_id,omitempty"`
+	TargetType  *WebsiteInquiryPreviewItemTargetType `json:"target_type,omitempty"`
+
+	// Version Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
+	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
+	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
+	// (ErrVersionSkew) so the client re-reads before retrying.
+	Version *RowVersion `json:"version,omitempty" minimum:"1"`
+}
+
+// WebsiteInquiryPreviewItemStatus defines model for WebsiteInquiryPreviewItem.Status.
+type WebsiteInquiryPreviewItemStatus string
+
+// WebsiteInquiryPreviewItemTargetType defines model for WebsiteInquiryPreviewItem.TargetType.
+type WebsiteInquiryPreviewItemTargetType string
+
+// WebsiteInquiryPreviewRequest defines model for WebsiteInquiryPreviewRequest.
+type WebsiteInquiryPreviewRequest struct {
+	AutomationId *openapi_types.UUID `json:"automation_id,omitempty"`
+
+	// AutomationVersion Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
+	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
+	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
+	// (ErrVersionSkew) so the client re-reads before retrying.
+	AutomationVersion *RowVersion               `json:"automation_version,omitempty" minimum:"1"`
+	Policy            WebsiteInquiryPolicy      `json:"policy"`
+	Selected          []WebsiteInquirySelection `json:"selected"`
+}
+
+// WebsiteInquirySelection defines model for WebsiteInquirySelection.
+type WebsiteInquirySelection struct {
+	// Id Accepted website source note.
+	Id openapi_types.UUID `json:"id"`
+
+	// Version Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
+	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
+	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
+	// (ErrVersionSkew) so the client re-reads before retrying.
+	Version *RowVersion `json:"version,omitempty" minimum:"1"`
 }
 
 // WeeklyDayActivity One local day of a rep's own activity, in the installation reporting timezone.
@@ -78808,6 +78910,9 @@ type UpdateWebFormJSONRequestBody = UpdateWebFormRequest
 
 // SaveWebFormHandlingJSONRequestBody defines body for SaveWebFormHandling for application/json ContentType.
 type SaveWebFormHandlingJSONRequestBody = WebsiteInquiryHandlingRequest
+
+// PreviewWebFormHandlingJSONRequestBody defines body for PreviewWebFormHandling for application/json ContentType.
+type PreviewWebFormHandlingJSONRequestBody = WebsiteInquiryPreviewRequest
 
 // CreateWebhookSubscriptionJSONRequestBody defines body for CreateWebhookSubscription for application/json ContentType.
 type CreateWebhookSubscriptionJSONRequestBody = CreateWebhookSubscriptionRequest
@@ -94709,6 +94814,9 @@ type ServerInterface interface {
 	// Save the reviewed inquiry policy and form link together.
 	// (PUT /web-forms/{id}/handling)
 	SaveWebFormHandling(w http.ResponseWriter, r *http.Request, id Id, params SaveWebFormHandlingParams)
+	// Preview inquiry deadlines and explicitly selected accepted submissions without writing.
+	// (POST /web-forms/{id}/handling/preview)
+	PreviewWebFormHandling(w http.ResponseWriter, r *http.Request, id Id)
 	// Rotate a form's minted signing secret (returns the new secret once).
 	// (POST /web-forms/{id}/rotate-secret)
 	RotateWebFormSecret(w http.ResponseWriter, r *http.Request, id Id)
@@ -100922,6 +101030,12 @@ func (_ Unimplemented) UpdateWebForm(w http.ResponseWriter, r *http.Request, id 
 // Save the reviewed inquiry policy and form link together.
 // (PUT /web-forms/{id}/handling)
 func (_ Unimplemented) SaveWebFormHandling(w http.ResponseWriter, r *http.Request, id Id, params SaveWebFormHandlingParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Preview inquiry deadlines and explicitly selected accepted submissions without writing.
+// (POST /web-forms/{id}/handling/preview)
+func (_ Unimplemented) PreviewWebFormHandling(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -146060,6 +146174,40 @@ func (siw *ServerInterfaceWrapper) SaveWebFormHandling(w http.ResponseWriter, r 
 	handler.ServeHTTP(w, r)
 }
 
+// PreviewWebFormHandling operation middleware
+func (siw *ServerInterfaceWrapper) PreviewWebFormHandling(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PreviewWebFormHandling(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // RotateWebFormSecret operation middleware
 func (siw *ServerInterfaceWrapper) RotateWebFormSecret(w http.ResponseWriter, r *http.Request) {
 
@@ -150621,6 +150769,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Put(options.BaseURL+"/web-forms/{id}/handling", wrapper.SaveWebFormHandling)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/web-forms/{id}/handling/preview", wrapper.PreviewWebFormHandling)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/web-forms/{id}/rotate-secret", wrapper.RotateWebFormSecret)

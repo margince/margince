@@ -68,6 +68,22 @@ export function code(path: string, source: string): string {
 // cannot stand in for.
 const pinnedZones: { file: string; why: string }[] = [
   {
+    file: "features/automations/automations.deadline-form.test.tsx",
+    why: "The deadline editor test pins the saved policy's IANA zone to verify that reviewing and saving preserve its calendar-day meaning.",
+  },
+  {
+    file: "features/automations/automations.deadline.test.ts",
+    why: "The deadline parameter test pins the configured IANA zone to distinguish saved calendar-day handling from the legacy duration fallback.",
+  },
+  {
+    file: "features/automations/automations.form.stories.tsx",
+    why: "The automation deadline story shows the policy's saved IANA zone so the calendar-day configuration is visible independently of the viewer's settings.",
+  },
+  {
+    file: "components/websiteinquiry.fixtures.ts",
+    why: "The inquiry policy fixture pins Berlin so its deadline example covers a change to daylight saving time independently of the reader's zone.",
+  },
+  {
     file: "app/agentrail.month.test.tsx",
     why: "Proves the rail asks for the reader's month, not UTC's: only a reader zone already past midnight while UTC is not tells the two apart, and UTC is named to show the boundary is real.",
   },

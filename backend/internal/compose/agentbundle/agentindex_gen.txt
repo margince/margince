@@ -10,6 +10,7 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `GET /web-forms/{id}` | getWebForm | Get one website form. | Read records | at once |
 | `PATCH /web-forms/{id}` | updateWebForm | Change a website form, pause it or resume it. | Change records | at once |
 | `DELETE /web-forms/{id}` | archiveWebForm | Archive a website form; its address stops taking submissions. | Change records | at once |
+| `POST /web-forms/{id}/handling/preview` | previewWebFormHandling | Preview inquiry deadlines and explicitly selected accepted submissions without writing. | Read records | at once |
 
 ## Integrations
 

@@ -95,7 +95,7 @@ func (e *WorkflowEngine) runUnfenced(ctx context.Context, h workflow.Handler, ev
 	}
 	effect, err := h.Plan(ctx, ev)
 	if err != nil {
-		if declined, ok := errors.AsType[declinedFiring](err); ok {
+		if declined, ok := errors.AsType[*workflow.DeclinedError](err); ok {
 			// A matched trigger whose Plan found nothing to act on (e.g. a
 			// stage_change_notify on an ownerless deal — no recipient to name).
 			// This is a skip, not a failure: nothing went wrong and a
@@ -104,7 +104,7 @@ func (e *WorkflowEngine) runUnfenced(ctx context.Context, h workflow.Handler, ev
 			// the bus entry unacked and re-delivering forever (no dead-letter
 			// store yet — platform/events/subscriber.go), poisoning every
 			// sibling handler dispatched off the same event.
-			return e.recordSkipReason(ctx, h, ev, declined.reason)
+			return e.recordSkipReason(ctx, h, ev, declined.Reason)
 		}
 		return e.recordFailedBeforeApply(ctx, h, ev, "planning the effect: "+sanitizedReason(err), err)
 	}
@@ -401,11 +401,8 @@ func (e *WorkflowEngine) recordSkip(ctx context.Context, h workflow.Handler, ev 
 	return e.recordSkipReason(ctx, h, ev, "the trigger event did not satisfy this automation's conditions")
 }
 
-// recordSkipReason is the shared body behind both skip paths — a Match-false
-// non-match (recordSkip) and a Plan-declined firing (runOne's declinedFiring
-// branch) — landing a durable 'skipped' run carrying the caller's reason. A
-// system handler (no automation instance, ev.AutomationID nil) has no run
-// history to read its skips, so recording one would only accrete rows.
+// Unmatched events and declined plans keep their reason in history.
+// System handlers have no instance history, so their skips need no row.
 func (e *WorkflowEngine) recordSkipReason(ctx context.Context, h workflow.Handler, ev workflow.Event, reason string) error {
 	if ev.AutomationID == ids.Nil {
 		return nil
@@ -417,18 +414,6 @@ func (e *WorkflowEngine) recordSkipReason(ctx context.Context, h workflow.Handle
 	_, err = e.claimRun(ctx, h, ev, emptyPlan, runSkipped, detail)
 	return err
 }
-
-// declinedFiring is a Plan's honest "the trigger matched, but this specific
-// record gives this automation nothing to do" — distinct from both a failure
-// (something went wrong) and a Match-false non-match (the trigger itself did
-// not apply). runOne records it as a 'skipped' run and never surfaces it, so
-// the firing neither poisons the bus entry nor fabricates a phantom effect.
-type declinedFiring struct{ reason string }
-
-func (d declinedFiring) Error() string { return d.reason }
-
-// declineFiring builds the skip a Plan returns to decline acting on a record.
-func declineFiring(reason string) error { return declinedFiring{reason: reason} }
 
 // sanitizedReason renders a client-safe failure reason for
 // workflow_run.detail, never the error's own message. Anyone with

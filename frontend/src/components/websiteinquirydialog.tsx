@@ -11,7 +11,8 @@ import { ErrorLine } from "../design-system/errorline";
 import { QueryStates } from "../design-system/querystates";
 import { RecordFormDialog } from "../design-system/recordformdialog";
 import { Select } from "../design-system/select";
-import { useT } from "../i18n";
+import { formatDateTime } from "../format/format";
+import { useLocale, useT } from "../i18n";
 import { useCan } from "../lib/capability";
 import { unwrap } from "../lib/problem";
 import { useMe } from "../lib/session";
@@ -145,6 +146,28 @@ function InquiryPolicyEditor({
   );
   const [name, setName] = useState(initialName);
   const [reviewing, setReviewing] = useState(false);
+  const preview = useQuery({
+    queryKey: [
+      "website-inquiry-preview",
+      opening.form.id,
+      opening.automation?.id,
+      policy,
+    ],
+    enabled: reviewing,
+    retry: false,
+    refetchOnWindowFocus: false,
+    queryFn: async () =>
+      unwrap(
+        await api.POST("/web-forms/{id}/handling/preview", {
+          params: { path: { id: opening.form.id } },
+          body: {
+            policy,
+            selected: [],
+            ...reviewedAutomation(opening.automation),
+          },
+        }),
+      ),
+  });
   const save = useMutation({
     mutationFn: async (review: HandlingSave) =>
       unwrap(
@@ -157,12 +180,7 @@ function InquiryPolicyEditor({
             name: review.name,
             policy: review.policy,
             enabled: review.enabled,
-            ...(review.automation
-              ? {
-                  automation_id: review.automation.id,
-                  automation_version: requireVersion(review.automation.version),
-                }
-              : {}),
+            ...reviewedAutomation(review.automation),
           },
         }),
       ),
@@ -208,26 +226,27 @@ function InquiryPolicyEditor({
             setReviewing(true);
           }}
         >
-          <Badge
-            tone={
-              opening.automation?.status === "enabled" ? "success" : "warning"
-            }
-          >
-            {t(
-              opening.automation?.status === "enabled"
-                ? "auto.statusEnabled"
-                : opening.automation
-                  ? "auto.statusPaused"
-                  : "inquiry.needsSetup",
-            )}
-          </Badge>
+          <InquiryConfigurationBadge automation={opening.automation} />
           {reviewing ? (
-            <InquiryPolicyReview
-              policy={policy}
-              form={opening.form}
-              name={name}
-              authorizer={opening.automation?.owner_id ?? me.data?.user.id}
-            />
+            <>
+              <InquiryPolicyReview
+                policy={policy}
+                form={opening.form}
+                name={name}
+                authorizer={opening.automation?.owner_id ?? me.data?.user.id}
+              />
+              <QueryStates
+                query={preview}
+                pendingLabel={t("inquiry.deadlinePreview")}
+              >
+                {preview.data && (
+                  <InquiryDeadlineExample
+                    value={preview.data}
+                    zone={policy.timezone}
+                  />
+                )}
+              </QueryStates>
+            </>
           ) : (
             <>
               <Field label={t("auto.name")}>
@@ -262,7 +281,7 @@ function InquiryPolicyEditor({
           {reviewing ? (
             <>
               <Button
-                disabled={save.isPending}
+                disabled={save.isPending || preview.isFetching || !preview.data}
                 onClick={() => saveReview(false)}
               >
                 {t("inquiry.savePaused")}
@@ -270,6 +289,7 @@ function InquiryPolicyEditor({
               <Button
                 variant="primary"
                 pending={save.isPending}
+                disabled={preview.isFetching || !preview.data}
                 onClick={() => saveReview(true)}
               >
                 {t("inquiry.enable")}
@@ -343,5 +363,48 @@ function InquiryPolicyReview({
       </dl>
       <p>{t("inquiry.futureOnly")}</p>
     </>
+  );
+}
+
+function InquiryDeadlineExample({
+  value,
+  zone,
+}: Readonly<{
+  value: components["schemas"]["WebsiteInquiryHandlingPreview"];
+  zone: string;
+}>) {
+  const t = useT();
+  const { locale } = useLocale();
+  return (
+    <p>
+      {t("inquiry.deadlineExample", {
+        received: formatDateTime(value.received_at, locale, zone),
+        due: formatDateTime(value.example_due_at, locale, zone),
+        zone,
+      })}
+    </p>
+  );
+}
+
+function reviewedAutomation(automation: Automation | undefined) {
+  return automation
+    ? {
+        automation_id: automation.id,
+        automation_version: requireVersion(automation.version),
+      }
+    : {};
+}
+
+function InquiryConfigurationBadge({
+  automation,
+}: Readonly<{ automation?: Automation }>) {
+  const t = useT();
+  if (!automation)
+    return <Badge tone="warning">{t("inquiry.needsSetup")}</Badge>;
+  const enabled = automation.status === "enabled";
+  return (
+    <Badge tone={enabled ? "success" : "warning"}>
+      {t(enabled ? "auto.statusEnabled" : "auto.statusPaused")}
+    </Badge>
   );
 }

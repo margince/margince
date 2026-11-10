@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
@@ -23,6 +24,10 @@ type inquiryReceipt struct {
 }
 
 func readInquiryReceipt(ctx context.Context, ex Executors, ev workflow.Event, policy crmcontracts.WebsiteInquiryPolicy) (inquiryReceipt, error) {
+	return readAcceptedInquiry(ctx, ex, ev, policy, false)
+}
+
+func readAcceptedInquiry(ctx context.Context, ex Executors, ev workflow.Event, policy crmcontracts.WebsiteInquiryPolicy, allowLegacy bool) (inquiryReceipt, error) {
 	if ex.Provider == nil {
 		return inquiryReceipt{}, errors.New("automation: inquiry record reader is not configured")
 	}
@@ -31,6 +36,9 @@ func readInquiryReceipt(ctx context.Context, ex Executors, ev workflow.Event, po
 		return inquiryReceipt{}, err
 	}
 	record, err := ex.Provider.Read(admit, ev.Entity)
+	if errors.Is(err, apperrors.ErrNotFound) {
+		return inquiryReceipt{}, workflow.Declined("the accepted website inquiry is no longer available")
+	}
 	if err != nil {
 		return inquiryReceipt{}, err
 	}
@@ -39,25 +47,25 @@ func readInquiryReceipt(ctx context.Context, ex Executors, ev workflow.Event, po
 		return inquiryReceipt{}, err
 	}
 	if activity.Kind != crmcontracts.ActivityKindNote || activity.SourceSystem == nil || *activity.SourceSystem != provenance.WebFormSource || activity.SourceId == nil || activity.Raw == nil || activity.Links == nil || activity.ArchivedAt != nil {
-		return inquiryReceipt{}, declineFiring("the trigger is not an available accepted website note")
+		return inquiryReceipt{}, workflow.Declined("the trigger is not an available accepted website note")
 	}
 	var payload crmcontracts.PublicEventActivityCaptured
 	if err := json.Unmarshal(ev.Payload, &payload); err != nil {
 		return inquiryReceipt{}, err
 	}
 	if payload.WebsiteSubmissionKey == nil || *payload.WebsiteSubmissionKey != *activity.SourceId {
-		return inquiryReceipt{}, declineFiring("the event does not name this accepted website note")
+		return inquiryReceipt{}, workflow.Declined("the event does not name this accepted website note")
 	}
 	form, _, ok := strings.Cut(*activity.SourceId, ":")
 	if !ok || form != policy.FormId.String() {
-		return inquiryReceipt{}, declineFiring("the accepted inquiry belongs to another form")
+		return inquiryReceipt{}, workflow.Declined("the accepted inquiry belongs to another form")
 	}
 	owner, err := AcceptedInquiryOwner(activity.Raw)
 	if err != nil {
 		return inquiryReceipt{}, err
 	}
-	if owner == nil || *owner != ev.AutomationID {
-		return inquiryReceipt{}, declineFiring("this handling policy does not own the accepted inquiry")
+	if (owner == nil && !allowLegacy) || (owner != nil && *owner != ev.AutomationID) {
+		return inquiryReceipt{}, workflow.Declined("this handling policy does not own the accepted inquiry")
 	}
 	var target datasource.EntityRef
 	for _, link := range *activity.Links {
@@ -71,9 +79,12 @@ func readInquiryReceipt(ctx context.Context, ex Executors, ev workflow.Event, po
 		target = datasource.EntityRef{Type: kind, ID: ids.UUID(link.EntityId)}
 	}
 	if target.ID == ids.Nil {
-		return inquiryReceipt{}, declineFiring("the accepted inquiry has no available lead or contact")
+		return inquiryReceipt{}, workflow.Declined("the accepted inquiry has no available lead or contact")
 	}
 	if _, err := ex.Provider.Read(admit, target); err != nil {
+		if errors.Is(err, apperrors.ErrNotFound) {
+			return inquiryReceipt{}, workflow.Declined("the inquiry target is no longer available")
+		}
 		return inquiryReceipt{}, err
 	}
 	return inquiryReceipt{Activity: activity, Target: target, Key: *activity.SourceId}, nil

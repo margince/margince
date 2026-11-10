@@ -10447,6 +10447,31 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/web-forms/{id}/handling/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Preview inquiry deadlines and explicitly selected accepted submissions without writing.
+         * @description Uses the live inquiry planner and current access checks. Selection is limited to fifty
+         *     source notes with expected versions. The caller and the authorizer must both be able
+         *     to read each source and target. A preview never reserves a recipient or creates work.
+         */
+        post: operations["previewWebFormHandling"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/web-forms/{id}/rotate-secret": {
         parameters: {
             query?: never;
@@ -25576,6 +25601,47 @@ export interface components {
          * @enum {string}
          */
         WebsiteInquiryMode: "one_colleague" | "rotate" | "coordinator";
+        WebsiteInquirySelection: {
+            /**
+             * Format: uuid
+             * @description Accepted website source note.
+             */
+            id: string;
+            version: components["schemas"]["RowVersion"];
+        };
+        WebsiteInquiryPreviewRequest: {
+            policy: components["schemas"]["WebsiteInquiryPolicy"];
+            /** Format: uuid */
+            automation_id?: string;
+            automation_version?: components["schemas"]["RowVersion"];
+            selected: components["schemas"]["WebsiteInquirySelection"][];
+        };
+        WebsiteInquiryHandlingPreview: {
+            /**
+             * Format: date-time
+             * @description Server clock used for the deadline example.
+             */
+            received_at: string;
+            /** Format: date-time */
+            example_due_at: string;
+            items: components["schemas"]["WebsiteInquiryPreviewItem"][];
+        };
+        WebsiteInquiryPreviewItem: {
+            /** Format: uuid */
+            id: string;
+            version: components["schemas"]["RowVersion"];
+            /** @enum {string} */
+            status: "eligible" | "already_handled" | "changed" | "unavailable" | "failed";
+            /** Format: uuid */
+            recipient_id?: string;
+            /** Format: date-time */
+            due_at?: string;
+            reason?: string;
+            /** @enum {string} */
+            target_type?: "lead" | "contact";
+            /** Format: uuid */
+            target_id?: string;
+        };
         WebsiteInquiryHandlingRequest: {
             name: string;
             policy: components["schemas"]["WebsiteInquiryPolicy"];
@@ -77338,6 +77404,38 @@ export interface operations {
             409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
             503: components["responses"]["WebsiteFormBusy"];
+        };
+    };
+    previewWebFormHandling: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WebsiteInquiryPreviewRequest"];
+            };
+        };
+        responses: {
+            /** @description Current deadline example and one result per selected source. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebsiteInquiryHandlingPreview"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
         };
     };
     rotateWebFormSecret: {

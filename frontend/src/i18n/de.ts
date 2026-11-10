@@ -16726,6 +16726,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "inquiry.fieldUnavailable": "Feld nicht mehr verfügbar",
   "inquiry.fieldsFailed":
     "Die Felder für die Anfrageart konnten nicht geladen werden. Sie können diese optionale Einstellung unverändert lassen.",
+  "inquiry.deadlinePreview": "Frist wird berechnet…",
+  "inquiry.deadlineExample":
+    "Für eine Anfrage vom {received} ist die Aufgabe am {due} fällig ({zone}).",
   "inquiry.handling": "Anfragen bearbeiten",
   "inquiry.review": "Bearbeitung prüfen",
   "inquiry.savePaused": "Pausiert speichern",

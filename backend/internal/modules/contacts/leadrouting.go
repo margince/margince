@@ -201,46 +201,20 @@ func (s *Store) RouteLeadAs(ctx, admit context.Context, leadID ids.LeadID, cfg R
 			return err
 		}
 
-		if err := auth.EnsureWritableLive(admit, tx, "lead", leadID.UUID); err != nil {
-			return err
-		}
-		var currentOwner *ids.UserID
-		var status string
-		var facts leadRoutingFacts
-		if err := tx.QueryRow(ctx, `
-			SELECT owner_id, status, coalesce(origin, ''), coalesce(company_name, ''), coalesce(candidate_company_key, '')
-			  FROM lead WHERE id = $1`,
-			leadID).Scan(&currentOwner, &status, &facts.Origin, &facts.CompanyName, &facts.CandidateCompanyKey); err != nil {
-			return err
-		}
-		if currentOwner != nil {
-			decision = RoutingDecision{Reason: "already_owned"} // a human assignment outranks routing
-			return nil
-		}
-		// A website lead whose notice may still bounce is not handed to anybody.
-		if held, err := websiteLeadNoticePending(ctx, tx, leadID.UUID); err != nil || held {
-			decision = RoutingDecision{Reason: "notice_pending"}
-			return err
-		}
-		if !LeadStatus(status).Open() {
-			decision = RoutingDecision{Reason: "terminal_status"}
-			return nil
-		}
-
-		candidates := candidateOwners(cfg)
-		active, openLoad, err := ownerCapacity(ctx, tx, candidates)
+		decision, err = planLeadRouting(ctx, admit, tx, leadID, cfg)
 		if err != nil {
 			return err
 		}
-
-		chosen, reason, ok := chooseOwner(cfg, facts, openLoad, active)
-		if !ok {
-			decision = RoutingDecision{Reason: reason}
+		if !decision.Assigned {
+			if decision.Reason != "no_capacity" && decision.Reason != "stale_rules" {
+				return nil
+			}
 			_, err := storekit.Audit(ctx, tx, "assign", "lead", leadID.UUID,
 				map[string]any{"owner_id": nil},
 				map[string]any{"owner_id": nil, "routed": false, "reason": decision.Reason})
 			return err
 		}
+		chosen, reason := decision.OwnerID, decision.Reason
 
 		p := storekit.NewPatch()
 		p.Set("owner_id", nil, chosen)

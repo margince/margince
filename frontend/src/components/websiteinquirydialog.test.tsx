@@ -14,6 +14,7 @@ import {
 } from "../testing/story-utils";
 import {
   INQUIRY_AUTOMATION,
+  INQUIRY_DEADLINE_PREVIEW,
   INQUIRY_FORM,
   INQUIRY_GRANTS,
   INQUIRY_MEMBERS,
@@ -39,6 +40,8 @@ it("reviews the shared policy before saving it and keeps authority separate from
   );
   installFetchStub({
     "GET /me": meRoute(INQUIRY_GRANTS),
+    [`POST /web-forms/${INQUIRY_FORM.id}/handling/preview`]: () =>
+      jsonResponse(INQUIRY_DEADLINE_PREVIEW),
     "GET /custom-fields": () =>
       jsonResponse({
         data: [
@@ -97,6 +100,10 @@ it("reviews the shared policy before saving it and keeps authority separate from
     ).toHaveTextContent("Mina Coordinator"),
   );
   expect(write).not.toHaveBeenCalled();
+  expect(await screen.findByText(/^A question received at /)).toBeVisible();
+  await waitFor(() =>
+    expect(screen.getByRole("button", { name: "Save paused" })).toBeEnabled(),
+  );
   await user.click(screen.getByRole("button", { name: "Save paused" }));
   await waitFor(() => expect(write).toHaveBeenCalledTimes(1));
   expect(reviewedVersion).toBe(String(INQUIRY_FORM.version));
@@ -117,6 +124,8 @@ it("reviews the shared policy before saving it and keeps authority separate from
 it("keeps the proposed policy visible when a stale review is refused", async () => {
   installFetchStub({
     "GET /me": meRoute(INQUIRY_GRANTS),
+    [`POST /web-forms/${INQUIRY_FORM.id}/handling/preview`]: () =>
+      jsonResponse(INQUIRY_DEADLINE_PREVIEW),
     "GET /custom-fields": () => jsonResponse({ data: [] }),
     "GET /users": () => jsonResponse({ data: INQUIRY_MEMBERS }),
     "GET /users/names": () => jsonResponse({ data: INQUIRY_MEMBERS }),
@@ -139,11 +148,50 @@ it("keeps the proposed policy visible when a stale review is refused", async () 
   );
   await screen.findByRole("textbox", { name: "Task title" });
   await user.click(screen.getByRole("button", { name: "Review handling" }));
+  await waitFor(() =>
+    expect(
+      screen.getByRole("button", { name: "Turn on this handling" }),
+    ).toBeEnabled(),
+  );
   await user.click(
     screen.getByRole("button", { name: "Turn on this handling" }),
   );
   expect(await screen.findByRole("alert")).toBeVisible();
   expect(closed).not.toHaveBeenCalled();
+  await user.click(screen.getByRole("button", { name: "Back to settings" }));
+  expect(screen.getByRole("textbox", { name: "Task title" })).toHaveValue(
+    INQUIRY_POLICY.task_title,
+  );
+});
+
+it("keeps activation unavailable when the current deadline preview fails", async () => {
+  installFetchStub({
+    "GET /me": meRoute(INQUIRY_GRANTS),
+    "GET /custom-fields": () => jsonResponse({ data: [] }),
+    "GET /users": () => jsonResponse({ data: INQUIRY_MEMBERS }),
+    "GET /users/names": () => jsonResponse({ data: INQUIRY_MEMBERS }),
+    [`GET /automations/${INQUIRY_AUTOMATION.id}`]: () =>
+      jsonResponse(INQUIRY_AUTOMATION),
+    [`POST /web-forms/${INQUIRY_FORM.id}/handling/preview`]: () =>
+      jsonResponse(
+        {
+          code: "version_skew",
+          detail: "The policy changed after it was opened.",
+          status: 409,
+        },
+        409,
+      ),
+  });
+  const user = userEvent.setup();
+  renderWithQueryClient(
+    <WebsiteInquiryDialog form={INQUIRY_FORM} onClose={() => {}} />,
+  );
+  await screen.findByRole("textbox", { name: "Task title" });
+  await user.click(screen.getByRole("button", { name: "Review handling" }));
+  expect(await screen.findByRole("alert")).toBeVisible();
+  expect(
+    screen.getByRole("button", { name: "Turn on this handling" }),
+  ).toBeDisabled();
   await user.click(screen.getByRole("button", { name: "Back to settings" }));
   expect(screen.getByRole("textbox", { name: "Task title" })).toHaveValue(
     INQUIRY_POLICY.task_title,

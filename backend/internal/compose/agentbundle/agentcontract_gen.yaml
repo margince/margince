@@ -12146,6 +12146,38 @@ paths:
         Needs the passport permission Change records.
 
         Runs at once.
+  /web-forms/{id}/handling/preview:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [WebForms]
+      operationId: previewWebFormHandling
+      security: [{bearerAuth: []}]
+      summary: Preview inquiry deadlines and explicitly selected accepted submissions without writing.
+      description: |-
+        Uses the live inquiry planner and current access checks. Selection is limited to fifty
+        source notes with expected versions. The caller and the authorizer must both be able
+        to read each source and target. A preview never reserves a recipient or creates work.
+
+        Needs the passport permission Read records.
+
+        Runs at once.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/WebsiteInquiryPreviewRequest'}
+      responses:
+        '200':
+          description: Current deadline example and one result per selected source.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/WebsiteInquiryHandlingPreview'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /tag-suggestions/{id}:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -26307,6 +26339,46 @@ components:
       type: string
       enum: [one_colleague, rotate, coordinator]
       description: Keep an eligible existing owner; otherwise route through selected colleagues or coordinator review.
+    WebsiteInquirySelection:
+      type: object
+      required: [id, version]
+      additionalProperties: false
+      properties:
+        id: {type: string, format: uuid, description: Accepted website source note.}
+        version: {$ref: '#/components/schemas/RowVersion'}
+    WebsiteInquiryPreviewRequest:
+      type: object
+      required: [policy, selected]
+      additionalProperties: false
+      properties:
+        policy: {$ref: '#/components/schemas/WebsiteInquiryPolicy'}
+        automation_id: {type: string, format: uuid}
+        automation_version: {$ref: '#/components/schemas/RowVersion'}
+        selected:
+          type: array
+          maxItems: 50
+          items: {$ref: '#/components/schemas/WebsiteInquirySelection'}
+    WebsiteInquiryHandlingPreview:
+      type: object
+      required: [received_at, example_due_at, items]
+      properties:
+        received_at: {type: string, format: date-time, description: Server clock used for the deadline example.}
+        example_due_at: {type: string, format: date-time}
+        items:
+          type: array
+          items: {$ref: '#/components/schemas/WebsiteInquiryPreviewItem'}
+    WebsiteInquiryPreviewItem:
+      type: object
+      required: [id, version, status]
+      properties:
+        id: {type: string, format: uuid}
+        version: {$ref: '#/components/schemas/RowVersion'}
+        status: {type: string, enum: [eligible, already_handled, changed, unavailable, failed]}
+        recipient_id: {type: string, format: uuid}
+        due_at: {type: string, format: date-time}
+        reason: {type: string}
+        target_type: {type: string, enum: [lead, contact]}
+        target_id: {type: string, format: uuid}
     WebsiteInquiryPolicy:
       type: object
       additionalProperties: false

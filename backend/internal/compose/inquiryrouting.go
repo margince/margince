@@ -98,6 +98,14 @@ func (r inquiryRouting) Validate(ctx context.Context, policy crmcontracts.Websit
 }
 
 func (r inquiryRouting) Choose(ctx, admit context.Context, policy crmcontracts.WebsiteInquiryPolicy, target datasource.EntityRef) (ids.UUID, string, error) {
+	return r.choose(ctx, admit, policy, target, true)
+}
+
+func (r inquiryRouting) Preview(ctx, admit context.Context, policy crmcontracts.WebsiteInquiryPolicy, target datasource.EntityRef) (ids.UUID, string, error) {
+	return r.choose(ctx, admit, policy, target, false)
+}
+
+func (r inquiryRouting) choose(ctx, admit context.Context, policy crmcontracts.WebsiteInquiryPolicy, target datasource.EntityRef, apply bool) (ids.UUID, string, error) {
 	owner, err := r.owner(admit, target)
 	if err != nil {
 		return ids.Nil, "", err
@@ -121,7 +129,13 @@ func (r inquiryRouting) Choose(ctx, admit context.Context, policy crmcontracts.W
 	if err != nil {
 		return ids.Nil, "", err
 	}
-	decision, err := contacts.NewStore(r.db).RouteLeadAs(ctx, admit, ids.From[ids.LeadKind](target.ID), config)
+	router := contacts.NewStore(r.db)
+	var decision contacts.RoutingDecision
+	if apply {
+		decision, err = router.RouteLeadAs(ctx, admit, ids.From[ids.LeadKind](target.ID), config)
+	} else {
+		decision, err = router.PreviewLeadRouting(admit, ids.From[ids.LeadKind](target.ID), config)
+	}
 	if err != nil {
 		return ids.Nil, "", err
 	}

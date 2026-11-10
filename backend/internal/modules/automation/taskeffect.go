@@ -145,7 +145,7 @@ func recordOwner(ctx context.Context, ex Executors, ev workflow.Event) (*ids.UUI
 	rec, err := ex.Provider.Read(ctx, ev.Entity)
 	if errors.Is(err, apperrors.ErrNotFound) {
 		// The event may outlive a promoted lead or an archived record.
-		return nil, declineFiring("the target record is no longer available")
+		return nil, workflow.Declined("the target record is no longer available")
 	}
 	if err != nil {
 		return nil, err
