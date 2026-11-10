@@ -104,6 +104,16 @@ doc = json.loads(s30.read_text())
 doc["@graph"] = [item for item in doc["@graph"] if item.get("relationshipType") != "hasConcludedLicense"]
 s30.write_text(json.dumps(doc))
 assert "differs across SBOMs" in run("parity", sboms, False)
+# A copied-file licence no package carries gets one shared element.
+doc = json.loads(s30.read_text())
+doc["@graph"] = [item for item in doc["@graph"] if item.get("type") != "expandedlicensing_ListedLicense"]
+s30.write_text(json.dumps(doc))
+run("supplement", sboms, True)
+run("parity", sboms, True)
+minted = [item for item in json.loads(s30.read_text())["@graph"] if item.get("type") == "expandedlicensing_ListedLicense"]
+assert [item["name"] for item in minted] == ["MIT"], minted
+run("supplement", sboms, True)
+assert len([item for item in json.loads(s30.read_text())["@graph"] if item.get("type") == "expandedlicensing_ListedLicense"]) == 1
 cdx.write_text(json.dumps({"components": []}))
 assert "omitted copied file" in run("supplement", sboms, False)
 print(f"OK: third-party provenance and SBOM licence checks pass {count} cases")

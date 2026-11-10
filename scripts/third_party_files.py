@@ -117,6 +117,19 @@ def license_relationship(graph, file, license_id, kind):
     graph.append(relation)
 
 
+# syft writes a licence element only for licences it found on a package. A
+# copied-file licence no package carries gets one shared element, in syft's
+# shape, so the file's relationships have something to point at.
+def listed_license(graph, license_id, file):
+    element = {"type": "expandedlicensing_ListedLicense", "name": license_id,
+               "spdxId": "SPDXRef:ListedLicense-" + license_id,
+               "simplelicensing_licenseText": "NOASSERTION"}
+    if "creationInfo" in file:
+        element["creationInfo"] = file["creationInfo"]
+    graph.append(element)
+    return element["spdxId"]
+
+
 # File conclusions are path-based; package declarations remain purl-based in Makefile.
 # Existing in-file scanner evidence must survive supplementation.
 def supplement(directory, manifest):
@@ -130,7 +143,7 @@ def supplement(directory, manifest):
             if record.path not in entries:
                 raise ValueError(f"SBOM omitted copied file {record.path}")
         if record.license not in licenses:
-            raise ValueError(f"SPDX 3.0 has no listed licence element for {record.license}")
+            licenses[record.license] = listed_license(graph, record.license, components[2][record.path])
         components[0][record.path]["licenses"] = [{"license": {"id": record.license}}]
         components[1][record.path]["licenseConcluded"] = record.license
         components[1][record.path]["licenseComments"] = "Concluded from " + record.text + "; source: " + record.source
