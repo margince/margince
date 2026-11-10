@@ -640,6 +640,14 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
   esac
 done
 
+# `setup:` names a step in e2e/llm/casesetup.py, never a command, and a name it does
+# not know stops the lane before the first token rather than at that case.
+for scenario in "$SCENARIO_DIR"/*.yaml; do
+  declared="$(python3 "$ROOT/e2e/llm/check.py" --field setup "$scenario")"
+  [[ -z "$declared" ]] || python3 "$ROOT/e2e/llm/casesetup.py" --known "$declared" ||
+    { echo "$(basename "$scenario") declares setup=$declared" >&2; exit 1; }
+done
+
 PASSED=0
 FAILED=0
 SWEEP_CALLS=0
@@ -719,6 +727,16 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
     # still written whatever it wrote up to that point, and a failure path that
     # left the flag clean would hand the next run that debris.
     WORLD_DIRTY=1
+
+    # The case's own setup runs on the reset world, which is already marked
+    # dirty, so the restore before the next run is what takes it away again.
+    setup="$(python3 "$ROOT/e2e/llm/check.py" --field setup "$scenario")"
+    if [[ -n "$setup" ]] && ! why="$(python3 "$ROOT/e2e/llm/casesetup.py" "$setup" "$APP_BASE" "$COOKIES" 2>&1)"; then
+      echo
+      echo "HARNESS: $name run $i could not be set up: $why"
+      echo "  This is not a use-case failure. Nothing was scored."
+      exit 2
+    fi
 
     transcript="$WORK/$name.run$i.jsonl"
     run_status=0
