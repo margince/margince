@@ -136,8 +136,10 @@ export function ReportDraftBar({
   const previewing = previewRevision !== undefined;
   // With nothing published there is no other revision to show instead.
   const unpublished = unpublishedDraft(report) !== undefined;
-  let note = previewing ? "reporting.draftPreviewing" : "reporting.draftHidden";
-  if (unpublished) note = "reporting.draftUnpublished";
+  const previewNote = previewing
+    ? "reporting.draftPreviewing"
+    : "reporting.draftHidden";
+  const note = unpublished ? "reporting.draftUnpublished" : previewNote;
   return (
     <Callout
       tone="info"
