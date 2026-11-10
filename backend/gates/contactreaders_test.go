@@ -134,6 +134,7 @@ var predicateContactReads = gatekit.Waive(map[string]string{
 // (platform/auth/rbac.go), so the gate would admit them anyway and the entry
 // records why asking was never the point.
 var lifecycleContactReads = gatekit.Waive(map[string]string{
+	"internal/modules/privacy/anonymizedsubject.go:subjectStillNamedSQL":          "the missed-receipt sweep asks whether a subject it is about to name in a notice was erased or anonymized, and leaves such subjects out of its read. One boolean per subject leaves it, and it only ever withholds a notice; no contact column reaches any caller",
 	"internal/modules/privacy/sarretainedcopies.go:sarRetainedCopySections":       "Builds subject-bound SELECT queries for AssembleSAR, which requires a human with contact.delete and unbounded row scope. The public notice path uses only its selected read sections under system authority. This builder executes no queries and returns no unrelated contact data.",
 	"internal/modules/privacy/heldrecords.go:heldRecordRule":                      "the system-only audit cleanup and copy retention read only a contact's legal-hold flag (the cleanup under a row lock). Both run as the system; the rule answers a keep decision, never a contact field to an outward caller",
 	"internal/modules/privacy/identifierrekey.go:RekeyAnonymizedAddressesPageTx":  "the system-only re-key reads only the address hashes an anonymize kept and rewrites them keyed. It asks auth.RequireSystem first and returns contact ids for the data task's cursor, never a field",
