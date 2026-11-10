@@ -109,6 +109,9 @@ type bulkApplied struct {
 	// restored is an undo's un-archive report, whose links wait for the
 	// records after it (bulkLinks).
 	restored storekit.RestoreReport
+	// restoredID names the record an undo brought back, for the target's
+	// settle step (bulkRestoreSettler).
+	restoredID *ids.UUID
 }
 
 // Preview answers what change would do, and writes nothing but the
@@ -296,9 +299,18 @@ func (e *bulkEngine) apply(ctx context.Context, tx pgx.Tx, target bulkTarget, ch
 	}
 	items := slices.Clone(change.items)
 	slices.SortFunc(items, func(a, b crmcontracts.BulkItem) int { return strings.Compare(a.Id.String(), b.Id.String()) })
+	held, err := holdBulkRows(ctx, tx, target, items, change.previewed)
+	if err != nil {
+		return bulkRun{}, err
+	}
 	run := bulkRun{changed: []crmcontracts.BulkSampleRow{}, skipped: []crmcontracts.BulkSkip{}}
 	var links bulkLinks
+	var restored []ids.UUID
 	for _, item := range items {
+		if skip, refused := held[ids.UUID(item.Id)]; refused {
+			run.skipped = append(run.skipped, skip)
+			continue
+		}
 		rowChange := change
 		rowChange.pendingLinks = links.pending
 		applied, skip, err := applyOneInSavepoint(ctx, tx, target, rowChange, item)
@@ -312,9 +324,17 @@ func (e *bulkEngine) apply(ctx context.Context, tx pgx.Tx, target bulkTarget, ch
 			run.outcomes = append(run.outcomes, applied.outcome)
 			run.leftBehind = append(run.leftBehind, applied.leftBehind...)
 			links.settle(applied.restored)
+			if applied.restoredID != nil {
+				restored = append(restored, *applied.restoredID)
+			}
 		}
 	}
 	run.leftBehind = links.stillBehind(run.leftBehind)
+	if settler, ok := target.(bulkRestoreSettler); ok && len(restored) > 0 {
+		if err := settler.settleRestores(ctx, tx, restored); err != nil {
+			return bulkRun{}, err
+		}
+	}
 	return run, nil
 }
 

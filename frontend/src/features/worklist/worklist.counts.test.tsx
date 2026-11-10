@@ -6,7 +6,11 @@ import type { components } from "../../api/schema";
 import { LocaleProvider, translate } from "../../i18n";
 import { echoView } from "../../testing/worklist.testkit";
 import { WorklistScreen } from "./worklist";
-import { completenessText, pillCount } from "./worklist.completeness";
+import {
+  completenessText,
+  pillCount,
+  pillFigure,
+} from "./worklist.completeness";
 
 // What the page says about the work it is NOT showing.
 //
@@ -146,7 +150,7 @@ describe("what the page says about what it is not showing", () => {
     expect(screen.queryByText(/shown/)).toBeNull();
   });
 
-  it("prints no count for a cut whose source hit its bound", async () => {
+  it("marks the count of a cut whose source hit its bound as a floor", async () => {
     stub(
       day([
         {
@@ -159,12 +163,13 @@ describe("what the page says about what it is not showing", () => {
     );
     renderWorklist();
 
+    // The server knows a floor, not a total. A bare "200" would be a wrong
+    // number, and no number reads as an empty view.
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: /Decisions/ })).toBeTruthy();
+      expect(
+        screen.getByRole("button", { name: /Decisions.*200\+/ }),
+      ).toBeTruthy();
     });
-    // The server knows a floor, not a total. A floor printed as a count is a
-    // wrong number rather than a missing one, so the button draws none.
-    expect(screen.queryByRole("button", { name: /Decisions.*200/ })).toBeNull();
   });
 
   it("does not print a fraction whose denominator is a floor", async () => {
@@ -480,4 +485,99 @@ it("prints the server's exact total over a category read short of it", () => {
   page.counts[0] = { ...page.counts[0], total: undefined };
   expect(pillCount(page, "decisions")).toBeUndefined();
   expect(pillCount(page, "all")).toBeUndefined();
+});
+
+describe("the figure a tab or pill draws", () => {
+  it("draws an exact count without a mark", () => {
+    const page = day([
+      { category: "tasks", considered: 3, shown: 3, more_available: false },
+      { category: "decisions", considered: 5, shown: 0, more_available: false },
+    ]);
+    expect(pillFigure(page, "decisions")).toEqual({ count: 5, floor: false });
+    expect(pillFigure(page, "all")).toEqual({ count: 8, floor: false });
+  });
+
+  it("draws what it counted as a floor when a category read to its bound", () => {
+    const page = day([
+      { category: "tasks", considered: 3, shown: 3, more_available: false },
+      { category: "decisions", considered: 25, shown: 1, more_available: true },
+    ]);
+    expect(pillFigure(page, "decisions")).toEqual({ count: 25, floor: true });
+    expect(pillFigure(page, "all")).toEqual({ count: 28, floor: true });
+    expect(pillFigure(page, "tasks")).toEqual({ count: 3, floor: false });
+  });
+
+  it("draws a floor over a source that did not load, and nothing over none", () => {
+    const page = day([
+      { category: "tasks", considered: 4, shown: 1, more_available: false },
+    ]);
+    page.sources_unavailable = [
+      { source: "task", category: "tasks", reason: "failed" },
+    ];
+    expect(pillFigure(page, "tasks")).toEqual({ count: 4, floor: true });
+    page.counts[0] = { ...page.counts[0], considered: 0 };
+    // "0" would call the cut empty, and "0+" says nothing.
+    expect(pillFigure(page, "tasks")).toBeUndefined();
+  });
+
+  it("keeps an exact total exact beside a category read to its bound", () => {
+    const page = day([
+      {
+        category: "decisions",
+        considered: 200,
+        shown: 25,
+        more_available: true,
+        total: 340,
+      },
+      { category: "tasks", considered: 3, shown: 3, more_available: false },
+    ]);
+    expect(pillFigure(page, "decisions")).toEqual({ count: 340, floor: false });
+    page.counts.push({
+      category: "customer_waiting",
+      considered: 10,
+      shown: 1,
+      more_available: true,
+    });
+    expect(pillFigure(page, "decisions")).toEqual({ count: 340, floor: false });
+    expect(pillFigure(page, "all")).toEqual({ count: 353, floor: true });
+  });
+
+  it("keeps the first page's total exact when a tail source fails", () => {
+    const page = day([
+      {
+        category: "tasks",
+        considered: 50,
+        shown: 50,
+        more_available: true,
+        total: 120,
+      },
+    ]);
+    page.sources_unavailable = [
+      { source: "task", category: "tasks", reason: "failed" },
+    ];
+    expect(pillFigure(page, "tasks")).toEqual({ count: 120, floor: false });
+    expect(pillFigure(page, "all")).toEqual({ count: 120, floor: false });
+  });
+
+  it("draws a Work type button's floor with +", async () => {
+    stub(
+      day([
+        { category: "tasks", considered: 4, shown: 1, more_available: false },
+        {
+          category: "customer_waiting",
+          considered: 30,
+          shown: 0,
+          more_available: true,
+        },
+      ]),
+    );
+    renderWorklist();
+
+    const label = translate("en", "worklist.filter.customer_waiting");
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", { name: new RegExp(`^${label}\\s*30\\+$`) }),
+      ).toBeTruthy();
+    });
+  });
 });

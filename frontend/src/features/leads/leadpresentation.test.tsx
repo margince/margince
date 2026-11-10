@@ -14,7 +14,8 @@ import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
 import { companyNamesAnswer } from "../../testing/companynames.testkit";
-import { LeadBoard, scoreTone } from "./leadpresentation";
+import { UNNARROWED_LIST_QUERY } from "../../testing/listquery.fixture";
+import { LeadBoard, StatusBadge, scoreTone } from "./leadpresentation";
 
 const { navigate } = vi.hoisted(() => ({ navigate: vi.fn() }));
 vi.mock("../../lib/router", async (actual) => ({
@@ -95,6 +96,7 @@ describe("lead work-board presentation", () => {
   it("uses lead-specific counts and shows work context on every card", () => {
     renderBoard(
       <LeadBoard
+        query={UNNARROWED_LIST_QUERY}
         rows={[lead]}
         onMoved={() => undefined}
         hasMore={false}
@@ -126,6 +128,7 @@ describe("lead work-board presentation", () => {
     );
     renderBoard(
       <LeadBoard
+        query={UNNARROWED_LIST_QUERY}
         rows={[{ ...lead, company_id: "c-7" }]}
         onMoved={() => undefined}
         hasMore={false}
@@ -147,6 +150,7 @@ describe("lead work-board presentation", () => {
     const user = userEvent.setup();
     renderBoard(
       <LeadBoard
+        query={UNNARROWED_LIST_QUERY}
         rows={[lead]}
         onMoved={() => undefined}
         hasMore={false}
@@ -173,6 +177,7 @@ describe("lead work-board presentation", () => {
     );
     renderBoard(
       <LeadBoard
+        query={UNNARROWED_LIST_QUERY}
         rows={[{ ...lead, company_id: "c-7" }]}
         onMoved={() => undefined}
         hasMore={false}
@@ -194,6 +199,7 @@ describe("lead work-board presentation", () => {
   it("names an unlinked lead's company as plain text", () => {
     renderBoard(
       <LeadBoard
+        query={UNNARROWED_LIST_QUERY}
         rows={[lead]}
         onMoved={() => undefined}
         hasMore={false}
@@ -207,6 +213,7 @@ describe("lead work-board presentation", () => {
   it("says where an unclassified lead came from as not set, and never prints how the row was written", () => {
     renderBoard(
       <LeadBoard
+        query={UNNARROWED_LIST_QUERY}
         rows={[
           {
             ...lead,
@@ -242,6 +249,7 @@ describe("lead work-board presentation", () => {
     );
     const { invalidated } = renderBoardWithClient(
       <LeadBoard
+        query={UNNARROWED_LIST_QUERY}
         rows={[lead]}
         onMoved={() => undefined}
         hasMore={false}
@@ -277,6 +285,7 @@ describe("lead work-board presentation", () => {
     );
     const { invalidated } = renderBoardWithClient(
       <LeadBoard
+        query={UNNARROWED_LIST_QUERY}
         rows={[lead]}
         onMoved={() => undefined}
         hasMore={false}
@@ -310,6 +319,7 @@ describe("lead work-board presentation", () => {
     );
     renderBoard(
       <LeadBoard
+        query={UNNARROWED_LIST_QUERY}
         rows={[lead]}
         onMoved={() => undefined}
         hasMore={false}
@@ -357,6 +367,7 @@ describe("lead work-board presentation", () => {
     vi.stubGlobal("fetch", fetchMock);
     renderBoard(
       <LeadBoard
+        query={UNNARROWED_LIST_QUERY}
         rows={[lead]}
         onMoved={() => undefined}
         hasMore={false}
@@ -396,6 +407,7 @@ describe("lead work-board presentation", () => {
     );
     renderBoard(
       <LeadBoard
+        query={UNNARROWED_LIST_QUERY}
         rows={[lead]}
         onMoved={() => undefined}
         hasMore={false}
@@ -441,6 +453,7 @@ describe("lead work-board presentation", () => {
     vi.stubGlobal("fetch", fetchMock);
     renderBoard(
       <LeadBoard
+        query={UNNARROWED_LIST_QUERY}
         rows={[]}
         onMoved={() => undefined}
         hasMore={false}
@@ -493,3 +506,17 @@ function jsonOk(body: unknown): Response {
     headers: { "content-type": "application/json" },
   });
 }
+
+// A status a newer server added still wears a label, not an empty badge.
+describe("StatusBadge", () => {
+  it("names a status this build does not know with the neutral label", () => {
+    render(
+      <LocaleProvider initial="en">
+        <StatusBadge
+          status={"a_status_from_a_later_release" as Lead["status"]}
+        />
+      </LocaleProvider>,
+    );
+    expect(screen.getByText(en["common.unknownValue"])).toBeTruthy();
+  });
+});

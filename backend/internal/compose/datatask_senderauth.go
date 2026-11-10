@@ -13,6 +13,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/capture/mailmap"
 	"github.com/margince/margince/backend/internal/platform/datatask"
+	"github.com/margince/margince/backend/internal/platform/originalstore"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -33,8 +34,8 @@ func estimateSenderAuthOriginals(ctx context.Context, q datatask.Querier, maximu
 }
 
 func restoreSenderAuthBatch(ctx context.Context, tx pgx.Tx, in datatask.BatchIn) (datatask.BatchOut, error) {
-	return pageStoredMail(ctx, tx, in, "a.id, a.counterparty_email, rc.payload", senderAuthOriginalScope,
-		func(row senderAuthOriginal) ids.UUID { return row.ID }, restoreSenderAuth)
+	return pageStoredMail(ctx, tx, in, "a.id, a.counterparty_email, "+originalstore.SQL("rc"), senderAuthOriginalScope,
+		func(row *senderAuthOriginal) (ids.UUID, *[]byte) { return row.ID, &row.Payload }, restoreSenderAuth)
 }
 
 func restoreSenderAuth(ctx context.Context, tx pgx.Tx, row senderAuthOriginal) (bool, error) {

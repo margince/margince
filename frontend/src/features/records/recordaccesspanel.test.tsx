@@ -232,18 +232,24 @@ describe("WhoCanSeePanel", () => {
     const fetchMock = serve(answer({ refresh_at: refreshAt(Date.now()) }));
     render(<WhoCanSeePanel kind="contact" recordId="c-1" />);
     await screen.findByTestId("who-can-see-you");
-    return fetchMock;
+    // Only the access read: the members' chips ask the names read for pictures.
+    return () =>
+      fetchMock.mock.calls.filter(([input]) =>
+        String(input instanceof Request ? input.url : input).includes(
+          "/contacts/c-1/access",
+        ),
+      ).length;
   }
 
   it("reads the answer again when the earliest share lapses", async () => {
     try {
-      const fetchMock = await refetchesAfter((now) =>
+      const accessReads = await refetchesAfter((now) =>
         new Date(now + 90_000).toISOString(),
       );
       await vi.advanceTimersByTimeAsync(60_000);
-      expect(fetchMock).toHaveBeenCalledTimes(1);
+      expect(accessReads()).toBe(1);
       await vi.advanceTimersByTimeAsync(31_000);
-      await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+      await waitFor(() => expect(accessReads()).toBe(2));
     } finally {
       vi.useRealTimers();
     }
@@ -254,13 +260,13 @@ describe("WhoCanSeePanel", () => {
   // minute later, and again after that, rather than once and never.
   it("keeps asking at a floor when the lapse is already past here", async () => {
     try {
-      const fetchMock = await refetchesAfter((now) =>
+      const accessReads = await refetchesAfter((now) =>
         new Date(now - 5_000).toISOString(),
       );
       await vi.advanceTimersByTimeAsync(REFRESH_FLOOR_MS + 1_000);
-      await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+      await waitFor(() => expect(accessReads()).toBe(2));
       await vi.advanceTimersByTimeAsync(REFRESH_FLOOR_MS + 1_000);
-      await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3));
+      await waitFor(() => expect(accessReads()).toBe(3));
     } finally {
       vi.useRealTimers();
     }
@@ -270,13 +276,13 @@ describe("WhoCanSeePanel", () => {
   // the ceiling instead of at once.
   it("waits no longer than the ceiling for a distant lapse", async () => {
     try {
-      const fetchMock = await refetchesAfter((now) =>
+      const accessReads = await refetchesAfter((now) =>
         new Date(now + 30 * 24 * 3_600_000).toISOString(),
       );
       await vi.advanceTimersByTimeAsync(REFRESH_CEILING_MS - 60_000);
-      expect(fetchMock).toHaveBeenCalledTimes(1);
+      expect(accessReads()).toBe(1);
       await vi.advanceTimersByTimeAsync(61_000);
-      await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+      await waitFor(() => expect(accessReads()).toBe(2));
     } finally {
       vi.useRealTimers();
     }

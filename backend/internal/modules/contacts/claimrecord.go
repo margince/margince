@@ -36,9 +36,12 @@ const unplacedPromiseSQL = `EXISTS (SELECT 1 FROM activity_commitment_admission 
    AND unplaced.locator = c.evidence_fingerprint
    AND unplaced.outcome = 'promiser_not_assignable')`
 
+// writtenForAMember holds a claim a user wrote, or their agent on its passport.
+var writtenForAMember = storekit.StampForAUserSQL("c.captured_by")
+
 func currentCommitmentAdmission(asOf time.Time, arg func(any) int) string {
 	current := provenance.CurrentCommitmentClause("c.source_activity_id", "c.evidence_fingerprint", "c.due_at", asOf, arg)
-	return `(` + unplacedPromiseSQL + ` OR c.corrected_at IS NOT NULL OR (starts_with(c.captured_by, 'human:') AND NOT EXISTS (
+	return `(` + unplacedPromiseSQL + ` OR c.corrected_at IS NOT NULL OR (` + writtenForAMember + ` AND NOT EXISTS (
  SELECT 1 FROM audit_log imported WHERE imported.entity_type='contact' AND imported.entity_id=c.contact_id
  AND imported.after->>'claim_id'=c.id::text AND NOT ` + storekit.AuditNotFromAnImport("imported") + `)) OR ` + current + `
  OR EXISTS (SELECT 1 FROM activity adopted_task WHERE adopted_task.id=c.task_activity_id
@@ -67,9 +70,9 @@ func (s *Store) RecordConversationClaimTx(
 	if err := validateClaim(in); err != nil {
 		return crmcontracts.ConversationClaim{}, false, err
 	}
-	// RequireHuman refuses an agent passport and admits the product's own
-	// passes, which is what an extractor runs as.
-	if err := auth.RequireHuman(ctx); err != nil {
+	// Admits a user, their agent, and the product's own passes, which is what
+	// an extractor runs as.
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return crmcontracts.ConversationClaim{}, false, err
 	}
 	if err := auth.Require(ctx, "contact", principal.ActionUpdate); err != nil {

@@ -4,6 +4,7 @@
 import type { components } from "../../api/schema";
 import type { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { labelFor, UNKNOWN_VALUE_LABEL } from "../../lib/labelfor";
 
 type T = ReturnType<typeof useT>;
 
@@ -41,7 +42,7 @@ export const TIER_ORDER: readonly Tier[] =
   Object.keys(TIER_NAMES).filter(isTier);
 
 export function tierLabel(tier: string, t: T): string {
-  if (isTier(tier)) return t(TIER_NAMES[tier]);
+  if (isTier(tier)) return t(labelFor(TIER_NAMES, tier));
   const lane = LANE_NAMES[tier];
   return lane ? t(lane) : tier;
 }
@@ -188,8 +189,8 @@ type SkipReason = NonNullable<
 >;
 
 // Why a feature that declares a decision form is not answered by the decision
-// model. A closed enum on the wire, so the switch is exhaustive and a new value
-// fails the typecheck here rather than rendering blank.
+// model. A value added to the contract fails the typecheck here; one a newer
+// server sends reads the neutral label.
 export function decisionSkipLabel(reason: SkipReason, t: T): string {
   switch (reason) {
     case "unbound":
@@ -198,5 +199,7 @@ export function decisionSkipLabel(reason: SkipReason, t: T): string {
       return t("aiAdmin.decisionSkip.uncertified");
     case "local_only":
       return t("aiAdmin.decisionSkip.local_only");
+    default:
+      return t(UNKNOWN_VALUE_LABEL);
   }
 }

@@ -18,6 +18,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/workforce"
 )
 
 // SeatNames names the colleagues in a set, as a human would recognize them.
@@ -31,31 +32,48 @@ import (
 // not hold is simply absent from the answer, which the caller renders as the id
 // it already has.
 func (s *Service) SeatNames(ctx context.Context, seats []ids.UserID) (map[ids.UUID]string, error) {
+	faces, err := s.seatFaces(ctx, seats)
+	names := make(map[ids.UUID]string, len(faces))
+	for id, face := range faces {
+		names[id] = face.name
+	}
+	return names, err
+}
+
+// seatFace is how a colleague is drawn: their name, and their picture's key
+// when they have one.
+type seatFace struct {
+	name      string
+	avatarKey *string
+}
+
+// seatFaces is SeatNames with the picture beside each name, on the same gate.
+func (s *Service) seatFaces(ctx context.Context, seats []ids.UserID) (map[ids.UUID]seatFace, error) {
 	if err := auth.RequireMember(ctx); err != nil {
 		return nil, err
 	}
-	names := map[ids.UUID]string{}
+	faces := map[ids.UUID]seatFace{}
 	if len(seats) == 0 {
-		return names, nil
+		return faces, nil
 	}
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx,
-			`SELECT id, display_name FROM app_user WHERE id = ANY($1) AND archived_at IS NULL`, seats)
+			`SELECT id, display_name, avatar_object_key FROM app_user WHERE id = ANY($1) AND `+workforce.NamedSeatSQL(""), seats)
 		if err != nil {
 			return err
 		}
 		defer rows.Close()
 		for rows.Next() {
 			var id ids.UUID
-			var name string
-			if err := rows.Scan(&id, &name); err != nil {
+			var face seatFace
+			if err := rows.Scan(&id, &face.name, &face.avatarKey); err != nil {
 				return err
 			}
-			names[id] = name
+			faces[id] = face
 		}
 		return rows.Err()
 	})
-	return names, err
+	return faces, err
 }
 
 // DepartedAmong answers which of seats left: deactivated and not archived. A

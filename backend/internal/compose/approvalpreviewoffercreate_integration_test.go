@@ -49,6 +49,12 @@ func TestOfferCreationApprovalMatchesTheWriter(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
+			// The offer takes the template's German, so the preview names the
+			// product as the created line will: by its German name.
+			const germanName = "Quartalsbetreuung"
+			if _, err := store.PutProductTranslation(ctx, ids.From[ids.ProductKind](ids.UUID(product.Id)), "de", germanName, nil); err != nil {
+				t.Fatal(err)
+			}
 			template, err := store.CreateOfferTemplate(ctx, deals.CreateOfferTemplateInput{Name: "Standard terms"})
 			if err != nil {
 				t.Fatal(err)
@@ -90,7 +96,7 @@ func TestOfferCreationApprovalMatchesTheWriter(t *testing.T) {
 			for _, detail := range *proposal.Preview.Details {
 				details[detail.Field] = detail.Value
 			}
-			if details["deal_id"].Text != deal.Name || details["template_id"].Text != template.Name || details["product_id"].Text != product.Name || details["terms_text"].Text != terms {
+			if details["deal_id"].Text != deal.Name || details["template_id"].Text != template.Name || details["product_id"].Text != germanName || details["description"].Text != germanName || details["terms_text"].Text != terms {
 				t.Fatalf("missing full context: %+v", details)
 			}
 			if details["arr_minor"].Kind != "money" || details["arr_minor"].Text != "80000" || details["net_tcv_minor"].Text != "40000" {

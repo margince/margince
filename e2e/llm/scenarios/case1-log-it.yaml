@@ -29,10 +29,14 @@ prompt: |
   Lars: Ich schicke Ihnen die Preisliste bis Freitag.
   Matthias: Passt, dann schauen wir uns das nächste Woche an.
 
+# The meeting has to be recorded; change_activities log and create_record with
+# record_type activity both do it, so either holds.
 must_call:
   - create_record
-  - log_activity
+must_call_with:
+  - log_activity.kind=meeting|create_record.record_type=activity
 may_call:
+  - log_activity
   - resolve_entities
   - search_records
   - read_workspace

@@ -158,7 +158,7 @@ type SystemOfRecordProvider interface {
 	// Every write carries provenance and the acting Principal from ctx.
 	Create(ctx context.Context, in CreateInput) (EntityRef, error)
 	Update(ctx context.Context, in UpdateInput) (EntityRef, error)
-	AdvanceDeal(ctx context.Context, in AdvanceDealInput) (EntityRef, error)
+	AdvanceDeal(ctx context.Context, in AdvanceDealInput) (AdvanceDealResult, error)
 	// Archive soft-deletes one contact/company/deal/project, or one
 	// relationship edge (🟡 on the tool surface: a visibility change is hard to
 	// undo for whoever needed the row). Leads leave through their own lifecycle
@@ -254,6 +254,13 @@ type AdvanceDealInput struct {
 	Source                   string
 	CapturedBy               string
 	IfVersion                *int64
+}
+
+// AdvanceDealResult is the moved deal and the probability the move set:
+// ProbabilityNote is one sentence, empty when the move changed no stage.
+type AdvanceDealResult struct {
+	Ref             EntityRef
+	ProbabilityNote string
 }
 
 // MergeInput folds SourceID into TargetID (the survivor). Type is contact

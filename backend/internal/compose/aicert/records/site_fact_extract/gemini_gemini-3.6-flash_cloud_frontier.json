@@ -3,7 +3,7 @@
   "provider": "gemini",
   "served_model": "gemini-3.6-flash",
   "env_class": "cloud_frontier",
-  "prompt_version": "pe492d9860cd07baba74b1294cf52e9f1",
+  "prompt_version": "p8d7ae5a87e7ca7c5d9ca427e83bed3cd",
   "corpus_version": "v1",
   "verdict": "certified",
   "runs": 9,
@@ -17,34 +17,34 @@
   "context_applied": false,
   "context_scopes": null,
   "judge_score_p50": 100,
-  "judge_score_min": 88,
-  "latency_p50": 4730,
-  "latency_p95": 7223,
-  "mean_tokens": 1883,
-  "mean_tokens_in": 1229,
-  "mean_tokens_out": 654,
+  "judge_score_min": 95,
+  "latency_p50": 2236,
+  "latency_p95": 4067,
+  "mean_tokens": 1518,
+  "mean_tokens_in": 1176,
+  "mean_tokens_out": 342,
   "mean_cached_tokens": 0,
   "mean_cache_write_tokens": 0,
-  "est_cost_microusd": 7729,
+  "est_cost_microusd": 2164,
   "judge_served_model": "claude-sonnet-4-6",
   "judge_provider": "claude_cli",
   "self_judged": false,
   "served_identity_source": "response",
   "thinking_level": "low",
-  "ran_at": "2026-10-13T03:47:50Z",
+  "ran_at": "2026-11-08T02:38:17Z",
   "scenarios": [
     {
       "scenario": "services_page_offering_facts",
       "site": "page_facts",
-      "stamp": "dbc0191bceca42b4a0b1f2dc61bace6a0cd019d2546f13c7870222b56ed5b7f43e8a5a22a89261e7ab7d609255445fd44806fba1ff430cc5b3c38333c50bb38243ba6ad345734a6a20ad21b4795f13d5177974d90afcc79344706a0e59cecf1d",
+      "stamp": "dbc0191bceca42b4a0b1f2dc61bace6a0cd019d2546f13c7870222b56ed5b7f47521afe76e879bcef6cc277b1a9fa2b06734e151db51a5d4707a9558573ec42290123839ed83ce6e88062a11d121bbf88eddd7c799c427c8e825e76d9850d19b",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,
       "passed": 3,
       "judge_scores": [
-        88,
-        95,
-        92
+        100,
+        100,
+        95
       ],
       "bands": {
         "certified_min": 70,
@@ -65,9 +65,9 @@
       "runs": 3,
       "passed": 3,
       "judge_scores": [
-        100,
         97,
-        100
+        100,
+        95
       ],
       "bands": {
         "certified_min": 70,
@@ -82,7 +82,7 @@
     {
       "scenario": "customer_story_credits_the_customer_not_the_reader",
       "site": "page_facts",
-      "stamp": "5a6daac8be1da3537aa7a2e4629fa1617cadf4d4d5ee22849234add057d8710317d4ed992baa561ab068a7f469cb63c6d28aaa1b1136709eb85ee67a89f986424efbb1e5756f259606bc7e8ab045bd8bdaa38cc71fa81955c88577429d4a2568",
+      "stamp": "5a6daac8be1da3537aa7a2e4629fa1617cadf4d4d5ee22849234add057d87103e5b5eaeb87ac975e3f94b55a5964647b8f9c03c38fe31f86a582dda9889e09169ccba98f34b1bb6b40ec91222afef6351ed614a97208f1ae0c4201473191b783",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,

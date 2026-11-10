@@ -58,7 +58,7 @@ function quietDefault(
           allow: {
             project: ["read", "create", "update", "delete"],
             deal: ["read", "create"],
-            activity: ["read", "update"],
+            activity: ["read", "create", "update"],
             relationship: ["read", "create", "update", "delete"],
           },
         }),

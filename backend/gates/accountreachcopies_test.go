@@ -86,23 +86,27 @@ func TestTheAccountReachWalkIsOneAnswer(t *testing.T) {
 }
 
 // last_activity_of_company is a third spelling of the employment arm, in SQL
-// because a trigger folds it. Its bound is the walk's own rendered text, so a
-// company's stored clock and its timeline count the same mail.
+// because a trigger folds it. last_activity_of_company_activity is that arm for
+// one new link. Their bound is the walk's own rendered text, so a company's
+// stored clock and its timeline count the same mail.
 func TestTheStoredCompanyClockBoundsEmploymentLikeTheWalk(t *testing.T) {
 	t.Parallel()
-	body, ok := currentRecencyBodies(t)["last_activity_of_company"]
-	if !ok {
-		t.Fatal("no migration defines last_activity_of_company, so this gate checks nothing")
-	}
-	arms, unbounded := employmentArmsWithoutTheBound(body)
-	if arms == 0 {
-		t.Error("last_activity_of_company has no employment arm the gate can find, so it checks nothing")
-	}
-	for _, alias := range unbounded {
-		t.Errorf("last_activity_of_company's employment arm on %s does not carry %q, so mail from a "+
-			"contact's previous job sets the clock of the employer they have now. Replace the "+
-			"function in a new migration with the bound's current text.",
-			alias, employment.InPlaceForSQL(alias, "a"))
+	bodies := currentRecencyBodies(t)
+	for _, name := range []string{"last_activity_of_company", "last_activity_of_company_activity"} {
+		body, ok := bodies[name]
+		if !ok {
+			t.Fatalf("no migration defines %s, so this gate checks nothing", name)
+		}
+		arms, unbounded := employmentArmsWithoutTheBound(body)
+		if arms == 0 {
+			t.Errorf("%s has no employment arm the gate can find, so it checks nothing", name)
+		}
+		for _, alias := range unbounded {
+			t.Errorf("%s's employment arm on %s does not carry %q, so mail from a "+
+				"contact's previous job sets the clock of the employer they have now. Replace the "+
+				"function in a new migration with the bound's current text.",
+				name, alias, employment.InPlaceForSQL(alias, "a"))
+		}
 	}
 }
 

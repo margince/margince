@@ -14,11 +14,13 @@ package apps
 // produced — a substituted file, a proxy's error page, an ingress serving the
 // app shell — because those carry the constructs a real view never has.
 //
-// THE REAL CONTROLS ARE ELSEWHERE, and each is stronger than this one: the
-// build-time PARSED validation in frontend/scripts/vite-inline-views.ts, the
-// Playwright zero-request run, TLS and origin discipline on the fetch, and the
-// host-enforced content-security policy that SEP-1865 requires. This is defence
-// in depth on the seam where the bytes cross a boundary.
+// The integrity control is the digest (digest.go). A document is served only
+// when its bytes are the ones this build produced, and that check runs first.
+// The other controls each cover one threat. The build-time parsed validation in
+// frontend/scripts/vite-inline-views.ts and the Playwright zero-request run cover
+// what the build makes. TLS and origin discipline cover the fetch. The host's
+// content-security policy keeps a view off the network. This check is defence in
+// depth on the seam where the bytes cross a boundary.
 //
 // IT RUNS THE SAME TOKEN LIST AS THE BUILD CHECK, from the same file, and that
 // identity is the point rather than a coincidence: a document that passes the

@@ -28,12 +28,14 @@ import { ConfirmModal } from "../../../design-system/confirmmodal";
 import { ErrorLine } from "../../../design-system/errorline";
 import { VerbWord } from "../../../design-system/iconaction";
 import { ListPopover } from "../../../design-system/listpopover";
-import { useT } from "../../../i18n";
+import { useToast } from "../../../design-system/toast";
+import { useLocale, useT } from "../../../i18n";
 import { dealRecordKeys } from "../../../lib/activitykeys";
 import { unwrap } from "../../../lib/problem";
 import { navigate } from "../../../lib/router";
 import { RecordEmailVerb } from "../../records/recordemail";
 import { ShareAction } from "../../records/share";
+import { probabilitySetNote } from "../dealprobability";
 import { CorrectCloseDayAction } from "./correctcloseday";
 import { useDealCoverage } from "./usedealcoverage";
 import { useDealRecipientAddress } from "./usedealrecipient";
@@ -48,7 +50,8 @@ type Stage = components["schemas"]["Stage"];
 function DealEmailVerb({
   deal,
   disabledReasonId,
-}: Readonly<{ deal: Deal; disabledReasonId?: string }>) {
+  disabled,
+}: Readonly<{ deal: Deal; disabledReasonId?: string; disabled?: boolean }>) {
   // The same coverage read the readings band and the coverage card already
   // make, served from one cache entry — so asking here costs no request.
   const coverage = useDealCoverage(deal.id, !deal.archived_at);
@@ -63,6 +66,7 @@ function DealEmailVerb({
       // over what the reader typed.
       recordAddress={recordAddress}
       disabledReasonId={disabledReasonId}
+      disabled={disabled}
     />
   );
 }
@@ -90,6 +94,8 @@ function ReopenAction({
   disabledReasonId?: string;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
+  const toast = useToast();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [stageId, setStageId] = useState<string | null>(null);
@@ -114,8 +120,12 @@ function ReopenAction({
         t,
       );
     },
-    onSuccess: () => {
+    onSuccess: (advanced) => {
       setOpen(false);
+      const note = probabilitySetNote(advanced, t, locale);
+      if (note) {
+        toast.show(note);
+      }
       for (const queryKey of dealRecordKeys(dealId)) {
         queryClient.invalidateQueries({ queryKey });
       }
@@ -195,7 +205,11 @@ export function DealActions({
           this deal: the same two groups, in the same order, that the contact,
           company and lead headers draw. A rep moving between records must not
           have to re-find the verb they just used on the last one. */}
-      <DealEmailVerb deal={deal} disabledReasonId={refusedByArchive} />
+      <DealEmailVerb
+        deal={deal}
+        disabledReasonId={logRefused}
+        disabled={logPending}
+      />
       <Button
         disabled={logPending}
         reasonId={logRefused}
@@ -206,6 +220,7 @@ export function DealActions({
         <VerbWord word={t("record.verb.call")} label={t("log.kindCall")} />
       </Button>
       <DealBookMeeting
+        dealId={deal.id}
         companyId={deal.company_id ?? undefined}
         allowed={!logPending && !logRefused}
         pending={logPending}
@@ -309,11 +324,13 @@ export function DealActions({
 // Meet books with one of the account's contacts, through that contact's own
 // booking screen. A deal on no company has nobody to book with yet.
 function DealBookMeeting({
+  dealId,
   companyId,
   allowed,
   pending,
   reasonId,
 }: Readonly<{
+  dealId: string;
   companyId?: string;
   allowed: boolean;
   pending: boolean;
@@ -348,7 +365,10 @@ function DealBookMeeting({
       search={(term) => searchCompanyContacts(companyId, term)}
       onPick={(contact, done) => {
         done();
-        navigate({ screen: "book", id: `contact-${contact.id}` });
+        navigate(
+          { screen: "book", id: `contact-${contact.id}` },
+          new Map([["deal", dealId]]),
+        );
       }}
     />
   );

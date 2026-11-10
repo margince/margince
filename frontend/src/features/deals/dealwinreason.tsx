@@ -4,6 +4,7 @@
 import type { components } from "../../api/schema";
 import { IdentityFact } from "../../design-system/identityline";
 import { useT } from "../../i18n";
+import { labelFor } from "../../lib/labelfor";
 import { WON_REASON_LABELS } from "../../lib/winreason";
 import "./dealstatus.css";
 
@@ -47,7 +48,7 @@ export function WonWithoutContractFact({
   if (deal.status !== "won" || !reason) {
     return null;
   }
-  const label = t(WON_REASON_LABELS[reason]);
+  const label = t(labelFor(WON_REASON_LABELS, reason));
   // The detail replaces the label for `other`, and does not follow it:
   // "Something else: renewed on a handshake" says the category twice and
   // buries the only part written by a contact. Every other reason is its own

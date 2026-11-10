@@ -69,15 +69,18 @@ async function openPanel(locale: "en" | "de") {
   const { container } = render(
     <QueryClientProvider client={client}>
       <LocaleProvider initial={locale}>
-        <AgentRail route={{ screen: "deals" }} />
+        <AgentRail />
       </LocaleProvider>
     </QueryClientProvider>,
   );
   const trigger = container.querySelector(".arhit");
   if (!trigger) throw new Error("no .arhit trigger in the rendered tree");
   await user.click(trigger);
-  const opened = document.querySelector(".arpanel");
-  if (!opened) throw new Error("no .arpanel on the document after the click");
+  const opened = await waitFor(() => {
+    const element = document.querySelector(".arpanel");
+    if (!element) throw new Error("The agent panel has not loaded");
+    return element;
+  });
   return opened;
 }
 

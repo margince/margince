@@ -21,6 +21,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/attention"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -28,6 +29,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 // approvalStatusApproved is the decided status a receipt is read from. Spelled
@@ -45,6 +47,7 @@ const approvalStatusApproved = "approved"
 // Filtering on status alone would do the same thing to every reader's own
 // approvals, which is the one claim this lane exists to make.
 type attentionReceipts struct {
+	tasks *activities.Store
 	svc   *approvals.Service
 	deals *deals.Store
 }
@@ -90,6 +93,29 @@ func (r attentionReceipts) RecentWithMore(ctx context.Context, since time.Time, 
 	for _, correction := range corrections {
 		decided = append(decided, correctionReceipt(correction))
 	}
+	if r.tasks != nil {
+		completions, err := r.tasks.RecentTaskCompletions(ctx, since, limit+1)
+		if err != nil && !errors.Is(err, apperrors.ErrPermissionDenied) {
+			return nil, false, err
+		}
+		if len(completions) > limit {
+			completions, more = completions[:limit], true
+		}
+		for _, completed := range completions {
+			var undo *attention.ReceiptUndo
+			if completed.Writable {
+				undo = &attention.ReceiptUndo{AuditLogID: completed.AuditID, Version: completed.Version}
+			}
+			actor, _ := principal.Actor(ctx)
+			said := approvalSummaryCopyFor(textlang.Lang(actor.Locale))
+			contact := completed.Contact
+			if contact == "" {
+				contact = said.taskContact
+			}
+			reason := fmt.Sprintf(said.taskCompleted, contact, completed.WrittenAt.Format(time.DateOnly))
+			decided = append(decided, attention.Receipt{Source: attention.ReceiptFromCorrection, ID: completed.AuditID, AuditLogID: completed.AuditID, Kind: "task_completed", Summary: reason, Headline: completed.Subject, Reason: reason, OccurredAt: completed.At, TargetType: string(recordTypeActivity), TargetID: completed.ID, Actor: attention.ReceiptActor{Type: systemActor}, Undo: undo})
+		}
+	}
 	decided, err = r.withChangeReviews(ctx, decided)
 	if err != nil {
 		return nil, false, err
@@ -115,21 +141,55 @@ func (r attentionReceipts) RecentWithMore(ctx context.Context, since time.Time, 
 // A changed date names both values; confidence-only changes must not claim
 // the date moved. The recorded basis explains why the sweep acted.
 func correctionReceipt(c deals.CorrectionReceipt) attention.Receipt {
+	receipt := correctionReceiptOfKind(c)
+	receipt.Source, receipt.AuditLogID = attention.ReceiptFromCorrection, c.AuditLogID
+	receipt.Reason = c.Basis
+	receipt.CustomerQuote = quotedFacts(c.Evidence).Quote
+	if receipt.Reason == "" && receipt.CustomerQuote == "" {
+		receipt.Headline = ""
+	}
+	return receipt
+}
+
+func correctionReceiptOfKind(c deals.CorrectionReceipt) attention.Receipt {
+	if c.Correction == deals.CloseLostCorrection {
+		return closeLostReceipt(c)
+	}
+	if c.Correction == deals.VerdictStageMoveCorrection {
+		return stageMoveReceipt(c)
+	}
+	if c.Correction == deals.DealOpenCorrection {
+		return dealOpenReceipt(c)
+	}
+	if c.Correction == deals.DealReviveCorrection {
+		return dealReviveReceipt(c)
+	}
+	if c.Correction == deals.VerdictAmountCorrection || c.Correction == deals.VerdictProbabilityCorrection {
+		return verdictReceipt(c)
+	}
 	summary := fmt.Sprintf("Updated close-date confidence on %q", c.DealName)
 	if slices.Contains(c.Fields, "expected_close_date") {
 		summary = fmt.Sprintf("Changed the close date on %q: %s → %s", c.DealName, correctionDate(c.BeforeClose), correctionDate(c.AfterClose))
 	}
-	if slices.Contains(c.Fields, "forecast_category") {
-		summary += ". Forecast category also changed"
+	if correctionMovedForecast(c) {
+		summary += ". Win probability also lowered"
 	}
+	headline := summary
 	if c.Basis != "" {
 		summary += " — " + c.Basis
+	}
+	// A date the verdict read from the customer keeps its own kind, so its
+	// receipt does not read as the sweep's estimate.
+	kind := deals.CloseDateCorrectionKind
+	if c.Correction == deals.VerdictCloseDateCorrection {
+		kind = c.Correction
 	}
 	return attention.Receipt{
 		ID:              c.AuditLogID,
 		CloseDateChange: correctionValues(c),
-		Kind:            deals.CloseDateCorrectionKind,
+		Kind:            kind,
 		Summary:         summary,
+		Headline:        headline,
 		OccurredAt:      c.AppliedAt,
 		TargetType:      approvalTargetDeal,
 		TargetID:        c.DealID.UUID,
@@ -139,6 +199,27 @@ func correctionReceipt(c deals.CorrectionReceipt) attention.Receipt {
 			Version:    c.Version,
 			Reversed:   c.Reversed,
 		},
+	}
+}
+
+// closeLostReceipt renders a deal Margince closed as lost. Its Undo reopens
+// the deal; the receipt has no close-date values to show.
+func closeLostReceipt(c deals.CorrectionReceipt) attention.Receipt {
+	summary := fmt.Sprintf("Closed %q as lost", c.DealName)
+	headline := summary
+	if c.Basis != "" {
+		summary += " — " + c.Basis
+	}
+	return attention.Receipt{
+		ID:         c.AuditLogID,
+		Kind:       deals.DealCloseLostKind,
+		Summary:    summary,
+		Headline:   headline,
+		OccurredAt: c.AppliedAt,
+		TargetType: approvalTargetDeal,
+		TargetID:   c.DealID.UUID,
+		Actor:      attention.ReceiptActor{Type: c.ActorType, ID: c.ActorID, OnBehalfOf: c.OnBehalfOf},
+		Undo:       &attention.ReceiptUndo{AuditLogID: c.AuditLogID, Version: c.Version, Reversed: c.Reversed},
 	}
 }
 
@@ -188,6 +269,7 @@ func receiptsWithin(rows []crmcontracts.Approval, since time.Time) []attention.R
 			summary = *row.Summary
 		}
 		receipt := attention.Receipt{
+			Source:           attention.ReceiptFromApproval,
 			ID:               ids.UUID(row.Id),
 			Kind:             row.Kind,
 			Summary:          summary,
@@ -211,7 +293,7 @@ func receiptsWithin(rows []crmcontracts.Approval, since time.Time) []attention.R
 func (r attentionReceipts) withChangeReviews(ctx context.Context, receipts []attention.Receipt) ([]attention.Receipt, error) {
 	keys := make([]deals.AppliedChangeKey, 0, len(receipts))
 	for _, receipt := range receipts {
-		if receipt.TargetType == approvalTargetDeal && (receipt.Kind == deals.StageProgressionKind || receipt.Undo != nil) {
+		if receipt.TargetType == approvalTargetDeal && receipt.Undo != nil {
 			keys = append(keys, deals.AppliedChangeKey{DealID: ids.From[ids.DealKind](receipt.TargetID), ChangeID: receipt.ID})
 		}
 	}

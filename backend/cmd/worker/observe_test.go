@@ -160,6 +160,8 @@ func TestTheWorkerMetricsAreProcessLocalAndReServeNoFleetGauge(t *testing.T) {
 		"margince_connector_rate_limited_total",
 		"margince_capture_backfill_stage_seconds",
 		"margince_capture_backfill_snooze_seconds_total",
+		"margince_worker_pinned_sessions",
+		"margince_worker_session_budget_snoozes_total",
 	} {
 		if !strings.Contains(body, "# TYPE "+family+" ") {
 			t.Errorf("the worker publishes no %s; it is process-local and served nowhere else\ngot:\n%s", family, body)

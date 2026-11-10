@@ -10,7 +10,12 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ListQuery } from "../../components/listquery";
 import { LocaleProvider } from "../../i18n";
 import { meFixture } from "../../testing/mefixture";
-import { listStateOf, SaveViewAction, useSavedViewTabs } from "./savedviews";
+import {
+  listStateOf,
+  SavedViewsFailure,
+  SaveViewAction,
+  useSavedViewTabs,
+} from "./savedviews";
 
 afterEach(cleanup);
 
@@ -235,7 +240,7 @@ describe("saved views", () => {
         });
       }),
     );
-    wrap(<SaveViewAction resource="companies" query={narrowed} />);
+    wrap(<SaveViewAction resource="companies" state={{ query: narrowed }} />);
 
     await user.click(screen.getByRole("button", { name: "Save view" }));
     await user.type(screen.getByRole("textbox", { name: "Name" }), "Customers");
@@ -254,25 +259,20 @@ describe("saved views", () => {
   it("says the saved views failed to load rather than showing an empty rail", async () => {
     const user = userEvent.setup();
     vi.stubGlobal("fetch", viewsFailingOnce());
-    wrap(<SaveViewAction resource="companies" query={narrowed} />);
+    wrap(<SavedViewsFailure resource="companies" />);
 
     // An empty rail claims the reader has saved nothing. A failed read knows
     // no such thing, and the retry is what makes it a failure rather than an
     // absence.
-    const failed = await screen.findByText("This section did not load.");
-    expect(failed).toBeTruthy();
-    // And it says WHICH section. The notice lands in the list's tools slot
-    // beside Columns and Compact, where an unnamed "this section" could be any
-    // of the three.
-    expect(
-      screen.getByRole("region", { name: "Saved views" }).contains(failed),
-    ).toBe(true);
+    // It names what failed, since on the toolbar it stands beside other dials,
+    // and it is one line with no heading of its own.
+    const failed = await screen.findByRole("alert");
+    expect(failed.textContent).toBe("Saved views did not load.Retry");
+    expect(screen.queryByRole("heading")).toBeNull();
 
     await user.click(screen.getByRole("button", { name: "Retry" }));
 
-    await waitFor(() =>
-      expect(screen.queryByText("This section did not load.")).toBeNull(),
-    );
+    await waitFor(() => expect(screen.queryByRole("alert")).toBeNull());
   });
 
   it("carries the search a view was saved with", async () => {
@@ -353,15 +353,44 @@ describe("saved views", () => {
     wrap(
       <SaveViewAction
         resource="companies"
-        query={{
-          q: "",
-          sort: "",
-          includeArchived: false,
-          filters: {},
-          perPage: 25,
+        state={{
+          query: {
+            q: "",
+            sort: "",
+            includeArchived: false,
+            filters: {},
+            perPage: 25,
+          },
         }}
       />,
     );
     expect(screen.queryByRole("button", { name: "Save view" })).toBeNull();
+  });
+
+  it("does not offer to save the order and filters the list opened with", () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => jsonResponse({ data: [] })),
+    );
+    const opening = {
+      initialSort: narrowed.sort,
+      initialFilters: narrowed.filters,
+    };
+    const opened = wrap(
+      <SaveViewAction
+        resource="companies"
+        state={{ ...opening, query: narrowed }}
+      />,
+    );
+    expect(screen.queryByRole("button", { name: "Save view" })).toBeNull();
+
+    opened.unmount();
+    wrap(
+      <SaveViewAction
+        resource="companies"
+        state={{ ...opening, query: { ...narrowed, sort: "-created_at" } }}
+      />,
+    );
+    expect(screen.getByRole("button", { name: "Save view" })).toBeTruthy();
   });
 });

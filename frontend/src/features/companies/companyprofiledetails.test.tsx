@@ -90,7 +90,9 @@ describe("CompanyProfileDetails", () => {
     );
 
     expect(
-      screen.getByRole("link", { name: "https://linkedin.com/company/brandt" }),
+      screen.getByRole("link", {
+        name: "Brandt Automotive GmbH on LinkedIn",
+      }),
     ).toHaveAttribute("href", "https://linkedin.com/company/brandt");
     await userEvent.click(
       await screen.findByRole("button", { name: "Change LinkedIn URL" }),

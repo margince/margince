@@ -12,18 +12,19 @@ import (
 )
 
 // signatureReader hands the send path the sender's sign-off. contacts owns the
-// row and the workspace template; activities owns the send that renders them.
+// row, the templates and the sender's legal entity; activities owns the send
+// that renders them.
 type signatureReader struct {
 	store *contacts.Store
 }
 
-func (r signatureReader) SignatureFor(ctx context.Context, userID ids.UUID) (activities.SenderSignature, error) {
-	signature, err := r.store.SignatureFor(ctx, userID)
+func (r signatureReader) SignatureFor(ctx context.Context, userID, entity ids.UUID) (activities.SenderSignature, error) {
+	signature, err := r.store.SignatureFor(ctx, userID, entity)
 	if err != nil {
 		return activities.SenderSignature{}, err
 	}
 	return activities.SenderSignature{
 		Body: signature.Body, HTML: signature.HTML, Title: signature.Title, Phone: signature.Phone, Template: signature.Template,
-		LogoKey: signature.LogoKey,
+		Imprint: signature.Imprint, LogoKey: signature.LogoKey,
 	}, nil
 }

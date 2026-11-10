@@ -29,8 +29,6 @@ import (
 	"go/parser"
 	"go/token"
 	"io/fs"
-	"os"
-	"path/filepath"
 	"sort"
 	"strings"
 	"testing"
@@ -126,7 +124,7 @@ func everyModelRequest(t *testing.T) []requestSite {
 	t.Helper()
 	var out []requestSite
 	for _, tree := range promptTrees {
-		err := filepath.WalkDir(tree, func(path string, d fs.DirEntry, err error) error {
+		err := gatekit.WalkDir(tree, func(path string, d fs.DirEntry, err error) error {
 			if err != nil {
 				return err
 			}
@@ -331,7 +329,7 @@ func functionAround(file *ast.File, lit *ast.CompositeLit) *ast.FuncDecl {
 
 func readSource(t *testing.T, path string) string {
 	t.Helper()
-	raw, err := os.ReadFile(path)
+	raw, err := gatekit.ReadFile(path)
 	if err != nil {
 		t.Fatalf("reading %s: %v", path, err)
 	}
@@ -357,7 +355,7 @@ func TestOnlyPromptlangSpellsTheLanguageRule(t *testing.T) {
 	)
 	var offenders []string
 	for _, tree := range promptTrees {
-		err := filepath.WalkDir(tree, func(path string, d fs.DirEntry, err error) error {
+		err := gatekit.WalkDir(tree, func(path string, d fs.DirEntry, err error) error {
 			if err != nil {
 				return err
 			}
@@ -408,7 +406,7 @@ func TestOnlyPromptlangSpellsTheLanguageRule(t *testing.T) {
 func TestAModelRequestIsBuiltAsALiteral(t *testing.T) {
 	t.Parallel()
 	for _, tree := range promptTrees {
-		err := filepath.WalkDir(tree, func(path string, d fs.DirEntry, err error) error {
+		err := gatekit.WalkDir(tree, func(path string, d fs.DirEntry, err error) error {
 			if err != nil {
 				return err
 			}

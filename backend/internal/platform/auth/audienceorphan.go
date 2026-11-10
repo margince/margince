@@ -15,6 +15,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/workforce"
 )
 
 // ActivityHasAReaderTx answers whether ANY human is admitted to this
@@ -89,7 +90,10 @@ func activityHasReaderExceptTx(ctx context.Context, tx pgx.Tx, id ids.UUID, exce
 	arg := func(value any) int { args = append(args, value); return len(args) }
 	row, excluded := arg(id), arg(except)
 	query := fmt.Sprintf(`
-		SELECT a.audience = 'workspace'
+		SELECT CASE WHEN a.internal_mail_authorization IS NOT NULL THEN EXISTS (
+ SELECT 1 FROM app_user internal_reader WHERE %[4]s
+ AND internal_reader.id NOT IN (%[3]s) AND %[5]s)
+ ELSE a.audience = 'workspace'
 		    OR EXISTS (SELECT 1 FROM app_user u WHERE a.captured_by LIKE '%%:' || u.id
                     AND u.id NOT IN (%[3]s))
 		    OR EXISTS (SELECT 1 FROM capture_import ci WHERE ci.activity_id = a.id
@@ -106,7 +110,7 @@ func activityHasReaderExceptTx(ctx context.Context, tx pgx.Tx, id ids.UUID, exce
 		                       JOIN team t ON t.id = tm.team_id AND t.archived_at IS NULL
 		                      WHERE tm.team_id = am.subject_id
                             AND tm.user_id NOT IN (%[3]s))))))
-		  FROM activity a WHERE a.id = $%[1]d`, row, ParticipantStandsSQL("ap", "a"), memberIdentitySetSQL(excluded))
+		  END FROM activity a WHERE a.id = $%[1]d`, row, ParticipantStandsSQL("ap", "a"), memberIdentitySetSQL(excluded), workforce.LiveHumanSQL("internal_reader"), internalMailReaderSQL("a"))
 	var reachable bool
 	if err := tx.QueryRow(ctx, query, args...).Scan(&reachable); err != nil {
 		return false, fmt.Errorf("auth: reading whether an activity still has a reader: %w", err)

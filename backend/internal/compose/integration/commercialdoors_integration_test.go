@@ -111,7 +111,7 @@ type confirmedFact struct {
 
 // A room and a thread in it are made, listed and read alike on either door.
 func TestDealRoomRoutesAnswerAsTheirTools(t *testing.T) {
-	d := newTwoDoors(t, "room-doors", "read", "write")
+	d := newTwoDoors(t, "room-doors", "read", "write", "send")
 	deal := openDeal(t, d.e, apptest.DiscoverSeededPipeline(t, d.e), "Room renewal")
 
 	room := recordIDOf(t, d.tool(t, "create_record", map[string]any{"record_type": "deal_room", "fields": map[string]any{
@@ -122,9 +122,9 @@ func TestDealRoomRoutesAnswerAsTheirTools(t *testing.T) {
 		d.tool(t, "list_records", map[string]any{"record_type": "deal_room", "filters": map[string]any{"deal_id": deal}}),
 		room)
 
-	thread := recordIDOf(t, d.tool(t, "create_record", map[string]any{"record_type": "deal_room_thread", "fields": map[string]any{
-		"deal_room_id": room, "body": "Any questions on the terms?",
-	}}))
+	thread := answerID(t, d.tool(t, "send_outbound", map[string]any{
+		"as": "open_room_thread", "id": room, "request_body": map[string]any{"body": "Any questions on the terms?"},
+	}))
 	sameDoorRecords(t, "the room's threads",
 		d.rest(t, "GET", "/v1/deal-rooms/"+room+"/threads", nil),
 		d.tool(t, "list_records", map[string]any{"record_type": "deal_room_thread", "filters": map[string]any{"deal_room_id": room}}),

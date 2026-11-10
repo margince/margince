@@ -102,7 +102,7 @@ func plainASCII(text string) bool {
 	return true
 }
 
-func (s SMTP) composeAlternative(to, subject, textBody, htmlBody, messageID string) ([]byte, error) {
+func (s SMTP) composeAlternative(to, subject, textBody, htmlBody, messageID string, inline []connector.InlineImage) ([]byte, error) {
 	if messageID == "" {
 		messageID = s.mintMessageID()
 	}
@@ -112,7 +112,7 @@ func (s SMTP) composeAlternative(to, subject, textBody, htmlBody, messageID stri
 	var message strings.Builder
 	message.WriteString(s.originHeaders(to, subject, messageID))
 	message.WriteString(s.privacyHeaders() + "MIME-Version: 1.0\r\n")
-	body, err := mailwire.SMTPBody(connector.EmailMessage{Body: textBody, HTMLBody: htmlBody, MessageID: messageID})
+	body, err := mailwire.SMTPBody(connector.EmailMessage{Body: textBody, HTMLBody: htmlBody, MessageID: messageID, Inline: inline})
 	if err != nil {
 		return nil, err
 	}

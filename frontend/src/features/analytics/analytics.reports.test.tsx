@@ -3,14 +3,11 @@ import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
-import {
-  formatMoney,
-  formatMoneyCompact,
-  MONEY_ABSENT,
-} from "../../format/format";
+import { formatAnalyticsMoney, MONEY_ABSENT } from "../../format/format";
 import { LocaleProvider } from "../../i18n";
 import { vi as viCatalog } from "../../i18n/vi";
-import { AnalyticsScreen, buildStageAggregates } from "./analytics";
+import { AnalyticsScreen } from "./analytics";
+import { buildStageAggregates } from "./analytics.pipeline";
 import { SECTION_REPORTS } from "./analytics.reports";
 import {
   openPipeline,
@@ -29,7 +26,7 @@ type Stage = components["schemas"]["Stage"];
 const SECTION_REPORT_COUNT_PIPELINE = SECTION_REPORTS.pipeline.length;
 
 // Money never sums across currencies (AC-DS-FX1). Every plan this screen runs
-// groups by currency, so a stage or a category holding two currencies has two
+// groups by currency, so a stage or a band holding two currencies has two
 // totals and the screen shows both. It must never show one figure that added
 // them, or a currency it invented for a figure the server sent without one.
 describe("reports never sum money across currencies", () => {
@@ -140,7 +137,9 @@ describe("reports never sum money across currencies", () => {
     await openPipeline();
 
     expect(
-      (await stageTable()).getByText(formatMoney(250_000, "EUR", "en")),
+      (await stageTable()).getByText(
+        formatAnalyticsMoney(250_000, "EUR", "en"),
+      ),
     ).toBeTruthy();
     // One stage, one row: the count cell appears once.
     expect(screen.getAllByText("Qualify")).toHaveLength(1);
@@ -166,10 +165,10 @@ describe("reports never sum money across currencies", () => {
     // The count is real and stays; only the money is unknown.
     expect((await stageTable()).getByText("4")).toBeTruthy();
     expect(screen.getAllByText(MONEY_ABSENT).length).toBeGreaterThan(0);
-    expect(screen.queryByText(formatMoney(0, "EUR", "en"))).toBeNull();
+    expect(screen.queryByText(formatAnalyticsMoney(0, "EUR", "en"))).toBeNull();
   });
 
-  it("renders a forecast category with no deals as absent rather than as zero euros", async () => {
+  it("renders a probability band with no deals as absent rather than as zero euros", async () => {
     vi.stubGlobal("fetch", reportsStub({ forecastRows: [] }));
     render(<AnalyticsScreen />);
     await userEvent
@@ -178,7 +177,7 @@ describe("reports never sum money across currencies", () => {
     await waitFor(() =>
       expect(screen.getAllByText(MONEY_ABSENT).length).toBeGreaterThan(0),
     );
-    expect(screen.queryByText(formatMoney(0, "EUR", "en"))).toBeNull();
+    expect(screen.queryByText(formatAnalyticsMoney(0, "EUR", "en"))).toBeNull();
   });
 
   // One stage is one row: the server converts each deal before summing, so
@@ -321,31 +320,24 @@ describe("reports never sum money across currencies", () => {
     expect(screen.queryByText((text) => text.includes("priced"))).toBeNull();
   });
 
-  // The wire allows a deal to carry no forecast category: nobody has said which
-  // way it is going. The five named categories match none of it. A tile set
-  // built from the enum alone drops those deals off the screen: the money is
-  // not moved to another tile, it leaves. On the demo dataset that is 22 of 27
-  // open deals.
-  it("shows the deals that carry no forecast category at all", async () => {
+  // A band this build has no range for still holds deals. A tile set built
+  // from the known bands alone would drop that money off the screen rather
+  // than move it to another tile.
+  it("shows the deals of a band the server added since", async () => {
     vi.stubGlobal(
       "fetch",
       reportsStub({
-        // Converted rows: one per category, the server having already summed
-        // each deal in the base currency. This test is about the uncategorised
-        // row: on the demo dataset it is 22 of 27 open deals. A slot set built
-        // from the named enum alone does not move that money to another tile;
-        // it drops it off the screen.
         forecastRows: [
           {
-            forecast_category: "omitted",
+            win_probability_band: "zero",
             raw_minor: 58_860_000,
-            weighted_minor: 31_502_500,
+            weighted_minor: 0,
             deal_count: 5,
           },
           {
-            forecast_category: null,
+            win_probability_band: "95_plus",
             raw_minor: 202_720_000,
-            weighted_minor: 76_460_000,
+            weighted_minor: 196_000_000,
             deal_count: 17,
           },
         ],
@@ -357,22 +349,21 @@ describe("reports never sum money across currencies", () => {
       .click(await screen.findByRole("button", { name: "Pipeline" }));
 
     expect(
-      await screen.findByText(formatMoneyCompact(202_720_000, "EUR", "en")),
+      await screen.findByText(formatAnalyticsMoney(202_720_000, "EUR", "en")),
     ).toBeTruthy();
-    // And never folded into a named category: the two totals added together
-    // is the number that must not appear anywhere.
+    // And never folded into a known band: the two totals added together is
+    // the number that must not appear anywhere.
     expect(
-      screen.queryByText(formatMoneyCompact(261_580_000, "EUR", "en")),
+      screen.queryByText(formatAnalyticsMoney(261_580_000, "EUR", "en")),
     ).toBeNull();
   });
 
   // The forecast is one comparison, not one per currency.
   //
-  // A band per currency would be correct for native sums. But a manager would
-  // then compare commit against best case inside each currency, never across
-  // the business. The server converts, so there is one denomination. The proof is
+  // A strip per currency would be correct for native sums. But a manager would
+  // then compare bands inside each currency, never across the business. The server converts, so there is one denomination. The proof is
   // that no currency code appears as a heading over the tiles.
-  it("draws the categories as one comparison, in the base currency", async () => {
+  it("draws the bands as one comparison, in the base currency", async () => {
     const bodies: { key: string; body: Record<string, unknown> }[] = [];
     vi.stubGlobal(
       "fetch",
@@ -380,13 +371,13 @@ describe("reports never sum money across currencies", () => {
         onRun: (key, body) => bodies.push({ key, body }),
         forecastRows: [
           {
-            forecast_category: "commit",
+            win_probability_band: "90_plus",
             raw_minor: 2_500_000,
-            weighted_minor: 250_000,
+            weighted_minor: 2_250_000,
             deal_count: 1,
           },
           {
-            forecast_category: "best_case",
+            win_probability_band: "30_59",
             raw_minor: 920_000,
             weighted_minor: 460_000,
             deal_count: 1,
@@ -399,8 +390,8 @@ describe("reports never sum money across currencies", () => {
       .setup()
       .click(await screen.findByRole("button", { name: "Pipeline" }));
 
-    // Both categories, both figures, in the one base currency and compact.
-    const compact = (minor: number) => formatMoneyCompact(minor, "EUR", "en");
+    // Both bands, both figures, in the one base currency and compact.
+    const compact = (minor: number) => formatAnalyticsMoney(minor, "EUR", "en");
     expect(await screen.findByText(compact(2_500_000))).toBeTruthy();
     expect(screen.getByText(compact(920_000))).toBeTruthy();
 
@@ -408,7 +399,7 @@ describe("reports never sum money across currencies", () => {
     // two go together: a request that changed one without the other would
     // either band a single denomination or sum minor units across several.
     const plan = bodies.find((sent) => sent.key === "forecast");
-    expect(plan?.body.group_by).toEqual(["forecast_category"]);
+    expect(plan?.body.group_by).toEqual(["win_probability_band"]);
     expect(plan?.body.aggregates).toContainEqual({
       fn: "sum",
       field: "amount_base_minor",
@@ -420,16 +411,16 @@ describe("reports never sum money across currencies", () => {
   // says how many deals it is about, as well as what they are worth.
   //
   // The sum has no sound alternative: guessing a rate would invent money. But
-  // a tile printing the total alone would give €25,000 as the category's
+  // a tile printing the total alone would give 25,000 EUR as the band's
   // worth. It holds two deals, and one was left out. The count makes that
   // visible: two deals, one figure.
-  it("says how many deals a category holds, not only what it is worth", async () => {
+  it("says how many deals a band holds, not only what it is worth", async () => {
     vi.stubGlobal(
       "fetch",
       reportsStub({
         forecastRows: [
           {
-            forecast_category: "commit",
+            win_probability_band: "60_89",
             // Two deals; one is in a currency the sheet cannot price, so it
             // contributes nothing to the sum and is still counted.
             raw_minor: 2_500_000,
@@ -446,7 +437,7 @@ describe("reports never sum money across currencies", () => {
       .click(await screen.findByRole("button", { name: "Pipeline" }));
 
     expect(
-      await screen.findByText(formatMoneyCompact(2_500_000, "EUR", "en")),
+      await screen.findByText(formatAnalyticsMoney(2_500_000, "EUR", "en")),
     ).toBeTruthy();
     // Fragments on the tile's second line, never "Label: value" pairs: a
     // caption is read as one sentence about the figure above it. Where the
@@ -457,37 +448,8 @@ describe("reports never sum money across currencies", () => {
       text.includes("weighted · "),
     );
     expect(detail.textContent).toBe(
-      `${formatMoneyCompact(250_000, "EUR", "en")} weighted · 1 of 2 priced`,
+      `${formatAnalyticsMoney(250_000, "EUR", "en")} weighted · 1 of 2 priced`,
     );
-  });
-
-  // An installation whose deals are all categorised should not be shown an empty
-  // sixth tile asking about a state it never reaches.
-  it("draws no uncategorised tile when every deal has a category", async () => {
-    vi.stubGlobal(
-      "fetch",
-      reportsStub({
-        forecastRows: [
-          {
-            forecast_category: "commit",
-            currency: "EUR",
-            raw_minor: 1000,
-            weighted_minor: 900,
-            deal_count: 1,
-          },
-        ],
-      }),
-    );
-    render(<AnalyticsScreen />);
-    await userEvent
-      .setup()
-      .click(await screen.findByRole("button", { name: "Pipeline" }));
-    await waitFor(() =>
-      expect(
-        screen.getByText(formatMoneyCompact(1000, "EUR", "en")),
-      ).toBeTruthy(),
-    );
-    expect(screen.queryByText("No category yet")).toBeNull();
   });
 });
 

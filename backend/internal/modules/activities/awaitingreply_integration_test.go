@@ -11,6 +11,7 @@ package activities
 
 import (
 	"context"
+	"slices"
 	"testing"
 	"time"
 
@@ -20,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -187,6 +189,34 @@ func TestAReplyOrACallSettlesTheFollowUp(t *testing.T) {
 	}
 }
 
+// A meeting with the contact since the message settles it once its time has
+// passed, whether or not anyone reported it held. One still to come, a
+// canceled one and a no-show settle nothing.
+func TestAMeetingInTouchSinceSettlesTheFollowUp(t *testing.T) {
+	e := setupLoad(t)
+	s := storeAddressing(e, readerAddress)
+
+	for name, tc := range map[string]struct {
+		status  string
+		ago     time.Duration
+		settles bool
+	}{
+		"nobody reported it": {"", 2 * time.Hour, true},
+		"still booked":       {"booked", 2 * time.Hour, true},
+		"held":               {"held", 2 * time.Hour, true},
+		"still to come":      {"booked", -2 * 24 * time.Hour, false},
+		"canceled":           {"canceled", 2 * time.Hour, false},
+		"a no-show":          {"no_show", 2 * time.Hour, false},
+	} {
+		contact := e.customerAt(t, "prospect")
+		owed, _ := e.sentTo(t, contact, "", 3*24*time.Hour)
+		e.metWith(t, contact, e.rep, tc.status, tc.ago)
+		if got := !awaited(t, s, e, owed); got != tc.settles {
+			t.Errorf("a meeting %s since settled the follow-up: %v, want %v", name, got, tc.settles)
+		}
+	}
+}
+
 func TestOnlyTheReadersOwnMailToACustomerIsAFollowUp(t *testing.T) {
 	e := setupLoad(t)
 	s := storeAddressing(e, readerAddress)
@@ -309,7 +339,7 @@ func TestAnImportedInboundIsNeverOwedAReply(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		states, err := EmailStatesFor(e.followUpReader(), tx, []ids.UUID{activity})
+		states, err := EmailStatesFor(e.followUpReader(), tx, []ids.UUID{activity}, clocktest.Now(t))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -348,7 +378,7 @@ func TestTheFollowUpLaneAndTheBadgeAgreeOnASentMessage(t *testing.T) {
 				t.Fatal(err)
 			}
 		}()
-		states, err := EmailStatesFor(e.followUpReader(), tx, []ids.UUID{plain, invitation})
+		states, err := EmailStatesFor(e.followUpReader(), tx, []ids.UUID{plain, invitation}, clocktest.Now(t))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -446,6 +476,51 @@ func TestASharedMailboxAddressIsEachListingSeatsFollowUp(t *testing.T) {
 	for seat, name := range map[ids.UUID]string{e.rep: "reader", e.other: "colleague"} {
 		if !awaitedAs(e.followUpReaderAs(seat), t, s, logged) {
 			t.Errorf("the %s, who lists the shared address, is not given the mail logged from it", name)
+		}
+	}
+}
+
+// Off the thread only the contact since decides. At one stored instant their message is news our mail
+// did not answer, unless a date on either side makes our mail its answer.
+func TestATieOffTheThreadIsContactSinceOnlyBetweenTwoInstants(t *testing.T) {
+	e := setupLoad(t)
+	s := storeAddressing(e, readerAddress)
+	now := clocktest.Now(t)
+	sent := occurredday.Anchor(now.Add(-3 * 24 * time.Hour))
+	in, out := string(crmcontracts.ActivityDirectionInbound), string(crmcontracts.ActivityDirectionOutbound)
+	for _, c := range []struct {
+		name      string
+		kind      string
+		precision string
+		followUp  bool
+	}{
+		{"their call, both instants", "call", PrecisionInstant, false},
+		{"their call, both by date", "call", PrecisionDay, true},
+		{"their mail with no thread, both instants", "email", PrecisionInstant, false},
+		{"their mail with no thread, both by date", "email", PrecisionDay, true},
+	} {
+		links := []ActivityLinkInput{{EntityType: "contact", EntityID: e.customerAt(t, "prospect")}}
+		subject := "The proposal"
+		ours, _, err := s.LogActivity(e.asSeat(e.rep), LogActivityInput{
+			Kind: "email", Source: "manual", Direction: &out, Subject: &subject, OccurredAt: &sent,
+			OccurredPrecision: c.precision, ThreadKey: "thread-" + ids.NewV7().String(), Links: links,
+		})
+		if err != nil {
+			t.Fatalf("%s: logging our mail: %v", c.name, err)
+		}
+		if _, _, err := s.LogActivity(e.asSeat(e.rep), LogActivityInput{
+			Kind: c.kind, Source: "manual", Direction: &in, Subject: &subject, OccurredAt: &sent,
+			OccurredPrecision: c.precision, Links: links,
+		}); err != nil {
+			t.Fatalf("%s: logging their %s: %v", c.name, c.kind, err)
+		}
+		rows, _, err := s.AwaitingReplies(e.followUpReader(), now)
+		if err != nil {
+			t.Fatalf("%s: reading follow-ups: %v", c.name, err)
+		}
+		got := slices.ContainsFunc(rows, func(row AwaitingReply) bool { return row.ActivityID == ids.UUID(ours.Id) })
+		if got != c.followUp {
+			t.Errorf("%s: our mail is a follow-up = %v, want %v", c.name, got, c.followUp)
 		}
 	}
 }

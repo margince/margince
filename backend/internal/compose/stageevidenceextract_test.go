@@ -19,6 +19,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/aitasks"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/shared/kernel/promptref"
 	"github.com/margince/margince/backend/internal/shared/schema"
 )
 
@@ -45,7 +46,8 @@ func oneClaim(t *testing.T, claim stageEvidenceClaim) string {
 	if err != nil {
 		t.Fatalf("rendering a reply: %v", err)
 	}
-	return string(raw)
+	// Written in span ids, read as the model writes it: in the refs shown.
+	return promptref.Rewrite(string(raw), stageEvidenceSpanRefs(evidenceSpans))
 }
 
 // groundedClaim is a reply this site accepts, and the control every refusal
@@ -100,7 +102,7 @@ func TestTheReplySchemaClosesCitationsToThisCallsOwn(t *testing.T) {
 	}
 	for name, reply := range map[string]string{
 		"an unlisted criterion": strings.Replace(oneClaim(t, groundedClaim()), "security_review", "legal_review", 1),
-		"an unsupplied source":  strings.Replace(oneClaim(t, groundedClaim()), evidenceSpans[0].SourceID, "01a07000-0000-7000-8000-00000000dead", 1),
+		"an unsupplied source":  strings.Replace(oneClaim(t, groundedClaim()), `"source_id":"s1"`, `"source_id":"s9"`, 1),
 		"a fractional line":     strings.Replace(oneClaim(t, groundedClaim()), `"source_lines":[1]`, `"source_lines":[1.5]`, 1),
 	} {
 		if err := schema.ValidateJSON(shape, reply); err == nil {
@@ -254,7 +256,7 @@ func TestEverySpanReachesTheModelInsideItsOwnFence(t *testing.T) {
 	prompt := req.Messages[0].Content
 	for _, span := range evidenceSpans {
 		for i, line := range span.Lines {
-			addressed := span.SourceID + ":" + strconv.Itoa(i+1)
+			addressed := stageEvidenceSpanRefs(evidenceSpans).For(span.SourceID) + ":" + strconv.Itoa(i+1)
 			if !strings.Contains(prompt, addressed) {
 				t.Errorf("span %s line %d is not addressed in the prompt, so a "+
 					"claim could not cite it", span.SourceID, i+1)
@@ -286,7 +288,7 @@ func TestEverySpanReachesTheModelInsideItsOwnFence(t *testing.T) {
 	fenced := 0
 	for _, span := range evidenceSpans {
 		for i, line := range span.Lines {
-			addressed := span.SourceID + ":" + strconv.Itoa(i+1)
+			addressed := stageEvidenceSpanRefs(evidenceSpans).For(span.SourceID) + ":" + strconv.Itoa(i+1)
 			// The SHAPE, not mere presence: an opening tag carrying this
 			// line's address, then this line, then the matching close.
 			wrapped := "<" + nonce[1] + ` span="` + addressed + `">` + line +

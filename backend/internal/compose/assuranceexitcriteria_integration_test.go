@@ -46,8 +46,8 @@ func TestACriterionCountsAsMetOnlyOnUnrefutedEvidenceSayingSo(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			deal := integration.SeedIDRow(t, owner, `
 				INSERT INTO deal (id, pipeline_id, stage_id, name, owner_id, status,
-				                  source, captured_by, forecast_category)
-				VALUES ($1, $2, $3, 'Exit criteria subject', $4, 'open', 'manual', 'test', 'commit')`,
+				                  source, captured_by, win_probability_override, win_probability_set_by)
+				VALUES ($1, $2, $3, 'Exit criteria subject', $4, 'open', 'manual', 'test', 95, 'human')`,
 				pipeline, open, e.Rep1)
 			if tc.attach {
 				// Both halves of the refutation or neither: the table refuses

@@ -67,6 +67,15 @@ func TestCapturedPartiesMeetingNeedsTheCapturingSeatsAttendance(t *testing.T) {
 			}
 			sink := newCaptureSink(e.Pool, CaptureConfig{})
 			ref, err := sink.Upsert(calendarOwnerCtx(e, e.AdminUser), rec)
+			if tc.ownerResponse == connector.ResponseDeclined {
+				if !errors.Is(err, connector.ErrSkip) {
+					t.Fatalf("an unseen declined invitation must be skipped: %v", err)
+				}
+				if n := e.WsCount(t, `SELECT count(*) FROM contact_email WHERE lower(email)=$1 AND archived_at IS NULL`, tc.guest); n != 0 {
+					t.Fatalf("a declined invitation admitted %d guest contacts", n)
+				}
+				return
+			}
 			if err != nil {
 				t.Fatal(err)
 			}

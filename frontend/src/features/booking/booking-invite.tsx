@@ -3,17 +3,19 @@ import { X } from "lucide-react";
 import { useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import { useActivityGate } from "../../components/activitygate";
 import { Breadcrumb } from "../../design-system/breadcrumb";
 import { ChoiceList } from "../../design-system/choicelist";
 import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
 import { IconAction } from "../../design-system/iconaction";
-import { viewerZone } from "../../format/timezone";
 import { useT } from "../../i18n";
 import { contactQuery } from "../../lib/contact.queries";
 import { unwrap } from "../../lib/problem";
 import { navigate } from "../../lib/router";
 import { useSchedulingProfile } from "../../lib/scheduling-profile-query";
+import { useUrlParams } from "../../lib/urlstate";
+import { useViewerZone } from "../../lib/viewerzone";
 import { useBookingCalendar } from "./booking-calendar-state";
 import {
   BookingBlocked,
@@ -41,7 +43,9 @@ export function BookingInviteScreen({
   contactId,
 }: Readonly<{ contactId?: string }>) {
   const t = useT();
-  const [zone, setZone] = useState(viewerZone);
+  // A signed-in host starts from their own zone.
+  const readerZone = useViewerZone();
+  const [zone, setZone] = useState(readerZone);
   const [mode, setMode] = useState<BookingMode>("propose");
   const [picks, setPicks] = useState<BookingSlot[]>([]);
   const [edits, setEdits] = useState<Edits>({});
@@ -54,12 +58,21 @@ export function BookingInviteScreen({
     ...contactQuery(selectedId || undefined),
     enabled: !!selectedId,
   });
+  const activity = useActivityGate(
+    contact.isError ? null : (contact.data ?? null),
+  );
   const saved = profile.data;
   const provider = saved?.provider ?? "";
   const { ready, connections } = useBookingCalendar(provider, false);
   const settled = !profile.isPending && !connections.isPending;
   const name = contact.data?.full_name;
-  const draft = bookingDraft(edits, contact.data, saved, selectedId, t);
+  const [params] = useUrlParams();
+  const draft = {
+    ...bookingDraft(edits, contact.data, saved, selectedId, t),
+    dealId:
+      selectedId === contactId ? (params.get("deal") ?? undefined) : undefined,
+    replyToActivityId: params.get("activity") ?? undefined,
+  };
   const edit = (change: BookingEdit) =>
     setEdits((current) => ({
       ...current,
@@ -82,6 +95,7 @@ export function BookingInviteScreen({
         onClose={back}
       />
       <ErrorLine error={profile.error} />
+      <ErrorLine error={contact.error} />
       <ChoiceList
         legend={t("scheduling.method")}
         hideLegend
@@ -136,6 +150,10 @@ export function BookingInviteScreen({
           />
         )}
         <BookingReview
+          contactPending={activity.pending}
+          contactRefusal={
+            activity.refusalKey ? t(activity.refusalKey) : undefined
+          }
           mode={mode}
           draft={draft}
           onEdit={edit}

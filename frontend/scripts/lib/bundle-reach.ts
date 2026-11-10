@@ -41,6 +41,7 @@ export type Program = {
   readonly aliases: ReadonlyMap<string, string>;
   /** Files whose literals are the keys themselves. */
   readonly catalogs: ReadonlySet<string>;
+  readonly dynamicImports?: boolean;
 };
 
 export type Module = {
@@ -118,10 +119,10 @@ function isPropertyName(node: ts.Node): boolean {
 }
 
 // Comments are trivia and types are erased, so a key named only there is unseen.
-function readModule(path: string, text: string): Module {
+function readModule(path: string, text: string, dynamicImports = true): Module {
   const source = parseSource(path, text);
   const found: { [field in keyof Module]: string[] } = {
-    specifiers: moduleSpecifiers(source, "values"),
+    specifiers: moduleSpecifiers(source, dynamicImports ? "values" : "static"),
     globs: [],
     literals: [],
     stems: [],
@@ -155,7 +156,9 @@ export function moduleGraph(program: Program): ModuleGraph {
     if (text === undefined) return undefined;
     const known = parsed.get(path);
     if (known !== undefined) return known;
-    const module = program.catalogs.has(path) ? SILENT : readModule(path, text);
+    const module = program.catalogs.has(path)
+      ? SILENT
+      : readModule(path, text, program.dynamicImports);
     parsed.set(path, module);
     return module;
   };
@@ -277,14 +280,23 @@ export function reachedModules(
       readFileSync(path, "utf8"),
     ]),
   );
+  return reachedModulesIn(tree, extra);
+}
+
+/** The modules the shipped bundle loads out of a tree the caller already read. */
+export function reachedModulesIn(
+  tree: SourceTree,
+  extra: { readonly catalogs?: ReadonlySet<string> } = {},
+  entries: readonly string[] = [
+    ...documentEntries(),
+    ...surfaceEntries(),
+    ...buildScriptEntries(),
+  ],
+): ReadonlyMap<string, Module> {
   const graph = moduleGraph({
     tree,
     aliases: aliases(),
     catalogs: extra.catalogs ?? new Set<string>(),
   });
-  return graph.reach([
-    ...documentEntries(),
-    ...surfaceEntries(),
-    ...buildScriptEntries(),
-  ]);
+  return graph.reach(entries);
 }

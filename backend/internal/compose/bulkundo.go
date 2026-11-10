@@ -192,6 +192,9 @@ func undoOne(
 	}
 	applied, skip, err := appliedAt(ctx, tx, change.recordType, sample)
 	applied.restored = restored
+	if change.verb == crmcontracts.BulkVerbArchive && skip.Reason == "" && err == nil {
+		applied.restoredID = new(ids.UUID(item.Id))
+	}
 	for _, left := range leftBehind {
 		applied.leftBehind = append(applied.leftBehind, crmcontracts.BulkLeftBehind{
 			Id: item.Id, Kind: crmcontracts.BulkLeftBehindKind(left.Kind), RefId: openapi_types.UUID(left.ID),

@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/settings/settingssignaturerow.tsx frontend/src/features/mail/composesignoff.tsx backend/internal/modules/contacts/emailsignature.go backend/internal/modules/activities/signature.go backend/internal/modules/activities/signaturetemplate.go -->
+<!-- describes: frontend/src/features/settings/settingssignaturerow.tsx frontend/src/features/mail/composesignoff.tsx backend/internal/modules/contacts/emailsignature.go backend/internal/modules/activities/signature.go backend/internal/modules/activities/signaturetemplate.go frontend/src/features/settings/legalentityeditor.tsx -->
 # Your email signature
 
 Open **Settings → Account → Edit signature**. Choose **Plain text** to write a
@@ -11,11 +11,16 @@ plain text. Clear the HTML field, or choose **Plain text** and save, to use the
 company template again. With none of these set, a send ends with a short greeting
 and your name.
 
+An Admin can assign you to one of the companies on the **Legal entities** card.
+If that company has its own template, it takes the place of the company template.
+The logo is then that company's, and one without a logo shows none. The template
+can also show that company's imprint.
+
 The greeting follows the message's language. When the message is too short to
 tell, Margince uses the installation's language, then English.
 
 The HTML preview shows what a send keeps. Images from websites and scripts are
-removed. Only the built-in company logo can be embedded; other image attachments
+removed. Only the built-in logo of the company you work for can be embedded; other image attachments
 are removed too.
 
 If no text remains, the usual fallback signs the mail.

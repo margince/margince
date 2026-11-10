@@ -1,0 +1,23 @@
+{
+  "scenario": "case1_log_it",
+  "criteria": [
+    8
+  ],
+  "passed": 2,
+  "runs": 2,
+  "pass_at": 2,
+  "driver": "gemini:cli",
+  "effort": "reasoning medium",
+  "system_prompt": "cli-default",
+  "search": "semantic",
+  "self_judged": false,
+  "usage": {
+    "input_tokens": 301588,
+    "output_tokens": 36450,
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 1613602,
+    "runs_measured": 2,
+    "runs_costed": 0,
+    "cost_usd": null
+  }
+}

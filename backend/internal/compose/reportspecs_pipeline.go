@@ -47,7 +47,8 @@ func pipelineCurrentSpec() reportSpec {
 		// currencies and get a number with no unit: 10,000 EUR + 10,000 USD =
 		// 20,000 of nothing, where the answer is 15,000 EUR. deals-by-stage
 		// still serves the native figures, and it groups by currency.
-		measures: baseMoneyMeasures(nil),
+		measures:    baseMoneyMeasures(nil),
+		sumCoverage: baseMoneyCoverage(),
 		filters: map[string]string{
 			fieldPipelineID:       colPipelineID,
 			fieldOwnerID:          colOwnerID,
@@ -122,4 +123,16 @@ func baseMoneyMeasures(native map[string]string) map[string]string {
 	}
 	maps.Copy(measures, native)
 	return measures
+}
+
+func baseMoneyCoverage(fields ...string) map[string]string {
+	if len(fields) == 0 {
+		fields = []string{fieldAmountBaseMinor, fieldWeightedBaseMinor}
+	}
+	missing := "CASE WHEN t.amount_minor IS NOT NULL AND (" + pipelineBaseValueExpr + ") IS NULL THEN 1 ELSE 0 END"
+	out := make(map[string]string, len(fields))
+	for _, field := range fields {
+		out[field] = missing
+	}
+	return out
 }

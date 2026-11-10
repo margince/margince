@@ -25,10 +25,12 @@ package draftcore
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"slices"
 	"strings"
 
+	"github.com/margince/margince/backend/internal/compose/claims"
 	"github.com/margince/margince/backend/internal/compose/draftcheck"
 	"github.com/margince/margince/backend/internal/compose/draftvoice"
 	"github.com/margince/margince/backend/internal/compose/promptlang"
@@ -97,13 +99,7 @@ type Input interface {
 	CoRecipientNames() []string
 	// Addresses is where the draft is sent, empty when the record holds none.
 	Addresses() []string
-	// Threaded says whether this draft answers a message THEY sent, which is
-	// what lets a subject carry "Re:" past the phrasing checks.
-	Threaded() bool
-	// ThreadSubject is the subject of the email thread this draft continues,
-	// whoever wrote last, and false when there is none. The served subject is
-	// set from it in code (see ContinueThread).
-	ThreadSubject() (string, bool)
+	RequestedSubject() string
 	// Booked says whether the record carries a meeting with this recipient.
 	//
 	// False is the common answer and the one that binds: with nothing booked, a
@@ -133,10 +129,23 @@ type Surface struct {
 	// draft also admits a dossier line, which is a fact about the company with
 	// no record of ours behind it.
 	KeepUncited func(kind crmcontracts.AccountDraftReasonKind, label string) bool
-	// Cites answers what kind of record this id is, as the caller can see it —
-	// so a citation can be checked against the type the model claimed. Empty
-	// means "no such record here", which drops the chip.
-	Cites func(entityID string) string
+	// Known is each record a citation may name, by id, with the kind the
+	// caller can see it as. That lets a citation be checked against the type
+	// the model claimed. The payload shows each by a ref of that kind. An id it
+	// does not hold is shown by a ref no citation can name.
+	Known map[string]string
+}
+
+// shown is the payload as the model reads it, every record id written as a
+// ref, and the refs a reply's citations read back through. BuildRequest and
+// ParseDraft both call it, so a ref names one record in both.
+func (s Surface) shown(in Input) (string, claims.Refs, error) {
+	payload, err := json.Marshal(in.Fenced())
+	if err != nil {
+		return "", nil, fmt.Errorf("marshal %s input: %w", s.Name, err)
+	}
+	refs := claims.MintKinds(string(payload), s.Known)
+	return refs.Show(string(payload)), refs, nil
 }
 
 // schema is the answer's shape: closed at every level, subject then body then
@@ -218,7 +227,7 @@ func writeChecked(
 		func(ctx context.Context, correction string) (Draft, error) {
 			return writeWithModel(ctx, lane, surface, in, voice, correction)
 		},
-		DraftText, DraftSubject(in),
+		DraftText, DraftSubject,
 		// No observer: these packages hold no logger, and a retry that does not
 		// help still returns a real draft. The reply surface, which has one,
 		// reports it.
@@ -232,7 +241,12 @@ func writeChecked(
 		return Draft{}, err
 	}
 	served.Body = draftcheck.EnsureGreeting(served.Body, envelope, groundsOf(in))
-	served.Subject = ContinueThread(served.Subject, in)
+	if draftcheck.ClaimsAttachment(served.Body) {
+		return Draft{}, errors.New("draft claims an outgoing attachment that was not supplied")
+	}
+	if subject := in.RequestedSubject(); subject != "" {
+		served.Subject = subject
+	}
 	return served, nil
 }
 
@@ -267,11 +281,11 @@ func writeWithModel(
 // the caller's steering, and this surface's prompt and schema.
 func BuildRequest(surface Surface, in Input, voice draftvoice.Context) (model.Request, error) {
 	fence := promptfence.New()
-	payload, err := json.Marshal(in.Fenced())
+	shown, _, err := surface.shown(in)
 	if err != nil {
-		return model.Request{}, fmt.Errorf("marshal %s input: %w", surface.Name, err)
+		return model.Request{}, err
 	}
-	content := fence.Wrap(string(payload))
+	content := fence.Wrap(shown)
 	if block := voice.Block(fence); block != "" {
 		content += "\n\n" + block
 	}
@@ -345,11 +359,15 @@ func ParseDraft(surface Surface, raw string, in Input) (Draft, error) {
 	if subject == "" || body == "" {
 		return Draft{}, fmt.Errorf("%s response: empty subject or body", surface.Name)
 	}
+	_, refs, err := surface.shown(in)
+	if err != nil {
+		return Draft{}, err
+	}
 	return Draft{
 		Subject:   subject,
 		Body:      body,
 		To:        in.Addresses(),
-		Reasoning: keepGroundedReasons(surface, out.Reasoning),
+		Reasoning: keepGroundedReasons(surface, refs, out.Reasoning),
 	}, nil
 }
 
@@ -359,7 +377,7 @@ func ParseDraft(surface Surface, raw string, in Input) (Draft, error) {
 // caller cannot see, or one labelled as the wrong kind, opens the WRONG record's
 // page rather than nothing at all — which is the worse of the two failures,
 // because it looks like it worked.
-func keepGroundedReasons(surface Surface, reasons []modelReason) []Reason {
+func keepGroundedReasons(surface Surface, refs claims.Refs, reasons []modelReason) []Reason {
 	out := make([]Reason, 0, len(reasons))
 	for _, reason := range reasons {
 		kind, ok := surface.kind(reason.Kind)
@@ -374,15 +392,14 @@ func keepGroundedReasons(surface Surface, reasons []modelReason) []Reason {
 			// the wrong record's page rather than nothing at all — the worse of
 			// the two failures, because it looks like it worked.
 			//
-			// An id this draft never read resolves to "", and so does a null
-			// type — so the id must resolve before the pair is compared, or a
-			// made-up id with no type would match nothing to nothing.
-			cited := surface.Cites(reason.EntityID)
-			if cited == "" || cited != reason.EntityType {
+			// A ref this payload never showed, or showed as another kind, reads
+			// back to nothing, and so does a null type.
+			id, ok := refs.ID(reason.EntityType, reason.EntityID)
+			if !ok || reason.EntityType == "" || surface.Known[id] != reason.EntityType {
 				continue
 			}
 			keep.EntityType = reason.EntityType
-			keep.EntityID = reason.EntityID
+			keep.EntityID = id
 		} else if !surface.KeepUncited(kind, label) {
 			// A reason with no citation is only honest where nothing was there
 			// to cite. An uncited "deal" is a claim about a record with no
@@ -407,12 +424,8 @@ func groundsOf(in Input) draftcheck.Grounds {
 // labels beside it.
 func DraftText(d Draft) (string, []string) { return d.Body, ReasonLabels(d.Reasoning) }
 
-// DraftSubject is the subject a phrasing check judges, and whether it continues
-// an existing thread — a threaded subject is not held to the same rules as one
-// opening a conversation.
-func DraftSubject(in Input) func(Draft) (string, bool) {
-	return func(d Draft) (string, bool) { return d.Subject, in.Threaded() }
-}
+// DraftSubject checks subjects on the new-message surfaces.
+func DraftSubject(d Draft) (string, bool) { return d.Subject, false }
 
 // ReasonLabels is the reasoning as plain strings, for the phrasing checks.
 func ReasonLabels(reasons []Reason) []string {

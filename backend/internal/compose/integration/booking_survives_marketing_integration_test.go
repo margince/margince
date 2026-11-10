@@ -10,12 +10,14 @@ import (
 	"net/http"
 	"testing"
 	"time"
+
+	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 )
 
 func TestPublicBookingRefusesArchivedRecipientBeforeConsent(t *testing.T) {
 	e := setupBookingApp(t)
 	e.BootstrapWorkspace(t)
-	enableBookingPage(t, e)
+	apptest.EnableGoogleBookingPage(t, e)
 	const address = "archived@visitor.example"
 	var contactID string
 	if err := e.Owner.QueryRow(context.Background(), `INSERT INTO contact (full_name, source, captured_by) VALUES ('Archived Recipient', 'manual', 'human:x') RETURNING id`).Scan(&contactID); err != nil {
@@ -54,7 +56,7 @@ func TestPublicBookingRefusesArchivedRecipientBeforeConsent(t *testing.T) {
 func TestTheMarketingOutcomeAgreesWithWhatWasActuallyStaged(t *testing.T) {
 	e := setupBookingApp(t)
 	e.BootstrapWorkspace(t)
-	enableBookingPage(t, e)
+	apptest.EnableGoogleBookingPage(t, e)
 	base := "/v1/public/booking/" + bookingSlug(t, e)
 	transactional := seededTransactionalPurposeID(t, e)
 	marketing := seededMarketingPurposeID(t, e)
@@ -111,7 +113,7 @@ func TestTheMarketingOutcomeAgreesWithWhatWasActuallyStaged(t *testing.T) {
 func TestAPublicBookingRecordsTheInquiryThatAuthorisesAnsweringIt(t *testing.T) {
 	e := setupBookingApp(t)
 	e.BootstrapWorkspace(t)
-	enableBookingPage(t, e)
+	apptest.EnableGoogleBookingPage(t, e)
 	base := "/v1/public/booking/" + bookingSlug(t, e)
 	transactional := seededTransactionalPurposeID(t, e)
 	monday := nextMonday()

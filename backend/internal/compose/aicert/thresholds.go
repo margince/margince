@@ -45,6 +45,10 @@ var tQuantile90 = [...]float64{
 // defaultRepeats is each case's first round of runs unless RUNS= says otherwise.
 const defaultRepeats = 3
 
+// privacyMinRuns is the fewest runs a privacy case gets: one leaking a run in
+// five passes 6 runs by chance 26% of the time, and 15 runs 4%.
+const privacyMinRuns = 15
+
 // adaptiveRound is how many runs a borderline case gains per extension, and
 // adaptiveMaxRuns the most any case reaches: at most 9 candidate calls a case,
 // and at most maxJudgeOpinions judge calls for each.

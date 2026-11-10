@@ -16,17 +16,19 @@ import { CommitmentReview } from "../../design-system/commitmentreview";
 import { DrawerBody, DrawerHead } from "../../design-system/drawerbands";
 import { Eyebrow } from "../../design-system/eyebrow";
 import { Heading } from "../../design-system/heading";
-import { Markdown } from "../../design-system/markdown";
+import { NoteMarkdown } from "../../design-system/markdown";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { SurfaceState } from "../../design-system/surfacestate";
 import { TIMELINE_KIND_LABEL } from "../../design-system/timelineentry";
 import { isTranscriptActivity } from "../../design-system/transcriptread";
 import { formatActivityWhen } from "../../format/activitywhen";
-import { formatDate, formatNumber } from "../../format/format";
+import { formatDue, formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { activityFollowUpsKey, TASK_QUEUE_KEY } from "../../lib/activitykeys";
 import { useActivity } from "../../lib/activityread";
+import { callOutcomeLabel } from "../../lib/calloutcome";
 import { useCanWrite } from "../../lib/capability";
+import { labelFor } from "../../lib/labelfor";
 import { problemCodeOf } from "../../lib/problem";
 import { ActivityFiles } from "../records/activityfiles";
 import { ActivityFollowUps } from "../records/activityfollowups";
@@ -120,7 +122,9 @@ function ActivityDetail({
     >
       <DrawerHead>
         {activity?.archived_at && <Badge>{t("record.archived")}</Badge>}
-        {activity && <Eyebrow>{t(TIMELINE_KIND_LABEL[activity.kind])}</Eyebrow>}
+        {activity && (
+          <Eyebrow>{t(labelFor(TIMELINE_KIND_LABEL, activity.kind))}</Eyebrow>
+        )}
         <Heading size="large" id={titleId} className="t-h2 modal-title">
           {activityTitle(activity, t)}
         </Heading>
@@ -192,10 +196,16 @@ function ActivityBody({
               {" "}
               ·{" "}
               {t("co.next.due", {
-                when: formatDate(activity.due_at, locale, zone),
+                when: formatDue(
+                  activity.due_at,
+                  activity.due_has_time,
+                  locale,
+                  zone,
+                ),
               })}
             </>
-          )}{" "}
+          )}
+          <CallOutcomeNote activity={activity} />{" "}
           {activity.is_done && (
             <Badge tone="success">{t("tasks.isDone")}</Badge>
           )}
@@ -420,7 +430,7 @@ function withheldOrBody(
   });
   return markdown ? (
     <div className="t-body">
-      <Markdown source={body} autolink />
+      <NoteMarkdown source={body} />
     </div>
   ) : (
     <p className="t-body" style={{ whiteSpace: "pre-wrap" }}>
@@ -447,5 +457,16 @@ function activityTitle(
 ): string {
   if (!activity) return t("activity.detail.none");
   if (activity.content_state === "withheld") return t("timeline.withheld");
-  return activity.subject?.trim() || t(TIMELINE_KIND_LABEL[activity.kind]);
+  return (
+    activity.subject?.trim() || t(labelFor(TIMELINE_KIND_LABEL, activity.kind))
+  );
+}
+
+/** How a call ended, after its time. Nothing on a call without an outcome. */
+function CallOutcomeNote({
+  activity,
+}: Readonly<{ activity: Pick<Activity, "kind" | "call_outcome"> }>) {
+  const t = useT();
+  const label = callOutcomeLabel(activity, t);
+  return label ? <> · {label}</> : null;
 }

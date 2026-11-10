@@ -110,6 +110,7 @@ export function DisqualifyDialog({
         {(control) => (
           <Textarea
             {...control}
+            grow
             value={note}
             onChange={(event) => setNote(event.target.value)}
           />

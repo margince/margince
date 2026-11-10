@@ -147,7 +147,7 @@ func WorkingHoursOf(ctx context.Context, tx pgx.Tx, user ids.UserID) (WorkingHou
 
 // MyWorkingHours answers the CALLER's own.
 func (s *Service) MyWorkingHours(ctx context.Context) (WorkingHours, bool, error) {
-	human, err := selfScoped(ctx)
+	human, err := ownSettingsSeat(ctx)
 	if err != nil {
 		return WorkingHours{}, false, err
 	}
@@ -163,13 +163,16 @@ func (s *Service) MyWorkingHours(ctx context.Context) (WorkingHours, bool, error
 	return hours, chosen, nil
 }
 
-// SaveMyWorkingHours records the CALLER's own hours, days and zone.
+// SaveMyWorkingHours records the CALLER's own hours and days. They are read on
+// the caller's own time zone. A non-empty in.Timezone, which an older client
+// still sends, is stored as the caller's chosen zone through writeTimezoneTx
+// in the same transaction. The answer carries the zone the hours are read on.
 //
 // Self-scoped from the authenticated principal, never from a body field: an id
 // on the request would be an admin's way to set a colleague's working hours,
 // which is the shape this setting exists to refuse.
 func (s *Service) SaveMyWorkingHours(ctx context.Context, in WorkingHours) (WorkingHours, error) {
-	human, err := selfScoped(ctx)
+	human, err := ownSettingsSeat(ctx)
 	if err != nil {
 		return WorkingHours{}, err
 	}
@@ -177,18 +180,25 @@ func (s *Service) SaveMyWorkingHours(ctx context.Context, in WorkingHours) (Work
 	if err != nil {
 		return WorkingHours{}, err
 	}
+	if in.Timezone != "" && values.ZoneName(in.Timezone) != nil {
+		return WorkingHours{}, &WorkingHoursError{
+			Field:   fieldWorkTimezone,
+			Message: "a timezone is an IANA name, such as Europe/Berlin",
+		}
+	}
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		before, _, err := WorkingHoursOf(ctx, tx, ids.From[ids.UserKind](human))
 		if err != nil {
 			return err
 		}
+		normalized.Timezone = before.Timezone
 		days := weekdayColumn(normalized.Days)
 		tag, err := tx.Exec(ctx, `
 			UPDATE app_user
-			   SET work_start_minute = $2, work_end_minute = $3, work_days = $4, timezone = $5
+			   SET work_start_minute = $2, work_end_minute = $3, work_days = $4
 			 WHERE id = $1 AND `+LiveMemberSQL(""),
 			human, minuteColumn(normalized.StartMinute), minuteColumn(normalized.EndMinute),
-			days, normalized.Timezone)
+			days)
 		if err != nil {
 			return fmt.Errorf("identity: saving working hours: %w", err)
 		}
@@ -204,7 +214,16 @@ func (s *Service) SaveMyWorkingHours(ctx context.Context, in WorkingHours) (Work
 			workingHoursImage(before), workingHoursImage(normalized)); err != nil {
 			return err
 		}
-		return nil
+		if in.Timezone == "" {
+			return nil
+		}
+		source := TimezoneChosen
+		if _, isAgent := callingAgent(ctx); isAgent {
+			source = TimezoneFromAgent
+		}
+		seat, err := writeTimezoneTx(ctx, tx, ids.From[ids.UserKind](human), in.Timezone, source)
+		normalized.Timezone = seat.Timezone
+		return err
 	})
 	if err != nil {
 		return WorkingHours{}, err
@@ -212,11 +231,19 @@ func (s *Service) SaveMyWorkingHours(ctx context.Context, in WorkingHours) (Work
 	return normalized, nil
 }
 
+// ownSettingsSeat is whose own settings a call changes: the caller, or the user
+// an agent works for. Its audit row still names the agent.
+func ownSettingsSeat(ctx context.Context) (ids.UUID, error) {
+	actor, ok := principal.Actor(ctx)
+	if !ok || !actor.HumanOrItsAgent() || actor.UserID.IsZero() {
+		return ids.UUID{}, apperrors.ErrPermissionDenied
+	}
+	return actor.UserID, nil
+}
+
 // selfScoped is the caller, refusing anybody who is not a human seat.
 //
-// Deliberately NOT actingHuman: that resolves the human an agent is acting
-// under, which is right for attributing work and wrong here. An agent carrying
-// its grantor's authority must not change when its grantor is bookable.
+// It guards a seat's sign-in and sessions, which an agent never touches.
 func selfScoped(ctx context.Context) (ids.UUID, error) {
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.Type != principal.PrincipalHuman || actor.UserID.IsZero() {
@@ -282,16 +309,7 @@ func validWorkingHours(in WorkingHours) (WorkingHours, error) {
 		days = append(days, day)
 	}
 	sort.Ints(days)
-	if err := values.ZoneName(in.Timezone); err != nil {
-		return WorkingHours{}, &WorkingHoursError{
-			Field:   fieldWorkTimezone,
-			Message: "a timezone is an IANA name, such as Europe/Berlin",
-		}
-	}
-	return WorkingHours{
-		StartMinute: in.StartMinute, EndMinute: in.EndMinute,
-		Days: days, Timezone: in.Timezone,
-	}, nil
+	return WorkingHours{StartMinute: in.StartMinute, EndMinute: in.EndMinute, Days: days}, nil
 }
 
 // WorkingHoursError names the control a refusal is about, so a settings form

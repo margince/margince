@@ -23,7 +23,6 @@ const LABELS = {
   bulletList: "Bulleted list",
   numberList: "Numbered list",
   link: "Link",
-  linkPrompt: "Address",
   heading: "Heading",
 };
 
