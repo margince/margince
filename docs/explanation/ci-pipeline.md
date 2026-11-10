@@ -311,13 +311,11 @@ and with a fixed split the fast shards waited for the slow ones. Parts of about 
 form groups of about 240 seconds, slowest first. A shard with a free slot claims a group: it creates
 the group's cache entry, which only one job of the run can do. It claims its own groups from the front,
 then those of others from the back ([`lib-shardqueue.sh`](../../scripts/lib-shardqueue.sh)).
+A run that may not write caches gets a fixed split; after `Re-run failed jobs`, shards skip what passed.
 
-A run that may not write caches gets a fixed split. After `Re-run failed jobs`, shards skip what passed.
-
-The fan-in uploads each test's time (`test-timing-integration`). On `main`, the `integration-timing`
-job of `cache-warm.yml` saves the mean of the five newest as the entry `integration-test-timing-<run>`.
-The build packs the newest entry, or `scripts/integration-test-timing.txt`, with the binaries; the fan-in
-fails shards with another digest. A test the file does not name counts as its package's mean.
+The fan-in uploads each test's time (`test-timing-integration`). On `main`, `cache-warm.yml` saves the
+mean of the five newest as `integration-test-timing-<run>`. The build packs it, or the committed file,
+with the binaries; the fan-in fails shards with another digest. An unknown test counts as its package's mean.
 
 ### The `ci` aggregate is the only required build context
 
