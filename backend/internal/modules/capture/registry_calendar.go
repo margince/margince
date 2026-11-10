@@ -72,6 +72,9 @@ func calendarProviderNames() []string {
 	return slices.Sorted(maps.Keys(calendarWriteScopes))
 }
 
+// CalendarProviders are the providers a seat may connect a calendar through.
+func CalendarProviders() []string { return calendarProviderNames() }
+
 // CalendarWriteGranted says whether a connection's granted scopes let it write
 // events on provider's calendar. It is the one read-only detector.
 func CalendarWriteGranted(provider string, scopes []string) bool {

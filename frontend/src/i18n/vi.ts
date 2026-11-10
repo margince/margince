@@ -4766,6 +4766,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "visibility.private": "Riêng tư",
   "visibility.withheld": "Bị ẩn",
   "email.access.unnamedMember": "Người dùng cũ",
+  "email.invitation.badge": "Lời mời",
+  "email.invitation.startsAt": "Bắt đầu {when}",
   "email.move.needsReply": "Cần trả lời",
   "email.move.waitingForThem": "Đang chờ họ trả lời",
   "email.detail.loading": "Đang tải email…",
@@ -7315,6 +7317,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "whoCanSee.emails.company":
     "Email xếp vào công ty này có phạm vi đọc riêng. Mở một email trong lịch sử để xem ai có thể đọc.",
   "compose.reply": "Trả lời",
+  "invitation.answer.label": "Trả lời lời mời",
+  "invitation.answer.accepted": "Chấp nhận",
+  "invitation.answer.tentative": "Có thể",
+  "invitation.answer.declined": "Từ chối",
   "compose.writeEmail": "Viết email",
   "compose.relink": "Đổi hồ sơ",
   "compose.previewEmail": "Xem trước",
@@ -16463,6 +16469,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "webhooks.event.activity.updated.label": "Đã đổi hoạt động",
   "webhooks.event.activity.updated.when":
     "Hoạt động được sửa hoặc liên kết với hồ sơ khác.",
+  "webhooks.event.activity.invitation_answered.label": "Đã trả lời lời mời",
+  "webhooks.event.activity.invitation_answered.when":
+    "Ai đó chấp nhận, từ chối hoặc trả lời có thể cho một lời mời lịch trong Margince.",
   "webhooks.event.activity.archived.label":
     "Đã chuyển hoạt động vào kho lưu trữ",
   "webhooks.event.activity.archived.when":
@@ -18552,6 +18561,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Lượt rà soát ban đêm đã đánh dấu deal này. Xử lý, tạm gác, hoặc bỏ qua.",
   "worklist.ask.conversation_claim":
     "Bạn đã cam kết việc này trong một cuộc trao đổi. Làm xong rồi đánh dấu là xong.",
+  "worklist.ask.invitation":
+    "Đây là lời mời lịch. Hãy chấp nhận, trả lời có thể hoặc từ chối, và bên tổ chức sẽ nhận được câu trả lời của bạn.",
   "worklist.ask.customer_waiting":
     "Khách hàng đã viết và chưa có ai trả lời. Trả lời khách hàng.",
   "worklist.ask.lead_response":

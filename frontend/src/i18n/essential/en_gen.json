@@ -1000,6 +1000,7 @@
   "co.cite.open": "Open record",
   "email.noSubject": "No subject",
   "email.withheldSubject": "Not shared with you",
+  "email.invitation.badge": "Invitation",
   "aiTask.name.reader_rendering": "Showing a message in your language",
   "activity.dayHoldsHostSlot": "This meeting is booked in a calendar, so it needs a time as well as a date.",
   "brief.coverage.source.tag_suggestion": "Suggested tags",

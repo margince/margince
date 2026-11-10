@@ -228,6 +228,38 @@ Fix in batches. Wait for a run to end, and read every failed scenario in the tra
 Fix the prompt, case or validator each one points to, and run again once. A fix made while a run is still
 going leaves that run measuring a prompt you have already changed.
 
+## What a run costs and how long it takes
+
+The last full run of each model family, with the default `PARALLEL=4`, judged by `claude-sonnet-5-5`.
+Runs graded by an earlier judge are not in this table. The judge runs on the Claude plan, so it adds
+time and no cost per call. The cost is the candidate's tokens at the
+list price of the provider that served them.
+
+| Model family | Served by | Scope | Time | Model calls | Tokens in / out | Cost |
+|---|---|---|---|---|---|---|
+| `openai/gpt-oss-120b` | OpenRouter, mostly Cerebras (`fp16`) | 28 tasks | 57 minutes | 1,712 | 3,440,000 / 1,140,000 | about $2 |
+| `google/gemma-4-31b-it` | OpenRouter, provider `crusoe` (`bf16`), pinned | every task but `document_extract` | 53 minutes | 1,581 | 2,720,000 / 215,000 | about $0.50 |
+| Gemini preset (`gemini-3.6-flash`, `gemini-3.1-flash-lite`) | Gemini API | the stale tasks of both models | 56 minutes | 1,528 | 2,870,000 / 472,000 | about $3 |
+
+A run after a fix batch measures only the cases whose stamp moved. Each of those ran for 12 to 35 minutes.
+
+The provider decides most of the cost. The default upstream picks the provider that returns the most
+tokens a second, which often costs more. Pin one with `UPSTREAM='{"only":["<provider>"]}'`
+when the price matters more than the time.
+
+**Update this table after every full run.** Replace the row of the model family you ran; add a row
+for a new one. Save the run's output to a file, then let the script read it, the journal and the trace:
+
+```bash
+make -C backend e2e-ai MODEL=<provider>:<model> RESUME=$PWD/.tmp/aicert/resume-<family> > run.log 2>&1
+scripts/aicert-run-cost.sh run.log .tmp/aicert/resume-<family>
+```
+
+It prints the time, the calls, and the tokens, serving provider and cost of each model. It looks up an
+OpenRouter model's price for the provider that served it. Give any other model's price in USD per
+1,000,000 tokens, as `PRICE_gemini_3_6_flash="0.75,3.75"` before the command. A change to the script
+runs its own test: `bash scripts/aicert-run-cost.test.sh`.
+
 ## What this loop does not tell you
 
 - **The `frontier` rung** (section 2), and any binding that no

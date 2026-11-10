@@ -45,10 +45,12 @@ expect:
     is progressing, and not a restatement of its name and value. "blocker"
     must name the unsent offer as the thing holding it up; "no contact for N
     days" alone scores low, because elapsed time is not something a reader can
-    act on. "buyer" must read what Nordwind is after from their own words —
-    the two extra depots, the revised pricing — and score low if it invents a
-    motive the summary never states. "verdict" must be blocked, with reasoning
+    act on. "buyer" may be empty, since the only buyer signal is our own call
+    note, or may name the two extra depots and revised offer that note
+    records; it scores low only if it invents a motive the summary never states. "verdict" must be blocked, with reasoning
     naming the unsent offer: the card's own rule makes a named blocker a
     blocked deal, so drifting costs marks and live scores low. "move_reason"
-    must explain the given move rather than proposing a different one. Any
+    must explain the given move rather than proposing a different one;
+    restating the given move's own reason explains it, since the card never
+    writes the same fact in two sections. Any
     invented contact, meeting, discount or figure fails the scenario.
