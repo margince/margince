@@ -690,6 +690,13 @@ type firingResult struct {
 // and a fixed pause would either be flaky or slow.
 func (e *resolveEnv) waitForBlockedWriter(t *testing.T, firing <-chan firingResult) {
 	t.Helper()
+	// This connection holds the contended row, so it is the holder the probe
+	// below asks about.
+	var proberPID int32
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT pg_backend_pid()`).Scan(&proberPID); err != nil {
+		t.Fatalf("naming this connection's backend: %v", err)
+	}
 	deadline := time.Now().Add(10 * time.Second)
 	for time.Now().Before(deadline) {
 		// A firing that RETURNED never reached the write, so the ordering this
@@ -702,27 +709,15 @@ func (e *resolveEnv) waitForBlockedWriter(t *testing.T, firing <-chan firingResu
 				got.completed, got.err)
 		default:
 		}
-		// pg_stat_activity is materialized once per transaction and cached
-		// until it ends, so a probe that did not clear it cannot see a backend
-		// that dialled after the snapshot was taken — the wait then runs to its
-		// deadline over a race that really did happen.
-		if _, err := e.owner.Exec(context.Background(),
-			`SELECT pg_stat_clear_snapshot()`); err != nil {
-			t.Fatalf("clearing the stats snapshot before probing: %v", err)
-		}
-		var blocked int
-		// Blocked BY US specifically, through pg_blocking_pids: any other
-		// waiter in this database would otherwise release the wait early and
-		// the test would go on to assert about a race it never set up.
+		// Blocked by this connection, which holds the contended row. Any other
+		// waiter in this database would release the wait early, and the test
+		// would then assert about a race it never set up.
 		//
-		// A waiter on a ROW lock does not appear as an ungranted lock on the
-		// relation — it waits on the holder's transaction id — and its
-		// `state` reads "idle in transaction" rather than "active", so
-		// neither of those is what identifies it.
-		if err := e.owner.QueryRow(context.Background(),
-			`SELECT count(*) FROM pg_stat_activity
-			  WHERE datname = current_database()
-			    AND pg_backend_pid() = ANY(pg_blocking_pids(pid))`).Scan(&blocked); err != nil {
+		// A waiter on a row lock waits on the holder's transaction id, not on
+		// an ungranted relation lock. It also reads as idle in transaction
+		// rather than active, so neither state identifies it.
+		blocked, err := testdb.QueuedBehind(context.Background(), e.owner, proberPID)
+		if err != nil {
 			t.Fatal(err)
 		}
 		if blocked > 0 {
