@@ -119,3 +119,29 @@ describe("a lead's company facts", () => {
     expect(screen.queryByRole("region", { name: /^From / })).toBeNull();
   });
 });
+
+describe("the About company row", () => {
+  it("shows the linked company's current name and edits the typed one", async () => {
+    const patches = serve({ ...linked, company_name: "Nordwind Logistik" });
+    const user = userEvent.setup();
+    render(<LeadScreen id="l-1" />);
+    const change = await screen.findByRole("button", {
+      name: /^Change Company/,
+    });
+    await waitFor(() =>
+      expect(change.closest("dd")).toHaveTextContent("Nordwind Holding SE"),
+    );
+    await user.click(change);
+    expect(await screen.findByDisplayValue("Nordwind Logistik")).toBeVisible();
+    expect(patches).toEqual([]);
+  });
+
+  it("shows the typed name while the lead is not linked", async () => {
+    serve({ ...lead, company_name: "Nordwind Logistik" });
+    render(<LeadScreen id="l-1" />);
+    const change = await screen.findByRole("button", {
+      name: /^Change Company/,
+    });
+    expect(change).toHaveTextContent("Nordwind Logistik");
+  });
+});

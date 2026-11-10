@@ -38,7 +38,11 @@ import { useListsAvailable, useRecordLists } from "../../lib/lists.queries";
 import { ProblemError } from "../../lib/problem";
 import { useRecordTags } from "../../lib/tags.queries";
 import { useViewerZone } from "../../lib/viewerzone";
-import { LeadCompany, useLeadCompanyFactsSection } from "./leadcompany";
+import {
+  LeadCompany,
+  useLeadCompanyFactsSection,
+  useLeadCompanyName,
+} from "./leadcompany";
 import { LeadOwnerControl, statusSetBy } from "./leadheader";
 import { leadIndustry } from "./leadindustry";
 import { useLeadPartnerRow } from "./leadpartner";
@@ -150,15 +154,22 @@ function useAboutRows(
   const text = (
     key: TextKey,
     label: MessageKey,
-    options: { required?: boolean; type?: "email" } = {},
+    options: {
+      required?: boolean;
+      type?: "email";
+      display?: string;
+      suggested?: string;
+    } = {},
   ): DetailRow => ({
     key,
     term: t(label),
-    empty: isBlank(lead[key]),
+    empty: isBlank(lead[key]) && !options.suggested,
     value: (
       <InlineText
         label={t(label)}
         value={lead[key] ?? ""}
+        display={options.display}
+        suggested={options.suggested}
         type={options.type}
         placeholder={t("field.unset")}
         canEdit={canEdit}
@@ -172,7 +183,13 @@ function useAboutRows(
     { value: "", label: t("lead.originNone") },
     ...originPickOptions(origins.data, lead.origin),
   ];
-  const companyName = text("company_name", "create.companyName");
+  const linkedName = useLeadCompanyName(lead);
+  const shownName = lead.company_id ? (linkedName ?? undefined) : undefined;
+  const typedBlank = isBlank(lead.company_name);
+  const companyName = text("company_name", "create.companyName", {
+    display: typedBlank ? undefined : shownName,
+    suggested: typedBlank ? shownName : undefined,
+  });
   const rows: DetailRow[] = [
     {
       ...companyName,
