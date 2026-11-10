@@ -19,7 +19,7 @@ workflow is outside the gate:
 | `pace.yml` | every push to `main` | No (runs after the merge) |
 | `scheduled.yml` | daily and weekly on `main` | No |
 | `sbom.yml` | manual dispatch only | No |
-| `release.yml` | manual dispatch only | No |
+| `release.yml` | `v*` tag push (no pre-release), manual dispatch | No |
 | `release-tag.yml` | `v*` tag push | No (runs on a tag, after every merge) |
 
 The merge queue rule is off, so the `merge_group` trigger in `ci.yml` does not run.
