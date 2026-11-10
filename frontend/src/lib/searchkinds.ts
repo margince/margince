@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { components } from "../api/schema";
+import { stable } from "../format/collate";
 import type { Translator } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import {
@@ -119,7 +120,7 @@ export function groupSearchHits<
 >(hits: readonly Hit[]): { group: SearchHitGroup; hits: Hit[] }[] {
   const extensionKinds = [
     ...new Set(hits.map((hit) => hit.type).filter(isExtensionEntityKind)),
-  ].sort();
+  ].sort(stable);
   const order: readonly SearchHitGroup[] = [
     ...SEARCH_GROUP_ORDER.slice(0, RECORD_GROUP_COUNT),
     ...extensionKinds,
