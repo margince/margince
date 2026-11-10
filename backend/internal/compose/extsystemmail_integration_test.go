@@ -72,7 +72,7 @@ func TestADealWithMoreMailThanAPageIsReadOverSeveralPages(t *testing.T) {
 	for i := range 5 {
 		want[s.mail(t, "outbound", "workspace", false, now.Add(-time.Duration(i)*time.Minute)).String()] = true
 	}
-	q := extension.MailQuery{ReadPage: extension.ReadPage{Limit: 2}}
+	q := extension.MailQuery{Limit: 2}
 	for pages := 0; ; pages++ {
 		if pages > 3 {
 			t.Fatal("the read did not stop paging")
