@@ -16,6 +16,7 @@ import { Select } from "../../design-system/select";
 import { SettingList, SettingRow } from "../../design-system/settingrow";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { labelFor } from "../../lib/labelfor";
 import {
   type BrowserNotificationPermission,
   requestNotificationPermission,
@@ -304,7 +305,7 @@ function DeliveryRow({
           }}
           options={offered.map((choice) => ({
             value: choice,
-            label: t(DELIVERY_COPY[choice]),
+            label: t(labelFor(DELIVERY_COPY, choice)),
           }))}
         />
       )}

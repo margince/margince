@@ -193,11 +193,20 @@
 .co-brief-body {
   max-width: 72ch;
 }
+/* On a phone the authorship line and Regenerate cannot share one row; the
+   verb drops under the line rather than past the card's edge. */
 .co-brief-foot {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
+  gap: var(--space-2);
   width: 100%;
+}
+/* The line wraps inside itself first, so the verb leaves its side only once
+   the line would be narrower than this. */
+.co-brief-foot > .co-brief-meta {
+  flex: 1 1 14rem;
 }
 .co-brief-read {
   display: flex;
@@ -1169,11 +1178,9 @@
 /* Under the fold the two columns become one, and the verbs move from opposite
    the claim to under it. That is the whole collapse: the verb column is a
    column at every width (`.today-actions`, record360.css) and nothing here
-   turns it, so a verb is full width above the fold and below it, and a refusal
-   that cannot state its own width — `Button` wraps one in `.btn-with-reason`,
-   which is `contain: inline-size` so a sentence cannot widen the column, and a
-   contained box contributes nothing to a flex line — never meets a line that
-   has to measure it.
+   turns it, so a verb is full width above the fold and below it, and a
+   refusal's sentence, which is `contain: inline-size` so it cannot widen the
+   column, never meets a line that has to measure it.
 
    `grid-row: auto` and not the span: with one column the span would lay the
    verbs over the very lines they are meant to follow. */

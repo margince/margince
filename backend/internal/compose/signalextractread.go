@@ -18,13 +18,13 @@ package compose
 import (
 	"context"
 	"fmt"
-	"strconv"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/promptref"
 )
 
 const (
@@ -150,14 +150,20 @@ type settledThread struct {
 	EventCap int
 }
 
-// messageLabel names a message in the prompt by its place, m1 for the oldest
-// shown. A small model copies a short label it was given. It garbles a long id,
-// and the fence tag beside it is an id of the same shape.
+// messageRefs names each message m1, m2, … from the oldest shown.
+func (t settledThread) messageRefs() *promptref.Refs {
+	refs := promptref.New("m")
+	for _, message := range t.Messages {
+		refs.For(message.ID.String())
+	}
+	return refs
+}
+
+// messageLabel is the ref the prompt shows for a message id; an id of no
+// message here stays as written.
 func (t settledThread) messageLabel(id string) string {
-	for i, message := range t.Messages {
-		if message.ID.String() == id {
-			return "m" + strconv.Itoa(i+1)
-		}
+	if ref, ok := t.messageRefs().RefOf(id); ok {
+		return ref
 	}
 	return id
 }
@@ -165,12 +171,20 @@ func (t settledThread) messageLabel(id string) string {
 // messageID is the id a reply's label names. A string that is no label of
 // this thread stays as written, for the validator to refuse.
 func (t settledThread) messageID(label string) string {
-	for i, message := range t.Messages {
-		if label == "m"+strconv.Itoa(i+1) {
-			return message.ID.String()
-		}
+	if id, ok := t.messageRefs().ID(label); ok {
+		return id
 	}
 	return label
+}
+
+// partyRefs names every verified participant of the thread p1, p2, … in the
+// order the prompt lists them, one ref per participant across messages.
+func (t settledThread) partyRefs() *promptref.Refs {
+	var parties []commitmentParty
+	for _, message := range t.Messages {
+		parties = append(parties, message.Parties...)
+	}
+	return commitmentPartyRefs(parties)
 }
 
 func (t settledThread) eventCap() int {

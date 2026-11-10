@@ -49,7 +49,8 @@ var askInstruction = map[crmcontracts.CompanyQuestion]string{
 		"Write one sentence per open item, naming it, who holds it and when it is due. " +
 		"Do not speculate about what will close.",
 	askMeetingPrep: "Answer what the reader needs before a meeting with this account: who the known contacts are, " +
-		"where the pipeline stands, and whether anything is waiting for a reply. Do not invent an agenda.",
+		"where the pipeline stands, what happened on it recently, and whether anything is waiting for a reply. " +
+		"Any one of these the summary holds is enough to answer from. Do not invent an agenda.",
 	askWhatsChanged: "Answer what has moved on this account recently, newest first, using only the timeline entries in the summary. " +
 		"Do not describe a trend the entries do not show.",
 }
@@ -71,13 +72,13 @@ func ParseQuestion(raw crmcontracts.CompanyQuestion) (crmcontracts.CompanyQuesti
 // askSystem is the shared prompt. The per-question instruction is appended,
 // so the grounding rules are stated once and cannot drift between questions.
 const askSystem = `You answer one question about one account in a salesperson's CRM, from a JSON summary of that account.
-Return ONLY a JSON object: {"sentences":[{"text":"...","evidence":[{"entity_type":"deal|activity|contact|company","entity_id":"..."}]}]}.
+Return ONLY a JSON object: {"sentences":[{"text":"...","evidence":[{"entity_type":"deal|activity|contact|company","entity_id":"<the record's ref, such as d1>"}]}]}.
 Answer in one to four sentences, plainly, addressing the reader as "you" where natural.
 State only what the summary states. Never infer a cause, a mood, an intent or a next step it does not contain.
 Cite the ids the summary gave you; a sentence about the account itself cites the company.
-Put ids ONLY in evidence. An id must never appear in a sentence's text — the reader sees the text, and an id there is unreadable.
+Put refs ONLY in evidence. A ref must never appear in a sentence's text — the reader sees the text, and a ref there is unreadable.
 Write one claim per sentence, and cite the ONE record that sentence is about. Three records worth naming are three sentences.
-If the summary names sections_omitted, leave those subjects out of the answer and say nothing about them at all — the reader is not allowed to see them. A withheld section does not make the question unanswerable: answer from what remains.
+If the summary names sections_omitted, leave those subjects out of the answer and say nothing about them at all — the reader is not allowed to see them. ` + claims.NeverNameTheGap + ` A withheld section does not make the question unanswerable: answer from what remains.
 If what remains does not answer the question, return an empty sentences array rather than a sentence that talks around it.`
 
 // The answer goes to the reader who asked and is stored nowhere, so it is

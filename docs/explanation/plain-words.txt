@@ -1246,7 +1246,6 @@ scheme
 scope
 scoped
 score
-scrape
 screen
 script
 seal

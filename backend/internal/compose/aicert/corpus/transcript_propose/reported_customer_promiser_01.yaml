@@ -18,5 +18,6 @@ expect:
     Ines made the payment promise; Mira reports it. Use the verified contact
     reference for Ines and cite line 1. The speaker and organizer must not inherit
     a promise made by the customer. The confirmation on line 2 adds evidence,
-    not a second promise.
+    not a second promise. Citing line 2 alongside line 1 as supporting evidence
+    is acceptable and is not a fault.
   bands: {certified_min: 70, degraded_min: 50, floor: 40}

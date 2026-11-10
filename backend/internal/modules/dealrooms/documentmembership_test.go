@@ -57,3 +57,18 @@ func TestRoomDocumentMembershipIsSpelledOnce(t *testing.T) {
 		}
 	}
 }
+
+// The room's rule differs from a Documents list by one clause: it admits no row
+// by its category. That clause is what a tidy-up would remove.
+func TestTheRoomsFileRuleAdmitsNoRowByItsCategory(t *testing.T) {
+	area := inTheDealsFilesArea // the value run, storekit fragments included
+	if strings.Contains(area, "category") {
+		t.Errorf("inTheDealsFilesArea reads an attachment's category:\n%s\n\n"+
+			"a Documents list admits a link row that way; a room may not, because its reader "+
+			"is a buyer's download", area)
+	}
+	if !strings.Contains(area, "NOT a.bytes_withheld") {
+		t.Error("inTheDealsFilesArea no longer refuses a row with no bytes, which is what keeps a " +
+			"captured link out of a room")
+	}
+}

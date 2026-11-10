@@ -23,7 +23,7 @@ type StatusOption = Readonly<{ value: Lead["status"]; label: MessageKey }>;
 
 export const LEAD_STATUS_FILTER_OPTIONS: readonly StatusOption[] = (
   ["new", "contacted", "engaged", "promoted", "disqualified"] as const
-).map((value) => ({ value, label: LEAD_STATUS_LABEL[value] }));
+).map((value) => ({ value, label: labelFor(LEAD_STATUS_LABEL, value) }));
 
 /**
  * The catalogue key for a status, shared by the badge and the readings strip,

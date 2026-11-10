@@ -25,6 +25,7 @@ import { useToast } from "../../design-system/toast";
 import { formatDateTime } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
+import { valueFor } from "../../lib/labelfor";
 import { problemMessageOf, throwProblem, unwrap } from "../../lib/problem";
 import { useMe } from "../../lib/session";
 import { useViewerZone } from "../../lib/viewerzone";
@@ -206,7 +207,7 @@ function ConnectedSource({
         label={connection.provider}
         description={lastSync}
         value={
-          <Badge tone={STATUS_TONE[connection.status]}>
+          <Badge tone={valueFor(STATUS_TONE, connection.status, "info")}>
             {t(`financeSource.status.${connection.status}`)}
           </Badge>
         }

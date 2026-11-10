@@ -20,6 +20,7 @@ import { QueryStates } from "../../design-system/querystates";
 import { formatDate } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { labelFor } from "../../lib/labelfor";
 import { problemMessageOf, unwrap } from "../../lib/problem";
 import { useViewerZone } from "../../lib/viewerzone";
 import { useAnalyticsContext } from "./analytics.context";
@@ -161,7 +162,7 @@ function OpenShareList({
                   (scope) =>
                     scope.kind === share.scope_kind &&
                     scope.id === share.scope_id,
-                )?.label ?? t(POPULATION_FALLBACK[share.scope_kind])
+                )?.label ?? t(labelFor(POPULATION_FALLBACK, share.scope_kind))
               }
               onClose={
                 canClose
@@ -217,7 +218,7 @@ function OpenShareRow({
   return (
     <PanelRow className="meta-row">
       <span className="meta-row-line t-caption" id={metaId}>
-        <span>{t(KIND_LABELS[share.kind])}</span>
+        <span>{t(labelFor(KIND_LABELS, share.kind))}</span>
         <span>
           {t("analytics.share.listCreated", {
             date: formatDate(share.created_at, locale, zone),

@@ -155,7 +155,7 @@ function CompanyCard({
   const summary = useEmployerSummary(companyId).data;
   const lifecycle =
     summary?.lifecycle && summary.lifecycle !== "unknown"
-      ? t(LIFECYCLE_LABELS[summary.lifecycle])
+      ? t(labelFor(LIFECYCLE_LABELS, summary.lifecycle))
       : undefined;
   const facts = [
     lifecycle,

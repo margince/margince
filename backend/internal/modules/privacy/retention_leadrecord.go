@@ -89,6 +89,20 @@ func (s *RetentionService) anonymizeLead(ctx context.Context, tx pgx.Tx, id ids.
 	// suppression: that path is an Art. 17 erasure and writes an
 	// erasure_suppression hash to keep the refusal alive. This one writes none,
 	// so the suppression is detached onto the address instead.
+	//
+	// First the mail still waiting to go to the lead, an opt-out receipt among
+	// it, and the notices saying such a receipt is missing. Both name the lead
+	// the UPDATE above has just made nameless.
+	var payloads PayloadPurger
+	if s.eraser != nil {
+		payloads = s.eraser.payloads
+	}
+	if err := redactLeadDeliveries(ctx, tx, []ids.UUID{id}, payloads); err != nil {
+		return err
+	}
+	if err := retractReceiptNotices(ctx, tx, ids.UUID{}, []ids.UUID{id}, theClockRanOut.collateralReason, theClockRanOut.cause); err != nil {
+		return err
+	}
 	return clearLeadCommunicationRecord(ctx, tx, id, address)
 }
 

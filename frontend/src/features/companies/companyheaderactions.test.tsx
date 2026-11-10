@@ -148,6 +148,20 @@ function renderActions() {
 // Without this, a read-only seat opened the form, typed a note, and was
 // refused only on submit.
 describe("Log activity and Add task, gated on the create grant", () => {
+  it("refuses Email too, over the same sentence as Log", async () => {
+    stubGrants({});
+    renderActions();
+
+    const log = await screen.findByRole("button", { name: "Log activity" });
+    const email = screen.getByRole("button", {
+      name: en["contact.action.email"],
+    });
+    expect(email.hasAttribute("disabled")).toBe(true);
+    expect(email.getAttribute("aria-describedby")).toBe(
+      log.getAttribute("aria-describedby"),
+    );
+  });
+
   it("refuses both without the grant, over one shared sentence", async () => {
     stubGrants({});
     const user = userEvent.setup();

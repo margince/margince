@@ -183,27 +183,33 @@ func seedThreadQuestion(t *testing.T, e *integration.Env, threadKey string, acti
 	return id
 }
 
-// scriptedConfidentialityBrain answers with a fixed kind, for the id it finds
-// IN THE PROMPT rather than the one it was constructed with.
-//
-// Reading the id back out of the fence is the point: production takes it from a
-// ledger row no model has seen, so a brain that answered from its own field
-// would pass even if the request carried the wrong thread — or no thread at
-// all. The constructed id is used only to check the prompt named the one this
-// test meant.
+// scriptedConfidentialityBrain answers with a fixed kind, for the ref it finds
+// in the prompt, after checking that ref names the thread it was constructed
+// with. A brain that answered from its own field would pass even if the
+// request carried the wrong thread, or no thread at all.
 type scriptedConfidentialityBrain struct {
 	kind       string
 	confidence float64
 	id         ids.UUID
 }
 
-func (s *scriptedConfidentialityBrain) Complete(_ context.Context, req model.Request) (model.Response, error) {
+// threadShown finds a thread question by the subject line of the message that
+// opened it.
+var threadShown = shownBy{key: "id", query: `
+	SELECT 'Subject: ' || a.subject FROM capture_thread_verdict v
+	  JOIN activity a ON a.id = v.first_activity_id WHERE v.id = $1`}
+
+func (s *scriptedConfidentialityBrain) Complete(ctx context.Context, req model.Request) (model.Response, error) {
 	askedFor := fencedIDs(req.System, req.Messages[0].Content, "id")
 	if len(askedFor) != 1 {
 		return model.Response{}, fmt.Errorf(
 			"confidentiality prompt declared no data boundary, or fenced %d threads rather than one", len(askedFor))
 	}
-	if askedFor[0] != s.id.String() {
+	underTest, err := refOfRecord(ctx, req, threadShown, s.id.String())
+	if err != nil {
+		return model.Response{}, err
+	}
+	if askedFor[0] != underTest {
 		return model.Response{}, fmt.Errorf(
 			"the prompt asked about thread %s, not the one under test", askedFor[0])
 	}

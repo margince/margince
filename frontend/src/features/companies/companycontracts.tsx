@@ -35,6 +35,7 @@ import { CustomFieldsPanel } from "./customfields.card";
 // it works today only because the company record page pulls that stylesheet in
 // for its own sake, so this file renders unstyled anywhere else.
 import "./company360.css";
+import { labelFor } from "../../lib/labelfor";
 import { useViewerZone } from "../../lib/viewerzone";
 
 // The account's agreements: what it signed, what each is worth, and when the
@@ -338,7 +339,7 @@ function ContractRow({
         </span>
         {contract.status && (
           <Badge tone={STATUS_TONE[contract.status]}>
-            {t(STATUS_LABELS[contract.status])}
+            {t(labelFor(STATUS_LABELS, contract.status))}
           </Badge>
         )}
         {(mayWrite || mayArchive || mayRenewThis) && (

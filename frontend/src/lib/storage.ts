@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// The one door to the browser's Web Storage. `storage-spelling.test.ts` fails
+// The one door to the browser's Web Storage. `census/rules/storage-spelling.census.ts` fails
 // any other file that reaches for `localStorage` or `sessionStorage`.
 
 type StorageArea = "local" | "session";

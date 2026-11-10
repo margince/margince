@@ -29,7 +29,7 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 361 |
-| Columns | 4373 |
+| Columns | 4375 |
 | Foreign keys | 599 |
 | Owning areas | 38 |
 
@@ -401,7 +401,7 @@ erDiagram
 | [`provider_run`](integrations.md#provider_run) | integrations | 25 | 5 |
 | [`provider_run_category`](integrations.md#provider_run_category) | integrations | 4 | 0 |
 | [`provider_run_reservation`](integrations.md#provider_run_reservation) | integrations | 6 | 0 |
-| [`raw_capture`](capture.md#raw_capture) | capture | 7 | 2 |
+| [`raw_capture`](capture.md#raw_capture) | capture | 9 | 2 |
 | [`record_assignment`](assignments.md#record_assignment) | assignments | 13 | 0 |
 | [`record_grant`](identity.md#record_grant) | identity | 16 | 0 |
 | [`record_role`](assignments.md#record_role) | assignments | 14 | 1 |

@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/modules/contracts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -25,6 +26,7 @@ func TestEveryRefusalTheStoreGivesADealRowIsASkipNotAFailedRun(t *testing.T) {
 		"another pipeline":                {&deals.StagePipelineMismatchError{}, migration.ReasonDealPipelineFixed},
 		"no lost reason":                  {&deals.LostReasonRequiredError{}, migration.ReasonLostReasonMissing},
 		"no exchange rate":                {&deals.MissingFxRateError{From: "VND", To: "EUR"}, migration.ReasonFxRateMissing},
+		"contracts on the old company":    {&contracts.DealContractsCrossCompanyError{Count: 1}, migration.ReasonDealCompanyContracts},
 		"a legal gate":                    {&deals.LegalReviewRequiredError{}, migration.ReasonDealLegalGate},
 		"a gate at birth":                 {&deals.LegalGateOnCreateError{}, migration.ReasonDealLegalGate},
 		"no open stage":                   {&deals.PipelineHasNoOpenStageError{}, migration.ReasonPipelineNoOpenStage},

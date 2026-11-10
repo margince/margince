@@ -20,33 +20,20 @@ import type { EditSeed } from "./schedulededit";
 
 type DraftReason = components["schemas"]["AccountDraftReason"];
 
-// The account-started path's grounding: the deal and the project a draft is
-// written for, with what the server said it wrote from. The recipient is not
-// held here: it is whoever from the account stands first in To.
+// The chosen deal and the server's report of what its draft read.
 function useAccountGrounding(edit: EditSeed | undefined) {
   const [dealId, setDealId] = useState(edit?.dealId ?? "");
-  // The project scopes the draft's grounding and files the sent message.
-  const [projectId, setProjectId] = useState(edit?.projectId ?? "");
   const [reasoning, setReasoning] = useState<DraftReason[]>([]);
   // The server's scope report for the draft on screen, retired with the
   // reasons because it describes the same read.
   const [scope, setScope] = useState<ProjectScope | undefined>(undefined);
-  // A new project retires the draft written for the previous one.
-  // A re-draft could not repair it, because the fill leaves a full field alone.
-  const reground = (apply: (next: string) => void) => (next: string) => {
-    apply(next);
-    setReasoning([]);
-    setScope(undefined);
-  };
   return {
     // A deal is chosen beside the project, among what the message is about.
     // The words stay: they are the rep's to read again, and a draft still in
     // flight for the old deal is dropped when it lands.
     dealId,
     setDealId,
-    projectId,
-    setProjectId: reground(setProjectId),
-    grounding: { dealId, projectId },
+    grounding: { dealId },
     reasoning,
     setReasoning,
     scope,
@@ -69,6 +56,7 @@ export type FieldsSnapshot = Readonly<{
   provenance: DraftProvenance | null;
   draftRef: string | null;
   servedBody: string;
+  dealId: string;
   reasoning: DraftReason[];
   scope: ProjectScope | undefined;
 }>;
@@ -88,6 +76,7 @@ export function emptyFields(): FieldsSnapshot {
     provenance: null,
     draftRef: null,
     servedBody: "",
+    dealId: "",
     reasoning: [],
     scope: undefined,
   };
@@ -215,22 +204,7 @@ export function useComposeFields({
     memory.current.forget();
     parked.current = null;
   };
-  // A new grounding clears drafted text alone. `draftRef` and `provenance`
-  // are set by the fill, so a rep's own typed message stays.
-  const account = {
-    ...grounding,
-    setProjectId: (next: string) => {
-      grounding.setProjectId(next);
-      if (!provenance && !draftRef) return;
-      setBody("");
-      setHtml("");
-      setSubject("");
-      setTo([]);
-      setDraftRef(null);
-      setProvenance(null);
-      forgetMarks();
-    },
-  };
+  const account = grounding;
 
   // A new transport changes what is being written. A subject or address left
   // standing would be one the channel send never uses.
@@ -349,11 +323,13 @@ export function useComposeFields({
     provenance,
     draftRef,
     servedBody,
+    dealId: account.dealId,
     reasoning: account.reasoning,
     scope: account.scope,
   });
 
   const load = (next: FieldsSnapshot) => {
+    grounding.setDealId(next.dealId);
     draftEpoch.current += 1;
     forgetMarks();
     forgetRefusals();

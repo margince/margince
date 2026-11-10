@@ -254,6 +254,7 @@ describe("a saved draft", () => {
       body: "Finished after lunch",
       html_body: "<p>Finished after lunch</p>",
       editor_state: {
+        filing: [],
         intent: "",
         ai_generated: false,
         voice_degraded: false,

@@ -52,7 +52,7 @@ expect:
     which meets the exit criterion of Proposal sent. The deal moves to
     Negotiation, citing that mail for the criterion with its words. Contract
     sent is out of reach: leaving Negotiation needs the legal call, which has
-    not been held. The deal already sits at its raise limit of 50%, so the
+    not been held. The deal already sits at its raise ceiling of 50%, so the
     prompt rules out a probability raise; the move itself brings the
     Negotiation stage's probability.
     Score high for move_stage to Negotiation with the budget criterion cited.

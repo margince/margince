@@ -32,10 +32,21 @@ import (
 	"github.com/margince/margince/backend/internal/platform/events"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
+	"github.com/margince/margince/backend/internal/platform/originalstore"
 	"github.com/margince/margince/backend/internal/platform/providerhealthstore"
 	"github.com/margince/margince/backend/internal/platform/ratelimit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
+
+// runPreBootSubcommand answers the commands that end before the boot: the
+// debug subcommands and the config check. handled is true when one ran.
+func runPreBootSubcommand(ctx context.Context, args []string, stdout io.Writer) (handled bool, err error) {
+	if handled, err := runDebugSubcommand(ctx, args, stdout); handled {
+		return true, err
+	}
+	checked, err := checkWorkerConfig(workerFlags(args), config.Environ(), stdout)
+	return checked || err != nil, err
+}
 
 // runDebugSubcommand dispatches the DB-less debug loops — `worker siteread …`
 // (siteread.go) and `worker aitask …` (aitask.go) — and reports whether it
@@ -156,6 +167,8 @@ func startEventLanes(laneCtx context.Context, background *sync.WaitGroup, cfg wo
 	// Before the runner lane: an offer a Surface-B run changes reclaims its
 	// retired rendering from this store.
 	lanes.blob = blob
+	laneCtx = originalstore.Bind(laneCtx, compose.InstallationDB(pool), blob)
+	lanes.ctx = laneCtx
 
 	if err := startRunnerLane(laneCtx, cfg, pool, rdb, vault, modelPath, &lanes, logger, stdout); err != nil {
 		return lanes, err
