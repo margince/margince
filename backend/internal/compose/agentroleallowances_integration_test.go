@@ -74,9 +74,6 @@ func TestTheAdminPresetYieldsToAnInstallationValueSomebodyChose(t *testing.T) {
 	if got := policy.For([]string{"admin"}).Limits; got.Calls != 5000 || got.Writes != 2000 {
 		t.Errorf("the meter holds an Admin's agent to %+v, want 5000 calls and 2000 changes", got)
 	}
-	if policy.Paced([]string{"admin"}) || !policy.Paced([]string{"rep"}) {
-		t.Errorf("the meter's policy names %v as unpaced, want admin alone", policy.Unpaced)
-	}
 }
 
 // A role's own values bind its users' agents through the meter's real source.

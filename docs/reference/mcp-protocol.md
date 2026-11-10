@@ -162,10 +162,12 @@ A changed length waits for a reset. It takes the first reset that is a minute or
 minute waits for the reset after that. The bucket number comes from the moment and the length, so a length that
 changed mid-window would restart every count. The passports of one OAuth grant share their counters
 (`agentvolume.SubjectOf`), so a refresh, which mints a new passport, keeps the count. The per-minute limits of the
-transport stay in the build (`compose/mcpedge.go`). Tool calls are paced after authentication, by the roles of the
-human who granted the passport (`agentvolume.Policy.Paced`). A role in `identity.UnpacedRoles`, today `admin`, lifts
-the pacing. The stream-open limit and the limits that guard authentication bind every caller, because they run
-before a role is known.
+transport stay in the build (`compose/mcpedge.go`).
+
+The limit on tool calls a minute is checked once the passport is known. It reads the roles of the human who granted
+the passport (`agentvolume.Policy.Paced`). A role in `identity.UnpacedRoles`, today `admin`, has no such limit. The
+limit on streams opened a minute and the limits on failed sign-ins hold for every caller. They are checked before the
+passport is known.
 
 **How a client gets a `client_id`.** There are three ways. A client that reads the priority order of the profile
 tries a client it was given first, then a metadata document, then dynamic registration:
