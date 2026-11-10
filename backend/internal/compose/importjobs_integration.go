@@ -104,8 +104,8 @@ func WithToolChecksRecordedForTest(sink func(verb string, call auth.RecordedCall
 	}
 }
 
-// WithRouteChecksRecordedForTest hands sink, after each signed-in /v1 request,
-// its method and path and what the gates noted of its caller.
+// WithRouteChecksRecordedForTest hands sink, after each /v1 request, signed in
+// or anonymous, its method and path and what the gates noted of its caller.
 func WithRouteChecksRecordedForTest(sink func(method, path string, call auth.RecordedCall)) Option {
 	return func(s *Server, _ *pgxpool.Pool) {
 		s.routesForTest = func(next http.Handler) http.Handler {
