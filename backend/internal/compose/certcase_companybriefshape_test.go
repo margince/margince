@@ -94,9 +94,9 @@ func TestACompanyBriefSentenceAboutTheAccountItselfSurvives(t *testing.T) {
 
 	// Input serializes the account's own id first and its name next, so this
 	// pair identifies the SUBJECT rather than one of its records.
-	account := regexp.MustCompile(`\{"id":"([0-9a-f-]{36})","name":`).FindStringSubmatch(sent)
+	account := regexp.MustCompile(`\{"id":"([a-z]+[0-9]+)","name":`).FindStringSubmatch(sent)
 	if account == nil {
-		t.Fatalf("the summary carries no account id before its name, so no sentence about the "+
+		t.Fatalf("the summary carries no account ref before its name, so no sentence about the "+
 			"account can cite it:\n%s", sent)
 	}
 

@@ -34,7 +34,7 @@ func TestAnEarlierAssessmentWithholdsMoneyAfterAFieldMaskChanges(t *testing.T) {
 			}
 			at := time.Date(2026, 10, 12, 9, 0, 0, 0, time.UTC)
 			subject, occurred := "Renewal scope", at.Add(-time.Hour)
-			source, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
+			_, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
 				Kind: "call", Subject: &subject, Source: "manual", OccurredAt: &occurred,
 				Links: []activities.ActivityLinkInput{{EntityType: "deal", EntityID: deal.UUID}},
 			})
@@ -46,7 +46,8 @@ func TestAnEarlierAssessmentWithholdsMoneyAfterAFieldMaskChanges(t *testing.T) {
 				for _, message := range request.Messages {
 					sawAmount = sawAmount || strings.Contains(message.Content, "48000000 EUR")
 				}
-				return model.Response{Text: fmt.Sprintf(`{"story":[{"text":"The renewal was discussed.","evidence":[%q]}],"blocker":[],"buyer":[],"verdict":{"standing":"live","because":[{"text":"The renewal is worth 480000 EUR.","evidence":[%q]}]},"move_reason":[]}`, source.Id.String(), source.Id.String())}, nil
+				renewal := refWhere(t, request, "subject", subject)
+				return model.Response{Text: fmt.Sprintf(`{"story":[{"text":"The renewal was discussed.","evidence":[%q]}],"blocker":[],"buyer":[],"verdict":{"standing":"live","because":[{"text":"The renewal is worth 480000 EUR.","evidence":[%q]}]},"move_reason":[]}`, renewal, renewal)}, nil
 			})
 			permissions := integration.AdminPerms
 			permissions.RoleKeys, permissions.RowScope = []string{"fixture"}, principal.RowScopeOwn

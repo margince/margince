@@ -66,7 +66,10 @@ const WITHHELD: Activity = {
   audience: "participants",
 };
 
-function Frame({ activity }: Readonly<{ activity: Activity }>) {
+function Frame({
+  activity,
+  contact = false,
+}: Readonly<{ activity: Activity; contact?: boolean }>) {
   installFetchStub({
     "GET /me": meRoute({ activity: ["update"] }),
   });
@@ -81,8 +84,8 @@ function Frame({ activity }: Readonly<{ activity: Activity }>) {
       >
         <TimelineActions
           activity={activity}
-          entityType="deal"
-          entityId="d1"
+          entityType={contact ? "contact" : "deal"}
+          entityId={contact ? "p1" : "d1"}
           contactId="p1"
         />
       </div>
@@ -103,6 +106,11 @@ export const HandLogged: Story = { args: { activity: BASE } };
 
 /** Captured mail: the thread decision, with the reason it is held. */
 export const CapturedThread: Story = { args: { activity: CAPTURED } };
+
+/** On a contact's timeline, a held mail also leads to the held list for that contact. */
+export const HeldFromContact: Story = {
+  args: { activity: CAPTURED, contact: true },
+};
 
 /** Outside the audience: the row keeps its verbs and loses the control. */
 export const Withheld: Story = { args: { activity: WITHHELD } };

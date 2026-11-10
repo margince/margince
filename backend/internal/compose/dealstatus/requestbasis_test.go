@@ -69,7 +69,7 @@ func TestEvaluationTimeDoesNotChangeCacheOrDismissalIdentity(t *testing.T) {
 func TestHistoricalRequestCannotGroundAModelBlocker(t *testing.T) {
 	in := inputWithTimeline()
 	in.RequestStates = map[string]string{"act-2": basisRequestReview}
-	got, err := ParseStatus(reply(draft{
+	got, err := parseIDs(reply(draft{
 		story:    []map[string]any{line("The customer asked for prices in July.", "act-2")},
 		buyer:    []map[string]any{line("The buyer is still waiting on an urgent reply.", "act-2")},
 		blocker:  []map[string]any{line("The old request is blocking the deal.", "act-2")},

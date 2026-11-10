@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
+	"github.com/margince/margince/backend/internal/shared/kernel/promptref"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 	"github.com/margince/margince/backend/internal/shared/schema"
@@ -92,6 +93,8 @@ type settleResult struct {
 
 func (r settleResult) answeredID() string { return r.ID }
 
+func (r settleResult) answering(id string) settleResult { r.ID = id; return r }
+
 type settlePayload struct {
 	Results []settleResult `json:"results"` // settleResultsKey
 }
@@ -109,6 +112,7 @@ type settlePayload struct {
 //promptvoice:exempt the reply is a verdict enum and a quote of the customer's own words, never a sentence addressed to anybody.
 func settleRequest(batch []settleCandidate) model.Request {
 	fence := promptfence.New()
+	refs := settleRefs(batch)
 	var prompt strings.Builder
 	prompt.WriteString("Conversations (untrusted; judge each by its id):\n")
 	for _, candidate := range batch {
@@ -118,7 +122,7 @@ func settleRequest(batch []settleCandidate) model.Request {
 				settleSourceWord(message), message.Subject, settleMessageBody(message))
 		}
 		prompt.WriteString(fence.WrapAttr("source_id",
-			candidate.Request.RequestID.String(), conversation.String()) + "\n")
+			refs.For(candidate.Request.RequestID.String()), conversation.String()) + "\n")
 	}
 	prompt.WriteString(`Return JSON: { "results": [ { "id", "verdict", "remaining", "due_at", "confidence" } ] } — ` +
 		`one entry per supplied id. "remaining" and "due_at" are empty strings unless the verdict is still_owed. ` + settleRemainingEvidence)
@@ -127,7 +131,7 @@ func settleRequest(batch []settleCandidate) model.Request {
 		System:         settleSystemFor(fence),
 		Messages:       []model.Message{{Role: chatRoleUser, Content: prompt.String()}},
 		MaxTokens:      ai.ReasoningOutputMaxTokens,
-		ResponseSchema: settleSchema(settleIDs(batch)),
+		ResponseSchema: settleSchema(refs.All()),
 		SecretStripper: ai.NewSecretStripper(),
 	}
 }
@@ -185,12 +189,14 @@ func settleShapeValid(batch []settleCandidate) ai.Validator {
 }
 
 // validateSettlePayload names the first batch-fidelity violation, or "" when
-// the payload is exact.
+// the payload is exact. The payload answers by ref; past the id contract its
+// results are read back to request ids.
 func validateSettlePayload(payload settlePayload, batch []settleCandidate) string {
-	if msg := checkBatchFidelity(payload.Results, settleIDs(batch)); msg != "" {
+	refs := settleRefs(batch)
+	if msg := checkBatchFidelity(payload.Results, refs.All()); msg != "" {
 		return msg
 	}
-	for _, r := range payload.Results {
+	for _, r := range resolveBatchRefs(payload.Results, refs) {
 		if !settleVerdicts[r.Verdict] {
 			return fmt.Sprintf("verdict %q is not settled|still_owed|unsure", clampToken(r.Verdict))
 		}
@@ -244,14 +250,14 @@ func settleRemainderStands(result settleResult, batch []settleCandidate) bool {
 	return result.Verdict != activities.RequestStillOwed || settleRemainderGrounded(result, batch)
 }
 
-// settleIDs is the ids one batch asks about: what the schema lets the model
-// name and what the validator requires it to answer.
-func settleIDs(batch []settleCandidate) []string {
-	requested := make([]string, len(batch))
-	for i, c := range batch {
-		requested[i] = c.Request.RequestID.String()
+// settleRefs names each request of a batch r1, r2, and so on, in batch order.
+// The schema lets the model name these refs and the validator requires each.
+func settleRefs(batch []settleCandidate) *promptref.Refs {
+	refs := promptref.New("r")
+	for _, c := range batch {
+		refs.For(c.Request.RequestID.String())
 	}
-	return requested
+	return refs
 }
 
 // settleSchema is the generation-time shape guardrail.

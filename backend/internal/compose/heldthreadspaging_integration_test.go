@@ -7,6 +7,7 @@ package compose
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -14,6 +15,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
@@ -21,7 +23,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -254,7 +255,8 @@ func TestAnOverlongSearchIsRefusedByField(t *testing.T) {
 }
 
 // The contact filter keeps the threads with that contact, by the addresses its
-// hold saw. A contact the reader may not read is a missing row.
+// hold saw. A contact the reader may not read, or one that is archived, is a 404.
+// Asked through the route, so the query parameter has to reach the store.
 func TestTheContactFilterKeepsTheThreadsWithThatContact(t *testing.T) {
 	e := integration.Setup(t)
 	day := time.Date(2026, 9, 1, 9, 0, 0, 0, time.UTC)
@@ -264,32 +266,54 @@ func TestTheContactFilterKeepsTheThreadsWithThatContact(t *testing.T) {
 	e.WsExec(t, `INSERT INTO activity_participant(activity_id,contact_id,address,role) VALUES($1,$2,'lena@prospect.test','from')`, message, lena)
 	seedHeldThread(t, e, e.Rep1, "with-sam", "held", 1, day, false, "sam@northwind.test")
 
-	page := heldPage(t, e, e.Rep1, capture.HeldThreadQuery{ContactID: &lena})
-	if len(page.Threads) != 1 || page.Threads[0].ThreadKey != "with-lena" {
-		t.Errorf("the contact filter listed %+v, want the thread with Lena alone", page.Threads)
+	listed := heldByContact(purgeCtx(e, e.Rep1), t, e, lena)
+	if listed.Code != http.StatusOK {
+		t.Fatalf("filtering by Lena answered %d: %s", listed.Code, listed.Body.String())
+	}
+	var page crmcontracts.HeldThreadListResponse
+	if err := json.Unmarshal(listed.Body.Bytes(), &page); err != nil {
+		t.Fatalf("decoding the page: %v", err)
+	}
+	if len(page.Data) != 1 || page.Data[0].ThreadKey != "with-lena" {
+		t.Errorf("the contact filter listed %+v, want the thread with Lena alone", page.Data)
 	}
 
 	hidden := e.SeedContact(t, "Private Contact", &e.Rep3)
 	e.MakeCapturePrivate(t, "contact", hidden, e.Rep3)
-	_, err := capture.HeldThreadsFor(purgeCtx(e, e.Rep1), InstallationDB(e.Pool), capture.HeldThreadQuery{ContactID: &hidden})
-	if !errors.Is(err, apperrors.ErrNotFound) {
-		t.Errorf("filtering by a contact the reader may not read answered %v, want not found", err)
-	}
-
 	noContactGrant := e.As(e.Rep1, nil, principal.Permissions{
 		Objects:  map[string]principal.ObjectGrant{"activity": {Read: true}},
 		RowScope: principal.RowScopeAll,
 	})
-	_, err = capture.HeldThreadsFor(noContactGrant, InstallationDB(e.Pool), capture.HeldThreadQuery{ContactID: &lena})
-	if !errors.Is(err, apperrors.ErrNotFound) {
-		t.Errorf("filtering with no contact grant answered %v, want not found", err)
+	refusals := []struct {
+		name    string
+		ctx     context.Context
+		contact ids.UUID
+	}{
+		{"a contact the reader may not read", purgeCtx(e, e.Rep1), hidden},
+		{"a reader with no contact grant", noContactGrant, lena},
+	}
+	for _, refusal := range refusals {
+		if got := heldByContact(refusal.ctx, t, e, refusal.contact); got.Code != http.StatusNotFound {
+			t.Errorf("filtering by %s answered %d, want 404: %s", refusal.name, got.Code, got.Body.String())
+		}
 	}
 
 	e.WsExec(t, `UPDATE contact SET archived_at = now() WHERE id = $1`, lena)
-	_, err = capture.HeldThreadsFor(purgeCtx(e, e.Rep1), InstallationDB(e.Pool), capture.HeldThreadQuery{ContactID: &lena})
-	if !errors.Is(err, apperrors.ErrNotFound) {
-		t.Errorf("filtering by an archived contact answered %v, want not found", err)
+	if got := heldByContact(purgeCtx(e, e.Rep1), t, e, lena); got.Code != http.StatusNotFound {
+		t.Errorf("filtering by an archived contact answered %d, want 404: %s", got.Code, got.Body.String())
 	}
+}
+
+// heldByContact asks GET /capture/held-threads?contact_id= through the
+// generated router, which is what parses the parameter off the address.
+func heldByContact(ctx context.Context, t *testing.T, e *integration.Env, contact ids.UUID) *httptest.ResponseRecorder {
+	t.Helper()
+	server := Server{captureSenderHandlers: captureSenderHandlers{db: InstallationDB(e.Pool)}}
+	router := crmcontracts.HandlerFromMuxWithBaseURL(server, chi.NewRouter(), "/v1")
+	response := httptest.NewRecorder()
+	request := httptest.NewRequest(http.MethodGet, "/v1/capture/held-threads?contact_id="+contact.String(), nil).WithContext(ctx)
+	router.ServeHTTP(response, request)
+	return response
 }
 
 func TestHeldSearchUsesAnotherReadableMessageAfterTheOpeningIsErased(t *testing.T) {

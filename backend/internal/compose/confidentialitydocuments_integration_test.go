@@ -272,7 +272,9 @@ func TestAStaffInvoiceAndCostPlusSheetStayPrivateWhateverTheModelSays(t *testing
 	}
 }
 
-func TestAScanUnderAPlainNameIsLeftToTheModel(t *testing.T) {
+// A scan under a plain name is still asked of the model, which keeps its kind
+// on the thread. A confident "ordinary" does not open it: nobody read the file.
+func TestAScanUnderAPlainNameIsAskedButNeverOpened(t *testing.T) {
 	e := integration.Setup(t)
 	blob := blobstore.NewMemory()
 	mail := seedHeldThreadMail(t, e, "thread-scanned-map", "office@gradion.example", "Directions to the venue")
@@ -287,8 +289,8 @@ func TestAScanUnderAPlainNameIsLeftToTheModel(t *testing.T) {
 	if brain.asked != 1 {
 		t.Fatalf("the model was asked %d times, want once: only a file named as private skips it", brain.asked)
 	}
-	if got := threadStatus(t, e, thread); got != capture.VerdictCleared {
-		t.Errorf("thread status = %q, want cleared as the model answered", got)
+	if got := threadStatus(t, e, thread); got != capture.VerdictUnsure {
+		t.Errorf("thread status = %q, want unsure: a file nobody read keeps the thread held", got)
 	}
 }
 
