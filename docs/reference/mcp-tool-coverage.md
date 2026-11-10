@@ -17,7 +17,7 @@ The lane that produces its results is `make e2e-llm`; it is paid and opt-in, so 
 
 | Assistant | How we connected it | Jobs tried | Can I trust it? | In plain words |
 |---|---|---:|---|---|
-| `claude-sonnet-5-5` | Claude Code CLI | 70 of 71 | 🟢 Yes | Reliable on 70 of 70 jobs tried. |
+| `claude-sonnet-5-5` | Claude Code CLI | 71 of 71 | 🟢 Yes | Reliable on 71 of 71 jobs tried. |
 | `gemini-3.8-flash-medium` | Antigravity CLI | 70 of 71 | 🟡 Mostly | Reliable on 69 of 70 jobs tried; not yet: What a buyer reads in a deal room changes the moment it is saved,. |
 | `gpt-5.6-sol` | Codex CLI | 70 of 71 | 🟡 Mostly | Reliable on 68 of 70 jobs tried; not yet: What a buyer reads in a deal room changes the moment it is saved,; The privacy notice mails a contact, so it is a send. The action says to ask first, and this user has not said to send it. |
 
@@ -103,7 +103,7 @@ One row per everyday job, one column per assistant. ✅ did it reliably, ❌ not
 | A team and a share are both change_access: create the team, add each | Create the team and add both colleagues<br>Share the record with the colleague named | ✅ | ✅ | ✅ |
 | A user's own hours and own language are theirs alone, so both go to | Own hours go to the own-settings tool<br>A user's language is their own | ✅ | ✅ | ✅ |
 | The FX sheet and the company logo are workspace setup, written | A rate goes on the sheet<br>A logo is setup, not an attachment | ✅ | ✅ | ✅ |
-| Log the meeting, add the task, and say what the work left waiting | Report what the write left waiting<br>Leave the rest of the queue out | - | - | - |
+| Log the meeting, add the task, and say what the work left waiting | Leave the rest of the queue out | ✅ | - | - |
 
 ---
 
@@ -129,13 +129,13 @@ Everything below is the detail behind the two tables above: which tools each job
 | | |
 |---|---:|
 | Tools the assistant is offered | 48 |
-| … some case requires | 36 |
+| … some case requires | 37 |
 | … some case requires as one of a set | 2 |
-| … **no case requires** | 10 |
-| … of those, permitted somewhere but never required | 5 |
-| Prompt tokens spent on tools no case requires | 5303 |
+| … **no case requires** | 9 |
+| … of those, permitted somewhere but never required | 4 |
+| Prompt tokens spent on tools no case requires | 4829 |
 | Use cases | 71 |
-| Acceptance criteria the cases declare, each with a statement | 119 |
+| Acceptance criteria the cases declare, each with a statement | 118 |
 
 ## By model
 
@@ -143,11 +143,9 @@ Which model drove the lane, and how it went. The tool columns further down are t
 
 | Model | Cases run | Reached their bar | Below it | Runs passed | Reliability |
 |---|---:|---:|---:|---:|---:|
-| `claude-sonnet-5-5@claude-cli` | 70 of 71 | 70 | 0 | 140/143 | 98% |
+| `claude-sonnet-5-5@claude-cli` | 71 of 71 | 71 | 0 | 144/147 | 98% |
 | `gemini-3.8-flash-medium@agy-cli` | 70 of 71 | 69 | 1 | 138/144 | 96% |
 | `gpt-5.6-sol@codex-cli` | 70 of 71 | 68 | 2 | 136/147 | 93% |
-
-> `claude-sonnet-5-5@claude-cli` has no committed run for 1 of 71 cases.
 
 > `gemini-3.8-flash-medium@agy-cli` has no committed run for 1 of 71 cases.
 
@@ -203,7 +201,7 @@ One row per case per model that ran it. A case nobody has run appears once, mark
 
 | Case | Model | Result | Passed | Bar | Criteria | Requires |
 |---|---|---|---:|---:|---|---|
-| [case1_log_it](../../e2e/llm/scenarios/case1-log-it.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **8** Promises come back as suggestions | `create_record` |
+| [case1_log_it](../../e2e/llm/scenarios/case1-log-it.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 3/3 | 2 | **8** Promises come back as suggestions | `create_record` |
 | [case1_log_it](../../e2e/llm/scenarios/case1-log-it.yaml) | `gemini-3.8-flash-medium@agy-cli` | pass | 2/2 | 2 | **8** Promises come back as suggestions | `create_record` |
 | [case1_log_it](../../e2e/llm/scenarios/case1-log-it.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/3 | 2 | **8** Promises come back as suggestions | `create_record` |
 | [case10_finish_the_import](../../e2e/llm/scenarios/case10-finish-the-import.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **1** A pre-authorized import is actually committed<br>**2** What landed is reported from the run's own report | `commit_import`, `preview_import`, `read_import` |
@@ -254,7 +252,7 @@ One row per case per model that ran it. A case nobody has run appears once, mark
 | [case116_the_rate_and_the_logo](../../e2e/llm/scenarios/case116-the-rate-and-the-logo.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **1** A rate goes on the sheet<br>**2** A logo is setup, not an attachment | `change_settings` |
 | [case116_the_rate_and_the_logo](../../e2e/llm/scenarios/case116-the-rate-and-the-logo.yaml) | `gemini-3.8-flash-medium@agy-cli` | pass | 2/2 | 2 | **1** A rate goes on the sheet<br>**2** A logo is setup, not an attachment | `change_settings` |
 | [case116_the_rate_and_the_logo](../../e2e/llm/scenarios/case116-the-rate-and-the-logo.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/2 | 2 | **1** A rate goes on the sheet<br>**2** A logo is setup, not an attachment | `change_settings` |
-| [case117_log_it_and_say_what_waits](../../e2e/llm/scenarios/case117-log-it-and-say-what-waits.yaml) | - | not run | - | - | **1** Report what the write left waiting<br>**2** Leave the rest of the queue out | - |
+| [case117_log_it_and_say_what_waits](../../e2e/llm/scenarios/case117-log-it-and-say-what-waits.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 3/3 | 2 | **2** Leave the rest of the queue out | `list_approvals` |
 | [case20_put_it_in_the_board_pack](../../e2e/llm/scenarios/case20-put-it-in-the-board-pack.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **1** Every figure in the document is the database's<br>**3** A refused literal is not a missing capability | - |
 | [case20_put_it_in_the_board_pack](../../e2e/llm/scenarios/case20-put-it-in-the-board-pack.yaml) | `gemini-3.8-flash-medium@agy-cli` | pass | 2/2 | 2 | **1** Every figure in the document is the database's<br>**3** A refused literal is not a missing capability | - |
 | [case20_put_it_in_the_board_pack](../../e2e/llm/scenarios/case20-put-it-in-the-board-pack.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/2 | 2 | **1** Every figure in the document is the database's<br>**3** A refused literal is not a missing capability | - |
@@ -446,7 +444,6 @@ The numbers in the table above, in words. Source: [`e2e/llm/criteria.yaml`](../.
 | `case115_my_hours_and_my_language` | 2 | A user's language is their own | The model sets its user's own language and no setting every colleague shares. |
 | `case116_the_rate_and_the_logo` | 1 | A rate goes on the sheet | The model sets the rate on the sheet. |
 | `case116_the_rate_and_the_logo` | 2 | A logo is setup, not an attachment | The model uploads the logo as the company logo and attaches nothing to a record. |
-| `case117_log_it_and_say_what_waits` | 1 | Report what the write left waiting | The model reports the draft an automation staged in reaction to the meeting it logged, as waiting for the user. |
 | `case117_log_it_and_say_what_waits` | 2 | Leave the rest of the queue out | The model names no waiting item this task did not cause; at most it counts them. |
 | `case1_log_it` | 8 | Promises come back as suggestions | Only what was actually promised is reported. Listing every topic that was discussed means the reader is reciting what it saw rather than what was committed to. |
 | `case20_put_it_in_the_board_pack` | 1 | Every figure in the document is the database's | The report is composed from a saved analytics run and cites the cells holding its numbers, rather than being written around figures the assistant read once and retyped. |
@@ -573,6 +570,7 @@ Every run of every case requiring this tool passed, for the model named.
 | `change_my_settings` | 1.00 | 6 | `case102_shorter_in_my_voice`, `case109_show_my_times_in_lisbon`, `case115_my_hours_and_my_language` |
 | `change_tags` | 1.00 | 6 | `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing` |
 | `draft_outbound` | 1.00 | 4 | `case44_chase_what_is_slipping`, `case60_send_one_draft_one` |
+| `list_approvals` | 1.00 | 3 | `case117_log_it_and_say_what_waits` |
 | `schedule_meeting` | 1.00 | 2 | `case46_get_us_in_a_room` |
 | `read_context` | 1.00 | 2 | `case64_catch_me_up_and_the_brief` |
 | `read_tags` | 1.00 | 6 | `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing` |
@@ -659,7 +657,7 @@ Driven, and not every run passed. Open the case to see what was asked.
 |---|---:|---:|---|---|
 | `read_reports` | 0.80 | 4/5 | - | `case49_who_can_introduce_us`, `case62_held_meetings_to_opportunities` |
 | `change_activities` | 0.92 | 12/13 | - | `case42_can_i_answer_on_whatsapp`, `case46_get_us_in_a_room`, `case48_that_whole_thread_is_filed_wrong`, `case59_file_it_on_the_meeting_and_the_contract`, `case74_read_the_file_back`, `case9_filed_in_the_wrong_place` |
-| `create_record` | 0.86 | 6/7 | - | `case1_log_it`, `case54_a_word_from_the_fair`, `case56_not_the_same` |
+| `create_record` | 0.88 | 7/8 | - | `case1_log_it`, `case54_a_word_from_the_fair`, `case56_not_the_same` |
 | `read_attention` | 0.86 | 6/7 | - | `case49_who_can_introduce_us`, `case58_quiet_for_three_weeks`, `case61_what_have_i_promised` |
 | `read_relationships` | 0.67 | 2/3 | - | `case49_who_can_introduce_us` |
 | `list_documents` | 0.67 | 2/3 | - | `case74_read_the_file_back` |
@@ -729,7 +727,7 @@ A tool this lane has not tried may still be graded. The `Graded by` column names
 corpus tests the tool anyway. That lane asks which tool a goal should reach for, and which plausible neighbour it must
 avoid, which this lane cannot express at all: it sees that a name appeared, never whether it was the right first reach.
 
-So of the 10 tools no use case requires, **2 are graded elsewhere** and 8 are untried by any lane.
+So of the 9 tools no use case requires, **2 are graded elsewhere** and 7 are untried by any lane.
 
 A tool in the `Permitted in` column is worse than one with nothing: a case is allowed to use it and no case checks that it can.
 
@@ -739,7 +737,6 @@ A tool in the `Permitted in` column is worse than one with nothing: a case is al
 | `run_research` | 776 | - | `case108_ask_sofia_for_an_intro` | - |
 | `read_view` | 638 | - | `case102_shorter_in_my_voice`, `case106_turn_that_rule_off`, `case76_she_said_yes_at_the_fair`, `case77_record_her_yes`, `case91_add_a_review_stage`, `case94_a_field_for_the_region` | - |
 | `change_record_parts` | 621 | - | - | - |
-| `list_approvals` | 474 | - | `case117_log_it_and_say_what_waits`, `case1_log_it`, `case32_two_words_for_one_thing`, `case46_get_us_in_a_room`, `case59_file_it_on_the_meeting_and_the_contract` | - |
 | `change_relationships` | 472 | - | - | - |
 | `decide_approvals` | 429 | - | - | - |
 | `annotate_brief` | 417 | `agent_loop` | - | `morning_brief` |
