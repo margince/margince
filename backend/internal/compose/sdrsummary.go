@@ -328,9 +328,15 @@ func scanWaitingHandoff(row pgx.CollectableRow) (crmcontracts.SdrWaitingHandoff,
 	return out, nil
 }
 
+// sdrAsOfWindow is how far back an SDR read may be pinned. The recipient,
+// team membership and meeting status keep no history. An older instant would
+// read them as they stand now while claiming to be that moment.
+const sdrAsOfWindow = 15 * time.Minute
+
 // sdrAnswerInstant is the instant an SDR read answers at: the one asked for, or
 // now. A summary and the rows beside it then describe one moment. A future
-// instant is refused, since nothing has happened by then to count.
+// instant is refused, since nothing has happened by then to count. So is one
+// older than sdrAsOfWindow.
 func sdrAnswerInstant(now time.Time, asked *time.Time) (time.Time, error) {
 	at := now.UTC()
 	if asked == nil {
@@ -338,6 +344,10 @@ func sdrAnswerInstant(now time.Time, asked *time.Time) (time.Time, error) {
 	}
 	if asked.After(at) {
 		return time.Time{}, httperr.Validation("as_of", "future", "choose an instant no later than now")
+	}
+	if at.Sub(*asked) > sdrAsOfWindow {
+		return time.Time{}, httperr.Validation("as_of", "too_old",
+			"choose an instant within the last 15 minutes, or omit as_of to count now")
 	}
 	return asked.UTC(), nil
 }
