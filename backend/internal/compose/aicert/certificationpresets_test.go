@@ -149,11 +149,10 @@ func loadAICertPresets(t *testing.T) []aiCertPreset {
 	return orderAICertPresets(t, presets)
 }
 
-// aiCertPresetOrder is the order a reader meets the presets in: the shipped
-// Gemini default first, then open-weight models a buyer can have brokered or
-// host, then the other brokered models, then presets that run on the buyer's
-// own machine. A preset missing from the list fails the page, so a new one is
-// placed on purpose rather than sorted in by its file name.
+// aiCertPresetOrder is the order a reader meets the presets in. The shipped
+// Gemini default comes first, then brokered open-weight models, then the other
+// brokered models, then presets that run on the buyer's own machine. A preset
+// missing from the list fails the page, so its place is chosen, not its file name.
 var aiCertPresetOrder = []string{
 	"gemini_cloud.yaml",
 	"gemini_vertex_eu.yaml",
