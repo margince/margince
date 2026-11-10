@@ -210,13 +210,9 @@ function DealCreateAction({
 }
 
 // Each surface reads only while it shows, so neither pays for the other.
-//
-// The pipeline the surfaces are scoped to arrives with the pipelines read.
-// Asking before it lands asks for every deal and throws the answer away. An
-// installation with no pipelines answers `[]`, which is knowing.
-//
-// Until that read answers, the table's state is that read's. The list waits on
-// it, so a pipelines failure is the table's failure to show.
+// Their pipeline scope arrives with the pipelines read. Asking before it lands
+// asks for every deal and throws the answer away; no pipelines answers `[]`,
+// which is knowing. The table waits on that read, so it shows its failure.
 function useSurfaceReads(
   f: DealFilters,
   stages: readonly Stage[],
