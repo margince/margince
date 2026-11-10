@@ -94,6 +94,22 @@ const fieldNote = "note"
 // fieldOccurredAt is the same, for the date.
 const fieldOccurredAt = "occurred_at"
 
+// fieldLegalEntityID names the legal entity a record was made for, in a refusal
+// or an audit row.
+const fieldLegalEntityID = "legal_entity_id"
+
+// The named arguments that every write and match of consent_qualifying_event
+// binds, so a writer and the replay that matches it cannot spell one apart.
+const (
+	contactArg  = "contact"
+	kindArg     = "kind"
+	noteArg     = "note"
+	occurredArg = "occurred"
+	sourceArg   = "source"
+	actorArg    = "actor"
+	dealArg     = "deal"
+)
+
 // clockSkewAllowance is how far ahead of this server a client's clock may be
 // before a date reads as a claim about the future rather than a fast watch.
 const clockSkewAllowance = 5 * time.Minute
@@ -308,9 +324,9 @@ func writeExchangeTx(
  WHERE contact_id=@contact AND kind=@kind AND note=@note AND occurred_at=@occurred
  AND about_deal_id IS NOT DISTINCT FROM @deal AND @entity=ANY(recorded_for_entities))
  RETURNING id::text`, pgx.StrictNamedArgs{
-		"contact": contactID, "kind": in.Kind, "note": note, "occurred": in.OccurredAt,
-		"source": handRecordedSource(ctx), "actor": by, "quote": in.AsksForQuote,
-		"deal": zeroUUIDAsNull(in.AboutDeal), "entity": entity,
+		contactArg: contactID, kindArg: in.Kind, noteArg: note, occurredArg: in.OccurredAt,
+		sourceArg: handRecordedSource(ctx), actorArg: by, "quote": in.AsksForQuote,
+		dealArg: zeroUUIDAsNull(in.AboutDeal), "entity": entity,
 	}).Scan(&out.ID); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return standingExchange(ctx, tx, contactID, in.AboutDeal, entity, out)
@@ -327,7 +343,7 @@ func writeExchangeTx(
 	// (`contact_consent.create`) that authorized nothing here.
 	_, err = storekit.AuditEvent(ctx, tx, "update", "contact", contactID.UUID, map[string]any{
 		"qualifying_event": in.Kind,
-		"legal_entity_id":  entity,
+		fieldLegalEntityID: entity,
 		fieldNote:          note,
 		fieldOccurredAt:    in.OccurredAt.UTC().Format(time.RFC3339),
 		"about_deal":       zeroUUIDAsNull(in.AboutDeal),
@@ -343,8 +359,8 @@ func standingExchange(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, d
  WHERE contact_id=@contact AND kind=@kind AND note=@note AND occurred_at=@occurred
  AND about_deal_id IS NOT DISTINCT FROM @deal AND @entity=ANY(recorded_for_entities)
  ORDER BY created_at LIMIT 1`, pgx.StrictNamedArgs{
-		"contact": contactID, "kind": out.Kind, "note": out.Note, "occurred": out.OccurredAt,
-		"deal": zeroUUIDAsNull(deal), "entity": entity,
+		contactArg: contactID, kindArg: out.Kind, noteArg: out.Note, occurredArg: out.OccurredAt,
+		dealArg: zeroUUIDAsNull(deal), "entity": entity,
 	}).Scan(&out.ID, &out.AsksForQuote, &out.Retracted); err != nil {
 		return fmt.Errorf("consent: reading the exchange already on file: %w", err)
 	}

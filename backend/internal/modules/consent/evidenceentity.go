@@ -57,15 +57,17 @@ func activityEntitySQL(alias, entity string) string {
  AND ` + recordedEntitySQL(`entity_import.legal_entity_id`, entity) + `))`
 }
 
-func activityEvidenceSQL(ctx context.Context, alias, entity string, args *[]any) (string, error) {
-	visible, err := auth.ActivityContentClause(ctx, alias, func(value any) int {
+// activityEvidenceSQL filters the activity aliased `a` to the evidence the
+// caller may read and that was recorded for entity.
+func activityEvidenceSQL(ctx context.Context, entity string, args *[]any) (string, error) {
+	visible, err := auth.ActivityContentClause(ctx, "a", func(value any) int {
 		*args = append(*args, value)
 		return len(*args)
 	})
 	if err != nil {
 		return "", err
 	}
-	return "(" + visible + ") AND " + activityEntitySQL(alias, entity), nil
+	return "(" + visible + ") AND " + activityEntitySQL("a", entity), nil
 }
 
 const availableQualifyingActivitySQL = `a.archived_at IS NULL AND a.restricted_at IS NULL`
@@ -115,7 +117,7 @@ func qualifyingRecordsSQL(alias, visible string, args *[]any) string {
 }
 
 func qualifyingSourceEntities(ctx context.Context, tx pgx.Tx, event QualifyingEvent) ([]ids.UUID, bool, error) {
-	if event.SourceEntityType != "activity" {
+	if event.SourceEntityType != entityActivity {
 		return nil, false, errors.New("consent: the exchange does not name a recorded activity")
 	}
 	rows, err := tx.Query(ctx, `SELECT DISTINCT scope.entity FROM activity a CROSS JOIN LATERAL (

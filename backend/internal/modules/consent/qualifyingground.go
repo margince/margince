@@ -197,9 +197,11 @@ func stampQualifyingEvent(
  DO UPDATE SET recorded_for_entities=ARRAY(SELECT DISTINCT unnest(
  coalesce(consent_qualifying_event.recorded_for_entities,'{}'::uuid[]) || EXCLUDED.recorded_for_entities) ORDER BY 1)
  WHERE NOT EXCLUDED.recorded_for_entities <@ coalesce(consent_qualifying_event.recorded_for_entities,'{}'::uuid[])`,
-		pgx.StrictNamedArgs{"contact": contactID, "kind": event.Kind, "source_type": event.SourceEntityType,
-			"source_id": event.SourceEntityID, "occurred": event.OccurredAt, "source": source,
-			"actor": capturedBy, "entities": entities})
+		pgx.StrictNamedArgs{
+			contactArg: contactID, kindArg: event.Kind, "source_type": event.SourceEntityType,
+			"source_id": event.SourceEntityID, occurredArg: event.OccurredAt, sourceArg: source,
+			actorArg: capturedBy, "entities": entities,
+		})
 	return err
 }
 
@@ -270,7 +272,7 @@ func inboundQualifyingEvent(ctx context.Context, tx pgx.Tx, contactID string, si
 	var activityID string
 	args := []any{contactID, since, entity}
 	entityArg := storekit.SQLf("$%d", len(args))
-	visible, err := activityEvidenceSQL(ctx, "a", entityArg, &args)
+	visible, err := activityEvidenceSQL(ctx, entityArg, &args)
 	if err != nil {
 		return QualifyingEvent{}, false, err
 	}
@@ -292,7 +294,7 @@ func inboundQualifyingEvent(ctx context.Context, tx pgx.Tx, contactID string, si
 		return QualifyingEvent{}, false, fmt.Errorf("read the inbound qualifying message: %w", err)
 	}
 	event.Kind = "inbound_message"
-	event.SourceEntityType = "activity"
+	event.SourceEntityType = entityActivity
 	event.SourceEntityID = activityID
 	return event, true, nil
 }
@@ -361,7 +363,7 @@ func meetingQualifyingEvent(ctx context.Context, tx pgx.Tx, contactID string, si
 	var activityID string
 	args := []any{contactID, since, asOf, entity}
 	entityArg := storekit.SQLf("$%d", len(args))
-	visible, err := activityEvidenceSQL(ctx, "a", entityArg, &args)
+	visible, err := activityEvidenceSQL(ctx, entityArg, &args)
 	if err != nil {
 		return QualifyingEvent{}, false, err
 	}
@@ -381,7 +383,7 @@ func meetingQualifyingEvent(ctx context.Context, tx pgx.Tx, contactID string, si
 		return QualifyingEvent{}, false, fmt.Errorf("read the qualifying meeting: %w", err)
 	}
 	event.Kind = KindMeeting
-	event.SourceEntityType = "activity"
+	event.SourceEntityType = entityActivity
 	event.SourceEntityID = activityID
 	return event, true, nil
 }

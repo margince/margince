@@ -40,9 +40,11 @@ func requestedNegotiation(ctx context.Context, tx pgx.Tx, deals []ids.UUID, subj
 	if err != nil {
 		return false, err
 	}
-	args := []any{subject.Kind, subject.ID, subject.Address, subject.ChannelProvider, subject.ChannelUserID,
+	args := []any{
+		subject.Kind, subject.ID, subject.Address, subject.ChannelProvider, subject.ChannelUserID,
 		deals, handRecordedRequestKinds, followupRequests.acquisitionKinds,
-		time.Now().Add(clockSkewAllowance), time.Now(), entity}
+		time.Now().Add(clockSkewAllowance), time.Now(), entity,
+	}
 	entityArg := storekit.SQLf("$%d", len(args))
 	args = append(args, deals)
 	dealFilter := storekit.SQLf("$%d", len(args))
@@ -115,16 +117,20 @@ type requestScope struct {
 	perDeal bool
 }
 
+// acquisitionRequestedQuote is the acquisition kind of a contact who asked for
+// a quote or a meeting. It owes no notice and supports a follow-up and a quote.
+const acquisitionRequestedQuote = "requested_quote_or_meeting"
+
 // followupRequests and quoteRequests are the two scopes the validators read.
 // Permission given in person, a callback asked for and a form enquiry support a
 // follow-up. Only a request for a quote or meeting supports a quote.
 var (
 	followupRequests = requestScope{
-		acquisitionKinds: []string{"requested_quote_or_meeting", "in_person_permission"},
+		acquisitionKinds: []string{acquisitionRequestedQuote, faceToFaceSource},
 		eventKinds:       []string{KindRequestedBySubject, KindInquiry},
 	}
 	quoteRequests = requestScope{
-		acquisitionKinds: []string{"requested_quote_or_meeting"},
+		acquisitionKinds: []string{acquisitionRequestedQuote},
 		eventKinds:       []string{KindRequestedBySubject},
 		quoteOnly:        true,
 		perDeal:          true,
@@ -160,9 +166,11 @@ func latestRequest(ctx context.Context, tx pgx.Tx, subject subjectRef, scope req
 	if err != nil {
 		return time.Time{}, false, err
 	}
-	args := []any{subject.ID, time.Now().Add(clockSkewAllowance),
+	args := []any{
+		subject.ID, time.Now().Add(clockSkewAllowance),
 		scope.eventKinds, scope.acquisitionKinds, scope.quoteOnly, scope.perDeal, zeroUUIDAsNull(deal),
-		subject.Address, entity}
+		subject.Address, entity,
+	}
 	entityArg := storekit.SQLf("$%d", len(args))
 	qualification, err := recordedQualificationSQL(ctx, "q", &args)
 	if err != nil {
