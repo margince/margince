@@ -75716,6 +75716,10 @@ export interface operations {
                 end_at?: string;
                 target_basis?: "month" | "fiscal_quarter";
                 close_window?: "fiscal_quarter" | "all_open" | "custom";
+                /** @description Start of the expected-close window when close_window is custom. Send it with close_end_at; the window spans at most twelve months. */
+                close_start_at?: string;
+                /** @description End of the expected-close window when close_window is custom, exclusive. Send it with close_start_at. */
+                close_end_at?: string;
                 metrics?: components["schemas"]["ReportingMetricID"][];
                 blocks?: components["schemas"]["ReportingBlockKind"][];
                 product_id?: components["schemas"]["ReportingProductId"];
@@ -75784,6 +75788,10 @@ export interface operations {
                 end_at?: string;
                 target_basis?: "month" | "fiscal_quarter";
                 close_window?: "fiscal_quarter" | "all_open" | "custom";
+                /** @description Start of the expected-close window when close_window is custom. Send it with close_end_at; the window spans at most twelve months. */
+                close_start_at?: string;
+                /** @description End of the expected-close window when close_window is custom, exclusive. Send it with close_start_at. */
+                close_end_at?: string;
                 metrics?: components["schemas"]["ReportingMetricID"][];
                 blocks?: components["schemas"]["ReportingBlockKind"][];
                 product_id?: string;
@@ -75828,9 +75836,9 @@ export interface operations {
                 end_at?: string;
                 target_basis?: "month" | "fiscal_quarter";
                 close_window?: "fiscal_quarter" | "all_open" | "custom";
-                /** @description Start of a custom close window. */
+                /** @description Start of the expected-close window when close_window is custom. Send it with close_end_at; the window spans at most twelve months. */
                 close_start_at?: string;
-                /** @description End of a custom close window, exclusive. */
+                /** @description End of the expected-close window when close_window is custom, exclusive. Send it with close_start_at. */
                 close_end_at?: string;
                 metrics?: components["schemas"]["ReportingMetricID"][];
                 blocks?: components["schemas"]["ReportingBlockKind"][];

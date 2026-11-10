@@ -70458,21 +70458,27 @@ type GetReportingEditionEvidenceParams struct {
 
 // EvaluateReportingParams defines parameters for EvaluateReporting.
 type EvaluateReportingParams struct {
-	ScopeKind    *EvaluateReportingParamsScopeKind   `form:"scope_kind,omitempty" json:"scope_kind,omitempty"`
-	ScopeId      *openapi_types.UUID                 `form:"scope_id,omitempty" json:"scope_id,omitempty"`
-	PipelineId   *openapi_types.UUID                 `form:"pipeline_id,omitempty" json:"pipeline_id,omitempty"`
-	Period       *EvaluateReportingParamsPeriod      `form:"period,omitempty" json:"period,omitempty"`
-	StartAt      *time.Time                          `form:"start_at,omitempty" json:"start_at,omitempty"`
-	EndAt        *time.Time                          `form:"end_at,omitempty" json:"end_at,omitempty"`
-	TargetBasis  *EvaluateReportingParamsTargetBasis `form:"target_basis,omitempty" json:"target_basis,omitempty"`
-	CloseWindow  *EvaluateReportingParamsCloseWindow `form:"close_window,omitempty" json:"close_window,omitempty"`
-	Metrics      *[]ReportingMetricID                `form:"metrics,omitempty" json:"metrics,omitempty"`
-	Blocks       *[]ReportingBlockKind               `form:"blocks,omitempty" json:"blocks,omitempty"`
-	ProductId    *openapi_types.UUID                 `form:"product_id,omitempty" json:"product_id,omitempty"`
-	Country      *ReportingCountry                   `form:"country,omitempty" json:"country,omitempty"`
-	Industry     *ReportingIndustry                  `form:"industry,omitempty" json:"industry,omitempty"`
-	ValueBasis   *ReportingValueBasis                `form:"value_basis,omitempty" json:"value_basis,omitempty"`
-	InitiativeId *openapi_types.UUID                 `form:"initiative_id,omitempty" json:"initiative_id,omitempty"`
+	ScopeKind   *EvaluateReportingParamsScopeKind   `form:"scope_kind,omitempty" json:"scope_kind,omitempty"`
+	ScopeId     *openapi_types.UUID                 `form:"scope_id,omitempty" json:"scope_id,omitempty"`
+	PipelineId  *openapi_types.UUID                 `form:"pipeline_id,omitempty" json:"pipeline_id,omitempty"`
+	Period      *EvaluateReportingParamsPeriod      `form:"period,omitempty" json:"period,omitempty"`
+	StartAt     *time.Time                          `form:"start_at,omitempty" json:"start_at,omitempty"`
+	EndAt       *time.Time                          `form:"end_at,omitempty" json:"end_at,omitempty"`
+	TargetBasis *EvaluateReportingParamsTargetBasis `form:"target_basis,omitempty" json:"target_basis,omitempty"`
+	CloseWindow *EvaluateReportingParamsCloseWindow `form:"close_window,omitempty" json:"close_window,omitempty"`
+
+	// CloseStartAt Start of the expected-close window when close_window is custom. Send it with close_end_at; the window spans at most twelve months.
+	CloseStartAt *time.Time `form:"close_start_at,omitempty" json:"close_start_at,omitempty"`
+
+	// CloseEndAt End of the expected-close window when close_window is custom, exclusive. Send it with close_start_at.
+	CloseEndAt   *time.Time            `form:"close_end_at,omitempty" json:"close_end_at,omitempty"`
+	Metrics      *[]ReportingMetricID  `form:"metrics,omitempty" json:"metrics,omitempty"`
+	Blocks       *[]ReportingBlockKind `form:"blocks,omitempty" json:"blocks,omitempty"`
+	ProductId    *openapi_types.UUID   `form:"product_id,omitempty" json:"product_id,omitempty"`
+	Country      *ReportingCountry     `form:"country,omitempty" json:"country,omitempty"`
+	Industry     *ReportingIndustry    `form:"industry,omitempty" json:"industry,omitempty"`
+	ValueBasis   *ReportingValueBasis  `form:"value_basis,omitempty" json:"value_basis,omitempty"`
+	InitiativeId *openapi_types.UUID   `form:"initiative_id,omitempty" json:"initiative_id,omitempty"`
 }
 
 // EvaluateReportingParamsScopeKind defines parameters for EvaluateReporting.
@@ -70500,13 +70506,19 @@ type ExportReportingEvaluationParams struct {
 	EndAt             *time.Time                                  `form:"end_at,omitempty" json:"end_at,omitempty"`
 	TargetBasis       *ExportReportingEvaluationParamsTargetBasis `form:"target_basis,omitempty" json:"target_basis,omitempty"`
 	CloseWindow       *ExportReportingEvaluationParamsCloseWindow `form:"close_window,omitempty" json:"close_window,omitempty"`
-	Metrics           *[]ReportingMetricID                        `form:"metrics,omitempty" json:"metrics,omitempty"`
-	Blocks            *[]ReportingBlockKind                       `form:"blocks,omitempty" json:"blocks,omitempty"`
-	ProductId         *ReportingProductId                         `form:"product_id,omitempty" json:"product_id,omitempty"`
-	InitiativeId      *ReportingInitiativeId                      `form:"initiative_id,omitempty" json:"initiative_id,omitempty"`
-	Country           *ReportingCountry                           `form:"country,omitempty" json:"country,omitempty"`
-	Industry          *ReportingIndustry                          `form:"industry,omitempty" json:"industry,omitempty"`
-	ValueBasis        *ReportingValueBasis                        `form:"value_basis,omitempty" json:"value_basis,omitempty"`
+
+	// CloseStartAt Start of the expected-close window when close_window is custom. Send it with close_end_at; the window spans at most twelve months.
+	CloseStartAt *time.Time `form:"close_start_at,omitempty" json:"close_start_at,omitempty"`
+
+	// CloseEndAt End of the expected-close window when close_window is custom, exclusive. Send it with close_start_at.
+	CloseEndAt   *time.Time             `form:"close_end_at,omitempty" json:"close_end_at,omitempty"`
+	Metrics      *[]ReportingMetricID   `form:"metrics,omitempty" json:"metrics,omitempty"`
+	Blocks       *[]ReportingBlockKind  `form:"blocks,omitempty" json:"blocks,omitempty"`
+	ProductId    *ReportingProductId    `form:"product_id,omitempty" json:"product_id,omitempty"`
+	InitiativeId *ReportingInitiativeId `form:"initiative_id,omitempty" json:"initiative_id,omitempty"`
+	Country      *ReportingCountry      `form:"country,omitempty" json:"country,omitempty"`
+	Industry     *ReportingIndustry     `form:"industry,omitempty" json:"industry,omitempty"`
+	ValueBasis   *ReportingValueBasis   `form:"value_basis,omitempty" json:"value_basis,omitempty"`
 }
 
 // ExportReportingEvaluationParamsScopeKind defines parameters for ExportReportingEvaluation.
@@ -70536,10 +70548,10 @@ type GetReportingEvidenceParams struct {
 	TargetBasis       *GetReportingEvidenceParamsTargetBasis `form:"target_basis,omitempty" json:"target_basis,omitempty"`
 	CloseWindow       *GetReportingEvidenceParamsCloseWindow `form:"close_window,omitempty" json:"close_window,omitempty"`
 
-	// CloseStartAt Start of a custom close window.
+	// CloseStartAt Start of the expected-close window when close_window is custom. Send it with close_end_at; the window spans at most twelve months.
 	CloseStartAt *time.Time `form:"close_start_at,omitempty" json:"close_start_at,omitempty"`
 
-	// CloseEndAt End of a custom close window, exclusive.
+	// CloseEndAt End of the expected-close window when close_window is custom, exclusive. Send it with close_start_at.
 	CloseEndAt   *time.Time            `form:"close_end_at,omitempty" json:"close_end_at,omitempty"`
 	Metrics      *[]ReportingMetricID  `form:"metrics,omitempty" json:"metrics,omitempty"`
 	Blocks       *[]ReportingBlockKind `form:"blocks,omitempty" json:"blocks,omitempty"`
@@ -105939,6 +105951,32 @@ func (siw *ServerInterfaceWrapper) EvaluateReporting(w http.ResponseWriter, r *h
 		return
 	}
 
+	// ------------- Optional query parameter "close_start_at" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "close_start_at", r.URL.Query(), &params.CloseStartAt, runtime.BindQueryParameterOptions{Type: "string", Format: "date-time"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "close_start_at"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "close_start_at", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "close_end_at" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "close_end_at", r.URL.Query(), &params.CloseEndAt, runtime.BindQueryParameterOptions{Type: "string", Format: "date-time"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "close_end_at"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "close_end_at", Err: err})
+		}
+		return
+	}
+
 	// ------------- Optional query parameter "metrics" -------------
 
 	err = runtime.BindQueryParameterWithOptions("form", true, false, "metrics", r.URL.Query(), &params.Metrics, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
@@ -106197,6 +106235,32 @@ func (siw *ServerInterfaceWrapper) ExportReportingEvaluation(w http.ResponseWrit
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "close_window"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "close_window", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "close_start_at" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "close_start_at", r.URL.Query(), &params.CloseStartAt, runtime.BindQueryParameterOptions{Type: "string", Format: "date-time"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "close_start_at"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "close_start_at", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "close_end_at" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "close_end_at", r.URL.Query(), &params.CloseEndAt, runtime.BindQueryParameterOptions{Type: "string", Format: "date-time"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "close_end_at"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "close_end_at", Err: err})
 		}
 		return
 	}

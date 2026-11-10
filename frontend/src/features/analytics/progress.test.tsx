@@ -2,12 +2,14 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 /** @vitest-environment happy-dom */
-import { cleanup, screen } from "@testing-library/react";
+import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { installFetchStub, jsonResponse } from "../../testing/story-utils";
+import { CONTEXTS } from "./analytics.overview.fixtures";
 import { render } from "./analytics.testkit";
 import { GoalEditor } from "./goals.editor";
+import { ProgressScreen } from "./progress";
 import { draftPlan, sellerMarch, teamMarch } from "./progress.fixtures";
 import { equalMonths, monthsTotal } from "./progress.queries";
 import { ProgressReadings, ProgressResult } from "./progress.result";
@@ -51,7 +53,7 @@ describe("ProgressResult", () => {
     expect(screen.queryByText(/below goal/)).toBeNull();
     expect(
       screen.getByText(
-        "Goals incomplete: some sellers have no goal yet, €100,000 so far",
+        "Goals incomplete: some months have no goal for every seller, €100,000 so far",
       ),
     ).toBeTruthy();
   });
@@ -125,5 +127,28 @@ describe("ProgressWork", () => {
     await user.click(await screen.findByRole("button", { name: "Show more" }));
     expect(await screen.findByText("Lead 2")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Show more" })).toBeNull();
+  });
+});
+
+describe("ProgressScreen", () => {
+  it("reads the seller a team row opened, though the picker never listed them", async () => {
+    const seller = "00000000-0000-4000-8000-0000000000b2";
+    window.location.hash = `#/progress?scope=owner:${seller}`;
+    installFetchStub({
+      "GET /analytics/context": () => jsonResponse(CONTEXTS.leader),
+      "GET /analytics/progress": () => jsonResponse(sellerMarch),
+    });
+    const stubbed = globalThis.fetch;
+    const asked: string[] = [];
+    vi.stubGlobal("fetch", (input: RequestInfo | URL, init?: RequestInit) => {
+      asked.push(input instanceof Request ? input.url : String(input));
+      return stubbed(input, init);
+    });
+    render(<ProgressScreen />);
+    await waitFor(() =>
+      expect(
+        asked.find((url) => url.includes("/analytics/progress")),
+      ).toContain(`scope_id=${seller}`),
+    );
   });
 });

@@ -15,6 +15,7 @@ import {
 import { useLocale, useT } from "../../i18n";
 import { navigate } from "../../lib/router";
 import { replaceDial, useUrlParams } from "../../lib/urlstate";
+import { isUuid } from "../../lib/uuid";
 import {
   type AnalyticsScope,
   scopeKey,
@@ -43,6 +44,13 @@ function progressScopes(scopes: readonly AnalyticsScope[]): AnalyticsScope[] {
   );
 }
 
+// A team row opens one seller, whom the offer does not list. The server still
+// decides whether the reader may see that seller.
+function sellerFromKey(key: string | undefined): AnalyticsScope | undefined {
+  const id = key?.startsWith("owner:") ? key.slice("owner:".length) : "";
+  return isUuid(id) ? { kind: "owner", id, label: "" } : undefined;
+}
+
 function readDials(params: ReadonlyMap<string, string>, now: Date) {
   const period: Period = params.get("period") === "year" ? "year" : "month";
   const year = Number(params.get("year")) || now.getFullYear();
@@ -61,7 +69,9 @@ export function ProgressScreen() {
   const [now] = useState(() => new Date());
   const context = useAnalyticsContext();
   const scopes = progressScopes(context.data?.allowed_scopes ?? []);
-  const named = scopes.find((scope) => scopeKey(scope) === params.get("scope"));
+  const named =
+    scopes.find((scope) => scopeKey(scope) === params.get("scope")) ??
+    sellerFromKey(params.get("scope"));
   const defaultScope =
     context.data?.default_scope.kind === "owner"
       ? undefined
@@ -134,10 +144,7 @@ export function ProgressScreen() {
             {(field) => (
               <Select
                 {...field}
-                options={scopes.map((each) => ({
-                  value: scopeKey(each),
-                  label: each.label,
-                }))}
+                options={scopeOptions(scopes, named, progress.data)}
                 value={
                   scope
                     ? scopeKey(scope)
@@ -154,6 +161,25 @@ export function ProgressScreen() {
       </QueryGate>
     </div>
   );
+}
+
+// A seller opened from a team row joins the picker under the name the
+// progress answer carries, so the control shows who is being read.
+function scopeOptions(
+  scopes: readonly AnalyticsScope[],
+  named: AnalyticsScope | undefined,
+  progress: SalesProgress | undefined,
+) {
+  const options = scopes.map((each) => ({
+    value: scopeKey(each),
+    label: each.label,
+  }));
+  if (named && !options.some((each) => each.value === scopeKey(named)))
+    options.push({
+      value: scopeKey(named),
+      label: progress?.scope.label ?? "",
+    });
+  return options;
 }
 
 // Sales goals opens on the same year, and on the seller being read.

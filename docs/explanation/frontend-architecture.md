@@ -257,11 +257,12 @@ wrong. So it is stated in `nav.ts`, again in `palette.tsx`, and here.
 `NavItem.screen` is the **route id**: the English name that never changes, in
 the hash, in the `switch` of `App.tsx`, and in every `href`.
 `NavItem.labelKey` is a **catalog key** whose rendered text may be different,
-and one of the 8 is:
+and two of the 10 are:
 
 | Route id | Rendered label |
 |---|---|
 | `filters` | `Filters and views` |
+| `goals` | `Sales goals` |
 
 The `⌘K` palette depends on the split. Every screen command carries its route
 id, plus any `aliases` the rail entry declares, as `keywords` the user never

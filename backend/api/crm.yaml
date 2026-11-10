@@ -14614,6 +14614,18 @@ paths:
           - fiscal_quarter
           - all_open
           - custom
+      - &closeStartAt
+        name: close_start_at
+        in: query
+        required: false
+        description: Start of the expected-close window when close_window is custom. Send it with close_end_at; the window spans at most twelve months.
+        schema: *id002
+      - &closeEndAt
+        name: close_end_at
+        in: query
+        required: false
+        description: End of the expected-close window when close_window is custom, exclusive. Send it with close_start_at.
+        schema: *id002
       - &id011
         name: metrics
         in: query
@@ -14754,6 +14766,8 @@ paths:
           - fiscal_quarter
           - all_open
           - custom
+      - *closeStartAt
+      - *closeEndAt
       - &id011
         name: metrics
         in: query
@@ -14848,16 +14862,8 @@ paths:
       - *id008
       - *id009
       - *id010
-      - name: close_start_at
-        in: query
-        required: false
-        description: Start of a custom close window.
-        schema: *id002
-      - name: close_end_at
-        in: query
-        required: false
-        description: End of a custom close window, exclusive.
-        schema: *id002
+      - *closeStartAt
+      - *closeEndAt
       - *id011
       - *id012
       - *dimProduct

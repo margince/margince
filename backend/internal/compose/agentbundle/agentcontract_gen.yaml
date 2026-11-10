@@ -10424,6 +10424,20 @@ paths:
               - fiscal_quarter
               - all_open
               - custom
+        - name: close_start_at
+          in: query
+          required: false
+          description: Start of the expected-close window when close_window is custom. Send it with close_end_at; the window spans at most twelve months.
+          schema:
+            type: string
+            format: date-time
+        - name: close_end_at
+          in: query
+          required: false
+          description: End of the expected-close window when close_window is custom, exclusive. Send it with close_start_at.
+          schema:
+            type: string
+            format: date-time
         - name: metrics
           in: query
           required: false
@@ -10558,6 +10572,20 @@ paths:
               - fiscal_quarter
               - all_open
               - custom
+        - name: close_start_at
+          in: query
+          required: false
+          description: Start of the expected-close window when close_window is custom. Send it with close_end_at; the window spans at most twelve months.
+          schema:
+            type: string
+            format: date-time
+        - name: close_end_at
+          in: query
+          required: false
+          description: End of the expected-close window when close_window is custom, exclusive. Send it with close_start_at.
+          schema:
+            type: string
+            format: date-time
         - name: metrics
           in: query
           required: false
@@ -10706,14 +10734,14 @@ paths:
         - name: close_start_at
           in: query
           required: false
-          description: Start of a custom close window.
+          description: Start of the expected-close window when close_window is custom. Send it with close_end_at; the window spans at most twelve months.
           schema:
             type: string
             format: date-time
         - name: close_end_at
           in: query
           required: false
-          description: End of a custom close window, exclusive.
+          description: End of the expected-close window when close_window is custom, exclusive. Send it with close_start_at.
           schema:
             type: string
             format: date-time
