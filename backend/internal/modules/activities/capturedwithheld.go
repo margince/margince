@@ -151,7 +151,8 @@ func (s *Store) AdoptWithheldFiles(
 }
 
 // partsAwaitingBytes names this message's parts whose row has none yet, each
-// with the fingerprint it was named under.
+// with the fingerprint it was named under. An archived row waits for nothing:
+// its file was removed, and bytes given to it would come back on a restore.
 //
 // The part id is derived from a part's ordinal, so it says where a file sat in
 // the message and not which file it was. The fingerprint is what says that.
@@ -161,7 +162,7 @@ func (s *Store) partsAwaitingBytes(
 	rows, err := tx.Query(ctx, `
 		SELECT external_part_id, coalesce(checksum, '')
 		  FROM attachment
-		 WHERE external_source_id = $1 AND bytes_withheld`,
+		 WHERE external_source_id = $1 AND bytes_withheld AND archived_at IS NULL`,
 		providerMessageKey(from))
 	if err != nil {
 		return nil, fmt.Errorf("read the files still awaiting bytes: %w", err)
@@ -197,7 +198,7 @@ func (s *Store) giveWithheldBytes(
 			UPDATE attachment
 			   SET storage_key = $3, checksum = $4, bytes_withheld = false
 			 WHERE external_source_id = $1 AND external_part_id = $2
-			   AND bytes_withheld
+			   AND bytes_withheld AND archived_at IS NULL
 			RETURNING id, byte_size`,
 			providerMessageKey(from), file.file.PartID, file.key, file.checksum,
 		).Scan(&id, &size)

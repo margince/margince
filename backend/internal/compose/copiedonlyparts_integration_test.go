@@ -18,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 // A mailbox only copied on a message keeps its files as names with no bytes.
@@ -100,6 +101,53 @@ func TestACopiedMailboxWithholdsUntilAnAddressedSeatArrives(t *testing.T) {
 	}
 	if !bytes.Equal(got, onePDF().Body) {
 		t.Errorf("adopted %d bytes, want the part's own %d", len(got), len(onePDF().Body))
+	}
+}
+
+// A file removed while it waited is not given bytes by a later arrival. The
+// addressed seat still joins the message; the removed row stays withheld.
+func TestARemovedWithheldFileIsNotGivenBytes(t *testing.T) {
+	ctx, db, tag := captureWorkspace(t)
+	blob := blobstore.NewMemory()
+	sink := capture.NewSink(db).WithFileKeeper(fileKeeper(db.Pool(), blob))
+
+	const copied = "copied@fixture.example"
+	const addressed = "addressed@fixture.example"
+	declareOwnedAddress(ctx, t, db, captureSeatID, copied)
+
+	source := "msg-removed-" + tag
+	rec := withAttachedOriginal(withFiles(mailRecord(source), onePDF()))
+	fields := rec.Fields.(capture.ActivityFields)
+	fields.Envelope = &capture.MailEnvelope{
+		DirectRecipients: []string{addressed},
+		OpenRecipients:   []string{addressed, copied},
+	}
+	rec.Fields = fields
+	if _, err := sink.Upsert(ctx, rec); err != nil {
+		t.Fatalf("the copied mailbox's capture: %v", err)
+	}
+	if err := db.Tx(ctx, func(tx pgx.Tx) error {
+		_, err := tx.Exec(ctx, `UPDATE attachment SET archived_at = now()
+			WHERE external_source_id = $1`, connector.EmailSourceSystem+":"+source)
+		return err
+	}); err != nil {
+		t.Fatalf("removing the withheld file: %v", err)
+	}
+
+	addressedSeat := ids.NewV7()
+	seedCapturingSeat(ctx, t, db, addressedSeat)
+	declareOwnedAddress(ctx, t, db, addressedSeat, addressed)
+	if _, err := sink.Upsert(asConnectorFor(ctx, "connector:imap", addressedSeat), rec); err != nil {
+		t.Fatalf("the addressed seat's capture: %v", err)
+	}
+
+	files := filesFor(ctx, t, db, source)
+	if len(files) != 1 {
+		t.Fatalf("stored %d rows, want the 1 removed row", len(files))
+	}
+	if !files[0].withheld || files[0].storageKey != "" {
+		t.Errorf("withheld=%v storage_key=%q, want the removed file still without bytes",
+			files[0].withheld, files[0].storageKey)
 	}
 }
 
