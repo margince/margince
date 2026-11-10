@@ -3,7 +3,7 @@
 
 //go:build integration
 
-package compose_test
+package integration_test
 
 // A fixture worker exercises the timeout River applies through jobs.Govern.
 // It stays out of the generated production catalog.
