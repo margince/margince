@@ -3,7 +3,7 @@
 
 import type { MessageKey } from "../i18n/en";
 import { FIELD_COMMIT_KEY } from "./fieldcommit";
-import type { Route } from "./router";
+import type { Route, Screen } from "./router";
 import { settingsHref } from "./settingsrouting";
 
 /** `chord` takes ⌘ or Ctrl; `named` is a key the platform answers, listed and never dispatched. */
@@ -35,6 +35,34 @@ const chord = (key: string) => ({ kind: "chord", key }) as const;
 const single = (key: string) => ({ kind: "single", key }) as const;
 const goTo = (key: string) =>
   ({ kind: "sequence", keys: [GO_TO_LEAD, key] }) as const;
+
+/** The rail's destinations as G, then a letter; each label is the rail's own. */
+const GO_TO = [
+  ["home", "h", "nav.brief"],
+  ["contacts", "c", "nav.contacts"],
+  ["companies", "o", "nav.companies"],
+  ["leads", "l", "nav.leads"],
+  ["deals", "d", "nav.deals"],
+  ["projects", "p", "nav.projects"],
+  ["filters", "f", "filters.title"],
+  ["analytics", "a", "nav.analytics"],
+] as const satisfies readonly (readonly [Screen, string, MessageKey])[];
+
+function goToRow<S extends Screen>(
+  screen: S,
+  letter: string,
+  labelKey: MessageKey,
+  goesTo: Route = { screen },
+) {
+  return {
+    id: `goto.${screen}`,
+    keys: goTo(letter),
+    group: "goto",
+    labelKey,
+    answeredBy: "dispatcher",
+    goesTo,
+  } as const;
+}
 
 /** Every keyboard shortcut the product binds or lists, in the order the dialog lists them. */
 const BINDING_ROWS = [
@@ -81,78 +109,10 @@ const BINDING_ROWS = [
     labelKey: "shell.shortcuts.dismiss",
     answeredBy: "control",
   },
-  {
-    id: "goto.home",
-    keys: goTo("h"),
-    group: "goto",
-    labelKey: "nav.brief",
-    answeredBy: "dispatcher",
-    goesTo: { screen: "home" },
-  },
-  {
-    id: "goto.contacts",
-    keys: goTo("c"),
-    group: "goto",
-    labelKey: "nav.contacts",
-    answeredBy: "dispatcher",
-    goesTo: { screen: "contacts" },
-  },
-  {
-    id: "goto.companies",
-    keys: goTo("o"),
-    group: "goto",
-    labelKey: "nav.companies",
-    answeredBy: "dispatcher",
-    goesTo: { screen: "companies" },
-  },
-  {
-    id: "goto.leads",
-    keys: goTo("l"),
-    group: "goto",
-    labelKey: "nav.leads",
-    answeredBy: "dispatcher",
-    goesTo: { screen: "leads" },
-  },
-  {
-    id: "goto.deals",
-    keys: goTo("d"),
-    group: "goto",
-    labelKey: "nav.deals",
-    answeredBy: "dispatcher",
-    goesTo: { screen: "deals" },
-  },
-  {
-    id: "goto.projects",
-    keys: goTo("p"),
-    group: "goto",
-    labelKey: "nav.projects",
-    answeredBy: "dispatcher",
-    goesTo: { screen: "projects" },
-  },
-  {
-    id: "goto.filters",
-    keys: goTo("f"),
-    group: "goto",
-    labelKey: "filters.title",
-    answeredBy: "dispatcher",
-    goesTo: { screen: "filters" },
-  },
-  {
-    id: "goto.analytics",
-    keys: goTo("a"),
-    group: "goto",
-    labelKey: "nav.analytics",
-    answeredBy: "dispatcher",
-    goesTo: { screen: "analytics" },
-  },
-  {
-    id: "goto.settings",
-    keys: goTo("s"),
-    group: "goto",
-    labelKey: "nav.settings",
-    answeredBy: "dispatcher",
-    goesTo: settingsHref(),
-  },
+  ...GO_TO.map(([screen, letter, labelKey]) =>
+    goToRow(screen, letter, labelKey),
+  ),
+  goToRow("settings", "s", "nav.settings", settingsHref()),
   {
     id: "record.logActivity",
     keys: single("n"),

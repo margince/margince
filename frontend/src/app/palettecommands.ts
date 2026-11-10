@@ -6,16 +6,27 @@ import {
 } from "../features/settings/settingsnav";
 import { settingsPageKeywords } from "../features/settings/settingssearch";
 import { useLocale, useT } from "../i18n";
+import type { MessageKey } from "../i18n/en";
 import { useCompanyContextShown } from "../lib/companycontextreach";
+import { type EntityKind, SCREEN_ENTITY } from "../lib/entity";
 import { settingsHref } from "../lib/settingsrouting";
 import {
   CUSTOM_SCREEN,
   customPaletteScreens,
   resolveCustomLabel,
 } from "./custom";
-import { CREATE_ID, NAV } from "./nav";
+import { CREATE_ID, CREATE_SCREENS, NAV } from "./nav";
 import type { Command } from "./palette";
 import { settingsCommandId } from "./paletteconfiguration";
+
+// Each kind's "New …" label; the commands follow `CREATE_SCREENS`' order.
+const CREATE_LABEL: Readonly<Record<EntityKind, MessageKey>> = {
+  contact: "create.contact",
+  company: "create.company",
+  lead: "create.lead",
+  deal: "action.newDeal",
+  project: "project.new",
+};
 
 export function useBuiltinCommands(): Command[] {
   const t = useT();
@@ -39,36 +50,19 @@ export function useBuiltinCommands(): Command[] {
       route: { screen: CUSTOM_SCREEN, id: screen.key },
     }));
     const actions: Command[] = [
-      {
-        id: "action:new-contact",
-        label: t("create.contact"),
-        type: "action",
-        route: { screen: "contacts", id: CREATE_ID },
-      },
-      {
-        id: "action:new-company",
-        label: t("create.company"),
-        type: "action",
-        route: { screen: "companies", id: CREATE_ID },
-      },
-      {
-        id: "action:new-lead",
-        label: t("create.lead"),
-        type: "action",
-        route: { screen: "leads", id: CREATE_ID },
-      },
-      {
-        id: "action:new-deal",
-        label: t("action.newDeal"),
-        type: "action",
-        route: { screen: "deals", id: CREATE_ID },
-      },
-      {
-        id: "action:new-project",
-        label: t("project.new"),
-        type: "action",
-        route: { screen: "projects", id: CREATE_ID },
-      },
+      ...[...CREATE_SCREENS].flatMap((screen) => {
+        const entity = SCREEN_ENTITY[screen];
+        return entity
+          ? [
+              {
+                id: `action:new-${entity}`,
+                label: t(CREATE_LABEL[entity]),
+                type: "action" as const,
+                route: { screen, id: CREATE_ID },
+              },
+            ]
+          : [];
+      }),
       {
         id: "action:booking",
         label: t("action.booking"),
