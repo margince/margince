@@ -159,9 +159,9 @@ func (h Handlers) RestoreTagApplication(w http.ResponseWriter, r *http.Request, 
 
 // GetFilterVocabulary answers what a filter may say about one record type.
 //
-// `resource` is a core record type or `ext:<unit>:<kind>`, and the contract
-// cannot list the second, so it does not close the set: the wrapper hands any
-// string here. A value no engine serves, a typo or a kind no unit declared,
+// `resource` is a core record type or `ext:<unit>:<kind>`. The contract cannot
+// list the second, so it does not close the set. The wrapper hands any string
+// here. A value no engine serves, a typo or a kind no unit declared,
 // earns a 422 naming the parameter. A bare 404 for `?resource=peron` would say
 // neither what went wrong nor what to do.
 func (h Handlers) GetFilterVocabulary(w http.ResponseWriter, r *http.Request, params crmcontracts.GetFilterVocabularyParams) {

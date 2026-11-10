@@ -28,22 +28,23 @@ func moveKindIDRows(ctx context.Context, tx pgx.Tx, entityType string, sourceID,
 }
 
 // moveRecordLinks re-ends the typed links of a merged-away record on the
-// survivor. The table is insert and delete only, and a pair may hold one link
-// per type, so each end is copied with ON CONFLICT DO NOTHING (the survivor's
-// own link stands) and the retired record's rows are then deleted. A link
+// survivor. The table is insert and delete only. A pair may hold one link per
+// type. So each end is copied with ON CONFLICT DO NOTHING (the survivor's own
+// link stands) and the retired record's rows are then deleted. A link
 // between the two records is skipped: it would join the survivor to itself.
 func moveRecordLinks(ctx context.Context, tx pgx.Tx, entityType string, sourceID, targetID ids.UUID) error {
 	for _, stmt := range []string{
 		`INSERT INTO record_link (from_type, from_id, to_type, to_id, link_type, captured_by, created_at)
-		 SELECT from_type, $2, to_type, to_id, link_type, captured_by, created_at FROM record_link
+		 SELECT from_type, $2::uuid, to_type, to_id, link_type, captured_by, created_at FROM record_link
 		  WHERE from_type = $3 AND from_id = $1 AND NOT (to_type = $3 AND to_id = $2)
 		 ON CONFLICT DO NOTHING`,
 		`INSERT INTO record_link (from_type, from_id, to_type, to_id, link_type, captured_by, created_at)
-		 SELECT from_type, from_id, to_type, $2, link_type, captured_by, created_at FROM record_link
+		 SELECT from_type, from_id, to_type, $2::uuid, link_type, captured_by, created_at FROM record_link
 		  WHERE to_type = $3 AND to_id = $1 AND NOT (from_type = $3 AND from_id = $2)
 		 ON CONFLICT DO NOTHING`,
 		`DELETE FROM record_link
-		  WHERE (from_type = $3 AND from_id = $1) OR (to_type = $3 AND to_id = $1)`,
+		  WHERE ((from_type = $3 AND from_id = $1) OR (to_type = $3 AND to_id = $1))
+		    AND $2::uuid IS NOT NULL`,
 	} {
 		if _, err := tx.Exec(ctx, stmt, sourceID, targetID, entityType); err != nil {
 			return fmt.Errorf("move the %s's typed links: %w", entityType, err)

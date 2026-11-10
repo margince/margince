@@ -1,14 +1,3 @@
-import {
-  CalendarClock,
-  CheckSquare,
-  Mail,
-  MessageCircle,
-  PencilLine,
-  Phone,
-  Puzzle,
-  StickyNote,
-  Zap,
-} from "lucide-react";
 import type { ReactNode } from "react";
 import type { components } from "../api/schema";
 import {
@@ -258,17 +247,7 @@ export function dotClass(entry: TimelineEntry): string {
     : "tl-dot tl-dot-quiet";
 }
 
-export const TIMELINE_ICON = {
-  email: Mail,
-  meeting: CalendarClock,
-  note: StickyNote,
-  call: Phone,
-  task: CheckSquare,
-  message: MessageCircle,
-  change: PencilLine,
-  extension: Puzzle,
-  signal: Zap,
-} as const;
+export { TIMELINE_ICON } from "./timelineicons";
 
 // A link inside a captured message, rendered as an element rather than as
 // markup: the body is escaped text and stays that way. The visible label is

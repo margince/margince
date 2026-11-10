@@ -95,7 +95,7 @@ type TimelineSubject struct {
 
 // timelineEntities are the core records a History is read for. A lead or a
 // project has no extension rows today.
-var timelineEntities = map[string]bool{"contact": true, "company": true, "deal": true}
+var timelineEntities = map[string]bool{contactRecord: true, string(KindCompany): true, string(KindDeal): true}
 
 func (k RecordKindDeclaration) validateTimeline() error {
 	tl := k.Timeline

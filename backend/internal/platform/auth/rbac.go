@@ -20,7 +20,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
-	"github.com/margince/margince/backend/internal/shared/ports/recordkinds"
 )
 
 // rbacActor resolves the acting principal; a missing actor is a
@@ -53,18 +52,6 @@ func refuseBuyer(p principal.Principal, what string) error {
 		what, apperrors.ErrPermissionDenied)
 }
 
-// gateObject maps an extension kind to its declared object; an undeclared one is no record, so even the system principal is refused.
-func gateObject(kind string) (string, error) {
-	if !recordkinds.IsExtensionName(kind) {
-		return kind, nil
-	}
-	declared, ok := recordkinds.Lookup(kind)
-	if !ok {
-		return "", fmt.Errorf("%s: no extension declares this record kind: %w", kind, apperrors.ErrPermissionDenied)
-	}
-	return declared.Object, nil
-}
-
 // Require is the object-level admission gate: the actor's merged role
 // policy must grant the action on the object type. The system principal
 // (workspace provisioning) is trusted by construction and has no role.
@@ -89,22 +76,6 @@ func Require(ctx context.Context, object string, action principal.Action) error 
 // one question two ways. It records nothing, since a branch is no requirement.
 func Allows(ctx context.Context, object string, action principal.Action) bool {
 	return probe(ctx, object, action) == nil
-}
-
-// AllowsWrite is Allows under the seat ceiling, for a control a read offers: a
-// read seat writes nothing, whatever its role grants. It records nothing.
-func AllowsWrite(ctx context.Context, object string, action principal.Action) bool {
-	p, err := rbacActor(ctx)
-	if err != nil {
-		return false
-	}
-	return seatAdmitsWrites(p) && Allows(ctx, object, action)
-}
-
-// seatAdmitsWrites is the seat ceiling every offered write sits under. The
-// system principal holds no seat and is trusted by construction.
-func seatAdmitsWrites(p principal.Principal) bool {
-	return p.Type == principal.PrincipalSystem || p.SeatType.CanMutate()
 }
 
 // RequireAny admits when the actor holds ANY of the listed actions on the
