@@ -48,8 +48,8 @@ func setupConsent(t *testing.T) *consentEnv {
 	return seedConsentSubject(t, e)
 }
 
-// seedConsentSubject gives a signed-in workspace one contact with an inbound mail
-// to answer.
+// The default anchor carries no inbound permission; each positive case adds
+// the evidence its send relies on through the application.
 func seedConsentSubject(t *testing.T, e *apptest.AppEnv) *consentEnv {
 	t.Helper()
 	var contact struct {
@@ -66,7 +66,7 @@ func seedConsentSubject(t *testing.T, e *apptest.AppEnv) *consentEnv {
 		ID string `json:"id"`
 	}
 	if status := e.Call(t, "POST", "/v1/activities", AnyMap{
-		"kind": "email", "subject": "Inbound question", "direction": "inbound",
+		"kind": "email", "subject": "Draft conversation", "direction": "outbound",
 		"links": []AnyMap{{"entity_type": "contact", "entity_id": contact.ID}},
 	}, nil, &activity); status != http.StatusCreated {
 		t.Fatalf("log anchor activity → %d", status)
@@ -90,6 +90,20 @@ func seedConsentSubject(t *testing.T, e *apptest.AppEnv) *consentEnv {
 		t.Fatalf("bootstrap did not seed the purpose catalog: %+v", purposeList.Data)
 	}
 	return &consentEnv{AppEnv: e, contactID: contact.ID, activityID: activity.ID, purposes: purposes}
+}
+
+func logConsentInbound(t *testing.T, e *apptest.AppEnv, contactID string) string {
+	t.Helper()
+	var activity struct {
+		ID string `json:"id"`
+	}
+	if status := e.Call(t, "POST", "/v1/activities", AnyMap{
+		"kind": "email", "subject": "Separate inbound question", "direction": "inbound",
+		"links": []AnyMap{{"entity_type": "contact", "entity_id": contactID}},
+	}, nil, &activity); status != http.StatusCreated {
+		t.Fatalf("record inbound evidence: %d", status)
+	}
+	return activity.ID
 }
 
 // stakeADeal gives the fixture's subject real transactional evidence. It
@@ -134,7 +148,7 @@ func TestConsentDefaultDenySuppressesSends(t *testing.T) {
 		AnyMap{"intent": "friendly nudge"}, nil, &draft); status != http.StatusOK {
 		t.Fatalf("draft → %d", status)
 	}
-	if draft.Subject != "Re: Inbound question" {
+	if draft.Subject != "Re: Draft conversation" {
 		t.Fatalf("draft subject = %q", draft.Subject)
 	}
 
@@ -206,6 +220,7 @@ func TestCorrespondenceAndTransactionalAreNotConsentGated(t *testing.T) {
 // something anybody can look up afterwards.
 func TestASendOnADerivedBasisRecordsWhatAuthorizedIt(t *testing.T) {
 	c := setupConsent(t)
+	logConsentInbound(t, c.AppEnv, c.contactID)
 	ctx := context.Background()
 
 	var before int
@@ -256,6 +271,7 @@ func TestASendOnADerivedBasisRecordsWhatAuthorizedIt(t *testing.T) {
 // basis on the record for a message that was never sent.
 func TestTheGuardPreviewRecordsNothing(t *testing.T) {
 	c := setupConsent(t)
+	logConsentInbound(t, c.AppEnv, c.contactID)
 	ctx := context.Background()
 
 	var guard struct {
@@ -318,6 +334,7 @@ func TestAnArchivedAddressDoesNotAuthorizeItsFormerHolder(t *testing.T) {
 // through the class model that reaches past a suppression.
 func TestAnObjectionOverridesAQualifyingEvent(t *testing.T) {
 	c := setupConsent(t)
+	logConsentInbound(t, c.AppEnv, c.contactID)
 
 	if status, _ := c.send(t, "business_correspondence"); status != http.StatusAccepted {
 		t.Fatal("the fixture's inbound message should allow correspondence before the objection")
@@ -566,6 +583,7 @@ func TestOmittingThePurposeKeyIsNotAWayPastTheGate(t *testing.T) {
 // diverge on the second case.
 func TestThePreviewAgreesWithTheSendItPreviews(t *testing.T) {
 	c := setupConsent(t)
+	logConsentInbound(t, c.AppEnv, c.contactID)
 
 	// The fixture's contact has an inbound on file, so correspondence is
 	// supported and marketing is not. Two cases with opposite answers, because
@@ -650,6 +668,7 @@ func TestThePreviewRefusesARecordTheCallerCannotRead(t *testing.T) {
 // transaction, so it commits, and the qualifying-event count goes up.
 func TestThePreviewRecordsNothing(t *testing.T) {
 	c := setupConsent(t)
+	logConsentInbound(t, c.AppEnv, c.contactID)
 	ctx := context.Background()
 
 	// BOTH tables a decision can write, because which one it reaches depends on

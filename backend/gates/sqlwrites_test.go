@@ -3,100 +3,187 @@
 
 package gates
 
-// Reading a SQL literal for what it WRITES.
-//
-// Its own file because it is not one gate's helper: table ownership, the PII
-// censuses, the satellite lifecycle, the contact scrub and the pending-writer
-// claim all ask it, and the last time two of them read statements separately
-// the two answers drifted.
-//
-// Everything here is a FLOOR and never a ceiling. A statement assembled at
-// runtime, an INSERT … SELECT with no column list, a fragment naming no table
-// — each contributes nothing, so a caller must read an empty answer as
-// "unknown" and never as "writes nothing". Every gate over this corpus carries
-// its own floor assertion for that reason.
-
 import (
-	"regexp"
+	"slices"
 	"strings"
 )
 
-// sqlWriteTargets extracts write-statement table names from one SQL (or
-// SQL-carrying format) string. UPDATE requires a SET clause so prose and
-// `DO UPDATE SET`/`FOR UPDATE` never match; INSERT/DELETE are unambiguous.
-var (
-	insertRe = regexp.MustCompile(`(?is)\binsert\s+into\s+([a-z_][a-z0-9_]*)`)
-	deleteRe = regexp.MustCompile(`(?is)\bdelete\s+from\s+([a-z_][a-z0-9_]*)`)
-	updateRe = regexp.MustCompile(`(?is)\b(do\s+|for\s+)?update\s+([a-z_][a-z0-9_]*)\s+(?:[a-z_][a-z0-9_]*\s+)?set\b`)
-)
-
-var (
-	insertColsRe = regexp.MustCompile(`(?is)\binsert\s+into\s+[a-z_][a-z0-9_]*\s*\(([^)]*)\)`)
-	setColRe     = regexp.MustCompile(`(?is)([a-z_][a-z0-9_]*)\s*=`)
-)
-
-// insertColumns reads the column list of the FIRST insert in a literal. One
-// statement per literal is this tree's style; a literal carrying two inserts
-// gets the first one's list, which is why cols is a floor.
-func insertColumns(literal string) []string {
-	m := insertColsRe.FindStringSubmatch(literal)
-	if m == nil {
-		return nil
-	}
-	var cols []string
-	for raw := range strings.SplitSeq(m[1], ",") {
-		name := strings.ToLower(strings.Trim(strings.TrimSpace(raw), `"`))
-		if name != "" {
-			cols = append(cols, name)
-		}
-	}
-	return cols
-}
-
-// setColumns reads the assignment targets of an UPDATE's SET clause, stopping
-// at WHERE so a predicate's comparisons are not read as writes.
-func setColumns(literal string) []string {
-	lower := strings.ToLower(literal)
-	at := strings.Index(lower, " set ")
-	if at < 0 {
-		return nil
-	}
-	clause := literal[at+len(" set "):]
-	if end := strings.Index(strings.ToLower(clause), " where "); end >= 0 {
-		clause = clause[:end]
-	}
-	var cols []string
-	for _, m := range setColRe.FindAllStringSubmatch(clause, -1) {
-		cols = append(cols, strings.ToLower(m[1]))
-	}
-	return cols
-}
-
-// sqlWriteTargets is sqlWrites projected to the table names, which is all most
-// callers ask. One scan underneath, so a statement shape learned by one view
-// is learned by both.
 func sqlWriteTargets(literal string) []string {
 	writes := sqlWrites(literal)
 	tables := make([]string, 0, len(writes))
-	for _, w := range writes {
-		tables = append(tables, w.table)
+	for _, write := range writes {
+		tables = append(tables, write.table)
 	}
 	return tables
 }
 
+// An empty answer is unknown. Callers must never treat it as proof that
+// protected data stays unchanged.
 func sqlWrites(literal string) []sqlTarget {
-	var tables []sqlTarget
-	for _, m := range insertRe.FindAllStringSubmatch(literal, -1) {
-		tables = append(tables, sqlTarget{strings.ToLower(m[1]), "insert", insertColumns(literal)})
+	tokens := sqlToken.FindAllString(stripNoise(literal), -1)
+	var writes []sqlTarget
+	for i, word := range tokens {
+		switch strings.ToLower(word) {
+		case "insert", "delete", "merge":
+			companion := "into"
+			if strings.EqualFold(word, "delete") {
+				companion = "from"
+			}
+			if i+1 >= len(tokens) || !strings.EqualFold(tokens[i+1], companion) {
+				continue
+			}
+			table, next := writeSQLName(tokens, i+2)
+			if table == "" {
+				continue
+			}
+			switch strings.ToLower(word) {
+			case "insert":
+				writes = append(writes, sqlTarget{table, "insert", insertTargetColumns(tokens, next)})
+			case "delete":
+				writes = append(writes, sqlTarget{table, "delete", nil})
+			case "merge":
+				using := next
+				if using < len(tokens) && strings.EqualFold(tokens[using], "as") {
+					using += 2
+				} else if using < len(tokens) && !strings.EqualFold(tokens[using], "using") {
+					using++
+				}
+				if using >= len(tokens) || !strings.EqualFold(tokens[using], "using") {
+					continue
+				}
+				writes = append(writes, mergeWriteTargets(tokens, next, table)...)
+			}
+		case "update":
+			if i > 0 && (strings.EqualFold(tokens[i-1], "for") || strings.EqualFold(tokens[i-1], "do")) {
+				continue
+			}
+			table, next := writeSQLName(tokens, i+1)
+			if table == "" {
+				continue
+			}
+			if next < len(tokens) && tokens[next] == "*" {
+				next++
+			}
+			if next < len(tokens) && strings.EqualFold(tokens[next], "as") {
+				next += 2
+			} else if next+1 < len(tokens) && isName(tokens[next]) && !strings.EqualFold(tokens[next], "set") {
+				next++
+			}
+			if next >= len(tokens) || !strings.EqualFold(tokens[next], "set") {
+				continue
+			}
+			writes = append(writes, sqlTarget{table, "update", assignmentColumns(tokens, next+1)})
+		}
 	}
-	for _, m := range deleteRe.FindAllStringSubmatch(literal, -1) {
-		tables = append(tables, sqlTarget{strings.ToLower(m[1]), "delete", nil})
+	return writes
+}
+
+func writeSQLName(tokens []string, at int) (string, int) {
+	if at < len(tokens) && strings.EqualFold(tokens[at], "only") {
+		at++
 	}
-	for _, m := range updateRe.FindAllStringSubmatch(literal, -1) {
-		if m[1] != "" { // ON CONFLICT … DO UPDATE / SELECT … FOR UPDATE — not a new target
+	if at >= len(tokens) || !isName(tokens[at]) {
+		return "", at
+	}
+	identifierParts := []string{tokens[at]}
+	at++
+	for at+1 < len(tokens) && tokens[at] == "." && isName(tokens[at+1]) {
+		identifierParts = append(identifierParts, tokens[at+1])
+		at += 2
+	}
+	name := strings.ToLower(strings.ReplaceAll(strings.Join(identifierParts, "."), `"`, ""))
+	return strings.TrimPrefix(name, "public."), at
+}
+
+func insertTargetColumns(tokens []string, at int) []string {
+	if at >= len(tokens) || tokens[at] != "(" {
+		return nil
+	}
+	end := matchingParen(tokens, at)
+	if end <= at || tokens[end] != ")" {
+		return nil
+	}
+	return targetColumnNames(tokens[at+1 : end])
+}
+
+func targetColumnNames(tokens []string) []string {
+	var columns []string
+	for i := 0; i < len(tokens); i++ {
+		if !isName(tokens[i]) {
 			continue
 		}
-		tables = append(tables, sqlTarget{strings.ToLower(m[2]), "update", setColumns(literal)})
+		name, next := writeSQLName(tokens, i)
+		if dot := strings.LastIndexByte(name, '.'); dot >= 0 {
+			name = name[dot+1:]
+		}
+		columns = append(columns, name)
+		i = next - 1
 	}
-	return tables
+	return columns
+}
+
+func assignmentColumns(tokens []string, start int) []string {
+	var columns []string
+	depth, cases, lhs, inValue := 0, 0, start, false
+	for i := start; i < len(tokens); i++ {
+		word := tokens[i]
+		if depth == 0 && cases == 0 && (word == ";" || strings.EqualFold(word, "where") || strings.EqualFold(word, "returning") || strings.EqualFold(word, "when")) {
+			break
+		}
+		if strings.EqualFold(word, "case") {
+			cases++
+		}
+		if strings.EqualFold(word, "end") && cases > 0 {
+			cases--
+		}
+		switch word {
+		case "(", "[":
+			depth++
+		case ")", "]":
+			if depth == 0 {
+				return columns
+			}
+			depth--
+		case "=":
+			if depth == 0 && !inValue {
+				targets := targetColumnNames(tokens[lhs:i])
+				if len(targets) == 0 || slices.Contains(tokens[lhs:i], "?") {
+					return nil
+				}
+				columns = append(columns, targets...)
+				inValue = true
+			}
+		case ",":
+			if depth == 0 && cases == 0 {
+				lhs = i + 1
+				inValue = false
+			}
+		}
+	}
+	return columns
+}
+
+func mergeWriteTargets(tokens []string, start int, table string) []sqlTarget {
+	var writes []sqlTarget
+	for i := start; i < len(tokens) && tokens[i] != ";"; i++ {
+		if i+1 < len(tokens) && strings.EqualFold(tokens[i], "update") && strings.EqualFold(tokens[i+1], "set") {
+			writes = append(writes, sqlTarget{table, "update", assignmentColumns(tokens, i+2)})
+		}
+		if strings.EqualFold(tokens[i], "insert") {
+			writes = append(writes, sqlTarget{table, "insert", insertTargetColumns(tokens, i+1)})
+		}
+		if strings.EqualFold(tokens[i], "delete") {
+			writes = append(writes, sqlTarget{table, "delete", nil})
+		}
+	}
+	return writes
+}
+
+func sqlWritesVerb(statement, verb string) bool {
+	for _, write := range sqlWrites(statement) {
+		if write.verb == verb {
+			return true
+		}
+	}
+	return false
 }

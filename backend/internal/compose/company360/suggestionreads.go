@@ -271,7 +271,7 @@ func gatherSuggestionInputs(
 	contractsGranted := auth.ReadGranted(ctx, "contract")
 	in := suggestionInputs{timeline: timeline, pipeline: pipeline, contracts: contractsGranted, language: language, loc: loc}
 	if in.contracts {
-		strip, err := readContractStrip(ctx, tx, companyID, now, baseCurrency)
+		strip, err := readContractStrip(ctx, tx, companyID, now, baseCurrency, loc)
 		if err != nil {
 			return suggestionInputs{}, err
 		}
