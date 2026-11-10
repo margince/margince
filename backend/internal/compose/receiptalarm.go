@@ -19,6 +19,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/notices"
+	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/noticekeys"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -113,6 +114,48 @@ func (a receiptAlarm) raiseOverdue(ctx context.Context, store *comms.Store, now 
 		}
 	}
 	return failed
+}
+
+// owedReceiptWindow is how far back a missed receipt whose alarm failed is
+// raised again.
+const owedReceiptWindow = 30 * 24 * time.Hour
+
+// raiseOwed raises each missed receipt whose alarm failed when it was missed.
+// Each gets a transaction of its own, a subject erased since is skipped, and
+// it answers how many it could not raise.
+func (a receiptAlarm) raiseOwed(ctx context.Context, now time.Time, limit int) (failed int, err error) {
+	var owed []consent.MissedReceipt
+	err = a.db.Tx(ctx, func(tx pgx.Tx) error {
+		owed, err = consent.OwedMissedReceiptsTx(ctx, tx, now.Add(-owedReceiptWindow), limit)
+		return err
+	})
+	if err != nil {
+		return 0, err
+	}
+	for _, missed := range owed {
+		err := a.db.Tx(ctx, func(tx pgx.Tx) error {
+			gone, err := privacy.SubjectAnonymizedTx(ctx, tx, missed.SubjectType, missed.SubjectID)
+			if err != nil || gone {
+				return err
+			}
+			return a.RaiseMissedReceiptTx(ctx, tx, missed)
+		})
+		if err != nil {
+			failed++
+		}
+	}
+	return failed, nil
+}
+
+// agedOut counts the owed receipts that left the window in the day before now
+// without ever being raised.
+func (a receiptAlarm) agedOut(ctx context.Context, now time.Time) (n int, err error) {
+	edge := now.Add(-owedReceiptWindow)
+	err = a.db.Tx(ctx, func(tx pgx.Tx) error {
+		n, err = consent.AgedOutMissedReceiptsTx(ctx, tx, edge.Add(-24*time.Hour), edge)
+		return err
+	})
+	return n, err
 }
 
 // settleSent takes back the notices whose receipt has since been sent.

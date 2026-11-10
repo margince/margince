@@ -100,8 +100,31 @@ func (w *controllerPayloadSweepWorker) alarmMissedReceipts(ctx context.Context) 
 	if failed := w.alarm.raiseOverdue(ctx, w.store, now, overdue); failed > 0 {
 		w.log.ErrorContext(ctx, "overdue controller receipts could not be raised to the privacy operators", "count", failed)
 	}
+	if err := w.raiseOwedReceipts(ctx, now); err != nil {
+		return err
+	}
 	if err := w.alarm.settleSent(ctx, w.store); err != nil {
 		return fmt.Errorf("settling missed-receipt notices: %w", err)
+	}
+	return nil
+}
+
+// raiseOwedReceipts raises again each missed receipt whose alarm failed, and
+// reports the ones that left the window unraised.
+func (w *controllerPayloadSweepWorker) raiseOwedReceipts(ctx context.Context, now time.Time) error {
+	failed, err := w.alarm.raiseOwed(ctx, now, controllerPayloadSweepBatch)
+	if err != nil {
+		return fmt.Errorf("reading the missed receipts still owed: %w", err)
+	}
+	if failed > 0 {
+		w.log.ErrorContext(ctx, "missed controller receipts still could not be raised to the privacy operators", "count", failed)
+	}
+	agedOut, err := w.alarm.agedOut(ctx, now)
+	if err != nil {
+		return fmt.Errorf("counting the missed receipts no sweep raised: %w", err)
+	}
+	if agedOut > 0 {
+		w.log.ErrorContext(ctx, "missed controller receipts were never raised and are no longer retried", "count", agedOut)
 	}
 	return nil
 }
