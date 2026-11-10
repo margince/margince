@@ -126,10 +126,7 @@ func applyHandoffReassignment(ctx context.Context, tx pgx.Tx, change handoffReas
 	if err != nil {
 		return err
 	}
-	if err := storekit.EmitEvent(ctx, tx, audit, change.id, crmcontracts.InternalEventSdrHandoffUpdated{}); err != nil {
-		return err
-	}
-	return nil
+	return storekit.EmitEvent(ctx, tx, audit, change.id, crmcontracts.InternalEventSdrHandoffUpdated{})
 }
 
 // OwnedPendingHandoffsTx exposes member-work counts without disclosing prospects.

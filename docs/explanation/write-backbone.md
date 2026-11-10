@@ -319,10 +319,10 @@ handler again, and the key layer makes that run do nothing.
 The `Trace` on every envelope lets you build one request or run back up as a single story:
 
 - **`correlation_id`** groups every event that one request or run starts. The HTTP middleware makes it
-  **once** per HTTP request (`internal/platform/httpserver/chassis.go`:
-  `principal.WithCorrelationID(r.Context(), ids.NewV7())`), and once per agent run
-  (`compose/runnerservice.go`). A background job that emits events must bind its own, since `Emit`
-  fails without one. It binds it together with the actor, through
+  **once** per HTTP request (`internal/platform/httpserver/chassis.go`) and returns it in `X-Correlation-ID`.
+  It ignores a client-supplied value. Each agent run binds one too (`compose/runnerservice.go`).
+  A background job that emits events must bind its own, since `Emit` fails without one.
+  It binds it together with the actor, through
   `principal.SystemActing(ctx, "system:<pass>")`.
 
   The pass names itself, so a reader can tell its audit rows from those of other passes. The two go
