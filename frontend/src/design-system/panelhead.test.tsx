@@ -8,13 +8,8 @@ import { fileURLToPath } from "node:url";
 import { cleanup, render, screen } from "@testing-library/react";
 import ts from "typescript";
 import { afterEach, describe, expect, it } from "vitest";
-import { selectorList } from "../../scripts/lib/css-rules";
-import {
-  extensionFrontendFiles,
-  filesMatching,
-  parseSource,
-  sourceFileAt,
-} from "../../scripts/lib/source-tree";
+import { DESCRIPTION_PROPS } from "../../census/rules/panelhead.census";
+import { parseSource, sourceFileAt } from "../../scripts/lib/source-tree";
 import { withoutComments } from "../testing/css";
 import { Card, SectionHeader } from "./atoms";
 import { Panel, PanelBody, PanelGroupHead } from "./panel";
@@ -36,40 +31,13 @@ import { Panel, PanelBody, PanelGroupHead } from "./panel";
 // own name and reads at the page-title size. Copy that genuinely adds something
 // is body content, where it can be as long as it needs to be.
 //
-// Five arms, because the rule can be broken in five places:
-//
-//   type   — a `sub`/`description`/`intro` prop back on one of the four
-//            components. The prop is the invitation; without it the rest cannot
-//            happen.
-//   call   — a caller passing one of those attributes. Held separately from the
-//            type because a component spreading `...rest` would take the
-//            attribute without ever declaring it.
-//   class  — a paragraph in the markup wearing the class the slot wore. Held
-//            apart from the call arm because it names no component: the eleven
-//            this tree carried were plain <p>s under a card title, each saying
-//            what the head was not allowed to say.
-//   sheet  — a stylesheet declaring the class such a slot would need. The class
-//            outliving the slot is how the slot comes back: the next author
-//            greps, finds a rule, and writes the span to match it.
-//   render — the title's own type and element, read off the DOM at every level
-//            the components offer, the page-naming level asserted beside its
-//            neighbours so the two jobs cannot be levelled into one scale. The
-//            first four are absence checks, and an absence check passes over a
-//            tree that has quietly changed shape; this one says what the head
-//            must positively look like.
-//
-// Under-recognition is the way a census like this fails silently — a walk that
-// reads a smaller tree reports the same word, PASS — so both walks are derived
-// from the tree, both fail closed under a floor, and each detector carries a
-// planted case of the shape it claims to see.
+// This file holds the components: no head declares a description prop, and the
+// title reads at one type at every level. census/rules/panelhead.census.ts
+// holds the tree: no caller, class or sheet brings the slot back.
 
 afterEach(cleanup);
 
 const dsDir = dirname(fileURLToPath(import.meta.url));
-const srcDir = join(dsDir, "..");
-// A unit's screen is shipped UI in the same bundle, so a gate stopping at
-// frontend/src would hold the core to a rule the extension tier escapes.
-const extensionsRoot = join(dsDir, "..", "..", "..", "extensions");
 
 // The four components a head is built from, and the file each lives in.
 const HEAD_COMPONENTS: Readonly<Record<string, string>> = {
@@ -78,26 +46,6 @@ const HEAD_COMPONENTS: Readonly<Record<string, string>> = {
   Card: join(dsDir, "atoms.tsx"),
   SectionHeader: join(dsDir, "atoms.tsx"),
 };
-
-// Three spellings of the same slot. A rule naming only `sub` would be answered
-// by renaming the prop.
-const DESCRIPTION_PROPS = ["sub", "description", "intro"];
-
-// Floors under the two walks. The tree carries a thousand-odd components and
-// nearly two hundred stylesheets; a corpus that comes back near these numbers
-// means the walk broke rather than that the app shrank.
-const TSX_FLOOR = 500;
-const CSS_FLOOR = 50;
-
-function tsxFiles(): readonly string[] {
-  return filesMatching(srcDir, /\.tsx$/).concat(
-    extensionFrontendFiles(extensionsRoot),
-  );
-}
-
-function cssFiles(): readonly string[] {
-  return filesMatching(srcDir, /\.css$/);
-}
 
 // ---------------------------------------------------------------- the type
 
@@ -169,216 +117,6 @@ describe("no head component declares a description slot", () => {
       ).toEqual([]);
     },
   );
-});
-
-// ---------------------------------------------------------------- the call
-
-type Offence = Readonly<{ file: string; line: number; attribute: string }>;
-
-// Every description attribute passed to a head component, anywhere in a tree.
-function descriptionAttributes(source: ts.SourceFile, file: string): Offence[] {
-  const found: Offence[] = [];
-  const visit = (node: ts.Node): void => {
-    if (ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node)) {
-      const tag = node.tagName.getText(source);
-      if (tag in HEAD_COMPONENTS) {
-        for (const property of node.attributes.properties) {
-          if (!ts.isJsxAttribute(property)) continue;
-          const attribute = property.name.getText(source);
-          if (!DESCRIPTION_PROPS.includes(attribute)) continue;
-          found.push({
-            file,
-            line:
-              source.getLineAndCharacterOfPosition(property.getStart(source))
-                .line + 1,
-            attribute: `${tag} ${attribute}`,
-          });
-        }
-      }
-    }
-    ts.forEachChild(node, visit);
-  };
-  visit(source);
-  return found;
-}
-
-// Every sweep below re-reads and re-parses the whole tree, which is file I/O
-// and not a unit test's shape of work: on CI's coverage run it costs well past
-// the 10s default. There is no hang for a tight timeout to catch, so the budget
-// is generous and its only job is to be the floor under a slower runner.
-const treeWalk = { timeout: 60_000 };
-
-describe("nothing under src passes a description to a head", treeWalk, () => {
-  // The planted case, in both shapes a caller writes: the one-line element and
-  // the multi-line opening tag a formatter produces once the props no longer
-  // fit. A detector that matched a line would see only the first.
-  it("sees a description passed either way it is written", () => {
-    const found = descriptionAttributes(
-      parseSource(
-        "fixture.tsx",
-        `const a = <Card title="Passports" sub="One line." />;
-         const b = (
-           <Panel
-             title="Purposes"
-             description="Another line."
-           >
-             {null}
-           </Panel>
-         );
-         const c = <SectionHeader title="Rooms" intro="A third." />;
-         const d = <Panel title="Clean" titleAction={null}>{null}</Panel>;`,
-      ),
-      "fixture.tsx",
-    );
-    expect(found.map((offence) => offence.attribute)).toEqual([
-      "Card sub",
-      "Panel description",
-      "SectionHeader intro",
-    ]);
-  });
-
-  it("finds none in the tree", () => {
-    const files = tsxFiles();
-    expect(files.length).toBeGreaterThan(TSX_FLOOR);
-    // And the extension tier specifically: the floor above is one the core
-    // satisfies alone, so it cannot notice a walk that stops at src/.
-    expect(
-      files.some((file) => file.includes("/extensions/")),
-      "the census reached no extension frontend layer",
-    ).toBe(true);
-    const offences = files.flatMap((file) =>
-      descriptionAttributes(sourceFileAt(file), file),
-    );
-    expect(
-      offences.map((offence) => `${offence.file}:${offence.line}`),
-    ).toEqual([]);
-  });
-});
-
-// --------------------------------------------------------------- the class
-
-// The name the slot wore in the markup. `card-sub` is the tree's own spelling:
-// a paragraph under a card title, carrying the sentence the head is not allowed
-// to carry. The boundaries are what keep a body class out — `dcard-subject` and
-// `card-subtitle` are not this.
-const SUB_CLASS = /(?<![\w-])card-sub(?![\w-])/;
-
-// Every className naming it, read off the attribute's WHOLE initializer rather
-// than a string literal: a list assembled in a template or picked by a
-// condition reaches the DOM exactly the same way.
-function subClassNames(source: ts.SourceFile, file: string): Offence[] {
-  const found: Offence[] = [];
-  const visit = (node: ts.Node): void => {
-    if (
-      ts.isJsxAttribute(node) &&
-      node.name.getText(source) === "className" &&
-      node.initializer !== undefined &&
-      SUB_CLASS.test(node.initializer.getText(source))
-    ) {
-      found.push({
-        file,
-        line:
-          source.getLineAndCharacterOfPosition(node.getStart(source)).line + 1,
-        attribute: "className card-sub",
-      });
-    }
-    ts.forEachChild(node, visit);
-  };
-  visit(source);
-  return found;
-}
-
-describe("nothing under src wears the class that slot wore", treeWalk, () => {
-  // The planted case, in the three shapes a class list is written, beside the
-  // two body classes that merely start or end the same way.
-  it("sees the class alone, beside another, and built in an expression", () => {
-    const found = subClassNames(
-      parseSource(
-        "fixture.tsx",
-        `const a = <p className="card-sub">One line.</p>;
-         const b = <p className="card-sub sr-only">Another line.</p>;
-         const c = <p className={classes("card-sub", tone)}>A third.</p>;
-         const d = <span className="dcard-subject-label">A label.</span>;
-         const e = <p className="card-subtitle">A subtitle.</p>;`,
-      ),
-      "fixture.tsx",
-    );
-    expect(found.map((offence) => offence.line)).toEqual([1, 2, 3]);
-  });
-
-  it("finds none in the tree", () => {
-    const files = tsxFiles();
-    expect(files.length).toBeGreaterThan(TSX_FLOOR);
-    // And the extension tier specifically: the floor above is one the core
-    // satisfies alone, so it cannot notice a walk that stops at src/.
-    expect(
-      files.some((file) => file.includes("/extensions/")),
-      "the census reached no extension frontend layer",
-    ).toBe(true);
-    const offences = files.flatMap((file) =>
-      subClassNames(sourceFileAt(file), file),
-    );
-    expect(
-      offences.map((offence) => `${offence.file}:${offence.line}`),
-    ).toEqual([]);
-  });
-});
-
-// --------------------------------------------------------------- the sheet
-
-// A class a head's description slot would need, by its name. `-head-sub` and
-// `-title-sub` are the two ways the tree spelled one: the prefix is whichever
-// surface grew it, so the rule is the SUFFIX rather than a list of prefixes.
-// `card-sub` is named outright because it is not a suffix of anything — it is
-// the sentence under a card title, and a rule left behind for it is how the
-// markup arm above would be answered by writing the paragraph back.
-const HEAD_SUB_CLASS =
-  /\.[\w-]*-(?:head|title)-sub(?![\w-])|\.card-sub(?![\w-])/;
-
-// The other shape: a generic `.sub` scoped INSIDE a head. It needs no name of
-// its own, which is exactly why a name-only detector would miss it.
-const SUB_IN_HEAD = /\.(?:panel-head|section-header)\b[^,{}]*\s\.sub(?![\w-])/;
-
-function headSubSelectors(css: string): readonly string[] {
-  return [...withoutComments(css).matchAll(/([^{}]+)\{[^{}]*\}/g)]
-    .flatMap(([, selectors]) => selectorList(selectors))
-    .map((selector) => selector.replace(/\s+/g, " "))
-    .filter(
-      (selector) => HEAD_SUB_CLASS.test(selector) || SUB_IN_HEAD.test(selector),
-    );
-}
-
-describe("no stylesheet declares a head description", treeWalk, () => {
-  it("sees both shapes, and leaves a body class alone", () => {
-    expect(
-      headSubSelectors(`
-        .panel-head-sub { color: var(--textSecondary); }
-        .co-glance .settings-panel-title-sub { max-width: 78ch; }
-        .section-header .sub { max-width: 78ch; }
-        .auth-card .card-sub { margin-top: var(--space-2); }
-        .panel-head .panel-title { color: var(--textPrimary); }
-        .filter-tabs > .sub { display: block; }
-        .rmap-panel-sub { margin: 0; }
-        .dcard-subject-label { text-transform: uppercase; }
-      `),
-    ).toEqual([
-      ".panel-head-sub",
-      ".co-glance .settings-panel-title-sub",
-      ".section-header .sub",
-      ".auth-card .card-sub",
-    ]);
-  });
-
-  it("finds none in the tree", () => {
-    const files = cssFiles();
-    expect(files.length).toBeGreaterThan(CSS_FLOOR);
-    const offences = files.flatMap((file) =>
-      headSubSelectors(readFileSync(file, "utf8")).map(
-        (selector) => `${file}: ${selector}`,
-      ),
-    );
-    expect(offences).toEqual([]);
-  });
 });
 
 // -------------------------------------------------------------- the render

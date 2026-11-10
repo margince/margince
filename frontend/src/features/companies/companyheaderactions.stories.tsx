@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, waitFor, within } from "storybook/test";
 import type { components } from "../../api/schema";
 import { useActivityGate } from "../../components/activitygate";
 import type { GrantSpec } from "../../testing/mefixture";
@@ -76,7 +77,20 @@ function GatedActions({ record }: Readonly<{ record: Company }>) {
 export const Live: Story = { render: () => <Row /> };
 
 // A role without the activity grant: both log verbs point at one sentence.
-export const LogRefused: Story = { render: () => <Row activity={false} /> };
+export const LogRefused: Story = {
+  render: () => <Row activity={false} />,
+  play: async ({ canvasElement }) => {
+    const email = await within(canvasElement).findByRole("button", {
+      name: "Email",
+    });
+    await waitFor(() =>
+      expect(email).toHaveAccessibleDescription(
+        "You do not have permission to log activities on this record.",
+      ),
+    );
+    await expect(email).toBeDisabled();
+  },
+};
 
 // An archived account: every verb here refuses on the record's state, and the
 // sentence is the component's own when the page has not stated it.

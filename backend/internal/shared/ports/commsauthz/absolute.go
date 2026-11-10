@@ -73,6 +73,9 @@ const (
 	// ReasonMarketingConsentRequired is marketing without consent to a
 	// recipient whose country's rules allow no exception in its place.
 	ReasonMarketingConsentRequired = "marketing_consent_required"
+	// ReasonMarketingPermissionRequired is marketing without consent or a
+	// supported statutory route under the applicable rules or limited baseline.
+	ReasonMarketingPermissionRequired = "marketing_permission_required"
 	// ReasonAllowed is the allow path's own code, so every row has one.
 	ReasonAllowed = "allowed"
 	// ReasonAllowedByOverride marks a send allowed because a seat outranked the
@@ -129,8 +132,9 @@ var absoluteDenials = map[string]bool{
 	ReasonClaimContradictsResolution: true,
 	// The objection binds as an objection does, and a jurisdiction that
 	// requires prior consent is not softened by a rollout mode.
-	ReasonOptedOutAfterRequest:     true,
-	ReasonMarketingConsentRequired: true,
+	ReasonOptedOutAfterRequest:        true,
+	ReasonMarketingConsentRequired:    true,
+	ReasonMarketingPermissionRequired: true,
 }
 
 // Absolute reports whether this reason denies regardless of Mode.

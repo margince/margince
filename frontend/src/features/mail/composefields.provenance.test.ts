@@ -234,3 +234,19 @@ describe("text a recipient line refused", () => {
     expect(view.result.current.addressRefused).toBe(false);
   });
 });
+
+describe("a conversation's chosen deal", () => {
+  it("parks and restores the deal with the words", () => {
+    const view = renderHook(() => useComposeFields({}));
+    act(() => {
+      view.result.current.account.setDealId("deal-one");
+      view.result.current.editBody(edit("The first draft."));
+    });
+    const parked = view.result.current.snapshot();
+    act(() => view.result.current.load(emptyFields()));
+    expect(view.result.current.account.dealId).toBe("");
+    act(() => view.result.current.load(parked));
+    expect(view.result.current.account.dealId).toBe("deal-one");
+    expect(view.result.current.body).toBe("The first draft.");
+  });
+});

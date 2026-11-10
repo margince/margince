@@ -305,7 +305,8 @@ func (said momentCopy) reEngagedMoment(_ context.Context, now time.Time, page *c
 		return crmcontracts.ContactMoment{}, false
 	}
 	inbound := *page.LastLiveInboundAt
-	if page.LastOutboundAt != nil && !page.LastOutboundAt.Before(inbound) {
+	theirs := occurredday.Moment{At: inbound, DateOnly: occurredday.IsStatedDay(page.LastLiveInboundPrecision)}
+	if page.LastOutboundAt != nil && occurredday.Answers(lastOutbound(page), theirs) {
 		// We answered after they wrote. Nothing is owed, and their message is
 		// not news.
 		return crmcontracts.ContactMoment{}, false
@@ -359,7 +360,7 @@ func (said momentCopy) goneQuietMoment(_ context.Context, now time.Time, page *c
 		return crmcontracts.ContactMoment{}, false
 	}
 	outbound := *page.LastOutboundAt
-	if page.LastInboundAt != nil && !page.LastInboundAt.Before(outbound) {
+	if theyWroteSince(page) {
 		// They answered. Silence is not the story.
 		return crmcontracts.ContactMoment{}, false
 	}

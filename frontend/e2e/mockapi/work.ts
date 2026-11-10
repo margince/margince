@@ -197,7 +197,7 @@ export const listActivities: Handler = (
 ) => {
   const entityType = url.searchParams.get("entity_type");
   const entityId = url.searchParams.get("entity_id");
-  const kind = url.searchParams.get("kind");
+  const kinds = url.searchParams.getAll("kind");
   if (entityType !== "deal" && entityType !== "project") {
     return json(page([]));
   }
@@ -207,7 +207,7 @@ export const listActivities: Handler = (
     page(
       loggedActivities.filter(
         (row) =>
-          (kind === null || row.kind === kind) &&
+          (kinds.length === 0 || kinds.includes(row.kind)) &&
           row.links.some(
             (link) =>
               link.entity_type === entityType && link.entity_id === entityId,

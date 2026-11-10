@@ -2,6 +2,7 @@ import { Button, TextInput } from "../../design-system/atoms";
 import { EvidenceMark } from "../../design-system/evidencemark";
 import { formatMoney } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
+import { labelFor } from "../../lib/labelfor";
 import {
   AMOUNT_FIELD,
   CONFIDENCE,
@@ -97,7 +98,7 @@ export function OmittedList({
         return (
           <li key={field.field}>
             {label ? t(label) : field.field} —{" "}
-            {t(OMITTED_REASONS[field.reason])}
+            {t(labelFor(OMITTED_REASONS, field.reason))}
           </li>
         );
       })}

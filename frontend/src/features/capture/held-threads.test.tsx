@@ -140,6 +140,7 @@ async function renderCard(
               held_by_others: false,
             },
             can_reply: false,
+            can_forward: true,
             can_relink: false,
             version: 1,
           }),

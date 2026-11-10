@@ -75,7 +75,7 @@ func setupStageMoveLedger(t *testing.T, ledger bool) *stageMoveEnv {
 		recordLedger(t, v, criterion.Id.String(), v.note)
 	}
 	move := &stageMoveLane{note: v.note, to: next.String(), criterion: criterion.Id.String(), quote: "The board agreed"}
-	v.pass = newDealVerdictPass(v.Pool, move, slog.New(slog.DiscardHandler))
+	v.pass = newDealVerdictPass(v.Pool, dealVerdictRefs(move), slog.New(slog.DiscardHandler))
 	v.pass.now = func() time.Time { return v.now.Add(time.Minute) }
 	return &stageMoveEnv{dealVerdictEnv: v, next: next, move: move}
 }

@@ -220,7 +220,8 @@ func TestEveryAbsoluteReasonIsClassifiedDeliberately(t *testing.T) {
 		ReasonUnconfirmedDOI:      LevelMachine,
 		// The absence of a consent the country requires: the subject's own
 		// act is missing, not given.
-		ReasonMarketingConsentRequired: LevelMachine,
+		ReasonMarketingConsentRequired:    LevelMachine,
+		ReasonMarketingPermissionRequired: LevelMachine,
 		// A request the engine cannot answer, corrected by asking again with a
 		// purpose that means what the caller claimed — nothing about the
 		// recipient refuses it.

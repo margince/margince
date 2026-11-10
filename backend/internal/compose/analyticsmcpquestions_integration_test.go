@@ -295,11 +295,9 @@ func proveG03OneBaseCurrencyNumber(t *testing.T) {
 	if row["deals"] != float64(6) {
 		t.Errorf("counted %v deals, want all 6 including the unrated one", row["deals"])
 	}
-	// 3×10,000 EUR native + 2×40,000 USD at 0.5 = 30,000 + 40,000. The
-	// unrated VND deal's nine million minor are NOT in it: excluded, never
-	// guessed at rate 1 — and the count above still says six.
-	if row["base_total"] != float64(70_000) {
-		t.Errorf("base total = %v, want 70000 exactly — per-deal conversion, no native-minor addition", row["base_total"])
+	// An unrated amount makes the converted total incomplete.
+	if row["base_total"] != nil {
+		t.Errorf("base total = %v, want null for an incomplete conversion", row["base_total"])
 	}
 }
 

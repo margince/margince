@@ -124,8 +124,8 @@ type OidcProviders =
  * that knows the locale, makes the stand-in follow the reader instead.
  *
  * The keys live in this `.ts` module rather than in `auth.tsx` for a second
- * reason: the no-inline-copy gate (`design-system/conformance.test.ts`) walks JSX
- * text and four user-facing attributes in `.tsx` files, and a provider key is
+ * reason. The no-inline-copy gate (`census/rules/conformance.census.ts`) walks
+ * JSX text and four user-facing attributes in `.tsx` files. A provider key is
  * neither copy nor translatable.
  */
 const PREVIEW_OIDC_PROVIDER_KEYS = ["google", "microsoft"] as const;

@@ -27,8 +27,12 @@ func (t listRecords) activityListCalendar(ctx context.Context, recordType string
 	if t.calendar == nil || recordType != string(datasource.EntityActivity) {
 		return "", false, nil
 	}
+	var kinds []string
+	if kind := filters["kind"]; kind != "" {
+		kinds = []string{kind}
+	}
 	calendar, owed, err = t.calendar(ctx, datasource.ActivityListScope{
-		Kind:     filters["kind"],
+		Kinds:    kinds,
 		Windowed: filters["occurred_after"] != "" || filters["occurred_before"] != "",
 		Narrowed: filters["entity_id"] != "" || filters["assignee_id"] != "" || filters["project_id"] != "",
 	})

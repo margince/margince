@@ -10,6 +10,7 @@ package contactdraft
 import (
 	"context"
 
+	"github.com/margince/margince/backend/internal/compose/claims"
 	"github.com/margince/margince/backend/internal/compose/draftcore"
 	"github.com/margince/margince/backend/internal/compose/draftrules"
 	"github.com/margince/margince/backend/internal/compose/draftvoice"
@@ -47,10 +48,10 @@ Where the shared rules let you either write around a missing detail or ask for i
 ` + draftrules.Turns + `
 ` + draftrules.Rewrite + `
 The reasoning array is where an explanation of the draft goes. It is the ONLY place; the body carries none.
-Each reasoning entry names ONE input you actually used, in the reader's words, short enough to read as a chip ("pricing concern", "asked about onboarding"). Give entity_type and entity_id when the input was a record the summary identified; set both to null when it was the caller's own intent. Cite the recipient with the entity_type the summary gives it. Label the caller's own intent by its purpose ("offer a call", "introduce ourselves"), and never say in a label who introduced or referred anyone: the product holds no record of it. The body is where the sender says who they are.
+Each reasoning entry names ONE input you actually used, in the reader's words, short enough to read as a chip ("pricing concern", "asked about onboarding"). Give entity_type and entity_id when the input was a record the summary identified, entity_id being the record's reference exactly as the summary shows it (such as c1, d1 or a2); set both to null when it was the caller's own intent. Cite the recipient with the entity_type the summary gives it. Label the caller's own intent by its purpose ("offer a call", "introduce ourselves"), and never say in a label who introduced or referred anyone: the product holds no record of it. The body is where the sender says who they are.
 about, when present, is the activity this message follows up, such as the meeting just held. Write about it first, before anything in recent.
 also_to, when present, names further contacts the same message goes to. Write it so it reads right to all of them.
-sections_omitted names what the reader of this summary was not allowed to see. Say nothing about those subjects rather than inferring around the gap.
+sections_omitted names what the reader of this summary was not allowed to see. Say nothing about those subjects rather than inferring around the gap. ` + claims.NeverNameTheGap + `
 If the summary gives you nothing but the recipient, write a short honest opener and return an empty reasoning array. Do not invent a reason.`
 
 // draftSystemFor assembles this call's system turn: what this surface is for,
@@ -162,7 +163,7 @@ func surface(in Input) draftcore.Surface {
 		KeepUncited: func(kind crmcontracts.AccountDraftReasonKind, _ string) bool {
 			return kind == crmcontracts.AccountDraftReasonKindIntent
 		},
-		Cites: func(entityID string) string { return known[entityID] },
+		Known: known,
 	}
 }
 

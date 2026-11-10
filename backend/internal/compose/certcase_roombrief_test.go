@@ -11,6 +11,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/aitasks"
 	"github.com/margince/margince/backend/internal/compose/roombrief"
+	"github.com/margince/margince/backend/internal/modules/ai/aitest"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
@@ -56,7 +57,10 @@ func TestTheRoomBriefCaseGradesEachKindOfReply(t *testing.T) {
 	cite := func(id, text string) string {
 		return `{"sentences":[{"text":"` + text + `","nature":"fact","evidence":[{"entity_type":"thread","entity_id":"` + id + `"}]}]}`
 	}
-	capID := c.mustCite
+	capID, shown := aitest.RefBefore(roombrief.BriefRequest(c.in, "en"), "Clause 11.2")
+	if !shown {
+		t.Fatal("the request shows no ref for the cap thread")
+	}
 	for name, tc := range map[string]struct {
 		reply string
 		want  string

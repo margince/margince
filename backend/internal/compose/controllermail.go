@@ -173,11 +173,14 @@ func (q controllerMailQueue) PresentConfirmationTx(ctx context.Context, tx pgx.T
 }
 
 // stagingRequest is what the engine is asked about one controller mail, at
-// staging and in its preview alike.
+// staging and in its preview alike. A mail filed under a lead names that lead.
+// The engine then judges the lead the mail is about, not whoever else holds the
+// same address.
 func stagingRequest(in consent.ConfirmationSend, body string) commsauthz.Request {
 	return commsauthz.Request{
 		Recipients: []connector.Recipient{{Email: in.Recipient}},
 		Context:    in.Category,
+		Evidence:   commsauthz.Evidence{LeadID: in.LeadID.UUID},
 		Subject:    in.Rendered.Subject,
 		Body:       body,
 		HTMLBody:   in.Rendered.HTMLBody,

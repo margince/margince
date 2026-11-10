@@ -32,19 +32,21 @@ export function rules(root: string): Rule[] {
 }
 
 export function rulesOf(sheets: readonly string[]): Rule[] {
-  const all: Rule[] = [];
-  for (const file of sheets) {
-    const sheet = readFileSync(file, "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
-    assertFlat(file, sheet);
-    // Innermost brace pairs, so a rule nested in an @media is found as
-    // itself and the query around it never matches as a selector.
-    for (const [, selector, body] of sheet.matchAll(/([^{}]*)\{([^{}]*)\}/g)) {
-      for (const one of selectorList(selector)) {
-        all.push({ file, selector: one, body });
-      }
-    }
-  }
-  return all;
+  return sheets.flatMap((file) =>
+    rulesOfText(file, readFileSync(file, "utf8")),
+  );
+}
+
+// The rules of one sheet already read, for a census that holds the text.
+export function rulesOfText(file: string, text: string): Rule[] {
+  const sheet = text.replace(/\/\*[\s\S]*?\*\//g, "");
+  assertFlat(file, sheet);
+  // Innermost brace pairs, so a rule nested in an @media is found as
+  // itself and the query around it never matches as a selector.
+  return [...sheet.matchAll(/([^{}]*)\{([^{}]*)\}/g)].flatMap(
+    ([, selector, body]) =>
+      selectorList(selector).map((one) => ({ file, selector: one, body })),
+  );
 }
 
 // A nested style rule would read as its parent's declarations turned selector.

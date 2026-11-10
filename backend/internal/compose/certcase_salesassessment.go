@@ -129,6 +129,7 @@ func salesAssessmentInput(f salesAssessmentFixture) (salesassessment.Input, map[
 		}
 		in.Decisions = append(in.Decisions, salesassessment.DecisionIn{ID: ids.NewV7().String(), Text: decision.Text, Deal: deal, OwnerID: owners[decision.Deal], ReviewOn: decision.ReviewOn, Status: decision.Status, Result: decision.Result})
 	}
+	displayAssessmentFigures(&in, string(textlang.English))
 	return in, labels, nil
 }
 

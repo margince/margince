@@ -62,7 +62,7 @@ func TestEverySARSectionStatementResolvesAgainstTheSchema(t *testing.T) {
 	// added to any chapter is covered the day it is added, and one that stops
 	// being reachable stops being checked, which is correct in both directions.
 	var pkg SARPackage
-	sections, err := sarSections(principal.SystemActing(context.Background(), "sar_test"), &pkg, ids.New[ids.ContactKind](), []string{"subject@sar.test"}, []ids.UUID{ids.NewV7()}, []ids.UUID{ids.NewV7()}, []ids.UUID{ids.NewV7()})
+	sections, err := sarSections(principal.SystemActing(context.Background(), "sar_test"), &pkg, ids.New[ids.ContactKind](), []string{"subject@sar.test"}, []ids.UUID{ids.NewV7()}, []ids.UUID{ids.NewV7()}, []ids.UUID{ids.NewV7()}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -33,6 +33,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
@@ -41,6 +42,8 @@ import (
 // counterparty on it.
 type QuietSide struct {
 	At time.Time
+	// DateOnly is an entry logged by its date alone, whose At is that date's anchor.
+	DateOnly bool
 	// Kind is the activity kind the message was — an email, a call, a meeting.
 	// The reason says what actually happened, and "wrote" on a phone call is a
 	// small lie that costs the sentence its authority.
@@ -103,12 +106,14 @@ func ReadQuietFacts(ctx context.Context, tx pgx.Tx, dealID ids.DealID) (QuietFac
 	for _, arm := range []struct {
 		direction string
 		role      string
-		into      **QuietSide
+		// tie orders rows at one stored instant, so quietReason's answer test decides the whole tie.
+		tie  string
+		into **QuietSide
 	}{
-		{directionInbound, counterpartyRoleInbound, &facts.LastInbound},
-		{directionOutbound, counterpartyRoleOutbound, &facts.LastOutbound},
+		{directionInbound, counterpartyRoleInbound, occurredday.AnsweredTieOrderSQL("a"), &facts.LastInbound},
+		{directionOutbound, counterpartyRoleOutbound, occurredday.AnswerTieOrderSQL("a"), &facts.LastOutbound},
 	} {
-		side, found, err := readQuietSide(ctx, tx, dealID, arm.direction, arm.role)
+		side, found, err := readQuietSide(ctx, tx, dealID, arm.direction, arm.role, arm.tie)
 		if err != nil {
 			return QuietFacts{}, fmt.Errorf("last %s message on deal %s: %w", arm.direction, dealID, err)
 		}
@@ -125,7 +130,7 @@ func ReadQuietFacts(ctx context.Context, tx pgx.Tx, dealID ids.DealID) (QuietFac
 // whose address never matched a contact still tells the reader WHEN the side
 // last spoke, and dropping it would report a deal as never-contacted because
 // the address is unknown.
-func readQuietSide(ctx context.Context, tx pgx.Tx, dealID ids.DealID, direction, role string) (QuietSide, bool, error) {
+func readQuietSide(ctx context.Context, tx pgx.Tx, dealID ids.DealID, direction, role, tie string) (QuietSide, bool, error) {
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	dealPos := arg(dealID)
@@ -165,7 +170,7 @@ func readQuietSide(ctx context.Context, tx pgx.Tx, dealID ids.DealID, direction,
 	var side QuietSide
 	var contactID *ids.UUID
 	err = tx.QueryRow(ctx, fmt.Sprintf(`
-		SELECT a.occurred_at, a.kind,
+		SELECT a.occurred_at, a.occurred_precision = 'day', a.kind,
 		       (SELECT sole.contact_id FROM activity_participant sole
 		         WHERE sole.activity_id = a.id AND sole.role = $%[3]d
 		           AND sole.contact_id IS NOT NULL
@@ -174,10 +179,10 @@ func readQuietSide(ctx context.Context, tx pgx.Tx, dealID ids.DealID, direction,
 		FROM activity a
 		JOIN activity_link l ON l.activity_id = a.id AND l.deal_id = $%[1]d
 		WHERE a.archived_at IS NULL AND %[4]s AND %[5]s AND %[6]s AND a.direction = $%[2]d
-		ORDER BY a.occurred_at DESC, a.id DESC
+		ORDER BY a.occurred_at DESC, %[7]s, a.id DESC
 		LIMIT 1`, dealPos, directionPos, rolePos, scope, healthInteraction("now()"),
-		relstrength.ExternalActivityCountsSQL("a", "now()")), args...).
-		Scan(&side.At, &side.Kind, &contactID)
+		relstrength.ExternalActivityCountsSQL("a", "now()"), tie), args...).
+		Scan(&side.At, &side.DateOnly, &side.Kind, &contactID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return QuietSide{}, false, nil
 	}

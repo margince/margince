@@ -13,6 +13,7 @@ import { SurfaceState } from "../../design-system/surfacestate";
 import { formatDateTime } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { labelFor } from "../../lib/labelfor";
 import {
   type List,
   type ListHistoryEntry,
@@ -95,7 +96,7 @@ export function ListHistoryPanel({ list }: Readonly<{ list: List }>) {
                 render: (row) => (
                   <CellStack>
                     <span>
-                      {t(KIND_LABEL[row.kind])}
+                      {t(labelFor(KIND_LABEL, row.kind))}
                       {reasonOf(row)}
                     </span>
                     {row.note && <span className="t-caption">{row.note}</span>}

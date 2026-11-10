@@ -56,6 +56,10 @@ func (s *Store) contactCaseView(ctx context.Context, tx pgx.Tx, c contactCase) (
 	if err != nil {
 		return crmcontracts.ContactCase{}, err
 	}
+	return renderContactCase(c, policy, authority)
+}
+
+func renderContactCase(c contactCase, policy bool, authority caseAuthority) (crmcontracts.ContactCase, error) {
 	mode := authority.mergeMode()
 	out := crmcontracts.ContactCase{
 		AnchorId: openapi_types.UUID(c.Anchor), Revision: c.revision(policy),
@@ -111,21 +115,19 @@ type caseAuthority struct {
 }
 
 func readCaseAuthority(ctx context.Context, tx pgx.Tx, c contactCase, policy bool) (caseAuthority, error) {
-	a := caseAuthority{c: c, writable: map[ids.UUID]bool{}}
-	if a.mayAct = auth.Allows(ctx, contactEntity, principal.ActionUpdate); !a.mayAct {
-		return a, nil
+	writable, err := auth.WritableSubset(ctx, tx, contactEntity, memberIDsOf(c))
+	if err != nil {
+		return caseAuthority{}, err
 	}
-	for _, m := range c.Members {
-		writable, err := auth.WritableBy(ctx, tx, contactEntity, m.ID)
-		if err != nil {
-			return a, err
-		}
-		a.writable[m.ID] = writable
-	}
+	return caseAuthorityFor(ctx, c, policy, writable), nil
+}
+
+func caseAuthorityFor(ctx context.Context, c contactCase, policy bool, writable map[ids.UUID]bool) caseAuthority {
+	a := caseAuthority{c: c, mayAct: auth.Allows(ctx, contactEntity, principal.ActionUpdate), writable: writable}
 	if actor, ok := principal.Actor(ctx); ok && policy {
 		a.delegator = actor
 	}
-	return a, nil
+	return a
 }
 
 func (a caseAuthority) delegate(memberIDs []ids.UUID) bool {
@@ -292,10 +294,20 @@ type caseSummary struct {
 // ListContactCases pages the cases the reader can see in one scope,
 // strongest first. The page is rendered from the components it ranked.
 func (s *Store) ListContactCases(ctx context.Context, in ContactCaseListInput) ([]crmcontracts.ContactCase, string, error) {
+	return s.readContactCases(ctx, in, contactCaseListMax)
+}
+
+// RankedContactCases reads a bounded ranking census without re-ranking pages.
+func (s *Store) RankedContactCases(ctx context.Context, in ContactCaseListInput) ([]crmcontracts.ContactCase, error) {
+	page, _, err := s.readContactCases(ctx, in, max(in.Limit, contactCaseListDefault))
+	return page, err
+}
+
+func (s *Store) readContactCases(ctx context.Context, in ContactCaseListInput, limit int) ([]crmcontracts.ContactCase, string, error) {
 	if err := auth.Require(ctx, contactEntity, principal.ActionRead); err != nil {
 		return nil, "", err
 	}
-	in.Limit = min(max(in.Limit, 0), contactCaseListMax)
+	in.Limit = min(max(in.Limit, 0), limit)
 	if in.Limit == 0 {
 		in.Limit = contactCaseListDefault
 	}
@@ -327,18 +339,8 @@ func (s *Store) ListContactCases(ctx context.Context, in ContactCaseListInput) (
 				return err
 			}
 		}
-		for _, summary := range ranked {
-			c, err := readComponentCase(ctx, tx, summary.component, summary.address)
-			if err != nil {
-				return err
-			}
-			view, err := s.contactCaseView(ctx, tx, c)
-			if err != nil {
-				return err
-			}
-			page = append(page, view)
-		}
-		return nil
+		page, err = s.contactCaseViews(ctx, tx, ranked)
+		return err
 	})
 	return page, next, err
 }

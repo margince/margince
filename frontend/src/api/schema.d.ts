@@ -16648,6 +16648,10 @@ export interface paths {
          *     read it, was shown the compliance warning, acknowledged it, and decided in writing that the
          *     message goes — and then sends the exact message the review was holding.
          *
+         *     Current permission is checked again before an exception is recorded. If new evidence or a
+         *     consent grant now permits the held message, it is queued under that permission with no
+         *     exception instruction. The caller's authority and request validation still apply.
+         *
          *     NOTHING ABOUT THE REFUSAL CHANGES. No consent is written and no stop is lifted. The decision
          *     rows still read `deny`; what changes is one column saying the message left under a human's
          *     instruction rather than under the engine's permission. A subject asking later why they
@@ -28546,7 +28550,19 @@ export interface components {
             links: components["schemas"]["ActivityLink"][];
             thread?: components["schemas"]["EmailThreadPage"];
             access: components["schemas"]["EmailAccess"];
+            /**
+             * @description True when this reader may answer the message: they read it inside its audience and
+             *     hold `activity.create`, because a reply is a new message they write. False otherwise:
+             *     a read seat's send is refused with `403 seat_tier_insufficient`, and a full seat's
+             *     without the grant with `403 permission_denied`.
+             */
             can_reply: boolean;
+            /**
+             * @description True when this reader holds `activity.create`. A forward is a new message the reader
+             *     writes to whoever they choose, so it asks nothing of the message's audience beyond
+             *     this read.
+             */
+            can_forward: boolean;
             can_relink: boolean;
             /** @description The activity's version, for the If-Match its own actions send. */
             version: components["schemas"]["RowVersion"];
@@ -30502,7 +30518,7 @@ export interface components {
          * @description Why a row was skipped or warned about, so a screen can say it in the reader's language with `params`. One closed list, the same one the server reports from; `reason` is the English sentence for a reader that does not know a code. `run_in_flight` is the one refusal code: it answers a commit or undo on a run another attempt holds, and no row carries it.
          * @enum {string}
          */
-        ImportReasonCode: "activity_empty" | "activity_held" | "address_erased" | "address_not_split" | "activity_link_ambiguous" | "activity_link_ambiguous_dropped" | "activity_type_unknown" | "activity_type_unnamed" | "activity_unlinked" | "amount_negative" | "author_too_long" | "cannot_create" | "cannot_create_tags" | "cannot_edit" | "cannot_edit_and_tag" | "cannot_link_stakeholders" | "cannot_read_pipelines" | "cannot_read_tags" | "cannot_write_type" | "close_date_future" | "close_date_past" | "company_duplicate_found" | "company_duplicate_skipped" | "company_link_on_meeting" | "company_name_empty" | "contact_duplicate_found" | "contact_duplicate_skipped" | "contact_email_held" | "contact_holds_lead" | "contact_not_found" | "contact_not_found_dropped" | "contact_unnamed" | "currency_not_a_code" | "currency_unset" | "deal_already_closed" | "deal_legal_gate" | "deal_not_found" | "deal_not_found_dropped" | "deal_pipeline_fixed" | "description_too_long" | "direction_unknown" | "domain_held" | "duplicate_email" | "duration_not_valid_for_kind" | "email_names_no_contact" | "duration_out_of_range" | "employer_column_empty" | "employer_column_empty_dropped" | "employer_not_found" | "employer_not_found_dropped" | "employer_refused" | "employer_will_create" | "empty_payload" | "field_inactive" | "fx_rate_missing" | "id_not_a_company_id" | "id_not_visible" | "id_on_non_company" | "lead_not_found" | "lead_not_found_dropped" | "lead_status_not_importable" | "lead_status_unknown" | "link_ambiguous" | "link_ambiguous_dropped" | "link_contact_not_imported" | "link_edge_unsupported" | "link_malformed" | "link_not_attachable" | "link_not_found" | "link_not_found_dropped" | "link_row_not_imported" | "link_row_skipped" | "link_row_skipped_dropped" | "link_type_unknown" | "linkedin_held" | "lost_reason_missing" | "meeting_not_taken_place" | "meeting_status_not_valid_for_kind" | "meeting_status_unknown" | "message_not_importable" | "natural_key_taken" | "not_a_date" | "note_repeated" | "not_a_domain" | "not_a_number" | "not_an_amount" | "not_an_email" | "not_yes_no" | "occurred_at_future" | "occurred_at_unnamed" | "option_not_allowed" | "option_not_in_list" | "options_need_semicolons" | "owner_refused" | "owner_unknown" | "phone_needs_country" | "pipeline_no_open_stage" | "pipeline_unknown" | "pipeline_unnamed" | "record_archived" | "ref_taken_by_another_company" | "row_key_empty" | "row_key_repeated" | "run_in_flight" | "size_band_invalid" | "stage_unknown" | "stage_unnamed" | "tag_created" | "tag_name_invalid" | "tag_new" | "task_not_importable" | "timestamp_needs_zone" | "too_many_links" | "undo_edited" | "undo_failed" | "undo_grant_lost" | "undo_not_visible" | "undo_rule_protects" | "undo_still_referenced" | "value_refused" | "value_unreadable";
+        ImportReasonCode: "activity_empty" | "activity_held" | "address_erased" | "address_not_split" | "activity_link_ambiguous" | "activity_link_ambiguous_dropped" | "activity_type_unknown" | "activity_type_unnamed" | "activity_unlinked" | "amount_negative" | "author_too_long" | "cannot_create" | "cannot_create_tags" | "cannot_edit" | "cannot_edit_and_tag" | "cannot_link_stakeholders" | "cannot_read_pipelines" | "cannot_read_tags" | "cannot_write_type" | "close_date_future" | "close_date_past" | "company_duplicate_found" | "company_duplicate_skipped" | "company_link_on_meeting" | "company_name_empty" | "contact_duplicate_found" | "contact_duplicate_skipped" | "contact_email_held" | "contact_holds_lead" | "contact_not_found" | "contact_not_found_dropped" | "contact_unnamed" | "currency_not_a_code" | "currency_unset" | "deal_already_closed" | "deal_company_has_contracts" | "deal_legal_gate" | "deal_not_found" | "deal_not_found_dropped" | "deal_pipeline_fixed" | "description_too_long" | "direction_unknown" | "domain_held" | "duplicate_email" | "duration_not_valid_for_kind" | "email_names_no_contact" | "duration_out_of_range" | "employer_column_empty" | "employer_column_empty_dropped" | "employer_not_found" | "employer_not_found_dropped" | "employer_refused" | "employer_will_create" | "empty_payload" | "field_inactive" | "fx_rate_missing" | "id_not_a_company_id" | "id_not_visible" | "id_on_non_company" | "lead_not_found" | "lead_not_found_dropped" | "lead_status_not_importable" | "lead_status_unknown" | "link_ambiguous" | "link_ambiguous_dropped" | "link_contact_not_imported" | "link_edge_unsupported" | "link_malformed" | "link_not_attachable" | "link_not_found" | "link_not_found_dropped" | "link_row_not_imported" | "link_row_skipped" | "link_row_skipped_dropped" | "link_type_unknown" | "linkedin_held" | "lost_reason_missing" | "meeting_not_taken_place" | "meeting_status_not_valid_for_kind" | "meeting_status_unknown" | "message_not_importable" | "natural_key_taken" | "not_a_date" | "note_repeated" | "not_a_domain" | "not_a_number" | "not_an_amount" | "not_an_email" | "not_yes_no" | "occurred_at_future" | "occurred_at_unnamed" | "option_not_allowed" | "option_not_in_list" | "options_need_semicolons" | "owner_refused" | "owner_unknown" | "phone_needs_country" | "pipeline_no_open_stage" | "pipeline_unknown" | "pipeline_unnamed" | "record_archived" | "ref_taken_by_another_company" | "row_key_empty" | "row_key_repeated" | "run_in_flight" | "size_band_invalid" | "stage_unknown" | "stage_unnamed" | "tag_created" | "tag_name_invalid" | "tag_new" | "task_not_importable" | "timestamp_needs_zone" | "too_many_links" | "undo_edited" | "undo_failed" | "undo_grant_lost" | "undo_not_visible" | "undo_rule_protects" | "undo_still_referenced" | "value_refused" | "value_unreadable";
         /**
          * @description Exactly one of two shapes: `object` and `mapping` (and optionally
          *     `source_key`) for one CSV, or `parts` for a ZIP, each part with its own
@@ -33509,6 +33525,8 @@ export interface components {
             /** Format: uuid */
             contact_id: string;
             full_name: string;
+            /** @description Whether this caller may file an activity under this contact. Computed with the same row-scope and write-share predicate the attach gate uses, so a mail started from the company links only the recipients this is true for. A read-only share grants no attach right. The server rechecks every write. */
+            attachable: boolean;
             title?: string | null;
             /** @description A provider-sourced job title, populated ONLY where the canonical title is empty (PO-EXT-9): a bought title fills a blank, never overwrites or seconds one a human typed. */
             provider_title?: string | null;
@@ -38305,7 +38323,10 @@ export interface components {
              * @description Expected annual recurring revenue in minor units of `currency`. Null means no recurring component, which is not zero.
              */
             expected_arr_minor?: number | null;
-            /** Format: uuid */
+            /**
+             * Format: uuid
+             * @description The company this deal is for. Changing it is refused 422 (`deal_contracts_cross_company`) while contracts filed against the deal name another company, because a contract on a deal is visible through that deal alone. Detach those contracts (`deal_id: null` on the contract) or file each against a deal of its own company first; an edit never changes a contract's company, only a company merge does. Null clears the company and is not refused.
+             */
             company_id?: string | null;
             /**
              * Format: uuid
@@ -41888,6 +41909,8 @@ export interface components {
         };
         /** @description The author's drafting purpose and presentation state, restored with the words. These client-supplied values grant no send permission and do not attest model execution. */
         MailDraftEditorState: {
+            /** @description The deal and project selected in the composer. An empty list clears the selection. Omission keeps the older draft's grounding as the restore default. These are filing choices, not evidence of a request or permission to send. The send checks each link. */
+            filing?: components["schemas"]["MailDraftGround"][];
             /** @description Server binding to the saved words, used only to retire stale editor state. */
             readonly content_fingerprint?: string;
             intent?: string;
@@ -59108,6 +59131,20 @@ export interface components {
                 "application/problem+json": components["schemas"]["Problem"];
             };
         };
+        /**
+         * @description The send failed validation, or no mailbox can carry it. The second answers with the top-level
+         *     `code: mailbox_not_send_capable` and no `details.errors`, because no field of the request can
+         *     fix it: the sender must connect a mailbox that can send, or an administrator must set up
+         *     sending for the installation. A scheduled send is checked the same way when it is created.
+         */
+        SendValidationError: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/problem+json": components["schemas"]["Problem"];
+            };
+        };
     };
     parameters: {
         /** @description The type of the record to build around. */
@@ -68792,7 +68829,8 @@ export interface operations {
                 sort?: components["parameters"]["Sort"];
                 /** @description Include soft-deleted (archived) rows. Default false. */
                 include_archived?: components["parameters"]["IncludeArchived"];
-                kind?: "email" | "call" | "meeting" | "note" | "task" | "message";
+                /** @description Activities of these kinds. Repeat the parameter for several (`kind=email&kind=message`), so a page of one kind of work is never filled by another kind it does not show. */
+                kind?: ("email" | "call" | "meeting" | "note" | "task" | "message")[];
                 /** @description Calls that ended this way. Matches calls only. */
                 call_outcome?: "reached" | "not_reached" | "voicemail" | "call_back_later" | "put_through";
                 /**
@@ -70078,6 +70116,18 @@ export interface operations {
             };
         };
         responses: {
+            /**
+             * @description Scheduled, not sent (ADR-0104). No activity and no delivery row exist yet;
+             *     the timeline stays silent until it fires.
+             */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScheduledSend"];
+                };
+            };
             /** @description Accepted for send (queued); the resulting activity is logged. */
             202: {
                 headers: {
@@ -70111,7 +70161,7 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            422: components["responses"]["ValidationError"];
+            422: components["responses"]["SendValidationError"];
         };
     };
     sendCompanyEmail: {
@@ -70213,7 +70263,7 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            422: components["responses"]["ValidationError"];
+            422: components["responses"]["SendValidationError"];
         };
     };
     listScheduledSends: {

@@ -10,6 +10,7 @@
 import { CheckSquare, FileText, Send } from "lucide-react";
 import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
+import { useActivityWritable } from "../../components/activitygate";
 import { useClaimSettle } from "../../components/taskactions";
 import { Button } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
@@ -46,6 +47,7 @@ function MomentVerb({
   label,
   icon,
   primary,
+  writes,
   onAct,
 }: Readonly<{
   label: string;
@@ -54,8 +56,14 @@ function MomentVerb({
   // draws — a guessed glyph there would name a kind nobody stated.
   icon?: ReactNode;
   primary?: boolean;
+  // The press files an activity, which a seat without the grant is refused.
+  writes?: boolean;
   onAct: () => void;
 }>) {
+  const writable = useActivityWritable();
+  if (writes && !writable) {
+    return null;
+  }
   return (
     <span className="today-verb">
       <Button variant={primary ? "primary" : "ghost"} onClick={onAct}>
@@ -125,6 +133,7 @@ export function momentFallbackVerb({
 }>): ReactNode {
   const secondary = onLogActivity ? (
     <MomentVerb
+      writes
       label={t("log.title")}
       icon={<FileText size={15} aria-hidden="true" />}
       onAct={onLogActivity}
@@ -156,6 +165,7 @@ export function momentFallbackVerb({
   const sendVerb = (label: string) => (
     <MomentVerb
       primary
+      writes
       label={label}
       icon={<Send size={15} aria-hidden="true" />}
       onAct={draftTo}
