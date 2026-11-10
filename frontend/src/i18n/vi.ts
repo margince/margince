@@ -13659,6 +13659,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Mọi thứ vẫn hoạt động và không bị giới hạn. Cấu hình token giấy phép cho bản cài đặt này để tính số tài khoản theo mức được cấp.",
   "license.refused.title": "Giấy phép của bản cài đặt này bị từ chối",
   "license.refused.body":
+    "Token giấy phép cấu hình cho bản cài đặt này đã được xuất trình và bị từ chối. Các tài khoản đầy đủ quyền đang dùng vẫn hoạt động, và cho đến khi token được thay, không thêm tài khoản đầy đủ quyền nào vượt quá số tài khoản đầy đủ quyền mà giấy phép hợp lệ gần nhất đã cấp. Kiểm tra token và đồng hồ của bản cài đặt.",
+  "license.refused.bodyUncapped":
     "Token giấy phép cấu hình cho bản cài đặt này đã được xuất trình và bị từ chối. Mọi thứ vẫn hoạt động, không giới hạn, cho đến khi token được thay. Kiểm tra token và đồng hồ của bản cài đặt.",
   "license.seats.capacityOnly":
     "Vai trò hiện tại không có quyền xem số tài khoản được cấp phép.",

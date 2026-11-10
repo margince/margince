@@ -106,6 +106,7 @@ func (w *Watcher) Recheck(ctx context.Context) {
 			"err", err, "posture", string(before.State))
 		return
 	}
+	carryCeiling(before, &after)
 	w.posture.Store(&after)
 	if after.State == before.State {
 		return

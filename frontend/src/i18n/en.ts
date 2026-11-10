@@ -13982,6 +13982,8 @@ export const en = {
     "Everything keeps working and nothing is capped. Configure a license token for this installation to count seats against a grant.",
   "license.refused.title": "This installation’s license was refused",
   "license.refused.body":
+    "The license token configured for this installation was presented and rejected. Full seats in use keep working, and no full seat is added beyond what the last valid license granted, until it is replaced. Check the token and the installation’s clock.",
+  "license.refused.bodyUncapped":
     "The license token configured for this installation was presented and rejected. Everything keeps working, uncapped, until it is replaced. Check the token and the installation’s clock.",
   "license.seats.capacityOnly": "Your role cannot see the license entitlement.",
   "license.seats.title": "Seats",

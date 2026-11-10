@@ -26291,8 +26291,10 @@ export interface components {
              */
             state: "valid" | "absent" | "rejected";
             /**
-             * @description Full seats the license admits. ABSENT when nothing caps them — no license, or a
-             *     grant carrying no seat count — which is not a grant of zero.
+             * @description Full seats a new seat is held to. A valid license answers its own grant; a refused
+             *     one keeps the last valid grant this process resolved. ABSENT when nothing caps them
+             *     — no license, no valid one before a refusal, or a grant carrying no seat count —
+             *     which is not a grant of zero.
              */
             seats_granted?: number;
             /**
