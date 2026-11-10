@@ -324,8 +324,7 @@ func (h Handlers) Login(w http.ResponseWriter, r *http.Request) {
 			httperr.Unauthorized(w, r, "invalid email or password")
 			return
 		}
-		var owed *challengeOwed
-		if errors.As(err, &owed) {
+		if owed, ok := errors.AsType[*challengeOwed](err); ok {
 			// Password verified; the member owes a second factor. Hand back a
 			// signed, short-lived challenge and no session — the flow resumes at
 			// /auth/mfa. A 202, not a 200, so a client that predates MFA never

@@ -16,7 +16,7 @@ import (
 func TestMFAChallengeRoundTripCarriesSubjectAndFreshNonce(t *testing.T) {
 	signer := newMFAChallengeSigner([]byte(testStateKey))
 
-	token, err := signer.Sign(identity.MFAChallenge{UserID: "user-123"}, 5*time.Minute)
+	token, err := signer.Sign(identity.MFAChallenge{UserID: "user-123", Epoch: "keyed"}, 5*time.Minute)
 	if err != nil {
 		t.Fatalf("Sign: %v", err)
 	}
@@ -24,11 +24,14 @@ func TestMFAChallengeRoundTripCarriesSubjectAndFreshNonce(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Verify: %v", err)
 	}
-	if verified.UserID != "user-123" {
-		t.Errorf("subject = %q, want the member the challenge was minted for", verified.UserID)
+	if verified.UserID != "user-123" || verified.Epoch != "keyed" {
+		t.Errorf("verified = %+v, want the member and the epoch the challenge was minted for", verified)
 	}
-	jti := verified.Jti
-	if jti == "" {
+	if e := signer.KeyEpoch("pw\x00t"); e == newMFAChallengeSigner([]byte(strings.Repeat("k", 32))).KeyEpoch("pw\x00t") ||
+		e == signer.KeyEpoch("pw\x00u") || strings.Contains(e, "pw") {
+		t.Error("the epoch rides readable in the challenge, yet is not a keyed digest of its material")
+	}
+	if verified.Jti == "" {
 		t.Fatal("the challenge carries no nonce; it could never be made single-use")
 	}
 
@@ -42,7 +45,7 @@ func TestMFAChallengeRoundTripCarriesSubjectAndFreshNonce(t *testing.T) {
 	if err != nil {
 		t.Fatalf("second Verify: %v", err)
 	}
-	if second.Jti == jti {
+	if second.Jti == verified.Jti {
 		t.Error("two challenges share one nonce; spending either spends both")
 	}
 }
@@ -57,10 +60,7 @@ func TestMFAChallengeRefusesTamperAndExpiry(t *testing.T) {
 	if _, err := signer.Verify(token + "x"); err == nil {
 		t.Error("a tampered signature verified")
 	}
-	payload, _, ok := strings.Cut(token, ".")
-	if !ok {
-		t.Fatal("the token has no signature part")
-	}
+	payload, _, _ := strings.Cut(token, ".")
 	if _, err := signer.Verify(payload + "x." + "forged"); err == nil {
 		t.Error("a forged token verified")
 	}
@@ -118,33 +118,5 @@ func TestAShortKeyBesideAVaultDisarmsMFAAndSaysSoAtError(t *testing.T) {
 	}
 	if !strings.Contains(logged.String(), "level=ERROR") {
 		t.Errorf("the reversed order lost the ERROR report; log: %s", logged.String())
-	}
-}
-
-// The challenge travels readable to its holder, so its epoch is keyed. It
-// round-trips under the signature. Without the key it says nothing about the
-// credentials it was made from.
-func TestMFAChallengeCarriesAKeyedCredentialEpoch(t *testing.T) {
-	signer := newMFAChallengeSigner([]byte(testStateKey))
-	const material = "$argon2id$v=19$m=19456,t=2,p=1$salt$hash\x002026-11-10T00:00:00Z"
-	epoch := signer.KeyEpoch(material)
-	if epoch == "" || strings.Contains(epoch, "argon2") {
-		t.Fatalf("epoch = %q, want a keyed value that does not repeat its material", epoch)
-	}
-	other := newMFAChallengeSigner([]byte(strings.Repeat("k", 32)))
-	if other.KeyEpoch(material) == epoch {
-		t.Error("two keys give one epoch for the same credentials; the value is not keyed")
-	}
-	if signer.KeyEpoch(material+"x") == epoch {
-		t.Error("changed credentials keep the epoch")
-	}
-
-	token, err := signer.Sign(identity.MFAChallenge{UserID: "user-123", Epoch: epoch}, 5*time.Minute)
-	if err != nil {
-		t.Fatalf("Sign: %v", err)
-	}
-	verified, err := signer.Verify(token)
-	if err != nil || verified.Epoch != epoch {
-		t.Fatalf("verified epoch = %q (err %v), want the signed one", verified.Epoch, err)
 	}
 }
