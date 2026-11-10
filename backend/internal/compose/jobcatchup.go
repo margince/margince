@@ -65,12 +65,13 @@ func startupDelay(kind string, interval, spread time.Duration) time.Duration {
 	if limit <= 0 {
 		return 0
 	}
-	// FNV-1a over the kind name.
+	// FNV-1a over the kind name, scaled to a fraction of the limit.
 	h := uint64(14695981039346656037)
 	for i := range len(kind) {
 		h = (h ^ uint64(kind[i])) * 1099511628211
 	}
-	return time.Duration(h % uint64(limit))
+	fraction := float64(h>>11) / float64(1<<53) // in [0, 1)
+	return time.Duration(fraction * float64(limit))
 }
 
 // periodicJob builds one pass's River entry. A book with no run history keeps
