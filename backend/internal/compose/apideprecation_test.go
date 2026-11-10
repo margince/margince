@@ -36,8 +36,15 @@ func TestEveryDeprecatedOperationAnnouncesThePolicyThroughTheGeneratedRouter(t *
 				t.Errorf("missing notice for %s", route)
 			}
 			requestPath := regexp.MustCompile(`\{[^}]+\}`).ReplaceAllString(httpserver.BaseURL+path, "00000000-0000-0000-0000-000000000001")
+			request := httptest.NewRequest(method, requestPath, nil)
+			// A required header is a parameter too, and its refusal comes before the operation.
+			for _, param := range op.Parameters {
+				if param.Value != nil && param.Value.In == "header" && param.Value.Required {
+					request.Header.Set(param.Value.Name, `"1"`)
+				}
+			}
 			response := httptest.NewRecorder()
-			router.ServeHTTP(response, httptest.NewRequest(method, requestPath, nil))
+			router.ServeHTTP(response, request)
 			if response.Code != http.StatusNoContent {
 				t.Errorf("%s did not reach operation middleware: %d", route, response.Code)
 			}
