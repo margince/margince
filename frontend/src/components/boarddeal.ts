@@ -82,6 +82,8 @@ export function toBoardDeal(
     // have — a zero amount, or a euro sign over an unknown currency.
     valueMinor: deal.amount_minor ?? null,
     currency: deal.currency ?? null,
+    probabilityPct:
+      deal.status === "open" ? (deal.win_probability ?? null) : null,
     idleSince: since,
     measuredAt,
     stalled: deal.stalled ?? false,

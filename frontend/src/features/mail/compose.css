@@ -92,6 +92,15 @@
   border: 0;
 }
 
+/* The draft's language, as wide as its names and not the band. */
+.compose-aiband .compose-draftlanguage {
+  flex: 0 0 auto;
+  align-self: flex-start;
+  inline-size: auto;
+  min-inline-size: 9rem;
+  max-inline-size: 100%;
+}
+
 /* The caret half of the send control. It carries the confirm's own fill, so
    the two read as one button divided rather than as a green button beside a
    green square. */
@@ -458,13 +467,19 @@
   padding: var(--space-2) var(--space-3) var(--space-2) var(--space-4);
   border-top: 1px solid var(--borderSubtle);
 }
+/* On a phone the row is wider than the sheet, so the status and the last
+   verb wrap to a line of their own, on the end edge. */
 .compose-foot-row {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--gapActions);
 }
+.compose-foot-row > .icon-action:last-child {
+  margin-inline-start: auto;
+}
 .compose-foot-status {
-  flex: 1;
+  flex: 1 1 auto;
   min-inline-size: 0;
   text-align: end;
 }

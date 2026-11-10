@@ -1103,6 +1103,8 @@ export const en = {
   "reporting.draftOpen": "Draft {revision} is not published yet",
   "reporting.draftHidden":
     "Readers still see the published report. Preview the draft before you publish it.",
+  "reporting.draftUnpublished":
+    "Nothing on this report is published yet, so you see its draft. Publish it to make these charts the report.",
   "reporting.draftPreviewing":
     "You are looking at the draft. Readers still see the published report.",
   "reporting.previewDraft": "Preview draft",
@@ -7737,6 +7739,7 @@ export const en = {
   "compose.scheduleGoesOut": "Sends {when}",
   "compose.willGoOut": "Sends {when}",
   "compose.scheduleAfternoon": "Tomorrow afternoon",
+  "compose.draftLanguage": "Draft language",
   "compose.rewrite": "Rewrite",
   "compose.rewriteShorter": "Shorter",
   "compose.rewriteShorterAsk": "Keep the meaning and use fewer words.",

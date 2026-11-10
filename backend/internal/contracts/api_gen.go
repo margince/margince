@@ -6106,6 +6106,27 @@ func (e CompanyDossierSectionKind) Valid() bool {
 	}
 }
 
+// Defines values for CompanyEmailDraftLanguage.
+const (
+	CompanyEmailDraftLanguageDe CompanyEmailDraftLanguage = "de"
+	CompanyEmailDraftLanguageEn CompanyEmailDraftLanguage = "en"
+	CompanyEmailDraftLanguageVi CompanyEmailDraftLanguage = "vi"
+)
+
+// Valid indicates whether the value is a known member of the CompanyEmailDraftLanguage enum.
+func (e CompanyEmailDraftLanguage) Valid() bool {
+	switch e {
+	case CompanyEmailDraftLanguageDe:
+		return true
+	case CompanyEmailDraftLanguageEn:
+		return true
+	case CompanyEmailDraftLanguageVi:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for CompanyFactCategory.
 const (
 	CompanyFactCategoryCompany  CompanyFactCategory = "company"
@@ -11704,6 +11725,27 @@ func (e DomainQuestionSuggestionBasis) Valid() bool {
 	}
 }
 
+// Defines values for DraftSteeringLanguage.
+const (
+	DraftSteeringLanguageDe DraftSteeringLanguage = "de"
+	DraftSteeringLanguageEn DraftSteeringLanguage = "en"
+	DraftSteeringLanguageVi DraftSteeringLanguage = "vi"
+)
+
+// Valid indicates whether the value is a known member of the DraftSteeringLanguage enum.
+func (e DraftSteeringLanguage) Valid() bool {
+	switch e {
+	case DraftSteeringLanguageDe:
+		return true
+	case DraftSteeringLanguageEn:
+		return true
+	case DraftSteeringLanguageVi:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for EmailAccessChangeMode.
 const (
 	EmailAccessChangeModeMessageAudience    EmailAccessChangeMode = "message_audience"
@@ -11833,6 +11875,27 @@ func (e EmailDeliveryState) Valid() bool {
 	case EmailDeliveryStatePending:
 		return true
 	case EmailDeliveryStateSent:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for EmailDraftLanguage.
+const (
+	EmailDraftLanguageDe EmailDraftLanguage = "de"
+	EmailDraftLanguageEn EmailDraftLanguage = "en"
+	EmailDraftLanguageVi EmailDraftLanguage = "vi"
+)
+
+// Valid indicates whether the value is a known member of the EmailDraftLanguage enum.
+func (e EmailDraftLanguage) Valid() bool {
+	switch e {
+	case EmailDraftLanguageDe:
+		return true
+	case EmailDraftLanguageEn:
+		return true
+	case EmailDraftLanguageVi:
 		return true
 	default:
 		return false
@@ -16408,6 +16471,27 @@ func (e MailDraftAnchorType) Valid() bool {
 	case MailDraftAnchorTypeLead:
 		return true
 	case MailDraftAnchorTypeProject:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MailDraftEditorStateLanguage.
+const (
+	MailDraftEditorStateLanguageDe MailDraftEditorStateLanguage = "de"
+	MailDraftEditorStateLanguageEn MailDraftEditorStateLanguage = "en"
+	MailDraftEditorStateLanguageVi MailDraftEditorStateLanguage = "vi"
+)
+
+// Valid indicates whether the value is a known member of the MailDraftEditorStateLanguage enum.
+func (e MailDraftEditorStateLanguage) Valid() bool {
+	switch e {
+	case MailDraftEditorStateLanguageDe:
+		return true
+	case MailDraftEditorStateLanguageEn:
+		return true
+	case MailDraftEditorStateLanguageVi:
 		return true
 	default:
 		return false
@@ -28645,6 +28729,27 @@ func (e ListCompanyDocumentsParamsDocState) Valid() bool {
 	}
 }
 
+// Defines values for DraftCompanyEmailJSONBodyLanguage.
+const (
+	DraftCompanyEmailJSONBodyLanguageDe DraftCompanyEmailJSONBodyLanguage = "de"
+	DraftCompanyEmailJSONBodyLanguageEn DraftCompanyEmailJSONBodyLanguage = "en"
+	DraftCompanyEmailJSONBodyLanguageVi DraftCompanyEmailJSONBodyLanguage = "vi"
+)
+
+// Valid indicates whether the value is a known member of the DraftCompanyEmailJSONBodyLanguage enum.
+func (e DraftCompanyEmailJSONBodyLanguage) Valid() bool {
+	switch e {
+	case DraftCompanyEmailJSONBodyLanguageDe:
+		return true
+	case DraftCompanyEmailJSONBodyLanguageEn:
+		return true
+	case DraftCompanyEmailJSONBodyLanguageVi:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for GetCompanyHierarchyRollupParamsScope.
 const (
 	GetCompanyHierarchyRollupParamsScopeSelf GetCompanyHierarchyRollupParamsScope = "self"
@@ -28813,6 +28918,27 @@ func (e SuppressContactJSONBodyKind) Valid() bool {
 	case SuppressContactJSONBodyKindMarketingObjection:
 		return true
 	case SuppressContactJSONBodyKindSubjectRequest:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DraftContactEmailJSONBodyLanguage.
+const (
+	DraftContactEmailJSONBodyLanguageDe DraftContactEmailJSONBodyLanguage = "de"
+	DraftContactEmailJSONBodyLanguageEn DraftContactEmailJSONBodyLanguage = "en"
+	DraftContactEmailJSONBodyLanguageVi DraftContactEmailJSONBodyLanguage = "vi"
+)
+
+// Valid indicates whether the value is a known member of the DraftContactEmailJSONBodyLanguage enum.
+func (e DraftContactEmailJSONBodyLanguage) Valid() bool {
+	switch e {
+	case DraftContactEmailJSONBodyLanguageDe:
+		return true
+	case DraftContactEmailJSONBodyLanguageEn:
+		return true
+	case DraftContactEmailJSONBodyLanguageVi:
 		return true
 	default:
 		return false
@@ -39755,6 +39881,9 @@ type CompanyEmailDraft struct {
 	// reader deciding how much to trust a sentence needs to know which wrote it.
 	GeneratedBy WrittenBy `json:"generated_by"`
 
+	// Language The language this draft is written in: the `language` the request named, else the one the server resolved from the record's correspondence. The model draft and the deterministic floor report it alike. Absent on an introduction request or note, which reads its language on its own and says so through `language_undetermined`.
+	Language *CompanyEmailDraftLanguage `json:"language,omitempty"`
+
 	// LanguageUndetermined True when the draft's language could not be determined from the contact's own correspondence, so it is written in the default rather than in theirs.
 	// The causes are deliberately not distinguished on the wire, and there are more than two: the reader may see none of that contact's mail, the contact may have written nothing readable, the evidence may be too short or mixed to call, or the language may be one the detector does not support. Every one of them means the same thing to a client — the draft is sendable and its language is a fallback rather than a choice.
 	// A client should say so beside the note, for the same reason voice_degraded is said: a reader fluent only in the default cannot tell a fallback from a choice, and would forward an English note to a customer who writes in German believing the product had checked. Absent reads as false.
@@ -39788,6 +39917,9 @@ type CompanyEmailDraft struct {
 	// VoiceProfileVersion The Voice DNA profile version that styled this draft; null when no ready profile shaped it.
 	VoiceProfileVersion *int `json:"voice_profile_version,omitempty" minimum:"1"`
 }
+
+// CompanyEmailDraftLanguage The language this draft is written in: the `language` the request named, else the one the server resolved from the record's correspondence. The model draft and the deterministic floor report it alike. Absent on an introduction request or note, which reads its language on its own and says so through `language_undetermined`.
+type CompanyEmailDraftLanguage string
 
 // CompanyFact defines model for CompanyFact.
 type CompanyFact struct {
@@ -46757,6 +46889,9 @@ type DraftSteering struct {
 	// Intent Optional steering in the caller's own words ("shorter", "warmer", "ask for Tuesday"). The one input that is NOT untrusted — the caller typed it — and so the only one outside the fence.
 	Intent *string `json:"intent,omitempty"`
 
+	// Language The language the caller chose for the draft. It outranks every language the server would read from the correspondence, the addressee, the rep and the installation, and the greeting, register, provenance notice and deterministic fallback all follow it. Absent leaves the choice to the server, which reads it from the correspondence. The server keeps no choice between calls, so a rewrite that should stay in the chosen language names it again. A code outside this list is `422` on `language`.
+	Language *DraftSteeringLanguage `json:"language,omitempty"`
+
 	// RewriteOf The draft the composer is CURRENTLY showing, when the call is a rewrite rather than a first draft. Without it an `intent` of "make it shorter" generates a second grounded draft from the same record and the composer swaps it in — a different email rather than a shorter one, and any edits the rep had made are gone.
 	// Sent by the client because the server stores no draft to resolve: this endpoint writes no record, so there is nothing on file to name. It is UNTRUSTED like every other input but `intent` — it may hold text a contact wrote, pasted in — and is fenced the same way.
 	// Absent or empty is a first draft.
@@ -46765,6 +46900,9 @@ type DraftSteering struct {
 	// Subject The subject the caller has already written on a new-message route, supplied as context for the body. A reply uses the selected message's subject instead.
 	Subject *string `json:"subject,omitempty"`
 }
+
+// DraftSteeringLanguage The language the caller chose for the draft. It outranks every language the server would read from the correspondence, the addressee, the rep and the installation, and the greeting, register, provenance notice and deterministic fallback all follow it. Absent leaves the choice to the server, which reads it from the correspondence. The server keeps no choice between calls, so a rewrite that should stay in the chosen language names it again. A code outside this list is `422` on `language`.
+type DraftSteeringLanguage string
 
 // EmailAccess Who reads this message, and what this caller may do about that. `can_change` and
 // `change_mode` are decided by the same authority that would execute the write, so a
@@ -46928,10 +47066,13 @@ type EmailDraft struct {
 	Body        string `json:"body"`
 
 	// DraftRef Opaque reference identifying this served voice draft for learning feedback (rejectVoiceDraft); null when no voice profile styled it.
-	DraftRef            *string                `json:"draft_ref,omitempty"`
-	InReplyToActivityId *openapi_types.UUID    `json:"in_reply_to_activity_id,omitempty"`
-	Subject             string                 `json:"subject"`
-	To                  *[]openapi_types.Email `json:"to,omitempty"`
+	DraftRef            *string             `json:"draft_ref,omitempty"`
+	InReplyToActivityId *openapi_types.UUID `json:"in_reply_to_activity_id,omitempty"`
+
+	// Language The language this draft is written in: the `language` the request named, else the one the server resolved from the correspondence. The model draft and the deterministic fallback report it alike. A client shows it as the composer's current choice and names it again on a rewrite that must keep it.
+	Language *EmailDraftLanguage    `json:"language,omitempty"`
+	Subject  string                 `json:"subject"`
+	To       *[]openapi_types.Email `json:"to,omitempty"`
 
 	// VoiceDegraded True when the sender's voice could not even be looked up, so this draft may be missing a voice its sender built. Distinct from voice_profile_version being null, which also covers the ordinary no-profile case. A client should say so: the sender cannot detect a missing voice by reading the text. Absent reads as false.
 	VoiceDegraded *bool `json:"voice_degraded,omitempty"`
@@ -46939,6 +47080,9 @@ type EmailDraft struct {
 	// VoiceProfileVersion The Voice DNA PROFILE version (not a model version) that styled this draft — the "built from your corpus · vN" provenance; null when no ready voice profile shaped it.
 	VoiceProfileVersion *int `json:"voice_profile_version,omitempty" minimum:"1"`
 }
+
+// EmailDraftLanguage The language this draft is written in: the `language` the request named, else the one the server resolved from the correspondence. The model draft and the deterministic fallback report it alike. A client shows it as the composer's current choice and names it again on a rewrite that must keep it.
+type EmailDraftLanguage string
 
 // EmailParty One address on a message, resolved to a contact or a seat when it is one.
 type EmailParty struct {
@@ -53262,12 +53406,18 @@ type MailDraftEditorState struct {
 	ContentFingerprint *string `json:"content_fingerprint,omitempty"`
 
 	// Filing The deal and project selected in the composer. An empty list clears the selection. Omission keeps the older draft's grounding as the restore default. These are filing choices, not evidence of a request or permission to send. The send checks each link.
-	Filing              *[]MailDraftGround `json:"filing,omitempty"`
-	Intent              *string            `json:"intent,omitempty"`
-	ServedBody          *string            `json:"served_body,omitempty"`
-	VoiceDegraded       *bool              `json:"voice_degraded,omitempty"`
-	VoiceProfileVersion *int               `json:"voice_profile_version,omitempty" minimum:"1"`
+	Filing *[]MailDraftGround `json:"filing,omitempty"`
+	Intent *string            `json:"intent,omitempty"`
+
+	// Language The language the author chose for the AI draft, restored with the words so the composer names it again on the next draft request. Absent when they chose none, and the next draft follows the correspondence. A code outside this list is dropped and the draft still saves, so the answer comes back without it.
+	Language            *MailDraftEditorStateLanguage `json:"language,omitempty"`
+	ServedBody          *string                       `json:"served_body,omitempty"`
+	VoiceDegraded       *bool                         `json:"voice_degraded,omitempty"`
+	VoiceProfileVersion *int                          `json:"voice_profile_version,omitempty" minimum:"1"`
 }
+
+// MailDraftEditorStateLanguage The language the author chose for the AI draft, restored with the words so the composer names it again on the next draft request. Absent when they chose none, and the next draft follows the correspondence. A code outside this list is dropped and the draft still saves, so the answer comes back without it.
+type MailDraftEditorStateLanguage string
 
 // MailDraftGround One record the draft was written from. A saved agent draft keeps these so the composer files the sent mail where the draft was grounded, rather than rebuilding links from whichever page it was opened on.
 type MailDraftGround struct {
@@ -70895,6 +71045,9 @@ type DraftCompanyEmailJSONBody struct {
 	// Intent Optional steering in the caller's own words ("shorter", "warmer", "ask for Tuesday"). The one input that is NOT untrusted — the caller typed it — and so the only one outside the fence.
 	Intent *string `json:"intent,omitempty"`
 
+	// Language The language the caller chose for the draft. It outranks every language the server would read from the correspondence, the addressee, the rep and the installation, and the greeting, register, provenance notice and deterministic fallback all follow it. Absent leaves the choice to the server, which reads it from the correspondence. The server keeps no choice between calls, so a rewrite that should stay in the chosen language names it again. A code outside this list is `422` on `language`.
+	Language *DraftCompanyEmailJSONBodyLanguage `json:"language,omitempty"`
+
 	// ProjectId Which body of work the message is about. When set, the draft is grounded in the 360 scoped to that project — correspondence filed under another project drops out — and the project's name, key, phase and target end date are facts the draft may use. Must be a live project the caller can read; an invisible or archived one is `404`, the same answer a direct read gives.
 	ProjectId *openapi_types.UUID `json:"project_id,omitempty"`
 
@@ -70906,6 +71059,9 @@ type DraftCompanyEmailJSONBody struct {
 	// Subject The subject the caller has already written on a new-message route, supplied as context for the body. A reply uses the selected message's subject instead.
 	Subject *string `json:"subject,omitempty"`
 }
+
+// DraftCompanyEmailJSONBodyLanguage defines parameters for DraftCompanyEmail.
+type DraftCompanyEmailJSONBodyLanguage string
 
 // CreateCompanyFactParams defines parameters for CreateCompanyFact.
 type CreateCompanyFactParams struct {
@@ -71849,6 +72005,9 @@ type DraftContactEmailJSONBody struct {
 	// Intent Optional steering in the caller's own words ("shorter", "warmer", "ask for Tuesday"). The one input that is NOT untrusted — the caller typed it — and so the only one outside the fence.
 	Intent *string `json:"intent,omitempty"`
 
+	// Language The language the caller chose for the draft. It outranks every language the server would read from the correspondence, the addressee, the rep and the installation, and the greeting, register, provenance notice and deterministic fallback all follow it. Absent leaves the choice to the server, which reads it from the correspondence. The server keeps no choice between calls, so a rewrite that should stay in the chosen language names it again. A code outside this list is `422` on `language`.
+	Language *DraftContactEmailJSONBodyLanguage `json:"language,omitempty"`
+
 	// ProjectId Which body of work the message is about. When set, the draft is grounded in the 360 scoped to that project — correspondence filed under another project drops out — and the project's name, key, phase and target end date are facts the draft may use. Must be a live project the caller can read; an invisible or archived one is `404`, the same answer a direct read gives.
 	ProjectId *openapi_types.UUID `json:"project_id,omitempty"`
 
@@ -71860,6 +72019,9 @@ type DraftContactEmailJSONBody struct {
 	// Subject The subject the caller has already written on a new-message route, supplied as context for the body. A reply uses the selected message's subject instead.
 	Subject *string `json:"subject,omitempty"`
 }
+
+// DraftContactEmailJSONBodyLanguage defines parameters for DraftContactEmail.
+type DraftContactEmailJSONBodyLanguage string
 
 // LinkContactEmployerParams defines parameters for LinkContactEmployer.
 type LinkContactEmployerParams struct {

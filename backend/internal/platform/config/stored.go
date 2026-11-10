@@ -384,7 +384,7 @@ func (c *Config) BootLocked() map[string]bool {
 // cannot name.
 type storedSetting interface {
 	entry() settings.Definition
-	storedText(ctx context.Context, db *settings.Store) (text string, stored bool, err error)
+	storedText(ctx context.Context, db *settings.Store) (text *string, stored bool, err error)
 }
 
 // StoredDefinitions are the rows platform/settings must register.
@@ -424,9 +424,7 @@ func (c *Config) StoredEntries(ctx context.Context) ([]Entry, error) {
 			return nil, err
 		}
 		out[i].Origin = storedOrigin(e.Key, has)
-		if !e.Secret {
-			out[i].Value = &text
-		}
+		out[i].Value = text
 	}
 	return out, nil
 }

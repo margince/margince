@@ -111,6 +111,16 @@ func registerOrFormal(register textlang.Register) textlang.Register {
 // rendering the floor does not have to re-parse the string it just wrote.
 func (e Envelope) Lang() textlang.Lang { return langOrDefault(textlang.Lang(e.Language)) }
 
+// Reported is a draft's language as a contract enum, nil for a code the
+// product does not write, so every draft route reports it alike.
+func Reported[Wire ~string](lang textlang.Lang) *Wire {
+	if !textlang.Known(string(lang)) {
+		return nil
+	}
+	wired := Wire(lang)
+	return &wired
+}
+
 // At reads the envelope's "now" back as a time, so a caller that needs to
 // compare a date against it does not re-read a clock and get a different
 // instant than the draft was stamped with. An unparseable or absent value

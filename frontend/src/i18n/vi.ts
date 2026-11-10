@@ -1132,6 +1132,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "reporting.draftOpen": "Bản nháp {revision} chưa được công bố",
   "reporting.draftHidden":
     "Ai đọc báo cáo vẫn thấy bản đã công bố. Hãy xem trước bản nháp rồi mới công bố.",
+  "reporting.draftUnpublished":
+    "Báo cáo này chưa công bố nội dung nào, nên bạn đang xem bản nháp. Hãy công bố để các biểu đồ này trở thành báo cáo.",
   "reporting.draftPreviewing":
     "Bạn đang xem bản nháp. Ai đọc báo cáo vẫn thấy bản đã công bố.",
   "reporting.previewDraft": "Xem trước bản nháp",
@@ -7548,6 +7550,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "compose.scheduleGoesOut": "Gửi lúc {when}",
   "compose.willGoOut": "Gửi lúc {when}",
   "compose.scheduleAfternoon": "Chiều mai",
+  "compose.draftLanguage": "Ngôn ngữ của bản nháp",
   "compose.rewrite": "Viết lại",
   "compose.rewriteShorter": "Ngắn hơn",
   "compose.rewriteShorterAsk": "Giữ nguyên ý, dùng ít chữ hơn.",
