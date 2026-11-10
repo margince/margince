@@ -53,9 +53,11 @@ got="$(queue_groups "$work/parts" "$work/timing" 200 | tr '\n' ';')"
 
 # 2 and 3. Shards race for one queue. A shard claims, then sleeps its own pace;
 # the claims it made go to claimed-<k>, one group per line.
+# Every shard waits for $work/go, so one that a loaded machine starts late is
+# not mistaken for a slow one.
 shard() { # store shard total groups-count pace done-file
   local store="$1" k="$2" total="$3" count="$4" pace="$5" done_file="${6:-}"
-  seq 1 "$count" | sed 's/$/ x/' > "$work/groups-$count"
+  until [[ -e "$work/go" ]]; do sleep 0.01; done
   queue_open "$store" "$k" "$total" "$work/groups-$count" "$done_file"
   : > "$work/claimed-$k"
   while queue_next && [[ -n "$QUEUE_GROUP" ]]; do
@@ -63,6 +65,9 @@ shard() { # store shard total groups-count pace done-file
     sleep "$pace"
   done
 }
+
+for count in 20 40 61; do seq 1 "$count" | sed 's/$/ x/' > "$work/groups-$count"; done
+start_race() { sleep 0.2; touch "$work/go"; wait; rm -f "$work/go"; }
 
 expect_whole() { # label count [done-file]
   local label="$1" count="$2" done_file="${3:-/dev/null}" want got
@@ -81,28 +86,28 @@ for round in 1 2 3 4 5 6; do
   for k in 1 2 3 4 5 6 7 8; do
     shard "dir:$work/q" "$k" 8 61 "0.0$(( (k * round) % 7 ))" &
   done
-  wait
+  start_race
   expect_whole "race round $round" 61
 done
 
 rm -rf "$work"/claimed-* "$work/q"
 shard "dir:$work/q" 1 4 40 0 &
 for k in 2 3 4; do shard "dir:$work/q" "$k" 4 40 0.1 & done
-wait
+start_race
 expect_whole "one fast shard" 40
 fast=$(wc -l < "$work/claimed-1")
 (( fast > 10 )) || fail "the fast shard claimed $fast of 40 groups; at its home share of 10 it would wait for the slow ones"
 
 rm -rf "$work"/claimed-* "$work/q"
 for k in 1 2 3; do shard "dir:$work/q" "$k" 4 40 0.01 & done
-wait
+start_race
 expect_whole "a shard that never started" 40
 
 # 4. A later attempt. Groups 1 to 5 passed on another shard and are skipped.
 seq 1 5 > "$work/done"
 rm -rf "$work"/claimed-* "$work/q"
 for k in 1 2; do shard "dir:$work/q" "$k" 4 20 0 "$work/done" & done
-wait
+start_race
 expect_whole "a later attempt" 20 "$work/done"
 
 mkdir -p "$work/earlier/integration-shard-1" "$work/earlier/integration-shard-2" "$work/earlier/integration-shard-3"
