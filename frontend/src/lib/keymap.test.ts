@@ -72,14 +72,18 @@ describe("the keymap", () => {
 });
 
 describe("aria-keyshortcuts", () => {
-  it("names both modifiers of a chord, and a sequence key by key", () => {
+  it("names both modifiers of a chord, and a single key as typed", () => {
     expect(ariaKeyShortcuts({ kind: "chord", key: "k" })).toBe(
       "Meta+K Control+K",
     );
-    expect(ariaKeyShortcuts({ kind: "sequence", keys: ["g", "c"] })).toBe(
-      "g c",
-    );
     expect(ariaKeyShortcuts({ kind: "single", key: "?" })).toBe("?");
+  });
+
+  // A space separates alternatives, so "g c" would claim C alone goes there.
+  it("names no sequence", () => {
+    expect(
+      ariaKeyShortcuts({ kind: "sequence", keys: ["g", "c"] }),
+    ).toBeUndefined();
   });
 });
 

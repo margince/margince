@@ -65,7 +65,7 @@ const commands: Command[] = [
   },
 ];
 
-// Asking sits above the destinations and is not one.
+// Every row button except "Ask your documents", which is not a command.
 function destinationRows(): HTMLElement[] {
   return screen
     .getAllByRole("button")

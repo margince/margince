@@ -268,16 +268,14 @@ export function shortcutCaps(
   return bindingCaps(binding(id).keys, platform);
 }
 
-/**
- * The `aria-keyshortcuts` value. ARIA has no spelling for a sequence, so its
- * keys are listed in order, which is also how a screen reader speaks them.
- */
-export function ariaKeyShortcuts(keys: BindingKeys): string {
+/** None for a sequence: ARIA separates alternatives with a space, so "g c"
+ *  would claim that C alone goes there. */
+export function ariaKeyShortcuts(keys: BindingKeys): string | undefined {
   switch (keys.kind) {
     case "chord":
       return `Meta+${capOf(keys.key)} Control+${capOf(keys.key)}`;
     case "sequence":
-      return keys.keys.join(" ");
+      return undefined;
     default:
       return keys.key;
   }

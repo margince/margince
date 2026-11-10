@@ -32,11 +32,11 @@ describe("the destinations' go-to keys", () => {
     }
   });
 
-  it("are announced on each row", () => {
+  // ARIA separates alternatives with a space, so "g c" would claim C alone goes there.
+  it("put no aria-keyshortcuts on a row, which has no spelling for a sequence", () => {
     render(<WorkspaceRail route={{ screen: "home" }} />);
-    expect(screen.getByRole("link", { name: "Contacts" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Contacts" })).not.toHaveAttribute(
       "aria-keyshortcuts",
-      "g c",
     );
   });
 
@@ -55,11 +55,10 @@ describe("the destinations' go-to keys", () => {
     expect(window.location.hash).toBe(routeHash({ screen: "projects" }));
   });
 
-  it("leave the rail unmarked and untipped while single keys are off", async () => {
+  it("leave a collapsed tip with the label alone while single keys are off", async () => {
     act(() => setSingleKeyShortcutsOn(false));
     render(<WorkspaceRail route={{ screen: "home" }} collapsed />);
     const deals = screen.getByRole("link", { name: "Deals" });
-    expect(deals).not.toHaveAttribute("aria-keyshortcuts");
     act(() => deals.focus());
     expect((await screen.findByRole("tooltip")).textContent).toBe(
       en["nav.deals"],

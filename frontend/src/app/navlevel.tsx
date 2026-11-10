@@ -17,9 +17,7 @@ import { Badge } from "../design-system/atoms";
 import { useHoverIntent } from "../design-system/hoverintent";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
-import { ariaKeyShortcuts, bindingCaps, goToBindingFor } from "../lib/keymap";
 import { navigate, type Route, routeHash } from "../lib/router";
-import { useSingleKeyShortcuts } from "../lib/shortcuts";
 import {
   currentClaim,
   entryLabel,
@@ -32,6 +30,7 @@ import {
   navLevelRoute,
   railTrail,
 } from "./nav";
+import { type TipState, useRowTip } from "./navrowtip";
 
 // ONE navigation level, whatever its depth. The rail's ten destinations and the
 // entries of a section drilled into from them render through this, so the two
@@ -222,34 +221,6 @@ function drawsRow(level: NavTrailLevel, rows: NavRows, id: string): boolean {
   return (level.barIds?.has(id) ?? false) === (rows === "bar");
 }
 
-type TipState = Readonly<{
-  collapsed: boolean;
-  tip: string | null;
-  onTip: (key: string | null, by?: "pointer" | "focus") => void;
-}>;
-
-/**
- * A destination's go-to keys, for its tip and `aria-keyshortcuts`, while the
- * reader keeps single-key shortcuts on. Only the destinations level has them.
- */
-function useGoToHint(
-  level: NavTrailLevel,
-  id: string,
-): Readonly<{ keys: string; aria: string }> | undefined {
-  const t = useT();
-  const on = useSingleKeyShortcuts();
-  const bound = level.path.length === 0 ? goToBindingFor(id) : undefined;
-  if (!on || bound === undefined) {
-    return undefined;
-  }
-  return {
-    keys: bindingCaps(bound.keys, navigator.platform).join(
-      ` ${t("shell.shortcuts.then")} `,
-    ),
-    aria: ariaKeyShortcuts(bound.keys),
-  };
-}
-
 function NavLevelRow({
   level,
   entry,
@@ -271,18 +242,12 @@ function NavLevelRow({
   const label = entryLabel(entry, locale, t);
   const active = level.activeId === entry.id;
   const key = navTipKey(level, entry.id);
-  const goTo = useGoToHint(level, entry.id);
-  const tipped = state.collapsed || goTo !== undefined;
-  const raiseTip = (by: "pointer" | "focus") => {
-    if (tipped) {
-      state.onTip(key, by);
-    }
-  };
+  const tip = useRowTip(state, { key, level, id: entry.id, label });
   // The rail's tips wait for the pointer to settle like every other popover.
   // A rail crossed on the way to the work column fired one tip per row it
   // passed, which read as the rail flickering rather than as a page answering.
   const hover = useHoverIntent(
-    () => raiseTip("pointer"),
+    () => tip.raise("pointer"),
     () => state.onTip(null),
   );
   return (
@@ -291,10 +256,9 @@ function NavLevelRow({
       href={navEntryHref(level.path, entry)}
       aria-label={label}
       aria-current={active ? currentClaim(level) : undefined}
-      aria-keyshortcuts={goTo?.aria}
       onPointerEnter={hover.onPointerEnter}
       onPointerLeave={hover.onPointerLeave}
-      onFocus={() => raiseTip("focus")}
+      onFocus={() => tip.raise("focus")}
       onBlur={() => state.onTip(null)}
       onClick={() => onSelect(entry)}
     >
@@ -316,11 +280,9 @@ function NavLevelRow({
           row and never tears it away mid-read (WCAG 1.4.13, hoverable). A
           sibling could not manage that without making the wrapper itself
           interactive. */}
-      {tipped && state.tip === key && (
+      {tip.text !== null && state.tip === key && (
         <span className="navtip" role="tooltip">
-          {[state.collapsed ? label : null, goTo?.keys]
-            .filter((part) => part !== null && part !== undefined)
-            .join(" · ")}
+          {tip.text}
         </span>
       )}
     </AppLink>
