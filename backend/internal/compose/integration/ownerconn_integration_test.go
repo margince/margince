@@ -110,12 +110,10 @@ func TestGoroutinesAskingAtOnceShareOneOwnerConnection(t *testing.T) {
 	var wg sync.WaitGroup
 	start := make(chan struct{})
 	for i := range askers {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			<-start
 			got[i] = OwnerConn(t)
-		}()
+		})
 	}
 	close(start)
 	wg.Wait()
