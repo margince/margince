@@ -29360,8 +29360,10 @@ paths:
       summary: Set or clear when buyer access lapses.
       description: |
         Null clears the bound, leaving access open until the room is closed or
-        archived. A past instant is accepted and takes effect immediately — that is
-        how access is cut short without ending the room. It decides how long a buyer can
+        archived. A past instant is accepted and takes effect at once — that is
+        how access is cut short without ending the room. One at or before the room's
+        creation is stored as the time of the call, unless a standing expiry has
+        already passed, which is kept. It decides how long a buyer can
         read the room, so an agent spends `send` on it.
       x-mcp-tool: { verb: set_deal_room_expiry, router: send_outbound, action: set_room_expiry, tier: auto_execute, scope: send, served_by: route, ask_user_first: true }
       parameters:
@@ -72344,7 +72346,12 @@ components:
           type: [string, 'null']
           format: uuid
           description: Defaults to the deal's owner when omitted.
-        expires_at: { type: [string, 'null'], format: date-time }
+        expires_at:
+          type: [string, 'null']
+          format: date-time
+          description: |
+            When buyer access lapses. A past instant is accepted and stored as the
+            time of the call, so the room opens with buyer access already ended.
         source: { type: string }
       additionalProperties: false
 

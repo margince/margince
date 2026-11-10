@@ -299,7 +299,7 @@ describe("SetupReminder", () => {
 
 describe("SetupReminder at phone width", () => {
   const openAccount = async (user: UserEvent) => {
-    await user.click(screen.getByRole("button", { name: /Account/ }));
+    await user.click(screen.getByRole("button", { name: /account$/i }));
     await screen.findByRole("menu", { name: "Account" });
     return screen.getAllByRole("menuitem").map((row) => row.textContent ?? "");
   };
@@ -355,7 +355,7 @@ describe("SetupReminder at phone width", () => {
     serve({ answersAfter: new Promise((resolve) => (answer = resolve)) });
     const view = mountTopBar();
     const user = userEvent.setup();
-    await user.click(screen.getByRole("button", { name: /Account/ }));
+    await user.click(screen.getByRole("button", { name: /account$/i }));
     await user.keyboard("{End}");
     const signOut = screen.getByRole("menuitem", { name: "Sign out" });
     expect(document.activeElement).toBe(signOut);
@@ -376,7 +376,7 @@ describe("SetupReminder at phone width", () => {
     serve();
     await mountTopBar().answered();
     const user = userEvent.setup();
-    const account = screen.getByRole("button", { name: /Account/ });
+    const account = screen.getByRole("button", { name: /account$/i });
     await user.click(account);
     await user.keyboard("{End}{ArrowUp}");
     expect(document.activeElement).toBe(
