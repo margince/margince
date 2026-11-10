@@ -37,6 +37,14 @@ const (
 	composeRootTestLines       = 354_000
 )
 
+// A read under these floors stopped early or read the wrong place, and would
+// pass every ceiling. They sit near 90% of the package; lower them with the
+// ceilings when code moves out.
+const (
+	composeRootFloorFiles = 2900
+	composeRootFloorLines = 520_000
+)
+
 // composeRootGenerated grows with the contract, not with hand-written code, so
 // it is left out of the count. The gate fails when this list and the tree differ.
 var composeRootGenerated = []string{
@@ -55,11 +63,11 @@ type composeRootSize struct {
 func TestTheRootComposePackageDoesNotGrow(t *testing.T) {
 	t.Parallel()
 	size := measureComposeRoot(t, composeRootDir)
-	// A wrong path reads nothing and would pass every ceiling.
-	if size.productionFiles+size.testFiles < 1000 || size.productionLines+size.testLines < 100_000 {
-		t.Fatalf("read %d files and %d lines in %s, which is far short of the package: "+
+	if size.short() {
+		t.Fatalf("read %d files and %d lines in %s, under the floors of %d and %d: "+
 			"the census has gone short and would pass vacuously",
-			size.productionFiles+size.testFiles, size.productionLines+size.testLines, composeRootDir)
+			size.productionFiles+size.testFiles, size.productionLines+size.testLines, composeRootDir,
+			composeRootFloorFiles, composeRootFloorLines)
 	}
 	if !slices.Equal(size.generated, composeRootGenerated) {
 		t.Errorf("%s holds the generated files %v, and this gate leaves out %v. Update composeRootGenerated",
@@ -82,8 +90,15 @@ func TestTheRootComposePackageDoesNotGrow(t *testing.T) {
 	}
 }
 
-// measureComposeRoot counts the Go files directly in dir, leaving out its
-// subpackages and the generated files it names apart.
+// short reports a read too small to be the whole package.
+func (size composeRootSize) short() bool {
+	return size.productionFiles+size.testFiles < composeRootFloorFiles ||
+		size.productionLines+size.testLines < composeRootFloorLines
+}
+
+// measureComposeRoot counts the Go files directly in dir that the Go tool
+// builds. It leaves out subpackages, names starting with "." or "_", anything
+// that is not a regular file, and the generated files it names apart.
 func measureComposeRoot(t *testing.T, dir string) composeRootSize {
 	t.Helper()
 	entries, err := gatekit.ReadDir(dir)
@@ -93,7 +108,8 @@ func measureComposeRoot(t *testing.T, dir string) composeRootSize {
 	var size composeRootSize
 	for _, entry := range entries {
 		name := entry.Name()
-		if entry.IsDir() || !strings.HasSuffix(name, ".go") {
+		if !entry.Type().IsRegular() || !strings.HasSuffix(name, ".go") ||
+			strings.HasPrefix(name, ".") || strings.HasPrefix(name, "_") {
 			continue
 		}
 		if strings.HasSuffix(name, "_gen.go") {
@@ -138,11 +154,34 @@ func TestTheComposeRootCountReadsOnlyTheRootPackage(t *testing.T) {
 	write("stubs_gen.go", "package compose\n\nvar x = 1\n")
 	write("notes.txt", "not go\n")
 	write("feature/inner.go", "package feature\n\nfunc b() {}\n")
+	write(".hidden.go", "package compose\n")
+	write("_ignored.go", "package compose\n")
+	if err := os.Symlink(filepath.Join(dir, "wiring.go"), filepath.Join(dir, "linked.go")); err != nil {
+		t.Fatal(err)
+	}
 	got := measureComposeRoot(t, dir)
 	want := composeRootSize{productionFiles: 1, testFiles: 2, productionLines: 3, testLines: 4, generated: []string{"stubs_gen.go"}}
 	if got.productionFiles != want.productionFiles || got.testFiles != want.testFiles ||
 		got.productionLines != want.productionLines || got.testLines != want.testLines ||
 		!slices.Equal(got.generated, want.generated) {
 		t.Fatalf("measured %+v, want %+v", got, want)
+	}
+}
+
+// A read that stopped partway is caught by the floors, not passed as a small
+// package. A read the size of the package is not.
+func TestAComposeRootReadThatStopsEarlyIsShort(t *testing.T) {
+	t.Parallel()
+	stopped := composeRootSize{productionFiles: 500, testFiles: 500, productionLines: 90_000, testLines: 90_000}
+	if !stopped.short() {
+		t.Error("a read of the first 1,000 files passed the floors")
+	}
+	fewLines := composeRootSize{productionFiles: 1356, testFiles: 1875, productionLines: 100_000, testLines: 100_000}
+	if !fewLines.short() {
+		t.Error("a read of every file but a fraction of its lines passed the floors")
+	}
+	whole := composeRootSize{productionFiles: 1356, testFiles: 1875, productionLines: 227_127, testLines: 353_700}
+	if whole.short() {
+		t.Error("a read of the whole package was called short")
 	}
 }
