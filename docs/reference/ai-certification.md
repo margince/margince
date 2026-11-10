@@ -51,13 +51,13 @@ are waiting to be re-checked; each is marked below.
 
 | Preset | Where your data goes | ✅ Ready | ⚠️ Usable with care | ❌ Not reliable yet | ❔ Not measured | Bottom line |
 |---|---|---:|---:|---:|---:|---|
-| [`consumer_class_brokered`](#consumer_class_brokered) | global cloud | 1 | 1 | 4 | 29 | 1 of 35 features ready (re-check pending) |
 | [`gemini_cloud`](#gemini_cloud) | global cloud | 27 | 7 | 1 | 0 | 27 of 35 features ready |
 | [`gemini_vertex_eu`](#gemini_vertex_eu) | EU-hosted cloud | 27 | 7 | 1 | 0 | 27 of 35 features ready |
-| [`gemma4_local_ollama`](#gemma4_local_ollama) | your own servers | 0 | 0 | 0 | 35 | 0 of 35 features ready |
 | [`openrouter_cloud`](#openrouter_cloud) | global cloud | 15 | 10 | 7 | 3 | 15 of 35 features ready (4 re-checks pending) |
+| [`consumer_class_brokered`](#consumer_class_brokered) | global cloud | 1 | 1 | 4 | 29 | 1 of 35 features ready (re-check pending) |
 | [`openrouter_cloud_eu`](#openrouter_cloud_eu) | EU-hosted cloud | 12 | 2 | 14 | 7 | 12 of 35 features ready (23 re-checks pending) |
 | [`openrouter_openai`](#openrouter_openai) | global cloud | 21 | 3 | 4 | 7 | 21 of 35 features ready (23 re-checks pending) |
+| [`gemma4_local_ollama`](#gemma4_local_ollama) | your own servers | 0 | 0 | 0 | 35 | 0 of 35 features ready |
 | [`qwen3_local_vllm`](#qwen3_local_vllm) | your own servers | 0 | 0 | 0 | 35 | 0 of 35 features ready |
 
 **What the grades mean**
@@ -78,101 +78,6 @@ rescue a feature graded below. *no separate fallback* means both tiers bind the 
 *re-check pending* after a grade means the product has changed since it was
 measured. The grade is the last one we have, and it is shown until the next test replaces it.
 [How the scoring works](#how-the-scoring-works) explains how a grade is reached.
-
-### `consumer_class_brokered`
-
-Your data goes to: global cloud. 1 of 35 features ready (re-check pending). Preset file: [`consumer_class_brokered.yaml`](../../config/presets/consumer_class_brokered.yaml).
-
-| Feature | Can I use it? | In plain words |
-|---|---|---|
-| Agent reasoning loop <sub>`agent_loop`</sub> | ❔ Not measured<br><sub>gemma-4-31b-it · cheap_cloud · no separate fallback</sub> | Not measured yet |
-| Assessing a sales report <sub>`report_interpret`</sub> | ❔ Not measured<br><sub>gemma-4-31b-it · premium · no separate fallback</sub> | Not measured yet |
-| Buying-role reading <sub>`propose_roles`</sub> | ❔ Not measured<br><sub>gemma-4-31b-it · cheap_cloud · no separate fallback</sub> | Not measured yet |
-| Certification judging <sub>`cert_judge`</sub> | ❔ Not measured<br><sub>gemma-4-31b-it · premium · no separate fallback</sub> | Not measured yet |
-| Checking the dates, amount and chances of a deal <sub>`deal_verdict`</sub> | ❔ Not measured<br><sub>gemma-4-26b-a4b-it · local_small → gemma-4-31b-it, not measured on this feature</sub> | Not measured yet |
-| Checking whether the reply answered the request <sub>`request_settlement`</sub> | ❌ Not reliable yet<br><sub>gemma-4-26b-a4b-it · local_small → gemma-4-31b-it, not measured on this feature</sub> | Right in 15 of 18 tries; one test case wrong too often · re-check pending |
-| Company fit assessment <sub>`growth_fit`</sub> | ❔ Not measured<br><sub>gemma-4-31b-it · cheap_cloud · no separate fallback</sub> | Not measured yet |
-| Deal status card <sub>`deal_health`</sub> | ❔ Not measured<br><sub>gemma-4-31b-it · cheap_cloud · no separate fallback</sub> | Not measured yet |
-| Document corpus question <sub>`corpus_ask`</sub> | ❔ Not measured<br><sub>gemma-4-31b-it · premium</sub> | Not measured yet |
-| Document extraction <sub>`document_extract`</sub> | ❔ Not measured<br><sub>gemma-4-31b-it · premium</sub> | Not measured yet |
-| Exchange rate extraction <sub>`rate_extract`</sub> | ❔ Not measured<br><sub>gemma-4-31b-it · premium · no separate fallback</sub> | Not measured yet |
-| First-time sender check <sub>`capture_counterparty_verdict`</sub> | ❌ Not reliable yet<br><sub>gemma-4-26b-a4b-it · local_small</sub> | Right in 68 of 75 tries; one test case wrong too often; answer quality below the bar in 4 test cases · re-check pending |
-| Meeting follow-up extraction <sub>`transcript_propose`</sub> | ❔ Not measured<br><sub>gemma-4-31b-it · premium</sub> | Not measured yet |
-| Message classification <sub>`capture_classify`</sub> | ⚠️ Usable with care<br><sub>gemma-4-26b-a4b-it · local_small → gemma-4-31b-it, not measured on this feature</sub> | Right in 21 of 27 tries; answer quality below the bar in one test case · re-check pending |
-| Morning brief ranking <sub>`brief_ranking`</sub> | ❔ Not measured<br><sub>gemma-4-31b-it · premium · no separate fallback</sub> | Not measured yet |
-| Natural-language search <sub>`nl_search`</sub> | ❔ Not measured<br><sub>gemma-4-31b-it · cheap_cloud · no separate fallback</sub> | Not measured yet |
-| Offer drafting <sub>`offer_draft`</sub> | ❔ Not measured<br><sub>gemma-4-31b-it · cheap_cloud · no separate fallback</sub> | Not measured yet |
-| Onboarding read <sub>`cold_start`</sub> | ❔ Not measured<br><sub>gemma-4-31b-it · cheap_cloud · no separate fallback</sub> | Not measured yet |
-| Reading what an account needs <sub>`account_scan`</sub> | ❔ Not measured<br><sub>gemma-4-31b-it · cheap_cloud · no separate fallback</sub> | Not measured yet |
-| Record summary <sub>`summarize`</sub> | ❔ Not measured<br><sub>gemma-4-31b-it · cheap_cloud · no separate fallback</sub> | Not measured yet |
-| Reply drafting <sub>`draft_reply`</sub> | ❔ Not measured<br><sub>gemma-4-31b-it · cheap_cloud · no separate fallback</sub> | Not measured yet |
-| Setting up a report from a description <sub>`report_setup`</sub> | ❔ Not measured<br><sub>gemma-4-31b-it · cheap_cloud · no separate fallback</sub> | Not measured yet |
-| Showing a message in your language <sub>`reader_rendering`</sub> | ❔ Not measured<br><sub>gemma-4-31b-it · cheap_cloud · no separate fallback</sub> | Not measured yet |
-| Signal extraction <sub>`signal_extract`</sub> | ❔ Not measured<br><sub>gemma-4-31b-it · frontier</sub> | Not measured yet |
-| Signature enrichment <sub>`enrich`</sub> | ❌ Not reliable yet<br><sub>gemma-4-26b-a4b-it · local_small → gemma-4-31b-it, not measured on this feature</sub> | Right in 3 of 6 tries; one test case wrong too often · re-check pending |
-| Stage evidence extraction <sub>`stage_evidence_extract`</sub> | ❔ Not measured<br><sub>gemma-4-31b-it · cheap_cloud · no separate fallback</sub> | Not measured yet |
-| Tag suggestions <sub>`tag_suggest`</sub> | ❔ Not measured<br><sub>gemma-4-26b-a4b-it · local_small → gemma-4-31b-it, not measured on this feature</sub> | Not measured yet |
-| Thread confidentiality check <sub>`capture_confidentiality_verdict`</sub> | ✅ Ready<br><sub>gemma-4-26b-a4b-it · local_small</sub> | Right every time (42 of 42) · re-check pending |
-| Unanswered-message triage <sub>`owed_verdict`</sub> | ❌ Not reliable yet<br><sub>gemma-4-26b-a4b-it · local_small → gemma-4-31b-it, not measured on this feature</sub> | Right in 17 of 21 tries; one test case wrong too often · re-check pending |
-| Voice DNA build <sub>`voice_build`</sub> | ❔ Not measured<br><sub>gemma-4-31b-it · cheap_cloud · no separate fallback</sub> | Not measured yet |
-| Website fact extraction <sub>`site_fact_extract`</sub> | ❔ Not measured<br><sub>gemma-4-31b-it · cheap_cloud · no separate fallback</sub> | Not measured yet |
-| Website research <sub>`site_extract`</sub> | ❔ Not measured<br><sub>gemma-4-31b-it · premium</sub> | Not measured yet |
-| Website triage <sub>`site_triage`</sub> | ❔ Not measured<br><sub>gemma-4-31b-it · cheap_cloud · no separate fallback</sub> | Not measured yet |
-| Weekly review narrative <sub>`weekly_review`</sub> | ❔ Not measured<br><sub>gemma-4-31b-it · cheap_cloud · no separate fallback</sub> | Not measured yet |
-| What last week taught <sub>`weekly_learnings`</sub> | ❔ Not measured<br><sub>gemma-4-31b-it · cheap_cloud · no separate fallback</sub> | Not measured yet |
-
-<details>
-<summary>Which models this preset uses</summary>
-
-| Tier | Provider | Model |
-|---|---|---|
-| `local_small` | `openai_compatible` | `google/gemma-4-26b-a4b-it` |
-| `cheap_cloud` | `openai_compatible` | `google/gemma-4-31b-it` |
-| `premium` | `openai_compatible` | `google/gemma-4-31b-it` |
-| `frontier` | `openai_compatible` | `google/gemma-4-31b-it` |
-
-Each feature walks its own ladder of tiers until it reaches one this preset
-binds; this is the rung and the model it lands on, and the record behind its grade.
-
-| Task | Served on | Model | Grade | Measurement |
-|---|---|---|---|---|
-| `account_scan` | `cheap_cloud` | `google/gemma-4-31b-it` | ❔ Not measured | not measured |
-| `agent_loop` | `cheap_cloud` | `google/gemma-4-31b-it` | ❔ Not measured | not measured |
-| `brief_ranking` | `premium` | `google/gemma-4-31b-it` | ❔ Not measured | not measured |
-| `capture_classify` | `local_small` | `google/gemma-4-26b-a4b-it` | ⚠️ Usable with care | re-check pending |
-| `capture_confidentiality_verdict` | `local_small` | `google/gemma-4-26b-a4b-it` | ✅ Ready | re-check pending |
-| `capture_counterparty_verdict` | `local_small` | `google/gemma-4-26b-a4b-it` | ❌ Not reliable yet | re-check pending |
-| `cert_judge` | `premium` | `google/gemma-4-31b-it` | ❔ Not measured | not measured |
-| `cold_start` | `cheap_cloud` | `google/gemma-4-31b-it` | ❔ Not measured | not measured |
-| `corpus_ask` | `premium` | `google/gemma-4-31b-it` | ❔ Not measured | not measured |
-| `deal_health` | `cheap_cloud` | `google/gemma-4-31b-it` | ❔ Not measured | not measured |
-| `deal_verdict` | `local_small` | `google/gemma-4-26b-a4b-it` | ❔ Not measured | not measured |
-| `document_extract` | `premium` | `google/gemma-4-31b-it` | ❔ Not measured | not measured |
-| `draft_reply` | `cheap_cloud` | `google/gemma-4-31b-it` | ❔ Not measured | not measured |
-| `enrich` | `local_small` | `google/gemma-4-26b-a4b-it` | ❌ Not reliable yet | re-check pending |
-| `growth_fit` | `cheap_cloud` | `google/gemma-4-31b-it` | ❔ Not measured | not measured |
-| `nl_search` | `cheap_cloud` | `google/gemma-4-31b-it` | ❔ Not measured | not measured |
-| `offer_draft` | `cheap_cloud` | `google/gemma-4-31b-it` | ❔ Not measured | not measured |
-| `owed_verdict` | `local_small` | `google/gemma-4-26b-a4b-it` | ❌ Not reliable yet | re-check pending |
-| `propose_roles` | `cheap_cloud` | `google/gemma-4-31b-it` | ❔ Not measured | not measured |
-| `rate_extract` | `premium` | `google/gemma-4-31b-it` | ❔ Not measured | not measured |
-| `reader_rendering` | `cheap_cloud` | `google/gemma-4-31b-it` | ❔ Not measured | not measured |
-| `report_interpret` | `premium` | `google/gemma-4-31b-it` | ❔ Not measured | not measured |
-| `report_setup` | `cheap_cloud` | `google/gemma-4-31b-it` | ❔ Not measured | not measured |
-| `request_settlement` | `local_small` | `google/gemma-4-26b-a4b-it` | ❌ Not reliable yet | re-check pending |
-| `signal_extract` | `frontier` | `google/gemma-4-31b-it` | ❔ Not measured | not measured |
-| `site_extract` | `premium` | `google/gemma-4-31b-it` | ❔ Not measured | not measured |
-| `site_fact_extract` | `cheap_cloud` | `google/gemma-4-31b-it` | ❔ Not measured | not measured |
-| `site_triage` | `cheap_cloud` | `google/gemma-4-31b-it` | ❔ Not measured | not measured |
-| `stage_evidence_extract` | `cheap_cloud` | `google/gemma-4-31b-it` | ❔ Not measured | not measured |
-| `summarize` | `cheap_cloud` | `google/gemma-4-31b-it` | ❔ Not measured | not measured |
-| `tag_suggest` | `local_small` | `google/gemma-4-26b-a4b-it` | ❔ Not measured | not measured |
-| `transcript_propose` | `premium` | `google/gemma-4-31b-it` | ❔ Not measured | not measured |
-| `voice_build` | `cheap_cloud` | `google/gemma-4-31b-it` | ❔ Not measured | not measured |
-| `weekly_learnings` | `cheap_cloud` | `google/gemma-4-31b-it` | ❔ Not measured | not measured |
-| `weekly_review` | `cheap_cloud` | `google/gemma-4-31b-it` | ❔ Not measured | not measured |
-
-</details>
 
 ### `gemini_cloud`
 
@@ -364,101 +269,6 @@ binds; this is the rung and the model it lands on, and the record behind its gra
 
 </details>
 
-### `gemma4_local_ollama`
-
-Your data goes to: your own servers. 0 of 35 features ready. Preset file: [`gemma4_local_ollama.yaml`](../../config/presets/gemma4_local_ollama.yaml).
-
-| Feature | Can I use it? | In plain words |
-|---|---|---|
-| Agent reasoning loop <sub>`agent_loop`</sub> | ❔ Not measured<br><sub>gemma4:12b · cheap_cloud · no separate fallback</sub> | Not measured yet |
-| Assessing a sales report <sub>`report_interpret`</sub> | ❔ Not measured<br><sub>gemma4:12b · premium · no separate fallback</sub> | Not measured yet |
-| Buying-role reading <sub>`propose_roles`</sub> | ❔ Not measured<br><sub>gemma4:12b · cheap_cloud · no separate fallback</sub> | Not measured yet |
-| Certification judging <sub>`cert_judge`</sub> | ❔ Not measured<br><sub>gemma4:12b · premium · no separate fallback</sub> | Not measured yet |
-| Checking the dates, amount and chances of a deal <sub>`deal_verdict`</sub> | ❔ Not measured<br><sub>gemma4:12b · local_small · no separate fallback</sub> | Not measured yet |
-| Checking whether the reply answered the request <sub>`request_settlement`</sub> | ❔ Not measured<br><sub>gemma4:12b · local_small · no separate fallback</sub> | Not measured yet |
-| Company fit assessment <sub>`growth_fit`</sub> | ❔ Not measured<br><sub>gemma4:12b · cheap_cloud · no separate fallback</sub> | Not measured yet |
-| Deal status card <sub>`deal_health`</sub> | ❔ Not measured<br><sub>gemma4:12b · cheap_cloud · no separate fallback</sub> | Not measured yet |
-| Document corpus question <sub>`corpus_ask`</sub> | ❔ Not measured<br><sub>gemma4:12b · premium</sub> | Not measured yet |
-| Document extraction <sub>`document_extract`</sub> | ❔ Not measured<br><sub>gemma4:12b · premium</sub> | Not measured yet |
-| Exchange rate extraction <sub>`rate_extract`</sub> | ❔ Not measured<br><sub>gemma4:12b · premium · no separate fallback</sub> | Not measured yet |
-| First-time sender check <sub>`capture_counterparty_verdict`</sub> | ❔ Not measured<br><sub>gemma4:12b · local_small</sub> | Not measured yet |
-| Meeting follow-up extraction <sub>`transcript_propose`</sub> | ❔ Not measured<br><sub>gemma4:12b · premium</sub> | Not measured yet |
-| Message classification <sub>`capture_classify`</sub> | ❔ Not measured<br><sub>gemma4:12b · local_small · no separate fallback</sub> | Not measured yet |
-| Morning brief ranking <sub>`brief_ranking`</sub> | ❔ Not measured<br><sub>gemma4:12b · premium · no separate fallback</sub> | Not measured yet |
-| Natural-language search <sub>`nl_search`</sub> | ❔ Not measured<br><sub>gemma4:12b · cheap_cloud · no separate fallback</sub> | Not measured yet |
-| Offer drafting <sub>`offer_draft`</sub> | ❔ Not measured<br><sub>gemma4:12b · cheap_cloud · no separate fallback</sub> | Not measured yet |
-| Onboarding read <sub>`cold_start`</sub> | ❔ Not measured<br><sub>gemma4:12b · cheap_cloud · no separate fallback</sub> | Not measured yet |
-| Reading what an account needs <sub>`account_scan`</sub> | ❔ Not measured<br><sub>gemma4:12b · cheap_cloud · no separate fallback</sub> | Not measured yet |
-| Record summary <sub>`summarize`</sub> | ❔ Not measured<br><sub>gemma4:12b · cheap_cloud · no separate fallback</sub> | Not measured yet |
-| Reply drafting <sub>`draft_reply`</sub> | ❔ Not measured<br><sub>gemma4:12b · cheap_cloud · no separate fallback</sub> | Not measured yet |
-| Setting up a report from a description <sub>`report_setup`</sub> | ❔ Not measured<br><sub>gemma4:12b · cheap_cloud · no separate fallback</sub> | Not measured yet |
-| Showing a message in your language <sub>`reader_rendering`</sub> | ❔ Not measured<br><sub>gemma4:12b · cheap_cloud · no separate fallback</sub> | Not measured yet |
-| Signal extraction <sub>`signal_extract`</sub> | ❔ Not measured<br><sub>gemma4:12b · frontier</sub> | Not measured yet |
-| Signature enrichment <sub>`enrich`</sub> | ❔ Not measured<br><sub>gemma4:12b · local_small · no separate fallback</sub> | Not measured yet |
-| Stage evidence extraction <sub>`stage_evidence_extract`</sub> | ❔ Not measured<br><sub>gemma4:12b · cheap_cloud · no separate fallback</sub> | Not measured yet |
-| Tag suggestions <sub>`tag_suggest`</sub> | ❔ Not measured<br><sub>gemma4:12b · local_small · no separate fallback</sub> | Not measured yet |
-| Thread confidentiality check <sub>`capture_confidentiality_verdict`</sub> | ❔ Not measured<br><sub>gemma4:12b · local_small</sub> | Not measured yet |
-| Unanswered-message triage <sub>`owed_verdict`</sub> | ❔ Not measured<br><sub>gemma4:12b · local_small · no separate fallback</sub> | Not measured yet |
-| Voice DNA build <sub>`voice_build`</sub> | ❔ Not measured<br><sub>gemma4:12b · cheap_cloud · no separate fallback</sub> | Not measured yet |
-| Website fact extraction <sub>`site_fact_extract`</sub> | ❔ Not measured<br><sub>gemma4:12b · cheap_cloud · no separate fallback</sub> | Not measured yet |
-| Website research <sub>`site_extract`</sub> | ❔ Not measured<br><sub>gemma4:12b · premium</sub> | Not measured yet |
-| Website triage <sub>`site_triage`</sub> | ❔ Not measured<br><sub>gemma4:12b · cheap_cloud · no separate fallback</sub> | Not measured yet |
-| Weekly review narrative <sub>`weekly_review`</sub> | ❔ Not measured<br><sub>gemma4:12b · cheap_cloud · no separate fallback</sub> | Not measured yet |
-| What last week taught <sub>`weekly_learnings`</sub> | ❔ Not measured<br><sub>gemma4:12b · cheap_cloud · no separate fallback</sub> | Not measured yet |
-
-<details>
-<summary>Which models this preset uses</summary>
-
-| Tier | Provider | Model |
-|---|---|---|
-| `local_small` | `ollama` | `gemma4:12b` |
-| `cheap_cloud` | `ollama` | `gemma4:12b` |
-| `premium` | `ollama` | `gemma4:12b` |
-| `frontier` | `ollama` | `gemma4:12b` |
-
-Each feature walks its own ladder of tiers until it reaches one this preset
-binds; this is the rung and the model it lands on, and the record behind its grade.
-
-| Task | Served on | Model | Grade | Measurement |
-|---|---|---|---|---|
-| `account_scan` | `cheap_cloud` | `gemma4:12b` | ❔ Not measured | not measured |
-| `agent_loop` | `cheap_cloud` | `gemma4:12b` | ❔ Not measured | not measured |
-| `brief_ranking` | `premium` | `gemma4:12b` | ❔ Not measured | not measured |
-| `capture_classify` | `local_small` | `gemma4:12b` | ❔ Not measured | not measured |
-| `capture_confidentiality_verdict` | `local_small` | `gemma4:12b` | ❔ Not measured | not measured |
-| `capture_counterparty_verdict` | `local_small` | `gemma4:12b` | ❔ Not measured | not measured |
-| `cert_judge` | `premium` | `gemma4:12b` | ❔ Not measured | not measured |
-| `cold_start` | `cheap_cloud` | `gemma4:12b` | ❔ Not measured | not measured |
-| `corpus_ask` | `premium` | `gemma4:12b` | ❔ Not measured | not measured |
-| `deal_health` | `cheap_cloud` | `gemma4:12b` | ❔ Not measured | not measured |
-| `deal_verdict` | `local_small` | `gemma4:12b` | ❔ Not measured | not measured |
-| `document_extract` | `premium` | `gemma4:12b` | ❔ Not measured | not measured |
-| `draft_reply` | `cheap_cloud` | `gemma4:12b` | ❔ Not measured | not measured |
-| `enrich` | `local_small` | `gemma4:12b` | ❔ Not measured | not measured |
-| `growth_fit` | `cheap_cloud` | `gemma4:12b` | ❔ Not measured | not measured |
-| `nl_search` | `cheap_cloud` | `gemma4:12b` | ❔ Not measured | not measured |
-| `offer_draft` | `cheap_cloud` | `gemma4:12b` | ❔ Not measured | not measured |
-| `owed_verdict` | `local_small` | `gemma4:12b` | ❔ Not measured | not measured |
-| `propose_roles` | `cheap_cloud` | `gemma4:12b` | ❔ Not measured | not measured |
-| `rate_extract` | `premium` | `gemma4:12b` | ❔ Not measured | not measured |
-| `reader_rendering` | `cheap_cloud` | `gemma4:12b` | ❔ Not measured | not measured |
-| `report_interpret` | `premium` | `gemma4:12b` | ❔ Not measured | not measured |
-| `report_setup` | `cheap_cloud` | `gemma4:12b` | ❔ Not measured | not measured |
-| `request_settlement` | `local_small` | `gemma4:12b` | ❔ Not measured | not measured |
-| `signal_extract` | `frontier` | `gemma4:12b` | ❔ Not measured | not measured |
-| `site_extract` | `premium` | `gemma4:12b` | ❔ Not measured | not measured |
-| `site_fact_extract` | `cheap_cloud` | `gemma4:12b` | ❔ Not measured | not measured |
-| `site_triage` | `cheap_cloud` | `gemma4:12b` | ❔ Not measured | not measured |
-| `stage_evidence_extract` | `cheap_cloud` | `gemma4:12b` | ❔ Not measured | not measured |
-| `summarize` | `cheap_cloud` | `gemma4:12b` | ❔ Not measured | not measured |
-| `tag_suggest` | `local_small` | `gemma4:12b` | ❔ Not measured | not measured |
-| `transcript_propose` | `premium` | `gemma4:12b` | ❔ Not measured | not measured |
-| `voice_build` | `cheap_cloud` | `gemma4:12b` | ❔ Not measured | not measured |
-| `weekly_learnings` | `cheap_cloud` | `gemma4:12b` | ❔ Not measured | not measured |
-| `weekly_review` | `cheap_cloud` | `gemma4:12b` | ❔ Not measured | not measured |
-
-</details>
-
 ### `openrouter_cloud`
 
 Your data goes to: global cloud. 15 of 35 features ready (4 re-checks pending). Preset file: [`openrouter_cloud.yaml`](../../config/presets/openrouter_cloud.yaml).
@@ -551,6 +361,101 @@ binds; this is the rung and the model it lands on, and the record behind its gra
 | `voice_build` | `cheap_cloud` | `openai/gpt-oss-120b` | ⚠️ Usable with care | current |
 | `weekly_learnings` | `cheap_cloud` | `openai/gpt-oss-120b` | ✅ Ready | current |
 | `weekly_review` | `cheap_cloud` | `openai/gpt-oss-120b` | ✅ Ready | current |
+
+</details>
+
+### `consumer_class_brokered`
+
+Your data goes to: global cloud. 1 of 35 features ready (re-check pending). Preset file: [`consumer_class_brokered.yaml`](../../config/presets/consumer_class_brokered.yaml).
+
+| Feature | Can I use it? | In plain words |
+|---|---|---|
+| Agent reasoning loop <sub>`agent_loop`</sub> | ❔ Not measured<br><sub>gemma-4-31b-it · cheap_cloud · no separate fallback</sub> | Not measured yet |
+| Assessing a sales report <sub>`report_interpret`</sub> | ❔ Not measured<br><sub>gemma-4-31b-it · premium · no separate fallback</sub> | Not measured yet |
+| Buying-role reading <sub>`propose_roles`</sub> | ❔ Not measured<br><sub>gemma-4-31b-it · cheap_cloud · no separate fallback</sub> | Not measured yet |
+| Certification judging <sub>`cert_judge`</sub> | ❔ Not measured<br><sub>gemma-4-31b-it · premium · no separate fallback</sub> | Not measured yet |
+| Checking the dates, amount and chances of a deal <sub>`deal_verdict`</sub> | ❔ Not measured<br><sub>gemma-4-26b-a4b-it · local_small → gemma-4-31b-it, not measured on this feature</sub> | Not measured yet |
+| Checking whether the reply answered the request <sub>`request_settlement`</sub> | ❌ Not reliable yet<br><sub>gemma-4-26b-a4b-it · local_small → gemma-4-31b-it, not measured on this feature</sub> | Right in 15 of 18 tries; one test case wrong too often · re-check pending |
+| Company fit assessment <sub>`growth_fit`</sub> | ❔ Not measured<br><sub>gemma-4-31b-it · cheap_cloud · no separate fallback</sub> | Not measured yet |
+| Deal status card <sub>`deal_health`</sub> | ❔ Not measured<br><sub>gemma-4-31b-it · cheap_cloud · no separate fallback</sub> | Not measured yet |
+| Document corpus question <sub>`corpus_ask`</sub> | ❔ Not measured<br><sub>gemma-4-31b-it · premium</sub> | Not measured yet |
+| Document extraction <sub>`document_extract`</sub> | ❔ Not measured<br><sub>gemma-4-31b-it · premium</sub> | Not measured yet |
+| Exchange rate extraction <sub>`rate_extract`</sub> | ❔ Not measured<br><sub>gemma-4-31b-it · premium · no separate fallback</sub> | Not measured yet |
+| First-time sender check <sub>`capture_counterparty_verdict`</sub> | ❌ Not reliable yet<br><sub>gemma-4-26b-a4b-it · local_small</sub> | Right in 68 of 75 tries; one test case wrong too often; answer quality below the bar in 4 test cases · re-check pending |
+| Meeting follow-up extraction <sub>`transcript_propose`</sub> | ❔ Not measured<br><sub>gemma-4-31b-it · premium</sub> | Not measured yet |
+| Message classification <sub>`capture_classify`</sub> | ⚠️ Usable with care<br><sub>gemma-4-26b-a4b-it · local_small → gemma-4-31b-it, not measured on this feature</sub> | Right in 21 of 27 tries; answer quality below the bar in one test case · re-check pending |
+| Morning brief ranking <sub>`brief_ranking`</sub> | ❔ Not measured<br><sub>gemma-4-31b-it · premium · no separate fallback</sub> | Not measured yet |
+| Natural-language search <sub>`nl_search`</sub> | ❔ Not measured<br><sub>gemma-4-31b-it · cheap_cloud · no separate fallback</sub> | Not measured yet |
+| Offer drafting <sub>`offer_draft`</sub> | ❔ Not measured<br><sub>gemma-4-31b-it · cheap_cloud · no separate fallback</sub> | Not measured yet |
+| Onboarding read <sub>`cold_start`</sub> | ❔ Not measured<br><sub>gemma-4-31b-it · cheap_cloud · no separate fallback</sub> | Not measured yet |
+| Reading what an account needs <sub>`account_scan`</sub> | ❔ Not measured<br><sub>gemma-4-31b-it · cheap_cloud · no separate fallback</sub> | Not measured yet |
+| Record summary <sub>`summarize`</sub> | ❔ Not measured<br><sub>gemma-4-31b-it · cheap_cloud · no separate fallback</sub> | Not measured yet |
+| Reply drafting <sub>`draft_reply`</sub> | ❔ Not measured<br><sub>gemma-4-31b-it · cheap_cloud · no separate fallback</sub> | Not measured yet |
+| Setting up a report from a description <sub>`report_setup`</sub> | ❔ Not measured<br><sub>gemma-4-31b-it · cheap_cloud · no separate fallback</sub> | Not measured yet |
+| Showing a message in your language <sub>`reader_rendering`</sub> | ❔ Not measured<br><sub>gemma-4-31b-it · cheap_cloud · no separate fallback</sub> | Not measured yet |
+| Signal extraction <sub>`signal_extract`</sub> | ❔ Not measured<br><sub>gemma-4-31b-it · frontier</sub> | Not measured yet |
+| Signature enrichment <sub>`enrich`</sub> | ❌ Not reliable yet<br><sub>gemma-4-26b-a4b-it · local_small → gemma-4-31b-it, not measured on this feature</sub> | Right in 3 of 6 tries; one test case wrong too often · re-check pending |
+| Stage evidence extraction <sub>`stage_evidence_extract`</sub> | ❔ Not measured<br><sub>gemma-4-31b-it · cheap_cloud · no separate fallback</sub> | Not measured yet |
+| Tag suggestions <sub>`tag_suggest`</sub> | ❔ Not measured<br><sub>gemma-4-26b-a4b-it · local_small → gemma-4-31b-it, not measured on this feature</sub> | Not measured yet |
+| Thread confidentiality check <sub>`capture_confidentiality_verdict`</sub> | ✅ Ready<br><sub>gemma-4-26b-a4b-it · local_small</sub> | Right every time (42 of 42) · re-check pending |
+| Unanswered-message triage <sub>`owed_verdict`</sub> | ❌ Not reliable yet<br><sub>gemma-4-26b-a4b-it · local_small → gemma-4-31b-it, not measured on this feature</sub> | Right in 17 of 21 tries; one test case wrong too often · re-check pending |
+| Voice DNA build <sub>`voice_build`</sub> | ❔ Not measured<br><sub>gemma-4-31b-it · cheap_cloud · no separate fallback</sub> | Not measured yet |
+| Website fact extraction <sub>`site_fact_extract`</sub> | ❔ Not measured<br><sub>gemma-4-31b-it · cheap_cloud · no separate fallback</sub> | Not measured yet |
+| Website research <sub>`site_extract`</sub> | ❔ Not measured<br><sub>gemma-4-31b-it · premium</sub> | Not measured yet |
+| Website triage <sub>`site_triage`</sub> | ❔ Not measured<br><sub>gemma-4-31b-it · cheap_cloud · no separate fallback</sub> | Not measured yet |
+| Weekly review narrative <sub>`weekly_review`</sub> | ❔ Not measured<br><sub>gemma-4-31b-it · cheap_cloud · no separate fallback</sub> | Not measured yet |
+| What last week taught <sub>`weekly_learnings`</sub> | ❔ Not measured<br><sub>gemma-4-31b-it · cheap_cloud · no separate fallback</sub> | Not measured yet |
+
+<details>
+<summary>Which models this preset uses</summary>
+
+| Tier | Provider | Model |
+|---|---|---|
+| `local_small` | `openai_compatible` | `google/gemma-4-26b-a4b-it` |
+| `cheap_cloud` | `openai_compatible` | `google/gemma-4-31b-it` |
+| `premium` | `openai_compatible` | `google/gemma-4-31b-it` |
+| `frontier` | `openai_compatible` | `google/gemma-4-31b-it` |
+
+Each feature walks its own ladder of tiers until it reaches one this preset
+binds; this is the rung and the model it lands on, and the record behind its grade.
+
+| Task | Served on | Model | Grade | Measurement |
+|---|---|---|---|---|
+| `account_scan` | `cheap_cloud` | `google/gemma-4-31b-it` | ❔ Not measured | not measured |
+| `agent_loop` | `cheap_cloud` | `google/gemma-4-31b-it` | ❔ Not measured | not measured |
+| `brief_ranking` | `premium` | `google/gemma-4-31b-it` | ❔ Not measured | not measured |
+| `capture_classify` | `local_small` | `google/gemma-4-26b-a4b-it` | ⚠️ Usable with care | re-check pending |
+| `capture_confidentiality_verdict` | `local_small` | `google/gemma-4-26b-a4b-it` | ✅ Ready | re-check pending |
+| `capture_counterparty_verdict` | `local_small` | `google/gemma-4-26b-a4b-it` | ❌ Not reliable yet | re-check pending |
+| `cert_judge` | `premium` | `google/gemma-4-31b-it` | ❔ Not measured | not measured |
+| `cold_start` | `cheap_cloud` | `google/gemma-4-31b-it` | ❔ Not measured | not measured |
+| `corpus_ask` | `premium` | `google/gemma-4-31b-it` | ❔ Not measured | not measured |
+| `deal_health` | `cheap_cloud` | `google/gemma-4-31b-it` | ❔ Not measured | not measured |
+| `deal_verdict` | `local_small` | `google/gemma-4-26b-a4b-it` | ❔ Not measured | not measured |
+| `document_extract` | `premium` | `google/gemma-4-31b-it` | ❔ Not measured | not measured |
+| `draft_reply` | `cheap_cloud` | `google/gemma-4-31b-it` | ❔ Not measured | not measured |
+| `enrich` | `local_small` | `google/gemma-4-26b-a4b-it` | ❌ Not reliable yet | re-check pending |
+| `growth_fit` | `cheap_cloud` | `google/gemma-4-31b-it` | ❔ Not measured | not measured |
+| `nl_search` | `cheap_cloud` | `google/gemma-4-31b-it` | ❔ Not measured | not measured |
+| `offer_draft` | `cheap_cloud` | `google/gemma-4-31b-it` | ❔ Not measured | not measured |
+| `owed_verdict` | `local_small` | `google/gemma-4-26b-a4b-it` | ❌ Not reliable yet | re-check pending |
+| `propose_roles` | `cheap_cloud` | `google/gemma-4-31b-it` | ❔ Not measured | not measured |
+| `rate_extract` | `premium` | `google/gemma-4-31b-it` | ❔ Not measured | not measured |
+| `reader_rendering` | `cheap_cloud` | `google/gemma-4-31b-it` | ❔ Not measured | not measured |
+| `report_interpret` | `premium` | `google/gemma-4-31b-it` | ❔ Not measured | not measured |
+| `report_setup` | `cheap_cloud` | `google/gemma-4-31b-it` | ❔ Not measured | not measured |
+| `request_settlement` | `local_small` | `google/gemma-4-26b-a4b-it` | ❌ Not reliable yet | re-check pending |
+| `signal_extract` | `frontier` | `google/gemma-4-31b-it` | ❔ Not measured | not measured |
+| `site_extract` | `premium` | `google/gemma-4-31b-it` | ❔ Not measured | not measured |
+| `site_fact_extract` | `cheap_cloud` | `google/gemma-4-31b-it` | ❔ Not measured | not measured |
+| `site_triage` | `cheap_cloud` | `google/gemma-4-31b-it` | ❔ Not measured | not measured |
+| `stage_evidence_extract` | `cheap_cloud` | `google/gemma-4-31b-it` | ❔ Not measured | not measured |
+| `summarize` | `cheap_cloud` | `google/gemma-4-31b-it` | ❔ Not measured | not measured |
+| `tag_suggest` | `local_small` | `google/gemma-4-26b-a4b-it` | ❔ Not measured | not measured |
+| `transcript_propose` | `premium` | `google/gemma-4-31b-it` | ❔ Not measured | not measured |
+| `voice_build` | `cheap_cloud` | `google/gemma-4-31b-it` | ❔ Not measured | not measured |
+| `weekly_learnings` | `cheap_cloud` | `google/gemma-4-31b-it` | ❔ Not measured | not measured |
+| `weekly_review` | `cheap_cloud` | `google/gemma-4-31b-it` | ❔ Not measured | not measured |
 
 </details>
 
@@ -741,6 +646,101 @@ binds; this is the rung and the model it lands on, and the record behind its gra
 | `voice_build` | `cheap_cloud` | `openai/gpt-6-luna` | ⚠️ Usable with care | re-check pending |
 | `weekly_learnings` | `cheap_cloud` | `openai/gpt-6-luna` | ✅ Ready | re-check pending |
 | `weekly_review` | `cheap_cloud` | `openai/gpt-6-luna` | ⚠️ Usable with care | re-check pending |
+
+</details>
+
+### `gemma4_local_ollama`
+
+Your data goes to: your own servers. 0 of 35 features ready. Preset file: [`gemma4_local_ollama.yaml`](../../config/presets/gemma4_local_ollama.yaml).
+
+| Feature | Can I use it? | In plain words |
+|---|---|---|
+| Agent reasoning loop <sub>`agent_loop`</sub> | ❔ Not measured<br><sub>gemma4:12b · cheap_cloud · no separate fallback</sub> | Not measured yet |
+| Assessing a sales report <sub>`report_interpret`</sub> | ❔ Not measured<br><sub>gemma4:12b · premium · no separate fallback</sub> | Not measured yet |
+| Buying-role reading <sub>`propose_roles`</sub> | ❔ Not measured<br><sub>gemma4:12b · cheap_cloud · no separate fallback</sub> | Not measured yet |
+| Certification judging <sub>`cert_judge`</sub> | ❔ Not measured<br><sub>gemma4:12b · premium · no separate fallback</sub> | Not measured yet |
+| Checking the dates, amount and chances of a deal <sub>`deal_verdict`</sub> | ❔ Not measured<br><sub>gemma4:12b · local_small · no separate fallback</sub> | Not measured yet |
+| Checking whether the reply answered the request <sub>`request_settlement`</sub> | ❔ Not measured<br><sub>gemma4:12b · local_small · no separate fallback</sub> | Not measured yet |
+| Company fit assessment <sub>`growth_fit`</sub> | ❔ Not measured<br><sub>gemma4:12b · cheap_cloud · no separate fallback</sub> | Not measured yet |
+| Deal status card <sub>`deal_health`</sub> | ❔ Not measured<br><sub>gemma4:12b · cheap_cloud · no separate fallback</sub> | Not measured yet |
+| Document corpus question <sub>`corpus_ask`</sub> | ❔ Not measured<br><sub>gemma4:12b · premium</sub> | Not measured yet |
+| Document extraction <sub>`document_extract`</sub> | ❔ Not measured<br><sub>gemma4:12b · premium</sub> | Not measured yet |
+| Exchange rate extraction <sub>`rate_extract`</sub> | ❔ Not measured<br><sub>gemma4:12b · premium · no separate fallback</sub> | Not measured yet |
+| First-time sender check <sub>`capture_counterparty_verdict`</sub> | ❔ Not measured<br><sub>gemma4:12b · local_small</sub> | Not measured yet |
+| Meeting follow-up extraction <sub>`transcript_propose`</sub> | ❔ Not measured<br><sub>gemma4:12b · premium</sub> | Not measured yet |
+| Message classification <sub>`capture_classify`</sub> | ❔ Not measured<br><sub>gemma4:12b · local_small · no separate fallback</sub> | Not measured yet |
+| Morning brief ranking <sub>`brief_ranking`</sub> | ❔ Not measured<br><sub>gemma4:12b · premium · no separate fallback</sub> | Not measured yet |
+| Natural-language search <sub>`nl_search`</sub> | ❔ Not measured<br><sub>gemma4:12b · cheap_cloud · no separate fallback</sub> | Not measured yet |
+| Offer drafting <sub>`offer_draft`</sub> | ❔ Not measured<br><sub>gemma4:12b · cheap_cloud · no separate fallback</sub> | Not measured yet |
+| Onboarding read <sub>`cold_start`</sub> | ❔ Not measured<br><sub>gemma4:12b · cheap_cloud · no separate fallback</sub> | Not measured yet |
+| Reading what an account needs <sub>`account_scan`</sub> | ❔ Not measured<br><sub>gemma4:12b · cheap_cloud · no separate fallback</sub> | Not measured yet |
+| Record summary <sub>`summarize`</sub> | ❔ Not measured<br><sub>gemma4:12b · cheap_cloud · no separate fallback</sub> | Not measured yet |
+| Reply drafting <sub>`draft_reply`</sub> | ❔ Not measured<br><sub>gemma4:12b · cheap_cloud · no separate fallback</sub> | Not measured yet |
+| Setting up a report from a description <sub>`report_setup`</sub> | ❔ Not measured<br><sub>gemma4:12b · cheap_cloud · no separate fallback</sub> | Not measured yet |
+| Showing a message in your language <sub>`reader_rendering`</sub> | ❔ Not measured<br><sub>gemma4:12b · cheap_cloud · no separate fallback</sub> | Not measured yet |
+| Signal extraction <sub>`signal_extract`</sub> | ❔ Not measured<br><sub>gemma4:12b · frontier</sub> | Not measured yet |
+| Signature enrichment <sub>`enrich`</sub> | ❔ Not measured<br><sub>gemma4:12b · local_small · no separate fallback</sub> | Not measured yet |
+| Stage evidence extraction <sub>`stage_evidence_extract`</sub> | ❔ Not measured<br><sub>gemma4:12b · cheap_cloud · no separate fallback</sub> | Not measured yet |
+| Tag suggestions <sub>`tag_suggest`</sub> | ❔ Not measured<br><sub>gemma4:12b · local_small · no separate fallback</sub> | Not measured yet |
+| Thread confidentiality check <sub>`capture_confidentiality_verdict`</sub> | ❔ Not measured<br><sub>gemma4:12b · local_small</sub> | Not measured yet |
+| Unanswered-message triage <sub>`owed_verdict`</sub> | ❔ Not measured<br><sub>gemma4:12b · local_small · no separate fallback</sub> | Not measured yet |
+| Voice DNA build <sub>`voice_build`</sub> | ❔ Not measured<br><sub>gemma4:12b · cheap_cloud · no separate fallback</sub> | Not measured yet |
+| Website fact extraction <sub>`site_fact_extract`</sub> | ❔ Not measured<br><sub>gemma4:12b · cheap_cloud · no separate fallback</sub> | Not measured yet |
+| Website research <sub>`site_extract`</sub> | ❔ Not measured<br><sub>gemma4:12b · premium</sub> | Not measured yet |
+| Website triage <sub>`site_triage`</sub> | ❔ Not measured<br><sub>gemma4:12b · cheap_cloud · no separate fallback</sub> | Not measured yet |
+| Weekly review narrative <sub>`weekly_review`</sub> | ❔ Not measured<br><sub>gemma4:12b · cheap_cloud · no separate fallback</sub> | Not measured yet |
+| What last week taught <sub>`weekly_learnings`</sub> | ❔ Not measured<br><sub>gemma4:12b · cheap_cloud · no separate fallback</sub> | Not measured yet |
+
+<details>
+<summary>Which models this preset uses</summary>
+
+| Tier | Provider | Model |
+|---|---|---|
+| `local_small` | `ollama` | `gemma4:12b` |
+| `cheap_cloud` | `ollama` | `gemma4:12b` |
+| `premium` | `ollama` | `gemma4:12b` |
+| `frontier` | `ollama` | `gemma4:12b` |
+
+Each feature walks its own ladder of tiers until it reaches one this preset
+binds; this is the rung and the model it lands on, and the record behind its grade.
+
+| Task | Served on | Model | Grade | Measurement |
+|---|---|---|---|---|
+| `account_scan` | `cheap_cloud` | `gemma4:12b` | ❔ Not measured | not measured |
+| `agent_loop` | `cheap_cloud` | `gemma4:12b` | ❔ Not measured | not measured |
+| `brief_ranking` | `premium` | `gemma4:12b` | ❔ Not measured | not measured |
+| `capture_classify` | `local_small` | `gemma4:12b` | ❔ Not measured | not measured |
+| `capture_confidentiality_verdict` | `local_small` | `gemma4:12b` | ❔ Not measured | not measured |
+| `capture_counterparty_verdict` | `local_small` | `gemma4:12b` | ❔ Not measured | not measured |
+| `cert_judge` | `premium` | `gemma4:12b` | ❔ Not measured | not measured |
+| `cold_start` | `cheap_cloud` | `gemma4:12b` | ❔ Not measured | not measured |
+| `corpus_ask` | `premium` | `gemma4:12b` | ❔ Not measured | not measured |
+| `deal_health` | `cheap_cloud` | `gemma4:12b` | ❔ Not measured | not measured |
+| `deal_verdict` | `local_small` | `gemma4:12b` | ❔ Not measured | not measured |
+| `document_extract` | `premium` | `gemma4:12b` | ❔ Not measured | not measured |
+| `draft_reply` | `cheap_cloud` | `gemma4:12b` | ❔ Not measured | not measured |
+| `enrich` | `local_small` | `gemma4:12b` | ❔ Not measured | not measured |
+| `growth_fit` | `cheap_cloud` | `gemma4:12b` | ❔ Not measured | not measured |
+| `nl_search` | `cheap_cloud` | `gemma4:12b` | ❔ Not measured | not measured |
+| `offer_draft` | `cheap_cloud` | `gemma4:12b` | ❔ Not measured | not measured |
+| `owed_verdict` | `local_small` | `gemma4:12b` | ❔ Not measured | not measured |
+| `propose_roles` | `cheap_cloud` | `gemma4:12b` | ❔ Not measured | not measured |
+| `rate_extract` | `premium` | `gemma4:12b` | ❔ Not measured | not measured |
+| `reader_rendering` | `cheap_cloud` | `gemma4:12b` | ❔ Not measured | not measured |
+| `report_interpret` | `premium` | `gemma4:12b` | ❔ Not measured | not measured |
+| `report_setup` | `cheap_cloud` | `gemma4:12b` | ❔ Not measured | not measured |
+| `request_settlement` | `local_small` | `gemma4:12b` | ❔ Not measured | not measured |
+| `signal_extract` | `frontier` | `gemma4:12b` | ❔ Not measured | not measured |
+| `site_extract` | `premium` | `gemma4:12b` | ❔ Not measured | not measured |
+| `site_fact_extract` | `cheap_cloud` | `gemma4:12b` | ❔ Not measured | not measured |
+| `site_triage` | `cheap_cloud` | `gemma4:12b` | ❔ Not measured | not measured |
+| `stage_evidence_extract` | `cheap_cloud` | `gemma4:12b` | ❔ Not measured | not measured |
+| `summarize` | `cheap_cloud` | `gemma4:12b` | ❔ Not measured | not measured |
+| `tag_suggest` | `local_small` | `gemma4:12b` | ❔ Not measured | not measured |
+| `transcript_propose` | `premium` | `gemma4:12b` | ❔ Not measured | not measured |
+| `voice_build` | `cheap_cloud` | `gemma4:12b` | ❔ Not measured | not measured |
+| `weekly_learnings` | `cheap_cloud` | `gemma4:12b` | ❔ Not measured | not measured |
+| `weekly_review` | `cheap_cloud` | `gemma4:12b` | ❔ Not measured | not measured |
 
 </details>
 
@@ -1194,8 +1194,8 @@ under [Certification by provider and model](#certification-by-provider-and-model
 | … best state `stale` | 0 |
 | … `absent` on every binding | 0 |
 | Scenarios in the corpus | 311 |
-| Committed records | 321 |
-| Bindings measured | 15 |
+| Committed records | 322 |
+| Bindings measured | 16 |
 
 #### Why the stale records went stale
 
@@ -1263,7 +1263,7 @@ Which model to run each site on, and what that choice rests on.
 
 | Site | Best model tested | Band | Reliability | State | Scenarios | Records |
 |---|---|---|---:|---|---:|---:|
-| [`account_scan/company_scan`](#account_scancompany_scan) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 3 | 11 |
+| [`account_scan/company_scan`](#account_scancompany_scan) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 3 | 12 |
 | [`agent_loop/morning_brief`](#agent_loopmorning_brief) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `certified` | 1.00 | `current` | 3 | 11 |
 | [`agent_loop/overnight_at_risk_sweep`](#agent_loopovernight_at_risk_sweep) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `certified` | 1.00 | `current` | 3 | 11 |
 | [`brief_ranking/rank`](#brief_rankingrank) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 1 | 12 |
@@ -1360,6 +1360,7 @@ record's own p50 and p95 are in the site tables.
 | `openai_compatible` | `openai/gpt-6-luna` | `cloud_frontier` | 43 | 10 | 0 | 33 | 645 | 616 | 0.96 | 26943ms | 26 | 13 | 4 |
 | `openai_compatible` | `openai/gpt-6-sol` | `cloud_frontier` | 39 | 10 | 0 | 29 | 495 | 474 | 0.96 | 21274ms | 25 | 12 | 2 |
 | `openai_compatible` | `openai/gpt-oss-120b` | `cloud_frontier` | 53 | 53 | 0 | 0 | 1665 | 1547 | 0.93 | 9507ms | 23 | 21 | 9 |
+| `openai_compatible` | `qwen/qwen3.8-27b` | `cloud_frontier` | 1 | 1 | 0 | 0 | 9 | 9 | 1.00 | 191650ms | 1 | 0 | 0 |
 
 </details>
 
@@ -1658,7 +1659,7 @@ did. What the columns mean is in [How to read this page](#how-to-read-this-page)
 Certified without the company context production prepends (`identity`): this lane runs with no database to assemble it from.
 
 <details>
-<summary><code>account_scan/company_scan</code>: 3 scenario(s), 11 record(s), best state current</summary>
+<summary><code>account_scan/company_scan</code>: 3 scenario(s), 12 record(s), best state current</summary>
 
 ##### `account_scan/company_scan`
 
@@ -1672,7 +1673,7 @@ Scenarios (3):
 | `scan_finds_the_question_nobody_answered` | `accepted` | judge | [question_left_unanswered_01.yaml](../../backend/internal/compose/aicert/corpus/account_scan/question_left_unanswered_01.yaml) |
 | `scan_reads_the_thread_past_an_answered_ask` | `accepted` | judge | [ask_answered_in_its_thread_01.yaml](../../backend/internal/compose/aicert/corpus/account_scan/ask_answered_in_its_thread_01.yaml) |
 
-Records (11):
+Records (12):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
@@ -1687,6 +1688,7 @@ Records (11):
 | `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `stale` | 0/3 | `certified` | 12 | 12 | 1.00 | 4366ms | 6215ms | 12 | 0 | 0 | 0 |
 | `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `stale` | 0/3 | `certified` | 12 | 12 | 1.00 | 6028ms | 7355ms | 12 | 0 | 0 | 0 |
 | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 3/3 | `supported_degraded` | 15 | 15 | 1.00 | 898ms | 3477ms | 15 | 0 | 0 | 0 |
+| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 | 94247ms | 191650ms | 9 | 0 | 0 | 0 |
 
 </details>
 

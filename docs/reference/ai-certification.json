@@ -6,950 +6,11 @@
     "sites_best_stale": 0,
     "sites_absent": 0,
     "scenarios": 311,
-    "records": 321,
-    "bindings": 15,
+    "records": 322,
+    "bindings": 16,
     "self_judged_records": 0
   },
   "presets": [
-    {
-      "file": "consumer_class_brokered.yaml",
-      "profile": "cloud_frontier",
-      "tiers": [
-        {
-          "tier": "local_small",
-          "provider": "openai_compatible",
-          "model": "google/gemma-4-26b-a4b-it"
-        },
-        {
-          "tier": "cheap_cloud",
-          "provider": "openai_compatible",
-          "model": "google/gemma-4-31b-it"
-        },
-        {
-          "tier": "premium",
-          "provider": "openai_compatible",
-          "model": "google/gemma-4-31b-it"
-        },
-        {
-          "tier": "frontier",
-          "provider": "openai_compatible",
-          "model": "google/gemma-4-31b-it"
-        }
-      ],
-      "tasks": [
-        {
-          "task": "account_scan",
-          "label": "Reading what an account needs",
-          "tier": "cheap_cloud",
-          "model": {
-            "provider": "openai_compatible",
-            "model": "google/gemma-4-31b-it",
-            "env": "cloud_frontier"
-          },
-          "band": "",
-          "state": "",
-          "fallback": {
-            "tier": "premium",
-            "model": {
-              "provider": "openai_compatible",
-              "model": "google/gemma-4-31b-it",
-              "env": "cloud_frontier"
-            },
-            "same_model": true,
-            "band": "",
-            "state": ""
-          },
-          "abandoned": 0,
-          "runs": 0,
-          "passed": 0,
-          "cases_failing_often": 0,
-          "cases_below_quality_bar": 0
-        },
-        {
-          "task": "agent_loop",
-          "label": "Agent reasoning loop",
-          "tier": "cheap_cloud",
-          "model": {
-            "provider": "openai_compatible",
-            "model": "google/gemma-4-31b-it",
-            "env": "cloud_frontier"
-          },
-          "band": "",
-          "state": "",
-          "fallback": {
-            "tier": "premium",
-            "model": {
-              "provider": "openai_compatible",
-              "model": "google/gemma-4-31b-it",
-              "env": "cloud_frontier"
-            },
-            "same_model": true,
-            "band": "",
-            "state": ""
-          },
-          "abandoned": 0,
-          "runs": 0,
-          "passed": 0,
-          "cases_failing_often": 0,
-          "cases_below_quality_bar": 0
-        },
-        {
-          "task": "brief_ranking",
-          "label": "Morning brief ranking",
-          "tier": "premium",
-          "model": {
-            "provider": "openai_compatible",
-            "model": "google/gemma-4-31b-it",
-            "env": "cloud_frontier"
-          },
-          "band": "",
-          "state": "",
-          "fallback": {
-            "tier": "cheap_cloud",
-            "model": {
-              "provider": "openai_compatible",
-              "model": "google/gemma-4-31b-it",
-              "env": "cloud_frontier"
-            },
-            "same_model": true,
-            "band": "",
-            "state": ""
-          },
-          "abandoned": 0,
-          "runs": 0,
-          "passed": 0,
-          "cases_failing_often": 0,
-          "cases_below_quality_bar": 0
-        },
-        {
-          "task": "capture_classify",
-          "label": "Message classification",
-          "tier": "local_small",
-          "model": {
-            "provider": "openai_compatible",
-            "model": "google/gemma-4-26b-a4b-it",
-            "env": "cloud_frontier"
-          },
-          "band": "supported_degraded",
-          "state": "stale",
-          "fallback": {
-            "tier": "cheap_cloud",
-            "model": {
-              "provider": "openai_compatible",
-              "model": "google/gemma-4-31b-it",
-              "env": "cloud_frontier"
-            },
-            "same_model": false,
-            "band": "",
-            "state": ""
-          },
-          "abandoned": 0,
-          "runs": 27,
-          "passed": 21,
-          "cases_failing_often": 0,
-          "cases_below_quality_bar": 1
-        },
-        {
-          "task": "capture_confidentiality_verdict",
-          "label": "Thread confidentiality check",
-          "tier": "local_small",
-          "model": {
-            "provider": "openai_compatible",
-            "model": "google/gemma-4-26b-a4b-it",
-            "env": "cloud_frontier"
-          },
-          "band": "certified",
-          "state": "stale",
-          "abandoned": 0,
-          "runs": 42,
-          "passed": 42,
-          "cases_failing_often": 0,
-          "cases_below_quality_bar": 0
-        },
-        {
-          "task": "capture_counterparty_verdict",
-          "label": "First-time sender check",
-          "tier": "local_small",
-          "model": {
-            "provider": "openai_compatible",
-            "model": "google/gemma-4-26b-a4b-it",
-            "env": "cloud_frontier"
-          },
-          "band": "not_supported",
-          "state": "stale",
-          "abandoned": 0,
-          "runs": 75,
-          "passed": 68,
-          "cases_failing_often": 1,
-          "cases_below_quality_bar": 4
-        },
-        {
-          "task": "cert_judge",
-          "label": "Certification judging",
-          "tier": "premium",
-          "model": {
-            "provider": "openai_compatible",
-            "model": "google/gemma-4-31b-it",
-            "env": "cloud_frontier"
-          },
-          "band": "",
-          "state": "",
-          "fallback": {
-            "tier": "cheap_cloud",
-            "model": {
-              "provider": "openai_compatible",
-              "model": "google/gemma-4-31b-it",
-              "env": "cloud_frontier"
-            },
-            "same_model": true,
-            "band": "",
-            "state": ""
-          },
-          "abandoned": 0,
-          "runs": 0,
-          "passed": 0,
-          "cases_failing_often": 0,
-          "cases_below_quality_bar": 0
-        },
-        {
-          "task": "cold_start",
-          "label": "Onboarding read",
-          "tier": "cheap_cloud",
-          "model": {
-            "provider": "openai_compatible",
-            "model": "google/gemma-4-31b-it",
-            "env": "cloud_frontier"
-          },
-          "band": "",
-          "state": "",
-          "fallback": {
-            "tier": "premium",
-            "model": {
-              "provider": "openai_compatible",
-              "model": "google/gemma-4-31b-it",
-              "env": "cloud_frontier"
-            },
-            "same_model": true,
-            "band": "",
-            "state": ""
-          },
-          "abandoned": 0,
-          "runs": 0,
-          "passed": 0,
-          "cases_failing_often": 0,
-          "cases_below_quality_bar": 0
-        },
-        {
-          "task": "corpus_ask",
-          "label": "Document corpus question",
-          "tier": "premium",
-          "model": {
-            "provider": "openai_compatible",
-            "model": "google/gemma-4-31b-it",
-            "env": "cloud_frontier"
-          },
-          "band": "",
-          "state": "",
-          "abandoned": 0,
-          "runs": 0,
-          "passed": 0,
-          "cases_failing_often": 0,
-          "cases_below_quality_bar": 0
-        },
-        {
-          "task": "deal_health",
-          "label": "Deal status card",
-          "tier": "cheap_cloud",
-          "model": {
-            "provider": "openai_compatible",
-            "model": "google/gemma-4-31b-it",
-            "env": "cloud_frontier"
-          },
-          "band": "",
-          "state": "",
-          "fallback": {
-            "tier": "premium",
-            "model": {
-              "provider": "openai_compatible",
-              "model": "google/gemma-4-31b-it",
-              "env": "cloud_frontier"
-            },
-            "same_model": true,
-            "band": "",
-            "state": ""
-          },
-          "abandoned": 0,
-          "runs": 0,
-          "passed": 0,
-          "cases_failing_often": 0,
-          "cases_below_quality_bar": 0
-        },
-        {
-          "task": "deal_verdict",
-          "label": "Checking the dates, amount and chances of a deal",
-          "tier": "local_small",
-          "model": {
-            "provider": "openai_compatible",
-            "model": "google/gemma-4-26b-a4b-it",
-            "env": "cloud_frontier"
-          },
-          "band": "",
-          "state": "",
-          "fallback": {
-            "tier": "cheap_cloud",
-            "model": {
-              "provider": "openai_compatible",
-              "model": "google/gemma-4-31b-it",
-              "env": "cloud_frontier"
-            },
-            "same_model": false,
-            "band": "",
-            "state": ""
-          },
-          "abandoned": 0,
-          "runs": 0,
-          "passed": 0,
-          "cases_failing_often": 0,
-          "cases_below_quality_bar": 0
-        },
-        {
-          "task": "document_extract",
-          "label": "Document extraction",
-          "tier": "premium",
-          "model": {
-            "provider": "openai_compatible",
-            "model": "google/gemma-4-31b-it",
-            "env": "cloud_frontier"
-          },
-          "band": "",
-          "state": "",
-          "abandoned": 0,
-          "runs": 0,
-          "passed": 0,
-          "cases_failing_often": 0,
-          "cases_below_quality_bar": 0
-        },
-        {
-          "task": "draft_reply",
-          "label": "Reply drafting",
-          "tier": "cheap_cloud",
-          "model": {
-            "provider": "openai_compatible",
-            "model": "google/gemma-4-31b-it",
-            "env": "cloud_frontier"
-          },
-          "band": "",
-          "state": "",
-          "fallback": {
-            "tier": "premium",
-            "model": {
-              "provider": "openai_compatible",
-              "model": "google/gemma-4-31b-it",
-              "env": "cloud_frontier"
-            },
-            "same_model": true,
-            "band": "",
-            "state": ""
-          },
-          "abandoned": 0,
-          "runs": 0,
-          "passed": 0,
-          "cases_failing_often": 0,
-          "cases_below_quality_bar": 0
-        },
-        {
-          "task": "enrich",
-          "label": "Signature enrichment",
-          "tier": "local_small",
-          "model": {
-            "provider": "openai_compatible",
-            "model": "google/gemma-4-26b-a4b-it",
-            "env": "cloud_frontier"
-          },
-          "band": "not_supported",
-          "state": "stale",
-          "fallback": {
-            "tier": "cheap_cloud",
-            "model": {
-              "provider": "openai_compatible",
-              "model": "google/gemma-4-31b-it",
-              "env": "cloud_frontier"
-            },
-            "same_model": false,
-            "band": "",
-            "state": ""
-          },
-          "abandoned": 0,
-          "runs": 6,
-          "passed": 3,
-          "cases_failing_often": 1,
-          "cases_below_quality_bar": 0
-        },
-        {
-          "task": "growth_fit",
-          "label": "Company fit assessment",
-          "tier": "cheap_cloud",
-          "model": {
-            "provider": "openai_compatible",
-            "model": "google/gemma-4-31b-it",
-            "env": "cloud_frontier"
-          },
-          "band": "",
-          "state": "",
-          "fallback": {
-            "tier": "premium",
-            "model": {
-              "provider": "openai_compatible",
-              "model": "google/gemma-4-31b-it",
-              "env": "cloud_frontier"
-            },
-            "same_model": true,
-            "band": "",
-            "state": ""
-          },
-          "abandoned": 0,
-          "runs": 0,
-          "passed": 0,
-          "cases_failing_often": 0,
-          "cases_below_quality_bar": 0
-        },
-        {
-          "task": "nl_search",
-          "label": "Natural-language search",
-          "tier": "cheap_cloud",
-          "model": {
-            "provider": "openai_compatible",
-            "model": "google/gemma-4-31b-it",
-            "env": "cloud_frontier"
-          },
-          "band": "",
-          "state": "",
-          "fallback": {
-            "tier": "premium",
-            "model": {
-              "provider": "openai_compatible",
-              "model": "google/gemma-4-31b-it",
-              "env": "cloud_frontier"
-            },
-            "same_model": true,
-            "band": "",
-            "state": ""
-          },
-          "abandoned": 0,
-          "runs": 0,
-          "passed": 0,
-          "cases_failing_often": 0,
-          "cases_below_quality_bar": 0
-        },
-        {
-          "task": "offer_draft",
-          "label": "Offer drafting",
-          "tier": "cheap_cloud",
-          "model": {
-            "provider": "openai_compatible",
-            "model": "google/gemma-4-31b-it",
-            "env": "cloud_frontier"
-          },
-          "band": "",
-          "state": "",
-          "fallback": {
-            "tier": "premium",
-            "model": {
-              "provider": "openai_compatible",
-              "model": "google/gemma-4-31b-it",
-              "env": "cloud_frontier"
-            },
-            "same_model": true,
-            "band": "",
-            "state": ""
-          },
-          "abandoned": 0,
-          "runs": 0,
-          "passed": 0,
-          "cases_failing_often": 0,
-          "cases_below_quality_bar": 0
-        },
-        {
-          "task": "owed_verdict",
-          "label": "Unanswered-message triage",
-          "tier": "local_small",
-          "model": {
-            "provider": "openai_compatible",
-            "model": "google/gemma-4-26b-a4b-it",
-            "env": "cloud_frontier"
-          },
-          "band": "not_supported",
-          "state": "stale",
-          "fallback": {
-            "tier": "cheap_cloud",
-            "model": {
-              "provider": "openai_compatible",
-              "model": "google/gemma-4-31b-it",
-              "env": "cloud_frontier"
-            },
-            "same_model": false,
-            "band": "",
-            "state": ""
-          },
-          "abandoned": 0,
-          "runs": 21,
-          "passed": 17,
-          "cases_failing_often": 1,
-          "cases_below_quality_bar": 0
-        },
-        {
-          "task": "propose_roles",
-          "label": "Buying-role reading",
-          "tier": "cheap_cloud",
-          "model": {
-            "provider": "openai_compatible",
-            "model": "google/gemma-4-31b-it",
-            "env": "cloud_frontier"
-          },
-          "band": "",
-          "state": "",
-          "fallback": {
-            "tier": "premium",
-            "model": {
-              "provider": "openai_compatible",
-              "model": "google/gemma-4-31b-it",
-              "env": "cloud_frontier"
-            },
-            "same_model": true,
-            "band": "",
-            "state": ""
-          },
-          "abandoned": 0,
-          "runs": 0,
-          "passed": 0,
-          "cases_failing_often": 0,
-          "cases_below_quality_bar": 0
-        },
-        {
-          "task": "rate_extract",
-          "label": "Exchange rate extraction",
-          "tier": "premium",
-          "model": {
-            "provider": "openai_compatible",
-            "model": "google/gemma-4-31b-it",
-            "env": "cloud_frontier"
-          },
-          "band": "",
-          "state": "",
-          "fallback": {
-            "tier": "cheap_cloud",
-            "model": {
-              "provider": "openai_compatible",
-              "model": "google/gemma-4-31b-it",
-              "env": "cloud_frontier"
-            },
-            "same_model": true,
-            "band": "",
-            "state": ""
-          },
-          "abandoned": 0,
-          "runs": 0,
-          "passed": 0,
-          "cases_failing_often": 0,
-          "cases_below_quality_bar": 0
-        },
-        {
-          "task": "reader_rendering",
-          "label": "Showing a message in your language",
-          "tier": "cheap_cloud",
-          "model": {
-            "provider": "openai_compatible",
-            "model": "google/gemma-4-31b-it",
-            "env": "cloud_frontier"
-          },
-          "band": "",
-          "state": "",
-          "fallback": {
-            "tier": "premium",
-            "model": {
-              "provider": "openai_compatible",
-              "model": "google/gemma-4-31b-it",
-              "env": "cloud_frontier"
-            },
-            "same_model": true,
-            "band": "",
-            "state": ""
-          },
-          "abandoned": 0,
-          "runs": 0,
-          "passed": 0,
-          "cases_failing_often": 0,
-          "cases_below_quality_bar": 0
-        },
-        {
-          "task": "report_interpret",
-          "label": "Assessing a sales report",
-          "tier": "premium",
-          "model": {
-            "provider": "openai_compatible",
-            "model": "google/gemma-4-31b-it",
-            "env": "cloud_frontier"
-          },
-          "band": "",
-          "state": "",
-          "fallback": {
-            "tier": "cheap_cloud",
-            "model": {
-              "provider": "openai_compatible",
-              "model": "google/gemma-4-31b-it",
-              "env": "cloud_frontier"
-            },
-            "same_model": true,
-            "band": "",
-            "state": ""
-          },
-          "abandoned": 0,
-          "runs": 0,
-          "passed": 0,
-          "cases_failing_often": 0,
-          "cases_below_quality_bar": 0
-        },
-        {
-          "task": "report_setup",
-          "label": "Setting up a report from a description",
-          "tier": "cheap_cloud",
-          "model": {
-            "provider": "openai_compatible",
-            "model": "google/gemma-4-31b-it",
-            "env": "cloud_frontier"
-          },
-          "band": "",
-          "state": "",
-          "fallback": {
-            "tier": "premium",
-            "model": {
-              "provider": "openai_compatible",
-              "model": "google/gemma-4-31b-it",
-              "env": "cloud_frontier"
-            },
-            "same_model": true,
-            "band": "",
-            "state": ""
-          },
-          "abandoned": 0,
-          "runs": 0,
-          "passed": 0,
-          "cases_failing_often": 0,
-          "cases_below_quality_bar": 0
-        },
-        {
-          "task": "request_settlement",
-          "label": "Checking whether the reply answered the request",
-          "tier": "local_small",
-          "model": {
-            "provider": "openai_compatible",
-            "model": "google/gemma-4-26b-a4b-it",
-            "env": "cloud_frontier"
-          },
-          "band": "not_supported",
-          "state": "stale",
-          "fallback": {
-            "tier": "cheap_cloud",
-            "model": {
-              "provider": "openai_compatible",
-              "model": "google/gemma-4-31b-it",
-              "env": "cloud_frontier"
-            },
-            "same_model": false,
-            "band": "",
-            "state": ""
-          },
-          "abandoned": 0,
-          "runs": 18,
-          "passed": 15,
-          "cases_failing_often": 1,
-          "cases_below_quality_bar": 0
-        },
-        {
-          "task": "signal_extract",
-          "label": "Signal extraction",
-          "tier": "frontier",
-          "model": {
-            "provider": "openai_compatible",
-            "model": "google/gemma-4-31b-it",
-            "env": "cloud_frontier"
-          },
-          "band": "",
-          "state": "",
-          "abandoned": 0,
-          "runs": 0,
-          "passed": 0,
-          "cases_failing_often": 0,
-          "cases_below_quality_bar": 0
-        },
-        {
-          "task": "site_extract",
-          "label": "Website research",
-          "tier": "premium",
-          "model": {
-            "provider": "openai_compatible",
-            "model": "google/gemma-4-31b-it",
-            "env": "cloud_frontier"
-          },
-          "band": "",
-          "state": "",
-          "abandoned": 0,
-          "runs": 0,
-          "passed": 0,
-          "cases_failing_often": 0,
-          "cases_below_quality_bar": 0
-        },
-        {
-          "task": "site_fact_extract",
-          "label": "Website fact extraction",
-          "tier": "cheap_cloud",
-          "model": {
-            "provider": "openai_compatible",
-            "model": "google/gemma-4-31b-it",
-            "env": "cloud_frontier"
-          },
-          "band": "",
-          "state": "",
-          "fallback": {
-            "tier": "premium",
-            "model": {
-              "provider": "openai_compatible",
-              "model": "google/gemma-4-31b-it",
-              "env": "cloud_frontier"
-            },
-            "same_model": true,
-            "band": "",
-            "state": ""
-          },
-          "abandoned": 0,
-          "runs": 0,
-          "passed": 0,
-          "cases_failing_often": 0,
-          "cases_below_quality_bar": 0
-        },
-        {
-          "task": "site_triage",
-          "label": "Website triage",
-          "tier": "cheap_cloud",
-          "model": {
-            "provider": "openai_compatible",
-            "model": "google/gemma-4-31b-it",
-            "env": "cloud_frontier"
-          },
-          "band": "",
-          "state": "",
-          "fallback": {
-            "tier": "premium",
-            "model": {
-              "provider": "openai_compatible",
-              "model": "google/gemma-4-31b-it",
-              "env": "cloud_frontier"
-            },
-            "same_model": true,
-            "band": "",
-            "state": ""
-          },
-          "abandoned": 0,
-          "runs": 0,
-          "passed": 0,
-          "cases_failing_often": 0,
-          "cases_below_quality_bar": 0
-        },
-        {
-          "task": "stage_evidence_extract",
-          "label": "Stage evidence extraction",
-          "tier": "cheap_cloud",
-          "model": {
-            "provider": "openai_compatible",
-            "model": "google/gemma-4-31b-it",
-            "env": "cloud_frontier"
-          },
-          "band": "",
-          "state": "",
-          "fallback": {
-            "tier": "premium",
-            "model": {
-              "provider": "openai_compatible",
-              "model": "google/gemma-4-31b-it",
-              "env": "cloud_frontier"
-            },
-            "same_model": true,
-            "band": "",
-            "state": ""
-          },
-          "abandoned": 0,
-          "runs": 0,
-          "passed": 0,
-          "cases_failing_often": 0,
-          "cases_below_quality_bar": 0
-        },
-        {
-          "task": "summarize",
-          "label": "Record summary",
-          "tier": "cheap_cloud",
-          "model": {
-            "provider": "openai_compatible",
-            "model": "google/gemma-4-31b-it",
-            "env": "cloud_frontier"
-          },
-          "band": "",
-          "state": "",
-          "fallback": {
-            "tier": "premium",
-            "model": {
-              "provider": "openai_compatible",
-              "model": "google/gemma-4-31b-it",
-              "env": "cloud_frontier"
-            },
-            "same_model": true,
-            "band": "",
-            "state": ""
-          },
-          "abandoned": 0,
-          "runs": 0,
-          "passed": 0,
-          "cases_failing_often": 0,
-          "cases_below_quality_bar": 0
-        },
-        {
-          "task": "tag_suggest",
-          "label": "Tag suggestions",
-          "tier": "local_small",
-          "model": {
-            "provider": "openai_compatible",
-            "model": "google/gemma-4-26b-a4b-it",
-            "env": "cloud_frontier"
-          },
-          "band": "",
-          "state": "",
-          "fallback": {
-            "tier": "cheap_cloud",
-            "model": {
-              "provider": "openai_compatible",
-              "model": "google/gemma-4-31b-it",
-              "env": "cloud_frontier"
-            },
-            "same_model": false,
-            "band": "",
-            "state": ""
-          },
-          "abandoned": 0,
-          "runs": 0,
-          "passed": 0,
-          "cases_failing_often": 0,
-          "cases_below_quality_bar": 0
-        },
-        {
-          "task": "transcript_propose",
-          "label": "Meeting follow-up extraction",
-          "tier": "premium",
-          "model": {
-            "provider": "openai_compatible",
-            "model": "google/gemma-4-31b-it",
-            "env": "cloud_frontier"
-          },
-          "band": "",
-          "state": "",
-          "abandoned": 0,
-          "runs": 0,
-          "passed": 0,
-          "cases_failing_often": 0,
-          "cases_below_quality_bar": 0
-        },
-        {
-          "task": "voice_build",
-          "label": "Voice DNA build",
-          "tier": "cheap_cloud",
-          "model": {
-            "provider": "openai_compatible",
-            "model": "google/gemma-4-31b-it",
-            "env": "cloud_frontier"
-          },
-          "band": "",
-          "state": "",
-          "fallback": {
-            "tier": "premium",
-            "model": {
-              "provider": "openai_compatible",
-              "model": "google/gemma-4-31b-it",
-              "env": "cloud_frontier"
-            },
-            "same_model": true,
-            "band": "",
-            "state": ""
-          },
-          "abandoned": 0,
-          "runs": 0,
-          "passed": 0,
-          "cases_failing_often": 0,
-          "cases_below_quality_bar": 0
-        },
-        {
-          "task": "weekly_learnings",
-          "label": "What last week taught",
-          "tier": "cheap_cloud",
-          "model": {
-            "provider": "openai_compatible",
-            "model": "google/gemma-4-31b-it",
-            "env": "cloud_frontier"
-          },
-          "band": "",
-          "state": "",
-          "fallback": {
-            "tier": "premium",
-            "model": {
-              "provider": "openai_compatible",
-              "model": "google/gemma-4-31b-it",
-              "env": "cloud_frontier"
-            },
-            "same_model": true,
-            "band": "",
-            "state": ""
-          },
-          "abandoned": 0,
-          "runs": 0,
-          "passed": 0,
-          "cases_failing_often": 0,
-          "cases_below_quality_bar": 0
-        },
-        {
-          "task": "weekly_review",
-          "label": "Weekly review narrative",
-          "tier": "cheap_cloud",
-          "model": {
-            "provider": "openai_compatible",
-            "model": "google/gemma-4-31b-it",
-            "env": "cloud_frontier"
-          },
-          "band": "",
-          "state": "",
-          "fallback": {
-            "tier": "premium",
-            "model": {
-              "provider": "openai_compatible",
-              "model": "google/gemma-4-31b-it",
-              "env": "cloud_frontier"
-            },
-            "same_model": true,
-            "band": "",
-            "state": ""
-          },
-          "abandoned": 0,
-          "runs": 0,
-          "passed": 0,
-          "cases_failing_often": 0,
-          "cases_below_quality_bar": 0
-        }
-      ],
-      "bands": {
-        "certified": 1,
-        "supported_degraded": 1,
-        "not_supported": 4
-      },
-      "untested": 29,
-      "unbound": 0,
-      "unrecognised": 0
-    },
     {
       "file": "gemini_cloud.yaml",
       "profile": "cloud_frontier",
@@ -3229,945 +2290,6 @@
       "unrecognised": 0
     },
     {
-      "file": "gemma4_local_ollama.yaml",
-      "profile": "sovereign",
-      "tiers": [
-        {
-          "tier": "local_small",
-          "provider": "ollama",
-          "model": "gemma4:12b"
-        },
-        {
-          "tier": "cheap_cloud",
-          "provider": "ollama",
-          "model": "gemma4:12b"
-        },
-        {
-          "tier": "premium",
-          "provider": "ollama",
-          "model": "gemma4:12b"
-        },
-        {
-          "tier": "frontier",
-          "provider": "ollama",
-          "model": "gemma4:12b"
-        }
-      ],
-      "tasks": [
-        {
-          "task": "account_scan",
-          "label": "Reading what an account needs",
-          "tier": "cheap_cloud",
-          "model": {
-            "provider": "ollama",
-            "model": "gemma4:12b",
-            "env": "sovereign"
-          },
-          "band": "",
-          "state": "",
-          "fallback": {
-            "tier": "premium",
-            "model": {
-              "provider": "ollama",
-              "model": "gemma4:12b",
-              "env": "sovereign"
-            },
-            "same_model": true,
-            "band": "",
-            "state": ""
-          },
-          "abandoned": 0,
-          "runs": 0,
-          "passed": 0,
-          "cases_failing_often": 0,
-          "cases_below_quality_bar": 0
-        },
-        {
-          "task": "agent_loop",
-          "label": "Agent reasoning loop",
-          "tier": "cheap_cloud",
-          "model": {
-            "provider": "ollama",
-            "model": "gemma4:12b",
-            "env": "sovereign"
-          },
-          "band": "",
-          "state": "",
-          "fallback": {
-            "tier": "premium",
-            "model": {
-              "provider": "ollama",
-              "model": "gemma4:12b",
-              "env": "sovereign"
-            },
-            "same_model": true,
-            "band": "",
-            "state": ""
-          },
-          "abandoned": 0,
-          "runs": 0,
-          "passed": 0,
-          "cases_failing_often": 0,
-          "cases_below_quality_bar": 0
-        },
-        {
-          "task": "brief_ranking",
-          "label": "Morning brief ranking",
-          "tier": "premium",
-          "model": {
-            "provider": "ollama",
-            "model": "gemma4:12b",
-            "env": "sovereign"
-          },
-          "band": "",
-          "state": "",
-          "fallback": {
-            "tier": "cheap_cloud",
-            "model": {
-              "provider": "ollama",
-              "model": "gemma4:12b",
-              "env": "sovereign"
-            },
-            "same_model": true,
-            "band": "",
-            "state": ""
-          },
-          "abandoned": 0,
-          "runs": 0,
-          "passed": 0,
-          "cases_failing_often": 0,
-          "cases_below_quality_bar": 0
-        },
-        {
-          "task": "capture_classify",
-          "label": "Message classification",
-          "tier": "local_small",
-          "model": {
-            "provider": "ollama",
-            "model": "gemma4:12b",
-            "env": "sovereign"
-          },
-          "band": "",
-          "state": "",
-          "fallback": {
-            "tier": "cheap_cloud",
-            "model": {
-              "provider": "ollama",
-              "model": "gemma4:12b",
-              "env": "sovereign"
-            },
-            "same_model": true,
-            "band": "",
-            "state": ""
-          },
-          "abandoned": 0,
-          "runs": 0,
-          "passed": 0,
-          "cases_failing_often": 0,
-          "cases_below_quality_bar": 0
-        },
-        {
-          "task": "capture_confidentiality_verdict",
-          "label": "Thread confidentiality check",
-          "tier": "local_small",
-          "model": {
-            "provider": "ollama",
-            "model": "gemma4:12b",
-            "env": "sovereign"
-          },
-          "band": "",
-          "state": "",
-          "abandoned": 0,
-          "runs": 0,
-          "passed": 0,
-          "cases_failing_often": 0,
-          "cases_below_quality_bar": 0
-        },
-        {
-          "task": "capture_counterparty_verdict",
-          "label": "First-time sender check",
-          "tier": "local_small",
-          "model": {
-            "provider": "ollama",
-            "model": "gemma4:12b",
-            "env": "sovereign"
-          },
-          "band": "",
-          "state": "",
-          "abandoned": 0,
-          "runs": 0,
-          "passed": 0,
-          "cases_failing_often": 0,
-          "cases_below_quality_bar": 0
-        },
-        {
-          "task": "cert_judge",
-          "label": "Certification judging",
-          "tier": "premium",
-          "model": {
-            "provider": "ollama",
-            "model": "gemma4:12b",
-            "env": "sovereign"
-          },
-          "band": "",
-          "state": "",
-          "fallback": {
-            "tier": "cheap_cloud",
-            "model": {
-              "provider": "ollama",
-              "model": "gemma4:12b",
-              "env": "sovereign"
-            },
-            "same_model": true,
-            "band": "",
-            "state": ""
-          },
-          "abandoned": 0,
-          "runs": 0,
-          "passed": 0,
-          "cases_failing_often": 0,
-          "cases_below_quality_bar": 0
-        },
-        {
-          "task": "cold_start",
-          "label": "Onboarding read",
-          "tier": "cheap_cloud",
-          "model": {
-            "provider": "ollama",
-            "model": "gemma4:12b",
-            "env": "sovereign"
-          },
-          "band": "",
-          "state": "",
-          "fallback": {
-            "tier": "premium",
-            "model": {
-              "provider": "ollama",
-              "model": "gemma4:12b",
-              "env": "sovereign"
-            },
-            "same_model": true,
-            "band": "",
-            "state": ""
-          },
-          "abandoned": 0,
-          "runs": 0,
-          "passed": 0,
-          "cases_failing_often": 0,
-          "cases_below_quality_bar": 0
-        },
-        {
-          "task": "corpus_ask",
-          "label": "Document corpus question",
-          "tier": "premium",
-          "model": {
-            "provider": "ollama",
-            "model": "gemma4:12b",
-            "env": "sovereign"
-          },
-          "band": "",
-          "state": "",
-          "abandoned": 0,
-          "runs": 0,
-          "passed": 0,
-          "cases_failing_often": 0,
-          "cases_below_quality_bar": 0
-        },
-        {
-          "task": "deal_health",
-          "label": "Deal status card",
-          "tier": "cheap_cloud",
-          "model": {
-            "provider": "ollama",
-            "model": "gemma4:12b",
-            "env": "sovereign"
-          },
-          "band": "",
-          "state": "",
-          "fallback": {
-            "tier": "premium",
-            "model": {
-              "provider": "ollama",
-              "model": "gemma4:12b",
-              "env": "sovereign"
-            },
-            "same_model": true,
-            "band": "",
-            "state": ""
-          },
-          "abandoned": 0,
-          "runs": 0,
-          "passed": 0,
-          "cases_failing_often": 0,
-          "cases_below_quality_bar": 0
-        },
-        {
-          "task": "deal_verdict",
-          "label": "Checking the dates, amount and chances of a deal",
-          "tier": "local_small",
-          "model": {
-            "provider": "ollama",
-            "model": "gemma4:12b",
-            "env": "sovereign"
-          },
-          "band": "",
-          "state": "",
-          "fallback": {
-            "tier": "cheap_cloud",
-            "model": {
-              "provider": "ollama",
-              "model": "gemma4:12b",
-              "env": "sovereign"
-            },
-            "same_model": true,
-            "band": "",
-            "state": ""
-          },
-          "abandoned": 0,
-          "runs": 0,
-          "passed": 0,
-          "cases_failing_often": 0,
-          "cases_below_quality_bar": 0
-        },
-        {
-          "task": "document_extract",
-          "label": "Document extraction",
-          "tier": "premium",
-          "model": {
-            "provider": "ollama",
-            "model": "gemma4:12b",
-            "env": "sovereign"
-          },
-          "band": "",
-          "state": "",
-          "abandoned": 0,
-          "runs": 0,
-          "passed": 0,
-          "cases_failing_often": 0,
-          "cases_below_quality_bar": 0
-        },
-        {
-          "task": "draft_reply",
-          "label": "Reply drafting",
-          "tier": "cheap_cloud",
-          "model": {
-            "provider": "ollama",
-            "model": "gemma4:12b",
-            "env": "sovereign"
-          },
-          "band": "",
-          "state": "",
-          "fallback": {
-            "tier": "premium",
-            "model": {
-              "provider": "ollama",
-              "model": "gemma4:12b",
-              "env": "sovereign"
-            },
-            "same_model": true,
-            "band": "",
-            "state": ""
-          },
-          "abandoned": 0,
-          "runs": 0,
-          "passed": 0,
-          "cases_failing_often": 0,
-          "cases_below_quality_bar": 0
-        },
-        {
-          "task": "enrich",
-          "label": "Signature enrichment",
-          "tier": "local_small",
-          "model": {
-            "provider": "ollama",
-            "model": "gemma4:12b",
-            "env": "sovereign"
-          },
-          "band": "",
-          "state": "",
-          "fallback": {
-            "tier": "cheap_cloud",
-            "model": {
-              "provider": "ollama",
-              "model": "gemma4:12b",
-              "env": "sovereign"
-            },
-            "same_model": true,
-            "band": "",
-            "state": ""
-          },
-          "abandoned": 0,
-          "runs": 0,
-          "passed": 0,
-          "cases_failing_often": 0,
-          "cases_below_quality_bar": 0
-        },
-        {
-          "task": "growth_fit",
-          "label": "Company fit assessment",
-          "tier": "cheap_cloud",
-          "model": {
-            "provider": "ollama",
-            "model": "gemma4:12b",
-            "env": "sovereign"
-          },
-          "band": "",
-          "state": "",
-          "fallback": {
-            "tier": "premium",
-            "model": {
-              "provider": "ollama",
-              "model": "gemma4:12b",
-              "env": "sovereign"
-            },
-            "same_model": true,
-            "band": "",
-            "state": ""
-          },
-          "abandoned": 0,
-          "runs": 0,
-          "passed": 0,
-          "cases_failing_often": 0,
-          "cases_below_quality_bar": 0
-        },
-        {
-          "task": "nl_search",
-          "label": "Natural-language search",
-          "tier": "cheap_cloud",
-          "model": {
-            "provider": "ollama",
-            "model": "gemma4:12b",
-            "env": "sovereign"
-          },
-          "band": "",
-          "state": "",
-          "fallback": {
-            "tier": "premium",
-            "model": {
-              "provider": "ollama",
-              "model": "gemma4:12b",
-              "env": "sovereign"
-            },
-            "same_model": true,
-            "band": "",
-            "state": ""
-          },
-          "abandoned": 0,
-          "runs": 0,
-          "passed": 0,
-          "cases_failing_often": 0,
-          "cases_below_quality_bar": 0
-        },
-        {
-          "task": "offer_draft",
-          "label": "Offer drafting",
-          "tier": "cheap_cloud",
-          "model": {
-            "provider": "ollama",
-            "model": "gemma4:12b",
-            "env": "sovereign"
-          },
-          "band": "",
-          "state": "",
-          "fallback": {
-            "tier": "premium",
-            "model": {
-              "provider": "ollama",
-              "model": "gemma4:12b",
-              "env": "sovereign"
-            },
-            "same_model": true,
-            "band": "",
-            "state": ""
-          },
-          "abandoned": 0,
-          "runs": 0,
-          "passed": 0,
-          "cases_failing_often": 0,
-          "cases_below_quality_bar": 0
-        },
-        {
-          "task": "owed_verdict",
-          "label": "Unanswered-message triage",
-          "tier": "local_small",
-          "model": {
-            "provider": "ollama",
-            "model": "gemma4:12b",
-            "env": "sovereign"
-          },
-          "band": "",
-          "state": "",
-          "fallback": {
-            "tier": "cheap_cloud",
-            "model": {
-              "provider": "ollama",
-              "model": "gemma4:12b",
-              "env": "sovereign"
-            },
-            "same_model": true,
-            "band": "",
-            "state": ""
-          },
-          "abandoned": 0,
-          "runs": 0,
-          "passed": 0,
-          "cases_failing_often": 0,
-          "cases_below_quality_bar": 0
-        },
-        {
-          "task": "propose_roles",
-          "label": "Buying-role reading",
-          "tier": "cheap_cloud",
-          "model": {
-            "provider": "ollama",
-            "model": "gemma4:12b",
-            "env": "sovereign"
-          },
-          "band": "",
-          "state": "",
-          "fallback": {
-            "tier": "premium",
-            "model": {
-              "provider": "ollama",
-              "model": "gemma4:12b",
-              "env": "sovereign"
-            },
-            "same_model": true,
-            "band": "",
-            "state": ""
-          },
-          "abandoned": 0,
-          "runs": 0,
-          "passed": 0,
-          "cases_failing_often": 0,
-          "cases_below_quality_bar": 0
-        },
-        {
-          "task": "rate_extract",
-          "label": "Exchange rate extraction",
-          "tier": "premium",
-          "model": {
-            "provider": "ollama",
-            "model": "gemma4:12b",
-            "env": "sovereign"
-          },
-          "band": "",
-          "state": "",
-          "fallback": {
-            "tier": "cheap_cloud",
-            "model": {
-              "provider": "ollama",
-              "model": "gemma4:12b",
-              "env": "sovereign"
-            },
-            "same_model": true,
-            "band": "",
-            "state": ""
-          },
-          "abandoned": 0,
-          "runs": 0,
-          "passed": 0,
-          "cases_failing_often": 0,
-          "cases_below_quality_bar": 0
-        },
-        {
-          "task": "reader_rendering",
-          "label": "Showing a message in your language",
-          "tier": "cheap_cloud",
-          "model": {
-            "provider": "ollama",
-            "model": "gemma4:12b",
-            "env": "sovereign"
-          },
-          "band": "",
-          "state": "",
-          "fallback": {
-            "tier": "premium",
-            "model": {
-              "provider": "ollama",
-              "model": "gemma4:12b",
-              "env": "sovereign"
-            },
-            "same_model": true,
-            "band": "",
-            "state": ""
-          },
-          "abandoned": 0,
-          "runs": 0,
-          "passed": 0,
-          "cases_failing_often": 0,
-          "cases_below_quality_bar": 0
-        },
-        {
-          "task": "report_interpret",
-          "label": "Assessing a sales report",
-          "tier": "premium",
-          "model": {
-            "provider": "ollama",
-            "model": "gemma4:12b",
-            "env": "sovereign"
-          },
-          "band": "",
-          "state": "",
-          "fallback": {
-            "tier": "cheap_cloud",
-            "model": {
-              "provider": "ollama",
-              "model": "gemma4:12b",
-              "env": "sovereign"
-            },
-            "same_model": true,
-            "band": "",
-            "state": ""
-          },
-          "abandoned": 0,
-          "runs": 0,
-          "passed": 0,
-          "cases_failing_often": 0,
-          "cases_below_quality_bar": 0
-        },
-        {
-          "task": "report_setup",
-          "label": "Setting up a report from a description",
-          "tier": "cheap_cloud",
-          "model": {
-            "provider": "ollama",
-            "model": "gemma4:12b",
-            "env": "sovereign"
-          },
-          "band": "",
-          "state": "",
-          "fallback": {
-            "tier": "premium",
-            "model": {
-              "provider": "ollama",
-              "model": "gemma4:12b",
-              "env": "sovereign"
-            },
-            "same_model": true,
-            "band": "",
-            "state": ""
-          },
-          "abandoned": 0,
-          "runs": 0,
-          "passed": 0,
-          "cases_failing_often": 0,
-          "cases_below_quality_bar": 0
-        },
-        {
-          "task": "request_settlement",
-          "label": "Checking whether the reply answered the request",
-          "tier": "local_small",
-          "model": {
-            "provider": "ollama",
-            "model": "gemma4:12b",
-            "env": "sovereign"
-          },
-          "band": "",
-          "state": "",
-          "fallback": {
-            "tier": "cheap_cloud",
-            "model": {
-              "provider": "ollama",
-              "model": "gemma4:12b",
-              "env": "sovereign"
-            },
-            "same_model": true,
-            "band": "",
-            "state": ""
-          },
-          "abandoned": 0,
-          "runs": 0,
-          "passed": 0,
-          "cases_failing_often": 0,
-          "cases_below_quality_bar": 0
-        },
-        {
-          "task": "signal_extract",
-          "label": "Signal extraction",
-          "tier": "frontier",
-          "model": {
-            "provider": "ollama",
-            "model": "gemma4:12b",
-            "env": "sovereign"
-          },
-          "band": "",
-          "state": "",
-          "abandoned": 0,
-          "runs": 0,
-          "passed": 0,
-          "cases_failing_often": 0,
-          "cases_below_quality_bar": 0
-        },
-        {
-          "task": "site_extract",
-          "label": "Website research",
-          "tier": "premium",
-          "model": {
-            "provider": "ollama",
-            "model": "gemma4:12b",
-            "env": "sovereign"
-          },
-          "band": "",
-          "state": "",
-          "abandoned": 0,
-          "runs": 0,
-          "passed": 0,
-          "cases_failing_often": 0,
-          "cases_below_quality_bar": 0
-        },
-        {
-          "task": "site_fact_extract",
-          "label": "Website fact extraction",
-          "tier": "cheap_cloud",
-          "model": {
-            "provider": "ollama",
-            "model": "gemma4:12b",
-            "env": "sovereign"
-          },
-          "band": "",
-          "state": "",
-          "fallback": {
-            "tier": "premium",
-            "model": {
-              "provider": "ollama",
-              "model": "gemma4:12b",
-              "env": "sovereign"
-            },
-            "same_model": true,
-            "band": "",
-            "state": ""
-          },
-          "abandoned": 0,
-          "runs": 0,
-          "passed": 0,
-          "cases_failing_often": 0,
-          "cases_below_quality_bar": 0
-        },
-        {
-          "task": "site_triage",
-          "label": "Website triage",
-          "tier": "cheap_cloud",
-          "model": {
-            "provider": "ollama",
-            "model": "gemma4:12b",
-            "env": "sovereign"
-          },
-          "band": "",
-          "state": "",
-          "fallback": {
-            "tier": "premium",
-            "model": {
-              "provider": "ollama",
-              "model": "gemma4:12b",
-              "env": "sovereign"
-            },
-            "same_model": true,
-            "band": "",
-            "state": ""
-          },
-          "abandoned": 0,
-          "runs": 0,
-          "passed": 0,
-          "cases_failing_often": 0,
-          "cases_below_quality_bar": 0
-        },
-        {
-          "task": "stage_evidence_extract",
-          "label": "Stage evidence extraction",
-          "tier": "cheap_cloud",
-          "model": {
-            "provider": "ollama",
-            "model": "gemma4:12b",
-            "env": "sovereign"
-          },
-          "band": "",
-          "state": "",
-          "fallback": {
-            "tier": "premium",
-            "model": {
-              "provider": "ollama",
-              "model": "gemma4:12b",
-              "env": "sovereign"
-            },
-            "same_model": true,
-            "band": "",
-            "state": ""
-          },
-          "abandoned": 0,
-          "runs": 0,
-          "passed": 0,
-          "cases_failing_often": 0,
-          "cases_below_quality_bar": 0
-        },
-        {
-          "task": "summarize",
-          "label": "Record summary",
-          "tier": "cheap_cloud",
-          "model": {
-            "provider": "ollama",
-            "model": "gemma4:12b",
-            "env": "sovereign"
-          },
-          "band": "",
-          "state": "",
-          "fallback": {
-            "tier": "premium",
-            "model": {
-              "provider": "ollama",
-              "model": "gemma4:12b",
-              "env": "sovereign"
-            },
-            "same_model": true,
-            "band": "",
-            "state": ""
-          },
-          "abandoned": 0,
-          "runs": 0,
-          "passed": 0,
-          "cases_failing_often": 0,
-          "cases_below_quality_bar": 0
-        },
-        {
-          "task": "tag_suggest",
-          "label": "Tag suggestions",
-          "tier": "local_small",
-          "model": {
-            "provider": "ollama",
-            "model": "gemma4:12b",
-            "env": "sovereign"
-          },
-          "band": "",
-          "state": "",
-          "fallback": {
-            "tier": "cheap_cloud",
-            "model": {
-              "provider": "ollama",
-              "model": "gemma4:12b",
-              "env": "sovereign"
-            },
-            "same_model": true,
-            "band": "",
-            "state": ""
-          },
-          "abandoned": 0,
-          "runs": 0,
-          "passed": 0,
-          "cases_failing_often": 0,
-          "cases_below_quality_bar": 0
-        },
-        {
-          "task": "transcript_propose",
-          "label": "Meeting follow-up extraction",
-          "tier": "premium",
-          "model": {
-            "provider": "ollama",
-            "model": "gemma4:12b",
-            "env": "sovereign"
-          },
-          "band": "",
-          "state": "",
-          "abandoned": 0,
-          "runs": 0,
-          "passed": 0,
-          "cases_failing_often": 0,
-          "cases_below_quality_bar": 0
-        },
-        {
-          "task": "voice_build",
-          "label": "Voice DNA build",
-          "tier": "cheap_cloud",
-          "model": {
-            "provider": "ollama",
-            "model": "gemma4:12b",
-            "env": "sovereign"
-          },
-          "band": "",
-          "state": "",
-          "fallback": {
-            "tier": "premium",
-            "model": {
-              "provider": "ollama",
-              "model": "gemma4:12b",
-              "env": "sovereign"
-            },
-            "same_model": true,
-            "band": "",
-            "state": ""
-          },
-          "abandoned": 0,
-          "runs": 0,
-          "passed": 0,
-          "cases_failing_often": 0,
-          "cases_below_quality_bar": 0
-        },
-        {
-          "task": "weekly_learnings",
-          "label": "What last week taught",
-          "tier": "cheap_cloud",
-          "model": {
-            "provider": "ollama",
-            "model": "gemma4:12b",
-            "env": "sovereign"
-          },
-          "band": "",
-          "state": "",
-          "fallback": {
-            "tier": "premium",
-            "model": {
-              "provider": "ollama",
-              "model": "gemma4:12b",
-              "env": "sovereign"
-            },
-            "same_model": true,
-            "band": "",
-            "state": ""
-          },
-          "abandoned": 0,
-          "runs": 0,
-          "passed": 0,
-          "cases_failing_often": 0,
-          "cases_below_quality_bar": 0
-        },
-        {
-          "task": "weekly_review",
-          "label": "Weekly review narrative",
-          "tier": "cheap_cloud",
-          "model": {
-            "provider": "ollama",
-            "model": "gemma4:12b",
-            "env": "sovereign"
-          },
-          "band": "",
-          "state": "",
-          "fallback": {
-            "tier": "premium",
-            "model": {
-              "provider": "ollama",
-              "model": "gemma4:12b",
-              "env": "sovereign"
-            },
-            "same_model": true,
-            "band": "",
-            "state": ""
-          },
-          "abandoned": 0,
-          "runs": 0,
-          "passed": 0,
-          "cases_failing_often": 0,
-          "cases_below_quality_bar": 0
-        }
-      ],
-      "bands": {
-        "certified": 0,
-        "supported_degraded": 0,
-        "not_supported": 0
-      },
-      "untested": 35,
-      "unbound": 0,
-      "unrecognised": 0
-    },
-    {
       "file": "openrouter_cloud.yaml",
       "profile": "cloud_frontier",
       "tiers": [
@@ -5103,6 +3225,945 @@
         "not_supported": 7
       },
       "untested": 3,
+      "unbound": 0,
+      "unrecognised": 0
+    },
+    {
+      "file": "consumer_class_brokered.yaml",
+      "profile": "cloud_frontier",
+      "tiers": [
+        {
+          "tier": "local_small",
+          "provider": "openai_compatible",
+          "model": "google/gemma-4-26b-a4b-it"
+        },
+        {
+          "tier": "cheap_cloud",
+          "provider": "openai_compatible",
+          "model": "google/gemma-4-31b-it"
+        },
+        {
+          "tier": "premium",
+          "provider": "openai_compatible",
+          "model": "google/gemma-4-31b-it"
+        },
+        {
+          "tier": "frontier",
+          "provider": "openai_compatible",
+          "model": "google/gemma-4-31b-it"
+        }
+      ],
+      "tasks": [
+        {
+          "task": "account_scan",
+          "label": "Reading what an account needs",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "openai_compatible",
+            "model": "google/gemma-4-31b-it",
+            "env": "cloud_frontier"
+          },
+          "band": "",
+          "state": "",
+          "fallback": {
+            "tier": "premium",
+            "model": {
+              "provider": "openai_compatible",
+              "model": "google/gemma-4-31b-it",
+              "env": "cloud_frontier"
+            },
+            "same_model": true,
+            "band": "",
+            "state": ""
+          },
+          "abandoned": 0,
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "agent_loop",
+          "label": "Agent reasoning loop",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "openai_compatible",
+            "model": "google/gemma-4-31b-it",
+            "env": "cloud_frontier"
+          },
+          "band": "",
+          "state": "",
+          "fallback": {
+            "tier": "premium",
+            "model": {
+              "provider": "openai_compatible",
+              "model": "google/gemma-4-31b-it",
+              "env": "cloud_frontier"
+            },
+            "same_model": true,
+            "band": "",
+            "state": ""
+          },
+          "abandoned": 0,
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "brief_ranking",
+          "label": "Morning brief ranking",
+          "tier": "premium",
+          "model": {
+            "provider": "openai_compatible",
+            "model": "google/gemma-4-31b-it",
+            "env": "cloud_frontier"
+          },
+          "band": "",
+          "state": "",
+          "fallback": {
+            "tier": "cheap_cloud",
+            "model": {
+              "provider": "openai_compatible",
+              "model": "google/gemma-4-31b-it",
+              "env": "cloud_frontier"
+            },
+            "same_model": true,
+            "band": "",
+            "state": ""
+          },
+          "abandoned": 0,
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "capture_classify",
+          "label": "Message classification",
+          "tier": "local_small",
+          "model": {
+            "provider": "openai_compatible",
+            "model": "google/gemma-4-26b-a4b-it",
+            "env": "cloud_frontier"
+          },
+          "band": "supported_degraded",
+          "state": "stale",
+          "fallback": {
+            "tier": "cheap_cloud",
+            "model": {
+              "provider": "openai_compatible",
+              "model": "google/gemma-4-31b-it",
+              "env": "cloud_frontier"
+            },
+            "same_model": false,
+            "band": "",
+            "state": ""
+          },
+          "abandoned": 0,
+          "runs": 27,
+          "passed": 21,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 1
+        },
+        {
+          "task": "capture_confidentiality_verdict",
+          "label": "Thread confidentiality check",
+          "tier": "local_small",
+          "model": {
+            "provider": "openai_compatible",
+            "model": "google/gemma-4-26b-a4b-it",
+            "env": "cloud_frontier"
+          },
+          "band": "certified",
+          "state": "stale",
+          "abandoned": 0,
+          "runs": 42,
+          "passed": 42,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "capture_counterparty_verdict",
+          "label": "First-time sender check",
+          "tier": "local_small",
+          "model": {
+            "provider": "openai_compatible",
+            "model": "google/gemma-4-26b-a4b-it",
+            "env": "cloud_frontier"
+          },
+          "band": "not_supported",
+          "state": "stale",
+          "abandoned": 0,
+          "runs": 75,
+          "passed": 68,
+          "cases_failing_often": 1,
+          "cases_below_quality_bar": 4
+        },
+        {
+          "task": "cert_judge",
+          "label": "Certification judging",
+          "tier": "premium",
+          "model": {
+            "provider": "openai_compatible",
+            "model": "google/gemma-4-31b-it",
+            "env": "cloud_frontier"
+          },
+          "band": "",
+          "state": "",
+          "fallback": {
+            "tier": "cheap_cloud",
+            "model": {
+              "provider": "openai_compatible",
+              "model": "google/gemma-4-31b-it",
+              "env": "cloud_frontier"
+            },
+            "same_model": true,
+            "band": "",
+            "state": ""
+          },
+          "abandoned": 0,
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "cold_start",
+          "label": "Onboarding read",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "openai_compatible",
+            "model": "google/gemma-4-31b-it",
+            "env": "cloud_frontier"
+          },
+          "band": "",
+          "state": "",
+          "fallback": {
+            "tier": "premium",
+            "model": {
+              "provider": "openai_compatible",
+              "model": "google/gemma-4-31b-it",
+              "env": "cloud_frontier"
+            },
+            "same_model": true,
+            "band": "",
+            "state": ""
+          },
+          "abandoned": 0,
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "corpus_ask",
+          "label": "Document corpus question",
+          "tier": "premium",
+          "model": {
+            "provider": "openai_compatible",
+            "model": "google/gemma-4-31b-it",
+            "env": "cloud_frontier"
+          },
+          "band": "",
+          "state": "",
+          "abandoned": 0,
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "deal_health",
+          "label": "Deal status card",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "openai_compatible",
+            "model": "google/gemma-4-31b-it",
+            "env": "cloud_frontier"
+          },
+          "band": "",
+          "state": "",
+          "fallback": {
+            "tier": "premium",
+            "model": {
+              "provider": "openai_compatible",
+              "model": "google/gemma-4-31b-it",
+              "env": "cloud_frontier"
+            },
+            "same_model": true,
+            "band": "",
+            "state": ""
+          },
+          "abandoned": 0,
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "deal_verdict",
+          "label": "Checking the dates, amount and chances of a deal",
+          "tier": "local_small",
+          "model": {
+            "provider": "openai_compatible",
+            "model": "google/gemma-4-26b-a4b-it",
+            "env": "cloud_frontier"
+          },
+          "band": "",
+          "state": "",
+          "fallback": {
+            "tier": "cheap_cloud",
+            "model": {
+              "provider": "openai_compatible",
+              "model": "google/gemma-4-31b-it",
+              "env": "cloud_frontier"
+            },
+            "same_model": false,
+            "band": "",
+            "state": ""
+          },
+          "abandoned": 0,
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "document_extract",
+          "label": "Document extraction",
+          "tier": "premium",
+          "model": {
+            "provider": "openai_compatible",
+            "model": "google/gemma-4-31b-it",
+            "env": "cloud_frontier"
+          },
+          "band": "",
+          "state": "",
+          "abandoned": 0,
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "draft_reply",
+          "label": "Reply drafting",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "openai_compatible",
+            "model": "google/gemma-4-31b-it",
+            "env": "cloud_frontier"
+          },
+          "band": "",
+          "state": "",
+          "fallback": {
+            "tier": "premium",
+            "model": {
+              "provider": "openai_compatible",
+              "model": "google/gemma-4-31b-it",
+              "env": "cloud_frontier"
+            },
+            "same_model": true,
+            "band": "",
+            "state": ""
+          },
+          "abandoned": 0,
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "enrich",
+          "label": "Signature enrichment",
+          "tier": "local_small",
+          "model": {
+            "provider": "openai_compatible",
+            "model": "google/gemma-4-26b-a4b-it",
+            "env": "cloud_frontier"
+          },
+          "band": "not_supported",
+          "state": "stale",
+          "fallback": {
+            "tier": "cheap_cloud",
+            "model": {
+              "provider": "openai_compatible",
+              "model": "google/gemma-4-31b-it",
+              "env": "cloud_frontier"
+            },
+            "same_model": false,
+            "band": "",
+            "state": ""
+          },
+          "abandoned": 0,
+          "runs": 6,
+          "passed": 3,
+          "cases_failing_often": 1,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "growth_fit",
+          "label": "Company fit assessment",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "openai_compatible",
+            "model": "google/gemma-4-31b-it",
+            "env": "cloud_frontier"
+          },
+          "band": "",
+          "state": "",
+          "fallback": {
+            "tier": "premium",
+            "model": {
+              "provider": "openai_compatible",
+              "model": "google/gemma-4-31b-it",
+              "env": "cloud_frontier"
+            },
+            "same_model": true,
+            "band": "",
+            "state": ""
+          },
+          "abandoned": 0,
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "nl_search",
+          "label": "Natural-language search",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "openai_compatible",
+            "model": "google/gemma-4-31b-it",
+            "env": "cloud_frontier"
+          },
+          "band": "",
+          "state": "",
+          "fallback": {
+            "tier": "premium",
+            "model": {
+              "provider": "openai_compatible",
+              "model": "google/gemma-4-31b-it",
+              "env": "cloud_frontier"
+            },
+            "same_model": true,
+            "band": "",
+            "state": ""
+          },
+          "abandoned": 0,
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "offer_draft",
+          "label": "Offer drafting",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "openai_compatible",
+            "model": "google/gemma-4-31b-it",
+            "env": "cloud_frontier"
+          },
+          "band": "",
+          "state": "",
+          "fallback": {
+            "tier": "premium",
+            "model": {
+              "provider": "openai_compatible",
+              "model": "google/gemma-4-31b-it",
+              "env": "cloud_frontier"
+            },
+            "same_model": true,
+            "band": "",
+            "state": ""
+          },
+          "abandoned": 0,
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "owed_verdict",
+          "label": "Unanswered-message triage",
+          "tier": "local_small",
+          "model": {
+            "provider": "openai_compatible",
+            "model": "google/gemma-4-26b-a4b-it",
+            "env": "cloud_frontier"
+          },
+          "band": "not_supported",
+          "state": "stale",
+          "fallback": {
+            "tier": "cheap_cloud",
+            "model": {
+              "provider": "openai_compatible",
+              "model": "google/gemma-4-31b-it",
+              "env": "cloud_frontier"
+            },
+            "same_model": false,
+            "band": "",
+            "state": ""
+          },
+          "abandoned": 0,
+          "runs": 21,
+          "passed": 17,
+          "cases_failing_often": 1,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "propose_roles",
+          "label": "Buying-role reading",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "openai_compatible",
+            "model": "google/gemma-4-31b-it",
+            "env": "cloud_frontier"
+          },
+          "band": "",
+          "state": "",
+          "fallback": {
+            "tier": "premium",
+            "model": {
+              "provider": "openai_compatible",
+              "model": "google/gemma-4-31b-it",
+              "env": "cloud_frontier"
+            },
+            "same_model": true,
+            "band": "",
+            "state": ""
+          },
+          "abandoned": 0,
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "rate_extract",
+          "label": "Exchange rate extraction",
+          "tier": "premium",
+          "model": {
+            "provider": "openai_compatible",
+            "model": "google/gemma-4-31b-it",
+            "env": "cloud_frontier"
+          },
+          "band": "",
+          "state": "",
+          "fallback": {
+            "tier": "cheap_cloud",
+            "model": {
+              "provider": "openai_compatible",
+              "model": "google/gemma-4-31b-it",
+              "env": "cloud_frontier"
+            },
+            "same_model": true,
+            "band": "",
+            "state": ""
+          },
+          "abandoned": 0,
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "reader_rendering",
+          "label": "Showing a message in your language",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "openai_compatible",
+            "model": "google/gemma-4-31b-it",
+            "env": "cloud_frontier"
+          },
+          "band": "",
+          "state": "",
+          "fallback": {
+            "tier": "premium",
+            "model": {
+              "provider": "openai_compatible",
+              "model": "google/gemma-4-31b-it",
+              "env": "cloud_frontier"
+            },
+            "same_model": true,
+            "band": "",
+            "state": ""
+          },
+          "abandoned": 0,
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "report_interpret",
+          "label": "Assessing a sales report",
+          "tier": "premium",
+          "model": {
+            "provider": "openai_compatible",
+            "model": "google/gemma-4-31b-it",
+            "env": "cloud_frontier"
+          },
+          "band": "",
+          "state": "",
+          "fallback": {
+            "tier": "cheap_cloud",
+            "model": {
+              "provider": "openai_compatible",
+              "model": "google/gemma-4-31b-it",
+              "env": "cloud_frontier"
+            },
+            "same_model": true,
+            "band": "",
+            "state": ""
+          },
+          "abandoned": 0,
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "report_setup",
+          "label": "Setting up a report from a description",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "openai_compatible",
+            "model": "google/gemma-4-31b-it",
+            "env": "cloud_frontier"
+          },
+          "band": "",
+          "state": "",
+          "fallback": {
+            "tier": "premium",
+            "model": {
+              "provider": "openai_compatible",
+              "model": "google/gemma-4-31b-it",
+              "env": "cloud_frontier"
+            },
+            "same_model": true,
+            "band": "",
+            "state": ""
+          },
+          "abandoned": 0,
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "request_settlement",
+          "label": "Checking whether the reply answered the request",
+          "tier": "local_small",
+          "model": {
+            "provider": "openai_compatible",
+            "model": "google/gemma-4-26b-a4b-it",
+            "env": "cloud_frontier"
+          },
+          "band": "not_supported",
+          "state": "stale",
+          "fallback": {
+            "tier": "cheap_cloud",
+            "model": {
+              "provider": "openai_compatible",
+              "model": "google/gemma-4-31b-it",
+              "env": "cloud_frontier"
+            },
+            "same_model": false,
+            "band": "",
+            "state": ""
+          },
+          "abandoned": 0,
+          "runs": 18,
+          "passed": 15,
+          "cases_failing_often": 1,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "signal_extract",
+          "label": "Signal extraction",
+          "tier": "frontier",
+          "model": {
+            "provider": "openai_compatible",
+            "model": "google/gemma-4-31b-it",
+            "env": "cloud_frontier"
+          },
+          "band": "",
+          "state": "",
+          "abandoned": 0,
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "site_extract",
+          "label": "Website research",
+          "tier": "premium",
+          "model": {
+            "provider": "openai_compatible",
+            "model": "google/gemma-4-31b-it",
+            "env": "cloud_frontier"
+          },
+          "band": "",
+          "state": "",
+          "abandoned": 0,
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "site_fact_extract",
+          "label": "Website fact extraction",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "openai_compatible",
+            "model": "google/gemma-4-31b-it",
+            "env": "cloud_frontier"
+          },
+          "band": "",
+          "state": "",
+          "fallback": {
+            "tier": "premium",
+            "model": {
+              "provider": "openai_compatible",
+              "model": "google/gemma-4-31b-it",
+              "env": "cloud_frontier"
+            },
+            "same_model": true,
+            "band": "",
+            "state": ""
+          },
+          "abandoned": 0,
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "site_triage",
+          "label": "Website triage",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "openai_compatible",
+            "model": "google/gemma-4-31b-it",
+            "env": "cloud_frontier"
+          },
+          "band": "",
+          "state": "",
+          "fallback": {
+            "tier": "premium",
+            "model": {
+              "provider": "openai_compatible",
+              "model": "google/gemma-4-31b-it",
+              "env": "cloud_frontier"
+            },
+            "same_model": true,
+            "band": "",
+            "state": ""
+          },
+          "abandoned": 0,
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "stage_evidence_extract",
+          "label": "Stage evidence extraction",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "openai_compatible",
+            "model": "google/gemma-4-31b-it",
+            "env": "cloud_frontier"
+          },
+          "band": "",
+          "state": "",
+          "fallback": {
+            "tier": "premium",
+            "model": {
+              "provider": "openai_compatible",
+              "model": "google/gemma-4-31b-it",
+              "env": "cloud_frontier"
+            },
+            "same_model": true,
+            "band": "",
+            "state": ""
+          },
+          "abandoned": 0,
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "summarize",
+          "label": "Record summary",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "openai_compatible",
+            "model": "google/gemma-4-31b-it",
+            "env": "cloud_frontier"
+          },
+          "band": "",
+          "state": "",
+          "fallback": {
+            "tier": "premium",
+            "model": {
+              "provider": "openai_compatible",
+              "model": "google/gemma-4-31b-it",
+              "env": "cloud_frontier"
+            },
+            "same_model": true,
+            "band": "",
+            "state": ""
+          },
+          "abandoned": 0,
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "tag_suggest",
+          "label": "Tag suggestions",
+          "tier": "local_small",
+          "model": {
+            "provider": "openai_compatible",
+            "model": "google/gemma-4-26b-a4b-it",
+            "env": "cloud_frontier"
+          },
+          "band": "",
+          "state": "",
+          "fallback": {
+            "tier": "cheap_cloud",
+            "model": {
+              "provider": "openai_compatible",
+              "model": "google/gemma-4-31b-it",
+              "env": "cloud_frontier"
+            },
+            "same_model": false,
+            "band": "",
+            "state": ""
+          },
+          "abandoned": 0,
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "transcript_propose",
+          "label": "Meeting follow-up extraction",
+          "tier": "premium",
+          "model": {
+            "provider": "openai_compatible",
+            "model": "google/gemma-4-31b-it",
+            "env": "cloud_frontier"
+          },
+          "band": "",
+          "state": "",
+          "abandoned": 0,
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "voice_build",
+          "label": "Voice DNA build",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "openai_compatible",
+            "model": "google/gemma-4-31b-it",
+            "env": "cloud_frontier"
+          },
+          "band": "",
+          "state": "",
+          "fallback": {
+            "tier": "premium",
+            "model": {
+              "provider": "openai_compatible",
+              "model": "google/gemma-4-31b-it",
+              "env": "cloud_frontier"
+            },
+            "same_model": true,
+            "band": "",
+            "state": ""
+          },
+          "abandoned": 0,
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "weekly_learnings",
+          "label": "What last week taught",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "openai_compatible",
+            "model": "google/gemma-4-31b-it",
+            "env": "cloud_frontier"
+          },
+          "band": "",
+          "state": "",
+          "fallback": {
+            "tier": "premium",
+            "model": {
+              "provider": "openai_compatible",
+              "model": "google/gemma-4-31b-it",
+              "env": "cloud_frontier"
+            },
+            "same_model": true,
+            "band": "",
+            "state": ""
+          },
+          "abandoned": 0,
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "weekly_review",
+          "label": "Weekly review narrative",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "openai_compatible",
+            "model": "google/gemma-4-31b-it",
+            "env": "cloud_frontier"
+          },
+          "band": "",
+          "state": "",
+          "fallback": {
+            "tier": "premium",
+            "model": {
+              "provider": "openai_compatible",
+              "model": "google/gemma-4-31b-it",
+              "env": "cloud_frontier"
+            },
+            "same_model": true,
+            "band": "",
+            "state": ""
+          },
+          "abandoned": 0,
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        }
+      ],
+      "bands": {
+        "certified": 1,
+        "supported_degraded": 1,
+        "not_supported": 4
+      },
+      "untested": 29,
       "unbound": 0,
       "unrecognised": 0
     },
@@ -6981,6 +6042,945 @@
         "not_supported": 4
       },
       "untested": 7,
+      "unbound": 0,
+      "unrecognised": 0
+    },
+    {
+      "file": "gemma4_local_ollama.yaml",
+      "profile": "sovereign",
+      "tiers": [
+        {
+          "tier": "local_small",
+          "provider": "ollama",
+          "model": "gemma4:12b"
+        },
+        {
+          "tier": "cheap_cloud",
+          "provider": "ollama",
+          "model": "gemma4:12b"
+        },
+        {
+          "tier": "premium",
+          "provider": "ollama",
+          "model": "gemma4:12b"
+        },
+        {
+          "tier": "frontier",
+          "provider": "ollama",
+          "model": "gemma4:12b"
+        }
+      ],
+      "tasks": [
+        {
+          "task": "account_scan",
+          "label": "Reading what an account needs",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "ollama",
+            "model": "gemma4:12b",
+            "env": "sovereign"
+          },
+          "band": "",
+          "state": "",
+          "fallback": {
+            "tier": "premium",
+            "model": {
+              "provider": "ollama",
+              "model": "gemma4:12b",
+              "env": "sovereign"
+            },
+            "same_model": true,
+            "band": "",
+            "state": ""
+          },
+          "abandoned": 0,
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "agent_loop",
+          "label": "Agent reasoning loop",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "ollama",
+            "model": "gemma4:12b",
+            "env": "sovereign"
+          },
+          "band": "",
+          "state": "",
+          "fallback": {
+            "tier": "premium",
+            "model": {
+              "provider": "ollama",
+              "model": "gemma4:12b",
+              "env": "sovereign"
+            },
+            "same_model": true,
+            "band": "",
+            "state": ""
+          },
+          "abandoned": 0,
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "brief_ranking",
+          "label": "Morning brief ranking",
+          "tier": "premium",
+          "model": {
+            "provider": "ollama",
+            "model": "gemma4:12b",
+            "env": "sovereign"
+          },
+          "band": "",
+          "state": "",
+          "fallback": {
+            "tier": "cheap_cloud",
+            "model": {
+              "provider": "ollama",
+              "model": "gemma4:12b",
+              "env": "sovereign"
+            },
+            "same_model": true,
+            "band": "",
+            "state": ""
+          },
+          "abandoned": 0,
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "capture_classify",
+          "label": "Message classification",
+          "tier": "local_small",
+          "model": {
+            "provider": "ollama",
+            "model": "gemma4:12b",
+            "env": "sovereign"
+          },
+          "band": "",
+          "state": "",
+          "fallback": {
+            "tier": "cheap_cloud",
+            "model": {
+              "provider": "ollama",
+              "model": "gemma4:12b",
+              "env": "sovereign"
+            },
+            "same_model": true,
+            "band": "",
+            "state": ""
+          },
+          "abandoned": 0,
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "capture_confidentiality_verdict",
+          "label": "Thread confidentiality check",
+          "tier": "local_small",
+          "model": {
+            "provider": "ollama",
+            "model": "gemma4:12b",
+            "env": "sovereign"
+          },
+          "band": "",
+          "state": "",
+          "abandoned": 0,
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "capture_counterparty_verdict",
+          "label": "First-time sender check",
+          "tier": "local_small",
+          "model": {
+            "provider": "ollama",
+            "model": "gemma4:12b",
+            "env": "sovereign"
+          },
+          "band": "",
+          "state": "",
+          "abandoned": 0,
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "cert_judge",
+          "label": "Certification judging",
+          "tier": "premium",
+          "model": {
+            "provider": "ollama",
+            "model": "gemma4:12b",
+            "env": "sovereign"
+          },
+          "band": "",
+          "state": "",
+          "fallback": {
+            "tier": "cheap_cloud",
+            "model": {
+              "provider": "ollama",
+              "model": "gemma4:12b",
+              "env": "sovereign"
+            },
+            "same_model": true,
+            "band": "",
+            "state": ""
+          },
+          "abandoned": 0,
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "cold_start",
+          "label": "Onboarding read",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "ollama",
+            "model": "gemma4:12b",
+            "env": "sovereign"
+          },
+          "band": "",
+          "state": "",
+          "fallback": {
+            "tier": "premium",
+            "model": {
+              "provider": "ollama",
+              "model": "gemma4:12b",
+              "env": "sovereign"
+            },
+            "same_model": true,
+            "band": "",
+            "state": ""
+          },
+          "abandoned": 0,
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "corpus_ask",
+          "label": "Document corpus question",
+          "tier": "premium",
+          "model": {
+            "provider": "ollama",
+            "model": "gemma4:12b",
+            "env": "sovereign"
+          },
+          "band": "",
+          "state": "",
+          "abandoned": 0,
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "deal_health",
+          "label": "Deal status card",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "ollama",
+            "model": "gemma4:12b",
+            "env": "sovereign"
+          },
+          "band": "",
+          "state": "",
+          "fallback": {
+            "tier": "premium",
+            "model": {
+              "provider": "ollama",
+              "model": "gemma4:12b",
+              "env": "sovereign"
+            },
+            "same_model": true,
+            "band": "",
+            "state": ""
+          },
+          "abandoned": 0,
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "deal_verdict",
+          "label": "Checking the dates, amount and chances of a deal",
+          "tier": "local_small",
+          "model": {
+            "provider": "ollama",
+            "model": "gemma4:12b",
+            "env": "sovereign"
+          },
+          "band": "",
+          "state": "",
+          "fallback": {
+            "tier": "cheap_cloud",
+            "model": {
+              "provider": "ollama",
+              "model": "gemma4:12b",
+              "env": "sovereign"
+            },
+            "same_model": true,
+            "band": "",
+            "state": ""
+          },
+          "abandoned": 0,
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "document_extract",
+          "label": "Document extraction",
+          "tier": "premium",
+          "model": {
+            "provider": "ollama",
+            "model": "gemma4:12b",
+            "env": "sovereign"
+          },
+          "band": "",
+          "state": "",
+          "abandoned": 0,
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "draft_reply",
+          "label": "Reply drafting",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "ollama",
+            "model": "gemma4:12b",
+            "env": "sovereign"
+          },
+          "band": "",
+          "state": "",
+          "fallback": {
+            "tier": "premium",
+            "model": {
+              "provider": "ollama",
+              "model": "gemma4:12b",
+              "env": "sovereign"
+            },
+            "same_model": true,
+            "band": "",
+            "state": ""
+          },
+          "abandoned": 0,
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "enrich",
+          "label": "Signature enrichment",
+          "tier": "local_small",
+          "model": {
+            "provider": "ollama",
+            "model": "gemma4:12b",
+            "env": "sovereign"
+          },
+          "band": "",
+          "state": "",
+          "fallback": {
+            "tier": "cheap_cloud",
+            "model": {
+              "provider": "ollama",
+              "model": "gemma4:12b",
+              "env": "sovereign"
+            },
+            "same_model": true,
+            "band": "",
+            "state": ""
+          },
+          "abandoned": 0,
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "growth_fit",
+          "label": "Company fit assessment",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "ollama",
+            "model": "gemma4:12b",
+            "env": "sovereign"
+          },
+          "band": "",
+          "state": "",
+          "fallback": {
+            "tier": "premium",
+            "model": {
+              "provider": "ollama",
+              "model": "gemma4:12b",
+              "env": "sovereign"
+            },
+            "same_model": true,
+            "band": "",
+            "state": ""
+          },
+          "abandoned": 0,
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "nl_search",
+          "label": "Natural-language search",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "ollama",
+            "model": "gemma4:12b",
+            "env": "sovereign"
+          },
+          "band": "",
+          "state": "",
+          "fallback": {
+            "tier": "premium",
+            "model": {
+              "provider": "ollama",
+              "model": "gemma4:12b",
+              "env": "sovereign"
+            },
+            "same_model": true,
+            "band": "",
+            "state": ""
+          },
+          "abandoned": 0,
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "offer_draft",
+          "label": "Offer drafting",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "ollama",
+            "model": "gemma4:12b",
+            "env": "sovereign"
+          },
+          "band": "",
+          "state": "",
+          "fallback": {
+            "tier": "premium",
+            "model": {
+              "provider": "ollama",
+              "model": "gemma4:12b",
+              "env": "sovereign"
+            },
+            "same_model": true,
+            "band": "",
+            "state": ""
+          },
+          "abandoned": 0,
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "owed_verdict",
+          "label": "Unanswered-message triage",
+          "tier": "local_small",
+          "model": {
+            "provider": "ollama",
+            "model": "gemma4:12b",
+            "env": "sovereign"
+          },
+          "band": "",
+          "state": "",
+          "fallback": {
+            "tier": "cheap_cloud",
+            "model": {
+              "provider": "ollama",
+              "model": "gemma4:12b",
+              "env": "sovereign"
+            },
+            "same_model": true,
+            "band": "",
+            "state": ""
+          },
+          "abandoned": 0,
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "propose_roles",
+          "label": "Buying-role reading",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "ollama",
+            "model": "gemma4:12b",
+            "env": "sovereign"
+          },
+          "band": "",
+          "state": "",
+          "fallback": {
+            "tier": "premium",
+            "model": {
+              "provider": "ollama",
+              "model": "gemma4:12b",
+              "env": "sovereign"
+            },
+            "same_model": true,
+            "band": "",
+            "state": ""
+          },
+          "abandoned": 0,
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "rate_extract",
+          "label": "Exchange rate extraction",
+          "tier": "premium",
+          "model": {
+            "provider": "ollama",
+            "model": "gemma4:12b",
+            "env": "sovereign"
+          },
+          "band": "",
+          "state": "",
+          "fallback": {
+            "tier": "cheap_cloud",
+            "model": {
+              "provider": "ollama",
+              "model": "gemma4:12b",
+              "env": "sovereign"
+            },
+            "same_model": true,
+            "band": "",
+            "state": ""
+          },
+          "abandoned": 0,
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "reader_rendering",
+          "label": "Showing a message in your language",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "ollama",
+            "model": "gemma4:12b",
+            "env": "sovereign"
+          },
+          "band": "",
+          "state": "",
+          "fallback": {
+            "tier": "premium",
+            "model": {
+              "provider": "ollama",
+              "model": "gemma4:12b",
+              "env": "sovereign"
+            },
+            "same_model": true,
+            "band": "",
+            "state": ""
+          },
+          "abandoned": 0,
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "report_interpret",
+          "label": "Assessing a sales report",
+          "tier": "premium",
+          "model": {
+            "provider": "ollama",
+            "model": "gemma4:12b",
+            "env": "sovereign"
+          },
+          "band": "",
+          "state": "",
+          "fallback": {
+            "tier": "cheap_cloud",
+            "model": {
+              "provider": "ollama",
+              "model": "gemma4:12b",
+              "env": "sovereign"
+            },
+            "same_model": true,
+            "band": "",
+            "state": ""
+          },
+          "abandoned": 0,
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "report_setup",
+          "label": "Setting up a report from a description",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "ollama",
+            "model": "gemma4:12b",
+            "env": "sovereign"
+          },
+          "band": "",
+          "state": "",
+          "fallback": {
+            "tier": "premium",
+            "model": {
+              "provider": "ollama",
+              "model": "gemma4:12b",
+              "env": "sovereign"
+            },
+            "same_model": true,
+            "band": "",
+            "state": ""
+          },
+          "abandoned": 0,
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "request_settlement",
+          "label": "Checking whether the reply answered the request",
+          "tier": "local_small",
+          "model": {
+            "provider": "ollama",
+            "model": "gemma4:12b",
+            "env": "sovereign"
+          },
+          "band": "",
+          "state": "",
+          "fallback": {
+            "tier": "cheap_cloud",
+            "model": {
+              "provider": "ollama",
+              "model": "gemma4:12b",
+              "env": "sovereign"
+            },
+            "same_model": true,
+            "band": "",
+            "state": ""
+          },
+          "abandoned": 0,
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "signal_extract",
+          "label": "Signal extraction",
+          "tier": "frontier",
+          "model": {
+            "provider": "ollama",
+            "model": "gemma4:12b",
+            "env": "sovereign"
+          },
+          "band": "",
+          "state": "",
+          "abandoned": 0,
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "site_extract",
+          "label": "Website research",
+          "tier": "premium",
+          "model": {
+            "provider": "ollama",
+            "model": "gemma4:12b",
+            "env": "sovereign"
+          },
+          "band": "",
+          "state": "",
+          "abandoned": 0,
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "site_fact_extract",
+          "label": "Website fact extraction",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "ollama",
+            "model": "gemma4:12b",
+            "env": "sovereign"
+          },
+          "band": "",
+          "state": "",
+          "fallback": {
+            "tier": "premium",
+            "model": {
+              "provider": "ollama",
+              "model": "gemma4:12b",
+              "env": "sovereign"
+            },
+            "same_model": true,
+            "band": "",
+            "state": ""
+          },
+          "abandoned": 0,
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "site_triage",
+          "label": "Website triage",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "ollama",
+            "model": "gemma4:12b",
+            "env": "sovereign"
+          },
+          "band": "",
+          "state": "",
+          "fallback": {
+            "tier": "premium",
+            "model": {
+              "provider": "ollama",
+              "model": "gemma4:12b",
+              "env": "sovereign"
+            },
+            "same_model": true,
+            "band": "",
+            "state": ""
+          },
+          "abandoned": 0,
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "stage_evidence_extract",
+          "label": "Stage evidence extraction",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "ollama",
+            "model": "gemma4:12b",
+            "env": "sovereign"
+          },
+          "band": "",
+          "state": "",
+          "fallback": {
+            "tier": "premium",
+            "model": {
+              "provider": "ollama",
+              "model": "gemma4:12b",
+              "env": "sovereign"
+            },
+            "same_model": true,
+            "band": "",
+            "state": ""
+          },
+          "abandoned": 0,
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "summarize",
+          "label": "Record summary",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "ollama",
+            "model": "gemma4:12b",
+            "env": "sovereign"
+          },
+          "band": "",
+          "state": "",
+          "fallback": {
+            "tier": "premium",
+            "model": {
+              "provider": "ollama",
+              "model": "gemma4:12b",
+              "env": "sovereign"
+            },
+            "same_model": true,
+            "band": "",
+            "state": ""
+          },
+          "abandoned": 0,
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "tag_suggest",
+          "label": "Tag suggestions",
+          "tier": "local_small",
+          "model": {
+            "provider": "ollama",
+            "model": "gemma4:12b",
+            "env": "sovereign"
+          },
+          "band": "",
+          "state": "",
+          "fallback": {
+            "tier": "cheap_cloud",
+            "model": {
+              "provider": "ollama",
+              "model": "gemma4:12b",
+              "env": "sovereign"
+            },
+            "same_model": true,
+            "band": "",
+            "state": ""
+          },
+          "abandoned": 0,
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "transcript_propose",
+          "label": "Meeting follow-up extraction",
+          "tier": "premium",
+          "model": {
+            "provider": "ollama",
+            "model": "gemma4:12b",
+            "env": "sovereign"
+          },
+          "band": "",
+          "state": "",
+          "abandoned": 0,
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "voice_build",
+          "label": "Voice DNA build",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "ollama",
+            "model": "gemma4:12b",
+            "env": "sovereign"
+          },
+          "band": "",
+          "state": "",
+          "fallback": {
+            "tier": "premium",
+            "model": {
+              "provider": "ollama",
+              "model": "gemma4:12b",
+              "env": "sovereign"
+            },
+            "same_model": true,
+            "band": "",
+            "state": ""
+          },
+          "abandoned": 0,
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "weekly_learnings",
+          "label": "What last week taught",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "ollama",
+            "model": "gemma4:12b",
+            "env": "sovereign"
+          },
+          "band": "",
+          "state": "",
+          "fallback": {
+            "tier": "premium",
+            "model": {
+              "provider": "ollama",
+              "model": "gemma4:12b",
+              "env": "sovereign"
+            },
+            "same_model": true,
+            "band": "",
+            "state": ""
+          },
+          "abandoned": 0,
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        },
+        {
+          "task": "weekly_review",
+          "label": "Weekly review narrative",
+          "tier": "cheap_cloud",
+          "model": {
+            "provider": "ollama",
+            "model": "gemma4:12b",
+            "env": "sovereign"
+          },
+          "band": "",
+          "state": "",
+          "fallback": {
+            "tier": "premium",
+            "model": {
+              "provider": "ollama",
+              "model": "gemma4:12b",
+              "env": "sovereign"
+            },
+            "same_model": true,
+            "band": "",
+            "state": ""
+          },
+          "abandoned": 0,
+          "runs": 0,
+          "passed": 0,
+          "cases_failing_often": 0,
+          "cases_below_quality_bar": 0
+        }
+      ],
+      "bands": {
+        "certified": 0,
+        "supported_degraded": 0,
+        "not_supported": 0
+      },
+      "untested": 35,
       "unbound": 0,
       "unrecognised": 0
     },
@@ -10715,6 +10715,26 @@
         "supported_degraded": 21,
         "not_supported": 9
       }
+    },
+    {
+      "binding": {
+        "provider": "openai_compatible",
+        "model": "qwen/qwen3.8-27b",
+        "env": "cloud_frontier"
+      },
+      "sites": 1,
+      "sites_current": 1,
+      "sites_partial": 0,
+      "sites_stale": 0,
+      "runs": 9,
+      "passed": 9,
+      "reliability": 1,
+      "slowest_p95_ms": 191650,
+      "bands": {
+        "certified": 1,
+        "supported_degraded": 0,
+        "not_supported": 0
+      }
     }
   ],
   "sites": [
@@ -11105,6 +11125,29 @@
           "latency_p95_ms": 3477,
           "reported": {
             "accepted": 15,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "qwen/qwen3.8-27b",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 3,
+          "scenarios_total": 3,
+          "runs": 9,
+          "passed": 9,
+          "reliability": 1,
+          "latency_p50_ms": 94247,
+          "latency_p95_ms": 191650,
+          "reported": {
+            "accepted": 9,
             "wrong_answer": 0,
             "invalid": 0,
             "abstained": 0
