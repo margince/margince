@@ -92,7 +92,9 @@ func (r *Registry) add(s Any) error {
 		}
 	}
 	r.byKey[s.Key()] = s
-	r.byEnv[s.Env()] = s
+	if s.Env() != "" {
+		r.byEnv[s.Env()] = s
+	}
 	if s.Flag() != "" {
 		r.byFlag[s.Flag()] = s
 	}
@@ -104,7 +106,7 @@ func wellFormed(s Any) error {
 	switch {
 	case !keyForm.MatchString(s.Key()):
 		return fmt.Errorf("config: key %q is not lowercase and dot-separated", s.Key())
-	case !envForm.MatchString(s.Env()):
+	case s.Env() != "" && !envForm.MatchString(s.Env()):
 		return fmt.Errorf("config: %s: env name %q is not upper snake case", s.Key(), s.Env())
 	case s.Flag() != "" && !flagForm.MatchString(s.Flag()):
 		return fmt.Errorf("config: %s: flag %q is not lowercase kebab case", s.Key(), s.Flag())

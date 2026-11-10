@@ -10,6 +10,7 @@ import {
   Users,
 } from "lucide-react";
 import type { MessageKey } from "../i18n/en";
+import { type CoreFeature, screenEnabled } from "../lib/corefeatures";
 import { type EntityKind, SCREEN_ENTITY } from "../lib/entity";
 import { EXTENSION_SCREEN } from "../lib/extensions";
 import { opensAFocusedFiltersPage } from "../lib/filtersaddress";
@@ -352,19 +353,24 @@ function forkItems(
   }));
 }
 
-function primaryLevel(route: Route): NavTrailLevel {
+function primaryLevel(
+  route: Route,
+  disabled: readonly CoreFeature[],
+): NavTrailLevel {
   return {
     groups: NAV_GROUPS.map((group) => ({
       headingKey: group.headingKey,
       items: [
-        ...group.items.map((item) => ({
-          id: item.screen,
-          labelKey: item.labelKey,
-          icon: item.icon,
-        })),
+        ...group.items
+          .filter((item) => screenEnabled(item.screen, disabled))
+          .map((item) => ({
+            id: item.screen,
+            labelKey: item.labelKey,
+            icon: item.icon,
+          })),
         ...forkItems(group.headingKey),
       ],
-    })),
+    })).filter((group) => group.items.length > 0),
     ancestor: opensAPageBelow(route),
     path: [],
     badgeIds: BADGE_SCREENS,
@@ -421,6 +427,20 @@ function activeRowFor(route: Route): string {
 export function railTrail(
   route: Route,
   section?: NavSection,
+  disabled: readonly CoreFeature[] = [],
 ): readonly NavTrailLevel[] {
-  return navTrail(primaryLevel(route), route, activeRowFor(route), section);
+  return navTrail(
+    primaryLevel(route, disabled),
+    route,
+    activeRowFor(route),
+    section,
+  );
+}
+
+export function firstAvailableRoute(disabled: readonly CoreFeature[]): Route {
+  return {
+    screen:
+      NAV.find((item) => screenEnabled(item.screen, disabled))?.screen ??
+      "settings",
+  };
 }

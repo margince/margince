@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/margince/margince/backend/internal/platform/config"
+	"github.com/margince/margince/backend/internal/platform/corefeatures"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
@@ -40,6 +41,11 @@ var (
 	AnalyticsPerformance = config.Define(config.Spec[bool]{
 		Key: "analytics.performance_enabled", Env: "MARGINCE_ANALYTICS_PERFORMANCE_ENABLED", Type: config.Bool, Default: config.Some(false), Roles: both,
 		Doc: "Ignored; kept so existing files load.",
+	})
+	CoreFeaturesDisabled = config.Define(config.Spec[[]string]{
+		Key: "features.disabled", Type: config.List(config.String), Default: config.Some([]string{}), Roles: both,
+		Validate: corefeatures.ValidateDisabled,
+		Doc:      "Main-menu features to turn off; their pages and API and agent calls are unavailable, and their data is kept.",
 	})
 	ListsEnabled = config.Define(config.Spec[bool]{
 		Key: "lists.enabled", Env: "MARGINCE_LISTS_ENABLED", Type: config.Bool, Default: config.Some(true), Roles: both,
@@ -89,5 +95,5 @@ func distinctCurrencies(codes []string) error {
 
 // FileSettings lists the margince.yaml switches above.
 func FileSettings() []config.Any {
-	return []config.Any{PasswordLogin, CapturePayloads, MCPConnector, MCPDynamicRegistration, MCPMetadataDocument, AnalyticsPerformance, ListsEnabled, AllowDataReset, AllowTestMailbox, RatesFxSource, RatesFxCurrencies}
+	return []config.Any{PasswordLogin, CapturePayloads, MCPConnector, MCPDynamicRegistration, MCPMetadataDocument, AnalyticsPerformance, CoreFeaturesDisabled, ListsEnabled, AllowDataReset, AllowTestMailbox, RatesFxSource, RatesFxCurrencies}
 }

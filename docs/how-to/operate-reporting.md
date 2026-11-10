@@ -6,8 +6,9 @@
 1. Apply the additive migrations with the normal deployment steps. Back up the
    installation before you deploy. Old rows get no made-up event owners, rates or
    customer eligibility.
-2. Know that reporting is on for every installation. The API, MCP and workers use the same
-   evaluator, and no deployment switch chooses another analytics engine.
+2. Reporting is on by default. The API, MCP and workers use the same evaluator.
+   The file setting `features.disabled` can turn off Analytics. A report that needs a
+   feature turned off there is hidden too. Set the same file on the API and worker.
 3. Review the role grants for `report_definition`, `report_edition`, `report_schedule`,
    `sales_target`, `reporting_framework` and `reporting_credit`. Grants on kinds of data,
    field masks and team oversight still limit the numbers. A read seat cannot change data.

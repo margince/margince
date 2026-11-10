@@ -47190,6 +47190,11 @@ export interface components {
             logo_icon_url?: string;
         };
         /**
+         * @description A core destination in the main menu. Disabling one keeps its stored data.
+         * @enum {string}
+         */
+        CoreFeature: "home" | "contacts" | "companies" | "leads" | "deals" | "projects" | "filters" | "analytics";
+        /**
          * @description Which settings surfaces EXIST in this installation, independently of whether this caller may read them. A surface can be absent for two unrelated reasons — the installation never enabled it, or this caller holds no grant on it — and settings navigation has to tell them apart: the first is not a destination at all, the second is a destination that explains itself.
          *     Deployment facts only, never per-caller ones. Nothing here narrows with a role, so it discloses no more than the deployment file already tells every seat. A caller capability belongs beside `admin_password_link` instead, which folds the caller's role into its answer for exactly that reason.
          *     Carried on `/me` so navigation, the command palette, settings home and settings search can resolve from ONE cached snapshot. Each of those surfaces has to agree about which pages exist, and a screen-specific probe alongside them is how they came to disagree: the rail asked, the palette did not, and a page appeared in one and not the other.
@@ -47201,7 +47206,9 @@ export interface components {
              * @description Deprecated. Still required and returned for compatibility throughout the API notice window. New clients read `read_enabled` from `GET /company/context/capabilities` instead. This field continues to report whether the company-context rollout has typed reads active. It does not gate the installation's Company settings page.
              */
             company_context: boolean;
-            /** @description Reporting is always available. Retained for compatibility with older clients. */
+            /** @description Core features turned off in the configuration file. Their pages, API operations and agent tools are unavailable. Their data stays stored for when they are turned on again. An omitted or empty list keeps every core feature available. */
+            disabled_features?: components["schemas"]["CoreFeature"][];
+            /** @description Whether reporting is enabled in this installation. */
             reporting?: boolean;
             /** @description True when Live Lists and Shortlists are on (`lists.enabled`, on by default). False when an operator has switched them off: the `/lists` routes answer 404, no agent tool reaches them, and no screen offers them. */
             lists?: boolean;

@@ -10,6 +10,7 @@
 import { Fragment } from "react";
 
 import type { components } from "../api/schema";
+import { recordEnabled, useDisabledCoreFeatures } from "../lib/corefeatures";
 import { EntityRef } from "./entityref";
 
 type ActivityLink = components["schemas"]["ActivityLink"];
@@ -51,12 +52,16 @@ export function RecordLinks({
   links,
   newTab = false,
 }: Readonly<{ links: readonly ActivityLink[]; newTab?: boolean }>) {
-  if (links.length === 0) {
+  const disabled = useDisabledCoreFeatures();
+  const available = links.filter((link) =>
+    recordEnabled(link.entity_type, disabled),
+  );
+  if (available.length === 0) {
     return null;
   }
   return (
     <>
-      {links.map((link, index) => (
+      {available.map((link, index) => (
         <Fragment key={`${link.entity_type}:${link.entity_id}`}>
           {index > 0 && ", "}
           <EntityRef

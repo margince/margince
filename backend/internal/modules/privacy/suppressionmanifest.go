@@ -20,6 +20,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
+	"github.com/margince/margince/backend/internal/platform/corefeatures"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -44,6 +45,7 @@ var ErrNoJournalManifest = errors.New("privacy: the object store holds no comple
 // ReadJournalManifest reports what the journal knows, or ErrNoJournalManifest
 // when no export ever finished.
 func (e *Eraser) ReadJournalManifest(ctx context.Context) (JournalManifest, error) {
+	ctx = corefeatures.RetainedDataContext(ctx)
 	if err := auth.Require(ctx, "contact", principal.ActionDelete); err != nil {
 		return JournalManifest{}, err
 	}

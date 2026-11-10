@@ -380,6 +380,12 @@ admin can also change under Settings. One that also says kept by a reset keeps i
 | `email.smtp.port` | `MARGINCE_SMTP_PORT` | — | `int` | `0` | api, worker | SMTP relay port, 1 to 65535 when email.enabled. |
 | `email.smtp.username` | `MARGINCE_SMTP_USERNAME` | — | `string` | — | api, worker | SMTP relay user; unset sends without signing in. |
 
+### `features`
+
+| Key | Env | Flag | Type | Default | Programs | Doc |
+|---|---|---|---|---|---|---|
+| `features.disabled` | — | — | `list<string>` | `""` | api, worker | Main-menu features to turn off; their pages and API and agent calls are unavailable, and their data is kept. |
+
 ### `identity`
 
 | Key | Env | Flag | Type | Default | Programs | Doc |

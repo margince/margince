@@ -182,7 +182,7 @@ func reportScopeHoldsDeals(ctx context.Context, tx pgx.Tx, spec reportSpec, requ
 	if err != nil {
 		return nil, err
 	}
-	return &holds, nil
+	return holds, nil
 }
 
 // withReportSnapshot runs one report read in one `REPEATABLE READ` snapshot, so

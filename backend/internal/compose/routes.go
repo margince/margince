@@ -64,7 +64,7 @@ func contractAPI(srv Server, pool *pgxpool.Pool, identitySvc *identity.Service) 
 	// to remove.
 	registry := registryWithGate(InstallationDB(pool), gate, srv.replyDrafter, srv.send,
 		companyEnricher{}, srv.retrievalEmbedder, nil, importsFor(&srv),
-		meetingBriefReader(srv.meetingBriefSvc), srv.log, registryFeatures{lists: srv.listsEnabled},
+		meetingBriefReader(srv.meetingBriefSvc), srv.log, registryFeatures{coreFeatures: srv.coreFeatures, lists: srv.listsEnabled},
 		agents.WithVolumeCharger(srv.volumeMeter))
 	// The ADR-0055 admission layer and the MCP tool surface share one
 	// provider seam: agentGate's StageResolver reads exactly what the MCP
@@ -85,6 +85,7 @@ func contractAPI(srv Server, pool *pgxpool.Pool, identitySvc *identity.Service) 
 		// idempotency replay: a refusal that cost a database read is a slow
 		// answer worth seeing. The wrapper applies it after chi has matched,
 		// which is what lets chiRoutePattern answer.
+		coreFeatureGate(srv.coreFeatures),
 		srv.httpMetrics.Measure(chiRoutePattern),
 	)
 }

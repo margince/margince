@@ -17,10 +17,12 @@ import { Badge } from "../design-system/atoms";
 import { useHoverIntent } from "../design-system/hoverintent";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
+import { screenEnabled, useDisabledCoreFeatures } from "../lib/corefeatures";
 import { navigate, type Route, routeHash } from "../lib/router";
 import {
   currentClaim,
   entryLabel,
+  firstAvailableRoute,
   type NavCounts,
   type NavLevelEntry,
   type NavLevelGroup,
@@ -155,7 +157,8 @@ export function useNavLevel(
   container: RefObject<HTMLElement | null>,
   onNavigate: () => void,
 ) {
-  const trail = railTrail(route, section);
+  const disabled = useDisabledCoreFeatures();
+  const trail = railTrail(route, section, disabled);
   const depth = trail.length - 1;
   const shown = trail[depth];
   if (shown === undefined)
@@ -178,7 +181,13 @@ export function useNavLevel(
   // direction that drops focus to <body> without saying so, so they are counted
   // here rather than left to be discovered one at a time.
   const onWalkUp = () => {
-    const target = walkUpTarget(parent, walk.origin());
+    const origin = walk.origin();
+    const target = walkUpTarget(
+      parent,
+      screenEnabled(origin.screen, disabled)
+        ? origin
+        : firstAvailableRoute(disabled),
+    );
     walk.claim(routeHash(target));
     navigate(target);
   };

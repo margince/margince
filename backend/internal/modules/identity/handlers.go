@@ -13,6 +13,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/agentgrant"
+	"github.com/margince/margince/backend/internal/platform/corefeatures"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/platform/httpserver"
 	"github.com/margince/margince/backend/internal/platform/mailer"
@@ -135,6 +136,7 @@ type Handlers struct {
 	embedReindexAvailable func() bool
 	// listsAvailable is the installation's lists.enabled.
 	listsAvailable bool
+	coreFeatures   corefeatures.Availability
 
 	// installationBrand reads the anchor company's name and marks for /me.
 	// Nil omits them (meparts.go).

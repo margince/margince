@@ -84,7 +84,8 @@ type Registry struct {
 	// a verb's own tier cannot express (tierfloor.go, #982).
 	tierFloor TierFloor
 	// toolGate decides which callers a Gated tool exists for. Nil offers it to no one.
-	toolGate ToolGate
+	toolGate         ToolGate
+	callAvailability CallAvailability
 	// volume budget is the MCP-SESS-* meter this surface CHARGES. The gate holds the
 	// same meter and does the refusing; the split is deliberate — a bound is
 	// enforced where admission is decided and paid where records and effects
@@ -203,6 +204,9 @@ func (r *Registry) InvokeServed(ctx context.Context, name string, in json.RawMes
 // It serves name as given and resolves no router. Callers holding a name a
 // client chose go through InvokeServed; taskexecute holds the stored target.
 func (r *Registry) InvokeServing(ctx context.Context, name string, in json.RawMessage) (json.RawMessage, int, error) {
+	if r.callAvailability != nil {
+		ctx = r.callAvailability.Context(ctx)
+	}
 	// The REGISTERED spec, not a fresh Spec() call. The two are the same for a
 	// tool whose spec is a literal, and every tool here is — but the registered
 	// one is what tools/list advertised and what the argument constraints were
@@ -242,6 +246,10 @@ func (r *Registry) InvokeServing(ctx context.Context, name string, in json.RawMe
 		return nil, 0, err
 	}
 	args := res.Args
+
+	if !r.callAvailable(name, args) {
+		return nil, 0, &UnknownToolError{Name: name}
+	}
 
 	// The contract may tighten this verb's tier for the record type this call
 	// names, and only the call can say which type that is (tierfloor.go).
