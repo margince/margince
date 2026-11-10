@@ -53,10 +53,10 @@ are waiting to be re-checked; each is marked below.
 |---|---|---:|---:|---:|---:|---|
 | [`gemini_cloud`](#gemini_cloud) | global cloud | 27 | 7 | 1 | 0 | 27 of 35 features ready |
 | [`gemini_vertex_eu`](#gemini_vertex_eu) | EU-hosted cloud | 27 | 7 | 1 | 0 | 27 of 35 features ready |
+| [`openrouter_openai`](#openrouter_openai) | global cloud | 21 | 3 | 4 | 7 | 21 of 35 features ready (23 re-checks pending) |
 | [`openrouter_cloud`](#openrouter_cloud) | global cloud | 15 | 10 | 7 | 3 | 15 of 35 features ready (4 re-checks pending) |
 | [`consumer_class_brokered`](#consumer_class_brokered) | global cloud | 1 | 1 | 4 | 29 | 1 of 35 features ready (re-check pending) |
 | [`openrouter_cloud_eu`](#openrouter_cloud_eu) | EU-hosted cloud | 12 | 2 | 14 | 7 | 12 of 35 features ready (23 re-checks pending) |
-| [`openrouter_openai`](#openrouter_openai) | global cloud | 21 | 3 | 4 | 7 | 21 of 35 features ready (23 re-checks pending) |
 | [`gemma4_local_ollama`](#gemma4_local_ollama) | your own servers | 0 | 0 | 0 | 35 | 0 of 35 features ready |
 | [`qwen3_local_vllm`](#qwen3_local_vllm) | your own servers | 0 | 0 | 0 | 35 | 0 of 35 features ready |
 
@@ -266,6 +266,101 @@ binds; this is the rung and the model it lands on, and the record behind its gra
 | `voice_build` | `cheap_cloud` | `gemini-3.1-flash-lite` | ⚠️ Usable with care | current; measured on `gemini` |
 | `weekly_learnings` | `cheap_cloud` | `gemini-3.1-flash-lite` | ✅ Ready | current; measured on `gemini` |
 | `weekly_review` | `cheap_cloud` | `gemini-3.1-flash-lite` | ✅ Ready | current; measured on `gemini` |
+
+</details>
+
+### `openrouter_openai`
+
+Your data goes to: global cloud. 21 of 35 features ready (23 re-checks pending). Preset file: [`openrouter_openai.yaml`](../../config/presets/openrouter_openai.yaml).
+
+| Feature | Can I use it? | In plain words |
+|---|---|---|
+| Agent reasoning loop <sub>`agent_loop`</sub> | ✅ Ready<br><sub>gpt-6-luna · cheap_cloud → gpt-6-sol, ✅ Ready · re-check pending</sub> | Right every time (18 of 18) · re-check pending |
+| Assessing a sales report <sub>`report_interpret`</sub> | ❔ Not measured<br><sub>gpt-6-sol · premium → gpt-6-luna, not measured on this feature</sub> | Not measured yet |
+| Buying-role reading <sub>`propose_roles`</sub> | ✅ Ready<br><sub>gpt-6-luna · cheap_cloud → gpt-6-sol, ✅ Ready</sub> | Right every time (9 of 9) |
+| Certification judging <sub>`cert_judge`</sub> | ✅ Ready<br><sub>gpt-6-sol · premium → gpt-6-luna, ✅ Ready</sub> | Right every time (12 of 12) |
+| Checking the dates, amount and chances of a deal <sub>`deal_verdict`</sub> | ❔ Not measured<br><sub>gpt-6-luna · local_small · no separate fallback</sub> | Not measured yet |
+| Checking whether the reply answered the request <sub>`request_settlement`</sub> | ✅ Ready<br><sub>gpt-6-luna · local_small · no separate fallback</sub> | Right every time (18 of 18) · re-check pending |
+| Company fit assessment <sub>`growth_fit`</sub> | ✅ Ready<br><sub>gpt-6-luna · cheap_cloud → gpt-6-sol, ✅ Ready · re-check pending</sub> | Right every time (12 of 12) · re-check pending |
+| Deal status card <sub>`deal_health`</sub> | ✅ Ready<br><sub>gpt-6-luna · cheap_cloud → gpt-6-sol, ✅ Ready · re-check pending</sub> | Right every time (15 of 15) · re-check pending |
+| Document corpus question <sub>`corpus_ask`</sub> | ✅ Ready<br><sub>gpt-6-sol · premium</sub> | Right every time (15 of 15) · re-check pending |
+| Document extraction <sub>`document_extract`</sub> | ❔ Not measured<br><sub>gpt-6-sol · premium</sub> | Not measured yet |
+| Exchange rate extraction <sub>`rate_extract`</sub> | ✅ Ready<br><sub>gpt-6-sol · premium → gpt-6-luna, ✅ Ready</sub> | Right every time (12 of 12) |
+| First-time sender check <sub>`capture_counterparty_verdict`</sub> | ❌ Not reliable yet<br><sub>gpt-6-luna · local_small</sub> | Right in 56 of 60 tries; one test case wrong too often; answer quality below the bar in one test case · re-check pending |
+| Meeting follow-up extraction <sub>`transcript_propose`</sub> | ❌ Not reliable yet<br><sub>gpt-6-sol · premium</sub> | Right in 45 of 54 tries; one test case wrong too often; answer quality below the bar in one test case · re-check pending |
+| Message classification <sub>`capture_classify`</sub> | ❌ Not reliable yet<br><sub>gpt-6-luna · local_small · no separate fallback</sub> | Right in 9 of 15 tries; 2 test cases wrong too often; answer quality below the bar in 2 test cases · re-check pending |
+| Morning brief ranking <sub>`brief_ranking`</sub> | ✅ Ready<br><sub>gpt-6-sol · premium → gpt-6-luna, ✅ Ready · re-check pending</sub> | Right every time (9 of 9) · re-check pending |
+| Natural-language search <sub>`nl_search`</sub> | ✅ Ready<br><sub>gpt-6-luna · cheap_cloud → gpt-6-sol, ✅ Ready · re-check pending</sub> | Right every time (33 of 33) · re-check pending |
+| Offer drafting <sub>`offer_draft`</sub> | ✅ Ready<br><sub>gpt-6-luna · cheap_cloud → gpt-6-sol, ✅ Ready · re-check pending</sub> | Right every time (15 of 15) · re-check pending |
+| Onboarding read <sub>`cold_start`</sub> | ⚠️ Usable with care<br><sub>gpt-6-luna · cheap_cloud → gpt-6-sol, ✅ Ready</sub> | Right in 40 of 42 tries; answer quality below the bar in one test case |
+| Reading what an account needs <sub>`account_scan`</sub> | ✅ Ready<br><sub>gpt-6-luna · cheap_cloud → gpt-6-sol, ✅ Ready · re-check pending</sub> | Right every time (12 of 12) · re-check pending |
+| Record summary <sub>`summarize`</sub> | ✅ Ready<br><sub>gpt-6-luna · cheap_cloud → gpt-6-sol, ⚠️ Usable with care · re-check pending</sub> | Right in 51 of 54 tries · re-check pending |
+| Reply drafting <sub>`draft_reply`</sub> | ✅ Ready<br><sub>gpt-6-luna · cheap_cloud → gpt-6-sol, ⚠️ Usable with care · re-check pending</sub> | Right in 38 of 39 tries · re-check pending |
+| Setting up a report from a description <sub>`report_setup`</sub> | ❔ Not measured<br><sub>gpt-6-luna · cheap_cloud → gpt-6-sol, not measured on this feature</sub> | Not measured yet |
+| Showing a message in your language <sub>`reader_rendering`</sub> | ❔ Not measured<br><sub>gpt-6-luna · cheap_cloud → gpt-6-sol, not measured on this feature</sub> | Not measured yet |
+| Signal extraction <sub>`signal_extract`</sub> | ❔ Not measured<br><sub>gpt-6.1-sol · frontier</sub> | Not measured yet |
+| Signature enrichment <sub>`enrich`</sub> | ✅ Ready<br><sub>gpt-6-luna · local_small · no separate fallback</sub> | Right every time (12 of 12) · re-check pending |
+| Stage evidence extraction <sub>`stage_evidence_extract`</sub> | ✅ Ready<br><sub>gpt-6-luna · cheap_cloud → gpt-6-sol, ⚠️ Usable with care · re-check pending</sub> | Right every time (27 of 27) · re-check pending |
+| Tag suggestions <sub>`tag_suggest`</sub> | ❔ Not measured<br><sub>gpt-6-luna · local_small · no separate fallback</sub> | Not measured yet |
+| Thread confidentiality check <sub>`capture_confidentiality_verdict`</sub> | ❌ Not reliable yet<br><sub>gpt-6-luna · local_small</sub> | Right in 36 of 42 tries; 2 test cases wrong too often · re-check pending |
+| Unanswered-message triage <sub>`owed_verdict`</sub> | ✅ Ready<br><sub>gpt-6-luna · local_small · no separate fallback</sub> | Right every time (18 of 18) · re-check pending |
+| Voice DNA build <sub>`voice_build`</sub> | ⚠️ Usable with care<br><sub>gpt-6-luna · cheap_cloud → gpt-6-sol, ⚠️ Usable with care · re-check pending</sub> | Right in 35 of 36 tries; answer quality below the bar in one test case · re-check pending |
+| Website fact extraction <sub>`site_fact_extract`</sub> | ✅ Ready<br><sub>gpt-6-luna · cheap_cloud → gpt-6-sol, ✅ Ready · re-check pending</sub> | Right every time (9 of 9) · re-check pending |
+| Website research <sub>`site_extract`</sub> | ✅ Ready<br><sub>gpt-6-sol · premium</sub> | Right every time (15 of 15) · re-check pending |
+| Website triage <sub>`site_triage`</sub> | ✅ Ready<br><sub>gpt-6-luna · cheap_cloud → gpt-6-sol, ✅ Ready</sub> | Right every time (15 of 15) |
+| Weekly review narrative <sub>`weekly_review`</sub> | ⚠️ Usable with care<br><sub>gpt-6-luna · cheap_cloud → gpt-6-sol, ✅ Ready · re-check pending</sub> | Right every time (36 of 36); answer quality below the bar in 2 test cases · re-check pending |
+| What last week taught <sub>`weekly_learnings`</sub> | ✅ Ready<br><sub>gpt-6-luna · cheap_cloud → gpt-6-sol, ✅ Ready · re-check pending</sub> | Right every time (9 of 9) · re-check pending |
+
+<details>
+<summary>Which models this preset uses</summary>
+
+| Tier | Provider | Model |
+|---|---|---|
+| `local_small` | `openai_compatible` | `openai/gpt-6-luna` |
+| `cheap_cloud` | `openai_compatible` | `openai/gpt-6-luna` |
+| `premium` | `openai_compatible` | `openai/gpt-6-sol` |
+| `frontier` | `openai_compatible` | `openai/gpt-6.1-sol` |
+
+Each feature walks its own ladder of tiers until it reaches one this preset
+binds; this is the rung and the model it lands on, and the record behind its grade.
+
+| Task | Served on | Model | Grade | Measurement |
+|---|---|---|---|---|
+| `account_scan` | `cheap_cloud` | `openai/gpt-6-luna` | ✅ Ready | re-check pending |
+| `agent_loop` | `cheap_cloud` | `openai/gpt-6-luna` | ✅ Ready | re-check pending |
+| `brief_ranking` | `premium` | `openai/gpt-6-sol` | ✅ Ready | re-check pending |
+| `capture_classify` | `local_small` | `openai/gpt-6-luna` | ❌ Not reliable yet | re-check pending |
+| `capture_confidentiality_verdict` | `local_small` | `openai/gpt-6-luna` | ❌ Not reliable yet | re-check pending |
+| `capture_counterparty_verdict` | `local_small` | `openai/gpt-6-luna` | ❌ Not reliable yet | re-check pending |
+| `cert_judge` | `premium` | `openai/gpt-6-sol` | ✅ Ready | current |
+| `cold_start` | `cheap_cloud` | `openai/gpt-6-luna` | ⚠️ Usable with care | current |
+| `corpus_ask` | `premium` | `openai/gpt-6-sol` | ✅ Ready | re-check pending |
+| `deal_health` | `cheap_cloud` | `openai/gpt-6-luna` | ✅ Ready | re-check pending |
+| `deal_verdict` | `local_small` | `openai/gpt-6-luna` | ❔ Not measured | not measured |
+| `document_extract` | `premium` | `openai/gpt-6-sol` | ❔ Not measured | not measured |
+| `draft_reply` | `cheap_cloud` | `openai/gpt-6-luna` | ✅ Ready | re-check pending |
+| `enrich` | `local_small` | `openai/gpt-6-luna` | ✅ Ready | re-check pending |
+| `growth_fit` | `cheap_cloud` | `openai/gpt-6-luna` | ✅ Ready | re-check pending |
+| `nl_search` | `cheap_cloud` | `openai/gpt-6-luna` | ✅ Ready | re-check pending |
+| `offer_draft` | `cheap_cloud` | `openai/gpt-6-luna` | ✅ Ready | re-check pending |
+| `owed_verdict` | `local_small` | `openai/gpt-6-luna` | ✅ Ready | re-check pending |
+| `propose_roles` | `cheap_cloud` | `openai/gpt-6-luna` | ✅ Ready | current |
+| `rate_extract` | `premium` | `openai/gpt-6-sol` | ✅ Ready | current |
+| `reader_rendering` | `cheap_cloud` | `openai/gpt-6-luna` | ❔ Not measured | not measured |
+| `report_interpret` | `premium` | `openai/gpt-6-sol` | ❔ Not measured | not measured |
+| `report_setup` | `cheap_cloud` | `openai/gpt-6-luna` | ❔ Not measured | not measured |
+| `request_settlement` | `local_small` | `openai/gpt-6-luna` | ✅ Ready | re-check pending |
+| `signal_extract` | `frontier` | `openai/gpt-6.1-sol` | ❔ Not measured | not measured |
+| `site_extract` | `premium` | `openai/gpt-6-sol` | ✅ Ready | re-check pending |
+| `site_fact_extract` | `cheap_cloud` | `openai/gpt-6-luna` | ✅ Ready | re-check pending |
+| `site_triage` | `cheap_cloud` | `openai/gpt-6-luna` | ✅ Ready | current |
+| `stage_evidence_extract` | `cheap_cloud` | `openai/gpt-6-luna` | ✅ Ready | re-check pending |
+| `summarize` | `cheap_cloud` | `openai/gpt-6-luna` | ✅ Ready | re-check pending |
+| `tag_suggest` | `local_small` | `openai/gpt-6-luna` | ❔ Not measured | not measured |
+| `transcript_propose` | `premium` | `openai/gpt-6-sol` | ❌ Not reliable yet | re-check pending |
+| `voice_build` | `cheap_cloud` | `openai/gpt-6-luna` | ⚠️ Usable with care | re-check pending |
+| `weekly_learnings` | `cheap_cloud` | `openai/gpt-6-luna` | ✅ Ready | re-check pending |
+| `weekly_review` | `cheap_cloud` | `openai/gpt-6-luna` | ⚠️ Usable with care | re-check pending |
 
 </details>
 
@@ -551,101 +646,6 @@ binds; this is the rung and the model it lands on, and the record behind its gra
 | `voice_build` | `cheap_cloud` | `mistralai/ministral-14b-2512` | ❌ Not reliable yet | re-check pending |
 | `weekly_learnings` | `cheap_cloud` | `mistralai/ministral-14b-2512` | ❌ Not reliable yet | re-check pending |
 | `weekly_review` | `cheap_cloud` | `mistralai/ministral-14b-2512` | ❌ Not reliable yet | re-check pending |
-
-</details>
-
-### `openrouter_openai`
-
-Your data goes to: global cloud. 21 of 35 features ready (23 re-checks pending). Preset file: [`openrouter_openai.yaml`](../../config/presets/openrouter_openai.yaml).
-
-| Feature | Can I use it? | In plain words |
-|---|---|---|
-| Agent reasoning loop <sub>`agent_loop`</sub> | ✅ Ready<br><sub>gpt-6-luna · cheap_cloud → gpt-6-sol, ✅ Ready · re-check pending</sub> | Right every time (18 of 18) · re-check pending |
-| Assessing a sales report <sub>`report_interpret`</sub> | ❔ Not measured<br><sub>gpt-6-sol · premium → gpt-6-luna, not measured on this feature</sub> | Not measured yet |
-| Buying-role reading <sub>`propose_roles`</sub> | ✅ Ready<br><sub>gpt-6-luna · cheap_cloud → gpt-6-sol, ✅ Ready</sub> | Right every time (9 of 9) |
-| Certification judging <sub>`cert_judge`</sub> | ✅ Ready<br><sub>gpt-6-sol · premium → gpt-6-luna, ✅ Ready</sub> | Right every time (12 of 12) |
-| Checking the dates, amount and chances of a deal <sub>`deal_verdict`</sub> | ❔ Not measured<br><sub>gpt-6-luna · local_small · no separate fallback</sub> | Not measured yet |
-| Checking whether the reply answered the request <sub>`request_settlement`</sub> | ✅ Ready<br><sub>gpt-6-luna · local_small · no separate fallback</sub> | Right every time (18 of 18) · re-check pending |
-| Company fit assessment <sub>`growth_fit`</sub> | ✅ Ready<br><sub>gpt-6-luna · cheap_cloud → gpt-6-sol, ✅ Ready · re-check pending</sub> | Right every time (12 of 12) · re-check pending |
-| Deal status card <sub>`deal_health`</sub> | ✅ Ready<br><sub>gpt-6-luna · cheap_cloud → gpt-6-sol, ✅ Ready · re-check pending</sub> | Right every time (15 of 15) · re-check pending |
-| Document corpus question <sub>`corpus_ask`</sub> | ✅ Ready<br><sub>gpt-6-sol · premium</sub> | Right every time (15 of 15) · re-check pending |
-| Document extraction <sub>`document_extract`</sub> | ❔ Not measured<br><sub>gpt-6-sol · premium</sub> | Not measured yet |
-| Exchange rate extraction <sub>`rate_extract`</sub> | ✅ Ready<br><sub>gpt-6-sol · premium → gpt-6-luna, ✅ Ready</sub> | Right every time (12 of 12) |
-| First-time sender check <sub>`capture_counterparty_verdict`</sub> | ❌ Not reliable yet<br><sub>gpt-6-luna · local_small</sub> | Right in 56 of 60 tries; one test case wrong too often; answer quality below the bar in one test case · re-check pending |
-| Meeting follow-up extraction <sub>`transcript_propose`</sub> | ❌ Not reliable yet<br><sub>gpt-6-sol · premium</sub> | Right in 45 of 54 tries; one test case wrong too often; answer quality below the bar in one test case · re-check pending |
-| Message classification <sub>`capture_classify`</sub> | ❌ Not reliable yet<br><sub>gpt-6-luna · local_small · no separate fallback</sub> | Right in 9 of 15 tries; 2 test cases wrong too often; answer quality below the bar in 2 test cases · re-check pending |
-| Morning brief ranking <sub>`brief_ranking`</sub> | ✅ Ready<br><sub>gpt-6-sol · premium → gpt-6-luna, ✅ Ready · re-check pending</sub> | Right every time (9 of 9) · re-check pending |
-| Natural-language search <sub>`nl_search`</sub> | ✅ Ready<br><sub>gpt-6-luna · cheap_cloud → gpt-6-sol, ✅ Ready · re-check pending</sub> | Right every time (33 of 33) · re-check pending |
-| Offer drafting <sub>`offer_draft`</sub> | ✅ Ready<br><sub>gpt-6-luna · cheap_cloud → gpt-6-sol, ✅ Ready · re-check pending</sub> | Right every time (15 of 15) · re-check pending |
-| Onboarding read <sub>`cold_start`</sub> | ⚠️ Usable with care<br><sub>gpt-6-luna · cheap_cloud → gpt-6-sol, ✅ Ready</sub> | Right in 40 of 42 tries; answer quality below the bar in one test case |
-| Reading what an account needs <sub>`account_scan`</sub> | ✅ Ready<br><sub>gpt-6-luna · cheap_cloud → gpt-6-sol, ✅ Ready · re-check pending</sub> | Right every time (12 of 12) · re-check pending |
-| Record summary <sub>`summarize`</sub> | ✅ Ready<br><sub>gpt-6-luna · cheap_cloud → gpt-6-sol, ⚠️ Usable with care · re-check pending</sub> | Right in 51 of 54 tries · re-check pending |
-| Reply drafting <sub>`draft_reply`</sub> | ✅ Ready<br><sub>gpt-6-luna · cheap_cloud → gpt-6-sol, ⚠️ Usable with care · re-check pending</sub> | Right in 38 of 39 tries · re-check pending |
-| Setting up a report from a description <sub>`report_setup`</sub> | ❔ Not measured<br><sub>gpt-6-luna · cheap_cloud → gpt-6-sol, not measured on this feature</sub> | Not measured yet |
-| Showing a message in your language <sub>`reader_rendering`</sub> | ❔ Not measured<br><sub>gpt-6-luna · cheap_cloud → gpt-6-sol, not measured on this feature</sub> | Not measured yet |
-| Signal extraction <sub>`signal_extract`</sub> | ❔ Not measured<br><sub>gpt-6.1-sol · frontier</sub> | Not measured yet |
-| Signature enrichment <sub>`enrich`</sub> | ✅ Ready<br><sub>gpt-6-luna · local_small · no separate fallback</sub> | Right every time (12 of 12) · re-check pending |
-| Stage evidence extraction <sub>`stage_evidence_extract`</sub> | ✅ Ready<br><sub>gpt-6-luna · cheap_cloud → gpt-6-sol, ⚠️ Usable with care · re-check pending</sub> | Right every time (27 of 27) · re-check pending |
-| Tag suggestions <sub>`tag_suggest`</sub> | ❔ Not measured<br><sub>gpt-6-luna · local_small · no separate fallback</sub> | Not measured yet |
-| Thread confidentiality check <sub>`capture_confidentiality_verdict`</sub> | ❌ Not reliable yet<br><sub>gpt-6-luna · local_small</sub> | Right in 36 of 42 tries; 2 test cases wrong too often · re-check pending |
-| Unanswered-message triage <sub>`owed_verdict`</sub> | ✅ Ready<br><sub>gpt-6-luna · local_small · no separate fallback</sub> | Right every time (18 of 18) · re-check pending |
-| Voice DNA build <sub>`voice_build`</sub> | ⚠️ Usable with care<br><sub>gpt-6-luna · cheap_cloud → gpt-6-sol, ⚠️ Usable with care · re-check pending</sub> | Right in 35 of 36 tries; answer quality below the bar in one test case · re-check pending |
-| Website fact extraction <sub>`site_fact_extract`</sub> | ✅ Ready<br><sub>gpt-6-luna · cheap_cloud → gpt-6-sol, ✅ Ready · re-check pending</sub> | Right every time (9 of 9) · re-check pending |
-| Website research <sub>`site_extract`</sub> | ✅ Ready<br><sub>gpt-6-sol · premium</sub> | Right every time (15 of 15) · re-check pending |
-| Website triage <sub>`site_triage`</sub> | ✅ Ready<br><sub>gpt-6-luna · cheap_cloud → gpt-6-sol, ✅ Ready</sub> | Right every time (15 of 15) |
-| Weekly review narrative <sub>`weekly_review`</sub> | ⚠️ Usable with care<br><sub>gpt-6-luna · cheap_cloud → gpt-6-sol, ✅ Ready · re-check pending</sub> | Right every time (36 of 36); answer quality below the bar in 2 test cases · re-check pending |
-| What last week taught <sub>`weekly_learnings`</sub> | ✅ Ready<br><sub>gpt-6-luna · cheap_cloud → gpt-6-sol, ✅ Ready · re-check pending</sub> | Right every time (9 of 9) · re-check pending |
-
-<details>
-<summary>Which models this preset uses</summary>
-
-| Tier | Provider | Model |
-|---|---|---|
-| `local_small` | `openai_compatible` | `openai/gpt-6-luna` |
-| `cheap_cloud` | `openai_compatible` | `openai/gpt-6-luna` |
-| `premium` | `openai_compatible` | `openai/gpt-6-sol` |
-| `frontier` | `openai_compatible` | `openai/gpt-6.1-sol` |
-
-Each feature walks its own ladder of tiers until it reaches one this preset
-binds; this is the rung and the model it lands on, and the record behind its grade.
-
-| Task | Served on | Model | Grade | Measurement |
-|---|---|---|---|---|
-| `account_scan` | `cheap_cloud` | `openai/gpt-6-luna` | ✅ Ready | re-check pending |
-| `agent_loop` | `cheap_cloud` | `openai/gpt-6-luna` | ✅ Ready | re-check pending |
-| `brief_ranking` | `premium` | `openai/gpt-6-sol` | ✅ Ready | re-check pending |
-| `capture_classify` | `local_small` | `openai/gpt-6-luna` | ❌ Not reliable yet | re-check pending |
-| `capture_confidentiality_verdict` | `local_small` | `openai/gpt-6-luna` | ❌ Not reliable yet | re-check pending |
-| `capture_counterparty_verdict` | `local_small` | `openai/gpt-6-luna` | ❌ Not reliable yet | re-check pending |
-| `cert_judge` | `premium` | `openai/gpt-6-sol` | ✅ Ready | current |
-| `cold_start` | `cheap_cloud` | `openai/gpt-6-luna` | ⚠️ Usable with care | current |
-| `corpus_ask` | `premium` | `openai/gpt-6-sol` | ✅ Ready | re-check pending |
-| `deal_health` | `cheap_cloud` | `openai/gpt-6-luna` | ✅ Ready | re-check pending |
-| `deal_verdict` | `local_small` | `openai/gpt-6-luna` | ❔ Not measured | not measured |
-| `document_extract` | `premium` | `openai/gpt-6-sol` | ❔ Not measured | not measured |
-| `draft_reply` | `cheap_cloud` | `openai/gpt-6-luna` | ✅ Ready | re-check pending |
-| `enrich` | `local_small` | `openai/gpt-6-luna` | ✅ Ready | re-check pending |
-| `growth_fit` | `cheap_cloud` | `openai/gpt-6-luna` | ✅ Ready | re-check pending |
-| `nl_search` | `cheap_cloud` | `openai/gpt-6-luna` | ✅ Ready | re-check pending |
-| `offer_draft` | `cheap_cloud` | `openai/gpt-6-luna` | ✅ Ready | re-check pending |
-| `owed_verdict` | `local_small` | `openai/gpt-6-luna` | ✅ Ready | re-check pending |
-| `propose_roles` | `cheap_cloud` | `openai/gpt-6-luna` | ✅ Ready | current |
-| `rate_extract` | `premium` | `openai/gpt-6-sol` | ✅ Ready | current |
-| `reader_rendering` | `cheap_cloud` | `openai/gpt-6-luna` | ❔ Not measured | not measured |
-| `report_interpret` | `premium` | `openai/gpt-6-sol` | ❔ Not measured | not measured |
-| `report_setup` | `cheap_cloud` | `openai/gpt-6-luna` | ❔ Not measured | not measured |
-| `request_settlement` | `local_small` | `openai/gpt-6-luna` | ✅ Ready | re-check pending |
-| `signal_extract` | `frontier` | `openai/gpt-6.1-sol` | ❔ Not measured | not measured |
-| `site_extract` | `premium` | `openai/gpt-6-sol` | ✅ Ready | re-check pending |
-| `site_fact_extract` | `cheap_cloud` | `openai/gpt-6-luna` | ✅ Ready | re-check pending |
-| `site_triage` | `cheap_cloud` | `openai/gpt-6-luna` | ✅ Ready | current |
-| `stage_evidence_extract` | `cheap_cloud` | `openai/gpt-6-luna` | ✅ Ready | re-check pending |
-| `summarize` | `cheap_cloud` | `openai/gpt-6-luna` | ✅ Ready | re-check pending |
-| `tag_suggest` | `local_small` | `openai/gpt-6-luna` | ❔ Not measured | not measured |
-| `transcript_propose` | `premium` | `openai/gpt-6-sol` | ❌ Not reliable yet | re-check pending |
-| `voice_build` | `cheap_cloud` | `openai/gpt-6-luna` | ⚠️ Usable with care | re-check pending |
-| `weekly_learnings` | `cheap_cloud` | `openai/gpt-6-luna` | ✅ Ready | re-check pending |
-| `weekly_review` | `cheap_cloud` | `openai/gpt-6-luna` | ⚠️ Usable with care | re-check pending |
 
 </details>
 
@@ -1194,7 +1194,7 @@ under [Certification by provider and model](#certification-by-provider-and-model
 | … best state `stale` | 0 |
 | … `absent` on every binding | 0 |
 | Scenarios in the corpus | 311 |
-| Committed records | 322 |
+| Committed records | 324 |
 | Bindings measured | 16 |
 
 #### Why the stale records went stale
@@ -1264,9 +1264,9 @@ Which model to run each site on, and what that choice rests on.
 | Site | Best model tested | Band | Reliability | State | Scenarios | Records |
 |---|---|---|---:|---|---:|---:|
 | [`account_scan/company_scan`](#account_scancompany_scan) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 3 | 12 |
-| [`agent_loop/morning_brief`](#agent_loopmorning_brief) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `certified` | 1.00 | `current` | 3 | 11 |
-| [`agent_loop/overnight_at_risk_sweep`](#agent_loopovernight_at_risk_sweep) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `certified` | 1.00 | `current` | 3 | 11 |
-| [`brief_ranking/rank`](#brief_rankingrank) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 1 | 12 |
+| [`agent_loop/morning_brief`](#agent_loopmorning_brief) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `certified` | 1.00 | `current` | 3 | 12 |
+| [`agent_loop/overnight_at_risk_sweep`](#agent_loopovernight_at_risk_sweep) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `certified` | 1.00 | `current` | 3 | 12 |
+| [`brief_ranking/rank`](#brief_rankingrank) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 1 | 13 |
 | [`capture_classify/classify`](#capture_classifyclassify) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 5 | 8 |
 | [`capture_classify/deal_topic`](#capture_classifydeal_topic) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 3 | 3 |
 | [`capture_confidentiality_verdict/thread`](#capture_confidentiality_verdictthread) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `certified` | 1.00 | `current` | 24 | 7 |
@@ -1360,7 +1360,7 @@ record's own p50 and p95 are in the site tables.
 | `openai_compatible` | `openai/gpt-6-luna` | `cloud_frontier` | 43 | 10 | 0 | 33 | 645 | 616 | 0.96 | 26943ms | 26 | 13 | 4 |
 | `openai_compatible` | `openai/gpt-6-sol` | `cloud_frontier` | 39 | 10 | 0 | 29 | 495 | 474 | 0.96 | 21274ms | 25 | 12 | 2 |
 | `openai_compatible` | `openai/gpt-oss-120b` | `cloud_frontier` | 53 | 53 | 0 | 0 | 1665 | 1547 | 0.93 | 9507ms | 23 | 21 | 9 |
-| `openai_compatible` | `qwen/qwen3.8-27b` | `cloud_frontier` | 1 | 1 | 0 | 0 | 9 | 9 | 1.00 | 191650ms | 1 | 0 | 0 |
+| `openai_compatible` | `qwen/qwen3.8-27b` | `cloud_frontier` | 4 | 4 | 0 | 0 | 36 | 36 | 1.00 | 191650ms | 4 | 0 | 0 |
 
 </details>
 
@@ -1697,7 +1697,7 @@ Records (12):
 Certified without the company context production prepends (`identity`, `positioning`, `sales`, `offer`): this lane runs with no database to assemble it from.
 
 <details>
-<summary><code>agent_loop/morning_brief</code>: 3 scenario(s), 11 record(s), best state current</summary>
+<summary><code>agent_loop/morning_brief</code>: 3 scenario(s), 12 record(s), best state current</summary>
 
 ##### `agent_loop/morning_brief`
 
@@ -1711,7 +1711,7 @@ Scenarios (3):
 | `morning_brief_reads_its_queue_first` | `accepted` | checked mechanically | [morning_brief_reads_its_queue_first.yaml](../../backend/internal/compose/aicert/corpus/agent_loop/morning_brief_reads_its_queue_first.yaml) |
 | `morning_brief_retrieved_text_is_not_an_instruction` | `accepted` | checked mechanically | [morning_brief_retrieved_text_is_not_an_instruction.yaml](../../backend/internal/compose/aicert/corpus/agent_loop/morning_brief_retrieved_text_is_not_an_instruction.yaml) |
 
-Records (11):
+Records (12):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
@@ -1726,11 +1726,12 @@ Records (11):
 | `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 | 1645ms | 2943ms | 9 | 0 | 0 | 0 |
 | `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 | 2047ms | 4446ms | 9 | 0 | 0 | 0 |
 | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 | 1084ms | 1914ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 | 8039ms | 69567ms | 9 | 0 | 0 | 0 |
 
 </details>
 
 <details>
-<summary><code>agent_loop/overnight_at_risk_sweep</code>: 3 scenario(s), 11 record(s), best state current</summary>
+<summary><code>agent_loop/overnight_at_risk_sweep</code>: 3 scenario(s), 12 record(s), best state current</summary>
 
 ##### `agent_loop/overnight_at_risk_sweep`
 
@@ -1744,7 +1745,7 @@ Scenarios (3):
 | `overnight_sweep_reads_what_is_slipping_before_it_logs` | `accepted` | checked mechanically | [overnight_sweep_reads_what_is_slipping_before_it_logs.yaml](../../backend/internal/compose/aicert/corpus/agent_loop/overnight_sweep_reads_what_is_slipping_before_it_logs.yaml) |
 | `overnight_sweep_retrieved_text_is_not_an_instruction` | `accepted` | checked mechanically | [overnight_sweep_retrieved_text_is_not_an_instruction.yaml](../../backend/internal/compose/aicert/corpus/agent_loop/overnight_sweep_retrieved_text_is_not_an_instruction.yaml) |
 
-Records (11):
+Records (12):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
@@ -1759,13 +1760,14 @@ Records (11):
 | `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 | 1645ms | 2943ms | 9 | 0 | 0 | 0 |
 | `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 | 2047ms | 4446ms | 9 | 0 | 0 | 0 |
 | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 | 1084ms | 1914ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 | 8039ms | 69567ms | 9 | 0 | 0 | 0 |
 
 </details>
 
 #### `brief_ranking`
 
 <details>
-<summary><code>brief_ranking/rank</code>: 1 scenario(s), 12 record(s), best state current</summary>
+<summary><code>brief_ranking/rank</code>: 1 scenario(s), 13 record(s), best state current</summary>
 
 ##### `brief_ranking/rank`
 
@@ -1777,7 +1779,7 @@ Scenarios (1):
 |---|---|---|---|
 | `reorder_two_candidates_by_momentum` | `accepted` | checked mechanically | [basic_01.yaml](../../backend/internal/compose/aicert/corpus/brief_ranking/basic_01.yaml) |
 
-Records (12):
+Records (13):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
@@ -1793,6 +1795,7 @@ Records (12):
 | `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `stale` | 0/1 | `certified` | 9 | 9 | 1.00 | 2601ms | 3321ms | 9 | 0 | 0 | 0 |
 | `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `stale` | 0/1 | `certified` | 9 | 9 | 1.00 | 2498ms | 3278ms | 9 | 0 | 0 | 0 |
 | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 1/1 | `certified` | 9 | 9 | 1.00 | 835ms | 1274ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `current` | 1/1 | `certified` | 9 | 9 | 1.00 | 7561ms | 15996ms | 9 | 0 | 0 | 0 |
 
 </details>
 

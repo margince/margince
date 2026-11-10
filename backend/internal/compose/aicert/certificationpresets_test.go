@@ -149,17 +149,17 @@ func loadAICertPresets(t *testing.T) []aiCertPreset {
 	return orderAICertPresets(t, presets)
 }
 
-// aiCertPresetOrder is the order a reader meets the presets in. The shipped
-// Gemini default comes first, then brokered open-weight models, then the other
-// brokered models, then presets that run on the buyer's own machine. A preset
-// missing from the list fails the page, so its place is chosen, not its file name.
+// aiCertPresetOrder is the order a reader meets the presets in. The model
+// vendors' own clouds come first, the shipped Gemini default leading. Then come
+// open-weight models a broker serves, then presets on the buyer's own machine.
+// A preset missing from the list fails the page, so its place is chosen.
 var aiCertPresetOrder = []string{
 	"gemini_cloud.yaml",
 	"gemini_vertex_eu.yaml",
+	"openrouter_openai.yaml",
 	"openrouter_cloud.yaml",
 	"consumer_class_brokered.yaml",
 	"openrouter_cloud_eu.yaml",
-	"openrouter_openai.yaml",
 	"gemma4_local_ollama.yaml",
 	"qwen3_local_vllm.yaml",
 }
