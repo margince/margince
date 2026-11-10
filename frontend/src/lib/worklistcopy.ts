@@ -24,6 +24,7 @@ import {
   connectionTitleKey,
 } from "./worklistconnection";
 import { nonBuyerRequest } from "./worklisteyebrow";
+import { ownTitle } from "./worklisttitles";
 import type { Worklist, WorklistItem } from "./worklisttypes";
 
 export {
@@ -354,7 +355,7 @@ export function itemTitle(
     return translatePlural(locale, base, item.batch.count, { count, cause });
   }
   const named = subjectNamed ? undefined : item.subject?.label;
-  const own = item.title;
+  const own = ownTitle(item, t);
   if (own) {
     // A title that names no record, on a row that HAS one, gets the record's
     // name beside it. Eight rows reading "Follow up with the new lead" cannot

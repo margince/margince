@@ -10,9 +10,12 @@
 
 import { activityDay } from "../../format/activitywhen";
 import { formatDayMonthNearYear } from "../../format/format.dates";
-import type { Locale } from "../../i18n";
+import { useNow } from "../../format/now";
+import { type Locale, useLocale } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { useCompanyZone } from "../../lib/companyzone";
 import { valueFor } from "../../lib/labelfor";
+import { useViewerZone } from "../../lib/viewerzone";
 import { dealFactsText, partyName, type T } from "../../lib/worklistcopy";
 import { askKey } from "./worklist.ask";
 import type { WorklistItem } from "./worklist.queries";
@@ -25,6 +28,16 @@ type Clock = Readonly<{
   recordZone: string;
   now: Date;
 }>;
+
+/** The clock these sentences are dated by, for the reader on this page. */
+export function useHappenedClock(): Clock {
+  const { locale } = useLocale();
+  const zone = useViewerZone();
+  const recordZone = useCompanyZone();
+  // Only the year is read off it, so the clock never ticks.
+  const now = useNow(0);
+  return { locale, zone, recordZone, now: new Date(now) };
+}
 
 // The sentence for each source that has one, and the facts it needs. A source
 // that is absent here has nothing a sentence could add to its ask.
@@ -99,7 +112,7 @@ const EVENT: Readonly<
   },
 };
 
-// Who a source's sentence names: a person for the conversation lanes, the
+// Who a source's sentence names: a contact for the conversation lanes, the
 // stopped thing for the health lanes, the record for a suggestion.
 const NAMES_THE_CAUSE = new Set<WorklistItem["source"]>([
   "automation_run",
@@ -122,10 +135,7 @@ export function happenedLines(
   t: T,
   clock: Clock,
 ): Readonly<{ lines: string[]; told: boolean }> {
-  const event =
-    eventLine(item, t, clock) ??
-    taskLine(item, t, clock) ??
-    meetingLine(item, t, clock);
+  const event = ownEvent(item, t, clock);
   const deal = dealLine(item, t, clock);
   const lines = [event, deal, ...touchLines(item, t, clock)].filter(
     (line): line is string => Boolean(line),
@@ -135,39 +145,117 @@ export function happenedLines(
   return { lines, told: event !== null || dealTold };
 }
 
-// What to do, for a row whose event is already said. It is the ask without
-// its first sentence, which repeats the event with no date or name.
-const TODO: Readonly<Partial<Record<WorklistItem["source"], MessageKey>>> = {
-  task: "worklist.todo.task",
-  deal_at_risk: "worklist.todo.deal_at_risk",
-  customer_waiting: "worklist.todo.customer_waiting",
-  awaiting_reply: "worklist.todo.awaiting_reply",
-  lead_response: "worklist.todo.lead_response",
-  meeting: "worklist.todo.meeting",
-  meeting_outcome: "worklist.todo.meeting_outcome",
-  meeting_follow_up: "worklist.todo.meeting_follow_up",
-  relationship_decay: "worklist.todo.relationship_decay",
-  conversation_claim: "worklist.todo.conversation_claim",
-  bounce: "worklist.todo.bounce",
-  undelivered: "worklist.todo.undelivered",
-  automation_run: "worklist.todo.automation_run",
-  capture_health: "worklist.todo.capture_health",
-  ai_work_health: "worklist.todo.ai_work_health",
-  failed_approval: "worklist.todo.failed_approval",
-  deal_suggestion: "worklist.todo.deal_suggestion",
-  tag_suggestion: "worklist.todo.tag_suggestion",
-  domain_question: "worklist.todo.domain_question",
-};
-
-/** What a row whose event is told asks, or its whole ask where none is shorter. */
-export function todoKey(item: WorklistItem): MessageKey {
-  const ask = askKey(item);
-  // An invitation asks for an RSVP, which no shorter sentence says.
-  if (ask === "worklist.ask.invitation") return ask;
-  return (Object.hasOwn(TODO, item.source) && TODO[item.source]) || ask;
+/**
+ * A card's line: its own event, then what to do about it by name. Null for a
+ * row with no event, which keeps its whole ask.
+ */
+export function cardLine(
+  item: WorklistItem,
+  t: T,
+  clock: Clock,
+): string | null {
+  const event = ownEvent(item, t, clock);
+  return event ? `${event} ${todoLine(item, t, true)}` : null;
 }
 
-function eventLine(item: WorklistItem, t: T, clock: Clock): string | null {
+function ownEvent(item: WorklistItem, t: T, clock: Clock): string | null {
+  return (
+    eventLine(item, t, clock) ??
+    taskLine(item, t, clock) ??
+    meetingLine(item, t, clock)
+  );
+}
+
+// What to do, for a row whose event is already said. It is the ask without
+// its first sentence, which repeats the event with no date or name.
+const TODO: Readonly<
+  Partial<
+    Record<
+      WorklistItem["source"],
+      Readonly<{ bare: MessageKey; named?: MessageKey }>
+    >
+  >
+> = {
+  task: { bare: "worklist.todo.task", named: "worklist.todo.task.named" },
+  deal_at_risk: {
+    bare: "worklist.todo.deal_at_risk",
+    named: "worklist.todo.deal_at_risk.named",
+  },
+  customer_waiting: {
+    bare: "worklist.todo.customer_waiting",
+    named: "worklist.todo.customer_waiting.named",
+  },
+  awaiting_reply: {
+    bare: "worklist.todo.awaiting_reply",
+    named: "worklist.todo.awaiting_reply.named",
+  },
+  lead_response: {
+    bare: "worklist.todo.lead_response",
+    named: "worklist.todo.lead_response.named",
+  },
+  meeting: {
+    bare: "worklist.todo.meeting",
+    named: "worklist.todo.meeting.named",
+  },
+  meeting_outcome: { bare: "worklist.todo.meeting_outcome" },
+  meeting_follow_up: {
+    bare: "worklist.todo.meeting_follow_up",
+    named: "worklist.todo.meeting_follow_up.named",
+  },
+  relationship_decay: {
+    bare: "worklist.todo.relationship_decay",
+    named: "worklist.todo.relationship_decay.named",
+  },
+  conversation_claim: {
+    bare: "worklist.todo.conversation_claim",
+    named: "worklist.todo.conversation_claim.named",
+  },
+  bounce: { bare: "worklist.todo.bounce", named: "worklist.todo.bounce.named" },
+  undelivered: {
+    bare: "worklist.todo.undelivered",
+    named: "worklist.todo.undelivered.named",
+  },
+  automation_run: {
+    bare: "worklist.todo.automation_run",
+    named: "worklist.todo.automation_run.named",
+  },
+  capture_health: {
+    bare: "worklist.todo.capture_health",
+    named: "worklist.todo.capture_health.named",
+  },
+  ai_work_health: { bare: "worklist.todo.ai_work_health" },
+  failed_approval: { bare: "worklist.todo.failed_approval" },
+  deal_suggestion: { bare: "worklist.todo.deal_suggestion" },
+  tag_suggestion: { bare: "worklist.todo.tag_suggestion" },
+  domain_question: { bare: "worklist.todo.domain_question" },
+};
+
+/**
+ * What a row asks, by name where it knows one. A row whose event is told
+ * drops the ask's first sentence; an invitation keeps its RSVP ask whole.
+ */
+export function todoLine(item: WorklistItem, t: T, told: boolean): string {
+  const ask = askKey(item);
+  const keys = Object.hasOwn(TODO, item.source) ? TODO[item.source] : undefined;
+  if (!told || !keys || ask === "worklist.ask.invitation") return t(ask);
+  const name = todoName(item);
+  return keys.named && name ? t(keys.named, { name }) : t(keys.bare);
+}
+
+// Whom the ask names: the deal at risk, the stopped thing, else the contact.
+function todoName(item: WorklistItem): string | undefined {
+  if (item.source === "deal_at_risk")
+    return item.subject?.type === "deal" ? item.subject.label : undefined;
+  if (NAMES_THE_CAUSE.has(item.source)) return item.cause_label || undefined;
+  return partyName(item);
+}
+
+/** The row's own event, for the lanes that have one apart from a date. */
+export function eventLine(
+  item: WorklistItem,
+  t: T,
+  clock: Clock,
+): string | null {
   const keys = Object.hasOwn(EVENT, item.source)
     ? EVENT[item.source]
     : undefined;
@@ -307,7 +395,10 @@ const CONSEQUENCE: Readonly<
     bare: "worklist.consequence.deal_slips_past_close",
   },
   meeting_unprepared: { bare: "worklist.consequence.meeting_unprepared" },
-  task_slips: { bare: "worklist.consequence.task_slips" },
+  task_slips: {
+    named: "worklist.consequence.task_slips.named",
+    bare: "worklist.consequence.task_slips",
+  },
   work_blocked: { bare: "worklist.consequence.work_blocked" },
   customer_never_received: {
     named: "worklist.consequence.customer_never_received.named",
@@ -321,7 +412,7 @@ const CONSEQUENCE: Readonly<
   data_drifts: { bare: "worklist.consequence.data_drifts" },
 };
 
-// The deal consequences name the deal; every other one names the person.
+// The deal consequences name the deal; every other one names the contact.
 const DEAL_CONSEQUENCES = new Set<string>([
   "deal_drifts",
   "deal_slips_past_close",

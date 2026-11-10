@@ -112,7 +112,7 @@ export function TaskCompleteCheck({
   );
 }
 
-/** Complete, snooze a dated task, or explicitly choose its next due day. */
+/** Complete, or snooze a dated task. */
 export function TaskQuickActions({
   activityId,
   version,
@@ -120,7 +120,6 @@ export function TaskQuickActions({
   dueHasTime,
   update,
   showComplete = true,
-  showDuePicker = false,
 }: Readonly<{
   activityId: string;
   version: number | undefined;
@@ -129,10 +128,6 @@ export function TaskQuickActions({
   dueHasTime?: boolean;
   update: ReturnType<typeof useTaskUpdate>;
   showComplete?: boolean;
-  // Whether the reader may name a day, rather than only step the due date on.
-  // Off by default, since a date box in every next-steps row is too heavy.
-  // The detail modal opts in: a reader came there to work on one task.
-  showDuePicker?: boolean;
 }>) {
   const t = useT();
   const readerZone = useViewerZone();
@@ -161,21 +156,16 @@ export function TaskQuickActions({
           {t("tasks.snooze")}
         </Button>
       )}
-      {showDuePicker && (
-        <TaskDueDatePick
-          activityId={activityId}
-          version={version}
-          dueAt={dueAt}
-          dueHasTime={dueHasTime}
-          update={update}
-        />
-      )}
     </>
   );
 }
 
-// The picker also dates tasks that have no deadline to snooze.
-function TaskDueDatePick({
+/**
+ * The day and time to move a task to. The detail modal draws it, where a
+ * reader came to work on one task; a date box in every row is too heavy.
+ * It also dates a task that has no deadline to snooze.
+ */
+export function TaskDueDatePick({
   activityId,
   version,
   dueAt,
@@ -250,6 +240,7 @@ export function TaskDetailDialog({
   update,
   openerFor,
   why,
+  title,
 }: Readonly<{
   activityId: string;
   // An archived company takes no new activity, so the verbs below would only
@@ -262,6 +253,8 @@ export function TaskDetailDialog({
   openerFor: SourceOpenerFor;
   // Why the task is on the list it was opened from, which only that list knows.
   why?: ReactNode;
+  // The name the opening card gave the task, so the two read alike.
+  title?: string;
 }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -293,7 +286,7 @@ export function TaskDetailDialog({
     >
       <DrawerHead className="task-detail-head">
         <Heading size="large" id={titleId} className="t-h2">
-          {task?.subject ?? t("tasks.detail")}
+          {title ?? task?.subject ?? t("tasks.detail")}
         </Heading>
       </DrawerHead>
       <DrawerBody ref={body}>
@@ -410,18 +403,29 @@ function TaskDetailActions({
       )}
       {canAct && (
         <div ref={verbs} className="task-detail-verbs">
-          <TaskQuickActions
-            activityId={task.id}
-            version={task.version}
-            dueAt={task.due_at}
-            dueHasTime={task.due_has_time}
-            update={update}
-            showDuePicker
-          />
-          <Button onClick={() => setLogging(true)}>
-            {t("tasks.log.action")}
-          </Button>
-          <WhichDealDecline task={task} />
+          <div className="task-detail-buttons">
+            <TaskQuickActions
+              activityId={task.id}
+              version={task.version}
+              dueAt={task.due_at}
+              dueHasTime={task.due_has_time}
+              update={update}
+            />
+            <Button onClick={() => setLogging(true)}>
+              {t("tasks.log.action")}
+            </Button>
+            <WhichDealDecline task={task} />
+          </div>
+          {/* After the buttons in reading order, as on screen. */}
+          <div className="task-detail-due">
+            <TaskDueDatePick
+              activityId={task.id}
+              version={task.version}
+              dueAt={task.due_at}
+              dueHasTime={task.due_has_time}
+              update={update}
+            />
+          </div>
         </div>
       )}
       {logging && (

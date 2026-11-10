@@ -18563,6 +18563,41 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.why.now": "Vì sao là bây giờ",
   "worklist.why.consequence": "Nếu không làm gì",
   "worklist.why.todo": "Việc cần làm",
+  "worklist.title.deal_at_risk": "{name} đang chững lại",
+  "worklist.title.deal_at_risk.close_overdue":
+    "{name} đã quá ngày dự kiến chốt",
+  "worklist.title.relationship_decay": "Lâu rồi chưa liên hệ với {name}",
+  "worklist.title.automation_run": "{name} chưa chạy xong",
+  "worklist.title.automation_run.failed": "{name} bị lỗi",
+  "worklist.title.automation_run.blocked": "{name} bị chặn",
+  "worklist.title.meeting_outcome": "Ghi lại kết quả của {name}",
+  "worklist.title.meeting_follow_up": "Gửi thư tiếp nối cho {name}",
+  "worklist.title.awaiting_reply": "Chưa có phản hồi: {name}",
+  "worklist.title.bounce": "Bị trả về: {name}",
+  "worklist.title.lead_response": "Liên hệ lead mới {name}",
+  "worklist.title.customer_waiting": "{name} đang chờ bạn trả lời",
+  "worklist.todo.task.named":
+    "Làm xong việc với {name} và đánh dấu là xong, hoặc chuyển sang ngày khác.",
+  "worklist.todo.deal_at_risk.named":
+    "Mở {name} và lên kế hoạch cho bước tiếp theo.",
+  "worklist.todo.customer_waiting.named": "Trả lời {name}.",
+  "worklist.todo.awaiting_reply.named": "Gửi thư nhắc lại cho {name}.",
+  "worklist.todo.lead_response.named":
+    "Liên hệ {name} trước khi hết thời gian phản hồi.",
+  "worklist.todo.meeting.named": "Mở cuộc họp để chuẩn bị gặp {name}.",
+  "worklist.todo.meeting_follow_up.named": "Gửi thư tiếp nối cho {name}.",
+  "worklist.todo.relationship_decay.named":
+    "Liên hệ {name}, hoặc tạm gác lại một tháng.",
+  "worklist.todo.conversation_claim.named":
+    "Làm việc bạn đã nói với {name}, rồi đánh dấu là xong.",
+  "worklist.todo.bounce.named": "Kiểm tra địa chỉ của {name}, rồi gửi lại.",
+  "worklist.todo.undelivered.named":
+    "Mở email gửi {name} để xem lý do, rồi gửi lại.",
+  "worklist.todo.automation_run.named":
+    "Kiểm tra vì sao {name} dừng, rồi chạy lại.",
+  "worklist.todo.capture_health.named":
+    "Kết nối lại {name} để thư được thu thập trở lại.",
+  "worklist.consequence.task_slips.named": "Việc với {name} tiếp tục trễ hạn.",
   "worklist.happened.customer_waiting":
     "{name} đã viết vào {when} và chưa có ai trả lời.",
   "worklist.happened.customer_waiting.bare":
@@ -18576,9 +18611,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.happened.lead_response.bare":
     "Lead này đến vào {when} và chưa được trả lời lần đầu.",
   "worklist.happened.meeting_outcome":
-    "Cuộc họp với {name} diễn ra vào {when} và chưa ghi lại kết quả.",
+    "Cuộc họp với {name} được lên lịch vào {when} và chưa ghi lại kết quả.",
   "worklist.happened.meeting_outcome.bare":
-    "Cuộc họp diễn ra vào {when} và chưa ghi lại kết quả.",
+    "Cuộc họp được lên lịch vào {when} và chưa ghi lại kết quả.",
   "worklist.happened.meeting_follow_up":
     "Bạn đã gặp {name} vào {when} và sau đó chưa gửi gì cho họ.",
   "worklist.happened.meeting_follow_up.bare":
@@ -18609,9 +18644,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.happened.failed_approval.bare":
     "Một hành động bạn đã duyệt không chạy vào {when}.",
   "worklist.happened.deal_suggestion":
-    "Vào {when}, một cuộc trò chuyện với {name} trông giống một deal mới.",
+    "Vào {when}, hoạt động với {name} trông giống một deal mới.",
   "worklist.happened.deal_suggestion.bare":
-    "Vào {when}, một cuộc trò chuyện trông giống một deal mới.",
+    "Vào {when}, hoạt động đã ghi nhận trông giống một deal mới.",
   "worklist.happened.tag_suggestion":
     "Vào {when}, Margince đã gợi ý một thẻ cho {name}.",
   "worklist.happened.tag_suggestion.bare":
@@ -18682,7 +18717,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.todo.capture_health":
     "Kết nối lại hộp thư để thu thập email trở lại.",
   "worklist.todo.ai_work_health": "Kiểm tra nhà cung cấp AI trong Cài đặt.",
-  "worklist.todo.failed_approval": "Kiểm tra điều đã xảy ra, rồi xác nhận.",
+  "worklist.todo.failed_approval": "Kiểm tra điều đã xảy ra, rồi bấm Đánh dấu đã xem.",
   "worklist.todo.deal_suggestion": "Tạo deal, hoặc bỏ qua gợi ý.",
   "worklist.todo.tag_suggestion": "Áp dụng thẻ, hoặc bỏ qua gợi ý.",
   "worklist.todo.domain_question":

@@ -59,6 +59,7 @@ import {
 } from "../../lib/worklistcopy";
 import { eyebrowKeyFor } from "../../lib/worklisteyebrow";
 import type { WorklistItem } from "../../lib/worklisttypes";
+import { eventLine, useHappenedClock } from "../worklist/worklist.happened";
 
 /** The name a card goes by, the way the row in hand names it. */
 export function taskName(
@@ -86,8 +87,8 @@ export function taskName(
 }
 
 /**
- * The line under a card's name: what to do. The agent's own move first, then
- * the first reason the row is here, then the producer's own supporting line.
+ * The line under a card's name. The agent's own move first, then the row's
+ * event, then the first reason it is here, then the producer's own line.
  * Null when the row has none of them: the kind's stock sentence on every card
  * would be one line said six times.
  */
@@ -96,12 +97,13 @@ export function taskLine(
   t: Translator,
   locale: Locale,
   zone: string,
+  event: string | null = null,
 ): string | null {
   // The meta row's badges carry the clock, so the line leaves it out.
   const reason = phrasedReasons(item, true)
     .map((entry) => reasonText(entry, t, locale, zone, partyName(item)))
     .find((text) => text !== null);
-  return briefContextTitle(item) ?? reason ?? (item.detail || null);
+  return briefContextTitle(item) ?? event ?? reason ?? (item.detail || null);
 }
 
 /** Done on a row that is not a task: the queue's put-down, handed in. */
@@ -177,7 +179,8 @@ export function TaskCard({
   const { locale } = useLocale();
   const zone = useViewerZone();
   const viewer = useMe(false).data?.user;
-  const line = taskLine(item, t, locale, zone);
+  const clock = useHappenedClock();
+  const line = taskLine(item, t, locale, zone, eventLine(item, t, clock));
   return (
     <Card as="article" className="brief-task">
       <TaskTick item={item} rowDone={rowDone} />

@@ -15,21 +15,19 @@
 }
 /* A drawer reads from its start edge, so its verbs start there too. */
 .task-detail-actions,
-.task-detail-verbs {
+.task-detail-buttons,
+.task-detail-due {
   display: flex;
   flex-wrap: wrap;
   align-items: flex-end;
   gap: var(--gapActions);
 }
-
 /* The day and time fields take a row of their own under the buttons. */
-.task-detail-verbs::after {
-  content: "";
-  flex-basis: 100%;
-  order: 1;
+.task-detail-verbs {
+  display: grid;
+  gap: var(--gapActions);
 }
-.task-detail-verbs > .field {
-  order: 2;
+.task-detail-due > .field {
   flex: 1 1 10rem;
 }
 

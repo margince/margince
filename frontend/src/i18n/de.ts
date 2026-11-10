@@ -19037,6 +19037,44 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.why.now": "Warum jetzt",
   "worklist.why.consequence": "Wenn nichts passiert",
   "worklist.why.todo": "Was zu tun ist",
+  "worklist.title.deal_at_risk": "Bei {name} tut sich nichts mehr",
+  "worklist.title.deal_at_risk.close_overdue":
+    "{name} ist über das Abschlussdatum",
+  "worklist.title.relationship_decay": "Länger kein Kontakt mit {name}",
+  "worklist.title.automation_run": "{name} ist nicht durchgelaufen",
+  "worklist.title.automation_run.failed": "{name} ist fehlgeschlagen",
+  "worklist.title.automation_run.blocked": "{name} wurde blockiert",
+  "worklist.title.meeting_outcome": "Ergebnis von {name} festhalten",
+  "worklist.title.meeting_follow_up": "Bei {name} nachfassen",
+  "worklist.title.awaiting_reply": "Noch keine Antwort: {name}",
+  "worklist.title.bounce": "Unzustellbar: {name}",
+  "worklist.title.lead_response": "Neuen Lead {name} kontaktieren",
+  "worklist.title.customer_waiting": "{name} wartet auf deine Antwort",
+  "worklist.todo.task.named":
+    "Erledige die Aufgabe mit {name} und markiere sie als erledigt, oder verschiebe sie auf einen anderen Tag.",
+  "worklist.todo.deal_at_risk.named":
+    "Öffne {name} und plane den nächsten Schritt.",
+  "worklist.todo.customer_waiting.named": "Antworte {name}.",
+  "worklist.todo.awaiting_reply.named": "Sende {name} eine Nachfrage.",
+  "worklist.todo.lead_response.named":
+    "Melde dich bei {name}, bevor die Antwortzeit abläuft.",
+  "worklist.todo.meeting.named":
+    "Öffne den Termin, um dich auf {name} vorzubereiten.",
+  "worklist.todo.meeting_follow_up.named": "Sende {name} ein Follow-up.",
+  "worklist.todo.relationship_decay.named":
+    "Melde dich bei {name}, oder leg es für einen Monat beiseite.",
+  "worklist.todo.conversation_claim.named":
+    "Erledige, was du {name} zugesagt hast, und markiere es dann als erledigt.",
+  "worklist.todo.bounce.named":
+    "Prüfe die Adresse von {name} und sende die E-Mail dann erneut.",
+  "worklist.todo.undelivered.named":
+    "Öffne die E-Mail an {name}, um den Grund zu sehen, und sende sie dann erneut.",
+  "worklist.todo.automation_run.named":
+    "Prüfe, warum {name} angehalten hat, und starte es dann erneut.",
+  "worklist.todo.capture_health.named":
+    "Verbinde {name} neu, damit seine E-Mails wieder erfasst werden.",
+  "worklist.consequence.task_slips.named":
+    "Die Aufgabe mit {name} rutscht weiter über ihr Datum.",
   "worklist.happened.customer_waiting":
     "{name} hat am {when} geschrieben, und noch niemand hat geantwortet.",
   "worklist.happened.customer_waiting.bare":
@@ -19086,9 +19124,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.happened.failed_approval.bare":
     "Eine Aktion, die du freigegeben hast, lief am {when} nicht.",
   "worklist.happened.deal_suggestion":
-    "Am {when} sah ein Gespräch mit {name} nach einem neuen Deal aus.",
+    "Am {when} sah eine Aktivität mit {name} nach einem neuen Deal aus.",
   "worklist.happened.deal_suggestion.bare":
-    "Am {when} sah ein Gespräch nach einem neuen Deal aus.",
+    "Am {when} sah eine erfasste Aktivität nach einem neuen Deal aus.",
   "worklist.happened.tag_suggestion":
     "Am {when} hat Margince ein Tag für {name} vorgeschlagen.",
   "worklist.happened.tag_suggestion.bare":
@@ -19163,19 +19201,19 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.todo.undelivered":
     "Öffne die E-Mail, um den Grund zu sehen, und sende sie dann erneut.",
   "worklist.todo.automation_run":
-    "Prüfe die Ursache und führe sie dann erneut aus.",
+    "Prüfe die Ursache und führe die Automatisierung dann erneut aus.",
   "worklist.todo.capture_health":
     "Verbinde das Postfach neu, damit seine E-Mails wieder erfasst werden.",
   "worklist.todo.ai_work_health":
     "Prüfe ihren KI-Anbieter in den Einstellungen.",
   "worklist.todo.failed_approval":
-    "Prüfe, was passiert ist, und bestätige es dann.",
+    "Prüfe, was passiert ist, und nimm es dann zur Kenntnis.",
   "worklist.todo.deal_suggestion":
     "Lege den Deal an, oder verwirf den Vorschlag.",
   "worklist.todo.tag_suggestion":
     "Wende das Tag an, oder verwirf den Vorschlag.",
   "worklist.todo.domain_question":
-    "Bestätige ein Unternehmen, wähle eines, oder erfasse die Domain nicht mehr.",
+    "Bestätige ein Unternehmen, wähle eines, oder erfasse keine E-Mails von dieser Domain mehr.",
   "worklist.ask.approval":
     "Ein Agent hat eine Änderung vorgeschlagen und wartet auf eine Entscheidung. Gib sie frei oder lehne sie ab.",
   "worklist.ask.dedupe_candidate":

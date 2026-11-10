@@ -6,7 +6,12 @@ import { browserZone } from "../../format/timezone";
 import type { Locale, Translator } from "../../i18n";
 import { translate } from "../../i18n";
 import { row } from "./worklist.fixtures";
-import { consequenceLine, happenedLines, todoKey } from "./worklist.happened";
+import {
+  cardLine,
+  consequenceLine,
+  happenedLines,
+  todoLine,
+} from "./worklist.happened";
 
 const t: Translator = (key, params) => translate("en", key, params);
 
@@ -122,13 +127,13 @@ describe("what happened behind a row", () => {
 });
 
 describe("what waiting costs", () => {
-  it("names the person who keeps waiting", () => {
+  it("names the contact who keeps waiting", () => {
     expect(
       consequenceLine(row({ consequence: "buyer_waits", contact: SONYA }), t),
     ).toBe("Sonya Beck keeps waiting for an answer.");
   });
 
-  it("names the deal that drifts, never the person on it", () => {
+  it("names the deal that drifts, never the contact on it", () => {
     expect(
       consequenceLine(
         row({
@@ -139,6 +144,12 @@ describe("what waiting costs", () => {
         t,
       ),
     ).toBe("Depot rollout keeps drifting without a next step.");
+  });
+
+  it("names the contact a task is with", () => {
+    expect(
+      consequenceLine(row({ consequence: "task_slips", contact: SONYA }), t),
+    ).toBe("The task with Sonya Beck slips further past its date.");
   });
 
   it("says nothing when nothing follows, or when this build has no words", () => {
@@ -153,25 +164,69 @@ describe("what waiting costs", () => {
 });
 
 describe("what a told row asks", () => {
-  it("drops the half of the ask the event already said", () => {
-    expect(todoKey(row({ source: "customer_waiting" }))).toBe(
-      "worklist.todo.customer_waiting",
+  it("names who to answer, and drops the half the event already said", () => {
+    expect(
+      todoLine(row({ source: "customer_waiting", contact: SONYA }), t, true),
+    ).toBe("Reply to Sonya Beck.");
+    expect(todoLine(row({ source: "customer_waiting" }), t, true)).toBe(
+      "Reply to the message.",
     );
   });
 
-  it("keeps an invitation's RSVP ask whole", () => {
+  it("names the deal on a deal at risk, never the contact on it", () => {
     expect(
-      todoKey(
+      todoLine(
+        row({
+          source: "deal_at_risk",
+          contact: SONYA,
+          subject: { type: "deal", id: SONYA.id, label: "Depot rollout" },
+        }),
+        t,
+        true,
+      ),
+    ).toBe("Open Depot rollout and plan the next step.");
+  });
+
+  it("keeps the whole ask when the event is untold or is an invitation", () => {
+    expect(todoLine(row({ source: "customer_waiting" }), t, false)).toBe(
+      translate("en", "worklist.ask.customer_waiting"),
+    );
+    expect(
+      todoLine(
         Object.assign(row({ source: "customer_waiting" }), {
           email_summary: { calendar_invitation: true },
         }),
+        t,
+        true,
       ),
-    ).toBe("worklist.ask.invitation");
+    ).toBe(translate("en", "worklist.ask.invitation"));
   });
 
   it("keeps the whole ask for a source with no shorter one", () => {
-    expect(todoKey(row({ source: "dedupe_candidate" }))).toBe(
-      "worklist.ask.dedupe_candidate",
+    expect(todoLine(row({ source: "dedupe_candidate" }), t, true)).toBe(
+      translate("en", "worklist.ask.dedupe_candidate"),
     );
+  });
+});
+
+describe("a card's line", () => {
+  it("says the event, then what to do about it by name", () => {
+    expect(
+      cardLine(
+        row({
+          source: "customer_waiting",
+          occurred_at: "2026-11-07T12:00:00Z",
+          contact: SONYA,
+        }),
+        t,
+        clock,
+      ),
+    ).toBe(
+      "Sonya Beck wrote on 7 Nov, and nobody has answered yet. Reply to Sonya Beck.",
+    );
+  });
+
+  it("is absent for a row with no event of its own", () => {
+    expect(cardLine(row({ source: "dedupe_candidate" }), t, clock)).toBeNull();
   });
 });

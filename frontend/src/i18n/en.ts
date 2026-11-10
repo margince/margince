@@ -18851,6 +18851,41 @@ export const en = {
   "worklist.why.now": "Why now",
   "worklist.why.consequence": "If nothing is done",
   "worklist.why.todo": "What to do",
+  "worklist.title.deal_at_risk": "{name} has gone quiet",
+  "worklist.title.deal_at_risk.close_overdue": "{name} is past its close date",
+  "worklist.title.relationship_decay": "No recent contact with {name}",
+  "worklist.title.automation_run": "{name} did not finish",
+  "worklist.title.automation_run.failed": "{name} failed",
+  "worklist.title.automation_run.blocked": "{name} was blocked",
+  "worklist.title.meeting_outcome": "Record the outcome of {name}",
+  "worklist.title.meeting_follow_up": "Follow up on {name}",
+  "worklist.title.awaiting_reply": "No reply yet: {name}",
+  "worklist.title.bounce": "Bounced: {name}",
+  "worklist.title.lead_response": "Get back to new lead {name}",
+  "worklist.title.customer_waiting": "{name} is waiting for your reply",
+  "worklist.todo.task.named":
+    "Finish the task with {name} and mark it done, or move it to another day.",
+  "worklist.todo.deal_at_risk.named": "Open {name} and plan the next step.",
+  "worklist.todo.customer_waiting.named": "Reply to {name}.",
+  "worklist.todo.awaiting_reply.named": "Send {name} a follow-up.",
+  "worklist.todo.lead_response.named":
+    "Get in touch with {name} before the response time runs out.",
+  "worklist.todo.meeting.named": "Open the meeting to prepare for {name}.",
+  "worklist.todo.meeting_follow_up.named": "Send {name} a follow-up.",
+  "worklist.todo.relationship_decay.named":
+    "Get in touch with {name}, or set this aside for a month.",
+  "worklist.todo.conversation_claim.named":
+    "Do what you told {name}, then mark it done.",
+  "worklist.todo.bounce.named":
+    "Check the address you have for {name}, then send it again.",
+  "worklist.todo.undelivered.named":
+    "Open the email to {name} to see why, then send it again.",
+  "worklist.todo.automation_run.named":
+    "Check why {name} stopped, then run it again.",
+  "worklist.todo.capture_health.named":
+    "Reconnect {name} so its mail is captured again.",
+  "worklist.consequence.task_slips.named":
+    "The task with {name} slips further past its date.",
   "worklist.happened.customer_waiting":
     "{name} wrote on {when}, and nobody has answered yet.",
   "worklist.happened.customer_waiting.bare":
@@ -18895,9 +18930,9 @@ export const en = {
   "worklist.happened.failed_approval.bare":
     "An action you approved did not run on {when}.",
   "worklist.happened.deal_suggestion":
-    "On {when}, a conversation with {name} looked like a new deal.",
+    "On {when}, activity with {name} looked like a new deal.",
   "worklist.happened.deal_suggestion.bare":
-    "On {when}, a conversation looked like a new deal.",
+    "On {when}, recorded activity looked like a new deal.",
   "worklist.happened.tag_suggestion":
     "On {when}, Margince suggested a tag for {name}.",
   "worklist.happened.tag_suggestion.bare":

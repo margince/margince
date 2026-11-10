@@ -10,19 +10,20 @@
 import type { ReactNode } from "react";
 import { Eyebrow } from "../../design-system/eyebrow";
 import { Panel, PanelBody } from "../../design-system/panel";
-import { useNow } from "../../format/now";
-import { type Locale, type Translator, useLocale, useT } from "../../i18n";
-import { useCompanyZone } from "../../lib/companyzone";
-import { useViewerZone } from "../../lib/viewerzone";
+import { type Locale, type Translator, useT } from "../../i18n";
 import {
   factReasons,
   partyName,
   reasonText,
   saidByTheWhenLine,
 } from "../../lib/worklistcopy";
-import { askKey } from "./worklist.ask";
 import { useBriefAnswer, withFoldedBrief } from "./worklist.briefverbs";
-import { consequenceLine, happenedLines, todoKey } from "./worklist.happened";
+import {
+  consequenceLine,
+  happenedLines,
+  todoLine,
+  useHappenedClock,
+} from "./worklist.happened";
 import type { WorklistItem } from "./worklist.queries";
 import { codedDetail } from "./worklist.reader";
 import { rowAnswer } from "./worklist.row.answer";
@@ -39,24 +40,15 @@ export function WorklistWhy({
   // Draws the row's own verbs, for a drawer that covers the row it opened from.
   answer?: boolean;
 }>) {
-  const readerZone = useViewerZone();
-  const recordZone = useCompanyZone();
   const t = useT();
-  const { locale } = useLocale();
-  // Only the year is read off it, so the clock never ticks.
-  const now = useNow(0);
-  const { lines: happened, told } = happenedLines(item, t, {
-    locale,
-    zone: readerZone,
-    recordZone,
-    now: new Date(now),
-  });
+  const clock = useHappenedClock();
+  const { lines: happened, told } = happenedLines(item, t, clock);
   const reasons = whyReasons(
     item,
     told && Boolean(item.due_at) && DATED_SOURCES.has(item.source),
     t,
-    locale,
-    readerZone,
+    clock.locale,
+    clock.zone,
   );
   const consequence = consequenceLine(item, t);
   const detail = codedDetail(item, t);
@@ -106,7 +98,7 @@ export function WorklistWhy({
             </WhySection>
           )}
           <WhySection heading={t("worklist.why.todo")}>
-            <p>{t(told ? todoKey(item) : askKey(item))}</p>
+            <p>{todoLine(item, t, told)}</p>
             {answer && <RowVerbs item={item} />}
           </WhySection>
         </div>

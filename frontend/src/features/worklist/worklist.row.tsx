@@ -38,6 +38,7 @@ import {
   useRowPutDown,
 } from "./worklist.dispositions";
 import { WaitingEmailLine } from "./worklist.emailtitle";
+import { cardLine, useHappenedClock } from "./worklist.happened";
 import { hostText } from "./worklist.meetingparties";
 import { useRowSource } from "./worklist.noticesource";
 import { lastTouch } from "./worklist.pane";
@@ -386,14 +387,18 @@ function framedName(
   };
 }
 
-// The card is read on its own, so it says what the row asks. A queue row leaves
-// that to the details its reader opens.
+// The card is read on its own, so it says what happened and what to do about
+// it. A queue row leaves that to the details its reader opens.
 function RowAsk({
   item,
   framed,
 }: Readonly<{ item: WorklistItem; framed: boolean }>) {
   const t = useT();
-  return framed ? (
-    <p className="t-body worklist-row-ask">{t(askKey(item))}</p>
-  ) : null;
+  const clock = useHappenedClock();
+  if (!framed) return null;
+  return (
+    <p className="t-body worklist-row-ask">
+      {cardLine(item, t, clock) ?? t(askKey(item))}
+    </p>
+  );
 }

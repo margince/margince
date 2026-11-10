@@ -390,6 +390,7 @@ function FocusDetails({
       <TaskDetailModal
         activityId={item.id}
         item={item}
+        title={taskName(item, viewer, t, locale)}
         readOnly={!item.actions.includes("complete")}
         update={update}
         onClose={onClose}

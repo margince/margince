@@ -583,7 +583,9 @@ it("keeps optional reconnections reachable in the real Home queue drawer", async
   expect(
     await within(drawer).findByText(en["worklist.relationships.optional"]),
   ).toBeVisible();
-  expect(within(drawer).getByText("Demo reconnection")).toBeVisible();
+  expect(
+    within(drawer).getByText("No recent contact with Demo reconnection"),
+  ).toBeVisible();
 });
 
 it("reads optional reconnections only when the reader opens them", async () => {
@@ -619,7 +621,9 @@ it("reads optional reconnections only when the reader opens them", async () => {
   });
   expect(asked).not.toContain("include");
   await userEvent.click(show);
-  expect(await within(drawer).findByText("Quiet buyer")).toBeVisible();
+  expect(
+    await within(drawer).findByText("No recent contact with Quiet buyer"),
+  ).toBeVisible();
   expect(asked.filter((value) => value === "include")).toHaveLength(1);
 });
 
