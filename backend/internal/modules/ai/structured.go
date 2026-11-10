@@ -106,8 +106,10 @@ func (r *Router) completeStructuredOn(ctx context.Context, lc *logicalCall, task
 		return resp, info, nil
 	}
 	r.refused(ctx, lc, task, info, firstErr)
-	// No retry and no escalation for a caller that stopped waiting.
+	// No retry and no escalation for a caller that stopped waiting. The
+	// refused answer stays the terminal, so it says why the call ended.
 	if err := ctx.Err(); err != nil {
+		lc.markTerminal(sentinelFor(ctx, err))
 		return model.Response{}, info, err
 	}
 
@@ -122,6 +124,7 @@ func (r *Router) completeStructuredOn(ctx context.Context, lc *logicalCall, task
 	}
 	r.refused(ctx, lc, task, info, secondErr)
 	if err := ctx.Err(); err != nil {
+		lc.markTerminal(sentinelFor(ctx, err))
 		return model.Response{}, info, err
 	}
 

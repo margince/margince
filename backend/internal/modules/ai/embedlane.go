@@ -106,7 +106,7 @@ func (r *Router) Embed(ctx context.Context, req model.EmbedRequest) (model.Embed
 	// spends the agent's share of it too. A retrieval-heavy agent whose
 	// embeddings were free would be the one shape this counter never sees.
 	r.spendAgentTokens(ctx, trace.TokensIn)
-	if err := r.meter.Record(ctx, Usage{Task: TaskEmbeddings, Tier: TierEmbedLane, TokensIn: trace.TokensIn}); err != nil {
+	if err := r.recordUsage(ctx, Usage{Task: TaskEmbeddings, Tier: TierEmbedLane, TokensIn: trace.TokensIn}); err != nil {
 		return model.Embeddings{}, fmt.Errorf("ai: call served but metering failed: %w", err)
 	}
 	return res, nil

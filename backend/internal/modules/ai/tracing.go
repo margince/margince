@@ -140,7 +140,7 @@ func (r *Router) finalizeAttempt(ctx context.Context, b *binding, lc *logicalCal
 // keep serveAttempt's own branching count down.
 func (r *Router) serveCacheHit(ctx context.Context, b *binding, trace *Call, task Task, tier Tier, cached model.Response, degraded bool) (model.Response, RouteInfo, error) {
 	trace.Tier, trace.CacheHit = tier, true
-	if meterErr := r.meter.Record(ctx, Usage{Task: task, Tier: tier, Cached: true}); meterErr != nil {
+	if meterErr := r.recordUsage(ctx, Usage{Task: task, Tier: tier, Cached: true}); meterErr != nil {
 		// A served (cache-hit) call whose metering failed: label it as a
 		// metering failure, not a provider error — the tier is already set.
 		return model.Response{}, RouteInfo{}, fmt.Errorf("ai: metering cache hit: %w", errors.Join(errMeteringFailed, meterErr))
@@ -259,7 +259,7 @@ func (r *Router) attemptLadder(ctx context.Context, b *binding, lc *logicalCall,
 			}
 			continue
 		}
-		if meterErr := r.meter.Record(ctx, usageOf(task, t, out)); meterErr != nil {
+		if meterErr := r.recordUsage(ctx, usageOf(task, t, out)); meterErr != nil {
 			// Return the served response and tier even though the call fails:
 			// provider tokens were spent, and the trace must bill them to the
 			// tier that answered. errMeteringFailed keeps classifyError from
@@ -360,7 +360,7 @@ func (r *Router) meterWithheld(ctx context.Context, task Task, tier Tier, callEr
 	if spent.InputTokens+spent.OutputTokens == 0 {
 		return nil
 	}
-	if err := r.meter.Record(ctx, usageOf(task, tier, spent)); err != nil {
+	if err := r.recordUsage(ctx, usageOf(task, tier, spent)); err != nil {
 		return fmt.Errorf("ai: a withheld answer's spend could not be metered: %w", errors.Join(errMeteringFailed, err))
 	}
 	r.spendAgentTokens(ctx, spent.InputTokens+spent.OutputTokens)

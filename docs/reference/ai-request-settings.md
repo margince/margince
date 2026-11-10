@@ -38,6 +38,8 @@ A call whose caller stopped waiting is recorded with the **`canceled`** sentinel
 reloaded, or a job stopped. The router then makes no further attempt, so no other tier and no retry
 is asked. The sentinel is not a failure. The health dot and the figures leave it out, and the calls list
 shows it as its own outcome. The task flow counts it with the calls that were not answered, because nothing reached the caller.
+A provider that fails at the moment its caller stops waiting is recorded as `canceled` too, because the
+two cannot be told apart.
 
 ## What each attempt was sent
 
