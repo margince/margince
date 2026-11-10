@@ -65319,6 +65319,12 @@ components:
             The square badge a collapsed sidebar draws — the `getCompanyLogoIcon` path, absent
             on the same terms as `logo_url`. A client without one draws the wide mark.
 
+    CoreFeature:
+      type: string
+      enum: [home, contacts, companies, leads, deals, projects, filters, analytics]
+      x-extensible-enum: true
+      description: A core destination in the main menu. Disabling one keeps its stored data.
+
     SettingsAvailability:
       type: object
       additionalProperties: false
@@ -65353,9 +65359,16 @@ components:
             `GET /company/context/capabilities` instead. This field continues to report
             whether the company-context rollout has typed reads active. It does not gate
             the installation's Company settings page.
+        disabled_features:
+          type: array
+          items: { $ref: '#/components/schemas/CoreFeature' }
+          description: >
+            Core features turned off in the configuration file. Their pages, API operations
+            and agent tools are unavailable. Their data stays stored for when they are
+            turned on again. An omitted or empty list keeps every core feature available.
         reporting:
           type: boolean
-          description: Reporting is always available. Retained for compatibility with older clients.
+          description: Whether reporting is enabled in this installation.
         lists:
           type: boolean
           description: >

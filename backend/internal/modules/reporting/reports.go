@@ -63,6 +63,9 @@ func (s *Service) report(ctx context.Context, tx pgx.Tx, id ids.UUID, lock bool)
 	if err != nil {
 		return report, err
 	}
+	if !s.evaluator.FeaturesAvailable(ctx, report.Selection) {
+		return crmcontracts.ReportingReport{}, errFeatureUnavailable
+	}
 	allowed := s.canEditReport(ctx, tx, report)
 	if allowed != nil && !errors.Is(allowed, apperrors.ErrPermissionDenied) && !errors.Is(allowed, apperrors.ErrNotFound) {
 		return report, allowed
@@ -124,13 +127,16 @@ func (s *Service) ListReports(ctx context.Context, after *ids.UUID, limit int, s
 		if err != nil {
 			return err
 		}
+		if len(out.Data) > limit {
+			cursor := out.Data[limit-1].Id.String()
+			out.NextCursor = &cursor
+			out.Data = out.Data[:limit]
+		}
+		out.Data = slices.DeleteFunc(out.Data, func(report crmcontracts.ReportingReport) bool {
+			return !s.evaluator.FeaturesAvailable(ctx, report.Selection)
+		})
 		return populateReportSummaries(ctx, tx, out.Data)
 	})
-	if len(out.Data) > limit {
-		cursor := out.Data[limit-1].Id.String()
-		out.NextCursor = &cursor
-		out.Data = out.Data[:limit]
-	}
 	return out, err
 }
 

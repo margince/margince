@@ -7,7 +7,7 @@ an HTTP handler and not find it. The check is at the entry point of the store or
 transaction seam and the grants of the app role are the last guard under it. This is a design
 decision.
 
-A record link has a limited public card: its name, type and short context are readable without a session.
+A record link for a feature that is on has a limited public card: its name, type and short context are readable without a session.
 The public card edge binds a system principal only for that projection. It cannot reach the signed-in router.
 The full record still needs the reader's session and record access. See [Sharing record links](../handbook/sharing-record-links.md).
 
@@ -98,6 +98,14 @@ action. The row scope says how far those grants reach; the server still checks
 each row. Clients use the snapshot to explain access and show controls, and
 fetch it again on window focus and after a 403. Human-only checks and any route that
 asks for the admin role still apply.
+
+The file setting `features.disabled` turns off a whole feature for this installation.
+The API and MCP refuse its public calls. Other reads leave out parts that need it.
+
+`GET /v1/me` names the features turned off in `settings_availability.disabled_features`.
+The client hides their pages and controls; the stored grants stay as they are.
+Privacy exports, erasure and retention still run under their own grants.
+See [Turn off core features](../how-to/turn-off-core-features.md).
 
 The `passport` field on this response is marked `deprecated` and always null. A passport
 cannot reach this human-session endpoint. The field stays for published clients;
