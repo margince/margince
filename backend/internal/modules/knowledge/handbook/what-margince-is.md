@@ -159,7 +159,7 @@ Press ⌘K again, or Esc, to close it.
 Also called: quick search, command menu, Cmd K, Ctrl K, keyboard shortcut.
 
 ### What keyboard shortcuts does Margince have?
-Margince has keyboard shortcuts for search, for moving between pages and for work on a record. Press `?` on any page to see the full list. The account menu also opens it, under **Help and feedback** → **Keyboard shortcuts**.
+Margince has keyboard shortcuts for search, for moving between pages and for work on a record. Press `?` to see the full list, while single-key shortcuts are on and you are not typing in a field. The account menu always opens it, under **Help and feedback** → **Keyboard shortcuts**.
 
 On Windows and Linux, press Ctrl where this list says ⌘.
 
