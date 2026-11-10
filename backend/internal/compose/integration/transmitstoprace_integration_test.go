@@ -162,18 +162,7 @@ func assertPermissionWriteWaitsForHandoff(t *testing.T, scenario permissionWrite
 		}
 	}()
 	testdb.WaitForContention(t, returned, "the stop returned before the provider handoff completed", "the stop did not wait on the transmitting recipient", func(ctx context.Context) (bool, error) {
-		if _, err := p.Owner.Exec(ctx, "SELECT pg_stat_clear_snapshot()"); err != nil {
-			return false, err
-		}
-		var waiting bool
-		err := p.Owner.QueryRow(ctx, `SELECT EXISTS (
- SELECT 1 FROM pg_locks waiting JOIN pg_locks held
- ON (held.locktype,held.database,held.classid,held.objid,held.objsubid) = (waiting.locktype,waiting.database,waiting.classid,waiting.objid,waiting.objsubid)
- WHERE waiting.locktype = 'advisory' AND NOT waiting.granted AND held.granted AND held.mode='ShareLock'
- AND held.pid = ANY(pg_blocking_pids(waiting.pid))
- AND waiting.database = (SELECT oid FROM pg_database WHERE datname = current_database())
- AND ((waiting.classid::bigint << 32) | (waiting.objid::bigint & 4294967295)) = ANY(ARRAY(SELECT hashtextextended(k,0) FROM unnest(@keys::text[]) AS k)))`, pgx.NamedArgs{"keys": keys}).Scan(&waiting)
-		return waiting, err
+		return testdb.QueuedOnAdvisoryKeys(ctx, p.Owner, keys, "ShareLock")
 	})
 	if scenario == confirmationDuringSend {
 		probe, err := p.Owner.Begin(t.Context())

@@ -237,7 +237,7 @@ func TestARetainedSignatureSaveOrdersTheMembersReturnAfterItsReview(t *testing.T
 			_, err := store.SaveRetainedSignature(ctx, id, shown.Version, contacts.SaveSignatureInput{Body: "Reviewed before the return"})
 			saved <- err
 		}()
-		reviewer := waitForBackendBlockedBy(t, holder, backendPID(t, holder), saved)
+		reviewer := waiterBlockedBy(t, holder, backendPID(t, holder), saved)
 		go func() {
 			restored <- members.ReactivateUser(ctx, administrator, ids.From[ids.UserKind](e.Rep1))
 		}()
@@ -383,7 +383,7 @@ func TestInvitationActivationWaitsForTheRetainedSignatureReview(t *testing.T) {
 			_, err := store.SaveRetainedSignature(ctx, id, shown.Version, contacts.SaveSignatureInput{Body: "Reviewed before activation"})
 			saved <- err
 		}()
-		reviewer := waitForBackendBlockedBy(t, holder, backendPID(t, holder), saved)
+		reviewer := waiterBlockedBy(t, holder, backendPID(t, holder), saved)
 		go func() { activated <- members.RedeemPasswordReset(ctx, token, "Retained-owner-chooses-42!") }()
 		waitForBackendBlockedBy(t, holder, reviewer, activated)
 		return nil

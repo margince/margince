@@ -18,6 +18,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -143,11 +144,8 @@ func TestAnErasureThatStartsAfterTheCheckWaitsUntilTheRequestIsWritten(t *testin
 // erasureBlocked reports whether the erasure's session waits on another's lock.
 func erasureBlocked(t *testing.T, owner *pgx.Conn, pid int) bool {
 	t.Helper()
-	if _, err := owner.Exec(context.Background(), `SELECT pg_stat_clear_snapshot()`); err != nil {
-		t.Fatal(err)
-	}
-	var blocked bool
-	if err := owner.QueryRow(context.Background(), `SELECT cardinality(pg_blocking_pids($1)) > 0`, pid).Scan(&blocked); err != nil {
+	blocked, err := testdb.Waiting(context.Background(), owner, int32(pid))
+	if err != nil {
 		t.Fatal(err)
 	}
 	return blocked
