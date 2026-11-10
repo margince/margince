@@ -2056,6 +2056,27 @@ func (e AnalyticsScopeKind) Valid() bool {
 	}
 }
 
+// Defines values for AnswerCalendarInvitationRequestResponse.
+const (
+	AnswerCalendarInvitationRequestResponseAccepted  AnswerCalendarInvitationRequestResponse = "accepted"
+	AnswerCalendarInvitationRequestResponseDeclined  AnswerCalendarInvitationRequestResponse = "declined"
+	AnswerCalendarInvitationRequestResponseTentative AnswerCalendarInvitationRequestResponse = "tentative"
+)
+
+// Valid indicates whether the value is a known member of the AnswerCalendarInvitationRequestResponse enum.
+func (e AnswerCalendarInvitationRequestResponse) Valid() bool {
+	switch e {
+	case AnswerCalendarInvitationRequestResponseAccepted:
+		return true
+	case AnswerCalendarInvitationRequestResponseDeclined:
+		return true
+	case AnswerCalendarInvitationRequestResponseTentative:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AppliedDealChangeReviewKind.
 const (
 	AppliedDealChangeReviewKindAmount      AppliedDealChangeReviewKind = "amount"
@@ -11707,6 +11728,30 @@ func (e EmailAccessStatus) Valid() bool {
 	case EmailAccessStatusWithheld:
 		return true
 	case EmailAccessStatusWorkspace:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for EmailCalendarInvitationResponse.
+const (
+	EmailCalendarInvitationResponseAccepted    EmailCalendarInvitationResponse = "accepted"
+	EmailCalendarInvitationResponseDeclined    EmailCalendarInvitationResponse = "declined"
+	EmailCalendarInvitationResponseNeedsAction EmailCalendarInvitationResponse = "needs_action"
+	EmailCalendarInvitationResponseTentative   EmailCalendarInvitationResponse = "tentative"
+)
+
+// Valid indicates whether the value is a known member of the EmailCalendarInvitationResponse enum.
+func (e EmailCalendarInvitationResponse) Valid() bool {
+	switch e {
+	case EmailCalendarInvitationResponseAccepted:
+		return true
+	case EmailCalendarInvitationResponseDeclined:
+		return true
+	case EmailCalendarInvitationResponseNeedsAction:
+		return true
+	case EmailCalendarInvitationResponseTentative:
 		return true
 	default:
 		return false
@@ -33621,6 +33666,15 @@ type AnnotateBriefRequest struct {
 	Narrative *string `json:"narrative,omitempty"`
 }
 
+// AnswerCalendarInvitationRequest defines model for AnswerCalendarInvitationRequest.
+type AnswerCalendarInvitationRequest struct {
+	// Response The answer the organizer receives. `tentative` is Maybe.
+	Response AnswerCalendarInvitationRequestResponse `json:"response"`
+}
+
+// AnswerCalendarInvitationRequestResponse The answer the organizer receives. `tentative` is Maybe.
+type AnswerCalendarInvitationRequestResponse string
+
 // AppliedDealChangeReview The recorded automatic change and its current review state.
 type AppliedDealChangeReview struct {
 	Accepted  bool                        `json:"accepted"`
@@ -46702,6 +46756,23 @@ type EmailAttachmentSummary struct {
 	Id            openapi_types.UUID `json:"id"`
 }
 
+// EmailCalendarInvitation The reader's own answer to the event an invitation names.
+type EmailCalendarInvitation struct {
+	// Response What the reader's calendar holds. `needs_action` until they answer, and while their
+	// calendar has not synced the event.
+	Response EmailCalendarInvitationResponse `json:"response"`
+
+	// StartsAt When the event starts. Absent while the reader's calendar has not synced it.
+	StartsAt *time.Time `json:"starts_at,omitempty"`
+
+	// StartsPrecision How to read `starts_at`, present beside it. `day` is an all-day event, so a client draws no time.
+	StartsPrecision *OccurredPrecision `json:"starts_precision,omitempty"`
+}
+
+// EmailCalendarInvitationResponse What the reader's calendar holds. `needs_action` until they answer, and while their
+// calendar has not synced the event.
+type EmailCalendarInvitationResponse string
+
 // EmailDelivery Whether an outbound message actually left, and why not when it did not.
 //
 // The timeline carried DIRECTION alone, which reads as a delivery state and is not one:
@@ -46989,6 +47060,12 @@ type EmailSummary struct {
 	// AttachmentCount How many files came with it. Zero when withheld, like every other count.
 	AttachmentCount int `json:"attachment_count"`
 
+	// CalendarInvitation Present when this message is a calendar invitation the reader can still answer: it came
+	// into the reader's own mailbox, names an event, and that event has not started. A client
+	// offers the answers here instead of a written reply, because an invitation asks for an
+	// RSVP. Absent on every other message, and on a withheld one.
+	CalendarInvitation *EmailCalendarInvitation `json:"calendar_invitation,omitempty"`
+
 	// Counterparty Who the message was with, named for the row: "Ana Sommer", or "Ana Sommer +2" when
 	// the exchange had more. Null when no participant resolves to a name this caller may
 	// see — the row then says the direction alone rather than inventing a stranger.
@@ -47031,7 +47108,8 @@ type EmailSummary struct {
 	// Move Whose move it is, derived from what this reader can see of the thread.
 	// `needs_reply` on a message still owed our answer, `waiting_for_them` on one we sent
 	// that is still the last word with them. A calendar invitation, update, cancellation
-	// or answer is `none` unless someone confirmed it asks us something. `none` also when
+	// or answer is `none` unless someone confirmed it asks us something, and an invitation
+	// the reader may still answer is `none` too: `calendar_invitation` carries what it asks. `none` also when
 	// the question cannot be answered honestly — an unanswerable move is not a claim.
 	// A message older than the waiting horizon that nobody kept is `none` too: it is
 	// no longer current work, the same bound the waiting queue and `waiting_reply` apply.
@@ -47063,7 +47141,8 @@ type EmailSummaryDirection string
 // EmailSummaryMove Whose move it is, derived from what this reader can see of the thread.
 // `needs_reply` on a message still owed our answer, `waiting_for_them` on one we sent
 // that is still the last word with them. A calendar invitation, update, cancellation
-// or answer is `none` unless someone confirmed it asks us something. `none` also when
+// or answer is `none` unless someone confirmed it asks us something, and an invitation
+// the reader may still answer is `none` too: `calendar_invitation` carries what it asks. `none` also when
 // the question cannot be answered honestly — an unanswerable move is not a claim.
 // A message older than the waiting horizon that nobody kept is `none` too: it is
 // no longer current work, the same bound the waiting queue and `waiting_reply` apply.
@@ -76737,6 +76816,9 @@ type UpdateActivityJSONRequestBody = UpdateActivityRequest
 // SetActivityAudienceJSONRequestBody defines body for SetActivityAudience for application/json ContentType.
 type SetActivityAudienceJSONRequestBody = SetActivityAudienceRequest
 
+// AnswerCalendarInvitationJSONRequestBody defines body for AnswerCalendarInvitation for application/json ContentType.
+type AnswerCalendarInvitationJSONRequestBody = AnswerCalendarInvitationRequest
+
 // DeclineActivityDealJSONRequestBody defines body for DeclineActivityDeal for application/json ContentType.
 type DeclineActivityDealJSONRequestBody = DeclineActivityDealRequest
 
@@ -90779,6 +90861,9 @@ type ServerInterface interface {
 	// Limit (or re-open) who may see this activity's content.
 	// (PATCH /activities/{id}/audience)
 	SetActivityAudience(w http.ResponseWriter, r *http.Request, id Id, params SetActivityAudienceParams)
+	// Accept, tentatively accept or decline a calendar invitation that came by email.
+	// (PUT /activities/{id}/calendar-response)
+	AnswerCalendarInvitation(w http.ResponseWriter, r *http.Request, id Id)
 	// Say a captured message is not about a deal, or about none of the deals its question offered.
 	// (POST /activities/{id}/deal-decline)
 	DeclineActivityDeal(w http.ResponseWriter, r *http.Request, id Id)
@@ -93962,6 +94047,12 @@ func (_ Unimplemented) UpdateActivity(w http.ResponseWriter, r *http.Request, id
 // Limit (or re-open) who may see this activity's content.
 // (PATCH /activities/{id}/audience)
 func (_ Unimplemented) SetActivityAudience(w http.ResponseWriter, r *http.Request, id Id, params SetActivityAudienceParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Accept, tentatively accept or decline a calendar invitation that came by email.
+// (PUT /activities/{id}/calendar-response)
+func (_ Unimplemented) AnswerCalendarInvitation(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -101103,6 +101194,40 @@ func (siw *ServerInterfaceWrapper) SetActivityAudience(w http.ResponseWriter, r 
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.SetActivityAudience(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AnswerCalendarInvitation operation middleware
+func (siw *ServerInterfaceWrapper) AnswerCalendarInvitation(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AnswerCalendarInvitation(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -146175,6 +146300,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Patch(options.BaseURL+"/activities/{id}/audience", wrapper.SetActivityAudience)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/activities/{id}/calendar-response", wrapper.AnswerCalendarInvitation)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/activities/{id}/deal-decline", wrapper.DeclineActivityDeal)

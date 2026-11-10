@@ -71,7 +71,7 @@ var internalColumns = map[string]map[string]bool{
 	typeProject: setOf("closed_reason", "company_id", "key", "phase"),
 	typeActivity: setOf(
 		"agenda_fingerprint", "audience", "body_completeness", "booking_interval_exact",
-		"bulk_mail_attested", "calendar_method", "capture_label", "capture_label_declined_at",
+		"bulk_mail_attested", "calendar_method", "calendar_uid", "capture_label", "capture_label_declined_at",
 		"capture_label_declined_ruleset", "capture_labeled_at", "channel_provider", "claims_host_slot",
 		"counterparty_email", "counterparty_outbound_attested", "deal_topic_checked_at", "deal_topic_digest",
 		"direction", "domain_evidence_version",

@@ -173,7 +173,8 @@ var routeVerbFixtures = map[string]func(p *recordPool) map[string]any{
 	"save_mail_draft": func(p *recordPool) map[string]any {
 		return map[string]any{"request_body": map[string]any{"anchor_type": "company", "anchor_id": p.take("company")}}
 	},
-	"set_activity_disposition": byID("inbound_email"),
+	"set_activity_disposition":   byID("inbound_email"),
+	"answer_calendar_invitation": byID("calendar_invitation"),
 	"decline_activity_deal": func(p *recordPool) map[string]any {
 		return map[string]any{"id": p.take("inbound_email"), "request_body": map[string]any{"deal_id": p.take("deal")}}
 	},
