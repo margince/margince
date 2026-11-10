@@ -37,6 +37,7 @@ const contracts: Contract[] = [
     status: "active",
     value_basis: "annualized_12m",
     under_contract: true,
+    term_state: "in_force",
     auto_renew: false,
     source: "manual",
     captured_by: "human:u1",

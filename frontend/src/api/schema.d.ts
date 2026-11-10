@@ -38558,6 +38558,15 @@ export interface components {
              *     no longer under contract and still reports the status it was left in.
              */
             readonly under_contract: boolean;
+            /**
+             * @description Where today falls in the agreement's dated term, read from the dates alone
+             *     (CONTRACT-FORM-1): `not_started` before `starts_on`, `ended` after the earlier
+             *     of `ends_on` and `cancellation_effective_on`, `in_force` between. It tells an
+             *     agreement that has not begun from one that has run out, which `under_contract`
+             *     = false cannot, and it ignores `status` and archival as `under_contract` does not.
+             * @enum {string}
+             */
+            readonly term_state: "not_started" | "in_force" | "ended";
             source: string;
             /** @description The principal that recorded this agreement, prefixed by kind ("human:<id>" / "agent:<id>"). Server-stamped from the authenticated caller, never client-supplied — an agent acting under a passport is not a row in app_user, so this is not a user id. */
             readonly captured_by: string;
