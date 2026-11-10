@@ -169,6 +169,7 @@ const (
 const (
 	replayMemberAdminObject = "user_admin"
 	replaySalesTargetObject = "sales_target"
+	salesGoalPlanOwnerParam = "owner_id"
 	salesGoalPlanReplayNote = "a plan carries no owner column a scope reads; it answers the seller's draft and history, so the reporting module owns the probe"
 )
 
@@ -178,10 +179,10 @@ var replayableOperations = map[string]replayTarget{
 	"POST /v1/scheduling/proposals":   {object: tableActivity, table: tableActivity, idPath: "id"},
 	"POST /v1/analytics/decisions":    {object: tableActivity, table: tableActivity, idPath: "id"},
 	"PUT /v1/analytics/sales-goals/{owner_id}/{year}/draft": {
-		object: replaySalesTargetObject, moduleProbe: probeSalesGoalPlan, pathParam: "owner_id", rowNote: salesGoalPlanReplayNote,
+		object: replaySalesTargetObject, moduleProbe: probeSalesGoalPlan, pathParam: salesGoalPlanOwnerParam, rowNote: salesGoalPlanReplayNote,
 	},
 	"POST /v1/analytics/sales-goals/{owner_id}/{year}/publish": {
-		object: replaySalesTargetObject, moduleProbe: probeSalesGoalPlan, pathParam: "owner_id", rowNote: salesGoalPlanReplayNote,
+		object: replaySalesTargetObject, moduleProbe: probeSalesGoalPlan, pathParam: salesGoalPlanOwnerParam, rowNote: salesGoalPlanReplayNote,
 	},
 	// Row-scoped records: both gates apply, and the object and the table are
 	// the same word by construction (policy.coreObjects mirrors the table).

@@ -34,10 +34,11 @@ type Reading struct {
 
 // GetSalesProgress answers closed revenue against the goal for one period.
 func (h Reading) GetSalesProgress(w http.ResponseWriter, r *http.Request, params crmcontracts.GetSalesProgressParams) {
+	ctx := r.Context()
 	var out crmcontracts.SalesProgress
-	err := h.DB.TxIsolated(r.Context(), pgx.RepeatableRead, func(tx pgx.Tx) error {
+	err := h.DB.TxIsolated(ctx, pgx.RepeatableRead, func(tx pgx.Tx) error {
 		var err error
-		out, err = h.read(r.Context(), tx, params)
+		out, err = h.read(ctx, tx, params)
 		return err
 	})
 	if err != nil {
@@ -171,12 +172,12 @@ func (h Reading) read(ctx context.Context, tx pgx.Tx, params crmcontracts.GetSal
 func headlineSelection(scope crmcontracts.ReportingScope, frame progressFrame) crmcontracts.ReportingSelection {
 	horizon := frame.horizon
 	selection := crmcontracts.ReportingSelection{
-		Scope: scope, Period: "custom", Interval: &horizon, TargetBasis: "month",
-		CloseWindow: "custom", CloseInterval: &horizon,
+		Scope: scope, Period: crmcontracts.ReportingSelectionPeriodCustom, Interval: &horizon, TargetBasis: crmcontracts.ReportingSelectionTargetBasisMonth,
+		CloseWindow: crmcontracts.ReportingSelectionCloseWindowCustom, CloseInterval: &horizon,
 		Metrics: []crmcontracts.ReportingMetricID{crmcontracts.ReportingMetricIDBookingsWon, crmcontracts.ReportingMetricIDBookingsMix, crmcontracts.ReportingMetricIDOpenPipeline},
 	}
 	if !frame.started() {
-		selection.Period, selection.Interval = "this_month", nil
+		selection.Period, selection.Interval = crmcontracts.ReportingSelectionPeriodThisMonth, nil
 		selection.Metrics = []crmcontracts.ReportingMetricID{crmcontracts.ReportingMetricIDOpenPipeline}
 	}
 	return selection
@@ -190,7 +191,7 @@ func (h Reading) yearEvaluation(ctx context.Context, tx pgx.Tx, scope crmcontrac
 	}
 	window := frame.year
 	return h.Reports.EvaluateFactsTx(ctx, tx, crmcontracts.ReportingSelection{
-		Scope: scope, Period: "custom", Interval: &window, TargetBasis: "month", CloseWindow: "all_open",
+		Scope: scope, Period: crmcontracts.ReportingSelectionPeriodCustom, Interval: &window, TargetBasis: crmcontracts.ReportingSelectionTargetBasisMonth, CloseWindow: crmcontracts.ReportingSelectionCloseWindowAllOpen,
 		Metrics: []crmcontracts.ReportingMetricID{crmcontracts.ReportingMetricIDBookingsWon},
 	})
 }
@@ -198,16 +199,16 @@ func (h Reading) yearEvaluation(ctx context.Context, tx pgx.Tx, scope crmcontrac
 func progressShell(frame progressFrame, headline reporting.Evaluation) crmcontracts.SalesProgress {
 	out := crmcontracts.SalesProgress{
 		Scope: headline.Result.Context.Scope, Horizon: frame.horizon, Cutoff: frame.now,
-		Timezone: frame.zone.String(), Currency: frame.currency, State: "current",
+		Timezone: frame.zone.String(), Currency: frame.currency, State: crmcontracts.SalesProgressStateCurrent,
 		Months: []crmcontracts.SalesProgressMonth{}, Members: []crmcontracts.SalesProgressMember{},
 		PlannedValuedAt: headline.Result.Context.EvaluatedAt,
 	}
 	out.Period.Kind, out.Period.Year, out.Period.Month = crmcontracts.SalesProgressPeriodKind(frame.period.kind), frame.period.year, frame.period.month
 	switch {
 	case !frame.started():
-		out.State = "not_started"
+		out.State = crmcontracts.SalesProgressStateNotStarted
 	case !frame.now.Before(frame.horizon.EndAt):
-		out.State = "ended"
+		out.State = crmcontracts.SalesProgressStateEnded
 	}
 	if frame.started() {
 		actual := headline.Result.Context.Interval

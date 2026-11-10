@@ -26,24 +26,24 @@ func metricAmount(evaluation reporting.Evaluation, metric crmcontracts.Reporting
 			continue
 		}
 		if reading.Coverage.Withheld || reading.Value == nil {
-			return crmcontracts.SalesProgressAmount{Status: "withheld"}
+			return crmcontracts.SalesProgressAmount{Status: crmcontracts.SalesProgressAmountStatusWithheld}
 		}
 		amount := int64(*reading.Value)
 		switch reading.Coverage.Status {
 		case crmcontracts.ReportingStatusOk, crmcontracts.ReportingStatusNoData:
-			return crmcontracts.SalesProgressAmount{Status: "ok", AmountMinor: &amount}
+			return crmcontracts.SalesProgressAmount{Status: crmcontracts.SalesProgressAmountStatusOk, AmountMinor: &amount}
 		case crmcontracts.ReportingStatusPartial, crmcontracts.ReportingStatusInsufficientSample:
-			return crmcontracts.SalesProgressAmount{Status: "partial", AmountMinor: &amount}
+			return crmcontracts.SalesProgressAmount{Status: crmcontracts.SalesProgressAmountStatusPartial, AmountMinor: &amount}
 		}
 	}
-	return crmcontracts.SalesProgressAmount{Status: "withheld"}
+	return crmcontracts.SalesProgressAmount{Status: crmcontracts.SalesProgressAmountStatusWithheld}
 }
 
 func fillFigures(frame progressFrame, headline reporting.Evaluation, goals progressGoals, sellers progressSellers, out *crmcontracts.SalesProgress) {
 	out.Goal = goals.over(sellers.owners, frame.months(), frame.period.yearly())
 	out.Planned = metricAmount(headline, crmcontracts.ReportingMetricIDOpenPipeline)
-	out.Closed = crmcontracts.SalesProgressAmount{Status: "not_started"}
-	out.Categories = crmcontracts.SalesProgressCategories{Status: "not_started", ProductItems: []string{}, ServiceItems: []string{}}
+	out.Closed = crmcontracts.SalesProgressAmount{Status: crmcontracts.SalesProgressAmountStatusNotStarted}
+	out.Categories = crmcontracts.SalesProgressCategories{Status: crmcontracts.SalesProgressCategoriesStatusNotStarted, ProductItems: []string{}, ServiceItems: []string{}}
 	if !frame.started() {
 		return
 	}
@@ -87,19 +87,19 @@ func fillMonths(frame progressFrame, year reporting.Evaluation, goals progressGo
 		start := frame.year.StartAt.AddDate(0, month-1, 0)
 		row := crmcontracts.SalesProgressMonth{
 			Month: month, Window: crmcontracts.ReportingWindow{StartAt: start, EndAt: start.AddDate(0, 1, 0)},
-			State: "ended", Goal: goals.over(sellers.owners, []int{month}, false),
-			Closed: crmcontracts.SalesProgressAmount{Status: "not_started"},
+			State: crmcontracts.SalesProgressMonthStateEnded, Goal: goals.over(sellers.owners, []int{month}, false),
+			Closed: crmcontracts.SalesProgressAmount{Status: crmcontracts.SalesProgressAmountStatusNotStarted},
 		}
 		switch {
 		case !start.Before(frame.now):
-			row.State = "not_started"
+			row.State = crmcontracts.SalesProgressMonthStateNotStarted
 		case frame.now.Before(row.Window.EndAt):
-			row.State = "current"
+			row.State = crmcontracts.SalesProgressMonthStateCurrent
 		}
-		if row.State != "not_started" {
+		if row.State != crmcontracts.SalesProgressMonthStateNotStarted {
 			amount := closed[month]
 			row.Closed = crmcontracts.SalesProgressAmount{Status: status, AmountMinor: &amount}
-			if status == "withheld" {
+			if status == crmcontracts.SalesProgressAmountStatusWithheld {
 				row.Closed.AmountMinor = nil
 			}
 			_, row.DeltaMinor = compared(row.Closed, row.Goal)
@@ -147,7 +147,7 @@ func (h Reading) fillMembers(ctx context.Context, tx pgx.Tx, frame progressFrame
 }
 
 func memberAmount(status crmcontracts.SalesProgressAmountStatus, amount int64) crmcontracts.SalesProgressAmount {
-	if status == "withheld" || status == "not_started" {
+	if status == crmcontracts.SalesProgressAmountStatusWithheld || status == crmcontracts.SalesProgressAmountStatusNotStarted {
 		return crmcontracts.SalesProgressAmount{Status: status}
 	}
 	return crmcontracts.SalesProgressAmount{Status: status, AmountMinor: &amount}

@@ -133,7 +133,7 @@ func drifted(published []goalTargetLink, current GoalYear) bool {
 func (s *Service) publishMonth(ctx context.Context, tx pgx.Tx, owner ids.UUID, year, month int, value int64, retire bool, reason string, existing GoalYear) (goalTargetLink, error) {
 	id := openapi_types.UUID(owner)
 	in := crmcontracts.ReportingTargetInput{
-		Metric: goalMetric, Scope: crmcontracts.ReportingScope{Kind: reportingOwner, Id: &id}, PeriodKind: "month",
+		Metric: goalMetric, Scope: crmcontracts.ReportingScope{Kind: reportingOwner, Id: &id}, PeriodKind: crmcontracts.ReportingTargetInputPeriodKindMonth,
 		PeriodStart: openapi_types.Date{Time: time.Date(year, time.Month(month), 1, 0, 0, 0, 0, time.UTC)},
 		Value:       value, Reason: reason,
 	}

@@ -88,7 +88,7 @@ func (s *Service) requireGoalEdit(ctx context.Context, tx pgx.Tx, owner ids.UUID
 // planOwnedIdentity reports the seller and year a target input belongs to when
 // it is a month a sales goal plan can own.
 func planOwnedIdentity(in crmcontracts.ReportingTargetInput) (ids.UUID, int, bool) {
-	if in.Metric != goalMetric || in.Scope.Kind != reportingOwner || in.Scope.Id == nil || in.PipelineId != nil || in.PeriodKind != "month" {
+	if in.Metric != goalMetric || in.Scope.Kind != reportingOwner || in.Scope.Id == nil || in.PipelineId != nil || in.PeriodKind != crmcontracts.ReportingTargetInputPeriodKindMonth {
 		return ids.Nil, 0, false
 	}
 	return ids.UUID(*in.Scope.Id), in.PeriodStart.Year(), true

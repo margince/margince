@@ -13,7 +13,6 @@ package compose
 
 import (
 	"context"
-	"github.com/margince/margince/backend/internal/compose/salesprogress"
 	"log/slog"
 	"time"
 
@@ -23,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/analyticsquery"
 	"github.com/margince/margince/backend/internal/compose/homecache"
 	"github.com/margince/margince/backend/internal/compose/magic"
+	"github.com/margince/margince/backend/internal/compose/salesprogress"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/capture"

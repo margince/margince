@@ -71,13 +71,47 @@ func (h Reading) goals(ctx context.Context, tx pgx.Tx, frame progressFrame, sell
 // over is the goal of owners across months. yearly withholds the comparison
 // from a plan another route changed, until a manager reviews it.
 func (g progressGoals) over(owners []ids.UUID, months []int, yearly bool) crmcontracts.SalesProgressGoal {
-	out := crmcontracts.SalesProgressGoal{Status: "missing", MonthsNeeded: len(months)}
+	out := crmcontracts.SalesProgressGoal{Status: crmcontracts.SalesProgressGoalStatusMissing, MonthsNeeded: len(months)}
 	if !g.readable || g.withheld {
-		out.Status = "withheld"
+		out.Status = crmcontracts.SalesProgressGoalStatusWithheld
 		return out
 	}
-	var total int64
-	known, foreign := false, false
+	sum := g.sum(owners, months)
+	out.MonthsSet = sum.monthsSet
+	switch {
+	case sum.overflow:
+		out.Status = crmcontracts.SalesProgressGoalStatusWithheld
+		return out
+	case sum.foreign:
+		out.Status = crmcontracts.SalesProgressGoalStatusOtherCurrency
+		return out
+	case !sum.known:
+		return out
+	}
+	out.AmountMinor = &sum.total
+	switch {
+	case out.MonthsSet < len(months):
+		out.Status = crmcontracts.SalesProgressGoalStatusIncomplete
+	case yearly && slices.ContainsFunc(owners, func(owner ids.UUID) bool { return g.drift[owner] }):
+		out.Status = crmcontracts.SalesProgressGoalStatusChangedOutsidePlan
+	case sum.total == 0:
+		out.Status = crmcontracts.SalesProgressGoalStatusZero
+	default:
+		out.Status = crmcontracts.SalesProgressGoalStatusSet
+	}
+	return out
+}
+
+// goalSum adds the goal cells of owners across months in the reading currency.
+// A month counts as set only when every owner has a cell in that currency.
+type goalSum struct {
+	total                    int64
+	monthsSet                int
+	known, foreign, overflow bool
+}
+
+func (g progressGoals) sum(owners []ids.UUID, months []int) goalSum {
+	var sum goalSum
 	for _, month := range months {
 		complete := len(owners) > 0
 		for _, owner := range owners {
@@ -86,49 +120,31 @@ func (g progressGoals) over(owners []ids.UUID, months []int, yearly bool) crmcon
 			case !ok:
 				complete = false
 			case cell.Unit != g.currency:
-				foreign, complete = true, false
-			case total > values.MaxExactInteger-cell.Value:
-				out.Status = "withheld"
-				return out
+				sum.foreign, complete = true, false
+			case sum.total > values.MaxExactInteger-cell.Value:
+				sum.overflow = true
+				return sum
 			default:
-				total += cell.Value
-				known = true
+				sum.total += cell.Value
+				sum.known = true
 			}
 		}
 		if complete {
-			out.MonthsSet++
+			sum.monthsSet++
 		}
 	}
-	switch {
-	case foreign:
-		out.Status = "other_currency"
-		return out
-	case known:
-		out.AmountMinor = &total
-	}
-	switch {
-	case !known:
-	case out.MonthsSet < len(months):
-		out.Status = "incomplete"
-	case yearly && slices.ContainsFunc(owners, func(owner ids.UUID) bool { return g.drift[owner] }):
-		out.Status = "changed_outside_plan"
-	case total == 0:
-		out.Status = "zero"
-	default:
-		out.Status = "set"
-	}
-	return out
+	return sum
 }
 
 // compared fills completion and delta, which only a complete goal over a
 // complete amount supports. A zero goal has a delta and no completion.
 func compared(closed crmcontracts.SalesProgressAmount, goal crmcontracts.SalesProgressGoal) (completion *float64, delta *int64) {
-	if closed.Status != "ok" || closed.AmountMinor == nil || goal.AmountMinor == nil || (goal.Status != "set" && goal.Status != "zero") {
+	if closed.Status != crmcontracts.SalesProgressAmountStatusOk || closed.AmountMinor == nil || goal.AmountMinor == nil || (goal.Status != crmcontracts.SalesProgressGoalStatusSet && goal.Status != crmcontracts.SalesProgressGoalStatusZero) {
 		return nil, nil
 	}
 	difference := *closed.AmountMinor - *goal.AmountMinor
 	delta = &difference
-	if goal.Status == "set" {
+	if goal.Status == crmcontracts.SalesProgressGoalStatusSet {
 		ratio := float64(*closed.AmountMinor) / float64(*goal.AmountMinor)
 		completion = &ratio
 	}

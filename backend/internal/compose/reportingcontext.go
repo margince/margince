@@ -108,14 +108,14 @@ func reportingContext(ctx context.Context, tx pgx.Tx, selection crmcontracts.Rep
 	}
 	out.Horizon = &horizon
 	switch selection.CloseWindow {
-	case "all_open":
-	case "fiscal_quarter":
+	case crmcontracts.ReportingSelectionCloseWindowAllOpen:
+	case crmcontracts.ReportingSelectionCloseWindowFiscalQuarter:
 		closeWindow, err := reporting.TargetWindow(crmcontracts.ReportingWindow{StartAt: at, EndAt: at.Add(time.Nanosecond)}, "fiscal_quarter", calendar)
 		if err != nil {
 			return out, err
 		}
 		out.CloseInterval = &closeWindow
-	case "custom":
+	case crmcontracts.ReportingSelectionCloseWindowCustom:
 		closeWindow, err := customCloseWindow(selection.CloseInterval)
 		if err != nil {
 			return out, err
