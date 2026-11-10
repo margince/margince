@@ -699,7 +699,8 @@
    room there is. */
 @media (pointer: coarse) {
   .rail-count-go,
-  .record-details-toggle {
+  .record-details-toggle,
+  .brief-done-band > .btn {
     min-height: max(var(--controlHeight), 44px);
   }
 }
