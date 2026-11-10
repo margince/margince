@@ -661,5 +661,8 @@ const (
 	// subject-access reads, unscoped for the reason subjectQuestionSources is.
 	// Art. 15 owes everything held, and AssembleSAR admits only an unbounded
 	// human holding contact.delete.
+	// Also counted: contacts.holdCohortActivities locks the activities a cohort
+	// repair may write before it locks the contact. The ids bound that repair's
+	// writes inside its transaction, and none is returned to a caller.
 	modulesTierUnscopedCeiling = 163
 )

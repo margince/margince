@@ -114,3 +114,34 @@ func TestParseNamesBackAnAmbiguousLabelAnUnassignedCountryAndASecondValue(t *tes
 		t.Fatalf("named back %+v", out.Unsupported)
 	}
 }
+
+func TestThePromptLetsAnObjectiveLeaveItsTargetAndDeadlineOpen(t *testing.T) {
+	system := Request(setupInput(SiteInitiative)).System
+	for _, want := range []string{`"target_value":123 or null`, `"deadline":"YYYY-MM-DD" or null`, "set that field to null"} {
+		if !strings.Contains(system, want) {
+			t.Errorf("the prompt lacks %q, so a description with no target reads as one that needs a made-up value", want)
+		}
+	}
+}
+
+// The prompt shows each product by its ref, and a reply's ref reads back to
+// the product id. The id itself was never shown, so it names no product; nor
+// does a ref the catalog never minted.
+func TestAProductIsNamedByTheRefThePromptShowed(t *testing.T) {
+	in := setupInput(SiteCustomReport)
+	shown := Request(in).Messages[0].Content
+	if strings.Contains(shown, in.Catalog.Products[0].ID) || !strings.Contains(shown, `{"id":"p1","label":"Linden press line"}`) {
+		t.Fatalf("the prompt must show the product as p1 and never its id:\n%s", shown)
+	}
+	for value, want := range map[string]string{"p1": in.Catalog.Products[0].ID, in.Catalog.Products[0].ID: "", "p9": ""} {
+		reply := `{"name":"Linden","filters":[{"field":"product","value":"` + value +
+			`","phrase":"Linden"}],"metrics":[],"charts":[],"objective":null,"clarifications":[],"unsupported":[]}`
+		out, err := Parse(reply, in)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if out.Product != want {
+			t.Errorf("a reply naming product %q resolved %q, want %q", value, out.Product, want)
+		}
+	}
+}

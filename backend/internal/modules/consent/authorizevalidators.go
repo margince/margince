@@ -42,7 +42,8 @@ import (
 func (g *Gate) validate(ctx context.Context, tx pgx.Tx, req commsauthz.Request, subject subjectRef, category commsauthz.Category, w packRules) (resolution, error) {
 	unsupported := resolution{Category: category, Supported: false, Reason: commsauthz.ReasonNoEvidence}
 	if subject.Kind != entityContact && category != commsauthz.CategoryReplyToInbound &&
-		category != commsauthz.CategoryRequestedFollowup && category != commsauthz.CategoryPrivacyNotice {
+		category != commsauthz.CategoryRequestedFollowup && category != commsauthz.CategoryPrivacyNotice &&
+		category != commsauthz.CategoryOptoutConfirmation {
 		// A LEAD REACHES ONE ARM AND NO OTHER.
 		//
 		// The correspondence arm asks who wrote to us through subjectAskedUs.
@@ -52,6 +53,9 @@ func (g *Gate) validate(ctx context.Context, tx pgx.Tx, req commsauthz.Request, 
 		//
 		// The privacy notice is the one link a lead can hold. A website lead
 		// is told by it before anything else is sent.
+		//
+		// A lead's opt-out receipt rests on the lead's own stop, which the
+		// suppression table records against the lead.
 		//
 		// Every other arm reads a record a lead cannot hold. An invoice or
 		// contract hangs off a company, and the record and consent links name

@@ -159,7 +159,7 @@ describe("DealHistoryTab", () => {
         "GET /activities": () =>
           jsonResponse({ data: rows, page: { has_more: false } }),
       },
-      {},
+      { activity: ["read", "create"] },
     );
     withProviders(<DealHistoryTab deal={DEAL} onOpenEmail={() => {}} />);
 

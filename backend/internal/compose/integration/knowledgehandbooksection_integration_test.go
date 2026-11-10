@@ -11,6 +11,7 @@ package integration
 import (
 	"context"
 	"encoding/json"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -84,8 +85,9 @@ func TestTheShippedHandbookAnswersATimeZoneQuestionWithItsSettingsPage(t *testin
 	if err != nil {
 		t.Fatalf("encode quote: %v", err)
 	}
+	// The prompt names the passages p1, p2, … in retrieval order.
 	lane := writtenLane{reply: `{"coverage":"answers","summary":"Pick it in your own settings. [1]","claims":[` +
-		`{"text":"Pick your time zone in your own settings.","id":"` + passages[quoted].ChunkID.String() +
+		`{"text":"Pick your time zone in your own settings.","id":"p` + strconv.Itoa(quoted+1) +
 		`","quote":` + string(quoteJSON) + `}]}`}
 	answer := compose.AnswerCorpus(ie.ctx, lane, state, question, passages,
 		string(textlang.English), apptest.QuietAskLog())

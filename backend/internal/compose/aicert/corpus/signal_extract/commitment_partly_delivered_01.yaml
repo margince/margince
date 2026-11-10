@@ -23,7 +23,7 @@ expect:
       restated_message: 2
       due_date: '2026-09-11'
   rubric: >
-    The standard tier has been delivered; the enterprise pricing remains owed. Summarize only the remaining enterprise obligation, citing and quoting the original promise in message 1 so this is the same obligation rather than a duplicate from message 2. Name message 2 as the restatement and quote its renewed enterprise promise; the remaining delivery is due September 11, 2026.
+    The standard tier has been delivered; the enterprise pricing remains owed. The summary names only the remaining enterprise obligation; the event cites and quotes the original promise in message 1 through its message_id and quote fields, so this is the same obligation rather than a duplicate from message 2. The summary need not quote it. Name message 2 as the restatement and quote its renewed enterprise promise; the remaining delivery is due September 11, 2026.
   bands:
     certified_min: 70
     degraded_min: 50

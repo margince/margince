@@ -7,9 +7,9 @@ import { CardBoundary } from "../../design-system/cardboundary";
 // renders a settings page, and every one was pulling in a hundred and fifty
 // imports — every card, every mutation, the whole lucide set — to get one.
 //
-// Nothing here renders and nothing here imports a card. That is what keeps the
-// cost of asking "where does this go" separate from the cost of drawing it, and
-// it is the property settings-imports.test.ts holds.
+// Nothing here renders and nothing here imports a card. That keeps the cost of
+// asking "where does this go" separate from the cost of drawing it.
+// census/rules/settings-imports.census.ts holds this property.
 
 import { House } from "lucide-react";
 import { Suspense, useCallback } from "react";

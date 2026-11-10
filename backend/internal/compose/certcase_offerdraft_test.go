@@ -95,15 +95,22 @@ func offerDraftSupportExpected(t *testing.T) json.RawMessage {
 	})
 }
 
-// draftedLine renders one candidate as the prompt demands it, plus whichever of
-// the two optional price fields a caller puts on it.
+// offerDraftSourceRefs is the ref the prompt shows for each fixture context
+// item, in fixture order.
+//
+// gatekit:fixture the ref the offer prompt mints for each fixture source: expected data, not a waived cost
+var offerDraftSourceRefs = map[string]string{offerDraftKickoffSource: "s1", offerDraftSupportSource: "s2"}
+
+// draftedLine renders one candidate as the prompt demands it, citing the
+// source by its ref. It adds whichever of the two optional price fields a
+// caller puts on it.
 func draftedLine(description, evidence, sourceID string, priceFields ...string) string {
 	fields := []string{
 		`"description":"` + description + `"`,
 		`"quantity":"1"`,
 		`"tax_rate":"19.00"`,
 		`"evidence_snippet":"` + evidence + `"`,
-		`"source_id":"` + sourceID + `"`,
+		`"source_id":"` + offerDraftSourceRefs[sourceID] + `"`,
 	}
 	return "{" + strings.Join(append(fields, priceFields...), ",") + "}"
 }
@@ -367,6 +374,41 @@ func TestOfferDraftCaseReportsARefusedLineBesideAnAcceptedAnswer(t *testing.T) {
 	}
 	if !strings.Contains(outcome.Detail, `the gate refused the line "Invented add-on"`) {
 		t.Errorf("Detail = %q, want it to name the refused line", outcome.Detail)
+	}
+}
+
+// An item declared no_line fails a draft that stages a line from it, however
+// right the rest is. A draft that leaves it out passes.
+func TestOfferDraftCaseFailsALineFromAnItemExpectedToGroundNone(t *testing.T) {
+	expected := offerDraftExpectation(t, map[string]offerDraftExpectedLine{
+		offerDraftKickoffSource: {UnitPriceMinor: 20000, PriceGrounded: true},
+		offerDraftSupportSource: {NoLine: true},
+	})
+	kickoff := kickoffLine(`"conversation_price_minor":20000`)
+	cases := []struct {
+		name       string
+		reply      string
+		wantResult string
+		wantDetail string
+	}{
+		{name: "the item left out", reply: draftReply(kickoff), wantResult: aitasks.OutcomeAccepted},
+		{
+			name:       "a line staged from it beside the right one",
+			reply:      draftReply(kickoff, supportLine()),
+			wantResult: aitasks.OutcomeWrongAnswer,
+			wantDetail: `a staged line cites "activity:2", which the scenario expects no line from`,
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			outcome, _ := draftOutcome(t, expected, cannedReply(tc.reply))
+			if outcome.Result != tc.wantResult {
+				t.Fatalf("Result = %q (%s), want %q", outcome.Result, outcome.Detail, tc.wantResult)
+			}
+			if !strings.Contains(outcome.Detail, tc.wantDetail) {
+				t.Errorf("Detail = %q, want it to name %q", outcome.Detail, tc.wantDetail)
+			}
+		})
 	}
 }
 

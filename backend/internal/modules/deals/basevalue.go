@@ -66,17 +66,6 @@ func UnpricedCountSQL(asOfSQL, baseSQL, alias, filterSQL string) string {
 	return UnpricedValueCountSQL(BaseValueSQL(asOfSQL, baseSQL, alias), alias+".amount_minor", filterSQL)
 }
 
-// FinalizeBaseTotalSQL distinguishes no money from money that cannot be priced.
-func FinalizeBaseTotalSQL(sumSQL, unpricedSQL string) string {
-	return "CASE WHEN (" + sumSQL + ") IS NULL AND coalesce((" + unpricedSQL + "), 0) > 0 THEN NULL ELSE coalesce((" + sumSQL + "), 0) END"
-}
-
-// IncompleteBaseTotalSQL is a total that is NULL once any amount in it cannot
-// be priced. It is for a figure that claims to be whole.
-func IncompleteBaseTotalSQL(sumSQL, unpricedSQL string) string {
-	return "CASE WHEN coalesce((" + unpricedSQL + "), 0) > 0 THEN NULL ELSE coalesce((" + sumSQL + "), 0) END"
-}
-
 // UnpricedValueCountSQL keeps coverage under the same visibility as its amount.
 func UnpricedValueCountSQL(valueSQL, amountSQL, filterSQL string) string {
 	return "count(*) FILTER (WHERE " + filterSQL + " AND (" + amountSQL + ") IS NOT NULL AND (" + valueSQL + ") IS NULL)::integer"

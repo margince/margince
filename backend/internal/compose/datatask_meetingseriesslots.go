@@ -16,6 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture/graphcal"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/datatask"
+	"github.com/margince/margince/backend/internal/platform/originalstore"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -78,7 +79,7 @@ func listStoredOccurrences(ctx context.Context, tx pgx.Tx, selection string, in 
 		return nil, err
 	}
 	rows, err := tx.Query(ctx, `SELECT rc.id, own.id, rc.source_system, own.captured_by,
-		       CASE WHEN own.restricted_at IS NULL THEN rc.payload END `+selection+`
+		       CASE WHEN own.restricted_at IS NULL THEN `+originalstore.SQL("rc")+` END `+selection+`
 		  AND rc.id > $2 ORDER BY rc.id LIMIT $3`, seriesCalendars, after, in.Limit)
 	if err != nil {
 		return nil, fmt.Errorf("compose: listing stored meeting occurrences: %w", err)
@@ -134,6 +135,10 @@ func rekeySeriesSlotsBatch(ctx context.Context, tx pgx.Tx, in datatask.BatchIn) 
 	rekeyed := 0
 	for _, o := range occurrences {
 		scanned = append(scanned, o.original)
+		o.payload, err = originalstore.RepairPayload(ctx, o.payload)
+		if err != nil {
+			return datatask.BatchOut{}, err
+		}
 		slot, ok := slotOf(o.source, o.payload)
 		if !ok {
 			continue

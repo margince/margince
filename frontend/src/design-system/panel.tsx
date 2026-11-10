@@ -231,9 +231,10 @@ export function PanelBody({
 // PanelIntro is the one descriptive line a panel may carry: the sentence that
 // says what the zone is, standing first in a `PanelBody`, above the form or the
 // rows it describes. A BODY child and never a prop, because the head is a title
-// and the verbs that act on it — a description up there is a head at two
-// heights, and `panelhead.test.tsx` holds that. Two may stack, a reading and
-// the posture a reader holds over it, and the second is still one of these.
+// and the verbs that act on it. A description up there is a head at two
+// heights; `panelhead.test.tsx` and `census/rules/panelhead.census.ts` hold
+// that. Two may stack, a reading and the posture a reader holds over it,
+// and the second is still one of these.
 //
 // The interval below it belongs to this component rather than to the screen
 // writing the line: seventy-odd of these were spaced from one screen sheet, and

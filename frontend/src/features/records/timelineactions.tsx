@@ -18,6 +18,7 @@ import type { components } from "../../api/schema";
 import { ifMatch, requireVersion } from "../../api/version";
 import { ArchiveAction } from "../../components/archive";
 import { RecordMeetingOutcome } from "../../components/meetingoutcome";
+import { AppLink } from "../../design-system/applink";
 import { Button } from "../../design-system/atoms";
 import { ChoiceList } from "../../design-system/choicelist";
 import { ConfirmModal } from "../../design-system/confirmmodal";
@@ -26,8 +27,11 @@ import { useT } from "../../i18n";
 import { entityTimelineKeys, taskWriteKeys } from "../../lib/activitykeys";
 import { useMessageAudience } from "../../lib/audienceservice";
 import { useCanWriteRecord } from "../../lib/capability";
+import { captureReviewTarget } from "../../lib/capturereview";
+import { labelFor } from "../../lib/labelfor";
 import { problemMessageOf, unwrap } from "../../lib/problem";
-import { navigate } from "../../lib/router";
+import { navigate, routeHash } from "../../lib/router";
+import { hashWithParams } from "../../lib/urlstate";
 import {
   AUDIENCE_HINT,
   AUDIENCE_LABEL,
@@ -58,6 +62,8 @@ type RowVerbProps = Readonly<{
   entityType: RelinkKind;
   entityId: string;
   contactId?: string;
+  /** The contact whose page draws the row, whose attach right gates a reply. */
+  contact?: { readonly attachable?: boolean };
   extra?: (activity: Activity) => ReactNode;
 }>;
 
@@ -73,6 +79,7 @@ export function RowAnswerActions({
   entityType,
   entityId,
   contactId,
+  contact,
   extra,
 }: RowVerbProps) {
   const t = useT();
@@ -95,6 +102,7 @@ export function RowAnswerActions({
         entityType={entityType}
         entityId={entityId}
         contactId={contactId}
+        contact={contact}
         contentWithheld={activity.content_state === "withheld"}
       />
       {activity.invitation_status && activity.content_state !== "withheld" && (
@@ -126,6 +134,9 @@ export function TimelineActions(props: RowVerbProps) {
   return (
     <>
       <RowAnswerActions {...props} />
+      {entityType === "contact" && (
+        <HeldMailLink activity={activity} contactId={entityId} />
+      )}
       <OverflowMenu
         label={
           activity.subject
@@ -376,8 +387,8 @@ export function AudienceAction({
             onChange={setChoice}
             choices={messageAudienceChoices(internal).map((value) => ({
               value,
-              label: t(AUDIENCE_LABEL[value]),
-              description: t(AUDIENCE_HINT[value]),
+              label: t(labelFor(AUDIENCE_LABEL, value)),
+              description: t(labelFor(AUDIENCE_HINT, value)),
             }))}
           />
           {/* The picker only where the choice needs one. A limited-to-nobody
@@ -397,6 +408,31 @@ export function AudienceAction({
         </div>
       </ConfirmModal>
     </>
+  );
+}
+
+// A held mail on a contact's timeline leads to the reader's held list, narrowed
+// to that contact. The list is the reader's own mailbox, so it may hold none
+// of this row's threads; it says so itself.
+function HeldMailLink({
+  activity,
+  contactId,
+}: Readonly<{ activity: Activity; contactId: string }>) {
+  const t = useT();
+  const held =
+    activity.kind === "email" &&
+    activity.content_state !== "withheld" &&
+    activity.audience !== "workspace" &&
+    audienceIsDerived(activity);
+  if (!held) return null;
+  const target = captureReviewTarget("held", contactId);
+  return (
+    <AppLink
+      className="btn btn-link"
+      href={hashWithParams(routeHash(target.route), target.params)}
+    >
+      {t("heldThreads.forContact")}
+    </AppLink>
   );
 }
 

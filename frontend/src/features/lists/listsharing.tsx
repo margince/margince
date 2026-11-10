@@ -11,6 +11,7 @@ import { Field } from "../../design-system/atoms";
 import { Select } from "../../design-system/select";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { labelFor } from "../../lib/labelfor";
 import type { List } from "../../lib/lists.queries";
 import { useMe } from "../../lib/session";
 
@@ -87,7 +88,7 @@ export function ListAudienceFields({
             }
             options={SHARINGS.map((sharing) => ({
               value: sharing,
-              label: t(SHARING_LABEL[sharing]),
+              label: t(labelFor(SHARING_LABEL, sharing)),
             }))}
           />
         )}
@@ -141,7 +142,7 @@ export function useListAudienceLabel(): (
   const teamName = useTeamName();
   return (list) => {
     if (list.sharing !== "team") {
-      return t(SHARING_LABEL[list.sharing]);
+      return t(labelFor(SHARING_LABEL, list.sharing));
     }
     if (list.team_id) {
       return teamName(list.team_id);

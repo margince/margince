@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// The extension import detector that ext-imports.test.ts runs over the tree
-// and over its own fixtures. The rules it holds are written in that file.
+// The extension import detector that census/rules/ext-imports.census.ts runs
+// over the tree and ext-imports.test.ts over its fixtures. The rules it holds
+// are written in the test file.
 
 import { existsSync, readFileSync, realpathSync } from "node:fs";
 import { basename, dirname, join, relative, resolve } from "node:path";

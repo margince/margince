@@ -375,7 +375,7 @@ func (c *OwedClassifier) ask(ctx context.Context, batch []owedCandidate) ([]owed
 	if msg := validateOwedPayload(payload, batch); msg != "" {
 		return nil, fmt.Errorf("owed classify: %s", msg)
 	}
-	return payload.Results, nil
+	return resolveBatchRefs(payload.Results, owedverdict.Refs(batch)), nil
 }
 
 // owedShapeValid is the deterministic hard floor beneath the response schema:
@@ -416,14 +416,12 @@ func validateOwedPayload(payload owedPayload, batch []owedCandidate) string {
 
 func (r owedResult) answeredID() string { return r.ID }
 
-// owedIDs is the ids one batch asks about: what the schema lets the model name
-// and what the validator requires it to answer.
+func (r owedResult) answering(id string) owedResult { r.ID = id; return r }
+
+// owedIDs is the refs one batch asks about: what the schema lets the model
+// name and what the validator requires it to answer.
 func owedIDs(batch []owedCandidate) []string {
-	requested := make([]string, len(batch))
-	for i, m := range batch {
-		requested[i] = m.ID.String()
-	}
-	return requested
+	return owedverdict.Refs(batch).All()
 }
 
 // owedSchema is the generation-time shape guardrail.

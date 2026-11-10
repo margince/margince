@@ -13,6 +13,7 @@ import (
 	"context"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/originalstore"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -21,7 +22,7 @@ import (
 // query set is compliance-critical — adding or dropping a source changes what
 // the export owes the data subject. It is assembled chapter by chapter, and the
 // order the chapters concatenate in is the order the export runs them in.
-func sarSections(ctx context.Context, pkg *SARPackage, contactID ids.ContactID, emails []string, leads, identities, authored []ids.UUID) ([]sarSection, error) {
+func sarSections(ctx context.Context, pkg *SARPackage, contactID ids.ContactID, emails []string, leads, identities, authored, external []ids.UUID) ([]sarSection, error) {
 	sections := sarIdentitySections(pkg)
 	retained, err := sarRetainedCopySections(ctx, pkg, identities, emails, leads)
 	if err != nil {
@@ -36,7 +37,7 @@ func sarSections(ctx context.Context, pkg *SARPackage, contactID ids.ContactID, 
 	sections = append(sections, sarConsentLinkSections(pkg)...)
 	sections = append(sections, sarCommunicationSections(pkg, emails, leads, identities)...)
 	sections = append(sections, sarJudgementSections(pkg, authored)...)
-	return append(sections, sarProvenanceSections(pkg)...), nil
+	return append(sections, sarProvenanceSections(pkg, contactID, external)...), nil
 }
 
 // sarIdentitySections gather how the subject is identified and where they are
@@ -296,7 +297,8 @@ func sarConsentSections(pkg *SARPackage) []sarSection {
 // sarProvenanceSections gather where the held data CAME FROM: the raw provider
 // payloads the subject was captured out of, and the per-field record of who
 // captured what from where.
-func sarProvenanceSections(pkg *SARPackage) []sarSection {
+func sarProvenanceSections(pkg *SARPackage, contactID ids.ContactID, external []ids.UUID) []sarSection {
+	rawArgs, externalIDs := sarOriginalArgs(contactID, external)
 	return []sarSection{
 		// Why the installation holds this contact at all: what they did, or
 		// what was done to obtain them. Art. 15(1)(g) asks for the source of
@@ -395,15 +397,13 @@ func sarProvenanceSections(pkg *SARPackage) []sarSection {
 		                          WHERE ` + sarRawCaptureLink + ` AND ` + sarContentDisclosed + `)
 		             AND NOT EXISTS (SELECT 1 FROM activity a
 		                              WHERE ` + sarRawCaptureLink + ` AND NOT ` + sarContentDisclosed + `)
-		            THEN rc.payload END AS payload
+		            THEN ` + originalstore.SQL("rc") + ` END AS payload
 		   FROM raw_capture rc
 		   WHERE EXISTS (SELECT 1 FROM contact_email pe WHERE pe.contact_id = $1
-		                 AND rc.payload::text ILIKE
-		                     '%' || ` + storekit.EscapeLikeSQL("pe.email") + ` || '%' ESCAPE '\')
-		      OR EXISTS (SELECT 1 FROM contact_channel_identity pci WHERE pci.contact_id = $1
-		                 AND rc.source_system = pci.provider
-		                 AND (rc.payload->'message'->'from'->>'id' = pci.channel_user_id
-		                      OR rc.payload->'my_chat_member'->'chat'->>'id' = pci.channel_user_id))`, nil},
+		                 AND ` + rawEmailMatchSQL("rc.payload", "pe.email") + `)
+ OR EXISTS (SELECT 1 FROM contact_channel_identity pci WHERE pci.contact_id = $1
+ AND ` + rawChannelMatchSQL("rc.payload", "rc.source_system", "pci.provider", "pci.channel_user_id") + `)
+ OR rc.id = ANY(` + externalIDs + `)`, rawArgs},
 		{&pkg.FieldOrigins, `SELECT fp.field_name, fp.source, fp.captured_by, fp.captured_at, fp.confidence, fp.evidence_ref
 		   FROM field_provenance fp
 		   WHERE fp.object_type = 'contact' AND fp.object_id = $1`, nil},

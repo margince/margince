@@ -104,14 +104,14 @@ describe("LeadHistoryTab", () => {
       {},
     );
     const stub = globalThis.fetch;
-    const kinds: (string | null)[] = [];
+    const kinds: string[][] = [];
     vi.stubGlobal("fetch", (input: RequestInfo | URL, init?: RequestInit) => {
       const url = new URL(
         input instanceof Request ? input.url : String(input),
         "https://test.local",
       );
       if (url.pathname.endsWith("/activities")) {
-        kinds.push(url.searchParams.get("kind"));
+        kinds.push(url.searchParams.getAll("kind"));
       }
       return stub(input, init);
     });
@@ -120,7 +120,7 @@ describe("LeadHistoryTab", () => {
     await screen.findByText("Fleet renewal");
     await userEvent.click(screen.getByRole("button", { name: "Calls" }));
 
-    await waitFor(() => expect(kinds).toContain("call"));
+    await waitFor(() => expect(kinds).toContainEqual(["call"]));
     expect(
       screen
         .getByRole("button", { name: "Calls" })

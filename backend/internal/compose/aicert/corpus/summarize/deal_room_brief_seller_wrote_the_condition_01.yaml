@@ -59,8 +59,11 @@ expect:
     degraded_min: 50
     floor: 40
   rubric: >
-    Score whether the brief reports the threads still waiting, including the
-    oldest, a request to rename the dashboards before the pilot opens, and
-    says the buyer's counsel is still reading clause 9. Penalise any sentence that reports the refusal
-    to countersign as the buyer's position: those are the seller's own words
-    in this thread. Penalise any date the summary did not supply.
+    Score whether the brief reports what the buyer is waiting on the reader
+    for, including the oldest such ask, a request to rename the dashboards
+    before the pilot opens. Clause 9 waits on the buyer's counsel, not on the
+    reader, so a brief that leaves it out has not missed anything; one that
+    mentions it reports counsel's reading, not a condition the buyer set.
+    Penalise any sentence that reports the refusal to countersign as the
+    buyer's position: those are the seller's own words in this thread.
+    Penalise any date the summary did not supply.
