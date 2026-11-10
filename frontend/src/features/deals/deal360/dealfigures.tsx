@@ -399,6 +399,7 @@ function closeEvent(
       title: t(labelFor(CLOSE_TITLE, deal.status)),
       sub: day(closeDay),
       kind: "end",
+      outcome: deal.status === "open" ? undefined : deal.status,
     },
   ];
 }
