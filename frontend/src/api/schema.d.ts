@@ -19667,8 +19667,9 @@ export interface paths {
         /**
          * Set or clear when buyer access lapses.
          * @description Null clears the bound, leaving access open until the room is closed or
-         *     archived. A past instant is accepted and takes effect immediately — that is
-         *     how access is cut short without ending the room. It decides how long a buyer can
+         *     archived. A past instant is accepted and takes effect at once — that is
+         *     how access is cut short without ending the room. One at or before the room's
+         *     creation is stored as the time of the call. It decides how long a buyer can
          *     read the room, so an agent spends `send` on it.
          */
         put: operations["setDealRoomExpiry"];
