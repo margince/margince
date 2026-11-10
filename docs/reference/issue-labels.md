@@ -75,8 +75,11 @@ issue to label.
 - `claim: main-red`: a session is already fixing this red on `main`. It sits on a draft pull request
   whose body lists the failing lanes and tests it covers. The list matters because `main` is often
   red for two reasons at once that have nothing to do with each other. A claim that names one of
-  them leaves the other free for someone to take. Check for a claim before you look into a failure
-  you did not cause. If no claim covers yours, open one before you start a fix.
+  them leaves the other free for someone to take.
+
+  The watcher claims a red `main`, so leave a failure you did not cause to it. Open a claim yourself
+  only when the red blocks your merge and, 30 minutes after it showed, no claim names its tests.
+  Then open it before you start a fix.
 
   The steps, and
   when someone may take over an old claim, are in
