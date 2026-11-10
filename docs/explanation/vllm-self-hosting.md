@@ -25,7 +25,7 @@ MLX). Of five models it was first or tied on 6 of 7 tasks, at 10 to 13 seconds
 for a verdict. It is the preset
 [`qwen3_local_vllm.yaml`](../../config/presets/qwen3_local_vllm.yaml), described
 in section 5. No record is committed for it, so run the certification lane on
-your own machine before you rely on it.
+your own machine before you use it.
 
 If it need not be vLLM, use **Ollama with Gemma 4 `12B`**
 ([ollama-self-hosting.md](ollama-self-hosting.md)). On this machine vLLM is not
@@ -167,7 +167,7 @@ With both servers up (0.87 and 0.1 of memory), about 9% of the machine is left
 free.
 
 No record is committed for it, so the
-[certification page](../reference/ai-certification.md) shows it as untested. To
+[certification page](../reference/ai-certification.md) shows it as not measured. To
 grade it on your own machine, start both servers and run
 `make e2e-ai ROUTING=config/presets/qwen3_local_vllm.yaml`.
 `document_extract` cannot pass on it: it sends a PDF, which this text-only
