@@ -3,11 +3,10 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { createQueryClient } from "../../app/queryclient";
 import { LocaleProvider } from "../../i18n";
 import { approvalQueryKey } from "../../lib/approvalread";
 import { useApprovalRetry } from "./worklist.acknowledge";
@@ -33,7 +32,9 @@ describe("retrying a failed approval", () => {
           }),
       ),
     );
-    const client = createQueryClient();
+    // A bare client: the app's adds refreshes of its own on every write, and
+    // the retry's own invalidation is what this holds.
+    const client = new QueryClient();
     const approval = "ap-1";
 
     // A resolved entry at the approval's own key. Invalidation marks it stale,
