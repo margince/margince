@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import type { Rule } from "../../scripts/lib/css-rules";
 import { here, membersOf, probe, ref } from "../../scripts/lib/surface-sheets";
+import { stable } from "../../src/format/collate";
 import { srcDir, treeOf } from "../tree";
 import {
   cssSpellings,
@@ -21,12 +22,12 @@ import {
 
 describe("the nesting ladder has one painter", () => {
   it("reads the theme roots and the rungs off the token sheets", () => {
-    expect([...THEME_ROOTS].sort()).toEqual([
+    expect([...THEME_ROOTS].sort(stable)).toEqual([
       ":root",
       ':root:not([data-theme="light"])',
       '[data-theme="dark"]',
     ]);
-    expect([...RUNGS].sort()).toEqual(
+    expect([...RUNGS].sort(stable)).toEqual(
       expect.arrayContaining([
         "--bgElevated",
         "--pane",

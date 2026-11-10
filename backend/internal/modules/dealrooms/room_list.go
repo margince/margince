@@ -72,7 +72,7 @@ func (s *Store) ListRooms(ctx context.Context, in ListRoomsInput) ([]crmcontract
 		// Answered here as well as by id, because the room screen reads its
 		// room from the LIST — a field only GetRoom filled would be absent
 		// exactly where the button that needs it is drawn.
-		return StampPreviewAvailable(ctx, tx, out)
+		return stampCapabilities(ctx, tx, out)
 	})
 	return out, page, err
 }

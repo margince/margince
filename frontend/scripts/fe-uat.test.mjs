@@ -6,6 +6,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { stable } from "./lib/stable.mjs";
 import { FAILURE_EVENTS, outcomeErrors } from "./lib/story-outcome.mjs";
 import { startupModules } from "./lib/uat-entry.mjs";
 import {
@@ -285,7 +286,7 @@ describe("drainInOrder", () => {
       () => "recovered",
     );
     expect(overlaps).toEqual([]);
-    expect([...used].sort()).toEqual(["a", "b", "c"]);
+    expect([...used].sort(stable)).toEqual(["a", "b", "c"]);
   });
 
   it("with one lane, runs items strictly in order", async () => {
@@ -490,7 +491,7 @@ it("includes committed, staged, unstaged and new stories before commit", () => {
     const includingDeleted = changesSince(git, base, { includeDeleted: true });
     expect(includingDeleted).toContain("frontend/.storybook/preview.tsx");
     expect(scopeFor([], includingDeleted)).toBe("all");
-    expect(changesSince(git, base).sort()).toEqual([
+    expect(changesSince(git, base).sort(stable)).toEqual([
       "committed.tsx",
       "new.stories.tsx",
       "staged.tsx",

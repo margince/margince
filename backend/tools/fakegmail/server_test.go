@@ -294,3 +294,46 @@ func TestTheConsentPageAdmitsTheNamedCallbackOrigin(t *testing.T) {
 		}
 	}
 }
+
+// The redirect is spelled again from the parts the check admitted. It carries
+// no user info, a lower-case host, a numeric port, the caller's path and the code.
+func TestTheConsentRedirectIsRebuiltFromTheCheckedParts(t *testing.T) {
+	s := testMailboxes(1)
+	s.callbackOrigin = "https://app.test"
+	srv := serve(t, s)
+	client := &http.Client{CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
+	for target, wantHost := range map[string]string{
+		"http://evil@127.0.0.1:8080/cb?keep=1": "127.0.0.1:8080",
+		"http://LOCALHOST.:5173/cb?keep=1":     "localhost:5173",
+		"http://[::1]:8080/cb?keep=1":          "[::1]:8080",
+		"https://APP.test/cb?keep=1":           "app.test",
+	} {
+		resp, err := client.Get(srv.URL + "/o/oauth2/v2/auth?" + url.Values{"redirect_uri": {target}, "login_hint": {"owner"}}.Encode())
+		if err != nil {
+			t.Fatal(err)
+		}
+		closeBody(t, resp)
+		if resp.StatusCode != http.StatusFound {
+			t.Errorf("redirect_uri %q: status %d, want 302", target, resp.StatusCode)
+			continue
+		}
+		back, err := url.Parse(resp.Header.Get("Location"))
+		if err != nil {
+			t.Fatalf("redirect_uri %q: Location %q is not a URL: %v", target, resp.Header.Get("Location"), err)
+		}
+		if back.Host != wantHost || back.User != nil || back.Path != "/cb" {
+			t.Errorf("redirect_uri %q: sent to %q, want host %q, no user info and path /cb", target, back, wantHost)
+		}
+		if back.Query().Get("keep") != "1" || back.Query().Get("code") != "code-owner" {
+			t.Errorf("redirect_uri %q: query %q lost the caller's parameter or the code", target, back.RawQuery)
+		}
+	}
+	resp, err := client.Get(srv.URL + "/o/oauth2/v2/auth?" + url.Values{"redirect_uri": {"http://127.0.0.1:99999/cb"}}.Encode())
+	if err != nil {
+		t.Fatal(err)
+	}
+	closeBody(t, resp)
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Errorf("a loopback redirect with port 99999: status %d, want 400", resp.StatusCode)
+	}
+}

@@ -5,6 +5,7 @@
  * one control the reader came for. */
 
 .compose-audience-members {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: var(--space-2);

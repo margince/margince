@@ -105,6 +105,9 @@ func RecordHardBounceTx(ctx context.Context, tx pgx.Tx, fact HardBounceFact) err
 	if address == "" {
 		return errors.New("consent: a hard bounce names no address")
 	}
+	if err := storekit.LockStopAddresses(ctx, tx, []string{address}, nil); err != nil {
+		return err
+	}
 	by, err := storekit.CapturedBy(ctx)
 	if err != nil {
 		return err
@@ -268,6 +271,9 @@ func (s *Store) LiftAddressStop(ctx context.Context, address, reason string) err
 		return err
 	}
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
+		if err := storekit.LockStopAddresses(ctx, tx, []string{address}, nil); err != nil {
+			return err
+		}
 		var stopID ids.UUID
 		err := tx.QueryRow(ctx, `
 			UPDATE communication_suppression

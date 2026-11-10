@@ -273,16 +273,19 @@ The 13 tables owned by `platform`, as the migrations build them. [Back to the en
 
 ## stored_object_intent
 
-3 columns · primary key `(storage_key)` · referenced by 0 foreign keys
+5 columns · primary key `(storage_key)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `kind` | `text` | yes |  |
+| `reaped_at` | `timestamp with time zone` |  |  |
+| `reaping_since` | `timestamp with time zone` |  |  |
 | `recorded_at` | `timestamp with time zone`, default `now()` | yes |  |
 | `storage_key` | `text` | yes |  |
 
 **Indexes**
 
+- `stored_object_intent_pending_idx`: `btree (COALESCE(reaping_since, recorded_at), storage_key) WHERE (reaped_at IS NULL)`
 - `stored_object_intent_pkey`: `unique, btree (storage_key)`
 - `stored_object_intent_recorded_idx`: `btree (recorded_at)`
 

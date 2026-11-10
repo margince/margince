@@ -6,6 +6,7 @@ package identity
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -62,8 +63,11 @@ func (s *Service) UpdateMember(ctx context.Context, actor Identity, member ids.U
 	if in.Teams != nil && len(*in.Teams) > 2000 {
 		return &values.ParseError{Field: fieldTeamIDs, Code: codeInvalid, Message: "choose at most 2000 teams"}
 	}
-	return s.db.Tx(ctx, func(tx pgx.Tx) error {
+	edit := func(tx pgx.Tx) error {
 		if err := lockAuthorization(ctx, tx); err != nil {
+			return err
+		}
+		if err := lockMemberAddressClaims(ctx, tx, member, in.Email); err != nil {
 			return err
 		}
 		if err := refuseUnlessCallerOutranksTarget(ctx, tx, actor, member, reachTakeover); err != nil {
@@ -86,7 +90,20 @@ func (s *Service) UpdateMember(ctx context.Context, actor Identity, member ids.U
 			}
 		}
 		return s.placeMember(ctx, tx, in.LegalEntity, member)
-	})
+	}
+	return storekit.RetryLockCycles(ctx, func() error { return s.db.Tx(ctx, edit) })
+}
+
+// lockMemberAddressClaims takes the seat-address claim lock on the member's
+// login and on any address it is about to become, before any row lock. The
+// authorization lock the caller holds keeps the login read here current.
+func lockMemberAddressClaims(ctx context.Context, tx pgx.Tx, member ids.UserID, next ...string) error {
+	var login string
+	err := tx.QueryRow(ctx, `SELECT email FROM app_user WHERE id = $1`, member).Scan(&login)
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return fmt.Errorf("identity: reading the member's login: %w", err)
+	}
+	return storekit.LockSeatAddressClaims(ctx, tx, append(next, login)...)
 }
 
 func (s *Service) editMemberIdentityTx(ctx context.Context, tx pgx.Tx, actor Identity, member ids.UserID, in MemberEdit) error {

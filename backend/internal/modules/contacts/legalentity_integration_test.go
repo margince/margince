@@ -301,6 +301,11 @@ func TestEveryEntityWriteCommitsItsAuditAndItsEvent(t *testing.T) {
 	if _, err := e.store.ArchiveLegalEntity(admin, vienna.ID, nil); err != nil {
 		t.Fatalf("archive: %v", err)
 	}
+	var retained bool
+	if err := e.owner.QueryRow(t.Context(), `SELECT archived_at IS NOT NULL FROM legal_entity WHERE id=@entity`,
+		pgx.StrictNamedArgs{"entity": vienna.ID.UUID}).Scan(&retained); err != nil || !retained {
+		t.Fatalf("retirement must keep the sending company: retained=%v, error=%v", retained, err)
+	}
 	for action, eventType := range map[string]string{
 		"create": "legal_entity.created", "update": "legal_entity.updated", "archive": "legal_entity.archived",
 	} {

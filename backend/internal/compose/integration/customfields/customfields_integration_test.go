@@ -209,7 +209,7 @@ func TestCustomFieldCreate_BusyTableAnswersRetryableConflict(t *testing.T) {
 	svc := customfieldsmod.NewService(e.Pool, integration.SchemaPool(t))
 	ctx := e.As(e.Rep1, nil, integration.CustomFieldAdminPerms)
 
-	blocker := integration.OwnerConn(t)
+	blocker := integration.FreshOwnerConn(t)
 	blockTx, err := blocker.Begin(context.Background())
 	if err != nil {
 		t.Fatal(err)
@@ -255,7 +255,7 @@ func TestCustomFieldSetOptions_BusyTableAnswersRetryableConflict(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	blocker := integration.OwnerConn(t)
+	blocker := integration.FreshOwnerConn(t)
 	blockTx, err := blocker.Begin(context.Background())
 	if err != nil {
 		t.Fatal(err)

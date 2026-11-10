@@ -103,3 +103,6 @@
 1794215101_large_originals_name_their_stored_object.up.sql | * | defines a retirement trigger whose body runs only on later writes; no existing original is rewritten
 1794215101_large_originals_name_their_stored_object.down.sql | * | refuses removal while external references exist, then removes only schema objects; no original is rewritten
 1794215102_large_original_references_are_valid.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+
+1794283985_system_text_provenance.up.sql | * | nullable columns and unvalidated checks visit no existing row; the function and two triggers are DDL only, with no data rewrite
+1794283986_system_text_shapes_are_validated.down.sql | * | the down migration retains validation and changes no row

@@ -55,7 +55,7 @@ func ClassifyBacklogPredicate(rulesetParam string) string {
 	  -- audience does not bound, so labelling one is that message's content on
 	  -- the screen of a colleague excluded from it. audiencerescope clears the
 	  -- label of a row that narrows after it was labelled.
-	  AND audience = 'workspace'
+	  AND ` + auth.WorkspaceAudienceSQL("activity") + `
 	  -- A row under a statutory hold is out of reach of every ordinary read
 	  -- path (A165/ADR-0114 §2), and the label pass is a model call over its
 	  -- text — precisely the further processing the hold bars.
@@ -139,7 +139,7 @@ func (s *Store) ReadPipelineFacts(ctx context.Context, id ids.UUID, classifyRule
 			  kind,
 			  captured_by,
 			  archived_at IS NOT NULL,
-			  audience <> 'workspace',
+			  `+"NOT ("+auth.WorkspaceAudienceSQL("activity")+")"+`,
 			  NOT `+captureLabelDecline.offeredSQL("", "$3")+`,
 			  EXISTS (SELECT 1 FROM capture_pending_counterparty p
 			           WHERE p.email = activity.counterparty_email

@@ -30,6 +30,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 // activityScan holds one row mid-flight: the contract record being built, and
@@ -39,8 +40,9 @@ import (
 // destination of a column is part of that column's declaration below, and a
 // closure cannot address a variable that does not exist yet.
 type activityScan struct {
-	a  crmcontracts.Activity
-	id ids.UUID
+	systemText *systemtext.Message
+	a          crmcontracts.Activity
+	id         ids.UUID
 	// assigneeID and hostUserID are typed ids in the row and openapi UUIDs on
 	// the record.
 	assigneeID, hostUserID *ids.UUID
@@ -112,6 +114,7 @@ type activityColumn struct {
 // content or only its markers. Its SQL is supplied per query, so it carries an
 // empty sql here and activityColumns fills it in.
 var activityProjection = []activityColumn{
+	{"a.system_text", func(s *activityScan) any { return &s.systemText }},
 	{"a.id", func(s *activityScan) any { return &s.id }},
 	{"a.kind", func(s *activityScan) any { return &s.kind }},
 	{"a.channel_provider", func(s *activityScan) any { return &s.channelProvider }},
@@ -248,26 +251,11 @@ func activityScanTargets(s *activityScan) []any {
 
 // record finishes the row: the conversions the scan could not do, and the
 // content withholding the audience test decided.
-func (s *activityScan) record() crmcontracts.Activity {
+func (s *activityScan) record(ctx context.Context) crmcontracts.Activity {
 	a := s.a
-	aud := crmcontracts.ActivityAudience(s.audience)
-	a.Audience = &aud
-	threadKey, captureLabel, audienceReason := s.threadKey, s.captureLabel, s.audienceReason
-	state := crmcontracts.ActivityContentStateAvailable
-	if !s.contentAvailable {
-		// Withheld: the row is discoverable, its content is not the caller's.
-		// Everything that carries what was said — or identifies the message
-		// at the provider — goes; the markers stay.
-		state = crmcontracts.ActivityContentStateWithheld
-		a.Subject, a.Body, a.SourceId = nil, nil, nil
-		a.CanShareInternal = nil
-		// The language too: it was read off the body, so answering it would
-		// tell a caller one fact about text they may not read.
-		a.Language = nil
-		threadKey, captureLabel, audienceReason = nil, nil, nil
-	}
-	a.ContentState = &state
-
+	audience := crmcontracts.ActivityAudience(s.audience)
+	a.Audience = &audience
+	threadKey, captureLabel, audienceReason := s.contentProjection(ctx, &a)
 	a.Id = openapi_types.UUID(s.id)
 	a.AssigneeId = uuidPtr(s.assigneeID)
 	if s.kind == string(crmcontracts.ActivityKindTask) {
@@ -315,25 +303,7 @@ func (s *activityScan) record() crmcontracts.Activity {
 		a.Raw = &raw
 		a.WebForm = webFormSubmissionOf(a.SourceSystem, raw)
 	}
-	a.Kind = crmcontracts.ActivityKind(s.kind)
-	a.OccurredPrecision = crmcontracts.OccurredPrecision(s.occurredPrecision)
-	a.ChannelProvider = s.channelProvider
-	if s.direction != nil {
-		d := crmcontracts.ActivityDirection(*s.direction)
-		a.Direction = &d
-	}
-	if s.invitationStatus != nil {
-		status := crmcontracts.ActivityInvitationStatus(*s.invitationStatus)
-		a.InvitationStatus = &status
-	}
-	if s.meetingStatus != nil {
-		m := crmcontracts.ActivityMeetingStatus(*s.meetingStatus)
-		a.MeetingStatus = &m
-	}
-	if s.callOutcome != nil {
-		outcome := crmcontracts.ActivityCallOutcome(*s.callOutcome)
-		a.CallOutcome = &outcome
-	}
+	s.projectStatuses(&a)
 	a.ThreadKey = threadKey
 	a.AudienceReason = audienceReason
 	if captureLabel != nil {
@@ -360,6 +330,28 @@ func (s *activityScan) record() crmcontracts.Activity {
 	// need joins this scan does not have, and the detail read fills them in.
 	a.EmailSummary = RowEmailSummary(a)
 	return a
+}
+
+func (s *activityScan) projectStatuses(a *crmcontracts.Activity) {
+	a.Kind = crmcontracts.ActivityKind(s.kind)
+	a.OccurredPrecision = crmcontracts.OccurredPrecision(s.occurredPrecision)
+	a.ChannelProvider = s.channelProvider
+	if s.direction != nil {
+		d := crmcontracts.ActivityDirection(*s.direction)
+		a.Direction = &d
+	}
+	if s.invitationStatus != nil {
+		status := crmcontracts.ActivityInvitationStatus(*s.invitationStatus)
+		a.InvitationStatus = &status
+	}
+	if s.meetingStatus != nil {
+		m := crmcontracts.ActivityMeetingStatus(*s.meetingStatus)
+		a.MeetingStatus = &m
+	}
+	if s.callOutcome != nil {
+		outcome := crmcontracts.ActivityCallOutcome(*s.callOutcome)
+		a.CallOutcome = &outcome
+	}
 }
 
 // automaticKindToWire renders what sent a row no human wrote, nil when a
@@ -423,4 +415,22 @@ func RowEmailSummary(a crmcontracts.Activity) *crmcontracts.EmailSummary {
 		}
 	}
 	return &summary
+}
+
+func (s *activityScan) contentProjection(ctx context.Context, a *crmcontracts.Activity) (*string, *string, *string) {
+	threadKey, captureLabel, audienceReason := s.threadKey, s.captureLabel, s.audienceReason
+	state := crmcontracts.ActivityContentStateAvailable
+	if !s.contentAvailable {
+		state = crmcontracts.ActivityContentStateWithheld
+		a.Subject, a.Body, a.SourceId = nil, nil, nil
+		a.CanShareInternal = nil
+		a.Language = nil
+		threadKey, captureLabel, audienceReason = nil, nil, nil
+	}
+	a.ContentState = &state
+	if s.contentAvailable {
+		a.SystemDisplay = activitySystemDisplay(ctx, s.systemText, a.Subject, a.Body, s.version)
+	}
+
+	return threadKey, captureLabel, audienceReason
 }

@@ -19,6 +19,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/storedobjects"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/auditentity"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -165,17 +166,11 @@ func (s *Store) UploadDocument(ctx context.Context, in NewDocument, queue QueueI
 			return crmcontracts.KnowledgeDocument{}, errors.Join(err,
 				fmt.Errorf("delete the corpus document's stored object after a failed write: %w", derr))
 		}
-		// The bytes are gone, so the declaration has nothing left to describe: left
-		// standing it would occupy a slot in every sweep's limit for a day, to be
-		// adjudicated as an orphan whose object is already deleted.
-		//
-		// Cleared on a transaction of this store's own, not Retire: retiring is the
-		// SWEEP's act and takes the system principal, and this path runs as the
-		// contact who uploaded the file. Reaching for it here answered their server
-		// fault with a 403.
+		// User cleanup uses Clear; Retire belongs to the system sweep.
+		// A condemned intent stays with the reaper because this failed write adopted nothing.
 		if rerr := s.tx(ctx, func(tx pgx.Tx) error {
 			return storedobjects.Clear(ctx, tx, key)
-		}); rerr != nil {
+		}); rerr != nil && !errors.Is(rerr, apperrors.ErrNotFound) {
 			return crmcontracts.KnowledgeDocument{}, errors.Join(err, rerr)
 		}
 		return crmcontracts.KnowledgeDocument{}, err

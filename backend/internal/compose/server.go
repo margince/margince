@@ -103,6 +103,7 @@ func New(pool *pgxpool.Pool, log *slog.Logger, opts ...Option) http.Handler {
 		opt(&srv, pool)
 	}
 	srv.applySendPath(pool)
+	srv.publishCoreFeatures()
 	srv.publishListsAvailability(pool)
 	srv.authHandlers = srv.WithAnalyticsStartup(srv.analyticsStartup)
 	// After the lists switch, so /me probes list_id through the resolvers the deal and lead lists hold.

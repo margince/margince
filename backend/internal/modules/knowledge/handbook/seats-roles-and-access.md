@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/settings/users-rolecell.tsx backend/internal/modules/capture/captureauthority.go frontend/src/features/settings/users-admin.tsx frontend/src/features/settings/users-memberverbs.tsx backend/internal/modules/identity/invitemail.go frontend/src/features/settings/roles-settings.tsx frontend/src/features/records/share.body.tsx backend/internal/modules/identity/internal/policy/defaults.go backend/internal/modules/identity/memberedit.go backend/internal/modules/identity/memberretirement.go backend/internal/modules/identity/seatceiling.go backend/internal/modules/identity/invite.go backend/internal/platform/auth/rowscope.go backend/internal/platform/auth/fieldmask.go backend/internal/modules/identity/roster.go frontend/src/components/recordteamassign.tsx backend/internal/modules/identity/ownercarry.go backend/internal/modules/contacts/contactcasesettings.go backend/internal/modules/contacts/contactcasedecide.go frontend/src/features/settings/sharedmergereviews.tsx backend/internal/modules/contacts/duplicatepairmerge.go -->
+<!-- describes: frontend/src/features/settings/users-rolecell.tsx backend/internal/modules/capture/captureauthority.go frontend/src/features/settings/users-admin.tsx frontend/src/features/settings/users-memberverbs.tsx backend/internal/modules/identity/invitemail.go frontend/src/features/settings/roles-settings.tsx frontend/src/features/records/share.body.tsx backend/internal/modules/identity/internal/policy/defaults.go backend/internal/modules/identity/memberedit.go backend/internal/modules/identity/memberretirement.go backend/internal/modules/identity/seatceiling.go backend/internal/modules/identity/invite.go backend/internal/platform/auth/rowscope.go backend/internal/platform/auth/fieldmask.go backend/internal/modules/identity/roster.go frontend/src/components/recordteamassign.tsx backend/internal/modules/assignments/assignments_read.go backend/internal/modules/identity/ownercarry.go backend/internal/modules/contacts/contactcasesettings.go backend/internal/modules/contacts/contactcasedecide.go frontend/src/features/settings/sharedmergereviews.tsx backend/internal/modules/contacts/duplicatepairmerge.go -->
 # Seats, roles and who can see what
 
 What you can do in Margince is decided by three things, and one cannot stand in for another:
@@ -193,9 +193,7 @@ Two exceptions count for every role, Admin included:
 - **Mail and meetings you were not part of.** Mail and meetings have their own
   list of who may see them, and no role changes that.
 - **A captured contact still private to its owner.** A connection creates a
-  contact from a message that nothing has judged yet. The contact belongs to the
-  colleague whose mailbox made it, until Margince judges the sender or the
-  owner makes it public. An admin cannot open it either. So when you connect a mailbox with a year of history, the whole company does not see everyone in its mail history. That may include a lawyer or a doctor.
+  contact from a message that nothing has judged yet. The contact belongs to the colleague whose mailbox made it, until Margince judges the sender or the owner makes it public. An admin cannot open it either. So when you connect a mailbox with a year of history, the whole company does not see everyone in its mail history. That may include a lawyer or a doctor.
 
 A shared pipeline is the default. A share on one record can widen access further.
 
@@ -220,6 +218,8 @@ A responsibility role controls nothing:
 - It gives no access to the record, and takes none away.
 - It does not change the owner. Nothing links the owner to the **Account manager** role, so the owner may hold it, or someone else may.
 - A role you turn off stays on the records that carry it, but nobody can be given it again.
+
+The **Who** search offers active human colleagues. An app using the API can also give a responsibility to an agent seat. This grants the agent no access to the record.
 
 You can give a responsibility to an active colleague. The **Who** search finds a name with or without its marks, so "Thang" finds "Thắng". An invited colleague shows in the search once they set a password through the invitation link. Ask an admin to invite anyone who needs an account, or to check the account of someone the search does not find.
 

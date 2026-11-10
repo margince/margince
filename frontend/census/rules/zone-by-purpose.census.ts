@@ -16,6 +16,7 @@
 
 import ts from "typescript";
 import { parseSource } from "../../scripts/lib/source-tree";
+import { stable } from "../../src/format/collate";
 import type { CensusFile, CensusRule } from "../tree";
 
 // The IANA areas every zone name starts with. Anchoring on them keeps module
@@ -302,6 +303,10 @@ const pinnedZones: { file: string; why: string }[] = [
   {
     file: "features/worklist/worklist.when.test.tsx",
     why: "The rule under test is which SIDE of the reader's own day a moment falls on — today's meeting shows a bare time, another day's shows the date too. Deciding that needs a zone whose offset is not zero: in UTC the fixture's instants land on the same calendar day under either rule, so every case would pass whichever branch ran. The zone is injected by mocking browserZone, which is the module this gate points callers at; naming it is what makes the expectation ('14:30', not '12:30') checkable at all.",
+  },
+  {
+    file: "features/brief/brief.queue.test.tsx",
+    why: "A snooze keeps the wall time the reader picked, and that time maps to a different instant on each side of a daylight-saving change. Only a named zone with daylight saving makes the expected instant the same on every runner.",
   },
   {
     file: "features/brief/brief.readings.test.tsx",
@@ -635,7 +640,7 @@ export const rule: CensusRule = {
       ...all
         .filter(({ file }) => !pinned.has(file))
         .map(({ file, line, text }) => `${file}:${line}: ${text}`)
-        .sort(),
+        .sort(stable),
       ...corpus
         .filter(
           (file) =>

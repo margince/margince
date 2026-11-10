@@ -595,7 +595,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 ## session
 
-10 columns · primary key `(id)` · referenced by 0 foreign keys
+11 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -604,6 +604,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 | `idle_expires_at` | `timestamp with time zone` | yes |  |
 | `ip` | `inet` |  |  |
 | `last_seen_at` | `timestamp with time zone`, default `now()` | yes |  |
+| `provider_authenticated` | `boolean`, default `false` | yes |  |
 | `revoked_at` | `timestamp with time zone` |  |  |
 | `token_hash` | `text` | yes |  |
 | `user_agent` | `text` |  |  |

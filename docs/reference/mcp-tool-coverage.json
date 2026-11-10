@@ -4038,7 +4038,7 @@
     },
     {
       "name": "read_workspace",
-      "tokens": 2744,
+      "tokens": 2747,
       "agents": [],
       "required_by_cases": [
         "case111_how_is_the_workspace_doing",
@@ -4153,7 +4153,7 @@
     },
     {
       "name": "read_details",
-      "tokens": 2167,
+      "tokens": 2186,
       "agents": [],
       "required_by_cases": [
         "case112_my_plan_and_the_dossier",
@@ -4622,6 +4622,42 @@
       }
     },
     {
+      "name": "change_compliance",
+      "tokens": 893,
+      "agents": [],
+      "required_by_cases": [
+        "case77_record_her_yes",
+        "case78_she_asked_us_to_stop",
+        "case79_put_it_on_hold",
+        "case81_she_wants_her_data"
+      ],
+      "required_as_one_of_a_set_by_cases": [],
+      "permitted_in_cases": [],
+      "driven": true,
+      "required_only_as_one_of_a_set": false,
+      "graded_by_certification_tasks": null,
+      "measured_by_model": {
+        "claude-sonnet-5-5@claude-cli": {
+          "runs": 8,
+          "passed": 8,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        },
+        "gemini-3.8-flash-medium@agy-cli": {
+          "runs": 8,
+          "passed": 8,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        },
+        "gpt-5.6-sol@codex-cli": {
+          "runs": 8,
+          "passed": 8,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        }
+      }
+    },
+    {
       "name": "create_record",
       "tokens": 873,
       "agents": [],
@@ -4652,42 +4688,6 @@
           "runs": 8,
           "passed": 6,
           "reliability": 0.75,
-          "cases_below_their_bar": []
-        }
-      }
-    },
-    {
-      "name": "change_compliance",
-      "tokens": 834,
-      "agents": [],
-      "required_by_cases": [
-        "case77_record_her_yes",
-        "case78_she_asked_us_to_stop",
-        "case79_put_it_on_hold",
-        "case81_she_wants_her_data"
-      ],
-      "required_as_one_of_a_set_by_cases": [],
-      "permitted_in_cases": [],
-      "driven": true,
-      "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": null,
-      "measured_by_model": {
-        "claude-sonnet-5-5@claude-cli": {
-          "runs": 8,
-          "passed": 8,
-          "reliability": 1,
-          "cases_below_their_bar": []
-        },
-        "gemini-3.8-flash-medium@agy-cli": {
-          "runs": 8,
-          "passed": 8,
-          "reliability": 1,
-          "cases_below_their_bar": []
-        },
-        "gpt-5.6-sol@codex-cli": {
-          "runs": 8,
-          "passed": 8,
-          "reliability": 1,
           "cases_below_their_bar": []
         }
       }

@@ -81,6 +81,7 @@ ready before we need it, because the first date comes 24 hours after we learn of
   Worklist before a repair. It changes nothing.
 - [how-to/rename-key-named-deals.md](how-to/rename-key-named-deals.md): rename imported deals whose name
   is the source key. Test with a dry run first.
+- [how-to/turn-off-core-features.md](how-to/turn-off-core-features.md): turn off core features in the file.
 - [how-to/operate-reporting.md](how-to/operate-reporting.md): run sales reports and their schedules.
 - [how-to/pre-register-a-forecast-evaluation.md](how-to/pre-register-a-forecast-evaluation.md): set the values
   a new forecast model is tested against, before it is scored.

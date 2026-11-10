@@ -26,7 +26,7 @@
    rather than the trigger's, inside the gutter on both sides on a phone.
    Above the bar (20) because it hangs out of it, below the modal overlay (50),
    which may legitimately cover the whole chrome. */
-.notifbell-loose {
+.notifbell-loose.topbar-popover {
   z-index: 25;
   width: min(380px, calc(100vw - 2 * var(--pageGutter)));
   /* The history is longer than the screen. The panel keeps its head in view and
@@ -38,7 +38,7 @@
 }
 /* A phone gives the list the whole width between the gutters. */
 @media (max-width: 700px) {
-  .notifbell-loose {
+  .notifbell-loose.topbar-popover {
     left: var(--pageGutter);
     width: auto;
   }

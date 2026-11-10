@@ -440,15 +440,8 @@ func oneStatementCarries(statements []string, assignments []string) bool {
 	return false
 }
 
-// sweepPurges reports whether the sweep deletes from table under every declared
-// predicate — one delete per predicate, so a declaration names the acts rather
-// than the table.
-//
-// Through deleteRe, the matcher tableownership_test.go already derives its own
-// answer from, rather than a second spelling here. The hand-written one this
-// replaced looked for "delete from <table> " and its end-of-string twin, and
-// went blind on a trailing `;` or `)` — both of which end a statement in this
-// tree, and both of which would have reported a purge that exists as missing.
+// Each declared predicate needs a delete; a table-level match could hide a
+// missing purge for one retained record shape.
 func sweepPurges(statements []string, table string, predicates []string) bool {
 	for _, predicate := range predicates {
 		found := false
@@ -456,8 +449,8 @@ func sweepPurges(statements []string, table string, predicates []string) bool {
 			if !strings.Contains(stmt, strings.ToLower(predicate)) {
 				continue
 			}
-			for _, m := range deleteRe.FindAllStringSubmatch(stmt, -1) {
-				if m[1] == table {
+			for _, write := range sqlWrites(stmt) {
+				if write.verb == "delete" && write.table == table {
 					found = true
 				}
 			}
@@ -506,7 +499,7 @@ func statementDestroying(statements []string, table, column string) string {
 		if !writesTable {
 			continue
 		}
-		if deleteRe.MatchString(stmt) {
+		if sqlWritesVerb(stmt, "delete") {
 			return stmt
 		}
 		if sets := setAssignments(stmt); sets != "" && needle.MatchString("SET "+strings.ToLower(sets)) {
@@ -548,7 +541,7 @@ func statementDestroying(statements []string, table, column string) string {
 // reader can follow, not a column hidden from one.
 func assembledSetTarget(statements []string) string {
 	for _, stmt := range statements {
-		if !updateRe.MatchString(stmt) {
+		if !sqlWritesVerb(stmt, "update") {
 			continue
 		}
 		assignments := strings.TrimSpace(setAssignments(stmt))

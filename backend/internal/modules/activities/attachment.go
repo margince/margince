@@ -424,25 +424,11 @@ func ensureContractFileable(ctx context.Context, tx pgx.Tx, contractID *ids.UUID
 	if err := auth.Require(ctx, "contract", principal.ActionRead); err != nil {
 		return err
 	}
-	var dealID *ids.UUID
-	var companyID ids.UUID
-	err := tx.QueryRow(ctx,
-		`SELECT deal_id, company_id FROM contract WHERE id = $1 AND archived_at IS NULL`,
-		*contractID).Scan(&dealID, &companyID)
-	if errors.Is(err, pgx.ErrNoRows) {
-		// Absent, archived, or invisible all answer the same way: a contract
-		// the caller cannot reach does not exist as far as they are concerned.
-		return apperrors.ErrNotFound
-	}
+	anchor, anchorID, err := auth.ContractAnchorTx(ctx, tx, *contractID, false)
 	if err != nil {
-		return fmt.Errorf("resolving the contract a document is filed against: %w", err)
+		return err
 	}
-	// ATTACH through the contract's anchor: the document is filed against that
-	// record and shows on it, which a read-only share does not confer.
-	if dealID != nil {
-		return auth.EnsureAttachTarget(ctx, tx, "deal", *dealID)
-	}
-	return auth.EnsureAttachTarget(ctx, tx, "company", companyID)
+	return auth.EnsureAttachTarget(ctx, tx, anchor, anchorID)
 }
 
 // accountRollUp resolves the account a newly filed attachment belongs to, which

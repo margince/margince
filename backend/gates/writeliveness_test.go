@@ -142,7 +142,6 @@ var livenessUnstated = gatekit.Waive(map[string]string{
 	// the specific destruction it performs rather than a restatement of that
 	// sentence: an erasure stamps archived_at itself, so its own subject is
 	// archived by the time the statement beside it runs.
-	"internal/modules/privacy:anonymizeLeadTwins":      "the lead half of the same erasure, reaching the twins a promotion left behind. They are found by promoted_contact_id and by address, and an archived twin holds the same personal data a live one does",
 	"internal/modules/privacy:archiveActivity":         "the retention sweep retiring a message whose window closed. The write IS the archive transition, chosen by a clock rather than by a caller",
 	"internal/modules/privacy:archiveDeal":             "the deal arm of the same sweep, and the same transition: a deal past its window is archived because of when it closed",
 	"internal/modules/privacy:anonymizeLead":           "the retention sweep's lead anonymization, which stamps archived_at as part of the destruction and must run on a lead an earlier pass already retired",

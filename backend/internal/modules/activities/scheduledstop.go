@@ -115,7 +115,9 @@ func stopCovers(purposeKey, marketing, legacy string) bool {
 // contact writing. Its time is when it reached us: the provider's arrival
 // time, or the capture time, never the Date header the sender wrote. A
 // scheduled reply listens on its own thread; a new message has no thread yet,
-// so any new mail from a recipient counts.
+// so any new mail from a recipient counts. A reply to a hand-logged mail
+// listens as a new message does, since captured mail never joins a logged
+// thread.
 func pursuitPausedByReply(ctx context.Context, tx pgx.Tx, in SendEmailInput, anchor ids.UUID, created time.Time) (bool, error) {
 	if in.Context != commsauthz.CategoryActiveDealFollowup && in.Context != commsauthz.CategoryPrecontractQuote {
 		return false, nil
@@ -132,6 +134,9 @@ func pursuitPausedByReply(ctx context.Context, tx pgx.Tx, in SendEmailInput, anc
 		if err := tx.QueryRow(ctx, `SELECT thread_key FROM activity WHERE id = $1`, anchor).Scan(&thread); err != nil && !errors.Is(err, pgx.ErrNoRows) {
 			return false, fmt.Errorf("scheduled send: reading the thread a reply listens on: %w", err)
 		}
+	}
+	if thread != nil && correspondence.IsHandLoggedThread(*thread) {
+		thread = nil
 	}
 	var replied bool
 	var args []any

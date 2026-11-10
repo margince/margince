@@ -5,6 +5,7 @@ package compose
 
 import (
 	"context"
+	"errors"
 	"io"
 	"sync/atomic"
 	"time"
@@ -60,6 +61,6 @@ func takeSessionSlot(ctx context.Context) (func(), error) {
 		return nil, ctx.Err()
 	default:
 		sessionBudgetSnoozes.Add(1)
-		return nil, river.JobSnooze(5 * time.Second)
+		return nil, errors.Join(database.ErrSessionBudgetBusy, river.JobSnooze(5*time.Second))
 	}
 }

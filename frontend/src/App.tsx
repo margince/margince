@@ -26,6 +26,7 @@ import { isPublicBookingId } from "./app/bookingroute";
 import { AuthSplash } from "./app/bootsplash";
 import { ConfinedAccountScreen, useProbeAnswer } from "./app/confinement";
 import { DateFormatsProvider } from "./app/dateformats";
+import { useFeatureLanding } from "./app/featurelanding";
 import { prefetchHome } from "./app/homeprefetch";
 import { passesOnboardingGate } from "./app/onboarding-gate";
 import { usePaletteHotkey } from "./app/palettehotkey";
@@ -45,6 +46,7 @@ import {
   CompanyZoneProvider,
   useConfiguredCompanyZone,
 } from "./lib/companyzone";
+import { screenEnabled, useDisabledCoreFeatures } from "./lib/corefeatures";
 import { useInstallationDescribed } from "./lib/installationcompany";
 import { notifyNavigate } from "./lib/instruments";
 import { markJourney } from "./lib/journeymarks";
@@ -88,6 +90,22 @@ export function App() {
   const route = useRoute();
   const pattern = routePattern(route);
   useEffect(() => notifyNavigate(pattern), [pattern]);
+  const queryClient = useQueryClient();
+  const { locale } = useLocale();
+  const previousLocale = useRef(locale);
+  useEffect(() => {
+    if (previousLocale.current === locale) return;
+    previousLocale.current = locale;
+    queryClient.removeQueries({
+      queryKey: ["reader-rendering"],
+      type: "inactive",
+    });
+    void queryClient.invalidateQueries({
+      predicate: (entry) =>
+        entry.queryKey[0] !== "me" && entry.queryKey[0] !== "reader-rendering",
+    });
+  }, [locale, queryClient]);
+
   // BEFORE every other gate, the public screens included. A bundle and an api
   // from different releases disagree about the contract between them, so nothing
   // below here — the session probe, the booking page, the preference centre —
@@ -194,6 +212,7 @@ function noteSessionSeen(data: unknown, error: unknown): boolean {
 function homeMayRead(
   state: Readonly<{
     screen: Screen;
+    homeAvailable: boolean;
     signedIn: boolean;
     sessionSeen: boolean;
     refused: boolean;
@@ -204,6 +223,7 @@ function homeMayRead(
 ): boolean {
   return (
     state.screen === "home" &&
+    state.homeAvailable &&
     (state.signedIn || state.sessionSeen) &&
     !state.refused &&
     !state.confined &&
@@ -223,6 +243,7 @@ function AuthedApp({
   route,
 }: Readonly<{ route: ReturnType<typeof useRoute> }>) {
   const me = useMe();
+  const disabled = useDisabledCoreFeatures();
   // A 401 after a previously live session is an expiry (or a deliberate
   // sign-out, which useLogout marks); a 401 on first load is just "not
   // signed in" and carries no notice.
@@ -319,6 +340,7 @@ function AuthedApp({
     companyPending || companyZone.pending || progress.pending;
   const shellReady = authed && !gatesPending;
   const opensHome = homeMayRead({
+    homeAvailable: screenEnabled("home", disabled),
     screen: route.screen,
     signedIn: me.data !== undefined,
     sessionSeen,
@@ -341,6 +363,7 @@ function AuthedApp({
   }, [opensHome, queryClient]);
   usePaletteHotkey(paletteOpen === true, setPaletteOpen);
   useTaskReminderNotifications(authed);
+  useFeatureLanding(shellReady, confinement !== null, disabled);
 
   if (me.isPending && refusal === null) {
     return (

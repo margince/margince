@@ -77,7 +77,7 @@ module to put a change in, read [modules.md](../modules.md).
 func TestEntityModelPagesMatchTheSchema(t *testing.T) {
 	t.Parallel()
 	schema := parseHeadCatalog(t)
-	rendered := entityModelPages(schema, tableOwners, contractDescriptions(t, schema))
+	rendered := entityModelPages(t, schema, tableOwners, contractDescriptions(t, schema))
 
 	if *updateEntityModel {
 		writeEntityModel(t, rendered)
@@ -117,7 +117,7 @@ func TestEntityModelPagesMatchTheSchema(t *testing.T) {
 func TestEntityModelDrawsOnEveryColumnItsSourcesCarry(t *testing.T) {
 	t.Parallel()
 	schema := parseHeadCatalog(t)
-	pages := entityModelPages(schema, tableOwners, contractDescriptions(t, schema))
+	pages := entityModelPages(t, schema, tableOwners, contractDescriptions(t, schema))
 
 	printed, columns := 0, 0
 	for _, name := range schema.tableNames() {

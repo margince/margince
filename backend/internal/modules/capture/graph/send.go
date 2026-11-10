@@ -59,27 +59,20 @@ const maxSendableFiles = 10
 // too rather than trusting this.
 const maxSendableFileBytes = 2 << 20
 
-// SendEmail transmits one message as the connected mailbox owner.
-//
-// On a retry it first asks Microsoft whether this message identity already
-// exists in Sent Items. Job delivery is at-least-once and Graph offers no
-// idempotency key, so without that lookup a crash between a successful
-// transmission and its recorded outcome mails the recipient twice.
-//
-// UNLIKE GMAIL, THE LOOKUP HAS SOMETHING TO SEARCH FOR. Gmail discards a
-// client-supplied Message-ID and files the message under one of its own, which
-// leaves its own guard inoperative (gmail/send.go says so). Graph exposes the
-// identity as the filterable `internetMessageId` property, so the search is
-// against the message's own field rather than a full-text index.
-//
-// It still does not CLOSE the window, and the reasons are worth stating rather
-// than leaving to be discovered. Exchange Online may rewrite the identity on
-// submission depending on tenant configuration, in which case the filter
-// matches nothing and the retry mails twice — the same failure Gmail has
-// always had, but conditional rather than certain. Nor does anything here
-// serialize concurrent attempts at the same delivery: that guarantee lives
-// outside this package, in River delivering one job per delivery.
+// SendEmail keeps a stable identity so retries can look up accepted mail.
+// The handoff-aware seam separates submission from preparation and read-back.
 func (c *Connector) SendEmail(ctx context.Context, auth connector.Auth, msg connector.EmailMessage) (connector.SendReceipt, error) {
+	return c.sendWithHandoff(ctx, auth, msg, func(ctx context.Context, send func(context.Context) (connector.SendReceipt, error)) (connector.SendReceipt, error) {
+		return send(ctx)
+	})
+}
+
+// SendEmailWithHandoff leaves refresh and prior-send lookup outside stop ordering.
+func (c *Connector) SendEmailWithHandoff(ctx context.Context, auth connector.Auth, msg connector.EmailMessage, handoff connector.SendHandoff) (connector.SendReceipt, error) {
+	return c.sendWithHandoff(ctx, auth, msg, handoff)
+}
+
+func (c *Connector) sendWithHandoff(ctx context.Context, auth connector.Auth, msg connector.EmailMessage, handoff connector.SendHandoff) (connector.SendReceipt, error) {
 	// Before anything reaches Microsoft: a message with no usable identity
 	// cannot be found again by the prior-send lookup, so transmitting it would
 	// mail the recipient once per retry with nothing able to tell that it had
@@ -108,24 +101,14 @@ func (c *Connector) SendEmail(ctx context.Context, auth connector.Auth, msg conn
 			return connector.SendReceipt{ProviderMessageID: id}, nil
 		}
 	}
-	if err := c.api.SendMIME(ctx, access, []byte(mailwire.Build(st.Owner, msg))); err != nil {
+	raw := []byte(mailwire.Build(st.Owner, msg))
+	if _, err := handoff(ctx, func(wire context.Context) (connector.SendReceipt, error) {
+		return connector.SendReceipt{}, c.api.SendMIME(wire, access, raw)
+	}); err != nil {
 		return connector.SendReceipt{}, err
 	}
-	// An EMPTY receipt, and it is the honest one rather than a gap.
-	//
-	// sendMail answers 202 Accepted with no body and no message id, and the
-	// send is ASYNCHRONOUS: Graph writes a draft, returns, and Exchange moves
-	// the copy into Sent Items only once it has actually gone. Looking it up
-	// here would therefore miss almost every time — a round trip per send to
-	// learn nothing, and a warning logged on the ordinary path.
-	//
-	// Nothing is lost by not looking. connector.SendReceipt reads an empty
-	// RFC822MessageID as "no re-key owed", and for a MIME submit that is the
-	// truth: the identity this system minted is the one in the message body
-	// Microsoft was handed, so there is nothing to correct. A tenant that
-	// rewrites it on submission is the exception, and the retry guard above —
-	// which runs later, when the copy HAS been filed — is what still finds the
-	// message in that case.
+	// Graph accepts asynchronously without a message id. A lookup here races
+	// that filing; retries search by the stable identity after it has arrived.
 	return connector.SendReceipt{}, nil
 }
 

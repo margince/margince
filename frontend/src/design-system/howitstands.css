@@ -72,6 +72,7 @@
   font-weight: var(--fontWeightRegular);
   color: var(--textPrimary);
   text-wrap: pretty;
+  overflow-wrap: anywhere;
 }
 /* The note a rep wrote under the call: body text, two lines until opened. */
 .standing-sheet-note {

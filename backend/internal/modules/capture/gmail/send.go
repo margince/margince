@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -57,34 +58,20 @@ var (
 // contract says is legal.
 const maxSendableFiles = 10
 
-// SendEmail transmits one message as the connected mailbox owner.
-//
-// On a retry it first asks Gmail whether this message identity already exists.
-// Job delivery is at-least-once and Gmail does not deduplicate on Message-ID, so
-// without that lookup a crash between a successful transmission and its recorded
-// outcome mails the recipient twice.
-//
-// THE LOOKUP HOLDS ONLY WHILE THE PROVIDER HONOURS THE IDENTITY IT IS GIVEN,
-// and Gmail does not: it discards a client-supplied Message-ID and files the
-// message under one of its own. A search for the identity this system minted
-// therefore matches nothing that was in fact sent, so on this provider the
-// guard is inoperative and the crash window between Gmail accepting a message
-// and its outcome being recorded is open, not narrowed. The guard is kept
-// because it is correct on every provider that does honour the identity, and
-// because nothing replaces it here — Gmail exposes no idempotency key, and once
-// the identity is rewritten there is nothing left to search for.
-//
-// The lookup narrows that window elsewhere; it does not close it there either.
-// FindByMessageID reads Gmail's search index, which is eventually consistent
-// with a just-completed send — a retry landing before the index catches up gets
-// a false negative and still mails twice. Nor does anything here serialize
-// concurrent attempts at the same delivery: that guarantee lives entirely
-// outside this package, in River delivering one job per delivery. The delivery
-// store deliberately carries no in-flight status and no claim, so two
-// concurrent attempts on the same delivery would both observe it pending and
-// both call SendEmail here — the one-job-per-delivery assumption, not this
-// lookup, is what keeps that from happening in practice.
+// SendEmail keeps a stable identity so retries can look up accepted mail.
+// The handoff-aware seam separates submission from preparation and read-back.
 func (c *Connector) SendEmail(ctx context.Context, auth connector.Auth, msg connector.EmailMessage) (connector.SendReceipt, error) {
+	return c.sendWithHandoff(ctx, auth, msg, func(ctx context.Context, send func(context.Context) (connector.SendReceipt, error)) (connector.SendReceipt, error) {
+		return send(ctx)
+	})
+}
+
+// SendEmailWithHandoff keeps refresh and read-back outside the stop ordering.
+func (c *Connector) SendEmailWithHandoff(ctx context.Context, auth connector.Auth, msg connector.EmailMessage, handoff connector.SendHandoff) (connector.SendReceipt, error) {
+	return c.sendWithHandoff(ctx, auth, msg, handoff)
+}
+
+func (c *Connector) sendWithHandoff(ctx context.Context, auth connector.Auth, msg connector.EmailMessage, handoff connector.SendHandoff) (connector.SendReceipt, error) {
 	// Before anything reaches Google: a message with no usable identity cannot
 	// be found again by the prior-send lookup above, so transmitting it would
 	// mail the recipient once per retry with nothing able to tell that it had
@@ -113,14 +100,15 @@ func (c *Connector) SendEmail(ctx context.Context, auth connector.Auth, msg conn
 		}
 	}
 	raw := base64.URLEncoding.EncodeToString([]byte(mailwire.Build(st.Owner, msg)))
-	id, err := c.api.Send(ctx, access, raw)
+	receipt, err := handoff(ctx, func(wire context.Context) (connector.SendReceipt, error) {
+		id, err := c.api.Send(wire, access, raw)
+		return connector.SendReceipt{ProviderMessageID: id}, err
+	})
 	if err != nil {
 		return connector.SendReceipt{}, err
 	}
-	return connector.SendReceipt{
-		ProviderMessageID: id,
-		RFC822MessageID:   c.stampedIdentity(ctx, access, st.Owner, id),
-	}, nil
+	receipt.RFC822MessageID, receipt.IdentityUnread = c.stampedIdentity(ctx, access, st.Owner, receipt.ProviderMessageID)
+	return receipt, nil
 }
 
 // Carriage declares what this connector transmits
@@ -169,27 +157,27 @@ func (c *Connector) Carriage() connector.Carriage {
 // bounded length. Anything else is reported as no identity at all rather than
 // adopted, which is the already-ratified no-op.
 //
-// EVERY failure returns "". The message has already been transmitted when this
-// runs, and returning an error would hand the delivery back to a retry whose
-// prior-send lookup cannot find a rewritten identity — mailing the recipient a
-// second time to fix a bookkeeping problem. An unread identity costs one
-// duplicate timeline row; a re-mail costs the recipient's trust. This is the
-// one place in this package where an error is deliberately not propagated, and
-// TestSendSucceedsWithNoIdentityWhenTheReadBackFails is what keeps it that way.
+// Every failure returns "", with the failure classified (identityUnreadOf) so
+// comms can recover the identity from the captured echo or record a denial.
+// The message has already been transmitted when this runs. An error would hand
+// the delivery to a retry whose prior-send lookup cannot find a rewritten
+// identity, and the recipient would be mailed twice. This is the one place in
+// this package where an error is not propagated, and
+// TestSendSucceedsWithNoIdentityWhenTheReadBackFails keeps it that way.
 //
 // A connection granted send-but-not-read makes this structurally dead:
 // SendEmail verifies only SendScope, so the read-back 403s and degrades as above.
-func (c *Connector) stampedIdentity(ctx context.Context, access, owner, providerMessageID string) string {
+func (c *Connector) stampedIdentity(ctx context.Context, access, owner, providerMessageID string) (string, connector.IdentityUnread) {
 	sent, err := c.api.GetRaw(ctx, access, providerMessageID)
 	if err != nil {
 		slog.WarnContext(ctx, "gmail: reading back the sent message identity",
 			"err", err, "provider_message_id", providerMessageID)
-		return ""
+		return "", identityUnreadOf(err)
 	}
 	parsed, err := mailmap.Parse(sent.RFC822, owner)
 	if err != nil {
 		slog.WarnContext(ctx, "gmail: parsing the sent message identity", "err", err)
-		return ""
+		return "", ""
 	}
 	id := parsed.ID()
 	if !connector.ValidMessageID(id) {
@@ -199,9 +187,22 @@ func (c *Connector) stampedIdentity(ctx context.Context, access, owner, provider
 		// carry no risk of writing megabytes or control bytes into a log line.
 		slog.WarnContext(ctx, "gmail: the sent copy carries no usable message identity",
 			"provider_message_id", providerMessageID, "identity_bytes", len(id))
-		return ""
+		return "", ""
 	}
-	return id
+	return id, ""
+}
+
+// identityUnreadOf classifies a failed read-back. A rate limit is transient
+// even when Google answers it with a 403, so it is asked first. Any other
+// refused credential is a denial; a server fault or lost connection is transient.
+func identityUnreadOf(err error) connector.IdentityUnread {
+	if _, throttled := errors.AsType[*connector.RateLimitedError](err); throttled {
+		return connector.IdentityUnreadTransient
+	}
+	if errors.Is(err, ErrAuthRejected) {
+		return connector.IdentityUnreadDenied
+	}
+	return connector.IdentityUnreadTransient
 }
 
 // Send transmits one already-encoded RFC822 message via messages.send. No

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { stable } from "../format/collate";
 import { translate } from "../i18n";
 import { type GrantSpec, meFixture } from "../testing/mefixture";
 import type { RbacAction, RbacObject } from "./capability";
@@ -135,8 +136,8 @@ describe("the scope each page declares", () => {
   // The other direction. Without this, deleting a page leaves a stale entry
   // that nothing reads, and the census quietly describes a catalog that moved.
   it("names every page in the catalog and nothing else", () => {
-    expect(Object.keys(DECLARED_SCOPE).sort()).toEqual(
-      SETTINGS_PAGES.map((page) => page.id).sort(),
+    expect(Object.keys(DECLARED_SCOPE).sort(stable)).toEqual(
+      SETTINGS_PAGES.map((page) => page.id).sort(stable),
     );
   });
 });
@@ -194,7 +195,8 @@ describe("what each page lets a reader change", () => {
   const DECLARED_CHANGES: Record<SettingsPageId, string> = {
     // The reader's own rows, with no grant between them and the control.
     account: "always",
-    meetings: "always",
+    // A booking profile belongs to a seat that may book.
+    meetings: "all(full-seat, any(any(activity:create)))",
     agents: "always",
     notifications: "always",
     connections: "always",
@@ -283,8 +285,8 @@ describe("what each page lets a reader change", () => {
   // The other direction: a page added with no entry fails, and an entry for a
   // page that no longer exists fails too.
   it("names every page in the catalog and nothing else", () => {
-    expect(Object.keys(DECLARED_CHANGES).sort()).toEqual(
-      SETTINGS_PAGES.map((page) => page.id).sort(),
+    expect(Object.keys(DECLARED_CHANGES).sort(stable)).toEqual(
+      SETTINGS_PAGES.map((page) => page.id).sort(stable),
     );
   });
 
@@ -375,11 +377,17 @@ describe("who may open what", () => {
     expect(visibleIds(nobody)).toEqual([
       "account",
       "notifications",
-      "meetings",
       "voice",
       "agents",
       "connections",
     ]);
+  });
+
+  // The server answers GET /scheduling/profile only with activity:create, so
+  // Meetings is the one personal page a grant opens.
+  it("opens meetings only to a seat that may book", () => {
+    expect(visibleIds(readsOnly("activity"))).not.toContain("meetings");
+    expect(visibleIds(grantOf("activity", ["create"]))).toContain("meetings");
   });
 
   // Members and Teams used to be on that list. `GET /users` still answers any

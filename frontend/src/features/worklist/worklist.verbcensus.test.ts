@@ -4,6 +4,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { stable } from "../../format/collate";
 import type { WorklistItem } from "./worklist.queries";
 
 // A row claims no verb it cannot perform.
@@ -144,9 +145,9 @@ describe("a row claims no verb it cannot perform", () => {
     const declared = Object.entries(ANSWERED_BY)
       .filter(([, where]) => where.how === "routed")
       .map(([verb]) => verb)
-      .sort();
+      .sort(stable);
 
-    expect([...routed].sort()).toEqual(declared);
+    expect([...routed].sort(stable)).toEqual(declared);
   });
 
   // THE CENSUS. A verb answered nowhere is a verb a reader is offered and

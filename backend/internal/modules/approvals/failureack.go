@@ -86,7 +86,7 @@ func (s *Service) OwnFailedDecisions(ctx context.Context, limit int) ([]FailedDe
 	}
 	shown := make([]crmcontracts.Approval, 0, len(rows))
 	for _, a := range rows {
-		shown = append(shown, wire(a, now))
+		shown = append(shown, wire(ctx, a, now))
 	}
 	if err := s.readPlans(ctx, shown, rows); err != nil {
 		return nil, err

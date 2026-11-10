@@ -214,6 +214,7 @@ func stageRefusal(w http.ResponseWriter, r *http.Request, staging agents.Approva
 		CoTargetID:     target.CoTargetID,
 		Summary:        summaryLine(said, parts),
 		SummaryParts:   stagedSummaryParts(parts),
+		SystemText:     stagedSentenceMetadata(target, parts, said, pol, r),
 	})
 	if sErr != nil {
 		httperr.Write(w, r, sErr)

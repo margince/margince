@@ -6,6 +6,7 @@ package compose
 import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/datatask"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 // taskActivityClocksDataTask refolds every stored clock the rule of 1792846717
@@ -15,7 +16,7 @@ func taskActivityClocksDataTask() datatask.Task {
 	audit := datatask.AuditPolicy{Reason: "the last-activity triggers move the same derived clock without an audit"}
 	return datatask.Task{
 		ID: "core/1792846717_task_activity_clocks", Version: 1,
-		Title: "Recompute last-activity dates without tasks", Requires: []string{"core/1792846717"},
+		Title: systemtext.Literal("datatask.title.core.1792846717_task_activity_clocks"), Requires: []string{"core/1792846717"},
 		Steps: []datatask.Step{
 			clockRefoldStep("contacts", storekit.ClockContacts, storekit.ClockNotFolded, audit),
 			clockRefoldStep("companies", storekit.ClockCompanies, storekit.ClockNotFolded, audit),

@@ -15,6 +15,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 const (
@@ -36,13 +37,16 @@ func (p capturedTextPurger) FlagSubjectReviewTx(ctx context.Context, tx pgx.Tx, 
 			return err
 		}
 		body := manualPrivacyReviewText(source.Kind)
-		if source.Kind == reviewEmailSignature && target.Type == "" && source.Owner != nil {
-			body = fmt.Sprintf("An inactive member's retained signature needs manual privacy review. Signature reference: %s. Member reference: %s. An administrator must review it before that member is reactivated.", source.ID, *source.Owner)
+		metadata := &systemtext.Message{Subject: systemtext.Sentence("privacy.review.subject"), Body: systemtext.Sentence(manualPrivacyReviewCode(source.Kind))}
+		if source.Kind == reviewEmailSignature && target.Type == notices.TargetRetainedEmailSignature && source.Owner != nil {
+			metadata.Body = systemtext.Sentence("privacy.review.retained_signature")
+			body = systemtext.Literal("privacy.review.retained_signature")
 		}
 		for _, recipient := range recipients {
 			_, err := store.CreateTx(system, tx, notices.NewNotice{
 				Recipient: recipient, Kind: notices.KindPrivacyReviewRequired,
-				Subject: "Manual privacy review needed", Body: body, Target: target,
+				SystemText: metadata,
+				Subject:    systemtext.Literal("privacy.review.subject"), Body: body, Target: target,
 				DedupeKey: fmt.Sprintf("privacy-review:%s:%s:%s", subject, source.Kind, source.ID),
 			})
 			if err != nil {
@@ -63,7 +67,7 @@ func privacyReviewRecipients(ctx context.Context, tx pgx.Tx, source privacy.Eras
 		if live {
 			return target, []ids.UserID{ids.From[ids.UserKind](*source.Owner)}, nil
 		}
-		target = notices.Target{}
+		target = notices.Target{Type: notices.TargetRetainedEmailSignature, ID: source.ID}
 	}
 	object := source.Kind
 	switch object {
@@ -83,17 +87,21 @@ func privacyReviewRecipients(ctx context.Context, tx pgx.Tx, source privacy.Eras
 }
 
 func manualPrivacyReviewText(kind string) string {
+	return systemtext.Literal(manualPrivacyReviewCode(kind))
+}
+
+func manualPrivacyReviewCode(kind string) string {
 	switch kind {
 	case "knowledge_document":
-		return "An uploaded document may mention an erased contact. Keep the file and open its original to review the text."
+		return "privacy.review.document"
 	case reviewEmailSignature:
-		return "An email signature may mention an erased contact. Review the signature before deciding what to remove."
+		return "privacy.review.signature"
 	case string(recordTypeActivity):
-		return "This retained note may mention an erased contact. Review the possible match manually; its text was kept."
+		return "privacy.review.note"
 	case reviewLegalEntity, reviewSignatureTemplate:
-		return "A company email signature template may mention an erased contact. Review it in Company settings before deciding what to remove."
+		return "privacy.review.company_signature"
 	default:
-		return "This record's description may mention an erased contact. Review its text before deciding what to remove."
+		return "privacy.review.description"
 	}
 }
 

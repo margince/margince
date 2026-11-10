@@ -129,18 +129,10 @@ func linkTargetVisible(p principal.Principal, alias string, arg func(any) int, c
 	return "(\n\t      " + strings.Join(arms, "\n\t   OR ") + ")"
 }
 
-// linkTargetArm renders one arm of that disjunction. A predicate of TRUE —
-// the caller reads every row of that table — collapses the arm to the
-// column test alone: the composite FK already guarantees the target row
-// exists, so the EXISTS could only confirm what TRUE already said.
-//
-// Dropping it is not a micro-optimization. The walk runs per candidate
-// row, and the search branch runs it across a whole FTS result set: an
-// all-scope reader was paying five correlated joins to be told yes five
-// times, which measured as a 6x regression on the search_fts perf budget
-// the moment capture privacy stopped exempting them from the walk.
+// An unbounded predicate needs no target lookup: the composite foreign key
+// already guarantees that the target exists.
 func linkTargetArm(alias, column, table, probe, predicate string) string {
-	if predicate == "TRUE" {
+	if predicate == truePredicate {
 		return fmt.Sprintf(`%s.%s IS NOT NULL`, alias, column)
 	}
 	return fmt.Sprintf(`(%[1]s.%[2]s IS NOT NULL AND EXISTS (SELECT 1 FROM %[3]s %[4]s WHERE %[4]s.id = %[1]s.%[2]s AND %[5]s))`,

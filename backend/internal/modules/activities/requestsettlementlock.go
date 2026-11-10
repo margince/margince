@@ -99,7 +99,7 @@ func requestStillWritable(ctx context.Context, tx pgx.Tx, requestID ids.UUID) (b
 	err := tx.QueryRow(ctx, `
 		SELECT true FROM activity
 		 WHERE id = $1 AND archived_at IS NULL
-		   AND audience = 'workspace' AND restricted_at IS NULL
+		   AND `+auth.WorkspaceAudienceSQL("activity")+` AND restricted_at IS NULL
 		   FOR NO KEY UPDATE`, requestID).Scan(&live)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return false, nil

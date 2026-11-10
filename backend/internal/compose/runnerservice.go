@@ -18,10 +18,12 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/promptlang"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/agents/runner"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
+	"github.com/margince/margince/backend/internal/platform/corefeatures"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -81,8 +83,13 @@ func WithSpecResolver(resolve func(string) (runner.AgentSpec, bool)) RunnerOptio
 	return func(s *RunnerService) { s.specByName = resolve }
 }
 
-// WithRunnerLists turns on list_id narrowing in the runner's tools, as the
-// API's are when lists are on.
+// WithRunnerDisabledCoreFeatures keeps queued tool calls within the configured feature boundary.
+func WithRunnerDisabledCoreFeatures(disabled []string) RunnerOption {
+	availability := corefeatures.New(disabled)
+	return func(s *RunnerService) { s.features.coreFeatures = availability }
+}
+
+// WithRunnerLists turns on list_id narrowing in the runner's tools.
 func WithRunnerLists(on bool) RunnerOption {
 	return func(s *RunnerService) { s.features.lists = on }
 }
@@ -118,6 +125,7 @@ func NewRunnerService(pool *pgxpool.Pool, brain runner.Brain, draftBrain complet
 	for _, opt := range opts {
 		opt(svc)
 	}
+	svc.features.lists = svc.features.lists && svc.features.coreFeatures.Enabled(crmcontracts.CoreFeatureFilters)
 	svc.runner = runner.New(registryWithDraftBrain(pool, draftBrain, send, svc.features), brain)
 	return svc
 }

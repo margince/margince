@@ -32,3 +32,13 @@ describe("manual privacy review destinations", () => {
     );
   });
 });
+
+it("opens a retained-review notice at its signature instead of the reader's own settings", () => {
+  const action = noticeAction({
+    type: "retained_email_signature",
+    id: "retained-signature",
+  });
+  expect(action?.href).toContain("signature_review=retained-signature");
+  expect(action?.href).toContain("privacy");
+  expect(action?.href).not.toContain("account");
+});

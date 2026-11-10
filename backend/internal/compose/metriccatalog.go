@@ -139,7 +139,7 @@ func (metricEvaluator) MetricVersions(metrics []crmcontracts.ReportingMetricID) 
 func (metricEvaluator) Catalog(ctx context.Context, language textlang.Lang) (crmcontracts.ReportingCatalog, error) {
 	out := crmcontracts.ReportingCatalog{Metrics: []crmcontracts.ReportingMetricDefinition{}}
 	for _, spec := range reportingMetrics {
-		if auth.Allows(ctx, spec.object, principal.ActionRead) {
+		if (metricEvaluator{}).FeaturesAvailable(ctx, crmcontracts.ReportingSelection{Metrics: []crmcontracts.ReportingMetricID{spec.definition.Id}}) && auth.Allows(ctx, spec.object, principal.ActionRead) {
 			out.Metrics = append(out.Metrics, reportingMetricMetadata(spec, language))
 		}
 	}

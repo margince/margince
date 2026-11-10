@@ -17,7 +17,9 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose"
 	ps "github.com/margince/margince/backend/internal/compose/programsettings"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/config"
+	"github.com/margince/margince/backend/internal/platform/corefeatures"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/dbsettings"
 	"github.com/margince/margince/backend/internal/platform/deployconfig"
@@ -144,7 +146,7 @@ func fromRegistry(loaded *config.Config, posture runtimeenv.Environment) workerC
 		certLogBaseURL: config.Val(loaded, ps.CertLogBaseURL), jobDrainWindow: config.Val(loaded, ps.JobDrainWindow), dataTasksPace: config.Val(loaded, ps.DataTasksPace),
 		logLevel: config.Val(loaded, ps.LogLevel), logFormat: config.Val(loaded, ps.LogFormat),
 		observeAddr: config.Val(loaded, ps.ObserveAddr), observePprof: config.Val(loaded, ps.ObservePprof),
-		listsEnabled:    config.Val(loaded, ps.ListsEnabled),
+		listsEnabled:    config.Val(loaded, ps.ListsEnabled) && corefeatures.New(config.Val(loaded, ps.CoreFeaturesDisabled)).Enabled(crmcontracts.CoreFeatureFilters),
 		csvImportCap:    compose.UploadLimitsFrom(loaded).CSVImport,
 		allowDataReset:  config.Val(loaded, ps.AllowDataReset),
 		ratesFx:         config.Val(loaded, ps.RatesFxSource),

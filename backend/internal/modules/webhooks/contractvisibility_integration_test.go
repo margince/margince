@@ -192,3 +192,57 @@ func TestAContractOnAnArchivedAnchorIsNotDelivered(t *testing.T) {
 			"so this hands a subscriber what the API refuses them")
 	}
 }
+
+func TestALegacyContractUsesItsOwnCompanyWhenTheDealNamesAnother(t *testing.T) {
+	e := setupContractVis(t)
+	contract := e.seedDealAndContract(t)
+	otherOwner := ids.NewV7()
+	if _, err := e.owner.Exec(t.Context(), `INSERT INTO app_user (id, email, display_name) VALUES (@id, @email, 'Other owner')`, pgx.StrictNamedArgs{"id": otherOwner, "email": otherOwner.String() + "@vis.test"}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.owner.Exec(t.Context(), `UPDATE company SET owner_id=@owner, visibility='owner' WHERE id=@company`, pgx.StrictNamedArgs{"owner": otherOwner, "company": e.company}); err != nil {
+		t.Fatal(err)
+	}
+
+	other := ids.NewV7()
+	if _, err := e.owner.Exec(t.Context(), `INSERT INTO company (id, display_name, owner_id, source, captured_by)
+  VALUES (@id, 'Other company', @owner, 'manual', 'human:test')`, pgx.StrictNamedArgs{"id": other, "owner": e.user}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.owner.Exec(t.Context(), `UPDATE deal SET company_id=@company WHERE id=@deal`, pgx.StrictNamedArgs{"company": other, "deal": e.deal}); err != nil {
+		t.Fatal(err)
+	}
+	reader := e.asHolding(map[string]principal.ObjectGrant{"contract": {Read: true}})
+	visible, err := e.store.contractVisibleTo(reader, contract)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if visible {
+		t.Fatal("the deal owner received a different company's agreement")
+	}
+	if _, err := e.owner.Exec(t.Context(), `UPDATE company SET owner_id=@owner WHERE id=@company`, pgx.StrictNamedArgs{"owner": e.user, "company": e.company}); err != nil {
+		t.Fatal(err)
+	}
+	visible, err = e.store.contractVisibleTo(reader, contract)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !visible {
+		t.Fatal("the agreement's company owner cannot recover the legacy agreement")
+	}
+}
+
+func TestAnArchivedContractIsStillVisibleForItsHistory(t *testing.T) {
+	e := setupContractVis(t)
+	contract := e.seedDealAndContract(t)
+	if _, err := e.owner.Exec(t.Context(), `UPDATE contract SET archived_at=now() WHERE id=@id`, pgx.StrictNamedArgs{"id": contract}); err != nil {
+		t.Fatal(err)
+	}
+	visible, err := e.store.contractVisibleTo(e.asHolding(map[string]principal.ObjectGrant{"contract": {Read: true}}), contract)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !visible {
+		t.Fatal("archiving the contract made its own history undeliverable")
+	}
+}

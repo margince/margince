@@ -165,6 +165,7 @@ const SYNTHETIC_AUDIT_FIELD_LABELS = new Map<string, MessageKey>([
   ["relinked_phones", "history.field.relinked_phones"],
   ["relinked_relationships", "history.field.relinked_relationships"],
   ["relinked_activity_links", "history.field.relinked_activity_links"],
+  ["legal_entity_id", "history.field.legal_entity_id"],
   ["lifted_by", "history.field.lifted_by"],
   ["lifted_by_level", "history.field.lifted_by_level"],
   ["lifted_suppression", "history.field.lifted_suppression"],

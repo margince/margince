@@ -87,14 +87,8 @@ const maxExplanationRunes = 1000
 // another on the exact string and an audit reader groups on it.
 const fieldReasonCode = "reason_code"
 
-// InstructionValidity is how long a decision stands before the facts under it
-// are too old to act on.
-//
-// Twenty-four hours, and the number is a judgement rather than a constant with
-// a derivation: long enough that a decision taken at the end of a day is still
-// good the next morning, short enough that a message directed last week does
-// not go out against a stop recorded since. The send path re-checks the facts
-// regardless; this is the outer bound on how stale they may be.
+// InstructionValidity dates the original facts snapshot. Every execution checks
+// current support, including when this snapshot is older than the window.
 const InstructionValidity = 24 * time.Hour
 
 // DirectInput is what the contact directing the send says.
