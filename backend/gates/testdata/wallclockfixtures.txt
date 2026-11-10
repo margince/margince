@@ -164,6 +164,7 @@ internal/compose/integration/jobfanout/runner_integration_test.go 2
 internal/compose/integration/jobfanout/runnerreap_integration_test.go 1
 internal/compose/integration/jobhealth_http_e2e_integration_test.go 4
 internal/compose/integration/jobtest/jobtest.go 2
+internal/compose/integration/jobtimeout_integration_test.go 1
 internal/compose/integration/jurisdictionfloor_integration_test.go 1
 internal/compose/integration/leadrouting_integration_test.go 2
 internal/compose/integration/leadscore_integration_test.go 3
@@ -237,7 +238,6 @@ internal/compose/integration/workflow_dispatch_bench_test.go 2
 internal/compose/integration/workflow_integration_test.go 4
 internal/compose/invitedtaskassignee_integration_test.go 1
 internal/compose/jobs_storedobject_integration_test.go 1
-internal/compose/jobtimeout_integration_test.go 1
 internal/compose/lastcontact_integration_test.go 1
 internal/compose/leadladder_manual_integration_test.go 2
 internal/compose/listevaluate_switch_integration_test.go 1

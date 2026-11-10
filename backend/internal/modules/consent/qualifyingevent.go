@@ -177,7 +177,7 @@ func holdSurvivingContact(ctx context.Context, tx pgx.Tx, contactID ids.ContactI
 func (in RecordQualifyingEventInput) validated(now time.Time) (string, error) {
 	if !handRecordedKinds[in.Kind] {
 		return "", &InvalidQualifyingEventError{
-			Field: "kind",
+			Field: fieldKind,
 			Reason: "only an exchange in person or a request the subject made themselves is " +
 				"recorded by hand; the rest are derived",
 		}
@@ -310,7 +310,7 @@ func writeExchangeTx(
  WHERE `+column+`=@subject AND kind=@kind AND note=@note AND occurred_at=@occurred
  AND about_deal_id IS NOT DISTINCT FROM @deal AND @entity=ANY(recorded_for_entities))
  RETURNING id::text`, pgx.StrictNamedArgs{
-		fieldSubject: sub.id, "kind": in.Kind, fieldNote: note, exchangeOccurredArg: in.OccurredAt,
+		fieldSubject: sub.id, fieldKind: in.Kind, fieldNote: note, exchangeOccurredArg: in.OccurredAt,
 		carrySourceArg: handRecordedSource(ctx), exchangeActorArg: by, "quote": in.AsksForQuote,
 		exchangeDealArg: zeroUUIDAsNull(in.AboutDeal), "entity": entity,
 	}).Scan(&out.ID); err != nil {
@@ -348,7 +348,7 @@ func standingExchange(ctx context.Context, tx pgx.Tx, sub subject, deal, entity 
  WHERE `+column+`=@subject AND kind=@kind AND note=@note AND occurred_at=@occurred
  AND about_deal_id IS NOT DISTINCT FROM @deal AND @entity=ANY(recorded_for_entities)
  ORDER BY created_at LIMIT 1`, pgx.StrictNamedArgs{
-		fieldSubject: sub.id, "kind": out.Kind, fieldNote: out.Note, exchangeOccurredArg: out.OccurredAt,
+		fieldSubject: sub.id, fieldKind: out.Kind, fieldNote: out.Note, exchangeOccurredArg: out.OccurredAt,
 		exchangeDealArg: zeroUUIDAsNull(deal), "entity": entity,
 	}).Scan(&out.ID, &out.AsksForQuote, &out.Retracted); err != nil {
 		return fmt.Errorf("consent: reading the exchange already on file: %w", err)
