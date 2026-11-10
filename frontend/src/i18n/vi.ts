@@ -2750,8 +2750,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "shell.skipToContent": "Chuyển đến nội dung",
   "shell.logoAria": "Margince",
   "shell.companyLogoAria": "Trang chủ {company}, chạy trên Margince",
-  "shell.companyLogoAriaInitials":
-    "{initials}, Trang chủ {company}, chạy trên Margince",
   "shell.poweredBy": "Chạy trên Margince",
   "shell.searchEverything": "Tìm kiếm hoặc hỏi Margince",
   "shell.breadcrumbAria": "Đường dẫn điều hướng",
@@ -2766,7 +2764,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "shell.collapse": "Thu gọn thanh bên",
   "shell.expand": "Mở rộng thanh bên",
   "shell.accountAria": "Tài khoản",
-  "shell.accountAriaInitials": "{initials}, tài khoản",
   "shell.accountSettingsAria": "{who}: cài đặt tài khoản",
   "shell.theme": "Giao diện",
   "shell.helpMenu": "Trợ giúp và phản hồi",

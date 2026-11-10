@@ -2838,8 +2838,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "shell.skipToContent": "Zum Inhalt springen",
   "shell.logoAria": "Margince",
   "shell.companyLogoAria": "Home von {company}, läuft mit Margince",
-  "shell.companyLogoAriaInitials":
-    "{initials}, Home von {company}, läuft mit Margince",
   "shell.poweredBy": "Läuft mit Margince",
   "shell.searchEverything": "Suchen oder Margince fragen",
   "shell.breadcrumbAria": "Navigationspfad",
@@ -2854,7 +2852,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "shell.collapse": "Seitenleiste einklappen",
   "shell.expand": "Seitenleiste ausklappen",
   "shell.accountAria": "Nutzerkonto",
-  "shell.accountAriaInitials": "{initials}, Nutzerkonto",
   "shell.accountSettingsAria": "{who}: Kontoeinstellungen",
   "shell.theme": "Design",
   "shell.helpMenu": "Hilfe und Feedback",

@@ -2,7 +2,13 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 /** @vitest-environment happy-dom */
-import { cleanup, screen, waitFor, within } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { FiltersScreen } from "../features/lists/filters";
@@ -208,14 +214,18 @@ describe("Top bar at phone width", () => {
       />,
     );
     expect(screen.queryByRole("navigation", { name: "Breadcrumb" })).toBeNull();
-    // The chip prints the initials, so the name starts with them (WCAG 2.5.3).
+    // The name starts with what the chip prints (WCAG 2.5.3): the initials until
+    // the square mark paints, then nothing.
     const home = screen.getByRole("link", {
-      name: "DG, Demo GmbH home, powered by Margince",
+      name: "DG Demo GmbH home, powered by Margince",
     });
     expect(home.getAttribute("href")).toBe("/#/home");
+    const mark = home.querySelector(".ws-chip-company img");
+    expect(mark?.getAttribute("src")).toBe(TWO_MARKS.logo_icon_url);
+    if (mark) fireEvent.load(mark);
     expect(
-      home.querySelector(".ws-chip-company img")?.getAttribute("src"),
-    ).toBe(TWO_MARKS.logo_icon_url);
+      screen.getByRole("link", { name: "Demo GmbH home, powered by Margince" }),
+    ).toBe(home);
   });
 
   it("reads no record name for the trail it does not draw", async () => {

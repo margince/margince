@@ -20237,7 +20237,8 @@ paths:
         Null clears the bound, leaving access open until the room is closed or
         archived. A past instant is accepted and takes effect at once — that is
         how access is cut short without ending the room. One at or before the room's
-        creation is stored as the time of the call. It decides how long a buyer can
+        creation is stored as the time of the call, unless a standing expiry has
+        already passed, which is kept. It decides how long a buyer can
         read the room, so an agent spends `send` on it.
 
         Needs the passport permission Send messages.

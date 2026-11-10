@@ -9,7 +9,6 @@ import {
 } from "react";
 import { AppLink } from "../design-system/applink";
 import { Avatar, BusyMark } from "../design-system/atoms";
-import { monogramOf } from "../design-system/avatarmesh";
 import { SilentCardBoundary } from "../design-system/cardboundary";
 import { Heading } from "../design-system/heading";
 import { Logomark } from "../design-system/logomark";
@@ -64,28 +63,20 @@ function useInstallationBrand() {
   return useMe(false).data?.installation_brand;
 }
 
-/**
- * The accessible name of a link home. One that holds the `WorkspaceChip` starts
- * with the initials the chip prints (WCAG 2.5.3).
- */
-export function useHomeLinkLabel(holdsChip = false): string {
+/** The accessible name of a link home that shows the company's mark. */
+export function useHomeLinkLabel(): string {
   const t = useT();
   const installation = useInstallationBrand();
-  if (!installation) return t("shell.logoAria");
-  const company = installation.display_name;
-  return holdsChip
-    ? t("shell.companyLogoAriaInitials", {
-        initials: monogramOf(company),
-        company,
-      })
-    : t("shell.companyLogoAria", { company });
+  return installation
+    ? t("shell.companyLogoAria", { company: installation.display_name })
+    : t("shell.logoAria");
 }
 
 /**
  * The company's square mark, or the product's own before onboarding named a
  * company. Decorative: the link around it carries the name.
  */
-export function WorkspaceChip() {
+export function WorkspaceChip({ id }: Readonly<{ id?: string }>) {
   const installation = useInstallationBrand();
   const mark = useSquareMark(
     installation?.logo_icon_url,
@@ -93,7 +84,7 @@ export function WorkspaceChip() {
   );
   if (!installation) {
     return (
-      <span className="ws-chip" aria-hidden="true">
+      <span className="ws-chip" id={id} aria-hidden="true">
         <Logomark />
       </span>
     );
@@ -101,7 +92,7 @@ export function WorkspaceChip() {
   // Avatar draws the deterministic monogram underneath, so a company with no
   // square mark has a face, not a gap.
   return (
-    <span className="ws-chip ws-chip-company" aria-hidden="true">
+    <span className="ws-chip ws-chip-company" id={id} aria-hidden="true">
       {/* The brand read carries no company id, so the name keys the chip. */}
       <Avatar
         identity={installation.display_name}

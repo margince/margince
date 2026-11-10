@@ -24,6 +24,7 @@ import {
   useRouting,
 } from "../../lib/ai-routing-query";
 import { useCan, useCanWrite } from "../../lib/capability";
+import { valueFor } from "../../lib/labelfor";
 import { problemMessageOf, throwProblem } from "../../lib/problem";
 import { useMe } from "../../lib/session";
 import { SETUP_PROVIDERS } from "../../lib/setup-providers";
@@ -437,8 +438,11 @@ const PROFILE_LABEL: Record<(typeof PROFILES)[number], MessageKey> = {
 
 // A profile newer than this bundle prints its id rather than nothing.
 function profileName(profile: string, t: Translator): string {
-  if (isProfile(profile)) return t(PROFILE_LABEL[profile]);
-  return profile === "" ? t("aiRouting.profile.unset") : profile;
+  if (profile === "") return t("aiRouting.profile.unset");
+  const label = isProfile(profile)
+    ? valueFor(PROFILE_LABEL, profile, undefined)
+    : undefined;
+  return label ? t(label) : profile;
 }
 
 // Where a new decision binding starts: the first decision adapter this

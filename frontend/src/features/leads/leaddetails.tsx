@@ -9,7 +9,7 @@ import { LinkedInChip } from "../../components/linkedinchip";
 import { saveRecordEdit } from "../../components/recordedit";
 import { LeadStops } from "../../components/stops";
 import { TagsPanel } from "../../components/tagspanel";
-import { Badge } from "../../design-system/atoms";
+import { Badge, PendingBody } from "../../design-system/atoms";
 import {
   ContactLink,
   CopyEmail,
@@ -141,7 +141,7 @@ function useLinkedCompanyRow(lead: Lead): DetailRow | null {
     term: t("create.companyName"),
     empty: !linked.settling && !linked.name,
     value: linked.settling ? (
-      <span aria-busy="true" />
+      <PendingBody label={t("common.loading")} lines={1} />
     ) : (
       <InlineText
         label={t("create.companyName")}

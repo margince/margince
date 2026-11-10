@@ -1,7 +1,6 @@
 import { UserRound } from "lucide-react";
 import { Suspense, useCallback, useId, useRef, useState } from "react";
 import { Avatar, Button } from "../design-system/atoms";
-import { monogramOf } from "../design-system/avatarmesh";
 import { CardBoundary } from "../design-system/cardboundary";
 import { useT } from "../i18n";
 import { lazy } from "../i18n/lazy";
@@ -44,6 +43,8 @@ export function AccountMenu() {
   const menu = useRef<HTMLDivElement>(null);
   const spokenId = useId();
   const menuId = useId();
+  const faceId = useId();
+  const nameId = useId();
 
   /**
    * Close, and put focus back where it can be used.
@@ -85,30 +86,20 @@ export function AccountMenu() {
         iconOnly
         className="account-trigger"
         ref={trigger}
-        // WCAG 2.5.3 (Label in Name): the chip prints the initials, so the name
-        // starts with them.
-        aria-label={
-          identity.label
-            ? t("shell.accountAriaInitials", {
-                initials: monogramOf(identity.label),
-              })
-            : t("shell.accountAria")
-        }
+        // WCAG 2.5.3 (Label in Name): the name starts with whatever the chip
+        // prints, read off the chip itself, so a painted photo adds nothing.
+        aria-labelledby={identity.label ? `${faceId} ${nameId}` : nameId}
         aria-haspopup="menu"
         aria-expanded={open}
         aria-controls={open ? menuId : undefined}
-        // With no room to print who is signed in, the sentence is carried for a
-        // screen reader and clipped for the eye. It is wired as the DESCRIPTION
-        // rather than left to be read in flow, because `aria-label` above
-        // replaces the button's contents for name computation and would
-        // otherwise silence it. The `title` is the pointer's version of the same
-        // sentence, and never the accessible name.
+        // Who is signed in, for a screen reader: a description, because the name
+        // above leaves it out. The `title` is the pointer's copy, never the name.
         aria-describedby={identity.spoken ? spokenId : undefined}
         title={identity.spoken || undefined}
         onClick={() => setOpen((current) => !current)}
       >
         {identity.label ? (
-          <span className="account-face" aria-hidden="true">
+          <span className="account-face" id={faceId} aria-hidden="true">
             <Avatar
               identity={identity.id}
               name={identity.label}
@@ -118,6 +109,9 @@ export function AccountMenu() {
         ) : (
           <UserRound aria-hidden />
         )}
+        <span id={nameId} hidden>
+          {t("shell.accountAria")}
+        </span>
         {identity.spoken && (
           <span className="sr-only" id={spokenId}>
             {identity.spoken}

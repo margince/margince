@@ -34,8 +34,8 @@ import { type RecentEntry, recentIdentity } from "./paletterecents.storage";
 import { PaletteRow } from "./paletterow";
 import { SEARCH_PENDING_DELAY_MS, useSearchCommands } from "./palettesearch";
 
-// ⌘K command palette (B-EP09.5, AC-shell-3..7). Each command is a screen,
-// setting, action or record; record rows come from the search seam.
+// ⌘K command palette. Each command is a screen, setting, action or record;
+// record rows come from the search seam.
 
 export type Command = {
   id: string;

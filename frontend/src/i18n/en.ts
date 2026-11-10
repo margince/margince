@@ -2732,8 +2732,6 @@ export const en = {
   "shell.skipToContent": "Skip to content",
   "shell.logoAria": "Margince",
   "shell.companyLogoAria": "{company} home, powered by Margince",
-  "shell.companyLogoAriaInitials":
-    "{initials}, {company} home, powered by Margince",
   "shell.poweredBy": "Powered by Margince",
   "shell.searchEverything": "Search or ask Margince",
   "shell.breadcrumbAria": "Breadcrumb",
@@ -2748,7 +2746,6 @@ export const en = {
   "shell.collapse": "Collapse sidebar",
   "shell.expand": "Expand sidebar",
   "shell.accountAria": "Account",
-  "shell.accountAriaInitials": "{initials}, account",
   "shell.accountSettingsAria": "{who}: account settings",
   "shell.theme": "Theme",
   "shell.helpMenu": "Help and feedback",

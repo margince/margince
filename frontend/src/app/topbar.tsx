@@ -1,5 +1,5 @@
 import { ArrowLeft, PanelLeftClose, PanelLeftOpen, Search } from "lucide-react";
-import { type RefObject, Suspense, useEffect, useRef } from "react";
+import { type RefObject, Suspense, useEffect, useId, useRef } from "react";
 import { AppLink } from "../design-system/applink";
 import { Kbd } from "../design-system/atoms";
 import { Breadcrumb, type Crumb } from "../design-system/breadcrumb";
@@ -176,10 +176,20 @@ function TopBarTrail({
 
 /** The company's mark leading home, where a phone has no room for the trail. */
 function TopBarHome() {
-  const label = useHomeLinkLabel(true);
+  const label = useHomeLinkLabel();
+  const chipId = useId();
+  const labelId = useId();
+  // WCAG 2.5.3: the name starts with whatever the chip prints, read off the chip.
   return (
-    <AppLink className="topbar-home" href="#/home" aria-label={label}>
-      <WorkspaceChip />
+    <AppLink
+      className="topbar-home"
+      href="#/home"
+      aria-labelledby={`${chipId} ${labelId}`}
+    >
+      <WorkspaceChip id={chipId} />
+      <span id={labelId} hidden>
+        {label}
+      </span>
     </AppLink>
   );
 }

@@ -307,9 +307,9 @@ func buildRoomPatch(current crmcontracts.DealRoom, in UpdateRoomInput) *storekit
 // Widening the window in which an outside party reads the deal's material is
 // the user's act, or their agent's for them, never automatic work's.
 //
-// A nil expiry removes the bound. A past instant is accepted and takes effect at
-// once, which is how access is cut short without ending the room. One at or
-// before the room's creation is stored as the time of the call.
+// A nil expiry removes the bound. A past instant takes effect at once, which
+// cuts access short without ending the room. One at or before creation is
+// stored as the time of the call; a standing expiry already passed is kept.
 func (s *Store) SetExpiry(ctx context.Context, id ids.DealRoomID, expiresAt *time.Time, ifVersion *int64) (crmcontracts.DealRoom, error) {
 	if err := auth.Require(ctx, roomObject, principal.ActionUpdate); err != nil {
 		return crmcontracts.DealRoom{}, err
