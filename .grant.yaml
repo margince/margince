@@ -34,6 +34,13 @@ allow:
   - Python-2.0
   - Unlicense
   - BUSL-1.1
+  # Community-Spec-1.0 is the licence of the SPDX 3.0.1 JSON schema that
+  # `make sbom-validate` reads (sbom-schemas/spdx-3.0.1/). It is a licence for
+  # specifications, not source code, and that schema is a validation input that
+  # is never built into or shipped with the product. Admitting it here is a
+  # maintainer decision for that one input. This list is global, so a future
+  # package under the same licence passes too, and that still needs review.
+  - Community-Spec-1.0
 
 # First-party components carry no third-party license to gate. The scan now
 # covers the whole committed tree (see .syft.yaml), so CI Actions reach grant as

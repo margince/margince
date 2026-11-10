@@ -236,7 +236,7 @@ the validator its format has:
 |---|---|
 | `margince.cdx.json` | `cyclonedx validate --fail-on-errors` |
 | `margince.spdx221.json` | `pyspdxtools`, from a requirements file pinned by hash |
-| `margince.spdx300.json` | `jsonschema` against `sbom-schemas/spdx-3.0.1.schema.json`, kept in the tree |
+| `margince.spdx300.json` | `jsonschema` against `sbom-schemas/spdx-3.0.1/spdx-3.0.1.schema.json`, kept in the tree |
 
 `make sbom-sign` depends on `sbom-parity` and `sbom-validate`, so a document
 that does not agree with the others, or is not valid, cannot be signed. A
