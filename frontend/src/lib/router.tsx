@@ -149,10 +149,12 @@ export function navigate(route: Route, dials?: UrlParams): void {
 /**
  * Go to an address WITHOUT leaving the current one in history.
  *
- * For a redirect, and only for a redirect: an address the product answers by
- * sending the reader somewhere else must not be a history entry, or Back lands
- * on it, it redirects again, and the reader cannot get out of the loop with the
- * one key that exists for getting out of things.
+ * For a redirect: an address the product answers by sending the reader
+ * somewhere else must not be a history entry, or Back lands on it, it
+ * redirects again, and the reader cannot get out of the loop with the one key
+ * that exists for getting out of things. And for a state of the page the
+ * reader is on, such as a list's create form at `#/<screen>/new`: Back leaves
+ * the page, and a dialog is not a page to step back through.
  *
  * `history.replaceState` and not `location.replace`, which is the obvious
  * spelling and the wrong one: `location.replace` discards the entry's state

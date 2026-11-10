@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { liveDialogs } from "../design-system/dialogfocus";
-import { navigate, type Screen } from "../lib/router";
+import { navigateReplacing, type Screen } from "../lib/router";
 import { useShortcutHandler } from "../lib/shortcuts";
 import { CREATE_ID, CREATE_SCREENS } from "./nav";
 
@@ -30,7 +30,7 @@ export function usePaletteShortcuts(
   useShortcutHandler("search.slash", () => show("all"));
   useShortcutHandler("create", () => {
     if (CREATE_SCREENS.has(screen)) {
-      navigate({ screen, id: CREATE_ID });
+      navigateReplacing({ screen, id: CREATE_ID });
     } else {
       show("create");
     }
