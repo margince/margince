@@ -48,7 +48,7 @@ func CurrentTaskClause(alias string, asOf time.Time, identities string, arg func
 // humanOrImportedTaskSQL names the tasks that stay current by their own
 // lifecycle with no automatic family. One has no source_system: a human or an
 // agent created it by hand. One is in an importer's reserved namespace. The
-// last is a task an extension unit filed for a named colleague: the capture
+// last is a task an extension unit filed for a named colleague. The capture
 // door refuses an assignee who cannot hold work, so it is already addressed.
 // Any other source_system waits for its family in taskSourceFamilies, or for a
 // human to write or adopt the task.
