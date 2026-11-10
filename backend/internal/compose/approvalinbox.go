@@ -31,8 +31,18 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// approvalInbox is the tool surface's read/decide door onto the queue.
-type approvalInbox struct{ svc *approvals.Service }
+// approvalInbox is the tool surface's read/decide door onto the queue. pending
+// counts the automations still reacting to the records a listing names.
+type approvalInbox struct {
+	svc     *approvals.Service
+	pending automationsPending
+}
+
+// automationsPending is the automation engine's answer to "is anything still
+// reacting to these records", which approvals cannot see from its own tables.
+type automationsPending interface {
+	PendingFor(ctx context.Context, targets []ids.Ref) (int, error)
+}
 
 // approvalQueue builds that door, and refuses at BOOT an engine that could
 // decide a kind it cannot release.
@@ -48,7 +58,7 @@ type approvalInbox struct{ svc *approvals.Service }
 // A panic rather than a refusal at call time, for the reason Registry.Register
 // panics: this is composition wiring, and a deployment that got it wrong should
 // not start.
-func approvalQueue(svc *approvals.Service) approvalInbox {
+func approvalQueue(svc *approvals.Service, pending automationsPending) approvalInbox {
 	releasable := svc.EffectKinds()
 	for kind := range lateApprovalEffects {
 		if !slices.Contains(releasable, kind) {
@@ -57,7 +67,7 @@ func approvalQueue(svc *approvals.Service) approvalInbox {
 				"a decision would commit, answer success, and perform nothing", kind))
 		}
 	}
-	return approvalInbox{svc: svc}
+	return approvalInbox{svc: svc, pending: pending}
 }
 
 // ListApprovals answers the caller's own decidable queue.
@@ -98,7 +108,15 @@ func (i approvalInbox) ListApprovals(ctx context.Context, q agents.ApprovalQuery
 		// payloads are whole emails. read_approval is the door onto one.
 		out.Approvals = append(out.Approvals, stagedActionFrom(a, false))
 	}
-	return out, nil
+	if status != approvals.StatusPending || i.pending == nil {
+		return out, nil
+	}
+	targets := in.Targets
+	if in.TargetID != nil {
+		targets = append(targets, ids.Ref{Type: *in.TargetType, ID: *in.TargetID})
+	}
+	out.AutomationsPending, err = i.pending.PendingFor(ctx, targets)
+	return out, err
 }
 
 // ReadApproval answers one staged action in full.

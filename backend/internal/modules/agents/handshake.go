@@ -120,8 +120,9 @@ const queueInstruction = "A write can also leave a question for a human WITHOUT 
 	"of its own, after your call returned. Before telling anyone the work is finished, call " +
 	"list_approvals with targets naming every record this task created or changed, the " +
 	"activities and tasks it logged included, and report what it returns as what the work left " +
-	"waiting; it needs no approval of its own. The rest of the queue is not part of the task: " +
-	"do not list it unless the user asks."
+	"waiting; it needs no approval of its own. While its answer carries check_again, an automation " +
+	"is still running on those records: call it again with the same targets before you report. " +
+	"The rest of the queue is not part of the task: do not list it unless the user asks."
 
 // identity is the serverInfo both framings report: the handshake era in its
 // initialize result, the modern era in every result's _meta.

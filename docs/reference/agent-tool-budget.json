@@ -31,7 +31,7 @@
   "catalog": {
     "tools": 48,
     "system_frame_tokens": 592,
-    "tokens": 39814,
+    "tokens": 39837,
     "median_tool_tokens": 620,
     "mean_tool_tokens": 829
   },
@@ -201,7 +201,7 @@
     },
     {
       "name": "list_approvals",
-      "tokens": 474
+      "tokens": 497
     },
     {
       "name": "change_relationships",

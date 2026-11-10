@@ -134,11 +134,19 @@ type ApprovalTarget struct {
 	ID   ids.UUID `json:"id"`
 }
 
-// ApprovalPage is one page of the queue.
+// ApprovalPage is one page of the queue. AutomationsPending counts the
+// automations still reacting to a recent write on the records a listing named.
+// Until it is zero, what they will stage is not in Approvals yet.
 type ApprovalPage struct {
-	Approvals  []StagedApproval `json:"approvals"`
-	NextCursor string           `json:"next_cursor,omitempty"`
+	Approvals          []StagedApproval `json:"approvals"`
+	NextCursor         string           `json:"next_cursor,omitempty"`
+	AutomationsPending int              `json:"automations_pending,omitempty"`
+	CheckAgain         string           `json:"check_again,omitempty"`
 }
+
+// checkAgainNote is what a listing says while an automation is still running.
+const checkAgainNote = "An automation is still reacting to these records and may stage more. " +
+	"Call list_approvals again with the same targets in a few seconds, before you report what waits."
 
 // ApprovalInbox is the confirm-first queue as this surface needs it. Compose
 // implements it over the approvals engine, which is where every authority
@@ -239,6 +247,9 @@ func (t listApprovalsTool) Handle(ctx context.Context, in json.RawMessage) (json
 		// most often needs to state plainly, and a model handed null reads it as
 		// "I could not find out" and hedges.
 		page.Approvals = []StagedApproval{}
+	}
+	if page.AutomationsPending > 0 {
+		page.CheckAgain = checkAgainNote
 	}
 	return json.Marshal(page)
 }
