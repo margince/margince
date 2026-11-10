@@ -17,7 +17,7 @@ input and output schema in folds below it. What a tool may do and whether a huma
 | Resources | 14 |
 | Tool catalog | 228.1 KB |
 | Resource catalog | 5.5 KB |
-| Approx. wire tokens | 59786 |
+| Approx. wire tokens | 59806 |
 | Largest tool | `read_context` (11.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -33,10 +33,10 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
 | Output schemas | 50.6 KB | 22% | **No**: a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 53.8 KB | 23% | Yes, every step |
+| Descriptions (incl. governance clause) | 53.9 KB | 23% | Yes, every step |
 | Input schemas | 111.8 KB | 49% | Yes, every step |
 | _Names, annotations, punctuation_ | 11.8 KB | 5% | Partly |
-| **Description + input schema** | **165.6 KB** | **72%** | **the recurring cost** |
+| **Description + input schema** | **165.7 KB** | **72%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -109,7 +109,7 @@ descriptions and input schemas are what each step pays for.
 | [`resolve_duplicates`](#resolve_duplicates) | Merge two records or dismiss a flagged pair |  |  | 618 |
 | [`run_research`](#run_research) | Run AI work for your user |  |  | 776 |
 | [`schedule_meeting`](#schedule_meeting) | Invite to a meeting |  |  | 420 |
-| [`send_outbound`](#send_outbound) | Send a message |  |  | 1680 |
+| [`send_outbound`](#send_outbound) | Send a message |  |  | 1695 |
 | [`update_record`](#update_record) | Update a record |  | [`ui://margince/update.html`](#update_view) | 626 |
 | [`whoami`](#whoami) | Who this passport acts for | yes |  | 129 |
 
@@ -12295,12 +12295,12 @@ change_activities with action=log to record that something was said rather than 
 subject, body and activity_id or links the draft produced, and keep the staged approval id: the
 approval binds that exact message, so changed text needs a new one. email_new answers with the new
 conversation's activity_id. (Runs immediately; the user's yes is needed for the actions
-add_room_document, change_invitation, chat_reply, deal_room_invite, deal_room_resend,
-details_confirmation, direct_send, double_opt_in, email_new, email_reply, invite_member,
-meeting_proposal, my_signature, open_room_thread, privacy_notice, remove_room_document,
-reply_room_thread, resend_member_invite, resume_room, set_room_expiry, signature_template,
-update_room, update_room_document, so tell them what the call will change and get it before calling,
-unless they asked for this call themselves; requires passport scope "send".)
+add_room_document, answer_invitation, change_invitation, chat_reply, deal_room_invite,
+deal_room_resend, details_confirmation, direct_send, double_opt_in, email_new, email_reply,
+invite_member, meeting_proposal, my_signature, open_room_thread, privacy_notice,
+remove_room_document, reply_room_thread, resend_member_invite, resume_room, set_room_expiry,
+signature_template, update_room, update_room_document, so tell them what the call will change and
+get it before calling, unless they asked for this call themselves; requires passport scope "send".)
 ```
 
 <details><summary>Input schema</summary>
@@ -12322,6 +12322,7 @@ unless they asked for this call themselves; requires passport scope "send".)
       "description": "email_reply answers a recorded mail thread, email_new starts one filed on links, chat_reply answers a captured chat",
       "enum": [
         "add_room_document",
+        "answer_invitation",
         "change_invitation",
         "chat_reply",
         "deal_room_invite",
@@ -12403,7 +12404,7 @@ unless they asked for this call themselves; requires passport scope "send".)
       "type": "object"
     },
     "id": {
-      "description": "add_room_document, change_invitation, deal_room_invite, deal_room_resend, details_confirmation, direct_send, double_opt_in, open_room_thread, privacy_notice, remove_room_document, reply_room_thread, resend_member_invite, resume_room, set_room_expiry, update_room, update_room_document only",
+      "description": "add_room_document, answer_invitation, change_invitation, deal_room_invite, deal_room_resend, details_confirmation, direct_send, double_opt_in, open_room_thread, privacy_notice, remove_room_document, reply_room_thread, resend_member_invite, resume_room, set_room_expiry, update_room, update_room_document only",
       "type": "string"
     },
     "idempotency_key": {
@@ -12459,7 +12460,7 @@ unless they asked for this call themselves; requires passport scope "send".)
       "type": "string"
     },
     "request_body": {
-      "description": "add_room_document, change_invitation, deal_room_invite, details_confirmation, direct_send, double_opt_in, invite_member, meeting_proposal, my_signature, open_room_thread, privacy_notice, reply_room_thread, set_room_expiry, signature_template, update_room, update_room_document only: The chosen action's request body; read_workspace topic actions lists its shape",
+      "description": "add_room_document, answer_invitation, change_invitation, deal_room_invite, details_confirmation, direct_send, double_opt_in, invite_member, meeting_proposal, my_signature, open_room_thread, privacy_notice, reply_room_thread, set_room_expiry, signature_template, update_room, update_room_document only: The chosen action's request body; read_workspace topic actions lists its shape",
       "type": "object"
     },
     "scheduled_at": {
