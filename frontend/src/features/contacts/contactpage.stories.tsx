@@ -834,7 +834,7 @@ function expectWhole(half: HTMLElement) {
 }
 
 // The About panel's address on a wide window, its copy glyph shown as on
-// hover: every letter reads, and the glyph sits on the address's line.
+// hover. Every letter reads, and the glyph sits on the address's line.
 export const PageLongAddress: Story = {
   name: "Page · long address",
   tags: ["uat-wide"],
