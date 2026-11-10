@@ -17,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
+	"github.com/margince/margince/backend/internal/platform/corefeatures"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -96,6 +97,7 @@ func (t scheduleTimer) ScheduleTx(ctx context.Context, tx pgx.Tx, id ids.UUID, d
 // scheduling human's freshly re-derived authority, never the one they had when
 // they pressed the button.
 type scheduledSendWorker struct {
+	features corefeatures.Availability
 	pool     *pgxpool.Pool
 	store    *activities.Store
 	actors   storedActor
@@ -112,9 +114,10 @@ type scheduledSendWorker struct {
 // immediate one is: the signature, the sender name, the unsubscribe linker and
 // the draft-outcome recorder all present, all identical. A hand-built store
 // here would be a second send path wearing the first one's name.
-func newScheduledSendWorker(pool *pgxpool.Pool, delivery DeliveryMachinery, blob blobstore.Store, origin SendOrigin) *scheduledSendWorker {
+func newScheduledSendWorker(pool *pgxpool.Pool, delivery DeliveryMachinery, blob blobstore.Store, origin SendOrigin, disabled ...string) *scheduledSendWorker {
 	return &scheduledSendWorker{
-		pool: pool,
+		features: corefeatures.New(disabled),
+		pool:     pool,
 		// The ORIGIN travels, because a fired message builds its unsubscribe
 		// link from it. An empty send path here refuses every scheduled
 		// correspondence and marketing send at fire time while the
@@ -257,6 +260,7 @@ func (w *scheduledSendWorker) scheduler(ctx context.Context, id ids.UUID) (sched
 // sign-off when an agent acts. Fired as a human, an agent's message would carry
 // the approver's signature, which the same immediate send never does.
 func (w *scheduledSendWorker) fireAs(ctx context.Context, sched schedulerOf) (context.Context, string, error) {
+	ctx = w.features.Context(ctx)
 	actor, err := w.actors.rebuild(ctx, sched.storedActor())
 	switch {
 	case errors.Is(err, errActorSeatGone):

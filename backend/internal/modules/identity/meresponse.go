@@ -45,7 +45,8 @@ func (h Handlers) meResponse(ctx context.Context, id Identity) crmcontracts.MeRe
 	confirmRequests := h.canRequestConfirmation(ctx, id)
 	readerContext := actorCtx(ctx, id)
 	readerRendering := h.readerRenderingAvailable && auth.RequireHuman(readerContext) == nil && auth.Require(readerContext, "activity", principal.ActionRead) == nil
-	reportingAvailable := true
+	reportingAvailable := h.coreFeatures.Enabled(crmcontracts.CoreFeatureAnalytics)
+	disabledFeatures := h.coreFeatures.Disabled()
 	roles := id.Roles
 	if roles == nil {
 		roles = []string{}
@@ -89,6 +90,7 @@ func (h Handlers) meResponse(ctx context.Context, id Identity) crmcontracts.MeRe
 			RowScope: contractRowScope(id.Permissions.RowScope),
 		},
 		SettingsAvailability: &crmcontracts.SettingsAvailability{
+			DisabledFeatures: &disabledFeatures,
 			CompanyContext:   h.companyContextAvailable,
 			EmbeddingReindex: h.EmbedReindexAvailable(),
 			Lists:            &h.listsAvailable,

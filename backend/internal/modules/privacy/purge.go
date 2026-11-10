@@ -28,6 +28,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/corefeatures"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -77,7 +78,7 @@ func requireContactAnonymise(ctx context.Context) error {
 	if err := auth.RequireHuman(ctx); err != nil {
 		return err
 	}
-	return auth.Require(ctx, "contact", principal.ActionDelete)
+	return auth.Require(corefeatures.RetainedDataContext(ctx), "contact", principal.ActionDelete)
 }
 
 // CheckPurgeAuthority asks what a purge will ask when it runs: the mail grant

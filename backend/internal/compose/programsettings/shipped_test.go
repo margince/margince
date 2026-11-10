@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package compose_test
+package programsettings_test
 
 import (
 	"testing"
@@ -13,8 +13,8 @@ import (
 )
 
 const (
-	shippedExample    = "../../../config/margince.example.yaml"
-	shippedDevPosture = "../../../config/margince.dev.yaml"
+	shippedExample    = "../../../../config/margince.example.yaml"
+	shippedDevPosture = "../../../../config/margince.dev.yaml"
 )
 
 // loadShipped loads the settings of one program from shipped files, the way

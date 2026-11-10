@@ -9139,6 +9139,42 @@ func (e ConversationMemoryEntryStatus) Valid() bool {
 	}
 }
 
+// Defines values for CoreFeature.
+const (
+	CoreFeatureAnalytics CoreFeature = "analytics"
+	CoreFeatureCompanies CoreFeature = "companies"
+	CoreFeatureContacts  CoreFeature = "contacts"
+	CoreFeatureDeals     CoreFeature = "deals"
+	CoreFeatureFilters   CoreFeature = "filters"
+	CoreFeatureHome      CoreFeature = "home"
+	CoreFeatureLeads     CoreFeature = "leads"
+	CoreFeatureProjects  CoreFeature = "projects"
+)
+
+// Valid indicates whether the value is a known member of the CoreFeature enum.
+func (e CoreFeature) Valid() bool {
+	switch e {
+	case CoreFeatureAnalytics:
+		return true
+	case CoreFeatureCompanies:
+		return true
+	case CoreFeatureContacts:
+		return true
+	case CoreFeatureDeals:
+		return true
+	case CoreFeatureFilters:
+		return true
+	case CoreFeatureHome:
+		return true
+	case CoreFeatureLeads:
+		return true
+	case CoreFeatureProjects:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for CreateActivityRequestCallOutcome.
 const (
 	CreateActivityRequestCallOutcomeCreateCallOutcomeCallBackLater CreateActivityRequestCallOutcome = "put_through"
@@ -43385,6 +43421,9 @@ type ConversationSuggestionListResponse struct {
 	ScanLimited bool                     `json:"scan_limited"`
 }
 
+// CoreFeature A core destination in the main menu. Disabling one keeps its stored data.
+type CoreFeature string
+
 // CorrectDealCloseDayRequest defines model for CorrectDealCloseDayRequest.
 type CorrectDealCloseDayRequest struct {
 	// ClosedOn The calendar day the deal closed, in the installation's zone. Not after today.
@@ -61975,13 +62014,16 @@ type SettingsAvailability struct {
 	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	CompanyContext bool `json:"company_context"`
 
+	// DisabledFeatures Core features turned off in the configuration file. Their pages, API operations and agent tools are unavailable. Their data stays stored for when they are turned on again. An omitted or empty list keeps every core feature available.
+	DisabledFeatures *[]CoreFeature `json:"disabled_features,omitempty"`
+
 	// EmbeddingReindex True when an embeddings model is bound, so the reindex surface (`/embeddings/reindex*`) exists. False is the posture under which those routes answer 501: `--ai-fake`, or a routing document that binds no embeddings model. Bound or unbound only — deliberately not which model, which is the reindex status's own answer to a caller who may read it.
 	EmbeddingReindex bool `json:"embedding_reindex"`
 
 	// Lists True when Live Lists and Shortlists are on (`lists.enabled`, on by default). False when an operator has switched them off: the `/lists` routes answer 404, no agent tool reaches them, and no screen offers them.
 	Lists *bool `json:"lists,omitempty"`
 
-	// Reporting Reporting is always available. Retained for compatibility with older clients.
+	// Reporting Whether reporting is enabled in this installation.
 	Reporting *bool `json:"reporting,omitempty"`
 }
 
