@@ -113,12 +113,13 @@ it("offers one reusable copy action without requiring a contact", async () => {
   ).toBeNull();
   expect(calls.some((call) => call.path.includes("/contacts"))).toBe(false);
 });
-it("shows the booking preview to a seat that may not book as a page it may not open", async () => {
+it("answers a seat that may not book on the booking preview as on its own link page", async () => {
   const calls = serve(false, { allow: { activity: ["read"] } });
   mount("preview");
   expect(
-    await screen.findByText("No access to this settings page"),
+    await screen.findByText(/You do not have permission for this action/),
   ).toBeTruthy();
+  expect(screen.queryByText("Loading…")).toBeNull();
   expect(asksProfile(calls)).toBe(false);
 });
 
