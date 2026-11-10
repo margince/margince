@@ -93,14 +93,11 @@ func (s *Store) healEntity(ctx context.Context, entityType string, id ids.UUID, 
 	return s.UpsertEmbedding(ctx, entityType, id, text, embedder)
 }
 
-// pendingEntityIDs selects every live, non-empty-text entity of one type
-// that has no embedding row under currentIdentity — the row-form of the
-// set workspacePending counts and TokenSumByWorkspace prices, built from the
-// same pendingTextCTE so the sweep heals exactly what the status endpoint
-// reports as pending. Ids only: the source text is re-read per entity at
-// heal time (healEntity's reasoning). Its own short transaction, separate
-// from the UpsertEmbedding calls that follow (liveEntitiesOf's reasoning:
-// model calls must not run under a held workspace tx).
+// pendingEntityIDs lists the ids of one type's pending set, built from the
+// same pendingTextCTE as the backlog count. The sweep heals what the status
+// endpoint reports. Ids only: healEntity re-reads the text at heal time. It
+// runs in its own short transaction, because model calls must not run under
+// a held workspace transaction.
 func (s *Store) pendingEntityIDs(ctx context.Context, entityType string, src pendingSource, currentIdentity string) ([]ids.UUID, error) {
 	var pendingIDs []ids.UUID
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {

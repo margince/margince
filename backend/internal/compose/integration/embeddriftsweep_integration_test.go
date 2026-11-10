@@ -170,10 +170,8 @@ func TestSweepWorkspaceEmbeddingDriftWaitsOutARunningReindex(t *testing.T) {
 
 // TestSweepWorkspaceEmbeddingDriftNeverEnumeratesHeldMail proves the sweep's id
 // scan admits only what the backlog count admits (#10966). A `participants`
-// message with a body is not embeddable: the sweep must neither embed it nor
-// count it, and a second pass must make no model call at all — the old scan
-// enumerated such a message on every pass because it carried no embeddable
-// predicate, and only the per-row re-read kept it out of the index.
+// message is not embeddable. The sweep must not embed it or count it, and a
+// second pass must make no model call.
 func TestSweepWorkspaceEmbeddingDriftNeverEnumeratesHeldMail(t *testing.T) {
 	e := SetupSearch(t)
 	ctx := context.Background()

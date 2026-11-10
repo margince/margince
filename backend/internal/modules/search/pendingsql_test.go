@@ -9,11 +9,9 @@ import (
 )
 
 // The drift sweep's id scan and the backlog count read the same pending set
-// (#10966). The sweep's copy once trimmed every row's text before the
-// embedding anti-join and carried no embeddable predicate, so on a large
-// mailbox it detoasted every mail body each pass, timed out, and enumerated
-// held mail it could never embed. Both statements must narrow by the source's
-// own predicate and read text only after the anti-join.
+// (#10966). The sweep's old copy trimmed text before the anti-join and had no
+// embeddable predicate, so it read every mail body on each pass. Both
+// statements must narrow by the source's predicate and read text afterwards.
 func TestThePendingStatementsNarrowFirstAndReadTextAfterTheAntiJoin(t *testing.T) {
 	for entityType, src := range pendingSources {
 		for name, sql := range map[string]string{

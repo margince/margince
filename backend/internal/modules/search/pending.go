@@ -200,19 +200,11 @@ func (s *Store) workspacePending(ctx context.Context, currentIdentity string) (c
 	return count, length, nil
 }
 
-// pendingTextCTE is the ONE statement both readers of the pending set build
-// on: workspacePending counts and prices it, and the drift sweep's
-// pendingEntityIDs heals it. It defines `pending_text (id, trimmed)` — live,
-// embeddable rows with no embedding at identity $1 and non-empty text.
-//
-// The embedding anti-join runs BEFORE the text is read. Filtering on
-// btrim(text) in the scan detoasts every body of the table, embedded or not,
-// to find a set that is empty in steady state; for activity that is every
-// mail body in the installation. The two readers once spelled this
-// separately, and the sweep's copy kept both the early btrim and no
-// embeddable predicate — so it read every private message's body each pass
-// and enumerated those messages forever, since the per-row re-read refuses
-// them. One builder is what keeps them admitting the same rows.
+// pendingTextCTE defines `pending_text (id, trimmed)`: live, embeddable rows
+// with no embedding at identity $1 and non-empty text. The backlog count and
+// the drift sweep both build on it, so they admit the same rows (#10966).
+// The anti-join runs before the text is read. Trimming in the scan would
+// detoast every body in the table, and for activity that is every mail.
 func (p pendingSource) pendingTextCTE(entityType string) string {
 	return fmt.Sprintf(`
 		unembedded AS MATERIALIZED (
