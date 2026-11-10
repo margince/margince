@@ -100,6 +100,7 @@ const emailPresentation = {
     held_by_others: false,
   },
   can_reply: true,
+  can_forward: true,
   can_relink: false,
   version: 3,
 };

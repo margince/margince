@@ -1,10 +1,18 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import type { Grounding } from "./composedraftcall";
+import { MAX_ACTIVITY_LINKS } from "../../lib/activitybody";
 import type { RelinkKind } from "./composerelink";
 
 export type Link = { entity_type: RelinkKind; entity_id: string };
+
+/** The records a new message files under beyond the page it was written on. */
+export type SendGrounding = {
+  /** The account's contacts on the message, in address order. */
+  contactIds: readonly string[];
+  dealId: string;
+  projectId: string;
+};
 
 /**
  * What a sent message files under: the page it was written from, and every
@@ -18,7 +26,7 @@ export type Link = { entity_type: RelinkKind; entity_id: string };
  */
 export function composedLinks(
   anchor: { entityType: RelinkKind; entityId: string; dealId?: string },
-  chosen: Grounding | null,
+  chosen: SendGrounding | null,
   // The derived filing when the rep chose nothing. Empty means no project.
   derivedProjectId = "",
 ): Link[] {
@@ -40,36 +48,43 @@ export function composedLinks(
     add("project", derivedProjectId);
     return links;
   }
-  add("contact", chosen.recipientId);
+  for (const contactId of chosen.contactIds) {
+    add("contact", contactId);
+  }
   add("deal", chosen.dealId);
   add("project", chosen.projectId);
-  return links;
+  // Past the server's cap the whole send is refused; the last contacts give way.
+  const room =
+    MAX_ACTIVITY_LINKS -
+    links.filter((link) => link.entity_type !== "contact").length;
+  const kept = new Set(
+    links.filter((link) => link.entity_type === "contact").slice(0, room),
+  );
+  return links.filter(
+    (link) => link.entity_type !== "contact" || kept.has(link),
+  );
 }
 
 /**
- * What a new message is about, from whichever page it was opened on. That is
- * the deal and project the rep chose. On the account path it is also the
- * contact the draft is for, which only that path picks. A reply has none of
- * its own, because its thread already files it.
- *
- * A chosen deal travels only from a composer that shows it: the account's
- * filing pick and the contact's deal pick. Elsewhere a deal kept by a draft
- * would file the message under a record nobody on screen named.
+ * What a new message is about: the deal and project the rep chose, plus the
+ * account's contacts on the account path. A reply has none; its thread files it.
+ * A chosen deal travels only from a composer that shows it, or a draft would
+ * file the message under a record nobody on screen named.
  */
 export function groundingOf(where: {
   entityType: RelinkKind;
   replying: boolean;
-  recipientId: string;
+  contactIds: readonly string[];
   dealId: string;
   projectId: string;
-}): Grounding | null {
+}): SendGrounding | null {
   if (where.replying) {
     return null;
   }
   const account = where.entityType === "company";
   const showsDeal = account || where.entityType === "contact";
   return {
-    recipientId: account ? where.recipientId : "",
+    contactIds: account ? where.contactIds : [],
     dealId: showsDeal ? where.dealId : "",
     projectId: where.projectId,
   };

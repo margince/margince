@@ -23,6 +23,7 @@ import { formatDateTime, formatNumber } from "../../format/format";
 import { UTC_ZONE } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import { useCan } from "../../lib/capability";
+import { valueFor } from "../../lib/labelfor";
 import { unwrap } from "../../lib/problem";
 import { useMe } from "../../lib/session";
 import {
@@ -51,7 +52,9 @@ export function AgentUsageBadge({
 }: Readonly<{ state: AgentUsageState }>) {
   const t = useT();
   return (
-    <Badge tone={STATE_TONE[state]}>{t(`agentUsage.state.${state}`)}</Badge>
+    <Badge tone={valueFor(STATE_TONE, state, "warning")}>
+      {t(`agentUsage.state.${state}`)}
+    </Badge>
   );
 }
 

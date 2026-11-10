@@ -45,16 +45,19 @@ function contact(
   } as CompanyContact;
 }
 
+/** Sabine's one recent thread, so a row that names a mail never reads "No interactions yet". */
+const SABINE_STRENGTH: CompanyContact["strength"] = {
+  score: 24,
+  bucket: "weak",
+  factors: { recency: 0.8, frequency: 0.1, reciprocity: 0, direction: 0 },
+};
+
 /** The account as a rep usually finds it: one way in, and a long tail. */
 const MIXED: CompanyContact[] = [
   contact("Sabine Vogel", "waiting", {
     title: "Head of Partnerships",
     last_inbound_at: "2026-08-30T09:00:00Z",
-    strength: {
-      score: 24,
-      bucket: "weak",
-      factors: { recency: 0.8, frequency: 0.1, reciprocity: 0, direction: 0 },
-    },
+    strength: SABINE_STRENGTH,
   } as Partial<CompanyContact>),
   contact("Dietmar Rietsch", "answered", {
     title: "Managing Director",
@@ -160,6 +163,7 @@ export const DayEntry: Story = {
           title: "Head of Partnerships",
           last_inbound_at: "2026-08-30T12:00:00Z",
           last_inbound_precision: "day",
+          strength: SABINE_STRENGTH,
         }),
       ]);
       return (
@@ -175,6 +179,54 @@ export const DayEntry: Story = {
     );
     await expect(touch.textContent).toMatch(/30/);
     await expect(touch.textContent).not.toMatch(/\d:\d\d/);
+    await expect(
+      within(canvasElement).queryByRole("img", {
+        name: en["standing.ring.noInteractions"],
+      }),
+    ).toBeNull();
+  },
+};
+
+/**
+ * Their mail and ours at one stored instant. Two instants have no order to
+ * read, so their mail stays owed and the row says they wrote last.
+ */
+export const SameInstantExchange: Story = {
+  args: { companyId: "o-1" },
+  decorators: [
+    (Story) => {
+      stub([
+        contact("Sabine Vogel", "waiting", {
+          title: "Head of Partnerships",
+          last_inbound_at: "2026-08-30T09:00:00Z",
+          last_inbound_precision: "instant",
+          last_outbound_at: "2026-08-30T09:00:00Z",
+          last_outbound_precision: "instant",
+          strength: SABINE_STRENGTH,
+        }),
+      ]);
+      return (
+        <StoryProviders>
+          <Story />
+        </StoryProviders>
+      );
+    },
+  ],
+  play: async ({ canvasElement }) => {
+    const row = await within(canvasElement).findByRole("row", {
+      name: /Sabine Vogel/,
+    });
+    await expect(
+      within(row).getByText(new RegExp(`^${en["co.contacts.theyWrote"]} · `)),
+    ).toBeTruthy();
+    await expect(
+      within(row).queryByText(new RegExp(`^${en["co.contacts.weWrote"]}`)),
+    ).toBeNull();
+    await expect(
+      within(row).queryByRole("img", {
+        name: en["standing.ring.noInteractions"],
+      }),
+    ).toBeNull();
   },
 };
 

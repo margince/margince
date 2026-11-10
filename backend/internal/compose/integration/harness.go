@@ -246,6 +246,17 @@ func (e *Env) As(user ids.UUID, teams []ids.UUID, perms principal.Permissions) c
 	})
 }
 
+// OnSeat puts ctx's actor on the seat named. As binds no seat, which reads as a
+// read seat: it may write through a store and is offered no write.
+func OnSeat(ctx context.Context, seat principal.SeatType) context.Context {
+	p, ok := principal.Actor(ctx)
+	if !ok {
+		panic("OnSeat: the context carries no actor")
+	}
+	p.SeatType = seat
+	return principal.WithActor(ctx, p)
+}
+
 // Admin binds an unbounded admin context under the harness's admin seat. It
 // is one real user, not a fresh synthetic one per call: a row the admin
 // creates without naming an owner is stamped with this id, and the owner

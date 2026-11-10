@@ -5,6 +5,7 @@ import { activityDay } from "../../format/activitywhen";
 import { formatDateAbbrev, formatNumber } from "../../format/format";
 import type { Locale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { labelFor } from "../../lib/labelfor";
 import { daysAgo, WITHHELD_READING } from "./company360health";
 
 type Company360 = components["schemas"]["Company360"];
@@ -60,7 +61,7 @@ export function LastTouchStat({
           ? t("co.strip.lastTouch.today")
           : t("co.strip.lastTouch.ago", { count: formatNumber(days, locale) })
       }
-      detail={`${t(LAST_CONTACT_KIND[last.kind])} · ${day}`}
+      detail={`${t(labelFor(LAST_CONTACT_KIND, last.kind))} · ${day}`}
     />
   );
 }

@@ -10,6 +10,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/datatask"
+	"github.com/margince/margince/backend/internal/platform/originalstore"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -31,11 +32,15 @@ func StampHeldMailTx(ctx context.Context, tx pgx.Tx, in datatask.BatchIn) (datat
 	if err != nil {
 		return datatask.BatchOut{}, err
 	}
-	tag, err := tx.Exec(ctx, stampHeldMailSQL, pgx.NamedArgs{"ids": scanned})
+	tag, err := tx.Exec(ctx, stampHeldMailSQL, pgx.NamedArgs{sqlArgIDs: scanned, "external_id": (*ids.UUID)(nil), "external_payload": []byte(nil)})
 	if err != nil {
 		return datatask.BatchOut{}, err
 	}
-	return datatask.AdvanceUUID(in, scanned, int(tag.RowsAffected()))
+	external, err := stampExternalHeldMailTx(ctx, tx, scanned)
+	if err != nil {
+		return datatask.BatchOut{}, err
+	}
+	return datatask.AdvanceUUID(in, scanned, int(tag.RowsAffected())+external)
 }
 
 // EstimateHeldMail bounds the rows inspected, not the number that will be parseable.
@@ -48,24 +53,65 @@ func EstimateHeldMail(ctx context.Context, q datatask.Querier, maximum int64) (i
 	return min(count, maximum), count > maximum, err
 }
 
+const heldMailFromSQL = `FROM capture_import ci
+ JOIN activity a ON a.id = ci.activity_id
+ JOIN raw_capture rc ON rc.id = a.raw_capture_id`
+
+const heldMailWhereSQL = `WHERE ci.id = ANY(@ids) AND ci.provider_received_at IS NULL
+ AND a.kind = 'email' AND a.direction = 'inbound'
+ AND a.captured_by IN ('connector:gmail:' || ci.user_id::text, 'connector:graph:' || ci.user_id::text)
+ AND NOT EXISTS (SELECT 1 FROM capture_import o
+                 WHERE o.activity_id = ci.activity_id AND o.user_id <> ci.user_id)`
+
+func stampExternalHeldMailTx(ctx context.Context, tx pgx.Tx, imports []ids.UUID) (int, error) {
+	rows, err := tx.Query(ctx, `SELECT ci.id, rc.id, `+originalstore.SQL("rc")+` `+
+		heldMailFromSQL+` `+heldMailWhereSQL+` AND rc.payload_object IS NOT NULL`, pgx.NamedArgs{sqlArgIDs: imports})
+	if err != nil {
+		return 0, err
+	}
+	type candidate struct {
+		imported, original ids.UUID
+		payload            []byte
+	}
+	originals, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (candidate, error) {
+		var c candidate
+		err := row.Scan(&c.imported, &c.original, &c.payload)
+		return c, err
+	})
+	if err != nil {
+		return 0, err
+	}
+	changed := 0
+	for _, c := range originals {
+		payload, err := originalstore.RepairPayload(ctx, c.payload)
+		if err != nil {
+			return 0, err
+		}
+		tag, err := tx.Exec(ctx, stampHeldMailSQL, pgx.NamedArgs{
+			sqlArgIDs: []ids.UUID{c.imported}, "external_id": c.original, "external_payload": payload,
+		})
+		if err != nil {
+			return 0, err
+		}
+		changed += int(tag.RowsAffected())
+	}
+	return changed, nil
+}
+
 const stampHeldMailSQL = `WITH held AS (
     SELECT ci.id,
            CASE
-             WHEN jsonb_typeof(rc.payload) = 'string' THEN left(rc.payload #>> '{}', 65536)
-             WHEN left(rc.payload ->> 'data', 87380) ~ '^([A-Za-z0-9+/]{4})*([A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$'
-             THEN encode(decode(left(rc.payload ->> 'data', 87380), 'base64'), 'escape')
-           END AS text_head
-      FROM capture_import ci
-      JOIN activity a ON a.id = ci.activity_id
-      JOIN raw_capture rc ON rc.id = a.raw_capture_id
-     WHERE ci.id = ANY(@ids) AND ci.provider_received_at IS NULL
-       AND a.kind = 'email' AND a.direction = 'inbound'
-       AND a.captured_by IN ('connector:gmail:' || ci.user_id::text, 'connector:graph:' || ci.user_id::text)
-       AND (jsonb_typeof(rc.payload) = 'string'
-            OR (jsonb_typeof(rc.payload) = 'object' AND rc.payload ->> 'encoding' = 'base64'
-                AND jsonb_typeof(rc.payload -> 'data') = 'string'))
-       AND NOT EXISTS (SELECT 1 FROM capture_import o
-                        WHERE o.activity_id = ci.activity_id AND o.user_id <> ci.user_id)
+             WHEN jsonb_typeof(original.payload) = 'string' THEN left(original.payload #>> '{}', 65536)
+             WHEN left(original.payload ->> 'data', 87380) ~ '^([A-Za-z0-9+/]{4})*([A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$'
+             THEN encode(decode(left(original.payload ->> 'data', 87380), 'base64'), 'escape')
+           END AS text_head ` + heldMailFromSQL + `
+      CROSS JOIN LATERAL (SELECT CASE
+        WHEN rc.payload_object IS NULL THEN rc.payload
+        WHEN rc.id = @external_id::uuid THEN @external_payload::jsonb
+      END AS payload) original ` + heldMailWhereSQL + `
+       AND (jsonb_typeof(original.payload) = 'string'
+            OR (jsonb_typeof(original.payload) = 'object' AND original.payload ->> 'encoding' = 'base64'
+                AND jsonb_typeof(original.payload -> 'data') = 'string'))
 ),
 top_received AS (
     SELECT id,

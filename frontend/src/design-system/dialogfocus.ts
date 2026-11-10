@@ -269,6 +269,28 @@ export function pressedInLayerAbove(
   );
 }
 
+/**
+ * Where focus goes when a dialog closes: the named target, else the opener.
+ * A detached or inert node would leave focus on the body. One under
+ * `aria-hidden` would hide focus. Neither counts.
+ */
+function restoreTarget(
+  named: (() => HTMLElement | null) | undefined,
+  opener: Element | null,
+): HTMLElement | null {
+  // A caller names a target because this dialog's own mutation removes the
+  // opener, often with a refetch that lands after the close.
+  return reachable(named?.() ?? null) ?? reachable(opener);
+}
+
+function reachable(element: Element | null): HTMLElement | null {
+  return element instanceof HTMLElement &&
+    element.isConnected &&
+    element.closest('[inert], [aria-hidden="true"]') === null
+    ? element
+    : null;
+}
+
 function ownsKeyboard(container: HTMLElement | null): boolean {
   const layers = liveDialogs();
   const top = layers[layers.length - 1];
@@ -278,10 +300,9 @@ function ownsKeyboard(container: HTMLElement | null): boolean {
 /**
  * Escape, the Tab trap, and focus in-and-back, for one open dialog.
  *
- * `container` is the element the trap holds and the element focus lands inside
- * — the dialog's own box, not its overlay. `returnFocusTo` names where focus
- * should go instead of the opener, for a dialog whose OWN mutation removes the
- * control that opened it.
+ * `container` is the dialog's own box, not its overlay. `returnFocusTo` names a
+ * target that outranks the opener. While the surface keeps `overlay` painted
+ * and `inert`, this moves focus out, then adds `aria-hidden` until a re-open.
  */
 export function useDialogFocus({
   open,
@@ -289,12 +310,14 @@ export function useDialogFocus({
   container,
   returnFocusTo,
   initialFocusTo,
+  overlay,
 }: Readonly<{
   open: boolean;
   onClose: () => void;
   container: React.RefObject<HTMLElement | null>;
   returnFocusTo?: () => HTMLElement | null;
   initialFocusTo?: () => HTMLElement | null;
+  overlay?: React.RefObject<HTMLElement | null>;
 }>) {
   // Held in a ref so the restore below calls the CURRENT resolver. The focus
   // effect is keyed on `open` alone — re-running it whenever an inline callback
@@ -307,6 +330,28 @@ export function useDialogFocus({
     returnFocus.current = returnFocusTo;
     initialFocus.current = initialFocusTo;
   }, [returnFocusTo, initialFocusTo]);
+  const opener = useRef<Element | null>(null);
+
+  // Focus leaves before `aria-hidden` lands: a browser refuses that attribute
+  // on a subtree that holds focus.
+  useLayoutEffect(() => {
+    const layer = overlay?.current;
+    if (!layer) {
+      return;
+    }
+    if (open) {
+      layer.removeAttribute("aria-hidden");
+      return;
+    }
+    if (layer.contains(document.activeElement)) {
+      restoreTarget(returnFocus.current, opener.current)?.focus();
+    }
+    const stuck = document.activeElement;
+    if (layer.contains(stuck) && stuck instanceof HTMLElement) {
+      stuck.blur();
+    }
+    layer.setAttribute("aria-hidden", "true");
+  }, [open, overlay]);
 
   // A LAYOUT effect, because a passive one is scheduled after the browser
   // paints: between the commit that puts this dialog on screen and a passive
@@ -353,31 +398,14 @@ export function useDialogFocus({
     if (!open) {
       return;
     }
-    const opener = document.activeElement;
+    opener.current = document.activeElement;
     (
       initialFocus.current?.() ??
       firstControlIn(container.current) ??
       container.current
     )?.focus();
     return () => {
-      // A named target outranks the opener even while the opener is still
-      // attached: a caller names one precisely because the mutation this dialog
-      // just performed unmakes that control, and the unmaking usually lands
-      // with the refetch a moment AFTER this runs. Handing focus back to a
-      // button that is about to be removed drops the reader on <body> a tick
-      // later, which is the failure this whole escape hatch exists to prevent.
-      const named = returnFocus.current?.() ?? null;
-      if (named?.isConnected) {
-        named.focus();
-        return;
-      }
-      // focus() on a node the mutation already detached is a silent no-op and
-      // leaves focus on <body>, from where the next Tab restarts at the top of
-      // the document. Asking first is what keeps that case from looking like a
-      // restore that worked.
-      if (opener instanceof HTMLElement && opener.isConnected) {
-        opener.focus();
-      }
+      restoreTarget(returnFocus.current, opener.current)?.focus();
     };
   }, [open, container]);
 }

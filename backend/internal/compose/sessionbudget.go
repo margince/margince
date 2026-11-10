@@ -30,11 +30,15 @@ func WriteJobProcessMetrics(w io.Writer) {
 }
 
 type sessionBudgetWorker[T river.JobArgs] struct {
-	work  jobs.WorkOnly[T]
-	slots chan struct{}
+	work        jobs.WorkOnly[T]
+	slots       chan struct{}
+	withContext func(context.Context) context.Context
 }
 
 func (w sessionBudgetWorker[T]) Work(ctx context.Context, job *river.Job[T]) error {
+	if w.withContext != nil {
+		ctx = w.withContext(ctx)
+	}
 	if w.slots != nil {
 		ctx = context.WithValue(ctx, sessionBudgetKey{}, w.slots)
 	}

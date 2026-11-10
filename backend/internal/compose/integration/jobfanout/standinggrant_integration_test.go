@@ -411,7 +411,8 @@ func TestAnExpiredPassportIsNotEnumeratedEvenThoughTheGrantStands(t *testing.T) 
 		t.Fatal(err)
 	}
 	if _, err := e.Owner.Exec(context.Background(),
-		`UPDATE passport SET expires_at = now() - interval '1 day' WHERE id = $1`, passport); err != nil {
+		`UPDATE passport SET created_at = now() - interval '2 days',
+		                    expires_at = now() - interval '1 day' WHERE id = $1`, passport); err != nil {
 		t.Fatal(err)
 	}
 

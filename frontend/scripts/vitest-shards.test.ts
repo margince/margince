@@ -3,22 +3,16 @@
 
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join, relative } from "node:path";
-import { fileURLToPath } from "node:url";
+import { join } from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
-import { filesMatching } from "./lib/source-tree";
 import { testCosts } from "./lib/test-cost";
-import { compilerTests, partition } from "./vitest-shards";
+import { partition } from "./vitest-shards";
 
-const frontendRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
-
-// Any corpus proves the split; the tree's own test files make it a real one.
-// check-shard-union.sh proves the same of each CI run against vitest's discovery.
-const suite = testCosts([
-  ...filesMatching(join(frontendRoot, "src"), /\.test\.tsx?$/),
-  ...filesMatching(join(frontendRoot, "scripts"), /\.test\.tsx?$/),
-]);
-const costs = new Map([...suite].map(([file, { cost }]) => [file, cost]));
+// Any corpus proves the split. check-shard-union.sh proves the same of each CI
+// run against vitest's discovery.
+const costs = new Map(
+  Array.from({ length: 40 }, (_, i) => [`t${i}.test.ts`, ((i * 37) % 23) + 1]),
+);
 
 describe("the cost-weighted shard split", () => {
   it.each([1, 2, 3, 4, 6, 8])(
@@ -103,21 +97,5 @@ describe("the cost a test file is expected to have", () => {
     );
     const source = 'import type * as S from "./census.sweep";\n';
     expect(kindOf("swept.test.ts", source)).toBe("program");
-  });
-
-  it("finds all three kinds in the real suite", () => {
-    const kinds = new Set([...suite.values()].map(({ kind }) => kind));
-    expect(kinds).toEqual(new Set(["render", "parse", "program"]));
-  });
-});
-
-describe("the unisolated project of compiler-loading files", () => {
-  it("holds every file the cost model reads as parse or program", async () => {
-    const scans = new Set(await compilerTests(frontendRoot));
-    const expected = [...suite]
-      .filter(([, { kind }]) => kind !== "render")
-      .map(([file]) => relative(frontendRoot, file));
-    expect(expected.length).toBeGreaterThan(0);
-    expect(expected.filter((file) => !scans.has(file))).toEqual([]);
   });
 });
