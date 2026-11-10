@@ -11,7 +11,7 @@ import { ConfirmModal } from "../../design-system/confirmmodal";
 import { EmailText } from "../../design-system/emailtext";
 import { ErrorLine } from "../../design-system/errorline";
 import { FactList } from "../../design-system/factlist";
-import { Select } from "../../design-system/select";
+import { LanguageSelect } from "../../design-system/languageselect";
 import { localeNameKey, type Translator, useT } from "../../i18n";
 import { problemMessageOf, problemStatus, unwrap } from "../../lib/problem";
 
@@ -164,20 +164,12 @@ function MailPreviewBody({
         })}
       >
         {(control) => (
-          <Select
+          <LanguageSelect
             {...control}
+            languages={preview.languages}
             value={preview.language}
             aria-busy={busy}
-            // Each name is in its own language, so each option carries `lang`.
-            options={preview.languages.map((language) => ({
-              value: language,
-              label: t(localeNameKey(language)),
-              lang: language,
-            }))}
-            onChange={(next) => {
-              const picked = preview.languages.find((one) => one === next);
-              if (picked) onLanguage(picked);
-            }}
+            onChange={onLanguage}
           />
         )}
       </Field>

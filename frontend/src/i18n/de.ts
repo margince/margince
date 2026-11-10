@@ -7705,6 +7705,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.scheduleGoesOut": "Versand: {when}",
   "compose.willGoOut": "Versand: {when}",
   "compose.scheduleAfternoon": "Morgen Nachmittag",
+  "compose.draftLanguage": "Sprache des Entwurfs",
   "compose.rewrite": "Umschreiben",
   "compose.rewriteShorter": "Kürzer",
   "compose.rewriteShorterAsk":
