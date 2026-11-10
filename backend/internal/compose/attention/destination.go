@@ -33,7 +33,8 @@ const (
 	destinationReview = crmcontracts.WorklistItemDestinationWorklistDestinationReview
 	// destinationSystemHealth is a source or an automation that stopped. An
 	// administrator restores most of them, so a seller can rarely act on one.
-	// A queue that asked them to spent their attention on somebody else's job.
+	// A queue that asked them to act would spend their attention on somebody
+	// else's job.
 	destinationSystemHealth = crmcontracts.WorklistItemDestinationWorklistDestinationSystemHealth
 )
 
