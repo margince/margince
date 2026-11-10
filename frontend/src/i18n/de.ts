@@ -13442,6 +13442,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "settings.page.records.sub":
     "Eigene Felder, gemeinsame Tags und die Zuständigkeiten, die Datensätze tragen.",
   "settings.partsLabel": "Bereiche dieser Seite",
+  "settings.part.voice.overview": "Dein Schreibstil",
+  "settings.part.voice.samples": "Schreibproben",
+  "settings.part.voice.rules": "Deine Regeln",
+  "settings.part.voice.builds": "Versionen",
   "settings.part.meetings.links": "Buchungslinks",
   "settings.part.meetings.availability": "Verfügbarkeit",
   "settings.part.meetings.guests": "Gastseite",
@@ -14066,13 +14070,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "voice.insights.provenance": "Aus deinen Schreibproben erstellt · v{n}",
   "voice.insights.statWords": "W\u00f6rter: {count}",
   "voice.insights.statSources": "Quellen: {count}",
-  "settings.voice.jumpLabel": "Auf dieser Seite",
-  "settings.voice.jump.voice": "Dein Schreibstil",
-  "settings.voice.jump.moves": "Typische Züge",
   "settings.voice.jump.drafts": "Probeentwürfe",
-  "settings.voice.jump.sharpen": "Schärfen",
-  "settings.voice.jump.rules": "Deine Regeln",
-  "settings.voice.jump.builds": "Versionen",
   "settings.voice.editRules": "Regeln bearbeiten",
   "settings.voice.addMore": "Weitere Texte hinzufügen",
   "settings.voice.start.title": "Dein Schreibstil",
@@ -14300,6 +14298,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Das Stilprofil wird aufgebaut. Das dauert etwa eine Minute und läuft weiter, wenn du die Seite verlässt.",
   "settings.voice.rebuild": "Voice DNA neu aufbauen",
   "settings.voice.buildFirst": "Voice DNA aufbauen",
+  "settings.voice.firstBuildHint":
+    "Den ersten Aufbau startest du im Tab „Dein Schreibstil“.",
+  "settings.voice.firstBuildGo": "„Dein Schreibstil“ öffnen",
   "settings.voice.buildNeedsWords":
     "Ein erster Aufbau braucht noch etwa {n} Wörter. Darunter gibt es nicht genug Text, um daraus zu lernen.",
   "settings.voice.buildProvisional":
