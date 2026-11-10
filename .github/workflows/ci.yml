@@ -1168,7 +1168,10 @@ jobs:
         with:
           flavor: plain
       - name: Boot the dev stack and migrate
-        run: make db-up && make migrate
+        # The api below boots with the development extensions composed, so the
+        # migration step composes them too: a development unit that owns tables
+        # would otherwise leave its namespace unapplied and the api not ready.
+        run: make db-up && make migrate COMPOSITION_FLAGS=-include-development
       # The deployment configuration (ADR-0061): the api bootstraps the
       # demo workspace itself at boot; the credentials match seed-dev.sh's
       # demo defaults (admin@demo.test / demo-password-123 — throwaway CI-only
@@ -1288,7 +1291,10 @@ jobs:
           flavor: plain
       - name: Boot the dev stack and migrate
         if: steps.scope.outputs.run == 'true'
-        run: make db-up && make migrate
+        # The api below boots with the development extensions composed, so the
+        # migration step composes them too: a development unit that owns tables
+        # would otherwise leave its namespace unapplied and the api not ready.
+        run: make db-up && make migrate COMPOSITION_FLAGS=-include-development
       # The same throwaway first-run configuration live-boot writes.
       - name: Write the deployment configuration
         if: steps.scope.outputs.run == 'true'
