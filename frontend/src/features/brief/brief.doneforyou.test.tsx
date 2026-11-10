@@ -133,8 +133,9 @@ it("reads what changed, why and the customer's words apart", async () => {
     ],
     [bundle(1, [auditId(1)]), bundle(2, [auditId(2)]), bundle(3, [auditId(3)])],
   );
+  const user = userEvent.setup();
   render(<DoneForYou completed={null} />);
-  const first = (await screen.findByText('Closed "Deal 1" as lost')).closest(
+  const first = (await screen.findByRole("link", { name: "Deal 1" })).closest(
     "li",
   );
   if (!first) throw new Error("no row for deal 1");
@@ -144,13 +145,17 @@ it("reads what changed, why and the customer's words apart", async () => {
   expect(within(first).getByText("We cancelled the project.")).toBeTruthy();
   // A closure says what happened under the deal's linked name, and that its
   // reason is unavailable.
-  const second = screen.getByRole("link", { name: "Deal 2" }).closest("li");
+  // A closed card says where its deal ended up; opening it shows the steps.
+  const head = screen.getByRole("link", { name: "Deal 2" }).closest("summary");
+  if (!head) throw new Error("no head for deal 2");
+  await user.click(head);
+  const second = head.closest("li");
   if (!second) throw new Error("no row for deal 2");
   expect(within(second).getByText(en["brief.done.markedLost"])).toBeTruthy();
   expect(within(second).queryByText(/Closed "Deal 2"/)).toBeNull();
   expect(within(second).getByText(en["brief.done.noReason"])).toBeTruthy();
   // Any other change with no reason leaves the line out.
-  const third = screen.getByText('Closed "Deal 3" as lost').closest("li");
+  const third = screen.getByRole("link", { name: "Deal 3" }).closest("li");
   if (!third) throw new Error("no row for deal 3");
   expect(within(third).queryByText(en["brief.done.noReason"])).toBeNull();
 });
@@ -161,9 +166,7 @@ it("keeps an older server's summary whole and claims no missing reason", async (
     [bundle(1, [auditId(1)])],
   );
   render(<DoneForYou completed={null} />);
-  expect(
-    await screen.findByText('Closed "Deal 1" as lost — reason 1.0'),
-  ).toBeTruthy();
+  expect(await screen.findByText("Closed as lost — reason 1.0")).toBeTruthy();
   expect(screen.queryByText(en["brief.done.noReason"])).toBeNull();
 });
 
@@ -342,4 +345,94 @@ it("keeps the drawer's list and its Undo together until the reader asks for new 
   expect(within(drawer).queryByText("reason 3.0")).toBeNull();
   await user.click(showNew);
   expect(await within(drawer).findByText("reason 3.0")).toBeTruthy();
+});
+
+it("opens the first deal and says where a closed one ended up", async () => {
+  routes(
+    [change(1), change(2)],
+    [bundle(1, [auditId(1)]), bundle(2, [auditId(2)])],
+  );
+  const user = userEvent.setup();
+  render(<DoneForYou completed={null} />);
+  const first = (await screen.findByRole("link", { name: "Deal 1" })).closest(
+    "summary",
+  );
+  const second = screen
+    .getByRole("link", { name: "Deal 2" })
+    .closest("summary");
+  if (!first || !second) throw new Error("no deal heads");
+  expect(first.getAttribute("aria-expanded")).toBe("true");
+  expect(second.getAttribute("aria-expanded")).toBe("false");
+  // A closed card carries its newest change on its head.
+  expect(within(second).getByText("Closed as lost")).toBeTruthy();
+  await user.click(second);
+  expect(second.getAttribute("aria-expanded")).toBe("true");
+  expect(first.getAttribute("aria-expanded")).toBe("false");
+  expect(within(second).queryByText("Closed as lost")).toBeNull();
+});
+
+it("says what a change moved without naming the deal it sits under", async () => {
+  routes([change(1)], [bundle(1, [auditId(1)])]);
+  render(<DoneForYou completed={null} />);
+  const card = (await screen.findByRole("link", { name: "Deal 1" })).closest(
+    "li",
+  );
+  if (!card) throw new Error("no card for deal 1");
+  expect(within(card).getByText("Closed as lost")).toBeTruthy();
+  expect(within(card).queryByText(/"Deal 1"/)).toBeNull();
+});
+
+it("marks every waiting change on a deal reviewed with one press", async () => {
+  const review = {
+    kind: "stage" as const,
+    accepted: false,
+    reversed: false,
+    version: 7,
+    can_undo: true,
+    can_accept: true,
+    writable: true,
+  };
+  const accept = (c: number) =>
+    `/deals/${dealId(1)}/applied-changes/${auditId(1, c)}/accept`;
+  const calls = stubApi({
+    "GET /me": () =>
+      jsonResponse(meFixture({ allow: { deal: ["read", "update"] } })),
+    "GET /worklist/handled": () =>
+      jsonResponse({
+        as_of: "2026-09-13T08:00:00Z",
+        truncated: false,
+        receipts: [change(1, 0, { review }), change(1, 1, { review })],
+      }),
+    "GET /deal-corrections/pending": () =>
+      jsonResponse({
+        as_of: "2026-09-13T08:00:00Z",
+        deals: 1,
+        closed: 1,
+        redated: 0,
+        revalued: 0,
+        probabilities: 0,
+        moved: 0,
+        opened: 0,
+        revived: 0,
+        base_currency: "EUR",
+        bundles: [bundle(1, [auditId(1, 0), auditId(1, 1)])],
+        truncated: false,
+      }),
+    [`POST ${accept(0)}`]: () => new Response(null, { status: 204 }),
+    [`POST ${accept(1)}`]: () => new Response(null, { status: 204 }),
+  });
+  const user = userEvent.setup();
+  render(<DoneForYou completed={null} />);
+  // One Mark reviewed answers for the deal; no change carries its own.
+  const presses = await screen.findAllByRole("button", {
+    name: en["brief.changes.markReviewed"],
+  });
+  expect(presses).toHaveLength(1);
+  await user.click(presses[0] as HTMLElement);
+  await waitFor(() =>
+    expect(writes(calls).map((call) => call.path)).toEqual([
+      accept(0),
+      accept(1),
+    ]),
+  );
 });

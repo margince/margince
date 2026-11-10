@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
+import { en } from "../../i18n/en";
 import type { Receipt } from "../../lib/handled";
 import { OpenSourceProvider } from "../../lib/opensource";
 import {
@@ -53,6 +54,59 @@ const REVIEW = {
   can_accept: true,
   writable: true,
 };
+
+// Win probability moved three times in four days: the newest two wait, and
+// the oldest was replaced by them before anyone looked.
+const probability = (before: number | null, after: number) => [
+  { field: "probability", type: "number" as const, before, after },
+];
+const FLIP_FLOP: Receipt[] = [
+  change(
+    4,
+    "Straight X platform rollout",
+    'Changed the win probability on "Straight X platform rollout": 50% → 0%',
+    {
+      kind: "deal_probability",
+      reason:
+        "The customer confirmed the board rejected the project and they are closing the deal on their side.",
+      changes: probability(50, 0),
+      review: { ...REVIEW, kind: "probability" },
+    },
+    0,
+  ),
+  change(
+    4,
+    "Straight X platform rollout",
+    'Changed the win probability on "Straight X platform rollout": 0% → 50%',
+    {
+      kind: "deal_probability",
+      reason:
+        "The customer is actively using the tool and working on improvements with us.",
+      occurred_at: "2026-09-12T09:05:00Z",
+      changes: probability(0, 50),
+      review: { ...REVIEW, kind: "probability" },
+    },
+    1,
+  ),
+  change(
+    4,
+    "Straight X platform rollout",
+    'Changed the win probability on "Straight X platform rollout": the stage\'s → 0%',
+    {
+      kind: "deal_probability",
+      reason: "The client's board rejected the implementation.",
+      occurred_at: "2026-09-09T06:40:00Z",
+      changes: probability(null, 0),
+      review: {
+        ...REVIEW,
+        kind: "probability",
+        can_accept: false,
+        can_undo: false,
+      },
+    },
+    2,
+  ),
+];
 
 const RECEIPTS: Receipt[] = [
   change(
@@ -176,13 +230,12 @@ function stub(initial: readonly Receipt[]) {
 }
 
 /**
- * Three deals: a quote, a long name, and a deal with two changes, one already
- * reviewed. The server no longer lists the reviewed one, so it does not wait
- * here. Marking the other reviewed keeps its row, now saying so.
+ * Four deals. One probability moved back and forth, with one change
+ * replaced. Then a quote, a long name, and a deal already partly reviewed. The first card is open; one Mark reviewed answers for its deal.
  */
 export const ChangedDeals: Story = {
   render: () => {
-    stub(RECEIPTS);
+    stub([...FLIP_FLOP, ...RECEIPTS]);
     return (
       <StoryProviders>
         <OpenSourceProvider openSource={() => undefined}>
@@ -194,19 +247,31 @@ export const ChangedDeals: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(
-      await canvas.findByText(
-        "The buyer confirmed the project was cancelled after the budget was withdrawn.",
-      ),
-    ).toBeTruthy();
-    const row = (
-      await canvas.findByText("The latest quote names a higher total.")
+      await canvas.findByText(en["brief.changes.superseded"]),
+    ).toBeVisible();
+    const card = (
+      await canvas.findByRole("link", { name: "Straight X platform rollout" })
     ).closest("li");
-    if (!(row instanceof HTMLElement)) throw new Error("no row for the amount");
+    if (!(card instanceof HTMLElement)) throw new Error("no card");
     await userEvent.click(
-      await within(row).findByRole("button", { name: "Mark reviewed" }),
+      within(card).getByRole("button", { name: "Mark reviewed" }),
     );
-    await expect(await within(row).findByText("Reviewed")).toBeVisible();
+    await expect((await within(card).findAllByText("Reviewed")).length).toBe(2);
   },
+};
+
+/** The same deals on a phone: steps take the width, verbs go full width. */
+export const ChangedDealsPhone: Story = {
+  render: () => {
+    stub([...FLIP_FLOP, ...RECEIPTS]);
+    return (
+      <StoryProviders>
+        <DoneForYou completed={null} />
+      </StoryProviders>
+    );
+  },
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
 };
 
 /** More than five deals: the preview stops at five and the drawer holds all. */

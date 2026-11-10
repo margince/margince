@@ -36,7 +36,7 @@ export function ladder(tokens: string): Map<string, string> {
 type AtRule = { text: string; start: number; end: number };
 
 /** Every at-rule opened by `prelude`, each read to its own closing brace. */
-export function atRules(tokens: string, prelude: string): AtRule[] {
+function atRules(tokens: string, prelude: string): AtRule[] {
   const out: AtRule[] = [];
   for (let at = tokens.indexOf(prelude); at >= 0; ) {
     let depth = 0;
@@ -64,7 +64,12 @@ function rungDeclarations(block: string): Map<string, string> {
   return found;
 }
 
-export const SQUIRCLE = "@supports (corner-shape: squircle)";
+/** The rung a rung's value names, where the rung is an alias of another. */
+export function aliasOf(value: string): string | undefined {
+  return /^var\((--r-[a-z]+)\)$/.exec(value)?.[1];
+}
+
+const SQUIRCLE = "@supports (corner-shape: squircle)";
 export const PHONE = `@media (max-width: ${PHONE_MAX_WIDTH}px)`;
 
 /** The same ladder as the squircle block redeclares it. */

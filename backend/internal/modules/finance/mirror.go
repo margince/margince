@@ -456,19 +456,38 @@ func deriveStatus(inv SourceInvoice, open int64, now time.Time) string {
 		return statusCredited
 	case inv.Disputed:
 		return statusDisputed
-	case open == 0 && inv.FullyPaidAt != nil:
+	default:
+		return settlementStatus(open, inv.PaidMinor, inv.DueOn, now)
+	}
+}
+
+// settlementStatus is the part of the status that moves with the clock. The
+// mirror writes it, and the card derives it again on read, because an
+// unchanged source is never rewritten.
+func settlementStatus(open, paid int64, due *time.Time, now time.Time) string {
+	switch {
+	case open == 0:
+		// Nothing is owed, whether money, credits or a zero total settled it, so
+		// a passed due date makes nothing late.
 		return statusPaid
-	case overdue(inv, now):
+	case deadline.Passed(due, now):
 		return statusOverdue
-	case inv.PaidMinor > 0:
+	case paid > 0:
 		return statusPartiallyPaid
 	default:
 		return statusOpen
 	}
 }
 
-func overdue(inv SourceInvoice, now time.Time) bool {
-	return deadline.Passed(inv.DueOn, now)
+// statusAsOf is a stored status as of now. Void, credited and disputed come
+// from the source alone; every other status is settled again against today.
+func statusAsOf(stored string, gross, credited, open int64, due *time.Time, now time.Time) string {
+	switch stored {
+	case statusVoid, statusCredited, statusDisputed:
+		return stored
+	default:
+		return settlementStatus(open, gross-credited-open, due, now)
+	}
 }
 
 func nullable(value string) *string {

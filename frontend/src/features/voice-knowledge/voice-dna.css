@@ -206,8 +206,7 @@
   margin-top: var(--space-2);
 }
 
-/* The page: one column of sections under the jump bar, the rules and the
-   builds side by side once there is room for both. */
+/* Each tab: one column of sections under the privacy line. */
 .vdna-page {
   display: flex;
   flex-direction: column;
@@ -215,18 +214,20 @@
 }
 
 .vdna-section {
-  scroll-margin-top: calc(var(--controlHeight) + var(--space-6));
+  scroll-margin-top: var(--space-6);
 }
 
 .vdna-section:focus {
   outline: none;
 }
 
-.vdna-split {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 24rem), 1fr));
-  gap: var(--gapCards);
-  align-items: start;
+/* The privacy line, with the build's standing at the far end. */
+.vdna-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
 }
 
 .vdna-privacy {

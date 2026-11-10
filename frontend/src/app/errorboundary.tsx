@@ -1,4 +1,4 @@
-import { QueryErrorResetBoundary } from "@tanstack/react-query";
+import { QueryErrorResetBoundary, useQueryClient } from "@tanstack/react-query";
 import { Component, type ReactNode } from "react";
 import { Button, EmptyState } from "../design-system/atoms";
 import { useT } from "../i18n";
@@ -76,13 +76,17 @@ class RenderErrorBoundary extends Component<BoundaryProps, BoundaryState> {
   }
 }
 
-// Wraps the routed shell, paired with the query cache's reset boundary so the
-// retry clears the failures the cache is holding as well as the boundary's own
-// state.
+// Wraps the routed shell, paired with the query cache's reset boundary.
+//
+// The reset reaches only a query that throws into render. A view more often
+// throws on a cached success, which a remount draws again before any refetch.
+// So Retry drops every answer nobody watches, the failed view's among them.
+// Only what the view mounts again is fetched, and the shell keeps its own.
 export function AppErrorBoundary({
   children,
   onReset,
 }: Readonly<{ children: ReactNode; onReset?: () => void }>) {
+  const client = useQueryClient();
   return (
     <QueryErrorResetBoundary>
       {({ reset }) => (
@@ -90,6 +94,7 @@ export function AppErrorBoundary({
           onReset={() => {
             resetLocaleFailures();
             reset();
+            void client.resetQueries({ type: "inactive" });
             onReset?.();
           }}
         >

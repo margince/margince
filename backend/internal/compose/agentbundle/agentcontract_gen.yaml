@@ -6793,6 +6793,36 @@ paths:
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
+  /activities/{id}/calendar-response:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    put:
+      tags: [Activities]
+      operationId: answerCalendarInvitation
+      security: [{bearerAuth: []}]
+      summary: Accept, tentatively accept or decline a calendar invitation that came by email.
+      description: |-
+        Answers the event the invitation names, on the caller's own connected calendar, and the
+        calendar tells the organizer. Only the email's `calendar_invitation` offers this, and only
+        to a seat whose own mailbox received the invitation.
+
+        Needs the passport permission Send messages.
+
+        Runs at once.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/AnswerCalendarInvitationRequest'}
+      responses:
+        '200':
+          description: The answer the calendar now holds.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/EmailCalendarInvitation'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /activities/{id}/meeting-brief:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -27460,7 +27490,8 @@ components:
             Whose move it is, derived from what this reader can see of the thread.
             `needs_reply` on a message still owed our answer, `waiting_for_them` on one we sent
             that is still the last word with them. A calendar invitation, update, cancellation
-            or answer is `none` unless someone confirmed it asks us something. `none` also when
+            or answer is `none` unless someone confirmed it asks us something, and an invitation
+            the reader may still answer is `none` too: `calendar_invitation` carries what it asks. `none` also when
             the question cannot be answered honestly — an unanswerable move is not a claim.
             A message older than the waiting horizon that nobody kept is `none` too: it is
             no longer current work, the same bound the waiting queue and `waiting_reply` apply.
@@ -27474,11 +27505,45 @@ components:
             staged for it. Absent on an inbound message, and on an outbound one logged
             rather than sent — neither has a delivery to report, which is a different
             thing from one that has not left yet.
+        calendar_invitation:
+          allOf: [{$ref: '#/components/schemas/EmailCalendarInvitation'}]
+          description: |-
+            Present when this message is a calendar invitation the reader can still answer: it came
+            into the reader's own mailbox, names an event, and that event has not started. A client
+            offers the answers here instead of a written reply, because an invitation asks for an
+            RSVP. Absent on every other message, and on a withheld one.
         version:
           allOf: [{$ref: '#/components/schemas/RowVersion'}]
           description: |-
             The activity's version, carried so a row can open an editor that writes with
             If-Match. A row without it can only read.
+    EmailCalendarInvitation:
+      type: object
+      required: [response]
+      description: The reader's own answer to the event an invitation names.
+      properties:
+        response:
+          type: string
+          enum: [needs_action, accepted, tentative, declined]
+          description: |-
+            What the reader's calendar holds. `needs_action` until they answer, and while their
+            calendar has not synced the event.
+        starts_at:
+          type: string
+          format: date-time
+          description: When the event starts. Absent while the reader's calendar has not synced it.
+        starts_precision:
+          allOf: [{$ref: '#/components/schemas/OccurredPrecision'}]
+          description: How to read `starts_at`, present beside it. `day` is an all-day event, so a client draws no time.
+    AnswerCalendarInvitationRequest:
+      type: object
+      additionalProperties: false
+      required: [response]
+      properties:
+        response:
+          type: string
+          enum: [accepted, tentative, declined]
+          description: The answer the organizer receives. `tentative` is Maybe.
     EmailDelivery:
       type: object
       required: [state]
@@ -39568,6 +39633,11 @@ components:
           maxLength: 20000
           description: >-
             The draft the composer is CURRENTLY showing, when the call is a rewrite rather than a first draft. Without it an `intent` of "make it shorter" generates a second grounded draft from the same record and the composer swaps it in — a different email rather than a shorter one, and any edits the rep had made are gone.
+        language:
+          type: string
+          enum: [en, de, vi]
+          description: >-
+            The language the caller chose for the draft. It outranks every language the server would read from the correspondence, the addressee, the rep and the installation, and the greeting, register, provenance notice and deterministic fallback all follow it. Absent leaves the choice to the server, which reads it from the correspondence. The server keeps no choice between calls, so a rewrite that should stay in the chosen language names it again. A code outside this list is `422` on `language`.
     EmailDraft:
       type: object
       description: A drafted email (never sent by drafting). Send via /activities/{id}/send-email ().
@@ -39582,6 +39652,12 @@ components:
         voice_profile_version: {type: [integer, 'null'], readOnly: true, minimum: 1, description: 'The Voice DNA PROFILE version (not a model version) that styled this draft — the "built from your corpus · vN" provenance; null when no ready voice profile shaped it.'}
         draft_ref: {type: [string, 'null'], readOnly: true, description: 'Opaque reference identifying this served voice draft for learning feedback (rejectVoiceDraft); null when no voice profile styled it.'}
         voice_degraded: {type: boolean, readOnly: true, description: 'True when the sender''s voice could not even be looked up, so this draft may be missing a voice its sender built. A client should say so: the sender cannot detect a missing voice by reading the text. Absent reads as false.'}
+        language:
+          type: string
+          enum: [en, de, vi]
+          readOnly: true
+          description: >-
+            The language this draft is written in: the `language` the request named, else the one the server resolved from the correspondence. The model draft and the deterministic fallback report it alike. A client shows it as the composer's current choice and names it again on a rewrite that must keep it.
     ReplyRecipient:
       type: object
       description: |-
@@ -39669,6 +39745,12 @@ components:
           readOnly: true
           description: >-
             True when the draft's language could not be determined from the contact's own correspondence, so it is written in the default rather than in theirs.
+        language:
+          type: string
+          enum: [en, de, vi]
+          readOnly: true
+          description: >-
+            The language this draft is written in: the `language` the request named, else the one the server resolved from the record's correspondence. The model draft and the deterministic floor report it alike. Absent on an introduction request or note, which reads its language on its own and says so through `language_undetermined`.
     AccountDraftReason:
       type: object
       description: |-
@@ -39979,6 +40061,11 @@ components:
         voice_profile_version: {type: integer, minimum: 1}
         voice_degraded: {type: boolean}
         served_body: {type: string}
+        language:
+          type: string
+          enum: [en, de, vi]
+          description: >-
+            The language the author chose for the AI draft, restored with the words so the composer names it again on the next draft request. Absent when they chose none, and the next draft follows the correspondence. A code outside this list is dropped and the draft still saves, so the answer comes back without it.
     MailDraftInput:
       type: object
       required: [anchor_type, anchor_id]

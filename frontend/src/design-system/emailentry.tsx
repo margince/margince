@@ -1,12 +1,14 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { AlertTriangle, Mail, Paperclip } from "lucide-react";
+import { AlertTriangle, CalendarClock, Mail, Paperclip } from "lucide-react";
 
 import type { components } from "../api/schema";
+import { formatActivityWhen } from "../format/activitywhen";
 import { formatNumber } from "../format/format";
 import { translatePlural, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { useViewerZone } from "../lib/viewerzone";
 import { Badge } from "./atoms";
 import { VisibilityBadge } from "./visibility";
 import "./emailentry.css";
@@ -26,6 +28,7 @@ import "./emailentry.css";
 // shows the subject and the date and no preview.
 
 type EmailSummary = components["schemas"]["EmailSummary"];
+type EmailCalendarInvitation = components["schemas"]["EmailCalendarInvitation"];
 
 const MOVE_LABEL: Record<string, MessageKey> = {
   needs_reply: "email.move.needsReply",
@@ -185,7 +188,10 @@ function rowFields(summary: EmailSummary, t: ReturnType<typeof useT>) {
       ? t("email.withheldSubject")
       : summary.subject?.trim() || t("email.noSubject"),
     who: direction ?? t("email.aMessage"),
-    preview: withheld ? null : summary.preview,
+    // An invitation names an event; its body is the calendar's boilerplate,
+    // so the row draws the event instead of the words.
+    invitation: withheld ? undefined : summary.calendar_invitation,
+    preview: withheld || summary.calendar_invitation ? null : summary.preview,
     move: moveLabel(summary, withheld) ?? null,
   };
 }
@@ -238,6 +244,30 @@ export function EmailWords({ summary }: Readonly<{ summary: EmailSummary }>) {
     return null;
   }
   return <span className="emailentry__words">{preview}</span>;
+}
+
+/** When an invitation's event starts, the line a row and the drawer both draw. */
+export function InvitationStarts({
+  invitation,
+}: Readonly<{ invitation: EmailCalendarInvitation }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const zone = useViewerZone();
+  if (!invitation.starts_at) {
+    return null;
+  }
+  return (
+    <span className="emailentry__starts">
+      {t("email.invitation.startsAt", {
+        when: formatActivityWhen(
+          invitation.starts_at,
+          invitation.starts_precision ?? "instant",
+          locale,
+          zone,
+        ),
+      })}
+    </span>
+  );
 }
 
 /**
@@ -308,11 +338,12 @@ export function EmailEntry({
     | { whyNotOpenable: NoOpenReason }>) {
   const t = useT();
   const row = rowFields(summary, t);
+  const Kind = row.invitation ? CalendarClock : Mail;
 
   const content = (
     <>
       <span className="emailentry__lead">
-        <Mail aria-hidden="true" />
+        <Kind aria-hidden="true" />
         {/* The row's KIND, for a reader who cannot see the envelope. Every
             other timeline kind announces itself through a Badge; this one
             said "email" in an icon and nothing else, so a screen reader was
@@ -328,12 +359,16 @@ export function EmailEntry({
       {row.preview && (
         <span className="emailentry__preview">{row.preview}</span>
       )}
+      {row.invitation && <InvitationStarts invitation={row.invitation} />}
       <span className="emailentry__marks">
         {/* Who may read it, as the one mark the drawer and the contact panel
             draw too. `display_status` is the server's word and the mark's
             vocabulary contains every value of it, so the row prints the state
             it was sent and never re-derives one. */}
         <VisibilityBadge state={summary.display_status} />
+        {row.invitation && (
+          <Badge tone="info">{t("email.invitation.badge")}</Badge>
+        )}
         {row.move && (
           <Badge tone={summary.move === "needs_reply" ? "warning" : undefined}>
             {t(row.move)}
