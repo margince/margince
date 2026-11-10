@@ -13,6 +13,8 @@
 # rather than reimplemented here: a copy would prove nothing about production.
 set -euo pipefail
 
+# shellcheck source=scripts/lib-git-fixture.sh
+source "$(cd "$(dirname "$0")" && pwd)/lib-git-fixture.sh"
 root="$(git rev-parse --show-toplevel)"
 dev="$root/scripts/dev.sh"
 failures=0
@@ -567,6 +569,49 @@ check "1" "$([[ "${#long_one}" -le 63 ]] && echo 1 || echo 0)" \
 check "1" "$([[ "$long_one" != "$long_two" ]] && echo 1 || echo 0)" \
       "two long names sharing a prefix still get different templates, so neither rebuilds the other's schema"
 rm -rf "$probe"
+
+echo "dev.sh: --fresh empties the slug's own Redis database, and no other"
+
+# The auth limiters count in Redis per client IP, and a fresh Postgres left them
+# standing, so a lane that rebooted per scenario ran out of set-password
+# redemptions. docker is a stand-in that records what it was asked: the
+# function under test is production's, lifted.
+lift flush_slug_redis
+lift_const DEV_REDIS_DB_MIN
+lift_const DEV_REDIS_DB_MAX
+REDIS_PORT=16379
+docker_calls="$(mktemp)"
+redis_containers="cid-one"
+docker() {
+    printf '%s\n' "$*" >>"$docker_calls"
+    [[ "$1" == "ps" ]] && printf '%s\n' "$redis_containers"
+    return 0
+}
+
+: >"$docker_calls"
+flush_slug_redis 70 2>/dev/null
+check "exec cid-one redis-cli -n 70 FLUSHDB" "$(grep '^exec' "$docker_calls")" \
+      "a slug's claimed database is flushed, in the container publishing the dev Redis port"
+check "1" "$(grep -c 'label=com.docker.compose.service=redis' "$docker_calls")" \
+      "the container is the compose redis service, not whatever else publishes the port"
+
+for db in 0 "$((DEV_REDIS_DB_MIN - 1))" "$((DEV_REDIS_DB_MAX + 1))"; do
+    : >"$docker_calls"
+    status=0; flush_slug_redis "$db" 2>/dev/null || status=$?
+    check "1 0" "$status $(wc -l <"$docker_calls" | tr -d ' ')" \
+          "database $db is outside the claimed block: refused before docker is asked anything"
+done
+
+redis_containers=$'cid-one\ncid-two'
+: >"$docker_calls"
+status=0; flush_slug_redis 70 2>/dev/null || status=$?
+check "1 0" "$status $(grep -c '^exec' "$docker_calls")" \
+      "two Redis containers on the port: refused rather than flushing a guess"
+unset -f docker
+rm -f "$docker_calls"
+
+check "1" "$(grep -c '\[\[ -z "\$slug" \]\] || flush_slug_redis "\$redis_db"' "$dev")" \
+      "the --fresh rebuild flushes only for a slug; the primary stack's database 0 is left alone"
 
 if [[ "$failures" -gt 0 ]]; then
     printf 'FAIL: %d check(s) failed\n' "$failures" >&2

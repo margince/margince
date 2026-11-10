@@ -35,31 +35,49 @@ real='sql\.Open\("(postgres|pgx)"|pgxpool\.New|pgx\.Connect|os\.Getenv\("MARGINC
 # read by awk itself, and its own test plants a violation to prove it.
 STRIP_AWK="$(dirname "$0")/lib-strip-go-comments.awk"
 
-# strip_comments prints one file's code with its comments removed.
-strip_comments() { awk -f "$STRIP_AWK" "$1"; }
-
-violations=0
-while IFS= read -r f; do
+# lane_report prints one file's violation report, or nothing when the file is
+# clean.
+lane_report() {
+  local f="$1" code lines ln
   # Skip files already in a non-unit lane. Build constraints sit anywhere
   # above the package clause, so scan up to it instead of a fixed head.
   if sed -n '/^package /q;p' "$f" | grep -qE '^//go:build .*(integration|livesmoke)'; then
-    continue
+    return 0
   fi
-  code="$(strip_comments "$f")"
-  if grep -Eq "$real" <<<"$code"; then
-    echo "VIOLATION (unit test opens real infra — add //go:build integration, or fake the boundary): $f"
-    # Reported against the ORIGINAL line, so the number is the one an author
-    # opens and the text is what they wrote — the stripped copy only decides
-    # WHICH lines are reported.
-    printf '%s\n' "$code" | grep -nE "$real" | cut -d: -f1 | while IFS= read -r ln; do
-      printf '    %s:%s\n' "$ln" "$(sed -n "${ln}p" "$f")"
-    done
-    violations=1
-  fi
-# Search roots: the backend hand-written Go tree, and nothing else is in scope.
-done < <(find backend -name '*_test.go' 2>/dev/null | sort)
+  # A stripper that fails prints nothing, and nothing matches nothing, so its
+  # failure must stop the gate rather than read as a clean file.
+  code="$(awk -f "$STRIP_AWK" "$f")" || { echo "test-lanes: cannot strip comments from $f" >&2; return 2; }
+  grep -Eq "$real" <<<"$code" || return 0
+  # Reported against the ORIGINAL line, so the number is the one an author
+  # opens and the text is what they wrote — the stripped copy only decides
+  # WHICH lines are reported.
+  lines="VIOLATION (unit test opens real infra — add //go:build integration, or fake the boundary): $f"
+  while IFS= read -r ln; do
+    lines+=$'\n'"    $ln:$(sed -n "${ln}p" "$f")"
+  done < <(printf '%s\n' "$code" | grep -nE "$real" | cut -d: -f1)
+  printf '%s\n' "$lines"
+}
+export -f lane_report
+export real STRIP_AWK
 
-if [[ "$violations" -ne 0 ]]; then
+# Each file is independent, so workers check one batch each, side by side. A
+# batch writes to its own file: one report can outgrow an atomic pipe write.
+jobs="$(getconf _NPROCESSORS_ONLN 2>/dev/null || echo 4)"
+reports="$(mktemp -d)"
+trap 'rm -rf "$reports"' EXIT
+export reports
+# Search roots: the backend hand-written Go tree, and nothing else is in scope.
+status=0
+find backend -name '*_test.go' -print0 2>/dev/null | sort -z \
+  | xargs -0 -P "$jobs" -n 64 bash -c 'set -uo pipefail; rc=0
+      out="$reports/${1//\//_}"
+      for f; do lane_report "$f" >>"$out" || rc=$?; done; exit "$rc"' lane_report || status=$?
+report="$(find "$reports" -type f | sort | xargs cat)"
+if [[ -n "$report" ]]; then
+  printf '%s\n' "$report"
+fi
+
+if [[ -n "$report" || "$status" -ne 0 ]]; then
   echo "FAIL: test-lanes — real-infra tests must carry //go:build integration."
   exit 1
 fi

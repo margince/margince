@@ -300,3 +300,17 @@ func TestTheAttentionQueueStillSeesHumansAtPersonalServiceCompanies(t *testing.T
 		}
 	}
 }
+
+// A CRM's BCC logging address names no contact and earns no record. A human
+// at the provider's own domain still does.
+func TestCaptureRefusesHubSpotBCC(t *testing.T) {
+	sink := &Sink{transactional: NewTransactionalList(nil, nil)}
+	for _, address := range []string{"4711@bcc.eu1.hubspot.com", "12345@bcc.hubspot.com"} {
+		if AddressCouldNameAContact(address, domainOf(address), nil) || sink.recordWorthy(counterpartyOf(address)) {
+			t.Errorf("%s logs mail into a CRM and must name no contact", address)
+		}
+	}
+	if !AddressCouldNameAContact("anna@hubspot.com", "hubspot.com", nil) {
+		t.Error("a human at the provider's own domain was refused")
+	}
+}

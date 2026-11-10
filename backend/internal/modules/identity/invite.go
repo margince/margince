@@ -33,6 +33,12 @@ type InviteUserInput struct {
 	// TeamIDs are the teams the member joins on arrival, in the same
 	// transaction as the seat and the role.
 	TeamIDs []ids.UUID
+	// LegalEntity is the entity the member works for; nil leaves them with
+	// the default entity.
+	LegalEntity *ids.LegalEntityID
+	// Mailed marks the set-password link as handed to the mail sender, which
+	// the roster reads as an invitation mail on its way.
+	Mailed bool
 }
 
 // InviteUser provisions a new INVITED member with the one target system role and
@@ -122,25 +128,34 @@ func (s *Service) InviteUser(ctx context.Context, actor Identity, in InviteUserI
 			return err
 		}
 		if _, err := tx.Exec(ctx,
-			`INSERT INTO auth_token (user_id, purpose, token_hash, expires_at)
-			 VALUES ($1, 'password_reset', $2, now() + $3::interval)`,
-			newUserID, tokenHash, inviteTokenTTL.String()); err != nil {
+			`INSERT INTO auth_token (user_id, purpose, token_hash, expires_at, mail_queued_at)
+			 VALUES ($1, 'password_reset', $2, now() + $3::interval, CASE WHEN $4 THEN now() END)`,
+			newUserID, tokenHash, inviteTokenTTL.String(), in.Mailed); err != nil {
 			return err
 		}
-		auditID, err := storekit.Audit(ctx, tx, "create", "user", newUserID.UUID,
-			nil, map[string]any{
-				"email": in.Email, "role": in.Role, fieldTeamIDs: in.TeamIDs,
-				userAuditKeyStatus: userStatusInvited, greetingNameField: in.GreetingName,
-			})
-		if err != nil {
-			return err
-		}
-		return emitInvited(ctx, tx, auditID, newUserID, actor.UserID, in)
+		return s.recordInvite(ctx, tx, newUserID, actor.UserID, in)
 	})
 	if err != nil {
 		return ids.UserID{}, "", err
 	}
 	return newUserID, raw, nil
+}
+
+// recordInvite audits and announces the new member, then places them in the
+// legal entity the invite named, all in the invite's transaction.
+func (s *Service) recordInvite(ctx context.Context, tx pgx.Tx, newUserID, inviter ids.UserID, in InviteUserInput) error {
+	auditID, err := storekit.Audit(ctx, tx, "create", "user", newUserID.UUID,
+		nil, map[string]any{
+			"email": in.Email, "role": in.Role, fieldTeamIDs: in.TeamIDs,
+			userAuditKeyStatus: userStatusInvited, greetingNameField: in.GreetingName,
+		})
+	if err != nil {
+		return err
+	}
+	if err := emitInvited(ctx, tx, auditID, newUserID, inviter, in); err != nil {
+		return err
+	}
+	return s.placeMember(ctx, tx, in.LegalEntity, newUserID)
 }
 
 // emitInvited publishes the invitation, and the greeting name when the invite

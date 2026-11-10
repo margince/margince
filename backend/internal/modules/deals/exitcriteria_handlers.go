@@ -137,21 +137,3 @@ func (h Handlers) GetDealWinEvidence(w http.ResponseWriter, r *http.Request, id 
 	}
 	httperr.WriteJSON(w, http.StatusOK, crmcontracts.DealWinEvidence{HasSignedContract: signed})
 }
-
-// RevertStageProgression takes back a stage move the product made by itself.
-//
-// The approval id is the caller's only handle on which move to undo; the stage
-// to return to comes from the ledger, never from the request. A caller who
-// could name the target could send a deal anywhere and call it an undo.
-func (h Handlers) RevertStageProgression(
-	w http.ResponseWriter, r *http.Request, id crmcontracts.Id,
-	approvalID openapi_types.UUID, _ crmcontracts.RevertStageProgressionParams,
-) {
-	deal, err := h.store.RevertStageProgression(
-		r.Context(), pathID[ids.DealKind](id), ids.UUID(approvalID))
-	if err != nil {
-		writeStoreErr(w, r, err)
-		return
-	}
-	httperr.WriteJSON(w, http.StatusOK, deal)
-}

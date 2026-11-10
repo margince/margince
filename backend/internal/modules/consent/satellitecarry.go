@@ -79,6 +79,37 @@ func (s *Store) CarrySatellitesTx(ctx context.Context, tx pgx.Tx, from, to comms
 	return auditSatelliteCarry(ctx, tx, from, to, carry)
 }
 
+// BindRequestsToAddressesTx implements contacts.ConsentSatelliteCarrier. Gated
+// by admitACarry like the carry it comes before.
+//
+// A stop for the whole subject and a withdrawal are bound the same way as a
+// request. An anonymize then pins each only to its own record's addresses. The
+// trigger bind_requests_on_address_move binds the same rows when a merge runs
+// on code that predates this call.
+func (s *Store) BindRequestsToAddressesTx(ctx context.Context, tx pgx.Tx, from, to ids.ContactID) error {
+	if err := admitACarry(ctx, tx, commsauthz.ContactStopSubject(from), commsauthz.ContactStopSubject(to)); err != nil {
+		return err
+	}
+	pair := []ids.UUID{from.UUID, to.UUID}
+	if _, err := tx.Exec(ctx, `
+		UPDATE consent_qualifying_event q SET recorded_for_addresses = `+storekit.RequestAddressesSQL("q.contact_id")+`
+		 WHERE q.contact_id = ANY($1) AND q.recorded_for_addresses IS NULL`, pair); err != nil {
+		return fmt.Errorf("consent: binding the recorded requests to their addresses: %w", err)
+	}
+	if _, err := tx.Exec(ctx, `
+		UPDATE communication_suppression s SET recorded_for_addresses = `+storekit.RequestAddressesSQL("s.contact_id")+`
+		 WHERE s.contact_id = ANY($1) AND s.address IS NULL AND s.revoked_at IS NULL
+		   AND s.recorded_for_addresses IS NULL`, pair); err != nil {
+		return fmt.Errorf("consent: binding the subject-wide stops to their addresses: %w", err)
+	}
+	if _, err := tx.Exec(ctx, `
+		UPDATE contact_consent c SET recorded_for_addresses = `+storekit.RequestAddressesSQL("c.contact_id")+`
+		 WHERE c.contact_id = ANY($1) AND c.state = 'withdrawn' AND c.recorded_for_addresses IS NULL`, pair); err != nil {
+		return fmt.Errorf("consent: binding the withdrawals to their addresses: %w", err)
+	}
+	return nil
+}
+
 // carrySubjectArmRows moves the two tables that can name a lead or a contact.
 // One statement sets both columns, so a promotion clears lead_id in the same
 // write that sets contact_id and the one-subject CHECK holds throughout.
@@ -156,7 +187,21 @@ func carryPreferenceTokens(ctx context.Context, tx pgx.Tx, from, to ids.ContactI
 // both halves recorded the same message or deal, the survivor's stands and the
 // source's copy is dropped, because it states nothing the survivor's does not.
 // Hand-recorded events name no source and always travel.
+//
+// The dropped copy's addresses join the kept row first: both records saw the
+// same message, so the request covers the addresses of each. NULL on either
+// side covers every address and stays NULL.
 func carryQualifyingEvents(ctx context.Context, tx pgx.Tx, from, to ids.ContactID, carry satelliteCarry) error {
+	if _, err := tx.Exec(ctx, `
+ UPDATE consent_qualifying_event b SET recorded_for_addresses = CASE
+   WHEN b.recorded_for_addresses IS NULL OR a.recorded_for_addresses IS NULL THEN NULL
+   ELSE ARRAY(SELECT DISTINCT x FROM unnest(b.recorded_for_addresses || a.recorded_for_addresses) AS x ORDER BY x) END
+   FROM consent_qualifying_event a
+  WHERE b.contact_id = @target AND a.contact_id = @source AND a.source_entity_id IS NOT NULL
+    AND b.source_entity_type = a.source_entity_type AND b.source_entity_id = a.source_entity_id`,
+		pgx.NamedArgs{carrySourceArg: from, carryTargetArg: to}); err != nil {
+		return fmt.Errorf("consent: joining the addresses of a qualifying event both records hold: %w", err)
+	}
 	dropped, err := collectIDs(ctx, tx, `
  DELETE FROM consent_qualifying_event a WHERE a.contact_id=@source AND `+qualifyingCarryDuplicate+` RETURNING id`,
 		pgx.NamedArgs{carrySourceArg: from, carryTargetArg: to})

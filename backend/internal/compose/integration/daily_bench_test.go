@@ -30,9 +30,9 @@ func TestDailyUseBudgets(t *testing.T) {
 	}
 	t.Logf("daily bench at scale %g", scale)
 	// The reindex identity row needs a bound embeddings model, or its route answers 501.
-	embedder := embedReindexRouter(t, "daily-bench-embed-v1")
-	e := apptest.SetupAppWithOptions(t, compose.WithEmbedReindex(embedder, insertOnlyRunner(t)))
-	seedRouterBinding(t, e, embedder)
+	embedder := apptest.EmbedReindexRouter(t, "daily-bench-embed-v1")
+	e := apptest.SetupAppWithOptions(t, compose.WithEmbedReindex(embedder, apptest.InsertOnlyRunner(t)))
+	apptest.SeedRouterBinding(t, e, embedder)
 	// Without a statement cache nothing is prepared, so the generic-plan
 	// regressions this bench exists to catch could never appear in a sample.
 	if mode := e.Pool.Config().ConnConfig.DefaultQueryExecMode; mode != pgx.QueryExecModeCacheStatement {

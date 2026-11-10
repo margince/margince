@@ -3,6 +3,7 @@ import type { ReadingTone } from "../../design-system/readingtone";
 import { calendarDaysUntil } from "../../format/daysuntil";
 import { displayDay } from "../../format/format.dates";
 import { daysPast } from "../../format/lateness";
+import { valueFor } from "../../lib/labelfor";
 import type { ProjectHealthState } from "./projecthealth.queries";
 
 // What "How it stands" reads off one Project360, as data rather than words:
@@ -11,7 +12,7 @@ import type { ProjectHealthState } from "./projecthealth.queries";
 
 type Project360 = components["schemas"]["Project360"];
 
-// A user judged the project; the tone is that judgement's, never a rule's.
+// The tone is the reading's own, whether a user or the health job made it.
 const HEALTH_TONE: Readonly<Record<ProjectHealthState, ReadingTone>> = {
   on_track: "success",
   at_risk: "warning",
@@ -21,10 +22,13 @@ const HEALTH_TONE: Readonly<Record<ProjectHealthState, ReadingTone>> = {
 export type ProjectReading =
   | Readonly<{
       kind: "assessed";
+      id: string;
       state: ProjectHealthState;
       note?: string;
       assessedAt: string;
       author?: string;
+      // The health job wrote it, from the quiet and overdue rules.
+      byAI: boolean;
       tone: ReadingTone;
     }>
   | Readonly<{ kind: "none" | "withheld"; tone: "neutral" }>;
@@ -40,11 +44,13 @@ export function projectReading(view: Project360): ProjectReading {
   }
   return {
     kind: "assessed",
+    id: current.id,
     state: current.state,
     note: current.note?.trim() || undefined,
     assessedAt: current.assessed_at,
     author: current.source_author,
-    tone: HEALTH_TONE[current.state],
+    byAI: current.source === "ai",
+    tone: valueFor(HEALTH_TONE, current.state, "neutral"),
   };
 }
 

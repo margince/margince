@@ -9,19 +9,20 @@ import {
   useMutation,
   useQueryClient,
 } from "@tanstack/react-query";
-import { ListChecks, Sparkles } from "lucide-react";
+import { ListChecks } from "lucide-react";
 import { useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import { useActivityWritable } from "../../components/activitygate";
 import { useTaskUpdate } from "../../components/taskactions";
 import { Button } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { useT } from "../../i18n";
-import { useCan } from "../../lib/capability";
+import { useCanWrite } from "../../lib/capability";
 import { refreshSuggestedMoves, useCurrentMove } from "../../lib/currentmove";
 import { useOpenEmail } from "../../lib/openemail";
 import { unwrap } from "../../lib/problem";
-import { useRecordZone } from "../../lib/recordzone";
+import { useViewerZone } from "../../lib/viewerzone";
 import { ContactMeetingBrief } from "../brief/meetingbrief";
 import { ComposeModal } from "../mail/compose";
 import { OpenEmailDrawer } from "../mail/openemaildrawer";
@@ -101,11 +102,11 @@ export function MoveButton({
   // mounts one for its timeline; this one is a lone control on the deal card,
   // so a message cited in the brief it opens has nowhere else to go.
   const [openEmail, setOpenEmail] = useOpenEmail();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const [taskId, setTaskId] = useState<string | null>(null);
   const openTask = useCurrentMove<string>(setTaskId);
   const openBrief = useCurrentMove<string>(setBriefId);
-  const canUpdateTask = useCan("activity", "update");
+  const canUpdateTask = useCanWrite("activity", "update");
   const taskUpdate = useTaskUpdate([
     ...taskRefreshKeys,
     ...(dealId ? [["deal-status", dealId]] : []),
@@ -154,6 +155,17 @@ export function MoveButton({
   });
 
   const taskBody = move.arguments;
+  // The task the press wrote stays named here, with the way into it, even
+  // after the refreshed advice moves on. The reader sees what they made.
+  if (createTask.data) {
+    return (
+      <CreatedFollowUp
+        taskId={createTask.data.id}
+        readOnly={!canUpdateTask}
+        update={taskUpdate}
+      />
+    );
+  }
   switch (move.action) {
     case "open_task":
       if (!activityId) return null;
@@ -182,24 +194,13 @@ export function MoveButton({
         </>
       );
     case "create_task":
-      // No body, no button: a click that sent {} would only be refused.
-      if (!taskBody) {
-        return null;
-      }
       return (
-        <>
-          {/* A rule wrote the task and pressing this accepts it. No model
-              runs on the press, so it is the plain primary, not indigo. */}
-          <Button
-            variant="primary"
-            pending={createTask.isPending}
-            onClick={() => createTask.mutate(taskBody)}
-          >
-            <ListChecks aria-hidden />
-            {t("deal360.createTask")}
-          </Button>
-          <ErrorLine error={createTask.error} />
-        </>
+        <CreateTaskVerb
+          body={taskBody}
+          pending={createTask.isPending}
+          error={createTask.error}
+          onCreate={createTask.mutate}
+        />
       );
     case "draft_email":
       // Only the follow-up after a meeting draws a button: it names who the
@@ -232,7 +233,6 @@ export function MoveButton({
               })
             }
           >
-            <Sparkles aria-hidden />
             {t("deal360.openBrief")}
           </Button>
           <ErrorLine error={openBrief.error} />
@@ -269,6 +269,7 @@ function FollowUpDraft({
 }>) {
   const t = useT();
   const queryClient = useQueryClient();
+  const writable = useActivityWritable();
   const [target, setTarget] = useState<{
     dealId?: string;
     meetingId: string;
@@ -277,7 +278,7 @@ function FollowUpDraft({
   const check = useCurrentMove<NonNullable<typeof target>>(setTarget);
   const selected = target ?? { dealId, meetingId, recipients };
   const [contact, ...alsoTo] = selected.recipients;
-  if (contact === undefined) return null;
+  if (contact === undefined || !writable) return null;
   return (
     <>
       <Button
@@ -290,7 +291,6 @@ function FollowUpDraft({
           })
         }
       >
-        <Sparkles aria-hidden />
         {t("worklist.verb.draft_follow_up_now")}
       </Button>
       <ErrorLine error={check.error} />
@@ -313,6 +313,71 @@ function FollowUpDraft({
             }
             void queryClient.invalidateQueries({ queryKey: ["worklist"] });
           }}
+        />
+      )}
+    </>
+  );
+}
+
+// A rule wrote the task and pressing this accepts it. No model runs on the
+// press, so it is the plain primary, not indigo.
+function CreateTaskVerb({
+  body,
+  pending,
+  error,
+  onCreate,
+}: Readonly<{
+  body: Record<string, unknown> | undefined;
+  pending: boolean;
+  error: unknown;
+  onCreate: (body: Record<string, unknown>) => void;
+}>) {
+  const t = useT();
+  const writable = useActivityWritable();
+  // No body, no button: a click that sent {} would only be refused, and so
+  // would any press from a seat that may not write activities.
+  if (!body || !writable) {
+    return null;
+  }
+  return (
+    <>
+      <Button
+        variant="primary"
+        pending={pending}
+        onClick={() => onCreate(body)}
+      >
+        <ListChecks aria-hidden />
+        {t("deal360.createTask")}
+      </Button>
+      <ErrorLine error={error} />
+    </>
+  );
+}
+
+/** The follow-up a press just wrote, named, with the way into it. */
+function CreatedFollowUp({
+  taskId,
+  readOnly,
+  update,
+}: Readonly<{
+  taskId: string;
+  readOnly: boolean;
+  update: ReturnType<typeof useTaskUpdate>;
+}>) {
+  const t = useT();
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <span role="status">{t("deal360.followUpCreated")}</span>
+      <Button variant="link" onClick={() => setOpen(true)}>
+        {t("deal360.openTask")}
+      </Button>
+      {open && (
+        <TaskDetailModal
+          activityId={taskId}
+          readOnly={readOnly}
+          onClose={() => setOpen(false)}
+          update={update}
         />
       )}
     </>

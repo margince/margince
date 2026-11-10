@@ -36,6 +36,16 @@ import {
   ticksOf,
 } from "./standingtimeline.layout";
 import { MarkLane } from "./standingtimeline.marks";
+import {
+  defaultZoom,
+  type TimelineZoom,
+  zoomStart,
+} from "./standingtimeline.zoom";
+import {
+  type TimelineHistory,
+  useOlderHistory,
+  ZoomBar,
+} from "./standingtimeline.zoombar";
 import type { TIMELINE_ICON } from "./timelineentry";
 import "./standingtimeline.css";
 
@@ -57,6 +67,8 @@ export type TimelineEvent = Readonly<{
   // The logged items this event already stands for, so no mark is drawn a
   // second time beside its label.
   activityIds?: readonly string[];
+  // A deal's result on the day it was decided: drawn as a flag, not a dot.
+  outcome?: "won" | "lost";
 }>;
 
 /**
@@ -100,7 +112,8 @@ type Pos = CSSProperties & Record<`--${string}`, string>;
  * The record's time on one dated axis. It draws month lines and what happened
  * as solid spine. It adds the silence since the last contact as a band, today
  * as a pill, and what is dated ahead as dotted spine. The canvas is drawn for
- * the eye.
+ * the eye. A zoom picks how far back it looks; it opens at a quarter or wider,
+ * wide enough for every event.
  * A screen reader gets the same events as a list.
  */
 export function StandingTimeline({
@@ -110,11 +123,13 @@ export function StandingTimeline({
   gap,
   label,
   marks = [],
+  history,
 }: Readonly<{
   events: readonly TimelineEvent[];
-  // Logged items and messages to draw as chips on the line. Only those inside
-  // the span the events already set are drawn, so a mark never stretches it.
+  // Logged items and messages to draw as chips on the line, those inside the
+  // zoom's span; on All time the earliest one starts the axis.
   marks?: readonly TimelineMark[];
+  history?: TimelineHistory;
   // The instant the record was read at: where today stands. Never the clock.
   asOf: string;
   // The record zone, which says what date today is for a date-only mark.
@@ -130,6 +145,19 @@ export function StandingTimeline({
   const canvas = useRef<HTMLDivElement>(null);
   const canvasPx = useWidth(canvas);
   const region = useScrollRegion(scroller, label);
+  const [chosen, setChosen] = useState<TimelineZoom>();
+  const today = instant(asOf);
+  const zoom =
+    chosen ??
+    defaultZoom(
+      today,
+      events.map((e) => instant(e.at)),
+    );
+  const from = zoomStart(zoom, today, [
+    ...events.map((event) => instant(event.at)),
+    ...marks.map((mark) => instant(mark.at)),
+  ]);
+  const older = useOlderHistory(history, zoom === "all" ? null : from);
   if (events.length === 0) {
     return (
       <p className="standing-timeline-empty t-caption">
@@ -137,23 +165,26 @@ export function StandingTimeline({
       </p>
     );
   }
-  const today = instant(asOf);
   const sorted = [...events].sort((a, b) => instant(a.at) - instant(b.at));
+  // An event before the zoom's start is off this view, never pinned to its edge.
+  const shown = sorted.filter((event) => instant(event.at) >= from);
   const axis = axisOf(
     today,
-    sorted.map((event) => instant(event.at)),
+    shown.map((event) => instant(event.at)),
+    from,
   );
   const nowPct = axisPct(today, axis);
   const gapPct = gap
     ? Math.min(axisPct(instant(gap.from), axis), nowPct)
     : nowPct;
-  const items = sorted.map((event) => ({
+  const items = shown.map((event) => ({
     event,
     pct: axisPct(instant(event.at), axis),
     kind: event.kind,
+    decided: event.outcome !== undefined,
   }));
   const labels = clusterEvents(items, canvasPx).map(({ lead, members }) => {
-    const { event, pct: at } = items[lead] ?? { event: sorted[0], pct: 0 };
+    const { event, pct: at } = items[lead] ?? { event: shown[0], pct: 0 };
     const more =
       members.length > 1
         ? plural("standing.timeline.more", members.length - 1, {
@@ -167,6 +198,7 @@ export function StandingTimeline({
     labels.map(({ event, at, sub }) => ({
       pct: at,
       kind: event?.kind ?? "done",
+      decided: event?.outcome !== undefined,
       titleChars: event?.title.length ?? 0,
       subChars: sub.length,
     })),
@@ -189,12 +221,13 @@ export function StandingTimeline({
     .filter(
       (mark) =>
         !drawn.has(mark.key) &&
-        instant(mark.at) >= axis.range.start &&
+        instant(mark.at) >= from &&
         activityHasBegun(mark.at, mark.precision, today, record),
     )
     .sort((a, b) => instant(a.at) - instant(b.at));
   return (
     <div className="standing-timeline">
+      <ZoomBar zoom={zoom} onZoom={setChosen} older={older} />
       <div ref={scroller} className="standing-timeline-scroll" {...region}>
         <div className="standing-timeline-stage" style={canvasStyle}>
           <div
@@ -222,13 +255,22 @@ export function StandingTimeline({
                 </span>
               </span>
             )}
-            {items.map(({ event, pct: at }) => (
-              <span
-                key={event.key}
-                className={`standing-timeline-dot is-${event.kind}`}
-                style={{ left: `${at}%` }}
-              />
-            ))}
+            {items.map(({ event, pct: at }) =>
+              event.outcome ? (
+                <span
+                  key={event.key}
+                  className="standing-timeline-flag"
+                  data-outcome={event.outcome}
+                  style={{ left: `${at}%` }}
+                />
+              ) : (
+                <span
+                  key={event.key}
+                  className={`standing-timeline-dot is-${event.kind}`}
+                  style={{ left: `${at}%` }}
+                />
+              ),
+            )}
             {labels.map(({ event, at, sub }, index) =>
               event ? (
                 <EventLabel

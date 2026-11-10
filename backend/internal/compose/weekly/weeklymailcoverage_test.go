@@ -13,6 +13,7 @@ import (
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/emailview"
 	"github.com/margince/margince/backend/internal/platform/mailcopy"
 )
 
@@ -191,5 +192,18 @@ func TestAnUnknownZoneDatesInUTCAndSaysSo(t *testing.T) {
 
 	if row := rowOf(t, MailBody(review, "", english), "Due tasks completed:"); !strings.HasSuffix(row, "Recorded from 14 Jun 2026 UTC") {
 		t.Errorf("an unknown zone did not fall back to a labelled UTC date: %q", row)
+	}
+}
+
+func TestAnUnreadFigureStaysOutOfTheHeadline(t *testing.T) {
+	facts := []emailview.Fact{{Label: english.WeeklyDealsWon, Value: english.WeeklyUnavailable}, {Label: english.WeeklyTasksDelivered, Value: "4"}}
+
+	headline, rest := mailHeadline(facts, english)
+
+	if len(headline) != 1 || headline[0].Value != "4" {
+		t.Fatalf("headline = %+v, want only the delivered count", headline)
+	}
+	if len(rest) != 1 || rest[0].Value != english.WeeklyUnavailable {
+		t.Fatalf("an unread figure must stay a plain fact row: %+v", rest)
 	}
 }

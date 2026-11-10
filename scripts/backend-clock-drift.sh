@@ -32,6 +32,9 @@ machine)
 	# The host clock moved, so Go and the compose Postgres read the same shifted
 	# instant. Prove it is still in force before spending an hour on the suites.
 	./scripts/clock-drift-host.sh assert "${SKEW##*:}"
+	# No TLS certificate verifies at the moved date, so a module still missing
+	# here fails by name instead of as a certificate error.
+	export GOPROXY=off
 	;;
 database)
 	echo "backend-clock-drift: the database applier is a REPRODUCTION AID, not a verdict."

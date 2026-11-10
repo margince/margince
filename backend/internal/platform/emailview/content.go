@@ -4,12 +4,45 @@
 package emailview
 
 import (
-	"html"
 	"strings"
 )
 
 // Fact is a named value whose meaning is independent of its position.
 type Fact struct{ Label, Value string }
+
+// Tone is a status colour from the design system's Badge.
+type Tone string
+
+// The tones a Badge or a note may take.
+const (
+	Neutral Tone = ""
+	Warning Tone = "warning"
+	Info    Tone = "info"
+	Success Tone = "success"
+	Danger  Tone = "danger"
+)
+
+// Line is one fact about an item. A toned line is drawn as a badge.
+type Line struct {
+	Text string
+	Tone Tone
+}
+
+// Item is one record a message asks the reader to look at. An ItemAction
+// added right after it becomes its link.
+type Item struct {
+	Title string
+	Lines []Line
+	// Verb is what the reader does with it, as the link's words.
+	Verb string
+	// OneLine keeps the plain alternative to one dash-joined line, for lists
+	// a reader scans line by line.
+	OneLine bool
+}
+
+// Stat is one headline figure. Its plain text is the same "Label: Value" a
+// Fact reads as.
+type Stat struct{ Label, Value string }
 
 // Block states presentation intent separately from customer-authored words.
 type Block struct {
@@ -18,6 +51,17 @@ type Block struct {
 	ActionLabel string
 	ActionURL   string
 	Facts       []Fact
+	Stats       []Stat
+	Item        *Item
+	// Lead opens the message under its title.
+	Lead bool
+	// Footnote moves the block below the message, where why-you-got-this lives.
+	Footnote bool
+	// Note sets the text apart in its Tone; Neutral draws a quiet well.
+	Note bool
+	// ItemLink makes the action the link of the item before it.
+	ItemLink bool
+	Tone     Tone
 }
 
 // Content builds matching text and markup from the same semantic blocks.
@@ -27,9 +71,27 @@ type Content struct{ Blocks []Block }
 func (c *Content) Heading(text string) { c.Blocks = append(c.Blocks, Block{Heading: text}) }
 
 // Paragraph adds words that cannot become a heading or a link.
-func (c *Content) Paragraph(text string) {
-	if strings.TrimSpace(text) != "" {
-		c.Blocks = append(c.Blocks, Block{Text: text})
+func (c *Content) Paragraph(text string) { c.add(Block{Text: text}) }
+
+// Lead adds the sentence that opens the message.
+func (c *Content) Lead(text string) { c.add(Block{Text: text, Lead: true}) }
+
+// Note adds words set apart in a tone, such as a security warning.
+func (c *Content) Note(text string, tone Tone) { c.add(Block{Text: text, Note: true, Tone: tone}) }
+
+// Footnote adds words below the message.
+func (c *Content) Footnote(text string) { c.add(Block{Text: text, Footnote: true}) }
+
+// FootnoteAction adds a quiet link below the message.
+func (c *Content) FootnoteAction(label, target string) {
+	if label != "" && target != "" {
+		c.Blocks = append(c.Blocks, Block{ActionLabel: label, ActionURL: target, Footnote: true})
+	}
+}
+
+func (c *Content) add(block Block) {
+	if strings.TrimSpace(block.Text) != "" {
+		c.Blocks = append(c.Blocks, block)
 	}
 }
 
@@ -40,72 +102,104 @@ func (c *Content) Action(label, target string) {
 	}
 }
 
-// Facts keeps metric labels next to their values in every client.
+// ItemAction links the item just added. Without one, as when Item dropped an
+// untitled row, it adds nothing, so no other record takes its link.
+func (c *Content) ItemAction(label, target string) {
+	if label != "" && target != "" && len(c.Blocks) > 0 && c.Blocks[len(c.Blocks)-1].Item != nil {
+		c.Blocks = append(c.Blocks, Block{ActionLabel: label, ActionURL: target, ItemLink: true})
+	}
+}
+
+// Facts adds named values as a FactList.
 func (c *Content) Facts(rows ...Fact) {
 	if len(rows) > 0 {
 		c.Blocks = append(c.Blocks, Block{Facts: rows})
 	}
 }
 
-// Append combines editions without reintroducing another primary title.
+// Stats adds headline figures as a StatStrip.
+func (c *Content) Stats(figures ...Stat) {
+	if len(figures) > 0 {
+		c.Blocks = append(c.Blocks, Block{Stats: figures})
+	}
+}
+
+// Item adds one record row. An item without a title is no row at all.
+func (c *Content) Item(item Item) {
+	if strings.TrimSpace(item.Title) != "" {
+		c.Blocks = append(c.Blocks, Block{Item: &item})
+	}
+}
+
+// Append adds blocks prepared by another view.
 func (c *Content) Append(other Content) { c.Blocks = append(c.Blocks, other.Blocks...) }
 
-// String is the plain-text alternative, derived from the presented blocks.
 func (c Content) String() string {
-	var paragraphs []string
+	paragraphs := make([]string, 0, len(c.Blocks))
 	for _, block := range c.Blocks {
-		switch {
-		case block.Heading != "":
-			paragraphs = append(paragraphs, block.Heading)
-		case block.ActionURL != "":
-			paragraphs = append(paragraphs, block.ActionLabel+"\n"+block.ActionURL)
-		case len(block.Facts) > 0:
-			var rows []string
-			for _, row := range block.Facts {
-				rows = append(rows, row.Label+": "+row.Value)
-			}
-			paragraphs = append(paragraphs, strings.Join(rows, "\n"))
-		default:
-			paragraphs = append(paragraphs, block.Text)
-		}
+		paragraphs = append(paragraphs, block.text())
 	}
 	return strings.Join(paragraphs, "\n\n")
 }
 
-// Message gives a document its primary title and language.
+// text is the block in the plain alternative; every kind keeps its words.
+func (b Block) text() string {
+	switch {
+	case b.Heading != "":
+		return b.Heading
+	case b.ActionURL != "":
+		return b.ActionLabel + "\n" + b.ActionURL
+	case len(b.Facts) > 0:
+		rows := make([]string, 0, len(b.Facts))
+		for _, row := range b.Facts {
+			rows = append(rows, row.Label+": "+row.Value)
+		}
+		return strings.Join(rows, "\n")
+	case len(b.Stats) > 0:
+		rows := make([]string, 0, len(b.Stats))
+		for _, figure := range b.Stats {
+			rows = append(rows, figure.Label+": "+figure.Value)
+		}
+		return strings.Join(rows, "\n")
+	case b.Item != nil:
+		return b.Item.text()
+	default:
+		return b.Text
+	}
+}
+
+func (i Item) text() string {
+	lines := []string{i.Title}
+	for _, line := range i.Lines {
+		if strings.TrimSpace(line.Text) != "" {
+			lines = append(lines, line.Text)
+		}
+	}
+	if i.Verb != "" {
+		lines = append(lines, i.Verb)
+	}
+	if i.OneLine {
+		return strings.Join(lines, " — ")
+	}
+	return strings.Join(lines, "\n")
+}
+
+// Message names the content and its title; Text keeps the title first.
 func (c Content) Message(title, language, preview string) Message {
 	return Message{Title: title, Language: language, Preheader: preview, Text: title + "\n\n" + c.String(), Blocks: c.Blocks}
 }
 
-func renderBlock(block Block, placeholder string) string {
-	switch {
-	case block.Heading != "":
-		return `<h2 style="font-size:19px;line-height:1.4;margin:28px 0 12px">` + html.EscapeString(block.Heading) + `</h2>`
-	case block.ActionURL != "":
-		if !actionURL(block.ActionURL, placeholder) {
-			return `<p>` + html.EscapeString(block.ActionLabel+" "+block.ActionURL) + `</p>`
-		}
-		return renderParagraph(block.ActionLabel+"\n"+block.ActionURL, block.ActionLabel, placeholder)
-	case len(block.Facts) > 0:
-		return renderFacts(block.Facts)
-
-	default:
-		return `<p style="margin:0 0 20px">` + strings.ReplaceAll(html.EscapeString(block.Text), "\n", "<br>") + `</p>`
-	}
-}
-
-func renderFacts(facts []Fact) string {
-	var rows strings.Builder
-	for _, fact := range facts {
-		rows.WriteString(`<tr><th scope="row" align="left" style="padding:10px 16px 10px 0;font-weight:600;vertical-align:top;border-bottom:1px solid ` + Border + `">` + html.EscapeString(fact.Label) + `</th><td style="padding:10px 0;vertical-align:top;border-bottom:1px solid ` + Border + `">` + html.EscapeString(fact.Value) + `</td></tr>`)
-	}
-	return `<table class="facts" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;margin:0 0 24px">` + rows.String() + `</table>`
-}
-
-// Preview chooses actual message context without putting URLs in the inbox preview.
+// Preview is the first line a reader could act on, or the fallback.
 func (c Content) Preview(fallback string) string {
 	for _, block := range c.Blocks {
-		line, _, _ := strings.Cut(strings.TrimSpace(block.Text), "\n")
+		source := block.Text
+		if block.Item != nil {
+			source = block.Item.Title
+		}
+		if block.Footnote {
+			continue
+		}
+		line, _, _ := strings.Cut(strings.TrimSpace(source), "\n")
 		if line != "" && !strings.Contains(line, "://") {
 			return line
 		}
@@ -113,7 +207,7 @@ func (c Content) Preview(fallback string) string {
 	return fallback
 }
 
-// AppendContent extends both alternatives together while retaining the primary title.
+// AppendContent adds blocks and keeps the plain alternative in step.
 func (m *Message) AppendContent(content Content) {
 	m.Blocks = append(m.Blocks, content.Blocks...)
 	m.Text = m.Title + "\n\n" + (Content{Blocks: m.Blocks}).String()

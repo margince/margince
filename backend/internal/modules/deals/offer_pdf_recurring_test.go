@@ -30,7 +30,7 @@ func monthlyCommittedLine() crmcontracts.OfferLineItem {
 
 func TestRenderOfferPDF_ARecurringLineShowsItsCadenceAndCommitment(t *testing.T) {
 	o := testRenderOffer(1200000, 0, 1200000)
-	pdf, err := RenderOfferPDF(o, []crmcontracts.OfferLineItem{monthlyCommittedLine()}, nil, "Margince GmbH", "en-GB", nil)
+	pdf, err := RenderOfferPDF(o, []crmcontracts.OfferLineItem{monthlyCommittedLine()}, nil, issuedBy("Margince GmbH"), "en-GB", nil)
 	if err != nil {
 		t.Fatalf("RenderOfferPDF() error = %v", err)
 	}
@@ -55,7 +55,7 @@ func TestRenderOfferPDF_AnUnclassifiedLineRendersUnchanged(t *testing.T) {
 	o := testRenderOffer(123456, 23456, 146912)
 	drawn := func(t *testing.T, lines []crmcontracts.OfferLineItem) []byte {
 		t.Helper()
-		pdf, err := RenderOfferPDF(o, lines, nil, "Margince GmbH", "de-DE", nil)
+		pdf, err := RenderOfferPDF(o, lines, nil, issuedBy("Margince GmbH"), "de-DE", nil)
 		if err != nil {
 			t.Fatalf("RenderOfferPDF() error = %v", err)
 		}
@@ -81,7 +81,7 @@ func TestRenderOfferPDF_ARecurringLineWithNoTermShowsOnlyItsCadence(t *testing.T
 	line := monthlyCommittedLine()
 	line.IntervalCount = nil
 	o := testRenderOffer(100000, 0, 100000)
-	pdf, err := RenderOfferPDF(o, []crmcontracts.OfferLineItem{line}, nil, "Margince GmbH", "en-GB", nil)
+	pdf, err := RenderOfferPDF(o, []crmcontracts.OfferLineItem{line}, nil, issuedBy("Margince GmbH"), "en-GB", nil)
 	if err != nil {
 		t.Fatalf("RenderOfferPDF() error = %v", err)
 	}

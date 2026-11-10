@@ -13,7 +13,6 @@ package gates
 // repeat with a 422. The screen then works for one value and breaks for two.
 
 import (
-	"os"
 	"strings"
 	"testing"
 
@@ -30,7 +29,7 @@ var commaJoinedQueryParams = gatekit.Waive(map[string]string{
 
 func TestQueryParametersAreEncodedTheWayTheClientSendsThem(t *testing.T) {
 	t.Parallel()
-	client, err := os.ReadFile("../frontend/src/api/client.ts")
+	client, err := gatekit.ReadFile("../frontend/src/api/client.ts")
 	if err != nil {
 		t.Fatalf("read the frontend client: %v", err)
 	}
@@ -40,7 +39,7 @@ func TestQueryParametersAreEncodedTheWayTheClientSendsThem(t *testing.T) {
 			"the serializer instead")
 	}
 
-	raw, err := os.ReadFile("api/crm.yaml")
+	raw, err := gatekit.ReadFile("api/crm.yaml")
 	if err != nil {
 		t.Fatalf("read crm.yaml: %v", err)
 	}

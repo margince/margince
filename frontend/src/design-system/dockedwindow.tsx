@@ -209,7 +209,11 @@ export function DockedWindow({
   };
   const drop = () => setSlide(null);
   const fold = (event: KeyboardEvent<HTMLElement>) => {
-    if (event.key !== "Escape" || event.defaultPrevented) return;
+    // A dialog opened from inside is portalled out of this box; its Escape is its own.
+    const own =
+      event.target instanceof Node &&
+      event.currentTarget.contains(event.target);
+    if (event.key !== "Escape" || event.defaultPrevented || !own) return;
     event.preventDefault();
     onStateChange("min");
   };

@@ -19,34 +19,16 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/modules/capture/capturemetrics"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/backoff"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
-// RunBackfillStep executes ONE provider page of a run and commits its
-// outcome. It returns done=true when the run reached a terminal state (so the
-// job stops), and completed=true ONLY on the single step that transitions a
-// live run to a successful `done` — the caller uses that edge to fire the
-// same-day digest so a freshly-imported mailbox surfaces on the morning
-// screen without waiting for the nightly pass. An already-terminal or
-// cancelled run returns done=true, completed=false (nothing new arrived). It
-// never advances the cursor on a failed page — the retry resumes from the
-// committed token. The sink counts land via the page-scoped stats snapshot
-// the connector maintains.
-//
-// done answers the RUN's fate, not this call's outcome: a step that ENDS the
-// run reports done=true alongside the err that ended it, so a caller reading
-// done without err never pages a run that is already over.
-//
-// retryAfter > 0 says the page failed on something a delay repairs (a rate
-// limit, an unreachable provider) and the run is still LIVE: the caller must
-// come back after that delay rather than treat err as the end of the import.
-// It is always 0 alongside a terminal outcome. err carries the fault detail
-// either way — the run row records only its class, the caller's log owns the
-// rest.
-func (r *Registry) RunBackfillStep(ctx context.Context, backfillID ids.UUID) (done, completed bool, retryAfter time.Duration, err error) {
+// executeBackfillPage keeps provider I/O outside the database transaction.
+// Checkpointed work survives faults; only the remaining tally enters final commit.
+func (r *Registry) executeBackfillPage(ctx context.Context, backfillID ids.UUID) (done, completed bool, retryAfter time.Duration, err error) {
 	var (
 		connID        ids.UUID
 		name          string
@@ -57,13 +39,14 @@ func (r *Registry) RunBackfillStep(ctx context.Context, backfillID ids.UUID) (do
 		cursor        []byte
 		status        string
 		generation    int
+		sameAccount   bool
 	)
 	err = r.db.Tx(ctx, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `
-			SELECT b.connection_id, b.after_date, b.cursor, b.status, c.provider, c.user_id, c.credential_ref, c.auth, c.generation
+			SELECT b.connection_id, b.after_date, b.cursor, b.status, c.provider, c.user_id, c.credential_ref, c.auth, c.generation, `+backfillMatchesAccount+`
 			FROM capture_backfill b JOIN capture_connection c ON c.id = b.connection_id
 			WHERE b.id = $1`, backfillID).
-			Scan(&connID, &after, &cursor, &status, &name, &grantedBy, &credentialRef, &authBytes, &generation)
+			Scan(&connID, &after, &cursor, &status, &name, &grantedBy, &credentialRef, &authBytes, &generation, &sameAccount)
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
 		return true, false, 0, fmt.Errorf("capture: backfill %s: %w", backfillID, apperrors.ErrNotFound)
@@ -71,8 +54,12 @@ func (r *Registry) RunBackfillStep(ctx context.Context, backfillID ids.UUID) (do
 	if err != nil {
 		return false, false, 0, err
 	}
-	if status == "cancelled" || status == "done" || status == "error" {
+	if backfillFinished(status) {
 		return true, false, 0, nil
+	}
+	if !sameAccount {
+		err := r.db.Tx(ctx, func(tx pgx.Tx) error { return cancelReboundBackfillTx(ctx, tx, backfillID) })
+		return true, false, 0, err
 	}
 
 	c, err := r.connector(name)
@@ -80,19 +67,20 @@ func (r *Registry) RunBackfillStep(ctx context.Context, backfillID ids.UUID) (do
 		// Terminally fail the run like every sibling execution-phase error —
 		// returning bare would strand it queued/running, blocking every future
 		// StartBackfill for the connection and never surfacing as failed.
-		return true, false, 0, r.failBackfill(ctx, backfillID, err)
+		return true, false, 0, errors.Join(err, r.failBackfill(ctx, backfillID, err))
 	}
 	bf, ok := supportsBackfill(c)
 	if !ok {
-		return true, false, 0, r.failBackfill(ctx, backfillID, ErrBackfillUnsupported)
+		return true, false, 0, errors.Join(ErrBackfillUnsupported, r.failBackfill(ctx, backfillID, ErrBackfillUnsupported))
 	}
 	runCtx, err := r.connectorContext(ctx, name, grantedBy)
 	if err != nil {
-		return true, false, 0, r.failBackfill(ctx, backfillID, err)
+		return true, false, 0, errors.Join(err, r.failBackfill(ctx, backfillID, err))
 	}
-	auth, err := r.resolveCredential(ctx, credentialRef, authBytes)
+	runCtx = withMailboxConnection(runCtx, connID, generation)
+	auth, err := r.syncCredential(runCtx, credentialRef, authBytes)
 	if err != nil {
-		return true, false, 0, r.failBackfill(ctx, backfillID, err)
+		return true, false, 0, errors.Join(err, r.failBackfill(ctx, backfillID, err))
 	}
 
 	pageToken, err := backfillPageCursor(cursor)
@@ -114,7 +102,7 @@ func (r *Registry) RunBackfillStep(ctx context.Context, backfillID ids.UUID) (do
 		return true, false, 0, errors.Join(err, r.failBackfill(ctx, backfillID, err))
 	}
 
-	pageCtx, _ := withPageProgress(runCtx, r, backfillID, generation)
+	pageCtx, progress := withPageProgress(runCtx, r, backfillID, generation)
 	pageCtx = capturemetrics.ForProvider(pageCtx, name)
 	res, pageErr := bf.BackfillPage(pageCtx, auth, after, pageToken, r.sink)
 	capturemetrics.ObservePage(pageCtx, pageErr)
@@ -124,7 +112,7 @@ func (r *Registry) RunBackfillStep(ctx context.Context, backfillID ids.UUID) (do
 		}
 		return r.recordPageFault(ctx, backfillID, pageErr)
 	}
-	done, completed, err = r.commitBackfillPage(ctx, backfillID, generation, res)
+	done, completed, err = r.commitBackfillPage(ctx, backfillID, generation, progress.uncommitted(res))
 	return done, completed, 0, err
 }
 
@@ -152,15 +140,15 @@ func (r *Registry) recordPageFault(ctx context.Context, backfillID ids.UUID, cau
 	if !retriesPage(class) {
 		return true, false, 0, errors.Join(cause, r.failBackfill(ctx, backfillID, cause))
 	}
-	failures, live, countErr := r.countBackfillFailure(ctx, backfillID, class)
+	failures, live, countErr := r.countBackfillFailure(ctx, backfillID, class, cause)
 	if countErr != nil {
-		// The ladder write is what leaves a live run resumable, so a run whose
-		// ladder cannot be written must not be left live: the caller stops paging
-		// after this, and a live run nobody pages sits behind
-		// uq_capture_backfill_live answering 409 to every later start, with nothing
-		// a human can clear. End it on the class the page actually failed with.
-		return true, false, 0, errors.Join(cause, countErr, r.failBackfill(ctx, backfillID, cause))
+		if errors.Is(countErr, apperrors.ErrConflict) {
+			return true, false, 0, errors.Join(cause, countErr)
+		}
+		// A rolled-back successor leaves this execution retryable; admission recovery also repairs it.
+		return false, false, backfillRetryDelay(max(1, failures), cause), errors.Join(cause, countErr)
 	}
+
 	if !live {
 		// The run reached a terminal state under us (a cancel, most likely).
 		// There is nothing left to retry and nothing left to fail.
@@ -198,43 +186,38 @@ func (r *Registry) restartWindowWalk(ctx context.Context, backfillID ids.UUID, c
 			UPDATE capture_backfill
 			   SET cursor = NULL, scanned = 0, captured = 0, skipped = 0, failed = 0,
 			       consecutive_failures = consecutive_failures + 1, last_error_class = $2,
-			       window_restarts = window_restarts + 1`+resetInflightProgress+`,
-			       status = CASE WHEN status = 'queued' THEN 'running' ELSE status END
-			 WHERE id = $1 AND status IN ('queued','running') AND window_restarts < $3`,
+			       window_restarts = window_restarts + 1`+resetInflightProgress+`
+			 WHERE id = $1 AND status = 'running' AND window_restarts < $3`,
 			backfillID, string(classHistoryGone), maxWindowRestarts)
 		restarted = tag.RowsAffected() > 0
-		return err
+		if err != nil {
+			return err
+		}
+		if restarted {
+			return rescheduleBackfillTx(writeCtx, tx, backfillID, time.Second)
+		}
+		return nil
 	})
 	if err != nil || !restarted {
 		// Either the write failed, or this run already walked its window again
 		// once (or ended under us — failBackfill then matches nothing).
 		return true, false, 0, errors.Join(cause, err, r.failBackfill(ctx, backfillID, cause))
 	}
+	markBackfillScheduled(ctx)
 	return false, false, time.Second, cause
 }
 
-// countBackfillFailure adds one to the run's consecutive-failure ladder and
-// records the class, WITHOUT touching the cursor — the failed page never
-// happened as far as the resume point is concerned. live=false means the row
-// was no longer queued/running: the caller lost a race with a cancel.
-//
-// The write is DETACHED, for the same reason the terminal one is: the commonest
-// reason a page fails is the job context dying, and the provider client reports
-// that deadline as its own unreachable — so this write would fail on the very
-// context that produced the fault it is recording, and the run would keep a
-// ladder that never climbs and a retry nobody scheduled.
-func (r *Registry) countBackfillFailure(ctx context.Context, backfillID ids.UUID, class errorClass) (failures int, live bool, err error) {
+// Failure accounting preserves the latest checkpoint. The detached context can
+// still schedule a retry after the provider's own context has ended.
+func (r *Registry) countBackfillFailure(ctx context.Context, backfillID ids.UUID, class errorClass, cause error) (failures int, live bool, err error) {
 	countCtx, cancel := detachedWrite(ctx)
 	defer cancel()
 	err = r.db.Tx(countCtx, func(tx pgx.Tx) error {
-		// A run whose FIRST page fails transiently is still a run that started:
-		// leaving it 'queued' would misreport a live import as one never begun.
 		scanErr := tx.QueryRow(countCtx, `
 			UPDATE capture_backfill
-			SET consecutive_failures = consecutive_failures + 1, last_error_class = $2`+resetInflightProgress+`,
-			    status = CASE WHEN status = 'queued' THEN 'running' ELSE status END
-			WHERE id = $1 AND status IN ('queued','running')
-			RETURNING consecutive_failures`, backfillID, string(class)).Scan(&failures)
+			SET consecutive_failures = consecutive_failures + 1, last_error_class = $2, backoff_is_mailbox_scoped = $3`+resetInflightProgress+`
+			WHERE id = $1 AND status = 'running'
+			RETURNING consecutive_failures`, backfillID, string(class), mailboxScopedBackoff(cause)).Scan(&failures)
 		if errors.Is(scanErr, pgx.ErrNoRows) {
 			return nil
 		}
@@ -242,8 +225,14 @@ func (r *Registry) countBackfillFailure(ctx context.Context, backfillID ids.UUID
 			return scanErr
 		}
 		live = true
+		if failures < backfillMaxConsecutiveFailures {
+			return rescheduleBackfillTx(countCtx, tx, backfillID, backfillRetryDelay(failures, cause))
+		}
 		return nil
 	})
+	if err == nil && live && failures < backfillMaxConsecutiveFailures {
+		markBackfillScheduled(ctx)
+	}
 	return failures, live, err
 }
 
@@ -278,35 +267,23 @@ const (
 	backfillRateBackoffCap  = 30 * time.Minute
 )
 
-// commitBackfillPage records one page's counters and the run's status
-// transition, returning whether the run is now terminal (done) and whether
-// THIS call is the edge that closed a live run successfully (completed).
-//
-// Two guards make the UPDATE conditional, and both mean the same thing: the run
-// this page belongs to is no longer the run being written. `status IN
-// ('queued','running')` catches a concurrent cancel or completion;
-// `generation` catches a disconnect or reconnect of the underlying connection
-// while the page was out at the provider — a page fetched under a grant its
-// human has since withdrawn is not history this connection gets to keep.
-// Either way the statement affects zero rows: completed is true ONLY when this
-// step actually moved a live run to done, so a lost race is terminal, never a
-// spurious completion (and so never a spurious digest).
-//
-// The counterparty yields commit in the SAME statement as scanned/captured, so
-// a page that fails to commit has counted nothing. They are an honest
-// undercount rather than an estimate: a sender the tier gate deferred is
-// resolved by the verdict engine long after this page, and the contact it may
-// eventually mint is nobody's page to claim.
+// backfillPageDelay is the wait between a committed page and the next one. The
+// admission slot already keeps an import from crowding out another, so a page
+// that finished starts the next at once.
+const backfillPageDelay time.Duration = 0
+
+// commitBackfillPage advances the cursor and remaining counters together.
+// Creation credits already belong to their domain transactions.
 func (r *Registry) commitBackfillPage(ctx context.Context, backfillID ids.UUID, generation int, res connector.BackfillPageResult) (done, completed bool, err error) {
 	finishing := res.NextToken == ""
 	var rowsAffected int64
 	err = r.db.Tx(ctx, func(tx pgx.Tx) error {
 		var cur []byte
-		statusExpr := "CASE WHEN status = 'queued' THEN 'running' ELSE status END"
-		terminal := ""
+		statusExpr := columnStatus
+		terminal := ", backoff_is_mailbox_scoped = false"
 		if finishing {
 			statusExpr = "'done'"
-			terminal = ", completed_at = now()"
+			terminal = ", completed_at = now()" + clearBackfillAdmission
 		} else {
 			cur = []byte(fmt.Sprintf(`{"page_token":%q}`, res.NextToken))
 		}
@@ -318,7 +295,7 @@ func (r *Registry) commitBackfillPage(ctx context.Context, backfillID ids.UUID, 
 			SET cursor = $2, scanned = scanned + $3, captured = captured + $4, skipped = skipped + $5,
 			    failed = failed + $7, consecutive_failures = 0`+resetInflightProgress+`,
 			    status = `+statusExpr+terminal+`
-			WHERE id = $1 AND status IN ('queued','running')
+			WHERE id = $1 AND status = 'running'
 			  AND EXISTS (SELECT 1 FROM capture_connection c
 			              WHERE c.id = capture_backfill.connection_id AND c.generation = $6)`,
 			backfillID, cur, res.Scanned, res.Captured, res.Skipped, generation, res.Failed)
@@ -327,23 +304,18 @@ func (r *Registry) commitBackfillPage(ctx context.Context, backfillID ids.UUID, 
 		}
 		rowsAffected = tag.RowsAffected()
 		if rowsAffected > 0 {
-			return nil
+			if finishing {
+				return reconcileBackfillCreationsTx(ctx, tx, backfillID)
+			}
+			return rescheduleBackfillTx(ctx, tx, backfillID, backfillPageDelay)
 		}
-		// Zero rows is either a run someone already ended (a no-op below) or a
-		// run whose connection changed under it. The second case has to end the
-		// run here: every remaining page would be fenced off the same way, and
-		// uq_capture_backfill_live would hold a run nothing can ever finish,
-		// answering 409 to every later start for the connection. Cancelled is
-		// what happened — the import stopped, and what it already captured is
-		// kept, counterparty yields included: they exist, and a replay never
-		// offers them to the resolver again.
-		_, err = tx.Exec(ctx, `
-			UPDATE capture_backfill SET status = 'cancelled', completed_at = now()`+resetInflightProgress+`
-			WHERE id = $1 AND status IN ('queued','running')`, backfillID)
-		return err
+		return cancelReboundBackfillTx(ctx, tx, backfillID)
 	})
 	if err != nil {
 		return false, false, err
+	}
+	if !finishing && rowsAffected > 0 {
+		markBackfillScheduled(ctx)
 	}
 	return finishing || rowsAffected == 0, finishing && rowsAffected == 1, nil
 }
@@ -372,8 +344,8 @@ func (r *Registry) failBackfill(ctx context.Context, backfillID ids.UUID, cause 
 	defer cancel()
 	return r.db.Tx(failCtx, func(tx pgx.Tx) error {
 		_, err := tx.Exec(failCtx, `
-			UPDATE capture_backfill SET status = 'error', last_error_class = $2, completed_at = now()`+resetInflightProgress+`
-			WHERE id = $1 AND status IN ('queued','running')`, backfillID, string(class))
+			UPDATE capture_backfill SET status = 'error', last_error_class = $2, completed_at = now()`+clearBackfillAdmission+resetInflightProgress+`
+			WHERE id = $1 AND status = 'running'`, backfillID, string(class))
 		return err
 	})
 }
@@ -393,4 +365,16 @@ func backfillPageCursor(cursor []byte) (string, error) {
 		return "", fmt.Errorf("capture: unreadable backfill cursor %q: %w", cursor, err)
 	}
 	return c.PageToken, nil
+}
+
+func cancelReboundBackfillTx(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
+	args := []any{id}
+	// A run already ended needs no second cancellation.
+	_, err := tx.Exec(ctx, `UPDATE capture_backfill SET status='cancelled', completed_at=now()`+clearBackfillAdmission+resetInflightProgress+` WHERE id=`+storekit.Placeholders(args)+` AND status IN ('queued','running')`, args...)
+	return err
+}
+
+// backfillFinished says whether a run's status leaves no page to pull.
+func backfillFinished(status string) bool {
+	return status == "cancelled" || status == "done" || status == "error"
 }

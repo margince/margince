@@ -25,13 +25,19 @@ func ReuseGenericPlans(ctx context.Context, fn func(context.Context) error) erro
 	if !ok || tx == nil {
 		return fn(ctx)
 	}
+	return ReuseGenericPlansTx(ctx, tx, func() error { return fn(ctx) })
+}
+
+// ReuseGenericPlansTx applies the same scoped mode to an explicit transaction.
+// Its statements must keep partial-index predicates literal, as for snapshot reuse.
+func ReuseGenericPlansTx(ctx context.Context, tx pgx.Tx, fn func() error) error {
 	// The materialized CTE reads the old mode before the outer row sets the new one.
 	var before, forced string
 	if err := tx.QueryRow(ctx, `WITH previous AS MATERIALIZED (SELECT current_setting('plan_cache_mode') AS mode)
 SELECT previous.mode, set_config('plan_cache_mode', 'force_generic_plan', true) FROM previous`).Scan(&before, &forced); err != nil {
 		return fmt.Errorf("pg: setting plan_cache_mode force_generic_plan: %w", err)
 	}
-	err := fn(ctx)
+	err := fn()
 	// A failed statement leaves the transaction aborted, and its rollback
 	// restores the mode. Any other failure leaves it usable, so the mode is put
 	// back for the statements after this one.

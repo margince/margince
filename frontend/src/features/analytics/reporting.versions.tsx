@@ -14,9 +14,9 @@ import { Panel, PanelBody } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
 import { formatDateTime, formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
+import { useCompanyZone } from "../../lib/companyzone";
 import { unwrap } from "../../lib/problem";
-import { useRecordZone } from "../../lib/recordzone";
-import type { ReportingReport } from "./reporting.model";
+import { type ReportingReport, unpublishedDraft } from "./reporting.model";
 
 type ReportRevision = components["schemas"]["ReportingReportRevision"];
 
@@ -134,6 +134,12 @@ export function ReportDraftBar({
     return null;
   }
   const previewing = previewRevision !== undefined;
+  // With nothing published there is no other revision to show instead.
+  const unpublished = unpublishedDraft(report) !== undefined;
+  const previewNote = previewing
+    ? "reporting.draftPreviewing"
+    : "reporting.draftHidden";
+  const note = unpublished ? "reporting.draftUnpublished" : previewNote;
   return (
     <Callout
       tone="info"
@@ -142,18 +148,20 @@ export function ReportDraftBar({
         revision: formatNumber(report.draft_revision, locale),
       })}
     >
-      <p>
-        {t(previewing ? "reporting.draftPreviewing" : "reporting.draftHidden")}
-      </p>
+      <p>{t(note)}</p>
       <div className="reporting-header-actions">
-        <Button
-          variant="ghost"
-          onClick={() =>
-            onPreview(previewing ? undefined : report.draft_revision)
-          }
-        >
-          {t(previewing ? "reporting.showPublished" : "reporting.previewDraft")}
-        </Button>
+        {!unpublished && (
+          <Button
+            variant="ghost"
+            onClick={() =>
+              onPreview(previewing ? undefined : report.draft_revision)
+            }
+          >
+            {t(
+              previewing ? "reporting.showPublished" : "reporting.previewDraft",
+            )}
+          </Button>
+        )}
         <Button
           disabled={action.isPending}
           onClick={() =>
@@ -193,7 +201,7 @@ export function ReportVersions({
 }: Readonly<{ report: ReportingReport; editable: boolean }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useCompanyZone();
   const revisions = useReportRevisions(report.id, editable);
   const action = useRevisionAction(report);
   const draftOpen = report.draft_revision !== undefined;

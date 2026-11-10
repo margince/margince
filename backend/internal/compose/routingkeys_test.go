@@ -19,15 +19,17 @@ import (
 // from the loaded settings too, through its own setting and never through this
 // lookup or the process environment.
 func TestRoutingKeysTakeTheRootKeyFromSettingsAndProviderKeysFromTheRegistry(t *testing.T) {
-	t.Setenv(keyvault.EnvRootKey, "from-the-process")
+	// 32 bytes each, as the root key setting requires.
+	const fromSettings = "AwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwM="
+	t.Setenv(keyvault.EnvRootKey, "BAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQ=")
 	t.Setenv("GEMINI_API_KEY", "from-the-process")
-	settings, err := configtest.Load(t, "", []string{keyvault.EnvRootKey + "=from-the-settings", "GEMINI_API_KEY=a-provider-key"}, nil,
+	settings, err := configtest.Load(t, "", []string{keyvault.EnvRootKey + "=" + fromSettings, "GEMINI_API_KEY=a-provider-key"}, nil,
 		append(keyvault.Settings(), ai.Settings()...)...)
 	if err != nil {
 		t.Fatalf("loading the root key: %v", err)
 	}
 	keys := RoutingKeys(settings)
-	if got := keys(keyvault.EnvRootKey); got != "from-the-settings" {
+	if got := keys(keyvault.EnvRootKey); got != fromSettings {
 		t.Errorf("root key %q, want the loaded setting's", got)
 	}
 	if got := keys("GEMINI_API_KEY"); got != "" {

@@ -12,7 +12,9 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -115,6 +117,9 @@ func readWords(
 	slices.Reverse(out)
 	slices.Reverse(threads)
 	labelThreads(out, threads)
+	if err := markCommitments(ctx, tx, out); err != nil {
+		return nil, err
+	}
 	if err := markSettled(ctx, tx, companyID, out, now); err != nil {
 		return nil, err
 	}
@@ -147,6 +152,22 @@ func markSettled(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, messag
 	}
 	for i := range messages {
 		messages[i].Settled = settled[messages[i].ID]
+	}
+	return nil
+}
+
+func markCommitments(ctx context.Context, tx pgx.Tx, messages []MessageIn) error {
+	sources := make([]crmcontracts.Activity, len(messages))
+	for i, message := range messages {
+		sources[i].Id = openapi_types.UUID(message.ID)
+	}
+	if err := activities.WithCommitmentAdmissions(ctx, tx, sources); err != nil {
+		return err
+	}
+	for i := range messages {
+		if sources[i].CommitmentAdmissions != nil {
+			messages[i].Commitments = *sources[i].CommitmentAdmissions
+		}
 	}
 	return nil
 }

@@ -40,6 +40,7 @@ type Assembler interface {
 
 // Request is the transport's body, narrowed to what the writer needs.
 type Request struct {
+	Subject   string
 	ContactID string
 	DealID    string
 	// ProjectID names the body of work the message is about. When set, the
@@ -49,6 +50,8 @@ type Request struct {
 	Intent    string
 	// RewriteOf is the draft the composer is showing; empty is a first draft.
 	RewriteOf string
+	// Language is the language the caller chose, Unknown to read it from the account.
+	Language textlang.Lang
 	// Envelope is the correspondence this draft opens: the language it must be
 	// written in, the current time, and who is writing it. Resolved by the
 	// service, never by the model.
@@ -148,7 +151,10 @@ func (s *Service) envelopeFor(ctx context.Context, view crmcontracts.Company360,
 	// of whichever one sorted first is not the language of the exchange.
 	zone := s.envelope.Zone(ctx)
 	return s.envelope.Resolve(ctx,
-		draftfloor.Written{Thread: languageEvidence(view, s.envelope.Now(), zone), Rewrite: req.RewriteOf, Purpose: req.Intent},
+		draftfloor.Written{
+			Chosen: req.Language, Thread: languageEvidence(view, s.envelope.Now(), zone),
+			Rewrite: req.RewriteOf, Purpose: req.Intent, DraftSubject: req.Subject,
+		},
 		ConversationState(view, s.envelope.Now(), zone)).InZone(zone)
 }
 
@@ -229,6 +235,7 @@ func wire(draft Draft, by crmcontracts.WrittenBy, voiceDegraded bool, lang strin
 		out.To = &to
 	}
 	out.AiDisclosure = draftfloor.AIProvenanceNoticeFor(aiWritten, textlang.Lang(lang))
+	out.Language = draftfloor.Reported[crmcontracts.CompanyEmailDraftLanguage](textlang.Lang(lang))
 	return out
 }
 

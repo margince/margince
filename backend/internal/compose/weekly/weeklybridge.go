@@ -4,15 +4,14 @@
 package weekly
 
 // The movement bridge: how a week got from its opening landing to its closing
-// one, in the six moves a contact tells the story in.
+// one, in the moves a contact tells the story in.
 //
-// SIX, not the eight the waterfall draws. The opening and closing landings are
-// the bridge's two ANCHORS — they are read off the frozen snapshots either side
-// of the week, not folded from any bucket — so they carry no bar here. A reader
-// counting the drawn columns sees eight; this file names only what MOVED.
+// The opening and closing landings are the bridge's two ANCHORS. They are read
+// off the frozen snapshots either side of the week, not folded from any
+// bucket, so they carry no bar here. This file names only what MOVED.
 //
-// The forecast engine reports thirteen buckets: the grain for diagnosing a
-// quarter, and too fine for a weekly look back. So they fold into these six.
+// The forecast engine reports finer buckets: the grain for diagnosing a
+// quarter, and too fine for a weekly look back. So they fold into these bars.
 //
 // Folding is where money goes missing. A bar list that quietly drops a bucket
 // still sums to something and still draws, so the mapping is total by

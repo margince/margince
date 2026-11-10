@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 /** @vitest-environment happy-dom */
+import { ViewerZoneProvider } from "../../../lib/viewerzone";
 import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen, within } from "@testing-library/react";
@@ -29,6 +30,8 @@ type Activity = components["schemas"]["Activity"];
 const AS_OF = "2026-05-30T09:00:00Z";
 const ENGLISH: Locale = "en";
 
+const VIEWER = "u-reader";
+
 function show(over: Partial<DealStandingInputs>) {
   const inputs: DealStandingInputs = {
     deal: deal({ stage_id: "s2" }),
@@ -40,10 +43,14 @@ function show(over: Partial<DealStandingInputs>) {
     ladder: { advancing: false, advanceRefused: false, onAdvance: () => {} },
     ...over,
   };
+  const client = new QueryClient();
+  client.setQueryData(["me"], { user: { id: VIEWER } });
   render(
-    <QueryClientProvider client={new QueryClient()}>
+    <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
-        <DealFigures inputs={inputs} />
+        <ViewerZoneProvider zone={UTC_ZONE}>
+          <DealFigures inputs={inputs} />
+        </ViewerZoneProvider>
       </LocaleProvider>
     </QueryClientProvider>,
   );
@@ -106,12 +113,86 @@ describe("Days in stage", () => {
   });
 });
 
-it("reads the probability off the deal's stage, and says so", () => {
-  show({});
-  expect(screen.getByText("40%")).toBeInTheDocument();
-  expect(
-    screen.getByText(en["deal.standing.figure.stageDefault"]),
-  ).toBeInTheDocument();
+describe("an open deal's probability", () => {
+  it("reads the stage's probability and says it comes from the stage", () => {
+    show({
+      deal: deal({
+        stage_id: "s2",
+        win_probability: 40,
+        win_probability_source: "stage",
+        stage_win_probability: 40,
+      }),
+    });
+    expect(screen.getByText("40%")).toBeInTheDocument();
+    expect(
+      screen.getByText(en["deal.winProbability.source.stage"]),
+    ).toBeInTheDocument();
+  });
+
+  it("shows a probability set by hand beside the stage's own", () => {
+    show({
+      deal: deal({
+        stage_id: "s2",
+        win_probability: 75,
+        win_probability_source: "human",
+        stage_win_probability: 40,
+      }),
+    });
+    expect(screen.getByText("75%")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        `${en["deal.winProbability.source.human"]} · ${translate(
+          ENGLISH,
+          "deal.winProbability.stageValue",
+          { percent: "40%" },
+        )}`,
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it.each([
+    ["the reader", VIEWER, "Kim Reader", en["deal.winProbability.source.you"]],
+    [
+      "a colleague",
+      "u-colleague",
+      "Kim Colleague",
+      translate(ENGLISH, "deal.winProbability.source.colleague", {
+        name: "Kim Colleague",
+      }),
+    ],
+    [
+      "nobody the deal names",
+      undefined,
+      undefined,
+      en["deal.winProbability.source.human"],
+    ],
+  ])("says who set it when %s did", (_, setterId, setterName, label) => {
+    show({
+      deal: deal({
+        stage_id: "s2",
+        win_probability: 75,
+        win_probability_source: "human",
+        win_probability_set_by_user_id: setterId,
+        win_probability_set_by_name: setterName,
+        stage_win_probability: 40,
+      }),
+    });
+    expect(screen.getByText(new RegExp(`^${label} · `))).toBeInTheDocument();
+  });
+
+  it("names Margince when it lowered the probability", () => {
+    show({
+      deal: deal({
+        win_probability: 10,
+        win_probability_source: "margince",
+        stage_win_probability: 40,
+      }),
+    });
+    expect(screen.getByText("10%")).toBeInTheDocument();
+    expect(
+      screen.getByText(new RegExp(en["deal.winProbability.source.margince"])),
+    ).toBeInTheDocument();
+  });
 });
 
 describe("a closed deal's figures", () => {
@@ -251,10 +332,10 @@ describe("what the axis marks", () => {
     expect(kept.map(([key]) => key)).toEqual(["m6", "m5", "m4", "m3", "m2"]);
   });
 
-  it("titles a closed deal's close by its outcome, never as expected", () => {
-    const close = timelineEvents(
+  const closeOf = (over: Parameters<typeof deal>[0]) =>
+    timelineEvents(
       {
-        deal: deal({ status: "lost", closed_at: "2026-05-20T12:00:00Z" }),
+        deal: deal(over),
         stages,
         asOf: AS_OF,
         activities: [],
@@ -268,7 +349,24 @@ describe("what the axis marks", () => {
       },
       words,
     ).find((event) => event.key === "close");
+
+  it("titles a closed deal's close by its outcome, never as expected", () => {
+    const close = closeOf({
+      status: "lost",
+      closed_at: "2026-05-20T12:00:00Z",
+    });
     expect(close?.title).toBe(en["deals.statusLost"]);
+  });
+
+  it("flags the day a deal was won or lost, never an open deal's expected close", () => {
+    const decided = "2026-05-20T12:00:00Z";
+    expect(closeOf({ status: "won", closed_at: decided })?.outcome).toBe("won");
+    expect(closeOf({ status: "lost", closed_at: decided })?.outcome).toBe(
+      "lost",
+    );
+    expect(
+      closeOf({ expected_close_date: "2026-06-30" })?.outcome,
+    ).toBeUndefined();
   });
 
   it("draws no close on a deal that closed without a day", () => {

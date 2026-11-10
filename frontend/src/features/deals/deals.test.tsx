@@ -10,6 +10,7 @@ import {
   mapDealUpdate,
 } from "./deals";
 import { deal, stages } from "./deals.testkit";
+import { dealEditRecord } from "./deals.write";
 
 afterEach(() => {
   cleanup();
@@ -104,6 +105,28 @@ describe("server-valued stage totals", () => {
   });
 });
 
+describe("the probability a deal's edit opens on", () => {
+  it("is empty while the deal follows its stage", () => {
+    const seeded = dealEditRecord(
+      deal({ win_probability: 40, win_probability_source: "stage" }),
+    );
+    expect(seeded.win_probability).toBe("");
+  });
+
+  it("is the deal's own where somebody or Margince set one", () => {
+    expect(
+      dealEditRecord(
+        deal({ win_probability: 75, win_probability_source: "human" }),
+      ).win_probability,
+    ).toBe("75");
+    expect(
+      dealEditRecord(
+        deal({ win_probability: 10, win_probability_source: "margince" }),
+      ).win_probability,
+    ).toBe("10");
+  });
+});
+
 describe("mapDealUpdate", () => {
   // The form's controls as a contact who changed nothing left them. Every value
   // here is exactly what dealEditRecord seeded, so a key reaching the body is
@@ -116,7 +139,7 @@ describe("mapDealUpdate", () => {
     company_id: "",
     partner_company_id: "",
     partner_attribution: "",
-    forecast_category: "",
+    win_probability: "",
     expected_close_date: "",
     wait_until: "",
     project_id: "",
@@ -129,7 +152,7 @@ describe("mapDealUpdate", () => {
         amount: "2120",
         currency: "EUR",
         owner_id: "u-me",
-        forecast_category: "commit",
+        win_probability: "75",
         expected_close_date: "2026-09-01",
       },
       { ...untouched, amount: "", currency: "", owner_id: "" },
@@ -137,7 +160,7 @@ describe("mapDealUpdate", () => {
     expect(body.amount_minor).toBe(212_000);
     expect(body.currency).toBe("EUR");
     expect(body.owner_id).toBe("u-me");
-    expect(body.forecast_category).toBe("commit");
+    expect(body.win_probability).toBe(75);
     expect(body.expected_close_date).toBe("2026-09-01");
     // Named nowhere in the edit, so named nowhere in the body.
     expect("name" in body).toBe(false);
@@ -149,6 +172,17 @@ describe("mapDealUpdate", () => {
   // correctly, refused to clear a field the contact never touched. On an
   // installation with no partners the refusal named `partner_attribution`, a
   // field the form does not even render.
+  // An emptied probability is the way back to the stage's, so it travels as
+  // null rather than being dropped as an unfinished field.
+  it("sends a cleared probability as null, which follows the stage again", () => {
+    const body = mapDealUpdate(
+      { ...untouched, win_probability: "" },
+      { ...untouched, win_probability: "60" },
+    );
+
+    expect(body).toEqual({ win_probability: null });
+  });
+
   it("sends nothing at all when the contact changed nothing", () => {
     const body = mapDealUpdate(untouched, untouched);
 
@@ -164,7 +198,7 @@ describe("mapDealUpdate", () => {
       company_id: "",
       partner_company_id: "",
       partner_attribution: "",
-      forecast_category: "",
+      win_probability: "",
       expected_close_date: "",
       wait_until: "",
       project_id: "",

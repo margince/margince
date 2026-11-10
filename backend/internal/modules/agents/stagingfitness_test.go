@@ -77,11 +77,6 @@ func stageableToolArgs() (reads, creates map[string]string) {
 		"progress_deal":  fmt.Sprintf(`{"deal_id":%q,"to_stage_id":%q,"note":"n"}`, deal, stage),
 		"send_message":   fmt.Sprintf(`{"activity_id":%q,"body":"b","consent_purpose":"support"}`, activity),
 		"send_email":     fmt.Sprintf(`{"activity_id":%q,"to":["a@example.test"],"subject":"s","body":"b","consent_purpose":"support"}`, activity),
-		// A booking anchors on no row, so its refusal has to come through a
-		// LINK. Arguments with no links would read nothing and pass this walk
-		// while proving nothing.
-		"book_meeting": fmt.Sprintf(
-			`{"start":"2026-08-03T09:00:00Z","end":"2026-08-03T09:30:00Z","subject":"s","links":[{"entity_type":"deal","entity_id":%q}]}`, deal),
 		// The account-started send has no anchor either, and for the same
 		// reason: it starts the conversation instead of answering one. Its
 		// links are what carry the refusal here.

@@ -91,3 +91,13 @@
   border-radius: var(--r-sm);
   padding: 0 var(--space-1);
 }
+
+/* A postal address arrives as one part per line, and keeps its lines. */
+.confirm-lines {
+  white-space: pre-line;
+}
+
+/* Why a purpose is allowed sits under its name. */
+.confirm-basis {
+  display: block;
+}

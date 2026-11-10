@@ -238,3 +238,45 @@ func TestAnUnroutableLeadRecordsWhyOnItsRun(t *testing.T) {
 		t.Errorf("the run's detail is %v, want the capacity reason a manager reads", detail)
 	}
 }
+
+func TestAStoredSourceRoutingRuleStopsWithAnActionableRun(t *testing.T) {
+	e := setupRouting(t)
+	enableLeadRouting(t, e.SearchEnv, map[string]any{
+		"owners": []string{e.Rep1.String()},
+		"rules": []map[string]any{
+			{"field": "source", "equals": "event", "owner_id": e.Rep3.String()},
+		},
+	})
+	leadID, owner := e.routeNewLead(t, "event")
+	if owner != nil {
+		t.Fatalf("a stale configuration assigned %v instead of stopping", owner)
+	}
+	var status, detail string
+	if err := e.Owner.QueryRow(context.Background(), `
+		SELECT status, detail::text FROM workflow_run
+		 WHERE handler = 'assign_lead_owner' AND idempotency_key LIKE @run_key`,
+		pgx.NamedArgs{"run_key": "assign_lead_owner:" + leadID.String() + "@%"}).Scan(&status, &detail); err != nil {
+		t.Fatal(err)
+	}
+	if status != "skipped" || !strings.Contains(detail, "Replace source with origin") || !strings.Contains(detail, "assign this lead by hand") {
+		t.Fatalf("stale configuration run = %q %s, want a skipped run with repair instructions", status, detail)
+	}
+	var reason string
+	if err := e.Owner.QueryRow(context.Background(), `
+		SELECT after->>'reason' FROM audit_log
+		 WHERE entity_type = 'lead' AND entity_id = @lead AND action = 'assign'`, pgx.NamedArgs{"lead": leadID}).Scan(&reason); err != nil {
+		t.Fatal(err)
+	}
+	if reason != "stale_rules" {
+		t.Fatalf("routing audit reason = %q, want stale_rules", reason)
+	}
+	var assignments int
+	if err := e.Owner.QueryRow(context.Background(), `
+		SELECT count(*) FROM event_outbox WHERE envelope->>'type' = 'lead.updated'
+		 AND envelope->'entity'->>'id' = @lead::text`, pgx.NamedArgs{"lead": leadID}).Scan(&assignments); err != nil {
+		t.Fatal(err)
+	}
+	if assignments != 0 {
+		t.Fatalf("a refused routing configuration emitted %d lead changes", assignments)
+	}
+}

@@ -1,27 +1,35 @@
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import {
+  queryOptions,
+  useInfiniteQuery,
+  useQuery,
+} from "@tanstack/react-query";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { useT } from "../../i18n";
 import { unwrap } from "../../lib/problem";
-import { reloadReportingFigures } from "../../lib/reportingfigures";
+import {
+  REPORTING_EVALUATION_KEY,
+  reloadReportingFigures,
+} from "../../lib/reportingfigures";
 import {
   type MetricNames,
   type ReportingSelection,
   reportingQuery,
+  unpublishedDraft,
 } from "./reporting.model";
 
 export { reloadReportingFigures };
 
 // The workspace's reporting framework, under one key. The landing tab and the
 // framework editor read one answer, and one publish refreshes both.
+export const reportingFrameworkOptions = queryOptions({
+  queryKey: ["reporting-framework"],
+  queryFn: async ({ signal }) =>
+    unwrap(await api.GET("/analytics/framework", { signal })),
+});
+
 export function useReportingFramework(enabled = true) {
-  return useQuery({
-    queryKey: ["reporting-framework"],
-    enabled,
-    queryFn: async () => {
-      return unwrap(await api.GET("/analytics/framework"));
-    },
-  });
+  return useQuery({ ...reportingFrameworkOptions, enabled });
 }
 
 /**
@@ -30,13 +38,9 @@ export function useReportingFramework(enabled = true) {
  * heading. The signal reaches the request, so a selection the reader has
  * already left stops on the server.
  */
-export function useReportingEvaluation(
-  selection: ReportingSelection,
-  enabled = true,
-) {
-  return useQuery({
-    enabled,
-    queryKey: ["reporting-evaluation", selection],
+export function reportingEvaluationOptions(selection: ReportingSelection) {
+  return queryOptions({
+    queryKey: [...REPORTING_EVALUATION_KEY, selection],
     queryFn: async ({ signal }) =>
       unwrap(
         await api.GET("/analytics/evaluate", {
@@ -47,18 +51,25 @@ export function useReportingEvaluation(
   });
 }
 
+export function useReportingEvaluation(
+  selection: ReportingSelection,
+  enabled = true,
+) {
+  return useQuery({ ...reportingEvaluationOptions(selection), enabled });
+}
+
 // The metric catalog this seat may read, under one query key so every surface
 // that reads it shares one answer.
 export const reportingCatalogKey = ["reporting-catalog"];
 
+export const reportingCatalogOptions = queryOptions({
+  queryKey: reportingCatalogKey,
+  queryFn: async ({ signal }) =>
+    unwrap(await api.GET("/analytics/metrics", { signal })),
+});
+
 export function useReportingCatalog(enabled = true) {
-  return useQuery({
-    queryKey: reportingCatalogKey,
-    enabled,
-    queryFn: async () => {
-      return unwrap(await api.GET("/analytics/metrics"));
-    },
-  });
+  return useQuery({ ...reportingCatalogOptions, enabled });
 }
 
 // The catalog's name for each metric, the one the CSV export writes too. It is
@@ -99,15 +110,19 @@ export function useReportDetailQueries(
       );
     },
   });
+  const shownRevision = revision ?? unpublishedDraft(report.data);
   const live = useQuery({
     enabled: !editionId,
-    queryKey: ["reporting-live", reportId, revision ?? "published"],
+    queryKey: ["reporting-live", reportId, shownRevision ?? "published"],
     queryFn: async () => {
       return unwrap(
         await api.GET("/analytics/reports/{id}/evaluation", {
           params: {
             path: { id: reportId },
-            query: revision === undefined ? undefined : { revision },
+            query:
+              shownRevision === undefined
+                ? undefined
+                : { revision: shownRevision },
           },
         }),
       );
@@ -150,5 +165,5 @@ export function useReportDetailQueries(
       );
     },
   });
-  return { report, live, edition, editions, schedules };
+  return { report, live, edition, editions, schedules, shownRevision };
 }

@@ -150,7 +150,7 @@ func TestListConnectorContainersOverHTTP(t *testing.T) {
 		rec := httptest.NewRecorder()
 		req := httptest.NewRequest(http.MethodGet, "/v1/connectors/imap/containers", nil)
 		h.ListConnectorContainers(rec,
-			req.WithContext(e.As(e.Rep1, nil, integration.AccountRepPerms)), "imap")
+			req.WithContext(e.As(e.Rep1, nil, integration.AccountRepPerms)), "imap", crmcontracts.ListConnectorContainersParams{})
 
 		if rec.Code != http.StatusOK {
 			t.Fatalf("status = %d, want 200; body %s", rec.Code, rec.Body)
@@ -168,7 +168,7 @@ func TestListConnectorContainersOverHTTP(t *testing.T) {
 		rec := httptest.NewRecorder()
 		req := httptest.NewRequest(http.MethodGet, "/v1/connectors/imap/containers", nil)
 		h.ListConnectorContainers(rec,
-			req.WithContext(e.As(e.Rep2, nil, integration.AccountRepPerms)), "imap")
+			req.WithContext(e.As(e.Rep2, nil, integration.AccountRepPerms)), "imap", crmcontracts.ListConnectorContainersParams{})
 
 		if rec.Code != http.StatusNotFound {
 			t.Fatalf("status = %d, want 404 rather than a refusal that confirms the connection exists", rec.Code)

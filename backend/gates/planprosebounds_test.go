@@ -24,12 +24,13 @@ package gates
 // somebody adds, and reports PASS while doing it.
 
 import (
-	"os"
 	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // A `length(<column>) <= <n>` clause in any CHECK on a weekly_plan table.
@@ -105,7 +106,7 @@ func planGoBounds(t *testing.T) map[string]int {
 	t.Helper()
 	out := map[string]int{}
 	for _, file := range planModuleFiles(t) {
-		body, err := os.ReadFile(file)
+		body, err := gatekit.ReadFile(file)
 		if err != nil {
 			t.Fatalf("reading %s: %v", file, err)
 		}
@@ -132,7 +133,7 @@ func planSchemaBounds(t *testing.T) map[string]int {
 	sortStrings(files)
 	out := map[string]int{}
 	for _, file := range files {
-		body, err := os.ReadFile(file)
+		body, err := gatekit.ReadFile(file)
 		if err != nil {
 			t.Fatalf("reading %s: %v", file, err)
 		}

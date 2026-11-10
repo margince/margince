@@ -81,7 +81,7 @@ func TestThePurposeAndTheRepsLanguageSitBetweenCorrespondenceAndInstallation(t *
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 			resolver := draftfloor.NewResolver().
-				WithClock(func() time.Time { return time.Date(2026, 10, 5, 9, 0, 0, 0, time.UTC) }).
+				SetClock(func() time.Time { return time.Date(2026, 10, 5, 9, 0, 0, 0, time.UTC) }).
 				WithUserLanguage(func(context.Context) string { return tc.user }).
 				WithBaseLanguage(func(context.Context) string { return tc.base })
 			got := resolver.Resolve(context.Background(), tc.written, convstate.State{Band: convstate.BandNone})
@@ -125,7 +125,7 @@ func TestTheRegisterReadsTheSameTextsAsTheLanguage(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 			resolver := draftfloor.NewResolver().
-				WithClock(func() time.Time { return time.Date(2026, 10, 5, 9, 0, 0, 0, time.UTC) }).
+				SetClock(func() time.Time { return time.Date(2026, 10, 5, 9, 0, 0, 0, time.UTC) }).
 				WithUserLanguage(func(context.Context) string { return "de" })
 			got := resolver.Resolve(context.Background(), tc.written, convstate.State{Band: convstate.BandNone})
 			if got.Language != "de" || got.Register != tc.want {
@@ -219,5 +219,67 @@ func TestTheThreadNamesTheLanguageWhenTheAnsweredMessageDoesNot(t *testing.T) {
 	sie := resolver.Resolve(context.Background(), draftfloor.Written{Body: "ok"}, convstate.State{Band: convstate.BandNone})
 	if du.Language != "de" || du.Register == sie.Register {
 		t.Errorf("a du thread gave language %q register %q, same as a bare message (%q)", du.Language, du.Register, sie.Register)
+	}
+}
+
+func TestCorrespondenceOutranksTheSubjectOfANewDraft(t *testing.T) {
+	resolver := draftfloor.NewResolver()
+	got := resolver.Resolve(context.Background(), draftfloor.Written{
+		Thread:       []string{"Hallo Anna, wir haben das Angebot geprüft und melden uns bei Ihnen."},
+		DraftSubject: "Your proposal and our next steps", Purpose: "Please ask for a meeting",
+	}, convstate.State{Band: convstate.BandFresh})
+	if got.Language != "de" {
+		t.Fatalf("language = %q, want the correspondence's German", got.Language)
+	}
+}
+
+// A language the rep chose outranks every tier the server reads for itself, and
+// a German choice still carries a register.
+func TestAChosenLanguageOutranksEveryDerivedTier(t *testing.T) {
+	t.Parallel()
+	const germanMail = "Guten Tag, wir haben das Angebot geprüft und melden uns wegen der offenen Punkte bei Ihnen."
+	const englishThread = "Thanks for the update, we plan to review the proposal with our team next week and come back to you."
+
+	for name, tc := range map[string]struct {
+		written draftfloor.Written
+		want    string
+	}{
+		"over the addressee's own German": {
+			written: draftfloor.Written{Chosen: "vi", Addressee: []string{germanMail}},
+			want:    "vi",
+		},
+		"over a stored German label": {
+			written: draftfloor.Written{Chosen: "en", Stored: "de", Body: germanMail},
+			want:    "en",
+		},
+		"over an English thread": {
+			written: draftfloor.Written{Chosen: "vi", Body: englishThread, Thread: []string{englishThread}},
+			want:    "vi",
+		},
+		"over the draft being rewritten and the typed purpose": {
+			written: draftfloor.Written{Chosen: "de", Rewrite: englishThread, Purpose: englishThread},
+			want:    "de",
+		},
+		"a code the product does not write is no choice": {
+			written: draftfloor.Written{Chosen: "fr", Body: germanMail},
+			want:    "de",
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			resolver := draftfloor.NewResolver().
+				WithUserLanguage(func(context.Context) string { return "en" }).
+				WithBaseLanguage(func(context.Context) string { return "en" })
+			got := resolver.Resolve(context.Background(), tc.written, convstate.State{Band: convstate.BandNone})
+			if got.Language != tc.want {
+				t.Errorf("language = %q, want %q", got.Language, tc.want)
+			}
+		})
+	}
+
+	german := draftfloor.NewResolver().Resolve(context.Background(),
+		draftfloor.Written{Chosen: "de", Body: englishThread}, convstate.State{Band: convstate.BandNone})
+	if german.Language != "de" || german.Register != "Sie" {
+		t.Errorf("German chosen on an English thread = %q/%q, want de/Sie", german.Language, german.Register)
 	}
 }

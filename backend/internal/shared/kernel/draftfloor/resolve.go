@@ -84,8 +84,8 @@ func (r *Resolver) WithUserLanguage(user UserLanguage) *Resolver {
 	return r
 }
 
-// WithClock replaces the clock, so a test states the date its case is about.
-func (r *Resolver) WithClock(now Clock) *Resolver {
+// SetClock replaces the clock, so a test states the date its case is about.
+func (r *Resolver) SetClock(now Clock) *Resolver {
 	if now != nil {
 		r.now = now
 	}
@@ -136,6 +136,9 @@ func (r *Resolver) Now() time.Time {
 // are text to read; and the subject is the weaker of the two, being a line
 // contacts often leave in the sender's language on a reply they wrote in theirs.
 type Written struct {
+	// Chosen is the language the rep picked for this draft. It outranks every
+	// tier below: they asked for it, and no evidence makes that the wrong answer.
+	Chosen textlang.Lang
 	// Addressee is the text the addressee wrote in their own mail, newest
 	// first, as draftcore.AddresseeEvidence gives it. It outranks Stored: it is
 	// the sender's own text with quotes cut, read with today's quote rule.
@@ -147,7 +150,8 @@ type Written struct {
 	// Body is the correspondence itself, quoted history included.
 	Body string
 	// Subject is the fallback text, read only when the body says nothing.
-	Subject string
+	Subject      string
+	DraftSubject string
 	// Thread is the other messages of the conversation, in the order
 	// draftcore.LanguageEvidence gives them: the recipient's own mail first.
 	// Read after the answered message so a reply whose own text names no
@@ -171,12 +175,12 @@ type Written struct {
 // draft unsigned (DRAFT-AC-E-6) — a drafting screen that errors because it
 // could not work out a greeting is worse than a draft the rep edits.
 //
-// The ladder is the addressee's own mail, then stored, then the correspondence (the answered message, then the
-// rest of the thread). Then the draft being rewritten, then the rep's typed
-// purpose, then the rep's own app language, then the installation's language,
-// then English. A purpose too short to clear
-// the detector's bar falls to the rep's app language, which is why that tier
-// sits above the installation's.
+// The ladder is the rep's chosen language, then the addressee's own mail, then
+// stored. Then the correspondence (the answered message, then the rest of the
+// thread). Then the draft being rewritten, then the rep's typed purpose, then
+// the rep's own app language, then the installation's language, then English.
+// A purpose too short to clear the detector's bar falls to the rep's app
+// language, which is why that tier sits above the installation's.
 func (r *Resolver) Resolve(ctx context.Context, written Written, state convstate.State) Envelope {
 	now := r.Now()
 	name, email := r.actor(ctx)
@@ -201,7 +205,7 @@ func (w Written) evidence() []string {
 	out = append(out, w.Addressee...)
 	out = append(out, w.Body, w.Subject)
 	out = append(out, w.Thread...)
-	return append(out, w.Rewrite, w.Purpose)
+	return append(out, w.Rewrite, w.DraftSubject, w.Purpose)
 }
 
 // register is the first du or Sie the evidence shows.
@@ -221,6 +225,9 @@ func register(written Written) textlang.Register {
 // would reach the prompt as an instruction to write in a language nothing else
 // in the product can render.
 func (r *Resolver) language(ctx context.Context, written Written) textlang.Lang {
+	if textlang.Known(string(written.Chosen)) {
+		return written.Chosen
+	}
 	// The stored label sits under the addressee's own text and above the rest:
 	// it was read at capture, possibly under an older quote rule.
 	if lang := textlang.DetectFirst(written.Addressee...); lang != textlang.Unknown {

@@ -32,6 +32,10 @@ Open **Analytics → Reports** and pick the product under **Product sales**. Sal
 
 On Sales review or Performance, open **Filters** and pick a **Product**, a **Country · company address**, an **Industry** and a **Value basis**. Each choice shows as a chip. The **×** on a chip removes that one filter. Every figure, chart, record list and export follows the same chips.
 
+Checks about deals follow the selected filters too.
+Forecast figures and checks about other records cover the whole selected group.
+The Forecast page says so while these filters are set.
+
 A deal counts for a product when the accepted offer has a line for it, or when someone set the deal's products by hand. **Sales won** for a product is the value of that product's lines on the accepted offers of the deals won in the period. It is converted the way the deal's own amount is. A won deal with no priced link to the product stays in the count and adds nothing to the value. Open pipeline for a product is the whole open deal, because an open deal has no accepted offer to split.
 
 **Country · company address** reads the checked address of the deal's company. **Industry** reads the company's industry. A lead with no company keeps the industry a rep typed.
@@ -49,7 +53,6 @@ With the time span set to this quarter, **This quarter against its target** sits
 - **Gap to target** is the target minus the forecast landing. A manager's call is the whole quarter, so it is not added to what is already won.
 - **Left to win** is the target minus sales won so far, and never below zero.
 - **Coverage, deals closing this quarter** is the open value eligible to close this quarter, over what is left to win. It is not all open pipeline, which also holds deals expected later.
-- **Coverage, qualified deals** counts only the deals the qualified forecast keeps; see [Deals the customer still supports](deals-the-customer-supports.md). While the qualified forecast is off, it says **Not switched on**.
 
 When nothing is left to win, the panel says **Target reached** and shows no coverage. When it cannot compare, it says why:
 
@@ -109,9 +112,9 @@ Open **Analytics → Stage conversion** and choose one pipeline. Each row is a s
 
 **Still open** deals have not left the stage yet. They never count as lost, and the rate leaves them out. **Moved on** is the share of deals that went to a later stage or were won, out of those that left the stage. A stage shows no rate until 5 deals have left it.
 
-Whether a move went forward or back is read from the stage order on the day of the move. If an admin puts the stages in a new order later, old moves keep the way they went. Moves saved before Margince kept the stage order show as **Next move imported or unknown**, and the rate leaves them out too.
+Whether a move went forward or back is read from the stage order on the day of the move. If an admin puts the stages in a new order later, old moves keep the way they went. Moves saved before Margince kept the stage order show as **Next move imported, synced or unknown**, and the rate leaves them out too.
 
-Moves that an import brought in are left out. Such a move shows what happened in the system the deal came from, not how your team sells. So an imported move never starts an entry, and a deal whose next move was imported shows as **Next move imported or unknown**. Margince did not always keep whether an import brought a move in. Moves saved before then still count, and the figure is marked as partial, because some of them may be imports.
+Moves that an import brought in are left out, and so are moves that an extension synced in from another CRM. Such a move shows what happened in the other system, not how your team sells. So an imported or synced move never starts an entry. A deal whose next move was imported or synced shows as **Next move imported, synced or unknown**. Margince did not always keep whether an import brought a move in. Moves saved before then still count, and the figure is marked as partial, because some of them may be imports.
 
 Each deal counts for the team member who owned it when it entered the stage, also after it gets a new owner. The days next to an outcome are the middle time a deal spent in the stage before it. The days next to **Still open** are the middle time in the stage so far.
 
@@ -131,17 +134,23 @@ The saved report keeps its graphs and their layout, scope, pipeline and time spa
 
 To change a shared report without readers seeing it half done, choose **Save as draft** in **Edit report**. Readers keep the published report. Use **Preview draft** to see it, then **Publish draft** or **Discard draft**. While a draft is open, edits go into it. An admin can choose **Preview as** to read the report as a role would, limited to what the admin may read.
 
+A new report that an agent prepares for you is private, and nothing on it is published yet. It opens on its draft, and it can't be scheduled or saved as a snapshot until you choose **Publish draft**.
+
 Under **History and schedules**, **Versions** lists who saved each version and when. **Restore version** publishes an earlier version again as the newest one. Snapshots and schedules keep the version they were made from. Only someone who may edit the report sees drafts and versions.
 
 To read a report, a user needs access to the report and access to the numbers under it. A shared report does not give access to records.
 
 A forecast link can share a live view or a stored capture. The user who gets it still signs in and is checked against the permissions of today.
 
-## What does the panel under the summary say?
+## How do I read the sales review?
 
-**Assessment** sits below the summary and the actions of the sales review. It reads the measured figures and writes a few sentences on what they show. Each is marked as an observation, a reported fact or a guess. It names one next decision on a deal you may open, or says that none is supported.
+**Sales review** opens with sales won, the forecast, its modelled range and pipeline due this quarter. The forecast names its basis. A manager call keeps its date, and the target comparison uses the same scope and period.
 
-**View evidence** lists the figures each sentence rests on and opens their records. **Record decision** turns the next decision into a task with the deal and owner filled in. **Refresh assessment** asks again. Without an AI model, the panel shows the summary written from the figures and says so.
+**Quarter outlook** explains the measured figures in connected paragraphs. **View supporting records** opens the evidence, and **Refresh assessment** asks again. A suggested decision can fill in the deal and owner when you choose **Record decision**.
+
+Amounts in Analytics use grouped whole currency units. The ≈ mark means the value was rounded. An amount below one unit keeps its sign and shows <1. Exports keep the exact amount.
+
+The figures and actions remain available without AI text. Actions for quarter deals without amounts or exchange rates open those deals. **My prospecting** puts work and booked meetings before the text. **Team prospecting** puts team results and work before the text. See [Analytics](analytics.md) for qualification credit and the team readings.
 
 ## Can I describe a report or an initiative in words?
 

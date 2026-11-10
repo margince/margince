@@ -112,12 +112,13 @@ func TestTheCLIJudgeRunsIsolatedFromTheOperatorsSetup(t *testing.T) {
 	t.Setenv("ANTHROPIC_API_KEY", "a-second-credential")
 	t.Setenv("ANTHROPIC_BASE_URL", "https://gateway.test")
 	t.Setenv("AICERT_OPERATOR_ONLY", "leaks")
-	proxies := map[string]string{
+	passedThrough := map[string]string{
 		"HTTPS_PROXY": "http://proxy.test:3128", "https_proxy": "http://proxy.test:3129",
 		"HTTP_PROXY": "http://proxy.test:3130", "http_proxy": "http://proxy.test:3131",
 		"NO_PROXY": "localhost", "no_proxy": "127.0.0.1",
+		"MAX_THINKING_TOKENS": "0",
 	}
-	for name, value := range proxies {
+	for name, value := range passedThrough {
 		t.Setenv(name, value)
 	}
 	record := stubClaude(t, printing(cliSuccess, "0"))
@@ -125,9 +126,9 @@ func TestTheCLIJudgeRunsIsolatedFromTheOperatorsSetup(t *testing.T) {
 		t.Fatal(err)
 	}
 	env, pwd := recorded(t, record, "env"), recorded(t, record, "pwd")
-	for name, value := range proxies {
+	for name, value := range passedThrough {
 		if !strings.Contains(env, name+"="+value+"\n") {
-			t.Errorf("env = %q: %s did not reach the CLI, so a proxied host could not dial out", env, name)
+			t.Errorf("env = %q: %s did not reach the CLI", env, name)
 		}
 	}
 	if !strings.Contains(pwd, "aicert-claude-judge-") || !strings.Contains(env, "HOME=") ||

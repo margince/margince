@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useQuery } from "@tanstack/react-query";
 import { api } from "../../api/client";
 import { Badge, EmptyState } from "../../design-system/atoms";
 import { DataTable } from "../../design-system/datatable";
 import { Checkbox, Field } from "../../design-system/field";
 import { Select } from "../../design-system/select";
-import { SetPicker } from "../../design-system/setpicker";
+import { SetPicker, type SetPickerOption } from "../../design-system/setpicker";
 import { countryOptions } from "../../format/assignedcountries";
 import { formatNumber } from "../../format/format";
 import { INDUSTRY_CODES, industryLabelKey } from "../../format/industry";
@@ -21,6 +20,50 @@ import {
   type Rule,
 } from "./reporting.initiativegoal";
 
+/** How many candidates one typed name brings back. */
+const CANDIDATE_LIMIT = 20;
+
+async function searchOpenDeals(q: string): Promise<SetPickerOption[]> {
+  const deals = unwrap(
+    await api.GET("/deals", {
+      params: { query: { q, status: "open", limit: CANDIDATE_LIMIT } },
+    }),
+  );
+  return deals.data.map((deal) => ({ value: deal.id, label: deal.name }));
+}
+
+async function searchLeads(q: string): Promise<SetPickerOption[]> {
+  const leads = unwrap(
+    await api.GET("/leads", {
+      params: { query: { q, limit: CANDIDATE_LIMIT } },
+    }),
+  );
+  return leads.data.map((lead) => ({
+    value: lead.id,
+    label: lead.full_name || lead.company_name || lead.id,
+  }));
+}
+
+/** A pick and the name it was ticked under, kept above this step's mount. */
+export type PickName = MemberRef & Readonly<{ label: string }>;
+
+/** The picks, named as the membership read or the search named them. */
+function pickedOptions(
+  members: Members | undefined,
+  names: readonly PickName[],
+  type: "lead" | "deal",
+): SetPickerOption[] {
+  const saved = (members?.data ?? []).filter(
+    (member) => member.reason === "picked" && member.record_type === type,
+  );
+  const ticked = names.filter((name) => name.record_type === type);
+  const named = [...ticked, ...saved].map((pick) => ({
+    value: pick.record_id,
+    label: pick.label,
+  }));
+  return [...new Map(named.map((pick) => [pick.value, pick])).values()];
+}
+
 export function MemberFields({
   rule,
   onRule,
@@ -28,6 +71,8 @@ export function MemberFields({
   pending,
   picked,
   onPick,
+  pickNames,
+  onPickName,
   excludedSet,
   onToggle,
   includeFuture,
@@ -39,6 +84,8 @@ export function MemberFields({
   pending: boolean;
   picked: MemberRef[];
   onPick: (picked: MemberRef[]) => void;
+  pickNames: readonly PickName[];
+  onPickName: (name: PickName) => void;
   excludedSet: ReadonlySet<string>;
   onToggle: (member: Members["data"][number], included: boolean) => void;
   includeFuture: boolean;
@@ -47,28 +94,6 @@ export function MemberFields({
   const t = useT();
   const { locale } = useLocale();
   const products = useProductOptions();
-  const candidates = useQuery({
-    queryKey: ["initiative-candidates"],
-    queryFn: async () => {
-      const [deals, leads] = await Promise.all([
-        api.GET("/deals", {
-          params: { query: { limit: 200, status: "open" } },
-        }),
-        api.GET("/leads", { params: { query: { limit: 200 } } }),
-      ]);
-      return {
-        deals: unwrap(deals).data.map((deal) => ({
-          value: deal.id,
-          label: deal.name,
-        })),
-        leads: unwrap(leads).data.map((lead) => ({
-          value: lead.id,
-          label: lead.full_name || lead.company_name || lead.id,
-        })),
-      };
-    },
-    staleTime: 60_000,
-  });
   const pickedOf = (type: "lead" | "deal") =>
     picked
       .filter((ref) => ref.record_type === type)
@@ -86,6 +111,7 @@ export function MemberFields({
     searchLabel: t("reporting.searchRecords"),
     noMatch: t("reporting.noMatchingRecords"),
     doneLabel: t("reporting.pickDone"),
+    empty: t("reporting.typeToFindRecord"),
   };
   return (
     <div className="form-stack">
@@ -146,16 +172,32 @@ export function MemberFields({
       />
       <SetPicker
         legend={t("reporting.pickDeals")}
-        options={candidates.data?.deals ?? []}
+        options={pickedOptions(members, pickNames, "deal")}
+        search={searchOpenDeals}
         values={pickedOf("deal")}
         onChange={(ids) => setPickedOf("deal", ids)}
+        onTick={(option) =>
+          onPickName({
+            record_type: "deal",
+            record_id: option.value,
+            label: option.label,
+          })
+        }
         {...pickerWords}
       />
       <SetPicker
         legend={t("reporting.pickLeads")}
-        options={candidates.data?.leads ?? []}
+        options={pickedOptions(members, pickNames, "lead")}
+        search={searchLeads}
         values={pickedOf("lead")}
         onChange={(ids) => setPickedOf("lead", ids)}
+        onTick={(option) =>
+          onPickName({
+            record_type: "lead",
+            record_id: option.value,
+            label: option.label,
+          })
+        }
         {...pickerWords}
       />
       <p className="t-caption">{t("reporting.pickExplains")}</p>

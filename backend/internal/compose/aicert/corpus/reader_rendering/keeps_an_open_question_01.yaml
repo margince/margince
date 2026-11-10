@@ -1,0 +1,22 @@
+name: reader_rendering_keeps_an_open_question
+task: reader_rendering
+site: activity_text
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5-5
+fixture:
+  kind: "email"
+  subject: "Rückfrage zur Integration"
+  body: "Hallo zusammen,\n\nkönnen Sie uns bis Mittwoch sagen, ob die Schnittstelle auch SAP S/4HANA unterstützt? Ohne diese Information können wir intern nicht weitermachen.\n\nDanke und Gruß\nPetra Sommer"
+  source: "de"
+  target: "en"
+expect:
+  outcome: accepted
+  answer:
+    already_in_target: false
+    keeps: ["SAP S/4HANA", "Petra Sommer"]
+    omits: []
+  bands:
+    certified_min: 80
+    degraded_min: 60
+    floor: 50
+  rubric: "The open question stays a question addressed to the reader's side, with its deadline (Wednesday) and the reason it matters. A rendering that answers it or turns it into a statement fails."

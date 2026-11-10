@@ -18,9 +18,9 @@ import { QueryGate } from "../../design-system/querystates";
 import { SettingList, SettingRow } from "../../design-system/settingrow";
 import { useToast } from "../../design-system/toast";
 import { formatDate } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { labelFor } from "../../lib/labelfor";
 import {
   problemCodeOf,
   problemMessageOf,
@@ -32,6 +32,7 @@ import {
   useRowHandoff,
   useUndoableRemoval,
 } from "../../lib/undoableremoval";
+import { useViewerZone } from "../../lib/viewerzone";
 import { captureValueMessage } from "./capturevalue";
 import "./capture-owner-identities.css";
 
@@ -248,6 +249,7 @@ function IdentityRow({
   landing: () => HTMLElement | null;
   onRemove: (identity: OwnerIdentity) => void;
 }>) {
+  const readerZone = useViewerZone();
   const t = useT();
   const { locale } = useLocale();
   const verbs = useRowHandoff(landing);
@@ -257,8 +259,8 @@ function IdentityRow({
       label={identity.value}
       description={
         <span className="owner-identity-caption">
-          <span>{t(kindLabel[identity.kind])}</span>
-          <span>{formatDate(identity.created_at, locale, viewerZone())}</span>
+          <span>{t(labelFor(kindLabel, identity.kind))}</span>
+          <span>{formatDate(identity.created_at, locale, readerZone)}</span>
           {learned !== null && <span>{t(learned)}</span>}
         </span>
       }

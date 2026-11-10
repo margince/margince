@@ -26,16 +26,15 @@ import {
   translatePlural,
   useT,
 } from "../../../i18n";
-import type { MessageKey } from "../../../i18n/en";
 import { closeDayOf } from "../../../lib/closeday";
 import { writtenByLabel } from "../../../lib/leadorigins";
 import {
   lostReasonWords,
   useLossReasons,
 } from "../../../lib/lossreasons.queries";
-import { useRecordZone } from "../../../lib/recordzone";
 import { useViewerId } from "../../../lib/session";
 import { useInstallationSettings } from "../../../lib/uploadlimit";
+import { useViewerZone } from "../../../lib/viewerzone";
 import {
   LostReasonFact,
   type WonWithoutContract,
@@ -57,7 +56,6 @@ export type DealIdentity = Partial<
     | "expected_close_date"
     | "closed_at"
     | "close_date_provisional"
-    | "forecast_category"
     | "wait_until"
     | "fx_rate_to_base"
     | "fx_rate_date"
@@ -128,7 +126,7 @@ export function DealRecordRows({
   locale: Locale;
 }>): ReactNode {
   const t = useT();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const viewerId = useViewerId();
   // The installation's own reporting currency: an unnamed base is not a euro
   // base.
@@ -255,9 +253,6 @@ export function closeWords(
   if (deal.close_date_provisional) {
     parts.push(t("deal.strip.close.provisional"));
   }
-  if (deal.forecast_category) {
-    parts.push(forecastLabel(deal.forecast_category, t));
-  }
   if (waitHolds(deal.wait_until, zone, new Date())) {
     parts.push(
       t("deal.strip.close.waiting", {
@@ -273,26 +268,6 @@ export function closeWords(
       Boolean(deal.close_date_provisional) ||
       (daysLeft !== undefined && daysLeft < 0),
   };
-}
-
-// The forecast words, in the reader's language. An unmapped value renders as
-// itself: the category is a wire enum, and a newer server naming a fifth is
-// still telling this reader something.
-const FORECAST_LABELS: Record<string, MessageKey> = {
-  commit: "deal.forecast.commit",
-  best_case: "deal.forecast.bestCase",
-  pipeline: "deal.forecast.pipeline",
-  omitted: "deal.forecast.omitted",
-};
-
-export function forecastLabel(
-  value: string,
-  t: (key: MessageKey) => string,
-): string {
-  const key = Object.hasOwn(FORECAST_LABELS, value)
-    ? FORECAST_LABELS[value]
-    : undefined;
-  return key === undefined ? value.replaceAll("_", " ") : t(key);
 }
 
 // The amount, converted into the installation's base currency at the frozen
@@ -317,7 +292,7 @@ export function FxLine({
   locale: Locale;
 }>) {
   const t = useT();
-  const recordZone = useRecordZone();
+  const readerZone = useViewerZone();
   // A deal carrying a rate but no amount converts to nothing, not to zero.
   const baseMinor =
     amountMinor == null ? null : Math.round(amountMinor * Number(fxRateToBase));
@@ -326,7 +301,7 @@ export function FxLine({
       {t("deal.fxBase", {
         value: formatMoneyOrAbsent(baseMinor, baseCurrency, locale),
         rate: fxRateToBase,
-        date: fxRateDate ? formatDate(fxRateDate, locale, recordZone) : "—",
+        date: fxRateDate ? formatDate(fxRateDate, locale, readerZone) : "—",
       })}
     </p>
   );

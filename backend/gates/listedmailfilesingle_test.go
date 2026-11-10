@@ -11,11 +11,13 @@ package gates
 // type out of a room.
 
 import (
-	"os"
+	"io/fs"
 	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // listedFileTests are each rule's type test, in any case and however the SQL
@@ -41,12 +43,12 @@ func TestTheListedMailFileRulesAreSpelledOnce(t *testing.T) {
 func spellingsOf(t *testing.T, test *regexp.Regexp) []string {
 	t.Helper()
 	var spellings []string
-	err := filepath.Walk("internal", func(path string, info os.FileInfo, err error) error {
+	err := gatekit.WalkDir("internal", func(path string, info fs.DirEntry, err error) error {
 		if err != nil || info.IsDir() || strings.HasSuffix(path, "_test.go") ||
 			!strings.HasSuffix(path, ".go") && !strings.HasSuffix(path, ".sql") {
 			return err
 		}
-		body, err := os.ReadFile(path)
+		body, err := gatekit.ReadFile(path)
 		if err != nil {
 			return err
 		}

@@ -45,7 +45,6 @@ package gates
 import (
 	"go/ast"
 	"go/token"
-	"os"
 	"strconv"
 	"strings"
 	"testing"
@@ -183,7 +182,7 @@ func TestTheOneTrustedPathWrapperStillRedacts(t *testing.T) {
 	t.Parallel()
 
 	const wrapper = trustedPathWrapperFile
-	body, err := os.ReadFile(wrapper)
+	body, err := gatekit.ReadFile(wrapper)
 	if err != nil {
 		t.Fatalf("reading the trusted path wrapper: %v", err)
 	}
@@ -219,6 +218,7 @@ func TestEveryPublicRoutePrefixIsJudgedForCredentials(t *testing.T) {
 		"/v1/public/record-previews/": "the identifier names a record with deliberately public card fields; it grants no access to the protected record, files or activity",
 		"/v1/public/rooms/":           "the segment is an operation name (peek, exchange, link-request); a deal room presents a Bearer, never a path token",
 		"/v1/public/forms/":           "the segment is a website form's key, printed in the page's own HTML; a signed form proves itself with a header signature, never the key",
+		"/v1/public/instrument/":      "the segment is the unit's name, which every composed build publishes",
 	}
 
 	redacted := make(map[string]bool)

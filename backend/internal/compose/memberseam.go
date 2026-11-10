@@ -7,11 +7,31 @@ import (
 	"context"
 	"net/http"
 
+	"github.com/jackc/pgx/v5"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
+
+// mailCaptureSeam is capture's answer to identity's role changes: the one
+// decider connect and sync ask, and the connections a role change reaches.
+type mailCaptureSeam struct{}
+
+func (mailCaptureSeam) Refuses(perms principal.Permissions, seat principal.SeatType) bool {
+	return capture.CaptureRefusal(perms, seat) != nil
+}
+
+func (mailCaptureSeam) LiveMailboxesTx(ctx context.Context, tx pgx.Tx, userIDs []ids.UUID) (map[ids.UUID]int, error) {
+	return capture.LiveConnectionsTx(ctx, tx, userIDs)
+}
+
+func (mailCaptureSeam) RecheckSeatsTx(ctx context.Context, tx pgx.Tx, userIDs []ids.UUID) error {
+	return capture.RecheckMembersTx(ctx, tx, userIDs)
+}
 
 type memberManager struct{ service *identity.Service }
 

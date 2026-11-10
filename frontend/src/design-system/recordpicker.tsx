@@ -7,7 +7,7 @@ import { Button, SearchField } from "./atoms";
 import { ErrorLine } from "./errorline";
 
 // The shared debounced search→candidate-list→pick pattern. MergeAction
-// (components/merge.tsx) draws it; AddRelationshipAction (features/records/relationships.tsx)
+// (components/merge.tsx) draws it; AddRelationshipAction (components/relationships.tsx)
 // still holds its own copy.
 //
 // It is now PUBLISHED to the extension tier (surface/design-system.ts), which
@@ -52,13 +52,14 @@ export type CandidateSearch<T> = Readonly<{
 
 /**
  * The debounced search behind `RecordPicker` and `ListPopover`. A stale answer
- * is ignored, not aborted; an empty term or no `searchTargets` asks nothing.
+ * is ignored, not aborted. Empty searches run only when the caller opts in.
  * An answer offers its rows only while the typed term is still the one it
  * answered, so no pick can land on a row the visible query never asked for.
  */
 export function useCandidateSearch<T>(
   searchTargets: ((q: string) => Promise<readonly T[]>) | undefined,
   term: string,
+  searchEmpty = false,
 ): CandidateSearch<T> {
   // The failure is held, not its sentence, so it is translated where it renders
   // and follows the locale. Wrapped, because a promise may reject with `null`.
@@ -68,18 +69,25 @@ export function useCandidateSearch<T>(
     failure: Readonly<{ cause: unknown }> | null;
   }> | null>(null);
 
-  // A new search space drops the old answer in render, not an effect, so no
-  // frame paints a row of the wrong kind. The functional forms, because the
-  // value is itself a function and the plain spellings would call it.
-  const [searchSpace, setSearchSpace] = useState(() => searchTargets);
-  if (searchSpace !== searchTargets) {
-    setSearchSpace(() => searchTargets);
+  const query = term.trim();
+  const emptySearch = searchEmpty && query === "";
+
+  // New targets or a changed empty-search mode must never show the old answer.
+  const [searchSpace, setSearchSpace] = useState(() => ({
+    searchTargets,
+    emptySearch,
+  }));
+  if (
+    searchSpace.searchTargets !== searchTargets ||
+    searchSpace.emptySearch !== emptySearch
+  ) {
+    setSearchSpace({ searchTargets, emptySearch });
     setAnswer(null);
   }
 
-  const query = term.trim();
+  const asking = searchTargets !== undefined && (query !== "" || searchEmpty);
   useEffect(() => {
-    if (!query || !searchTargets) {
+    if (!asking || !searchTargets) {
       return;
     }
     let cancelled = false;
@@ -99,9 +107,7 @@ export function useCandidateSearch<T>(
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [query, searchTargets]);
-
-  const asking = query !== "" && searchTargets !== undefined;
+  }, [query, searchTargets, asking]);
   const current = asking && answer?.query === query ? answer : null;
   return {
     candidates: current?.candidates ?? [],
@@ -118,6 +124,8 @@ export function RecordPicker({
   selected,
   disabled = false,
   initialTerm = "",
+  searchOnFocus = false,
+  onSearchChange,
   unavailableReason,
   noMatch,
   id,
@@ -137,6 +145,8 @@ export function RecordPicker({
   // The search the picker opens with, when the caller already knows the
   // likely name. Read once: the user's typing owns the term after that.
   initialTerm?: string;
+  searchOnFocus?: boolean;
+  onSearchChange?: (term: string) => void;
   // A sentence for a row that is listed but cannot be picked. A function read
   // at render, not part of the search, so a new translator never restarts it.
   unavailableReason?: (candidate: RecordPickerCandidate) => string | undefined;
@@ -147,11 +157,16 @@ export function RecordPicker({
   RecordPickerName) {
   const t = useT();
   const [term, setTerm] = useState(initialTerm);
+  const [showDefaults, setShowDefaults] = useState(false);
   const {
     candidates,
     answered,
     failure: searchFailure,
-  } = useCandidateSearch(searchTargets, term);
+  } = useCandidateSearch(
+    searchTargets,
+    term,
+    searchOnFocus && showDefaults && !disabled,
+  );
 
   return (
     // A named wrapper, because the search field inside it has to FILL it: the
@@ -168,8 +183,12 @@ export function RecordPicker({
         placeholder={label}
         aria-label={label}
         value={term}
+        onFocus={() => setShowDefaults(true)}
         disabled={disabled}
-        onChange={(event) => setTerm(event.target.value)}
+        onChange={(event) => {
+          setTerm(event.target.value);
+          onSearchChange?.(event.target.value);
+        }}
         // Inside a form, Enter here would submit the record picked BEFORE this
         // search; a pick is a click on a candidate, never this keystroke. An
         // IME's Enter commits its candidate.
@@ -213,6 +232,7 @@ export function RecordPicker({
                   disabled={disabled || !!unavailable}
                   onClick={() => {
                     onPick(candidate);
+                    setShowDefaults(false);
                     // Collapse the list and empty the field so the resolved
                     // selection reads cleanly instead of sitting under a stale
                     // result set.

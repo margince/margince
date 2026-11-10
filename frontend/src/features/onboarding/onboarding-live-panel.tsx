@@ -7,6 +7,7 @@ import type { components } from "../../api/schema";
 import { formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { labelFor } from "../../lib/labelfor";
 import { namedSiteReadKind, stopIsConfigured } from "../../lib/sitereadkind";
 import { skipReasonText } from "./onboarding";
 import "./onboarding-live-panel.css";
@@ -134,7 +135,7 @@ function coverageRows(
           ? "ob.live.coverageCapped"
           : "ob.live.coverageStopped",
       ),
-      reason: t(STOPPED_REASON_COPY[stoppedReason]),
+      reason: t(labelFor(STOPPED_REASON_COPY, stoppedReason)),
     });
   }
   for (const warning of warnings) {

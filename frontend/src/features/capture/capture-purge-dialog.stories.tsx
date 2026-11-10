@@ -46,7 +46,7 @@ function story() {
 }
 
 const meta: Meta<typeof PurgeDialog> = {
-  title: "Settings/You/Capture activity/Delete captured mail",
+  title: "Settings/You/Connections/Delete captured mail",
   component: PurgeDialog,
 };
 export default meta;

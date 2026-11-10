@@ -79,9 +79,9 @@ measures the real default.
 
 - **Read [`src/design-system/README.md`](src/design-system/README.md) before you build a control.**
   It is the catalog. Every control a user can click or type into comes from that folder. An HTML
-  `<select>` or a dropdown built by hand is a bug, and `src/design-system/native-controls.test.ts`
-  refuses one. That test is a vitest gate over the TypeScript AST, and `make native-controls` runs
-  it on its own. `pnpm storybook` shows every control.
+  `<select>` or a dropdown built by hand is a bug, and `census/rules/native-controls.census.ts`
+  refuses one. That rule is a census over the TypeScript AST in `make fe-census`, and
+  `make native-controls` runs it on its own. `pnpm storybook` shows every control.
 - `src/design-system/`: tokens, building blocks and their stories. Read
   [its README](src/design-system/README.md) before you build a control. It never imports `app/`,
   `components/` or `features/`.

@@ -10,6 +10,7 @@ import {
 } from "../../components/taskactions";
 import { en } from "../../i18n/en";
 import { taskWriteKeys } from "../../lib/activitykeys";
+import { SourceHost } from "../../testing/sourcehost";
 import {
   installFetchStub,
   jsonResponse,
@@ -154,6 +155,7 @@ function DetailModal({
         links: [],
         thread: { members: [], next_cursor: null },
         can_reply: false,
+        can_forward: true,
         can_relink: false,
         access: {
           content_state: "available",
@@ -189,6 +191,9 @@ function DetailModal({
         is_done: false,
         assignee_id: "u-1",
         links: linksOf(filed, contactTask),
+        email_target: contactTask
+          ? { entity_type: "contact", entity_id: "c-1" }
+          : undefined,
       }),
     "GET /activities/call-1": () =>
       jsonResponse({
@@ -217,7 +222,9 @@ function DetailModal({
   });
   return (
     <StoryProviders>
-      <DetailModalBody />
+      <SourceHost>
+        <DetailModalBody />
+      </SourceHost>
     </StoryProviders>
   );
 }
@@ -250,7 +257,7 @@ export const DetailFromCall: Story = {
   },
 };
 
-// The same contact on a task typed by hand: no Call, since nothing says it is one.
+// A task typed by hand still opens the contact the server names for it.
 export const DetailTypedByHand: Story = {
   render: () => <DetailModal contactTask="typed" />,
   play: async () => {

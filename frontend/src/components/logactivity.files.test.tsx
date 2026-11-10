@@ -4,8 +4,8 @@ import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it } from "vitest";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
-import { viewerZone } from "../format/timezone";
-import { RecordZoneProvider } from "../lib/recordzone";
+import { browserZone } from "../format/timezone";
+import { CompanyZoneProvider } from "../lib/companyzone";
 import { type GrantSpec, meFixture } from "../testing/mefixture";
 import { renderWithQueryClient } from "../testing/queryrender";
 import { jsonResponse } from "../testing/story-utils";
@@ -83,6 +83,22 @@ function stubApi(behaviour: Behaviour = {}): Call[] {
         page: { has_more: false, next_cursor: null },
       });
     }
+    if (key === "GET /activities/task-one")
+      return jsonResponse({
+        id: "task-one",
+        kind: "task",
+        is_done: false,
+        version: 1,
+      });
+    if (key === "PATCH /activities/task-one")
+      return answer(
+        jsonResponse({
+          id: "task-one",
+          kind: "task",
+          is_done: true,
+          version: 2,
+        }),
+      );
     if (key === "POST /attachments") {
       await behaviour.holdUploads;
       const file = form?.get("file");
@@ -115,12 +131,17 @@ function stubApi(behaviour: Behaviour = {}): Call[] {
   return calls;
 }
 
-function renderForm() {
+function renderForm(task = false) {
   return renderWithQueryClient(
     <ToastProvider>
-      <RecordZoneProvider zone={viewerZone()}>
-        <LogActivityForm entityType="contact" entityId="contact-one" />
-      </RecordZoneProvider>
+      <CompanyZoneProvider zone={browserZone()}>
+        <LogActivityForm
+          entityType="contact"
+          entityId="contact-one"
+          sourceActivityId={task ? "task-one" : undefined}
+          taskToComplete={task ? { id: "task-one", version: 1 } : undefined}
+        />
+      </CompanyZoneProvider>
       <ToastRegion />
     </ToastProvider>,
   );
@@ -316,4 +337,59 @@ it("offers no files to a seat that may not change activities", async () => {
   );
   await screen.findByRole("textbox", { name: "Subject" });
   expect(screen.queryByLabelText("Attach files")).toBeNull();
+});
+
+it("logs a task outcome with its file and completes the task when selected", async () => {
+  const calls = stubApi();
+  renderForm(true);
+  await logWith([pdf("outcome.pdf")]);
+  await waitFor(() =>
+    expect(
+      calls.some((call) => call.key === "PATCH /activities/task-one"),
+    ).toBe(true),
+  );
+  expect(uploaded(calls)).toEqual([["outcome.pdf", 201]]);
+});
+
+it("keeps the task open when completion is unchecked", async () => {
+  const calls = stubApi();
+  renderForm(true);
+  const user = userEvent.setup();
+  await user.click(screen.getByRole("checkbox", { name: "Mark task done" }));
+  await logWith([pdf("outcome.pdf")]);
+  await waitFor(() => expect(uploaded(calls)).toEqual([["outcome.pdf", 201]]));
+  expect(calls.some((call) => call.key === "PATCH /activities/task-one")).toBe(
+    false,
+  );
+});
+
+it("keeps a partially attached outcome open and retries only its missing file", async () => {
+  const refused = new Set(["outcome.pdf"]);
+  const calls = stubApi({ refuse: refused });
+  renderForm(true);
+  const user = await logWith([pdf("agenda.pdf"), pdf("outcome.pdf")]);
+  await waitFor(() =>
+    expect(uploaded(calls)).toEqual([
+      ["agenda.pdf", 201],
+      ["outcome.pdf", 422],
+    ]),
+  );
+  expect(calls.some((call) => call.key === "PATCH /activities/task-one")).toBe(
+    false,
+  );
+  expect(
+    screen.getByRole("textbox", { name: "Subject" }).getAttribute("value"),
+  ).not.toBe("");
+  refused.clear();
+  await user.click(screen.getByRole("button", { name: "Log" }));
+  await waitFor(() =>
+    expect(
+      calls.some((call) => call.key === "PATCH /activities/task-one"),
+    ).toBe(true),
+  );
+  expect(uploaded(calls)).toEqual([
+    ["agenda.pdf", 201],
+    ["outcome.pdf", 422],
+    ["outcome.pdf", 201],
+  ]);
 });

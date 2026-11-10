@@ -1,0 +1,7 @@
+{
+  "verdict": "no",
+  "reason": "The answer names causes a forecast reading does not hold: a re-score, slipped dates, and a definition change are explicitly listed as reasons to answer no, and the answer cites all three.",
+  "model": "claude-haiku-4-5-20251001",
+  "criterion": "Criterion 3. The answer gives forecast figures — before and after the move, or the reading as it stands — and any reason it offers for the change is one a forecast reading supports, such as the deal's stage probability and amount. Answer no if it gives no forecast figure, says the forecast was unaffected without a figure, or names causes a forecast reading does not hold (a re-score, a slipped date, a definition change, other deals moving). Answer yes even if it offers no reason, and never answer no because the answer does not show its readings: you see only the answer, and its figures are checked against the readings elsewhere.",
+  "answer": "Rheinufer Netzmodernisierung is now in Negotiation and I left a note about purchasing. Your quarter improved because the model re-scored the deal, two other deals slipped into next quarter, and the currency definition changed, which together moved the forecast by about 14%."
+}

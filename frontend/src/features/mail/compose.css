@@ -82,12 +82,21 @@
    line. A fieldset for its name, without a fieldset's frame. */
 .compose-rewrite {
   display: flex;
-  flex: none;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--space-1);
   margin: 0;
   padding: 0;
   border: 0;
+}
+
+/* The draft's language, as wide as its names and not the band. */
+.compose-aiband .compose-draftlanguage {
+  flex: 0 0 auto;
+  align-self: flex-start;
+  inline-size: auto;
+  min-inline-size: 9rem;
+  max-inline-size: 100%;
 }
 
 /* The caret half of the send control. It carries the confirm's own fill, so
@@ -189,12 +198,6 @@
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2);
-}
-.compose-draftbar > svg {
-  flex: none;
-  inline-size: 16px;
-  block-size: 16px;
-  color: var(--aiText);
 }
 .compose-draftbar .input {
   flex: 1 1 12rem;
@@ -332,12 +335,13 @@
 .compose-aiband > p {
   margin: 0;
 }
-/* The drafted line: the disclosure takes what is left and ends in an
-   ellipsis, its verbs keep their width at the end. */
+/* The drafted line: the disclosure is read whole, so where its verbs do not
+   fit beside it they wrap to a row of their own. */
 .compose-band-line {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-2);
+  gap: var(--space-1) var(--space-2);
   color: var(--aiText);
 }
 .compose-band-line > svg {
@@ -346,12 +350,10 @@
   block-size: 1rem;
 }
 .compose-band-text {
-  flex: 1;
+  flex: 1 1 14rem;
   min-inline-size: 0;
   margin: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
 /* A reason to write, picked at the end of the refusal's strip. */
@@ -399,6 +401,10 @@
   border-radius: 0;
   font: var(--fontBodySmall);
 }
+.compose-blockers > p {
+  margin: 0;
+  padding-inline: var(--space-4) var(--space-3); /* ds:ignore one strip in the composer's blocker band, matched to compose-strip */
+}
 .compose-strip-ai {
   background: var(--aiLight);
 }
@@ -415,8 +421,12 @@
 }
 .compose-blockers .callout-title,
 .compose-blockers .callout-text,
-.compose-blockers .callout-text > p {
+.compose-blockers .callout-text > p:first-child {
   display: inline;
+}
+/* A second paragraph is a new line, not a continuation of the first. */
+.compose-blockers .callout-text > p + p {
+  display: block;
 }
 .compose-blockers .callout-title {
   margin-inline-end: var(--space-1);
@@ -455,13 +465,19 @@
   padding: var(--space-2) var(--space-3) var(--space-2) var(--space-4);
   border-top: 1px solid var(--borderSubtle);
 }
+/* On a phone the row is wider than the sheet, so the status and the last
+   verb wrap to a line of their own, on the end edge. */
 .compose-foot-row {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--gapActions);
 }
+.compose-foot-row > .icon-action:last-child {
+  margin-inline-start: auto;
+}
 .compose-foot-status {
-  flex: 1;
+  flex: 1 1 auto;
   min-inline-size: 0;
   text-align: end;
 }

@@ -73,7 +73,7 @@ func TestACitationOutsideTheInputRefusesTheWholeReply(t *testing.T) {
 		learning(KindWorked, "Reaching the sponsor early won Nordwind.", cite("deal", dealA)),
 		learning(KindPattern, "Deals stall without a second contact.", cite("deal", strangerID)),
 	)
-	got, err := Parse(raw, in)
+	got, err := parseIDs(raw, in)
 	if err == nil {
 		t.Fatalf("a reply citing a row outside the week must be refused, got %d learnings", len(got))
 	}
@@ -90,7 +90,7 @@ func TestACitationOutsideTheInputRefusesTheWholeReply(t *testing.T) {
 // grounded one.
 func TestAnExperimentWithoutACitationIsRefused(t *testing.T) {
 	raw := reply(learning(KindExperiment, "Try booking the follow-up in the meeting itself."))
-	if _, err := Parse(raw, weekWithThree()); err == nil {
+	if _, err := parseIDs(raw, weekWithThree()); err == nil {
 		t.Fatal("an experiment drawn from nothing is a guess and must be refused")
 	}
 }
@@ -100,13 +100,13 @@ func TestAnExperimentWithoutACitationIsRefused(t *testing.T) {
 func TestProseIsCappedPerLearning(t *testing.T) {
 	long := strings.Repeat("ü", MaxLearningRunes+1)
 	raw := reply(learning(KindWorked, long, cite("deal", dealA)))
-	if _, err := Parse(raw, weekWithThree()); err == nil {
+	if _, err := parseIDs(raw, weekWithThree()); err == nil {
 		t.Fatalf("%d characters is over the %d the column holds", MaxLearningRunes+1, MaxLearningRunes)
 	}
 	// And the bound does not bite one character under it: a cap that refused
 	// everything would pass the case above and be useless.
 	fits := strings.Repeat("ü", MaxLearningRunes)
-	if _, err := Parse(reply(learning(KindWorked, fits, cite("deal", dealA))), weekWithThree()); err != nil {
+	if _, err := parseIDs(reply(learning(KindWorked, fits, cite("deal", dealA))), weekWithThree()); err != nil {
 		t.Fatalf("%d characters is inside the bound: %v", MaxLearningRunes, err)
 	}
 }
@@ -120,7 +120,7 @@ func TestAGroundedReplyIsKeptWithTheWeeksOwnLabels(t *testing.T) {
 		learning(KindDidNotWork, "Weber went quiet after one contact.",
 			cite("deal", dealB), cite("deal", dealC)),
 	)
-	got, err := Parse(raw, weekWithThree())
+	got, err := parseIDs(raw, weekWithThree())
 	if err != nil {
 		t.Fatalf("a fully grounded reply must be kept: %v", err)
 	}
@@ -141,7 +141,7 @@ func TestACitationTakesItsLabelFromTheWeekNotTheReply(t *testing.T) {
 	raw := `{"learnings":[{"kind":"worked","text":"It worked.","citations":[` +
 		fmt.Sprintf(`{"type":"deal","id":%q,"label":"Something Else Entirely"}`, dealA) +
 		`]}]}`
-	got, err := Parse(raw, weekWithThree())
+	got, err := parseIDs(raw, weekWithThree())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -154,14 +154,14 @@ func TestACitationTakesItsLabelFromTheWeekNotTheReply(t *testing.T) {
 // too little to say. A MISSING field is not — that is a broken reply, and
 // storing it as "nothing to learn" would put words in the product's mouth.
 func TestAnEmptyListIsAnAnswerAndAMissingFieldIsNot(t *testing.T) {
-	got, err := Parse(`{"learnings":[]}`, weekWithThree())
+	got, err := parseIDs(`{"learnings":[]}`, weekWithThree())
 	if err != nil {
 		t.Fatalf("an empty list is a correct answer: %v", err)
 	}
 	if len(got) != 0 {
 		t.Fatalf("wanted no learnings, got %d", len(got))
 	}
-	if _, err := Parse(`{}`, weekWithThree()); err == nil {
+	if _, err := parseIDs(`{}`, weekWithThree()); err == nil {
 		t.Fatal("a reply with no learnings field is malformed, not an empty week")
 	}
 }
@@ -170,7 +170,7 @@ func TestAnEmptyListIsAnAnswerAndAMissingFieldIsNot(t *testing.T) {
 // surface draws; a fifth would reach a reader as an unstyled card or not at all.
 func TestAnUnknownKindIsRefused(t *testing.T) {
 	raw := reply(learning("recommendation", "Do better.", cite("deal", dealA)))
-	if _, err := Parse(raw, weekWithThree()); err == nil {
+	if _, err := parseIDs(raw, weekWithThree()); err == nil {
 		t.Fatal("a kind outside the four must be refused")
 	}
 }
@@ -208,7 +208,7 @@ func TestTheRequestLeavesOutTheHouseVoice(t *testing.T) {
 // id is one the week did carry: the type is half of what a citation names.
 func TestACitationOfAKindTheWeekNeverCarriesIsRefused(t *testing.T) {
 	raw := reply(learning(KindWorked, "Calling the sponsor won Nordwind.", cite("commitment", dealA)))
-	if _, err := Parse(raw, weekWithThree()); err == nil {
+	if _, err := parseIDs(raw, weekWithThree()); err == nil {
 		t.Fatal("a commitment citation must be refused: the week sends no commitment rows")
 	}
 }

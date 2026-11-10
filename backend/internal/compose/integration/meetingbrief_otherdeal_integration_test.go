@@ -39,7 +39,7 @@ func (l *planPromptLane) Complete(_ context.Context, req model.Request) (model.R
 
 // promptMessage is one message of the plan prompt, as the model reads it.
 type promptMessage struct {
-	ActivityID string `json:"activity_id"`
+	Subject    string `json:"subject"`
 	OnThisDeal *bool  `json:"on_this_deal"`
 	OtherDeal  *struct {
 		Name  string `json:"name"`
@@ -76,16 +76,16 @@ func (l *planPromptLane) planPrompt(t *testing.T) planPrompt {
 	return planPrompt{}
 }
 
-func (p planPrompt) message(t *testing.T, activity ids.UUID) promptMessage {
+func (p planPrompt) message(t *testing.T, subject string) promptMessage {
 	t.Helper()
 	for _, moment := range p.Moments {
 		for _, message := range moment.Messages {
-			if message.ActivityID == activity.String() {
+			if message.Subject == subject {
 				return message
 			}
 		}
 	}
-	t.Fatalf("the plan prompt carries no message %s", activity)
+	t.Fatalf("the plan prompt carries no message %q", subject)
 	return promptMessage{}
 }
 
@@ -165,11 +165,11 @@ func TestAMeetingOnAnOpenAndAClosedDealBriefsOnTheOpenOne(t *testing.T) {
 	if prompt.Deal == nil || prompt.Deal.Name != "Hangar booking" {
 		t.Fatalf("the brief is about deal %+v, want the open Hangar booking deal", prompt.Deal)
 	}
-	onThis := prompt.message(t, room.openMail)
+	onThis := prompt.message(t, "Hangar slots")
 	if onThis.OnThisDeal == nil || !*onThis.OnThisDeal || onThis.OtherDeal != nil {
 		t.Errorf("the open deal's mail = %+v, want on_this_deal and no other deal", onThis)
 	}
-	onLost := prompt.message(t, room.lostMail)
+	onLost := prompt.message(t, "Telematics decision")
 	if onLost.OnThisDeal == nil || *onLost.OnThisDeal {
 		t.Errorf("the lost deal's mail says on_this_deal = %v, want false", onLost.OnThisDeal)
 	}
@@ -197,7 +197,7 @@ func TestHistoryNamesAnotherDealOnlyWhenTheReaderMaySeeIt(t *testing.T) {
 	if prompt.Deal != nil {
 		t.Errorf("a reader with no deal grant was briefed on deal %+v", prompt.Deal)
 	}
-	if onLost := prompt.message(t, room.lostMail); onLost.OtherDeal != nil {
+	if onLost := prompt.message(t, "Telematics decision"); onLost.OtherDeal != nil {
 		t.Errorf("a reader with no deal grant was told the mail is on %+v", onLost.OtherDeal)
 	}
 }
@@ -232,7 +232,7 @@ func TestMailOnTheContactsLeadingDealIsOnAnUnlinkedMeetingsDeal(t *testing.T) {
 	if prompt.Deal == nil || prompt.Deal.Name != "Hangar booking" {
 		t.Fatalf("the brief is about deal %+v, want the contact's leading Hangar booking deal", prompt.Deal)
 	}
-	got := prompt.message(t, mail)
+	got := prompt.message(t, "Hangar slots")
 	if got.OnThisDeal == nil || !*got.OnThisDeal || got.OtherDeal != nil {
 		t.Errorf("mail on the leading deal = %+v, want on_this_deal and no other deal", got)
 	}

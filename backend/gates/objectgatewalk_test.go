@@ -359,7 +359,7 @@ func packageFunctionReferences(t *testing.T, pkg string) packageReferences {
 	// The path is relative to the module root, which is this test's working
 	// directory: package gates sits one below it and TestMain chdirs up.
 	dir := filepath.FromSlash(pkg)
-	entries, err := os.ReadDir(dir)
+	entries, err := gatekit.ReadDir(dir)
 	if err != nil {
 		t.Fatalf("reading %s to resolve its object gates: %v", pkg, err)
 	}

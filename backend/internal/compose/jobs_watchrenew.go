@@ -59,7 +59,7 @@ func (w *gmailWatchWorker) Work(ctx context.Context, _ *river.Job[GmailWatchArgs
 	}
 	return jobs.FaultContext(ctx, dispatchDueWatches(ctx, w.registry, providerGmail, renewWithin,
 		func(ws ids.UUID, connID string) error {
-			return dispatchOne(ctx, GmailWatchRenewArgs{Workspace: ws, ConnectionID: connID}, nil)
+			return dispatchOne(ctx, w.pool, GmailWatchRenewArgs{Workspace: ws, ConnectionID: connID}, nil)
 		}))
 }
 
@@ -168,7 +168,7 @@ func (w *graphWatchWorker) Work(ctx context.Context, _ *river.Job[GraphWatchArgs
 	}
 	return jobs.FaultContext(ctx, dispatchDueWatches(ctx, w.registry, providerGraph, renewWithin,
 		func(ws ids.UUID, connID string) error {
-			return dispatchOne(ctx, GraphWatchRenewArgs{Workspace: ws, ConnectionID: connID}, nil)
+			return dispatchOne(ctx, w.pool, GraphWatchRenewArgs{Workspace: ws, ConnectionID: connID}, nil)
 		}))
 }
 

@@ -87,7 +87,7 @@ func rateAudits(e *Env, t *testing.T) int {
 func TestSyncPricesWritesTheBoundAndSheetModelsOnceOnly(t *testing.T) {
 	e := Setup(t)
 	today := pinnedRateDay()
-	store := ai.NewRateStore(e.DB()).WithClock(func() time.Time { return today })
+	store := ai.NewRateStore(e.DB()).SetClock(func() time.Time { return today })
 	ctx := e.Admin()
 	seedSheetRate(ctx, t, store, "openai_compatible", "b/sheet-only", "9", ai.LaneEmbeddings, today)
 	seedSheetRate(ctx, t, store, "openai_compatible", "c/unlisted", "3", ai.LaneChat, today)
@@ -142,7 +142,7 @@ func TestSyncPricesWritesTheBoundAndSheetModelsOnceOnly(t *testing.T) {
 func TestSyncPricesLeavesAFutureDatedPriceAlone(t *testing.T) {
 	e := Setup(t)
 	today := pinnedRateDay()
-	store := ai.NewRateStore(e.DB()).WithClock(func() time.Time { return today })
+	store := ai.NewRateStore(e.DB()).SetClock(func() time.Time { return today })
 	ctx := e.Admin()
 	seedSheetRate(ctx, t, store, "openai_compatible", "a/bound", "5", ai.LaneChat, today)
 	seedSheetRate(ctx, t, store, "openai_compatible", "a/bound", "7", ai.LaneChat, today.AddDate(0, 0, 1))
@@ -179,7 +179,7 @@ func TestSyncPricesLeavesAFutureDatedPriceAlone(t *testing.T) {
 func TestSyncPricesWritesNothingWhenTheListCannotBeRead(t *testing.T) {
 	e := Setup(t)
 	today := pinnedRateDay()
-	store := ai.NewRateStore(e.DB()).WithClock(func() time.Time { return today })
+	store := ai.NewRateStore(e.DB()).SetClock(func() time.Time { return today })
 	ctx := e.Admin()
 	seedSheetRate(ctx, t, store, "openai_compatible", "a/bound", "5", ai.LaneChat, today)
 	before := rateAudits(e, t)
@@ -201,7 +201,7 @@ func TestSyncPricesWritesNothingWhenTheListCannotBeRead(t *testing.T) {
 // A decision model the broker prices as variable (-1) stays a manual price.
 func TestSyncPricesReportsAModelTheListDoesNotPriceAsNotAvailable(t *testing.T) {
 	e := Setup(t)
-	store := ai.NewRateStore(e.DB()).WithClock(pinnedRateDay)
+	store := ai.NewRateStore(e.DB()).SetClock(pinnedRateDay)
 	cfg := ai.RoutingConfig{Decisions: &ai.DecisionsConfig{
 		Provider: "jev_compatible", Model: "typesafe/jev-router",
 		BaseURL: "https://openrouter.ai/api/alpha/decisions",
@@ -225,7 +225,7 @@ func TestSyncPricesReportsAModelTheListDoesNotPriceAsNotAvailable(t *testing.T) 
 func TestSyncPricesIsAllOrNothingAndHonoursTheWriteGrants(t *testing.T) {
 	e := Setup(t)
 	today := pinnedRateDay()
-	store := ai.NewRateStore(e.DB()).WithClock(func() time.Time { return today })
+	store := ai.NewRateStore(e.DB()).SetClock(func() time.Time { return today })
 	seedSheetRate(e.Admin(), t, store, "openai_compatible", "b/sheet-only", "9", ai.LaneChat, today)
 	creator := e.As(e.Rep1, nil, modelRatePerms(principal.ObjectGrant{Create: true, Read: true}))
 	before := rateAudits(e, t)
@@ -255,10 +255,8 @@ func TestSyncPricesRefusesAPrincipalWithoutTheSheet(t *testing.T) {
 	}
 }
 
-// The route is human-only in the contract, the generated policy table and the
-// handler. This drives the first two: an agent's bearer is refused before the
-// handler runs, so the refusal cannot depend on the handler being wired.
-func TestRefreshAiModelRatesRefusesAnAgentBearerOverHTTP(t *testing.T) {
+// A read-only passport is refused before the handler runs.
+func TestRefreshAiModelRatesRefusesAReadOnlyAgentOverHTTP(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	var minted struct {
@@ -276,8 +274,8 @@ func TestRefreshAiModelRatesRefusesAnAgentBearerOverHTTP(t *testing.T) {
 	}
 	status := e.Call(t, "POST", "/v1/ai-model-rates/refresh", nil, bearer, &problem)
 
-	if status != http.StatusForbidden || problem.Code != "permission_denied" {
-		t.Errorf("agent POST /ai-model-rates/refresh → %d %q, want 403 permission_denied", status, problem.Code)
+	if status != http.StatusForbidden || problem.Code != "scope_exceeds_grantor" {
+		t.Errorf("a read-only agent POST /ai-model-rates/refresh → %d %q, want 403 scope_exceeds_grantor", status, problem.Code)
 	}
 }
 
@@ -285,7 +283,7 @@ func TestRefreshAiModelRatesRefusesAnAgentBearerOverHTTP(t *testing.T) {
 // not name it, and the report must say so and carry the id.
 func TestSyncPricesNamesABoundModelTheListDoesNotHave(t *testing.T) {
 	e := Setup(t)
-	store := ai.NewRateStore(e.DB()).WithClock(pinnedRateDay)
+	store := ai.NewRateStore(e.DB()).SetClock(pinnedRateDay)
 
 	report, err := store.SyncPrices(e.Admin(), ai.PriceSources{Routing: brokerRouting("a/typo", "b/real"), Broker: catalogueOf(listed("b/real", "1", "2", nil))}, discardRun)
 	if err != nil {
@@ -313,7 +311,7 @@ func TestSyncPricesNamesABoundModelTheListDoesNotHave(t *testing.T) {
 func TestSyncPricesLeavesASelfHostedSheetRowAlone(t *testing.T) {
 	e := Setup(t)
 	today := pinnedRateDay()
-	store := ai.NewRateStore(e.DB()).WithClock(func() time.Time { return today })
+	store := ai.NewRateStore(e.DB()).SetClock(func() time.Time { return today })
 	seedSheetRate(e.Admin(), t, store, "openai_compatible", "meta/llama-4", "0", ai.LaneChat, today)
 	selfHosted := ai.RoutingConfig{Tiers: map[ai.Tier]ai.ProviderConfig{
 		"premium": {Provider: "openai_compatible", Model: "meta/llama-4", BaseURL: "https://llm.internal.test/v1"},

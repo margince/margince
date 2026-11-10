@@ -14,6 +14,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/originalstore"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
@@ -62,17 +63,47 @@ func storeRawCapture(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRec
 	// rule above means the second delivery of one message stores nothing — and
 	// its activity still has to name the original the FIRST delivery stored,
 	// or the row that keeps the bytes is the one nothing points at.
+	return insertOriginalRowTx(ctx, tx, rec.NaturalKey, payload, "")
+}
+
+// insertOriginalRowTx is the one insert of a stored original. A non-empty
+// slimmed outcome stamps the row as the part sweep would. The sweep then never
+// reads an original that names its files instead of carrying them.
+func insertOriginalRowTx(
+	ctx context.Context, tx pgx.Tx, key connector.NaturalKey, payload []byte, slimmed partSlimOutcome,
+) (ids.UUID, error) {
+	if len(payload) > originalstore.InlineLimit {
+		var existing ids.UUID
+		err := tx.QueryRow(ctx, `SELECT id FROM raw_capture WHERE source_system = @system AND source_id = @source`,
+			pgx.NamedArgs{sqlArgSystem: key.SourceSystem, sqlArgSource: key.SourceID}).Scan(&existing)
+		if err == nil {
+			return existing, nil
+		}
+		if !errors.Is(err, pgx.ErrNoRows) {
+			return ids.Nil, fmt.Errorf("capture: read first original: %w", err)
+		}
+	}
+	inline, ref, err := originalstore.PrepareTx(ctx, tx, payload)
+	if err != nil {
+		return ids.Nil, err
+	}
 	var id ids.UUID
 	err = tx.QueryRow(ctx, `
-		INSERT INTO raw_capture (source_system, source_id, payload)
-		VALUES ($1, $2, $3)
+		INSERT INTO raw_capture (source_system, source_id, payload, payload_object, payload_offload_checked_at, parts_slimmed_at, parts_slim_outcome)
+		VALUES (@system, @source, @payload, @object::jsonb, now(),
+             CASE WHEN @outcome <> '' THEN now() END, NULLIF(@outcome, ''))
 		ON CONFLICT (source_system, source_id) DO NOTHING
-		RETURNING id`,
-		rec.NaturalKey.SourceSystem, rec.NaturalKey.SourceID, payload).Scan(&id)
+		RETURNING id`, pgx.NamedArgs{
+		sqlArgSystem: key.SourceSystem, sqlArgSource: key.SourceID, sqlArgPayload: inline,
+		sqlArgObject: ref, "outcome": string(slimmed),
+	}).Scan(&id)
+	if err == nil {
+		return id, originalstore.Adopt(ctx, tx, ref)
+	}
 	if errors.Is(err, pgx.ErrNoRows) {
 		err = tx.QueryRow(ctx, `
 			SELECT id FROM raw_capture WHERE source_system = $1 AND source_id = $2`,
-			rec.NaturalKey.SourceSystem, rec.NaturalKey.SourceID).Scan(&id)
+			key.SourceSystem, key.SourceID).Scan(&id)
 	}
 	if err != nil {
 		return ids.Nil, fmt.Errorf("capture: raw store: %w", err)

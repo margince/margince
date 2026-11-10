@@ -1,0 +1,124 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+// The board's view model: what a deal ROW becomes on a CARD.
+//
+// The card takes a model rather than the wire row, so every fact it states has
+// to be copied across here — a field left out is silently absent on every card
+// in every column, which is the failure the tests beside this file exist for.
+
+import type { components } from "../api/schema";
+import type { BoardDealMail } from "../design-system/dealcard";
+import type { BoardDeal } from "../design-system/pipelineboard";
+import { idleSince } from "../lib/idlebase";
+import { routeHash } from "../lib/router";
+import type { CompanyNaming } from "./companymarks";
+import type { OwnerNaming } from "./entityref";
+
+type Deal = components["schemas"]["Deal"];
+
+/**
+ * What a deal's company reads as on its card, in the four readings it has.
+ *
+ * Withheld carries the mask, the same control the table's company cell draws. A
+ * company the screen has a name for is named. A company whose read FAILED says
+ * so, because a deal that names a company the reader could not fetch is not a
+ * deal with no company. Only a deal naming no company draws nothing.
+ *
+ * A name still in flight also draws nothing rather than a uuid: the card's
+ * company line is a name a reader recognises and an id is not one. That is the
+ * one case where an empty slot is a wait rather than a claim, and it resolves
+ * itself.
+ */
+function dealCompany(
+  deal: Deal,
+  naming: CompanyNaming,
+): Pick<
+  BoardDeal,
+  | "company"
+  | "companyId"
+  | "companyHref"
+  | "companyLogoUrl"
+  | "companyWithheld"
+  | "companyUnreadable"
+> {
+  if (deal.masked_fields?.includes("company_id")) {
+    return { company: "", companyId: "", companyWithheld: true };
+  }
+  if (deal.company_id && naming.unreadable.has(deal.company_id)) {
+    return { company: "", companyId: "", companyUnreadable: true };
+  }
+  const mark = deal.company_id ? naming.marks.get(deal.company_id) : undefined;
+  return {
+    company: mark?.name ?? "",
+    companyId: mark?.name ? (deal.company_id ?? "") : "",
+    // The company's address, built HERE because this is the tier that holds
+    // routes. A deal with no company, or one whose name has not resolved,
+    // gets none — the card then draws prose, which is what a slot with no
+    // name has to say anyway.
+    companyHref:
+      deal.company_id && mark?.name
+        ? routeHash({ screen: "companies", id: deal.company_id })
+        : undefined,
+    companyLogoUrl: mark?.logoUrl,
+  };
+}
+
+export function toBoardDeal(
+  deal: Deal,
+  naming: CompanyNaming,
+  owners?: OwnerNaming,
+  ownerPhotos?: ReadonlyMap<string, string>,
+): BoardDeal {
+  const since = idleSince(deal);
+  const measuredAt = Date.now();
+  const ownerName = owners?.(deal.owner_id);
+  return {
+    id: deal.id,
+    name: deal.name,
+    ...dealCompany(deal, naming),
+    // Both halves as the wire sent them. Nobody has priced every deal, and a
+    // card that filled in either half would state a figure this deal does not
+    // have — a zero amount, or a euro sign over an unknown currency.
+    valueMinor: deal.amount_minor ?? null,
+    currency: deal.currency ?? null,
+    probabilityPct:
+      deal.status === "open" ? (deal.win_probability ?? null) : null,
+    idleSince: since,
+    measuredAt,
+    stalled: deal.stalled ?? false,
+    archived: deal.archived_at != null,
+    closeDate: deal.expected_close_date ?? null,
+    closeDateProvisional: deal.close_date_provisional ?? false,
+    owner:
+      ownerName && deal.owner_id
+        ? {
+            id: deal.owner_id,
+            name: ownerName,
+            photo: ownerPhotos?.get(deal.owner_id),
+          }
+        : null,
+    lastEmail: boardMail(deal.last_email, measuredAt),
+  };
+}
+
+/**
+ * The wire's last email as the card states it: when, measured from now, and
+ * which way. Now is read here, where every other span on the card is. A card
+ * that read the clock itself would be one no test could pin. Exported for the
+ * table's column, which states the same chip off the same row.
+ */
+export function boardMail(
+  last: Deal["last_email"],
+  measuredAt = Date.now(),
+): BoardDealMail | null {
+  if (!last) {
+    return null;
+  }
+  return {
+    at: last.occurred_at,
+    precision: last.occurred_precision,
+    measuredAt,
+    direction: last.direction ?? null,
+  };
+}

@@ -3,7 +3,7 @@
 
 import { expect, it } from "vitest";
 import { formatDateAbbrev } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
+import { browserZone } from "../../format/timezone";
 import { en, type MessageKey } from "../../i18n/en";
 import {
   beforeHistoryWeeklyNumbers,
@@ -27,8 +27,8 @@ function t(key: MessageKey, values?: Record<string, string>): string {
     template,
   );
 }
-const place = { t, locale: "en" as const, zone: viewerZone() };
-const day = (iso: string) => formatDateAbbrev(iso, "en", viewerZone());
+const place = { t, locale: "en" as const, zone: browserZone() };
+const day = (iso: string) => formatDateAbbrev(iso, "en", browserZone());
 
 it("keeps a complete zero-activity week readable", () => {
   const result = weeklyNumericStatus({
@@ -124,4 +124,19 @@ it("says why an unreadable figure is missing from its status", () => {
     value: en["reporting.unavailable"],
     detail: en["reporting.status.failed"],
   });
+});
+
+it("marks withheld lead figures unavailable without hiding the rest of the week", () => {
+  for (const summary of [undefined, sharedWeeklyNumbers]) {
+    const result = weeklyNumericStatus(summary, true);
+    expect(result.figures.leads.kind).toBe("unavailable");
+    expect(figureShown(result.figures.leads)).toBe(false);
+    expect(figureReading(result.figures.leads, { value: "0" }, place)).toEqual({
+      value: en["reporting.unavailable"],
+      detail: en["brief.weekly.leadsUnavailable"],
+    });
+    expect(result.figures.tasks.kind).toBe("measured");
+    expect(result.partial).toBe(true);
+    expect(beforeRecordedHistory(result.figures)).toBe(false);
+  }
 });

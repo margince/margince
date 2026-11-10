@@ -98,7 +98,7 @@ func seedScopedContractEndedAt(t *testing.T, e *integration.Env, company ids.UUI
 // proposePass runs one reconciler pass and reports how many offers it staged.
 func proposePass(t *testing.T, e *integration.Env) int {
 	t.Helper()
-	proposer := NewSignalProposer(e.Pool, approvalsServiceWithEffects(e.Pool),
+	proposer := NewSignalProposer(e.Pool, NewApprovalsServiceWithEffects(e.Pool),
 		slog.New(slog.DiscardHandler))
 	staged, err := proposer.RunWorkspace(e.As(e.AdminUser, nil, integration.AdminWithSignals))
 	if err != nil {
@@ -162,7 +162,7 @@ func TestAcceptingTheOfferMovesTheAccountAndSettlesTheSignal(t *testing.T) {
 		t.Fatalf("the account moved to %q before anyone decided", stage)
 	}
 
-	if _, err := approvalsServiceWithEffects(e.Pool).Decide(
+	if _, err := NewApprovalsServiceWithEffects(e.Pool).Decide(
 		e.As(e.Rep1, nil, integration.AdminWithSignals),
 		ids.From[ids.ApprovalKind](stagedOffer(t, e, company)), true, nil); err != nil {
 		t.Fatalf("accepting the offer: %v", err)
@@ -190,7 +190,7 @@ func TestAContractEndedMailOffersTheEndToAnAccountWeDeliverFor(t *testing.T) {
 			if staged := proposePass(t, e); staged != 1 {
 				t.Fatalf("the pass staged %d offers on a %s account, want 1", staged, stage)
 			}
-			if _, err := approvalsServiceWithEffects(e.Pool).Decide(
+			if _, err := NewApprovalsServiceWithEffects(e.Pool).Decide(
 				e.As(e.Rep1, nil, integration.AdminWithSignals),
 				ids.From[ids.ApprovalKind](stagedOffer(t, e, company)), true, nil); err != nil {
 				t.Fatalf("accepting the offer: %v", err)
@@ -214,7 +214,7 @@ func TestAnOfferEditedToLiveIsRefusedWhenTheSystemAppliesIt(t *testing.T) {
 		SELECT jsonb_set(proposed_change, '{proposed_lifecycle}', '"live"')::text
 		  FROM approval WHERE id = $1`, offer)
 
-	_, err := approvalsServiceWithEffects(e.Pool).DecideEdited(
+	_, err := NewApprovalsServiceWithEffects(e.Pool).DecideEdited(
 		e.As(e.Rep1, nil, integration.AdminWithSignals),
 		ids.From[ids.ApprovalKind](offer), []byte(edited))
 	var refusal *httperr.DetailedError
@@ -235,7 +235,7 @@ func TestARefusedOfferIsNotAskedAgain(t *testing.T) {
 	signal := seedOpenContractEnded(t, e, company)
 
 	proposePass(t, e)
-	if _, err := approvalsServiceWithEffects(e.Pool).Decide(
+	if _, err := NewApprovalsServiceWithEffects(e.Pool).Decide(
 		e.As(e.Rep1, nil, integration.AdminWithSignals),
 		ids.From[ids.ApprovalKind](stagedOffer(t, e, company)), false, nil); err != nil {
 		t.Fatalf("declining the offer: %v", err)
@@ -302,7 +302,7 @@ func TestAnAcceptOverACorrectedRecordIsRefused(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err := approvalsServiceWithEffects(e.Pool).Decide(
+	_, err := NewApprovalsServiceWithEffects(e.Pool).Decide(
 		e.As(e.Rep1, nil, integration.AdminWithSignals),
 		ids.From[ids.ApprovalKind](approvalID), true, nil)
 	if !errors.Is(err, apperrors.ErrVersionSkew) {
@@ -338,7 +338,7 @@ func TestAcceptingSettlesOnlyTheCitedContradiction(t *testing.T) {
 	cited := e.WsScalar(t, `SELECT proposed_change->>'signal_id' FROM approval WHERE target_entity_id=$1`, company)
 	later := seedScopedContractEndedAt(t, e, company, "company", "We ended all business earlier.",
 		time.Date(2026, 7, 1, 12, 0, 0, 0, time.UTC), time.Date(2026, 8, 1, 12, 0, 0, 0, time.UTC))
-	if _, err := approvalsServiceWithEffects(e.Pool).Decide(
+	if _, err := NewApprovalsServiceWithEffects(e.Pool).Decide(
 		e.As(e.Rep1, nil, integration.AdminWithSignals),
 		ids.From[ids.ApprovalKind](stagedOffer(t, e, company)), true, nil); err != nil {
 		t.Fatalf("accepting the offer: %v", err)
@@ -381,7 +381,7 @@ func TestHiddenContradictionBlocksAccountLifecycleDecision(t *testing.T) {
 	proposePass(t, e)
 	theirs := seedOpenContractEndedOnContact(t, e, company, seedCapturePrivateContactOf(t, e, e.Rep3))
 
-	_, err := approvalsServiceWithEffects(e.Pool).Decide(
+	_, err := NewApprovalsServiceWithEffects(e.Pool).Decide(
 		e.As(e.Rep1, nil, teamScopedDecider),
 		ids.From[ids.ApprovalKind](stagedOffer(t, e, company)), true, nil)
 	if !errors.Is(err, apperrors.ErrVersionSkew) {
@@ -457,7 +457,7 @@ func TestWhitespaceNormalizedSourceProofAllowsTheDecision(t *testing.T) {
 	if proposePass(t, e) != 1 {
 		t.Fatal("normalized source words failed to stage")
 	}
-	_, err := approvalsServiceWithEffects(e.Pool).Decide(e.As(e.Rep1, nil, integration.AdminWithSignals), ids.From[ids.ApprovalKind](stagedOffer(t, e, company)), true, nil)
+	_, err := NewApprovalsServiceWithEffects(e.Pool).Decide(e.As(e.Rep1, nil, integration.AdminWithSignals), ids.From[ids.ApprovalKind](stagedOffer(t, e, company)), true, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -479,7 +479,7 @@ func TestLifecycleProposalKeepsSourceWordsBehindTheSourceReader(t *testing.T) {
 	if strings.Contains(stored, quote) || strings.Contains(stored, "Atlas support") || strings.Contains(stored, `"occurred_at"`) {
 		t.Fatal("proposal copied source words outside source authorization")
 	}
-	view, err := approvalsServiceWithEffects(e.Pool).GetWire(e.As(e.Rep1, nil, integration.AdminWithSignals), ids.From[ids.ApprovalKind](stagedOffer(t, e, company)))
+	view, err := NewApprovalsServiceWithEffects(e.Pool).GetWire(e.As(e.Rep1, nil, integration.AdminWithSignals), ids.From[ids.ApprovalKind](stagedOffer(t, e, company)))
 	if err != nil {
 		t.Fatal(err)
 	}

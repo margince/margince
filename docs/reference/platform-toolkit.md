@@ -48,6 +48,7 @@ is here: [authorization.md](../explanation/authorization.md).)
 
 `emailview` renders escaped product content in the user’s language as HTML and plain text. It reads no records
 and sends no mail. Controller wording stays with consent; customer mail stays with its send owner.
+It writes the design-system tokens in as values, and `backend/gates/emaildesign_test.go` checks them against `tokens.css` in both themes.
 `mailwire` builds MIME parts and attachments for mailbox connectors and SMTP. SMTP uses
 `quoted-printable`; mailbox sends keep their existing body bytes and envelope handling.
 
@@ -138,7 +139,8 @@ and time. What to pull out of a page, and what to look for, stays with the calle
 - **Use it when:** you fetch a URL a tenant gave. Never write your own `http.Client` for one.
 
 ### `platform/testdb`: the test database setup
-Builds the schema once and resets only the data, fast, for the integration lanes (`EnsureSchema`, `Reset`).
+Checks or builds the schema once and resets only the data for the integration lanes (`EnsureSchema`, `Reset`).
+A declared lane clone must match the binary’s migration ledger and hold no test rows. It refuses to start before any schema drop if these checks fail. For a ledger that differs, run `make test-db-up` in that worktree, then run the lane again. Other errors name the template or migration fix.
 The `integrationmigrateonce_test.go` gate makes tests use it.
 - **Use it when:** you write the setup of a test that runs on a real Postgres.
 
