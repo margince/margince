@@ -56,7 +56,7 @@ func TestAStagedCallOffersTheRelayOnlyWhereTheCredentialCanRelease(t *testing.T)
 	}
 }
 
-// A staged call points at its own proposal, never at the whole queue: a bare
+// A staged call points at its own proposal, never at the whole queue. A bare
 // list_approvals reads colleagues' waiting work out to the user as well.
 func TestAStagedCallPointsAtItsOwnProposalNotTheQueue(t *testing.T) {
 	for _, releasable := range []bool{true, false} {
@@ -152,8 +152,8 @@ func TestAThreadRelinkIsRefusedOnTheExecutionPathAtEveryDestination(t *testing.T
 	}
 }
 
-// With nothing staged there is no id to point at, so the refusal scopes the
-// queue read to the record instead of sending the caller to all of it.
+// With nothing staged there is no id to point at. The refusal scopes the queue
+// read to the record instead.
 func TestAnUnstagedApprovalScopesTheQueueReadToItsRecord(t *testing.T) {
 	said := NewDispatcher(NewRegistry(nil, nil), bindAuthenticated, "margince-crm", "test").WithLogger(discardLog()).
 		explain("archive_record", apperrors.ErrRequiresApproval)

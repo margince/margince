@@ -114,8 +114,7 @@ const surfaceInstructions = "A governed CRM tool surface. Every call re-authenti
 // answered — so the only thing that prevents the false report is the model
 // knowing to look before it makes one.
 //
-// The look is scoped to the task's own records: the queue holds colleagues'
-// work too, and a model told only to "report what is waiting" read all of it out.
+// It names the task's own records, because the queue holds colleagues' work too.
 const queueInstruction = "A write can also leave a question for a human WITHOUT saying so in its " +
 	"answer — an automation reacting to what you just wrote may draft a reply or stage a change " +
 	"of its own, after your call returned. Before telling anyone the work is finished, call " +

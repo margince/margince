@@ -153,7 +153,7 @@ type ListInput struct {
 	Kind               *string
 	TargetType         *string
 	TargetID           *ids.UUID
-	// Targets narrows to the rows staged against ANY of these records. It is
+	// Targets narrows to the rows staged against any of these records. It is
 	// read through the per-row decidability probe like the whole inbox, so a
 	// record the caller cannot see adds nothing. Empty means no filter.
 	Targets []ids.Ref

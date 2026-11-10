@@ -98,9 +98,9 @@ func pageInfo(p storekit.Page) crmcontracts.PageInfo {
 	return info
 }
 
-// listInput binds the inbox query parameters, or refuses a record filter that
-// names nothing a client could have meant: half of the target pair (a type alone
-// matches every record of that type), a malformed target, or both forms at once.
+// listInput binds the inbox query parameters. It refuses a record filter that
+// names nothing a client could have meant. That is half of the target pair (a
+// type alone matches every record of that type), a malformed target, or both.
 func listInput(params crmcontracts.ListApprovalsParams) (ListInput, *httperr.DetailedError) {
 	in := ListInput{Kind: params.Kind}
 	if params.IncludeMuted != nil {

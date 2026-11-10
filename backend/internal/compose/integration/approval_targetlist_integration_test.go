@@ -6,9 +6,8 @@
 package integration
 
 // The inbox filtered to the records one task touched. An agent asks it before
-// it reports the work finished, so it must answer what those records left
-// waiting and nothing else of the queue, and still hide what the caller cannot
-// decide.
+// it reports the work finished. It answers what those records left waiting,
+// and still hides what the caller cannot decide.
 
 import (
 	"errors"
@@ -48,8 +47,8 @@ func TestApprovalListFilteredToSeveralTargetsAnswersExactlyThose(t *testing.T) {
 	}
 }
 
-// A named record the caller cannot see adds nothing, and the rest of the list
-// still answers: one hidden record must not empty or refuse the whole read.
+// A named record the caller cannot see adds nothing. One hidden record must not
+// empty or refuse the whole read.
 func TestApprovalListFilteredToSeveralTargetsHidesAnOutOfScopeOne(t *testing.T) {
 	e := Setup(t)
 	svc := approvals.NewService(e.DB())
@@ -75,8 +74,8 @@ func TestApprovalListFilteredToSeveralTargetsHidesAnOutOfScopeOne(t *testing.T) 
 	}
 }
 
-// The tool door reaches the same filter: the records a run touched answer their
-// own proposals, and a record with nothing staged answers an empty list.
+// The tool door reaches the same filter. A record with nothing staged answers
+// an empty list.
 func TestListApprovalsWithTargetsAnswersOnlyTheNamedRecords(t *testing.T) {
 	q := setupQueue(t)
 	invoke := q.invoker(t, q.mintPassport(t, "finishing agent", "read", "write", "enrich"))
