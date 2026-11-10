@@ -839,7 +839,7 @@
   border: 2px solid var(--ai);
   border-radius: var(--r-full);
   corner-shape: round;
-  background: var(--bgElevated);
+  background: var(--ground);
 }
 .brief-done-change:not([data-state="open"])::before {
   border-color: var(--borderStrong);
@@ -865,7 +865,7 @@
   grid-column: 1 / -1;
 }
 .brief-done-quote {
-  margin: var(--space-1) 0 0;
+  margin: 0;
   padding: var(--space-2) var(--space-3);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-md);
