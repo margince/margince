@@ -42,6 +42,7 @@ const (
 	fieldEntityType = "entity_type"
 	fieldEntityID   = "entity_id"
 	fieldCategory   = "category"
+	fieldStatus     = "status"
 )
 
 // ensureAttachmentParentVisible enforces that the caller can see the parent
