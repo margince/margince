@@ -257,7 +257,7 @@ export const ChangedDealsPhone: Story = {
 };
 
 /** More than five deals: the preview stops at five and the drawer holds all. */
-export const ReviewAllDrawer: Story = {
+export const AllChangesDrawer: Story = {
   render: () => {
     stub(
       Array.from({ length: 7 }, (_, i) =>
