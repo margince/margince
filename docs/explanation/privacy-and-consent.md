@@ -9,11 +9,8 @@ It also checks whether one message may go. Most mail rests on a contract, a repl
 the subject started, or a legal duty. The engine works out the message's **category**, checks
 its **proof**, and records a **decision** per recipient:
 
-- **The server works out the category.** The caller does not name it. A closed set of names
-  (`reply_to_inbound`, `invoice_or_payment`, `marketing`, `security_notice`, … in
-  `internal/shared/ports/commsauthz`) comes from the message's own source. That source is its
-  thread, the records it links and the template it uses. A caller can offer a category but cannot
-  make one up.
+- **The server checks the category.** A caller can claim a category from
+  `internal/shared/ports/commsauthz`. The engine needs proof from the thread, linked records or template.
 
   The send paths refuse a claim to any **subject-serving** category: a security or privacy
   notice, an opt-out, a note that confirms consent or a record. So only the installation
@@ -42,12 +39,9 @@ its **proof**, and records a **decision** per recipient:
   visible to the sender. An open deal alone does not prove that the subject asked for a follow-up.
   A fact with no company on record can count for the only company, which must be the default. With more than one
   company on file, its scope needs a human check before it can allow a send.
-- The composer uses proof already on file before asking for a fact. A user can record what was
-  agreed and when, for the recipient, sending company and linked deal. This records an exchange;
-  it grants no marketing consent and sends no message. The engine then checks the message again.
-
-  The lead stays a lead when you record an exchange. When you make it a contact later, the exchange
-  keeps its original addresses and sending company.
+- The composer reuses proof on file. A user can record what was agreed and when for the recipient,
+  sending company and deal. This grants no marketing consent and sends no message. The engine checks again.
+  A lead stays a lead; when made a contact, its exchange keeps its addresses and sending company.
 - **Withdrawals and stops are separate, and both bind.** An unsubscribe is a consent withdrawal. The
   engine reads it **by class** ("has the subject stopped this kind of message"). That is because a category worked out from
   proof may carry no purpose key to match. `communication_suppression` records the other stops: an

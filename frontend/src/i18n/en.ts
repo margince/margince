@@ -17640,8 +17640,6 @@ export const en = {
   "contact.consent.fact.notAllowed": "Not allowed for this purpose",
   "contact.consent.fact.nothingRecorded": "Nothing recorded yet",
   "contact.consent.fact.purposeSupported": "Supported for this purpose",
-  "contact.consent.blockedWord": "Blocked",
-  "contact.consent.unknownWord": "Unknown",
 
   "contact.moment.rule.privacy_notice_due": "Privacy notice owed",
   "contact.moment.rule.meeting_prep": "Meeting soon",

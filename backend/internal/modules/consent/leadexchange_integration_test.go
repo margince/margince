@@ -60,11 +60,11 @@ func TestLeadExchangesKeepTheirAddressCompanyQuoteAndRetractionScope(t *testing.
 	}
 	contact := ids.From[ids.ContactKind](e.lead.UUID)
 	if _, err := e.owner.Exec(t.Context(), `INSERT INTO contact(id,full_name,source,captured_by)
- VALUES(@id,'A different person with the same UUID','manual','human:fixture')`, pgx.StrictNamedArgs{"id": contact}); err != nil {
+ VALUES(@id,'A different contact with the same UUID','manual','human:fixture')`, pgx.StrictNamedArgs{"id": contact}); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := e.store.RecordQualifyingEvent(e.ctx, contact, RecordQualifyingEventInput{
-		Kind: KindRequestedBySubject, Note: "A different person asked.", OccurredAt: at, AsksForQuote: true,
+		Kind: KindRequestedBySubject, Note: "A different contact asked.", OccurredAt: at, AsksForQuote: true,
 	}); err != nil {
 		t.Fatal(err)
 	}

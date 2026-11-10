@@ -17334,8 +17334,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contact.consent.fact.notAllowed": "Không được phép cho mục đích này",
   "contact.consent.fact.nothingRecorded": "Chưa có gì được ghi nhận",
   "contact.consent.fact.purposeSupported": "Có căn cứ cho mục đích này",
-  "contact.consent.blockedWord": "Bị chặn",
-  "contact.consent.unknownWord": "Chưa rõ",
 
   "contact.moment.rule.privacy_notice_due": "Cần gửi thông báo quyền riêng tư",
   "contact.moment.rule.meeting_prep": "Sắp có cuộc họp",

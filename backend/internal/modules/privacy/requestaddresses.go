@@ -37,7 +37,3 @@ func clearWithdrawalAddresses(ctx context.Context, tx pgx.Tx, column stopSubject
 	}
 	return nil
 }
-
-func recordedRequestAddressScope(emails string) string {
-	return "recorded_for_addresses && " + emails + "::text[]"
-}

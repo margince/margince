@@ -53,7 +53,7 @@ func anonymizeLeadTwins(ctx context.Context, tx pgx.Tx, contactID ids.ContactID,
 		    company_name = NULL, candidate_company_key = NULL, linkedin_url = NULL,
 		    disqualify_note = NULL, score_override_reason = NULL, source_author_name = NULL,
 		    origin_detail = NULL, archived_at = coalesce(archived_at, now())%s
-		  WHERE `+leadTwinOf(bind[0], bind[1])+`
+		  WHERE %s
 		  RETURNING id
 		), pruned AS (
 		  DELETE FROM field_provenance
@@ -69,7 +69,7 @@ func anonymizeLeadTwins(ctx context.Context, tx pgx.Tx, contactID ids.ContactID,
 		  WHERE lead_id IN (SELECT id FROM wiped)
 		), leadexchanges AS (
 		  DELETE FROM consent_qualifying_event
-		  WHERE lead_id IN (SELECT id FROM wiped) OR `+recordedRequestAddressScope(bind[1])+`
+		  WHERE lead_id IN (SELECT id FROM wiped) OR %s
 		), leadbases AS (
 		  DELETE FROM communication_basis
 		  WHERE lead_id IN (SELECT id FROM wiped)
@@ -115,7 +115,7 @@ func anonymizeLeadTwins(ctx context.Context, tx pgx.Tx, contactID ids.ContactID,
 		                   AND refusal->>'subject_id' IN (SELECT id::text FROM wiped))
 		               OR lower(refusal->>'address') = ANY($2))
 		)
-		SELECT id FROM wiped`, nullColumnAssignments(leadCustom)),
+		SELECT id FROM wiped`, nullColumnAssignments(leadCustom), leadTwinOf(bind[0], bind[1]), recordedRequestAddressScope(bind[1])),
 		args...)
 	if err != nil {
 		return nil, err

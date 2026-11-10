@@ -241,7 +241,7 @@ func carryQualifyingSubjectEvents(ctx context.Context, tx pgx.Tx, source, target
 	moved, err := collectIDs(ctx, tx,
 		`UPDATE consent_qualifying_event SET contact_id = @contact, lead_id = @lead
  WHERE `+fromColumn+` = @source RETURNING id`, pgx.StrictNamedArgs{
-			"contact": zeroAsNull(subjectKindID(target, entityContact)), "lead": zeroAsNull(subjectKindID(target, entityLead)), "source": source.id,
+			entityContact: zeroAsNull(subjectKindID(target, entityContact)), entityLead: zeroAsNull(subjectKindID(target, entityLead)), carrySourceArg: source.id,
 		})
 	if err != nil {
 		return fmt.Errorf("consent: carrying the qualifying events: %w", err)

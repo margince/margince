@@ -41,9 +41,8 @@ func TestAnInstructionKeepsItsRecipientCompanyAndPurpose(t *testing.T) {
 			d := original
 			tc.change(&d)
 			err := instructionScopeStillFits(t.Context(), nil, recorded, commsauthz.DecisionSet{Decisions: []commsauthz.Decision{d}})
-			var stale *InstructionStaleError
 			if tc.stale {
-				if !errors.As(err, &stale) {
+				if _, ok := errors.AsType[*InstructionStaleError](err); !ok {
 					t.Fatalf("changed scope error=%v, want a fresh acknowledgement", err)
 				}
 			} else if err != nil {

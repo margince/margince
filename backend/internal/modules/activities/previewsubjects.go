@@ -28,7 +28,7 @@ func (s *Store) withReadablePreviewSubjects(ctx context.Context, preview SendPre
 		if decision.SubjectID.IsZero() || preview.NewContacts[correspondence.Fold(decision.Recipient.Email)] {
 			continue
 		}
-		if decision.SubjectKind == "contact" || decision.SubjectKind == "lead" {
+		if decision.SubjectKind == roomContact || decision.SubjectKind == "lead" {
 			preview.readableSubjects[previewSubject{kind: decision.SubjectKind, id: decision.SubjectID}] = false
 		}
 	}

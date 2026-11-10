@@ -17803,8 +17803,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.consent.fact.nothingRecorded": "Noch nichts erfasst",
   "contact.consent.fact.purposeSupported":
     "Grundlage für diesen Zweck vorhanden",
-  "contact.consent.blockedWord": "Blockiert",
-  "contact.consent.unknownWord": "Unbekannt",
 
   "contact.moment.rule.privacy_notice_due": "Datenschutzhinweis ausstehend",
   "contact.moment.rule.meeting_prep": "Termin steht bevor",

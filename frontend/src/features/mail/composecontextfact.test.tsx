@@ -52,8 +52,7 @@ it.each(["contact", "lead"] as const)(
     const user = userEvent.setup();
     let attempts = 0;
     const sent = stubRoutes({
-      "GET /me": () =>
-        jsonResponse(meFixture({ allow: { [kind]: verbs } })),
+      "GET /me": () => jsonResponse(meFixture({ allow: { [kind]: verbs } })),
       [endpoint]: () => {
         attempts += 1;
         return attempts === 1

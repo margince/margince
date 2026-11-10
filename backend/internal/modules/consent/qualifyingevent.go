@@ -77,6 +77,13 @@ const noteMaxRunes = 500
 // the surface highlights.
 const fieldNote = "note"
 
+const (
+	exchangeOccurredArg = "occurred"
+	exchangeActorArg    = "actor"
+	exchangeDealArg     = "deal"
+	exchangeEntityField = "legal_entity_id"
+)
+
 // fieldOccurredAt is the same, for the date.
 const fieldOccurredAt = "occurred_at"
 
@@ -84,7 +91,7 @@ const fieldOccurredAt = "occurred_at"
 // before a date reads as a claim about the future rather than a fast watch.
 const clockSkewAllowance = 5 * time.Minute
 
-// RecordQualifyingEventInput is one exchange, stated by the person who was there.
+// RecordQualifyingEventInput is one exchange, stated by the colleague who was there.
 type RecordQualifyingEventInput struct {
 	sendingEntity *ids.UUID
 	Kind          string
@@ -303,9 +310,9 @@ func writeExchangeTx(
  WHERE `+column+`=@subject AND kind=@kind AND note=@note AND occurred_at=@occurred
  AND about_deal_id IS NOT DISTINCT FROM @deal AND @entity=ANY(recorded_for_entities))
  RETURNING id::text`, pgx.StrictNamedArgs{
-		"subject": sub.id, "kind": in.Kind, "note": note, "occurred": in.OccurredAt,
-		"source": handRecordedSource(ctx), "actor": by, "quote": in.AsksForQuote,
-		"deal": zeroUUIDAsNull(in.AboutDeal), "entity": entity,
+		fieldSubject: sub.id, "kind": in.Kind, fieldNote: note, exchangeOccurredArg: in.OccurredAt,
+		carrySourceArg: handRecordedSource(ctx), exchangeActorArg: by, "quote": in.AsksForQuote,
+		exchangeDealArg: zeroUUIDAsNull(in.AboutDeal), "entity": entity,
 	}).Scan(&out.ID); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return standingExchange(ctx, tx, sub, in.AboutDeal, entity, out)
@@ -323,11 +330,11 @@ func writeExchangeTx(
 	//
 	// The audit names the subject whose update right admitted this assertion.
 	_, err = storekit.AuditEvent(ctx, tx, "update", sub.entityType, sub.id, map[string]any{
-		"qualifying_event": in.Kind,
-		"legal_entity_id":  entity,
-		fieldNote:          note,
-		fieldOccurredAt:    in.OccurredAt.UTC().Format(time.RFC3339),
-		"about_deal":       zeroUUIDAsNull(in.AboutDeal),
+		"qualifying_event":  in.Kind,
+		exchangeEntityField: entity,
+		fieldNote:           note,
+		fieldOccurredAt:     in.OccurredAt.UTC().Format(time.RFC3339),
+		"about_deal":        zeroUUIDAsNull(in.AboutDeal),
 	})
 	return err
 }
@@ -341,8 +348,8 @@ func standingExchange(ctx context.Context, tx pgx.Tx, sub subject, deal, entity 
  WHERE `+column+`=@subject AND kind=@kind AND note=@note AND occurred_at=@occurred
  AND about_deal_id IS NOT DISTINCT FROM @deal AND @entity=ANY(recorded_for_entities)
  ORDER BY created_at LIMIT 1`, pgx.StrictNamedArgs{
-		"subject": sub.id, "kind": out.Kind, "note": out.Note, "occurred": out.OccurredAt,
-		"deal": zeroUUIDAsNull(deal), "entity": entity,
+		fieldSubject: sub.id, "kind": out.Kind, fieldNote: out.Note, exchangeOccurredArg: out.OccurredAt,
+		exchangeDealArg: zeroUUIDAsNull(deal), "entity": entity,
 	}).Scan(&out.ID, &out.AsksForQuote, &out.Retracted); err != nil {
 		return fmt.Errorf("consent: reading the exchange already on file: %w", err)
 	}
@@ -390,7 +397,7 @@ func (s *Store) retractQualifyingSubject(ctx context.Context, target RecordInput
 			UPDATE consent_qualifying_event
 			   SET retracted_at = now(), retracted_by = @actor
 			 WHERE id = @event AND `+column+` = @subject AND kind = ANY(@kinds::text[]) AND retracted_at IS NULL
-			RETURNING kind, occurred_at`, pgx.StrictNamedArgs{"event": eventID, "subject": sub.id, "actor": by, "kinds": handRecordedKindList()}).Scan(&kind, &occurred)
+			RETURNING kind, occurred_at`, pgx.StrictNamedArgs{"event": eventID, fieldSubject: sub.id, exchangeActorArg: by, "kinds": handRecordedKindList()}).Scan(&kind, &occurred)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return apperrors.ErrNotFound
 		}

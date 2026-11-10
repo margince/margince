@@ -35,7 +35,7 @@ func TestTheLeadExchangeDowngradeKeepsRecordedEvidence(t *testing.T) {
 	}
 	_, err = conn.Exec(t.Context(), string(down))
 	var fault *pgconn.PgError
-	if !errors.As(err, &fault) || fault.Code != "23514" {
+	if !errors.As(err, &fault) || fault.Code != "23502" {
 		t.Fatalf("downgrade = %v; want refusal to discard recorded evidence", err)
 	}
 	var exists bool
