@@ -33,6 +33,13 @@
 .recorddetails-toggle[aria-expanded="true"] > svg {
   transform: rotate(180deg);
 }
+/* An address and its copy glyph share a line as wide as the address, so a
+   mark after them sits beside it when the column has room, else under it. */
+.recorddetails .contactlink-copyable {
+  display: inline-flex;
+  max-inline-size: 100%;
+  vertical-align: top;
+}
 /* A value's copy glyph is quiet like the chat glyph (callaction.css), and
    takes no room until the pointer or focus is on its row, so at rest the
    value has the whole column. */
