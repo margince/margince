@@ -3975,6 +3975,9 @@ export const en = {
     "This deal has no Deal Room yet. Open one from the deal page.",
   "roompage.backToDeal": "← Back to deal",
   "roompage.accessMenu": "Room access",
+  "room.stewardNeeded.title": "New contact needed",
+  "room.stewardNeeded.body":
+    "Choose an active colleague to answer buyers. Existing questions and room access stay as they are.",
   "roompage.manage": "Manage room",
   "roompage.pause": "Pause",
   "roompage.pauseHint":
@@ -12895,6 +12898,7 @@ export const en = {
     "Leave empty for no end date. The day is read in UTC.",
   "roomtab.manage.contactLabel": "Your contact",
   "roomtab.manage.contactHint": "The colleague a buyer turns to.",
+  "roomtab.manage.contactMissing": "No active contact",
   "roomtab.manage.contactOwner": "The deal’s owner",
   "roomtab.manage.textHeading": "Title and welcome",
   "roomtab.manage.welcomeHint": "The first paragraph a buyer reads.",

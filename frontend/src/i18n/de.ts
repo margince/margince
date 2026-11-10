@@ -4016,6 +4016,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Dieser Deal hat noch keinen Deal Room. Eröffne einen Deal Room auf der Deal-Seite.",
   "roompage.backToDeal": "← Zurück zum Deal",
   "roompage.accessMenu": "Zugang zum Raum",
+  "room.stewardNeeded.title": "Neue Kontaktperson nötig",
+  "room.stewardNeeded.body":
+    "Eine aktive Person für Käuferfragen auswählen. Bestehende Fragen und der Zugang zum Raum bleiben erhalten.",
   "roompage.manage": "Raum verwalten",
   "roompage.pause": "Pausieren",
   "roompage.pauseHint":
@@ -12917,6 +12920,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "roomtab.manage.contactLabel": "Dein Kontakt",
   "roomtab.manage.contactHint":
     "Wähle, wer im Team für die Käuferseite ansprechbar ist.",
+  "roomtab.manage.contactMissing": "Keine aktive Kontaktperson",
   "roomtab.manage.contactOwner": "Für den Deal zuständig",
   "roomtab.manage.textHeading": "Titel und Begrüßung",
   "roomtab.manage.welcomeHint": "Der erste Absatz, den die Käuferseite liest.",
