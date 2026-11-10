@@ -10,6 +10,7 @@ import { useLocale, useT } from "../../i18n";
 import { useCompanyZone } from "../../lib/companyzone";
 import { isUnprepared } from "../../lib/meetingreadiness";
 import { useMe } from "../../lib/session";
+import { askKey } from "../../lib/worklistask";
 import {
   briefContextTitle,
   briefSubjectLabel,
@@ -29,7 +30,6 @@ import {
   eyebrowKeyFor,
   kindClass,
 } from "../../lib/worklisteyebrow";
-import { askKey } from "./worklist.ask";
 import { useBriefAnswer, withFoldedBrief } from "./worklist.briefverbs";
 import { DepartedOwnerCaption } from "./worklist.departedowner";
 import {

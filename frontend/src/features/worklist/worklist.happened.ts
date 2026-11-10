@@ -16,8 +16,8 @@ import type { MessageKey } from "../../i18n/en";
 import { useCompanyZone } from "../../lib/companyzone";
 import { valueFor } from "../../lib/labelfor";
 import { useViewerZone } from "../../lib/viewerzone";
+import { askKey } from "../../lib/worklistask";
 import { dealFactsText, partyName, type T } from "../../lib/worklistcopy";
-import { askKey } from "./worklist.ask";
 import type { WorklistItem } from "./worklist.queries";
 
 type Clock = Readonly<{
