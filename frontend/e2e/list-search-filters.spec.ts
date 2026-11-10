@@ -34,6 +34,8 @@ for (const screen of ["contacts", "companies", "deals", "leads"]) {
           if (url.pathname === `/v1/${screen}`) requests.push(url);
         });
         await page.goto(`/#/${screen}`);
+        // The audit reads the list it searches, so it waits for the rows.
+        await expect(page.locator(".lt-loading")).toHaveCount(0);
         const search = page.getByRole("combobox", {
           name: "Search",
           exact: true,
