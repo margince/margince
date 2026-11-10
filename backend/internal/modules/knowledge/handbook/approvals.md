@@ -48,7 +48,7 @@ or a list of fields does not tell you what you are confirming.
 ## Answering approvals
 
 ### How do I approve an action in Margince?
-To approve a proposed change in Margince, open **Home** and show the **Worklist**. Find the approval row and choose **Decide**, then **Accept**.
+To approve a proposed change in Margince, open **Home** and show the **Worklist**. Find the approval row and choose **Decide**, then **Accept**. The open card on **Home** shows the proposal too, and its **View details** answers it.
 1. Open **Home** and choose **Show Worklist** if it is hidden.
 2. Set **Work type** to **Approvals** to see only approvals.
 3. On the row, choose **Decide**. The **Your decision** panel opens.
