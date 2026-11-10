@@ -96,7 +96,7 @@
   margin: 0;
 }
 /* What is left here is the MEASURE — this is a ROW in the document's rhythm,
-   where the staged card's reading padding and 16px corner would make one gap
+   where the staged card's reading padding and corner would make one gap
    taller and rounder than every line it sits between. Two classes, so that
    measure wins wherever the two sheets land in the bundle. */
 .pdigest-open.staging-card {
