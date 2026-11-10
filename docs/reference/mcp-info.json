@@ -10,16 +10,16 @@
   "totals": {
     "tools": 48,
     "resources": 14,
-    "tool_catalog_bytes": 234470,
+    "tool_catalog_bytes": 234489,
     "resource_catalog_bytes": 5622,
-    "approx_wire_tokens_total": 60023,
+    "approx_wire_tokens_total": 60027,
     "largest_tool_bytes": 11810,
     "largest_tool": "read_context",
     "tool_catalog_composition": {
       "description_bytes": 55315,
-      "input_schema_bytes": 115209,
+      "input_schema_bytes": 115228,
       "output_schema_bytes": 51838,
-      "description_plus_input_schema_bytes": 170524
+      "description_plus_input_schema_bytes": 170543
     }
   },
   "tools": {
@@ -8239,7 +8239,7 @@
               "type": "boolean"
             },
             "cursor": {
-              "description": "company_contracts, contact_overrides, deal_margince_changes, deal_suggestions, field_history, handled_for_you, job_health_history, lead_score, legal_reviews, magic_line_records, notice_source_evidence, notices only",
+              "description": "company_contracts, contact_overrides, deal_margince_changes, deal_suggestions, field_history, handled_for_you, job_health_history, lead_score, legal_reviews, magic_line_records, my_linkedin_reach, notice_source_evidence, notices only",
               "type": "string"
             },
             "days": {

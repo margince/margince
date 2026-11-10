@@ -52811,6 +52811,10 @@ type LinkedInReachResponse struct {
 	// AccountsTotal Every account reached, not just the page returned — a truncated list read as the whole network would understate reach.
 	AccountsTotal int `json:"accounts_total" minimum:"0"`
 
+	// NextCursor Send this back as `cursor` to continue past the last account of this page.
+	// Absent on the last page, so a client walking until it disappears stops.
+	NextCursor *string `json:"next_cursor,omitempty"`
+
 	// UnresolvedConnections Connections whose employer matched no account on file. Reported because it is
 	// the honest size of what this view cannot show, and because it is the number
 	// that shrinks as accounts are created.
@@ -74461,6 +74465,13 @@ type ImportLinkedInConnectionsMultipartBody struct {
 type GetMyLinkedInReachParams struct {
 	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty" maximum:"200" minimum:"1"`
+
+	// Cursor Opaque position from a prior answer's `next_cursor`, which resumes the ranking after
+	// the last account returned. A cursor that names no position in this ranking, such
+	// as one from another route, is refused with 422.
+	// The ranking is by live connection counts, so an import between two pages can move
+	// an account across the cut: re-read from the top to see the network as it is now.
+	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
 }
 
 // SaveNotificationPreferenceJSONBody defines parameters for SaveNotificationPreference.
@@ -132427,6 +132438,19 @@ func (siw *ServerInterfaceWrapper) GetMyLinkedInReach(w http.ResponseWriter, r *
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
 		}
 		return
 	}
