@@ -39,7 +39,6 @@ package gates
 
 import (
 	"go/ast"
-	"os"
 	"regexp"
 	"slices"
 	"sort"
@@ -218,7 +217,7 @@ func crmSchemaProperty(t *testing.T, schema, property string) crmProperty {
 			} `yaml:"schemas"`
 		} `yaml:"components"`
 	}
-	raw, err := os.ReadFile("api/crm.yaml")
+	raw, err := gatekit.ReadFile("api/crm.yaml")
 	if err != nil {
 		t.Fatalf("reading the contract: %v", err)
 	}

@@ -6,6 +6,7 @@ package activities
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -54,13 +55,13 @@ func (s *Store) GetEmailPresentation(ctx context.Context, id ids.ActivityID, thr
 	}
 	var out crmcontracts.EmailPresentation
 	err := s.tx(ctx, func(tx pgx.Tx) (err error) {
-		out, err = readEmailPresentation(ctx, tx, id, threadCursor)
+		out, err = readEmailPresentation(ctx, tx, id, threadCursor, s.now())
 		return err
 	})
 	return out, err
 }
 
-func readEmailPresentation(ctx context.Context, tx pgx.Tx, id ids.ActivityID, threadCursor *string) (crmcontracts.EmailPresentation, error) {
+func readEmailPresentation(ctx context.Context, tx pgx.Tx, id ids.ActivityID, threadCursor *string, asOf time.Time) (crmcontracts.EmailPresentation, error) {
 	// The same discover gate and per-row audience test every activity read
 	// carries: a caller who may know the row exists reads it, and the audience
 	// decides whether its content comes along.
@@ -96,6 +97,9 @@ func readEmailPresentation(ctx context.Context, tx pgx.Tx, id ids.ActivityID, th
 		return withheldPresentation(out, activity), nil
 	}
 	out.BodyCompleteness = activity.BodyCompleteness
+	if activity.Language != nil {
+		out.Language = new(crmcontracts.EmailPresentationLanguage(*activity.Language))
+	}
 
 	parties, err := readEmailParties(ctx, tx, id)
 	if err != nil {
@@ -128,17 +132,19 @@ func readEmailPresentation(ctx context.Context, tx pgx.Tx, id ids.ActivityID, th
 		out.Links = *activity.Links
 	}
 
-	access, err := readEmailAccess(ctx, tx, id, activity)
+	access, writable, err := readEmailAccess(ctx, tx, id, activity)
 	if err != nil {
 		return crmcontracts.EmailPresentation{}, err
 	}
 	out.Access = access
 	out.Summary = availableSummary(activity, parties, len(attachments), access.DisplayStatus)
-
 	// What HAPPENED to it. Read after the access gate for the reason the
 	// attachment count is: whether a message left is something about the
 	// message, so the caller's own gate is what decides.
-	if out.ControllerSend, err = withEmailStateOn(ctx, tx, activity.Id, &out.Summary); err != nil {
+	if out.ControllerSend, err = withEmailStateOn(ctx, tx, activity.Id, &out.Summary, asOf); err != nil {
+		return crmcontracts.EmailPresentation{}, err
+	}
+	if err := markOpenInvitation(ctx, tx, id, &out.Summary, asOf); err != nil {
 		return crmcontracts.EmailPresentation{}, err
 	}
 
@@ -148,13 +154,28 @@ func readEmailPresentation(ctx context.Context, tx pgx.Tx, id ids.ActivityID, th
 	}
 	out.Thread = &thread
 
-	// Replying needs only the message: a reader inside the audience may answer
-	// it. Relinking is a WRITE — it changes what the message is filed against —
-	// so it follows the same writability the access block just decided, rather
-	// than being promised to every reader and refused on click.
-	out.CanReply = true
+	// Reply and forward are writes, so they follow the send's grant; relink follows
+	// the row's writability.
+	mayWrite := auth.AllowsWrite(ctx, "activity", principal.ActionCreate)
+	out.CanReply, out.CanForward = mayWrite, mayWrite
 	out.CanRelink = access.CanChange && access.ChangeMode == crmcontracts.EmailAccessChangeModeMessageAudience
+	if activity.CanShareInternal != nil {
+		out.CanRelink = writable
+	}
 	return out, nil
+}
+
+// markOpenInvitation turns the summary into an invitation's when the reader
+// may still answer it.
+func markOpenInvitation(ctx context.Context, tx pgx.Tx, id ids.ActivityID, summary *crmcontracts.EmailSummary, asOf time.Time) error {
+	open, err := openInvitationsTx(ctx, tx, []ids.UUID{id.UUID}, readerOrNobody(ctx), asOf)
+	if err != nil {
+		return err
+	}
+	if found, ok := open[id.UUID]; ok {
+		found.mark(summary)
+	}
+	return nil
 }
 
 // withheldPresentation is the whole answer for a caller who may know the

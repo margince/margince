@@ -50,6 +50,7 @@ it("drops figures already on screen when the switch goes off", async () => {
   client.setQueryData(INSTALLATION_SETTINGS_KEY, {
     individual_performance: true,
     forecast_self_correcting: true,
+    forecast_likely_threshold: 90,
   });
   client.setQueryData(FIGURES_KEY, { total: 7 });
   mounted(client);
@@ -57,6 +58,7 @@ it("drops figures already on screen when the switch goes off", async () => {
   client.setQueryData(INSTALLATION_SETTINGS_KEY, {
     individual_performance: false,
     forecast_self_correcting: true,
+    forecast_likely_threshold: 90,
   });
 
   // The data is gone, not merely stale. A stale answer is still rendered until
@@ -71,6 +73,7 @@ it("drops nothing when a session opens with the switch already off", async () =>
   client.setQueryData(INSTALLATION_SETTINGS_KEY, {
     individual_performance: false,
     forecast_self_correcting: true,
+    forecast_likely_threshold: 90,
   });
   client.setQueryData(FIGURES_KEY, { total: 7 });
   mounted(client);
@@ -86,6 +89,7 @@ it("drops nothing when the switch goes back on", async () => {
   client.setQueryData(INSTALLATION_SETTINGS_KEY, {
     individual_performance: false,
     forecast_self_correcting: true,
+    forecast_likely_threshold: 90,
   });
   client.setQueryData(FIGURES_KEY, { total: 7 });
   mounted(client);
@@ -93,6 +97,7 @@ it("drops nothing when the switch goes back on", async () => {
   client.setQueryData(INSTALLATION_SETTINGS_KEY, {
     individual_performance: true,
     forecast_self_correcting: true,
+    forecast_likely_threshold: 90,
   });
 
   await waitFor(() => expect(client.getQueryData(FIGURES_KEY)).toBeDefined());

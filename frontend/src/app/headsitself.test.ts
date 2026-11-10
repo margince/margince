@@ -5,9 +5,9 @@ import { describe, expect, it } from "vitest";
 import { parseHash } from "../lib/router";
 import { headsItself } from "./pagemeta";
 
-// Which pages print their own h1 is asked of the ROUTE: under one screen,
+// Which pages print their own h1 is asked of the route. Under one screen,
 // Filters and views, the library is named by the shell and every focused page
-// names itself. The self-headed census (self-headed-coverage.test.ts) reads
+// names itself. The self-headed census (census/rules/self-headed-coverage.census.ts) reads
 // screens, not addresses, so this is the table that holds the address half.
 
 describe("a page that heads itself", () => {

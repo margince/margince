@@ -33,7 +33,9 @@ const answerWalkOwner = "internal/platform/database/storekit/answered.go:threadA
 // answerWalksAdmitted are the thread walks that ask something other than
 // "was this inbound answered", keyed by file and declaration.
 var answerWalksAdmitted = gatekit.Waive(map[string]string{
-	"internal/modules/activities/awaitingreply.go:awaitingTheirAnswerSQL": "the mirror question: whether a message the READER sent is still the last word on its thread, so the reader is reminded to follow up. It asks about our outbound, never whether an inbound was answered, and decides no needs-reply badge",
+	"internal/modules/capture/dealrecheck.go:explicitDealEvidence":            "asks whether a proven mail of the conversation is filed on the deal, the thread evidence the deal rule reads. It decides whether a link is rechecked, never whether an inbound was answered",
+	"internal/modules/capture/senderstanding.go:WithheldUnansweredOutboundTx": "asks whether the address the owner wrote to has answered the workspace at all, through capture's addressAnswered (the reply evidence the verdict and the reply promotion share). It decides whether a released contact stays outbound_no_answer, never a needs-reply badge",
+	"internal/modules/activities/awaitingreply.go:awaitingTheirAnswerSQL":     "the mirror question: whether a message the READER sent is still the last word on its thread, so the reader is reminded to follow up. It asks about our outbound, never whether an inbound was answered, and decides no needs-reply badge",
 	answerWalkOwner: "the thread arm of the one answer: every surface that shows needs-reply, a waiting row, request review or the response time reads it through answeredSQL or firstAnswerAtSQL",
 	"internal/modules/activities/awaitingreply.go:awaitingRepliesSQL":                "the waiting-replies lane query; it lists rows through awaitingTheirAnswerSQL and asks the same mirror question about our outbound",
 	"internal/modules/activities/emailmove.go:EmailStatesFor":                        "the email row's page read; its move is moveSQL, and it asks no answer question of its own",
@@ -60,7 +62,7 @@ var answerWalksAdmitted = gatekit.Waive(map[string]string{
 	"internal/modules/activities/samecorrespondence.go:SameCorrespondenceSQL":        "decides which messages on a thread belong to one correspondence: our attested mail to its correspondent or company, or authenticated mail from them. It feeds a reply's context, a thread move, the viewer's standing and the extraction window, never whether an inbound was answered",
 	"internal/modules/activities/relinkbatch.go:liveConversationMembers":             "lists the messages of one correspondence through SameCorrespondenceSQL so a thread move files exactly them; it decides no badge",
 	"internal/compose/signalextractwindow.go:windowAnchor":                           "picks the message an extraction window is bound to, preferring a proven one (our attested mail or authenticated inbound); it asks which message anchors the read, never whether an inbound was answered",
-	"internal/modules/activities/whichdealanswer.go:answerWhichDealTx":               "a colleague's deal answer files the rest of one conversation on the chosen deal; it reads our attested mail and authenticated inbound mail in the thread to decide which rows may follow, never whether an inbound was answered",
+	"internal/modules/activities/whichdealanswer.go:provenConversationSQL":           "a colleague's deal answer files, or declines on, the rest of one conversation; it reads our attested mail and authenticated inbound mail in the thread to decide which rows may follow, never whether an inbound was answered",
 	"internal/modules/capture/replyevidence.go:AddressAnsweredTx":                    "the entry point of addressAnswered's reverse question: whether the address answered us on a thread we wrote on; it decides no badge and no lane row",
 	"internal/modules/capture/sinkdealdecide.go:threadDeals":                         "the deal rule follows a deal our own attested mail in the thread is filed under, and only when the mail's company owns that deal; it asks which deal a message is about, never whether an inbound was answered",
 	"internal/modules/capture/replyevidence.go:addressAnswered":                      "the reverse question: whether the address answered US, on a thread we wrote on, as the evidence that publishes a contact kept private while our mail went unanswered; it decides no badge and no lane row",
@@ -207,7 +209,7 @@ func fragmentKey(call *ast.CallExpr, pkg string) (key, callee string) {
 func kernelFragments(t *testing.T) map[string]fragment {
 	t.Helper()
 	out := map[string]fragment{}
-	err := filepath.WalkDir(filepath.Join("internal", "shared", "kernel"), func(path string, entry fs.DirEntry, err error) error {
+	err := gatekit.WalkDir(filepath.Join("internal", "shared", "kernel"), func(path string, entry fs.DirEntry, err error) error {
 		if err != nil || entry.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
 			return err
 		}
@@ -254,7 +256,7 @@ func TestOnlyTheAnswerPredicateWalksAThreadForOurReply(t *testing.T) {
 			walkRoot = filepath.Join("..", "extensions")
 		}
 		packages := map[string]map[string]*ast.File{}
-		err := filepath.WalkDir(walkRoot, func(path string, entry fs.DirEntry, err error) error {
+		err := gatekit.WalkDir(walkRoot, func(path string, entry fs.DirEntry, err error) error {
 			if err != nil || entry.IsDir() || !strings.HasSuffix(path, ".go") ||
 				strings.HasSuffix(path, "_test.go") || strings.HasSuffix(path, "_gen.go") {
 				return err

@@ -22,11 +22,11 @@ expect:
   answer:
     must_mention: []
     # The failure this case exists for: inventing significance to fill the
-    # space. "No deal moved or closed" is true here and the prompt invites it,
-    # so "closed" is no failure; momentum, a breakthrough or a deal won is a
-    # week that did not happen.
+    # space. "No deal was won, lost or closed" is true here and the prompt
+    # invites it, so none of those words is a failure; momentum or a
+    # breakthrough is a week that did not happen.
     must_not_mention:
-      ["won", "lost", "breakthrough", "momentum", "Weber"]
+      ["breakthrough", "momentum", "Weber"]
   bands: { certified_min: 70, degraded_min: 50, floor: 40 }
   # The counts are not all zero, so the product forbids calling this week
   # "quiet" and its validator refuses the phrase; the rubric grades the same.

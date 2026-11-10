@@ -22,7 +22,6 @@ package gates
 import (
 	"go/ast"
 	"go/token"
-	"os"
 	"sort"
 	"strings"
 	"testing"
@@ -80,7 +79,7 @@ func TestEveryMomentActionKindIsClassifiedAsWritingOrNot(t *testing.T) {
 // ContactMomentAction schema.
 func momentActionKindEnum(t *testing.T) []string {
 	t.Helper()
-	raw, err := os.ReadFile("api/crm.yaml")
+	raw, err := gatekit.ReadFile("api/crm.yaml")
 	if err != nil {
 		t.Fatalf("read contract: %v", err)
 	}

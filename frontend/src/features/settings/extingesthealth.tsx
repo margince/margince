@@ -10,7 +10,6 @@ import { DataTable, type DataTableColumn } from "../../design-system/datatable";
 import { KeyedName } from "../../design-system/keyedname";
 import { PanelBody, PanelIntro } from "../../design-system/panel";
 import { formatDateTime, formatNumber } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
 import {
   type Locale,
   type PluralTranslator,
@@ -23,7 +22,9 @@ import type { MessageKey } from "../../i18n/en";
 import { useCan } from "../../lib/capability";
 import { extensionTitle } from "../../lib/extensions";
 import { useHealthScope, useHealthVisible } from "../../lib/healthscope";
+import { labelFor } from "../../lib/labelfor";
 import { unwrap } from "../../lib/problem";
+import { useViewerZone } from "../../lib/viewerzone";
 import { HealthCard } from "./healthcard";
 
 // GET /admin/extension-ingest-health — whether an installed connector is
@@ -90,7 +91,7 @@ function unitColumns(
             <span key={refusal.refusal}>
               {t("extIngest.refusalCount", {
                 count: formatNumber(refusal.refused, locale),
-                refusal: t(REFUSAL_LABEL[refusal.refusal]),
+                refusal: t(labelFor(REFUSAL_LABEL, refusal.refusal)),
               })}
             </span>
           ))}
@@ -184,7 +185,7 @@ export function ExtensionIngestHealthCard() {
   const t = useT();
   // The reader's own zone: "most recent at 03:14" is only useful against the
   // clock on their wall.
-  const zone = viewerZone();
+  const zone = useViewerZone();
   const { canSee, query } = useExtensionIngestHealth();
 
   return (

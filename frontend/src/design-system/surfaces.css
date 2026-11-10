@@ -37,7 +37,6 @@
   .rail,
   .topbar,
   .backfill-estimate,
-  .agents-guide-command,
   .aiconnect-path,
   .aiconnect-admin,
   .mb-open,
@@ -81,7 +80,6 @@
   .ob-conv-artifact .ob-core-dialog,
   .ob-conv-confirm:not(.ob-triage),
   .ob-triage-rows > li:not(.ob-triage-solid-divider),
-  .jumpbar,
   .vdna-hero,
   .vdna-sharpen,
   .ob-voice-print,
@@ -89,7 +87,8 @@
   .ob-voice-building,
   .voicekind,
   .compose-reasons-card,
-  .page-pane
+  .page-pane,
+  .analytics-sheet
 ) {
   --ground: var(--ladder1Solid);
   --groundEdge: var(--ladder1Edge);
@@ -134,7 +133,6 @@
     .rail,
     .topbar,
     .backfill-estimate,
-    .agents-guide-command,
     .aiconnect-path,
     .aiconnect-admin,
     .mb-open,
@@ -178,7 +176,6 @@
     .ob-conv-artifact .ob-core-dialog,
     .ob-conv-confirm:not(.ob-triage),
     .ob-triage-rows > li:not(.ob-triage-solid-divider),
-    .jumpbar,
     .vdna-hero,
     .vdna-sharpen,
     .ob-voice-print,
@@ -186,7 +183,8 @@
     .ob-voice-building,
     .voicekind,
     .compose-reasons-card,
-    .page-pane
+    .page-pane,
+    .analytics-sheet
   )
   :where(
     .panel,
@@ -216,7 +214,6 @@
     .rail,
     .topbar,
     .backfill-estimate,
-    .agents-guide-command,
     .aiconnect-path,
     .aiconnect-admin,
     .mb-open,
@@ -260,7 +257,6 @@
     .ob-conv-artifact .ob-core-dialog,
     .ob-conv-confirm:not(.ob-triage),
     .ob-triage-rows > li:not(.ob-triage-solid-divider),
-    .jumpbar,
     .vdna-hero,
     .vdna-sharpen,
     .ob-voice-print,
@@ -268,7 +264,8 @@
     .ob-voice-building,
     .voicekind,
     .compose-reasons-card,
-    .page-pane
+    .page-pane,
+    .analytics-sheet
   ) {
   --ground: var(--ladder2);
   --groundEdge: var(--ladder2Edge);
@@ -313,7 +310,6 @@
     .rail,
     .topbar,
     .backfill-estimate,
-    .agents-guide-command,
     .aiconnect-path,
     .aiconnect-admin,
     .mb-open,
@@ -357,7 +353,6 @@
     .ob-conv-artifact .ob-core-dialog,
     .ob-conv-confirm:not(.ob-triage),
     .ob-triage-rows > li:not(.ob-triage-solid-divider),
-    .jumpbar,
     .vdna-hero,
     .vdna-sharpen,
     .ob-voice-print,
@@ -365,7 +360,8 @@
     .ob-voice-building,
     .voicekind,
     .compose-reasons-card,
-    .page-pane
+    .page-pane,
+    .analytics-sheet
   )
   :where(
     .panel,
@@ -395,7 +391,6 @@
     .rail,
     .topbar,
     .backfill-estimate,
-    .agents-guide-command,
     .aiconnect-path,
     .aiconnect-admin,
     .mb-open,
@@ -439,7 +434,6 @@
     .ob-conv-artifact .ob-core-dialog,
     .ob-conv-confirm:not(.ob-triage),
     .ob-triage-rows > li:not(.ob-triage-solid-divider),
-    .jumpbar,
     .vdna-hero,
     .vdna-sharpen,
     .ob-voice-print,
@@ -447,7 +441,8 @@
     .ob-voice-building,
     .voicekind,
     .compose-reasons-card,
-    .page-pane
+    .page-pane,
+    .analytics-sheet
   )
   :where(
     .panel,
@@ -477,7 +472,6 @@
     .rail,
     .topbar,
     .backfill-estimate,
-    .agents-guide-command,
     .aiconnect-path,
     .aiconnect-admin,
     .mb-open,
@@ -521,7 +515,6 @@
     .ob-conv-artifact .ob-core-dialog,
     .ob-conv-confirm:not(.ob-triage),
     .ob-triage-rows > li:not(.ob-triage-solid-divider),
-    .jumpbar,
     .vdna-hero,
     .vdna-sharpen,
     .ob-voice-print,
@@ -529,7 +522,8 @@
     .ob-voice-building,
     .voicekind,
     .compose-reasons-card,
-    .page-pane
+    .page-pane,
+    .analytics-sheet
   ) {
   --ground: var(--ladder3);
   --groundEdge: var(--ladder3Edge);
@@ -574,7 +568,6 @@
     .rail,
     .topbar,
     .backfill-estimate,
-    .agents-guide-command,
     .aiconnect-path,
     .aiconnect-admin,
     .mb-open,
@@ -618,7 +611,6 @@
     .ob-conv-artifact .ob-core-dialog,
     .ob-conv-confirm:not(.ob-triage),
     .ob-triage-rows > li:not(.ob-triage-solid-divider),
-    .jumpbar,
     .vdna-hero,
     .vdna-sharpen,
     .ob-voice-print,
@@ -626,7 +618,8 @@
     .ob-voice-building,
     .voicekind,
     .compose-reasons-card,
-    .page-pane
+    .page-pane,
+    .analytics-sheet
   )
   :where(
     .panel,
@@ -656,7 +649,6 @@
     .rail,
     .topbar,
     .backfill-estimate,
-    .agents-guide-command,
     .aiconnect-path,
     .aiconnect-admin,
     .mb-open,
@@ -700,7 +692,6 @@
     .ob-conv-artifact .ob-core-dialog,
     .ob-conv-confirm:not(.ob-triage),
     .ob-triage-rows > li:not(.ob-triage-solid-divider),
-    .jumpbar,
     .vdna-hero,
     .vdna-sharpen,
     .ob-voice-print,
@@ -708,7 +699,8 @@
     .ob-voice-building,
     .voicekind,
     .compose-reasons-card,
-    .page-pane
+    .page-pane,
+    .analytics-sheet
   )
   :where(
     .panel,
@@ -738,7 +730,6 @@
     .rail,
     .topbar,
     .backfill-estimate,
-    .agents-guide-command,
     .aiconnect-path,
     .aiconnect-admin,
     .mb-open,
@@ -782,7 +773,6 @@
     .ob-conv-artifact .ob-core-dialog,
     .ob-conv-confirm:not(.ob-triage),
     .ob-triage-rows > li:not(.ob-triage-solid-divider),
-    .jumpbar,
     .vdna-hero,
     .vdna-sharpen,
     .ob-voice-print,
@@ -790,7 +780,8 @@
     .ob-voice-building,
     .voicekind,
     .compose-reasons-card,
-    .page-pane
+    .page-pane,
+    .analytics-sheet
   )
   :where(
     .panel,
@@ -820,7 +811,6 @@
     .rail,
     .topbar,
     .backfill-estimate,
-    .agents-guide-command,
     .aiconnect-path,
     .aiconnect-admin,
     .mb-open,
@@ -864,7 +854,6 @@
     .ob-conv-artifact .ob-core-dialog,
     .ob-conv-confirm:not(.ob-triage),
     .ob-triage-rows > li:not(.ob-triage-solid-divider),
-    .jumpbar,
     .vdna-hero,
     .vdna-sharpen,
     .ob-voice-print,
@@ -872,7 +861,8 @@
     .ob-voice-building,
     .voicekind,
     .compose-reasons-card,
-    .page-pane
+    .page-pane,
+    .analytics-sheet
   ) {
   --ground: var(--ladder4);
   --groundEdge: var(--ladder4Edge);
@@ -907,7 +897,8 @@
   .arpanel,
   .mw-aistat-pop,
   .ddeck-tray:not(.panel-foot > .ddeck-tray),
-  .notifbell-loose
+  .notifbell-loose,
+  .overflow-menu-labelled
 ) {
   --ground: var(--bgElevated);
   --groundEdge: var(--ladder1Edge);
@@ -942,7 +933,8 @@
     .arpanel,
     .mw-aistat-pop,
     .ddeck-tray:not(.panel-foot > .ddeck-tray),
-    .notifbell-loose
+    .notifbell-loose,
+    .overflow-menu-labelled
   )
   :where(
     .panel,
@@ -972,7 +964,6 @@
     .rail,
     .topbar,
     .backfill-estimate,
-    .agents-guide-command,
     .aiconnect-path,
     .aiconnect-admin,
     .mb-open,
@@ -1016,7 +1007,6 @@
     .ob-conv-artifact .ob-core-dialog,
     .ob-conv-confirm:not(.ob-triage),
     .ob-triage-rows > li:not(.ob-triage-solid-divider),
-    .jumpbar,
     .vdna-hero,
     .vdna-sharpen,
     .ob-voice-print,
@@ -1024,7 +1014,8 @@
     .ob-voice-building,
     .voicekind,
     .compose-reasons-card,
-    .page-pane
+    .page-pane,
+    .analytics-sheet
   ) {
   --ground: var(--ladder2);
   --groundEdge: var(--ladder2Edge);
@@ -1059,7 +1050,8 @@
     .arpanel,
     .mw-aistat-pop,
     .ddeck-tray:not(.panel-foot > .ddeck-tray),
-    .notifbell-loose
+    .notifbell-loose,
+    .overflow-menu-labelled
   )
   :where(
     .panel,
@@ -1089,7 +1081,6 @@
     .rail,
     .topbar,
     .backfill-estimate,
-    .agents-guide-command,
     .aiconnect-path,
     .aiconnect-admin,
     .mb-open,
@@ -1133,7 +1124,6 @@
     .ob-conv-artifact .ob-core-dialog,
     .ob-conv-confirm:not(.ob-triage),
     .ob-triage-rows > li:not(.ob-triage-solid-divider),
-    .jumpbar,
     .vdna-hero,
     .vdna-sharpen,
     .ob-voice-print,
@@ -1141,7 +1131,8 @@
     .ob-voice-building,
     .voicekind,
     .compose-reasons-card,
-    .page-pane
+    .page-pane,
+    .analytics-sheet
   )
   :where(
     .panel,
@@ -1171,7 +1162,6 @@
     .rail,
     .topbar,
     .backfill-estimate,
-    .agents-guide-command,
     .aiconnect-path,
     .aiconnect-admin,
     .mb-open,
@@ -1215,7 +1205,6 @@
     .ob-conv-artifact .ob-core-dialog,
     .ob-conv-confirm:not(.ob-triage),
     .ob-triage-rows > li:not(.ob-triage-solid-divider),
-    .jumpbar,
     .vdna-hero,
     .vdna-sharpen,
     .ob-voice-print,
@@ -1223,7 +1212,8 @@
     .ob-voice-building,
     .voicekind,
     .compose-reasons-card,
-    .page-pane
+    .page-pane,
+    .analytics-sheet
   ) {
   --ground: var(--ladder3);
   --groundEdge: var(--ladder3Edge);
@@ -1258,7 +1248,8 @@
     .arpanel,
     .mw-aistat-pop,
     .ddeck-tray:not(.panel-foot > .ddeck-tray),
-    .notifbell-loose
+    .notifbell-loose,
+    .overflow-menu-labelled
   )
   :where(
     .panel,
@@ -1288,7 +1279,6 @@
     .rail,
     .topbar,
     .backfill-estimate,
-    .agents-guide-command,
     .aiconnect-path,
     .aiconnect-admin,
     .mb-open,
@@ -1332,7 +1322,6 @@
     .ob-conv-artifact .ob-core-dialog,
     .ob-conv-confirm:not(.ob-triage),
     .ob-triage-rows > li:not(.ob-triage-solid-divider),
-    .jumpbar,
     .vdna-hero,
     .vdna-sharpen,
     .ob-voice-print,
@@ -1340,7 +1329,8 @@
     .ob-voice-building,
     .voicekind,
     .compose-reasons-card,
-    .page-pane
+    .page-pane,
+    .analytics-sheet
   )
   :where(
     .panel,
@@ -1370,7 +1360,6 @@
     .rail,
     .topbar,
     .backfill-estimate,
-    .agents-guide-command,
     .aiconnect-path,
     .aiconnect-admin,
     .mb-open,
@@ -1414,7 +1403,6 @@
     .ob-conv-artifact .ob-core-dialog,
     .ob-conv-confirm:not(.ob-triage),
     .ob-triage-rows > li:not(.ob-triage-solid-divider),
-    .jumpbar,
     .vdna-hero,
     .vdna-sharpen,
     .ob-voice-print,
@@ -1422,7 +1410,8 @@
     .ob-voice-building,
     .voicekind,
     .compose-reasons-card,
-    .page-pane
+    .page-pane,
+    .analytics-sheet
   )
   :where(
     .panel,
@@ -1452,7 +1441,6 @@
     .rail,
     .topbar,
     .backfill-estimate,
-    .agents-guide-command,
     .aiconnect-path,
     .aiconnect-admin,
     .mb-open,
@@ -1496,7 +1484,6 @@
     .ob-conv-artifact .ob-core-dialog,
     .ob-conv-confirm:not(.ob-triage),
     .ob-triage-rows > li:not(.ob-triage-solid-divider),
-    .jumpbar,
     .vdna-hero,
     .vdna-sharpen,
     .ob-voice-print,
@@ -1504,7 +1491,8 @@
     .ob-voice-building,
     .voicekind,
     .compose-reasons-card,
-    .page-pane
+    .page-pane,
+    .analytics-sheet
   ) {
   --ground: var(--ladder4);
   --groundEdge: var(--ladder4Edge);
@@ -1544,6 +1532,7 @@
     .arhit,
     .arphead,
     .avatar-mesh,
+    .brief-cardpager-stacked,
     .brief-triage-frame,
     .co-move,
     .core-glass,
@@ -1588,7 +1577,6 @@
     .rail,
     .topbar,
     .backfill-estimate,
-    .agents-guide-command,
     .aiconnect-path,
     .aiconnect-admin,
     .mb-open,
@@ -1632,7 +1620,6 @@
     .ob-conv-artifact .ob-core-dialog,
     .ob-conv-confirm:not(.ob-triage),
     .ob-triage-rows > li:not(.ob-triage-solid-divider),
-    .jumpbar,
     .vdna-hero,
     .vdna-sharpen,
     .ob-voice-print,
@@ -1640,7 +1627,8 @@
     .ob-voice-building,
     .voicekind,
     .compose-reasons-card,
-    .page-pane
+    .page-pane,
+    .analytics-sheet
   ) {
   background-color: var(--ground);
 }

@@ -29,10 +29,10 @@ package gates
 // advertised to nobody.
 
 import (
+	"bytes"
 	"go/ast"
 	"go/token"
 	"io/fs"
-	"os"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -97,7 +97,7 @@ func TestEveryOutboundIdentityHasARequestBehindIt(t *testing.T) {
 		senders[name] = regexp.MustCompile(`\boutbound\.` + name + `(Product|Header)\b`)
 	}
 	users := map[string]int{}
-	err := filepath.WalkDir(".", func(path string, d fs.DirEntry, walkErr error) error {
+	err := gatekit.WalkDir(".", func(path string, d fs.DirEntry, walkErr error) error {
 		if walkErr != nil || d.IsDir() || !strings.HasSuffix(path, ".go") {
 			return walkErr
 		}
@@ -107,9 +107,12 @@ func TestEveryOutboundIdentityHasARequestBehindIt(t *testing.T) {
 		if path == outboundIdentities || strings.HasSuffix(path, "_test.go") {
 			return nil
 		}
-		source, readErr := os.ReadFile(path) // #nosec G304 -- a *.go path from walking the trusted source tree
+		source, readErr := gatekit.ReadFile(path) // #nosec G304 -- a *.go path from walking the trusted source tree
 		if readErr != nil {
 			return readErr
+		}
+		if !bytes.Contains(source, []byte("outbound.")) {
+			return nil
 		}
 		for _, name := range identities {
 			// Either half counts, and per FILE rather than per occurrence: the

@@ -58,6 +58,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/vectorkit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
+	"github.com/margince/margince/backend/internal/shared/kernel/promptref"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
@@ -84,7 +85,10 @@ Being about the same subject is NOT answering. A question asking HOW to do
 something is not answered by a passage saying what the thing IS, when it comes
 into being, who is allowed to do it, or what happens to it afterwards. If you
 find yourself assembling an answer out of parts that each say something else,
-the coverage is "does_not_answer".
+the coverage is "does_not_answer". A question that asks one thing has one part:
+who may do it, what it is and when it happens are not parts of "how do I do
+it", so a passage that states only those makes the coverage "does_not_answer",
+never "partially_answers".
 
 When coverage is "does_not_answer":
   - return NO claims.
@@ -92,14 +96,14 @@ When coverage is "does_not_answer":
     documents do not answer this, then say what those documents do cover nearby
     so they know where to look next. This is the ONLY place you may describe
     what you could not find.
-    Write "Your handbook doesn't say how to create a project. It explains what a
-    project is and when one starts, but not how to make one."
-    Not "The documents do not contain information regarding project creation."
+    Write "Your handbook doesn't say how to book a meeting room. It explains
+    which rooms there are and who looks after them, but not how to reserve one."
+    Not "The documents do not contain information regarding room booking."
 
 When coverage is "partially_answers":
   - write claims for the part you CAN ground, exactly as below.
   - name the missing part in summary, in the reader's own terms: "Your handbook
-    says what a seat is, but not how to ask for one."
+    says how to book a day off, but not how many days you get."
   - never pad the gap with a claim built out of adjacent material. Half an
     answer that says so beats a whole one that is partly invented.
 
@@ -108,9 +112,12 @@ acting on the wrong half of a contradiction is worse off than one who knows the
 documents conflict.
 
 When coverage is "answers":
+  - every claim answers the question that was asked. Leave out a true sentence
+    that answers a neighbouring question (who may do it, what the thing is),
+    even when it sits next to the passage that does answer.
   - write one claim per sentence of the answer. Every claim carries:
       - text: one sentence of the answer, in your own words.
-      - id: the id of the passage that sentence rests on.
+      - id: the reference of the passage that sentence rests on, such as p2.
       - quote: a span copied from that passage, CHARACTER FOR CHARACTER.
   - write summary as the ANSWER, in the words a colleague would use, saying only
     what your own claims say. Lead with the answer itself — never open by
@@ -166,7 +173,7 @@ func CorpusAskRequest(question string, passages []knowledge.Passage, lang string
 		System:         corpusAskSystemFor(fence, lang),
 		Messages:       []model.Message{{Role: chatRoleUser, Content: fence.Wrap(renderCorpusAsk(question, passages))}},
 		MaxTokens:      2 * ai.ReasoningOutputMaxTokens,
-		ResponseSchema: corpusAskSchema(passageIDs(passages)),
+		ResponseSchema: corpusAskSchema(passageRefs(passages).All()),
 		SecretStripper: ai.NewSecretStripper(),
 	}
 }
@@ -196,12 +203,14 @@ func corpusAskSystemFor(fence promptfence.Fence, lang string) string {
 		"\n" + fence.Rule("passage")
 }
 
-func passageIDs(passages []knowledge.Passage) []string {
-	ids := make([]string, len(passages))
-	for i, p := range passages {
-		ids[i] = p.ChunkID.String()
+// passageRefs names the passages p1, p2, … in the order the prompt lists
+// them. The request and the reply's reading both build it from the same list.
+func passageRefs(passages []knowledge.Passage) *promptref.Refs {
+	refs := promptref.New("p")
+	for _, p := range passages {
+		refs.For(p.ChunkID.String())
 	}
-	return ids
+	return refs
 }
 
 // renderCorpusAsk lays out the question and the numbered passages.
@@ -210,8 +219,9 @@ func renderCorpusAsk(question string, passages []knowledge.Passage) string {
 	b.WriteString("Question: ")
 	b.WriteString(question)
 	b.WriteString("\n\nPassages:\n")
+	refs := passageRefs(passages)
 	for _, p := range passages {
-		fmt.Fprintf(&b, "\n[%s] from %s\n%s\n", p.ChunkID, p.DocumentName, p.Text)
+		fmt.Fprintf(&b, "\n[%s] from %s\n%s\n", refs.For(p.ChunkID.String()), p.DocumentName, p.Text)
 	}
 	return b.String()
 }
@@ -349,8 +359,7 @@ type corpusAskEngine struct {
 	// lane writes the prose. Nil is a composition without a chat lane, and the
 	// answer is the passages themselves.
 	lane corpusAskLane
-	// pool resolves the workspace's base language, which is what the answer's
-	// sentences are written in.
+	// pool resolves the base language for a caller who chose none of their own.
 	pool *pgxpool.Pool
 	log  *slog.Logger
 }
@@ -371,8 +380,10 @@ func (e *corpusAskEngine) ask(w http.ResponseWriter, r *http.Request, id crmcont
 		modelfailure.Write(w, r, err)
 		return
 	}
+	// The answer goes to the one caller who asked and is stored nowhere, so it
+	// takes their language rather than the shared record's.
 	answer := AnswerCorpus(r.Context(), e.lane, state, question, passages,
-		identity.BaseLanguageForPrompt(r.Context(), e.pool), e.log)
+		identity.ReaderLanguageForPrompt(r.Context(), e.pool), e.log)
 	httperr.WriteJSON(w, http.StatusOK, answer)
 }
 

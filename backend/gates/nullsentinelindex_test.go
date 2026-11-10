@@ -28,7 +28,6 @@ package gates
 // not match the detector rather than needing to be excused by name.
 
 import (
-	"os"
 	"regexp"
 	"strings"
 	"testing"
@@ -199,7 +198,7 @@ func TestNoUpsertInfersASentinelIndex(t *testing.T) {
 
 	read := 0
 	for _, path := range goSourceFiles(t, "..") {
-		body, err := os.ReadFile(path)
+		body, err := gatekit.ReadFile(path)
 		if err != nil {
 			t.Fatalf("reading %s: %v", path, err)
 		}

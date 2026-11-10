@@ -25,7 +25,7 @@ export function useQueueWrites(readerZone: string, onWithdrawn: () => void) {
       return unwrap(
         await api.PATCH("/scheduled-sends/{id}", {
           // Through `ifMatch`, not a hand-written header: it is the one spelling of
-          // the precondition. `src/api/if-match-coverage.test.ts` reads the AST for
+          // the precondition. `census/rules/if-match-coverage.census.ts` reads the AST for
           // that call, so a second spelling reads to the gate as no precondition.
           params: { path: { id }, ...ifMatch(version) },
           // The zone travels as a name beside the instant. So a message scheduled

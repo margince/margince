@@ -75,7 +75,8 @@ func TestTheWonDealScenarioAcceptsEveryFormOfTheWinAndNoWrongWeek(t *testing.T) 
 
 func TestTheLossPatternScenarioWantsACitedLearningAndRefusesSilence(t *testing.T) {
 	prepared := preparedCorpusCase(t, "aicert/corpus/weekly_learnings/a_repeated_pattern_is_cited.yaml")
-	const aurora, borealis = "01a05500-0000-7000-8000-0000000000e1", "01a05500-0000-7000-8000-0000000000e2"
+	// The refs the prompt shows for the scenario's first two deals.
+	const aurora, borealis = "d1", "d2"
 	learning := func(ids ...string) string {
 		citations := make([]string, 0, len(ids))
 		for _, id := range ids {

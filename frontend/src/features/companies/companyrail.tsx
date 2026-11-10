@@ -25,6 +25,7 @@ import { INDUSTRY_CODES, industryOptions } from "../../format/industry";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useCanWriteRecord } from "../../lib/capability";
+import { labelFor } from "../../lib/labelfor";
 import { useListsAvailable, useRecordLists } from "../../lib/lists.queries";
 import { CompanyContactCard } from "./companycontactcard";
 import {
@@ -286,7 +287,7 @@ function useAboutRows(
       "company.lifecycle",
       LIFECYCLE_OPTIONS.map((value) => ({
         value,
-        label: t(LIFECYCLE_LABELS[value]),
+        label: t(labelFor(LIFECYCLE_LABELS, value)),
       })),
     ),
     compound("address", t("co.address.summary"), addressLine(company), {

@@ -39,6 +39,7 @@ func New() extension.Extension {
 		Panels: []extension.Panel{
 			{Slot: extension.SlotDealPanel, Export: "DealHello", Object: "ext_crm_hello_ping"},
 		},
+		Instrumentation: &extension.Instrumentation{Start: startInstrumentation, Browser: "instrument", Edge: instrumentationEdge()},
 	}
 }
 

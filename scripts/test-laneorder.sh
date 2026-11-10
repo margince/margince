@@ -15,7 +15,13 @@
 #      degrade to no-hint behaviour, not to an order the sort invented;
 #   3. the measured hint beats the committed baseline, and an empty or missing
 #      file is not a hint at all;
-#   4. the shard split holds every test once and spreads slow tests apart.
+#   4. the shard split holds every test once and spreads slow tests apart;
+#   5. a package too heavy for one process splits into parts that hold every
+#      test once, none empty, balanced by weight;
+#   6. the wall-clock report reads the critical part's own seconds;
+#   7. a shard starts its heaviest part first, by the weights it split by;
+#   8. discovery finds the tests `go test -tags=integration` runs, and fails on
+#      a file it cannot decide.
 set -euo pipefail
 
 root_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -231,11 +237,135 @@ printf 'backend|./mid|TestP|10.0\nbackend|./mid|*|6.0\n' > "$work/midtime"
 count=$(assign_shard "$work/middisc" "$work/midtime" 1 2 | wc -l | tr -d ' ')
 [[ "$count" -eq 2 ]] || fail "shard 1 of 2 got $count of ./mid's tests; the * row weighs the unnamed ones at 6 s, so it must hold 2"
 
+# A package whose tests all measured 0.00 s, or a file poisoned with zeros,
+# must still spread: a weight of zero never adds to a shard's load.
+printf 'backend|./zero|*|0.000\n' > "$work/zerotime"
+printf 'backend|./zero|TestZ%s\n' 1 2 3 4 5 6 > "$work/zerodisc"
+for k in 1 2 3; do
+  count=$(assign_shard "$work/zerodisc" "$work/zerotime" "$k" 3 | wc -l | tr -d ' ')
+  [[ "$count" -eq 2 ]] || fail "with every weight zero, shard $k got $count of 6 tests; it must get 2"
+done
+
 : > "$work/notiming"
 for k in 1 2 3; do
   count=$(assign_shard "$work/discovery" "$work/notiming" "$k" 3 | grep -c '|./big|' || true)
   [[ "$count" -eq 2 ]] || fail "with no timing, shard $k got $count of ./big's 6 tests; it must split by count, 2 each"
 done
+
+# 5. Parts. A part is one `go test` process, so a lost test is a test no process
+# runs, and an empty part would be a `-run ^()$` process that runs nothing.
+part_tests() { # the tests a `dir|pkg|^(A|B)$` line runs, one `dir|pkg|Test` each
+  awk -F'|' '{ for (i = 3; i <= NF; i++) { t = $i; gsub(/[\^()$]/, "", t); print $1 "|" $2 "|" t } }' "$1" | LC_ALL=C sort
+}
+split_parts "$work/discovery" "$work/timing" 50 > "$work/parts"
+expect_order "the parts together must hold every test exactly once" \
+  "$(LC_ALL=C sort "$work/discovery")" "$(part_tests "$work/parts")"
+expect_order "./big (123 s) splits into three parts, each under 50 s but the one holding the 60 s test alone; ./small (9 s) stays whole" \
+  './big
+./big
+./big
+./small' \
+  "$(cut -d'|' -f2 "$work/parts")"
+while IFS= read -r part; do
+  printf '%s\n' "$part" > "$work/onepart"
+  load=$(awk -F'|' 'NR == FNR { if (NF == 4) t[$1 "|" $2 "|" $3] = $4; next } { s += t[$0] } END { print s + 0 }' \
+    "$work/timing" <(part_tests "$work/onepart" | grep '|./big|' || true))
+  if (( ${load%.*} > 61 )); then
+    fail "a part of ./big holds ${load}s; balanced, none holds more than the 60 s test plus a 1 s one"
+  fi
+done < "$work/parts"
+[[ "$(split_parts "$work/discovery" "$work/timing" 1 | grep -c '|./big|')" -eq 6 ]] \
+  || fail "a package never splits into more parts than it has tests"
+expect_order "a package under the part size runs as one process with all its tests" \
+  'backend|./big
+backend|./small' \
+  "$(split_parts "$work/discovery" "$work/timing" 900 | cut -d'|' -f1,2)"
+
+if grep -qE '\^\(\||\|\||\|\)\$' "$work/parts"; then
+  fail "a -run union has an empty alternative, which matches every test: $(tr '\n' ' ' < "$work/parts")"
+fi
+# Dealing is not packing: two parts take 40 s, then 30 + 30 s. A part of more
+# than one test over the part size asks for one more part.
+printf 'backend|./trio|TestX\nbackend|./trio|TestY\nbackend|./trio|TestZ\n' > "$work/triodisc"
+printf 'backend|./trio|TestX|40.0\nbackend|./trio|TestY|30.0\nbackend|./trio|TestZ|30.0\n' > "$work/triotime"
+expect_order "40, 30 and 30 s under a 50 s part size run as three parts, one test each" \
+  '^(TestX)$
+^(TestY)$
+^(TestZ)$' \
+  "$(split_parts "$work/triodisc" "$work/triotime" 50 | cut -d'|' -f3- | LC_ALL=C sort)"
+
+# 6. The wall-clock report prices the process that ended last by its own
+# seconds. Two parts of one package share its name; only the slot tells them
+# apart.
+printf './a|10|50|3\n./big|5|400|7\n./big|5|200|8\n' > "$work/wallclock"
+printf './big|380.0|40|7\n./big|20.0|5|8\n./a|30.0|9|3\n' > "$work/parttiming"
+expect_order "the critical part is joined to its own seconds, not its sibling's" \
+  './big|5|400|380.0' "$(critical_part "$work/wallclock" "$work/parttiming")"
+printf './big|20.0|5|8\n' > "$work/othertiming"
+expect_order "a critical part whose log recorded no seconds reports none" \
+  './big|5|400|' "$(critical_part "$work/wallclock" "$work/othertiming")"
+
+# 7. Part order, by the weights of the timing above: a part weighs the sum of
+# its tests, a test the file does not name weighs its package's `*` row, the
+# packages mix, and the two 60 s parts keep the order they arrived in.
+cat > "$work/unordered" <<'PARTS'
+backend|./small|^(TestG|TestH)$
+backend|./big|^(TestB|TestC)$
+backend|./big|^(TestA)$
+backend|./small|^(TestNew)$
+backend|./big|^(TestD|TestE)$
+PARTS
+expect_order "parts start heaviest first, whatever package they belong to" \
+  'backend|./big|^(TestA)$
+backend|./big|^(TestD|TestE)$
+backend|./small|^(TestG|TestH)$
+backend|./small|^(TestNew)$
+backend|./big|^(TestB|TestC)$' \
+  "$(order_by_weight "$work/unordered" "$work/timing")"
+
+# 8. Discovery, against a module laid out as the lane meets one.
+mod="$work/mod"
+mkdir -p "$mod/a" "$mod/b" "$mod/c"
+printf '//go:build integration\n\npackage a\n\nfunc TestA(t *testing.T) {}\nfunc TestMain(m *testing.M) {}\nfunc Testhelper() {}\nfunc Test(t *testing.T) {}\n' > "$mod/a/a_test.go"
+printf 'package a\n\nfunc TestUnitOne(t *testing.T) {}\nfunc TestUnitTwo(t *testing.T) {}\n' > "$mod/a/unit_test.go"
+printf 'package a\n\n//go:build integration\nfunc TestProse(t *testing.T) {}\n' > "$mod/a/prose_test.go"
+printf '//go:build linux\n\npackage b\n\nfunc TestB(t *testing.T) {}\n' > "$mod/b/b_test.go"
+printf '//go:build integration\n\npackage c\n\nfunc TestC(t *testing.T) {}\n' > "$mod/c/c_test.go"
+printf '//go:build !integration\n\npackage c\n\nfunc TestNotHere(t *testing.T) {}\n' > "$mod/c/unit_test.go"
+printf '//go:build integration && bench\n\npackage c\n\nfunc TestBench(t *testing.T) {}\n' > "$mod/c/bench_test.go"
+printf '// +build e2e_llm\n\npackage c\n\nfunc TestLLM(t *testing.T) {}\n' > "$mod/c/llm_test.go"
+: > "$work/untagged"
+expect_order "discovery lists the tagged tests of the lane's packages, as go test runs them" \
+  "$(printf '%s\n' "$mod|./a|Test" "$mod|./a|TestA" "$mod|./c|TestC")" \
+  "$(lane_discover "$work/untagged" "$mod")"
+expect_order "an untagged file counts every Test function it holds, and a constraint below package is prose" \
+  "$(printf '%s\n' "$mod|./a|1" "$mod|./a|2")" "$(LC_ALL=C sort "$work/untagged")"
+# go reads no testdata directory, and with a //go:build line it ignores the
+# // +build lines beside it.
+mkdir -p "$mod/c/testdata/fixture"
+printf '//go:build integration\n\npackage fixture\n\nfunc TestFixture(t *testing.T) {}\n' > "$mod/c/testdata/fixture/f_test.go"
+printf '//go:build integration && bench\n// +build integration,bench\n\npackage c\n\nfunc TestPaired(t *testing.T) {}\n' > "$mod/c/paired_test.go"
+printf '//go:build integration\n\npackage c\n\nfunc TestMain(t *testing.T) {}\n' > "$mod/c/main_test.go"
+expect_order "testdata is not read, a paired legacy line follows //go:build, and TestMain(*testing.T) is a test" \
+  "$(printf '%s\n' "$mod|./a|Test" "$mod|./a|TestA" "$mod|./c|TestC" "$mod|./c|TestMain")" \
+  "$(lane_discover "$work/untagged" "$mod")"
+expect_fail() { # label stderr-pattern file content
+  printf '%b' "$4" > "$3"
+  if lane_discover "$work/untagged" "$mod" > /dev/null 2> "$work/err" || ! grep -q "$2" "$work/err"; then
+    fail "$1"
+  fi
+  rm "$3"
+}
+expect_fail "a constraint discovery cannot decide, in a package the lane runs, must fail by name" \
+  linux "$mod/c/linux_test.go" '//go:build linux\n\npackage c\n\nfunc TestLinux(t *testing.T) {}\n'
+expect_fail "a constraint that names integration in another form must fail, not skip its package" \
+  "(integration)" "$mod/d_test.go" '//go:build (integration)\n\npackage d\n\nfunc TestD(t *testing.T) {}\n'
+expect_fail "a tagged file named for a GOOS must fail" \
+  "GOOS or GOARCH" "$mod/c/c_windows_test.go" '//go:build integration\n\npackage c\n\nfunc TestWin(t *testing.T) {}\n'
+expect_fail "a test name outside ASCII must fail" \
+  "outside ASCII" "$mod/c/u_test.go" '//go:build integration\n\npackage c\n\nfunc Test\xc3\x89crit(t *testing.T) {}\n'
+expect_fail "a Fuzz function in a tagged file must fail discovery" \
+  "Fuzz or Example" "$mod/c/fuzz_test.go" '//go:build integration\n\npackage c\n\nfunc FuzzC(f *testing.F) {}\n'
 
 # The committed shard timing has to be readable by assign_shard: four fields,
 # a number last. A line it cannot read silently weighs its test at the mean.
@@ -246,6 +376,9 @@ live=$(grep -v '^#' "$shard_timing" | cut -d'|' -f2 | LC_ALL=C sort -u | while r
   [[ -d "$root_dir/backend/${pkg#./}" ]] && echo "$pkg"
 done | wc -l | tr -d ' ')
 (( live > 0 )) || fail "no package named in $shard_timing still exists — every shard splits by count"
+# The refresh script writes the rows in C sort order; a hand edit keeps it.
+grep -v '^#' "$shard_timing" | LC_ALL=C sort -c 2>/dev/null \
+  || fail "$shard_timing rows are not in LC_ALL=C sort order, as scripts/refresh-integration-test-timing.sh writes them"
 
 if (( fails > 0 )); then
   echo "test-laneorder: $fails failure(s)" >&2

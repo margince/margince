@@ -3,9 +3,9 @@
 
 import { DataTable } from "../../design-system/datatable";
 import {
-  formatMoneyOrAbsent,
-  formatNumber,
-  formatPercent,
+  formatAnalyticsMoneyOrAbsent,
+  formatAnalyticsNumber,
+  formatAnalyticsPercent,
   MONEY_ABSENT,
 } from "../../format/format";
 import { type Locale, useT } from "../../i18n";
@@ -135,7 +135,7 @@ export function CompanyTable({
               />
             ) : (
               // The same notation as the link branch, whether or not it links.
-              formatNumber(rowCount(row, "deal_count"), locale)
+              formatAnalyticsNumber(rowCount(row, "deal_count"), locale)
             ),
         },
         {
@@ -152,7 +152,7 @@ export function CompanyTable({
                 scale={currency ? (scaleOf.get(currency) ?? 0) : 0}
                 label={t("analytics.unweighted")}
               >
-                {formatMoneyOrAbsent(rawMinor, currency, locale)}
+                {formatAnalyticsMoneyOrAbsent(rawMinor, currency, locale)}
               </BarFigure>
             );
           },
@@ -166,7 +166,7 @@ export function CompanyTable({
             const rawMinor = rowMoney(row, "raw_minor");
             const total = currency ? totalOf.get(currency) : undefined;
             return rawMinor != null && total
-              ? formatPercent(rawMinor / total, locale)
+              ? formatAnalyticsPercent(rawMinor / total, locale)
               : MONEY_ABSENT;
           },
         },

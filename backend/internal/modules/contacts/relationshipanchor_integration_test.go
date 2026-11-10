@@ -83,10 +83,7 @@ func setupEdgeAnchor(t *testing.T) *edgeAnchorEnv {
 			t.Errorf("closing owner connection: %v", err)
 		}
 	})
-	// Before anything else touches this database, for the reason the capture
-	// privacy harness gives: testdb.Pool refuses until EnsureSchema has run, and
-	// EnsureSchema rebuilds whenever it cannot prove the database is a fresh
-	// clone, so a seed written first would be dropped rather than reset.
+	// Verify the empty clone before seeding or opening an application pool.
 	if err := testdb.EnsureSchema(ctx, conn); err != nil {
 		t.Fatal(err)
 	}

@@ -27,11 +27,13 @@ package gates
 // to the record with a bad path would pass a gate that only knew the old ones.
 
 import (
-	"os"
+	"io/fs"
 	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // processingRecords are the Art. 30 documents this rule covers. A record in a
@@ -53,7 +55,7 @@ var citedGoFile = regexp.MustCompile("`([a-z][a-zA-Z0-9_]*(?:/[a-zA-Z0-9_]+)*\\.
 func TestTheProcessingRecordCitesCodeThatExists(t *testing.T) {
 	t.Parallel()
 	for _, record := range processingRecords {
-		body, err := os.ReadFile(record)
+		body, err := gatekit.ReadFile(record)
 		if err != nil {
 			t.Fatalf("reading the processing record %s: %v", record, err)
 		}
@@ -107,7 +109,7 @@ func TestTheProcessingRecordCitesCodeThatExists(t *testing.T) {
 func resolveCitedFile(t *testing.T, cited string) []string {
 	t.Helper()
 	var found []string
-	err := filepath.Walk("internal", func(path string, info os.FileInfo, err error) error {
+	err := gatekit.WalkDir("internal", func(path string, info fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}

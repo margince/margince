@@ -115,7 +115,7 @@ describe("a done line standing for many records", () => {
     renderMagic();
 
     await userEvent.click(
-      await screen.findByRole("button", { name: "GEM and 1 more" }),
+      await screen.findByRole("button", { name: "View 2 changes" }),
     );
 
     const dialog = await screen.findByRole("dialog");
@@ -208,10 +208,24 @@ function reviewedRecords() {
 async function openTheLine() {
   renderMagic();
   await userEvent.click(
-    await screen.findByRole("button", { name: "GEM and 1 more" }),
+    await screen.findByRole("button", { name: "View 2 changes" }),
   );
   return screen.findByRole("dialog");
 }
+
+describe("a done line's opener", () => {
+  it("marks its label as data and aligns it to the start", async () => {
+    stubOpenedLine();
+    renderMagic();
+
+    const opener = await screen.findByRole("button", {
+      name: "View 2 changes",
+    });
+
+    expect(opener.classList).toContain("btn-valuelabel");
+    expect(opener.dataset.align).toBe("start");
+  });
+});
 
 describe("a grouped record with a reviewed change", () => {
   it("keeps the review verbs its receipt offers on its own", async () => {
@@ -225,9 +239,8 @@ describe("a grouped record with a reviewed change", () => {
     const dialog = await openTheLine();
 
     expect(
-      await within(dialog).findByRole("button", { name: "Keep date" }),
-    ).toBeTruthy();
-    expect(within(dialog).getByRole("button", { name: "Accept" })).toBeTruthy();
+      await within(dialog).findAllByRole("button", { name: "Mark reviewed" }),
+    ).toHaveLength(2);
     expect(
       within(dialog).getAllByRole("button", { name: "Undo" }),
     ).toHaveLength(2);
@@ -240,9 +253,8 @@ describe("a grouped record with a reviewed change", () => {
     const dialog = await openTheLine();
 
     expect(await within(dialog).findByText("Deal 1")).toBeTruthy();
-    expect(within(dialog).queryByRole("button", { name: "Accept" })).toBeNull();
     expect(
-      within(dialog).queryByRole("button", { name: "Keep date" }),
+      within(dialog).queryByRole("button", { name: "Mark reviewed" }),
     ).toBeNull();
   });
 });

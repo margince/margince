@@ -14,13 +14,17 @@ package aicert
 // connection. This file keeps the record's shape and gives the spend a place
 // to survive.
 //
-// A journaled run stands in for a fresh one ONLY when nothing it measured can
-// have moved: the same candidate binding, the same judge, the same environment
-// class, the same corpus format, the same scenario stamp (the scenario whole
-// plus the requests this build constructs from it), the same BINARY, the same
-// repeat index — and inside resumeWindow. Anything else and the run is paid for
-// again. The binary is in that list because the stamp is not enough on its own:
-// it covers the requests, never the code that judges the replies.
+// A journaled run stands in for a fresh one only when nothing the models were
+// asked can have moved. That is the same candidate binding, judge, environment
+// class, corpus format and repeat index, inside resumeWindow. It is also the
+// same scenario stamp: the scenario whole plus the requests this build
+// constructs from it. Anything else and the run is paid for again.
+//
+// What is replayed is what the models said, never what was concluded from it.
+// The case is driven again over the journaled answers and graded by the code
+// that runs now (reevaluate, replay.go). A changed validator or cap reaches
+// every replayed run, and a run whose requests moved is paid for again. So a
+// replay survives an unrelated code change.
 //
 // One run at a time per directory, held by an exclusive lock file rather than
 // assumed — see claimResumeDir.
@@ -44,8 +48,10 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"time"
 
+	"github.com/margince/margince/backend/internal/compose/aitasks"
 	"github.com/margince/margince/backend/internal/modules/ai"
 )
 
@@ -65,13 +71,9 @@ const resumeWindow = 6 * time.Hour
 // one file holds whatever the last six hours ran, including other bindings.
 type journaledRun struct {
 	At string `json:"at"`
-	// Build identifies the binary that scored the run, and it is here because
-	// the scenario stamp does NOT cover the code that turns a reply into a
-	// measurement. A stamp digests the scenario and the two requests built from
-	// it; the site's own Evaluate, checkCaps and the judge-reply parsing all sit
-	// outside it. Without this, tightening a validator and re-running inside the
-	// window replays hard_pass values the OLD validator produced, and the record
-	// certifies this build on measurements it would itself have failed.
+	// Build identifies the binary that scored the run, for an operator reading
+	// the file. A replay never matches on it: the current code re-grades the
+	// journaled answers instead (Evidence).
 	Build string `json:"build"`
 	// Candidate and Judge are bindingKey strings — what the run ASKED to be
 	// served by, not what answered it. What answered is inside Outcome, and
@@ -86,6 +88,8 @@ type journaledRun struct {
 	Stamp         string     `json:"stamp"`
 	Run           int        `json:"run"`
 	Outcome       runOutcome `json:"outcome"`
+	// Evidence is what the models said, which a replay is re-graded from.
+	Evidence *replayEvidence `json:"evidence,omitempty"`
 }
 
 // resumeKey identifies the one run a journaled line may stand in for.
@@ -100,15 +104,14 @@ type resumeKey struct {
 	run                                     int
 }
 
-// binaryIdentity is the SHA-256 of the running executable — the exact code that
-// will evaluate, cap-check and score whatever this run replays.
+// binaryIdentity is the SHA-256 of the running executable, filed on every
+// journaled line so a reader can tell which build scored it.
 //
 // The binary itself rather than a VCS stamp, because this lane runs as a `go
 // test` binary and those carry no vcs.revision setting: an identity read from
 // build info would be the empty string here, compare equal to every other empty
 // string, and hold nothing at all while looking like a guard. It is computed
-// once, before the first paid call, so a run pays a fraction of a second for it
-// and a failure to read it costs nothing.
+// once, before the first paid call, so a run pays a fraction of a second for it.
 func binaryIdentity() (string, error) {
 	exe, err := os.Executable()
 	if err != nil {
@@ -160,9 +163,8 @@ func bindingKey(c ai.ProviderConfig) string {
 // fail silently, looking like a journal that simply had nothing to replay.
 type runJournal struct {
 	sink   *jsonlSink
-	loaded map[resumeKey]runOutcome
-	// build is this binary's identity, filed on every appended line and required
-	// of every replayed one — see journaledRun.Build.
+	loaded map[resumeKey]journaledRun
+	// build is this binary's identity, filed on every appended line.
 	build string
 	// lock is the exclusive claim on the resume directory, released on close.
 	lock *os.File
@@ -194,7 +196,7 @@ func openRunJournal(ctx context.Context, dir string, profile ai.Profile, now tim
 	}
 	path := filepath.Join(dir, journalFilename)
 	j := &runJournal{
-		loaded:  map[resumeKey]runOutcome{},
+		loaded:  map[resumeKey]journaledRun{},
 		profile: string(profile),
 		build:   build,
 		lock:    lock,
@@ -225,8 +227,8 @@ const journalFilename = "aicert-resume.jsonl"
 
 // readLive returns every unexpired line in the journal, and fills j.loaded with
 // the subset THIS run could replay. The two differ on purpose: compaction must
-// keep a line belonging to another profile or another binary, which is somebody
-// else's still-good measurement, not this run's to discard.
+// keep a line belonging to another profile, which is somebody else's
+// still-good measurement, not this run's to discard.
 func (j *runJournal) readLive(ctx context.Context, path string, now time.Time, log *slog.Logger) ([]journaledRun, error) {
 	f, err := os.Open(path) // #nosec G304 -- see openRunJournal
 	if errors.Is(err, os.ErrNotExist) {
@@ -261,8 +263,8 @@ func (j *runJournal) readLive(ctx context.Context, path string, now time.Time, l
 			continue
 		}
 		live = append(live, line)
-		if line.Profile == j.profile && line.CorpusVersion == corpusVersionV1 && line.Build == j.build {
-			j.loaded[keyOf(line)] = line.Outcome
+		if line.Profile == j.profile && line.CorpusVersion == corpusVersionV1 {
+			j.loaded[keyOf(line)] = line
 		}
 	}
 	return live, nil
@@ -325,27 +327,34 @@ func (j *runJournal) close() error {
 // an unlinked inode — so the first journals every remaining run into a file
 // nobody will ever read, with no error, and its crash recovery silently does not
 // exist. The cost is exactly the re-paid corpus this file was written to prevent.
+//
+// The claim is a kernel lock, not the file's existence: a run killed by
+// `go test -timeout` runs no defer, and the kernel still releases its lock.
 func claimResumeDir(dir string) (*os.File, error) {
 	path := filepath.Join(dir, "aicert-resume.lock")
-	lock, err := os.OpenFile(path, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o600) // #nosec G304 -- see openRunJournal
-	if errors.Is(err, os.ErrExist) {
-		return nil, fmt.Errorf("aicert: another certification run holds the resume directory %s; "+
-			"wait for it, or point this run elsewhere with RESUME=<dir> — and if no run is going, "+
-			"a previous one was killed and %s is stale: delete it", dir, path)
-	}
+	lock, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|syscall.O_NOFOLLOW, 0o600) // #nosec G304 -- see openRunJournal
 	if err != nil {
 		return nil, fmt.Errorf("aicert: claiming resume directory %s: %w", dir, err)
+	}
+	if ferr := syscall.Flock(int(lock.Fd()), syscall.LOCK_EX|syscall.LOCK_NB); ferr != nil {
+		closeErr := lock.Close()
+		if errors.Is(ferr, syscall.EWOULDBLOCK) {
+			return nil, errors.Join(fmt.Errorf("aicert: another certification run holds the resume directory %s; "+
+				"wait for it, or point this run elsewhere with RESUME=<dir>", dir), closeErr)
+		}
+		return nil, errors.Join(fmt.Errorf("aicert: claiming resume directory %s: %w", dir, ferr), closeErr)
 	}
 	return lock, nil
 }
 
 // releaseResumeDir drops the claim. Nil-safe, so every error path out of
-// openRunJournal can join it unconditionally.
+// openRunJournal can join it unconditionally. The file stays: removing it would
+// let a run that opened it a moment earlier lock an unlinked inode.
 func releaseResumeDir(lock *os.File) error {
 	if lock == nil {
 		return nil
 	}
-	return errors.Join(lock.Close(), os.Remove(lock.Name()))
+	return lock.Close()
 }
 
 // forTask is the journal as ONE task's certification sees it: the file, plus
@@ -378,7 +387,7 @@ func (j *runJournal) replaysEverything(ctx context.Context, cfg RunnerConfig, by
 			return false
 		}
 		for _, c := range cands {
-			if !j.forTask(task, c.Binding, c.Judge).replaysRounds(scenarios, stamps, repeats) {
+			if !j.forTask(task, c.Binding, c.Judge).replaysRounds(ctx, cfg.Census, scenarios, stamps, repeats) {
 				return false
 			}
 		}
@@ -390,11 +399,12 @@ func (j *runJournal) replaysEverything(ctx context.Context, cfg RunnerConfig, by
 var errNotJournaled = errors.New("aicert: run not journaled")
 
 // replaysRounds reports whether every run this task's adaptive rounds would
-// make is journaled — the extensions included, which the replayed outcomes
-// decide exactly as the live ones did.
-func (t taskJournal) replaysRounds(scenarios []Scenario, stamps map[string]string, repeats int) bool {
+// make replays. That includes the extensions, which the re-graded outcomes
+// decide as the live ones did.
+func (t taskJournal) replaysRounds(ctx context.Context, census *aitasks.Registry, scenarios []Scenario, stamps map[string]string, repeats int) bool {
+	silent := slog.New(slog.DiscardHandler)
 	_, err := runRounds(caseSeeds(scenarios), repeats, adaptiveMaxRuns, func(i, run int) (RunResult, error) {
-		out, ok := t.lookup(scenarios[i], stamps[scenarios[i].Name], run)
+		out, ok := t.replay(ctx, census, scenarios[i], stamps[scenarios[i].Name], run, silent)
 		if !ok {
 			return RunResult{}, errNotJournaled
 		}
@@ -425,21 +435,43 @@ func (t taskJournal) restartHint() string {
 	return " — every run already scored replays from the resume journal for six hours, so a restart pays only for what is left"
 }
 
-// lookup returns the journaled outcome for one repeat of one scenario, if this
-// run may replay it.
+// lookup returns the outcome journaled for one repeat of one scenario, as it
+// was graded when it was measured.
 func (t taskJournal) lookup(sc Scenario, stamp string, run int) (runOutcome, bool) {
+	line, ok := t.line(sc, stamp, run)
+	return line.Outcome, ok
+}
+
+func (t taskJournal) line(sc Scenario, stamp string, run int) (journaledRun, bool) {
 	if t.j == nil {
+		return journaledRun{}, false
+	}
+	line, ok := t.j.loaded[resumeKeyFor(t.candidate, t.judge, string(t.task), sc.Name, stamp, run)]
+	return line, ok
+}
+
+// replay returns one journaled run as the code that runs now grades it. It
+// returns false when the run must be paid for: nothing is journaled, or this
+// build would not have been given those answers (reevaluate).
+func (t taskJournal) replay(ctx context.Context, census *aitasks.Registry, sc Scenario, stamp string, run int, log *slog.Logger) (runOutcome, bool) {
+	line, ok := t.line(sc, stamp, run)
+	if !ok {
 		return runOutcome{}, false
 	}
-	out, ok := t.j.loaded[resumeKeyFor(t.candidate, t.judge, string(t.task), sc.Name, stamp, run)]
-	return out, ok
+	out, err := reevaluate(ctx, census, t.task, sc, line, log)
+	if err != nil {
+		log.InfoContext(ctx, "aicert: a journaled run cannot be replayed by this build, so it is paid for again",
+			"task", string(t.task), "scenario", sc.Name, "run", run, "reason", err)
+		return runOutcome{}, false
+	}
+	return out, true
 }
 
 // append files one scored run, best-effort: a write failure is logged and
 // swallowed, never returned. The journal exists so a paid run survives a fault;
 // letting it become a new way for a paid run to FAIL would invert that. The
 // error is heard — logged with the run it belongs to — not ignored.
-func (t taskJournal) append(ctx context.Context, sc Scenario, stamp string, run int, outcome runOutcome, at time.Time, log *slog.Logger) {
+func (t taskJournal) append(ctx context.Context, sc Scenario, stamp string, run int, measured measuredRun, at time.Time, log *slog.Logger) {
 	if t.j == nil {
 		return
 	}
@@ -454,7 +486,8 @@ func (t taskJournal) append(ctx context.Context, sc Scenario, stamp string, run 
 		Scenario:      sc.Name,
 		Stamp:         stamp,
 		Run:           run,
-		Outcome:       outcome,
+		Outcome:       measured.outcome,
+		Evidence:      measured.evidence,
 	}
 	if err := encodeLine(t.j.sink, line); err != nil {
 		log.WarnContext(ctx, "aicert: resume journal write failed — the run stands, but a restart will pay for it again",

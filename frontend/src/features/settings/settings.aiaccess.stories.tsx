@@ -12,7 +12,7 @@ import {
 import { AiAccessTab } from "./settings.aiaccess";
 
 const meta: Meta<typeof AiAccessTab> = {
-  title: "Settings/You/AI access/Personal review settings",
+  title: "Settings/You/AI assistants/Personal review settings",
   component: AiAccessTab,
 };
 export default meta;

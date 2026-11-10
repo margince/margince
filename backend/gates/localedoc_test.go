@@ -21,7 +21,6 @@ package gates
 // catalogs meet textlang below.
 
 import (
-	"os"
 	"path/filepath"
 	"regexp"
 	"slices"
@@ -29,6 +28,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
@@ -148,7 +148,7 @@ func TestEveryShippedCatalogIsALanguageTheServerAdmits(t *testing.T) {
 // localesShipped reads the catalog directory and returns the codes it carries.
 func localesShipped(t *testing.T) map[string]bool {
 	t.Helper()
-	entries, err := os.ReadDir(localeCatalogDir)
+	entries, err := gatekit.ReadDir(localeCatalogDir)
 	if err != nil {
 		t.Fatalf("reading the catalog directory %s: %v", localeCatalogDir, err)
 	}
@@ -215,7 +215,7 @@ func sortedLocales(codes map[string]bool) []string {
 // draws paths, it does not state a set.
 func localeClaimsIn(t *testing.T, page string) []localeClaim {
 	t.Helper()
-	raw, err := os.ReadFile(page)
+	raw, err := gatekit.ReadFile(page)
 	if err != nil {
 		t.Fatalf("reading %s: %v", page, err)
 	}

@@ -2,8 +2,8 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
-import { EntityRef } from "../../components/entityref";
 import { LogActivityForm } from "../../components/logactivity";
+import { TaskAssignee } from "../../components/taskassignee";
 import { Badge, Button } from "../../design-system/atoms";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { Row, Stack } from "../../design-system/stack";
@@ -11,12 +11,12 @@ import {
   type SectionState,
   SurfaceState,
 } from "../../design-system/surfacestate";
-import { formatDate } from "../../format/format";
+import { formatDue } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { activityFollowUpsKey } from "../../lib/activitykeys";
 import { useCanWrite } from "../../lib/capability";
 import { problemCodeOf, unwrap } from "../../lib/problem";
-import { useRecordZone } from "../../lib/recordzone";
+import { useViewerZone } from "../../lib/viewerzone";
 
 export function ActivityFollowUps({
   sourceId,
@@ -126,7 +126,7 @@ function FollowUpRow({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   return (
     <Stack gap="1">
       <Row justify="between">
@@ -140,16 +140,14 @@ function FollowUpRow({
         </Badge>
       </Row>
       <p className="t-caption">
-        {task.assignee_id ? (
-          <EntityRef kind="user" id={task.assignee_id} />
-        ) : (
-          t("log.unassigned")
-        )}
+        <TaskAssignee id={task.assignee_id} />
         {task.due_at && (
           <>
             {" "}
             ·{" "}
-            {t("co.next.due", { when: formatDate(task.due_at, locale, zone) })}
+            {t("co.next.due", {
+              when: formatDue(task.due_at, task.due_has_time, locale, zone),
+            })}
           </>
         )}
       </p>

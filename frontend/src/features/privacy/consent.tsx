@@ -14,7 +14,6 @@ import { ErrorLine } from "../../design-system/errorline";
 import { Panel, PanelBody, PanelRow } from "../../design-system/panel";
 import { QueryStates } from "../../design-system/querystates";
 import { formatDateTime } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useCanWriteRecord } from "../../lib/capability";
@@ -29,6 +28,8 @@ import "./consent.css";
 export { ConfirmDetailsAction };
 
 import { stable } from "../../format/collate";
+import { labelFor } from "../../lib/labelfor";
+import { useViewerZone } from "../../lib/viewerzone";
 
 // The Art. 7 proof log (G-4) + the double-opt-in redeem field (G-5) for the
 // Contact 360. GET /contacts/{id}/consent already returns {state, events}; this
@@ -116,7 +117,7 @@ function ConsentEventActor({ event }: Readonly<{ event: ConsentEvent }>) {
   if (!event.actor_type) {
     return <span className="t-caption">{t("consent.actorUnknown")}</span>;
   }
-  const label = t(ACTOR_LABEL[event.actor_type]);
+  const label = t(labelFor(ACTOR_LABEL, event.actor_type));
   return (
     <span className="t-caption">
       {label}
@@ -141,7 +142,7 @@ function ConsentEventActor({ event }: Readonly<{ event: ConsentEvent }>) {
 function ConsentProofLog({ events }: Readonly<{ events: ConsentEvent[] }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = viewerZone();
+  const zone = useViewerZone();
   if (events.length === 0) {
     return <EmptyState>{t("consent.proofEmpty")}</EmptyState>;
   }

@@ -71,17 +71,17 @@ describe("historyRows", () => {
   it("reports the residual when only part of the change went back", () => {
     const twoFields = entry({
       id: "c2",
-      before: { forecast_category: "Commit", renewal_owner: null },
-      after: { forecast_category: "Upside", renewal_owner: "Priya Raman" },
+      before: { win_probability_override: 40, renewal_owner: null },
+      after: { win_probability_override: 75, renewal_owner: "Priya Raman" },
     });
     const partial = entry({
       id: "r2",
       action: "restore",
       occurred_at: "2026-08-27T16:41:00Z",
       undid_audit_log_id: "c2",
-      // renewal_owner could not be cleared, so only the category went back.
-      before: { forecast_category: "Upside" },
-      after: { forecast_category: "Commit" },
+      // renewal_owner could not be cleared, so only the probability went back.
+      before: { win_probability_override: 75 },
+      after: { win_probability_override: 40 },
     });
     const rows = historyRows([partial, twoFields]);
     const [row] = rows;

@@ -5,6 +5,7 @@ import { formatDateAbbrev } from "../../format/format";
 import { leadIdentityName } from "../../format/leadname";
 import type { Locale, Translator } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { labelFor } from "../../lib/labelfor";
 import {
   disqualifyReasonLabel,
   type LeadDisqualifyReason,
@@ -68,6 +69,10 @@ export function terminalBadge(
     case "new":
     case "contacted":
     case "engaged":
+      return null;
+    default:
+      // A status a newer server added is not one this build knows to be
+      // terminal. The lead keeps no badge rather than an undefined one.
       return null;
   }
 }
@@ -163,7 +168,7 @@ function engagedSentence(
   if (!evidence?.occurred_at) {
     return t("lead.standing.engagedBecause");
   }
-  return t(EVIDENCE_SENTENCE[evidence.trigger], {
+  return t(labelFor(EVIDENCE_SENTENCE, evidence.trigger), {
     name: leadIdentityName(lead) || t("lead.unnamed"),
     at: when(evidence.occurred_at, evidence.occurred_precision ?? "instant"),
   });

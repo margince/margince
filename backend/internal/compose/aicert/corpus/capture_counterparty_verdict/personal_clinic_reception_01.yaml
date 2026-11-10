@@ -21,23 +21,10 @@ fixture:
     Rezeption
 expect:
   outcome: accepted
+  privacy: true
   answer: personal
-  rubric: >
-    A medical practice confirming the mailbox owner's own appointment, from an
-    address that names the practice rather than a desk. The address is
-    deliberately not one the deterministic role-mailbox list settles: a case
-    whose address that list already answers would certify a path production
-    never reaches, because the pre-check runs before the model is asked.
-    So the whole judgment rests on the message. It is signed by a named human
-    at a reception desk, which is what makes "contact" tempting and wrong. What
-    decides it is whose matter this is: the owner's health, not the company's
-    business. "personal" scores high — no record at all, which is right for a
-    private appointment. "role_mailbox" is the near miss and scores in the
-    middle: it creates no contact either, so nothing is disclosed, but it files
-    a private matter as company correspondence. "contact" scores zero above the
-    floor — it would put a receptionist called Anja in the shared CRM and, with
-    her, the fact that the owner is seeing a doctor.
-  bands:
-    certified_min: 70
-    degraded_min: 50
-    floor: 40
+  judge: none
+  judge_none_reason: >
+    The answer is one closed kind, and the check requires it exactly.
+    The rubric only ranked the other kinds by the harm each does, and
+    "contact", the answer this scenario exists to catch, fails the check outright.

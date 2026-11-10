@@ -103,6 +103,19 @@
 .reporting-panel-wide {
   grid-column: 1 / -1;
 }
+/* On a sheet the grid's rules part its sections: a half section draws one at
+   its leading edge, which the sheet clips in the first column. */
+.reporting-sheet-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0;
+}
+.analytics-sheet > .reporting-sheet-grid {
+  border-top: 0;
+}
+.reporting-sheet-grid > .reporting-panel:not(.reporting-panel-wide) {
+  margin-inline-start: -1px; /* ds:ignore a hairline offset, not spacing */
+  border-inline-start: 1px solid var(--groundEdge);
+}
 @media (max-width: 900px) {
   .reporting-grid {
     grid-template-columns: minmax(0, 1fr);
@@ -149,6 +162,19 @@
 .reporting-details-trigger {
   color: var(--textSecondary);
 }
+/* Quiet at rest, so a head reads as its title; the pane returns under the
+   pointer, on focus and while open. */
+.reporting-details-trigger:not(:hover, :focus-visible, [aria-expanded="true"]) {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+}
+/* What a chart sums, stated beside its title. */
+.reporting-meta {
+  color: var(--textSecondary);
+  font: var(--fontBodySmall);
+  text-align: end;
+}
 .reporting-context {
   display: flex;
   flex: 1 1 auto;
@@ -179,10 +205,23 @@
 .filter-bar .reporting-toolbar {
   margin: 0;
 }
+/* As chips, each dial is as wide as its name and value. */
+.filter-bar[data-labels="inside"] .reporting-toolbar {
+  align-items: center;
+  gap: var(--space-2);
+}
+.filter-bar[data-labels="inside"] .reporting-toolbar > * {
+  flex: none;
+  min-width: 0;
+}
 
 .reporting-results {
   display: grid;
   gap: var(--gapCards);
+}
+/* Sections drawn into a sheet the page holds: the sheet spaces and rules them. */
+.reporting-results-part {
+  display: contents;
 }
 
 .reporting-written {
@@ -195,4 +234,21 @@
   margin: 0;
   color: var(--warningText);
   font: var(--fontBodySmall);
+}
+
+/* A prepared report's verbs read as one quiet line beside its title. */
+.reporting-prepared-verbs {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-1) var(--space-3);
+}
+/* The filter, the table and its paging are one column with air between. */
+.reporting-library-body {
+  display: grid;
+  gap: var(--space-3);
+}
+.reporting-library-body > .segmented,
+.reporting-library-body > .btn {
+  justify-self: start;
 }

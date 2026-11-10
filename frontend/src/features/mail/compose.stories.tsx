@@ -4,7 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, screen, userEvent, within } from "storybook/test";
 import type { components } from "../../api/schema";
-import { viewerZone } from "../../format/timezone";
+import { browserZone } from "../../format/timezone";
 import type { Transport } from "../../lib/contacttransports";
 import {
   installFetchStub,
@@ -281,10 +281,9 @@ export const ColleaguesMailbox: Story = {
   },
 };
 
-// The default-deny consent gate (A22/ADR-0011): a filled, confirmed send comes
-// back 409 consent_not_granted, so the modal stays open with the pointed
-// "Review consent" copy instead of a raw server error, and the action the
-// server says this rep may take.
+// A filled, confirmed send comes back 409 consent_not_granted. The modal stays
+// open, and the send status shows the engine's reason for the refused address
+// with the action the server offers this rep.
 export const ConsentBlocked: Story = {
   render: composeStory({
     "POST /activities/act-1/send-email": () =>
@@ -302,6 +301,13 @@ export const ConsentBlocked: Story = {
             overrulable: [
               {
                 contact_id: "01a0aaaa-bbbb-7ccc-8ddd-eeeeffff0003",
+                category: "marketing",
+              },
+            ],
+            refusals: [
+              {
+                address: "buyer@acme.test",
+                reason_code: "no_marketing_consent",
                 category: "marketing",
               },
             ],
@@ -340,23 +346,28 @@ export const ConsentBlockedUnknownAction: Story = {
   },
 };
 
-// The mailbox is connected for capture but holds no send grant (422). The
-// refusal names the only fix — reconnect — and links to the connect surface,
-// because the provider will not widen an existing grant in place.
+// No mailbox here can send (422, its code at the top level and no field).
+// The refusal names the fix and links to the connect surface.
 export const MailboxNotSendCapable: Story = {
   render: composeStory({
     "POST /activities/act-1/send-email": () =>
       jsonResponse(
-        validationProblem(
-          "from",
-          "mailbox_not_send_capable",
-          "reconnect your mailbox to enable sending",
-        ),
+        {
+          type: "https://errors.gradion.com/mailbox_not_send_capable",
+          title: "Unprocessable Entity",
+          status: 422,
+          code: "mailbox_not_send_capable",
+          detail: "reconnect your mailbox to enable sending",
+        },
         422,
       ),
   }),
   play: async () => {
     await fillAndSend();
+    await screen.findByRole("link", { name: "Reconnect your mailbox" });
+    await expect(
+      screen.queryByText("reconnect your mailbox to enable sending"),
+    ).toBeNull();
   },
 };
 
@@ -672,7 +683,7 @@ const SCHEDULED_EDIT = editSeedOf({
   id: "019f7e65-fbf7-7114-b114-40af4af63ae8",
   status: "scheduled",
   scheduled_at: new Date(Date.now() + 86_400_000).toISOString(),
-  scheduled_tz: viewerZone(),
+  scheduled_tz: browserZone(),
   subject: "The renewal quote",
   to: ["dana@brandt.example"],
   body: "Hi Dana, here is the renewal quote. The terms are on the site.",

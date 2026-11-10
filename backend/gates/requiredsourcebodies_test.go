@@ -165,7 +165,7 @@ func sourceGuardedBodiesUnder(t *testing.T, root string) map[string]bool {
 	t.Helper()
 	guarded := map[string]bool{}
 	constants := map[string]map[string]string{}
-	err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, walkErr error) error {
+	err := gatekit.WalkDir(root, func(path string, entry fs.DirEntry, walkErr error) error {
 		switch {
 		case walkErr != nil:
 			return walkErr

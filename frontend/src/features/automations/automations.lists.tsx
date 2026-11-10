@@ -7,12 +7,14 @@
 // reader from choosing a list that could never be accepted.
 
 import type { components } from "../../api/schema";
-import type { FieldControl } from "../../design-system/atoms";
+import { Badge, type FieldControl } from "../../design-system/atoms";
 import { Popover } from "../../design-system/popover";
 import { Select, type SelectOption } from "../../design-system/select";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { labelFor } from "../../lib/labelfor";
 import { useLists } from "../../lib/lists.queries";
+import { useMe } from "../../lib/session";
 import "./automations.datefield.css";
 
 type ListRow = NonNullable<ReturnType<typeof useLists>["data"]>["data"][number];
@@ -97,6 +99,7 @@ const PAUSED_REASON: Record<
   list_invalid: "auto.pausedReason.listInvalid",
   list_unavailable: "auto.pausedReason.listUnavailable",
   burst: "auto.pausedReason.burst",
+  passport_revoked: "auto.pausedReason.passportRevoked",
 };
 
 /** The same reason, short enough to sit under the rule's switch. */
@@ -108,7 +111,25 @@ const PAUSED_SHORT: Record<
   list_invalid: "auto.pausedShort.listInvalid",
   list_unavailable: "auto.pausedShort.listUnavailable",
   burst: "auto.pausedShort.burst",
+  passport_revoked: "auto.pausedShort.passportRevoked",
 };
+
+/** Which agent's passport a rule stops with, in words for whoever reads the rule. */
+export function RuleSetByAgent({
+  automation,
+}: Readonly<{ automation: Automation }>) {
+  const t = useT();
+  const me = useMe();
+  if (!automation.setter_passport_id) {
+    return null;
+  }
+  const mine = automation.owner_id === me.data?.user.id;
+  return (
+    <Badge tone="ai">
+      {t(mine ? "auto.setByYourAgent" : "auto.setByAnAgent")}
+    </Badge>
+  );
+}
 
 /** The reason a paused rule stopped itself; nothing for a rule paused by hand. */
 export function RulePausedReason({
@@ -122,9 +143,9 @@ export function RulePausedReason({
     <Popover
       onHover
       className="t-caption"
-      label={t(PAUSED_SHORT[automation.paused_reason])}
+      label={t(labelFor(PAUSED_SHORT, automation.paused_reason))}
     >
-      <p>{t(PAUSED_REASON[automation.paused_reason])}</p>
+      <p>{t(labelFor(PAUSED_REASON, automation.paused_reason))}</p>
     </Popover>
   );
 }

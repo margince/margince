@@ -5,6 +5,7 @@ package identity
 
 import (
 	"context"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -43,9 +44,16 @@ func TestMeReportsTheCompanyContextAvailabilityItWasGiven(t *testing.T) {
 				t.Fatal("/me carries no settings_availability, so every client reading it fails " +
 					"closed and reports each surface absent whatever the installation configured")
 			}
-			if got.SettingsAvailability.CompanyContext != tt.want {
-				t.Errorf("company_context = %v, want %v",
-					got.SettingsAvailability.CompanyContext, tt.want)
+			encoded, err := json.Marshal(got.SettingsAvailability)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var published map[string]bool
+			if err := json.Unmarshal(encoded, &published); err != nil {
+				t.Fatal(err)
+			}
+			if available, present := published["company_context"]; !present || available != tt.want {
+				t.Fatalf("compatibility field present=%t available=%t want=%t", present, available, tt.want)
 			}
 		})
 	}

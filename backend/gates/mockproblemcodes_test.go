@@ -17,7 +17,6 @@ import (
 	"fmt"
 	"go/parser"
 	"maps"
-	"os"
 	"path"
 	"path/filepath"
 	"regexp"
@@ -163,7 +162,7 @@ func frontendProblemMocks(t *testing.T) ([]problemMock, map[string]*problemFileS
 		if file.symlink || !moduleFile.MatchString(file.path) {
 			continue
 		}
-		raw, err := os.ReadFile(filepath.Join(repoRoot, file.path))
+		raw, err := gatekit.ReadFile(filepath.Join(repoRoot, file.path))
 		if err != nil {
 			t.Fatalf("reading %s: %v", file.path, err)
 		}
@@ -203,7 +202,7 @@ func collectMocks(scans map[string]*problemFileScan) []problemMock {
 // frontendModuleFile reads MODULE_FILE from the module that declares it.
 func frontendModuleFile(t *testing.T) *regexp.Regexp {
 	t.Helper()
-	raw, err := os.ReadFile(filepath.Join(repoRoot, moduleFileOwner))
+	raw, err := gatekit.ReadFile(filepath.Join(repoRoot, moduleFileOwner))
 	if err != nil {
 		t.Fatalf("reading %s: %v", moduleFileOwner, err)
 	}
@@ -257,7 +256,7 @@ func problemTakers(t *testing.T) map[string]bool {
 	t.Helper()
 	takers := map[string]bool{}
 	for _, owner := range problemTakerOwners {
-		raw, err := os.ReadFile(filepath.Join(repoRoot, owner))
+		raw, err := gatekit.ReadFile(filepath.Join(repoRoot, owner))
 		if err != nil {
 			t.Fatalf("reading %s: %v", owner, err)
 		}
@@ -296,7 +295,7 @@ func problemTakersIn(tree *tsTree) map[string]bool {
 // the contract shows.
 func contractProblemExampleCodes(t *testing.T) []string {
 	t.Helper()
-	raw, err := os.ReadFile(contractPath)
+	raw, err := gatekit.ReadFile(contractPath)
 	if err != nil {
 		t.Fatalf("reading %s: %v", contractPath, err)
 	}
@@ -425,7 +424,7 @@ func plantedScans(t *testing.T) (map[string]*problemFileScan, map[string]string)
 		"planted/problemmockhelper.ts":  "gates/testdata/problemmockhelper.ts.txt",
 		"planted/client.ts":             "gates/testdata/problemclient.ts.txt",
 	} {
-		raw, err := os.ReadFile(planted)
+		raw, err := gatekit.ReadFile(planted)
 		if err != nil {
 			t.Fatalf("reading %s: %v", planted, err)
 		}
@@ -502,7 +501,7 @@ func TestAMarkerVouchesOnlyForTheCodeItsFileBuilds(t *testing.T) {
 func TestTheEmittedCodeCensusReadsEveryPlantedSite(t *testing.T) {
 	t.Parallel()
 	const planted, virtual = "gates/testdata/problemcodesites.go.txt", "internal/planted/sites.go"
-	raw, err := os.ReadFile(planted)
+	raw, err := gatekit.ReadFile(planted)
 	if err != nil {
 		t.Fatalf("reading %s: %v", planted, err)
 	}
@@ -564,7 +563,7 @@ func TestTheEmittedCodeCensusReadsEveryPlantedSite(t *testing.T) {
 // plantedUnit parses a planted Go file as the source it stands for.
 func plantedUnit(t *testing.T, planted, virtual string) *goUnit {
 	t.Helper()
-	raw, err := os.ReadFile(planted)
+	raw, err := gatekit.ReadFile(planted)
 	if err != nil {
 		t.Fatalf("reading %s: %v", planted, err)
 	}

@@ -130,7 +130,8 @@ export function LeadActions({
         entityType="lead"
         entityId={id}
         recordAddress={lead.email ?? undefined}
-        disabledReasonId={archived}
+        disabledReasonId={logRefused}
+        disabled={logPending}
         open={emailOpen}
         onOpenChange={onEmailOpenChange}
       />

@@ -1,0 +1,39 @@
+name: a_salary_sheet_behind_an_invoice_note_stays_private
+task: capture_confidentiality_verdict
+site: thread
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+fixture:
+  subject: "[Northwind] Development Service - March"
+  attachments:
+    - 2026.03 Northwind INV 1042.pdf
+    - 2026 03 Northwind Cost+ VER 2.xlsx
+  body: |
+    Dear Anna and Tom,
+
+    please find attached the invoice 1042 for the services provided during
+    March. Kindly review the details at your convenience.
+
+    Best regards
+  documents:
+    - name: 2026.03 Northwind INV 1042.pdf
+      excerpt: |
+        INVOICE 1042
+        Development services March, 160 hours
+        Total due: 24,800.00 EUR, payable within 30 days
+    - name: 2026 03 Northwind Cost+ VER 2.xlsx
+      excerpt: |
+        Sheet: Cost+
+        Employee | Role | Gross salary | Employer cost
+        Minh Tran | Senior developer | 2,450 | 2,940
+        Linh Pham | Developer | 1,680 | 2,016
+        Quang Le | QA engineer | 1,320 | 1,584
+expect:
+  outcome: accepted
+  privacy: true
+  answer: personnel
+  judge: none
+  judge_none_reason: >
+    The answer is one closed kind, and the check requires it exactly. The
+    covering note reads as an ordinary invoice; only the attached sheet of
+    named salaries decides the kind, which is what the scenario holds.

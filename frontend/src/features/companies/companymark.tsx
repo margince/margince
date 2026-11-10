@@ -2,14 +2,15 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useId, useRef } from "react";
+import { useId } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
-import { Avatar, Button } from "../../design-system/atoms";
+import { Avatar } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { CompanyLogo } from "../../design-system/companylogo";
-import { FileDropzoneControl } from "../../design-system/filedropzone";
+import { ImageSlot, type ImageSlotVerbs } from "../../design-system/imageslot";
 import { Panel, PanelBody } from "../../design-system/panel";
+import { SettingDescription } from "../../design-system/settingrow";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { storeCompany } from "../../lib/installationcompany";
@@ -82,8 +83,9 @@ export function CompanyMark({
             hintId={hintId}
             emptyLabel={t("settings.companyMarkEmpty")}
             verbs={{
-              add: t("settings.companyMarkAddWide"),
-              replace: t("settings.companyMarkReplaceWide"),
+              edit: t("settings.imageEdit"),
+              editLabel: t("settings.companyMarkEditWide"),
+              upload: t("settings.companyMarkUploadWide"),
               remove: t("settings.companyMarkRemoveWide"),
             }}
             writes={wide}
@@ -98,8 +100,9 @@ export function CompanyMark({
             hintId={hintId}
             emptyLabel={t("settings.companyMarkIconEmpty")}
             verbs={{
-              add: t("settings.companyMarkAddIcon"),
-              replace: t("settings.companyMarkReplaceIcon"),
+              edit: t("settings.imageEdit"),
+              editLabel: t("settings.companyMarkEditIcon"),
+              upload: t("settings.companyMarkUploadIcon"),
               remove: t("settings.companyMarkRemoveIcon"),
             }}
             writes={icon}
@@ -130,9 +133,9 @@ export function CompanyMark({
             )}
           </div>
         )}
-        <p className="t-caption" id={hintId}>
+        <SettingDescription id={hintId}>
           {t("settings.brandHint")}
-        </p>
+        </SettingDescription>
       </PanelBody>
     </Panel>
   );
@@ -219,8 +222,7 @@ function MarkRefusal({
   );
 }
 
-// `verbs` holds each button's accessible name, so two slots never offer two
-// controls both called "Replace".
+// Each slot names its own verbs, so two Edit pills are never one name twice.
 function MarkSlot({
   profile,
   canEdit,
@@ -240,86 +242,27 @@ function MarkSlot({
   name: string;
   hintId: string;
   emptyLabel: string;
-  verbs: { add: string; replace: string; remove: string };
+  verbs: ImageSlotVerbs;
   writes: MarkWrites;
   refusalId?: string;
 }>) {
-  const t = useT();
-  const nameId = useId();
-  const inputId = useId();
-  const tile = useRef<HTMLDivElement>(null);
-  const { send, uploading, removing } = writes;
-  const describedBy = refusalId ? `${hintId} ${refusalId}` : hintId;
-  // The tile takes nothing while a write is out: a drop racing a DELETE lands
-  // in whichever order the two answer.
-  const busy = uploading || removing;
-  const control = {
-    id: inputId,
-    "aria-labelledby": nameId,
-    "aria-describedby": describedBy,
-    disabled: busy,
-  };
-  const choose = () => {
-    tile.current?.querySelector<HTMLInputElement>("input[type=file]")?.click();
-  };
-
   return (
-    <section
-      className={`brand-slot brand-slot-${shape}`}
-      aria-labelledby={nameId}
-    >
-      <div
-        ref={tile}
-        className={src ? "brand-tile is-filled" : "brand-tile"}
-        aria-busy={busy || undefined}
-      >
-        {canEdit && (
-          <FileDropzoneControl
-            control={control}
-            emptyLabel={emptyLabel}
-            accept={ACCEPTED_IMAGES}
-            onPick={send}
-          />
-        )}
-        <div className="brand-tile-mark">
-          <MarkPreview profile={profile} src={src} />
-        </div>
-      </div>
-      <span className="t-name" id={nameId}>
-        {name}
-      </span>
-      {canEdit && (
-        <div className="brand-slot-verbs">
-          {/* Each verb is disabled by the OTHER one's flight and pending on its
-              own, so focus stays on a pressed verb and a repeat press is
-              swallowed rather than racing the first request. */}
-          <Button
-            variant="ghost"
-            aria-label={src ? verbs.replace : verbs.add}
-            onClick={choose}
-            aria-describedby={refusalId}
-            disabled={removing}
-            pending={uploading}
-          >
-            {src
-              ? t("settings.companyMarkReplace")
-              : t("settings.companyMarkAdd")}
-          </Button>
-          {src && (
-            <Button
-              variant="ghost"
-              aria-label={verbs.remove}
-              onClick={() => send(null)}
-              aria-describedby={refusalId}
-              disabled={uploading}
-              pending={removing}
-            >
-              {t("settings.companyMarkRemove")}
-            </Button>
-          )}
-        </div>
-      )}
-    </section>
+    <ImageSlot
+      shape={shape}
+      filled={Boolean(src)}
+      preview={<MarkPreview profile={profile} src={src} />}
+      editable={canEdit}
+      name={name}
+      describedBy={hintId}
+      refusalId={refusalId}
+      emptyLabel={emptyLabel}
+      accept={ACCEPTED_IMAGES}
+      verbs={verbs}
+      uploading={writes.uploading}
+      removing={writes.removing}
+      onPick={writes.send}
+      onRemove={() => writes.send(null)}
+    />
   );
 }
 

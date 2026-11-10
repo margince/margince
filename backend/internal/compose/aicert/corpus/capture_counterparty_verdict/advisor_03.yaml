@@ -1,0 +1,37 @@
+name: the_founders_accountant_on_a_share_transfer_is_an_advisor
+task: capture_counterparty_verdict
+site: verdict
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+# An accountant writing about the founder moving part of their own shares
+# into a personal holding company. The shares are the owner's affair, not a
+# service the company bought, so the definitions give advisor, not contact.
+fixture:
+  display_name: Priya Desai
+  email: priya.desai@desai-accounting.example
+  subject: Transfer of your 20% stake to the holding - next steps
+  direction: inbound
+  body: |
+    Dear Martin,
+
+    I have gone through the draft share purchase agreement for moving 20% of
+    your shares into your personal holding company. Before the notary
+    appointment, please send me the latest valuation and your original
+    acquisition cost, so I can work out what the transfer means for your own
+    tax position.
+
+    I will keep this between us until you decide how to tell your
+    co-founders.
+
+    Best regards,
+    Priya Desai
+    Chartered Accountant
+expect:
+  outcome: accepted
+  privacy: true
+  answer: advisor
+  judge: none
+  judge_none_reason: >
+    The answer is one closed kind, and the check requires it exactly.
+    The rubric only ranked the other kinds by the harm each does, and
+    "contact", the answer this scenario exists to catch, fails the check outright.

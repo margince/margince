@@ -91,7 +91,11 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  column-gap: var(--space-3);
+  gap: var(--space-1) var(--space-3);
+}
+/* The row's gap spaces its lines; a paragraph's own gap would double it. */
+.analytics-attention-text > * + * {
+  margin-block-start: 0;
 }
 .analytics-attention-text {
   display: contents;
@@ -187,33 +191,12 @@
   gap: var(--gapActions);
 }
 
-/* The summary's sentences, one per line, each opening what it rests on. */
-.analytics-decision {
-  display: flex;
-  flex-direction: column;
-  gap: var(--gapActions);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-.analytics-decision-link {
-  text-align: start;
-  white-space: normal;
-}
-.analytics-composition {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  margin-top: var(--space-4);
-}
-
 /* All open pipeline, the secondary reading over the stock charts. */
 .analytics-open-line {
   margin: 0;
 }
 
-/* Sales review's lead row: the outcome and its trend, and the three readings
-   stacked beside them. Under 1100px the readings go under the lead. */
+/* Personal outcomes and the work awaiting the reader share the first row. */
 .analytics-lead {
   display: grid;
   grid-template-columns: minmax(0, 7fr) minmax(0, 4fr);
@@ -247,4 +230,40 @@
   flex-wrap: wrap;
   gap: var(--gapActions);
   align-items: baseline;
+}
+
+.analytics-outlook-prose {
+  max-width: 75ch;
+}
+
+.analytics-outlook-prose > p + p {
+  margin-block-start: var(--paragraphSpacing);
+}
+
+.analytics-lead > .panel,
+.analytics-pair > .panel {
+  align-self: start;
+}
+
+/* A projected shortfall is the one hero line that warns. */
+.analytics-hero-short {
+  color: var(--warningText);
+}
+.analytics-sales-hero .trajectory-chart {
+  padding: 0 var(--padPanel) var(--space-3);
+}
+/* The outlook's first sentence is its verdict, set a step above the prose. */
+.analytics-outlook-lead {
+  font: var(--fontHeadingSmall);
+  font-weight: var(--fontWeightMedium);
+  color: var(--textPrimary);
+  text-wrap: pretty;
+}
+.analytics-outlook .panel-foot {
+  justify-content: space-between;
+}
+/* As a chip the scope fits its name rather than holding a column's width. */
+.filter-bar[data-labels="inside"] .analytics-scope-control {
+  flex: none;
+  min-width: 0;
 }

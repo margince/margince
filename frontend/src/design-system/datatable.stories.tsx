@@ -577,8 +577,21 @@ export const PinnedFirstColumn: Story = {
     await expect(second.getBoundingClientRect().left).toBeLessThan(
       first.getBoundingClientRect().right,
     );
-    await expect(getComputedStyle(first).backgroundImage).not.toBe("none");
+    const sample = document.createElement("canvas").getContext("2d");
+    if (!sample)
+      throw new Error("the browser cannot sample the pinned cell's colour");
+    sample.fillStyle = getComputedStyle(first).backgroundColor;
+    sample.fillRect(0, 0, 1, 1);
+    await expect(sample.getImageData(0, 0, 1, 1).data[3]).toBe(255);
+    await waitFor(() =>
+      expect(getComputedStyle(first).boxShadow).not.toBe("none"),
+    );
   },
+};
+
+export const PinnedFirstColumnDark: Story = {
+  ...PinnedFirstColumn,
+  globals: { theme: "dark" },
 };
 
 // A pinned table that scrolls, with a row open. The detail spans every column,

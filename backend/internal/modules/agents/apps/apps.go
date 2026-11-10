@@ -20,11 +20,16 @@
 // store, a seam, or a principal: it composes documents, and the documents are the
 // same for every caller.
 //
-// WHY THE DOCUMENTS ARE SELF-CONTAINED. Each is built with its stylesheet and
-// its scripts INLINE, and declares an empty origin allowlist. A host builds its
-// content-security policy from that declaration and admits nothing the
-// declaration does not name, so "this view reaches no network" is a promise kept
-// by having no origin to name rather than by an allowlist someone maintains.
+// What each control covers, and no more:
+//
+//   - The empty origin allowlist means the view makes no network requests. A
+//     host builds its content-security policy from it, and the documents are
+//     self-contained, so there is no origin to name.
+//   - The build digest (digest.go) means the view is the document this build
+//     produced. A substituted or altered document is refused before it is held.
+//   - Messages to the host are the bridge working as designed. The host is
+//     trusted: it runs the tools a view asks for, under its own passport. No
+//     control here stops a view from messaging its host, and none claims to.
 //
 // WHERE THE DOCUMENTS COME FROM. They are authored in frontend/src/mcp-apps and
 // served by the web tier as one fully-inlined file each; this package FETCHES
@@ -149,10 +154,10 @@ func DeclaredViews() map[string]string {
 // sandbox is the policy every view here declares, and the ONE place it is
 // stated.
 //
-// EVERY allowlist is left empty, and every permission unasked. That is the whole
-// security posture of these views: no fetch, no remote script, no nested frame,
-// no camera, no clipboard, no position. See the package comment for why an empty
-// list is the promise rather than a placeholder.
+// Every allowlist is left empty, and every permission unasked: no fetch, no
+// remote script, no nested frame, no camera, no clipboard, no position. That
+// keeps a view off the network. It does not limit what a view says to its host;
+// the package comment says what does.
 //
 // It is one function because the policy reaches a host TWICE — on the catalogue
 // and on the read — and those are the two answers that must not be allowed to

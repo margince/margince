@@ -11,12 +11,13 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/compose/integration/importjobtest"
 )
 
-func stageBundle(t *testing.T, e *apptest.AppEnv, sourceRef, sourceName string, parts []AnyMap) importRunDTO {
+func stageBundle(t *testing.T, e *apptest.AppEnv, sourceRef, sourceName string, parts []AnyMap) importjobtest.Run {
 	t.Helper()
-	var run importRunDTO
-	if status := testCall(t, e, "/v1/imports", AnyMap{
+	var run importjobtest.Run
+	if status := importjobtest.CallTestRun(t, e, "/v1/imports", AnyMap{
 		"connector": "csv", "source_ref": sourceRef, "source_name": sourceName, "parts": parts,
 	}, &run); status != http.StatusAccepted {
 		t.Fatalf("stage → %d", status)
@@ -37,7 +38,7 @@ func approveAndRead(t *testing.T, e *apptest.AppEnv, runID string) {
 	if status := importCall(t, e, runID, "approve", nil, nil); status != http.StatusAccepted {
 		t.Fatalf("approve → %d, want 202", status)
 	}
-	var run importRunDTO
+	var run importjobtest.Run
 	if status := e.Call(t, http.MethodGet, "/v1/imports/"+runID, nil, nil, &run); status != http.StatusOK {
 		t.Fatalf("read run → %d, want 200", status)
 	}
@@ -120,7 +121,7 @@ func TestUndoReversesContactsBeforeCompanies(t *testing.T) {
 	}
 	run := stageBundle(t, e, uploadZip(t, e, "u.zip", zipBytes(t, files)).SourceRef, "u", bundleParts())
 	approveAndRead(t, e, run.ID)
-	var undone importRunDTO
+	var undone importjobtest.Run
 	if status := importCall(t, e, run.ID, "undo", nil, &undone); status != http.StatusAccepted {
 		t.Fatalf("undo → %d", status)
 	}

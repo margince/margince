@@ -17,12 +17,13 @@ import {
   formatNumber,
   ordinalNumber,
 } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { providerName } from "../../lib/ai-provider-names";
 import { aiTaskLabel } from "../../lib/ai-task-label";
+import { valueFor } from "../../lib/labelfor";
 import { unwrap } from "../../lib/problem";
+import { useViewerZone } from "../../lib/viewerzone";
 import {
   attemptReasonLabel,
   callCodeName,
@@ -343,6 +344,7 @@ export function CallDrawer({
   onNext?: () => void;
   onExport: (detail: AiCallRecord) => void;
 }>) {
+  const readerZone = useViewerZone();
   const t = useT();
   const { locale } = useLocale();
   const titleId = useId();
@@ -369,7 +371,7 @@ export function CallDrawer({
         </Heading>
         <div className="aicalls-drawer-meta">
           <StatusBadge
-            kind={OUTCOME_KIND[outcome]}
+            kind={valueFor(OUTCOME_KIND, outcome, "neutral")}
             label={outcomeLabel(outcome, t)}
           />
           {call.decision_attempted && (
@@ -380,7 +382,7 @@ export function CallDrawer({
             <Badge tone="warning">{t("aicalls.badge.degraded")}</Badge>
           )}
           <time className="t-caption" dateTime={call.occurred_at}>
-            {formatDateTime(call.occurred_at, locale, viewerZone())}
+            {formatDateTime(call.occurred_at, locale, readerZone)}
           </time>
           <span className="aicalls-drawer-nav">
             <IconAction

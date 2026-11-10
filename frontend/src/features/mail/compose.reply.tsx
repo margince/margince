@@ -1,41 +1,18 @@
-import { Sparkles } from "lucide-react";
 import { useState } from "react";
 import type { components } from "../../api/schema";
+import { useActivityWritable } from "../../components/activitygate";
 import { Button } from "../../design-system/atoms";
 import { useT } from "../../i18n";
 import { ComposeModal } from "./compose";
 import { useChannelReachable } from "./composereachability";
 import type { RelinkKind } from "./composerelink";
+import { InvitationAnswer } from "./invitationanswer";
 import { rowAnswer } from "./rowanswer";
 
 type Activity = components["schemas"]["Activity"];
 type EmailTarget = components["schemas"]["ActivityEmailTarget"];
 
-// The reply affordance for ONE captured conversation, on its own so the two
-// surfaces that offer it cannot come to offer different things.
-//
-// It exists as a separate export because the conversation-memory card wants
-// exactly this and nothing else: Relink below is a raw-ledger act — "this
-// activity is filed against the wrong record" — and a summary card is not where
-// a reader re-files anything.
-//
-// The gate is the same one TimelineActions applies, and that sameness is the
-// point of the extraction rather than a happy accident: a `message` row is
-// withheld when the contact behind it cannot be reached on the transport that
-// carried it, and a rep offered a reply on one surface and refused it on the
-// other would have no way to tell which answer was true.
-export function ChannelReplyAction({
-  activityId,
-  kind,
-  emailTarget,
-  channelProvider,
-  entityType,
-  entityId,
-  contactId,
-  contentWithheld,
-  prepared,
-  onSent,
-}: Readonly<{
+type ReplyActionProps = Readonly<{
   activityId: string;
   kind: Activity["kind"];
   /** Where a new email about this row goes (`email_target`). */
@@ -44,6 +21,8 @@ export function ChannelReplyAction({
   entityType: RelinkKind;
   entityId: string;
   contactId?: string;
+  /** The contact whose page draws the row: the reply files under it. */
+  contact?: { readonly attachable?: boolean };
   // Told when the message actually went, for a caller whose own view the send
   // changes. ComposeModal invalidates the RECORD timelines it knows about; a
   // surface listing the unanswered — the worklist's waiting lane — is not one
@@ -63,7 +42,48 @@ export function ChannelReplyAction({
    * those, a reader simply opened a conversation and chose to answer it.
    */
   prepared?: { label: string; intent: string };
-}>) {
+  /**
+   * The row is a calendar invitation the reader can still answer
+   * (`email_summary.calendar_invitation`). It asks for an RSVP, so the answers
+   * stand where the reply would, and `onSent` hears an answer.
+   */
+  invitation?: components["schemas"]["EmailCalendarInvitation"];
+}>;
+
+// An invitation asks for an RSVP, so its answers stand where the reply would,
+// and `onSent` hears an answer. Every reply surface passes through here.
+export function ChannelReplyAction(props: ReplyActionProps) {
+  const { invitation, contentWithheld, activityId, onSent } = props;
+  if (invitation && !contentWithheld) {
+    return (
+      <InvitationAnswer
+        activityId={activityId}
+        invitation={invitation}
+        onAnswered={onSent}
+      />
+    );
+  }
+  return <ReplyAction {...props} />;
+}
+
+// The reply affordance for one conversation, shared so two surfaces cannot
+// drift. The conversation-memory card wants it without Relink.
+//
+// The gate is the one TimelineActions applies: a `message` row is withheld
+// when its contact cannot be reached on the transport that carried it.
+function ReplyAction({
+  activityId,
+  kind,
+  emailTarget,
+  channelProvider,
+  entityType,
+  entityId,
+  contactId,
+  contact,
+  contentWithheld,
+  prepared,
+  onSent,
+}: ReplyActionProps) {
   const t = useT();
   // `null` until the verb is first pressed; the drawer stays mounted from then
   // on, which is what lets it animate out rather than vanish. `seq` counts the
@@ -80,10 +100,16 @@ export function ChannelReplyAction({
     contactId,
     channelProvider,
   );
+  // Every send writes an activity, which a seat without the grant is refused.
+  const writable = useActivityWritable(contact);
   const answer = rowAnswer(kind);
   // A written-about row is withheld through `email_target`, which the server
   // leaves out for it, so only mail reaches the withheld branch below.
-  if (!reachable || (answer === "about" && !offered(emailTarget))) {
+  if (
+    !writable ||
+    !reachable ||
+    (answer === "about" && !offered(emailTarget))
+  ) {
     return null;
   }
   const company = answer === "about" ? companyOf(emailTarget) : undefined;
@@ -106,7 +132,6 @@ export function ChannelReplyAction({
           }));
         }}
       >
-        {proposed && <Sparkles aria-hidden="true" />}
         {proposed?.label ??
           t(
             withheld || answer === "about"

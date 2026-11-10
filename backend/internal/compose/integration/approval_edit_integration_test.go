@@ -29,7 +29,7 @@ func TestModifyThenApproveRebindsTheAuthority(t *testing.T) {
 	e := Setup(t)
 	owner := OwnerConn(t)
 	pipeline, open, _ := DealFixture(t, e)
-	svc := approvals.NewService(e.DB())
+	svc := approvalEngineWithLiveProposer(t, e)
 
 	var effectPayload json.RawMessage
 	var effectHash string
@@ -140,7 +140,7 @@ func assertEditAuditCarriesBothSides(t *testing.T, owner *pgx.Conn, approvalID i
 func TestModifyThenApproveCannotRetargetTheEffect(t *testing.T) {
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
-	svc := approvals.NewService(e.DB())
+	svc := approvalEngineWithLiveProposer(t, e)
 
 	var effectRan bool
 	svc.WithEffect("advance_deal", func(_ context.Context, _ ids.ApprovalID, _ json.RawMessage, _ string) error {
@@ -214,7 +214,7 @@ func TestModifyThenApproveCannotRetargetTheEffect(t *testing.T) {
 func TestMalformedEditLeavesTheStagingPending(t *testing.T) {
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
-	svc := approvals.NewService(e.DB())
+	svc := approvalEngineWithLiveProposer(t, e)
 
 	deal := e.SeedDeal(t, "Mine", pipeline, open, &e.Rep1)
 	approvalID, _ := stageAdvance(t, svc, e, deal)
