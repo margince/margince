@@ -67,6 +67,35 @@ func TestEveryOfferedVerbIsClassifiedAsWritingOrNot(t *testing.T) {
 	}
 }
 
+// A verb named in two maps is one verb, so it must write in both or in neither.
+// Otherwise one surface offers live what another refuses.
+func TestAVerbSharedByTwoMapsIsClassifiedTheSameInEach(t *testing.T) {
+	t.Parallel()
+	first := map[string]string{}
+	answers := map[string]bool{}
+	shared := 0
+	for _, vocabulary := range offeredVerbVocabularies {
+		classified, _ := vocabulary.classification(t)
+		for verb, writes := range classified {
+			owner, seen := first[verb]
+			if !seen {
+				first[verb], answers[verb] = vocabulary.mapName, writes
+				continue
+			}
+			shared++
+			if writes != answers[verb] {
+				t.Errorf("%q writes=%v in %s and writes=%v in %s: one verb needs one answer",
+					verb, answers[verb], owner, writes, vocabulary.mapName)
+			}
+		}
+	}
+	// draft_reply sits in all three maps and open_meeting_brief in two, so a
+	// read that found no overlap has stopped reading the maps.
+	if shared < 3 {
+		t.Fatalf("found %d shared verbs across the maps, want at least 3", shared)
+	}
+}
+
 func (v offeredVerbs) check(t *testing.T) {
 	declared := v.enum(t)
 	if len(declared) < v.floor {

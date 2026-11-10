@@ -47,6 +47,7 @@ func TestTheWorklistOffersAMailMoveOnlyToASeatThatMayWrite(t *testing.T) {
 		"a full seat that may write":    {integration.OnSeat(e.As(e.Rep1, team, integration.AdminPerms), principal.SeatFull), nil},
 		"a full seat without the grant": {integration.OnSeat(e.As(e.Rep1, team, readsActivities()), principal.SeatFull), new(refusedSend)},
 		"a read seat holding the grant": {integration.OnSeat(e.As(e.Rep1, team, integration.AdminPerms), principal.SeatRead), new(refusedSend)},
+		"an agent whose human lacks it": {e.AgentFor(t, e.Rep1, team, readsActivities()), new(refusedSend)},
 	} {
 		page := quiet.read(reader.ctx)
 		if page.OptionalRelationships == nil || len(*page.OptionalRelationships) != 1 {
