@@ -14,10 +14,14 @@ package graph
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
+	"slices"
 	"time"
 )
 
@@ -86,106 +90,164 @@ type deltaPage struct {
 	DeltaLink string `json:"@odata.deltaLink"` //nolint:tagliatelle // Microsoft's wire format; must match to decode
 }
 
-// deltaEntry is one message a walk named, with the instant that decides which
-// window it belongs to.
-type deltaEntry struct {
-	id         string
-	receivedAt time.Time
-	// removed reports a TOMBSTONE: Graph says this message is no longer in the
-	// folder. It carries no message fields, so there is nothing to fetch — but
-	// it is the owner telling us they deleted their own copy, which is a fact
-	// about mail this workspace may be holding.
-	removed bool
+// anchorSeenCap bounds the distinct messages one anchor round can count. The
+// set rides in the stored cursor to survive checkpoints. At 22 bytes an id,
+// the cap is about 2.2 MB of cursor.
+const anchorSeenCap = 100_000
+
+// ErrAnchorTooLarge is an anchor round whose window holds more messages than
+// its census can hold. The round stops rather than certify a count it cannot
+// keep exact.
+var ErrAnchorTooLarge = errors.New("graph: the anchor window holds more messages than one certified round can count")
+
+// DeltaPage is one page of a delta round, handed over before the next page is
+// read, with what a checkpoint stores to continue after it.
+type DeltaPage struct {
+	Messages []MessageRef
+	Removed  []string
+	Resume   DeltaResume
 }
 
-func fetchableEntries(entries []deltaEntry) []MessageRef {
-	var messages []MessageRef
-	for _, entry := range entries {
-		if !entry.removed {
-			messages = append(messages, MessageRef{ID: entry.id, ReceivedAt: entry.receivedAt})
-		}
+// DeltaResume is where a round continues after a page: the link read next, and
+// for an anchor what its census has counted. NextLink is empty after the
+// round's last page.
+type DeltaResume struct {
+	NextLink string        `json:"next_link"`
+	Anchor   *AnchorCensus `json:"anchor,omitempty"`
+}
+
+// PageVisitor captures one page. An error stops the round where it is.
+type PageVisitor func(context.Context, DeltaPage) error
+
+// AnchorCensus counts the distinct messages an anchor round walked inside the
+// window it reconciles, [After, Opened). Each id is kept as a 16-byte SHA-256
+// prefix: an exact set, not a filter that answers "maybe".
+type AnchorCensus struct {
+	After  time.Time
+	Opened time.Time
+	seen   map[string]struct{}
+}
+
+func newAnchorCensus(after, opened time.Time) *AnchorCensus {
+	return &AnchorCensus{After: after, Opened: opened, seen: map[string]struct{}{}}
+}
+
+// count adds one entry. A tombstone, an entry outside the window and an entry
+// without an instant do not count; see countedInWindow.
+func (c *AnchorCensus) count(id string, receivedAt time.Time, removed bool) error {
+	if removed || !countedInWindow(receivedAt, c.After, c.Opened) {
+		return nil
 	}
-	return messages
-}
-
-// countWithin counts the DISTINCT entries a walk named that belong to
-// [after, before) — the window a tally covers, with the lower bound read the way
-// Microsoft read it.
-//
-// An entry that carries no instant does not count. The round ASKS for the field
-// ($select on the opening request), so its absence is not the ordinary silence
-// of a response that was never asked — it is an entry that cannot be shown to
-// belong to the window being reconciled, and one that cannot be shown to belong
-// is exactly what must not stand in for a message the round never reached. The
-// cost of the strict reading is a loud refusal that the next cycle retries; the
-// cost of the lenient one is a watermark stored over a gap, and the watermark
-// only moves forward.
-func countWithin(entries []deltaEntry, after, before time.Time) int {
-	from := filterInstant(after)
-	seen := make(map[string]bool, len(entries))
-	for _, e := range entries {
-		// A tombstone is not a message in the window — it is the absence of
-		// one, and counting it would inflate a tally an operator reads as "this
-		// much mail will arrive".
-		if e.removed {
-			continue
-		}
-		// One comparison covers the undated entry too: an absent instant decodes
-		// to the zero time, which precedes every window an anchor can ask for.
-		if e.receivedAt.Before(from) || !e.receivedAt.Before(before) {
-			continue
-		}
-		seen[e.id] = true
+	digest := idDigest(id)
+	if _, ok := c.seen[digest]; ok {
+		return nil
 	}
-	return len(seen)
+	if len(c.seen) >= anchorSeenCap {
+		return fmt.Errorf("%w: more than %d messages since %s; run the history import for this mailbox, then re-anchor it",
+			ErrAnchorTooLarge, anchorSeenCap, c.After.UTC().Format(time.RFC3339))
+	}
+	c.seen[digest] = struct{}{}
+	return nil
 }
 
-func (a *httpAPI) DeltaInit(ctx context.Context, accessToken, folder string, after time.Time) ([]MessageRef, string, error) {
-	opened := time.Now().UTC()
-	// $select, so the walk is answered in the two fields it reconciles on rather
-	// than in whatever Graph would send by default: receivedDateTime is not
-	// promised on every entry of a delta round, and this is the request that
-	// asks for it. It rides the deltaLink into every later round of the same
-	// stream, so a resume is answered the same way.
+func idDigest(id string) string {
+	sum := sha256.Sum256([]byte(id))
+	return base64.RawURLEncoding.EncodeToString(sum[:16])
+}
+
+type anchorCensusJSON struct {
+	After  time.Time `json:"after"`
+	Opened time.Time `json:"opened"`
+	Seen   []string  `json:"seen"`
+}
+
+// MarshalJSON stores the set sorted, so one census always reads the same.
+func (c *AnchorCensus) MarshalJSON() ([]byte, error) {
+	seen := make([]string, 0, len(c.seen))
+	for digest := range c.seen {
+		seen = append(seen, digest)
+	}
+	slices.Sort(seen)
+	return json.Marshal(anchorCensusJSON{After: c.After, Opened: c.Opened, Seen: seen})
+}
+
+// UnmarshalJSON refuses a stored set past the cap rather than resuming a
+// census it could no longer keep exact.
+func (c *AnchorCensus) UnmarshalJSON(b []byte) error {
+	var stored anchorCensusJSON
+	if err := json.Unmarshal(b, &stored); err != nil {
+		return err
+	}
+	if len(stored.Seen) > anchorSeenCap {
+		return fmt.Errorf("graph: a stored anchor census holds %d ids, over the cap of %d", len(stored.Seen), anchorSeenCap)
+	}
+	c.After, c.Opened = stored.After, stored.Opened
+	c.seen = make(map[string]struct{}, len(stored.Seen))
+	for _, digest := range stored.Seen {
+		c.seen[digest] = struct{}{}
+	}
+	return nil
+}
+
+// countedInWindow reports whether an entry belongs to [after, before), the
+// window a tally covers, with the lower bound read the way Microsoft reads it.
+// The round asks for the instant, so an entry without one does not count: its
+// zero time precedes every window. A short census is retried next cycle.
+func countedInWindow(receivedAt, after, before time.Time) bool {
+	return !receivedAt.Before(filterInstant(after)) && receivedAt.Before(before)
+}
+
+// DeltaInit starts a fresh anchor round, or resumes one from resume, handing
+// each page to visit. The round's deltaLink is returned only after its census
+// reaches the folder's own tally.
+func (a *httpAPI) DeltaInit(ctx context.Context, accessToken, folder string, after time.Time, resume *DeltaResume, visit PageVisitor) (string, error) {
+	census, start, err := a.anchorStart(folder, after, resume)
+	if err != nil {
+		return "", err
+	}
+	deltaLink, err := a.deltaWalk(ctx, accessToken, start, census, visit)
+	if err != nil {
+		return "", err
+	}
+	// A filtered delta that closes early also ends with a deltaLink. The
+	// watermark only moves forward, so the census must reach the folder's
+	// tally before it may stand.
+	held, err := a.countInFolder(ctx, accessToken, folder, receivedBetweenFilter(census.After, census.Opened))
+	if err != nil {
+		return "", err
+	}
+	// The tally runs after the walk, over a window closed when the walk opened.
+	// Mail that arrives or is deleted meanwhile can only raise the census side.
+	// The census counts only in-window entries, so changed older mail cannot pad it.
+	if walked := len(census.seen); walked < held {
+		return "", fmt.Errorf(
+			"graph: the %s anchor closed holding %d message(s) from the window but the folder holds %d since %s: %w",
+			folder, walked, held, census.After.UTC().Format(time.RFC3339), ErrUnreachable)
+	}
+	return deltaLink, nil
+}
+
+// anchorStart returns the census and first URL of an anchor round. It opens a
+// fresh round now, or resumes the one a checkpoint stored.
+func (a *httpAPI) anchorStart(folder string, after time.Time, resume *DeltaResume) (*AnchorCensus, string, error) {
+	if resume != nil {
+		if resume.Anchor == nil || resume.Anchor.seen == nil || resume.NextLink == "" {
+			return nil, "", fmt.Errorf("graph: a stored %s anchor round names no census or link: %w", folder, ErrUnreachable)
+		}
+		if err := a.sameAPIOrigin(resume.NextLink); err != nil {
+			return nil, "", err
+		}
+		return resume.Anchor, resume.NextLink, nil
+	}
+	// $select asks for receivedDateTime, which Graph does not promise by
+	// default. It rides every nextLink and the deltaLink. Exchange stamps it on
+	// sent mail too, so it bounds both folders.
 	q := url.Values{
 		paramFilter: {receivedAfterFilter(after)},
 		paramSelect: {"id,receivedDateTime"},
 	}
-	// receivedDateTime bounds BOTH folders: Exchange stamps it on a sent
-	// message too, so one filter serves the pair rather than the sent side
-	// needing sentDateTime and a second spelling of "recently".
-	entries, deltaLink, err := a.deltaWalk(ctx, accessToken,
-		a.base+"/me/mailFolders/"+url.PathEscape(folder)+"/messages/delta?"+q.Encode())
-	if err != nil {
-		return nil, "", err
-	}
-	// A round that ends with a deltaLink says "you are at the end" but a
-	// filtered delta closing early would say exactly the same thing, and the
-	// watermark that follows only ever moves forward — so anything the round
-	// fell short of would never be offered again. Measure the walk against the
-	// folder's own tally before letting the watermark stand.
-	held, err := a.countInFolder(ctx, accessToken, folder, receivedBetweenFilter(after, opened))
-	if err != nil {
-		return nil, "", err
-	}
-	// The tally is taken AFTER the walk over a window closed at the instant the
-	// walk opened, so both ways a mailbox can move meanwhile push the walk's
-	// side up rather than the tally's: a message arriving mid-walk is outside
-	// the counted window yet may be inside the walk, and one deleted mid-walk
-	// leaves both. A walk short of the tally is therefore evidence the round
-	// ended early, never an artifact of the gap between the two calls.
-	// Measured on the entries that BELONG to the counted window, not on
-	// everything the round named: a delta tracks a folder rather than a query,
-	// so an entry for an older message that merely changed would otherwise pad
-	// this side and let a short round pass. Every entry is still returned — a
-	// message named by the round is a message to fetch, whatever window it
-	// belongs to.
-	if walked := countWithin(entries, after, opened); walked < held {
-		return nil, "", fmt.Errorf(
-			"graph: the %s anchor closed holding %d message(s) from the window but the folder holds %d since %s: %w",
-			folder, walked, held, after.UTC().Format(time.RFC3339), ErrUnreachable)
-	}
-	return fetchableEntries(entries), deltaLink, nil
+	return newAnchorCensus(after, time.Now().UTC()),
+		a.base + "/me/mailFolders/" + url.PathEscape(folder) + "/messages/delta?" + q.Encode(), nil
 }
 
 // countInFolder reports how many messages one folder holds for a filter, so a
@@ -221,68 +283,86 @@ func (a *httpAPI) countInFolder(ctx context.Context, accessToken, folder, filter
 	return *out.Count, nil
 }
 
-func (a *httpAPI) Delta(ctx context.Context, accessToken, deltaLink string) ([]MessageRef, []string, string, error) {
-	if err := a.sameAPIOrigin(deltaLink); err != nil {
-		return nil, nil, "", err
+// Delta resumes a folder's round from its stored deltaLink, or from the page a
+// checkpoint stored, handing each page to visit.
+func (a *httpAPI) Delta(ctx context.Context, accessToken, deltaLink string, resume *DeltaResume, visit PageVisitor) (string, error) {
+	start := deltaLink
+	if resume != nil {
+		start = resume.NextLink
 	}
-	entries, next, err := a.deltaWalk(ctx, accessToken, deltaLink)
-	if err != nil {
-		return nil, nil, "", err
+	if err := a.sameAPIOrigin(start); err != nil {
+		return "", err
 	}
 	// Folder tombstones include archive moves, which change even immutable ids.
-	// They cannot authorize irreversible deletion.
-	return fetchableEntries(entries), nil, next, nil
+	// They cannot authorize irreversible deletion, so a page reports none.
+	return a.deltaWalk(ctx, accessToken, start, nil, visit)
 }
 
-// deltaWalk follows a delta round from startURL through every nextLink until
-// Graph hands back the deltaLink that closes it, collecting the ids of the
-// non-tombstoned messages along the way. A 410 anywhere in the walk means the
-// server no longer honors this delta state (ErrDeltaGone).
-func (a *httpAPI) deltaWalk(ctx context.Context, accessToken, startURL string) ([]deltaEntry, string, error) {
-	var entries []deltaEntry
+// deltaWalk follows a round from startURL through every nextLink to the
+// closing deltaLink, handing visit one page at a time. An anchor round counts
+// each page into census first. A 410 anywhere returns ErrDeltaGone.
+func (a *httpAPI) deltaWalk(ctx context.Context, accessToken, startURL string, census *AnchorCensus, visit PageVisitor) (string, error) {
 	next := startURL
 	for {
 		var page deltaPage
 		status, err := a.get(ctx, accessToken, next, nil, &page)
 		if err != nil {
 			if status == http.StatusGone {
-				return nil, "", ErrDeltaGone
+				return "", ErrDeltaGone
 			}
-			return nil, "", err
+			return "", err
 		}
-		for _, m := range page.Value {
-			if m.ID == "" {
-				continue
-			}
-			entries = append(entries, deltaEntry{
-				id:         m.ID,
-				receivedAt: m.ReceivedAt.UTC(),
-				removed:    m.Removed != nil,
-			})
+		messages, err := pageMessages(page, census)
+		if err != nil {
+			return "", err
 		}
 		if page.NextLink == "" {
 			if page.DeltaLink == "" {
-				// A closed round with neither a next nor a delta link has lost
-				// the resumable cursor — treat the malformed response as
-				// unreachable rather than reporting success with no watermark.
-				return nil, "", ErrUnreachable
+				// A round with neither link has lost its cursor. It is
+				// unreachable, never a success without a watermark.
+				return "", ErrUnreachable
 			}
-			// The deltaLink gets the same check as a nextLink, and needs it
-			// more: this one is STORED. A nextLink is followed once and the
-			// round ends either way, while an off-origin deltaLink becomes the
-			// cursor, and every later cycle then fails its own origin check
-			// before fetching anything — a mailbox stuck with no way back,
-			// since that refusal is not the 410 a re-anchor answers.
+			// The deltaLink is stored, so it gets the origin check too. An
+			// off-origin one would fail every later cycle with no 410 to
+			// re-anchor on.
 			if err := a.sameAPIOrigin(page.DeltaLink); err != nil {
-				return nil, "", err
+				return "", err
 			}
-			return entries, page.DeltaLink, nil
+			if err := visit(ctx, DeltaPage{Messages: messages, Resume: DeltaResume{Anchor: census}}); err != nil {
+				return "", err
+			}
+			return page.DeltaLink, nil
 		}
 		if err := a.sameAPIOrigin(page.NextLink); err != nil {
-			return nil, "", err
+			return "", err
+		}
+		if err := visit(ctx, DeltaPage{Messages: messages, Resume: DeltaResume{NextLink: page.NextLink, Anchor: census}}); err != nil {
+			return "", err
 		}
 		next = page.NextLink
 	}
+}
+
+// pageMessages is a page's fetchable messages, counted into census first when
+// the round is an anchor. A tombstone carries nothing to fetch.
+func pageMessages(page deltaPage, census *AnchorCensus) ([]MessageRef, error) {
+	var messages []MessageRef
+	for _, m := range page.Value {
+		if m.ID == "" {
+			continue
+		}
+		receivedAt := m.ReceivedAt.UTC()
+		removed := m.Removed != nil
+		if census != nil {
+			if err := census.count(m.ID, receivedAt, removed); err != nil {
+				return nil, err
+			}
+		}
+		if !removed {
+			messages = append(messages, MessageRef{ID: m.ID, ReceivedAt: receivedAt})
+		}
+	}
+	return messages, nil
 }
 
 // sameAPIOrigin refuses any continuation URL that does not live under the

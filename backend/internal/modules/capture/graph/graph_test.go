@@ -152,15 +152,15 @@ func (f *fakeAPI) FindSentByMessageID(_ context.Context, _, id string) (string, 
 // DeltaInit answers per folder, because the two are separate rounds with
 // separate watermarks and a fake that conflated them would let the connector
 // conflate them too.
-func (f *fakeAPI) DeltaInit(_ context.Context, _, folder string, after time.Time) ([]MessageRef, string, error) {
+func (f *fakeAPI) DeltaInit(ctx context.Context, _, folder string, after time.Time, _ *DeltaResume, visit PageVisitor) (string, error) {
 	if folder == folderSent {
 		f.sentInitCalls++
 		f.sentInitAfter = after
-		return f.messageRefs(f.sentInitIDs), f.sentInitDelta, nil
+		return f.sentInitDelta, visit(ctx, DeltaPage{Messages: f.messageRefs(f.sentInitIDs)})
 	}
 	f.initCalls++
 	f.initAfter = after
-	return f.messageRefs(f.initIDs), f.initDelta, nil
+	return f.initDelta, visit(ctx, DeltaPage{Messages: f.messageRefs(f.initIDs)})
 }
 
 func (f *fakeAPI) EnsureSubscription(
@@ -216,13 +216,13 @@ func (f *fakeAPI) GetSubscription(_ context.Context, _, id string) (Subscription
 	return Subscription{ID: id, NotificationURL: url}, nil
 }
 
-func (f *fakeAPI) Delta(_ context.Context, _, deltaLink string) ([]MessageRef, []string, string, error) {
+func (f *fakeAPI) Delta(ctx context.Context, _, deltaLink string, _ *DeltaResume, visit PageVisitor) (string, error) {
 	f.deltaCalls++
 	f.seenDelta = deltaLink
 	if f.deltaErr != nil {
-		return nil, nil, "", f.deltaErr
+		return "", f.deltaErr
 	}
-	return f.messageRefs(f.deltaIDs), f.deltaRemoved, f.deltaLink, nil
+	return f.deltaLink, visit(ctx, DeltaPage{Messages: f.messageRefs(f.deltaIDs), Removed: f.deltaRemoved})
 }
 
 func (f *fakeAPI) GetMIME(_ context.Context, _, folder, id string) ([]byte, error) {

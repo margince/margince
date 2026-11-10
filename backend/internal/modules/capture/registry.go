@@ -305,7 +305,15 @@ func (r *Registry) syncConnection(ctx context.Context, connectionID ids.UUID) er
 		return err
 	}
 	runCtx, tally := withDeliveryTally(runCtx)
+	runCtx, checkpoints := r.withSyncCheckpoints(runCtx, snapshot)
 	next, syncErr := syncFrom(runCtx, syncer, auth, connector.Cursor(cursor), from, r.sink)
+	// A checkpoint moved the fence on; what follows writes behind the new one.
+	snapshot = checkpoints.snapshot
+	if errors.Is(syncErr, errSyncSuperseded) {
+		slog.InfoContext(ctx, "capture: sync superseded mid-round — it stopped at its last checkpoint",
+			"connection_id", connectionID, "provider", name)
+		return nil
+	}
 	if syncErr != nil {
 		// A transient failure never kills the connection (ADR-0063): the
 		// state machine classifies, backs off, degrades to a daily probe at
@@ -323,7 +331,6 @@ func (r *Registry) syncConnection(ctx context.Context, connectionID ids.UUID) er
 		// An older snapshot cannot replace the newer cursor or health verdict.
 		slog.InfoContext(ctx, "capture: sync superseded — its cursor and health were not recorded",
 			"connection_id", connectionID, "provider", name)
-		return nil
 	}
 	return nil
 }
