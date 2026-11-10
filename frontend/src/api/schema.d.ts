@@ -52672,7 +52672,10 @@ export interface components {
          *     on reading it, and neither side adds a document or a comment. It is not a
          *     frozen copy: what the buyer reads is the live room, so a file later removed
          *     from the deal stops being served here too. `expired` is access lapsing on its
-         *     own. `archived` ends the room outright and frees the deal for another.
+         *     own: no write sets it, and a room reads `expired` once its `expires_at` has
+         *     passed unless it is `paused`, `closed` or `archived`. A later `expires_at`
+         *     makes it read `live` again. `archived` ends the room outright and frees the
+         *     deal for another.
          * @enum {string}
          */
         DealRoomState: "draft" | "building" | "ready" | "publishing" | "live" | "paused" | "closed" | "expired" | "archived";

@@ -46,8 +46,15 @@ func (s *Store) tx(ctx context.Context, fn func(pgx.Tx) error) error {
 	return s.db.Tx(ctx, fn)
 }
 
+// roomStateSQL is the state a room reads as, to staff and buyer alike. A room
+// whose expiry has passed reads as expired unless paused, closed or archived. The
+// stored column never changes on its own, so the rule runs on the database clock.
+const roomStateSQL = `CASE WHEN r.expires_at <= now()
+	  AND r.state NOT IN ('` + statePaused + `', '` + stateClosed + `', '` + stateArchived + `')
+	 THEN '` + stateExpired + `' ELSE r.state END`
+
 // roomColumns is the projection every room read returns, in the order
 // scanRoom consumes it.
-const roomColumns = `r.id, r.deal_id, r.title, r.welcome_message, r.state,
+const roomColumns = `r.id, r.deal_id, r.title, r.welcome_message, ` + roomStateSQL + `,
 	r.steward_user_id, r.expires_at, r.closed_at,
 	r.source, r.captured_by, r.version, r.created_at, r.updated_at, r.archived_at`

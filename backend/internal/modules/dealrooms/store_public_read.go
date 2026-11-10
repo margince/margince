@@ -31,9 +31,8 @@ const (
 	accessExpired = "expired"
 )
 
-// roomStanding is the one room read the buyer edge performs: state and expiry
-// for access, the steward's name for the contact line, and the wording the
-// buyer reads at the top of the page.
+// roomStanding is the one room read the buyer edge performs. It carries the
+// state access follows, the steward's name and the wording atop the page.
 //
 // It answers for the deal as well as the room. A room is a place to work one
 // deal, so an archived deal has no room. Every buyer path reaches this read,
@@ -48,7 +47,6 @@ const (
 // page because the rep had not pressed a button they did not know about.
 type roomStanding struct {
 	state       string
-	expiresAt   *time.Time
 	closedAt    *time.Time
 	stewardName *string
 	title       string
@@ -58,12 +56,12 @@ type roomStanding struct {
 func readStanding(ctx context.Context, tx pgx.Tx, roomID ids.DealRoomID) (roomStanding, error) {
 	var st roomStanding
 	err := tx.QueryRow(ctx,
-		`SELECT r.state, r.expires_at, r.closed_at, u.display_name, r.title, r.welcome_message
+		`SELECT `+roomStateSQL+`, r.closed_at, u.display_name, r.title, r.welcome_message
 		   FROM deal_room r
 		   JOIN deal d ON d.id = r.deal_id AND d.archived_at IS NULL
 		   LEFT JOIN app_user u ON u.id = r.steward_user_id
 		  WHERE r.id = $1 AND r.archived_at IS NULL`,
-		roomID).Scan(&st.state, &st.expiresAt, &st.closedAt, &st.stewardName, &st.title, &st.welcome)
+		roomID).Scan(&st.state, &st.closedAt, &st.stewardName, &st.title, &st.welcome)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return roomStanding{}, apperrors.ErrNotFound
 	}
@@ -73,19 +71,15 @@ func readStanding(ctx context.Context, tx pgx.Tx, roomID ids.DealRoomID) (roomSt
 	return st, nil
 }
 
-// access maps the room's lifecycle onto what the buyer may do. Expiry is
-// decided HERE, on every read, rather than by a sweep that flips the state
-// later: a room whose expires_at has passed stops serving the moment it passes.
-func (st roomStanding) access(now time.Time) string {
+// access maps the room's lifecycle onto what the buyer may do. The state was
+// read through roomStateSQL, so a room stops serving the moment its expiry passes.
+func (st roomStanding) access() string {
 	switch st.state {
 	case statePaused:
 		return accessPaused
 	case stateClosed:
 		return accessClosed
-	case "expired", stateArchived:
-		return accessExpired
-	}
-	if st.expiresAt != nil && !st.expiresAt.After(now) {
+	case stateExpired, stateArchived:
 		return accessExpired
 	}
 	return accessLive
@@ -113,7 +107,7 @@ func (s *Store) BuyerView(ctx context.Context, sess Session) (crmcontracts.Buyer
 		if err != nil {
 			return err
 		}
-		out.Access = crmcontracts.BuyerRoomAccess(st.access(time.Now()))
+		out.Access = crmcontracts.BuyerRoomAccess(st.access())
 		out.StewardName = st.stewardName
 		if sess.Preview {
 			preview := true
