@@ -202,7 +202,7 @@ export const WHY_LABEL = {
   marketing: "Marketing",
 } as const;
 
-// The composer has one dropdown, so a pick needs nothing but the label.
+// The reason dropdown is found by its name, so a pick needs only the label.
 // `pickOption` takes a userEvent session, which the bare direct API is not.
 // So it gets a fresh one, as every bare `userEvent.*` call here does inside.
 export function pickWhy(label: string) {
