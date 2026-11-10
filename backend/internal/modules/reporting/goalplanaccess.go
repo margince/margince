@@ -18,15 +18,15 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// goalAccess is what the caller may do with one person's goals. A caller
-// outside the person's reach gets ErrNotFound instead, whether or not a plan
+// goalAccess is what the caller may do with one seller's goals. A caller
+// outside the seller's reach gets ErrNotFound instead, whether or not a plan
 // exists, so the refusal says nothing about the plan.
 type goalAccess struct {
 	self bool
 	// edit is drafting, publishing, discarding and withdrawing.
 	edit bool
 	// drafts is reading the shared draft, its reasons and the history: the
-	// person and those who set their goals, never a peer.
+	// seller and those who set their goals, never a peer.
 	drafts bool
 }
 
@@ -38,11 +38,11 @@ func (s *Service) goalAccess(ctx context.Context, tx pgx.Tx, owner ids.UUID) (go
 	if !ok {
 		return goalAccess{}, apperrors.ErrPermissionDenied
 	}
-	person := actor.UserID
+	seller := actor.UserID
 	if actor.Type == principal.PrincipalAgent {
-		person = actor.OnBehalfOf
+		seller = actor.OnBehalfOf
 	}
-	access := goalAccess{self: !person.IsZero() && person == owner}
+	access := goalAccess{self: !seller.IsZero() && seller == owner}
 	if !access.self {
 		// The individual-performance switch and the reader's population both
 		// live in this one rule, so a goal is read where its figures are.
@@ -85,7 +85,7 @@ func (s *Service) requireGoalEdit(ctx context.Context, tx pgx.Tx, owner ids.UUID
 	return nil
 }
 
-// planOwnedIdentity reports the person and year a target input belongs to when
+// planOwnedIdentity reports the seller and year a target input belongs to when
 // it is a month a sales goal plan can own.
 func planOwnedIdentity(in crmcontracts.ReportingTargetInput) (ids.UUID, int, bool) {
 	if in.Metric != goalMetric || in.Scope.Kind != reportingOwner || in.Scope.Id == nil || in.PipelineId != nil || in.PeriodKind != "month" {
@@ -124,7 +124,7 @@ func (s *Service) goalWriteReachesCaller(ctx context.Context, tx pgx.Tx, owner i
 	return s.goalWriteReaches(ctx, tx, actor, owner)
 }
 
-// CanSetGoals answers whether the caller may set this person's sales goals,
+// CanSetGoals answers whether the caller may set this seller's sales goals,
 // under the same rule the plan writes enforce.
 func (s *Service) CanSetGoals(ctx context.Context, tx pgx.Tx, owner ids.UUID) (bool, error) {
 	access, err := s.goalAccess(ctx, tx, owner)
@@ -134,7 +134,7 @@ func (s *Service) CanSetGoals(ctx context.Context, tx pgx.Tx, owner ids.UUID) (b
 	return access.edit, err
 }
 
-// GoalPlanVisible refuses a caller who may no longer read this person's
+// GoalPlanVisible refuses a caller who may no longer read this seller's
 // draft and history, which every plan write answers with.
 func (s *Service) GoalPlanVisible(ctx context.Context, owner ids.UUID) error {
 	return s.store.db.Tx(ctx, func(tx pgx.Tx) error {

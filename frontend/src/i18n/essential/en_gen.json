@@ -2185,5 +2185,7 @@
   "analytics.outlook.dealCount_one": "{count} deal",
   "analytics.outlook.dealCount_other": "{count} deals",
   "analytics.team.qualificationUnattributed_one": "{count} first qualification has no recorded owner. Member counts cover attributed events only.",
-  "analytics.team.qualificationUnattributed_other": "{count} first qualifications have no recorded owner. Member counts cover attributed events only."
+  "analytics.team.qualificationUnattributed_other": "{count} first qualifications have no recorded owner. Member counts cover attributed events only.",
+  "nav.progress": "Progress",
+  "nav.salesGoals": "Sales goals"
 }

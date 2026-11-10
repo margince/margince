@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package compose
+package salesprogress
 
 import (
 	"context"
@@ -15,29 +15,29 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
-// progressPeople is whose goals and figures a reading adds up.
-type progressPeople struct {
+// progressSellers is whose goals and figures a reading adds up.
+type progressSellers struct {
 	team bool
-	// owners are the people whose goals count, each one the reader measures.
+	// owners are the sellers whose goals count, each one the reader measures.
 	owners []ids.UUID
 	// withheld is a team the reader may not measure member by member. Its
 	// goal is the sum of the members' goals, so it is withheld with them.
 	withheld bool
 }
 
-func (h salesProgressHandlers) people(ctx context.Context, tx pgx.Tx, frame crmcontracts.ReportingContext) (progressPeople, error) {
+func (h Reading) sellers(ctx context.Context, tx pgx.Tx, frame crmcontracts.ReportingContext) (progressSellers, error) {
 	if frame.Scope.Kind == crmcontracts.ReportingScopeKindOwner && frame.Scope.Id != nil {
-		return progressPeople{owners: []ids.UUID{ids.UUID(*frame.Scope.Id)}}, nil
+		return progressSellers{owners: []ids.UUID{ids.UUID(*frame.Scope.Id)}}, nil
 	}
-	members, err := reportingMembers(ctx, tx, frame.Scope)
+	members, err := h.Members(ctx, tx, frame.Scope)
 	if err != nil {
-		return progressPeople{}, err
+		return progressSellers{}, err
 	}
-	measured, err := readerMeasurableOwners(ctx, tx)
+	measured, err := h.Measurable(ctx, tx)
 	if err != nil {
-		return progressPeople{}, err
+		return progressSellers{}, err
 	}
-	out := progressPeople{team: true}
+	out := progressSellers{team: true}
 	for _, member := range members {
 		if measured.Includes(member) && !measured.IndividualOff {
 			out.owners = append(out.owners, member)
@@ -57,14 +57,14 @@ type progressGoals struct {
 	drift    map[ids.UUID]bool
 }
 
-func (h salesProgressHandlers) goals(ctx context.Context, tx pgx.Tx, frame progressFrame, people progressPeople) (progressGoals, error) {
-	out := progressGoals{withheld: people.withheld, currency: frame.currency}
+func (h Reading) goals(ctx context.Context, tx pgx.Tx, frame progressFrame, sellers progressSellers) (progressGoals, error) {
+	out := progressGoals{withheld: sellers.withheld, currency: frame.currency}
 	var err error
-	out.years, out.readable, err = h.reports.OwnerGoalYears(ctx, tx, people.owners, frame.period.year)
+	out.years, out.readable, err = h.Reports.OwnerGoalYears(ctx, tx, sellers.owners, frame.period.year)
 	if err != nil || !out.readable {
 		return out, err
 	}
-	out.drift, err = h.reports.GoalPlanDrift(ctx, tx, people.owners, frame.period.year)
+	out.drift, err = h.Reports.GoalPlanDrift(ctx, tx, sellers.owners, frame.period.year)
 	return out, err
 }
 

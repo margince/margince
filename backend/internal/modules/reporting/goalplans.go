@@ -19,7 +19,7 @@ import (
 
 const goalMonths = 12
 
-// GetGoalPlan reads one person's plan for a year as the caller may see it.
+// GetGoalPlan reads one seller's plan for a year as the caller may see it.
 func (s *Service) GetGoalPlan(ctx context.Context, owner ids.UUID, year int) (crmcontracts.SalesGoalPlan, error) {
 	var out crmcontracts.SalesGoalPlan
 	err := s.store.db.Tx(ctx, func(tx pgx.Tx) error {
@@ -161,7 +161,7 @@ func checkGoalReason(reason string) error {
 	return nil
 }
 
-// planForWrite locks the person's year and checks the version the caller saw;
+// planForWrite locks the seller's year and checks the version the caller saw;
 // version 0 means the caller saw no plan.
 func (s *Service) planForWrite(ctx context.Context, tx pgx.Tx, owner ids.UUID, year int, version int64) (*goalPlan, error) {
 	if year < minGoalYear || year > maxGoalYear {

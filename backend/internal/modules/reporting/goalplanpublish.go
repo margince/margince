@@ -142,10 +142,10 @@ func (s *Service) ListGoalSellers(ctx context.Context, year int) (crmcontracts.S
 }
 
 func (s *Service) goalSellers(ctx context.Context, tx pgx.Tx, self ids.UUID, measured []ids.UUID, year int) ([]crmcontracts.SalesGoalSeller, error) {
-	people := append([]ids.UUID{self}, measured...)
+	sellers := append([]ids.UUID{self}, measured...)
 	rows, err := tx.Query(ctx, `SELECT u.id, COALESCE(u.display_name,''), p.version IS NOT NULL, p.draft_revision IS NOT NULL, p.published_revision IS NOT NULL, p.withdrawn_revision IS NOT NULL
 		FROM app_user u LEFT JOIN sales_goal_plan p ON p.owner_id=u.id AND p.year=$2
-		WHERE u.id=ANY($1) ORDER BY u.id=$3 DESC, u.display_name, u.id`, people, year, self)
+		WHERE u.id=ANY($1) ORDER BY u.id=$3 DESC, u.display_name, u.id`, sellers, year, self)
 	if err != nil {
 		return nil, err
 	}
@@ -161,11 +161,11 @@ func (s *Service) goalSellers(ctx context.Context, tx pgx.Tx, self ids.UUID, mea
 	if err != nil {
 		return nil, err
 	}
-	drift, err := s.GoalPlanDrift(ctx, tx, people, year)
+	drift, err := s.GoalPlanDrift(ctx, tx, sellers, year)
 	if err != nil {
 		return nil, err
 	}
-	live, err := yearTargets(ctx, tx, people, year, false)
+	live, err := yearTargets(ctx, tx, sellers, year, false)
 	if err != nil {
 		return nil, err
 	}
@@ -174,24 +174,24 @@ func (s *Service) goalSellers(ctx context.Context, tx pgx.Tx, self ids.UUID, mea
 		return nil, err
 	}
 	out := make([]crmcontracts.SalesGoalSeller, 0, len(found))
-	for _, person := range found {
+	for _, seller := range found {
 		header := goalPlan{}
 		one := int64(1)
-		if person.draft {
+		if seller.draft {
 			header.Draft = &one
 		}
-		if person.published {
+		if seller.published {
 			header.Published = &one
 		}
-		if person.withdrawn {
+		if seller.withdrawn {
 			header.Withdrawn = &one
 		}
-		edit, err := s.goalWriteReachesCaller(ctx, tx, person.id)
+		edit, err := s.goalWriteReachesCaller(ctx, tx, seller.id)
 		if err != nil {
 			return nil, err
 		}
-		entry := crmcontracts.SalesGoalSeller{OwnerId: openapi_types.UUID(person.id), Name: person.name, State: goalPlanState(header, drift[person.id]), CanEdit: edit}
-		if total, complete, err := monthTotal(liveMonths(live[person.id], calendar.Currency)); err == nil && complete {
+		entry := crmcontracts.SalesGoalSeller{OwnerId: openapi_types.UUID(seller.id), Name: seller.name, State: goalPlanState(header, drift[seller.id]), CanEdit: edit}
+		if total, complete, err := monthTotal(liveMonths(live[seller.id], calendar.Currency)); err == nil && complete {
 			entry.TotalMinor = &total
 		}
 		out = append(out, entry)

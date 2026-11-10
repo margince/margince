@@ -60,7 +60,7 @@ export function useSalesProgress(ask: ProgressAsk) {
 
 export function useSalesGoalRoster(year: number) {
   return useQuery({
-    queryKey: [...GOALS_KEY, "people", year],
+    queryKey: [...GOALS_KEY, "sellers", year],
     queryFn: async ({ signal }) =>
       unwrap(
         await api.GET("/analytics/sales-goals", {
@@ -90,7 +90,7 @@ type PlanPath = Readonly<{ owner: string; year: number; version: number }>;
 // A plan write moves the goals every Progress figure is read against.
 function refreshGoals(client: QueryClient, plan: SalesGoalPlan) {
   client.setQueryData([...GOALS_KEY, "plan", plan.owner_id, plan.year], plan);
-  void client.invalidateQueries({ queryKey: [...GOALS_KEY, "people"] });
+  void client.invalidateQueries({ queryKey: [...GOALS_KEY, "sellers"] });
   void client.invalidateQueries({ queryKey: PROGRESS_KEY });
 }
 

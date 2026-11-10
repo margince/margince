@@ -7,6 +7,7 @@ import (
 	"slices"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/compose/salesprogress"
 	"github.com/margince/margince/backend/internal/modules/reporting"
 )
 
@@ -77,11 +78,11 @@ func TestSettleDealShowsAnOverAllocatedDealWhole(t *testing.T) {
 	if len(got) != 1 {
 		t.Fatalf("an over-allocated deal settles to %d parts, want one", len(got))
 	}
-	if got[0].GroupKey != "kind:"+mixInvalidKind || *got[0].Money != total {
-		t.Fatalf("invalid part = %s %d, want kind:%s %d", got[0].GroupKey, *got[0].Money, mixInvalidKind, total)
+	if got[0].GroupKey != "kind:"+salesprogress.InvalidKind || *got[0].Money != total {
+		t.Fatalf("invalid part = %s %d, want kind:%s %d", got[0].GroupKey, *got[0].Money, salesprogress.InvalidKind, total)
 	}
-	if saleCategory(got[0].GroupKey) != saleUnresolved {
-		t.Fatalf("an invalid deal counts as %s, want unresolved", saleCategory(got[0].GroupKey))
+	if salesprogress.Category(got[0].GroupKey) != salesprogress.Unresolved {
+		t.Fatalf("an invalid deal counts as %s, want unresolved", salesprogress.Category(got[0].GroupKey))
 	}
 }
 
@@ -90,19 +91,5 @@ func TestSettleDealKeepsTheLinesOfADealWithNoValue(t *testing.T) {
 	got := settleDeal(facts, []int{0, 1}, nil, "invalid")
 	if len(got) != 1 || *got[0].Money != 5000 {
 		t.Fatalf("a deal with no value keeps %v, want only its positive line", partMoney(got))
-	}
-}
-
-func TestSaleCategoryReadsTheCapturedLineKind(t *testing.T) {
-	for group, want := range map[string]string{
-		"kind:software":       saleProduct,
-		"kind:implementation": saleService,
-		"kind:other":          saleUnresolved,
-		"kind:unallocated":    saleUnresolved,
-		"kind:invalid":        saleUnresolved,
-	} {
-		if got := saleCategory(group); got != want {
-			t.Errorf("saleCategory(%q) = %q, want %q", group, got, want)
-		}
 	}
 }

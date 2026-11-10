@@ -20,7 +20,7 @@ import (
 // goalMetric is the figure a sales goal is set on: closed revenue, every pipeline.
 const goalMetric crmcontracts.ReportingMetricID = "bookings_won"
 
-// goalPlan is one person's plan header for one calendar year.
+// goalPlan is one seller's plan header for one calendar year.
 type goalPlan struct {
 	ID        ids.UUID  `json:"id"`
 	OwnerID   ids.UUID  `json:"owner_id"`
@@ -62,7 +62,7 @@ const (
 	goalKindWithdrawn = "withdrawn"
 )
 
-// lockGoalYear serializes every write to one person's goals for one year: plan
+// lockGoalYear serializes every write to one seller's goals for one year: plan
 // drafts, publications and the target routes that would change those months.
 // It holds whether or not a plan header exists yet.
 func lockGoalYear(ctx context.Context, tx pgx.Tx, owner ids.UUID, year int) error {
@@ -72,7 +72,7 @@ func lockGoalYear(ctx context.Context, tx pgx.Tx, owner ids.UUID, year int) erro
 
 const goalPlanColumns = "id,owner_id,year,currency,version,draft_revision,published_revision,withdrawn_revision,created_at,updated_at"
 
-// loadGoalPlan reads the header, nil when the person has no plan for the year.
+// loadGoalPlan reads the header, nil when the seller has no plan for the year.
 func loadGoalPlan(ctx context.Context, tx pgx.Tx, owner ids.UUID, year int) (*goalPlan, error) {
 	var p goalPlan
 	err := tx.QueryRow(ctx, "SELECT "+goalPlanColumns+" FROM sales_goal_plan WHERE owner_id=$1 AND year=$2", owner, year).

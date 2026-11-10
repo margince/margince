@@ -12,36 +12,13 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/salesprogress"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/reporting"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// The sale categories a won deal's value splits into. Software is a product
-// sale and implementation a service. Every other kind is unresolved, and so
-// are products nobody classified and the part no line carries.
-const (
-	saleProduct    = "product"
-	saleService    = "service"
-	saleUnresolved = "unresolved"
-)
-
-// mixInvalidKind groups a deal whose lines add up to more than its value. Its
-// whole value is shown under it, never spread over the lines.
-const mixInvalidKind = "invalid"
-
-// saleCategory places a commercial-mix group key in its sale category.
-func saleCategory(groupKey string) string {
-	switch strings.TrimPrefix(groupKey, "kind:") {
-	case "software":
-		return saleProduct
-	case "implementation":
-		return saleService
-	}
-	return saleUnresolved
-}
-
-var saleCategoryOrder = []string{saleProduct, saleService, saleUnresolved}
+var saleCategoryOrder = []string{salesprogress.Product, salesprogress.Service, salesprogress.Unresolved}
 
 // settleShares splits total over weights by largest remainder, in minor units,
 // so the shares add up to total. A tie goes to the earlier weight.
@@ -98,7 +75,7 @@ func settleMix(ctx context.Context, tx pgx.Tx, frame crmcontracts.ReportingConte
 		}
 		byDeal[key] = append(byDeal[key], index)
 	}
-	invalidLabel := reporting.ExplanationCopy(frame).Say(reportingComponentKindLabels[mixInvalidKind])
+	invalidLabel := reporting.ExplanationCopy(frame).Say(reportingComponentKindLabels[salesprogress.InvalidKind])
 	out := make([]reporting.Fact, 0, len(facts))
 	for _, key := range order {
 		out = append(out, settleDeal(facts, byDeal[key], totals[key.deal], invalidLabel)...)
@@ -118,27 +95,27 @@ func settleDeal(facts []reporting.Fact, indexes []int, total *int64, invalidLabe
 	}
 	if slices.ContainsFunc(parts, func(f reporting.Fact) bool { return *f.Money < 0 }) {
 		invalid := parts[0]
-		invalid.GroupKey, invalid.GroupLabel = "kind:"+mixInvalidKind, invalidLabel
-		invalid.Row.Key = strings.SplitN(invalid.Row.Key, ":", 2)[0] + ":" + mixInvalidKind
+		invalid.GroupKey, invalid.GroupLabel = "kind:"+salesprogress.InvalidKind, invalidLabel
+		invalid.Row.Key = strings.SplitN(invalid.Row.Key, ":", 2)[0] + ":" + salesprogress.InvalidKind
 		setFactMoney(&invalid, *total)
 		return []reporting.Fact{invalid}
 	}
 	slices.SortStableFunc(parts, func(a, b reporting.Fact) int {
-		if order := cmp.Compare(slices.Index(saleCategoryOrder, saleCategory(a.GroupKey)), slices.Index(saleCategoryOrder, saleCategory(b.GroupKey))); order != 0 {
+		if order := cmp.Compare(slices.Index(saleCategoryOrder, salesprogress.Category(a.GroupKey)), slices.Index(saleCategoryOrder, salesprogress.Category(b.GroupKey))); order != 0 {
 			return order
 		}
 		return cmp.Compare(a.Row.Key, b.Row.Key)
 	})
 	weights := make([]int64, len(saleCategoryOrder))
 	for _, part := range parts {
-		weights[slices.Index(saleCategoryOrder, saleCategory(part.GroupKey))] += *part.Money
+		weights[slices.Index(saleCategoryOrder, salesprogress.Category(part.GroupKey))] += *part.Money
 	}
 	shares := settleShares(*total, weights)
 	for category, share := range shares {
 		var lines []int
 		var lineWeights []int64
 		for index, part := range parts {
-			if saleCategory(part.GroupKey) == saleCategoryOrder[category] {
+			if salesprogress.Category(part.GroupKey) == saleCategoryOrder[category] {
 				lines, lineWeights = append(lines, index), append(lineWeights, *part.Money)
 			}
 		}

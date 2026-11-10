@@ -27,7 +27,7 @@ func (h Handlers) ListSalesGoalSellers(w http.ResponseWriter, r *http.Request, p
 	respond(w, r, out, err)
 }
 
-// GetSalesGoalPlan reads one person's plan, refusing alike whether or not it exists.
+// GetSalesGoalPlan reads one seller's plan, refusing alike whether or not it exists.
 func (h Handlers) GetSalesGoalPlan(w http.ResponseWriter, r *http.Request, ownerID openapi_types.UUID, year int) {
 	out, err := h.service.GetGoalPlan(r.Context(), ids.UUID(ownerID), year)
 	respond(w, r, out, err)

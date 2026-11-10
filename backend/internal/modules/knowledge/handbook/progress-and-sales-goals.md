@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/analytics/progress.tsx frontend/src/features/analytics/goals.tsx frontend/src/features/analytics/goals.editor.tsx backend/internal/compose/salesprogress.go backend/internal/modules/reporting/goalplans.go -->
+<!-- describes: frontend/src/features/analytics/progress.tsx frontend/src/features/analytics/goals.tsx frontend/src/features/analytics/goals.editor.tsx backend/internal/compose/salesprogress backend/internal/modules/reporting/goalplans.go -->
 # Progress and sales goals
 
 ## Where do I see my results against my goal?

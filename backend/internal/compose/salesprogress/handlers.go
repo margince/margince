@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package compose
+package salesprogress
 
 import (
 	"context"
@@ -20,18 +20,22 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// salesProgressHandlers serves My Progress and Team Progress. It reads the
+// Reading serves My Progress and Team Progress. It reads the
 // figures from the reporting evaluation Analytics uses and the goals from the
 // sales targets, so both read one scope and window alike.
-type salesProgressHandlers struct {
-	db      *database.DB
-	reports *reporting.Service
+type Reading struct {
+	DB      *database.DB
+	Reports *reporting.Service
+	// Members lists a scope's sellers, and Measurable the owners the reader
+	// may measure one by one: the rules Analytics reads its population with.
+	Members    func(ctx context.Context, tx pgx.Tx, scope crmcontracts.ReportingScope) ([]ids.UUID, error)
+	Measurable func(ctx context.Context, tx pgx.Tx) (reporting.MeasurableOwners, error)
 }
 
 // GetSalesProgress answers closed revenue against the goal for one period.
-func (h salesProgressHandlers) GetSalesProgress(w http.ResponseWriter, r *http.Request, params crmcontracts.GetSalesProgressParams) {
+func (h Reading) GetSalesProgress(w http.ResponseWriter, r *http.Request, params crmcontracts.GetSalesProgressParams) {
 	var out crmcontracts.SalesProgress
-	err := h.db.TxIsolated(r.Context(), pgx.RepeatableRead, func(tx pgx.Tx) error {
+	err := h.DB.TxIsolated(r.Context(), pgx.RepeatableRead, func(tx pgx.Tx) error {
 		var err error
 		out, err = h.read(r.Context(), tx, params)
 		return err
@@ -72,11 +76,11 @@ func (f progressFrame) months() []int {
 	return []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12}
 }
 
-func (h salesProgressHandlers) frame(ctx context.Context, tx pgx.Tx, period progressPeriod) (progressFrame, error) {
+func (h Reading) frame(ctx context.Context, tx pgx.Tx, period progressPeriod) (progressFrame, error) {
 	if !period.yearly() && period.month == nil {
 		return progressFrame{}, httperr.Validation("month", "required", "choose the month to read")
 	}
-	calendar, err := h.reports.Calendar(ctx, tx)
+	calendar, err := h.Reports.Calendar(ctx, tx)
 	if err != nil {
 		return progressFrame{}, err
 	}
@@ -84,7 +88,7 @@ func (h salesProgressHandlers) frame(ctx context.Context, tx pgx.Tx, period prog
 	if err != nil {
 		return progressFrame{}, err
 	}
-	out := progressFrame{period: period, zone: zone, now: h.reports.Now(), currency: calendar.Currency}
+	out := progressFrame{period: period, zone: zone, now: h.Reports.Now(), currency: calendar.Currency}
 	yearStart := time.Date(period.year, time.January, 1, 0, 0, 0, 0, zone)
 	out.year = crmcontracts.ReportingWindow{StartAt: yearStart, EndAt: yearStart.AddDate(1, 0, 0)}
 	out.horizon = out.year
@@ -100,7 +104,7 @@ func (h salesProgressHandlers) frame(ctx context.Context, tx pgx.Tx, period prog
 func progressScope(ctx context.Context, kind *crmcontracts.GetSalesProgressParamsScopeKind, id *openapi_types.UUID) (crmcontracts.ReportingScope, error) {
 	if kind != nil {
 		if id == nil {
-			return crmcontracts.ReportingScope{}, httperr.Validation("scope_id", "required", "choose the person or team to read")
+			return crmcontracts.ReportingScope{}, httperr.Validation("scope_id", "required", "choose the seller or team to read")
 		}
 		return crmcontracts.ReportingScope{Kind: crmcontracts.ReportingScopeKind(*kind), Id: id}, nil
 	}
@@ -119,7 +123,7 @@ func progressScope(ctx context.Context, kind *crmcontracts.GetSalesProgressParam
 	return crmcontracts.ReportingScope{Kind: crmcontracts.ReportingScopeKindOwner, Id: &own}, nil
 }
 
-func (h salesProgressHandlers) read(ctx context.Context, tx pgx.Tx, params crmcontracts.GetSalesProgressParams) (crmcontracts.SalesProgress, error) {
+func (h Reading) read(ctx context.Context, tx pgx.Tx, params crmcontracts.GetSalesProgressParams) (crmcontracts.SalesProgress, error) {
 	frame, err := h.frame(ctx, tx, progressPeriod{kind: params.Period, year: params.Year, month: params.Month})
 	if err != nil {
 		return crmcontracts.SalesProgress{}, err
@@ -128,7 +132,7 @@ func (h salesProgressHandlers) read(ctx context.Context, tx pgx.Tx, params crmco
 	if err != nil {
 		return crmcontracts.SalesProgress{}, err
 	}
-	headline, err := h.reports.EvaluateFactsTx(ctx, tx, headlineSelection(scope, frame))
+	headline, err := h.Reports.EvaluateFactsTx(ctx, tx, headlineSelection(scope, frame))
 	if err != nil {
 		return crmcontracts.SalesProgress{}, err
 	}
@@ -138,25 +142,25 @@ func (h salesProgressHandlers) read(ctx context.Context, tx pgx.Tx, params crmco
 			return crmcontracts.SalesProgress{}, err
 		}
 	}
-	people, err := h.people(ctx, tx, headline.Result.Context)
+	sellers, err := h.sellers(ctx, tx, headline.Result.Context)
 	if err != nil {
 		return crmcontracts.SalesProgress{}, err
 	}
-	goals, err := h.goals(ctx, tx, frame, people)
+	goals, err := h.goals(ctx, tx, frame, sellers)
 	if err != nil {
 		return crmcontracts.SalesProgress{}, err
 	}
 	out := progressShell(frame, headline)
-	fillFigures(frame, headline, goals, people, &out)
-	fillMonths(frame, year, goals, people, &out)
-	if err := h.fillMembers(ctx, tx, frame, headline, goals, people, &out); err != nil {
+	fillFigures(frame, headline, goals, sellers, &out)
+	fillMonths(frame, year, goals, sellers, &out)
+	if err := h.fillMembers(ctx, tx, frame, headline, goals, sellers, &out); err != nil {
 		return out, err
 	}
 	if err := h.fillItems(ctx, tx, headline, &out); err != nil {
 		return out, err
 	}
 	if scope.Kind == crmcontracts.ReportingScopeKindOwner {
-		out.Capabilities.WriteGoals, err = h.reports.CanSetGoals(ctx, tx, ids.UUID(*scope.Id))
+		out.Capabilities.WriteGoals, err = h.Reports.CanSetGoals(ctx, tx, ids.UUID(*scope.Id))
 	}
 	return out, err
 }
@@ -169,25 +173,25 @@ func headlineSelection(scope crmcontracts.ReportingScope, frame progressFrame) c
 	selection := crmcontracts.ReportingSelection{
 		Scope: scope, Period: "custom", Interval: &horizon, TargetBasis: "month",
 		CloseWindow: "custom", CloseInterval: &horizon,
-		Metrics: []crmcontracts.ReportingMetricID{reportingBookingsWon, reportingBookingsMix, reportingOpenPipeline},
+		Metrics: []crmcontracts.ReportingMetricID{crmcontracts.ReportingMetricIDBookingsWon, crmcontracts.ReportingMetricIDBookingsMix, crmcontracts.ReportingMetricIDOpenPipeline},
 	}
 	if !frame.started() {
 		selection.Period, selection.Interval = "this_month", nil
-		selection.Metrics = []crmcontracts.ReportingMetricID{reportingOpenPipeline}
+		selection.Metrics = []crmcontracts.ReportingMetricID{crmcontracts.ReportingMetricIDOpenPipeline}
 	}
 	return selection
 }
 
 // yearEvaluation reads the closed revenue of the year around a month, for the
 // monthly table. A year that has not started has none.
-func (h salesProgressHandlers) yearEvaluation(ctx context.Context, tx pgx.Tx, scope crmcontracts.ReportingScope, frame progressFrame) (reporting.Evaluation, error) {
+func (h Reading) yearEvaluation(ctx context.Context, tx pgx.Tx, scope crmcontracts.ReportingScope, frame progressFrame) (reporting.Evaluation, error) {
 	if !frame.year.StartAt.Before(frame.now) {
 		return reporting.Evaluation{}, nil
 	}
 	window := frame.year
-	return h.reports.EvaluateFactsTx(ctx, tx, crmcontracts.ReportingSelection{
+	return h.Reports.EvaluateFactsTx(ctx, tx, crmcontracts.ReportingSelection{
 		Scope: scope, Period: "custom", Interval: &window, TargetBasis: "month", CloseWindow: "all_open",
-		Metrics: []crmcontracts.ReportingMetricID{reportingBookingsWon},
+		Metrics: []crmcontracts.ReportingMetricID{crmcontracts.ReportingMetricIDBookingsWon},
 	})
 }
 

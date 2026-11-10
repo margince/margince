@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package compose
+package salesprogress
 
 import (
 	"cmp"
@@ -39,15 +39,15 @@ func metricAmount(evaluation reporting.Evaluation, metric crmcontracts.Reporting
 	return crmcontracts.SalesProgressAmount{Status: "withheld"}
 }
 
-func fillFigures(frame progressFrame, headline reporting.Evaluation, goals progressGoals, people progressPeople, out *crmcontracts.SalesProgress) {
-	out.Goal = goals.over(people.owners, frame.months(), frame.period.yearly())
-	out.Planned = metricAmount(headline, reportingOpenPipeline)
+func fillFigures(frame progressFrame, headline reporting.Evaluation, goals progressGoals, sellers progressSellers, out *crmcontracts.SalesProgress) {
+	out.Goal = goals.over(sellers.owners, frame.months(), frame.period.yearly())
+	out.Planned = metricAmount(headline, crmcontracts.ReportingMetricIDOpenPipeline)
 	out.Closed = crmcontracts.SalesProgressAmount{Status: "not_started"}
 	out.Categories = crmcontracts.SalesProgressCategories{Status: "not_started", ProductItems: []string{}, ServiceItems: []string{}}
 	if !frame.started() {
 		return
 	}
-	out.Closed = metricAmount(headline, reportingBookingsWon)
+	out.Closed = metricAmount(headline, crmcontracts.ReportingMetricIDBookingsWon)
 	out.Completion, out.DeltaMinor = compared(out.Closed, out.Goal)
 	out.Categories.Status = crmcontracts.SalesProgressCategoriesStatus(out.Closed.Status)
 	if out.Closed.AmountMinor == nil {
@@ -56,30 +56,30 @@ func fillFigures(frame progressFrame, headline reporting.Evaluation, goals progr
 	split := map[string]int64{}
 	invalid := map[ids.UUID]bool{}
 	for _, fact := range headline.Facts {
-		if fact.Metric != reportingBookingsMix || fact.ContextID != reportingInterval || fact.Money == nil {
+		if fact.Metric != crmcontracts.ReportingMetricIDBookingsMix || fact.ContextID != contextInterval || fact.Money == nil {
 			continue
 		}
-		split[saleCategory(fact.GroupKey)] += *fact.Money
-		if strings.TrimPrefix(fact.GroupKey, "kind:") == mixInvalidKind {
+		split[Category(fact.GroupKey)] += *fact.Money
+		if strings.TrimPrefix(fact.GroupKey, "kind:") == InvalidKind {
 			invalid[fact.SourceID] = true
 		}
 	}
 	// The split is settled to each deal's value, so a gap is a deal the mix
 	// could not read. It is unresolved, never a product or a service.
-	if gap := *out.Closed.AmountMinor - split[saleProduct] - split[saleService] - split[saleUnresolved]; gap > 0 {
-		split[saleUnresolved] += gap
+	if gap := *out.Closed.AmountMinor - split[Product] - split[Service] - split[Unresolved]; gap > 0 {
+		split[Unresolved] += gap
 	}
-	out.Categories.ProductMinor, out.Categories.ServiceMinor, out.Categories.UnresolvedMinor = split[saleProduct], split[saleService], split[saleUnresolved]
+	out.Categories.ProductMinor, out.Categories.ServiceMinor, out.Categories.UnresolvedMinor = split[Product], split[Service], split[Unresolved]
 	out.Categories.InvalidDeals = len(invalid)
 }
 
 // fillMonths adds the twelve months of the selected year from the year's
 // reading, each month's actuals placed by the close date's local month.
-func fillMonths(frame progressFrame, year reporting.Evaluation, goals progressGoals, people progressPeople, out *crmcontracts.SalesProgress) {
+func fillMonths(frame progressFrame, year reporting.Evaluation, goals progressGoals, sellers progressSellers, out *crmcontracts.SalesProgress) {
 	closed := map[int]int64{}
-	status := metricAmount(year, reportingBookingsWon).Status
+	status := metricAmount(year, crmcontracts.ReportingMetricIDBookingsWon).Status
 	for _, fact := range year.Facts {
-		if fact.Metric == reportingBookingsWon && fact.ContextID == reportingInterval && fact.Money != nil && fact.At() != nil {
+		if fact.Metric == crmcontracts.ReportingMetricIDBookingsWon && fact.ContextID == contextInterval && fact.Money != nil && fact.At() != nil {
 			closed[int(fact.At().In(frame.zone).Month())] += *fact.Money
 		}
 	}
@@ -87,7 +87,7 @@ func fillMonths(frame progressFrame, year reporting.Evaluation, goals progressGo
 		start := frame.year.StartAt.AddDate(0, month-1, 0)
 		row := crmcontracts.SalesProgressMonth{
 			Month: month, Window: crmcontracts.ReportingWindow{StartAt: start, EndAt: start.AddDate(0, 1, 0)},
-			State: "ended", Goal: goals.over(people.owners, []int{month}, false),
+			State: "ended", Goal: goals.over(sellers.owners, []int{month}, false),
 			Closed: crmcontracts.SalesProgressAmount{Status: "not_started"},
 		}
 		switch {
@@ -110,12 +110,12 @@ func fillMonths(frame progressFrame, year reporting.Evaluation, goals progressGo
 
 // fillMembers lists a team's members one by one, each with the facts the
 // headline counted for them, in name order.
-func (h salesProgressHandlers) fillMembers(ctx context.Context, tx pgx.Tx, frame progressFrame, headline reporting.Evaluation, goals progressGoals, people progressPeople, out *crmcontracts.SalesProgress) error {
-	out.MembersWithheld = people.team && people.withheld
-	if !people.team || len(people.owners) == 0 {
+func (h Reading) fillMembers(ctx context.Context, tx pgx.Tx, frame progressFrame, headline reporting.Evaluation, goals progressGoals, sellers progressSellers, out *crmcontracts.SalesProgress) error {
+	out.MembersWithheld = sellers.team && sellers.withheld
+	if !sellers.team || len(sellers.owners) == 0 {
 		return nil
 	}
-	names, err := seatNames(ctx, tx, people.owners)
+	names, err := seatNames(ctx, tx, sellers.owners)
 	if err != nil {
 		return err
 	}
@@ -125,13 +125,13 @@ func (h salesProgressHandlers) fillMembers(ctx context.Context, tx pgx.Tx, frame
 			continue
 		}
 		switch {
-		case fact.Metric == reportingBookingsWon && fact.ContextID == reportingInterval:
+		case fact.Metric == crmcontracts.ReportingMetricIDBookingsWon && fact.ContextID == contextInterval:
 			closed[fact.OwnerID] += *fact.Money
-		case fact.Metric == reportingOpenPipeline && fact.ContextID == reportingState:
+		case fact.Metric == crmcontracts.ReportingMetricIDOpenPipeline && fact.ContextID == contextState:
 			planned[fact.OwnerID] += *fact.Money
 		}
 	}
-	for _, owner := range people.owners {
+	for _, owner := range sellers.owners {
 		member := crmcontracts.SalesProgressMember{
 			OwnerId: openapi_types.UUID(owner), Name: names[owner],
 			Goal:   goals.over([]ids.UUID{owner}, frame.months(), frame.period.yearly()),
@@ -173,12 +173,12 @@ func seatNames(ctx context.Context, tx pgx.Tx, owners []ids.UUID) (map[ids.UUID]
 
 // fillItems names what was sold in each category, most revenue first, from
 // the product each settled line carries.
-func (h salesProgressHandlers) fillItems(ctx context.Context, tx pgx.Tx, headline reporting.Evaluation, out *crmcontracts.SalesProgress) error {
-	revenue := map[string]map[ids.UUID]int64{saleProduct: {}, saleService: {}}
+func (h Reading) fillItems(ctx context.Context, tx pgx.Tx, headline reporting.Evaluation, out *crmcontracts.SalesProgress) error {
+	revenue := map[string]map[ids.UUID]int64{Product: {}, Service: {}}
 	var products []ids.UUID
 	for _, fact := range headline.Facts {
-		category := saleCategory(fact.GroupKey)
-		if fact.Metric != reportingBookingsMix || fact.ContextID != reportingInterval || fact.Money == nil || category == saleUnresolved {
+		category := Category(fact.GroupKey)
+		if fact.Metric != crmcontracts.ReportingMetricIDBookingsMix || fact.ContextID != contextInterval || fact.Money == nil || category == Unresolved {
 			continue
 		}
 		_, part, _ := strings.Cut(fact.Row.Key, ":")
@@ -196,8 +196,8 @@ func (h salesProgressHandlers) fillItems(ctx context.Context, tx pgx.Tx, headlin
 	if err != nil {
 		return err
 	}
-	out.Categories.ProductItems = rankedNames(revenue[saleProduct], names)
-	out.Categories.ServiceItems = rankedNames(revenue[saleService], names)
+	out.Categories.ProductItems = rankedNames(revenue[Product], names)
+	out.Categories.ServiceItems = rankedNames(revenue[Service], names)
 	return nil
 }
 
