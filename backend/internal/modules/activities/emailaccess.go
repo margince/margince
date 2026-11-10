@@ -69,14 +69,16 @@ func readEmailAccess(
 	// error, which reaches the reader as the Access control quietly not being
 	// there — indistinguishable from the product deciding they lack authority.
 	writable := false
-	switch err := auth.EnsureActivityWritable(ctx, tx, id.UUID); {
-	case err == nil:
-		writable = true
-	case errors.Is(err, apperrors.ErrNotFound), errors.Is(err, apperrors.ErrPermissionDenied):
-		// Denied. Not an error to report: the caller may read this message and
-		// simply may not change who else does.
-	default:
-		return crmcontracts.EmailAccess{}, false, err
+	if mayUpdateActivities(ctx) {
+		switch err := auth.EnsureActivityWritable(ctx, tx, id.UUID); {
+		case err == nil:
+			writable = true
+		case errors.Is(err, apperrors.ErrNotFound), errors.Is(err, apperrors.ErrPermissionDenied):
+			// Denied. Not an error to report: the caller may read this message and
+			// may not change who else does.
+		default:
+			return crmcontracts.EmailAccess{}, false, err
+		}
 	}
 	switch {
 	case activity.CanShareInternal != nil:
@@ -93,8 +95,9 @@ func readEmailAccess(
 		if err != nil {
 			return crmcontracts.EmailAccess{}, false, err
 		}
-		out.CanChange = sender
-		if sender {
+		// ThreadAudienceSetter.Decide refuses a read seat and a role without activity.update.
+		out.CanChange = sender && mayUpdateActivities(ctx)
+		if out.CanChange {
 			out.ChangeMode = crmcontracts.EmailAccessChangeModeThreadContribution
 			out.ChangeScope = new(crmcontracts.EmailAccessChangeScopeThread)
 		}

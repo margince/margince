@@ -20,6 +20,7 @@ import { type Locale, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useCanWrite } from "../../lib/capability";
 import { useCompanyZone } from "../../lib/companyzone";
+import { labelFor } from "../../lib/labelfor";
 import { useMe } from "../../lib/session";
 import { useViewerZone } from "../../lib/viewerzone";
 import {
@@ -332,7 +333,7 @@ function CommitmentRow({
           <span>{commitment.label}</span>
           <span className="plan-row-meta">
             <Badge tone={STATE_TONE[commitment.state]}>
-              {t(STATE_LABEL[commitment.state])}
+              {t(labelFor(STATE_LABEL, commitment.state))}
             </Badge>
             {commitment.linked_record && (
               <EntityRef

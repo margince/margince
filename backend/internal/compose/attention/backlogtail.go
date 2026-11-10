@@ -115,6 +115,10 @@ func (s *Service) tailStart(source crmcontracts.WorklistItemSource) string {
 func (s *Service) withTail(
 	ctx context.Context, page tailPage, shown []ranked, more bool, limit int, from *backlogCursor, ranking []ranked,
 ) ([]ranked, *backlogCursor, []crmcontracts.WorklistSourceUnavailable) {
+	// The changed badge counts the ranked snapshot, so its door ends with that snapshot.
+	if page.filter == string(filterChangedSinceBrief) {
+		return shown, nil, nil
+	}
 	if page.first {
 		from = s.startTail(page)
 	}
@@ -200,12 +204,16 @@ func (s *Service) readTail(
 	if err != nil {
 		return tailBatch{}, err
 	}
-	kept := map[worklistsnap.Row]bool{}
+	kept := map[worklistsnap.Row]ranked{}
 	for _, row := range admitted {
-		kept[rowIdentity(row)] = true
+		kept[rowIdentity(row)] = row
 	}
 	for i := range batch.rows {
-		batch.rows[i].kept = kept[rowIdentity(batch.rows[i].row)]
+		row, admitted := kept[rowIdentity(batch.rows[i].row)]
+		batch.rows[i].kept = admitted
+		if admitted {
+			batch.rows[i].row = row
+		}
 	}
 	return batch, nil
 }

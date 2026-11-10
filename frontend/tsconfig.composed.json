@@ -41,6 +41,9 @@
       // RBAC-object half is not; see src/lib/capability.ts).
       "@composition/screens": ["../build/composition/frontend/extscreens.gen"],
       "@composition/copy": ["../build/composition/frontend/extlocales.gen"],
+      "@composition/instruments": [
+        "../build/composition/frontend/extinstruments.gen"
+      ],
       // Every enabled unit's screen package, by the name the generated registry
       // imports it under.
       //

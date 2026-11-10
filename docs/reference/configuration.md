@@ -217,13 +217,13 @@ admin can also change under Settings. One that also says kept by a reset keeps i
 | `ai_fake` | `MARGINCE_AI_FAKE` | `--ai-fake` | `bool` | `false` | api, worker | Drive the AI surfaces with the offline fake model when nothing else can serve (dev and test only). |
 | `ai_routing` | `MARGINCE_AI_ROUTING` | `--ai-routing` | `string` | — | api, worker | Ignored; kept so existing command lines parse. |
 | `api_base_url` | `MARGINCE_API_BASE_URL` | `--api-base-url` | `string` | — | api | External base of the api for the OAuth `redirect_uri` when the api and the SPA are on different origins; defaults to `--public-base-url`. |
-| `blobstore_access_key` | `MARGINCE_BLOBSTORE_ACCESS_KEY` | — | `string`, secret | — | api, worker | Access key for the object store. |
-| `blobstore_bucket` | `MARGINCE_BLOBSTORE_BUCKET` | — | `string` | — | api, worker | Bucket attachments are written to. |
-| `blobstore_endpoint` | `MARGINCE_BLOBSTORE_ENDPOINT` | — | `string` | — | api, worker | Endpoint of an object store such as MinIO for attachment bytes; it wins over `MARGINCE_BLOBSTORE_PATH`, and with both unset the attachment endpoints answer 501. |
-| `blobstore_path` | `MARGINCE_BLOBSTORE_PATH` | — | `string` | — | api, worker | Directory attachment bytes are written to when there is no object storage service; ignored when `MARGINCE_BLOBSTORE_ENDPOINT` is set. |
-| `blobstore_region` | `MARGINCE_BLOBSTORE_REGION` | — | `string` | — | api, worker | Region the bucket lives in. |
-| `blobstore_secret_key` | `MARGINCE_BLOBSTORE_SECRET_KEY` | — | `string`, secret | — | api, worker | Secret key for the object store. |
-| `blobstore_use_ssl` | `MARGINCE_BLOBSTORE_USE_SSL` | — | `bool` | `false` | api, worker | Reach the object store over TLS. |
+| `blobstore_access_key` | `MARGINCE_BLOBSTORE_ACCESS_KEY` | — | `string`, secret | — | api, migrate, worker | Access key for the object store. |
+| `blobstore_bucket` | `MARGINCE_BLOBSTORE_BUCKET` | — | `string` | — | api, migrate, worker | Bucket attachments are written to. |
+| `blobstore_endpoint` | `MARGINCE_BLOBSTORE_ENDPOINT` | — | `string` | — | api, migrate, worker | Endpoint of an object store such as MinIO for attachment bytes; it wins over `MARGINCE_BLOBSTORE_PATH`, and with both unset the attachment endpoints answer 501. |
+| `blobstore_path` | `MARGINCE_BLOBSTORE_PATH` | — | `string` | — | api, migrate, worker | Directory attachment bytes are written to when there is no object storage service; ignored when `MARGINCE_BLOBSTORE_ENDPOINT` is set. |
+| `blobstore_region` | `MARGINCE_BLOBSTORE_REGION` | — | `string` | — | api, migrate, worker | Region the bucket lives in. |
+| `blobstore_secret_key` | `MARGINCE_BLOBSTORE_SECRET_KEY` | — | `string`, secret | — | api, migrate, worker | Secret key for the object store. |
+| `blobstore_use_ssl` | `MARGINCE_BLOBSTORE_USE_SSL` | — | `bool` | `false` | api, migrate, worker | Reach the object store over TLS. |
 | `certlog_base_url` | `MARGINCE_CERTLOG_BASE_URL` | `--certlog-base-url` | `string` | — | worker | Base URL of a certificate log, or public for a free public one; unset makes no outbound lookups of what a company runs. |
 | `connector_state_key` | `MARGINCE_CONNECTOR_STATE_KEY` | `--connector-state-key` | `string`, secret | — | api | HMAC key of at least 32 bytes signing the OAuth connect state and the questions an MCP tool asks in the chat; required for the Gmail and Graph connect flows. |
 | `dsn` | `MARGINCE_DSN` | `--dsn` | `string`, secret | — | api, migrate, worker | Postgres DSN of the runtime app role; migrate falls back to it when `MARGINCE_OWNER_DSN` is unset. |

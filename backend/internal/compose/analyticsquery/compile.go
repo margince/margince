@@ -20,6 +20,8 @@ import (
 	"fmt"
 	"slices"
 	"strings"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/moneytotal"
 )
 
 // Plan is a compiled query: the statement, its arguments, and what the columns
@@ -276,10 +278,14 @@ func aggregateSQL(entity Entity, m Measure) (string, error) {
 	if m.Fn == CountDistinct {
 		return fmt.Sprintf("count(DISTINCT %s)", field.Expr), nil
 	}
+	rendered := fmt.Sprintf("%s(%s)", m.Fn, field.Expr)
 	if m.Fn == Median || m.Fn == P75 {
-		return PercentileExpr(field.Expr, m.Fn), nil
+		rendered = PercentileExpr(field.Expr, m.Fn)
 	}
-	return fmt.Sprintf("%s(%s)", m.Fn, field.Expr), nil
+	if field.Unpriced != "" && foldsValues[m.Fn] {
+		rendered = moneytotal.CompleteAggregateSQL(rendered, "sum("+field.Unpriced+")", m.Fn == Sum)
+	}
+	return rendered, nil
 }
 
 // PercentileExpr renders a percentile over a TRUSTED schema expression. Both

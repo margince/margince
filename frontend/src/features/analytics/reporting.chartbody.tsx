@@ -288,6 +288,8 @@ export function ChartBody({
       );
     case "metric_reading":
       return null;
+    default:
+      return <EmptyState>{t("reporting.unavailable")}</EmptyState>;
   }
 }
 

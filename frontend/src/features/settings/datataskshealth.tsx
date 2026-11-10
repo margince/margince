@@ -17,6 +17,7 @@ import { useLocale, usePlural, useT, type Words } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useCan, useCanWrite } from "../../lib/capability";
 import { useHealthScope, useHealthVisible } from "../../lib/healthscope";
+import { valueFor } from "../../lib/labelfor";
 import { problemCodeOf, unwrap } from "../../lib/problem";
 import { useViewerZone } from "../../lib/viewerzone";
 import { HealthCard } from "./healthcard";
@@ -232,11 +233,7 @@ function TaskRow({ row }: Readonly<{ row: Progress }>) {
         <>
           {t("dataTasks.step", { step: row.step })}{" "}
           <Badge tone={taskTone(row)}>
-            {t(
-              Object.hasOwn(statusLabels, row.status)
-                ? statusLabels[row.status]
-                : "dataTasks.unknownState",
-            )}
+            {t(valueFor(statusLabels, row.status, "dataTasks.unknownState"))}
           </Badge>
         </>
       }
@@ -245,9 +242,11 @@ function TaskRow({ row }: Readonly<{ row: Progress }>) {
           {row.blocked_reason && (
             <p>
               {t(
-                Object.hasOwn(blockLabels, row.blocked_reason)
-                  ? blockLabels[row.blocked_reason]
-                  : "dataTasks.unknownState",
+                valueFor(
+                  blockLabels,
+                  row.blocked_reason,
+                  "dataTasks.unknownState",
+                ),
               )}
             </p>
           )}

@@ -136,3 +136,18 @@ describe("a door from Sales review", () => {
     );
   });
 });
+
+describe("a folded finding row", () => {
+  it("is titled by its deal, or by the finding when it names no deal", async () => {
+    const { subject: _subject, ...call } = check("f-9", "", "close_past");
+    show("#/analytics/forecast", [HARBOUR, call]);
+    await screen.findByRole("link", { name: "Harbourline depot retrofit" });
+
+    const folded = (place: string) =>
+      [...document.querySelectorAll(`td[data-fold="${place}"]`)].map(
+        (cell) => cell.querySelector(".datatable-folded")?.textContent ?? null,
+      );
+    expect(folded("title")).toEqual([null, "Close date has passed "]);
+    expect(folded("rest")).toContain("");
+  });
+});

@@ -1,0 +1,107 @@
+{
+  "task": "report_interpret",
+  "provider": "openai_compatible",
+  "served_model": "openai/gpt-oss-120b",
+  "env_class": "cloud_frontier",
+  "prompt_version": "p6f78e2409cfd0c2757b0fd2970b138da",
+  "corpus_version": "v1",
+  "verdict": "supported_degraded",
+  "runs": 18,
+  "passed": 14,
+  "reliability": 0.7777777777777778,
+  "reported_accepted": 14,
+  "reported_wrong_answer": 0,
+  "reported_invalid": 4,
+  "reported_abstained": 0,
+  "certified_scope": "full_invocation",
+  "context_applied": false,
+  "context_scopes": null,
+  "judge_score_p50": 76,
+  "judge_score_min": 40,
+  "latency_p50": 1444,
+  "latency_p95": 7285,
+  "mean_tokens": 3469,
+  "mean_tokens_in": 1817,
+  "mean_tokens_out": 1651,
+  "mean_cached_tokens": 999,
+  "mean_cache_write_tokens": 0,
+  "est_cost_microusd": 347,
+  "judge_served_model": "claude-sonnet-5-5",
+  "judge_provider": "claude_cli",
+  "self_judged": false,
+  "served_identity_source": "echo",
+  "candidate_upstream": {
+    "only": null,
+    "ignore": null,
+    "quantizations": [
+      "fp16",
+      "bf16"
+    ],
+    "sort": "throughput",
+    "require_parameters": true,
+    "allow_fallbacks": null,
+    "preferred_max_latency_p90": 0,
+    "reasoning_effort": ""
+  },
+  "ran_at": "2026-11-09T17:12:01Z",
+  "scenarios": [
+    {
+      "scenario": "sales_assessment_acknowledges_an_open_decision",
+      "site": "sales_assessment",
+      "stamp": "2d9c7a9743ffb10f5c808f4d91aa94cc22ef4248eb52ba0da2e41040d6111df1da49b0dffa503a13e7f6cc20314b3d9cd82171abce181a7f500799bd355543f9570315e0fbf041a3e3ebdaf8ee961e78ffa5de0498146736d12d0e37c453b020",
+      "verdict": "certified",
+      "judge_band": "certified",
+      "runs": 9,
+      "passed": 7,
+      "judge_scores": [
+        88,
+        90,
+        62,
+        86,
+        72,
+        86,
+        88,
+        72,
+        82
+      ],
+      "bands": {
+        "certified_min": 70,
+        "degraded_min": 50,
+        "floor": 40
+      },
+      "reported_accepted": 7,
+      "reported_wrong_answer": 0,
+      "reported_invalid": 2,
+      "reported_abstained": 0
+    },
+    {
+      "scenario": "sales_assessment_names_the_deal_no_decision_covers",
+      "site": "sales_assessment",
+      "stamp": "d665af1f0806ddecf480613517aa4a29a596634aa4d6bf4e71f7592fd193a3e8e793fda9a3c0e76b5d246f5ea7f579451948bd5775921f52242663e3bb5c68258aa7caf0a03d167686775a58c2b34e76870c16ea8144b6104d1b147e387eb3c5",
+      "verdict": "certified",
+      "judge_band": "certified",
+      "runs": 9,
+      "passed": 7,
+      "judge_scores": [
+        64,
+        40,
+        80,
+        72,
+        64,
+        72,
+        80,
+        64,
+        80
+      ],
+      "bands": {
+        "certified_min": 70,
+        "degraded_min": 50,
+        "floor": 40
+      },
+      "reported_accepted": 7,
+      "reported_wrong_answer": 0,
+      "reported_invalid": 2,
+      "reported_abstained": 0
+    }
+  ]
+}

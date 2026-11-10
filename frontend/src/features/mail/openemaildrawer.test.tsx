@@ -68,6 +68,7 @@ const PRESENTATION: EmailPresentation = {
     change_mode: "none",
   },
   can_reply: true,
+  can_forward: true,
   can_relink: false,
   version: 3,
 };
@@ -201,6 +202,7 @@ describe("the email drawer's verbs", () => {
             id: LATEST,
             body: "Private newer text",
             can_reply: true,
+            can_forward: true,
             access: { ...PRESENTATION.access, content_state: "withheld" },
           }),
       },

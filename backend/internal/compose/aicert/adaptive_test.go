@@ -117,17 +117,17 @@ func TestAResumedRunReplaysTheSameExtensions(t *testing.T) {
 	sc := testScenario("basic", wideBands)
 	const stamp = "stamp"
 	journalOf := func(runs int) taskJournal {
-		j := &runJournal{loaded: map[resumeKey]runOutcome{}}
+		j := &runJournal{loaded: map[resumeKey]journaledRun{}}
 		for run := 1; run <= runs; run++ {
-			j.loaded[resumeKeyFor("c", "j", "summarize", sc.Name, stamp, run)] = runOutcome{HardPass: true, Score: 90}
+			j.loaded[resumeKeyFor("c", "j", "summarize", sc.Name, stamp, run)] = journaledAnswer(t, sc, containsWidget, 90)
 		}
 		return taskJournal{j: j, task: "summarize", candidate: "c", judge: "j"}
 	}
 	stamps := map[string]string{sc.Name: stamp}
-	if journalOf(defaultRepeats).replaysRounds([]Scenario{sc}, stamps, defaultRepeats) {
+	if journalOf(defaultRepeats).replaysRounds(wsContext(t), testCensus(t), []Scenario{sc}, stamps, defaultRepeats) {
 		t.Fatal("a journal holding only the first round replayed a task whose first round asked for an extension")
 	}
-	if !journalOf(adaptiveMaxRuns).replaysRounds([]Scenario{sc}, stamps, defaultRepeats) {
+	if !journalOf(adaptiveMaxRuns).replaysRounds(wsContext(t), testCensus(t), []Scenario{sc}, stamps, defaultRepeats) {
 		t.Fatal("a journal holding every extension did not replay them")
 	}
 }

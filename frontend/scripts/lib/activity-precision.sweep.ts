@@ -1,23 +1,17 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// The census behind src/format/activity-precision.test.ts, which states the
-// rule. It runs in a worker thread (in-worker.ts), so it returns plain data.
+// The census behind census/rules/activity-precision.census.ts, which states
+// the rule. The rule hands it the shared type-checked program of the tree.
 
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
-import {
-  extensionFrontendFiles,
-  filesUnder,
-  plantedProgram,
-  programOver,
-} from "./source-tree.ts";
+import { filesUnder, plantedProgram, programOver } from "./source-tree.ts";
 
 const frontendRoot = fileURLToPath(new URL("../..", import.meta.url));
 const srcRoot = join(frontendRoot, "src");
 const here = join(srcRoot, "format");
-const extensionsDir = resolve(frontendRoot, "..", "extensions");
 const owner = join(here, "activitywhen.ts");
 // Shipped TypeScript: a JavaScript module carries no record type to read.
 export const shipped = (path: string) =>
@@ -139,7 +133,8 @@ function leaves(node: ts.Expression): ts.Expression[] {
   return [node];
 }
 
-function census(program: ts.Program, files: string[]): Census {
+/** The census of `files`, read through `program`, which must hold them. */
+export function census(program: ts.Program, files: readonly string[]): Census {
   const checker = program.getTypeChecker();
   const analyzed = new Set(files.map((path) => resolve(path)));
   const inTree = (node: ts.Node) =>
@@ -769,23 +764,14 @@ function meetingRuledOut(record: ts.Node): boolean {
   return false;
 }
 
-// Every shipped module, extension screens included, and the format/ modules
-// the clock formatters are derived from.
-export function shippedFiles(): string[] {
-  return [
-    ...filesUnder(srcRoot),
-    ...extensionFrontendFiles(extensionsDir),
-  ].filter(shipped);
-}
-
-/** The census of every shipped file, with the files it read. */
-export function sweep(): Readonly<{ files: string[]; found: Census }> {
-  const files = shippedFiles();
-  return { files, found: census(programOver(files, frontendRoot), files) };
-}
-
 // Compiles the planted lines against the real contract and formatters. The
 // preamble is one line, so a finding's line is its case's own index.
+/** The census of `files`, typed in a program of their own. A worker thread
+ * calls it, so the check runs beside the census runner's other rules. */
+export function sweepFiles(files: readonly string[]): Census {
+  return census(programOver([...files], frontendRoot), files);
+}
+
 export function plant(lines: string[]): number[] {
   const fixture = join(srcRoot, "activity-precision-fixture.tsx");
   const preamble = [

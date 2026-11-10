@@ -100,6 +100,8 @@ func sqlLiterals(t *testing.T, path string, constants ...map[string]string) []st
 // privacy package: retention.go also writes subject tables, and a retention sweep
 // must not satisfy "Art. 17 reaches this table".
 var erasureCascadeFiles = []string{
+	"internal/modules/privacy/originalobjects.go",
+	"internal/modules/privacy/raworiginalsubjects.go",
 	"internal/platform/database/storekit/auditredaction.go",
 	"internal/modules/privacy/erasure_links.go",
 	// Capture owns the projection purge reached through privacy.RawCapturePurger.
@@ -155,6 +157,7 @@ var erasureCascadeFiles = []string{
 	// The drafts a rep started to the subject and never sent. Same Art. 17
 	// transaction; its own file because the table is not the eraser's own.
 	"internal/modules/privacy/maildrafts.go",
+	"internal/modules/privacy/erasure_leaddeliveries.go",
 	// The live capabilities over the subject's consent record — the
 	// preference-center token and the double-opt-in token. Split out of
 	// erasure.go for the same size reason as the timeline, and named here for
@@ -179,6 +182,9 @@ var erasureCascadeFiles = []string{
 	// destructive engine and both reach it.
 	"internal/modules/privacy/erasure_approvals.go",
 	"internal/modules/privacy/erasure_approvalnotices.go",
+	// The missed-receipt notices that name the subject. Same Art. 17
+	// transaction; retracted and detached from the erased record.
+	"internal/modules/privacy/erasure_receiptnotices.go",
 	// The readings of the transcripts the timeline scrub just emptied — same
 	// transaction, its own file for the same both-engines reason.
 	"internal/modules/privacy/transcriptreadings.go",

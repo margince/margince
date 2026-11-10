@@ -17,6 +17,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -98,9 +99,11 @@ type Input struct {
 	// OpenWorkWithheld says the reader's scope hid some. Either way a list of
 	// open work is not the whole of it, and the answer must not read as if it
 	// were.
-	OpenWorkCapped   bool    `json:"open_work_capped,omitempty"`
-	OpenWorkWithheld bool    `json:"open_work_withheld,omitempty"`
-	Recent           []ActIn `json:"recent,omitempty"`
+	OpenWorkCapped bool `json:"open_work_capped,omitempty"`
+	// OpenCommitmentsCut: that page was cut, maybe between two promises of one message.
+	OpenCommitmentsCut bool    `json:"-"`
+	OpenWorkWithheld   bool    `json:"open_work_withheld,omitempty"`
+	Recent             []ActIn `json:"recent,omitempty"`
 	// LastContact is the activity the page's "Last contact" tile names, nil
 	// when it names none. Tasks and notes can push it out of Recent, so it
 	// rides the fingerprint on its own. Two readers who see different activity
@@ -413,7 +416,8 @@ func Fingerprint(in Input, routingVersion, lang string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("fingerprint the brief input: %w", err)
 	}
-	sum := sha256.Sum256([]byte(floorVersion + "\x00" + promptVersion + "\x00" + routingVersion + "\x00" + lang + "\x00" + string(encoded)))
+	cut := strconv.FormatBool(in.OpenCommitmentsCut) // out of the prompt, but it decides the names
+	sum := sha256.Sum256([]byte(floorVersion + "\x00" + promptVersion + "\x00" + routingVersion + "\x00" + lang + "\x00" + cut + "\x00" + string(encoded)))
 	return hex.EncodeToString(sum[:]), nil
 }
 

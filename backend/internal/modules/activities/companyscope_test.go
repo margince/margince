@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -280,11 +281,8 @@ func TestTheWaitingQueryReturnsOneRowPerMessage(t *testing.T) {
 	}
 }
 
-// Mail carries second precision, so two messages in one thread sharing a
-// timestamp are ordinary. The newest-inbound walk breaks the tie by id, or two
-// equal-second inbounds would both be the wait. An answer never does: an id
-// says when a row was captured, not which message came first, so an answer
-// must be strictly later and a tie stays owed.
+// The newest-inbound walk breaks an equal-second tie by id, or two inbounds would both be the wait. An
+// answer never does, since an id orders capture: every answer arm asks occurredday.AnswersSQL.
 func TestTheWaitingQueryBreaksTimestampTies(t *testing.T) {
 	if strings.Count(waitingRepliesSQL, "newer.id) > (a.occurred_at, a.id)") == 0 {
 		t.Fatal("the newest-inbound walk no longer breaks equal-second ties by id")
@@ -293,8 +291,16 @@ func TestTheWaitingQueryBreaksTimestampTies(t *testing.T) {
 	if strings.Contains(answers, ".id) > (a.occurred_at, a.id)") {
 		t.Fatal("an answer is ordered by id, so capture order decides whether a same-second reply answered")
 	}
-	if regexp.MustCompile(`occurred_at\s*>=\s*a\.occurred_at`).MatchString(answers) {
-		t.Fatal("an answer at the same second as the message counts as later")
+	rest := answers
+	for _, arm := range []string{"answer_thread", "answer_mail", "answer_touch"} {
+		ordered := occurredday.AnswersSQL(arm, "a")
+		if !strings.Contains(rest, ordered) {
+			t.Errorf("the %s arm does not ask occurredday.AnswersSQL, so a day tie and an instant tie read alike", arm)
+		}
+		rest = strings.ReplaceAll(rest, ordered, "")
+	}
+	if regexp.MustCompile(`answer_\w+\.occurred_at\s*[<>]=?\s*\ba\.occurred_at|\ba\.occurred_at\s*[<>]=?\s*answer_\w+\.occurred_at`).MatchString(rest) {
+		t.Fatal("an answer arm orders itself against the message outside occurredday.AnswersSQL")
 	}
 }
 

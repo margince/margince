@@ -69,17 +69,17 @@ func start(ctx context.Context, args []string, stdout io.Writer) error {
 // runner, then the relay it blocks on — in the order the process depends on;
 // boot.go and jobrunner.go hold the phases.
 func run(ctx context.Context, args []string, stdout io.Writer) error {
-	if handled, err := runDebugSubcommand(ctx, args, stdout); handled {
-		return err
-	}
-	if checked, err := checkWorkerConfig(workerFlags(args), config.Environ(), stdout); checked || err != nil {
+	if handled, err := runPreBootSubcommand(ctx, args, stdout); handled {
 		return err
 	}
 
-	boot, err := configureWorker(workerFlags(args), stdout)
+	boot, err := configureWorker(ctx, workerFlags(args), stdout)
 	if err != nil {
 		return err
 	}
+	// Deferred before every closer below, so it runs last: what a draining job
+	// or lane logs is still flushed.
+	defer compose.FlushInstrumentation(ctx)
 	cfg, bootstrap, logger := boot.cfg, boot.deploy, boot.log
 
 	pool, err := openWorkerPool(ctx, cfg, logger)
@@ -263,17 +263,13 @@ type workerBoot struct {
 	log        *slog.Logger
 }
 
-// configureWorker runs the phases that can fail on configuration alone, in the
-// order they depend on each other: flags, then extensions (a failing
-// registration aborts the boot before anything is opened), then the deployment
-// file, then the logger — and the capture posture last, because it carries the
-// logger into the Sink's post-commit steps, where a fault is reported rather
-// than returned.
+// configureWorker runs the phases that can fail on configuration alone. In
+// order: flags, extensions, the deployment file, the units' instrumentation,
+// the logger that wraps it, and the capture posture that carries the logger.
 //
-// Grouped because they share one property the phases after them do not: none
-// of them opens a connection, so a deployment misconfigured in any of these
-// ways fails before a pool, a bus client or a listener exists to clean up.
-func configureWorker(args []string, stdout io.Writer) (workerBoot, error) {
+// None opens a core connection, so a misconfigured deployment fails before a
+// pool, bus client or listener exists. A unit's Start may do its own I/O.
+func configureWorker(ctx context.Context, args []string, stdout io.Writer) (workerBoot, error) {
 	cfg, loaded, err := loadWorkerConfig(args, config.Environ())
 	if err != nil {
 		return workerBoot{}, err
@@ -285,6 +281,9 @@ func configureWorker(args []string, stdout io.Writer) (workerBoot, error) {
 	compose.BindExtensionEgress(cfg.posture)
 	bootstrap, err := loadBootstrap(cfg)
 	if err != nil {
+		return workerBoot{}, err
+	}
+	if err := startInstrumentation(ctx, cfg, stdout); err != nil {
 		return workerBoot{}, err
 	}
 	log, err := newWorkerLogger(cfg, stdout)

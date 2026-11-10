@@ -35,7 +35,7 @@ const CompanyZoneContext = createContext<string>(FALLBACK_COMPANY_ZONE);
  *
  * Every other time a signed-in screen shows is read on the reader's own clock,
  * `useViewerZone()`. `format/timezone.ts` states the rule, and the census in
- * `zone-by-purpose.readers.test.ts` lists each file that reads this hook and why.
+ * `census/rules/zone-by-purpose.readers.census.ts` lists each file that reads this hook and why.
  */
 export function useCompanyZone(): string {
   return useContext(CompanyZoneContext);

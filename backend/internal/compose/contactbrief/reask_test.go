@@ -23,8 +23,8 @@ func TestTheBriefWriterReAsksThroughItsOwnParse(t *testing.T) {
 		// Valid JSON, refused by ParseBrief alone: sentences is a string where
 		// the site reads a list.
 		First: `{"sentences":"They are waiting on the list."}`,
-		Second: `{"sentences":[{"text":"They are waiting on the list.","evidence":[` +
-			`{"entity_type":"activity","entity_id":"` + objectionID + `"}]}]}`,
+		Second: cited(inputFixture(), `{"sentences":[{"text":"They are waiting on the list.","evidence":[`+
+			`{"entity_type":"activity","entity_id":"`+objectionID+`"}]}]}`),
 	}
 	written, err := writeWithModel(t.Context(), lane, briefContactID, inputFixture(),
 		string(textlang.English))

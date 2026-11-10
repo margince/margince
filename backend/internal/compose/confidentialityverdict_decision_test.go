@@ -140,7 +140,7 @@ func TestTheConfidentialityAskTakesAConfidentDecision(t *testing.T) {
 	row := capture.PendingThread{ID: ids.NewV7(), ActivityID: ids.NewV7(), Subject: "Kündigung"}
 	lane := &scriptedDecidingLane{
 		answer:   decision.Answer{Choice: confidentialityPersonnel, Confidence: 0.93},
-		llmReply: verdictReply(row.ID.String(), confidentialityOrdinary),
+		llmReply: verdictReply("t1", confidentialityOrdinary),
 	}
 
 	results, err := (&ConfidentialityVerdictEngine{brain: lane}).ask(context.Background(), row)
@@ -163,7 +163,7 @@ func TestTheConfidentialityAskFallsBackBelowTheFloor(t *testing.T) {
 	row := capture.PendingThread{ID: ids.NewV7(), ActivityID: ids.NewV7(), Subject: "Lunch"}
 	lane := &scriptedDecidingLane{
 		answer:   decision.Answer{Choice: confidentialityLegal, Confidence: confidentialityFloor - 0.01},
-		llmReply: verdictReply(row.ID.String(), confidentialityOrdinary),
+		llmReply: verdictReply("t1", confidentialityOrdinary),
 	}
 
 	results, err := (&ConfidentialityVerdictEngine{brain: lane}).ask(context.Background(), row)
@@ -174,6 +174,25 @@ func TestTheConfidentialityAskFallsBackBelowTheFloor(t *testing.T) {
 		t.Error("an unsure decision was kept instead of falling back to the LLM")
 	}
 	if len(results) != 1 || results[0].Verdict != confidentialityOrdinary {
-		t.Errorf("results %+v, want the LLM's own ordinary answer", results)
+		t.Fatalf("results %+v, want the LLM's own ordinary answer", results)
+	}
+	if results[0].ID != row.ID.String() {
+		t.Errorf("the answer about t1 reads back as %q, want the row id %s", results[0].ID, row.ID)
+	}
+}
+
+// The model is shown the thread as t1. An answer naming the thread's own id,
+// or a ref the call never showed, is about no thread this call asked.
+func TestAConfidentialityAnswerNamesTheThreadByItsRef(t *testing.T) {
+	row := capture.PendingThread{ID: ids.NewV7(), ActivityID: ids.NewV7(), Subject: "Lunch"}
+	req := confidentialityRequest(row)
+	if strings.Contains(req.Messages[0].Content, row.ID.String()) || strings.Contains(string(req.ResponseSchema), row.ID.String()) {
+		t.Fatalf("the request shows the model the thread id:\n%s", req.Messages[0].Content)
+	}
+	for _, id := range []string{row.ID.String(), "t2"} {
+		payload := confidentialityPayload{Results: []confidentialityResult{{ID: id, Verdict: confidentialityOrdinary, Confidence: 0.9}}}
+		if msg := validateConfidentialityPayload(payload, row); !strings.Contains(msg, "was not requested") {
+			t.Errorf("an answer about %q was not refused: %q", id, msg)
+		}
 	}
 }

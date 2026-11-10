@@ -20,6 +20,7 @@ import { unwrap } from "../../lib/problem";
 // that mounts one panel alone would otherwise render it unstyled.
 import "./automationdetail.css";
 import { RUN_OUTCOME_WORD, runReasonWords } from "../../lib/automationrun";
+import { labelFor } from "../../lib/labelfor";
 import { useViewerZone } from "../../lib/viewerzone";
 
 // The human surface for the two human-only automation ops
@@ -224,7 +225,7 @@ export function AutomationRuns({
                 { value: ALL_OUTCOMES, label: t("auto.runs.filterAll") },
                 ...FILTER_OPTIONS.map((option) => ({
                   value: option,
-                  label: t(FILTER_LABELS[option]),
+                  label: t(labelFor(FILTER_LABELS, option)),
                 })),
               ]}
             />

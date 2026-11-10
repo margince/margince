@@ -37,6 +37,7 @@ import {
 } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import type { Locale } from "../../i18n/locale";
+import { labelFor } from "../../lib/labelfor";
 import {
   type LeadOrigin,
   type LeadOriginIntent,
@@ -62,7 +63,10 @@ const intentLabel: Record<LeadOriginIntent, MessageKey> = {
 };
 
 function intentOptions(t: Translator) {
-  return INTENTS.map((value) => ({ value, label: t(intentLabel[value]) }));
+  return INTENTS.map((value) => ({
+    value,
+    label: t(labelFor(intentLabel, value)),
+  }));
 }
 
 // Mounted only while open, so a half-typed origin never waits under an intent
