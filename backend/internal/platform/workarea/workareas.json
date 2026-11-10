@@ -75,6 +75,7 @@
     "advanceProjectPhase": "business",
     "allowContact": "compliance",
     "annotateMorningBrief": "business",
+    "answerCalendarInvitation": "business",
     "answerReportingQuestionCard": "business",
     "answerWeeklyPlanCommitment": "business",
     "applyContactEmploymentImport": "business",
@@ -966,6 +967,9 @@
       "compliance"
     ],
     "annotate_brief": [
+      "business"
+    ],
+    "answer_calendar_invitation": [
       "business"
     ],
     "answer_reporting_question_card": [

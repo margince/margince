@@ -1006,6 +1006,7 @@
   "co.cite.open": "Datensatz öffnen",
   "email.noSubject": "Kein Betreff",
   "email.withheldSubject": "Nicht für dich freigegeben",
+  "email.invitation.badge": "Einladung",
   "aiTask.name.reader_rendering": "Nachricht in deiner Sprache zeigen",
   "activity.dayHoldsHostSlot": "Dieser Termin ist in einem Kalender gebucht und braucht deshalb eine Uhrzeit, nicht nur ein Datum.",
   "brief.coverage.source.tag_suggestion": "Vorgeschlagene Tags",

@@ -72,6 +72,7 @@ func (s *Store) CaptureEmailRequests(ctx context.Context, asOf time.Time) error 
      AND `+storekit.AutomaticRequestIntentClause("a")+`
      AND a.occurred_at >= $`+fmt.Sprint(arg(asOf.AddDate(0, 0, -automaticRequestHorizonDays)))+`
      AND `+auth.WorkspaceAudienceSQL("a")+` AND a.restricted_at IS NULL
+     AND NOT `+answerableInvitationSQL+`
      AND NOT EXISTS (SELECT 1 FROM activity task WHERE task.source_system = 'email_request' AND task.source_activity_id = a.id)
      AND (`+assigneeSQL+`) IS NOT NULL
      AND NOT `+readerSetAsideSQL("("+assigneeSQL+")", wake), neverRelaxed)

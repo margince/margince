@@ -31,9 +31,9 @@
   "catalog": {
     "tools": 48,
     "system_frame_tokens": 592,
-    "tokens": 39748,
+    "tokens": 39763,
     "median_tool_tokens": 620,
-    "mean_tool_tokens": 827
+    "mean_tool_tokens": 828
   },
   "agents": [
     {
@@ -113,7 +113,7 @@
     },
     {
       "name": "send_outbound",
-      "tokens": 1680
+      "tokens": 1695
     },
     {
       "name": "change_reports",

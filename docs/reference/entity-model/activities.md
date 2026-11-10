@@ -6,7 +6,7 @@ The 33 tables owned by `activities`, as the migrations build them. [Back to the 
 
 ## activity
 
-77 columns · primary key `(id)` · referenced by 45 foreign keys
+78 columns · primary key `(id)` · referenced by 45 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -20,6 +20,7 @@ The 33 tables owned by `activities`, as the migrations build them. [Back to the 
 | `booking_interval_exact` | `boolean`, default `false` | yes |  |
 | `bulk_mail_attested` | `boolean`, default `false` | yes | This message carried an RFC 2369 List-Unsubscribe header, so the SENDER declared it bulk. |
 | `calendar_method` | `text` |  | One of `PUBLISH`, `REQUEST`, `REPLY`, `ADD`, `CANCEL`, `REFRESH` and 2 more. |
+| `calendar_uid` | `text` |  |  |
 | `call_outcome` | `text` |  | How a call ended: reached, not_reached (nobody answered), voicemail (left a voicemail), call_back_later (asked to be called back), put_through (passed to someone else who took it). |
 | `capture_label` | `text` |  | What this message turned out to be, from the batched capture classification. |
 | `capture_label_declined_at` | `timestamp with time zone` |  |  |
@@ -335,6 +336,7 @@ The 33 tables owned by `activities`, as the migrations build them. [Back to the 
 **Indexes**
 
 - `activity_identity_activity_idx`: `btree (activity_id, identity_kind, identity_key)`
+- `activity_identity_meeting_uid`: `btree ("left"(identity_key, (length(identity_key) - strpos(reverse(identity_key), '/')))) WHERE (identity_kind = 'meeting')`
 - `activity_identity_pkey`: `unique, btree (identity_kind, identity_key)`
 
 ## activity_link

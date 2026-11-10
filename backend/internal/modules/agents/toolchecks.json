@@ -124,6 +124,11 @@
         "deal.read"
       ]
     },
+    "answer_calendar_invitation": {
+      "checks": [
+        "activity.read"
+      ]
+    },
     "answer_reporting_question_card": {
       "checks": [
         "activity.read",

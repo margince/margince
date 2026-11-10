@@ -13,7 +13,7 @@ import (
 
 // activityClockRepair re-creates the activity clock functions for a database
 // whose upgrade applied an older body last.
-const activityClockRepair = "1794229944"
+const activityClockRepair = "1794283983"
 
 // functionStatementRe matches one CREATE OR REPLACE FUNCTION statement through
 // the `$$;` that closes its body, capturing the name and the body.
