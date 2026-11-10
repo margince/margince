@@ -15,15 +15,16 @@ package automation
 import (
 	"context"
 	"fmt"
-	"maps"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
@@ -57,11 +58,14 @@ type AutomationPreviewInput struct {
 // dropped), a small visible sample, and the trailing-window firing
 // estimate (nil when the window count is not computable for the type).
 type AutomationPreviewResult struct {
-	MatchesNow           int
-	ExcludedByPermission int
-	Sample               []ids.UUID
-	WindowDays           int
-	WouldHaveFired       *int
+	Kind                       crmcontracts.AutomationPreviewKind
+	MatchesNowAvailable        bool
+	HistoricalPreviewAvailable bool
+	MatchesNow                 int
+	ExcludedByPermission       int
+	Sample                     []ids.UUID
+	WindowDays                 int
+	WouldHaveFired             *int
 }
 
 // previewDef is one catalog type's dry-run definition: the record table
@@ -70,6 +74,7 @@ type AutomationPreviewResult struct {
 // a DOCUMENTED gap instead (see its own doc) — exactly one of
 // (table+fields+match+firedCount) or unsupported is set.
 type previewDef struct {
+	eventOnly bool
 	table     string
 	baseWhere string
 	fields    map[string]storekit.Field
@@ -104,138 +109,16 @@ func previewNotYetSupported(reason string) previewDef {
 	return previewDef{unsupported: reason}
 }
 
-// previewDefs maps every catalog key to its dry-run definition; the
-// catalog is closed, so a key without ANY entry here is a programming
-// error a fitness test catches, never a silent empty preview
-// (TestEveryCatalogKeyHasAPreviewDefinition). Merged from smaller,
-// per-table builders rather than one long literal.
+// Event previews describe future occurrences, never a count of stored records.
+// Scheduled previews retain their population-specific readers.
 func previewDefs() map[string]previewDef {
-	defs := map[string]previewDef{}
-	for _, group := range []map[string]previewDef{
-		leadPreviewDefs(), dealPreviewDefs(), activityPreviewDefs(), unsupportedPreviewDefs(),
-	} {
-		maps.Copy(defs, group)
+	defs := unsupportedPreviewDefs()
+	for _, entry := range Catalog() {
+		if !strings.HasPrefix(entry.Trigger, "clock:") {
+			defs[entry.Key] = previewDef{eventOnly: true}
+		}
 	}
 	return defs
-}
-
-// leadPreviewDefs are the catalog entries whose When/If ranges over the
-// lead table.
-func leadPreviewDefs() map[string]previewDef {
-	return map[string]previewDef{
-		assignLeadOwnerName: {
-			table:     "lead",
-			baseWhere: previewBaseWhereNotArchived,
-			fields: map[string]storekit.Field{
-				keyStatus:  {Expr: "t.status", Type: storekit.FieldPicklist},
-				keyOwnerID: {Expr: "t.owner_id", Type: storekit.FieldID},
-			},
-			// When: lead.created. If: the router only assigns where no
-			// owner is set — so the blast radius now is the open, unrouted
-			// lead pool.
-			match: storekit.Predicate{And: []storekit.Predicate{
-				{Field: keyStatus, Op: storekit.OpIn, Value: []any{"new", "contacted", "engaged"}},
-				{Field: keyOwnerID, Op: storekit.OpExists, Value: false},
-			}},
-			firedCount: func(ctx context.Context, tx pgx.Tx, since time.Time) (int, error) {
-				// Every lead created in the window was one firing —
-				// including leads since archived or routed.
-				var n int
-				err := tx.QueryRow(ctx,
-					`SELECT count(*) FROM lead WHERE created_at >= $1`, since).Scan(&n)
-				return n, err
-			},
-		},
-		routeLeadName: {
-			table:     "lead",
-			baseWhere: previewBaseWhereNotArchived,
-			fields: map[string]storekit.Field{
-				// No "if" narrows this starter — every new lead gets the
-				// follow-up task; "id exists" is the always-true leaf
-				// previewDef's Predicate shape needs (a zero-value
-				// Predicate has no defined meaning, storekit's groupShape).
-				"id": {Expr: "t.id", Type: storekit.FieldID},
-			},
-			match: storekit.Predicate{Field: "id", Op: storekit.OpExists, Value: true},
-			firedCount: func(ctx context.Context, tx pgx.Tx, since time.Time) (int, error) {
-				var n int
-				err := tx.QueryRow(ctx, `SELECT count(*) FROM lead WHERE created_at >= $1`, since).Scan(&n)
-				return n, err
-			},
-		},
-	}
-}
-
-// dealPreviewDefs are the catalog entries whose When/If ranges over the
-// deal table.
-func dealPreviewDefs() map[string]previewDef {
-	return map[string]previewDef{
-		stageChangeCreateTaskName: {
-			table:     "deal",
-			baseWhere: previewBaseWhereNotArchived,
-			fields: map[string]storekit.Field{
-				keyStatus: {Expr: "t.status", Type: storekit.FieldPicklist},
-			},
-			// When: deal.stage_changed. If: only OPEN destinations mint a
-			// follow-up — so the records in range now are the open deals.
-			// dealStatusOpen is the SAME value the runtime Match tests
-			// (handlers_event.go), so the dry-run and the firing agree.
-			match: storekit.Predicate{Field: keyStatus, Op: storekit.OpEq, Value: dealStatusOpen},
-			firedCount: func(ctx context.Context, tx pgx.Tx, since time.Time) (int, error) {
-				var n int
-				err := tx.QueryRow(ctx, `
-					SELECT count(*) FROM deal_stage_history h
-					JOIN stage s ON s.id = h.to_stage_id
-					WHERE h.changed_at >= $1 AND s.semantic = $2`, since, dealStatusOpen).Scan(&n)
-				return n, err
-			},
-		},
-		stageChangeNotifyName: {
-			table:     "deal",
-			baseWhere: previewBaseWhereNotArchived + " AND t.owner_id IS NOT NULL",
-			fields: map[string]storekit.Field{
-				// Both open and closed deals can receive a move by another actor.
-				"id": {Expr: "t.id", Type: storekit.FieldID},
-			},
-			match: storekit.Predicate{Field: "id", Op: storekit.OpExists, Value: true},
-			firedCount: func(ctx context.Context, tx pgx.Tx, since time.Time) (int, error) {
-				var n int
-				// Preview applies the current recipient rule to recorded moves;
-				// creation establishes a stage but does not emit deal.stage_changed.
-				err := tx.QueryRow(ctx, `
-					SELECT count(*) FROM deal_stage_history h JOIN deal d ON d.id = h.deal_id
-					 WHERE h.changed_at >= @since AND h.from_stage_id IS NOT NULL
-					   AND d.owner_id IS NOT NULL
-					   AND lower(h.changed_by) NOT IN (d.owner_id::text, @human_prefix || d.owner_id::text)`,
-					pgx.NamedArgs{"since": since, "human_prefix": principal.HumanIDPrefix}).Scan(&n)
-				return n, err
-			},
-		},
-	}
-}
-
-// activityPreviewDefs are the catalog entries whose When/If ranges over
-// the activity table.
-func activityPreviewDefs() map[string]previewDef {
-	return map[string]previewDef{
-		postMeetingRecapName: {
-			table:     "activity",
-			baseWhere: previewBaseWhereNotArchived,
-			fields: map[string]storekit.Field{
-				"kind": {Expr: "t.kind", Type: storekit.FieldPicklist},
-			},
-			// When: activity.captured. If: kind = meeting — the records in
-			// range now are every captured meeting activity.
-			match: storekit.Predicate{Field: "kind", Op: storekit.OpEq, Value: activityKindMeeting},
-			firedCount: func(ctx context.Context, tx pgx.Tx, since time.Time) (int, error) {
-				var n int
-				err := tx.QueryRow(ctx,
-					`SELECT count(*) FROM activity a WHERE `+occurredday.FromSQL("a", "$1")+` AND a.kind = $2`,
-					since, activityKindMeeting).Scan(&n)
-				return n, err
-			},
-		},
-	}
 }
 
 // unsupportedPreviewDefs are the catalog entries previewNotYetSupported
@@ -251,10 +134,7 @@ func unsupportedPreviewDefs() map[string]previewDef {
 			"preview is not yet supported for check_in_cadence: its candidate set spans every linked entity type with no single row-scoped resource to preview against",
 		),
 	}
-	for _, key := range listRuleKeys {
-		defs[key] = previewNotYetSupported("preview is not yet supported for " + key +
-			": who joins or leaves a Live List is known only when its check runs; the list's own history shows past changes")
-	}
+
 	return defs
 }
 
@@ -272,6 +152,13 @@ func (s *AutomationStore) Preview(ctx context.Context, id ids.AutomationID, in A
 	if err != nil {
 		return AutomationPreviewResult{}, err
 	}
+	res := AutomationPreviewResult{WindowDays: window, Kind: crmcontracts.AutomationPreviewKindPopulation, MatchesNowAvailable: true, HistoricalPreviewAvailable: true}
+	if def.eventOnly {
+		res.Kind = crmcontracts.AutomationPreviewKindEvent
+		res.MatchesNowAvailable = false
+		res.HistoricalPreviewAvailable = false
+		return res, nil
+	}
 	// The dry-run reads the target records, so it carries their read
 	// gate — the same admission a list over the same table demands.
 	if err := auth.Require(ctx, def.table, principal.ActionRead); err != nil {
@@ -279,7 +166,6 @@ func (s *AutomationStore) Preview(ctx context.Context, id ids.AutomationID, in A
 	}
 
 	since := now.AddDate(0, 0, -window)
-	res := AutomationPreviewResult{WindowDays: window}
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		return def.measure(ctx, tx, since, &res)
 	})

@@ -3703,6 +3703,24 @@ func (e AutomationCatalogEntryTier) Valid() bool {
 	}
 }
 
+// Defines values for AutomationPreviewKind.
+const (
+	AutomationPreviewKindEvent      AutomationPreviewKind = "event"
+	AutomationPreviewKindPopulation AutomationPreviewKind = "population"
+)
+
+// Valid indicates whether the value is a known member of the AutomationPreviewKind enum.
+func (e AutomationPreviewKind) Valid() bool {
+	switch e {
+	case AutomationPreviewKindEvent:
+		return true
+	case AutomationPreviewKindPopulation:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AutomationRetryResultRefusal.
 const (
 	AutomationRetryResultRefusalNotFailed               AutomationRetryResultRefusal = "not_failed"
@@ -36209,13 +36227,22 @@ type AutomationCatalogEntry struct {
 // AutomationCatalogEntryTier confirmation_required actions stage to /approvals at run time.
 type AutomationCatalogEntryTier string
 
-// AutomationPreview Read-only blast-radius result for the designer's dry-run. No side effects.
+// AutomationPreview Read-only preview. Event rules act from activation onward and do not estimate past events from current records.
 type AutomationPreview struct {
 	// ExcludedByPermission Matches the caller cannot see (masked, not silently dropped) — honest count, never widens scope.
 	ExcludedByPermission *int `json:"excluded_by_permission,omitempty"`
 
-	// MatchesNow Records matching the trigger+filter right now, bounded by the caller's Passport visibility.
+	// HistoricalPreviewAvailable False when historical execution cannot be reconstructed. Never infer historical events from record creation dates.
+	HistoricalPreviewAvailable *bool `json:"historical_preview_available,omitempty"`
+
+	// MatchesNow Current population matches within the caller's visibility. Ignore this compatibility field when matches_now_available is false.
 	MatchesNow int `json:"matches_now"`
+
+	// MatchesNowAvailable False for event previews. In that case matches_now is a compatibility placeholder, not a count of eligible work.
+	MatchesNowAvailable *bool `json:"matches_now_available,omitempty"`
+
+	// PreviewKind Whether the preview describes a current record population or a future event.
+	PreviewKind *AutomationPreviewKind `json:"preview_kind,omitempty"`
 
 	// Sample Up to a few matching record ids for the "affects these" preview (visibility-bounded).
 	Sample *[]openapi_types.UUID `json:"sample,omitempty"`
@@ -36226,6 +36253,9 @@ type AutomationPreview struct {
 	// WouldHaveFired Estimated firings over the trailing window (null when not computable).
 	WouldHaveFired *int `json:"would_have_fired,omitempty"`
 }
+
+// AutomationPreviewKind Whether the preview describes a current record population or a future event.
+type AutomationPreviewKind string
 
 // AutomationPreviewRequest Optional body for POST /automations/{id}/preview. Omit to preview the stored automation as-is; supply
 // an inline draft recipe (key + params) to preview a not-yet-created or edited automation from the

@@ -164,3 +164,18 @@ func TestResolvePreviewRecipeRenewalReminder(t *testing.T) {
 		}
 	})
 }
+
+func TestEventPreviewsNeverEstimateOccurrencesFromStoredRecords(t *testing.T) {
+	now := time.Date(2026, time.November, 1, 12, 0, 0, 0, time.UTC)
+	for _, key := range []string{routeLeadName, assignLeadOwnerName, stageChangeCreateTaskName, stageChangeNotifyName, postMeetingRecapName, listTaskName, listNotifyName, listShortlistName} {
+		t.Run(key, func(t *testing.T) {
+			def, window, err := resolvePreviewRecipe(context.Background(), nil, Automation{Key: key}, AutomationPreviewInput{}, now)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !def.eventOnly || def.table != "" || def.firedCount != nil || len(def.fields) != 0 || window != 30 {
+				t.Fatalf("event preview must contain no population reader: %+v, window %d", def, window)
+			}
+		})
+	}
+}

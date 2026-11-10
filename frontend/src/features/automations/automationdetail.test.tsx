@@ -269,6 +269,37 @@ function previewBackend(
 }
 
 describe("AutomationPreview", () => {
+  it("describes event rules without treating compatibility counts as eligible work", async () => {
+    vi.stubGlobal(
+      "fetch",
+      previewBackend(
+        () =>
+          jsonResponse({
+            preview_kind: "event",
+            matches_now_available: false,
+            historical_preview_available: false,
+            matches_now: 999,
+            would_have_fired: 999,
+            excluded_by_permission: 999,
+            window_days: 30,
+          }),
+        [],
+      ),
+    );
+    render(<AutomationPreview automationId="au-1" />);
+    await waitFor(() => expect(screen.getByText("From now on")).toBeTruthy());
+    expect(screen.getByText("Historical preview unavailable")).toBeTruthy();
+    expect(
+      screen.getByText(
+        "Turning this rule on handles new events. It does not process existing records.",
+      ),
+    ).toBeTruthy();
+    expect(screen.queryByText(/Matches now:/)).toBeNull();
+    expect(screen.queryByText(/Would fire:/)).toBeNull();
+    expect(screen.queryByText(/hidden \(no access\)/)).toBeNull();
+    expect(screen.queryByRole("group", { name: "Window" })).toBeNull();
+  });
+
   it("posts window_days:30 on open and shows matches-now + would-fire", async () => {
     const bodies: PreviewBody[] = [];
     vi.stubGlobal(

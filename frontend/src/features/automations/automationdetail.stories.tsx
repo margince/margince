@@ -263,3 +263,24 @@ export const PreviewError: Story = {
     );
   },
 };
+
+export const FutureEventsOnly: Story = {
+  render: () => {
+    installFetchStub({
+      [PREVIEW_PATH]: () =>
+        jsonResponse({
+          preview_kind: "event",
+          matches_now_available: false,
+          historical_preview_available: false,
+          matches_now: 0,
+          window_days: 30,
+          would_have_fired: null,
+        }),
+    });
+    return (
+      <StoryProviders>
+        <AutomationPreview automationId="au-1" />
+      </StoryProviders>
+    );
+  },
+};

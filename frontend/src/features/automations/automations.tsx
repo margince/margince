@@ -34,7 +34,7 @@ type StagedTemplate = { entry: CatalogEntry; seq: number; open: boolean };
 /** Which tab of the Automations page is open. */
 export type AutomationsView = "mine" | "library";
 
-// One section of Settings → AI: the page owns the reading column and the h1.
+// The settings page owns the reading column and its heading.
 export function AutomationsAdmin({
   view = "mine",
 }: Readonly<{ view?: AutomationsView }>) {
@@ -115,6 +115,7 @@ export function AutomationsAdmin({
             intro={
               <>
                 <PanelIntro>{t("auto.sub")}</PanelIntro>
+                <PanelIntro>{t("auto.ownerHint")}</PanelIntro>
                 {/* Bound to `update`, the grant the row's Switch asks for. */}
                 {me.isSuccess && !canEdit && (
                   <PanelIntro>{t("auto.readOnly")}</PanelIntro>

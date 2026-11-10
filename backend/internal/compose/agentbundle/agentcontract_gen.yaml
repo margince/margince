@@ -50604,12 +50604,19 @@ components:
         key: {type: [string, 'null'], description: Catalog type for a draft preview (defaults to the stored instance's key).}
         params: {type: [object, 'null'], additionalProperties: true, description: Draft parameters (trigger/filter/actions) to preview instead of the stored ones.}
         window_days: {type: [integer, 'null'], minimum: 1, maximum: 90, description: 'Trailing window for the would-have-fired estimate (default 30).'}
+    AutomationPreviewKind:
+      type: string
+      enum: [population, event]
+      description: Whether the preview describes a current record population or a future event.
     AutomationPreview:
       type: object
-      description: Read-only blast-radius result for the designer's dry-run. No side effects.
+      description: Read-only preview. Event rules act from activation onward and do not estimate past events from current records.
       required: [matches_now, window_days]
       properties:
-        matches_now: {type: integer, description: 'Records matching the trigger+filter right now, bounded by the caller''s Passport visibility.'}
+        preview_kind: {$ref: '#/components/schemas/AutomationPreviewKind'}
+        matches_now_available: {type: boolean, description: 'False for event previews. In that case matches_now is a compatibility placeholder, not a count of eligible work.'}
+        historical_preview_available: {type: boolean, description: 'False when historical execution cannot be reconstructed. Never infer historical events from record creation dates.'}
+        matches_now: {type: integer, description: 'Current population matches within the caller''s visibility. Ignore this compatibility field when matches_now_available is false.'}
         would_have_fired: {type: [integer, 'null'], description: 'Estimated firings over the trailing window (null when not computable).'}
         window_days: {type: integer, description: 'The trailing window used for would_have_fired.'}
         sample: {type: array, items: {type: string, format: uuid}, description: 'Up to a few matching record ids for the "affects these" preview (visibility-bounded).'}

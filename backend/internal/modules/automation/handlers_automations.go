@@ -230,9 +230,12 @@ func (h Handlers) PreviewAutomation(w http.ResponseWriter, r *http.Request, id c
 		return
 	}
 	wire := crmcontracts.AutomationPreview{
-		MatchesNow:     res.MatchesNow,
-		WindowDays:     res.WindowDays,
-		WouldHaveFired: res.WouldHaveFired,
+		PreviewKind:                &res.Kind,
+		MatchesNowAvailable:        &res.MatchesNowAvailable,
+		HistoricalPreviewAvailable: &res.HistoricalPreviewAvailable,
+		MatchesNow:                 res.MatchesNow,
+		WindowDays:                 res.WindowDays,
+		WouldHaveFired:             res.WouldHaveFired,
 	}
 	// The masked count ships even at zero: "nothing was hidden from you"
 	// is information, not noise.

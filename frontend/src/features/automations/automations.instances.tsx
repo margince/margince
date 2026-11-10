@@ -379,7 +379,6 @@ function AutomationOwner({
           })
         }
       />
-      <span className="t-caption">{t("auto.ownerHint")}</span>
       <RosterFailedLine kind="user" roster={roster} />
       {hand.isError && <ErrorLine>{problemMessageOf(hand.error, t)}</ErrorLine>}
     </CellStack>

@@ -52521,9 +52521,19 @@ export interface components {
             /** @description Trailing window for the would-have-fired estimate (default 30). */
             window_days?: number | null;
         };
-        /** @description Read-only blast-radius result for the designer's dry-run. No side effects. */
+        /**
+         * @description Whether the preview describes a current record population or a future event.
+         * @enum {string}
+         */
+        AutomationPreviewKind: "population" | "event";
+        /** @description Read-only preview. Event rules act from activation onward and do not estimate past events from current records. */
         AutomationPreview: {
-            /** @description Records matching the trigger+filter right now, bounded by the caller's Passport visibility. */
+            preview_kind?: components["schemas"]["AutomationPreviewKind"];
+            /** @description False for event previews. In that case matches_now is a compatibility placeholder, not a count of eligible work. */
+            matches_now_available?: boolean;
+            /** @description False when historical execution cannot be reconstructed. Never infer historical events from record creation dates. */
+            historical_preview_available?: boolean;
+            /** @description Current population matches within the caller's visibility. Ignore this compatibility field when matches_now_available is false. */
             matches_now: number;
             /** @description Estimated firings over the trailing window (null when not computable). */
             would_have_fired?: number | null;

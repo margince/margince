@@ -237,7 +237,7 @@ describe("a rule's owner", () => {
       return stubbed(input, init);
     };
     const picker = await within(await row("au-5")).findByRole("combobox", {
-      name: "Runs as Post-meeting recap draft",
+      name: "Person authorizing Post-meeting recap draft",
     });
     await user.click(picker);
     await user.click(await screen.findByRole("option", { name: "Lee Closer" }));

@@ -12,11 +12,14 @@ package automation
 // NOTHING: no domain write, no audit row, no outbox event, no run row.
 
 import (
+	"encoding/json"
 	"errors"
-	"slices"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -96,17 +99,8 @@ func TestPreviewMatchesCurrentRecordsWithoutApplying(t *testing.T) {
 	if res.WindowDays != 30 {
 		t.Fatalf("window = %d, want the 30-day default", res.WindowDays)
 	}
-	// Three live open deals match, and a deal is workspace-readable identity:
-	// rep1 (row_scope=own) sees the other reps' deals too, so nothing is
-	// masked and the exclusion count is honestly zero.
-	if res.MatchesNow != 3 || res.ExcludedByPermission != 0 {
-		t.Fatalf("matches=%d excluded=%d, want 3 visible + 0 masked", res.MatchesNow, res.ExcludedByPermission)
-	}
-	if len(res.Sample) != 3 || !slices.Contains(res.Sample, board.ownDeal) {
-		t.Fatalf("sample = %v, want all three live open deals including the caller's own", res.Sample)
-	}
-	if res.WouldHaveFired == nil || *res.WouldHaveFired != 3 {
-		t.Fatalf("would_have_fired = %v, want 3 open-destination moves in the window", res.WouldHaveFired)
+	if res.MatchesNowAvailable || res.HistoricalPreviewAvailable || res.MatchesNow != 0 || res.ExcludedByPermission != 0 || len(res.Sample) != 0 || res.WouldHaveFired != nil {
+		t.Fatalf("event preview must not estimate events from current deals: %+v", res)
 	}
 
 	// The dry-run is a READ: no audit row, no outbox event, no task
@@ -144,13 +138,8 @@ func TestPreviewDraftOverrideAndValidation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// Two unrouted live leads match (ownerless rows are visible at every
-	// scope); the routed and disqualified ones sit outside the When/If.
-	if draft.MatchesNow != 2 || draft.ExcludedByPermission != 0 || draft.WindowDays != 7 {
-		t.Fatalf("draft preview = %+v, want 2 visible matches over a 7-day window", draft)
-	}
-	if draft.WouldHaveFired == nil || *draft.WouldHaveFired != 4 {
-		t.Fatalf("draft would_have_fired = %v, want all 4 leads created in the window", draft.WouldHaveFired)
+	if draft.MatchesNowAvailable || draft.HistoricalPreviewAvailable || draft.MatchesNow != 0 || draft.WindowDays != 7 || draft.WouldHaveFired != nil {
+		t.Fatalf("event draft preview must not count historical leads: %+v", draft)
 	}
 
 	badKey := "not_a_type"
@@ -172,5 +161,31 @@ func TestPreviewDraftOverrideAndValidation(t *testing.T) {
 	}
 	if _, err := store.Preview(ctx, ids.New[ids.AutomationKind](), AutomationPreviewInput{}); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("absent automation preview → %v, want ErrNotFound", err)
+	}
+}
+
+func TestEventPreviewResponseMarksPopulationAndHistoryUnavailable(t *testing.T) {
+	fx := setupAutomationDB(t)
+	store := NewAutomationStore(database.BindTo(fx.pool, ids.From[ids.WorkspaceKind](fx.ws)))
+	automation := fx.seedAutomation(t, routeLeadName)
+	request := httptest.NewRequest(http.MethodPost, "/automations/"+automation.UUID.String()+"/preview", nil)
+	request = request.WithContext(fx.humanCtx(fx.rep1, principal.RowScopeOwn))
+	response := httptest.NewRecorder()
+	Handlers{automations: store}.PreviewAutomation(response, request, crmcontracts.Id(automation.UUID))
+	if response.Code != http.StatusOK {
+		t.Fatalf("preview status = %d, body %s", response.Code, response.Body.String())
+	}
+	var result crmcontracts.AutomationPreview
+	if err := json.Unmarshal(response.Body.Bytes(), &result); err != nil {
+		t.Fatal(err)
+	}
+	if result.PreviewKind == nil || *result.PreviewKind != crmcontracts.AutomationPreviewKindEvent {
+		t.Fatalf("preview kind = %v", result.PreviewKind)
+	}
+	if result.MatchesNowAvailable == nil || *result.MatchesNowAvailable || result.HistoricalPreviewAvailable == nil || *result.HistoricalPreviewAvailable {
+		t.Fatalf("event preview availability flags = %+v", result)
+	}
+	if result.MatchesNow != 0 || result.WouldHaveFired != nil || result.Sample == nil || len(*result.Sample) != 0 {
+		t.Fatalf("event preview returned inferred historical work: %+v", result)
 	}
 }

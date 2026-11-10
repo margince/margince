@@ -307,6 +307,7 @@ export function AutomationPreview({
 
   const result = query.data;
   const hidden = result?.excluded_by_permission ?? 0;
+  const eventPreview = result?.preview_kind === "event";
 
   // SegmentedControl takes resolved label strings (not i18n keys); build them
   // from the one WINDOW_LABELS map so the control and its copy stay in step.
@@ -318,47 +319,64 @@ export function AutomationPreview({
 
   return (
     <Inspector title={t("auto.preview.title")} titled={titled ?? false}>
-      <div className="auto-preview-window">
-        <span className="t-label">{t("auto.preview.window")}</span>
-        <SegmentedControl
-          options={WINDOWS}
-          value={windowDays}
-          onChange={setWindowDays}
-          labels={windowLabels}
-          label={t("auto.preview.window")}
-        />
-      </div>
+      {!eventPreview && (
+        <div className="auto-preview-window">
+          <span className="t-label">{t("auto.preview.window")}</span>
+          <SegmentedControl
+            options={WINDOWS}
+            value={windowDays}
+            onChange={setWindowDays}
+            labels={windowLabels}
+            label={t("auto.preview.window")}
+          />
+        </div>
+      )}
       {/* Polite live region: announce when the estimate resolves or the
           window result changes, without stealing focus from the control. */}
       <div aria-live="polite">
         <QueryStates query={query} pendingLabel={t("auto.preview.title")}>
-          {result && (
-            <div className="auto-preview-figures">
-              <p className="t-body">
-                {t("auto.preview.matchesNow", {
-                  n: formatNumber(result.matches_now, locale),
-                })}
-              </p>
-              <p className="t-caption">
-                {result.would_have_fired == null
-                  ? t("auto.preview.notComputable")
-                  : t("auto.preview.wouldFire", {
-                      n: formatNumber(result.would_have_fired, locale),
-                      days: formatNumber(result.window_days, locale),
-                    })}
-              </p>
-              {hidden > 0 && (
+          {result &&
+            (eventPreview ? (
+              <div className="auto-preview-figures">
+                <p className="t-body">{t("auto.preview.fromNowOn")}</p>
                 <p className="t-caption">
-                  {t("auto.preview.hidden", {
-                    n: formatNumber(hidden, locale),
-                  })}
+                  {t("auto.preview.historyUnavailable")}
                 </p>
-              )}
-            </div>
-          )}
+              </div>
+            ) : (
+              <div className="auto-preview-figures">
+                <p className="t-body">
+                  {result.matches_now_available !== false &&
+                    t("auto.preview.matchesNow", {
+                      n: formatNumber(result.matches_now, locale),
+                    })}
+                </p>
+                <p className="t-caption">
+                  {result.would_have_fired == null
+                    ? t("auto.preview.notComputable")
+                    : t("auto.preview.wouldFire", {
+                        n: formatNumber(result.would_have_fired, locale),
+                        days: formatNumber(result.window_days, locale),
+                      })}
+                </p>
+                {hidden > 0 && (
+                  <p className="t-caption">
+                    {t("auto.preview.hidden", {
+                      n: formatNumber(hidden, locale),
+                    })}
+                  </p>
+                )}
+              </div>
+            ))}
         </QueryStates>
       </div>
-      <p className="t-caption">{t("auto.preview.explainer")}</p>
+      <p className="t-caption">
+        {t(
+          eventPreview
+            ? "auto.preview.futureEventsOnly"
+            : "auto.preview.explainer",
+        )}
+      </p>
     </Inspector>
   );
 }
