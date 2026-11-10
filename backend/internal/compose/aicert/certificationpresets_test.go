@@ -391,6 +391,7 @@ func assertAICertPresetsAreAttributed(t *testing.T, presets []aiCertPreset, doc 
 // (AssertAllMatched), or once any record measures one of its models.
 var aiCertUnmeasuredWaivers = gatekit.Waive(map[string]string{
 	"gemma4_local_ollama.yaml": "kept as the worked example of a local preset; no record is committed for it, so the page says untested",
+	"qwen3_local_vllm.yaml":    "kept as the worked example of a vLLM preset; no record is committed for it, so the page says untested",
 })
 
 // unmeasuredPresetProblems asks, PER PRESET and not summed across them,

@@ -166,7 +166,7 @@ vLLM, under `sovereign`. Its header carries the two `vllm serve` command lines.
 With both servers up (0.87 and 0.1 of memory), about 9% of the machine is left
 free. We ran every task we ship that this text-only binding can carry (all but
 `document_extract`): three runs per scenario, judged by the default cloud judge.
-The records are committed, and the page that shows what is ready reads them.
+Those records are no longer committed; a new run makes new ones.
 
 | task | verdict | pass rate | runs | median (seconds) | `p95` (seconds) | output tokens |
 |---|---|---|---|---|---|---|
