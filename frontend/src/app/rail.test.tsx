@@ -455,7 +455,7 @@ describe("WorkspaceRail (AC-shell-1/2)", () => {
     // The top bar carries the company's mark at this width, so the menu does not.
     expect(container.querySelector(".railmenu .railhead")).toBeNull();
     expect(container.querySelector(".accountrows")).toBeNull();
-    expect(screen.queryByRole("button", { name: /Account$/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /account$/i })).toBeNull();
     expect(screen.queryByRole("button", { name: "Sign out" })).toBeNull();
   });
 

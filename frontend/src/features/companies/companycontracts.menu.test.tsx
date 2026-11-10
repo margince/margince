@@ -30,6 +30,7 @@ const ACTIVE = {
   captured_by: "human:u-1",
   status: "active",
   under_contract: true,
+  term_state: "in_force",
   auto_renew: false,
   value_basis: "total",
   version: 3,
@@ -179,5 +180,38 @@ describe("the contract row's linked deal", () => {
     await screen.findByText("Framework agreement 2024");
     expect(screen.queryByText(RENEWED_DEAL.name)).toBeNull();
     expect(screen.queryByText("Deal")).toBeNull();
+  });
+});
+
+// An active agreement is out of contract both before its term starts and after
+// it ends. Only the ended one is a status change waiting on somebody.
+describe("the contract row's term", () => {
+  it("does not call an agreement that has not started ended", async () => {
+    stub([
+      {
+        ...ACTIVE,
+        starts_on: "2099-01-01",
+        under_contract: false,
+        term_state: "not_started",
+      },
+    ]);
+    show(<CompanyContractsCard companyId="o-1" />);
+
+    await screen.findByText("Framework agreement 2024");
+    expect(screen.queryByText("Term ended, status pending")).toBeNull();
+  });
+
+  it("says an active agreement whose term ended waits on its status", async () => {
+    stub([
+      {
+        ...ACTIVE,
+        ends_on: "2020-12-31",
+        under_contract: false,
+        term_state: "ended",
+      },
+    ]);
+    show(<CompanyContractsCard companyId="o-1" />);
+
+    expect(await screen.findByText("Term ended, status pending")).toBeTruthy();
   });
 });

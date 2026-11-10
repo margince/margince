@@ -330,7 +330,7 @@ func (s *Store) fillRecent(
 ) error {
 	rows, err := tx.Query(ctx, `
 		SELECT id, number, issued_at, due_at, fully_paid_at, status, currency,
-		       gross_minor, open_minor
+		       gross_minor, credited_minor, open_minor
 		  FROM finance_invoice
 		 WHERE company_id = $1 AND connection_id = $2 AND archived_at IS NULL
 		 ORDER BY issued_at DESC, id DESC
@@ -372,12 +372,14 @@ func scanRecentInvoice(rows pgx.Rows, now time.Time) (crmcontracts.FinanceInvoic
 		status   string
 		currency string
 		gross    int64
+		credited int64
 		open     int64
 	)
 	if err := rows.Scan(&id, &number, &issued, &due, &paid, &status,
-		&currency, &gross, &open); err != nil {
+		&currency, &gross, &credited, &open); err != nil {
 		return crmcontracts.FinanceInvoice{}, fmt.Errorf("scan invoice: %w", err)
 	}
+	status = statusAsOf(status, gross, credited, open, due, now)
 	out := crmcontracts.FinanceInvoice{
 		Id:         openapi_types.UUID(id),
 		Number:     number,

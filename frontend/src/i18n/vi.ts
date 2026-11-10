@@ -2868,6 +2868,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "palette.recent": "Gần đây",
   "palette.clearRecent": "Xóa",
   "palette.typeScreen": "Màn hình",
+  "palette.typeSetting": "Cài đặt",
   "palette.typeAction": "Hành động",
   "palette.typeRecord": "Hồ sơ",
   "palette.seeAll": "Xem tất cả kết quả cho “{query}”",
@@ -4815,7 +4816,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "email.thread.count_other": "{count} thư",
   "email.thread.countLatest_one": "Thư gần nhất",
   "email.thread.countLatest_other": "{count} thư gần nhất",
-  "email.thread.fold": "Thu gọn thư của {name}",
   "email.thread.toLine": "gửi {names}",
   "email.thread.details": "Chi tiết",
   "email.thread.textForwarded":
@@ -15570,6 +15570,13 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Mỗi cấp gán một loại công việc cho một nhà cung cấp và một mô hình; thay đổi đã lưu có hiệu lực trong vòng một phút.",
   "aiRouting.profileLine":
     "Hồ sơ bản cài đặt: {profile}. Hồ sơ này giới hạn nhà cung cấp mà một cấp được dùng, do bên vận hành thiết lập.",
+  "aiRouting.profile.eu_hosted":
+    "“EU-hosted” (suy luận của đối tác; hồ sơ này không giới hạn nơi một bậc chạy, nơi đó do kết nối của từng bậc quyết định)",
+  "aiRouting.profile.sovereign":
+    "Chủ quyền (AI chỉ chạy trên máy chủ của chính bản cài đặt, không dùng nhà cung cấp đám mây)",
+  "aiRouting.profile.cloud_frontier":
+    "Đám mây (nhà cung cấp đám mây, dùng khóa API riêng của bản cài đặt)",
+  "aiRouting.profile.unset": "Chưa thiết lập",
   "aiRouting.notBound": "Chưa gán",
   "aiRouting.lastResponse": "Phản hồi gần nhất {when}",
   "aiTerms.provider": "Nhà cung cấp",
@@ -19585,6 +19592,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "lead.company.matchedByName": "Cùng tên công ty",
   "lead.company.linkWhyDomain": "{name} dùng tên miền trang web của lead này.",
   "lead.company.linkWhyName": "{name} có cùng tên công ty với lead này.",
+  "lead.company.nameFollowsLink":
+    "Tên này lấy từ công ty được liên kết. Đổi tên trên trang của công ty.",
   "lead.details.fromCompany": "Từ {name}",
   "lead.details.fromCompanyRecord": "Từ hồ sơ công ty",
   "lead.details.companyDecides":

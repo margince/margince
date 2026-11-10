@@ -2869,6 +2869,7 @@ export const en = {
   "palette.recent": "Recent",
   "palette.clearRecent": "Clear",
   "palette.typeScreen": "Screen",
+  "palette.typeSetting": "Setting",
   "palette.typeAction": "Action",
   "palette.typeRecord": "Record",
   "palette.seeAll": "See all results for “{query}”",
@@ -4906,7 +4907,6 @@ export const en = {
   "email.thread.count_other": "{count} messages",
   "email.thread.countLatest_one": "Latest message",
   "email.thread.countLatest_other": "Latest {count} messages",
-  "email.thread.fold": "Fold the message from {name}",
   "email.thread.toLine": "to {names}",
   "email.thread.details": "Details",
   "email.thread.textForwarded":
@@ -15876,6 +15876,13 @@ export const en = {
     "Each tier binds a class of work to one provider and model; saved changes apply within a minute.",
   "aiRouting.profileLine":
     "Installation profile: {profile}. It limits which providers a tier can use and is set by the operator.",
+  "aiRouting.profile.eu_hosted":
+    "EU-hosted (partner inference; it does not limit where a tier runs, which each tier’s connection decides)",
+  "aiRouting.profile.sovereign":
+    "Sovereign (AI runs only on the installation’s own hosts; cloud providers are refused)",
+  "aiRouting.profile.cloud_frontier":
+    "Cloud (cloud providers with the installation’s own API keys)",
+  "aiRouting.profile.unset": "Not set",
   "aiRouting.notBound": "Not bound",
   "aiRouting.lastResponse": "Last response {when}",
   "aiTerms.provider": "Provider",
@@ -19898,6 +19905,8 @@ export const en = {
   "lead.company.matchedByName": "Same company name",
   "lead.company.linkWhyDomain": "{name} uses the website domain on this lead.",
   "lead.company.linkWhyName": "{name} has the company name on this lead.",
+  "lead.company.nameFollowsLink":
+    "The name comes from the linked company. Rename it on the company’s page.",
   "lead.details.fromCompany": "From {name}",
   "lead.details.fromCompanyRecord": "From the company record",
   "lead.details.companyDecides":

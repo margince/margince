@@ -474,14 +474,12 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
     render(<CommandPalette open onClose={() => {}} commands={commands} />);
     await user.type(screen.getByRole("searchbox"), "acme");
 
+    // The name starts with the initials the mark prints (WCAG 2.5.3).
     const row = await screen.findByRole("button", {
-      name: "Jonas Weiß Works at Acme GmbH",
+      name: /^JW\s*Jonas Weiß Works at Acme GmbH$/,
     });
     expect(row.querySelector(".sub")?.textContent).toBe("Works at Acme GmbH");
-    // The mark is hidden from the row's name, which is why the name above
-    // carries no initials.
     const mark = row.querySelector(".palette-mark");
-    expect(mark?.getAttribute("aria-hidden")).toBe("true");
     expect(mark?.querySelector(".avatar")?.textContent).toBe("JW");
     const asked = fetchMock.mock.calls.map(([input]) =>
       input instanceof Request ? input.url : String(input),

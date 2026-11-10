@@ -47,8 +47,15 @@ const COMMANDS: Command[] = [
     id: "screen:settings-data-model",
     label: "Data model",
     keywords: ["products", "price list", "custom-fields"],
-    type: "screen",
-    route: { screen: "settings" },
+    type: "setting",
+    route: { screen: "settings", id: "records" },
+  },
+  {
+    id: "screen:settings-deals",
+    label: "Deals",
+    keywords: ["deal stages"],
+    type: "setting",
+    route: { screen: "settings", id: "deals" },
   },
   {
     id: "action:new-deal",
@@ -84,6 +91,18 @@ const type =
 // Opened, nothing typed: the whole command list, which is what ⌘K shows first.
 export const Default: Story = {
   render: () => palette(noHits),
+};
+export const DefaultDark: Story = { ...Default, globals: { theme: "dark" } };
+
+// The list screen and the settings page share a name; the badge parts them.
+export const SettingBesideScreen: Story = {
+  render: () => palette(noHits),
+  play: type("deals"),
+};
+export const SettingBesideScreenPhone: Story = {
+  ...SettingBesideScreen,
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
 };
 
 // What C opens off a list screen: the product's create commands and nothing else.

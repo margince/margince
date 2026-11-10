@@ -50,7 +50,7 @@ describe("Sign-out (AS-1)", () => {
     renderWith(client, <Shell onOpenSearch={ignoreSearch}>{null}</Shell>);
     expect(client.getQueryData(["me"])).toBeTruthy();
     // Sign-out lives inside the account menu, so it takes opening first.
-    await user.click(screen.getByRole("button", { name: /Account$/ }));
+    await user.click(screen.getByRole("button", { name: /account$/i }));
     await user.click(await screen.findByRole("menuitem", { name: "Sign out" }));
     // POST fired and the ["me"] entry lost its data, so the auth gate
     // re-probes → 401 → login. This bites if useLogout's onSuccess stops
@@ -103,7 +103,7 @@ describe("Sign-out (AS-1)", () => {
 
     // Authenticated: the chrome (and its account menu) is on screen. Boot may
     // probe more than once; what this test owns is the probe sign-out causes.
-    const account = await screen.findByRole("button", { name: /Account$/ });
+    const account = await screen.findByRole("button", { name: /account$/i });
     expect(meCalls).toBeGreaterThanOrEqual(1);
     const probesBeforeSignOut = meCalls;
 

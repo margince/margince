@@ -80,7 +80,7 @@ export function useBuiltinCommands(): Command[] {
           ? [t("settings.companyRefresh")]
           : []),
       ],
-      type: "screen",
+      type: "setting",
       route: settingsHref(page.id),
     }));
     const offRailScreens: Command[] = [
