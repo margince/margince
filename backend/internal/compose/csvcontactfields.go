@@ -121,10 +121,10 @@ func withNamePartsOverStoredEmail(current map[string]json.RawMessage, fields map
 	return out
 }
 
-// namePart is the row's value for a name part, or the stored one when the row
-// does not map that part.
+// namePart is the row's value for a name part. A row that leaves the part out
+// or blank keeps the stored one, as an update does.
 func namePart(current map[string]json.RawMessage, fields map[string]string, part string) string {
-	if value, mapped := fields[part]; mapped {
+	if value := fields[part]; strings.TrimSpace(value) != "" {
 		return value
 	}
 	return textOf(current[part])

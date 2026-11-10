@@ -24,6 +24,15 @@ func TestARowNamingOnePartKeepsTheStoredOther(t *testing.T) {
 	if both[fieldFullName] != "Jane Smith" {
 		t.Fatalf("full name %q, want the row's two parts", both[fieldFullName])
 	}
+	blank := map[string]json.RawMessage{
+		fieldFullName: json.RawMessage(`"jane@acme.test"`),
+		"first_name":  json.RawMessage(`"Jane"`),
+		"last_name":   json.RawMessage(`"Doe"`),
+		"emails":      json.RawMessage(`[{"email":"jane@acme.test","is_primary":true}]`),
+	}
+	if got := withNamePartsOverStoredEmail(blank, map[string]string{"first_name": " "})[fieldFullName]; got != "Jane Doe" {
+		t.Fatalf("full name %q, want a blank mapped first name to keep the stored one", got)
+	}
 	named := map[string]json.RawMessage{fieldFullName: json.RawMessage(`"Jane Doe"`), "last_name": json.RawMessage(`"Doe"`)}
 	if _, sent := withNamePartsOverStoredEmail(named, map[string]string{"first_name": "Janet"})[fieldFullName]; sent {
 		t.Fatal("a contact with a chosen name was renamed by a row")
