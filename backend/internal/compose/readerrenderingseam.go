@@ -25,5 +25,6 @@ func newReaderRenderingService(pool *pgxpool.Pool) *readerrendering.Service {
 func WithReaderRendering(brain completer) Option {
 	return func(s *Server, pool *pgxpool.Pool) {
 		s.readerRenderingHandlers = readerrendering.NewHandlers(newReaderRenderingService(pool).WithLane(brain))
+		s.authHandlers = s.WithReaderRenderingAvailable(brain != nil)
 	}
 }

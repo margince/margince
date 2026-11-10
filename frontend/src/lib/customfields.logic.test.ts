@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { stable } from "../format/collate";
 import {
   apiKey,
   CF_OBJECTS,
@@ -25,7 +26,7 @@ describe("custom-fields logic", () => {
       "contract",
       "activity",
     ] as const;
-    expect([...CF_OBJECTS].sort()).toEqual([...admitted].sort());
+    expect([...CF_OBJECTS].sort(stable)).toEqual([...admitted].sort(stable));
   });
 
   it("slugs a label to a snake_case identifier", () => {

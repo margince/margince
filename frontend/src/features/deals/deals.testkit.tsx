@@ -192,7 +192,11 @@ export function stubBackend(
     const method = request ? request.method : (init?.method ?? "GET");
     // The deal's products, in the list-and-tag shape the card reads. Without
     // this the deal's own route answers it with the deal record.
-    if (/\/deals\/[^/]+\/products$/.test(new URL(url, "http://x").pathname)) {
+    if (
+      /\/deals\/[^/]+\/products$/.test(
+        new URL(url, "https://deals.invalid").pathname,
+      )
+    ) {
       return jsonResponse({ data: [], tag: "empty" });
     }
     if (method === "GET" && url.includes("/commitments")) {

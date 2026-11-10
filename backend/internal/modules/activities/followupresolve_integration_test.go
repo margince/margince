@@ -690,6 +690,13 @@ type firingResult struct {
 // and a fixed pause would either be flaky or slow.
 func (e *resolveEnv) waitForBlockedWriter(t *testing.T, firing <-chan firingResult) {
 	t.Helper()
+	// This connection holds the contended row, so it is the holder the probe
+	// below asks about.
+	var proberPID int32
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT pg_backend_pid()`).Scan(&proberPID); err != nil {
+		t.Fatalf("naming this connection's backend: %v", err)
+	}
 	deadline := time.Now().Add(10 * time.Second)
 	for time.Now().Before(deadline) {
 		// A firing that RETURNED never reached the write, so the ordering this
@@ -702,9 +709,14 @@ func (e *resolveEnv) waitForBlockedWriter(t *testing.T, firing <-chan firingResu
 				got.completed, got.err)
 		default:
 		}
-		// Blocked BY US specifically. Any other waiter would release the wait
-		// early, and the test would assert about a race it never set up.
-		blocked, err := testdb.QueuedBehind(context.Background(), e.owner, int32(e.owner.PgConn().PID()))
+		// Blocked by this connection, which holds the contended row. Any other
+		// waiter in this database would release the wait early, and the test
+		// would then assert about a race it never set up.
+		//
+		// A waiter on a row lock waits on the holder's transaction id, not on
+		// an ungranted relation lock. It also reads as idle in transaction
+		// rather than active, so neither state identifies it.
+		blocked, err := testdb.QueuedBehind(context.Background(), e.owner, proberPID)
 		if err != nil {
 			t.Fatal(err)
 		}

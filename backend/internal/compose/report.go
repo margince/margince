@@ -21,6 +21,8 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/corefeatures"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
@@ -310,6 +312,10 @@ type reportOutcome struct {
 // runSpec executes one validated vocabulary; Run (prebuilt catalog) and
 // runAdHocPlan (schema-descriptor vocabulary) both land here.
 func (e *reportEngine) runSpec(ctx context.Context, report string, spec reportSpec, req reportRequest) (reportOutcome, error) {
+	availability := corefeatures.FromContext(ctx)
+	if !reportAvailable(availability, spec) {
+		return reportOutcome{}, apperrors.ErrNotFound
+	}
 	if err := checkReportScope(spec, req.Scope); err != nil {
 		return reportOutcome{}, err
 	}

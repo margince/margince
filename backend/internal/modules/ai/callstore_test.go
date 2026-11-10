@@ -4,6 +4,7 @@
 package ai
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"testing"
@@ -18,6 +19,8 @@ func TestClassifyError(t *testing.T) {
 		want string
 	}{
 		{"nil is success", nil, ""},
+		{"caller cancellation", fmt.Errorf("wrap: %w", context.Canceled), sentinelCanceled},
+		{"caller deadline", fmt.Errorf("wrap: %w", context.DeadlineExceeded), sentinelTimeout},
 		{"budget deferred", fmt.Errorf("wrap: %w", ErrBudgetDeferred), "budget_deferred"},
 		{"served but metering failed", fmt.Errorf("wrap: %w", errMeteringFailed), "metering_failed"},
 		{"other is provider_error", errors.New("connection reset"), "provider_error"},

@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { describe, expect, it } from "vitest";
+import { stable } from "../format/collate";
 import { parseHash, type Route, routeHash } from "./router";
 import {
   bestIdentifierMatch,
@@ -132,8 +133,8 @@ describe("groupSearchHits", () => {
   // on the way to the screen — how project hits once went missing — so the
   // list is checked against the record rather than against a third copy.
   it("draws every group a heading exists for, once", () => {
-    expect([...SEARCH_GROUP_ORDER].sort()).toEqual(
-      Object.keys(SEARCH_GROUP_KEY).sort(),
+    expect([...SEARCH_GROUP_ORDER].sort(stable)).toEqual(
+      Object.keys(SEARCH_GROUP_KEY).sort(stable),
     );
   });
 

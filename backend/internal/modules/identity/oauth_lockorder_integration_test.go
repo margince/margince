@@ -341,7 +341,7 @@ func (e *revocationEnv) awaitQueuedBehind(t *testing.T, pid int32, racerReturned
 		racer+" finished while the other side held the client row: it never queued on the lock both take first",
 		racer+" never queued behind the client row the other side held",
 		func(ctx context.Context) (bool, error) {
-			queued, err := testdb.QueuedBehind(ctx, e.owner, pid)
+			queued, err := testdb.QueuedBehind(ctx, e.owner, int32(pid))
 			return queued > 0, err
 		})
 }

@@ -112,7 +112,7 @@ func settlementRepairItemTx(ctx context.Context, tx pgx.Tx, request ids.UUID, as
 	     EXISTS (SELECT 1 FROM activity r WHERE r.source_system = $4 AND r.source_activity_id = a.id
 	       AND ` + storekit.HumanWroteActivityClause("r") + `),
 	     ` + occurredday.FromSQL("a", "$3") + `,
-	     a.archived_at IS NULL AND a.audience = 'workspace' AND a.restricted_at IS NULL
+	     a.archived_at IS NULL AND ` + auth.WorkspaceAudienceSQL("a") + ` AND a.restricted_at IS NULL
 	       AND EXISTS (` + settlementAnswersSQL() + `)
 	   FROM activity_request_settlement s JOIN activity a ON a.id = s.request_activity_id
 	  WHERE s.request_activity_id = $2 AND ` + legacySettledSQL

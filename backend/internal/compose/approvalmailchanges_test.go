@@ -245,3 +245,21 @@ func TestAChangeEmailListsWhatThePreviewHidAndCountsItInTheLimit(t *testing.T) {
 		t.Errorf("a summary line past the limit was listed or not counted:\n%s", got)
 	}
 }
+
+func TestLocalizedDigestRetainsTheAuthorizedFieldValues(t *testing.T) {
+	sentence := "Datensatz aktualisieren"
+	approval := crmcontracts.Approval{
+		SystemDisplay: &crmcontracts.SystemDisplay{Locale: "de", Subject: &sentence},
+		SummaryParts:  &crmcontracts.ApprovalSummaryParts{Fields: []crmcontracts.ApprovalSummaryField{{Field: "name", Value: "Acme, Inc."}}},
+	}
+	digest := digestOrSubjectLine(approval, forDigestLine)
+	if !strings.Contains(digest, sentence) || !strings.Contains(digest, "Acme, Inc.") {
+		t.Fatalf("digest lost proposal facts: %q", digest)
+	}
+	if got := digestOrSubjectLine(approval, forSingleEmail); got != sentence {
+		t.Fatalf("subject = %q", got)
+	}
+	if got := approvalSentence(approval); got != sentence {
+		t.Fatalf("proposal sentence = %q", got)
+	}
+}

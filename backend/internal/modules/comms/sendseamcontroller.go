@@ -96,23 +96,25 @@ func (d *Dispatcher) controllerSeam(ctx context.Context, del Delivery) (sendSeam
 		// attachments and holds no OAuth grant. profileFor already turns both
 		// gates off; leaving these zero means the seam agrees with it rather
 		// than restating it.
-		transmit: func(ctx context.Context, _ []connector.OutboundFile) (connector.SendReceipt, error) {
-			if deadline.Passed(del.DueAt, d.now()) {
-				slog.ErrorContext(ctx, "controller receipt delivery deadline was missed", "delivery_id", del.ID, "due_at", *del.DueAt)
-			}
-			if err := d.relay.SendControllerMail(ctx, ControllerMessage{
-				To:        to,
-				Subject:   del.Subject,
-				TextBody:  bodies.text,
-				HTMLBody:  letterheadMarkupFor(del, bodies.html, inline),
-				MessageID: del.MessageID,
-				Inline:    inline,
-			}); err != nil {
-				return connector.SendReceipt{}, err
-			}
-			// The row's own message id, echoed back. A relay does not rewrite
-			// the identity it was handed, so nothing is owed a re-key.
-			return connector.SendReceipt{RFC822MessageID: del.MessageID, FromAddress: d.relay.SenderAddress()}, nil
+		transmit: func(ctx context.Context, _ []connector.OutboundFile, handoff connector.SendHandoff) (connector.SendReceipt, error) {
+			return handoff(ctx, func(wire context.Context) (connector.SendReceipt, error) {
+				if deadline.Passed(del.DueAt, d.now()) {
+					slog.ErrorContext(ctx, "controller receipt delivery deadline was missed", "delivery_id", del.ID, "due_at", *del.DueAt)
+				}
+				if err := d.relay.SendControllerMail(wire, ControllerMessage{
+					To:        to,
+					Subject:   del.Subject,
+					TextBody:  bodies.text,
+					HTMLBody:  letterheadMarkupFor(del, bodies.html, inline),
+					MessageID: del.MessageID,
+					Inline:    inline,
+				}); err != nil {
+					return connector.SendReceipt{}, err
+				}
+				// The row's own message id, echoed back. A relay does not rewrite
+				// the identity it was handed, so nothing is owed a re-key.
+				return connector.SendReceipt{RFC822MessageID: del.MessageID, FromAddress: d.relay.SenderAddress()}, nil
+			})
 		},
 	}, nil
 }

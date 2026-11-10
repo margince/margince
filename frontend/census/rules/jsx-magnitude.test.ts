@@ -7,6 +7,7 @@
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { plant } from "../../scripts/lib/jsx-magnitude.sweep";
+import { stable } from "../../src/format/collate";
 import { srcDir, treeOf } from "../tree";
 import {
   blindStringifiers,
@@ -20,7 +21,7 @@ const geometry = svgGeometry();
 
 describe("a magnitude is drawn in the reader's own notation", () => {
   it("derives the stringifiers that answer in nobody's notation", () => {
-    expect([...blind].sort()).toEqual([
+    expect([...blind].sort(stable)).toEqual([
       "toExponential",
       "toFixed",
       "toPrecision",

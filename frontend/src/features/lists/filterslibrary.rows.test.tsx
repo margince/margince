@@ -9,6 +9,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
+import { stable } from "../../format/collate";
 import { en } from "../../i18n/en";
 import type { List } from "../../lib/lists.queries";
 import {
@@ -225,7 +226,9 @@ describe("a row", () => {
     expect(
       within(await rowOf(liveList.name)).getByText(liveList.purpose ?? ""),
     ).toBeVisible();
-    expect(vocabularyReads(seen).sort()).toEqual(["contact", "project"]);
+    expect(
+      vocabularyReads(seen).sort((a, b) => stable(String(a), String(b))),
+    ).toEqual(["contact", "project"]);
   });
 });
 

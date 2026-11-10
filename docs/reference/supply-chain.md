@@ -236,7 +236,7 @@ the validator its format has:
 |---|---|
 | `margince.cdx.json` | `cyclonedx validate --fail-on-errors` |
 | `margince.spdx221.json` | `pyspdxtools`, from a requirements file pinned by hash |
-| `margince.spdx300.json` | `jsonschema` against `sbom-schemas/spdx-3.0.1.schema.json`, kept in the tree |
+| `margince.spdx300.json` | `jsonschema` against `sbom-schemas/spdx-3.0.1/spdx-3.0.1.schema.json`, kept in the tree |
 
 `make sbom-sign` depends on `sbom-parity` and `sbom-validate`, so a document
 that does not agree with the others, or is not valid, cannot be signed. A
@@ -388,10 +388,10 @@ See also:
 
 ## Copied third-party files
 
-[`third-party-files.txt`](../../third-party-files.txt) records each copied file, its source and version,
-its SPDX licence and the path to its licence text. `make third-party-files` checks the committed
-licence files and their siblings. It refuses missing files, copies with no record and licences
-outside `.grant.yaml`. A package with no licence text may use a recorded file whose source is `name@version`.
+[`third-party-files.txt`](../../third-party-files.txt) records each copied file, its source and version, its SPDX
+licence and its licence text. `make third-party-files` checks the licence files and their siblings, and refuses missing
+files, copies with no record, and a licence outside `copied-file-licenses`. One not also in `allow` needs its file in
+`ignore-packages`. A package with no licence text may use a recorded file whose source is `name@version`.
 
 The frontend build collects licence and notice texts from bundled code, CSS and copied files.
 Missing text fails the build. The app serves `/licenses/THIRD-PARTY-NOTICES.txt`; MCP App documents

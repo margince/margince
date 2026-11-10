@@ -21,6 +21,7 @@ import (
 	"strings"
 
 	"github.com/margince/margince/backend/internal/modules/agents"
+	"github.com/margince/margince/backend/internal/platform/corefeatures"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
@@ -36,9 +37,16 @@ import (
 //
 // Everything is sorted: the map is not ordered, and a description that
 // reshuffles per boot reads as a changed tool to a client that caches it.
-func reportToolCatalog() []agents.ReportCatalogEntry {
+func reportToolCatalog(selected ...corefeatures.Availability) []agents.ReportCatalogEntry {
+	var availability corefeatures.Availability
+	if len(selected) > 0 {
+		availability = selected[0]
+	}
 	catalog := make([]agents.ReportCatalogEntry, 0, len(prebuiltReports))
 	for report, spec := range prebuiltReports {
+		if !reportAvailable(availability, spec) {
+			continue
+		}
 		catalog = append(catalog, agents.ReportCatalogEntry{
 			Report:  report,
 			GroupBy: allowedReportNames(spec.dimensions),

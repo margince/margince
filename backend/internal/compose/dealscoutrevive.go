@@ -22,6 +22,8 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 // reviveOne reopens one lost deal from one suggestion as the deal owner's
@@ -98,10 +100,11 @@ func scoutEvidenceArrival(ctx context.Context, tx pgx.Tx, evidence []deals.Sugge
 // Its origin keeps it out of every recency clock. The evidence is named only
 // on the owner's receipt, so the note does not cite it.
 func (o scoutDealOpener) recordRevivalOnTimeline(ctx context.Context, tx pgx.Tx, deal ids.DealID, name string) error {
-	subject := "Margince reopened " + name
-	body := "New buying evidence arrived at the company after this deal was lost. Undo it from Home if the deal is still lost."
+	subject := fmt.Sprintf(systemtext.Copy("deal.reopened", textlang.English), name)
+	body := systemtext.Literal("deal.reopened_body")
 	_, _, err := o.activities.LogActivityTx(ctx, tx, activities.LogActivityInput{
-		Kind: string(crmcontracts.ActivityKindNote), Subject: &subject, Body: &body, Origin: activities.OriginSystemRemediation,
+		SystemText: &systemtext.Message{Subject: systemtext.Sentence("deal.reopened", systemtext.Text(name)), Body: systemtext.Sentence("deal.reopened_body")},
+		Kind:       string(crmcontracts.ActivityKindNote), Subject: &subject, Body: &body, Origin: activities.OriginSystemRemediation,
 		Links: []activities.ActivityLinkInput{{EntityType: entityTypeDeal, EntityID: deal.UUID}},
 	})
 	if err != nil {

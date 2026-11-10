@@ -512,6 +512,9 @@ func waitForRowLockWaiter(t *testing.T, e *stagingEnv, blocker int, done <-chan 
 		"the bundle decision finished without ever blocking on the contested member — it never reached the row the competing transaction was holding, so this run proved nothing",
 		fmt.Sprintf("nothing waited on backend %d within %s — the decision never reached the row it should have blocked on", blocker, testdb.ProbeBudget),
 		func(ctx context.Context) (bool, error) {
+			// The competing transaction is open on this connection, so each look
+			// runs inside it. QueuedBehind discards the stats snapshot per look,
+			// which is what keeps a later connection's decision visible.
 			queued, err := testdb.QueuedBehind(ctx, e.owner, int32(blocker))
 			return queued > 0, err
 		})

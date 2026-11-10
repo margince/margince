@@ -45,7 +45,7 @@ const baseCurrencyKey = "installation.base_currency"
 func TestAWriteOfTheBaseWaitsForACallerDecidingAgainstIt(t *testing.T) {
 	e := Setup(t)
 	ctx, admin := context.Background(), e.Admin()
-	reader, writer := OwnerConn(t), OwnerConn(t)
+	reader, writer := FreshOwnerConn(t), OwnerConn(t)
 
 	deciding, err := reader.Begin(ctx)
 	if err != nil {
@@ -113,7 +113,7 @@ func TestAWriteOfTheBaseWaitsForACallerDecidingAgainstIt(t *testing.T) {
 func TestDecidingAgainstTheBaseDoesNotBlockAnotherSetting(t *testing.T) {
 	e := Setup(t)
 	ctx, admin := context.Background(), e.Admin()
-	reader, writer := OwnerConn(t), OwnerConn(t)
+	reader, writer := FreshOwnerConn(t), OwnerConn(t)
 
 	deciding, err := reader.Begin(ctx)
 	if err != nil {

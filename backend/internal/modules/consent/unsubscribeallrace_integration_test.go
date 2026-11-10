@@ -114,6 +114,13 @@ func TestUnsubscribeAllStopsAPurposeGrantedWhileItWasRunning(t *testing.T) {
 //
 // pg_blocking_pids answers precisely, and covers both shapes this file needs:
 // the row lock a held transaction takes, and the advisory lock a session takes.
+//
+// Asked of the DATABASE rather than timed: what the test needs to know is that
+// the press has reached the lock and stopped there, and Postgres reports
+// exactly that. A sleep would either be too short — committing before the press
+// arrives, so nothing was interleaved — or slow for everybody. The small pause
+// between asks is not the wait itself; it stops the poll competing with the
+// press for a pool connection.
 func waitUntilBlockedBy(t *testing.T, holder *pgx.Conn) {
 	t.Helper()
 	waitUntilNBlockedBy(t, holder, 1)

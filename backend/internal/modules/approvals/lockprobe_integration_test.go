@@ -19,7 +19,6 @@ import (
 	"testing"
 
 	"github.com/jackc/pgx/v5"
-
 	"github.com/margince/margince/backend/internal/platform/testdb"
 )
 
@@ -49,8 +48,17 @@ func TestTheRowLockProbeSeesABackendThatDialsAfterItsFirstLook(t *testing.T) {
 		t.Fatalf("taking the contested lock: %v", err)
 	}
 
-	// The look that used to freeze this connection's view of who is connected:
-	// e.owner is a bare *pgx.Conn, but competingTx opened a transaction on it.
+	// The look that used to freeze this connection's view of who is connected.
+	//
+	// The clear is not optional here, and the reason is the trap itself:
+	// e.owner is a bare *pgx.Conn, which reads as "not a transaction" — but
+	// competingTx above opened one ON THIS CONNECTION, so pgx runs this probe
+	// inside it and the snapshot it answers from is the one taken then. Without
+	// the clear, this test — whose entire subject is a probe that cannot see a
+	// backend dialled after its first look — was itself blind in exactly that
+	// way. It is a call-site property, never a property of the probe's own code
+	// (#970), which is why TestEveryContentionProbeClearsTheStatsSnapshot in the
+	// backend suite now requires it of every call site rather than of this one.
 	queued, err := testdb.QueuedBehind(ctx, e.owner, int32(blocker))
 	if err != nil {
 		t.Fatalf("the probe's first look: %v", err)

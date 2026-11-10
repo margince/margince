@@ -28,7 +28,9 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/consent"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -89,7 +91,7 @@ func (c *carryEnv) parkMerge(t *testing.T, hold string, row ids.UUID, merge func
 	}
 	done := make(chan error, 1)
 	go func() { done <- merge() }()
-	return &parkedMerge{holder: holder, mergePID: waitForBackendBlockedBy(t, holder, holderPID, done), done: done}
+	return &parkedMerge{holder: holder, mergePID: waiterBlockedBy(t, holder, holderPID, done), done: done}
 }
 
 // waitsOnIt proves the writer is queued behind the parked merge, so the order
@@ -121,31 +123,37 @@ func within(t *testing.T, done <-chan error) error {
 	}
 }
 
-// waitForBackendBlockedBy returns a backend waiting on blocker.
-func waitForBackendBlockedBy(t *testing.T, probe pgx.Tx, blocker int, done <-chan error) int {
+// waitForBackendBlockedBy waits until a backend waits on blocker.
+func waitForBackendBlockedBy(t *testing.T, probe pgx.Tx, blocker int, done <-chan error) {
 	t.Helper()
-	return waitForBackendsBlockedBy(t, probe, blocker, 1, done)
+	waitForBackendsBlockedBy(t, probe, blocker, 1, done)
+}
+
+// waiterBlockedBy waits until a backend waits on blocker, and names it.
+func waiterBlockedBy(t *testing.T, probe pgx.Tx, blocker int, done <-chan error) int {
+	t.Helper()
+	waitForBackendBlockedBy(t, probe, blocker, done)
+	waiter, err := testdb.WaiterBehind(context.Background(), probe, int32(blocker))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return int(waiter)
 }
 
 // waitForBackendsBlockedBy waits until at least want backends queue behind
-// blocker, and returns one that waits on it directly.
-func waitForBackendsBlockedBy(t *testing.T, probe pgx.Tx, blocker, want int, done <-chan error) int {
+// blocker, directly or behind one that does.
+func waitForBackendsBlockedBy(t *testing.T, probe pgx.Tx, blocker, want int, done <-chan error) {
 	t.Helper()
 	pace := time.NewTicker(20 * time.Millisecond)
 	defer pace.Stop()
 	budget := time.After(30 * time.Second)
 	for {
-		ctx := context.Background()
-		waiting, err := testdb.QueuedBehind(ctx, probe.Conn(), int32(blocker))
+		waiting, err := testdb.QueuedBehind(context.Background(), probe, int32(blocker))
 		if err != nil {
 			t.Fatal(err)
 		}
 		if waiting >= want {
-			waiter, err := testdb.WaiterOn(ctx, probe.Conn(), int32(blocker))
-			if err != nil {
-				t.Fatal(err)
-			}
-			return int(waiter)
+			return
 		}
 		select {
 		case err := <-done:
@@ -255,7 +263,15 @@ func TestQualifyingEventsWrittenDuringTheMergeAreNotLeftBehind(t *testing.T) {
 	c := setupCarry(t)
 	retired := c.contactAt(t, "Race Event Retired", "race-event@carry.test")
 	survivor := c.contactAt(t, "Race Event Survivor", "race-event-survivor@carry.test")
-	booking := ids.NewV7()
+	when := clocktest.Now(t).Add(time.Hour)
+	booked, _, err := c.e.Activities.LogActivity(c.e.Admin(), activities.LogActivityInput{
+		Kind: "meeting", Subject: new("A booked call"), Source: "public_booking", OccurredAt: &when,
+		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: retired.UUID}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	booking := ids.UUID(booked.Id)
 
 	merge := c.parkContactMerge(t, retired, survivor)
 	handWritten, inquired := make(chan error, 1), make(chan error, 1)

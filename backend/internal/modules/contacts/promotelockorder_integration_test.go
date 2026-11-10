@@ -64,15 +64,14 @@ func (e *promoteConsentEnv) promoteInBackground(lead ids.LeadID) <-chan promoteR
 	return done
 }
 
-// waiterOn names the one backend in this database waiting on a lock pid holds.
+// waiterOn names the one backend waiting on a lock pid holds. A second waiter
+// is refused rather than chosen between, because the caller goes on to ask
+// about the backend this names.
 func waiterOn(t *testing.T, probe pgx.Tx, pid int) int {
 	t.Helper()
-	waiter, err := testdb.WaiterOn(context.Background(), probe.Conn(), int32(pid))
+	waiter, err := testdb.WaiterBehind(context.Background(), probe, int32(pid))
 	if err != nil {
-		t.Fatal(err)
-	}
-	if waiter == 0 {
-		t.Fatalf("no backend waits on %d", pid)
+		t.Fatalf("naming the backend waiting on %d: %v", pid, err)
 	}
 	return int(waiter)
 }

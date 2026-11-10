@@ -14,6 +14,7 @@ import (
 	"log/slog"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -26,6 +27,8 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 // scoutDealOpener opens the open_deal suggestions whose company has an owner.
@@ -168,10 +171,11 @@ func scoutBasis(s deals.Suggestion) string {
 // recordOnTimeline writes the opening on the deal's timeline as a note. Its
 // origin keeps it out of every recency clock.
 func (o scoutDealOpener) recordOnTimeline(ctx context.Context, tx pgx.Tx, deal ids.UUID, company, basis string) error {
-	subject := "Margince opened a deal for " + company
-	body := basis + ". Undo it from Home if this is not a deal."
+	subject := fmt.Sprintf(systemtext.Copy("deal.opened", textlang.English), company)
+	body := fmt.Sprintf(systemtext.Copy("deal.opened_body", textlang.English), basis)
 	_, _, err := o.activities.LogActivityTx(ctx, tx, activities.LogActivityInput{
-		Kind: string(crmcontracts.ActivityKindNote), Subject: &subject, Body: &body, Origin: activities.OriginSystemRemediation,
+		SystemText: &systemtext.Message{Subject: systemtext.Sentence("deal.opened", systemtext.Text(company)), Body: systemtext.Sentence("deal.opened_body", systemtext.Excerpt(0, utf8.RuneCountInString(basis)))},
+		Kind:       string(crmcontracts.ActivityKindNote), Subject: &subject, Body: &body, Origin: activities.OriginSystemRemediation,
 		Links: []activities.ActivityLinkInput{{EntityType: entityTypeDeal, EntityID: deal}},
 	})
 	if err != nil {

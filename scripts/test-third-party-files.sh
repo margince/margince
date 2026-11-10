@@ -14,7 +14,8 @@ script = source / "scripts/third_party_files.py"
 fixture = work / "repo"
 fixture.mkdir()
 subprocess.run(["git", "init", "-q", str(fixture)], check=True)
-(fixture / ".grant.yaml").write_text("allow:\n  - MIT\n  - Apache-2.0\n")
+grant = fixture / ".grant.yaml"
+grant.write_text("allow:\n  - MIT\n  - Apache-2.0\ncopied-file-licenses:\n  - MIT\n")
 asset = fixture / "vendor/nested"
 asset.mkdir(parents=True)
 (asset / "LICENCE.md").write_text("Permission to use this file")
@@ -56,6 +57,19 @@ manifest.write_text(record.replace("mark.svg", "missing.svg"))
 assert "missing vendor/nested/missing.svg" in run("check", fixture, False)
 manifest.write_text(record.replace(" | MIT | ", " | GPL-3.0-only | "))
 assert "disallowed licence" in run("check", fixture, False)
+# A licence the shipped list allows is still refused for a copied file the
+# copied-file list does not name.
+manifest.write_text(record.replace(" | MIT | ", " | Apache-2.0 | "))
+assert "disallowed licence" in run("check", fixture, False)
+# A licence only the copied-file list holds is accepted for no package, so the
+# file must be kept out of grant's package judgement by name.
+spec_only = "allow:\n  - MIT\ncopied-file-licenses:\n  - MIT\n  - Community-Spec-1.0\n"
+grant.write_text(spec_only)
+manifest.write_text(record.replace(" | MIT | ", " | Community-Spec-1.0 | "))
+assert "no shipped package may carry" in run("check", fixture, False)
+grant.write_text(spec_only + "ignore-packages:\n  - vendor/nested/mark.svg # copied, never shipped\n")
+run("check", fixture, True)
+grant.write_text("allow:\n  - MIT\n  - Apache-2.0\ncopied-file-licenses:\n  - MIT\n")
 manifest.write_text(record + record)
 assert "duplicate copied path" in run("check", fixture, False)
 manifest.write_text(record.replace("vendor/nested/mark.svg", "../outside.svg"))
@@ -90,6 +104,16 @@ doc = json.loads(s30.read_text())
 doc["@graph"] = [item for item in doc["@graph"] if item.get("relationshipType") != "hasConcludedLicense"]
 s30.write_text(json.dumps(doc))
 assert "differs across SBOMs" in run("parity", sboms, False)
+# A copied-file licence no package carries gets one shared element.
+doc = json.loads(s30.read_text())
+doc["@graph"] = [item for item in doc["@graph"] if item.get("type") != "expandedlicensing_ListedLicense"]
+s30.write_text(json.dumps(doc))
+run("supplement", sboms, True)
+run("parity", sboms, True)
+minted = [item for item in json.loads(s30.read_text())["@graph"] if item.get("type") == "expandedlicensing_ListedLicense"]
+assert [item["name"] for item in minted] == ["MIT"], minted
+run("supplement", sboms, True)
+assert len([item for item in json.loads(s30.read_text())["@graph"] if item.get("type") == "expandedlicensing_ListedLicense"]) == 1
 cdx.write_text(json.dumps({"components": []}))
 assert "omitted copied file" in run("supplement", sboms, False)
 print(f"OK: third-party provenance and SBOM licence checks pass {count} cases")

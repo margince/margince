@@ -125,7 +125,7 @@ func TestAFilterPreviewReadsItsRowsInTheSnapshotOfItsPage(t *testing.T) {
 		t.Fatalf("contact engine: ok=%v err=%v", ok, err)
 	}
 
-	holder := integration.OwnerConn(t)
+	holder := integration.FreshOwnerConn(t)
 	locked, err := holder.Begin(context.Background())
 	if err != nil {
 		t.Fatal(err)

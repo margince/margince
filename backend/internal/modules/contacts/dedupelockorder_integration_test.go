@@ -112,7 +112,7 @@ func (e *dedupeEnv) waitForWaitersOrDone(t *testing.T, h *heldCreate, n int, don
 	}
 }
 
-// countWaiters counts the backends waiting directly behind the held create or
+// countWaiters counts the backends queued behind the held create, directly or
 // behind a writer queued after it. The connection is held only for the probe,
 // so the writers keep the pool.
 func countWaiters(ctx context.Context, t *testing.T, pool *pgxpool.Pool, pid int) int {
@@ -122,11 +122,11 @@ func countWaiters(ctx context.Context, t *testing.T, pool *pgxpool.Pool, pid int
 		t.Fatalf("acquiring the probe connection: %v", err)
 	}
 	defer conn.Release()
-	waiting, err := testdb.QueuedBehind(ctx, conn.Conn(), int32(pid))
+	queued, err := testdb.QueuedBehind(ctx, conn, int32(pid))
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("probing the lock queue: %v", err)
 	}
-	return waiting
+	return queued
 }
 
 // inBackground runs one writer and hands its error back.

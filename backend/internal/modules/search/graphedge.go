@@ -256,14 +256,9 @@ func foldPairs(ctx context.Context, tx pgx.Tx, pairs []pair) ([]pair, error) {
 	return written, nil
 }
 
-// audienceWorkspaceOnly is the projection's audience rule, spelled once for
-// the fold, the prune and the rebuild: a limited message (audience
-// participants|selected) contributes NOTHING to the global projection — its
-// participants and timings are content (auth's activity gates), and an edge
-// readable by everyone would disclose who talked to whom and when. The
-// graph-edge consumer already refolds on activity.updated, which is the event
-// a Limit emits, so an edge whose last evidence is limited is re-folded away.
-const audienceWorkspaceOnly = ` AND a.audience = 'workspace'`
+// Global interaction edges exclude mail outside workspace visibility.
+// Limiting evidence refolds its edge through activity.updated.
+var audienceWorkspaceOnly = ` AND ` + auth.WorkspaceAudienceSQL("a") + ``
 
 // liveMemberJoin joins app_user on the shared definition of "still works here".
 var liveMemberJoin = `JOIN app_user u ON u.id = e.user_id AND ` + workforce.LiveMemberSQL("u")

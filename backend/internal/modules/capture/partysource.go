@@ -69,7 +69,7 @@ func recordPartySourceTx(ctx context.Context, tx pgx.Tx, in partySourceEvidence)
 	}
 	in.Recipients = retainedPartyAddresses(in.Recipients, erased)
 	in.Addresses = retainedPartyAddresses(in.Addresses, erased)
-	args := pgx.NamedArgs{partyActivityArg: in.Activity, partyUserArg: in.User, partyProviderArg: in.Provider, "sent": in.Sent, "containers": append([]string{}, in.Containers...), "recipients": append([]string{}, in.Recipients...), "addresses": append([]string{}, in.Addresses...), "known": in.ContainersKnown, "blocked": in.Blocked, "original": in.Original, "pending": in.awaitsAdmission()}
+	args := pgx.NamedArgs{partyActivityArg: in.Activity, partyUserArg: in.User, sqlArgProvider: in.Provider, "sent": in.Sent, "containers": append([]string{}, in.Containers...), "recipients": append([]string{}, in.Recipients...), "addresses": append([]string{}, in.Addresses...), "known": in.ContainersKnown, "blocked": in.Blocked, "original": in.Original, "pending": in.awaitsAdmission()}
 	query := `INSERT INTO capture_party_source(activity_id,user_id,provider,sent_by_owner,containers,recipients,policy_addresses,containers_known,admission_blocked,raw_capture_id,admission_pending)
  SELECT @activity,@user,@provider,@sent,@containers,@recipients,@addresses,@known,@blocked,coalesce(a.raw_capture_id,@original),@pending
  FROM activity a WHERE a.id=@activity
@@ -143,7 +143,7 @@ func (s *Sink) revokePartySourceTx(ctx context.Context, tx pgx.Tx, rec connector
 	_, err := tx.Exec(ctx, `UPDATE capture_party_source ps SET admission_blocked=true
  FROM activity a WHERE a.id=ps.activity_id AND ps.user_id=@user AND ps.provider=@provider
  AND ((a.source_system=@system AND a.source_id=ANY(@keys::text[])) OR a.id=@resolved)
- AND NOT ps.admission_blocked`, pgx.NamedArgs{partyUserArg: actorUserID(ctx), partyProviderArg: deliveringConnector(ctx), sqlArgSystem: rec.NaturalKey.SourceSystem, sqlArgKeys: keys, "resolved": resolved})
+ AND NOT ps.admission_blocked`, pgx.NamedArgs{partyUserArg: actorUserID(ctx), sqlArgProvider: deliveringConnector(ctx), sqlArgSystem: rec.NaturalKey.SourceSystem, sqlArgKeys: keys, "resolved": resolved})
 	return err
 }
 
@@ -160,5 +160,4 @@ func retainedPartyAddresses(addresses []string, erased map[string]bool) []string
 const (
 	partyActivityArg = "activity"
 	partyUserArg     = "user"
-	partyProviderArg = "provider"
 )

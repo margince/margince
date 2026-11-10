@@ -13,6 +13,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/datatask"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 // technicalAddressDataTask retires contacts a technical address made. It
@@ -23,7 +24,7 @@ func technicalAddressDataTask(pool *pgxpool.Pool) datatask.Task {
 	store := newContactsStore(InstallationDB(pool))
 	return datatask.Task{
 		ID: "core/1793763111_technical_address_contacts", Version: 1,
-		Title: "Retire contacts made from a technical address", Requires: []string{"core/1788327300"},
+		Title: systemtext.Literal("datatask.title.core.1793763111_technical_address_contacts"), Requires: []string{"core/1788327300"},
 		Steps: []datatask.Step{{
 			Name: "retire_technical_address_contacts", Limit: 25, MinLimit: 1,
 			Audit:    datatask.AuditPolicy{PerRecord: true},

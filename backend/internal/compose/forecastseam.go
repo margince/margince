@@ -315,7 +315,8 @@ func ForecastScopeHoldsDeals(ctx context.Context, tx pgx.Tx, scope forecasting.S
 		// A resolved-only kind: asking for the default again re-derives it.
 		requested = RequestedScope{}
 	}
-	return scopeHoldsDeals(ctx, tx, requested, unownedIsExcluded)
+	holds, err := scopeHoldsDeals(ctx, tx, requested, unownedIsExcluded)
+	return holds != nil && *holds, err
 }
 
 // ForecastWritableScope answers the population a caller may ASSERT about, in

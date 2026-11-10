@@ -16,8 +16,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// SeatAddresses answers whether an address belongs to a live seat, and how
-// that is shown. A login, a connected mailbox or a provider-attested alias
+// SeatAddresses answers whether an address belongs to a live seat, or to an
+// invited one by its login, and how that is shown. A login, a connected mailbox or a provider-attested alias
 // speaks for the whole workspace. A typed or inferred alias speaks for its own
 // seat alone, because any seat can type a client's address.
 //
@@ -42,7 +42,7 @@ func WorkspaceSeatAddresses(ctx context.Context, tx pgx.Tx) (SeatAddresses, erro
 		if address == "" || !record.decidesNew() {
 			continue
 		}
-		if record.source == loginSource {
+		if isLoginSource(record.source) {
 			set.logins[address] = struct{}{}
 		}
 		if provenSeatSource(record.source) {
@@ -62,11 +62,18 @@ func WorkspaceSeatAddresses(ctx context.Context, tx pgx.Tx) (SeatAddresses, erro
 }
 
 func provenSeatSource(source string) bool {
+	if isLoginSource(source) {
+		return true
+	}
 	switch source {
-	case loginSource, provedMailboxSource, "provider":
+	case provedMailboxSource, "provider":
 		return true
 	}
 	return false
+}
+
+func isLoginSource(source string) bool {
+	return source == loginSource || source == invitedLoginSource
 }
 
 // Covers reports whether address, in any case, is a seat address as seen by
@@ -80,8 +87,8 @@ func (s SeatAddresses) Covers(address string, asking ids.UUID) bool {
 	return s.declaredBy(folded, asking)
 }
 
-// IsLogin reports whether address is a live seat's login, which only the
-// seat's own account changes.
+// IsLogin reports whether address is a live or invited seat's login, which only
+// the seat's own account changes.
 func (s SeatAddresses) IsLogin(address string) bool {
 	_, ok := s.logins[mailidentity.SeatAddressKey(address, "")]
 	return ok

@@ -3,7 +3,10 @@
 
 package correspondence
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 // The conversation a message belongs to, and which of its rows are proven to
 // be in it. The thread key is the sender's References root, so the key alone
@@ -18,6 +21,14 @@ func ConversationSQL(row, anchor string) string {
 	return ThreadSQL(row, anchor) + fmt.Sprintf(`
      AND %[1]s.counterparty_email = %[2]s.counterparty_email`, row, anchor)
 }
+
+// HandLoggedThreadPrefix starts the thread key a hand-logged email gets when
+// it names no conversation of its own. Such a thread proves nothing the
+// logger did not type, so consent never reads it as the subject replying.
+const HandLoggedThreadPrefix = "logged:"
+
+// IsHandLoggedThread reports whether key is a hand-logged email's own thread.
+func IsHandLoggedThread(key string) bool { return strings.HasPrefix(key, HandLoggedThreadPrefix) }
 
 // ThreadSQL is the thread, medium and liveness half of ConversationSQL. It
 // names no correspondent, so a caller must add one.

@@ -62,6 +62,7 @@
 /* Eight rows at rest, then the list scrolls inside the panel: forty teams
  * never push Done off the screen. */
 .set-picker-list {
+  position: relative;
   max-block-size: calc(8 * (var(--inputHeight) - var(--space-2)));
   overflow-y: auto;
   margin: 0;

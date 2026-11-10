@@ -54,6 +54,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 	"testing"
@@ -329,94 +330,6 @@ func exprText(fset *token.FileSet, expr ast.Expr) string {
 	return out.String()
 }
 
-// lockProbeHome is the one package that may ask pg_blocking_pids. Every other
-// test waits through its helpers, so "queued behind" has one meaning.
-const lockProbeHome = "internal/platform/testdb"
-
-// lockProbeCall is a call of pg_blocking_pids in SQL text. The bare name, as in
-// blockingPidsProbe above, is not a query.
-var lockProbeCall = regexp.MustCompile(`(?i)\bpg_blocking_pids\s*\(`)
-
-// TestOnlyTestdbAsksWhoBlocksWhom fails on a pg_blocking_pids query outside
-// lockProbeHome, and on a home that no longer holds one.
-func TestOnlyTestdbAsksWhoBlocksWhom(t *testing.T) {
-	t.Parallel()
-	fset := gatekit.SourceFileSet()
-	var home []string
-	copies := scanTrees(t, func(path string, file *ast.File) []string {
-		var found []string
-		for _, line := range lockProbesIn(fset, file) {
-			found = append(found, fmt.Sprintf("%s:%d", path, line))
-		}
-		if filepath.Dir(path) == lockProbeHome {
-			home = append(home, found...)
-			return nil
-		}
-		return found
-	})
-	if len(home) == 0 {
-		t.Fatalf("%s holds no %s query. The lock probe moved: move this exemption with it.",
-			lockProbeHome, blockingPidsProbe)
-	}
-	if len(copies) > 0 {
-		t.Fatalf(`%d hand-written %s quer(ies) outside %s:
-
-  %s
-
-Wait through testdb.AwaitQueuedBehind, or ask once through testdb.QueuedBehind,
-testdb.WaiterOn or testdb.Waiting. A second copy of the query drifts from the
-first: one-level and recursive reads of one queue already disagreed on what
-"queued behind" means. If none of them asks your question, add a helper there.`,
-			len(copies), blockingPidsProbe, lockProbeHome, strings.Join(copies, "\n  "))
-	}
-}
-
-// lockProbesIn returns the line of each string in file that calls
-// pg_blocking_pids outside a SQL comment.
-func lockProbesIn(fset *token.FileSet, file *ast.File) []int {
-	var lines []int
-	ast.Inspect(file, func(node ast.Node) bool {
-		text, isString := gatekit.StringExpr(node, nil, gatekit.FoldTotal)
-		if isString && lockProbeCall.MatchString(withoutComments(text)) {
-			lines = append(lines, fset.Position(node.Pos()).Line)
-			return false
-		}
-		return true
-	})
-	return lines
-}
-
-// TestAHandWrittenLockProbeIsFound seeds the shapes a copy of the probe takes.
-// BLOCKERS keeps this file's own literals out of the census.
-func TestAHandWrittenLockProbeIsFound(t *testing.T) {
-	t.Parallel()
-	cases := map[string]struct {
-		query string
-		found bool
-	}{
-		"a queue read":           {"`SELECT count(*) FROM pg_stat_activity WHERE $1 = ANY(BLOCKERS(pid))`", true},
-		"a backend's own wait":   {"`SELECT cardinality(BLOCKERS ($1)) > 0`", true},
-		"split over a +":         {`"SELECT 1 FROM pg_stat_activity WHERE " + "$1 = ANY(BLOCKERS(pid))"`, true},
-		"in a SQL comment":       {"`SELECT 1 -- not BLOCKERS(pid)`", false},
-		"the name, not a call":   {`"BLOCKERS"`, false},
-		"an unrelated statement": {"`SELECT pg_backend_pid()`", false},
-	}
-	for name, c := range cases {
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-			source := "package probe\nfunc poll() { query(" + strings.ReplaceAll(c.query, "BLOCKERS", blockingPidsProbe) + ") }\n"
-			fset := token.NewFileSet()
-			file, err := parser.ParseFile(fset, "probe.go", source, parser.SkipObjectResolution)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if got := len(lockProbesIn(fset, file)) == 1; got != c.found {
-				t.Fatalf("found = %v, want %v for %s", got, c.found, c.query)
-			}
-		})
-	}
-}
-
 // TestAPauseThePlannerMaySkipIsRefused seeds each shape that skips its pause,
 // and pauses standing alone that must pass. PAUSE keeps this file's own
 // literals out of the census.
@@ -449,4 +362,93 @@ func TestAPauseThePlannerMaySkipIsRefused(t *testing.T) {
 			}
 		})
 	}
+}
+
+// sharedProbeHome is where asking pg_blocking_pids belongs: the one probe, and
+// the gates that hold it.
+func sharedProbeHome(path string) bool {
+	return strings.Contains(path, filepath.Join("platform", "testdb")) ||
+		strings.Contains(path, string(filepath.Separator)+"gates"+string(filepath.Separator)) ||
+		filepath.Dir(path) == "gates"
+}
+
+// TestNoNewPrivateContentionProbe fails on a file that asks pg_blocking_pids
+// outside the one probe, and on a probe home that no longer asks it.
+//
+// The files come from the tree rather than a list, so a copy under a name
+// nobody thought of is found too.
+func TestNoNewPrivateContentionProbe(t *testing.T) {
+	t.Parallel()
+	var home []string
+	owners := scanTrees(t, func(path string, file *ast.File) []string {
+		if !slices.ContainsFunc(file.Decls, asksBlockingPids) {
+			return nil
+		}
+		if sharedProbeHome(path) {
+			home = append(home, path)
+			return nil
+		}
+		return []string{path}
+	})
+	if !slices.ContainsFunc(home, func(path string) bool { return strings.Contains(path, filepath.Join("platform", "testdb")) }) {
+		t.Fatalf("no file under platform/testdb asks %s. The probe moved, so move sharedProbeHome with it.", blockingPidsProbe)
+	}
+	if len(owners) > 0 {
+		t.Fatalf(`%d files write their own %s query:
+  %s
+Wait through testdb.AwaitQueuedBehind, or ask once through testdb.QueuedBehind,
+WaiterBehind, Waiting or QueuedOnAdvisoryKeys. A second copy of the query
+drifts from the first. If none of them asks your question, add one there.`,
+			len(owners), blockingPidsProbe, strings.Join(owners, "\n  "))
+	}
+}
+
+// TestAPrivateContentionProbeIsFound seeds the shapes a copy of the probe
+// takes. BLOCKERS keeps this file's own literals out of the census.
+func TestAPrivateContentionProbeIsFound(t *testing.T) {
+	t.Parallel()
+	cases := map[string]struct {
+		query string
+		found bool
+	}{
+		"a queue read":           {"`SELECT count(*) FROM pg_stat_activity WHERE $1 = ANY(BLOCKERS(pid))`", true},
+		"a backend's own wait":   {"`SELECT cardinality(BLOCKERS($1)) > 0`", true},
+		"split over a +":         {`"SELECT 1 FROM pg_stat_activity WHERE " + "$1 = ANY(BLOCKERS(pid))"`, true},
+		"in upper case":          {"`SELECT PG_BLOCKING_PIDS($1)`", true},
+		"an unrelated statement": {"`SELECT pg_backend_pid()`", false},
+	}
+	for name, c := range cases {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			source := "package probe\nfunc poll() { query(" + strings.ReplaceAll(c.query, "BLOCKERS", blockingPidsProbe) + ") }\n"
+			file, err := parser.ParseFile(token.NewFileSet(), "probe.go", source, parser.SkipObjectResolution)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got := slices.ContainsFunc(file.Decls, asksBlockingPids); got != c.found {
+				t.Fatalf("found = %v, want %v for %s", got, c.found, c.query)
+			}
+		})
+	}
+}
+
+// asksBlockingPids reports whether a declaration holds the probe in a string it
+// executes. Matching the literal, not the line, so a query split across
+// concatenated pieces still counts.
+func asksBlockingPids(decl ast.Decl) bool {
+	found := false
+	ast.Inspect(decl, func(n ast.Node) bool {
+		expr, isExpr := n.(ast.Expr)
+		if !isExpr {
+			return !found
+		}
+		// gatekit.LiteralText decodes the string, because a query in double
+		// quotes reaches the source text with its escapes and would be missed.
+		// Lowered, because Postgres folds an unquoted function name.
+		if text, ok := gatekit.LiteralText(expr); ok && strings.Contains(strings.ToLower(text), blockingPidsProbe) {
+			found = true
+		}
+		return !found
+	})
+	return found
 }

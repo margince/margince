@@ -22,7 +22,9 @@ import (
 	"github.com/margince/margince/backend/internal/platform/mailcopy"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
@@ -46,14 +48,15 @@ func (l webFormLeads) Land(ctx context.Context, landing webforms.Landing) error 
 		return err
 	}
 	system, key := provenance.WebFormSource, landing.SourceKey
-	subject := "Website form: " + landing.FormName
+	subject := fmt.Sprintf(systemtext.Copy("form.subject", textlang.English), landing.FormName)
 	body := webFormNote(landing)
 	raw, err := webFormRaw(landing)
 	if err != nil {
 		return err
 	}
 	_, _, err = l.activities.LogActivity(ctx, activities.LogActivityInput{
-		Kind: string(crmcontracts.ActivityKindNote), Subject: &subject, Body: &body, Links: []activities.ActivityLinkInput{*target},
+		SystemText: &systemtext.Message{Subject: systemtext.Sentence("form.subject", systemtext.Label(landing.FormName)), Body: webFormBodyComponent(landing, body)},
+		Kind:       string(crmcontracts.ActivityKindNote), Subject: &subject, Body: &body, Links: []activities.ActivityLinkInput{*target},
 		SourceSystem: &system, SourceID: &key, Source: webFormLeadSource, Raw: &raw,
 	})
 	if err != nil {
@@ -260,13 +263,38 @@ func webFormConsent(landing webforms.Landing) string {
 	case landing.ConsentWording == nil:
 		return ""
 	case !landing.Enquiry.Consent:
-		return "Consent: not ticked"
+		return systemtext.Literal("form.consent_no")
 	}
-	consent := "Consent: ticked: " + mailcopy.OneLine(*landing.ConsentWording)
+	wording := mailcopy.OneLine(*landing.ConsentWording)
 	if landing.ConsentPolicyVersion != nil {
-		consent += " (policy " + mailcopy.OneLine(*landing.ConsentPolicyVersion) + ")"
+		return fmt.Sprintf(systemtext.Copy("form.consent_policy", textlang.English), wording, mailcopy.OneLine(*landing.ConsentPolicyVersion))
 	}
-	return consent
+	return fmt.Sprintf(systemtext.Copy("form.consent_yes", textlang.English), wording)
+}
+
+func webFormBodyComponent(landing webforms.Landing, body string) *systemtext.Component {
+	consent := webFormConsent(landing)
+	if consent == "" {
+		return systemtext.Prose(systemtext.Quote, "")
+	}
+	component := systemtext.Sentence("form.consent_no")
+	if landing.Enquiry.Consent {
+		before, _, _ := strings.Cut(systemtext.Copy("form.consent_yes", textlang.English), "%s")
+		prefix := utf8.RuneCountInString(before)
+		wording := utf8.RuneCountInString(mailcopy.OneLine(*landing.ConsentWording))
+		component = systemtext.Sentence("form.consent_yes", systemtext.Excerpt(prefix, wording))
+		if landing.ConsentPolicyVersion != nil {
+			_, after, _ := strings.Cut(systemtext.Copy("form.consent_policy", textlang.English), "%s")
+			between, _, _ := strings.Cut(after, "%s")
+			component = systemtext.Sentence("form.consent_policy", systemtext.Excerpt(prefix, wording), systemtext.Excerpt(prefix+wording+utf8.RuneCountInString(between), utf8.RuneCountInString(mailcopy.OneLine(*landing.ConsentPolicyVersion))))
+		}
+	}
+	if body != consent {
+		offset := utf8.RuneCountInString(consent) + 2
+		component = systemtext.Sequence(component, systemtext.Sentence("core.source", systemtext.Excerpt(offset, utf8.RuneCountInString(body)-offset)))
+		component.Layout = "paragraphs"
+	}
+	return component
 }
 
 // quoted marks every line of text as a Markdown quote. It splits on each break

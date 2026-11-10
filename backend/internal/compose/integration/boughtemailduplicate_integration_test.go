@@ -9,6 +9,7 @@ package integration
 // applier then runs the duplicate check a create runs and files the pair.
 
 import (
+	"context"
 	"errors"
 	"testing"
 	"time"
@@ -82,12 +83,12 @@ func TestABoughtUnrelatedAddressFilesNothing(t *testing.T) {
 
 // holdBoughtCreate runs a real contact create and holds its transaction open,
 // with the lane locks the create took, until release is closed.
-func holdBoughtCreate(t *testing.T, e *Env, store *contacts.Store, email string, release <-chan struct{}) (pid int32, done <-chan error) {
+func holdBoughtCreate(t *testing.T, e *Env, store *contacts.Store, email string, release <-chan struct{}) (pid int, done <-chan error) {
 	t.Helper()
-	ready, finished := make(chan int32, 1), make(chan error, 1)
+	ready, finished := make(chan int, 1), make(chan error, 1)
 	go func() {
 		finished <- database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
-			var pid int32
+			var pid int
 			if err := tx.QueryRow(e.Admin(), `SELECT pg_backend_pid()`).Scan(&pid); err != nil {
 				return err
 			}
@@ -108,6 +109,42 @@ func holdBoughtCreate(t *testing.T, e *Env, store *contacts.Store, email string,
 		t.Fatalf("the held create failed: %v", err)
 	}
 	return pid, finished
+}
+
+// waitForBoughtWaiters returns once n backends wait behind pid.
+func waitForBoughtWaiters(t *testing.T, e *Env, pid, n int) {
+	t.Helper()
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	defer cancel()
+	tick := time.NewTicker(25 * time.Millisecond)
+	defer tick.Stop()
+	for {
+		waiting := countBoughtWaiters(ctx, t, e, pid)
+		if waiting >= n {
+			return
+		}
+		select {
+		case <-ctx.Done():
+			t.Fatalf("only %d of %d writers waited behind the held create", waiting, n)
+		case <-tick.C:
+		}
+	}
+}
+
+// countBoughtWaiters counts the backends queued behind pid, directly or behind
+// one that is. It holds a connection only for the probe.
+func countBoughtWaiters(ctx context.Context, t *testing.T, e *Env, pid int) int {
+	t.Helper()
+	conn, err := e.Pool.Acquire(ctx)
+	if err != nil {
+		t.Fatalf("acquiring the probe connection: %v", err)
+	}
+	defer conn.Release()
+	queued, err := testdb.QueuedBehind(ctx, conn, int32(pid))
+	if err != nil {
+		t.Fatalf("probing the lock queue: %v", err)
+	}
+	return queued
 }
 
 func isDeadlock(err error) bool {
@@ -137,8 +174,7 @@ func TestABoughtAddressAndACreateOfItNeverDeadlock(t *testing.T) {
 		})
 		create <- err
 	}()
-	observer := OwnerConn(t)
-	testdb.AwaitQueuedBehind(t, observer, pid, 1, nil, "the create on the held address")
+	waitForBoughtWaiters(t, e, pid, 1)
 	bought := make(chan error, 1)
 	go func() {
 		bought <- database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
@@ -149,7 +185,7 @@ func TestABoughtAddressAndACreateOfItNeverDeadlock(t *testing.T) {
 			return contacts.ApplyProviderClaims(e.Admin(), tx, run, subject.String(), "surfe", claims)
 		})
 	}()
-	testdb.AwaitQueuedBehind(t, observer, pid, 2, nil, "the purchase beside the waiting create")
+	waitForBoughtWaiters(t, e, pid, 2)
 	close(release)
 	if err := <-held; err != nil {
 		t.Fatalf("the held create: %v", err)

@@ -79,7 +79,7 @@ func refusedAfterReassignment(t *testing.T, e *configEnv, deal ids.DealID, write
 			t.Errorf("rolling back the reassignment: %v", err)
 		}
 	})
-	var blocker int32
+	var blocker int
 	if err := reassign.QueryRow(ctx, `SELECT pg_backend_pid()`).Scan(&blocker); err != nil {
 		t.Fatal(err)
 	}
@@ -88,8 +88,12 @@ func refusedAfterReassignment(t *testing.T, e *configEnv, deal ids.DealID, write
 	}
 
 	done := make(chan error, 1)
-	go func() { done <- write(e.asFormerOwner()) }()
-	testdb.AwaitQueuedBehind(t, e.owner, blocker, 1, nil, "the former owner's write")
+	racer := make(chan struct{})
+	go func() {
+		done <- write(e.asFormerOwner())
+		close(racer)
+	}()
+	testdb.AwaitQueuedBehind(t, e.owner, int32(blocker), 1, racer, "the competing write")
 	if err := reassign.Commit(ctx); err != nil {
 		t.Fatalf("committing the reassignment: %v", err)
 	}

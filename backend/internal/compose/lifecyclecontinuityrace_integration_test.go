@@ -75,7 +75,12 @@ func TestAnUncommittedEngagementChangePreventsEndingTheAccount(t *testing.T) {
 				t.Fatal(err)
 			}
 			defer observer.Release()
-			testdb.AwaitQueuedBehind(t, observer.Conn(), holder, 1, done, "the termination on the engagement lock")
+			testdb.WaitForContention(t, done, "termination ignored an uncommitted engagement", "termination never reached the engagement lock", func(
+				ctx context.Context,
+			) (bool, error) {
+				queued, err := testdb.QueuedBehind(ctx, observer.Conn(), holder)
+				return queued > 0, err
+			})
 			close(release)
 			if err := <-written; err != nil {
 				t.Fatal(err)

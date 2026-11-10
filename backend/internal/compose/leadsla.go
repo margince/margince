@@ -33,6 +33,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
 )
@@ -146,6 +147,7 @@ func (w leadSLAEscalation) Apply(ctx context.Context, ev workflow.Event, eff wor
 		words := mailcopy.For(string(identity.BaseLanguageForRecord(ctx, tx)))
 		subject := words.NoticeSLASubject
 		in.Subject = &subject
+		in.SystemText = &systemtext.Message{Subject: systemtext.Sentence("notice.NoticeSLASubject")}
 		seat, addressed, err := deliverableSeat(ctx, tx, in.AssigneeID)
 		if err != nil {
 			return err
@@ -164,12 +166,13 @@ func (w leadSLAEscalation) Apply(ctx context.Context, ev workflow.Event, eff wor
 			return nil
 		}
 		if _, err := w.notices.CreateTx(ctx, tx, notices.NewNotice{
-			Recipient: seat,
-			Kind:      noticeKindLeadSLA,
-			Subject:   subject,
-			Body:      words.NoticeSLABody,
-			DedupeKey: leadSLATaskSource + ":" + sourceID,
-			Target:    notices.Target{Type: entityLead, ID: ev.Entity.ID},
+			SystemText: &systemtext.Message{Subject: systemtext.Sentence("notice.NoticeSLASubject"), Body: systemtext.Sentence("notice.NoticeSLABody")},
+			Recipient:  seat,
+			Kind:       noticeKindLeadSLA,
+			Subject:    subject,
+			Body:       words.NoticeSLABody,
+			DedupeKey:  leadSLATaskSource + ":" + sourceID,
+			Target:     notices.Target{Type: entityLead, ID: ev.Entity.ID},
 		}); err != nil {
 			return fmt.Errorf(noticeLegWrap+": %w", err)
 		}

@@ -402,11 +402,11 @@ func waitForBlockedOn(ctx context.Context, t *testing.T, probe pgx.Tx, holderPID
 	budget, cancel := context.WithTimeout(ctx, 60*time.Second)
 	defer cancel()
 	for {
-		queued, err := testdb.QueuedBehind(budget, probe.Conn(), int32(holderPID))
+		blocked, err := blockedBy(budget, probe, holderPID)
 		if err != nil && budget.Err() == nil {
 			t.Fatalf("probing for a backend blocked on the project row: %v", err)
 		}
-		if queued > 0 {
+		if blocked {
 			return
 		}
 		select {
@@ -416,6 +416,18 @@ func waitForBlockedOn(ctx context.Context, t *testing.T, probe pgx.Tx, holderPID
 				"decided its transition without taking the lock, so this run proves nothing")
 		}
 	}
+}
+
+// blockedBy asks whether any backend in this database is waiting on the
+// holder. pg_blocking_pids answers the question directly, so nothing here has
+// to reason about which lock shape Postgres reports mid-queue.
+//
+// The probe runs inside the holder's own long transaction, where
+// pg_stat_activity would answer from the view it had before the win's
+// connection existed. QueuedBehind clears that snapshot per look.
+func blockedBy(ctx context.Context, probe pgx.Tx, holderPID int) (bool, error) {
+	queued, err := testdb.QueuedBehind(ctx, probe, int32(holderPID))
+	return queued > 0, err
 }
 
 // The race the row lock exists to close, forced rather than hoped for.

@@ -302,7 +302,7 @@ describe("AgentAllowancesCard", () => {
     render(<AgentAllowancesCard />);
 
     expect(
-      await screen.findByText(/240 calls and 30 stream opens/),
+      await screen.findByText(/30 stream opens a minute for every role/),
     ).toBeTruthy();
     expect(
       screen.getByText(/Every allowance resets .*2026.* UTC/),
@@ -471,6 +471,21 @@ describe("AgentAllowancesCard by role", () => {
     expect(
       screen.getByText(translate("en", "agentAllowances.state.changed")),
     ).toBeTruthy();
+  });
+
+  it("shows each role's tool calls a minute, with none for Admin", async () => {
+    vi.stubGlobal(
+      "fetch",
+      backendFor(EDITOR, roleTunedAgentAllowances).fetchMock,
+    );
+    render(<AgentAllowancesCard />);
+
+    const admin = await screen.findByTestId("role-allowance-admin");
+    const rep = screen.getByTestId("role-allowance-rep");
+    const unpaced = translate("en", "agentAllowances.roles.unpaced");
+    expect(admin).toHaveTextContent(unpaced);
+    expect(rep).not.toHaveTextContent(unpaced);
+    expect(rep).toHaveTextContent("240");
   });
 
   it("saves only the role and count that moved, leaving Admin on its preset", async () => {

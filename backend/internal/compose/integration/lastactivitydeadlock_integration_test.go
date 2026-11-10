@@ -18,6 +18,7 @@ import (
 	"context"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -40,7 +41,8 @@ func TestActivitiesCrossingAnEmployerQueueRatherThanDeadlock(t *testing.T) {
 	employForLockOrder(t, e, atSecond, second)
 
 	barrier := holdRows(t, `SELECT 1 FROM contact WHERE id = ANY($1) FOR UPDATE`, []ids.UUID{atFirst, atSecond})
-	errs := runConcurrently(t, e, barrier,
+	errs := runConcurrently(
+		t, e, barrier,
 		func(ctx context.Context, tx pgx.Tx) error {
 			return logNoteTx(ctx, e, tx, noteLink("company", second), noteLink("contact", atFirst))
 		},
@@ -111,7 +113,7 @@ func logNoteTx(ctx context.Context, e *Env, tx pgx.Tx, links ...activities.Activ
 // holdRows opens the barrier: an owner transaction holding rows every writer needs.
 func holdRows(t *testing.T, lockSQL string, rows []ids.UUID) pgx.Tx {
 	t.Helper()
-	conn := OwnerConn(t)
+	conn := FreshOwnerConn(t)
 	tx, err := conn.Begin(context.Background())
 	if err != nil {
 		t.Fatalf("opening the barrier: %v", err)
@@ -134,7 +136,7 @@ func runConcurrently(t *testing.T, e *Env, barrier pgx.Tx, writers ...func(conte
 			errs[i] = runWriter(e, write)
 		})
 	}
-	testdb.AwaitQueuedBehind(t, OwnerConn(t), int32(barrier.Conn().PgConn().PID()), len(writers), nil, "the writers")
+	waitForParkedWriters(t, len(writers))
 	if err := barrier.Rollback(context.Background()); err != nil {
 		t.Fatalf("releasing the barrier: %v", err)
 	}
@@ -154,6 +156,26 @@ func runWriter(e *Env, write func(context.Context, pgx.Tx) error) error {
 		return err
 	}
 	return tx.Commit(ctx)
+}
+
+// waitForParkedWriters polls until n backends in this database wait on a lock.
+func waitForParkedWriters(t *testing.T, n int) {
+	t.Helper()
+	probe := OwnerConn(t)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	for {
+		if ctx.Err() != nil {
+			t.Fatalf("fewer than %d writers ever parked behind the barrier, so the interleaving under test never happened", n)
+		}
+		parked, err := testdb.QueuedAnywhere(ctx, probe)
+		if err != nil {
+			t.Fatalf("counting parked writers: %v", err)
+		}
+		if parked >= n {
+			return
+		}
+	}
 }
 
 func assertNoLockCycle(t *testing.T, errs []error) {

@@ -31,6 +31,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 // promiseTakeOverHandlers serves POST /claims/{id}/take-over.
@@ -129,7 +130,8 @@ func (h promiseTakeOverHandlers) write(ctx context.Context, tx pgx.Tx, promise c
 		return fmt.Errorf("your seat cannot be given tasks, so it cannot take over a promise: %w", apperrors.ErrPermissionDenied)
 	}
 	task, err := writeCommitmentTask(ctx, tx, h.tasks, h.claims, commitmentTask{
-		Locator: promise.Locator, Summary: promise.Body, Body: takenOverBody(promise),
+		SystemText: &systemtext.Message{Subject: systemtext.Prose(systemtext.Quote, ""), Body: takenOverBodyComponent(promise)},
+		Locator:    promise.Locator, Summary: promise.Body, Body: takenOverBody(promise),
 		SourceActivityID: promise.Source, DueAt: promise.DueAt, Assignee: taker, PrivateTo: privateTo,
 		Links:  []activities.ActivityLinkInput{{EntityType: string(recordTypeContact), EntityID: promise.Contact}},
 		Origin: takenOverOrigin(ctx),
@@ -243,10 +245,14 @@ func (h promiseTakeOverHandlers) refuseOfferedPromise(ctx context.Context, tx pg
 
 // takenOverBody says where the task came from, in words the taker can check.
 func takenOverBody(promise contacts.PromiseToTake) string {
+	return systemtext.Canonical(takenOverBodyComponent(promise), "")
+}
+
+func takenOverBodyComponent(promise contacts.PromiseToTake) *systemtext.Component {
 	if promise.SourceLabel != nil && *promise.SourceLabel != "" {
-		return fmt.Sprintf("Promise taken over from %q. Nobody was asked to keep it.", *promise.SourceLabel)
+		return systemtext.Sentence("commitment.taken_over", systemtext.Label(*promise.SourceLabel))
 	}
-	return "Promise taken over from a captured conversation. Nobody was asked to keep it."
+	return systemtext.Sentence("commitment.taken_over_unlabelled")
 }
 
 // takenOverBy reports whether taker already holds this promise as their task.

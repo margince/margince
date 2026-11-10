@@ -163,7 +163,10 @@ func TestConcurrentOlderRenewalCannotOverwriteCommittedNewerWork(t *testing.T) {
 		})
 	}()
 	observer := integration.OwnerConn(t)
-	testdb.AwaitQueuedBehind(t, observer, int32(pid), 1, done, "the older renewal on the source lock")
+	testdb.WaitForContention(t, done, "older renewal bypassed the source lock", "older renewal never reached the source lock", func(probe context.Context) (bool, error) {
+		queued, err := testdb.QueuedBehind(probe, observer, int32(pid))
+		return queued > 0, err
+	})
 	close(release)
 	if err := <-winner; err != nil {
 		t.Fatal(err)
@@ -220,7 +223,10 @@ func TestErasingOldRenewalWaitsForTheTaskAndRechecksItsEvidence(t *testing.T) {
 			defer close(done)
 			erased <- privacy.NewEraser(f.e.DB()).WithRawCapturePurger(RawCapturePurgerFor(f.e.DB())).EraseContact(eraseCtx, subject, "Subject requested erasure")
 		}()
-		testdb.AwaitQueuedBehind(t, observer, int32(pid), 1, done, "the erasure on the held task")
+		testdb.WaitForContention(t, done, "erasure did not wait for task renewal", "erasure never reached the held task", func(probe context.Context) (bool, error) {
+			queued, err := testdb.QueuedBehind(probe, observer, int32(pid))
+			return queued > 0, err
+		})
 		_, _, err := dispatcher.DispatchTx(ctx, tx, c, ids.NewV7())
 		return err
 	})

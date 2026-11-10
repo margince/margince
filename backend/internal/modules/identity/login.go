@@ -72,7 +72,7 @@ func (s *Service) Login(ctx context.Context, email, plaintext, device string) (I
 		if err := s.enforceSignInPolicy(ctx, tx, id, sso); err != nil {
 			return err
 		}
-		if err := insertSession(ctx, tx, account.UserID, tokenHash); err != nil {
+		if err := insertSession(ctx, tx, account.UserID, tokenHash, false); err != nil {
 			return err
 		}
 		if err := auditLogin(ctx, tx, account.UserID, "password login"); err != nil {

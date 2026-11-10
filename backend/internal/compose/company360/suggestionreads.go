@@ -61,6 +61,9 @@ type lastMessage struct {
 	Excerpt string
 	// Move is the History badge's move when the message is a mail.
 	Move *crmcontracts.EmailSummaryMove
+	// EarlierOwed says our message left the correspondent's newest earlier mail
+	// still owed (activities.EarlierMailOwed).
+	EarlierOwed bool
 }
 
 // excerptRunes bounds what a citation quotes of a message body. A quote is
@@ -136,9 +139,17 @@ func newestMessage(
 	if err != nil || len(found) == 0 {
 		return lastMessage{}, false, err
 	}
-	return activities.LastWord(found, func(m lastMessage) (occurredday.Moment, bool) {
+	last := activities.LastWord(found, func(m lastMessage) (occurredday.Moment, bool) {
 		return occurredday.Moment{At: m.At, DateOnly: m.DateOnly}, m.Direction == string(crmcontracts.ActivityDirectionInbound)
-	}), true, nil
+	})
+	// Only our own mail can leave an earlier one owed, so an inbound newest
+	// message costs no second read.
+	if last.Direction == string(crmcontracts.ActivityDirectionOutbound) {
+		if last.EarlierOwed, err = activities.EarlierMailOwed(ctx, tx, last.ID, now); err != nil {
+			return lastMessage{}, false, err
+		}
+	}
+	return last, true, nil
 }
 
 func scanLastMessage(row pgx.CollectableRow) (lastMessage, error) {
@@ -279,7 +290,7 @@ func gatherSuggestionInputs(
 	contractsGranted := auth.ReadGranted(ctx, "contract")
 	in := suggestionInputs{timeline: timeline, pipeline: pipeline, contracts: contractsGranted, language: language, loc: loc}
 	if in.contracts {
-		strip, err := readContractStrip(ctx, tx, companyID, now, baseCurrency)
+		strip, err := readContractStrip(ctx, tx, companyID, now, baseCurrency, loc)
 		if err != nil {
 			return suggestionInputs{}, err
 		}

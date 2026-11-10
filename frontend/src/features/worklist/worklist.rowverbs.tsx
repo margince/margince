@@ -282,6 +282,7 @@ function PreparedMove({
       <>
         <Button
           variant="ghost"
+          reason={item.move?.blocked_reason}
           pending={check.isPending}
           onClick={() =>
             check.mutate({
@@ -299,6 +300,15 @@ function PreparedMove({
   const move = moveHref(item);
   if (!move) {
     return null;
+  }
+  // A refused verb is no link: it is drawn as the button it would be, with why.
+  const refused = item.move?.blocked_reason;
+  if (refused !== undefined) {
+    return (
+      <Button variant="ghost" reason={refused}>
+        {moveLabel(item, t)}
+      </Button>
+    );
   }
   const modelWrites =
     moveOpensComposer(item) || item.move?.action === "open_meeting_brief";

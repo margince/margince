@@ -15,6 +15,7 @@ import (
 	"encoding/json"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -32,7 +33,7 @@ import (
 // writer refuses it by name and the trigger refuses a direct delete of the proof.
 func TestAFilingUnderAHeldProjectIsNotUndone(t *testing.T) {
 	e := Setup(t)
-	owner := OwnerConn(t)
+	owner := FreshOwnerConn(t)
 	f := filedUnderAProject(t, e)
 	e.WsExec(t, `UPDATE project SET legal_hold = true WHERE id = $1`, f.project)
 
@@ -83,7 +84,7 @@ func TestTheUndoTriggersAgreeWithTheGoPredicates(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			e := Setup(t)
-			owner := OwnerConn(t)
+			owner := FreshOwnerConn(t)
 			f := filedUnderAProject(t, e)
 			tc.arrange(t, e, f)
 
@@ -177,7 +178,7 @@ func TestAnUnnamedMemberIsToldToSetADisplayName(t *testing.T) {
 // question about the activity's state.
 func TestAProjectRelinkIsReleasableOnlyWhileTheUndoCouldTakeItBack(t *testing.T) {
 	e := Setup(t)
-	owner := OwnerConn(t)
+	owner := FreshOwnerConn(t)
 	f := seedThreadFixture(t, e, owner)
 	clean, held, erasing, restricted := f.mine[0], f.mine[1], ids.NewV7(), ids.NewV7()
 	contact := e.SeedContact(t, "Erasure Subject", &e.Rep1)
@@ -242,7 +243,7 @@ func TestAProjectRelinkIsReleasableOnlyWhileTheUndoCouldTakeItBack(t *testing.T)
 // deal's lock first, so it waits for the win and then reads its evidence.
 func TestAnUndoWaitsForADealWinInFlightAndThenRefuses(t *testing.T) {
 	e := Setup(t)
-	owner := OwnerConn(t)
+	owner := FreshOwnerConn(t)
 	ctx := context.Background()
 	f := filedUnderAProject(t, e)
 	deal := seedStampFixture(t, e)
@@ -280,24 +281,42 @@ func TestAnUndoWaitsForADealWinInFlightAndThenRefuses(t *testing.T) {
 }
 
 // waitUntilBlockedBy waits until some session is blocked by the transaction
-// held on holder's connection, asked on a connection of its own.
+// held on holder's connection, asked of the server through pg_blocking_pids on
+// a connection of its own, paced by a ticker and bounded by a deadline.
 func waitUntilBlockedBy(t *testing.T, holder interface {
 	QueryRow(context.Context, string, ...any) pgx.Row
 },
 ) {
 	t.Helper()
-	var holderPID int32
+	var holderPID int
 	if err := holder.QueryRow(context.Background(), `SELECT pg_backend_pid()`).Scan(&holderPID); err != nil {
 		t.Fatal(err)
 	}
-	testdb.AwaitQueuedBehind(t, OwnerConn(t), holderPID, 1, nil, "the writer racing the held row")
+	observer := OwnerConn(t)
+	deadline := time.After(10 * time.Second)
+	tick := time.NewTicker(20 * time.Millisecond)
+	defer tick.Stop()
+	for {
+		queued, err := testdb.QueuedBehind(context.Background(), observer, int32(holderPID))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if queued > 0 {
+			return
+		}
+		select {
+		case <-deadline:
+			t.Fatal("the undo never queued behind the writer's row lock, so it does not serialize with it")
+		case <-tick.C:
+		}
+	}
 }
 
 // A credential files an activity under a project as its colleague could in the
 // app, also while an erasure is open on the activity's contact. Nothing waits.
 func TestACredentialFilesAnActivityUnderErasureAsItsColleagueCould(t *testing.T) {
 	e := Setup(t)
-	owner := OwnerConn(t)
+	owner := FreshOwnerConn(t)
 	f := seedThreadFixture(t, e, owner)
 	relinkLender(t, e)
 	registry := compose.NewRegistry(e.Pool, compose.SendPath{})
@@ -337,7 +356,7 @@ func staysUndoable(e *Env, named []ids.UUID, project ids.UUID) (bool, error) {
 // FOR SHARE, so it waits for the hold and then refuses.
 func TestAnUndoWaitsForALegalHoldBeingPlacedAndThenRefuses(t *testing.T) {
 	e := Setup(t)
-	owner := OwnerConn(t)
+	owner := FreshOwnerConn(t)
 	ctx := context.Background()
 	f := filedUnderAProject(t, e)
 

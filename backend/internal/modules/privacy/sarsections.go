@@ -11,7 +11,9 @@ package privacy
 
 import (
 	"context"
+	"strings"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/originalstore"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -32,7 +34,7 @@ func sarSections(ctx context.Context, pkg *SARPackage, contactID ids.ContactID, 
 	sections = append(sections, sarReportingSections(pkg), sarQuestionSection(pkg, contactID, emails), sarBindingSection(pkg, contactID, emails))
 	sections = append(sections, sarRecordSections(pkg, contactID, leads)...)
 	sections = append(sections, sarMessagingSections(pkg, contactID, emails, leads)...)
-	sections = append(sections, sarConsentSections(pkg)...)
+	sections = append(sections, sarConsentSections(pkg, contactID, emails, leads)...)
 	sections = append(sections, sarRequestSections(pkg, contactID)...)
 	sections = append(sections, sarConsentLinkSections(pkg)...)
 	sections = append(sections, sarCommunicationSections(pkg, emails, leads, identities)...)
@@ -200,7 +202,7 @@ func sarRecordSections(pkg *SARPackage, contactID ids.ContactID, leads []ids.UUI
 
 // sarContentDisclosed is the export's one rule for whether an activity's (alias
 // `a`) own content travels: only workspace-audience mail.
-const sarContentDisclosed = `a.audience = 'workspace'`
+var sarContentDisclosed = `` + auth.WorkspaceAudienceSQL("a") + ``
 
 // sarRawCaptureLink correlates one raw_capture row to the activities read from
 // it. The clause below asks it four times, twice to decide disclosure and twice
@@ -212,7 +214,7 @@ var sarRawCaptureLink = storekit.StoredOriginalSQL("a", "rc")
 
 // sarConsentSections gather the per-purpose consent state and the proof log
 // behind it — what the subject agreed to, and every change of mind on record.
-func sarConsentSections(pkg *SARPackage) []sarSection {
+func sarConsentSections(pkg *SARPackage, contactID ids.ContactID, emails []string, leads []ids.UUID) []sarSection {
 	return []sarSection{
 		{&pkg.Consent, `SELECT cp.key AS purpose, pc.state, pc.lawful_basis, pc.captured_at
 		   FROM contact_consent pc JOIN consent_purpose cp ON cp.id = pc.purpose_id
@@ -261,9 +263,7 @@ func sarConsentSections(pkg *SARPackage) []sarSection {
 		// short answer. Aliased rather than renamed in the output because every
 		// other section here reports "when we wrote it down" as captured_at, and
 		// the export is read by the subject, not by us.
-		{&pkg.ConsentQualifyingEvents, `SELECT kind, occurred_at, source_entity_type, created_at AS captured_at
-		   FROM consent_qualifying_event
-		   WHERE contact_id = $1`, nil},
+		sarQualifyingEventSection(pkg, contactID, emails, leads),
 		{&pkg.ConfirmSubmissions, `SELECT kind, field, proposed_value, submitted_at, resolution, resolved_at
 		   FROM contact_confirm_submission
 		   WHERE contact_id = $1`, nil},
@@ -489,4 +489,11 @@ func sarProvenanceSections(pkg *SARPackage, contactID ids.ContactID, external []
 		   FROM provider_run pr
 		   WHERE pr.contact_id = $1`, nil},
 	}
+}
+
+func sarQualifyingEventSection(pkg *SARPackage, contactID ids.ContactID, emails []string, leads []ids.UUID) sarSection {
+	args := []any{contactID.UUID, leads, lowercased(emails)}
+	bind := strings.Split(storekit.Placeholders(args), ",")
+	return sarSection{&pkg.ConsentQualifyingEvents, `SELECT kind, occurred_at, source_entity_type, created_at AS captured_at
+	 FROM consent_qualifying_event WHERE contact_id = ` + bind[0] + ` OR lead_id = ANY(` + bind[1] + `) OR ` + recordedRequestAddressScope(bind[2]), args}
 }

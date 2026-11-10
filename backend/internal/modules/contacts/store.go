@@ -27,6 +27,8 @@ const ownerIDColumn = "owner_id"
 // Store owns this module's tables (data-seam ownership, ADR-0014 Am.1);
 // every write rides the storekit audit+outbox shape in one transaction.
 type Store struct {
+	privacyReviewer         PrivacyReviewer
+	signaturePreview        func(string) (string, error)
 	floorCarry              FloorCarry
 	mergeSignalReader       MergeSignalReader
 	mergeCommitmentReader   MergeCommitmentReader

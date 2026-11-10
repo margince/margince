@@ -11,6 +11,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/corefeatures"
 )
 
 // addDatabaseOnlySweepJobs registers every periodic pass that needs nothing but
@@ -40,11 +41,11 @@ import (
 // The verdict pass is the one exception: it reads through verdictBrain, a model
 // lane. Unset, the close-date sweep still runs and its verdict step does nothing.
 func addDatabaseOnlySweepJobs(
-	reg *jobRegistry, pool *pgxpool.Pool, log *slog.Logger, briefMail BriefMailConfig, verdictBrain, topicBrain completer,
+	reg *jobRegistry, pool *pgxpool.Pool, log *slog.Logger, briefMail BriefMailConfig, verdictBrain, topicBrain completer, disabled []string,
 ) {
 	addDeclaredWorker[CapturedDealRefileArgs](reg, newCapturedDealRefileWorker(pool, topicBrain))
 	addDeclaredWorker[CapturedDealRefileSweepArgs](reg, &capturedDealRefileSweepWorker{pool: pool, now: time.Now})
-	addDeclaredWorker[ReportScheduleSweepArgs](reg, &reportScheduleSweepWorker{pool: pool, now: time.Now})
+	addDeclaredWorker[ReportScheduleSweepArgs](reg, &reportScheduleSweepWorker{pool: pool, now: time.Now, features: corefeatures.New(disabled)})
 	addDeclaredWorker[CloseDateSweepArgs](reg, &closeDateSweepWorker{
 		pool: pool, corrector: NewCloseDateCorrector(pool, log), closer: newSilentDealCloser(pool, log),
 		verdict: newDealVerdictPass(pool, verdictBrain, log),
@@ -75,6 +76,7 @@ func addDatabaseOnlySweepJobs(
 		sweeper: NewAgentTaskRetentionSweeper(pool, log), identity: identity.NewService(pool),
 	})
 	addDeclaredWorker[ApprovalNoticeReconcileArgs](reg, newApprovalNoticeReconcileWorker(pool))
+	addDeclaredWorker[ApprovalOwnerNoticeArgs](reg, &approvalOwnerNoticeWorker{pool: pool, now: time.Now})
 	addDeclaredWorker[ApprovalExpiryArgs](reg, &approvalExpiryWorker{
 		pool: pool, identity: identity.NewService(pool), log: log,
 	})

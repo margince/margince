@@ -163,8 +163,10 @@ export const ReadOnlyLockTip: Story = {
   render: home(LEAD),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
+    const page = settingsReach(meFixture(LEAD), NO_UNITS).looksUp[0];
+    if (!page) throw new Error("The read-only story has no read-only page.");
     const row = await canvas.findByRole("link", {
-      name: new RegExp(en["settings.tab.records"]),
+      name: new RegExp(en[`settings.tab.${page.id}`]),
     });
     row.focus();
     const tip = await within(canvasElement.ownerDocument.body).findByRole(

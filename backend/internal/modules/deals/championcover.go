@@ -135,19 +135,18 @@ func championSeats(
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	dealsPos := arg(dealIDs)
-	rolePos := arg(dealrole.Champion)
 	bound, err := edgeBound(ctx, "r", arg)
 	if err != nil {
 		return nil, err
 	}
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT r.deal_id,
-		       array_remove(array_agg(r.contact_id) FILTER (WHERE r.role = $%[2]d), NULL)
+		       array_remove(array_agg(r.contact_id) FILTER (WHERE r.role = '%[2]s'), NULL)
 		  FROM relationship r
 		  JOIN contact p ON %[4]s
 		 WHERE r.kind = 'deal_stakeholder' AND r.deal_id = ANY($%[1]d) AND r.archived_at IS NULL
 		   AND (%[3]s)
-		 GROUP BY r.deal_id`, dealsPos, rolePos, bound, liveContactSeat), args...)
+		 GROUP BY r.deal_id`, dealsPos, dealrole.Champion, bound, liveContactSeat), args...)
 	if err != nil {
 		return nil, fmt.Errorf("deals: reading the champion seats on a set of deals: %w", err)
 	}

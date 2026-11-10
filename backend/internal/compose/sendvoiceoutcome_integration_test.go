@@ -143,7 +143,8 @@ func (e *voiceSendEnv) readVoiceSignal(t *testing.T, signal ids.UUID) voiceSigna
 	if err := e.owner.QueryRow(context.Background(), `
 		SELECT outcome, similarity::double precision, version
 		FROM voice_learning_signal WHERE id = $1`, signal).Scan(
-		&row.outcome, &row.similarity, &row.version); err != nil {
+		&row.outcome, &row.similarity, &row.version,
+	); err != nil {
 		t.Fatalf("reading the learning signal: %v", err)
 	}
 	return row
@@ -313,11 +314,6 @@ func awaitLockHolder(t *testing.T, locked <-chan int32) int32 {
 	}
 }
 
-// Two sends may legitimately carry one draft reference — they are two emails,
-// and both must go out. The judgment is not two-valued though: the first
-// transaction to take the row's lock owns the outcome, and the second finds
-// the WHERE outcome = 'drafted' guard closed. This is the genuine race, with
-// the loser blocked on the winner's open transaction, not two serial calls.
 func TestConcurrentSendsSharingADraftReferenceLeaveOneOutcomeAndBothTransmit(t *testing.T) {
 	e := setupVoiceSend(t)
 	draft := e.openDraft(t)
@@ -348,10 +344,22 @@ func TestConcurrentSendsSharingADraftReferenceLeaveOneOutcomeAndBothTransmit(t *
 	})
 	holder := awaitLockHolder(t, winner.locked)
 
+	loserReturned := make(chan struct{})
 	wg.Go(func() {
+		defer close(loserReturned)
 		_, loserErr = loserStore.SendEmail(e.ctx, activities.FromActivity(anchor), e.draftedSend(draft.ref), gate, loserStager)
 	})
-	testdb.AwaitQueuedBehind(t, integration.OwnerConn(t), holder, 1, nil, "the second send")
+	// One held connection for the whole poll. pg_stat_activity materializes its
+	// row set per transaction, so a clear issued through the pool can land on a
+	// connection the next probe never gets.
+	acquireCtx, cancel := context.WithTimeout(e.ctx, 30*time.Second)
+	defer cancel()
+	probe, err := e.Pool.Acquire(acquireCtx)
+	if err != nil {
+		t.Fatalf("acquiring the probe's connection: %v", err)
+	}
+	defer probe.Release()
+	testdb.AwaitQueuedBehind(t, probe.Conn(), holder, 1, loserReturned, "the losing send")
 
 	release()
 	wg.Wait()
