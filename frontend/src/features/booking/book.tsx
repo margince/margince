@@ -1,6 +1,5 @@
 import { useBookingRefused } from "../../lib/scheduling-profile-query";
 import { useMe } from "../../lib/session";
-import { SettingsBoundary } from "../settings/settingshome";
 import { BookingGuestScreen } from "./booking-guest";
 import { BookingInviteScreen } from "./booking-invite";
 import { BookingMeetingScreen } from "./booking-meeting";
@@ -25,11 +24,12 @@ export function BookingScreen({ hostSlug }: Readonly<{ hostSlug?: string }>) {
 }
 
 // The host's own preview reads their booking profile, which only a seat that
-// may book has. Guests never pass here, so the public page never asks /me.
+// may book has. A seat that may not gets the link page's own refusal, and
+// guests never pass here, so the public page never asks /me.
 function BookingPreview() {
   const answered = useMe().data?.authorization !== undefined;
   const refused = useBookingRefused();
   if (!answered) return null;
-  if (refused) return <SettingsBoundary kind="denied" />;
+  if (refused) return <BookingProfileScreen />;
   return <BookingGuestScreen hostSlug="" preview />;
 }
