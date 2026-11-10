@@ -50,7 +50,7 @@ scenario grades whether the answer says "not sent, and why". The Go census
 against the scopes of its passport.
 
 **A setup of its own.** A scenario that says `setup: <step>` runs that step of
-`e2e/llm/casesetup.py` before each of its runs, on the world the lane has just
+`e2e/llm/casesetup.py` before each of its runs, on the records the lane has just
 reset. The step writes through the REST API as the admin. The lane restores the
 snapshot before the next run, and that restore undoes the step. A step the file
 does not name stops the lane before the first run.

@@ -1499,7 +1499,7 @@ if [[ "$(status_of GET "/mail-drafts?anchor_type=contact&anchor_id=$greta")" = "
   [[ "$code" = "200" ]] || { echo "saving the user's own draft to Greta Lindqvist answered HTTP $code" >&2; exit 1; }
 fi
 
-# --- CASE 117: the people its setup step needs --------------------------------
+# --- CASE 117: the contacts its setup step needs ------------------------------
 #
 # Only the records. The card reviews and the post-meeting recap are staged by
 # the case's own `setup:` step (e2e/llm/casesetup.py), because a pending review or a

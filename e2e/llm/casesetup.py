@@ -72,7 +72,7 @@ class Admin:
         return self.call("POST", path, body, f"multipart/form-data; boundary={boundary}")
 
 
-# The three people whose cards resemble a contact already on file, each with
+# The three contacts whose cards resemble one already on file, each with
 # the address the card states. The seed writes the contacts; the cards differ.
 CARD_REVIEWS = (
     ("Wiebke Brandstätter", "w.brandstaetter@kaelte-nord.test"),
