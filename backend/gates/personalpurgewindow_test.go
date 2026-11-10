@@ -21,11 +21,12 @@ package gates
 
 import (
 	"io/fs"
-	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // windowArithmetic matches the interval arithmetic the deadline is made of: the
@@ -44,7 +45,7 @@ const deadlineHome = "internal/modules/capture/purgepersonal.go"
 func TestOnePlaceDecidesWhenPersonalMailDies(t *testing.T) {
 	t.Parallel()
 	var offenders []string
-	err := filepath.WalkDir(".", func(path string, d fs.DirEntry, err error) error {
+	err := gatekit.WalkDir(".", func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -55,7 +56,7 @@ func TestOnePlaceDecidesWhenPersonalMailDies(t *testing.T) {
 		if rel == deadlineHome {
 			return nil
 		}
-		body, readErr := os.ReadFile(path)
+		body, readErr := gatekit.ReadFile(path)
 		if readErr != nil {
 			return readErr
 		}
@@ -77,7 +78,7 @@ func TestOnePlaceDecidesWhenPersonalMailDies(t *testing.T) {
 	// A gate that matches nothing has stopped being one: if the home file stops
 	// spelling the arithmetic, the regex is stale and every other file passes
 	// for the wrong reason.
-	home, err := os.ReadFile(deadlineHome)
+	home, err := gatekit.ReadFile(deadlineHome)
 	if err != nil {
 		t.Fatalf("reading %s: %v", deadlineHome, err)
 	}

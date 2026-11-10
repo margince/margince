@@ -38,7 +38,7 @@ earlier one, so legal reads both answers side by side.
 The colleague who asked, and the deal's owner, cannot answer the request.
 
 ### Can a stage require legal's approval?
-Yes. An administrator opens the account menu → **Settings** → **Pipelines** and adds a condition
+Yes. An administrator opens the account menu → **Settings** → **Deals** and adds a condition
 of the kind **Legal approved** to a stage, under its **Exit criteria**. A deal then cannot move past that stage until legal approves it.
 When you try, the deal stays where it is and Margince says what is missing.
 - Closing a deal as lost is always allowed, and so is moving it back onto or before that stage.
@@ -60,7 +60,7 @@ A reviewer opens the queue from **Deals**, with the **Legal reviews** button. Th
 comes first, then the earliest close date.
 
 ### How do I switch legal review off?
-An administrator opens the account menu → **Settings** → **Pipelines** and turns off **Legal review
+An administrator opens the account menu → **Settings** → **Deals** and turns off **Legal review
 on deals**.
 Off hides the request, the queue and the **Legal approved** kind, and a stage stops waiting for
 legal. Every review already recorded is kept, and comes back when legal review is on again.

@@ -40,6 +40,17 @@ func (s *Store) DeleteRawTx(ctx context.Context, tx pgx.Tx, key string) (bool, e
 	if err != nil {
 		return false, fmt.Errorf("settings: reading %s before removal: %w", key, err)
 	}
+	before, err = def.CanonicalJSON(before)
+	if err != nil {
+		return false, err
+	}
+	after, err := def.DefaultJSON()
+	if err != nil {
+		return false, err
+	}
+	if err := def.CheckChange(ctx, tx, before, after); err != nil {
+		return false, err
+	}
 	frozen, why, err := def.Frozen(ctx, tx)
 	if err != nil {
 		return false, fmt.Errorf("settings: probing %s: %w", key, err)
@@ -50,14 +61,14 @@ func (s *Store) DeleteRawTx(ctx context.Context, tx pgx.Tx, key string) (bool, e
 	if _, err := tx.Exec(ctx, `DELETE FROM setting WHERE key = $1`, key); err != nil {
 		return false, fmt.Errorf("settings: removing %s: %w", key, err)
 	}
-	after, err := def.DefaultJSON()
-	if err != nil {
-		return false, err
-	}
-	if _, err := storekit.Audit(ctx, tx, def.AuditVerb(), def.Object(), storekit.MustWorkspace(ctx),
+	auditID, err := storekit.Audit(ctx, tx, def.AuditVerb(), def.Object(), storekit.MustWorkspace(ctx),
 		map[string]any{key: def.AuditImage(before)},
-		map[string]any{key: def.AuditImage(after)}); err != nil {
+		map[string]any{key: def.AuditImage(after)})
+	if err != nil {
 		return false, fmt.Errorf("settings: auditing the removal of %s: %w", key, err)
+	}
+	if err := def.Changed(ctx, tx, auditID); err != nil {
+		return false, err
 	}
 	return true, nil
 }

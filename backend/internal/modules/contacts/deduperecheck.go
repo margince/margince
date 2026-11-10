@@ -37,6 +37,10 @@ const (
 	auditKeyEntityType = "entity_type"
 )
 
+// evidenceKeyDataTaskRun names, in a repair's audit evidence, the data task
+// run that made the change.
+const evidenceKeyDataTaskRun = "data_task_run"
+
 // The reasons an open pair is archived without a decision.
 const (
 	archiveReasonNoLongerFiled  = "no_longer_filed"
@@ -258,8 +262,7 @@ func readContactSide(ctx context.Context, tx pgx.Tx, id ids.UUID) (contactSide, 
 	var side contactSide
 	err := tx.QueryRow(ctx, `
 		SELECT p.full_name,
-		       coalesce((SELECT array_agg(pe.email) FROM contact_email pe
-		                  WHERE pe.contact_id = p.id AND pe.archived_at IS NULL), '{}'),
+		       `+storekit.RequestAddressesSQL("p.id")+`,
 		       coalesce((SELECT s.handle FROM contact_social s
 		                  WHERE s.contact_id = p.id AND s.platform = '`+SocialLinkedIn+`'), '')
 		  FROM contact p

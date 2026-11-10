@@ -12,6 +12,7 @@ import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider, translate } from "../../i18n";
+import { showLayout } from "../../testing/listquery.testkit";
 import { meFixture } from "../../testing/mefixture";
 import { RecordShell } from "../../testing/recordshell.testkit";
 import type { CompanyNaming } from "./dealcompanymarks";
@@ -529,7 +530,7 @@ describe("the deals table's company columns", () => {
   const toTable = async () => {
     const user = userEvent.setup();
     render(<DealsScreen />);
-    await user.click(await screen.findByRole("button", { name: "Table" }));
+    await showLayout(user, "Table");
     return user;
   };
 

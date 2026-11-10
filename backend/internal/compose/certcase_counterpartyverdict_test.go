@@ -169,6 +169,10 @@ func TestVerdictCaseSeparatesTheThreeThingsAReplyCanBe(t *testing.T) {
 			if !strings.Contains(outcome.Detail, tc.wantDetail) {
 				t.Errorf("Detail = %q, want it to name %q", outcome.Detail, tc.wantDetail)
 			}
+			// Only a well-formed wrong kind reaches a reader, so only it leaks.
+			if outcome.Leak != (tc.wantResult == aitasks.OutcomeWrongAnswer) {
+				t.Errorf("Leak = %v for a %s reply", outcome.Leak, outcome.Result)
+			}
 		})
 	}
 }
@@ -237,19 +241,23 @@ func TestVerdictCaseMintsTheRowIDRatherThanReadingIt(t *testing.T) {
 		if _, err := prepared.Run(context.Background(), stub); err != nil {
 			t.Fatalf("running the case: %v", err)
 		}
-		id, err := requestedIDIn(stub.seen[0])
+		shown, err := requestedIDIn(stub.seen[0])
 		if err != nil {
 			t.Fatalf("reading the requested id: %v", err)
 		}
-		return id
+		row := prepared.(*counterpartyVerdictCase).row.ID.String()
+		if shown != "s1" || strings.Contains(stub.seen[0].Messages[0].Content, row) {
+			t.Fatalf("the request names the sender %q and must show s1, never the row id %s", shown, row)
+		}
+		return row
 	}
 
 	first, second := ask(), ask()
 	if _, err := ids.Parse(first); err != nil {
-		t.Fatalf("the requested id %q is not one this system mints: %v", first, err)
+		t.Fatalf("the row id %q is not one this system mints: %v", first, err)
 	}
 	if first == second {
-		t.Errorf("two preparations of one fixture asked about the same id %q", first)
+		t.Errorf("two preparations of one fixture minted the same row id %q", first)
 	}
 }
 

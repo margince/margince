@@ -15,7 +15,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 
 	"github.com/jackc/pgx/v5"
 
@@ -48,6 +47,5 @@ func RefreshDisplayNameTx(ctx context.Context, tx pgx.Tx, contactID ids.ContactI
 	if err != nil || !stale {
 		return false, err
 	}
-	learned := strings.TrimSpace(first) + " " + strings.TrimSpace(last)
-	return rewriteFullNameTx(ctx, tx, contactID, previous, learned)
+	return rewriteFullNameTx(ctx, tx, contactID, previous, JoinNameParts(first, last))
 }

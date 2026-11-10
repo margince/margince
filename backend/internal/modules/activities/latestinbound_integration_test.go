@@ -150,15 +150,18 @@ func TestLatestInboundKeepsAFormUntilARowThatAnswersIt(t *testing.T) {
 		kind    string
 		dir     *string
 		meeting *string
+		after   time.Duration
 		answers bool
 	}{
-		{"a sent mail", "email", &out, nil, true},
-		{"a call", "call", nil, nil, true},
-		{"a held meeting", "meeting", nil, status(crmcontracts.ActivityMeetingStatusHeld), true},
-		{"their reply", "email", &in, nil, false},
-		{"our own note", "note", nil, nil, false},
-		{"a canceled meeting", "meeting", nil, status(crmcontracts.ActivityMeetingStatusCanceled), false},
-		{"a no-show", "meeting", nil, status(crmcontracts.ActivityMeetingStatusNoShow), false},
+		{"a sent mail", "email", &out, nil, 30 * time.Minute, true},
+		{"a call", "call", nil, nil, 30 * time.Minute, true},
+		{"a held meeting", "meeting", nil, status(crmcontracts.ActivityMeetingStatusHeld), 30 * time.Minute, true},
+		{"a past meeting nobody reported", "meeting", nil, nil, 30 * time.Minute, true},
+		{"a booked meeting still to come", "meeting", nil, status(crmcontracts.ActivityMeetingStatusBooked), 2 * time.Hour, false},
+		{"their reply", "email", &in, nil, 30 * time.Minute, false},
+		{"our own note", "note", nil, nil, 30 * time.Minute, false},
+		{"a canceled meeting", "meeting", nil, status(crmcontracts.ActivityMeetingStatusCanceled), 30 * time.Minute, false},
+		{"a no-show", "meeting", nil, status(crmcontracts.ActivityMeetingStatusNoShow), 30 * time.Minute, false},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -173,7 +176,9 @@ func TestLatestInboundKeepsAFormUntilARowThatAnswersIt(t *testing.T) {
 			}); err != nil {
 				t.Fatal(err)
 			}
-			later, what := requestInstant.Add(30*time.Minute), "After the form"
+			// The store's clock is justInLater, so a meeting two hours after the
+			// form is still to come for it. The database clock is long past it.
+			later, what := requestInstant.Add(c.after), "After the form"
 			if _, _, err := store.LogActivity(e.asSeat(e.rep), LogActivityInput{
 				Kind: c.kind, Source: "manual", Subject: &what, OccurredAt: &later,
 				Direction: c.dir, MeetingStatus: c.meeting, Links: links,
@@ -186,6 +191,52 @@ func TestLatestInboundKeepsAFormUntilARowThatAnswersIt(t *testing.T) {
 			}
 			if open == c.answers {
 				t.Fatalf("form open = %v after %s, want answered = %v", open, c.name, c.answers)
+			}
+		})
+	}
+}
+
+// A form and our answer at one stored instant: a date on either side makes ours its answer. Between
+// two answers of ours at that instant, the day one answers whichever was logged last.
+func TestLatestInboundReadsAFormTieByTheAnswerRule(t *testing.T) {
+	out := string(crmcontracts.ActivityDirectionOutbound)
+	for _, c := range []struct {
+		name    string
+		replies []string
+		open    bool
+	}{
+		{"a day reply on the form's date", []string{PrecisionDay}, false},
+		{"an instant reply at the form's instant", []string{PrecisionInstant}, true},
+		{"our day reply, then our instant reply", []string{PrecisionDay, PrecisionInstant}, false},
+		{"our instant reply, then our day reply", []string{PrecisionInstant, PrecisionDay}, false},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			e := setupLoad(t)
+			contact := e.buyer(t)
+			links := []ActivityLinkInput{{EntityType: "contact", EntityID: contact}}
+			store := storeKnowing(e).WithClock(func() time.Time { return justInLater })
+			subject, system, key := "Website form: Trial", provenance.WebFormSource, ids.NewV7().String()
+			if _, _, err := store.LogActivity(asClassifier(e), LogActivityInput{
+				Kind: "note", Subject: &subject, OccurredAt: &requestInstant, Links: links,
+				SourceSystem: &system, SourceID: &key, Source: provenance.WebFormSource,
+			}); err != nil {
+				t.Fatal(err)
+			}
+			for _, precision := range c.replies {
+				reply := "Re: your trial"
+				if _, _, err := store.LogActivity(e.asSeat(e.rep), LogActivityInput{
+					Kind: "email", Source: "manual", Subject: &reply, Direction: &out,
+					OccurredAt: &requestInstant, OccurredPrecision: precision, Links: links,
+				}); err != nil {
+					t.Fatal(err)
+				}
+			}
+			open := false
+			for _, item := range latestOn(t, e, store, contact) {
+				open = open || item.Kind == crmcontracts.LatestInboundKindWebForm
+			}
+			if open != c.open {
+				t.Fatalf("form open = %v, want %v", open, c.open)
 			}
 		})
 	}

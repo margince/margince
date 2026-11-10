@@ -4,11 +4,8 @@ import { api } from "../../../api/client";
 import type { components } from "../../../api/schema";
 import { throwProblem } from "../../../lib/problem";
 import type { CompanyForm } from "../onboarding";
-import {
-  ONBOARDING_PROGRESS_KEY,
-  wizardStateBody,
-  writeWizardState,
-} from "../onboarding";
+import { wizardStateBody, writeWizardState } from "../onboarding";
+import { ONBOARDING_PROGRESS_KEY } from "../onboarding-progress";
 import { isCompanyField } from "./company-proposal";
 
 // Minimal wizard-state persistence for the conversational shell: the server

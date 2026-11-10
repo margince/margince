@@ -1,0 +1,42 @@
+name: a_vietnamese_salary_sheet_behind_an_invoice_note_stays_private
+task: capture_confidentiality_verdict
+site: thread
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+# The salary-sheet incident in Vietnamese. Its names are capitalised Latin
+# script, but its role words are not ones the staff-cost rule knows.
+fixture:
+  subject: "[Sao Mai] Dịch vụ phát triển tháng 3"
+  attachments:
+    - 2026.03 Sao Mai Hoa don 1042.pdf
+    - 2026.03 Sao Mai Chi phi v2.xlsx
+  body: |
+    Chào chị Hoa,
+
+    Em gửi kèm hóa đơn 1042 cho dịch vụ phát triển tháng 3.
+    Chị vui lòng kiểm tra giúp em.
+
+    Trân trọng
+  documents:
+    - name: 2026.03 Sao Mai Hoa don 1042.pdf
+      excerpt: |
+        HÓA ĐƠN 1042
+        Dịch vụ phát triển tháng 3, 160 giờ
+        Tổng cộng: 620,000,000 VND, thanh toán trong 30 ngày
+    - name: 2026.03 Sao Mai Chi phi v2.xlsx
+      excerpt: |
+        Trang tính: Chi phí
+        Nhân viên | Chức danh | Lương gộp | Chi phí công ty
+        Trần Văn Minh | Lập trình viên chính | 45,000,000 | 54,000,000
+        Phạm Thị Linh | Lập trình viên | 32,000,000 | 38,400,000
+        Lê Quang Huy | Kiểm thử viên | 26,000,000 | 31,200,000
+expect:
+  outcome: accepted
+  privacy: true
+  answer: personnel
+  judge: none
+  judge_none_reason: >
+    The answer is one closed kind, and the check requires it exactly. The
+    covering note reads as an ordinary invoice; only the attached sheet of
+    named pay decides the kind. No rule reads this language, so only the
+    model can hold it.

@@ -2,10 +2,12 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { describe, expect, it } from "vitest";
+import answersCases from "../../../backend/internal/shared/kernel/occurredday/testdata/answers.json";
 import happenedCases from "../../../backend/internal/shared/kernel/occurredday/testdata/happened.json";
 import withinCases from "../../../backend/internal/shared/kernel/occurredday/testdata/within.json";
 import {
   activityAgo,
+  activityAnswers,
   activityDate,
   activityDay,
   activityDaysAway,
@@ -165,6 +167,21 @@ describe("whether an activity has taken place", () => {
     expect(activityHasHappened(row, Date.parse(c.now), c.zone)).toBe(
       c.happened,
     );
+  });
+});
+
+// The tie cases occurredday.Answers and AnswersSQL answer on the server.
+describe("whether a later activity answers a message", () => {
+  it.each(answersCases)("$name", (c) => {
+    const answer = {
+      at: c.answer_at,
+      precision: precisionOf(c.answer_precision),
+    };
+    const message = {
+      at: c.message_at,
+      precision: precisionOf(c.message_precision),
+    };
+    expect(activityAnswers(answer, message)).toBe(c.answers);
   });
 });
 

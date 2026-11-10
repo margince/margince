@@ -4,6 +4,7 @@
 package dealrooms
 
 import (
+	"context"
 	"net/http"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -11,6 +12,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
@@ -30,6 +32,7 @@ func (h Handlers) OpenDealRoomThread(w http.ResponseWriter, r *http.Request, id 
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
+	req.Source = sourceOrAgents(r.Context(), req.Source)
 	in, err := openThreadInput(req, true)
 	if err != nil {
 		httperr.Write(w, r, err)
@@ -49,6 +52,7 @@ func (h Handlers) ReplyDealRoomThread(w http.ResponseWriter, r *http.Request, id
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
+	req.Source = sourceOrAgents(r.Context(), req.Source)
 	body, source, err := commentInput(req, true)
 	if err != nil {
 		httperr.Write(w, r, err)
@@ -111,6 +115,15 @@ func commentInput(req crmcontracts.PostDealRoomCommentRequest, sellerSide bool) 
 	}
 	source, err = sourceFor(req.Source, sellerSide)
 	return body, source, err
+}
+
+// sourceOrAgents names an agent as the source when its call names none. An agent has
+// one true answer to that field, so its words are not refused for leaving it out.
+func sourceOrAgents(ctx context.Context, given *string) *string {
+	if actor, ok := principal.Actor(ctx); given == nil && ok && actor.Type == principal.PrincipalAgent {
+		return new("agent")
+	}
+	return given
 }
 
 func sourceFor(given *string, sellerSide bool) (string, error) {

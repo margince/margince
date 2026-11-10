@@ -6,6 +6,7 @@ import {
   hasTimelineFilters,
   useRecordTimeline,
 } from "../../design-system/recordtimeline";
+import { omitted } from "../../design-system/surfacestate";
 import type {
   TimelineEntry,
   TimelineGroup,
@@ -14,7 +15,7 @@ import { TimelineFilterBar } from "../../design-system/timelinefilterbar";
 import { groupChronology } from "../../design-system/timelinegroups";
 import { useLocale, useT } from "../../i18n";
 import { useOpenEmail } from "../../lib/openemail";
-import { useRecordZone } from "../../lib/recordzone";
+import { useViewerZone } from "../../lib/viewerzone";
 import type { OpenReceipt } from "../records/record360";
 import {
   ChronologyFilter,
@@ -70,7 +71,7 @@ export function useChronologySlots({
 } {
   const t = useT();
   const { locale } = useLocale();
-  const recordZone = useRecordZone();
+  const readerZone = useViewerZone();
   // The workspace roster, for the ids a change row stores. Still walks rather
   // than reading useMemberNames by id: `colleagueName` becomes useRecordChronology's
   // `values.nameOf`, called per row as it renders, so the ids are unknown here.
@@ -91,14 +92,17 @@ export function useChronologySlots({
     records("contact", id) ??
     records("deal", id) ??
     records("company", id);
-  const { filter, filters, setFilters, openCut, kinds } = useChronologyCut(
-    company.id,
-  );
+  const { filter, filters, setFilters, openCut, kinds, read } =
+    useChronologyCut(company.id);
+  // Withheld on the 360 is withheld on every cut: a narrowed read would only
+  // collect the refusal.
+  const withheld = view ? omitted(view, "activities") : false;
   // The 360's own page seeds the list; older pages and every narrowed read
   // come from the activity list itself.
   const timeline = useRecordTimeline("company", company.id, {
-    filters,
+    filters: read,
     firstPage: view?.activities,
+    enabled: !withheld,
   });
 
   const [openEmail, setOpenEmail] = useOpenEmail();
@@ -116,7 +120,7 @@ export function useChronologySlots({
     // ids. An owner moving between colleagues is the change most often sought.
     // An account holds no currency of its own. A minor-unit column on it says
     // so, rather than printing a bare integer under a currency it never had.
-    values: { currency: null, locale, zone: recordZone, nameOf: colleagueName },
+    values: { currency: null, locale, zone: readerZone, nameOf: colleagueName },
     renderActions: (activity) => (
       <TimelineActions
         activity={activity}
@@ -172,12 +176,13 @@ export function useChronologySlots({
           filter,
           history,
           {
+            withheld,
             loading: loading || timeline.isPending,
             failed: failed || timeline.isError,
             // A narrowed read is the list's own and is assembled once it
             // answers. So is an archived account's, whose 360 is refused.
             assembled:
-              hasTimelineFilters(filters) || company.archived_at
+              hasTimelineFilters(read) || company.archived_at
                 ? timeline.isSuccess
                 : Boolean(view?.activities),
           },
@@ -189,7 +194,7 @@ export function useChronologySlots({
         (filter === "conversations" ? (
           <ConversationList
             groups={groupChronology(history.entries, timeline.hasNextPage)}
-            zone={recordZone}
+            zone={readerZone}
           />
         ) : undefined),
     },

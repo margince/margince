@@ -29,11 +29,11 @@ package gates
 // edit is actually made.
 
 import (
-	"os"
 	"path/filepath"
 	"regexp"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
@@ -53,7 +53,7 @@ func TestOverrideCategoryVocabularyAgreesWithItsCheckConstraint(t *testing.T) {
 	t.Parallel()
 
 	path := filepath.Join("migrations", "core", overrideMigration)
-	sql, err := os.ReadFile(path) // #nosec G304 -- path is a fixed migration name under the trusted migrations tree
+	sql, err := gatekit.ReadFile(path) // #nosec G304 -- path is a fixed migration name under the trusted migrations tree
 	if err != nil {
 		t.Fatalf("reading %s: %v", path, err)
 	}
@@ -118,7 +118,7 @@ func TestTheAllowDoorOffersExactlyTheCategoriesItAccepts(t *testing.T) {
 	t.Parallel()
 
 	path := filepath.Join("api", "crm.yaml")
-	spec, err := os.ReadFile(path) // #nosec G304 -- a fixed contract path under the trusted api tree
+	spec, err := gatekit.ReadFile(path) // #nosec G304 -- a fixed contract path under the trusted api tree
 	if err != nil {
 		t.Fatalf("reading %s: %v", path, err)
 	}

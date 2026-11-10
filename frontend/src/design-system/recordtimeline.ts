@@ -9,7 +9,7 @@ import { startOfDayInZone } from "../format/timezone";
 import { timelineBaseKey } from "../lib/activitykeys";
 import type { EntityKind } from "../lib/entity";
 import { unwrap } from "../lib/problem";
-import { useRecordZone } from "../lib/recordzone";
+import { useViewerZone } from "../lib/viewerzone";
 import type { ISODate } from "./dateinput";
 
 type Activity = components["schemas"]["Activity"];
@@ -17,7 +17,7 @@ type ActivityPage = components["schemas"]["ActivityListResponse"];
 type ListActivitiesQuery = NonNullable<
   operations["listActivities"]["parameters"]["query"]
 >;
-export type ActivityKind = NonNullable<ListActivitiesQuery["kind"]>;
+export type ActivityKind = NonNullable<ListActivitiesQuery["kind"]>[number];
 
 /** Every kind the list accepts, in the order the filter offers them. */
 export const ACTIVITY_KINDS: readonly ActivityKind[] = [
@@ -31,16 +31,13 @@ export const ACTIVITY_KINDS: readonly ActivityKind[] = [
 
 /**
  * TimelineFilters is what a reader narrows a record's timeline BY. Every
- * field is sent to the server: a filter applied over the page the client
- * holds answers "which of these 20 rows match", which is not the question —
- * the contact page did that for a release, and a rep filtering for tasks saw
- * none because the newest 20 rows happened to be mail.
- *
- * `after` / `before` are the calendar days the reader picked; the wire wants
- * instants, and `timelineQueryParams` is where a day becomes one.
+ * field is sent to the server, because a filter over the held page misses rows.
+ * `after` / `before` are calendar days; `timelineQueryParams` makes them instants.
+ * `kinds` is the set an open cut asks for. A `kind` the reader picks wins over it.
  */
 export type TimelineFilters = Readonly<{
   kind?: ActivityKind;
+  kinds?: readonly ActivityKind[];
   q?: string;
   after?: ISODate | "";
   before?: ISODate | "";
@@ -49,7 +46,13 @@ export type TimelineFilters = Readonly<{
 export const NO_TIMELINE_FILTERS: TimelineFilters = {};
 
 export function hasTimelineFilters(filters: TimelineFilters): boolean {
-  return Boolean(filters.kind || filters.q || filters.after || filters.before);
+  return Boolean(
+    filters.kind ||
+      filters.kinds?.length ||
+      filters.q ||
+      filters.after ||
+      filters.before,
+  );
 }
 
 /**
@@ -77,9 +80,8 @@ export function dayStartIso(day: ISODate, zone: string, daysLater = 0): string {
 
 /**
  * timelineQueryParams is the ONE spelling of a record timeline read for the
- * wire. An absent filter is an absent parameter, never `""`: the server reads
- * an empty `q` as "no filter" today, but an empty `kind` is a 400, and not
- * sending what was not asked keeps both honest.
+ * wire. An absent filter is an absent parameter, never `""`, because the server
+ * refuses an empty `kind`.
  */
 export function timelineQueryParams(
   entityType: EntityKind,
@@ -94,7 +96,8 @@ export function timelineQueryParams(
     limit: TIMELINE_PAGE_SIZE,
   };
   if (cursor) query.cursor = cursor;
-  if (filters.kind) query.kind = filters.kind;
+  const kinds = filters.kind ? [filters.kind] : filters.kinds;
+  if (kinds?.length) query.kind = [...kinds];
   if (filters.q?.trim()) query.q = filters.q.trim();
   if (filters.after) query.occurred_after = dayStartIso(filters.after, zone);
   if (filters.before)
@@ -173,7 +176,7 @@ export function useRecordTimeline(
   const filters = options.filters ?? NO_TIMELINE_FILTERS;
   // The seed stands only for the unfiltered read it was cut from.
   const seed = hasTimelineFilters(filters) ? undefined : options.firstPage;
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const seedCursor = seed?.page.next_cursor ?? undefined;
   const query = useInfiniteQuery({
     // The key the write path invalidates, extended by the filters, the seed's

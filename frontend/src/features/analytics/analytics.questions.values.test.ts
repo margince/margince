@@ -22,8 +22,8 @@ describe("a dimension value in the reader's words", () => {
     expect(valueLabel(t, "activities-by-kind", "kind", "meeting")).toBe(
       "Meeting",
     );
-    expect(valueLabel(t, "forecast", "forecast_category", "best_case")).toBe(
-      "Best case",
+    expect(valueLabel(t, "forecast", "win_probability_band", "30_59")).toBe(
+      translate("en", "deal.winProbability.band.30_59"),
     );
     expect(valueLabel(t, "deals-by-stage", "status", "open")).toBe("Open");
     expect(

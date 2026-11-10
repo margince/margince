@@ -36,6 +36,7 @@ type Completer interface {
 const draftSystem = `You draft the first email of a new conversation, for a salesperson to send under their own name, from a JSON summary of one account in their CRM.
 Return ONLY a JSON object: {"subject":"...","body":"...","reasoning":[{"kind":"intent|recipient|relationship|deal|commitment|conversation|dossier","label":"...","entity_type":"deal|activity|contact|company|fact","entity_id":"..."}]}.
 ` + draftrules.FirstTouch + `
+If subject is supplied, write the body for that subject and the stated intent.
 Say one thing and ask for one thing. Three short paragraphs at most.
 A commitment is something WE said we would do by its "due" date. One due before now is overdue, and it is the reason this message is being written: lead with it and say plainly that it is late, without apologising at length and without promising a new date the summary did not give you. "due" is a machine timestamp for you to read, never text to copy.
 Where the shared rules let you either write around a missing detail or ask for it, prefer writing around it here: this message opens with an ask of its own, and a second question dilutes it.
@@ -43,7 +44,7 @@ A recent message may carry a "snippet" — the opening of a message on this acco
 Where the snippets are the only substance you have, write from what they actually say. If they say nothing you can use, say less rather than inventing a conversation: no meeting that has not happened, no concern the recipient did not raise, no description of their situation you were not given.
 ` + draftrules.Rewrite + `
 The reasoning array is where an explanation of the draft goes. It is the ONLY place; the body carries none.
-Each reasoning entry names ONE input you actually used, in the reader's words, short enough to read as a chip ("pricing concern", "follow-up due today"). Give entity_type and entity_id when the input was a record the summary identified; set both to null when it was the caller's own intent. Label the caller's own intent by its purpose ("offer a call", "introduce ourselves"), and never say in a label who introduced or referred anyone: the product holds no record of it. The body is where the sender says who they are.
+Each reasoning entry names ONE input you actually used, in the reader's words, short enough to read as a chip ("pricing concern", "follow-up due today"). Give entity_type and entity_id when the input was a record the summary identified, entity_id being the record's reference exactly as the summary shows it (such as c1, d1 or a2); set both to null when it was the caller's own intent. Label the caller's own intent by its purpose ("offer a call", "introduce ourselves"), and never say in a label who introduced or referred anyone: the product holds no record of it. The body is where the sender says who they are.
 If the summary gives you nothing but the recipient, write a short honest opener and return an empty reasoning array. Do not invent a reason.`
 
 // draftSystemFor assembles this call's system turn: what this surface is for,
@@ -218,7 +219,7 @@ func surface(in Input) draftcore.Surface {
 		KeepUncited: func(kind crmcontracts.AccountDraftReasonKind, label string) bool {
 			return groundedWithoutCitation(kind, label, in)
 		},
-		Cites: func(entityID string) string { return known[entityID] },
+		Known: known,
 	}
 }
 

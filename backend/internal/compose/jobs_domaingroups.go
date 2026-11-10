@@ -18,10 +18,8 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/margince/margince/backend/internal/compose/briefs"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/aiactivity"
-	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
 )
 
@@ -35,7 +33,7 @@ import (
 // what the api role adds on a rep's explicit refresh.
 func addBriefGenerateJobs(reg *jobRegistry, pool *pgxpool.Pool, log *slog.Logger, mail BriefMailConfig) {
 	addDeclaredWorker[BriefGenerateArgs](reg, &briefGenerateWorker{
-		engine: briefs.NewBriefEngine(pool, contacts.NewStore(InstallationDB(pool))),
+		engine: routineBriefEngine(pool),
 		pool:   pool,
 		users:  identity.NewService(pool),
 		now:    time.Now,

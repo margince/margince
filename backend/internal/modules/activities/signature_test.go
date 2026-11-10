@@ -22,14 +22,15 @@ type stubSignature struct {
 	template string
 	title    string
 	phone    string
+	imprint  string
 	logoKey  string
 	err      error
 	askedID  ids.UUID
 }
 
-func (s *stubSignature) SignatureFor(_ context.Context, userID ids.UUID) (SenderSignature, error) {
+func (s *stubSignature) SignatureFor(_ context.Context, userID, _ ids.UUID) (SenderSignature, error) {
 	s.askedID = userID
-	return SenderSignature{Body: s.body, HTML: s.html, Template: s.template, Title: s.title, Phone: s.phone, LogoKey: s.logoKey}, s.err
+	return SenderSignature{Body: s.body, HTML: s.html, Template: s.template, Title: s.title, Phone: s.phone, Imprint: s.imprint, LogoKey: s.logoKey}, s.err
 }
 
 func humanCtx(userID ids.UUID) context.Context {
@@ -42,7 +43,7 @@ func humanCtx(userID ids.UUID) context.Context {
 // message, beneath it.
 func signedBody(ctx context.Context, t *testing.T, store *Store, body string) string {
 	t.Helper()
-	sign, err := store.signOff(ctx, body, "")
+	sign, err := store.signOff(ctx, body, "", ids.Nil)
 	if err != nil {
 		t.Fatalf("resolving the sign-off failed: %v", err)
 	}
@@ -107,7 +108,7 @@ func TestASenderWithNoSignatureClosesWithTheirName(t *testing.T) {
 				WithSenderName(&stubSenderName{name: "Lars Jankowfsky"}).
 				WithBaseLanguage(BaseLanguageFunc(func(context.Context) string { return tc.base }))
 
-			sign, err := store.signOff(humanCtx(ids.NewV7()), tc.body, "")
+			sign, err := store.signOff(humanCtx(ids.NewV7()), tc.body, "", ids.Nil)
 			if err != nil {
 				t.Fatalf("resolving the sign-off failed: %v", err)
 			}
@@ -151,7 +152,7 @@ func TestAnAgentSendSignsNothing(t *testing.T) {
 		Type: principal.PrincipalAgent, ID: "agent:assistant", UserID: ids.NewV7(),
 	})
 
-	sign, err := store.signOff(ctx, "Body", "")
+	sign, err := store.signOff(ctx, "Body", "", ids.Nil)
 	if err != nil {
 		t.Fatalf("resolving the sign-off failed: %v", err)
 	}
@@ -186,7 +187,7 @@ func TestAFailedSignOffReadRefusesTheSend(t *testing.T) {
 		"name":      (&Store{}).WithSignature(&stubSignature{}).WithSenderName(&stubSenderName{err: boom}),
 	} {
 		t.Run(name, func(t *testing.T) {
-			if _, err := store.signOff(humanCtx(ids.NewV7()), "Body", ""); !errors.Is(err, boom) {
+			if _, err := store.signOff(humanCtx(ids.NewV7()), "Body", "", ids.Nil); !errors.Is(err, boom) {
 				t.Fatalf("expected the read error to surface, got %v", err)
 			}
 		})
@@ -357,7 +358,7 @@ func TestTheClosingCarriesTheNameItIsGiven(t *testing.T) {
 	store := (&Store{}).WithSignature(&stubSignature{}).
 		WithSenderName(&stubSenderName{name: "A later edit"})
 
-	sign, err := store.signOffAs(humanCtx(ids.NewV7()), "Thx", "", "Lars Jankowfsky")
+	sign, err := store.signOffAs(humanCtx(ids.NewV7()), "Thx", "", "Lars Jankowfsky", ids.Nil)
 	if err != nil {
 		t.Fatalf("resolving the sign-off failed: %v", err)
 	}

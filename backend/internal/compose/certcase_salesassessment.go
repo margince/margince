@@ -16,6 +16,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/aitasks"
 	"github.com/margince/margince/backend/internal/compose/salesassessment"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
@@ -102,7 +103,7 @@ func (salesAssessmentCases) Prepare(fixture, expected json.RawMessage) (aitasks.
 }
 
 func salesAssessmentInput(f salesAssessmentFixture) (salesassessment.Input, map[string]string, error) {
-	in := salesassessment.Input{Frame: f.Frame}
+	in := salesassessment.Input{View: string(crmcontracts.SalesAssessmentViewSales), Frame: f.Frame}
 	labels := map[string]string{}
 	for _, cell := range f.Cells {
 		if err := refuseUnnameable(cell.Label, "cell", labels); err != nil {
@@ -128,6 +129,7 @@ func salesAssessmentInput(f salesAssessmentFixture) (salesassessment.Input, map[
 		}
 		in.Decisions = append(in.Decisions, salesassessment.DecisionIn{ID: ids.NewV7().String(), Text: decision.Text, Deal: deal, OwnerID: owners[decision.Deal], ReviewOn: decision.ReviewOn, Status: decision.Status, Result: decision.Result})
 	}
+	displayAssessmentFigures(&in, string(textlang.English))
 	return in, labels, nil
 }
 

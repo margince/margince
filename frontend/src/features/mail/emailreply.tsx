@@ -59,7 +59,8 @@ export function replyAnchor(
 /**
  * Actions for one expanded message: Reply, Forward, and the rest behind More.
  *
- * Reply follows the server's `can_reply`, so a withheld message offers none.
+ * Reply follows the server's `can_reply` and Forward its `can_forward`, so a
+ * seat that may not write offers neither.
  * Every verb needs a record to file under. A message filed against nothing
  * offers none of them, since its send could show on no timeline.
  */
@@ -68,11 +69,13 @@ export function EmailDrawerActions({
   onReply,
   onForward,
   onRelink,
+  onBook,
 }: Readonly<{
   presentation: EmailPresentation;
   onReply: () => void;
   onForward: () => void;
   onRelink: () => void;
+  onBook?: () => void;
 }>) {
   const t = useT();
   const anchor = replyAnchor(presentation.links);
@@ -87,14 +90,21 @@ export function EmailDrawerActions({
           {t("compose.reply")}
         </Button>
       )}
-      <Button variant="ghost" onClick={onForward}>
-        <Forward aria-hidden="true" />
-        {t("email.forward")}
-      </Button>
-      {presentation.can_relink && (
+      {presentation.can_forward && (
+        <Button variant="ghost" onClick={onForward}>
+          <Forward aria-hidden="true" />
+          {t("email.forward")}
+        </Button>
+      )}
+      {(presentation.can_relink || onBook) && (
         <span className="emaildetail__more">
           <OverflowMenu label={t("record.moreActions")}>
-            <Button onClick={onRelink}>{t("email.fileUnder")}</Button>
+            {onBook && (
+              <Button onClick={onBook}>{t("scheduling.bookContact")}</Button>
+            )}
+            {presentation.can_relink && (
+              <Button onClick={onRelink}>{t("email.fileUnder")}</Button>
+            )}
           </OverflowMenu>
         </span>
       )}

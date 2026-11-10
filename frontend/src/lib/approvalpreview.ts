@@ -125,7 +125,7 @@ function previewMoney(value: Value, t: Translator, locale: Locale): string {
       });
 }
 
-function previewValue(
+export function previewValue(
   value: Value,
   field: string,
   t: Translator,
@@ -194,7 +194,11 @@ const PREVIEW_CATALOG_ALIASES: Readonly<Record<string, string>> = {
   relationship_end_precision: "relationship_start_precision",
 };
 
-function previewLabel(value: Value, field: string, t: Translator): string {
+export function previewLabel(
+  value: Value,
+  field: string,
+  t: Translator,
+): string {
   const mergeLabel = mergeValueLabel(field, value.text, t);
   if (mergeLabel !== undefined) return mergeLabel;
   const formatter = PREVIEW_TEXT_FORMATTERS.get(field);

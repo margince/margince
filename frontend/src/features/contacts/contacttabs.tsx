@@ -8,12 +8,11 @@ import {
   hasTimelineFilters,
   useRecordTimeline,
 } from "../../design-system/recordtimeline";
-import { SurfaceState } from "../../design-system/surfacestate";
+import { omitted, SurfaceState } from "../../design-system/surfacestate";
 import { GroupedTimelineList } from "../../design-system/timeline";
 import { TimelineFilterBar } from "../../design-system/timelinefilterbar";
 import { groupChronology } from "../../design-system/timelinegroups";
 import { useLocale, useT } from "../../i18n";
-import { useRecordZone } from "../../lib/recordzone";
 import { RecordHistoryTab } from "../records/history";
 import {
   CHRONOLOGY_EMPTY_KEYS,
@@ -32,6 +31,7 @@ import { callBackNumber } from "./contactmemory.rows";
 import { timelineState } from "./contacttimelinestate";
 import "./contact360.css";
 import { invalidateRecord } from "../../lib/recordwritekeys";
+import { useViewerZone } from "../../lib/viewerzone";
 
 // The tabs beside Overview that read what the 360 already assembled — the same
 // rule the overview cards hold to (contactcards.tsx): a tab can never show a
@@ -69,6 +69,7 @@ function ContactRowActions({
       entityType="contact"
       entityId={contactId}
       contactId={contactId}
+      contact={view?.contact}
       extra={(row) => (
         <>
           <MeetingBriefAction activity={row} onBriefMeeting={onBriefMeeting} />
@@ -101,6 +102,7 @@ export function ContactLatestInbound({
       latest={latest}
       entityType="contact"
       entityId={contactId}
+      contact={view.contact}
       actions={(activity) => (
         <ContactRowActions
           activity={activity}
@@ -143,19 +145,23 @@ export function ContactTimelineTab({
   const t = useT();
   const { locale } = useLocale();
   const queryClient = useQueryClient();
-  const recordZone = useRecordZone();
-  const { filter, filters, setFilters, openCut, kinds } =
+  const readerZone = useViewerZone();
+  const { filter, filters, setFilters, openCut, kinds, read } =
     useChronologyCut(contactId);
   // Every cut renders through the ONE chronicle, off the same groups: the
   // Conversations list is the same rows cut to the exchanges somebody can
   // answer, never a second rendering of what another cut already shows.
   const List =
     filter === "conversations" ? ConversationList : GroupedTimelineList;
+  // Withheld on the 360 is withheld on every cut.
+  // A narrowed read would draw the refusal as a failure.
+  const withheld = view ? omitted(view, "activities") : false;
   // The 360's own page seeds the list; older pages and every narrowed read
   // come from the activity list itself.
   const timeline = useRecordTimeline("contact", contactId, {
-    filters,
+    filters: read,
     firstPage: view?.activities,
+    enabled: !withheld,
   });
   const chronology = useRecordChronology({
     onOpenEmail,
@@ -172,7 +178,7 @@ export function ContactTimelineTab({
     // says so instead of printing an integer. No name resolver: a mail filed
     // here may have been sent by somebody else. A resolved link name would
     // hide that sender behind this contact's own.
-    values: { currency: null, locale, zone: recordZone },
+    values: { currency: null, locale, zone: readerZone },
     renderActions: (activity) => (
       <ContactRowActions
         activity={activity}
@@ -235,7 +241,7 @@ export function ContactTimelineTab({
               view,
               chronology,
               timeline,
-              hasTimelineFilters(filters),
+              hasTimelineFilters(read) && !withheld,
               loading,
             )}
             emptyLabel={
@@ -246,7 +252,7 @@ export function ContactTimelineTab({
           >
             <List
               groups={groupChronology(chronology.entries, timeline.hasNextPage)}
-              zone={recordZone}
+              zone={readerZone}
             />
           </SurfaceState>
         )}

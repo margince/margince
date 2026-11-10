@@ -6,7 +6,7 @@ import { Button } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
-import { formatNumber } from "../../format/format";
+import { formatAnalyticsNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { throwProblem, unwrap } from "../../lib/problem";
 import { CoverageLine } from "./analytics.forecast.review";
@@ -102,12 +102,6 @@ export function FirstCheck({ title }: Readonly<{ title: string }>) {
 
   return (
     <Panel title={title}>
-      <PanelBody>
-        {/* Said plainly, because the alternative reading is dangerous: a
-            reader who takes an unchecked pipeline for a clean one has been
-            told the opposite of what happened. */}
-        <p>{t("review.notCheckedYet")}</p>
-      </PanelBody>
       <QueryGate query={preview} pendingLabel={t("review.firstCheck.pending")}>
         {(scope) => <FirstCheckOffer preview={scope} />}
       </QueryGate>
@@ -159,8 +153,8 @@ function FirstCheckOffer({ preview }: Readonly<{ preview: Preview }>) {
             ) : (
               <p>
                 {t("review.firstCheck.scope", {
-                  deals: formatNumber(preview.eligible_deals, locale),
-                  findings: formatNumber(total, locale),
+                  deals: formatAnalyticsNumber(preview.eligible_deals, locale),
+                  findings: formatAnalyticsNumber(total, locale),
                 })}
               </p>
             )}

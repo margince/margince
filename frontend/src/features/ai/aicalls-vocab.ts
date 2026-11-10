@@ -5,6 +5,7 @@ import type { components } from "../../api/schema";
 import type { StatusKind } from "../../design-system/statusbadge";
 import { formatAiRunCost } from "../../format/aicost";
 import type { Locale, useT } from "../../i18n";
+import { UNKNOWN_VALUE_LABEL } from "../../lib/labelfor";
 
 type T = ReturnType<typeof useT>;
 export type AiCallSummary = components["schemas"]["AiCallSummary"];
@@ -58,6 +59,8 @@ export function outcomeLabel(outcome: CallOutcome, t: T): string {
       return t("aicalls.outcome.declined");
     case "failed":
       return t("aicalls.outcome.error");
+    default:
+      return t(UNKNOWN_VALUE_LABEL);
   }
 }
 

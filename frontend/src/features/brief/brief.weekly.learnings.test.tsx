@@ -6,10 +6,8 @@ import { render } from "../../testing/brief.testkit";
 import type { WeeklyReview } from "./brief.queries";
 import { LearningsPanel } from "./brief.weekly.learnings";
 
-// The distinction this panel exists to keep: a week NOBODY READ and a week that
-// held NO LESSON are different facts, and only the second is about the week.
-// Collapsing them tells a rep the product looked and found nothing when it may
-// never have looked at all.
+// A learning is drawn beside what it rests on; a week without one draws no
+// panel at all.
 
 afterEach(cleanup);
 
@@ -40,26 +38,15 @@ describe("what the week taught", () => {
     expect(container.innerHTML).toBe("");
   });
 
-  it("tells 'insufficient evidence' from 'nobody looked'", () => {
-    render(
-      <LearningsPanel learnings={learned({ state: "not_run", items: [] })} />,
-    );
-    expect(screen.getByText(en["brief.weekly.learnings.notRun"])).toBeTruthy();
-    expect(
-      screen.queryByText(en["brief.weekly.learnings.insufficient"]),
-    ).toBeNull();
-
-    cleanup();
-    render(
-      <LearningsPanel
-        learnings={learned({ state: "insufficient_evidence", items: [] })}
-      />,
-    );
-    expect(
-      screen.getByText(en["brief.weekly.learnings.insufficient"]),
-    ).toBeTruthy();
-    expect(screen.queryByText(en["brief.weekly.learnings.notRun"])).toBeNull();
-  });
+  it.each(["not_run", "insufficient_evidence"] as const)(
+    "draws nothing for a %s week with no learning",
+    (state) => {
+      const { container } = render(
+        <LearningsPanel learnings={learned({ state, items: [] })} />,
+      );
+      expect(container.innerHTML).toBe("");
+    },
+  );
 
   it("shows what a learning rests on, beside the claim", () => {
     render(<LearningsPanel learnings={learned()} />);

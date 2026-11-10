@@ -157,6 +157,10 @@ func NewPool(ctx context.Context, dsn string) (*pgxpool.Pool, error) {
 	if err != nil {
 		return nil, err
 	}
+	return openPool(ctx, cfg)
+}
+
+func openPool(ctx context.Context, cfg *pgxpool.Config) (*pgxpool.Pool, error) {
 	pool, err := pgxpool.NewWithConfig(ctx, cfg)
 	if err != nil {
 		return nil, fmt.Errorf("pg: opening pool: %w", err)
@@ -193,7 +197,7 @@ func WithWorkspaceTx(ctx context.Context, pool *pgxpool.Pool, fn func(pgx.Tx) er
 	// and every store beneath it lands here; joining that snapshot is what
 	// makes the composition cost one transaction instead of forty.
 	if tx, joined := snapshotOf(ctx); joined {
-		return fn(tx)
+		return guardedTransaction(ctx, tx, fn)
 	}
 	return runTx(ctx, pool, fn)
 }
@@ -209,6 +213,13 @@ type snapshotKey struct{}
 func snapshotOf(ctx context.Context) (pgx.Tx, bool) {
 	tx, ok := ctx.Value(snapshotKey{}).(pgx.Tx)
 	return tx, ok
+}
+
+// InWorkspaceTransaction reports whether a caller must leave rollback and retry
+// to the owner of an ambient transaction.
+func InWorkspaceTransaction(ctx context.Context) bool {
+	_, joined := snapshotOf(ctx)
+	return joined
 }
 
 // WithWorkspaceSnapshot runs fn against ONE read-only snapshot, which every
@@ -308,8 +319,9 @@ func runTxWith(ctx context.Context, pool *pgxpool.Pool, opts pgx.TxOptions, fn f
 	// path the fn/commit error is the one the caller must see.
 	//craft:ignore swallowed-errors rollback after commit is a designed no-op; on the error path the fn error supersedes it
 	defer func() { _ = tx.Rollback(ctx) }()
+	defer openTxMemo(tx)()
 
-	if err := fn(tx); err != nil {
+	if err := guardedTransaction(ctx, tx, fn); err != nil {
 		return err
 	}
 	return tx.Commit(ctx)

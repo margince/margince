@@ -364,7 +364,7 @@ func TestUsageReadsEverySubjectInOneRoundTrip(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	usage, err := meter.Usage(t.Context(), ws, []string{busy.String(), idle.String()})
+	usage, err := meter.Usage(t.Context(), ws, []Holder{{Subject: busy.String()}, {Subject: idle.String()}})
 	if err != nil {
 		t.Fatal(err)
 	}

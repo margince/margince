@@ -23,6 +23,7 @@ import {
   tabOfListType,
   UNIT_LABEL,
 } from "../../lib/filtersaddress";
+import { labelFor } from "../../lib/labelfor";
 import {
   type List,
   useList,
@@ -41,7 +42,6 @@ import {
 } from "../../lib/segmentpredicate";
 import { useFilterDraft, useFirstAnswer, wireSignature } from "./filterdraft";
 import { FilterEditor, useRowsFocus } from "./filtereditor";
-import { useFilterExport } from "./filterexport";
 import { FilterFoot } from "./filterfoot";
 import { FocusedHead, FocusedPending, FocusedState } from "./filterhead";
 import { FilterOutcome } from "./filtermatches";
@@ -123,18 +123,16 @@ function ListFilter({
   const resource = RESOURCE_OF[tab];
   const vocabulary = useFilterVocabulary(resource);
   const words = usePlainWords({ resource, dispatch });
-  const exportRun = useFilterExport();
   const focus = useRowsFocus();
   const editable = mayEditFilter(list);
   const complete = isComplete(draft.tree);
   const changed = wireSignature(draft.tree) !== wireSignature(tree);
   const leave = useGuardedLeave(changed);
   const land = useLandOnSaved(tab, leave);
-  const records = t(UNIT_LABEL[tab]);
+  const records = t(labelFor(UNIT_LABEL, tab));
 
   const foot = editable ? (
     <FilterFoot
-      resource={resource}
       tree={draft.tree}
       mode={{
         kind: "list",
@@ -156,17 +154,14 @@ function ListFilter({
         ),
       }}
       onSave={() => setSaving(draft.tree)}
-      exportRun={exportRun}
     />
   ) : complete ? (
     // A list the reader may read but not change: its filter is theirs to
     // start from, kept the way a new filter is.
     <FilterFoot
-      resource={resource}
       tree={draft.tree}
       mode={{ kind: "new" }}
       onSave={() => setSaving(draft.tree)}
-      exportRun={exportRun}
     />
   ) : undefined;
 
@@ -175,7 +170,7 @@ function ListFilter({
       <FocusedHead
         title={list.name}
         facts={t("filters.listFacts", {
-          records: t(TAB_LABEL[tab]),
+          records: t(labelFor(TAB_LABEL, tab)),
           who: audienceOf(list),
         })}
       />

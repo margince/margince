@@ -12,9 +12,13 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// Policy is the allowances an installation set and the window they are counted over.
+// Policy is the allowances an installation set and the window they are counted
+// over. Limits is the installation value; Roles holds each role's own values,
+// keyed by role key, where a zero field uses the installation value. A call is
+// judged by For the caller's roles, never by the policy as a whole.
 type Policy struct {
 	Limits Limits
+	Roles  map[string]Limits
 	Window WindowPlan
 }
 
@@ -138,20 +142,29 @@ func (c *policyCache) heldOr(fallback Policy) Policy {
 	return fallback
 }
 
-// window is one call's view of the policy: the limits, the length in force and
-// the bucket now falls in. They are taken together, so a call is never judged
-// half by an old policy and half by a new one.
+// window is one call's view of the policy: the caller's limits, the length in
+// force and the bucket now falls in. They are taken together, so a call is never
+// judged half by an old policy and half by a new one.
 type window struct {
+	policy Policy
 	limits Limits
 	length time.Duration
 	bucket int64
+	now    time.Time
 }
 
 func (m *Meter) window(ctx context.Context) window {
 	p := m.policy(ctx)
 	now := m.now()
 	length := p.Window.At(now)
-	return window{limits: p.Limits, length: length, bucket: bucketAt(now, length)}
+	w := window{policy: p, length: length, bucket: bucketAt(now, length), now: now}
+	return w.heldBy(rolesOf(ctx))
+}
+
+// heldBy is the same window judged for a human holding roles.
+func (w window) heldBy(roles []string) window {
+	w.limits = w.policy.For(roles).Limits
+	return w
 }
 
 // effectiveLimit is the configured threshold plus what a human has released.
@@ -161,7 +174,7 @@ func (m *Meter) window(ctx context.Context) window {
 // another. A release that granted an unbounded continuation would make the
 // second confirmation the last one anybody is ever asked for.
 func (w window) effectiveLimit(c Counter, released int) int {
-	base := w.limits.of(c)
+	base := w.limits.Of(c)
 	if released <= 0 {
 		return base
 	}
@@ -178,5 +191,8 @@ func (w window) ttlSeconds() int {
 
 // reading is a Reading of counter c with nothing observed yet.
 func (w window) reading(c Counter) Reading {
-	return Reading{Counter: c, Limit: w.limits.of(c), Allowance: w.limits.of(c), Bucket: w.bucket, Window: w.length}
+	return Reading{
+		Counter: c, Limit: w.limits.Of(c), Allowance: w.limits.Of(c), Bucket: w.bucket, Window: w.length,
+		ResetsAt: ResetAfter(w.now, w.length), ResetsIn: ResetAfter(w.now, w.length).Sub(w.now),
+	}
 }

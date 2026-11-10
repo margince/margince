@@ -33,6 +33,8 @@ import {
   serviceBadge,
   serviceReason,
 } from "../../../lib/connector-status";
+import { captureRefusalOf, useConnectors } from "../../../lib/connectors";
+import { labelFor } from "../../../lib/labelfor";
 import { problemMessageOf } from "../../../lib/problem";
 import { IMPORT_WINDOW_LABELS } from "../../../mail-history/window-picker";
 import { ConnectPostureStep } from "../connect-posture";
@@ -165,6 +167,8 @@ function AccountPanel({
   const connect = useConnectAccount({
     onRedirect: (input) => markOAuthAttempt(input.provider),
   });
+  // The server refuses every connect for this role or seat, so no verb is offered.
+  const refusal = captureRefusalOf(useConnectors().data);
   const name = t(ACCOUNT_NAME[account.key]);
   const health = healthBadge(accountHealth(account));
   const live = liveServices(account);
@@ -197,7 +201,7 @@ function AccountPanel({
           }
           reason={reasonKey ? t(reasonKey) : undefined}
           action={
-            vendor !== null && stale.length > 0 ? (
+            vendor !== null && stale.length > 0 && !refusal ? (
               <Button
                 variant="primary"
                 pending={connect.isPending}
@@ -213,6 +217,7 @@ function AccountPanel({
             vendor={vendor}
             label={t("connectors.svc.list", { account: name })}
             pending={connect.isPending}
+            offerConnect={!refusal}
             // The calendar leg alone: the mailbox is already live, and the
             // import stays the footer's choice.
             onConnectCalendar={(v) =>
@@ -220,6 +225,7 @@ function AccountPanel({
             }
           />
         </ProviderRow>
+        {refusal && <Callout tone="info" kind="standing" title={t(refusal)} />}
         <CalendarAskOutcome connect={connect} name={name} />
       </PanelBody>
     </Panel>
@@ -277,12 +283,14 @@ function AccountServiceRows({
   vendor,
   label,
   pending,
+  offerConnect,
   onConnectCalendar,
 }: Readonly<{
   account: ConnectionAccount;
   vendor: AccountVendor | null;
   label: string;
   pending: boolean;
+  offerConnect: boolean;
   onConnectCalendar: (vendor: AccountVendor) => void;
 }>) {
   const t = useT();
@@ -314,9 +322,14 @@ function AccountServiceRows({
             label: t("connectors.health.notConnected"),
           }}
           action={
-            <Button pending={pending} onClick={() => onConnectCalendar(vendor)}>
-              {t("ob.conv.connect.connectCalendar")}
-            </Button>
+            offerConnect && (
+              <Button
+                pending={pending}
+                onClick={() => onConnectCalendar(vendor)}
+              >
+                {t("ob.conv.connect.connectCalendar")}
+              </Button>
+            )
           }
         />
       )}
@@ -386,7 +399,7 @@ export function ConnectedWayOnward({
         onClick={() => choice.begin(choice.window, onFinish)}
       >
         {t("ob.conv.connect.importAndContinue", {
-          period: t(IMPORT_WINDOW_LABELS[choice.window]),
+          period: t(labelFor(IMPORT_WINDOW_LABELS, choice.window)),
         })}
       </Button>
     </StageActions>

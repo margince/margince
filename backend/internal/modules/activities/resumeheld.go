@@ -3,24 +3,8 @@
 
 package activities
 
-// Firing a message that was stopped and has since been decided about.
-//
-// A send the consent engine refused is frozen into a held scheduled_send
-// (holdforreview.go) so the review recording that refusal has something a
-// human can act on. This is the act: the held row is claimed, the message it
-// froze is replayed through the ordinary send, and the consent engine is asked
-// again.
-//
-// THE ENGINE IS ASKED AGAIN, AND IT WILL REFUSE AGAIN. That is the point. The
-// refusal is real and stays on record; what lets the message through is a
-// decision a named human already recorded against this message's review, which
-// the staging path finds and spends. Nothing here overrules anything — this
-// code does not know whether an instruction exists, and must not, or the
-// authority question would be answered in two places.
-//
-// SO A RESUME WITH NO DECISION BEHIND IT IS REFUSED, exactly as the first
-// attempt was. A rep can press Resume on their own refusal and will be told the
-// same thing they were told before, which is the honest answer.
+// A held message is replayed through the current send checks. It uses ordinary
+// permission when available, or a recorded instruction for an eligible refusal.
 
 import (
 	"context"
@@ -83,18 +67,23 @@ func (s *Store) ResumeHeldSend(
 	}
 
 	var sent crmcontracts.Activity
-	err = s.tx(ctx, func(tx pgx.Tx) error {
+	err = s.txRetryingLockCycles(ctx, pgx.ReadCommitted, func(tx pgx.Tx) error {
+		sent = crmcontracts.Activity{}
 		// CLAIMED AGAIN, INSIDE THE TRANSACTION THAT WRITES. The read above was
 		// unlocked, so the row may have been cancelled or resumed by somebody
 		// else since — and this is where that is decided, under the row's own
 		// lock, before anything is staged.
-		if _, found, err := s.claimHeldForResume(ctx, tx, id); err != nil {
+		claimed, found, err := s.claimHeldForResume(ctx, tx, id)
+		if err != nil {
 			return err
 		} else if !found {
 			return apperrors.ErrNotFound
 		}
 		sent, err = s.SendPreparedTx(ctx, tx, origin, prepared, stager)
 		if err != nil {
+			return err
+		}
+		if err := discardHeldDraftTx(ctx, tx, claimed, origin, in); err != nil {
 			return err
 		}
 		if err := s.releaseHeldInTx(ctx, tx, id, ids.UUID(sent.Id)); err != nil {
@@ -162,11 +151,12 @@ func (s *Store) heldRow(ctx context.Context, tx pgx.Tx, id ids.UUID, lock string
 	var c claimedSend
 	err := tx.QueryRow(ctx, `
 		SELECT scheduled_at, origin_kind, anchor_activity_id,
-		       origin_links, also_links, payload, payload_version, version
+		       origin_links, also_links, payload, payload_version, version,
+		       scheduled_by, nullif(payload->>'pending_draft_id', '')::uuid, created_at
 		  FROM scheduled_send
 		 WHERE id = $1 AND status = 'held' AND held_reason = $2`+lock, id, HeldSendRefused).
 		Scan(&c.ScheduledAt, &c.OriginKind, &c.Anchor,
-			&c.OriginLinks, &c.AlsoLinks, &c.Payload, &c.Version, &c.RowVersion)
+			&c.OriginLinks, &c.AlsoLinks, &c.Payload, &c.Version, &c.RowVersion, &c.ScheduledBy, &c.PendingDraftID, &c.CreatedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return claimedSend{}, false, nil
 	}

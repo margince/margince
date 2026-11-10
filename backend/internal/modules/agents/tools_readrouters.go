@@ -18,7 +18,7 @@ type readImport struct{ routed }
 func (readImport) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "read_import", Title: "Read an import run or the import format", Version: toolVersionV1,
-		Description: readImportCopy.render(),
+		Description: readImportCopy.render(), Instead: readImportCopy.Instead,
 		InputSchema: schema(`{"type":"object","properties":{
 			"view":{"description":"report is one run's state and, once validated, what it will do or did; format is the files and columns an import takes"}}}`),
 	}

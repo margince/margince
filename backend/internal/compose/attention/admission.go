@@ -59,6 +59,7 @@ var sourceOwnerAnswers = map[crmcontracts.WorklistItemSource]ownerAnswers{
 	crmcontracts.WorklistItemSourceUndelivered:         answers(ownerTheReader),
 	crmcontracts.WorklistItemSourceNotice:              answers(ownerTheReader),
 	crmcontracts.WorklistItemSourceCaptureHealth:       answers(ownerTheReader),
+	crmcontracts.WorklistItemSourceBookingHealth:       answers(ownerTheReader),
 	crmcontracts.WorklistItemSourceDomainQuestion:      answers(ownerTheReader),
 	crmcontracts.WorklistItemSourceAwaitingReply:       answers(ownerTheReader),
 	crmcontracts.WorklistItemSourceMeetingFollowUp:     answers(ownerTheReader),

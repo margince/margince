@@ -30,7 +30,6 @@ package gates
 
 import (
 	"encoding/json"
-	"os"
 	"regexp"
 	"sort"
 	"strings"
@@ -71,7 +70,7 @@ var otherSenses = gatekit.Waive(map[string]string{
 func TestTheToolCatalogCallsTheRecordACompany(t *testing.T) {
 	t.Parallel()
 
-	source, err := os.ReadFile(publishedCatalog)
+	source, err := gatekit.ReadFile(publishedCatalog)
 	if err != nil {
 		t.Fatalf("reading the published catalog: %v", err)
 	}

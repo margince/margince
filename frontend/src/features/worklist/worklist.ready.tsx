@@ -11,6 +11,7 @@ import { Badge, Button } from "../../design-system/atoms";
 import { undoAction, useToast } from "../../design-system/toast";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { labelFor } from "../../lib/labelfor";
 import { isUnprepared } from "../../lib/meetingreadiness";
 import { problemStatus, throwProblem } from "../../lib/problem";
 import { type WorklistItem, worklistKey } from "./worklist.queries";
@@ -124,6 +125,8 @@ export function PreparationNote({ item }: Readonly<{ item: WorklistItem }>) {
   if (preparation.changed.length === 0) {
     return null;
   }
-  const facts = preparation.changed.map((fact) => t(FACT_KEY[fact])).join(", ");
+  const facts = preparation.changed
+    .map((fact) => t(labelFor(FACT_KEY, fact)))
+    .join(", ");
   return <p className="t-caption">{t("worklist.ready.changed", { facts })}</p>;
 }

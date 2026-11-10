@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/modules/identity"
 )
 
 // consentCookieName is the double-submit cookie the authorize GET arms. Spelled
@@ -144,8 +145,8 @@ func TestAuthorizeRedirectsToTheSPAConsentScreen(t *testing.T) {
 	if status != http.StatusFound {
 		t.Fatalf("authorize → %d %s, want 302", status, body)
 	}
-	fragment := "#/oauth-consent?"
-	if !strings.Contains(location, fragment) {
+	fragment := identity.ConsentScreenPath + "?"
+	if !strings.HasPrefix(location, fragment) {
 		t.Fatalf("Location = %q, want the SPA consent route %q", location, fragment)
 	}
 	// The old server-rendered page is gone: no HTML, and nothing that could be

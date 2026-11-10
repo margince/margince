@@ -28,7 +28,7 @@ cross the split:
   the resource server's own 401, which a split origin breaks. It must be the host
   `--public-base-url` names.
 - The consent flow crosses the two services in both directions. `GET
-  /oauth/authorize` (api) redirects the human's browser to `/#/oauth-consent`
+  /oauth/authorize` (api) redirects the human's browser to `/consent#/oauth-consent`
   (web). That screen reads `/v1/oauth/consent-request` and posts the decision
   back to `/oauth/authorize` (api). Say an ingress serves `/` from somewhere
   else than `/oauth/authorize`, or routes `/oauth` to the web service. Then it gives a 404
@@ -72,6 +72,8 @@ Every release image carries the release it was built from, derived from one buil
 |---|---|---|
 | OCI label `org.opencontainers.image.version` | `docker inspect` / `crane config`, no pull needed | an operator diffing a set |
 | `/etc/margince/release-version` | `docker run --rm <image> cat /etc/margince/release-version`, or `kubectl exec` into a running one | an operator inspecting a role that is running or crash-looping. It is the only place the **web** image's release can be read from the outside, because nginx runs none of our code. It is not what the web tier itself compares against |
+| `margince-api --version`, and the same for `margince-worker` and `margince-migrate` | on a server `/opt/margince/bin/margince-api --version`, or `docker run --rm --entrypoint margince-api <image> --version`. It prints the release and the commit | an operator on a server install, which has no image to look at |
+| `VERSION` at the top of a server bundle | `cat /opt/margince/VERSION` | anyone with the files of a bundle |
 | the Go binary's link-time stamp, and the SPA bundle's compiled-in copy | the guard below. This is the value each role compares; the label and the file are for humans | the software itself |
 
 ### Why the guard exists
@@ -141,6 +143,16 @@ from the web tier once at startup, and there is no channel for announcing a late
 that was down at that moment leaves a running api advertising a short set for the life of the
 process. It says so at boot, naming the views it is without and the restart, and
 `margince_mcp_app_view_held{uri=…}` reports the same per view.
+
+The api serves a view only from a web tier built in the same build. Each release image links the
+SHA-256 of every view document the web build produced, and the api refuses a document whose bytes
+differ. A refusal is logged at error level with both digests and counted in
+`margince_mcp_app_digest_mismatches_total`.
+
+So an api started against a web tier from another release serves no views until both run the same
+release and the api restarts. A CDN or proxy that rewrites the documents has the same effect, so
+serve them as built. A local build without the digest list serves views without the check and warns
+at boot. A release built without it serves none.
 
 The lever, when the api cannot reliably reach the web tier at boot, is `--mcp-apps-base-url` /
 `MARGINCE_MCP_APPS_BASE_URL`; a CDN origin is a supported value. Before you set it:

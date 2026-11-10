@@ -13,7 +13,6 @@ package contacts
 
 import (
 	"context"
-	"crypto/sha256"
 	"errors"
 	"fmt"
 
@@ -22,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/assetrev"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -257,16 +257,14 @@ func (s *Store) LogoHeldByHuman(ctx context.Context, id ids.CompanyID) (bool, er
 // logoHeldByHuman reports whether a contact's own mark is on this company
 // in one slot right now.
 //
-// TWO questions, because the logo's provenance can outlive the logo. What holds
-// a read off is a mark a contact chose, not the fact that a contact once touched
-// the field: someone who REMOVES a logo has asked for the record to have none,
-// and leaving their removal standing as a hold would mean the company could
-// never be given a face again by any later read. So the field's own answer —
-// companyFieldHeldByHuman, shared with the description — is narrowed by whether
-// there is a mark in the slot at all. The description needs no such arm: its
-// column and its provenance move together.
+// Two questions, because the logo's provenance can outlive the logo. What holds
+// a read off is a mark a user or their agent chose, not a past touch of the field.
+// Someone who removes a logo has asked for the record to have none. Treating that
+// as a hold would keep any later read from giving the company a face.
+// So companyFieldHeldByAUser is narrowed by whether the slot holds a mark.
+// The description needs no such arm: its column and its provenance move together.
 func logoHeldByHuman(ctx context.Context, tx pgx.Tx, id ids.CompanyID, slot LogoSlot) (bool, error) {
-	human, err := companyFieldHeldByHuman(ctx, tx, id, slot.field())
+	human, err := companyFieldHeldByAUser(ctx, tx, id, slot.field())
 	if err != nil || !human {
 		return false, err
 	}
@@ -326,8 +324,7 @@ func (s *Store) CompanyLogoKey(ctx context.Context, id ids.CompanyID, slot LogoS
 // minted per upload (companyLogoKey / siteReadLogoKey,
 // compose/sitelogo.go), so two marks can never share a digest.
 func logoRevisionDigest(objectKey string) string {
-	digest := sha256.Sum256([]byte("logo-display-v2\x00" + objectKey))
-	return fmt.Sprintf("%x", digest[:6])
+	return assetrev.Digest("logo-display-v2", objectKey)
 }
 
 // LogoURL renders where a client fetches one slot's logo bytes, or nil when the

@@ -12,12 +12,12 @@ package gates
 // check and never shows. A glyph only Go knows is an entry without its icon.
 
 import (
-	"os"
 	"regexp"
 	"slices"
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
@@ -107,7 +107,7 @@ func TestTheFrontendEntryIconsMatchTheGoOnes(t *testing.T) {
 // so a name a comment mentions cannot stand in for a deleted entry.
 func tsLiteral(t *testing.T, path, open, closing string) string {
 	t.Helper()
-	source, err := os.ReadFile(path)
+	source, err := gatekit.ReadFile(path)
 	if err != nil {
 		t.Fatalf("reading %s: %v", path, err)
 	}

@@ -134,7 +134,7 @@ func integrationSuitesUnder(t *testing.T, roots ...string) []gatekit.ParsedFile 
 	t.Helper()
 	var suites []gatekit.ParsedFile
 	for _, root := range roots {
-		err := filepath.WalkDir(root, func(p string, entry fs.DirEntry, walkErr error) error {
+		err := gatekit.WalkDir(root, func(p string, entry fs.DirEntry, walkErr error) error {
 			if walkErr != nil {
 				return walkErr
 			}

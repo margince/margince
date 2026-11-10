@@ -4,7 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 
 import type { components } from "../../api/schema";
-import { viewerZone } from "../../format/timezone";
+import { browserZone } from "../../format/timezone";
 import {
   installFetchStub,
   jsonResponse,
@@ -103,6 +103,7 @@ export const RecordDrawer: StoryObj = {
               change_mode: "none",
             },
             can_reply: true,
+            can_forward: true,
             can_relink: false,
             version: 3,
           }),
@@ -118,7 +119,7 @@ export const RecordDrawer: StoryObj = {
         {/* The reader's own zone: format/zone-by-purpose forbids naming one. */}
         <OpenEmailDrawer
           activityId={BASE.activity_id}
-          zone={viewerZone()}
+          zone={browserZone()}
           onClose={() => {}}
         />
       </StoryProviders>
@@ -183,6 +184,7 @@ export const RecordDrawerHeld: StoryObj = {
               change_scope: "thread",
             },
             can_reply: true,
+            can_forward: true,
             can_relink: false,
             version: 3,
           }),
@@ -191,7 +193,7 @@ export const RecordDrawerHeld: StoryObj = {
       <StoryProviders>
         <OpenEmailDrawer
           activityId={BASE.activity_id}
-          zone={viewerZone()}
+          zone={browserZone()}
           onClose={() => {}}
         />
       </StoryProviders>

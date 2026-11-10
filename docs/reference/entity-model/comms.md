@@ -97,4 +97,5 @@ The 1 table owned by `comms`, as the migrations build them. [Back to the entity 
 - `comms_outbound_party_admission`: `btree (activity_id, user_id) WHERE (party_admission_pending AND (status = 'sent') AND (sender_kind = 'user') AND (channel_user_id IS NULL))`
 - `comms_outbound_pkey`: `unique, btree (id)`
 - `comms_outbound_workspace_activity_ix`: `btree (activity_id, id)`
+- `idx_comms_outbound_addressed`: `gin (comms_outbound_addressed(recipients, cc)) WHERE ((sender_kind = 'user') AND (status = 'sent') AND (user_id IS NOT NULL) AND (channel_user_id IS NULL))`
 - `idx_comms_outbound_parked`: `btree (user_id, parked_at DESC) WHERE (parked_at IS NOT NULL)`

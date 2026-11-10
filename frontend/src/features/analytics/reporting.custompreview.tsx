@@ -16,13 +16,13 @@ import { unwrap } from "../../lib/problem";
 import { navigate } from "../../lib/router";
 import { useViewerId } from "../../lib/session";
 import { useUrlParams } from "../../lib/urlstate";
+import { ReportingEvidenceDrawer } from "./analytics.drawers";
 import { ReportingCharts } from "./reporting.charts";
 import {
   type CustomReportDraft,
   CustomReportDrawer,
   heldCustomReport,
 } from "./reporting.custombuilder";
-import { ReportingEvidenceDrawer } from "./reporting.evidence";
 import { useSelectionEvidence } from "./reporting.evidenceselection";
 import { useReportingEvaluation } from "./reporting.queries";
 

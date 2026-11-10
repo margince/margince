@@ -32,10 +32,10 @@ func TestBookingBrandUsesTheCurrentAnchorAndServesItsLogoWithoutLogin(t *testing
 	blob := blobstore.NewMemory()
 	theCompanyExists(t, e)
 	uploadMark(t, e, companyHandlers{store: e.Contacts, blob: blob}, logoFixture(t, 400, 100), "logo.png")
-	store := e.Activities.WithSchedulingBrand(e.Contacts)
+	store := e.Activities.WithSchedulingBrand(e.Contacts).WithSchedulingCalendar(privateCalendar{}).WithPublicBaseURL("https://crm.example.test")
 	obsoleteName, obsoleteLogo := "Obsolete company", "https://old.example/logo.png"
 	profile, err := store.SaveSchedulingProfile(e.Admin(), crmcontracts.SchedulingProfile{
-		CalendarId: "primary", DurationMinutes: 30, NoticeMinutes: 120, HorizonDays: 30,
+		Enabled: true, Provider: "gcal", CalendarId: "primary", DurationMinutes: 30, NoticeMinutes: 120, HorizonDays: 30,
 		Title: "Let's meet", CompanyName: &obsoleteName, LogoUrl: &obsoleteLogo,
 	})
 	if err != nil {
@@ -44,7 +44,7 @@ func TestBookingBrandUsesTheCurrentAnchorAndServesItsLogoWithoutLogin(t *testing
 	if profile.CompanyName == nil || *profile.CompanyName != "Acme GmbH" || profile.LogoUrl == nil {
 		t.Fatalf("profile did not use anchor identity: %+v", profile)
 	}
-	server := New(e.Pool, slog.New(slog.NewTextHandler(io.Discard, nil)), WithBlobstore(blob))
+	server := New(e.Pool, slog.New(slog.NewTextHandler(io.Discard, nil)), withConnectedCalendar(), WithBlobstore(blob))
 	logo := httptest.NewRecorder()
 	server.ServeHTTP(logo, httptest.NewRequest(http.MethodGet, *profile.LogoUrl, nil))
 	if logo.Code != http.StatusOK || logo.Header().Get("Content-Type") != "image/png" {
@@ -76,8 +76,8 @@ func TestBookingBrandUsesTheCurrentAnchorAndServesItsLogoWithoutLogin(t *testing
 	if err := json.Unmarshal(guest.Body.Bytes(), &public); err != nil {
 		t.Fatal(err)
 	}
-	if guest.Code != http.StatusOK || public.CompanyName != "New anchor name" || public.Enabled {
-		t.Fatalf("public profile did not follow the anchor or changed paused status: %d %+v", guest.Code, public)
+	if guest.Code != http.StatusOK || public.CompanyName != "New anchor name" || !public.Enabled {
+		t.Fatalf("public profile did not follow the anchor or changed its open status: %d %+v", guest.Code, public)
 	}
 	if _, err := e.Contacts.ClearCompanyLogo(e.Admin(), contacts.LogoWide); err != nil {
 		t.Fatal(err)
@@ -121,7 +121,7 @@ func TestBookingBrandTrimsLegacyLogosWithoutAuthorizingPublicWrites(t *testing.T
 	if _, err := e.Contacts.SetAnchorCompanyLogo(e.Admin(), contacts.LogoWide, key, "legacy.png"); err != nil {
 		t.Fatal(err)
 	}
-	server := New(e.Pool, slog.New(slog.NewTextHandler(io.Discard, nil)), WithBlobstore(blob))
+	server := New(e.Pool, slog.New(slog.NewTextHandler(io.Discard, nil)), withConnectedCalendar(), WithBlobstore(blob))
 	response := httptest.NewRecorder()
 	server.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/v1/public/booking/company-logo", nil))
 	picture, err := png.Decode(response.Body)
@@ -161,7 +161,7 @@ func TestBookingBrandFollowsTheAnchorOnPersonalProposals(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	server := New(e.Pool, slog.New(slog.NewTextHandler(io.Discard, nil)), WithBlobstore(blob), WithKeyvault(vault), WithPublicBaseURL("https://crm.example.test"))
+	server := New(e.Pool, slog.New(slog.NewTextHandler(io.Discard, nil)), withConnectedCalendar(), WithBlobstore(blob), WithKeyvault(vault), WithPublicBaseURL("https://crm.example.test"))
 	response := httptest.NewRecorder()
 	server.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/v1/public/proposal/"+strings.Split(proposal.URL, "proposal-")[1], nil))
 	var public crmcontracts.PublicMeetingProposal
@@ -242,7 +242,7 @@ func TestBookingBrandFollowsTheLegalEntityTheHostWorksFor(t *testing.T) {
 		t.Fatalf("a Vienna host: %q %q, want Wien and its own logo", deref(viennaHost.CompanyName), deref(viennaHost.LogoUrl))
 	}
 
-	server := New(e.Pool, slog.New(slog.NewTextHandler(io.Discard, nil)), WithBlobstore(blob))
+	server := New(e.Pool, slog.New(slog.NewTextHandler(io.Discard, nil)), withConnectedCalendar(), WithBlobstore(blob))
 	logo := httptest.NewRecorder()
 	server.ServeHTTP(logo, httptest.NewRequest(http.MethodGet, *viennaHost.LogoUrl, nil))
 	if logo.Code != http.StatusOK || logo.Header().Get("Content-Type") != "image/png" {

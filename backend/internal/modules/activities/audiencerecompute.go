@@ -79,11 +79,10 @@ const (
 // RecomputeAudiencesTx re-derives SEVERAL activities' audiences on one
 // transaction, in the order every other writer of these rows takes them.
 //
-// The plural exists for the lock order alone. RecomputeAudienceTx takes
-// `FOR UPDATE` on the activity, so a caller looping over rows in whatever order
-// its query returned is choosing a lock order by accident — and two such callers
-// that disagree about it can each hold the other's next row, which Postgres ends
-// by aborting one of them. Sorting is what makes them agree: see ids.Ascending.
+// The plural exists for the lock order alone. RecomputeAudienceTx row-locks
+// the activity, so a caller looping in its query's order picks a lock order by
+// accident. Two callers that disagree can each hold the other's next row, and
+// Postgres aborts one of them. Sorting makes them agree: see ids.Ascending.
 //
 // A caller with ONE id calls the singular. A caller holding several must not
 // loop the singular itself, which is what the loop below is for.
@@ -97,15 +96,11 @@ func RecomputeAudiencesTx(ctx context.Context, tx pgx.Tx, activityIDs []ids.Acti
 }
 
 func RecomputeAudienceTx(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID) error {
-	// The activity FIRST, and locked. Every writer of a derived row in this
-	// tree takes the activity before the row derived from it (the embedding
-	// upsert's share lock, the retraction's own), and a recompute that took
-	// capture_import first would deadlock against them.
+	// The activity first, FOR NO KEY UPDATE: a second recompute queues behind it,
+	// and another seat's import row can still take its foreign key share.
 	//
-	// The lock is also what makes the derivation correct rather than merely
-	// plausible: two seats' syncs committing at once would otherwise each read
-	// a set of import rows that did not include the other's, and each write a
-	// row the other's contribution should have tightened.
+	// The import rows are read in later statements, so a recompute that waited
+	// here derives from the rows the one before it committed.
 	//
 	// restricted_at IS NULL excludes a row under a statutory retention
 	// obligation, and excluding it is the whole treatment rather than a
@@ -114,12 +109,13 @@ func RecomputeAudienceTx(ctx context.Context, tx pgx.Tx, activityID ids.Activity
 	// reader could observe, and widening it would be the one write here that
 	// could make a held row more readable than the obligation allows. Leaving
 	// it exactly as it is has neither effect.
+	var internalMail bool
 	var stored string
 	var storedReason *string
 	err := tx.QueryRow(ctx, `
-		SELECT audience, audience_reason FROM activity
-		 WHERE id = $1 AND restricted_at IS NULL FOR UPDATE`,
-		activityID).Scan(&stored, &storedReason)
+		SELECT audience, audience_reason, internal_mail_authorization IS NOT NULL FROM activity
+		 WHERE id = $1 AND restricted_at IS NULL FOR NO KEY UPDATE`,
+		activityID).Scan(&stored, &storedReason, &internalMail)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			// Erased, deleted, or under a statutory hold. Nothing to derive an
@@ -132,7 +128,7 @@ func RecomputeAudienceTx(ctx context.Context, tx pgx.Tx, activityID ids.Activity
 	// widening publishes what a contact narrowed by hand, and narrowing discards
 	// the member set they named, which no contribution here knows how to
 	// rebuild.
-	if stored == audienceSelected {
+	if internalMail || stored == audienceSelected {
 		return nil
 	}
 	// A human's decision binds in ONE direction, and it is asked BEFORE anything
@@ -269,7 +265,7 @@ func rowCarriedHold(stored string, storedReason *string) (bool, string) {
 	}
 	switch why := deref(storedReason); why {
 	case ReasonNoRecord, ReasonNoCounterparty, ReasonWorkspaceFloor, ReasonCounterparty, ReasonConfidentialMarker,
-		ReasonMembersOnly:
+		ReasonMembersOnly, ReasonInternalOperational:
 		return true, why
 	}
 	return false, ""
@@ -360,7 +356,7 @@ func writeDerivedAudienceTx(
 ) error {
 	before := map[string]any{auditFieldAudience: stored, auditFieldAudienceReason: deref(storedReason)}
 	// The audience pin is the concurrency guard, re-stating what the caller read
-	// under FOR UPDATE.
+	// under its row lock.
 	tag, err := tx.Exec(ctx, `
 		UPDATE activity SET audience = $2, audience_reason = NULLIF($3, '')
 		 WHERE id = $1 AND audience = $4 AND restricted_at IS NULL`,

@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, userEvent, within } from "storybook/test";
+import { expect, screen, userEvent, waitFor, within } from "storybook/test";
 import {
   installFetchStub,
   jsonResponse,
@@ -40,6 +40,48 @@ export const CreateTask: Story = {
     installFetchStub({ "GET /me": meRoute({ activity: ["read", "create"] }) });
   },
   args: CREATE_TASK,
+};
+
+/** A seat that may not write activities is offered no follow-up. */
+export const CreateTaskNoGrant: Story = {
+  beforeEach: () => {
+    installFetchStub({ "GET /me": meRoute({ activity: ["read"] }) });
+  },
+  args: CREATE_TASK,
+  play: async () => {
+    // Drawn while the grants are unknown, gone once /me refuses the write.
+    await screen.findByRole("button", { name: "Create follow-up" });
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("button", { name: "Create follow-up" }),
+      ).toBeNull(),
+    );
+  },
+};
+
+/** A seat that may not write activities is offered no follow-up draft. */
+export const DraftFollowUpNoGrant: Story = {
+  beforeEach: () => {
+    installFetchStub({ "GET /me": meRoute({ activity: ["read"] }) });
+  },
+  args: {
+    dealId: "d-1",
+    move: {
+      action: "draft_email",
+      arguments: {
+        activity_id: "m-1",
+        links: [{ entity_type: "contact", entity_id: "p-1" }],
+      },
+    },
+  },
+  play: async () => {
+    await screen.findByRole("button", { name: "Draft follow-up" });
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("button", { name: "Draft follow-up" }),
+      ).toBeNull(),
+    );
+  },
 };
 
 export const RecommendationChanged: Story = {
@@ -106,12 +148,48 @@ export const CreateTaskRefused: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(
-      await canvas.findByRole("button", { name: "Add task" }),
+      await canvas.findByRole("button", { name: "Create follow-up" }),
     );
     await expect(await canvas.findByRole("alert")).toHaveTextContent(
       "The deal this task names is archived.",
     );
   },
+};
+
+// The press wrote the task. The verb gives way to a line naming it, with the
+// way into it, so the reader sees what they made.
+export const CreateTaskCreated: Story = {
+  beforeEach: () => {
+    installFetchStub({
+      "GET /me": meRoute({ activity: ["read", "create", "update"] }),
+      "POST /tasks": () =>
+        jsonResponse(
+          { id: "task-9", subject: "Send the revised offer", deal_id: "d-1" },
+          201,
+        ),
+    });
+  },
+  args: CREATE_TASK,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByRole("button", { name: "Create follow-up" }),
+    );
+    await expect(await canvas.findByRole("status")).toHaveTextContent(
+      "Follow-up created",
+    );
+    await expect(
+      canvas.getByRole("button", { name: "Open task" }),
+    ).toBeVisible();
+    await expect(
+      canvas.queryByRole("button", { name: "Create follow-up" }),
+    ).toBeNull();
+  },
+};
+
+export const CreateTaskCreatedDark: Story = {
+  ...CreateTaskCreated,
+  globals: { theme: "dark" },
 };
 
 export const RecommendationChangedDark: Story = {

@@ -30,6 +30,9 @@ func MoveOne(ctx context.Context, raw []byte, sink connector.Sink, owner, connec
 		countEvent(ctx, connectorName, "", "dropped_"+ReasonNoEventID.Label())
 		return nil
 	}
+	if replay, ok := sink.(connector.MeetingReplayer); ok {
+		return settleWrite(ctx, connectorName, m.id, OutcomeBeyondHorizon, replay.ReplayMeeting(ctx, m.ToRecord(connectorName, raw)))
+	}
 	mover, ok := sink.(connector.MeetingMover)
 	if !ok {
 		countEvent(ctx, connectorName, m.id, OutcomeMoveUnsupported)

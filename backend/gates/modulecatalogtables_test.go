@@ -15,11 +15,12 @@ package gates
 // so a module with tables and no row is found too.
 
 import (
-	"os"
 	"regexp"
 	"sort"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // catalogModuleRow reads a catalog row: the bolded module name, then the cells.
@@ -43,7 +44,7 @@ const catalogModulePrefix = "internal/modules/"
 
 func TestTheModuleCatalogsOwnedTablesLinkToTheEntityModel(t *testing.T) {
 	t.Parallel()
-	page, err := os.ReadFile(moduleCatalog)
+	page, err := gatekit.ReadFile(moduleCatalog)
 	if err != nil {
 		t.Fatalf("reading %s: %v", moduleCatalog, err)
 	}

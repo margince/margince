@@ -39,6 +39,11 @@ func TestAnAddressNobodyAnswersNeverBecomesAContact(t *testing.T) {
 		subject string
 	}{
 		{
+			name:  "a recruiting relay",
+			email: "group-11111111-2222-4333-8444-555555555555@hire.lever.co", domain: "hire.lever.co",
+			subject: "Interview arrangements",
+		},
+		{
 			name:  "an expense tool mailing its own user",
 			email: "receipts@expensify.com", domain: "expensify.com",
 			subject: "Your receipt is ready",

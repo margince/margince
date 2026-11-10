@@ -292,3 +292,13 @@ func TestASentenceAboutDealsIsJudgedByTheDeals(t *testing.T) {
 		t.Errorf("an empty week was refused its own description: %v", err)
 	}
 }
+
+// The subtract-the-difference rule has nothing to work on when no task carried
+// over and no deal moved. The prompt must not leave the model to invent a
+// meaning for the counts.
+func TestAWeekWithNothingOpenAndNothingMovedIsStatedNotInterpreted(t *testing.T) {
+	week := Input{Counts: Counts{TasksDue: 2, TasksDone: 2, ProposalsAccepted: 1}}
+	if !strings.Contains(Request(week, "en").System, "the counts are the whole answer") {
+		t.Error("a week with nothing open and nothing moved is still asked what the counts mean")
+	}
+}

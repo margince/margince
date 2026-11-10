@@ -58,6 +58,10 @@ defaults:
 # backend/gates/buildinputfetch_test.go, which holds this line.
 env:
   GOPROXY: https://proxy.golang.org|direct
+  # The diff-scoped gates (strict lint, comment checks) judge what a pull request
+  # adds to the branch it merges into, so one into develop is not held to all of
+  # develop's lines. The develop into main pull request judges those.
+  CHECK_BASE_REF: origin/${{ github.base_ref || 'main' }}
 
 jobs:
   # Classify the diff so a change runs only the checks it can affect — a
@@ -117,6 +121,10 @@ jobs:
       # docs/explanation/ci-pipeline.md rather than left to be inferred from
       # this filter.
       images: ${{ steps.filter.outputs.images == 'true' || github.event_name == 'merge_group' }}
+      # A pull request into `develop` takes the fast lanes only. The slow ones run
+      # each night on develop's tip, before develop is merged into main: see
+      # docs/how-to/land-through-develop.md.
+      full_lane: ${{ github.event_name != 'pull_request' || github.base_ref != 'develop' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -149,10 +157,12 @@ jobs:
               - 'frontend/src/mcp-apps/forbidden.json'
               # The dev compose stack the DB-backed lanes boot.
               - 'docker-compose.dev.yml'
+              - 'go.mod'
               - 'go.work'
               - 'go.work.sum'
               - 'Makefile'
               - 'scripts/**'
+              - 'instance/**'
               - 'extensions/**'
               - 'fixtures/**'
               - 'composition/**'
@@ -236,6 +246,7 @@ jobs:
               - 'SECURITY.md'
               - 'SUPPORT.md'
             frontend:
+              - 'third-party-files.txt'
               - 'frontend/**'
               - 'backend/api/**'
               # The frontend job runs BOTH SPA lanes (ADR-0120), and the
@@ -246,6 +257,9 @@ jobs:
               # or edits a fragment skips this job entirely, which is a lane
               # skipping generation and passing silently: exactly the failure
               # mode the composed lane exists to catch.
+              - 'go.mod'
+              - 'go.work'
+              - 'instance/**'
               - 'extensions/**'
               - 'fixtures/**'
               - 'composition/**'
@@ -282,6 +296,11 @@ jobs:
               # unreviewable without the lane it governs, and the one that
               # introduced it would have merged never once executed.
               - '.github/actions/install-playwright-chromium/**'
+              # And the image the lane runs in, and the action that finds or
+              # builds it, for the same reason: they hold its Node, pnpm and
+              # browser.
+              - '.github/ci-image/**'
+              - '.github/actions/ci-image/**'
             e2e:
               - 'backend/**'
               - 'frontend/**'
@@ -289,6 +308,7 @@ jobs:
               - 'docker-compose.dev.yml'
               # live-boot boots COMPOSED (ADR-0120): the enabled extension
               # tree and the composition inputs shape the binary under test.
+              - 'instance/**'
               - 'extensions/**'
               - 'fixtures/**'
               - 'composition/**'
@@ -345,6 +365,10 @@ jobs:
               # Its corpus is the build's own package list, so a dependency
               # change can add a binary without either file being touched; the
               # `deps` filter below covers that side.
+              - 'third-party-files.txt'
+              - 'scripts/third_party_files.py'
+              - 'scripts/third-party-files.sh'
+              - 'scripts/test-third-party-files.sh'
               - 'embedded-binaries.txt'
               - 'scripts/embedded-binary-licenses.sh'
               - 'scripts/test-embedded-binary-licenses.sh'
@@ -363,30 +387,87 @@ jobs:
               - '.github/workflows/**'
               - '.github/actions/**'
 
+  # The image the toolchain jobs run in, named by digest. Beside `changes`, not
+  # behind it: when the image exists this is a lookup that ends first.
+  #
+  # A run that can push builds and pushes a missing image here, so a pull
+  # request that changes an input runs its own jobs on the image it brings. A
+  # fork's token cannot push, and an image only a login can pull is one no job
+  # can start in; in both cases the output is empty and every job sets up on
+  # the runner. scripts/ci-verdict.sh reads this job like any other, so an
+  # image that fails to build fails `ci` rather than skipping the jobs that
+  # need it into a pass.
+  #
+  # Sixty minutes, because a build fetches every Debian package from the
+  # snapshot archive, and that host has taken over twenty minutes for one set.
+  ci-image:
+    name: ci-image
+    timeout-minutes: 60
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      pinned-image: ${{ steps.image.outputs.pinned-image }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Find or build the CI image
+        id: image
+        uses: ./.github/actions/ci-image
+        with:
+          push: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+          token: ${{ github.token }}
+
   # The deterministic merge gate: build, vet, lint (baseline + new-code
   # strict), arch-lint, unit + root fitness tests (incl. audit_log enum
   # coherence and the contract $ref pre-flight), generated-drift, and the
   # script gates (image pins, contract breaking, test lanes, file length, RLS
   # store-path, jurisdiction isolation).
   deterministic-gates:
-    name: deterministic-gates
+    name: deterministic-gates (${{ matrix.part }})
     timeout-minutes: 30
-    needs: [changes]
+    needs: [changes, ci-image]
     if: needs.changes.outputs.backend == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
     runs-on: ubuntu-latest
+    # In the CI image when this run can pull it, and on the runner when the
+    # name is empty; the steps marked for the runner then install what the
+    # image would have held.
+    container: ${{ needs.ci-image.outputs.pinned-image }}
     permissions:
       contents: read
+    # The uncached root fitness packages were most of the test leg, so they get
+    # a runner. Both legs run the build; only the unit leg runs the gates that
+    # read the tree the same way on either (CHECK_TREE_GATES).
+    # TestTheTwoBackendJobsRunEveryCheckLeg reads the legs from these entries.
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - part: unit
+            legs: test-cached test-extensions
+            tree-gates: "on"
+          - part: gates
+            legs: test-uncached
+            tree-gates: "off"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-          # The contract-breaking gate, the citation gate and the strict
-          # lint's new-from-merge-base all diff against origin/main — a shallow
-          # checkout has no base ref and would silently disarm them.
+          # Every commit and ref, for the gates that diff against the merge base
+          # with origin/main (contract-breaking, migration-versions, pkg-freeze,
+          # citations) and the RBAC gate that reads a fixture at an old commit.
+          # Blobless: only HEAD's files come down, and git fetches an old file
+          # the first time a gate asks for it.
           fetch-depth: 0
+          filter: blob:none
+      # In the image Go is already there, so no version is asked for and
+      # setup-go only restores the module cache.
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          go-version-file: backend/go.mod
+          go-version-file: ${{ needs.ci-image.outputs.pinned-image == '' && 'backend/go.mod' || '' }}
           cache-dependency-path: backend/go.sum
       # The shared Go build cache (see .github/actions/go-build-cache): this job
       # compiles the untagged tree twice over — `go build ./...` plus the unit
@@ -397,49 +478,13 @@ jobs:
         uses: ./.github/actions/go-build-cache
         with:
           flavor: plain
-      # Cache the compiled gate binaries. `make tools` compiles golangci-lint,
-      # go-arch-lint, govulncheck, and oasdiff from source into ~/go/bin — ~75s
-      # that setup-go's module/build cache does not cover (it caches ~/go/pkg/mod
-      # and ~/.cache/go-build, not installed binaries). The pinned versions live
-      # in backend/Makefile and the Go toolchain version — which `go install`
-      # embeds in every binary, so a bump makes it reject and recompile the
-      # cached tools — lives in backend/go.mod, so the key hashes both: a change
-      # to either reseeds, otherwise a hit skips the compile. arch is in the key
-      # so a binary built for one runner CPU is never restored onto another.
-      - name: Cache the gate binaries
-        id: gate-binaries
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ~/go/bin
-          key: gate-binaries-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('backend/go.mod', 'backend/Makefile') }}
-      # golangci-lint's analysis cache (~/.cache/golangci-lint) is separate
-      # from Go's build cache, so without it the two lint passes recompute the
-      # whole repo. cache-warm.yml writes the entry a PR's first push restores.
-      - name: Compute the golangci cache key
-        id: golangci-key
-        uses: ./.github/actions/golangci-cache-key
-      - name: Cache the golangci-lint analysis cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ~/.cache/golangci-lint
-          key: ${{ steps.golangci-key.outputs.key }}
-          restore-keys: ${{ steps.golangci-key.outputs.restore-keys }}
-      # Install the pinned gate binaries (golangci-lint, go-arch-lint, oasdiff) so
-      # `make check` runs golangci and the oasdiff contract gate itself — one run
-      # of every gate, instead of the golangci-lint-action + per-gate steps that
-      # `make check` then re-ran as its prerequisites. Skipped entirely on a
-      # cache hit: the key hashes the pinned versions (backend/Makefile) and
-      # the toolchain (backend/go.mod), so a hit proves the binaries current —
-      # and `go install ...@version` would NOT short-circuit on an existing
-      # binary; it recomputes the whole build against a cold build cache
-      # (~75s), since setup-go's caches are keyed to the product module, not
-      # the tools' dependency graphs. The PATH export runs regardless.
-      - name: Install the pinned gate binaries
-        if: steps.gate-binaries.outputs.cache-hit != 'true'
-        working-directory: .
-        run: make tools
-      - name: Gate binaries onto PATH
-        run: echo "$HOME/go/bin" >> "$GITHUB_PATH"
+      # `make tools` compiles golangci-lint, go-arch-lint, govulncheck and
+      # oasdiff into ~/go/bin, which setup-go's caches do not cover. Restored,
+      # never saved: an entry a PR saves serves that PR alone, so cache-warm.yml
+      # writes the one on main that every PR reads. The image holds them.
+      - name: Gate binaries on PATH
+        if: needs.ci-image.outputs.pinned-image == ''
+        uses: ./.github/actions/gate-binaries
       # The backend half of the merge gate in one pass:
       # check-craft-doc, image pins, contract-breaking, migration-versions,
       # test-lanes, file-length,
@@ -465,157 +510,156 @@ jobs:
           # declaration and the gate enforces again — it goes inert on its own
           # rather than waiting for somebody to remember to delete this line.
           MIGRATION_VERSIONS_BASELINE_RESET: "1"
+          # The gates leg has this runner to itself, so collection need not
+          # hold the package to the limit a laptop running every leg wants.
+          GATES_GOMEMLIMIT: 6GiB
         # pipefail, because the default shell lacks it and tee would turn a red
         # gate green.
         # TEST_LEGS only: backend-lint runs the static legs on its own runner,
         # so lint and the unit tests stop sharing four cores.
+        #
+        # Outside a PR into develop, the unit leg's pass is also the test-input
+        # census: testlog-exec.sh logs what each package read, and the next step
+        # judges it. It runs uncached (-count=1), since a replayed result reads
+        # nothing; develop keeps the test cache.
         run: |
           set -o pipefail
-          make check-backend CHECK_LEGS="test test-extensions" 2>&1 | tee "$RUNNER_TEMP/check-backend.log"
-      # Here and not in check-backend: only a CI runner's timings are steady
-      # enough to hold a package to a budget.
-      - name: Unit-test time budget per package
+          census=()
+          if [ "${{ matrix.part }}" = unit ] && [ "${{ needs.changes.outputs.full_lane }}" = true ]; then
+            export TESTLOG_DIR="$RUNNER_TEMP/testlogs"
+            mkdir -p "$TESTLOG_DIR"
+            census=(TEST_EXEC="$PWD/scripts/testlog-exec.sh")
+          fi
+          make check-backend CHECK_LEGS="${{ matrix.legs }}" CHECK_TREE_GATES="${{ matrix.tree-gates }}" "${census[@]}" 2>&1 | tee "$RUNNER_TEMP/check-backend.log"
+      # A test read outside its module that skips the tree digest merges green
+      # and breaks cache-warm's save hours later. Here it fails the PR that
+      # adds it. Skipped into develop: it guards main's cache-warm, and the
+      # develop into main pull request runs it. Judged only after a passing
+      # pass: a failed test stops make before the rest log their reads, and a
+      # verdict over part of the tree is not one.
+      - name: Census the test cache's inputs (make test-input-census-judge)
+        if: ${{ success() && matrix.part == 'unit' && needs.changes.outputs.full_lane == 'true' }}
         working-directory: .
-        run: make test-budget LOG="$RUNNER_TEMP/check-backend.log"
+        run: make test-input-census-judge TESTLOG_DIR="$RUNNER_TEMP/testlogs"
+      # crm-hello declares capabilities no shipped unit does, so this is the one
+      # walk of them; TestEveryPublishedCapabilityHasALiveDeclaringUnit reads the
+      # require below. It runs after the merge gate, which must see only the committed
+      # units. Only cmd/ imports the composition (TestCompositionWiredOnlyFromCmd),
+      # so ./cmd/... is every package the fixture can change.
+      - name: Stage the reference fixture and walk the composed path
+        if: ${{ matrix.part == 'unit' }}
+        working-directory: .
+        run: |
+          printf 'require example.margince.dev/ext/crm-hello v0.0.0\nreplace example.margince.dev/ext/crm-hello => ../fixtures/extensions/crm-hello\n' >> instance/go.mod
+          make -C backend build check-composition
+          (cd backend && GOWORK="$PWD/../build/composition/go.work" go test ./cmd/...)
+          make -C backend test-extensions EXT_COVER_OUT="$PWD/backend/coverage-extensions.out"
+      # Extension units are their own Go modules, so the shards' profile never
+      # reaches them.
+      - name: Upload extension coverage
+        if: ${{ matrix.part == 'unit' }}
+        uses: ./.github/actions/upload-artifact-retried
+        with:
+          name: go-coverage-extensions
+          path: backend/coverage-extensions.out
+          if-no-files-found: error
+      # Judged in test-budget over both legs' logs: a waiver for a package
+      # this leg never ran is stale only if the other leg never ran it either.
+      - name: Upload the test log for the budget
+        if: ${{ !cancelled() }}
+        uses: ./.github/actions/upload-artifact-retried
+        with:
+          name: check-backend-log-${{ matrix.part }}
+          path: ${{ runner.temp }}/check-backend.log
+          if-no-files-found: error
+
+  # Here and not in check-backend: only a CI runner's timings are steady enough
+  # to hold a package to a budget.
+  test-budget:
+    name: test-budget
+    timeout-minutes: 10
+    needs: [deterministic-gates]
+    if: ${{ !cancelled() && needs.deterministic-gates.result != 'skipped' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Download every leg's test log
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: check-backend-log-*
+          path: ${{ runner.temp }}/logs
+      - name: Unit-test time budget per package
+        run: make test-budget LOG="$RUNNER_TEMP/logs/*/check-backend.log"
 
   # The static half of the backend gate (`make check-static`: lint, vet,
   # arch-lint), beside deterministic-gates rather than inside it. On one runner
   # the two halves took turns on four cores, and lint finished last.
   backend-lint:
-    name: backend-lint
+    name: backend-lint (${{ matrix.pass }})
     timeout-minutes: 30
-    needs: [changes]
+    needs: [changes, ci-image]
     if: needs.changes.outputs.backend == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
     runs-on: ubuntu-latest
+    container: ${{ needs.ci-image.outputs.pinned-image }}
     permissions:
       contents: read
+    # The baseline pass loads the whole tree, so it gets a runner. The strict
+    # pass loads only the packages a change touched, which leaves room for the
+    # modules outside backend/.
+    # TestTheTwoBackendJobsRunEveryCheckLeg reads the legs from these entries.
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - pass: baseline
+            legs: lint-base vet arch-lint
+            fetch-depth: 1
+            filter: ""
+          - pass: strict
+            legs: lint-strict lint-modules
+            fetch-depth: 0
+            filter: blob:none
     # Setup mirrors deterministic-gates, which says why each step is there.
-    # Full history, because the strict lint diffs against origin/main.
+    # Only the strict pass reads history (it diffs against CHECK_BASE_REF), so
+    # only its checkout is deep; the baseline legs read the tree alone.
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-          fetch-depth: 0
+          fetch-depth: ${{ matrix.fetch-depth }}
+          filter: ${{ matrix.filter }}
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          go-version-file: backend/go.mod
+          go-version-file: ${{ needs.ci-image.outputs.pinned-image == '' && 'backend/go.mod' || '' }}
           cache-dependency-path: backend/go.sum
       - name: Restore the Go build cache
         id: go-cache
         uses: ./.github/actions/go-build-cache
         with:
           flavor: plain
-      - name: Cache the gate binaries
-        id: gate-binaries
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ~/go/bin
-          key: gate-binaries-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('backend/go.mod', 'backend/Makefile') }}
+      - name: Gate binaries on PATH
+        if: needs.ci-image.outputs.pinned-image == ''
+        uses: ./.github/actions/gate-binaries
       - name: Compute the golangci cache key
         id: golangci-key
         uses: ./.github/actions/golangci-cache-key
-      - name: Cache the golangci-lint analysis cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      # Restore only: lint-cache.yml and cache-warm.yml write the entry on main.
+      - name: Restore the golangci-lint analysis cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/golangci-lint
           key: ${{ steps.golangci-key.outputs.key }}
           restore-keys: ${{ steps.golangci-key.outputs.restore-keys }}
-      - name: Install the pinned gate binaries
-        if: steps.gate-binaries.outputs.cache-hit != 'true'
-        working-directory: .
-        run: make tools
-      - name: Gate binaries onto PATH
-        run: echo "$HOME/go/bin" >> "$GITHUB_PATH"
       - name: Backend static gate (make check-static)
         working-directory: .
-        run: make check-static
-      # A test read outside its module that skips the tree digest merges green
-      # and breaks cache-warm's save hours later. Here it fails the PR that
-      # adds it. On this job because it finishes minutes before
-      # deterministic-gates, so the census's uncached pass adds no wall clock.
-      - name: Census the test cache's inputs (make test-input-census)
-        if: ${{ !cancelled() }}
-        working-directory: .
-        run: make test-input-census
-
-  # The composed-build lane (ADR-0120): materialize the walking-skeleton
-  # reference extension into extensions/, compose, and run the backend
-  # build + unit lane against the composed workspace — the continuous
-  # proof that an enabled extension composes without touching an
-  # upstream-owned file, plus the extension's own test lane the way a
-  # fork's CI would run it. deterministic-gates covers the vanilla
-  # composition (empty set) via the same make targets.
-  extension-reference:
-    name: extension-reference
-    timeout-minutes: 30
-    needs: [changes]
-    if: needs.changes.outputs.backend == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-          # Full history: this job runs the backend unit lane, which includes
-          # rbacbaselineerafixture_test.go. That gate derives the RBAC
-          # composition arm's pre-state by reading the migration baseline
-          # commit, and pins the committed fixture to it — a pre-state the
-          # migration replay seeds from, so it must not be hand-editable. They
-          # FAIL on a shallow checkout rather than degrading to an empty cohort,
-          # because a gate that quietly checks nothing looks exactly like a
-          # passing one.
-          fetch-depth: 0
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
-        with:
-          go-version-file: backend/go.mod
-          cache-dependency-path: backend/go.sum
-      # Reads the `plain` flavour: this lane builds the untagged tree twice (once
-      # with extensions/ emptied, once composed), so it is the biggest single
-      # beneficiary after the shards.
-      - name: Restore the Go build cache
-        uses: ./.github/actions/go-build-cache
-        with:
-          flavor: plain
-      # working-directory: . on the root-level steps — the workflow default
-      # (backend) would resolve fixtures/ and extensions/ under backend/.
-      #
-      # The EMPTY installation stays a supported, proven state: with the
-      # tracked first-party units (extensions/de) moved aside, the
-      # composed wiring must be byte-identical to the committed vanilla
-      # stub and the composed build must pass — otherwise a regression
-      # that only breaks "remove the directory to disable" could merge,
-      # since the normal gates always see {de}.
-      - name: Vanilla lane (empty extensions/)
-        working-directory: .
-        run: |
-          stash="$RUNNER_TEMP/ext-stash"
-          mkdir -p "$stash"
-          find extensions -mindepth 1 -maxdepth 1 -type d -exec mv {} "$stash"/ \;
-          make -C backend composition build
-          cmp build/composition/backend/extensions_gen.go composition/extensions_gen.go
-          find "$stash" -mindepth 1 -maxdepth 1 -exec mv {} extensions/ \;
-      - name: Enable the reference extension
-        working-directory: .
-        run: cp -R fixtures/extensions/crm-hello extensions/
-      - name: Composed build + unit lane
-        working-directory: .
-        run: make -C backend build test check-composition
-      # Tree-derived: every enabled unit's own module lane (the committed
-      # first-party extensions AND the copied-in reference fixture). The
-      # same run emits the merged coverage profile the sonarcloud job
-      # consumes — extension units are their own modules, unreachable by
-      # the shard profiles, and this job runs PARALLEL to the shard
-      # fleet, so coverage costs no extra test run and no fan-in latency.
-      - name: Extension self-test lanes (+ coverage)
-        working-directory: .
-        run: make -C backend test-extensions EXT_COVER_OUT="$PWD/backend/coverage-extensions.out"
-      - name: Upload extension coverage
-        uses: ./.github/actions/upload-artifact-retried
-        with:
-          name: go-coverage-extensions
-          path: backend/coverage-extensions.out
-          if-no-files-found: ignore
+        run: make check-static STATIC_LEGS="${{ matrix.legs }}"
 
   # The code-craftsmanship gate (ADR-0045) reads source only, so it starts
   # beside deterministic-gates rather than after it. `ci` fails if either does.
@@ -636,8 +680,9 @@ jobs:
         with:
           persist-credentials: false
           # The comment checks judge the lines added since origin/main, which a
-          # shallow checkout does not have.
+          # shallow checkout does not have. Blobless, as in deterministic-gates.
           fetch-depth: 0
+          filter: blob:none
       - name: craft static (strict — blocker + major)
         working-directory: .
         run: make craft-static
@@ -785,7 +830,7 @@ jobs:
   # the build gate serialized the two slowest jobs and dominated PR wall-clock.
   integration:
     needs: [changes]
-    if: needs.changes.outputs.backend_db == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
+    if: needs.changes.outputs.backend_db == 'true' && needs.changes.outputs.full_lane == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
     uses: ./.github/workflows/_lane-integration.yml
 
   vuln:
@@ -855,10 +900,10 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-          # SBOM_VERSION is the release tag when HEAD sits exactly on one
-          # (`git describe --tags --exact-match`), else the full revision —
-          # resolving that needs the tags and history.
-          fetch-depth: 0
+          # Shallow. SBOM_VERSION is the release tag when HEAD sits exactly on
+          # one, else the revision. Only a manual dispatch can start on a tag,
+          # so only that run fetches the tags.
+          fetch-tags: ${{ github.event_name == 'workflow_dispatch' }}
       # A scan that read part of pnpm-lock.yaml writes a valid SBOM that grant
       # passes, and only the census inside `make sbom` tells it apart. Planted
       # lockfiles, read by the real pinned YAML reader, and short SBOMs prove it
@@ -878,6 +923,12 @@ jobs:
         run: make embedded-binary-licenses
       - name: the embedded-binary check still refuses each way
         run: make test-embedded-binary-licenses
+      # The backend lane runs this too, but a change to third-party-files.txt
+      # alone does not start it, and only this check reads the allowed licences.
+      - name: every copied file declares provenance and an allowed licence
+        run: make third-party-files
+      - name: the copied-file check still refuses each way
+        run: make test-third-party-files
       # syft and grant run through digest-pinned Docker images (see the Makefile),
       # so the runner needs only Docker — pre-installed on ubuntu-latest.
       # One step, because the retry has to wrap BOTH: `.syft.yaml` sets
@@ -940,11 +991,6 @@ jobs:
     # every other backend producer — must genuinely have SUCCEEDED, not merely
     # not-failed.
     #
-    # On merge_group the classifier is overridden and every producer runs, so the
-    # clause is satisfied whenever the lane is green. It is kept rather than
-    # simplified away because it is the thing that would catch a future event, or
-    # a future skip, that reintroduces a partial scan.
-    #
     # deterministic-gates is gated directly, not just transitively. Now that
     # integration runs in parallel with the build gate rather than behind it, a
     # failed build no longer skips integration — it can still go green on its
@@ -953,20 +999,29 @@ jobs:
     # Analysis" check over a broken build (result == 'failure' fails this
     # condition, so the scan is skipped); the PR is already red, so nothing that
     # wasn't already blocked is blocked.
-    # `ci` is in needs for the merge_group case ONLY, and it is not a cycle: the
-    # aggregate deliberately omits sonarcloud from its own needs, so nothing waits
-    # on this job to reach a verdict — the queue merges on `ci` alone and this scan
-    # may finish after the merge.
-    needs: [ci, deterministic-gates, integration, frontend, extension-reference]
+    #
+    # It waits for its coverage producers and nothing else, so it starts as the
+    # last of them ends: on a full run, the integration fan-in. SonarCloud reads coverage only from the report
+    # files present when the scanner runs, and a second analysis of a pull request
+    # replaces the first, so no part of the scan can start before the last
+    # producer ends. The `ci` aggregate is not a producer.
+    #
+    # A merge_group build is not scanned. Publishing it as `main` needed the `ci`
+    # verdict first, or a build that does not merge would replace main's stored
+    # analysis, and that kept every pull request's scan waiting for `ci` too.
+    # main-health.yml publishes main's analysis from main itself.
+    # A pull request into develop skips the scan: develop's pull request into
+    # main is scanned before any of it reaches main.
+    needs: [changes, deterministic-gates, integration, frontend]
     if: >-
       !cancelled()
+      && github.event_name != 'merge_group'
+      && needs.changes.outputs.full_lane == 'true'
       && (needs.deterministic-gates.result == 'success' || needs.deterministic-gates.result == 'skipped')
       && (needs.integration.result == 'success' || needs.integration.result == 'skipped')
       && (needs.frontend.result == 'success' || needs.frontend.result == 'skipped')
-      && (needs.extension-reference.result == 'success' || needs.extension-reference.result == 'skipped')
       && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
       && (github.event_name == 'pull_request' || needs.integration.result == 'success')
-      && (github.event_name != 'merge_group' || needs.ci.result == 'success')
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -982,7 +1037,7 @@ jobs:
           persist-credentials: false
           # Full history so SonarCloud can attribute blame / compute new code.
           fetch-depth: 0
-      # Coverage the integration + frontend + extension-reference jobs already
+      # Coverage the integration + frontend + deterministic-gates jobs already
       # produced. Each download is guarded on its producer having run (a
       # skipped area uploaded nothing); if-no-files-found tolerates the gap so
       # the scan still posts. The paths match sonar-project.properties
@@ -995,7 +1050,7 @@ jobs:
           name: go-coverage
           path: backend
       - name: Download extension coverage
-        if: ${{ env.SONAR_TOKEN != '' && needs.extension-reference.result == 'success' }}
+        if: ${{ env.SONAR_TOKEN != '' && needs.deterministic-gates.result == 'success' }}
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: go-coverage-extensions
@@ -1015,31 +1070,12 @@ jobs:
         with:
           name: fe-coverage-ext
           path: frontend/coverage-ext
-      # A merge_group run publishes as `main`, and that is not a fiction: the
-      # queue builds `main + the queued entries`, which is byte-for-byte the tree
-      # main becomes when the batch merges. Measuring it here is the same
-      # measurement the old push-to-main scan took, one step earlier.
-      #
-      # Without this override the scanner reads GITHUB_REF and files the analysis
-      # under `gh-readonly-queue/main/pr-N-<sha>` — a branch that is deleted
-      # minutes later. Nothing would ever update main again, and main's stored
-      # analysis does not disappear when it stops being refreshed: it FREEZES. The
-      # nightly `quality-gate` job in scheduled.yml reads `?branch=main` and would
-      # keep reporting the last real verdict indefinitely, which is a green that
-      # measures nothing — the exact failure this pipeline change exists to end.
-      #
-      # What makes it safe is the `needs.ci.result == 'success'` clause above, and
-      # nothing weaker would: this job's other conditions cover only its COVERAGE
-      # producers, so without that clause a merge_group build whose secret-scan,
-      # license-gate or craft-residue failed would still publish. That tree
-      # does not merge — and it would have replaced the stored analysis every
-      # scheduled check reads for main, describing a tree main never became.
-      # Requiring the aggregate verdict is what makes "published as main" mean
-      # "became main".
       - name: SonarCloud scan
         if: ${{ env.SONAR_TOKEN != '' }}
-        # A CAP ON THE HANG, not on the scan. The scan itself runs in 72-125
-        # seconds; eight minutes is a hang, not a slow day.
+        # A CAP ON THE HANG, not on the scan. A whole scan, upload and
+        # dependency data included, runs well under twenty minutes, so twenty
+        # is a hang and not a slow day. It still ends inside the job's thirty
+        # with the step's own message.
         #
         # What it bounds is the action's signature verification of the scanner
         # download, which fetches SonarSource's key from a public keyserver. On
@@ -1052,7 +1088,7 @@ jobs:
         # NOT skipSignatureVerification. That would make the hang impossible by
         # not verifying the scanner binary at all, trading an occasional lost
         # scan for permanently trusting an unverified download.
-        timeout-minutes: 8
+        timeout-minutes: 20
         uses: SonarSource/sonarqube-scan-action@ba9859eae8dd6bd29e412f25ddbbef3d032000f4 # v8.2.2
         with:
           # WHICH BRANCH THIS ANALYSIS IS FILED UNDER, said for every event
@@ -1060,26 +1096,22 @@ jobs:
           #
           # An analysis carrying no `sonar.branch.name` is filed as the
           # project's MAIN branch. On a pull request that is right — the action
-          # sets sonar.pullrequest.* itself and the scan decorates the PR — and
-          # on merge_group the ref is the queue's ephemeral one, so `main` is
-          # named outright. Every OTHER event fell through to the same empty
+          # sets sonar.pullrequest.* itself and the scan decorates the PR.
+          # Every OTHER event fell through to the same empty
           # argument, and a workflow_dispatch has no pull-request context: a
           # run dispatched on a feature branch published that branch's tree as
           # main's stored verdict, which is the one every scheduled check reads.
           #
           # It is not hypothetical and it is not rare. `main`'s two most recent
           # analyses were `issue-1985-agent-carriage` and
-          # `issue-2381-ast-censuses`, neither revision a commit on main, while
-          # merge_group — the one event this argument covered — has not fired
-          # since 2026-08-20. So the quality gate has been reporting on feature
-          # branches for as long as anyone has been dispatching this workflow,
-          # including a bug already fixed on main and a new-code coverage figure
-          # belonging to somebody's diff.
+          # `issue-2381-ast-censuses`, neither revision a commit on main. So the
+          # quality gate reported on feature branches for as long as anyone
+          # dispatched this workflow, including a bug already fixed on main and a
+          # new-code coverage figure belonging to somebody's diff.
           #
           # `main` when the ref genuinely IS main, so a dispatch there refreshes
-          # the verdict that no merge_group is left to refresh; the branch's own
-          # name otherwise, so a dispatched branch is filed as itself and can
-          # only ever describe itself.
+          # main's verdict; the branch's own name otherwise, so a dispatched
+          # branch is filed as itself and can only ever describe itself.
           # The empty case is LAST on purpose. `&&` here yields its right
           # operand, and an empty string is falsy, so `pull_request && ''`
           # would fall straight through the `||` beside it and hand a pull
@@ -1087,7 +1119,7 @@ jobs:
           # arms so that only a truthy argument short-circuits is what keeps
           # the PR arm empty.
           args: >-
-            ${{ (github.event_name == 'merge_group' || github.ref_name == 'main')
+            ${{ github.ref_name == 'main'
                 && '-Dsonar.branch.name=main'
              || (github.event_name != 'pull_request'
                 && format('-Dsonar.branch.name={0}', github.ref_name))
@@ -1104,7 +1136,7 @@ jobs:
     name: live-boot (compose + seed + verify)
     timeout-minutes: 20
     needs: [changes]
-    if: needs.changes.outputs.e2e == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
+    if: needs.changes.outputs.e2e == 'true' && needs.changes.outputs.full_lane == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -1119,16 +1151,6 @@ jobs:
         with:
           go-version-file: backend/go.mod
           cache-dependency-path: backend/go.sum
-      # No version input: the pin is package.json's "packageManager", which pnpm
-      # and corepack read too. A second one here is refused as a mismatch.
-      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-        with:
-          node-version: 24
-          cache: pnpm
-          # Root, not frontend/: this branch moved the lockfile to a root pnpm
-          # workspace so a unit's frontend/ can join it.
-          cache-dependency-path: pnpm-lock.yaml
       # This lane compiles the composition generator and then `go run`s cmd/api.
       - name: Restore the Go build cache
         uses: ./.github/actions/go-build-cache
@@ -1171,7 +1193,7 @@ jobs:
           # the enabled extensions (extensions/de ships by default). The
           # generator itself pins the ROOT workspace (the tool is its own
           # module — a stray GOWORK would break its resolution).
-          GOWORK="$PWD/../go.work" go run ./tools/gen-composition
+          GOWORK="$PWD/../go.work" go run ./tools/gen-composition -include-development
           GOWORK="$PWD/../build/composition/go.work" \
             go run ./cmd/api --dsn "postgres://margince_app:margince_app_dev@localhost:15432/margince" \
             --config "$RUNNER_TEMP/margince.yaml" \
@@ -1185,8 +1207,123 @@ jobs:
           exit 1
       - name: Seed the demo workspace
         run: make seed-dev
+      # The frontend filter holds every input of `pnpm build`, and merge_group
+      # turns it on, so fe-bundle builds the frontend whenever a change can
+      # break the build. Built here too, it took two minutes and found nothing.
       - name: Verify boot
+        env:
+          VERIFY_BOOT_FRONTEND_BUILT_BY: fe-bundle
         run: make verify-boot
+      - name: API log (on failure)
+        if: failure()
+        run: cat "$RUNNER_TEMP/api.log" || true
+
+  # Home's per-PR budget (scripts/home-budget.sh): the API p95 of Home's reads,
+  # cold and warm, on a small corpus of its own, then the day paint and CLS of a
+  # production bundle against an api booted the way live-boot boots it.
+  # ADVISORY: it is not in the `ci` fan-in, and a red run stops no merge. The
+  # scope step skips the rest when the diff cannot reach Home
+  # (scripts/home-budget-scope.sh); a push or a merge group always runs.
+  home-budget:
+    name: home-budget (advisory)
+    timeout-minutes: 30
+    needs: [changes]
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          # The scope step diffs against the pull request's base branch.
+          fetch-depth: 0
+      # No version input: the pin is package.json's "packageManager".
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      # The scope step walks the frontend's import graph, which needs TypeScript.
+      - name: Install deps
+        working-directory: frontend
+        timeout-minutes: 5
+        run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Decide whether the change can reach Home
+        id: scope
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          if [ "$EVENT" = "pull_request" ]; then
+            bash scripts/home-budget-scope.sh "origin/$BASE_REF"
+          else
+            echo "home-budget-scope: run=true ($EVENT runs the whole check)"
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        if: steps.scope.outputs.run == 'true'
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+      - name: Restore the Go build cache
+        if: steps.scope.outputs.run == 'true'
+        uses: ./.github/actions/go-build-cache
+        with:
+          flavor: plain
+      - name: Boot the dev stack and migrate
+        if: steps.scope.outputs.run == 'true'
+        run: make db-up && make migrate
+      # The same throwaway first-run configuration live-boot writes.
+      - name: Write the deployment configuration
+        if: steps.scope.outputs.run == 'true'
+        run: |
+          printf '%s' "operator-supplied-first-password" > "$RUNNER_TEMP/admin-password"
+          chmod 600 "$RUNNER_TEMP/admin-password"
+          cat > "$RUNNER_TEMP/margince.yaml" <<EOF
+          version: 1
+          workspace:
+            name: Demo Workspace
+            base_currency: EUR
+            timezone: Europe/Berlin
+          bootstrap_admin:
+            email: admin@demo.test
+            display_name: Demo Admin
+            password_file: $RUNNER_TEMP/admin-password
+          EOF
+      - name: Start the api
+        if: steps.scope.outputs.run == 'true'
+        working-directory: backend
+        env:
+          MARGINCE_ENV: dev
+        run: |
+          GOWORK="$PWD/../go.work" go run ./tools/gen-composition -include-development
+          GOWORK="$PWD/../build/composition/go.work" \
+            go run ./cmd/api --dsn "postgres://margince_app:margince_app_dev@localhost:15432/margince" \
+            --config "$RUNNER_TEMP/margince.yaml" \
+            > "$RUNNER_TEMP/api.log" 2>&1 &
+          for _ in $(seq 1 60); do
+            curl -fsS http://localhost:8080/readyz >/dev/null 2>&1 && exit 0
+            sleep 1
+          done
+          echo "api never became ready" >&2
+          cat "$RUNNER_TEMP/api.log" >&2
+          exit 1
+      - name: Seed the demo workspace
+        if: steps.scope.outputs.run == 'true'
+        run: make seed-dev
+      - name: Install the Playwright Chromium browser
+        if: steps.scope.outputs.run == 'true'
+        uses: ./.github/actions/install-playwright-chromium
+      # Writes the wall time of each half, the API rows and the vitals line to
+      # the job summary, pass or fail.
+      - name: Home budget
+        if: steps.scope.outputs.run == 'true'
+        run: make home-budget BENCH_API_PORT=8080
       - name: API log (on failure)
         if: failure()
         run: cat "$RUNNER_TEMP/api.log" || true
@@ -1198,9 +1335,11 @@ jobs:
   # As with the integration lane, the conditional lives HERE and not inside the
   # lane, so a skip always means the caller skipped the lane.
   frontend:
-    needs: [changes]
+    needs: [changes, ci-image]
     if: needs.changes.outputs.frontend == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
     uses: ./.github/workflows/_lane-frontend.yml
+    with:
+      ci-image: ${{ needs.ci-image.outputs.pinned-image }}
 
   # The UAT lane: the AC-<screen>-N screen-acceptance criteria as named
   # Playwright tests, plus the axe WCAG 2.2 AA gate, the 390px
@@ -1228,9 +1367,13 @@ jobs:
     # both gate the merge, the sequence would be the aggregate's wall clock on
     # every frontend change. What the order saved was this job's runner minutes
     # on a change biome would have refused, which is cheaper than the wait.
-    needs: [changes]
-    if: needs.changes.outputs.frontend == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
+    needs: [changes, ci-image]
+    if: needs.changes.outputs.frontend == 'true' && needs.changes.outputs.full_lane == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
     runs-on: ubuntu-latest
+    # The image holds Chromium and the libraries it needs, so a hung package
+    # mirror cannot stop this lane before a test runs. An empty name runs it
+    # on the runner, where the install action below fetches both.
+    container: ${{ needs.ci-image.outputs.pinned-image }}
     permissions:
       contents: read
     defaults:
@@ -1242,10 +1385,13 @@ jobs:
           persist-credentials: false
       # No version input: the pin is package.json's "packageManager", which pnpm
       # and corepack read too. A second one here is refused as a mismatch.
+      # The image's corepack holds that pnpm already.
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        if: needs.ci-image.outputs.pinned-image == ''
+      # In the image Node is already there, so only the pnpm store is restored.
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: 24
+          node-version: ${{ needs.ci-image.outputs.pinned-image == '' && '24' || '' }}
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
       - name: Install deps
@@ -1258,6 +1404,7 @@ jobs:
       # apt inside the runner and an unresponsive mirror hangs with no output.
       # It also says which half hung, which one folded step could not.
       - name: Install the Playwright Chromium browser
+        if: needs.ci-image.outputs.pinned-image == ''
         uses: ./.github/actions/install-playwright-chromium
       - name: Screen-acceptance UAT (build → preview → AC + axe)
         run: make frontend-e2e E2E_ARGS=--shard=${{ matrix.shard }}/3
@@ -1281,6 +1428,8 @@ jobs:
   #                                blocking by the back door.
   #   vuln, live-boot            — advisory today, and deliberately still
   #                                advisory here. See below.
+  #   home-budget                — advisory while its budgets are measured
+  #                                for feasibility; it joins as its own change.
   #
   # WHAT THE REPOSITORY ACTUALLY REQUIRES, said once and only here so the file
   # cannot answer it twice with different answers: `ci` — this job — is the ONE
@@ -1337,6 +1486,7 @@ jobs:
     needs: [changes]
     if: >-
       needs.changes.outputs.images == 'true'
+      && needs.changes.outputs.full_lane == 'true'
       && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
     runs-on: ubuntu-latest
     permissions:
@@ -1361,12 +1511,15 @@ jobs:
     # which is the whole failure mode this job exists to end.
     if: always()
     needs:
+      # A failed image build skips every job that needs it, and a skip passes
+      # on a pull request; this entry is what turns that failure red.
+      - ci-image
       - deterministic-gates
+      - test-budget
       - backend-lint
       - craftsmanship
       - craft-residue
       - secret-scan
-      - extension-reference
       - integration
       - frontend
       # The screen-acceptance lane gates the merge. It was advisory on the
@@ -1385,9 +1538,14 @@ jobs:
       run:
         working-directory: .
     steps:
+      # The verdict reads one script. The whole tree took 12 of this job's 16 s,
+      # and this job is the last step to every pull request's result.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          filter: blob:none
+          sparse-checkout: scripts/ci-verdict.sh
+          sparse-checkout-cone-mode: false
       - name: Verdict
         env:
           CI_VERDICT_NEEDS: ${{ toJSON(needs) }}

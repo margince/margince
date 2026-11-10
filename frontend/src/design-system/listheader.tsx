@@ -2,7 +2,7 @@
 // biome-ignore-all lint/a11y/useSemanticElements: the semantic element is already in use
 
 import { ChevronDown } from "lucide-react";
-import { useRef, useState } from "react";
+import { type ReactNode, useRef, useState } from "react";
 import { useT } from "../i18n";
 import type { ListColumn } from "./listcolumn";
 import { nextSortValue, type SortControl } from "./listsurface";
@@ -23,6 +23,7 @@ export function HeaderCell<Row>({
   onResizeStart,
   onResize,
   onResizeEnd,
+  lead,
 }: Readonly<{
   column: ListColumn<Row>;
   sort?: SortControl;
@@ -35,6 +36,8 @@ export function HeaderCell<Row>({
   onResizeStart: () => void;
   onResize: (key: string, width: number) => void;
   onResizeEnd: () => void;
+  /** A control before the header's words, outside its sort button. */
+  lead?: ReactNode;
 }>) {
   const t = useT();
   const grip = resizable ? (
@@ -47,6 +50,7 @@ export function HeaderCell<Row>({
   if (!column.sort || !sort) {
     return (
       <th className={className} role="columnheader">
+        {lead}
         {/* A menu column's heading is read, never drawn: forced colours would show any ink. */}
         {column.verbs === "menu" ? (
           <span className="sr-only">{column.header}</span>
@@ -75,6 +79,7 @@ export function HeaderCell<Row>({
             : undefined
       }
     >
+      {lead}
       <button
         type="button"
         className={`lt-sort${state ? " on" : ""}`}

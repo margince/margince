@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { components } from "../../api/schema";
-import { UTC_ZONE, viewerZone } from "../../format/timezone";
+import { browserZone, UTC_ZONE } from "../../format/timezone";
 import { type Translator, translate } from "../../i18n";
 import { withShippedLabels } from "../../lib/shippedlabels";
 import type { LeadDisqualifyReason } from "./leadhandling";
-import { leadStanding, standingReasons } from "./leadstanding";
+import { leadStanding, standingReasons, terminalBadge } from "./leadstanding";
 
 type Lead = components["schemas"]["Lead"];
 
@@ -17,7 +17,7 @@ const t: Translator = (key: string, params?: Record<string, string>) =>
 
 // The zone only satisfies the signature: no case here asserts a rendered date,
 // so the reader's own zone is the honest one to hand over.
-const zone = viewerZone();
+const zone = browserZone();
 
 function lead(extra: Partial<Lead>): Lead {
   return {
@@ -267,3 +267,14 @@ function reason(
     updated_at: "2026-01-01T00:00:00Z",
   };
 }
+
+describe("terminalBadge", () => {
+  // A status a newer server added is not one this build knows to be terminal.
+  it("gives a lead with an unknown status no badge, rather than an undefined one", () => {
+    expect(
+      terminalBadge(
+        lead({ status: "a_status_from_a_later_release" as Lead["status"] }),
+      ),
+    ).toBeNull();
+  });
+});

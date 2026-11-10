@@ -32,7 +32,7 @@ func TestEveryDossierModelFailureFallsBackToADescribedCompany(t *testing.T) {
 		"lane answering prose":     proseLane{},
 		"lane citing nothing":      scriptedLane{reply: `{"sections":[]}`},
 		"lane citing a stranger":   scriptedLane{reply: describing("summary", "They do things.", fourOfSeven())},
-		"lane inventing a section": scriptedLane{reply: describing("pipeline", "They are close to buying.", in)},
+		"lane inventing a section": scriptedLane{reply: cited(in, describing("pipeline", "They are close to buying.", in))},
 	} {
 		t.Run(name, func(t *testing.T) {
 			got, by, _ := WriteDossier(context.Background(), lane, in, string(textlang.English))
@@ -58,7 +58,7 @@ func TestEveryDossierModelFailureFallsBackToADescribedCompany(t *testing.T) {
 func TestAGroundedDossierIsServedAsTheModels(t *testing.T) {
 	in := fourOfSeven()
 	lane := scriptedLane{
-		reply: describing("summary", "They build load-shifting software for industrial sites.", in),
+		reply: cited(in, describing("summary", "They build load-shifting software for industrial sites.", in)),
 	}
 
 	got, by, _ := WriteDossier(context.Background(), lane, in, string(textlang.English))
@@ -83,7 +83,7 @@ func TestASectionKindTheContractDoesNotDeclareIsDropped(t *testing.T) {
 		` + sectionEntry("summary", "They build load-shifting software.", in) + `,
 		` + sectionEntry("pipeline", "They are close to buying.", in) + `]}`
 
-	got, err := ParseDossier(reply, in)
+	got, err := parseCitedDossier(reply, in)
 	if err != nil {
 		t.Fatalf("parse: %v", err)
 	}
@@ -107,7 +107,7 @@ func TestADossierSentenceLabelledARecommendationIsDropped(t *testing.T) {
 		{"text":"They build load-shifting software.","nature":"fact",` + cite + `},
 		{"text":"Pitch them load-shifting software.","nature":"recommendation",` + cite + `}]}]}`
 
-	got, err := ParseDossier(reply, in)
+	got, err := parseCitedDossier(reply, in)
 	if err != nil {
 		t.Fatalf("parse: %v", err)
 	}
