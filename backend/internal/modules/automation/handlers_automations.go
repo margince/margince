@@ -95,7 +95,7 @@ func (h Handlers) ListAutomations(w http.ResponseWriter, r *http.Request, params
 	}
 	data := make([]crmcontracts.Automation, 0, len(page.Items))
 	for _, a := range page.Items {
-		wire, err := wireAutomation(a)
+		wire, err := WireAutomation(a)
 		if err != nil {
 			httperr.Write(w, r, err)
 			return
@@ -125,7 +125,7 @@ func (h Handlers) CreateAutomation(w http.ResponseWriter, r *http.Request) {
 		writeAutomationErr(w, r, err)
 		return
 	}
-	wire, err := wireAutomation(created)
+	wire, err := WireAutomation(created)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -140,7 +140,7 @@ func (h Handlers) GetAutomation(w http.ResponseWriter, r *http.Request, id crmco
 		writeAutomationErr(w, r, err)
 		return
 	}
-	wire, err := wireAutomation(a)
+	wire, err := WireAutomation(a)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -191,7 +191,7 @@ func (h Handlers) UpdateAutomation(w http.ResponseWriter, r *http.Request, id cr
 		writeAutomationErr(w, r, err)
 		return
 	}
-	wire, err := wireAutomation(updated)
+	wire, err := WireAutomation(updated)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -382,7 +382,7 @@ func wireSetter(setter *ids.UUID) *openapi_types.UUID {
 	return &id
 }
 
-func wireAutomation(a Automation) (crmcontracts.Automation, error) {
+func WireAutomation(a Automation) (crmcontracts.Automation, error) {
 	status := crmcontracts.AutomationStatus("paused")
 	if a.Enabled {
 		status = crmcontracts.AutomationStatus("enabled")

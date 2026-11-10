@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Translator } from "../../i18n";
+import { WEBSITE_INQUIRY_RECIPE } from "../../lib/websiteinquiries";
 import type { MessageKey } from "../../i18n/en";
 import { humanizeToken } from "../settings/audit";
 
@@ -40,9 +41,10 @@ export function triggerLabel(trigger: string, t: Translator): string {
 
 /** What an automation does and when, as one line: "New lead: create a task". */
 export function recipeSentence(
-  recipe: Readonly<{ trigger: string; action: string }>,
+  recipe: Readonly<{ key?: string; trigger: string; action: string }>,
   t: Translator,
 ): string {
+  if (recipe.key === WEBSITE_INQUIRY_RECIPE) return t("inquiry.trigger");
   const action = ACTION[recipe.action];
   return t("auto.recipe", {
     trigger: triggerLabel(recipe.trigger, t),

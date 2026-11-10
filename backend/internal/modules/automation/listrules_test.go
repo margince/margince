@@ -138,11 +138,11 @@ func TestTheCatalogOffersListRulesOnlyWhereListsAreOn(t *testing.T) {
 
 func TestAPausedRuleSaysWhyOnTheWire(t *testing.T) {
 	reason := PausedBurst
-	wire, err := wireAutomation(Automation{ID: ids.New[ids.AutomationKind](), Key: listNotifyName, Params: json.RawMessage(`{}`), PausedReason: &reason})
+	wire, err := WireAutomation(Automation{ID: ids.New[ids.AutomationKind](), Key: listNotifyName, Params: json.RawMessage(`{}`), PausedReason: &reason})
 	if err != nil || wire.Status != "paused" || wire.PausedReason == nil || string(*wire.PausedReason) != PausedBurst {
 		t.Fatalf("a rule paused for a burst reads %+v (%v), want paused with the reason", wire, err)
 	}
-	running, err := wireAutomation(Automation{ID: ids.New[ids.AutomationKind](), Key: listNotifyName, Enabled: true})
+	running, err := WireAutomation(Automation{ID: ids.New[ids.AutomationKind](), Key: listNotifyName, Enabled: true})
 	if err != nil || running.PausedReason != nil {
 		t.Fatalf("a running rule reads %+v (%v), want no pause reason", running, err)
 	}

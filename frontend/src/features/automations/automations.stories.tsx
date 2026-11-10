@@ -3,13 +3,14 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
+import { en } from "../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
-import { AutomationsAdmin } from "./automations";
+import { AutomationsAdmin, type AutomationsView } from "./automations";
 import {
   AUTOMATION_CATALOG,
   configuredAutomations,
@@ -39,7 +40,8 @@ const CARD_ROUTES = {
 function Card({
   readOnly = false,
   none = false,
-}: Readonly<{ readOnly?: boolean; none?: boolean }>) {
+  view = "mine",
+}: Readonly<{ readOnly?: boolean; none?: boolean; view?: AutomationsView }>) {
   const routes = none
     ? {
         ...CARD_ROUTES,
@@ -54,7 +56,7 @@ function Card({
   );
   return (
     <StoryProviders>
-      <AutomationsAdmin />
+      <AutomationsAdmin view={view} />
     </StoryProviders>
   );
 }
@@ -62,7 +64,7 @@ function Card({
 const cardRendered: NonNullable<Story["play"]> = async ({ canvasElement }) => {
   const canvas = within(canvasElement);
   await canvas.findByTestId("automation-au-6");
-  await canvas.findByTestId("template-no_activity_reminder");
+  await canvas.findByRole("columnheader", { name: "Authorized by" });
 };
 
 export const AdminCard: Story = {
@@ -79,7 +81,7 @@ export const AdminCardDark: Story = {
 // Nothing configured yet: the intro and one empty line share one body.
 export const NoneConfigured: Story = {
   play: async ({ canvasElement }) => {
-    await within(canvasElement).findByTestId("template-no_activity_reminder");
+    await within(canvasElement).findByText(en["auto.instances.empty"]);
   },
   render: () => <Card none />,
 };
@@ -101,7 +103,7 @@ export const AdminCardReadOnly: Story = {
       canvas.queryByRole("button", { name: /^Use template/ }),
     ).toBeNull();
   },
-  render: () => <Card readOnly />,
+  render: () => <Card readOnly view="library" />,
 };
 
 export const CreatingFromATemplate: Story = {
@@ -112,7 +114,7 @@ export const CreatingFromATemplate: Story = {
     await user.click(within(row).getByText("Renewal reminder"));
     await within(canvasElement.ownerDocument.body).findByRole("dialog");
   },
-  render: () => <Card />,
+  render: () => <Card view="library" />,
 };
 
 export const EditingInADialog: Story = {

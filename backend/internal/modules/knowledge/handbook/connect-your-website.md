@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/settings/webforms.tsx frontend/src/features/settings/webformdrawer.tsx frontend/src/features/settings/webformsetup.tsx frontend/src/features/settings/webformsnippet.ts backend/internal/modules/webforms backend/internal/compose/webformleads.go backend/internal/compose/webforms.go -->
+<!-- describes: frontend/src/components/websiteinquirydialog.tsx frontend/src/components/websiteinquiryfields.tsx frontend/src/features/settings/webforms.tsx frontend/src/features/settings/webformdrawer.tsx frontend/src/features/settings/webformsetup.tsx frontend/src/features/settings/webformsnippet.ts backend/internal/modules/webforms backend/internal/compose/webformleads.go backend/internal/compose/webforms.go -->
 # Connecting your website
 
 A website form sends each question from your website to Margince as a new lead. Each form
@@ -47,11 +47,17 @@ A line outside the quote was written by Margince, so a prospect cannot type one.
 The prospect then sees the form's **Success message**, or goes to the **Thank-you page** if you set one.
 Also called: where do my website leads go, new lead from website, duplicate lead.
 
-### Who gets the leads from a form?
-Pick a colleague in **Owner of new leads** when you create or edit the form. Each new lead from it then goes to that colleague. With **Unassigned**, anyone on the team can pick the lead up. If the owner leaves the workspace, new leads arrive unassigned until you pick someone else.
+### Who handles questions from a form?
+Choose **Inquiry handling** beside the form. Choose one colleague, share work between selected colleagues, or ask someone to check each question first. Pick a person to check questions that need review, a task title, a deadline and its time zone.
 
-The list holds every colleague who may own records, also those whose records you do not see. Type a name to find it.
-Also called: assign website leads, lead owner, route form leads.
+Choose **Review handling** to check the plan. **Authorized by** names the person whose rights let the rule act. The person who checks questions and the selected colleagues get the work. Choose **Save paused** to keep the plan off, or **Turn on this handling** to handle future accepted posts. Turning it on leaves past questions as they are.
+
+An existing owner keeps the lead or contact. A new or unowned lead follows the plan. The person who checks questions gets a task when the plan leaves the lead unassigned. A repeated post does not make a second task. The deadline ends on the chosen local day, in the chosen time zone.
+
+**Request type field (optional)** can name a lead picklist sent by your website form. A value outside that list stays in the note. Leave this choice as **Not specified** if the form has no request type.
+
+For a form with no handling plan, **Owner of new leads** still sets who gets new leads. Its value stops deciding who gets new work once you save a handling plan.
+Also called: assign website leads, lead owner, route form leads, handle questions.
 
 ### How do I connect WordPress?
 To connect a WordPress site, add a **Custom HTML** block to the page and paste the **Code to paste** into it. Choose **Your website** and list the site's address under **Websites**.

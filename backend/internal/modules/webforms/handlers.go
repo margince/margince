@@ -41,7 +41,7 @@ func (h Handlers) ListWebForms(w http.ResponseWriter, r *http.Request, params cr
 	}
 	data := make([]crmcontracts.WebForm, 0, len(forms))
 	for _, f := range forms {
-		data = append(data, wireForm(f))
+		data = append(data, WireForm(f))
 	}
 	httperr.WriteJSON(w, http.StatusOK, crmcontracts.WebFormListResponse{Data: data, SecretsAvailable: h.store.SecretsAvailable()})
 }
@@ -82,7 +82,7 @@ func (h Handlers) GetWebForm(w http.ResponseWriter, r *http.Request, id crmcontr
 		writeErr(w, r, err)
 		return
 	}
-	httperr.WriteJSON(w, http.StatusOK, wireForm(f))
+	httperr.WriteJSON(w, http.StatusOK, WireForm(f))
 }
 
 // UpdateWebForm changes a form under the If-Match version.
@@ -117,7 +117,7 @@ func (h Handlers) UpdateWebForm(w http.ResponseWriter, r *http.Request, id crmco
 		writeErr(w, r, err)
 		return
 	}
-	httperr.WriteJSON(w, http.StatusOK, wireForm(f))
+	httperr.WriteJSON(w, http.StatusOK, WireForm(f))
 }
 
 // ArchiveWebForm retires a form; its address answers 404 from then on.
@@ -127,7 +127,7 @@ func (h Handlers) ArchiveWebForm(w http.ResponseWriter, r *http.Request, id crmc
 		writeErr(w, r, err)
 		return
 	}
-	httperr.WriteJSON(w, http.StatusOK, wireForm(f))
+	httperr.WriteJSON(w, http.StatusOK, WireForm(f))
 }
 
 // RotateWebFormSecret mints a server form's new secret and answers it once.

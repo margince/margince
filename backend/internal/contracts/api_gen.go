@@ -66722,6 +66722,29 @@ type WebhookSubscriptionListResponse struct {
 	Page            PageInfo `json:"page"`
 }
 
+// WebsiteInquiryHandling defines model for WebsiteInquiryHandling.
+type WebsiteInquiryHandling struct {
+	// Automation A configured automation instance (feedback/14).
+	Automation Automation `json:"automation"`
+
+	// Form A website form (`web_form`): a public intake address that turns a submission into a lead. No secret is ever returned here; `secret_configured` says one is stored.
+	Form WebForm `json:"form"`
+}
+
+// WebsiteInquiryHandlingRequest defines model for WebsiteInquiryHandlingRequest.
+type WebsiteInquiryHandlingRequest struct {
+	AutomationId *openapi_types.UUID `json:"automation_id,omitempty"`
+
+	// AutomationVersion Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
+	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
+	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
+	// (ErrVersionSkew) so the client re-reads before retrying.
+	AutomationVersion *RowVersion          `json:"automation_version,omitempty" minimum:"1"`
+	Enabled           bool                 `json:"enabled"`
+	Name              string               `json:"name"`
+	Policy            WebsiteInquiryPolicy `json:"policy"`
+}
+
 // WebsiteInquiryMode Keep an eligible existing owner; otherwise route through selected colleagues or coordinator review.
 type WebsiteInquiryMode string
 
@@ -77193,6 +77216,16 @@ type UpdateWebFormParams struct {
 	IfMatch *IfMatch `json:"If-Match,omitempty"`
 }
 
+// SaveWebFormHandlingParams defines parameters for SaveWebFormHandling.
+type SaveWebFormHandlingParams struct {
+	// IfMatch Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+	// the last-seen entity `version`. If the row's current `version` differs, the write is
+	// rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+	// re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+	// Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+	IfMatch *IfMatch `json:"If-Match,omitempty"`
+}
+
 // ListWebhookSubscriptionsParams defines parameters for ListWebhookSubscriptions.
 type ListWebhookSubscriptionsParams struct {
 	// IncludeArchived Include soft-deleted (archived) rows. Default false.
@@ -78772,6 +78805,9 @@ type CreateWebFormJSONRequestBody = CreateWebFormRequest
 
 // UpdateWebFormJSONRequestBody defines body for UpdateWebForm for application/json ContentType.
 type UpdateWebFormJSONRequestBody = UpdateWebFormRequest
+
+// SaveWebFormHandlingJSONRequestBody defines body for SaveWebFormHandling for application/json ContentType.
+type SaveWebFormHandlingJSONRequestBody = WebsiteInquiryHandlingRequest
 
 // CreateWebhookSubscriptionJSONRequestBody defines body for CreateWebhookSubscription for application/json ContentType.
 type CreateWebhookSubscriptionJSONRequestBody = CreateWebhookSubscriptionRequest
@@ -94670,6 +94706,9 @@ type ServerInterface interface {
 	// Change a website form, pause it or resume it.
 	// (PATCH /web-forms/{id})
 	UpdateWebForm(w http.ResponseWriter, r *http.Request, id Id, params UpdateWebFormParams)
+	// Save the reviewed inquiry policy and form link together.
+	// (PUT /web-forms/{id}/handling)
+	SaveWebFormHandling(w http.ResponseWriter, r *http.Request, id Id, params SaveWebFormHandlingParams)
 	// Rotate a form's minted signing secret (returns the new secret once).
 	// (POST /web-forms/{id}/rotate-secret)
 	RotateWebFormSecret(w http.ResponseWriter, r *http.Request, id Id)
@@ -100877,6 +100916,12 @@ func (_ Unimplemented) GetWebForm(w http.ResponseWriter, r *http.Request, id Id)
 // Change a website form, pause it or resume it.
 // (PATCH /web-forms/{id})
 func (_ Unimplemented) UpdateWebForm(w http.ResponseWriter, r *http.Request, id Id, params UpdateWebFormParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Save the reviewed inquiry policy and form link together.
+// (PUT /web-forms/{id}/handling)
+func (_ Unimplemented) SaveWebFormHandling(w http.ResponseWriter, r *http.Request, id Id, params SaveWebFormHandlingParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -145957,6 +146002,64 @@ func (siw *ServerInterfaceWrapper) UpdateWebForm(w http.ResponseWriter, r *http.
 	handler.ServeHTTP(w, r)
 }
 
+// SaveWebFormHandling operation middleware
+func (siw *ServerInterfaceWrapper) SaveWebFormHandling(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params SaveWebFormHandlingParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "If-Match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("If-Match")]; found {
+		var IfMatch IfMatch
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "If-Match", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "If-Match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "If-Match", Err: err})
+			return
+		}
+
+		params.IfMatch = &IfMatch
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SaveWebFormHandling(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // RotateWebFormSecret operation middleware
 func (siw *ServerInterfaceWrapper) RotateWebFormSecret(w http.ResponseWriter, r *http.Request) {
 
@@ -150515,6 +150618,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Patch(options.BaseURL+"/web-forms/{id}", wrapper.UpdateWebForm)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/web-forms/{id}/handling", wrapper.SaveWebFormHandling)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/web-forms/{id}/rotate-secret", wrapper.RotateWebFormSecret)

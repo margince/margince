@@ -10421,6 +10421,32 @@ export interface paths {
         patch: operations["updateWebForm"];
         trace?: never;
     };
+    "/web-forms/{id}/handling": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Save the reviewed inquiry policy and form link together.
+         * @description Saves one policy and its link to this form under the same form lock as intake.
+         *     The form version and, for an edit, the automation version must still match the
+         *     review. Enabling handles future accepted submissions; it does not scan old leads.
+         *     A paused linked policy keeps legacy handling stopped. No outbound mail is sent.
+         */
+        put: operations["saveWebFormHandling"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/web-forms/{id}/rotate-secret": {
         parameters: {
             query?: never;
@@ -25550,6 +25576,18 @@ export interface components {
          * @enum {string}
          */
         WebsiteInquiryMode: "one_colleague" | "rotate" | "coordinator";
+        WebsiteInquiryHandlingRequest: {
+            name: string;
+            policy: components["schemas"]["WebsiteInquiryPolicy"];
+            enabled: boolean;
+            /** Format: uuid */
+            automation_id?: string;
+            automation_version?: components["schemas"]["RowVersion"];
+        };
+        WebsiteInquiryHandling: {
+            form: components["schemas"]["WebForm"];
+            automation: components["schemas"]["Automation"];
+        };
         WebsiteInquiryPolicy: {
             /** Format: uuid */
             form_id: string;
@@ -77250,6 +77288,48 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["WebForm"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+            503: components["responses"]["WebsiteFormBusy"];
+        };
+    };
+    saveWebFormHandling: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+                 *     the last-seen entity `version`. If the row's current `version` differs, the write is
+                 *     rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+                 *     re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+                 *     Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+                 */
+                "If-Match"?: components["parameters"]["IfMatch"];
+            };
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WebsiteInquiryHandlingRequest"];
+            };
+        };
+        responses: {
+            /** @description The saved form and policy. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebsiteInquiryHandling"];
                 };
             };
             401: components["responses"]["Unauthorized"];

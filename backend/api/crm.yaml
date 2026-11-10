@@ -16354,6 +16354,41 @@ paths:
         '422': { $ref: '#/components/responses/ValidationError' }
         '503': { $ref: '#/components/responses/WebsiteFormBusy' }
 
+  /web-forms/{id}/handling:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    put:
+      tags: [WebForms]
+      operationId: saveWebFormHandling
+      security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
+      x-agent-access: human-only
+      x-human-only-reason: covered
+      summary: Save the reviewed inquiry policy and form link together.
+      description: |
+        Saves one policy and its link to this form under the same form lock as intake.
+        The form version and, for an edit, the automation version must still match the
+        review. Enabling handles future accepted submissions; it does not scan old leads.
+        A paused linked policy keeps legacy handling stopped. No outbound mail is sent.
+      parameters:
+        - $ref: '#/components/parameters/IfMatch'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/WebsiteInquiryHandlingRequest' }
+      responses:
+        '200':
+          description: The saved form and policy.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WebsiteInquiryHandling' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '503': { $ref: '#/components/responses/WebsiteFormBusy' }
+
   /web-forms/{id}/rotate-secret:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -38006,6 +38041,23 @@ components:
       enum: [one_colleague, rotate, coordinator]
       description: Keep an eligible existing owner; otherwise route through selected colleagues or coordinator review.
 
+    WebsiteInquiryHandlingRequest:
+      type: object
+      required: [name, policy, enabled]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 200 }
+        policy: { $ref: '#/components/schemas/WebsiteInquiryPolicy' }
+        enabled: { type: boolean }
+        automation_id: { type: string, format: uuid }
+        automation_version: { $ref: '#/components/schemas/RowVersion' }
+      additionalProperties: false
+    WebsiteInquiryHandling:
+      type: object
+      required: [form, automation]
+      properties:
+        form: { $ref: '#/components/schemas/WebForm' }
+        automation: { $ref: '#/components/schemas/Automation' }
+      additionalProperties: false
     WebsiteInquiryPolicy:
       type: object
       additionalProperties: false

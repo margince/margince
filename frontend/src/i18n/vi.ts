@@ -16263,6 +16263,47 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "webForms.field.productClear": "Ghi nhận lead không có sản phẩm",
   "webForms.field.productLoading": "Đang đọc sản phẩm…",
   "webForms.field.owner": "Người chịu trách nhiệm cho lead mới",
+  "inquiry.needsSetup": "Cần thiết lập",
+  "inquiry.trigger":
+    "Khi tiếp nhận yêu cầu từ website, giao một công việc cho đồng nghiệp đã chọn.",
+  "inquiry.form": "Biểu mẫu website",
+  "inquiry.chooseForm": "Chọn biểu mẫu website",
+  "inquiry.formAccess":
+    "Bạn cần quyền xem biểu mẫu website để thiết lập cách xử lý yêu cầu.",
+  "inquiry.mode": "Ai xử lý yêu cầu mới?",
+  "inquiry.mode.one": "Một đồng nghiệp",
+  "inquiry.mode.rotate": "Luân phiên giữa các đồng nghiệp đã chọn",
+  "inquiry.mode.coordinator": "Điều phối viên xem xét trước",
+  "inquiry.colleague": "Đồng nghiệp",
+  "inquiry.colleagues": "Đồng nghiệp đã chọn",
+  "inquiry.chooseColleague": "Chọn đồng nghiệp",
+  "inquiry.chooseColleagues": "Chọn các đồng nghiệp",
+  "inquiry.colleagueUnavailable": "Đồng nghiệp không còn khả dụng",
+  "inquiry.keepOwner":
+    "Người phụ trách hiện tại vẫn giữ yêu cầu nếu đủ điều kiện. Chỉ phân công bản ghi mới hoặc chưa có người phụ trách.",
+  "inquiry.coordinator": "Điều phối viên",
+  "inquiry.coordinatorHint":
+    "Xem xét lead chưa được phân công và yêu cầu cần chú ý. Đồng nghiệp này cần quyền xem các bản ghi đó.",
+  "inquiry.taskTitle": "Tên công việc",
+  "inquiry.taskTitleDefault": "Trả lời yêu cầu từ website",
+  "inquiry.dueDays": "Số ngày theo lịch sau khi nhận",
+  "inquiry.dueHint": "Đến hạn vào cuối ngày đó theo múi giờ đã lưu.",
+  "inquiry.requestTypeField": "Trường loại yêu cầu (tùy chọn)",
+  "inquiry.requestTypeHint":
+    "Chọn trường danh sách của khách hàng tiềm năng mà biểu mẫu gửi theo tên trường. Giá trị ngoài danh sách được giữ trong ghi chú.",
+  "inquiry.notSpecified": "Chưa nêu",
+  "inquiry.fieldUnavailable": "Trường không còn khả dụng",
+  "inquiry.fieldsFailed":
+    "Không tải được các trường loại yêu cầu. Bạn có thể giữ nguyên thiết lập tùy chọn này.",
+  "inquiry.handling": "Xử lý yêu cầu",
+  "inquiry.review": "Xem lại cách xử lý",
+  "inquiry.savePaused": "Lưu và tạm dừng",
+  "inquiry.enable": "Bật cách xử lý này",
+  "inquiry.futureOnly":
+    "Yêu cầu hiện có được giữ nguyên. Cách này áp dụng cho các lần gửi được tiếp nhận từ nay.",
+  "inquiry.conversion":
+    "Xem lại thay đổi trước khi thay thế cách xử lý hiện tại của biểu mẫu.",
+  "inquiry.back": "Quay lại thiết lập",
   "webForms.handlingBusy": "Biểu mẫu đang được xử lý. Vui lòng thử lại.",
   "webForms.field.ownerHint":
     "Mỗi lead mới từ biểu mẫu này được giao cho thành viên này. Để trống thì bất kỳ ai trong nhóm cũng có thể nhận.",

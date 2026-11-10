@@ -16,6 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/automation"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/modules/customfields"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/webforms"
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -25,6 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
+	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
 type inquiryRouting struct {
@@ -70,9 +72,13 @@ func (r inquiryRouting) Validate(ctx context.Context, policy crmcontracts.Websit
 		}
 	}
 	if err := r.db.Tx(ctx, func(tx pgx.Tx) error {
+		eligible, err := auth.EligibleAssignees(ctx, tx, candidates)
+		if err != nil {
+			return err
+		}
 		for _, id := range candidates {
-			if err := auth.EnsureAssignee(ctx, tx, id); err != nil {
-				return err
+			if !eligible[id] {
+				return &auth.AssigneeNotAllowedError{}
 			}
 		}
 		return nil
@@ -88,7 +94,7 @@ func (r inquiryRouting) Validate(ctx context.Context, policy crmcontracts.Websit
 			return err
 		}
 	}
-	return nil
+	return r.checkRequestType(ctx, policy)
 }
 
 func (r inquiryRouting) Choose(ctx, admit context.Context, policy crmcontracts.WebsiteInquiryPolicy, target datasource.EntityRef) (ids.UUID, string, error) {
@@ -190,4 +196,25 @@ func inquiryRecipientDenied(err error) bool {
 
 func (r inquiryRouting) ReuseArrivalTask(ctx, admit context.Context, key string, source, recipient ids.UUID, due time.Time) (bool, error) {
 	return activities.NewStore(r.db).ReuseWebsiteArrivalTask(ctx, admit, key, source, recipient, due)
+}
+
+func (r inquiryRouting) checkRequestType(ctx context.Context, policy crmcontracts.WebsiteInquiryPolicy) error {
+	if policy.RequestTypeField == nil {
+		return nil
+	}
+	var columns []fieldcatalog.Column
+	err := r.db.Tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		columns, err = customfields.ActiveColumnsIn(ctx, tx, "lead")
+		return err
+	})
+	if err != nil {
+		return err
+	}
+	for _, column := range columns {
+		if column.Name == *policy.RequestTypeField && column.Type == fieldcatalog.TypePicklist {
+			return nil
+		}
+	}
+	return &automation.ParamError{Field: "params.request_type_field", Reason: "choose an active lead picklist field mapped on the form"}
 }

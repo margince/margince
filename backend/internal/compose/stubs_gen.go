@@ -4083,6 +4083,10 @@ func (stubs) UpdateWebForm(w nethttp.ResponseWriter, r *nethttp.Request, id crmc
 	httperr.NotImplemented(w, r, "UpdateWebForm")
 }
 
+func (stubs) SaveWebFormHandling(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.SaveWebFormHandlingParams) {
+	httperr.NotImplemented(w, r, "SaveWebFormHandling")
+}
+
 func (stubs) RotateWebFormSecret(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "RotateWebFormSecret")
 }

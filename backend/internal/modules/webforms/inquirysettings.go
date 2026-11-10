@@ -1,0 +1,57 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+package webforms
+
+import (
+	"context"
+	"net/http"
+
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+)
+
+// InquirySettings joins policy and form writes without either module owning the other's rows.
+type InquirySettings interface {
+	Save(context.Context, ids.UUID, int64, crmcontracts.WebsiteInquiryHandlingRequest) (crmcontracts.WebsiteInquiryHandling, error)
+}
+
+func (s *Store) WithInquirySettings(settings InquirySettings) *Store {
+	clone := *s
+	clone.settings = settings
+	return &clone
+}
+
+func (s *Store) SaveHandling(ctx context.Context, id ids.UUID, version int64, in crmcontracts.WebsiteInquiryHandlingRequest) (crmcontracts.WebsiteInquiryHandling, error) {
+	if err := auth.Require(ctx, rbacObject, principal.ActionUpdate); err != nil {
+		return crmcontracts.WebsiteInquiryHandling{}, err
+	}
+	if ids.UUID(in.Policy.FormId) != id {
+		return crmcontracts.WebsiteInquiryHandling{}, badInput("policy.form_id", "must name this website form")
+	}
+	if s.settings == nil {
+		return crmcontracts.WebsiteInquiryHandling{}, apperrors.ErrNotFound
+	}
+	return s.settings.Save(ctx, id, version, in)
+}
+
+func (h Handlers) SaveWebFormHandling(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, _ crmcontracts.SaveWebFormHandlingParams) {
+	version, ok := httperr.IfMatchVersion(w, r)
+	if !ok {
+		return
+	}
+	var request crmcontracts.WebsiteInquiryHandlingRequest
+	if !httperr.Decode(w, r, &request) {
+		return
+	}
+	out, err := h.store.SaveHandling(r.Context(), ids.UUID(id), *version, request)
+	if err != nil {
+		writeErr(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, out)
+}

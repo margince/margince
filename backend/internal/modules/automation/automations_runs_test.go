@@ -124,17 +124,17 @@ func TestEveryCountedStatusIsALastRunOutcome(t *testing.T) {
 }
 
 func TestOnlyAListedRuleCarriesItsRunSummaryOnTheWire(t *testing.T) {
-	single, err := wireAutomation(Automation{Key: stageChangeNotifyName})
+	single, err := WireAutomation(Automation{Key: stageChangeNotifyName})
 	if err != nil || single.LastRunAt != nil || single.LastRunOutcome != nil || single.RunsLast30Days != nil {
 		t.Fatalf("a rule read without a summary wires %+v (%v), want the three fields absent", single, err)
 	}
-	quiet, err := wireAutomation(Automation{Key: stageChangeNotifyName, Runs: &RunSummary{}})
+	quiet, err := WireAutomation(Automation{Key: stageChangeNotifyName, Runs: &RunSummary{}})
 	if err != nil || quiet.LastRunAt != nil || quiet.LastRunOutcome != nil || quiet.RunsLast30Days == nil || *quiet.RunsLast30Days != 0 {
 		t.Fatalf("a listed rule that never ran wires %+v (%v), want no last run and a count of 0", quiet, err)
 	}
 	ranAt := time.Date(2026, 9, 1, 8, 0, 0, 0, time.UTC)
 	status := "requires_approval"
-	busy, err := wireAutomation(Automation{Key: stageChangeNotifyName, Runs: &RunSummary{LastRunAt: &ranAt, LastRunStatus: &status, RecentRuns: 4}})
+	busy, err := WireAutomation(Automation{Key: stageChangeNotifyName, Runs: &RunSummary{LastRunAt: &ranAt, LastRunStatus: &status, RecentRuns: 4}})
 	if err != nil || busy.LastRunAt == nil || !busy.LastRunAt.Equal(ranAt) ||
 		busy.LastRunOutcome == nil || *busy.LastRunOutcome != crmcontracts.AutomationLastRunOutcomeQueuedForApproval ||
 		busy.RunsLast30Days == nil || *busy.RunsLast30Days != 4 {

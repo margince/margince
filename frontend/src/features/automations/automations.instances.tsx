@@ -8,6 +8,7 @@ import type { components } from "../../api/schema";
 import { ifMatch, requireVersion } from "../../api/version";
 import { useRunAsOwnerOptions } from "../../components/assigneepicker";
 import { RosterFailedLine } from "../../components/entityref";
+import { WebsiteInquiryDialog } from "../../components/websiteinquirydialog";
 import { Badge, Button, OverflowMenu } from "../../design-system/atoms";
 import { CellStack } from "../../design-system/cellstack";
 import { DataTable, type DataTableColumn } from "../../design-system/datatable";
@@ -20,6 +21,7 @@ import { formatRelativeTime } from "../../format/relativetime";
 import { type Translator, useLocale, usePlural, useT } from "../../i18n";
 import { problemMessageOf, unwrap } from "../../lib/problem";
 import { useViewerZone } from "../../lib/viewerzone";
+import { WEBSITE_INQUIRY_RECIPE } from "../../lib/websiteinquiries";
 import { AutomationInspectors, OUTCOME_LOOK } from "./automationdetail";
 import { DeleteAutomationAction } from "./automations.delete";
 import { AutomationDialog } from "./automations.form";
@@ -185,30 +187,39 @@ export function ConfiguredAutomations({
             : undefined
         }
       />
-      {editing && editingEntry && (
-        <AutomationDialog
-          key={editing.seq}
-          entry={editingEntry}
-          open={editing.open}
-          initialName={editing.automation.name}
-          initialParams={editing.automation.params}
-          submitLabel={t("trust.save")}
-          pending={edit.isPending}
-          refusal={<ErrorLine error={edit.error} />}
-          onSubmit={(name, params) => {
-            // The version as the list now holds it, not as it stood at open.
-            const current =
-              automations.find((one) => one.id === editing.automation.id) ??
-              editing.automation;
-            edit.mutate({
-              id: current.id,
-              version: current.version,
-              body: { name, params },
-            });
-          }}
+      {editing?.open && editing.automation.key === WEBSITE_INQUIRY_RECIPE && (
+        <WebsiteInquiryDialog
+          automation={editing.automation}
+          formId={editing.automation.inquiry_policy?.form_id}
           onClose={() => setEditing(shut)}
         />
       )}
+      {editing &&
+        editingEntry &&
+        editingEntry.key !== WEBSITE_INQUIRY_RECIPE && (
+          <AutomationDialog
+            key={editing.seq}
+            entry={editingEntry}
+            open={editing.open}
+            initialName={editing.automation.name}
+            initialParams={editing.automation.params}
+            submitLabel={t("trust.save")}
+            pending={edit.isPending}
+            refusal={<ErrorLine error={edit.error} />}
+            onSubmit={(name, params) => {
+              // The version as the list now holds it, not as it stood at open.
+              const current =
+                automations.find((one) => one.id === editing.automation.id) ??
+                editing.automation;
+              edit.mutate({
+                id: current.id,
+                version: current.version,
+                body: { name, params },
+              });
+            }}
+            onClose={() => setEditing(shut)}
+          />
+        )}
     </>
   );
 }

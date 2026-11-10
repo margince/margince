@@ -7,6 +7,7 @@ import { useState } from "react";
 import { api } from "../../api/client";
 import { ifMatch } from "../../api/version";
 import { ArchiveAction } from "../../components/archive";
+import { WebsiteInquiryDialog } from "../../components/websiteinquirydialog";
 import { Badge, Button, OverflowMenu } from "../../design-system/atoms";
 import { ConfirmModal } from "../../design-system/confirmmodal";
 import { ErrorLine } from "../../design-system/errorline";
@@ -15,10 +16,11 @@ import { QueryGate } from "../../design-system/querystates";
 import { SettingList, SettingRow } from "../../design-system/settingrow";
 import { formatDate } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
-import { useCanWrite } from "../../lib/capability";
+import { useCan, useCanWrite } from "../../lib/capability";
 import { problemMessageOf, throwProblem, unwrap } from "../../lib/problem";
 import { useMe } from "../../lib/session";
 import { useViewerZone } from "../../lib/viewerzone";
+import { WEBSITE_INQUIRY_RECIPE } from "../../lib/websiteinquiries";
 import { WebFormDrawer } from "./webformdrawer";
 import {
   mintsSecret,
@@ -148,6 +150,34 @@ function RotateAction({
   );
 }
 
+function HandlingAction({
+  form,
+  canEdit,
+}: Readonly<{ form: WebForm; canEdit: boolean }>) {
+  const t = useT();
+  const [handling, setHandling] = useState(false);
+  const readPolicies = useCan("automation", "read");
+  const createPolicies = useCanWrite("automation", "create");
+  const editPolicies = useCanWrite("automation", "update");
+  const canHandle =
+    canEdit &&
+    readPolicies &&
+    editPolicies &&
+    (!!form.handling_automation_id || createPolicies);
+  const catalog = useQuery({ queryKey: ["automation-catalog"], enabled: canHandle, queryFn: async () => unwrap(await api.GET("/automations/catalog")) });
+  if (!canHandle) return null;
+  if (catalog.error) return <ErrorLine inline error={catalog.error} />;
+  if (!catalog.data?.data.some((entry) => entry.key === WEBSITE_INQUIRY_RECIPE)) return null;
+  return (
+    <>
+      <Button onClick={() => setHandling(true)}>{t("inquiry.handling")}</Button>
+      {handling && (
+        <WebsiteInquiryDialog form={form} onClose={() => setHandling(false)} />
+      )}
+    </>
+  );
+}
+
 function FormRow({
   form,
   canEdit,
@@ -170,7 +200,9 @@ function FormRow({
             {form.sender === "browser"
               ? form.allowed_origins.join(", ")
               : t(`webForms.senderLine.${form.sender}`)}
-            {form.owner_id && <FormOwnerLine ownerId={form.owner_id} />}
+            {!form.handling_automation_id && form.owner_id && (
+              <FormOwnerLine ownerId={form.owner_id} />
+            )}
             <LastPostLine lastPostAt={form.last_post_at} />
             <span className="webform-row-actions">
               <Button
@@ -187,6 +219,7 @@ function FormRow({
                   {t("webForms.edit")}
                 </Button>
               )}
+              <HandlingAction form={form} canEdit={canEdit} />
               {(canEdit || canArchive) && (
                 <OverflowMenu label={t("record.moreActions")}>
                   {canEdit && <PauseAction form={form} />}

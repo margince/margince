@@ -37,6 +37,7 @@ const publicFormsPrefix = "/v1/public/forms/"
 func newWebFormHandlers(pool *pgxpool.Pool, log *slog.Logger) webforms.Handlers {
 	db := InstallationDB(pool)
 	store := webforms.NewStore(db, log).WithHandlingFence(newWebFormFence(db))
+	store = store.WithInquirySettings(newInquirySettings(db, store))
 	return webforms.NewHandlers(store, webforms.NewIntake(store, newWebFormLander(db, pool, log)), time.Now)
 }
 

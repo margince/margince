@@ -3,6 +3,7 @@ import { CalendarClock, Zap } from "lucide-react";
 import { type ReactNode, useEffect, useId, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import { WebsiteInquiryDialog } from "../../components/websiteinquirydialog";
 import { EmptyState } from "../../design-system/atoms";
 import { CellStack } from "../../design-system/cellstack";
 import { DataTable, type DataTableColumn } from "../../design-system/datatable";
@@ -16,6 +17,7 @@ import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 import { useCan, useCanWrite } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
 import { useMe } from "../../lib/session";
+import { WEBSITE_INQUIRY_RECIPE } from "../../lib/websiteinquiries";
 import { AutomationDialog } from "./automations.form";
 import { ConfiguredAutomations, shut } from "./automations.instances";
 import { triggerLabel } from "./automations.recipe";
@@ -154,7 +156,10 @@ export function AutomationsAdmin({
           )}
         </Panel>
       )}
-      {staged && (
+      {staged?.open && staged.entry.key === WEBSITE_INQUIRY_RECIPE && (
+        <WebsiteInquiryDialog onClose={() => setStaged(shut)} />
+      )}
+      {staged && staged.entry.key !== WEBSITE_INQUIRY_RECIPE && (
         <AutomationDialog
           key={staged.seq}
           open={staged.open}

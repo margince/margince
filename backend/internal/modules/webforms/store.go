@@ -26,11 +26,12 @@ const defaultLeadOrigin = "website"
 // Store owns web_form. vault is nil on an installation with no secret store:
 // browser forms still work, and every signed sender is refused at create.
 type Store struct {
-	db    *database.DB
-	vault keyvault.Vault
-	log   *slog.Logger
-	now   func() time.Time
-	fence HandlingFence
+	db       *database.DB
+	vault    keyvault.Vault
+	log      *slog.Logger
+	now      func() time.Time
+	fence    HandlingFence
+	settings InquirySettings
 }
 
 // NewStore wires the forms table over the workspace database.

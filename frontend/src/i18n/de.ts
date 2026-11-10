@@ -16693,6 +16693,48 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "webForms.field.productClear": "Leads ohne Produkt erfassen",
   "webForms.field.productLoading": "Produkt wird geladen…",
   "webForms.field.owner": "Verantwortlich für neue Leads",
+  "inquiry.needsSetup": "Einrichtung nötig",
+  "inquiry.trigger":
+    "Wenn eine Website-Anfrage eingeht, bekommt die gewählte Person eine Aufgabe.",
+  "inquiry.form": "Website-Formular",
+  "inquiry.chooseForm": "Website-Formular wählen",
+  "inquiry.formAccess":
+    "Du brauchst Zugriff auf Website-Formulare, um die Bearbeitung einzurichten.",
+  "inquiry.mode": "Wer bearbeitet neue Anfragen?",
+  "inquiry.mode.one": "Eine Person",
+  "inquiry.mode.rotate": "Abwechselnd ausgewählte Personen",
+  "inquiry.mode.coordinator": "Zuerst durch die Koordination prüfen",
+  "inquiry.colleague": "Person",
+  "inquiry.colleagues": "Ausgewählte Personen",
+  "inquiry.chooseColleague": "Person wählen",
+  "inquiry.chooseColleagues": "Personen wählen",
+  "inquiry.colleagueUnavailable": "Person nicht mehr verfügbar",
+  "inquiry.keepOwner":
+    "Eine berechtigte zuständige Person behält ihre Anfragen. Nur neue oder nicht zugewiesene Datensätze werden verteilt.",
+  "inquiry.coordinator": "Koordination",
+  "inquiry.coordinatorHint":
+    "Prüft nicht zugewiesene Leads und Anfragen mit Klärungsbedarf. Diese Person braucht Zugriff auf die Datensätze.",
+  "inquiry.taskTitle": "Aufgabentitel",
+  "inquiry.taskTitleDefault": "Website-Anfrage beantworten",
+  "inquiry.dueDays": "Kalendertage nach Eingang",
+  "inquiry.dueHint":
+    "Fällig am Ende dieses Tages in der gespeicherten Zeitzone.",
+  "inquiry.requestTypeField": "Feld für die Anfrageart (optional)",
+  "inquiry.requestTypeHint":
+    "Wählen Sie die Lead-Auswahlliste, deren Feldname Ihr Website-Formular sendet. Andere Werte bleiben in der Notiz.",
+  "inquiry.notSpecified": "Nicht angegeben",
+  "inquiry.fieldUnavailable": "Feld nicht mehr verfügbar",
+  "inquiry.fieldsFailed":
+    "Die Felder für die Anfrageart konnten nicht geladen werden. Sie können diese optionale Einstellung unverändert lassen.",
+  "inquiry.handling": "Anfragen bearbeiten",
+  "inquiry.review": "Bearbeitung prüfen",
+  "inquiry.savePaused": "Pausiert speichern",
+  "inquiry.enable": "Diese Bearbeitung einschalten",
+  "inquiry.futureOnly":
+    "Bestehende Anfragen bleiben unverändert. Dies gilt für künftig angenommene Einsendungen.",
+  "inquiry.conversion":
+    "Prüfe diese Änderung, bevor sie die bisherige Bearbeitung des Formulars ersetzt.",
+  "inquiry.back": "Zurück zu den Einstellungen",
   "webForms.handlingBusy":
     "Dieses Formular wird gerade bearbeitet. Versuche es erneut.",
   "webForms.field.ownerHint":

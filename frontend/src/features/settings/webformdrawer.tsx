@@ -352,11 +352,13 @@ export function WebFormDrawer({
             </Field>
           )}
         </div>
-        <OwnerField
-          ownerId={draft.ownerId}
-          error={fieldErrors.get("owner_id")}
-          onChange={(ownerId) => set({ ownerId })}
-        />
+        {!form?.handling_automation_id && (
+          <OwnerField
+            ownerId={draft.ownerId}
+            error={fieldErrors.get("owner_id")}
+            onChange={(ownerId) => set({ ownerId })}
+          />
+        )}
         <ProductField
           productId={draft.productId}
           error={fieldErrors.get("product_id")}

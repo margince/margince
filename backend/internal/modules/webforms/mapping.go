@@ -14,7 +14,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-func wireForm(f Form) crmcontracts.WebForm {
+func WireForm(f Form) crmcontracts.WebForm {
 	fieldMap := f.FieldMap
 	if fieldMap == nil {
 		fieldMap = map[string]string{}
@@ -55,7 +55,7 @@ func wireForm(f Form) crmcontracts.WebForm {
 // wireCreated is the form plus a server form's secret, which the caller sees
 // this once.
 func wireCreated(f Form, secret string) crmcontracts.WebFormCreated {
-	w := wireForm(f)
+	w := WireForm(f)
 	out := crmcontracts.WebFormCreated{
 		Id: w.Id, Name: w.Name, FormKey: w.FormKey, Sender: w.Sender, AllowedOrigins: w.AllowedOrigins,
 		HandlingAutomationId: w.HandlingAutomationId, HandlingCutoverAt: w.HandlingCutoverAt,

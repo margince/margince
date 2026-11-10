@@ -16570,6 +16570,47 @@ export const en = {
   "webForms.field.productClear": "Capture leads with no product",
   "webForms.field.productLoading": "Reading the product…",
   "webForms.field.owner": "Owner of new leads",
+  "inquiry.needsSetup": "Needs setup",
+  "inquiry.trigger":
+    "When a website inquiry is accepted, give its chosen colleague one task.",
+  "inquiry.form": "Website form",
+  "inquiry.chooseForm": "Choose a website form",
+  "inquiry.formAccess":
+    "You need access to website forms to set up inquiry handling.",
+  "inquiry.mode": "Who handles new inquiries?",
+  "inquiry.mode.one": "One colleague",
+  "inquiry.mode.rotate": "Rotate between selected colleagues",
+  "inquiry.mode.coordinator": "Coordinator reviews first",
+  "inquiry.colleague": "Colleague",
+  "inquiry.colleagues": "Selected colleagues",
+  "inquiry.chooseColleague": "Choose a colleague",
+  "inquiry.chooseColleagues": "Choose colleagues",
+  "inquiry.colleagueUnavailable": "Colleague no longer available",
+  "inquiry.keepOwner":
+    "An eligible existing owner keeps their inquiries. Only new or unowned records are routed.",
+  "inquiry.coordinator": "Coordinator",
+  "inquiry.coordinatorHint":
+    "Reviews unowned leads and inquiries that need attention. This colleague needs access to those records.",
+  "inquiry.taskTitle": "Task title",
+  "inquiry.taskTitleDefault": "Answer the website inquiry",
+  "inquiry.dueDays": "Calendar days after receipt",
+  "inquiry.dueHint": "Due at the end of that local day in the saved timezone.",
+  "inquiry.requestTypeField": "Request type field (optional)",
+  "inquiry.requestTypeHint":
+    "Choose the lead picklist whose field name your website form submits. Values outside its choices stay on the note.",
+  "inquiry.notSpecified": "Not specified",
+  "inquiry.fieldUnavailable": "Field no longer available",
+  "inquiry.fieldsFailed":
+    "Request type fields could not be loaded. You can keep this optional setting unchanged.",
+  "inquiry.handling": "Inquiry handling",
+  "inquiry.review": "Review handling",
+  "inquiry.savePaused": "Save paused",
+  "inquiry.enable": "Turn on this handling",
+  "inquiry.futureOnly":
+    "Existing inquiries stay as they are. This handles future accepted submissions.",
+  "inquiry.conversion":
+    "Review this change before replacing the form’s current handling.",
+  "inquiry.back": "Back to settings",
   "webForms.handlingBusy": "This form is busy. Try again.",
   "webForms.field.ownerHint":
     "Each new lead from this form goes to this colleague. Leave it unassigned for anyone on the team to pick up.",
