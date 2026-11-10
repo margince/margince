@@ -5,6 +5,7 @@ import { formatDateTime } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import { opensElsewhere } from "../lib/linkclick";
 import { useSourceOpener } from "../lib/opensource";
+import { displayedBody } from "../lib/systemdisplay";
 import { useViewerZone } from "../lib/viewerzone";
 import { noticeAction } from "./noticeaction";
 import { noticeHeadline } from "./noticeheadline";
@@ -59,7 +60,7 @@ export function NoticeRow({
       </div>
       {detail !== undefined && <p className="notifrow-body t-sub">{detail}</p>}
       {notice.body !== undefined && (
-        <p className="notifrow-body t-sub">{notice.body}</p>
+        <p className="notifrow-body t-sub">{displayedBody(notice)}</p>
       )}
       <time className="t-caption" dateTime={notice.created_at}>
         {formatDateTime(notice.created_at, locale, readerZone)}

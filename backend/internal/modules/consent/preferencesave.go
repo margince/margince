@@ -20,7 +20,6 @@ package consent
 import (
 	"context"
 	"errors"
-	"fmt"
 	"slices"
 
 	"github.com/jackc/pgx/v5"
@@ -230,11 +229,7 @@ func subjectTakesAGrantTx(ctx context.Context, tx pgx.Tx, sub subject) (bool, er
 // case. The key is the contact, so two DIFFERENT subjects never wait for each
 // other.
 func lockOneSubjectsConsent(ctx context.Context, tx pgx.Tx, contactID ids.ContactID) error {
-	if _, err := tx.Exec(ctx,
-		`SELECT pg_advisory_xact_lock(hashtextextended($1::text, 0))`, contactID); err != nil {
-		return fmt.Errorf("consent: taking the subject's consent lock: %w", err)
-	}
-	return nil
+	return lockSubjectSuppressions(ctx, tx, contactID.UUID)
 }
 
 // lockPressSubject takes the consent lock of the contact a public link was

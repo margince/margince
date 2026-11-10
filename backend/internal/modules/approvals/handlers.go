@@ -4,6 +4,7 @@
 package approvals
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -18,6 +19,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/diffhash"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 // Handlers is the module's transport surface: the /approvals inbox ops.
@@ -284,7 +286,7 @@ func writeErr(w http.ResponseWriter, r *http.Request, err error) {
 
 // wire maps the store row onto the contract shape; effectiveStatus folds
 // lazy expiry in so a stale pending row never reads as approvable.
-func wire(a row, now time.Time) crmcontracts.Approval {
+func wire(ctx context.Context, a row, now time.Time) crmcontracts.Approval {
 	out := crmcontracts.Approval{
 		Id:         openapi_types.UUID(a.ID.UUID),
 		Kind:       a.Kind,
@@ -297,6 +299,19 @@ func wire(a row, now time.Time) crmcontracts.Approval {
 		DecidedAt:  a.DecidedAt,
 	}
 	out.SummaryParts = readSummaryParts(a.SummaryParts)
+	sentence := ""
+	if out.SummaryParts != nil {
+		sentence = out.SummaryParts.Sentence
+	} else if a.Summary != nil {
+		sentence = *a.Summary
+	}
+	metadata := SummarySystemText(a.SummaryParts)
+	if metadata != nil {
+		subject, _ := metadata.Displays(sentence, "", systemtext.Locale(ctx))
+		if subject != nil {
+			out.SystemDisplay = &crmcontracts.SystemDisplay{Locale: crmcontracts.SystemDisplayLocale(systemtext.Locale(ctx)), Subject: subject}
+		}
+	}
 	if recipient := requestedDecider(a); !recipient.IsZero() {
 		out.RequestedDeciderId = new(openapi_types.UUID(recipient))
 	}

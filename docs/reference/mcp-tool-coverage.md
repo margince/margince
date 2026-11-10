@@ -595,8 +595,8 @@ Every run of every case requiring this tool passed, for the model named.
 | `change_capture` | 1.00 | 4 | `case82_keep_that_newsletter_out`, `case97_import_this_card` |
 | `read_forecast` | 1.00 | 4 | `case22_can_i_trust_the_numbers`, `case50_what_moved_my_quarter` |
 | `change_attention` | 1.00 | 6 | `case104_mark_it_seen`, `case70_clear_my_notices`, `case99_they_raised_money` |
-| `create_record` | 1.00 | 6 | `case1_log_it`, `case54_a_word_from_the_fair`, `case56_not_the_same` |
 | `change_compliance` | 1.00 | 8 | `case77_record_her_yes`, `case78_she_asked_us_to_stop`, `case79_put_it_on_hold`, `case81_she_wants_her_data` |
+| `create_record` | 1.00 | 6 | `case1_log_it`, `case54_a_word_from_the_fair`, `case56_not_the_same` |
 | `bulk_update_records` | 1.00 | 2 | `case47_tidy_the_fair_list` |
 | `read_lists` | 1.00 | 2 | `case47_tidy_the_fair_list` |
 | `change_access` | 1.00 | 2 | `case114_the_fleet_team` |

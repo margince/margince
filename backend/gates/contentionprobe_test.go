@@ -51,9 +51,11 @@ import (
 	"go/printer"
 	"go/token"
 	"io/fs"
+	"maps"
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 	"testing"
@@ -361,4 +363,95 @@ func TestAPauseThePlannerMaySkipIsRefused(t *testing.T) {
 			}
 		})
 	}
+}
+
+// privateProbeFiles are the files outside testdb that still write their own
+// pg_blocking_pids query, each a second answer to testdb.QueuedBehind's
+// question. Some read the waiting pid rather than a count, which that
+// function does not answer, so they need a reader beside it.
+//
+// The list only shrinks. Convert a file and remove it here; a file not on the
+// list cannot add a copy without this gate asking why.
+var privateProbeFiles = []string{
+	"internal/compose/filterpreviewpages_integration_test.go",
+	"internal/compose/graphhistoryinsertedrow_integration_test.go",
+	"internal/compose/integration/transmitstoprace_integration_test.go",
+	"internal/compose/mergecarryraces_integration_test.go",
+	"internal/compose/partyadmissionrace_integration_test.go",
+	"internal/compose/seataddress_integration_test.go",
+	"internal/compose/webhookerasurerace_integration_test.go",
+	"internal/modules/activities/domainevidence_integration_test.go",
+	"internal/modules/capture/backfillbindingorder_integration_test.go",
+	"internal/modules/introductions/store_integration_test.go",
+	"internal/modules/webhooks/deliverysendhold_integration_test.go",
+}
+
+// sharedProbeHome is where asking pg_blocking_pids belongs: the one probe, and
+// the gates that hold it.
+func sharedProbeHome(path string) bool {
+	return strings.Contains(path, filepath.Join("platform", "testdb")) ||
+		strings.Contains(path, string(filepath.Separator)+"gates"+string(filepath.Separator)) ||
+		filepath.Dir(path) == "gates"
+}
+
+// TestNoNewPrivateContentionProbe counts the files that ask pg_blocking_pids
+// outside the one probe, so a new copy cannot arrive unremarked.
+//
+// It counts files, not queries, because a file is what a reader converts. The
+// files come from the tree rather than a list, so a copy under a name nobody
+// thought of is counted too.
+func TestNoNewPrivateContentionProbe(t *testing.T) {
+	t.Parallel()
+	owners := scanTrees(t, func(path string, file *ast.File) []string {
+		if sharedProbeHome(path) {
+			return nil
+		}
+		if slices.ContainsFunc(file.Decls, asksBlockingPids) {
+			return []string{path}
+		}
+		return nil
+	})
+	pinned := map[string]bool{}
+	for _, path := range privateProbeFiles {
+		pinned[filepath.FromSlash(path)] = true
+	}
+	var unpinned []string
+	for _, path := range owners {
+		if !pinned[path] {
+			unpinned = append(unpinned, path)
+		}
+		delete(pinned, path)
+	}
+	sort.Strings(unpinned)
+	if len(unpinned) > 0 {
+		t.Fatalf(`%d files write their own %s query and are not in privateProbeFiles:
+  %s
+testdb.QueuedBehind counts the whole queue behind a holder, after clearing the
+stats snapshot, and testdb.AwaitQueuedBehind waits on it. Wait through those
+instead.`, len(unpinned), blockingPidsProbe, strings.Join(unpinned, "\n  "))
+	}
+	for _, path := range slices.Sorted(maps.Keys(pinned)) {
+		t.Errorf("%s no longer writes its own probe. Remove it from privateProbeFiles", filepath.ToSlash(path))
+	}
+}
+
+// asksBlockingPids reports whether a declaration holds the probe in a string it
+// executes. Matching the literal, not the line, so a query split across
+// concatenated pieces still counts.
+func asksBlockingPids(decl ast.Decl) bool {
+	found := false
+	ast.Inspect(decl, func(n ast.Node) bool {
+		expr, isExpr := n.(ast.Expr)
+		if !isExpr {
+			return !found
+		}
+		// gatekit.LiteralText decodes the string, because a query in double
+		// quotes reaches the source text with its escapes and would be missed.
+		// Lowered, because Postgres folds an unquoted function name.
+		if text, ok := gatekit.LiteralText(expr); ok && strings.Contains(strings.ToLower(text), blockingPidsProbe) {
+			found = true
+		}
+		return !found
+	})
+	return found
 }

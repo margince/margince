@@ -16,7 +16,7 @@ func classifyReadOnlyPreviewAdmissions(t *testing.T, packages map[string]map[str
 	}{
 		{"internal/modules/contacts", []string{"PreviewCompanyRead", "PreviewColdStart", "PreviewMergeSurvivorship", "PreviewLeadPromotionWithOptions", "promotionDealsPreview", "promotionCandidateCompany"}},
 		{"internal/modules/deals", []string{"appendDealWriteScope"}},
-		{"internal/modules/consent", []string{"mayLiftOn"}},
+		{"internal/modules/consent", []string{"mayLiftOn", "readableOverrideContact"}},
 	} {
 		receivers := packages[group.module]
 		visible := visibleWriteAuthorityFns(receivers, "Store")

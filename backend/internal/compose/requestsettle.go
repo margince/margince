@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
@@ -249,7 +250,7 @@ func conversationRows(ctx context.Context, tx pgx.Tx, requestID ids.UUID,
 		   -- this request: the candidate query runs in its own statement and a
 		   -- thread can be narrowed between the two, which under read-committed
 		   -- this statement is the first to see.
-		   AND activity.audience = 'workspace' AND activity.restricted_at IS NULL
+		   AND `+auth.WorkspaceAudienceSQL("activity")+` AND activity.restricted_at IS NULL
 		   AND `+occurredday.BegunSQL("activity", "$3")+`
 		   AND (activity.id = $2 OR `+activities.SettlementThreadSQL("activity", "request")+`)
 		   AND ($6::uuid IS NULL OR activity.id = $6)

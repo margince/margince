@@ -9,6 +9,7 @@ import {
   providerBrandName,
 } from "../../design-system/provider-mark";
 import { useT } from "../../i18n";
+import { isConsentAddress } from "../../lib/recordaddress";
 import { keepReturnRoute } from "../../lib/returnroute";
 import "../../components/auth-core.css";
 import { foldForSearch } from "../../format/collate";
@@ -209,7 +210,13 @@ export function startFederatedSignIn(
     return;
   }
   keepReturnRoute();
-  globalThis.location.assign(`/v1/auth/oidc/${providerKey}/start`);
+  const start = `/v1/auth/oidc/${providerKey}/start`;
+  // From the consent screen the sign-in must land back on it. The post-login
+  // page's opener policy would cut an MCP client's popup off from its opener.
+  const { pathname, hash } = globalThis.location;
+  globalThis.location.assign(
+    isConsentAddress(pathname, hash) ? `${start}?return=consent` : start,
+  );
 }
 
 /**

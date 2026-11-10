@@ -85,15 +85,16 @@ func createContractTx(ctx context.Context, tx pgx.Tx, in CreateContractInput, by
 	// Naming the counterparty is a read of it, and naming a deal is a read of
 	// that deal — both are client-supplied references to row-scoped records, so
 	// a caller may not hang an agreement off something it cannot see.
+	// Deal edits lock the deal before refreshing its company, so references use that order too.
+	if err := ensureLinksVisible(ctx, tx, fromRequest, dealRef(in.DealID), projectRef(in.ProjectID)); err != nil {
+		return crmcontracts.Contract{}, err
+	}
 	companyProbe := auth.EnsureLinkTarget(ctx, tx, companyTable, in.CompanyID.UUID)
 	if fromRequest {
 		companyProbe = auth.NameMissingReference("company_id", companyProbe)
 	}
 	if companyProbe != nil {
 		return crmcontracts.Contract{}, companyProbe
-	}
-	if err := ensureLinksVisible(ctx, tx, fromRequest, dealRef(in.DealID), projectRef(in.ProjectID)); err != nil {
-		return crmcontracts.Contract{}, err
 	}
 	if err := ensureLinksShareCompany(ctx, tx, in.CompanyID.UUID,
 		dealRef(in.DealID), projectRef(in.ProjectID)); err != nil {

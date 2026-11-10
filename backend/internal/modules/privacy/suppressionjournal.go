@@ -35,6 +35,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
+	"github.com/margince/margince/backend/internal/platform/corefeatures"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -81,6 +82,7 @@ var suppressionKinds = []string{"email", "channel_identity"}
 // gone and only its fingerprint remains, so an export that carried the address
 // would reconstitute what the erasure destroyed.
 func (e *Eraser) ExportSuppressions(ctx context.Context) (int, error) {
+	ctx = corefeatures.RetainedDataContext(ctx)
 	if err := auth.Require(ctx, "contact", principal.ActionDelete); err != nil {
 		return 0, err
 	}

@@ -10,6 +10,7 @@ import (
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/company360"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -222,14 +223,8 @@ func TestAFindingCitingNoActivityIsNeverRetracted(t *testing.T) {
 func TestAFindingWhoseDraftAnchorIsGoneIsRetracted(t *testing.T) {
 	gone, live := activityID(1), activityID(2)
 	finding := citing(live)
-	finding.Action = &struct {
-		//nolint:staticcheck // the generated contract's own field names.
-		ActivityId *openapi_types.UUID `json:"activity_id,omitempty"`
-		//nolint:staticcheck // as above.
-		DealId *openapi_types.UUID                         `json:"deal_id,omitempty"`
-		Kind   crmcontracts.Company360SuggestionActionKind `json:"kind"`
-		Task   *crmcontracts.CreateTaskRequest             `json:"task,omitempty"`
-	}{ActivityId: &gone, Kind: crmcontracts.Company360SuggestionActionKindDraftReply}
+	finding.Action = company360.NewSuggestionAction(crmcontracts.Company360SuggestionActionKindDraftReply)
+	finding.Action.ActivityId = &gone
 
 	if kept := keepCited([]crmcontracts.Company360Suggestion{finding}, standingSet(live)); len(kept) != 0 {
 		t.Errorf("kept %d findings; want the one whose draft anchor is gone retracted", len(kept))
@@ -276,14 +271,8 @@ func TestARetractedFindingDoesNotHoldASlotAgainstALiveOne(t *testing.T) {
 func TestTheCitationCensusReachesTheActionAnchorAndDedupes(t *testing.T) {
 	anchor, shared := activityID(1), activityID(2)
 	withAnchor := citing(shared)
-	withAnchor.Action = &struct {
-		//nolint:staticcheck // the generated contract's own field names.
-		ActivityId *openapi_types.UUID `json:"activity_id,omitempty"`
-		//nolint:staticcheck // as above.
-		DealId *openapi_types.UUID                         `json:"deal_id,omitempty"`
-		Kind   crmcontracts.Company360SuggestionActionKind `json:"kind"`
-		Task   *crmcontracts.CreateTaskRequest             `json:"task,omitempty"`
-	}{ActivityId: &anchor, Kind: crmcontracts.Company360SuggestionActionKindDraftReply}
+	withAnchor.Action = company360.NewSuggestionAction(crmcontracts.Company360SuggestionActionKindDraftReply)
+	withAnchor.Action.ActivityId = &anchor
 
 	cited := citedActivities([]crmcontracts.Company360Suggestion{withAnchor, citing(shared)})
 	if len(cited) != 2 {

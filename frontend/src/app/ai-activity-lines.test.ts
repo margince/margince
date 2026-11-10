@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { stable } from "../format/collate";
 import { de } from "../i18n/de";
 import { en } from "../i18n/en";
 import { vi } from "../i18n/vi";
@@ -342,7 +343,7 @@ describe("the site-read lanes carry one reason of their own", () => {
 // and does it still fit inside `recent`'s cap of ten alongside the rest.
 describe("the kinds the rail asks for", () => {
   it("is exactly the reviewed set", () => {
-    expect([...displayedKinds()].sort()).toEqual([
+    expect([...displayedKinds()].sort(stable)).toEqual([
       // The account scan's sentence. It reaches one seat's feed — the read
       // runs under the reader's own principal, for the account they opened,
       // so the occurrence is theirs rather than the workspace's. And it fits:

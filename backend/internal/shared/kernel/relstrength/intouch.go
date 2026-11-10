@@ -13,6 +13,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
+	"github.com/margince/margince/backend/internal/shared/kernel/threadverdict"
 )
 
 // InTouchDays is how long since they last wrote or we last met before contact
@@ -169,7 +170,7 @@ const InteractionRolesSQL = `('from','to','cc','bcc','attendee','organizer')`
 // message (audience participants|selected) is content, so anything derived for
 // all readers from its participants or timing would disclose who talked to whom.
 func WorkspaceAudienceSQL(alias string) string {
-	return alias + ".audience = 'workspace'"
+	return threadverdict.WorkspaceAudienceSQL(alias)
 }
 
 // How an account's contact stands, by what made it so.

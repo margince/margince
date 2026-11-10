@@ -6,6 +6,7 @@ import { composeStories } from "@storybook/react-vite";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
+import { stable } from "../../format/collate";
 import { translate } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { companyContextShown } from "../../lib/companycontextreach";
@@ -185,13 +186,13 @@ async function expectTabDraws(
     expect(view.container.querySelector(".panel"), address).not.toBeNull();
     expect(view.container.querySelector("[aria-busy=true]")).toBeNull();
     // Sorted lists rather than sets, so a failure names the odd one out.
-    expect([...drawnNames(view.container)].sort(), address).toEqual(
+    expect([...drawnNames(view.container)].sort(stable), address).toEqual(
       [
         ...new Set([
           ...drawnSections(page, tab),
           ...notOffered.map(({ key }) => t(key)),
         ]),
-      ].sort(),
+      ].sort(stable),
     );
   });
   const filters = notOffered
@@ -208,8 +209,8 @@ async function expectTabDraws(
 describe("each settings page's sections are the names it draws", () => {
   it("has one page story for every catalog page", () => {
     const covered = pageStories.map((story) => story.parameters.settingsPage);
-    expect(covered.sort()).toEqual(
-      SETTINGS_PAGES.map((page) => page.id).sort(),
+    expect(covered.sort(stable)).toEqual(
+      SETTINGS_PAGES.map((page) => page.id).sort(stable),
     );
   });
 

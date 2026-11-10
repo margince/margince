@@ -289,7 +289,8 @@ func (m *callMetrics) observeAttempt(c Call) {
 	if c.Degraded {
 		m.degraded[k]++
 	}
-	if c.ErrorSentinel != "" {
+	// A caller that stopped waiting is an attempt, not a failure of the route.
+	if c.ErrorSentinel != "" && c.ErrorSentinel != sentinelCanceled {
 		m.errors[errorKey{routeKey: k, sentinel: c.ErrorSentinel}]++
 	}
 	// A cache hit replays a stored response, so its FinishReason is a

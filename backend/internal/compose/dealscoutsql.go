@@ -10,6 +10,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
@@ -110,7 +111,7 @@ func scoutEvidenceSQL(in func(string) string, document string) string {
 // workspaceEvidence admits an activity the whole workspace may read: the
 // workspace audience, live, and on a thread nobody holds.
 func workspaceEvidence(alias string) string {
-	return fmt.Sprintf(`(%[1]s.audience = 'workspace' AND %[1]s.archived_at IS NULL AND NOT %[2]s)`,
+	return fmt.Sprintf(`(`+auth.WorkspaceAudienceSQL("%[1]s")+` AND %[1]s.archived_at IS NULL AND NOT %[2]s)`,
 		alias, capture.CounterpartyHeldOn(alias))
 }
 

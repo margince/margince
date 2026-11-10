@@ -15,6 +15,7 @@ import {
   SLOWEST_MEASURED_TEST_MS,
 } from "../../../vitest.budget";
 import type { components } from "../../api/schema";
+import { stable } from "../../format/collate";
 import { LocaleProvider } from "../../i18n";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import {
@@ -764,6 +765,6 @@ describe("the onboarding draft payload", () => {
     // nothing for: it is the address a read starts from, not a profile fact.
     const serialized = Object.keys(onboardingDraftPayload(EMPTY_DRAFT.values));
 
-    expect([...collected].sort()).toEqual(serialized.sort());
+    expect([...collected].sort(stable)).toEqual(serialized.sort(stable));
   });
 });

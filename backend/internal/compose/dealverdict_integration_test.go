@@ -29,8 +29,11 @@ import (
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
@@ -426,5 +429,33 @@ func TestANewRateMakesANoRateDropDueAgain(t *testing.T) {
 	v.run(t)
 	if v.lane.calls != calls+1 {
 		t.Fatal("a stored rate did not make the no-rate deal due again")
+	}
+}
+
+func TestVerdictNotesTranslateTheInstructionsAndKeepTheirEvidence(t *testing.T) {
+	v := setupDealVerdict(t)
+	v.run(t)
+	textID := v.WsScalar(t, `SELECT a.id::text FROM activity a JOIN activity_link l ON l.activity_id=a.id WHERE l.deal_id=$1 AND a.subject='Margince updated this deal'`, v.deal)
+	id := ids.From[ids.ActivityKind](ids.MustParse(textID))
+	original, err := v.Activities.GetActivity(v.owner(t), id, storekit.LiveOnly)
+	if err != nil || original.Body == nil {
+		t.Fatalf("timeline note missing: %v", err)
+	}
+	for _, language := range []textlang.Lang{textlang.German, textlang.Vietnamese} {
+		shown, err := v.Activities.GetActivity(systemtext.WithLocale(v.owner(t), language), id, storekit.LiveOnly)
+		if err != nil || shown.SystemDisplay == nil || shown.SystemDisplay.Body == nil {
+			t.Fatalf("%s lost the mixed body descriptor: %+v %v", language, shown.SystemDisplay, err)
+		}
+		if *shown.Body != *original.Body || *shown.SystemDisplay.Body == *original.Body {
+			t.Fatal("presentation changed canonical text or failed to translate its instructions")
+		}
+		for line := range strings.SplitSeq(*original.Body, "\n") {
+			if _, evidence, ok := strings.Cut(line, ": "); ok && !strings.Contains(*shown.SystemDisplay.Body, evidence) {
+				t.Fatalf("quoted evidence changed: %q", evidence)
+			}
+		}
+		if shown.SystemDisplay.GeneratedParts != nil {
+			t.Fatal("deterministic instructions were classified as generated prose")
+		}
 	}
 }

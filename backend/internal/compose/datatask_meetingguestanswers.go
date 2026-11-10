@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/originalstore"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/ports/authz"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
@@ -32,7 +33,7 @@ func meetingGuestAnswersDataTask(pool *pgxpool.Pool) datatask.Task {
 	authority := identity.NewService(pool)
 	return datatask.Task{
 		ID: "core/1793003497_meeting_guest_answers", Version: 2,
-		Title: "Recording what calendar guests answered", Requires: []string{"core/1793003496"},
+		Title: systemtext.Literal("datatask.title.core.1793003497_meeting_guest_answers"), Requires: []string{"core/1793003496"},
 		Steps: []datatask.Step{{
 			Name: "fill_guest_answers", Limit: 100, MinLimit: 1,
 			Audit:    datatask.AuditPolicy{PerRecord: true},

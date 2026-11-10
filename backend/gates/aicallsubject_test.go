@@ -61,7 +61,7 @@ var namesItsSubject = map[string]subjectClaim{
 		"internal/compose/capturedealtopic.go",
 		"the captured mail whose subject and body are the request",
 	},
-	"internal/compose/readerrendering/service.go:Render": {
+	"internal/compose/readerrendering/service.go:RenderPart": {
 		"internal/compose/readerrendering/service.go",
 		"the activity whose subject and body are the request",
 	},

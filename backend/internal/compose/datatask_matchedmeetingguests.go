@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/originalstore"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/ports/authz"
 )
 
@@ -33,7 +34,7 @@ func matchedMeetingGuestsDataTask(pool *pgxpool.Pool) datatask.Task {
 	authority := identity.NewService(pool)
 	return datatask.Task{
 		ID: "core/1792998483_matched_meeting_guests", Version: 1,
-		Title: "Adding calendar guests to matched meetings", Requires: []string{"core/1792998482"},
+		Title: systemtext.Literal("datatask.title.core.1792998483_matched_meeting_guests"), Requires: []string{"core/1792998482"},
 		Steps: []datatask.Step{{
 			Name: "add_calendar_guests", Limit: 100, MinLimit: 1,
 			Audit:    datatask.AuditPolicy{PerRecord: true},

@@ -4,6 +4,7 @@
 import type { components } from "../../api/schema";
 import { paragraphsFrom } from "../../design-system/richtext";
 import { localDateTimeValue } from "../../format/calendarday";
+import { stable } from "../../format/collate";
 import type { ChosenFile } from "./composeattachments";
 import type { Grounding } from "./composedraftcall";
 import type { ComposeFields } from "./composefields";
@@ -79,7 +80,7 @@ const filingKeys = (fields: SavedDraftFields) =>
     selectedFiling(groundedFiling(fields.grounding))
   )
     .map((ground) => `${ground.anchor_type}:${ground.anchor_id}`)
-    .sort();
+    .sort(stable);
 
 function sameEditorState(
   a: SavedDraftFields["editorState"],

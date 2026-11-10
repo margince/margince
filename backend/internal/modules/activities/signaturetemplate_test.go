@@ -259,7 +259,7 @@ func TestPastedSignatureBlocksKeepTheirReadableBoundaries(t *testing.T) {
 		"<div>Mira Voss</div><div>Head of Sales</div><table><tr><td>+49 711</td><td>mira@example.com</td></tr></table>",
 		"<h2>Mira Voss</h2><table><tr><td><p>Head of Sales</p></td></tr><tr><td>+49 711</td><td>mira@example.com</td></tr></table>",
 	} {
-		markup, text, err := signatureMarkup(source)
+		markup, text, err := sanitizeSignature(source)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -272,7 +272,7 @@ func TestPastedSignatureBlocksKeepTheirReadableBoundaries(t *testing.T) {
 
 func TestSignatureTextKeepsLinkDestinationsAndMarkupKeepsTextVisible(t *testing.T) {
 	t.Parallel()
-	markup, text, err := signatureMarkup(`<span style="color:transparent">Mira</span><br><a href="https://calendar.example/mira">Book a call</a><br><a href="mailto:mira@example.com">mira@example.com</a><img src="data:image/png;base64,AAAA">`)
+	markup, text, err := sanitizeSignature(`<span style="color:transparent">Mira</span><br><a href="https://calendar.example/mira">Book a call</a><br><a href="mailto:mira@example.com">mira@example.com</a><img src="data:image/png;base64,AAAA">`)
 	if err != nil {
 		t.Fatal(err)
 	}

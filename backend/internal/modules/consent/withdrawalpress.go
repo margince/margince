@@ -97,6 +97,10 @@ func (s *Store) StopForCredentialTx(ctx context.Context, tx pgx.Tx, ref Withdraw
 	if err := lockStopKey(ctx, tx, stopSubjectKey(ref)); err != nil {
 		return false, err
 	}
+	if err := storekit.LockStopAddresses(ctx, tx, []string{ref.Address}, nil); err != nil {
+		return false, err
+	}
+
 	// THE DEDUP IS ASYMMETRIC, because "already stopped" is.
 	//
 	// A BROAD live row ABSORBS a narrow press. Somebody who has already left

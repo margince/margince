@@ -48,10 +48,10 @@ func companyContactStrengths(
 // awaitsThem is whether the newest message leaves the move with the other
 // side, by the rule every record's last exchange is read with.
 func (m lastMessage) awaitsThem() bool {
-	return activities.WhoseMove(m.Move, m.Direction) == crmcontracts.LastExchangeWhoseMoveThem
+	return activities.WhoseMove(m.Move, m.Direction, m.EarlierOwed) == crmcontracts.LastExchangeWhoseMoveThem
 }
 
 // owedByUs is whether the newest message leaves the move with us.
 func (m lastMessage) owedByUs() bool {
-	return activities.WhoseMove(m.Move, m.Direction) == crmcontracts.LastExchangeWhoseMoveUs
+	return activities.WhoseMove(m.Move, m.Direction, m.EarlierOwed) == crmcontracts.LastExchangeWhoseMoveUs
 }

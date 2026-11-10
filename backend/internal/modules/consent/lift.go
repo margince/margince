@@ -100,7 +100,11 @@ func lifterOf(ctx context.Context) lifter {
 // mayLiftOn answers the caller half of a lift for one subject without failing
 // the read: false where Lift would refuse with a 403 or 404.
 func mayLiftOn(ctx context.Context, tx pgx.Tx, sub subject) (bool, error) {
-	err := admitLifter(ctx, sub.entityType)
+	return mayRetractSubject(ctx, tx, sub, admitLifter(ctx, sub.entityType))
+}
+
+func mayRetractSubject(ctx context.Context, tx pgx.Tx, sub subject, admissionErr error) (bool, error) {
+	err := admissionErr
 	if err == nil {
 		err = auth.EnsureRetractable(ctx, tx, sub.entityType, sub.id)
 	}
@@ -167,6 +171,9 @@ func (s *Store) liftAdmittedTx(
 	// invert the order between the two and deadlock; see suppress.go, where it
 	// did exactly that.
 	if err := lockSubjectSuppressions(ctx, tx, sub.id); err != nil {
+		return err
+	}
+	if err := storekit.LockSubjectsStopAddresses(ctx, tx, sub.id); err != nil {
 		return err
 	}
 	// EnsureRetractable, which IS EnsureWritable and says so: this is a write

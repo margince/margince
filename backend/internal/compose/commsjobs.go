@@ -326,6 +326,14 @@ func newSendWorker(pool *pgxpool.Pool, registry *capture.Registry, blob blobstor
 	})}
 }
 
+// NewMailDeliveryStore is the delivery store the send worker records receipts
+// through. Comms owns the delivery and activities owns the timeline row.
+// Capture owns the echo that can supply an identity the read-back could not.
+func NewMailDeliveryStore(pool *pgxpool.Pool, admitParties func(context.Context, ids.ActivityID) error) *comms.Store {
+	return comms.NewStore(InstallationDB(pool), time.Now, activities.NewStore(InstallationDB(pool)),
+		comms.WithPartyAdmission(admitParties), comms.WithEchoIdentity(capture.EchoIdentityTx))
+}
+
 // newSendDispatcher builds the dispatcher for one pace.
 func newSendDispatcher(pool *pgxpool.Pool, registry *capture.Registry, pace sendPace, blob blobstore.Store, relay comms.ControllerRelay, vault keyvault.Vault) *comms.Dispatcher {
 	var admitParties func(context.Context, ids.ActivityID) error
@@ -333,10 +341,7 @@ func newSendDispatcher(pool *pgxpool.Pool, registry *capture.Registry, pace send
 		admitParties = registry.AdmitActivityParties
 	}
 	return controllerLaneOn(comms.NewDispatcher(
-		// The reconcile seam is the cross-module edge comms must not hold
-		// itself: activities owns the timeline row, comms owns the delivery,
-		// and the two meet here.
-		comms.NewStore(InstallationDB(pool), time.Now, activities.NewStore(InstallationDB(pool)), comms.WithPartyAdmission(admitParties)),
+		NewMailDeliveryStore(pool, admitParties),
 		commsResolver{registry: registry, channels: registry},
 		NewSendSeatAuthority(pool),
 		NewSendAttachmentAuthority(pool, blob),

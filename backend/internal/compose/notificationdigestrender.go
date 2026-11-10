@@ -16,6 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/emailview"
 	"github.com/margince/margince/backend/internal/platform/mailcopy"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 // digestQuoteCap bounds the lines one message carries.
@@ -82,8 +83,10 @@ func (w *notificationDigestWorker) readDigestLines(
 	sort.SliceStable(held, func(i, j int) bool {
 		return held[i].Kind == notices.KindApprovalPending && held[j].Kind != notices.KindApprovalPending
 	})
+	words := recipientMailCopy(seatCtx, w.pool)
 	lines := digestLines{}
 	for _, notice := range held {
+		notice = notice.InLanguage(textlang.Lang(words.Language))
 		if notice.Target.Named() && !nameable[notice.Target] {
 			continue
 		}

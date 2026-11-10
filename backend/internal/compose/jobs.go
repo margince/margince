@@ -69,7 +69,8 @@ func sweepInsertOpts() *river.InsertOpts {
 // Embedder registers nothing for the drift sweep and anyway for a reindex —
 // which is why the posture is stated per kind and never per field.
 type JobRunnerConfig struct {
-	DataTasksPace time.Duration
+	DisabledCoreFeatures []string
+	DataTasksPace        time.Duration
 	// Schedules is the interval every {setting: …} cadence runs at, read from
 	// the admin's settings at boot and moved by its Watch while the worker
 	// runs. Nil schedules from the registered defaults.
@@ -385,7 +386,7 @@ func wireJobs(pool *pgxpool.Pool, log *slog.Logger, cfg JobRunnerConfig) (*jobRe
 	// them. The schedules that drive them are the list below, because a
 	// cadence is the declaration's and not the group's.
 	addModelLaneJobs(reg, pool, cfg, log)
-	addDatabaseOnlySweepJobs(reg, pool, log, cfg.BriefMail, cfg.DealVerdictBrain, cfg.ClassifyBrain)
+	addDatabaseOnlySweepJobs(reg, pool, log, cfg.BriefMail, cfg.DealVerdictBrain, cfg.ClassifyBrain, cfg.DisabledCoreFeatures)
 	addCapturePipelineJobs(reg, pool, cfg, log)
 	addStoredObjectJobs(reg, pool, cfg, log)
 	addSuppressionJournalJobs(reg, pool, cfg, log)

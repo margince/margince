@@ -68,7 +68,7 @@ func (r *Registry) RecordTypeOfCall(name string, args json.RawMessage) string {
 	if !ok {
 		return ""
 	}
-	typed, isTyped := t.(recordTypedTool)
+	typed, isTyped := t.(interface{ RecordTypeOf(json.RawMessage) string })
 	if !isTyped {
 		return ""
 	}
@@ -152,7 +152,7 @@ func outsideToolName(c rune) bool {
 // Gated and the tool gate admits this caller. Each description names a routed
 // verb by the router action this listing offers.
 func (r *Registry) Offered(ctx context.Context) []mcp.ToolSpec {
-	all := r.Specs()
+	all := r.availableSpecs(r.Specs())
 	out := make([]mcp.ToolSpec, 0, len(all))
 	for _, spec := range all {
 		if spec.Unlisted || !invocableByCaller(ctx, spec) {
@@ -175,7 +175,7 @@ func (r *Registry) Offered(ctx context.Context) []mcp.ToolSpec {
 // invoke, offered on the external listing or not. A scheduled agent's allowlist
 // narrows it to the verbs that agent names, each with its own full copy.
 func (r *Registry) Runnable(ctx context.Context) []mcp.ToolSpec {
-	all := r.Specs()
+	all := r.availableSpecs(r.Specs())
 	out := make([]mcp.ToolSpec, 0, len(all))
 	for _, spec := range all {
 		if !spec.Gated && invocableByCaller(ctx, spec) {

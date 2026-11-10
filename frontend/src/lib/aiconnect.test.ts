@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { stable } from "../format/collate";
 import { type Locale, translate } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import {
@@ -34,7 +35,7 @@ describe("AI connect paths", () => {
     const unavailable = Object.entries(CONNECT_PATHS).filter(
       ([, path]) => path.unavailable !== undefined,
     );
-    expect(unavailable.map(([id]) => id).sort()).toEqual(["copilot-own"]);
+    expect(unavailable.map(([id]) => id).sort(stable)).toEqual(["copilot-own"]);
     for (const [, path] of unavailable) {
       expect(path.steps).toEqual([]);
       expect(path.admin).toBeUndefined();
@@ -55,7 +56,7 @@ describe("AI connect paths", () => {
     const pasting = Object.entries(CONNECT_PATHS).filter(
       ([, path]) => path.pasteAfter !== undefined,
     );
-    expect(pasting.map(([id]) => id).sort()).toEqual([
+    expect(pasting.map(([id]) => id).sort(stable)).toEqual([
       "chatgpt-own",
       "claude-own",
       "gemini-own",
@@ -141,9 +142,9 @@ describe("which AI, and where", () => {
     const locals = routes.flatMap((place) =>
       place.route.kind === "local" ? [place.route.cli] : [],
     );
-    expect([...new Set(apps)].sort()).toEqual([...AI_TOOLS].sort());
-    expect([...new Set(locals)].sort()).toEqual(
-      CLI_PATHS.map((path) => path.id).sort(),
+    expect([...new Set(apps)].sort(stable)).toEqual([...AI_TOOLS].sort(stable));
+    expect([...new Set(locals)].sort(stable)).toEqual(
+      CLI_PATHS.map((path) => path.id).sort(stable),
     );
   });
 
