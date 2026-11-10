@@ -22,7 +22,7 @@ both lanes, plus the craftsmanship gate, the license gate and the frontend lane,
 Four lanes run without blocking: `vuln`, the SonarCloud scan, `live-boot` and `home-budget`. `scheduled.yml` checks
 `vuln` and the scan again daily on `main`. See [the workflows beside the merge gate](../reference/ci-workflows.md)
 for why a gate that does not block needs that second check. Why they do not block yet is under
-[The `ci` aggregate](#the-ci-aggregate-is-the-only-required-context).
+[The `ci` aggregate](#the-ci-aggregate-is-the-only-required-build-context).
 
 `scheduled.yml` also calls each data vendor once a day, through the production adapter. For Surfe that
 call is `GET /v1/credits` (`make vendor-live`), which costs nothing. It proves that the key works, and
@@ -41,10 +41,11 @@ records the results. It never writes them to `main`. It opens one pull request w
 records and the pages they feed, and a record is published when a maintainer merges that pull request. See
 [the workflows beside the merge gate](../reference/ci-workflows.md#scheduledyml).
 
-**The merge queue is not turned on.** Each active ruleset on `main` requires the `ci` check, and none
-holds a merge queue rule. So no `merge_group` run happens, and a pull request's own run, scoped to its diff, is
-the merge verdict. `ci.yml` still handles `merge_group`. The sections below that describe the queue
-describe how the pipeline acts when the queue is switched on. Where that matters, the text says so.
+**The merge queue is a ruleset setting**, not a file in this tree. Both required checks, `ci` and `cla`,
+run on `merge_group`. `backend/gates/mergequeuereach_test.go` fails a pull request workflow that does not,
+unless a waiver names it as advisory. The gate cannot read the ruleset, so a workflow with a waiver that a
+ruleset requires still passes it. With no queue rule, no `merge_group` run happens, and a pull request's
+own run is the merge verdict.
 
 ## Triggers
 
@@ -56,42 +57,37 @@ There is no `push` trigger on `main`. With the queue on, a push to `main` is the
 already reached, because the queue gated that tree before it landed. With the queue off, nothing runs
 `ci.yml` on `main` after a merge; `scheduled.yml` checks `main` again daily.
 
-### The merge queue, when turned on
+### The merge queue
 
 A `merge_group` run builds `main` + everything ahead of it in the queue + the entry under test, on a
 `gh-readonly-queue/main/...` ref that is removed later. It gates that tree. Two things follow:
 
 - **The full tree, always.** The change classifier is overridden on `merge_group` (every scope reports
   `true`), so no job can be skipped there.
-- **Every commit, not just the last one.** The tree that is measured is the tree that merges.
+- **The tree that lands.** Each group's head is the tree that reaches `main`. With `HEADGREEN` it is
+  the only one that must pass, so a commit inside a group can land without a green run of its own.
 
-The queue merges in **batches**. Say it merged one PR at a time, with a lane of about 20 minutes. That
-would cap merges at three an hour, against a measured rate of 70–82 a day. A batch makes gating per commit
-cheap enough.
+The queue merges in **batches**. One PR at a time, with a lane of about 25 minutes, caps merges near
+two an hour. The measured rate is 55 merges a day on average, and up to 10 in a busy hour. Five builds at
+once lift that cap to about 12 an hour. A queue rule on `main` takes these settings:
 
-The queue was set up with these ruleset settings. Two of the limits are often taken for each other:
-
-| Setting in the ruleset | Set to | What it bounds |
+| Setting in the ruleset | Set to | What it bounds, and why this value |
 |---|---|---|
-| `max_entries_to_merge` | **2** | how many entries may merge together as one group |
-| `max_entries_to_build` | **2** | how many queued entries may ask for checks at once |
-| `min_entries_to_merge` / `…_wait_minutes` | 1 / 2 | a single entry still merges after a 2 minute wait |
-| `grouping_strategy` | `HEADGREEN` | **which commits get checked** (see below) |
-| `check_response_timeout_minutes` | 60 | clears the `p90` of 22 minutes with a margin |
-| `merge_method` | `SQUASH` | keeps `required_linear_history` |
+| `max_entries_to_build` | **5** | queued entries that build at once; 10 merges an hour times a 25 minute lane is about 4 in flight |
+| `max_entries_to_merge` | **5** | entries that merge together as one group; equal to the build limit, so one green head can merge every entry in flight |
+| `min_entries_to_merge` / `…_wait_minutes` | 1 / 5 | a single entry merges as soon as it passes, so the wait never applies |
+| `grouping_strategy` | `HEADGREEN` | **which commits must pass** (see below) |
+| `check_response_timeout_minutes` | 75 | clears the `p95` full lane of 45 minutes by 30 minutes |
+| `merge_method` | `SQUASH` | one commit per pull request on `main` |
 
-`grouping_strategy` is not about partial merging. `HEADGREEN` checks only the merge group's **head**
-commit (the changes of every entry in the group put together). `ALLGREEN` checks the commit of each
-entry on its own. It sets cost against knowing which entry failed.
+`grouping_strategy` is not about partial merging. `HEADGREEN` asks only the group's **head** commit (the
+changes of every entry in the group put together) to pass. `ALLGREEN` asks the commit of each entry to
+pass on its own.
 
-- `ALLGREEN` tells you *which* entry failed the batch. But it runs the lane of 28 jobs once per entry
-  in the group, which a limit of 20 jobs at a time cannot take.
-- `HEADGREEN` pays one lane per group, and leaves GitHub to work out which entry to drop when the
-  group fails.
+- `ALLGREEN` tells you *which* entry failed, and a flaky failure in any entry removes it from the queue.
+- `HEADGREEN` merges the group when its head passes. An entry whose own run failed by chance still
+  merges once a later run that holds it passes.
 - Neither one merges the passing first part of a failing group.
-
-`max_entries_to_merge` starts at **2**, because in a batched queue a flaky job costs a whole group's run,
-not one. It is a live ruleset setting: raise it once the queue has a measured baseline.
 
 `concurrency` is keyed on `github.ref`, with `cancel-in-progress` held to `pull_request` only. A new push
 replaces the review under way, and a merge verdict can never be cancelled. Each queue entry has its own
@@ -106,9 +102,9 @@ signs; see [the workflows beside the merge gate](../reference/ci-workflows.md).
 cancelling, because nothing replaces a daily run. `cache-warm.yml` groups without cancelling, because a
 cancelled run saves no cache.
 
-A skipped required check counts as *passing* on GitHub. That is why the required checks are put together
+A skipped required check counts as *passing* on GitHub. That is why the build checks are put together
 in one `ci` job that refuses a skip on `merge_group`; see
-[The `ci` aggregate](#the-ci-aggregate-is-the-only-required-context).
+[The `ci` aggregate](#the-ci-aggregate-is-the-only-required-build-context).
 
 ## Run only the checks a change can reach
 
@@ -275,11 +271,11 @@ pass, one level down.
 without that, every step would run from the repository root.
 
 Check names inside a lane are reported as `<caller-job> / <lane-job>`, for example
-`integration / integration shard (3/8)`. Only `ci` is a required check, so no ruleset depends on those
+`integration / integration shard (3/8)`. No check inside a lane is required, so no ruleset depends on those
 names.
 
 The pipeline stays **one caller**, and does not split into `pr.yml` and `merge-queue.yml`. The `ci`
-aggregate is the single required check. Two callers would mean two copies of it that must stay the same
+aggregate is the single required build check. Two callers would mean two copies of it that must stay the same
 byte for byte, or the two events gate in different ways. That is two lists kept by hand, guarding the
 check everything depends on.
 

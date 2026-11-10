@@ -33,7 +33,7 @@ ROOT_SCRIPT_GATES := check-craft-doc test-dev-isolation test-dev-dsn test-dev-en
   test-release-version-stamped test-closing-declaration test-release-patch-base \
   test-docs-describing \
   test-craft-review test-release-tag-version test-release-license-stamped \
-  test-release-notes test-release-bundle embedded-binary-licenses third-party-files test-third-party-files \
+  test-release-notes test-release-bundle test-backend-notices embedded-binary-licenses third-party-files test-third-party-files \
   test-strict-lint-packages
 
 # How wide the gate fan-out runs: the machine's online core count, so a 4-core
@@ -1638,6 +1638,12 @@ test-release-notes:
 ## missing platform or program it refuses. Its one caller is a tag push.
 test-release-bundle:
 	@./scripts/release-bundle.test.sh
+
+## test-backend-notices — the Go notice generator's own test: it writes every
+## linked module's licence text, the toolchain's and the embedded-binary
+## declarations, and fails on a linked module with no licence text.
+test-backend-notices:
+	@./scripts/backend-notices.test.sh
 
 ## no-jurisdiction — pack-boundary fitness gate: no country-specific
 ## regulatory identifier (XRechnung/ZUGFeRD/DATEV/…) or ISO-3166 code appears

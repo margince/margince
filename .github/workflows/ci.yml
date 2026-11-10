@@ -1449,8 +1449,9 @@ jobs:
   #
   # WHAT THE REPOSITORY ACTUALLY REQUIRES, said once and only here so the file
   # cannot answer it twice with different answers: `ci` — this job — is the ONE
-  # required context, from the `main-required-status-checks` ruleset. There is no
-  # classic branch protection at all. `main-required-ai-reviewers` names
+  # required context this workflow reports, from the `main-required-status-checks`
+  # ruleset; the other is `cla`, from cla.yml. There is no classic branch
+  # protection at all. `main-required-ai-reviewers` names
   # CodeRabbit and is DISABLED. Nothing else is required, SonarCloud included,
   # and three comments in this file used to say otherwise (margince/margince#2544).
   #
@@ -1540,10 +1541,11 @@ jobs:
       - frontend
       # The screen-acceptance lane gates the merge. It was advisory on the
       # argument that a flaky job under a merge queue re-queues every entry in
-      # its group; the queue is not in use, and an advisory lane is one a red
-      # verdict never stops anybody on. Its classifier skip is admissible here
-      # for the same reason `frontend`'s is: on a pull request a skip means out
-      # of scope, and on the merge queue every scope is true so it cannot skip.
+      # its group; an advisory lane is one a red verdict never stops anybody
+      # on, and a flake it shows is a test to fix. Its classifier skip is
+      # admissible here for the same reason `frontend`'s is: on a pull request
+      # a skip means out of scope, and on the merge queue every scope is true
+      # so it cannot skip.
       - uat
       - license-gate
       - images

@@ -49,6 +49,7 @@ required=(
 	config/margince.example.yaml
 	margince.env.example
 	LICENSE
+	licenses/THIRD-PARTY-NOTICES.txt
 )
 
 # The web server listens where the front server's margince_web upstream points,

@@ -386,8 +386,8 @@ automated tool, a newsletter, an advisor, or personal. You can change any of the
 
 **Mark as business** lets a sender back in; **Exclude** destroys their mail, also what they send
 later ([how](#how-do-i-tell-margince-a-sender-is-business-or-exclude-one)). **Waiting on a decision**, under the
-list, names the contacts only you see until their sender is decided. An administrator sees only
-how many there are.
+list, names the contacts only you see until their sender is decided. Each says if it waits on Margince or on you.
+Decide the sender there, or remove the contact, which archives it and keeps its mail. An administrator sees only how many there are.
 
 **Held threads** (Settings → Connections → Activity): the threads your mailbox is holding
 back right now, with the reason and the outside addresses on each. **Share with

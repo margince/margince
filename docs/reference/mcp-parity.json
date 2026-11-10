@@ -11,16 +11,16 @@
       "covered": 29,
       "sign_in": 1,
       "no_signed_in_user": 0,
-      "web_app_calls": 866,
-      "web_app_calls_open": 736,
+      "web_app_calls": 867,
+      "web_app_calls_open": 737,
       "web_app_calls_ask_first": 103,
       "web_app_calls_pending": 0,
       "web_app_calls_security": 114,
       "web_app_calls_covered": 15,
       "parity_signed_in_percent": 83.9,
-      "parity_web_app_percent": 84.9
+      "parity_web_app_percent": 85
     },
-    "open_with_no_web_app_call_found": 111,
+    "open_with_no_web_app_call_found": 110,
     "parity_web_app_counting_covered_percent": 86.7,
     "parity_web_app_once_pending_is_open_percent": 86.7
   },
@@ -41,8 +41,8 @@
       "covered": 22,
       "sign_in": 0,
       "no_signed_in_user": 0,
-      "web_app_calls": 477,
-      "web_app_calls_open": 450,
+      "web_app_calls": 478,
+      "web_app_calls_open": 451,
       "web_app_calls_ask_first": 36,
       "web_app_calls_pending": 0,
       "web_app_calls_security": 14,
@@ -61,14 +61,14 @@
           "covered": 3,
           "sign_in": 0,
           "no_signed_in_user": 0,
-          "web_app_calls": 41,
-          "web_app_calls_open": 37,
+          "web_app_calls": 42,
+          "web_app_calls_open": 38,
           "web_app_calls_ask_first": 2,
           "web_app_calls_pending": 0,
           "web_app_calls_security": 1,
           "web_app_calls_covered": 3,
           "parity_signed_in_percent": 92,
-          "parity_web_app_percent": 90.2
+          "parity_web_app_percent": 90.4
         },
         {
           "key": "duplicates",
@@ -8549,7 +8549,8 @@
       "scope": "write",
       "verb": "publish_captured_contact",
       "router": "change_state",
-      "action": "publish_contact"
+      "action": "publish_contact",
+      "web_app": "direct"
     },
     {
       "method": "POST",
