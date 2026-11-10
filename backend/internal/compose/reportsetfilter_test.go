@@ -4,6 +4,7 @@
 package compose
 
 import (
+	"errors"
 	"fmt"
 	"maps"
 	"testing"
@@ -86,5 +87,31 @@ func TestTheVocabularyVersionMovesWithAFieldsSetPredicate(t *testing.T) {
 	}
 	if found == 0 {
 		t.Fatal("no field in the activity vocabulary carries a set predicate, so this test checks nothing")
+	}
+}
+
+// A threshold and an unset field render as they did before set predicates.
+// A threshold that is not a whole number is refused.
+func TestADrillThroughRendersThresholdsAndUnsetFields(t *testing.T) {
+	t.Parallel()
+	spec := prebuiltReports["activities-by-kind"]
+	arg := func(any) int { return 2 }
+	over := &reportThreshold{clause: func(pos int) string { return fmt.Sprintf("n > $%d", pos) }}
+	cases := []struct {
+		name string
+		pred boundExpr
+		want string
+	}{
+		{"threshold", boundExpr{field: "days", value: "3", threshold: over}, "n > $2"},
+		{"unset", boundExpr{field: fieldKind, expr: "t.kind", isNull: true}, "t.kind IS NULL"},
+	}
+	for _, c := range cases {
+		if got, err := predicateClause(spec, c.pred, arg); err != nil || got != c.want {
+			t.Errorf("%s: got %q, %v; want %q", c.name, got, err, c.want)
+		}
+	}
+	var refused *ThresholdValueError
+	if _, err := predicateClause(spec, boundExpr{field: "days", value: "three", threshold: over}, arg); !errors.As(err, &refused) {
+		t.Errorf("a threshold of three: err = %v, want a ThresholdValueError", err)
 	}
 }
