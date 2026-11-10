@@ -70,8 +70,9 @@ See [Review a retained signature](email-signatures.md#review-a-retained-signatur
 Matching full names and email addresses are removed from notes without contact or lead links.
 Other note text stays. Reviewers need a full seat, rights to read and delete all contacts without hidden fields,
 and read access to the retained content. If no active Admin or Ops member qualifies, erasure stops
-and says how to restore review access and retry. The same review access is needed to receive
-alerts about an opt-out receipt that could not be sent. If no one has it when a receipt is
+and says how to restore review access and retry.
+
+The same review access is needed to receive alerts about an opt-out receipt that could not be sent. If no one has it when a receipt is
 missed, the alert arrives within 15 minutes of access being restored. This works only when
 access is restored within 30 days of the missed receipt.
 
