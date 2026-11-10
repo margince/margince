@@ -6,11 +6,12 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { retryQuery } from "../../app/queryclient";
-import { ToastProvider } from "../../design-system/toast";
-import { LocaleProvider } from "../../i18n";
-import { en } from "../../i18n/en";
-import { ScheduledSendsScreen } from "./scheduledsends";
+import { ToastProvider } from "../design-system/toast";
+import { ScheduledSendsScreen } from "../features/mail/scheduledsends";
+import { browserZone } from "../format/timezone";
+import { LocaleProvider } from "../i18n";
+import { en } from "../i18n/en";
+import { retryQuery } from "./queryclient";
 
 // The queue read through the real client, query and screen when an
 // intermediary answers it with a challenge instead of the API.
@@ -20,7 +21,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-const readerZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+const readerZone = browserZone();
 
 function waiting(subject: string) {
   return {

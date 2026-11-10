@@ -6,18 +6,18 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { retryQuery } from "../../app/queryclient";
-import { LocaleProvider } from "../../i18n";
-import { en } from "../../i18n/en";
-import { EmptySuccessError } from "../../lib/problem";
-import { worklistKey } from "../../lib/workkeys";
+import { WorklistScreen } from "../features/worklist/worklist";
+import { LocaleProvider } from "../i18n";
+import { en } from "../i18n/en";
+import { EmptySuccessError } from "../lib/problem";
+import { worklistKey } from "../lib/workkeys";
 import {
   day,
   jsonResponse,
   row,
   type Worklist,
-} from "../../testing/worklist.testkit";
-import { WorklistScreen } from "./worklist";
+} from "../testing/worklist.testkit";
+import { retryQuery } from "./queryclient";
 
 // The day read through the real client, query and screen when an intermediary
 // answers it with a challenge instead of the API.
