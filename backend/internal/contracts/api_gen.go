@@ -38508,6 +38508,10 @@ type CommunicationReview struct {
 	// it. Both together, because a surface that could get one without the other would show words
 	// while naming a different version.
 	Warning *OverrideWarning `json:"warning,omitempty"`
+
+	// WordingCorrection The current approved wording, visible only to its original human approver while the
+	// decision is unspent. The original reason remains on the instruction.
+	WordingCorrection *WordingCorrectionContext `json:"wording_correction,omitempty"`
 }
 
 // CommunicationReviewKind defines model for CommunicationReview.Kind.
@@ -43699,6 +43703,18 @@ type ConversationSuggestionListResponse struct {
 
 // CoreFeature A core destination in the main menu. Disabling one keeps its stored data.
 type CoreFeature string
+
+// CorrectCommunicationWordingRequest defines model for CorrectCommunicationWordingRequest.
+type CorrectCommunicationWordingRequest struct {
+	Body            string `json:"body"`
+	ExpectedWording string `json:"expected_wording"`
+	HtmlBody        string `json:"html_body"`
+
+	// MeaningUnchanged The original approver attests that only spelling or punctuation changed and meaning is unchanged.
+	MeaningUnchanged bool   `json:"meaning_unchanged"`
+	Subject          string `json:"subject"`
+	Version          int64  `json:"version" minimum:"1"`
+}
 
 // CorrectDealCloseDayRequest defines model for CorrectDealCloseDayRequest.
 type CorrectDealCloseDayRequest struct {
@@ -64711,7 +64727,7 @@ type UpdateDealRequest struct {
 	// CommercialMotion Why this deal exists commercially: `new_business` (first purchase by this customer), `renewal` (continuing an agreement, when that is the primary purpose), `upsell` (more capacity or a higher tier of something they already have), `cross_sell` (a different offering to an existing customer), `expansion` (growth spanning offerings, or outside the more specific choices), `existing_business` (the relationship is known, the motion is not). A combined renewal-and-growth deal takes its PRIMARY purpose — one value is a reporting classification, not revenue split across motions. Null means unknown, which is different from `existing_business`: unknown has not been asked, `existing_business` has been asked and answered "not more precisely than this".
 	CommercialMotion *UpdateDealRequestCommercialMotion `json:"commercial_motion,omitempty"`
 
-	// CompanyId The company this deal is for. Changing it is refused 422 (`deal_contracts_cross_company`) while contracts filed against the deal name another company, because a contract on a deal is visible through that deal alone. Detach those contracts (`deal_id: null` on the contract) or file each against a deal of its own company first; an edit never changes a contract's company, only a company merge does. Null clears the company and is not refused.
+	// CompanyId The company this deal is for. Changing it is refused 422 (`deal_contracts_cross_company`) while contracts filed against the deal name another company, because a contract on a deal is visible through that deal alone. Archived contracts also count. Ask an administrator to correct the contract links before changing the company. An edit never changes a contract's company; only a company merge does. Null clears the company and is not refused.
 	CompanyId *openapi_types.UUID `json:"company_id,omitempty"`
 	Currency  *string             `json:"currency,omitempty"`
 
@@ -67223,6 +67239,25 @@ type WeeklyScorecardLeadBlock struct {
 	// are a floor, and a reader should say so.
 	MeetingsPartialHistory int `json:"meetings_partial_history" minimum:"0"`
 	Promoted               int `json:"promoted" minimum:"0"`
+}
+
+// WordingCorrectionContext The current approved wording, visible only to its original human approver while the
+// decision is unspent. The original reason remains on the instruction.
+type WordingCorrectionContext struct {
+	Body           string             `json:"body"`
+	Explanation    string             `json:"explanation"`
+	HtmlBody       string             `json:"html_body"`
+	InstructionId  openapi_types.UUID `json:"instruction_id"`
+	ReasonCode     string             `json:"reason_code"`
+	Subject        string             `json:"subject"`
+	Version        int64              `json:"version"`
+	WarningVersion string             `json:"warning_version"`
+	WordingDigest  string             `json:"wording_digest"`
+}
+
+// WordingCorrectionResult defines model for WordingCorrectionResult.
+type WordingCorrectionResult struct {
+	Version int64 `json:"version"`
 }
 
 // WorkArea One area of work a passport may be limited to. Each operation an agent can call sits in one
@@ -70252,6 +70287,16 @@ type ListApprovalsParams struct {
 
 	// TargetEntityId The record the staged actions act on. Requires `target_entity_type`.
 	TargetEntityId *openapi_types.UUID `form:"target_entity_id,omitempty" json:"target_entity_id,omitempty"`
+
+	// Target Filter to the approvals staged against ANY of these records, each written
+	// `<entity_type>:<uuid>` (`contact:…`, `activity:…`). Repeat the parameter for several,
+	// up to 25. It answers "what is waiting on the records I touched" without the rest of
+	// the queue.
+	//
+	// A record outside the caller's row scope adds nothing to the page, never a 403. A
+	// malformed item, more than 25, or `target` together with `target_entity_type` or
+	// `target_entity_id` is a 422.
+	Target *[]string `form:"target,omitempty" json:"target,omitempty"`
 
 	// BundleId Filter to the proposals ONE act staged together (see `Approval.bundle_id`) — today, a
 	// website read's company facts plus the leads it published. Members the caller could not
@@ -77605,6 +77650,9 @@ type DecideCommissionEntryJSONRequestBody = DecideCommissionRequest
 
 // RecordCommunicationContextJSONRequestBody defines body for RecordCommunicationContext for application/json ContentType.
 type RecordCommunicationContextJSONRequestBody = RecordCommunicationContextRequest
+
+// CorrectCommunicationWordingJSONRequestBody defines body for CorrectCommunicationWording for application/json ContentType.
+type CorrectCommunicationWordingJSONRequestBody = CorrectCommunicationWordingRequest
 
 // DirectCommunicationSendJSONRequestBody defines body for DirectCommunicationSend for application/json ContentType.
 type DirectCommunicationSendJSONRequestBody = DirectCommunicationSendRequest
@@ -92180,6 +92228,9 @@ type ServerInterface interface {
 	// Answer a refusal by saying what happened away from the system.
 	// (POST /communication-reviews/{id}/context)
 	RecordCommunicationContext(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// Keep the original approval for a spelling or punctuation correction.
+	// (POST /communication-reviews/{id}/correct-wording)
+	CorrectCommunicationWording(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// Send a refused message anyway, on a named human's recorded decision.
 	// (POST /communication-reviews/{id}/direct-send)
 	DirectCommunicationSend(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
@@ -96131,6 +96182,12 @@ func (_ Unimplemented) GetCommunicationReview(w http.ResponseWriter, r *http.Req
 // Answer a refusal by saying what happened away from the system.
 // (POST /communication-reviews/{id}/context)
 func (_ Unimplemented) RecordCommunicationContext(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Keep the original approval for a spelling or punctuation correction.
+// (POST /communication-reviews/{id}/correct-wording)
+func (_ Unimplemented) CorrectCommunicationWording(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -108477,6 +108534,19 @@ func (siw *ServerInterfaceWrapper) ListApprovals(w http.ResponseWriter, r *http.
 		return
 	}
 
+	// ------------- Optional query parameter "target" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "target", r.URL.Query(), &params.Target, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "target"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "target", Err: err})
+		}
+		return
+	}
+
 	// ------------- Optional query parameter "bundle_id" -------------
 
 	err = runtime.BindQueryParameterWithOptions("form", true, false, "bundle_id", r.URL.Query(), &params.BundleId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
@@ -112491,6 +112561,38 @@ func (siw *ServerInterfaceWrapper) RecordCommunicationContext(w http.ResponseWri
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.RecordCommunicationContext(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CorrectCommunicationWording operation middleware
+func (siw *ServerInterfaceWrapper) CorrectCommunicationWording(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CorrectCommunicationWording(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -147842,6 +147944,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/communication-reviews/{id}/context", wrapper.RecordCommunicationContext)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/communication-reviews/{id}/correct-wording", wrapper.CorrectCommunicationWording)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/communication-reviews/{id}/direct-send", wrapper.DirectCommunicationSend)

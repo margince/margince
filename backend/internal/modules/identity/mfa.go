@@ -319,16 +319,26 @@ func (s *Service) selfWorkspace(ctx context.Context) (ids.UserID, ids.WorkspaceI
 // confirm and disable cannot interleave — and so two verifications of one code
 // serialize on the last_used_step high-water mark instead of both accepting it.
 func lockEnrolment(ctx context.Context, tx pgx.Tx, userID ids.UserID) (secretRef string, confirmedAt *time.Time, lastUsedStep int64, err error) {
-	scanErr := tx.QueryRow(ctx,
+	factor, err := lockFactor(ctx, tx, userID)
+	return factor.secretRef, factor.confirmedAt, factor.lastUsedStep, err
+}
+
+// lockedFactor is a member's user_mfa row, read under its row lock.
+type lockedFactor struct {
+	secretRef    string
+	confirmedAt  *time.Time
+	lastUsedStep int64
+}
+
+func lockFactor(ctx context.Context, tx pgx.Tx, userID ids.UserID) (lockedFactor, error) {
+	var factor lockedFactor
+	err := tx.QueryRow(ctx,
 		`SELECT secret_ref, confirmed_at, last_used_step FROM user_mfa WHERE user_id = $1 FOR UPDATE`,
-		userID).Scan(&secretRef, &confirmedAt, &lastUsedStep)
-	if errors.Is(scanErr, pgx.ErrNoRows) {
-		return "", nil, 0, errMFANotEnrolled
+		userID).Scan(&factor.secretRef, &factor.confirmedAt, &factor.lastUsedStep)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return lockedFactor{}, errMFANotEnrolled
 	}
-	if scanErr != nil {
-		return "", nil, 0, scanErr
-	}
-	return secretRef, confirmedAt, lastUsedStep, nil
+	return factor, err
 }
 
 // issueRecoveryCodes replaces any existing codes with a fresh set, returning the
@@ -376,25 +386,23 @@ func hasConfirmedMFA(ctx context.Context, tx pgx.Tx, userID ids.UserID) (bool, e
 // and a recovery code stamps itself spent — so this runs in the caller's
 // transaction, under the enrolment row lock.
 func (s *Service) verifyMFA(ctx context.Context, tx pgx.Tx, wsID ids.WorkspaceID, userID ids.UserID, code string) (bool, error) {
-	secretRef, confirmedAt, lastUsedStep, err := lockEnrolment(ctx, tx, userID)
+	factor, err := lockFactor(ctx, tx, userID)
 	if err != nil {
 		return false, err
 	}
-	if confirmedAt == nil {
-		return false, errMFANotEnrolled
-	}
-	plain, err := s.vault.GetOn(ctx, tx, wsID, keyvault.Ref(secretRef))
-	if err != nil {
-		return false, fmt.Errorf("identity: open totp secret: %w", err)
-	}
-	ok, step, err := verifyTOTPCode(string(plain), code, s.now())
+	return s.verifyLockedFactor(ctx, tx, wsID, userID, factor, code)
+}
+
+// verifyLockedFactor is verifyMFA on a factor row the caller already locked.
+func (s *Service) verifyLockedFactor(ctx context.Context, tx pgx.Tx, wsID ids.WorkspaceID, userID ids.UserID, factor lockedFactor, code string) (bool, error) {
+	ok, step, err := s.totpMatches(ctx, tx, wsID, factor, code)
 	if err != nil {
 		return false, err
 	}
 	if ok {
 		// A code from a step already honoured is a replay, refused as neutrally
 		// as a wrong code — it IS the right code, in the wrong hands or twice.
-		if step <= lastUsedStep {
+		if step <= factor.lastUsedStep {
 			return false, nil
 		}
 		if _, err := tx.Exec(ctx,
@@ -404,6 +412,19 @@ func (s *Service) verifyMFA(ctx context.Context, tx pgx.Tx, wsID ids.WorkspaceID
 		return true, nil
 	}
 	return consumeRecoveryCode(ctx, tx, userID, code)
+}
+
+// totpMatches opens the sealed secret and checks the code against it, writing
+// nothing.
+func (s *Service) totpMatches(ctx context.Context, tx pgx.Tx, wsID ids.WorkspaceID, factor lockedFactor, code string) (bool, int64, error) {
+	if factor.confirmedAt == nil {
+		return false, 0, errMFANotEnrolled
+	}
+	plain, err := s.vault.GetOn(ctx, tx, wsID, keyvault.Ref(factor.secretRef))
+	if err != nil {
+		return false, 0, fmt.Errorf("identity: open totp secret: %w", err)
+	}
+	return verifyTOTPCode(string(plain), code, s.now())
 }
 
 // consumeRecoveryCode spends one unused recovery code matching the presented

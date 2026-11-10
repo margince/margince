@@ -74,7 +74,19 @@ func settleEvidence(ctx context.Context, tx pgx.Tx, request activities.RepliedRe
 		return nil, nil
 	}
 	inTimeOrder(messages)
-	return windowKeeping(messages, request.NewestAnswerID, settleThreadMessages), nil
+	messages = windowKeeping(messages, request.NewestAnswerID, settleThreadMessages)
+	messageIDs := make([]ids.UUID, len(messages))
+	for i, message := range messages {
+		messageIDs[i] = message.ID
+	}
+	files, err := activities.AttachmentNamesFor(ctx, tx, messageIDs)
+	if err != nil {
+		return nil, err
+	}
+	for i := range messages {
+		messages[i].Attachments = files[messages[i].ID]
+	}
+	return messages, nil
 }
 
 // settleEvidenceFetch is how much of each evidence read the window chooses

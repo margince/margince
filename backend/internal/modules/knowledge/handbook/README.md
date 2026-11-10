@@ -19,6 +19,8 @@ Getting around Margince, and where to read about it:
 - What is Margince? → [What Margince is](what-margince-is.md)
 - How do I get around the app, and where is something in the sidebar? → [What Margince is](what-margince-is.md)
 - How do I search, or open the command palette (⌘K)? → [What Margince is](what-margince-is.md)
+- What keyboard shortcuts are there? → [What Margince is](what-margince-is.md)
+- How do I turn off single-key shortcuts? → [Your own settings](your-own-settings.md)
 - How do I ask the handbook a question, and where is the Ask box? → [What Margince is](what-margince-is.md)
 - What does Margince call an opportunity, an account, a prospect or a quote? → [What Margince is](what-margince-is.md), under Other words for the same thing
 - Something is wrong. How do I report it? → [Report a problem](report-a-problem.md)
@@ -65,8 +67,8 @@ Records, deals and mail in Margince, by page:
 
 - [What Margince is](what-margince-is.md): what the product is for, and the
   three ways it is not like other CRM products. How to get around the sidebar,
-  search and the command palette, and how to ask the handbook. It ends with a
-  list of other words for the same thing.
+  search and the command palette, the keyboard shortcuts, and how to ask the
+  handbook. It ends with a list of other words for the same thing.
 - [Contacts, companies, leads, deals and projects](records.md): the five kinds
   of record, what each holds, and which links between them are required. How
   to create, edit, reassign, link and merge contacts and companies. Archiving,
@@ -182,9 +184,10 @@ Records, deals and mail in Margince, by page:
   states mean, and moving, cancelling or retrying a meeting. Reminders, what
   counts as busy, and what a guest sees.
 - [Your own settings](your-own-settings.md): changing your password, display
-  name, language and theme. Your email signature, your meetings and booking
-  link, and your writing voice. Your agent passports and your mailbox
-  connections. What the last 24 hours of your mail turned into.
+  name, language and theme, and turning off single-key shortcuts. Your email
+  signature, your meetings and booking link, and your writing voice. Your agent
+  passports and your mailbox connections. What the last 24 hours of your mail
+  turned into.
 - [Configuration](configuration.md): the read-only list of every setting, its
   value and where the value comes from, and how to change a locked one.
 - [Settings](settings.md): how to open Settings, every settings page and which

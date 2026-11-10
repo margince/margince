@@ -10267,8 +10267,8 @@ paths:
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       summary: Move a scheduled message to a different moment.
       description: |
-        Time only. The content is what the approval bound to, so changing it is
-        cancel-and-recompose, which re-enters every gate from the top (ADR-0104 §5).
+        Time only. An attested spelling or punctuation correction uses the communication review's
+        wording-correction route. Other content changes need cancel-and-recompose and fresh checks.
       x-mcp-tool: { verb: reschedule_scheduled_send, router: change_activities, action: reschedule_send, tier: auto_execute, scope: write, served_by: route }
       parameters:
         - $ref: '#/components/parameters/IfMatch'
@@ -23463,6 +23463,23 @@ paths:
           in: query
           schema: { type: string, format: uuid }
           description: The record the staged actions act on. Requires `target_entity_type`.
+        - name: target
+          in: query
+          schema:
+            type: array
+            maxItems: 25
+            items: { type: string }
+          style: form
+          explode: true
+          description: |
+            Filter to the approvals staged against ANY of these records, each written
+            `<entity_type>:<uuid>` (`contact:…`, `activity:…`). Repeat the parameter for several,
+            up to 25. It answers "what is waiting on the records I touched" without the rest of
+            the queue.
+
+            A record outside the caller's row scope adds nothing to the page, never a 403. A
+            malformed item, more than 25, or `target` together with `target_entity_type` or
+            `target_entity_id` is a 422.
         - name: bundle_id
           in: query
           schema: { type: string, format: uuid }
@@ -24324,6 +24341,42 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Activity' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /communication-reviews/{id}/correct-wording:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+    post:
+      tags: [Communication]
+      operationId: correctCommunicationWording
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      x-human-only-reason: security
+      summary: Keep the original approval for a spelling or punctuation correction.
+      description: |
+        The original human approver confirms that meaning is unchanged. The same instruction
+        remains attached to the held message. Recipients, sender, purpose, attachments and other
+        scope fields cannot be edited here. A change in meaning needs a new message approval.
+        The message remains held; its normal send path checks current permission and stops again.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CorrectCommunicationWordingRequest' }
+      responses:
+        '200':
+          description: Wording saved under the same approval.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WordingCorrectionResult' }
+        '400':
+          description: The correction confirmation or input is invalid.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
@@ -53565,7 +53618,7 @@ components:
         amount_minor: { type: [integer, 'null'], format: int64, minimum: 0, description: 'The deal''s one-off price in minor units of `currency`. Below zero is refused with 422 `amount_negative`.' }
         currency: { type: [string, 'null'], pattern: '^[A-Z]{3}$' }
         expected_arr_minor: { type: [integer, 'null'], format: int64, description: 'Expected annual recurring revenue in minor units of `currency`. Null means no recurring component, which is not zero.' }
-        company_id: { type: [string, 'null'], format: uuid, description: 'The company this deal is for. Changing it is refused 422 (`deal_contracts_cross_company`) while contracts filed against the deal name another company, because a contract on a deal is visible through that deal alone. Detach those contracts (`deal_id: null` on the contract) or file each against a deal of its own company first; an edit never changes a contract''s company, only a company merge does. Null clears the company and is not refused.' }
+        company_id: { type: [string, 'null'], format: uuid, description: 'The company this deal is for. Changing it is refused 422 (`deal_contracts_cross_company`) while contracts filed against the deal name another company, because a contract on a deal is visible through that deal alone. Archived contracts also count. Ask an administrator to correct the contract links before changing the company. An edit never changes a contract''s company; only a company merge does. Null clears the company and is not refused.' }
         partner_company_id: { type: [string, 'null'], format: uuid, description: 'The partner who brought this deal. The company must have a live `partner` row (else 422 `not_a_partner`), and the caller must be able to read it. Null clears the attribution.' }
         partner_attribution:
           type: [string, 'null']
@@ -70596,6 +70649,8 @@ components:
           type: array
           description: What was refused, per recipient. Empty once an erasure has cleared the subject from it.
           items: { $ref: '#/components/schemas/RefusedRecipient' }
+        wording_correction:
+          $ref: '#/components/schemas/WordingCorrectionContext'
         warning:
           $ref: '#/components/schemas/OverrideWarning'
           description: |
@@ -70623,6 +70678,45 @@ components:
           description: |
             Shown verbatim. A surface that paraphrased it would record somebody as having read the
             server's words while showing them its own.
+
+    WordingCorrectionContext:
+      type: object
+      description: |
+        The current approved wording, visible only to its original human approver while the
+        decision is unspent. The original reason remains on the instruction.
+      required: [instruction_id, version, subject, body, html_body, wording_digest, reason_code, explanation, warning_version]
+      properties:
+        instruction_id: { type: string, format: uuid }
+        version: { type: integer, format: int64 }
+        subject: { type: string }
+        body: { type: string }
+        html_body: { type: string }
+        wording_digest: { type: string, pattern: '^[a-f0-9]{64}$' }
+        reason_code: { type: string }
+        explanation: { type: string }
+        warning_version: { type: string }
+      additionalProperties: false
+
+    CorrectCommunicationWordingRequest:
+      type: object
+      required: [version, expected_wording, subject, body, html_body, meaning_unchanged]
+      properties:
+        version: { type: integer, format: int64, minimum: 1 }
+        expected_wording: { type: string, pattern: '^[a-f0-9]{64}$' }
+        subject: { type: string, minLength: 1, maxLength: 998 }
+        body: { type: string, minLength: 1, maxLength: 1000000 }
+        html_body: { type: string, maxLength: 1000000 }
+        meaning_unchanged:
+          type: boolean
+          description: The original approver attests that only spelling or punctuation changed and meaning is unchanged.
+      additionalProperties: false
+
+    WordingCorrectionResult:
+      type: object
+      required: [version]
+      properties:
+        version: { type: integer, format: int64 }
+      additionalProperties: false
 
     DirectCommunicationSendRequest:
       type: object

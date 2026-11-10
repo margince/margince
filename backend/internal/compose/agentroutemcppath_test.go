@@ -295,6 +295,7 @@ var spelledOtherwiseByItsVerb = map[string]string{
 	"GET /v1/analytics/evidence#scope_id":        "id",
 	"GET /v1/analytics/editions/compare#left_id": "id",
 	"GET /v1/search#types":                       "record_types",
+	"GET /v1/approvals#target":                   "targets",
 }
 
 // answeredByAnotherVerb are route parameters whose question an agent asks

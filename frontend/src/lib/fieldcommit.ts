@@ -1,10 +1,10 @@
-import type { KeyboardEvent } from "react";
+import { isChordOf } from "./chord";
 
 export const FIELD_COMMIT_KEY = "Enter";
 
 /** A paragraph commits on ⌘/Ctrl+Enter, because Enter there is a newline. */
 export function isParagraphCommit(
-  event: Pick<KeyboardEvent, "key" | "metaKey" | "ctrlKey">,
+  event: Parameters<typeof isChordOf>[0],
 ): boolean {
-  return event.key === FIELD_COMMIT_KEY && (event.metaKey || event.ctrlKey);
+  return isChordOf(event, FIELD_COMMIT_KEY);
 }

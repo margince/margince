@@ -69,6 +69,7 @@ type LiveInstruction struct {
 	// Empty on a decision written before this was recorded, and an absent
 	// fingerprint is nothing to disagree with rather than a mismatch.
 	Acknowledged []byte
+	Scope        string
 	// GivenByAdmin says an admin gave the exception, so it may answer a refusal
 	// only an admin may (DecisionSet.ExceptionMayAnswer).
 	GivenByAdmin bool
@@ -113,7 +114,9 @@ func (e *InstructionStaleError) FieldFault() (field, code, message string) {
 func liveInstructionForIntentTx(ctx context.Context, tx pgx.Tx, intentID ids.UUID) (LiveInstruction, error) {
 	var out LiveInstruction
 	err := tx.QueryRow(ctx, `
-		SELECT i.id, i.review_id, r.delivery_intent_id, i.acknowledged_wording, i.given_by_admin, r.refusals
+		SELECT i.id, i.review_id, r.delivery_intent_id,
+		       coalesce(i.corrected_wording, i.acknowledged_wording),
+		       i.given_by_admin, r.refusals, coalesce(i.acknowledged_scope, '')
 		  FROM communication_instruction i
 		  JOIN communication_review r ON r.id = i.review_id
 		 WHERE r.delivery_intent_id = $1
@@ -121,7 +124,7 @@ func liveInstructionForIntentTx(ctx context.Context, tx pgx.Tx, intentID ids.UUI
 		 ORDER BY i.directed_at DESC
 		 LIMIT 1
 		   FOR UPDATE OF i`, intentID).
-		Scan(&out.ID, &out.ReviewID, &out.IntentID, &out.Acknowledged, &out.GivenByAdmin, &out.Refusals)
+		Scan(&out.ID, &out.ReviewID, &out.IntentID, &out.Acknowledged, &out.GivenByAdmin, &out.Refusals, &out.Scope)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return LiveInstruction{}, nil
 	}
@@ -156,6 +159,15 @@ func consumeInstructionTx(
 	if len(inst.Acknowledged) > 0 && !bytes.Equal(inst.Acknowledged, wording[:]) {
 		return &InstructionStaleError{
 			Why: "the message has been edited since it was acknowledged",
+		}
+	}
+	if inst.Scope != "" {
+		message, err := instructionMessageTx(ctx, tx, inst.IntentID)
+		if err != nil {
+			return err
+		}
+		if !message.Known || message.Scope != inst.Scope {
+			return &InstructionStaleError{Why: "the recipients, sender or purpose changed; approve this message again"}
 		}
 	}
 	tag, err := tx.Exec(ctx, `
@@ -202,34 +214,6 @@ func consumeInstructionTx(
 		return err
 	}
 	return nil
-}
-
-// acknowledgedWordingTx answers the fingerprint of the message this review
-// holds — what the human was looking at when they acknowledged.
-//
-// NOT FOUND IS NOT A FAULT, and this is the one place that judgement matters.
-// A review whose held message has been cancelled or emptied — by an erasure, or
-// by a rep who resumed it another way — has no wording to compare. Inventing a
-// mismatch there would refuse a send for a reason nobody can act on; the
-// caller treats an absent fingerprint as nothing to disagree with, exactly as
-// the staging-to-transmit check does (authorizecontent.go).
-func acknowledgedWordingTx(ctx context.Context, tx pgx.Tx, intentID ids.UUID) ([32]byte, bool, error) {
-	if intentID.IsZero() {
-		return [32]byte{}, false, nil
-	}
-	var subject, body, htmlBody string
-	err := tx.QueryRow(ctx, `
-		SELECT coalesce(payload->>'subject', ''),
-		       coalesce(payload->>'body', ''),
-		       coalesce(payload->>'html_body', '')
-		  FROM scheduled_send WHERE id = $1`, intentID).Scan(&subject, &body, &htmlBody)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return [32]byte{}, false, nil
-	}
-	if err != nil {
-		return [32]byte{}, false, fmt.Errorf("consent: reading the message that was acknowledged: %w", err)
-	}
-	return SendingDigest(subject, body, htmlBody), true, nil
 }
 
 // AuthorizeDirectedExecutionTx asks whether a refused message may go out anyway

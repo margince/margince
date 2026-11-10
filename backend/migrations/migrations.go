@@ -31,10 +31,7 @@
 package migrations
 
 import (
-	"bufio"
 	"embed"
-	"fmt"
-	"strings"
 
 	"github.com/margince/margince/backend/internal/platform/dbmigrate"
 )
@@ -48,8 +45,6 @@ var files embed.FS
 //
 //go:embed renumbered.txt
 var renumbered string
-
-const renumberedFile = "renumbered.txt"
 
 // Core returns the upstream-owned namespace.
 func Core() (dbmigrate.Namespace, error) {
@@ -79,20 +74,5 @@ func namespace(name string) (dbmigrate.Namespace, error) {
 // line is `namespace old_version new_version name old_digest`; a line
 // starting with # is a comment.
 func Renumbered() (map[string][]dbmigrate.Renumber, error) {
-	pairs := map[string][]dbmigrate.Renumber{}
-	lines := bufio.NewScanner(strings.NewReader(renumbered))
-	for n := 1; lines.Scan(); n++ {
-		line := strings.TrimSpace(lines.Text())
-		if line == "" || strings.HasPrefix(line, "#") {
-			continue
-		}
-		fields := strings.Fields(line)
-		if len(fields) != 5 {
-			return nil, fmt.Errorf("migrations: %s:%d: want `namespace old_version new_version name old_digest`, got %q", renumberedFile, n, line)
-		}
-		pairs[fields[0]] = append(pairs[fields[0]], dbmigrate.Renumber{
-			Old: fields[1], New: fields[2], Name: fields[3], OldDigest: fields[4],
-		})
-	}
-	return pairs, lines.Err()
+	return dbmigrate.ParseRenumbers(renumbered)
 }

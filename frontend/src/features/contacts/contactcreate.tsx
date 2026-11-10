@@ -2,11 +2,13 @@ import { NewContactAction } from "../../components/newcontact";
 import { QuickCaptureAction } from "../../components/quickcapture";
 
 // The Contacts list's typed creates; the list adds the vCard import after them.
-export function ContactCreateActions() {
+export function ContactCreateActions({
+  startCreating = false,
+}: Readonly<{ startCreating?: boolean }>) {
   return (
     <>
       <QuickCaptureAction />
-      <NewContactAction />
+      <NewContactAction listCreate={{ open: startCreating }} />
     </>
   );
 }

@@ -2787,6 +2787,20 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "shell.shortcuts.paragraphSave": "Lưu trường nhiều dòng",
   "shell.shortcuts.deckHint":
     "Trên Trang chủ, phím mũi tên chọn một quyết định. Enter gửi các quyết định đã chọn.",
+  "shell.shortcuts.create": "Tạo hồ sơ",
+  "shell.shortcuts.list": "Hiển thị phím tắt",
+  "shell.shortcuts.goto": "Đi tới",
+  "shell.shortcuts.gotoHint": "Nhấn G, rồi nhấn chữ cái.",
+  "shell.shortcuts.record": "Trong hồ sơ",
+  "shell.shortcuts.logActivity": "Ghi nhận hoạt động",
+  "shell.shortcuts.addTask": "Thêm việc cần làm",
+  "shell.shortcuts.writeEmail": "Viết tin nhắn",
+  "shell.shortcuts.sendEmail": "Gửi email",
+  "shell.shortcuts.submitDialog": "Gửi biểu mẫu hộp thoại",
+  "shell.shortcuts.then": "rồi",
+  "shell.shortcuts.or": "hoặc",
+  "shell.shortcuts.singleKeyOff": "Đã tắt phím tắt một phím",
+  "shell.shortcuts.singleKeyOffHint": "Bật lại trong Cài đặt, mục Tài khoản.",
   "shell.more": "Thêm",
   "shell.unknownPage": "Không tìm thấy",
   "shell.closeMenu": "Đóng",
@@ -7666,6 +7680,21 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Email được gửi vào thời điểm đã chọn, và các bước kiểm tra sự đồng ý và hộp thư sẽ chạy lại lúc đó. Trước đó, có thể dời hoặc hủy email trong Tin nhắn đã lên lịch.",
   "compose.sendMessageConfirmTitle": "Gửi tin nhắn",
   "compose.sendMessageBody": "Tin nhắn được gửi ngay. Không thể hoàn tác.",
+  "directSend.existingApproval":
+    "Phê duyệt của bạn cho tin nhắn này vẫn có hiệu lực. Lý do ban đầu vẫn được lưu lại.",
+  "directSend.correctWording": "Sửa chính tả hoặc dấu câu",
+  "directSend.correctionTitle": "Sửa nội dung và giữ nguyên phê duyệt",
+  "directSend.correctionSave": "Lưu bản sửa",
+  "directSend.correctionScope":
+    "Chỉ sửa chính tả hoặc dấu câu. Người nhận, người gửi, mục đích và tệp đính kèm giữ nguyên. Thay đổi ý nghĩa cần phê duyệt lại tin nhắn.",
+  "directSend.correctionAcknowledge":
+    "Tôi xác nhận chỉ sửa chính tả hoặc dấu câu. Ý nghĩa và các thông tin thực tế không thay đổi.",
+  "directSend.correctionNeedsEdit": "Hãy sửa chính tả hoặc dấu câu trước.",
+  "directSend.correctionNeedsConfirmation":
+    "Xác nhận ý nghĩa và thông tin thực tế không thay đổi.",
+  "directSend.correctionNeedsText": "Giữ lại tiêu đề và nội dung tin nhắn.",
+  "directSend.correctionFailed":
+    "Chưa lưu được bản sửa. Mở lại phần kiểm tra để xem tin nhắn và phê duyệt hiện tại.",
   "directSend.open": "Gửi và ghi nhận ngoại lệ",
   "directSend.queued": "Đã xếp hàng gửi theo ngoại lệ đã ghi nhận.",
   "directSend.opening": "Đang mở…",
@@ -9749,8 +9778,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "import.reason.lost_reason_missing": "Deal đã thua cần có lý do thua.",
   "import.reason.deal_pipeline_fixed":
     "Deal này nằm trong quy trình khác với quy trình trong tệp. Nhập không chuyển deal giữa các quy trình nên hàng bị bỏ qua.",
+  "companies.contractMergeBlocked":
+    "Một deal có hợp đồng thuộc công ty khác. Hợp đồng trong kho lưu trữ cũng được tính. Liên hệ quản trị viên để sửa liên kết hợp đồng trước khi hợp nhất.",
+  "deals.contractCompanyBlocked":
+    "Deal này có hợp đồng thuộc công ty khác. Hợp đồng trong kho lưu trữ cũng được tính. Liên hệ quản trị viên để sửa liên kết hợp đồng trước khi đổi công ty.",
   "import.reason.deal_company_has_contracts":
-    "Deal này có hợp đồng thuộc một công ty khác với công ty trong hàng này nên hàng bị bỏ qua. Hãy tách các hợp đồng khỏi deal hoặc chuyển từng hợp đồng sang một deal của chính công ty mà hợp đồng đó thuộc về rồi nhập lại.",
+    "Deal này có hợp đồng thuộc một công ty khác với công ty trong hàng này nên hàng bị bỏ qua. Hợp đồng trong kho lưu trữ cũng được tính. Liên hệ quản trị viên để sửa liên kết hợp đồng rồi nhập lại.",
   "import.reason.deal_already_closed":
     "Deal này đã đóng nên hàng bị bỏ qua. Nhập không mở lại deal đã đóng.",
   "import.reason.fx_rate_missing":
@@ -15391,6 +15424,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Ngôn ngữ của menu, trang và tin nhắn từ Margince. Được lưu vào tài khoản của bạn, nên áp dụng trên mọi thiết bị bạn đăng nhập.",
   "account.appearanceHelp":
     "Sáng, tối hoặc theo cài đặt của máy tính này. Chỉ áp dụng trên trình duyệt này. Menu tài khoản đổi cùng cài đặt này.",
+  "account.singleKeyShortcuts": "Phím tắt một phím",
+  "account.singleKeyShortcutsHelp":
+    "Các phím chữ và ký hiệu dùng riêng làm phím tắt, không cần phím bổ trợ. Chỉ áp dụng trên trình duyệt này.",
   "reviewTemplates.questionCount_one": "{count} câu hỏi",
   "reviewTemplates.questionCount_other": "{count} câu hỏi",
   "reviewTemplates.summary": "{questions}, {required} bắt buộc",

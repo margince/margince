@@ -28,6 +28,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 // AuthorizeStagingTx records why this message was allowed to be queued, one row
@@ -95,7 +96,7 @@ func (g *Gate) stageDecisions(ctx context.Context, tx pgx.Tx, deliveryID ids.UUI
 	}
 	// Each recipient's country, resolved once: the decision and its recorded
 	// stamp read this one answer.
-	countries, err := recipientCountries(ctx, tx, req.Recipients)
+	countries, err := recipientCountries(ctx, tx, req.Recipients, func(connector.Recipient) commsauthz.Request { return req })
 	if err != nil {
 		return commsauthz.DecisionSet{}, err
 	}

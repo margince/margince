@@ -14,10 +14,12 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	"github.com/margince/margince/backend/internal/compose"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/contracts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -305,5 +307,21 @@ func TestAContractCannotBeRepointedAtADealOfAnotherCompany(t *testing.T) {
 	}
 	if f.e.WsCount(t, `SELECT count(*) FROM contract WHERE id = $1 AND deal_id = $2`, contract, acmeDeal) != 1 {
 		t.Error("the contract left its Acme deal although the patch was refused")
+	}
+}
+
+func TestACompanyMergeRefusesALegacyThirdCompanyContract(t *testing.T) {
+	f := newCompanyMoveFixture(t)
+	deal := f.dealFor(t, &f.acme, nil)
+	contract := f.acmeContractOn(t, deal, "Legacy MSA")
+	third := f.e.SeedCompany(t, "Third company", nil)
+	f.e.WsExec(t, `UPDATE contract SET company_id=@company WHERE id=@contract`, pgx.StrictNamedArgs{"contract": contract, "company": third})
+	_, err := f.e.Contacts.MergeCompany(f.e.Admin(), f.acme, f.contoso, nil)
+	if _, ok := errors.AsType[*contacts.CrossCompanyContractsError](err); !ok {
+		t.Fatalf("company merge answered %v", err)
+	}
+	f.dealStillNames(t, deal, &f.acme)
+	if got := f.e.WsCount(t, `SELECT count(*) FROM company WHERE id=@company AND archived_at IS NULL`, pgx.StrictNamedArgs{"company": f.acme}); got != 1 {
+		t.Fatal("refused merge retired its source")
 	}
 }

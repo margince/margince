@@ -15,6 +15,24 @@ info:
     coverage gate that walks the subscribable set.
 components:
   schemas:
+    InternalEventInstructionWordingCorrected:
+      type: object
+      x-event-type: communication_instruction.updated
+      x-entity-type: communication_instruction
+      description: The original approver attested that a wording correction preserves meaning.
+      properties: {}
+      additionalProperties: false
+
+    InternalEventScheduledWordingCorrected:
+      type: object
+      x-event-type: scheduled_send.updated
+      x-entity-type: scheduled_send
+      description: A held message retained its approval after an attested spelling or punctuation correction.
+      required: [version]
+      properties:
+        version: { type: integer, format: int64 }
+      additionalProperties: false
+
     InternalEventInternalMailHistoryCreated:
       type: object
       x-event-type: internal_mail_history.created

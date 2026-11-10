@@ -2720,6 +2720,7 @@ public.communication_decision_one_per_decision CREATE UNIQUE INDEX communication
 public.communication_decision_pkey CREATE UNIQUE INDEX communication_decision_pkey ON public.communication_decision USING btree (id)
 public.communication_instruction acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.communication_instruction.acknowledged_at timestamp with time zone NOT NULL gen=- def=-
+public.communication_instruction.acknowledged_scope character varying(64) gen=- def=-
 public.communication_instruction.acknowledged_wording bytea gen=- def=-
 public.communication_instruction.communication_instruction_consumption_shape CHECK (((status = 'consumed'::text) = (consumed_at IS NOT NULL)))
 public.communication_instruction.communication_instruction_directed_by_fkey FOREIGN KEY (directed_by) REFERENCES app_user(id) ON DELETE RESTRICT
@@ -2735,7 +2736,9 @@ public.communication_instruction.communication_instruction_revoked_by_fkey FOREI
 public.communication_instruction.communication_instruction_spent_on_shape CHECK (((status = 'consumed'::text) = (delivery_id IS NOT NULL)))
 public.communication_instruction.communication_instruction_status CHECK ((status = ANY (ARRAY['directed'::text, 'consumed'::text, 'revoked'::text, 'expired'::text])))
 public.communication_instruction.communication_instruction_window CHECK ((valid_until > facts_as_of))
+public.communication_instruction.communication_instruction_wording_correction CREATE TRIGGER communication_instruction_wording_correction BEFORE INSERT OR UPDATE ON public.communication_instruction FOR EACH ROW EXECUTE FUNCTION guard_instruction_wording_correction()
 public.communication_instruction.consumed_at timestamp with time zone gen=- def=-
+public.communication_instruction.corrected_wording bytea gen=- def=-
 public.communication_instruction.delivery_id uuid gen=- def=-
 public.communication_instruction.directed_at timestamp with time zone NOT NULL gen=- def=now()
 public.communication_instruction.directed_by uuid NOT NULL gen=- def=-
@@ -5368,6 +5371,31 @@ public.graph_interaction_edge.requested_generation bigint NOT NULL gen=- def=0
 public.graph_interaction_edge.sent_count_90d integer gen=- def=-
 public.graph_interaction_edge.user_id uuid NOT NULL gen=- def=-
 public.graph_interaction_edge_pkey CREATE UNIQUE INDEX graph_interaction_edge_pkey ON public.graph_interaction_edge USING btree (user_id, contact_id)
+public.guard_instruction_wording_correction() secdef=false cfg=- acl=- BEGIN
+  IF NEW.acknowledged_scope IS NOT NULL AND NEW.acknowledged_scope !~ '^[a-f0-9]{64}$' THEN
+    RAISE EXCEPTION 'an instruction scope must be a complete fingerprint' USING ERRCODE='check_violation';
+  END IF;
+  IF NEW.corrected_wording IS NOT NULL AND octet_length(NEW.corrected_wording) <> 32 THEN
+    RAISE EXCEPTION 'a wording correction must be a complete fingerprint' USING ERRCODE='check_violation';
+  END IF;
+  IF TG_OP = 'INSERT' THEN
+    IF NEW.corrected_wording IS NOT NULL THEN
+      RAISE EXCEPTION 'a correction needs an existing decision' USING ERRCODE='check_violation';
+    END IF;
+  ELSE
+    IF NEW.acknowledged_scope IS DISTINCT FROM OLD.acknowledged_scope THEN
+      RAISE EXCEPTION 'an instruction scope is immutable' USING ERRCODE='check_violation';
+    END IF;
+    IF NEW.corrected_wording IS DISTINCT FROM OLD.corrected_wording AND
+       (OLD.status <> 'directed' OR NEW.status <> 'directed' OR OLD.delivery_id IS NOT NULL
+        OR OLD.acknowledged_scope IS NULL OR OLD.acknowledged_wording IS NULL
+        OR NEW.corrected_wording IS NULL) THEN
+      RAISE EXCEPTION 'only an unspent decision with a frozen message can retain a correction'
+        USING ERRCODE='check_violation';
+    END IF;
+  END IF;
+  RETURN NEW;
+END;
 public.home_read_cache acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.home_read_cache.computed_at timestamp with time zone NOT NULL gen=- def=-
 public.home_read_cache.fence bigint NOT NULL gen=- def=-

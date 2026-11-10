@@ -2769,6 +2769,20 @@ export const en = {
   "shell.shortcuts.paragraphSave": "Save multi-line field",
   "shell.shortcuts.deckHint":
     "On Home, arrow keys stage a decision. Enter sends what is staged.",
+  "shell.shortcuts.create": "Create record",
+  "shell.shortcuts.list": "Show keyboard shortcuts",
+  "shell.shortcuts.goto": "Go to",
+  "shell.shortcuts.gotoHint": "Press G, then the letter.",
+  "shell.shortcuts.record": "On a record",
+  "shell.shortcuts.logActivity": "Log activity",
+  "shell.shortcuts.addTask": "Add task",
+  "shell.shortcuts.writeEmail": "Write message",
+  "shell.shortcuts.sendEmail": "Send email",
+  "shell.shortcuts.submitDialog": "Submit dialog",
+  "shell.shortcuts.then": "then",
+  "shell.shortcuts.or": "or",
+  "shell.shortcuts.singleKeyOff": "Single-key shortcuts are off",
+  "shell.shortcuts.singleKeyOffHint": "Turn them on in Settings → Account.",
   "shell.more": "More",
   "shell.unknownPage": "Not found",
   "shell.closeMenu": "Close",
@@ -7864,6 +7878,22 @@ export const en = {
   "compose.sendMessageConfirmTitle": "Send message",
   "compose.sendMessageBody":
     "The message is sent immediately. This cannot be undone.",
+  "directSend.existingApproval":
+    "Your one-message approval still stands. Its original reason stays on record.",
+  "directSend.correctWording": "Correct spelling or punctuation",
+  "directSend.correctionTitle": "Correct wording and keep your approval",
+  "directSend.correctionSave": "Save correction",
+  "directSend.correctionScope":
+    "Correct spelling or punctuation only. Recipients, sender, purpose and attachments stay the same. Changes in meaning need a new message approval.",
+  "directSend.correctionAcknowledge":
+    "I confirm that only spelling or punctuation changed. The meaning and facts are unchanged.",
+  "directSend.correctionNeedsEdit":
+    "Make a spelling or punctuation correction first.",
+  "directSend.correctionNeedsConfirmation":
+    "Confirm that the meaning and facts are unchanged.",
+  "directSend.correctionNeedsText": "Keep a subject and a message body.",
+  "directSend.correctionFailed":
+    "The correction was not saved. Reopen the review to check the current message and approval.",
   "directSend.open": "Send with a recorded exception",
   "directSend.queued": "Queued as a recorded exception.",
   "directSend.opening": "Opening…",
@@ -10021,8 +10051,12 @@ export const en = {
     "A lost deal needs the reason it was lost.",
   "import.reason.deal_pipeline_fixed":
     "This deal is in another pipeline than the file names. An import does not move a deal between pipelines, so the row is skipped.",
+  "companies.contractMergeBlocked":
+    "A deal has contracts belonging to another company. Archived contracts also count. Ask an administrator to correct the contract links before merging.",
+  "deals.contractCompanyBlocked":
+    "This deal has contracts belonging to another company. Archived contracts also count. Ask an administrator to correct the contract links before changing the company.",
   "import.reason.deal_company_has_contracts":
-    "This deal has contracts that name a company other than the one in this row, so the row is skipped. Detach the contracts from the deal, or file each against a deal of its own company, then import again.",
+    "This deal has contracts that name a company other than the one in this row, so the row is skipped. Archived contracts also count. Ask an administrator to correct the contract links, then import again.",
   "import.reason.deal_already_closed":
     "This deal is already closed, so the row is skipped. An import does not reopen a closed deal.",
   "import.reason.fx_rate_missing":
@@ -15696,6 +15730,9 @@ export const en = {
     "The language of menus, pages and messages from Margince. Saved to your account, so it follows you to every device you sign in on.",
   "account.appearanceHelp":
     "Light, dark or follow this computer’s setting. Applies in this browser only. The account menu changes the same setting.",
+  "account.singleKeyShortcuts": "Single-key shortcuts",
+  "account.singleKeyShortcutsHelp":
+    "Letter and symbol keys work as shortcuts on their own. Applies in this browser only.",
   "reviewTemplates.questionCount_one": "{count} question",
   "reviewTemplates.questionCount_other": "{count} questions",
   "reviewTemplates.summary": "{questions}, {required} required",

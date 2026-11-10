@@ -7,6 +7,8 @@ import { problemCode, problemDetails } from "./problembody";
 // Wire codes whose server detail is not a sentence for this screen's reader,
 // and the catalog copy problemDetail (problem.ts) shows in its place.
 export const PROBLEM_CODE_COPY = new Map<string, MessageKey>([
+  ["deal_contracts_cross_company", "deals.contractCompanyBlocked"],
+  ["company_merge_contract_mismatch", "companies.contractMergeBlocked"],
   ["booking_horizon", "scheduling.windowHorizon"],
   ["booking_notice", "scheduling.windowNotice"],
   ["booking_limits", "scheduling.windowLimits"],

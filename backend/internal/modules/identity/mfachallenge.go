@@ -12,6 +12,7 @@ package identity
 
 import (
 	"context"
+	"crypto/subtle"
 	"errors"
 	"time"
 
@@ -43,8 +44,105 @@ const spentChallengeReapLimit = 100
 // arrangement OIDCStateSigner uses. Every minted token carries a fresh random
 // nonce (jti); Verify returns it so the service can spend it exactly once.
 type MFAChallengeSigner interface {
-	Sign(userID string, ttl time.Duration) (token string, err error)
-	Verify(token string) (userID, jti string, err error)
+	Sign(challenge MFAChallenge, ttl time.Duration) (token string, err error)
+	Verify(token string) (MFAChallenge, error)
+	// KeyEpoch keys a credential epoch with the signing key. The challenge is
+	// readable by its holder, so it carries only this keyed value.
+	KeyEpoch(material string) string
+}
+
+// MFAChallenge is what a signed challenge binds. Sign mints the Jti; Verify
+// returns it. Epoch is the keyed credential epoch the challenge was issued under.
+type MFAChallenge struct {
+	UserID string
+	Jti    string
+	Epoch  string
+}
+
+// challengeOwed is the password step's answer when the member owes a second
+// factor. It matches errMFARequired and carries the challenge to sign.
+type challengeOwed struct{ challenge MFAChallenge }
+
+func (c *challengeOwed) Error() string        { return errMFARequired.Error() }
+func (c *challengeOwed) Is(target error) bool { return target == errMFARequired }
+
+// challengeFor builds the challenge a sign-in stops at, under the member's
+// current credential epoch.
+func (s *Service) challengeFor(ctx context.Context, tx pgx.Tx, userID ids.UserID) (*challengeOwed, error) {
+	epoch, err := s.credentialEpoch(ctx, tx, userID)
+	if err != nil {
+		return nil, err
+	}
+	return &challengeOwed{challenge: MFAChallenge{UserID: userID.String(), Epoch: epoch}}, nil
+}
+
+// credentialEpoch is a keyed value over the member's password, factor and
+// status. A challenge issued under an older epoch cannot be completed.
+//
+// Status is the newest audit row that changed it. If retention purges that
+// row, the epoch moves and an open challenge is refused, which fails safe.
+func (s *Service) credentialEpoch(ctx context.Context, tx pgx.Tx, userID ids.UserID) (string, error) {
+	if s.challengeEpochKey == nil {
+		return "", nil
+	}
+	var passwordHash, statusChange string
+	var enrolledAt *time.Time
+	err := tx.QueryRow(ctx,
+		`SELECT coalesce(u.password_hash, ''), m.created_at,
+		        coalesce((SELECT a.id::text FROM audit_log a
+		                   WHERE a.entity_type = 'user' AND a.entity_id = u.id AND a.after ? 'status'
+		                   ORDER BY a.occurred_at DESC, a.id DESC LIMIT 1), '')
+		   FROM app_user u
+		   LEFT JOIN user_mfa m ON m.user_id = u.id
+		  WHERE u.id = $1`, userID).Scan(&passwordHash, &enrolledAt, &statusChange)
+	if err != nil {
+		return "", err
+	}
+	material := passwordHash + "\x00" + statusChange + "\x00"
+	if enrolledAt != nil {
+		material += enrolledAt.UTC().Format(time.RFC3339Nano)
+	}
+	return s.challengeEpochKey(material), nil
+}
+
+// lockChallengedFactor locks what a second-factor attempt reads, in one order:
+// the member row, then the factor row. Under both, the epoch cannot move
+// between this check and the code check. It reports whether the challenge
+// still stands. Deactivation and factor removal take the same rows, so they
+// wait for this attempt to commit.
+func (s *Service) lockChallengedFactor(ctx context.Context, tx pgx.Tx, userID ids.UserID, challenge MFAChallenge) (lockoutState, lockedFactor, bool, error) {
+	lock, err := lockSecondFactorStreak(ctx, tx, userID)
+	if err != nil {
+		return lockoutState{}, lockedFactor{}, false, err
+	}
+	if lock.locked(s.now()) {
+		return lockoutState{}, lockedFactor{}, false, errAccountLocked
+	}
+	factor, err := lockFactor(ctx, tx, userID)
+	if err != nil {
+		return lockoutState{}, lockedFactor{}, false, err
+	}
+	epoch, err := s.credentialEpoch(ctx, tx, userID)
+	if err != nil {
+		return lockoutState{}, lockedFactor{}, false, err
+	}
+	if s.challengeLocked != nil {
+		s.challengeLocked()
+	}
+	stands := epoch != "" && subtle.ConstantTimeCompare([]byte(epoch), []byte(challenge.Epoch)) == 1
+	return lock, factor, stands, nil
+}
+
+// checkChallengedCode checks the code on a challenge that still stands. On one
+// that does not, it still opens the secret and checks the code, writing nothing.
+// So the refusal costs what a wrong code costs, and spends no step or recovery
+// code.
+func (s *Service) checkChallengedCode(ctx context.Context, tx pgx.Tx, wsID ids.WorkspaceID, userID ids.UserID, factor lockedFactor, stands bool, code string) (bool, error) {
+	if stands {
+		return s.verifyLockedFactor(ctx, tx, wsID, userID, factor, code)
+	}
+	_, _, err := s.totpMatches(ctx, tx, wsID, factor, code)
+	return false, err
 }
 
 // WithRequireMFA injects the require-MFA policy reader, read at admission so an
@@ -90,7 +188,8 @@ func (s *Service) mfaMandatory(ctx context.Context) (bool, error) {
 // before it. So neither parallel requests nor a pile of fresh challenges buys
 // more than the lockout threshold. A wrong code leaves the nonce unspent, so the
 // member can retype a mistyped code on the same challenge.
-func (s *Service) CompleteMFAChallenge(ctx context.Context, userID ids.UserID, jti, code string) (Identity, string, error) {
+func (s *Service) CompleteMFAChallenge(ctx context.Context, userID ids.UserID, challenge MFAChallenge, code string) (Identity, string, error) {
+	jti := challenge.Jti
 	rawWsID, ok := principal.WorkspaceID(ctx)
 	if !ok {
 		return Identity{}, "", ErrBadCredentials
@@ -110,14 +209,11 @@ func (s *Service) CompleteMFAChallenge(ctx context.Context, userID ids.UserID, j
 	// failure it counts has to land. It travels out beside the nil return.
 	var wrongCode error
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
-		lock, err := lockSecondFactorStreak(ctx, tx, userID)
+		lock, factor, stands, err := s.lockChallengedFactor(ctx, tx, userID, challenge)
 		if err != nil {
 			return err
 		}
-		if lock.locked(s.now()) {
-			return errAccountLocked
-		}
-		verified, err := s.verifyMFA(ctx, tx, wsID, userID, code)
+		verified, err := s.checkChallengedCode(ctx, tx, wsID, userID, factor, stands, code)
 		if err != nil {
 			return err
 		}

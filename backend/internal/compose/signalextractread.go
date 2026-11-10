@@ -68,12 +68,13 @@ const (
 
 // threadMessage is one message of a conversation as the prompt sees it.
 type threadMessage struct {
-	Parties   []commitmentParty
-	ID        ids.UUID
-	Direction string
-	Subject   string
-	Body      string
-	At        time.Time
+	Attachments []string
+	Parties     []commitmentParty
+	ID          ids.UUID
+	Direction   string
+	Subject     string
+	Body        string
+	At          time.Time
 	// UnreadRunes is how much of this body extractBodyLimit left behind.
 	//
 	// Carried rather than inferred, because it cannot be inferred: a body cut

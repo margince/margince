@@ -159,6 +159,9 @@ type InternalEventExistingCustomerNoticeCreated struct {
 // InternalEventExistingCustomerNoticeWithdrawn An administrator withdrew a collection-notice declaration.
 type InternalEventExistingCustomerNoticeWithdrawn struct{}
 
+// InternalEventInstructionWordingCorrected The original approver attested that a wording correction preserves meaning.
+type InternalEventInstructionWordingCorrected struct{}
+
 // InternalEventInternalMailHistoryCreated A mailbox owner explicitly authorized an internal history import within the administrator's current source policy.
 type InternalEventInternalMailHistoryCreated struct {
 	BackfillId     openapi_types.UUID `json:"backfill_id"`
@@ -235,6 +238,11 @@ type InternalEventReportingChanged struct {
 	Object string `json:"object"`
 }
 
+// InternalEventScheduledWordingCorrected A held message retained its approval after an attested spelling or punctuation correction.
+type InternalEventScheduledWordingCorrected struct {
+	Version int64 `json:"version"`
+}
+
 // InternalEventTagSuggestionAccepted A user accepted a tag suggestion. The tagging itself is audited on the tag; this records the decision.
 type InternalEventTagSuggestionAccepted struct{}
 
@@ -302,6 +310,14 @@ func (InternalEventExistingCustomerNoticeWithdrawn) EntityType() string {
 	return "existing_customer_notice"
 }
 
+func (InternalEventInstructionWordingCorrected) EventType() string {
+	return "communication_instruction.updated"
+}
+
+func (InternalEventInstructionWordingCorrected) EntityType() string {
+	return "communication_instruction"
+}
+
 func (InternalEventInternalMailHistoryCreated) EventType() string {
 	return "internal_mail_history.created"
 }
@@ -355,6 +371,10 @@ func (InternalEventMeetingProposalUpdated) EntityType() string { return "activit
 func (InternalEventReportingChanged) EventType() string { return "reporting.changed" }
 
 func (InternalEventReportingChanged) EntityType() string { return "dynamic" }
+
+func (InternalEventScheduledWordingCorrected) EventType() string { return "scheduled_send.updated" }
+
+func (InternalEventScheduledWordingCorrected) EntityType() string { return "scheduled_send" }
 
 func (InternalEventTagSuggestionAccepted) EventType() string { return "tag_suggestion.accepted" }
 
