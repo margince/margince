@@ -3,10 +3,7 @@
 
 package privacy
 
-import (
-	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/shared/kernel/retentionscope"
-)
+import "github.com/margince/margince/backend/internal/shared/kernel/retentionscope"
 
 // The selector table: which records each (object_type, category) policy scope
 // governs. Split out of retention.go because it is also the AUTHORABLE
@@ -78,30 +75,11 @@ var retentionSelectors = map[string]string{
 		  AND entered_at < now() - make_interval(days => $1) LIMIT $2`,
 	"ai_call_payload/content": `SELECT id FROM ai_call_payload
 		WHERE occurred_at < now() - make_interval(days => $1) LIMIT $2`,
-	// The verbatim provider original, aged on its own clock rather than on the
-	// activity's. Without this stage only the activity sweep and Art. 17 erasure
-	// reach raw_capture, so it grows for as long as the activity policy keeps.
-	//
-	// Gated on the activities read from it, and that gate is the whole safety
-	// of the stage. Every one of them must be live and outside the statutory
-	// floor and every legal hold, because the original carries all their
-	// content. The activity rows stay standing, which keeps the
-	// `(source_system, source_id)` tombstone against a replay.
-	//
-	// WHAT IT DOES NOT REACH: an original with no activity row at all, which an
-	// internal-only drop leaves behind. There the raw_capture row IS the
-	// tombstone, and deleting it would let a replay re-ingest a message the
-	// pipeline already judged. Those need the trace to carry the tombstone
-	// before they can be aged, which is not this stage's to invent.
+	// Originals follow their receipt clock. Linked activities retain the replay
+	// identity, while every correspondence floor and legal hold must release them.
 	"raw_capture/": `SELECT r.id FROM raw_capture r
-		WHERE r.received_at < now() - make_interval(days => $1)
-		  AND EXISTS (SELECT 1 FROM activity a WHERE ` + storekit.StoredOriginalSQL("a", "r") + `)
-		  AND NOT EXISTS (SELECT 1 FROM activity a
-		        WHERE ` + storekit.StoredOriginalSQL("a", "r") + `
-		          AND (a.archived_at IS NULL
-		               ` + correspondenceFloorPredicate(3, 4) + `
-		               AND NOT ` + retentionscope.HeldThroughAnyLink("a.id") + `) IS NOT TRUE)
-		LIMIT $2`,
+ WHERE r.received_at < now() - make_interval(days => $1)
+   AND ` + rawCaptureUnshielded(3, 4) + ` LIMIT $2`,
 	// The queue's recorded risk days, aged on the day they describe. A day and
 	// its verdicts exist to answer the same-day next-step figure over its
 	// window, which counts only days starting inside it; a day starting

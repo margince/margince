@@ -28,7 +28,7 @@ func TestTheBriefWriterReAsksThroughItsOwnParse(t *testing.T) {
 		// Valid JSON, refused by ParseBriefSections alone: sections is an object
 		// where the site reads a list.
 		First:  `{"sections":{"kind":"snapshot"}}`,
-		Second: groundedBriefReply,
+		Second: cited(inputFixture(), groundedBriefReply),
 	}
 	sections, err := writeWithModel(t.Context(), lane, briefCompanyID, inputFixture(), string(textlang.English))
 	if err != nil {
@@ -51,8 +51,8 @@ func TestTheQuestionAnswererReAsksThroughItsOwnParse(t *testing.T) {
 		// Valid JSON, refused by ParseBrief alone: sentences is a string where
 		// the site reads a list.
 		First: `{"sentences":"They sell managed hosting."}`,
-		Second: `{"sentences":[{"text":"They sell managed hosting.","evidence":[` +
-			`{"entity_type":"company","entity_id":"` + askCompanyID + `"}]}]}`,
+		Second: cited(askInput(), `{"sentences":[{"text":"They sell managed hosting.","evidence":[`+
+			`{"entity_type":"company","entity_id":"`+askCompanyID+`"}]}]}`),
 	}
 	answered, err := answerWithModel(t.Context(), lane, askMeetingPrep, askCompanyID,
 		askInput(), string(textlang.English))

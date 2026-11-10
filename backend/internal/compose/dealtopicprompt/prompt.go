@@ -13,6 +13,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
+	"github.com/margince/margince/backend/internal/shared/kernel/promptref"
 )
 
 // Input is what the model reads: one mail, and the deals it might be about,
@@ -55,8 +56,9 @@ func Prompt(fence promptfence.Fence, in Input) string {
 	prompt.WriteString("Email (untrusted):\n")
 	prompt.WriteString(fence.Wrap(fmt.Sprintf("Subject: %s\n%s", in.Subject, in.Body)) + "\n")
 	prompt.WriteString("Deals (judge each by its id):\n")
+	refs := Refs(in)
 	for _, deal := range in.Deals {
-		fmt.Fprintf(&prompt, "deal %s: %s", deal.ID, fence.WrapAuthored(deal.Name))
+		fmt.Fprintf(&prompt, "deal %s: %s", refs.For(deal.ID.String()), fence.WrapAuthored(deal.Name))
 		if deal.Project != "" {
 			prompt.WriteString(" (project: " + fence.WrapAuthored(deal.Project) + ")")
 		}
@@ -67,6 +69,16 @@ func Prompt(fence promptfence.Fence, in Input) string {
 	}
 	prompt.WriteString(`Return JSON: { "results": [ { "deal_id", "verdict", "confidence" } ] } with one entry per supplied deal id.`)
 	return prompt.String()
+}
+
+// Refs names each deal d1, d2, and so on, in the order the prompt lists them.
+// The model answers by these refs; a record id never reaches it.
+func Refs(in Input) *promptref.Refs {
+	refs := promptref.New("d")
+	for _, deal := range in.Deals {
+		refs.For(deal.ID.String())
+	}
+	return refs
 }
 
 // Ruleset names the prompt this build asks, so a changed prompt asks again. It

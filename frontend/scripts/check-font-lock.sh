@@ -20,8 +20,9 @@
 #      - a mono family inside a quoted TS/TSX string (an inline fontFamily, a
 #        style string, a constant) unless that string is itself a code rule.
 #
-# Fail-closed grep arm on top of the vitest suites (conformance.test.ts for the
-# families, design-system/mono.test.ts for mono) — same discipline even if the
+# Fail-closed grep arm on top of the census rules
+# (census/rules/conformance.census.ts for the families,
+# census/rules/mono.census.ts for mono) — same discipline even if the
 # test tree regresses. check-font-lock.test.sh plants each shape and requires
 # a verdict about it.
 #

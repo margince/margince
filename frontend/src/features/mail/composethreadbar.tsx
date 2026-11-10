@@ -144,6 +144,17 @@ export function ThreadBar({
     onSelect(id);
   };
   const count = recent.conversations.length;
+  const shown = formatNumber(count, locale);
+  // A page of only withheld or bulk mail holds no thread, yet older mail exists.
+  let earlier: string | null = null;
+  if (recent.more) {
+    earlier =
+      count > 0
+        ? plural("compose.earlierThreadsAtLeast", count, { count: shown })
+        : t("compose.earlierThreadsMayExist");
+  } else if (count > 0) {
+    earlier = plural("compose.earlierThreads", count, { count: shown });
+  }
   return (
     <div className="compose-threadbar-wrap">
       <Popover
@@ -166,12 +177,8 @@ export function ThreadBar({
               ) : (
                 <>
                   <strong>{t("compose.newThread")}</strong>
-                  {count > 0 && (
-                    <span className="compose-threadbar-count">
-                      {plural("compose.earlierThreads", count, {
-                        count: formatNumber(count, locale),
-                      })}
-                    </span>
+                  {earlier && (
+                    <span className="compose-threadbar-count">{earlier}</span>
                   )}
                 </>
               )}

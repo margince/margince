@@ -218,10 +218,31 @@ describe("PrivacyInboxCard", () => {
     expect(document.querySelectorAll(".dsr-actions button")).toHaveLength(0);
   });
 
-  // Opening a request is a THIRD grant: the POST writes the contact it names, so
-  // consent/dsr.go's CreateDSR asks `contact:update` rather than anything on the
-  // privacy object at all.
-  it("offers no New request to a reader who may work the queue but not write a contact", async () => {
+  // Filing a request is working the queue: consent/dsr.go's CreateDSR asks
+  // `privacy_request:update`. A role that writes contacts and only reads the
+  // queue, as the seeded Ops role does, was offered a form the server refuses.
+  it("offers no New request to a reader who may write a contact but not work the queue", async () => {
+    stubRoutes({
+      "GET /data-subject-requests": () => jsonResponse(DSRS),
+      "GET /me": () =>
+        jsonResponse(
+          meFixture({
+            roles: ["ops"],
+            allow: { privacy_request: ["read"], contact: ["update"] },
+          }),
+        ),
+    });
+    render(<RequestsPanel />);
+
+    // The queue answered, so this is about the missing grant and not about a
+    // card that never rendered.
+    expect(await screen.findByText(/anna@acme.test/)).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /new request/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("offers New request to a reader who may work the queue without writing contacts", async () => {
     stubRoutes({
       "GET /data-subject-requests": () => jsonResponse(DSRS),
       "GET /me": () =>
@@ -234,12 +255,9 @@ describe("PrivacyInboxCard", () => {
     });
     render(<RequestsPanel />);
 
-    // The queue answered, so this is about the missing grant and not about a
-    // card that never rendered.
-    expect(await screen.findByText(/anna@acme.test/)).toBeInTheDocument();
     expect(
-      screen.queryByRole("button", { name: /new request/i }),
-    ).not.toBeInTheDocument();
+      await screen.findByRole("button", { name: /new request/i }),
+    ).toBeInTheDocument();
   });
 
   // The mirror of both: the full set of grants offers both verbs, so the two

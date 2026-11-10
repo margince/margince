@@ -22,6 +22,7 @@ import type { MessageKey } from "../../i18n/en";
 import { useCan } from "../../lib/capability";
 import { extensionTitle } from "../../lib/extensions";
 import { useHealthScope, useHealthVisible } from "../../lib/healthscope";
+import { labelFor } from "../../lib/labelfor";
 import { unwrap } from "../../lib/problem";
 import { useViewerZone } from "../../lib/viewerzone";
 import { HealthCard } from "./healthcard";
@@ -90,7 +91,7 @@ function unitColumns(
             <span key={refusal.refusal}>
               {t("extIngest.refusalCount", {
                 count: formatNumber(refusal.refused, locale),
-                refusal: t(REFUSAL_LABEL[refusal.refusal]),
+                refusal: t(labelFor(REFUSAL_LABEL, refusal.refusal)),
               })}
             </span>
           ))}

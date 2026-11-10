@@ -22,6 +22,7 @@ fixture:
       at: "2026-07-18T14:00:00Z"
 expect:
   outcome: accepted
+  privacy: true
   # The one record this reader can be prepped from.
   answer: [intro_call]
   bands:

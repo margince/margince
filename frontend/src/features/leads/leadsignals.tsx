@@ -177,8 +177,8 @@ export function LeadManualSignals({
   };
   const set = useMutation({
     // The batch arrives as the mutation's variable, never read back out of
-    // render state (mutation-variable-coverage.test.ts): the click that
-    // carries it belongs to the render the rep was looking at.
+    // render state (census/rules/mutation-variable-coverage.census.ts). The
+    // click that carries it belongs to the render the rep was looking at.
     mutationFn: async (writes: readonly SetSignalRequest[]) => {
       // Sequential on purpose. Each PUT recomputes the lead's score inside
       // its own transaction, so three in flight at once would race that

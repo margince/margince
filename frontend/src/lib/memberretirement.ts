@@ -4,6 +4,7 @@
 import type { components } from "../api/schema";
 import type { Translator } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { labelFor } from "./labelfor";
 
 type Blocker = components["schemas"]["MemberRetirementBlocker"];
 type Consequence = components["schemas"]["MemberRetirementConsequence"];
@@ -64,5 +65,5 @@ export function memberRetirementConsequence(
   code: Consequence,
   t: Translator,
 ): string {
-  return t(CONSEQUENCES[code]);
+  return t(labelFor(CONSEQUENCES, code));
 }

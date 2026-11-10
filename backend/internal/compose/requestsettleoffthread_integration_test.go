@@ -7,6 +7,7 @@ package compose
 
 import (
 	"context"
+	"slices"
 	"testing"
 	"time"
 
@@ -14,8 +15,10 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -241,5 +244,110 @@ func TestAReplyOnTheThreadFoundBySubjectIsNotCalledASeparateEmail(t *testing.T) 
 	}
 	if seen != 1 {
 		t.Fatalf("the reply reaches the model %d times, want once", seen)
+	}
+}
+
+// Our reply filed before a request dated by its day, at that day's stored instant, answers it (occurredday.Answers).
+// The model reads that reply even under another subject, so the request the pass offers is judged.
+func TestADayTieReplyFiledFirstReachesTheModel(t *testing.T) {
+	o := setupOwed(t)
+	o.contact(t, "Pat Buyer", "pat@customer.example")
+	reply := o.weWrite(t, owedMail{
+		to: "pat@customer.example", subject: "Countersigned copy", inReplyTo: "dated@customer.example",
+		at: o.now.Add(-72 * time.Hour),
+	})
+	request := o.capture(t, owedMail{
+		from: "pat@customer.example", to: o.seat, subject: "Signed NDA",
+		messageID: "dated@customer.example", at: o.now.Add(-72 * time.Hour),
+	})
+	if o.threadKey(t, reply) != o.threadKey(t, request) {
+		t.Fatal("capture left the reply off the request's thread; the fixture proves nothing")
+	}
+	if err := database.WithWorkspaceTx(o.e.Admin(), o.e.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(), `UPDATE activity
+			SET occurred_at = $3, occurred_precision = CASE WHEN id = $1 THEN 'day' ELSE occurred_precision END
+			WHERE id IN ($1, $2)`, request, reply, occurredday.Anchor(o.now.Add(-72*time.Hour)))
+		return err
+	}); err != nil {
+		t.Fatalf("dating the request by its day: %v", err)
+	}
+	if applied, err := o.e.Activities.SetOwedVerdict(o.judge(), request, activities.OwedVerdictAsksUs,
+		"prompts-test", clocktest.Now(t)); err != nil || !applied {
+		t.Fatalf("judging the request: applied=%v err=%v", applied, err)
+	}
+
+	candidate, ok := o.offered(t, request)
+	if !ok {
+		t.Fatal("a request our reply answers by its day was never offered")
+	}
+	if !slices.ContainsFunc(o.evidence(t, candidate), func(message threadMessage) bool { return message.ID == reply }) {
+		t.Fatal("the reply that answers the request never reaches the model")
+	}
+}
+
+// askWithTiedCorrection captures a request, their second mail in its own second on its thread, and our later reply.
+func (o *owedEnv) askWithTiedCorrection(t *testing.T) (request, correction ids.UUID) {
+	t.Helper()
+	o.contact(t, "Pat Buyer", "pat@customer.example")
+	asked := clocktest.Now(t).Add(-3 * time.Hour).Truncate(time.Second)
+	request = o.capture(t, owedMail{
+		from: "pat@customer.example", to: o.seat, subject: "Signed NDA", messageID: "same-second@customer.example", at: asked,
+	})
+	correction = o.capture(t, owedMail{
+		from: "pat@customer.example", to: o.seat, subject: "Re: Signed NDA", inReplyTo: "same-second@customer.example",
+		messageID: "correction@customer.example", at: asked, authenticated: true,
+	})
+	if o.threadKey(t, correction) != o.threadKey(t, request) {
+		t.Fatal("capture left the correction off the request's thread; the fixture proves nothing")
+	}
+	if applied, err := o.e.Activities.SetOwedVerdict(o.judge(), request, activities.OwedVerdictAsksUs,
+		"prompts-test", clocktest.Now(t)); err != nil || !applied {
+		t.Fatalf("judging the request: applied=%v err=%v", applied, err)
+	}
+	o.weWrite(t, owedMail{
+		to: "pat@customer.example", subject: "Re: Signed NDA", inReplyTo: "same-second@customer.example",
+		at: asked.Add(time.Hour),
+	})
+	return request, correction
+}
+
+// Their second mail in the request's own second is no answer, but the model still reads it: it may correct the ask.
+func TestTheirMailAtTheRequestsInstantReachesTheModel(t *testing.T) {
+	o := setupOwed(t)
+	request, correction := o.askWithTiedCorrection(t)
+
+	candidate, ok := o.offered(t, request)
+	if !ok {
+		t.Fatal("a request with a reply on its thread was never offered")
+	}
+	if candidate.NewestAnswerID == correction {
+		t.Fatal("their mail at the request's instant was taken for an answer")
+	}
+	if !slices.ContainsFunc(o.evidence(t, candidate), func(message threadMessage) bool { return message.ID == correction }) {
+		t.Fatal("their mail at the request's instant never reaches the model")
+	}
+}
+
+// The verdict is bound to their tied mail as well. Edited after the model read it, the verdict is dropped.
+func TestAVerdictOverAnEditedTiedMailIsDropped(t *testing.T) {
+	o := setupOwed(t)
+	request, correction := o.askWithTiedCorrection(t)
+	candidate, ok := o.offered(t, request)
+	if !ok || !o.owed(t, request) {
+		t.Fatalf("the request was not offered while owed: offered=%v", ok)
+	}
+
+	body := "Please send the countersigned copy instead."
+	if _, err := o.e.Activities.UpdateActivity(o.e.Admin(), ids.From[ids.ActivityKind](correction),
+		activities.UpdateActivityInput{Body: &body}); err != nil {
+		t.Fatalf("editing their tied mail: %v", err)
+	}
+	if err := activities.NewStore(o.e.DB()).SettleRequest(o.judge(), activities.RequestSettlementInput{
+		Request: candidate, Verdict: activities.RequestSettled, Confidence: 0.95, DecidedBy: "test-model",
+	}); err != nil {
+		t.Fatalf("settling: %v", err)
+	}
+	if !o.owed(t, request) {
+		t.Fatal("a verdict over a tied mail edited after the model read it settled the request")
 	}
 }

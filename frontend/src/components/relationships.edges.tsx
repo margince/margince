@@ -3,6 +3,7 @@ import { api } from "../api/client";
 import type { MessageKey } from "../i18n/en";
 import { DEAL_COVERAGE_KEY } from "../lib/activitykeys";
 import type { EntityKind } from "../lib/entity";
+import { labelFor } from "../lib/labelfor";
 import { unwrap } from "../lib/problem";
 import type { RelationshipEntity } from "../lib/relationshipcandidates";
 import { KIND_LABELS } from "../lib/relationshipkinds";
@@ -134,7 +135,7 @@ export function kindLabelFor(
   ) {
     return "rel.kind.referred";
   }
-  return KIND_LABELS[rel.kind];
+  return labelFor(KIND_LABELS, rel.kind);
 }
 
 export function dateRange(

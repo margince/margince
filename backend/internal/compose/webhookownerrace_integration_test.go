@@ -41,7 +41,7 @@ func (r *afterFirstAuthorization) EffectiveRBAC(ctx context.Context, ws, user id
 
 // dealWebhook stores a subscription to deal.updated owned by owner, and
 // answers a deliverer whose receiver counts what it was sent.
-func dealWebhook(t *testing.T, e *integration.Env, owner ids.UUID, between func()) (*webhooks.Deliverer, agendaWebhookReceiver) {
+func dealWebhook(t *testing.T, e *integration.Env, owner ids.UUID, between func()) (*webhooks.Deliverer, *agendaWebhookReceiver) {
 	t.Helper()
 	cipher, err := webhooks.NewCipher(bytes.Repeat([]byte{0x5a}, webhooks.WebhookKeyBytes))
 	if err != nil {
@@ -56,9 +56,9 @@ func dealWebhook(t *testing.T, e *integration.Env, owner ids.UUID, between func(
 	}); err != nil {
 		t.Fatal(err)
 	}
-	receiver := agendaWebhookReceiver{}
+	receiver := newAgendaWebhookReceiver(t)
 	resolver := &afterFirstAuthorization{Resolver: identity.NewService(e.Pool), then: between}
-	return webhooks.NewDeliverer(store, receiver, nil, resolver, slog.Default()), receiver
+	return webhooks.NewDeliverer(store, receiver.client(t), nil, resolver, slog.Default()), receiver
 }
 
 func dealUpdated(deal ids.UUID) kevents.Envelope {
@@ -96,7 +96,7 @@ func TestAFirstWebhookAttemptIsCheckedAgainBeforeItsPost(t *testing.T) {
 			if err := deliverer.HandleEvent(context.Background(), dealUpdated(deal)); err != nil {
 				t.Fatal(err)
 			}
-			if got := receiver["/deals"]; got != tc.posts {
+			if got := receiver.sent("/deals"); got != tc.posts {
 				t.Fatalf("the receiver was sent %d delivery(ies), want %d (%s)", got, tc.posts,
 					e.WsScalar(t, `SELECT coalesce(string_agg(status || ':' || coalesce(last_error, ''), ';'), 'no row') FROM webhook_delivery`))
 			}

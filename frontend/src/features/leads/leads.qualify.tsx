@@ -25,6 +25,7 @@ import { defaultPipelineOf, usePipelines } from "../../lib/pipelines.queries";
 import { problemMessageOf, unwrap } from "../../lib/problem";
 import { useInstallationSettings } from "../../lib/uploadlimit";
 import { useViewerZone } from "../../lib/viewerzone";
+import { useLeadCompanyNameReading } from "./leadcompany";
 import {
   ExistingQualificationDeal,
   type QualificationDealChoice,
@@ -239,9 +240,14 @@ function QualificationForm({
     pipelines.data?.find((p) => p.id === pipelineId) ?? defaultPipeline;
   const stages = openStagesOf(chosenPipeline);
   const chosenStage = stages.find((s) => s.id === stageId) ?? stages[0];
+  // The linked company's own name, which a rename there may have moved away
+  // from what the lead typed. The deal this dialog offers to open carries the
+  // name into a record of its own, so the stale one would outlive the lead.
+  const company = useLeadCompanyNameReading(lead);
+  const companyName = company.name ?? leadIdentityName(lead);
   const suggestedName = chosenStage
-    ? `${lead.company_name ?? leadIdentityName(lead)} — ${chosenStage.name}`
-    : (lead.company_name ?? leadIdentityName(lead));
+    ? `${companyName} — ${chosenStage.name}`
+    : companyName;
 
   const qualify = useMutation({
     mutationFn: async (body: PromoteLeadRequest) => {
@@ -305,6 +311,7 @@ function QualificationForm({
     { selectedDeal, withDeal, invalidSelection },
     preview,
     { amountInvalid, amountWaitsForCurrency },
+    { nameSettling: company.settling && !dealName.trim() },
   );
   const name = leadIdentityName(lead);
 

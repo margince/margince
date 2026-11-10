@@ -215,9 +215,8 @@ export const PLATFORM_PAGES = [
       // read management holds on this page.
       allOf(reads("contact"), reads("consent_config")),
     ),
-    // Four cards, four objects. `contact:update` is what PrivacyInboxCard asks to
-    // open a subject request. The request is about a contact's record, so the
-    // grant is the contact's, not the queue's.
+    // Four cards, four objects. `privacy_request:update` files and works a
+    // subject request. `contact:update` decides a correction to a contact.
     changes: acts(
       writes("consent_config", ["create"]),
       writes("retention_policy"),

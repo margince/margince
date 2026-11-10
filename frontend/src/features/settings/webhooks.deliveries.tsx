@@ -48,6 +48,8 @@ export function webhookStatusBadge(
     // way of saying it landed.
     case "pending":
       return "info";
+    default:
+      return "info";
   }
 }
 

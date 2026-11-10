@@ -11,6 +11,7 @@ import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { showsAMessage, TASK_QUEUE_KEY } from "../lib/activitykeys";
+import { labelFor } from "../lib/labelfor";
 import { throwProblem, unwrap } from "../lib/problem";
 import { navigate } from "../lib/router";
 import { worklistKey } from "../lib/workkeys";
@@ -291,7 +292,7 @@ function TranscriptReadBody({
     <div className="transcript-reading">
       <p className="transcript-status">
         <Badge tone={report.status === "failed" ? "danger" : undefined}>
-          {t(READ_STATUS_LABELS[report.status])}
+          {t(labelFor(READ_STATUS_LABELS, report.status))}
         </Badge>
         {terminal && (
           <span className="t-caption">

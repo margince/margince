@@ -19,6 +19,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
@@ -220,5 +222,74 @@ func TestAWithdrawnCorrespondencePurposeOwesNoAcknowledgement(t *testing.T) {
 
 	if got.Supported {
 		t.Error("a withdrawn correspondence purpose resolved SUPPORTED for an opt-out acknowledgement")
+	}
+}
+
+// resolveForLead asks the same question about a lead holding the address.
+func (e *resolveEnv) resolveForLead(t *testing.T, lead ids.UUID) resolution {
+	t.Helper()
+	var out resolution
+	if err := e.store.db.Tx(e.ctx, func(tx pgx.Tx) error {
+		var err error
+		out, err = e.gate.resolveCategory(e.ctx, tx,
+			commsauthz.Request{Context: commsauthz.CategoryOptoutConfirmation},
+			subjectRef{Kind: entityLead, ID: lead.String(), Address: "lead@buyer.test"})
+		return err
+	}); err != nil {
+		t.Fatalf("resolving for the lead: %v", err)
+	}
+	return out
+}
+
+// plantLeadStop seeds a lead and a suppression on it of the given kind.
+func plantLeadStop(t *testing.T, e *resolveEnv, kind string, revoked bool) ids.UUID {
+	t.Helper()
+	lead := ids.NewV7()
+	if _, err := e.owner.Exec(context.Background(), `
+		INSERT INTO lead (id, full_name, email, source, captured_by)
+		VALUES ($1, 'Lead Refusal', 'lead@buyer.test', 'manual', 'human:x')`, lead); err != nil {
+		t.Fatalf("seeding the lead: %v", err)
+	}
+	if kind == "" {
+		return lead
+	}
+	if _, err := e.owner.Exec(context.Background(), `
+		INSERT INTO communication_suppression (lead_id, kind, source, captured_by, decided_by_level, revoked_at)
+		VALUES ($1, $2, 'test', 'human:x', $3, CASE WHEN $4 THEN now() END)`,
+		lead, kind, string(commsauthz.LevelSubject), revoked); err != nil {
+		t.Fatalf("planting the lead's stop: %v", err)
+	}
+	return lead
+}
+
+// A lead's live objection is the evidence its receipt rests on.
+func TestALeadsLiveObjectionOwesAnAcknowledgement(t *testing.T) {
+	e := setupResolve(t)
+	lead := plantLeadStop(t, e, commsauthz.ReasonObjection, false)
+
+	got := e.resolveForLead(t, lead)
+
+	if !got.Supported || got.Basis != commsauthz.BasisLegalObligation {
+		t.Fatalf("a lead's live objection resolved %+v, want supported on a legal obligation", got)
+	}
+}
+
+// A lead with no stop, a lifted one, or one that refused nothing is owed none.
+func TestALeadWithNoStandingRefusalOwesNoAcknowledgement(t *testing.T) {
+	for name, plant := range map[string]struct {
+		kind    string
+		revoked bool
+	}{
+		"no stop":     {kind: ""},
+		"lifted stop": {kind: commsauthz.ReasonObjection, revoked: true},
+		"hard bounce": {kind: commsauthz.ReasonHardBounce},
+	} {
+		t.Run(name, func(t *testing.T) {
+			e := setupResolve(t)
+			lead := plantLeadStop(t, e, plant.kind, plant.revoked)
+			if got := e.resolveForLead(t, lead); got.Supported {
+				t.Errorf("%s resolved supported for a lead's opt-out acknowledgement", name)
+			}
+		})
 	}
 }
