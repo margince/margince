@@ -4,7 +4,6 @@
 package compose
 
 import (
-	"context"
 	"encoding/json"
 	"strings"
 	"testing"
@@ -127,7 +126,7 @@ func TestTheToolSurfaceDecidesThroughAnEngineThatCanReleaseEveryKind(t *testing.
 		t.Fatal("no late effect is registered anywhere — this gate checked nothing")
 	}
 	// The engine the registry actually composes carries both halves.
-	approvalQueue(decidingApprovalsService(nil, SendPath{}, nil), nothingRunning{})
+	approvalQueue(decidingApprovalsService(nil, SendPath{}, nil), nil)
 
 	// And the one the registration list alone produces does not, so the check
 	// above is a check rather than a formality.
@@ -136,7 +135,7 @@ func TestTheToolSurfaceDecidesThroughAnEngineThatCanReleaseEveryKind(t *testing.
 			t.Fatal("an engine that cannot release a held draft was accepted as the tool surface's queue")
 		}
 	}()
-	approvalQueue(NewApprovalsServiceWithEffects(nil), nothingRunning{})
+	approvalQueue(NewApprovalsServiceWithEffects(nil), nil)
 }
 
 // Every kind this installation can RELEASE says whether releasing it sends.
@@ -188,8 +187,3 @@ func TestEveryReleasableKindSaysWhetherItsReleaseSends(t *testing.T) {
 		}
 	}
 }
-
-// nothingRunning is an automation engine with nothing in flight.
-type nothingRunning struct{}
-
-func (nothingRunning) PendingFor(context.Context, []ids.Ref) (bool, error) { return false, nil }

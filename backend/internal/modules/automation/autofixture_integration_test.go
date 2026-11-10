@@ -14,7 +14,6 @@ package automation
 // test runs on.
 
 import (
-	"cmp"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -181,8 +180,6 @@ type scriptedWorkflow struct {
 	// a case that wants a retry to proceed has to say so, exactly as a real
 	// handler does.
 	redrivable bool
-	// trigger replaces scriptedTrigger for a case whose event a real writer emits.
-	trigger string
 }
 
 const scriptedTrigger = "history.test_event"
@@ -190,7 +187,7 @@ const scriptedTrigger = "history.test_event"
 func (s scriptedWorkflow) Spec() workflow.Spec {
 	return workflow.Spec{
 		Name:                         s.name,
-		Trigger:                      workflow.Trigger{EventType: cmp.Or(s.trigger, scriptedTrigger)},
+		Trigger:                      workflow.Trigger{EventType: scriptedTrigger},
 		Tier:                         mcp.TierAutoExecute,
 		RedrivableWithoutDuplicating: s.redrivable,
 	}

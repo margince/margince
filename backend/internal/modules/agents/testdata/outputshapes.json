@@ -8122,6 +8122,9 @@
               ]
             }
           },
+          "automations_pending": {
+            "type": "integer"
+          },
           "check_again": {
             "type": "string"
           },

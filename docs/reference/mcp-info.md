@@ -17,7 +17,7 @@ input and output schema in folds below it. What a tool may do and whether a huma
 | Resources | 14 |
 | Tool catalog | 228.6 KB |
 | Resource catalog | 5.5 KB |
-| Approx. wire tokens | 59917 |
+| Approx. wire tokens | 59927 |
 | Largest tool | `read_context` (11.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -5670,6 +5670,9 @@ Renders its result in [`ui://margince/approval-queue.html`](#approval_queue_view
             "type": "object"
           },
           "type": "array"
+        },
+        "automations_pending": {
+          "type": "integer"
         },
         "check_again": {
           "type": "string"

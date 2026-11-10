@@ -59,10 +59,6 @@ type Subscriber struct {
 	batchHandler BatchHandler
 }
 
-// DefaultMinIdle is the reclaim window of a group that sets none: a delivered
-// entry whose consumer died is handled again within it.
-const DefaultMinIdle = 5 * time.Minute
-
 // NewSubscriber wires a handler to a consumer group. The consumer name is
 // host+pid: stable enough to reclaim its own pending entries after a
 // restart, unique enough that replicas never collide.
@@ -75,7 +71,7 @@ func NewSubscriber(rdb *redis.Client, group kevents.Group, handler Handler, log 
 		handler:  handler,
 		log:      log.With("group", group.Name),
 		block:    2 * time.Second,
-		minIdle:  DefaultMinIdle,
+		minIdle:  5 * time.Minute,
 		batch:    64,
 	}
 }

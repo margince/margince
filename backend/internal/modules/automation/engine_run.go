@@ -323,11 +323,6 @@ func (e *WorkflowEngine) recordApplyOutcome(ctx context.Context, h workflow.Hand
 	})
 }
 
-// runInFlightSQL is a run claimed for Apply with no outcome yet. claimRun inserts
-// it as 'applied' with no applied column. recordApplyOutcome then moves the
-// status or writes applied, which json.Marshal makes "null" rather than SQL NULL.
-const runInFlightSQL = `status = 'applied' AND applied IS NULL`
-
 // claimRun claims the (handler, key) row FIRST: whoever inserts runs; a
 // redelivery finds the claim and stops (AC-W3). Terminal-at-claim
 // outcomes (skipped, failed before Apply) insert directly in their final
