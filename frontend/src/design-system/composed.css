@@ -455,6 +455,14 @@
   flex-wrap: wrap;
   gap: var(--space-1) var(--space-2);
 }
+/* The figure and its chance of landing read as one: the ring sits beside the
+   value, and the close date keeps the trailing edge. */
+.deal-card .deal-worth {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  min-width: 0;
+}
 /* Tabular so a column of figures lines up digit for digit, and bold because it
    is the one thing compared from card to card. */
 .deal-card .deal-value {
