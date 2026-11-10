@@ -8,6 +8,7 @@ import { LinkedInChip } from "../../components/linkedinchip";
 import { FieldGrid, FieldRow } from "../../design-system/fieldgrid";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { useT } from "../../i18n";
+import { labelFor } from "../../lib/labelfor";
 import { type Edit, useRowBuilders } from "./companyrail";
 import { SidecarFieldValue } from "./companyraildetails";
 import { CompanyTagsSection } from "./companyrailtags";
@@ -44,7 +45,9 @@ export function CompanyProfileDetails({
       "relationship_types",
       t("company.relationshipTypes"),
       types.length > 0
-        ? types.map((type) => t(RELATIONSHIP_TYPE_LABELS[type])).join(", ")
+        ? types
+            .map((type) => t(labelFor(RELATIONSHIP_TYPE_LABELS, type)))
+            .join(", ")
         : undefined,
     ),
     compound(

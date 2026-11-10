@@ -17,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture/meetingmap"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/originalstore"
 )
 
 // cancellationIsTheLastSignTx answers whether no audit row and no import came
@@ -44,7 +45,7 @@ var meetingCaptureKeySQL = `SELECT coalesce(a.source_system, ''), coalesce(a.sou
 // storedCopiesSQL lists each calendar copy stored for meeting $1, with the
 // calendar it was read from. The copies are the key it was captured under ($2,
 // $3, read by seat $4) and each event id a seat's import recorded.
-const storedCopiesSQL = `SELECT copy.source_system, rc.payload, coalesce(owner.account_label, '')
+var storedCopiesSQL = `SELECT copy.source_system, ` + originalstore.SQL("rc") + `, coalesce(owner.account_label, '')
   FROM (SELECT $2::text AS source_system, $3::text AS source_id, $4::text AS seat
         UNION
         SELECT split_part(alias, ':', 1), regexp_replace(alias, '^[^:]*:[^:]*:', ''), ci.user_id::text
@@ -70,6 +71,10 @@ func noStoredCopyCancelledTx(ctx context.Context, tx pgx.Tx, c activities.Calend
 		var payload []byte
 		if err := rows.Scan(&source, &payload, &owner); err != nil {
 			return false, fmt.Errorf("compose: reading a meeting's stored calendar copies: %w", err)
+		}
+		payload, err = originalstore.RepairPayload(ctx, payload)
+		if err != nil {
+			return false, err
 		}
 		if settlement, readable := storedMeetingSettlement(source, owner, payload); readable && settlement == meetingmap.SettleCancel {
 			return false, nil

@@ -239,7 +239,7 @@ func (r *StageEvidenceReader) ask(
 			"error", clampToken(err.Error()))
 		return nil, nil
 	}
-	return payload.claims(), nil
+	return readStageEvidenceRefs(payload.claims(), spans), nil
 }
 
 // record writes the claims that clear the floor, and answers how many landed.

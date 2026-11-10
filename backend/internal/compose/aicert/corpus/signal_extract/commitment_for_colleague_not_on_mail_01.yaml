@@ -3,7 +3,7 @@ task: signal_extract
 site: thread_events
 source: hand_authored
 sanitized_by: hand_authored/claude-opus-5
-fixture: [{"direction": "outbound", "subject": "Product demo", "sent": "2026-09-07", "body": "Hi Jonas, product demo on the 5th at 10:00, online with Robin.", "participants": [{"key": "mira", "kind": "seat", "role": "from", "name": "Mira Chen", "address": ""}, {"key": "jonas", "kind": "contact", "role": "to", "name": "Jonas Weber", "address": ""}]}]
+fixture: [{"direction": "outbound", "subject": "Product demo", "sent": "2026-09-07", "body": "Hi Jonas, Robin will run the product demo on the 5th at 10:00, online.", "participants": [{"key": "mira", "kind": "seat", "role": "from", "name": "Mira Chen", "address": ""}, {"key": "jonas", "kind": "contact", "role": "to", "name": "Jonas Weber", "address": ""}]}]
 expect:
   outcome: accepted
   answer: [{"kind": "commitment_made", "message": 1, "promiser": ""}]

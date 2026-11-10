@@ -6,6 +6,7 @@ package agents
 import (
 	"context"
 	"encoding/json"
+	"slices"
 	"strings"
 	"testing"
 
@@ -66,8 +67,8 @@ func TestAMeetingListWithNoCalendarSaysItIsNotTheDiary(t *testing.T) {
 			env, out := listWithCalendar(t, calendar,
 				`{"record_type":"activity","filters":{"kind":"meeting","occurred_after":"2026-11-07T00:00:00Z"}}`)
 
-			if calendar.scope.Kind != "meeting" || !calendar.scope.Windowed {
-				t.Errorf("the seam was asked kind %q windowed %v, want the call's meeting window", calendar.scope.Kind, calendar.scope.Windowed)
+			if !slices.Equal(calendar.scope.Kinds, []string{"meeting"}) || !calendar.scope.Windowed {
+				t.Errorf("the seam was asked kinds %q windowed %v, want the call's meeting window", calendar.scope.Kinds, calendar.scope.Windowed)
 			}
 			if out.Calendar == nil || *out.Calendar != tc.calendar {
 				t.Errorf("calendar = %v, want %q, the field GET /activities publishes", out.Calendar, tc.calendar)
@@ -101,8 +102,8 @@ func TestAMeetingListFedByTheCalendarOrNotADiaryCarriesNoCaveat(t *testing.T) {
 
 	notADiary := &calendarAsked{}
 	env, out = listWithCalendar(t, notADiary, `{"record_type":"activity","filters":{"kind":"email"}}`)
-	if notADiary.scope.Kind != "email" || notADiary.scope.Windowed {
-		t.Errorf("the seam was asked kind %q windowed %v, want email with no window", notADiary.scope.Kind, notADiary.scope.Windowed)
+	if !slices.Equal(notADiary.scope.Kinds, []string{"email"}) || notADiary.scope.Windowed {
+		t.Errorf("the seam was asked kinds %q windowed %v, want email with no window", notADiary.scope.Kinds, notADiary.scope.Windowed)
 	}
 	if out.Calendar != nil || calendarCaveated(env) {
 		t.Errorf("an email list carries a calendar answer: %v, warnings %v", out.Calendar, env.Warnings)

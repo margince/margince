@@ -1,5 +1,6 @@
 import type { operations } from "../api/schema";
 import type { MessageKey } from "../i18n/en";
+import { labelFor } from "../lib/labelfor";
 
 type DealStatus = NonNullable<
   NonNullable<operations["listDeals"]["parameters"]["query"]>["status"]
@@ -24,7 +25,7 @@ export function dealStatusFilter(
 
 export function dealStatusLabel(value: string): MessageKey | undefined {
   const status = dealStatusFilter(value);
-  return status && DEAL_STATUS_LABEL[status];
+  return status && labelFor(DEAL_STATUS_LABEL, status);
 }
 
 // Won reads success, lost reads danger, an open deal carries no status tone.

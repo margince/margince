@@ -46,8 +46,10 @@ import {
   useConfiguredCompanyZone,
 } from "./lib/companyzone";
 import { useInstallationDescribed } from "./lib/installationcompany";
+import { notifyNavigate } from "./lib/instruments";
 import { markJourney } from "./lib/journeymarks";
 import { SPA_RELEASE } from "./lib/release";
+import { routePattern } from "./lib/routepattern";
 import { navigateReplacing, type Screen } from "./lib/router";
 import { AuthProbeError, consumeAuthExitNotice, useMe } from "./lib/session";
 import {
@@ -84,6 +86,8 @@ export function App() {
   // credential out of it (lib/router.tsx). A credential must leave the bar
   // whatever this function renders instead.
   const route = useRoute();
+  const pattern = routePattern(route);
+  useEffect(() => notifyNavigate(pattern), [pattern]);
   // BEFORE every other gate, the public screens included. A bundle and an api
   // from different releases disagree about the contract between them, so nothing
   // below here — the session probe, the booking page, the preference centre —

@@ -1,0 +1,50 @@
+name: the_buyers_budget_freeze_lowers_the_chances
+task: deal_verdict
+site: deal_verdict
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+# The buyer writes that the budget is frozen until next year. That is the
+# buyer's own word on the chances, so the probability goes down. The close
+# date is already in the spring and the mail names no new date, so it stays.
+fixture:
+  today: "2026-11-04"
+  deal:
+    name: "Visitor management for the head office"
+    stage: "Proposal sent"
+    amount: 15000
+    currency: EUR
+    close_date: "2027-03-31"
+    probability: 50
+  activities:
+    - kind: email
+      direction: outbound
+      at: "2026-10-21"
+      subject: "Offer for visitor management"
+      body: |
+        Hi Sven, attached is our offer for visitor management at the head
+        office, 15,000 EUR a year.
+    - kind: email
+      direction: inbound
+      at: "2026-11-03"
+      subject: "Re: Offer for visitor management"
+      body: |
+        Hi, bad news from our side: the budget is frozen until next year, and
+        nobody can tell me yet whether this project gets money then. I will
+        let you know when I hear more.
+expect:
+  outcome: accepted
+  answer:
+    - kind: set_probability
+  rubric: >
+    The buyer's own mail says the budget is frozen until next year, with no
+    word on whether the project gets money then. That lowers the chance of
+    winning below the deal's 50%.
+    Score high for one set_probability below 50 that cites the buyer's mail
+    of 2026-11-03 and names the frozen budget in its reason.
+    Score at the floor for a probability of 50 or more, a reason that cites
+    only our own offer, or any other change: the amount and the close date
+    of 2027-03-31 stand, and the mail names no date.
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40

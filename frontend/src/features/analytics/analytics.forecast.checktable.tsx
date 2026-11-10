@@ -15,6 +15,7 @@ import type {
 import { formatAnalyticsMoneyOrAbsent, formatDate } from "../../format/format";
 import { type Locale, useT } from "../../i18n";
 import { useCompanyZone } from "../../lib/companyzone";
+import { labelFor, valueFor } from "../../lib/labelfor";
 import { unwrap } from "../../lib/problem";
 import { replaceDial, useUrlParams } from "../../lib/urlstate";
 import { OutOfDateBadge } from "./analytics.forecast.freshness";
@@ -256,7 +257,11 @@ export function SeverityBadge({
     medium: "review.severityMedium",
     low: "review.severityLow",
   } as const;
-  return <Badge tone={tone[severity]}>{t(label[severity])}</Badge>;
+  return (
+    <Badge tone={valueFor(tone, severity, "default")}>
+      {t(labelFor(label, severity))}
+    </Badge>
+  );
 }
 export function sheetLabels(t: ReturnType<typeof useT>): ResolveSheetLabels {
   return {

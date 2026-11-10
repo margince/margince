@@ -58,12 +58,16 @@ func scenarioRow(sc Scenario, stamp string, set ScenarioRuns) ScenarioRecord {
 		JudgeBand:           caseJudgeBand(stats),
 		JudgeScores:         stats.scores,
 		JudgeNone:           set.Mechanical,
+		Privacy:             set.Privacy,
 		CommitmentBand:      sc.CommitmentBand,
 		Runs:                len(results),
 		ReportedAccepted:    tally.accepted,
 		ReportedWrongAnswer: tally.wrongAnswer,
 		ReportedInvalid:     tally.invalid,
 		ReportedAbstained:   tally.abstained,
+	}
+	if set.Privacy {
+		row.Leaks = &stats.leaks
 	}
 	if !set.Mechanical {
 		row.Bands = &RowBands{CertifiedMin: set.Bands.CertifiedMin, DegradedMin: set.Bands.DegradedMin, Floor: set.Bands.Floor}
@@ -142,72 +146,129 @@ type runOutcome struct {
 // scenario: the request is the one the site's own code issues and the verdict
 // is the one the site's own validator reaches, so a run measures what ships
 // instead of a corpus author's description of it.
-func runOnce(ctx context.Context, candidate *ai.Router, candidateRec *traceRecorder, judge *ai.Router, judgeRec *traceRecorder, sc Scenario, task ai.Task, census *aitasks.Registry, log *slog.Logger, trace *payloadTrace, run, attempt int) (runOutcome, error) {
+func runOnce(ctx context.Context, lane runLane, sc Scenario, task ai.Task, census *aitasks.Registry, log *slog.Logger, trace *payloadTrace, run, attempt int) (measuredRun, error) {
+	bound, err := prepareCase(census, task, sc)
+	if err != nil {
+		return measuredRun{}, err
+	}
+
+	recorder := &recordingCompleter{next: routedCompleter{router: lane.candidate, task: task}}
+	caseTrace, pooled, err := driveCandidate(ctx, bound.prepared, recorder, lane.candidateRec, task, sc, run, attempt, trace, log)
+	if err != nil {
+		return measuredRun{}, err
+	}
+	if pooled.Degraded {
+		return measuredRun{outcome: runOutcome{RunResult: RunResult{Degraded: true}}}, nil
+	}
+	scored, err := scoreAnswer(ctx, bound.prepared, bound.scope, caseTrace, sc, task, pooled, log)
+	if err != nil {
+		return measuredRun{}, err
+	}
+	measured := measuredRun{outcome: scored.outcome}
+	switch {
+	case !scored.outcome.delivered():
+		// No answer to keep, only the routing it was refused under.
+		measured.evidence = &replayEvidence{Routing: replayRouting}
+	case recorder.replayable():
+		// Losing the evidence costs a later restart this run, never this run itself.
+		if measured.evidence, err = recorder.evidence(pooled); err != nil {
+			log.WarnContext(ctx, "aicert: this run cannot be journaled for replay — a restart will pay for it again",
+				"task", string(task), "scenario", sc.Name, "run", run, "err", err)
+		}
+	}
+	if !scored.judged {
+		return measured, nil
+	}
+
+	graded := asGraded(sc, census)
+	judgeMark := lane.judgeRec.mark()
+	judged, err := judgeScore(ctx, lane.judge, lane.judgeRec, graded, caseTrace, scored.output, log)
+	if err != nil {
+		// The same debt the candidate side settles: a judge call that failed
+		// still spent. driveRun may discard this whole attempt, so the trace is
+		// the only place its cost and its prompt can still be read.
+		traceSpentCalls(ctx, trace, "judge", task, sc, run, attempt, lane.judgeRec, judgeMark, log)
+		return measuredRun{}, fmt.Errorf("judge: %w", unservable(judgeRole, err))
+	}
+	judgeCalls, err := lane.judgeRec.terminalsSince(judgeMark)
+	if err != nil {
+		return measuredRun{}, fmt.Errorf("judge: %w", err)
+	}
+	traceCalls(ctx, trace, "judge", task, sc, run, attempt, judgeCalls, log)
+	if measured.evidence != nil {
+		if measured.evidence.GraderDigest, err = graderDigest(graded, caseTrace, scored.output); err != nil {
+			return measuredRun{}, fmt.Errorf("judge: %w", err)
+		}
+	}
+
+	measured.outcome.Score = judged.score
+	measured.outcome.JudgeScores = judged.scores
+	measured.outcome.Ungraded = judged.ungraded
+	measured.outcome.JudgeServedModel = judged.servedModel
+	measured.outcome.JudgeDegraded = judged.degraded
+	return measured, nil
+}
+
+// boundCase is the certification case a scenario's site binds, prepared from
+// the scenario's fixture, with the scope its factory certifies.
+type boundCase struct {
+	prepared aitasks.PreparedCase
+	scope    string
+}
+
+// prepareCase builds the certification case the scenario's site binds, from
+// the scenario's own fixture.
+func prepareCase(census *aitasks.Registry, task ai.Task, sc Scenario) (boundCase, error) {
 	factory, bound := census.CaseFor(task, sc.Site)
 	if !bound {
-		return runOutcome{}, fmt.Errorf("no certification case is bound to site %s/%s", task, sc.Site)
+		return boundCase{}, fmt.Errorf("no certification case is bound to site %s/%s", task, sc.Site)
 	}
 	prepared, err := factory.Prepare(json.RawMessage(sc.Fixture), json.RawMessage(sc.Expect.Answer))
 	if err != nil {
-		return runOutcome{}, fmt.Errorf("preparing the case: %w", err)
+		return boundCase{}, fmt.Errorf("preparing the case: %w", err)
 	}
+	return boundCase{prepared: prepared, scope: aitasks.ScopeOf(factory)}, nil
+}
 
-	caseTrace, pooled, err := driveCandidate(ctx, prepared, candidate, candidateRec, task, sc, run, attempt, trace, log)
-	if err != nil {
-		return runOutcome{}, err
-	}
-	if pooled.Degraded {
-		return runOutcome{RunResult: RunResult{Degraded: true}}, nil
-	}
+// scoredAnswer is a run's candidate side as this build grades it, and whether
+// a judge is asked about it.
+type scoredAnswer struct {
+	outcome runOutcome
+	output  string
+	judged  bool
+}
+
+// scoreAnswer grades what the candidate answered: the site's validator, the
+// caps, and the tally rule. A live run and a replayed one both go through it,
+// so a replay is graded by the code that runs now.
+func scoreAnswer(ctx context.Context, prepared aitasks.PreparedCase, scope string, caseTrace aitasks.Trace, sc Scenario, task ai.Task,
+	pooled runCalls, log *slog.Logger,
+) (scoredAnswer, error) {
 	// A withheld or abandoned run has no reply to validate: the site's own path
 	// reads it as no usable answer, which runEntry records as invalid.
 	var validated validation
 	if pooled.Withheld == "" && !pooled.Abandoned {
+		var err error
 		if validated, err = validateRun(ctx, prepared, caseTrace, sc, task, pooled, log); err != nil {
-			return runOutcome{}, err
+			return scoredAnswer{}, err
 		}
 	}
 	entry := runEntry(pooled, validated)
 	outcome := candidateSideRun(candidateSide{
-		output: validated.output, outcome: entry.outcome, passed: entry.passed,
-		scope: aitasks.ScopeOf(factory), pooled: pooled,
+		output: validated.output, outcome: entry.outcome, passed: entry.passed, scope: scope, pooled: pooled,
 	})
+	outcome.Leak = entry.leak
 	outcome.AnswerConfidence = keptConfidence(prepared, caseTrace, entry.passed)
 	outcome.ContextApplied = len(caseTrace.Requests) > 0 && caseTrace.Requests[0].ContextFingerprint != ""
 	if !entry.graded {
 		log.WarnContext(ctx, "aicert: this run has no whole answer, so it fails and is not sent to the judge",
 			"task", string(task), "scenario", sc.Name, "site", sc.Site, "withheld", pooled.Withheld, "abandoned", pooled.Abandoned, "truncated", pooled.Truncated)
-		outcome.Ungraded = true
-		return outcome, nil
 	}
 	// A case declaring judge: none is graded by the check above alone, so no
 	// judge is asked and the run carries no opinion.
-	if !sc.Expect.Judged() {
-		outcome.Ungraded = true
-		return outcome, nil
-	}
-
-	judgeMark := judgeRec.mark()
-	judged, err := judgeScore(ctx, judge, judgeRec, asGraded(sc, census), caseTrace, validated.output, log)
-	if err != nil {
-		// The same debt the candidate side settles: a judge call that failed
-		// still spent, and driveRun may discard this whole attempt, so the
-		// trace is the only place its cost and its prompt can still be read.
-		traceSpentCalls(ctx, trace, "judge", task, sc, run, attempt, judgeRec, judgeMark, log)
-		return runOutcome{}, fmt.Errorf("judge: %w", unservable(judgeRole, err))
-	}
-	judgeCalls, err := judgeRec.terminalsSince(judgeMark)
-	if err != nil {
-		return runOutcome{}, fmt.Errorf("judge: %w", err)
-	}
-	traceCalls(ctx, trace, "judge", task, sc, run, attempt, judgeCalls, log)
-
-	outcome.Score = judged.score
-	outcome.JudgeScores = judged.scores
-	outcome.Ungraded = judged.ungraded
-	outcome.JudgeServedModel = judged.servedModel
-	outcome.JudgeDegraded = judged.degraded
-	return outcome, nil
+	judged := entry.graded && sc.Expect.Judged()
+	outcome.Ungraded = !judged
+	return scoredAnswer{outcome: outcome, output: validated.output, judged: judged}, nil
 }
 
 // validation is what the site's own validator and the scenario's caps made of
@@ -216,6 +277,8 @@ type validation struct {
 	output, outcome string
 	// asExpected is the outcome the scenario named, inside its caps.
 	asExpected bool
+	// leak is the site's own word that the reply failed a privacy check.
+	leak bool
 }
 
 // validateRun runs the site's own validator over the site's own trace: Evaluate
@@ -248,6 +311,7 @@ func validateRun(ctx context.Context, prepared aitasks.PreparedCase, caseTrace a
 	// presentation, not a defect).
 	return validation{
 		output: ai.Unfence(caseTrace.Output), outcome: evaluated.Result, asExpected: outcomeAsExpected && capsOK,
+		leak: evaluated.Leak,
 	}, nil
 }
 
@@ -269,8 +333,8 @@ func keptConfidence(prepared aitasks.PreparedCase, trace aitasks.Trace, kept boo
 // tallyEntry is how one run enters its scenario's tally: the outcome counted,
 // whether it passed, and whether a judge is asked about it.
 type tallyEntry struct {
-	outcome        string
-	passed, graded bool
+	outcome              string
+	passed, graded, leak bool
 }
 
 // runEntry decides how a run enters the tally, which is part of the grading
@@ -292,7 +356,7 @@ func runEntry(pooled runCalls, validated validation) tallyEntry {
 	case pooled.Truncated:
 		return tallyEntry{outcome: validated.outcome}
 	default:
-		return tallyEntry{outcome: validated.outcome, passed: validated.asExpected, graded: true}
+		return tallyEntry{outcome: validated.outcome, passed: validated.asExpected, graded: true, leak: validated.leak}
 	}
 }
 
@@ -342,11 +406,11 @@ type candidateSide struct {
 // every call THIS run made and nothing a previous one left behind. A run whose
 // calls were not all served by one model is refused here rather than pooled: it
 // has no single (provider, model) heading to be certified under.
-func driveCandidate(ctx context.Context, prepared aitasks.PreparedCase, candidate *ai.Router, candidateRec *traceRecorder,
+func driveCandidate(ctx context.Context, prepared aitasks.PreparedCase, completer aitasks.Completer, candidateRec *traceRecorder,
 	task ai.Task, sc Scenario, run, attempt int, trace *payloadTrace, log *slog.Logger,
 ) (aitasks.Trace, runCalls, error) {
 	mark := candidateRec.mark()
-	caseTrace, runErr := prepared.Run(ctx, routedCompleter{router: candidate, task: task})
+	caseTrace, runErr := prepared.Run(ctx, completer)
 	withheld := withheldReason(runErr)
 	abandoned := errors.Is(runErr, ai.ErrAnswerAbandoned)
 	if runErr != nil {

@@ -12,6 +12,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"slices"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/capture"
@@ -37,12 +38,13 @@ func readerCalendar(ctx context.Context, registry *capture.Registry) (crmcontrac
 }
 
 // activityListCalendar is what an activity list owes about the reader's
-// calendar, and whether it owes anything. A meeting list, or a time window over
-// every kind, reads as the reader's diary. A list held to one record, project
-// or assignee does not. A reader refused their own connections is owed nothing.
+// calendar, and whether it owes anything. A list that holds meetings, or a
+// time window over every kind, reads as the reader's diary. A list held to one
+// record, project or assignee does not. A reader refused their own connections
+// is owed nothing.
 func activityListCalendar(registry *capture.Registry) func(ctx context.Context, scope datasource.ActivityListScope) (calendar crmcontracts.ReaderCalendar, owed bool, err error) {
 	return func(ctx context.Context, scope datasource.ActivityListScope) (crmcontracts.ReaderCalendar, bool, error) {
-		readsAsDiary := scope.Kind == string(crmcontracts.ActivityKindMeeting) || (scope.Kind == "" && scope.Windowed)
+		readsAsDiary := slices.Contains(scope.Kinds, string(crmcontracts.ActivityKindMeeting)) || (len(scope.Kinds) == 0 && scope.Windowed)
 		if !readsAsDiary || scope.Narrowed {
 			return "", false, nil
 		}

@@ -31,6 +31,7 @@ import { Select } from "../../design-system/select";
 import { useToast } from "../../design-system/toast";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { labelFor } from "../../lib/labelfor";
 import { problemCodeOf } from "../../lib/problem";
 import { useMe } from "../../lib/session";
 import {
@@ -89,7 +90,10 @@ export function OwnerPicker({
   const rosterHint = useRosterHint(roster, useRosterPartial("user", true));
   // Naming nobody follows the scope dial, so the empty choice says which
   // population that is; "My Worklist" over the whole team misstates it.
-  const options = [{ value: "", label: t(NOBODY_NAMED[scope]) }, ...contacts];
+  const options = [
+    { value: "", label: t(labelFor(NOBODY_NAMED, scope)) },
+    ...contacts,
+  ];
   return (
     <Field
       label={t("worklist.owner.visibleLabel")}

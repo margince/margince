@@ -14,10 +14,12 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"runtime/debug"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 
+	"github.com/margince/margince/backend/internal/platform/instrument"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -216,6 +218,7 @@ func (w *extJobWorkspaceWorker) tick(ctx context.Context) (err error) {
 	defer rt.release()
 	defer func() {
 		if r := recover(); r != nil {
+			instrument.Panic(ctx, r, debug.Stack())
 			w.log.Error("extension job tick panicked",
 				"unit", string(w.decl.Unit), "job", w.decl.Job, "kind", w.decl.ChildKind(), "panic", r)
 			err = fmt.Errorf("compose: extension %q job %q panicked: %v", w.decl.Unit, w.decl.Job, r)

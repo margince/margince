@@ -500,7 +500,7 @@ it("reads older meetings when the reader asks for them", async () => {
   expect(asked).toHaveLength(2);
   for (const url of asked) {
     expect(url.searchParams.get("entity_id")).toBe("p-1");
-    expect(url.searchParams.get("kind")).toBe("meeting");
+    expect(url.searchParams.getAll("kind")).toEqual(["meeting"]);
   }
   expect(asked[0].searchParams.get("cursor")).toBeNull();
   expect(asked[1].searchParams.get("cursor")).toBe("c-2");

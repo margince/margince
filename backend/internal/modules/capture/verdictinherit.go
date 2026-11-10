@@ -115,8 +115,12 @@ func inheritedVerdictTx(ctx context.Context, tx pgx.Tx, rec connector.Normalized
 		return "", fmt.Errorf("capture: reading this thread's verdict: %w", err)
 	}
 
+	status, err = applicableThreadVerdictTx(ctx, tx, status)
+	if err != nil {
+		return "", err
+	}
 	switch status {
-	case VerdictHeld, VerdictUnsure, VerdictHeldByOwner:
+	case VerdictPending, VerdictHeld, VerdictUnsure, VerdictHeldByOwner:
 		return status, nil
 	case VerdictCleared, VerdictSharedByOwner:
 		if senderWasSeen(rec, seen) && !recordCarriesDocument(rec) {
@@ -128,9 +132,8 @@ func inheritedVerdictTx(ctx context.Context, tx pgx.Tx, rec connector.Normalized
 		if err := reopenClearedThreadTx(ctx, tx, rec.ThreadKey); err != nil {
 			return "", err
 		}
-		return VerdictPending, nil
+		return applicableThreadVerdictTx(ctx, tx, VerdictPending)
 	}
-	// pending: nothing has concluded yet, so the posture decides.
 	return "", nil
 }
 
@@ -217,4 +220,19 @@ func reopenClearedThreadTx(ctx context.Context, tx pgx.Tx, threadKey string) err
 		return fmt.Errorf("capture: re-opening the thread's verdict: %w", err)
 	}
 	return nil
+}
+
+// Pending questions hold new mail only while this mailbox still asks for classification.
+func applicableThreadVerdictTx(ctx context.Context, tx pgx.Tx, status string) (string, error) {
+	if status != VerdictPending {
+		return status, nil
+	}
+	posture, err := mailboxPostureTx(ctx, tx)
+	if err != nil {
+		return "", err
+	}
+	if posture != PostureClassified {
+		return "", nil
+	}
+	return status, nil
 }

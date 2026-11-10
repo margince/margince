@@ -64,3 +64,11 @@
 .held-threads-filters > :last-child {
   width: auto;
 }
+
+/* The contact the list is narrowed to, and the way back to the whole list. */
+.held-threads-contact {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2);
+}

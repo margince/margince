@@ -115,6 +115,7 @@ const company360 = {
     data: [
       {
         contact_id: "p-1",
+        attachable: true,
         full_name: "Dana Buyer",
         title: "Head of Fleet",
         primary_email: "dana@brandt.example",
@@ -380,6 +381,10 @@ export const CompanyDeals: Story = {
           // contract grant; without it the upper panel is not drawn at all and
           // the tab is back to a single card.
           state_strip: {
+            account: {
+              lifecycle: "customer",
+              relationship_types: ["customer"],
+            },
             contracts: {
               active_count: 2,
               priced_count: 2,

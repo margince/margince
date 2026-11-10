@@ -2,14 +2,13 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { readFileSync } from "node:fs";
-import { dirname } from "node:path";
+import { readdirSync, readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { cleanup, render } from "@testing-library/react";
 import { Fragment, type ReactNode } from "react";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { selectorList, splitTopLevel } from "../../scripts/lib/css-rules";
-import { filesMatching } from "../../scripts/lib/source-tree";
 import { withoutComments } from "../testing/css";
 import { Disclosure, TableScroll } from "./atoms";
 import {
@@ -113,7 +112,10 @@ function prepared(sheet: string): string {
   );
 }
 
-const sheets = filesMatching(here, /\.css$/);
+// The design system keeps its sheets flat in this folder.
+const sheets = readdirSync(here)
+  .filter((name) => name.endsWith(".css"))
+  .map((name) => join(here, name));
 let installed: HTMLStyleElement | undefined;
 
 beforeAll(() => {
