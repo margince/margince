@@ -13,20 +13,33 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/assignments"
 	"github.com/margince/margince/backend/internal/modules/collections"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/signals"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/workforce"
 )
 
 type memberWork struct{ handoverSeam }
 
-func (s memberWork) Inspect(ctx context.Context, tx pgx.Tx, source ids.UUID, lock bool) (identity.MemberWorkInspection, error) {
+func (s memberWork) Inspect(ctx context.Context, tx pgx.Tx, source ids.UUID, target *ids.UUID, lock bool) (identity.MemberWorkInspection, error) {
 	var report identity.MemberWorkInspection
 	counts := &report.Owned
 	stamp := []string{}
+	member, present, err := memberWorkReceiverTx(ctx, tx, target)
+	if err != nil {
+		return report, err
+	}
+	var receiver *principal.Principal
+	if present {
+		receiver = &member
+	}
+
 	tally := handoverTally(counts)
 	tally[string(recordTypeActivity)] = &counts.Task
 	tally["signal"] = &report.Signals
@@ -44,22 +57,17 @@ func (s memberWork) Inspect(ctx context.Context, tx pgx.Tx, source ids.UUID, loc
 			continue
 		}
 		seen[table] = true
-		query := fmt.Sprintf("SELECT id, version FROM %s WHERE %s ORDER BY id", pgx.Identifier{table}.Sanitize(), memberHandoverPredicate(table))
-		if lock {
-			query += " FOR UPDATE"
-		}
-		rows, err := tx.Query(ctx, query, pgx.StrictNamedArgs{memberSourceArgument: source})
-		if err != nil {
-			return report, err
-		}
-		pins, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (string, error) {
-			var id ids.UUID
-			var version int64
-			if err := row.Scan(&id, &version); err != nil {
-				return "", err
+		if table == handoverAssignmentTable || table == handoverHandoffTable {
+			snapshot, err := inspectMemberStaffingTx(ctx, tx, table, source, receiver)
+			if err != nil {
+				return report, err
 			}
-			return fmt.Sprintf("%s:%s:%d", table, id, version), nil
-		})
+			*tally[table] = snapshot.Owned
+			*handoverTally(&report.Transferable)[table] = snapshot.Transferable
+			stamp = append(stamp, snapshot.Stamp...)
+			continue
+		}
+		pins, err := memberReferencePinsTx(ctx, tx, table, source, lock)
 		if err != nil {
 			return report, err
 		}
@@ -78,6 +86,48 @@ func (s memberWork) Inspect(ctx context.Context, tx pgx.Tx, source ids.UUID, loc
 	return report, err
 }
 
+func memberReferencePinsTx(ctx context.Context, tx pgx.Tx, table string, source ids.UUID, lock bool) ([]string, error) {
+	query := fmt.Sprintf("SELECT id, version FROM %s WHERE %s ORDER BY id", pgx.Identifier{table}.Sanitize(), memberHandoverPredicate(table))
+	if lock {
+		query += " FOR UPDATE"
+	}
+	rows, err := tx.Query(ctx, query, pgx.StrictNamedArgs{memberSourceArgument: source})
+	if err != nil {
+		return nil, err
+	}
+	return pgx.CollectRows(rows, func(row pgx.CollectableRow) (string, error) {
+		var id ids.UUID
+		var version int64
+		if err := row.Scan(&id, &version); err != nil {
+			return "", err
+		}
+		return fmt.Sprintf("%s:%s:%d", table, id, version), nil
+	})
+}
+
+func memberWorkReceiverTx(ctx context.Context, tx pgx.Tx, target *ids.UUID) (principal.Principal, bool, error) {
+	if target == nil {
+		return principal.Principal{}, false, nil
+	}
+	members, err := identity.MemberPrincipalsTx(ctx, tx, []ids.UUID{*target})
+	if err != nil {
+		return principal.Principal{}, false, err
+	}
+	receiver, exists := members[*target]
+	return receiver, exists, nil
+}
+
+func inspectMemberStaffingTx(ctx context.Context, tx pgx.Tx, table string, source ids.UUID, receiver *principal.Principal) (workforce.MemberWorkSnapshot, error) {
+	switch table {
+	case handoverAssignmentTable:
+		return assignments.InspectMemberAssignmentsTx(ctx, tx, source, receiver)
+	case handoverHandoffTable:
+		return contacts.InspectMemberHandoffsTx(ctx, tx, source, receiver)
+	default:
+		return workforce.MemberWorkSnapshot{}, apperrors.ErrInvalidArgument
+	}
+}
+
 func memberHandoverPredicate(table string) string {
 	var clauses []string
 	for _, reference := range slices.Sorted(maps.Keys(memberReferences)) {
@@ -94,7 +144,10 @@ func (s memberWork) Retire(ctx context.Context, tx pgx.Tx, source ids.UUID, targ
 	if merge && target != nil {
 		ctx = auth.WithConsolidatedMembers(ctx, source, *target)
 	}
-	before, err := s.Inspect(ctx, tx, source, true)
+	if err := assignments.ArchiveRetiredMemberAssignmentsTx(ctx, tx, source); err != nil {
+		return err
+	}
+	before, err := s.Inspect(ctx, tx, source, target, true)
 	if err != nil {
 		return err
 	}
@@ -116,19 +169,19 @@ func (s memberWork) Retire(ctx context.Context, tx pgx.Tx, source ids.UUID, targ
 	} else if err := signals.ArchiveMemberSignalsTx(ctx, tx, source); err != nil {
 		return err
 	}
-	after, err := s.Inspect(ctx, tx, source, true)
+	after, err := s.Inspect(ctx, tx, source, target, true)
 	left := after.Owned
 	if err != nil {
 		return err
 	}
-	if left.Contact+left.Company+left.Lead+left.Deal+left.Project+left.Task+left.List+after.Signals > 0 {
+	if handoverWorkCount(left)+after.Signals > 0 {
 		return fmt.Errorf("%w: some work could not be transferred; nothing was removed", apperrors.ErrConflict)
 	}
 	return nil
 }
 
 func (s memberWork) transferMemberWork(ctx context.Context, tx pgx.Tx, source ids.UUID, target *ids.UUID, merge bool, work crmcontracts.HandoverCounts) error {
-	if work.Contact+work.Company+work.Lead+work.Deal+work.Project+work.Task+work.List == 0 {
+	if handoverWorkCount(work) == 0 {
 		return nil
 	}
 	if target == nil {

@@ -261,6 +261,11 @@ func (s *Store) CreateDSR(ctx context.Context, in CreateDSRInput) (dsrRow, error
 		if out, found, err = agentsOpenCase(ctx, tx, in); err != nil || found {
 			return err
 		}
+		if in.AssigneeID != nil {
+			if err := requireCaseAssignee(ctx, tx, in.AssigneeID.UUID, fieldAssigneeID); err != nil {
+				return err
+			}
+		}
 		computed, rule, err := s.requestDeadlineTx(ctx, tx, in.Kind, received)
 		if err != nil {
 			return err

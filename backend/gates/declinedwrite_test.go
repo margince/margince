@@ -38,12 +38,9 @@ import (
 // outcomeMarkers are the selectors that make a declined write visible. The row
 // count off the command tag, a row scanned back out, or a storekit helper.
 var outcomeMarkers = map[string]bool{
-	"RowsAffected":         true,
-	"QueryRow":             true,
-	"CollectOneRow":        true,
-	"CollectExactlyOneRow": true,
-	"UpdateReturning":      true,
-	"ClaimRow":             true,
+	"RowsAffected":    true,
+	"UpdateReturning": true,
+	"ClaimRow":        true,
 }
 
 // returningRow is the other spelling. The statement asks for the row back, so
@@ -110,18 +107,44 @@ func countingHelpers(t *testing.T, cache map[string]map[string]bool, dir string)
 		return known
 	}
 	known := map[string]bool{}
-	for _, file := range parsePackageFiles(t, dir) {
-		for _, decl := range file.Decls {
-			fn, ok := decl.(*ast.FuncDecl)
-			if !ok || fn.Body == nil {
-				continue
+	callees := map[string][]string{}
+	hasExec := map[string]bool{}
+	declarations := outcomeDeclarations(t, dir)
+	for _, group := range declarations {
+		for _, fn := range group {
+			for _, statement := range gatekit.SQLStatementsOf(fn.Body) {
+				if returningRow.MatchString(statement) {
+					known[fn.Name.Name] = true
+				}
 			}
-			ast.Inspect(fn.Body, func(n ast.Node) bool {
-				if sel, ok := n.(*ast.SelectorExpr); ok && outcomeMarkers[sel.Sel.Name] {
+			ast.Inspect(fn.Body, func(node ast.Node) bool {
+				if call, ok := node.(*ast.CallExpr); ok {
+					if selector, ok := call.Fun.(*ast.SelectorExpr); ok && selector.Sel.Name == "Exec" {
+						hasExec[fn.Name.Name] = true
+					}
+					if called := outcomeLocalCall(fn, call, declarations); called != "" {
+						callees[fn.Name.Name] = append(callees[fn.Name.Name], called)
+					}
+				}
+				if selector, ok := node.(*ast.SelectorExpr); ok && outcomeMarkers[selector.Sel.Name] {
 					known[fn.Name.Name] = true
 				}
 				return true
 			})
+		}
+	}
+	for changed := true; changed; {
+		changed = false
+		for caller, calls := range callees {
+			if known[caller] || hasExec[caller] {
+				continue
+			}
+			for _, called := range calls {
+				if known[called] {
+					known[caller], changed = true, true
+					break
+				}
+			}
 		}
 	}
 	cache[dir] = known

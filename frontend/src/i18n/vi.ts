@@ -8309,6 +8309,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "analytics.sdrReading.leads_awaiting_response":
     "Lead vẫn đang chờ phản hồi đầu tiên",
   "analytics.sdrQualifiedOf": "{qualified} trên {arrived}",
+  "analytics.handoffReassign": "Chuyển giao cho đồng nghiệp khác",
+  "analytics.handoffReassignHint":
+    "Chọn đồng nghiệp đang hoạt động có quyền chỉnh sửa bản ghi này. Đồng nghiệp đã nhận bàn giao vẫn được ghi nhận như cũ.",
+  "analytics.handoffReassignUnavailable":
+    "Chọn đồng nghiệp sau khi tải xong phân công hiện tại. Bạn cần quyền chỉnh sửa và bàn giao vẫn đang chờ trả lời.",
   "analytics.sdrWaiting": "Bàn giao đang chờ bên khác xử lý",
   "analytics.sdrWaitingIntro":
     "Các bàn giao bạn đã gửi mà chưa ai quyết định. Bàn giao bị trả lại rồi gửi lại được tính thời gian chờ từ lần gửi mới.",
@@ -14362,6 +14367,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "users.handover.tasks_other": "{count} việc cần làm đang mở",
   "users.handover.webhooks_one": "{count} đăng ký webhook",
   "users.handover.webhooks_other": "{count} đăng ký webhook",
+  "users.handover.handoffs_one": "{count} lượt bàn giao đang chờ",
+  "users.handover.handoffs_other": "{count} lượt bàn giao đang chờ",
+  "users.handover.responsibilities_one": "{count} trách nhiệm đối với hồ sơ",
+  "users.handover.responsibilities_other": "{count} trách nhiệm đối với hồ sơ",
   "users.handover.lists_one": "{count} danh sách",
   "users.handover.lists_other": "{count} danh sách",
   "users.removeMfa": "Gỡ đăng nhập hai bước",
@@ -17164,6 +17173,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contact.intro.whenYesterday": "liên lạc gần nhất hôm qua",
   "contact.intro.whenDays": "liên lạc gần nhất {days} ngày trước",
   "contact.intro.whenNever": "chưa có liên lạc gần đây",
+  "contact.intro.replaceAction": "Chọn đồng nghiệp khác",
+  "contact.intro.replaceHint":
+    "Xem lại một lộ trình và yêu cầu mới. Yêu cầu cũ vẫn mở cho đến khi yêu cầu thay thế được lưu thành công. Đồng nghiệp mới phải tự quyết định; phê duyệt trước đó không được chuyển sang.",
+  "contact.intro.replaceReasonHint":
+    "Đồng nghiệp trong yêu cầu ban đầu có thể đọc lý do này.",
+  "contact.intro.replaceReason": "Vì sao bạn thay thế yêu cầu này?",
   "contact.intro.askTitle": "Nhờ giới thiệu với {name}",
   "contact.intro.recordAction": "Ghi nhận một lần giới thiệu",
   "contact.intro.recordTitle": "Ghi nhận lần giới thiệu với {name}",
@@ -17192,7 +17207,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contact.intro.recordedIntroduced": "đã giới thiệu",
   "contact.intro.cancel": "Hủy",
   "contact.intro.askAction": "Yêu cầu giới thiệu",
-  "contact.intro.askFailed": "Không thể ghi nhận yêu cầu. Thử lại.",
   "contact.intro.reasonLabel": "Lý do yêu cầu",
   "contact.intro.reasonHint":
     "Đồng nghiệp sẽ đọc phần này, người liên hệ thì không. Nêu lý do nên có lời giới thiệu này.",

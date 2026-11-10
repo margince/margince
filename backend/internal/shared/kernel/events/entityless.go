@@ -26,6 +26,12 @@ package events
 // link (audit_log OR system_log) so the outcome stays attributable — Validate
 // enforces the trace, only the entity is relaxed.
 var pipelineEventTypes = map[string]struct{}{
+	// Staffing changes remain private to the readers of their parent records.
+	"sdr_handoff.created":        {},
+	"sdr_handoff.updated":        {},
+	"record_assignment.created":  {},
+	"record_assignment.updated":  {},
+	"record_assignment.archived": {},
 	// Held correspondence and its exception remain private to their authorized readers.
 	"communication_instruction.updated": {},
 	"scheduled_send.updated":            {},

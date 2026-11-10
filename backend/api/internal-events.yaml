@@ -15,6 +15,46 @@ info:
     coverage gate that walks the subscribable set.
 components:
   schemas:
+    InternalEventSdrHandoffCreated:
+      type: object
+      x-event-type: sdr_handoff.created
+      x-entity-type: sdr_handoff
+      description: A prospect handoff was recorded.
+      properties: {}
+      additionalProperties: false
+
+    InternalEventSdrHandoffUpdated:
+      type: object
+      x-event-type: sdr_handoff.updated
+      x-entity-type: sdr_handoff
+      description: A prospect handoff changed without changing its original authorship.
+      properties: {}
+      additionalProperties: false
+
+    InternalEventRecordAssignmentCreated:
+      type: object
+      x-event-type: record_assignment.created
+      x-entity-type: record_assignment
+      description: A record responsibility was assigned.
+      properties: {}
+      additionalProperties: false
+
+    InternalEventRecordAssignmentUpdated:
+      type: object
+      x-event-type: record_assignment.updated
+      x-entity-type: record_assignment
+      description: A record responsibility changed.
+      properties: {}
+      additionalProperties: false
+
+    InternalEventRecordAssignmentArchived:
+      type: object
+      x-event-type: record_assignment.archived
+      x-entity-type: record_assignment
+      description: A record responsibility ended and remains in history.
+      properties: {}
+      additionalProperties: false
+
     InternalEventInstructionWordingCorrected:
       type: object
       x-event-type: communication_instruction.updated
