@@ -362,9 +362,9 @@ func dismissalInForceSQL(alias string, at int) string {
 }
 
 // NudgeStatesOf reads one reader's own choice about each of the contacts, as it
-// stands at the given moment. A contact the reader has not set aside, or whose
-// dismissal has run out, answers the zero state, and so does one that does not
-// exist, so an id cannot be used to probe. It reads no colleague's choice and
+// stands at the given moment. A contact the reader has not set aside answers
+// the zero state. So does one whose dismissal has run out, and so does one that
+// does not exist, so an id cannot be used to probe. It reads no colleague's choice and
 // nothing else about the contact.
 func NudgeStatesOf(ctx context.Context, tx pgx.Tx, reader ids.UUID, contacts []ids.UUID, at time.Time) (map[ids.UUID]NudgeState, error) {
 	out := make(map[ids.UUID]NudgeState, len(contacts))

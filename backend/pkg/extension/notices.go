@@ -41,7 +41,9 @@ type NoticeRequest struct {
 
 // NoticeRecordTypes are the record types a notice may be about: the identity
 // records a reader opens by id.
-func NoticeRecordTypes() []string { return []string{"contact", "company", "deal"} }
+func NoticeRecordTypes() []string {
+	return []string{string(KindContact), string(KindCompany), string(KindDeal)}
+}
 
 // RecordRef names one core record. Type is one of NoticeRecordTypes.
 type RecordRef struct {

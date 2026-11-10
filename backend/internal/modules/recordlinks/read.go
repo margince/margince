@@ -25,8 +25,10 @@ import (
 // archived.
 func (s *Store) List(ctx context.Context, recordType string, recordID ids.UUID) ([]crmcontracts.RecordLink, error) {
 	if !recordkinds.IsLinkEnd(recordType) {
-		return nil, &values.ParseError{Field: "record_type", Code: "unknown_link_end",
-			Message: "links are read for a deal, a company or a contact"}
+		return nil, &values.ParseError{
+			Field: "record_type", Code: "unknown_link_end",
+			Message: "links are read for a deal, a company or a contact",
+		}
 	}
 	if err := auth.Require(ctx, recordType, principal.ActionRead); err != nil {
 		return nil, err

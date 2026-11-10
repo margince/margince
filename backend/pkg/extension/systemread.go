@@ -163,8 +163,8 @@ type Activities interface {
 	// Mail answers the emails of one deal that the deal's team may read. An
 	// email private to its participants is left out, and so is one held back
 	// from reading. A reply that sits only in a private mailbox is therefore
-	// invisible here: a unit that decides "no reply yet" from this read is
-	// reminding a user to check, and must not act on it alone, such as by
+	// invisible here. A unit that decides "no reply yet" from this read is
+	// reminding a user to check. It must not act on it alone, such as by
 	// sending a message.
 	//
 	// A deal that does not exist answers ErrNotFound; an id that is not a
@@ -177,11 +177,11 @@ type Activities interface {
 type SetAsideKind string
 
 const (
-	// SetAsideNone: not set aside, or the dismissal has run out.
+	// SetAsideNone is: not set aside, or the dismissal has run out.
 	SetAsideNone SetAsideKind = "none"
-	// SetAsideUntil: set aside until SetAsideState.Until.
+	// SetAsideUntil is: set aside until SetAsideState.Until.
 	SetAsideUntil SetAsideKind = "until"
-	// SetAsidePermanent: set aside for good.
+	// SetAsidePermanent is: set aside for good.
 	SetAsidePermanent SetAsideKind = "permanent"
 )
 

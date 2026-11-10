@@ -5,9 +5,9 @@ package compose
 
 // The system read of the emails linked to one deal. A job tick or a bus
 // delivery has no caller, so no grant narrows it. What a user limited to
-// themselves may not see is left out here instead: the read answers only mail
-// the whole workspace may see, and only the facts a unit needs to tell whether
-// a mail went out and whether anyone answered. No subject, body, address or
+// themselves may not see is left out here instead. The read answers only mail
+// the whole workspace may see. It gives only the facts a unit needs to tell
+// whether a mail went out and whether anyone answered. No subject, body, address or
 // attachment leaves the core.
 
 import (
@@ -83,7 +83,7 @@ func (p mailPosition) cursor() string {
 
 func parseMailCursor(cursor string) (*mailPosition, error) {
 	if cursor == "" {
-		return nil, nil
+		return nil, nil //nolint:nilnil // no cursor is the first page: a nil position IS that answer
 	}
 	bad := fmt.Errorf("%w: the cursor is not one this read gave", extension.ErrInvalid)
 	raw, err := base64.RawURLEncoding.DecodeString(cursor)
