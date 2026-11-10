@@ -388,10 +388,10 @@ See also:
 
 ## Copied third-party files
 
-[`third-party-files.txt`](../../third-party-files.txt) records each copied file, its source and version,
-its SPDX licence and the path to its licence text. `make third-party-files` checks the committed
-licence files and their siblings. It refuses missing files, copies with no record and licences
-outside `.grant.yaml`. A package with no licence text may use a recorded file whose source is `name@version`.
+[`third-party-files.txt`](../../third-party-files.txt) records each copied file, its source and version, its SPDX
+licence and its licence text. `make third-party-files` checks the licence files and their siblings, and refuses missing
+files, copies with no record, and a licence outside `copied-file-licenses`. One not also in `allow` needs its file in
+`ignore-packages`. A package with no licence text may use a recorded file whose source is `name@version`.
 
 The frontend build collects licence and notice texts from bundled code, CSS and copied files.
 Missing text fails the build. The app serves `/licenses/THIRD-PARTY-NOTICES.txt`; MCP App documents
