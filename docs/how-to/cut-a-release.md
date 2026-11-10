@@ -79,7 +79,9 @@ git push origin v1.0.0
 
 1. It pushes the three images to `ghcr.io/margince`, tagged with the version.
 2. It packs one server bundle for each Linux platform, with
-   [`scripts/release-bundle.sh`](../../scripts/release-bundle.sh).
+   [`scripts/release-bundle.sh`](../../scripts/release-bundle.sh). Each bundle and the api and worker images carry
+   `THIRD-PARTY-NOTICES.txt`, the license texts of the Go modules the programs link. It is written by
+   [`scripts/backend-notices.sh`](../../scripts/backend-notices.sh). The pack refuses a bundle without it.
 3. It writes the SBOMs, `images.txt` (each image pinned by its hash) and `SHA256SUMS` over the bundles, the SBOMs and `images.txt`.
 4. It signs each image and `SHA256SUMS` with cosign.
 5. It uploads those files with your notes, the changes and the install steps, then publishes the release.

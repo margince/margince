@@ -154,16 +154,7 @@ func TestAFilterPreviewReadsItsRowsInTheSnapshotOfItsPage(t *testing.T) {
 		answered <- answer{got, err}
 	}()
 	observer := integration.OwnerConn(t)
-	testdb.WaitForContention(t, returned, "the preview finished without reading contact_email", "the preview never waited on contact_email",
-		func(ctx context.Context) (bool, error) {
-			if _, err := observer.Exec(ctx, `SELECT pg_stat_clear_snapshot()`); err != nil {
-				return false, err
-			}
-			var waiting bool
-			err := observer.QueryRow(ctx,
-				`SELECT EXISTS (SELECT 1 FROM pg_stat_activity WHERE $1 = ANY(pg_blocking_pids(pid)))`, holderPID).Scan(&waiting)
-			return waiting, err
-		})
+	testdb.AwaitQueuedBehind(t, observer, holderPID, 1, returned, "the preview reading contact_email")
 	e.WsExec(t, `UPDATE contact SET full_name = 'Renamed meanwhile' WHERE id = $1`, target)
 	if err := locked.Rollback(context.Background()); err != nil {
 		t.Fatal(err)

@@ -312,8 +312,8 @@ func TestALostRaceWritesNoAuditTrail(t *testing.T) {
 	go func() { done <- e.store.Complete(e.asUser(e.requester), id, nil, 2) }()
 
 	// Let the goroutine reach the lock. It is waiting on Postgres, so this is
-	// a poll of pg_locks and not a sleep-and-hope.
-	waitForLockOn(t, e, id)
+	// a poll of who queues behind the blocker and not a sleep-and-hope.
+	testdb.AwaitQueuedBehind(t, e.owner, int32(e.owner.PgConn().PID()), 1, nil, "the completion")
 	if _, err := blocker.Exec(ctx,
 		`UPDATE intro_request SET version = version + 1 WHERE id = $1`, id); err != nil {
 		t.Fatal(err)
@@ -328,45 +328,6 @@ func TestALostRaceWritesNoAuditTrail(t *testing.T) {
 	if got := auditRowsFor(t, e, id); got != before {
 		t.Errorf("a lost race wrote %d audit rows for a move it did not make", got-before)
 	}
-}
-
-// waitForLockOn blocks until a backend is waiting for a lock on THIS ask's row,
-// which is the observable fact that the racing call reached it and stopped.
-//
-// The wait is scoped to the row rather than to "any ungranted lock": a shared
-// database has other traffic, and a test that took somebody else's contention
-// as its signal would race past the setup it is trying to establish and then
-// fail somewhere else.
-func waitForLockOn(t *testing.T, e *introEnv, id ids.UUID) {
-	t.Helper()
-	deadline := time.Now().Add(10 * time.Second)
-	for time.Now().Before(deadline) {
-		// pg_stat_activity is materialized once per transaction and cached
-		// until it ends, so a probe that did not clear it cannot see a backend
-		// that dialled after the snapshot was taken.
-		if _, err := e.owner.Exec(context.Background(),
-			`SELECT pg_stat_clear_snapshot()`); err != nil {
-			t.Fatalf("clearing the stats snapshot before probing: %v", err)
-		}
-		var waiting bool
-		// A backend blocked on a row lock in THIS database, while the ask still
-		// exists. pg_blocking_pids is the direct question — "is somebody stuck
-		// behind somebody else" — and it names the waiter rather than counting
-		// ungranted locks the rest of the machine happens to hold.
-		if err := e.owner.QueryRow(context.Background(), `
-			SELECT EXISTS (
-				SELECT 1 FROM pg_stat_activity
-				 WHERE datname = current_database()
-				   AND cardinality(pg_blocking_pids(pid)) > 0)
-			   AND EXISTS (SELECT 1 FROM intro_request WHERE id = $1)`,
-			id).Scan(&waiting); err != nil {
-			t.Fatal(err)
-		}
-		if waiting {
-			return
-		}
-	}
-	t.Fatal("no backend ever blocked on the row — the race never happened")
 }
 
 func auditRowsFor(t *testing.T, e *introEnv, id ids.UUID) int {

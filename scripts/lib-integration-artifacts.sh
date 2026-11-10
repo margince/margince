@@ -31,7 +31,9 @@ part_names() {
   local work="$1" regex_dir="$2" slot=0 line first
   while IFS= read -r line; do
     slot=$((slot + 1))
-    first="$(part_tests "$regex_dir/$slot" | LC_ALL=C sort | head -n1)" || return 1
+    # awk reads to the end. head would close the pipe after one line, and
+    # under pipefail the sort it cut off fails the part on a long list.
+    first="$(part_tests "$regex_dir/$slot" | LC_ALL=C sort | awk 'NR == 1')" || return 1
     printf '%s|%s|%s\n' "$line" "$first" "$slot"
   done < "$work" \
     | LC_ALL=C sort -t'|' -k1,1 -k2,2 -k3,3 \
