@@ -331,6 +331,7 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `PATCH /activities/{id}/audience` | setActivityAudience | Limit (or re-open) who may see this activity's content. | Change records | at once |
 | `PUT /activities/{id}/disposition` | setActivityDisposition | Put a waiting message down, so the Worklist stops offering it. | Change records | at once |
 | `DELETE /activities/{id}/disposition` | clearActivityDisposition | Pick the message back up — the undo behind every set-aside verb. | Change records | at once |
+| `PUT /activities/{id}/calendar-response` | answerCalendarInvitation | Accept, tentatively accept or decline a calendar invitation that came by email. | Send messages | at once |
 | `GET /activities/{id}/meeting-brief` | getMeetingBrief | The pre-meeting brief for one booked meeting — goal, commitments, where the deal stands. | Read records | at once |
 | `GET /activities/{id}/pipeline` | readActivityPipelineTrace | Every ingress stage this message passed through, and why each did or did not run. | Read records | at once |
 | `POST /activities/{id}/relink` | relinkActivity | Re-associate a captured activity to a chosen deal/entity (idempotent, source-preserving). | Change records | may wait for approval |

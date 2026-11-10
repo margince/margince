@@ -24,6 +24,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/recordkinds"
 )
 
+// fieldLinkType is the link-type key of the write shape and of the refusals about it.
+const fieldLinkType = "link_type"
+
 const (
 	linkAdded   = "added"
 	linkRemoved = "removed"
@@ -38,11 +41,11 @@ func validate(in NewLink) error {
 	}
 	declared, ok := recordkinds.LookupLinkType(in.LinkType)
 	if !ok {
-		return &values.ParseError{Field: "link_type", Code: "unknown_link_type",
+		return &values.ParseError{Field: fieldLinkType, Code: "unknown_link_type",
 			Message: "no core or extension declared this link type; GET /v1/link-types lists them"}
 	}
 	if !declared.Allows(in.FromType, in.ToType) {
-		return &values.ParseError{Field: "link_type", Code: "link_ends_not_allowed",
+		return &values.ParseError{Field: fieldLinkType, Code: "link_ends_not_allowed",
 			Message: fmt.Sprintf("the type %s does not join a %s to a %s", in.LinkType, in.FromType, in.ToType)}
 	}
 	if in.FromType == in.ToType && in.FromID == in.ToID {
@@ -194,7 +197,7 @@ func (s *Store) Delete(ctx context.Context, id ids.UUID) error {
 func recordLinkChange(ctx context.Context, tx pgx.Tx, link crmcontracts.RecordLink, status string) error {
 	from := ids.UUID(link.FromId)
 	auditID, err := storekit.AuditEvent(ctx, tx, "update", string(link.FromType), from, map[string]any{
-		"record_link": map[string]any{"id": link.Id, "link_type": link.LinkType, "status": status},
+		"record_link": map[string]any{"id": link.Id, fieldLinkType: link.LinkType, "status": status},
 	})
 	if err != nil {
 		return err
