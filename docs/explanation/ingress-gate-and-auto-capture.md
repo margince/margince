@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/pkg/extension/ingress.go backend/internal/compose/extingress.go backend/internal/modules/capture/sink.go backend/internal/modules/capture/sinkensure.go backend/internal/modules/capture/sinkchannel.go backend/internal/modules/capture/pending.go backend/internal/modules/capture/transactional.go backend/internal/compose/captureverdict.go backend/internal/compose/capturejobs.go backend/internal/compose/heldcontactrelease.go -->
+<!-- describes: backend/pkg/extension/ingress.go backend/internal/compose/extingress.go backend/internal/modules/capture/birthdecision.go backend/internal/modules/capture/verdictinherit.go backend/internal/modules/capture/privatedocumentmarkers.go backend/internal/modules/capture/threadverdictdocuments.go backend/internal/modules/capture/sink.go backend/internal/modules/capture/sinkensure.go backend/internal/modules/capture/sinkchannel.go backend/internal/modules/capture/pending.go backend/internal/modules/capture/transactional.go backend/internal/compose/captureverdict.go backend/internal/compose/capturejobs.go backend/internal/compose/heldcontactrelease.go -->
 # The ingress gate, auto-capture, and the verdict engine
 
 What happens to a message **after** a connector pulled it from an outside provider, and before it
@@ -333,6 +333,10 @@ mailbox owner alone:
   colleague which companies this user is going after. The record opens up on its own the first time that address replies.
 - **The thread is on a privacy hold.** A contact visible to the whole workspace, created from mail on
   hold, would show the counterparty that the hold exists to keep private.
+
+For a mailbox set to `classified`, a cleared sender does not clear a new document. Mail with a
+document waits for its own thread verdict. Replies stay held while that verdict is pending. A file name that marks
+private records also holds the mail when its text cannot be read.
 
 A privacy hold on a contact ends when nothing holds it any more. That happens when the thread
 verdict answers `ordinary` or the owner shares the thread. The same contact then opens to the workspace,
