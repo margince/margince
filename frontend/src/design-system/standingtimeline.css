@@ -146,6 +146,42 @@
   box-shadow: inset 0 0 0 2.5px var(--textPrimary);
 }
 
+/* A deal's result: a pole up from the spine with a pennant on top, in the
+   spine's green for won and grey for lost, standing on a dot of that tone. */
+.standing-timeline-flag {
+  --standing-timeline-flag-tone: var(--accent);
+  position: absolute;
+  inset-block-start: calc(var(--standing-timeline-spine-y) - 64px);
+  block-size: 64px;
+  border-inline-start: 2px solid var(--standing-timeline-flag-tone);
+  transform: translateX(-1px);
+}
+.standing-timeline-flag[data-outcome="lost"] {
+  --standing-timeline-flag-tone: var(--textSecondary);
+}
+.standing-timeline-flag::before {
+  content: "";
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-start: 0;
+  inline-size: 20px;
+  block-size: 14px;
+  background: var(--standing-timeline-flag-tone);
+  clip-path: polygon(0 0, 100% 0, 72% 50%, 100% 100%, 0 100%);
+}
+.standing-timeline-flag::after {
+  content: "";
+  position: absolute;
+  inset-block-end: 0;
+  inset-inline-start: -1px;
+  inline-size: 10px;
+  block-size: 10px;
+  border-radius: var(--r-full);
+  corner-shape: round;
+  background: var(--standing-timeline-flag-tone);
+  transform: translate(-50%, 50%);
+}
+
 /* A label on row 2 or 3 hangs from its dot on a thin lead line. */
 .standing-timeline-lead {
   position: absolute;

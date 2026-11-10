@@ -15,6 +15,7 @@ import {
   type MetricNames,
   type ReportingSelection,
   reportingQuery,
+  unpublishedDraft,
 } from "./reporting.model";
 
 export { reloadReportingFigures };
@@ -109,15 +110,19 @@ export function useReportDetailQueries(
       );
     },
   });
+  const shownRevision = revision ?? unpublishedDraft(report.data);
   const live = useQuery({
     enabled: !editionId,
-    queryKey: ["reporting-live", reportId, revision ?? "published"],
+    queryKey: ["reporting-live", reportId, shownRevision ?? "published"],
     queryFn: async () => {
       return unwrap(
         await api.GET("/analytics/reports/{id}/evaluation", {
           params: {
             path: { id: reportId },
-            query: revision === undefined ? undefined : { revision },
+            query:
+              shownRevision === undefined
+                ? undefined
+                : { revision: shownRevision },
           },
         }),
       );
@@ -160,5 +165,5 @@ export function useReportDetailQueries(
       );
     },
   });
-  return { report, live, edition, editions, schedules };
+  return { report, live, edition, editions, schedules, shownRevision };
 }

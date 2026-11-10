@@ -290,3 +290,49 @@ export const FarClose: Story = {
     ).toBeInTheDocument();
   },
 };
+
+// The account's deal decided on 5 Aug, before the day it was read: the close
+// carries its outcome and stands as a flag.
+const decided = (outcome: "won" | "lost", title: string): TimelineEvent[] => [
+  ...company.filter((event) => !["w", "c"].includes(event.key)),
+  {
+    key: "c",
+    at: "2026-08-05T15:00:00Z",
+    title,
+    sub: "5 Aug",
+    kind: "end",
+    outcome,
+  },
+];
+
+/** A won deal: a green flag on the day it was won. */
+export const Won: Story = {
+  args: {
+    label: "Fleet retrofit over time",
+    asOf: "2026-08-13T09:00:00Z",
+    events: decided("won", "Won"),
+    marks: [
+      mark("1", "2026-07-08", "8 Jul", "email", "Revised offer", "ours"),
+      mark("2", "2026-08-04", "4 Aug", "email", "Signed order", "theirs"),
+    ],
+  },
+  play: async ({ canvasElement }) => {
+    await expect(
+      canvasElement.querySelector('[data-outcome="won"]'),
+    ).toBeInTheDocument();
+  },
+};
+
+/** A lost deal: the same flag in grey, so a loss reads calmly. */
+export const Lost: Story = {
+  args: {
+    label: "Fleet retrofit over time",
+    asOf: "2026-08-13T09:00:00Z",
+    events: decided("lost", "Lost"),
+  },
+  play: async ({ canvasElement }) => {
+    await expect(
+      canvasElement.querySelector('[data-outcome="lost"]'),
+    ).toBeInTheDocument();
+  },
+};

@@ -56860,6 +56860,17 @@ components:
             contact wrote, pasted in — and is fenced the same way.
 
             Absent or empty is a first draft.
+        language:
+          type: string
+          enum: [en, de, vi]
+          description: >-
+            The language the caller chose for the draft. It outranks every language the
+            server would read from the correspondence, the addressee, the rep and the
+            installation, and the greeting, register, provenance notice and deterministic
+            fallback all follow it. Absent leaves the choice to the server, which reads it
+            from the correspondence. The server keeps no choice between calls, so a rewrite
+            that should stay in the chosen language names it again. A code outside this list
+            is `422` on `language`.
 
     EmailDraft:
       type: object
@@ -56875,6 +56886,16 @@ components:
         voice_profile_version: { type: [integer, 'null'], readOnly: true, minimum: 1, description: 'The Voice DNA PROFILE version (not a model version) that styled this draft — the "built from your corpus · vN" provenance; null when no ready voice profile shaped it.' }
         draft_ref: { type: [string, 'null'], readOnly: true, description: 'Opaque reference identifying this served voice draft for learning feedback (rejectVoiceDraft); null when no voice profile styled it.' }
         voice_degraded: { type: boolean, readOnly: true, description: 'True when the sender''s voice could not even be looked up, so this draft may be missing a voice its sender built. Distinct from voice_profile_version being null, which also covers the ordinary no-profile case. A client should say so: the sender cannot detect a missing voice by reading the text. Absent reads as false.' }
+        language:
+          type: string
+          enum: [en, de, vi]
+          x-extensible-enum: true
+          readOnly: true
+          description: >-
+            The language this draft is written in: the `language` the request named, else the
+            one the server resolved from the correspondence. The model draft and the
+            deterministic fallback report it alike. A client shows it as the composer's current
+            choice and names it again on a rewrite that must keep it.
 
     ReplyRecipient:
       type: object
@@ -57044,6 +57065,16 @@ components:
             said: a reader fluent only in the default cannot tell a fallback from a choice,
             and would forward an English note to a customer who writes in German believing
             the product had checked. Absent reads as false.
+        language:
+          type: string
+          enum: [en, de, vi]
+          x-extensible-enum: true
+          readOnly: true
+          description: >-
+            The language this draft is written in: the `language` the request named, else the
+            one the server resolved from the record's correspondence. The model draft and the
+            deterministic floor report it alike. Absent on an introduction request or note,
+            which reads its language on its own and says so through `language_undetermined`.
 
     AccountDraftReason:
       type: object
@@ -57466,6 +57497,15 @@ components:
         voice_profile_version: { type: integer, minimum: 1 }
         voice_degraded: { type: boolean }
         served_body: { type: string }
+        language:
+          type: string
+          enum: [en, de, vi]
+          x-extensible-enum: true
+          description: >-
+            The language the author chose for the AI draft, restored with the words so the
+            composer names it again on the next draft request. Absent when they chose none,
+            and the next draft follows the correspondence. A code outside this list is
+            dropped and the draft still saves, so the answer comes back without it.
 
     MailDraftInput:
       type: object

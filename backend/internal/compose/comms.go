@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/calendarbacking"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
 )
@@ -115,7 +116,7 @@ func (c commsAdapter) DraftEmail(ctx context.Context, anchor ids.UUID, intent st
 	if err != nil {
 		return "", "", err
 	}
-	subject, body := c.store.FloorDraft(ctx, anchor, activity)
+	subject, body, _ := c.store.FloorDraft(ctx, anchor, activity, textlang.Unknown)
 	return subject, body, nil
 }
 
