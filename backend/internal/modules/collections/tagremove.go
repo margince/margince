@@ -114,6 +114,9 @@ func removeTagTx(
 	if err := auth.EnsureWritableLive(ctx, tx, entityType, entityID); err != nil {
 		return ids.Nil, err
 	}
+	if err := lockTagAssignmentTx(ctx, tx, tagID, entityType, entityID); err != nil {
+		return ids.Nil, err
+	}
 	kept := storekit.TagAssignment{TagID: tagID.UUID}
 	var rowID ids.UUID
 	var createdAt time.Time

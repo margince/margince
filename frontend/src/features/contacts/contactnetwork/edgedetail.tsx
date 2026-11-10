@@ -18,6 +18,7 @@ import { relayMemberFor } from "../../../design-system/provenanceof";
 import { formatNumber } from "../../../format/format";
 import { type Translator, useLocale, useT } from "../../../i18n";
 import { useCanWrite } from "../../../lib/capability";
+import { labelFor } from "../../../lib/labelfor";
 import { BAND_BADGE } from "../companygraph";
 import { ReceiptList } from "./receipts";
 
@@ -81,7 +82,7 @@ export function EdgeDetail({
         return (
           <div key={`${edge.from}->${edge.to}`}>
             <p className="pn-band">
-              <Badge>{t(BAND_BADGE[edge.strength_bucket])}</Badge>
+              <Badge>{t(labelFor(BAND_BADGE, edge.strength_bucket))}</Badge>
               {withWhom && <span>{withWhom}</span>}
             </p>
             <p className="pn-counts t-sub">

@@ -186,7 +186,7 @@ func TestFrozenReplayResendsTheStoredBodyVerbatim(t *testing.T) {
 	}))
 	defer receiver.Close()
 
-	d := NewDeliverer(NewStore(nil, cipher), receiver.Client(), clock, nil, log)
+	d := NewDeliverer(NewStore(nil, cipher), loopbackClient(nil), clock, nil, log)
 	target := attemptTarget{
 		deliveryID:   ids.NewV7(),
 		subID:        ids.NewV7(),
@@ -196,7 +196,7 @@ func TestFrozenReplayResendsTheStoredBodyVerbatim(t *testing.T) {
 		eventID:      ids.NewV7(),
 		payload:      preMigrationBody,
 	}
-	out := d.attempt(context.Background(), target)
+	out := d.attempt(context.Background(), target, allowSend)
 	if out.failure != "" {
 		t.Fatalf("attempt failed: %s", out.failure)
 	}

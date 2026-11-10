@@ -37,10 +37,9 @@ func TestAWorkerOnlyYAMLKeyIsKnownToTheAPI(t *testing.T) {
 	}
 }
 
-// migrate reads the credentials, and the root key its data-tasks verb hashes
-// under as the worker does. Any other worker or api setting in its registry
-// would let a stray variable change how the schema is applied.
-func TestMigrateReadsOnlyTheDatabaseCredentialsAndTheRootKey(t *testing.T) {
+// Data tasks read immutable originals through the same object-store settings
+// as the worker; unrelated runtime settings cannot change schema application.
+func TestMigrateReadsOnlyItsDatabaseKeyAndOriginalStoreSettings(t *testing.T) {
 	t.Parallel()
 	reg, err := compose.ProgramRegistry(config.RoleMigrate)
 	if err != nil {
@@ -50,7 +49,8 @@ func TestMigrateReadsOnlyTheDatabaseCredentialsAndTheRootKey(t *testing.T) {
 	for _, s := range reg.All() {
 		keys = append(keys, s.Key())
 	}
-	if !slices.Equal(keys, []string{"dsn", "keyvault_root_key", "owner_dsn"}) {
-		t.Fatalf("migrate reads %v, want [dsn keyvault_root_key owner_dsn]", keys)
+	want := []string{"blobstore_access_key", "blobstore_bucket", "blobstore_endpoint", "blobstore_path", "blobstore_region", "blobstore_secret_key", "blobstore_use_ssl", "dsn", "keyvault_root_key", "owner_dsn"}
+	if !slices.Equal(keys, want) {
+		t.Fatalf("migrate reads %v, want %v", keys, want)
 	}
 }

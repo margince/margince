@@ -44,7 +44,7 @@ import (
 // `bounds` alone therefore states exact figures over work nobody looked at, which
 // is the one direction these numbers must never fail in.
 func readingsOf(
-	considered []ranked,
+	considered, drawn []ranked,
 	bounds map[crmcontracts.WorklistItemSource]bool,
 	unread []crmcontracts.WorklistSourceUnavailable,
 ) crmcontracts.WorklistReadings {
@@ -54,6 +54,11 @@ func readingsOf(
 	// unpriced one is LEFT OUT rather than added as zero: a deal nobody recorded
 	// an amount for is not a deal worth nothing, and counting it as nothing
 	// reports a safer pipeline than the one that exists.
+	for _, row := range drawn {
+		if keepsRow(row, filterChangedSinceBrief) {
+			out.ChangedSinceBrief++
+		}
+	}
 	var revenue int64
 	var priced bool
 	var currency string
@@ -68,20 +73,6 @@ func readingsOf(
 	// the deal, and it is the only field the two lanes' rows share.
 	countedDeals := map[openapi_types.UUID]bool{}
 	for _, row := range considered {
-		// The freshness figure, and it is counted HERE rather than in the
-		// browser for the reason the set makes obvious: a client counts the
-		// flag over the rows it received, which is one page of an unfiltered
-		// read, while the door beside the number opens every row past that cut.
-		// The two then disagree by whatever ranked below the page, and only ever
-		// in the direction that makes a busy morning look quiet.
-		//
-		// keepsRow, not a second spelling of its rule. The filter already
-		// excludes a row a decisions-drawing surface answers — a card on screen
-		// is not also news — and that exclusion is exactly the kind of detail a
-		// reimplementation here would drop.
-		if keepsRow(row, filterChangedSinceBrief) {
-			out.ChangedSinceBrief++
-		}
 		if prospectingWork(row.item) {
 			out.Prospecting++
 		}

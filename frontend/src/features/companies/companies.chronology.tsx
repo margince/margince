@@ -6,6 +6,7 @@ import {
   hasTimelineFilters,
   useRecordTimeline,
 } from "../../design-system/recordtimeline";
+import { omitted } from "../../design-system/surfacestate";
 import type {
   TimelineEntry,
   TimelineGroup,
@@ -91,14 +92,17 @@ export function useChronologySlots({
     records("contact", id) ??
     records("deal", id) ??
     records("company", id);
-  const { filter, filters, setFilters, openCut, kinds } = useChronologyCut(
-    company.id,
-  );
+  const { filter, filters, setFilters, openCut, kinds, read } =
+    useChronologyCut(company.id);
+  // Withheld on the 360 is withheld on every cut: a narrowed read would only
+  // collect the refusal.
+  const withheld = view ? omitted(view, "activities") : false;
   // The 360's own page seeds the list; older pages and every narrowed read
   // come from the activity list itself.
   const timeline = useRecordTimeline("company", company.id, {
-    filters,
+    filters: read,
     firstPage: view?.activities,
+    enabled: !withheld,
   });
 
   const [openEmail, setOpenEmail] = useOpenEmail();
@@ -172,12 +176,13 @@ export function useChronologySlots({
           filter,
           history,
           {
+            withheld,
             loading: loading || timeline.isPending,
             failed: failed || timeline.isError,
             // A narrowed read is the list's own and is assembled once it
             // answers. So is an archived account's, whose 360 is refused.
             assembled:
-              hasTimelineFilters(filters) || company.archived_at
+              hasTimelineFilters(read) || company.archived_at
                 ? timeline.isSuccess
                 : Boolean(view?.activities),
           },

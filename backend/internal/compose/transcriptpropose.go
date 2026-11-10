@@ -141,6 +141,22 @@ type transcriptPayload struct {
 	Proposals *[]proposedStep `json:"proposals"`
 }
 
+// asRead is a reply as the server reads it: each participant ref becomes the
+// participant key it names.
+func (p transcriptPayload) asRead(parties []commitmentParty) transcriptPayload {
+	if p.Proposals == nil {
+		return p
+	}
+	refs := commitmentPartyRefs(parties)
+	steps := slices.Clone(*p.Proposals)
+	for i := range steps {
+		steps[i].PromiserRef = partyKey(refs, steps[i].PromiserRef)
+		steps[i].RecipientRefs = partyKeys(refs, steps[i].RecipientRefs)
+	}
+	p.Proposals = &steps
+	return p
+}
+
 func (p transcriptPayload) proposals() []proposedStep {
 	if p.Proposals == nil {
 		return nil
@@ -163,7 +179,7 @@ var errRefusedTranscript = errors.New("compose: the reading could not be used")
 func transcriptRequest(lines []string, meetingDay string, lang string, parties []commitmentParty) model.Request {
 	fence := promptfence.New()
 	var prompt strings.Builder
-	prompt.WriteString(fence.Wrap("Verified participants (reference, role, name, address):\n"+commitmentPartyPrompt(parties, strings.Join(lines, "\n"))) + "\n")
+	prompt.WriteString(fence.Wrap(commitmentPartyHeader+commitmentPartyPrompt(parties, strings.Join(lines, "\n"), commitmentPartyRefs(parties))) + "\n")
 	prompt.WriteString("One meeting transcript, in order (untrusted). Each line is numbered:\n")
 	for i, line := range lines {
 		prompt.WriteString(fence.WrapAttr("line", strconv.Itoa(i+1), line) + "\n")
@@ -190,7 +206,7 @@ func transcriptRequest(lines []string, meetingDay string, lang string, parties [
 			`an unqualified "I will" with a thing and a day is 0.9 or more, while "I will try", "I'll try", `+
 			`"at some point" or "maybe" names no firm commitment and is 0.3 or less even with a stated day. `+
 			`"source_lines" are the line numbers it is stated on, between 1 and %d.`,
-		meetingDay, maxTranscriptProposals, len(lines))
+		meetingDayLabel(meetingDay), maxTranscriptProposals, len(lines))
 
 	prompt.WriteString("\n" + commitmentMeaningInstruction)
 	return model.Request{
@@ -236,6 +252,7 @@ func transcriptShapeValid(lines []string, parties []commitmentParty) ai.Validato
 		if err := json.Unmarshal([]byte(ai.Unfence(text)), &payload); err != nil {
 			return fmt.Errorf("output is not the required JSON shape: %w", err)
 		}
+		payload = payload.asRead(parties)
 		if msg := validateTranscriptPayload(payload, lines, parties); msg != "" {
 			return errors.New(msg)
 		}
@@ -345,6 +362,7 @@ func (p *TranscriptProposer) ask(ctx context.Context, lines []string, meetingDay
 	if err := json.Unmarshal([]byte(ai.Unfence(resp.Text)), &payload); err != nil {
 		return nil, fmt.Errorf("%w: unparseable model output: %w", errRefusedTranscript, err)
 	}
+	payload = payload.asRead(parties)
 	if msg := validateTranscriptPayload(payload, lines, parties); msg != "" {
 		return nil, fmt.Errorf("%w: %s", errRefusedTranscript, msg)
 	}
@@ -411,4 +429,14 @@ type transcriptReadStore interface {
 	// The Tx form, for the close that has to commit with the proposals it is
 	// closing over — see stageAndFinish.
 	FinishTranscriptReadTx(ctx context.Context, tx pgx.Tx, readID ids.UUID, outcome activities.TranscriptReadOutcome) error
+}
+
+// meetingDayLabel shows the weekday beside the date: "by Friday" resolves
+// against it, and a model working the weekday out from the date gets it wrong.
+func meetingDayLabel(day string) string {
+	parsed, err := time.Parse(time.DateOnly, day)
+	if err != nil {
+		return day
+	}
+	return parsed.Format(time.DateOnly + " (Monday)")
 }

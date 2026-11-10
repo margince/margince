@@ -18,6 +18,7 @@ import { QuietVerbs } from "../../design-system/verbvolume";
 import { countryOptions } from "../../format/assignedcountries";
 import { industryWords } from "../../format/industry";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
+import { UNKNOWN_VALUE_LABEL } from "../../lib/labelfor";
 import { problemCodeOf, unwrap } from "../../lib/problem";
 import { blockLabel } from "./reporting.model";
 
@@ -212,6 +213,8 @@ function fieldName(field: Source["field"], t: Translator): string {
       return t("reporting.targetValue");
     case "deadline":
       return t("reporting.deadline");
+    default:
+      return t(UNKNOWN_VALUE_LABEL);
   }
 }
 

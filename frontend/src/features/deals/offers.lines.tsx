@@ -12,6 +12,7 @@ import {
 } from "../../design-system/recordpicker";
 import { formatMoney } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
+import { labelFor } from "../../lib/labelfor";
 import { problemMessageOf, unwrap } from "../../lib/problem";
 import {
   EMPTY_LINE_BILLING,
@@ -218,7 +219,7 @@ export function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
               className="t-caption"
               data-testid={`line-tax-category-${line.id}`}
             >
-              {t(TAX_CATEGORY_LABEL[line.tax_category])}
+              {t(labelFor(TAX_CATEGORY_LABEL, line.tax_category))}
             </span>
           )}
         </>

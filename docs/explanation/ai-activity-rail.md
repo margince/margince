@@ -141,7 +141,7 @@ reads the file, not the PR.
 
 The text uses a literal key, never `t(\`agent.activity.${kind}.${state}\`)`. The guard for keys no code uses, in
 
-`i18n/orphan-keys.test.ts` counts a key as in use when it starts with the fixed part of a template. A
+`frontend/census/rules/orphan-keys.census.ts` counts a key as in use when it starts with the fixed part of a template. A
 key built from parts would count for the whole namespace forever. The text of a removed kind would then
 sit in three catalogs with nothing to flag it.
 

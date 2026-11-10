@@ -394,9 +394,9 @@ func TestALeadWhoNeverGrantedIsReportedAsAnAbsence(t *testing.T) {
 	if err != nil {
 		t.Fatalf("deciding: %v", err)
 	}
-	if d.ReasonCode != commsauthz.ReasonNoMarketingConsent {
+	if d.ReasonCode != commsauthz.ReasonMarketingPermissionRequired {
 		t.Errorf("reason = %q, want %q for a lead who granted nothing",
-			d.ReasonCode, commsauthz.ReasonNoMarketingConsent)
+			d.ReasonCode, commsauthz.ReasonMarketingPermissionRequired)
 	}
 }
 

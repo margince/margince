@@ -24,8 +24,10 @@ import (
 // test sets answer to judge otherwise, unconfigured to have no model, or
 // forbid to fail when it is asked at all.
 type topicModel struct {
-	mu           sync.Mutex
-	answer       func(deal string) (verdict string, confidence float64)
+	mu sync.Mutex
+	// answer judges one deal by the line the prompt shows it on, which names
+	// it; the request names it to the model only by ref.
+	answer       func(shown string) (verdict string, confidence float64)
 	unconfigured bool
 	forbid       *testing.T
 	calls        int
@@ -63,7 +65,7 @@ func (m *topicModel) Complete(_ context.Context, req model.Request) (model.Respo
 			verdict, confidence = "about", 0.95
 		}
 		if m.answer != nil {
-			verdict, confidence = m.answer(deal)
+			verdict, confidence = m.answer(shownDeal(req, deal))
 		}
 		results[i] = fmt.Sprintf(`{"deal_id":%q,"verdict":%q,"confidence":%v}`, deal, verdict, confidence)
 	}
@@ -92,7 +94,19 @@ func (m *topicModel) asked() int {
 	return m.calls
 }
 
-// askedDeals reads the deal ids a request asks about from its own schema.
+// shownDeal is the prompt line that lists the deal ref names.
+func shownDeal(req model.Request, ref string) string {
+	for _, msg := range req.Messages {
+		for line := range strings.SplitSeq(msg.Content, "\n") {
+			if strings.HasPrefix(line, "deal "+ref+": ") {
+				return line
+			}
+		}
+	}
+	return ""
+}
+
+// askedDeals reads the deal refs a request asks about from its own schema.
 func askedDeals(req model.Request) ([]string, error) {
 	var shape struct {
 		Properties struct {

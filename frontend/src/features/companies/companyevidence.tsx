@@ -14,6 +14,7 @@ import { formatDateTime, formatNumber } from "../../format/format";
 import { type Locale, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { isEntityKind } from "../../lib/entity";
+import { labelFor } from "../../lib/labelfor";
 import { unwrap } from "../../lib/problem";
 import { useViewerZone } from "../../lib/viewerzone";
 
@@ -119,7 +120,7 @@ export function EvidenceModal({
             {shown.value}
           </p>
           <p className="co-evidence-origin">
-            <Badge>{t(KIND_LABELS[shown.source_kind])}</Badge>{" "}
+            <Badge>{t(labelFor(KIND_LABELS, shown.source_kind))}</Badge>{" "}
             <ExtractedMark receipt={shown} />{" "}
             {t("co.evidence.producedBy", { who: shown.produced_by })}
           </p>

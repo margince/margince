@@ -160,12 +160,7 @@ func TestTheLinkedMatcherDoesNotInferASubjectFromAnEditableWeeklyLabel(t *testin
 func TestDeletedBuyerCommentCopiesRespectTheDealHoldAndLaterHistory(t *testing.T) {
 	ctx := principal.SystemActing(context.Background(), "privacy_test")
 	tx := subjectColumnsTx(ctx, t)
-	pipeline, stage, deal, room, participant := ids.NewV7(), ids.NewV7(), ids.NewV7(), ids.NewV7(), ids.NewV7()
-	mustExec(ctx, t, tx, `INSERT INTO pipeline(id,name,is_default,position) VALUES(@id,'Legacy room',false,99)`, pgx.StrictNamedArgs{"id": pipeline})
-	mustExec(ctx, t, tx, `INSERT INTO stage(id,pipeline_id,name,position,semantic,win_probability) VALUES(@id,@pipeline,'Open',0,'open',10)`, pgx.StrictNamedArgs{"id": stage, "pipeline": pipeline})
-	mustExec(ctx, t, tx, `INSERT INTO deal(id,name,pipeline_id,stage_id,status,source,captured_by,legal_hold) VALUES(@id,'Legacy room',@pipeline,@stage,'open','manual','system:legacy',true)`, pgx.StrictNamedArgs{"id": deal, "pipeline": pipeline, "stage": stage})
-	mustExec(ctx, t, tx, `INSERT INTO deal_room(id,deal_id,title,source,captured_by) VALUES(@id,@deal,'Legacy room','manual','system:legacy')`, pgx.StrictNamedArgs{"id": room, "deal": deal})
-	mustExec(ctx, t, tx, `INSERT INTO deal_room_participant(id,room_id,full_name,email,source,captured_by,revoked_at) VALUES(@id,@room,'Erased',@email,'manual','system:legacy',now())`, pgx.StrictNamedArgs{"id": participant, "room": room, "email": erasedEmail})
+	deal, room, participant := seedLegacyErasedSeat(ctx, t, tx, true)
 	buyer := principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalBuyer, ID: "buyer:" + participant.String()})
 	original := seedPersonalAudit(buyer, t, tx, "deal_room_comment", ids.NewV7())
 	seller := seedPersonalAudit(ctx, t, tx, "deal_room_comment", ids.NewV7())
@@ -196,4 +191,35 @@ func TestDeletedBuyerCommentCopiesRespectTheDealHoldAndLaterHistory(t *testing.T
 	if retained != 0 {
 		t.Fatalf("kept %d comment event copies", retained)
 	}
+}
+
+// A session an older erasure deleted keeps no audit copy once the seat's
+// erasure is known.
+func TestDeletedBuyerSessionCopiesAreRedacted(t *testing.T) {
+	ctx := principal.SystemActing(context.Background(), "privacy_test")
+	tx := subjectColumnsTx(ctx, t)
+	_, _, participant := seedLegacyErasedSeat(ctx, t, tx, false)
+	buyer := principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalBuyer, ID: "buyer:" + participant.String()})
+	deleted := seedPersonalAudit(buyer, t, tx, "deal_room_session", ids.NewV7())
+	if _, err := storekit.AuditWithEvidence(ctx, tx, "erase", "deal_room_participant", participant, nil, nil, map[string]any{"cause": "contact_erasure"}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RedactLinkedHistoricalAuditPageTx(ctx, tx, ids.UUID{}, ids.NewV7(), 100, nil); err != nil {
+		t.Fatal(err)
+	}
+	assertLegacyAuditImage(ctx, t, tx, deleted, false)
+}
+
+// seedLegacyErasedSeat writes a deal, its room and a seat an older erasure
+// already wiped, as the rows stood before any audit copy was redacted.
+func seedLegacyErasedSeat(ctx context.Context, t *testing.T, tx pgx.Tx, held bool) (deal, room, participant ids.UUID) {
+	t.Helper()
+	pipeline, stage := ids.NewV7(), ids.NewV7()
+	deal, room, participant = ids.NewV7(), ids.NewV7(), ids.NewV7()
+	mustExec(ctx, t, tx, `INSERT INTO pipeline(id,name,is_default,position) VALUES(@id,'Legacy room',false,99)`, pgx.StrictNamedArgs{"id": pipeline})
+	mustExec(ctx, t, tx, `INSERT INTO stage(id,pipeline_id,name,position,semantic,win_probability) VALUES(@id,@pipeline,'Open',0,'open',10)`, pgx.StrictNamedArgs{"id": stage, "pipeline": pipeline})
+	mustExec(ctx, t, tx, `INSERT INTO deal(id,name,pipeline_id,stage_id,status,source,captured_by,legal_hold) VALUES(@id,'Legacy room',@pipeline,@stage,'open','manual','system:legacy',@held)`, pgx.StrictNamedArgs{"id": deal, "pipeline": pipeline, "stage": stage, "held": held})
+	mustExec(ctx, t, tx, `INSERT INTO deal_room(id,deal_id,title,source,captured_by) VALUES(@id,@deal,'Legacy room','manual','system:legacy')`, pgx.StrictNamedArgs{"id": room, "deal": deal})
+	mustExec(ctx, t, tx, `INSERT INTO deal_room_participant(id,room_id,full_name,email,source,captured_by,revoked_at) VALUES(@id,@room,'Erased',@email,'manual','system:legacy',now())`, pgx.StrictNamedArgs{"id": participant, "room": room, "email": erasedEmail})
+	return deal, room, participant
 }

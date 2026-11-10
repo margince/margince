@@ -3,6 +3,7 @@ import type { Translator } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import type { ResolvedDisplayField } from "./approvaldisplay.types";
 import { previewFieldLabel } from "./approvalpreviewfields";
+import { labelFor } from "./labelfor";
 
 type ImportRow = components["schemas"]["ApprovalPreviewImportRow"];
 type PreviewValue = components["schemas"]["ApprovalPreviewValue"];
@@ -32,7 +33,7 @@ export function importPreviewFields(
       {
         field: prefix,
         label,
-        value: t(OUTCOME_LABELS[row.outcome]),
+        value: t(labelFor(OUTCOME_LABELS, row.outcome)),
         comparison: null,
       },
     ];

@@ -434,6 +434,70 @@ describe("ConnectedAgentsCard", () => {
   });
 });
 
+describe("ConnectedAgentsCard: disconnected tools", () => {
+  const DISCONNECTED = {
+    ...CONNECTED,
+    id: "pp-disconnected",
+    revoked_at: "2026-08-01T08:00:00Z",
+    connection: { ...CONNECTED.connection, client_name: "Old Gemini" },
+  };
+
+  it("keeps a disconnected tool out of sight until asked for, and a lapsed one in view", async () => {
+    vi.stubGlobal(
+      "fetch",
+      backend({ passports: [CONNECTED, LAPSED, DISCONNECTED] }),
+    );
+    render(<ConnectedAgentsCard />);
+
+    const toggle = await screen.findByRole("button", {
+      name: "Show 1 disconnected tool",
+    });
+    expect(screen.queryByText("Old Gemini")).toBeNull();
+    expect(screen.getByTestId("connection-pp-lapsed")).toBeTruthy();
+
+    const user = userEvent.setup();
+    await user.click(toggle);
+    expect(await screen.findByText("Old Gemini")).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Hide disconnected" }));
+    expect(screen.queryByText("Old Gemini")).toBeNull();
+  });
+
+  it("lets a tool disconnected from this view be hidden, even when it is the only one", async () => {
+    vi.stubGlobal(
+      "fetch",
+      backend({ passports: [CONNECTED], keepRevoked: true }),
+    );
+    render(<ConnectedAgentsCard />);
+    const user = userEvent.setup();
+    await openActions("Claude Code");
+    await user.click(
+      screen.getByRole("button", { name: "Disconnect Claude Code" }),
+    );
+    await user.click(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: "Disconnect",
+      }),
+    );
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(screen.getByText("Claude Code")).toBeTruthy();
+
+    await user.click(screen.getByRole("button", { name: "Hide disconnected" }));
+    expect(screen.queryByText("Claude Code")).toBeNull();
+    expect(
+      screen.getByRole("button", { name: "Show 1 disconnected tool" }),
+    ).toBeTruthy();
+  });
+
+  it("says no tool is connected when every tool is disconnected, and still offers them", async () => {
+    vi.stubGlobal("fetch", backend({ passports: [DISCONNECTED] }));
+    render(<ConnectedAgentsCard />);
+
+    await screen.findByRole("button", { name: "Show 1 disconnected tool" });
+    expect(screen.getByText("No AI tool connected yet.")).toBeTruthy();
+    expect(screen.queryByText("Old Gemini")).toBeNull();
+  });
+});
+
 describe("the two passport cards on AI access", () => {
   it("keeps a connection out of the passports a human may lend", async () => {
     vi.stubGlobal("fetch", backend({}));

@@ -14,8 +14,10 @@ import (
 	"io"
 	"log/slog"
 	"maps"
+	"net"
 	"net/http"
-	"strings"
+	"net/http/httptest"
+	"sync"
 	"testing"
 	"time"
 
@@ -30,11 +32,51 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/authz"
 )
 
-type agendaWebhookReceiver map[string]int
+// agendaWebhookReceiver counts the deliveries each path was sent. Its client
+// is the real delivery client, with every host dialing this one test server.
+type agendaWebhookReceiver struct {
+	server *httptest.Server
+	mu     sync.Mutex
+	paths  map[string]int
+}
 
-func (r agendaWebhookReceiver) Do(req *http.Request) (*http.Response, error) {
-	r[req.URL.Path]++
-	return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader("ok"))}, nil
+func newAgendaWebhookReceiver(t *testing.T) *agendaWebhookReceiver {
+	t.Helper()
+	r := &agendaWebhookReceiver{paths: map[string]int{}}
+	r.server = httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		if _, err := io.Copy(io.Discard, req.Body); err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		r.mu.Lock()
+		r.paths[req.URL.Path]++
+		r.mu.Unlock()
+		w.WriteHeader(http.StatusOK)
+	}))
+	t.Cleanup(r.server.Close)
+	return r
+}
+
+// client dials this server for any host. The test certificate names
+// example.com, so the handshake verifies against that name.
+func (r *agendaWebhookReceiver) client(t *testing.T) webhooks.HTTPDoer {
+	t.Helper()
+	transport, ok := r.server.Client().Transport.(*http.Transport)
+	if !ok {
+		t.Fatal("the test server's client has no *http.Transport")
+	}
+	tlsConfig := transport.TLSClientConfig.Clone()
+	tlsConfig.ServerName = "example.com"
+	addr := r.server.Listener.Addr().String()
+	return webhooks.NewDeliveryClient(func(ctx context.Context, network, _ string) (net.Conn, error) {
+		return (&net.Dialer{}).DialContext(ctx, network, addr)
+	}, tlsConfig)
+}
+
+func (r *agendaWebhookReceiver) sent(path string) int {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return r.paths[path]
 }
 
 func assertCaptureReviewDelivery(t *testing.T, e *integration.Env, approval ids.UUID) {
@@ -53,8 +95,8 @@ func assertCaptureReviewDelivery(t *testing.T, e *integration.Env, approval ids.
 			t.Fatal(err)
 		}
 	}
-	receiver := agendaWebhookReceiver{}
-	deliverer := webhooks.NewDeliverer(store, receiver, func() time.Time { return homeReadTime }, agendaWebhookAuthority{}, slog.Default())
+	receiver := newAgendaWebhookReceiver(t)
+	deliverer := webhooks.NewDeliverer(store, receiver.client(t), func() time.Time { return homeReadTime }, agendaWebhookAuthority{}, slog.Default())
 	event := kevents.Envelope{
 		EventID: ids.NewV7(), Type: "approval.requested", Version: 1, OccurredAt: homeReadTime,
 		Actor: kevents.Actor{Type: "system", ID: "system"}, Entity: kevents.EntityRef{Type: "approval", ID: approval}, Payload: []byte(`{}`),
@@ -62,8 +104,9 @@ func assertCaptureReviewDelivery(t *testing.T, e *integration.Env, approval ids.
 	if err := deliverer.HandleEvent(context.Background(), event); err != nil {
 		t.Fatal(err)
 	}
-	if receiver["/"+e.Rep1.String()] != 1 || receiver["/"+e.AdminUser.String()] != 0 {
-		t.Fatalf("review deliveries = %v; want only the importing member", receiver)
+	if receiver.sent("/"+e.Rep1.String()) != 1 || receiver.sent("/"+e.AdminUser.String()) != 0 {
+		t.Fatalf("review deliveries: importer %d, admin %d; want only the importing member's one",
+			receiver.sent("/"+e.Rep1.String()), receiver.sent("/"+e.AdminUser.String()))
 	}
 }
 

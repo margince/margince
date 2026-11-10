@@ -12,6 +12,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture/mailmap"
 	"github.com/margince/margince/backend/internal/platform/datatask"
+	"github.com/margince/margince/backend/internal/platform/originalstore"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -32,9 +33,9 @@ const recoverableMailBodyScope = `FROM activity a ` + mailOriginalJoin + `
 
 func restoreMailBodiesBatch(ctx context.Context, tx pgx.Tx, in datatask.BatchIn) (datatask.BatchOut, error) {
 	return pageStoredMail(ctx, tx, in,
-		"a.id, a.version, a.body, rc.payload",
+		"a.id, a.version, a.body, "+originalstore.SQL("rc"),
 		recoverableMailBodyScope,
-		func(c recoverableMailBody) ids.UUID { return c.ID },
+		func(c *recoverableMailBody) (ids.UUID, *[]byte) { return c.ID, &c.Payload },
 		restoreMailBody)
 }
 

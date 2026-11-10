@@ -33,7 +33,7 @@ internal/compose/awaitingseam_integration_test.go 2
 internal/compose/bulkworklist_integration_test.go 2
 internal/compose/canceledmeetingclocks_integration_test.go 1
 internal/compose/canceledmeetingfolds_integration_test.go 6
-internal/compose/capturedigestprojects_integration_test.go 2
+internal/compose/capturedigestprojects_integration_test.go 1
 internal/compose/capturedigestreview_integration_test.go 2
 internal/compose/captureenrich_integration_test.go 1
 internal/compose/capturehealth_integration_test.go 4
@@ -262,7 +262,6 @@ internal/compose/network/intronote_test.go 1
 internal/compose/openpromisesection_integration_test.go 5
 internal/compose/owedanswer_integration_test.go 10
 internal/compose/privacyqueuenames_integration_test.go 5
-internal/compose/proposalsfollowdeal_integration_test.go 1
 internal/compose/providerreceived_integration_test.go 2
 internal/compose/providerselect_test.go 5
 internal/compose/publicoriginprobe_test.go 7

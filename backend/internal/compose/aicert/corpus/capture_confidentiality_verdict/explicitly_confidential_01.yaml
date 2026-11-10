@@ -22,6 +22,7 @@ fixture:
     Northwind Logistics
 expect:
   outcome: accepted
+  privacy: true
   answer: explicitly_confidential
   judge: none
   judge_none_reason: >

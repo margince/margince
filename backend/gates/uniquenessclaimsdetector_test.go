@@ -382,7 +382,7 @@ func findClaims(root string) ([]claim, error) {
 			// that read it would register its own prose as debt: a sentence
 			// naming a shape is not a claim made by the declaration it sits
 			// on. A gate describing its own subject cannot also be judged by
-			// it. `format/zone-by-purpose.test.ts` skips itself likewise.
+			// it. `frontend/census/rules/zone-by-purpose.census.ts` skips itself likewise.
 			return nil
 		}
 		file, parseErr := gatekit.ParseFile(path, parser.ParseComments)

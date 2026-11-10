@@ -137,8 +137,7 @@ func ArchivableSubset(ctx context.Context, tx pgx.Tx, r ArchiveRule, rowIDs []id
 		return nil, err
 	}
 	canDelete := Allows(ctx, r.object, principal.ActionDelete)
-	mutable := p.Type == principal.PrincipalSystem || p.SeatType.CanMutate()
-	if !mutable || len(rowIDs) == 0 || (!canDelete && !Allows(ctx, r.object, principal.ActionUpdate)) {
+	if !seatAdmitsWrites(p) || len(rowIDs) == 0 || (!canDelete && !Allows(ctx, r.object, principal.ActionUpdate)) {
 		return map[ids.UUID]bool{}, nil
 	}
 	writable, err := r.writable(ctx, tx, p, rowIDs)

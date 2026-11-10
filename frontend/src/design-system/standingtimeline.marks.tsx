@@ -83,7 +83,11 @@ function MarkChip({
         type="button"
         className="standing-timeline-mark"
         style={{ left: `${px}px` }}
-        aria-label={content.head}
+        aria-label={
+          members.length === 1
+            ? t("standing.mark.label", { what: newest.what, when: newest.when })
+            : content.head
+        }
         aria-haspopup="true"
         aria-expanded={peekOpen}
         {...peekProps}

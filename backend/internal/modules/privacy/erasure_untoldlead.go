@@ -122,10 +122,9 @@ func deleteNoticeActivities(ctx context.Context, tx pgx.Tx, deliveryID, leadID i
 // reaches from it. Those are the captured original, the field stamps, the
 // vectors and the communication record. The rest cascade from the row.
 func deleteLeadRecordsTx(ctx context.Context, tx pgx.Tx, leadID ids.UUID) error {
-	if _, err := tx.Exec(ctx, `
-		DELETE FROM raw_capture rc USING lead l
-		 WHERE l.id = $1 AND rc.source_system = l.source_system AND rc.source_id = l.source_id`,
-		leadID); err != nil {
+	if _, err := deleteRawOriginalsTx(ctx, tx,
+		`EXISTS (SELECT 1 FROM lead l WHERE l.id = @lead AND r.source_system = l.source_system AND r.source_id = l.source_id)`,
+		pgx.NamedArgs{sqlArgLead: leadID}); err != nil {
 		return fmt.Errorf("deleting the untold lead's captured original: %w", err)
 	}
 	if _, err := tx.Exec(ctx,

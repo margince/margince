@@ -17,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
+	"github.com/margince/margince/backend/internal/shared/kernel/promptref"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 	"github.com/margince/margince/backend/internal/shared/schema"
 )
@@ -27,6 +28,10 @@ type confidentialityResult struct {
 	Verdict    string            `json:"verdict"`
 	Confidence schema.Confidence `json:"confidence"`
 }
+
+func (r confidentialityResult) answeredID() string { return r.ID }
+
+func (r confidentialityResult) answering(id string) confidentialityResult { r.ID = id; return r }
 
 type confidentialityPayload struct {
 	Results []confidentialityResult `json:"results"`
@@ -48,6 +53,7 @@ type confidentialityPayload struct {
 //promptvoice:exempt the reply is one kind enum value and a confidence number.
 func confidentialityRequest(row capture.PendingThread) model.Request {
 	fence := promptfence.New()
+	ref := threadRefs(row).For(row.ID.String())
 	var prompt strings.Builder
 	prompt.WriteString("Email thread (untrusted; judge it by its id):\n")
 	// One span over the whole thread. The fields are concatenated INSIDE the
@@ -60,16 +66,22 @@ func confidentialityRequest(row capture.PendingThread) model.Request {
 	// whatever the covering note says.
 	thread := fmt.Sprintf("Subject: %s\nAttachments: %s\n%s%s",
 		row.Subject, strings.Join(row.Attachments, ", "), row.Body, documentsSection(row))
-	prompt.WriteString(fence.WrapAttr("id", row.ID.String(), thread) + "\n")
+	prompt.WriteString(fence.WrapAttr("id", ref, thread) + "\n")
 	prompt.WriteString(`Return JSON: { "results": [ { "id", "verdict", "confidence" } ] } — one entry for the supplied id, where "verdict" is the thread kind.`)
 
 	return model.Request{
 		System:         confidentialitySystemFor(fence),
 		Messages:       []model.Message{{Role: chatRoleUser, Content: prompt.String()}},
 		MaxTokens:      ai.ReasoningOutputMaxTokens,
-		ResponseSchema: confidentialitySchema(row.ID.String()),
+		ResponseSchema: confidentialitySchema(ref),
 		SecretStripper: ai.NewSecretStripper(),
 	}
+}
+
+// threadRefs names the one thread a call judges t1: the id the prompt shows
+// and the reply answers by.
+func threadRefs(row capture.PendingThread) *promptref.Refs {
+	return promptref.New("t", row.ID.String())
 }
 
 // documentsSection is what the thread's documents say, inside the body's
@@ -136,7 +148,7 @@ func (e *ConfidentialityVerdictEngine) ask(ctx context.Context, row capture.Pend
 	if msg := validateConfidentialityPayload(payload, row); msg != "" {
 		return nil, fmt.Errorf("confidentiality: %s", msg)
 	}
-	return payload.Results, nil
+	return resolveBatchRefs(payload.Results, threadRefs(row)), nil
 }
 
 // confidentialityShapeValid is the generation-time validator: the requested id
@@ -159,7 +171,7 @@ func confidentialityShapeValid(row capture.PendingThread) ai.Validator {
 // validateConfidentialityPayload names the first fidelity violation, or "" when
 // the payload is exact.
 func validateConfidentialityPayload(payload confidentialityPayload, row capture.PendingThread) string {
-	want := map[string]bool{row.ID.String(): true}
+	want := map[string]bool{threadRefs(row).For(row.ID.String()): true}
 	seen := map[string]bool{}
 	for _, r := range payload.Results {
 		// Every echoed token is MODEL output, and a sender who got the model to
