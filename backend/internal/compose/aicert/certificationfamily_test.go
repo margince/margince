@@ -73,11 +73,11 @@ type aiCertFamilySite struct {
 }
 
 // buildAICertFamilies folds the document's records by model family. A family is
-// graded on its best model per feature, the model a buyer picking that family
-// would run, so a weak model in the family cannot hide a strong one. Only a
-// route a preset takes and a record grades counts: a retired or one-off binding
-// is a model no buyer is given, and one the preset sends with other settings
-// than its records were measured on has no grade to list.
+// graded on its best model per feature: the model a buyer picking that family
+// would run. So a weak model in the family cannot hide a strong one. Only a
+// route a preset takes and a record grades counts. A retired or one-off binding
+// is a model no buyer is given. A binding sent with settings no record measured
+// has no grade to list.
 func buildAICertFamilies(doc aiCertDoc, rows []aicert.ReadinessRow) []aiCertFamily {
 	measured := aiCertMeasuredRoutes(doc.Presets)
 	byName := map[string]*aiCertFamily{}

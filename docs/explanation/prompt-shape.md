@@ -192,9 +192,9 @@ other way.
 - **One field, one order.** When a field has two ordering rules, say which
   comes first.
 - **Bound a permission where you give it.** "It may skip stages" is read as
-  leave to skip past a stage whose rule is not met. Say how far, in the same
+  leave to skip past a stage whose rule does not hold. Say how far, in the same
   sentence.
-- **A rule needs the fact it rests on.** A prompt can't tell the model to
+- **A rule needs the fact it rests on.** A prompt cannot tell the model to
   answer only the recipient's mail when the data does not say who wrote each
   one. Fix the input instead.
 

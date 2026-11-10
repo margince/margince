@@ -205,7 +205,7 @@ func directionWord(direction string) string {
 // extractReferenceFields defines the reference fields in the reply format,
 // where a model follows a field's definition more closely than a system rule.
 const extractReferenceFields = `A reference is a value from the first column of a "Verified participants" list, such as "p1"; a name or an ` +
-	`address is never a reference. When that column holds none for the person meant, buyer_ref and promiser_ref ` +
+	`address is never a reference. When that column holds none for the participant meant, buyer_ref and promiser_ref ` +
 	`are "" and recipient_refs is []. ` +
 	`"buyer_ref" is the contact whose own words ask for OUR company's work; words they attribute to someone else ` +
 	`("the client said …") are not their request. commercial_role is "buyer" only when buyer_ref is set; ` +
