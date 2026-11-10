@@ -22792,8 +22792,8 @@ export interface paths {
          *
          *     Ranked by connection count, then by name, then by company id, so two reads of an
          *     unchanged network return the same order. The ranking pages: `next_cursor`
-         *     resumes after the last account returned, and a cursor this ranking did not mint
-         *     is refused with 422.
+         *     resumes after the last account returned, and a cursor that names no position in
+         *     this ranking is refused with 422.
          *
          *     Only companies the caller can READ appear, under the ordinary company
          *     row scope. A connection whose employer resolved to no account is not reported
@@ -94257,7 +94257,8 @@ export interface operations {
                 limit?: components["parameters"]["Limit"];
                 /**
                  * @description Opaque position from a prior answer's `next_cursor`, which resumes the ranking after
-                 *     the last account returned. A cursor this route did not mint is refused with 422.
+                 *     the last account returned. A cursor that names no position in this ranking, such
+                 *     as one from another route, is refused with 422.
                  *     The ranking is by live connection counts, so an import between two pages can move
                  *     an account across the cut: re-read from the top to see the network as it is now.
                  */

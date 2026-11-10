@@ -74467,7 +74467,8 @@ type GetMyLinkedInReachParams struct {
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty" maximum:"200" minimum:"1"`
 
 	// Cursor Opaque position from a prior answer's `next_cursor`, which resumes the ranking after
-	// the last account returned. A cursor this route did not mint is refused with 422.
+	// the last account returned. A cursor that names no position in this ranking, such
+	// as one from another route, is refused with 422.
 	// The ranking is by live connection counts, so an import between two pages can move
 	// an account across the cut: re-read from the top to see the network as it is now.
 	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
