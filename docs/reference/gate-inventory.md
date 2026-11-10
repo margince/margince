@@ -156,7 +156,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `modelreplyfence_test.go` | H3 | A markdown fence around a model's JSON is presentation, and no site may read it as a malformed answer. |
 | `modelroutes_test.go` | H3 | The SPA's table of routes that hold a model call open must be the contract's. |
 | `modulecatalogtables_test.go` | H2 | The module catalog's Owns-tables column links to the entity model, and copies no table. |
-| `momentactionvocabulary_test.go` | H3 | Every moment-card verb is classified by whether pressing it writes. |
+| `momentactionvocabulary_test.go` | H3 | Every offered verb is classified by whether pressing it writes. |
 | `netguardparity_test.go` | H3 | The egress SSRF denylist exists twice, and this is where the two are held equal. |
 | `offertemplatelayout_test.go` | H2 | The offer-template form and the PDF renderer must spell a layout key the same way, or what an administrator types is stored and never printed. |
 | `onboardinglocales_test.go` | H2 | The onboarding conversation speaks every language the product does. |

@@ -38933,6 +38933,12 @@ type Company360Suggestion struct {
 		// ActivityId The unanswered outbound message a `draft_reply` anchors on.
 		ActivityId *openapi_types.UUID `json:"activity_id,omitempty"`
 
+		// BlockedReason Present when this reader may not take the action, and says why in the reader's
+		// language. A client draws the button disabled with this sentence. `draft_reply`
+		// and `add_task` write an activity, so a seat without `activity.create`, or a
+		// seat that may not write at all, gets one.
+		BlockedReason *string `json:"blocked_reason,omitempty"`
+
 		// DealId The deal an `open_deal` opens, and the optional link an `add_task` carries.
 		DealId *openapi_types.UUID `json:"deal_id,omitempty"`
 
@@ -46077,8 +46083,15 @@ type DealStatusCardMove struct {
 	Arguments *map[string]interface{} `json:"arguments,omitempty"`
 
 	// Basis Evidence classification for this recommendation; absence supplies no urgency.
-	Basis    *WorkEvidenceBasis           `json:"basis,omitempty"`
-	Evidence []DealNextBestActionEvidence `json:"evidence"`
+	Basis *WorkEvidenceBasis `json:"basis,omitempty"`
+
+	// BlockedReason Present when this reader may not take the move, and says why in the reader's
+	// language. A client draws the verb disabled with this sentence. `draft_email`
+	// and `create_task` write an activity, so a seat without `activity.create`, or a
+	// seat that may not write at all, gets one. The stored card never carries it; it
+	// is set for each reader.
+	BlockedReason *string                      `json:"blocked_reason,omitempty"`
+	Evidence      []DealNextBestActionEvidence `json:"evidence"`
 
 	// Fingerprint A digest of what the move names: its verb, operands and evidence, taken when the
 	// rules chose it. Send it to `POST /deals/{id}/move/dismiss` to set this move aside;
@@ -68121,6 +68134,12 @@ type WorklistMove struct {
 
 	// Basis The deal recommendation's evidence basis, preserved across surfaces.
 	Basis *WorkEvidenceBasis `json:"basis,omitempty"`
+
+	// BlockedReason Present when this reader may not take the verb, and says why in the reader's
+	// language. A client draws the verb disabled with this sentence. `draft_reply`,
+	// `draft_email` and `create_task` write an activity, so a seat without
+	// `activity.create`, or a seat that may not write at all, gets one.
+	BlockedReason *string `json:"blocked_reason,omitempty"`
 
 	// MailCoverage The calling reader's mail capture for the requested interval. This does
 	// not assert that no reply exists. Partial means capture has succeeded but
