@@ -404,10 +404,8 @@ func TestNoNewPrivateContentionProbe(t *testing.T) {
 		if sharedProbeHome(path) {
 			return nil
 		}
-		for _, decl := range file.Decls {
-			if asksBlockingPids(decl) {
-				return []string{path}
-			}
+		if slices.ContainsFunc(file.Decls, asksBlockingPids) {
+			return []string{path}
 		}
 		return nil
 	})
