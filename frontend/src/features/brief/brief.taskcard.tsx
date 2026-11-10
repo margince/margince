@@ -70,6 +70,8 @@ export function taskName(
   const mail = item.email_summary;
   const sender = partyName(item);
   // A message waiting on the reader is named by the move it asks for.
+  // An invitation's subject already names the event it asks about.
+  if (mail?.calendar_invitation && mail.subject) return mail.subject;
   if (mail?.move === "needs_reply" && sender && mail.subject)
     return t("brief.task.reply", { name: sender, subject: mail.subject });
   return (
@@ -258,12 +260,17 @@ function kindIcon(item: WorklistItem): LucideIcon {
   return item.email_summary ? Mail : CATEGORY_ICONS[item.category];
 }
 
-type CardStatus = Readonly<{ key: MessageKey; tone: "danger" | "warning" }>;
+type CardStatus = Readonly<{
+  key: MessageKey;
+  tone: "danger" | "warning" | "info";
+}>;
 
 /** Late first, then why a message is waiting; any other row has no state. */
 function statusOf(item: WorklistItem, titled: boolean): CardStatus | null {
   if (item.overdue === true)
     return titled ? null : { key: "worklist.overdue", tone: "danger" };
+  if (item.email_summary?.calendar_invitation)
+    return { key: eyebrowKeyFor(item), tone: "info" };
   if (item.email_summary && item.band === "now")
     return { key: eyebrowKeyFor(item), tone: "warning" };
   return null;

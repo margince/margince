@@ -121,6 +121,7 @@ components:
         - sales_initiative.updated
         - activity.disposition_recorded
         - activity.marked_handled
+        - activity.invitation_answered
         - activity.link_suggestion_changed
         - activity.readiness_recorded
         - relationship_nudge.decided
@@ -2847,6 +2848,29 @@ components:
         activity_id:
           type: string
           format: uuid
+      additionalProperties: false
+
+    PublicEventActivityInvitationAnswered:
+      type: object
+      x-event-type: activity.invitation_answered
+      x-entity-type: activity
+      x-version: 1
+      description: >-
+        Payload for activity.invitation_answered. One reader answered a calendar
+        invitation that came by email, and their own calendar sent the answer to
+        the organizer (activities/calendarinvitation.go). It is that reader's own
+        answer, and the reader is not on the wire. The same press marks the
+        message done for them, announced as activity.marked_handled.
+      required:
+        - activity_id
+        - response
+      properties:
+        activity_id:
+          type: string
+          format: uuid
+        response:
+          type: string
+          enum: [accepted, tentative, declined]
       additionalProperties: false
 
     PublicEventActivityLinkSuggestionChanged:
