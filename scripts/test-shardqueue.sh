@@ -14,7 +14,9 @@
 #      artifact cut from other parts;
 #   5. the dispatcher runs each claimed part once, never two at once on one slot;
 #   6. a store that fails stops the claims and says so; the cache store reads
-#      the service's answers as claim, lost claim, refusal or retry.
+#      the service's answers as claim, lost claim, refusal or retry;
+#   7. the action that hands the results service to `run:` steps writes it
+#      and masks the token.
 set -euo pipefail
 
 root_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -187,6 +189,10 @@ mode() { # answer
 [[ "$(mode '200 {"ok":false,"message":"cache write denied: read-only"}')" == fixed ]] \
   || fail "a service that refuses this run's writes must choose the fixed split"
 unset -f curl sleep
+
+# The action that hands the results service to the shard's `run:` steps.
+node --test "$root_dir/.github/actions/results-service-env/index.test.cjs" > "$work/node-test.log" 2>&1 \
+  || fail "results-service-env: $(cat "$work/node-test.log")"
 
 if (( fails > 0 )); then
   echo "test-shardqueue: $fails failure(s)" >&2
