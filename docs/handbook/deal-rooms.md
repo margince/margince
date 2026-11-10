@@ -68,6 +68,12 @@ To change what a buyer reads first in Margince, open the deal's **Deal Room** ta
 - **Welcome message** is "The first paragraph a buyer reads."
 - **Your contact** is "The colleague a buyer turns to."
 Click **Save changes**. "Changes reach buyers the next time they open the room."
+
+If no active colleague is named as the buyer's contact, the room's editors see **New contact needed**.
+Open **Manage room** and choose an active colleague under **Your contact**.
+
+The buyer's page no longer names the colleague who left. Access to the room and its questions stays as it was.
+
 Also called: rename the room, edit the welcome text, change the buyer's contact.
 
 ### What does the deal room tab show?

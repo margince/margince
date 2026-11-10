@@ -52767,11 +52767,8 @@ export interface components {
          */
         DealRoomState: "draft" | "building" | "ready" | "publishing" | "live" | "paused" | "closed" | "expired" | "archived";
         /**
-         * @description One buyer-facing room per deal. Mirrors the `deal_room` table.
-         *
-         *     The fields here are the WORKING copy — what a buyer actually reads is the
-         *     latest release, which freezes these values at publish time. Editing a live
-         *     room's title changes nothing for the buyer until someone publishes again.
+         * @description One buyer-facing room per deal. Changes to a live room are visible to
+         *     invited buyers as soon as they are saved.
          */
         DealRoom: {
             /** Format: uuid */
@@ -52792,6 +52789,10 @@ export interface components {
              *     deleted, which is the state a steward transfer exists to repair.
              */
             steward_user_id?: string | null;
+            /** @description Whether this caller may write the room's live deal. The caller also needs the room update grant, and finished rooms refuse content changes. */
+            readonly writable?: boolean;
+            /** @description No active human is set as steward. Authorized room editors should select a replacement; buyer access and existing questions remain available. */
+            readonly needs_steward?: boolean;
             /**
              * Format: date-time
              * @description When buyer access lapses on its own. Extending is an explicit human act.

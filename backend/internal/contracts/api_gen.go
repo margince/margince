@@ -45622,11 +45622,8 @@ type DealRoleProposalWritten struct {
 	SourceActivityId openapi_types.UUID `json:"source_activity_id"`
 }
 
-// DealRoom One buyer-facing room per deal. Mirrors the `deal_room` table.
-//
-// The fields here are the WORKING copy — what a buyer actually reads is the
-// latest release, which freezes these values at publish time. Editing a live
-// room's title changes nothing for the buyer until someone publishes again.
+// DealRoom One buyer-facing room per deal. Changes to a live room are visible to
+// invited buyers as soon as they are saved.
 type DealRoom struct {
 	ArchivedAt *time.Time `json:"archived_at,omitempty"`
 
@@ -45641,6 +45638,9 @@ type DealRoom struct {
 	// ExpiresAt When buyer access lapses on its own. Extending is an explicit human act.
 	ExpiresAt *time.Time         `json:"expires_at,omitempty"`
 	Id        openapi_types.UUID `json:"id"`
+
+	// NeedsSteward No active human is set as steward. Authorized room editors should select a replacement; buyer access and existing questions remain available.
+	NeedsSteward *bool `json:"needs_steward,omitempty"`
 
 	// PreviewAvailable Whether THIS caller may open the buyer preview of THIS room — the same question `POST /deal-rooms/{id}/preview` answers, computed here so a screen can say no before the press rather than after it. Four things must hold, and a plain `writable` would answer only one: the caller holds `update` on deal rooms, is a contact rather than an agent (a preview is a seat's own view, and a system caller has no seat to preview from), the underlying deal is writable AND live, and the room is not archived. False is not "this room is broken" — it is the ordinary reading for a colleague who may read the room and not present it.
 	PreviewAvailable *bool  `json:"preview_available,omitempty"`
@@ -45672,7 +45672,10 @@ type DealRoom struct {
 	Version *RowVersion `json:"version,omitempty" minimum:"1"`
 
 	// WelcomeMessage The buyer's first paragraph on opening the room.
-	WelcomeMessage       *string                `json:"welcome_message,omitempty"`
+	WelcomeMessage *string `json:"welcome_message,omitempty"`
+
+	// Writable Whether this caller may write the room's live deal. The caller also needs the room update grant, and finished rooms refuse content changes.
+	Writable             *bool                  `json:"writable,omitempty"`
 	AdditionalProperties map[string]interface{} `json:"-"`
 }
 
@@ -85135,6 +85138,14 @@ func (a *DealRoom) UnmarshalJSON(b []byte) error {
 		delete(object, "id")
 	}
 
+	if raw, found := object["needs_steward"]; found {
+		err = json.Unmarshal(raw, &a.NeedsSteward)
+		if err != nil {
+			return fmt.Errorf("error reading 'needs_steward': %w", err)
+		}
+		delete(object, "needs_steward")
+	}
+
 	if raw, found := object["preview_available"]; found {
 		err = json.Unmarshal(raw, &a.PreviewAvailable)
 		if err != nil {
@@ -85199,6 +85210,14 @@ func (a *DealRoom) UnmarshalJSON(b []byte) error {
 		delete(object, "welcome_message")
 	}
 
+	if raw, found := object["writable"]; found {
+		err = json.Unmarshal(raw, &a.Writable)
+		if err != nil {
+			return fmt.Errorf("error reading 'writable': %w", err)
+		}
+		delete(object, "writable")
+	}
+
 	if len(object) != 0 {
 		a.AdditionalProperties = make(map[string]interface{})
 		for fieldName, fieldBuf := range object {
@@ -85259,6 +85278,13 @@ func (a DealRoom) MarshalJSON() ([]byte, error) {
 		return nil, fmt.Errorf("error marshaling 'id': %w", err)
 	}
 
+	if a.NeedsSteward != nil {
+		object["needs_steward"], err = json.Marshal(a.NeedsSteward)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'needs_steward': %w", err)
+		}
+	}
+
 	if a.PreviewAvailable != nil {
 		object["preview_available"], err = json.Marshal(a.PreviewAvailable)
 		if err != nil {
@@ -85304,6 +85330,13 @@ func (a DealRoom) MarshalJSON() ([]byte, error) {
 		object["welcome_message"], err = json.Marshal(a.WelcomeMessage)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'welcome_message': %w", err)
+		}
+	}
+
+	if a.Writable != nil {
+		object["writable"], err = json.Marshal(a.Writable)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'writable': %w", err)
 		}
 	}
 

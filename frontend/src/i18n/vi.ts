@@ -3900,6 +3900,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "roompage.none": "Deal này chưa có Deal Room. Mở Deal Room từ trang deal.",
   "roompage.backToDeal": "← Quay lại deal",
   "roompage.accessMenu": "Quyền vào Deal Room",
+  "room.stewardNeeded.title": "Cần người liên hệ mới",
+  "room.stewardNeeded.body":
+    "Chọn đồng nghiệp đang hoạt động để trả lời người mua. Các câu hỏi hiện có và quyền truy cập phòng vẫn giữ nguyên.",
   "roompage.manage": "Quản lý Deal Room",
   "roompage.pause": "Tạm dừng",
   "roompage.pauseHint":
@@ -12577,6 +12580,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Để trống nếu không có ngày kết thúc. Ngày được tính theo UTC.",
   "roomtab.manage.contactLabel": "Người liên hệ",
   "roomtab.manage.contactHint": "Đồng nghiệp mà người mua liên hệ.",
+  "roomtab.manage.contactMissing": "Chưa có người liên hệ đang hoạt động",
   "roomtab.manage.contactOwner": "Người phụ trách deal",
   "roomtab.manage.textHeading": "Tiêu đề và lời chào",
   "roomtab.manage.welcomeHint": "Đoạn đầu tiên người mua đọc.",

@@ -72038,11 +72038,8 @@ components:
     DealRoom:
       type: object
       description: |
-        One buyer-facing room per deal. Mirrors the `deal_room` table.
-
-        The fields here are the WORKING copy — what a buyer actually reads is the
-        latest release, which freezes these values at publish time. Editing a live
-        room's title changes nothing for the buyer until someone publishes again.
+        One buyer-facing room per deal. Changes to a live room are visible to
+        invited buyers as soon as they are saved.
       required: [id, deal_id, title, state, source, captured_by, created_at, updated_at]
       properties:
         id: { type: string, format: uuid }
@@ -72062,6 +72059,18 @@ components:
             The named human a buyer is pointed at for help. Defaults to the deal's owner
             at create time and transfers deliberately thereafter; null once that user is
             deleted, which is the state a steward transfer exists to repair.
+        writable:
+          type: boolean
+          readOnly: true
+          description: >-
+            Whether this caller may write the room's live deal. The caller also
+            needs the room update grant, and finished rooms refuse content changes.
+        needs_steward:
+          type: boolean
+          readOnly: true
+          description: >-
+            No active human is set as steward. Authorized room editors should
+            select a replacement; buyer access and existing questions remain available.
         expires_at:
           type: [string, 'null']
           format: date-time
