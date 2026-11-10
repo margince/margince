@@ -28,6 +28,8 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/internal/shared/kernel/viability"
 )
 
@@ -58,10 +60,12 @@ func newSilentDealCloser(pool *pgxpool.Pool, log *slog.Logger) silentDealCloser 
 
 // closeDecision is one deal the check would close, and why.
 type closeDecision struct {
-	deal   ids.DealID
-	owner  ids.UUID
-	code   string
-	reason string
+	reasonCode string
+	reasonDays int
+	deal       ids.DealID
+	owner      ids.UUID
+	code       string
+	reason     string
 }
 
 // CloseWorkspace closes every due deal in the workspace bound in ctx and
@@ -118,10 +122,20 @@ func (c silentDealCloser) closeOne(ctx context.Context, decision closeDecision, 
 // origin keeps it out of every recency clock, so it never reads as the
 // deal being worked on.
 func (c silentDealCloser) recordOnTimeline(ctx context.Context, tx pgx.Tx, decision closeDecision) error {
-	subject := "Margince closed this deal as lost"
-	body := decision.reason + ". Undo it from Home if the deal is still alive, and add a note on why."
+	subject := systemtext.Literal("deal.lost")
+	body := decision.reason + ". " + systemtext.Literal("deal.lost_undo")
+	var component *systemtext.Component
+	if decision.reasonCode != "" {
+		component = systemtext.Sentence(decision.reasonCode)
+		if decision.reasonCode != "deal.customer_declined" {
+			component.Args = []systemtext.Argument{systemtext.Count(int64(decision.reasonDays))}
+		}
+		component = systemtext.Sequence(component, systemtext.Sentence("deal.lost_undo"))
+		component.Layout = "sentences"
+	}
 	_, _, err := c.activities.LogActivityTx(ctx, tx, activities.LogActivityInput{
-		Kind: string(crmcontracts.ActivityKindNote), Subject: &subject, Body: &body, Origin: activities.OriginSystemRemediation,
+		SystemText: &systemtext.Message{Subject: systemtext.Sentence("deal.lost"), Body: component},
+		Kind:       string(crmcontracts.ActivityKindNote), Subject: &subject, Body: &body, Origin: activities.OriginSystemRemediation,
 		Links: []activities.ActivityLinkInput{{EntityType: entityTypeDeal, EntityID: decision.deal.UUID}},
 	})
 	if err != nil {
@@ -209,11 +223,13 @@ func decideClose(
 		return closeDecision{}, false
 	case slices.Contains(assessed.Reasons, viability.ReasonCustomerDeclined) &&
 		after(facts.refusalAt, keptOpen) && after(facts.refusalAt, facts.anyProgressAt):
-		decision.code, decision.reason = deals.LossReasonOther, "The customer wrote that they will not go ahead"
+		decision.code, decision.reason = deals.LossReasonOther, systemtext.Literal("deal.customer_declined")
+		decision.reasonCode = "deal.customer_declined"
 		return decision, true
 	case silentReason(assessed.Reasons) && silentDays > threshold && daysSince(keptOpen, now, zone) > threshold:
 		decision.code = deals.LossReasonWentSilent
 		decision.reason = silenceReason(silentDays, assessed.SilentDays, threshold)
+		decision.reasonCode, decision.reasonDays = silenceReasonParts(silentDays, assessed.SilentDays, threshold)
 		return decision, true
 	}
 	return closeDecision{}, false
@@ -223,10 +239,15 @@ func decideClose(
 // every reader of the deal. When private mail is newer than all visible mail,
 // it names the threshold, not a day that private mail set.
 func silenceReason(silentDays, visibleDays, threshold int) string {
+	code, days := silenceReasonParts(silentDays, visibleDays, threshold)
+	return fmt.Sprintf(systemtext.Copy(code, textlang.English), days)
+}
+
+func silenceReasonParts(silentDays, visibleDays, threshold int) (string, int) {
 	if silentDays < visibleDays {
-		return fmt.Sprintf("No word from the customer for more than %d days", threshold)
+		return "deal.silent_threshold", threshold
 	}
-	return fmt.Sprintf("No word from the customer for %d days", silentDays)
+	return "deal.silent", silentDays
 }
 
 func silentReason(reasons []viability.Reason) bool {

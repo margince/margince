@@ -28,6 +28,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 ROOT="$ROOT_DIR"
 source "$ROOT/scripts/lib-testdb.sh"
+source "$ROOT/scripts/lib-integration-artifacts.sh"
 
 ARTIFACTS="${1:?usage: test-integration-reconcile.sh <artifacts-root> [cover-out]}"
 COVER_OUT="${2:-}"
@@ -51,12 +52,13 @@ REF_TIMING="$(sed -n 's/^timing=//p' "$first_meta")"
 UNION="$(mktemp)"
 trap 'rm -f "$UNION"' EXIT
 
-# A shard without meta.txt reported no result: it failed or never ran. Its
-# tests are named below instead of stopping at the first such shard.
+# A shard without meta.txt never finished, and one with failure-summary.txt is
+# red. The tests no green shard ran are named below, instead of stopping at the
+# first such shard.
 missing=()
 for k in $(seq 1 "$TOTAL"); do
   d="$ARTIFACTS/integration-shard-$k"
-  if [[ ! -f "$d/meta.txt" ]]; then
+  if [[ ! -f "$d/meta.txt" || -f "$d/failure-summary.txt" ]]; then
     missing+=("$k")
     continue
   fi
@@ -70,6 +72,7 @@ for k in $(seq 1 "$TOTAL"); do
   # leave gaps with no slicing bug to find.
   grep -qx "timing=$REF_TIMING" "$d/meta.txt" || fail "shard $k split by other test durations than shard $REF_SHARD ($(grep '^timing=' "$d/meta.txt" || echo 'no timing=')) — every shard of a run must read the one file the build job hands on"
   diff "$d/assigned.txt" "$d/ran.txt" > /dev/null || fail "shard $k ran a different test set than assigned (its own gate should have caught this)"
+  reconcile_parts "$d" || fail "shard $k's parts do not add up to its slice"
   cat "$d/assigned.txt" >> "$UNION"
 done
 LC_ALL=C sort -o "$UNION" "$UNION"
@@ -77,13 +80,15 @@ LC_ALL=C sort -o "$UNION" "$UNION"
 if (( ${#missing[@]} > 0 )); then
   for k in "${missing[@]}"; do
     claimed="$ARTIFACTS/integration-shard-$k/claimed.txt"
+    state="reported no result"
+    [[ ! -f "$ARTIFACTS/integration-shard-$k/failure-summary.txt" ]] || state="is red (its failure-summary.txt and rerun.txt say what failed)"
     if [[ -s "$claimed" ]]; then
-      echo "FAIL: shard $k/$TOTAL reported no result; it had claimed groups $(cut -d' ' -f1 "$claimed" | paste -sd' ' -)"
+      echo "FAIL: shard $k/$TOTAL $state; it had claimed groups $(cut -d' ' -f1 "$claimed" | paste -sd' ' -)"
     else
-      echo "FAIL: shard $k/$TOTAL reported no result (its job log says why)"
+      echo "FAIL: shard $k/$TOTAL $state"
     fi
   done
-  echo "FAIL: these tests ran on no shard that reported, by package (count, first names):"
+  echo "FAIL: these tests passed on no green shard, by package (count, first names):"
   LC_ALL=C comm -23 "$REF_DISCOVERY" "$UNION" | awk -F'|' '
     { key = $1 "|" $2; n[key]++; if (n[key] <= 3) names[key] = names[key] " " $3 }
     END { for (key in n) printf "  %-48s %5d %s%s\n", key, n[key], names[key], (n[key] > 3 ? " ..." : "") }

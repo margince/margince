@@ -150,7 +150,7 @@ func (e *qualifyingEnv) attendedMeeting(t *testing.T, offset time.Duration, capt
 // attendedMeetingAt plants a captured meeting the subject was in at a stated
 // instant, read as a day entry when day is set. The time is the fixture's,
 // never the database's now(), so a test can read it on a clock of its own.
-func (e *qualifyingEnv) attendedMeetingAt(t *testing.T, at time.Time, day bool) {
+func (e *qualifyingEnv) attendedMeetingAt(t *testing.T, at time.Time, day bool) ids.UUID {
 	t.Helper()
 	precision := "instant"
 	if day {
@@ -170,6 +170,7 @@ func (e *qualifyingEnv) attendedMeetingAt(t *testing.T, at time.Time, day bool) 
 	}); err != nil {
 		t.Fatalf("planting a meeting at %s: %v", at, err)
 	}
+	return id
 }
 
 // The ordinary case, spelled out at the call sites: a calendar the mailbox owner
@@ -308,15 +309,15 @@ func TestAMeetingIsJudgedOnTheVerdictsClock(t *testing.T) {
 	}
 }
 
-// A meeting stamped as evidence while it was still ahead, as the send path once
-// did, does not count until its time is reached.
+// A retained stamp for a future meeting follows the actual meeting time.
 func TestAMeetingStampedBeforeItHappensCountsOnlyOnceItIsPast(t *testing.T) {
 	e := setupQualifying(t)
 	meetsAt := clocktest.Now(t).Add(time.Hour)
+	meeting := e.attendedMeetingAt(t, meetsAt, false)
 	if err := e.store.db.Tx(e.ctx, func(tx pgx.Tx) error {
 		return stampQualifyingEvent(e.ctx, tx, e.contact.String(), QualifyingEvent{
 			Kind: KindMeeting, OccurredAt: meetsAt,
-			SourceEntityType: "activity", SourceEntityID: ids.NewV7().String(),
+			SourceEntityType: "activity", SourceEntityID: meeting.String(),
 		}, sourceKindDerived, "user:"+e.user.String())
 	}); err != nil {
 		t.Fatalf("stamping the meeting: %v", err)

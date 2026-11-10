@@ -16,6 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/datatask"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 // meetingNoonStartsDataTask puts back the start of a meeting the old outcome
@@ -25,7 +26,7 @@ import (
 func meetingNoonStartsDataTask() datatask.Task {
 	return datatask.Task{
 		ID: "core/1792912000_meeting_noon_starts", Version: 3,
-		Title: "Restore meeting times an old outcome save moved to noon",
+		Title: systemtext.Literal("datatask.title.core.1792912000_meeting_noon_starts"),
 		// The selection also reads occurred_precision, which core/1792983858 adds.
 		Requires: []string{"core/" + activities.MeetingNoonCutoffMigration, "core/1792983858"},
 		Steps: []datatask.Step{{

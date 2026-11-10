@@ -126,7 +126,7 @@ func TestAnArchiveWaitingOnAnOwnerChangeReadsTheNewOwner(t *testing.T) {
 	e := integration.Setup(t)
 	rep := ownerRep(e, e.Rep1)
 	company := e.SeedCompany(t, "Handed GmbH", &e.Rep1)
-	owner := integration.OwnerConn(t)
+	owner := integration.FreshOwnerConn(t)
 	transfer, err := owner.Begin(context.Background())
 	if err != nil {
 		t.Fatal(err)

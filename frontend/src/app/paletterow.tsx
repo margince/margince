@@ -11,6 +11,7 @@ import type { Command } from "./palette";
 
 const TYPE_KEY: Record<Command["type"], MessageKey> = {
   screen: "palette.typeScreen",
+  setting: "palette.typeSetting",
   action: "palette.typeAction",
   record: "palette.typeRecord",
 };
@@ -76,13 +77,13 @@ export function PaletteRow({
   );
 }
 
-// A record's mark where it has one, hidden from the row's name: its initials
-// are TEXT, and would otherwise be read out before the record they stand for.
+// A record's mark where it has one. Not hidden: the row's name holds what the
+// mark prints (WCAG 2.5.3).
 function RowGlyph({ command }: Readonly<{ command: Command }>) {
   if (command.pending) return <BusyMark />;
   if (command.mark) {
     return (
-      <span className="palette-mark" aria-hidden="true">
+      <span className="palette-mark">
         <Avatar
           name={command.mark.name}
           identity={command.mark.identity}

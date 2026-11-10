@@ -4,6 +4,7 @@
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { moduleGraph } from "../../scripts/lib/bundle-reach";
+import { stable } from "../../src/format/collate";
 import { en } from "../../src/i18n/en";
 import { plantedFindings, srcDir } from "../tree";
 import { orphanKeys, rule } from "./orphan-keys.census";
@@ -143,7 +144,7 @@ describe("the orphan finder, over a planted tree", () => {
 
 describe("the orphan-keys rule", () => {
   // The real entry names every English key but one; a story names that one.
-  const [kept, ...named] = Object.keys(en).sort();
+  const [kept, ...named] = Object.keys(en).sort(stable);
 
   it("reports the one key only a story renders", () => {
     const findings = plantedFindings(rule, [

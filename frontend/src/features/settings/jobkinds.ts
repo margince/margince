@@ -16,6 +16,7 @@ const JOB_KIND_NAME: Readonly<Record<string, MessageKey>> = {
   ai_price_sync_sweep: "jobs.kind.ai_price_sync_sweep",
   approval_auto_apply: "jobs.kind.approval_auto_apply",
   approval_expiry: "systemJob.approval_expiry",
+  approval_owner_notice: "systemJob.approval_owner_notice",
   approval_notice_reconcile: "systemJob.approval_notice_reconcile",
   assurance_deal_rescan: "jobs.kind.assurance_deal_rescan",
   assurance_run: "jobs.kind.assurance_run",

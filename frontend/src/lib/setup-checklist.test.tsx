@@ -30,7 +30,12 @@ type VoiceBuild = components["schemas"]["VoiceBuild"];
 type SchedulingProfile = components["schemas"]["SchedulingProfile"];
 type PassportSummary = components["schemas"]["PassportSummary"];
 
-const VOICE_WRITER: GrantSpec = { voice_profile: ["read", "create", "update"] };
+// The seat's own pages: Voice by its grant, Meetings by the booking grant the
+// scheduling profile is served under.
+const VOICE_WRITER: GrantSpec = {
+  voice_profile: ["read", "create", "update"],
+  activity: ["read", "create"],
+};
 const MAIL_PROVIDERS: readonly MailProvider[] = ["gmail", "graph", "imap"];
 
 // A calendar can write bookings unless a test takes its grant away.
@@ -242,7 +247,10 @@ describe("deriveSetupSteps", () => {
   it("offers nothing to do next while every connection waits on an administrator", () => {
     const steps = summary(
       reads({
-        acts: actsFor({ voice_profile: ["read"] }),
+        acts: actsFor({
+          voice_profile: ["read"],
+          activity: ["read", "create"],
+        }),
         connectors: roster([], {
           gmail: "app_missing",
           graph: "app_missing",
@@ -406,7 +414,12 @@ describe("deriveSetupSteps", () => {
 
   it("leaves out a step whose page the reader cannot act on", () => {
     const steps = summary(
-      reads({ acts: actsFor({ voice_profile: ["read"] }) }),
+      reads({
+        acts: actsFor({
+          voice_profile: ["read"],
+          activity: ["read", "create"],
+        }),
+      }),
     );
 
     expect(steps.map((step) => step.id)).toEqual([
@@ -512,12 +525,19 @@ function serve(answers: Readonly<Record<string, () => Response>>) {
   );
 }
 
-function wrapper({ children }: Readonly<{ children: ReactNode }>) {
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
-  return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
+// A signed-in seat holding allow, as /me answered it.
+function wrapperFor(allow: GrantSpec) {
+  return function SignedIn({ children }: Readonly<{ children: ReactNode }>) {
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    client.setQueryData(["me"], meFixture({ allow }));
+    return (
+      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    );
+  };
 }
+const wrapper = wrapperFor(VOICE_WRITER);
 
 const REACH = settingsReach(meFixture({ allow: VOICE_WRITER }));
 
@@ -619,5 +639,35 @@ describe("useSetupChecklist", () => {
       wrapper,
     });
     expect(signedInAgain.result.current.hidden).toBe(false);
+  });
+});
+
+describe("a seat that may not book", () => {
+  it("never asks for the scheduling profile and shows no booking step", async () => {
+    const reader: GrantSpec = {
+      voice_profile: ["read", "create", "update"],
+      activity: ["read"],
+    };
+    const asked: string[] = [];
+    serve({
+      "/connectors": () => jsonResponse({ data: [], providers: [] }),
+      "/voice-profiles": () => jsonResponse({ data: [] }),
+      "/scheduling/profile": () => {
+        asked.push("/scheduling/profile");
+        return jsonResponse(
+          { status: 403, code: "permission_denied", title: "Forbidden" },
+          403,
+        );
+      },
+    });
+    const { result } = renderHook(
+      () => useSetupChecklist(settingsReach(meFixture({ allow: reader }))),
+      { wrapper: wrapperFor(reader) },
+    );
+    await waitFor(() => expect(result.current.settled).toBe(true));
+    expect(result.current.steps.map((step) => step.id)).not.toContain(
+      "booking",
+    );
+    expect(asked).toEqual([]);
   });
 });

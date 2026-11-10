@@ -31,7 +31,7 @@ describe("excerptLines", () => {
 describe("emphasisIndices", () => {
   it("lights the two longest words, earliest first on a tie, and never a short one", () => {
     const words = "We should move the kickoff to Thursday, please".split(" ");
-    expect([...emphasisIndices(words)].sort()).toEqual([4, 6]);
+    expect([...emphasisIndices(words)].sort((a, b) => a - b)).toEqual([4, 6]);
     expect(emphasisIndices("so it is".split(" ")).size).toBe(0);
   });
 });

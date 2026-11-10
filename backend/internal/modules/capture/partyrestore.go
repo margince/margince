@@ -31,7 +31,7 @@ func RestorePartySourceTx(ctx context.Context, tx pgx.Tx, in PartySourceOriginal
 	var attested bool
 	err := tx.QueryRow(ctx, `SELECT a.counterparty_outbound_attested FROM activity a
  WHERE a.id=@activity AND split_part(a.captured_by,':',2)=@provider
- AND `+auth.ConnectorSeatSQL("a")+`=@owner FOR SHARE`, pgx.NamedArgs{partyActivityArg: in.Activity, partyProviderArg: in.Provider, "owner": in.User.String()}).Scan(&attested)
+ AND `+auth.ConnectorSeatSQL("a")+`=@owner FOR SHARE`, pgx.NamedArgs{partyActivityArg: in.Activity, sqlArgProvider: in.Provider, "owner": in.User.String()}).Scan(&attested)
 	if err != nil {
 		return err
 	}

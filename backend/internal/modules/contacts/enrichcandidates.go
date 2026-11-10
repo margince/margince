@@ -167,7 +167,7 @@ func capturingMailboxSQL(activity string) string {
 // beyond the participants, so it is not bounded by "the owner was there".
 func SignatureSourceEligible(contact, activity string) string {
 	return correspondence.ExternalSQL(activity) + " AND " + fmt.Sprintf(`(
-		    %[2]s.audience = 'workspace'
+		    `+auth.WorkspaceAudienceSQL("%[2]s")+`
 		    OR (%[1]s.visibility = 'owner' AND %[2]s.audience = 'participants'
 		        AND (EXISTS (SELECT 1 FROM capture_import ci
 		                      WHERE ci.activity_id = %[2]s.id AND ci.user_id = %[1]s.owner_id)

@@ -106,6 +106,9 @@ func (s *Store) SubmitConfirmation(ctx context.Context, token string, in Confirm
 		if err := refuseWiderThanTheMail(kind, in); err != nil {
 			return err
 		}
+		if err := lockSubjectSuppressions(ctx, tx, contactID.UUID); err != nil {
+			return err
+		}
 		if err := auth.LockSubjectLive(ctx, tx, "contact", contactID.UUID); err != nil {
 			return err
 		}

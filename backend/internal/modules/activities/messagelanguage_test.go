@@ -25,12 +25,12 @@ func TestALoggedNoteIsLabelledByTheFunctionCaptureUses(t *testing.T) {
 
 func TestOnlyProseAMemberWritesIsLabelledAtLogTime(t *testing.T) {
 	body := germanNote
-	for _, kind := range []string{"note", "meeting", "call"} {
+	for _, kind := range []string{"note", "meeting", "call", "task"} {
 		if col, _, _ := languageInsertFragment(LogActivityInput{Kind: kind, Body: &body}, nil); col == "" {
 			t.Errorf("a hand-logged %s is not labelled", kind)
 		}
 	}
-	for _, kind := range []string{"email", "task"} {
+	for _, kind := range []string{"email"} {
 		if col, _, args := languageInsertFragment(LogActivityInput{Kind: kind, Body: &body}, nil); col != "" || len(args) != 0 {
 			t.Errorf("a logged %s is labelled at log time; it keeps the label its own path gave it", kind)
 		}

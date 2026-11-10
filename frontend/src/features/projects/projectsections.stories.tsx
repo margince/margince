@@ -95,6 +95,7 @@ const AGREEMENT: Contract = {
   ends_on: "2027-03-31",
   auto_renew: false,
   under_contract: true,
+  term_state: "in_force",
   source: "manual",
   captured_by: "human:u-1",
   created_at: "2026-04-01T00:00:00Z",

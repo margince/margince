@@ -1,3 +1,4 @@
+import { existsSync, readdirSync } from "node:fs";
 import { createServer, type Plugin, type ViteDevServer } from "vite";
 import { afterAll, beforeAll, expect, it, vi } from "vitest";
 import actions from "../src/mcp-apps/actions.json";
@@ -81,6 +82,38 @@ it("serves a document the admission check would accept", async () => {
   expect(doc).toContain("<title>Next steps for this record</title>");
   expect(doc).toContain("SPDX-License-Identifier: BUSL-1.1");
 }, 30_000);
+
+const viewActions: Readonly<Record<string, readonly string[]>> = actions;
+const viewRoot = new URL("../src/mcp-apps/", import.meta.url);
+const views = readdirSync(viewRoot, { withFileTypes: true })
+  .filter(
+    (entry) =>
+      entry.isDirectory() &&
+      existsSync(new URL(`${entry.name}/index.html`, viewRoot)),
+  )
+  .map((entry) => entry.name);
+
+it("discovers at least the complete shipped view set", () => {
+  expect(views.length).toBeGreaterThanOrEqual(7);
+});
+
+it.each(views)(
+  "serves %s under a development launcher without forbidden dependency bytes",
+  async (view) => {
+    const previous = process.env.NODE_ENV;
+    vi.stubEnv("NODE_ENV", "development");
+    try {
+      const res = await fetch(`${base}/mcp-apps/${view}.html`);
+      expect(res.status, await res.clone().text()).toBe(200);
+      const document = await res.text();
+      expect(validateDocument(document, viewActions[view])).toEqual([]);
+      expect(inspectDocument(document)).toEqual([]);
+    } finally {
+      vi.stubEnv("NODE_ENV", previous);
+    }
+  },
+  30_000,
+);
 
 it("404s a view that does not exist rather than answering with something else", async () => {
   // The production posture, mirrored: nginx's try_files ... =404 exists because

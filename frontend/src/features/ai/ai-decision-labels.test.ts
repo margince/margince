@@ -84,6 +84,7 @@ describe("call codes", () => {
         "budget_unavailable",
         "request_failed",
         "timeout",
+        "canceled",
         "provider_quota",
         "provider_throttled",
         "provider_refused",

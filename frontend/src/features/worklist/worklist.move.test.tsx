@@ -9,6 +9,7 @@
 // was told a deal had gone quiet and left to work out what to do about it.
 
 /** @vitest-environment happy-dom */
+import "@testing-library/jest-dom/vitest";
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -315,5 +316,64 @@ describe("a waiting message whose prepared move is the reply", () => {
       }),
     );
     await waitFor(() => expect(asked).toHaveLength(1));
+  });
+});
+
+describe("a move the server refused this reader", () => {
+  const SEND = "You do not have permission to send email";
+
+  it("draws the prepared reply refused, with the server's reason", async () => {
+    stub(
+      day({
+        queue: [
+          row({
+            id: "01a05500-0000-7000-8000-0000000000a2",
+            source: "customer_waiting",
+            category: "customer_waiting",
+            title: "Re: delivery dates",
+            actions: ["open", "reply"],
+            subject: {
+              type: "deal",
+              id: "01a05500-0000-7000-8000-00000000bbbc",
+            },
+            move: {
+              action: "draft_reply",
+              activity_id: ACTIVITY,
+              blocked_reason: SEND,
+            },
+          }),
+        ],
+        summary: { urgent: 1, due: 0, lower_priority: 0, total: 1 },
+      }),
+    );
+    renderWorklist();
+
+    const reply = await screen.findByRole("button", {
+      name: en["worklist.verb.draft_reply_now"],
+    });
+    expect(reply).toBeDisabled();
+    expect(reply).toHaveAccessibleDescription(SEND);
+  });
+
+  it("draws a mail move as a refused button rather than a link", async () => {
+    stub(
+      aDayWith(
+        aQuietDeal({
+          move: {
+            action: "draft_email",
+            arguments: { activity_id: ACTIVITY },
+            blocked_reason: SEND,
+          },
+        }),
+      ),
+    );
+    renderWorklist();
+
+    const refused = await screen.findByRole("button", { description: SEND });
+    expect(refused).toBeDisabled();
+    expect(
+      screen.queryByRole("link", { name: refused.textContent ?? "" }),
+      "the refused move still links to the composer",
+    ).toBeNull();
   });
 });

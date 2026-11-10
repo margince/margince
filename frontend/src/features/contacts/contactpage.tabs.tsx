@@ -2,6 +2,10 @@ import { RecordTabs } from "../../design-system/recordtabs";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { CONTACT_TABS, type ContactTab } from "../../lib/contacttab";
+import {
+  type CoreFeature,
+  useDisabledCoreFeatures,
+} from "../../lib/corefeatures";
 import { useWriteRefusal } from "./contactactions";
 import { ContactDealsTab } from "./contactdeals";
 import { Employers } from "./contactemployers";
@@ -25,6 +29,13 @@ export const TAB_LABEL_KEYS: Readonly<Record<ContactTab, MessageKey>> = {
   documents: "tab.documents",
 };
 
+export function contactTabForFeatures(
+  tab: ContactTab,
+  disabled: readonly CoreFeature[],
+): ContactTab {
+  return tab === "deals" && disabled.includes("deals") ? "overview" : tab;
+}
+
 /**
  * ContactRecordTabs is the strip over the work column. It carries the tab
  * words every record shares and a count where the page holds the whole list.
@@ -44,12 +55,15 @@ export function ContactRecordTabs({
   onChange: (next: ContactTab) => void;
 }>) {
   const t = useT();
+  const disabled = useDisabledCoreFeatures();
   const files = useContactFiles(view.contact.id);
   const filesRead =
     files.query.isSuccess && !files.hasMore ? files.files.length : undefined;
   return (
     <RecordTabs
-      options={CONTACT_TABS}
+      options={CONTACT_TABS.filter(
+        (tab) => contactTabForFeatures(tab, disabled) === tab,
+      )}
       value={value}
       onChange={onChange}
       labels={{
@@ -106,6 +120,10 @@ export function ContactTabPanel({
   // the tab whose verb writes the record: the upload on Documents.
   refusedReasonId?: string;
 }>) {
+  const disabled = useDisabledCoreFeatures();
+  if (contactTabForFeatures(tab, disabled) !== tab) {
+    return null;
+  }
   switch (tab) {
     case "timeline":
       return (

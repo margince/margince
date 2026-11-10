@@ -12,6 +12,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
@@ -55,7 +56,7 @@ func unpolicedSeatColumns(specs map[string]reportSpec, seats []string) []string 
 	mentions := regexp.MustCompile(`(^|[^a-z_])(` + strings.Join(seats, "|") + `)([^a-z_]|$)`)
 	joined := regexp.MustCompile(`^([a-z_]+)\.([a-z_]+)$`)
 	readsSeat := func(spec reportSpec, expr string) bool {
-		if mentions.MatchString(expr) {
+		if mentions.MatchString(withoutActivityPrivacyGuard(expr)) {
 			return true
 		}
 		match := joined.FindStringSubmatch(expr)
@@ -63,7 +64,7 @@ func unpolicedSeatColumns(specs map[string]reportSpec, seats []string) []string 
 			return false
 		}
 		return slices.ContainsFunc(spec.joins, func(join string) bool {
-			return strings.Contains(join, ") "+match[1]+" ON") && strings.Contains(join, " AS "+match[2]) && mentions.MatchString(join)
+			return strings.Contains(join, ") "+match[1]+" ON") && strings.Contains(join, " AS "+match[2]) && mentions.MatchString(withoutActivityPrivacyGuard(join))
 		})
 	}
 	var out []string
@@ -81,6 +82,25 @@ func unpolicedSeatColumns(specs map[string]reportSpec, seats []string) []string 
 		}
 	}
 	return out
+}
+
+func withoutActivityPrivacyGuard(expression string) string {
+	aliases := regexp.MustCompile(`\b([a-z_]+)\.audience\b`)
+	for _, match := range aliases.FindAllStringSubmatch(expression, -1) {
+		expression = strings.ReplaceAll(expression, auth.WorkspaceAudienceSQL(match[1]), "TRUE")
+	}
+	return expression
+}
+
+func TestMailReadabilityDoesNotCountAsAColleaguesPerformance(t *testing.T) {
+	spec := reportSpec{filters: map[string]string{"readable": auth.WorkspaceAudienceSQL("mail")}}
+	if got := unpolicedSeatColumns(map[string]reportSpec{"example": spec}, []string{"user_id", "owner_id"}); len(got) != 0 {
+		t.Fatalf("privacy join was counted as performance: %v", got)
+	}
+	spec.filters["readable"] += " AND d.owner_id IS NOT NULL"
+	if got := unpolicedSeatColumns(map[string]reportSpec{"example": spec}, []string{"user_id", "owner_id"}); len(got) != 1 {
+		t.Fatalf("privacy join hid a real performance column: %v", got)
+	}
 }
 
 func TestEveryReportColumnNamingASeatAnswersToTheSwitch(t *testing.T) {

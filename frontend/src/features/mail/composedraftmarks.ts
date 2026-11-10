@@ -3,16 +3,21 @@
 
 import type { components } from "../../api/schema";
 import type { ProjectScope } from "../../design-system/projectpicker";
+import type { Locale } from "../../i18n/locale";
 import type { DraftProvenance } from "./composedraftcall";
 
 type DraftReason = components["schemas"]["AccountDraftReason"];
 
-/** What marks a body as the model's: its reference, disclosure and reasons. */
+/**
+ * What marks a body as the model's: its reference, disclosure and reasons, and
+ * the language the rep had chosen for it.
+ */
 export type DraftMarks = Readonly<{
   draftRef: string | null;
   provenance: DraftProvenance | null;
   reasoning: DraftReason[];
   scope: ProjectScope | undefined;
+  language: Locale | null;
 }>;
 
 export const plainText = (text: string) => text.replace(/\s+/g, " ").trim();

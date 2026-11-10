@@ -9,6 +9,7 @@
 // chosen edge points at.
 
 import { api } from "../api/client";
+import type { components } from "../api/schema";
 import type { EntityKind } from "./entity";
 import { unwrap } from "./problem";
 
@@ -17,6 +18,7 @@ export type Candidate = {
   name: string;
   companyId?: string;
   detail?: string;
+  dealStatus?: string;
 };
 
 // include_anchor: recording that a contact works at the company running the CRM
@@ -54,19 +56,24 @@ async function searchDealCandidates(
   const query = q.trim();
   const scopes: (string | undefined)[] = [...new Set(companyIds)];
   if (query || scopes.length === 0) scopes.push(undefined);
+  const statuses: components["schemas"]["Deal"]["status"][] = query
+    ? ["open", "won", "lost"]
+    : ["open"];
   const pages = await Promise.all(
-    scopes.map(async (companyId) =>
-      unwrap(
-        await api.GET("/deals", {
-          params: {
-            query: {
-              q: query || undefined,
-              company_id: companyId,
-              status: "open",
-              limit: 20,
+    scopes.flatMap((companyId) =>
+      statuses.map(async (status) =>
+        unwrap(
+          await api.GET("/deals", {
+            params: {
+              query: {
+                q: query || undefined,
+                company_id: companyId,
+                status,
+                limit: 20,
+              },
             },
-          },
-        }),
+          }),
+        ),
       ),
     ),
   );
@@ -78,10 +85,16 @@ async function searchDealCandidates(
       seen.add(deal.id);
       return true;
     })
+    .sort(
+      (a, b) =>
+        Number(a.status === "won" || a.status === "lost") -
+        Number(b.status === "won" || b.status === "lost"),
+    )
     .map((deal) => ({
       id: deal.id,
       name: deal.name,
       companyId: deal.company_id ?? undefined,
+      dealStatus: deal.status,
     }));
 }
 

@@ -35,6 +35,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/mailcopy"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
@@ -94,11 +95,12 @@ func (q controllerMailQueue) QueueConfirmationTx(ctx context.Context, tx pgx.Tx,
 	readable := strings.ReplaceAll(body, comms.LinkPlaceholder, mailcopy.For(in.Rendered.Language).SentLinkMarker)
 	outbound := string(crmcontracts.ActivityDirectionOutbound)
 	activity, _, err := q.activities.LogActivityTx(ctx, tx, activities.SentRecord(activities.LogActivityInput{
-		Kind:      string(crmcontracts.ActivityKindEmail),
-		Subject:   &subject,
-		Body:      &readable,
-		Direction: &outbound,
-		Source:    systemActor,
+		SystemText: &systemtext.Message{Subject: systemtext.Prose(systemtext.Quote, ""), Body: systemtext.Prose(systemtext.Quote, "")},
+		Kind:       string(crmcontracts.ActivityKindEmail),
+		Subject:    &subject,
+		Body:       &readable,
+		Direction:  &outbound,
+		Source:     systemActor,
 		// The installation writing to somebody about its own obligations is not
 		// that contact engaging, so it stays out of every last_activity_at.
 		Origin: activities.OriginSystemNotice,

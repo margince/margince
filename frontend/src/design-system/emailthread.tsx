@@ -244,7 +244,6 @@ function OpenMessage({
           type="button"
           className="emailthread__fold"
           aria-expanded="true"
-          aria-label={t("email.thread.fold", { name })}
           onClick={onFold}
         >
           <Avatar name={name} identity={sender?.address ?? name} size="sm" />

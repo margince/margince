@@ -13,6 +13,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/agentgrant"
+	"github.com/margince/margince/backend/internal/platform/corefeatures"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/platform/httpserver"
 	"github.com/margince/margince/backend/internal/platform/mailer"
@@ -30,7 +31,8 @@ const SessionCookieName = "crm_session"
 // Handlers is the identity module's transport surface: the identity operations of
 // the contract plus the middleware that authenticates everything else.
 type Handlers struct {
-	svc *Service
+	readerRenderingAvailable bool
+	svc                      *Service
 	// agentGrants writes the rep's standing answer for a scheduled agent, in
 	// the same transaction as the passport that answer commits. Nil is a
 	// deployment with no agent runner, where the endpoints answer 404 rather
@@ -134,6 +136,7 @@ type Handlers struct {
 	embedReindexAvailable func() bool
 	// listsAvailable is the installation's lists.enabled.
 	listsAvailable bool
+	coreFeatures   corefeatures.Availability
 
 	// installationBrand reads the anchor company's name and marks for /me.
 	// Nil omits them (meparts.go).
@@ -415,4 +418,10 @@ func clearSessionCookie(w http.ResponseWriter) {
 		Name: SessionCookieName, Value: "", MaxAge: -1,
 		Path: "/", HttpOnly: true, Secure: true, SameSite: http.SameSiteStrictMode,
 	})
+}
+
+// WithReaderRenderingAvailable exposes model capability without exposing model credentials.
+func (h Handlers) WithReaderRenderingAvailable(available bool) Handlers {
+	h.readerRenderingAvailable = available
+	return h
 }

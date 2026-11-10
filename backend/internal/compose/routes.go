@@ -64,7 +64,7 @@ func contractAPI(srv Server, pool *pgxpool.Pool, identitySvc *identity.Service) 
 	// to remove.
 	registry := registryWithGate(InstallationDB(pool), gate, srv.replyDrafter, srv.send,
 		companyEnricher{}, srv.retrievalEmbedder, nil, importsFor(&srv),
-		meetingBriefReader(srv.meetingBriefSvc), srv.log, registryFeatures{lists: srv.listsEnabled},
+		meetingBriefReader(srv.meetingBriefSvc), srv.log, registryFeatures{coreFeatures: srv.coreFeatures, lists: srv.listsEnabled},
 		agents.WithVolumeCharger(srv.volumeMeter))
 	// The ADR-0055 admission layer and the MCP tool surface share one
 	// provider seam: agentGate's StageResolver reads exactly what the MCP
@@ -85,6 +85,7 @@ func contractAPI(srv Server, pool *pgxpool.Pool, identitySvc *identity.Service) 
 		// idempotency replay: a refusal that cost a database read is a slow
 		// answer worth seeing. The wrapper applies it after chi has matched,
 		// which is what lets chiRoutePattern answer.
+		coreFeatureGate(srv.coreFeatures),
 		srv.httpMetrics.Measure(chiRoutePattern),
 	)
 }
@@ -226,7 +227,7 @@ func operationalMux(srv Server, pool *pgxpool.Pool, log *slog.Logger, identitySv
 		publicEdge = srv.routesForTest(publicEdge)
 	}
 	mux.Handle("/v1/", boundByResponseDeadline(httpserver.Correlate(
-		httpserver.AccessLog(log, publicRecordPreviews(srv, identitySvc)(authH.Middleware(publicEdge))))))
+		httpserver.AccessLog(log, publicRecordPreviews(srv, identitySvc)(authH.Middleware(readerDisplayLocale(pool)(publicEdge)))))))
 	// The remote MCP connector, mounted as ONE group behind the deployment
 	// gate: the A2 transport, the A2 authorization server (ADR-0013) and
 	// both discovery documents. They belong together because RFC 9728
@@ -238,11 +239,10 @@ func operationalMux(srv Server, pool *pgxpool.Pool, log *slog.Logger, identitySv
 	// gate signal: with the connector off none of these routes is
 	// registered, so the mux's own 404 answers all of them identically and
 	// nothing tells a prober which gate is closed.
-	if mcp := srv.mcpHandler(pool, identitySvc, log); mcp != nil {
-		// ONE set of limiters for the whole group: the transport and the
-		// authorization server are two halves of one internet-facing surface,
-		// and a second construction would give each its own private ceilings.
-		mcpLimits := newMCPLimiters()
+	// One set of limiters serves the transport and the authorization server.
+	// They are one surface, so a second set would split its ceilings.
+	mcpLimits := newMCPLimiters()
+	if mcp := srv.mcpHandler(pool, identitySvc, log, mcpLimits); mcp != nil {
 		mux.Handle("/mcp", httpserver.Correlate(httpserver.AccessLog(log, mcpEdge(mcp, mcpLimits, srv.mcpAllowedOrigin))))
 		// The AS endpoints live outside the generated resource surface but
 		// behind the same workspace and session middleware (whose one exemption

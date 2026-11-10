@@ -25,6 +25,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
@@ -295,7 +296,8 @@ func (s *Store) insertInvitation(ctx context.Context, row *invitationRow, in crm
 		}
 		seconds := int(in.End.Sub(in.Start) / time.Second)
 		activity, _, err := s.LogActivityTx(ctx, tx, LogActivityInput{
-			Kind: KindMeeting, Subject: &in.Subject, Body: &in.Description,
+			SystemText: &systemtext.Message{Subject: systemtext.Prose(systemtext.Quote, ""), Body: systemtext.Prose(systemtext.Quote, "")},
+			Kind:       KindMeeting, Subject: &in.Subject, Body: &in.Description,
 			OccurredAt: &in.Start, DurationSeconds: &seconds, HostUserID: &host, ClaimsHostSlot: true,
 			Links: invitationLinks(in, intent), LinksFromRequest: in.Links != nil, Source: invitationSource(ctx),
 		})

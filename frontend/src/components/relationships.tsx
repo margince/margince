@@ -14,6 +14,7 @@ import { DateInput, type ISODate } from "../design-system/dateinput";
 import { Heading } from "../design-system/heading";
 import { RecordPicker } from "../design-system/recordpicker";
 import { Select } from "../design-system/select";
+import { dealStatusLabel } from "../format/dealstatus";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { currentEmployerCompanyIds } from "../lib/employmentpages";
@@ -212,9 +213,23 @@ export function AddRelationshipAction({
       const candidates = await searchByEntity(entity, query, companyIds);
       if (entity !== "deal") return candidates;
       return Promise.all(
-        candidates.map((candidate) =>
-          withCompanyCaption(queryClient, candidate, nameLoadFailed),
-        ),
+        candidates.map(async (candidate) => {
+          const named = await withCompanyCaption(
+            queryClient,
+            candidate,
+            nameLoadFailed,
+          );
+          const status =
+            candidate.dealStatus && candidate.dealStatus !== "open"
+              ? dealStatusLabel(candidate.dealStatus)
+              : undefined;
+          return status
+            ? {
+                ...named,
+                detail: [named.detail, t(status)].filter(Boolean).join(" · "),
+              }
+            : named;
+        }),
       );
     },
     [
@@ -223,6 +238,7 @@ export function AddRelationshipAction({
       queryClient,
       nameLoadFailed,
       employerUnavailableMessage,
+      t,
     ],
   );
 

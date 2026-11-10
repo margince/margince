@@ -1,6 +1,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import { stable } from "../../format/collate";
 import { unwrap } from "../../lib/problem";
 import { roomBriefKey } from "./dealroombrief.key";
 
@@ -105,7 +106,7 @@ export function useRoomAttendance(roomId: string) {
     lastSeen: rows
       .map((p) => p.last_seen_at)
       .filter((v): v is string => typeof v === "string")
-      .sort()
+      .sort(stable)
       .at(-1),
     // Whether the count is a fact yet. A "0 invited" drawn while the read is in
     // flight is a wrong statement rather than a loading one.

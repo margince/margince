@@ -84,9 +84,9 @@ func isMeetingRow(row crmcontracts.WorklistItem) bool {
 }
 
 // nameTheEmployers puts the contact's employer on every row that names a
-// contact, in one read for the page, so each card can name the account. The
-// employer only decorates a row, so a failed read leaves the rows unchanged
-// and says so instead of failing the page.
+// contact, and on each recipient of a follow-up. One read serves the page, so
+// each card can name the account. The employer only decorates a row, so a
+// failed read leaves the rows unchanged and says so instead of failing the page.
 func (s *Service) nameTheEmployers(
 	ctx context.Context, rows []crmcontracts.WorklistItem,
 ) *crmcontracts.WorklistSourceUnavailable {
@@ -96,11 +96,12 @@ func (s *Service) nameTheEmployers(
 	var wanted []ids.UUID
 	seen := map[ids.UUID]bool{}
 	for _, row := range rows {
-		if row.Contact == nil || seen[ids.UUID(row.Contact.Id)] {
-			continue
+		for _, contact := range namedContacts(row) {
+			if !seen[ids.UUID(contact.Id)] {
+				seen[ids.UUID(contact.Id)] = true
+				wanted = append(wanted, ids.UUID(contact.Id))
+			}
 		}
-		seen[ids.UUID(row.Contact.Id)] = true
-		wanted = append(wanted, ids.UUID(row.Contact.Id))
 	}
 	if len(wanted) == 0 {
 		return nil
@@ -124,12 +125,26 @@ func (s *Service) nameTheEmployers(
 		return note
 	}
 	for i := range rows {
-		if rows[i].Contact == nil {
-			continue
-		}
-		if employer, known := employers[ids.UUID(rows[i].Contact.Id)]; known {
-			rows[i].Contact.Employer = &employer
+		for _, contact := range namedContacts(rows[i]) {
+			if employer, known := employers[ids.UUID(contact.Id)]; known {
+				contact.Employer = &employer
+			}
 		}
 	}
 	return nil
+}
+
+// namedContacts lists the contacts a row names: its own, then a follow-up's
+// recipients. Each is the row's own value, so setting a field sets it on the row.
+func namedContacts(row crmcontracts.WorklistItem) []*crmcontracts.WorklistContactFacts {
+	var named []*crmcontracts.WorklistContactFacts
+	if row.Contact != nil {
+		named = append(named, row.Contact)
+	}
+	if row.Recipients != nil {
+		for i := range *row.Recipients {
+			named = append(named, &(*row.Recipients)[i])
+		}
+	}
+	return named
 }

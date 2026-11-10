@@ -27,6 +27,9 @@ func (s *RetentionService) anonymizeLead(ctx context.Context, tx pgx.Tx, id ids.
 	if err := storekit.LockStopKey(ctx, tx, id.String()); err != nil {
 		return err
 	}
+	if err := storekit.LockSubjectsStopAddresses(ctx, tx, id); err != nil {
+		return err
+	}
 	// BEFORE the UPDATE below nulls it: a suppression is detached onto the
 	// address it applies to, and the lead row is the only place that address
 	// still lives. Read after the scrub and the objection is orphaned.
@@ -113,6 +116,10 @@ func (s *RetentionService) anonymizeLead(ctx context.Context, tx pgx.Tx, id ids.
 // clearCommunicationRecord would mean one function branching on a subject kind
 // its callers already know.
 func clearLeadCommunicationRecord(ctx context.Context, tx pgx.Tx, id ids.UUID, address *string) error {
+	if _, err := tx.Exec(ctx, `DELETE FROM consent_qualifying_event WHERE lead_id = @id`, pgx.StrictNamedArgs{"id": id}); err != nil {
+		return fmt.Errorf("clear the lead's recorded exchanges: %w", err)
+	}
+
 	if _, err := tx.Exec(ctx,
 		`DELETE FROM communication_basis WHERE lead_id = $1`, id); err != nil {
 		return fmt.Errorf("clear the lead's communication bases: %w", err)

@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 )
 
@@ -43,11 +44,13 @@ func NewStore(db *database.DB) *Store {
 
 // Notice is one durable line addressed to one contact.
 type Notice struct {
-	ApprovalID *ids.ApprovalID
-	Origin     *crmcontracts.NoticeOrigin
-	ID         ids.UUID
-	Kind       string
-	Subject    string
+	SystemText    *systemtext.Message
+	SystemDisplay *crmcontracts.SystemDisplay
+	ApprovalID    *ids.ApprovalID
+	Origin        *crmcontracts.NoticeOrigin
+	ID            ids.UUID
+	Kind          string
+	Subject       string
 	// SubjectParts is Subject taken apart, on an approval notice whose summary
 	// lists field values. Nil on any other notice, and on one written before.
 	SubjectParts *crmcontracts.ApprovalSummaryParts
@@ -61,10 +64,11 @@ type Notice struct {
 // notice, and five positional strings is where a caller starts passing the
 // subject as the body.
 type NewNotice struct {
-	Origin    *crmcontracts.NoticeOrigin
-	Recipient ids.UserID
-	Kind      string
-	Subject   string
+	SystemText *systemtext.Message
+	Origin     *crmcontracts.NoticeOrigin
+	Recipient  ids.UserID
+	Kind       string
+	Subject    string
 	// SubjectParts is Subject taken apart, when it is an approval's summary of
 	// a sentence and field values. The bell shows the values as a list.
 	SubjectParts *crmcontracts.ApprovalSummaryParts
@@ -185,8 +189,11 @@ func (s *Store) insertNoticeTx(ctx context.Context, tx pgx.Tx, in NewNotice, evi
 	if err != nil {
 		return Notice{}, false, err
 	}
-	subject := textcut.Runes(in.Subject, subjectBound)
-	body := textcut.Runes(in.Body, bodyBound)
+	metadata, subject, body := systemtext.FitForWrite(ctx, in.SystemText, in.Subject, in.Body, subjectBound, bodyBound)
+	subject = textcut.Runes(subject, subjectBound)
+	body = textcut.Runes(body, bodyBound)
+	metadata = systemtext.ForWrite(ctx, metadata, subject, body)
+
 	id := ids.NewV7()
 	var createdAt time.Time
 	var dedupe *string
@@ -209,7 +216,7 @@ func (s *Store) insertNoticeTx(ctx context.Context, tx pgx.Tx, in NewNotice, evi
 	//
 	// created_at is the column's own default, so the insert returns it rather
 	// than the caller stamping a second clock beside it.
-	args := []any{id, in.Recipient, in.Kind, subject, body, capturedBy, dedupe, targetType, targetID, in.Origin, in.SubjectParts}
+	args := []any{id, in.Recipient, in.Kind, subject, body, capturedBy, dedupe, targetType, targetID, in.Origin, in.SubjectParts, metadata}
 	holders := make([]string, len(args))
 	for i := range args {
 		holders[i] = "$" + strconv.Itoa(i+1)
@@ -217,7 +224,7 @@ func (s *Store) insertNoticeTx(ctx context.Context, tx pgx.Tx, in NewNotice, evi
 	placeholders := strings.Join(holders, ", ")
 	row := tx.QueryRow(ctx, `
 		INSERT INTO notice (id, recipient_user_id, kind, subject, body, captured_by,
-		                    dedupe_key, target_type, target_id, origin, subject_parts)
+		                    dedupe_key, target_type, target_id, origin, subject_parts, system_text)
 		VALUES (`+placeholders+`)
 		ON CONFLICT (recipient_user_id, dedupe_key) WHERE dedupe_key IS NOT NULL
 		DO NOTHING
@@ -231,7 +238,7 @@ func (s *Store) insertNoticeTx(ctx context.Context, tx pgx.Tx, in NewNotice, evi
 		return Notice{}, false, fmt.Errorf("notices: recording the notice: %w", scanErr)
 	}
 	auditID, err := storekit.AuditEventWithEvidence(ctx, tx, "create", "notice", id,
-		map[string]any{"kind": in.Kind, "recipient_user_id": in.Recipient.String()}, evidence)
+		map[string]any{"kind": in.Kind, "recipient_user_id": in.Recipient.String(), "system_text": metadata}, evidence)
 	if err != nil {
 		return Notice{}, false, err
 	}
@@ -244,64 +251,10 @@ func (s *Store) insertNoticeTx(ctx context.Context, tx pgx.Tx, in NewNotice, evi
 		return Notice{}, false, err
 	}
 	return Notice{
-		ID: id, Kind: in.Kind, Subject: subject, Body: body,
-		Target: in.Target, CreatedAt: createdAt, Origin: in.Origin,
+		ID: id, Kind: in.Kind, Subject: subject, Body: body, SystemText: metadata, SystemDisplay: noticeSystemDisplay(ctx, metadata, subject, body),
+		Target: resolvedNoticeTarget(in.Target, in.Kind, metadata), CreatedAt: createdAt, Origin: in.Origin,
 	}, true, nil
 }
-
-// storedNotice answers the notice a repeat delivery collided with — ALL of it,
-// not its id with this call's text pinned beside it.
-//
-// The two need not agree. A dedupe key names the EVENT, and a second delivery
-// can carry a subject reworded since, or a kind a later version spells
-// differently. Returning the stored id with the replay's words would put a
-// notice on screen that the reader cannot find anywhere, and that nothing in the
-// database says. The target comes back with them for the same reason: a second
-// delivery can name a different entity — an event replayed after the automation
-// was repointed — and answering the stored notice's id with this call's target
-// would send a reader to a record the notice they can see says nothing about.
-func storedNotice(ctx context.Context, tx pgx.Tx, recipient ids.UserID, dedupeKey string) (Notice, error) {
-	var stored Notice
-	var storedType *string
-	var storedID *ids.UUID
-	if err := tx.QueryRow(ctx, `
-		SELECT id, kind, subject, body, target_type, target_id, created_at, origin FROM notice
-		 WHERE recipient_user_id = $1 AND dedupe_key = $2`,
-		recipient, dedupeKey,
-	).Scan(&stored.ID, &stored.Kind, &stored.Subject, &stored.Body,
-		&storedType, &storedID, &stored.CreatedAt, &stored.Origin); err != nil {
-		return Notice{}, fmt.Errorf("notices: reading the notice that already stands: %w", err)
-	}
-	if storedType != nil && storedID != nil {
-		stored.Target = Target{Type: *storedType, ID: *storedID}
-	}
-	return stored, nil
-}
-
-// notTheReadersOwnStageMove is true of a notice the reader was ever shown: it
-// declines the stage changes the recipient made themselves.
-//
-// Delivery declines owner-made stage changes in automation.stageChangeNotify,
-// and this is the SQL mirror of that decision. It excludes rather than deletes:
-// the history stays, and nothing pretends the recipient acknowledged it.
-//
-// A CONSTANT because every reader of the table composes this same one — the
-// attention lane's unread query, the notification centre's history and badge,
-// the count MarkAllRead answers with, and the morning's window — so the rule
-// moves in one edit rather than five. Nothing stops a later query from
-// spelling its own instead; what a new reader should take from this is that
-// the fragment exists and is meant to be composed, not that the compiler will
-// notice if it is not.
-//
-// A boolean expression over `notice` columns only, so it composes into a WHERE
-// arm and into RETURNING alike.
-const stageMoveNotice = `kind = 'automation' AND target_type = 'deal'
- AND (origin ? 'stage_change' OR starts_with(dedupe_key, 'stage_change_notify:'))`
-
-const notTheReadersOwnStageMove = `NOT coalesce(` + stageMoveNotice + `
-	AND origin->>'actor_type' = 'human'
-	AND lower(origin->>'actor_id') IN
-	  (recipient_user_id::text, 'human:' || recipient_user_id::text), false)`
 
 // inTheReadersLane is what the product may put in front of a reader without
 // being asked: not a stage move they made themselves, not a class they switched
@@ -361,7 +314,7 @@ func (s *Store) unreadPage(ctx context.Context, limit int, workOnly bool) ([]Not
 			lane += fmt.Sprintf(" AND kind <> $%d", arg(KindApprovalPending))
 		}
 		rows, txErr := tx.Query(ctx, fmt.Sprintf(`
-			SELECT id, kind, subject, body, target_type, target_id, created_at, origin, coalesce(dedupe_key, '')
+			SELECT id, kind, subject, body, target_type, target_id, created_at, origin, coalesce(dedupe_key, ''), system_text
 			  FROM notice
 			 WHERE recipient_user_id = $%d AND read_at IS NULL
 			   AND %s
@@ -380,7 +333,7 @@ func (s *Store) unreadPage(ctx context.Context, limit int, workOnly bool) ([]Not
 			var targetType *string
 			var targetID *ids.UUID
 			if scanErr := rows.Scan(&n.ID, &n.Kind, &n.Subject, &n.Body,
-				&targetType, &targetID, &n.CreatedAt, &n.Origin, &noticeKey); scanErr != nil {
+				&targetType, &targetID, &n.CreatedAt, &n.Origin, &noticeKey, &n.SystemText); scanErr != nil {
 				return scanErr
 			}
 			if targetType != nil && targetID != nil {
@@ -390,6 +343,8 @@ func (s *Store) unreadPage(ctx context.Context, limit int, workOnly bool) ([]Not
 				typed := ids.From[ids.ApprovalKind](approval)
 				n.ApprovalID = &typed
 			}
+			n.Target = resolvedNoticeTarget(n.Target, n.Kind, n.SystemText)
+			n.SystemDisplay = noticeSystemDisplay(ctx, n.SystemText, n.Subject, n.Body)
 			unread = append(unread, n)
 		}
 		return rows.Err()

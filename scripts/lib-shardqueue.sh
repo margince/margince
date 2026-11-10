@@ -56,12 +56,13 @@ queue_open() {
 
 # queue_done_groups DIR SHARD DIGEST — print the groups that the shard
 # artifacts under DIR, from an earlier attempt of this run, report as passed.
-# Only a green shard writes meta.txt. The shard's own earlier artifact is left
-# out, because a shard runs again only when it failed or someone asked it to.
+# A red shard writes failure-summary.txt beside its meta.txt, and its groups
+# run again. The shard's own earlier artifact is left out, because a shard runs
+# again only when it failed or someone asked it to.
 queue_done_groups() {
   local dir="$1" shard="$2" digest="$3" meta
   for meta in "$dir"/integration-shard-*/meta.txt; do
-    [[ -e "$meta" ]] || continue
+    [[ -e "$meta" && ! -e "$(dirname "$meta")/failure-summary.txt" ]] || continue
     [[ "$(sed -n 's/^shard=//p' "$meta")" != "$shard" ]] || continue
     if ! grep -qx "queue=$digest" "$meta"; then
       echo "FAIL: $meta numbers other parts than this attempt (no queue=$digest), so its groups cannot be skipped" >&2

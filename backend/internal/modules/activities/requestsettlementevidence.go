@@ -11,6 +11,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -40,7 +41,7 @@ func settlementEvidenceSQL() string {
 func settlementContextSQL() string {
 	return `SELECT context.id, context.occurred_at FROM activity context
    WHERE ` + correspondentInThisThread("context", "a") + ` AND ` + tiedContextSQL("context", "a") + `
-     AND context.audience = 'workspace' AND context.restricted_at IS NULL
+     AND ` + auth.WorkspaceAudienceSQL("context") + ` AND context.restricted_at IS NULL
      AND ` + occurredday.BegunSQL("context", "$1") + ` AND context.id <> a.id`
 }
 

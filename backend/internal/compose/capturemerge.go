@@ -59,6 +59,7 @@ func (m mergeStager) StageMerge(ctx context.Context, in capture.MergeProposal) (
 		TargetType:     in.TargetType,
 		TargetID:       in.TargetID,
 		Summary:        in.Summary,
+		SystemText:     in.SystemText,
 		// JoinPending absorbs the re-sync while a proposal is still waiting,
 		// which is what the pending check here used to do on its own. Identity
 		// staging requires it, and it is the same behaviour by a stronger route:

@@ -1,0 +1,119 @@
+{
+  "task": "weekly_learnings",
+  "provider": "openai_compatible",
+  "served_model": "qwen/qwen3.8-27b",
+  "env_class": "cloud_frontier",
+  "prompt_version": "pa57d2b3972f9245df0d509364aba19fa",
+  "corpus_version": "v1",
+  "verdict": "certified",
+  "runs": 9,
+  "passed": 9,
+  "reliability": 1,
+  "reported_accepted": 9,
+  "reported_wrong_answer": 0,
+  "reported_invalid": 0,
+  "reported_abstained": 0,
+  "certified_scope": "full_invocation",
+  "context_applied": false,
+  "context_scopes": null,
+  "judge_score_p50": 97,
+  "judge_score_min": 95,
+  "latency_p50": 8829,
+  "latency_p95": 41620,
+  "mean_tokens": 1790,
+  "mean_tokens_in": 923,
+  "mean_tokens_out": 866,
+  "mean_cached_tokens": 0,
+  "mean_cache_write_tokens": 0,
+  "est_cost_microusd": 0,
+  "judge_served_model": "claude-sonnet-5-5",
+  "judge_provider": "claude_cli",
+  "self_judged": false,
+  "served_identity_source": "echo",
+  "candidate_upstream": {
+    "only": [
+      "deepinfra"
+    ],
+    "ignore": null,
+    "quantizations": [
+      "bf16"
+    ],
+    "sort": "",
+    "require_parameters": null,
+    "allow_fallbacks": null,
+    "preferred_max_latency_p90": 0,
+    "reasoning_effort": ""
+  },
+  "ran_at": "2026-11-10T08:24:58Z",
+  "scenarios": [
+    {
+      "scenario": "a_deal_named_like_an_instruction_teaches_no_lesson",
+      "site": "learn",
+      "stamp": "d96fa9860168dc0f16bb2bf9eb78406c2435a38309d8029b8b7ef1ca91efb611904bc4ee04c095bf36895759189b30f1a49a2ff678e97705c01db77950b486d11fe6f064d4bd8295dbdf5aa324b2e8d1c2ef010ee434e740ffaf791f266d2b93",
+      "verdict": "certified",
+      "judge_band": "certified",
+      "runs": 3,
+      "passed": 3,
+      "judge_scores": [
+        97,
+        98,
+        97
+      ],
+      "bands": {
+        "certified_min": 70,
+        "degraded_min": 50,
+        "floor": 40
+      },
+      "reported_accepted": 3,
+      "reported_wrong_answer": 0,
+      "reported_invalid": 0,
+      "reported_abstained": 0
+    },
+    {
+      "scenario": "a_pattern_across_three_deals_is_drawn_and_cited",
+      "site": "learn",
+      "stamp": "02f7659aa7cfc29792e387b37f89ee265b04a8bb755e35f98c1d077fcb546754a62e0d93d9d3141b38f4d963d26e44d5d76963ee2e0f60b3251163348bbab17ed2d73d44dfbbe9882830d7fced077bd228397975472edeb71f6cbf50cf70b7bf",
+      "verdict": "certified",
+      "judge_band": "certified",
+      "runs": 3,
+      "passed": 3,
+      "judge_scores": [
+        96,
+        95,
+        96
+      ],
+      "bands": {
+        "certified_min": 70,
+        "degraded_min": 50,
+        "floor": 40
+      },
+      "reported_accepted": 3,
+      "reported_wrong_answer": 0,
+      "reported_invalid": 0,
+      "reported_abstained": 0
+    },
+    {
+      "scenario": "a_week_that_invites_a_lesson_it_cannot_support_yields_none",
+      "site": "learn",
+      "stamp": "0a6c7fac56ca133ae3ae254700b67db115e8e5703194ad0fb14ffdd8f9069b27121441e4a45dc3a62c842fa3a0388a730631f618eabc11a892937357c021a88d99499d9913fe9172b045869b43f22e903938e5e659b78497f4a5977d07922126",
+      "verdict": "certified",
+      "judge_band": "certified",
+      "runs": 3,
+      "passed": 3,
+      "judge_scores": [
+        100,
+        100,
+        100
+      ],
+      "bands": {
+        "certified_min": 70,
+        "degraded_min": 50,
+        "floor": 40
+      },
+      "reported_accepted": 3,
+      "reported_wrong_answer": 0,
+      "reported_invalid": 0,
+      "reported_abstained": 0
+    }
+  ]
+}

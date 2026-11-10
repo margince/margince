@@ -55,7 +55,8 @@ type SendPreview struct {
 	Decisions commsauthz.DecisionSet
 	// NewContacts are the folded addresses no record holds. The decisions about
 	// them are the ones the contact the send makes will get.
-	NewContacts map[string]bool
+	NewContacts      map[string]bool
+	readableSubjects map[previewSubject]bool
 }
 
 // PreviewSendInput is a message a composer has not written yet.
@@ -119,11 +120,16 @@ func (s *Store) PreviewSend(ctx context.Context, origin SendOrigin, in PreviewSe
 		AnchorActivityID: origin.anchor.UUID,
 		Links:            linkedRecordIDs(links),
 	}
+	var preview SendPreview
 	if origin.isReply() || s.recipientFiler == nil {
-		set, err := previewer.Preview(ctx, req)
-		return SendPreview{Decisions: set}, err
+		preview.Decisions, err = previewer.Preview(ctx, req)
+	} else {
+		preview, err = s.previewFilingNewAddresses(ctx, in.Recipients, req, previewer)
 	}
-	return s.previewFilingNewAddresses(ctx, in.Recipients, req, previewer)
+	if err != nil {
+		return SendPreview{}, err
+	}
+	return s.withReadablePreviewSubjects(ctx, preview)
 }
 
 // errPreviewFiled unwinds the preview's transaction once it has its answer:

@@ -16,16 +16,18 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"testing"
 )
 
 // entityModelPages renders every page, keyed by file name.
-func entityModelPages(schema *emSchema, owners map[string]string, contract map[string]string) map[string]string {
+func entityModelPages(t *testing.T, schema *emSchema, owners map[string]string, contract map[string]string) map[string]string {
 	byArea := map[string][]string{}
 	for _, table := range schema.tableNames() {
 		area := areaOf(owners[table])
 		byArea[area] = append(byArea[area], table)
 	}
 	pages := map[string]string{"README.md": renderIndex(schema, owners, byArea)}
+	pages["coupling.md"] = renderEntityModelCoupling(t, schema, owners)
 	for area, tables := range byArea {
 		pages[area+".md"] = renderArea(schema, area, tables, contract)
 	}
@@ -156,6 +158,7 @@ func renderIndex(schema *emSchema, owners map[string]string, byArea map[string][
 	var b strings.Builder
 	b.WriteString("# Entity model\n\n" + generatedBy + "\n\n")
 	b.WriteString(entityModelLede)
+	b.WriteString("\n[Foreign keys between owning areas](coupling.md) measures the dependencies an extraction must replace.\n")
 	renderShape(&b, schema, byArea)
 	renderPrimary(&b, schema, owners)
 	renderAreaIndex(&b, byArea)

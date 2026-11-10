@@ -106,11 +106,12 @@ func withoutDisagreeingFullName(fields map[string]string) map[string]string {
 }
 
 // withNamePartsOverStoredEmail gives a record still named by its own address the
-// name the row's parts spell. The address is the last rung of contactFullName, a
-// name nobody chose. The store protects anything that is not a join of the stored
-// parts, so the row has to send this one.
+// name its parts spell. The address is the last rung of contactFullName, a name
+// nobody chose. The store protects anything that is not a join of the stored
+// parts, so the row has to send this one. A part the row leaves out keeps its
+// stored value, so a row naming only the first name keeps the last.
 func withNamePartsOverStoredEmail(current map[string]json.RawMessage, fields map[string]string) map[string]string {
-	joined := contacts.JoinNameParts(fields["first_name"], fields["last_name"])
+	joined := contacts.JoinNameParts(namePart(current, fields, "first_name"), namePart(current, fields, "last_name"))
 	stored := textOf(current[fieldFullName])
 	if joined == "" || stored == "" || !strings.EqualFold(stored, textOf(storedPrimaryEmail(current))) {
 		return fields
@@ -118,6 +119,15 @@ func withNamePartsOverStoredEmail(current map[string]json.RawMessage, fields map
 	out := maps.Clone(fields)
 	out[fieldFullName] = joined
 	return out
+}
+
+// namePart is the row's value for a name part. A row that leaves the part out
+// or blank keeps the stored one, as an update does.
+func namePart(current map[string]json.RawMessage, fields map[string]string, part string) string {
+	if value := fields[part]; strings.TrimSpace(value) != "" {
+		return value
+	}
+	return textOf(current[part])
 }
 
 // joinedNameParts is "first last" when the row states both parts, else "".

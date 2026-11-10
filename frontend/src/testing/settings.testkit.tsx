@@ -405,8 +405,10 @@ export const pagesNamed = (...ids: readonly SettingsPageId[]) => [
 // directory is not an administration page, so the settings ENTRY follows the
 // `user_admin` and `team_admin` verbs while the safe roster stays open
 // underneath it.
+// Meetings is the one personal page a grant opens: the booking profile is
+// served only to a seat holding activity:create.
 export const UNGATED_IDS = SETTINGS_PAGES.filter(
-  (page) => page.group === "me",
+  (page) => page.group === "me" && page.requires.kind === "always",
 ).map((page) => page.id) as readonly SettingsPageId[];
 
 // The floor plus the pages a grant opens, in CATALOG order. Concatenating the
