@@ -180,6 +180,27 @@ func (e PublicEventActivityDispositionRecordedDisposition) Valid() bool {
 	}
 }
 
+// Defines values for PublicEventActivityInvitationAnsweredResponse.
+const (
+	Accepted  PublicEventActivityInvitationAnsweredResponse = "accepted"
+	Declined  PublicEventActivityInvitationAnsweredResponse = "declined"
+	Tentative PublicEventActivityInvitationAnsweredResponse = "tentative"
+)
+
+// Valid indicates whether the value is a known member of the PublicEventActivityInvitationAnsweredResponse enum.
+func (e PublicEventActivityInvitationAnsweredResponse) Valid() bool {
+	switch e {
+	case Accepted:
+		return true
+	case Declined:
+		return true
+	case Tentative:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for PublicEventActivityReadinessRecordedState.
 const (
 	Ready     PublicEventActivityReadinessRecordedState = "ready"
@@ -590,6 +611,7 @@ const (
 	ActivityArchived                      SubscribableEventType = "activity.archived"
 	ActivityCaptured                      SubscribableEventType = "activity.captured"
 	ActivityDispositionRecorded           SubscribableEventType = "activity.disposition_recorded"
+	ActivityInvitationAnswered            SubscribableEventType = "activity.invitation_answered"
 	ActivityMarkedHandled                 SubscribableEventType = "activity.marked_handled"
 	ActivityReadinessRecorded             SubscribableEventType = "activity.readiness_recorded"
 	ActivityUpdated                       SubscribableEventType = "activity.updated"
@@ -744,6 +766,8 @@ func (e SubscribableEventType) Valid() bool {
 	case ActivityCaptured:
 		return true
 	case ActivityDispositionRecorded:
+		return true
+	case ActivityInvitationAnswered:
 		return true
 	case ActivityMarkedHandled:
 		return true
@@ -1195,6 +1219,15 @@ type PublicEventActivityDispositionRecorded struct {
 
 // PublicEventActivityDispositionRecordedDisposition What was decided. `sales_again` and `picked_up` are the undos of `not_sales` and of the reader states, Done included. A decision withdrawn is itself a decision. A consumer counting dispositions has to see it happen rather than infer it from a row going quiet.
 type PublicEventActivityDispositionRecordedDisposition string
+
+// PublicEventActivityInvitationAnswered Payload for activity.invitation_answered. One reader answered a calendar invitation that came by email, and their own calendar sent the answer to the organizer (activities/calendarinvitation.go). It is that reader's own answer, and the reader is not on the wire. The same press marks the message done for them, announced as activity.marked_handled.
+type PublicEventActivityInvitationAnswered struct {
+	ActivityId openapi_types.UUID                            `json:"activity_id"`
+	Response   PublicEventActivityInvitationAnsweredResponse `json:"response"`
+}
+
+// PublicEventActivityInvitationAnsweredResponse defines model for PublicEventActivityInvitationAnswered.Response.
+type PublicEventActivityInvitationAnsweredResponse string
 
 // PublicEventActivityMarkedHandled Payload for activity.marked_handled. One reader marked an activity on their Worklist done. It is a waiting message, a message of their own still unanswered, or a meeting still owed a follow-up. They dealt with it another way, by phone, in a meeting, or with nothing owed (activities/disposition.go). It is that reader's own state, like a snooze, and the reader is not on the wire. No reply was sent. The undo is activity.disposition_recorded with `picked_up`.
 type PublicEventActivityMarkedHandled struct {
@@ -2986,6 +3019,12 @@ func (PublicEventActivityDispositionRecorded) EventType() string {
 
 func (PublicEventActivityDispositionRecorded) EntityType() string { return "activity" }
 
+func (PublicEventActivityInvitationAnswered) EventType() string {
+	return "activity.invitation_answered"
+}
+
+func (PublicEventActivityInvitationAnswered) EntityType() string { return "activity" }
+
 func (PublicEventActivityMarkedHandled) EventType() string { return "activity.marked_handled" }
 
 func (PublicEventActivityMarkedHandled) EntityType() string { return "activity" }
@@ -3583,6 +3622,7 @@ var PublicEventVersions = map[string]int{
 	"activity.archived":                         1,
 	"activity.captured":                         1,
 	"activity.disposition_recorded":             1,
+	"activity.invitation_answered":              1,
 	"activity.marked_handled":                   1,
 	"activity.readiness_recorded":               1,
 	"activity.updated":                          1,
@@ -3735,6 +3775,7 @@ var PublicEventSamples = map[string]string{
 	"activity.archived":                         "{\"import_run_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"imported\":true}",
 	"activity.captured":                         "{\"channel_provider\":\"Sample channel provider\",\"import_run_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"imported\":true,\"kind\":\"Sample kind\",\"source_system\":\"Sample source system\"}",
 	"activity.disposition_recorded":             "{\"activity_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"disposition\":\"not_sales\"}",
+	"activity.invitation_answered":              "{\"activity_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"response\":\"accepted\"}",
 	"activity.marked_handled":                   "{\"activity_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"activity.readiness_recorded":               "{\"activity_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"preparation_revision\":\"Sample preparation revision\",\"state\":\"ready\"}",
 	"activity.updated":                          "{\"changed_fields\":{\"agenda_changed\":true,\"assignee_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"audience\":\"workspace\",\"automatic_task_repaired\":true,\"body\":true,\"calendar_method\":\"PUBLISH\",\"call_outcome\":\"reached\",\"call_outcome_cleared\":true,\"commitment_admissions_changed\":true,\"direction\":\"outbound\",\"due_at\":\"2026-10-14T09:12:00Z\",\"due_has_time\":true,\"host_user_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"is_done\":true,\"meeting_status\":\"booked\",\"meeting_status_cleared\":true,\"occurred_at\":\"2026-10-14T09:12:00Z\",\"occurred_precision\":\"instant\",\"outbound_attested\":true,\"project_filing_undone\":true,\"relinked\":{\"entity_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"entity_type\":\"Sample entity type\"},\"remind_at\":\"2026-10-14T09:12:00Z\",\"remind_at_cleared\":true,\"request_settlement_changed\":true,\"restored\":true,\"subject\":\"Sample subject\",\"thread_key\":\"Sample thread key\"},\"import_run_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"imported\":true}",

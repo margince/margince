@@ -1001,6 +1001,7 @@
   "co.cite.open": "Mở hồ sơ",
   "email.noSubject": "Không có tiêu đề",
   "email.withheldSubject": "Không được chia sẻ với bạn",
+  "email.invitation.badge": "Lời mời",
   "aiTask.name.reader_rendering": "Hiển thị tin nhắn bằng ngôn ngữ của bạn",
   "activity.dayHoldsHostSlot": "Cuộc họp này đã được đặt trong lịch, nên cần có giờ chứ không chỉ có ngày.",
   "brief.coverage.source.tag_suggestion": "Thẻ gợi ý",
