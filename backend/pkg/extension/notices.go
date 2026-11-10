@@ -39,10 +39,13 @@ type NoticeRequest struct {
 	Key string
 }
 
+// contactRecord is a contact in the words core stores.
+const contactRecord = "contact"
+
 // NoticeRecordTypes are the record types a notice may be about: the identity
 // records a reader opens by id.
 func NoticeRecordTypes() []string {
-	return []string{string(KindContact), string(KindCompany), string(KindDeal)}
+	return []string{contactRecord, string(KindCompany), string(KindDeal)}
 }
 
 // RecordRef names one core record. Type is one of NoticeRecordTypes.
