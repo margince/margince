@@ -225,6 +225,7 @@ func TestEveryAgentVerbIsReachableByALimitedPassport(t *testing.T) {
 }
 
 func TestEveryHTTPOperationHasItsCurrentFeaturePlacement(t *testing.T) {
+	t.Parallel()
 	file := workarea.Embedded()
 	contract := readParityContract(t)
 	count := 0
