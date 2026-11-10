@@ -47,16 +47,11 @@ type ListRoomsInput struct {
 // answer; silently falling back to another order is not.
 var roomSortFields = map[string]storekit.SortField{
 	"title":      storekit.Column(fieldcatalog.TypeText),
-	"state":      {Kind: fieldcatalog.TypeText, Expr: orderByReadState, CursorField: "read_state"},
+	"state":      storekit.Column(fieldcatalog.TypeText),
 	"expires_at": storekit.Column(storekit.KindTimestamp),
 	"closed_at":  storekit.Column(storekit.KindTimestamp),
 	"created_at": storekit.Column(storekit.KindTimestamp),
 	"updated_at": storekit.Column(storekit.KindTimestamp),
-}
-
-// orderByReadState sorts by the state each row shows rather than the stored one.
-func orderByReadState(context.Context, func(any) int) (string, error) {
-	return "(" + roomStateSQL + ")", nil
 }
 
 // ListRooms pages the Deal Rooms whose deals the caller can see.
@@ -110,7 +105,7 @@ func roomPage(ctx context.Context, tx pgx.Tx, in ListRoomsInput) ([]crmcontracts
 		where = append(where, storekit.SQLf("r.deal_id = $%d", arg(in.DealID)))
 	}
 	if in.State != nil {
-		where = append(where, storekit.SQLf("(%s) = $%d", roomStateSQL, arg(*in.State)))
+		where = append(where, storekit.SQLf("r.state = $%d", arg(*in.State)))
 	}
 	if in.ParticipantEmail != nil {
 		where = append(where, storekit.SQLf(
@@ -216,18 +211,12 @@ func (s *Store) ArchiveRoom(ctx context.Context, id ids.DealRoomID, ifVersion *i
 
 func archiveRoomTx(ctx context.Context, tx pgx.Tx, room crmcontracts.DealRoom, ifVersion *int64) error {
 	id := ids.UUID(room.Id)
-	// The audit image holds the stored column, which undo writes back and which
-	// never holds the derived expired.
-	var stored string
-	if err := tx.QueryRow(ctx, `SELECT state FROM deal_room WHERE id = $1`, id).Scan(&stored); err != nil {
-		return fmt.Errorf("read the stored room state: %w", err)
-	}
 	p := storekit.NewPatch()
 	// state and archived_at move together: the schema's CHECK requires them to
 	// agree, so setting one alone would be refused by the database rather than
 	// leaving a row that reads live to the state machine and archived to every
 	// list query.
-	p.Set("state", stored, stateArchived)
+	p.Set("state", string(room.State), stateArchived)
 	p.Set("archived_at", nil, time.Now().UTC())
 
 	if err := p.ApplyGuarded(ctx, tx, roomObject, id, ifVersion); err != nil {

@@ -27,8 +27,6 @@ const (
 	statePaused   = "paused"
 	stateClosed   = "closed"
 	stateArchived = "archived"
-	// No writer stores it: roomStateSQL derives it from the expiry.
-	stateExpired = "expired"
 )
 
 // PauseRoom refuses buyer reads while every credential stays valid.

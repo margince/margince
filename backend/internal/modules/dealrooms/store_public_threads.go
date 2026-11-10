@@ -11,6 +11,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -43,11 +44,11 @@ func (s *Store) BuyerThreads(ctx context.Context, sess Session, documentID *ids.
 		if err != nil {
 			return err
 		}
-		if !servesContent(st.access()) {
+		if !servesContent(st.access(time.Now())) {
 			out = []crmcontracts.DealRoomThread{}
 			return nil
 		}
-		docs, err := visibleDocuments(ctx, tx, sess.RoomID)
+		docs, err := visibleDocuments(ctx, tx, sess.RoomID, time.Now())
 		if err != nil {
 			return err
 		}
@@ -89,7 +90,7 @@ func liveRoomForBuyerWrite(ctx context.Context, tx pgx.Tx, sess Session) (crmcon
 	if err != nil {
 		return crmcontracts.DealRoom{}, err
 	}
-	switch access := st.access(); access {
+	switch access := st.access(time.Now()); access {
 	case accessLive:
 	case accessPaused:
 		return crmcontracts.DealRoom{}, pausedForBuyer()
@@ -128,7 +129,7 @@ func liveRoomForBuyerWrite(ctx context.Context, tx pgx.Tx, sess Session) (crmcon
 // has left the deal's Files area. Absent rather than forbidden, which is the
 // same answer an id that never existed gets.
 func requireBuyerVisibleDocument(ctx context.Context, tx pgx.Tx, roomID ids.DealRoomID, documentID ids.UUID) error {
-	docs, err := visibleDocuments(ctx, tx, roomID)
+	docs, err := visibleDocuments(ctx, tx, roomID, time.Now())
 	if err != nil {
 		return err
 	}

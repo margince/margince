@@ -53,7 +53,7 @@ func cleanTitle(title string) (string, error) {
 // from either side.
 func acceptsContent(state string) bool {
 	switch state {
-	case stateClosed, stateExpired, stateArchived:
+	case "closed", "expired", "archived":
 		return false
 	}
 	return true

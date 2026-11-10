@@ -45613,10 +45613,7 @@ type DealRoom struct {
 	// on reading it, and neither side adds a document or a comment. It is not a
 	// frozen copy: what the buyer reads is the live room, so a file later removed
 	// from the deal stops being served here too. `expired` is access lapsing on its
-	// own: no write sets it, and a room reads `expired` once its `expires_at` has
-	// passed unless it is `paused`, `closed` or `archived`. A later `expires_at`
-	// makes it read `live` again. `archived` ends the room outright and frees the
-	// deal for another.
+	// own. `archived` ends the room outright and frees the deal for another.
 	State DealRoomState `json:"state"`
 
 	// StewardUserId The named human a buyer is pointed at for help. Defaults to the deal's owner
@@ -45930,10 +45927,7 @@ type DealRoomSessionIssued struct {
 // on reading it, and neither side adds a document or a comment. It is not a
 // frozen copy: what the buyer reads is the live room, so a file later removed
 // from the deal stops being served here too. `expired` is access lapsing on its
-// own: no write sets it, and a room reads `expired` once its `expires_at` has
-// passed unless it is `paused`, `closed` or `archived`. A later `expires_at`
-// makes it read `live` again. `archived` ends the room outright and frees the
-// deal for another.
+// own. `archived` ends the room outright and frees the deal for another.
 type DealRoomState string
 
 // DealRoomThread One thread of the room's conversation, with its comments. Served to both
