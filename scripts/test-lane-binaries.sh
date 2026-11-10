@@ -8,7 +8,7 @@
 #   2. a shard run after an edit tests the code from before the edit;
 #   3. a duration read in a decimal-comma locale loses its fraction;
 #   4. a shard runs the binaries of another attempt, or waits out its time
-#      limit for a build that already failed.
+#      limit for a build that already failed or that its attempt does not run.
 set -euo pipefail
 
 root_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -169,15 +169,17 @@ expect_wait "the build's upload, after a few polls" 1 600 "$B-1" 0 'other|' 'oth
 expect_wait "a failed build" 1 600 "FAIL:failed or was cancelled" 0 'other|' "$B-1-failed|"
 expect_wait "a failed build beside a binaries upload" 1 600 "FAIL:failed or was cancelled" 0 "$B-1,$B-1-failed|"
 expect_wait "a build that ended red and left nothing" 1 600 "FAIL:ended 'failure'" 1 \
-  '|1 in_progress -' '|1 in_progress -' '|1 in_progress -' '|1 in_progress -' '|1 in_progress -' \
-  '|1 in_progress -' '|1 in_progress -' '|1 in_progress -' '|1 in_progress -' '|1 in_progress -' \
-  '|1 in_progress -' '|1 in_progress -' '|1 completed failure'
-expect_wait "a build that never answers" 1 100 "FAIL:after 100s" 1 '|1 in_progress -'
+  '|in_progress -' '|in_progress -' '|in_progress -' '|in_progress -' '|in_progress -' \
+  '|in_progress -' '|in_progress -' '|in_progress -' '|in_progress -' '|in_progress -' \
+  '|in_progress -' '|in_progress -' '|completed failure'
+expect_wait "a build that never answers" 1 100 "FAIL:after 100s" 1 '|in_progress -'
 expect_wait "an artifact list that fails a while" 1 600 "$B-1" 0 '-|' '-|' "$B-1|"
-expect_wait "a re-run that does not build again" 2 600 "$B-1" 1 "$B-1|1 completed success"
+expect_wait "a re-run that does not build again" 2 600 "$B-1" 1 "$B-1|carried"
 expect_wait "a re-run whose jobs list no build" 2 600 "$B-1" 1 "$B-1|none"
-expect_wait "a re-run that builds again" 2 600 "$B-2" 1 "$B-1|2 in_progress -" "$B-1|" "$B-1,$B-2|"
-expect_wait "a re-run whose build failed" 2 600 "FAIL:failed or was cancelled" 1 "$B-1|2 in_progress -" "$B-1,$B-2-failed|"
+expect_wait "a re-run that does not build again, with no binaries kept" 2 600 "FAIL:lists no test binaries" 1 "|carried"
+expect_wait "a re-run decides on a fresh list only" 2 600 "$B-1" 1 "-|carried" "$B-1|"
+expect_wait "a re-run that builds again" 2 600 "$B-2" 1 "$B-1|in_progress -" "$B-1|" "$B-1,$B-2|"
+expect_wait "a re-run whose build failed" 2 600 "FAIL:failed or was cancelled" 1 "$B-1|in_progress -" "$B-1,$B-2-failed|"
 expect_wait "a rate-limited REST API never decides, nor floods" 2 300 "$B-2" 2 \
   "$B-1|" "$B-1|" "$B-1|" "$B-1|" "$B-1|" "$B-1|" "$B-1|" "$B-1|" "$B-1|" "$B-1|" \
   "$B-1|" "$B-1|" "$B-1|" "$B-1|" "$B-1|" "$B-1|" "$B-1|" "$B-1|" "$B-1|" "$B-1|" \
@@ -206,16 +208,19 @@ printf '{}' > "$work/body"
 [[ -z "$(lane_bin_artifacts)" ]] || fail "a run with no artifacts must list none"
 printf '429' > "$work/code"
 lane_bin_artifacts > /dev/null 2>&1 && fail "a refused artifact list must fail, not read as empty"
-GITHUB_TOKEN=t GITHUB_REPOSITORY=o/r GITHUB_RUN_ID=9
+GITHUB_TOKEN=t GITHUB_REPOSITORY=o/r GITHUB_RUN_ID=9 GITHUB_RUN_ATTEMPT=3
+build_job() { # want body
+  printf '%s' "$2" > "$work/body"
+  [[ "$(lane_bin_build_job)" == "$1" ]] || fail "want '$1' from $2, got '$(lane_bin_build_job)'"
+}
 printf '200' > "$work/code"
-printf '{"jobs":[{"name":"changes","run_attempt":2},{"name":"integration / integration build","run_attempt":1,"status":"completed","conclusion":"success"}]}' > "$work/body"
-[[ "$(lane_bin_build_job 2)" == "1 completed success" ]] || fail "the build job was misread: $(lane_bin_build_job 2)"
-printf '{"jobs":[{"name":"integration / integration build","run_attempt":2,"status":"in_progress","conclusion":null}]}' > "$work/body"
-[[ "$(lane_bin_build_job 2)" == "2 in_progress -" ]] || fail "a running build was misread: $(lane_bin_build_job 2)"
-printf '{"jobs":[{"name":"integration / integration shard (1/8)","run_attempt":2}]}' > "$work/body"
-[[ "$(lane_bin_build_job 2)" == none ]] || fail "a list without the build was misread: $(lane_bin_build_job 2)"
+# A job this attempt did not run again ended before the attempt made it.
+build_job carried '{"jobs":[{"name":"changes"},{"name":"integration / integration build","created_at":"2026-11-10T14:08:18Z","completed_at":"2026-11-10T13:52:37Z","status":"completed","conclusion":"success"}]}'
+build_job "completed success" '{"jobs":[{"name":"integration / integration build","created_at":"2026-11-10T14:08:18Z","completed_at":"2026-11-10T14:13:01Z","status":"completed","conclusion":"success"}]}'
+build_job "in_progress -" '{"jobs":[{"name":"integration build","created_at":"2026-11-10T14:08:18Z","completed_at":null,"status":"in_progress","conclusion":null}]}'
+build_job none '{"jobs":[{"name":"integration / integration shard (1/8)"}]}'
 printf '403' > "$work/code"
-lane_bin_build_job 2 > /dev/null 2>&1 && fail "a rate-limited REST call must fail, not decide"
+lane_bin_build_job > /dev/null 2>&1 && fail "a rate-limited REST call must fail, not decide"
 unset -f curl
 
 if (( fails > 0 )); then

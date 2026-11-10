@@ -106,8 +106,9 @@ lane_micros() { # t
 
 # The shards start beside the build and wait here for its binaries. The build
 # of attempt A uploads them as test-binaries-integration-A, or, when it fails
-# or is cancelled, a small test-binaries-integration-A-failed. The name holds
-# the attempt because a run lists the artifacts of all its attempts together.
+# or is cancelled, a small test-binaries-integration-A-failed. The attempt is
+# in the name because a job that `Re-run failed jobs` does not run again keeps
+# its artifacts in the later attempt.
 LANE_BIN_ARTIFACT=test-binaries-integration
 
 # lane_bin_wait ATTEMPT BUDGET — print the name of the binaries artifact the
@@ -115,17 +116,21 @@ LANE_BIN_ARTIFACT=test-binaries-integration
 # build failed, or when BUDGET seconds pass without binaries.
 #
 # The artifact list costs no REST call. A REST call (GITHUB_TOKEN allows 1,000
-# an hour for the whole repository) answers only what the list cannot: whether
-# this attempt runs the build again, asked when binaries of an earlier attempt
-# are there, and after LANE_BIN_REST_AFTER seconds whether a build that left no
-# artifact has ended. A REST error only delays that answer.
+# an hour for the whole repository) answers what the list cannot: whether a
+# later attempt runs the build at all, asked at once, and after
+# LANE_BIN_REST_AFTER seconds whether a build that left no artifact has ended.
+# A REST error only delays that answer.
 lane_bin_wait() { # attempt budget
-  local attempt="$1" budget="$2" spent=0 interval names earlier="" asked=""
-  local poll="${LANE_BIN_POLL_SECONDS:-5}" rest_at="${LANE_BIN_REST_AFTER:-360}" rest_calls=0
-  local build built status conclusion
+  local attempt="$1" budget="$2" spent=0 interval names listed seen="" earlier="" carried=""
+  local poll="${LANE_BIN_POLL_SECONDS:-5}" rest_at="${LANE_BIN_REST_AFTER:-360}" rest_calls=0 build
+  (( attempt == 1 )) || rest_at=0
   while :; do
-    interval="$poll"
+    interval="$poll" listed=""
     if names="$(lane_bin_artifacts)"; then
+      listed=1
+      names="$(grep "^$LANE_BIN_ARTIFACT-" <<<"$names" || true)"
+      [[ "$names" == "$seen" ]] || echo "test-binaries: after ${spent}s the run lists: ${names//$'\n'/ }" >&2
+      seen="$names"
       if grep -qx "$LANE_BIN_ARTIFACT-$attempt-failed" <<<"$names"; then
         echo "FAIL: the integration build of attempt $attempt failed or was cancelled, so there are no test binaries to run. Its log names the cause." >&2
         return 1
@@ -136,29 +141,32 @@ lane_bin_wait() { # attempt budget
         return 0
       fi
       earlier="$(sed -n "s/^$LANE_BIN_ARTIFACT-\([0-9][0-9]*\)\$/\1/p" <<<"$names" | LC_ALL=C sort -n | tail -n1)"
-      # Asked once at once; a failed ask waits for the usual 180 s.
-      [[ -z "$earlier" || -n "$asked" ]] || { rest_at="$spent" asked=pending; }
     else
       interval=$(( poll * 3 ))
     fi
     if (( spent >= rest_at )); then
       rest_at=$(( spent + 180 )) rest_calls=$(( rest_calls + 1 ))
-      if build="$(lane_bin_build_job "$attempt")"; then
-        read -r built status conclusion <<<"$build"
-        if [[ "$built" == none ]] || (( built < attempt )); then
-          if [[ -z "$earlier" ]]; then
-            echo "FAIL: attempt $attempt does not run the integration build again, and no earlier attempt left test binaries" >&2
+      if build="$(lane_bin_build_job)"; then
+        echo "test-binaries: REST call $rest_calls: attempt $attempt lists the build as '$build'" >&2
+        case "$build" in
+          carried | none) carried=1 ;;
+          "completed success") ;;
+          completed*)
+            echo "FAIL: the integration build of attempt $attempt ended '${build#completed }' and left no test binaries. Its log names the cause." >&2
             return 1
-          fi
-          echo "test-binaries: attempt $attempt does not run the build again, so it runs the binaries of attempt $earlier; $rest_calls REST call(s)" >&2
-          echo "$LANE_BIN_ARTIFACT-$earlier"
-          return 0
-        fi
-        if [[ "$status" == completed && "$conclusion" != success ]]; then
-          echo "FAIL: the integration build of attempt $attempt ended '$conclusion' and left no test binaries. Its log names the cause." >&2
-          return 1
-        fi
+            ;;
+        esac
       fi
+    fi
+    # Decided on a list read in this round, never on an older one.
+    if [[ -n "$carried" && -n "$listed" ]]; then
+      if [[ -n "$earlier" ]]; then
+        echo "test-binaries: attempt $attempt does not run the build again, so it runs the binaries of attempt $earlier; $rest_calls REST call(s)" >&2
+        echo "$LANE_BIN_ARTIFACT-$earlier"
+        return 0
+      fi
+      echo "FAIL: attempt $attempt does not run the integration build again, and it lists no test binaries of an earlier attempt" >&2
+      return 1
     fi
     if (( spent + interval > budget )); then
       echo "FAIL: no test binaries from the integration build of attempt $attempt after ${spent}s. The build's own time limit is shorter, so it ended without leaving them." >&2
@@ -196,15 +204,16 @@ lane_bin_artifacts() {
   rm -f "$reply"
 }
 
-# lane_bin_build_job ATTEMPT — print `ATTEMPT STATUS CONCLUSION` of the
-# integration build as the jobs of attempt ATTEMPT list it, or `none`. One REST
-# call, with GITHUB_TOKEN and `actions: read`.
-lane_bin_build_job() { # attempt
+# lane_bin_build_job — print how this attempt lists the integration build:
+# `STATUS CONCLUSION`, `carried` when it is a job of an earlier attempt that
+# this one did not run again (it ended before this attempt made it), or `none`.
+# One REST call, with GITHUB_TOKEN and `actions: read`.
+lane_bin_build_job() {
   local reply code
   reply="$(mktemp)"
   code=$(curl -sS -o "$reply" -w '%{http_code}' --max-time 30 \
     -H "Authorization: Bearer ${GITHUB_TOKEN:?}" -H 'Accept: application/vnd.github+json' \
-    "${GITHUB_API_URL:-https://api.github.com}/repos/${GITHUB_REPOSITORY:?}/actions/runs/${GITHUB_RUN_ID:?}/attempts/$1/jobs?per_page=100" \
+    "${GITHUB_API_URL:-https://api.github.com}/repos/${GITHUB_REPOSITORY:?}/actions/runs/${GITHUB_RUN_ID:?}/attempts/${GITHUB_RUN_ATTEMPT:?}/jobs?per_page=100" \
     2>/dev/null) || code=000
   if [[ "$code" != 200 ]]; then
     echo "test-binaries: the REST jobs list answered $code: $(head -c 200 "$reply")" >&2
@@ -212,6 +221,8 @@ lane_bin_build_job() { # attempt
     return 1
   fi
   jq -r '[.jobs[]? | select(.name | test("(^|/ )integration build$"))][0]
-    | if . == null then "none" else "\(.run_attempt) \(.status) \(.conclusion // "-")" end' "$reply"
+    | if . == null then "none"
+      elif .completed_at != null and .completed_at < .created_at then "carried"
+      else "\(.status) \(.conclusion // "-")" end' "$reply"
   rm -f "$reply"
 }
