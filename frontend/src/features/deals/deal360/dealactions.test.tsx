@@ -2,41 +2,37 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import "@testing-library/jest-dom/vitest";
+
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../../api/schema";
 import { LocaleProvider } from "../../../i18n";
+import { en } from "../../../i18n/en";
+import { deal } from "../../../testing/brief.fixtures";
 import { RecordShell } from "../../../testing/recordshell.testkit";
 import { stubWithSession } from "../../../testing/story-utils";
 import { DealActions } from "./dealactions";
 
 type Deal = components["schemas"]["Deal"];
 
-const deal = {
-  id: "d-1",
-  name: "Fleet telematics rollout",
-  amount_minor: 4_500_000,
-  currency: "EUR",
-  stage_id: "st-1",
-  status: "open",
-  stalled: false,
-  source: "manual",
-  version: 1,
-  created_at: "2026-01-01T00:00:00Z",
-  updated_at: "2026-01-01T00:00:00Z",
-} as Deal;
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+});
 
-afterEach(cleanup);
-
-function mount(allow: Parameters<typeof stubWithSession>[1]) {
+function mount(
+  allow: Parameters<typeof stubWithSession>[1],
+  over: Partial<Deal> = {},
+) {
   stubWithSession({}, allow);
   render(
     <QueryClientProvider client={new QueryClient()}>
       <LocaleProvider initial="en">
         <RecordShell>
           <DealActions
-            deal={deal}
+            deal={deal("d-1", "Fleet telematics rollout", over)}
             openStages={[]}
             onEditDetails={() => undefined}
           />
@@ -70,5 +66,31 @@ describe("the deal header's Email verb", () => {
 
     const email = await screen.findByRole("button", { name: "Email" });
     await expect.poll(() => email.hasAttribute("disabled")).toBe(false);
+  });
+});
+
+const meet = () =>
+  screen.getByRole("button", { name: en["scheduling.bookContact"] });
+
+describe("the deal header's Meet verb", () => {
+  const grants: Parameters<typeof stubWithSession>[1] = {
+    deal: ["read", "update"],
+    activity: ["create"],
+  };
+
+  it("says why Meet is off on a deal with no company", async () => {
+    mount(grants, { company_id: null });
+
+    await waitFor(() =>
+      expect(meet()).toHaveAccessibleDescription(en["deal.meetNeedsCompany"]),
+    );
+    expect(meet()).toBeDisabled();
+  });
+
+  it("offers Meet with no refusal on a deal with a company", async () => {
+    mount(grants, { company_id: "01a02000-0000-7000-8000-000000000001" });
+
+    await waitFor(() => expect(meet()).toBeEnabled());
+    expect(meet()).not.toHaveAccessibleDescription(en["deal.meetNeedsCompany"]);
   });
 });

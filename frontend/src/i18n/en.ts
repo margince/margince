@@ -956,6 +956,8 @@ export const en = {
   "forecast.deals.colSignals": "Risk signals",
   "forecast.deals.colAmount": "Amount",
   "forecast.deals.colWeighted": "Weighted",
+  "forecast.deals.foldedAmount": "Amount {amount}",
+  "forecast.deals.foldedWeighted": "{amount} weighted",
   "forecast.signal.close_pushed": "Close date keeps moving",
   "forecast.signal.no_next_step": "No next step booked",
   "forecast.signal.quiet": "Customer quiet",
@@ -5888,6 +5890,8 @@ export const en = {
   "deal.aside.partner": "Partner",
   "deal.aside.partnerNone": "None",
   "deal.editDetails": "Edit details",
+  "deal.meetNeedsCompany":
+    "This deal has no company yet. Add one under Edit details to book a meeting.",
   "deal.committee.card": "Committee",
   "deal.committee.change": "Change or remove stakeholders",
   "deal.committee.legendEngaged": "Engaged",
@@ -7418,6 +7422,8 @@ export const en = {
     "This contact is now private to its owner. Users and teams it was shared with keep access.",
   "recordAccess.contact.leftYourAccess":
     "This contact is now private to its owner. You no longer have access to it.",
+  "recordAccess.contact.handedOver":
+    "{owner} now owns this contact. It is private to them, so you no longer have access to it.",
   "recordAccess.company.title": "Who can see this company",
   "recordAccess.company.shared":
     "All users in the company can see this record.",
@@ -7432,6 +7438,8 @@ export const en = {
     "This company is now private to its owner. Deals, contacts and mail filed against it keep their own visibility.",
   "recordAccess.company.leftYourAccess":
     "This company is now private to its owner. You no longer have access to it.",
+  "recordAccess.company.handedOver":
+    "{owner} now owns this company. It is private to them, so you no longer have access to it.",
   // The switch behind the header's access chip. The owner's answer carries
   // what it does not take away, because a share outlives it; to anyone but the
   // owner it says what it takes from them, and without an owner it is refused.
@@ -8585,6 +8593,8 @@ export const en = {
   "review.colDeal": "Deal",
   "review.colAtStake": "At stake",
   "review.colSeenSince": "Seen since",
+  "review.foldedAtStake": "{amount} at stake",
+  "review.foldedSeenSince": "Seen since {date}",
   "review.severityHigh": "High",
   "review.severityMedium": "Medium",
   "review.severityLow": "Low",
@@ -19380,7 +19390,7 @@ export const en = {
   "worklist.verb.meetingAddNotes": "Add notes",
   "worklist.verb.meetingUpdateTitle": "Meeting",
   "worklist.verb.meetingReading": "Loading meeting…",
-  "worklist.verb.meetingWhatHappened": "Meeting notes",
+  "worklist.verb.meetingWhatHappened": "What happened",
   "worklist.verb.meetingBodyHint":
     "Discussion and next steps. Calendar notes can be edited here.",
   "worklist.verb.meetingHeld": "It happened",

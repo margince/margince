@@ -985,6 +985,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "forecast.deals.colSignals": "Tín hiệu rủi ro",
   "forecast.deals.colAmount": "Giá trị",
   "forecast.deals.colWeighted": "Có trọng số",
+  "forecast.deals.foldedAmount": "Giá trị {amount}",
+  "forecast.deals.foldedWeighted": "{amount} có trọng số",
   "forecast.signal.close_pushed": "Ngày chốt liên tục dời",
   "forecast.signal.no_next_step": "Chưa đặt bước tiếp theo",
   "forecast.signal.quiet": "Khách hàng im lặng",
@@ -7228,6 +7230,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Liên hệ này giờ là riêng của người chịu trách nhiệm. Thành viên và nhóm đã được chia sẻ vẫn giữ quyền truy cập.",
   "recordAccess.contact.leftYourAccess":
     "Liên hệ này giờ là riêng của người chịu trách nhiệm. Bạn không còn quyền truy cập.",
+  "recordAccess.contact.handedOver":
+    "{owner} giờ chịu trách nhiệm liên hệ này. Liên hệ ở chế độ riêng tư, nên bạn không còn quyền truy cập.",
   "recordAccess.company.title": "Ai có thể xem công ty này",
   "recordAccess.company.shared":
     "Mọi thành viên trong công ty đều có thể xem hồ sơ này.",
@@ -7243,6 +7247,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Công ty này giờ là riêng của người chịu trách nhiệm. Deal, liên hệ và email đã xếp vào công ty vẫn giữ phạm vi hiển thị riêng.",
   "recordAccess.company.leftYourAccess":
     "Công ty này giờ là riêng của người chịu trách nhiệm. Bạn không còn quyền truy cập.",
+  "recordAccess.company.handedOver":
+    "{owner} giờ chịu trách nhiệm công ty này. Công ty ở chế độ riêng tư, nên bạn không còn quyền truy cập.",
   "recordAccess.option.owner": "Chỉ người chịu trách nhiệm",
   "recordAccess.option.ownerHint":
     "Thành viên và nhóm được chia sẻ vẫn giữ quyền truy cập.",
@@ -8386,6 +8392,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "review.colDeal": "Deal",
   "review.colAtStake": "Số tiền bị ảnh hưởng",
   "review.colSeenSince": "Xuất hiện từ",
+  "review.foldedAtStake": "{amount} bị ảnh hưởng",
+  "review.foldedSeenSince": "Xuất hiện từ {date}",
   "review.severityHigh": "Cao",
   "review.severityMedium": "Trung bình",
   "review.severityLow": "Thấp",
@@ -18455,6 +18463,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deal.aside.partner": "Đối tác",
   "deal.aside.partnerNone": "Không có",
   "deal.editDetails": "Sửa chi tiết",
+  "deal.meetNeedsCompany":
+    "Deal này chưa có công ty. Thêm công ty trong “Sửa chi tiết” để đặt lịch họp.",
   "deal.committee.card": "Hội đồng mua",
   "deal.committee.change": "Sửa hoặc gỡ bên liên quan",
 
@@ -19098,7 +19108,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.verb.meetingAddNotes": "Thêm ghi chú",
   "worklist.verb.meetingUpdateTitle": "Cuộc họp",
   "worklist.verb.meetingReading": "Đang tải cuộc họp…",
-  "worklist.verb.meetingWhatHappened": "Ghi chú cuộc họp",
+  "worklist.verb.meetingWhatHappened": "Điều đã diễn ra",
   "worklist.verb.meetingBodyHint":
     "Nội dung trao đổi và bước tiếp theo. Có thể sửa ghi chú từ lịch tại đây.",
   "worklist.verb.meetingHeld": "Đã diễn ra",
