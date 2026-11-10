@@ -91,25 +91,29 @@ func (w *Watcher) Posture() Posture { return *w.posture.Load() }
 // is reported as itself. None of those is evidence about the license, and
 // degrading on one would tell an operator their license had been refused when
 // what actually broke was the machinery for asking.
-func (w *Watcher) Recheck(ctx context.Context) {
-	defer w.surviveFault(ctx)
+//
+// The error is that same fault, already logged. The daily loop has nothing to
+// add to it. An admin who pressed "Check now" in Settings needs to hear that
+// nothing was re-read.
+func (w *Watcher) Recheck(ctx context.Context) (err error) {
+	defer w.surviveFault(ctx, &err)
 	before := w.Posture()
 	token, err := w.source()
 	if err != nil {
 		w.log.ErrorContext(ctx, "re-reading the license failed; keeping the posture this process last resolved",
 			"err", err, "posture", string(before.State))
-		return
+		return fmt.Errorf("licensecheck: re-reading the license token: %w", err)
 	}
 	after, err := Resolve(ctx, token, w.now(), w.env)
 	if err != nil {
 		w.log.ErrorContext(ctx, "re-checking the license failed; keeping the posture this process last resolved",
 			"err", err, "posture", string(before.State))
-		return
+		return fmt.Errorf("licensecheck: re-checking the license: %w", err)
 	}
 	carryCeiling(before, &after)
 	w.posture.Store(&after)
 	if after.State == before.State {
-		return
+		return nil
 	}
 	// Any transition is worth a warning, including one back to valid: a license
 	// that recovered did so because somebody replaced the token, and when it
@@ -117,18 +121,21 @@ func (w *Watcher) Recheck(ctx context.Context) {
 	w.log.WarnContext(ctx, "license posture changed",
 		"from", string(before.State), "to", string(after.State),
 		"reason", after.Reason, "module", ModuleVersion())
+	return nil
 }
 
 // surviveFault turns a panic on the re-check path into a logged fault. The
 // posture keeps whatever it last held, which is the honest answer: a panicking
-// runtime said nothing about the license.
-func (w *Watcher) surviveFault(ctx context.Context) {
+// runtime said nothing about the license. The panic becomes the re-check's
+// error, so a caller waiting on the answer is not told it succeeded.
+func (w *Watcher) surviveFault(ctx context.Context, err *error) {
 	fault := recover()
 	if fault == nil {
 		return
 	}
 	w.log.ErrorContext(ctx, "re-checking the license panicked; keeping the posture this process last resolved",
 		"panic", fmt.Sprint(fault), "module", ModuleVersion(), "stack", string(debug.Stack()))
+	*err = fmt.Errorf("licensecheck: re-checking the license panicked: %v", fault)
 }
 
 // RunRecheck re-resolves until ctx is cancelled. It is started by each process
@@ -141,7 +148,8 @@ func (w *Watcher) RunRecheck(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			w.Recheck(ctx)
+			//craft:ignore swallowed-errors Recheck logs its own fault and keeps the last posture; the loop has nobody to tell
+			_ = w.Recheck(ctx)
 		}
 	}
 }

@@ -178,6 +178,15 @@ func WithLicensePosture(posture func() licensecheck.Posture) Option {
 	}
 }
 
+// WithLicenseRecheck wires the watcher's re-check into "Check now" on the
+// entitlement surface. It adds to the handler the assembly
+// built, like WithLicensePosture, so the seat count and posture stay.
+func WithLicenseRecheck(recheck func(context.Context) error) Option {
+	return func(s *Server, _ *pgxpool.Pool) {
+		s.licenseHandlers.recheck = recheck
+	}
+}
+
 // writeLicenseMetrics renders the entitlement section. A role that wired no
 // posture writes nothing, the same "declared or absent" posture every other
 // section takes — a state gauge nobody resolved would read as an installation

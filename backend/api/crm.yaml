@@ -21504,6 +21504,49 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
 
+  /installation/license/check:
+    post:
+      tags: [Identity]
+      operationId: checkLicenseNow
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
+      x-agent-access: human-only
+      x-human-only-reason: security
+      summary: Re-read the installation's license token now (admin/ops).
+      description: |
+        Runs the api's license re-check at once, instead of waiting for the daily one.
+        It re-reads the token where the deployment declares it and checks it OFFLINE
+        against the bundled validation module, the same path the daily re-check takes.
+        An operator who has swapped the token on the server presses this to see the new
+        license without waiting up to a day.
+
+        It writes nothing and takes no token. Entering or replacing the token stays the
+        operator's job on the server. Only the api process that serves
+        this request re-checks; the worker and any other api replica keep their own
+        daily re-check.
+
+        The answer is the same body as `GET /installation/license`, read after the
+        re-check. A re-check that reached a verdict answers `200`, a refused license
+        included: `state` then says `rejected`. A token that could not be read, or a
+        module that could not run, is no verdict. The posture the process last resolved
+        stands, the fault goes to the server log, and the answer is `503`.
+
+        Gated on `installation_settings` update (admin and ops), the grant that guards
+        installation settings, and on `license` read, which the entitlement in the
+        answer needs. Human-only, like the entitlement read.
+      responses:
+        '200':
+          description: The entitlement as the re-check resolved it.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LicenseEntitlement' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '503':
+          description: The token could not be re-read, or the module could not run; the last posture stands.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
   /installation/seat-usage:
     get:
       tags: [Identity]

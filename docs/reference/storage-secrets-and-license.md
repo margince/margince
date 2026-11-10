@@ -251,8 +251,18 @@ to run with no license.
 
 **An ended license never stops a running process.** A license that ends while the process
 runs leaves it serving. The api checks again daily, and its `/metrics` posture gets worse; nothing
-goes offline mid-month without a human there. Each daily check reads `token_file` (or the variable)
-again. So a license replaced in place applies within a day, without starting the process again.
+goes offline mid-month without a human there. Each daily check reads the file that `token_file`
+names again. So a token replaced in that file applies within a day, without starting the process
+again. A `token` reference and `MARGINCE_LICENSE` are read once, when the process starts. A token
+changed there applies at the next start.
+
+**Check now.** Settings → Seats has a **Check now** button for admin and ops. It runs the same
+check at once, through `POST /installation/license/check`, and shows the result. It needs
+`installation_settings` update and `license` read. It reads only what the daily check reads, so
+it picks up a token replaced in the `token_file` file. It checks only the api process that answers
+the request. The worker and any other api process keep their daily check. It writes nothing, and
+nobody can enter a token in the app. A token that cannot be read, or a module that cannot run,
+answers `503`. The process then keeps its last result, and the server log says why.
 
 Some results are not a result about the license: a token it cannot read, or a module that failed to
 run. Those keep the posture the process last worked out, and are logged as what they are. None of
@@ -270,7 +280,7 @@ them is evidence about the license.
 - A license that carries no seat count limits nothing, and the same goes for a dev installation with
   no license.
 - Margince reads the limit live, so a license replaced in place raises it on the next daily check,
-  without starting the process again. The number an admin is refused against is the number the
+  or at once on **Check now**, without starting the process again. The number an admin is refused against is the number the
   license screen and `margince_license_seats` report.
 
 **Which authority a license must come from.** A production installation accepts one:

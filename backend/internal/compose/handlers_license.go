@@ -13,6 +13,7 @@ package compose
 // belongs where both are already in scope.
 
 import (
+	"context"
 	"net/http"
 	"time"
 
@@ -21,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/platform/licensecheck"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 type licenseHandlers struct {
@@ -29,6 +31,9 @@ type licenseHandlers struct {
 	// the watcher re-checks while the process runs, so a screen opened on day
 	// thirty reports the license as it stands and not as it booted.
 	posture func() licensecheck.Posture
+	// recheck runs the watcher's re-check now. Set by WithLicenseRecheck; a role
+	// that wired none answers "Check now" with 501.
+	recheck func(context.Context) error
 }
 
 // withPosture adds the license half to a handler that already carries the seat
@@ -72,6 +77,50 @@ func (h licenseHandlers) GetLicenseEntitlement(w http.ResponseWriter, r *http.Re
 	}
 	httperr.WriteJSON(w, http.StatusOK, toContractLicenseEntitlement(h.posture(), used))
 }
+
+// CheckLicenseNow re-reads the installation's license token at once and
+// answers the entitlement as the re-check resolved it.
+//
+// It reuses the watcher's daily re-check rather than a second path. Nothing
+// is written and no token travels in the request, so there is no row to
+// audit; a posture that changed is logged by the watcher.
+//
+// Both gates run BEFORE the re-check. A caller who may not change installation
+// settings, or may not see the entitlement, never makes the api re-read its
+// token.
+func (h licenseHandlers) CheckLicenseNow(w http.ResponseWriter, r *http.Request) {
+	if h.seats == nil || h.posture == nil || h.recheck == nil {
+		httperr.NotImplemented(w, r, "CheckLicenseNow")
+		return
+	}
+	ctx := r.Context()
+	if err := auth.RequireHuman(ctx); err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	if err := auth.Require(ctx, licenseCheckObject, principal.ActionUpdate); err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	// The seat count carries the `license` read gate, as on the GET.
+	used, err := h.seats.FullSeatsInUse(ctx)
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	if err := h.recheck(ctx); err != nil {
+		// The watcher has logged the fault. The response names none of it: the
+		// cause can quote the token file's path or the module's own text.
+		httperr.ServiceUnavailable(w, r, "the license could not be re-read; the last result stands — see the server log")
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, toContractLicenseEntitlement(h.posture(), used))
+}
+
+// licenseCheckObject is the grant "Check now" asks for: update on installation
+// settings, which admin and ops hold. No role holds a `license` write grant,
+// and a re-check changes no license, so it does not invent one.
+const licenseCheckObject = "installation_settings"
 
 // GetSeatUsage answers the seat count without the entitlement beside it.
 //

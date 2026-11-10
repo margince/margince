@@ -155,6 +155,8 @@ Nobody loses a role. Nobody is signed out. Only the *next* seat is refused.
 
 Margince checks the licence itself when it starts. The licence check never calls out or reports back to anyone.
 
+Margince checks the licence again once a day. Your server admin may replace the licence on the server. An admin or ops member then presses **Check now** on the same page, and Margince checks it at once. The page then shows the new licence. You cannot type a licence into Margince; it stays on the server.
+
 ## The six roles
 
 Margince comes with six roles: Admin, Ops, Management, Team lead, User and Read-only.
