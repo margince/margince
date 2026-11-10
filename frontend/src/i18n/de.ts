@@ -19105,7 +19105,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.todo.customer_waiting.named": "Antworte {name}.",
   "worklist.todo.awaiting_reply.named": "Sende {name} eine Nachfrage.",
   "worklist.todo.lead_response.named":
-    "Melde dich bei {name}, bevor die Antwortzeit abläuft.",
+    "Melde dich jetzt bei {name}, ein neuer Lead kühlt schnell ab.",
   "worklist.todo.meeting.named":
     "Öffne den Termin, um dich auf {name} vorzubereiten.",
   "worklist.todo.meeting_follow_up.named": "Sende {name} ein Follow-up.",
@@ -19118,9 +19118,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.todo.undelivered.named":
     "Öffne die E-Mail an {name}, um den Grund zu sehen, und sende sie dann erneut.",
   "worklist.todo.automation_run.named":
-    "Prüfe, warum {name} angehalten hat, und starte es dann erneut.",
+    "Öffne {name}, sieh nach, warum es angehalten hat, und behebe die Ursache.",
   "worklist.todo.capture_health.named":
-    "Verbinde {name} neu, damit seine E-Mails wieder erfasst werden.",
+    "Prüfe die Verbindung von {name}, damit seine E-Mails wieder erfasst werden.",
   "worklist.consequence.task_slips.named":
     "Die Aufgabe mit {name} rutscht weiter über ihr Datum.",
   "worklist.happened.customer_waiting":
@@ -19140,7 +19140,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.happened.meeting_outcome.bare":
     "Der Termin war am {when}, und nichts hält fest, wie er lief.",
   "worklist.happened.meeting_follow_up":
-    "Du hast {name} am {when} getroffen, und danach ging nichts an sie raus.",
+    "Du hast {name} am {when} getroffen, und danach ging keine Nachricht raus.",
   "worklist.happened.meeting_follow_up.bare":
     "Der Termin war am {when}, und danach ging nichts an die Teilnehmenden raus.",
   "worklist.happened.relationship_decay":
@@ -19156,13 +19156,13 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.happened.undelivered.bare":
     "Eine E-Mail wurde am {when} nicht gesendet.",
   "worklist.happened.automation_run":
-    "Die Automation {name} ist am {when} abgebrochen.",
+    "Die Automation {name} wurde am {when} nicht abgeschlossen.",
   "worklist.happened.automation_run.bare":
-    "Eine Automation ist am {when} abgebrochen.",
+    "Eine Automation wurde am {when} nicht abgeschlossen.",
   "worklist.happened.capture_health":
-    "Das Postfach {name} erfasst seit dem {when} keine E-Mails mehr.",
+    "Das Postfach {name} hat seit dem {when} keine E-Mails erfasst.",
   "worklist.happened.capture_health.bare":
-    "Ein Postfach erfasst seit dem {when} keine E-Mails mehr.",
+    "Ein Postfach hat seit dem {when} keine E-Mails erfasst.",
   "worklist.happened.ai_work_health":
     "Die KI-Aufgabe {name} ist am {when} fehlgeschlagen.",
   "worklist.happened.ai_work_health.bare":
@@ -19236,7 +19236,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Erledige sie und markiere sie als erledigt, oder verschiebe sie auf einen anderen Tag.",
   "worklist.todo.customer_waiting": "Beantworte die Nachricht.",
   "worklist.todo.awaiting_reply": "Sende eine Nachfrage.",
-  "worklist.todo.lead_response": "Melde dich, bevor die Antwortzeit abläuft.",
+  "worklist.todo.lead_response": "Melde dich jetzt, ein neuer Lead kühlt schnell ab.",
   "worklist.todo.meeting": "Öffne den Termin, um dich vorzubereiten.",
   "worklist.todo.meeting_outcome":
     "Halte fest, was dabei herauskam, oder markiere ihn als abgesagt, wenn er nicht stattfand.",
@@ -19249,9 +19249,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.todo.undelivered":
     "Öffne die E-Mail, um den Grund zu sehen, und sende sie dann erneut.",
   "worklist.todo.automation_run":
-    "Prüfe die Ursache und führe die Automatisierung dann erneut aus.",
+    "Öffne den Lauf, sieh nach, warum er angehalten hat, und behebe die Ursache.",
   "worklist.todo.capture_health":
-    "Verbinde das Postfach neu, damit seine E-Mails wieder erfasst werden.",
+    "Prüfe die Verbindung des Postfachs, damit seine E-Mails wieder erfasst werden.",
   "worklist.todo.ai_work_health":
     "Prüfe ihren KI-Anbieter in den Einstellungen.",
   "worklist.todo.failed_approval":

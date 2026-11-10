@@ -18912,7 +18912,7 @@ export const en = {
   "worklist.todo.customer_waiting.named": "Reply to {name}.",
   "worklist.todo.awaiting_reply.named": "Send {name} a follow-up.",
   "worklist.todo.lead_response.named":
-    "Get in touch with {name} before the response time runs out.",
+    "Get in touch with {name} now; a new lead cools fast.",
   "worklist.todo.meeting.named": "Open the meeting to prepare for {name}.",
   "worklist.todo.meeting_follow_up.named": "Send {name} a follow-up.",
   "worklist.todo.relationship_decay.named":
@@ -18924,9 +18924,9 @@ export const en = {
   "worklist.todo.undelivered.named":
     "Open the email to {name} to see why, then send it again.",
   "worklist.todo.automation_run.named":
-    "Check why {name} stopped, then run it again.",
+    "Open {name}, see why it stopped and fix the cause.",
   "worklist.todo.capture_health.named":
-    "Reconnect {name} so its mail is captured again.",
+    "Check the connection of {name} so its mail is captured again.",
   "worklist.consequence.task_slips.named":
     "The task with {name} slips further past its date.",
   "worklist.happened.customer_waiting":
@@ -18963,9 +18963,9 @@ export const en = {
     "The automation {name} stopped on {when}.",
   "worklist.happened.automation_run.bare": "An automation stopped on {when}.",
   "worklist.happened.capture_health":
-    "The mailbox {name} stopped capturing mail on {when}.",
+    "The mailbox {name} has captured no mail since {when}.",
   "worklist.happened.capture_health.bare":
-    "A mailbox stopped capturing mail on {when}.",
+    "A mailbox has captured no mail since {when}.",
   "worklist.happened.ai_work_health": "The AI task {name} failed on {when}.",
   "worklist.happened.ai_work_health.bare": "An AI task failed on {when}.",
   "worklist.happened.failed_approval":
@@ -19032,7 +19032,7 @@ export const en = {
   "worklist.todo.customer_waiting": "Reply to the message.",
   "worklist.todo.awaiting_reply": "Send a follow-up.",
   "worklist.todo.lead_response":
-    "Get in touch before its response time runs out.",
+    "Get in touch now; a new lead cools fast.",
   "worklist.todo.meeting": "Open the meeting to prepare.",
   "worklist.todo.meeting_outcome":
     "Record what came of it, or mark it canceled if it did not take place.",
@@ -19042,9 +19042,9 @@ export const en = {
   "worklist.todo.conversation_claim": "Do it, then mark it done.",
   "worklist.todo.bounce": "Check the address, then send it again.",
   "worklist.todo.undelivered": "Open the email to see why, then send it again.",
-  "worklist.todo.automation_run": "Check the cause, then run it again.",
+  "worklist.todo.automation_run": "Open the run, see why it stopped and fix the cause.",
   "worklist.todo.capture_health":
-    "Reconnect the mailbox so its mail is captured again.",
+    "Check the mailbox connection so its mail is captured again.",
   "worklist.todo.ai_work_health": "Check its AI provider in Settings.",
   "worklist.todo.failed_approval": "Check what happened, then acknowledge it.",
   "worklist.todo.deal_suggestion":

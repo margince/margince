@@ -283,6 +283,7 @@ function eventName(item: WorklistItem): string | undefined {
 }
 
 // A task's own deadline, against today: when it fell due and that it is open.
+// A due day is a calendar date, so it reads in the company zone, as on the record.
 function taskLine(item: WorklistItem, t: T, clock: Clock): string | null {
   if (item.source !== "task" && item.source !== "weekly_commitment")
     return null;
