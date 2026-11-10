@@ -292,7 +292,7 @@ describe("the identity card's mark", () => {
     const reference = only('[data-testid="reference-mark"] .avatar');
 
     expect(meshOf(card)).toBe(meshOf(reference));
-    expect(card).toHaveTextContent("GG");
+    expect(card.getAttribute("data-initials")).toBe("GG");
   });
 });
 

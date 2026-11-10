@@ -459,9 +459,10 @@ describe("AccountMenu", () => {
     const trigger = glyphTrigger();
     expect(container.querySelector(".acctwho")).toBeNull();
     expect(trigger.getAttribute("aria-label")).toBe("Account");
-    // The initials are drawn and hidden, so they never join the name.
-    const chip = trigger.querySelector(".avatar");
-    expect(chip?.textContent).toBe("TU");
+    // The initials are drawn, not printed, and hidden: they never join the name.
+    const chip = trigger.querySelector<HTMLElement>(".avatar");
+    expect(chip?.dataset.initials).toBe("TU");
+    expect(chip?.textContent).toBe("");
     expect(chip?.closest("[aria-hidden='true']")).not.toBeNull();
 
     await openMenu(user, trigger);

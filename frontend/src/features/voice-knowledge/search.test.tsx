@@ -863,7 +863,9 @@ describe("SearchScreen — a company and the contacts who work there", () => {
     const { container } = render(<SearchScreen q="acme" />);
     await screen.findByRole("link", { name: "Acme GmbH" });
     expect(hitRow(container).querySelector(".avatar-img")).toBeNull();
-    expect(hitRow(container).querySelector(".avatar")?.textContent).toBe("AG");
+    expect(
+      hitRow(container).querySelector<HTMLElement>(".avatar")?.dataset.initials,
+    ).toBe("AG");
   });
 
   it("says which matched company a contact works at", async () => {

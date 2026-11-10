@@ -29,7 +29,7 @@ import {
 import { NotificationBell } from "./notificationbell";
 import { OutboxButton } from "./outboxbutton";
 import { resolveTitle, sectionHead, useRouteSubject } from "./pagemeta";
-import { paletteHotkeyCaps } from "./palettehotkey";
+import { paletteHotkeyCaps, paletteKeyShortcuts } from "./palettehotkey";
 import { useHomeLinkLabel, WorkspaceChip } from "./shellrail";
 import "./topbar.css";
 
@@ -143,7 +143,9 @@ export function TopBarSearch({
         ref={buttonRef}
         type="button"
         className="topbar-search"
-        aria-label={label}
+        // Named by its printed words alone; the caps reach a screen reader as
+        // the shortcut they are, never as part of the name.
+        aria-keyshortcuts={paletteKeyShortcuts(navigator.platform)}
         onClick={onOpenSearch}
       >
         <Search size={16} strokeWidth={1.8} aria-hidden />
@@ -151,10 +153,7 @@ export function TopBarSearch({
         {/* One cap per KEY, which is how a keyboard shortcut is read: "⌘ then K",
             not the four-character string "⌘K" in one box. The caps come from the
             palette's own helper, which is also what the label is joined from, so
-            the two spellings ("⌘ K" and "Ctrl K") stay one source.
-            The whole group is a hint rather than a second name: the aria-label
-            above already says what this control does, so nobody is made to
-            listen to the shortcut spelled out. */}
+            the two spellings ("⌘ K" and "Ctrl K") stay one source. */}
         <span className="topbar-keys" aria-hidden>
           {paletteHotkeyCaps(navigator.platform).map((cap) => (
             <Kbd key={cap}>{cap}</Kbd>

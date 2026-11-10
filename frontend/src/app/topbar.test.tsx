@@ -25,6 +25,7 @@ import {
   TWO_MARKS,
 } from "../testing/shellharness";
 import type { NavSection } from "./nav";
+import { paletteKeyShortcuts } from "./palettehotkey";
 import { TopBar } from "./topbar";
 
 // The sticky strip above every railed page: what is true of the SESSION rather
@@ -168,6 +169,26 @@ describe("Top bar search (AC-shell-7)", () => {
     expect(caps).toHaveLength(2);
     expect(caps[1]).toBe("K");
     expect(caps[0]).toMatch(/^(⌘|Ctrl)$/);
+  });
+
+  // The name is the printed words alone, so a speech-input reader's "click
+  // Search or ask Margince" matches it; a screen reader hears the chord apart.
+  it("takes its name from its printed words and announces the chord apart", () => {
+    renderTopBar({ screen: "home" }, { onToggle: ignoreToggle });
+    const search = screen.getByRole("button", {
+      name: "Search or ask Margince",
+    });
+    expect(search.hasAttribute("aria-label")).toBe(false);
+    expect(search.getAttribute("aria-keyshortcuts")).toBe(
+      paletteKeyShortcuts(navigator.platform),
+    );
+  });
+});
+
+describe("paletteKeyShortcuts", () => {
+  it("spells the chord the caps print", () => {
+    expect(paletteKeyShortcuts("MacIntel")).toBe("Meta+K");
+    expect(paletteKeyShortcuts("Win32")).toBe("Control+K");
   });
 });
 

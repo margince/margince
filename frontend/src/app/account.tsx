@@ -84,8 +84,8 @@ export function AccountMenu() {
         iconOnly
         className="account-trigger"
         ref={trigger}
-        // WCAG 2.5.3 (Label in Name) binds only printed text, and the chip's
-        // initials are hidden, so it prints none. It is named by what it does.
+        // WCAG 2.5.3 (Label in Name) binds printed text, and Avatar draws the
+        // initials as a picture rather than printing them: named by what it does.
         aria-label={t("shell.accountAria")}
         aria-haspopup="menu"
         aria-expanded={open}

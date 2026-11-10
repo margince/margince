@@ -82,7 +82,11 @@ it.each(["Wide logo", "Square icon"] as const)(
     mark(WITHOUT_MARK);
     const field = slot(slotName);
     expect(field.queryByRole("img", { name: "Acme GmbH" })).toBeNull();
-    expect(field.getByText("AG")).toBeTruthy();
+    expect(
+      screen
+        .getByRole("region", { name: slotName })
+        .querySelector('[data-initials="AG"]'),
+    ).toBeTruthy();
 
     await openEdit(user, slotName);
     const upload =
@@ -117,7 +121,11 @@ it("draws each mark in its own slot and offers the verbs that fit it", async () 
 
   const icon = slot("Square icon");
   expect(icon.queryByRole("img", { name: "Acme GmbH" })).toBeNull();
-  expect(icon.getByText("AG")).toBeTruthy();
+  expect(
+    screen
+      .getByRole("region", { name: "Square icon" })
+      .querySelector('[data-initials="AG"]'),
+  ).toBeTruthy();
   await openEdit(user, "Square icon");
   expect(
     screen.getByRole("button", { name: "Upload square icon" }),

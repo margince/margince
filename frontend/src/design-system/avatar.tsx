@@ -64,9 +64,12 @@ export function Avatar({
     `avatar-${size}`,
   ].filter(Boolean);
   return (
+    // The initials are the chip's stand-in for a photo, so they are drawn like
+    // one (avatar.css), never printed as text a control's name must repeat.
     <span
       className={classes.join(" ")}
       style={meshed ? meshStyle(meshOf(identity || name)) : undefined}
+      data-initials={painted ? undefined : initials}
     >
       {logo ? (
         // The monogram stays underneath: it is what the chip shows until the
@@ -80,7 +83,6 @@ export function Avatar({
           onLoad={() => setPaintedSrc(picture ?? null)}
         />
       ) : null}
-      {!painted && initials}
     </span>
   );
 }

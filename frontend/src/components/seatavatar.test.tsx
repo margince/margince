@@ -4,7 +4,7 @@
 /** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
@@ -76,7 +76,7 @@ it("keeps the initials for a seat the read names without a picture", async () =>
   // One batch answers both, so once one picture is drawn the other has its answer.
   await waitFor(() => expect(pictureOf(container)).not.toBeNull());
   expect(container.querySelectorAll("img")).toHaveLength(1);
-  expect(screen.getByText("JB")).toBeInTheDocument();
+  expect(container.querySelector('[data-initials="JB"]')).not.toBeNull();
 });
 
 it("draws a held seat's own picture without asking for it", async () => {

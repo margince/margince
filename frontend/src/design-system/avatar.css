@@ -25,6 +25,10 @@
   font: var(--fontHeadingXXSmall);
 }
 
+.avatar[data-initials]::before {
+  content: attr(data-initials);
+}
+
 /* The smallest rung, and the default: every list row, every name a chip sits
    beside, the account block in the rail. A list table draws some chips smaller
    still, and does it from its own sheet — see the 20px rule in listtable.css —

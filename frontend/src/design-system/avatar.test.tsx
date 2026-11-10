@@ -1,5 +1,5 @@
 /** @vitest-environment happy-dom */
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { Avatar } from "./atoms";
 
@@ -13,6 +13,11 @@ afterEach(cleanup);
 const ID = "company_7f3";
 const LOGO = "/v1/companies/abc/logo";
 
+// The monogram the chip draws (avatar.css), which it never prints as text.
+function initialsOf(): string | undefined {
+  return document.querySelector<HTMLElement>(".avatar")?.dataset.initials;
+}
+
 function chipOf(container: HTMLElement): string {
   return container.querySelector("span")?.className ?? "";
 }
@@ -23,9 +28,12 @@ function meshOf(container: HTMLElement): string | null | undefined {
 }
 
 describe("Avatar", () => {
-  it("renders the monogram when no logo resolved", () => {
-    render(<Avatar name="Voltaq Systems" identity={ID} />);
-    expect(screen.getByText("VS")).toBeTruthy();
+  it("draws the monogram when no logo resolved, and prints no text", () => {
+    const { container } = render(
+      <Avatar name="Voltaq Systems" identity={ID} />,
+    );
+    expect(initialsOf()).toBe("VS");
+    expect(container.textContent).toBe("");
     expect(document.querySelector("img")).toBeNull();
   });
 
@@ -38,7 +46,7 @@ describe("Avatar", () => {
     expect(img?.getAttribute("alt")).toBe("");
     // The monogram stays in the markup underneath — that is what shows until
     // the image paints.
-    expect(screen.getByText("VS")).toBeTruthy();
+    expect(initialsOf()).toBe("VS");
   });
 
   // A seat with no picture yet looks as a contact without one does.
@@ -50,6 +58,7 @@ describe("Avatar", () => {
     const img = document.querySelector("img");
     if (img) fireEvent.load(img);
     expect(meshOf(container)).toBeUndefined();
+    expect(initialsOf()).toBeUndefined();
     expect(chipOf(container)).toContain("avatar-photo");
   });
 
@@ -59,7 +68,7 @@ describe("Avatar", () => {
     expect(img).toBeTruthy();
     if (img) fireEvent.error(img);
     expect(document.querySelector("img")).toBeNull();
-    expect(screen.getByText("VS")).toBeTruthy();
+    expect(initialsOf()).toBe("VS");
   });
 
   // The monogram rule reaches names that are not two words with a space between
@@ -79,8 +88,8 @@ describe("Avatar", () => {
       // "ß" uppercases to "SS"; a chip is still one letter per part.
       ["ßeta Smith", "SS"],
     ])("reads %s as %s", (name, expected) => {
-      const { container } = render(<Avatar name={name} identity={ID} />);
-      expect(container.textContent).toBe(expected);
+      render(<Avatar name={name} identity={ID} />);
+      expect(initialsOf()).toBe(expected);
       cleanup();
     });
   });

@@ -234,9 +234,19 @@
   .topbar-search:focus-visible {
     outline-offset: 2px;
   }
-  .topbar-searchlabel,
   .topbar-keys {
     display: none;
+  }
+  /* Still the button's name, so out of sight but never out of the tree:
+     the base sheet's .sr-only. */
+  .topbar-searchlabel {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
   .topbar-trail {
     order: 2;
