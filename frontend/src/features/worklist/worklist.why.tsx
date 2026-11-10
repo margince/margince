@@ -155,8 +155,8 @@ const DATED_SOURCES = new Set<WorklistItem["source"]>([
   "meeting",
 ]);
 
-// A reason with no words in this language is left out, not drawn blank, and
-// one that restates a date already told is left out too.
+// A reason with no words in this language is left out, not drawn blank.
+// So is one that restates a date already told.
 function whyReasons(
   item: WorklistItem,
   dated: boolean,

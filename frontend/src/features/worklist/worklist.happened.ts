@@ -135,8 +135,8 @@ export function happenedLines(
   return { lines, told: event !== null || dealTold };
 }
 
-// What to do, for a row whose event is already said: the ask without its
-// first sentence, which says the same event with no date or name.
+// What to do, for a row whose event is already said. It is the ask without
+// its first sentence, which repeats the event with no date or name.
 const TODO: Readonly<Partial<Record<WorklistItem["source"], MessageKey>>> = {
   task: "worklist.todo.task",
   deal_at_risk: "worklist.todo.deal_at_risk",
