@@ -109,6 +109,8 @@ jobs:
       # The database-bearing subset of `backend`. See the filter below for why
       # the two differ, and by exactly what.
       backend_db: ${{ steps.filter.outputs.backend_db == 'true' || github.event_name == 'merge_group' }}
+      # What backend-lint reads. See the filter below.
+      backend_lint: ${{ steps.filter.outputs.backend_lint == 'true' || github.event_name == 'merge_group' }}
       frontend: ${{ steps.filter.outputs.frontend == 'true' || github.event_name == 'merge_group' }}
       e2e: ${{ steps.filter.outputs.e2e == 'true' || github.event_name == 'merge_group' }}
       deps: ${{ steps.filter.outputs.deps == 'true' || github.event_name == 'merge_group' }}
@@ -296,6 +298,12 @@ jobs:
               # unreviewable without the lane it governs, and the one that
               # introduced it would have merged never once executed.
               - '.github/actions/install-playwright-chromium/**'
+            # What backend-lint reads: `backend_db` plus `tools/`, a module
+            # lint-modules lints. Not `backend`: its frontend/ and docs/ paths are
+            # there for Go gates that read them, and golangci reads Go only.
+            backend_lint:
+              - *backend_db
+              - 'tools/**'
             e2e:
               - 'backend/**'
               - 'frontend/**'
@@ -559,7 +567,7 @@ jobs:
     name: backend-lint (${{ matrix.pass }})
     timeout-minutes: 30
     needs: [changes]
-    if: needs.changes.outputs.backend == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
+    if: needs.changes.outputs.backend_lint == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -592,11 +600,14 @@ jobs:
         with:
           go-version-file: backend/go.mod
           cache-dependency-path: backend/go.sum
+      # golangci loads every package before it reads its own cache, and that
+      # load compiles whatever the Go build cache lacks. lint-cache.yml saves
+      # this flavor after each push to main, so the load starts from the tip.
       - name: Restore the Go build cache
         id: go-cache
         uses: ./.github/actions/go-build-cache
         with:
-          flavor: plain
+          flavor: lint
       - name: Gate binaries on PATH
         uses: ./.github/actions/gate-binaries
       - name: Compute the golangci cache key

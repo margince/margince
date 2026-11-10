@@ -43,7 +43,9 @@ inputs:
   flavor:
     description: >-
       Which set of compiled artifacts this job produces, and therefore which
-      cache it shares. `plain` is the untagged build/vet/lint/unit compile;
+      cache it shares. `plain` is the untagged build/vet/unit compile;
+      `lint` is what backend-lint loads (vet's untagged compile and golangci's
+      tagged one), written by lint-cache.yml after each push to main;
       `integration` is the `-tags=integration -cover -coverpkg=./...` compile
       the lane's build job does. They are separate keys because a build tag and coverage
       instrumentation both change the package builds themselves — only the
