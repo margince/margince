@@ -240,8 +240,9 @@ func TestADeltaRoundHoldsOnePageAndAnExactCensus(t *testing.T) {
 			if largestPage > pagedPageSize {
 				t.Errorf("a page handed over %d messages, more than one provider page", largestPage)
 			}
-			// The moved id adds one; the duplicate and tombstones add none.
-			if got, want := len(census.seen), n-4+1; got != want {
+			// The duplicate adds nothing, the tombstones take m1 and m2 back
+			// out, and the move adds its new id.
+			if got, want := len(census.seen), n-4-2+1; got != want {
 				t.Errorf("the census holds %d ids, want each distinct message once: %d", got, want)
 			}
 			if p.reads() != pagesOf(entries) || link == "" {
@@ -358,12 +359,12 @@ func TestACancelledRoundResumesWhereItsCheckpointStands(t *testing.T) {
 	}
 }
 
-// A round short of the folder's tally is refused, before and after a restart,
-// and stores no watermark.
+// A round short of the folder's tally is refused across a checkpoint. The
+// round's later tombstones for m1 and m2, counted before the checkpoint, must
+// not stand in for the message the provider hides.
 func TestAShortRoundIsRefusedEvenAcrossACheckpoint(t *testing.T) {
 	p := newPagedProvider(t, pagedEntries(3_000))
-	// Two tombstones lower the tally by two: three more held is one short.
-	p.extraHeld = 3
+	p.extraHeld = 1
 	p.failOnce[20] = true
 	api := &pagedAPI{API: NewAPI(p.srv.Client(), p.srv.URL)}
 	conn := New(&fakeOAuth{access: "access-1"}, api)
@@ -380,7 +381,7 @@ func TestAShortRoundIsRefusedEvenAcrossACheckpoint(t *testing.T) {
 }
 
 func TestAnAnchorPastTheCapStopsLoudly(t *testing.T) {
-	p := newPagedProvider(t, pagedEntries(anchorSeenCap+4))
+	p := newPagedProvider(t, pagedEntries(anchorSeenCap+5))
 	_, err := NewAPI(p.srv.Client(), p.srv.URL).DeltaInit(context.Background(), "access", folderInbox, anchorAfter, nil,
 		func(context.Context, DeltaPage) error { return nil })
 	if !errors.Is(err, ErrAnchorTooLarge) {
@@ -403,24 +404,5 @@ func TestAStoredCensusPastTheCapIsRefused(t *testing.T) {
 	var census AnchorCensus
 	if err := json.Unmarshal(stored, &census); err == nil {
 		t.Fatal("a stored census past the cap was resumed")
-	}
-}
-
-// A first sync checkpointed in Sent Items has no watermark yet. The registry
-// then passes a fresh window, and the inbox still anchors where Sent Items did.
-func TestAResumedFirstSyncAnchorsTheInboxWhereItBegan(t *testing.T) {
-	held := anchorAfter.Add(-24 * time.Hour)
-	stored, err := json.Marshal(cursorState{Email: owner, Rounds: map[string]*DeltaResume{
-		folderSent: {NextLink: "https://graph.microsoft.com/v1.0/me/mailFolders/sentitems/messages/delta?page=3", Anchor: newAnchorCensus(held, pinned)},
-	}})
-	if err != nil {
-		t.Fatal(err)
-	}
-	api := &fakeAPI{initDelta: "inbox-link", sentInitDelta: "sent-link"}
-	if _, err := pinnedConn(api).SyncFrom(context.Background(), authBytes(t), stored, anchorAfter, &recordingSink{}); err != nil {
-		t.Fatal(err)
-	}
-	if !api.initAfter.Equal(held) {
-		t.Fatalf("the inbox anchored from %s, want the held %s", api.initAfter, held)
 	}
 }

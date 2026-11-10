@@ -6,9 +6,13 @@ package capture
 import (
 	"context"
 	"errors"
+	"fmt"
+	"log/slog"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -22,6 +26,56 @@ var errSyncSuperseded = errors.New("capture: a newer sync or lifecycle change su
 type syncCheckpointer struct {
 	registry *Registry
 	snapshot syncSnapshot
+}
+
+// quietIfSuperseded turns a sync stopped by a newer one into a logged no-op,
+// and passes every other error through.
+func quietIfSuperseded(ctx context.Context, err error, connectionID ids.UUID, provider string) error {
+	if !errors.Is(err, errSyncSuperseded) {
+		return err
+	}
+	slog.InfoContext(ctx, "capture: sync superseded — it stopped at its last checkpoint",
+		"connection_id", connectionID, "provider", provider)
+	return nil
+}
+
+// resumeAnchor is where a first sync a checkpoint interrupted reads from: a
+// stored cursor with the anchor still held. The held anchor binds for
+// anchorBinds like any other. Past that the checkpointed round is dropped, the
+// unread period recorded, and the sync starts again from its own window.
+func (r *Registry) resumeAnchor(
+	ctx context.Context, snapshot *syncSnapshot, held, window, now time.Time,
+) (time.Time, error) {
+	if choice := chooseAnchor(&held, window, now); !choice.lapsed {
+		return choice.from, nil
+	}
+	err := r.db.Tx(ctx, func(tx pgx.Tx) error {
+		recorded, err := recordUnreadPeriod(ctx, tx, snapshot.id, snapshot.generation, held, window)
+		if err != nil {
+			return err
+		}
+		if !recorded {
+			return errSyncSuperseded
+		}
+		args := snapshot.args()
+		args["window"] = window
+		var revision int64
+		err = tx.QueryRow(ctx, `UPDATE capture_connection
+			SET sync_cursor=NULL, sync_anchor=@window, sync_revision=sync_revision+1
+			WHERE `+syncSnapshotMatch+` RETURNING sync_revision`, args).Scan(&revision)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return errSyncSuperseded
+		}
+		if err != nil {
+			return fmt.Errorf("capture: dropping a lapsed checkpointed round: %w", err)
+		}
+		snapshot.revision, snapshot.prior = revision, nil
+		return nil
+	})
+	if err != nil {
+		return time.Time{}, err
+	}
+	return window, nil
 }
 
 // withSyncCheckpoints installs a checkpointer for one sync, fenced by snapshot.

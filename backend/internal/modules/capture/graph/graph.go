@@ -131,19 +131,6 @@ func (s *cursorState) link(folder string) string {
 	return s.DeltaLink
 }
 
-// anchoredFrom is where a first sync's anchors start. A checkpoint stored
-// during a first sync leaves a cursor with no watermark yet, so the registry no
-// longer passes the point it held. The census it stored keeps that point, and
-// a folder still to anchor starts there too rather than at a fresh window.
-func (s *cursorState) anchoredFrom(from time.Time) time.Time {
-	for _, round := range s.Rounds {
-		if round != nil && round.Anchor != nil {
-			return round.Anchor.After
-		}
-	}
-	return from
-}
-
 func (s *cursorState) setLink(folder, link string) {
 	if folder == folderSent {
 		s.SentDeltaLink = link
@@ -282,7 +269,6 @@ func (c *Connector) SyncFrom(
 	// a no-op. Inbox-first left exactly those messages permanently unattested,
 	// which is the T1 evidence this change exists to collect.
 	start.Email = owner
-	from = start.anchoredFrom(from)
 	for _, folder := range syncedFolders {
 		next, err := c.pullFolder(ctx, access, folder, &start, from, sink, owner)
 		if err != nil {

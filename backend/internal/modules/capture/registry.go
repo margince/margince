@@ -229,6 +229,7 @@ func (r *Registry) syncConnection(ctx context.Context, connectionID ids.UUID) er
 		cursor        []byte
 		generation    int
 		revision      int64
+		heldAnchor    *time.Time
 	)
 	err := r.db.Tx(ctx, func(tx pgx.Tx) error {
 		// 'error' is syncable by design (ADR-0063): the daily probe of a
@@ -236,9 +237,9 @@ func (r *Registry) syncConnection(ctx context.Context, connectionID ids.UUID) er
 		// is what flips the row back to connected. Only 'disconnected' and
 		// 'reauth_required' park a connection.
 		return tx.QueryRow(ctx, `
-			SELECT provider, user_id, credential_ref, auth, sync_cursor, generation, sync_revision FROM capture_connection
-			WHERE id = $1 AND status IN ('connected','error')`, connectionID).
-			Scan(&name, &grantedBy, &credentialRef, &authBytes, &cursor, &generation, &revision)
+			SELECT provider, user_id, credential_ref, auth, sync_cursor, generation, sync_revision, sync_anchor
+			  FROM capture_connection WHERE id = $1 AND status IN ('connected','error')`, connectionID).
+			Scan(&name, &grantedBy, &credentialRef, &authBytes, &cursor, &generation, &revision, &heldAnchor)
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
 		return fmt.Errorf("capture: connection %s: %w", connectionID, apperrors.ErrNotFound)
@@ -300,19 +301,17 @@ func (r *Registry) syncConnection(ctx context.Context, connectionID ids.UUID) er
 	// Where a first pull starts, held so a retry reads the same point. A
 	// connector with no bounded first pull answers the zero time and takes
 	// the plain Sync below.
-	from, err := r.syncStart(ctx, connectionID, generation, c.Descriptor(), connector.Cursor(cursor), r.now())
+	from, err := r.syncStart(ctx, &snapshot, heldAnchor, c.Descriptor(), r.now())
 	if err != nil {
-		return err
+		return quietIfSuperseded(ctx, err, connectionID, name)
 	}
 	runCtx, tally := withDeliveryTally(runCtx)
 	runCtx, checkpoints := r.withSyncCheckpoints(runCtx, snapshot)
-	next, syncErr := syncFrom(runCtx, syncer, auth, connector.Cursor(cursor), from, r.sink)
+	next, syncErr := syncFrom(runCtx, syncer, auth, snapshot.prior, from, r.sink)
 	// A checkpoint moved the fence on; what follows writes behind the new one.
 	snapshot = checkpoints.snapshot
 	if errors.Is(syncErr, errSyncSuperseded) {
-		slog.InfoContext(ctx, "capture: sync superseded mid-round — it stopped at its last checkpoint",
-			"connection_id", connectionID, "provider", name)
-		return nil
+		return quietIfSuperseded(ctx, syncErr, connectionID, name)
 	}
 	if syncErr != nil {
 		// A transient failure never kills the connection (ADR-0063): the

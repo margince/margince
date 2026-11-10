@@ -132,13 +132,18 @@ func newAnchorCensus(after, opened time.Time) *AnchorCensus {
 	return &AnchorCensus{After: after, Opened: opened, seen: map[string]struct{}{}}
 }
 
-// count adds one entry. A tombstone, an entry outside the window and an entry
-// without an instant do not count; see countedInWindow.
+// count adds one entry. A tombstone, a move out of the folder included, takes
+// its id back out: the tally counts only what the folder still holds. An entry
+// outside the window or without an instant does not count; see countedInWindow.
 func (c *AnchorCensus) count(id string, receivedAt time.Time, removed bool) error {
-	if removed || !countedInWindow(receivedAt, c.After, c.Opened) {
+	digest := idDigest(id)
+	if removed {
+		delete(c.seen, digest)
 		return nil
 	}
-	digest := idDigest(id)
+	if !countedInWindow(receivedAt, c.After, c.Opened) {
+		return nil
+	}
 	if _, ok := c.seen[digest]; ok {
 		return nil
 	}

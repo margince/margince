@@ -120,3 +120,91 @@ func TestASupersededCheckpointStopsTheSyncQuietly(t *testing.T) {
 		t.Errorf("a superseded sync counted %d failures", failures)
 	}
 }
+
+// interruptedFirstSync checkpoints its first attempt and then fails, as a
+// first sync cut off mid-round does. Every attempt records what it was handed.
+type interruptedFirstSync struct {
+	anchorRecorder
+	cursors []string
+}
+
+func (c *interruptedFirstSync) SyncFrom(
+	ctx context.Context, _ connector.Auth, cursor connector.Cursor, from time.Time, _ connector.Sink,
+) (connector.Cursor, error) {
+	c.told = append(c.told, from)
+	c.cursors = append(c.cursors, string(cursor))
+	if len(c.told) > 1 {
+		return connector.Cursor(`{"round":"closed"}`), nil
+	}
+	if err := connector.CheckpointSync(ctx, connector.Cursor(`{"round":"first"}`)); err != nil {
+		return nil, err
+	}
+	return nil, connector.ErrUnreachable
+}
+
+// A first sync resumed from its checkpoint reads from the anchor it held, for
+// as long as that anchor binds.
+func TestAResumedFirstSyncReadsFromItsHeldAnchor(t *testing.T) {
+	ctx, reg, _, _ := newCaptureRegistryFixture(t)
+	at := time.Date(2026, 3, 1, 9, 0, 0, 0, time.UTC)
+	reg.SetClock(func() time.Time { return at })
+	rec := &interruptedFirstSync{}
+	rec.window = 7 * 24 * time.Hour
+	reg.Register(rec)
+
+	if err := syncOnceOf(ctx, t, reg, anchorProvider); err == nil {
+		t.Fatal("the interrupted first attempt succeeded")
+	}
+	at = at.Add(48 * time.Hour)
+	if err := syncOnceOfExisting(ctx, t, reg, anchorProvider); err != nil {
+		t.Fatalf("the resumed sync failed: %v", err)
+	}
+	if len(rec.told) != 2 {
+		t.Fatalf("the connector was told where to start %d times, want 2", len(rec.told))
+	}
+	if rec.cursors[1] != `{"round": "first"}` || !rec.told[1].Equal(rec.told[0]) {
+		t.Errorf("the resume was handed %q from %s, want the checkpoint from the held %s", rec.cursors[1], rec.told[1], rec.told[0])
+	}
+}
+
+// Past anchorBinds a checkpointed first sync goes the way of any lapsed
+// anchor. Its round is dropped, the period nobody read is recorded, and the
+// sync starts again from its own window.
+func TestALapsedCheckpointedFirstSyncRecordsWhatNobodyRead(t *testing.T) {
+	ctx, reg, _, _ := newCaptureRegistryFixture(t)
+	owner, _ := setupCaptureDB(t)
+	at := time.Date(2026, 3, 1, 9, 0, 0, 0, time.UTC)
+	reg.SetClock(func() time.Time { return at })
+	rec := &interruptedFirstSync{}
+	rec.window = 7 * 24 * time.Hour
+	reg.Register(rec)
+
+	if err := syncOnceOf(ctx, t, reg, anchorProvider); err == nil {
+		t.Fatal("the interrupted first attempt succeeded")
+	}
+	held := rec.told[0]
+	at = at.Add(200 * 24 * time.Hour)
+	if err := syncOnceOfExisting(ctx, t, reg, anchorProvider); err != nil {
+		t.Fatalf("the resumed sync failed: %v", err)
+	}
+
+	window := at.Add(-rec.window)
+	if len(rec.told) != 2 {
+		t.Fatalf("the connector was told where to start %d times, want 2", len(rec.told))
+	}
+	if rec.cursors[1] != "" || !rec.told[1].Equal(window) {
+		t.Errorf("the resume was handed %q from %s, want no cursor from its own window %s", rec.cursors[1], rec.told[1], window)
+	}
+	var from, to time.Time
+	if err := owner.QueryRow(ctx,
+		`SELECT unread_from, unread_to FROM capture_connection WHERE provider = $1`, anchorProvider).
+		Scan(&from, &to); err != nil {
+		t.Fatalf("reading the recorded period: %v", err)
+	}
+	if !from.Equal(held) || !to.Equal(window) {
+		t.Errorf("the unread period is %s to %s, want %s to %s", from, to, held, window)
+	}
+	if end := readConnectionRow(ctx, t, owner); end.cursor != `{"round": "closed"}` || end.anchored || !end.succeeded {
+		t.Errorf("after the fresh round the row held %+v, want its cursor stored, the anchor released and a success", end)
+	}
+}
