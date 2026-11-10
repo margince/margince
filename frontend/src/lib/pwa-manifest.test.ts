@@ -40,8 +40,7 @@ function purposeOf(icon: ManifestIcon): string {
 // answers falls through to the SPA's index.html. The browser then parses a
 // page as a manifest and reports it invalid rather than missing.
 describe("the install manifest is where the page says it is", () => {
-  const head = parse(readFileSync(join(frontendRoot, "index.html"), "utf8"));
-  const manifestLinks = head
+  const manifestLinks = indexPage
     .querySelectorAll("link")
     .filter((link) => link.getAttribute("rel") === "manifest");
   const href = manifestLinks[0]?.getAttribute("href");
@@ -57,17 +56,16 @@ describe("the install manifest is where the page says it is", () => {
   it("names a file public/ actually holds, and holds JSON", () => {
     const served = join(publicDir, (href ?? "").replace(/^\//, ""));
 
-    // join resolves `..`, so a path can climb out of public/.
-    //
-    // It would read a file no browser is served, and still satisfy the rest
-    // of this test.
+    // join resolves `..`, so a path can climb out of public/ and read a file
+    // no browser is served.
     const inside = relative(publicDir, served);
     expect(isAbsolute(inside)).toBe(false);
     expect(inside.split("/")).not.toContain("..");
 
-    const body = readFileSync(served, "utf8");
-    expect(() => JSON.parse(body) as unknown).not.toThrow();
-    const { name } = JSON.parse(body) as { name?: unknown };
+    // A page in place of the file throws here, which fails the test.
+    const { name }: { name?: unknown } = JSON.parse(
+      readFileSync(served, "utf8"),
+    );
     expect(typeof name).toBe("string");
     expect(name).not.toBe("");
   });
