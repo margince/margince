@@ -427,7 +427,7 @@ func wireJobs(pool *pgxpool.Pool, log *slog.Logger, cfg JobRunnerConfig) (*jobRe
 		registerTelegramPoll(reg, pool, cfg, log),
 		// The composed extension jobs, if any. Empty on every vanilla process:
 		// the ext_ kinds and their ticks do not exist there at all.
-		addExtensionJobs(reg, pool, log),
+		addExtensionJobs(reg, pool, schedulesOf(cfg), log),
 		placedSchedules(cfg),
 	)
 

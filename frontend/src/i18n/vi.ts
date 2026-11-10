@@ -2211,7 +2211,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "brief.plan.period": "Kế hoạch hiện tại · tuần từ {date}",
   "brief.coverage.retry": "Làm mới bản tin",
   "brief.reply.owed": "Khách hàng đang chờ bạn trả lời",
-  "brief.changes.superseded": "Đã thay đổi sau lần cập nhật này",
+  "brief.changes.superseded": "Đã được thay bằng một thay đổi sau",
   "brief.changes.undone": "Đã hoàn tác",
   "brief.updates.title": "Cập nhật",
   "brief.task.undated": "Chưa có hạn",
@@ -2854,6 +2854,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "palette.recent": "Gần đây",
   "palette.clearRecent": "Xóa",
   "palette.typeScreen": "Màn hình",
+  "palette.typeSetting": "Cài đặt",
   "palette.typeAction": "Hành động",
   "palette.typeRecord": "Hồ sơ",
   "palette.seeAll": "Xem tất cả kết quả cho “{query}”",
@@ -4801,7 +4802,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "email.thread.count_other": "{count} thư",
   "email.thread.countLatest_one": "Thư gần nhất",
   "email.thread.countLatest_other": "{count} thư gần nhất",
-  "email.thread.fold": "Thu gọn thư của {name}",
   "email.thread.toLine": "gửi {names}",
   "email.thread.details": "Chi tiết",
   "email.thread.textForwarded":
@@ -15553,6 +15553,13 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Mỗi cấp gán một loại công việc cho một nhà cung cấp và một mô hình; thay đổi đã lưu có hiệu lực trong vòng một phút.",
   "aiRouting.profileLine":
     "Hồ sơ bản cài đặt: {profile}. Hồ sơ này giới hạn nhà cung cấp mà một cấp được dùng, do bên vận hành thiết lập.",
+  "aiRouting.profile.eu_hosted":
+    "“EU-hosted” (suy luận của đối tác; hồ sơ này không giới hạn nơi một bậc chạy, nơi đó do kết nối của từng bậc quyết định)",
+  "aiRouting.profile.sovereign":
+    "Chủ quyền (AI chỉ chạy trên máy chủ của chính bản cài đặt, không dùng nhà cung cấp đám mây)",
+  "aiRouting.profile.cloud_frontier":
+    "Đám mây (nhà cung cấp đám mây, dùng khóa API riêng của bản cài đặt)",
+  "aiRouting.profile.unset": "Chưa thiết lập",
   "aiRouting.notBound": "Chưa gán",
   "aiRouting.lastResponse": "Phản hồi gần nhất {when}",
   "aiTerms.provider": "Nhà cung cấp",
@@ -19568,6 +19575,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "lead.company.matchedByName": "Cùng tên công ty",
   "lead.company.linkWhyDomain": "{name} dùng tên miền trang web của lead này.",
   "lead.company.linkWhyName": "{name} có cùng tên công ty với lead này.",
+  "lead.company.nameFollowsLink":
+    "Tên này lấy từ công ty được liên kết. Đổi tên trên trang của công ty.",
   "lead.details.fromCompany": "Từ {name}",
   "lead.details.fromCompanyRecord": "Từ hồ sơ công ty",
   "lead.details.companyDecides":
@@ -21051,6 +21060,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "{count} lần đủ điều kiện đầu tiên chưa ghi nhận người phụ trách. Số của thành viên chỉ tính sự kiện đã phân bổ.",
   "analytics.team.qualificationUnattributed_other":
     "{count} lần đủ điều kiện đầu tiên chưa ghi nhận người phụ trách. Số của thành viên chỉ tính sự kiện đã phân bổ.",
+  "brief.done.changeCount_one": "{count} thay đổi",
+  "brief.done.changeCount_other": "{count} thay đổi",
+  "brief.done.steps": "Các thay đổi trên giao dịch này, mới nhất trước",
   "brief.done.title": "Margince đã làm giúp bạn",
   "brief.done.waiting_one": "{count} giao dịch chờ bạn xem xét",
   "brief.done.waiting_other": "{count} giao dịch chờ bạn xem xét",
@@ -21065,7 +21077,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "brief.done.viewChanges_one": "Xem {count} thay đổi",
   "brief.done.viewChanges_other": "Xem {count} thay đổi",
   "brief.done.showNew": "Hiện các thay đổi mới",
-  "brief.done.history": "Xem lịch sử thay đổi",
+  "brief.done.history": "Lịch sử thay đổi",
   "brief.done.dealsLabel": "Các giao dịch Margince đã thay đổi",
   "brief.done.noReason": "Không có lý do",
   "brief.done.markedLost": "Đã đánh dấu là mất",

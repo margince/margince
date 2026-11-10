@@ -2180,7 +2180,7 @@ export const en = {
   "brief.plan.period": "Current plan · week of {date}",
   "brief.coverage.retry": "Refresh brief",
   "brief.reply.owed": "Customer awaiting your reply",
-  "brief.changes.superseded": "Changed since this update",
+  "brief.changes.superseded": "Replaced by a later change",
   "brief.changes.undone": "Undone",
   "brief.updates.title": "Updates",
   "brief.task.undated": "No due date",
@@ -2855,6 +2855,7 @@ export const en = {
   "palette.recent": "Recent",
   "palette.clearRecent": "Clear",
   "palette.typeScreen": "Screen",
+  "palette.typeSetting": "Setting",
   "palette.typeAction": "Action",
   "palette.typeRecord": "Record",
   "palette.seeAll": "See all results for “{query}”",
@@ -4892,7 +4893,6 @@ export const en = {
   "email.thread.count_other": "{count} messages",
   "email.thread.countLatest_one": "Latest message",
   "email.thread.countLatest_other": "Latest {count} messages",
-  "email.thread.fold": "Fold the message from {name}",
   "email.thread.toLine": "to {names}",
   "email.thread.details": "Details",
   "email.thread.textForwarded":
@@ -15859,6 +15859,13 @@ export const en = {
     "Each tier binds a class of work to one provider and model; saved changes apply within a minute.",
   "aiRouting.profileLine":
     "Installation profile: {profile}. It limits which providers a tier can use and is set by the operator.",
+  "aiRouting.profile.eu_hosted":
+    "EU-hosted (partner inference; it does not limit where a tier runs, which each tier’s connection decides)",
+  "aiRouting.profile.sovereign":
+    "Sovereign (AI runs only on the installation’s own hosts; cloud providers are refused)",
+  "aiRouting.profile.cloud_frontier":
+    "Cloud (cloud providers with the installation’s own API keys)",
+  "aiRouting.profile.unset": "Not set",
   "aiRouting.notBound": "Not bound",
   "aiRouting.lastResponse": "Last response {when}",
   "aiTerms.provider": "Provider",
@@ -19881,6 +19888,8 @@ export const en = {
   "lead.company.matchedByName": "Same company name",
   "lead.company.linkWhyDomain": "{name} uses the website domain on this lead.",
   "lead.company.linkWhyName": "{name} has the company name on this lead.",
+  "lead.company.nameFollowsLink":
+    "The name comes from the linked company. Rename it on the company’s page.",
   "lead.details.fromCompany": "From {name}",
   "lead.details.fromCompanyRecord": "From the company record",
   "lead.details.companyDecides":
@@ -21361,6 +21370,9 @@ export const en = {
     "{count} first qualification has no recorded owner. Member counts cover attributed events only.",
   "analytics.team.qualificationUnattributed_other":
     "{count} first qualifications have no recorded owner. Member counts cover attributed events only.",
+  "brief.done.changeCount_one": "{count} change",
+  "brief.done.changeCount_other": "{count} changes",
+  "brief.done.steps": "Changes on this deal, newest first",
   "brief.done.title": "Done for you",
   "brief.done.waiting_one": "{count} deal waits for your review",
   "brief.done.waiting_other": "{count} deals wait for your review",
@@ -21375,7 +21387,7 @@ export const en = {
   "brief.done.viewChanges_one": "View {count} change",
   "brief.done.viewChanges_other": "View {count} changes",
   "brief.done.showNew": "Show new changes",
-  "brief.done.history": "View change history",
+  "brief.done.history": "Change history",
   "brief.done.dealsLabel": "Deals Margince changed",
   "brief.done.noReason": "Reason unavailable",
   "brief.done.markedLost": "Marked lost",

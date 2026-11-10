@@ -141,7 +141,7 @@ export const Phone: Story = {
   tags: ["uat-phone"],
   play: async () => {
     await userEvent.click(
-      await screen.findByRole("button", { name: /Account/ }),
+      await screen.findByRole("button", { name: /account$/i }),
     );
     const row = await screen.findByRole("menuitem", { name: /Finish setup/ });
     await expect(row).toHaveAttribute("href", "/#/settings/connections");

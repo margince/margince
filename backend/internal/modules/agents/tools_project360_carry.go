@@ -109,6 +109,9 @@ func project360Contracts(rows []crmcontracts.Contract) []Project360Contract {
 		if c.UnderContract != nil {
 			item.UnderContract = *c.UnderContract
 		}
+		if c.TermState != nil {
+			item.TermState = string(*c.TermState)
+		}
 		out = append(out, item)
 	}
 	return out
