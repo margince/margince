@@ -91,7 +91,8 @@ function sameEditorState(
     (a?.ai_disclosure ?? "") === (b?.ai_disclosure ?? "") &&
     a?.voice_profile_version === b?.voice_profile_version &&
     (a?.voice_degraded ?? false) === (b?.voice_degraded ?? false) &&
-    (a?.served_body ?? "") === (b?.served_body ?? "")
+    (a?.served_body ?? "") === (b?.served_body ?? "") &&
+    a?.language === b?.language
   );
 }
 
