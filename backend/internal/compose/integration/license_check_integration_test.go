@@ -15,12 +15,15 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
+	"github.com/margince/margince/backend/internal/platform/config/configtest"
 	"github.com/margince/margince/backend/internal/platform/licensecheck"
 	"github.com/margince/margince/backend/internal/shared/runtimeenv"
 )
@@ -42,10 +45,10 @@ func (s *swappableToken) source() (string, error) {
 
 // licenseCheckApp boots the api with a real watcher over source, wired the way
 // cmd/api wires it: the posture for the reads, the re-check for "Check now".
-func licenseCheckApp(t *testing.T, source *swappableToken) *apptest.AppEnv {
+func licenseCheckApp(t *testing.T, source licensecheck.TokenSource) *apptest.AppEnv {
 	t.Helper()
 	clock := func() time.Time { return clocktest.Now(t) }
-	watcher, err := licensecheck.NewWatcher(context.Background(), source.source, clock,
+	watcher, err := licensecheck.NewWatcher(context.Background(), source, clock,
 		slog.New(slog.DiscardHandler), runtimeenv.Test)
 	if err != nil {
 		t.Fatalf("NewWatcher: %v", err)
@@ -63,7 +66,7 @@ func licenseCheckApp(t *testing.T, source *swappableToken) *apptest.AppEnv {
 // absent to rejected, which only a fresh read of the source can do.
 func TestCheckNowAppliesASwappedToken(t *testing.T) {
 	source := &swappableToken{}
-	e := licenseCheckApp(t, source)
+	e := licenseCheckApp(t, source.source)
 
 	var before entitlement
 	if status := e.Call(t, "GET", "/v1/installation/license", nil, nil, &before); status != http.StatusOK {
@@ -100,7 +103,7 @@ func TestCheckNowAppliesASwappedToken(t *testing.T) {
 // posture the process held stands.
 func TestCheckNowReportsATokenItCouldNotRead(t *testing.T) {
 	source := &swappableToken{}
-	e := licenseCheckApp(t, source)
+	e := licenseCheckApp(t, source.source)
 
 	source.err = errors.New("license.token_file: no such file")
 	if status := e.Call(t, "POST", licenseCheckPath, nil, nil, nil); status != http.StatusServiceUnavailable {
@@ -119,7 +122,7 @@ func TestCheckNowReportsATokenItCouldNotRead(t *testing.T) {
 // re-read its token on that seat's behalf.
 func TestCheckNowRefusesANonAdmin(t *testing.T) {
 	source := &swappableToken{}
-	e := licenseCheckApp(t, source)
+	e := licenseCheckApp(t, source.source)
 	e.DescribeCompany(t)
 
 	var invited struct {
@@ -140,5 +143,59 @@ func TestCheckNowRefusesANonAdmin(t *testing.T) {
 	}
 	if source.reads != readsBefore {
 		t.Errorf("the token was read %d times for a refused caller, want 0", source.reads-readsBefore)
+	}
+}
+
+// A token replaced in the file the deployment names is seen by "Check now",
+// for both ways margince.yaml can name that file. The source is the one
+// EnsureLicense builds from the loaded configuration. Only the boot read is
+// answered as unlicensed: no token this repository can mint boots, and the
+// watcher refuses a rejected one at boot.
+func TestCheckNowReadsATokenReplacedInTheDeclaredFile(t *testing.T) {
+	for name, declare := range map[string]func(path string) string{
+		"license.token as a file reference": func(path string) string {
+			return "license:\n  token: ${file:" + path + "}\n"
+		},
+		"license.token_file": func(path string) string {
+			return "license:\n  token_file: " + path + "\n"
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "license")
+			writeToken(t, path, "the-token-at-boot")
+			cfg, err := configtest.Load(t, declare(path), nil, nil, compose.LicenseToken, compose.LicenseTokenFile)
+			if err != nil {
+				t.Fatalf("loading the licence settings: %v", err)
+			}
+			declared := compose.SealedLicenseTokenSource(context.Background(), nil, nil, cfg, slog.New(slog.DiscardHandler))
+			booted := false
+			e := licenseCheckApp(t, func() (string, error) {
+				if !booted {
+					booted = true
+					return "", nil
+				}
+				return declared()
+			})
+
+			writeToken(t, path, "a-replaced-token-the-module-refuses")
+			var after entitlement
+			if status := e.Call(t, "POST", licenseCheckPath, nil, nil, &after); status != http.StatusOK {
+				t.Fatalf("Check now → %d, want 200", status)
+			}
+			if after.State != "rejected" {
+				t.Errorf("state after Check now = %q, want rejected — the replaced file was not read", after.State)
+			}
+			got, err := declared()
+			if err != nil || got != "a-replaced-token-the-module-refuses" {
+				t.Errorf("the declared source answers %q, %v; want the replaced token", got, err)
+			}
+		})
+	}
+}
+
+func writeToken(t *testing.T, path, token string) {
+	t.Helper()
+	if err := os.WriteFile(path, []byte(token+"\n"), 0o600); err != nil {
+		t.Fatalf("writing the token file: %v", err)
 	}
 }

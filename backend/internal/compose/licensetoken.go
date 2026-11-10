@@ -35,14 +35,19 @@ const licenseTokenOriginNone = "none"
 // production, "no licence" and "an empty file" would otherwise refuse the boot
 // with the wrong remedy.
 //
-// A source rather than a value because token_file is read again at each
-// check, so a licence renewed there takes effect without a restart. The
-// license.token value is fixed at boot.
+// A source rather than a value because a file is read again at each check,
+// so a licence renewed there takes effect without a restart. That holds for
+// token_file and for a license.token declared as ${file:}. A token in the
+// environment is fixed for the life of the process.
 func declaredLicenseToken(c *config.Config) func() (string, error) {
-	token, origin := config.ValWithSource(c, LicenseToken)
+	_, origin := config.ValWithSource(c, LicenseToken)
 	path, pathOrigin := config.ValWithSource(c, LicenseTokenFile)
 	return func() (string, error) {
 		if origin.Source != config.SourceUnset {
+			token, _, err := config.RereadSecret(c, LicenseToken)
+			if err != nil {
+				return "", fmt.Errorf("compose: reading the licence token: %w", err)
+			}
 			if strings.TrimSpace(token) == "" {
 				return "", fmt.Errorf("compose: %s holds no licence token — remove it to run unlicensed, or fill it", origin)
 			}

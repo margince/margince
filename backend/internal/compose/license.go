@@ -39,10 +39,6 @@ import (
 // every development, test and CI process in this repository boots. MARGINCE_ENV
 // is fail-closed, so an installation that names nothing is production and is
 // held to a license.
-//
-// Both serving roles ask this question, and neither serves without an answer: an
-// api that refuses to boot beside a worker that shrugs would be a licensing
-// posture nobody could describe.
 func EnsureLicense(ctx context.Context, log *slog.Logger, pool *pgxpool.Pool, vault keyvault.Vault, cfg *config.Config, env runtimeenv.Environment) (*licensecheck.Watcher, error) {
 	// The SOURCE is handed over, not a token: the watcher re-reads it. A
 	// license.token_file renewed in place takes effect on the next re-check;
@@ -154,33 +150,19 @@ func logLicensePosture(ctx context.Context, log *slog.Logger, posture licenseche
 func WithLicensePosture(posture func() licensecheck.Posture) Option {
 	return func(s *Server, pool *pgxpool.Pool) {
 		s.licensePosture = posture
-		// The entitlement surface is built HERE rather than in the assembly, and
-		// the posture half: the assembly runs BEFORE the options, so a handler wired
-		// there would have captured a nil posture and answered 501 for the life of
-		// the process. One wiring point also means one answer to "does this role
-		// report entitlement at all" — a role that never applies this option serves
-		// no /metrics section and no entitlement surface, declared or absent in both.
-		//
-		// The seat COUNT is not rebuilt here. It came from the assembly, because it
-		// is a fact about app_user rows that holds whether or not a license was ever
-		// configured, and adding the posture is the only thing this option has to
-		// say about it. Spelling the store a second time would put one invariant in
-		// two places, and dropping it from that second literal — reasonably, on the
-		// grounds that the assembly already wired it — would take the entitlement
-		// surface down with it.
+		// Wired here, not in the assembly: the assembly runs before the options,
+		// so a handler built there would hold a nil posture and answer 501. The
+		// seat count stays the assembly's; withPosture only adds the posture.
 		s.licenseHandlers = s.withPosture(posture)
-		// The same posture reaches identity's seat writer as a ceiling, so an admin
-		// is held to the number they are shown. It is read at CALL time, so a
-		// license renewed in place raises the ceiling on the next re-check. A seat
-		// already in use is never touched. A refused or removed license keeps the
-		// last valid one's ceiling (Posture.SeatCeiling) until it is replaced.
+		// The same posture is the seat writer's ceiling, read at call time, so an
+		// admin is held to the number they are shown. A refused or removed license
+		// keeps the last valid one's ceiling (Posture.SeatCeiling).
 		s.authHandlers = s.WithSeatCeiling(func() (int, bool) { return posture().SeatCeiling() })
 	}
 }
 
-// WithLicenseRecheck wires the watcher's re-check into "Check now" on the
-// entitlement surface. It adds to the handler the assembly
-// built, like WithLicensePosture, so the seat count and posture stay.
+// WithLicenseRecheck wires the watcher's re-check into "Check now". It adds to
+// the handler the assembly built, so the seat count and posture stay.
 func WithLicenseRecheck(recheck func(context.Context) error) Option {
 	return func(s *Server, _ *pgxpool.Pool) {
 		s.licenseHandlers.recheck = recheck

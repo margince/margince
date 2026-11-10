@@ -31,8 +31,7 @@ type licenseHandlers struct {
 	// the watcher re-checks while the process runs, so a screen opened on day
 	// thirty reports the license as it stands and not as it booted.
 	posture func() licensecheck.Posture
-	// recheck runs the watcher's re-check now. Set by WithLicenseRecheck; a role
-	// that wired none answers "Check now" with 501.
+	// recheck is the watcher's re-check, set by WithLicenseRecheck.
 	recheck func(context.Context) error
 }
 
@@ -78,16 +77,9 @@ func (h licenseHandlers) GetLicenseEntitlement(w http.ResponseWriter, r *http.Re
 	httperr.WriteJSON(w, http.StatusOK, toContractLicenseEntitlement(h.posture(), used))
 }
 
-// CheckLicenseNow re-reads the installation's license token at once and
-// answers the entitlement as the re-check resolved it.
-//
-// It reuses the watcher's daily re-check rather than a second path. Nothing
-// is written and no token travels in the request, so there is no row to
-// audit; a posture that changed is logged by the watcher.
-//
-// Both gates run BEFORE the re-check. A caller who may not change installation
-// settings, or may not see the entitlement, never makes the api re-read its
-// token.
+// CheckLicenseNow runs the watcher's daily re-check at once and answers the
+// entitlement it resolved. It writes nothing and takes no token, so there is no
+// row to audit. Both gates run before the re-check.
 func (h licenseHandlers) CheckLicenseNow(w http.ResponseWriter, r *http.Request) {
 	if h.seats == nil || h.posture == nil || h.recheck == nil {
 		httperr.NotImplemented(w, r, "CheckLicenseNow")
@@ -109,26 +101,21 @@ func (h licenseHandlers) CheckLicenseNow(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	if err := h.recheck(ctx); err != nil {
-		// The watcher has logged the fault. The response names none of it: the
-		// cause can quote the token file's path or the module's own text.
+		// Logged by the watcher; the cause can quote a path, so it stays out of the response.
 		httperr.ServiceUnavailable(w, r, "the license could not be re-read; the last result stands — see the server log")
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, toContractLicenseEntitlement(h.posture(), used))
 }
 
-// licenseCheckObject is the grant "Check now" asks for: update on installation
-// settings, which admin and ops hold. No role holds a `license` write grant,
-// and a re-check changes no license, so it does not invent one.
+// licenseCheckObject is the grant "Check now" asks for (update; admin and ops).
+// No role holds a `license` write grant, and a re-check changes no license.
 const licenseCheckObject = "installation_settings"
 
 // GetSeatUsage answers the seat count without the entitlement beside it.
 //
-// The posture is not read here at all, and that is the split: this surface
-// exists so a reader who may see capacity is not thereby handed what the
-// installation pays. Its gate is the store's — `seat_usage` rather than
-// `license` — so the two surfaces differ in exactly one thing, which grant
-// opens them.
+// The posture is not read here: a reader who may see capacity is not handed
+// what the installation pays. The store gates it on `seat_usage`.
 func (h licenseHandlers) GetSeatUsage(w http.ResponseWriter, r *http.Request) {
 	if h.seats == nil {
 		httperr.NotImplemented(w, r, "GetSeatUsage")

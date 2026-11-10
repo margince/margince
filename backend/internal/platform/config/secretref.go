@@ -12,6 +12,12 @@ import (
 // refEnv is the ${env:NAME} reference kind.
 const refEnv = "env"
 
+// refFile is the ${file:PATH} reference kind, and refFilePrefix opens one.
+const (
+	refFile       = "file"
+	refFilePrefix = "${" + refFile + ":"
+)
+
 // refNone declares a secret absent. It uses the reference grammar so it can
 // never be mistaken for a password: a secret refuses every literal.
 const refNone = "${none}"
@@ -33,7 +39,7 @@ func resolveRef(text string, readFile func(string) ([]byte, error), getenv func(
 		return text, "", false, nil
 	}
 	switch kind {
-	case "file":
+	case refFile:
 		raw, err := readFile(arg)
 		if err != nil {
 			return "", arg, true, fmt.Errorf("cannot read secret file %s", arg)

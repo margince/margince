@@ -14070,7 +14070,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Die Lizenz läuft am {expiry} ab. Vor diesem Datum ändert sich nichts.",
   "license.check.button": "Jetzt prüfen",
   "license.check.hint":
-    "Liest das Lizenz-Token auf dem Server sofort neu ein, statt bei der nächsten täglichen Prüfung. Tausche das Token vorher auf dem Server aus.",
+    "Liest die Lizenz-Token-Datei auf dem Server sofort neu ein, statt bei der nächsten täglichen Prüfung. Tausche die Datei vorher aus. Ein Token aus einer Umgebungsvariable gilt erst nach einem Neustart.",
   "license.check.done":
     "Lizenz-Token neu eingelesen. Diese Karte zeigt das Ergebnis.",
   "license.check.failed":

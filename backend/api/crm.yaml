@@ -21517,7 +21517,9 @@ paths:
         It re-reads the token where the deployment declares it and checks it OFFLINE
         against the bundled validation module, the same path the daily re-check takes.
         An operator who has swapped the token on the server presses this to see the new
-        license without waiting up to a day.
+        license without waiting up to a day. A token file is read again; a token from the
+        environment (`MARGINCE_LICENSE`) is fixed when the process starts and changes
+        only with a restart.
 
         It writes nothing and takes no token. Entering or replacing the token stays the
         operator's job on the server. Only the api process that serves

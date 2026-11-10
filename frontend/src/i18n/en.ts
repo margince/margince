@@ -14015,7 +14015,7 @@ export const en = {
     "The license expires on {expiry}. Nothing changes before that date.",
   "license.check.button": "Check now",
   "license.check.hint":
-    "Reads the license token on the server again now, instead of at the next daily check. Replace the token on the server first.",
+    "Reads the license token file on the server again now, instead of at the next daily check. Replace the file first. A token set in an environment variable applies only after a restart.",
   "license.check.done": "License token read again. This card shows the result.",
   "license.check.failed":
     "The license token could not be read again. The last result stands, and the server log says why.",
