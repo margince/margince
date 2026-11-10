@@ -216,32 +216,43 @@ export const GRIDDED_RECORD_SCREENS: ReadonlySet<Screen> = new Set([
 ]);
 
 // Id segments that name a page rather than a record, each on its own screen
-// only: `#/leads/new` is the lead whose id is "new".
+// only: `#/leads/import` is the lead whose id is "import".
 export const CREATE_ID = "new";
 export const IMPORT_ID = "import";
 
 /** The screens whose list opens a create form at `CREATE_ID`, which `C` opens. */
-export const CREATE_SCREENS: ReadonlySet<Screen> = new Set(["deals"]);
+export const CREATE_SCREENS: ReadonlySet<Screen> = new Set([
+  "contacts",
+  "companies",
+  "leads",
+  "deals",
+  "projects",
+]);
 
-// A `titleKey` marks a page of its own below the list; without one the segment
-// is a state of the list itself (`#/deals/new` is the list with its form open).
-const RESERVED_SEGMENTS: Readonly<
-  Partial<Record<Screen, { id: string; titleKey?: MessageKey }>>
+/** `#/deals/new`: the list itself, with its create form open. */
+export function opensCreateForm(route: Route): boolean {
+  return route.id === CREATE_ID && CREATE_SCREENS.has(route.screen);
+}
+
+// A page of its own below the list, which the trail names.
+const RESERVED_PAGES: Readonly<
+  Partial<Record<Screen, { id: string; titleKey: MessageKey }>>
 > = {
-  deals: { id: CREATE_ID },
   contacts: { id: IMPORT_ID, titleKey: "vcardImport.title" },
 };
 
 export function opensReservedPage(route: Route): boolean {
   return (
-    route.id !== undefined && RESERVED_SEGMENTS[route.screen]?.id === route.id
+    opensCreateForm(route) ||
+    (route.id !== undefined && RESERVED_PAGES[route.screen]?.id === route.id)
   );
 }
 
 // The trail, the agent's subject and the rail read a reserved page's name here.
 export function reservedPageTitle(route: Route): MessageKey | undefined {
-  return opensReservedPage(route)
-    ? RESERVED_SEGMENTS[route.screen]?.titleKey
+  const page = RESERVED_PAGES[route.screen];
+  return route.id !== undefined && page?.id === route.id
+    ? page.titleKey
     : undefined;
 }
 

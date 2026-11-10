@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   cleanup,
   fireEvent,
+  renderHook,
   render as rtlRender,
   screen,
   waitFor,
@@ -14,8 +15,13 @@ import { COMPANY_CONTEXT_ON } from "../features/settings/settingspages.fixtures"
 import { LocaleProvider } from "../i18n";
 import { type GrantSpec, meFixture } from "../testing/mefixture";
 import { steppedClock } from "../testing/steppedclock";
-import { CREATE_ID } from "./nav";
-import { type Command, CommandPalette, useBuiltinCommands } from "./palette";
+import { CREATE_ID, CREATE_SCREENS } from "./nav";
+import {
+  type Command,
+  CommandPalette,
+  isCreateCommand,
+  useBuiltinCommands,
+} from "./palette";
 
 // B-EP09.5 (AC-shell-3..7) and RS-1 (live /search records + see-all)
 // acceptance. AC-shell-8 is no longer about this file: it covered the
@@ -688,15 +694,26 @@ describe("useBuiltinCommands", () => {
     );
   }
 
+  function CreateProbe() {
+    return (
+      <CommandPalette
+        open
+        mode="create"
+        onClose={() => {}}
+        commands={useBuiltinCommands()}
+      />
+    );
+  }
+
   // A /me with no grant at all, which is the harder case: the two settings
   // shortcuts drop out, so anything still offered here is offered because the
   // rail names it rather than because the principal holds something.
-  function renderProbe() {
+  function renderProbe(probe: ReactNode = <Probe />) {
     vi.stubGlobal(
       "fetch",
       vi.fn(async () => jsonResponse(meFixture({ roles: [], allow: {} }))),
     );
-    return render(<Probe />);
+    return render(probe);
   }
 
   // Company profile opens on the catalog's installation grants, and the profile
@@ -791,6 +808,37 @@ describe("useBuiltinCommands", () => {
     await user.clear(box);
     await user.type(box, "website");
     expect(screen.queryByText("Company profile")).toBeNull();
+  });
+
+  // Elsewhere `C` lists these commands, so a list form with none is one that
+  // `C` cannot reach from there.
+  it("offers a create command for each list that opens a create form", () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => jsonResponse(meFixture({ roles: [], allow: {} }))),
+    );
+    const client = new QueryClient();
+    const view = renderHook(() => useBuiltinCommands(), {
+      wrapper: ({ children }) => wrap(children, client),
+    });
+    const routes = view.result.current
+      .filter(isCreateCommand)
+      .map((command) => command.route);
+    expect(new Set(routes.map((route) => route?.screen))).toEqual(
+      CREATE_SCREENS,
+    );
+    expect(routes.every((route) => route?.id === CREATE_ID)).toBe(true);
+  });
+
+  it("names each create command for the record it makes", () => {
+    renderProbe(<CreateProbe />);
+    expect(destinationRows().map((row) => row.textContent)).toEqual([
+      expect.stringContaining("New contact"),
+      expect.stringContaining("New company"),
+      expect.stringContaining("New lead"),
+      expect.stringContaining("New deal"),
+      expect.stringContaining("New project"),
+    ]);
   });
 
   // The two destinations that carry a word the rail no longer prints. A reader

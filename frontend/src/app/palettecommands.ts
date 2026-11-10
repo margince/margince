@@ -40,10 +40,34 @@ export function useBuiltinCommands(): Command[] {
     }));
     const actions: Command[] = [
       {
+        id: "action:new-contact",
+        label: t("create.contact"),
+        type: "action",
+        route: { screen: "contacts", id: CREATE_ID },
+      },
+      {
+        id: "action:new-company",
+        label: t("create.company"),
+        type: "action",
+        route: { screen: "companies", id: CREATE_ID },
+      },
+      {
+        id: "action:new-lead",
+        label: t("create.lead"),
+        type: "action",
+        route: { screen: "leads", id: CREATE_ID },
+      },
+      {
         id: "action:new-deal",
         label: t("action.newDeal"),
         type: "action",
         route: { screen: "deals", id: CREATE_ID },
+      },
+      {
+        id: "action:new-project",
+        label: t("project.new"),
+        type: "action",
+        route: { screen: "projects", id: CREATE_ID },
       },
       {
         id: "action:booking",

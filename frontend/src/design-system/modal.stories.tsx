@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { type ReactNode, useId, useState } from "react";
 import { expect, screen, userEvent, within } from "storybook/test";
+import { useShortcutDispatcher } from "../lib/shortcuts";
 import {
   Button,
   Field,
@@ -138,6 +139,54 @@ export const Form: Story = {
     </IntentDemo>
   ),
   play: opens("New contact at Globex"),
+};
+
+function CommitDemo() {
+  useShortcutDispatcher();
+  const [saved, setSaved] = useState(0);
+  const titleId = useId();
+  const formId = useId();
+  return (
+    <>
+      <p className="t-body">Saves: {saved}</p>
+      <Modal open onClose={() => undefined} labelledBy={titleId} intent="form">
+        <Heading size="large" id={titleId} className="t-h2 modal-title">
+          Rename Globex
+        </Heading>
+        <form
+          id={formId}
+          className="form-stack"
+          onSubmit={(event) => {
+            event.preventDefault();
+            setSaved((count) => count + 1);
+          }}
+        >
+          <Field label="Name">
+            {(control) => <TextInput {...control} defaultValue="Globex" />}
+          </Field>
+        </form>
+        <div className="actions">
+          <Button onClick={() => undefined}>Cancel</Button>
+          <Button variant="primary" type="submit" form={formId}>
+            Save
+          </Button>
+        </div>
+      </Modal>
+    </>
+  );
+}
+
+/** Cmd/Ctrl+Enter from a field presses the form's submit. */
+export const FormSubmitsOnCommit: Story = {
+  render: () => <CommitDemo />,
+  play: async () => {
+    const dialog = within(
+      await screen.findByRole("dialog", { name: "Rename Globex" }),
+    );
+    await userEvent.click(dialog.getByRole("textbox", { name: "Name" }));
+    await userEvent.keyboard("{Control>}{Enter}{/Control}");
+    await expect(await screen.findByText("Saves: 1")).toBeInTheDocument();
+  },
 };
 
 /** Only the body scrolls; the title and the action row stay pinned. */

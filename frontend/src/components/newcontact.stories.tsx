@@ -18,7 +18,11 @@ import { NewContactAction } from "./newcontact";
 
 const HOLDER_ID = "01930000-0000-7000-8000-0000000000o2";
 
-function form(company?: HomeCompany, holder = "Nordlicht Logistik AG") {
+function form(
+  company?: HomeCompany,
+  holder = "Nordlicht Logistik AG",
+  listCreate?: { open: boolean },
+) {
   return () => {
     installFetchStub({
       "GET /me": meRoute({ contact: ["read", "create"] }),
@@ -34,7 +38,7 @@ function form(company?: HomeCompany, holder = "Nordlicht Logistik AG") {
     });
     return (
       <StoryProviders>
-        <NewContactAction company={company} />
+        <NewContactAction company={company} listCreate={listCreate} />
       </StoryProviders>
     );
   };
@@ -116,4 +120,18 @@ export const OnCompanyPage: Story = {
     listKey: "company-contacts:01930000-0000-7000-8000-0000000000o2",
   }),
   play: open,
+};
+
+// The Contacts list's own create: its address opens it, and its button names `C`.
+export const OpenedByItsAddress: Story = {
+  render: form(undefined, undefined, { open: true }),
+  play: async () => {
+    const body = within(document.body);
+    await expect(
+      await body.findByRole("dialog", { name: "New contact" }),
+    ).toBeVisible();
+    await expect(
+      body.getByRole("button", { name: "New contact", hidden: true }),
+    ).toHaveAttribute("aria-keyshortcuts", "c");
+  },
 };

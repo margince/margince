@@ -18,7 +18,7 @@ import { holdExits } from "../design-system/presence-testing";
 import { LocaleProvider } from "../i18n";
 import type { Screen } from "../lib/router";
 import { useShortcutDispatcher } from "../lib/shortcuts";
-import { CREATE_ID } from "./nav";
+import { CREATE_ID, CREATE_SCREENS } from "./nav";
 import { type Command, CommandPalette, isCreateCommand } from "./palette";
 import { type PaletteMode, usePaletteShortcuts } from "./palettehotkey";
 
@@ -189,18 +189,21 @@ describe("the palette's single keys", () => {
     expect(screen.getByRole("searchbox")).toHaveProperty("value", "");
   });
 
-  it("opens a screen's own create form on C", async () => {
-    window.location.hash = "#/deals";
-    render(<ShellWithDialog dialogOpen={false} screen="deals" />);
-    const user = userEvent.setup();
+  it.each([...CREATE_SCREENS])(
+    "opens the %s list's own create form on C",
+    async (listScreen) => {
+      window.location.hash = `#/${listScreen}`;
+      render(<ShellWithDialog dialogOpen={false} screen={listScreen} />);
+      const user = userEvent.setup();
 
-    await user.keyboard("c");
-    expect(window.location.hash).toBe(`#/deals/${CREATE_ID}`);
-    expect(screen.queryByRole("searchbox")).toBeNull();
-  });
+      await user.keyboard("c");
+      expect(window.location.hash).toBe(`#/${listScreen}/${CREATE_ID}`);
+      expect(screen.queryByRole("searchbox")).toBeNull();
+    },
+  );
 
   it("lists only what creates on C where the screen has no form", async () => {
-    render(<ShellWithDialog dialogOpen={false} screen="contacts" />);
+    render(<ShellWithDialog dialogOpen={false} screen="analytics" />);
     const user = userEvent.setup();
 
     await user.keyboard("c");
@@ -210,7 +213,7 @@ describe("the palette's single keys", () => {
   });
 
   it("keeps every command once ⌘K opens it again", async () => {
-    render(<ShellWithDialog dialogOpen={false} screen="contacts" />);
+    render(<ShellWithDialog dialogOpen={false} screen="analytics" />);
     const user = userEvent.setup();
 
     await user.keyboard("c{Escape}{Meta>}k{/Meta}");

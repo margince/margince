@@ -9,12 +9,22 @@ import { type ReactNode, useState } from "react";
 import { useIdempotencyKey } from "../api/idempotencykey";
 import { Button } from "../design-system/atoms";
 import { useT } from "../i18n";
+import { shortcutCaps } from "../lib/keymap";
+import { listAddress } from "../lib/listreturn";
 import {
   ProblemError,
   problemExistingId,
   problemMessageOf,
 } from "../lib/problem";
-import { navigate, type Route, type Screen } from "../lib/router";
+import {
+  navigate,
+  navigateReplacing,
+  parseHash,
+  type Route,
+  type Screen,
+} from "../lib/router";
+import { useShortcutAria } from "../lib/shortcuts";
+import { parseParams } from "../lib/urlstate";
 import { catalogOfScreen, useSettledOpen } from "./create.dialog";
 import "./create.css";
 import "../design-system/querystates.css";
@@ -116,6 +126,16 @@ export function useCreateRecord<Created extends { id: string }>({
   });
 }
 
+// Replaced, not pushed: Back from the list must not reopen the form.
+function leaveCreateAddress(screen: Screen): void {
+  const here = parseHash(globalThis.location.hash);
+  if (here.screen !== screen || here.id === undefined) {
+    return;
+  }
+  const list = listAddress(screen);
+  navigateReplacing(parseHash(list), parseParams(list));
+}
+
 // The whole per-screen create affordance in one piece: the button, the modal,
 // its open state, and the post-create choreography. A list screen supplies
 // its label, fields, and transport — nothing else.
@@ -125,7 +145,7 @@ export function CreateAction<Created extends { id: string }>({
   create,
   invalidate,
   screen,
-  startOpen = false,
+  listCreate,
   resolveExisting,
   stay = false,
   aboutId,
@@ -161,7 +181,9 @@ export function CreateAction<Created extends { id: string }>({
   ) => ReactNode | null;
   invalidate: string;
   screen: Screen;
-  startOpen?: boolean;
+  // The list's own create, which `C` opens at `#/<screen>/new`; `open` when
+  // that address opened it.
+  listCreate?: Readonly<{ open: boolean }>;
   // `keepOpen` makes one save "saved, next" for capture in a run: the modal
   // empties, not closes. It implies `stay`: opening the record would end a run.
   keepOpen?: boolean;
@@ -182,7 +204,7 @@ export function CreateAction<Created extends { id: string }>({
   resolveExisting?: (code: string, id: string) => Route;
 }>) {
   const t = useT();
-  const [creating, setCreating] = useState(startOpen);
+  const [creating, setCreating] = useState(listCreate?.open ?? false);
   const shown = useSettledOpen(creating, catalogOfScreen(screen));
   // Counts this session's saves, which empties the form between them. Not a
   // boolean: two saves in a row must read as two distinct clears.
@@ -200,10 +222,16 @@ export function CreateAction<Created extends { id: string }>({
         setSaved((n) => n + 1);
         return;
       }
-      setCreating(false);
+      close();
     },
     onCreated,
   });
+  function close() {
+    setCreating(false);
+    if (listCreate) {
+      leaveCreateAddress(screen);
+    }
+  }
   const existing =
     mutation.error instanceof ProblemError
       ? problemExistingId(mutation.error.problem)
@@ -231,12 +259,13 @@ export function CreateAction<Created extends { id: string }>({
         pending={creating && !shown}
         reason={reason}
         link={link}
+        opensOnCreateKey={listCreate !== undefined}
       />
       <CreateRecordModal
         // A refusal that lands while the dialog is open closes it. A verb the
         // reader may no longer take must not stay one press from the server.
         open={shown && reason === undefined}
-        onClose={() => setCreating(false)}
+        onClose={close}
         title={label}
         fields={fields}
         pending={mutation.isPending}
@@ -266,6 +295,7 @@ export function NewRecordButton({
   pending,
   reason,
   link,
+  opensOnCreateKey = false,
 }: Readonly<{
   label: string;
   onClick: () => void;
@@ -276,7 +306,10 @@ export function NewRecordButton({
   testId?: string;
   pending?: boolean;
   reason?: string;
+  opensOnCreateKey?: boolean;
 }>) {
+  const createKey = useShortcutAria("create");
+  const keyShortcut = opensOnCreateKey ? createKey : undefined;
   return (
     <Button
       onClick={onClick}
@@ -284,6 +317,12 @@ export function NewRecordButton({
       pending={pending}
       reason={reason}
       variant={link ? "link" : undefined}
+      aria-keyshortcuts={keyShortcut}
+      title={
+        keyShortcut === undefined
+          ? undefined
+          : `${label} · ${shortcutCaps("create", navigator.platform).join(" ")}`
+      }
     >
       {link ? (
         label

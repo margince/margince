@@ -113,7 +113,9 @@ export async function fetchLeadsPage(
   };
 }
 
-export function LeadsScreen() {
+export function LeadsScreen({
+  startCreating = false,
+}: Readonly<{ startCreating?: boolean }>) {
   const t = useT();
   const me = useMe();
   return (
@@ -133,11 +135,8 @@ export function LeadsScreen() {
             // The opening FILTER, not a permission: every seat holding the lead
             // grant may read any lead (auth/tableclass.go), so this decides
             // which view the queue starts in and nothing about what it may
-            // fetch. The row scope the server computed, though, rather than the
-            // role keys it came from — those were a second reading of the same
-            // policy, and a custom role, or a seeded role whose grants an
-            // operator edits, opens the wrong view while the server answers
-            // correctly.
+            // fetch. It reads the row scope the server computed, not role keys:
+            // a custom role would open the wrong view.
             //
             // Written as the POSITIVE test, so an absent authorization block
             // opens on "mine". `!== "own"` would read a missing answer as
@@ -147,6 +146,7 @@ export function LeadsScreen() {
               session.authorization?.row_scope === "team" ||
               session.authorization?.row_scope === "all"
             }
+            startCreating={startCreating}
           />
         )}
       </QueryGate>
@@ -163,7 +163,12 @@ const LEAD_SCREEN_DIALS: readonly string[] = [LEAD_VIEW_PARAM];
 function LeadsWorkbench({
   viewerId,
   opensOnAll,
-}: Readonly<{ viewerId: string; opensOnAll: boolean }>) {
+  startCreating,
+}: Readonly<{
+  viewerId: string;
+  opensOnAll: boolean;
+  startCreating: boolean;
+}>) {
   const ownerChips = useOwnerTagChips();
   const pageName = usePageName("leads");
   const savedViews = useSavedViewTabs("leads");
@@ -281,6 +286,7 @@ function LeadsWorkbench({
             label={t("create.lead")}
             invalidate="leads"
             screen="leads"
+            listCreate={{ open: startCreating }}
             create={(values) => createLead(values, cf.toBody(values), t)}
             // A contact holding the lead's email or profile opens as the
             // contact: a new opportunity with them is a deal on that contact.
