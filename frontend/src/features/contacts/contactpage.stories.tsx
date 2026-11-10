@@ -805,6 +805,63 @@ export const DetailsOnPhone: Story = {
   },
 };
 
+// 35 characters, wider than the About column holds on one line, and bought,
+// so the row seats its mark too.
+const LONG_ADDRESS = "priya.ramasami@examplecorp-group.de";
+const longAddress: View = {
+  ...populated,
+  contact: {
+    ...populated.contact,
+    primary_email: LONG_ADDRESS,
+    emails: populated.contact.emails?.map((row) => ({
+      ...row,
+      email: LONG_ADDRESS,
+    })),
+    bought_fields: [
+      {
+        target: "email:pe-1",
+        provider: "surfe",
+        applied_at: "2026-06-02T12:00:00Z",
+        paid: true,
+        trigger: "manual",
+      },
+    ],
+  },
+};
+
+function expectWhole(half: HTMLElement) {
+  return expect(half.scrollWidth).toBeLessThanOrEqual(half.clientWidth);
+}
+
+// The About panel's address on a wide window, its copy glyph shown as on
+// hover. Every letter reads, and the glyph sits on the address's line.
+export const PageLongAddress: Story = {
+  name: "Page · long address",
+  tags: ["uat-wide"],
+  render: () => <Page view={longAddress} />,
+  play: async () => {
+    const link = await screen.findByRole("link", { name: LONG_ADDRESS });
+    const local = link.querySelector<HTMLElement>(".contactlink-email-local");
+    const domain = link.querySelector<HTMLElement>(".contactlink-email-domain");
+    const copy = link.parentElement?.querySelector<HTMLElement>(".copy-action");
+    const column = link.closest(".factlist-value");
+    if (!local || !domain || !copy || !column) {
+      throw new Error("the address lost a half or its copy glyph");
+    }
+    copy.style.maxInlineSize = "none";
+    await expectWhole(local);
+    await expectWhole(domain);
+    const address = link.getBoundingClientRect();
+    const glyph = copy.getBoundingClientRect();
+    await expect(glyph.left).toBeGreaterThanOrEqual(address.right - 0.5);
+    await expect(glyph.top).toBeLessThan(address.bottom);
+    await expect(glyph.bottom).toBeGreaterThan(address.top);
+    await expect(glyph.right).toBeLessThanOrEqual(
+      column.getBoundingClientRect().right + 0.5,
+    );
+  },
+};
+
 // --- Drawers: the surfaces the page opens over itself ------------------------
 //
 // Each renders open, since a closed drawer paints nothing. Writing to the
