@@ -134,6 +134,8 @@ The saved report keeps its graphs and their layout, scope, pipeline and time spa
 
 To change a shared report without readers seeing it half done, choose **Save as draft** in **Edit report**. Readers keep the published report. Use **Preview draft** to see it, then **Publish draft** or **Discard draft**. While a draft is open, edits go into it. An admin can choose **Preview as** to read the report as a role would, limited to what the admin may read.
 
+A new report that an agent prepares for you is private, and nothing on it is published yet. It opens on its draft, and it can't be scheduled or saved as a snapshot until you choose **Publish draft**.
+
 Under **History and schedules**, **Versions** lists who saved each version and when. **Restore version** publishes an earlier version again as the newest one. Snapshots and schedules keep the version they were made from. Only someone who may edit the report sees drafts and versions.
 
 To read a report, a user needs access to the report and access to the numbers under it. A shared report does not give access to records.
