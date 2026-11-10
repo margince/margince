@@ -29,6 +29,8 @@ The **Source** column says which of these set the value:
 Change it where its source says. A setting set outside the app is locked in the app, and this page does not edit it. The same name and place show beside the locked control on its own Settings page, as [Why can't I change a setting?](settings.md#why-cant-i-change-a-setting) shows.
 
 ### Why does a row show "Secret", "Not set" or "No value"?
-A secret shows the word "Secret" and never its value or its default. Some settings are read only by the background worker or by the program that sets up the data store. Such a setting shows "Not set", because the app cannot see the sources of those programs. It does not mean the setting is empty. A setting the app reads also shows "Not set" when nothing set it and it has no default. "No value" is a setting the app reads that has neither a value nor a default. "Empty" is a value that is set to nothing.
+A secret shows the word "Secret" and never its value or its default. Some settings are read only by the background worker or by the program that sets up the data store. Such a setting shows "Not set", because the app cannot see the sources of those programs. It does not mean the setting is empty.
+
+A setting the app reads also shows "Not set" when nothing set it and it has no default. "No value" is a setting the app reads that has neither a value nor a default. "Empty" is a value that is set to nothing.
 
 For the other settings pages, see [Settings](settings.md).

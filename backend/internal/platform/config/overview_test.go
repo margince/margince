@@ -80,7 +80,7 @@ func TestTheOverviewWritesCompoundValuesAsAnOperatorWould(t *testing.T) {
 
 // An optional object declares its absence as a nil pointer, which JSON writes
 // as null. The overview lists that as no value and no default, never as the
-// text "null"; the templates still write null, which a source can read back.
+// text "null". The templates still write null, which a source can read back.
 func TestANilObjectIsNoValueNotTheTextNull(t *testing.T) {
 	contact := config.Define(config.Spec[*overviewWindow]{
 		Key: "overview.contact", Env: "X_OVERVIEW_CONTACT", Type: config.Struct[*overviewWindow](),

@@ -185,7 +185,7 @@ func (s *Setting[T]) DefaultText() (string, bool) {
 }
 
 // text is v as an operator writes it, and false for an object that is JSON
-// null: an optional object's nil pointer holds nothing, and "null" reads as a value.
+// null. An optional object's nil pointer holds nothing, and "null" reads as a value.
 func (s *Setting[T]) text(v T) (string, bool) {
 	text := s.spec.Type.Format(v)
 	if _, object := s.spec.Type.(structType[T]); object && text == "null" {
