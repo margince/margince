@@ -5,6 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { ConversationSuggestionsCard } from "../../components/conversationsuggestions";
 import { EntityRef } from "../../components/entityref";
+import { useEntityName } from "../../components/entityref.queries";
 import { LinkedInChip } from "../../components/linkedinchip";
 import { saveRecordEdit } from "../../components/recordedit";
 import { LeadStops } from "../../components/stops";
@@ -38,11 +39,7 @@ import { useListsAvailable, useRecordLists } from "../../lib/lists.queries";
 import { ProblemError } from "../../lib/problem";
 import { useRecordTags } from "../../lib/tags.queries";
 import { useViewerZone } from "../../lib/viewerzone";
-import {
-  LeadCompany,
-  useLeadCompanyFactsSection,
-  useLeadCompanyNameReading,
-} from "./leadcompany";
+import { LeadCompany, useLeadCompanyFactsSection } from "./leadcompany";
 import { LeadOwnerControl, statusSetBy } from "./leadheader";
 import { leadIndustry } from "./leadindustry";
 import { useLeadPartnerRow } from "./leadpartner";
@@ -134,13 +131,15 @@ function EmailValue({
 // A linked lead's name is the company's own, so it is changed there, not here.
 function useLinkedCompanyRow(lead: Lead): DetailRow | null {
   const t = useT();
-  const linked = useLeadCompanyNameReading(lead);
+  const linked = useEntityName("company", lead.company_id);
   if (!lead.company_id) return null;
+  const settling =
+    linked.name === null && (linked.reading === "pending" || linked.fetching);
   return {
     key: "company_name",
     term: t("create.companyName"),
-    empty: !linked.settling && !linked.name,
-    value: linked.settling ? (
+    empty: !settling && !linked.name,
+    value: settling ? (
       <PendingBody label={t("common.loading")} lines={1} />
     ) : (
       <InlineText

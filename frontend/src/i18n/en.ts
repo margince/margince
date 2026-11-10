@@ -15860,9 +15860,9 @@ export const en = {
   "aiRouting.profileLine":
     "Installation profile: {profile}. It limits which providers a tier can use and is set by the operator.",
   "aiRouting.profile.eu_hosted":
-    "EU-hosted (partner models that run inside the EU)",
+    "EU-hosted (partner inference; each tier’s connection decides where it runs)",
   "aiRouting.profile.sovereign":
-    "Sovereign (no data leaves the installation, and cloud providers are refused)",
+    "Sovereign (AI runs only on the installation’s own hosts; cloud providers are refused)",
   "aiRouting.profile.cloud_frontier":
     "Cloud (cloud providers with the installation’s own API keys)",
   "aiRouting.profile.unset": "Not set",

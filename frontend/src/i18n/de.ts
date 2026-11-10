@@ -15960,9 +15960,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aiRouting.profileLine":
     "Installationsprofil: {profile}. Das Profil begrenzt, welche Anbieter eine Stufe nutzen kann, und wird von der Systemadministration festgelegt.",
   "aiRouting.profile.eu_hosted":
-    "In der EU gehostet (Modelle von Partnern, die in der EU laufen)",
+    "In der EU gehostet (Inferenz von Partnern; die Verbindung jeder Stufe bestimmt, wo sie läuft)",
   "aiRouting.profile.sovereign":
-    "Souverän (keine Daten verlassen die Installation, Cloud-Anbieter werden abgelehnt)",
+    "Souverän (KI läuft nur auf den eigenen Hosts der Installation, Cloud-Anbieter werden abgelehnt)",
   "aiRouting.profile.cloud_frontier":
     "Cloud (Cloud-Anbieter mit den eigenen API-Schlüsseln der Installation)",
   "aiRouting.profile.unset": "Nicht festgelegt",

@@ -139,6 +139,23 @@ describe("the About company row", () => {
     ).toBeNull();
   });
 
+  it("shows the unset text, not the typed name, when the linked company has no name", async () => {
+    stubFetch(async (url) => {
+      const named = companyNamesAnswer(url, {});
+      return (
+        named ?? jsonResponse({ ...linked, company_name: "Nordwind Logistik" })
+      );
+    });
+    render(<LeadScreen id="l-1" />);
+    await showEmptyFields(userEvent.setup());
+    expect(
+      await screen.findByText("Not set", { selector: ".inlinetext" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText("Nordwind Logistik", { selector: ".inlinetext" }),
+    ).toBeNull();
+  });
+
   it("edits the typed name while the lead is not linked", async () => {
     const patches = serve({ ...lead, company_name: "Nordwind Logistik" });
     const user = userEvent.setup();

@@ -157,10 +157,13 @@ describe("AiRoutingCard", () => {
   });
 
   it.each([
-    ["eu_hosted", "EU-hosted (partner models that run inside the EU)"],
+    [
+      "eu_hosted",
+      "EU-hosted (partner inference; each tier’s connection decides where it runs)",
+    ],
     [
       "sovereign",
-      "Sovereign (no data leaves the installation, and cloud providers are refused)",
+      "Sovereign (AI runs only on the installation’s own hosts; cloud providers are refused)",
     ],
     [
       "cloud_frontier",
