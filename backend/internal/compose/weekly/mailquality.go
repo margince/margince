@@ -26,6 +26,9 @@ func MailUseful(review Review) bool {
 
 // NarrativeCovered requires each figure source before a narrative is trusted.
 func NarrativeCovered(review Review) bool {
+	if review.LeadsWithheld {
+		return false
+	}
 	if review.NumericSummary == nil || review.NumericSummary.FigureCoverage == nil {
 		return false
 	}
@@ -61,7 +64,7 @@ func TeamMailSummary(review TeamReview, words mailcopy.Copy) string {
 // TeamMailFacts uses the same named metrics and source coverage as personal mail.
 func TeamMailFacts(review TeamReview, words mailcopy.Copy) []emailview.Fact {
 	c := review.Counts
-	return mailFacts(Review{NumericSummary: review.NumericSummary, Money: review.Money, Counts: Counts{DealsWon: c.DealsWon, DealsLost: c.DealsLost, DealsMoved: c.DealsMoved, LeadsRouted: c.LeadsRouted, LeadsAnsweredInTarget: c.LeadsAnsweredInTarget, LeadsBreached: c.LeadsBreached, MeetingsHeld: c.MeetingsHeld, MeetingsWithNextStep: c.MeetingsWithNextStep, CommitmentsDue: c.CommitmentsDue, CommitmentsKept: c.CommitmentsKept}}, words)
+	return mailFacts(Review{LeadsWithheld: review.LeadsWithheld, NumericSummary: review.NumericSummary, Money: review.Money, Counts: Counts{DealsWon: c.DealsWon, DealsLost: c.DealsLost, DealsMoved: c.DealsMoved, LeadsRouted: c.LeadsRouted, LeadsAnsweredInTarget: c.LeadsAnsweredInTarget, LeadsBreached: c.LeadsBreached, MeetingsHeld: c.MeetingsHeld, MeetingsWithNextStep: c.MeetingsWithNextStep, CommitmentsDue: c.CommitmentsDue, CommitmentsKept: c.CommitmentsKept}}, words)
 }
 
 // TeamMailFocus names a frozen pattern in the recipient's language without rewriting it.

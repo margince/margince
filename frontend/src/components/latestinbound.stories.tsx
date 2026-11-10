@@ -2,14 +2,22 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import type { ReactNode } from "react";
+import { type ReactNode, useState } from "react";
+import { expect, screen, waitFor, within } from "storybook/test";
 import type { components } from "../api/schema";
 import { Button } from "../design-system/atoms";
-import { StoryProviders } from "../testing/story-utils";
+import { OpenSourceProvider } from "../lib/opensource";
+import {
+  installFetchStub,
+  meRoute,
+  StoryProviders,
+  storyQueryClient,
+} from "../testing/story-utils";
 import {
   type JustIn,
   JustInScope,
   LatestInboundLine,
+  latestInboundKey,
   RecordNextBar,
 } from "./latestinbound";
 
@@ -84,10 +92,20 @@ const MAIL: JustIn = {
   notice,
 };
 
+const MAY_WRITE = meRoute({ activity: ["read", "create"] });
+
 function OnRecord({
   latest,
+  me = MAY_WRITE,
+  contact,
   children,
-}: Readonly<{ latest: JustIn; children: ReactNode }>) {
+}: Readonly<{
+  latest: JustIn;
+  me?: () => Response;
+  contact?: { attachable?: boolean };
+  children: ReactNode;
+}>) {
+  installFetchStub({ "GET /me": me });
   return (
     <StoryProviders>
       <div style={{ maxWidth: 720 }}>
@@ -95,6 +113,7 @@ function OnRecord({
           latest={latest}
           entityType="contact"
           entityId="story-contact"
+          contact={contact}
           actions={verbs}
         >
           {children}
@@ -117,6 +136,37 @@ export const Email: Story = {
       <RecordNextBar />
     </OnRecord>
   ),
+};
+
+/** A seat that may not write activities is offered no task. */
+export const EmailTaskRefused: Story = {
+  render: () => {
+    return (
+      <OnRecord latest={MAIL} me={meRoute({ activity: ["read"] })}>
+        <RecordNextBar />
+      </OnRecord>
+    );
+  },
+  play: async () => {
+    // Drawn while the grants are unknown, gone once /me refuses the write.
+    await screen.findByRole("button", { name: "Create task" });
+    await waitFor(() =>
+      expect(screen.queryByRole("button", { name: "Create task" })).toBeNull(),
+    );
+  },
+};
+
+/** A contact shared read-only: the task would file under it, so none is offered. */
+export const EmailTaskRefusedOnReadShareContact: Story = {
+  render: () => (
+    <OnRecord latest={MAIL} contact={{ attachable: false }}>
+      <RecordNextBar />
+    </OnRecord>
+  ),
+  play: async () => {
+    await screen.findByRole("button", { name: "Reply" });
+    expect(screen.queryByRole("button", { name: "Create task" })).toBeNull();
+  },
 };
 
 export const UrgentNext: Story = {
@@ -175,6 +225,67 @@ export const Withheld: Story = {
       <RecordNextBar />
     </OnRecord>
   ),
+};
+
+// Nothing came in and nothing is next: the record's last exchange, a meeting
+// held yesterday with no reply direction, as history above the bar.
+const lunch = activity("lunch", {
+  kind: "meeting",
+  source: "manual",
+  captured_by: "human:u-1",
+  occurred_at: hoursAgo(26),
+  subject: "Introductory lunch",
+  meeting_status: "held",
+});
+
+// Seeded and never stale, so the story's empty fetch stub does not replace it.
+function seededClient() {
+  const client = storyQueryClient();
+  const key = latestInboundKey("deal", "story-deal");
+  client.setQueryDefaults(key, { staleTime: Number.POSITIVE_INFINITY });
+  client.setQueryData(key, {
+    data: [],
+    last_exchange: { activity: lunch, whose_move: "neither" },
+  });
+  return client;
+}
+
+function LastExchangeOnRecord() {
+  const [client] = useState(seededClient);
+  return (
+    <StoryProviders client={client}>
+      <OpenSourceProvider openSource={() => {}}>
+        <div style={{ maxWidth: 720 }}>
+          <JustInScope
+            latest={undefined}
+            entityType="deal"
+            entityId="story-deal"
+          >
+            <RecordNextBar />
+          </JustInScope>
+        </div>
+      </OpenSourceProvider>
+    </StoryProviders>
+  );
+}
+
+export const LastExchange: Story = {
+  name: "Last exchange as history",
+  render: () => <LastExchangeOnRecord />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(await canvas.findByText("Introductory lunch")).toBeVisible();
+    await expect(
+      canvas.getByRole("button", { name: "View meeting" }),
+    ).toBeVisible();
+    await expect(canvas.getByText("Nothing is due next.")).toBeVisible();
+  },
+};
+
+export const LastExchangeDark: Story = {
+  ...LastExchange,
+  name: "Last exchange as history, dark",
+  globals: { theme: "dark" },
 };
 
 export const HeadLine: Story = {

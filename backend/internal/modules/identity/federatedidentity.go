@@ -12,9 +12,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -68,16 +71,58 @@ func (s *Service) resolveFederatedUser(ctx context.Context, tx pgx.Tx, provider,
 
 	var byEmail ids.UserID
 	err = tx.QueryRow(ctx,
-		`SELECT id FROM app_user WHERE `+LiveMemberSQL("")+`
-		 AND password_hash IS NOT NULL AND NOT is_agent AND lower(email) = lower($1)`,
-		email).Scan(&byEmail)
+		`SELECT u.id FROM app_user u WHERE `+LiveMemberSQL("u")+`
+		 AND u.password_hash IS NOT NULL AND NOT u.is_agent
+		 AND `+storekit.SeatLoginIsSQL("u", "$1", "$2")+`
+		 `+storekit.SeatLoginPrefersTypedSQL("u", "$1")+``,
+		typedLoginAddress(email), owndomain.OfAddress(email)).Scan(&byEmail)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return ids.UserID{}, false, ErrFederatedSignInRefused
 	}
 	if err != nil {
 		return ids.UserID{}, false, fmt.Errorf("identity: resolve app_user by email: %w", err)
 	}
+	if err := refuseTheTwinOfALinkedSeat(ctx, tx, provider, subject, email, byEmail); err != nil {
+		return ids.UserID{}, false, err
+	}
 	return byEmail, true, nil
+}
+
+// refuseTheTwinOfALinkedSeat refuses a seat the email lookup found when this
+// subject is still linked to a different seat at the same mailbox.
+//
+// That linked seat is no longer live, or the lookup above would have answered
+// it. The seat found is its twin under the other spelling of the same login,
+// and a disabled seat's link is no way into it. A recycled address is a
+// different mailbox, so its transfer stands.
+//
+// Compared in Go, because Postgres cannot fold IDNA and a seat the backfill has
+// not reached has no folded domain to compare.
+func refuseTheTwinOfALinkedSeat(ctx context.Context, tx pgx.Tx, provider, subject, email string, found ids.UserID) error {
+	var linked ids.UserID
+	var linkedLogin string
+	err := tx.QueryRow(ctx,
+		`SELECT u.id, u.email FROM federated_identity fi JOIN app_user u ON u.id = fi.user_id
+		 WHERE fi.provider = $1 AND fi.subject = $2`,
+		provider, subject).Scan(&linked, &linkedLogin)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("identity: read the subject's existing link: %w", err)
+	}
+	if linked != found && sameMailbox(linkedLogin, email) {
+		return ErrFederatedSignInRefused
+	}
+	return nil
+}
+
+// sameMailbox reports whether two logins name one mailbox: one local part,
+// and one domain in either of its spellings.
+func sameMailbox(a, b string) bool {
+	localA, _, _ := strings.Cut(typedLoginAddress(a), "@")
+	localB, _, _ := strings.Cut(typedLoginAddress(b), "@")
+	return localA == localB && owndomain.OfAddress(a) != "" && owndomain.OfAddress(a) == owndomain.OfAddress(b)
 }
 
 // linkFederatedIdentity records the (provider, subject) -> user_id mapping.
@@ -149,6 +194,7 @@ func (s *Service) LoginViaFederatedIdentity(ctx context.Context, provider string
 		return "", fmt.Errorf("identity: mint session token: %w", err)
 	}
 
+	var signedIn ids.UserID
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		// A mapped grant is a role_assignment write and serializes with every
 		// other one, so an admin's re-role cannot interleave with a sign-in
@@ -164,6 +210,7 @@ func (s *Service) LoginViaFederatedIdentity(ctx context.Context, provider string
 		if resolveErr != nil {
 			return resolveErr
 		}
+		signedIn = userID
 		wasRelink, linkErr := linkFederatedIdentity(ctx, tx, userID, provider, subject, email)
 		if linkErr != nil {
 			return linkErr
@@ -202,5 +249,6 @@ func (s *Service) LoginViaFederatedIdentity(ctx context.Context, provider string
 		}
 		return "", err
 	}
+	s.offerProviderPicture(ctx, signedIn, claims.Picture)
 	return rawToken, nil
 }

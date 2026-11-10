@@ -253,11 +253,11 @@ func storeDeclaresMachineryApplied(call *ast.CallExpr) bool {
 	return false
 }
 
-// forwardsItsCallersEntry is config.StoredApplyTx or StoredApplyPairTx handing
-// its caller's entries to settings.ApplyTx or ApplyManyTx. The entries are
-// named at that caller, which this gate reads as a machinery read of its own.
+// forwardsItsCallersEntry is a config machinery reader handing its caller's
+// entries to a settings one. The entries are named at that caller, which this
+// gate reads as a machinery read of its own.
 func forwardsItsCallersEntry(pkg, fn string) bool {
-	return pkg == "config" && (fn == "StoredApplyTx" || fn == "StoredApplyPairTx")
+	return pkg == "config" && (fn == "StoredApplyTx" || fn == "StoredApplyPairTx" || fn == "StoredApplyChosenTx")
 }
 
 // entryName renders the entry argument as declaringPackage.Name.
@@ -436,11 +436,11 @@ func parsedByPath(files []*ast.File, fset *token.FileSet, path string) (*ast.Fil
 // fire, in production, which is exactly the lateness this gate exists to fix.
 func machineryEntryArgs(call *ast.CallExpr) []ast.Expr {
 	switch {
-	case calleeName(call) == "ApplyTx" && len(call.Args) == 3:
+	case (calleeName(call) == "ApplyTx" || calleeName(call) == "ApplyChosenTx") && len(call.Args) == 3:
 		return call.Args[2:]
 	case calleeName(call) == "ApplyManyTx" && len(call.Args) > 2:
 		return call.Args[2:]
-	case calleeName(call) == "StoredApplyTx" && len(call.Args) == 4:
+	case (calleeName(call) == "StoredApplyTx" || calleeName(call) == "StoredApplyChosenTx") && len(call.Args) == 4:
 		return call.Args[3:]
 	case calleeName(call) == "StoredApplyPairTx" && len(call.Args) == 5:
 		return call.Args[3:]
@@ -474,6 +474,13 @@ func TestTheMachineryCensusReadsAStoredSettingAndItsDeclaration(t *testing.T) {
 	args := machineryEntryArgs(parse(`config.StoredApplyTx(ctx, tx, cfg, identity.Country)`))
 	if len(args) != 1 || entryName(args[0], "compose", map[string]string{"identity": "identity"}, nil) != "identity.Country" {
 		t.Errorf("StoredApplyTx's entry is not read: %v", args)
+	}
+	chosen := machineryEntryArgs(parse(`config.StoredApplyChosenTx(ctx, tx, cfg, identity.AgentCallsPerWindow)`))
+	if len(chosen) != 1 || entryName(chosen[0], "compose", map[string]string{"identity": "identity"}, nil) != "identity.AgentCallsPerWindow" {
+		t.Errorf("StoredApplyChosenTx's entry is not read: %v", chosen)
+	}
+	if len(machineryEntryArgs(parse(`settings.ApplyChosenTx(ctx, tx, identity.Country)`))) != 1 {
+		t.Error("ApplyChosenTx's entry is not read")
 	}
 	pair := machineryEntryArgs(parse(`config.StoredApplyPairTx(ctx, tx, cfg, contacts.Enabled, contacts.Target)`))
 	if len(pair) != 2 || entryName(pair[1], "compose", map[string]string{"contacts": "contacts"}, nil) != "contacts.Target" {

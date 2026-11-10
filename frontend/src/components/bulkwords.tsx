@@ -11,6 +11,7 @@ import { Badge } from "../design-system/atoms";
 import { type PluralBase, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { CLAIM_SETTLED_KEYS } from "../lib/activitykeys";
+import { labelFor } from "../lib/labelfor";
 import type { BulkChangeRequest, Translate } from "./bulkchange";
 import { OwnerName } from "./entityref";
 
@@ -128,7 +129,7 @@ export function SkipReason({
     return <span>{t(noChangeReason(verb))}</span>;
   }
   if (skip.reason !== "refused") {
-    return <span>{t(SKIP_REASONS[skip.reason])}</span>;
+    return <span>{t(labelFor(SKIP_REASONS, skip.reason))}</span>;
   }
   const known =
     skip.code && Object.hasOwn(REFUSAL_CODES, skip.code)

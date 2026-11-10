@@ -306,9 +306,8 @@ func ensureSubjectAssignable(
 		}
 		return fmt.Errorf("read app_user: %w", err)
 	}
-	// `invited` is deliberately assignable: staffing a record is part of
-	// onboarding somebody, and refusing it would mean nobody could be given
-	// work until their first login.
+	// Existing invited holders remain editable, and compatibility clients may still name them.
+	// The product picker offers only active colleagues.
 	if status == "suspended" || status == "deactivated" || archivedAt != nil {
 		return &values.ParseError{
 			Field: fieldSubjectID, Code: "inactive_user",

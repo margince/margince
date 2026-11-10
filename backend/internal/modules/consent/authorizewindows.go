@@ -18,10 +18,7 @@ package consent
 // than the core default is simply ignored.
 
 import (
-	"context"
 	"time"
-
-	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/pkg/extension/messaging"
 )
@@ -42,38 +39,32 @@ const (
 	defaultDealFollowUpWindow = 182 * 24 * time.Hour
 )
 
-// windows are the spans an evidence check measures against.
-// packRules is what this installation's jurisdiction sets: the spans that bind
-// a follow-up, and the marketing exception it grants.
+// packRules is what the recipient's jurisdiction sets: the spans that bind a
+// follow-up, and the marketing exception it grants.
 //
-// One struct because it is one read. packRulesFor is already the single settings
-// read on the send path, and a second resolver would mean a second query and
-// two places that can disagree about which pack is in force.
+// One struct because it is one read. packRulesFor is the single resolver on the
+// send path, and a second would be two places that can disagree about which
+// pack is in force.
 type packRules struct {
 	reply      time.Duration
 	dealFollow time.Duration
-	// marketingException is the exception this jurisdiction allows, nil for
-	// none — which is the answer for a pack that declares none and for an
-	// installation that names no country.
+	// marketingException is the exception this jurisdiction allows. It is nil
+	// for a pack that declares none and for the baseline.
 	marketingException *messaging.MarketingException
 }
 
-// packRulesFor resolves the rules that bind this installation.
+// packRulesFor answers the rules that bind a message to a recipient in this
+// country, the marketing selector's answer.
 //
-// A jurisdiction that declares a window shortens the core default; one that
-// declares none, and an installation that names no country at all, gets the
-// defaults above. That direction is deliberate — an installation with no
-// country stated should behave exactly as it did before jurisdiction packs
-// existed, rather than losing the ability to follow up because nobody has
-// filled in a setting.
-func (s *Store) packRulesFor(ctx context.Context, tx pgx.Tx) (packRules, error) {
+// A jurisdiction that declares a window shortens the core default. One that
+// declares none, and a recipient whose country is unknown or has no pack, gets
+// the defaults above. So requested correspondence flows when nobody has filled
+// in an address.
+func packRulesFor(country RecipientCountry) packRules {
 	out := packRules{reply: defaultReplyWindow, dealFollow: defaultDealFollowUpWindow}
-	rules, _, applicable, err := s.applicableRules(ctx, tx)
-	if err != nil {
-		return packRules{}, err
-	}
+	rules, _, applicable := applicableRules(country.Code)
 	if !applicable {
-		return out, nil
+		return out
 	}
 	// Zero means the pack says nothing about this window, which is not the same
 	// as a pack asking for zero — Rules.Validate refuses a negative one and the
@@ -93,20 +84,5 @@ func (s *Store) packRulesFor(ctx context.Context, tx pgx.Tx) (packRules, error) 
 			break
 		}
 	}
-	return out, nil
+	return out
 }
-
-// Why installation.country is MachineryApplied, recorded here because this is
-// the reader that needs it:
-//
-// packRulesFor runs inside the transaction that binds a decision, under whatever
-// principal is sending. A rep holds no settings-read grant and a dispatching
-// worker holds the system principal, so a gated read fails the send outright —
-// with a 500, not a refusal, because "the caller may not read a setting" is not
-// an answer about anybody's consent.
-//
-// That is not hypothetical: the entry shipped gated and killed every outbound
-// send job on main until it was declared. TestEverySettingReadThroughApplyIsDeclaredMachineryApplied
-// (backend/gates/machineryapplied_test.go) now derives the pairing from the
-// source, so a reader added here without the declaration fails at build rather
-// than in a worker log.

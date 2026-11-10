@@ -385,11 +385,12 @@ func (s *Dispatcher) call(ctx context.Context, params json.RawMessage, fr framin
 			"mint a new passport or contact the workspace admin.")
 	}
 	callCtx = s.withChatInput(callCtx, fr, p.Name, p.Arguments, params)
-	served, err := s.registry.InvokeServed(callCtx, p.Name, p.Arguments)
-	if spec, ok := s.registry.Spec(p.Name); ok && spec.Unlisted {
-		// The traffic a hidden name still carries, which decides when it can go.
-		s.log.Info("mcp: a hidden tool was called by its own name", "tool", p.Name)
+	spec, registered := s.registry.Spec(p.Name)
+	if registered && spec.ProtocolOnly {
+		callCtx = withRequestFacts(callCtx, fr.requestFacts())
 	}
+	served, err := s.registry.InvokeServed(callCtx, p.Name, p.Arguments)
+	s.noteHiddenCall(spec, registered)
 	if err != nil {
 		if handle, minted := s.mintTask(callCtx, fr, served.Tool, err); minted {
 			return handle

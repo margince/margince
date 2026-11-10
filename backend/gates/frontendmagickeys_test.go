@@ -29,7 +29,6 @@ package gates
 
 import (
 	"go/ast"
-	"os"
 	"regexp"
 	"sort"
 	"strconv"
@@ -51,8 +50,8 @@ const (
 
 // magicKeyPrefixes are the families the receipt sends: what happened, what it
 // means, why the machinery did it, and who it was. A key outside them
-// is ordinary screen copy, which the orphan gate in orphan-keys.test.ts already
-// holds.
+// is ordinary screen copy, which the orphan rule already holds
+// (frontend/census/rules/orphan-keys.census.ts).
 var magicKeyPrefixes = []string{"magic.action.", "magic.consequence.", "magic.why.", "magic.by."}
 
 // magicKeyLiteral matches a quoted key in TypeScript. Both families in one
@@ -152,7 +151,7 @@ func magicKeysWithin(file *ast.File) []string {
 // remove a key that was never real, so it cannot make this side read short.
 func magicKeysIn(t *testing.T, path string) map[string]bool {
 	t.Helper()
-	source, err := os.ReadFile(path)
+	source, err := gatekit.ReadFile(path)
 	if err != nil {
 		t.Fatalf("reading %s: %v", path, err)
 	}

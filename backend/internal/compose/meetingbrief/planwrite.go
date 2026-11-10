@@ -41,7 +41,7 @@ func WritePlan(
 func writePlanWithModel(
 	ctx context.Context, lane Completer, in Input, floor Plan, lang string,
 ) (Plan, error) {
-	reply, err := ai.Ask(ctx, lane, PlanRequest(planPromptOf(in, floor), lang), func(text string) error {
+	reply, err := ai.Ask(ctx, lane, PlanRequest(in, floor, lang), func(text string) error {
 		_, err := ParsePlan(text, in, floor)
 		return err
 	})

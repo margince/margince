@@ -39,30 +39,17 @@ type BookMeetingInput struct {
 	Subject        string
 	AttendeeEmails []string
 	Links          []ActivityLinkInput
-	// LinksFromRequest is LogActivityInput's flag: a door whose caller typed the
-	// links sets it.
-	LinksFromRequest bool
-	// Source names the capture surface ("manual" when empty — the
-	// authenticated default). The anonymous page passes public_booking
-	// so a stranger's submission never masquerades as hand-entered data.
-	Source string
 }
 
-// BookMeeting commits one slot: the meeting lands as an activity on the
-// linked records' timelines, and a taken slot answers slot_taken
-// instead of double-booking the host.
+// BookMeeting commits one slot through the invitation engine. The meeting lands
+// on the linked records' timelines and the host's calendar gets the event. The
+// provider sends the invite to every attendee. A taken slot answers slot_taken.
 func (s *Store) BookMeeting(ctx context.Context, in BookMeetingInput) (crmcontracts.Activity, error) {
 	if err := auth.Require(ctx, "activity", principal.ActionCreate); err != nil {
 		return crmcontracts.Activity{}, err
 	}
-	// Booking writes onto the host's calendar, so a caller may commit their OWN
-	// slots and only an admin may book on behalf of another host. A
-	// per-seat delegation grant would be the finer answer and this build has
-	// none, so the admin role carries it.
-	//
-	// The admin ROLE, not an unbounded row scope: ops, read_only and management
-	// all read every row, and none of them is thereby a calendar delegate for
-	// everyone in the company.
+	// Booking writes onto the host's calendar, so only an admin may book on
+	// behalf of another host: the admin ROLE, not an unbounded row scope.
 	actor, ok := principal.Actor(ctx)
 	if !ok {
 		return crmcontracts.Activity{}, apperrors.ErrPermissionDenied
@@ -81,49 +68,20 @@ func (s *Store) BookMeeting(ctx context.Context, in BookMeetingInput) (crmcontra
 	if len(in.Links) == 0 {
 		return crmcontracts.Activity{}, errBookingLinksEmpty
 	}
-
-	subject := in.Subject
-	if subject == "" {
-		subject = DefaultMeetingSubject
+	req, intent, err := s.bookingInvitation(ctx, in)
+	if err != nil {
+		return crmcontracts.Activity{}, err
 	}
-	source := in.Source
-	if source == "" {
-		source = sourceManual
+	queued, err := s.reserveAndQueueInvitation(ctx, in.Host, req, intent)
+	if err != nil {
+		return crmcontracts.Activity{}, err
 	}
-	occurred := in.Start
-	durationSeconds := int(in.End.Sub(in.Start) / time.Second)
-	// Booking a meeting is what `booked` MEANS, and every period question —
-	// how many did we book this week — counts the column rather than the row.
-	booked := string(crmcontracts.ActivityMeetingStatusBooked)
 	var activity crmcontracts.Activity
-	err := s.tx(ctx, func(tx pgx.Tx) error {
-		if err := storekit.LockWriteIdentity(ctx, tx, "meeting_host", in.Host.String()); err != nil {
-			return err
-		}
-		if err := reserveInvitation(ctx, tx, in.Host, in.Start, in.End, 0, ids.Nil); err != nil {
-			return err
-		}
+	err = s.tx(ctx, func(tx pgx.Tx) error {
 		var err error
-		activity, _, err = s.LogActivityTx(ctx, tx, LogActivityInput{
-			Kind:          KindMeeting,
-			Subject:       &subject,
-			OccurredAt:    &occurred,
-			HostUserID:    &in.Host,
-			MeetingStatus: &booked,
-			// This door takes the slot, which is what the overlap guard refuses a
-			// second of. Both booking doors arrive here; nothing else sets it.
-			ClaimsHostSlot:   true,
-			DurationSeconds:  &durationSeconds,
-			Links:            in.Links,
-			LinksFromRequest: in.LinksFromRequest,
-			Source:           source,
-		})
+		activity, err = readActivity(ctx, tx, ids.From[ids.ActivityKind](ids.UUID(queued.Id)), storekit.LiveOnly)
 		return err
 	})
-	if _, excluded := storekit.ExclusionViolation(err); excluded {
-		return crmcontracts.Activity{}, &SlotTakenError{Start: in.Start}
-	}
-	// Legacy bookings record the meeting; only the invitation engine sends it.
 	return activity, err
 }
 
@@ -148,10 +106,9 @@ func (h Handlers) BookMeeting(w http.ResponseWriter, r *http.Request, _ crmcontr
 		return
 	}
 	in := BookMeetingInput{
-		Host:             ids.From[ids.UserKind](actor.UserID),
-		Start:            req.Start,
-		End:              req.End,
-		LinksFromRequest: true,
+		Host:  ids.From[ids.UserKind](actor.UserID),
+		Start: req.Start,
+		End:   req.End,
 	}
 	if req.Subject != nil {
 		in.Subject = *req.Subject

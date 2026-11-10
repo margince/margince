@@ -12,9 +12,9 @@ import {
   formatNumber,
 } from "../../format/format";
 import { pipelineValueDetail } from "../../format/pipelinevalue";
-import { viewerZone } from "../../format/timezone";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { navigate } from "../../lib/router";
+import { useViewerZone } from "../../lib/viewerzone";
 import { WORKLIST_FILTER_PARAM } from "../worklist/worklist";
 import type { Worklist, WorklistFilter } from "../worklist/worklist.queries";
 import { calendarDay } from "./brief.facts";
@@ -214,6 +214,7 @@ function LaneReading({
 }
 
 export function BriefReadingsStrip({ day }: Readonly<{ day: Worklist }>) {
+  const readerZone = useViewerZone();
   const t = useT();
   const { locale } = useLocale();
   const plural = usePlural();
@@ -279,7 +280,7 @@ export function BriefReadingsStrip({ day }: Readonly<{ day: Worklist }>) {
             locale,
             t,
             plural,
-            zone: viewerZone(),
+            zone: readerZone,
           })}
           unavailable={t("brief.readings.unavailable.meetings")}
           lane="meetings"
@@ -301,7 +302,7 @@ export function BriefReadingsStrip({ day }: Readonly<{ day: Worklist }>) {
             soonest === null
               ? t("brief.readings.leadsBasis")
               : t("brief.readings.leadsDue", {
-                  value: formatDateTime(soonest, locale, viewerZone()),
+                  value: formatDateTime(soonest, locale, readerZone),
                 })
           }
           unavailable={t("brief.readings.unavailable.leads")}

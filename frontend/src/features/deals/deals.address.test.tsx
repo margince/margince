@@ -158,12 +158,18 @@ afterEach(() => {
 
 // A link may only name a dial the list sends on. Each sample is typed by the
 // dial union, so a new dial without one does not compile. A dial the list
-// ignores fails the case below.
-const SAMPLE: Record<DealDial, string> = {
-  stage_id: "s1",
-  company_id: "c-nw",
-  status: "lost",
-  forecast_category: "commit",
+// ignores fails the case below. A range dial is sent as its two bounds.
+const SAMPLE: Record<
+  DealDial,
+  Readonly<{ value: string; sent: Record<string, unknown> }>
+> = {
+  stage_id: { value: "s1", sent: { stage_id: "s1" } },
+  company_id: { value: "c-nw", sent: { company_id: "c-nw" } },
+  status: { value: "lost", sent: { status: "lost" } },
+  win_probability: {
+    value: "60..89",
+    sent: { win_probability_min: 60, win_probability_max: 89 },
+  },
 };
 
 describe("a deals link", () => {
@@ -175,9 +181,9 @@ describe("a deals link", () => {
         q: "",
         sort: "",
         includeArchived: false,
-        filters: { [dial]: SAMPLE[dial] },
+        filters: { [dial]: SAMPLE[dial].value },
       });
-      expect(sent[dial]).toBe(SAMPLE[dial]);
+      expect(sent).toMatchObject(SAMPLE[dial].sent);
     },
   );
 });
@@ -200,18 +206,18 @@ describe("the deals list opened from an address", () => {
   });
 
   it.each([
-    ["status", "closed", "Status"],
-    ["forecast_category", "slipped", "Forecast"],
+    ["status", "closed", "Status", "status="],
+    ["win_probability", "70..20", "Probability", "win_probability_"],
   ])(
     "drops %s=%s, which the wire does not admit, from row and request",
-    async (dial, value, chip) => {
+    async (dial, value, chip, wire) => {
       window.location.hash = `#/deals?${dial}=${value}&view=table`;
       const seen = noneSeen();
       vi.stubGlobal("fetch", stubBackend(seen));
       render();
 
       await waitFor(() => expect(seen.dealUrls.length).toBeGreaterThan(0));
-      expect(seen.dealUrls.at(-1)?.includes(`${dial}=`)).toBe(false);
+      expect(seen.dealUrls.at(-1)?.includes(wire)).toBe(false);
       expect(
         screen.queryByRole("group", { name: new RegExp(`^${chip}:`) }),
       ).toBeNull();

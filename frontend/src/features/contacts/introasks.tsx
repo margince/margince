@@ -16,8 +16,9 @@ import { Panel, PanelBody } from "../../design-system/panel";
 import { formatDate } from "../../format/format";
 import { INTRO_STATUS_LABELS as STATUS_LABEL } from "../../format/introstatus";
 import { useLocale, useT } from "../../i18n";
-import { useRecordZone } from "../../lib/recordzone";
+import { labelFor } from "../../lib/labelfor";
 import { useViewerId } from "../../lib/session";
+import { useViewerZone } from "../../lib/viewerzone";
 import { IntroDecisionDrawer } from "./introdecision";
 import {
   type IntroRequest,
@@ -167,7 +168,8 @@ function AskRow({
   // press on each before the first answer returns cannot fire both at once.
   return (
     <li>
-      <Badge>{t(STATUS_LABEL[ask.status])}</Badge> <AskSummary ask={ask} />
+      <Badge>{t(labelFor(STATUS_LABEL, ask.status))}</Badge>{" "}
+      <AskSummary ask={ask} />
       {mine && ask.status === "requested" ? (
         <Button onClick={onAnswer}>{t("contact.intro.answerAction")}</Button>
       ) : null}
@@ -217,7 +219,7 @@ function AskSummary({ ask }: Readonly<{ ask: IntroRequest }>) {
 function RecordedLine({ ask }: Readonly<{ ask: IntroRequest }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const channel = ask.recorded_channel;
   return (
     <>
@@ -227,7 +229,7 @@ function RecordedLine({ ask }: Readonly<{ ask: IntroRequest }>) {
       {ask.introduced_at
         ? `, ${formatDate(ask.introduced_at, locale, zone)}`
         : ""}
-      {channel ? ` · ${t(CHANNEL_LABEL[channel])}` : ""}{" "}
+      {channel ? ` · ${t(labelFor(CHANNEL_LABEL, channel))}` : ""}{" "}
       <Badge>{t("contact.intro.recordedBadge")}</Badge>
     </>
   );

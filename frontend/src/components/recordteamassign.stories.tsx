@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { screen, userEvent, within } from "storybook/test";
+import { expect, screen, userEvent, within } from "storybook/test";
 import {
   installFetchStub,
   jsonResponse,
@@ -76,6 +76,12 @@ function assign(roles: RecordRole[], moving?: RecordAssignment) {
         jsonResponse({
           data: [
             {
+              id: "invited",
+              display_name: "Invited colleague",
+              is_agent: false,
+              status: "invited",
+            },
+            {
               id: "u2",
               display_name: "Jonas Weiler",
               email: "jonas@example.test",
@@ -138,5 +144,18 @@ export const SwitchedToATeam: Story = {
     const dialog = within(await screen.findByRole("dialog"));
     await userEvent.click(await dialog.findByRole("button", { name: "Team" }));
     await dialog.findByRole("searchbox", { name: "Find a team" });
+  },
+};
+
+export const OnlyActiveColleagues: Story = {
+  render: assign(ROLES),
+  play: async () => {
+    const dialog = within(await screen.findByRole("dialog"));
+    await userEvent.type(
+      await dialog.findByRole("searchbox", { name: "Find a colleague" }),
+      "Jo",
+    );
+    await dialog.findByText("Jonas Weiler");
+    await expect(dialog.queryByText("Invited colleague")).toBeNull();
   },
 };

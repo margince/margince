@@ -72,6 +72,7 @@ var judged = map[string]struct {
 	"assign_lead_owner":                      {true, "RouteLead returns already_owned and writes nothing once the lead has an owner, under a row lock inside the workspace routing lock"},
 	"lead_first_response":                    {true, "stamps only an EARLIER first response; a later-or-equal stamp on an answered lead returns without writing"},
 	"lead_status_ladder":                     {true, "the ladder only climbs: AdvanceLeadStatus returns unless the current status Advances to the target"},
+	"follow_up_auto_resolve_on_sent_proof":   {true, "completes only open tasks; audit evidence preserves an undone completion on replay"},
 	"follow_up_auto_resolve":                 {true, "completes only tasks still is_done=false, so a second pass finds none open"},
 	"follow_up_auto_resolve_on_promoted":     {true, "the same resolve on a different trigger"},
 	"follow_up_auto_resolve_on_disqualified": {true, "the same resolve on a different trigger"},

@@ -15,11 +15,12 @@ package gates
 // a /* */ block or a list written as "this module keeps a, b and c" passes.
 
 import (
-	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // tableListPointer is the one legal form of the phrase.
@@ -47,7 +48,7 @@ func TestTableOwnershipCommentsPointAtTheEntityModel(t *testing.T) {
 			if strings.HasSuffix(path, "_test.go") || strings.HasSuffix(path, "_gen.go") {
 				continue
 			}
-			raw, err := os.ReadFile(path)
+			raw, err := gatekit.ReadFile(path)
 			if err != nil {
 				t.Fatalf("read %s: %v", path, err)
 			}

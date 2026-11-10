@@ -37,6 +37,7 @@ const askCompanyID = "018f0000-0000-7000-8000-000000000001"
 
 func askInput() Input {
 	return Input{
+		ID:           askCompanyID,
 		Name:         "Brandt Automotive GmbH",
 		Industry:     "Automotive",
 		Strength:     41,

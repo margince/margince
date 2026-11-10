@@ -23,7 +23,7 @@ func TestFindingsRankByTheirAmountInTheBaseCurrency(t *testing.T) {
 	seedRate(t, e, "0.5", 1)
 
 	finding := func(name string, amountMinor int64, currency string) ids.UUID {
-		deal := e.seedOpenDeal(t, name, pipelineTestStage, &e.Rep1, nil, nil)
+		deal := e.seedOpenDeal(t, name, pipelineTestStage, &e.Rep1, nil)
 		if _, err := e.owner.Exec(t.Context(),
 			`INSERT INTO assurance_exception
 			   (logical_key, type, subject_kind, subject_id, severity, affected_minor, currency, captured_by)

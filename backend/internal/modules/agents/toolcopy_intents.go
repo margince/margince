@@ -217,8 +217,8 @@ var readRelationshipsCopy = toolCopy{
 }
 
 var readProjectCopy = toolCopy{
-	Purpose: "Read one project. overview: its whole page — company, phase history with time per " +
-		"phase, deals, stakeholders, contracts, documents, open commitments, timeline, filing " +
+	Purpose: "Read one project. overview: its whole page — company, phase history (each move with " +
+		"its reason, and time per phase), deals, stakeholders, contracts, documents, open commitments, timeline, filing " +
 		"coverage, totals. handoff: what the delivery side needs from sales — who owns it, who " +
 		"to call at the client, what was sold, by when, what is already promised — with a named " +
 		"gap for each the records do not answer.",
@@ -226,7 +226,7 @@ var readProjectCopy = toolCopy{
 		"what your grants withhold. A handoff gap means the field is empty as far as the caller " +
 		"can see. Preparing a handover is not performing one.",
 	Instead: "read_record for the project's stored fields alone, catch_me_up_on for what has been " +
-		"happening.",
+		"happening, change_state record_project_health to say how it is going.",
 	Retain: "The project_id, each gap's source field, and the deal, contact and task ids a " +
 		"follow-up acts on.",
 }

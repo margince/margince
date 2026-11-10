@@ -201,6 +201,37 @@ describe("the lead header's Log activity and Add task", () => {
 });
 
 describe("the lead header's Email verb", () => {
+  it("refuses Email without the activity grant, over the same sentence as Log", async () => {
+    stubLead();
+    const fetchWithoutGrant = globalThis.fetch;
+    vi.stubGlobal("fetch", async (request: Request) =>
+      request.url.endsWith("/v1/me")
+        ? jsonResponse({
+            user: { id: "u-9", display_name: "Me" },
+            roles: ["read_only"],
+            teams: [],
+            authorization: meFixture({ allow: { lead: ["read"] } })
+              .authorization,
+          })
+        : fetchWithoutGrant(request),
+    );
+    render(<LeadScreen id="l-1" />);
+
+    const email = await screen.findByRole("button", { name: "Email" });
+    const logButton = screen.getByRole("button", { name: "Log activity" });
+    await vi.waitFor(() =>
+      expect(email.getAttribute("aria-describedby")).toBeTruthy(),
+    );
+    expect(email.hasAttribute("disabled")).toBe(true);
+    expect(email.getAttribute("aria-describedby")).toBe(
+      logButton.getAttribute("aria-describedby"),
+    );
+    expect(
+      document.getElementById(email.getAttribute("aria-describedby") ?? "")
+        ?.textContent,
+    ).toBe("You do not have permission to log activities on this record.");
+  });
+
   it("allows outreach without inventing a reply obligation", async () => {
     const user = userEvent.setup();
     stubLead(

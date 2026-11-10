@@ -16,3 +16,11 @@ func TestNowCarriesNoMoreThanTheMicrosecondsPostgresStores(t *testing.T) {
 		}
 	}
 }
+
+// A fixture N days back is then N times 24 hours back, as the database counts
+// it, in whatever zone the process runs.
+func TestNowIsInUTC(t *testing.T) {
+	if got := Now(t).Location(); got != time.UTC {
+		t.Fatalf("Now() is in %v, want UTC", got)
+	}
+}

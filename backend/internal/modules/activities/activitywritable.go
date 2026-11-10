@@ -40,7 +40,7 @@ func stampActivitiesWritable(ctx context.Context, tx pgx.Tx, page []crmcontracts
 		named[i] = ids.UUID(page[i].Id)
 	}
 	may := make(map[ids.UUID]bool)
-	if mayMutate(ctx) && auth.Allows(ctx, "activity", principal.ActionUpdate) && len(page) > 0 {
+	if mayUpdateActivities(ctx) && len(page) > 0 {
 		var err error
 		if may, err = auth.ActivityWritableSubset(ctx, tx, named); err != nil {
 			return err
@@ -94,10 +94,8 @@ func stampAwaitingOutcome(ctx context.Context, tx pgx.Tx, page []crmcontracts.Ac
 	return nil
 }
 
-// mayMutate is the seat ceiling the mutation admission applies before any
-// grant: a read seat changes nothing, whatever its role says. The system
-// principal holds no seat and is trusted by construction, as in auth.Require.
-func mayMutate(ctx context.Context) bool {
-	p, ok := principal.Actor(ctx)
-	return ok && (p.Type == principal.PrincipalSystem || p.SeatType.CanMutate())
+// mayUpdateActivities is the object half of every activity write offered to a
+// reader. The row authority is asked after it.
+func mayUpdateActivities(ctx context.Context) bool {
+	return auth.AllowsWrite(ctx, "activity", principal.ActionUpdate)
 }

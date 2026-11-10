@@ -39,7 +39,7 @@ func readEmailAccess(
 	tx pgx.Tx,
 	id ids.ActivityID,
 	activity crmcontracts.Activity,
-) (crmcontracts.EmailAccess, error) {
+) (crmcontracts.EmailAccess, bool, error) {
 	out := crmcontracts.EmailAccess{
 		ContentState:  crmcontracts.EmailAccessContentStateAvailable,
 		ChangeMode:    crmcontracts.EmailAccessChangeModeNone,
@@ -51,7 +51,7 @@ func readEmailAccess(
 		out.Audience = &aud
 		status, err := statusForAudience(ctx, tx, id, aud)
 		if err != nil {
-			return crmcontracts.EmailAccess{}, err
+			return crmcontracts.EmailAccess{}, false, err
 		}
 		out.DisplayStatus = status
 	}
@@ -61,7 +61,7 @@ func readEmailAccess(
 
 	imported, err := activityWasImported(ctx, tx, id)
 	if err != nil {
-		return crmcontracts.EmailAccess{}, err
+		return crmcontracts.EmailAccess{}, false, err
 	}
 
 	// Denial and failure are different answers and must not collapse into one.
@@ -69,26 +69,35 @@ func readEmailAccess(
 	// error, which reaches the reader as the Access control quietly not being
 	// there — indistinguishable from the product deciding they lack authority.
 	writable := false
-	switch err := auth.EnsureActivityWritable(ctx, tx, id.UUID); {
-	case err == nil:
-		writable = true
-	case errors.Is(err, apperrors.ErrNotFound), errors.Is(err, apperrors.ErrPermissionDenied):
-		// Denied. Not an error to report: the caller may read this message and
-		// simply may not change who else does.
-	default:
-		return crmcontracts.EmailAccess{}, err
+	if mayUpdateActivities(ctx) {
+		switch err := auth.EnsureActivityWritable(ctx, tx, id.UUID); {
+		case err == nil:
+			writable = true
+		case errors.Is(err, apperrors.ErrNotFound), errors.Is(err, apperrors.ErrPermissionDenied):
+			// Denied. Not an error to report: the caller may read this message and
+			// may not change who else does.
+		default:
+			return crmcontracts.EmailAccess{}, false, err
+		}
 	}
 	switch {
+	case activity.CanShareInternal != nil:
+		out.CanChange = *activity.CanShareInternal
+		if out.CanChange {
+			out.ChangeMode = crmcontracts.EmailAccessChangeModeMessageAudience
+			out.ChangeScope = new(crmcontracts.EmailAccessChangeScopeMessage)
+		}
 	case imported:
 		// A captured message: the caller changes their own contribution to the
 		// thread, and only their own. Every importing seat holds one, so this
 		// is offered to an importer rather than to a writer of the row.
 		sender, err := callerIsSenderSeat(ctx, tx, id)
 		if err != nil {
-			return crmcontracts.EmailAccess{}, err
+			return crmcontracts.EmailAccess{}, false, err
 		}
-		out.CanChange = sender
-		if sender {
+		// ThreadAudienceSetter.Decide refuses a read seat and a role without activity.update.
+		out.CanChange = sender && mayUpdateActivities(ctx)
+		if out.CanChange {
 			out.ChangeMode = crmcontracts.EmailAccessChangeModeThreadContribution
 			out.ChangeScope = new(crmcontracts.EmailAccessChangeScopeThread)
 		}
@@ -106,11 +115,11 @@ func readEmailAccess(
 	if out.CanChange && activity.Audience != nil && *activity.Audience == crmcontracts.ActivityAudienceSelected {
 		members, err := readSelectedMembers(ctx, tx, id)
 		if err != nil {
-			return crmcontracts.EmailAccess{}, err
+			return crmcontracts.EmailAccess{}, false, err
 		}
 		out.SelectedMembers = &members
 	}
-	return out, nil
+	return out, writable, nil
 }
 
 // statusForAudience is the word the badge prints for a message the caller can

@@ -25,12 +25,18 @@ import (
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // Definition is the type-erased view the registry stores. Entry[T] is the
 // typed form callers hold; the registry cannot be generic over a
 // heterogeneous set, so registration erases and the accessors restore.
 type Definition interface {
+	Authorize(context.Context, principal.Action) error
+	CheckChange(context.Context, pgx.Tx, json.RawMessage, json.RawMessage) error
+	Changed(context.Context, pgx.Tx, ids.UUID) error
 	// Key is the `<module>.<name>` storage key.
 	Key() string
 	// Object is the RBAC object gating reads and writes of this setting.
@@ -83,13 +89,16 @@ type Definition interface {
 // Entry is one setting's declaration: its key, governance, default and
 // validation. Modules declare these as package vars; compose registers them.
 type Entry[T any] struct {
-	key      string
-	object   string
-	verb     string
-	def      T
-	validate func(T) error
-	freeze   func(context.Context, pgx.Tx) (bool, string, error)
-	identity bool
+	authorize   func(context.Context, principal.Action) error
+	checkChange func(context.Context, pgx.Tx, T, T) error
+	changed     func(context.Context, pgx.Tx, ids.UUID) error
+	key         string
+	object      string
+	verb        string
+	def         T
+	validate    func(T) error
+	freeze      func(context.Context, pgx.Tx) (bool, string, error)
+	identity    bool
 	// secretReference redacts this entry's audited image. Off by default: a
 	// setting's value belongs in the ledger unless someone declares it is a
 	// capability handle rather than a choice.

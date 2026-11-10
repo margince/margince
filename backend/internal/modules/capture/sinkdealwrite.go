@@ -28,6 +28,9 @@ type DealFiler interface {
 	// RetractMachineDeal takes one deal link off under the activity's lock,
 	// only while no human or agent ever filed the activity on a deal.
 	RetractMachineDeal(ctx context.Context, tx pgx.Tx, id ids.ActivityID, deal ids.UUID, evidence map[string]any) (bool, error)
+	// StampDealTopic records that the topic check answered digest for the
+	// activity, under its lock.
+	StampDealTopic(ctx context.Context, tx pgx.Tx, id ids.ActivityID, digest string) error
 }
 
 // linkActivityToDeal writes the one deal link the attribution rule concluded.
@@ -43,7 +46,7 @@ func linkActivityToDeal(f dealFiling, tx pgx.Tx, activityID ids.ActivityID, deal
 	if err != nil {
 		return "", err
 	}
-	current, err := decideDeal(f.decider, tx, facts, candidates)
+	current, _, err := decideFiling(f, tx, facts, candidates)
 	if err != nil || current.Outcome != DealLinked || current.Deal != dealID {
 		return DealNotWritable, err
 	}

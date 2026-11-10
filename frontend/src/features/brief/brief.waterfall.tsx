@@ -1,12 +1,12 @@
 import type { components } from "../../api/schema";
 import { Button } from "../../design-system/atoms";
 import { DataTable } from "../../design-system/datatable";
-import { Panel } from "../../design-system/panel";
 import { Waterfall, type WaterfallStep } from "../../design-system/waterfall";
 import { formatMoney, formatMoneyOrAbsent } from "../../format/format";
 import { formatMoneyOrWord } from "../../format/moneyword";
 import { type Locale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { labelFor } from "../../lib/labelfor";
 
 type Review = components["schemas"]["WeeklyReview"];
 type Outlook = NonNullable<Review["outlook"]>[number];
@@ -60,16 +60,9 @@ export function OutlookPanel({
       minor: (o) => o.won_minor,
     },
     {
-      key: "commit",
-      label: t("brief.weekly.outlook.commit"),
-      minor: (o) => o.commit_minor,
-    },
-    {
-      key: "best",
-      label: t("brief.weekly.outlook.bestCase"),
-      // A reader adding best case to commit would count the overlap twice.
-      basis: t("brief.weekly.outlook.bestCaseDetail"),
-      minor: (o) => o.best_case_minor,
+      key: "likely",
+      label: t("brief.weekly.outlook.likely"),
+      minor: (o) => o.likely_minor,
     },
     {
       key: "weighted",
@@ -81,10 +74,9 @@ export function OutlookPanel({
           {
             key: "landing",
             label: t("brief.weekly.outlook.landing"),
-            // The measure it was read under, frozen with the week.
-            basis: measure
-              ? t(`brief.weekly.outlook.measure.${measure}`)
-              : undefined,
+            // The measure it was read under, frozen with the week. A week
+            // frozen under a retired measure shows its number unlabelled.
+            basis: measureLabel(measure, t),
             minor: (o: Outlook) => o.closing_landing_minor,
           },
         ]
@@ -104,37 +96,35 @@ export function OutlookPanel({
   const bridged = outlook.find((o) => o.period_kind === "quarter") ?? first;
   return (
     <>
-      <Panel>
-        <DataTable
-          bleed
-          label={t("brief.weekly.outlook")}
-          rowKey={(row: ForecastRow) => row.key}
-          rows={rows}
-          columns={[
-            {
-              key: "figure",
-              header: t("brief.report.col.figure"),
-              grow: true,
-              render: (row) => (
-                <>
-                  {row.label}
-                  {row.basis && (
-                    <span className="brief-report-basis t-caption">
-                      {row.basis}
-                    </span>
-                  )}
-                </>
-              ),
-            },
-            ...outlook.map((o) => ({
-              key: o.period_kind,
-              header: t(PERIOD_LABEL[o.period_kind]),
-              align: "end" as const,
-              render: (row: ForecastRow) => money(o, row.minor(o)),
-            })),
-          ]}
-        />
-      </Panel>
+      <DataTable
+        bleed
+        label={t("brief.weekly.outlook")}
+        rowKey={(row: ForecastRow) => row.key}
+        rows={rows}
+        columns={[
+          {
+            key: "figure",
+            header: t("brief.report.col.figure"),
+            grow: true,
+            render: (row) => (
+              <>
+                {row.label}
+                {row.basis && (
+                  <span className="brief-report-basis t-caption">
+                    {row.basis}
+                  </span>
+                )}
+              </>
+            ),
+          },
+          ...outlook.map((o) => ({
+            key: o.period_kind,
+            header: t(labelFor(PERIOD_LABEL, o.period_kind)),
+            align: "end" as const,
+            render: (row: ForecastRow) => money(o, row.minor(o)),
+          })),
+        ]}
+      />
       <div className="brief-report-actions">
         <Button variant="ghost" onClick={onOpenForecast}>
           {t("brief.weekly.outlook.open")}
@@ -190,4 +180,23 @@ function BridgePanel({
       reconciliationWarning={t("brief.weekly.bridge.reconcile")}
     />
   );
+}
+
+const MEASURE_LABELS = {
+  likely: "brief.weekly.outlook.measure.likely",
+  weighted: "brief.weekly.outlook.measure.weighted",
+  manager_call: "brief.weekly.outlook.measure.manager_call",
+} as const;
+
+function labelled(measure: string): measure is keyof typeof MEASURE_LABELS {
+  return Object.hasOwn(MEASURE_LABELS, measure);
+}
+
+function measureLabel(
+  measure: Outlook["forward_measure"],
+  t: ReturnType<typeof useT>,
+): string | undefined {
+  return measure !== undefined && labelled(measure)
+    ? t(labelFor(MEASURE_LABELS, measure))
+    : undefined;
 }

@@ -101,6 +101,17 @@ function Chosen({
   );
 }
 
+async function focusedCard(canvasElement: HTMLElement) {
+  const card = await waitFor(() => {
+    const found = canvasElement.querySelector<HTMLElement>(
+      ".brief-triage-frame > article",
+    );
+    if (!found) throw new Error("the chosen task drew no card");
+    return found;
+  });
+  return within(card);
+}
+
 /** The first row in hand: a customer waiting, with five behind it. */
 export const InHand: Story = { render: panel(aDay()) };
 
@@ -111,10 +122,10 @@ export const Pressed: Story = {
     const canvas = within(canvasElement);
     await userEvent.click(
       await canvas.findByRole("button", {
-        name: /Follow up on customer commitment 3/,
+        name: /^Follow up on customer commitment 3/,
       }),
     );
-    const chosen = within(canvas.getByRole("article"));
+    const chosen = await focusedCard(canvasElement);
     await expect(
       await chosen.findByText("Follow up on customer commitment 3"),
     ).toBeTruthy();
@@ -170,6 +181,11 @@ function callBackPanel(primaryEmail: string | null) {
           is_done: false,
           source_activity_id: "call-1",
           links: [{ entity_type: "contact", entity_id: "c-alice" }],
+          email_target: {
+            entity_type: "contact",
+            entity_id: "c-alice",
+            ...(primaryEmail ? {} : { refusal: "no_address" }),
+          },
         }),
       "GET /activities/call-1": () =>
         jsonResponse({
@@ -199,7 +215,7 @@ function callBackPanel(primaryEmail: string | null) {
 export const TaskFromCallInHand: Story = {
   render: callBackPanel("alice@brandt.example"),
   play: async ({ canvasElement }) => {
-    const card = within(within(canvasElement).getByRole("article"));
+    const card = await focusedCard(canvasElement);
     await card.findByRole("link", { name: en["record.verb.call"] });
     await expect(
       card.getByRole("link", { name: en["record.verb.email"] }),
@@ -212,7 +228,7 @@ export const TaskFromCallInHand: Story = {
 export const TaskFromCallNoAddressInHand: Story = {
   render: callBackPanel(null),
   play: async ({ canvasElement }) => {
-    const card = within(within(canvasElement).getByRole("article"));
+    const card = await focusedCard(canvasElement);
     await card.findByRole("link", { name: en["record.verb.call"] });
     await expect(card.getByText(en["task.next.noAddress"])).toBeTruthy();
   },
@@ -247,7 +263,7 @@ export const AccountTerminationDark: Story = {
 export const ApprovedButNotRun: Story = {
   render: panel([failedApprovalRow(), taskRow("call", "Call the buyer")]),
   play: async ({ canvasElement }) => {
-    const card = within(within(canvasElement).getByRole("article"));
+    const card = await focusedCard(canvasElement);
     await expect(card.getByText("Move deal to Won")).toBeTruthy();
     await expect(card.getByText(failedApprovalRow().detail ?? "")).toBeTruthy();
     await expect(
@@ -279,7 +295,7 @@ export const LegacyStalledDeal: Story = {
     detailedDeal(),
   ]),
   play: async ({ canvasElement }) => {
-    const card = within(within(canvasElement).getByRole("article"));
+    const card = await focusedCard(canvasElement);
     await expect(
       card.getByRole("heading", { name: "Acme Expansion" }),
     ).toBeTruthy();
@@ -322,7 +338,7 @@ function detailedDeal(): WorklistItem {
 export const DealWithNextAction: Story = {
   render: panel([detailedDeal()]),
   play: async ({ canvasElement }) => {
-    const card = within(within(canvasElement).getByRole("article"));
+    const card = await focusedCard(canvasElement);
     await expect(
       card.getByRole("heading", { name: "Nordwind Rollout" }),
     ).toBeTruthy();
@@ -348,7 +364,7 @@ export const RecordedNextStepGap: Story = {
     },
   ]),
   play: async ({ canvasElement }) => {
-    const card = within(within(canvasElement).getByRole("article"));
+    const card = await focusedCard(canvasElement);
     await waitFor(() =>
       expect(card.getByText(en["worklist.because.no_next_step"])).toBeVisible(),
     );

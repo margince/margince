@@ -1,0 +1,44 @@
+# CASE 109 — An agent sets its user's time zone only as source `agent`. The zone
+# then reads as the agent's and not as one the user picked, so timezone_chosen
+# stays false until the user picks a zone in the app.
+#
+# The server refuses `chosen` or `browser` from an agent and stores the agent's
+# stamp, so the call this case holds is the one the server accepts: the user's
+# zone, with source agent. A run that tries `chosen` first is a model claiming
+# the user's own pick, and fails here even though a retry would land.
+#
+# THE END STATE reads the zone through whoami. The stored flag and stamp are on
+# the user's own seat only, which no agent tool reads; the Go integration test
+# TestATimeZoneSaysItsAgentOnTheUsersOwnSeatOnly holds them.
+name: case109_show_my_times_in_lisbon
+criteria: [1]
+
+writes: true
+
+prompt: |
+  I am working from Lisbon for the next three months. Show my times in Lisbon
+  time from now on.
+
+must_call:
+  - change_my_settings
+
+must_call_with:
+  - change_my_settings.action=save_timezone
+
+must_call_matching:
+  - 'change_my_settings~"timezone": "Europe/Lisbon"'
+  - 'change_my_settings~"source": "agent"'
+
+must_not_call_with:
+  - 'change_my_settings~"source": "(?:chosen|browser)"'
+  - change_settings~.
+
+may_call:
+  - whoami
+  - read_workspace
+
+must_end_with:
+  - me "admin@demo.test" timezone=Europe/Lisbon
+
+runs: 3
+pass_at: 2

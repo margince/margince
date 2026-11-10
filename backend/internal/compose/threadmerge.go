@@ -25,6 +25,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/modules/consent"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 )
 
 // threadMergedTables names every table mergeThreadsTx rewrites, for the
@@ -48,6 +49,9 @@ var threadMergedTables = []string{
 func mergeThreadsTx(ctx context.Context, tx pgx.Tx, from, to string) error {
 	if from == "" || to == "" || from == to {
 		return nil
+	}
+	if err := storekit.LockThreadKeysTx(ctx, tx, from, to); err != nil {
+		return err
 	}
 	if err := activities.ThreadMergeTx(ctx, tx, from, to); err != nil {
 		return err

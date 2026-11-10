@@ -37,10 +37,15 @@ func foldMeetingDuplicateTx(
 	if err != nil || !retirable {
 		return false, err
 	}
-	if err := capture.CarryMeetingImportTx(ctx, tx, duplicate, survivor, seat); err != nil {
+	if err := capture.CarryImportTx(ctx, tx, duplicate, survivor, seat); err != nil {
 		return false, err
 	}
 	if err := meetings.RetireMeetingCopyTx(ctx, tx, duplicate, survivor); err != nil {
+		return false, err
+	}
+	// The organizer's import may have come over with the copy, and the survivor
+	// may be the guest's row a human worked on.
+	if _, err := meetings.ClaimOrganizerHostTx(ctx, tx, survivor); err != nil {
 		return false, err
 	}
 	// The survivor's audience follows the seats now recorded on it.
@@ -128,5 +133,13 @@ func foldCapturedMeeting(meetings *activities.Store) capture.MeetingFolder {
 			return false, nil
 		}
 		return foldMeetingDuplicateTx(ctx, tx, meetings, duplicate, survivor, *seat, "")
+	}
+}
+
+// keepOrganizerHost hands a meeting a calendar sync replays to its organizer.
+func keepOrganizerHost(meetings *activities.Store) capture.MeetingHostKeeper {
+	return func(ctx context.Context, tx pgx.Tx, meeting ids.ActivityID) error {
+		_, err := meetings.ClaimOrganizerHostTx(ctx, tx, meeting)
+		return err
 	}
 }

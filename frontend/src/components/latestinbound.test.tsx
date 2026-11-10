@@ -12,6 +12,7 @@ import { LocaleProvider } from "../i18n";
 import type { EntityKind } from "../lib/entity";
 import { OpenSourceProvider } from "../lib/opensource";
 import { forgetSeat } from "../lib/storage";
+import { type GrantSpec, meFixture } from "../testing/mefixture";
 import {
   type JustIn,
   JustInScope,
@@ -84,12 +85,17 @@ function withProviders(node: ReactNode, openSource = vi.fn()) {
   );
 }
 
-function scoped(latest: JustIn | undefined, bar: ReactNode) {
+function scoped(
+  latest: JustIn | undefined,
+  bar: ReactNode,
+  contact?: { attachable?: boolean },
+) {
   return (
     <JustInScope
       latest={latest}
       entityType="contact"
       entityId="contact-1"
+      contact={contact}
       actions={(row) => <button type="button">Reply to {row.id}</button>}
     >
       {bar}
@@ -203,6 +209,25 @@ describe("a record's Next bar with what just came in", () => {
     expect(screen.getByRole("button", { name: "Read form" })).toBeTruthy();
   });
 
+  it("reads a website form's note as text, without its markdown", () => {
+    const form = activity("form", {
+      kind: "note",
+      source: "web_form",
+      body: "> Hello,\n> we need a quote for 40 seats.\n>\n> **not bold** & more\n>\n> Name: Pat",
+    });
+    withProviders(
+      scoped(
+        { activity: form, kind: "web_form", accepts_request: false },
+        <RecordNextBar />,
+      ),
+    );
+    expect(
+      screen.getByText(
+        "Hello, · we need a quote for 40 seats. · not bold & more · Name: Pat",
+      ),
+    ).toBeTruthy();
+  });
+
   it("keeps a chat message's own characters, which are not markdown", () => {
     const chat = activity("chat", {
       kind: "message",
@@ -218,12 +243,18 @@ describe("a record's Next bar with what just came in", () => {
   });
 });
 
-function serveTasks() {
+function serveTasks(allow: GrantSpec = { activity: ["read", "create"] }) {
   const posted: Record<string, unknown>[] = [];
   vi.stubGlobal(
     "fetch",
     vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const request = input instanceof Request ? input : undefined;
+      const url = request ? request.url : String(input);
+      if (url.endsWith("/me")) {
+        return new Response(JSON.stringify(meFixture({ allow })), {
+          headers: { "Content-Type": "application/json" },
+        });
+      }
       const body = request ? await request.text() : String(init?.body ?? "");
       posted.push(JSON.parse(body));
       return new Response(JSON.stringify(activity("task", { kind: "task" })), {
@@ -271,6 +302,36 @@ describe("making the item a task", () => {
       source_activity_id: "form",
     });
   });
+
+  it("offers no task to a seat that may not write activities", async () => {
+    const posted = serveTasks({ activity: ["read"] });
+    withProviders(scoped(MAIL_IN, <RecordNextBar />));
+
+    // Drawn while the grants are unknown, gone once /me refuses the write.
+    await screen.findByRole("button", { name: "Create task" });
+    await waitFor(() =>
+      expect(screen.queryByRole("button", { name: "Create task" })).toBeNull(),
+    );
+    expect(posted).toHaveLength(0);
+  });
+
+  // The task files under the contact the item came in on.
+  it.each([
+    [true, 1],
+    [false, 0],
+  ] as const)(
+    "on a contact whose attach right is %s, offers %i Create task",
+    async (attachable, count) => {
+      serveTasks();
+      withProviders(scoped(MAIL_IN, <RecordNextBar />, { attachable }));
+
+      await waitFor(() =>
+        expect(
+          screen.queryAllByRole("button", { name: "Create task" }),
+        ).toHaveLength(count),
+      );
+    },
+  );
 });
 
 describe("the Just in line in the record's head", () => {
@@ -361,14 +422,18 @@ describe("the Next bar with nothing next", () => {
     subject: "The order form",
   });
 
-  it("says it waits on them when what we sent is the last exchange", async () => {
+  it("shows the last exchange as history, waiting on them, above the bar", async () => {
     const user = userEvent.setup();
     const openSource = vi.fn();
     serveLatest([], { activity: sent, whose_move: "them" });
     withProviders(scoped(undefined, <RecordNextBar />), openSource);
-    expect(await screen.findByText("Waiting on them")).toBeTruthy();
+    expect(
+      await screen.findByText(/^Last email ·.*· Waiting on them$/),
+    ).toBeTruthy();
     expect(screen.getByText("The order form")).toBeTruthy();
-    await user.click(screen.getByRole("button", { name: "Open" }));
+    // The bar keeps its own answer; the exchange is not its content.
+    expect(screen.getByText("Nothing is due next.")).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "View email" }));
     expect(openSource).toHaveBeenCalledWith("sent");
   });
 
@@ -376,8 +441,45 @@ describe("the Next bar with nothing next", () => {
     const call = activity("call", { kind: "call", direction: "inbound" });
     serveLatest([], { activity: call, whose_move: "us" });
     withProviders(scoped(undefined, <RecordNextBar />));
-    expect(await screen.findByText("Your turn to answer")).toBeTruthy();
-    expect(screen.getByText(/^Call ·/)).toBeTruthy();
+    expect(
+      await screen.findByText(/^Last call ·.*· Your turn to answer$/),
+    ).toBeTruthy();
+  });
+
+  // A held meeting with no reply direction leaves "neither" move. That is no
+  // evidence that nothing is left to do, and the meeting is history, not the
+  // next step.
+  it("shows a past meeting as history and claims nothing from it", async () => {
+    const user = userEvent.setup();
+    const openSource = vi.fn();
+    const lunch = activity("lunch", {
+      kind: "meeting",
+      subject: "Introductory lunch",
+    });
+    serveLatest([], { activity: lunch, whose_move: "neither" });
+    withProviders(
+      scoped(undefined, <RecordNextBar empty="No follow-up task recorded." />),
+      openSource,
+    );
+    const line = await screen.findByText(/^Last meeting ·/);
+    expect(line.textContent).not.toMatch(/Waiting|turn/);
+    expect(screen.getByText("Introductory lunch")).toBeTruthy();
+    expect(screen.getByText("No follow-up task recorded.")).toBeTruthy();
+    expect(screen.queryByText("Nothing is due next.")).toBeNull();
+    // The meeting is not drawn as the bar's title.
+    expect(
+      screen.getByText("Introductory lunch").closest(".next-bar-row"),
+    ).toBeNull();
+    await user.click(screen.getByRole("button", { name: "View meeting" }));
+    expect(openSource).toHaveBeenCalledWith("lunch");
+  });
+
+  it("leaves the exchange out where the page shows it elsewhere", () => {
+    const asked = serveLatest([], { activity: sent, whose_move: "them" });
+    withProviders(scoped(undefined, <RecordNextBar lastExchange={false} />));
+    expect(screen.getByText("Nothing is due next.")).toBeTruthy();
+    expect(screen.queryByText(/^Last email/)).toBeNull();
+    expect(asked).toHaveLength(0);
   });
 
   it("keeps a bar that has something next", async () => {

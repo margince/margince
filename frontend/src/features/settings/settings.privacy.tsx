@@ -17,6 +17,7 @@ import {
 } from "../privacy/privacy.corrections";
 import { ConsentPurposesCard } from "../privacy/privacy.purposes";
 import { RetentionCard } from "../privacy/retention";
+import { CustomerNoticesCard } from "./customernotices";
 import {
   PinRecordAction,
   RestrictedRecordsCard,
@@ -25,18 +26,23 @@ import {
 
 /** The governance page's panels in working order: defaults, the requests
  * that override them, then the duties nobody asked for. */
-export function PrivacyLanes() {
+export function PrivacyLanes({ tab = "consent" }: Readonly<{ tab?: string }>) {
   const [params] = useUrlParams();
   const caseId = params.get(NOTICE_CASE_PARAM);
+  // A notice case opens over whichever tab the link named.
   if (caseId) return <NoticeCasesCard key={caseId} caseId={caseId} />;
-  return (
-    <>
-      <ConsentPurposesCard />
-      <RetentionCard />
-      <RequestsPanel />
-      <NoticeCasesCard />
-    </>
-  );
+  switch (tab) {
+    case "customers":
+      return <CustomerNoticesCard />;
+    case "retention":
+      return <RetentionCard />;
+    case "requests":
+      return <RequestsPanel />;
+    case "duties":
+      return <NoticeCasesCard />;
+    default:
+      return <ConsentPurposesCard />;
+  }
 }
 
 const LANES = ["requests", "corrections", "restricted"] as const;
@@ -100,8 +106,8 @@ function NewRequestAction() {
   const t = useT();
   const titleId = useId();
   const [creating, setCreating] = useState(false);
-  // Opening a request writes the contact it names (consent/dsr.go CreateDSR).
-  const canOpenRequest = useCanWrite("contact", "update");
+  // Filing a request is working the queue (consent/dsr.go CreateDSR).
+  const canOpenRequest = useCanWrite("privacy_request", "update");
   if (!canOpenRequest) {
     return null;
   }

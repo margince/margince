@@ -47,8 +47,8 @@ afterEach(() => {
 //
 // What these rows have to prove is that each half of a pair carries its OWN
 // time — not what any particular zone renders. Naming a zone to check that
-// would pin one here, which is the thing zone-by-purpose.test.ts forbids a
-// screen from doing, and pinning the installation's fallback would agree with
+// would pin one here, and census/rules/zone-by-purpose.census.ts forbids a
+// screen to pin one. Pinning the installation's fallback would agree with
 // whatever that value happened to be. The two instants are two minutes apart,
 // so in every zone their rendered forms differ; that is the claim, and it is
 // checkable without one.

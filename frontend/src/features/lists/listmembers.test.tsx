@@ -4,13 +4,7 @@
 
 import "@testing-library/jest-dom/vitest";
 
-import {
-  cleanup,
-  render,
-  screen,
-  waitFor,
-  within,
-} from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -76,13 +70,9 @@ function openList(listID: string, routes: Routes) {
 }
 
 const selectMiTek = en["bulk.selectRow"].replace("{name}", "MiTek");
-const selectAll42 = en["lists.members.selectAll_other"].replace(
-  "{count}",
-  "42",
-);
 
 describe("acting on a list's members", () => {
-  it("draws the members table as the Members panel's own content, with Select all in its head", async () => {
+  it("draws the members table as the Members panel's own content", async () => {
     openList(LIVE_ID, {});
     await screen.findByText("MiTek");
     const region = screen.getByRole("region", {
@@ -90,9 +80,6 @@ describe("acting on a list's members", () => {
     });
     expect(region.querySelector(":scope > .lt")).not.toBeNull();
     expect(region.querySelector(".panel-body .lt")).toBeNull();
-    expect(
-      within(region).getByRole("button", { name: selectAll42 }),
-    ).toBeInTheDocument();
   });
 
   it("offers the bulk verbs over a ticked member, and no Shortlist removal on a Live List", async () => {
@@ -187,64 +174,28 @@ describe("acting on a list's members", () => {
         });
       },
     });
-    await screen.findByText("MiTek");
-    await user.click(screen.getByRole("button", { name: selectAll42 }));
+    await user.click(
+      await screen.findByRole("checkbox", { name: selectMiTek }),
+    );
+    await user.click(
+      screen.getByRole("button", { name: en["bulk.selectAll"] }),
+    );
     expect(
-      await screen.findByText(en["lists.members.selectAllCappedTitle"]),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText(
-        en["lists.members.selectAllCapped_other"].replace("{count}", "500"),
+      await screen.findByText(
+        en["bulk.selected_other"].replace("{count}", "500"),
       ),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(en["bulk.selected_other"].replace("{count}", "500")),
-    ).toBeInTheDocument();
-  });
-
-  it("adds no member past the cap but still lets one be unticked", async () => {
-    let walked = 0;
-    const others = (from: number, n: number) =>
-      Array.from({ length: n }, (_, i) => ({
-        id: `01a0f000-0000-7000-8000-${String(from + i).padStart(12, "0")}`,
-        display_name: `Company ${from + i}`,
-        version: 1,
-      }));
-    const user = userEvent.setup();
-    openList(LIVE_ID, {
-      "GET /companies": () => {
-        walked += 1;
-        const data =
-          walked === 1
-            ? members
-            : walked === 2
-              ? [members[0], ...others(1000, 199)]
-              : others(walked * 1000, 200);
-        return jsonResponse({
-          data,
-          page: { has_more: walked < 4, next_cursor: `c${walked}` },
-        });
-      },
-    });
-    await screen.findByText("MiTek");
-    await user.click(screen.getByRole("button", { name: selectAll42 }));
-    const selected = (n: number) =>
-      en["bulk.selected_other"].replace("{count}", String(n));
-    expect(await screen.findByText(selected(500))).toBeInTheDocument();
-    const nordfracht = en["bulk.selectRow"].replace("{name}", "Nordfracht");
-    await user.click(screen.getByRole("checkbox", { name: nordfracht }));
-    expect(screen.getByText(selected(500))).toBeInTheDocument();
-    expect(
-      screen.getByRole("checkbox", { name: nordfracht }),
-    ).not.toBeChecked();
-    expect(
-      screen.getByText(en["lists.members.selectionFullTitle"]),
+      screen.getByText(
+        en["bulk.selectionLimit_other"].replaceAll("{count}", "500"),
+      ),
     ).toBeInTheDocument();
     await user.click(screen.getByRole("checkbox", { name: selectMiTek }));
-    expect(await screen.findByText(selected(499))).toBeInTheDocument();
-    await user.click(screen.getByRole("checkbox", { name: nordfracht }));
-    expect(await screen.findByText(selected(500))).toBeInTheDocument();
-    expect(screen.getByRole("checkbox", { name: nordfracht })).toBeChecked();
+    expect(
+      await screen.findByText(
+        en["bulk.selected_other"].replace("{count}", "499"),
+      ),
+    ).toBeInTheDocument();
   });
 
   it("exports the list's members through the list's own export", async () => {
