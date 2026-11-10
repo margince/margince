@@ -111,7 +111,7 @@ func logNoteTx(ctx context.Context, e *Env, tx pgx.Tx, links ...activities.Activ
 // holdRows opens the barrier: an owner transaction holding rows every writer needs.
 func holdRows(t *testing.T, lockSQL string, rows []ids.UUID) pgx.Tx {
 	t.Helper()
-	conn := OwnerConn(t)
+	conn := FreshOwnerConn(t)
 	tx, err := conn.Begin(context.Background())
 	if err != nil {
 		t.Fatalf("opening the barrier: %v", err)
