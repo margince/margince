@@ -44,6 +44,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/search"
+	"github.com/margince/margince/backend/internal/platform/agentvolume"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/platform/httpserver"
 	"github.com/margince/margince/backend/internal/platform/ratelimit"
@@ -73,7 +74,7 @@ var errMissingBearer = errors.New("missing bearer token")
 // its time windows against an injectable clock — so a second instance would
 // hold a second cache and, worse, its own time.Now, silently escaping a clock
 // a test injected on the process's real service.
-func (s *Server) mcpHandler(pool *pgxpool.Pool, auth *identity.Service, log *slog.Logger) http.Handler {
+func (s *Server) mcpHandler(pool *pgxpool.Pool, auth *identity.Service, log *slog.Logger, lim mcpLimiters) http.Handler {
 	if !s.mcpConnectorEnabled {
 		return nil
 	}
@@ -88,7 +89,7 @@ func (s *Server) mcpHandler(pool *pgxpool.Pool, auth *identity.Service, log *slo
 	// sends it elsewhere 404s a human mid-consent, so the target is named where an
 	// operator can compare it against what their front end actually routes.
 	log.Info("mcp: consent screen redirect target", "location", identity.ConsentScreenPath)
-	return agents.NewHTTPHandler(s.toolRegistry, mcpAuthenticate(auth),
+	return agents.NewHTTPHandler(s.toolRegistry, mcpPaceAfterAuth(mcpAuthenticate(auth), lim.perPassport, s.volumeMeter),
 		agents.ResourceMetadataChallenge(s.mcpAllowedOrigin), mcpServerName, mcpServerVersion, log,
 		// The cross-module edge: composing the query vocabulary is the search
 		// module's job and publishing it is the transport's, and neither
@@ -179,6 +180,46 @@ func mcpAuthenticate(auth *identity.Service) func(*http.Request) (context.Contex
 		return principal.WithCorrelationID(principal.WithActor(ctx, agent.Principal()), ids.NewV7()), nil
 	}
 }
+
+// mcpPaceAfterAuth paces a tool call by its caller's roles, through the policy
+// the window allowances use. It runs after authentication, so an anonymous or
+// refused caller never reaches the role check. An unpaced caller's calls are
+// never counted, so the check mcpEdge makes before authentication never
+// refuses them either.
+func mcpPaceAfterAuth(
+	authenticate func(*http.Request) (context.Context, error),
+	calls *ratelimit.Limiter,
+	meter *agentvolume.Meter,
+) func(*http.Request) (context.Context, error) {
+	return func(r *http.Request) (context.Context, error) {
+		ctx, err := authenticate(r)
+		if err != nil || !meter.Paced(ctx) {
+			return ctx, err
+		}
+		if !calls.Allow(passportBucket(r)) {
+			return nil, mcpPacingRefusal{bucket: calls}
+		}
+		return ctx, nil
+	}
+}
+
+// mcpPacingRefusal is a paced caller over its per-minute tool calls. The
+// transport hands the answer back here, so the 429 has one writer.
+type mcpPacingRefusal struct{ bucket *ratelimit.Limiter }
+
+func (p mcpPacingRefusal) Error() string {
+	return "mcp: the tool calls a minute on this credential are spent"
+}
+
+func (p mcpPacingRefusal) WriteRefusal(w http.ResponseWriter, r *http.Request) {
+	writeMCPRateLimited(w, r, p.bucket, mcpToolCalls)
+}
+
+// mcpToolCalls and mcpStreamOpens name what each bucket counts in a refusal.
+const (
+	mcpToolCalls   = "tool calls on this credential"
+	mcpStreamOpens = "stream opens on this credential"
+)
 
 // mcpLimiters bounds the connector's edges — the /mcp transport here and the
 // authorization server in oauthedge.go, from ONE set, because they are two
@@ -279,12 +320,17 @@ func mcpEdge(next http.Handler, lim mcpLimiters, allowedOrigin string) http.Hand
 			// it gets its own tighter bucket. It is metered here, ahead of the
 			// transport's method dispatch, so what bounds the churn is whether
 			// the request was made — not what the transport answers it with.
-			bucket, what := lim.perPassport, "tool calls on this credential"
-			if r.Method == http.MethodGet {
-				bucket, what = lim.streams, "stream opens on this credential"
+			// The transport refuses a GET before it authenticates, so no role
+			// is known for one and every caller keeps this bucket.
+			if r.Method == http.MethodGet && !lim.streams.Allow(credential) {
+				writeMCPRateLimited(w, r, lim.streams, mcpStreamOpens)
+				return
 			}
-			if !bucket.Allow(credential) {
-				writeMCPRateLimited(w, r, bucket, what)
+			// Tool calls are counted after authentication (mcpPaceAfterAuth),
+			// where the caller's roles are known. This check only refuses a
+			// credential already over its pacing without a passport lookup.
+			if r.Method != http.MethodGet && lim.perPassport.Blocked(credential) {
+				writeMCPRateLimited(w, r, lim.perPassport, mcpToolCalls)
 				return
 			}
 		}

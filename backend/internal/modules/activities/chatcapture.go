@@ -25,6 +25,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 // ChatCaptureSourceSystem keys a filed chat on the reading it was read by. A
@@ -239,6 +240,7 @@ func (s *Store) writeChatActivity(ctx context.Context, tx pgx.Tx, in ChatCapture
 		writeCtx = in.WriteAs(ctx)
 	}
 	out, _, err := s.LogActivityTx(writeCtx, tx, LogActivityInput{
+		SystemText:      &systemtext.Message{Body: systemtext.Prose(systemtext.Quote, "")},
 		Kind:            string(crmcontracts.ActivityKindMessage),
 		ChannelProvider: in.Channel,
 		Body:            body,

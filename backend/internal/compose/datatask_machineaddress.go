@@ -13,6 +13,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/datatask"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 // machineAddressTag is the word machine-address contacts are filed under, for a
@@ -25,7 +26,7 @@ const machineAddressTaggedBy = "data_task_run"
 func machineAddressDataTask() datatask.Task {
 	return datatask.Task{
 		ID: "core/1792645085_machine_address_contacts", Version: 3,
-		Title: "Tag contacts made from a sending system's address", Requires: []string{"core/1788327300"},
+		Title: systemtext.Literal("datatask.title.core.1792645085_machine_address_contacts"), Requires: []string{"core/1788327300"},
 		Steps: []datatask.Step{{
 			Name: "tag_machine_address_contacts", Limit: 200, MinLimit: 1,
 			Audit:    datatask.AuditPolicy{PerRecord: true},

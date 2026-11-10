@@ -141,7 +141,7 @@ describe("problemMessage", () => {
     ).toBe("permission denied");
   });
 
-  it("keeps the server detail for an unrelated code even with a translator", () => {
+  it("keeps an unknown English API detail for an English reader", () => {
     expect(
       problemMessage({ code: "conflict", detail: "name already taken" }, t),
     ).toBe("name already taken");
@@ -319,7 +319,7 @@ describe("isConsentNotGranted", () => {
 // bug in a handler states our internals in wording nobody wrote for a user. At
 // the point of rendering the two look alike unless the type is checked here.
 describe("problemMessageOf", () => {
-  it("shows the server's own detail when the failure carries a problem", () => {
+  it("keeps English problem detail for the English reader", () => {
     expect(
       problemMessageOf(new ProblemError({ detail: "email taken" }), t),
     ).toBe("email taken");
@@ -349,7 +349,7 @@ describe("problemMessageOf", () => {
     }
   });
 
-  it("keeps the server's words whenever the body carries any", () => {
+  it("keeps an English server title for the English reader", () => {
     // The line above must not become a way to lose a real detail. A body with
     // a detail, or with only a title, still speaks for itself. A blank detail
     // is not words and would render an empty error state, so the reader gets
@@ -534,3 +534,21 @@ describe("a success that carried no body", () => {
     }
   });
 });
+
+for (const locale of ["de", "vi"] as const) {
+  it(`keeps unknown English API detail out of ${locale} reader copy`, () => {
+    const local = Object.assign(
+      (key: Parameters<typeof translate>[1]) => translate(locale, key),
+      { locale },
+    );
+    const problem = {
+      code: "unmapped",
+      detail: "An English diagnostic",
+      title: "Server failure",
+    };
+    expect(problemMessage(problem, local)).toBe(local("common.errorNoCause"));
+    expect(problemMessageOf(new ProblemError(problem), local)).toBe(
+      local("common.errorNoCause"),
+    );
+  });
+}

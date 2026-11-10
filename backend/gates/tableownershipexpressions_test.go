@@ -48,7 +48,7 @@ func TestOwnershipReadsCompleteExpressionsWithoutLosingUnresolvedWrites(t *testi
 	}{
 		{"split keyword", "`UP`+`DATE rival SET active = true`", nil, []string{"UPDATE rival SET active = true"}, []string{"rival"}},
 		{"shared predicate", "`DELETE FROM rival WHERE `+scope", map[string]string{"scope": "owner_id = @id"}, []string{"DELETE FROM rival WHERE owner_id = @id"}, []string{"rival"}},
-		{"cte spans fragments", "`WITH gone AS (DELETE FROM rival WHERE `+scope+` RETURNING id) INSERT INTO history SELECT id FROM gone`", map[string]string{"scope": "owner_id = @id"}, []string{"WITH gone AS (DELETE FROM rival WHERE owner_id = @id RETURNING id) INSERT INTO history SELECT id FROM gone"}, []string{"history", "rival"}},
+		{"cte spans fragments", "`WITH gone AS (DELETE FROM rival WHERE `+scope+` RETURNING id) INSERT INTO history SELECT id FROM gone`", map[string]string{"scope": "owner_id = @id"}, []string{"WITH gone AS (DELETE FROM rival WHERE owner_id = @id RETURNING id) INSERT INTO history SELECT id FROM gone"}, []string{"rival", "history"}},
 		{"unknown fragment retains both writes", "`DELETE FROM rival WHERE `+unknown()+`; INSERT INTO history(id) VALUES (1)`", nil, []string{"DELETE FROM rival WHERE ", "; INSERT INTO history(id) VALUES (1)"}, []string{"rival", "history"}},
 		{"nested joins count once", "(`UPDATE rival `+(`SET active = true`))", nil, []string{"UPDATE rival SET active = true"}, []string{"rival"}},
 	} {

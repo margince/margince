@@ -43,6 +43,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/diffhash"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
 )
@@ -172,7 +173,7 @@ func applyCreate(ctx context.Context, ex Executors, eff workflow.Effect, action 
 	if action.Kind == workflow.ActionCreateTask {
 		entity = datasource.EntityActivity
 	}
-	_, createErr = ex.Provider.Create(ctx, datasource.CreateInput{
+	_, createErr = ex.Provider.Create(systemtext.WithMessage(ctx, action.SystemText), datasource.CreateInput{
 		EntityType: entity,
 		Fields:     action.Args,
 		Source:     systemSource,

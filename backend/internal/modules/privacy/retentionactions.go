@@ -83,6 +83,9 @@ func (s *RetentionService) anonymizeContact(ctx context.Context, tx pgx.Tx, id i
 	if err := storekit.LockStopKey(ctx, tx, id.String()); err != nil {
 		return err
 	}
+	if err := storekit.LockSubjectsStopAddresses(ctx, tx, id); err != nil {
+		return err
+	}
 	return anonymizeContactRecord(ctx, tx, id, s.eraser)
 }
 

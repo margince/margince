@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import { cleanup, render, screen } from "@testing-library/react";
 import { Mail } from "lucide-react";
 import { afterEach, describe, expect, it } from "vitest";
+import { stable } from "../format/collate";
 import { BADGE_TONES, Badge } from "./atoms";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -232,8 +233,10 @@ describe("Badge", () => {
       // tones must appear is not: the vocabulary decides that, and a tone added
       // to the type with no hairline of its own fails here rather than shipping
       // in the card's neutral edge.
-      expect([...Object.keys(edges)].sort()).toEqual(
-        [...PAINTED.map((tone) => `.badge-${tone}`), ".badge-primary"].sort(),
+      expect([...Object.keys(edges)].sort(stable)).toEqual(
+        [...PAINTED.map((tone) => `.badge-${tone}`), ".badge-primary"].sort(
+          stable,
+        ),
       );
       for (const [selector, colour] of Object.entries(edges)) {
         expect(declared(selector, "border-color"), selector).toBe(colour);

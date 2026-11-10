@@ -19,6 +19,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 // redactSubjectTimeline erases the subject's free text from the activity
@@ -111,8 +112,10 @@ func (e *Eraser) redactSubjectTimeline(ctx context.Context, tx pgx.Tx, contactID
 	// capture idempotency key, but the same erasure arms the suppression list,
 	// and Sink.Upsert refuses a suppressed account before it writes — so there
 	// is no redelivery left for the key to deduplicate.
+	args := []any{contactID, emails, floorCurrent, floorCarried, erasedName, channelKeys}
+	args = append(args, systemtext.BoundLiteral("core.erased_subject", erasedName))
 	rows, err := tx.Query(ctx, `
-		UPDATE activity a SET subject = $5, body = NULL, raw = NULL, agenda_fingerprint = NULL,
+		UPDATE activity a SET subject = $5, body = NULL, system_text = `+fmt.Sprintf("$%d", len(args))+`, raw = NULL, agenda_fingerprint = NULL,
  internal_mail_authorization = `+erasedInternalMailAuthorizationSQL+`,
 		  counterparty_email = NULL,
 		  -- What a classifier concluded the message MEANT goes with the words it
@@ -138,7 +141,7 @@ func (e *Eraser) redactSubjectTimeline(ctx context.Context, tx pgx.Tx, contactID
 		    OR a.id IN (`+unlinkedSubjectMail+`)
 		    OR a.id IN (`+unlinkedSubjectChannel+`))
 		  `+correspondenceFloorPredicate(3, 4)+`
-		RETURNING a.id`, contactID, emails, floorCurrent, floorCarried, erasedName, channelKeys)
+		RETURNING a.id`, args...)
 	if err != nil {
 		return nil, err
 	}

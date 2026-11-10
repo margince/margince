@@ -118,7 +118,7 @@ func addCapturePipelineJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerC
 		// its delivery and its dispatch job, so it registers only where that
 		// machinery exists — a role that cannot send cannot fire either.
 		if cfg.SendDelivery != nil {
-			worker := newScheduledSendWorker(pool, cfg.SendDelivery, cfg.SendBlob, cfg.SendOrigin)
+			worker := newScheduledSendWorker(pool, cfg.SendDelivery, cfg.SendBlob, cfg.SendOrigin, cfg.DisabledCoreFeatures...)
 			worker.store = worker.store.WithSendAuthority(workerMailAuthority(cfg.SendRegistry))
 			addDeclaredWorker[ScheduledSendArgs](reg, worker)
 		}

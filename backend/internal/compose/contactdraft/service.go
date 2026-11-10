@@ -44,6 +44,8 @@ type Request struct {
 	Intent  string
 	// RewriteOf is the draft the composer is showing; empty is a first draft.
 	RewriteOf string
+	// Language is the language the caller chose, Unknown to read it from the record.
+	Language textlang.Lang
 	// ProjectID names the body of work the message is about. When set, the
 	// draft is grounded in the 360 scoped to that project and the project's
 	// own facts are folded in; nil is the contact in general.
@@ -141,7 +143,10 @@ func (s *Service) Draft(
 	}
 	zone := s.envelope.Zone(ctx)
 	req.Envelope = s.envelope.Resolve(ctx,
-		draftfloor.Written{Thread: languageEvidence(view, s.envelope.Now(), zone), Rewrite: req.RewriteOf, Purpose: req.Intent, DraftSubject: req.Subject},
+		draftfloor.Written{
+			Chosen: req.Language, Thread: languageEvidence(view, s.envelope.Now(), zone),
+			Rewrite: req.RewriteOf, Purpose: req.Intent, DraftSubject: req.Subject,
+		},
 		ConversationState(view, s.envelope.Now(), zone)).InZone(zone)
 	in := FromView(view, req)
 	if in.AlsoTo, err = s.coRecipients(ctx, contactID, req.AlsoTo); err != nil {
@@ -214,6 +219,7 @@ func Wire(draft Draft, by crmcontracts.WrittenBy, voiceDegraded bool, lang strin
 		out.To = &to
 	}
 	out.AiDisclosure = draftfloor.AIProvenanceNoticeFor(aiWritten, textlang.Lang(lang))
+	out.Language = draftfloor.Reported[crmcontracts.CompanyEmailDraftLanguage](textlang.Lang(lang))
 	return out
 }
 

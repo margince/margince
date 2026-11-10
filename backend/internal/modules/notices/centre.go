@@ -124,7 +124,7 @@ func (s *Store) ListFor(ctx context.Context, limit int, cursor string) (CentrePa
 			return err
 		}
 		defer rows.Close()
-		items, err := scanCentreItems(rows)
+		items, err := scanCentreItems(ctx, rows)
 		if err != nil {
 			return err
 		}
@@ -240,9 +240,9 @@ func boundedPageSize(limit int) int {
 // centreColumns is what scanCentreItems reads, in its order. Every read of
 // centre lines selects it, so a column added here reaches each of them.
 const centreColumns = `id, kind, subject, subject_parts, body, target_type, target_id, created_at, origin,
-	read_at, coalesce(dedupe_key, '')`
+	read_at, coalesce(dedupe_key, ''), system_text`
 
-func scanCentreItems(rows pgx.Rows) ([]CentreItem, error) {
+func scanCentreItems(ctx context.Context, rows pgx.Rows) ([]CentreItem, error) {
 	items := []CentreItem{}
 	for rows.Next() {
 		var item CentreItem
@@ -252,7 +252,7 @@ func scanCentreItems(rows pgx.Rows) ([]CentreItem, error) {
 		var targetID *ids.UUID
 		var dedupeKey string
 		if err := rows.Scan(&item.ID, &item.Kind, &item.Subject, &item.SubjectParts, &item.Body,
-			&targetType, &targetID, &item.CreatedAt, &item.Origin, &item.ReadAt, &dedupeKey); err != nil {
+			&targetType, &targetID, &item.CreatedAt, &item.Origin, &item.ReadAt, &dedupeKey, &item.SystemText); err != nil {
 			return nil, err
 		}
 		if targetType != nil && targetID != nil {
@@ -263,6 +263,8 @@ func scanCentreItems(rows pgx.Rows) ([]CentreItem, error) {
 		if approval, ok := approvalOfNoticeKey(item.Kind, dedupeKey); ok {
 			item.Target = Target{Type: TargetApproval, ID: approval}
 		}
+		item.Target = resolvedNoticeTarget(item.Target, item.Kind, item.SystemText)
+		item.SystemDisplay = noticeSystemDisplay(ctx, item.SystemText, item.Subject, item.Body)
 		items = append(items, item)
 	}
 	return items, rows.Err()

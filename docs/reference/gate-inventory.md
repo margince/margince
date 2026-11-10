@@ -156,7 +156,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `modelreplyfence_test.go` | H3 | A markdown fence around a model's JSON is presentation, and no site may read it as a malformed answer. |
 | `modelroutes_test.go` | H3 | The SPA's table of routes that hold a model call open must be the contract's. |
 | `modulecatalogtables_test.go` | H2 | The module catalog's Owns-tables column links to the entity model, and copies no table. |
-| `momentactionvocabulary_test.go` | H3 | Every moment-card verb is classified by whether pressing it writes. |
+| `momentactionvocabulary_test.go` | H3 | Every offered verb is classified by whether pressing it writes. |
 | `netguardparity_test.go` | H3 | The egress SSRF denylist exists twice, and this is where the two are held equal. |
 | `offertemplatelayout_test.go` | H2 | The offer-template form and the PDF renderer must spell a layout key the same way, or what an administrator types is stored and never printed. |
 | `onboardinglocales_test.go` | H2 | The onboarding conversation speaks every language the product does. |
@@ -283,9 +283,11 @@ The eight shapes, what each is for, and how each one silently passes:
 | `contractproducers_test.go` | H2 | A field the contract promises and nobody writes is invisible. |
 | `contractrefs_test.go` | H3 | Every local $ref in api/crm.yaml resolves, and a dangling one fails with a readable message. |
 | `contributorwiring_test.go` | H1 | What a contributor arriving from outside is promised, in the files they meet on the way in. |
+| `corefeatures_test.go` | H3 | _(no doc comment)_ |
 | `currencycolumndomain_test.go` | H2 | Every currency column carries the `currency\_code` domain. |
 | `datataskregistry_test.go` | H2 | Removing a released registration must fail even when its ID constant remains. |
 | `datecolumncalendars_test.go` | H2 | Every `date` column states whose calendar it is a day in. |
+| `deallinewriters_test.go` | H2 | A lines-priced deal has one value writer; every other writer must refuse line-owned columns and preserve its product projection. |
 | `dealreaders_test.go` | H2 | `deal` is an RBAC object, and until this gate nothing held the object half of that anywhere outside the module that owns it. |
 | `dealtargettype_test.go` | H2 | Every deal-scoped staging names its target type through one constant. |
 | `decisioncoverage_test.go` | H2 | A message that reaches the send queue carries a decision saying why, written in the transaction that staged it. |
@@ -458,6 +460,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `statutoryfloorsingle_test.go` | H2 | The statutory retention floor is spelled once, and every destructive activity path applies that one spelling. |
 | `storedobjectdeclaration_test.go` | H2 | A writer that puts bytes into the object store declares them first, or says why its key needs no declaration. |
 | `suppressionauthority_test.go` | H2 | Every kind of suppression says who decided it. |
+| `systemtextproducer_test.go` | H2 | _(no doc comment)_ |
 | `tablelistpointer_test.go` | H1 | Every module names its entity-model page as its table list, and no Go comment copies that list. |
 | `tableownershipdiscovery_test.go` | H2 | Which packages the ownership gate walks, derived rather than remembered. |
 | `taskdeadlinereaders_test.go` | H2 | _(no doc comment)_ |
@@ -504,6 +507,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `relaywiring_test.go` | H2 | Every option that wires the mail relay is wired by a role binary. |
 | `replayscope_test.go` | H2 | A replay is a read, so every operation the idempotency middleware can replay must either re-probe the row scope of the record its recorded body carries, or say in writing that the body carries no such record. |
 | `resetflushscope_test.go` | H2 | The reset's cache flush has two entry points by design, and the split is a security boundary rather than a style choice. |
+| `stopwriters_test.go` | H2 | Every mutation coordinates: restoring a stop or widening its purpose can revoke permission without changing either address column. |
 | `threadcomponentwriters_test.go` | H2 | The ownership census supplies packages; its SQL parser supplies columns. |
 | `versionguard_test.go` | H2 | A version pin is only real if the pinned table's version actually moves. |
 | `writeauthorityreach_test.go` | H2 | Every write of a shareable record reaches a write-authority probe. |
@@ -685,7 +689,9 @@ The eight shapes, what each is for, and how each one silently passes:
 
 | Gate | Hardness | What it holds |
 |---|---|---|
+| `composeroot_test.go` | H3 | The root compose package may not grow. |
 | `docspagelength_test.go` | H3 | A docs page an agent cannot navigate is a page it does not read, and the failure is silent: it greps, lands in the middle of six hundred lines, and answers from the part it happened to see. |
+| `entitymodelcoupling_test.go` | H3 | _(no doc comment)_ |
 | `laneconnbudget_test.go` | H3 | The integration lane's connection demand is concurrent packages times what one package may hold, and that product has to fit inside the compose Postgres's max\_connections. |
 | `mcptoolcount_test.go` | H2 | How much of a user's tool budget this server spends. |
 | `rulebooklength_test.go` | H3 | A rulebook is read in full by every session and, for its Craftsmanship section, by every gate prompt, so its length is a running cost rather than a matter of taste. |
@@ -696,7 +702,9 @@ The eight shapes, what each is for, and how each one silently passes:
 
 | Gate | Hardness | What it holds |
 |---|---|---|
+| `audiencebinding_test.go` | H2 | _(no doc comment)_ |
 | `bookingdisplay_test.go` | H2 | A projection may append display values, but cannot pass addresses to another call or retain them in another assignment for a later send. |
+| `deallinewritersplanted_test.go` | H2 | A census must reject new writers and misleading guard paths, even when they sit outside the files that introduced the line-value engine. |
 | `extensionsqlscopecases_test.go` | H2 | The SQL-scope gate's own test, driven with synthetic unit sources rather than the tree, because the real units are supposed to pass. |
 | `historyfieldlabelsfalsify_test.go` | H3 | The label census, falsified. |
 | `jobfleetwideshapes_test.go` | H2 | The FleetWide gate's own falsification: every dispatch shape the tree uses is proven accepted, and the shapes it exists to reject (a dispatcher doing a tenant's work, and a fan-out built around the chokepoints) are proven rejected. |
@@ -708,6 +716,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `retainedcolumncases_test.go` | H1 | The retention sweep's two SQL claims, driven with synthetic statements rather than the tree, for the reason extensionsqlscopecases\_test.go gives for its own cases. |
 | `retentionconstants_test.go` | H2 | _(no doc comment)_ |
 | `rowscopeplanted_test.go` | H2 | The defect this census is for, planted and run. |
+| `sqlwritetargets_test.go` | H2 | SQL assignments stay attached to their own target, including unresolved fragments and mutation branches inside compound statements. |
 | `subjectlockorderwalk_test.go` | H2 | The lock-order walk judged on planted bodies. |
 | `tableownershipexpressions_test.go` | H2 | Complete concatenations keep one statement identity. |
 | `taskcensuscoverage_test.go` | H2 | The task census rejects unsupported source stamps and unresolved task kinds. |

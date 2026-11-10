@@ -496,7 +496,7 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
     await showLayout(user, "Board");
 
     expect(
-      screen.getByRole("searchbox", { name: "Search" }),
+      screen.getByRole("combobox", { name: "Search" }),
     ).toBeInTheDocument();
     // And it admits there is more than it is showing.
     expect(screen.getByRole("button", { name: "Load more" })).toBeTruthy();

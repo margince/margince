@@ -6,6 +6,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
+import { stable } from "../../src/format/collate";
 
 // Every shipped catalog of a locale, core and extension: a gate that names one
 // file reads a smaller tree and still passes.
@@ -64,7 +65,7 @@ function listedUnitCatalogs(locale: string): string[] {
 /** Each unit's `<locale>.json`, with the en.json beside it. */
 export function listedUnitCopy(locale: string): LocaleCopy[] {
   return listedUnitCatalogs(locale)
-    .sort()
+    .sort(stable)
     .map((path) => {
       const full = join(repoRoot, path);
       return {

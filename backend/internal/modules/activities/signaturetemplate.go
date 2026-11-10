@@ -62,10 +62,10 @@ func renderSignatureTemplate(template string, v signatureValues) (markup, text s
 		"{imprint}", htmlLines(v.Imprint),
 		"{logo}", logo,
 	).Replace(template)
-	return signatureMarkup(filled)
+	return sanitizeSignature(filled)
 }
 
-func signatureMarkup(source string) (markup, text string, err error) {
+func sanitizeSignature(source string) (markup, text string, err error) {
 	markup, err = sanitizeHTML(source, signaturePolicy)
 	if err != nil {
 		return "", "", err
@@ -124,4 +124,9 @@ func writeText(out *strings.Builder, node *xhtml.Node) {
 			out.WriteString("\n")
 		}
 	}
+}
+
+// SignatureMarkup renders retained markup through the send path's sanitizer.
+func SignatureMarkup(source string) (markup, text string, err error) {
+	return sanitizeSignature(source)
 }

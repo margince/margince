@@ -23,6 +23,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
+const truePredicate = "TRUE"
+
 // Unbounded reports whether the actor sees every row of a permitted
 // object: the system principal, or row_scope=all.
 func Unbounded(p principal.Principal) bool {
@@ -71,7 +73,7 @@ const (
 
 func ownerPredicate(p principal.Principal, arg func(any) int, unowned unownedRows) func(alias string) string {
 	if Unbounded(p) {
-		return func(string) string { return "TRUE" }
+		return func(string) string { return truePredicate }
 	}
 	me := arg(p.UserID)
 	col := func(alias string) string {
@@ -231,7 +233,7 @@ func predicateFor(p principal.Principal, table string, arg func(any) int,
 	if class == asOwnerScoped {
 		everyRow = Unbounded(p)
 	}
-	scope := func(string) string { return "TRUE" }
+	scope := func(string) string { return truePredicate }
 	switch {
 	case class == asOwnerScoped:
 		scope = ownerPredicate(p, arg, unownedIsNobodys)

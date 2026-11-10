@@ -22,10 +22,11 @@ import { Eyebrow } from "../../design-system/eyebrow";
 import { Heading } from "../../design-system/heading";
 import { QueryStates } from "../../design-system/querystates";
 import { useT } from "../../i18n";
-import { useCanWrite } from "../../lib/capability";
+import { useCanWriteRecord } from "../../lib/capability";
 import { problemMessageOf, unwrap } from "../../lib/problem";
 import { navigate } from "../../lib/router";
-import { RoomFacts, StateBanner } from "./deal360/dealroomdeck";
+import { RoomFacts, StateBanner, StewardNotice } from "./deal360/dealroomdeck";
+import { ManageRoomDialog } from "./deal360/dealroommanage";
 import { RoomText, ViewAsBuyerButton } from "./deal360/dealroomtab";
 import { DealRoomAccess } from "./dealroomaccess";
 import { DealRoomConversation } from "./dealroomconversation";
@@ -75,7 +76,8 @@ function RoomPage({
   dealId,
 }: Readonly<{ room: DealRoom; dealId: string }>) {
   const t = useT();
-  const mayWrite = useCanWrite("deal_room", "update");
+  const mayWrite = useCanWriteRecord("deal_room", room);
+  const [managing, setManaging] = useState(false);
   const finished = FINISHED_STATES.has(room.state);
   const refusal = refusalFor(finished, mayWrite, t);
   return (
@@ -111,6 +113,19 @@ function RoomPage({
         </div>
       </header>
       <StateBanner room={room} />
+      {mayWrite && !finished ? (
+        <StewardNotice
+          room={room}
+          action={
+            <Button onClick={() => setManaging(true)}>
+              {t("roompage.manage")}
+            </Button>
+          }
+        />
+      ) : null}
+      {managing ? (
+        <ManageRoomDialog room={room} open onClose={() => setManaging(false)} />
+      ) : null}
       <RoomText room={room} refusal={refusal} />
       <DealRoomConversation room={room} refusal={refusal} />
       <DealRoomAccess room={room} mayManage={mayWrite} />

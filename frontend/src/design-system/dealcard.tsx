@@ -19,6 +19,7 @@ import { DealOwner } from "./dealowner";
 import { IconAction } from "./iconaction";
 import type { BoardDeal } from "./pipelineboard";
 import { Popover } from "./popover";
+import { ProbabilityRing } from "./probabilityring";
 import { FieldGuard } from "./rbac";
 import { Chip } from "./readings";
 
@@ -410,13 +411,18 @@ export function DealCard({
       <span className="deal-figure">
         {/* Compact, because a card is compared at a glance: the column head
             sums the stage exactly and the deal states its own figure whole. */}
-        <span className="deal-value">
-          {formatMoneyOrWord(
-            deal.valueMinor,
-            deal.currency,
-            locale,
-            MONEY_ABSENT,
-            formatMoneyCompact,
+        <span className="deal-worth">
+          <span className="deal-value">
+            {formatMoneyOrWord(
+              deal.valueMinor,
+              deal.currency,
+              locale,
+              MONEY_ABSENT,
+              formatMoneyCompact,
+            )}
+          </span>
+          {deal.probabilityPct != null && (
+            <ProbabilityRing percent={deal.probabilityPct} />
           )}
         </span>
         {closed !== undefined ? (

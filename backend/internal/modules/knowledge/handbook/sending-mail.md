@@ -13,7 +13,6 @@ To send an email to a contact in Margince, open the contact's page and choose **
 "No address and no thread to reply to." means the contact has no address to write to. Also called: write an email, email a customer, message a client.
 
 ### Where can I start writing an email?
-To start an email in Margince, use any of these:
 - the contact header's **Email** button, or an email address on a record, a card or the contacts list. The address is the recipient, and the email is filed under the record you are on. Without a connected mailbox, the address opens your own mail app.
 - **Write email** or **Draft reply** in a record's **Email** panel
 - **Send email** on a deal
@@ -21,7 +20,6 @@ To start an email in Margince, use any of these:
 - **Reply** on any message in a timeline
 - **Write email** on a call, note, meeting or task in a timeline, when it names one contact with an email address. A task Margince filed itself offers none.
 
-Every one of these opens the same composer, so the fields, checks and send times are the same from each.
 From a call, note, meeting or task, it opens a new email that names the entry as "About: {subject}", not a reply.
 A company page opens the composer with the company's contacts to choose from. With none on file it says "No contacts at this company yet. Write the message manually, or add a contact first." Also called: compose, new message, reply to an email.
 
@@ -118,17 +116,11 @@ Also called: AI writer, generate an email, write it for me.
 
 ### Drafting with AI
 
-**Draft email** writes an email from what the record holds, in your voice.
-**Why this draft**, closed until you open it, shows what it read
-("Based on: {inputs}"), with a link to each record it read.
+**Draft email** writes an email from what the record holds, in your voice. **Why this draft**, closed until you open it, shows what it read ("Based on: {inputs}"), with a link to each record it read.
 
-A restored draft keeps its purpose and AI note. The **Saved draft restored** notice makes clear that you are opening saved work. Every AI draft is marked **AI-assisted draft**, with a note that AI wrote it and
-that you should check and edit it before sending.
+A restored draft keeps its purpose and AI note. The **Saved draft restored** notice makes clear that you are opening saved work. Every AI draft is marked **AI-assisted draft**, with a note that AI wrote it and that you should check and edit it before sending.
 
-Your voice profile has a number that goes up with each build, shown after
-"Built from your writing samples". A profile Margince is still building is
-marked **Provisional voice**. It still shapes the draft the same way a finished
-one does.
+Your voice profile has a number that goes up with each build, shown after "Built from your writing samples". A profile Margince is still building is marked **Provisional voice**. It still shapes the draft the same way a finished one does.
 
 If Margince could not load the profile, the draft says so:
 
@@ -136,26 +128,27 @@ If Margince could not load the profile, the draft says so:
 > Your voice profile could not be loaded,
 > so this draft does not use your voice. Draft again, or edit before sending.
 
-Once a draft stands, **Change the ask** opens the ask again, so you can change
-what the next draft says.
+Once a draft stands, **Change the ask** opens the ask again, so you can change what the next draft says.
 
-**Discard draft** marks the draft as a miss for your Voice DNA. Margince never
-keeps the text it wrote.
+**Discard draft** marks the draft as a miss for your Voice DNA. Margince never keeps the text it wrote.
 
-Margince keeps a message you have not finished as a draft while you type. The
-foot says **Draft saved**, and closing the window keeps it too. It does not send
-anything. **Delete draft** deletes the message.
+Margince keeps a message you have not finished as a draft while you type. The foot says **Draft saved**, and closing the window keeps it too. It does not send anything. **Delete draft** deletes the message.
 
 A saved draft also keeps the deal and project you chose. Margince checks that you can still use them when you open the draft again.
 
 ### The four rewrites
 
-The AI draft offers four rewrites on its line, beside the note that AI
-wrote it. They work on text the model wrote that you have not edited yet. They are **Shorter**, **Warmer**, **More formal** and
-**Add a deadline**.
+The AI draft offers four rewrites on its line, beside the note that AI wrote it. They work on text the model wrote that you have not edited yet. They are **Shorter**, **Warmer**, **More formal** and **Add a deadline**.
 
-They are gone the moment you type, because they rewrite the model's text, not
-yours.
+They are gone the moment you type, because they rewrite the model's text, not yours.
+
+### How do I change the language of an AI draft?
+To change the language of an AI draft, pick another language in the list on the AI line above the message. The list shows the language the draft is in, and names each language in its own words, such as **Deutsch**. Margince writes the words in the message again in that language, for the same purpose.
+
+If you edited the words, only an AI model writes your edited words again. With no model set up, or with a link or format you added, your words and the language stay as they are. The composer then says "Your edits were kept. Draft again when ready."
+
+Once you pick a language, **Draft email**, **Change the ask**, the four rewrites and a saved draft keep it. Until then, Margince takes the language from the mail on the thread. If the new draft fails, your words and the language stay. When Margince cannot tell the language of a draft, it shows no list.
+Also called: draft in another language, write the email in German, change the email language.
 
 ### Why are you writing?
 The **Reason for contact** field says why you are writing. The composer explains
@@ -199,11 +192,12 @@ security notice.
 When Margince will not send an email to a contact, the warning bar above **Send** names the reason. Where there is a fix, it names that too.
 - **This message needs one more detail**: for "Choose the deal for this follow-up.", pick it in **Deal this follow-up is about**. You can also write from the deal's page. When the record already shows another reason, the bar offers **Use "…" instead**. It switches the reason and checks again; it does not send.
 - **Permission needed for this message**: the required permission is not on record. Record the recipient's consent or the facts that support an allowed customer route. A staff exception cannot replace them.
-- **No recorded reason to contact this recipient**: pick why you may write from the list beside the refusal. When **Reason for contact** already names it, press **Keep as a standing reason**. It covers this kind of message to them from your company until someone revokes it. It is your word, not their consent. If Margince still refuses when you press **Send**, press **Overrule with a reason**.
-- **Overrule with a reason**: write why the message may go and press **Record the overrule**, then press **Send** again. Your reason is recorded on each contact, under your name, and covers that kind of message to them until someone revokes it. It is offered only where Margince itself refused. It is not offered when the contact objected or the address does not accept mail. Where you hold the exception right, **Send with a recorded exception** sends this one message instead. It grants nothing for later messages, and the composer closes once it has sent.
+- **No recorded reason to contact this recipient**: Margince first uses a request or meeting it already holds. Where a fact is missing, press **Record what happened**. Say what was agreed and when. This records the exchange for that recipient and sending company, and for a deal when one is picked. It does not send the email, record marketing consent or make a standing exception. Margince checks again; any stop that remains still blocks the message.
+- **Send with a recorded exception**: where the check allows it and you hold the exception right, this queues only this message. Your name, reason and the message are kept in a record that cannot be edited. It grants no consent or permission for later mail. The composer closes once the email is queued. A retry checks current support and stops, without asking again for facts that still hold.
 - **Message cannot be sent**: a reason nobody can lift, such as "The recipient objected to marketing", or an address that does not take mail.
 - A mailbox connected only to read mail: press **Reconnect your mailbox** and allow sending.
-Also called: email blocked, cannot email customer, send refused.
+
+The lead stays a lead when you record an exchange. When you make it a contact later, that exchange keeps its original addresses and sending company. A standing exception covers its named sending company and purpose until it is taken back. It records a staff decision and grants no consent. A recorded request is a fact that Margince checks for the message you are writing. A one-message exception covers only the message you read and approved.
 
 ## What a send refuses, and what it only warns about
 

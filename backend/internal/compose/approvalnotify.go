@@ -48,6 +48,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 // approvalNotifyActor names this consumer in the audit rows it causes. A line
@@ -219,11 +220,11 @@ func (a *ApprovalNotify) announceToSeat(
 	// its job is a decision nobody is told about by the route they chose. The
 	// seat's preference decides only the message, in stageNoticeMail.
 	return a.db.Tx(ctx, func(tx pgx.Tx) error {
-		decidable, parts, err := a.approvals.PendingAskOfInTx(seatCtx, tx, approvalID)
+		decidable, parts, metadata, err := a.approvals.PendingAskOfInTx(seatCtx, tx, approvalID)
 		if err != nil || !decidable {
 			return err
 		}
-		line := approvalNoticeFor(seat, approvalID, staged.Summary, parts, approvalNoticeTarget(staged))
+		line := approvalNoticeFor(seat, approvalID, staged.Summary, parts, approvalNoticeTarget(staged), metadata)
 		return recordApprovalNotice(ctx, tx, a.notices.CreateTx, a.mail, wsID, line)
 	})
 }
@@ -324,16 +325,25 @@ func (a *ApprovalNotify) seatContext(
 // any later announcement about the same staging — collapses onto the one line
 // each seat already has.
 func approvalNoticeFor(
-	seat ids.UUID, approvalID ids.ApprovalID, summary string, parts *crmcontracts.ApprovalSummaryParts, target notices.Target,
+	seat ids.UUID, approvalID ids.ApprovalID, summary string, parts *crmcontracts.ApprovalSummaryParts, target notices.Target, messages ...*systemtext.Message,
 ) notices.NewNotice {
+	var metadata *systemtext.Message
+	if len(messages) > 0 {
+		metadata = systemtext.ForDestination(messages[0])
+	}
 	subject := summary
+	if metadata != nil && parts != nil && metadata.Subject != nil {
+		subject = parts.Sentence
+	}
 	if subject == "" {
 		subject = unsummarisedProposal
+		metadata = &systemtext.Message{Version: 1, Subject: systemtext.Sentence("approval.unsummarized")}
 	}
 	return notices.NewNotice{
 		Recipient:    ids.From[ids.UserKind](seat),
 		Kind:         notices.KindApprovalPending,
 		Subject:      subject,
+		SystemText:   metadata,
 		SubjectParts: parts,
 		DedupeKey:    approvalNoticeDedupeKey(approvalID.UUID),
 		Target:       target,

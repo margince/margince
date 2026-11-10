@@ -11,6 +11,7 @@ import { Panel, PanelRow } from "../../design-system/panel";
 import { badgeTone } from "../../design-system/readingtone";
 import { useNow } from "../../format/now";
 import { useLocale, useT } from "../../i18n";
+import { useDisabledCoreFeatures } from "../../lib/corefeatures";
 import { navigate } from "../../lib/router";
 import { useViewerZone } from "../../lib/viewerzone";
 import { TakenOverLine, TakeOverPromiseButton } from "./claimtakeover";
@@ -109,7 +110,11 @@ export function ContactDealCard({
   const { locale } = useLocale();
   const readerZone = useViewerZone();
   const card = dealCard(view, t, locale, readerZone);
+  const disabled = useDisabledCoreFeatures();
   const title = t("contact.card.dealTitle", { name: firstName });
+  if (disabled.includes("deals")) {
+    return null;
+  }
   if (card.state !== "deal") {
     return (
       <OverviewCard

@@ -179,8 +179,8 @@ func TestLastActivity_MovesTheContactAndEveryAccountItReaches(t *testing.T) {
 func TestLastActivity_ConcurrentWritersConvergeOnTheNewest(t *testing.T) {
 	e := Setup(t)
 	staff := e.SeedContact(t, "Raced Contact", nil)
-	a := OwnerConn(t)
-	b := OwnerConn(t)
+	a := FreshOwnerConn(t)
+	b := FreshOwnerConn(t)
 	ctx := context.Background()
 	// Both instants are the database's past, because the clock counts only that.
 	var newest, older time.Time

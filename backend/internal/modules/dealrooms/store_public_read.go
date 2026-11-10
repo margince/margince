@@ -19,6 +19,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/workforce"
 )
 
 // The four access states the buyer edge reports. Distinct from the room's
@@ -61,7 +62,7 @@ func readStanding(ctx context.Context, tx pgx.Tx, roomID ids.DealRoomID) (roomSt
 		`SELECT r.state, r.expires_at, r.closed_at, u.display_name, r.title, r.welcome_message
 		   FROM deal_room r
 		   JOIN deal d ON d.id = r.deal_id AND d.archived_at IS NULL
-		   LEFT JOIN app_user u ON u.id = r.steward_user_id
+		   LEFT JOIN app_user u ON u.id = r.steward_user_id AND `+workforce.LiveHumanSQL("u")+`
 		  WHERE r.id = $1 AND r.archived_at IS NULL`,
 		roomID).Scan(&st.state, &st.expiresAt, &st.closedAt, &st.stewardName, &st.title, &st.welcome)
 	if errors.Is(err, pgx.ErrNoRows) {

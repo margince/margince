@@ -2,6 +2,7 @@ import { useState } from "react";
 import { AuthCardTitle, AuthExperience } from "../../components/auth-core";
 import { usePageTitle, Wordmark } from "../../components/auth-identity";
 import { Button, Field, TextInput } from "../../design-system/atoms";
+import { LanguageSelect } from "../../design-system/languageselect";
 import { usePasswordReveal } from "../../design-system/passwordreveal";
 import { Select } from "../../design-system/select";
 import { jurisdictionName } from "../../format/jurisdiction";
@@ -10,7 +11,6 @@ import {
   detectLocale,
   LOCALES,
   type Locale,
-  localeNameKey,
   useLocale,
   useT,
 } from "../../i18n";
@@ -277,27 +277,13 @@ export function SetupClaimScreen({
             hint={t("setup.baseLanguageHint")}
           >
             {(control) => (
-              <Select
+              <LanguageSelect
                 {...control}
+                languages={LOCALES}
                 value={fields.baseLanguage}
-                // Language names are proper nouns and untranslated, so each
-                // option is in a different language from the page — `lang` is
-                // WCAG 2.2 AA 3.1.2, and our locale codes are the BCP 47
-                // subtags it wants.
-                options={LOCALES.map((locale) => ({
-                  value: locale,
-                  label: t(localeNameKey(locale)),
-                  lang: locale,
-                }))}
-                onChange={(next) => {
-                  const picked = LOCALES.find((locale) => locale === next);
-                  if (picked) {
-                    setFields((current) => ({
-                      ...current,
-                      baseLanguage: picked,
-                    }));
-                  }
-                }}
+                onChange={(picked) =>
+                  setFields((current) => ({ ...current, baseLanguage: picked }))
+                }
               />
             )}
           </Field>

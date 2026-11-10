@@ -37,6 +37,7 @@ const AGREEMENT: Contract = {
   source: "manual",
   captured_by: "human:u1",
   under_contract: true,
+  term_state: "in_force",
   auto_renew: false,
   value_basis: "annualized_12m",
   value_minor: 14850000,

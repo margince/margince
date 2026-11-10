@@ -119,3 +119,53 @@ describe("a lead's company facts", () => {
     expect(screen.queryByRole("region", { name: /^From / })).toBeNull();
   });
 });
+
+describe("the About company row", () => {
+  // The name shown is the company's own, so an editor here would change a name
+  // the row does not show.
+  it("shows a linked lead's company name read-only, saying where it changes", async () => {
+    serve({ ...linked, company_name: "Nordwind Logistik" });
+    render(<LeadScreen id="l-1" />);
+    const name = await screen.findByText("Nordwind Holding SE", {
+      selector: ".inlinetext",
+    });
+    expect(name).toHaveAttribute(
+      "title",
+      "The name comes from the linked company. Rename it on the company’s page.",
+    );
+    expect(screen.queryByText("Nordwind Logistik")).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: /^Change Company/ }),
+    ).toBeNull();
+  });
+
+  it("shows the unset text, not the typed name, when the linked company has no name", async () => {
+    stubFetch(async (url) => {
+      const named = companyNamesAnswer(url, {});
+      return (
+        named ?? jsonResponse({ ...linked, company_name: "Nordwind Logistik" })
+      );
+    });
+    render(<LeadScreen id="l-1" />);
+    await showEmptyFields(userEvent.setup());
+    expect(
+      await screen.findByText("Not set", { selector: ".inlinetext" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText("Nordwind Logistik", { selector: ".inlinetext" }),
+    ).toBeNull();
+  });
+
+  it("edits the typed name while the lead is not linked", async () => {
+    const patches = serve({ ...lead, company_name: "Nordwind Logistik" });
+    const user = userEvent.setup();
+    render(<LeadScreen id="l-1" />);
+    const change = await screen.findByRole("button", {
+      name: /^Change Company/,
+    });
+    expect(change).toHaveTextContent("Nordwind Logistik");
+    await user.click(change);
+    expect(await screen.findByDisplayValue("Nordwind Logistik")).toBeVisible();
+    expect(patches).toEqual([]);
+  });
+});

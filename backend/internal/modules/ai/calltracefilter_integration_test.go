@@ -78,6 +78,7 @@ func seedTrace(ctx context.Context, t *testing.T, env *rateEnv, meter *CallMeter
 
 	recordLogical(ctx, t, meter, traceCall(sentinelOutputWithheld, 100, 0, tracePricedModel))
 	recordLogical(ctx, t, meter, traceCall("provider_quota", 0, 0, tracePricedModel))
+	recordLogical(ctx, t, meter, traceCall(sentinelCanceled, 50, 0, tracePricedModel))
 	recordLogical(ctx, t, meter, traceCall("", 10, 10, traceUnpricedModel))
 }
 
@@ -104,6 +105,7 @@ func TestTheCallTraceBucketsAndPricesEachCall(t *testing.T) {
 		"answered": 2000 + 4000,
 		"fallback": 400 + 600 + 800,
 		"declined": 200,
+		"canceled": 100,
 		"failed":   0,
 	}
 	for outcome, want := range wantCost {
@@ -158,8 +160,8 @@ func TestTheCallTraceNarrowsOnTheServer(t *testing.T) {
 	store, reader := NewCallReadStore(db), diagnosticsReader(ws)
 
 	all := listTrace(reader, t, store, CallListFilter{})
-	if len(all) != 5 {
-		t.Fatalf("trace lists %d terminal calls, want the 5 seeded", len(all))
+	if len(all) != 6 {
+		t.Fatalf("trace lists %d terminal calls, want the 6 seeded", len(all))
 	}
 	page, err := store.ListCalls(reader, nil, nil, CallListFilter{Outcome: "failed"})
 	if err != nil {
@@ -173,10 +175,10 @@ func TestTheCallTraceNarrowsOnTheServer(t *testing.T) {
 		want   int
 	}{
 		"search by error code":         {CallListFilter{Query: "QUOTA"}, 1},
-		"search by task in words":      {CallListFilter{Query: "summar"}, 5},
+		"search by task in words":      {CallListFilter{Query: "summar"}, 6},
 		"search treats % as a literal": {CallListFilter{Query: "%"}, 0},
 		"model and outcome combine":    {CallListFilter{Model: traceServedModel, Outcome: "failed"}, 0},
-		"configured model":             {CallListFilter{Model: tracePricedModel}, 4},
+		"configured model":             {CallListFilter{Model: tracePricedModel}, 5},
 		"served model":                 {CallListFilter{Model: traceServedModel}, 1},
 		"task that ran nothing":        {CallListFilter{Task: string(TaskEnrich)}, 0},
 	}

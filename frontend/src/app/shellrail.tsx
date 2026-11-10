@@ -16,12 +16,19 @@ import { useTruncationTooltip } from "../design-system/tooltip";
 import { useSettingsSection } from "../features/settings/settingsnav";
 import { useT } from "../i18n";
 import { lazy } from "../i18n/lazy";
+import { useDisabledCoreFeatures } from "../lib/corefeatures";
 import { entryDepth } from "../lib/historydepth";
 import { type Route, routeHash, useHash } from "../lib/router";
 import { useMe } from "../lib/session";
 import { usePhoneViewport } from "../lib/viewport";
 import "./agentrail.css";
-import { currentClaim, MOBILE_PRIMARY, NAV, type NavSection } from "./nav";
+import {
+  currentClaim,
+  firstAvailableRoute,
+  MOBILE_PRIMARY,
+  NAV,
+  type NavSection,
+} from "./nav";
 import { DESTINATION_ROW, NavLevelView, useNavLevel } from "./navlevel";
 import { useNavTip } from "./navtip";
 import { usePopoverDismiss } from "./popover";
@@ -76,7 +83,7 @@ export function useHomeLinkLabel(): string {
  * The company's square mark, or the product's own before onboarding named a
  * company. Decorative: the link around it carries the name.
  */
-export function WorkspaceChip() {
+export function WorkspaceChip({ id }: Readonly<{ id?: string }>) {
   const installation = useInstallationBrand();
   const mark = useSquareMark(
     installation?.logo_icon_url,
@@ -84,7 +91,7 @@ export function WorkspaceChip() {
   );
   if (!installation) {
     return (
-      <span className="ws-chip" aria-hidden="true">
+      <span className="ws-chip" id={id} aria-hidden="true">
         <Logomark />
       </span>
     );
@@ -92,7 +99,7 @@ export function WorkspaceChip() {
   // Avatar draws the deterministic monogram underneath, so a company with no
   // square mark has a face, not a gap.
   return (
-    <span className="ws-chip ws-chip-company" aria-hidden="true">
+    <span className="ws-chip ws-chip-company" id={id} aria-hidden="true">
       {/* The brand read carries no company id, so the name keys the chip. */}
       <Avatar
         identity={installation.display_name}
@@ -110,6 +117,7 @@ export function WorkspaceChip() {
 // from assistive tech. The link covers the whole card (shell.css).
 function BrandBlock() {
   const t = useT();
+  const start = routeHash(firstAvailableRoute(useDisabledCoreFeatures()));
   const installation = useInstallationBrand();
   const homeLabel = useHomeLinkLabel();
   // On the link, not the heading: the link already holds the tab stop, and the
@@ -127,7 +135,7 @@ function BrandBlock() {
     return (
       <div className="railhead">
         <WorkspaceChip />
-        <AppLink className="ws" href="#/home" aria-label={homeLabel}>
+        <AppLink className="ws" href={start} aria-label={homeLabel}>
           <Heading size="small" as="div" className="ws-name">
             {t("shell.logoAria")}
           </Heading>
@@ -140,7 +148,7 @@ function BrandBlock() {
       <WorkspaceChip />
       <AppLink
         className="ws"
-        href="#/home"
+        href={start}
         aria-label={homeLabel}
         ref={nameRef}
         {...nameTrigger}

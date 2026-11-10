@@ -57,6 +57,39 @@ describe("stable orders identically for everyone", () => {
     expect(stable("a", "a")).toBe(0);
   });
 
+  it("orders by UTF-16 code unit, the order a sort with no comparator uses", () => {
+    const words = [
+      "zeta",
+      "Zeta",
+      "äpfel",
+      "apfel",
+      "Ärger",
+      "10",
+      "9",
+      "",
+      "a\u{1F600}",
+      "a\uFFFF",
+      "_x",
+      "-x",
+    ];
+    // The emoji's high surrogate sorts below U+FFFF, so this is code-unit
+    // order and not code-point order.
+    expect([...words].sort(stable)).toEqual([
+      "",
+      "-x",
+      "10",
+      "9",
+      "Zeta",
+      "_x",
+      "apfel",
+      "a\u{1F600}",
+      "a\uFFFF",
+      "zeta",
+      "Ärger",
+      "äpfel",
+    ]);
+  });
+
   it("sorts an ISO timestamp chronologically, which is why a key may use it", () => {
     // ISO-8601 is designed so that lexicographic order IS chronological order.
     const stamps = [

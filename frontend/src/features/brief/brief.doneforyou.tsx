@@ -10,7 +10,6 @@
 
 import { type ReactNode, useId, useState } from "react";
 import { rowsOf } from "../../api/rows";
-import { EntityRef } from "../../components/entityref";
 import { BundleUndo } from "../../components/marginchanges";
 import { ReceiptsMore } from "../../components/receiptsmore";
 import { AppLink } from "../../design-system/applink";
@@ -22,136 +21,28 @@ import {
 } from "../../design-system/drawerbands";
 import { Eyebrow } from "../../design-system/eyebrow";
 import { Heading } from "../../design-system/heading";
-import { PanelBody, PanelGroupHead } from "../../design-system/panel";
 import { SurfaceState } from "../../design-system/surfacestate";
+import { stable } from "../../format/collate";
 import { formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
-import { ENTITY } from "../../lib/entity";
-import { type Receipt, useHandledForYou } from "../../lib/handled";
+import { useHandledForYou } from "../../lib/handled";
 import { useMagic } from "../../lib/magic.queries";
 import {
   type MarginceChangeBundle,
   type MarginceChangeSummary,
-  shownUndoable,
   usePendingMarginceChanges,
 } from "../../lib/marginchanges";
-import { isReviewableReceipt, receiptAuditId } from "../../lib/receiptreview";
-import { routeHash } from "../../lib/router";
 import { listReadState } from "../../lib/worklist.listread";
-import { ChangeRow } from "./brief.doneforyou.change";
+import { DealCard } from "./brief.doneforyou.deal";
+import "./brief.feed.css";
+import {
+  type DealChanges,
+  dealChanges,
+  undoableShown,
+} from "./brief.doneforyou.groups";
 
 /** How many changed deals Home shows before "Review all". */
 export const DONE_PREVIEW_DEALS = 5;
-
-/** One deal and the changes on it that wait for the reader, newest first. */
-export type DealChanges = Readonly<{
-  dealId: string;
-  name: string | undefined;
-  receipts: readonly Receipt[];
-  /** Changes the server lists on this deal that no loaded page holds yet. */
-  unloaded: number;
-}>;
-
-/**
- * The changed deals, in the server's order when its summary is read. That
- * summary decides which deals and changes wait; the loaded receipts only
- * dress them. Without it, the receipts read so far are grouped as they come.
- * A receipt the reader settled on this visit stays with its answer, so a row
- * never leaves under the pointer that pressed it.
- */
-export function dealChanges(
-  receipts: readonly Receipt[] | undefined,
-  settled: ReadonlySet<string>,
-  bundles?: readonly MarginceChangeBundle[],
-): DealChanges[] {
-  const byDeal = new Map<string, Receipt[]>();
-  for (const receipt of receipts ?? []) {
-    const subject = receipt.subject;
-    if (subject?.type !== "deal") continue;
-    const group = byDeal.get(subject.id) ?? [];
-    group.push(receipt);
-    byDeal.set(subject.id, group);
-  }
-  if (!bundles) {
-    return [...byDeal]
-      .map(([dealId, group]) => ({
-        dealId,
-        name: group[0]?.subject?.label ?? undefined,
-        receipts: group.filter(
-          (receipt) => isReviewableReceipt(receipt) || settled.has(receipt.id),
-        ),
-        unloaded: 0,
-      }))
-      .filter((group) => group.receipts.length > 0);
-  }
-  const listedDeals = new Set(bundles.map((bundle) => bundle.deal_id));
-  const groups: DealChanges[] = bundles.map((bundle) => {
-    const listed = new Set(bundle.audit_log_ids);
-    const rows = (byDeal.get(bundle.deal_id) ?? []).filter((receipt) => {
-      const audit = receiptAuditId(receipt);
-      return (
-        (audit !== undefined && listed.has(audit)) || settled.has(receipt.id)
-      );
-    });
-    const loaded = rows.filter((receipt) => {
-      const audit = receiptAuditId(receipt);
-      return audit !== undefined && listed.has(audit);
-    }).length;
-    return {
-      dealId: bundle.deal_id,
-      name: bundle.deal_name,
-      receipts: rows,
-      unloaded: Math.max(0, listed.size - loaded),
-    };
-  });
-  for (const [dealId, group] of byDeal) {
-    if (listedDeals.has(dealId)) continue;
-    const kept = group.filter((receipt) => settled.has(receipt.id));
-    if (kept.length > 0) {
-      groups.push({
-        dealId,
-        name: kept[0]?.subject?.label ?? undefined,
-        receipts: kept,
-        unloaded: 0,
-      });
-    }
-  }
-  return groups;
-}
-
-/**
- * The receipts the changed-deals list draws, by id, so the done lane below it
- * leaves out those and no others.
- */
-export function shownReceiptIds(
-  receipts: readonly Receipt[] | undefined,
-  bundles: readonly MarginceChangeBundle[] | undefined,
-): string[] {
-  return dealChanges(receipts, new Set(), bundles).flatMap((group) =>
-    group.receipts.map((receipt) => receipt.id),
-  );
-}
-
-/**
- * The changes an Undo of this deal may send: those the server still allows,
- * and only those this list shows the reader. An older server names no
- * undoable subset, so the shown changes that still read as reviewable stand in.
- */
-export function undoableShown(
-  group: DealChanges,
-  bundle: MarginceChangeBundle | undefined,
-): string[] {
-  if (!bundle) return [];
-  return shownUndoable(
-    bundle,
-    new Set(
-      group.receipts
-        .filter(isReviewableReceipt)
-        .map(receiptAuditId)
-        .filter((id): id is string => id !== undefined),
-    ),
-  );
-}
 
 export function DoneForYou({ completed }: Readonly<{ completed: ReactNode }>) {
   const t = useT();
@@ -178,54 +69,55 @@ export function DoneForYou({ completed }: Readonly<{ completed: ReactNode }>) {
   }
   const waiting = pending?.deals;
   return (
-    <section className="brief-section" aria-labelledby={titleId}>
-      <Eyebrow as="h2" id={titleId} className="brief-section-label">
-        {t("brief.done.title")}
-      </Eyebrow>
+    <section className="brief-section brief-done" aria-labelledby={titleId}>
+      {/* Headed like Needs you, so Home's two lists read as one system. */}
+      <div className="brief-first-head brief-done-band">
+        <Eyebrow as="h2" id={titleId} className="brief-section-label">
+          {t("brief.done.title")}
+        </Eyebrow>
+        {waiting !== undefined && waiting > 0 && (
+          <span className="t-caption t-num brief-first-count">
+            <span aria-hidden="true">{formatNumber(waiting, locale)}</span>
+            <span className="sr-only">
+              {plural("brief.done.waiting", waiting, {
+                count: formatNumber(waiting, locale),
+              })}
+            </span>
+          </span>
+        )}
+        <AppLink className="btn btn-ghost brief-first-queue" href="#/worklist">
+          {t("brief.done.history")}
+        </AppLink>
+      </div>
       {state !== "empty" && (
-        <>
-          <PanelGroupHead
-            title={
-              waiting === undefined
-                ? t("brief.done.dealsLabel")
-                : plural("brief.done.waiting", waiting, {
-                    count: formatNumber(waiting, locale),
-                  })
-            }
-            level="h3"
+        <SurfaceState
+          state={state}
+          emptyLabel=""
+          loadingLabel={t("worklist.handled.loading")}
+          detail={{
+            onRetry: () => {
+              void summary.refetch();
+              void handled.refetch();
+            },
+          }}
+        >
+          <DealChangeList
+            groups={groups.slice(0, DONE_PREVIEW_DEALS)}
+            pending={pending}
+            asOf={handled.data?.as_of}
+            onSettled={settle}
           />
-          <PanelBody>
-            <SurfaceState
-              state={state}
-              emptyLabel=""
-              loadingLabel={t("worklist.handled.loading")}
-              detail={{
-                onRetry: () => {
-                  void summary.refetch();
-                  void handled.refetch();
-                },
-              }}
-            >
-              <DealChangeList
-                groups={groups.slice(0, DONE_PREVIEW_DEALS)}
-                pending={pending}
-                asOf={handled.data?.as_of}
-                onSettled={settle}
-              />
-              <div className="brief-done-foot">
-                <ReviewAll
-                  count={waiting ?? groups.length}
-                  groups={groups}
-                  pending={pending}
-                  asOf={handled.data?.as_of}
-                  handled={handled}
-                  onSettled={settle}
-                />
-                <AppLink href="#/worklist">{t("brief.done.history")}</AppLink>
-              </div>
-            </SurfaceState>
-          </PanelBody>
-        </>
+          <div className="brief-done-foot">
+            <ReviewAll
+              count={waiting ?? groups.length}
+              groups={groups}
+              pending={pending}
+              asOf={handled.data?.as_of}
+              handled={handled}
+              onSettled={settle}
+            />
+          </div>
+        </SurfaceState>
       )}
       {completed}
     </section>
@@ -332,6 +224,10 @@ function ReviewAll({
   );
 }
 
+/**
+ * The changed deals as cards, one open at a time: the first until the reader
+ * opens another.
+ */
 function DealChangeList({
   groups,
   pending,
@@ -344,74 +240,23 @@ function DealChangeList({
   onSettled: (id: string) => void;
 }>) {
   const t = useT();
-  const plural = usePlural();
-  const { locale } = useLocale();
+  const [chosen, choose] = useState<string | null | undefined>(undefined);
+  const openId = chosen === undefined ? groups[0]?.dealId : chosen;
   return (
     <ul className="brief-done-deals" aria-label={t("brief.done.dealsLabel")}>
       {groups.map((group) => (
-        <li className="brief-done-deal" key={group.dealId}>
-          <p className="brief-done-name">
-            <EntityRef kind="deal" id={group.dealId} name={group.name} />
-          </p>
-          {group.unloaded > 0 && (
-            <p className="t-caption">
-              <AppLink href={routeHash(ENTITY.deal.route(group.dealId))}>
-                {plural("brief.done.viewChanges", group.unloaded, {
-                  count: formatNumber(group.unloaded, locale),
-                })}
-              </AppLink>
-            </p>
-          )}
-          <ul className="brief-done-changes">
-            {group.receipts.map((receipt) => (
-              <ChangeRow
-                key={receipt.id}
-                receipt={receipt}
-                asOf={asOf}
-                onSettled={() => onSettled(receipt.id)}
-              />
-            ))}
-          </ul>
-          <DealUndo
-            group={group}
-            bundle={pending?.bundles.find((b) => b.deal_id === group.dealId)}
-            onSettled={onSettled}
-          />
-        </li>
+        <DealCard
+          key={group.dealId}
+          group={group}
+          bundle={pending?.bundles.find((b) => b.deal_id === group.dealId)}
+          currency={pending?.base_currency}
+          open={openId === group.dealId}
+          onOpen={(open) => choose(open ? group.dealId : null)}
+          asOf={asOf}
+          onSettled={onSettled}
+        />
       ))}
     </ul>
-  );
-}
-
-/**
- * "Undo N changes" for a deal with more than one waiting change. It sends the
- * changes listed above it, at the version the server read.
- */
-function DealUndo({
-  group,
-  bundle,
-  onSettled,
-}: Readonly<{
-  group: DealChanges;
-  bundle: MarginceChangeBundle | undefined;
-  onSettled: (id: string) => void;
-}>) {
-  const plural = usePlural();
-  const { locale } = useLocale();
-  const audits = undoableShown(group, bundle);
-  if (!bundle || audits.length < 2) return null;
-  return (
-    <div className="brief-done-controls">
-      <BundleUndo
-        bundles={[{ ...bundle, audit_log_ids: audits }]}
-        label={plural("brief.done.undoChanges", audits.length, {
-          count: formatNumber(audits.length, locale),
-        })}
-        onDone={() => {
-          for (const receipt of group.receipts) onSettled(receipt.id);
-        }}
-      />
-    </div>
   );
 }
 
@@ -423,7 +268,7 @@ function changedSince(
   const ids = (groups: readonly DealChanges[]) =>
     groups
       .flatMap((group) => group.receipts.map((receipt) => receipt.id))
-      .sort()
+      .sort(stable)
       .join(",");
   return ids(shown) !== ids(live);
 }

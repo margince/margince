@@ -18,6 +18,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -63,21 +64,16 @@ func (e *promoteConsentEnv) promoteInBackground(lead ids.LeadID) <-chan promoteR
 	return done
 }
 
-// waiterOn names the one backend in this database waiting on a lock pid holds.
+// waiterOn names the one backend waiting on a lock pid holds. A second waiter
+// is refused rather than chosen between, because the caller goes on to ask
+// about the backend this names.
 func waiterOn(t *testing.T, probe pgx.Tx, pid int) int {
 	t.Helper()
-	ctx := context.Background()
-	if _, err := probe.Exec(ctx, `SELECT pg_stat_clear_snapshot()`); err != nil {
-		t.Fatal(err)
+	waiter, err := testdb.WaiterBehind(context.Background(), probe, int32(pid))
+	if err != nil {
+		t.Fatalf("naming the backend waiting on %d: %v", pid, err)
 	}
-	var waiter int
-	if err := probe.QueryRow(ctx, `
-		SELECT a.pid FROM pg_stat_activity a
-		 WHERE a.datname = current_database() AND $1 = ANY (pg_blocking_pids(a.pid))`,
-		pid).Scan(&waiter); err != nil {
-		t.Fatalf("name the backend waiting on %d: %v", pid, err)
-	}
-	return waiter
+	return int(waiter)
 }
 
 // endTx rolls back a holder the test may already have committed.

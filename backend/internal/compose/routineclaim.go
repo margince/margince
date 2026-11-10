@@ -43,6 +43,11 @@ func routineBriefWorker(pool *pgxpool.Pool, users *identity.Service, log *slog.L
 func claimRoutine(ctx context.Context, pool *pgxpool.Pool, runID, reviewID ids.UUID, part morningDigest, now time.Time, holds ...func(pgx.Tx) error) (routineClaim, bool, error) {
 	var claim routineClaim
 	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+		if len(holds) > 0 {
+			if err := identity.HoldAuthorizationTx(ctx, tx); err != nil {
+				return err
+			}
+		}
 		var won bool
 		var err error
 		claim.morning, won, err = routineBriefEngine(pool).ClaimMailAttemptTx(ctx, tx, runID, now)

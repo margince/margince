@@ -18,8 +18,9 @@ const EMBEDDED_LOGO_SRC = 'src="cid:signature-logo@margince"';
 export function SignatureHtml({
   html,
   title,
-}: Readonly<{ html: string; title: string }>) {
-  const showsLogo = html.includes(EMBEDDED_LOGO_SRC);
+  resolveEmbeddedLogo = true,
+}: Readonly<{ html: string; title: string; resolveEmbeddedLogo?: boolean }>) {
+  const showsLogo = resolveEmbeddedLogo && html.includes(EMBEDDED_LOGO_SRC);
   const logo = useLogoDataUrl(showsLogo);
   const shown =
     showsLogo && logo !== undefined

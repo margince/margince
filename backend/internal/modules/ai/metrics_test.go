@@ -119,6 +119,17 @@ func TestAttemptsCountEveryRungAndCallsCountOnlyTheTerminal(t *testing.T) {
 	)
 }
 
+// A caller that stopped waiting counts as an attempt and never as an error.
+func TestACanceledAttemptIsNoError(t *testing.T) {
+	m := newCallMetrics()
+	m.observeAttempt(served(func(c *Call) { c.ErrorSentinel = sentinelCanceled }))
+	out := render(m)
+	mustContain(t, out, "margince_ai_call_attempts_total{"+servedLabels+"} 1")
+	if strings.Contains(out, `sentinel="canceled"`) {
+		t.Errorf("a canceled attempt reached the error counter:\n%s", out)
+	}
+}
+
 // A rate-limited provider and a broken one produced the same graph before the
 // sentinel label, which is the difference an operator reads the panel for.
 func TestErrorsAreSplitByTheSentinelTheRouterClassified(t *testing.T) {

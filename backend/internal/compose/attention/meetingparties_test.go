@@ -147,6 +147,40 @@ func TestEveryRowWithAContactSaysWhereItWorks(t *testing.T) {
 	}
 }
 
+// A follow-up's recipients are contacts on the card too, so each says where it
+// works, from the same one read.
+func TestEveryRecipientOfAFollowUpSaysWhereItWorks(t *testing.T) {
+	t.Parallel()
+	lead, second, unknown := ids.NewV7(), ids.NewV7(), ids.NewV7()
+	acme := crmcontracts.ContactEmployer{CompanyId: openapi_types.UUID(ids.NewV7()), CompanyName: "Acme"}
+	globex := crmcontracts.ContactEmployer{CompanyId: openapi_types.UUID(ids.NewV7()), CompanyName: "Globex"}
+	var asked []ids.UUID
+	svc := &Service{employers: employersSaying{
+		known: map[ids.UUID]crmcontracts.ContactEmployer{lead: acme, second: globex},
+		asked: &asked,
+	}}
+	recipients := []crmcontracts.WorklistContactFacts{
+		{Id: openapi_types.UUID(lead)}, {Id: openapi_types.UUID(second)}, {Id: openapi_types.UUID(unknown)},
+	}
+	rows := []crmcontracts.WorklistItem{{
+		Source: "meeting_follow_up", Contact: &crmcontracts.WorklistContactFacts{Id: openapi_types.UUID(lead)},
+		Recipients: &recipients,
+	}}
+	if note := svc.nameTheEmployers(context.Background(), rows); note != nil {
+		t.Fatalf("naming the employers: %+v", note)
+	}
+	got := *rows[0].Recipients
+	if got[1].Employer == nil || got[1].Employer.CompanyName != "Globex" {
+		t.Errorf("the second recipient's employer = %+v, want Globex", got[1].Employer)
+	}
+	if got[0].Employer == nil || got[0].Employer.CompanyName != "Acme" || got[2].Employer != nil {
+		t.Errorf("recipients' employers = %+v, %+v, want Acme and none", got[0].Employer, got[2].Employer)
+	}
+	if !sameMembers(asked, []ids.UUID{lead, second, unknown}) {
+		t.Errorf("the employer read was asked about %v, want each contact once", asked)
+	}
+}
+
 // The employer only decorates a row, so a failed read keeps every row and names
 // the missing source, as withheld when the reader was refused.
 func TestAFailedEmployerReadKeepsTheRowsAndSaysSo(t *testing.T) {

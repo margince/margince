@@ -14,6 +14,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/datatask"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 // colleagueSenderDataTask re-checks every copy capture read as a colleague's
@@ -24,7 +25,7 @@ import (
 func colleagueSenderDataTask() datatask.Task {
 	return datatask.Task{
 		ID: "core/1792679687_colleague_sender_domains_rechecked", Version: 1,
-		Title: "Re-checking mail read as a colleague's sent mail", Requires: []string{"core/1791798498"},
+		Title: systemtext.Literal("datatask.title.core.1792679687_colleague_sender_domains_rechecked"), Requires: []string{"core/1791798498"},
 		Steps: []datatask.Step{{
 			Name: auth.SenderStampsCheckedStep, Limit: 200, MinLimit: 10,
 			Audit:    datatask.AuditPolicy{PerRecord: true},

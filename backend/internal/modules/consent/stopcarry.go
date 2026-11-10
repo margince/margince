@@ -87,6 +87,9 @@ func (s *Store) CarryStopsTx(ctx context.Context, tx pgx.Tx, from, to commsauthz
 	if err := lockBothSidesOfACarry(ctx, tx, from, to); err != nil {
 		return err
 	}
+	if err := storekit.LockSubjectsStopAddresses(ctx, tx, subjectKey(from), subjectKey(to)); err != nil {
+		return err
+	}
 
 	// DISTINCT ON collapses several live source rows of one (kind, purpose_id)
 	// to the strongest, because a subquery in an INSERT ... SELECT does NOT

@@ -14,6 +14,7 @@ import {
   titleRules,
   titleTypeRules,
 } from "../../census/rules/panel.census";
+import { stable } from "../format/collate";
 import { EmptyState } from "./atoms";
 import { PANEL_TONES, Panel, PanelBody, PanelIntro } from "./panel";
 
@@ -505,7 +506,7 @@ describe("a panel tone tints the head band and never reshapes it", () => {
 describe("the pane insets the state arm it has no body to wrap", () => {
   it("pays that inset at its own role, on a bare child of the panel", () => {
     const inset = stateArmRoleInsets(panelCss());
-    expect([...inset.map((rule) => rule.selector)].sort()).toEqual([
+    expect([...inset.map((rule) => rule.selector)].sort(stable)).toEqual([
       ".panel > .empty",
       ".panel > .pending",
       '.panel > [role="alert"] > .empty',

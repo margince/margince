@@ -38,6 +38,7 @@ export function MagicLaneSection({
   zone,
   byDay,
   fold,
+  note,
 }: Readonly<{
   lane: MagicLane;
   title: string;
@@ -47,6 +48,8 @@ export function MagicLaneSection({
   // The window runs past a day, so a line names its day rather than its hour.
   byDay: boolean;
   fold?: string;
+  /** A caveat on the whole lane, read under its lines. */
+  note?: string;
 }>) {
   const lines = (
     <ul className="magic-lines" aria-label={title}>
@@ -74,6 +77,7 @@ export function MagicLaneSection({
         ) : (
           lines
         )}
+        {note && <p className="t-caption">{note}</p>}
       </PanelBody>
     </>
   );

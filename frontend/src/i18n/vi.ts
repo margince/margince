@@ -1132,6 +1132,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "reporting.draftOpen": "Bản nháp {revision} chưa được công bố",
   "reporting.draftHidden":
     "Ai đọc báo cáo vẫn thấy bản đã công bố. Hãy xem trước bản nháp rồi mới công bố.",
+  "reporting.draftUnpublished":
+    "Báo cáo này chưa công bố nội dung nào, nên bạn đang xem bản nháp. Hãy công bố để các biểu đồ này trở thành báo cáo.",
   "reporting.draftPreviewing":
     "Bạn đang xem bản nháp. Ai đọc báo cáo vẫn thấy bản đã công bố.",
   "reporting.previewDraft": "Xem trước bản nháp",
@@ -2209,7 +2211,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "brief.plan.period": "Kế hoạch hiện tại · tuần từ {date}",
   "brief.coverage.retry": "Làm mới bản tin",
   "brief.reply.owed": "Khách hàng đang chờ bạn trả lời",
-  "brief.changes.superseded": "Đã thay đổi sau lần cập nhật này",
+  "brief.changes.superseded": "Đã được thay bằng một thay đổi sau",
   "brief.changes.undone": "Đã hoàn tác",
   "brief.updates.title": "Cập nhật",
   "brief.task.undated": "Chưa có hạn",
@@ -2293,6 +2295,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "systemJob.ai_price_sync": "Cập nhật giá mô hình",
   "systemJob.alias_discovery": "Tìm địa chỉ email",
   "systemJob.approval_expiry": "Hết hạn phê duyệt",
+  "systemJob.approval_owner_notice": "Thông báo bàn giao phê duyệt",
   "systemJob.approval_notice_reconcile": "Dọn thông báo phê duyệt đang chờ",
   "systemJob.approval_notice_retract": "Thu hồi thông báo phê duyệt",
   "systemJob.approval_notify": "Thông báo phê duyệt",
@@ -2690,8 +2693,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "history.field.partner_company_id": "Đối tác",
   "history.field.project_id": "Dự án",
   "history.field.product_id": "Sản phẩm",
+  "history.field.legal_entity_id": "Công ty gửi",
   "history.field.about_deal": "Giao dịch liên quan",
-  "history.field.qualifying_event": "Sự kiện đủ điều kiện",
+  "history.field.qualifying_event": "Trao đổi đã ghi nhận",
+  "history.value.exchange.requested": "Đã yêu cầu liên hệ",
   "history.field.qualifying_event_retracted": "Trao đổi đã ghi nhận bị rút lại",
   "history.field.acquisition_request_retracted":
     "Yêu cầu khi thu nhận đã bị rút lại",
@@ -2852,6 +2857,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "palette.recent": "Gần đây",
   "palette.clearRecent": "Xóa",
   "palette.typeScreen": "Màn hình",
+  "palette.typeSetting": "Cài đặt",
   "palette.typeAction": "Hành động",
   "palette.typeRecord": "Hồ sơ",
   "palette.seeAll": "Xem tất cả kết quả cho “{query}”",
@@ -2870,6 +2876,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "action.newDeal": "Deal mới",
   "action.booking": "Trang đặt lịch",
 
+  "common.fieldInvalid": "Kiểm tra giá trị này và thử lại.",
   "common.undo": "Hoàn tác",
   "common.close": "Đóng",
   "common.unknownValue": "Khác",
@@ -3257,7 +3264,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "common.gatewayUnavailable":
     "Máy chủ không kịp xử lý xong yêu cầu và có thể vẫn đang xử lý. Chờ một lúc rồi hãy thử lại, nếu không thao tác có thể chạy hai lần.",
   "common.individualPerformanceOff":
-    "Quản trị viên đã tắt hiệu suất của từng thành viên. Bạn vẫn xem được số liệu của bạn. Một số liệu bị ẩn khi có ít hơn hai thành viên khác đóng góp, hoặc khi trừ đi tổng của một nhóm khác sẽ còn ít hơn hai thành viên.",
+    "Quản trị viên đã tắt hiệu suất của từng thành viên. Bạn vẫn xem được số liệu của bạn. Một số liệu bị ẩn khi có ít hơn hai thành viên khác đóng góp, hoặc khi trừ đi tổng của một nhóm khác sẽ còn ít hơn hai thành viên. Toàn bộ dự báo bị ẩn nếu một nhóm trong đó có thể cho thấy số liệu của riêng một đồng nghiệp.",
   "common.permissionDenied":
     "Bạn không có quyền thực hiện thao tác này. Liên hệ quản trị viên hoặc người đã chia sẻ hồ sơ này để được cấp thêm quyền.",
   "common.seatReadOnly":
@@ -3334,6 +3341,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
 
   "list.headActions": "Thao tác khác",
   "list.search": "Tìm kiếm",
+  "list.searchFor": "Tìm “{query}”",
+  "list.filterSuggestionsFailed": "Không tải được gợi ý bộ lọc.",
   "list.showArchived": "Hiển thị mục trong kho lưu trữ",
   "list.viewToggleOn": "Bật",
   "list.viewToggleOff": "Tắt",
@@ -3449,6 +3458,18 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Các thư sẽ không còn dựa vào yêu cầu này, kể cả thư đã xếp hàng chờ gửi. Yêu cầu vẫn nằm trong hồ sơ ở trạng thái đã rút lại và không thể khôi phục.",
   "consent.acquisitionRequest":
     "Khi được thêm vào, liên hệ này đã yêu cầu báo giá hoặc cuộc hẹn, hoặc đã đồng ý trực tiếp để nhận thư.",
+  "consent.exceptionUnknownOrigin":
+    "Không rõ ai đã ghi nhận ban đầu và vào ngày nào.",
+  "consent.exceptionsTitle": "Ngoại lệ thường trực",
+  "consent.exceptionsScope":
+    "Mỗi ngoại lệ áp dụng cho một mục đích và một công ty gửi. Ngoại lệ không cấp sự đồng ý nhận quảng cáo. Mỗi thư đều được kiểm tra lại.",
+  "consent.exceptionOtherPurpose": "Mục đích khác đã ghi nhận",
+  "consent.exceptionCompany": "Công ty gửi: {name}",
+  "consent.exceptionUnnamedCompany": "Chưa đặt tên công ty gửi.",
+  "consent.exceptionUnknownCompany": "Chưa ghi nhận công ty gửi.",
+  "consent.exceptionRevoke": "Thu hồi ngoại lệ",
+  "consent.exceptionRevokeBody":
+    "Các thư sau không thể dùng ngoại lệ này. Hồ sơ đồng ý và yêu cầu của liên hệ vẫn được giữ nguyên.",
   "consent.stopsTitle": "Lệnh dừng",
   "consent.stopKind.subject_request": "Đã yêu cầu ngừng liên hệ",
   "consent.stopKind.marketing_objection": "Đã phản đối tiếp thị",
@@ -3886,6 +3907,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "roompage.none": "Deal này chưa có Deal Room. Mở Deal Room từ trang deal.",
   "roompage.backToDeal": "← Quay lại deal",
   "roompage.accessMenu": "Quyền vào Deal Room",
+  "room.stewardNeeded.title": "Cần người liên hệ mới",
+  "room.stewardNeeded.body":
+    "Chọn đồng nghiệp đang hoạt động để trả lời người mua. Các câu hỏi hiện có và quyền truy cập phòng vẫn giữ nguyên.",
   "roompage.manage": "Quản lý Deal Room",
   "roompage.pause": "Tạm dừng",
   "roompage.pauseHint":
@@ -4799,7 +4823,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "email.thread.count_other": "{count} thư",
   "email.thread.countLatest_one": "Thư gần nhất",
   "email.thread.countLatest_other": "{count} thư gần nhất",
-  "email.thread.fold": "Thu gọn thư của {name}",
   "email.thread.toLine": "gửi {names}",
   "email.thread.details": "Chi tiết",
   "email.thread.textForwarded":
@@ -7355,11 +7378,16 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "compose.newThread": "Chuỗi thư mới",
   "compose.copies": "Cc và Bcc",
   "compose.signsOffAs": "Kết thư bằng “{closing}”.",
-  "compose.reasonRecord": "Giữ làm lý do lâu dài",
-  "compose.reasonStanding":
-    "Lý do lâu dài áp dụng cho loại thư này gửi {address} từ công ty của bạn cho đến khi có ai thu hồi. Đây là lời xác nhận của bạn, không phải sự đồng ý của họ.",
-  "compose.reasonRecordFor": "Giữ làm lý do lâu dài: {reason}, cho {address}",
-  "compose.reasonLabel": "Vì sao bạn có thể viết cho {address}",
+  "compose.fact.open": "Ghi lại sự việc",
+  "compose.fact.title": "Ghi lại trao đổi với {address}",
+  "compose.fact.scope":
+    "Ghi lại trao đổi với {address} cho công ty gửi email. Không gửi email này, không ghi nhận đồng ý nhận quảng cáo hay tạo ngoại lệ.",
+  "compose.fact.kind": "Đã xảy ra việc gì?",
+  "compose.fact.request": "Đã yêu cầu tôi liên hệ",
+  "compose.fact.quoteRequest": "Đã yêu cầu báo giá này",
+  "compose.fact.met": "Đã gặp trực tiếp",
+  "compose.fact.note": "Đã thống nhất điều gì?",
+  "compose.fact.save": "Ghi lại trao đổi",
   "compose.replyIntent": "Mục đích trả lời",
   "compose.newIntent": "Mục đích email",
   "compose.draftReply": "Soạn trả lời",
@@ -7522,6 +7550,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "compose.scheduleGoesOut": "Gửi lúc {when}",
   "compose.willGoOut": "Gửi lúc {when}",
   "compose.scheduleAfternoon": "Chiều mai",
+  "compose.draftLanguage": "Ngôn ngữ của bản nháp",
   "compose.rewrite": "Viết lại",
   "compose.rewriteShorter": "Ngắn hơn",
   "compose.rewriteShorterAsk": "Giữ nguyên ý, dùng ít chữ hơn.",
@@ -7638,7 +7667,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "compose.sendMessageConfirmTitle": "Gửi tin nhắn",
   "compose.sendMessageBody": "Tin nhắn được gửi ngay. Không thể hoàn tác.",
   "directSend.open": "Gửi và ghi nhận ngoại lệ",
-  "directSend.sent": "Đã gửi như một ngoại lệ có ghi nhận.",
+  "directSend.queued": "Đã xếp hàng gửi theo ngoại lệ đã ghi nhận.",
   "directSend.opening": "Đang mở…",
   "directSend.alreadySettled":
     "Đã có quyết định cho mục này. Mở phần xem lại để xem kết quả.",
@@ -8568,6 +8597,20 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "settings.signatureHtmlHintPlain":
     "Để trống để dùng lại chữ ký văn bản thuần. Hình ảnh từ xa và mã script sẽ bị xóa.",
   "settings.signatureOwnHtml": "Chữ ký HTML của bạn",
+  "settings.signatureReviewTitle": "Kiểm tra chữ ký được giữ lại của {name}",
+  "settings.signatureReviewIntro":
+    "Chủ chữ ký không thể tự kiểm tra. Bản gốc được giữ nguyên cho đến khi bạn lưu thay đổi. Hãy kiểm tra từng trường trước khi chọn phần cần xóa.",
+  "settings.signatureReviewPreview": "Xem trước chữ ký đã lưu",
+  "settings.signatureReviewReload": "Tải lại chữ ký này trước khi chỉnh sửa.",
+  "settings.signatureReviewChangedTitle": "Chữ ký đã thay đổi",
+  "settings.signatureReviewChanged":
+    "Một người kiểm tra khác đã lưu thay đổi. Hãy xem phiên bản mới nhất bên dưới. Chỉ giữ bản nháp của bạn nếu bạn muốn dùng nó để thay các trường đó.",
+  "settings.signatureReviewLatest": "Phiên bản đã lưu mới nhất",
+  "settings.signatureReviewUseLatest": "Dùng phiên bản mới nhất",
+  "settings.signatureReviewKeepDraft": "Giữ bản nháp của tôi",
+  "settings.signatureReviewLoading": "Đang tải chữ ký được giữ lại…",
+  "settings.signatureReviewSaved": "Đã lưu kiểm tra chữ ký",
+  "settings.signatureReviewMember": "thành viên",
   "settings.signature": "Chữ ký email",
   "settings.signatureSub":
     "Chèn vào dưới mỗi email bạn gửi, phía trên chân trang hủy đăng ký.",
@@ -12241,7 +12284,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "forcedMfa.pageTitle": "Thiết lập đăng nhập hai bước",
   "forcedMfa.title": "Thiết lập đăng nhập hai bước",
   "forcedMfa.body":
-    "Bản cài đặt này yêu cầu đăng nhập hai bước. Thiết lập ứng dụng xác thực để tiếp tục.",
+    "Đăng nhập bằng mật khẩu yêu cầu đăng nhập hai bước. Thiết lập ứng dụng xác thực để tiếp tục.",
   "forcedMfa.alreadyOn": "Đăng nhập hai bước đã bật.",
   "forcedMfa.continue": "Tiếp tục",
   "forcedPassword.pageTitle": "Đặt mật khẩu",
@@ -12551,6 +12594,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Để trống nếu không có ngày kết thúc. Ngày được tính theo UTC.",
   "roomtab.manage.contactLabel": "Người liên hệ",
   "roomtab.manage.contactHint": "Đồng nghiệp mà người mua liên hệ.",
+  "roomtab.manage.contactMissing": "Chưa có người liên hệ đang hoạt động",
   "roomtab.manage.contactOwner": "Người phụ trách deal",
   "roomtab.manage.textHeading": "Tiêu đề và lời chào",
   "roomtab.manage.welcomeHint": "Đoạn đầu tiên người mua đọc.",
@@ -14550,6 +14594,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "aicalls.outcome.ok": "Đã trả lời",
   "aicalls.outcome.fallback": "Dự phòng",
   "aicalls.outcome.declined": "Bị từ chối",
+  "aicalls.outcome.canceled": "Đã hủy",
   "aicalls.outcome.error": "Lỗi",
   "aicalls.filter.search": "Tìm lượt gọi",
   "aicalls.filter.searchPlaceholder": "Tìm tính năng, mô hình hoặc lỗi",
@@ -14631,6 +14676,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "aicalls.sentinel.provider_refused": "Nhà cung cấp từ chối",
   "aicalls.sentinel.provider_error": "Nhà cung cấp bị lỗi",
   "aicalls.sentinel.timeout": "Hết thời gian",
+  "aicalls.sentinel.canceled": "Bên gọi đã hủy",
   "aicalls.sentinel.output_withheld": "Câu trả lời bị giữ lại",
   "aicalls.sentinel.output_rejected": "Câu trả lời bị loại",
   "aicalls.sentinel.request_rejected": "Yêu cầu bị từ chối",
@@ -14811,14 +14857,16 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Luôn khả dụng, nên không ai bị khóa ngoài khi một phương thức khác bị tắt.",
   "signInMethods.noneConfigured":
     "Bản cài đặt này chưa cấu hình nhà cung cấp bên ngoài nào. Chỉ có thể đăng nhập bằng mật khẩu.",
-  "signInMethods.requireMfa": "Yêu cầu yếu tố thứ hai",
+  "signInMethods.requireMfa": "Yêu cầu yếu tố thứ hai khi dùng mật khẩu",
+  "signInMethods.requireMfaAction": "Yêu cầu",
   "signInMethods.requireMfaHint":
-    "Mọi thành viên cần bật đăng nhập hai bước để dùng Margince.",
-  "signInMethods.requireMfaConfirmTitle": "Yêu cầu yếu tố thứ hai?",
+    "Đăng nhập bằng mật khẩu yêu cầu đăng nhập hai bước của Margince. Google và Microsoft quản lý MFA riêng.",
+  "signInMethods.requireMfaConfirmTitle":
+    "Yêu cầu yếu tố thứ hai khi dùng mật khẩu?",
   "signInMethods.requireMfaConfirmBody":
-    "Thành viên chưa bật đăng nhập hai bước sẽ được yêu cầu thiết lập trước khi tiếp tục.",
+    "Thành viên đăng nhập bằng mật khẩu phải thiết lập đăng nhập hai bước trước khi tiếp tục.",
   "signInMethods.requireMfaConfirmSelf":
-    "Bạn chưa thiết lập đăng nhập hai bước, nên bạn cũng sẽ được yêu cầu thiết lập.",
+    "Tài khoản này cũng cần thiết lập đăng nhập hai bước khi đăng nhập bằng mật khẩu.",
   "groupRoles.title": "Cấp vai trò theo nhóm",
   "groupRoles.sub":
     "Khi ai đó bạn đã mời đăng nhập bằng Google hoặc Microsoft, họ nhận vai trò được ánh xạ với một nhóm họ thuộc về trong thư mục công ty bạn. Không ai vào được nếu chưa được mời.",
@@ -15550,6 +15598,13 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Mỗi cấp gán một loại công việc cho một nhà cung cấp và một mô hình; thay đổi đã lưu có hiệu lực trong vòng một phút.",
   "aiRouting.profileLine":
     "Hồ sơ bản cài đặt: {profile}. Hồ sơ này giới hạn nhà cung cấp mà một cấp được dùng, do bên vận hành thiết lập.",
+  "aiRouting.profile.eu_hosted":
+    "“EU-hosted” (suy luận của đối tác; hồ sơ này không giới hạn nơi một bậc chạy, nơi đó do kết nối của từng bậc quyết định)",
+  "aiRouting.profile.sovereign":
+    "Chủ quyền (AI chỉ chạy trên máy chủ của chính bản cài đặt, không dùng nhà cung cấp đám mây)",
+  "aiRouting.profile.cloud_frontier":
+    "Đám mây (nhà cung cấp đám mây, dùng khóa API riêng của bản cài đặt)",
+  "aiRouting.profile.unset": "Chưa thiết lập",
   "aiRouting.notBound": "Chưa gán",
   "aiRouting.lastResponse": "Phản hồi gần nhất {when}",
   "aiTerms.provider": "Nhà cung cấp",
@@ -15710,7 +15765,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "agentAllowances.window.help":
     "Một hạn mức kéo dài bao lâu. Độ dài mới bắt đầu ở lần đặt lại kế tiếp, nên không passport nào được hạn mức mới sớm.",
   "agentAllowances.burst":
-    "Giới hạn cố định trên kết nối MCP: {calls} lệnh gọi và {streams} lần mở luồng mỗi phút cho mỗi passport, như nhau cho mọi vai trò.",
+    "Giới hạn cố định trên kết nối MCP cho mỗi passport: {streams} lần mở luồng mỗi phút cho mọi vai trò, và số lệnh gọi công cụ mỗi phút như từng vai trò hiển thị.",
   "agentAllowances.pending.title": "Đang chờ đổi khung thời gian",
   "agentAllowances.pending.body":
     "Từ {date} UTC, mỗi khung kéo dài {interval}. Đến lúc đó, khung hiện tại vẫn tiếp tục đếm.",
@@ -15739,6 +15794,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "agentAllowances.roles.rule":
     "Với mỗi loại, agent nhận giá trị cao nhất trong các vai trò của thành viên. Vai trò không có giá trị riêng dùng giá trị của hệ thống, còn Quản trị có thể nhận mức sẵn của Quản trị.",
   "agentAllowances.roles.col.role": "Vai trò",
+  "agentAllowances.roles.col.pacing": "Lệnh gọi công cụ mỗi phút",
+  "agentAllowances.roles.unpaced": "Không giới hạn",
   "agentAllowances.roles.builtIn": "Có sẵn",
   "agentAllowances.roles.source.role": "Đặt cho vai trò này",
   "agentAllowances.roles.source.admin_preset": "Mức sẵn của Quản trị",
@@ -17302,9 +17359,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Chưa ghi nhận cho phép tiếp thị",
   "contact.consent.fact.notAllowed": "Không được phép cho mục đích này",
   "contact.consent.fact.nothingRecorded": "Chưa có gì được ghi nhận",
-  "contact.consent.allowedWord": "Được phép",
-  "contact.consent.blockedWord": "Bị chặn",
-  "contact.consent.unknownWord": "Chưa rõ",
+  "contact.consent.fact.purposeSupported": "Có căn cứ cho mục đích này",
 
   "contact.moment.rule.privacy_notice_due": "Cần gửi thông báo quyền riêng tư",
   "contact.moment.rule.meeting_prep": "Sắp có cuộc họp",
@@ -19565,6 +19620,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "lead.company.matchedByName": "Cùng tên công ty",
   "lead.company.linkWhyDomain": "{name} dùng tên miền trang web của lead này.",
   "lead.company.linkWhyName": "{name} có cùng tên công ty với lead này.",
+  "lead.company.nameFollowsLink":
+    "Tên này lấy từ công ty được liên kết. Đổi tên trên trang của công ty.",
   "lead.details.fromCompany": "Từ {name}",
   "lead.details.fromCompanyRecord": "Từ hồ sơ công ty",
   "lead.details.companyDecides":
@@ -20230,6 +20287,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "aiOutcome.gaveUp.last_one": "{count} {reason} → không có câu trả lời",
   "aiOutcome.gaveUp.last_other": "{count} {reason} → không có câu trả lời",
   "aiOutcome.gaveUp.timeout": "hết thời gian",
+  "aiOutcome.gaveUp.canceled": "bên gọi đã hủy",
   "aiOutcome.gaveUp.failed": "bị lỗi",
   "aiOutcome.gaveUp.throttled": "bị giới hạn tốc độ",
   "aiOutcome.gaveUp.quota": "hết hạn mức",
@@ -21048,6 +21106,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "{count} lần đủ điều kiện đầu tiên chưa ghi nhận người phụ trách. Số của thành viên chỉ tính sự kiện đã phân bổ.",
   "analytics.team.qualificationUnattributed_other":
     "{count} lần đủ điều kiện đầu tiên chưa ghi nhận người phụ trách. Số của thành viên chỉ tính sự kiện đã phân bổ.",
+  "brief.done.changeCount_one": "{count} thay đổi",
+  "brief.done.changeCount_other": "{count} thay đổi",
+  "brief.done.steps": "Các thay đổi trên giao dịch này, mới nhất trước",
   "brief.done.title": "Margince đã làm giúp bạn",
   "brief.done.waiting_one": "{count} giao dịch chờ bạn xem xét",
   "brief.done.waiting_other": "{count} giao dịch chờ bạn xem xét",
@@ -21062,7 +21123,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "brief.done.viewChanges_one": "Xem {count} thay đổi",
   "brief.done.viewChanges_other": "Xem {count} thay đổi",
   "brief.done.showNew": "Hiện các thay đổi mới",
-  "brief.done.history": "Xem lịch sử thay đổi",
+  "brief.done.history": "Lịch sử thay đổi",
   "brief.done.dealsLabel": "Các giao dịch Margince đã thay đổi",
   "brief.done.noReason": "Không có lý do",
   "brief.done.markedLost": "Đã đánh dấu là mất",

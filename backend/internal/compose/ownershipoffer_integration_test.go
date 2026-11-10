@@ -21,6 +21,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -402,5 +403,28 @@ func TestTheOfferRouteTellsANewOfferFromAnOpenOne(t *testing.T) {
 	}
 	if ids.UUID(made.ToId) != e.Rep3 {
 		t.Errorf("the offer names %s, want the colleague", made.ToId)
+	}
+}
+
+func TestReassignmentWithdrawsAnOfferWithoutLosingItsNotice(t *testing.T) {
+	e := integration.Setup(t)
+	grantHandoverRole(t, e, e.Rep1, e.Rep3)
+	company := e.SeedCompany(t, "Example Company", &e.Rep1)
+	transfers := newOwnershipTransfers(e.Pool)
+	offer, _, err := transfers.Offer(giver(e), "company", company, e.Rep3, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := transfers.contacts.UpdateCompany(e.Admin(), ids.From[ids.CompanyKind](company), contacts.UpdateCompanyInput{OwnerID: new(ids.From[ids.UserKind](e.Rep2))}); err != nil {
+		t.Fatal(err)
+	}
+	if got := e.WsScalar(t, `SELECT owner_id::text FROM company WHERE id=$1`, company); got != e.Rep2.String() {
+		t.Fatalf("reassignment rolled back: %s", got)
+	}
+	if got := e.WsScalar(t, `SELECT status FROM approval WHERE id=$1`, offer.ApprovalID); got != "expired" {
+		t.Fatalf("offer stayed actionable: %s", got)
+	}
+	if n := e.WsCount(t, `SELECT count(*) FROM notice WHERE recipient_user_id=$1 AND kind=$2 AND system_text->'subject'->>'code'='ownership.OfferWithdrawn'`, e.Rep1, transferWithdrawn.kind); n != 1 {
+		t.Fatalf("withdrawal notice lost its verified display: %d", n)
 	}
 }

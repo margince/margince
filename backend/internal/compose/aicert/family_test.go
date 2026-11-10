@@ -16,6 +16,7 @@ func TestModelFamilyGroupsByLineWithOnlyTheStatedMerges(t *testing.T) {
 		"gpt-oss:20b":                      "GPT",
 		"z-ai/glm-5.2":                     "GLM",
 		"mlx-community/Qwen3-14B-4bit":     "Qwen", // the publisher is a repackager, the line is Qwen
+		"qwen/qwen3.8-27b":                 "Qwen",
 		"anthropic/claude-haiku-4.5":       "Claude",
 		"us.anthropic.claude-haiku-4-5-v1": "Claude",
 		"":                                 OtherFamily,

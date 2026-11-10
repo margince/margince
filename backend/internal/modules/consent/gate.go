@@ -5,6 +5,7 @@ package consent
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -46,6 +47,10 @@ func (g *Gate) RequireGrantedForEmails(ctx context.Context, recipients []string,
 // block. A DOI purpose additionally demands the confirmed round-trip on the
 // proof log — a granted-but-unconfirmed row does not send.
 func (g *Gate) RequireGrantedForRecipients(ctx context.Context, recipients []connector.Recipient, purposeKey string) error {
+	return g.checkGrantedRecipients(ctx, recipients, purposeKey, true)
+}
+
+func (g *Gate) checkGrantedRecipients(ctx context.Context, recipients []connector.Recipient, purposeKey string, record bool) error {
 	if len(recipients) == 0 {
 		return fmt.Errorf("consent: a send needs at least one recipient: %w", apperrors.ErrConsentNotGranted)
 	}
@@ -60,15 +65,21 @@ func (g *Gate) RequireGrantedForRecipients(ctx context.Context, recipients []con
 		}
 	}
 	purposeKey = normalizedPurposeKey(purposeKey)
-	return g.store.db.Tx(ctx, func(tx pgx.Tx) error {
+	transact := g.store.db.Tx
+	if !record {
+		transact = g.readTransmitTx
+	}
+	return transact(ctx, func(tx pgx.Tx) error {
 		var purpose PurposeRow
 		err := tx.QueryRow(ctx,
 			`SELECT id, key, label, class, requires_double_opt_in
 			 FROM consent_purpose WHERE key = $1 AND archived_at IS NULL`,
 			purposeKey).Scan(&purpose.ID, &purpose.Key, &purpose.Label, &purpose.Class, &purpose.RequiresDOI)
-		if err != nil {
-			// Unknown purpose ⇒ nothing can be granted under it.
+		if errors.Is(err, pgx.ErrNoRows) {
 			return fmt.Errorf("consent: purpose %q is not defined: %w", purposeKey, apperrors.ErrConsentNotGranted)
+		}
+		if err != nil {
+			return fmt.Errorf("consent: reading the sending purpose: %w", err)
 		}
 		for _, r := range recipients {
 			// Each recipient's own country sets the window a qualifying event
@@ -81,7 +92,7 @@ func (g *Gate) RequireGrantedForRecipients(ctx context.Context, recipients []con
 			// No sending entity: this gate is asked about a purpose key, not a
 			// staged message, so the existing-customer route never applies here.
 			marketing := MarketingContext{Exception: w.marketingException}
-			granted, err := grantedForRecipient(ctx, tx, r, purpose, time.Now(), w.reply, marketing)
+			granted, err := grantedForRecipient(ctx, tx, r, purpose, time.Now(), w.reply, marketing, record)
 			if err != nil {
 				return err
 			}
@@ -112,7 +123,7 @@ func (g *Gate) RequireGrantedForRecipients(ctx context.Context, recipients []con
 // A recipient that resolves only to an unpromoted LEAD is answered by its
 // recorded grant. Any stop that binds the purpose refuses it. resolveLead
 // finds the lead, as it does for the send engine.
-func grantedForRecipient(ctx context.Context, tx pgx.Tx, r connector.Recipient, purpose PurposeRow, asOf time.Time, window time.Duration, marketing MarketingContext) (bool, error) {
+func grantedForRecipient(ctx context.Context, tx pgx.Tx, r connector.Recipient, purpose PurposeRow, asOf time.Time, window time.Duration, marketing MarketingContext, record bool) (bool, error) {
 	contactID, found, err := resolveContact(ctx, tx, r)
 	if err != nil {
 		return false, err
@@ -144,8 +155,10 @@ func grantedForRecipient(ctx context.Context, tx pgx.Tx, r connector.Recipient, 
 	}
 	// false: VerdictForRecipient allowed, so no stop binds this purpose. The
 	// engine's arms pass their own answer.
-	if err := stampDerivedBasis(ctx, tx, contactID, verdict, false); err != nil {
-		return false, err
+	if record {
+		if err := stampDerivedBasis(ctx, tx, contactID, verdict, false); err != nil {
+			return false, err
+		}
 	}
 	return true, nil
 }

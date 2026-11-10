@@ -26,11 +26,11 @@ import (
 
 // atHead is the ledger this binary would record for a namespace, which is what
 // every arm below starts from and then breaks in exactly one way.
-func atHead(t *testing.T, ns dbmigrate.Namespace) map[string]recordedRow {
+func atHead(t *testing.T, ns dbmigrate.Namespace) map[string]dbmigrate.LedgerRow {
 	t.Helper()
-	recorded := make(map[string]recordedRow, len(ns.Migrations))
+	recorded := make(map[string]dbmigrate.LedgerRow, len(ns.Migrations))
 	for _, m := range ns.Migrations {
-		recorded[m.Version] = recordedRow{name: m.Name, digest: dbmigrate.Digest(m)}
+		recorded[m.Version] = dbmigrate.LedgerRow{Name: m.Name, Digest: new(dbmigrate.Digest(m))}
 	}
 	return recorded
 }
@@ -54,6 +54,37 @@ func TestAnAtHeadLedgerIsAccepted(t *testing.T) {
 	}
 }
 
+// A template that applied a declared renumber under its old version is one the
+// migrator reconciles, so the probe must not rebuild it. The same row with
+// content the source does not prove is the migrator's refusal, and the probe's.
+func TestADeclaredRenumberIsJudgedAsTheMigratorLeavesIt(t *testing.T) {
+	ns := coreNamespace(t)
+	if len(ns.Renumbered) == 0 {
+		t.Fatal("the embedded core namespace declares no renumber — this test would pass vacuously")
+	}
+	pair := ns.Renumbered[0]
+	ledger := atHead(t, ns)
+	moved := ledger[pair.New]
+	var asOld dbmigrate.Migration
+	for _, m := range ns.Migrations {
+		if m.Version == pair.New {
+			asOld = m
+		}
+	}
+	asOld.Version = pair.Old
+	delete(ledger, pair.New)
+	ledger[pair.Old] = dbmigrate.LedgerRow{Name: moved.Name, Digest: new(dbmigrate.Digest(asOld))}
+
+	if reason := namespaceAtHead(ns, ledger); reason != "" {
+		t.Fatalf("a ledger the migrator reconciles was refused: %s", reason)
+	}
+
+	ledger[pair.Old] = dbmigrate.LedgerRow{Name: moved.Name, Digest: moved.Digest}
+	if reason := namespaceAtHead(ns, ledger); !strings.Contains(reason, "different content") {
+		t.Fatalf("an old row whose digest does not prove the renumber was not refused for its content: %q", reason)
+	}
+}
+
 // TestEveryWayALedgerCanLieIsRefused walks the five shapes a tracking table can
 // take that all LOOK migrated. Each is a real failure mode: a template built
 // before the newest migration landed; one whose migration was renumbered under
@@ -67,45 +98,45 @@ func TestEveryWayALedgerCanLieIsRefused(t *testing.T) {
 
 	for _, tc := range []struct {
 		name    string
-		corrupt func(map[string]recordedRow)
+		corrupt func(map[string]dbmigrate.LedgerRow)
 		expects string
 	}{
 		{
 			name:    "a migration this binary embeds was never applied",
-			corrupt: func(l map[string]recordedRow) { delete(l, newest.Version) },
+			corrupt: func(l map[string]dbmigrate.LedgerRow) { delete(l, newest.Version) },
 			expects: "behind this binary",
 		},
 		{
 			name: "the version was applied under a different name",
-			corrupt: func(l map[string]recordedRow) {
+			corrupt: func(l map[string]dbmigrate.LedgerRow) {
 				row := l[newest.Version]
-				row.name += "_other"
+				row.Name += "_other"
 				l[newest.Version] = row
 			},
 			expects: "renumbered",
 		},
 		{
 			name: "the row records no content digest",
-			corrupt: func(l map[string]recordedRow) {
+			corrupt: func(l map[string]dbmigrate.LedgerRow) {
 				row := l[newest.Version]
-				row.digest = ""
+				row.Digest = nil
 				l[newest.Version] = row
 			},
 			expects: "no content digest",
 		},
 		{
 			name: "the migration was edited after it was applied",
-			corrupt: func(l map[string]recordedRow) {
+			corrupt: func(l map[string]dbmigrate.LedgerRow) {
 				row := l[newest.Version]
-				row.digest = strings.Repeat("0", len(row.digest))
+				row.Digest = new(strings.Repeat("0", len(*row.Digest)))
 				l[newest.Version] = row
 			},
 			expects: "different content",
 		},
 		{
 			name: "the ledger records a migration this binary does not have",
-			corrupt: func(l map[string]recordedRow) {
-				l["9999999999"] = recordedRow{name: "from_another_branch", digest: "unchecked"}
+			corrupt: func(l map[string]dbmigrate.LedgerRow) {
+				l["9999999999"] = dbmigrate.LedgerRow{Name: "from_another_branch", Digest: new("unchecked")}
 			},
 			expects: "different source tree",
 		},
@@ -187,11 +218,11 @@ func TestUpStampsTheDigestOfWhatItApplied(t *testing.T) {
 	if !ok {
 		t.Fatalf("%s recorded no row for the migration that was just applied", table)
 	}
-	if row.digest == "" {
+	if row.Digest == nil {
 		t.Fatal("dbmigrate.Up recorded no content digest — every clone would then be refused as unverifiable")
 	}
-	if want := dbmigrate.Digest(probe); row.digest != want {
-		t.Fatalf("Up stamped %s where Digest computes %s — the probe compares two different things", row.digest, want)
+	if want := dbmigrate.Digest(probe); *row.Digest != want {
+		t.Fatalf("Up stamped %s where Digest computes %s — the probe compares two different things", *row.Digest, want)
 	}
 }
 
