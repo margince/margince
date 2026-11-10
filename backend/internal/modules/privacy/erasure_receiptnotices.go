@@ -29,7 +29,7 @@ func retractReceiptNotices(ctx context.Context, tx pgx.Tx, contact ids.UUID, lea
 		leads = []ids.UUID{}
 	}
 	rows, err := tx.Query(ctx, `UPDATE notice
- SET target_type = NULL, target_id = NULL, retracted_at = coalesce(retracted_at, now())
+ SET system_text = NULL, target_type = NULL, target_id = NULL, retracted_at = coalesce(retracted_at, now())
  WHERE kind = @notice_kind
    AND ((target_type = 'contact' AND target_id = @erased_contact) OR (target_type = 'lead' AND target_id = ANY(@erased_leads)))
  RETURNING id`, pgx.StrictNamedArgs{"notice_kind": noticekeys.OptOutReceiptMissedKind, "erased_contact": contact, "erased_leads": leads})

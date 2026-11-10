@@ -20,6 +20,7 @@ import {
 import {
   installFetchStub,
   jsonResponse,
+  meRoute,
   type RouteMap,
   StoryProviders,
 } from "../../testing/story-utils";
@@ -34,6 +35,7 @@ const legacy: Profile = bookingProfile;
 function mount(profile: Profile, overrides: RouteMap = {}) {
   const writes: unknown[] = [];
   installFetchStub({
+    "GET /me": meRoute({ activity: ["read", "create"] }),
     "GET /connectors": () => jsonResponse({ data: [bookingConnection] }),
     "GET /me/working-hours": () => jsonResponse(bookingHours),
     "GET /scheduling/profile": () => jsonResponse(profile),
@@ -95,12 +97,14 @@ it("clears a legacy address when the video app is saved, and leaves it out of a 
   };
   expect(linkChanges(legacy, draft)).toEqual({
     title: "Intro call",
+    use_default_title: false,
     video_call: true,
     location: "",
   });
   const app = { ...legacy, video_call: true, location: "" };
   expect(linkChanges(app, { ...draft, location: "" })).toEqual({
     title: "Intro call",
+    use_default_title: false,
   });
 });
 

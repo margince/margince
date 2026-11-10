@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
@@ -51,10 +52,10 @@ type Teammates interface {
 // blank headline, and the write refuses a blank subject, so the failure would
 // be a 500 on a request the contract said was valid.
 var coachSubjects = map[crmcontracts.NoticeKind]string{
-	crmcontracts.NoticeKindCoachReplyAging:        "A customer reply is getting old",
-	crmcontracts.NoticeKindCoachDealNeedsNextStep: "A deal needs its next step",
-	crmcontracts.NoticeKindCoachReviewBacklog:     "There is review work waiting",
-	crmcontracts.NoticeKindCoachGeneral:           "Your lead left you a note",
+	crmcontracts.NoticeKindCoachReplyAging:        systemtext.Literal("coach_reply_aging"),
+	crmcontracts.NoticeKindCoachDealNeedsNextStep: systemtext.Literal("coach_deal_needs_next_step"),
+	crmcontracts.NoticeKindCoachReviewBacklog:     systemtext.Literal("coach_review_backlog"),
+	crmcontracts.NoticeKindCoachGeneral:           systemtext.Literal("coach_general"),
 }
 
 // RaiseCoachNotice records one colleague's nudge to a teammate.
@@ -135,10 +136,11 @@ func (s *Store) RaiseCoachNotice(
 	// changes, so a reader years later asking "why was this allowed" needs the
 	// edge stated rather than re-derived from a team that has since moved.
 	return s.insertNotice(ctx, NewNotice{
-		Recipient: recipient,
-		Kind:      string(kind),
-		Subject:   subject,
-		Body:      note,
+		Recipient:  recipient,
+		Kind:       string(kind),
+		SystemText: &systemtext.Message{Version: 1, Subject: systemtext.Sentence(string(kind))},
+		Subject:    subject,
+		Body:       note,
 		// No dedupe key: a coaching note is a human act, not the delivery of an
 		// event, so there is nothing to key on and two notes are two notices.
 	}, map[string]any{

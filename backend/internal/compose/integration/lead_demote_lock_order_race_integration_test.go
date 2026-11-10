@@ -210,18 +210,8 @@ func waitUntilSomethingQueuesBehind(t *testing.T, holder uint32, demoteReturned 
 	t.Helper()
 	conn := freshConnection(t)
 	testdb.WaitForContention(t, demoteReturned, finishedEarly, missed, func(ctx context.Context) (bool, error) {
-		// pg_stat_activity's row set is materialized once per transaction and
-		// cached until something drops it, so a probe that skips this clear
-		// answers from the snapshot its first look took — and the demote's
-		// connection may have been dialled after that.
-		if _, err := conn.Exec(ctx, `SELECT pg_stat_clear_snapshot()`); err != nil {
-			return false, err
-		}
-		var queued bool
-		err := conn.QueryRow(ctx,
-			`SELECT EXISTS (SELECT 1 FROM pg_stat_activity a
-			  WHERE $1 = ANY (pg_blocking_pids(a.pid)))`, holder).Scan(&queued)
-		return queued, err
+		queued, err := testdb.QueuedBehind(ctx, conn, int32(holder))
+		return queued > 0, err
 	})
 }
 

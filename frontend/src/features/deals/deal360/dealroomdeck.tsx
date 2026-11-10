@@ -148,6 +148,24 @@ export function StateBanner({
   }
 }
 
+export function StewardNotice({
+  room,
+  action,
+}: Readonly<{ room: DealRoom; action: ReactNode }>) {
+  const t = useT();
+  if (!room.needs_steward) return null;
+  return (
+    <Callout
+      tone="warning"
+      kind="standing"
+      title={t("room.stewardNeeded.title")}
+      actions={action}
+    >
+      <p>{t("room.stewardNeeded.body")}</p>
+    </Callout>
+  );
+}
+
 // What still stands between a live room and one worth opening, read from the
 // room's own records. It goes away once all four are done.
 export function RoomSetup({

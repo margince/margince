@@ -96,6 +96,8 @@ func composedFragment(call *ast.CallExpr) string {
 		return ""
 	}
 	switch name.Name {
+	case "WorkspaceAudienceSQL":
+		return WorkspaceAudienceSQL("a") + "\n"
 	case "internalMailReaderSQL":
 		return internalMailReaderSQL("a") + "\n"
 	case "ParticipantStandsSQL":

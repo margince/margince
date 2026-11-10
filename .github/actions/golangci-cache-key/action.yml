@@ -5,7 +5,7 @@ description: >-
 
 outputs:
   key:
-    description: The primary key, ending in the commit SHA so cache-warm can save a new entry for each main commit.
+    description: The primary key, ending in the commit SHA so each scheduled cache-warm run can save a new entry for the main commit it read.
     value: ${{ steps.key.outputs.key }}
   restore-keys:
     description: The prefix that matches the newest entry with the same dependencies and lint config.

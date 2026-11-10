@@ -30,6 +30,7 @@ import {
   isLocale,
   type Locale,
   preferredLocale,
+  setEffectiveLocale,
 } from "./locale";
 
 export {
@@ -248,9 +249,11 @@ export function LocaleProvider({
   // pick, then the browser's preference. The stored pick outranks detection
   // because it is the more specific statement of the same intent — this reader,
   // on this machine, asked for this language.
-  const [locale, setLocaleState] = useState<Locale>(
-    () => initial ?? preferredLocale(),
-  );
+  const [locale, setLocaleState] = useState<Locale>(() => {
+    const chosen = initial ?? preferredLocale();
+    setEffectiveLocale(chosen);
+    return chosen;
+  });
   // The signed-in person's own choice, which ARRIVES rather than being present
   // at mount: `/me` resolves after this provider renders, so seeding state once
   // would mean a stored choice never reached the browser they signed in from —
@@ -296,6 +299,7 @@ export function LocaleProvider({
       }
       if (usable !== locale) setLevel("complete");
       setAdopted(usable);
+      setEffectiveLocale(usable);
       setLocaleState(usable);
     },
     [adopted, locale],
@@ -307,6 +311,7 @@ export function LocaleProvider({
   const setLocale = useCallback((next: Locale) => {
     setLevel("complete");
     rememberLocale(next);
+    setEffectiveLocale(next);
     setLocaleState(next);
   }, []);
   /*
@@ -351,8 +356,12 @@ export function useT() {
   // some two dozen core helpers take a translator as — and widening the RETURN
   // makes every core-only test fake stop being assignable to it, for a
   // capability no core helper has any use for.
-  return (key: MessageKey, params?: Record<string, string>) =>
-    translate(locale, key, params);
+  const language: { readonly locale?: Locale } = { locale };
+  return Object.assign(
+    (key: MessageKey, params?: Record<string, string>) =>
+      translate(locale, key, params),
+    language,
+  );
 }
 
 /**

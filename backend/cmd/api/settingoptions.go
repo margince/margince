@@ -27,6 +27,7 @@ func settingOptions(cfg apiConfig, logger *slog.Logger) []compose.Option {
 	return []compose.Option{
 		compose.WithCompanyContextRollout(config.Val(cfg.settings, compose.CompanyContextRollout)),
 		compose.WithListsEnabled(config.Val(cfg.settings, programsettings.ListsEnabled)),
+		compose.WithDisabledCoreFeatures(config.Val(cfg.settings, programsettings.CoreFeaturesDisabled)),
 		compose.SecurityTxtOption(cfg.settings, time.Now(), logger),
 	}
 }

@@ -23,7 +23,9 @@ type File struct {
 	Note  string `json:"note"`
 	Areas []Area `json:"areas"`
 	// Operations places each operation an agent can call, by operationId.
-	Operations map[string]string `json:"operations"`
+	Operations     map[string]string   `json:"operations"`
+	Placements     map[string]string   `json:"placements"`
+	VerbPlacements map[string][]string `json:"verb_placements"`
 	// Verbs lists the areas of the operations each verb serves.
 	Verbs map[string][]string `json:"verbs"`
 	// RecordCalls places a verb that picks its operation by record type.
@@ -117,4 +119,15 @@ func OfVerb(verb string) []string {
 func OfRecordCall(verb, recordType string) (string, bool) {
 	area, ok := table.RecordCalls[verb][recordType]
 	return area, ok
+}
+
+// PlacementOfOperation reads the parity catalog's area for an HTTP operation.
+func PlacementOfOperation(operationID string) (string, bool) {
+	placement, ok := table.Placements[operationID]
+	return placement, ok
+}
+
+// PlacementsOfVerb returns a copy so callers cannot change the shared catalog.
+func PlacementsOfVerb(verb string) []string {
+	return slices.Clone(table.VerbPlacements[verb])
 }

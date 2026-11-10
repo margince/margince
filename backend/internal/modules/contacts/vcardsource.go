@@ -18,6 +18,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -52,7 +53,7 @@ func sourceIsNarrowed(ctx context.Context, tx pgx.Tx, source ids.UUID) (bool, er
 func sourceLendsItsCard(ctx context.Context, tx pgx.Tx, source ids.UUID) (bool, error) {
 	var open bool
 	err := tx.QueryRow(ctx, `
-		SELECT audience = 'workspace'
+		SELECT `+auth.WorkspaceAudienceSQL("activity")+`
 		       AND restricted_at IS NULL
 		       AND archived_at IS NULL
 		  FROM activity WHERE id = $1 FOR SHARE`, source).Scan(&open)

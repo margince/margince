@@ -57,6 +57,7 @@ func TestEveryAggregateAsksTheAudience(t *testing.T) {
 		// assembled with positional verbs where a concatenated fragment would
 		// land inside one.
 		if !strings.Contains(text, "AudienceWorkspaceOnly") &&
+			!strings.Contains(text, "WorkspaceAudienceSQL") &&
 			!strings.Contains(text, "audience = 'workspace'") {
 			t.Errorf("%s counts activities and asks no audience question (%s). "+
 				"A held message must not be visible in the shape of a number either — "+

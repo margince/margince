@@ -205,7 +205,7 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 ## capture_connection
 
-30 columns · primary key `(id)` · referenced by 2 foreign keys
+31 columns · primary key `(id)` · referenced by 2 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -221,6 +221,7 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 | `history_baseline_set_at` | `timestamp with time zone` |  |  |
 | `history_baseline_set_by` | `text` |  |  |
 | `history_baseline_tz` | `text` |  |  |
+| `legal_entity_id` | `uuid` |  | Points at `legal_entity.id`. |
 | `mail_posture` | `text`, default `'classified'::text` | yes | What this mailbox asks of the mail it brings in. |
 | `provider` | `text` | yes | The mail/calendar provider (A51 email+calendar parity). |
 | `provider_scopes` | `text[]` |  |  |
@@ -245,6 +246,7 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 | Columns | Table | When the parent goes |
 |---|---|---|
 | `context_tag_id` | `tag` | deleting the parent keeps this row and clears the link |
+| `legal_entity_id` | `legal_entity` | the parent cannot be deleted while this row points at it |
 | `user_id` | `app_user` | deleting the parent deletes this row |
 
 **Rules**
@@ -385,7 +387,7 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 ## capture_import
 
-13 columns · primary key `(id)` · referenced by 0 foreign keys
+14 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -394,6 +396,7 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 | `bcc_only` | `boolean` |  |  |
 | `delivered_by` | `text[]`, default `'{}'::text[]` | yes |  |
 | `imported_at` | `timestamp with time zone`, default `now()` | yes |  |
+| `legal_entity_id` | `uuid` |  | Points at `legal_entity.id`. |
 | `posture_at_import` | `text` |  | One of `shared`, `classified`, `held`. |
 | `provider_message_ids` | `text[]`, default `'{}'::text[]` | yes |  |
 | `provider_received_at` | `timestamp with time zone` |  |  |
@@ -408,6 +411,7 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 | Columns | Table | When the parent goes |
 |---|---|---|
 | `activity_id` | `activity` | deleting the parent deletes this row |
+| `legal_entity_id` | `legal_entity` | the parent cannot be deleted while this row points at it |
 | `user_id` | `app_user` | the parent cannot be deleted while this row points at it |
 
 **Rules**

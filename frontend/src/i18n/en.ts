@@ -2275,6 +2275,7 @@ export const en = {
   "systemJob.ai_price_sync": "Model price update",
   "systemJob.alias_discovery": "Mail address discovery",
   "systemJob.approval_expiry": "Approval expiry",
+  "systemJob.approval_owner_notice": "Approval handover notice",
   "systemJob.approval_notice_reconcile": "Pending approval notice cleanup",
   "systemJob.approval_notice_retract": "Approval notice withdrawal",
   "systemJob.approval_notify": "Approval notification",
@@ -2672,8 +2673,10 @@ export const en = {
   "history.field.partner_company_id": "Partner",
   "history.field.project_id": "Project",
   "history.field.product_id": "Product",
+  "history.field.legal_entity_id": "Sending company",
   "history.field.about_deal": "Deal it was about",
-  "history.field.qualifying_event": "Qualifying event",
+  "history.field.qualifying_event": "Recorded exchange",
+  "history.value.exchange.requested": "Asked to be contacted",
   "history.field.qualifying_event_retracted": "Recorded exchange withdrawn",
   "history.field.acquisition_request_retracted":
     "Acquisition request withdrawn",
@@ -2874,6 +2877,7 @@ export const en = {
   "action.newDeal": "New deal",
   "action.booking": "Booking page",
 
+  "common.fieldInvalid": "Check this value and try again.",
   "common.undo": "Undo",
   "common.close": "Close",
   "common.unknownValue": "Other",
@@ -3271,7 +3275,7 @@ export const en = {
   // comes back 404, so by the time this is read the record is one they may know
   // about. Two sentences, no dash (VOICE-RULE-5).
   "common.individualPerformanceOff":
-    "An administrator switched off individual performance. You can see your own figures. A figure is withheld when fewer than two other members make it up, or when taking another team’s total from it would leave fewer than two.",
+    "An administrator switched off individual performance. You can see your own figures. A figure is withheld when fewer than two other members make it up, or when taking another team’s total from it would leave fewer than two. A forecast is withheld in full if any of its groups would show one colleague’s figures.",
   "common.permissionDenied":
     "You do not have permission for this action. Ask an administrator, or the user who shared this record, to extend your access.",
   // The licensing ceiling, decided before any role is consulted: a read seat is
@@ -3380,6 +3384,8 @@ export const en = {
 
   "list.headActions": "More actions",
   "list.search": "Search",
+  "list.searchFor": "Search for “{query}”",
+  "list.filterSuggestionsFailed": "Filter suggestions did not load.",
   "list.showArchived": "Show archived",
   "list.viewToggleOn": "On",
   "list.viewToggleOff": "Off",
@@ -3502,6 +3508,17 @@ export const en = {
     "Sends stop resting on it, including a message already queued on it. The request stays on the record as withdrawn and cannot be restored.",
   "consent.acquisitionRequest":
     "When this contact was added, they asked for a quote or a meeting, or said face to face that they may be written to.",
+  "consent.exceptionUnknownOrigin": "Original author and date unavailable.",
+  "consent.exceptionsTitle": "Standing exceptions",
+  "consent.exceptionsScope":
+    "Each exception covers one purpose and one sending company. It grants no marketing consent. Every message is checked again.",
+  "consent.exceptionOtherPurpose": "Other recorded purpose",
+  "consent.exceptionCompany": "Sending company: {name}",
+  "consent.exceptionUnnamedCompany": "Sending company name not set.",
+  "consent.exceptionUnknownCompany": "Sending company not recorded.",
+  "consent.exceptionRevoke": "Revoke exception",
+  "consent.exceptionRevokeBody":
+    "Future messages can no longer use this exception. Consent records and contact requests stay as they are.",
   "consent.stopsTitle": "Stops",
   "consent.stopKind.subject_request": "Asked not to be contacted",
   "consent.stopKind.marketing_objection": "Objected to marketing",
@@ -3965,6 +3982,9 @@ export const en = {
     "This deal has no Deal Room yet. Open one from the deal page.",
   "roompage.backToDeal": "← Back to deal",
   "roompage.accessMenu": "Room access",
+  "room.stewardNeeded.title": "New contact needed",
+  "room.stewardNeeded.body":
+    "Choose an active colleague to answer buyers. Existing questions and room access stay as they are.",
   "roompage.manage": "Manage room",
   "roompage.pause": "Pause",
   "roompage.pauseHint":
@@ -7545,12 +7565,16 @@ export const en = {
   "compose.newThread": "New thread",
   "compose.copies": "Cc and Bcc",
   "compose.signsOffAs": "Signs off as “{closing}”.",
-  "compose.reasonRecord": "Keep as a standing reason",
-  "compose.reasonStanding":
-    "A standing reason covers this kind of message to {address} from your company until someone revokes it. It is your word, not their consent.",
-  "compose.reasonRecordFor":
-    "Keep as a standing reason: {reason}, for {address}",
-  "compose.reasonLabel": "Why you may write to {address}",
+  "compose.fact.open": "Record what happened",
+  "compose.fact.title": "Record the exchange with {address}",
+  "compose.fact.scope":
+    "Records the exchange with {address} for the sending company. It does not send this email, record marketing consent or create an exception.",
+  "compose.fact.kind": "What happened?",
+  "compose.fact.request": "They asked me to write",
+  "compose.fact.quoteRequest": "They asked for this quote",
+  "compose.fact.met": "Met face to face",
+  "compose.fact.note": "What was agreed?",
+  "compose.fact.save": "Record the exchange",
   "compose.replyIntent": "Purpose of the reply",
   "compose.newIntent": "Purpose of the email",
   "compose.draftReply": "Draft reply",
@@ -7841,7 +7865,7 @@ export const en = {
   "compose.sendMessageBody":
     "The message is sent immediately. This cannot be undone.",
   "directSend.open": "Send with a recorded exception",
-  "directSend.sent": "Sent as a recorded exception.",
+  "directSend.queued": "Queued as a recorded exception.",
   "directSend.opening": "Opening…",
   "directSend.alreadySettled":
     "This has already been decided. Open the review for the outcome.",
@@ -8766,6 +8790,20 @@ export const en = {
   "settings.signatureHtmlHintPlain":
     "Leave this empty to use your plain text again. Remote images and scripts are removed.",
   "settings.signatureOwnHtml": "Your HTML signature",
+  "settings.signatureReviewTitle": "Review {name}’s retained signature",
+  "settings.signatureReviewIntro":
+    "The owner cannot review this signature themselves. The original stays until you save your changes. Check every field before choosing what to remove.",
+  "settings.signatureReviewPreview": "Saved signature preview",
+  "settings.signatureReviewReload": "Reload this signature before editing it.",
+  "settings.signatureReviewChangedTitle": "The signature changed",
+  "settings.signatureReviewChanged":
+    "Another controller saved changes. Review the latest version below. Keep your draft only if you want it to replace those fields.",
+  "settings.signatureReviewLatest": "Latest saved version",
+  "settings.signatureReviewUseLatest": "Use latest version",
+  "settings.signatureReviewKeepDraft": "Keep my draft",
+  "settings.signatureReviewLoading": "Loading the retained signature…",
+  "settings.signatureReviewSaved": "Signature review saved",
+  "settings.signatureReviewMember": "the member",
   "settings.signature": "Email signature",
   "settings.signatureSub":
     "Added below every message you send, above the unsubscribe footer.",
@@ -12563,7 +12601,7 @@ export const en = {
   "forcedMfa.pageTitle": "Set up two-step sign-in",
   "forcedMfa.title": "Set up two-step sign-in",
   "forcedMfa.body":
-    "This installation requires two-step sign-in. Set up an authenticator app to continue.",
+    "Password sign-in requires two-step sign-in. Set up an authenticator app to continue.",
   "forcedMfa.alreadyOn": "Two-step sign-in is already on.",
   "forcedMfa.continue": "Continue",
   "forcedPassword.pageTitle": "Set password",
@@ -12876,6 +12914,7 @@ export const en = {
     "Leave empty for no end date. The day is read in UTC.",
   "roomtab.manage.contactLabel": "Your contact",
   "roomtab.manage.contactHint": "The colleague a buyer turns to.",
+  "roomtab.manage.contactMissing": "No active contact",
   "roomtab.manage.contactOwner": "The deal’s owner",
   "roomtab.manage.textHeading": "Title and welcome",
   "roomtab.manage.welcomeHint": "The first paragraph a buyer reads.",
@@ -14866,6 +14905,7 @@ export const en = {
   "aicalls.outcome.ok": "Answered",
   "aicalls.outcome.fallback": "Fallback",
   "aicalls.outcome.declined": "Declined",
+  "aicalls.outcome.canceled": "Canceled",
   "aicalls.outcome.error": "Failed",
   "aicalls.filter.search": "Search calls",
   "aicalls.filter.searchPlaceholder": "Search feature, model or error",
@@ -14947,6 +14987,7 @@ export const en = {
   "aicalls.sentinel.provider_refused": "Refused by provider",
   "aicalls.sentinel.provider_error": "Provider failed",
   "aicalls.sentinel.timeout": "Timed out",
+  "aicalls.sentinel.canceled": "Canceled by the caller",
   "aicalls.sentinel.output_withheld": "Answer withheld",
   "aicalls.sentinel.output_rejected": "Answer rejected",
   "aicalls.sentinel.request_rejected": "Request rejected",
@@ -15127,14 +15168,16 @@ export const en = {
     "Always available, so nobody is locked out when another method is off.",
   "signInMethods.noneConfigured":
     "This installation has no external provider configured. Password is the only sign-in method.",
-  "signInMethods.requireMfa": "Require second factor",
+  "signInMethods.requireMfa": "Require second factor for passwords",
+  "signInMethods.requireMfaAction": "Require",
   "signInMethods.requireMfaHint":
-    "Every member needs two-step sign-in turned on to use Margince.",
-  "signInMethods.requireMfaConfirmTitle": "Require second factor?",
+    "Password sign-in requires Margince two-step sign-in. Google and Microsoft manage their own MFA.",
+  "signInMethods.requireMfaConfirmTitle":
+    "Require second factor for passwords?",
   "signInMethods.requireMfaConfirmBody":
-    "Members without two-step sign-in are asked to set it up before they can continue.",
+    "Members signing in with a password must set up two-step sign-in before they can continue.",
   "signInMethods.requireMfaConfirmSelf":
-    "You have not set up two-step sign-in yet, so you are asked to set it up too.",
+    "Signing in with a password will require setting up two-step sign-in for this account too.",
   "groupRoles.title": "Group role grants",
   "groupRoles.sub":
     "When someone you invited signs in with Google or Microsoft, they get the role mapped to a group they belong to in your company directory. Nobody gets in without an invitation.",
@@ -16030,7 +16073,7 @@ export const en = {
   "agentAllowances.window.help":
     "How long one allowance lasts. A new length starts at the next reset, so no passport gets a fresh allowance early.",
   "agentAllowances.burst":
-    "Fixed limits on the MCP connection: {calls} calls and {streams} stream opens a minute per passport, the same for every role.",
+    "Fixed limits on the MCP connection, per passport: {streams} stream opens a minute for every role, and the tool calls a minute each role shows.",
   "agentAllowances.pending.title": "Window change waiting",
   "agentAllowances.pending.body":
     "Each window lasts {interval} from {date} UTC. Until then the current window keeps counting.",
@@ -16059,6 +16102,8 @@ export const en = {
   "agentAllowances.roles.rule":
     "For each kind, an agent gets the highest value among its user’s roles. A role with no value of its own uses the installation value, and Admin may take its preset instead.",
   "agentAllowances.roles.col.role": "Role",
+  "agentAllowances.roles.col.pacing": "Tool calls a minute",
+  "agentAllowances.roles.unpaced": "No limit",
   "agentAllowances.roles.builtIn": "Built-in",
   "agentAllowances.roles.source.role": "Set for this role",
   "agentAllowances.roles.source.admin_preset": "Admin preset",
@@ -17622,9 +17667,7 @@ export const en = {
     "No marketing permission recorded",
   "contact.consent.fact.notAllowed": "Not allowed for this purpose",
   "contact.consent.fact.nothingRecorded": "Nothing recorded yet",
-  "contact.consent.allowedWord": "Allowed",
-  "contact.consent.blockedWord": "Blocked",
-  "contact.consent.unknownWord": "Unknown",
+  "contact.consent.fact.purposeSupported": "Supported for this purpose",
 
   "contact.moment.rule.privacy_notice_due": "Privacy notice owed",
   "contact.moment.rule.meeting_prep": "Meeting soon",
@@ -20720,6 +20763,7 @@ export const en = {
   "aiOutcome.gaveUp.last_one": "{count} {reason} → no answer",
   "aiOutcome.gaveUp.last_other": "{count} {reason} → no answer",
   "aiOutcome.gaveUp.timeout": "timed out",
+  "aiOutcome.gaveUp.canceled": "canceled by the caller",
   "aiOutcome.gaveUp.failed": "failed",
   "aiOutcome.gaveUp.throttled": "throttled",
   "aiOutcome.gaveUp.quota": "out of quota",

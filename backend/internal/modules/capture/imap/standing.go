@@ -222,10 +222,16 @@ func (c *Connector) syncStanding(ctx context.Context, auth connector.Auth, curso
 	// it likes. A standing connector is one registry singleton serving every
 	// mailbox.
 	defer abortAfter(netConn, pullDeadline, c.phaseTimerOr())()
+	// A cancelled pull ends the same way: closing the connection fails the
+	// command in flight, which no context reaches inside go-imap.
+	defer context.AfterFunc(ctx, func() {
+		//craft:ignore swallowed-errors the close IS the cancellation; the command in flight reports the failure
+		_ = netConn.Close()
+	})()
 
 	selData, err := client.Select(creds.Mailbox, &imapv2.SelectOptions{ReadOnly: true}).Wait()
 	if err != nil {
-		return nil, fmt.Errorf("imap: selecting mailbox %q: %w", creds.Mailbox, ErrUnreachable)
+		return nil, cancelledOr(ctx, fmt.Errorf("imap: selecting mailbox %q: %w", creds.Mailbox, ErrUnreachable))
 	}
 	// Asked before a single message is captured: the UID watermark advances past
 	// whatever this pull writes, and the activity natural key means a row
@@ -234,7 +240,7 @@ func (c *Connector) syncStanding(ctx context.Context, auth connector.Auth, curso
 	// watermark, exactly as a failed Select does.
 	st.sentMailbox, err = sentSpecialUse(client, creds.Mailbox)
 	if err != nil {
-		return nil, err
+		return nil, cancelledOr(ctx, err)
 	}
 
 	// A mailbox-identity change, a generation change, or a first sync
@@ -245,21 +251,30 @@ func (c *Connector) syncStanding(ctx context.Context, auth connector.Auth, curso
 	if cur.Email != creds.Email || cur.Mailbox != creds.Mailbox || cur.UIDValidity != selData.UIDValidity || cur.LastUID == 0 {
 		maxUID, err := c.pullWindow(ctx, client, selData, creds.MaxMessages, sink, st)
 		if err != nil {
-			return nil, err
+			return nil, cancelledOr(ctx, err)
 		}
 		return marshalIMAPCursor(imapCursor{
 			UIDValidity: selData.UIDValidity, LastUID: maxUID, Email: creds.Email, Mailbox: creds.Mailbox,
 		}), nil
 	}
 
-	cur, err = c.syncIncremental(ctx, client, creds, cur, sink, st)
+	cur, err = c.syncIncremental(ctx, client, creds, cur, selData.NumMessages, sink, st)
 	if err != nil {
-		return nil, err
+		return nil, cancelledOr(ctx, err)
 	}
 	cur.UIDValidity = selData.UIDValidity
 	cur.Email = creds.Email
 	cur.Mailbox = creds.Mailbox
 	return marshalIMAPCursor(cur), nil
+}
+
+// cancelledOr names the cancellation when it is what failed the command: the
+// closed connection is only how it reached the command in flight.
+func cancelledOr(ctx context.Context, err error) error {
+	if cause := ctx.Err(); cause != nil {
+		return errors.Join(cause, err)
+	}
+	return err
 }
 
 // sentSpecialUse reports whether the server describes mailbox with RFC 6154's
@@ -294,25 +309,33 @@ func sentAttr(entries []*imapv2.ListData, mailbox string) bool {
 	return false
 }
 
-// syncIncremental pulls above the watermark: enumerate first (UIDs only, no
-// bodies on the wire), then body-fetch just the oldest MaxMessages — a burst
-// beyond that window simply continues next sync from the new watermark (the
-// capture key makes any overlap a no-op).
-func (c *Connector) syncIncremental(ctx context.Context, client *imapclient.Client, creds Credentials, cur imapCursor, sink connector.Sink, st *syncState) (imapCursor, error) {
+// syncIncremental pulls above the watermark: list a bounded page of new UIDs
+// (no bodies on the wire), then body-fetch just those. A burst beyond that page
+// continues next sync from the new watermark (the capture key makes any
+// overlap a no-op).
+//
+// The watermark is the highest UID processed. The one exception is a range
+// the listing proved empty below the highest UID the mailbox holds. No message
+// can ever take a UID there, so the watermark moves past it rather than
+// listing it again on every pull.
+func (c *Connector) syncIncremental(ctx context.Context, client *imapclient.Client, creds Credentials, cur imapCursor, messages uint32, sink connector.Sink, st *syncState) (imapCursor, error) {
 	if cur.LastUID == math.MaxUint32 {
 		// The 32-bit UID space is exhausted: +1 would wrap to 0 and rescan
 		// the mailbox. Hold the watermark until UIDVALIDITY rolls over.
 		return cur, nil
 	}
-	newUIDs, err := c.listNewUIDs(client, cur.LastUID+1, creds.MaxMessages)
+	page, err := listNewUIDs(ctx, client, cur.LastUID+1, messages, boundedWindow(creds.MaxMessages))
 	if err != nil {
 		return cur, err
 	}
-	if len(newUIDs) == 0 {
+	if len(page.uids) == 0 {
+		if page.emptyThrough > cur.LastUID {
+			cur.LastUID = page.emptyThrough
+		}
 		return cur, nil
 	}
 	var uids imapv2.UIDSet
-	for _, u := range newUIDs {
+	for _, u := range page.uids {
 		uids.AddNum(u)
 	}
 	maxUID, err := c.pullSet(ctx, client, uids, 0, sink, st)
@@ -323,46 +346,6 @@ func (c *Connector) syncIncremental(ctx context.Context, client *imapclient.Clie
 		cur.LastUID = maxUID
 	}
 	return cur, nil
-}
-
-// listNewUIDs enumerates the UIDs at or above from, ascending, fetching no
-// bodies — the pre-flight that lets the incremental pull bound how many
-// messages actually stream.
-func (c *Connector) listNewUIDs(client *imapclient.Client, from uint32, retain int) ([]imapv2.UID, error) {
-	var set imapv2.UIDSet
-	set.AddRange(imapv2.UID(from), 0) // 0 = *
-	cmd := client.Fetch(set, &imapv2.FetchOptions{UID: true})
-	var uids []imapv2.UID
-	for {
-		msg := cmd.Next()
-		if msg == nil {
-			break
-		}
-		for {
-			item := msg.Next()
-			if item == nil {
-				break
-			}
-			if it, ok := item.(imapclient.FetchItemDataUID); ok && uint32(it.UID) >= from {
-				uids = append(uids, it.UID)
-			}
-		}
-		// Retention stays bounded however large the backlog: keep only the
-		// LOWEST retain UIDs (the oldest mail syncs first; the watermark
-		// walks forward through the rest on later pulls).
-		if retain > 0 && len(uids) > 2*retain {
-			slices.Sort(uids)
-			uids = uids[:retain]
-		}
-	}
-	if err := cmd.Close(); err != nil {
-		return nil, fmt.Errorf("imap: listing new mail: %w", errors.Join(ErrUnreachable, err))
-	}
-	slices.Sort(uids)
-	if retain > 0 && len(uids) > retain {
-		uids = uids[:retain]
-	}
-	return uids, nil
 }
 
 // pullWindow captures the most recent window by sequence numbers (the

@@ -12,6 +12,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { pickOption, pickSuggestion } from "../../design-system/select-testing";
+import { stable } from "../../format/collate";
 import { LocaleProvider } from "../../i18n";
 import { forgetPlatformDeclines } from "../../lib/installation-setup.decline";
 import { jsonResponse } from "../../testing/company.fixtures";
@@ -551,7 +552,7 @@ describe("the first-run setup gate", () => {
       tiers: Record<string, { provider: string; model: string }>;
       embeddings: { provider: string; model: string };
     };
-    expect(Object.keys(routing.tiers).sort()).toEqual([
+    expect(Object.keys(routing.tiers).sort(stable)).toEqual([
       "cheap_cloud",
       "frontier",
       "local_small",

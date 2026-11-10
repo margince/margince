@@ -225,7 +225,10 @@ type stubConsent struct {
 	// so this is the field a coverage case asserts on.
 	authzAsked []string
 	// recheck is what RecheckTransmit hands back; nil keeps the issued ticket.
-	recheck *commsauthz.TransmitTicket
+	recheck    *commsauthz.TransmitTicket
+	permitBusy bool
+	readyErr   error
+	lastPermit *testTransmitPermit
 }
 
 // RecheckTransmit stands in for the second look at the wire.
@@ -422,4 +425,39 @@ func (s *stubConsent) AuthorizeTransmit(_ context.Context, req commsauthz.Transm
 		DecisionSetID: ids.NewV7(),
 		Allowed:       true,
 	}, nil
+}
+
+type testTransmitPermit struct {
+	ticket   commsauthz.TransmitTicket
+	readyErr error
+	closed   bool
+}
+
+func (p *testTransmitPermit) Ticket() commsauthz.TransmitTicket { return p.ticket }
+func (p *testTransmitPermit) Ready(ctx context.Context) error {
+	if p.readyErr != nil {
+		return p.readyErr
+	}
+	return ctx.Err()
+}
+func (p *testTransmitPermit) Close(context.Context) { p.closed = true }
+
+func (s *stubConsent) AcquireTransmitPermit(ctx context.Context, req commsauthz.TransmitRequest, issued commsauthz.TransmitTicket) (commsauthz.TransmitPermit, error) {
+	if s.permitBusy {
+		return nil, nil //nolint:nilnil // Exercise the permit contract for busy capacity.
+	}
+	fresh, err := s.RecheckTransmit(ctx, req, issued)
+	if err != nil {
+		return nil, err
+	}
+	s.lastPermit = &testTransmitPermit{ticket: fresh, readyErr: s.readyErr}
+	return s.lastPermit, nil
+}
+
+func (f consentFunc) AcquireTransmitPermit(ctx context.Context, req commsauthz.TransmitRequest, issued commsauthz.TransmitTicket) (commsauthz.TransmitPermit, error) {
+	fresh, err := f.RecheckTransmit(ctx, req, issued)
+	if err != nil {
+		return nil, err
+	}
+	return &testTransmitPermit{ticket: fresh}, nil
 }

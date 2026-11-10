@@ -1,10 +1,11 @@
 import { createHash } from "node:crypto";
-import { readFile, readdir, writeFile } from "node:fs/promises";
+import { readdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { createServer } from "vite";
 import ts from "typescript";
+import { createServer } from "vite";
 import { parseSource } from "./lib/source-tree.ts";
+import { stable } from "./lib/stable.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const names = [
@@ -42,7 +43,7 @@ function addCodes(source, name) {
 const fields = new Set();
 const values = new Set();
 const hashes = {};
-for (const name of inputs.sort()) {
+for (const name of inputs.sort(stable)) {
   const source = await readFile(join(root, "src", name), "utf8");
   hashes[name] = createHash("sha256").update(source).digest("hex");
   if (!name.startsWith("i18n/")) addCodes(source, name);
@@ -124,7 +125,7 @@ try {
     const labels = {};
     const coded = {};
     const defaults = {};
-    for (const field of [...fields].sort()) {
+    for (const field of [...fields].sort(stable)) {
       labels[field] = previewFieldLabel(field, t);
       for (const kind of [
         "text",
@@ -142,7 +143,7 @@ try {
         );
         if (translated && !fallback.includes("__unknown_preview_code__"))
           defaults[`${field}/${kind}`] = fallback;
-        for (const code of [...values].sort()) {
+        for (const code of [...values].sort(stable)) {
           translated = false;
           const text = previewValue({ kind, text: code }, field, t, language);
           if (
@@ -186,7 +187,9 @@ try {
     };
   }
   const output = JSON.stringify({
-    inputs: Object.fromEntries(Object.entries(hashes).sort()),
+    inputs: Object.fromEntries(
+      Object.entries(hashes).sort((a, b) => stable(String(a), String(b))),
+    ),
     languages,
   });
   const path = join(

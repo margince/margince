@@ -112,7 +112,7 @@ const (
 // newest — the one naming the date a rep would recognise.
 func TestTheRepairFoldsOneRecordsRemindersToTheNewest(t *testing.T) {
 	e := Setup(t)
-	owner := OwnerConn(t)
+	owner := FreshOwnerConn(t)
 	company := e.SeedCompany(t, "Over-reminded Account", nil)
 
 	var ids3 []ids.UUID
@@ -136,7 +136,7 @@ func TestTheRepairFoldsOneRecordsRemindersToTheNewest(t *testing.T) {
 // together would retire one nobody has answered.
 func TestTheRepairKeepsTheTwoStartersApart(t *testing.T) {
 	e := Setup(t)
-	owner := OwnerConn(t)
+	owner := FreshOwnerConn(t)
 	company := e.SeedCompany(t, "Account With Both", nil)
 
 	noActivity := seedLegacyReminder(t, owner, noActivitySubject, "system:time-scan", "company", company)
@@ -161,7 +161,7 @@ func TestTheRepairKeepsTheTwoStartersApart(t *testing.T) {
 // reported by nobody, which is the starvation the collapse itself had to avoid.
 func TestTheRepairArchivesAChildOnlyWhenItsAccountHoldsOne(t *testing.T) {
 	e := Setup(t)
-	owner := OwnerConn(t)
+	owner := FreshOwnerConn(t)
 	pipeline, open, _ := DealFixture(t, e)
 
 	watched := e.SeedCompany(t, "Watched Account", nil)
@@ -190,7 +190,7 @@ func TestTheRepairArchivesAChildOnlyWhenItsAccountHoldsOne(t *testing.T) {
 // updated_at or version on a row it already stamped.
 func TestTheRepairIsANoOpTheSecondTime(t *testing.T) {
 	e := Setup(t)
-	owner := OwnerConn(t)
+	owner := FreshOwnerConn(t)
 	company := e.SeedCompany(t, "Rerun Account", nil)
 	survivor := seedLegacyReminder(t, owner, noActivitySubject, "system:time-scan", "company", company)
 	seedLegacyReminder(t, owner, noActivitySubject, "system:time-scan", "company", company)
@@ -225,7 +225,7 @@ func TestTheRepairIsANoOpTheSecondTime(t *testing.T) {
 // captured_by is the only thing that marks the engine's own output.
 func TestTheRepairLeavesAHumansTaskAlone(t *testing.T) {
 	e := Setup(t)
-	owner := OwnerConn(t)
+	owner := FreshOwnerConn(t)
 	company := e.SeedCompany(t, "Hand-written Account", nil)
 
 	planted := seedLegacyReminder(t, owner, noActivitySubject, "human:rep-1", "company", company)

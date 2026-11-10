@@ -9,6 +9,7 @@
 
 import type { Translator } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { displayedTitle } from "./systemdisplay";
 import { partyName } from "./worklistcopyreasons";
 import type { WorklistItem } from "./worklisttypes";
 
@@ -56,9 +57,9 @@ function framedTitle(item: WorklistItem, t: Translator): string | undefined {
     ? FRAMED[item.source]
     : undefined;
   if (!framing) return undefined;
-  if (item.title && SUBJECT_TITLED.has(item.source)) return undefined;
-  const name =
-    item.title?.trim() || item.subject?.label?.trim() || partyName(item);
+  const own = displayedTitle(item)?.trim();
+  if (own && SUBJECT_TITLED.has(item.source)) return undefined;
+  const name = own || item.subject?.label?.trim() || partyName(item);
   if (!name) return undefined;
   const kind = item.kind ?? "";
   const key =

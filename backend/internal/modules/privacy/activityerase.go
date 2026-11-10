@@ -9,6 +9,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 // eraseActivityContent is the activity/erase action: the record of the meeting
@@ -38,10 +39,10 @@ func (s *RetentionService) eraseActivityContent(ctx context.Context, tx pgx.Tx, 
 }
 
 func clearActivityContent(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
-	_, err := tx.Exec(ctx, `UPDATE activity SET body = NULL, raw = NULL, agenda_fingerprint = NULL, subject = @subject,
+	_, err := tx.Exec(ctx, `UPDATE activity SET body = NULL, system_text = @system_text, raw = NULL, agenda_fingerprint = NULL, subject = @subject,
  internal_mail_authorization = `+erasedInternalMailAuthorizationSQL+`,
  language = NULL, source_author_name = NULL, reply_verdict = NULL, reply_verdict_at = NULL,
- reply_verdict_by = NULL, archived_at = coalesce(archived_at, now()) WHERE id = @id`, pgx.StrictNamedArgs{"subject": erasedActivitySubject, "id": id})
+ reply_verdict_by = NULL, archived_at = coalesce(archived_at, now()) WHERE id = @id`, pgx.StrictNamedArgs{"subject": erasedActivitySubject, "id": id, "system_text": systemtext.BoundLiteral("core.erased", erasedActivitySubject)})
 	if err != nil {
 		return err
 	}

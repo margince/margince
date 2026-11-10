@@ -283,12 +283,9 @@ func standingHoldsTx(
 }
 
 // Settled holds apply to every sibling; pending has not judged the conversation.
+// The shared rule also controls sibling stamps and reader authorization.
 func holdingVerdict(status string) bool {
-	switch status {
-	case VerdictHeld, VerdictUnsure, VerdictHeldByOwner:
-		return true
-	}
-	return false
+	return ClosesOpenMessages(status)
 }
 
 // mailboxPostureTx reads the posture of the connection that DELIVERED this

@@ -51,6 +51,7 @@ function room(over: Partial<DealRoom> = {}): DealRoom {
     deal_id: "deal-1",
     title: "Acme Expansion — Deal Room",
     state: "live",
+    writable: true,
     source: "manual",
     version: 1,
     created_at: "2026-08-22T09:00:00Z",
@@ -555,3 +556,23 @@ describe("the brief follows the room", () => {
     await waitFor(() => expect(briefReads).toHaveBeenCalledTimes(2));
   });
 });
+
+it.each([true, false])(
+  "asks only a room editor to repair an unavailable contact: %s",
+  async (writable) => {
+    stubWithSession(
+      {
+        ...roomRoutes(),
+        "GET /deal-rooms": () =>
+          jsonResponse({
+            data: [room({ needs_steward: true, writable })],
+            page: {},
+          }),
+      },
+      { deal_room: ["read", "update"] },
+    );
+    withProviders(<DealRoomTab dealId="deal-1" dealName="Acme Expansion" />);
+    await screen.findByRole("heading", { name: "Acme Expansion — Deal Room" });
+    expect(screen.queryByText("New contact needed") !== null).toBe(writable);
+  },
+);

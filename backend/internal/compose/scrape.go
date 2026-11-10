@@ -33,6 +33,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 // The enrich proposal's wire identity — one spelling for the two producers
@@ -106,6 +107,7 @@ func (e *scrapeEngine) Propose(ctx context.Context, companyID ids.UUID, override
 		TargetType:     enrichTargetType,
 		TargetID:       companyID,
 		Summary:        fmt.Sprintf(approvalSummaryCopyOver(ctx, e.pool).enrichmentOf, rawURL),
+		SystemText:     &systemtext.Message{Version: 1, Subject: systemtext.Sentence("approval.enrichmentOf", systemtext.Text(rawURL))},
 	})
 	if err != nil {
 		return crmcontracts.EnrichmentProposal{}, err

@@ -152,7 +152,7 @@ export const ProviderAppPending: Story = {
 export const GroupDraft: Story = {
   render: () => (
     <Served providers={[{ key: "google", label: "Google", enabled: true }]}>
-      <SignInMethodsCard />
+      <SignInMethodsCard part="grants" />
     </Served>
   ),
   play: async ({ canvasElement }) => {
@@ -193,7 +193,7 @@ export const GroupsGrantRoles: Story = {
       providers={[{ key: "google", label: "Google", enabled: true }]}
       groupRoleMap={{ "crm-admins": "admin", "field-sales": "rep" }}
     >
-      <SignInMethodsCard />
+      <SignInMethodsCard part="grants" />
     </Served>
   ),
 };
@@ -212,12 +212,12 @@ export const GroupsGrantRolesPhone: Story = {
           "rep",
       }}
     >
-      <SignInMethodsCard />
+      <SignInMethodsCard part="grants" />
     </Served>
   ),
 };
 
-/** A second factor required of every member. Turning it off saves at once. */
+/** A second factor required for password sign-in. Turning it off saves at once. */
 export const SecondFactorRequired: Story = {
   render: () => (
     <Served
@@ -230,7 +230,7 @@ export const SecondFactorRequired: Story = {
 };
 
 /** Turning the requirement on asks first. This admin holds no factor of their
- * own, so the dialog says they are asked to set one up too. */
+ * own, so the dialog explains what their next password sign-in requires. */
 export const SecondFactorConfirm: Story = {
   render: () => (
     <Served
@@ -251,7 +251,7 @@ export const SecondFactorConfirm: Story = {
     await userEvent.click(control);
     // The dialog portals to the body, outside the canvas.
     await within(canvasElement.ownerDocument.body).findByText(
-      /you have not set up two-step sign-in/i,
+      /signing in with a password will require setting up two-step sign-in/i,
     );
   },
 };

@@ -82,12 +82,12 @@ var changeMySettingsCopy = toolCopy{
 
 var changeComplianceCopy = toolCopy{
 	Purpose: "Do the user's privacy work on a contact or record: record consent, record that a contact " +
-		"asked to stop, allow a refused category, record the exchange that makes correspondence lawful, " +
+		"asked to stop, allow a refused category, record an exchange with a lead or contact, " +
 		"answer a refused send, open or update a data subject request, assign a disclosure duty, confirm a " +
 		"source, accept or decline what a subject proposed, place a legal hold and pin an activity to the " +
 		"retention floor.",
 	Limits: "record_consent, allow_contact, revoke_override, lift_suppression, record_qualifying_event, " +
-		"retract_qualifying_event, retract_acquisition_request and " +
+		"retract_qualifying_event, record_lead_qualifying_event, retract_lead_qualifying_event, retract_acquisition_request and " +
 		"record_communication_context have legal weight: tell the user what you will record and call only " +
 		"after they say yes. The proof names you as its author. Record only what the user or the contact " +
 		"said, never your reading of their tone. Fulfilling an erasure request, lifting a legal hold, " +

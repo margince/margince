@@ -4,6 +4,7 @@
 package compose
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"slices"
@@ -154,7 +155,7 @@ func TestARowThatRecordedNoCauseDoesNotClaimItFailed(t *testing.T) {
 func TestBothTenantAndDispatcherFailuresReachTheResponse(t *testing.T) {
 	someoneElse := ids.NewV7().String()
 
-	got := jobHealthResponse(jobs.Health{Failures: []jobs.Failure{
+	got := jobHealthResponse(context.Background(), jobs.Health{Failures: []jobs.Failure{
 		{Kind: "tenant_pass", WorkspaceID: &someoneElse, State: "discarded"},
 		{Kind: "the_dispatcher", WorkspaceID: nil, State: "discarded"},
 	}}, 24*time.Hour)
@@ -174,7 +175,7 @@ func TestBothTenantAndDispatcherFailuresReachTheResponse(t *testing.T) {
 // a healthy-looking number.
 func TestAnAbsentOldestAgeStaysAbsent(t *testing.T) {
 	measured := 41.7
-	got := jobHealthResponse(jobs.Health{Kinds: []jobs.KindHealth{
+	got := jobHealthResponse(context.Background(), jobs.Health{Kinds: []jobs.KindHealth{
 		{Kind: "idle", OldestWaitingAgeSeconds: nil},
 		{Kind: "waiting", OldestWaitingAgeSeconds: &measured},
 	}}, 24*time.Hour)
@@ -194,7 +195,7 @@ func TestAnAbsentOldestAgeStaysAbsent(t *testing.T) {
 // arrays, and a JSON null where a list belongs breaks a client that
 // iterates it.
 func TestAnIdleFleetMapsToEmptyListsNotNulls(t *testing.T) {
-	got := jobHealthResponse(jobs.Health{}, 24*time.Hour)
+	got := jobHealthResponse(context.Background(), jobs.Health{}, 24*time.Hour)
 
 	if got.Kinds == nil {
 		t.Error("kinds serialized as null rather than []")

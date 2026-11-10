@@ -26,6 +26,7 @@ import (
 	"github.com/riverqueue/river"
 
 	"github.com/margince/margince/backend/internal/platform/blobstore"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/platform/storedobjects"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -84,32 +85,45 @@ func (w *storedObjectReapWorker) reapWorkspace(ctx context.Context, workspace id
 	// orphans already adjudicated are still orphans, and a kind nobody owns must not
 	// keep every other kind's bytes alive.
 	settled, adjudicateErr := adjudicate(ctx, db, provisional)
+	pendingByKey := make(map[string]storedobjects.Provisional, len(provisional))
+	for _, pending := range provisional {
+		pendingByKey[pending.Key] = pending
+	}
 	// A key an owning row DOES carry is a clear that never ran. Its bytes stay and
 	// its intent goes, so it stops occupying a slot in every later pass's limit.
 	for _, adopted := range settled.adopted {
-		if err := ledger.Retire(ctx, adopted); err != nil {
+		if err := ledger.Retire(ctx, pendingByKey[adopted]); err != nil {
 			return err
 		}
 	}
 	for _, orphan := range settled.orphans {
-		// The BYTES first, then the ledger row. The other order would forget an
-		// object that is still there, which is the state this whole ledger
-		// exists to make impossible — a failed delete leaves the key and the
-		// next pass tries again.
-		if err := w.blob.Delete(ctx, orphan); err != nil {
-			// One key that will not delete must not stop the rest: a bucket
-			// that refuses one object still holds the others, and every one of
-			// them is a subject's file an erasure cannot reach. The key stays
-			// in the ledger, so nothing is forgotten.
-			w.log.ErrorContext(ctx, "an orphaned object could not be deleted",
-				"workspace", workspace.String(), "err", err)
-			continue
-		}
-		if err := ledger.Retire(ctx, orphan); err != nil {
+		if err := w.reapOrphan(ctx, ledger, db, pendingByKey[orphan], before, workspace); err != nil {
 			return err
 		}
 	}
 	return adjudicateErr
+}
+
+func (w *storedObjectReapWorker) reapOrphan(ctx context.Context, ledger *storedobjects.Ledger, db *database.DB, pending storedobjects.Provisional, before time.Time, workspace ids.UUID) error {
+	claimed, err := ledger.Condemn(ctx, pending.Key, before, w.now())
+	if err != nil || !claimed {
+		return err
+	}
+	current, err := adjudicate(ctx, db, []storedobjects.Provisional{pending})
+	if err != nil {
+		return err
+	}
+	if len(current.adopted) != 0 {
+		return ledger.Retire(ctx, pending)
+	}
+	orphan := pending.Key
+	if err := w.blob.Delete(ctx, orphan); err != nil {
+		// The claim stays retryable; one unavailable object must not stop the batch.
+		w.log.ErrorContext(ctx, "an orphaned object could not be deleted",
+			"workspace", workspace, "err", err)
+		return nil
+	}
+	return ledger.CompleteReap(ctx, orphan, w.now())
 }
 
 // storedObjectReaperFor answers nil for a role that composed no object store.

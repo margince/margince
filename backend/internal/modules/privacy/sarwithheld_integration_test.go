@@ -47,6 +47,7 @@ import (
 // source and fails when they diverge — without it, registering a column there
 // and forgetting it here would leave the airtight half not looking.
 var withheldFromTheExport = map[string][]string{
+	"activity":      {"system_text"},
 	"confirm_token": {"token_hash", "delivered_to"},
 }
 

@@ -15,17 +15,5 @@ export function throwBookingProblem(
   problem: components["schemas"]["Problem"],
   t: (key: MessageKey) => string,
 ): never {
-  switch (bookingWindowCode(problem)) {
-    case "booking_horizon":
-      return throwProblem({
-        ...problem,
-        detail: t("scheduling.windowHorizon"),
-      });
-    case "booking_notice":
-      return throwProblem({ ...problem, detail: t("scheduling.windowNotice") });
-    case "booking_limits":
-      return throwProblem({ ...problem, detail: t("scheduling.windowLimits") });
-    default:
-      return throwProblem(problem);
-  }
+  return throwProblem(problem, t);
 }

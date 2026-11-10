@@ -148,13 +148,15 @@ To change one, open the menu on its row and choose **Edit**. The form holds its 
 
 The Sign-in and security page in Settings (group **Company**) holds how members sign in to the installation, and the Google and Microsoft apps. Admin and Ops change it; Management can read it.
 
-### How do I require two-step sign-in for every member?
+### How do I require two-step sign-in for passwords?
 <!-- opens: settings/authentication -->
-To require two-step sign-in for every member of Margince, open Settings → **Sign-in and security** and turn on **Require second factor**. Margince asks you to confirm first.
-A member without two-step sign-in is asked to set it up the next time they sign in or open Margince, before anything else opens.
+To require Margince two-step sign-in for password sign-in, open Settings → **Sign-in and security** and turn on **Require second factor for passwords**. Margince asks you to confirm first.
+
+Google and Microsoft manage their own MFA; this setting does not require Margince MFA for provider sessions. Older sessions keep the password rule until the member signs in again.
+A member using a password session without two-step sign-in must set it up before opening other pages.
 Members who already use it go on as before, with their own phone app.
 The switch keeps its setting when someone resets data.
-Also called: require MFA, two-step sign-in for everyone, sign-in codes for all.
+Also called: require MFA, password MFA.
 
 ### How do I offer sign-in with Google or Microsoft?
 To offer sign-in with Google or Microsoft in Margince, store that company's app on Settings → **Sign-in and security** and keep its switch on.

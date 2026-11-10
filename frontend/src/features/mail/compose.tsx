@@ -419,7 +419,6 @@ export function ComposeWindow({
               send={send}
               anchorActivity={thread.anchorActivity}
               dealChoice={dealChoice}
-              contactOf={records.contactOf}
               bodyKey={wording.body}
               permission={(override, picksReason) => (
                 <SendPermission

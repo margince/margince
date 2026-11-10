@@ -111,6 +111,12 @@ func previewResponse(preview SendPreview) crmcontracts.SendAuthorizationPreview 
 			Verdict:    crmcontracts.SendAuthorizationPreviewRecipientVerdict(d.Verdict),
 			ReasonCode: d.ReasonCode,
 		}
+		if preview.readableSubjects[previewSubject{kind: d.SubjectKind, id: d.SubjectID}] {
+			entry.EvidenceSubject = &crmcontracts.CommunicationEvidenceSubject{
+				EntityId:   openapi_types.UUID(d.SubjectID),
+				EntityType: crmcontracts.CommunicationEvidenceSubjectEntityType(d.SubjectKind),
+			}
+		}
 		if d.Resolved != "" {
 			resolved := crmcontracts.CommunicationContext(d.Resolved)
 			entry.ResolvedCategory = &resolved

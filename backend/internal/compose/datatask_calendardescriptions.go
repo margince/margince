@@ -14,6 +14,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/datatask"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 // calendarDescriptionsDataTask renders calendar meeting descriptions stored as
@@ -23,7 +24,7 @@ import (
 func calendarDescriptionsDataTask() datatask.Task {
 	return datatask.Task{
 		ID: "core/1793007922_calendar_html_descriptions", Version: 1,
-		Title: "Render calendar descriptions stored as HTML",
+		Title: systemtext.Literal("datatask.title.core.1793007922_calendar_html_descriptions"),
 		Steps: []datatask.Step{{
 			Name: "render_calendar_descriptions", Limit: 100, MinLimit: 10,
 			Audit:    datatask.AuditPolicy{PerRecord: true},

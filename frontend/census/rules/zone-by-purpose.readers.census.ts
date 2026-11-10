@@ -7,6 +7,7 @@
 
 import { join, relative, sep } from "node:path";
 import ts from "typescript";
+import { stable } from "../../src/format/collate";
 import { type CensusFile, type CensusRule, srcDir } from "../tree";
 
 const REPORTING =
@@ -317,7 +318,7 @@ export const rule: CensusRule = {
       ...refs
         .filter(({ source, file }) => !listed[source].has(file))
         .map(({ source, file, line }) => `${file}:${line}: ${source}`)
-        .sort(),
+        .sort(stable),
       ...companyZoneSites
         .filter(({ file }) => !reads("useCompanyZone", file))
         .map(({ file }) => `${file}: listed, but reads no useCompanyZone`),

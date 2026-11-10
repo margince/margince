@@ -239,6 +239,7 @@ func (p *preflightEnv) sendClaiming(t *testing.T, context string) (status int, c
 // support is visible later rather than silently honoured or silently dropped.
 func TestAClaimedContextReachesTheDecision(t *testing.T) {
 	p := setupPreflight(t)
+	p.activityID = logConsentInbound(t, p.AppEnv, p.contactID)
 	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 
 	sent := p.sendExpectingAcceptanceClaiming(t, "reply_to_inbound")

@@ -56,10 +56,11 @@ func (h Handlers) RaiseNotice(w http.ResponseWriter, r *http.Request) {
 // different fact from adding a blank one.
 func noticeWire(n Notice) crmcontracts.Notice {
 	out := crmcontracts.Notice{
-		Id:        openapi_types.UUID(n.ID),
-		Kind:      crmcontracts.NoticeKind(n.Kind),
-		Subject:   n.Subject,
-		CreatedAt: n.CreatedAt,
+		Id:            openapi_types.UUID(n.ID),
+		Kind:          crmcontracts.NoticeKind(n.Kind),
+		Subject:       n.Subject,
+		SystemDisplay: n.SystemDisplay,
+		CreatedAt:     n.CreatedAt,
 	}
 	if n.Body != "" {
 		body := n.Body
@@ -167,13 +168,14 @@ func centrePageWire(page CentrePage) crmcontracts.NotificationPage {
 // from it, so a cast would publish a value the enum does not admit.
 func centreItemWire(item CentreItem) crmcontracts.NotificationItem {
 	out := crmcontracts.NotificationItem{
-		Id:           openapi_types.UUID(item.ID),
-		Kind:         item.Kind,
-		Subject:      item.Subject,
-		CreatedAt:    item.CreatedAt,
-		ReadAt:       item.ReadAt,
-		Origin:       item.Origin,
-		SummaryParts: item.SubjectParts,
+		Id:            openapi_types.UUID(item.ID),
+		Kind:          item.Kind,
+		Subject:       item.Subject,
+		SystemDisplay: item.SystemDisplay,
+		CreatedAt:     item.CreatedAt,
+		ReadAt:        item.ReadAt,
+		Origin:        item.Origin,
+		SummaryParts:  item.SubjectParts,
 	}
 	if item.Body != "" {
 		body := item.Body

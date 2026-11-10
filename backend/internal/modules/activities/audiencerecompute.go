@@ -24,6 +24,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/threadverdict"
 )
 
 // audienceRank orders the audiences from most open to most closed. The
@@ -191,10 +192,14 @@ func deriveAudienceTx(
 	ctx context.Context, tx pgx.Tx, activityID ids.ActivityID,
 ) (audience string, reason string, ok bool, err error) {
 	rows, err := tx.Query(ctx, `
-		SELECT posture_at_import, verdict_status, verdict_reason
-		  FROM capture_import
-		 WHERE activity_id = $1
-		 ORDER BY user_id`, activityID)
+		SELECT i.posture_at_import,
+ CASE WHEN `+threadverdict.HoldsSQL("v.status")+` THEN v.status ELSE i.verdict_status END,
+ CASE WHEN `+threadverdict.HoldsSQL("v.status")+` THEN
+  NULLIF(`+threadverdict.ReasonSQL("v.kind")+`,'')
+  ELSE i.verdict_reason END
+ FROM capture_import i JOIN activity a ON a.id=i.activity_id
+ LEFT JOIN capture_thread_verdict v ON v.user_id=i.user_id AND v.thread_key=a.thread_key
+ WHERE i.activity_id = $1 AND a.restricted_at IS NULL ORDER BY i.user_id`, activityID)
 	if err != nil {
 		return "", "", false, fmt.Errorf("activities: reading the import rows of %s: %w", activityID, err)
 	}

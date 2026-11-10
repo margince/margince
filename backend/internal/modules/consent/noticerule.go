@@ -73,7 +73,7 @@ func DutyFor(acquisitionKind string) (NoticeDuty, bool) {
 	// From the subject. Art. 13 was owed at collection, by the surface that
 	// collected it, and no case is opened here.
 	case "subject_initiated", "customer_contract",
-		"requested_quote_or_meeting", "in_person_permission":
+		acquisitionRequestedQuote, faceToFaceSource:
 		return NoticeDuty{}, false
 
 	// Carried over from the CRM the installation used before. The contact did

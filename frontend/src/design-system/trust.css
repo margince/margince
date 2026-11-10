@@ -177,6 +177,7 @@ button.evidence-chip:hover {
   max-width: 100%;
 }
 .field-diff-long {
+  position: relative;
   /* A section is block-level; the diff reads as one line, so it sits inline. */
   display: inline-block;
   /* .field-diff is an inline-flex row centring its items, so a tall scrolling

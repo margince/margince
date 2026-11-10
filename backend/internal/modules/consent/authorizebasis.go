@@ -26,6 +26,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
@@ -194,7 +195,7 @@ func threadKeyOf(ctx context.Context, tx pgx.Tx, anchor ids.UUID) string {
 		anchor).Scan(&key); err != nil {
 		return ""
 	}
-	if key == nil {
+	if key == nil || correspondence.IsHandLoggedThread(*key) {
 		return ""
 	}
 	return *key

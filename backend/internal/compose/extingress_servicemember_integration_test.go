@@ -30,7 +30,7 @@ import (
 // shipped service_ingest role.
 func declareServiceMemberFor(t *testing.T, unit string) ids.UUID {
 	t.Helper()
-	owner := integration.OwnerConn(t)
+	owner := integration.FreshOwnerConn(t)
 	ctx := context.Background()
 	tx, err := owner.Begin(ctx)
 	if err != nil {
@@ -83,7 +83,7 @@ func TestAFeedRunsAsItsServiceMemberAndOffboardingAColleagueDoesNotStopIt(t *tes
 
 	// The colleague who set the feed up leaves. Nothing about the feed was
 	// filed under them, so the next poll lands as before.
-	owner := integration.OwnerConn(t)
+	owner := integration.FreshOwnerConn(t)
 	if _, err := owner.Exec(context.Background(),
 		`UPDATE app_user SET status = 'deactivated', archived_at = now() WHERE id = $1`, e.member); err != nil {
 		t.Fatalf("offboarding the colleague: %v", err)
@@ -123,7 +123,7 @@ func TestAnArchivedServiceMemberLandsNothing(t *testing.T) {
 	e := setupIngress(t)
 	member := declareServiceMemberFor(t, ingressUnit)
 	depositCredential(t, e.extRuntimeEnv, member)
-	owner := integration.OwnerConn(t)
+	owner := integration.FreshOwnerConn(t)
 	if _, err := owner.Exec(context.Background(),
 		`UPDATE app_user SET status = 'deactivated', archived_at = now() WHERE id = $1`, member); err != nil {
 		t.Fatalf("archiving the service member: %v", err)

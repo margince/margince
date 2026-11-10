@@ -13,13 +13,14 @@
 
 import { describe, expect, it } from "vitest";
 import pkg from "../../package.json" with { type: "json" };
+import { stable } from "../format/collate";
 import * as apiSurface from "./api";
 import * as designSystem from "./design-system";
 import * as appSurface from "./index";
 
 describe("the published frontend surface", () => {
   it("publishes exactly three subpaths", () => {
-    expect(Object.keys(pkg.exports).sort()).toEqual([
+    expect(Object.keys(pkg.exports).sort(stable)).toEqual([
       "./api",
       "./app",
       "./design-system",
@@ -31,7 +32,7 @@ describe("the published frontend surface", () => {
   // it — and a unit's screen is compiled in a lane a core-only change does not
   // run, so nothing else would notice until an installation did.
   it("publishes exactly these names", () => {
-    expect(Object.keys(designSystem).sort()).toEqual([
+    expect(Object.keys(designSystem).sort(stable)).toEqual([
       "Badge",
       "Button",
       // Callout, ChoiceList and TokenList: what a unit needs to WARN about a
@@ -90,7 +91,7 @@ describe("the published frontend surface", () => {
       // holds unit screens to as well. See the note beside its export.
       "useClipboardCopy",
     ]);
-    expect(Object.keys(apiSurface).sort()).toEqual([
+    expect(Object.keys(apiSurface).sort(stable)).toEqual([
       "ProblemError",
       "QueryStates",
       "api",
@@ -99,7 +100,7 @@ describe("the published frontend surface", () => {
       "resetToSignedOut",
       "throwProblem",
     ]);
-    expect(Object.keys(appSurface).sort()).toEqual([
+    expect(Object.keys(appSurface).sort(stable)).toEqual([
       "LocaleProvider",
       // formatBytes: a unit reporting a stored payload's size has no
       // locale-aware byte scale of its own, one level past formatNumber's own

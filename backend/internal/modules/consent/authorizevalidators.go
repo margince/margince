@@ -42,24 +42,11 @@ import (
 func (g *Gate) validate(ctx context.Context, tx pgx.Tx, req commsauthz.Request, subject subjectRef, category commsauthz.Category, w packRules) (resolution, error) {
 	unsupported := resolution{Category: category, Supported: false, Reason: commsauthz.ReasonNoEvidence}
 	if subject.Kind != entityContact && category != commsauthz.CategoryReplyToInbound &&
-		category != commsauthz.CategoryRequestedFollowup && category != commsauthz.CategoryPrivacyNotice &&
+		category != commsauthz.CategoryRequestedFollowup && category != commsauthz.CategoryPrecontractQuote &&
+		category != commsauthz.CategoryPrivacyNotice &&
 		category != commsauthz.CategoryOptoutConfirmation {
-		// A LEAD REACHES ONE ARM AND NO OTHER.
-		//
-		// The correspondence arm asks who wrote to us through subjectAskedUs.
-		// wroteToUsWithin matches a lead through its bare address, and
-		// requestOnRecord answers false for a lead without reading a
-		// contact-keyed table.
-		//
-		// The privacy notice is the one link a lead can hold. A website lead
-		// is told by it before anything else is sent.
-		//
-		// A lead's opt-out receipt rests on the lead's own stop, which the
-		// suppression table records against the lead.
-		//
-		// Every other arm reads a record a lead cannot hold. An invoice or
-		// contract hangs off a company, and the record and consent links name
-		// a contact. Those fall through to the lead's own grant.
+		// Leads hold their own requests, captured replies, notice links and stops.
+		// Categories needing company documents or deal stakeholders remain contact-only.
 		return unsupported, nil
 	}
 	// THE NAMED RECORD MUST BE ONE THE CALLER MAY SEE, before it is read.
@@ -156,17 +143,27 @@ func subjectAskedUs(ctx context.Context, tx pgx.Tx, subject subjectRef, w packRu
 // repliedOrWasRecorded asks whether the subject wrote to us, or somebody
 // recorded that they asked to hear from us, inside the window.
 //
-// A contact is asked through latestQualifyingEvent, the reader the legacy
-// correspondence verdict uses. So a recorded "requested by the subject" or an
-// in-person exchange supports a composer send, and both readers agree. A lead
-// has no qualifying event, because the table is keyed on contacts. It keeps
-// the authorship test alone, which wroteToUsWithin spells for both kinds.
+// Contacts share the legacy fact reader. Leads use the same recorded-event
+// reader alongside their captured correspondence.
 func repliedOrWasRecorded(ctx context.Context, tx pgx.Tx, subject subjectRef, asOf time.Time, window time.Duration) (bool, error) {
 	since := asOf.Add(-window)
 	if subject.Kind != entityContact {
-		return wroteToUsWithin(ctx, tx, subject, since)
+		found, err := wroteToUsWithin(ctx, tx, subject, since)
+		if err != nil || found {
+			return found, err
+		}
+		sub, known, err := qualifyingSubjectRef(subject)
+		if err != nil || !known {
+			return false, err
+		}
+		entity, err := evidenceEntity(ctx, tx, subject.SendingEntity)
+		if err != nil {
+			return false, err
+		}
+		_, found, err = recordedSubjectQualifyingEvent(ctx, tx, sub, since, asOf, &subject.Address, entity)
+		return found, err
 	}
-	_, source, err := latestQualifyingEvent(ctx, tx, subject.ID, since, asOf, &subject.Address)
+	_, source, err := latestQualifyingEvent(ctx, tx, subject.ID, since, asOf, &subject.Address, subject.SendingEntity)
 	if err != nil {
 		return false, err
 	}
@@ -376,7 +373,7 @@ func wrapEvidenceRead(what string, err error) error {
 // recipient ($2).
 func validateCompanyDocument(ctx context.Context, tx pgx.Tx, subject subjectRef, category commsauthz.Category, basis commsauthz.Basis, query string, named ids.UUID, args ...any) (resolution, error) {
 	unsupported := resolution{Category: category, Supported: false, Reason: commsauthz.ReasonNoEvidence}
-	if named == (ids.UUID{}) {
+	if named == (ids.UUID{}) || subject.Kind != entityContact {
 		// The caller claimed the category and named no record. Nothing to look
 		// at, so nothing supports it.
 		return unsupported, nil

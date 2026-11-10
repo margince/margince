@@ -51,13 +51,17 @@ func knownNames(reg *Registry, others Names, bootstrapRoots map[string]bool) kno
 	k := known{keys: map[string]bool{}, envs: map[string]bool{}, sections: map[string]bool{}, bootstrapRoots: bootstrapRoots}
 	for _, s := range reg.All() {
 		k.keys[s.Key()] = true
-		k.envs[s.Env()] = true
+		if s.Env() != "" {
+			k.envs[s.Env()] = true
+		}
 	}
 	for _, key := range others.Keys {
 		k.keys[key] = true
 	}
 	for _, env := range others.Envs {
-		k.envs[env] = true
+		if env != "" {
+			k.envs[env] = true
+		}
 	}
 	for key := range k.keys {
 		for i, c := range key {

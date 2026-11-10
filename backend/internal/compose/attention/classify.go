@@ -96,6 +96,7 @@ func base(
 		Consequence:       consequence,
 		Kind:              item.Kind,
 		Title:             item.Title,
+		SystemDisplay:     item.SystemDisplay,
 		SummaryParts:      item.SummaryParts,
 		Detail:            item.Detail,
 		NoticeOrigin:      item.NoticeOrigin,

@@ -19,7 +19,7 @@ func DataTaskOperatorsTx(ctx context.Context, tx pgx.Tx) ([]ids.UserID, error) {
 	if err := auth.RequireSystem(ctx); err != nil {
 		return nil, err
 	}
-	users, grants, err := liveOperatorGrantsTx(ctx, tx)
+	users, grants, err := liveOperatorGrantsTx(ctx, tx, anyOperatorSeat)
 	if err != nil {
 		return nil, err
 	}
@@ -32,10 +32,13 @@ func DataTaskOperatorsTx(ctx context.Context, tx pgx.Tx) ([]ids.UserID, error) {
 	return out, nil
 }
 
-func liveOperatorGrantsTx(ctx context.Context, tx pgx.Tx) ([]ids.UUID, map[ids.UUID]seatGrants, error) {
+const anyOperatorSeat principal.SeatType = ""
+
+func liveOperatorGrantsTx(ctx context.Context, tx pgx.Tx, seat principal.SeatType) ([]ids.UUID, map[ids.UUID]seatGrants, error) {
 	rows, err := tx.Query(ctx, `SELECT DISTINCT u.id FROM app_user u
  JOIN role_assignment ra ON ra.user_id = u.id JOIN role r ON r.id = ra.role_id
- WHERE r.key IN ('admin', 'ops') AND `+workforce.LiveHumanSQL("u"))
+ WHERE r.key IN ('admin', 'ops') AND `+workforce.LiveHumanSQL("u")+`
+ AND (@seat='' OR u.seat_type=@seat)`, pgx.StrictNamedArgs{"seat": seat})
 	if err != nil {
 		return nil, nil, err
 	}
@@ -55,7 +58,7 @@ func PrivacyReviewOperatorsTx(ctx context.Context, tx pgx.Tx, object string) ([]
 	if err := auth.RequireSystem(ctx); err != nil {
 		return nil, err
 	}
-	users, grants, err := liveOperatorGrantsTx(ctx, tx)
+	users, grants, err := liveOperatorGrantsTx(ctx, tx, principal.SeatFull)
 	if err != nil {
 		return nil, err
 	}

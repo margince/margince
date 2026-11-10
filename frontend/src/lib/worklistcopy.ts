@@ -454,6 +454,7 @@ export function sentenceTitled(item: WorklistItem): WorklistItem {
   const sentence = summarySentence({
     summary: item.title,
     summary_parts: item.summary_parts,
+    system_display: item.system_display,
   });
   return item.summary_parts && sentence ? { ...item, title: sentence } : item;
 }

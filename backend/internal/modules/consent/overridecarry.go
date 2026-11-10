@@ -148,8 +148,8 @@ func insertCarriedOverrides(
 ) ([]carriedOverride, error) {
 	rows, err := tx.Query(ctx, `
  INSERT INTO communication_override
- (contact_id, lead_id, category, reason, decided_by_level, captured_by, carried_from, legal_entity_id)
- SELECT @to_contact, @to_lead, category, reason, decided_by_level, @by, id, legal_entity_id
+ (contact_id, lead_id, category, reason, decided_by_level, captured_by, carried_from, legal_entity_id, recorded_directly)
+ SELECT @to_contact, @to_lead, category, reason, decided_by_level, @by, id, legal_entity_id, false
  FROM (`+overrideCarryCandidates+`) candidates
  RETURNING id, category, decided_by_level`, carryAuthorityArgs(from, to, by))
 	if err != nil {

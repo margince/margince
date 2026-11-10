@@ -15,6 +15,8 @@ import (
 	"strings"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 const publicBookingPreviewSuffix = "/preview"
@@ -32,18 +34,18 @@ func bookingPreviewSlug(path string) (string, bool) {
 // GetPublicBookingPreview renders the card. The booking edge has already
 // resolved the slug and bound the public booking principal.
 func (s Server) GetPublicBookingPreview(w http.ResponseWriter, r *http.Request, hostSlug string) {
-	preview, err := s.PublicBookingPreview(r.Context(), hostSlug)
+	preview, err := s.PublicBookingPreview(systemtext.WithLocale(r.Context(), publicPreviewLocale(r)), hostSlug)
 	if err != nil {
 		s.writeBookingPreviewUnavailable(w, r, hostSlug, err)
 		return
 	}
-	s.writePreviewCard(w, r, bookingCard(hostSlug, preview), "booking", nil)
+	s.writePreviewCard(w, r, bookingCard(hostSlug, preview, publicPreviewLocale(r)), "booking", nil)
 }
 
 // writeBookingPreviewUnavailable answers a missing, revoked, throttled or
 // failed read with a card that names no host. Its status says which.
 func (s Server) writeBookingPreviewUnavailable(w http.ResponseWriter, r *http.Request, hostSlug string, cause error) {
-	s.writePreviewCard(w, r, previewCard{Title: "Booking page unavailable", Href: bookingAppHref(hostSlug), LinkText: "Open booking page"}, "booking", cause)
+	s.writePreviewCard(w, r, previewCard{Title: systemtext.Copy("preview.page_unavailable", publicPreviewLocale(r)), Href: bookingAppHref(hostSlug), LinkText: systemtext.Copy("preview.open_booking", publicPreviewLocale(r))}, "booking", cause)
 }
 
 // bookingAppHref is where the card sends a browser: the fragment address.
@@ -53,22 +55,26 @@ func bookingAppHref(hostSlug string) string {
 	return "/#/book/" + hostSlug
 }
 
-func bookingCard(hostSlug string, preview activities.BookingPreview) previewCard {
-	card := previewCard{Href: bookingAppHref(hostSlug), LinkText: "Open booking page", Canonical: preview.PageURL}
+func bookingCard(hostSlug string, preview activities.BookingPreview, locales ...textlang.Lang) previewCard {
+	language := textlang.English
+	if len(locales) > 0 {
+		language = locales[0]
+	}
+	card := previewCard{Href: bookingAppHref(hostSlug), LinkText: systemtext.Copy("preview.open_booking", language), Canonical: preview.PageURL}
 	if !preview.Available {
 		// A paused page keeps its host's identity in the app, where the guest
 		// reads why it is unavailable. A card shared onward names nobody.
-		card.Title = "Booking unavailable"
-		card.Summary = "This booking page is not taking new meetings right now."
+		card.Title = systemtext.Copy("preview.booking_unavailable", language)
+		card.Summary = systemtext.Copy("preview.booking_paused", language)
 		return card
 	}
-	card.Title = "Book a meeting with " + preview.HostName
-	with := preview.HostName
+	card.Title = fmt.Sprintf(systemtext.Copy("preview.book_with", language), preview.HostName)
+	card.Summary = fmt.Sprintf(systemtext.Copy("preview.book_summary", language), preview.Title, preview.DurationMinutes, preview.HostName)
 	if preview.CompanyName != "" {
-		with += " of " + preview.CompanyName
 		card.SiteName = preview.CompanyName
+		card.Summary = fmt.Sprintf(systemtext.Copy("preview.book_company_summary", language), preview.Title, preview.DurationMinutes, preview.HostName, preview.CompanyName)
 	}
-	card.Summary = fmt.Sprintf("%s: a %d-minute meeting with %s. Choose a time that suits you.", preview.Title, preview.DurationMinutes, with)
+
 	if preview.LogoURL != "" {
 		card.Image = preview.LogoURL
 		card.ImageAlt = preview.CompanyName

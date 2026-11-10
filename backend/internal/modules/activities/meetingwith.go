@@ -134,8 +134,8 @@ func orUnbounded(clause string) string {
 }
 
 // colleagueParticipantSQL holds when participant row ap is a colleague. The
-// invited address decides: it is on a trusted own domain, is a live member's
-// login, or is a mailbox proved for a seat. A row with no address falls back
+// invited address decides. It is on a trusted own domain, is a live or invited
+// member's login, or is a mailbox proved for a seat. A row with no address falls back
 // to its contact's live addresses, read through contactScope on alias cs.
 // provedIdentities is the binding storekit.ProvedMailSeatIdentitiesSQL wrote;
 // empty leaves that arm out. A row whose domain fold is missing is outside.
@@ -157,7 +157,7 @@ func colleagueParticipantSQL(provedIdentities, contactScope string) string {
 	               WHERE ce.contact_id = ap.contact_id AND ce.archived_at IS NULL
 	                 AND (EXISTS (SELECT 1 FROM (%[1]s) own_domain(domain) WHERE %[5]s)
 	                   OR EXISTS (SELECT 1 FROM app_user u WHERE %[3]s AND %[6]s)))))`,
-		auth.TrustedOwnDomainsFoldedSQL, ownAddress, workforce.LiveMemberSQL("u"), seatAddress, ownContact, seatContact, contactScope)
+		auth.TrustedOwnDomainsFoldedSQL, ownAddress, workforce.ActivatableMemberSQL("u"), seatAddress, ownContact, seatContact, contactScope)
 }
 
 // Unknown guests keep a meeting in the customer lane; known resources cannot establish an outside party.

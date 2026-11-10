@@ -23,9 +23,9 @@ The current facts live elsewhere:
 On a 24 GB Apple machine, if it must be vLLM, serve **`Qwen3-14B`** (`4-bit`
 MLX). Of five models it was first or tied on 6 of 7 tasks, at 10 to 13 seconds
 for a verdict. It is the preset
-[`qwen3_local_vllm.yaml`](../../config/presets/qwen3_local_vllm.yaml), measured
-on every task (section 5): 8 of 28 certified and 1 usable with care. The Ollama
-Gemma 4 preset certifies 8 of 28, and 6 more with care.
+[`qwen3_local_vllm.yaml`](../../config/presets/qwen3_local_vllm.yaml), described
+in section 5. No record is committed for it, so run the certification lane on
+your own machine before you use it.
 
 If it need not be vLLM, use **Ollama with Gemma 4 `12B`**
 ([ollama-self-hosting.md](ollama-self-hosting.md)). On this machine vLLM is not
@@ -86,8 +86,8 @@ latency below is only the candidate on the GPU. The server was started with the
 flags in section 1.
 
 The runs in section 4 that compare models were written under a test `eu_hosted`
-profile, and are not committed. The run of the preset itself (section 5) is
-`sovereign` and committed. A certification run holds only the candidate to the
+profile, and are not committed. A run of the preset itself (section 5) is
+`sovereign`. A certification run holds only the candidate to the
 profile. The judge gets the corpus and nothing from an installation, so it may be
 the default cloud one. No local judge would fit next to a vLLM server on 24 GB
 (see **Memory** in
@@ -158,58 +158,20 @@ pass rate of 0.02 at 39 seconds a call. With spaces not allowed, the model canno
 tokens it would write, and the number is where that shows. Through `vllm-metal`,
 the structured output of Gemma 3 is not usable either way.
 
-## 5. The preset, certified
+## 5. The preset
 
 [`config/presets/qwen3_local_vllm.yaml`](../../config/presets/qwen3_local_vllm.yaml)
 binds every tier to `Qwen3-14B` on vLLM, and embeddings to `bge-m3` on a second
 vLLM, under `sovereign`. Its header carries the two `vllm serve` command lines.
 With both servers up (0.87 and 0.1 of memory), about 9% of the machine is left
-free. We ran every task we ship that this text-only binding can carry (all but
-`document_extract`): three runs per scenario, judged by the default cloud judge.
-The records are committed, and the page that shows what is ready reads them.
+free.
 
-| task | verdict | pass rate | runs | median (seconds) | `p95` (seconds) | output tokens |
-|---|---|---|---|---|---|---|
-| `account_scan` | certified | 1.00 | 12 | 19.7 | 29.2 | 115 |
-| `agent_loop` | certified | 1.00 | 18 | 6.2 | 29.0 | 18 |
-| `brief_ranking` | certified | 1.00 | 9 | 8.1 | 12.9 | 71 |
-| `cert_judge` | certified | 1.00 | 12 | 9.6 | 12.3 | 42 |
-| `enrich` | certified | 1.00 | 12 | 49.3 | 154.6 | 297 |
-| `rate_extract` | certified | 1.00 | 9 | 8.4 | 23.1 | 109 |
-| `site_triage` | certified | 1.00 | 18 | 8.8 | 49.5 | 39 |
-| `transcript_propose` | certified | 1.00 | 9 | 9.9 | 23.3 | 29 |
-| `corpus_ask` | `supported, degraded` | 0.85 | 33 | 22.7 | 54.6 | 111 |
-| `deal_health` | not supported | 1.00 | 9 | 90.8 | 117.8 | 387 |
-| `weekly_review` | not supported | 1.00 | 30 | 30.4 | 44.2 | 43 |
-| `draft_reply` | not supported | 0.95 | 63 | 46.3 | 189.9 | 149 |
-| `cold_start` | not supported | 0.88 | 72 | 12.3 | 91.3 | 99 |
-| `capture_confidentiality_verdict` | not supported | 0.86 | 42 | 10.4 | 11.6 | 70 |
-| `offer_draft` | not supported | 0.83 | 18 | 15.6 | 86.1 | 173 |
-| `voice_build` | not supported | 0.83 | 18 | 28.3 | 108.6 | 128 |
-| `capture_classify` | not supported | 0.80 | 15 | 12.9 | 27.8 | 101 |
-| `capture_counterparty_verdict` | not supported | 0.77 | 123 | 12.7 | 37.4 | 71 |
-| `site_extract` | not supported | 0.76 | 45 | 30.4 | 82.1 | 233 |
-| `site_fact_extract` | not supported | 0.67 | 9 | 48.3 | 67.8 | 197 |
-| `stage_evidence_extract` | not supported | 0.67 | 30 | 19.0 | 31.9 | 116 |
-| `weekly_learnings` | not supported | 0.60 | 15 | 36.4 | 66.4 | 226 |
-| `summarize` | not supported | 0.54 | 57 | 64.7 | 119.0 | 405 |
-| `propose_roles` | not supported | 0.54 | 24 | 26.3 | 81.6 | 164 |
-| `request_settlement` | not supported | 0.50 | 12 | 21.5 | 57.6 | 140 |
-| `signal_extract` | not supported | 0.50 | 12 | 14.2 | 40.4 | 69 |
-| `owed_verdict` | not supported | 0.47 | 15 | 17.4 | 26.7 | 136 |
-| `growth_fit` | not supported | 0.00 | 12 | 119.6 | 195.2 | 886 |
-
-8 certified, 1 supported with care, 19 not supported, of 28 scored; the median
-call took 19.3 seconds. We ran these records again on 2026-09-28/29 under the
-grade rule of that time. That rule runs a scenario close to the bar again before
-it decides it, so the run count of a row is not fixed.
-
-The machine was short of memory for part of that night. So read the latency
-columns as an upper limit, and measure serving speed with a direct call.
-`document_extract` has no record: it sends a PDF, which this text-only binding
-does not carry. A pass rate of 1.00 next to "not supported" (`deal_health`,
-`weekly_review`) is the grade rule at work. Every run passed the own validator of
-the site, and the judge still scored a scenario below its bar.
+No record is committed for it, so the
+[certification page](../reference/ai-certification.md) shows it as not measured. To
+grade it on your own machine, start both servers and run
+`make e2e-ai ROUTING=config/presets/qwen3_local_vllm.yaml`.
+`document_extract` cannot pass on it: it sends a PDF, which this text-only
+binding does not carry.
 
 ## 6. What the product does for vLLM
 

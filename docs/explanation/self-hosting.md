@@ -34,6 +34,11 @@ cross the split:
   else than `/oauth/authorize`, or routes `/oauth` to the web service. Then it gives a 404
   to the human in the middle of approving a connection. It fails only there, since
   the client's own handshake never touches the SPA.
+- A human who signs in with a provider on that screen comes back to it, also when the
+  sign-in fails. Its buttons start the sign-in with `?return=consent`, and the callback
+  (api) then lands on `/consent#/oauth-consent` (web) instead of `/`. A failure adds
+  `?oidc=failed`. So an MCP client that opened the screen in its own window can still
+  read the answer from it.
 
 ## Readiness waits for the schema
 

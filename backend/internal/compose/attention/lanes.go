@@ -170,6 +170,7 @@ type Tasks interface {
 
 // Task is one piece of agreed work.
 type Task struct {
+	SystemDisplay    *crmcontracts.SystemDisplay
 	SourceActivityID *ids.UUID
 	Recipients       []crmcontracts.WorklistPromiseRecipient
 	// Commitment marks a task written for a promise read out of a message.
@@ -435,12 +436,13 @@ type Notices interface {
 
 // UnreadNotice is one line still waiting to be seen.
 type UnreadNotice struct {
-	ApprovalID *ids.ApprovalID
-	Origin     *crmcontracts.NoticeOrigin
-	ID         ids.UUID
-	Kind       string
-	Subject    string
-	Body       string
+	SystemDisplay *crmcontracts.SystemDisplay
+	ApprovalID    *ids.ApprovalID
+	Origin        *crmcontracts.NoticeOrigin
+	ID            ids.UUID
+	Kind          string
+	Subject       string
+	Body          string
 	// Target names the record the notice is about, when it names one. Empty
 	// type means it names none — a capture backlog, a coach's word — and the
 	// row then carries no subject, which is what it carried before any notice

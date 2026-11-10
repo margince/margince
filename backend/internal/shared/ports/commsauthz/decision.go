@@ -4,6 +4,7 @@
 package commsauthz
 
 import (
+	"context"
 	"time"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -319,4 +320,12 @@ type TransmitTicket struct {
 // dispatcher asks before it transmits.
 func (t TransmitTicket) Current(deliveryID ids.UUID, attempt int) bool {
 	return t.DecisionSetID != ids.UUID{} && t.DeliveryID == deliveryID && t.Attempt == attempt
+}
+
+// TransmitPermit keeps the stop ordering in force through provider handoff.
+// The dispatcher closes it before recording a receipt or a new stop.
+type TransmitPermit interface {
+	Ticket() TransmitTicket
+	Ready(context.Context) error
+	Close(context.Context)
 }

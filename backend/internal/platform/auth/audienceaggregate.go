@@ -38,7 +38,7 @@ import (
 // difference between them. An aggregate asks "may everyone see this", and the
 // answer is the same for everybody.
 func AudienceWorkspaceOnly(alias string) string {
-	return " AND " + alias + ".audience = 'workspace' AND (" + alias + ".kind <> 'task' OR " + alias + ".source_activity_id IS NULL AND coalesce(" + alias + ".source_system, '') <> '" + provenance.LeadRepliedSource + "' OR EXISTS (SELECT 1 FROM activity follow_up_source WHERE follow_up_source.id = " + provenance.TaskSourceActivitySQL(alias) + " AND follow_up_source.audience = 'workspace' AND follow_up_source.restricted_at IS NULL))"
+	return " AND " + WorkspaceAudienceSQL(alias) + " AND (" + alias + ".kind <> 'task' OR " + alias + ".source_activity_id IS NULL AND coalesce(" + alias + ".source_system, '') <> '" + provenance.LeadRepliedSource + "' OR EXISTS (SELECT 1 FROM activity follow_up_source WHERE follow_up_source.id = " + provenance.TaskSourceActivitySQL(alias) + " AND " + WorkspaceAudienceSQL("follow_up_source") + " AND follow_up_source.restricted_at IS NULL))"
 }
 
 // ReaderlessAudience narrows the system principal to the rows every member may

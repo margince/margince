@@ -58,7 +58,7 @@ func (s *Service) checkPreview(ctx context.Context, a row, edited json.RawMessag
 	if s.preview == nil {
 		return nil
 	}
-	proposal, err := editedProposal(a, edited, s.now())
+	proposal, err := editedProposal(ctx, a, edited, s.now())
 	if err != nil {
 		return err
 	}
@@ -71,8 +71,8 @@ func (s *Service) checkPreview(ctx context.Context, a row, edited json.RawMessag
 
 // editedProposal is a in the contract shape, carrying edited in place of
 // the staged call when a decision edits it.
-func editedProposal(a row, edited json.RawMessage, now time.Time) (crmcontracts.Approval, error) {
-	proposal := wire(a, now)
+func editedProposal(ctx context.Context, a row, edited json.RawMessage, now time.Time) (crmcontracts.Approval, error) {
+	proposal := wire(ctx, a, now)
 	if len(edited) > 0 {
 		change, err := diffhash.DecodeObject(edited)
 		if err != nil {
