@@ -66,6 +66,10 @@ describe("disabled main-menu features", () => {
     expect(recordEnabled("company", ["deals"])).toBe(true);
     expect(recordEnabled("deal", [])).toBe(true);
   });
+  it("keeps unknown record kinds independent of object prototypes", () => {
+    expect(recordEnabled("constructor", FEATURES)).toBe(true);
+    expect(recordEnabled("__proto__", FEATURES)).toBe(true);
+  });
   it.each<{ object: RbacObject; disabled: CoreFeature[] }>([
     { object: "product", disabled: ["deals"] },
     { object: "pipeline", disabled: ["deals"] },

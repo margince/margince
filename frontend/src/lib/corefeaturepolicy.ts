@@ -8,8 +8,9 @@ import type { Screen } from "./router";
 export type CoreFeature = components["schemas"]["CoreFeature"];
 
 // The generated lookup keeps controls on the server's RecordEnabled decision.
-const RECORD_FEATURES: Readonly<Record<string, readonly string[]>> =
-  recordFeatures;
+const RECORD_FEATURES: ReadonlyMap<string, readonly string[]> = new Map(
+  Object.entries(recordFeatures),
+);
 
 const SCREEN_FEATURE: Partial<Record<Screen, CoreFeature>> = {
   partners: "companies",
@@ -32,7 +33,7 @@ export function recordEnabled(
   kind: string,
   disabled: readonly CoreFeature[],
 ): boolean {
-  return !(RECORD_FEATURES[kind] ?? []).some((feature) =>
+  return !(RECORD_FEATURES.get(kind) ?? []).some((feature) =>
     disabled.some((entry) => entry === feature),
   );
 }
