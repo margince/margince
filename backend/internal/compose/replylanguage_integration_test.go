@@ -8,6 +8,7 @@ package compose
 import (
 	"context"
 	"log/slog"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -16,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
@@ -71,23 +73,47 @@ func replyLangDraft(t *testing.T, e *integration.Env, anchor ids.UUID) string {
 // replyLangPrompt is replyLangDraft with the whole prompt the model was sent.
 func replyLangPrompt(t *testing.T, e *integration.Env, anchor ids.UUID) (string, string) {
 	t.Helper()
-	brain := &replyBrainStub{response: model.Response{Text: `{"subject":"Angebot","body":"Gern."}`}}
+	lang, first := replyLangSteeredPrompt(t, e, anchor, draftfloor.Steering{})
+	return lang, first.Messages[0].Content
+}
+
+// firstRequestBrain keeps the first request it is sent, before any retry.
+type firstRequestBrain struct {
+	answer model.Response
+	first  *model.Request
+}
+
+func (b *firstRequestBrain) Complete(_ context.Context, req model.Request) (model.Response, error) {
+	if b.first == nil {
+		b.first = &req
+	}
+	return b.answer, nil
+}
+
+// replyLangSteeredPrompt drafts a reply the rep steered and returns the
+// language the model was told and the first request it was sent.
+func replyLangSteeredPrompt(t *testing.T, e *integration.Env, anchor ids.UUID, steering draftfloor.Steering) (string, model.Request) {
+	t.Helper()
+	brain := &firstRequestBrain{answer: model.Response{Text: `{"subject":"Angebot","body":"Gern."}`}}
 	drafter := newReplyDrafter(e.Pool, brain, slog.New(slog.DiscardHandler))
 	drafter.envelope = draftfloor.NewResolver().
 		SetClock(func() time.Time { return replyLangStart.Add(30 * 24 * time.Hour) }).
 		WithUserLanguage(func(context.Context) string { return "vi" })
 	reader := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AccountRepPerms)
-	if _, err := drafter.DraftEmailWithProvenance(reader, anchor, draftfloor.Steering{}); err != nil {
+	if _, err := drafter.DraftEmailWithProvenance(reader, anchor, steering); err != nil {
 		t.Fatal(err)
 	}
-	content := brain.request.Messages[0].Content
+	if brain.first == nil {
+		t.Fatal("the drafter sent the model nothing")
+	}
+	content := brain.first.Messages[0].Content
 	for _, lang := range []string{"de", "en", "vi"} {
 		if strings.Contains(content, `"output_language":"`+lang+`"`) {
-			return lang, content
+			return lang, *brain.first
 		}
 	}
 	t.Fatalf("the prompt names no output language: %s", content)
-	return "", ""
+	return "", model.Request{}
 }
 
 // storeOldRuleLanguage records the label an older quote rule wrote at capture.
@@ -95,6 +121,36 @@ func replyLangPrompt(t *testing.T, e *integration.Env, anchor ids.UUID) (string,
 func storeOldRuleLanguage(t *testing.T, e *integration.Env, activity ids.UUID, lang string) {
 	t.Helper()
 	e.WsExec(t, `UPDATE activity SET language = $2 WHERE id = $1`, activity, lang)
+}
+
+// A language the rep chose is what the model is told over an English thread.
+// It is the one thing in the request that changes.
+func TestAChosenLanguageIsTheOneTheModelIsTold(t *testing.T) {
+	o := setupOwed(t)
+	e := o.e
+	replyLangContact(t, e, "Dietmar Kunde", "dietmar@kunde.test")
+	anchor := replyLangMail(t, o, "inbound", "dietmar@kunde.test", replyLangEnglish, 0)
+
+	derivedLang, derived := replyLangSteeredPrompt(t, e, anchor, draftfloor.Steering{})
+	chosenLang, chosen := replyLangSteeredPrompt(t, e, anchor, draftfloor.Steering{Language: textlang.Vietnamese})
+	if derivedLang != "en" || chosenLang != "vi" {
+		t.Fatalf("output language = %q unsteered and %q with vi chosen, want en and vi", derivedLang, chosenLang)
+	}
+	want := withoutFence(derived)
+	got := strings.Replace(withoutFence(chosen), `"output_language":"vi"`, `"output_language":"en"`, 1)
+	if got != want {
+		t.Errorf("choosing a language changed more than output_language:\nchosen:  %s\nderived: %s", got, want)
+	}
+}
+
+// withoutFence is a request as text with its per-call data marker made constant.
+func withoutFence(req model.Request) string {
+	parts := []string{req.System}
+	for _, message := range req.Messages {
+		parts = append(parts, message.Content)
+	}
+	text := strings.Join(parts, "\n---\n")
+	return regexp.MustCompile(`untrusted-[a-z0-9]+`).ReplaceAllString(text, "untrusted-fence")
 }
 
 func TestTheAddresseesGermanReplyStoredAsEnglishIsDraftedInGerman(t *testing.T) {

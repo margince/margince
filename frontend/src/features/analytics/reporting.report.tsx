@@ -24,6 +24,7 @@ import {
   type ReportAction,
   type ReportingEvidenceRef,
   type ReportingReport,
+  unpublishedDraft,
 } from "./reporting.model";
 import { useReportDetailQueries } from "./reporting.queries";
 import { PreviewAsSelect } from "./reporting.readerpreview";
@@ -49,11 +50,10 @@ export function ReportingReportDetail({
   const [archiving, setArchiving] = useState(false);
   const [comparing, setComparing] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
-  // The draft revision shown in place of the published one, while previewed.
-  const [previewRevision, setPreviewRevision] = useState<number>();
+  // The draft revision the editor chose to show in place of the published one.
+  const [chosenPreview, setPreviewRevision] = useState<number>();
   // The role the report is previewed as, in place of the caller's own view.
   const [previewRole, setPreviewRole] = useState<string>();
-  const previewDraft = previewRevision !== undefined;
   const [capturePending, setCapturePending] = useState<boolean | undefined>(
     undefined,
   );
@@ -65,12 +65,20 @@ export function ReportingReportDetail({
   const canReadSchedules = useCan("report_schedule", "read");
   const canReadEditions = useCan("report_edition", "read");
   const canSchedule = useCanWrite("report_schedule", "create");
-  const { report, live, edition, editions, schedules } = useReportDetailQueries(
+  const {
+    report,
+    live,
+    edition,
+    editions,
+    schedules,
+    shownRevision: previewRevision,
+  } = useReportDetailQueries(
     reportId,
     editionId,
     { editions: canReadEditions, schedules: canReadSchedules },
-    previewRevision,
+    chosenPreview,
   );
+  const previewDraft = previewRevision !== undefined;
   const draftEditing = useDraftEditing(reportId, report.data, canEdit);
   const write = useMutation({
     mutationFn: async (action: ReportAction) => {
@@ -177,11 +185,22 @@ export function ReportingReportDetail({
         {canCreate && (
           <Button
             variant="ghost"
-            disabled={write.isPending}
+            disabled={
+              write.isPending ||
+              (unpublishedDraft(report) !== undefined &&
+                draftEditing.editBlocked)
+            }
             onClick={() =>
               write.mutate({
                 kind: "duplicate",
-                report,
+                // A copy of a report with nothing published takes its draft.
+                report: {
+                  ...report,
+                  selection:
+                    unpublishedDraft(report) !== undefined
+                      ? draftEditing.editSelection(report)
+                      : report.selection,
+                },
                 key: requestKey,
                 name: t("reporting.copyName", { name: report.name }),
               })

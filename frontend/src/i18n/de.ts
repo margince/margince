@@ -1156,6 +1156,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "reporting.draftOpen": "Entwurf {revision} ist noch nicht veröffentlicht",
   "reporting.draftHidden":
     "Wer den Bericht liest, sieht weiter die veröffentlichte Fassung. Den Entwurf vor dem Veröffentlichen ansehen.",
+  "reporting.draftUnpublished":
+    "In diesem Bericht ist noch nichts veröffentlicht, darum steht hier der Entwurf. Nach dem Veröffentlichen sind diese Diagramme der Bericht.",
   "reporting.draftPreviewing":
     "Hier steht der Entwurf. Wer den Bericht liest, sieht weiter die veröffentlichte Fassung.",
   "reporting.previewDraft": "Entwurf ansehen",
@@ -2271,7 +2273,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.plan.period": "Aktueller Plan · Woche vom {date}",
   "brief.coverage.retry": "Morgenbericht aktualisieren",
   "brief.reply.owed": "Kontakt wartet auf deine Antwort",
-  "brief.changes.superseded": "Seit dieser Änderung erneut geändert",
+  "brief.changes.superseded": "Durch eine spätere Änderung ersetzt",
   "brief.changes.undone": "Rückgängig gemacht",
   "brief.updates.title": "Updates",
   "brief.task.undated": "Kein Fälligkeitsdatum",
@@ -2940,6 +2942,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "palette.recent": "Zuletzt verwendet",
   "palette.clearRecent": "Leeren",
   "palette.typeScreen": "Ansicht",
+  "palette.typeSetting": "Einstellung",
   "palette.typeAction": "Aktion",
   "palette.typeRecord": "Datensatz",
   "palette.seeAll": "Alle Ergebnisse für „{query}“ anzeigen",
@@ -4921,7 +4924,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "email.thread.count_other": "{count} Nachrichten",
   "email.thread.countLatest_one": "Die letzte Nachricht",
   "email.thread.countLatest_other": "Die letzten {count} Nachrichten",
-  "email.thread.fold": "Nachricht von {name} einklappen",
   "email.thread.toLine": "an {names}",
   "email.thread.details": "Details",
   "email.thread.textForwarded":
@@ -7703,6 +7705,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.scheduleGoesOut": "Versand: {when}",
   "compose.willGoOut": "Versand: {when}",
   "compose.scheduleAfternoon": "Morgen Nachmittag",
+  "compose.draftLanguage": "Sprache des Entwurfs",
   "compose.rewrite": "Umschreiben",
   "compose.rewriteShorter": "Kürzer",
   "compose.rewriteShorterAsk":
@@ -15956,6 +15959,13 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Jede Stufe ordnet eine Art von Arbeit einem Anbieter und einem Modell zu. Gespeicherte Änderungen gelten innerhalb einer Minute.",
   "aiRouting.profileLine":
     "Installationsprofil: {profile}. Das Profil begrenzt, welche Anbieter eine Stufe nutzen kann, und wird von der Systemadministration festgelegt.",
+  "aiRouting.profile.eu_hosted":
+    "„EU-Hosting“ (Inferenz von Partnern; das Profil begrenzt nicht, wo eine Stufe läuft, das bestimmt die Verbindung jeder Stufe)",
+  "aiRouting.profile.sovereign":
+    "Souverän (KI läuft nur auf den eigenen Hosts der Installation, Cloud-Anbieter werden abgelehnt)",
+  "aiRouting.profile.cloud_frontier":
+    "Cloud (Cloud-Anbieter mit den eigenen API-Schlüsseln der Installation)",
+  "aiRouting.profile.unset": "Nicht festgelegt",
   "aiRouting.notBound": "Nicht zugeordnet",
   "aiRouting.lastResponse": "Letzte Antwort {when}",
   "aiTerms.provider": "Anbieter",
@@ -20073,6 +20083,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lead.company.linkWhyDomain": "{name} nutzt die Website-Domain dieses Leads.",
   "lead.company.linkWhyName":
     "{name} trägt den Unternehmensnamen dieses Leads.",
+  "lead.company.nameFollowsLink":
+    "Der Name kommt vom verknüpften Unternehmen. Benenne es auf der Seite des Unternehmens um.",
   "lead.details.fromCompany": "Von {name}",
   "lead.details.fromCompanyRecord": "Aus dem Unternehmenseintrag",
   "lead.details.companyDecides":
@@ -21608,6 +21620,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Für {count} erste Qualifizierung ist keine Verantwortung gespeichert. Die Mitgliederzahlen enthalten nur zugeordnete Ereignisse.",
   "analytics.team.qualificationUnattributed_other":
     "Für {count} erste Qualifizierungen ist keine Verantwortung gespeichert. Die Mitgliederzahlen enthalten nur zugeordnete Ereignisse.",
+  "brief.done.changeCount_one": "{count} Änderung",
+  "brief.done.changeCount_other": "{count} Änderungen",
+  "brief.done.steps": "Änderungen an diesem Deal, neueste zuerst",
   "brief.done.title": "Für dich erledigt",
   "brief.done.waiting_one": "{count} Deal wartet auf deine Prüfung",
   "brief.done.waiting_other": "{count} Deals warten auf deine Prüfung",
@@ -21622,7 +21637,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.done.viewChanges_one": "{count} Änderung ansehen",
   "brief.done.viewChanges_other": "{count} Änderungen ansehen",
   "brief.done.showNew": "Neue Änderungen zeigen",
-  "brief.done.history": "Änderungsverlauf ansehen",
+  "brief.done.history": "Änderungsverlauf",
   "brief.done.dealsLabel": "Deals, die Margince geändert hat",
   "brief.done.noReason": "Grund nicht verfügbar",
   "brief.done.markedLost": "Als verloren markiert",

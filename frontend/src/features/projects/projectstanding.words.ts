@@ -332,6 +332,7 @@ export function projectEvents(view: Project360, ctx: Ctx): TimelineEvent[] {
     kind: moment.kind,
     title: momentTitle(moment, ctx),
     sub: momentSub(moment, ctx),
+    outcome: moment.what === "won" ? "won" : undefined,
     // The newest update is a filed activity, so its mark is not drawn twice.
     activityIds:
       moment.what === "update"

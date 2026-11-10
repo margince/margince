@@ -192,7 +192,10 @@ func (d replyDrafter) DraftEmailWithProvenance(ctx context.Context, anchor ids.U
 		// profile. Weaken this and a transient model failure becomes a failed
 		// draft_reply instead of a plain one.
 		d.logger().WarnContext(ctx, "model reply draft unavailable; using deterministic draft", "err", err)
-		return activities.DraftResult{Subject: activities.ReplySubject(activity.Kind, topic, fallbackSubject), Body: fallbackBody, VoiceDegraded: voice.Degraded}, nil
+		return activities.DraftResult{
+			Subject: activities.ReplySubject(activity.Kind, topic, fallbackSubject), Body: fallbackBody,
+			VoiceDegraded: voice.Degraded, Language: envelope.Lang(),
+		}, nil
 	}
 	// The draft's OWN language, from the envelope the drafter already resolved:
 	// a German reply used to carry an English legal line, which is the half of
@@ -206,6 +209,7 @@ func (d replyDrafter) DraftEmailWithProvenance(ctx context.Context, anchor ids.U
 		VoiceProfileVersion: voiceVersion,
 		DraftRef:            draftRef,
 		VoiceDegraded:       voice.Degraded,
+		Language:            envelope.Lang(),
 	}, nil
 }
 
@@ -338,6 +342,7 @@ func (d replyDrafter) languageInputs(ctx context.Context, anchor ids.UUID, steer
 		return activity, written, err
 	}
 	return activity, draftfloor.Written{
+		Chosen:    steering.Language,
 		Addressee: thread.addresseeEvidence(delivery.ContactID),
 		Stored:    activityLanguage(activity),
 		Body:      textlang.MessageOpening(stringValue(activity.Body), draftcore.LanguageEvidenceRunes),

@@ -45,3 +45,14 @@ export const Recent: Story = {};
 export const RecentDark: Story = { globals: { theme: "dark" } };
 export const Selected: Story = { args: { selected: true } };
 export const SelectedDark: Story = { ...Selected, globals: { theme: "dark" } };
+export const Setting: Story = {
+  args: {
+    command: {
+      id: "screen:settings-deals",
+      label: "Deals",
+      type: "setting",
+      route: { screen: "settings", id: "deals" },
+    },
+  },
+};
+export const SettingDark: Story = { ...Setting, globals: { theme: "dark" } };

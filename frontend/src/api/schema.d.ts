@@ -19699,8 +19699,10 @@ export interface paths {
         /**
          * Set or clear when buyer access lapses.
          * @description Null clears the bound, leaving access open until the room is closed or
-         *     archived. A past instant is accepted and takes effect immediately — that is
-         *     how access is cut short without ending the room. It decides how long a buyer can
+         *     archived. A past instant is accepted and takes effect at once — that is
+         *     how access is cut short without ending the room. One at or before the room's
+         *     creation is stored as the time of the call, unless a standing expiry has
+         *     already passed, which is kept. It decides how long a buyer can
          *     read the room, so an agent spends `send` on it.
          */
         put: operations["setDealRoomExpiry"];
@@ -38432,6 +38434,15 @@ export interface components {
              *     no longer under contract and still reports the status it was left in.
              */
             readonly under_contract: boolean;
+            /**
+             * @description Where today falls in the agreement's dated term, read from the dates alone
+             *     (CONTRACT-FORM-1): `not_started` before `starts_on`, `ended` after the earlier
+             *     of `ends_on` and `cancellation_effective_on`, `in_force` between. It tells an
+             *     agreement that has not begun from one that has run out, which `under_contract`
+             *     = false cannot, and it ignores `status` and archival as `under_contract` does not.
+             * @enum {string}
+             */
+            readonly term_state: "not_started" | "in_force" | "ended";
             source: string;
             /** @description The principal that recorded this agreement, prefixed by kind ("human:<id>" / "agent:<id>"). Server-stamped from the authenticated caller, never client-supplied — an agent acting under a passport is not a row in app_user, so this is not a user id. */
             readonly captured_by: string;
@@ -41048,6 +41059,11 @@ export interface components {
              *     Absent or empty is a first draft.
              */
             rewrite_of?: string | null;
+            /**
+             * @description The language the caller chose for the draft. It outranks every language the server would read from the correspondence, the addressee, the rep and the installation, and the greeting, register, provenance notice and deterministic fallback all follow it. Absent leaves the choice to the server, which reads it from the correspondence. The server keeps no choice between calls, so a rewrite that should stay in the chosen language names it again. A code outside this list is `422` on `language`.
+             * @enum {string}
+             */
+            language?: "en" | "de" | "vi";
         };
         /** @description A drafted email (never sent by drafting). Send via /activities/{id}/send-email (🟡). */
         EmailDraft: {
@@ -41066,6 +41082,11 @@ export interface components {
             readonly draft_ref: string | null;
             /** @description True when the sender's voice could not even be looked up, so this draft may be missing a voice its sender built. Distinct from voice_profile_version being null, which also covers the ordinary no-profile case. A client should say so: the sender cannot detect a missing voice by reading the text. Absent reads as false. */
             readonly voice_degraded?: boolean;
+            /**
+             * @description The language this draft is written in: the `language` the request named, else the one the server resolved from the correspondence. The model draft and the deterministic fallback report it alike. A client shows it as the composer's current choice and names it again on a rewrite that must keep it.
+             * @enum {string}
+             */
+            readonly language?: "en" | "de" | "vi";
         };
         /**
          * @description Who a reply to a message is addressed to: one contact, resolved from the
@@ -41153,6 +41174,11 @@ export interface components {
              *     A client should say so beside the note, for the same reason voice_degraded is said: a reader fluent only in the default cannot tell a fallback from a choice, and would forward an English note to a customer who writes in German believing the product had checked. Absent reads as false.
              */
             readonly language_undetermined?: boolean;
+            /**
+             * @description The language this draft is written in: the `language` the request named, else the one the server resolved from the record's correspondence. The model draft and the deterministic floor report it alike. Absent on an introduction request or note, which reads its language on its own and says so through `language_undetermined`.
+             * @enum {string}
+             */
+            readonly language?: "en" | "de" | "vi";
         };
         /**
          * @description One thing the draft was written from, named so the reader can check it rather than
@@ -41545,6 +41571,11 @@ export interface components {
             voice_profile_version?: number;
             voice_degraded?: boolean;
             served_body?: string;
+            /**
+             * @description The language the author chose for the AI draft, restored with the words so the composer names it again on the next draft request. Absent when they chose none, and the next draft follows the correspondence. A code outside this list is dropped and the draft still saves, so the answer comes back without it.
+             * @enum {string}
+             */
+            language?: "en" | "de" | "vi";
         };
         /**
          * @description The composer's fields as they stand. Every content field is optional and an omitted
@@ -52800,7 +52831,11 @@ export interface components {
              * @description Defaults to the deal's owner when omitted.
              */
             steward_user_id?: string | null;
-            /** Format: date-time */
+            /**
+             * Format: date-time
+             * @description When buyer access lapses. A past instant is accepted and stored as the
+             *     time of the call, so the room opens with buyer access already ended.
+             */
             expires_at?: string | null;
             source: string;
         };

@@ -465,6 +465,24 @@ func TestCrossingADueDateDoesNotRewriteTheLedger(t *testing.T) {
 		t.Fatalf("a year passing rewrote %d invoices; status must not ride the hash",
 			second.InvoicesUpdate)
 	}
+	card, err := later.SummaryFor(ctx, e.company)
+	if err != nil {
+		t.Fatal(err)
+	}
+	owed := 0
+	for _, inv := range *card.RecentInvoices {
+		if inv.OpenMinor == 0 {
+			continue
+		}
+		owed++
+		if inv.Status != crmcontracts.FinanceInvoiceStatus(statusOverdue) {
+			t.Errorf("invoice %v owes %d a year past its date and reads %q, want overdue",
+				inv.Id, inv.OpenMinor, inv.Status)
+		}
+	}
+	if owed == 0 {
+		t.Fatal("no listed invoice owes anything; this test proves nothing")
+	}
 }
 
 // The repair Codex named: an invoice mirrored BEFORE the rate was recorded is

@@ -26,6 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
@@ -50,9 +51,8 @@ type ActivityLister interface {
 
 // Request is the transport's body, narrowed to what the writer needs.
 //
-// One field, and no recipient among them: the lead in the path IS the
-// recipient, which is what makes this the same shape contactdraft writes for and
-// not a second kind of request.
+// It names no recipient: the lead in the path is the recipient. That makes it
+// the shape contactdraft writes for, not a second kind of request.
 type Request struct {
 	Subject string
 	// Intent is the caller's own steering ("shorter", "ask for Tuesday"). The
@@ -60,6 +60,8 @@ type Request struct {
 	Intent string
 	// RewriteOf is the draft the composer is showing; empty is a first draft.
 	RewriteOf string
+	// Language is the language the caller chose, Unknown to read it from the lead.
+	Language textlang.Lang
 }
 
 // Service writes one draft per call.
@@ -132,7 +134,10 @@ func (s *Service) Draft(
 	}
 	zone := s.envelope.Zone(ctx)
 	envelope := s.envelope.Resolve(ctx,
-		draftfloor.Written{Thread: draftcore.LanguageEvidenceOf(activities, s.envelope.Now(), zone), Rewrite: req.RewriteOf, Purpose: req.Intent, DraftSubject: req.Subject},
+		draftfloor.Written{
+			Chosen: req.Language, Thread: draftcore.LanguageEvidenceOf(activities, s.envelope.Now(), zone),
+			Rewrite: req.RewriteOf, Purpose: req.Intent, DraftSubject: req.Subject,
+		},
 		ConversationState(activities, s.envelope.Now(), zone)).InZone(zone)
 	in := FromLead(lead, activities, req, envelope)
 	grounding, err := in.Grounding()

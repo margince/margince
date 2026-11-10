@@ -188,7 +188,7 @@ func gcalMeeting(t *testing.T, e *integration.SearchEnv) ids.UUID {
 		return tx.QueryRow(context.Background(),
 			`SELECT id FROM activity WHERE source_system = 'gcal' AND source_id = 'review'`).Scan(&id)
 	}); err != nil {
-		t.Fatalf("the meeting was not captured: %v", err)
+		t.Fatalf("no gcal meeting with source_id 'review' was captured: %v", err)
 	}
 	return id
 }
@@ -254,6 +254,51 @@ func TestEveryGuestOnAnInvitationIsOnTheMeeting(t *testing.T) {
 	if !meetingLinkedTo(t, e, meeting, later) {
 		t.Error("the meeting is not filed under the guest who became a contact after it")
 	}
+}
+
+// A link a member moved off a guest outlives the organiser dropping that
+// guest. A roster retires its own rows, and a moved row is no longer one, so
+// the next sync cannot undo what the member chose.
+func TestTheRosterDoesNotRetireALinkAMemberMoved(t *testing.T) {
+	env := newCaptureEnv(t)
+	e := env.e
+	seatFor(t, e, guestColleagueA)
+	ensureGuestContact(t, e, guestKnown)
+	feed := &calendarFeed{}
+	start := captureNow.AddDate(0, 0, -3)
+	feed.set(lateGuestEvent("review", "confirmed", start, guestColleagueA, guestList()...))
+	sync := connectFeed(t, env, feed)
+	sync()
+	meeting := gcalMeeting(t, e)
+
+	// Read the row while the roster still lists the guest, so a later zero is
+	// the retirement and not a fixture that seeded nothing.
+	if got := len(guestRows(t, e, meeting)[guestKnown]); got != 1 {
+		t.Fatalf("the guest holds %d rows before the move, want 1", got)
+	}
+
+	elsewhere := ensureGuestContact(t, e, "elsewhere@other-co.example")
+	if _, err := activities.NewStore(e.DB()).RelinkActivity(importerCtx(e),
+		ids.From[ids.ActivityKind](meeting), activities.RelinkActivityInput{
+			EntityType: "contact", EntityID: elsewhere.UUID, ReplaceExistingOfType: true,
+		}); err != nil {
+		t.Fatalf("moving the meeting off the known guest: %v", err)
+	}
+
+	feed.set(lateGuestEvent("review", "confirmed", start, guestColleagueA, rosterWithout(guestKnown)...))
+	sync()
+
+	if got := len(guestRows(t, e, meeting)[guestKnown]); got != 1 {
+		t.Errorf("the moved row holds %d rows once the organiser dropped the guest, want 1", got)
+	}
+}
+
+// rosterWithout is the standard roster less one address, which is how an
+// organiser dropping a guest reaches the sync.
+func rosterWithout(address string) []map[string]any {
+	return slices.DeleteFunc(guestList(), func(g map[string]any) bool {
+		return g["email"] == address
+	})
 }
 
 // A guest the organizer adds after the first sync joins the meeting once, and

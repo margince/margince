@@ -36,8 +36,9 @@ const system = `You decide whether one captured email is about each of a few sal
 supplied deal id emit exactly one verdict: "about" (the email concerns this deal's business:
 its offer, scope, contract, delivery, price or decision), "not_about" (it concerns something
 else: an invoice for other work, a newsletter, an invitation, small talk, another project), or
-"unsure" (it could be either). A sender who writes to a customer we sell to is not by that alone
-writing about a deal. Judge the email's content, not who sent it.
+"unsure" (it could be either). "unsure" is for a mail that names no subject of its own, such as
+a bare request to talk; a mail that names other work is "not_about", even from the deal's own
+company. A sender who writes to a customer we sell to is not by that alone writing about a deal. Judge the email's content, not who sent it.
 
 Each deal is described by its name, its project and the subjects of mail already filed on it.
 "confidence" is how sure you are of that one verdict, from 0 to 1. A wrong "about" files
