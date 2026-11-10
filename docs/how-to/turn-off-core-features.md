@@ -18,7 +18,7 @@ The allowed names are the `CoreFeature` values in [the API contract](../../backe
 An unknown name stops startup with an error. An empty list keeps every core feature on.
 
 A feature that is off has no main-menu entry or command-palette entry. Its pages,
-API routes and agent calls refuse access. Other pages omit sections and reports
+API routes and agent calls refuse access. Other pages leave out sections and reports
 that need it. Existing role grants and data stay in place. Removing a name from the
 list and restarting both programs makes that feature available under the same grants.
 

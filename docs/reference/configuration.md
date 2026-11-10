@@ -384,7 +384,7 @@ admin can also change under Settings. One that also says kept by a reset keeps i
 
 | Key | Env | Flag | Type | Default | Programs | Doc |
 |---|---|---|---|---|---|---|
-| `features.disabled` | — | — | `list<string>` | `""` | api, worker | Main-menu features to turn off; their pages and API and agent calls are unavailable, and their data is kept. |
+| `features.disabled` | — | — | `list<string>` | `""` | api, worker | Main-menu features to turn off; their pages and API and agent calls are not available, and their data is kept. |
 
 ### `identity`
 

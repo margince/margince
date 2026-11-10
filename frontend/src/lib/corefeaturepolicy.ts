@@ -2,10 +2,14 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { components } from "../api/schema";
-import { ENTITY, isEntityKind } from "./entity";
+import recordFeatures from "./corefeature-records.json";
 import type { Screen } from "./router";
 
 export type CoreFeature = components["schemas"]["CoreFeature"];
+
+// The generated lookup keeps controls on the server's RecordEnabled decision.
+const RECORD_FEATURES: Readonly<Record<string, readonly string[]>> =
+  recordFeatures;
 
 const SCREEN_FEATURE: Partial<Record<Screen, CoreFeature>> = {
   partners: "companies",
@@ -28,8 +32,7 @@ export function recordEnabled(
   kind: string,
   disabled: readonly CoreFeature[],
 ): boolean {
-  return (
-    !isEntityKind(kind) ||
-    screenEnabled(ENTITY[kind].route("").screen, disabled)
+  return !(RECORD_FEATURES[kind] ?? []).some((feature) =>
+    disabled.some((entry) => entry === feature),
   );
 }

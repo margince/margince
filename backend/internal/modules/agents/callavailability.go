@@ -12,11 +12,13 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
 
+// CallAvailability applies one feature policy to listings and execution.
 type CallAvailability interface {
 	Admits(verb, recordType string) bool
 	Context(context.Context) context.Context
 }
 
+// WithCallAvailability binds the feature boundary before tool admission.
 func WithCallAvailability(available CallAvailability) RegistryOption {
 	return func(r *Registry) { r.callAvailability = available }
 }

@@ -45,7 +45,7 @@ var (
 	CoreFeaturesDisabled = config.Define(config.Spec[[]string]{
 		Key: "features.disabled", Type: config.List(config.String), Default: config.Some([]string{}), Roles: both,
 		Validate: corefeatures.ValidateDisabled,
-		Doc:      "Main-menu features to turn off; their pages and API and agent calls are unavailable, and their data is kept.",
+		Doc:      "Main-menu features to turn off; their pages and API and agent calls are not available, and their data is kept.",
 	})
 	ListsEnabled = config.Define(config.Spec[bool]{
 		Key: "lists.enabled", Env: "MARGINCE_LISTS_ENABLED", Type: config.Bool, Default: config.Some(true), Roles: both,

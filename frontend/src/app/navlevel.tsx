@@ -17,20 +17,19 @@ import { Badge } from "../design-system/atoms";
 import { useHoverIntent } from "../design-system/hoverintent";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
-import { screenEnabled, useDisabledCoreFeatures } from "../lib/corefeatures";
+import { useDisabledCoreFeatures } from "../lib/corefeatures";
 import { navigate, type Route, routeHash } from "../lib/router";
 import {
   currentClaim,
   entryLabel,
-  firstAvailableRoute,
   type NavCounts,
   type NavLevelEntry,
   type NavLevelGroup,
   type NavSection,
   type NavTrailLevel,
   navEntryHref,
-  navLevelRoute,
   railTrail,
+  walkUpTarget,
 } from "./nav";
 
 // ONE navigation level, whatever its depth. The rail's ten destinations and the
@@ -130,17 +129,6 @@ export function useNavWalk(route: Route, remembers: boolean): NavWalkStore {
   return walk;
 }
 
-// The address the way back leads to. Below the section's own level it is the
-// entry the reader drilled through — that entry's own address is what names the
-// shallower level. At the section's own level there is no address above it
-// INSIDE the section, so the walk leaves: back to where the reader came in from.
-function walkUpTarget(parent: NavTrailLevel | undefined, origin: Route): Route {
-  if (!parent || parent.path.length === 0 || !parent.activeId) {
-    return origin;
-  }
-  return navLevelRoute(parent.path, parent.activeId);
-}
-
 /**
  * The level the sidebar is showing, and the two ways a reader moves between
  * levels.
@@ -181,13 +169,7 @@ export function useNavLevel(
   // direction that drops focus to <body> without saying so, so they are counted
   // here rather than left to be discovered one at a time.
   const onWalkUp = () => {
-    const origin = walk.origin();
-    const target = walkUpTarget(
-      parent,
-      screenEnabled(origin.screen, disabled)
-        ? origin
-        : firstAvailableRoute(disabled),
-    );
+    const target = walkUpTarget(parent, walk.origin(), disabled);
     walk.claim(routeHash(target));
     navigate(target);
   };

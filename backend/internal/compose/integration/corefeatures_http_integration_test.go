@@ -31,15 +31,16 @@ func TestCoreFeatureSwitchesBlockBothDoorsAndKeepDataForReenable(t *testing.T) {
 	mustCall(t, e, http.MethodGet, "/v1/me", nil, http.StatusOK, &before)
 	for _, phase := range []string{"enabled", "only deals disabled", "only contacts disabled", "only analytics disabled", "disabled", "enabled again"} {
 		t.Run(phase, func(t *testing.T) {
-			if phase == "only analytics disabled" {
+			switch phase {
+			case "only analytics disabled":
 				disabled = []string{"analytics"}
-			} else if phase == "disabled" {
+			case "disabled":
 				disabled = []string{"home", "contacts", "companies", "leads", "deals", "projects", "filters", "analytics"}
-			} else if phase == "only contacts disabled" {
+			case "only contacts disabled":
 				disabled = []string{"contacts"}
-			} else if phase == "only deals disabled" {
+			case "only deals disabled":
 				disabled = []string{"deals"}
-			} else {
+			default:
 				disabled = nil
 			}
 			off := slices.Contains(disabled, "contacts")

@@ -20,6 +20,7 @@ import {
   type NavLevelEntry,
   type NavSection,
   type NavTrailLevel,
+  navLevelRoute,
   navTrail,
 } from "./subnav";
 
@@ -443,4 +444,17 @@ export function firstAvailableRoute(disabled: readonly CoreFeature[]): Route {
       NAV.find((item) => screenEnabled(item.screen, disabled))?.screen ??
       "settings",
   };
+}
+
+export function walkUpTarget(
+  parent: NavTrailLevel | undefined,
+  origin: Route,
+  disabled: readonly CoreFeature[],
+): Route {
+  if (!parent || parent.path.length === 0 || !parent.activeId) {
+    return screenEnabled(origin.screen, disabled)
+      ? origin
+      : firstAvailableRoute(disabled);
+  }
+  return navLevelRoute(parent.path, parent.activeId);
 }

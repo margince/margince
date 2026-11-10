@@ -13,6 +13,7 @@ func (a Availability) Context(ctx context.Context) context.Context {
 	return context.WithValue(ctx, availabilityKey{}, a)
 }
 
+// FromContext keeps maintenance callers without a public boundary enabled.
 func FromContext(ctx context.Context) Availability {
 	availability, ok := ctx.Value(availabilityKey{}).(Availability)
 	if !ok {
@@ -21,7 +22,7 @@ func FromContext(ctx context.Context) Availability {
 	return availability
 }
 
-// Privacy duties still require their normal grants when a feature is hidden.
+// RetainedDataContext preserves role and row checks while privacy duties use retained data.
 func RetainedDataContext(ctx context.Context) context.Context {
 	return (Availability{}).Context(ctx)
 }

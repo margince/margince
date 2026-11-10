@@ -121,11 +121,13 @@ func OfRecordCall(verb, recordType string) (string, bool) {
 	return area, ok
 }
 
+// PlacementOfOperation reads the parity catalog's area for an HTTP operation.
 func PlacementOfOperation(operationID string) (string, bool) {
 	placement, ok := table.Placements[operationID]
 	return placement, ok
 }
 
+// PlacementsOfVerb returns a copy so callers cannot change the shared catalog.
 func PlacementsOfVerb(verb string) []string {
 	return slices.Clone(table.VerbPlacements[verb])
 }

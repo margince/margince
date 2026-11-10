@@ -1025,7 +1025,7 @@
       "additionalProperties": false,
       "properties": {
         "disabled": {
-          "description": "Main-menu features to turn off; their pages and API and agent calls are unavailable, and their data is kept.",
+          "description": "Main-menu features to turn off; their pages and API and agent calls are not available, and their data is kept.",
           "type": [
             "array",
             "null"

@@ -92,11 +92,10 @@ func (e *Eraser) EraseContact(ctx context.Context, contactID ids.UUID, reason st
 //
 //nolint:gocognit,cyclop // the rename added no branch: this body is what it was under the old noun.
 func (e *Eraser) EraseContactCounted(ctx context.Context, contactID ids.UUID, reason string) (erased erasureaccount.Account, err error) {
-	ctx = corefeatures.RetainedDataContext(ctx)
+	ctx = originalstore.Bind(corefeatures.RetainedDataContext(ctx), e.db, e.blob)
 	if err := auth.Require(ctx, "contact", principal.ActionDelete); err != nil {
 		return erasureaccount.Account{}, err
 	}
-	ctx = originalstore.Bind(ctx, e.db, e.blob)
 	subject := ids.From[ids.ContactKind](contactID)
 	err = e.withPreparedOriginalErasure(ctx, subject, func(raw pgx.Tx, prepared originalMatches) error {
 		tx := newTallyTx(raw)

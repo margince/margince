@@ -5,6 +5,7 @@ package reporting
 
 import (
 	"fmt"
+
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 

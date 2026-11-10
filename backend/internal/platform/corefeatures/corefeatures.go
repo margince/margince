@@ -17,10 +17,12 @@ var known = []crmcontracts.CoreFeature{
 	crmcontracts.CoreFeatureFilters, crmcontracts.CoreFeatureAnalytics,
 }
 
+// Availability bounds public access without changing stored grants.
 type Availability struct {
 	disabled []crmcontracts.CoreFeature
 }
 
+// New copies and normalizes the disabled feature names.
 func New(disabled []string) Availability {
 	out := Availability{disabled: make([]crmcontracts.CoreFeature, 0, len(disabled))}
 	for _, feature := range disabled {
@@ -33,6 +35,7 @@ func New(disabled []string) Availability {
 	return out
 }
 
+// ValidateDisabled refuses names the public contract does not serve.
 func ValidateDisabled(disabled []string) error {
 	for _, feature := range disabled {
 		if !slices.Contains(known, crmcontracts.CoreFeature(feature)) {
@@ -42,14 +45,17 @@ func ValidateDisabled(disabled []string) error {
 	return nil
 }
 
+// Enabled keeps features available unless the file turns them off.
 func (a Availability) Enabled(feature crmcontracts.CoreFeature) bool {
 	return !slices.Contains(a.disabled, feature)
 }
 
+// Disabled returns a copy so publishing cannot mutate the policy.
 func (a Availability) Disabled() []crmcontracts.CoreFeature {
 	return append([]crmcontracts.CoreFeature{}, a.disabled...)
 }
 
+// RecordEnabled applies feature dependencies to a record kind.
 func (a Availability) RecordEnabled(recordType string) bool {
 	if recordType == "commission" {
 		return a.AreaEnabled("commissions")
@@ -58,6 +64,7 @@ func (a Availability) RecordEnabled(recordType string) bool {
 	return !owned || a.Enabled(feature)
 }
 
+// RecordFeature links record kinds to their main-menu owner.
 func RecordFeature(recordType string) (crmcontracts.CoreFeature, bool) {
 	switch recordType {
 	case "contact":
@@ -79,6 +86,7 @@ func RecordFeature(recordType string) (crmcontracts.CoreFeature, bool) {
 	}
 }
 
+// AreaEnabled also checks the record features a composite area needs.
 func (a Availability) AreaEnabled(area string) bool {
 	switch area {
 	case "contacts", "duplicates":
@@ -104,6 +112,7 @@ func (a Availability) AreaEnabled(area string) bool {
 	}
 }
 
+// AreaUsesRecordScope marks calls that need their concrete record kind.
 func AreaUsesRecordScope(area string) bool {
 	switch area {
 	case "bulk", "sharing", "imports", "exports", "search":

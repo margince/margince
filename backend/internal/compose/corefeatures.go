@@ -5,6 +5,7 @@ package compose
 
 import (
 	"net/http"
+	"slices"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -17,6 +18,12 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
+type coreFeatureSettings struct {
+	listsEnabled bool
+	coreFeatures corefeatures.Availability
+}
+
+// WithDisabledCoreFeatures binds the same feature decision to HTTP and MCP.
 func WithDisabledCoreFeatures(disabled []string) Option {
 	availability := corefeatures.New(disabled)
 	return func(s *Server, _ *pgxpool.Pool) { s.coreFeatures = availability }
@@ -56,7 +63,7 @@ func coreFeatureGate(availability corefeatures.Availability) func(http.Handler) 
 
 type coreCallPolicy struct{ corefeatures.Availability }
 
-func coreCallAvailability(availability corefeatures.Availability) agents.CallAvailability {
+func coreCallAvailability(availability corefeatures.Availability) coreCallPolicy {
 	return coreCallPolicy{availability}
 }
 
@@ -71,12 +78,7 @@ func (p coreCallPolicy) Admits(verb, recordType string) bool {
 	if len(areas) == 0 {
 		return true
 	}
-	for _, area := range areas {
-		if p.AreaEnabled(area) {
-			return true
-		}
-	}
-	return false
+	return slices.ContainsFunc(areas, p.AreaEnabled)
 }
 
 func coreReadViews(availability corefeatures.Availability) []agents.ReadView {

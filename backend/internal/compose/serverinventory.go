@@ -34,7 +34,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/agentvolume"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
-	"github.com/margince/margince/backend/internal/platform/corefeatures"
 	"github.com/margince/margince/backend/internal/platform/deployconfig"
 	"github.com/margince/margince/backend/internal/platform/httpserver"
 	"github.com/margince/margince/backend/internal/platform/jobs"
@@ -492,9 +491,7 @@ type Server struct {
 
 	// views is the router read_view runs through, shared by every Server copy.
 	views *viewDoor
-	// listsEnabled is the deployment's lists.enabled (WithListsEnabled).
-	listsEnabled bool
-	coreFeatures corefeatures.Availability
+	coreFeatureSettings
 
 	// securityTxt is the rendered web.security_txt (WithSecurityTxt); empty
 	// leaves /.well-known/security.txt unmounted.

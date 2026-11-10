@@ -83,6 +83,7 @@ func WithSpecResolver(resolve func(string) (runner.AgentSpec, bool)) RunnerOptio
 	return func(s *RunnerService) { s.specByName = resolve }
 }
 
+// WithRunnerDisabledCoreFeatures keeps queued tool calls within the configured feature boundary.
 func WithRunnerDisabledCoreFeatures(disabled []string) RunnerOption {
 	availability := corefeatures.New(disabled)
 	return func(s *RunnerService) { s.features.coreFeatures = availability }
