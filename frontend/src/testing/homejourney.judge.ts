@@ -126,8 +126,8 @@ export function readerFrom(body: unknown): {
   greeting: string | null;
 } {
   const user = field(body, "user");
-  const id = field(user, "id");
-  if (typeof id !== "string") throw new Error("/v1/me named no user id");
+  const id = readerIdFrom(body);
+  if (id === undefined) throw new Error("/v1/me named no user id");
   const text = (key: string) => {
     const value = field(user, key);
     return typeof value === "string" ? value : null;
@@ -139,6 +139,11 @@ export function readerFrom(body: unknown): {
       display_name: text("display_name"),
     }),
   };
+}
+
+export function readerIdFrom(body: unknown): string | undefined {
+  const id = field(field(body, "user"), "id");
+  return typeof id === "string" ? id : undefined;
 }
 
 /** Sources a grant keeps from this reader: expected, and never degraded. */
@@ -314,6 +319,7 @@ export class RequestLedger {
   private current = "";
   private onWire = new Map<string, number>();
   private retries = new Map<HomeRead, { journey: string; attempts: number }>();
+  private requested = new Map<string, Set<HomeRead>>();
 
   begin(journey: string): void {
     this.current = journey;
@@ -321,11 +327,18 @@ export class RequestLedger {
 
   /** Records a request for `read` and returns the journey it belongs to. */
   started(read: HomeRead): string {
+    return this.startedAttempt(read).journey;
+  }
+
+  startedAttempt(read: HomeRead): { journey: string; attempt: number } {
     const due = this.retries.get(read);
     if (due) due.attempts++;
     const journey = due?.journey ?? this.current;
+    const reads = this.requested.get(journey) ?? new Set<HomeRead>();
+    reads.add(read);
+    this.requested.set(journey, reads);
     this.onWire.set(journey, (this.onWire.get(journey) ?? 0) + 1);
-    return journey;
+    return { journey, attempt: due?.attempts ?? 1 };
   }
 
   /** Records its end: `status` is null when no response came at all. */
@@ -346,11 +359,16 @@ export class RequestLedger {
     return [...this.retries.values()].some((due) => due.journey === journey);
   }
 
+  reads(journey: string): readonly HomeRead[] {
+    return [...(this.requested.get(journey) ?? [])];
+  }
+
   /**
    * Gives up on retries of `journey` that never came. The client does not
    * retry every server error (a 501 is final), so a wait for one is bounded.
    */
   release(journey: string): void {
+    this.requested.delete(journey);
     for (const [read, due] of this.retries) {
       if (due.journey === journey) this.retries.delete(read);
     }

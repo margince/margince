@@ -60,7 +60,7 @@ import (
 // SQL string literal, capturing the table. The by-id shape is what makes the
 // statement a read-modify-write on a row somebody named, which is where the
 // liveness question lives.
-var byIDWriteOf = regexp.MustCompile(`(?is)\b(?:UPDATE|DELETE\s+FROM)\s+(?:ONLY\s+)?([a-z_]+)\b[\s\S]*?\bWHERE\s+(?:[a-z]+\.)?id\s*=\s*\$`)
+var byIDWriteOf = regexp.MustCompile(`(?is)\b(?:UPDATE|DELETE\s+FROM)\s+(?:ONLY\s+)?([a-z_]+)\b[\s\S]*?\bWHERE\s+(?:[a-z]+\.)?id\s*=\s*(?:\$|@[a-z_])`)
 
 // livePredicate is the refusal written into the statement itself.
 var livePredicate = regexp.MustCompile(`(?i)archived_at\s+IS\s+NULL`)
@@ -125,17 +125,26 @@ const retirableTableFloor = 20
 // for were closed before it was armed, so a waiver here is a statement that the
 // obligation is MET some other way — never that it is owed and unpaid.
 var livenessUnstated = gatekit.Waive(map[string]string{
-	"internal/modules/activities:unlinkRecordedTx":           "both callers lock the row first: retractMachineLinkTx with a LiveOnly lock, and the decline through lockActivityForWrite, which admits an archived row only under a retention hold so the hold trigger answers the write",
-	"internal/modules/privacy:deleteNoticeActivities":        "deletes the notice mail of a website lead whose notice bounced. An archived notice holds the same recipient address a live one does, so refusing it would leave the address behind",
-	"internal/modules/privacy:deleteLeadRecordsTx":           "deletes a website lead whose notice failed. An archived lead holds the same name and address, and the failed notice, not the row's state, is what decides it goes",
-	"internal/modules/contacts:RestoreContactLeavingTwinsTx": "an un-archive writes archived child rows on purpose: it brings back exactly the rows the contact's archive retired, matched on that archive's own archived_at stamp, and storekit.Unarchive patches the contact row with IncludeArchived",
-	"internal/modules/contacts:RestoreCompanyTx":             "the company un-archive, which brings back exactly the rows the company's archive retired, matched on that archive's own stamp",
-	"internal/modules/activities:SetCalendarMethodTx":        "the calendar-method re-read writes an archived message on purpose: the method is a fact of the message, and an archived decline brought back must still read as a reply rather than as mail owed an answer. The row stays archived; only calendar_method changes, and only from NULL",
-	"internal/modules/activities:AssessMailBodiesTx":         "the completeness assessment writes an archived mail on purpose: completeness is a fact of the stored body, and an archived message brought back must not be read as complete when it is not. The row stays archived; only body_completeness changes, and only from unassessed",
-	"internal/modules/activities:WithholdStoredFilesTx":      "withholding a captured file's bytes reaches an archived row on purpose: archiving hides an attachment and keeps its object, so a strip that skipped archived rows would leave a private message's bytes stored for good. The row stays archived; only its key, checksum and bytes_withheld change",
-	"internal/modules/identity:countFailure":                 "every caller first reads the member through LiveMemberSQL under FOR UPDATE in the same transaction (recordFailedLogin, recordFailedChange, lockSecondFactorStreak), so the row it folds is live",
-	"internal/modules/identity:resetLockoutStreak":           "its callers read the member through LiveMemberSQL in the same transaction (checkCredentials, and lockSecondFactorStreak on second-factor completion), so the row it clears is live",
-	"internal/modules/capture:releaseSyncAnchor":             "the second half of the watermark write beside it in one transaction, which matches on id and generation alone so a round that already ran keeps its cursor. A release that refused an archived connection would leave the anchor held behind a stored cursor, and the next attempt would read that stale point as one somebody chose",
+	"internal/modules/activities:StampSenderAuthenticationTx": "system-only repair of sender-authentication evidence from a retained original. Archiving a message does not change its sender authentication; restricted content is excluded explicitly",
+	"internal/modules/automation:claimDraftStarter":           "UpdateAutomation holds a storekit.LiveOnly row lock before settleRuleOwner calls this claim, and retains it through the update transaction",
+	"internal/modules/contacts:refreshContactPhoneEvidence":   "lockOpenPairs selects only open, unarchived candidates FOR UPDATE OF d before stillFiled refreshes their evidence in the same transaction",
+	"internal/modules/identity:applyMemberRetirement":         "retireMemberTx reads and locks its source through readRetirementSource/readRetirementMember, whose query requires archived_at IS NULL, before applying the removal",
+	"internal/modules/identity:recordMemberSurvivor":          "retireMemberTx locks the surviving member through readRetirementTarget/readRetirementMember with archived_at IS NULL before the merge stamps its change",
+	"internal/modules/identity:recordTeamChange":              "the membership writer first requires the user to have archived_at and removed_at unset. This statement only stamps updated_at after the membership changes, under lockAuthorization",
+	"internal/modules/identity:changeUserRoleTx":              "memberRoleTarget requires archived_at IS NULL and removed_at IS NULL before changing roles; lockAuthorization serializes the membership and retirement writers",
+	"internal/modules/privacy:clearActivityContent":           "retention and restriction cleanup must remove content from archived messages too; refusing them would preserve the very personal data the cleanup removes",
+	"internal/modules/privacy:RekeyAnonymizedAddressesPageTx": "system-only rekey of retained suppression hashes on already anonymized contacts, including archived tombstones; the source page locks each selected contact FOR UPDATE",
+	"internal/modules/activities:unlinkRecordedTx":            "both callers lock the row first: retractMachineLinkTx with a LiveOnly lock, and the decline through lockActivityForWrite, which admits an archived row only under a retention hold so the hold trigger answers the write",
+	"internal/modules/privacy:deleteNoticeActivities":         "deletes the notice mail of a website lead whose notice bounced. An archived notice holds the same recipient address a live one does, so refusing it would leave the address behind",
+	"internal/modules/privacy:deleteLeadRecordsTx":            "deletes a website lead whose notice failed. An archived lead holds the same name and address, and the failed notice, not the row's state, is what decides it goes",
+	"internal/modules/contacts:RestoreContactLeavingTwinsTx":  "an un-archive writes archived child rows on purpose: it brings back exactly the rows the contact's archive retired, matched on that archive's own archived_at stamp, and storekit.Unarchive patches the contact row with IncludeArchived",
+	"internal/modules/contacts:RestoreCompanyTx":              "the company un-archive, which brings back exactly the rows the company's archive retired, matched on that archive's own stamp",
+	"internal/modules/activities:SetCalendarMethodTx":         "the calendar-method re-read writes an archived message on purpose: the method is a fact of the message, and an archived decline brought back must still read as a reply rather than as mail owed an answer. The row stays archived; only calendar_method changes, and only from NULL",
+	"internal/modules/activities:AssessMailBodiesTx":          "the completeness assessment writes an archived mail on purpose: completeness is a fact of the stored body, and an archived message brought back must not be read as complete when it is not. The row stays archived; only body_completeness changes, and only from unassessed",
+	"internal/modules/activities:WithholdStoredFilesTx":       "withholding a captured file's bytes reaches an archived row on purpose: archiving hides an attachment and keeps its object, so a strip that skipped archived rows would leave a private message's bytes stored for good. The row stays archived; only its key, checksum and bytes_withheld change",
+	"internal/modules/identity:countFailure":                  "every caller first reads the member through LiveMemberSQL under FOR UPDATE in the same transaction (recordFailedLogin, recordFailedChange, lockSecondFactorStreak), so the row it folds is live",
+	"internal/modules/identity:resetLockoutStreak":            "its callers read the member through LiveMemberSQL in the same transaction (checkCredentials, and lockSecondFactorStreak on second-factor completion), so the row it clears is live",
+	"internal/modules/capture:releaseSyncAnchor":              "the second half of the watermark write beside it in one transaction, which matches on id and generation alone so a round that already ran keeps its cursor. A release that refused an archived connection would leave the anchor held behind a stored cursor, and the next attempt would read that stale point as one somebody chose",
 	// ERASURE AND RETENTION MUST WRITE ARCHIVED ROWS. This is the family that
 	// makes a row-level trigger impossible, and the reason each entry gives is
 	// the specific destruction it performs rather than a restatement of that
@@ -206,7 +215,7 @@ var livenessUnstated = gatekit.Waive(map[string]string{
 	"internal/modules/knowledge:replacePage":                    "the same reconcile replacing a page whose checksum moved, on a document it just resolved as managed by the handbook source",
 	"internal/modules/introductions:Decide":                     "an ask's decision, pinned on the version the decider read (`AND version = $6`) and admitted by the state machine May() checks first. An intro_request is closed, never archived",
 	"internal/modules/introductions:Complete":                   "the same move, recording that the introduction happened or that a name was dropped instead, under the same version pin",
-	"internal/modules/introductions:Cancel":                     "the same move, withdrawing the ask — a retraction, and the one direction an archived anchor must never freeze",
+	"internal/modules/introductions:cancelTx":                   "the same move, withdrawing the ask — a retraction, and the one direction an archived anchor must never freeze",
 })
 
 // retirableTables derives the set of tables that can hold an archived row from

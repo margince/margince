@@ -1873,6 +1873,58 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/sdr-handoffs/{id}/assignee": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /** Read the current receiver and reassignment version of a prospect handoff. */
+        get: operations["getHandoffAssignee"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Choose a colleague who can work a waiting prospect handoff.
+         * @description Requires write access to the prospect and an active colleague with the same
+         *     access. Accepted handoffs retain their original decision and attribution.
+         */
+        patch: operations["reassignHandoff"];
+        trace?: never;
+    };
+    "/intro-requests/{id}/replace": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Withdraw your ask and make a fresh ask through another route.
+         * @description Only the original requester may replace an open ask. The replacement concerns the
+         *     same contact and starts with no decision or approval. Both changes commit together;
+         *     an invalid replacement leaves the original ask open. The old ask remains private
+         *     to its original parties. Choosing another introducer does not transfer a personal
+         *     relationship or permission to name-drop.
+         */
+        post: operations["replaceIntroRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/contacts/{id}/profile-fields": {
         parameters: {
             query?: never;
@@ -35379,6 +35431,28 @@ export interface components {
             source_activity_id?: string;
             version: number;
         };
+        HandoffAssignee: {
+            /** Format: uuid */
+            id: string;
+            /** Format: int64 */
+            version: number;
+            /** @enum {string} */
+            status: "submitted" | "accepted" | "rejected" | "recycled";
+            /** Format: uuid */
+            assigned_to?: string;
+            can_reassign: boolean;
+        };
+        HandoffAssigneeInput: {
+            /** Format: uuid */
+            assigned_to: string;
+            /** Format: int64 */
+            version: number;
+        };
+        IntroRequestReplaceInput: {
+            version: number;
+            reason: string;
+            request: components["schemas"]["IntroRequestInput"];
+        };
         IntroRequestCancelInput: {
             reason?: string;
             version: number;
@@ -39165,6 +39239,10 @@ export interface components {
             webhook: number;
             /** @description Live lists owned by the member. */
             list: number;
+            /** @description Waiting prospect handoffs assigned to the member. */
+            sdr_handoff: number;
+            /** @description Current user responsibilities on records. */
+            record_assignment: number;
         };
         UserHandover: {
             owned: components["schemas"]["HandoverCounts"];
@@ -61867,6 +61945,97 @@ export interface operations {
         responses: {
             /** @description The ask is withdrawn. */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IntroRequest"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    getHandoffAssignee: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Current assignment, scoped through the prospect. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HandoffAssignee"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    reassignHandoff: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HandoffAssigneeInput"];
+            };
+        };
+        responses: {
+            /** @description Current assignment after reassignment. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HandoffAssignee"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    replaceIntroRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IntroRequestReplaceInput"];
+            };
+        };
+        responses: {
+            /** @description The fresh ask; the original ask is withdrawn. */
+            201: {
                 headers: {
                     [name: string]: unknown;
                 };

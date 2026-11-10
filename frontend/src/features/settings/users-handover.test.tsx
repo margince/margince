@@ -28,7 +28,7 @@ describe("handing over a member's work", () => {
     await waitFor(() =>
       expect(
         within(dialog).getByText(
-          "Otto Off still owns 16 deals, 4 leads and 2 webhooks.",
+          "Otto Off still owns 16 deals, 4 leads, 2 webhooks, 3 pending handoffs and 2 record responsibilities.",
         ),
       ).toBeTruthy(),
     );
@@ -73,7 +73,7 @@ describe("handing over a member's work", () => {
     await waitFor(() =>
       expect(
         within(dialog).getByText(
-          /Ada Active still owns 16 deals, 4 leads and 2 webhooks\./,
+          /Ada Active still owns 16 deals, 4 leads, 2 webhooks, 3 pending handoffs and 2 record responsibilities\./,
         ),
       ).toBeTruthy(),
     );

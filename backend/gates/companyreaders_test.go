@@ -98,12 +98,16 @@ var predicateCompanyReads = gatekit.Waive(map[string]string{
 	"internal/modules/contacts/companycreatepreview.go:ensureCompanyLinkedInUnclaimed": "uniqueness admission for the supplied LinkedIn URL, shared by creation and its preview. It returns only a collision error containing the caller-supplied URL, never an incumbent id or company fields; filtering by visibility would admit a create that the unique constraint refuses",
 })
 
+const memberStaffingMetadataReadVerdict = "retiring a member must find live dependencies even when the administrator cannot read their parents. This shared join serves counts, responsibility identifiers and version/liveness stamps under user_admin:update; no parent identity or business field leaves it. Public counts use readAssignmentRow and keep only visible responsibilities. TestMemberAdministrationCountsDoNotDiscloseUnreadableStaffing and TestStaffingMetadataRequiresMemberAdministration prove the disclosure and permission boundaries"
+
 // lifecycleCompanyReads: cascades, merges, sweeps, capture and enrichment
 // resolution, seeders. Each is gated by the WRITE it belongs to, or runs as
 // PrincipalSystem — which auth.Require short-circuits outright
 // (platform/auth/rbac.go), so the gate would admit them anyway and the entry
 // records why asking was never the point.
+
 var lifecycleCompanyReads = gatekit.Waive(map[string]string{
+	"internal/modules/assignments/memberwork.go:memberAssignmentParents":        memberStaffingMetadataReadVerdict,
 	"internal/modules/privacy/erasure_manualreview.go:manualMentionSourcesSQL":  "the contact-delete-authorized eraser selects only identifiers of retained text requiring manual review. The compose flagger selects live controllers with unrestricted row scope, no field masks and current object read permission before issuing any notification; no matched text is copied",
 	"internal/modules/contacts/mergeprimaryrepair.go:mergeDroppedHeir":          "the merge-dropped-primary data task asks, as the system principal, whether a contact's archived primary sat at a company merged into its kept employer. Only merged_into_id is compared; no company column leaves the query, and the edge id goes to the audited promotion",
 	"internal/compose/company360/viewbaseline.go:keyVisitsSQL":                  "the visit-mark keying data task, run by KeyVisitsTx behind auth.RequireSystem: `company` appears only in an EXISTS that decides whether a mark's record is gone. It answers user_record_view ids and nothing of a company",

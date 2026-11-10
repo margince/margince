@@ -13471,6 +13471,30 @@ func (e GrowthFitSubScoreDimension) Valid() bool {
 	}
 }
 
+// Defines values for HandoffAssigneeStatus.
+const (
+	HandoffAssigneeStatusAccepted  HandoffAssigneeStatus = "accepted"
+	HandoffAssigneeStatusRecycled  HandoffAssigneeStatus = "recycled"
+	HandoffAssigneeStatusRejected  HandoffAssigneeStatus = "rejected"
+	HandoffAssigneeStatusSubmitted HandoffAssigneeStatus = "submitted"
+)
+
+// Valid indicates whether the value is a known member of the HandoffAssigneeStatus enum.
+func (e HandoffAssigneeStatus) Valid() bool {
+	switch e {
+	case HandoffAssigneeStatusAccepted:
+		return true
+	case HandoffAssigneeStatusRecycled:
+		return true
+	case HandoffAssigneeStatusRejected:
+		return true
+	case HandoffAssigneeStatusSubmitted:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for HealthActionDestination.
 const (
 	HealthActionDestinationConfiguration HealthActionDestination = "configuration"
@@ -48931,6 +48955,24 @@ type HandledForYou struct {
 	Truncated bool `json:"truncated"`
 }
 
+// HandoffAssignee defines model for HandoffAssignee.
+type HandoffAssignee struct {
+	AssignedTo  *openapi_types.UUID   `json:"assigned_to,omitempty"`
+	CanReassign bool                  `json:"can_reassign"`
+	Id          openapi_types.UUID    `json:"id"`
+	Status      HandoffAssigneeStatus `json:"status"`
+	Version     int64                 `json:"version"`
+}
+
+// HandoffAssigneeStatus defines model for HandoffAssignee.Status.
+type HandoffAssigneeStatus string
+
+// HandoffAssigneeInput defines model for HandoffAssigneeInput.
+type HandoffAssigneeInput struct {
+	AssignedTo openapi_types.UUID `json:"assigned_to"`
+	Version    int64              `json:"version" minimum:"1"`
+}
+
 // HandoverCounts Live records per kind.
 type HandoverCounts struct {
 	Company int `json:"company" minimum:"0"`
@@ -48941,6 +48983,12 @@ type HandoverCounts struct {
 	// List Live lists owned by the member.
 	List    int `json:"list" minimum:"0"`
 	Project int `json:"project" minimum:"0"`
+
+	// RecordAssignment Current user responsibilities on records.
+	RecordAssignment int `json:"record_assignment" minimum:"0"`
+
+	// SdrHandoff Waiting prospect handoffs assigned to the member.
+	SdrHandoff int `json:"sdr_handoff" minimum:"0"`
 
 	// Task Open tasks assigned to the member.
 	Task int `json:"task" minimum:"0"`
@@ -51044,6 +51092,15 @@ type IntroRequestInput struct {
 // IntroRequestListResponse defines model for IntroRequestListResponse.
 type IntroRequestListResponse struct {
 	Data []IntroRequest `json:"data"`
+}
+
+// IntroRequestReplaceInput defines model for IntroRequestReplaceInput.
+type IntroRequestReplaceInput struct {
+	Reason string `json:"reason"`
+
+	// Request The ask. There is no requester field: that is the authenticated contact, so one rep cannot put an ask in another's name.
+	Request IntroRequestInput `json:"request"`
+	Version int               `json:"version"`
 }
 
 // IntroRequestStatus Where the ask stands.
@@ -78075,6 +78132,9 @@ type CompleteIntroRequestJSONRequestBody = IntroRequestCompleteInput
 // DecideIntroRequestJSONRequestBody defines body for DecideIntroRequest for application/json ContentType.
 type DecideIntroRequestJSONRequestBody = IntroRequestDecisionInput
 
+// ReplaceIntroRequestJSONRequestBody defines body for ReplaceIntroRequest for application/json ContentType.
+type ReplaceIntroRequestJSONRequestBody = IntroRequestReplaceInput
+
 // CreateCorpusJSONRequestBody defines body for CreateCorpus for application/json ContentType.
 type CreateCorpusJSONRequestBody CreateCorpusJSONBody
 
@@ -78470,6 +78530,9 @@ type PutSchedulingAliasJSONRequestBody = SchedulingAliasRequest
 
 // CreateMeetingProposalJSONRequestBody defines body for CreateMeetingProposal for application/json ContentType.
 type CreateMeetingProposalJSONRequestBody = MeetingProposalRequest
+
+// ReassignHandoffJSONRequestBody defines body for ReassignHandoff for application/json ContentType.
+type ReassignHandoffJSONRequestBody = HandoffAssigneeInput
 
 // CreateSignalJSONRequestBody defines body for CreateSignal for application/json ContentType.
 type CreateSignalJSONRequestBody = CreateSignalRequest
@@ -93264,6 +93327,9 @@ type ServerInterface interface {
 	// Answer an ask made of you.
 	// (POST /intro-requests/{id}/decision)
 	DecideIntroRequest(w http.ResponseWriter, r *http.Request, id Id)
+	// Withdraw your ask and make a fresh ask through another route.
+	// (POST /intro-requests/{id}/replace)
+	ReplaceIntroRequest(w http.ResponseWriter, r *http.Request, id Id)
 	// The document corpora this workspace has defined.
 	// (GET /knowledge/corpora)
 	ListCorpora(w http.ResponseWriter, r *http.Request)
@@ -94173,6 +94239,12 @@ type ServerInterface interface {
 	// Create a personal, expiring invitation without reserving time or sending mail.
 	// (POST /scheduling/proposals)
 	CreateMeetingProposal(w http.ResponseWriter, r *http.Request, params CreateMeetingProposalParams)
+	// Read the current receiver and reassignment version of a prospect handoff.
+	// (GET /sdr-handoffs/{id}/assignee)
+	GetHandoffAssignee(w http.ResponseWriter, r *http.Request, id Id)
+	// Choose a colleague who can work a waiting prospect handoff.
+	// (PATCH /sdr-handoffs/{id}/assignee)
+	ReassignHandoff(w http.ResponseWriter, r *http.Request, id Id)
 	// Cross-object search (contacts, companies, deals, activities, leads).
 	// (GET /search)
 	Search(w http.ResponseWriter, r *http.Request, params SearchParams)
@@ -98247,6 +98319,12 @@ func (_ Unimplemented) DecideIntroRequest(w http.ResponseWriter, r *http.Request
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Withdraw your ask and make a fresh ask through another route.
+// (POST /intro-requests/{id}/replace)
+func (_ Unimplemented) ReplaceIntroRequest(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // The document corpora this workspace has defined.
 // (GET /knowledge/corpora)
 func (_ Unimplemented) ListCorpora(w http.ResponseWriter, r *http.Request) {
@@ -100062,6 +100140,18 @@ func (_ Unimplemented) ListMeetingProposals(w http.ResponseWriter, r *http.Reque
 // Create a personal, expiring invitation without reserving time or sending mail.
 // (POST /scheduling/proposals)
 func (_ Unimplemented) CreateMeetingProposal(w http.ResponseWriter, r *http.Request, params CreateMeetingProposalParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Read the current receiver and reassignment version of a prospect handoff.
+// (GET /sdr-handoffs/{id}/assignee)
+func (_ Unimplemented) GetHandoffAssignee(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Choose a colleague who can work a waiting prospect handoff.
+// (PATCH /sdr-handoffs/{id}/assignee)
+func (_ Unimplemented) ReassignHandoff(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -127855,6 +127945,40 @@ func (siw *ServerInterfaceWrapper) DecideIntroRequest(w http.ResponseWriter, r *
 	handler.ServeHTTP(w, r)
 }
 
+// ReplaceIntroRequest operation middleware
+func (siw *ServerInterfaceWrapper) ReplaceIntroRequest(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ReplaceIntroRequest(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListCorpora operation middleware
 func (siw *ServerInterfaceWrapper) ListCorpora(w http.ResponseWriter, r *http.Request) {
 
@@ -141125,6 +141249,74 @@ func (siw *ServerInterfaceWrapper) CreateMeetingProposal(w http.ResponseWriter, 
 	handler.ServeHTTP(w, r)
 }
 
+// GetHandoffAssignee operation middleware
+func (siw *ServerInterfaceWrapper) GetHandoffAssignee(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetHandoffAssignee(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ReassignHandoff operation middleware
+func (siw *ServerInterfaceWrapper) ReassignHandoff(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ReassignHandoff(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // Search operation middleware
 func (siw *ServerInterfaceWrapper) Search(w http.ResponseWriter, r *http.Request) {
 
@@ -148995,6 +149187,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/intro-requests/{id}/decision", wrapper.DecideIntroRequest)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/intro-requests/{id}/replace", wrapper.ReplaceIntroRequest)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/knowledge/corpora", wrapper.ListCorpora)
 	})
 	r.Group(func(r chi.Router) {
@@ -149902,6 +150097,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/scheduling/proposals", wrapper.CreateMeetingProposal)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/sdr-handoffs/{id}/assignee", wrapper.GetHandoffAssignee)
+	})
+	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/sdr-handoffs/{id}/assignee", wrapper.ReassignHandoff)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/search", wrapper.Search)

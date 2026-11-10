@@ -70,7 +70,7 @@ part_names() {
 keep_shard_evidence() {
   local out="$1" work="$2" regex_dir="$3" log_dir="$4" failed="$5"
   local slot name line dir pkg log prefix names
-  local -A only=()
+  local -a only=()
   shift 5
   for slot in "$@"; do only[$slot]=1; done
   mkdir -p "$out/parts" || return 1

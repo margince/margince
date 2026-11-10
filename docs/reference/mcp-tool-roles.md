@@ -39,7 +39,7 @@ Each cell counts the calls in the group that ran for the role, and those a gate 
 
 | Group | Calls | admin | management | manager | ops | read_only | rep |
 |---|---:|---|---|---|---|---|---|
-| [Business operations](#business-operations) | 377 | 376✓ 1✗ | 350✓ 27✗ | 351✓ 26✗ | 350✓ 27✗ | 177✓ 200✗ | 321✓ 56✗ |
+| [Business operations](#business-operations) | 380 | 379✓ 1✗ | 353✓ 27✗ | 354✓ 26✗ | 353✓ 27✗ | 178✓ 202✗ | 324✓ 56✗ |
 | [Compliance and privacy](#compliance-and-privacy) | 48 | 48✓ 0✗ | 28✓ 20✗ | 28✓ 20✗ | 32✓ 16✗ | 10✓ 38✗ | 27✓ 21✗ |
 | [Capture and connectors](#capture-and-connectors) | 38 | 38✓ 0✗ | 32✓ 6✗ | 32✓ 6✗ | 38✓ 0✗ | 26✓ 12✗ | 31✓ 7✗ |
 | [Workspace settings a non-admin can reach](#workspace-settings-a-non-admin-can-reach) | 38 | 38✓ 0✗ | 38✓ 0✗ | 38✓ 0✗ | 38✓ 0✗ | 34✓ 4✗ | 38✓ 0✗ |
@@ -69,6 +69,7 @@ Each cell counts the calls in the group that ran for the role, and those a gate 
 | `change_relationships.decide_intro_request` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
 | `change_relationships.record_introduction` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
 | `change_relationships.record_promise` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
+| `change_relationships.replace_intro_request` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
 | `change_relationships.request_intro` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
 | `change_relationships.restore_profile_field` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
 | `change_relationships.save_research` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
@@ -186,6 +187,7 @@ Each cell counts the calls in the group that ran for the role, and those a gate 
 
 | Call | admin | management | manager | ops | read_only | rep |
 |---|---|---|---|---|---|---|
+| `change_relationships.reassign_handoff` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
 | `change_state.accept_partner_lead` | ✓ | ✓ | ✓ | ✓ | ✗ | ✗ |
 | `change_state.clear_lead_signal` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
 | `change_state.demote` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
@@ -195,6 +197,7 @@ Each cell counts the calls in the group that ran for the role, and those a gate 
 | `change_state.qualify` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
 | `change_state.reopen_lead` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
 | `change_state.set_lead_signal` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
+| `read_details.handoff_assignee` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | `read_details.lead_promotion_preview` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | `read_details.lead_score` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | `read_details.lead_signals` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
@@ -1075,6 +1078,7 @@ A check is `object.action`, or `object.a|b` for any one of them. `*.action` is t
 | Contacts and relationships | `change_relationships.decide_intro_request` | `decide_intro_request` | `introduction.read` `introduction.update` |
 | Contacts and relationships | `change_relationships.record_introduction` | `record_introduction` | `contact.read` `introduction.create` `introduction.read` |
 | Contacts and relationships | `change_relationships.record_promise` | `record_conversation_claim` | `contact.update` |
+| Contacts and relationships | `change_relationships.replace_intro_request` | `replace_intro_request` | `contact.read` `introduction.create` `introduction.read` `introduction.update` |
 | Contacts and relationships | `change_relationships.request_intro` | `create_intro_request` | `contact.read` `introduction.create` `introduction.read` |
 | Contacts and relationships | `change_relationships.restore_profile_field` | `restore_contact_profile_field` | `contact.update` |
 | Contacts and relationships | `change_relationships.save_research` | `save_contact_research` | `contact.update` |
@@ -1167,6 +1171,7 @@ A check is `object.action`, or `object.a|b` for any one of them. `*.action` is t
 | Legal reviews | `read_details.deal_legal_reviews` | `list_deal_legal_reviews` | `deal.read` |
 | Legal reviews | `read_details.legal_review` | `get_legal_review` | `company.read` `deal.read` `legal_review.read` |
 | Legal reviews | `read_details.legal_reviews` | `list_legal_reviews` | `company.read` `deal.read` `legal_review.read` |
+| Leads | `change_relationships.reassign_handoff` | `reassign_handoff` | `lead.read` `lead.update` |
 | Leads | `change_state.accept_partner_lead` | `accept_partner_lead` | `company.read` `lead.update` `partner.update` |
 | Leads | `change_state.clear_lead_signal` | `clear_lead_manual_signal` | `lead.update` |
 | Leads | `change_state.demote` | `demote_lead` | `contact.update` `lead.update` |
@@ -1176,6 +1181,7 @@ A check is `object.action`, or `object.a|b` for any one of them. `*.action` is t
 | Leads | `change_state.qualify` | `qualify_lead` | `lead.read` `lead.update` |
 | Leads | `change_state.reopen_lead` | `reopen_lead` | `lead.delete` `lead.update` |
 | Leads | `change_state.set_lead_signal` | `set_lead_manual_signal` | `lead.update` |
+| Leads | `read_details.handoff_assignee` | `get_handoff_assignee` | `lead.read` |
 | Leads | `read_details.lead_promotion_preview` | `preview_lead_promotion` | `deal.read` `lead.read` |
 | Leads | `read_details.lead_score` | `explain_lead_score` | `lead.read` |
 | Leads | `read_details.lead_signals` | `list_lead_manual_signals` | `lead.read` |
