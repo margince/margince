@@ -4,6 +4,10 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, within } from "storybook/test";
 import { LocaleProvider } from "../i18n";
+import {
+  expectNextBarHoldsItsText,
+  UNBROKEN_SUBJECT,
+} from "../testing/nextbarchecks";
 import { Button } from "./atoms";
 import { NextBar } from "./nextbar";
 
@@ -26,6 +30,25 @@ export default meta;
 type Story = StoryObj<typeof NextBar>;
 
 const noop = () => undefined;
+
+const PHONE = {
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+};
+const WIDE = { tags: ["uat-wide"] };
+
+/** A subject with no space in it wraps inside the bar, clear of Snooze. */
+export const UnbrokenSubject: Story = {
+  args: {
+    title: UNBROKEN_SUBJECT,
+    sub: `Re: ${UNBROKEN_SUBJECT}`,
+    snooze: { onSnooze: noop },
+  },
+  play: ({ canvasElement }) =>
+    expectNextBarHoldsItsText(canvasElement, UNBROKEN_SUBJECT),
+};
+export const UnbrokenSubjectPhone: Story = { ...UnbrokenSubject, ...PHONE };
+export const UnbrokenSubjectWide: Story = { ...UnbrokenSubject, ...WIDE };
 
 /** An overdue promise: the late tag, why it is next, the verb, Snooze, and
  *  the other open tasks. */

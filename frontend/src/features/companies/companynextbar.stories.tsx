@@ -4,6 +4,10 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../../api/schema";
 import {
+  expectNextBarHoldsItsText,
+  UNBROKEN_SUBJECT,
+} from "../../testing/nextbarchecks";
+import {
   installFetchStub,
   meRoute,
   StoryProviders,
@@ -102,3 +106,25 @@ export const APromiseWithNoLaterMail: Story = {
     />
   ),
 };
+
+// A promise named by a subject with no space in it wraps inside the bar,
+// clear of its verbs.
+const unbroken: Story = {
+  render: () => (
+    <Bar
+      data={view({
+        ...promise,
+        headline: `You promised Greta Schilling ${UNBROKEN_SUBJECT}`,
+        may_be_done: undefined,
+      })}
+    />
+  ),
+  play: ({ canvasElement }) =>
+    expectNextBarHoldsItsText(canvasElement, UNBROKEN_SUBJECT),
+};
+export const UnbrokenSubjectPhone: Story = {
+  ...unbroken,
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+};
+export const UnbrokenSubjectWide: Story = { ...unbroken, tags: ["uat-wide"] };
