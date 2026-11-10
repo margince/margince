@@ -145,7 +145,7 @@ export function MagicPanel({
           {drawsWaiting && shown?.not_shown_count_withheld && (
             <p className="t-caption">{t("magic.visibleScope")}</p>
           )}
-          {coverageIncomplete && (
+          {coverageIncomplete && !drawn.includes("done") && (
             <p className="t-caption">{t("magic.coverageIncomplete")}</p>
           )}
         </SurfaceState>
@@ -164,6 +164,11 @@ export function MagicPanel({
           zone={zone}
           byDay={byDay}
           fold={lane === "done" ? doneFold : undefined}
+          note={
+            lane === "done" && coverageIncomplete
+              ? t("magic.coverageIncomplete")
+              : undefined
+          }
         />
       ))}
       {notShown.length > 0 && (
