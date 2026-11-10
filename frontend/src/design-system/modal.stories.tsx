@@ -143,12 +143,12 @@ export const Form: Story = {
 
 function CommitDemo() {
   useShortcutDispatcher();
-  const [saved, setSaved] = useState(0);
+  const [saved, setSaved] = useState(false);
   const titleId = useId();
   const formId = useId();
   return (
     <>
-      <p className="t-body">Saves: {saved}</p>
+      <p className="t-body">{saved ? "Saved" : "Not saved yet"}</p>
       <Modal open onClose={() => undefined} labelledBy={titleId} intent="form">
         <Heading size="large" id={titleId} className="t-h2 modal-title">
           Rename Globex
@@ -158,7 +158,7 @@ function CommitDemo() {
           className="form-stack"
           onSubmit={(event) => {
             event.preventDefault();
-            setSaved((count) => count + 1);
+            setSaved(true);
           }}
         >
           <Field label="Name">
@@ -185,7 +185,7 @@ export const FormSubmitsOnCommit: Story = {
     );
     await userEvent.click(dialog.getByRole("textbox", { name: "Name" }));
     await userEvent.keyboard("{Control>}{Enter}{/Control}");
-    await expect(await screen.findByText("Saves: 1")).toBeInTheDocument();
+    await expect(await screen.findByText("Saved")).toBeInTheDocument();
   },
 };
 

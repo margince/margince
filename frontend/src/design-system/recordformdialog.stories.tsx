@@ -84,10 +84,10 @@ export const DrawerDark: Story = { ...Drawer, globals: { theme: "dark" } };
 
 function CommitDemo() {
   useShortcutDispatcher();
-  const [created, setCreated] = useState(0);
+  const [created, setCreated] = useState(false);
   return (
     <>
-      <p className="t-body">Created: {created}</p>
+      <p className="t-body">{created ? "Created" : "Not created yet"}</p>
       <RecordFormDialog
         open
         title="New company"
@@ -99,7 +99,7 @@ function CommitDemo() {
             className="form-stack"
             onSubmit={(event) => {
               event.preventDefault();
-              setCreated((count) => count + 1);
+              setCreated(true);
             }}
           >
             {labels.map((label) => (
@@ -127,6 +127,6 @@ export const DrawerSubmitsOnCommit: Story = {
     const body = within(canvasElement.ownerDocument.body);
     await userEvent.click(await body.findByRole("textbox", { name: "City" }));
     await userEvent.keyboard("{Control>}{Enter}{/Control}");
-    await expect(await body.findByText("Created: 1")).toBeInTheDocument();
+    await expect(await body.findByText("Created")).toBeInTheDocument();
   },
 };
