@@ -36975,23 +36975,23 @@ type CaptureActivityResponse struct {
 type CaptureAwaitingAddress struct {
 	Email string `json:"email"`
 
-	// State `decided`: you answered about this sender and the next verdict pass applies it.
+	// State `decided`: a decision about this sender is recorded, and a pass that applies it is due.
 	// `classifying`: the sender classifier has an open question about this sender.
 	// `unsure`: the classifier could not tell, so your answer decides.
 	// `queued`: nothing was asked yet; a sweep will ask over a message from this address.
-	// `unjudgeable`: nothing was asked and nothing will be, because no captured message from
-	// this address remains or someone already worked on the contact. Only you can settle it.
+	// `unjudgeable`: no pass will settle this address, because no captured message from it
+	// remains or someone already worked on the contact. Only you can settle it.
 	// `decided`, `classifying` and `queued` wait on the product; `unsure` and `unjudgeable`
 	// wait on you.
 	State CaptureAwaitingAddressState `json:"state"`
 }
 
-// CaptureAwaitingAddressState `decided`: you answered about this sender and the next verdict pass applies it.
+// CaptureAwaitingAddressState `decided`: a decision about this sender is recorded, and a pass that applies it is due.
 // `classifying`: the sender classifier has an open question about this sender.
 // `unsure`: the classifier could not tell, so your answer decides.
 // `queued`: nothing was asked yet; a sweep will ask over a message from this address.
-// `unjudgeable`: nothing was asked and nothing will be, because no captured message from
-// this address remains or someone already worked on the contact. Only you can settle it.
+// `unjudgeable`: no pass will settle this address, because no captured message from it
+// remains or someone already worked on the contact. Only you can settle it.
 // `decided`, `classifying` and `queued` wait on the product; `unsure` and `unjudgeable`
 // wait on you.
 type CaptureAwaitingAddressState string
