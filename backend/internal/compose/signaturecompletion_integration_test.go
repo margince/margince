@@ -74,7 +74,7 @@ func TestSignatureEvidenceSettlesOnlyItsMatchingRequest(t *testing.T) {
 		t.Fatal(err)
 	}
 	brain := ai.NewFakeClient().Script(string(reply))
-	settler := NewRequestSettler(o.e.Pool, brain, func() time.Time { return o.now }, slog.Default())
+	settler := NewRequestSettler(o.e.Pool, inRefs{inner: brain, shown: []shownBy{requestShown}}, func() time.Time { return o.now }, slog.Default())
 	for range 2 {
 		if err := settler.RunWorkspace(o.judge(), 2); err != nil {
 			t.Fatal(err)

@@ -18,18 +18,13 @@ runs:
   steps:
     # The key is the `make tools` recipe with its pins expanded, plus the Go
     # that runs it, because `go install` rebuilds a binary another toolchain
-    # built. An edit elsewhere in the Makefile leaves the key alone.
+    # built. The CI image builds from the same recipe text.
     - name: Compute the gate binaries key
       id: key
       shell: bash
-      working-directory: backend
       run: |
         set -euo pipefail
-        recipe="$(make -s -n tools | grep -v '^[[:space:]]*#')"
-        if ! grep -q 'go install ' <<<"$recipe"; then
-          echo "::error::'make -n tools' shows no go install, so the gate binaries key cannot follow the pins" >&2
-          exit 1
-        fi
+        recipe="$(scripts/gate-tools-recipe.sh)"
         digest="$(printf '%s\n%s\n' "$(go env GOVERSION)" "$recipe" | sha256sum | cut -c1-16)"
         echo "key=gate-binaries-${{ runner.os }}-${{ runner.arch }}-$digest" >> "$GITHUB_OUTPUT"
 

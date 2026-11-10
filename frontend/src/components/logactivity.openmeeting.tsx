@@ -169,7 +169,7 @@ export function useOpenMeetingOnDay(
         await api.GET("/activities", {
           params: {
             query: {
-              kind: "meeting",
+              kind: ["meeting"],
               entity_type: entityType,
               entity_id: entityId,
               occurred_after: dayStartIso(day, zone, -1),

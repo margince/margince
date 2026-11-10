@@ -76,8 +76,8 @@ func TestRankRequestRendersOnlyMachineMadeValues(t *testing.T) {
 		t.Fatalf("the re-order request has %d messages, want the single user turn", len(req.Messages))
 	}
 	want := "Candidates:\n" +
-		"- 00000000-0000-0000-0000-000000000001: winnability=0.80 revenue=0.75 timing=1.00 momentum=1.00 warmth=0.47 (composite=0.825)\n" +
-		"- 00000000-0000-0000-0000-000000000002: winnability=0.25 revenue=0.00 timing=0.20 momentum=0.40 warmth=0.10 (composite=0.185)\n"
+		"- d1: winnability=0.80 revenue=0.75 timing=1.00 momentum=1.00 warmth=0.47 (composite=0.825)\n" +
+		"- d2: winnability=0.25 revenue=0.00 timing=0.20 momentum=0.40 warmth=0.10 (composite=0.185)\n"
 	if got := req.Messages[0].Content; got != want {
 		t.Errorf("the re-order turn reads\n%q\nwant\n%q", got, want)
 	}
@@ -107,7 +107,7 @@ func TestReorderRunsTheExportedRankPath(t *testing.T) {
 	candidates := rankFixtureCandidates()
 	// The model promotes the deterministically-lower deal, which is the whole
 	// point of the L2 pass.
-	brain := &recordingBrain{reply: `{"order":["` + uuidAt(2).String() + `","` + uuidAt(1).String() + `"]}`}
+	brain := &recordingBrain{reply: `{"order":["d2","d1"]}`}
 
 	got := briefL2Ranker{brain: brain, log: discardBriefLog()}.reorder(context.Background(), candidates)
 
@@ -117,7 +117,7 @@ func TestReorderRunsTheExportedRankPath(t *testing.T) {
 	if !reflect.DeepEqual(brain.seen[0], RankRequest(candidates)) {
 		t.Errorf("the request the ranker issued is not the one RankRequest builds:\n%+v", brain.seen[0])
 	}
-	order, err := ParseRankOrder(brain.reply)
+	order, err := ParseRankOrder(brain.reply, candidates)
 	if err != nil {
 		t.Fatalf("reading the reply the ranker was given: %v", err)
 	}
@@ -129,15 +129,15 @@ func TestReorderRunsTheExportedRankPath(t *testing.T) {
 // A reply this site cannot read is its only refusal, and the refusal degrades
 // to the deterministic order rather than failing the rep's morning.
 func TestParseRankOrderIsTheOnlyRefusal(t *testing.T) {
-	if _, err := ParseRankOrder("I have re-ranked them for you."); err == nil {
+	if _, err := ParseRankOrder("I have re-ranked them for you.", rankFixtureCandidates()); err == nil {
 		t.Error("prose parsed as an ordered id list")
 	}
-	order, err := ParseRankOrder("```json\n{\"order\":[\"" + uuidAt(3).String() + "\"]}\n```")
+	order, err := ParseRankOrder("```json\n{\"order\":[\"d2\"]}\n```", rankFixtureCandidates())
 	if err != nil {
 		t.Fatalf("a fenced reply is one the product unfences: %v", err)
 	}
-	if len(order) != 1 || order[0] != uuidAt(3) {
-		t.Errorf("parsed order = %v, want the single fenced id", order)
+	if len(order) != 1 || order[0] != uuidAt(2) {
+		t.Errorf("parsed order = %v, want the deal d2 names", order)
 	}
 
 	candidates := rankFixtureCandidates()
@@ -158,4 +158,19 @@ func TestParseRankOrderIsTheOnlyRefusal(t *testing.T) {
 // fallback DID is asserted above, which is the part that matters.
 func discardBriefLog() *slog.Logger {
 	return slog.New(slog.DiscardHandler)
+}
+
+// A deal's raw id is refused; a ref the request never showed names no
+// candidate and reads as ids.Nil, which the bounding drops.
+func TestARankReplyNamingARawIDIsRefusedAndAnUnshownRefNamesNoDeal(t *testing.T) {
+	if order, err := ParseRankOrder(`{"order":["d2","`+uuidAt(1).String()+`"]}`, rankFixtureCandidates()); err == nil {
+		t.Errorf("a reply naming a raw deal id was read as %v", order)
+	}
+	order, err := ParseRankOrder(`{"order":["d9","d1"]}`, rankFixtureCandidates())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := []ids.UUID{ids.Nil, uuidAt(1)}; !reflect.DeepEqual(order, want) {
+		t.Errorf("order = %v, want %v", order, want)
+	}
 }

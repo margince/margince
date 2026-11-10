@@ -21,11 +21,17 @@ import (
 // a test can tell a served assessment from one asked again.
 type assessmentLane struct {
 	reply string
-	calls int
+	// answer, when set, writes the reply from the request, so it can name a
+	// record by the ref the request showed.
+	answer func(model.Request) string
+	calls  int
 }
 
-func (l *assessmentLane) Complete(_ context.Context, _ model.Request) (model.Response, error) {
+func (l *assessmentLane) Complete(_ context.Context, req model.Request) (model.Response, error) {
 	l.calls++
+	if l.answer != nil {
+		return model.Response{Text: l.answer(req), ServedModel: "stub"}, nil
+	}
 	return model.Response{Text: l.reply, ServedModel: "stub"}, nil
 }
 

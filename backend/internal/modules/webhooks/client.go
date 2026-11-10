@@ -4,6 +4,8 @@
 package webhooks
 
 import (
+	"context"
+	"crypto/tls"
 	"net"
 	"net/http"
 	"time"
@@ -35,12 +37,19 @@ const (
 // DNS on the concrete IP, so a rebind cannot bypass it (netguard.RefusePrivate).
 func NewGuardedClient() *http.Client {
 	dialer := &net.Dialer{Timeout: deliveryTimeout, Control: netguard.RefusePrivate}
+	return NewDeliveryClient(dialer.DialContext, nil)
+}
+
+// DialFunc opens the TCP connection a delivery is sent over.
+type DialFunc func(ctx context.Context, network, addr string) (net.Conn, error)
+
+// NewDeliveryClient builds a delivery client over dial. Production calls it
+// through NewGuardedClient; a test dials its loopback receiver instead. Every
+// request goes through checkedTransport, which holds the row while it writes.
+func NewDeliveryClient(dial DialFunc, tlsConfig *tls.Config) *http.Client {
 	return &http.Client{
-		Timeout: deliveryTimeout,
-		Transport: &http.Transport{
-			DialContext:         dialer.DialContext,
-			TLSHandshakeTimeout: deliveryTimeout,
-		},
+		Timeout:   deliveryTimeout,
+		Transport: checkedTransport{dial: dial, tlsConfig: tlsConfig, writeLimit: writeHoldLimit},
 		// A redirect is never followed. Go would turn the POST into a GET with
 		// no body, and carry custom headers to a host nobody named. The 3xx is
 		// recorded as the failed attempt it is.

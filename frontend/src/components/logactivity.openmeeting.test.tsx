@@ -150,7 +150,7 @@ function stubApi(
       }
       if (
         key === "GET /activities" &&
-        url.searchParams.get("kind") === "meeting"
+        url.searchParams.getAll("kind").includes("meeting")
       ) {
         return jsonResponse({ data: meetings, page: { next_cursor: null } });
       }
@@ -329,7 +329,9 @@ describe("logging a meeting where one owes its outcome", () => {
     const user = await logMeeting();
     await waitFor(() =>
       expect(
-        captured.some((entry) => entry.query.get("kind") === "meeting"),
+        captured.some((entry) =>
+          entry.query.getAll("kind").includes("meeting"),
+        ),
       ).toBe(true),
     );
     expect(screen.queryByText(QUESTION)).toBeNull();
@@ -478,7 +480,9 @@ describe("logging a meeting where one owes its outcome", () => {
     await logMeeting();
     await waitFor(() =>
       expect(
-        captured.some((entry) => entry.query.get("kind") === "meeting"),
+        captured.some((entry) =>
+          entry.query.getAll("kind").includes("meeting"),
+        ),
       ).toBe(true),
     );
     await waitFor(() =>
@@ -508,7 +512,9 @@ describe("logging a meeting where one owes its outcome", () => {
     await logMeeting();
     await waitFor(() =>
       expect(
-        captured.some((entry) => entry.query.get("kind") === "meeting"),
+        captured.some((entry) =>
+          entry.query.getAll("kind").includes("meeting"),
+        ),
       ).toBe(true),
     );
     expect(screen.queryByText(QUESTION)).toBeNull();
@@ -521,13 +527,15 @@ describe("logging a meeting where one owes its outcome", () => {
     await logMeeting();
     await waitFor(() =>
       expect(
-        captured.some((entry) => entry.query.get("kind") === "meeting"),
+        captured.some((entry) =>
+          entry.query.getAll("kind").includes("meeting"),
+        ),
       ).toBe(true),
     );
     const day = calendarDay(new Date(), ZONE);
     if (!isISODate(day)) throw new Error(`today is not a day: ${day}`);
-    const lookup = captured.find(
-      (entry) => entry.query.get("kind") === "meeting",
+    const lookup = captured.find((entry) =>
+      entry.query.getAll("kind").includes("meeting"),
     );
     expect(lookup?.query.get("entity_id")).toBe("p1");
     expect(lookup?.query.get("occurred_after")).toBe(
@@ -610,7 +618,9 @@ describe("the open meeting on a company", () => {
     );
     await waitFor(() =>
       expect(
-        captured.some((entry) => entry.query.get("kind") === "meeting"),
+        captured.some((entry) =>
+          entry.query.getAll("kind").includes("meeting"),
+        ),
       ).toBe(true),
     );
     expect(result.current).toBeUndefined();

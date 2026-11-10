@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, waitFor, within } from "storybook/test";
 import type { components } from "../../api/schema";
 import { useT } from "../../i18n";
 import {
@@ -41,6 +42,7 @@ const page = { has_more: false, next_cursor: null };
 
 const contact: components["schemas"]["Company360Contact"] = {
   contact_id: "p-1",
+  attachable: true,
   full_name: "Greta Schilling",
   title: "Head of Procurement",
   strength: {
@@ -76,8 +78,11 @@ function view(
   };
 }
 
-function Verbs({ data }: Readonly<{ data: Company360 }>) {
-  installFetchStub({ "GET /me": meRoute({ company: ["read"] }) });
+function Verbs({
+  data,
+  grants = { company: ["read"], activity: ["read", "create"] },
+}: Readonly<{ data: Company360; grants?: Parameters<typeof meRoute>[0] }>) {
+  installFetchStub({ "GET /me": meRoute(grants) });
   return (
     <StoryProviders>
       <Column data={data} />
@@ -144,4 +149,22 @@ export const WeOweTheReply: Story = {
 // judges before pressing.
 export const WaitingOnThem: Story = {
   render: () => <Verbs data={view({ engagement: "waiting_on_them" })} />,
+};
+
+// A seat that may read but not write activities: the reply and Log would be
+// refused by the server, so neither is drawn.
+export const ReadOnlySeat: Story = {
+  render: () => (
+    <Verbs
+      data={view({ engagement: "waiting_on_us" })}
+      grants={{ company: ["read"], activity: ["read"] }}
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await canvas.findByRole("button", { name: "Draft" });
+    await waitFor(() =>
+      expect(canvas.queryAllByRole("button")).toHaveLength(0),
+    );
+  },
 };

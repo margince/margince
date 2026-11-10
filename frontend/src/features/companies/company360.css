@@ -1178,11 +1178,9 @@
 /* Under the fold the two columns become one, and the verbs move from opposite
    the claim to under it. That is the whole collapse: the verb column is a
    column at every width (`.today-actions`, record360.css) and nothing here
-   turns it, so a verb is full width above the fold and below it, and a refusal
-   that cannot state its own width — `Button` wraps one in `.btn-with-reason`,
-   which is `contain: inline-size` so a sentence cannot widen the column, and a
-   contained box contributes nothing to a flex line — never meets a line that
-   has to measure it.
+   turns it, so a verb is full width above the fold and below it, and a
+   refusal's sentence, which is `contain: inline-size` so it cannot widen the
+   column, never meets a line that has to measure it.
 
    `grid-row: auto` and not the span: with one column the span would lay the
    verbs over the very lines they are meant to follow. */

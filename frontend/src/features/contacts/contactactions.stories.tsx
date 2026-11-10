@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, screen, userEvent } from "storybook/test";
+import { expect, screen, userEvent, waitFor, within } from "storybook/test";
 import type { components } from "../../api/schema";
 import { en } from "../../i18n/en";
 import {
@@ -203,6 +203,17 @@ export const LogRefused: Story = {
         <Header />
       </StoryProviders>
     );
+  },
+  play: async ({ canvasElement }) => {
+    const email = await within(canvasElement).findByRole("button", {
+      name: "Email",
+    });
+    await waitFor(() =>
+      expect(email).toHaveAccessibleDescription(
+        "You do not have permission to log activities on this record.",
+      ),
+    );
+    await expect(email).toBeDisabled();
   },
 };
 

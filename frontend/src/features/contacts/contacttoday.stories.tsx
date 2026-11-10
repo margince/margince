@@ -1,5 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, waitFor, within } from "storybook/test";
 import type { components } from "../../api/schema";
+import { en } from "../../i18n/en";
 import {
   installFetchStub,
   meRoute,
@@ -66,3 +68,84 @@ export const PrivacyDuty: Story = {
   },
 };
 export const Quiet: Story = { args: { moment: undefined } };
+
+// A seat without activity.create: the Next bar keeps its words and draws no
+// verb that would draft a mail the server refuses.
+export const DraftNotOfferedWithoutGrant: Story = {
+  decorators: [
+    (Story) => {
+      installFetchStub({ "GET /me": meRoute({ activity: ["read"] }) });
+      return <Story />;
+    },
+  ],
+  args: {
+    moment: {
+      rule: "gone_quiet",
+      claim_key: "moment:gone_quiet",
+      evidence_fingerprint: "quiet-1",
+      headline: "No reply recorded for 233 days",
+      why_now: "The last message went out and nothing came back.",
+      confidence: "observed_fact",
+      evidence: [],
+      recommended_action: {
+        kind: "draft_reply",
+        label: "Draft a follow-up",
+        state: "available",
+        destination: { surface: "composer", prefill: { intent: "follow_up" } },
+      },
+    },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await canvas.findByText("No reply recorded for 233 days");
+    await waitFor(() =>
+      expect(
+        canvas.queryByRole("button", { name: "Draft a follow-up" }),
+      ).toBeNull(),
+    );
+  },
+};
+
+// A contact shared read-only: the send would file under it, so the verb is
+// drawn refused with the reason.
+export const DraftRefusedOnReadShareContact: Story = {
+  args: {
+    view: { ...view, contact: { ...view.contact, attachable: false } },
+    moment: {
+      rule: "gone_quiet",
+      claim_key: "moment:gone_quiet",
+      evidence_fingerprint: "quiet-1",
+      headline: "No reply recorded for 233 days",
+      why_now: "The last message went out and nothing came back.",
+      confidence: "observed_fact",
+      evidence: [],
+      recommended_action: {
+        kind: "draft_reply",
+        label: "Draft a follow-up",
+        state: "available",
+        destination: { surface: "composer", prefill: { intent: "follow_up" } },
+      },
+    },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const verb = await canvas.findByRole("button", {
+      name: "Draft a follow-up",
+    });
+    await waitFor(() => expect(verb).toHaveProperty("disabled", true));
+    const reason = canvas
+      .getByText(en["contact.attachRefused"])
+      .getBoundingClientRect();
+    const snooze = canvas
+      .getByRole("button", { name: "Snooze" })
+      .getBoundingClientRect();
+    // The sentence wraps at a readable width and keeps clear of Snooze.
+    await expect(reason.width).toBeGreaterThan(120);
+    const overlaps =
+      reason.left < snooze.right &&
+      snooze.left < reason.right &&
+      reason.top < snooze.bottom &&
+      snooze.top < reason.bottom;
+    await expect(overlaps).toBe(false);
+  },
+};

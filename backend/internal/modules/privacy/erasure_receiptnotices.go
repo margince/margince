@@ -19,6 +19,12 @@ import (
 // The notice names the subject by its target. Its dedupe key is the receipt's
 // message id, a threading identity the scrubbed delivery keeps as well.
 func eraseReceiptNotices(ctx context.Context, tx pgx.Tx, subject ids.ContactID, leads []ids.UUID, reason string) error {
+	return retractReceiptNotices(ctx, tx, subject.UUID, leads, reason, causeContactErasure)
+}
+
+// retractReceiptNotices is eraseReceiptNotices for any act that anonymizes a
+// subject. A zero contact names only the leads.
+func retractReceiptNotices(ctx context.Context, tx pgx.Tx, contact ids.UUID, leads []ids.UUID, reason, cause string) error {
 	if leads == nil {
 		leads = []ids.UUID{}
 	}
@@ -26,7 +32,7 @@ func eraseReceiptNotices(ctx context.Context, tx pgx.Tx, subject ids.ContactID, 
  SET target_type = NULL, target_id = NULL, retracted_at = coalesce(retracted_at, now())
  WHERE kind = @notice_kind
    AND ((target_type = 'contact' AND target_id = @erased_contact) OR (target_type = 'lead' AND target_id = ANY(@erased_leads)))
- RETURNING id`, pgx.StrictNamedArgs{"notice_kind": noticekeys.OptOutReceiptMissedKind, "erased_contact": subject.UUID, "erased_leads": leads})
+ RETURNING id`, pgx.StrictNamedArgs{"notice_kind": noticekeys.OptOutReceiptMissedKind, "erased_contact": contact, "erased_leads": leads})
 	if err != nil {
 		return fmt.Errorf("privacy: retracting missed-receipt notices: %w", err)
 	}
@@ -34,5 +40,5 @@ func eraseReceiptNotices(ctx context.Context, tx pgx.Tx, subject ids.ContactID, 
 	if err != nil {
 		return err
 	}
-	return tombstoneCollateralScrubs(ctx, tx, "notice", cleared, reason, causeContactErasure)
+	return tombstoneCollateralScrubs(ctx, tx, "notice", cleared, reason, cause)
 }

@@ -85,6 +85,11 @@ type Evidence struct {
 	ConsentEventID ids.UUID
 	// BasisID is a durable communication_basis row.
 	BasisID ids.UUID
+	// LeadID is the lead a controller message is filed under. Only the
+	// controller lane sets it; no send door maps it from a request. When set,
+	// the engine decides about that lead alone, at staging and at transmit, and
+	// refuses a recipient address the lead does not hold.
+	LeadID ids.UUID
 }
 
 // Request is one message put to the engine.

@@ -3,7 +3,7 @@
 
 package capture
 
-// Two more documents the verdict holds without a model.
+// File names and career headings can require a hold without a model.
 //
 // A CV describes one candidate's career, and a model can read the mail that
 // carries it as an ordinary application or offer. A scanned invoice or cost
@@ -129,6 +129,52 @@ var cvFilenameWords = wordSet(`cv lebenslauf resume résumé`)
 var costFilenameWords = wordSet(`inv invoice invoices rechnung rechnungen cost costs costing payroll salary
 	salaries gehalt gehälter lohn`)
 
+var sensitiveFilenameWords = wordSet(`passport passports reisepass reisepässe personalausweis visa befund befunde covid`)
+
+// sensitiveStem names an identity or medical document inside a longer word,
+// as in "employeeidcard". Where an ordinary word also contains the stem, the
+// letters around it are limited. "Passporting" ends in no file-name tail, and
+// "contestresults" starts with no kind of test.
+type sensitiveStem struct {
+	stem            string
+	tails, prefixes []string
+}
+
+var filenameTails = []string{"", "s", "scan", "scans", "copy", "copies", "kopie", "front", "back", "page", "photo", "foto"}
+
+var testKinds = []string{"", "blood", "covid", "corona", "pcr", "antigen", "lab", "labor", "drug", "urine", "medical", "my"}
+
+var sensitiveFilenameStems = []sensitiveStem{
+	{stem: "passport", tails: filenameTails},
+	{stem: "reisepass"},
+	{stem: "personalausweis"},
+	{stem: "befund"},
+	{stem: "covid"},
+	{stem: "idcard", tails: filenameTails},
+	{stem: "visa", tails: filenameTails},
+	{stem: "medicalresult"},
+	{stem: "testresult", prefixes: testKinds},
+}
+
+// in says whether word holds the stem with letters around it the stem admits.
+func (s sensitiveStem) in(word string) bool {
+	for at := strings.Index(word, s.stem); at >= 0; {
+		before, after := word[:at], word[at+len(s.stem):]
+		if (s.prefixes == nil || slices.Contains(s.prefixes, before)) &&
+			(s.tails == nil || slices.Contains(s.tails, after)) {
+			return true
+		}
+		next := strings.Index(word[at+1:], s.stem)
+		if next < 0 {
+			return false
+		}
+		at += 1 + next
+	}
+	return false
+}
+
+var sensitiveFilenamePhrases = []string{"id card", "test result", "test results", "medical result", "medical results"}
+
 // cvFilenameStems and costFilenameStems name the same inside a longer word,
 // as in "salaryinvoice". Only stems no ordinary word contains are listed.
 var (
@@ -144,14 +190,25 @@ func NamedAsCV(filename string) bool {
 	})
 }
 
+// NamedAsPersonnel identifies files whose unread contents require a personnel hold.
+func NamedAsPersonnel(filename string) bool {
+	return slices.ContainsFunc(filenameWords(filename), func(word string) bool {
+		return cvFilenameWords[word] || costFilenameWords[word] || cvFilenameStems.inside(word) || costFilenameStems.inside(word)
+	})
+}
+
 // NamedAsPrivate says whether a file's name calls it an invoice, a cost sheet
-// or a CV. The verdict asks it only of a file it could not read: then the name
+// or a CV, identity document or medical result. For an unread file, its name
 // is all there is to judge. An invoice it can read is judged by its text,
 // because most invoices bill no one's pay.
 func NamedAsPrivate(filename string) bool {
-	return slices.ContainsFunc(filenameWords(filename), func(word string) bool {
-		return cvFilenameWords[word] || costFilenameWords[word] ||
-			cvFilenameStems.inside(word) || costFilenameStems.inside(word)
+	words := filenameWords(filename)
+	name := " " + strings.Join(words, " ") + " "
+	return NamedAsPersonnel(filename) || slices.ContainsFunc(words, func(word string) bool {
+		return sensitiveFilenameWords[word] ||
+			slices.ContainsFunc(sensitiveFilenameStems, func(s sensitiveStem) bool { return s.in(word) })
+	}) || slices.ContainsFunc(sensitiveFilenamePhrases, func(phrase string) bool {
+		return strings.Contains(name, " "+phrase+" ")
 	})
 }
 
