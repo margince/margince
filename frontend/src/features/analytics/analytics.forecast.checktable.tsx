@@ -150,6 +150,15 @@ function stakeOf(check: InputCheck, locale: Locale): string {
   );
 }
 
+function FindingCell({ check }: Readonly<{ check: InputCheck }>) {
+  const t = useT();
+  return (
+    <>
+      {t(checkLabel(check.type))} {check.inputs_changed && <OutOfDateBadge />}
+    </>
+  );
+}
+
 function checkColumns(
   t: ReturnType<typeof useT>,
   locale: Locale,
@@ -165,18 +174,18 @@ function checkColumns(
     {
       key: "finding",
       header: t("review.colFinding"),
-      render: (check) => (
-        <>
-          {t(checkLabel(check.type))}{" "}
-          {check.inputs_changed && <OutOfDateBadge />}
-        </>
-      ),
+      render: (check) => <FindingCell check={check} />,
+      // A finding with no deal is the folded row's title, so it is not
+      // repeated below it.
+      folded: (check) => (check.subject ? undefined : null),
     },
     {
       key: "deal",
       header: t("review.colDeal"),
       fold: "title",
       render: (check) => <SubjectCell check={check} />,
+      folded: (check) =>
+        check.subject ? undefined : <FindingCell check={check} />,
     },
     {
       key: "stake",

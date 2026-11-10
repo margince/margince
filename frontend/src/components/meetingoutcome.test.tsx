@@ -111,7 +111,7 @@ describe("MeetingOutcome", () => {
     const dialog = await screen.findByRole("dialog");
 
     expect(
-      within(dialog).getByRole("combobox", { name: "What happened" }),
+      await within(dialog).findByRole("combobox", { name: "What happened" }),
     ).toBeTruthy();
   });
 

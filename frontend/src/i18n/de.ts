@@ -16584,7 +16584,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "webForms.setup.copyAddress": "Adresse kopieren",
   "webForms.steps.browser.address": "Kopiere die Formularadresse.",
   "webForms.steps.browser.builder":
-    "Öffne in Webflow, WordPress oder einem anderen Baukasten die Einstellungen deines Formulars. Trag diese Adresse als Ziel ein (in Webflow heißt das Action) und als Methode POST.",
+    "Öffne in Webflow, WordPress oder einem anderen Baukasten die Einstellungen deines Formulars. Trage diese Adresse als Ziel ein (in Webflow heißt das Action) und als Methode POST.",
   "webForms.steps.browser.fields":
     "Nenne das E-Mail-Feld email. Margince liest auch full_name, phone, company und message und legt jedes andere Feld in der Notiz am Lead ab.",
   "webForms.steps.browser.code":
@@ -18941,7 +18941,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deal.aside.partnerNone": "Keiner",
   "deal.editDetails": "Details bearbeiten",
   "deal.meetNeedsCompany":
-    "Dieser Deal hat noch kein Unternehmen. Trag es unter „Details bearbeiten“ ein, um einen Termin zu buchen.",
+    "Dieser Deal hat noch kein Unternehmen. Trage es unter „Details bearbeiten“ ein, um einen Termin zu buchen.",
   "deal.committee.card": "Gremium",
   "deal.committee.change": "Stakeholder ändern oder entfernen",
 
