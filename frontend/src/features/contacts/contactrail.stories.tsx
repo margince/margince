@@ -373,8 +373,8 @@ export const BoughtPhonePhone: Story = {
 
 const LONG_ADDRESS = "sebastian.sachsinger@straight.de";
 
-// An address wider than the column keeps one line. The mailbox name gives
-// way, and the domain stays whole to say whose address it is.
+// An address wider than the column breaks at its `@`: the domain drops under
+// the mailbox name, and neither half is cut.
 export const LongAddress: Story = {
   name: "Long address, phone",
   render: () =>
@@ -393,16 +393,17 @@ export const LongAddress: Story = {
     const link = await within(canvasElement).findByRole("link", {
       name: LONG_ADDRESS,
     });
-    const face = link.querySelector<HTMLElement>(".contactlink-email");
-    const domain = face?.querySelector<HTMLElement>(
-      ".contactlink-email-domain",
-    );
+    const local = link.querySelector<HTMLElement>(".contactlink-email-local");
+    const domain = link.querySelector<HTMLElement>(".contactlink-email-domain");
     const column = link.closest(".factlist-value");
-    if (!face || !domain || !column) {
-      throw new Error("the address lost its domain");
+    if (!local || !domain || !column) {
+      throw new Error("the address lost a half");
     }
-    await expect(face.getClientRects()).toHaveLength(1);
+    await expect(local.scrollWidth).toBeLessThanOrEqual(local.clientWidth);
     await expect(domain.scrollWidth).toBeLessThanOrEqual(domain.clientWidth);
+    await expect(domain.getBoundingClientRect().top).toBeGreaterThanOrEqual(
+      local.getBoundingClientRect().bottom - 0.5,
+    );
     await expect(domain.getBoundingClientRect().right).toBeLessThanOrEqual(
       column.getBoundingClientRect().right,
     );
