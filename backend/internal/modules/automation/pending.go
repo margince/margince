@@ -38,32 +38,37 @@ func (e *WorkflowEngine) PendingFor(ctx context.Context, targets []ids.Ref) (boo
 	}
 	ctx = principal.WithWorkspaceID(ctx, ws.UUID)
 	window := fmt.Sprintf("%d seconds", int(events.DefaultMinIdle.Seconds()))
+	// One connection at a time: liveInstances opens its own transaction, so
+	// nesting it inside another would hold two pooled connections per call.
+	var envelopes [][]byte
+	if err := e.db.Tx(ctx, func(tx pgx.Tx) error {
+		envelopes, err = recentEventsOn(ctx, tx, caller.ID, targets, window)
+		return err
+	}); err != nil || len(envelopes) == 0 {
+		return false, err
+	}
+	instances, err := e.liveInstances(ctx)
+	if err != nil {
+		return false, fmt.Errorf("loading automation instances: %w", err)
+	}
+	var handlers, keys []string
+	for _, raw := range envelopes {
+		ev, err := eventFromEnvelope(raw, ws.UUID)
+		if err != nil {
+			return false, err
+		}
+		system, instanced := e.firings(ev, instances)
+		for _, f := range slices.Concat(system, instanced) {
+			// A list rule fires on a scheduled check, never on the caller's write.
+			if _, list := f.handler.(listRule); list || !wouldRun(ctx, f) {
+				continue
+			}
+			handlers = append(handlers, f.handler.Spec().Name)
+			keys = append(keys, runKey(f.handler, f.event))
+		}
+	}
 	pending := false
 	err = e.db.Tx(ctx, func(tx pgx.Tx) error {
-		envelopes, err := recentEventsOn(ctx, tx, caller.ID, targets, window)
-		if err != nil || len(envelopes) == 0 {
-			return err
-		}
-		instances, err := e.liveInstances(ctx)
-		if err != nil {
-			return fmt.Errorf("loading automation instances: %w", err)
-		}
-		var handlers, keys []string
-		for _, raw := range envelopes {
-			ev, err := eventFromEnvelope(raw, ws.UUID)
-			if err != nil {
-				return err
-			}
-			system, instanced := e.firings(ev, instances)
-			for _, f := range slices.Concat(system, instanced) {
-				// A list rule fires on a scheduled check, never on the caller's write.
-				if _, list := f.handler.(listRule); list || !wouldRun(ctx, f) {
-					continue
-				}
-				handlers = append(handlers, f.handler.Spec().Name)
-				keys = append(keys, runKey(f.handler, f.event))
-			}
-		}
 		pending, err = anyRunUnfinished(ctx, tx, handlers, keys, window)
 		return err
 	})
