@@ -73,7 +73,10 @@ const meet = () =>
   screen.getByRole("button", { name: en["scheduling.bookContact"] });
 
 describe("the deal header's Meet verb", () => {
-  const grants = { deal: ["read", "update"], activity: ["create"] };
+  const grants: Parameters<typeof stubWithSession>[1] = {
+    deal: ["read", "update"],
+    activity: ["create"],
+  };
 
   it("says why Meet is off on a deal with no company", async () => {
     mount(grants, { company_id: null });
