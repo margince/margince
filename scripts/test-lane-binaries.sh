@@ -175,7 +175,9 @@ expect_wait "a build that ended red and left nothing" 1 600 "FAIL:ended 'failure
 expect_wait "a build that never answers" 1 100 "FAIL:after 100s" 1 '|in_progress -'
 expect_wait "an artifact list that fails a while" 1 600 "$B-1" 0 '-|' '-|' "$B-1|"
 expect_wait "a re-run that does not build again" 2 600 "$B-1" 1 "$B-1|carried"
-expect_wait "a re-run whose jobs list no build" 2 600 "$B-1" 1 "$B-1|none"
+expect_wait "a jobs list without the build decides nothing" 2 600 "$B-2" 1 "$B-1|none" "$B-1|" "$B-1,$B-2|"
+expect_wait "a first attempt's jobs list without the build decides nothing" 1 600 "$B-1" 1 \
+  '|none' '|' '|' '|' '|' '|' '|' '|' '|' '|' '|' '|' '|none' '|' "$B-1|"
 expect_wait "a re-run that does not build again, with no binaries kept" 2 600 "FAIL:lists no test binaries" 1 "|carried"
 expect_wait "a re-run decides on a fresh list only" 2 600 "$B-1" 1 "-|carried" "$B-1|"
 expect_wait "a re-run that builds again" 2 600 "$B-2" 1 "$B-1|in_progress -" "$B-1|" "$B-1,$B-2|"

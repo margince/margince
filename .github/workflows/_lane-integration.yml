@@ -161,7 +161,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      # One REST call on a re-run, to learn whether its attempt builds again.
+      # REST calls: a re-run asks at once whether it builds again, and every
+      # wait past 6 minutes asks every 3 minutes whether the build ended.
       actions: read
     strategy:
       # A red shard must not cancel its siblings: one CI run should report

@@ -117,8 +117,9 @@ LANE_BIN_ARTIFACT=test-binaries-integration
 #
 # The artifact list costs no REST call. A REST call (GITHUB_TOKEN allows 1,000
 # an hour for the whole repository) answers what the list cannot: whether a
-# later attempt runs the build at all, asked at once, and after
-# LANE_BIN_REST_AFTER seconds whether a build that left no artifact has ended.
+# later attempt runs the build at all, and whether a build that left no
+# artifact has ended. A later attempt asks at once, the first after
+# LANE_BIN_REST_AFTER seconds, and both every 180 s after that while they wait.
 # A REST error only delays that answer.
 lane_bin_wait() { # attempt budget
   local attempt="$1" budget="$2" spent=0 interval names listed seen="" earlier="" carried=""
@@ -149,7 +150,9 @@ lane_bin_wait() { # attempt budget
       if build="$(lane_bin_build_job)"; then
         echo "test-binaries: REST call $rest_calls: attempt $attempt lists the build as '$build'" >&2
         case "$build" in
-          carried | none) carried=1 ;;
+          carried) carried=1 ;;
+          # A name or page the list missed; only `carried` proves a kept build.
+          none) ;;
           "completed success") ;;
           completed*)
             echo "FAIL: the integration build of attempt $attempt ended '${build#completed }' and left no test binaries. Its log names the cause." >&2
