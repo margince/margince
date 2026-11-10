@@ -14,7 +14,6 @@ import {
   automaticLabel,
   CommitmentReviewFlag,
   entryDay,
-  entryMove,
   entryTimeOfDay,
   groupCountLabel,
   MoveFlag,
@@ -355,7 +354,7 @@ export function ThreadRow({
           {/* Whose move the conversation waits on, read off its newest
                 message. It goes on the row that stands for it, never on the
                 members inside. */}
-          {entryMove(newest) && <MoveFlag entry={newest} />}
+          <MoveFlag entry={newest} />
           <CommitmentReviewFlag
             count={group.entries.reduce(
               (count, entry) =>

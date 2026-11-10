@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -82,5 +83,39 @@ func TestAWaitWithoutABookingStillCountsItsDays(t *testing.T) {
 		if because.Kind == "meeting_booked" {
 			t.Fatal("the row claims a meeting nobody booked")
 		}
+	}
+}
+
+// An unanswered invitation books the meeting it asks about. That booking does
+// not demote it: answering it is today's work, and no reply is drafted.
+func TestAnUnansweredInvitationStaysTodaysWork(t *testing.T) {
+	start := rankInstant.Add(48 * time.Hour)
+	waiting := WaitingCustomer{
+		ActivityID:       ids.MustParse("01a05500-0000-7000-8000-0000000000d3"),
+		Subject:          "Invitation: Kickoff",
+		Since:            rankInstant.Add(-3 * time.Hour),
+		ConfirmedRequest: true,
+		Engaged:          true,
+		MeetingBookedAt:  &start,
+		EmailSummary: &crmcontracts.EmailSummary{CalendarInvitation: &crmcontracts.EmailCalendarInvitation{
+			Response: crmcontracts.EmailCalendarInvitationResponseNeedsAction,
+		}},
+	}
+
+	row := classifyWaiting(waiting, rankInstant)
+
+	if row.item.Level != levelWaiting || bandOfItem(row.item) != bandNow {
+		t.Fatalf("an unanswered invitation sits at level %d, want today's live-wait band", row.item.Level)
+	}
+	if row.item.Move == nil || row.item.Move.Action != crmcontracts.WorklistMoveActionNone {
+		t.Fatalf("an invitation's move is %+v, want none: it is answered, not replied to", row.item.Move)
+	}
+
+	answered := waiting
+	answered.EmailSummary = &crmcontracts.EmailSummary{CalendarInvitation: &crmcontracts.EmailCalendarInvitation{
+		Response: crmcontracts.EmailCalendarInvitationResponseAccepted,
+	}}
+	if classifyWaiting(answered, rankInstant).item.Level == levelWaiting {
+		t.Fatal("an answered invitation still claims the live-wait band over its booked meeting")
 	}
 }
