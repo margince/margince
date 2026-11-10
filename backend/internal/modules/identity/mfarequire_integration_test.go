@@ -160,9 +160,16 @@ func TestRequireMFAAsksOnlyThePasswordPathWhileConfiningBoth(t *testing.T) {
 		t.Fatalf("provider sign-in with a confirmed factor: %v. If the provider path now "+
 			"challenges, this test states the reading that replaced", err)
 	}
-	if id, err := e.svc.Authenticate(e.wsOnlyCtx(), signedIn); err != nil || id.MustEnrolMFA {
-		t.Errorf("provider session with a confirmed factor: confined=%v err=%v, want an unconfined session",
-			id.MustEnrolMFA, err)
+	unconfined, err := e.svc.Authenticate(e.wsOnlyCtx(), signedIn)
+	if err != nil {
+		t.Fatalf("authenticate the provider session: %v", err)
+	}
+	if unconfined.MustEnrolMFA {
+		t.Error("provider session with a confirmed factor is confined, want an unconfined session")
+	}
+	if unconfined.UserID != e.member.UserID {
+		t.Errorf("provider session belongs to %v, want the member %v who confirmed the factor",
+			unconfined.UserID, e.member.UserID)
 	}
 }
 
