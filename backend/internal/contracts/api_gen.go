@@ -74409,15 +74409,11 @@ type GetMyLinkedInReachParams struct {
 	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty" maximum:"200" minimum:"1"`
 
-	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
-	// effective `sort` of the originating request (field + direction) plus the last row's keyset
-	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
-	// together with a `sort` that differs from the one the cursor was minted under returns
-	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
-	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
-	// remaining pages see, so re-issue the query without the cursor when changing filters.
-	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
+	// Cursor Opaque position from a prior answer's `next_cursor`, which resumes the ranking after
+	// the last account returned. A cursor this route did not mint is refused with 422.
+	// The ranking is by live connection counts, so an import between two pages can move
+	// an account across the cut: re-read from the top to see the network as it is now.
+	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
 }
 
 // SaveNotificationPreferenceJSONBody defines parameters for SaveNotificationPreference.
