@@ -14,6 +14,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { activityTimeline } from "../../design-system/activitytimeline";
+import { stubClipboard } from "../../design-system/clipboard-testing";
 import { LocaleProvider } from "../../i18n";
 import { WriteToProvider } from "../../lib/writeto";
 import { meFixture } from "../../testing/mefixture";
@@ -128,6 +129,36 @@ describe("ContactsScreen (B-EP09.10a)", () => {
       entityId: "p-1",
       address: "anna.weber@brandt.example",
     });
+    expect(window.location.hash).toBe(listed);
+  });
+
+  it("copies a row's address without opening the row or the composer", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        jsonResponse({
+          data: [{ ...anna, primary_email: "anna.weber@brandt.example" }],
+          page: { next_cursor: null },
+        }),
+      ),
+    );
+    const user = userEvent.setup();
+    const clipboard = stubClipboard("accepts");
+    const writeTo = vi.fn();
+    render(
+      <WriteToProvider writeTo={writeTo}>
+        <ContactsScreen />
+      </WriteToProvider>,
+    );
+    await waitFor(() => expect(window.location.hash).toContain("sort="));
+    const listed = window.location.hash;
+
+    await user.click(
+      await screen.findByRole("button", { name: "Copy email address" }),
+    );
+
+    expect(clipboard.written).toEqual(["anna.weber@brandt.example"]);
+    expect(writeTo).not.toHaveBeenCalled();
     expect(window.location.hash).toBe(listed);
   });
 

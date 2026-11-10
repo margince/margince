@@ -765,7 +765,7 @@ describe("LeadScreen — the header's Email verb", () => {
     render(<LeadScreen id="l-1" />);
     const verb = await screen.findByRole("button", { name: "Email" });
     expect(verb.querySelector(".lucide-mail")).toBeTruthy();
-    expect(verb.hasAttribute("disabled")).toBe(false);
+    await waitFor(() => expect(verb.hasAttribute("disabled")).toBe(false));
   });
 
   it("opens the composer on the lead from its address in About, already addressed", async () => {

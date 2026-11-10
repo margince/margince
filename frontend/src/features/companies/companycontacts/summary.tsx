@@ -11,6 +11,7 @@ import { routeHash } from "../../../lib/router";
 import { ENGAGEMENT_LABELS } from "./contacts";
 import "./companycontacts.css";
 
+import { labelFor } from "../../../lib/labelfor";
 import { CommitteeBoard } from "./summary.board";
 import { ROLE_LABELS } from "./summary.roles";
 
@@ -152,7 +153,7 @@ function WayIn({ coverage }: Readonly<{ coverage: Coverage }>) {
       detail={
         <span>
           {way.title ? `${way.title} · ` : ""}
-          {t(ENGAGEMENT_LABELS[way.engagement])}
+          {t(labelFor(ENGAGEMENT_LABELS, way.engagement))}
         </span>
       }
       href={routeHash(ENTITY.contact.route(way.contact_id))}

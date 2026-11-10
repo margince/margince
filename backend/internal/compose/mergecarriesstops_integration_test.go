@@ -32,7 +32,10 @@ package compose
 import (
 	"context"
 	"errors"
+	"sync"
 	"testing"
+
+	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/consent"
@@ -40,6 +43,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
+	"github.com/margince/margince/backend/internal/shared/ports/messagingrules"
 )
 
 // liveObjections counts one subject's live marketing objections, which is the
@@ -462,6 +466,7 @@ func TestAMergeCarriesTheRetiringContactsOverride(t *testing.T) {
 	// be merged into.
 	vouched := e.SeedContact(t, "Rep Vouched", nil)
 	survivor := e.SeedContact(t, "Override Survivor", nil)
+	setReviewableCarryProfile(t, e, vouched, survivor)
 
 	const address = "override-survivor@buyer.test"
 	addContactEmail(t, e, survivor, address)
@@ -479,7 +484,7 @@ func TestAMergeCarriesTheRetiringContactsOverride(t *testing.T) {
 	if _, err := consentStore.Allow(admin, consent.AllowInput{
 		ContactID: ids.From[ids.ContactKind](vouched),
 		Category:  "marketing",
-		Reason:    "confirmed the opt-in on a call before the records were merged",
+		Reason:    "recorded context supports correspondence in this category",
 	}); err != nil {
 		t.Fatalf("recording the override: %v", err)
 	}
@@ -491,7 +496,7 @@ func TestAMergeCarriesTheRetiringContactsOverride(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(scope.Overrides) != 1 || scope.Overrides[0].Category != "marketing" || scope.Overrides[0].Authority != "admin" || scope.Overrides[0].Reason != "confirmed the opt-in on a call before the records were merged" {
+	if len(scope.Overrides) != 1 || scope.Overrides[0].Category != "marketing" || scope.Overrides[0].Authority != "admin" || scope.Overrides[0].Reason != "recorded context supports correspondence in this category" {
 		t.Fatalf("override preview = %+v", scope.Overrides)
 	}
 	if _, err := contactsStore.MergeContact(admin,
@@ -632,6 +637,7 @@ func TestRevokingAPreMergeOverrideHandleStopsTheSendOnTheSurvivor(t *testing.T) 
 
 	vouched := e.SeedContact(t, "Pre-merge Revoke Source", nil)
 	survivor := e.SeedContact(t, "Pre-merge Revoke Survivor", nil)
+	setReviewableCarryProfile(t, e, vouched, survivor)
 
 	const address = "premerge-revoke@buyer.test"
 	addContactEmail(t, e, survivor, address)
@@ -670,4 +676,14 @@ func TestRevokingAPreMergeOverrideHandleStopsTheSendOnTheSurvivor(t *testing.T) 
 			"row and left the survivor's carried copy standing, so mail still goes out on a vouch "+
 			"somebody took back", after.ReasonCode)
 	}
+}
+
+var carryOverrideCountry sync.Once
+
+func setReviewableCarryProfile(t *testing.T, e *integration.Env, contacts ...ids.UUID) {
+	t.Helper()
+	carryOverrideCountry.Do(func() {
+		messagingrules.Register(messagingrules.Rules{Jurisdiction: "zi", Version: 1})
+	})
+	e.WsExec(t, `UPDATE contact SET address_country='zi' WHERE id=ANY(@contacts)`, pgx.StrictNamedArgs{"contacts": contacts})
 }

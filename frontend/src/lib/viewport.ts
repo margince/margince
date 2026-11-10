@@ -7,14 +7,15 @@ import { useEffect, useState } from "react";
 // by it. At this width the sidebar is a bottom bar of three destinations, the
 // agent and More. That changes what the panel renders and where it is measured.
 // Stylesheets spell it in their own `@media (max-width: 700px)` blocks, and
-// viewport.test.ts fails a phone block that spells another number.
+// census/rules/viewport.census.ts fails a phone block that spells another
+// number.
 export const PHONE_MAX_WIDTH = 700;
 
 // The width at which the layout folds, for code that must agree with the
 // stylesheets' fold. The worklist draws its set-aside verbs as buttons above it
 // and answers a swipe below it, so another number would draw both in between.
-// A stylesheet cannot read this constant, so viewport.test.ts fails a fold
-// block that spells another number.
+// A stylesheet cannot read this constant, so census/rules/viewport.census.ts
+// fails a fold block that spells another number.
 export const FOLD_MAX_WIDTH = 720;
 
 // The width at which a LIST HEADER stops fitting its verbs. Below it the row of

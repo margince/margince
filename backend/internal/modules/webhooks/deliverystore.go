@@ -339,6 +339,8 @@ func (s *Store) loadTarget(ctx context.Context, deliveryID ids.UUID) (attemptTar
 type outcome struct {
 	statusCode int    // 0 when the request never got a response (dial/timeout)
 	failure    string // empty on success
+	// withdrawn is an attempt the send guard refused; nothing is recorded for it.
+	withdrawn bool
 }
 
 // recordOutcome advances the delivery state machine in the target's

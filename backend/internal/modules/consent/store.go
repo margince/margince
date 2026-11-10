@@ -58,6 +58,9 @@ type Store struct {
 	// held reads what is held about a notice link's subject, for the privacy
 	// page. Nil discloses none of it (privacyinfoparts.go).
 	held NoticeHeldReader
+	// missedReceipts tells the controller about a required opt-out receipt
+	// that will not go out on its own. Nil leaves only the log line.
+	missedReceipts MissedReceipts
 }
 
 // NewStore binds the store to the pool every read and write runs through.

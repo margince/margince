@@ -42,6 +42,7 @@ DECLARE
     'ai_call_config',
     'app_user',
     'audit_log',
+    'stored_object_intent',
     'activity_review_template',
     'auth_token',
     'channel_provider',

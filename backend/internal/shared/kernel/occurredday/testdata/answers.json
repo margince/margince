@@ -1,0 +1,13 @@
+[
+  {"name": "a reply an hour after the mail", "message_at": "2026-10-31T09:00:00Z", "message_precision": "instant", "answer_at": "2026-10-31T10:00:00Z", "answer_precision": "instant", "answers": true},
+  {"name": "a reply an hour before the mail", "message_at": "2026-10-31T10:00:00Z", "message_precision": "instant", "answer_at": "2026-10-31T09:00:00Z", "answer_precision": "instant", "answers": false},
+  {"name": "a reply at the mail's stored instant", "message_at": "2026-10-31T10:00:00Z", "message_precision": "instant", "answer_at": "2026-10-31T10:00:00Z", "answer_precision": "instant", "answers": false},
+  {"name": "a day reply and a day mail on one date", "message_at": "2026-10-31T12:00:00Z", "message_precision": "day", "answer_at": "2026-10-31T12:00:00Z", "answer_precision": "day", "answers": true},
+  {"name": "an instant reply at a day mail's noon", "message_at": "2026-10-31T12:00:00Z", "message_precision": "day", "answer_at": "2026-10-31T12:00:00Z", "answer_precision": "instant", "answers": true},
+  {"name": "a day reply dated the day of an instant mail at noon", "message_at": "2026-10-31T12:00:00Z", "message_precision": "instant", "answer_at": "2026-10-31T12:00:00Z", "answer_precision": "day", "answers": true},
+  {"name": "an instant reply the morning of a day mail's date", "message_at": "2026-10-31T12:00:00Z", "message_precision": "day", "answer_at": "2026-10-31T09:00:00Z", "answer_precision": "instant", "answers": false},
+  {"name": "a day reply dated the day before an instant mail", "message_at": "2026-10-31T09:00:00Z", "message_precision": "instant", "answer_at": "2026-10-30T12:00:00Z", "answer_precision": "day", "answers": false},
+  {"name": "a day reply dated the day after a day mail", "message_at": "2026-10-30T12:00:00Z", "message_precision": "day", "answer_at": "2026-10-31T12:00:00Z", "answer_precision": "day", "answers": true},
+  {"name": "a day reply dated the day of a mail stored a fraction of a millisecond after noon", "message_at": "2026-10-31T12:00:00.000400Z", "message_precision": "instant", "answer_at": "2026-10-31T12:00:00Z", "answer_precision": "day", "answers": false},
+  {"name": "an instant reply a fraction of a millisecond after a day mail's noon", "message_at": "2026-10-31T12:00:00Z", "message_precision": "day", "answer_at": "2026-10-31T12:00:00.000400Z", "answer_precision": "instant", "answers": true}
+]

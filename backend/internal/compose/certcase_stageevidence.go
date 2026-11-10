@@ -240,11 +240,7 @@ func (c *stageEvidenceCase) Evaluate(trace aitasks.Trace) aitasks.Outcome {
 	for _, criterion := range c.fixture.Criteria {
 		keys[criterion.Key] = true
 	}
-	byID := make(map[string]stageEvidenceSpan, len(c.fixture.Spans))
-	for _, span := range c.fixture.Spans {
-		byID[span.SourceID] = span
-	}
-	if msg := validateStageEvidencePayload(payload, keys, byID); msg != "" {
+	if msg := validateStageEvidencePayload(payload, keys, stageEvidenceSpansByRef(c.fixture.Spans)); msg != "" {
 		return aitasks.Outcome{Result: aitasks.OutcomeInvalid, Detail: msg}
 	}
 	if disagreements := c.disagreements(payload); len(disagreements) > 0 {

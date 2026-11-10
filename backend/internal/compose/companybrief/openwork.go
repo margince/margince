@@ -61,5 +61,6 @@ func foldOpenWorkGaps(view crmcontracts.Company360, in *Input) {
 	in.OpenWorkCapped = (view.Deals != nil && view.Deals.Page.HasMore) ||
 		(view.NextSteps != nil && view.NextSteps.Page.HasMore) ||
 		(view.OpenCommitments != nil && view.OpenCommitments.Page.HasMore)
+	in.OpenCommitmentsCut = view.OpenCommitments != nil && view.OpenCommitments.Page.HasMore
 	in.OpenWorkWithheld = view.AttentionWithheld != nil && *view.AttentionWithheld
 }

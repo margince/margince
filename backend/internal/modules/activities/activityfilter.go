@@ -192,7 +192,10 @@ func timelineNarrowings(in ListActivitiesInput, reminders string, arg func(any) 
 		where = append(where, sprintf("a.kind = 'task' AND a.source_activity_id = $%d", arg(*in.SourceActivityID)))
 	}
 	if in.Kind != nil {
-		where = append(where, kindPredicate(*in.Kind, arg))
+		where = append(where, kindPredicate([]string{*in.Kind}, arg))
+	}
+	if len(in.Kinds) > 0 {
+		where = append(where, kindPredicate(in.Kinds, arg))
 	}
 	if in.CallOutcome != nil {
 		// A marker, like the kind: it stays out of filtersOnContent.
@@ -354,11 +357,19 @@ func filtersOnContent(in ListActivitiesInput) bool {
 		in.SentBy != nil || in.ConversationOf != nil || in.RemindersDue || len(in.CustomFilters) > 0
 }
 
-// kindPredicate spells a known kind as a literal, so a generic plan keeps the
-// partial indexes keyed on kind. Any other value stays bound.
-func kindPredicate(kind string, arg func(any) int) string {
-	if known := crmcontracts.ActivityKind(kind); known.Valid() {
-		return "a.kind = '" + string(known) + "'"
+// kindPredicate spells known kinds as literals, so a generic plan keeps the
+// partial indexes keyed on kind. A set holding any other value stays bound.
+func kindPredicate(kinds []string, arg func(any) int) string {
+	literals := make([]string, 0, len(kinds))
+	for _, kind := range kinds {
+		known := crmcontracts.ActivityKind(kind)
+		if !known.Valid() {
+			return sprintf("a.kind = ANY($%d)", arg(kinds))
+		}
+		literals = append(literals, "'"+string(known)+"'")
 	}
-	return sprintf("a.kind = $%d", arg(kind))
+	if len(literals) == 1 {
+		return "a.kind = " + literals[0]
+	}
+	return "a.kind IN (" + strings.Join(literals, ", ") + ")"
 }

@@ -4,6 +4,7 @@
 import { Badge } from "../design-system/atoms";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { labelFor, valueFor } from "../lib/labelfor";
 import type { LegalReviewSummary } from "../lib/legalreviews.queries";
 
 type Status = LegalReviewSummary["status"];
@@ -30,5 +31,9 @@ export function LegalReviewStatusBadge({
   status,
 }: Readonly<{ status: Status }>) {
   const t = useT();
-  return <Badge tone={STATUS_TONE[status]}>{t(STATUS_LABEL[status])}</Badge>;
+  return (
+    <Badge tone={valueFor(STATUS_TONE, status, "default")}>
+      {t(labelFor(STATUS_LABEL, status))}
+    </Badge>
+  );
 }

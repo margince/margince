@@ -12,6 +12,7 @@ import { LocaleProvider } from "../i18n";
 import type { EntityKind } from "../lib/entity";
 import { OpenSourceProvider } from "../lib/opensource";
 import { forgetSeat } from "../lib/storage";
+import { type GrantSpec, meFixture } from "../testing/mefixture";
 import {
   type JustIn,
   JustInScope,
@@ -84,12 +85,17 @@ function withProviders(node: ReactNode, openSource = vi.fn()) {
   );
 }
 
-function scoped(latest: JustIn | undefined, bar: ReactNode) {
+function scoped(
+  latest: JustIn | undefined,
+  bar: ReactNode,
+  contact?: { attachable?: boolean },
+) {
   return (
     <JustInScope
       latest={latest}
       entityType="contact"
       entityId="contact-1"
+      contact={contact}
       actions={(row) => <button type="button">Reply to {row.id}</button>}
     >
       {bar}
@@ -237,12 +243,18 @@ describe("a record's Next bar with what just came in", () => {
   });
 });
 
-function serveTasks() {
+function serveTasks(allow: GrantSpec = { activity: ["read", "create"] }) {
   const posted: Record<string, unknown>[] = [];
   vi.stubGlobal(
     "fetch",
     vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const request = input instanceof Request ? input : undefined;
+      const url = request ? request.url : String(input);
+      if (url.endsWith("/me")) {
+        return new Response(JSON.stringify(meFixture({ allow })), {
+          headers: { "Content-Type": "application/json" },
+        });
+      }
       const body = request ? await request.text() : String(init?.body ?? "");
       posted.push(JSON.parse(body));
       return new Response(JSON.stringify(activity("task", { kind: "task" })), {
@@ -290,6 +302,36 @@ describe("making the item a task", () => {
       source_activity_id: "form",
     });
   });
+
+  it("offers no task to a seat that may not write activities", async () => {
+    const posted = serveTasks({ activity: ["read"] });
+    withProviders(scoped(MAIL_IN, <RecordNextBar />));
+
+    // Drawn while the grants are unknown, gone once /me refuses the write.
+    await screen.findByRole("button", { name: "Create task" });
+    await waitFor(() =>
+      expect(screen.queryByRole("button", { name: "Create task" })).toBeNull(),
+    );
+    expect(posted).toHaveLength(0);
+  });
+
+  // The task files under the contact the item came in on.
+  it.each([
+    [true, 1],
+    [false, 0],
+  ] as const)(
+    "on a contact whose attach right is %s, offers %i Create task",
+    async (attachable, count) => {
+      serveTasks();
+      withProviders(scoped(MAIL_IN, <RecordNextBar />, { attachable }));
+
+      await waitFor(() =>
+        expect(
+          screen.queryAllByRole("button", { name: "Create task" }),
+        ).toHaveLength(count),
+      );
+    },
+  );
 });
 
 describe("the Just in line in the record's head", () => {

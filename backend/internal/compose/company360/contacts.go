@@ -110,6 +110,7 @@ func contactsSection(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, no
 			card.PrimaryEmail = who.primaryEmail
 			card.ProviderTitle = who.providerTitle
 			card.TitleSource = titleSource(who)
+			card.Attachable = who.attachable
 		}
 		out = append(out, card)
 	}
@@ -141,6 +142,8 @@ type contactCard struct {
 	// one is empty (PO-EXT-9). It fills a blank; it never overwrites or
 	// seconds a title a human typed.
 	providerTitle *string
+	// attachable is auth.EnsureAttachTarget's answer, read in the same statement.
+	attachable bool
 }
 
 // contactIdentity reads name, title and the primary email address for a
@@ -186,6 +189,13 @@ func contactIdentity(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, co
 	if err != nil {
 		return nil, err
 	}
+	attachable, err := auth.AttachClauseFor(ctx, "contact", "p", arg)
+	if err != nil {
+		return nil, err
+	}
+	if attachable == "" {
+		attachable = scopeAll
+	}
 	// The purchased title rides the same correlated-subquery shape as the
 	// address, under two conditions.
 	//
@@ -221,10 +231,11 @@ func contactIdentity(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, co
 		             )
 		           ORDER BY c.retrieved_at DESC
 		           LIMIT 1)
-		       END
+		       END,
+		       coalesce((%[4]s), false)
 		FROM contact p
 		 WHERE p.id = ANY($%[1]d) AND p.archived_at IS NULL AND %[3]s`,
-		contactsPos, companyPos, visible), args...)
+		contactsPos, companyPos, visible, attachable), args...)
 	if err != nil {
 		return nil, err
 	}
@@ -233,7 +244,7 @@ func contactIdentity(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, co
 	for rows.Next() {
 		var id ids.ContactID
 		var card contactCard
-		if err := rows.Scan(&id, &card.fullName, &card.title, &card.primaryEmail, &card.providerTitle); err != nil {
+		if err := rows.Scan(&id, &card.fullName, &card.title, &card.primaryEmail, &card.providerTitle, &card.attachable); err != nil {
 			return nil, err
 		}
 		out[id] = card

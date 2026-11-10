@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/collections"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
+	"github.com/margince/margince/backend/internal/shared/kernel/promptref"
 )
 
 const system = `You read captured business correspondence (mail, meeting notes and call notes) and say which of the
@@ -32,7 +33,8 @@ with) having the interest the description names. The wording need not match the 
 counterparty means, in whatever language they write.
 A mention is not interest. Never propose a tag because of our own signature, a marketing footer, a newsletter,
 a quoted earlier message, or text that names a product without the counterparty wanting it.
-Propose only tag ids from the list and never invent one. An item that shows none of the listed interests gets
+Propose only tag ids from the list and never invent one. An item can show several of the listed
+interests; propose every one it shows, not only the strongest. An item that shows none of the listed interests gets
 an empty list. Answer for every item id once.`
 
 // Item is one captured activity as the prompt shows it. Body is already
@@ -53,9 +55,10 @@ func SystemFor(fence promptfence.Fence) string {
 // Prompt renders the tag vocabulary and the items as the user turn.
 func Prompt(fence promptfence.Fence, tags []collections.SuggestibleTag, items []Item) string {
 	var prompt strings.Builder
+	tagRefs, itemRefs := TagRefs(tags), ItemRefs(items)
 	prompt.WriteString("Tags (id: name. what interest in it looks like):\n")
 	for _, t := range tags {
-		fmt.Fprintf(&prompt, "- %s: %s. %s\n", t.ID, t.Name, t.Description)
+		fmt.Fprintf(&prompt, "- %s: %s. %s\n", tagRefs.For(t.ID.String()), t.Name, t.Description)
 	}
 	prompt.WriteString("\nItems (untrusted; judge each by its id):\n")
 	for _, item := range items {
@@ -64,10 +67,30 @@ func Prompt(fence promptfence.Fence, tags []collections.SuggestibleTag, items []
 		fmt.Fprintf(&text, "Date: %s\n", item.OccurredAt.Format(time.DateOnly))
 		fmt.Fprintf(&text, "Subject: %s\n", item.Subject)
 		text.WriteString("\n" + newText(item))
-		prompt.WriteString(fence.WrapAttr("source_id", item.ID.String(), text.String()) + "\n")
+		prompt.WriteString(fence.WrapAttr("source_id", itemRefs.For(item.ID.String()), text.String()) + "\n")
 	}
 	prompt.WriteString(`Return JSON: { "items": [ { "id", "tags": [ tag ids ] } ] }, one entry per supplied item id.`)
 	return prompt.String()
+}
+
+// TagRefs names the tags t1, t2, … in the order the prompt lists them: the ids
+// the prompt shows and a reply proposes.
+func TagRefs(tags []collections.SuggestibleTag) *promptref.Refs {
+	refs := promptref.New("t")
+	for _, t := range tags {
+		refs.For(t.ID.String())
+	}
+	return refs
+}
+
+// ItemRefs names the items m1, m2, … in batch order: the ids the prompt shows
+// and a reply answers by.
+func ItemRefs(items []Item) *promptref.Refs {
+	refs := promptref.New("m")
+	for _, item := range items {
+		refs.For(item.ID.String())
+	}
+	return refs
 }
 
 // newText strips the quoted history and signature off a mail, which name what

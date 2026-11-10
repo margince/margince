@@ -47,12 +47,13 @@ type Completer interface {
 // one idea per sentence, and never performs enthusiasm. The banned openers are
 // the ones that make a brief read as generated.
 const briefSystem = `You write a pre-meeting brief for a salesperson, from a JSON summary of one meeting in their CRM.
-Return ONLY a JSON object: {"sections":[{"kind":"header|goal|what_changed|attendees|risks|commitments|deal_state|talking_points|company_context","sentences":[{"text":"...","nature":"fact|assessment|recommendation","evidence":[{"entity_type":"activity|deal|contact","entity_id":"..."}]}]}]}.
+Return ONLY a JSON object: {"sections":[{"kind":"header|goal|what_changed|attendees|risks|commitments|deal_state|talking_points|company_context","sentences":[{"text":"...","nature":"fact|assessment|recommendation","evidence":[{"entity_type":"activity|deal|contact","entity_id":"<the record's ref, such as a1>"}]}]}]}.
 Write every sentence from the summary and from nothing else. Never invent a fact, a name, a date or a number. If the summary does not say it, do not write it.
 Label every sentence. A FACT restates what the summary says. An ASSESSMENT is a reading you draw from it — allowed only in risks and deal_state. A RECOMMENDATION is one concrete move — allowed only in goal and talking_points, at most three in the whole brief.
-Cite the ids the summary gave you, in evidence only. An id must never appear in the text a reader sees.
+Cite the refs the summary gave you, in evidence only. A ref must never appear in the text a reader sees.
 When a sentence rests on one message, name that message by its subject in the text, so the reader can find the thread.
 A sentence that names a message cites that message's id in its evidence.
+Build the brief around the conversation this meeting is about: the message an open commitment or question came from, named by its subject wherever a sentence rests on it. A newer message on another subject is at most one company_context fact.
 Never open with "Absolutely", "Great question", "I'd be happy to", "Based on the provided context", or any greeting. No exclamation marks. No praise. No summary of what the reader already knows.
 Say plainly when something is uncertain or missing rather than filling the gap. If a section has nothing real to say, omit the section.
 `
@@ -183,7 +184,7 @@ func BriefRequest(in Input, lang string) model.Request {
 	fence := promptfence.New()
 	return model.Request{
 		System:         briefSystemFor(fence, lang),
-		Messages:       []model.Message{{Role: "user", Content: fence.Wrap(encodeInput(in))}},
+		Messages:       []model.Message{{Role: "user", Content: fence.Wrap(shownRefs(in).Show(encodeInput(in)))}},
 		MaxTokens:      ai.ReasoningOutputMaxTokens,
 		SecretStripper: ai.NewSecretStripper(),
 	}
@@ -201,6 +202,13 @@ func encodeInput(in Input) string {
 		return fmt.Sprintf("{%q:%q}", "encoding_error", err.Error())
 	}
 	return string(encoded)
+}
+
+// shownRefs names each record id the meeting prompt shows by a ref, and reads
+// a reply's citations back. A withheld conversation is shown by a ref no
+// citation can name.
+func shownRefs(in Input) claims.Refs {
+	return claims.MintRefs(encodeInput(in), knownRecords(in))
 }
 
 // wireReply is the shape the prompt asks for.
@@ -233,6 +241,7 @@ func ParseBriefSections(reply string, in Input) ([]Section, error) {
 		return nil, fmt.Errorf("parse meeting brief sections: %w", err)
 	}
 	known := knownRecords(in)
+	shown := shownRefs(in)
 	byKind := map[crmcontracts.MeetingBriefSectionKind][]Sentence{}
 	// The volume budget is on the BRIEF, not on one section: a model returning two
 	// talking_points sections would otherwise be handed the allowance twice.
@@ -244,7 +253,7 @@ func ParseBriefSections(reply string, in Input) ([]Section, error) {
 			continue
 		}
 		for _, raw := range section.Sentences {
-			sentence, keep := keptSentence(raw, allowed, known, &recommendations)
+			sentence, keep := keptSentence(raw, allowed, known, shown, &recommendations)
 			if !keep {
 				continue
 			}
@@ -264,7 +273,7 @@ func keptSentence(
 			EntityID   string `json:"entity_id"`
 		} `json:"evidence"`
 	},
-	allowed map[string]bool, known map[Evidence]string, recommendations *int,
+	allowed map[string]bool, known map[Evidence]string, shown claims.Refs, recommendations *int,
 ) (Sentence, bool) {
 	nature := raw.Nature
 	if nature == "" {
@@ -281,6 +290,11 @@ func keptSentence(
 		sentence.Evidence = append(sentence.Evidence,
 			Evidence{EntityType: cited.EntityType, EntityID: cited.EntityID})
 	}
+	read := shown.Read([]Sentence{sentence})
+	if len(read) == 0 {
+		return Sentence{}, false
+	}
+	sentence = read[0]
 	// Grounding and refusal decide first: a recommendation the reader never sees
 	// must not spend the budget.
 	if !claims.Grounded(sentence, known) {

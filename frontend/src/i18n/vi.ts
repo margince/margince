@@ -15,6 +15,7 @@ import type { MessageKey } from "./en";
 //     string in this catalog and must stay that way.
 export const vi: Readonly<Record<MessageKey, string>> = {
   "systemJob.import_identity_links": "Liên kết email đã nhập",
+  "systemJob.optout_receipt": "Báo biên nhận hủy đăng ký bị lỡ",
   "systemJob.task_completion": "Hoàn tất công việc sau email",
   "homeRepair.reason.taskChanged":
     "Công việc đã thay đổi trong khi tạo bản xem trước. Hãy xem trước lần nữa.",
@@ -984,6 +985,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "forecast.deals.colSignals": "Tín hiệu rủi ro",
   "forecast.deals.colAmount": "Giá trị",
   "forecast.deals.colWeighted": "Có trọng số",
+  "forecast.deals.foldedAmount": "Giá trị {amount}",
+  "forecast.deals.foldedWeighted": "{amount} có trọng số",
   "forecast.signal.close_pushed": "Ngày chốt liên tục dời",
   "forecast.signal.no_next_step": "Chưa đặt bước tiếp theo",
   "forecast.signal.quiet": "Khách hàng im lặng",
@@ -7241,6 +7244,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Liên hệ này giờ là riêng của người chịu trách nhiệm. Thành viên và nhóm đã được chia sẻ vẫn giữ quyền truy cập.",
   "recordAccess.contact.leftYourAccess":
     "Liên hệ này giờ là riêng của người chịu trách nhiệm. Bạn không còn quyền truy cập.",
+  "recordAccess.contact.handedOver":
+    "{owner} giờ chịu trách nhiệm liên hệ này. Liên hệ ở chế độ riêng tư, nên bạn không còn quyền truy cập.",
   "recordAccess.company.title": "Ai có thể xem công ty này",
   "recordAccess.company.shared":
     "Mọi thành viên trong công ty đều có thể xem hồ sơ này.",
@@ -7256,6 +7261,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Công ty này giờ là riêng của người chịu trách nhiệm. Deal, liên hệ và email đã xếp vào công ty vẫn giữ phạm vi hiển thị riêng.",
   "recordAccess.company.leftYourAccess":
     "Công ty này giờ là riêng của người chịu trách nhiệm. Bạn không còn quyền truy cập.",
+  "recordAccess.company.handedOver":
+    "{owner} giờ chịu trách nhiệm công ty này. Công ty ở chế độ riêng tư, nên bạn không còn quyền truy cập.",
   "recordAccess.option.owner": "Chỉ người chịu trách nhiệm",
   "recordAccess.option.ownerHint":
     "Thành viên và nhóm được chia sẻ vẫn giữ quyền truy cập.",
@@ -7339,6 +7346,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "compose.draftSaving": "Đang lưu…",
   "compose.earlierThreads_one": "{count} chuỗi thư trước",
   "compose.earlierThreads_other": "{count} chuỗi thư trước",
+  "compose.earlierThreadsAtLeast_one": "{count}+ chuỗi thư trước",
+  "compose.earlierThreadsAtLeast_other": "{count}+ chuỗi thư trước",
+  "compose.earlierThreadsMayExist": "Có thể còn chuỗi thư trước đó",
   "compose.threadChange": "Đổi",
   "compose.threadContinue": "Tiếp tục chuỗi thư",
   "compose.threadsRecent": "Chuỗi thư gần đây",
@@ -7553,7 +7563,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Nếu có lý do, ví dụ một yêu cầu, một cuộc họp hoặc quan hệ khách hàng, ghi lại lý do đó dưới tên bạn.",
   "sendPermission.unprovenRefuses": "Không thể gửi cho đến khi ghi nhận lý do.",
   "sendPermission.missingContext": "Tin nhắn này còn thiếu một thông tin",
-  "sendPermission.missingPermission": "Tin nhắn này cần có sự đồng ý",
+  "sendPermission.missingPermission": "Cần được phép gửi thư này",
   "sendPermission.reason.chooseDeal": "Chọn giao dịch cho lần liên hệ lại này.",
   "sendPermission.appliesTo": "Điều này áp dụng cho {address}.",
   "sendPermission.appliesToAndMore_one":
@@ -7581,6 +7591,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Địa chỉ này không nhận thư. Sửa lại địa chỉ; trường hợp này không thể bỏ qua.",
   "sendPermission.reason.optedOutAfterRequest":
     "Người nhận đã từ chối tin tiếp thị sau khi yêu cầu báo giá này. Hãy xác nhận lại với họ rằng họ vẫn muốn nhận, rồi ghi nhận yêu cầu mới của họ.",
+  "sendPermission.reason.permissionRequired":
+    "Chưa có căn cứ cho phép gửi tin tiếp thị này theo quy tắc áp dụng. Ngoại lệ của nhân viên không thay thế sự đồng ý hoặc bằng chứng bắt buộc.",
   "sendPermission.reason.consentRequired":
     "Tin tiếp thị gửi người nhận ở quốc gia này cần sự đồng ý trước của họ. Không có ngoại lệ nào thay thế được.",
   "sendPermission.reason.dealNotRequested":
@@ -8394,6 +8406,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "review.colDeal": "Deal",
   "review.colAtStake": "Số tiền bị ảnh hưởng",
   "review.colSeenSince": "Xuất hiện từ",
+  "review.foldedAtStake": "{amount} bị ảnh hưởng",
+  "review.foldedSeenSince": "Xuất hiện từ {date}",
   "review.severityHigh": "Cao",
   "review.severityMedium": "Trung bình",
   "review.severityLow": "Thấp",
@@ -8956,6 +8970,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "agents.disconnectOpen": "Ngắt kết nối",
   "agents.disconnectNamed": "Ngắt kết nối {client}",
   "agents.disconnected": "Đã ngắt kết nối",
+  "agents.showDisconnected_one": "Hiện {count} công cụ đã ngắt kết nối",
+  "agents.showDisconnected_other": "Hiện {count} công cụ đã ngắt kết nối",
+  "agents.hideDisconnected": "Ẩn công cụ đã ngắt kết nối",
   "agents.lapsed": "Thông tin xác thực đã hết hạn",
   "agents.renewing": "Đang gia hạn",
   "agents.expiredOn": "Đã hết hạn {date}",
@@ -9696,6 +9713,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "import.reason.lost_reason_missing": "Deal đã thua cần có lý do thua.",
   "import.reason.deal_pipeline_fixed":
     "Deal này nằm trong quy trình khác với quy trình trong tệp. Nhập không chuyển deal giữa các quy trình nên hàng bị bỏ qua.",
+  "import.reason.deal_company_has_contracts":
+    "Deal này có hợp đồng thuộc một công ty khác với công ty trong hàng này nên hàng bị bỏ qua. Hãy tách các hợp đồng khỏi deal hoặc chuyển từng hợp đồng sang một deal của chính công ty mà hợp đồng đó thuộc về rồi nhập lại.",
   "import.reason.deal_already_closed":
     "Deal này đã đóng nên hàng bị bỏ qua. Nhập không mở lại deal đã đóng.",
   "import.reason.fx_rate_missing":
@@ -11187,6 +11206,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "aiHealth.callCounts_one": "{count} lượt gọi, {failures} lượt bị lỗi",
   "aiHealth.callCounts_other": "{count} lượt gọi, {failures} lượt bị lỗi",
   "heldThreads.search": "Tìm theo tiêu đề hoặc bên liên quan",
+  "heldThreads.forContact": "Xem thư được giữ lại với liên hệ này",
+  "heldThreads.withContact": "Chuỗi thư với",
+  "heldThreads.allThreads": "Xem mọi chuỗi thư",
+  "heldThreads.contactUnavailable":
+    "Liên hệ đã được lưu trữ hoặc bạn không xem được, nên các chuỗi thư của liên hệ không được liệt kê.",
   "heldThreads.statusFilter": "Trạng thái",
   "heldThreads.statusAll": "Mọi trạng thái",
   "heldThreads.noMatch": "Không có chuỗi thư nào khớp.",
@@ -18453,6 +18477,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deal.aside.partner": "Đối tác",
   "deal.aside.partnerNone": "Không có",
   "deal.editDetails": "Sửa chi tiết",
+  "deal.meetNeedsCompany":
+    "Deal này chưa có công ty. Thêm công ty trong “Sửa chi tiết” để đặt lịch họp.",
   "deal.committee.card": "Hội đồng mua",
   "deal.committee.change": "Sửa hoặc gỡ bên liên quan",
 
@@ -19096,7 +19122,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.verb.meetingAddNotes": "Thêm ghi chú",
   "worklist.verb.meetingUpdateTitle": "Cuộc họp",
   "worklist.verb.meetingReading": "Đang tải cuộc họp…",
-  "worklist.verb.meetingWhatHappened": "Ghi chú cuộc họp",
+  "worklist.verb.meetingWhatHappened": "Điều đã diễn ra",
   "worklist.verb.meetingBodyHint":
     "Nội dung trao đổi và bước tiếp theo. Có thể sửa ghi chú từ lịch tại đây.",
   "worklist.verb.meetingHeld": "Đã diễn ra",
@@ -20427,6 +20453,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "standing.mark.group_one": "{count} mục, {range}",
   "standing.mark.group_other": "{count} mục, {range}",
   "standing.mark.range": "{from} đến {to}",
+  "standing.mark.label": "{what}, {when}",
   "standing.mark.more_one": "{count} mục nữa trong Lịch sử",
   "standing.mark.more_other": "{count} mục nữa trong Lịch sử",
   "standing.peek.partial_one": "Hiển thị {shown}/{count}.",

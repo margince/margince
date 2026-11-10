@@ -16,6 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/promptref"
 )
 
 const commitmentSenderRole = "from"
@@ -56,16 +57,72 @@ func verifiedCommitmentParties(parties activities.MessageParties) []commitmentPa
 	return out
 }
 
-func commitmentPartyPrompt(parties []commitmentParty, source string) string {
+// commitmentPartyHeader names the columns commitmentPartyPrompt writes, in
+// its order.
+const commitmentPartyHeader = "Verified participants (reference, kind, role, name, address):\n"
+
+// commitmentPartyPrompt lists the participants under the short refs a reply
+// cites them by; their record keys never reach the model.
+func commitmentPartyPrompt(parties []commitmentParty, source string, refs *promptref.Refs) string {
 	var out strings.Builder
 	for _, party := range parties {
 		address := ""
 		if quotedCommitmentAddress(source, party.Address) {
 			address = party.Address
 		}
-		fmt.Fprintf(&out, "%q %q %q %q\n", party.Ref, party.Role, party.Name, address)
+		ref := ""
+		if party.Ref != "" {
+			ref = refs.For(party.Ref)
+		}
+		fmt.Fprintf(&out, "%q %q %q %q %q\n", ref, partyKind(party), party.Role, party.Name, address)
 	}
 	return out.String()
+}
+
+// partyKind says which participants are contacts: only a contact may receive
+// a promise, and a short ref does not show it.
+func partyKind(party commitmentParty) string {
+	switch {
+	case party.Seat != nil:
+		return "colleague"
+	case party.Contact != nil:
+		return string(recordTypeContact)
+	}
+	return ""
+}
+
+// commitmentPartyRefs names each verified participant p1, p2, … in order; a
+// participant with no record has no ref to cite.
+func commitmentPartyRefs(parties []commitmentParty) *promptref.Refs {
+	refs := promptref.New("p")
+	for _, party := range parties {
+		if party.Ref != "" {
+			refs.For(party.Ref)
+		}
+	}
+	return refs
+}
+
+// partyKey is the participant key a reply's ref names. A string that is no ref
+// of this prompt stays as written, for the validator to refuse.
+func partyKey(refs *promptref.Refs, ref string) string {
+	if key, ok := refs.ID(ref); ok {
+		return key
+	}
+	return ref
+}
+
+// partyKeys reads each ref of a list back to its participant key. It keeps nil
+// as nil, because an omitted list and an empty one mean different things.
+func partyKeys(refs *promptref.Refs, cited []string) []string {
+	if cited == nil {
+		return nil
+	}
+	keys := make([]string, len(cited))
+	for i, ref := range cited {
+		keys[i] = partyKey(refs, ref)
+	}
+	return keys
 }
 
 func referencedPromiser(ref string, parties []commitmentParty) (commitmentParty, bool) {

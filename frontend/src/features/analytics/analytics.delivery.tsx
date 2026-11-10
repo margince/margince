@@ -11,6 +11,7 @@ import {
 } from "../../format/format";
 import { type Locale, usePlural, useT } from "../../i18n";
 import { ENTITY } from "../../lib/entity";
+import { labelFor } from "../../lib/labelfor";
 import { routeHash } from "../../lib/router";
 import { isProjectPhase, PHASE_LABEL } from "../projects/projects.form";
 import {
@@ -144,7 +145,7 @@ function projectHref(projectId: string): string {
 
 // A phase spelled to a human, the one way the Projects screen spells it.
 function phaseLabel(phase: string, t: ReturnType<typeof useT>): string {
-  return isProjectPhase(phase) ? t(PHASE_LABEL[phase]) : phase;
+  return isProjectPhase(phase) ? t(labelFor(PHASE_LABEL, phase)) : phase;
 }
 
 // Each project's promises: how many stand open, how many are already late.
