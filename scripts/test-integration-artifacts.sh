@@ -4,14 +4,15 @@
 # continuation.
 #
 # A shard that lost a failing part's log still reports red, so nothing else
-# would notice. Four properties:
+# would notice. Five properties:
 #   1. two failing parts of one package keep two logs, each under a name that
-#      does not move with the dispatch order; a whole package keeps its old name;
+#      does not move with the dispatch order, and no two parts share a name;
 #   2. every part keeps the tests it was given and the tests that reported;
 #   3. rerun.txt holds exactly the tests not passed, a test a killed part never
 #      reached included, and none that passed;
 #   4. the fan-in check refuses a missing part, a test in two parts and a part
-#      without its lists.
+#      without its lists, and accepts a shard that was dealt no tests;
+#   5. a step that cannot be written makes the function fail, not the shell exit.
 set -euo pipefail
 
 root_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -56,25 +57,25 @@ shard_fixture "$forward" forward
 
 # 1. Two failing parts, two logs, named by rank and not by slot.
 logs="$(cd "$forward/out/failed-logs" && ls | LC_ALL=C sort | tr '\n' ' ')"
-[[ "$logs" == "__internal_compose--part1of2.log __internal_compose--part2of2.log __internal_notes.log " ]] \
+[[ "$logs" == "backend@internal%2Fcompose@part1of2.log backend@internal%2Fcompose@part2of2.log backend@internal%2Fnotes.log " ]] \
   || fail "failed-logs holds [$logs], want both compose parts and the whole notes package"
-grep -q 'TestA' "$forward/out/failed-logs/__internal_compose--part1of2.log" \
+grep -q 'TestA' "$forward/out/failed-logs/backend@internal%2Fcompose@part1of2.log" \
   || fail "part 1 of compose is not the part holding TestA"
-grep -q 'TestC' "$forward/out/failed-logs/__internal_compose--part2of2.log" \
+grep -q 'TestC' "$forward/out/failed-logs/backend@internal%2Fcompose@part2of2.log" \
   || fail "part 2 of compose is not the part holding TestC"
 reverse="$work/reverse"
 shard_fixture "$reverse" reverse
-for name in __internal_compose--part1of2 __internal_compose--part2of2; do
+for name in backend@internal%2Fcompose@part1of2 backend@internal%2Fcompose@part2of2; do
   cmp -s "$forward/out/parts/$name.assigned.txt" "$reverse/out/parts/$name.assigned.txt" \
     || fail "$name names other tests when the lane dispatches its parts in another order"
 done
 
 # 2. Every part keeps what it was given and what reported.
-[[ "$(cat "$forward/out/parts/__internal_compose--part1of2.assigned.txt")" == $'backend|./internal/compose|TestA\nbackend|./internal/compose|TestB' ]] \
+[[ "$(cat "$forward/out/parts/backend@internal%2Fcompose@part1of2.assigned.txt")" == $'backend|./internal/compose|TestA\nbackend|./internal/compose|TestB' ]] \
   || fail "part 1 of compose lists the wrong assigned tests"
-[[ "$(cat "$forward/out/parts/__internal_compose--part1of2.ran.txt")" == 'backend|./internal/compose|TestA' ]] \
+[[ "$(cat "$forward/out/parts/backend@internal%2Fcompose@part1of2.ran.txt")" == 'backend|./internal/compose|TestA' ]] \
   || fail "part 1 of compose lists the wrong tests as reported"
-[[ -f "$forward/out/parts/__internal_deals.ran.txt" ]] || fail "a passing package kept no lists"
+[[ -f "$forward/out/parts/backend@internal%2Fdeals.ran.txt" ]] || fail "a passing package kept no lists"
 
 # 3. Owed: the failure and the test the killed part never reached, nothing passed.
 want=$'backend|./internal/compose|TestB\nbackend|./internal/compose|TestC\nbackend|./internal/notes|TestN'
@@ -85,15 +86,54 @@ want=$'backend|./internal/compose|TestB\nbackend|./internal/compose|TestC\nbacke
 reconcile_parts "$forward/out" > /dev/null || fail "a complete shard did not reconcile"
 broken="$work/broken"
 cp -R "$forward/out" "$broken"
-rm "$broken/parts/__internal_notes.assigned.txt"
+rm "$broken/parts/backend@internal%2Fnotes.assigned.txt"
 reconcile_parts "$broken" > /dev/null && fail "a shard missing a part's tests reconciled"
 rm -rf "$broken" && cp -R "$forward/out" "$broken"
 for list in assigned ran rerun; do
-  cp "$broken/parts/__internal_deals.$list.txt" "$broken/parts/again.$list.txt"
+  cp "$broken/parts/backend@internal%2Fdeals.$list.txt" "$broken/parts/again.$list.txt"
 done
 reconcile_parts "$broken" > /dev/null && fail "a test held by two parts reconciled"
 rm -rf "$broken" && cp -R "$forward/out" "$broken"
-rm "$broken/parts/__internal_deals.rerun.txt"
+rm "$broken/parts/backend@internal%2Fdeals.rerun.txt"
 reconcile_parts "$broken" > /dev/null && fail "a part without its rerun list reconciled"
+
+# Names that used to collide: a split ./foo beside a package literally named
+# ./foo--part1of2, ./a.b beside ./a/b, and one package path in two modules.
+names="$work/names"
+mkdir -p "$names/logs" "$names/regex" "$names/out"
+printf 'backend|./foo\nbackend|./foo\nbackend|./foo--part1of2\nbackend|./a.b\nbackend|./a/b\nbackend|./x\nextensions/y|./x\n' > "$names/work"
+: > "$names/failed"
+slot=0
+for test in TestA TestB TestF TestDot TestSlash TestBackend TestExtension; do
+  slot=$((slot + 1))
+  printf '^(%s)$' "$test" > "$names/regex/$slot"
+  printf -- '--- FAIL: %s (0.01s)\nEXIT 1\n' "$test" > "$names/logs/$slot.log"
+  sed -n "${slot}p" "$names/work" | awk -v s="$slot" '{ print $0 "|" s ".log" }' >> "$names/failed"
+done
+keep_shard_evidence "$names/out" "$names/work" "$names/regex" "$names/logs" "$names/failed"
+[[ "$(ls "$names/out/failed-logs" | wc -l | tr -d ' ')" == 7 ]] \
+  || fail "seven failing parts kept [$(ls "$names/out/failed-logs" | tr '\n' ' ')]; two of them share a name"
+
+# A shard dealt no tests keeps empty lists and reconciles.
+empty="$work/empty"
+mkdir -p "$empty/regex" "$empty/logs" "$empty/out"
+: > "$empty/work"
+: > "$empty/failed"
+: > "$empty/out/assigned.txt"
+keep_shard_evidence "$empty/out" "$empty/work" "$empty/regex" "$empty/logs" "$empty/failed" \
+  || fail "a shard dealt no tests could not keep its evidence"
+[[ ! -s "$empty/out/rerun.txt" && ! -d "$empty/out/failed-logs" ]] || fail "a shard dealt no tests owes something"
+reconcile_parts "$empty/out" > /dev/null || fail "a shard dealt no tests did not reconcile"
+printf 'backend|./internal/deals|TestX\n' > "$empty/out/assigned.txt"
+reconcile_parts "$empty/out" > /dev/null && fail "a shard assigned tests but holding no parts reconciled"
+
+# 5. A part whose selector is gone fails the function, and the shell runs on.
+lost="$work/lost"
+cp -R "$forward" "$lost"
+rm "$lost/regex/3"
+rm -rf "$lost/out/parts" "$lost/out/failed-logs"
+if keep_shard_evidence "$lost/out" "$lost/work" "$lost/regex" "$lost/logs" "$lost/failed" 2> /dev/null; then
+  fail "a part with no selector was kept as if complete"
+fi
 
 echo "OK: each failing part keeps its own log and lists, and the rerun list holds what is owed"

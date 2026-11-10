@@ -765,7 +765,11 @@ if [[ -n "$SHARD_OUT" ]]; then
   printf 'shard=%s\ntotal=%s\ntiming=%s\n' "$SHARD_IDX" "$SHARD_TOTAL" "$timing_digest" > "$SHARD_OUT/meta.txt"
   # Each part's lists and its failed log, under the part's own name, and the
   # tests a continuation owes (scripts/lib-integration-artifacts.sh).
-  keep_shard_evidence "$SHARD_OUT" "$WORK" "$REGEX_DIR" "$OUTDIR" "$FAILED_PKGS"
+  # Guarded, so the verdict below still prints: the shard is red and says why.
+  if ! keep_shard_evidence "$SHARD_OUT" "$WORK" "$REGEX_DIR" "$OUTDIR" "$FAILED_PKGS"; then
+    echo "FAIL: the shard could not keep its part evidence in $SHARD_OUT"
+    fail=1
+  fi
 fi
 
 if [[ "$fail" -ne 0 ]]; then
