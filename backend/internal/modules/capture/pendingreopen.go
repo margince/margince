@@ -132,10 +132,19 @@ func (s *PendingStore) ClaimParkedForReopen(ctx context.Context, tx pgx.Tx, w Re
 // ReopenParkedTx puts a claimed row back in the queue, due now with a fresh
 // allowance, and audits it in the same transaction. The offer is withdrawn by
 // the caller first; the row forgets it so the next exhaustion is offered anew.
+func (s *PendingStore) ReopenParkedTx(ctx context.Context, tx pgx.Tx, id ids.UUID, w ReopenWindow) error {
+	return reopenUnsureTx(ctx, tx, id,
+		map[string]any{"reopened_window_from": w.From, "reopened_window_to": w.To})
+}
+
+// reopenUnsureTx moves one locked `unsure` row back to `pending`, due now with
+// a fresh allowance, and audits why. The caller has withdrawn its offer.
 //
 // Audit only: the ledger is internal scheduling state with no kernel entity
 // kind, so the closed event catalog has no verb to carry it.
-func (s *PendingStore) ReopenParkedTx(ctx context.Context, tx pgx.Tx, id ids.UUID, w ReopenWindow) error {
+//
+//craft:ignore naked-any an audit evidence image is a JSON object of mixed values
+func reopenUnsureTx(ctx context.Context, tx pgx.Tx, id ids.UUID, why map[string]any) error {
 	var attempts int
 	var reason string
 	err := tx.QueryRow(ctx, `
@@ -162,7 +171,7 @@ func (s *PendingStore) ReopenParkedTx(ctx context.Context, tx pgx.Tx, id ids.UUI
 	_, err = storekit.AuditWithEvidence(ctx, tx, "update", pendingObject, id,
 		map[string]any{columnStatus: PendingStatusUnsure, columnAttempts: attempts, "disposition_reason": reason},
 		map[string]any{columnStatus: PendingStatusPending, columnAttempts: 0},
-		map[string]any{"reopened_window_from": w.From, "reopened_window_to": w.To})
+		why)
 	if err != nil {
 		return fmt.Errorf("capture: auditing the reopening of disposition %s: %w", id, err)
 	}

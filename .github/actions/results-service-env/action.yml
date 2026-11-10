@@ -1,0 +1,13 @@
+name: results-service-env
+description: >-
+  Hand the job's results-service token and address to the `run:` steps after
+  this one, so a script can claim cache entries as the shard queue does.
+
+# GitHub gives ACTIONS_RUNTIME_TOKEN and ACTIONS_RESULTS_URL to an action's own
+# process and to no `run:` step. The token is this run's: it reads and writes
+# the caches and artifacts of the run's own scope and nothing else, and a pull
+# request that runs here already chooses the workflow it runs.
+
+runs:
+  using: node24
+  main: index.cjs
