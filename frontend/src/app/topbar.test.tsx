@@ -31,7 +31,6 @@ import {
   TWO_MARKS,
 } from "../testing/shellharness";
 import type { NavSection } from "./nav";
-import { paletteKeyShortcuts } from "./palettehotkey";
 import { TopBar } from "./topbar";
 
 // The sticky strip above every railed page: what is true of the SESSION rather
@@ -185,16 +184,8 @@ describe("Top bar search (AC-shell-7)", () => {
       name: "Search or ask Margince",
     });
     expect(search.hasAttribute("aria-label")).toBe(false);
-    expect(search.getAttribute("aria-keyshortcuts")).toBe(
-      paletteKeyShortcuts(navigator.platform),
-    );
-  });
-});
-
-describe("paletteKeyShortcuts", () => {
-  it("spells the chord the caps print", () => {
-    expect(paletteKeyShortcuts("MacIntel")).toBe("Meta+K");
-    expect(paletteKeyShortcuts("Win32")).toBe("Control+K");
+    // Both modifiers answer, so both are announced: the keymap's own value.
+    expect(search.getAttribute("aria-keyshortcuts")).toBe("Meta+K Control+K");
   });
 });
 

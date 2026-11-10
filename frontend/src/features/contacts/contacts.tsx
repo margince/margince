@@ -78,11 +78,16 @@ async function fetchContactsPage(
 // list's reads never start for the import page.
 export function ContactsScreen({
   importing = false,
-}: Readonly<{ importing?: boolean }>) {
-  return importing ? <VCardImportPage /> : <ContactsList />;
+  startCreating = false,
+}: Readonly<{ importing?: boolean; startCreating?: boolean }>) {
+  return importing ? (
+    <VCardImportPage />
+  ) : (
+    <ContactsList startCreating={startCreating} />
+  );
 }
 
-function ContactsList() {
+function ContactsList({ startCreating }: Readonly<{ startCreating: boolean }>) {
   const t = useT();
   const pageName = usePageName("contacts");
   const { locale } = useLocale();
@@ -115,7 +120,7 @@ function ContactsList() {
         }
         action={
           <>
-            <ContactCreateActions />
+            <ContactCreateActions startCreating={startCreating} />
             {/* Last, because it is the one a reader reaches for with a stack
                 of cards already in hand rather than while typing one contact. */}
             <VCardImportAction />

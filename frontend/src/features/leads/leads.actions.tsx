@@ -9,6 +9,7 @@ import { IconAction, VerbWord } from "../../design-system/iconaction";
 import { leadIdentityName } from "../../format/leadname";
 import { useT } from "../../i18n";
 import { ACTION_PARAM, CALL_ACTION } from "../../lib/leads.address";
+import { useShortcut } from "../../lib/shortcuts";
 import { useUrlParams } from "../../lib/urlstate";
 import { RecordEmailVerb } from "../records/recordemail";
 import { ShareAction } from "../records/share";
@@ -102,6 +103,22 @@ export function LeadActions({
       setDrawer("call");
     }
   }, [askedToLogCall]);
+  const logOpen = !logPending && !logRefused;
+  const logKeys = useShortcut(
+    "record.logActivity",
+    () => setDrawer("log"),
+    logOpen,
+  );
+  const taskKeys = useShortcut(
+    "record.addTask",
+    () => setDrawer("task"),
+    logOpen,
+  );
+  const writeKeys = useShortcut(
+    "record.writeEmail",
+    () => onEmailOpenChange(true),
+    logOpen,
+  );
   return (
     <>
       <ClosedReason lead={lead} writer={writer} id={terminalReasonId} />
@@ -134,6 +151,7 @@ export function LeadActions({
         disabled={logPending}
         open={emailOpen}
         onOpenChange={onEmailOpenChange}
+        keyShortcuts={writeKeys}
       />
       {/* A lead has no phone screen or calendar of its own, so Call and
           Meet record what happened, the drawer opened on that kind. */}
@@ -166,6 +184,7 @@ export function LeadActions({
         reasonId={logRefused}
         title={t("log.title")}
         onClick={() => setDrawer("log")}
+        aria-keyshortcuts={logKeys}
       >
         <FileText aria-hidden="true" />
         <VerbWord word={t("record.verb.log")} label={t("log.title")} />
@@ -203,6 +222,7 @@ export function LeadActions({
           disabled={logPending}
           reasonId={logRefused}
           onClick={() => setDrawer("task")}
+          aria-keyshortcuts={taskKeys}
         >
           {t("log.addTask")}
         </Button>

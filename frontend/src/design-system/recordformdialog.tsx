@@ -45,6 +45,7 @@ export function RecordFormDialog({
       intent={shape}
       unsaved={unsaved}
       closeDisabled={closeDisabled}
+      commitSubmits
     >
       {shape === "form" ? (
         <>
