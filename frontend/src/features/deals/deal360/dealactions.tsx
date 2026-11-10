@@ -33,6 +33,7 @@ import { useLocale, useT } from "../../../i18n";
 import { dealRecordKeys } from "../../../lib/activitykeys";
 import { unwrap } from "../../../lib/problem";
 import { navigate } from "../../../lib/router";
+import { useShortcutAria, useShortcutHandler } from "../../../lib/shortcuts";
 import { RecordEmailVerb } from "../../records/recordemail";
 import { ShareAction } from "../../records/share";
 import { probabilitySetNote } from "../dealprobability";
@@ -51,7 +52,15 @@ function DealEmailVerb({
   deal,
   disabledReasonId,
   disabled,
-}: Readonly<{ deal: Deal; disabledReasonId?: string; disabled?: boolean }>) {
+  open,
+  onOpenChange,
+}: Readonly<{
+  deal: Deal;
+  disabledReasonId?: string;
+  disabled?: boolean;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}>) {
   // The same coverage read the readings band and the coverage card already
   // make, served from one cache entry — so asking here costs no request.
   const coverage = useDealCoverage(deal.id, !deal.archived_at);
@@ -67,6 +76,8 @@ function DealEmailVerb({
       recordAddress={recordAddress}
       disabledReasonId={disabledReasonId}
       disabled={disabled}
+      open={open}
+      onOpenChange={onOpenChange}
     />
   );
 }
@@ -196,6 +207,13 @@ export function DealActions({
   const activity = useActivityGate();
   const logRefused = refusedByArchive ?? activity.refusedId;
   const logPending = !refusedByArchive && activity.pending;
+  const [writing, setWriting] = useState(false);
+  const logOpen = !logPending && !logRefused;
+  useShortcutHandler("record.logActivity", () => setDrawer("log"), logOpen);
+  useShortcutHandler("record.addTask", () => setDrawer("task"), logOpen);
+  useShortcutHandler("record.writeEmail", () => setWriting(true), logOpen);
+  const logKeys = useShortcutAria("record.logActivity");
+  const taskKeys = useShortcutAria("record.addTask");
   return (
     <>
       {!refusedByArchive && activity.refusedId && (
@@ -209,6 +227,8 @@ export function DealActions({
         deal={deal}
         disabledReasonId={logRefused}
         disabled={logPending}
+        open={writing}
+        onOpenChange={setWriting}
       />
       <Button
         disabled={logPending}
@@ -231,6 +251,7 @@ export function DealActions({
         reasonId={logRefused}
         title={t("log.title")}
         onClick={() => setDrawer("log")}
+        aria-keyshortcuts={logKeys}
       >
         <FileText aria-hidden="true" />
         <VerbWord word={t("record.verb.log")} label={t("log.title")} />
@@ -264,6 +285,7 @@ export function DealActions({
           disabled={logPending}
           reasonId={logRefused}
           onClick={() => setDrawer("task")}
+          aria-keyshortcuts={taskKeys}
         >
           {t("log.addTask")}
         </Button>

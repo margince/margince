@@ -32,6 +32,7 @@ import { mayLeaveReach, useLeaveIfOutOfReach } from "../../lib/outofreach";
 import { unwrap } from "../../lib/problem";
 import { navigate } from "../../lib/router";
 import { useMe, useViewerId } from "../../lib/session";
+import { useShortcutAria, useShortcutHandler } from "../../lib/shortcuts";
 import { ShareAction } from "../records/share";
 import { CompanyRejectAction } from "./companyreject";
 
@@ -301,6 +302,12 @@ export function CompanyActionBadges({
   const partnerUnreadable =
     useMe().data?.authorization !== undefined && !readsPartners;
   const isPartner = (company.relationship_types ?? []).includes("partner");
+  useShortcutHandler(
+    "record.addTask",
+    onAddTask,
+    !company.archived_at && !activity.pending && !activity.refusedId,
+  );
+  const taskKeys = useShortcutAria("record.addTask");
   return (
     <>
       {/* What the company IS to us, and whether it is archived, are drawn
@@ -323,6 +330,7 @@ export function CompanyActionBadges({
           disabled={!company.archived_at && activity.pending}
           reasonId={company.archived_at ? menuReasonId : activity.refusedId}
           onClick={onAddTask}
+          aria-keyshortcuts={taskKeys}
         >
           {t("log.addTask")}
         </Button>

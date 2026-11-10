@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/settings/account-settings.tsx frontend/src/features/settings/notification-settings.tsx frontend/src/features/sign-in/mfasetup.tsx frontend/src/features/booking/booking-setup.tsx frontend/src/features/voice-knowledge/voice-dna.tsx frontend/src/features/capture/connection-settings.tsx backend/internal/modules/identity/mfa.go backend/internal/modules/activities/scheduling_profile.go frontend/src/features/settings/settingssignaturerow.tsx backend/internal/modules/contacts/emailsignature.go backend/internal/modules/activities/signature.go frontend/src/app/setup-reminder.tsx frontend/src/app/account.tsx backend/internal/modules/identity/avatar.go backend/internal/modules/identity/providerpicture.go backend/internal/modules/identity/federatedidentity.go backend/internal/compose/avatarprovider.go backend/internal/compose/connectors_picture.go -->
+<!-- describes: frontend/src/features/settings/account-settings.tsx frontend/src/features/settings/notification-settings.tsx frontend/src/features/sign-in/mfasetup.tsx frontend/src/features/booking/booking-setup.tsx frontend/src/features/voice-knowledge/voice-dna.tsx frontend/src/features/capture/connection-settings.tsx backend/internal/modules/identity/mfa.go backend/internal/modules/activities/scheduling_profile.go frontend/src/features/settings/settingssignaturerow.tsx backend/internal/modules/contacts/emailsignature.go backend/internal/modules/activities/signature.go frontend/src/app/setup-reminder.tsx frontend/src/app/account.tsx backend/internal/modules/identity/avatar.go backend/internal/modules/identity/providerpicture.go backend/internal/modules/identity/federatedidentity.go backend/internal/compose/avatarprovider.go backend/internal/compose/connectors_picture.go frontend/src/lib/shortcuts.ts -->
 # Your own settings
 
 Your own settings in Margince are the pages under **You** in Settings: **Account**, **Notifications**, **Meetings**, **Writing voice**, **AI assistants** and **Connections**. Everything here changes your own seat and nobody else's.
@@ -134,6 +134,15 @@ To change the theme in Margince, open Settings → **Account** and pick a choice
 You can do the same from the account menu at the top right, under **Theme**. Both change the same setting.
 **System** follows the light or dark setting of your computer or phone, and keeps following it.
 Also called: dark mode, light mode, appearance, colour scheme.
+
+### How do I turn off single-key shortcuts?
+<!-- opens: settings/account -->
+To turn off the keyboard shortcuts that are one key, open Settings → **Account**. Turn off **Single-key shortcuts** in the **This browser** card.
+The change is made at once, and applies in this browser only. Another browser or computer keeps its own choice.
+
+With it off, `?`, `/`, `C`, `G`, `N` and the other one-key shortcuts do nothing. `⌘K`, `⌘B`, `⌘↵` and `Esc` keep working.
+The full list of shortcuts is in [What Margince is](what-margince-is.md#what-keyboard-shortcuts-does-margince-have).
+Also called: turn off keys, keyboard shortcuts, single key.
 
 ## Meetings
 

@@ -18,6 +18,7 @@ import {
   useTransports,
 } from "../../lib/contacttransports";
 import { navigate } from "../../lib/router";
+import { useShortcutAria, useShortcutHandler } from "../../lib/shortcuts";
 import { EmailVerb } from "../records/recordemail";
 import { ShareAction } from "../records/share";
 import { openContactTab } from "../worklist/worklist.return";
@@ -93,6 +94,12 @@ export function ContactActions({
   const write = primaryTransportAction(transports, t);
   const WriteIcon = write.icon;
   const refusal = writeRefusal({ transports }, t);
+  const logOpen = !logPending && !logRefused;
+  useShortcutHandler("record.logActivity", onLogActivity, logOpen);
+  useShortcutHandler("record.addTask", onAddTask, logOpen);
+  useShortcutHandler("record.writeEmail", onWrite, logOpen && !refusal);
+  const logKeys = useShortcutAria("record.logActivity");
+  const taskKeys = useShortcutAria("record.addTask");
   return (
     <>
       <EmailVerb
@@ -119,6 +126,7 @@ export function ContactActions({
         reasonId={logRefused}
         onClick={onLogActivity}
         title={t("log.title")}
+        aria-keyshortcuts={logKeys}
       >
         <FileText aria-hidden="true" />
         <VerbWord word={t("record.verb.log")} label={t("log.title")} />
@@ -144,7 +152,12 @@ export function ContactActions({
       >
         {/* First in the menu: the most frequent verb here. Files the task
             against THIS record, in the same form Log activity opens. */}
-        <Button disabled={logPending} reasonId={logRefused} onClick={onAddTask}>
+        <Button
+          disabled={logPending}
+          reasonId={logRefused}
+          onClick={onAddTask}
+          aria-keyshortcuts={taskKeys}
+        >
           {t("contact.action.addTask")}
         </Button>
         <ContactRecordActions

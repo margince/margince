@@ -34,6 +34,7 @@ import { useCan } from "../../lib/capability";
 import { labelFor } from "../../lib/labelfor";
 import { unwrap } from "../../lib/problem";
 import { navigate } from "../../lib/router";
+import { useShortcutAria, useShortcutHandler } from "../../lib/shortcuts";
 import { NewDealAction } from "../companies/companyactions";
 import { ShareAction } from "../records/share";
 import { TaskDetailModal } from "../worklist/taskdetailmodal";
@@ -381,13 +382,21 @@ function ProjectActions({
 }>) {
   const t = useT();
   const owner = useOwnerPicker(project.owner_id);
+  const taskRefusedId = refusedReasonId ?? activity.refusedId;
+  useShortcutHandler(
+    "record.addTask",
+    onAddTask,
+    !activity.pending && !taskRefusedId,
+  );
+  const taskKeys = useShortcutAria("record.addTask");
   return (
     <OverflowMenu label={t("record.moreActions")} word={t("record.verb.more")}>
       {/* First: the most frequent verb in the menu. */}
       <Button
         disabled={activity.pending}
-        reasonId={refusedReasonId ?? activity.refusedId}
+        reasonId={taskRefusedId}
         onClick={onAddTask}
+        aria-keyshortcuts={taskKeys}
       >
         {t("log.addTask")}
       </Button>

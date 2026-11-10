@@ -13,6 +13,7 @@ import { VerbWord } from "../../design-system/iconaction";
 import { ListPopover } from "../../design-system/listpopover";
 import { useT } from "../../i18n";
 import { navigate } from "../../lib/router";
+import { useShortcutAria, useShortcutHandler } from "../../lib/shortcuts";
 import { ComposeModal } from "../mail/compose";
 import { EmailVerb } from "../records/recordemail";
 
@@ -70,6 +71,10 @@ export function CompanyHeaderActions({
   const bookRefusedId = useId();
   const logRefused = archived ?? activity.refusedId;
   const logPending = !archived && activity.pending;
+  const logOpen = !logPending && !logRefused;
+  useShortcutHandler("record.logActivity", () => onDrawer("log"), logOpen);
+  useShortcutHandler("record.writeEmail", () => onComposerOpen(true), logOpen);
+  const logKeys = useShortcutAria("record.logActivity");
   return (
     <>
       {archived && !archivedReasonId && (
@@ -105,6 +110,7 @@ export function CompanyHeaderActions({
         reasonId={logRefused}
         title={t("log.title")}
         onClick={() => onDrawer("log")}
+        aria-keyshortcuts={logKeys}
       >
         <FileText aria-hidden="true" />
         <VerbWord word={t("record.verb.log")} label={t("log.title")} />

@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/app/nav.ts frontend/src/app/palette.tsx frontend/src/app/palettesearch.ts frontend/src/app/paletterecents.ts frontend/src/app/paletterecents.reader.ts frontend/src/app/paletterecents.storage.ts frontend/src/features/voice-knowledge/search.tsx backend/internal/modules/search -->
+<!-- describes: frontend/src/app/nav.ts frontend/src/app/palette.tsx frontend/src/app/palettesearch.ts frontend/src/app/paletterecents.ts frontend/src/app/paletterecents.reader.ts frontend/src/app/paletterecents.storage.ts frontend/src/features/voice-knowledge/search.tsx backend/internal/modules/search frontend/src/lib/keymap.ts frontend/src/lib/keyguard.ts -->
 # What Margince is
 
 Margince is a CRM. It is one place for the contacts you sell to, the companies
@@ -154,9 +154,32 @@ Its first row is always **Ask your documents**.
 
 ### How do I open the command palette?
 To open the Margince command palette, press ⌘K on a Mac or Ctrl+K on Windows and Linux. It works from any screen while no dialog is open.
-You can also click the search field **Search or ask Margince** in the top bar.
+You can also click the search field **Search or ask Margince** in the top bar, or press /.
 Press ⌘K again, or Esc, to close it.
 Also called: quick search, command menu, Cmd K, Ctrl K, keyboard shortcut.
+
+### What keyboard shortcuts does Margince have?
+Margince has keyboard shortcuts for search, for moving between pages and for work on a record. Press `?` on any page to see the full list. The account menu also opens it, under **Help and feedback** → **Keyboard shortcuts**.
+
+On Windows and Linux, press Ctrl where this list says ⌘.
+
+| Keys | What they do |
+|---|---|
+| `⌘K` or `/` | **Open search** |
+| `?` | **Show keyboard shortcuts** |
+| `C` | **Create record**. On a list such as Contacts, it opens the form for a new record of that kind. On any other page, it opens search with the **New …** actions. |
+| `G`, then a key | **Go to** a page in the sidebar: `G` then `C` for Contacts, `G` then `D` for Deals. Point at a page in the sidebar to see its key. |
+| `N` | **Log activity**, on a record |
+| `T` | **Add task**, on a record |
+| `M` | **Write email**, on a record |
+| `⌘↵` | **Save multi-line field**, **Send email**, or **Submit dialog** in a dialog with a form |
+| `⌘B` | **Show or hide sidebar** |
+| `Esc` | **Close dialog or menu** |
+
+A shortcut that is one key, with no ⌘ or Ctrl, never acts while you type in a field. It also waits while a dialog or menu is open.
+`N`, `T` and `M` act only where the record shows the same button and you may use it. A project has no email button, so `M` does nothing there.
+To turn off the shortcuts that are one key, see [Your own settings](your-own-settings.md#how-do-i-turn-off-single-key-shortcuts).
+Also called: keys, shortcut list, keyboard, key for a page.
 
 ### Where is the handbook, and how do I ask it a question?
 To ask the Margince handbook a question, type it into **Search or ask Margince** in the top bar and press Enter. You can also open it with ⌘K (Ctrl+K).

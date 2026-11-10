@@ -9,6 +9,7 @@ import { IconAction, VerbWord } from "../../design-system/iconaction";
 import { leadIdentityName } from "../../format/leadname";
 import { useT } from "../../i18n";
 import { ACTION_PARAM, CALL_ACTION } from "../../lib/leads.address";
+import { useShortcutAria, useShortcutHandler } from "../../lib/shortcuts";
 import { useUrlParams } from "../../lib/urlstate";
 import { RecordEmailVerb } from "../records/recordemail";
 import { ShareAction } from "../records/share";
@@ -102,6 +103,16 @@ export function LeadActions({
       setDrawer("call");
     }
   }, [askedToLogCall]);
+  const logOpen = !logPending && !logRefused;
+  useShortcutHandler("record.logActivity", () => setDrawer("log"), logOpen);
+  useShortcutHandler("record.addTask", () => setDrawer("task"), logOpen);
+  useShortcutHandler(
+    "record.writeEmail",
+    () => onEmailOpenChange(true),
+    logOpen,
+  );
+  const logKeys = useShortcutAria("record.logActivity");
+  const taskKeys = useShortcutAria("record.addTask");
   return (
     <>
       <ClosedReason lead={lead} writer={writer} id={terminalReasonId} />
@@ -166,6 +177,7 @@ export function LeadActions({
         reasonId={logRefused}
         title={t("log.title")}
         onClick={() => setDrawer("log")}
+        aria-keyshortcuts={logKeys}
       >
         <FileText aria-hidden="true" />
         <VerbWord word={t("record.verb.log")} label={t("log.title")} />
@@ -203,6 +215,7 @@ export function LeadActions({
           disabled={logPending}
           reasonId={logRefused}
           onClick={() => setDrawer("task")}
+          aria-keyshortcuts={taskKeys}
         >
           {t("log.addTask")}
         </Button>

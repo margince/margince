@@ -19,6 +19,7 @@ Getting around Margince, and where to read about it:
 - What is Margince? → [What Margince is](what-margince-is.md)
 - How do I get around the app, and where is something in the sidebar? → [What Margince is](what-margince-is.md)
 - How do I search, or open the command palette (⌘K)? → [What Margince is](what-margince-is.md)
+- What keyboard shortcuts are there, and how do I turn off the one-key ones? → [What Margince is](what-margince-is.md)
 - How do I ask the handbook a question, and where is the Ask box? → [What Margince is](what-margince-is.md)
 - What does Margince call an opportunity, an account, a prospect or a quote? → [What Margince is](what-margince-is.md), under Other words for the same thing
 - Something is wrong. How do I report it? → [Report a problem](report-a-problem.md)
