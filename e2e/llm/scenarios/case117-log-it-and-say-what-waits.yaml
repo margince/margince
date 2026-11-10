@@ -27,9 +27,15 @@ writes: true
 
 prompt: |
   Had coffee with Jannik Feddersen from Husumer Windservice this morning at
-  their office. They want a quote for the gearbox inspection on their six
+  9:30 at their office. They want a quote for the gearbox inspection on their six
   turbines in Q1. Please log the meeting in the CRM and add a follow-up task for
   me to send him the quote by Friday.
+
+# The finish-time check is the behaviour under test, so the run must make it.
+# The prompt gives a start time: a held meeting with only today's date is
+# refused as not over yet, and a run that stops there never reads the queue.
+must_call:
+  - list_approvals
 
 # The meeting is what the recap answers, so it is pinned the way case 1 pins
 # it. The end-state reader finds an activity only on a project, and this one is
