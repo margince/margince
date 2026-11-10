@@ -45,13 +45,13 @@ func (s *catchUpSchedule) Next(current time.Time) time.Time {
 	if !s.armed.CompareAndSwap(true, false) {
 		return s.every.Next(current)
 	}
-	due := current
+	first := current
 	if !s.lastRun.IsZero() {
-		if next := s.every.Next(s.lastRun); next.After(due) {
-			due = next
+		if next := s.every.Next(s.lastRun); next.After(first) {
+			first = next
 		}
 	}
-	return due.Add(startupDelay(s.kind, s.every.Next(current).Sub(current), s.spread))
+	return first.Add(startupDelay(s.kind, s.every.Next(current).Sub(current), s.spread))
 }
 
 // rearm makes the next Next catch up again. A schedule handed back to River
