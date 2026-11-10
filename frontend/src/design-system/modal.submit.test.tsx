@@ -235,7 +235,10 @@ describe("⌘/Ctrl+Enter in a form dialog", () => {
 });
 
 describe("⌘/Ctrl+Enter in a drawer", () => {
-  function drawer(commitSubmits: boolean | undefined, onSubmit: () => void) {
+  function drawer(
+    commitSubmits: boolean | undefined,
+    onSubmit: (event: FormEvent) => void,
+  ) {
     return (
       <Modal
         open

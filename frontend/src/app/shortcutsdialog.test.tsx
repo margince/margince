@@ -120,8 +120,8 @@ describe("the keyboard shortcuts dialog", () => {
   });
 });
 
-// The paragraph save is the field's own, so the keymap lists it and the field
-// binds it; a field that answered another key would fail here.
+// The keymap lists the paragraph save, and the field binds it. A field that
+// answered another key fails here.
 describe("the paragraph save the field binds", () => {
   it("answers the key the keymap lists, and only with a modifier", () => {
     const paragraph = KEYMAP.find(

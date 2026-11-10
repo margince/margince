@@ -117,9 +117,7 @@ function ShellWithDialog({
   );
 }
 
-// An open dialog makes the rest of the app unreachable, and the palette is the
-// rest of the app: raised over one it sat under the dialog's keyboard, so
-// Escape closed the dialog and left the palette standing.
+// The palette is the app, and an open dialog makes the app unreachable.
 describe("the palette hotkey", () => {
   it("does nothing while a dialog is up, and Escape still closes the dialog", async () => {
     const onDialogClose = vi.fn();

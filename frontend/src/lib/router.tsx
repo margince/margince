@@ -147,24 +147,8 @@ export function navigate(route: Route, dials?: UrlParams): void {
 }
 
 /**
- * Go to an address WITHOUT leaving the current one in history.
- *
- * For a redirect: an address the product answers by sending the reader
- * somewhere else must not be a history entry, or Back lands on it, it
- * redirects again, and the reader cannot get out of the loop with the one key
- * that exists for getting out of things. And for a state of the page the
- * reader is on, such as a list's create form at `#/<screen>/new`: Back leaves
- * the page, and a dialog is not a page to step back through.
- *
- * `history.replaceState` and not `location.replace`, which is the obvious
- * spelling and the wrong one: `location.replace` discards the entry's state
- * object. lib/scrollmemory.ts stamps the entry's identity in there. A redirect,
- * or a screen that normalises its own address on arrival, would wipe that name,
- * and the offset saved under it would be lost. Carrying the current
- * state through keeps the entry the same entry.
- *
- * It fires no event, so the store has to be told; lib/urlstate.ts's
- * `replaceParams` is the same write for the QUERY half and says the same thing.
+ * Use it for a redirect, or for a state of the page such as a create form.
+ * Back must not land on an address that is not a page.
  */
 export function navigateReplacing(route: Route, dials?: UrlParams): void {
   globalThis.history.replaceState(
