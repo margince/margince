@@ -33760,6 +33760,13 @@ export interface components {
                  *     governed endpoint the task form uses, so it is theirs, audited and undoable.
                  */
                 task?: components["schemas"]["CreateTaskRequest"] | null;
+                /**
+                 * @description Present when this reader may not take the action, and says why in the reader's
+                 *     language. A client draws the button disabled with this sentence. `draft_reply`
+                 *     and `add_task` write an activity, so a seat without `activity.create`, or a
+                 *     seat that may not write at all, gets one.
+                 */
+                blocked_reason?: string;
             } | null;
         };
         /**
@@ -35682,6 +35689,14 @@ export interface components {
              *     nothing to do (`none`).
              */
             readonly fingerprint?: string;
+            /**
+             * @description Present when this reader may not take the move, and says why in the reader's
+             *     language. A client draws the verb disabled with this sentence. `draft_email`
+             *     and `create_task` write an activity, so a seat without `activity.create`, or a
+             *     seat that may not write at all, gets one. The stored card never carries it; it
+             *     is set for each reader.
+             */
+            blocked_reason?: string;
         };
         /** @description The rule and current facts behind a suggested action. The server checks these facts again when accepting the suggestion; the receipt grants no authority. Replaying the same accepted observation returns its original task. */
         RecommendationReceipt: {
@@ -58321,6 +58336,13 @@ export interface components {
             arguments?: {
                 [key: string]: unknown;
             };
+            /**
+             * @description Present when this reader may not take the verb, and says why in the reader's
+             *     language. A client draws the verb disabled with this sentence. `draft_reply`,
+             *     `draft_email` and `create_task` write an activity, so a seat without
+             *     `activity.create`, or a seat that may not write at all, gets one.
+             */
+            blocked_reason?: string;
         };
         /**
          * @description A group of routine decisions that read alike, standing on the queue as one row.
@@ -92287,11 +92309,12 @@ export interface operations {
                 scope_id?: string;
                 /**
                  * @description The instant to count at, so the summary describes the same moment as an evaluation
-                 *     read beside it (its `context.evaluated_at`). Omitted means now. A future instant is
-                 *     refused, since nothing has happened by then to count. It bounds each handoff's state,
-                 *     submitter and reason, and which meetings existed. The recipient, whether that
-                 *     recipient can still act, team membership and a meeting's status keep no history, so
-                 *     they read as they stand now. An `as_of` far in the past is not a historical report.
+                 *     read moments earlier (its `context.evaluated_at`). Omitted means now. It pairs two
+                 *     reads; it is not a historical report. A future instant is refused (`future`), and so
+                 *     is one more than 15 minutes before now (`too_old`); a client that is refused reads
+                 *     again at a fresh instant. It bounds each handoff's state, submitter and reason, and
+                 *     which meetings existed. The recipient, whether that recipient can still act, team
+                 *     membership and a meeting's status keep no history, so they read as they stand now.
                  */
                 as_of?: string;
             };
@@ -92330,8 +92353,10 @@ export interface operations {
                 limit?: number;
                 /**
                  * @description The instant to list at, so the rows describe the same moment as a summary read beside
-                 *     them (its `as_of`). Omitted means now; a future instant is refused. It bounds the same
-                 *     facts as the summary's `as_of`: the recipient and team membership read as they stand now.
+                 *     them (its `as_of`). Omitted means now. It is refused on the same terms as the
+                 *     summary's `as_of`: a future instant (`future`), or one more than 15 minutes before
+                 *     now (`too_old`). It bounds the same facts, and the recipient and team membership read
+                 *     as they stand now.
                  */
                 as_of?: string;
             };

@@ -146,7 +146,7 @@ func packageCallGraph(t *testing.T, dir string) map[string]*graphFunc {
 			if !ok || fn.Body == nil {
 				continue
 			}
-			recvType, recvVar := receiverTypeName(fn), receiverVarName(fn)
+			recvType := receiverTypeName(fn)
 			entry := &graphFunc{calls: map[string]bool{}, reads: map[string]bool{}}
 			// What this function DECLARES is its own, whatever the package
 			// calls something of the same name. Attributing by spelling alone
@@ -172,14 +172,8 @@ func packageCallGraph(t *testing.T, dir string) map[string]*graphFunc {
 				if !isCall {
 					return true
 				}
-				switch fun := call.Fun.(type) {
-				case *ast.Ident:
-					entry.calls[fun.Name] = true
-				case *ast.SelectorExpr:
-					if base, isIdent := fun.X.(*ast.Ident); isIdent &&
-						recvVar != "" && base.Name == recvVar {
-						entry.calls[scrubKey(recvType, fun.Sel.Name)] = true
-					}
+				if called := localFunctionCall(fn, call.Fun, nil); called != "" {
+					entry.calls[called] = true
 				}
 				return true
 			})
@@ -417,4 +411,38 @@ func guardedBy(graph map[string]*graphFunc, name, target string) bool {
 		return all
 	}
 	return guarded(name)
+}
+
+// Reachability retains possible edges; provenance refuses a shadowed name.
+func localFunctionCall(fn *ast.FuncDecl, fun ast.Expr, shadowed map[string]bool) string {
+	switch called := fun.(type) {
+	case *ast.Ident:
+		if !shadowed[called.Name] {
+			return called.Name
+		}
+	case *ast.SelectorExpr:
+		base, ok := called.X.(*ast.Ident)
+		receiver := receiverVarName(fn)
+		if ok && receiver != "" && base.Name == receiver && !shadowed[base.Name] {
+			return scrubKey(receiverTypeName(fn), called.Sel.Name)
+		}
+	}
+	return ""
+}
+
+// callsPackageFunc reports a call to importPath.name under whatever name this
+// file gave that import, dot-imports included.
+func callsPackageFunc(file *ast.File, fun ast.Expr, importPath, name string) bool {
+	qualifier, dotImported := gatekit.ImportedAs(file, importPath)
+	switch f := fun.(type) {
+	case *ast.Ident:
+		return dotImported && f.Name == name
+	case *ast.SelectorExpr:
+		if f.Sel.Name != name {
+			return false
+		}
+		pkg, ok := f.X.(*ast.Ident)
+		return ok && qualifier != "" && pkg.Name == qualifier
+	}
+	return false
 }

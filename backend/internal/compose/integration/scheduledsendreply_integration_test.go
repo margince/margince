@@ -148,7 +148,7 @@ func TestAReplyPausesAScheduledDealFollowUp(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			p := setupPreflight(t)
 			p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
-			id := p.scheduleClaiming(t, tc.claim)
+			id := p.scheduleClaimingAt(t, tc.claim, "/v1/emails")
 
 			p.theyWrite(t, tc.mail(clocktest.Now(t).UTC().Add(time.Second)))
 			p.makeDue(t, id)

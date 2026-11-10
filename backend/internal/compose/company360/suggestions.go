@@ -31,6 +31,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	"github.com/margince/margince/backend/internal/compose/activitywhen"
+	"github.com/margince/margince/backend/internal/compose/momentaction"
 	"github.com/margince/margince/backend/internal/compose/receiptcopy"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -102,6 +103,7 @@ func (a *assembly) readSuggestions() error {
 	if err != nil {
 		return err
 	}
+	momentaction.MarkRefusedSuggestions(a.ctx, found)
 	a.out.Suggestions = &found
 	// Set together with the list, so the count is absent exactly when the section
 	// is. A zero on a section this read never computed would state "no further
@@ -244,16 +246,18 @@ func setAddTask(out *crmcontracts.Company360Suggestion, step nextStep) {
 //
 //nolint:staticcheck // ST1003: the field names mirror the oapi-codegen type this must assign to
 func NewSuggestionAction(kind crmcontracts.Company360SuggestionActionKind) *struct {
-	ActivityId *openapi_types.UUID                         `json:"activity_id,omitempty"`
-	DealId     *openapi_types.UUID                         `json:"deal_id,omitempty"`
-	Kind       crmcontracts.Company360SuggestionActionKind `json:"kind"`
-	Task       *crmcontracts.CreateTaskRequest             `json:"task,omitempty"`
+	ActivityId    *openapi_types.UUID                         `json:"activity_id,omitempty"`
+	BlockedReason *string                                     `json:"blocked_reason,omitempty"`
+	DealId        *openapi_types.UUID                         `json:"deal_id,omitempty"`
+	Kind          crmcontracts.Company360SuggestionActionKind `json:"kind"`
+	Task          *crmcontracts.CreateTaskRequest             `json:"task,omitempty"`
 } {
 	action := new(struct {
-		ActivityId *openapi_types.UUID                         `json:"activity_id,omitempty"`
-		DealId     *openapi_types.UUID                         `json:"deal_id,omitempty"`
-		Kind       crmcontracts.Company360SuggestionActionKind `json:"kind"`
-		Task       *crmcontracts.CreateTaskRequest             `json:"task,omitempty"`
+		ActivityId    *openapi_types.UUID                         `json:"activity_id,omitempty"`
+		BlockedReason *string                                     `json:"blocked_reason,omitempty"`
+		DealId        *openapi_types.UUID                         `json:"deal_id,omitempty"`
+		Kind          crmcontracts.Company360SuggestionActionKind `json:"kind"`
+		Task          *crmcontracts.CreateTaskRequest             `json:"task,omitempty"`
 	})
 	action.Kind = kind
 	return action
