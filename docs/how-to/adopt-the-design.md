@@ -83,10 +83,9 @@ The shell comes last in this group: it is the part users see most, and the safes
    Set `--fs-body` 13.5px, `--lh-normal` 1.55, and `--fs-display` 32px with `--tracking-display` `-0.03em`.
    `body` in `app.css` reads the tokens, not `14px/1.5`.
 7. **Corner radius and shadow.** The radius goes by role, and the ladder in `tokens.css` is the contract.
-   `--r-lg` is for a pane, the details panel and a reading card.
-   `--r-md` is for a board card and the agent's row, and `--r-control` for a control.
-   All three read `--r-sm`, 8px, which a chip also takes. `--r-xs` is 4px for a key.
-   `--r-full` is for a pill or a monogram (`DESIGN.md` section 5).
+   `--r-lg` names a pane, `--r-md` a board card and `--r-control` a control.
+   All three read `--r-sm`, 8px, which a chip also takes, so every box has the same corner.
+   `--r-xs` is 4px for a key, and `--r-full` is for a pill or a monogram (`DESIGN.md` section 5).
 
    Where a browser has `corner-shape: squircle`, every step but `--r-full` is twice its size. A superellipse of
    radius `R` looks about as round as a round corner of `R/2`. One `@supports` block in `tokens.css` does this, and no
