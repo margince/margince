@@ -102,7 +102,7 @@ func visitReader(e *integration.Env, mask ...principal.FieldMask) context.Contex
 	})
 }
 
-func runRegisteredReport(t *testing.T, e *integration.Env, ctx context.Context, name string) extensionReportAnswer {
+func runRegisteredReport(ctx context.Context, t *testing.T, e *integration.Env, name string) extensionReportAnswer {
 	t.Helper()
 	engine := newReportEngine(e.Pool)
 	for _, r := range registeredReports() {
@@ -125,7 +125,7 @@ func TestARegisteredBreakdownCountsLiveRowsOfTheKind(t *testing.T) {
 	seedVisits(t, "north", 6, 3)
 	seedVisits(t, "south", 7, 0)
 
-	answer := runRegisteredReport(t, e, visitReader(e), "ext:reportdemo:by_site")
+	answer := runRegisteredReport(visitReader(e), t, e, "ext:reportdemo:by_site")
 	if answer.Withheld || answer.Total == nil || *answer.Total != 13 {
 		t.Fatalf("answer = %+v, want 13 live visits and nothing withheld (archived rows are not counted)", answer)
 	}
@@ -136,7 +136,7 @@ func TestARegisteredBreakdownCountsLiveRowsOfTheKind(t *testing.T) {
 	if counts["north"] != 6 || counts["south"] != 7 {
 		t.Errorf("groups = %v, want north=6 south=7", counts)
 	}
-	count := runRegisteredReport(t, e, visitReader(e), "ext:reportdemo:visits")
+	count := runRegisteredReport(visitReader(e), t, e, "ext:reportdemo:visits")
 	if count.Total == nil || *count.Total != 13 {
 		t.Errorf("count = %+v, want 13", count)
 	}
@@ -161,7 +161,7 @@ func TestTheFloorWithholdsTheSmallestGroupsAndTheTotal(t *testing.T) {
 	seedVisits(t, "small", 5, 0)
 	seedVisits(t, "large", 9, 0)
 
-	answer := runRegisteredReport(t, e, visitReader(e), "ext:reportdemo:by_site")
+	answer := runRegisteredReport(visitReader(e), t, e, "ext:reportdemo:by_site")
 	if !answer.Withheld || answer.Total != nil {
 		t.Fatalf("withheld=%v total=%v, want the total withheld with the groups", answer.Withheld, answer.Total)
 	}
@@ -183,14 +183,14 @@ func TestAFieldMaskExcludesTheKindsRowsAndCountsThem(t *testing.T) {
 	seedVisits(t, "south", 7, 0)
 
 	masked := visitReader(e, principal.FieldMask{Object: reportDemoObject, Field: "site", Condition: principal.MaskAlways})
-	answer := runRegisteredReport(t, e, masked, "ext:reportdemo:by_site")
+	answer := runRegisteredReport(masked, t, e, "ext:reportdemo:by_site")
 	if answer.ExcludedByPermission == nil || *answer.ExcludedByPermission != 13 {
 		t.Fatalf("excluded_by_permission = %v, want 13", answer.ExcludedByPermission)
 	}
 	if answer.Total == nil || *answer.Total != 0 || len(answer.Groups) != 0 {
 		t.Errorf("answer = %+v, want the masked rows out of every group and the total", answer)
 	}
-	open := runRegisteredReport(t, e, visitReader(e), "ext:reportdemo:by_site")
+	open := runRegisteredReport(visitReader(e), t, e, "ext:reportdemo:by_site")
 	if open.ExcludedByPermission != nil {
 		t.Errorf("unmasked excluded_by_permission = %v, want none", *open.ExcludedByPermission)
 	}
@@ -201,7 +201,7 @@ func TestABreakdownByANonTextColumnKeepsItsKeys(t *testing.T) {
 	registerVisitReports(t)
 	seedVisits(t, "north", 6, 0)
 
-	answer := extensionReportWire(runRegisteredReport(t, e, visitReader(e), "ext:reportdemo:by_tier"))
+	answer := extensionReportWire(runRegisteredReport(visitReader(e), t, e, "ext:reportdemo:by_tier"))
 	if len(answer.Groups) != 1 || answer.Groups[0].Key == nil || *answer.Groups[0].Key != "2" {
 		t.Fatalf("groups = %+v, want one group keyed \"2\": an integer column is text on the wire", answer.Groups)
 	}
@@ -221,8 +221,16 @@ func TestAMultiselectCustomFieldSplitsDealsByCombinationWithoutDoubleCounting(t 
 	pipeline, open, _ := integration.DealFixture(t, e)
 	store := deals.NewStore(e.DB(), installseam.Deals()).WithFieldCatalog(catalog)
 	for i, regions := range [][]string{
-		{"emea", "apac"}, {"apac", "emea"}, {"emea", "apac"}, {"emea", "apac"}, {"emea", "apac"},
-		{"amer"}, {"amer"}, {"amer"}, {"amer"}, {"amer"},
+		{"emea", "apac"},
+		{"apac", "emea"},
+		{"emea", "apac"},
+		{"emea", "apac"},
+		{"emea", "apac"},
+		{"amer"},
+		{"amer"},
+		{"amer"},
+		{"amer"},
+		{"amer"},
 	} {
 		if _, err := store.CreateDeal(e.Admin(), deals.CreateDealInput{
 			Name: fmt.Sprintf("Regional deal %d", i), PipelineID: pipeline, StageID: open,
@@ -239,7 +247,7 @@ func TestAMultiselectCustomFieldSplitsDealsByCombinationWithoutDoubleCounting(t 
 	}})
 	t.Cleanup(func() { registerReports(nil) })
 
-	answer := runRegisteredReport(t, e, e.Admin(), "ext:reportdemo:by_region")
+	answer := runRegisteredReport(e.Admin(), t, e, "ext:reportdemo:by_region")
 	counts := map[string]int{}
 	for _, g := range answer.Groups {
 		counts[fmt.Sprint(g.Key)] = g.Count

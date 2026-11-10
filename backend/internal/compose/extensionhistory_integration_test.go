@@ -57,7 +57,7 @@ func registerHistoryVisits(t *testing.T) {
 	})
 }
 
-func readExtensionHistory(t *testing.T, e *integration.Env, ctx context.Context, contact ids.UUID) (int, []crmcontracts.ExtensionHistoryEntry) {
+func readExtensionHistory(ctx context.Context, t *testing.T, e *integration.Env, contact ids.UUID) (int, []crmcontracts.ExtensionHistoryEntry) {
 	t.Helper()
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/v1/extension-history", nil).WithContext(ctx)
@@ -105,7 +105,7 @@ func TestAContactsHistoryCarriesExtensionRowsAndSignalsNewestFirst(t *testing.T)
 			"contact": {Read: true}, "signal": {Read: true}, "ext_historydemo_visit": {Read: true},
 		},
 	})
-	code, got := readExtensionHistory(t, e, reader, contact)
+	code, got := readExtensionHistory(reader, t, e, contact)
 	if code != http.StatusOK {
 		t.Fatalf("status = %d", code)
 	}
@@ -130,17 +130,17 @@ func TestAContactsHistoryCarriesExtensionRowsAndSignalsNewestFirst(t *testing.T)
 		RowScope: principal.RowScopeAll,
 		Objects:  map[string]principal.ObjectGrant{"contact": {Read: true}, "signal": {Read: true}},
 	})
-	if _, got := readExtensionHistory(t, e, noKind, contact); len(got) != 1 || got[0].Title != "Paid late" {
+	if _, got := readExtensionHistory(noKind, t, e, contact); len(got) != 1 || got[0].Title != "Paid late" {
 		t.Errorf("without the kind's read right = %+v, want the signal alone", got)
 	}
 	noContact := e.As(e.Rep1, nil, principal.Permissions{
 		RowScope: principal.RowScopeAll,
 		Objects:  map[string]principal.ObjectGrant{"ext_historydemo_visit": {Read: true}},
 	})
-	if code, _ := readExtensionHistory(t, e, noContact, contact); code == http.StatusOK {
+	if code, _ := readExtensionHistory(noContact, t, e, contact); code == http.StatusOK {
 		t.Error("a caller who may not read contacts was served the History")
 	}
-	if code, _ := readExtensionHistory(t, e, reader, ids.NewV7()); code != http.StatusNotFound {
+	if code, _ := readExtensionHistory(reader, t, e, ids.NewV7()); code != http.StatusNotFound {
 		t.Errorf("a contact nobody holds = %d, want 404", code)
 	}
 }

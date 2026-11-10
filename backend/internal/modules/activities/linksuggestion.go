@@ -130,17 +130,23 @@ func ProposeLinkSuggestionTx(ctx context.Context, tx pgx.Tx, in LinkSuggestionIn
 
 func validateLinkSuggestion(in *LinkSuggestionInput) error {
 	if !slices.Contains(linkSuggestionTargets, in.EntityType) {
-		return &values.ParseError{Field: fieldEntityType, Code: "unknown_link_target",
-			Message: "a message is suggested for a contact, company, deal or project"}
+		return &values.ParseError{
+			Field: fieldEntityType, Code: "unknown_link_target",
+			Message: "a message is suggested for a contact, company, deal or project",
+		}
 	}
 	in.Reason = strings.TrimSpace(in.Reason)
 	if n := utf8.RuneCountInString(in.Reason); n == 0 || n > maxSuggestionReason {
-		return &values.ParseError{Field: fieldSuggestionReason, Code: "bad_suggestion_reason",
-			Message: fmt.Sprintf("a suggestion gives one reason of at most %d characters", maxSuggestionReason)}
+		return &values.ParseError{
+			Field: fieldSuggestionReason, Code: "bad_suggestion_reason",
+			Message: fmt.Sprintf("a suggestion gives one reason of at most %d characters", maxSuggestionReason),
+		}
 	}
 	if in.Score < 0 || in.Score > 1 {
-		return &values.ParseError{Field: "score", Code: "bad_suggestion_score",
-			Message: "a suggestion's score is between 0 and 1"}
+		return &values.ParseError{
+			Field: "score", Code: "bad_suggestion_score",
+			Message: "a suggestion's score is between 0 and 1",
+		}
 	}
 	return nil
 }
