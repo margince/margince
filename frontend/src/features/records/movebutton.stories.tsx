@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, userEvent, within } from "storybook/test";
+import { expect, screen, userEvent, waitFor, within } from "storybook/test";
 import {
   installFetchStub,
   jsonResponse,
@@ -40,6 +40,48 @@ export const CreateTask: Story = {
     installFetchStub({ "GET /me": meRoute({ activity: ["read", "create"] }) });
   },
   args: CREATE_TASK,
+};
+
+/** A seat that may not write activities is offered no follow-up. */
+export const CreateTaskNoGrant: Story = {
+  beforeEach: () => {
+    installFetchStub({ "GET /me": meRoute({ activity: ["read"] }) });
+  },
+  args: CREATE_TASK,
+  play: async () => {
+    // Drawn while the grants are unknown, gone once /me refuses the write.
+    await screen.findByRole("button", { name: "Create follow-up" });
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("button", { name: "Create follow-up" }),
+      ).toBeNull(),
+    );
+  },
+};
+
+/** A seat that may not write activities is offered no follow-up draft. */
+export const DraftFollowUpNoGrant: Story = {
+  beforeEach: () => {
+    installFetchStub({ "GET /me": meRoute({ activity: ["read"] }) });
+  },
+  args: {
+    dealId: "d-1",
+    move: {
+      action: "draft_email",
+      arguments: {
+        activity_id: "m-1",
+        links: [{ entity_type: "contact", entity_id: "p-1" }],
+      },
+    },
+  },
+  play: async () => {
+    await screen.findByRole("button", { name: "Draft follow-up" });
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("button", { name: "Draft follow-up" }),
+      ).toBeNull(),
+    );
+  },
 };
 
 export const RecommendationChanged: Story = {

@@ -90,9 +90,9 @@ The commands above also follow these rules:
 - **Use separate folders for each pass.** Give each pass its own `TRACE=` and `RESUME=`. Then they can run
   at the same time. The records they write are separate: one file for each
   task, provider, model and environment. And no pass replays the journal of the other.
-- **`RESUME=` is a cache that lasts 6 hours.** It holds only for the same program. Any Go edit makes
-  the whole journal stale. So finish the work in section 3 and the fix before you start a run that stopped early
-  again, or the whole run costs money again.
+- **`RESUME=` is a cache that lasts 6 hours.** A replay keeps what the models said, and the code
+  that runs now grades it again. So a Go edit does not empty the journal. A change to a scenario,
+  or to a request a site or the judge is sent, does: those runs cost money again.
 
 Expect these outcomes:
 
@@ -205,6 +205,28 @@ why the certification tests alone leave it green, while CI is red.
 Then run the whole package, and not only your own tests by name:
 `go test ./internal/compose/ -count=1`. A drift gate that you would not think to name
 may be the one that catches this.
+
+## Make a run take less time
+
+A run calls the candidate and then the judge, for every run of every scenario. These settings decide
+how long that takes:
+
+- **`PARALLEL=<n>`** (default `4`) measures that many runs of a task at once. The record is the same one
+  `PARALLEL=1` writes. Add to it until the plan of the judge or the rate limit of the candidate pushes
+  back.
+- **`SITE=<variant>` and `SCENARIO=<regexp>`** measure part of a task, such as the one site a prompt fix
+  changed. The rows measured replace theirs in the committed record, and the verdict is worked out
+  again from every row. The task needs a committed record with a row for every other scenario.
+- **`RUNS=3`** while you look for a fix. Leave it out for the run that writes the record you commit.
+- **A restart replays.** The journal under `RESUME=` keeps what the models said, and the code you
+  build now grades it again. Only a scenario whose case, prompt or judge request changed costs money
+  again ([resume](certify-an-ai-model.md#5-when-the-network-drops-in-the-middle-of-a-run)).
+- **Separate tasks can run side by side.** Give each `TASK=` its own `RESUME=<dir>` ([resume](certify-an-ai-model.md#5-when-the-network-drops-in-the-middle-of-a-run)), and
+  watch how much RAM the machine has left.
+
+Fix in batches. Wait for a run to end, and read every failed scenario in the trace ([trace](certify-an-ai-model.md#4-see-the-prompts--trace-requestresponse-for-tuning)).
+Fix the prompt, case or validator each one points to, and run again once. A fix made while a run is still
+going leaves that run measuring a prompt you have already changed.
 
 ## What this loop does not tell you
 

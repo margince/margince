@@ -18,7 +18,10 @@
 #   4. the shard split holds every test once and spreads slow tests apart;
 #   5. a package too heavy for one process splits into parts that hold every
 #      test once, none empty, balanced by weight;
-#   6. the wall-clock report reads the critical part's own seconds.
+#   6. the wall-clock report reads the critical part's own seconds;
+#   7. a shard starts its heaviest part first, by the weights it split by;
+#   8. discovery finds the tests `go test -tags=integration` runs, and fails on
+#      a file it cannot decide.
 set -euo pipefail
 
 root_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -234,6 +237,15 @@ printf 'backend|./mid|TestP|10.0\nbackend|./mid|*|6.0\n' > "$work/midtime"
 count=$(assign_shard "$work/middisc" "$work/midtime" 1 2 | wc -l | tr -d ' ')
 [[ "$count" -eq 2 ]] || fail "shard 1 of 2 got $count of ./mid's tests; the * row weighs the unnamed ones at 6 s, so it must hold 2"
 
+# A package whose tests all measured 0.00 s, or a file poisoned with zeros,
+# must still spread: a weight of zero never adds to a shard's load.
+printf 'backend|./zero|*|0.000\n' > "$work/zerotime"
+printf 'backend|./zero|TestZ%s\n' 1 2 3 4 5 6 > "$work/zerodisc"
+for k in 1 2 3; do
+  count=$(assign_shard "$work/zerodisc" "$work/zerotime" "$k" 3 | wc -l | tr -d ' ')
+  [[ "$count" -eq 2 ]] || fail "with every weight zero, shard $k got $count of 6 tests; it must get 2"
+done
+
 : > "$work/notiming"
 for k in 1 2 3; do
   count=$(assign_shard "$work/discovery" "$work/notiming" "$k" 3 | grep -c '|./big|' || true)
@@ -292,6 +304,68 @@ expect_order "the critical part is joined to its own seconds, not its sibling's"
 printf './big|20.0|5|8\n' > "$work/othertiming"
 expect_order "a critical part whose log recorded no seconds reports none" \
   './big|5|400|' "$(critical_part "$work/wallclock" "$work/othertiming")"
+
+# 7. Part order, by the weights of the timing above: a part weighs the sum of
+# its tests, a test the file does not name weighs its package's `*` row, the
+# packages mix, and the two 60 s parts keep the order they arrived in.
+cat > "$work/unordered" <<'PARTS'
+backend|./small|^(TestG|TestH)$
+backend|./big|^(TestB|TestC)$
+backend|./big|^(TestA)$
+backend|./small|^(TestNew)$
+backend|./big|^(TestD|TestE)$
+PARTS
+expect_order "parts start heaviest first, whatever package they belong to" \
+  'backend|./big|^(TestA)$
+backend|./big|^(TestD|TestE)$
+backend|./small|^(TestG|TestH)$
+backend|./small|^(TestNew)$
+backend|./big|^(TestB|TestC)$' \
+  "$(order_by_weight "$work/unordered" "$work/timing")"
+
+# 8. Discovery, against a module laid out as the lane meets one.
+mod="$work/mod"
+mkdir -p "$mod/a" "$mod/b" "$mod/c"
+printf '//go:build integration\n\npackage a\n\nfunc TestA(t *testing.T) {}\nfunc TestMain(m *testing.M) {}\nfunc Testhelper() {}\nfunc Test(t *testing.T) {}\n' > "$mod/a/a_test.go"
+printf 'package a\n\nfunc TestUnitOne(t *testing.T) {}\nfunc TestUnitTwo(t *testing.T) {}\n' > "$mod/a/unit_test.go"
+printf 'package a\n\n//go:build integration\nfunc TestProse(t *testing.T) {}\n' > "$mod/a/prose_test.go"
+printf '//go:build linux\n\npackage b\n\nfunc TestB(t *testing.T) {}\n' > "$mod/b/b_test.go"
+printf '//go:build integration\n\npackage c\n\nfunc TestC(t *testing.T) {}\n' > "$mod/c/c_test.go"
+printf '//go:build !integration\n\npackage c\n\nfunc TestNotHere(t *testing.T) {}\n' > "$mod/c/unit_test.go"
+printf '//go:build integration && bench\n\npackage c\n\nfunc TestBench(t *testing.T) {}\n' > "$mod/c/bench_test.go"
+printf '// +build e2e_llm\n\npackage c\n\nfunc TestLLM(t *testing.T) {}\n' > "$mod/c/llm_test.go"
+: > "$work/untagged"
+expect_order "discovery lists the tagged tests of the lane's packages, as go test runs them" \
+  "$(printf '%s\n' "$mod|./a|Test" "$mod|./a|TestA" "$mod|./c|TestC")" \
+  "$(lane_discover "$work/untagged" "$mod")"
+expect_order "an untagged file counts every Test function it holds, and a constraint below package is prose" \
+  "$(printf '%s\n' "$mod|./a|1" "$mod|./a|2")" "$(LC_ALL=C sort "$work/untagged")"
+# go reads no testdata directory, and with a //go:build line it ignores the
+# // +build lines beside it.
+mkdir -p "$mod/c/testdata/fixture"
+printf '//go:build integration\n\npackage fixture\n\nfunc TestFixture(t *testing.T) {}\n' > "$mod/c/testdata/fixture/f_test.go"
+printf '//go:build integration && bench\n// +build integration,bench\n\npackage c\n\nfunc TestPaired(t *testing.T) {}\n' > "$mod/c/paired_test.go"
+printf '//go:build integration\n\npackage c\n\nfunc TestMain(t *testing.T) {}\n' > "$mod/c/main_test.go"
+expect_order "testdata is not read, a paired legacy line follows //go:build, and TestMain(*testing.T) is a test" \
+  "$(printf '%s\n' "$mod|./a|Test" "$mod|./a|TestA" "$mod|./c|TestC" "$mod|./c|TestMain")" \
+  "$(lane_discover "$work/untagged" "$mod")"
+expect_fail() { # label stderr-pattern file content
+  printf '%b' "$4" > "$3"
+  if lane_discover "$work/untagged" "$mod" > /dev/null 2> "$work/err" || ! grep -q "$2" "$work/err"; then
+    fail "$1"
+  fi
+  rm "$3"
+}
+expect_fail "a constraint discovery cannot decide, in a package the lane runs, must fail by name" \
+  linux "$mod/c/linux_test.go" '//go:build linux\n\npackage c\n\nfunc TestLinux(t *testing.T) {}\n'
+expect_fail "a constraint that names integration in another form must fail, not skip its package" \
+  "(integration)" "$mod/d_test.go" '//go:build (integration)\n\npackage d\n\nfunc TestD(t *testing.T) {}\n'
+expect_fail "a tagged file named for a GOOS must fail" \
+  "GOOS or GOARCH" "$mod/c/c_windows_test.go" '//go:build integration\n\npackage c\n\nfunc TestWin(t *testing.T) {}\n'
+expect_fail "a test name outside ASCII must fail" \
+  "outside ASCII" "$mod/c/u_test.go" '//go:build integration\n\npackage c\n\nfunc Test\xc3\x89crit(t *testing.T) {}\n'
+expect_fail "a Fuzz function in a tagged file must fail discovery" \
+  "Fuzz or Example" "$mod/c/fuzz_test.go" '//go:build integration\n\npackage c\n\nfunc FuzzC(f *testing.F) {}\n'
 
 # The committed shard timing has to be readable by assign_shard: four fields,
 # a number last. A line it cannot read silently weighs its test at the mean.

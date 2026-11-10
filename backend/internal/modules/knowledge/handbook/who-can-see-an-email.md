@@ -156,7 +156,10 @@ A held Margince message carries a reason, so you can see why it is held:
 
 A later verdict clears some of these and not others:
 
-- **Held until checked** clears once Margince has sorted the thread.
+- **Held until checked** clears once Margince has sorted the thread. It stays
+  on a thread with an attached file Margince could not read, such as a scan,
+  because nobody knows what that file holds. The mailbox owner can still choose
+  **Share with the company**.
 - **Kept private** stays. Only your decision or your agent's sets it, and nothing
   automatic changes it.
 - **Held: counterparty mail** and **Marked confidential** both win over a later

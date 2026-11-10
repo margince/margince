@@ -295,7 +295,7 @@ func TestAJournaledRunCarriesEveryFieldOfARunOutcome(t *testing.T) {
 		Output: "the widget is blue", Outcome: "accepted", LatencyMS: 1234,
 		TokensIn: 11, TokensOut: 22, CachedTokens: 33, CacheWriteTokens: 44,
 		Degraded: true, HardPass: true, Score: 87, Ungraded: true, JudgeScores: []int{12, 87, 90},
-		Withheld: "SAFETY", Abandoned: true, AnswerConfidence: &ConfidenceRange{Min: 0.6, Max: 0.9},
+		Withheld: "SAFETY", Abandoned: true, Leak: true, AnswerConfidence: &ConfidenceRange{Min: 0.6, Max: 0.9},
 		Provider: "openai_compatible", ServedModel: "z-ai/glm-5.2",
 		ServedIdentitySource: "provider_reported", JudgeServedModel: "claude-haiku-4.5",
 		CertifiedScope: "full_invocation", JudgeDegraded: true, ContextApplied: true,
@@ -455,7 +455,7 @@ func TestALookupAndAJournaledLineAgreeOnTheirKey(t *testing.T) {
 		Scenario: "basic", Stamp: "stamp-a", Run: 2,
 	}
 	view := taskJournal{j: &runJournal{}, task: ai.TaskSummarize, candidate: line.Candidate, judge: line.Judge}
-	view.j.loaded = map[resumeKey]runOutcome{keyOf(line): {RunResult: RunResult{Score: 42}}}
+	view.j.loaded = map[resumeKey]journaledRun{keyOf(line): {Outcome: runOutcome{RunResult: RunResult{Score: 42}}}}
 
 	got, ok := view.lookup(Scenario{Name: line.Scenario}, line.Stamp, line.Run)
 	if !ok {
@@ -466,24 +466,26 @@ func TestALookupAndAJournaledLineAgreeOnTheirKey(t *testing.T) {
 	}
 }
 
-func TestAJournaledRunIsNotReplayedByADifferentBinary(t *testing.T) {
+func TestAJournaledRunIsReplayedByADifferentBinary(t *testing.T) {
 	dir := t.TempDir()
 	sc := testScenario("basic", wideBands)
 	candidate, judge := answeringFakes()
-	if _, err := certifyOnce(t, dir, sc, candidate, judge); err != nil {
+	first, err := certifyOnce(t, dir, sc, candidate, judge)
+	if err != nil {
 		t.Fatalf("first certification: %v", err)
 	}
 
-	// The scenario stamp covers the REQUESTS, never the code that judges the
-	// replies: a tightened site validator, a tightened caps check or a changed
-	// judge-reply parser all leave every stamp exactly where it was. Replaying
-	// across that would certify this build on hard_pass values the previous one
-	// produced — the one failure mode where a resumed record is not merely stale
-	// but wrong about this build.
-	rewriteFirstJournaledRun(t, dir, func(line *journaledRun) { line.Build = "some-other-binary" })
+	// A rebuild after an unrelated change must not cost the runs already paid
+	// for. The replay re-grades what the models said with the code that runs now.
+	rewriteEveryJournaledRun(t, dir, func(line *journaledRun) { line.Build = "some-other-binary" })
 
-	if replayable(t, dir, fixedResumeNow, sc, testCandidateBinding) {
-		t.Fatal("a run scored by a different binary was offered as a replay")
+	refusingCandidate, refusingJudge := refusingFakes(t)
+	second, err := certifyOnce(t, dir, sc, refusingCandidate, refusingJudge)
+	if err != nil {
+		t.Fatalf("a run journaled by another build must replay: %v", err)
+	}
+	if len(refusingCandidate.Calls()) != 0 || !reflect.DeepEqual(first, second) {
+		t.Fatalf("the replay called the candidate %d time(s) and reached\n %+v\nwant\n %+v", len(refusingCandidate.Calls()), second, first)
 	}
 }
 
@@ -553,6 +555,32 @@ func rewriteFirstJournaledRun(t *testing.T, dir string, edit func(*journaledRun)
 		t.Fatalf("re-encoding the first journaled run: %v", err)
 	}
 	lines[0] = string(edited)
+	if werr := os.WriteFile(path, []byte(strings.Join(lines, "\n")+"\n"), 0o600); werr != nil {
+		t.Fatalf("rewriting the journal: %v", werr)
+	}
+}
+
+// rewriteEveryJournaledRun edits every line of the journal in place.
+func rewriteEveryJournaledRun(t *testing.T, dir string, edit func(*journaledRun)) {
+	t.Helper()
+	path := filepath.Join(dir, "aicert-resume.jsonl")
+	raw, err := os.ReadFile(path) // #nosec G304 -- a t.TempDir path
+	if err != nil {
+		t.Fatalf("reading the journal: %v", err)
+	}
+	lines := strings.Split(strings.TrimSuffix(string(raw), "\n"), "\n")
+	for i := range lines {
+		var line journaledRun
+		if uerr := json.Unmarshal([]byte(lines[i]), &line); uerr != nil {
+			t.Fatalf("decoding journaled run %d: %v", i+1, uerr)
+		}
+		edit(&line)
+		edited, merr := json.Marshal(line)
+		if merr != nil {
+			t.Fatalf("re-encoding journaled run %d: %v", i+1, merr)
+		}
+		lines[i] = string(edited)
+	}
 	if werr := os.WriteFile(path, []byte(strings.Join(lines, "\n")+"\n"), 0o600); werr != nil {
 		t.Fatalf("rewriting the journal: %v", werr)
 	}

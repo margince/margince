@@ -179,6 +179,7 @@ var waitingSelectSQL = `
 	            AND ours.channel_provider IS NOT DISTINCT FROM a.channel_provider
 	            AND ours.direction = 'outbound'
 	            AND ours.archived_at IS NULL
+	            -- Not an answer (occurredday.AnswersSQL): it only ranks the row, so id order may break a tie.
 	            AND (ours.occurred_at, ours.id) < (a.occurred_at, a.id)),
 	       COALESCE(
 	         (array_agg(ownerDeal.owner_id ORDER BY ownerDeal.id::text)

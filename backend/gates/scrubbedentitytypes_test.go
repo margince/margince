@@ -71,6 +71,8 @@ var scrubbedEntityTypes = map[string]bool{
 	// weekly deal reconstruction reads none of their images.
 	"data_subject_request":   true,
 	"deal_room_comment":      true,
+	"deal_room_session":      true,
+	"deal_room_thread":       true,
 	"dedupe_candidate":       true,
 	"intro_request":          true,
 	"weekly_plan_commitment": true,

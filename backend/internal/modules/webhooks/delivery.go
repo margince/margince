@@ -65,7 +65,10 @@ type Deliverer struct {
 	log      *slog.Logger
 	// publicBaseURL is the app's origin for record links; empty sends none.
 	publicBaseURL string
-	beforeSend    func(context.Context) error
+	// beforeSend runs in each attempt's send check, after the connection is up
+	// and before the row is re-read. Nil outside tests, which use it to change
+	// the row at that point; an error counts as a check that could not run.
+	beforeSend func(context.Context) error
 }
 
 // WithPublicBaseURL sets the origin that record links in a delivery start
@@ -389,8 +392,10 @@ func (d *Deliverer) Replay(ctx context.Context, subID, deliveryID ids.UUID) (Del
 // it is logged (the sweeper's re-scan is the recovery, and the row's prior
 // state is safe).
 func (d *Deliverer) deliverOnce(ctx context.Context, t attemptTarget) {
-	res := d.attempt(ctx, t, func() bool { return d.sendAuthorized(ctx, t) })
-	if res.suppressed {
+	res := d.attempt(ctx, t, d.sendGuard(ctx, t))
+	if res.withdrawn {
+		// The row was revoked, erased or re-claimed; its new state is not ours to overwrite.
+		d.log.Info("webhooks: delivery withdrawn before its body was sent", "delivery", t.deliveryID, "claim", claimedAt(t))
 		return
 	}
 	if err := d.store.recordOutcome(ctx, t, res, d.clock()); err != nil {
@@ -398,10 +403,17 @@ func (d *Deliverer) deliverOnce(ctx context.Context, t attemptTarget) {
 	}
 }
 
-// attempt signs and POSTs the stored body, returning the outcome. A
+// attempt sends t's body over a connection on which guard holds the row, and
+// decides the outcome from that check first (checkedOutcome).
+func (d *Deliverer) attempt(ctx context.Context, t attemptTarget, guard sendHold) outcome {
+	check := &sendCheck{hold: guard}
+	return checkedOutcome(check, d.post(withSendCheck(ctx, check), t))
+}
+
+// post signs and POSTs the stored body, returning the outcome. A
 // non-2xx or a transport error is a failure; the receiver's response body
 // is read (capped) only to keep the connection reusable and is discarded.
-func (d *Deliverer) attempt(ctx context.Context, t attemptTarget, authorize func() bool) outcome {
+func (d *Deliverer) post(ctx context.Context, t attemptTarget) outcome {
 	if d.store.cipher == nil {
 		return outcome{failure: "signing key not configured"}
 	}
@@ -445,9 +457,6 @@ func (d *Deliverer) attempt(ctx context.Context, t attemptTarget, authorize func
 	req.Header.Set(HeaderWebhookTimestamp, strconv.FormatInt(ts, 10))
 	req.Header.Set(HeaderWebhookSignature, sig)
 
-	if authorize == nil || !authorize() {
-		return outcome{suppressed: true}
-	}
 	resp, err := d.client.Do(req)
 	if err != nil {
 		return outcome{failure: "request failed: " + err.Error()}

@@ -41,8 +41,8 @@ func TestTheLearningsPromptReadsTheReviewsFrozenWeek(t *testing.T) {
 			CommitmentsDue: 4, CommitmentsKept: 3, MeetingsHeld: 8, LeadsRouted: 6,
 		},
 		Deals: []promptDeal{
-			{Type: learnings.SubjectDeal, ID: won, Label: "Voltaq renewal", Outcome: "won"},
-			{Type: learnings.SubjectDeal, ID: lost, Label: "Nordwerk pilot", Outcome: "lost"},
+			{Type: learnings.SubjectDeal, Ref: "d1", Label: "Voltaq renewal", Outcome: "won"},
+			{Type: learnings.SubjectDeal, Ref: "d2", Label: "Nordwerk pilot", Outcome: "lost"},
 		},
 	}
 	if !reflect.DeepEqual(got, want) {
@@ -66,10 +66,10 @@ type promptWeek struct {
 }
 
 type promptDeal struct {
-	Type    string   `json:"type"`
-	ID      ids.UUID `json:"id"`
-	Label   string   `json:"label"`
-	Outcome string   `json:"outcome,omitempty"`
+	Type    string `json:"type"`
+	Ref     string `json:"id"`
+	Label   string `json:"label"`
+	Outcome string `json:"outcome,omitempty"`
 }
 
 // promptedWeek decodes the week out of the fenced user turn the request sends.

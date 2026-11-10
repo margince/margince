@@ -22,17 +22,26 @@ import (
 // on the audit row.
 const RequestSettlementActor = "system:request_settlement"
 
-// settlementEvidenceSQL is the request and every answer a verdict may be
-// judged over, as sorted id:version pairs. It reads alias a with $1 as the
-// bound. Every UPDATE on activity bumps version, so a body edit, an audience
-// change or a narrowing changes the value. A narrowed answer leaves the set.
+// settlementEvidenceSQL is the request, its answers and its tied context (settlementContextSQL), as sorted
+// id:version pairs. It reads alias a with $1 as the bound. Every UPDATE on activity bumps version, so a body edit,
+// an audience change or a narrowing changes the value. A narrowed answer leaves the set.
 // The request sits inside the `IN` list: an `OR` beside it scans every row.
 //
 // Held by: TestSettlementEvidenceReadsEachActivityByItsID (backend/internal/modules/activities/requestsettlementevidenceplan_integration_test.go)
 func settlementEvidenceSQL() string {
 	return `SELECT string_agg(seen.id::text || ':' || seen.version, ',' ORDER BY seen.id)
    FROM activity seen
-  WHERE seen.id IN (SELECT a.id UNION ALL SELECT answered.id FROM (` + settlementAnswersSQL() + `) answered)`
+  WHERE seen.id IN (SELECT a.id UNION ALL SELECT answered.id FROM (` + settlementAnswersSQL() + `) answered
+    UNION ALL SELECT context.id FROM (` + settlementContextSQL() + `) context)`
+}
+
+// settlementContextSQL selects their mail on request a's thread at its stored instant, as SettlementThreadSQL feeds
+// it to the model. It is context, never an answer, so the binding and the verdict's locks add it beside the answers.
+func settlementContextSQL() string {
+	return `SELECT context.id, context.occurred_at FROM activity context
+   WHERE ` + correspondentInThisThread("context", "a") + ` AND ` + tiedContextSQL("context", "a") + `
+     AND context.audience = 'workspace' AND context.restricted_at IS NULL
+     AND ` + occurredday.BegunSQL("context", "$1") + ` AND context.id <> a.id`
 }
 
 // reArmedSettlementSQL is a settled request whose verdict recorded the
@@ -113,4 +122,14 @@ func reopenSettledReminder(ctx context.Context, tx pgx.Tx, in RequestSettlementI
 		return nil
 	}
 	return err
+}
+
+// SettlementThreadSQL keeps a thread row under row that the settlement pass reads after the request under request.
+// That is an answer (occurredday.AnswersSQL), or their own mail at the request's stored instant, read as context only.
+func SettlementThreadSQL(row, request string) string {
+	return `(` + occurredday.AnswersSQL(row, request) + ` OR ` + tiedContextSQL(row, request) + `)`
+}
+
+func tiedContextSQL(row, request string) string {
+	return `(` + row + `.occurred_at = ` + request + `.occurred_at AND ` + CapturedInboundSQL(row) + `)`
 }

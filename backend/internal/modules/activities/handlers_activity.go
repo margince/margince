@@ -30,8 +30,9 @@ func (h Handlers) ListActivities(w http.ResponseWriter, r *http.Request, params 
 		CustomFilters:    httperr.CustomFieldFilters(r),
 	}
 	if params.Kind != nil {
-		k := string(*params.Kind)
-		in.Kind = &k
+		for _, kind := range *params.Kind {
+			in.Kinds = append(in.Kinds, string(kind))
+		}
 	}
 	in.ChannelProvider = params.ChannelProvider
 	if params.CallOutcome != nil {
@@ -61,12 +62,8 @@ func (h Handlers) ListActivities(w http.ResponseWriter, r *http.Request, params 
 	}
 	out := crmcontracts.ActivityListResponse{Data: activities, Page: pageInfo(page)}
 	if h.listCalendar != nil {
-		kind := ""
-		if in.Kind != nil {
-			kind = *in.Kind
-		}
 		calendar, owed, err := h.listCalendar(r.Context(), datasource.ActivityListScope{
-			Kind:     kind,
+			Kinds:    in.Kinds,
 			Windowed: in.OccurredAfter != nil || in.OccurredBefore != nil,
 			Narrowed: in.EntityID != nil || in.AssigneeID != nil || in.WithinProjectID != nil,
 		})

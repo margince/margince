@@ -1,13 +1,11 @@
 /** @vitest-environment happy-dom */
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render as renderRTL, screen } from "@testing-library/react";
-import type { ReactNode } from "react";
-import { afterEach, expect, it } from "vitest";
-import { holdExits } from "../design-system/presence-testing";
-import { LocaleProvider } from "../i18n";
+import { cleanup, fireEvent, screen } from "@testing-library/react";
+import { useState } from "react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { holdExits, watchHiding } from "../design-system/presence-testing";
+import { renderWithQueryClient } from "../testing/queryrender";
+import { steppedClock } from "../testing/steppedclock";
 import { type Command, CommandPalette } from "./palette";
-
-afterEach(cleanup);
 
 // One screen command is enough: this file asks where focus goes when the
 // palette closes, not what it lists.
@@ -21,49 +19,111 @@ const commands: Command[] = [
   },
 ];
 
-function render(ui: ReactNode) {
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
-  return renderRTL(
-    <QueryClientProvider client={client}>
-      <LocaleProvider initial="en">{ui}</LocaleProvider>
-    </QueryClientProvider>,
+// The exit is held, so the overlay is still mounted, inert and hidden, when
+// each case asks where focus went.
+let exits: ReturnType<typeof holdExits>;
+let hiding: ReturnType<typeof watchHiding>;
+
+beforeEach(() => {
+  exits = holdExits();
+  hiding = watchHiding();
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(
+      async () =>
+        new Response(
+          JSON.stringify({
+            data: [],
+            page: { next_cursor: null, has_more: false },
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        ),
+    ),
+  );
+});
+
+afterEach(() => {
+  cleanup();
+  hiding.restore();
+  exits.mockRestore();
+  vi.useRealTimers();
+  vi.unstubAllGlobals();
+  window.location.hash = "";
+});
+
+function PaletteFromButton() {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button type="button" onClick={() => setOpen(true)}>
+        Search
+      </button>
+      <CommandPalette
+        open={open}
+        onClose={() => setOpen(false)}
+        commands={commands}
+      />
+    </>
   );
 }
 
-it("hands focus out of the overlay before making it inert", () => {
-  // The exit is held, so the overlay is still mounted when this asks where
-  // focus went. Unheld it unmounts at once, and there is no inert subtree to
-  // ask about.
-  const exits = holdExits();
-  const opener = document.createElement("button");
-  opener.textContent = "open the palette";
-  document.body.append(opener);
-  try {
-    opener.focus();
-    const { rerender } = render(
-      <CommandPalette open onClose={() => {}} commands={commands} />,
+function overlay(): Element {
+  const found = document.querySelector(".palette-overlay");
+  if (!found) throw new Error("the palette is not on the page");
+  return found;
+}
+
+describe("the palette hands focus back before it hides its overlay", () => {
+  async function openFromButton() {
+    const user = steppedClock();
+    renderWithQueryClient(<PaletteFromButton />);
+    const opener = screen.getByRole("button", { name: "Search" });
+    await user.click(opener);
+    expect(document.activeElement).toBe(screen.getByRole("searchbox"));
+    return { user, opener };
+  }
+
+  it("on Escape", async () => {
+    const { user, opener } = await openFromButton();
+    await user.keyboard("{Escape}");
+    hiding.expectHiddenAfterFocusLeft(overlay());
+    expect(document.activeElement).toBe(opener);
+  });
+
+  it("on a press on the backdrop", async () => {
+    const { opener } = await openFromButton();
+    fireEvent.pointerDown(overlay());
+    fireEvent.pointerUp(overlay());
+    fireEvent.click(overlay());
+    hiding.expectHiddenAfterFocusLeft(overlay());
+    expect(document.activeElement).toBe(opener);
+  });
+
+  it("on Enter, running the selected row", async () => {
+    const { user, opener } = await openFromButton();
+    await user.type(screen.getByRole("searchbox"), "deals");
+    await user.keyboard("{Enter}");
+    expect(window.location.hash).toBe("#/deals");
+    hiding.expectHiddenAfterFocusLeft(overlay());
+    expect(document.activeElement).toBe(opener);
+  });
+
+  it("when the page behind closes it", () => {
+    const page = (open: boolean) => (
+      <>
+        <button type="button">Search</button>
+        <CommandPalette open={open} onClose={() => {}} commands={commands} />
+      </>
     );
+    const { rerender } = renderWithQueryClient(page(false));
+    const opener = screen.getByRole("button", { name: "Search" });
+    opener.focus();
+    rerender(page(true));
     expect(document.activeElement).toBe(screen.getByRole("searchbox"));
 
-    rerender(
-      <QueryClientProvider client={new QueryClient()}>
-        <LocaleProvider initial="en">
-          <CommandPalette open={false} onClose={() => {}} commands={commands} />
-        </LocaleProvider>
-      </QueryClientProvider>,
-    );
+    rerender(page(false));
 
-    // The overlay stays mounted to play its exit and is marked inert. Focus
-    // left inside an inert subtree is focus no reader can use, and the next
-    // Tab restarts at the top of the document.
-    const inertOverlay = document.querySelector("[inert]");
-    expect(inertOverlay).not.toBeNull();
-    expect(inertOverlay?.contains(document.activeElement)).toBe(false);
+    hiding.expectHiddenAfterFocusLeft(overlay());
     expect(document.activeElement).toBe(opener);
-  } finally {
-    opener.remove();
-    exits.mockRestore();
-  }
+  });
 });

@@ -42,6 +42,7 @@ TOTAL="$(sed -n 's/^total=//p' "$first_meta")"
 [[ "$TOTAL" =~ ^[0-9]+$ && "$TOTAL" -ge 1 ]] || fail "unparsable total= in $first_meta"
 
 REF_DISCOVERY="$ARTIFACTS/integration-shard-1/discovery.txt"
+REF_TIMING=""
 UNION="$(mktemp)"
 trap 'rm -f "$UNION"' EXIT
 
@@ -53,6 +54,13 @@ for k in $(seq 1 "$TOTAL"); do
   grep -qx "shard=$k" "$d/meta.txt" || fail "shard $k artifact carries $(grep '^shard=' "$d/meta.txt") — artifact/matrix mix-up"
   grep -qx "total=$TOTAL" "$d/meta.txt" || fail "shard $k ran with $(grep '^total=' "$d/meta.txt"), expected total=$TOTAL — the matrix and INTEGRATION_SHARD disagree"
   cmp -s "$REF_DISCOVERY" "$d/discovery.txt" || fail "shard $k discovered a different test set than shard 1 — shards did not run the same code"
+  # Another file of weights deals another split, so the slices would overlap and
+  # leave gaps with no slicing bug to find.
+  if (( k == 1 )); then
+    REF_TIMING="$(sed -n 's/^timing=//p' "$d/meta.txt")"
+    [[ -n "$REF_TIMING" ]] || fail "shard 1 names no timing= digest in its meta.txt — the weights it split by are unknown"
+  fi
+  grep -qx "timing=$REF_TIMING" "$d/meta.txt" || fail "shard $k split by other test durations than shard 1 ($(grep '^timing=' "$d/meta.txt" || echo 'no timing=')) — every shard of a run must read the one file the build job hands on"
   diff "$d/assigned.txt" "$d/ran.txt" > /dev/null || fail "shard $k ran a different test set than assigned (its own gate should have caught this)"
   cat "$d/assigned.txt" >> "$UNION"
 done
