@@ -6649,11 +6649,6 @@ export const en = {
   "brief.briefedAt": "Briefed by Margince at {time}",
   "brief.task.done": "Mark done: {title}",
   "brief.task.reply": "Reply to {name}: {subject}",
-  "brief.pager.label": "Tasks",
-  "brief.pager.previous": "Previous task",
-  "brief.pager.next": "Next task",
-  "brief.pager.hint":
-    "Swipe left or right to browse tasks. You can also use the arrow keys on the navigation buttons.",
   "brief.first.title": "Needs you",
   "brief.intro.waiting": "Waiting on you",
   "brief.intro.meetings": "Meetings today",

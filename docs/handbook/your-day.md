@@ -6,7 +6,7 @@
 
 The Worklist is the ranked to-do list in Margince: one list of everything waiting on you, in the order Margince ranks them. That is buyers to answer, tasks due, promises made, deals at risk and items to check. It lives on **Home**. Press **Show Worklist** to open it as a panel over the page; **Hide Worklist** closes it. It has no sidebar row of its own.
 
-Move through the task card by dragging it or using the **Previous task** and **Next task** buttons. The arrow keys work on those buttons. Moving between tasks changes only which task you see.
+Under **Needs you**, every task is its own card, and the first one is open. Press another card to open it in its place. Opening a card changes only which task you see.
 
 When you email a task's contact after the task was created, Margince marks the task done and shows a receipt in **Done for you**. Bulk mail and a contact named only in Bcc do not count. **Undo** reopens the task; the same email will not close it again. This includes tasks from website requests.
 
