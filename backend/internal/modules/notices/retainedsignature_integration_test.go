@@ -18,7 +18,8 @@ import (
 func TestARetainedSignatureNoticeKeepsItsLinkAcrossStoredDescriptorVersions(t *testing.T) {
 	e := setupNotices(t)
 	signature, owner := ids.NewV7(), ids.NewV7()
-	input := NewNotice{Recipient: e.recipient, Kind: KindPrivacyReviewRequired,
+	input := NewNotice{
+		Recipient: e.recipient, Kind: KindPrivacyReviewRequired,
 		Subject:    systemtext.Literal("privacy.review.subject"),
 		Body:       fmt.Sprintf(systemtext.Copy("privacy.review.inactive", textlang.English), signature.String(), owner.String()),
 		SystemText: &systemtext.Message{Subject: systemtext.Sentence("privacy.review.subject"), Body: systemtext.Sentence("privacy.review.inactive", systemtext.Text(signature.String()), systemtext.Text(owner.String()))},

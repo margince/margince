@@ -39,8 +39,10 @@ func TestAPrivateActivitySupportsOnlyItsAudience(t *testing.T) {
 			if kind == "inquiry" {
 				ctx := e.seatCtx(e.user)
 				if err := e.store.db.Tx(ctx, func(tx pgx.Tx) error {
-					return RecordSubjectInquiry(ctx, tx, e.contact.String(), QualifyingEvent{Kind: KindInquiry, OccurredAt: when,
-						SourceEntityType: "activity", SourceEntityID: source.String()}, "connector:gmail")
+					return RecordSubjectInquiry(ctx, tx, e.contact.String(), QualifyingEvent{
+						Kind: KindInquiry, OccurredAt: when,
+						SourceEntityType: "activity", SourceEntityID: source.String(),
+					}, "connector:gmail")
 				}); err != nil {
 					t.Fatal(err)
 				}

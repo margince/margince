@@ -388,8 +388,10 @@ func TestAMergeCarriesQualifyingEventsWithoutDoublingOne(t *testing.T) {
 		_, err := tx.Exec(c.admin, `INSERT INTO consent_qualifying_event
  (contact_id,kind,source_entity_type,source_entity_id,occurred_at,source,captured_by)
  VALUES (@contact,'active_deal','deal',@deal,@when,'derived',@actor)`,
-			pgx.StrictNamedArgs{"contact": retired, "deal": deal,
-				"when": time.Date(2026, 10, 1, 12, 0, 0, 0, time.UTC), "actor": "human:" + c.e.AdminUser.String()})
+			pgx.StrictNamedArgs{
+				"contact": retired, "deal": deal,
+				"when": time.Date(2026, 10, 1, 12, 0, 0, 0, time.UTC), "actor": "human:" + c.e.AdminUser.String(),
+			})
 		return err
 	}); err != nil {
 		t.Fatal(err)

@@ -25,8 +25,10 @@ func TestAnActiveAgentCanHoldAResponsibilityWithoutGainingAccess(t *testing.T) {
 	agent := declareSignatureServiceMember(t, e)
 	company := e.SeedCompany(t, "Private company", &e.AdminUser)
 	e.WsExec(t, `UPDATE company SET visibility='owner' WHERE id=$1`, company)
-	actor := principal.Principal{Type: principal.PrincipalAgent, ID: "agent:" + agent.String(), UserID: agent.UUID, SeatType: principal.SeatFull,
-		Permissions: principal.Permissions{RowScope: principal.RowScopeOwn, Objects: map[string]principal.ObjectGrant{"company": {Read: true}, "custom_field": {Read: true}}}}
+	actor := principal.Principal{
+		Type: principal.PrincipalAgent, ID: "agent:" + agent.String(), UserID: agent.UUID, SeatType: principal.SeatFull,
+		Permissions: principal.Permissions{RowScope: principal.RowScopeOwn, Objects: map[string]principal.ObjectGrant{"company": {Read: true}, "custom_field": {Read: true}}},
+	}
 	agentContext := principal.WithActor(e.Admin(), actor)
 	companies := contacts.NewStore(e.DB())
 	if _, err := companies.GetCompany(agentContext, ids.From[ids.CompanyKind](company), storekit.LiveOnly); !errors.Is(err, apperrors.ErrNotFound) {
