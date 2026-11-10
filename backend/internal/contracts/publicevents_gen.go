@@ -180,6 +180,27 @@ func (e PublicEventActivityDispositionRecordedDisposition) Valid() bool {
 	}
 }
 
+// Defines values for PublicEventActivityInvitationAnsweredResponse.
+const (
+	Accepted  PublicEventActivityInvitationAnsweredResponse = "accepted"
+	Declined  PublicEventActivityInvitationAnsweredResponse = "declined"
+	Tentative PublicEventActivityInvitationAnsweredResponse = "tentative"
+)
+
+// Valid indicates whether the value is a known member of the PublicEventActivityInvitationAnsweredResponse enum.
+func (e PublicEventActivityInvitationAnsweredResponse) Valid() bool {
+	switch e {
+	case Accepted:
+		return true
+	case Declined:
+		return true
+	case Tentative:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for PublicEventActivityReadinessRecordedState.
 const (
 	Ready     PublicEventActivityReadinessRecordedState = "ready"
@@ -590,6 +611,7 @@ const (
 	ActivityArchived                      SubscribableEventType = "activity.archived"
 	ActivityCaptured                      SubscribableEventType = "activity.captured"
 	ActivityDispositionRecorded           SubscribableEventType = "activity.disposition_recorded"
+	ActivityInvitationAnswered            SubscribableEventType = "activity.invitation_answered"
 	ActivityLinkSuggestionChanged         SubscribableEventType = "activity.link_suggestion_changed"
 	ActivityMarkedHandled                 SubscribableEventType = "activity.marked_handled"
 	ActivityReadinessRecorded             SubscribableEventType = "activity.readiness_recorded"
@@ -746,6 +768,8 @@ func (e SubscribableEventType) Valid() bool {
 	case ActivityCaptured:
 		return true
 	case ActivityDispositionRecorded:
+		return true
+	case ActivityInvitationAnswered:
 		return true
 	case ActivityLinkSuggestionChanged:
 		return true
@@ -1201,6 +1225,15 @@ type PublicEventActivityDispositionRecorded struct {
 
 // PublicEventActivityDispositionRecordedDisposition What was decided. `sales_again` and `picked_up` are the undos of `not_sales` and of the reader states, Done included. A decision withdrawn is itself a decision. A consumer counting dispositions has to see it happen rather than infer it from a row going quiet.
 type PublicEventActivityDispositionRecordedDisposition string
+
+// PublicEventActivityInvitationAnswered Payload for activity.invitation_answered. One reader answered a calendar invitation that came by email, and their own calendar sent the answer to the organizer (activities/calendarinvitation.go). It is that reader's own answer, and the reader is not on the wire. The same press marks the message done for them, announced as activity.marked_handled.
+type PublicEventActivityInvitationAnswered struct {
+	ActivityId openapi_types.UUID                            `json:"activity_id"`
+	Response   PublicEventActivityInvitationAnsweredResponse `json:"response"`
+}
+
+// PublicEventActivityInvitationAnsweredResponse defines model for PublicEventActivityInvitationAnswered.Response.
+type PublicEventActivityInvitationAnsweredResponse string
 
 // PublicEventActivityLinkSuggestionChanged Payload for activity.link_suggestion_changed. An extension proposed a record a message may belong to, or a reader accepted or rejected one (activities/linksuggestion.go). A proposal attaches nothing. Accepting it files the message through the ordinary relink, which announces activity.updated as well. Who decided is on the audit row, not on the wire.
 type PublicEventActivityLinkSuggestionChanged struct {
@@ -3016,6 +3049,12 @@ func (PublicEventActivityDispositionRecorded) EventType() string {
 
 func (PublicEventActivityDispositionRecorded) EntityType() string { return "activity" }
 
+func (PublicEventActivityInvitationAnswered) EventType() string {
+	return "activity.invitation_answered"
+}
+
+func (PublicEventActivityInvitationAnswered) EntityType() string { return "activity" }
+
 func (PublicEventActivityLinkSuggestionChanged) EventType() string {
 	return "activity.link_suggestion_changed"
 }
@@ -3623,6 +3662,7 @@ var PublicEventVersions = map[string]int{
 	"activity.archived":                         1,
 	"activity.captured":                         1,
 	"activity.disposition_recorded":             1,
+	"activity.invitation_answered":              1,
 	"activity.link_suggestion_changed":          1,
 	"activity.marked_handled":                   1,
 	"activity.readiness_recorded":               1,
@@ -3777,6 +3817,7 @@ var PublicEventSamples = map[string]string{
 	"activity.archived":                         "{\"import_run_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"imported\":true}",
 	"activity.captured":                         "{\"channel_provider\":\"Sample channel provider\",\"import_run_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"imported\":true,\"kind\":\"Sample kind\",\"source_system\":\"Sample source system\"}",
 	"activity.disposition_recorded":             "{\"activity_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"disposition\":\"not_sales\"}",
+	"activity.invitation_answered":              "{\"activity_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"response\":\"accepted\"}",
 	"activity.link_suggestion_changed":          "{\"activity_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"status\":\"Sample status\",\"suggestion_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"target_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"target_type\":\"Sample target type\"}",
 	"activity.marked_handled":                   "{\"activity_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"activity.readiness_recorded":               "{\"activity_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"preparation_revision\":\"Sample preparation revision\",\"state\":\"ready\"}",

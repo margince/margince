@@ -52,8 +52,8 @@ var linkSuggestionTargets = []string{linkEntityContact, linkEntityCompany, linkE
 
 // targetNameColumns is the column that names each target kind on its table.
 var targetNameColumns = map[string]string{
-	linkEntityContact: "full_name", linkEntityCompany: "display_name",
-	linkEntityDeal: "name", linkEntityProject: "name",
+	linkEntityContact: columnFullName, linkEntityCompany: "display_name",
+	linkEntityDeal: columnName, linkEntityProject: columnName,
 }
 
 const fieldSuggestionReason = "reason"
@@ -167,7 +167,7 @@ func recordLinkSuggestion(
 ) error {
 	auditID, err := storekit.AuditEvent(ctx, tx, "update", "activity", activity.UUID, map[string]any{
 		"link_suggestion": map[string]any{
-			"id": suggestion, "status": status, fieldEntityType: entityType, fieldEntityID: entityID,
+			"id": suggestion, fieldStatus: status, fieldEntityType: entityType, fieldEntityID: entityID,
 		},
 	})
 	if err != nil {

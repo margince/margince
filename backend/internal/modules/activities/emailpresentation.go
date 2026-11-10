@@ -138,11 +138,13 @@ func readEmailPresentation(ctx context.Context, tx pgx.Tx, id ids.ActivityID, th
 	}
 	out.Access = access
 	out.Summary = availableSummary(activity, parties, len(attachments), access.DisplayStatus)
-
 	// What HAPPENED to it. Read after the access gate for the reason the
 	// attachment count is: whether a message left is something about the
 	// message, so the caller's own gate is what decides.
 	if out.ControllerSend, err = withEmailStateOn(ctx, tx, activity.Id, &out.Summary, asOf); err != nil {
+		return crmcontracts.EmailPresentation{}, err
+	}
+	if err := markOpenInvitation(ctx, tx, id, &out.Summary, asOf); err != nil {
 		return crmcontracts.EmailPresentation{}, err
 	}
 
@@ -161,6 +163,19 @@ func readEmailPresentation(ctx context.Context, tx pgx.Tx, id ids.ActivityID, th
 		out.CanRelink = writable
 	}
 	return out, nil
+}
+
+// markOpenInvitation turns the summary into an invitation's when the reader
+// may still answer it.
+func markOpenInvitation(ctx context.Context, tx pgx.Tx, id ids.ActivityID, summary *crmcontracts.EmailSummary, asOf time.Time) error {
+	open, err := openInvitationsTx(ctx, tx, []ids.UUID{id.UUID}, readerOrNobody(ctx), asOf)
+	if err != nil {
+		return err
+	}
+	if found, ok := open[id.UUID]; ok {
+		found.mark(summary)
+	}
+	return nil
 }
 
 // withheldPresentation is the whole answer for a caller who may know the

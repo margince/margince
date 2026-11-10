@@ -131,7 +131,7 @@ func (s *Store) FinishExtractionRead(ctx context.Context, readID ids.UUID, outco
 		// anyone set — and a document is re-read by starting a new attempt,
 		// never by putting a finished one back to running.
 		auditID, err := storekit.AuditEvent(ctx, tx, "update", "attachment_extraction", readID, map[string]any{
-			"status": outcome.Status, "grounded": groundedCount(outcome.Fields),
+			fieldStatus: outcome.Status, "grounded": groundedCount(outcome.Fields),
 		})
 		if err != nil {
 			return fmt.Errorf("audit extraction reading finish: %w", err)

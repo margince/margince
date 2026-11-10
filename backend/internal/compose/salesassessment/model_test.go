@@ -131,6 +131,33 @@ func TestParagraphsCannotKeepAnUnsupportedClaimOrInventAnAction(t *testing.T) {
 	}
 }
 
+func TestAParagraphWrittenAsOneSentenceObjectReadsAsAOneSentenceParagraph(t *testing.T) {
+	sentence := `{"text":"The open pipeline of 370000 EUR is the starting point.","kind":"observation","cells":["metric:open_pipeline"]}`
+	for name, reply := range map[string]string{
+		"a list of sentences": `{"paragraphs":[[` + sentence + `],[` + sentence + `]]}`,
+		"a bare sentence":     `{"paragraphs":[` + sentence + `,` + sentence + `]}`,
+	} {
+		got, err := Parse(reply, assessmentInput())
+		if err != nil {
+			t.Fatalf("%s: %v", name, err)
+		}
+		if len(got.Paragraphs) != 2 || len(got.Paragraphs[0]) != 1 || len(got.Sentences) != 2 {
+			t.Fatalf("%s: read %+v, want two one-sentence paragraphs", name, got)
+		}
+	}
+}
+
+func TestABareSentenceParagraphStillPassesTheSentenceChecks(t *testing.T) {
+	for reply, refusal := range map[string]string{
+		`{"paragraphs":[{"text":"The pipeline is 42 EUR.","cells":["metric:open_pipeline"]}]}`:            "unsupported sentence",
+		`{"paragraphs":[{"text":"You still owe r1.","cells":["metric:open_pipeline"],"records":["r1"]}]}`: "spells an id",
+	} {
+		if _, err := Parse(reply, decisionInput()); err == nil || !strings.Contains(err.Error(), refusal) {
+			t.Fatalf("Parse(%s) = %v, want the %q refusal", reply, err, refusal)
+		}
+	}
+}
+
 func decisionInput() Input {
 	return Input{
 		Frame: FrameIn{Scope: "Whole company", Period: "this_quarter", Currency: "EUR", Today: "2026-11-03"},
