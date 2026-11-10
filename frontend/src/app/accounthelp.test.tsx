@@ -56,7 +56,7 @@ function renderMenu() {
   );
 }
 
-const trigger = () => screen.getByRole("button", { name: "Account" });
+const trigger = () => screen.getByRole("button", { name: "TU Account" });
 const row = (name: string | RegExp) => screen.getByRole("menuitem", { name });
 const helpMenu = () => screen.getByRole("menu", { name: "Help and feedback" });
 const helpItem = (name: string | RegExp) =>
