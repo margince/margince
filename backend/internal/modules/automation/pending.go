@@ -10,145 +10,116 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
-	"github.com/margince/margince/backend/internal/shared/ports/workflow"
 )
 
-// pendingWindow bounds how far back a write still counts as one an automation
-// may react to. A run crashed between its claim and its outcome stays unfinished
-// forever, and past this window it stops reading as pending.
-const pendingWindow = "2 minutes"
+// maxPendingEvents bounds one check to the caller's newest events on the
+// records. The answer is a yes or no, so older ones would only add cost.
+const maxPendingEvents = 50
 
-// PendingFor counts the automation runs still due on the caller's own recent
-// writes to any of these records. A run is due while its event is undelivered,
-// or while a handler that fires on it has no outcome yet. Only the caller's
-// writes count, so a listing reveals nothing about records another hand touched.
-func (e *WorkflowEngine) PendingFor(ctx context.Context, targets []ids.Ref) (int, error) {
+// PendingFor says whether an automation is still due to act on the caller's own
+// writes to any of these records. It is due while the event is undelivered, or
+// while a handler that fires on it has no outcome yet. Only the caller's
+// writes count.
+//
+// A delivered event whose consumer died is handled again within the reclaim
+// window. Past it, a firing with no run row never gets one, and a claim with
+// no outcome crashed.
+func (e *WorkflowEngine) PendingFor(ctx context.Context, targets []ids.Ref) (bool, error) {
 	caller, ok := principal.Actor(ctx)
 	if len(targets) == 0 || !ok {
-		return 0, nil
+		return false, nil
 	}
 	ws, err := e.db.Workspace(ctx)
 	if err != nil {
-		return 0, err
+		return false, err
 	}
-	events, err := e.recentEventsOn(ctx, caller.ID, targets)
-	if err != nil {
-		return 0, err
-	}
-	if len(events) == 0 {
-		return 0, nil
-	}
-	// Match reads the event as HandleEvent hands it over, workspace included.
 	ctx = principal.WithWorkspaceID(ctx, ws.UUID)
-	instances, err := e.liveInstances(ctx)
-	if err != nil {
-		return 0, fmt.Errorf("loading automation instances: %w", err)
-	}
-	pending := 0
+	window := fmt.Sprintf("%d seconds", int(events.DefaultMinIdle.Seconds()))
+	pending := false
 	err = e.db.Tx(ctx, func(tx pgx.Tx) error {
-		for _, raw := range events {
+		envelopes, err := recentEventsOn(ctx, tx, caller.ID, targets, window)
+		if err != nil || len(envelopes) == 0 {
+			return err
+		}
+		instances, err := e.liveInstances(ctx)
+		if err != nil {
+			return fmt.Errorf("loading automation instances: %w", err)
+		}
+		var handlers, keys []string
+		for _, raw := range envelopes {
 			ev, err := eventFromEnvelope(raw, ws.UUID)
 			if err != nil {
 				return err
 			}
-			for _, run := range e.expectedRuns(ctx, ev, instances) {
-				var finished bool
-				if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM workflow_run
-					WHERE handler = $1 AND trigger_event = $2 AND ($3 = '' OR idempotency_key = $3)
-					AND NOT (status = 'applied' AND applied IS NULL))`,
-					run.handler, ev.ID, run.key).Scan(&finished); err != nil {
-					return err
+			system, instanced := e.firings(ev, instances)
+			for _, f := range slices.Concat(system, instanced) {
+				// A list rule fires on a scheduled check, never on the caller's write.
+				if _, list := f.handler.(listRule); list || !wouldRun(ctx, f) {
+					continue
 				}
-				if !finished {
-					pending++
-				}
+				handlers = append(handlers, f.handler.Spec().Name)
+				keys = append(keys, runKey(f.handler, f.event))
 			}
 		}
-		return nil
+		pending, err = anyRunUnfinished(ctx, tx, handlers, keys, window)
+		return err
 	})
 	return pending, err
 }
 
-// recentEventsOn reads the envelopes of the events the actor's writes emitted
-// in the pending window about any of the targets, delivered or not.
-func (e *WorkflowEngine) recentEventsOn(ctx context.Context, actor string, targets []ids.Ref) ([][]byte, error) {
+// wouldRun answers Match for a firing. A firing Match declines records only a
+// skip, and one whose Match errs records a failure, so neither is left running.
+func wouldRun(ctx context.Context, f firing) bool {
+	ok, err := f.handler.Match(ctx, f.event)
+	return ok && err == nil
+}
+
+// recentEventsOn reads the actor's newest events about any of the targets that
+// are undelivered or were delivered within the window.
+func recentEventsOn(ctx context.Context, tx pgx.Tx, actor string, targets []ids.Ref, window string) ([][]byte, error) {
 	types, entityIDs := make([]string, 0, len(targets)), make([]string, 0, len(targets))
 	for _, target := range targets {
 		types = append(types, target.Type)
 		entityIDs = append(entityIDs, target.ID.String())
 	}
+	rows, err := tx.Query(ctx, `SELECT envelope->'entity'->>'type', envelope->'entity'->>'id', envelope
+		FROM event_outbox
+		WHERE envelope->'entity'->>'type' = ANY($1) AND envelope->'entity'->>'id' = ANY($2)
+		AND envelope->'actor'->>'id' = $3
+		AND (published_at IS NULL OR published_at > now() - $4::interval)
+		ORDER BY seq DESC LIMIT $5`, types, entityIDs, actor, window, maxPendingEvents)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
 	var out [][]byte
-	err := e.db.Tx(ctx, func(tx pgx.Tx) error {
-		rows, err := tx.Query(ctx, `SELECT envelope->'entity'->>'type', envelope->'entity'->>'id', envelope
-			FROM event_outbox
-			WHERE envelope->'entity'->>'type' = ANY($1) AND envelope->'entity'->>'id' = ANY($2)
-			AND envelope->'actor'->>'id' = $3 AND created_at > now() - $4::interval`,
-			types, entityIDs, actor, pendingWindow)
-		if err != nil {
-			return err
+	for rows.Next() {
+		var entityType, entityID string
+		var envelope []byte
+		if err := rows.Scan(&entityType, &entityID, &envelope); err != nil {
+			return nil, err
 		}
-		defer rows.Close()
-		for rows.Next() {
-			var entityType, entityID string
-			var envelope []byte
-			if err := rows.Scan(&entityType, &entityID, &envelope); err != nil {
-				return err
-			}
-			// The two lists also pair a type with another target's id.
-			if slices.ContainsFunc(targets, func(t ids.Ref) bool { return t.Type == entityType && t.ID.String() == entityID }) {
-				out = append(out, envelope)
-			}
-		}
-		return rows.Err()
-	})
-	return out, err
-}
-
-// expectedRun is one firing HandleEvent makes on an event. key is empty for a
-// list rule, whose fan-out claims one run per record it saw change.
-type expectedRun struct {
-	handler string
-	key     string
-}
-
-// expectedRuns lists the firings HandleEvent makes on ev, from the same
-// registry and enabled instances. A firing whose Match declines writes only a
-// skip, so it is left out. A Match that errs is recorded as failed, not left
-// running, so it is left out too.
-func (e *WorkflowEngine) expectedRuns(ctx context.Context, ev workflow.Event, instances map[string][]automationInstance) []expectedRun {
-	e.mu.RLock()
-	handlers := append([]workflow.Handler(nil), e.handlers...)
-	system := append([]workflow.Handler(nil), e.system...)
-	e.mu.RUnlock()
-
-	var out []expectedRun
-	for _, h := range system {
-		if h.Spec().Trigger.EventType == ev.Type && matches(ctx, h, ev) {
-			out = append(out, expectedRun{handler: h.Spec().Name, key: runKey(h, ev)})
+		// The two lists also pair a type with another target's id.
+		if slices.ContainsFunc(targets, func(t ids.Ref) bool { return t.Type == entityType && t.ID.String() == entityID }) {
+			out = append(out, envelope)
 		}
 	}
-	for _, h := range handlers {
-		if h.Spec().Trigger.EventType != ev.Type {
-			continue
-		}
-		for _, inst := range instances[h.Spec().Name] {
-			iev := ev
-			iev.AutomationID, iev.OwnerID, iev.Params = inst.id.UUID, inst.owner, inst.params
-			if _, list := h.(listRule); list {
-				out = append(out, expectedRun{handler: h.Spec().Name})
-				continue
-			}
-			if matches(ctx, h, iev) {
-				out = append(out, expectedRun{handler: h.Spec().Name, key: runKey(h, iev)})
-			}
-		}
-	}
-	return out
+	return out, rows.Err()
 }
 
-func matches(ctx context.Context, h workflow.Handler, ev workflow.Event) bool {
-	ok, err := h.Match(ctx, ev)
-	return ok && err == nil
+// anyRunUnfinished says whether one of these (handler, key) runs has no row,
+// or holds a claim made within the window that has no outcome yet.
+func anyRunUnfinished(ctx context.Context, tx pgx.Tx, handlers, keys []string, window string) (bool, error) {
+	if len(handlers) == 0 {
+		return false, nil
+	}
+	var finished int
+	err := tx.QueryRow(ctx, `SELECT count(*) FROM workflow_run
+		WHERE (handler, idempotency_key) IN (SELECT * FROM unnest($1::text[], $2::text[]))
+		AND NOT (`+runInFlightSQL+` AND created_at > now() - $3::interval)`,
+		handlers, keys, window).Scan(&finished)
+	return finished < len(handlers), err
 }

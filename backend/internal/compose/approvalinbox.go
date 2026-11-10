@@ -32,7 +32,7 @@ import (
 )
 
 // approvalInbox is the tool surface's read/decide door onto the queue. pending
-// counts the automations still reacting to the records a listing names.
+// says whether an automation is still acting on the records a listing names.
 type approvalInbox struct {
 	svc     *approvals.Service
 	pending automationsPending
@@ -41,7 +41,7 @@ type approvalInbox struct {
 // automationsPending is the automation engine's answer to "is anything still
 // reacting to these records", which approvals cannot see from its own tables.
 type automationsPending interface {
-	PendingFor(ctx context.Context, targets []ids.Ref) (int, error)
+	PendingFor(ctx context.Context, targets []ids.Ref) (bool, error)
 }
 
 // approvalQueue builds that door, and refuses at BOOT an engine that could
@@ -59,6 +59,10 @@ type automationsPending interface {
 // panics: this is composition wiring, and a deployment that got it wrong should
 // not start.
 func approvalQueue(svc *approvals.Service, pending automationsPending) approvalInbox {
+	if pending == nil {
+		//craft:ignore panic-in-domain composition-time wiring assertion — fires only while cmd wiring runs, never on a request path
+		panic("compose: the tool surface's queue needs the automation engine, or an empty queue reads as final while a draft is still coming")
+	}
 	releasable := svc.EffectKinds()
 	for kind := range lateApprovalEffects {
 		if !slices.Contains(releasable, kind) {
@@ -108,15 +112,17 @@ func (i approvalInbox) ListApprovals(ctx context.Context, q agents.ApprovalQuery
 		// payloads are whole emails. read_approval is the door onto one.
 		out.Approvals = append(out.Approvals, stagedActionFrom(a, false))
 	}
-	if status != approvals.StatusPending || i.pending == nil {
+	if status != approvals.StatusPending {
 		return out, nil
 	}
-	targets := in.Targets
-	if in.TargetID != nil {
-		targets = append(targets, ids.Ref{Type: *in.TargetType, ID: *in.TargetID})
+	targets := slices.Clone(in.Targets)
+	if !q.TargetEntityID.IsZero() {
+		targets = append(targets, ids.Ref{Type: q.TargetEntityType, ID: q.TargetEntityID})
 	}
-	out.AutomationsPending, err = i.pending.PendingFor(ctx, targets)
-	return out, err
+	if out.AutomationsRunning, err = i.pending.PendingFor(ctx, targets); err != nil {
+		return agents.ApprovalPage{}, err
+	}
+	return out, nil
 }
 
 // ReadApproval answers one staged action in full.

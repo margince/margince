@@ -143,11 +143,6 @@ func (e *WorkflowEngine) HandleEvent(ctx context.Context, env kevents.Envelope) 
 	if env.Type == "approval.decided" {
 		return e.HandleApprovalDecided(ctx, env)
 	}
-	e.mu.RLock()
-	handlers := append([]workflow.Handler(nil), e.handlers...)
-	system := append([]workflow.Handler(nil), e.system...)
-	e.mu.RUnlock()
-
 	// The workspace is this engine's, not the envelope's: the bus carries no
 	// tenant (ADR-0091 §6) and the engine is wired for one installation. The
 	// gate still needs the value to ask the authz seam about an owner.
@@ -166,14 +161,12 @@ func (e *WorkflowEngine) HandleEvent(ctx context.Context, env kevents.Envelope) 
 	if err != nil {
 		return fmt.Errorf("loading automation instances: %w", err)
 	}
+	system, instanced := e.firings(ev, instances)
 
 	var firstErr error
-	for _, h := range system {
-		if h.Spec().Trigger.EventType != env.Type {
-			continue
-		}
-		if err := e.runOne(runCtx, h, ev); err != nil && firstErr == nil {
-			firstErr = fmt.Errorf("workflow %s: %w", h.Spec().Name, err)
+	for _, f := range system {
+		if err := e.runOne(runCtx, f.handler, f.event); err != nil && firstErr == nil {
+			firstErr = fmt.Errorf("workflow %s: %w", f.handler.Spec().Name, err)
 		}
 	}
 	if env.Type == eventListArchived {
@@ -181,18 +174,9 @@ func (e *WorkflowEngine) HandleEvent(ctx context.Context, env kevents.Envelope) 
 			firstErr = fmt.Errorf("pausing the rules on an archived list: %w", err)
 		}
 	}
-	for _, h := range handlers {
-		if h.Spec().Trigger.EventType != env.Type {
-			continue
-		}
-		for _, inst := range instances[h.Spec().Name] {
-			iev := ev
-			iev.AutomationID = inst.id.UUID
-			iev.OwnerID = inst.owner
-			iev.Params = inst.params
-			if err := e.dispatch(runCtx, h, iev, inst.version); err != nil && firstErr == nil {
-				firstErr = fmt.Errorf("workflow %s: %w", h.Spec().Name, err)
-			}
+	for _, f := range instanced {
+		if err := e.dispatch(runCtx, f.handler, f.event, f.version); err != nil && firstErr == nil {
+			firstErr = fmt.Errorf("workflow %s: %w", f.handler.Spec().Name, err)
 		}
 	}
 	return firstErr

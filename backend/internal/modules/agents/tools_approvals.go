@@ -134,13 +134,13 @@ type ApprovalTarget struct {
 	ID   ids.UUID `json:"id"`
 }
 
-// ApprovalPage is one page of the queue. AutomationsPending counts the
-// automations still reacting to a recent write on the records a listing named.
-// Until it is zero, what they will stage is not in Approvals yet.
+// ApprovalPage is one page of the queue. AutomationsRunning says an automation
+// is still acting on the caller's writes to the records a listing named. Until
+// it stops, what it will stage is not in Approvals yet; CheckAgain says so.
 type ApprovalPage struct {
 	Approvals          []StagedApproval `json:"approvals"`
 	NextCursor         string           `json:"next_cursor,omitempty"`
-	AutomationsPending int              `json:"automations_pending,omitempty"`
+	AutomationsRunning bool             `json:"-"`
 	CheckAgain         string           `json:"check_again,omitempty"`
 }
 
@@ -248,7 +248,7 @@ func (t listApprovalsTool) Handle(ctx context.Context, in json.RawMessage) (json
 		// "I could not find out" and hedges.
 		page.Approvals = []StagedApproval{}
 	}
-	if page.AutomationsPending > 0 {
+	if page.AutomationsRunning {
 		page.CheckAgain = checkAgainNote
 	}
 	return json.Marshal(page)
