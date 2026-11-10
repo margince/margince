@@ -68,3 +68,21 @@ function framedTitle(item: WorklistItem, t: Translator): string | undefined {
       : framing.key;
   return t(key ?? framing.key, { name });
 }
+
+// A brief item goes by its record's name, and keeps its own line beside it.
+export function briefSubjectLabel(item: WorklistItem): string | undefined {
+  return item.source === "brief_item"
+    ? item.subject?.label || undefined
+    : undefined;
+}
+
+export function briefContextTitle(item: WorklistItem): string | undefined {
+  const subject = briefSubjectLabel(item);
+  const title = item.title?.trim();
+  return subject &&
+    title &&
+    title !== subject &&
+    title !== item.verdict?.line.trim()
+    ? title
+    : undefined;
+}
