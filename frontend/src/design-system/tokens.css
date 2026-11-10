@@ -336,21 +336,19 @@
   --tagOrange: #ea580c;
 
   /* ===== Corners =====
-   * One ladder, in fours: 4 / 8 / 12 / 16 / 20, and the pill. Every corner in
-   * the tree reads one of these. A raw px radius is a sixth value nobody chose,
-   * which is how the tree came to answer 3, 5, 6, 9, 10, 11 and 28px at once —
-   * seven corners that were each somebody's judgement of "about right" and
-   * together were a ladder with no rungs. The squircle block at the foot of
-   * this file doubles the ladder under `corner-shape`, so a value here is also
-   * the thing that decides what a smooth corner measures. */
+   * One ladder, in fours: 4 / 8, and the pill. Every corner in the tree reads
+   * one of these. A raw px radius is a value nobody chose, which is how the
+   * tree came to answer 3, 5, 6, 9, 10, 11 and 28px at once. The squircle block
+   * at the foot of this file doubles the ladder under `corner-shape`, so a
+   * value here also decides what a smooth corner measures. */
   --r-xs: 4px;
   --r-sm: 8px;
-  /* The one radius for a control a hand operates — button, input, select
-     trigger. Between the chip's --r-sm and the pane's --r-md, because a control
-     as round as the pane it sits in reads as part of the pane. */
-  --r-control: 12px;
-  --r-md: 16px;
-  --r-lg: 20px; /* the pane */
+  /* A control, a card and a pane round alike, at every width: a box that
+     rounds more than the one it sits in reads as softer, not as nested. The
+     three keep their own names so a call site still says which box it is. */
+  --r-control: var(--r-sm);
+  --r-md: var(--r-sm);
+  --r-lg: var(--r-sm);
   --r-full: 9999px;
 
   /* The geometry of an interactive control, in ONE size. A button, a text
@@ -1082,25 +1080,12 @@
   :root {
     --r-xs: 8px;
     --r-sm: 16px;
-    --r-control: 24px;
-    --r-md: 32px;
-    --r-lg: 40px;
   }
   :where(*),
   :where(*)::before,
   :where(*)::after,
   :where(*)::backdrop {
     corner-shape: squircle;
-  }
-}
-
-/* A phone caps every corner at --r-sm. This block follows the squircle block,
-   so var(--r-sm) is the doubled rung where the browser draws squircles. */
-@media (max-width: 700px) {
-  :root {
-    --r-control: var(--r-sm);
-    --r-md: var(--r-sm);
-    --r-lg: var(--r-sm);
   }
 }
 
