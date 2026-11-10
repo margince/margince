@@ -57592,10 +57592,10 @@ type RecordClaim struct {
 // RecordClaimRecordType defines model for RecordClaim.RecordType.
 type RecordClaimRecordType string
 
-// RecordCommunicationContextRequest One rep's statement about one contact, answering one refusal.
+// RecordCommunicationContextRequest One rep's statement about one recipient, answering one refusal.
 type RecordCommunicationContextRequest struct {
 	// Kind How it happened. `in_person` is an exchange in a room, a card handed over at a stand
-	// included; `requested_by_subject` is the contact asking us to write to them by phone or
+	// included; `requested_by_subject` is the recipient asking us to write to them by phone or
 	// across a counter. `in_person` supports personal one-to-one follow-up mail, never
 	// marketing or a newsletter. A meeting owes no notice. A caller who may change notice cases
 	// settles the contact's open source reviews as information given at the meeting, as a
@@ -57608,14 +57608,14 @@ type RecordCommunicationContextRequest struct {
 	// OccurredAt When it happened, not when it was typed in. A future moment is refused.
 	OccurredAt time.Time `json:"occurred_at"`
 
-	// SubjectId The contact this statement is about. It must be somebody this review was refused for,
-	// and the refusal must be one a statement can answer — a review naming three contacts
+	// SubjectId The lead or contact this statement is about. It must be somebody this review was refused for,
+	// and the refusal must be one a statement can answer — a review naming three recipients
 	// takes three statements, not one copied across them.
 	SubjectId openapi_types.UUID `json:"subject_id"`
 }
 
 // RecordCommunicationContextRequestKind How it happened. `in_person` is an exchange in a room, a card handed over at a stand
-// included; `requested_by_subject` is the contact asking us to write to them by phone or
+// included; `requested_by_subject` is the recipient asking us to write to them by phone or
 // across a counter. `in_person` supports personal one-to-one follow-up mail, never
 // marketing or a newsletter. A meeting owes no notice. A caller who may change notice cases
 // settles the contact's open source reviews as information given at the meeting, as a

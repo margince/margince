@@ -2670,7 +2670,8 @@ export const en = {
   "history.field.product_id": "Product",
   "history.field.legal_entity_id": "Sending company",
   "history.field.about_deal": "Deal it was about",
-  "history.field.qualifying_event": "Qualifying event",
+  "history.field.qualifying_event": "Recorded exchange",
+  "history.value.exchange.requested": "Asked to be contacted",
   "history.field.qualifying_event_retracted": "Recorded exchange withdrawn",
   "history.field.acquisition_request_retracted":
     "Acquisition request withdrawn",

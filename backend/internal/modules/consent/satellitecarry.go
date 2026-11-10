@@ -94,11 +94,14 @@ func (s *Store) BindRequestsToAddressesTx(ctx context.Context, tx pgx.Tx, from, 
 		return err
 	}
 	pair := []ids.UUID{from.UUID, to.UUID}
-	if _, err := tx.Exec(ctx, `
-		UPDATE consent_qualifying_event q SET recorded_for_addresses = `+storekit.RequestAddressesSQL("q.contact_id")+`
-		 WHERE q.contact_id = ANY($1) AND q.recorded_for_addresses IS NULL`, pair); err != nil {
-		return fmt.Errorf("consent: binding the recorded requests to their addresses: %w", err)
+	sub, err := consentSubject(RecordInput{ContactID: from})
+	if err != nil {
+		return err
 	}
+	if err := bindQualifyingAddresses(ctx, tx, sub, to.UUID); err != nil {
+		return err
+	}
+
 	if _, err := tx.Exec(ctx, `
 		UPDATE communication_suppression s SET recorded_for_addresses = `+storekit.RequestAddressesSQL("s.contact_id")+`
 		 WHERE s.contact_id = ANY($1) AND s.address IS NULL AND s.revoked_at IS NULL

@@ -13,13 +13,15 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/testdb"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 func TestAnExpiredInstructionIsCheckedAgainBeforeItIsSpent(t *testing.T) {
 	for _, tc := range []struct {
-		name string
-		stop bool
-	}{{"basis still holds", false}, {"later subject stop", true}} {
+		name  string
+		stop  bool
+		moved bool
+	}{{"basis still holds", false, false}, {"later subject stop", true, false}, {"changed sender and refreshed review", false, true}} {
 		t.Run(tc.name, func(t *testing.T) {
 			c := setupConsent(t)
 			c.useReviewableMarketingProfile(t)
@@ -88,8 +90,22 @@ func TestAnExpiredInstructionIsCheckedAgainBeforeItIsSpent(t *testing.T) {
 					t.Fatalf("recording the stop = %d, want 204", status)
 				}
 			}
+			if tc.moved {
+				entity := ids.NewV7()
+				if _, err := c.Owner.Exec(t.Context(), `INSERT INTO legal_entity (id, display_name, legal_name, country, imprint, signature_template, captured_by) VALUES (@id,'Another sender','Another Sender GmbH','at','Another Sender GmbH','<p>{name}</p><p>{imprint}</p>','human:fixture')`, pgx.StrictNamedArgs{"id": entity}); err != nil {
+					t.Fatal(err)
+				}
+				if _, err := c.Owner.Exec(t.Context(), `INSERT INTO legal_entity_member (legal_entity_id,user_id,assigned_by) SELECT @id,id,'human:fixture' FROM app_user WHERE email='dpo@fable.test'`, pgx.StrictNamedArgs{"id": entity}); err != nil {
+					t.Fatal(err)
+				}
+				if status := c.Call(t, "POST", "/v1/activities/"+c.activityID+"/send-email", AnyMap{
+					"subject": "Requested information", "body": "The requested information.", "to": []string{"subject@consent.test"}, "communication_context": "requested_followup",
+				}, nil, nil); status != http.StatusConflict {
+					t.Fatalf("refresh send=%d, want409", status)
+				}
+			}
 			status := c.Call(t, "POST", path, directed(), nil, nil)
-			if tc.stop {
+			if tc.stop || tc.moved {
 				if status != http.StatusForbidden && status != http.StatusConflict && status != http.StatusUnprocessableEntity {
 					t.Fatalf("retry after a stop = %d, want 403, 409 or 422", status)
 				}
@@ -103,7 +119,7 @@ func TestAnExpiredInstructionIsCheckedAgainBeforeItIsSpent(t *testing.T) {
 				t.Fatal("retry rewrote the original author, scope, warning, message or dates")
 			}
 			want, wantStatus := 1, "consumed"
-			if tc.stop {
+			if tc.stop || tc.moved {
 				want, wantStatus = 0, "directed"
 			} else if retry := c.Call(t, "POST", path, directed(), nil, nil); retry >= http.StatusInternalServerError {
 				t.Fatalf("repeated retry = %d, want a completed or known refusal response", retry)

@@ -200,9 +200,13 @@ When Margince will not send an email to a contact, the warning bar above **Send*
 - **This message needs one more detail**: for "Choose the deal for this follow-up.", pick it in **Deal this follow-up is about**. You can also write from the deal's page. When the record already shows another reason, the bar offers **Use "…" instead**. It switches the reason and checks again; it does not send.
 - **Permission needed for this message**: the required permission is not on record. Record the recipient's consent or the facts that support an allowed customer route. A staff exception cannot replace them.
 - **No recorded reason to contact this recipient**: Margince first uses a request or meeting it already holds. Where a fact is missing, press **Record what happened**. Say what was agreed and when. This records the exchange for that recipient and sending company, and for a deal when one is picked. It does not send the email, record marketing consent or make a standing exception. Margince checks again; any stop that remains still blocks the message.
-- **Send with a recorded exception**: where the check allows it and you hold the exception right, this queues only this message. Your name, reason and the message are kept in a record that cannot be edited. It grants no consent or permission for later mail. The composer closes once the email is queued.
+- **Send with a recorded exception**: where the check allows it and you hold the exception right, this queues only this message. Your name, reason and the message are kept in a record that cannot be edited. It grants no consent or permission for later mail. The composer closes once the email is queued. A retry checks the current facts and any new stop. An old check does not make you record the same facts again while their support still holds.
 - **Message cannot be sent**: a reason nobody can lift, such as "The recipient objected to marketing", or an address that does not take mail.
 - A mailbox connected only to read mail: press **Reconnect your mailbox** and allow sending.
+The lead stays a lead when you record an exchange. When you make it a contact later, that exchange keeps its original addresses and sending company.
+
+A standing exception covers its named sending company and purpose until it is taken back. It records a staff decision and grants no consent. A recorded request is a fact that Margince checks for the message you are writing. A one-message exception covers only the message you read and approved.
+
 Also called: email blocked, cannot email customer, send refused.
 
 ## What a send refuses, and what it only warns about

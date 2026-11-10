@@ -171,7 +171,10 @@ func OpenReviewTx(ctx context.Context, tx pgx.Tx, set commsauthz.DecisionSet, in
 		VALUES ($1, $2, $3, $4, $5, $6)
 		ON CONFLICT (delivery_intent_id)
 		  WHERE delivery_intent_id IS NOT NULL AND resolved_at IS NULL
-		  DO UPDATE SET refusals = EXCLUDED.refusals,
+		  DO UPDATE SET refusals = CASE WHEN EXISTS (
+		                    SELECT 1 FROM communication_instruction i
+		                    WHERE i.review_id = communication_review.id AND i.status = 'directed'
+		                  ) THEN communication_review.refusals ELSE EXCLUDED.refusals END,
 		                reason_code = EXCLUDED.reason_code,
 		                state = EXCLUDED.state,
 		                opened_at = now()

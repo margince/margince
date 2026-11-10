@@ -51,7 +51,10 @@ export function reasonTargetOf(
   )
     return undefined;
   const subject = recipient.evidence_subject;
-  if (!subject?.entity_id || (subject.entity_type !== "contact" && subject.entity_type !== "lead")) {
+  if (
+    !subject?.entity_id ||
+    (subject.entity_type !== "contact" && subject.entity_type !== "lead")
+  ) {
     return undefined;
   }
   return {
@@ -100,9 +103,7 @@ export function ComposeBlockers({
    *  reason pick this band offers where a reason may be recorded. */
   permission: (override: ReactNode, picksReason: boolean) => ReactNode;
 }>) {
-  const target = isChannelReply
-    ? undefined
-    : reasonTargetOf(send.permission);
+  const target = isChannelReply ? undefined : reasonTargetOf(send.permission);
   // A reason the record already carries comes before recording a new one.
   const alternative = isChannelReply
     ? undefined

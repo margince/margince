@@ -2777,7 +2777,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "history.field.product_id": "Produkt",
   "history.field.legal_entity_id": "Absendendes Unternehmen",
   "history.field.about_deal": "Betreffender Deal",
-  "history.field.qualifying_event": "Qualifizierendes Ereignis",
+  "history.field.qualifying_event": "Erfasster Austausch",
+  "history.value.exchange.requested": "Um eine Nachricht gebeten",
   "history.field.qualifying_event_retracted":
     "Erfasster Austausch zurückgenommen",
   "history.field.acquisition_request_retracted":

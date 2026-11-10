@@ -206,24 +206,7 @@ func (g *Gate) decideResolved(ctx context.Context, tx pgx.Tx, req commsauthz.Req
 	if err != nil {
 		return commsauthz.Decision{}, nil, err
 	}
-	// ONLY EVIDENCE THIS CALLER WAS SHOWN TO HOLD travels any further.
-	//
-	// refuseUnreadableEvidence runs inside validate, and validate runs only for
-	// arm 3 of resolution — the thread and live-deal arms answer before it. So
-	// a message allowed by one of those two carries evidence ids nobody has
-	// checked this caller may see, and writing them to the decision row would
-	// hand them to the transmit phase. That phase runs under the system
-	// principal, for which auth.Require returns nil, so an unchecked id there
-	// becomes an authorization the sender could never have obtained: name any
-	// invoice in the installation, get allowed by an open deal at staging, and
-	// have the invoice arm allow it at transmit.
-	//
-	// EvidenceChecked is the resolution's own record of having passed that
-	// check, so what reaches the row is the intersection of "named" and
-	// "readable by the contact who named it".
-	if res.EvidenceChecked {
-		d.Evidence = req.Evidence
-	}
+	d = withCheckedEvidence(d, req, res)
 	if res.Supported {
 		// The claim first, because the record bearing out a category is not the
 		// same as the caller having named it. A sender who says "this is
@@ -424,4 +407,12 @@ func (g *Gate) legacyVerdictFor(ctx context.Context, tx pgx.Tx, contactID string
 		d.ReasonCode = res.Reason
 	}
 	return d, &purposeID, nil
+}
+
+func withCheckedEvidence(d commsauthz.Decision, req commsauthz.Request, res resolution) commsauthz.Decision {
+	// Unchecked record IDs must not acquire the worker's broader read scope.
+	if res.EvidenceChecked {
+		d.Evidence = req.Evidence
+	}
+	return d
 }

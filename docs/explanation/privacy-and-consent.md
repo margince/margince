@@ -4,7 +4,7 @@
 
 ## The authorization engine (`consent`)
 
-`consent` records each contact's answer about a purpose and keeps an **add-only proof log**.
+`consent` records each lead or contact's answer about a purpose and keeps an **add-only proof log**.
 It also checks whether one message may go. Most mail rests on a contract, a reply to a thread
 the subject started, or a legal duty. The engine works out the message's **category**, checks
 its **proof**, and records a **decision** per recipient:
@@ -45,6 +45,9 @@ its **proof**, and records a **decision** per recipient:
 - The composer uses proof already on file before asking for a fact. A user can record what was
   agreed and when, for the recipient, sending company and linked deal. This records an exchange;
   it grants no marketing consent and sends no message. The engine then checks the message again.
+
+  The lead stays a lead when you record an exchange. When you make it a contact later, the exchange
+  keeps its original addresses and sending company.
 - **Withdrawals and stops are separate, and both bind.** An unsubscribe is a consent withdrawal. The
   engine reads it **by class** ("has the subject stopped this kind of message"). That is because a category worked out from
   proof may carry no purpose key to match. `communication_suppression` records the other stops: an
@@ -172,19 +175,22 @@ The legal cap counts mail sent and mail about to go out. It joins each delivery 
 check, including a send made under an instruction. A parked message does not use the allowance.
 The count is per address, so one recipient's delivery cannot consume another's allowance.
 
-Using an instruction checks four things. Each is a different way the record could end up telling of
-something that never happened:
+Using an instruction checks these facts:
 
-- **The decision is still live.** Revoked, out of date and already used are three different reasons
-  the same row allows nothing now.
+- **The decision is still live.** A revoked decision, one marked expired or one already used
+  allows no send.
 - **It is this message.** An instruction is made against one review, and that review holds one
   message.
+- **The scope still fits.** The recipient, sending company, purpose and deal still match the review.
 - **The message has not changed**, where there is a fingerprint to check. The sender confirmed they would send
   that subject and body. An edit after that is a message nobody signed for. Some
   instructions are not held back: one with no fingerprint, or one against a review whose held message
   could not be read. Holding it back would refuse a send for a reason nobody can act on.
 - **It is used once.** The row moves to `consumed` and names its delivery inside the same transaction
   that stages the message. So a retry, a double click or a job delivered twice cannot use it twice.
+
+An old facts window does not by itself ask for another statement. Each retry checks current
+support and stops. The original author, scope, words and dates stay on the record.
 
 Directing a send answers to `communication_exception`, its own RBAC object, not a part of
 consent's settings. The two are different authorities. Consent's settings decide who may change the

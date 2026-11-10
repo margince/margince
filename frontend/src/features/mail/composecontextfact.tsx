@@ -43,7 +43,9 @@ export function RecordConversationFact({
   const mayWriteContact = useCan("contact", "update");
   const mayWriteLead = useCan("lead", "update");
   const mayWrite = (subject: ReasonTarget["subject"] | undefined) =>
-    subject?.entity_type === "contact" ? mayWriteContact : subject?.entity_type === "lead" && mayWriteLead;
+    subject?.entity_type === "contact"
+      ? mayWriteContact
+      : subject?.entity_type === "lead" && mayWriteLead;
   const mayMutate = useCanMutate();
   const [opened, setOpened] = useState<Target>();
   const available =
@@ -85,23 +87,30 @@ function ConversationFactDialog({
   const quote =
     chosen === "precontract_quote" || target.category === "precontract_quote";
   const record = useMutation({
-    mutationFn: async (ask: { subject: ReasonTarget["subject"]; fact: Fact }) => {
-      const endpoint = ask.subject.entity_type === "lead"
-        ? "/leads/{id}/consent/qualifying-events"
-        : "/contacts/{id}/consent/qualifying-events";
-      unwrap(await api.POST(endpoint, {
-        params: { path: { id: ask.subject.entity_id } },
-        body: ask.fact,
-      }));
+    mutationFn: async (ask: {
+      subject: ReasonTarget["subject"];
+      fact: Fact;
+    }) => {
+      const endpoint =
+        ask.subject.entity_type === "lead"
+          ? "/leads/{id}/consent/qualifying-events"
+          : "/contacts/{id}/consent/qualifying-events";
+      unwrap(
+        await api.POST(endpoint, {
+          params: { path: { id: ask.subject.entity_id } },
+          body: ask.fact,
+        }),
+      );
     },
     onSuccess: async (_, ask) => {
-      if (ask.subject.entity_type === "contact") await Promise.all(
-        [
-          ["contactConsentGuard", ask.subject.entity_id],
-          ["contact-consent", ask.subject.entity_id],
-          contact360Query(ask.subject.entity_id).queryKey,
-        ].map((queryKey) => queries.invalidateQueries({ queryKey })),
-      );
+      if (ask.subject.entity_type === "contact")
+        await Promise.all(
+          [
+            ["contactConsentGuard", ask.subject.entity_id],
+            ["contact-consent", ask.subject.entity_id],
+            contact360Query(ask.subject.entity_id).queryKey,
+          ].map((queryKey) => queries.invalidateQueries({ queryKey })),
+        );
       onClose();
     },
   });

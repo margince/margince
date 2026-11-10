@@ -3,22 +3,8 @@
 
 package consent
 
-// Recording the one qualifying event nothing can derive.
-//
-// A `business_correspondence` verdict reads the most recent thing on the record
-// that makes writing to somebody lawful, and three of the four kinds arrive on
-// their own: an inbound message, an inquiry and an open deal are all facts the
-// product already holds and the verdict derives them itself.
-//
-// The fourth happened away from every system. Somebody handed over a card at a
-// trade fair, and the only record of it is the memory of the contact who was
-// there. This is where they write it down — and the note is required, because
-// there is no message to cite and no deal to point at, so the note IS the
-// evidence. A basis nobody can check is not accountability.
-//
-// It grants no marketing consent and could not: §7 UWG asks for express
-// consent, and a card is not one. What it settles is the narrower question of
-// whether an ordinary business email may be sent at all.
+// A remembered exchange has no captured source record. Its author, note,
+// date and recipient scope let later send checks judge the assertion.
 
 import (
 	"context"
@@ -98,8 +84,7 @@ const fieldOccurredAt = "occurred_at"
 // before a date reads as a claim about the future rather than a fast watch.
 const clockSkewAllowance = 5 * time.Minute
 
-// RecordQualifyingEventInput is one exchange, as the contact who was there
-// states it.
+// RecordQualifyingEventInput is one exchange, stated by the person who was there.
 type RecordQualifyingEventInput struct {
 	sendingEntity *ids.UUID
 	Kind          string
@@ -192,7 +177,7 @@ func (in RecordQualifyingEventInput) validated(now time.Time) (string, error) {
 	}
 	if in.AsksForQuote && in.Kind != KindRequestedBySubject {
 		return "", &InvalidQualifyingEventError{
-			Field: "asks_for_quote", Reason: "only a request the contact made can ask for a quote",
+			Field: "asks_for_quote", Reason: "only a request the recipient made can ask for a quote",
 		}
 	}
 	note := strings.TrimSpace(in.Note)
@@ -225,11 +210,7 @@ func (in RecordQualifyingEventInput) validated(now time.Time) (string, error) {
 	return note, nil
 }
 
-// RecordQualifyingEvent writes the exchange and returns it as it now stands.
-//
-// Gated on the subject rather than on a consent object. What this asserts is a
-// fact about a contact, and it changes what may be sent to them. The authority
-// to make that assertion is the authority to write their record.
+// RecordQualifyingEvent records a fact under the contact's update authority.
 func (s *Store) RecordQualifyingEvent(ctx context.Context, contactID ids.ContactID, in RecordQualifyingEventInput) (QualifyingEvent, error) {
 	return s.recordQualifyingSubject(ctx, RecordInput{ContactID: contactID}, in)
 }
@@ -372,8 +353,8 @@ func standingExchange(ctx context.Context, tx pgx.Tx, sub subject, deal, entity 
 // as the record of what was said and when it was taken back; no send and no
 // verdict reads it any more.
 //
-// Gated like recording, because it is the same statement taken back. A derived exchange is not retracted here: it stands on a record the
-// product holds, and archiving that record is what ends it.
+// A derived exchange stands on a captured record; archiving that record
+// ends it. A hand-recorded statement uses the same gate for write and retraction.
 func (s *Store) RetractQualifyingEvent(ctx context.Context, contactID ids.ContactID, eventID ids.UUID) error {
 	return s.retractQualifyingSubject(ctx, RecordInput{ContactID: contactID}, eventID)
 }

@@ -55,9 +55,20 @@ const settled = (preview: ReturnType<typeof refusedPreview>) => ({
 describe("who a reason to write is recorded on", () => {
   it("uses the resolved lead without converting it to a contact", () => {
     const subject = { entity_type: "lead", entity_id: "lead-one" } as const;
-    expect(reasonTargetOf(settled(refusedPreview("anna@example.test", {
-      ...NOTHING_ON_RECORD, evidence_subject: subject,
-    })))).toEqual({ subject, address: "anna@example.test", category: "requested_followup" });
+    expect(
+      reasonTargetOf(
+        settled(
+          refusedPreview("anna@example.test", {
+            ...NOTHING_ON_RECORD,
+            evidence_subject: subject,
+          }),
+        ),
+      ),
+    ).toEqual({
+      subject,
+      address: "anna@example.test",
+      category: "requested_followup",
+    });
   });
 
   it("is the contact behind the deciding address, for its category", () => {
@@ -77,7 +88,12 @@ describe("who a reason to write is recorded on", () => {
   it("is nobody without a readable recipient record or where nobody may lift it", () => {
     expect(
       reasonTargetOf(
-        settled(refusedPreview("stranger@example.test", { ...NOTHING_ON_RECORD, evidence_subject: undefined })),
+        settled(
+          refusedPreview("stranger@example.test", {
+            ...NOTHING_ON_RECORD,
+            evidence_subject: undefined,
+          }),
+        ),
       ),
     ).toBeUndefined();
     expect(

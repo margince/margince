@@ -8,6 +8,8 @@ package activities
 import (
 	"testing"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
@@ -17,12 +19,17 @@ import (
 func TestPreviewEvidenceReferencesRespectRecordAccessAndOmitTransientSubjects(t *testing.T) {
 	e := setupSend(t)
 	id := ids.NewV7()
+	privateID := ids.NewV7()
 	if _, err := e.owner.Exec(t.Context(), `INSERT INTO contact(id, full_name, source, captured_by, owner_id)
- VALUES($1,'Readable contact','manual','human:x',$2)`, id, e.rep); err != nil {
+ VALUES(@id,'Readable contact','manual','human:x',@owner)`, pgx.StrictNamedArgs{"id": id, "owner": e.rep}); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := e.owner.Exec(t.Context(), `INSERT INTO lead(id, full_name, source, captured_by, owner_id)
- VALUES($1,'Private lead','manual','human:x',$2)`, id, e.other); err != nil {
+ VALUES(@id,'Workspace-readable lead','manual','human:x',@owner)`, pgx.StrictNamedArgs{"id": id, "owner": e.other}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.owner.Exec(t.Context(), `INSERT INTO contact(id, full_name, source, captured_by, owner_id, visibility)
+ VALUES(@id,'Owner-private contact','manual','human:x',@owner,'owner')`, pgx.StrictNamedArgs{"id": privateID, "owner": e.other}); err != nil {
 		t.Fatal(err)
 	}
 	ctx := e.as(principal.RowScopeOwn)
@@ -35,6 +42,7 @@ func TestPreviewEvidenceReferencesRespectRecordAccessAndOmitTransientSubjects(t 
 	decisions := []commsauthz.Decision{
 		{SubjectKind: "contact", SubjectID: id, Recipient: connector.Recipient{Email: "visible@example.test"}},
 		{SubjectKind: "lead", SubjectID: id, Recipient: connector.Recipient{Email: "hidden@example.test"}},
+		{SubjectKind: "contact", SubjectID: privateID, Recipient: connector.Recipient{Email: "private@example.test"}},
 		{SubjectKind: "contact", SubjectID: ids.NewV7(), Recipient: connector.Recipient{Email: "new@example.test"}},
 	}
 	for _, tc := range []struct {
@@ -43,7 +51,7 @@ func TestPreviewEvidenceReferencesRespectRecordAccessAndOmitTransientSubjects(t 
 		scope    principal.RowScope
 		leadRead bool
 	}{
-		{"own rows", false, principal.RowScopeOwn, true},
+		{"own rows", true, principal.RowScopeOwn, true},
 		{"all rows", true, principal.RowScopeAll, true},
 		{"no lead grant", false, principal.RowScopeAll, false},
 	} {
@@ -64,6 +72,9 @@ func TestPreviewEvidenceReferencesRespectRecordAccessAndOmitTransientSubjects(t 
 				t.Fatalf("lead reference present=%v, want %v", got, tc.wantLead)
 			}
 			if wire.Recipients[2].EvidenceSubject != nil {
+				t.Fatal("preview returned an owner-private contact id")
+			}
+			if wire.Recipients[3].EvidenceSubject != nil {
 				t.Fatal("preview returned a transient recipient id")
 			}
 		})

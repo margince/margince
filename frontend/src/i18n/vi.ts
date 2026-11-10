@@ -2690,7 +2690,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "history.field.product_id": "Sản phẩm",
   "history.field.legal_entity_id": "Công ty gửi",
   "history.field.about_deal": "Giao dịch liên quan",
-  "history.field.qualifying_event": "Sự kiện đủ điều kiện",
+  "history.field.qualifying_event": "Trao đổi đã ghi nhận",
+  "history.value.exchange.requested": "Đã yêu cầu liên hệ",
   "history.field.qualifying_event_retracted": "Trao đổi đã ghi nhận bị rút lại",
   "history.field.acquisition_request_retracted":
     "Yêu cầu khi thu nhận đã bị rút lại",

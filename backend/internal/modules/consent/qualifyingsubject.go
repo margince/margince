@@ -38,14 +38,15 @@ func subjectKindID(sub subject, kind string) ids.UUID {
 	return ids.UUID{}
 }
 
-func bindQualifyingAddresses(ctx context.Context, tx pgx.Tx, sub subject) error {
+func bindQualifyingAddresses(ctx context.Context, tx pgx.Tx, sub subject, others ...ids.UUID) error {
+	subjects := append([]ids.UUID{sub.id}, others...)
 	column := pgx.Identifier{sub.column}.Sanitize()
 	addresses := storekit.RequestAddressesSQL("q.contact_id")
 	if sub.entityType == entityLead {
 		addresses = "(SELECT CASE WHEN email IS NULL THEN '{}'::text[] ELSE ARRAY[email] END FROM lead WHERE id = q.lead_id)"
 	}
 	_, err := tx.Exec(ctx, `UPDATE consent_qualifying_event q SET recorded_for_addresses = `+addresses+`
- WHERE q.`+column+`=@subject AND q.recorded_for_addresses IS NULL`, pgx.StrictNamedArgs{"subject": sub.id})
+ WHERE q.`+column+`=ANY(@subjects) AND q.recorded_for_addresses IS NULL`, pgx.StrictNamedArgs{"subjects": subjects})
 	if err != nil {
 		return fmt.Errorf("consent: binding recorded exchanges to their addresses: %w", err)
 	}

@@ -70,7 +70,13 @@ export const RequestedQuote: Story = {
 
 export const Lead: Story = {
   beforeEach: () => stubWithSession({}, { lead: ["read", "update"] }),
-  args: { target: { subject: { entity_type: "lead", entity_id: "lead-one" }, address: "anna@example.test", category: "requested_followup" } },
+  args: {
+    target: {
+      subject: { entity_type: "lead", entity_id: "lead-one" },
+      address: "anna@example.test",
+      category: "requested_followup",
+    },
+  },
   tags: ["uat-phone"],
   play: Open.play,
 };

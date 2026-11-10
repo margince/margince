@@ -43418,18 +43418,18 @@ export interface components {
             /** @description The engagement named in the cited words, when present. Never inferred from the company name. */
             workstream?: string;
         };
-        /** @description One rep's statement about one contact, answering one refusal. */
+        /** @description One rep's statement about one recipient, answering one refusal. */
         RecordCommunicationContextRequest: {
             /**
              * Format: uuid
-             * @description The contact this statement is about. It must be somebody this review was refused for,
-             *     and the refusal must be one a statement can answer — a review naming three contacts
+             * @description The lead or contact this statement is about. It must be somebody this review was refused for,
+             *     and the refusal must be one a statement can answer — a review naming three recipients
              *     takes three statements, not one copied across them.
              */
             subject_id: string;
             /**
              * @description How it happened. `in_person` is an exchange in a room, a card handed over at a stand
-             *     included; `requested_by_subject` is the contact asking us to write to them by phone or
+             *     included; `requested_by_subject` is the recipient asking us to write to them by phone or
              *     across a counter. `in_person` supports personal one-to-one follow-up mail, never
              *     marketing or a newsletter. A meeting owes no notice. A caller who may change notice cases
              *     settles the contact's open source reviews as information given at the meeting, as a
