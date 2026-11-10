@@ -13,7 +13,6 @@ Usage:
   casesetup.py <step> <app base URL> <cookie jar written by curl>
 """
 
-import http.cookiejar
 import json
 import sys
 import urllib.error
@@ -27,16 +26,34 @@ class SetupFault(Exception):
     """The step could not leave the world it names. Nothing should be scored."""
 
 
+def cookie_header(jar_text):
+    """The Cookie header for every cookie in a jar curl wrote. curl marks an
+    HttpOnly cookie with a "#HttpOnly_" prefix, which a cookie-file reader takes
+    for a comment, and the session cookie is Secure, which a client refuses to
+    send over the lane's plain-HTTP localhost. So the jar is read here."""
+    pairs = []
+    for line in jar_text.splitlines():
+        line = line.removeprefix("#HttpOnly_")
+        fields = line.split("\t")
+        if line.startswith("#") or len(fields) != 7:
+            continue
+        pairs.append(f"{fields[5]}={fields[6]}")
+    return "; ".join(pairs)
+
+
 class Admin:
     def __init__(self, base, cookie_jar):
-        jar = http.cookiejar.MozillaCookieJar(cookie_jar)
-        jar.load(ignore_discard=True, ignore_expires=True)
+        with open(cookie_jar, encoding="utf-8") as jar:
+            self._cookie = cookie_header(jar.read())
+        if not self._cookie:
+            raise SetupFault(f"the cookie jar {cookie_jar} holds no cookie, so the step has no session")
         self._base = base.rstrip("/") + "/v1"
-        self._open = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(jar)).open
+        self._open = urllib.request.build_opener().open
 
     def call(self, method, path, body=None, content_type="application/json"):
         data = body if isinstance(body, bytes) or body is None else json.dumps(body).encode()
         request = urllib.request.Request(self._base + path, data=data, method=method)
+        request.add_header("Cookie", self._cookie)
         if data is not None:
             request.add_header("Content-Type", content_type)
         try:
