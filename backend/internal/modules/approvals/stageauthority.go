@@ -5,9 +5,11 @@ package approvals
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -47,8 +49,16 @@ func stageAuthorityRow(in StageInput) row {
 }
 
 func requireCallAuthority(ctx context.Context, tx pgx.Tx, p principal.Principal, proposal row) error {
-	if err := requireDecisionGrants(p, proposal); err != nil {
+	checks, err := decisionChecksFor(proposal)
+	if err != nil {
 		return err
+	}
+	for _, check := range checks {
+		held := check.HeldBy(p)
+		auth.RecordDecision(ctx, check, held)
+		if !held {
+			return fmt.Errorf("approving %s needs %s: %w", proposal.Kind, check, apperrors.ErrPermissionDenied)
+		}
 	}
 	permitted, err := authorityRows(ctx, tx, p, []row{proposal})
 	if err != nil {

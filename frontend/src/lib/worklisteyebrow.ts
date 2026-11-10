@@ -2,6 +2,7 @@ import { providerName } from "../format/connectorprovider";
 import type { Translator } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { aiTaskLabel } from "./ai-task-label";
+import { labelFor } from "./labelfor";
 import type { WorklistItem } from "./worklisttypes";
 
 /** The signals the overnight run can name, and the only ones this eyebrow trusts. */
@@ -39,7 +40,7 @@ export function eyebrowKeyFor(item: WorklistItem): MessageKey {
     }
   }
   if (item.source === "brief_item") return "search.kind.deal";
-  return CATEGORY_LABEL[item.category];
+  return labelFor(CATEGORY_LABEL, item.category);
 }
 
 /**

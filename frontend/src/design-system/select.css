@@ -98,7 +98,7 @@
   /* The MENU ANATOMY's inset (listtable.css, .lt-menu): one option list is one
      surface, whichever control opened it. Its floor and its ceiling are the two
      parts this list does NOT share — both arrive as inline styles measured
-     against the trigger and the viewport, above — and menu-anatomy.test.ts
+     against the trigger and the viewport, above — and census/rules/menu-anatomy.census.ts
      carries that exception with its reason. */
   padding: var(--controlGap);
 }

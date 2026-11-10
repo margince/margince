@@ -55,6 +55,7 @@ import {
   visibleGroups,
 } from "./library";
 import "../voice-knowledge/library.css";
+import { labelFor } from "../../lib/labelfor";
 import { useListsAvailable } from "../../lib/lists.queries";
 import {
   LibraryTable,
@@ -333,7 +334,7 @@ function NoHits({ cut }: Readonly<{ cut: LibraryCut }>) {
   if (searched) {
     said = t("filters.library.noHits", { q });
   } else if (cut.type !== "all") {
-    said = t(NO_TYPE_HITS_LABEL[cut.type]);
+    said = t(labelFor(NO_TYPE_HITS_LABEL, cut.type));
   } else {
     return null;
   }

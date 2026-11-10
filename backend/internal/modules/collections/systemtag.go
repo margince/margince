@@ -6,11 +6,13 @@ package collections
 import (
 	"context"
 	"errors"
-	"fmt"
+	"slices"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -34,23 +36,11 @@ func ApplySystemTagTx(ctx context.Context, tx pgx.Tx, name, entityType string, e
 	if tagID.UUID == ids.Nil {
 		return 0, nil
 	}
-	// Maintenance must not reverse a user's explicit removal.
-	rows, err := tx.Query(ctx, `SELECT candidate FROM unnest(@entity_ids::uuid[]) candidate
- WHERE NOT EXISTS (SELECT 1 FROM audit_log a WHERE a.entity_type = 'tag'
- AND a.entity_id = @tag AND a.actor_type NOT IN ('system', 'connector')
- AND a.after -> 'removed' ->> 'entity_type' = @entity_type
- AND a.after -> 'removed' ->> 'entity_id' = candidate::text)`,
-		pgx.NamedArgs{"entity_ids": entityIDs, "tag": tagID, "entity_type": entityType})
-	if err != nil {
-		return 0, fmt.Errorf("collections: reading prior tag decisions: %w", err)
-	}
-	entityIDs, err = pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
-	if err != nil {
-		return 0, fmt.Errorf("collections: reading prior tag decisions: %w", err)
-	}
+	entityIDs = slices.Clone(entityIDs)
+	slices.SortFunc(entityIDs, func(a, b ids.UUID) int { return strings.Compare(a.String(), b.String()) })
 	applied := 0
 	for _, id := range entityIDs {
-		_, err := applyTagTx(ctx, tx, tagID, entityType, id, evidence)
+		_, err := applyTagWithRemovalPolicyTx(ctx, tx, tagID, entityType, id, evidence, true)
 		if errors.Is(err, apperrors.ErrConflict) {
 			continue
 		}
@@ -84,4 +74,8 @@ func tagNamedTx(ctx context.Context, tx pgx.Tx, name string) (ids.TagID, error) 
 		return ids.TagID{}, nil
 	}
 	return id, nil
+}
+
+func lockTagAssignmentTx(ctx context.Context, tx pgx.Tx, tagID ids.TagID, entityType string, entityID ids.UUID) error {
+	return storekit.LockWriteIdentity(ctx, tx, "tag_assignment", tagID.String()+":"+entityType+":"+entityID.String())
 }

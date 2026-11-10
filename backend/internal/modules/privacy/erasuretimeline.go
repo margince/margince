@@ -234,14 +234,20 @@ var subjectActivityEmbeddingsDelete = `
 // activities on the subject's timeline embed text ABOUT them; the vector
 // store must not keep what a similarity probe could partially reconstruct.
 func purgeDerivedTraces(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, displayName string, emails []string, identities []channelIdentity, erased erasedCitations) (rawPurged, aiPayloadsPurged int64, err error) {
+	rawPurged, err = deleteRawOriginalsTx(ctx, tx,
+		`r.payload_object @> jsonb_build_object('matched_subjects', jsonb_build_array(@subject::text))`,
+		pgx.NamedArgs{sqlArgSubject: contactID.String()})
+	if err != nil {
+		return 0, 0, err
+	}
 	for _, email := range emails {
-		tag, execErr := tx.Exec(ctx,
-			`DELETE FROM raw_capture WHERE payload::text ILIKE '%' || $1 || '%' ESCAPE '\'`,
-			storekit.EscapeLike(email))
+		erased, execErr := deleteRawOriginalsTx(ctx, tx,
+			rawEmailMatchSQL("r.payload", "@email::text"),
+			pgx.NamedArgs{sqlArgEmail: email})
 		if execErr != nil {
 			return 0, 0, execErr
 		}
-		rawPurged += tag.RowsAffected()
+		rawPurged += erased
 	}
 	// The 24-hour capture trace, when the deployment enabled payload capture.
 	// The sweep bounds exposure to a day; it does not ANSWER an erasure made

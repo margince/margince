@@ -28,6 +28,7 @@ import {
   documentFilename,
   floorText,
 } from "../../lib/jurisdictiontext";
+import { labelFor } from "../../lib/labelfor";
 import { DSR_KIND_LABEL } from "../../lib/privacy.logic";
 import { problemMessageOf, throwProblem, unwrap } from "../../lib/problem";
 import { useInstallationSettings } from "../../lib/uploadlimit";
@@ -361,7 +362,7 @@ function EffectsPanel({
             ...jurisdiction.deadlines.map((deadline) => ({
               key: `deadline-${deadline.kind}`,
               term: t("jurisdiction.effects.deadline", {
-                kind: t(DSR_KIND_LABEL[deadline.kind]),
+                kind: t(labelFor(DSR_KIND_LABEL, deadline.kind)),
               }),
               value: deadlineText(deadline, locale, t),
               note: ruleText(deadline.rule, t),
@@ -434,8 +435,8 @@ function DocumentsPanel({
               </span>
             ),
             note: t("jurisdiction.documents.note", {
-              audience: t(AUDIENCE_LABEL[document.audience]),
-              kind: t(DOCUMENT_KIND_LABEL[document.kind]),
+              audience: t(labelFor(AUDIENCE_LABEL, document.audience)),
+              kind: t(labelFor(DOCUMENT_KIND_LABEL, document.kind)),
               language: document.language.toUpperCase(),
             }),
           }))}

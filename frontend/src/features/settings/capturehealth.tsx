@@ -27,6 +27,7 @@ import {
 import type { MessageKey } from "../../i18n/en";
 import { useCan } from "../../lib/capability";
 import { useHealthScope, useHealthVisible } from "../../lib/healthscope";
+import { labelFor } from "../../lib/labelfor";
 import { unwrap } from "../../lib/problem";
 import { useViewerZone } from "../../lib/viewerzone";
 import { CaptureConnectionsHealth } from "./captureconnectionshealth";
@@ -102,7 +103,7 @@ function sweepColumns(
     {
       key: "pass",
       header: t("captureHealth.col.pass"),
-      render: (sweep) => t(SWEEP_LABEL[sweep.sweep]),
+      render: (sweep) => t(labelFor(SWEEP_LABEL, sweep.sweep)),
     },
     {
       key: "lastSuccess",

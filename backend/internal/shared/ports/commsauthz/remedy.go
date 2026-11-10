@@ -30,8 +30,8 @@ var remedies = map[string][]Remedy{
 	ReasonLegacyTransactionalUnevidenced: {RemedyAnswer, RemedyFact, RemedyException},
 	// Absolute for rollout modes (absoluteDenials), yet a sender's answer can
 	// correct the request that caused it. The two are different axes.
-	ReasonUnknownPurpose:             {RemedyAnswer, RemedyException},
-	ReasonClaimContradictsResolution: {RemedyAnswer, RemedyException},
+	ReasonUnknownPurpose:             {RemedyAnswer},
+	ReasonClaimContradictsResolution: {RemedyAnswer},
 	// No answer or fact supplies marketing consent.
 	ReasonNoMarketingConsent: {RemedyException},
 
@@ -47,14 +47,14 @@ var remedies = map[string][]Remedy{
 	// Prior consent is the only route where the recipient's country says so
 	// (messaging.Rules.ConsentOnly), and the advertising ceiling of such a
 	// country clears with time. Nobody sends past either.
-	ReasonMarketingConsentRequired: {},
-	ReasonFrequencyCapReached:      {},
+	ReasonMarketingConsentRequired:    {},
+	ReasonMarketingPermissionRequired: {},
+	ReasonFrequencyCapReached:         {},
 
-	// A dead mailbox, an unconfirmed opt-in and an unresolvable recipient:
-	// only an admin may send past these.
-	ReasonHardBounce:     {RemedyAdminException},
-	ReasonUnconfirmedDOI: {RemedyAdminException},
-	ReasonNoSubject:      {RemedyAdminException},
+	// Correct the address, confirmation or subject before checking a new send.
+	ReasonHardBounce:     {},
+	ReasonUnconfirmedDOI: {},
+	ReasonNoSubject:      {},
 
 	// Allows, not refusals.
 	ReasonAllowed:           {},
@@ -78,6 +78,9 @@ func HasRemedy(reason string, remedy Remedy) bool {
 // the message. givenByAdmin is the exception's own record of who gave it, never
 // the authority of whoever is sending now.
 func (s DecisionSet) ExceptionMayAnswer(givenByAdmin bool) bool {
+	if len(s.Decisions) == 0 {
+		return false
+	}
 	for _, d := range s.Decisions {
 		if d.Verdict == VerdictAllow || HasRemedy(d.ReasonCode, RemedyException) {
 			continue

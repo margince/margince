@@ -16,6 +16,7 @@ fixture:
     Beste Grüße
 expect:
   outcome: accepted
+  privacy: true
   answer: personnel
   judge: none
   judge_none_reason: >

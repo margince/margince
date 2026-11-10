@@ -340,7 +340,7 @@ describe("a record timeline you can work in", () => {
 
     await pickOption(user, screen.getByLabelText("Activity kind"), "Tasks");
     await waitFor(() =>
-      expect(feed.last().searchParams.get("kind")).toBe("task"),
+      expect(feed.last().searchParams.getAll("kind")).toEqual(["task"]),
     );
   });
 

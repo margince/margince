@@ -5,7 +5,7 @@
 // whole tree as one sentence. The builder's operator picker, a Live List's
 // verdicts and the list page's Filter line all read through this module, so a
 // reader meets one wording for one filter wherever it appears.
-// filtersentence.census.test.ts fails any other module spelling an operator.
+// census/rules/filtersentence.census.ts fails any other module spelling an operator.
 
 import {
   formatDateAbbrev,

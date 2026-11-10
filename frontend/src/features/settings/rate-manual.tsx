@@ -28,6 +28,7 @@ import {
   useAiModelCatalogue,
   useAvailableModels,
 } from "../../lib/ai-models";
+import { labelFor } from "../../lib/labelfor";
 import { problemMessageOf, unwrap } from "../../lib/problem";
 import { DECISION_PROVIDERS, PROVIDERS } from "../ai/ai-routing-fields";
 import { PER_MTOK_PRICE } from "./priceinput";
@@ -199,7 +200,7 @@ export function PriceForm({
         <p className="t-sub">
           {t("aiRates.manual.editing", {
             model: initial.model_id,
-            lane: t(LANE_LABEL[initial.lane]),
+            lane: t(labelFor(LANE_LABEL, initial.lane)),
           })}
         </p>
       ) : null}
@@ -387,7 +388,7 @@ function LaneField({
           value={lane}
           options={LANES.map((value) => ({
             value,
-            label: t(LANE_LABEL[value]),
+            label: t(labelFor(LANE_LABEL, value)),
           }))}
           onChange={(next) => {
             const picked = LANES.find((candidate) => candidate === next);

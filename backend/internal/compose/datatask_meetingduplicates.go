@@ -15,6 +15,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture/gcal"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/datatask"
+	"github.com/margince/margince/backend/internal/platform/originalstore"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -67,7 +68,7 @@ func retireCalendarCopiesBatch(
 	if err != nil {
 		return datatask.BatchOut{}, err
 	}
-	rows, err := tx.Query(ctx, `SELECT rc.id, own.id, `+auth.ConnectorSeatSQL("own")+`::uuid, rc.payload `+selection+`
+	rows, err := tx.Query(ctx, `SELECT rc.id, own.id, `+auth.ConnectorSeatSQL("own")+`::uuid, `+originalstore.SQL("rc")+` `+selection+`
 		  AND rc.id > $2 ORDER BY rc.id LIMIT $3`, googleCalendar, after, in.Limit)
 	if err != nil {
 		return datatask.BatchOut{}, fmt.Errorf("compose: listing calendar copies of meetings: %w", err)
@@ -83,6 +84,10 @@ func retireCalendarCopiesBatch(
 	retired := 0
 	for _, c := range copies {
 		scanned = append(scanned, c.original)
+		c.payload, err = originalstore.RepairPayload(ctx, c.payload)
+		if err != nil {
+			return datatask.BatchOut{}, err
+		}
 		folded, err := retireCalendarCopy(ctx, tx, meetings, c)
 		if err != nil {
 			return datatask.BatchOut{}, err

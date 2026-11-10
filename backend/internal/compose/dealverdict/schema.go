@@ -63,19 +63,11 @@ func Request(in Input, lang string) model.Request {
 // responseSchema is the shape a constrained decoder keeps to. The cited ids
 // are an enum of the activities supplied.
 func responseSchema(in Input) json.RawMessage {
-	cited := make([]string, 0, len(in.Activities))
-	for _, activity := range in.Activities {
-		cited = append(cited, activity.ID)
-	}
+	r := refsFor(in)
+	cited := r.activities.All()
 	// "" is the value of a field that does not apply to the kind.
-	stages := []string{""}
-	for _, stage := range in.Later {
-		stages = append(stages, stage.ID)
-	}
-	criteria := []string{""}
-	for _, criterion := range in.ExitCriteria {
-		criteria = append(criteria, criterion.ID)
-	}
+	stages := append([]string{""}, r.stages.All()...)
+	criteria := append([]string{""}, r.criteria.All()...)
 	return schema.Must(schema.Object(map[string]schema.Node{
 		"actions": schema.Array(schema.Object(map[string]schema.Node{
 			"kind":         schema.Enum(KindSetCloseDate, KindSetAmount, KindSetProbability, KindMoveStage),
@@ -108,11 +100,15 @@ func Validator(in Input) ai.Validator {
 	}
 }
 
-// Parse decodes and checks the model's answer.
+// Parse decodes and checks the model's answer. The answer names records by
+// the refs the request showed; Parse returns each read back to its id.
 func Parse(text string, in Input) (Payload, error) {
 	var payload Payload
 	if err := json.Unmarshal([]byte(ai.Unfence(text)), &payload); err != nil {
 		return Payload{}, fmt.Errorf("output is not the required JSON shape: %w", err)
+	}
+	if msg := readRefs(&payload, refsFor(in)); msg != "" {
+		return Payload{}, errors.New(msg)
 	}
 	if msg := validatePayload(payload, in); msg != "" {
 		return Payload{}, errors.New(msg)

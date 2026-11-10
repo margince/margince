@@ -17,6 +17,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/attention"
 	"github.com/margince/margince/backend/internal/compose/contact360"
 	"github.com/margince/margince/backend/internal/compose/integration"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -109,6 +110,7 @@ func TestTheReadsThatReuseGenericPlansBindNoPartialIndexPredicate(t *testing.T) 
 	if err != nil {
 		t.Fatal(err)
 	}
+	seedPlannedMeeting(t, e, contact, at.Add(time.Hour))
 	store := activities.NewStore(database.BindTo(pool, ids.From[ids.WorkspaceKind](e.WS)))
 	reader := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
 	if err := database.WithWorkspaceSnapshot(reader, pool, func(ctx context.Context) error {
@@ -126,6 +128,9 @@ func TestTheReadsThatReuseGenericPlansBindNoPartialIndexPredicate(t *testing.T) 
 			return err
 		}
 		if err := readSuggestionLanes(ctx, database.BindTo(pool, ids.From[ids.WorkspaceKind](e.WS))); err != nil {
+			return err
+		}
+		if err := readMeetingLanes(ctx, store, at, e.Rep1); err != nil {
 			return err
 		}
 		return database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
@@ -147,7 +152,10 @@ func TestTheReadsThatReuseGenericPlansBindNoPartialIndexPredicate(t *testing.T) 
 	if len(sent.sql) == 0 {
 		t.Fatal("no statement was sent, so there is nothing to hold")
 	}
-	for _, held := range []string{"FROM activity_commitment_admission d", "FROM deal_suggestion s", "FROM tag_suggestion s"} {
+	for _, held := range []string{
+		"FROM activity_commitment_admission d", "FROM deal_suggestion s", "FROM tag_suggestion s",
+		"a.meeting_status IS NULL OR a.meeting_status = 'booked'",
+	} {
 		if !slices.ContainsFunc(sent.sql, func(sql string) bool { return strings.Contains(sql, held) }) {
 			t.Fatalf("no statement %s was sent, so the check does not hold that read", held)
 		}
@@ -174,6 +182,35 @@ func readSuggestionLanes(ctx context.Context, db *database.DB) error {
 		return err
 	}
 	_, err := tagSuggestions.CountOpenTagSuggestions(ctx)
+	return err
+}
+
+// seedPlannedMeeting books a meeting with the contact at the given start, so the
+// meeting lanes read a row and finish it.
+func seedPlannedMeeting(t *testing.T, e *integration.Env, contact ids.UUID, startsAt time.Time) {
+	t.Helper()
+	subject, status := "Kick-off", "booked"
+	if _, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
+		Kind: "meeting", Subject: &subject, MeetingStatus: &status, OccurredAt: &startsAt, Source: "manual",
+		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contact}},
+	}); err != nil {
+		t.Fatalf("book the meeting: %v", err)
+	}
+}
+
+// readMeetingLanes runs the meetings lanes' reads through the seams that reuse
+// their plans, under every scope a lane can be asked for.
+func readMeetingLanes(ctx context.Context, store *activities.Store, at time.Time, owner ids.UUID) error {
+	window := attention.MeetingWindow{From: at.Add(-24 * time.Hour), Until: at.Add(12 * time.Hour), DaysFrom: at, DaysUntil: at.AddDate(0, 0, 1)}
+	for _, scope := range []attention.TaskScope{attention.TasksVisible, attention.TasksMine, attention.TasksUnassigned, attention.TasksOwnedBy} {
+		if _, _, err := (attentionMeetings{store: store}).Today(ctx, window, 5, scope, owner); err != nil {
+			return err
+		}
+		if _, err := (attentionMeetingsAwaitingOutcome{store: store}).Since(ctx, window, 5, scope, owner); err != nil {
+			return err
+		}
+	}
+	_, _, err := (attentionMeetingHorizon{store: store}).NextCustomerMeeting(ctx, window)
 	return err
 }
 

@@ -53,9 +53,10 @@ func TestPromptVersionMovesWithEveryPartOfTheClaim(t *testing.T) {
 		"the expected answer": func(sc *Scenario) {
 			sc.Expect.Answer = JSONValue(`"` + widgetAbstention + `"`)
 		},
-		"the rubric": func(sc *Scenario) { sc.Expect.Rubric = "Score the grounding leniently." },
-		"the bands":  func(sc *Scenario) { sc.Expect.Bands.CertifiedMin = 60 },
-		"the caps":   func(sc *Scenario) { sc.Expect.Caps.MaxTokens = 300 },
+		"the rubric":  func(sc *Scenario) { sc.Expect.Rubric = "Score the grounding leniently." },
+		"the bands":   func(sc *Scenario) { sc.Expect.Bands.CertifiedMin = 60 },
+		"the caps":    func(sc *Scenario) { sc.Expect.Caps.MaxTokens = 300 },
+		"the privacy": func(sc *Scenario) { sc.Expect.Privacy = true },
 	}
 	for what, edit := range edits {
 		t.Run(what, func(t *testing.T) {

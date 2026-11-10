@@ -266,6 +266,10 @@ func (s *Store) ApplyTagTx(ctx context.Context, tx pgx.Tx, tagID ids.TagID, enti
 // transaction is the wrong place to discover a caller had no authority.
 // evidence lands on the audit row: an accepted suggestion names itself there.
 func applyTagTx(ctx context.Context, tx pgx.Tx, tagID ids.TagID, entityType string, entityID ids.UUID, evidence map[string]any) (taggableRow, error) {
+	return applyTagWithRemovalPolicyTx(ctx, tx, tagID, entityType, entityID, evidence, false)
+}
+
+func applyTagWithRemovalPolicyTx(ctx context.Context, tx pgx.Tx, tagID ids.TagID, entityType string, entityID ids.UUID, evidence map[string]any, keepRemoval bool) (taggableRow, error) {
 	var out taggableRow
 	err := func() error {
 		var archived *time.Time
@@ -284,6 +288,23 @@ func applyTagTx(ctx context.Context, tx pgx.Tx, tagID ids.TagID, entityType stri
 		// not-found rather than confirming it exists by refusing differently.
 		if err := holdTagTarget(ctx, tx, entityType, entityID); err != nil {
 			return err
+		}
+		if err := lockTagAssignmentTx(ctx, tx, tagID, entityType, entityID); err != nil {
+			return err
+		}
+		if keepRemoval {
+			var removed bool
+			err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM audit_log a
+ WHERE a.entity_type='tag' AND a.entity_id=@tag AND a.actor_type NOT IN ('system','connector')
+ AND a.after->'removed'->>'entity_type'=@entity_type
+ AND a.after->'removed'->>'entity_id'=@entity_id::text)`,
+				pgx.NamedArgs{"tag": tagID, "entity_type": entityType, "entity_id": entityID}).Scan(&removed)
+			if err != nil {
+				return err
+			}
+			if removed {
+				return apperrors.ErrConflict
+			}
 		}
 		by, byKind := assigningPrincipal(ctx)
 		row := tx.QueryRow(ctx, `

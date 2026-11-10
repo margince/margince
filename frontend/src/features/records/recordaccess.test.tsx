@@ -57,6 +57,7 @@ const mayWrite: Seat = {
 };
 
 const NAMES = { data: [{ id: "u-owner", display_name: "Mira Voss" }] };
+const CANDIDATES = { data: [{ id: "u-rep-two", display_name: "Rep Two" }] };
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -102,6 +103,8 @@ function stub(
       sent.push(key);
       if (key === "GET /me") return me(seat);
       if (key === "GET /users/names") return json(options.names ?? NAMES);
+      if (key === "GET /records/contact/p-1/ownership-offer/candidates")
+        return json(CANDIDATES);
       if (options.gone && method === "GET")
         return json({ status: 404, title: "Not found" }, 404);
       if (options.probeFails && key === "GET /contacts/p-1")
@@ -246,6 +249,38 @@ describe("RecordAccess — the chip", () => {
     stub();
     drawContact({ ...base, writable: true });
     expect(screen.queryByRole("button")).toBeNull();
+  });
+});
+
+describe("RecordAccess — handing the record over", () => {
+  it("keeps the panel and the colleague a mouse picks in the hand-over list", async () => {
+    const user = userEvent.setup();
+    stub();
+    drawContact({
+      ...base,
+      visibility: "owner",
+      writable: true,
+      owner_id: "u1",
+    });
+    const panel = await open(user);
+    await user.click(
+      await within(panel).findByRole("button", { name: en["handover.offer"] }),
+    );
+    await user.click(
+      within(panel).getByRole("combobox", { name: en["handover.offerTo"] }),
+    );
+
+    await user.click(await screen.findByRole("option", { name: "Rep Two" }));
+
+    expect(
+      within(panel).getByRole("combobox", { name: en["handover.offerTo"] })
+        .textContent,
+    ).toContain("Rep Two");
+    expect(
+      within(panel)
+        .getByRole("button", { name: en["handover.offerSend"] })
+        .hasAttribute("disabled"),
+    ).toBe(false);
   });
 });
 

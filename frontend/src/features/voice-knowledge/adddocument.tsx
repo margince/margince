@@ -25,6 +25,7 @@ import {
   uploadAttachment,
 } from "../../lib/attachmentupload";
 import { useCanWrite } from "../../lib/capability";
+import { labelFor } from "../../lib/labelfor";
 import { problemMessageOf, unwrap } from "../../lib/problem";
 import { formatUploadLimit, useMaxUploadBytes } from "../../lib/uploadlimit";
 import {
@@ -401,7 +402,7 @@ export function AddDocumentDialog({
               onChange={(picked) => setCategory(picked as Category)}
               options={UPLOADABLE_CATEGORIES.map((key) => ({
                 value: key,
-                label: t(CATEGORY_KEYS[key]),
+                label: t(labelFor(CATEGORY_KEYS, key)),
               }))}
             />
           )}

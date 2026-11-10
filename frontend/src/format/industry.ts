@@ -1,6 +1,7 @@
 import type { components } from "../api/schema";
 import type { Locale } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { labelFor } from "../lib/labelfor";
 import { forReader } from "./collate";
 
 export type IndustryCode = NonNullable<
@@ -75,7 +76,7 @@ export const INDUSTRY_FIELD = "industry";
 // code (an older server, or a row not yet repaired).
 export function industryLabelKey(value: string): MessageKey | undefined {
   const code = INDUSTRY_CODES.find((known) => known === value);
-  return code ? INDUSTRY_LABEL_KEYS[code] : undefined;
+  return code ? labelFor(INDUSTRY_LABEL_KEYS, code) : undefined;
 }
 
 // What a reader sees for a stored industry: the wording of a code, and the

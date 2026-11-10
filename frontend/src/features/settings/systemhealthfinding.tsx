@@ -17,6 +17,7 @@ import { formatDateTime, formatNumber } from "../../format/format";
 import { type Translator, useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { healthScope, useHealthScope } from "../../lib/healthscope";
+import { labelFor } from "../../lib/labelfor";
 import { navigate } from "../../lib/router";
 import { settingsHref } from "../../lib/settingsrouting";
 import { useViewerZone } from "../../lib/viewerzone";
@@ -126,7 +127,7 @@ function FindingScope({ finding }: Readonly<{ finding: Finding }>) {
             count: formatNumber(finding.count, locale),
           })
         : t("health.scopeUnknown")}{" "}
-      · {t(healthResponsible[finding.responsible])}
+      · {t(labelFor(healthResponsible, finding.responsible))}
     </p>
   );
 }

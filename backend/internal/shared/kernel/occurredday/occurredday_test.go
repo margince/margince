@@ -219,3 +219,36 @@ func TestHappenedAnswersTheCasesTheFrontendShares(t *testing.T) {
 		}
 	}
 }
+
+// answersCase is one row of testdata/answers.json, which AnswersSQL and the
+// frontend's activityAnswers read too, so every reader of a tie agrees.
+type answersCase struct {
+	Name             string    `json:"name"`
+	MessageAt        time.Time `json:"message_at"`
+	MessagePrecision string    `json:"message_precision"`
+	AnswerAt         time.Time `json:"answer_at"`
+	AnswerPrecision  string    `json:"answer_precision"`
+	Answers          bool      `json:"answers"`
+}
+
+func TestAnswersBreaksATieOnlyForADayEntry(t *testing.T) {
+	t.Parallel()
+	raw, err := os.ReadFile("testdata/answers.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var cases []answersCase
+	if err := json.Unmarshal(raw, &cases); err != nil {
+		t.Fatal(err)
+	}
+	if len(cases) < 9 {
+		t.Fatalf("read %d cases, want the whole table", len(cases))
+	}
+	for _, c := range cases {
+		answer := Moment{At: c.AnswerAt, DateOnly: IsDay(c.AnswerPrecision)}
+		message := Moment{At: c.MessageAt, DateOnly: IsDay(c.MessagePrecision)}
+		if got := Answers(answer, message); got != c.Answers {
+			t.Errorf("%s: Answers = %v, want %v", c.Name, got, c.Answers)
+		}
+	}
+}

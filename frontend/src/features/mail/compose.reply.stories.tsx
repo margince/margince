@@ -1,9 +1,10 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { ReactNode } from "react";
-import { expect, within } from "storybook/test";
+import { expect, screen, waitFor, within } from "storybook/test";
 import {
   installFetchStub,
   jsonResponse,
+  meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
 import { ChannelReplyAction } from "./compose.reply";
@@ -39,6 +40,8 @@ const meta: Meta<typeof ChannelReplyAction> = {
 export default meta;
 
 type Story = StoryObj<typeof ChannelReplyAction>;
+
+const MAY_WRITE = meRoute({ activity: ["read", "create"] });
 
 // Whether this contact can be reached on one transport. The shape is the
 // record read's own, because that read is what the gate consults — see
@@ -76,7 +79,7 @@ function Row({
  *  is not a fact this gate has an opinion about. */
 export const MailReply: Story = {
   render: () => {
-    installFetchStub({});
+    installFetchStub({ "GET /me": MAY_WRITE });
     return (
       <StoryProviders>
         <Row
@@ -96,11 +99,78 @@ export const MailReply: Story = {
   },
 };
 
+/** A seat that may not write activities is offered no reply. */
+export const MailReplyRefused: Story = {
+  render: () => {
+    installFetchStub({ "GET /me": meRoute({ activity: ["read"] }) });
+    return (
+      <StoryProviders>
+        <Row
+          when="24 August, 10:00"
+          said="Can we align the payment schedule with our fiscal quarters?"
+        >
+          <ChannelReplyAction
+            activityId="a-1"
+            kind="email"
+            entityType="contact"
+            entityId="p-1"
+            contactId="p-1"
+          />
+        </Row>
+      </StoryProviders>
+    );
+  },
+  play: async () => {
+    // Drawn while the grants are unknown, gone once /me refuses the write.
+    await screen.findByRole("button", { name: "Reply" });
+    await waitFor(() =>
+      expect(screen.queryByRole("button", { name: "Reply" })).toBeNull(),
+    );
+  },
+};
+
+/** A contact shared read-only: the reply would file under it, so only the
+ *  row on a contact the reader may attach to offers one. */
+export const MailReplyOnReadShareContact: Story = {
+  render: () => {
+    installFetchStub({ "GET /me": MAY_WRITE });
+    return (
+      <StoryProviders>
+        <Row when="24 August, 10:00" said="Your own contact">
+          <ChannelReplyAction
+            activityId="a-1"
+            kind="email"
+            entityType="contact"
+            entityId="p-1"
+            contactId="p-1"
+            contact={{ attachable: true }}
+          />
+        </Row>
+        <Row when="24 August, 11:00" said="A contact shared with you read-only">
+          <ChannelReplyAction
+            activityId="a-2"
+            kind="email"
+            entityType="contact"
+            entityId="p-2"
+            contactId="p-2"
+            contact={{ attachable: false }}
+          />
+        </Row>
+      </StoryProviders>
+    );
+  },
+  play: async () => {
+    await screen.findByRole("button", { name: "Reply" });
+    expect(screen.getAllByRole("button", { name: "Reply" })).toHaveLength(1);
+  },
+};
+
 /** A channel row whose contact IS reachable on the transport that carried it.
  *  The word is the same as mail's: this is an answer to the message above. */
 export const ChannelReply: Story = {
   render: () => {
     installFetchStub({
+      "GET /me": MAY_WRITE,
       "GET /contacts/p-1": contactReachable("telegram", true),
     });
     return (
@@ -126,6 +196,7 @@ export const ChannelReply: Story = {
 export const WithheldWritesEmail: Story = {
   render: () => {
     installFetchStub({
+      "GET /me": MAY_WRITE,
       "GET /contacts/p-1": contactReachable("telegram", true),
     });
     return (
@@ -153,7 +224,7 @@ export const WithheldWritesEmail: Story = {
  *  never a reply to it. */
 export const CallWritesEmail: Story = {
   render: () => {
-    installFetchStub({});
+    installFetchStub({ "GET /me": MAY_WRITE });
     return (
       <StoryProviders>
         <Row
@@ -181,7 +252,7 @@ export const CallWritesEmail: Story = {
  *  offers Write email. */
 export const NoteWithNobodyToWriteTo: Story = {
   render: () => {
-    installFetchStub({});
+    installFetchStub({ "GET /me": MAY_WRITE });
     return (
       <StoryProviders>
         <Row when="24 August, 11:20" said="Asked for the revised annex.">
@@ -220,6 +291,7 @@ export const NoteWithNobodyToWriteTo: Story = {
 export const UnreachableOffersNothing: Story = {
   render: () => {
     installFetchStub({
+      "GET /me": MAY_WRITE,
       "GET /contacts/p-1": contactReachable("telegram", false),
     });
     return (
@@ -258,7 +330,7 @@ export const UnreachableOffersNothing: Story = {
  */
 export const PreparedReply: Story = {
   render: () => {
-    installFetchStub({});
+    installFetchStub({ "GET /me": MAY_WRITE });
     return (
       <StoryProviders>
         <Row

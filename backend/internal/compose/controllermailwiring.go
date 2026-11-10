@@ -196,7 +196,8 @@ func (s *Server) rewireConfirmationLane(pool *pgxpool.Pool) {
 	s.authHandlers = s.WithContactMailLane(true)
 	s.siteLeadNotices.store.Store(consent.NewStore(InstallationDB(pool)).
 		WithMailLanguage(consent.MailLanguageFunc(identity.LanguageOf)).
-		WithConfirmationLane(queue, confirmLinkVault{s.vault}, s.confirmLinkBase))
+		WithConfirmationLane(queue, confirmLinkVault{s.vault}, s.confirmLinkBase).
+		WithMissedReceipts(receiptAlarm{db: InstallationDB(pool)}))
 }
 
 // errNoWorkspaceForConfirmLink marks a seal attempted with no workspace in

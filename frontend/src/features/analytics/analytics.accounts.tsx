@@ -25,6 +25,7 @@ import {
   formatDateTime,
 } from "../../format/format";
 import { type Locale, usePlural, useT } from "../../i18n";
+import { UNKNOWN_VALUE_LABEL } from "../../lib/labelfor";
 import { useMemberNames } from "../../lib/membernames";
 import { unwrap } from "../../lib/problem";
 import type { AnalyticsScope } from "./analytics.context";
@@ -199,6 +200,8 @@ function viewPurpose(
         days: formatAnalyticsNumber(limits.silent_days ?? 30, locale),
         won: formatAnalyticsNumber(limits.won_within_days ?? 180, locale),
       });
+    default:
+      return t(UNKNOWN_VALUE_LABEL);
   }
 }
 

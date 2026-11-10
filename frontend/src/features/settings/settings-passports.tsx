@@ -27,6 +27,7 @@ import { ScopeChips, scopeChipLabel } from "../../design-system/passportselect";
 import { QueryStates } from "../../design-system/querystates";
 import { formatDate, formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
+import { useEndedRows } from "../../lib/ended-rows";
 import { usePassports } from "../../lib/passports.queries";
 import {
   PassportUsageLine,
@@ -72,27 +73,16 @@ export function PassportCard() {
   const [changingAreas, setChangingAreas] = useState<PassportSummary | null>(
     null,
   );
-  // A revoked passport can do nothing more, so it waits behind a toggle. One
-  // revoked from this view stays, struck, so focus has its row to land on.
-  const [showRevoked, setShowRevoked] = useState(false);
-  const [revokedHere, setRevokedHere] = useState<ReadonlySet<string>>(
-    new Set(),
+  const { shown, ended, hidden, showing, toggle, keep } = useEndedRows(
+    minted,
+    (passport) => passport.revoked_at != null,
   );
-  const hidden = minted.filter(
-    (passport) => passport.revoked_at != null && !revokedHere.has(passport.id),
-  );
-  const shown = showRevoked
-    ? minted
-    : minted.filter((passport) => !hidden.includes(passport));
-  const askRevoke = (id: string) => {
-    setRevokedHere((ids) => new Set(ids).add(id));
-    revoke.ask(id);
-  };
 
   const revoke = usePassportRevoke({
     verb: "settings.revoke",
     question: "settings.revokeConfirm",
     focusAfter: passportAnchor,
+    onRevoked: (id) => keep(id),
   });
 
   return (
@@ -113,7 +103,7 @@ export function PassportCard() {
         <PassportTable
           passports={shown}
           reachable={reachable}
-          onRevoke={askRevoke}
+          onRevoke={revoke.ask}
           onChangeAreas={setChangingAreas}
         />
       ) : list.isSuccess && hidden.length > 0 ? null : (
@@ -124,10 +114,10 @@ export function PassportCard() {
         </PanelBody>
       )}
       <PanelBody className="form-stack">
-        {hidden.length > 0 && (
+        {ended.length > 0 && (
           <span>
-            <Button variant="link" onClick={() => setShowRevoked((on) => !on)}>
-              {showRevoked
+            <Button variant="link" onClick={toggle}>
+              {showing
                 ? t("settings.passportsHideRevoked")
                 : plural("settings.passportsShowRevoked", hidden.length, {
                     count: formatNumber(hidden.length, locale),

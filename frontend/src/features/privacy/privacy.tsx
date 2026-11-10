@@ -36,6 +36,7 @@ import { Stack } from "../../design-system/stack";
 import { useNow } from "../../format/now";
 import { useT } from "../../i18n";
 import { useCan } from "../../lib/capability";
+import { labelFor } from "../../lib/labelfor";
 import { isOption } from "../../lib/options";
 import {
   closingBody,
@@ -185,7 +186,7 @@ export function NewDsrForm({ onDone }: Readonly<{ onDone: () => void }>) {
               {...control}
               options={DSR_KINDS.map((value) => ({
                 value,
-                label: t(DSR_KIND_LABEL[value]),
+                label: t(labelFor(DSR_KIND_LABEL, value)),
               }))}
               value={draft.kind}
               onChange={(value) => {

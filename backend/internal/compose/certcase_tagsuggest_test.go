@@ -9,6 +9,7 @@ package compose
 import (
 	"context"
 	"encoding/json"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -34,11 +35,14 @@ func (s *tagSuggestCompleterStub) Complete(_ context.Context, req model.Request)
 }
 
 // listedTagIDs reads the tag ids off the vocabulary lines of a prompt, in order.
+// tagRef is the shape of the ref the prompt lists a tag by.
+var tagRef = regexp.MustCompile(`^t[1-9][0-9]*$`)
+
 func listedTagIDs(prompt string) []string {
 	var out []string
 	for line := range strings.Lines(prompt) {
 		id, _, found := strings.Cut(strings.TrimPrefix(line, "- "), ":")
-		if _, err := ids.Parse(id); found && strings.HasPrefix(line, "- ") && err == nil {
+		if found && strings.HasPrefix(line, "- ") && tagRef.MatchString(id) {
 			out = append(out, id)
 		}
 	}

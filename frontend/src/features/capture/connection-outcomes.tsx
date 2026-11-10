@@ -15,7 +15,11 @@ import { Panel } from "../../design-system/panel";
 import { SettingList, SettingRow } from "../../design-system/settingrow";
 import { formatNumber } from "../../format/format";
 import { type PluralBase, useLocale, usePlural, useT } from "../../i18n";
-import { CAPTURE_REVIEW_PARAM, captureReview } from "../../lib/capturereview";
+import {
+  CAPTURE_REVIEW_PARAM,
+  captureReview,
+  withoutCaptureContact,
+} from "../../lib/capturereview";
 import { problemMessageOf } from "../../lib/problem";
 import { useUrlParams } from "../../lib/urlstate";
 import {
@@ -47,7 +51,9 @@ export function ConnectionOutcomesCard() {
   const [selected, setSelected] = useState<Outcome | null>(null);
   const open = captureReview(params.get(CAPTURE_REVIEW_PARAM)) ?? selected;
   const setOpen = (outcome: Outcome | null) => {
-    const next = new Map(params);
+    // A contact filter came with a link from a timeline. The row's own View
+    // opens the whole list, and closing the drawer ends the filter.
+    const next = withoutCaptureContact(params);
     next.delete(CAPTURE_REVIEW_PARAM);
     setParams(next);
     setSelected(outcome);
@@ -154,7 +160,7 @@ export function ConnectionOutcomesCard() {
           )}
         </OutcomeDrawer>
       )}
-      {open === "held" && held.data && (
+      {open === "held" && (
         <OutcomeDrawer
           title={t("heldThreads.title")}
           onClose={close}

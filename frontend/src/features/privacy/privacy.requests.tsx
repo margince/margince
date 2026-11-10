@@ -44,6 +44,7 @@ import {
 import { ProblemError, problemMessageOf, unwrap } from "../../lib/problem";
 import { RequestProof } from "./privacy.proofreading";
 import "./privacy.css";
+import { labelFor } from "../../lib/labelfor";
 import { isUuid } from "../../lib/uuid";
 import { useViewerZone } from "../../lib/viewerzone";
 import { DsrDispute, DsrProofFields } from "./privacy.requestproof";
@@ -111,7 +112,7 @@ export function DsrTable({
     {
       key: "kind",
       header: t("privacy.kind"),
-      render: (dsr) => t(DSR_KIND_LABEL[dsr.kind]),
+      render: (dsr) => t(labelFor(DSR_KIND_LABEL, dsr.kind)),
     },
     {
       key: "status",
@@ -367,7 +368,7 @@ function DsrFacts({
     {
       key: "kind",
       term: t("privacy.kind"),
-      value: t(DSR_KIND_LABEL[dsr.kind]),
+      value: t(labelFor(DSR_KIND_LABEL, dsr.kind)),
     },
     {
       key: "status",
