@@ -230,7 +230,7 @@ it("rechecks access on activation and refuses a now-hidden record", async () => 
       ? json({ id, full_name: "Fresh name" })
       : json({ code: "not_found", status: 404 }, 404),
   );
-  const row = await screen.findByRole("button", { name: /^Fresh name/ });
+  const row = await screen.findByRole("button", { name: /^FN\s*Fresh name/ });
   allowed = false;
   fireEvent.click(row);
   await waitFor(() => expect(readRecents(me.user.id).entries).toEqual([]));
@@ -263,7 +263,7 @@ it("hides a transient activation failure and keeps it for the next opening", asy
       ? json({ id, full_name: "Fresh name" })
       : json({ status: 503, code: "service_unavailable" }, 503),
   );
-  const row = await screen.findByRole("button", { name: /^Fresh name/ });
+  const row = await screen.findByRole("button", { name: /^FN\s*Fresh name/ });
   available = false;
   fireEvent.click(row);
   await waitFor(() => expect(screen.queryByText("Fresh name")).toBeNull());
@@ -280,7 +280,7 @@ it("a closed palette never navigates when an activation finishes late", async ()
   const view = mount(() =>
     waiting ? pending : json({ id, full_name: "Fresh name" }),
   );
-  const row = await screen.findByRole("button", { name: /^Fresh name/ });
+  const row = await screen.findByRole("button", { name: /^FN\s*Fresh name/ });
   waiting = true;
   fireEvent.click(row);
   view.rerender(false);
