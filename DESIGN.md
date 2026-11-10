@@ -67,10 +67,10 @@ screen against it. The sources are listed at the end of the section.
 4. **Corners inside corners follow one rule**. The most common reason a screen looks "off": the corner of a
    control does not match its card.
 
-   Inner radius = outer radius − padding. Rule: a 20px pane with an 8px inset holds 12px controls;
-   `--r-lg` 20, `--r-control` 12, and a keycap 4. The ladder runs in fours (4 / 8 / 12 / 16 / 20
-   and the pill). It is twice as large under `corner-shape: squircle`, where a superellipse of radius R
-   looks about as round as a plain round corner of R/2.
+   Rule: a pane, a card and a control share one radius, 8px, at every width. `--r-lg`,
+   `--r-md` and `--r-control` all read `--r-sm`, and a keycap takes 4. The ladder runs in fours
+   (4 / 8 and the pill). It is twice as large under `corner-shape: squircle`, where a superellipse of
+   radius R looks about as round as a plain round corner of R/2.
 5. **Text is near-black slate**; greys carry the hue. Stripe sets text in deep slate on an
    almost white ground, never plain black.
 
@@ -134,7 +134,7 @@ Sources for this section:
 1. **A flat ground, and panes by depth**. The page is light teal paper, one flat colour with no
    light painted into it.
 
-   Each zone of a record is one white pane on it, with a hairline edge and a 20px corner. A pane
+   Each zone of a record is one white pane on it, with a hairline edge and an 8px corner. A pane
    inside it sits one level down. Dark is the same room with the lights down.
 2. **Everything is a list**. The fields of a record are a list of label and value, in a panel on the
    left that folds.
@@ -310,10 +310,10 @@ target for that new build. The shipped sheet may not match it.
   and the rest, all in `base.css`. What each one draws is the new build in section 4, one role at a
   time.
 - **Corners by role**:
-  - 20px for a pane, the details panel, a reading card and a modal;
-  - 16px for a board card and the agent's row;
-  - 12px (`--r-control`) for a control;
-  - 8px for a chip, and 4px for a keycap;
+  - 8px for a pane, the details panel, a reading card and a modal (`--r-lg`);
+  - 8px for a board card and the agent's row (`--r-md`);
+  - 8px for a control (`--r-control`);
+  - 8px for a chip (`--r-sm`), and 4px for a keycap;
   - full for a pill and a monogram.
 - **Depth is light first, shadow second**. A pane stands on the flat ground with a hairline edge;
   that is its height. On top of it, the shadow turns on what the thing is:
@@ -887,23 +887,23 @@ The primitives in the catalog keep their names and `props`; this is how each one
 
 | Component | Look |
 |---|---|
-| `Button` primary | `--accent` fill, `--textOnAccentControl` text (off-white `#f4faf7` in light, dark ink `#06130b` in dark), `--r-control` (12px) radius, `--controlHeight` (32px), `--fontWeightMedium`. One per view. |
+| `Button` primary | `--accent` fill, `--textOnAccentControl` text (off-white `#f4faf7` in light, dark ink `#06130b` in dark), `--r-control` (8px) radius, `--controlHeight` (32px), `--fontWeightMedium`. One per view. |
 | `Button` secondary | `--pane` fill, `--line2` outline, `--ink` text, flat. With only an icon, it is the same `--controlHeight` square for the more menu: there is one control size. |
 | `Button` ghost | No outline, `--ink2` text; hover `--bg3`. |
 | `Button` danger | An outline in `--bad`; fills only inside a `ConfirmModal`. |
-| `TextInput` / `Select` | White, `--line2` outline, `--controlHeight`, `--r-control` (12px) radius; focus is a 2px accent ring. Label above at 12px 500; help text below at 12px in `--ink3`. |
+| `TextInput` / `Select` | White, `--line2` outline, `--controlHeight`, `--r-control` (8px) radius; focus is a 2px accent ring. Label above at 12px 500; help text below at 12px in `--ink3`. |
 | `Badge` | One size (20px: an 18px line inside a 1px edge, 12px 500, full radius), never in upper case. `soft` by default: the tint of the tone behind the word, in the ink of the tone, with a hairline of the same tone as its edge (the record's standing badges beside its name, a status in a row). `primary` is the solid fill with its edge left clear, for a count and the one status that must not be missed. A glyph, when there is one, sits left of the word; the agent's badge always carries the `Sparkles` glyph. |
 | `Chip` | A fact a reader can use: a pill on the raised ground with a neutral hairline and a glyph, a link when the fact has a place to go, and a hover that says so. A badge is a tinted status, with an edge in its tone, that nobody presses. |
-| `Panel` | Becomes a **zone pane**: the ground and edge of its level (`--pane` and `--paneEdge` on the page) and a 20px corner; inside, a title in the display face with its count and its verb, a hairline, and rows. `PanelPlate` is a row one level down from the pane. |
-| `StatCard` | The **reading card**: the ground of its level with its hairline and a 20px corner, 138px tall. The eyebrow is its label, with the basis as words with a dotted underline at the end of the label. The figure is at 26px in the display face, tabular (down to 20px where five share a small row). The basis is at 12.5px at the foot. |
+| `Panel` | Becomes a **zone pane**: the ground and edge of its level (`--pane` and `--paneEdge` on the page) and an 8px corner; inside, a title in the display face with its count and its verb, a hairline, and rows. `PanelPlate` is a row one level down from the pane. |
+| `StatCard` | The **reading card**: the ground of its level with its hairline and an 8px corner, 138px tall. The eyebrow is its label, with the basis as words with a dotted underline at the end of the label. The figure is at 26px in the display face, tabular (down to 20px where five share a small row). The basis is at 12.5px at the foot. |
 | `FieldGrid` / `FieldRow` | The field row in the details panel: a 96px label with its glyph in `--ink3`, the value in `--ink`, "Add …" in `--ink4` when empty, and the dotted evidence underline when a machine read it. |
 | `ListTable` / `DataTable` | Headers at 11.5px 500 in `--ink3`; 44px rows; hairlines; figures aligned right; the selected row on `--accentBg`. Edge to edge inside its zone. |
 | `RecordTabs` | Quiet: no rule under the strip; the open tab in `--ink` with a 2px accent underline; counts at 11px in `--ink4`. |
 | `SegmentedControl` | `--bg3` track, the pressed part white on the resting shadow, 12px. |
-| `Modal` | White, `--r-lg` (20px) radius, `--shadow-pop`, a scrim of `rgba(24,24,27,.4)`. Five intents, each one a fixed width, but never wider than the glass: a confirm at 440px, a form at 600px, a drawer at 560px, a reading drawer at 880px, and the lightbox at 1240px. The drawers come in from the right with the same surface. On a phone a confirm stays a card over the scrim, and the rest become a full-screen sheet. On a desktop, a form, or a drawer with no bands whose body is one form stack followed by its action row, scrolls that stack, so the title and the actions stay put. A drawer with bands scrolls its body between its head and foot. |
+| `Modal` | White, `--r-lg` (8px) radius, `--shadow-pop`, a scrim of `rgba(24,24,27,.4)`. Five intents, each one a fixed width, but never wider than the glass: a confirm at 440px, a form at 600px, a drawer at 560px, a reading drawer at 880px, and the lightbox at 1240px. The drawers come in from the right with the same surface. On a phone a confirm stays a card over the scrim, and the rest become a full-screen sheet. On a desktop, a form, or a drawer with no bands whose body is one form stack followed by its action row, scrolls that stack, so the title and the actions stay put. A drawer with bands scrolls its body between its head and foot. |
 | `EmptyState` | Aligned left in its own zone, `--ink3`, one sentence and one verb. |
 | `Callout` | A card on a soft wash of the tone's colour. The glyph of the tone and the heading sit on one line, with a body below if there is one. The glyph is in the ink of the tone: a filled Material mark, except `ai`, which keeps the lucide `Sparkles`. The heading (bold) and the body are in plain ink. The verbs are aligned right at the end of the heading line, with the dismiss after them. A callout must have a heading; a heading alone is the most common callout. In a narrow card the verbs drop under the words. Six tones: `info`, `success`, `warning`, `danger`, `discovery` (new to this reader; no verdict) and `ai`. Borders inside the card follow the wash. No `className`. |
-| `StagingCard` / `DecisionCard` | The agent's row: `--aiBg`, 14px radius, the indigo mark on its own tile (no label beside it: the tile is the claim), the verdict word at 15px 600 (amber when warning, green when calm), the sentence in `--ink`, `What this rests on · n sources` in `--aiText`, and the agent's verb in `--ai`. A staged change is a row with a dashed `--aiLine` edge, Accept and Dismiss. |
+| `StagingCard` / `DecisionCard` | The agent's row: `--aiBg`, `--r-md` (8px) radius, the indigo mark on its own tile (no label beside it: the tile is the claim), the verdict word at 15px 600 (amber when warning, green when calm), the sentence in `--ink`, `What this rests on · n sources` in `--aiText`, and the agent's verb in `--ai`. A staged change is a row with a dashed `--aiLine` edge, Accept and Dismiss. |
 | `Kbd` | 10.5px in `--ink4` with a `--line` outline, 4px radius. On the search field and the ask field. |
 | `Spine` | The product's own spine: per stop a date, a 2px accent rule with a 9px dot at its start, a title, and a detail. The gap stop is at 1.5× width, as a 26px amber day count over a dashed amber rule with no dot. Today is a 2px black bar with TODAY and the date under it, and dotted grey and hollow dots come after it. |
 | `RecordTimeline` | The rail: a 76px date column in tabular figures, and a 1px rail of full height with a mark per kind (solid, hollow, indigo, dashed indigo, a glyph in a circle for a thread). Then the kind in upper case, direction words, title, the message text cut to three lines, and a meta line; threads as a card on the rail. |

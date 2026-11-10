@@ -50,6 +50,33 @@ func TestTheHashIgnoresEverythingDerivedFromToday(t *testing.T) {
 	}
 }
 
+// Overdue is money owed past its date. An invoice with nothing open owes
+// nothing, so its passed due date must not paint it as a payment failure.
+func TestOnlyAnInvoiceWithSomethingOpenIsOverdue(t *testing.T) {
+	due := time.Date(2026, time.June, 1, 0, 0, 0, 0, time.UTC)
+	afterDue := due.AddDate(0, 0, 10)
+	cases := []struct {
+		name    string
+		invoice SourceInvoice
+		open    int64
+		want    string
+	}{
+		{"a zero total past its due date", SourceInvoice{DueOn: &due}, 0, statusPaid},
+		{"settled by credits past its due date", SourceInvoice{DueOn: &due, GrossMinor: 50000}, 0, statusPaid},
+		{"an open balance past its due date", SourceInvoice{DueOn: &due, GrossMinor: 50000}, 50000, statusOverdue},
+		{"an open balance before its due date", SourceInvoice{DueOn: &due, GrossMinor: 50000}, 50000, statusOpen},
+	}
+	for _, tc := range cases {
+		now := afterDue
+		if tc.want == statusOpen {
+			now = due.AddDate(0, 0, -1)
+		}
+		if got := deriveStatus(tc.invoice, tc.open, now); got != tc.want {
+			t.Errorf("%s: status = %q, want %q", tc.name, got, tc.want)
+		}
+	}
+}
+
 // FIN-FORM-1 reads `credited_minor` off the invoice being reduced: its term is
 // `net - credited`. A credit note that carried its own amount there would
 // subtract nothing, and the credit would never reach the figure.
