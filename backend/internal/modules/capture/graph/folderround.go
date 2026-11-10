@@ -50,6 +50,11 @@ func (c *Connector) pullFolder(
 		resume = state.Rounds[folder]
 	}
 	next, err := c.walkFolder(ctx, access, folder, state.link(folder), resume, anchorFrom, visit)
+	if errors.Is(err, ErrAnchorShort) {
+		// Resuming the same census cannot find what it missed, so the next
+		// cycle opens a fresh anchor instead.
+		return "", errors.Join(err, dropRound(ctx, state, folder))
+	}
 	if err != nil {
 		return "", err
 	}
@@ -91,6 +96,25 @@ func checkpointRound(ctx context.Context, state *cursorState, folder string, res
 	cursor, err := json.Marshal(saved)
 	if err != nil {
 		return fmt.Errorf("graph: encoding the %s checkpoint: %w", folder, err)
+	}
+	return connector.CheckpointSync(ctx, cursor)
+}
+
+// dropRound saves the cursor without folder's round, keeping its watermarks.
+func dropRound(ctx context.Context, state *cursorState, folder string) error {
+	saved := *state
+	saved.Rounds = nil
+	for other, round := range state.Rounds {
+		if other != folder {
+			if saved.Rounds == nil {
+				saved.Rounds = map[string]*DeltaResume{}
+			}
+			saved.Rounds[other] = round
+		}
+	}
+	cursor, err := json.Marshal(saved)
+	if err != nil {
+		return fmt.Errorf("graph: encoding the cursor without the %s round: %w", folder, err)
 	}
 	return connector.CheckpointSync(ctx, cursor)
 }
