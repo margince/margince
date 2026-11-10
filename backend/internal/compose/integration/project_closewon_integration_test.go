@@ -30,6 +30,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/projects"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -401,11 +402,11 @@ func waitForBlockedOn(ctx context.Context, t *testing.T, probe pgx.Tx, holderPID
 	budget, cancel := context.WithTimeout(ctx, 60*time.Second)
 	defer cancel()
 	for {
-		blocked, err := blockedBy(budget, probe, holderPID)
+		queued, err := testdb.QueuedBehind(budget, probe.Conn(), int32(holderPID))
 		if err != nil && budget.Err() == nil {
 			t.Fatalf("probing for a backend blocked on the project row: %v", err)
 		}
-		if blocked {
+		if queued > 0 {
 			return
 		}
 		select {
@@ -415,27 +416,6 @@ func waitForBlockedOn(ctx context.Context, t *testing.T, probe pgx.Tx, holderPID
 				"decided its transition without taking the lock, so this run proves nothing")
 		}
 	}
-}
-
-// blockedBy asks whether any backend in this database is waiting on the
-// holder. pg_blocking_pids answers the question directly, so nothing here has
-// to reason about which lock shape Postgres reports mid-queue.
-//
-// The snapshot is cleared first because pg_stat_activity is materialized once
-// per transaction and cached until it ends: a probe running inside the holder's
-// long transaction would otherwise keep answering from the view it had before
-// the win's connection existed, and never see the waiter at all.
-func blockedBy(ctx context.Context, probe pgx.Tx, holderPID int) (bool, error) {
-	if _, err := probe.Exec(ctx, `SELECT pg_stat_clear_snapshot()`); err != nil {
-		return false, err
-	}
-	var blocked bool
-	err := probe.QueryRow(ctx, `
-		SELECT EXISTS (
-		  SELECT 1 FROM pg_stat_activity a
-		   WHERE a.datname = current_database() AND $1 = ANY (pg_blocking_pids(a.pid)))`,
-		holderPID).Scan(&blocked)
-	return blocked, err
 }
 
 // The race the row lock exists to close, forced rather than hoped for.

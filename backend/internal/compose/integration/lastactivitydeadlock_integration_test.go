@@ -18,13 +18,13 @@ import (
 	"context"
 	"sync"
 	"testing"
-	"time"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -134,7 +134,7 @@ func runConcurrently(t *testing.T, e *Env, barrier pgx.Tx, writers ...func(conte
 			errs[i] = runWriter(e, write)
 		})
 	}
-	waitForParkedWriters(t, len(writers))
+	testdb.AwaitQueuedBehind(t, OwnerConn(t), int32(barrier.Conn().PgConn().PID()), len(writers), nil, "the writers")
 	if err := barrier.Rollback(context.Background()); err != nil {
 		t.Fatalf("releasing the barrier: %v", err)
 	}
@@ -154,31 +154,6 @@ func runWriter(e *Env, write func(context.Context, pgx.Tx) error) error {
 		return err
 	}
 	return tx.Commit(ctx)
-}
-
-// waitForParkedWriters polls until n backends in this database wait on a lock.
-func waitForParkedWriters(t *testing.T, n int) {
-	t.Helper()
-	probe := OwnerConn(t)
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-	for {
-		if ctx.Err() != nil {
-			t.Fatalf("fewer than %d writers ever parked behind the barrier, so the interleaving under test never happened", n)
-		}
-		if _, err := probe.Exec(ctx, `SELECT pg_stat_clear_snapshot()`); err != nil {
-			t.Fatalf("clearing the stats snapshot: %v", err)
-		}
-		var parked int
-		if err := probe.QueryRow(ctx, `
-			SELECT count(*)::int FROM pg_stat_activity
-			 WHERE datname = current_database() AND cardinality(pg_blocking_pids(pid)) > 0`).Scan(&parked); err != nil {
-			t.Fatalf("counting parked writers: %v", err)
-		}
-		if parked >= n {
-			return
-		}
-	}
 }
 
 func assertNoLockCycle(t *testing.T, errs []error) {

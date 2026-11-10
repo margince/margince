@@ -329,6 +329,94 @@ func exprText(fset *token.FileSet, expr ast.Expr) string {
 	return out.String()
 }
 
+// lockProbeHome is the one package that may ask pg_blocking_pids. Every other
+// test waits through its helpers, so "queued behind" has one meaning.
+const lockProbeHome = "internal/platform/testdb"
+
+// lockProbeCall is a call of pg_blocking_pids in SQL text. The bare name, as in
+// blockingPidsProbe above, is not a query.
+var lockProbeCall = regexp.MustCompile(`(?i)\bpg_blocking_pids\s*\(`)
+
+// TestOnlyTestdbAsksWhoBlocksWhom fails on a pg_blocking_pids query outside
+// lockProbeHome, and on a home that no longer holds one.
+func TestOnlyTestdbAsksWhoBlocksWhom(t *testing.T) {
+	t.Parallel()
+	fset := gatekit.SourceFileSet()
+	var home []string
+	copies := scanTrees(t, func(path string, file *ast.File) []string {
+		var found []string
+		for _, line := range lockProbesIn(fset, file) {
+			found = append(found, fmt.Sprintf("%s:%d", path, line))
+		}
+		if filepath.Dir(path) == lockProbeHome {
+			home = append(home, found...)
+			return nil
+		}
+		return found
+	})
+	if len(home) == 0 {
+		t.Fatalf("%s holds no %s query. The lock probe moved: move this exemption with it.",
+			lockProbeHome, blockingPidsProbe)
+	}
+	if len(copies) > 0 {
+		t.Fatalf(`%d hand-written %s quer(ies) outside %s:
+
+  %s
+
+Wait through testdb.AwaitQueuedBehind, or ask once through testdb.QueuedBehind,
+testdb.WaiterOn or testdb.Waiting. A second copy of the query drifts from the
+first: one-level and recursive reads of one queue already disagreed on what
+"queued behind" means. If none of them asks your question, add a helper there.`,
+			len(copies), blockingPidsProbe, lockProbeHome, strings.Join(copies, "\n  "))
+	}
+}
+
+// lockProbesIn returns the line of each string in file that calls
+// pg_blocking_pids outside a SQL comment.
+func lockProbesIn(fset *token.FileSet, file *ast.File) []int {
+	var lines []int
+	ast.Inspect(file, func(node ast.Node) bool {
+		text, isString := gatekit.StringExpr(node, nil, gatekit.FoldTotal)
+		if isString && lockProbeCall.MatchString(withoutComments(text)) {
+			lines = append(lines, fset.Position(node.Pos()).Line)
+			return false
+		}
+		return true
+	})
+	return lines
+}
+
+// TestAHandWrittenLockProbeIsFound seeds the shapes a copy of the probe takes.
+// BLOCKERS keeps this file's own literals out of the census.
+func TestAHandWrittenLockProbeIsFound(t *testing.T) {
+	t.Parallel()
+	cases := map[string]struct {
+		query string
+		found bool
+	}{
+		"a queue read":           {"`SELECT count(*) FROM pg_stat_activity WHERE $1 = ANY(BLOCKERS(pid))`", true},
+		"a backend's own wait":   {"`SELECT cardinality(BLOCKERS ($1)) > 0`", true},
+		"split over a +":         {`"SELECT 1 FROM pg_stat_activity WHERE " + "$1 = ANY(BLOCKERS(pid))"`, true},
+		"in a SQL comment":       {"`SELECT 1 -- not BLOCKERS(pid)`", false},
+		"the name, not a call":   {`"BLOCKERS"`, false},
+		"an unrelated statement": {"`SELECT pg_backend_pid()`", false},
+	}
+	for name, c := range cases {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			source := "package probe\nfunc poll() { query(" + strings.ReplaceAll(c.query, "BLOCKERS", blockingPidsProbe) + ") }\n"
+			fset := token.NewFileSet()
+			file, err := parser.ParseFile(fset, "probe.go", source, parser.SkipObjectResolution)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got := len(lockProbesIn(fset, file)) == 1; got != c.found {
+				t.Fatalf("found = %v, want %v for %s", got, c.found, c.query)
+			}
+		})
+	}
+}
+
 // TestAPauseThePlannerMaySkipIsRefused seeds each shape that skips its pause,
 // and pauses standing alone that must pass. PAUSE keeps this file's own
 // literals out of the census.

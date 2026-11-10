@@ -9,7 +9,6 @@ package integration
 // applier then runs the duplicate check a create runs and files the pair.
 
 import (
-	"context"
 	"errors"
 	"testing"
 	"time"
@@ -19,6 +18,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/provider"
 )
@@ -82,12 +82,12 @@ func TestABoughtUnrelatedAddressFilesNothing(t *testing.T) {
 
 // holdBoughtCreate runs a real contact create and holds its transaction open,
 // with the lane locks the create took, until release is closed.
-func holdBoughtCreate(t *testing.T, e *Env, store *contacts.Store, email string, release <-chan struct{}) (pid int, done <-chan error) {
+func holdBoughtCreate(t *testing.T, e *Env, store *contacts.Store, email string, release <-chan struct{}) (pid int32, done <-chan error) {
 	t.Helper()
-	ready, finished := make(chan int, 1), make(chan error, 1)
+	ready, finished := make(chan int32, 1), make(chan error, 1)
 	go func() {
 		finished <- database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
-			var pid int
+			var pid int32
 			if err := tx.QueryRow(e.Admin(), `SELECT pg_backend_pid()`).Scan(&pid); err != nil {
 				return err
 			}
@@ -108,48 +108,6 @@ func holdBoughtCreate(t *testing.T, e *Env, store *contacts.Store, email string,
 		t.Fatalf("the held create failed: %v", err)
 	}
 	return pid, finished
-}
-
-// waitForBoughtWaiters returns once n backends wait behind pid.
-func waitForBoughtWaiters(t *testing.T, e *Env, pid, n int) {
-	t.Helper()
-	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
-	defer cancel()
-	tick := time.NewTicker(25 * time.Millisecond)
-	defer tick.Stop()
-	for {
-		waiting := countBoughtWaiters(ctx, t, e, pid)
-		if waiting >= n {
-			return
-		}
-		select {
-		case <-ctx.Done():
-			t.Fatalf("only %d of %d writers waited behind the held create", waiting, n)
-		case <-tick.C:
-		}
-	}
-}
-
-// countBoughtWaiters counts the backends in this test database, other than
-// pid, that wait on a lock. It holds a connection only for the probe, and
-// clears the statistics snapshot on that connection first.
-func countBoughtWaiters(ctx context.Context, t *testing.T, e *Env, pid int) int {
-	t.Helper()
-	conn, err := e.Pool.Acquire(ctx)
-	if err != nil {
-		t.Fatalf("acquiring the probe connection: %v", err)
-	}
-	defer conn.Release()
-	if _, err := conn.Exec(ctx, `SELECT pg_stat_clear_snapshot()`); err != nil {
-		t.Fatalf("clearing the statistics snapshot: %v", err)
-	}
-	var waiting int
-	if err := conn.QueryRow(ctx,
-		`SELECT count(*) FROM pg_stat_activity WHERE datname = current_database() AND cardinality(pg_blocking_pids(pid)) > 0
-		   AND pid <> $1`, pid).Scan(&waiting); err != nil {
-		t.Fatalf("probing for waiters: %v", err)
-	}
-	return waiting
 }
 
 func isDeadlock(err error) bool {
@@ -179,7 +137,8 @@ func TestABoughtAddressAndACreateOfItNeverDeadlock(t *testing.T) {
 		})
 		create <- err
 	}()
-	waitForBoughtWaiters(t, e, pid, 1)
+	observer := OwnerConn(t)
+	testdb.AwaitQueuedBehind(t, observer, pid, 1, nil, "the create on the held address")
 	bought := make(chan error, 1)
 	go func() {
 		bought <- database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
@@ -190,7 +149,7 @@ func TestABoughtAddressAndACreateOfItNeverDeadlock(t *testing.T) {
 			return contacts.ApplyProviderClaims(e.Admin(), tx, run, subject.String(), "surfe", claims)
 		})
 	}()
-	waitForBoughtWaiters(t, e, pid, 2)
+	testdb.AwaitQueuedBehind(t, observer, pid, 2, nil, "the purchase beside the waiting create")
 	close(release)
 	if err := <-held; err != nil {
 		t.Fatalf("the held create: %v", err)

@@ -75,14 +75,7 @@ func TestAnUncommittedEngagementChangePreventsEndingTheAccount(t *testing.T) {
 				t.Fatal(err)
 			}
 			defer observer.Release()
-			testdb.WaitForContention(t, done, "termination ignored an uncommitted engagement", "termination never reached the engagement lock", func(ctx context.Context) (bool, error) {
-				if _, err := observer.Exec(ctx, "SELECT pg_stat_clear_snapshot()"); err != nil {
-					return false, err
-				}
-				var waiting bool
-				err := observer.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM pg_stat_activity WHERE $1 = ANY(pg_blocking_pids(pid)))`, holder).Scan(&waiting)
-				return waiting, err
-			})
+			testdb.AwaitQueuedBehind(t, observer.Conn(), holder, 1, done, "the termination on the engagement lock")
 			close(release)
 			if err := <-written; err != nil {
 				t.Fatal(err)

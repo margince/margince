@@ -43,6 +43,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -312,47 +313,6 @@ func awaitLockHolder(t *testing.T, locked <-chan int32) int32 {
 	}
 }
 
-// waitForBlockedOn returns once some backend is waiting on a lock the given
-// backend holds. It polls rather than pauses: a sleep would be a guess about
-// how long the second send takes to reach the lock, and the query's own round
-// trip is the pacing. The deadline turns a wait that never resolves into a
-// legible failure instead of a hung suite.
-func waitForBlockedOn(t *testing.T, e *voiceSendEnv, holder int32) {
-	t.Helper()
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-	// ONE connection for the whole poll, held rather than borrowed per statement.
-	// pg_stat_activity's row set is materialized once per transaction and cached
-	// until it ends, so the probe needs a snapshot clear it can actually see —
-	// and a clear issued through the POOL cannot be that: pool.Exec acquires a
-	// connection, runs, and releases it, and the pool.QueryRow that follows may
-	// be handed a different one. The pair has to share a connection or the clear
-	// is decoration (#970).
-	conn, err := e.Pool.Acquire(ctx)
-	if err != nil {
-		t.Fatalf("acquiring the probe's connection: %v", err)
-	}
-	defer conn.Release()
-
-	for {
-		if ctx.Err() != nil {
-			t.Fatal("no backend ever blocked on the first send's row lock — the second send did not contend for it, so this case proves nothing")
-		}
-		if _, err := conn.Exec(ctx, `SELECT pg_stat_clear_snapshot()`); err != nil {
-			t.Fatalf("clearing the stats snapshot before probing for a backend blocked by %d: %v", holder, err)
-		}
-		var blocked int
-		if err := conn.QueryRow(ctx,
-			`SELECT count(*)::int FROM pg_stat_activity WHERE $1 = ANY(pg_blocking_pids(pid))`,
-			holder).Scan(&blocked); err != nil {
-			t.Fatalf("probing for a backend blocked by %d: %v", holder, err)
-		}
-		if blocked > 0 {
-			return
-		}
-	}
-}
-
 // Two sends may legitimately carry one draft reference — they are two emails,
 // and both must go out. The judgment is not two-valued though: the first
 // transaction to take the row's lock owns the outcome, and the second finds
@@ -391,7 +351,7 @@ func TestConcurrentSendsSharingADraftReferenceLeaveOneOutcomeAndBothTransmit(t *
 	wg.Go(func() {
 		_, loserErr = loserStore.SendEmail(e.ctx, activities.FromActivity(anchor), e.draftedSend(draft.ref), gate, loserStager)
 	})
-	waitForBlockedOn(t, e, holder)
+	testdb.AwaitQueuedBehind(t, integration.OwnerConn(t), holder, 1, nil, "the second send")
 
 	release()
 	wg.Wait()

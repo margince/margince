@@ -154,18 +154,40 @@ func AwaitReturnWithoutWaiting(t *testing.T, conn *pgx.Conn, pid int32, racerRet
 				return true, nil
 			default:
 			}
-			if _, err := conn.Exec(ctx, `SELECT pg_stat_clear_snapshot()`); err != nil {
-				return false, fmt.Errorf("clearing the stats snapshot before probing backend %d: %w", pid, err)
-			}
-			var waiting bool
-			err := conn.QueryRow(ctx, `SELECT cardinality(pg_blocking_pids($1)) > 0`, pid).Scan(&waiting)
-			return waiting, err
+			return Waiting(ctx, conn, pid)
 		})
 	select {
 	case <-racerReturned:
 	default:
 		t.Fatalf("%s waited on a lock instead of returning", racer)
 	}
+}
+
+// Waiting reports whether backend pid waits on a lock another session holds.
+func Waiting(ctx context.Context, conn *pgx.Conn, pid int32) (bool, error) {
+	if _, err := conn.Exec(ctx, `SELECT pg_stat_clear_snapshot()`); err != nil {
+		return false, fmt.Errorf("clearing the stats snapshot before probing backend %d: %w", pid, err)
+	}
+	var waiting bool
+	if err := conn.QueryRow(ctx, `SELECT cardinality(pg_blocking_pids($1)) > 0`, pid).Scan(&waiting); err != nil {
+		return false, fmt.Errorf("probing whether backend %d waits on a lock: %w", pid, err)
+	}
+	return waiting, nil
+}
+
+// WaiterOn names one session waiting directly on holder's backend, or 0 while
+// none does.
+func WaiterOn(ctx context.Context, conn *pgx.Conn, holder int32) (int32, error) {
+	if _, err := conn.Exec(ctx, `SELECT pg_stat_clear_snapshot()`); err != nil {
+		return 0, fmt.Errorf("clearing the stats snapshot before naming a waiter on backend %d: %w", holder, err)
+	}
+	var waiter int32
+	if err := conn.QueryRow(ctx, `
+		SELECT coalesce(min(pid), 0) FROM pg_stat_activity WHERE $1 = ANY(pg_blocking_pids(pid))`,
+		holder).Scan(&waiter); err != nil {
+		return 0, fmt.Errorf("naming a session waiting on backend %d: %w", holder, err)
+	}
+	return waiter, nil
 }
 
 // AwaitQueuedBehind returns once n sessions wait behind holder. Scoped to that

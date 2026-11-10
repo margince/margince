@@ -178,15 +178,11 @@ func waitForEvidenceBlock(ctx context.Context, tx pgx.Tx, done chan error) error
 			return fmt.Errorf("concurrent writer did not wait for the evidence snapshot: %v", err)
 		default:
 		}
-		if _, err := tx.Exec(ctx, `SELECT pg_stat_clear_snapshot()`); err != nil {
+		queued, err := testdb.QueuedBehind(ctx, tx.Conn(), int32(tx.Conn().PgConn().PID()))
+		if err != nil {
 			return err
 		}
-		var blocked bool
-		if err := tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM pg_locks
-   WHERE NOT granted AND pg_backend_pid()=ANY(pg_blocking_pids(pid)))`).Scan(&blocked); err != nil {
-			return err
-		}
-		if blocked {
+		if queued > 0 {
 			return nil
 		}
 	}
@@ -325,15 +321,11 @@ func TestAnUnrelatedParentUpdateKeepsItsNonKeyLock(t *testing.T) {
 				return err
 			default:
 			}
-			if _, err := tx.Exec(ctx, `SELECT pg_stat_clear_snapshot()`); err != nil {
+			queued, err := testdb.QueuedBehind(ctx, tx.Conn(), int32(tx.Conn().PgConn().PID()))
+			if err != nil {
 				return err
 			}
-			var blocked bool
-			if err := tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM pg_locks WHERE NOT granted
-    AND pg_backend_pid()=ANY(pg_blocking_pids(pid)))`).Scan(&blocked); err != nil {
-				return err
-			}
-			if blocked {
+			if queued > 0 {
 				return errors.New("an unrelated correction took an exclusive parent lock")
 			}
 		}

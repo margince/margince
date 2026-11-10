@@ -413,39 +413,9 @@ func waitUntilBlockedIn[T any](ctx context.Context, t *testing.T, probe pgx.Tx, 
 }
 
 // probeForWaiter asks once whether any backend is waiting on a lock pid holds.
-//
-// It discards the statistics snapshot first, and THAT is why this is a function
-// rather than a query inlined in the loop above. pg_stat_activity's row set is
-// materialized once per transaction and then cached until that transaction
-// ends: a backend that connects after the probing transaction's first look is
-// missing from every later look, permanently. The probe runs on the lock
-// HOLDER's transaction, which stays open for the whole race, while the racer
-// arrives on a pooled connection the pool may only dial once the race is under
-// way — so the observer could be structurally blind to the one backend it
-// exists to see, and would then report "the writer never reached the lock"
-// about a writer parked squarely on it.
-//
-// That is the failure this helper kept producing on CI and never on an idle
-// machine, where the pool always had a warm connection to hand (#548). It is
-// not slowness, so neither of the two budget increases it outlived could have
-// helped. pg_stat_clear_snapshot drops the cache, which is what makes every
-// probe a look at the live set rather than a re-reading of the first one.
-//
-// Only the row set goes stale. pg_blocking_pids is a function call evaluated
-// per probe and always reports the live lock manager, which is exactly why the
-// bug hid: whenever the racer's connection happened to pre-date the first look,
-// its blocking state was reported correctly and the test passed.
 func probeForWaiter(ctx context.Context, probe pgx.Tx, pid int) (bool, error) {
-	if _, err := probe.Exec(ctx, `SELECT pg_stat_clear_snapshot()`); err != nil {
-		return false, err
-	}
-	var blocked bool
-	err := probe.QueryRow(ctx, `
-		SELECT EXISTS (
-		  SELECT 1 FROM pg_stat_activity a
-		   WHERE a.datname = current_database() AND $1 = ANY (pg_blocking_pids(a.pid)))`,
-		pid).Scan(&blocked)
-	return blocked, err
+	queued, err := testdb.QueuedBehind(ctx, probe.Conn(), int32(pid))
+	return queued > 0, err
 }
 
 // racerFinished asks once more whether the racer has an answer waiting.

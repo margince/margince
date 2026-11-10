@@ -29,6 +29,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/consent"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -126,9 +127,8 @@ func waitForBackendBlockedBy(t *testing.T, probe pgx.Tx, blocker int, done <-cha
 	return waitForBackendsBlockedBy(t, probe, blocker, 1, done)
 }
 
-// waitForBackendsBlockedBy waits until at least want backends wait on blocker,
-// and returns one of them. The statistics snapshot is cleared on every look,
-// because a transaction keeps the first one it read.
+// waitForBackendsBlockedBy waits until at least want backends queue behind
+// blocker, and returns one that waits on it directly.
 func waitForBackendsBlockedBy(t *testing.T, probe pgx.Tx, blocker, want int, done <-chan error) int {
 	t.Helper()
 	pace := time.NewTicker(20 * time.Millisecond)
@@ -136,25 +136,16 @@ func waitForBackendsBlockedBy(t *testing.T, probe pgx.Tx, blocker, want int, don
 	budget := time.After(30 * time.Second)
 	for {
 		ctx := context.Background()
-		if _, err := probe.Exec(ctx, `SELECT pg_stat_clear_snapshot()`); err != nil {
-			t.Fatalf("clearing the statistics snapshot: %v", err)
-		}
-		// Directly, or queued behind a backend that is: a second writer on the
-		// same row waits on the first one's place in the queue.
-		var waiting, waiter int
-		if err := probe.QueryRow(ctx, `
-			WITH direct AS (
-				SELECT pid FROM pg_stat_activity
-				 WHERE datname = current_database() AND $1 = ANY (pg_blocking_pids(pid)))
-			SELECT count(*), coalesce(min(pid) FILTER (WHERE pid IN (SELECT pid FROM direct)), 0)
-			  FROM pg_stat_activity
-			 WHERE datname = current_database()
-			   AND (pid IN (SELECT pid FROM direct) OR pg_blocking_pids(pid) && ARRAY(SELECT pid FROM direct))`,
-			blocker).Scan(&waiting, &waiter); err != nil {
-			t.Fatalf("reading who waits on backend %d: %v", blocker, err)
+		waiting, err := testdb.QueuedBehind(ctx, probe.Conn(), int32(blocker))
+		if err != nil {
+			t.Fatal(err)
 		}
 		if waiting >= want {
-			return waiter
+			waiter, err := testdb.WaiterOn(ctx, probe.Conn(), int32(blocker))
+			if err != nil {
+				t.Fatal(err)
+			}
+			return int(waiter)
 		}
 		select {
 		case err := <-done:

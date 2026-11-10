@@ -15,13 +15,13 @@ import (
 	"encoding/json"
 	"errors"
 	"testing"
-	"time"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -280,40 +280,17 @@ func TestAnUndoWaitsForADealWinInFlightAndThenRefuses(t *testing.T) {
 }
 
 // waitUntilBlockedBy waits until some session is blocked by the transaction
-// held on holder's connection, asked of the server through pg_blocking_pids on
-// a connection of its own, paced by a ticker and bounded by a deadline.
+// held on holder's connection, asked on a connection of its own.
 func waitUntilBlockedBy(t *testing.T, holder interface {
 	QueryRow(context.Context, string, ...any) pgx.Row
 },
 ) {
 	t.Helper()
-	var holderPID int
+	var holderPID int32
 	if err := holder.QueryRow(context.Background(), `SELECT pg_backend_pid()`).Scan(&holderPID); err != nil {
 		t.Fatal(err)
 	}
-	observer := OwnerConn(t)
-	deadline := time.After(10 * time.Second)
-	tick := time.NewTicker(20 * time.Millisecond)
-	defer tick.Stop()
-	for {
-		var blocked int
-		// A fresh reading each pass: the statistics view is a per-transaction snapshot.
-		if _, err := observer.Exec(context.Background(), `SELECT pg_stat_clear_snapshot()`); err != nil {
-			t.Fatal(err)
-		}
-		if err := observer.QueryRow(context.Background(),
-			`SELECT count(*) FROM pg_stat_activity WHERE $1 = ANY(pg_blocking_pids(pid))`, holderPID).Scan(&blocked); err != nil {
-			t.Fatal(err)
-		}
-		if blocked > 0 {
-			return
-		}
-		select {
-		case <-deadline:
-			t.Fatal("the undo never queued behind the writer's row lock, so it does not serialize with it")
-		case <-tick.C:
-		}
-	}
+	testdb.AwaitQueuedBehind(t, OwnerConn(t), holderPID, 1, nil, "the writer racing the held row")
 }
 
 // A credential files an activity under a project as its colleague could in the
