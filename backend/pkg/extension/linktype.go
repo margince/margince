@@ -11,7 +11,7 @@ import (
 
 // LinkEnds are the records a typed link joins, in the words the link table
 // stores. A link type narrows them; it cannot widen them.
-var LinkEnds = []string{"deal", "company", "contact"}
+var LinkEnds = []string{"deal", string(KindCompany), "contact"}
 
 // LinkType is one way a unit says two core records relate, beside core's own
 // types. It is declared by its short name and stored as LinkTypeValue, so two

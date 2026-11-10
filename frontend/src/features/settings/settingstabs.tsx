@@ -28,6 +28,12 @@ type TabId<P extends TabbedPageId> = Extract<
 const TAB_LABELS: {
   readonly [P in TabbedPageId]: Record<TabId<P>, MessageKey>;
 } = {
+  voice: {
+    overview: "settings.part.voice.overview",
+    samples: "settings.part.voice.samples",
+    rules: "settings.part.voice.rules",
+    builds: "settings.part.voice.builds",
+  },
   meetings: {
     links: "settings.part.meetings.links",
     availability: "settings.part.meetings.availability",

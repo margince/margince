@@ -776,6 +776,7 @@
       "field": "as",
       "actions": {
         "add_room_document": "add_deal_room_document",
+        "answer_invitation": "answer_calendar_invitation",
         "change_invitation": "change_meeting_invitation",
         "chat_reply": "send_message",
         "deal_room_invite": "invite_deal_room_participant",

@@ -133,6 +133,8 @@ var waivedActivityFields = gatekit.Waive(map[string]string{
 		"Publishing it would let a unit assert a parse it never performed",
 	"CalendarMethod": "empty is the right answer for a unit, for the reason HasCalendarPart's is: the method " +
 		"is read from a calendar part of a raw RFC822 message, and a unit hands over no parts to read it from",
+	"CalendarUID": "empty is the right answer for a unit, for the reason CalendarMethod's is: the UID is read " +
+		"from the same calendar part, which a unit never hands over",
 	"BodyCompleteness": "zero, stored as complete, is the right answer for a unit, for the reason HasCalendarPart's is: the " +
 		"fact comes from the core's MIME walk over a raw RFC822 message, and a unit hands over text it " +
 		"already read",
