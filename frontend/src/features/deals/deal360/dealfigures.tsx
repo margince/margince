@@ -33,6 +33,7 @@ import {
 } from "../../../i18n";
 import type { MessageKey } from "../../../i18n/en";
 import { closeDayOf } from "../../../lib/closeday";
+import { labelFor } from "../../../lib/labelfor";
 import { useViewerId } from "../../../lib/session";
 import { activityMarks } from "../../../lib/standingmarks";
 import { useViewerZone } from "../../../lib/viewerzone";
@@ -214,7 +215,7 @@ function NextStepFigure({ inputs, words }: FigureProps) {
     <StatCard
       label={label}
       value={activityDay(step.at, step.precision, locale, zone, formatDayMonth)}
-      detail={step.subject ?? t(KIND_LABEL[step.kind])}
+      detail={step.subject ?? t(labelFor(KIND_LABEL, step.kind))}
       tone={tone}
     />
   );
@@ -287,7 +288,8 @@ export function timelineEvents(
       zone,
       formatDayMonth,
     );
-  const titleOf = (row: Activity) => row.subject || t(KIND_LABEL[row.kind]);
+  const titleOf = (row: Activity) =>
+    row.subject || t(labelFor(KIND_LABEL, row.kind));
   const held = activities
     .filter((row) => isConversation(row) && activityHasHappened(row, now, zone))
     .sort((a, b) => Date.parse(b.occurred_at) - Date.parse(a.occurred_at))
@@ -297,7 +299,7 @@ export function timelineEvents(
         key: row.id,
         at: row.occurred_at,
         title: titleOf(row),
-        sub: `${dayOf(row)} · ${t(KIND_LABEL[row.kind])}`,
+        sub: `${dayOf(row)} · ${t(labelFor(KIND_LABEL, row.kind))}`,
         kind: "done",
         activityIds: [row.id],
       }),
@@ -394,7 +396,7 @@ function closeEvent(
     {
       key: "close",
       at: closeDay,
-      title: t(CLOSE_TITLE[deal.status]),
+      title: t(labelFor(CLOSE_TITLE, deal.status)),
       sub: day(closeDay),
       kind: "end",
     },

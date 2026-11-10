@@ -280,6 +280,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `contactprosecoverage_test.go` | H3 | Every table with a foreign key to contact and a column prose fits in is registered or carries a reason. |
 | `contactreaders_test.go` | H2 | `contact` is an RBAC object, and until this gate nothing held the object half of that anywhere outside the module that owns it. |
 | `contractlistpaging_test.go` | H2 | A list that can be cut says where it was cut. |
+| `contractnullable_test.go` | H3 | `nullable:` in a document that declares OpenAPI 3.1, where the keyword does not exist. |
 | `contractproducers_test.go` | H2 | A field the contract promises and nobody writes is invisible. |
 | `contractrefs_test.go` | H3 | Every local $ref in api/crm.yaml resolves, and a dangling one fails with a readable message. |
 | `contributorwiring_test.go` | H1 | What a contributor arriving from outside is promised, in the files they meet on the way in. |
@@ -516,6 +517,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `benchfilenames_test.go` | H2 | A file behind the bench build tag says so in its name, so `git ls-files '\*\_bench\_test.go'` lists every bench in the tree. |
 | `bulktoolschema_test.go` | H1 | bulk\_update\_records advertises one schema for four modes. |
 | `capturedbytyping_test.go` | H2 | `captured\_by` records the principal, and a principal is not a user row. |
+| `ciimagepins_test.go` | H2 | The CI image builds from pins in this tree and from nothing else. |
 | `cursorrefusal_test.go` | H2 | A page token a caller hands back is either one this server minted or it is not, and that question has one answer on the wire: the contract's `422 code: malformed\_cursor`, which tells the caller to re-issue the request without the token. |
 | `domainclaimprobe_test.go` | H2 | A domain maps to at most one company, so "is this domain taken?" is one question, and answering it discloses something either way. |
 | `enrichmentpool_test.go` | H2 | A provider handler set that can queue a run must carry the pool its visibility check reads through. |

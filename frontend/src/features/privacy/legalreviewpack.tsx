@@ -28,6 +28,7 @@ import {
   useT,
 } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { labelFor } from "../../lib/labelfor";
 import type { LegalReview } from "../../lib/legalreviews.queries";
 import { useViewerZone } from "../../lib/viewerzone";
 
@@ -265,8 +266,8 @@ function PackDocuments({ packet }: Readonly<{ packet: Packet }>) {
         packet.documents.map((doc) => (
           <PanelRow key={doc.attachment_id} className="meta-row">
             <span className="meta-row-line t-caption">
-              <span>{t(CATEGORY_LABEL[doc.category])}</span>
-              <span>{t(STATE_LABEL[doc.doc_state])}</span>
+              <span>{t(labelFor(CATEGORY_LABEL, doc.category))}</span>
+              <span>{t(labelFor(STATE_LABEL, doc.doc_state))}</span>
             </span>
             <span className="meta-row-entry">
               {doc.available ? (
@@ -281,7 +282,7 @@ function PackDocuments({ packet }: Readonly<{ packet: Packet }>) {
                 />
               ) : (
                 <FileChip
-                  filename={t(CATEGORY_LABEL[doc.category])}
+                  filename={t(labelFor(CATEGORY_LABEL, doc.category))}
                   withheld={t("legalReview.docUnavailable")}
                 />
               )}

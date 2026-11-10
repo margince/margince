@@ -12,6 +12,7 @@ package compose
 // module's own pass River-agnostic.
 
 import (
+	"context"
 	"errors"
 	"log/slog"
 	"slices"
@@ -30,27 +31,11 @@ import (
 	"github.com/margince/margince/backend/internal/platform/geocode"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
+	"github.com/margince/margince/backend/internal/platform/originalstore"
 	"github.com/margince/margince/backend/internal/platform/vatcheck"
 )
 
-// activeSweepStates is the uniqueness window for the periodic passes: a new
-// tick is suppressed only while a prior run is still in flight (available,
-// pending, running, scheduled, retryable) — reproducing the old ticker's
-// one-pass-at-a-time, now enforced across replicas. It deliberately EXCLUDES
-// completed: a completed sweep must NOT block the next scheduled run (the
-// default ByState includes completed, which for a 24h cadence would stop the
-// job firing until the completed row is cleaned out).
-//
-// A SNOOZED JOB IS COVERED BY `scheduled`, and there is no state of its own to
-// add: River has eight, and snoozing is `JobSnooze` putting the row back as
-// scheduled for later. Naming a sixth would not compile, and a reader coming to
-// add one should know the case is already held rather than go looking for the
-// constant.
-//
-// That is a claim about a dependency's vocabulary, so it is checked against the
-// dependency: TestEveryRiverJobStateIsEitherInFlightOrFinished
-// (jobsweepstates_test.go) walks rivertype.JobStates() and fails on any state
-// this list and the finished set do not between them account for.
+// In-flight states prevent overlapping sweep runs without blocking the next cadence.
 var activeSweepStates = []rivertype.JobState{
 	rivertype.JobStateAvailable,
 	rivertype.JobStatePending,
@@ -388,6 +373,9 @@ func NewJobRunner(pool *pgxpool.Pool, log *slog.Logger, cfg JobRunnerConfig) (*j
 // nothing to do with a database.
 func wireJobs(pool *pgxpool.Pool, log *slog.Logger, cfg JobRunnerConfig) (*jobRegistry, []*river.PeriodicJob) {
 	reg := newJobRegistry()
+	reg.withContext = func(ctx context.Context) context.Context {
+		return originalstore.Bind(ctx, InstallationDB(pool), cfg.Blobstore)
+	}
 	if pool != nil {
 		reg.sessionSlots = make(chan struct{}, database.WorkerSessionCapacity(pool.Config().MaxConns))
 	}

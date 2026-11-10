@@ -12,6 +12,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/attention"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -23,6 +24,10 @@ import (
 // that is already the lane. The day meetings and the timed ones are read with
 // a limit each. A calendar's all-day rows lead the lane, and they can never
 // take the places of the meetings about to start.
+//
+// Every meeting read here and the next customer meeting reuse their generic
+// plans (listMeetings). The kind and the meeting state are literals, and a
+// limit caps every read. One plan serves every reader and window.
 type attentionMeetings struct{ store *activities.Store }
 
 // soonestFirst is the store's ascending order on the meeting's start.
@@ -61,7 +66,18 @@ func (m attentionMeetings) openIn(
 	if !applyMeetingScope(ctx, &in, scope, owner) {
 		return nil, nil
 	}
-	rows, _, err := m.store.ListActivities(ctx, in)
+	return listMeetings(ctx, m.store, in)
+}
+
+// listMeetings reads one lane's meetings with each statement's generic plan
+// reused.
+func listMeetings(ctx context.Context, store *activities.Store, in activities.ListActivitiesInput) ([]crmcontracts.Activity, error) {
+	var rows []crmcontracts.Activity
+	err := database.ReuseGenericPlans(ctx, func(ctx context.Context) error {
+		var err error
+		rows, _, err = store.ListActivities(ctx, in)
+		return err
+	})
 	return rows, err
 }
 
@@ -215,7 +231,7 @@ func (m attentionMeetingsAwaitingOutcome) Since(
 	if !applyMeetingScope(ctx, &in, scope, owner) {
 		return nil, nil
 	}
-	rows, _, err := m.store.ListActivities(ctx, in)
+	rows, err := listMeetings(ctx, m.store, in)
 	if err != nil {
 		return nil, err
 	}

@@ -55,6 +55,10 @@ func (s *Sink) holdFromJoinedThreadTx(ctx context.Context, tx pgx.Tx, id ids.Act
 		}
 		return fmt.Errorf("capture: reading the joined thread's verdict: %w", err)
 	}
+	status, err = applicableThreadVerdictTx(ctx, tx, status)
+	if err != nil {
+		return err
+	}
 	if !holdsItsMessages(status) {
 		return nil
 	}

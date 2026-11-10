@@ -16,6 +16,7 @@ import { Switch } from "../../design-system/switch";
 import { formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { labelFor } from "../../lib/labelfor";
 import { throwProblem } from "../../lib/problem";
 import { navigate } from "../../lib/router";
 import { settingsHref } from "../../lib/settingsrouting";
@@ -191,7 +192,7 @@ function MailPostureRow({ conn }: Readonly<{ conn: CaptureConnection }>) {
     },
     discard,
   });
-  const help = t(postureHelp[shown]);
+  const help = t(labelFor(postureHelp, shown));
 
   return (
     <>

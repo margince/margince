@@ -17,6 +17,7 @@ fixture:
     angepasst, die Liquidation Preference bleibt bei 1x non-participating.
 expect:
   outcome: accepted
+  privacy: true
   answer: financial_corporate
   judge: none
   judge_none_reason: >

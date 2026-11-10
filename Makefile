@@ -515,22 +515,22 @@ native-controls:
 ## stylesheet cannot: a row with no rule at all. `.modal-actions`, `.pn-actions`
 ## and `.worklist-manager-control` were spelled in ten places in the markup and
 ## in no stylesheet, so ten rows of buttons rendered with no gap, no alignment
-## and no margin, and every gate in the tree passed them. A vitest fitness
-## function over the TypeScript AST, so it runs in `fe-unit` with the rest of
-## the suite; this target runs it alone.
+## and no margin, and every gate in the tree passed them. The rule is
+## frontend/census/rules/actionrow.census.ts, so it runs in `fe-census`; this
+## target runs it alone.
 action-rows:
 	cd frontend && pnpm install --frozen-lockfile && pnpm exec vitest run \
-		src/design-system/actionrow.test.ts
+		-c vitest.census.config.ts -t actionrow
 ## ext-imports — a unit screen reaches the core only through the published
 ## surface (frontend/package.json's exports map) and npm only through what its
 ## own package declares. The frontend has no module boundary of its own, so
-## this gate IS the boundary. It is a vitest fitness function over the
-## TypeScript AST now — see frontend/scripts/ext-imports.test.ts, which carries
-## its own fixture suite — so it runs in `fe-unit` with the rest of the suite.
+## this gate IS the boundary. The rule is
+## frontend/census/rules/ext-imports.census.ts, so it runs in `fe-census`;
+## frontend/scripts/ext-imports.test.ts keeps the detector's planted cases.
 ## This target keeps its name for anyone who runs the gate on its own.
 ext-imports:
 	cd frontend && pnpm install --frozen-lockfile && pnpm exec vitest run \
-		scripts/ext-imports.test.ts
+		-c vitest.census.config.ts -t ext-imports
 
 ## seed-dev — create/refresh the demo installation (admin@demo.test /
 ## demo-password-123) through the public API, then seed

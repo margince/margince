@@ -1,0 +1,40 @@
+name: a_japanese_salary_sheet_behind_an_invoice_note_stays_private
+task: capture_confidentiality_verdict
+site: thread
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+# The salary-sheet incident in Japanese, which no staff-cost rule reads.
+fixture:
+  subject: "【ノースウィンド】3月分 開発業務のご請求"
+  attachments:
+    - 2026年3月 請求書 1042.pdf
+    - 2026年3月 原価内訳 v2.xlsx
+  body: |
+    田中様
+
+    いつもお世話になっております。
+    3月分の開発業務の請求書（No.1042）を添付いたします。
+    ご確認のほど、よろしくお願いいたします。
+  documents:
+    - name: 2026年3月 請求書 1042.pdf
+      excerpt: |
+        請求書 No.1042
+        3月 開発業務 160時間
+        ご請求金額：3,720,000 円（30日以内にお支払いください）
+    - name: 2026年3月 原価内訳 v2.xlsx
+      excerpt: |
+        シート：原価内訳
+        社員名 | 役職 | 基本給 | 会社負担額
+        佐藤 健 | シニアエンジニア | 420,000 | 504,000
+        鈴木 美咲 | エンジニア | 310,000 | 372,000
+        高橋 翔 | テストエンジニア | 260,000 | 312,000
+expect:
+  outcome: accepted
+  privacy: true
+  answer: personnel
+  judge: none
+  judge_none_reason: >
+    The answer is one closed kind, and the check requires it exactly. The
+    covering note reads as an ordinary invoice; only the attached sheet of
+    named pay decides the kind. No rule reads this language, so only the
+    model can hold it.

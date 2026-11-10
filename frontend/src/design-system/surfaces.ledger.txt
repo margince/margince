@@ -2,7 +2,8 @@
 # control faces, pressed and disabled fills, state colours, tints mixed on a
 # rung, and page grounds. A `state:` line is a member's fixed state colour,
 # which outranks the ladder on purpose; its reason follows the bar.
-# surfaces.test.ts holds this list and pins its size; it only shrinks.
+# census/rules/surfaces.census.ts holds this list and pins its size; it only
+# shrinks.
 src/app/agentrail.css: .arloose::after { background: var(--bgElevated) }
 src/app/agentrail.css: .rail .arhit { background: radial-gradient( 70% 70% at 50% 42%, color-mix(in srgb, var(--arTone) 14%, transparent), transparent 72% ), var(--bgElevated) }
 src/app/shell.css: .settingssearch input { background: var(--bgElevated) }

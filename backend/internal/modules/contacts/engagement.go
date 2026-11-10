@@ -20,6 +20,7 @@ import (
 	"sort"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
 // Engagement is one contact's state, in the five values a rep acts on.
@@ -50,17 +51,12 @@ const (
 	EngagementUntried Engagement = "untried"
 )
 
-// EngagementOf reads the state off the strength fold. The direction counts say who
-// wrote inside the 90-day window. Answered needs our mail at or after their
-// latest, because an unprompted mail nobody answered is the account's most
-// urgent row. A tie reads answered, as the contact page's moments read it: two
-// date-only entries on one day share one stored time.
-//
-// When their latest message is a mail, its History badge says whether we owe
-// a reply. A mail it owes nothing on, such as a calendar copy, reads answered
-// when we wrote at or after it. Otherwise it reads as though it had not arrived.
+// EngagementOf reads the state off the strength fold. An unprompted mail nobody answered is the account's
+// most urgent row. One its History badge owes no reply, such as a calendar copy, reads as not arrived.
 func EngagementOf(rs RelationshipStrength) Engagement {
-	replied := rs.LastInbound != nil && rs.LastOutbound != nil && !rs.LastOutbound.Before(*rs.LastInbound)
+	replied := rs.LastInbound != nil && rs.LastOutbound != nil && occurredday.Answers(
+		occurredday.Moment{At: *rs.LastOutbound, DateOnly: occurredday.IsDay(rs.LastOutboundPrecision)},
+		occurredday.Moment{At: *rs.LastInbound, DateOnly: occurredday.IsDay(rs.LastInboundPrecision)})
 	owesNothing := rs.LastInboundMove != nil && *rs.LastInboundMove != crmcontracts.EmailSummaryMoveNeedsReply
 	switch {
 	case rs.Inbound90d > 0 && owesNothing && !replied:

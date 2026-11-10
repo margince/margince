@@ -22,11 +22,30 @@ import (
 	"context"
 	"net/http"
 	"strings"
+	"sync"
 	"testing"
+
+	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/modules/consent"
+	"github.com/margince/margince/backend/internal/shared/ports/messagingrules"
 )
+
+var directedExceptionCountry = sync.OnceValue(func() string {
+	messagingrules.Register(messagingrules.Rules{Jurisdiction: "zi", Version: 1})
+	return "zi"
+})
+
+// An explicit permissive profile separates exception mechanics from statutory consent.
+func (c *consentEnv) useReviewableMarketingProfile(t *testing.T) {
+	t.Helper()
+	if _, err := c.Owner.Exec(t.Context(), `UPDATE contact SET address_country=@country WHERE id=@contact`, pgx.StrictNamedArgs{
+		"country": directedExceptionCountry(), "contact": c.contactID,
+	}); err != nil {
+		t.Fatal(err)
+	}
+}
 
 // directed is the request body a designated human sends.
 func directed() AnyMap {
@@ -52,9 +71,10 @@ func liveReviewID(t *testing.T, c *consentEnv) string {
 // THE MESSAGE GOES, AND THE REFUSAL STAYS A REFUSAL.
 func TestADesignatedUserSendsTheMessageTheEngineRefused(t *testing.T) {
 	c := setupConsent(t)
+	c.useReviewableMarketingProfile(t)
 
 	if status, _ := c.send(t, "marketing_email"); status != http.StatusConflict {
-		t.Fatalf("marketing send with no grant → %d, want 409", status)
+		t.Fatalf("correspondence with no supporting context → %d, want 409", status)
 	}
 	review := liveReviewID(t, c)
 
@@ -123,9 +143,10 @@ func TestADesignatedUserSendsTheMessageTheEngineRefused(t *testing.T) {
 // name.
 func TestTheNextMessageToTheSameContactNeedsItsOwnDecision(t *testing.T) {
 	c := setupConsent(t)
+	c.useReviewableMarketingProfile(t)
 
 	if status, _ := c.send(t, "marketing_email"); status != http.StatusConflict {
-		t.Fatalf("first marketing send → %d, want 409", status)
+		t.Fatalf("first correspondence → %d, want 409", status)
 	}
 	if status := c.Call(t, "POST", "/v1/communication-reviews/"+liveReviewID(t, c)+"/direct-send",
 		directed(), nil, nil); status != http.StatusCreated {
@@ -144,7 +165,7 @@ func TestTheNextMessageToTheSameContactNeedsItsOwnDecision(t *testing.T) {
 
 	// A fresh message to the same contact: refused again, exactly as before.
 	if code, _ := c.send(t, "marketing_email"); code != http.StatusConflict {
-		t.Errorf("the next marketing send → %d, want 409 — the override leaked into a standing "+
+		t.Errorf("the next correspondence → %d, want 409 — the override leaked into a standing "+
 			"permission", code)
 	}
 }
@@ -257,9 +278,10 @@ func TestAnUnacknowledgedDirectionSendsNothing(t *testing.T) {
 // is what a mistake would be in.
 func TestASpentDecisionCannotBeRePointedAtAnotherMessage(t *testing.T) {
 	c := setupConsent(t)
+	c.useReviewableMarketingProfile(t)
 
 	if status, _ := c.send(t, "marketing_email"); status != http.StatusConflict {
-		t.Fatalf("marketing send → %d, want 409", status)
+		t.Fatalf("correspondence → %d, want 409", status)
 	}
 	if status := c.Call(t, "POST", "/v1/communication-reviews/"+liveReviewID(t, c)+"/direct-send",
 		directed(), nil, nil); status != http.StatusCreated {
@@ -293,9 +315,10 @@ func TestASpentDecisionCannotBeRePointedAtAnotherMessage(t *testing.T) {
 // forgetting would answer nothing.
 func TestADirectedSendClosesTheReviewItAnswered(t *testing.T) {
 	c := setupConsent(t)
+	c.useReviewableMarketingProfile(t)
 
 	if status, _ := c.send(t, "marketing_email"); status != http.StatusConflict {
-		t.Fatalf("marketing send → %d, want 409", status)
+		t.Fatalf("correspondence → %d, want 409", status)
 	}
 	review := liveReviewID(t, c)
 	if status := c.Call(t, "POST", "/v1/communication-reviews/"+review+"/direct-send",
@@ -342,9 +365,10 @@ func TestADirectedSendClosesTheReviewItAnswered(t *testing.T) {
 // a version this installation does not serve.
 func TestTheWarningADirectorAcknowledgesIsTheServersOwn(t *testing.T) {
 	c := setupConsent(t)
+	c.useReviewableMarketingProfile(t)
 
 	if status, _ := c.send(t, "marketing_email"); status != http.StatusConflict {
-		t.Fatalf("marketing send → %d, want 409", status)
+		t.Fatalf("correspondence → %d, want 409", status)
 	}
 	review := liveReviewID(t, c)
 
@@ -476,9 +500,10 @@ func TestCancellingAHeldMessageClosesItsReview(t *testing.T) {
 // decision can no longer carry a send.
 func TestADecisionPastItsWindowSaysSoRatherThanLoopingTheCaller(t *testing.T) {
 	c := setupConsent(t)
+	c.useReviewableMarketingProfile(t)
 
 	if status, _ := c.send(t, "marketing_email"); status != http.StatusConflict {
-		t.Fatalf("marketing send → %d, want 409", status)
+		t.Fatalf("correspondence → %d, want 409", status)
 	}
 	review := liveReviewID(t, c)
 

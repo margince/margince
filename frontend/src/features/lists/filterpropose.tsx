@@ -30,6 +30,7 @@ import {
   type VocabularyField,
 } from "../../lib/filterdata";
 import { isImeCommit } from "../../lib/imecommit";
+import { labelFor } from "../../lib/labelfor";
 import { problemCodeOf, unwrap } from "../../lib/problem";
 import { decode, type Group, rootGroup } from "../../lib/segmentpredicate";
 import type { FilterDraftAction } from "./filterdraft";
@@ -364,7 +365,9 @@ export function UnusedPhrases({
               reason:
                 item.code === "not_expressible"
                   ? item.reason
-                  : t(UNUSED_REASON[item.code], { field: named(item.field) }),
+                  : t(labelFor(UNUSED_REASON, item.code), {
+                      field: named(item.field),
+                    }),
             })}
           </li>
         ))}

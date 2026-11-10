@@ -14,6 +14,7 @@ package compose
 
 import (
 	"context"
+	"maps"
 	"slices"
 	"testing"
 
@@ -119,12 +120,13 @@ func TestNewMailIsJudgedBeforeTheSweep(t *testing.T) {
 	if len(brain.prompts) == 0 {
 		t.Fatal("the pass made no model call at all")
 	}
-	first := fencedIDs(brain.prompts[0].System, brain.prompts[0].Messages[0].Content, "source_id")
-	if !slices.Contains(first, fresh.String()) {
+	first := slices.Collect(maps.Values(
+		fencedSubjects(brain.prompts[0].System, brain.prompts[0].Messages[0].Content, "source_id")))
+	if !slices.Contains(first, "A question nobody has judged") {
 		t.Errorf("the first model call judged %v, not the unjudged message %v — "+
 			"new mail is queued behind a sweep of history", first, fresh)
 	}
-	if slices.Contains(first, stale.String()) {
+	if slices.Contains(first, "Judged under rules that have moved") {
 		t.Errorf("the first model call carried the stale row %v, so the two populations "+
 			"share one read and one budget", stale)
 	}

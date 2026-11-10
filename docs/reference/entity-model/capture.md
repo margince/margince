@@ -872,7 +872,7 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 ## raw_capture
 
-7 columns · primary key `(id)` · referenced by 2 foreign keys
+9 columns · primary key `(id)` · referenced by 2 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -880,6 +880,8 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 | `parts_slim_outcome` | `text` |  | One of `slimmed`, `no_proved_parts`, `unreadable_spelling`, `unrewritable_original`, `nothing_came_out`, `unencodable_result` and 1 more. |
 | `parts_slimmed_at` | `timestamp with time zone` |  |  |
 | `payload` | `jsonb` | yes |  |
+| `payload_object` | `jsonb` |  |  |
+| `payload_offload_checked_at` | `timestamp with time zone` |  |  |
 | `received_at` | `timestamp with time zone`, default `now()` | yes |  |
 | `source_id` | `text` | yes |  |
 | `source_system` | `text` | yes | The outside system the record came from, when it came from one. |
@@ -887,13 +889,22 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 **Rules**
 
 - `raw_capture_parts_slim_outcome_known`: `CHECK (((parts_slim_outcome IS NULL) OR (parts_slim_outcome = ANY (ARRAY['slimmed', 'no_proved_parts', 'unreadable_spelling', 'unrewritable_original', 'nothing_came_out', 'unencodable_result', 'no_bytes_saved']))))`
+- `raw_capture_payload_object_shape`: `CHECK (((payload_object IS NULL) OR (((jsonb_typeof(payload_object) = 'object') AND (jsonb_typeof((payload_object -> 'key')) = 'string') AND (jsonb_typeof((payload_object -> 'sha256')) = 'string') AND ((payload_object ->> 'sha256') ~ '^[0-9a-f]{64}$') AND (jsonb_typeof((payload_object -> 'bytes')) = 'number') AND (((payload_object ->> 'bytes'))::numeric > (0)::numeric)) IS TRUE)))`
 - `raw_capture_source_unique`: `UNIQUE (source_system, source_id)`
 
 **Indexes**
 
+- `raw_capture_original_legacy_hints`: `btree (id) WHERE ((payload_object IS NOT NULL) AND ((((payload_object -> 'subjects') ->> 'version') IS DISTINCT FROM '1') OR (jsonb_typeof(((payload_object -> 'subjects') -> 'email_bits')) IS DISTINCT FROM 'array') OR (COALESCE(((payload_object -> 'subjects') ->> 'email_saturated'), 'false') <> 'false')))`
+- `raw_capture_original_subject_hints`: `gin (payload_object jsonb_path_ops) WHERE (payload_object IS NOT NULL)`
+- `raw_capture_payload_object_key`: `btree (((payload_object ->> 'key'))) WHERE (payload_object IS NOT NULL)`
+- `raw_capture_payload_offload_unchecked`: `btree (id) WHERE ((payload_offload_checked_at IS NULL) AND (payload_object IS NULL))`
 - `raw_capture_pkey`: `unique, btree (id)`
 - `raw_capture_source_unique`: `unique, btree (source_system, source_id)`
 - `raw_capture_unslimmed_idx`: `btree (received_at) WHERE (parts_slimmed_at IS NULL)`
+
+**Triggers**
+
+- `raw_original_object_retired`: `BEFORE DELETE OR UPDATE OF payload, payload_object FOR EACH ROW EXECUTE FUNCTION retire_raw_original_object()`
 
 ## workspace_email_domain
 

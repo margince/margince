@@ -238,11 +238,11 @@ describe("an edited message is a different message", () => {
     await fillSendableForm();
     await userEvent.click(screen.getByRole("button", { name: "Send" }));
     const alert = await screen.findByRole("alert");
-    expect(alert).toHaveTextContent("Consent needed for this message");
+    expect(alert).toHaveTextContent("Permission needed for this message");
 
     await edit();
     await waitFor(() => expect(screen.queryByRole("alert")).toBeNull());
-    expect(screen.queryByText("Consent needed for this message")).toBeNull();
+    expect(screen.queryByText("Permission needed for this message")).toBeNull();
   });
 });
 

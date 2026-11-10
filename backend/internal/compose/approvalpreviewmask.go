@@ -170,7 +170,7 @@ func detailFieldNames(details []crmcontracts.ApprovalPreviewDetail) [][]string {
 }
 
 // previewFieldNames lists, once each, every field name the mask checks compare
-// in a plan's changes, details and import rows.
+// in a plan's own changes and details.
 func previewFieldNames(preview *crmcontracts.ApprovalPreview) []string {
 	var fields []string
 	add := func(changes []crmcontracts.ApprovalPreviewChange, details []crmcontracts.ApprovalPreviewDetail) {
@@ -186,11 +186,6 @@ func previewFieldNames(preview *crmcontracts.ApprovalPreview) []string {
 		details = *preview.Details
 	}
 	add(preview.Changes, details)
-	if preview.ImportRows != nil {
-		for i := range *preview.ImportRows {
-			add((*preview.ImportRows)[i].Changes, (*preview.ImportRows)[i].Details)
-		}
-	}
 	slices.Sort(fields)
 	return slices.Compact(fields)
 }

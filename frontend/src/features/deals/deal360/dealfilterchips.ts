@@ -4,6 +4,7 @@ import {
   acquisitionFilterOptions,
 } from "../../../lib/acquisitionsources.queries";
 import { WIN_PROBABILITY_DIAL } from "../../../lib/dealranges";
+import { labelFor } from "../../../lib/labelfor";
 import type { LinkType } from "../../../lib/recordlinks.queries";
 import {
   bandDialValue,
@@ -48,7 +49,7 @@ export function dealSurfaceChips({
       allLabel: "deals.filterStatusAll",
       options: DEAL_STATUS_VALUES.map((value) => ({
         value,
-        label: DEAL_STATUS_LABEL[value],
+        label: labelFor(DEAL_STATUS_LABEL, value),
       })),
     },
     {

@@ -156,7 +156,7 @@ export function ComposeWindow({
   const newMessage = !answering && !isChannelReply;
   const groundable = newMessage && entityType === "company";
   const accountCompanyId = groundable ? entityId : undefined;
-  const account = useAccountRecipient(accountCompanyId, fields.to, {
+  const account = useAccountRecipient(accountCompanyId, fields, {
     contactId,
     recordAddress,
   });
@@ -188,6 +188,7 @@ export function ComposeWindow({
     subject: fields.subject,
     setSubject: fields.setSubject,
     addressed: [...fields.to, ...fields.cc, ...fields.bcc],
+    initialProjectId: edit?.projectId,
   });
   const projectId = records.projectFiling.projectId;
   const { settle } = offer;
@@ -198,7 +199,25 @@ export function ComposeWindow({
     restoreSaved,
     adoptSavedSubject,
     setFiles: attached.setFiles,
-    account: fields.account,
+    account: {
+      setDealId: fields.account.setDealId,
+      setProjectId: records.projectFiling.setProjectId,
+    },
+  });
+  const dealChoice = useDealChoice({
+    open,
+    entityType,
+    entityId,
+    replying: !newMessage,
+    context: fields.context,
+    dealId: fields.account.dealId,
+  });
+  const grounding = groundingOf({
+    entityType,
+    replying: !newMessage,
+    contactIds: account.contactIds,
+    dealId: dealChoice.dealId,
+    projectId,
   });
   const savedDraft = useSavedDraft({
     where: {
@@ -208,20 +227,21 @@ export function ComposeWindow({
       isChannelReply,
     },
     open,
-    fields: savedFieldsOf(fields, attached.files),
+    fields: savedFieldsOf(fields, attached.files, {
+      ...groundingOf({
+        entityType,
+        replying: !newMessage,
+        contactIds: account.contactIds,
+        dealId: fields.account.dealId,
+        projectId,
+      }),
+      projectId: records.projectFiling.draftProjectId,
+    }),
     replyTo: thread.anchorActivity,
     offeredRecipient: offer.standing.offeredAddress,
     initialIntent: askedIntent,
     onRestore: restoreFields,
     onClose,
-  });
-  const dealChoice = useDealChoice({
-    open,
-    entityType,
-    entityId,
-    replying: !newMessage,
-    context: fields.context,
-    dealId: fields.account.dealId,
   });
   const send = useComposeSend({
     open,
@@ -235,13 +255,7 @@ export function ComposeWindow({
     carriageBlocked: carriageBlocks.length > 0,
     sourceBlocked,
     anchorActivity: thread.anchorActivity,
-    grounding: groundingOf({
-      entityType,
-      replying: !newMessage,
-      recipientId: account.recipientId,
-      dealId: dealChoice.dealId,
-      projectId,
-    }),
+    grounding,
     projectId,
     needsDeal: dealChoice.needsChoice,
     savedDraft,

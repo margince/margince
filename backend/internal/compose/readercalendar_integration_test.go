@@ -28,7 +28,7 @@ func listCalendarAtBothDoors(t *testing.T, e *integration.Env, kind crmcontracts
 
 	req := httptest.NewRequest(http.MethodGet, "/v1/activities?kind="+string(kind), nil).WithContext(ctx)
 	rec := httptest.NewRecorder()
-	newActivitiesHandlers(e.Pool).ListActivities(rec, req, crmcontracts.ListActivitiesParams{Kind: &kind})
+	newActivitiesHandlers(e.Pool).ListActivities(rec, req, crmcontracts.ListActivitiesParams{Kind: &[]crmcontracts.ListActivitiesParamsKind{kind}})
 	if rec.Code != http.StatusOK {
 		t.Fatalf("GET /activities answered %d: %s", rec.Code, rec.Body.String())
 	}
@@ -86,28 +86,35 @@ func TestAnEmailListCarriesNoCalendarAnswer(t *testing.T) {
 }
 
 // The window rule, over the function both doors are wired to. A list of every
-// kind reads as the diary with a window, and not without one.
+// kind reads as the diary with a window, and a list of named kinds when it holds meetings.
 func TestAListOfEveryKindReadsAsTheDiaryOnlyOverAWindow(t *testing.T) {
 	e := integration.Setup(t)
 	calendar := activityListCalendar(captureHealthRegistry(e.DB()))
 	ctx := horizonReader(e)
 
 	for _, tc := range []struct {
+		kinds    []string
 		windowed bool
 		owed     bool
-	}{{true, true}, {false, false}} {
-		_, owed, err := calendar(ctx, datasource.ActivityListScope{Windowed: tc.windowed})
+	}{
+		{nil, true, true},
+		{nil, false, false},
+		{[]string{"email", "meeting"}, true, true},
+		{[]string{"email", "meeting"}, false, true},
+		{[]string{"email"}, true, false},
+	} {
+		_, owed, err := calendar(ctx, datasource.ActivityListScope{Kinds: tc.kinds, Windowed: tc.windowed})
 		if err != nil {
 			t.Fatalf("reading the calendar answer: %v", err)
 		}
 		if owed != tc.owed {
-			t.Errorf("a list of every kind, windowed %v, owed an answer %v, want %v", tc.windowed, owed, tc.owed)
+			t.Errorf("a list of kinds %v, windowed %v, owed an answer %v, want %v", tc.kinds, tc.windowed, owed, tc.owed)
 		}
 	}
-	if _, owed, err := calendar(ctx, datasource.ActivityListScope{Kind: "meeting", Narrowed: true}); err != nil || owed {
+	if _, owed, err := calendar(ctx, datasource.ActivityListScope{Kinds: []string{"meeting"}, Narrowed: true}); err != nil || owed {
 		t.Errorf("a meeting list held to one record or assignee is not the reader's diary, yet owed an answer (%v): %v", owed, err)
 	}
-	if _, owed, err := calendar(context.Background(), datasource.ActivityListScope{Kind: "meeting"}); err != nil || owed {
+	if _, owed, err := calendar(context.Background(), datasource.ActivityListScope{Kinds: []string{"meeting"}}); err != nil || owed {
 		t.Errorf("a caller with no actor is refused its connections, which owes no answer (owed %v), not an error: %v", owed, err)
 	}
 }

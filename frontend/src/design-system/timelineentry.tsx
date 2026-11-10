@@ -26,6 +26,7 @@ import {
   useT,
 } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { valueFor } from "../lib/labelfor";
 import { Badge } from "./atoms";
 import { moveLabel } from "./emailentry";
 import type { ContactOn } from "./participants";
@@ -471,7 +472,9 @@ const AUTOMATIC_LABEL: Record<AutomaticKind, MessageKey> = {
 };
 
 export function automaticLabel(entry: TimelineEntry): MessageKey | undefined {
-  return entry.automaticKind ? AUTOMATIC_LABEL[entry.automaticKind] : undefined;
+  return entry.automaticKind
+    ? valueFor(AUTOMATIC_LABEL, entry.automaticKind, undefined)
+    : undefined;
 }
 
 // AutomaticFlag says a row is not a human's message, so it is not read as

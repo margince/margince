@@ -56,6 +56,9 @@ func Deals() deals.Installation {
 		// live there and the edges are injected here for the same reason.
 		EnsureProjectAttachable: projects.EnsureAttachable,
 		StartDeliveryForWonDeal: projects.StartDeliveryForWonDeal,
+		// contracts owns `contract`, so the read of a deal's contracts lives
+		// there. The edge is injected here for the same reason.
+		EnsureContractsShareCompany: contracts.EnsureDealContractsShareCompany,
 		// approvals owns the pending proposals that follow a deal to its new
 		// owner, so the hand-over lives there and the edge is injected here.
 		FollowOwner: approvals.FollowDealOwnerInTx,

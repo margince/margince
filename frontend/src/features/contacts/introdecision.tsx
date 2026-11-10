@@ -22,6 +22,7 @@ import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
 import { formatDate } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
+import { labelFor } from "../../lib/labelfor";
 import { useViewerZone } from "../../lib/viewerzone";
 import {
   type IntroDecision,
@@ -138,8 +139,8 @@ export function IntroDecisionDrawer({
           onChange={setAnswer}
           choices={answers.map((a) => ({
             value: a,
-            label: t(DECISION_LABEL[a]),
-            description: t(DECISION_HELP[a]),
+            label: t(labelFor(DECISION_LABEL, a)),
+            description: t(labelFor(DECISION_HELP, a)),
           }))}
         />
         <Field
