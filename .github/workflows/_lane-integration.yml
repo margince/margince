@@ -85,6 +85,19 @@ jobs:
             echo "No cached test durations: the shards split by the committed scripts/integration-test-timing.txt."
           fi
           cp "$timing" "$RUNNER_TEMP/integration-bin/test-timing.txt"
+      # The shards share one queue of parts in the cache service
+      # (scripts/lib-shardqueue.sh). Asked once here and packed with the
+      # binaries, so every shard of the run works the same way; a run that may
+      # not write caches gets the fixed split.
+      - name: Expose the results service to the next steps
+        uses: ./.github/actions/results-service-env
+      - name: Choose how the shards share the lane
+        env:
+          QUEUE_PREFIX: shard-queue-${{ github.run_id }}-${{ github.run_attempt }}
+        run: |
+          mode="$("$GITHUB_WORKSPACE/scripts/shard-queue-mode.sh" "$QUEUE_PREFIX")"
+          printf 'mode=%s\nattempt=%s\n' "$mode" "$GITHUB_RUN_ATTEMPT" > "$RUNNER_TEMP/integration-bin/shard-queue.txt"
+          echo "The shards share the lane by: $mode"
       # A tarball because an artifact keeps no file mode, and a binary without
       # its execute bit fails every slot. zstd because the binaries come to
       # about 2.8 GB and pack to about a third of that; the upload then stores
@@ -104,11 +117,13 @@ jobs:
 
   # Sharded across independent runners. One runner already fans packages out
   # onto per-package clone DBs, but the heaviest package (compose/integration,
-  # minutes of serial tests) floors any package-level split — so each shard runs
-  # a deterministic per-TEST slice of every package
-  # (scripts/test-integration-parallel.sh, INTEGRATION_SHARD) against its own
-  # Postgres/Redis/MinIO. The `integration` fan-in below reconciles the slices
-  # back into one verdict and one coverage profile.
+  # minutes of serial tests) floors any package-level split — so the lane is cut
+  # per TEST into parts of every package, and each shard runs parts against its
+  # own Postgres/Redis/MinIO. Which parts: the groups it claims from the queue
+  # the shards share, so a fast runner takes more (scripts/lib-shardqueue.sh),
+  # or a fixed slice when the build chose that (INTEGRATION_SHARD). The
+  # `integration` fan-in below reconciles the slices back into one verdict and
+  # one coverage profile.
   #
   # The caller runs this lane in parallel with the Go gate, not behind it: gating
   # the longest lane on the build gate serialized the two slowest jobs and
@@ -164,6 +179,31 @@ jobs:
         run: |
           mkdir -p "$RUNNER_TEMP/integration-bin"
           tar -I zstd -xf "$RUNNER_TEMP/integration-bin.tar.zst" -C "$RUNNER_TEMP/integration-bin"
+      - name: Expose the results service to the next steps
+        uses: ./.github/actions/results-service-env
+      # The claims of each attempt are their own, so `Re-run failed jobs` gets a
+      # fresh queue. When the build did not run again, the green shards of the
+      # earlier attempt keep their groups, and the shards that run again skip
+      # them (INTEGRATION_QUEUE_DONE).
+      - name: Read how the shards share the lane
+        id: queue
+        run: |
+          mode="$(sed -n 's/^mode=//p' "$RUNNER_TEMP/integration-bin/shard-queue.txt")"
+          built="$(sed -n 's/^attempt=//p' "$RUNNER_TEMP/integration-bin/shard-queue.txt")"
+          spec="" later=false
+          if [[ "$mode" == queue ]]; then
+            spec="cache:shard-queue-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+            [[ "$built" == "$GITHUB_RUN_ATTEMPT" ]] || later=true
+          fi
+          echo "spec=$spec" >> "$GITHUB_OUTPUT"
+          echo "later=$later" >> "$GITHUB_OUTPUT"
+          echo "mode=$mode, binaries built in attempt $built, this is attempt $GITHUB_RUN_ATTEMPT"
+      - name: Download the shard results of the earlier attempt
+        if: steps.queue.outputs.later == 'true'
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: integration-shard-*
+          path: ${{ runner.temp }}/earlier
       # The same compose stack dev machines use (docker-compose.dev.yml:
       # Postgres + Redis + MinIO, digest-pinned there) plus scripts/db-init.sql
       # for the cluster-level margince_app role — migration 0015 GRANTs to it,
@@ -182,6 +222,8 @@ jobs:
           INTEGRATION_SHARD_OUT: ${{ runner.temp }}/shard-out
           INTEGRATION_BIN_DIR: ${{ runner.temp }}/integration-bin
           INTEGRATION_TEST_TIMING: ${{ runner.temp }}/integration-bin/test-timing.txt
+          INTEGRATION_QUEUE: ${{ steps.queue.outputs.spec }}
+          INTEGRATION_QUEUE_DONE: ${{ steps.queue.outputs.later == 'true' && format('{0}/earlier', runner.temp) || '' }}
           # The tests are DB-bound, not CPU-bound: on the 4-core runner the
           # nproc-derived default leaves the slice mostly waiting on Postgres.
           # So this stays above `min(nproc, 8)` = 4 — the CPU reading behind it
@@ -305,10 +347,11 @@ jobs:
   # therefore what the `ci` aggregate reads. It must RUN and FAIL when a shard
   # fails — `needs` alone would leave it skipped, and a skipped required check
   # counts as passing — hence the always() guard plus the explicit result
-  # assertion in the first step. Then it proves the slices add up
+  # assertions. Then it proves the slices add up
   # (scripts/test-integration-reconcile.sh: every shard present, same discovery,
   # union complete + disjoint) and merges every binary coverage pod (shards +
-  # unit) into the one text profile the sonarcloud job consumes.
+  # unit) into the one text profile the sonarcloud job consumes. The shards are
+  # checked after that, so a shard that died is named with the tests it took.
   integration:
     name: integration (isolation + erasure + HTTP e2e)
     timeout-minutes: 20
@@ -325,16 +368,15 @@ jobs:
         with:
           persist-credentials: false
       # The build first: when it fails the shards are skipped, and "shards:
-      # skipped" would name the wrong job.
-      - name: The build, every shard and the unit pass are green
+      # skipped" would name the wrong job. The shards are checked after the
+      # reconcile, which names the tests a red or lost shard took.
+      - name: The build and the unit pass are green
         working-directory: .
         env:
           BUILD_RESULT: ${{ needs.integration-build.result }}
-          SHARDS_RESULT: ${{ needs.integration-shards.result }}
           UNIT_RESULT: ${{ needs.integration-unit-coverage.result }}
         run: |
           [ "$BUILD_RESULT" = "success" ] || { echo "integration build: $BUILD_RESULT"; exit 1; }
-          [ "$SHARDS_RESULT" = "success" ] || { echo "integration shards: $SHARDS_RESULT"; exit 1; }
           [ "$UNIT_RESULT" = "success" ] || { echo "unit coverage pass: $UNIT_RESULT"; exit 1; }
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
@@ -348,6 +390,11 @@ jobs:
       - name: Reconcile the slices and merge coverage
         working-directory: .
         run: ./scripts/test-integration-reconcile.sh "$RUNNER_TEMP/shards" backend/coverage.out
+      - name: Every shard is green
+        working-directory: .
+        env:
+          SHARDS_RESULT: ${{ needs.integration-shards.result }}
+        run: '[ "$SHARDS_RESULT" = "success" ] || { echo "integration shards: $SHARDS_RESULT"; exit 1; }'
       # What this run measured, for cache-warm.yml to weigh the next splits by.
       # Only a run whose slices reconciled gets here. Neither step can fail the
       # lane: a lost file costs the next split some freshness, never a verdict.
