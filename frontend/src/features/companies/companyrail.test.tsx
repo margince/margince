@@ -3,6 +3,7 @@ import { cleanup, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom/vitest";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { meFixture } from "../../testing/mefixture";
 import {
   emptyPage,
   renderCards,
@@ -16,6 +17,9 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+// The signed-in reader of every stubbed `/me`.
+const ME = meFixture().user.id;
+
 function contact(
   id: string,
   name: string,
@@ -24,6 +28,7 @@ function contact(
 ) {
   return {
     contact_id: id,
+    attachable: true,
     full_name: name,
     title: "Head of Fleet",
     primary_email: `${id}@brandt.example`,
@@ -83,10 +88,9 @@ describe("the Overview's Contacts card", () => {
       }),
     });
     const contacts = within(card("Contacts"));
-    expect(contacts.getByRole("link", { name: "Dana Buyer" })).toHaveAttribute(
-      "href",
-      "/#/contacts/p-2",
-    );
+    expect(
+      contacts.getByRole("link", { name: /^DB\s*Dana Buyer$/ }),
+    ).toHaveAttribute("href", "/#/contacts/p-2");
     expect(contacts.getByText("Lena Middle")).toBeInTheDocument();
     expect(contacts.queryByText("Ravi Weak")).toBeNull();
     expect(contacts.getByText("Champion")).toBeInTheDocument();
@@ -228,7 +232,7 @@ describe("the Overview's Deals and projects card", () => {
   });
 });
 
-describe("the Overview's Also on your list card", () => {
+describe("the Overview's Other open tasks card", () => {
   const step = (id: string, over: Record<string, unknown> = {}) => ({
     activity_id: id,
     subject: `Task ${id}`,
@@ -252,11 +256,33 @@ describe("the Overview's Also on your list card", () => {
         },
       }),
     });
-    const list = within(card("Also on your list"));
+    const list = within(card("Other open tasks"));
     const rows = list.getAllByRole("listitem");
     expect(rows[0]).toHaveTextContent("19 days late");
     expect(rows[1]).toHaveTextContent("In 6 days");
     expect(rows[2]).toHaveTextContent("No date");
+  });
+
+  it("names who holds each task, so a colleague's work never reads as the reader's", async () => {
+    stub();
+    renderCards({
+      view: view({
+        next_steps: {
+          data: [
+            step("t-1", { assignee_id: ME, assignee_name: "Alex Reader" }),
+            step("t-2", { assignee_id: "u-sam", assignee_name: "Sam Holder" }),
+            step("t-3", { assignee_id: null, assignee_name: null }),
+          ],
+          page: emptyPage,
+        },
+      }),
+    });
+    const rows = within(card("Other open tasks")).getAllByRole("listitem");
+    expect(await within(rows[0]).findByText("You")).toBeInTheDocument();
+    expect(rows[1]).toHaveTextContent("Sam Holder");
+    expect(rows[1]).not.toHaveTextContent("You");
+    expect(rows[2]).toHaveTextContent("Unassigned");
+    expect(screen.queryByText(/your list/i)).toBeNull();
   });
 });
 
@@ -275,9 +301,8 @@ describe("the details' Way in row", () => {
       }),
     });
     expect(screen.getByText("Way in")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Dana Buyer" })).toHaveAttribute(
-      "href",
-      "/#/contacts/p-2",
-    );
+    expect(
+      screen.getByRole("link", { name: /^DB\s*Dana Buyer$/ }),
+    ).toHaveAttribute("href", "/#/contacts/p-2");
   });
 });

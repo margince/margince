@@ -21,7 +21,6 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/platform/mailidentity"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -139,13 +138,14 @@ func (s *Sink) captureActivity(ctx context.Context, tx pgx.Tx, rec connector.Nor
 		// through to replayClaimIsProvenTx — which is the right question for a
 		// natural-key collision and the gate that covered this case before the
 		// identity resolve existed.
-		wasCapturedBy, asserted, err := assertedIncumbent(ctx, tx, id)
+		wasCapturedBy, asserted, err := replayIncumbent(ctx, tx, id, fields)
 		if err != nil {
 			return datasource.EntityRef{}, false, counterpartyDecision{}, err
 		}
 		if asserted && alreadyFiled && s.takeOverAsserted != nil {
 			err := s.takeOverAsserted(
-				ctx, tx, id, fields.Subject, fields.Body, wasCapturedBy, capturedByFor(ctx, rec), senderIsMachine(rec, fields))
+				ctx, tx, id, fields.Subject, fields.Body, wasCapturedBy, capturedByFor(ctx, rec), senderIsMachine(rec, fields),
+			)
 			// Archived under us between the resolve and here — an erasure racing
 			// this capture. Skipping advances the watermark; propagating would
 			// stall this mailbox on this message on every pass forever.
@@ -172,18 +172,10 @@ func (s *Sink) captureActivity(ctx context.Context, tx pgx.Tx, rec connector.Nor
 			// advances the watermark and no later pass retries it.
 			return s.fileUnderOwnReplayKey(ctx, tx, rec, fields, birth, memberBound)
 		}
-		// Before this seat's own import and participant rows: the claim asks who
-		// the STORED row names as sender, and this capture is about to add itself.
-		if err := s.claimOwnSentMailTx(ctx, tx, id, rec); err != nil {
-			return datasource.EntityRef{}, false, counterpartyDecision{}, err
-		}
-		if err := s.recordThisImport(ctx, tx, id, rec, fields, birth, memberBound); err != nil {
-			return datasource.EntityRef{}, false, counterpartyDecision{}, err
-		}
-		if err := s.joinThread(ctx, tx, id, rec, false); err != nil {
-			return datasource.EntityRef{}, false, counterpartyDecision{}, err
-		}
-		if err := s.settleMeetingReplay(ctx, tx, id, rec, alreadyFiled); err != nil {
+		if err := s.finishJoinedActivity(
+			ctx, tx, id, rec, fields, birth,
+			joinedCapture{memberBound: memberBound, alreadyFiled: alreadyFiled},
+		); err != nil {
 			return datasource.EntityRef{}, false, counterpartyDecision{}, err
 		}
 		return ref, false, counterpartyDecision{}, nil
@@ -245,7 +237,7 @@ func (s *Sink) finishNewActivity(
 	// before staging, because this is the last point where the bodies are
 	// still only in memory: once stageParts has run they are in the object
 	// store, and the raw original points at them rather than carrying them.
-	rec, err := s.keepParts(ctx, tx, id, rec, fields)
+	rec, err := s.keepPartsAndOriginal(ctx, tx, id, rec, fields)
 	if err != nil {
 		return counterpartyDecision{}, err
 	}
@@ -275,10 +267,13 @@ func (s *Sink) finishNewActivity(
 	// ladder that names contacts never runs for a meeting, because attendance is
 	// a list and the mapper leaves the counterparty unset. The other ordering —
 	// an attendee who becomes a contact later — belongs to the cohort repair.
-	if s.nameParticipants != nil && namesSomebody(rec.Participants) {
+	if !internalMailAdmitted(ctx) && s.nameParticipants != nil && namesSomebody(rec.Participants) {
 		if err := s.nameParticipants(ctx, tx, id); err != nil {
 			return counterpartyDecision{}, err
 		}
+	}
+	if err := s.recordInternalMailTx(ctx, tx, id); err != nil {
+		return counterpartyDecision{}, err
 	}
 	// Capture-audit minimization (ADR-0072/A118): the after-image is
 	// metadata-only, never the subject/body (capturedActivityAuditImage).
@@ -286,8 +281,17 @@ func (s *Sink) finishNewActivity(
 	if err != nil {
 		return counterpartyDecision{}, err
 	}
-	if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, activityCaptureEventPayload(fields.Kind, fields.ChannelProvider, rec.NaturalKey.SourceSystem)); err != nil {
+	if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, activityCaptureEventPayload(ctx, fields.Kind, fields.ChannelProvider, rec.NaturalKey.SourceSystem)); err != nil {
 		return counterpartyDecision{}, err
+	}
+	if internalMailAdmitted(ctx) {
+		if err := s.recordThisImport(ctx, tx, id, rec, fields, birth, memberBound); err != nil {
+			return counterpartyDecision{}, err
+		}
+		if err := s.joinThread(ctx, tx, id, rec, true); err != nil {
+			return counterpartyDecision{}, err
+		}
+		return counterpartyDecision{}, nil
 	}
 	if err := s.emitReply(ctx, tx, auditID, id, rec, fields); err != nil {
 		return counterpartyDecision{}, err
@@ -316,6 +320,9 @@ func (s *Sink) finishNewActivity(
 	if fields.Kind == meetingKind {
 		derivedLinks, err = s.linkResolvedMeetingParticipants(ctx, tx, id, len(rec.Links), private)
 		if err != nil {
+			return counterpartyDecision{}, err
+		}
+		if err := s.recordMeetingDocuments(ctx, tx, id, rec, false); err != nil {
 			return counterpartyDecision{}, err
 		}
 	}
@@ -366,8 +373,9 @@ func (s *Sink) finishNewActivity(
 // capture ingestion path — the one emit site (of the event's two) that
 // names an originating source system; the direct-log path
 // (activities/activity.go) sets no fields but kind.
-func activityCaptureEventPayload(kind, channelProvider, sourceSystem string) crmcontracts.PublicEventActivityCaptured {
+func activityCaptureEventPayload(ctx context.Context, kind, channelProvider, sourceSystem string) crmcontracts.PublicEventActivityCaptured {
 	p := crmcontracts.PublicEventActivityCaptured{Kind: kind, SourceSystem: &sourceSystem}
+	p.Imported, p.ImportRunId = storekit.ImportMark(ctx)
 	// Present only for a message, matching the envelope's own rule. This is the
 	// path that carries every inbound channel message, so a consumer that could
 	// once read the transport off the kind reads it here instead (ADR-0107/A158).
@@ -381,20 +389,11 @@ func (s *Sink) upsertActivity(
 	ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord,
 	fields ActivityFields, birth birthDecision,
 ) (ids.ActivityID, bool, error) {
-	if err := auth.Require(ctx, "activity", principal.ActionCreate); err != nil {
+	if err := auth.Require(ctx, capturedActivityObject, principal.ActionCreate); err != nil {
 		return ids.ActivityID{}, false, err
 	}
-	// Attested outbound is the ONLY write that turns "does this workspace
-	// correspond with them" from no to yes, and a verdict acts on that answer
-	// inside its own transaction — so the two serialize here rather than racing.
-	// Taken only for the attested row: inbound mail cannot change the answer,
-	// and locking every capture insert on its sender would serialize a busy
-	// address against itself for nothing.
-	if rec.Counterparty.SentByOwner() {
-		if err := storekit.LockWriteIdentity(ctx, tx, correspondence.LockEntity,
-			mailidentity.CorrespondenceLockKey(rec.Counterparty.Email)); err != nil {
-			return ids.ActivityID{}, false, err
-		}
+	if err := lockActivityInsertTx(ctx, tx, rec); err != nil {
+		return ids.ActivityID{}, false, err
 	}
 	var id ids.ActivityID
 	query, args := capturedActivityInsert(ctx, rec, fields, birth)
@@ -413,7 +412,7 @@ func (s *Sink) upsertActivity(
 		if err := storekit.StampFields(ctx, tx, "activity", id.UUID, captureSource(rec), rec.CapturedBy, stamps); err != nil {
 			return ids.ActivityID{}, false, err
 		}
-		if rec.Counterparty.SentByOwner() {
+		if rec.Counterparty.SentByOwner() && !internalMailAdmitted(ctx) {
 			if err := repairStrangerFactsTx(ctx, tx, rec.Counterparty.Email); err != nil {
 				return ids.ActivityID{}, false, err
 			}
@@ -443,14 +442,6 @@ func (s *Sink) upsertActivity(
 		return ids.ActivityID{}, false, err
 	}
 	return id, false, nil
-}
-
-// occurredPrecision is the activity column's word for DateOnly.
-func (f ActivityFields) occurredPrecision() string {
-	if f.DateOnly {
-		return string(crmcontracts.OccurredPrecisionOccurredPrecisionDay)
-	}
-	return string(crmcontracts.OccurredPrecisionOccurredPrecisionInstant)
 }
 
 // settledFields fills in what the capture does not take as sent. That is the
@@ -492,8 +483,9 @@ func capturedActivityInsert(ctx context.Context, rec connector.NormalizedRecord,
 		fields.occurredPrecision(),
 		nullableID(fields.InvitationFromSeat),
 		nullableString(fields.AgendaFingerprint),
+		nullableString(fields.CalendarUID),
 	}
-	query := `INSERT INTO activity(kind,channel_provider,subject,body,occurred_at,direction,source_system,source_id,source,captured_by,thread_key,counterparty_email,counterparty_outbound_attested,bulk_mail_attested,audience,audience_reason,has_calendar_part,host_user_id,language,raw_capture_id,duration_seconds,sent_by_colleague,calendar_method,foreign_link,sender_was_stranger,inbound_sender_authenticated,body_completeness,sender_is_machine,occurred_precision,invitation_sender,agenda_fingerprint)
+	query := `INSERT INTO activity(kind,channel_provider,subject,body,occurred_at,direction,source_system,source_id,source,captured_by,thread_key,counterparty_email,counterparty_outbound_attested,bulk_mail_attested,audience,audience_reason,has_calendar_part,host_user_id,language,raw_capture_id,duration_seconds,sent_by_colleague,calendar_method,foreign_link,sender_was_stranger,inbound_sender_authenticated,body_completeness,sender_is_machine,occurred_precision,invitation_sender,agenda_fingerprint,calendar_uid)
  VALUES (` + storekit.Placeholders(args) + `) ON CONFLICT(source_system,source_id) WHERE source_system IS NOT NULL AND source_id IS NOT NULL DO NOTHING RETURNING id`
 	return query, args
 }

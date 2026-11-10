@@ -11,7 +11,7 @@ two tiers, what waits for a human, passports and allowances) are on
 ### What does the AI do in Margince?
 The AI in Margince drafts emails, reads deal documents for deal fields, and fills in company records from the web. It answers questions from a document set you filed, and ranks your Morning brief during the night.
 
-Everything it suggests carries its evidence. Changes to your records either wait as an approval, or appear as an automatic change. You can turn off each kind of automatic change in **Settings → AI access**, on the **Agent rules** tab under **For developers**.
+Everything it suggests carries its evidence. Changes to your records either wait as an approval, or appear as an automatic change. You can turn off each kind of automatic change in **Settings → AI assistants**, on the **Agent rules** tab under **For developers**.
 Also called: AI features, assistant, copilot, what can Margince AI do.
 
 ### Can the AI send email on my behalf?
@@ -88,9 +88,7 @@ question**. See [Documents and files](documents-and-files.md). It answers only
 from the set of documents you filed, and refuses a question that set does not
 cover.
 
-Only a human can ask a document set. An agent is refused, whatever its passport
-allows. See [Agents, passports and what they may
-do](agents-and-passports.md#things-the-ai-is-refused-outright).
+An agent can ask a document set for you if its passport has **Use AI and buy data**, the permission for AI work like this. It gets the same answer you would, with the same passages under each sentence, for the sets you may read.
 
 **The brief during the night.** The Morning brief looks at your companies during
 the night and ranks what most needs your first hour. If it found nothing, it
@@ -146,7 +144,29 @@ Where Margince can say who put a value there, it does. The trust marks are:
   colleague's passport reads "An agent".
 - "Source not recorded": when nobody knows where it came from
 
+## What your agent can set up, and what stays yours
+An agent acting for you can set up pipelines and open stages, custom fields and automations, and change an existing web form. Creating a web form stays yours. It can change price and tax sheets, and your own name, language, hours and voice.
+
+It can upload a logo, a vCard or your LinkedIn export. A vCard from your agent fills blanks and replaces nothing a contact already holds. It asks you first where its tool says so. That covers a custom field, a removal, a change to your name and a rule it turns on.
+
+A rule it set up stops at its next run after you revoke its passport or disconnect it, or an admin turns its tool off. It also stops once its passport runs out with no way to renew. A run already under way can finish. A rule it set up says **By your agent**, and so does a time zone it set for you. Margince tells you it stopped; resume the rule and it runs with no agent behind it. A contact's details cost credits, so it needs a daily limit on the connection, and it pays for a detail only when it names one.
+
+These stay with you, in the app, because they would give it more than you want to give:
+
+- which AI model runs and where your text goes, and how far the product moves deals by itself;
+- your base currency, your legal rules, and what a contact data provider may sell you;
+- what the product tells you about your agent, and the claims and drafts you corrected;
+- the margin tier of a partner and whether a stage counts as won or lost;
+- a web form's secret, consent wording and allowed sites, and the rules Margince starts with;
+- a sample of your writing you filed or left out;
+- passwords, secrets and connecting a mailbox, and anything that removes data for good.
+
 ## Seeing work in progress
+
+The risk sweep during the night looks only at the open deals you own. Nobody
+sweeps the deals of a colleague who has not turned it on. On a quiet deal it
+writes at most one risk note a night. That note does not count as activity, so
+the deal stays in the list of slipping deals.
 
 While the AI in Margince works for you, you can see it in the agent panel
 (**Open agent panel**, under **Running now**). These kinds of work show there:
@@ -198,7 +218,7 @@ timing, how quickly things move, and how warm the contact is.
 The **AI** group in Settings holds four pages: **AI usage**, **AI models**,
 **AI call log** and **Automations**.
 
-In **Settings → AI access** you connect your AI tool. Under **For developers**
+In **Settings → AI assistants** you connect your AI tool. Under **For developers**
 there, you create your own passports on **API keys** and switch **Automatic changes** on or off on **Agent rules**.
 
 The full record of actions is in **Settings → Audit log**: every action, with the

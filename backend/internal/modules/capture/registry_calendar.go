@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"maps"
 	"slices"
 
 	"github.com/jackc/pgx/v5"
@@ -64,6 +65,15 @@ var calendarWriteScopes = map[string][]string{
 	},
 	"graphcal": {"Calendars.ReadWrite"},
 }
+
+// calendarProviderNames are the providers that connect a calendar: each one
+// names its write scopes above.
+func calendarProviderNames() []string {
+	return slices.Sorted(maps.Keys(calendarWriteScopes))
+}
+
+// CalendarProviders are the providers a seat may connect a calendar through.
+func CalendarProviders() []string { return calendarProviderNames() }
 
 // CalendarWriteGranted says whether a connection's granted scopes let it write
 // events on provider's calendar. It is the one read-only detector.

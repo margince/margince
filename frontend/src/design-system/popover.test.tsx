@@ -7,11 +7,13 @@ import {
   screen,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useState } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 import { Heading } from "./heading";
 import { armHoverIntent, takeHoverClock } from "./hoverintent-testing";
 import { Modal } from "./modal";
 import { Popover } from "./popover";
+import { Select } from "./select";
 
 afterEach(() => {
   cleanup();
@@ -23,6 +25,7 @@ afterEach(() => {
 // The whole reason this is not a Disclosure: the aside is not on the page
 // until it is asked for, and asking for it does not move what is around it.
 it("keeps the aside off the page until the trigger is pressed", async () => {
+  const user = userEvent.setup();
   render(
     <Popover label="How it stands">Two of three invoices are late.</Popover>,
   );
@@ -32,22 +35,42 @@ it("keeps the aside off the page until the trigger is pressed", async () => {
     "false",
   );
 
-  await userEvent.click(screen.getByRole("button", { name: "How it stands" }));
+  await user.click(screen.getByRole("button", { name: "How it stands" }));
 
   expect(screen.getByText("Two of three invoices are late.")).toBeTruthy();
   expect(screen.getByRole("button").getAttribute("aria-expanded")).toBe("true");
+});
+
+// An id the page does not hold is an invalid reference (axe
+// aria-valid-attr-value), and the panel is drawn only while open.
+it("points the trigger at its panel only while the panel is drawn", async () => {
+  const user = userEvent.setup();
+  render(<Popover label="How it stands">Two of three are late.</Popover>);
+  const trigger = screen.getByRole("button", { name: "How it stands" });
+  expect(trigger.hasAttribute("aria-controls")).toBe(false);
+
+  await user.click(trigger);
+  const panelId = trigger.getAttribute("aria-controls");
+  expect(document.getElementById(panelId ?? "")?.textContent).toBe(
+    "Two of three are late.",
+  );
+
+  await user.click(trigger);
+  expect(screen.queryByText("Two of three are late.")).toBeNull();
+  expect(trigger.hasAttribute("aria-controls")).toBe(false);
 });
 
 // The panel is portalled to the body, so it is nowhere near its trigger in the
 // tree. It has to say what it is an aside TO, or a screen reader meets a
 // paragraph belonging to nothing.
 it("names the panel by the trigger that opened it", async () => {
+  const user = userEvent.setup();
   render(
     <Popover label="What makes up this score">
       Payment, replies, spread.
     </Popover>,
   );
-  await userEvent.click(screen.getByRole("button"));
+  await user.click(screen.getByRole("button"));
 
   const panel = screen.getByRole("region", {
     name: "What makes up this score",
@@ -58,13 +81,14 @@ it("names the panel by the trigger that opened it", async () => {
 // Escape puts the reader back on the button rather than at the top of the
 // document, which is where focus lands when the node holding it disappears.
 it("closes on Escape and hands focus back to the trigger", async () => {
+  const user = userEvent.setup();
   render(
     <Popover label="How it stands">Two of three invoices are late.</Popover>,
   );
   const trigger = screen.getByRole("button");
-  await userEvent.click(trigger);
+  await user.click(trigger);
 
-  await userEvent.keyboard("{Escape}");
+  await user.keyboard("{Escape}");
 
   expect(screen.queryByText("Two of three invoices are late.")).toBeNull();
   expect(document.activeElement).toBe(trigger);
@@ -101,15 +125,16 @@ it("leaves Escape to a dialog raised over it", async () => {
 });
 
 it("closes when the reader clicks away from it", async () => {
+  const user = userEvent.setup();
   render(
     <>
       <p>Elsewhere on the card</p>
       <Popover label="How it stands">Two of three invoices are late.</Popover>
     </>,
   );
-  await userEvent.click(screen.getByRole("button"));
+  await user.click(screen.getByRole("button"));
 
-  await userEvent.click(screen.getByText("Elsewhere on the card"));
+  await user.click(screen.getByText("Elsewhere on the card"));
 
   expect(screen.queryByText("Two of three invoices are late.")).toBeNull();
 });
@@ -118,29 +143,76 @@ it("closes when the reader clicks away from it", async () => {
 // the panel is portalled — the panel has to be part of "inside" or its own
 // content dismisses it.
 it("stays open when the reader clicks inside the panel", async () => {
+  const user = userEvent.setup();
   render(
     <Popover label="How it stands">
       <a href="#invoices">The three invoices</a>
     </Popover>,
   );
-  await userEvent.click(screen.getByRole("button", { name: "How it stands" }));
+  await user.click(screen.getByRole("button", { name: "How it stands" }));
 
-  await userEvent.click(
-    screen.getByRole("link", { name: "The three invoices" }),
-  );
+  await user.click(screen.getByRole("link", { name: "The three invoices" }));
 
   expect(screen.getByRole("link", { name: "The three invoices" })).toBeTruthy();
+});
+
+function SelectInPopover() {
+  const [colleague, setColleague] = useState("");
+  return (
+    <Popover label="Access">
+      <Select
+        aria-label="Hand over to"
+        placeholder="Choose a colleague"
+        options={[
+          { value: "rep-one", label: "Rep One" },
+          { value: "rep-two", label: "Rep Two" },
+        ]}
+        value={colleague}
+        onChange={setColleague}
+      />
+    </Popover>
+  );
+}
+
+// A select's list is portalled to the body, outside the panel. A mouse press
+// on its option must not count as a press away from the panel.
+it("keeps the panel and the pick when an option of a select inside it is clicked", async () => {
+  const user = userEvent.setup();
+  render(<SelectInPopover />);
+  await user.click(screen.getByRole("button", { name: "Access" }));
+  await user.click(screen.getByRole("combobox", { name: "Hand over to" }));
+
+  await user.click(screen.getByRole("option", { name: "Rep Two" }));
+
+  expect(
+    screen.getByRole("combobox", { name: "Hand over to" }).textContent,
+  ).toContain("Rep Two");
+});
+
+it("closes an open select list on Escape before the panel around it", async () => {
+  const user = userEvent.setup();
+  render(<SelectInPopover />);
+  await user.click(screen.getByRole("button", { name: "Access" }));
+  await user.click(screen.getByRole("combobox", { name: "Hand over to" }));
+
+  await user.keyboard("{Escape}");
+  expect(screen.queryByRole("option", { name: "Rep Two" })).toBeNull();
+  expect(screen.getByRole("combobox", { name: "Hand over to" })).toBeTruthy();
+
+  await user.keyboard("{Escape}");
+  expect(screen.queryByRole("combobox", { name: "Hand over to" })).toBeNull();
 });
 
 // A panel with controls in it is a panel a keyboard reader has to be able to
 // reach. Prose takes no focus, so the reader stays on the trigger.
 it("puts focus on the panel's first control, and leaves prose alone", async () => {
+  const user = userEvent.setup();
   const { unmount } = render(
     <Popover label="Send options">
       <button type="button">Schedule send</button>
     </Popover>,
   );
-  await userEvent.click(screen.getByRole("button", { name: "Send options" }));
+  await user.click(screen.getByRole("button", { name: "Send options" }));
   expect(document.activeElement).toBe(
     screen.getByRole("button", { name: "Schedule send" }),
   );
@@ -150,7 +222,7 @@ it("puts focus on the panel's first control, and leaves prose alone", async () =
     <Popover label="How it stands">Two of three invoices are late.</Popover>,
   );
   const trigger = screen.getByRole("button", { name: "How it stands" });
-  await userEvent.click(trigger);
+  await user.click(trigger);
   expect(document.activeElement).toBe(trigger);
 });
 
@@ -185,13 +257,14 @@ it("opens on a settled pointer only when the caller asks for it", () => {
 });
 
 it("still opens on a click when it opens on hover", async () => {
+  const user = userEvent.setup();
   render(
     <Popover label="How it stands" onHover>
       Two of three invoices are late.
     </Popover>,
   );
 
-  await userEvent.click(screen.getByRole("button"));
+  await user.click(screen.getByRole("button"));
 
   expect(screen.getByText("Two of three invoices are late.")).toBeTruthy();
 });

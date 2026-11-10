@@ -9,16 +9,35 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
-const fieldForecastCategory = "forecast_category"
+const fieldWinProbabilityBand = "win_probability_band"
 
 // The activity report's own vocabulary. Spelled here rather than borrowed from
 // an unrelated surface that happens to use the same words: renaming a report
 // dimension must never rename a capture target type.
 
 // colMeetingCreditedSeat is the one seat a meeting is listed under where a
-// report filters by colleague (storekit.MeetingCreditedSeatSQL); NULL for every
-// other kind of activity.
-var colMeetingCreditedSeat = "(CASE WHEN t.kind = 'meeting' THEN " + storekit.MeetingCreditedSeatSQL("t") + " END)"
+// report filters by colleague; NULL for every other kind of activity.
+//
+// It reads the host the held transition recorded, through heldTransitionJoin.
+// Today's RSVPs would answer differently once somebody changed their response,
+// which moves a week that has already been read.
+var colMeetingCreditedSeat = "(CASE WHEN t.kind = 'meeting' THEN " +
+	storekit.MeetingCreditedSeatAtChangeSQL("t", heldHostUnrecorded, "held.host_id_at_change") + " END)"
+
+// heldHostUnrecorded is true for a meeting with no recorded held transition,
+// where the current host is the only host there has ever been.
+const heldHostUnrecorded = "held.host_id_at_change IS NULL"
+
+// creditedSeatIsFilter narrows to the meetings one colleague is credited for.
+//
+// A meeting credits everyone the attendance evidence names, so asking whether
+// the set holds them finds it. Comparing the single seat a listing shows
+// answered no for every colleague but the one it happened to pick.
+func creditedSeatIsFilter() string {
+	return "(t.kind = 'meeting' AND EXISTS (SELECT 1 FROM " +
+		storekit.MeetingCreditedSeatsAtChangeSQL("t", heldHostUnrecorded, "held.host_id_at_change") +
+		" WHERE credit.id = %s))"
+}
 
 const (
 	fieldKind          = "kind"
@@ -91,6 +110,7 @@ var prebuiltReports = map[string]reportSpec{
 			fieldAmountMinor:     colAmountMinor,
 			fieldAmountBaseMinor: pipelineBaseValueExpr,
 		},
+		sumCoverage:    baseMoneyCoverage(fieldAmountBaseMinor),
 		nativeMeasures: nativeMoney(fieldAmountMinor),
 		filters: map[string]string{
 			fieldOwnerID:    colOwnerID,
@@ -187,6 +207,7 @@ var prebuiltReports = map[string]reportSpec{
 			fieldAmountMinor:         colAmountMinor,
 			fieldWeightedAmountMinor: weightedAmountMinorExpr,
 		}),
+		sumCoverage:    baseMoneyCoverage(),
 		nativeMeasures: nativeMoney(fieldAmountMinor, fieldWeightedAmountMinor),
 		// No stage_id filter: nothing serves it (the screen groups BY stage_id
 		// instead), and a filter key this report has no caller for is public
@@ -196,12 +217,12 @@ var prebuiltReports = map[string]reportSpec{
 		// the engine's generic `expr = $n` rendering already handles with no
 		// special-casing.
 		filters: map[string]string{
-			fieldForecastCategory: "t.forecast_category",
-			fieldPipelineID:       colPipelineID,
-			fieldStatus:           colStatus,
-			fieldOwnerID:          colOwnerID,
-			fieldCompanyID:        colCompanyID,
-			fieldPartnerSourced:   deals.PartnerSourcedSQL("t"),
+			fieldWinProbabilityBand: winProbabilityBandExpr,
+			fieldPipelineID:         colPipelineID,
+			fieldStatus:             colStatus,
+			fieldOwnerID:            colOwnerID,
+			fieldCompanyID:          colCompanyID,
+			fieldPartnerSourced:     deals.PartnerSourcedSQL("t"),
 			// Narrowing to ONE partner, beside the boolean that asks whether
 			// there is one. The board's totals are read from this report with
 			// the deals screen's own filter dials, so a dial the screen offers
@@ -276,6 +297,10 @@ var prebuiltReports = map[string]reportSpec{
 	"activities-by-kind": {
 		entity: datasource.EntityActivity,
 		table:  tableActivity,
+		joins:  []string{heldTransitionJoin},
+		filterPredicates: map[string]string{
+			fieldHostUserID: creditedSeatIsFilter(),
+		},
 		// `activity` has no owner_id column at all, so the population
 		// default's hardcoded `owner_id = caller` clause does not narrow this
 		// report for a non-workspace-scope caller — it renders invalid SQL,
@@ -361,14 +386,14 @@ var prebuiltReports = map[string]reportSpec{
 		table:     tableDeal,
 		joins:     []string{joinStageForWinProbability},
 		baseWhere: whereOpenDeal,
-		basePlain: "open, unarchived deals (win probability read live from the deal's current stage; a commit/best_case deal whose close date is past, missing, or provisional reports as 'slipped' instead, per formulas §11)",
+		basePlain: "open, unarchived deals (win probability is the deal's own where set, else its current stage's)",
 		dimensions: map[string]string{
-			fieldOwnerID:          colOwnerID,
-			fieldStageID:          colStageID,
-			fieldPipelineID:       colPipelineID,
-			fieldForecastCategory: forecastCategoryExpr,
-			fieldCurrency:         colCurrency,
-			fieldWinProbability:   colWinProbability,
+			fieldOwnerID:            colOwnerID,
+			fieldStageID:            colStageID,
+			fieldPipelineID:         colPipelineID,
+			fieldWinProbabilityBand: winProbabilityBandExpr,
+			fieldCurrency:           colCurrency,
+			fieldWinProbability:     colWinProbability,
 			// The same question deals-by-stage answers, asked of the pipeline
 			// rather than of what already landed: what is a partner bringing
 			// us THIS quarter. It was on one of the two deal reports and not
@@ -384,12 +409,11 @@ var prebuiltReports = map[string]reportSpec{
 		// because its default grouping does not, and offering it there would
 		// let a caller sum minor units across currencies.
 		//
-		// The BASE pair is what lets the forecast be read as ONE answer instead
-		// of one answer per currency. A screen drawing the five categories had
-		// to band by currency — a slot carries a single figure, and adding
-		// euros to dong is the unit-less total data-semantics §1 r4 forbids —
-		// so a manager comparing commit against best case compared them inside
-		// each currency and never across the business.
+		// The BASE pair lets the forecast be read as one answer instead of one
+		// answer per currency. Without it a screen drawing the probability
+		// bands would band by currency. A slot carries a single figure, and
+		// euros added to dong is a total with no unit. Bands could then be
+		// compared only inside each currency.
 		//
 		// Priced through the SAME expressions pipeline-current uses, so the two
 		// reports cannot value one deal differently.
@@ -397,14 +421,15 @@ var prebuiltReports = map[string]reportSpec{
 			fieldAmountMinor:         colAmountMinor,
 			fieldWeightedAmountMinor: weightedAmountMinorExpr,
 		}),
+		sumCoverage:    baseMoneyCoverage(),
 		nativeMeasures: nativeMoney(fieldAmountMinor, fieldWeightedAmountMinor),
 		filters: map[string]string{
-			fieldOwnerID:          colOwnerID,
-			fieldStageID:          colStageID,
-			fieldPipelineID:       colPipelineID,
-			fieldForecastCategory: forecastCategoryExpr,
-			fieldCurrency:         colCurrency,
-			fieldProjectID:        colProjectID,
+			fieldOwnerID:            colOwnerID,
+			fieldStageID:            colStageID,
+			fieldPipelineID:         colPipelineID,
+			fieldWinProbabilityBand: winProbabilityBandExpr,
+			fieldCurrency:           colCurrency,
+			fieldProjectID:          colProjectID,
 			// Narrowing to ONE partner, the dial the deals screen now offers.
 			// partner_sourced is deliberately absent here and present on
 			// deals-by-stage: that report's filters mirror the board's dials,
@@ -417,7 +442,7 @@ var prebuiltReports = map[string]reportSpec{
 		// per row when the caller cannot open it, so grouping by it must not
 		// name one they could not have seen.
 		referenceScopes: map[string]string{colPartnerCompanyID: tableCompany},
-		defaultBy:       moneyDefaultBy(fieldForecastCategory),
+		defaultBy:       moneyDefaultBy(fieldWinProbabilityBand),
 		defaultAggs: []reportAggregate{
 			{Fn: aggFnCount, As: aliasDeals},
 			{Fn: aggFnSum, Field: fieldAmountMinor, As: "unweighted_minor"},
@@ -425,6 +450,17 @@ var prebuiltReports = map[string]reportSpec{
 		},
 	},
 }
+
+// heldTransitionJoin is the meeting's own held transition, which recorded the
+// host as it stood then. Its latest one, because a meeting re-held under a new
+// host is credited to that host.
+const heldTransitionJoin = `LEFT JOIN LATERAL (
+        SELECT h.host_id_at_change
+        FROM activity_meeting_history h
+        WHERE h.activity_id = t.id AND h.status = 'held'
+        ORDER BY h.effective_at DESC, h.id DESC
+        LIMIT 1
+      ) held ON true`
 
 const currentStageEntryJoin = `LEFT JOIN LATERAL (
 				SELECT max(h.changed_at) AS entered_at

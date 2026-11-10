@@ -23,10 +23,11 @@ package gates
 // than by writing better — the one outcome this must not buy.
 
 import (
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // defaultRulebookCeiling applies to a rulebook this test does not name. It is
@@ -128,7 +129,7 @@ func TestNoRulebookGrowsPastItsCeiling(t *testing.T) {
 		}
 		rel = filepath.ToSlash(rel)
 
-		raw, err := os.ReadFile(path)
+		raw, err := gatekit.ReadFile(path)
 		if err != nil {
 			t.Fatalf("read %s: %v", rel, err)
 		}

@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/settings/users-rolecell.tsx frontend/src/features/settings/users-admin.tsx frontend/src/features/settings/users-memberverbs.tsx backend/internal/modules/identity/invitemail.go frontend/src/features/settings/roles-settings.tsx frontend/src/features/records/share.body.tsx backend/internal/modules/identity/internal/policy/defaults.go backend/internal/modules/identity/memberedit.go backend/internal/modules/identity/memberretirement.go backend/internal/modules/identity/seatceiling.go backend/internal/modules/identity/invite.go backend/internal/platform/auth/rowscope.go backend/internal/platform/auth/fieldmask.go backend/internal/modules/identity/roster.go frontend/src/components/recordteamassign.tsx backend/internal/modules/identity/ownercarry.go backend/internal/modules/contacts/contactcasesettings.go backend/internal/modules/contacts/contactcasedecide.go frontend/src/features/settings/sharedmergereviews.tsx backend/internal/modules/contacts/duplicatepairmerge.go -->
+<!-- describes: frontend/src/features/settings/users-rolecell.tsx backend/internal/modules/capture/captureauthority.go frontend/src/features/settings/users-admin.tsx frontend/src/features/settings/users-memberverbs.tsx backend/internal/modules/identity/invitemail.go frontend/src/features/settings/roles-settings.tsx frontend/src/features/records/share.body.tsx backend/internal/modules/identity/internal/policy/defaults.go backend/internal/modules/identity/memberedit.go backend/internal/modules/identity/memberretirement.go backend/internal/modules/identity/seatceiling.go backend/internal/modules/identity/invite.go backend/internal/platform/auth/rowscope.go backend/internal/platform/auth/fieldmask.go backend/internal/modules/identity/roster.go frontend/src/components/recordteamassign.tsx backend/internal/modules/identity/ownercarry.go backend/internal/modules/contacts/contactcasesettings.go backend/internal/modules/contacts/contactcasedecide.go frontend/src/features/settings/sharedmergereviews.tsx backend/internal/modules/contacts/duplicatepairmerge.go -->
 # Seats, roles and who can see what
 
 What you can do in Margince is decided by three things, and one cannot stand in for another:
@@ -17,18 +17,18 @@ To invite a colleague to Margince, open **Settings → Members** and choose **In
 1. Open the account menu at the top right and choose **Settings**, then **Members**.
 2. Choose **Invite member**.
 3. Fill **Email** (required) and **Full name** (required).
-4. Pick a **Role** and tick any **Teams** they should join.
+4. Pick a **Role** and tick any **Teams** they should join. If your company has more than one legal entity, also pick the **Legal entity** they work for. It starts on your main company.
 5. Check the **User access** preview, then choose **Invite**.
-You need the permission to manage users. A role that may only read the page sees **Read-only settings** and no **Invite member**. An invite is refused when no seat is left.
+You need the permission to manage users. To pick the legal entity you also need the permission to change a legal entity. A role that may only read the page sees **Read-only settings** and no **Invite member**. An invite is refused when no seat is left.
 Also called: add a user, add a teammate, create an account, onboard a colleague.
 
 ### What if the invitation email did not arrive?
-If the mail server refuses the invitation email, the colleague's row in **Settings → Members** shows **Invitation email failed**.
+You can send a new invitation to any colleague who has not set a password yet. This covers a link that expired after 7 days, an email that went to spam, and a colleague added without an invitation email. If the mail server refuses the invitation email, their row in **Settings → Members** shows **Invitation email failed**.
 1. Check the email address on their row. If it is wrong, deactivate the seat and invite the right address.
 2. Open the **Actions for {name}** menu on their row and choose **Resend invitation**.
-3. The note "Invitation sent again to {name}" confirms it. The mark goes away once the new email has gone out.
-Margince does not try again by itself. If the email still does not arrive, choose **Get set-password link** and pass the link on yourself.
-Also called: invite failed, invitation not received, resend invite.
+3. The note "Invitation sent again to {name}" confirms it. The new email carries a new link, and any older link stops working.
+**Resend invitation** shows only when Margince can send email. Margince does not try again by itself. If the email still does not arrive, choose **Get set-password link** and pass the link on yourself.
+Also called: invite failed, invitation not received, invitation expired, resend invite.
 
 ### How do I change someone's role or make someone an admin?
 To change a colleague's role in Margince, open **Settings → Members** and press the role on their row.
@@ -38,6 +38,12 @@ To change a colleague's role in Margince, open **Settings → Members** and pres
 4. The note "Role changed for {name}" confirms it.
 Saving a role takes the place of every role they held. Only an Admin can give or take away the Admin role.
 Also called: promote, demote, change permissions, make admin.
+
+### Why can a colleague not connect their mailbox?
+A role that cannot record activities cannot connect a mailbox or calendar. Read-only is the shipped role that cannot. A custom role needs create rights on activities, contacts and leads. The colleague sees no connect button, and one sentence says to ask an admin.
+
+When you pick such a role for a member, the dialog says how many of their mailboxes will stop. A stopped mailbox shows as a role problem in System health. It starts again by itself once their role can record activities.
+Also called: cannot connect Gmail, cannot connect Outlook, mailbox stopped, capture paused.
 
 ### How do I find and edit a colleague?
 
@@ -51,7 +57,7 @@ If another administrator changed the account while you were editing, choose **Re
 
 To stop a colleague signing in while keeping their account in the list, choose **Deactivate** in their actions menu. You can bring it back, and it frees their seat.
 
-To remove the account from the member list, deactivate it first, then choose **Remove member**. Choose a colleague to receive any remaining CRM work and review the preview. Resolve the listed items before confirming.
+To remove the account from the member list, deactivate it first, then choose **Remove member**. Choose a colleague to receive any remaining CRM work and review the preview. Resolve the listed items before confirming. Private lists move to that colleague too. That member’s personal saved views are archived when the account is removed.
 
 Personal alerts are archived. Private contacts and companies move to the receiving colleague. Activity reader lists stay the same; activity already shared with the readers of a record may become visible to its new owner. The original names stay in history.
 
@@ -77,7 +83,7 @@ When a colleague leaves and you deactivate them in Margince, they stay the owner
 2. Open the **Actions for {name}** menu on their row and choose **Hand over work**.
 3. The box says what they still own. Pick the colleague under **Give it to** and press **Hand over**.
 
-Every lead, contact, company, deal, project and open task you may change moves to that colleague. Automations and Deal Rooms stay where they are. The **Deactivate {name}?** box also says what they still own and offers **Hand over work**.
+Every lead, contact, company, deal, project and open task you may change moves to that colleague, and so does every live webhook they own. Automations and Deal Rooms stay where they are. The **Deactivate {name}?** box also says what they still own and offers **Hand over work**.
 
 Some contacts and companies only the colleague who left could see. They move too once the colleague is deactivated, and stay visible to the new owner alone. Before that, they stay with the colleague.
 
@@ -160,7 +166,7 @@ Margince comes with six roles: Admin, Ops, Management, Team lead, User and Read-
 | **Management** | every record in the company | every record; no admin rights |
 | **Team lead** | records | records owned by anyone on a live team with them; settings read-only; no access to exchange rates, AI prices, imports or retention |
 | **User** | records | records they own; settings read-only; all of their own saved views |
-| **Read-only** | every record and most settings | nothing, except their own saved views |
+| **Read-only** | every record and most settings | nothing, except their own saved views; cannot connect a mailbox |
 
 This is the biggest difference between Admin and Ops: **Ops cannot manage members or teams.** It also cannot read the audit log or the privacy list, or reset the installation. It reads the list of roles but does not edit it. Everything else in daily running belongs to Ops.
 
@@ -215,7 +221,7 @@ A responsibility role controls nothing:
 - It does not change the owner. Nothing links the owner to the **Account manager** role, so the owner may hold it, or someone else may.
 - A role you turn off stays on the records that carry it, but nobody can be given it again.
 
-You can give a responsibility to a colleague who was invited but has not signed in yet. The **Who** search marks them "Invited, not signed in yet". It finds a name with or without its marks, so "Thang" finds "Thắng". Only a colleague with a Margince account can be given a responsibility, so ask an admin to invite anyone the search does not find.
+You can give a responsibility to an active colleague. The **Who** search finds a name with or without its marks, so "Thang" finds "Thắng". An invited colleague shows in the search once they set a password through the invitation link. Ask an admin to invite anyone who needs an account, or to check the account of someone the search does not find.
 
 Margince comes with these responsibility roles: **Account manager**, **Sales engineer**, **Delivery lead**, **Project manager**, **Technical contact**, **Executive sponsor** and **Support team**. Admin and Ops can rename them and add more. **Settings → Responsibility roles** marks each one **Built-in** when it comes with Margince, or **Custom** when someone added it.
 
@@ -240,14 +246,16 @@ The refusal does not name the contact or its owner.
 Also called: contact already exists, email already taken, hidden contact.
 
 ### How do I share a record with a colleague?
-To share one contact, company, lead, deal or project with a colleague or a team, open the record and choose **Share**. Then fill in **Share this record**.
 1. Open the record and choose **Share** in its header.
-2. Under **Grant access**, pick the colleague or team.
+2. Under **Grant access**, pick the colleague or team. A new team share starts at **Write** with **No expiry (until revoked)**. A share with a colleague starts at **Read** for 7 days.
 3. Choose the **Access level**: **Read** or **Write**.
 4. Choose an **Expiry**: **No expiry (until revoked)**, **Expires in 24 hours**, **Expires in 7 days** or **Expires in 30 days**.
 5. If you like, add a **Reason**, then choose **Grant access**.
 You cannot share more access than you hold.
-Also called: give access, grant access, collaborate on a deal.
+
+On a company, choose **Share contacts** to share contacts who work there now with a person or team. Pick the access level and end date, then choose **Grant access** and confirm **Share these contacts?**. This replaces that recipient's existing shares on those contacts. Other recipients keep their access.
+
+Margince reports how many contacts it shared and skipped. A contact you can read but cannot share is skipped. Hidden contacts are not counted. Contacts who left the company are left out. Being on the same team alone gives no new access.
 
 ### How do I stop sharing a record?
 To take back a share in Margince, open the record and choose **Share**. Find the colleague or team under **Shared with** and choose **Revoke**. The question says: "Revoke this access? It ends at the next request and cannot be undone." To lower write to read instead, share again with **Read**; Margince asks **Reduce access?** first.

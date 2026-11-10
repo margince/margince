@@ -42,7 +42,7 @@ func TestReadApprovalSaysWhatTheCardSaysApprovingDoes(t *testing.T) {
 	if got.PreviewState != "ready" || got.PreviewNote != "" {
 		t.Errorf("state = %q, note = %q, want a ready preview with no note", got.PreviewState, got.PreviewNote)
 	}
-	if len(got.Details) != 1 || got.Details[0].Value.Text != "Pat Typed" || got.Details[0].Label != "Promotion contact name" {
+	if len(got.Details) != 1 || got.Details[0].Value.Text != "Pat Typed" || got.Details[0].Label != "Contact name" {
 		t.Errorf("details = %+v, want the contact name and no message body", got.Details)
 	}
 	want := []PreviewEffect{

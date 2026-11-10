@@ -8,8 +8,10 @@ import (
 	"fmt"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/knowledge"
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -27,12 +29,14 @@ import (
 // owner takes both a new kind and a missing entry.
 func unreferencedKeysBy(db *database.DB) map[storedobjects.Kind]func(context.Context, []string) ([]string, error) {
 	return map[storedobjects.Kind]func(context.Context, []string) ([]string, error){
-		storedobjects.KindAttachment: activities.NewStore(db).UnreferencedAttachmentKeys,
-		storedobjects.KindKnowledge:  knowledge.NewStore(db).UnreferencedDocumentKeys,
+		storedobjects.KindRawOriginal: capture.NewSink(db).UnreferencedOriginalKeys,
+		storedobjects.KindAttachment:  activities.NewStore(db).UnreferencedAttachmentKeys,
+		storedobjects.KindKnowledge:   knowledge.NewStore(db).UnreferencedDocumentKeys,
 		storedobjects.KindLogo: unreferencedByAll(contacts.NewStore(db).UnreferencedLogoKeys,
 			deals.NewStore(db, DealsInstallation()).UnreferencedIssuerLogoKeys),
 		storedobjects.KindOffer:  deals.NewStore(db, DealsInstallation()).UnreferencedOfferKeys,
 		storedobjects.KindImport: migration.NewRunStore(db).UnreferencedImportKeys,
+		storedobjects.KindAvatar: identity.NewServiceFor(db).UnreferencedAvatarKeys,
 	}
 }
 

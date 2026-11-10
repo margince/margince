@@ -17,6 +17,7 @@ import {
 import {
   isConsentNotGranted,
   ProblemError,
+  problemCodeOf,
   problemFieldErrorsOf,
   problemMessageOf,
   throwProblem,
@@ -24,8 +25,8 @@ import {
 import { navigate } from "../../lib/router";
 import { useSendPermission } from "../../lib/usesendpermission";
 import type { ChosenFile } from "./composeattachments";
-import type { Grounding } from "./composedraftcall";
 import type { ComposeFields } from "./composefields";
+import { composedLinks, type Link, type SendGrounding } from "./composelinks";
 import type { RelinkKind } from "./composerelink";
 import type { useSavedDraft } from "./composesaveddraft";
 import { scheduleFields } from "./composeschedule";
@@ -34,66 +35,25 @@ import { sendReviewOf } from "./sendreview";
 
 type Activity = components["schemas"]["Activity"];
 type Preview = components["schemas"]["SendAuthorizationPreview"];
-type Link = { entity_type: RelinkKind; entity_id: string };
 
 // The refusals a rep can act on, as opposed to failures. Anything else keeps
 // the server's own message, so this surface invents no copy for it.
 export type Refusal = "consent" | "mailbox" | "sharedUnsubscribe" | null;
 
-// Consent is a sentinel-mapped 409 that names itself. The two pre-flight
-// refusals are 422s, told apart by the field and code the server asserted.
+// Consent is a 409 naming itself, a mailbox that cannot send a 422 naming no
+// field, and a shared unsubscribe link a 422 field fault on the recipients.
 export function refusalOf(error: unknown): Refusal {
   if (error instanceof ProblemError && isConsentNotGranted(error.problem)) {
     return "consent";
   }
-  for (const { field, code } of problemFieldErrorsOf(error)) {
-    if (field === "from" && code === "mailbox_not_send_capable") {
-      return "mailbox";
-    }
-    if (field === "recipients" && code === "shared_unsubscribe_token") {
-      return "sharedUnsubscribe";
-    }
+  if (problemCodeOf(error) === "mailbox_not_send_capable") {
+    return "mailbox";
   }
-  return null;
-}
-
-/**
- * What a sent message files under: the page it was written from, and every
- * record the rep named while writing it.
- *
- * The grounding choices are the attribution, so they travel with the send. A
- * link is matched on kind and id, the way the server identifies it, and a
- * repeat is dropped because the link table refuses one.
- *
- * `chosen` is null on a reply, whose links belong to its thread.
- */
-export function composedLinks(
-  anchor: { entityType: RelinkKind; entityId: string },
-  chosen: Grounding | null,
-  // The derived filing when the rep chose nothing. Empty means no project.
-  derivedProjectId = "",
-): Link[] {
-  const links: Link[] = [
-    { entity_type: anchor.entityType, entity_id: anchor.entityId },
-  ];
-  const add = (kind: RelinkKind, id: string) => {
-    const already = links.some(
-      (l) => l.entity_type === kind && l.entity_id === id,
-    );
-    if (!id || already) {
-      return;
-    }
-    links.push({ entity_type: kind, entity_id: id });
-  };
-  if (!chosen) {
-    // An anchored send: the record it started from, plus the filing it states.
-    add("project", derivedProjectId);
-    return links;
-  }
-  add("contact", chosen.recipientId);
-  add("deal", chosen.dealId);
-  add("project", chosen.projectId);
-  return links;
+  const shared = problemFieldErrorsOf(error).some(
+    ({ field, code }) =>
+      field === "recipients" && code === "shared_unsubscribe_token",
+  );
+  return shared ? "sharedUnsubscribe" : null;
 }
 
 type SendRequest = {
@@ -156,7 +116,7 @@ async function sendFrom(args: SendRequest) {
 
 // What the send is waiting for, in reading order. A pressed Send names each
 // field on the field, so the button never refuses by going grey.
-export type MissingField = "to" | "subject" | "body" | "context";
+export type MissingField = "to" | "subject" | "body" | "context" | "deal";
 
 export function missingToSend(
   isChannelReply: boolean,
@@ -168,6 +128,8 @@ export function missingToSend(
     // False where the anchor answers what the message is. A reply derives
     // its category from the thread.
     asksContext: boolean;
+    // An Active deal claim with a deal to choose and none chosen.
+    needsDeal?: boolean;
   },
 ): readonly MissingField[] {
   const missing: MissingField[] = [];
@@ -183,6 +145,9 @@ export function missingToSend(
   }
   if (fields.asksContext && fields.context === "") {
     missing.push("context");
+  }
+  if (fields.needsDeal) {
+    missing.push("deal");
   }
   return missing;
 }
@@ -272,12 +237,15 @@ export function useComposeSend({
   answering,
   entityType,
   entityId,
+  dealId,
   fields,
   files,
   carriageBlocked,
+  sourceBlocked,
   anchorActivity,
   grounding,
   projectId,
+  needsDeal,
   savedDraft,
   onSent,
   onClose,
@@ -287,13 +255,16 @@ export function useComposeSend({
   answering: string | undefined;
   entityType: RelinkKind;
   entityId: string;
+  dealId?: string;
   fields: ComposeFields;
   files: readonly ChosenFile[];
   carriageBlocked: boolean;
+  sourceBlocked?: boolean;
   anchorActivity: Activity | undefined;
-  /** The account path's choices; null on an anchored send. */
-  grounding: Grounding | null;
+  /** What a new message is about; null on an anchored send. */
+  grounding: SendGrounding | null;
   projectId: string;
+  needsDeal: boolean;
   savedDraft: ReturnType<typeof useSavedDraft>;
   onSent?: () => void;
   onClose: () => void;
@@ -302,6 +273,20 @@ export function useComposeSend({
   const queryClient = useQueryClient();
   const toast = useToast();
   const { setSendUnavailable } = fields;
+  // What every sent message does next, whichever door sent it: the draft is
+  // spent, the timeline reads again, and the composer closes.
+  const finishSent = () => {
+    savedDraft.sent();
+    const changed = [
+      ...entityTimelineKeys(entityType, entityId),
+      ...(dealId ? entityTimelineKeys("deal", dealId) : []),
+    ];
+    for (const queryKey of changed) {
+      queryClient.invalidateQueries({ queryKey });
+    }
+    onSent?.();
+    onClose();
+  };
   const send = useMutation({
     mutationKey: ["email", entityId],
     // The grounding is the variable, so a stale closure cannot file the mail
@@ -326,10 +311,6 @@ export function useComposeSend({
         setSendUnavailable(true);
         return;
       }
-      savedDraft.sent();
-      for (const queryKey of entityTimelineKeys(entityType, entityId)) {
-        queryClient.invalidateQueries({ queryKey });
-      }
       // A scheduled send may need undoing, so the toast opens the queue. An
       // `open` verb keeps it until dismissed, door and all.
       if (result.scheduled) {
@@ -342,10 +323,17 @@ export function useComposeSend({
           },
         });
       }
-      onSent?.();
-      onClose();
+      finishSent();
     },
   });
+  // A message sent past its refusal as a recorded exception. The refusal it
+  // answered is cleared with the rest, so nothing on screen invites a second
+  // send of a message that has gone.
+  const directSent = () => {
+    send.reset();
+    toast.show(t("directSend.sent"));
+    finishSent();
+  };
 
   // A refusal keeps the form open under copy naming the next move, without
   // the raw server detail beside it.
@@ -365,9 +353,14 @@ export function useComposeSend({
     body: fields.body,
     context: fields.context,
     asksContext: asksWhy(anchorActivity),
+    needsDeal,
   });
   // Spelled once for the send and for the question asked ahead of it.
-  const links = composedLinks({ entityType, entityId }, grounding, projectId);
+  const links = composedLinks(
+    { entityType, entityId, dealId },
+    grounding,
+    projectId,
+  );
   // The engine's answer, asked while the rep writes. Bcc is in the question,
   // because consent is owed to everyone who receives the message.
   const answer = useSendPermission({
@@ -417,7 +410,7 @@ export function useComposeSend({
   };
   const confirm = () => {
     // Marking and focusing is harmless when only a carriage block is present.
-    if (missing.length > 0 || carriageBlocked) {
+    if (missing.length > 0 || carriageBlocked || sourceBlocked) {
       setAttempted(true);
       globalThis.requestAnimationFrame(focusFirstMissing);
       return;
@@ -427,6 +420,7 @@ export function useComposeSend({
   // What this client already knows will stop the send. The mark beside Send
   // makes no passed claim while any of it stands.
   const blocked =
+    Boolean(sourceBlocked) ||
     missing.length > 0 ||
     carriageBlocked ||
     fields.sendUnavailable ||
@@ -444,6 +438,7 @@ export function useComposeSend({
     fieldsRef,
     confirm,
     clearAttempt: () => setAttempted(false),
+    directSent,
   };
 }
 

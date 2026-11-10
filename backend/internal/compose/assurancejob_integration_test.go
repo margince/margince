@@ -68,8 +68,8 @@ func setupAssuranceJob(t *testing.T) *assuranceJobEnv {
 	// clearing them should clear one task, not two.
 	if _, err := owner.Exec(context.Background(), `
 		INSERT INTO deal (pipeline_id, stage_id, name, owner_id, status, source, captured_by,
-		                  amount_minor, currency, expected_close_date, forecast_category)
-		VALUES ($1, $2, 'Assurance Faulted', $3, 'open', 'manual', 'test', 3100000, 'EUR', $4, 'commit')`,
+		                  amount_minor, currency, expected_close_date, win_probability_override, win_probability_set_by)
+		VALUES ($1, $2, 'Assurance Faulted', $3, 'open', 'manual', 'test', 3100000, 'EUR', $4, 95, 'human')`,
 		pipeline, open, e.Rep1, at.AddDate(0, 0, -7)); err != nil {
 		t.Fatalf("seeding the deal the check faults: %v", err)
 	}

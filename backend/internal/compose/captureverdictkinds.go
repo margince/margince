@@ -88,21 +88,26 @@ func statusForKind(kind string) (string, bool) {
 const verdictSystem = `You decide what KIND of sender a first-time email address is, so the CRM
 records the right thing — or nothing.
 For EACH supplied address emit exactly one kind:
-  "contact" — a NAMED human with an interest in this business: a prospect, customer, partner,
-    supplier, applicant, or their named representative. Those words name the RELATIONSHIP, which
+  "contact" — a NAMED human with an interest in this business, writing about this business: a
+    prospect, customer, partner, supplier, applicant, or their named representative. Mail about
+    the mailbox owner's own home, health, family or private accounts is "personal" whoever
+    signs it. Those words name the RELATIONSHIP, which
     a company can hold too, so they do not by themselves make a sender a contact: the mail must
     name the human who wrote it — in the From display name, a salutation, a signature or an
     "on behalf of". A supplier
     or customer writing with nobody named is one of the two kinds below, never this one.
     ONLY this kind becomes a contact record.
-  "role_mailbox" — an address a company answers rather than a contact (support@, info@,
-    sales@, a shared team mailbox). The correspondence is real; there is no human to name.
-    This includes any SERVICE DESK answering for its company: customer service, tenant or
+  "role_mailbox" — an address NAMED FOR A FUNCTION that a company answers rather than a contact
+    (support@, info@, sales@, a shared team mailbox), even beside a place (emea.billing@). The correspondence is real; there is no human to name.
+    This includes any SERVICE DESK answering for its company about THIS BUSINESS's dealings:
+    customer service, tenant or
     property management, a utility, bank, insurer or airline, a clinic reception, a booking or
     reservations desk. A numbered queue is still one desk — support2@, cs6@ — and so is a desk
     whose agent signs with a first name, because the next mail is answered by somebody else.
+    The same desk handling the mailbox owner's own home, health or account is "personal".
   "company_sender" — the company itself writing under its own name rather than a
-    named employee, including mail signed only with a company or product name.
+    named employee, including mail signed only with a company, office or product name from an
+    address named for the company or a place rather than a function.
   "newsletter" — bulk editorial or marketing mail, however welcome. Subscribing is not a
     business relationship.
   "transactional" — automated mail from a service: receipts, invoices, notifications, delivery
@@ -129,13 +134,16 @@ school, their personal bank — is "personal". Ask who the matter belongs to, no
 company it is.
 DIRECTION matters where you are told it. A message the mailbox owner WROTE to an address is an
 intention, not yet a relationship, and an address that has never written back has told you
-nothing about itself. Prefer a kind that records no contact, and lower your confidence.
+nothing about itself. Prefer a kind that records no contact — "personal" when the owner wrote
+about their own private affair — and lower your confidence.
 Judge the DIRECTION of the offer, not its politeness. A "contact" wants something this business
 sells, or supplies something it was engaged to supply. Someone offering to sell this business a
 service it shows no sign of having asked for — financing, capital, leads, SEO, staffing,
 development, an introduction for a fee — is "vendor_pitch" when a human is named and "spam"
-when nobody is, no matter how courteous the mail, how specific the offer, or how complete
-the sender's signature block, address and job title.
+when nobody is, no matter how courteous the mail or how complete the sender's signature
+block, address and job title. Only a sign that THIS business asked — thanks for its enquiry, a
+call referred to, its own order, stand or site — makes an offer genuine correspondence; dates
+any outsider can look up do not.
 You are NOT told the relationship history, so decide it from the message. Mail that continues
 work already agreed is GENUINE CORRESPONDENCE: a quote for a named job with dates and scope, a
 delivery date, a reply in a thread, an answer to a question. That settles only that the mail is

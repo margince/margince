@@ -24,10 +24,11 @@ package gates
 // without the other takes its answer for the rule everywhere.
 
 import (
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 func TestEachDraftingToolNamesTheOneThatAnswersDifferently(t *testing.T) {
@@ -47,7 +48,7 @@ func TestEachDraftingToolNamesTheOneThatAnswersDifferently(t *testing.T) {
 				"finding this one alone reads the timeline write as what drafting means everywhere",
 		},
 	} {
-		raw, err := os.ReadFile(filepath.Join(repoRoot, pair.file))
+		raw, err := gatekit.ReadFile(filepath.Join(repoRoot, pair.file))
 		if err != nil {
 			t.Errorf("reading %s: %v", pair.file, err)
 			continue

@@ -11,6 +11,7 @@ import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { showsAMessage, TASK_QUEUE_KEY } from "../lib/activitykeys";
+import { labelFor } from "../lib/labelfor";
 import { throwProblem, unwrap } from "../lib/problem";
 import { navigate } from "../lib/router";
 import { worklistKey } from "../lib/workkeys";
@@ -19,6 +20,7 @@ import { Callout } from "./callout";
 import { ErrorLine } from "./errorline";
 import { AutonomyDot } from "./trust";
 import "./transcriptread.css";
+import { approvalQuery } from "../lib/approvalread";
 
 type Activity = components["schemas"]["Activity"];
 type TranscriptReadReport = components["schemas"]["TranscriptReadReport"];
@@ -49,6 +51,9 @@ function TranscriptReadOutcome({
   report,
 }: Readonly<{ report: TranscriptReadReport }>) {
   const t = useT();
+  // `detail` is phrased for this reader by the server; `status_detail` is the
+  // stored sentence a reading from before carries instead.
+  const detail = report.detail ?? report.status_detail;
   if (report.status === "failed") {
     return (
       <Callout
@@ -56,7 +61,7 @@ function TranscriptReadOutcome({
         kind="event"
         title={t("transcriptread.failedTitle")}
       >
-        {report.status_detail ?? t("transcriptread.failedFallback")}
+        {detail ?? t("transcriptread.failedFallback")}
       </Callout>
     );
   }
@@ -65,12 +70,29 @@ function TranscriptReadOutcome({
     // other arm lists the proposals — a fact about the transcript, not
     // something the card says about itself.
     return (
-      <EmptyState>
-        {report.status_detail ?? t("transcriptread.nothingStated")}
-      </EmptyState>
+      <EmptyState>{detail ?? t("transcriptread.nothingStated")}</EmptyState>
     );
   }
-  return <TranscriptReadProposals ids={report.proposal_ids} />;
+  const mine = ownProposals(report);
+  return (
+    <>
+      {report.detail && <p className="t-caption">{report.detail}</p>}
+      {mine.length > 0 && <TranscriptReadProposals ids={mine} />}
+    </>
+  );
+}
+
+// The proposals this reader decides. One waiting on a colleague is theirs, and
+// its status is not this reader's to read: the server's sentence already says
+// who it was sent to. A reading from before names nobody, so all of its
+// proposals are read as before.
+function ownProposals(report: TranscriptReadReport): string[] {
+  if (report.proposals.length === 0) {
+    return report.proposal_ids;
+  }
+  return report.proposals
+    .filter((proposal) => proposal.asked_of.is_you)
+    .map((proposal) => proposal.id);
 }
 
 // What became of what the reading staged.
@@ -81,10 +103,11 @@ function TranscriptReadOutcome({
 // watched the task appear, came back to a card still saying one was waiting.
 // Nothing was wrong with the number; the sentence was about a different fact.
 //
-// The decisions are read where they actually live, one authorised read per
-// staged approval, keyed ["approval", id] — the key approvalrow already
-// invalidates when a decision lands, so accepting from the worklist refreshes
-// this card without a reload.
+// The decisions are read where they actually live: one authorised read per
+// staged approval, through `approvalQuery`.
+//
+// That is the key approvalrow invalidates when a decision lands, so accepting
+// from the worklist refreshes this card without a reload.
 //
 // A hook cannot sit under a changing early return, which is why this is its own
 // component: the parent returns before it for a failed or empty reading.
@@ -94,14 +117,7 @@ function TranscriptReadProposals({ ids }: Readonly<{ ids: string[] }>) {
   const { locale } = useLocale();
   const decisions = useQueries({
     queries: ids.map((id) => ({
-      queryKey: ["approval", id],
-      queryFn: async () => {
-        return unwrap(
-          await api.GET("/approvals/{id}", {
-            params: { path: { id } },
-          }),
-        );
-      },
+      ...approvalQuery(id),
       // A decided approval does not un-decide, and this card is often on
       // screen while the rep works elsewhere in the record.
       staleTime: 10_000,
@@ -271,7 +287,7 @@ function TranscriptReadBody({
     <div className="transcript-reading">
       <p className="transcript-status">
         <Badge tone={report.status === "failed" ? "danger" : undefined}>
-          {t(READ_STATUS_LABELS[report.status])}
+          {t(labelFor(READ_STATUS_LABELS, report.status))}
         </Badge>
         {terminal && (
           <span className="t-caption">

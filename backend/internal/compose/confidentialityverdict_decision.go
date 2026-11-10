@@ -30,13 +30,13 @@ const confidentialityDecisionSite = "thread"
 const confidentialityDecisionInstructions = "May the mailbox owner's colleagues read `thread`? Which kind of thread is it?"
 
 var confidentialityDecisionCriteria = map[string]string{
-	confidentialityOrdinary:      "Routine company business: sales, delivery, support, suppliers, scheduling, and invoices or expenses for the company's own trade (including a work trip or conference paid personally). Saying an NDA exists or is signed is still ordinary.",
-	confidentialityLegal:         "A dispute, a claim, a contract under negotiation, or correspondence with lawyers, including counsel's fees.",
-	confidentialityFinancial:     "The company's own corporate finance: shareholders, funding, valuation, tax, audit, banking, an acquisition.",
-	confidentialityPersonnel:     "A named individual as employee or candidate: salary, employment contract, termination, grievance, performance, application.",
+	confidentialityOrdinary:      "Routine company business: sales, delivery, support, suppliers, scheduling, and invoices or expenses for the company's own trade (including a work trip or conference paid personally). Saying an NDA exists or is signed is still ordinary. An attached document that could not be read is no evidence of this kind.",
+	confidentialityLegal:         "A dispute, a claim, a commercial contract under negotiation, or correspondence with lawyers, including counsel's fees.",
+	confidentialityFinancial:     "The company's own corporate finance: shareholders, funding, valuation, tax, audit, banking, an acquisition, including a term sheet or investment agreement still under negotiation.",
+	confidentialityPersonnel:     "Employees or candidates, one or many: salary or payroll data (a salary list, payroll sheet or compensation table included), employment contract, termination, grievance, performance, application. An attached document's text counts as the thread's.",
 	confidentialityPersonal:      "The mailbox owner's private life: family, health, their home, rent, phone or utility bill, personal bank or card alert, private subscription, even if forwarded for reimbursement.",
-	confidentialitySecurity:      "A breach, intrusion, leaked credentials, or an unpatched vulnerability under embargo.",
-	confidentialityExplicitlyMar: "The message itself asks for confidence: marked confidential or vertraulich, or asks to keep it to a small circle or not forward it.",
+	confidentialitySecurity:      "A breach, intrusion, leaked credentials, or an unpatched vulnerability in this company's own systems or data; never a routine alert on the owner's own consumer account.",
+	confidentialityExplicitlyMar: "The message itself asks for confidence: marked confidential or vertraulich, or asks to keep it to a small circle or not forward it. Any sensitive kind that also fits wins over this one; it always wins over ordinary.",
 }
 
 type confidentialityDecisionThread struct {
@@ -45,6 +45,28 @@ type confidentialityDecisionThread struct {
 	// as the LLM request says "Attachments:" with nothing after it.
 	Attachments []string `json:"attachments"`
 	Body        string   `json:"body"`
+	// Documents is an empty list rather than absent, like Attachments.
+	Documents        []confidentialityDecisionDocument `json:"documents"`
+	DocumentsOmitted int                               `json:"documents_omitted"`
+}
+
+// confidentialityDecisionDocument is one document as the LLM request states
+// it: the name, then the excerpt or that it could not be read.
+type confidentialityDecisionDocument struct {
+	Name       string `json:"name"`
+	Excerpt    string `json:"excerpt"`
+	Truncated  bool   `json:"truncated"`
+	Unreadable bool   `json:"unreadable"`
+}
+
+func confidentialityDecisionDocuments(row capture.PendingThread) []confidentialityDecisionDocument {
+	out := make([]confidentialityDecisionDocument, 0, len(row.Documents))
+	for _, doc := range row.Documents {
+		out = append(out, confidentialityDecisionDocument{
+			Name: doc.Filename, Excerpt: doc.Excerpt, Truncated: doc.Truncated, Unreadable: doc.Unreadable,
+		})
+	}
+	return out
 }
 
 type confidentialityDecisionState struct {
@@ -52,16 +74,18 @@ type confidentialityDecisionState struct {
 }
 
 // confidentialityDecision carries exactly the inputs confidentialityRequest
-// sends: the subject, every attachment name and the body.
+// sends: the subject, every attachment name, the body and each document.
 func confidentialityDecision(row capture.PendingThread) decision.Request {
 	attachments := row.Attachments
 	if attachments == nil {
 		attachments = []string{}
 	}
-	state, _ := json.Marshal(confidentialityDecisionState{Thread: confidentialityDecisionThread{ //nolint:errchkjson // strings only; marshal cannot fail
-		Subject:     row.Subject,
-		Attachments: attachments,
-		Body:        row.Body,
+	state, _ := json.Marshal(confidentialityDecisionState{Thread: confidentialityDecisionThread{ //nolint:errchkjson // strings, bools and an int only; marshal cannot fail
+		Subject:          row.Subject,
+		Attachments:      attachments,
+		Body:             row.Body,
+		Documents:        confidentialityDecisionDocuments(row),
+		DocumentsOmitted: row.DocumentsOmitted,
 	}})
 	return decision.Request{State: state, Questions: map[string]decision.Question{
 		decisionQuestionKey: choiceQuestion(confidentialityDecisionInstructions, confidentialityDecisionCriteria),

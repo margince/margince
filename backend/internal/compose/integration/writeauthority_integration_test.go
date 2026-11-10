@@ -355,7 +355,8 @@ func TestAnExpiredWriteShareConfersNothing(t *testing.T) {
 
 	if err := database.WithWorkspaceTx(f.env.Admin(), f.env.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
-			`UPDATE record_grant SET expires_at = now() - interval '1 hour' WHERE record_id = $1`, f.contact)
+			`UPDATE record_grant SET created_at = now() - interval '2 hours',
+			                        expires_at = now() - interval '1 hour' WHERE record_id = $1`, f.contact)
 		return err
 	}); err != nil {
 		t.Fatal(err)

@@ -127,3 +127,13 @@
   justify-items: start;
   inline-size: 8rem;
 }
+
+/* A user's name with the roles that choose their agents' allowance under it. */
+.agent-usage-user {
+  display: grid;
+  gap: var(--space-1);
+}
+/* The user picker sizes to its longest name rather than the panel. */
+.agent-usage-check {
+  max-inline-size: 24rem;
+}

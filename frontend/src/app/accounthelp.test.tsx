@@ -56,7 +56,7 @@ function renderMenu() {
   );
 }
 
-const trigger = () => screen.getByRole("button", { name: "Account" });
+const trigger = () => screen.getByRole("button", { name: "TU Account" });
 const row = (name: string | RegExp) => screen.getByRole("menuitem", { name });
 const helpMenu = () => screen.getByRole("menu", { name: "Help and feedback" });
 const helpItem = (name: string | RegExp) =>
@@ -66,7 +66,8 @@ const helpItem = (name: string | RegExp) =>
 async function openHelpByKeyboard(user: UserEvent) {
   trigger().focus();
   await user.keyboard("{Enter}");
-  for (let at = 0; at < 3; at++) {
+  await screen.findByRole("menu", { name: "Account" });
+  for (let at = 0; at < 4; at++) {
     await user.keyboard("{ArrowDown}");
   }
   expect(document.activeElement).toBe(row("Help and feedback"));
@@ -75,6 +76,7 @@ async function openHelpByKeyboard(user: UserEvent) {
 
 async function openHelp(user: UserEvent) {
   await user.click(trigger());
+  await screen.findByRole("menu", { name: "Account" });
   await user.click(row("Help and feedback"));
 }
 
@@ -94,11 +96,11 @@ describe("Help and feedback", () => {
     await user.keyboard("{ArrowDown}");
     expect(document.activeElement).toBe(helpItem(/^Request a feature/));
     await user.keyboard("{End}");
-    expect(document.activeElement).toBe(helpItem(/^Release notes/));
+    expect(document.activeElement).toBe(helpItem(/^Web app licenses/));
     await user.keyboard("{ArrowDown}");
     expect(document.activeElement).toBe(helpItem(/^Report a problem/));
     await user.keyboard("{ArrowUp}");
-    expect(document.activeElement).toBe(helpItem(/^Release notes/));
+    expect(document.activeElement).toBe(helpItem(/^Web app licenses/));
     await user.keyboard("{Home}");
     expect(document.activeElement).toBe(helpItem(/^Report a problem/));
     // The walk stayed inside: the account menu's own tabstop did not move.
@@ -249,9 +251,9 @@ describe("the build at the foot of Help and feedback", () => {
     expect(version.closest("[role=menuitem]")).toBeNull();
     expect(
       within(helpMenu()).getAllByRole("menuitem").at(-1)?.textContent,
-    ).toMatch(/^Release notes/);
+    ).toMatch(/^Web app licenses/);
     await user.keyboard("{End}");
-    expect(document.activeElement).toBe(helpItem(/^Release notes/));
+    expect(document.activeElement).toBe(helpItem(/^Web app licenses/));
   });
 
   it("names the instance and the core release on an instance build", async () => {
@@ -307,5 +309,14 @@ describe("the build at the foot of Help and feedback", () => {
     renderMenu();
     await user.click(trigger());
     expect(screen.queryByText("Version v1.4.0")).toBeNull();
+  });
+  it("offers web app licenses without a settings grant", async () => {
+    const user = userEvent.setup();
+    renderMenu();
+    await openHelpByKeyboard(user);
+    const link = helpItem(/^Web app licenses/);
+    expect(link).toHaveAttribute("href", "/licenses/THIRD-PARTY-NOTICES.txt");
+    expect(link).toHaveAttribute("target", "_blank");
+    expect(link).toHaveAttribute("rel", "noopener noreferrer");
   });
 });

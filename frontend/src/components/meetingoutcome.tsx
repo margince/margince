@@ -34,9 +34,10 @@ import { outgoingBody } from "../lib/activitybody";
 import { useActivity } from "../lib/activityread";
 import { useCanWriteRecord } from "../lib/capability";
 import { problemFieldErrorsOf } from "../lib/problem";
-import { useRecordZone } from "../lib/recordzone";
+import { useViewerZone } from "../lib/viewerzone";
 import { worklistKey } from "../lib/workkeys";
 import { ActivityBodyField } from "./activitybodyfield";
+import { useMeetingCustomFields } from "./meetingoutcome.custom";
 import { useMeetingOutcome } from "./taskactions";
 import { writeMeetingOutcome } from "./taskactions.rowwrites";
 
@@ -131,10 +132,10 @@ function heldDays(
 }
 
 /**
- * MeetingOutcome is the row's answer: it was held, it was cancelled, or say
- * more about what came of it.
+ * MeetingOutcome is the row's answer to How did it go? It happened (held), it
+ * did not happen (canceled), or the reader says more about what came of it.
  *
- * "Held" is the commonest answer and a fact with nothing to add, so it writes
+ * "It happened" is the commonest answer and a fact with nothing to add, so it writes
  * at once, as Cancel does. "Add notes" opens the dialog, which also offers
  * No-show and moves the date.
  */
@@ -187,6 +188,7 @@ export function MeetingOutcome({
     );
   return (
     <>
+      <span className="t-caption">{t("worklist.verb.meetingHowDidItGo")}</span>
       <Button
         pending={record.isPending}
         aria-label={
@@ -256,7 +258,7 @@ function MeetingOutcomeDialog({
   const toast = useToast();
   const titleId = useId();
   const formId = useId();
-  const recordZone = useRecordZone();
+  const readerZone = useViewerZone();
   const queryClient = useQueryClient();
   const [draft, setDraft] = useState<OutcomeDraft | null>(null);
   const [seed, setSeed] = useState<OutcomeSeed | null>(null);
@@ -266,13 +268,14 @@ function MeetingOutcomeDialog({
   const meeting = useActivity(id);
   const transcript = meeting.data ? isTranscriptActivity(meeting.data) : false;
   const managed = meeting.data?.calendar_managed === true;
+  const custom = useMeetingCustomFields(meeting.data);
   // Seeded during render, not in an effect: an effect paints an empty form first
   // and replaces words typed into that frame.
   if (draft === null && meeting.data) {
     const day = activityDate(
       meeting.data.occurred_at,
       meeting.data.occurred_precision,
-      recordZone,
+      readerZone,
     );
     setDraft({
       status: "held",
@@ -289,7 +292,7 @@ function MeetingOutcomeDialog({
       version: meeting.data.version,
     });
   }
-  const days = heldDays(seed, recordZone);
+  const days = heldDays(seed, readerZone);
   const save = useMutation({
     // Fields travel as variables: a closure would read the last committed render.
     mutationFn: async (input: {
@@ -298,12 +301,15 @@ function MeetingOutcomeDialog({
       moved: MovedStart | undefined;
       transcript: boolean;
       managed: boolean;
+      custom: Record<string, unknown>;
     }) => {
       await writeMeetingOutcome(
         {
           id,
           version: input.seed.version,
           status: input.draft.status,
+          // The workspace's own fields, which no calendar holds.
+          custom: input.custom,
           // A calendar-managed meeting keeps the calendar's subject, notes
           // and start; only its outcome is written.
           ...(input.managed
@@ -356,7 +362,7 @@ function MeetingOutcomeDialog({
               try {
                 moved = managed
                   ? undefined
-                  : movedStart(seed, draft.day, recordZone, new Date());
+                  : movedStart(seed, draft.day, readerZone, new Date());
               } catch (error) {
                 // A day the record zone skipped has no start to keep, so
                 // nothing is sent and the reader picks another date.
@@ -365,7 +371,14 @@ function MeetingOutcomeDialog({
                 return;
               }
               setDayRefused(false);
-              save.mutate({ draft, seed, moved, transcript, managed });
+              save.mutate({
+                draft,
+                seed,
+                moved,
+                transcript,
+                managed,
+                custom: custom.patch(),
+              });
             }}
           >
             <div className="form-row">
@@ -420,6 +433,7 @@ function MeetingOutcomeDialog({
                 onChange={setDraft}
               />
             )}
+            {custom.controls}
             {dayRefused && (
               <ErrorLine>{t("worklist.verb.meetingDayMissing")}</ErrorLine>
             )}

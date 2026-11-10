@@ -1,11 +1,12 @@
 import { FileUp } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { Button, Field, Radio, Textarea } from "../../design-system/atoms";
 import { FileDropzoneControl } from "../../design-system/filedropzone";
 import { SettingRow } from "../../design-system/settingrow";
 import { formatNumber } from "../../format/format";
 import { type Locale, useLocale, useT } from "../../i18n";
 import { problemMessageOf } from "../../lib/problem";
+import { useUnsavedGuard } from "../../lib/unsavedclaims";
 import { useFileDrop } from "../../lib/use-file-drop";
 import { ACCEPTED_CORPUS_ATTR } from "../../lib/voice-corpus-file";
 import { VOICE_MIN_WORDS } from "../../lib/voice-intake-core";
@@ -27,8 +28,6 @@ type VoiceCorpusIntakeProps = Readonly<{
   /** The intake this zone feeds. Its caller owns it, so work in flight
    * outlives the swap from the first-sample card to the full one. */
   intake: VoiceIntake;
-  /** Told when intake is in progress, so the caller can hold the build. */
-  onBusyChange?: (busy: boolean) => void;
   /** The first sample is the one that MINTS the profile: the row names itself
    * for that, and there is no meter yet to say how far the floor is, so the
    * card states the floor itself. */
@@ -37,7 +36,6 @@ type VoiceCorpusIntakeProps = Readonly<{
 
 export function VoiceCorpusIntake({
   intake,
-  onBusyChange,
   first = false,
 }: VoiceCorpusIntakeProps) {
   const t = useT();
@@ -48,14 +46,6 @@ export function VoiceCorpusIntake({
   // armed: it only keeps a file that misses the zone from navigating the
   // browser away from the app, which is what a stray drop does by default.
   useFileDrop({ container: zoneRef, active: false, onFiles: intake.addFiles });
-
-  // Told AFTER the render that changed it: calling a parent's setState from a
-  // render body updates one component while another is rendering, which React
-  // does not support.
-  const busy = intake.busy;
-  useEffect(() => {
-    onBusyChange?.(busy);
-  }, [busy, onBusyChange]);
 
   return (
     <div ref={zoneRef}>
@@ -91,18 +81,7 @@ export function VoiceCorpusIntake({
                 }
               />
             </div>
-            {intake.pendingAsk && (
-              // Keyed by the source: when the queue advances to the next file
-              // the panel is a NEW panel, so the previous file's chosen
-              // speaker cannot survive into a question about different
-              // contacts.
-              <SpeakerPanel
-                key={intake.pendingAsk.ref}
-                ask={intake.pendingAsk}
-                onAnswer={intake.answerSpeaker}
-                onDismiss={intake.dismissAsk}
-              />
-            )}
+            <VoicePendingAsk intake={intake} />
             {/* Polite, so the outcome of a drop reaches a screen reader as it
                 lands: the zone's own live region only ever states the
                 invitation, because the input is cleared after every pick. A
@@ -140,6 +119,8 @@ function PasteSample({
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
   const blank = text.trim() === "";
+  // A tab change unmounts the box, so an unsent paste asks before it goes.
+  useUnsavedGuard(!blank);
   return (
     <div className="vdna-paste">
       <Field label={t("settings.voice.pasteLabel")}>
@@ -192,6 +173,24 @@ function WhatTeachesTheVoice() {
 
 // A file the preview found several speakers in: only the owner's own turns may
 // become their voice, so the source waits here until they say which is theirs.
+/** The open speaker question of an intake, if any. A tab without the intake
+ * card draws it too, so a question never waits where no one sees it. */
+export function VoicePendingAsk({ intake }: Readonly<{ intake: VoiceIntake }>) {
+  if (!intake.pendingAsk) {
+    return null;
+  }
+  // Keyed by the source: the next file's question is a new panel, so a chosen
+  // speaker cannot carry over to different contacts.
+  return (
+    <SpeakerPanel
+      key={intake.pendingAsk.ref}
+      ask={intake.pendingAsk}
+      onAnswer={intake.answerSpeaker}
+      onDismiss={intake.dismissAsk}
+    />
+  );
+}
+
 function SpeakerPanel({
   ask,
   onAnswer,

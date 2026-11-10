@@ -71,6 +71,7 @@ func TestADayEntryKeepsItsDateWhenTheInstallationZoneMoves(t *testing.T) {
 
 			// Early on the 45th date after it, where the stored noon is already
 			// the next local morning east of UTC.
+			e.RecordHeld(t, ids.UUID(meeting.Id))
 			quietRead := time.Date(2026, 4, 24, 9, 0, 0, 0, to)
 			if days := quietDays(t, e, contact, func() time.Time { return quietRead }); days != relstrength.QuietDays {
 				t.Errorf("at %v in %s the contact reads quiet for %d days, want %d", quietRead, move.to, days, relstrength.QuietDays)

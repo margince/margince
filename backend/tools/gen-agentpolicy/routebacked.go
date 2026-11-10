@@ -33,6 +33,16 @@ func reasonDefect(access, reason string, security *[]map[string][]string) string
 	return ""
 }
 
+// audienceDefect refuses an x-settings-audience the parity catalog cannot read. The
+// two words mirror audienceMember and audienceAdmin in backend/gates/mcpparity_test.go.
+// This module cannot import a gate, so that gate refuses any other word too.
+func audienceDefect(audience string) string {
+	if audience == "" || audience == "member" || audience == "admin" {
+		return ""
+	}
+	return fmt.Sprintf("x-settings-audience is %q; say member or admin", audience)
+}
+
 // reachedWithASession reports whether a signed-in user's cookie admits the
 // operation. Absent security inherits the document's, which admits it.
 func reachedWithASession(security *[]map[string][]string) bool {
@@ -100,13 +110,13 @@ func routeBackedDefects(policies []policy, routers map[string]bool) []string {
 	return defects
 }
 
-// nonJSONBodies refuses a route-backed route whose body is not JSON. The verb
-// passes its body argument on as JSON, so a file upload cannot run through it.
+// nonJSONBodies refuses a route-backed route whose body is neither JSON nor one
+// uploaded file: the two bodies the verb can pass on.
 func nonJSONBodies(shapes map[string]routeShape) []string {
 	var defects []string
 	for route, shape := range shapes {
-		if shape.body && shape.bodySchema == "" {
-			defects = append(defects, route+": served_by: route needs a JSON body; a file upload goes through attach")
+		if shape.body && shape.bodySchema == "" && shape.uploadField == "" {
+			defects = append(defects, route+": served_by: route needs a JSON body or a one-file multipart body")
 		}
 	}
 	sort.Strings(defects)

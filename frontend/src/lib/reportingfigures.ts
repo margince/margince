@@ -10,6 +10,7 @@ const EVALUATED_FIGURES: readonly string[] = [
   ...REPORTING_EVALUATION_KEY,
   "reporting-live",
   "reporting-forecast",
+  "sdr-summary",
 ];
 
 // A stale evaluation reloads every figure the page draws, so the next read

@@ -19,7 +19,6 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
-	"github.com/margince/margince/backend/internal/platform/database"
 )
 
 // derivationOutcome is a resolved handle: definition, drill-through
@@ -56,7 +55,7 @@ type derivationOutcome struct {
 // the aggregate recompute run over the identical WHERE side (validated
 // predicates + the caller's row-scope clause) in one transaction.
 func (e *reportEngine) fetchDerivation(ctx context.Context, report string, spec reportSpec, plan derivationPlan, out *derivationOutcome) error {
-	return database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+	return withReportSnapshot(ctx, e.pool, func(tx pgx.Tx) error {
 		if err := requireNamedQuestion(ctx, tx, spec, requestedReportScope(plan.scope), plan.groupBy, predicatesAsFilters(plan.predicates)); err != nil {
 			return err
 		}
@@ -93,6 +92,9 @@ func (e *reportEngine) fetchDerivation(ctx context.Context, report string, spec 
 		whereSQL := strings.Join(where, " AND ")
 
 		if err := requireNoLoneColleagueIn(ctx, tx, frame, contributorsSQL(spec, where, nil), args); err != nil {
+			return err
+		}
+		if err := requireSpecPopulationFloor(ctx, tx, spec, requestedReportScope(plan.scope)); err != nil {
 			return err
 		}
 		if out.Rows, err = derivationRows(ctx, tx, frame, report, spec, plan, whereSQL, args); err != nil {
@@ -275,6 +277,22 @@ func derivationFrame(ctx context.Context, tx pgx.Tx, plan derivationPlan) (repor
 	return frame, nil
 }
 
+// predicateClause renders one handle predicate the way its headline did.
+func predicateClause(spec reportSpec, p boundExpr, arg func(any) int) (string, error) {
+	switch {
+	case p.threshold != nil:
+		n, err := thresholdValue(p.field, p.value)
+		if err != nil {
+			return "", err
+		}
+		return p.threshold.clause(arg(n)), nil
+	case p.isNull:
+		return p.expr + " IS NULL", nil
+	default:
+		return filterClause(spec, p.field, p.expr, arg(p.value)), nil
+	}
+}
+
 // derivationWhere renders the drill-through's WHERE side: the report's
 // base predicate, the validated equality predicates ("" = SQL NULL), and
 // the caller's row-scope clause (the activity link-walk when the report
@@ -288,18 +306,11 @@ func derivationWhere(
 ) ([]string, string, error) {
 	where := []string{spec.populationWhere()}
 	for _, p := range plan.preds {
-		switch {
-		case p.threshold != nil:
-			n, err := thresholdValue(p.field, p.value)
-			if err != nil {
-				return nil, "", err
-			}
-			where = append(where, p.threshold.clause(arg(n)))
-		case p.isNull:
-			where = append(where, p.expr+" IS NULL")
-		default:
-			where = append(where, fmt.Sprintf("%s = $%d", p.expr, arg(p.value)))
+		clause, err := predicateClause(spec, p, arg)
+		if err != nil {
+			return nil, "", err
 		}
+		where = append(where, clause)
 	}
 	var scope string
 	var err error

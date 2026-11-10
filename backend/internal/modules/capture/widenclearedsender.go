@@ -21,10 +21,8 @@ package capture
 // import rows is enough for the recompute to reach a new answer.
 
 import (
-	"bytes"
 	"context"
 	"fmt"
-	"slices"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
@@ -111,6 +109,11 @@ func ClearedSenderRemainingTx(ctx context.Context, tx pgx.Tx, email string) (int
 // budget has to interrupt the drain itself: a single sender with thousands of
 // held messages would otherwise hold one transaction open for all of them, and a
 // cap checked only between senders would never fire.
+//
+// It locks each message with its import row and skips a message another
+// transaction holds. The verdict callers have already written the sender's
+// contact, and the holder of a message may be waiting for that contact. A
+// skipped message stays due, and a later pass opens it.
 func WidenClearedSenderTx(
 	ctx context.Context, tx pgx.Tx, email string, limit int, recompute AudienceRecomputer,
 ) (int, error) {
@@ -129,6 +132,7 @@ func WidenClearedSenderTx(
 			 ORDER BY i.id
 			 LIMIT $2
 			 FOR UPDATE OF i SKIP LOCKED
+			 FOR NO KEY UPDATE OF a SKIP LOCKED
 		)
 		UPDATE capture_import i
 		   SET posture_at_import = 'shared',
@@ -153,21 +157,7 @@ func WidenClearedSenderTx(
 	if err := rows.Err(); err != nil {
 		return 0, fmt.Errorf("capture: claiming the import rows a cleared sender re-opens: %w", err)
 	}
-	// Sorted before recomputing, because the recompute takes FOR UPDATE on each
-	// activity in turn. Two passes claiming different seats' import rows for an
-	// overlapping set of activities would otherwise take those row locks in
-	// whatever order each UPDATE returned them, which is a deadlock the import
-	// rows' own SKIP LOCKED cannot prevent. One agreed order removes it.
-	sortActivityIDs(touched)
 	return len(touched), recomputeEach(ctx, tx, touched, recompute)
-}
-
-// sortActivityIDs puts a claimed batch into one agreed order before anything
-// locks the rows it names.
-func sortActivityIDs(list []ids.ActivityID) {
-	slices.SortFunc(list, func(a, b ids.ActivityID) int {
-		return bytes.Compare(a.UUID[:], b.UUID[:])
-	})
 }
 
 // ClearedSendersDueTx names the settled senders that still have mail a posture

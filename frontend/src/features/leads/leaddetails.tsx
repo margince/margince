@@ -5,9 +5,12 @@ import { useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { ConversationSuggestionsCard } from "../../components/conversationsuggestions";
 import { EntityRef } from "../../components/entityref";
+import { useEntityName } from "../../components/entityref.queries";
+import { LinkedInChip } from "../../components/linkedinchip";
 import { saveRecordEdit } from "../../components/recordedit";
+import { LeadStops } from "../../components/stops";
 import { TagsPanel } from "../../components/tagspanel";
-import { Badge } from "../../design-system/atoms";
+import { Badge, PendingBody } from "../../design-system/atoms";
 import {
   ContactLink,
   CopyEmail,
@@ -15,7 +18,6 @@ import {
 } from "../../design-system/contactlink";
 import { InlineChoice } from "../../design-system/inlinechoice";
 import { InlineText } from "../../design-system/inlinetext";
-import { OffsiteLink } from "../../design-system/offsitelink";
 import {
   type DetailRow,
   type DetailSection,
@@ -23,7 +25,6 @@ import {
 } from "../../design-system/recorddetails";
 import { formatDateAbbrev } from "../../format/format";
 import { industryOptions, industryWords } from "../../format/industry";
-import { viewerZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useCanWriteRecord } from "../../lib/capability";
@@ -37,10 +38,12 @@ import {
 import { useListsAvailable, useRecordLists } from "../../lib/lists.queries";
 import { ProblemError } from "../../lib/problem";
 import { useRecordTags } from "../../lib/tags.queries";
+import { useViewerZone } from "../../lib/viewerzone";
 import { LeadCompany, useLeadCompanyFactsSection } from "./leadcompany";
 import { LeadOwnerControl, statusSetBy } from "./leadheader";
 import { leadIndustry } from "./leadindustry";
 import { useLeadPartnerRow } from "./leadpartner";
+import { LeadProductLine } from "./leadproduct";
 import { LeadProjectAttachButton } from "./leadraillinks";
 import type { Lead, LeadWriter } from "./leads";
 import { mapLeadUpdate } from "./leads.form";
@@ -125,12 +128,42 @@ function EmailValue({
   );
 }
 
+// A linked lead's name is the company's own, so it is changed there, not here.
+function useLinkedCompanyRow(lead: Lead): DetailRow | null {
+  const t = useT();
+  const linked = useEntityName("company", lead.company_id);
+  if (!lead.company_id) return null;
+  const settling =
+    linked.name === null && (linked.reading === "pending" || linked.fetching);
+  return {
+    key: "company_name",
+    term: t("create.companyName"),
+    empty: !settling && !linked.name,
+    value: settling ? (
+      <PendingBody label={t("common.loading")} lines={1} />
+    ) : (
+      <InlineText
+        label={t("create.companyName")}
+        value={linked.name ?? ""}
+        placeholder={t("field.unset")}
+        canEdit={false}
+        readOnlyReason={t("lead.company.nameFollowsLink")}
+        onSave={refusedSave}
+      />
+    ),
+  };
+}
+
+// The read-only row never opens its editor, so nothing reaches this.
+async function refusedSave(): Promise<void> {}
+
 /** The About rows in the order the design reads them, blanks folded. */
 function useAboutRows(
   lead: Lead,
   writer: LeadWriter,
   reasonId: string | undefined,
 ): DetailRow[] {
+  const readerZone = useViewerZone();
   const t = useT();
   const { locale } = useLocale();
   const origins = useLeadOrigins();
@@ -169,7 +202,8 @@ function useAboutRows(
     { value: "", label: t("lead.originNone") },
     ...originPickOptions(origins.data, lead.origin),
   ];
-  const companyName = text("company_name", "create.companyName");
+  const companyName =
+    useLinkedCompanyRow(lead) ?? text("company_name", "create.companyName");
   const rows: DetailRow[] = [
     {
       ...companyName,
@@ -255,7 +289,7 @@ function useAboutRows(
     {
       key: "received",
       term: t("lead.aside.received"),
-      value: formatDateAbbrev(lead.created_at, locale, viewerZone()),
+      value: formatDateAbbrev(lead.created_at, locale, readerZone),
     },
     // The name heads the card; the row is only here to fill a blank one.
     ...(isBlank(lead.full_name)
@@ -266,9 +300,7 @@ function useAboutRows(
       term: t("create.linkedinUrl"),
       empty: isBlank(lead.linkedin_url),
       value: lead.linkedin_url ? (
-        <OffsiteLink href={lead.linkedin_url}>
-          {t("record.openProfile")}
-        </OffsiteLink>
+        <LinkedInChip href={lead.linkedin_url} name={lead.full_name} />
       ) : (
         <span title={t("record.leadProfileReadOnly")}>{t("field.unset")}</span>
       ),
@@ -287,6 +319,15 @@ function useAboutRows(
           writer={writer}
           reasonId={reasonId}
         />
+      ),
+    },
+    {
+      key: "product_id",
+      term: t("lead.product"),
+      empty: !lead.product_id,
+      block: !lead.product_id,
+      value: (
+        <LeadProductLine lead={lead} writer={writer} reasonId={reasonId} />
       ),
     },
     {
@@ -401,6 +442,7 @@ function LeadDetailsBody({
   return (
     <>
       <RecordDetails sections={sections} footnote={t("lead.aside.footnote")} />
+      <LeadStops leadId={lead.id} />
       {!lead.archived_at && (
         <ConversationSuggestionsCard
           key={lead.id}

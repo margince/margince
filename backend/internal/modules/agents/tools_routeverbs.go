@@ -6,6 +6,7 @@ package agents
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"maps"
 	"net/http"
@@ -35,10 +36,15 @@ type RouteVerb struct {
 	Query           []ViewQuery
 	// IfMatch is true when the route takes the record's version.
 	IfMatch bool
+	// IdempotencyKey is true when the route refuses a call with no key.
+	IdempotencyKey bool
 	// Body is true when the route takes a JSON body, whose schema BodySchema
 	// is, $refs resolved.
 	Body       bool
 	BodySchema json.RawMessage
+	// UploadField is the form field of a route that takes one file, which the
+	// verb takes as attach_document does.
+	UploadField string
 	// AnswerSchema is the route's 2xx answer schema, as gen-agentpolicy
 	// derives it: the {status} a body-less answer becomes, where it has none.
 	AnswerSchema json.RawMessage
@@ -53,6 +59,13 @@ type RouteCall struct {
 	Query   url.Values
 	Version string
 	Body    json.RawMessage
+	File    RouteFile
+}
+
+// RouteFile is the one file a call uploads, decoded and bounded.
+type RouteFile struct {
+	Name, ContentType string
+	Content           []byte
 }
 
 // RouteRunner runs one call through its route as the caller.
@@ -62,6 +75,8 @@ type RouteRunner func(ctx context.Context, call RouteCall) (json.RawMessage, err
 const (
 	routeBodyArg    = "request_body"
 	routeVersionArg = "if_version"
+	routeFileName   = "filename"
+	routeFileType   = "content_type"
 )
 
 // RouteAnswerTruncated is the member a write's answer carries when its body was
@@ -79,7 +94,13 @@ func writeAnswerSchema(answer json.RawMessage) json.RawMessage {
 	if err := json.Unmarshal(shape["properties"], &properties); err != nil || properties == nil {
 		properties = map[string]json.RawMessage{}
 	}
-	properties["status"] = json.RawMessage(`{"type":"integer"}`)
+	// A route's own status may be a word, and a cut answer's is the HTTP code. This
+	// surface refuses anyOf, so a status that may be either stays untyped.
+	if _, declared := properties["status"]; declared {
+		properties["status"] = json.RawMessage(`{}`)
+	} else {
+		properties["status"] = json.RawMessage(`{"type":"integer"}`)
+	}
 	properties[RouteAnswerTruncated] = json.RawMessage(`{"type":"boolean"}`)
 	shape["properties"] = mustMarshal(properties)
 	delete(shape, "required")
@@ -120,10 +141,11 @@ func (t routeVerbTool) Spec() mcp.ToolSpec {
 	}
 	// A router refuses to unite two actions that give one name two shapes. A list
 	// published here fails at boot if another action takes that name as one value.
+	required := append([]string{}, v.PathParams...)
 	for _, q := range v.Query {
-		properties[q.Name] = `{"type":` + strconv.Quote(q.Type) + `}`
-		if q.Type == schemaArray {
-			properties[q.Name] = `{"type":"array","items":{"type":"string"}}`
+		properties[q.Name] = string(q.schema())
+		if q.Required {
+			required = append(required, q.Name)
 		}
 	}
 	if v.IfMatch {
@@ -131,16 +153,20 @@ func (t routeVerbTool) Spec() mcp.ToolSpec {
 	}
 	var unkeyed map[string]string
 	if v.Body {
-		properties[routeBodyArg] = `{"type":"object","description":"The request body of ` + v.Op + `"}`
+		properties[routeBodyArg] = `{"type":"object","description":"The chosen action's request body; read_workspace topic actions lists its shape"}`
 		unkeyed = map[string]string{"$." + routeBodyArg: "the body of " + v.Method + " " + v.Pattern + ", as its operation " + v.Op + " defines it"}
+	}
+	var maxArgs int64
+	if v.UploadField != "" {
+		properties[routeFileName] = `{"type":"string","description":"The file's name, with its extension"}`
+		properties[routeFileType] = `{"type":"string","description":"The file's media type, e.g. image/png"}`
+		properties[argContentBase64] = `{"type":"string","description":"The whole file, standard base64 with = padding"}`
+		required = append(required, routeFileName, routeFileType, argContentBase64)
+		maxArgs = MaxMCPRequestBytes
 	}
 	members := make([]string, 0, len(properties))
 	for _, name := range slices.Sorted(maps.Keys(properties)) {
 		members = append(members, strconv.Quote(name)+":"+properties[name])
-	}
-	required := `[]`
-	if len(v.PathParams) > 0 {
-		required = mustJSON(v.PathParams)
 	}
 	egress := v.Scope.Egresses()
 	answer := v.AnswerSchema
@@ -154,10 +180,29 @@ func (t routeVerbTool) Spec() mcp.ToolSpec {
 		Unlisted:         true,
 		OpenAPIOp:        v.Op,
 		UnkeyedArguments: unkeyed,
-		InputSchema: schema(`{"type":"object","required":` + required + `,"properties":{` +
+		MaxArgsBytes:     maxArgs,
+		InputSchema: schema(`{"type":"object","required":` + mustJSON(required) + `,"properties":{` +
 			strings.Join(members, ",") + `},"additionalProperties":false}`),
 		OutputSchema: answer,
 	}
+}
+
+// querySchema is a query parameter's JSON schema. A list takes strings, and
+// its words and format, where it has any, are its items'.
+type querySchema struct {
+	Type   string       `json:"type"`
+	Items  *querySchema `json:"items,omitempty"`
+	Enum   []string     `json:"enum,omitempty"`
+	Format string       `json:"format,omitempty"`
+}
+
+func (q ViewQuery) schema() json.RawMessage {
+	words := querySchema{Type: q.Type, Enum: q.Enum, Format: q.Format}
+	if q.Type == schemaArray {
+		words.Type = schemaString
+		return mustMarshal(querySchema{Type: schemaArray, Items: &words})
+	}
+	return mustMarshal(words)
 }
 
 func (t routeVerbTool) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {
@@ -177,13 +222,48 @@ func (t routeVerbTool) Handle(ctx context.Context, in json.RawMessage) (json.Raw
 			return nil, &BadArgsError{Field: param, Cause: fmt.Errorf("%s needs %s", v.Verb, param)}
 		}
 	}
+	if v.UploadField != "" {
+		if err := bindUpload(args, &call); err != nil {
+			return nil, err
+		}
+	}
 	return t.run(ctx, call)
+}
+
+// bindUpload reads the file a verb uploads, under attach_document's own checks.
+// The route still judges the file by its own kinds, and the door applies its size limit.
+func bindUpload(args map[string]json.RawMessage, call *RouteCall) error {
+	text := func(name string) string {
+		var value string
+		if json.Unmarshal(args[name], &value) != nil {
+			return ""
+		}
+		return value
+	}
+	name, declared := strings.TrimSpace(text(routeFileName)), text(routeFileType)
+	if name == "" {
+		return &BadArgsError{
+			Field: routeFileName, Code: codeRequired,
+			Cause: errors.New("`filename` is blank; give the file's name with its extension"),
+		}
+	}
+	if err := requireMediaType(declared); err != nil {
+		return err
+	}
+	content, err := decodeFile(text(argContentBase64), MaxInlineFileBytes)
+	if err != nil {
+		return err
+	}
+	call.File = RouteFile{Name: name, ContentType: declared, Content: content}
+	return nil
 }
 
 // bind puts one argument where the verb's route takes it, and refuses one the
 // verb does not publish rather than dropping it.
 func (v RouteVerb) bind(key string, raw json.RawMessage, call *RouteCall) error {
 	switch {
+	case v.UploadField != "" && (key == routeFileName || key == routeFileType || key == argContentBase64):
+		return nil
 	case key == routeBodyArg && v.Body:
 		call.Body = raw
 		return nil
@@ -236,6 +316,9 @@ func (v RouteVerb) arguments() []string {
 	}
 	if v.Body {
 		names = append(names, routeBodyArg)
+	}
+	if v.UploadField != "" {
+		names = append(names, routeFileName, routeFileType, argContentBase64)
 	}
 	if len(names) == 0 {
 		return []string{"no arguments"}
@@ -331,7 +414,8 @@ func (d describeRouterActions) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: describeRouterActionsName, Title: "Describe a router's actions", Version: toolVersionV1,
 		Description: "Lists what each action of one router takes: its path ids, if_version, and the " +
-			"JSON schema of its body, as the app's own route defines them.",
+			"JSON schema of its body, as the app's own route defines them. Name action to read one; a large " +
+			"router's whole list is long.",
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute, Unlisted: true,
 		OpenAPIOp: "describeRouterActions",
 		OutputSchema: schema(`{"type":"object","required":["router","actions"],"properties":{` +
@@ -339,9 +423,9 @@ func (d describeRouterActions) Spec() mcp.ToolSpec {
 			`"required":["action","does","route"],"properties":{"action":{"type":"string"},` +
 			`"does":{"type":"string"},"route":{"type":"string"},"ids":{"type":"array","items":{"type":"string"}},` +
 			`"query":{"type":"array","items":{"type":"string"}},"if_version":{"type":"boolean"},` +
-			`"ask_user_first":{"type":"boolean"},"body":{"type":"object"}}}}}}`),
+			`"ask_user_first":{"type":"boolean"},"uploads_a_file":{"type":"boolean"},"body":{"type":"object"}}}}}}`),
 		InputSchema: schema(`{"type":"object","required":["router"],"properties":{"router":{"type":"string","enum":` +
-			mustJSON(d.routers()) + `}},"additionalProperties":false}`),
+			mustJSON(d.routers()) + `},"action":{"type":"string","description":"One action to describe; leave it out for all of them"}},"additionalProperties":false}`),
 	}
 }
 
@@ -354,18 +438,22 @@ type routeActionShape struct {
 	IfVersion    bool            `json:"if_version,omitempty"`
 	AskUserFirst bool            `json:"ask_user_first,omitempty"`
 	Body         json.RawMessage `json:"body,omitempty"`
+	// UploadsAFile is true for an action that takes filename, content_type and
+	// content_base64.
+	UploadsAFile bool `json:"uploads_a_file,omitempty"`
 }
 
 func (d describeRouterActions) Handle(_ context.Context, in json.RawMessage) (json.RawMessage, error) {
 	var args struct {
 		Router string `json:"router"`
+		Action string `json:"action"`
 	}
 	if err := json.Unmarshal(in, &args); err != nil || !slices.Contains(d.routers(), args.Router) {
 		return nil, &BadArgsError{Field: "router", Cause: fmt.Errorf("router must be one of %s", strings.Join(d.routers(), ", "))}
 	}
 	actions := []routeActionShape{}
 	for _, v := range d.verbs {
-		if v.Router != args.Router {
+		if v.Router != args.Router || (args.Action != "" && v.Action != args.Action) {
 			continue
 		}
 		shape := routeActionShape{
@@ -378,7 +466,13 @@ func (d describeRouterActions) Handle(_ context.Context, in json.RawMessage) (js
 		if v.Body && len(v.BodySchema) > 0 {
 			shape.Body = v.BodySchema
 		}
+		shape.UploadsAFile = v.UploadField != ""
 		actions = append(actions, shape)
+	}
+	if args.Action != "" && len(actions) == 0 {
+		return nil, &BadArgsError{Field: "action", Cause: fmt.Errorf(
+			"router %s has no route action %s; a router-run action takes the router's inputSchema, and any other name is no action of %[1]s",
+			args.Router, args.Action)}
 	}
 	slices.SortFunc(actions, func(a, b routeActionShape) int { return strings.Compare(a.Action, b.Action) })
 	return json.Marshal(map[string]any{"router": args.Router, "actions": actions})

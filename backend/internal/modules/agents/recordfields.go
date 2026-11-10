@@ -43,19 +43,17 @@ import (
 // type the seam does not serve would be describing nothing.
 var (
 	createShapes = map[datasource.EntityType]reflect.Type{
-		datasource.EntityContact:         reflect.TypeFor[crmcontracts.CreateContactRequest](),
-		datasource.EntityCompany:         reflect.TypeFor[crmcontracts.CreateCompanyRequest](),
-		datasource.EntityDeal:            reflect.TypeFor[crmcontracts.CreateDealRequest](),
-		datasource.EntityLead:            reflect.TypeFor[crmcontracts.CreateLeadRequest](),
-		datasource.EntityActivity:        reflect.TypeFor[crmcontracts.CreateActivityRequest](),
-		datasource.EntityProject:         reflect.TypeFor[crmcontracts.CreateProjectRequest](),
-		datasource.EntityRelationship:    reflect.TypeFor[crmcontracts.CreateRelationshipRequest](),
-		datasource.EntityProduct:         reflect.TypeFor[crmcontracts.CreateProductRequest](),
-		datasource.EntityOfferTemplate:   reflect.TypeFor[crmcontracts.CreateOfferTemplateRequest](),
-		datasource.EntityOffer:           reflect.TypeFor[crmcontracts.CreateOfferRequest](),
-		datasource.EntityDealRoom:        reflect.TypeFor[crmcontracts.CreateDealRoomRequest](),
-		datasource.EntityDealRoomThread:  reflect.TypeFor[crmcontracts.OpenDealRoomThreadRequest](),
-		datasource.EntityDealRoomComment: reflect.TypeFor[crmcontracts.PostDealRoomCommentRequest](),
+		datasource.EntityContact:       reflect.TypeFor[crmcontracts.CreateContactRequest](),
+		datasource.EntityCompany:       reflect.TypeFor[crmcontracts.CreateCompanyRequest](),
+		datasource.EntityDeal:          reflect.TypeFor[crmcontracts.CreateDealRequest](),
+		datasource.EntityLead:          reflect.TypeFor[crmcontracts.CreateLeadRequest](),
+		datasource.EntityActivity:      reflect.TypeFor[crmcontracts.CreateActivityRequest](),
+		datasource.EntityProject:       reflect.TypeFor[crmcontracts.CreateProjectRequest](),
+		datasource.EntityRelationship:  reflect.TypeFor[crmcontracts.CreateRelationshipRequest](),
+		datasource.EntityProduct:       reflect.TypeFor[crmcontracts.CreateProductRequest](),
+		datasource.EntityOfferTemplate: reflect.TypeFor[crmcontracts.CreateOfferTemplateRequest](),
+		datasource.EntityOffer:         reflect.TypeFor[crmcontracts.CreateOfferRequest](),
+		datasource.EntityDealRoom:      reflect.TypeFor[crmcontracts.CreateDealRoomRequest](),
 	}
 	// An activity patch cannot reach its LINKS: UpdateActivityRequest declares
 	// no link field, so this list has none to describe. A relationship patch
@@ -243,6 +241,11 @@ const windowNote = `,"description":"` + windowRule + `"`
 
 // pastDayNeedsATime is the activity-write sentence for a day named without an
 // hour. An omitted occurred_at is the call's own moment; the server dates a day.
+// meetingStatusRule is the sentence create_record and update_record carry about
+// an activity's meeting_status. log_activity says it on the field itself, where
+// it costs the tool's window less.
+const meetingStatusRule = ` Set meeting_status held only when the user says the meeting took place.`
+
 const pastDayNeedsATime = ` No occurred_at means now; a past day with no time: its date, occurred_precision "day".`
 
 // argumentSchemaFor is schemaFor for a tool ARGUMENT. Every date-time member

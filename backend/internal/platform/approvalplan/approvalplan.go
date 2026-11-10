@@ -6,7 +6,10 @@
 // cards read it, so no surface shows what another holds back.
 package approvalplan
 
-import crmcontracts "github.com/margince/margince/backend/internal/contracts"
+import (
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+)
 
 // Withheld reports a preview that shows nothing of the plan: one in a version
 // no reader knows, or in any state but ready.
@@ -27,6 +30,27 @@ type PreviewRead struct {
 	BuiltAsAgent bool
 	// HeldBack says the build replaced a value the reader's role masks.
 	HeldBack bool
+	// FootprintHidden says the plan is no longer pending and the reader does
+	// not clear its footprint, or no footprint proves they may.
+	FootprintHidden bool
+}
+
+// Footprint is what a plan touched when it stopped being pending: records by
+// type and id, the objects whose masks apply, and field names. It holds no
+// record value, so a later read checks sight and masks again.
+type Footprint struct {
+	Refs    map[string][]ids.UUID `json:"refs"`
+	Objects []string              `json:"objects,omitempty"`
+	Fields  []string              `json:"fields,omitempty"`
+	Rows    []ImportRowFields     `json:"rows,omitempty"`
+	// Files are the attachments a send would carry, checked as a send checks them.
+	Files []ids.UUID `json:"files,omitempty"`
+}
+
+// ImportRowFields binds field names to their import object without keeping values.
+type ImportRowFields struct {
+	Object string   `json:"object"`
+	Fields []string `json:"fields,omitempty"`
 }
 
 // PayloadWithheld reports an approval whose staged call, summary and evidence
@@ -35,6 +59,9 @@ type PreviewRead struct {
 // activity, or the approval would not be listed for them. An agent wrote its
 // staged call with its own sight, so its proposal keeps nothing unless ready.
 func (read PreviewRead) PayloadWithheld() bool {
+	if read.FootprintHidden {
+		return true
+	}
 	preview := read.Preview
 	if preview == nil {
 		return false

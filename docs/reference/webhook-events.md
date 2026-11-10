@@ -30,6 +30,7 @@ Every delivery with the standard body is this envelope, with the event's own fie
 |---|---|---|---|
 | `entity.id` | string (uuid) | yes | Stable identifier of the entity. |
 | `entity.name` | string | no | The record's name when the event was delivered, for a deal, company or project. Absent for a contact or lead; open the link to see who it is. |
+| `entity.owner_name` | string | no | The display name of the record's owner when the event was delivered, for a deal, company or project. Absent when the record has no owner. |
 | `entity.type` | string | yes | Entity kind (e.g. deal, contact, company). |
 | `entity.url` | string (uri) | no | A link to the record in the app, when the record has a page and the installation has a public base URL. |
 
@@ -44,6 +45,7 @@ Every delivery with the standard body is this envelope, with the event's own fie
 | [`activity.archived`](#activityarchived) | activity | 1 |
 | [`activity.captured`](#activitycaptured) | activity | 1 |
 | [`activity.disposition_recorded`](#activitydisposition_recorded) | activity | 1 |
+| [`activity.invitation_answered`](#activityinvitation_answered) | activity | 1 |
 | [`activity.marked_handled`](#activitymarked_handled) | activity | 1 |
 | [`activity.readiness_recorded`](#activityreadiness_recorded) | activity | 1 |
 | [`activity.updated`](#activityupdated) | activity | 1 |
@@ -144,6 +146,7 @@ Every delivery with the standard body is this envelope, with the event's own fie
 | [`offer.rejected`](#offerrejected) | offer | 1 |
 | [`offer.sent`](#offersent) | offer | 1 |
 | [`offer.superseded`](#offersuperseded) | offer | 1 |
+| [`offer.updated`](#offerupdated) | offer | 1 |
 | [`onboarding.state_changed`](#onboardingstate_changed) | onboarding_wizard_state | 1 |
 | [`passport.revoked`](#passportrevoked) | passport | 1 |
 | [`pipeline.archived`](#pipelinearchived) | pipeline | 1 |
@@ -177,6 +180,7 @@ Every delivery with the standard body is this envelope, with the event's own fie
 | [`user_display_name.changed`](#user_display_namechanged) | user | 1 |
 | [`user_greeting_name.changed`](#user_greeting_namechanged) | user | 1 |
 | [`user_locale.changed`](#user_localechanged) | user | 1 |
+| [`user_timezone.changed`](#user_timezonechanged) | user | 1 |
 | [`voice.build_changed`](#voicebuild_changed) | voice_profile | 1 |
 | [`voice.corpus_changed`](#voicecorpus_changed) | voice_profile | 1 |
 | [`voice.draft_outcome_recorded`](#voicedraft_outcome_recorded) | voice_profile | 1 |
@@ -222,6 +226,17 @@ Payload for activity.disposition_recorded. Somebody decided what to do about a w
 |---|---|---|---|
 | `data.activity_id` | string (uuid) | yes |  |
 | `data.disposition` | string: `not_sales`, `sales_again`, `snoozed`, `not_mine`, `picked_up` | yes | What was decided. `sales_again` and `picked_up` are the undos of `not_sales` and of the reader states, Done included. A decision withdrawn is itself a decision. A consumer counting dispositions has to see it happen rather than infer it from a row going quiet. |
+
+### `activity.invitation_answered`
+
+Record: `activity` · version 1
+
+Payload for activity.invitation_answered. One reader answered a calendar invitation that came by email, and their own calendar sent the answer to the organizer (activities/calendarinvitation.go). It is that reader's own answer, and the reader is not on the wire. The same press marks the message done for them, announced as activity.marked_handled.
+
+| Field | Type | Always present | What it is |
+|---|---|---|---|
+| `data.activity_id` | string (uuid) | yes |  |
+| `data.response` | string: `accepted`, `tentative`, `declined` | yes |  |
 
 ### `activity.marked_handled`
 
@@ -1405,6 +1420,18 @@ Payload for offer.superseded, a sent offer was regenerated into a fresh draft re
 | `data.offer_id` | string (uuid) | yes | The superseded (prior) offer revision. |
 | `data.to_revision` | integer | yes | The new revision number minted by the regenerate. |
 
+### `offer.updated`
+
+Record: `offer` · version 1
+
+Payload for offer.updated: a draft offer was edited, its header or its line items. Names what changed and carries no values, so a subscriber reads the offer for them.
+
+| Field | Type | Always present | What it is |
+|---|---|---|---|
+| `data.changed_fields` | array of string | yes | The offer fields the edit moved, by their column names. A line edit names line_items, beside any total it moved. |
+| `data.deal_id` | string (uuid) | yes | The deal this offer belongs to. |
+| `data.offer_id` | string (uuid) | yes | The edited draft offer. |
+
 ### `onboarding.state_changed`
 
 Record: `onboarding_wizard_state` · version 1
@@ -1488,12 +1515,12 @@ Payload for project.created, a body of work was opened on a company.
 
 Record: `project` · version 1
 
-Payload for project.health_assessed: a reading of how the project is going was appended to its history. Every row counts: a new reading, a correction or the undo of an AI reading, by a user or the health job. The project row itself is not written, so no project.updated goes with it.
+Payload for project.health_assessed: a reading of how the project is going was appended to its history. Every row counts: a new reading, a correction or the undo of an AI reading, by a user, their agent or the health job. The project row itself is not written, so no project.updated goes with it.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
 | `data.assessment_id` | string (uuid) | yes | The appended reading. |
-| `data.source` | string | yes | human for a user, ai for the health job, undo for a user undoing an AI reading. |
+| `data.source` | string | yes | human for a user, agent for their agent, ai for the health job, undo for a user undoing an AI reading. |
 | `data.state` | string | yes | on_track, at_risk or off_track. On an undo row it is the reading the undo restored, or on_track when the project reads as not judged again. |
 
 ### `project.phase_changed`
@@ -1791,6 +1818,17 @@ Payload for user_locale.changed, a member chose the language their own interface
 | Field | Type | Always present | What it is |
 |---|---|---|---|
 | `data.locale` | string | yes | The language now chosen, one of the catalogs the product ships. Never empty: this event fires on a choice, and a member who has never chosen has no row and produces no event. |
+
+### `user_timezone.changed`
+
+Record: `user` · version 1
+
+Payload for user_timezone.changed. A member's own time zone was stored by identity/usertimezone.go's writeTimezoneTx. It is the app's guess from the browser on first sign-in, or the member's own pick. Booking reads the member's working hours on it, and mail sent to them is timed by it.
+
+| Field | Type | Always present | What it is |
+|---|---|---|---|
+| `data.chosen` | boolean | yes | True when the member picked the zone themselves. A later browser guess never replaces a chosen zone. |
+| `data.timezone` | string | yes | The IANA name now stored, such as Europe/Berlin. |
 
 ### `voice.build_changed`
 

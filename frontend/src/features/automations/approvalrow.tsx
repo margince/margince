@@ -34,10 +34,10 @@ import {
   ProblemError,
   unwrap,
 } from "../../lib/problem";
-import { useRecordZone } from "../../lib/recordzone";
 import { navigate } from "../../lib/router";
 import { useViewerId } from "../../lib/session";
 import { useSendPermission } from "../../lib/usesendpermission";
+import { useViewerZone } from "../../lib/viewerzone";
 import { resolveDisplay, stagedDayFormatter } from "./approvaldisplay";
 import {
   ApprovalDetailModal,
@@ -295,19 +295,19 @@ export function ApprovalRow({
   const change = approval.proposed_change ?? {};
   const linkedIn = useLinkedInChoice(approval);
   const approvalNames = useApprovalNames([approval]);
-  const recordZone = useRecordZone();
+  const readerZone = useViewerZone();
   const strings = editableStrings(approval.kind, change);
   const display = resolveDisplay(
     approval.kind,
     change,
     t,
-    stagedDayFormatter(locale, recordZone),
+    stagedDayFormatter(locale, readerZone),
     approvalNames,
     approval.requested_decider_id,
     approval.assignee_inactive,
     editedCommercialPreview(approval.preview, draft, editing),
     locale,
-    recordZone,
+    readerZone,
   );
 
   const problem =

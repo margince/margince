@@ -19,6 +19,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 // WithEmailDrafter returns handlers whose draft endpoint uses the injected
@@ -45,6 +46,7 @@ type DraftResult struct {
 	// no-profile case, and it is the one state the sender cannot detect by
 	// reading the text.
 	VoiceDegraded bool
+	Language      textlang.Lang
 }
 
 // ProvenanceEmailDrafter is the richer drafting seam: same draft, plus the
@@ -65,7 +67,12 @@ func (h Handlers) DraftEmail(w http.ResponseWriter, r *http.Request, id crmcontr
 		return
 	}
 	ctx := r.Context()
-	result, err := h.prepareEmailDraft(ctx, ids.UUID(id), draftfloor.NewSteering(req.Intent, req.RewriteOf))
+	steering, err := draftfloor.NewSteering(req.Intent, req.RewriteOf, req.Subject, (*string)(req.Language))
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	result, err := h.prepareEmailDraft(ctx, ids.UUID(id), steering)
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return
@@ -82,6 +89,7 @@ func (h Handlers) DraftEmail(w http.ResponseWriter, r *http.Request, id crmcontr
 		VoiceProfileVersion: result.VoiceProfileVersion,
 		DraftRef:            result.DraftRef,
 		VoiceDegraded:       &result.VoiceDegraded,
+		Language:            draftfloor.Reported[crmcontracts.EmailDraftLanguage](result.Language),
 	})
 }
 
@@ -110,6 +118,6 @@ func (h Handlers) draftForActivity(ctx context.Context, anchor ids.UUID, activit
 		subject, body, err := h.emailDrafter.DraftEmail(ctx, anchor, steering.Intent)
 		return DraftResult{Subject: subject, Body: body}, err
 	}
-	subject, body := h.store.FloorDraft(ctx, anchor, activity)
-	return DraftResult{Subject: subject, Body: body}, nil
+	subject, body, lang := h.store.FloorDraft(ctx, anchor, activity, steering.Language)
+	return DraftResult{Subject: subject, Body: body, Language: lang}, nil
 }

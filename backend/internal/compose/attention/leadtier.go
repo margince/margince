@@ -17,11 +17,10 @@ import (
 	"context"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// requireLeadTier refuses a reader below a row scope of `team`.
+// RequireLeadTier refuses a reader below a row scope of `team`.
 //
 // The KIND check first, and it is not decoration: a tier test answers from
 // `Permissions`, and a Deal Room buyer is minted carrying none — so it would be
@@ -32,18 +31,9 @@ import (
 //
 // A background pass wanting these figures would need to say so here rather than
 // arriving by default on a system principal's row scope.
-func requireLeadTier(ctx context.Context) error {
+func RequireLeadTier(ctx context.Context) error {
 	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return err
 	}
-	actor, ok := principal.Actor(ctx)
-	if !ok {
-		return apperrors.ErrPermissionDenied
-	}
-	switch actor.Permissions.RowScope {
-	case principal.RowScopeTeam, principal.RowScopeAll:
-		return nil
-	default:
-		return apperrors.ErrPermissionDenied
-	}
+	return auth.RequireRowScope(ctx, principal.RowScopeTeam)
 }

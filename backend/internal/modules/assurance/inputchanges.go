@@ -54,6 +54,7 @@ var inputChanges = map[string]InputChange{
 	"deal.erased":        {ScopeDeal, "an erased deal leaves the checked set"},
 
 	"offer.created":    {ScopeDeal, "the offer total is compared with the deal amount"},
+	"offer.updated":    {ScopeDeal, "the offer total is compared with the deal amount"},
 	"offer.sent":       {ScopeDeal, "the offer total is compared with the deal amount"},
 	"offer.accepted":   {ScopeDeal, "the offer total is compared with the deal amount"},
 	"offer.rejected":   {ScopeDeal, "the offer total is compared with the deal amount"},
@@ -112,8 +113,9 @@ var inputChanges = map[string]InputChange{
 	"activity.disposition_recorded": {
 		ScopeDealActivity, "a reply's verdict decides whether the customer refused",
 	},
-	"activity.marked_handled":     {ScopeDealActivity, "the fingerprint decides whether the deal's reading moved"},
-	"activity.readiness_recorded": {ScopeDealActivity, "the fingerprint decides whether the deal's reading moved"},
+	"activity.marked_handled":      {ScopeDealActivity, "the fingerprint decides whether the deal's reading moved"},
+	"activity.readiness_recorded":  {ScopeDealActivity, "the fingerprint decides whether the deal's reading moved"},
+	"activity.invitation_answered": {ScopeNone, "an attendee's answer is not a rule input; the meeting it changes arrives on its own"},
 
 	"signal.detected": {ScopeSignal, "a new buying signal was never judged"},
 	"signal.updated":  {ScopeSignal, "the signal's evidence, company and status are rule inputs"},

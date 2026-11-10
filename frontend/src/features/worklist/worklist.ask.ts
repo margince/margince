@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { MessageKey } from "../../i18n/en";
+import { labelFor } from "../../lib/labelfor";
 import type { WorklistItem } from "./worklist.queries";
 
 // What a row asks of its reader, one sentence per source. A row's reasons say
@@ -21,13 +22,13 @@ const ASK_BY_SOURCE: Readonly<Record<WorklistItem["source"], MessageKey>> = {
   customer_waiting: "worklist.ask.customer_waiting",
   lead_response: "worklist.ask.lead_response",
   deal_at_risk: "worklist.ask.deal_at_risk",
-  deal_review: "worklist.ask.deal_review",
   meeting: "worklist.ask.meeting",
   relationship_decay: "worklist.ask.relationship_decay",
   failed_approval: "worklist.ask.failed_approval",
   dsr: "worklist.ask.dsr",
   notice_case: "worklist.ask.notice_case",
   capture_health: "worklist.ask.capture_health",
+  booking_health: "worklist.ask.booking_health",
   domain_question: "worklist.ask.domain_question",
   ai_work_health: "worklist.ask.ai_work_health",
   bounce: "worklist.ask.bounce",
@@ -44,5 +45,7 @@ const ASK_BY_SOURCE: Readonly<Record<WorklistItem["source"], MessageKey>> = {
 
 /** The sentence saying what this row asks of its reader. */
 export function askKey(item: WorklistItem): MessageKey {
-  return ASK_BY_SOURCE[item.source];
+  // An invitation waits on an RSVP, not on a written answer.
+  if (item.email_summary?.calendar_invitation) return "worklist.ask.invitation";
+  return labelFor(ASK_BY_SOURCE, item.source);
 }

@@ -11,14 +11,15 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/stagemove"
 )
 
 // wonStintsSQL is the completed stage stints of the live won deals of
 // pipeline $1. The health pace and the close-date pace both take their median
 // of it. A stint runs from a move into a stage to the deal's next move, in the
-// order the moves were written. A stint with an imported move at either end is
-// left out. An import lands a deal's whole history in one instant, which would
-// read as a stint of zero days. Columns: deal_id, stage_id, secs.
+// order the moves were written. A stint with an imported or synced move at
+// either end is left out. Another system's move shows its pace, not this team's,
+// and an import lands a deal's whole history in one instant. Columns: deal_id, stage_id, secs.
 var wonStintsSQL = wonStints(false)
 
 // wonStints renders the won-stint population. recordedOnly keeps only stints
@@ -27,10 +28,10 @@ var wonStintsSQL = wonStints(false)
 // The paces keep their legacy-inclusive, live-only rule.
 func wonStints(recordedOnly bool) string {
 	live := " AND d.archived_at IS NULL"
-	ends := "provenance IS DISTINCT FROM 'imported' AND left_provenance IS DISTINCT FROM 'imported'"
+	ends := stagemove.NotMadeElsewhereSQL("provenance") + " AND " + stagemove.NotMadeElsewhereSQL("left_provenance")
 	if recordedOnly {
 		live = ""
-		ends = "provenance = 'recorded' AND left_provenance = 'recorded'"
+		ends = "provenance = '" + stagemove.Recorded + "' AND left_provenance = '" + stagemove.Recorded + "'"
 	}
 	return `
 	SELECT deal_id, stage_id, secs FROM (

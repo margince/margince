@@ -19,6 +19,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/contractterm"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
@@ -169,32 +170,26 @@ const contractColumns = `id, company_id, deal_id, project_id, contract_number, t
 	status, signed_on, cancellation_notice_on, cancellation_effective_on,
 	superseded_by_id, source, captured_by, version, created_at, updated_at, archived_at`
 
-// UnderContractSQL is CONTRACT-FORM-1 as a SQL expression, taking the as-of
-// date as its one parameter.
-//
-// The effective end is the EARLIER of the term end and the cancellation
-// effective date — LEAST ignores NULLs in Postgres, which is exactly the
-// null-safe behaviour wanted here, and an absent value on both means the
-// agreement is open-ended. A cancellation never extends a term that already
-// ran out.
+// UnderContractSQL is CONTRACT-FORM-1 (contractterm.InForceSQL) over the bare
+// columns, taking the as-of date as its one parameter.
 func UnderContractSQL(asOfPos int) string {
-	return storekit.SQLf(`(
-		archived_at IS NULL
-		AND status NOT IN ('draft', 'superseded')
-		AND (starts_on IS NULL OR starts_on <= $%[1]d)
-		AND (LEAST(ends_on, cancellation_effective_on) IS NULL
-		     OR $%[1]d <= LEAST(ends_on, cancellation_effective_on))
-	)`, asOfPos)
+	return contractterm.InForceSQL("", storekit.SQLf("$%d", asOfPos))
+}
+
+// derivedColumns end every read: under_contract, then term_state, in the order
+// scanContract expects. Both are judged on the one as-of day.
+func derivedColumns(asOfPos int) string {
+	return UnderContractSQL(asOfPos) + ", " + contractterm.TermStateSQL("", storekit.SQLf("$%d", asOfPos))
 }
 
 // scanContract reads one row. `active` is the custom-field columns the caller
-// asked for, appended to the select list in the same order — the values land
-// between the core columns and the derived under-contract flag, which is why
-// the flag's destination goes last rather than beside its neighbours.
+// asked for, appended to the select list in the same order. Their values land
+// between the core columns and the derived ones, so the derived go last.
 func scanContract(row pgx.Row, active []fieldcatalog.Column) (crmcontracts.Contract, error) {
 	var (
 		c             crmcontracts.Contract
 		underContract bool
+		termState     string
 		id            ids.UUID
 		companyID     ids.UUID
 		dealID        *ids.UUID
@@ -221,7 +216,7 @@ func scanContract(row pgx.Row, active []fieldcatalog.Column) (crmcontracts.Contr
 		&c.ArchivedAt,
 	}
 	cf := storekit.ScanDests(active)
-	if err := row.Scan(append(append(dests, cf...), &underContract)...); err != nil {
+	if err := row.Scan(append(append(dests, cf...), &underContract, &termState)...); err != nil {
 		return crmcontracts.Contract{}, err
 	}
 	if values := storekit.ExtractValues(active, cf); len(values) > 0 {
@@ -237,6 +232,8 @@ func scanContract(row pgx.Row, active []fieldcatalog.Column) (crmcontracts.Contr
 	contractStatus := crmcontracts.ContractStatus(status)
 	c.Status = &contractStatus
 	c.UnderContract = &underContract
+	term := crmcontracts.ContractTermState(termState)
+	c.TermState = &term
 	c.FxRateDate = datePtr(fxDate)
 	c.StartsOn = datePtr(startsOn)
 	c.EndsOn = datePtr(endsOn)
@@ -318,7 +315,7 @@ func readContract(ctx context.Context, tx pgx.Tx, id ids.ContractID, asOf time.T
 
 	row := tx.QueryRow(ctx, storekit.SQLf(
 		`SELECT %s%s, %s FROM contract WHERE %s`,
-		contractColumns, storekit.SelectSuffix(active), UnderContractSQL(asOfPos), where), args...)
+		contractColumns, storekit.SelectSuffix(active), derivedColumns(asOfPos), where), args...)
 	out, err := scanContract(row, active)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return crmcontracts.Contract{}, apperrors.ErrNotFound

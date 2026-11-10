@@ -20,6 +20,7 @@ here: put it in the area's word list instead. A name that no plain page uses mus
 | changelog | A file listing the changes of each release, which this repository does not keep. |
 | CI | Continuous integration: the checks GitHub runs on every pull request. |
 | CIMD | Client ID Metadata Document: an AI tool's ID that is the URL of a file describing it. |
+| CLS | Cumulative Layout Shift: how far content moves on screen while a page loads. |
 | Compose | Docker Compose, which starts Postgres and Redis for local work. |
 | Conventional | Conventional Commits, a format for commit messages. |
 | Copilot | Microsoft's AI assistant, whose Copilot Studio builds agents that connect to Margince. |
@@ -27,12 +28,14 @@ here: put it in the area's word list instead. A name that no plain page uses mus
 | CRA | The EU Cyber Resilience Act, which sets duties for software makers. |
 | CRM | Customer relationship management: software for contacts, companies and deals. |
 | CSV | Comma-separated values, a plain text format for tables. |
+| Cursor | An AI code editor, which can connect to Margince. |
 | de | The language code for German, as a setting value. |
 | dev | The development mode of a local install, set by `MARGINCE_ENV`. |
 | Diátaxis | A way to sort docs into tutorials, how-to guides, reference and explanation. |
 | dmy | The date order day, month, year, as a setting value. |
 | Docker | The container tool used to run the local stack and the images. |
 | English | The language the docs and the source catalog are written in. |
+| entity | A legal entity: one of the companies an installation trades as, each with its own name and address. |
 | EU | The European Union, whose laws several pages refer to. |
 | GDPR | The EU General Data Protection Regulation, the law on personal data. |
 | German | The language of the German compliance pack and UI catalog. |
@@ -53,6 +56,7 @@ here: put it in the area's word list instead. A name that no plain page uses mus
 | JPEG | A common photo file format, saved as .jpg or .jpeg. |
 | Jurisdiction | The settings page where an admin chooses the law an installation follows. |
 | Langdock | A service that serves OpenAI, Gemini and Claude models on one key. |
+| Launchpad | The Ubuntu project service that records each package Ubuntu publishes. |
 | LICENSE | The file at the repository root that holds the license text. |
 | LinkedIn | The professional network whose contact export Margince can import. |
 | locale | The date or time format of the reader's language, as a setting value. |
@@ -71,8 +75,8 @@ here: put it in the area's word list instead. A name that no plain page uses mus
 | origin | Where a lead came from, such as a referral or an event, chosen from a list in Settings. |
 | Origins | The list of places a lead can come from, kept in Settings. |
 | origins | The list of places a lead can come from, kept in Settings. |
-| PNG | A common image file format, saved as .png. |
 | PKCE | Proof Key for Code Exchange: a one-time secret that ties the end of a sign-in to its start. |
+| PNG | A common image file format, saved as .png. |
 | pnpm | The package manager for the web app. |
 | Postgres | PostgreSQL, the database Margince stores its data in. |
 | RBAC | Role-based access control: what each role may see and change. |
@@ -88,14 +92,18 @@ here: put it in the area's word list instead. A name that no plain page uses mus
 | systemd | The service manager of most Linux systems, which starts the api and the worker. |
 | Tally | An online form tool that can send each answer to a webhook address. |
 | Telegram | A chat app Margince can send messages through. |
+| terminal | The window where you type commands, such as `claude` or `codex`. |
 | Typeform | An online form tool that can send each answer to a webhook address. |
+| Ubuntu | The Linux distribution the CI image is built on, pinned to 24.04. |
 | UTF | The Unicode text encoding family, as in UTF-8. |
 | VAT | Value added tax, and the tax number a company is registered under. |
 | vi | The language code for Vietnamese, as a setting value. |
+| Visual | Part of the name Visual Studio, Microsoft's code editor, which can connect to Margince. |
 | Vite | The build and dev server tool for the web app. |
 | vLLM | A server that runs language models on your own machines. |
 | Webflow | A website builder whose forms can send each entry to a webhook address. |
 | webhook | A message one tool sends to another tool's address when a chosen event happens. |
+| WebP | A modern image file format, saved as .webp. |
 | WhatsApp | A chat app; a link to it opens a chat with a phone number. |
 | Windows | Microsoft's desktop operating system. |
 | Worklist | The app's list of tasks and items that need a user's action. |

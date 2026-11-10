@@ -201,8 +201,9 @@ describe("what a rep is shown", () => {
     );
     expect(screen.getByText(/objected to marketing/i)).toBeInTheDocument();
     expect(
-      screen.getByText(/only an administrator can still send past this/i),
+      screen.getByText(/a reply or a message they asked for can still go/i),
     ).toBeInTheDocument();
+    expect(screen.queryByText(/administrator/i)).not.toBeInTheDocument();
   });
 
   // The rule that matters most: a control nobody may press teaches a rep the
@@ -297,6 +298,11 @@ describe("every refusal says what is wrong and what to do", () => {
       "sendPermission.reason.legacyPurpose",
     ],
     ["unknown_purpose", false, "sendPermission.reason.unknownPurpose"],
+    [
+      "marketing_permission_required",
+      false,
+      "sendPermission.reason.permissionRequired",
+    ],
     [
       "claim_contradicts_resolution",
       false,
@@ -605,13 +611,13 @@ describe("one status for the message", () => {
     ],
     [
       { reason_code: "no_marketing_consent" },
-      "Consent needed for this message",
+      "Permission needed for this message",
       "Marketing needs the recipient’s consent, and none is on record.",
     ],
     [
       { reason_code: "marketing_objection" },
       "Message cannot be sent",
-      "The recipient objected to marketing. Only an administrator can still send past this, one message at a time.",
+      "The recipient objected to marketing, so no marketing goes to them. A reply or a message they asked for can still go.",
     ],
   ] as const)("explains %o in its own words", (over, title, sentence) => {
     render(
@@ -621,6 +627,54 @@ describe("one status for the message", () => {
     );
     expect(screen.getByText(title)).toBeInTheDocument();
     expect(screen.getByText(sentence)).toBeInTheDocument();
+  });
+
+  // An active-deal claim no deal backs never resolves. The server sends the
+  // rep's pick beside the engine's reading, and the remedy named is the deal.
+  it("names the deal when the rep's own active-deal claim failed", () => {
+    render(
+      <LocaleProvider initial="en">
+        <SendPermission
+          preview={refusing({
+            reason_code: "no_compatible_evidence",
+            resolved_category: "requested_followup",
+            requested_category: "active_deal_followup",
+          })}
+        />
+      </LocaleProvider>,
+    );
+    expect(
+      screen.getByText("This message needs one more detail"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("Choose the deal for this follow-up."),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText("No recorded reason to contact this recipient"),
+    ).toBeNull();
+  });
+
+  it("names the deal on a refused send whose active-deal claim failed", () => {
+    render(
+      <LocaleProvider initial="en">
+        <SendPermission
+          preview={undefined}
+          refusal={{
+            refusals: [
+              {
+                address: "a@x.test",
+                reasonCode: "no_compatible_evidence",
+                requestedCategory: "active_deal_followup",
+                canBeOverruled: true,
+              },
+            ],
+          }}
+        />
+      </LocaleProvider>,
+    );
+    expect(
+      screen.getByText("Choose the deal for this follow-up."),
+    ).toBeInTheDocument();
   });
 
   it("says how many of the recipients a refusal applies to where it may not name them", () => {

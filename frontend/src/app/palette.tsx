@@ -1,5 +1,11 @@
 import { Sparkles } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  type ComponentProps,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   Badge,
   Button,
@@ -10,7 +16,7 @@ import {
 } from "../design-system/atoms";
 import { useBackdropDismiss } from "../design-system/backdrop";
 import { Callout } from "../design-system/callout";
-import { liveDialogs, useDialogFocus } from "../design-system/dialogfocus";
+import { useDialogFocus } from "../design-system/dialogfocus";
 import { Eyebrow } from "../design-system/eyebrow";
 import { usePresence } from "../design-system/presence";
 import { holdsEveryWord, searchWords } from "../format/collate";
@@ -20,17 +26,16 @@ import { isImeCommit } from "../lib/imecommit";
 import { navigate, type Route } from "../lib/router";
 import { SEARCH_HIT_KIND_KEY, searchHitHasCard } from "../lib/searchkinds";
 import { openAsk, type UrlParams } from "../lib/urlstate";
-import { modifierCap } from "./hotkeys";
 import { PaletteAnswer, usePaletteAsk } from "./paletteanswer";
+import { useBuiltinCommands } from "./palettecommands";
 import { useConfigurationCommand } from "./paletteconfiguration";
 import { usePaletteRecents } from "./paletterecents";
 import { type RecentEntry, recentIdentity } from "./paletterecents.storage";
 import { PaletteRow } from "./paletterow";
 import { SEARCH_PENDING_DELAY_MS, useSearchCommands } from "./palettesearch";
 
-// ⌘K command palette (B-EP09.5, AC-shell-3..7). The command set carries a type
-// tag (screen / action / record); record entries are fed by the search seam
-// once the data layer lands — the ranking mechanics are already here.
+// ⌘K command palette. Each command is a screen, setting, action or record;
+// record rows come from the search seam.
 
 export type Command = {
   id: string;
@@ -41,7 +46,9 @@ export type Command = {
   // the place deals live, Decisions is still the inbox, and someone typing the
   // older word must not be told the screen does not exist.
   keywords?: readonly string[];
-  type: "screen" | "action" | "record";
+  // A settings page is a "setting": several share a list screen's name, and the
+  // badge is what tells the two rows apart.
+  type: "screen" | "setting" | "action" | "record";
   // The heading the row is drawn under, already translated. A record hit names
   // its kind here rather than in a badge, so a list holding a company and three
   // emails reads as two groups and not as four rows saying "Record".
@@ -116,7 +123,7 @@ export function CommandPalette({
   // and Shift+Tab left for the page behind on the first press. Keyed on `open`
   // and not on `mounted`, so the reader gets their place back the moment they
   // dismiss rather than at the end of an animation.
-  useDialogFocus({ open, onClose, container: panel });
+  useDialogFocus({ open, onClose, container: panel, overlay });
 
   // AC-shell-3: opening CLEARS the input. Focus is the hook's — the input is
   // this dialog's first tab stop, so it lands there either way, and two owners
@@ -233,20 +240,12 @@ export function CommandPalette({
   }
 
   return (
-    // The two a11y suppressions this element carried are gone rather than kept:
-    // `aria-hidden` below takes the overlay out of the accessibility tree while
-    // it leaves, and the rules that wanted a keyboard handler beside the
-    // backdrop click no longer fire on it. Escape is still the keyboard path,
-    // and it is `useDialogFocus`'s.
-    <div // NOSONAR: backdrop dismiss only; keyboard path (Esc) is handled on the input inside
+    <div // NOSONAR: backdrop dismiss only; keyboard path (Esc) is handled by useDialogFocus
       className="overlay palette-overlay"
       data-state={state}
-      // Painted and nothing else while it leaves: `inert` takes it out of the
-      // tab order and out of hit testing, `aria-hidden` out of the
-      // accessibility tree — an inert node keeps its role, so without the
-      // second one a palette on its way out is still a dialog to a reader.
+      // Painted and nothing else while it leaves: `inert` stops Tab and hit
+      // testing now; `useDialogFocus` hides it from readers once focus is out.
       inert={leaving}
-      aria-hidden={leaving || undefined}
       ref={overlay}
       {...backdrop}
     >
@@ -410,36 +409,10 @@ function paletteSelection(
   return Math.max(named, 0);
 }
 
-const PALETTE_KEY = "k";
+export { paletteHotkeyCaps, usePaletteHotkey } from "./palettehotkey";
 
-/**
- * The ⌘K / Ctrl K chord as one cap per key. Both modifiers work, but a surface
- * shows only the one the reader's keyboard has. Pure in `platform`, so a test
- * needs no stub.
- */
-export function paletteHotkeyCaps(platform: string): readonly string[] {
-  return [modifierCap(platform), PALETTE_KEY.toUpperCase()];
-}
-
-export function usePaletteHotkey(
-  open: boolean,
-  setOpen: (open: boolean) => void,
+export function BuiltinCommandPalette(
+  props: Omit<ComponentProps<typeof CommandPalette>, "commands">,
 ) {
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent) => {
-      if (
-        (event.metaKey || event.ctrlKey) &&
-        event.key.toLowerCase() === PALETTE_KEY
-      ) {
-        event.preventDefault();
-        // An open dialog makes the rest of the app unreachable, the palette with
-        // it; asked only while closed, so the palette's own box never blocks it.
-        if (open || liveDialogs().length === 0) {
-          setOpen(!open);
-        }
-      }
-    };
-    globalThis.addEventListener("keydown", onKey);
-    return () => globalThis.removeEventListener("keydown", onKey);
-  }, [open, setOpen]);
+  return <CommandPalette {...props} commands={useBuiltinCommands()} />;
 }

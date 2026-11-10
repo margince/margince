@@ -139,12 +139,11 @@ func (s *Service) worklistIn(
 	// must not sit on the shared service, for the reason feed.go's assembleDay
 	// gives about the findings.
 	withPins = withPins.readingScores(beside.night.scores, beside.night.cutoff)
-	withPins = withPins.readingBacklog(ctx, day, beside.until, beside.zone, token == "")
+	withPins = withPins.readingBacklog(ctx, day, beside, token == "")
 	withPins, planErr := withPins.readingPlan(ctx, resolved, day.AsOf)
-	withPins, reviewErr := withPins.readingReviews(ctx, resolved)
 	withPins, awaitingErrs := withPins.readingAwaiting(ctx, day.AsOf, beside.zone)
 	horizon := reader.meetingHorizon(ctx, day, beside.until)
-	failed := append(append([]*crmcontracts.WorklistSourceUnavailable{waitingErr, planErr, reviewErr}, awaitingErrs...), beside.failed...)
+	failed := append(append([]*crmcontracts.WorklistSourceUnavailable{waitingErr, planErr}, awaitingErrs...), beside.failed...)
 	out := withPins.worklistFrom(
 		ctx, day, resolved, filter, limit, waiting, cursor, append(failed, horizon.failed...))
 	out.Calendar, out.NextMeeting = horizon.calendar, horizon.next
@@ -204,9 +203,6 @@ func (s *Service) worklistFrom(
 	// One job is one row: a deal with a waiting customer or a near task does
 	// not also appear as drifting.
 	rows = dropDealsAlreadyInHand(rows, day.AsOf)
-	// One review is one row: its task and its quiet-only at-risk row fold into
-	// it, before scope, filters, Focus and counts read the rows.
-	rows = foldDealReviews(rows, s.reviews.open)
 	// Whose queue this is, applied to the rows the same way the lane applied it
 	// to the query. A row belonging to somebody else is not part of this
 	// contact's day, and leaving it in would make a manager's answer to "show me
@@ -248,9 +244,6 @@ func (s *Service) worklistFrom(
 		bounded[sourceWeeklyCommitment] = s.planCoverage.Truncated
 	}
 	s.followUps.bound(bounded)
-	if s.reviews.cut {
-		bounded[sourceDealReview] = true
-	}
 	// Held before the category narrowing, so a filtered-out source still
 	// reports what it had. Counting after it erased those sources from reach
 	// entirely — a rep narrowing to meetings would read "no tasks" rather than
@@ -287,8 +280,9 @@ func (s *Service) worklistFrom(
 	// and the group they became untested: an incident group whose members were all
 	// stale reached a page asking only for what changed, because the three rows the
 	// filter had approved were replaced afterwards by one it never saw.
+	drawn := dropDone(s.foldAndRepin(rows, bounded), s.marked, day.AsOf)
 	if !opensTheDeck(filter) && !opensTheDeck(s.view) {
-		rows = dropDone(s.foldAndRepin(rows, bounded), s.marked, day.AsOf)
+		rows = drawn
 	}
 	rows = keepInView(rows, s.view, filter)
 	narrowed := filter != "" && filter != string(crmcontracts.WorklistFilterAll)
@@ -366,7 +360,7 @@ func (s *Service) worklistFrom(
 		// the sentence's own `total` has always been that scope. Counting the
 		// bands over `shown` printed one page's four figures beside the day's
 		// fifth, in a sentence shaped like a breakdown of the total.
-		Summary:            walk.statedOver(summarize(outstanding(considered, s.view), materialBarOf(day, s.money))),
+		Summary:            walk.statedOver(summarize(summaryPopulation(considered, rows, s.view, filter), materialBarOf(day, s.money))),
 		SourcesUnavailable: missing,
 		// Said on the page rather than per source: the cap is a bound on the
 		// ROSTER the scope resolves against, so what it cut is a colleague's
@@ -390,7 +384,7 @@ func (s *Service) worklistFrom(
 		// merely convenient: DSR rows classify as `system` and feed none of the
 		// four readings, so a suppressed DSR lane hides no work these figures
 		// count. A lane whose rows DID feed one would have to be named.
-		Readings: readingsOf(considered, bounded, missing),
+		Readings: readingsOf(considered, drawn, bounded, missing),
 	}
 	s.echoAsked(&out, filter)
 	// The token for the row this page stopped on, minted ONLY when there is more

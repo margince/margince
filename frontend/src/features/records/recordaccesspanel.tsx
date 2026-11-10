@@ -17,7 +17,8 @@ import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useEffect } from "react";
 import { api, FIRST_PAGE } from "../../api/client";
 import type { components } from "../../api/schema";
-import { Avatar, Badge, Disclosure } from "../../design-system/atoms";
+import { SeatAvatar } from "../../components/seatavatar";
+import { Badge, Disclosure } from "../../design-system/atoms";
 import {
   Panel,
   PanelBody,
@@ -27,10 +28,11 @@ import {
 import { LoadMoreButton, QueryGate } from "../../design-system/querystates";
 import { RoleBadge } from "../../design-system/rbac";
 import { formatDate, formatNumber } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
 import { useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { labelFor, UNKNOWN_VALUE_LABEL } from "../../lib/labelfor";
 import { throwProblem } from "../../lib/problem";
+import { useViewerZone } from "../../lib/viewerzone";
 import "./recordaccesspanel.css";
 
 type RecordAccessAnswer = components["schemas"]["RecordAccess"];
@@ -105,6 +107,8 @@ function reasonPhrase(reason: Reason, { t, date }: ReasonWords): string {
       return t("whoCanSee.reason.allRecords");
     case "write_share":
       return t("whoCanSee.reason.writeShare") + until;
+    default:
+      return t(UNKNOWN_VALUE_LABEL);
   }
 }
 
@@ -119,7 +123,7 @@ function MemberRow({
   const { t } = words;
   return (
     <PanelRow className="who-can-see-row">
-      <Avatar name={member.display_name} identity={member.user_id} />
+      <SeatAvatar id={member.user_id} name={member.display_name} />
       <div className="who-can-see-who">
         <span>{member.display_name}</span>
         <span className="t-caption">
@@ -200,7 +204,10 @@ function AccessBody({
           return (
             rows.length > 0 && (
               <div key={group} data-testid={`who-can-see-${group}`}>
-                <PanelGroupHead title={t(GROUP_TITLE[group])} level="h3" />
+                <PanelGroupHead
+                  title={t(labelFor(GROUP_TITLE, group))}
+                  level="h3"
+                />
                 {rows.map((m) => (
                   <MemberRow key={m.user_id} member={m} words={words} />
                 ))}
@@ -265,7 +272,7 @@ export function WhoCanSeePanel({
 }: Readonly<{ kind: AccessKind; recordId: string }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = viewerZone();
+  const zone = useViewerZone();
   const queryClient = useQueryClient();
   const query = useInfiniteQuery({
     queryKey: recordAccessKey(kind, recordId),

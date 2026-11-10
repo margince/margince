@@ -3,9 +3,16 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, renderHook, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  render,
+  renderHook,
+  screen,
+  waitFor,
+} from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { COMPANY_CONTEXT_ON } from "../features/settings/settingspages.fixtures";
 import { settingsSearch } from "../features/settings/settingssearch";
 import { LocaleProvider, translate } from "../i18n";
@@ -18,9 +25,18 @@ import {
   type SettingsPageId,
 } from "../lib/settingscatalog";
 import { type GrantSpec, meFixture } from "../testing/mefixture";
-import { type Command, matchingCommands, useBuiltinCommands } from "./palette";
+import {
+  type Command,
+  CommandPalette,
+  matchingCommands,
+  useBuiltinCommands,
+} from "./palette";
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  window.location.hash = "";
+  vi.unstubAllGlobals();
+});
 
 // What a reader types for a page, one thought per phrase. Several are words the
 // product once printed and no longer does, so a reader who learned them still lands.
@@ -34,7 +50,7 @@ const PHRASES: readonly (readonly [string, SettingsPageId])[] = [
   ["passport", "agents"],
   ["digest", "notifications"],
   ["mailbox", "connections"],
-  ["capture log", "capture-activity"],
+  ["capture log", "connections"],
   ["fx", "company"],
   ["fiscal year", "company"],
   ["oauth app", "authentication"],
@@ -42,11 +58,11 @@ const PHRASES: readonly (readonly [string, SettingsPageId])[] = [
   ["sso", "authentication"],
   ["invite", "members"],
   ["license", "seats"],
-  ["deal stages", "pipelines"],
+  ["deal stages", "deals"],
   ["lead sources", "leads"],
-  ["custom-fields", "fields"],
-  ["data model", "fields"],
-  ["labels", "tags"],
+  ["custom-fields", "records"],
+  ["data model", "records"],
+  ["labels", "records"],
   ["price list", "products"],
   ["rate card", "products"],
   ["offer-templates", "products"],
@@ -91,6 +107,12 @@ function everyCatalogGrant(): GrantSpec {
   for (const page of SETTINGS_PAGES) {
     walk(page.requires);
     walk(page.changes);
+    // A tab can ask for a grant its page does not, as System health's
+    // configuration tab does.
+    for (const tab of "tabs" in page ? page.tabs : []) {
+      if ("requires" in tab) walk(tab.requires);
+      if ("changes" in tab) walk(tab.changes);
+    }
   }
   return allow;
 }
@@ -151,12 +173,65 @@ describe("the palette and the settings search", () => {
   );
 });
 
+describe("a settings page in the palette", () => {
+  it("is a setting on every page, never a screen", async () => {
+    const pages = (await adminCommands()).filter((command) =>
+      command.id.startsWith("screen:settings-"),
+    );
+    expect(pages.length).toBeGreaterThan(0);
+    expect(pages.map((command) => command.type)).toEqual(
+      pages.map(() => "setting"),
+    );
+  });
+
+  // The settings tab and the rail row carry one name, so only the badge tells
+  // the two rows apart.
+  it.each([
+    ["Deals", "#/deals"],
+    ["Leads", "#/leads"],
+  ])(
+    "answers %s with the list screen first and the settings page under its own badge",
+    async (typed, hash) => {
+      const commands = await adminCommands();
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async (input: RequestInfo | URL) =>
+          (input instanceof Request ? input.url : String(input)).endsWith(
+            "/installation/configuration",
+          )
+            ? Response.json([])
+            : Response.json({
+                data: [],
+                page: { next_cursor: null, has_more: false },
+              }),
+        ),
+      );
+      const user = userEvent.setup();
+      render(
+        <QueryClientProvider client={new QueryClient()}>
+          <LocaleProvider initial="en">
+            <CommandPalette open onClose={() => {}} commands={[...commands]} />
+          </LocaleProvider>
+        </QueryClientProvider>,
+      );
+      await user.type(screen.getByRole("searchbox"), typed);
+      const named = screen
+        .getAllByRole("button")
+        .map((row) => row.textContent)
+        .filter((text) => text?.startsWith(typed));
+      expect(named.slice(0, 2)).toEqual([`${typed}Screen`, `${typed}Setting`]);
+      await user.keyboard("{Enter}");
+      expect(window.location.hash).toBe(hash);
+    },
+  );
+});
+
 describe("the palette's matcher", () => {
   const company: Command = {
     id: "screen:settings-company",
     label: "Hồ sơ công ty",
     keywords: ["Múi giờ báo cáo", "Khoảng đồng bộ (giây)"],
-    type: "screen",
+    type: "setting",
   };
 
   it.each(["mui gio bao cao", "bao cao gio", "dong bo", "ho so cong"])(

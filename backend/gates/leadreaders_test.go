@@ -57,6 +57,9 @@ var leadGate = objectGate{
 // than in the gated set: removing the lead condition could only WIDEN the
 // result the caller already sees.
 var predicateLeadReads = gatekit.Waive(map[string]string{
+	"internal/modules/privacy/notementionlocks.go:lockNoteMentions":          "the contact-delete-authorized eraser locks records linked to candidate notes so their legal-hold flags cannot change during erasure. IDs are consumed inside the transaction and no record content is disclosed",
+	"internal/modules/privacy/historicalaudit.go:markerHoldSQL":              "system-only marker correction reads existence of a legal hold to refuse destruction. No record field leaves the transaction; SHARE locks keep the hold decision stable",
+	"internal/modules/consent/ruleselectors.go:leadCountryCandidates":        "the marketing rule selector's lead arm: the country of the company a recipient lead is filed under picks which country's messaging rules judge the send. No lead column is selected beyond the join key; what leaves is a pack choice and the pack code a decision records",
 	"internal/modules/consent/gateaddress.go:AddressHasSubject":              "whether any contact or lead holds a calendar guest's address. A boolean that only ever sends the address to the consent gate; nothing of the lead is selected",
 	"internal/modules/capture/suggestioneligibility.go:suggestiblePartiesTx": "An exact-address existence predicate only removes already held identities from a content-gated conversation suggestion. No lead id or column leaves the query, and a missing lead read grant must not suggest a duplicate contact.",
 	"internal/modules/contacts/leadorigin.go:DeleteLeadOrigin":               "`SELECT EXISTS (SELECT 1 FROM lead WHERE origin = $1)`: whether a lead still uses the origin being deleted, after the lead-vocabulary delete grant. One boolean that only refuses the delete as a conflict; nothing of a lead leaves",
@@ -84,6 +87,8 @@ var predicateLeadReads = gatekit.Waive(map[string]string{
 // (platform/auth/rbac.go), so the gate would admit them anyway and the entry
 // records why asking was never the point.
 var lifecycleLeadReads = gatekit.Waive(map[string]string{
+	"internal/modules/privacy/sarretainedcopies.go:sarRetainedCopySections":          "The subject export follows only its authenticated contact and lead twins. AssembleSAR requires a human with contact.delete and unbounded scope; this private builder returns SELECT queries, not lead rows or mutations.",
+	"internal/modules/privacy/heldrecords.go:heldRecordRule":                         "the system-only audit cleanup and copy retention read only a lead's legal-hold flag (the cleanup under a row lock). Both run as the system, and the flag prevents destruction rather than disclosing a lead",
 	"internal/modules/contacts/linkedinrepair.go:NormalizeLeadLinkedInTx":            "the bounded data task reads stored profile values under auth.RequireSystem so it can rewrite old LinkedIn host spellings through the ordinary audit and event shape. The values leave only as the corrected lead row and its audit image",
 	"internal/modules/weeklyplan/linkedkeys.go":                                      "the backfill of the per-type record keys asks only whether the lead its row names still exists, under the system principal behind auth.RequireSystem. The answer decides whether the row is keyed or ends as the key's ON DELETE action would end it, and no lead column leaves the statement",
 	"internal/modules/contacts/deduperecheck.go:readLeadSide":                        "the nightly duplicate re-check reads both leads of an open pair, under the system principal behind auth.RequireSystem, to re-score it. Its only effect is whether the pair stays on the review queue; no lead column reaches any caller",
@@ -109,6 +114,8 @@ var lifecycleLeadReads = gatekit.Waive(map[string]string{
 	"internal/modules/capture/participantfiling.go":                                  "capture resolution: which live lead holds a participant's exact address, so the activity being captured is filed under it. It runs under the connector principal of the mailbox that captured the activity, and each lead it names passes auth.ReadGranted and auth.EnsureLinkTarget for that seat before a link is written. What leaves is a link the seat could have written by hand, never a lead column",
 	"internal/modules/capture/leadfilingrepair.go":                                   "the lead filing backfill selects activities whose participant address a live lead holds, under the system principal behind auth.RequireSystem and the data_task read grant. It answers activity ids to inspect and a bounded count; each lead is then admitted for the importing seat by participantRecords' own checks",
 	"internal/modules/contacts/ensurerecords.go:heldByMigratedLeadTx":                "capture resolution: when a connected mailbox mints a contact, it asks whether a live lead imported from the previous CRM still holds that address, to record the contact's acquisition as crm_migration rather than unknown_legacy. One boolean leaves it, consumed inside the capture write under the connector principal; no lead id or column reaches anyone. A gate here would refuse the connector and leave a migrated counterparty owing a privacy notice nobody owes",
+	"internal/modules/consent/authorizelead.go:decidePinnedLead":                     "whether the lead a controller message is filed under holds the recipient address, as its own email or as the address one of its stops was made from. The controller lane names the lead; the engine decides about it under the principal that staged or transmits the message. One boolean leaves the statement and it can only refuse a recipient",
+	"internal/modules/consent/optoutack.go:liveLeadEmailSQL":                         "the address a lead's opt-out receipt is sent to, read inside the transaction that records the lead's own refusal. The receipt is a legal duty the refusal owes, so no seat's grant may decide whether it goes. The address becomes the receipt's recipient and reaches no caller",
 	"internal/modules/contacts/linkedinrepair.go:CountStoredLinkedIn":                "the data-task estimate counts at most its supplied cap plus one stored profile. It returns only the count to a caller already gated on data_task:read, never a lead id or field",
 })
 
@@ -130,6 +137,7 @@ var lifecycleLeadReads = gatekit.Waive(map[string]string{
 // Store.X would then vouch for an ungated Handlers.X. rbacgate_test.go's header
 // records being bitten by exactly that.
 var calleeGatedLeadReads = gatekit.Waive(map[string]string{
+	"internal/modules/consent/lift.go:liveStopsOf":                             "the lead's address, read to find the stops held on it. Both callers ask first: ListLeadStops asks auth.Require(lead, read) and EnsureReadable, the lift asks auth.Require(lead, update) and EnsureRetractable. The address never leaves the transaction; the stop rows do, under that gate",
 	"internal/compose/schedulingattendees.go:attendeeCandidates":               "the lead ids that hold one invited address, before the host's row scope is asked. resolveAttendee hands each id to contacts.GetLead under the host's principal, which asks the lead object gate and row scope; an id the host may not read never leaves, and only says the consent gate must clear that address",
 	"internal/modules/activities/emailtarget.go:leadCandidatesSQL":             "the record an email about a written-about row goes to (activities.emailTargets). linkedCandidates asks auth.ReadGranted for the object it reads and renders that object's row scope, so a caller with no lead grant is told about none; the census cannot see it because the object arrives as a PARAMETER",
 	"internal/modules/contacts/leadcompany.go:leadLinkedCompany":               "the company a lead row is linked to, read for LinkLeadCompany, QualifyLead and MergeLead (each asking auth.Require(lead, update)), for UpdateLead's unlink (lead update) and for GetLead's match offer (lead read); one uuid column, and every wire read of a lead withholds it through withholdUnreadableCompanies",
@@ -148,12 +156,13 @@ var calleeGatedLeadReads = gatekit.Waive(map[string]string{
 	"internal/modules/contacts/leadslabreach.go:dayAnswerCandidates":           "the candidate read of ScanLeadSLA's day-answer pass, past its auth.Require(lead, update). It reads only lead ids, and each one stampDayAnswers stamps goes through recordFirstResponseTx, which takes the row probe itself. Nothing it reads leaves the scan",
 	"internal/modules/contacts/leadsla.go:recordFirstResponseTx":               "the one spelling of what counts as a lead's first response, shared by the outbox subscriber and the breach scan so the two cannot disagree about it. It takes the ROW half itself (auth.EnsureWritableLive on the lead) and its named caller RecordLeadFirstResponse asks auth.Require(lead, update); the breach scan reaches it holding the lead row it is about to judge. It reads one timestamp, to refuse moving a stamp already set",
 	"internal/modules/automation/automations_preview.go:leadPreviewDefs":       "the catalog entries whose blast-radius preview ranges over the lead table, including the count of leads created in the window. resolvePreviewRecipe asks auth.Require(ctx, def.table, principal.ActionRead) before running any of them, and def.table is \"lead\" for exactly these — the object arrives as a struct field, which is why no static reader can see the gate from the definition",
-	"internal/modules/contacts/leadpartner.go:readStoredLeadPartner":           "the lead's stored partner and acceptance stamp, read past the read's blanking so a decision about the link sees what the row holds. Its callers are setLeadPartner, reached through updateLeadTx from UpdateLead, FillEmptyLeadFieldsTx and ReassignLeadTx, each past auth.Require(lead, update), and AcceptPartnerLead, which asks auth.Require on partner and lead update. The two columns decide a refusal and fill the audit image; neither reaches the caller",
+	"internal/modules/contacts/leadpartner.go:readStoredLeadPartner":           "the lead's stored partner and acceptance stamp, read past the read's blanking so a decision about the link sees what the row holds. Its callers are setLeadPartner, reached through updateLeadInTx from UpdateLead, FillEmptyLeadFieldsTx and ReassignLeadTx, each past auth.Require(lead, update), and AcceptPartnerLead, which asks auth.Require on partner and lead update. The two columns decide a refusal and fill the audit image; neither reaches the caller",
 	"internal/modules/contacts/mergeface.go:readLeadFaces":                     "the label and detail line a merge card shows for each side of a pair. Its only caller is DescribeForMerge, which asks auth.Require(entityType, read) — the object name arrives as a parameter, which is why no static reader can see the gate from here — and then narrows the ids through auth.VisibleSubset, so a lead the caller cannot see is absent before this runs",
 })
 
 // ruledLeadReads: a DISCLOSING read the product has ruled needs no lead grant.
 var ruledLeadReads = gatekit.Waive(map[string]string{
+	"internal/modules/privacy/noticedisclosurelead.go:readLeadNotice":    "the Art. 14 page behind a website lead's notice link names which KINDS of data the lead holds and whether the lead is still open. It reads presence flags only and returns no value, so the page discloses what is held, never who. The link is the authority, and AssembleNoticeDisclosure admits only the public edge's system principal",
 	"internal/modules/consent/privacyinfo.go:assembleLeadDisclosure":     "the Art. 14 page behind a website lead's notice link reads one column, the lead's created_at, to date the acquisition the page discloses. The link is the authority, as for a contact's notice; the lead's name, address and title are never read, so the page discloses when and how, not who",
 	"internal/modules/privacy/erasure_untoldlead.go:deleteLeadRecordsTx": "deleting a website lead whose notice failed joins its own lead row only to find the raw original captured under the same source key, and deletes that original. Nothing is selected or returned; the deletion runs on the bounce or accept transaction that decided the lead may not be kept, where a caller's grants would under-delete",
 	"internal/modules/activities/projectfiling.go":                       "the undo of a project filing locks the linked record FOR SHARE so a legal hold placed on it cannot land between the undo reading the holds and clearing the class. It takes a shared row lock (shareLockQualifyingRecords) on the records the activity is linked to, so the undo of a project filing serializes with a hold or a stamp being written; it selects only a row count, no field, and returns nothing to the caller.",
@@ -178,21 +187,12 @@ var notTheLeadTable = gatekit.Waive(map[string]string{
 	"internal/modules/deals/wonstints.go:wonStints": "`extract(epoch FROM lead(h.changed_at) OVER moves - h.changed_at)` — the window function that reads the NEXT row's value, measuring how long a deal sat in each stage. The statement never names the lead table",
 })
 
-// deferredLeadReads: a DISCLOSING read that is still ungated, each naming the
-// issue that will close it.
-var deferredLeadReads = gatekit.Waive(map[string]string{
-	"internal/compose/weekly/weeklycounts.go:countWeekLeads": "the week's routed / answered-in-target / breached counts. It takes the ROW half (auth.ScopeClauseFor on lead) and never the object half, so a seat whose role grants no lead read is still answered lead figures for its own rows. Deferred rather than gated because the answer turns on what a weekly review SAYS to such a seat: failing the whole review is fail-closed and breaks a report whose other blocks are fine, and zeroed counts read as failure at work nobody asked of them — which this file's own doc names as the thing it must not print. #5466",
-	"internal/compose/weekly/weeklyscorecard.go:hasLeads":    "whether the rep carried a funnel at all, the presence question the lead block hangs off. Same row-half-only shape and the same open question as countWeekLeads beside it. #5466",
-	"internal/compose/weekly/weeklyscorecard.go:scoreLeads":  "the lead block itself. It already models the absent case — an absent block IS the answer for a rep who carried no leads — so it is the one of the three a refusal could be folded into cleanly; it is deferred with the other two because a review whose block is omitted and whose counts are not would be worse than either. #5466",
-})
-
 var leadVerdicts = []namedVerdict{
 	{"predicate", predicateLeadReads},
 	{"lifecycle", lifecycleLeadReads},
 	{"callee-gated", calleeGatedLeadReads},
 	{"not-the-table", notTheLeadTable},
 	{"ruled", ruledLeadReads},
-	{"deferred", deferredLeadReads},
 }
 
 // wantMinimumGatedLeadSites is the floor below the count of sites that satisfy
@@ -250,14 +250,13 @@ func TestEveryReaderOfTheLeadTableCarriesTheObjectGateOrAVerdict(t *testing.T) {
 			"that stopped recognising this tree's SQL would report exactly this, and it reads the "+
 			"same as a clean tree", satisfied, wantMinimumGatedLeadSites)
 	}
-	t.Logf("lead reads: %d gated, %d predicate, %d lifecycle, %d callee-gated, %d ruled, %d DEFERRED (still disclosing)",
+	t.Logf("lead reads: %d gated, %d predicate, %d lifecycle, %d callee-gated, %d ruled",
 		satisfied, len(predicateLeadReads.Subjects()), len(lifecycleLeadReads.Subjects()),
-		len(calleeGatedLeadReads.Subjects()), len(ruledLeadReads.Subjects()), len(deferredLeadReads.Subjects()))
+		len(calleeGatedLeadReads.Subjects()), len(ruledLeadReads.Subjects()))
 
 	predicateLeadReads.AssertAllMatched(t)
 	lifecycleLeadReads.AssertAllMatched(t)
 	calleeGatedLeadReads.AssertAllMatched(t)
 	notTheLeadTable.AssertAllMatched(t)
 	ruledLeadReads.AssertAllMatched(t)
-	deferredLeadReads.AssertAllMatched(t)
 }

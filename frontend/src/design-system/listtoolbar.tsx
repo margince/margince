@@ -1,22 +1,24 @@
 import { Search } from "lucide-react";
-import { type ReactNode, useState } from "react";
-import { useT } from "../i18n";
-import { Checkbox } from "./atoms";
-import { FilterMenu, FilterRow } from "./listfilter";
-import { SortMenu } from "./listsort";
+import { type ReactNode, useRef, useState } from "react";
+import { type Translator, useT } from "../i18n";
+import { useFoldedViewport } from "../lib/viewport";
+import { FilterRow, FilterStep } from "./listfilter";
+import { SortStep, sortSummary } from "./listsort";
 import {
   type ListChip,
   openRowSegment,
   type SortControl,
   type SortOption,
 } from "./listsurface.dials";
+import {
+  ListViewMenu,
+  ToggleRow,
+  type ViewRow,
+  type ViewToggle,
+} from "./listviewmenu";
 
-/**
- * The controls row, read as two halves. What narrows the list is on the left:
- * search, chips, the body's own filter pickers. What changes how the list is
- * displayed is on the right. A reader looking to cut the set down never has to
- * scan the whole row to find out which controls do that.
- */
+export const VIEW_MENU = "view";
+
 export function Toolbar({
   search,
   sort,
@@ -25,9 +27,14 @@ export function Toolbar({
   chosen,
   onChipChange,
   archived,
+  layout,
+  viewRows,
+  displayRows,
+  displayToggles,
+  changed,
   tools,
-  displayMenu,
   saveView,
+  notice,
   openMenu,
   setOpenMenu,
 }: Readonly<{
@@ -37,12 +44,15 @@ export function Toolbar({
   chips: readonly ListChip[];
   chosen: Readonly<Record<string, string>>;
   onChipChange?: (key: string, value: string) => void;
-  archived?: { checked: boolean; onChange: (next: boolean) => void };
+  archived?: Archived;
+  layout?: ReactNode;
+  viewRows: readonly ViewRow[];
+  displayRows: readonly ViewRow[];
+  displayToggles: readonly ViewToggle[];
+  changed: boolean;
   tools?: ReactNode;
-  displayMenu?: (
-    menu: Readonly<{ open: boolean; onToggle: () => void }>,
-  ) => ReactNode;
   saveView?: ReactNode;
+  notice?: ReactNode;
   openMenu: string | null;
   setOpenMenu: (next: string | null) => void;
 }>) {
@@ -57,17 +67,69 @@ export function Toolbar({
     const remembered = picked[key];
     return remembered && remembered[0] === value ? remembered[1] : undefined;
   };
-  const remember = (key: string, value: string, label: string) =>
+  const applyFilter = (key: string, value: string, label: string) => {
     setPicked((prev) => ({ ...prev, [key]: [value, label] }));
-  // Every dial on the row asks the same state which one is open, so opening one
-  // is what closes the last. Spelled once: three copies of this arithmetic is
-  // how the Display menu came to keep an `open` of its own.
-  const menu = (key: string) => ({
-    open: openMenu === key,
-    onToggle: () => setOpenMenu(openMenu === key ? null : key),
-  });
+    onChipChange?.(key, value);
+  };
+  const deleteFilter = (key: string) => onChipChange?.(key, "");
+  const root = useRef<HTMLDivElement>(null);
+  // A closing menu takes focus with it. So a chip's pick or delete hands focus
+  // on: to the first of `rows` that is drawn, else to View.
+  const focusApplied = (...rows: number[]) => {
+    const drawn = root.current?.querySelectorAll<HTMLElement>(
+      ".lt-applied .lt-frow-value",
+    );
+    const row = rows.map((index) => drawn?.[index]).find(Boolean);
+    (row ?? root.current?.querySelector<HTMLElement>(".lt-vtrigger"))?.focus();
+  };
+
+  const rows: ViewRow[] = [...viewRows];
+  if (chips.length > 0) {
+    rows.push({
+      key: "filters",
+      label: t("table.filters"),
+      value:
+        applied.length > 0
+          ? applied.map((chip) => chip.label).join(", ")
+          : t("list.viewMenuNone"),
+      changed: applied.length > 0,
+      ownHead: true,
+      step: (back) => (
+        <FilterStep
+          chips={chips}
+          chosen={chosen}
+          labelFor={labelFor}
+          onPick={applyFilter}
+          onDelete={deleteFilter}
+          back={back}
+        />
+      ),
+    });
+  }
+  if (sort && sortOptions.length > 0) {
+    rows.push({
+      key: "sort",
+      label: t("table.sort"),
+      value: sortSummary(sort, sortOptions, t),
+      // "Default order" is the server's own, so it carries no dot.
+      changed: sort.value !== "" && sort.value !== (sort.initial ?? ""),
+      step: () => <SortStep sort={sort} options={sortOptions} />,
+    });
+  }
+  rows.push(...displayRows);
+  // Which rows exist before how they are drawn, as in the rows above.
+  const toggles: ViewToggle[] = [
+    ...(archived ? [archivedToggle(archived, t)] : []),
+    ...displayToggles,
+  ];
+  const hasPanel =
+    rows.length > 0 ||
+    toggles.length > 0 ||
+    layout !== undefined ||
+    saveView !== undefined;
+
   return (
-    <div className="lt-tools">
+    <div className="lt-tools" ref={root}>
       {search && (
         <label className="lt-search">
           <Search size={13} strokeWidth={1.6} aria-hidden="true" />
@@ -83,69 +145,78 @@ export function Toolbar({
           />
         </label>
       )}
-
-      {applied.map((chip) => (
-        <FilterRow
-          key={chip.key}
-          chip={chip}
-          value={chosen[chip.key] ?? ""}
-          pickedLabel={labelFor(chip.key, chosen[chip.key] ?? "")}
-          openSegment={openRowSegment(openMenu, chip.key)}
-          onToggleSegment={(next) => {
-            const key = `row:${chip.key}:${next}`;
-            setOpenMenu(openMenu === key ? null : key);
-          }}
-          onPick={(value, label) => {
-            remember(chip.key, value, label);
-            onChipChange?.(chip.key, value);
-            setOpenMenu(null);
-          }}
-          onDelete={() => {
-            onChipChange?.(chip.key, "");
-            setOpenMenu(null);
-          }}
-        />
-      ))}
-
-      {chips.length > 0 && (
-        <FilterMenu
-          chips={chips}
-          chosen={chosen}
-          onChipChange={onChipChange}
-          onRemember={remember}
-          {...menu("filter")}
-          hasApplied={applied.length > 0}
+      {hasPanel && (
+        <ListViewMenu
+          open={openMenu === VIEW_MENU}
+          onOpenChange={(next) => setOpenMenu(next ? VIEW_MENU : null)}
+          filterCount={applied.length}
+          changed={changed}
+          layout={layout}
+          rows={rows}
+          toggles={toggles}
+          footer={saveView}
         />
       )}
-
-      {archived && <ArchivedSwitch archived={archived} />}
-
-      <span className="lt-spacer" />
-
-      {sort && sortOptions.length > 0 && (
-        <SortMenu sort={sort} options={sortOptions} {...menu("sort")} />
-      )}
-
-      {displayMenu?.(menu("display"))}
-
       {tools}
-
-      {saveView}
+      <div className="lt-notice">{notice}</div>
+      {applied.length > 0 && (
+        <AppliedFilters>
+          {(menuHost) =>
+            applied.map((chip, index) => (
+              <FilterRow
+                key={chip.key}
+                chip={chip}
+                value={chosen[chip.key] ?? ""}
+                pickedLabel={labelFor(chip.key, chosen[chip.key] ?? "")}
+                openSegment={openRowSegment(openMenu, chip.key)}
+                onToggleSegment={(next) => {
+                  const key = `row:${chip.key}:${next}`;
+                  setOpenMenu(openMenu === key ? null : key);
+                }}
+                onPick={(value, label) => {
+                  applyFilter(chip.key, value, label);
+                  setOpenMenu(null);
+                  // The any option takes the filter, and this row, away.
+                  focusApplied(...(value ? [index] : [index + 1, index - 1]));
+                }}
+                onDelete={() => {
+                  deleteFilter(chip.key);
+                  setOpenMenu(null);
+                  focusApplied(index + 1, index - 1);
+                }}
+                menuHost={menuHost}
+              />
+            ))
+          }
+        </AppliedFilters>
+      )}
     </div>
   );
 }
 
-export function ArchivedSwitch({
-  archived,
-}: Readonly<{
-  archived: { checked: boolean; onChange: (next: boolean) => void };
-}>) {
-  const t = useT();
+// Below the fold the line scrolls sideways and would clip a menu opened inside
+// it, so each row's menus are drawn under the line instead.
+function AppliedFilters({
+  children,
+}: Readonly<{ children: (menuHost: HTMLElement | null) => ReactNode }>) {
+  const folded = useFoldedViewport();
+  const [host, setHost] = useState<HTMLDivElement | null>(null);
   return (
-    <Checkbox
-      checked={archived.checked}
-      label={t("list.showArchived")}
-      onChange={(event) => archived.onChange(event.target.checked)}
-    />
+    <div className="lt-applied">
+      <div className="lt-applied-rows">{children(folded ? host : null)}</div>
+      <div className="lt-applied-menus" ref={setHost} />
+    </div>
   );
+}
+
+type Archived = { checked: boolean; onChange: (next: boolean) => void };
+
+function archivedToggle(archived: Archived, t: Translator): ViewToggle {
+  return { key: "archived", label: t("list.showArchived"), ...archived };
+}
+
+/** Show archived for a list with no View panel, as the panel draws it. */
+export function ArchivedSwitch({ archived }: Readonly<{ archived: Archived }>) {
+  const t = useT();
+  return <ToggleRow toggle={archivedToggle(archived, t)} />;
 }

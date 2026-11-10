@@ -58,7 +58,7 @@ import (
 // ruleVersion stamps the ladder that selected a moment. It changes whenever a
 // rung's condition or order changes, so the same evidence rendering differently
 // across two clients is visible rather than silent.
-const ruleVersion = "contact-moment-ladder-v7"
+const ruleVersion = "contact-moment-ladder-v8"
 
 // meetingHorizonHours is how far ahead a meeting is worth preparing for
 // (ADR-0096 D2 rung 1). Three days, not the week the earlier ladder used: a
@@ -112,7 +112,7 @@ func (s *Service) momentsSection(ctx context.Context, tx pgx.Tx, contactID ids.C
 		return err
 	}
 	moment := said.deriveMomentPast(ctx, now, out, dismissed, said.proposer(ctx, out, followUps, dismissed))
-	momentaction.Withhold(ctx, string(said.Lang()), &moment)
+	momentaction.WithholdContact(ctx, string(said.Lang()), &moment, out.Contact.Attachable != nil && *out.Contact.Attachable)
 	out.Moment = &moment
 	return nil
 }
@@ -224,7 +224,7 @@ type ladderRung = func(context.Context, time.Time, *crmcontracts.Contact360) (cr
 // A meeting deadline wins over a reply, followed by promises and relationship gaps.
 // Role changes need recorded role-change evidence; reply gaps cannot establish them.
 func (said momentCopy) ladder() []ladderRung {
-	return []ladderRung{said.meetingPrepMoment, said.reEngagedMoment, said.overduePromiseMoment, said.goneQuietMoment, said.openPromiseMoment, said.missingNextStepMoment, said.thinRelationshipMoment}
+	return []ladderRung{said.meetingPrepMoment, said.reEngagedMoment, said.overduePromiseMoment, said.goneQuietMoment, said.awaitingReplyMoment, said.openPromiseMoment, said.missingNextStepMoment, said.thinRelationshipMoment}
 }
 
 // momentLadderNames names the rungs in ladder order, for tests that
@@ -236,6 +236,7 @@ var momentLadderNames = []string{
 	"re_engaged",
 	"overdue_promise",
 	"gone_quiet",
+	"awaiting_reply",
 	"open_promise",
 	"missing_next_step",
 	"thin_relationship",
@@ -304,7 +305,8 @@ func (said momentCopy) reEngagedMoment(_ context.Context, now time.Time, page *c
 		return crmcontracts.ContactMoment{}, false
 	}
 	inbound := *page.LastLiveInboundAt
-	if page.LastOutboundAt != nil && !page.LastOutboundAt.Before(inbound) {
+	theirs := occurredday.Moment{At: inbound, DateOnly: occurredday.IsStatedDay(page.LastLiveInboundPrecision)}
+	if page.LastOutboundAt != nil && occurredday.Answers(lastOutbound(page), theirs) {
 		// We answered after they wrote. Nothing is owed, and their message is
 		// not news.
 		return crmcontracts.ContactMoment{}, false
@@ -339,20 +341,12 @@ func (said momentCopy) reEngagedMoment(_ context.Context, now time.Time, page *c
 		//
 		// The interval itself is real; only its owner was wrong. It is the age
 		// of OUR last message, which is the fact this rung fires on anyway.
-		Headline:    fmt.Sprintf(said.Say(momentWords.Replied), sinceWeWrote),
-		WhyNow:      said.Say(momentWords.RepliedWhy),
-		Confidence:  crmcontracts.ContactMomentConfidenceObservedFact,
-		Evidence:    evidence,
-		FreshnessAt: &inbound,
-		RecommendedAction: crmcontracts.ContactMomentAction{
-			Kind:  crmcontracts.ContactMomentActionKindDraftReply,
-			Label: said.Say(momentWords.Reply),
-			State: crmcontracts.ContactMomentActionStateWillConfirm,
-			Destination: &crmcontracts.ContactMomentDestination{
-				Surface: crmcontracts.ContactMomentDestinationSurfaceComposer,
-				Prefill: new(map[string]string{prefillIntent: "reply"}),
-			},
-		},
+		Headline:          fmt.Sprintf(said.Say(momentWords.Replied), sinceWeWrote),
+		WhyNow:            said.Say(momentWords.RepliedWhy),
+		Confidence:        crmcontracts.ContactMomentConfidenceObservedFact,
+		Evidence:          evidence,
+		FreshnessAt:       &inbound,
+		RecommendedAction: said.replyAction(said.Say(momentWords.Reply), "reply", page.LastLiveInboundActivityId),
 	}, true
 }
 
@@ -366,7 +360,7 @@ func (said momentCopy) goneQuietMoment(_ context.Context, now time.Time, page *c
 		return crmcontracts.ContactMoment{}, false
 	}
 	outbound := *page.LastOutboundAt
-	if page.LastInboundAt != nil && !page.LastInboundAt.Before(outbound) {
+	if theyWroteSince(page) {
 		// They answered. Silence is not the story.
 		return crmcontracts.ContactMoment{}, false
 	}
@@ -384,19 +378,11 @@ func (said momentCopy) goneQuietMoment(_ context.Context, now time.Time, page *c
 		Headline:            fmt.Sprintf(said.Say(momentWords.Quiet), waiting),
 		WhyNow: fmt.Sprintf(said.Say(momentWords.QuietWhy),
 			waiting, goneQuietAfterDays),
-		Confidence:  crmcontracts.ContactMomentConfidenceObservedFact,
-		Evidence:    evidence,
-		FreshnessAt: &outbound,
-		RecommendedAction: crmcontracts.ContactMomentAction{
-			Kind:  crmcontracts.ContactMomentActionKindDraftReply,
-			Label: said.Say(momentWords.FollowUp),
-			State: crmcontracts.ContactMomentActionStateWillConfirm,
-			Destination: &crmcontracts.ContactMomentDestination{
-				Surface: crmcontracts.ContactMomentDestinationSurfaceComposer,
-				Prefill: new(map[string]string{prefillIntent: "follow_up"}),
-			},
-		},
-		SecondaryActions: &[]crmcontracts.ContactMomentAction{said.askColleague()},
+		Confidence:        crmcontracts.ContactMomentConfidenceObservedFact,
+		Evidence:          evidence,
+		FreshnessAt:       &outbound,
+		RecommendedAction: said.replyAction(said.Say(momentWords.FollowUp), "follow_up", page.LastOutboundActivityId),
+		SecondaryActions:  &[]crmcontracts.ContactMomentAction{said.askColleague()},
 	}, true
 }
 

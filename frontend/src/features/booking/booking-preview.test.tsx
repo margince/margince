@@ -15,7 +15,7 @@ import { createQueryClient } from "../../app/queryclient";
 import { PageSaveBar, SavePageProvider } from "../../design-system/savepage";
 import { formatTimeOfDay, fullDayName } from "../../format/format";
 import { formatDayFull, formatTimeRange } from "../../format/meetingtime";
-import { dayInZone, viewerZone } from "../../format/timezone";
+import { browserZone, dayInZone } from "../../format/timezone";
 import {
   bookingConnection,
   bookingHours,
@@ -29,7 +29,7 @@ import {
   StoryProviders,
 } from "../../testing/story-utils";
 import { BookingScreen } from "./book";
-import { MeetingSettings } from "./meeting-settings";
+import { MeetingSettings, type MeetingsPart } from "./meeting-settings";
 
 afterEach(() => {
   cleanup();
@@ -44,7 +44,7 @@ function inBookingMonth() {
   vi.setSystemTime(new Date("2026-10-01T12:00:00Z"));
 }
 const slotName = (index: number) =>
-  formatTimeOfDay(bookingSlots[index].start, "en", viewerZone());
+  formatTimeOfDay(bookingSlots[index].start, "en", browserZone());
 const CONFIRM = /^Confirm \d/;
 
 it.each([false, true])(
@@ -83,7 +83,7 @@ it.each([false, true])(
     // The chosen time moves to the summary, and the times give way to the form.
     expect(
       screen.getByText(
-        `${formatDayFull(bookingSlots[0].start, "en", viewerZone())} · ${formatTimeRange(bookingSlots[0].start, bookingSlots[0].end, "en", viewerZone())}`,
+        `${formatDayFull(bookingSlots[0].start, "en", browserZone())} · ${formatTimeRange(bookingSlots[0].start, bookingSlots[0].end, "en", browserZone())}`,
       ),
     ).toBeTruthy();
     expect(screen.queryByRole("button", { name: slotName(1) })).toBeNull();
@@ -196,7 +196,7 @@ it("reads the day a truncated month stopped in, and the days after it, on their 
     if (!isDayRead(request))
       return jsonResponse({ slots: bookingSlots, truncated: true });
     const from = new URL(request.url).searchParams.get("from") ?? "";
-    const day = dayInZone(Date.parse(from), viewerZone());
+    const day = dayInZone(Date.parse(from), browserZone());
     return jsonResponse({
       slots: day === "2026-10-05" ? [...bookingSlots, rest] : [late],
       truncated: false,
@@ -219,11 +219,11 @@ it("reads the day a truncated month stopped in, and the days after it, on their 
     </StoryProviders>,
   );
   const timeOf = (slot: { start: string }) =>
-    formatTimeOfDay(slot.start, "en", viewerZone());
+    formatTimeOfDay(slot.start, "en", browserZone());
   expect(
     await screen.findByRole("button", { name: timeOf(rest) }),
   ).toBeTruthy();
-  const [year, month, date] = dayInZone(Date.parse(late.start), viewerZone())
+  const [year, month, date] = dayInZone(Date.parse(late.start), browserZone())
     .split("-")
     .map(Number);
   await user.click(
@@ -342,7 +342,7 @@ it("shows calendar errors and retries the authenticated availability read", asyn
   expect(screen.getByRole("button", { name: slotName(1) })).toBeTruthy();
 });
 
-function Journey() {
+function Journey({ part }: Readonly<{ part?: MeetingsPart }>) {
   const [preview, setPreview] = useState(true);
   return (
     <>
@@ -353,7 +353,7 @@ function Journey() {
         <BookingScreen hostSlug="preview" />
       ) : (
         <SavePageProvider>
-          <MeetingSettings />
+          <MeetingSettings part={part} />
           <PageSaveBar />
         </SavePageProvider>
       )}
@@ -445,7 +445,7 @@ it("refreshes cached preview times after saving working hours", async () => {
   render(
     <StoryProviders>
       <QueryClientProvider client={client}>
-        <Journey />
+        <Journey part="availability" />
       </QueryClientProvider>
     </StoryProviders>,
   );

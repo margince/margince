@@ -48,7 +48,10 @@ var errUploadLimitUnset = errors.New("knowledge: no upload ceiling configured fo
 // errIngestUnavailable reports a composition with no job runner behind the
 // upload. Accepting the file anyway would leave a document queued forever
 // behind a worker that does not exist, which reads to the uploader as success.
-var errIngestUnavailable = errors.New("knowledge: document ingest is not available on this role")
+var errIngestUnavailable = &httperr.DetailedError{
+	Status: http.StatusServiceUnavailable, Code: "ingest_unavailable",
+	Detail: "this process cannot ingest documents; try again on the API process",
+}
 
 // WithUploadLimit grants this handler set the ceiling compose resolved for the
 // upload route.

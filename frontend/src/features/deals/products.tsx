@@ -46,6 +46,7 @@ import {
   currencyOptions,
   type LeadingCurrencies,
 } from "../../format/currencychoices";
+import { labelFor } from "../../lib/labelfor";
 import { useLeadingCurrencies } from "../../lib/leadingcurrencies";
 import {
   OTHER_UNIT,
@@ -84,17 +85,9 @@ async function fetchProductsPage(
   };
 }
 
-// Phase-3 line-item product picker reuses this list read, mapped to {id,name}.
-export async function searchProductCandidates(
-  q: string,
-): Promise<{ id: string; name: string }[]> {
-  const data = unwrap(
-    await api.GET("/products", {
-      params: { query: { q, limit: 10 } },
-    }),
-  );
-  return data.data.map((p) => ({ id: p.id, name: p.name }));
-}
+// The offer lines and the deal's products pick from the catalog through the
+// one search every surface shares.
+export { searchProductCandidates } from "../../components/productsearch";
 
 // Built per render: option labels are shown as given, so they arrive translated.
 function productFields(
@@ -143,7 +136,7 @@ function productFields(
         { value: "", label: t("product.taxCategoryUnset") },
         ...TAX_CATEGORIES.map((category) => ({
           value: category,
-          label: t(TAX_CATEGORY_LABEL[category]),
+          label: t(labelFor(TAX_CATEGORY_LABEL, category)),
         })),
       ],
     },
@@ -184,7 +177,7 @@ function productFields(
         { value: "", label: t("product.componentUnset") },
         ...COMPONENT_KINDS.map((kind) => ({
           value: kind,
-          label: t(COMPONENT_LABEL[kind]),
+          label: t(labelFor(COMPONENT_LABEL, kind)),
         })),
       ],
     },
@@ -480,7 +473,7 @@ export function ProductsAdmin() {
               { value: "unclassified", label: "product.taxCategoryUnset" },
               ...TAX_CATEGORIES.map((category) => ({
                 value: category,
-                label: TAX_CATEGORY_LABEL[category],
+                label: labelFor(TAX_CATEGORY_LABEL, category),
               })),
             ],
           },

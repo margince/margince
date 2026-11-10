@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/projects/contractform.tsx frontend/src/features/projects/contractlifecycle.tsx frontend/src/features/companies/companycontracts.tsx frontend/src/features/companies/companyfinance.tsx frontend/src/features/settings/financesource.tsx backend/internal/modules/contracts backend/internal/modules/finance backend/internal/modules/deals/win_evidence.go -->
+<!-- describes: frontend/src/features/projects/contractform.tsx frontend/src/features/projects/contractlifecycle.tsx frontend/src/features/projects/contractrenewal.ts frontend/src/features/companies/companycontracts.tsx frontend/src/components/contractterms.tsx frontend/src/features/companies/companyfinance.tsx frontend/src/features/settings/financesource.tsx backend/internal/modules/contracts backend/internal/modules/finance backend/internal/modules/deals/win_evidence.go -->
 # Contracts and invoices
 
 Contracts and invoices both live on a company's own page in Margince. The
@@ -65,6 +65,11 @@ Where a yearly figure is recorded, the contract form shows a **Monthly
 equivalent** beside it. Margince works it out; you never type it. When the
 monthly figure has to be rounded, it says so.
 
+The company's **Contracts** panel and a project's **Contracts** card show each
+contract's payment terms and yearly figure under its name. Both use the same
+words, for example "Net 30" and "€10,000.00/year (approx. €833.33/month)". A contract
+with neither shows no extra line.
+
 ### The dates
 
 A contract carries four dates: starts, ends, renews, signed. An empty end date
@@ -86,7 +91,9 @@ A contract has five statuses: **Draft, Active, Expired, Canceled, Superseded.**
 
 **A contract's status never changes by date.** A human makes every change. A
 term whose end date has passed while nobody has changed the status reads "Term
-ended, status pending". It does not switch to Expired by itself.
+ended, status pending". It does not switch to Expired by itself. An active
+contract whose start date is in the future is not under contract yet, and it does
+not read as ended.
 
 On its own, the record shows whether the company is **under contract** as of
 today, worked out from the dates. That reading can disagree with the status, and
@@ -132,9 +139,8 @@ checks the records, and the audit trail shows who entered what.
 
 ### Contracts and agents
 
-**An agent cannot read or change a contract.** A wrong answer about contract
-values and dates, given as if it were true, costs the most. So agents have no
-access to contracts. Every contract action is done by a signed-in user.
+An agent acting for you can read, record, edit and renew contracts as you can. It
+asks you first before it cancels or archives one.
 
 ## Finance and invoices
 

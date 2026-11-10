@@ -58,6 +58,21 @@ func promoteIfWorkspaceScoped(ctx context.Context, tx pgx.Tx, id ids.ContactID, 
 	return err
 }
 
+// AwaitsAnAnswerTx reports whether PromoteOnReplyTx would move the contact,
+// without moving it. The reply evidence costs a read over the address's whole
+// history, so a caller asks this first. It asks what the promotion asks.
+func (s *Store) AwaitsAnAnswerTx(ctx context.Context, tx pgx.Tx, id ids.ContactID) (bool, error) {
+	if err := auth.Require(ctx, entityContact, principal.ActionUpdate); err != nil {
+		return false, err
+	}
+	var awaits bool
+	if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM contact WHERE `+widenableWhere+`)`,
+		replyWidening.args(id)...).Scan(&awaits); err != nil {
+		return false, fmt.Errorf("contacts: reading whether a contact awaits an answer: %w", err)
+	}
+	return awaits, nil
+}
+
 // PromoteOnReplyTx moves an owner-scoped contact to the workspace because the
 // address has answered mail somebody here sent, and reports whether it moved.
 //
@@ -72,8 +87,12 @@ func (s *Store) PromoteOnReplyTx(ctx context.Context, tx pgx.Tx, id ids.ContactI
 	if err := auth.Require(ctx, entityContact, principal.ActionUpdate); err != nil {
 		return false, err
 	}
-	return widenTx(ctx, tx, id, widening{lifts: []NarrowingReason{NarrowedOutboundNoAnswer}})
+	return widenTx(ctx, tx, id, replyWidening)
 }
+
+// replyWidening ends only outbound_no_answer, for PromoteOnReplyTx and the
+// AwaitsAnAnswerTx check in front of it.
+var replyWidening = widening{lifts: []NarrowingReason{NarrowedOutboundNoAnswer}}
 
 // fieldVisibility names the column in an audit image, so the word a reader
 // greps for is the word the table uses.
@@ -90,6 +109,21 @@ type widening struct {
 	owner *ids.UUID
 }
 
+// widenableWhere matches the row a widening may move, with the arguments from
+// widening.args. widenTx and AwaitsAnAnswerTx both read it.
+const widenableWhere = `id = $1 AND visibility = $2 AND archived_at IS NULL
+	   AND (narrowing_reason = ANY($3::text[]) OR $4)
+	   AND ($5::uuid IS NULL OR owner_id = $5)`
+
+//craft:ignore naked-any pgx takes a statement's arguments as []any
+func (w widening) args(id ids.ContactID) []any {
+	lifts := make([]string, 0, len(w.lifts))
+	for _, reason := range w.lifts {
+		lifts = append(lifts, string(reason))
+	}
+	return []any{id, visibilityOwner, lifts, w.liftsAny, w.owner}
+}
+
 // widenTx moves one owner-scoped contact to the workspace, if w may end its
 // narrowing, and reports whether it moved.
 //
@@ -99,16 +133,8 @@ type widening struct {
 // The pins are the concurrency guard, read through RowsAffected: a second pass
 // over the same contact matches nothing and writes nothing again.
 func widenTx(ctx context.Context, tx pgx.Tx, id ids.ContactID, w widening) (bool, error) {
-	lifts := make([]string, 0, len(w.lifts))
-	for _, reason := range w.lifts {
-		lifts = append(lifts, string(reason))
-	}
-	tag, err := tx.Exec(ctx, `
-		UPDATE contact SET visibility = $2, narrowing_reason = NULL
-		 WHERE id = $1 AND visibility = $3 AND archived_at IS NULL
-		   AND (narrowing_reason = ANY($4::text[]) OR $5)
-		   AND ($6::uuid IS NULL OR owner_id = $6)`,
-		id, visibilityWorkspace, visibilityOwner, lifts, w.liftsAny, w.owner)
+	tag, err := tx.Exec(ctx, `UPDATE contact SET visibility = $6, narrowing_reason = NULL WHERE `+widenableWhere,
+		append(w.args(id), visibilityWorkspace)...)
 	if err != nil {
 		return false, fmt.Errorf("contacts: moving a contact to the workspace: %w", err)
 	}

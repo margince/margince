@@ -28,6 +28,7 @@ import (
 	"fmt"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/meetingoutcome"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
@@ -53,11 +54,6 @@ const (
 	// this one, and buying eight tokens with a name a reader has to decode is
 	// the wrong trade.
 	fieldBecameOpportunity = "became_opportunity"
-
-	// A held meeting is one the record says was HELD. booked is a plan,
-	// no_show and canceled are the two ways a plan fails, and counting any of
-	// them here would answer a question about calendars rather than about work.
-	whereHeldMeeting = "t.kind = 'meeting' AND t.meeting_status = 'held' AND t.archived_at IS NULL"
 
 	// joinAcceptedHandoff is the anchor.
 	//
@@ -103,6 +99,11 @@ const (
 	colCreditedSeat = "credited_seat.id"
 )
 
+// whereHeldMeeting admits a meeting the record says was held. booked is a
+// plan, and no_show and canceled are the two ways a plan fails. Counting any
+// of them would answer a question about calendars rather than about work.
+var whereHeldMeeting = "t.kind = 'meeting' AND " + meetingoutcome.HeldSQL("t") + " AND t.archived_at IS NULL"
+
 // joinMeetingCredit computes the credited seat once per meeting, so the
 // report can group by it.
 var joinMeetingCredit = "LEFT JOIN LATERAL (SELECT " + storekit.MeetingCreditedSeatSQL("t") + " AS id) credited_seat ON true"
@@ -114,6 +115,9 @@ var joinMeetingCredit = "LEFT JOIN LATERAL (SELECT " + storekit.MeetingCreditedS
 var activityOwnRowFields = map[string]map[string]string{
 	"meeting-conversion": {
 		fieldMeetingHost: "the credited seat is read off the meeting's own participant and invitation rows",
+	},
+	"activities-by-kind": {
+		fieldHostUserID: "the credited seat is read off the meeting's own held transition, keyed by activity_id",
 	},
 }
 

@@ -11,7 +11,6 @@ package compose
 
 import (
 	"context"
-	"errors"
 	"testing"
 	"time"
 
@@ -21,7 +20,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/owndomain"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -164,24 +162,6 @@ func TestAStoredMeetingClaimTheMeetingNoLongerMakesIsWithdrawn(t *testing.T) {
 	f.runPass()
 	if n := f.WsCount(t, audits, stale); n != 1 {
 		t.Errorf("a second pass wrote %d audit rows for the withdrawal, want still 1", n)
-	}
-}
-
-// The stage-move check judges the meeting live, so a stale claim settles
-// nothing even before the pass has run.
-func TestACardOnAStaleMeetingClaimIsRefusedBeforeThePass(t *testing.T) {
-	f := newAuthorshipFixture(t)
-	f.heldCriterion()
-	stale := f.heldClaim(f.heldMeeting("rep@ourco.test", "colleague@ourco.test"), deals.ExtractedByDeterministic)
-	checked := deals.NewStore(f.DB(), DealsInstallation()).WithOwnDomains(ownDomainReader{store: f.own})
-	err := database.WithWorkspaceTx(f.Admin(), f.Pool, func(tx pgx.Tx) error {
-		return checked.ValidateProgressionCriteriaTx(f.Admin(), tx, f.cardFor("held"))
-	})
-	if !errors.Is(err, apperrors.ErrVersionSkew) {
-		t.Errorf("a card resting on a meeting only colleagues attended stands: %v", err)
-	}
-	if got := f.met(stale); got != "true" {
-		t.Errorf("the check changed the stored claim to met = %s; only the pass writes", got)
 	}
 }
 

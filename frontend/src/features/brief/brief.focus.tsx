@@ -1,45 +1,30 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// The focus panel's body: the row in hand as a card, and the ranked column
-// beside it. The panel's head, states and foot are in brief.feed.tsx.
+// The focus panel's body: the day's rows as cards, the one in hand opened.
+// The panel's head, states and foot are in brief.feed.tsx.
 
+import { ArrowRight } from "lucide-react";
 import { useRef } from "react";
 import {
   TaskNextSteps,
   TaskNextStepsPending,
 } from "../../components/tasknextsteps";
-import { AppLink } from "../../design-system/applink";
 import { Button, Card } from "../../design-system/atoms";
-import { Eyebrow } from "../../design-system/eyebrow";
-import { activityDay, activityTimeOfDay } from "../../format/activitywhen";
-import { formatDayMonth, formatNumber } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
-import { type Locale, type Translator, useLocale, useT } from "../../i18n";
+import { Heading } from "../../design-system/heading";
+import { useLocale, useT } from "../../i18n";
 import { useActivity } from "../../lib/activityread";
-import { useRecordZone } from "../../lib/recordzone";
 import { navigate } from "../../lib/router";
-import {
-  briefContextTitle,
-  briefSubjectLabel,
-  dealFactsText,
-  itemTitle,
-  phrasedReasons,
-  reasonText,
-  subjectHref,
-  whenText,
-} from "../../lib/worklistcopy";
-import { eyebrowKeyFor } from "../../lib/worklisteyebrow";
+import { useMe } from "../../lib/session";
+import { briefContextTitle } from "../../lib/worklistcopy";
+import { useWriteTo } from "../../lib/writeto";
 import type { WorklistItem } from "../worklist/worklist.queries";
-import { WorklistRow } from "../worklist/worklist.row";
-import { contactHref, useListed } from "../worklist/worklist.row.captions";
+import { OneRowWrite, useRowDone, WorklistRow } from "../worklist/worklist.row";
+import { useListed } from "../worklist/worklist.row.captions";
+import { TaskCard, TaskMeta, TaskTick, taskName } from "./brief.taskcard";
 
 import "./brief.feed.css";
-
-/** One row's identity across renders, the way the queue page spells it. */
-export function identity(item: WorklistItem): string {
-  return `${item.source}-${item.id}`;
-}
+import { identity } from "./brief.focuslink";
 
 export function Triage({
   rows,
@@ -58,13 +43,23 @@ export function Triage({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = viewerZone();
-  const recordZone = useRecordZone();
-  // A press removes the pressed button from the list. Focus follows it onto
-  // the card it brought in hand; a first render takes no focus.
+  const viewer = useMe(false).data?.user;
+  const listed = useListed();
+  const writeTo = useWriteTo();
+  // A press removes the pressed button, and a finished task takes its card
+  // away. Either way focus moves onto the card now in hand. A first render
+  // takes no focus.
   const pressed = useRef(false);
+  const held = useRef<string | null>(null);
   const takeFocus = (frame: HTMLDivElement | null) => {
-    if (frame && pressed.current) {
+    if (!frame) return;
+    const key = identity(lead);
+    const replaced = held.current !== null && held.current !== key;
+    held.current = key;
+    if (
+      pressed.current ||
+      (replaced && document.activeElement === document.body)
+    ) {
       pressed.current = false;
       frame.focus();
     }
@@ -74,8 +69,14 @@ export function Triage({
   const taskRead = useActivity(lead.id, isTask);
   const task = taskRead.data;
   const taskPending = isTask && taskRead.isPending;
+  // The drafted mail is the card's one filled verb, so Done steps back. A
+  // refused draft still draws its AI button, with the reason under it.
+  const target = task?.email_target;
+  const drafts = Boolean(target && (writeTo || target.refusal));
+  // Next steps past a task without answering it; past the last it wraps.
+  const next = rows.length > 1 ? rows[(at + 1) % rows.length] : undefined;
   const cardVerbs =
-    onContext || task || taskPending ? (
+    onContext || task || taskPending || next ? (
       <>
         {/* The drafted mail stands beside Done, ahead of the way to read
             more: it is the task's next step, the details are about it. */}
@@ -83,186 +84,116 @@ export function Triage({
         {task && <TaskNextSteps task={task} offerOpen={false} />}
         {/* Every row opens on what it asks and why it is here. */}
         {onContext && (
-          <Button variant="ghost" onClick={() => onContext(lead)}>
+          <Button
+            variant="ghost"
+            className="brief-triage-details"
+            onClick={() => onContext(lead)}
+          >
             {t("brief.focus.context")}
+          </Button>
+        )}
+        {next && (
+          <Button
+            variant="ghost"
+            className="brief-triage-next"
+            onClick={() => {
+              pressed.current = true;
+              onChoose(next);
+            }}
+          >
+            {t("brief.focus.next")} <ArrowRight aria-hidden />
           </Button>
         )}
       </>
     ) : undefined;
-  // The head's facts come from the helpers the row uses, so the card and the
-  // queue agree. A message is dated by its arrival, the rest by its own clock.
-  // The reader's own pin is the queue's reason, not the card's.
-  const arrived = lead.email_summary;
-  const when = arrived
-    ? [
-        activityDay(
-          arrived.occurred_at,
-          arrived.occurred_precision,
-          locale,
-          zone,
-          formatDayMonth,
-        ),
-        activityTimeOfDay(
-          arrived.occurred_at,
-          arrived.occurred_precision,
-          locale,
-          zone,
-        ),
-      ]
-        .filter(Boolean)
-        .join(", ")
-    : whenText(lead, t, locale, zone, recordZone, new Date());
-  const label = t(eyebrowKeyFor(lead));
+  // The open card says what to do, then its chips, then the deal's figures.
+  // With no line of its own from the producer, the row's ask is its line.
+  const told = Boolean(briefContextTitle(lead) || lead.detail);
+  const inbox = lead.email_summary?.display_status;
+  // Every row of the day is a card in the server's order, and the one in hand
+  // opens where it stands. An ordered list, so the order reaches a screen
+  // reader as the claim it is.
   return (
-    <div className="brief-triage">
-      {/* Keyed by the row, so pressing another one in the list mounts a new
-          card and replays its arrival. The press is answered on the card. */}
-      <div
-        ref={takeFocus}
-        tabIndex={-1}
-        className="brief-triage-frame"
-        key={identity(lead)}
-      >
-        <Card as="article" className="brief-triage-lead">
-          <p className="t-caption brief-triage-lead-head">
-            <span
-              className={
-                lead.band === "now"
-                  ? "brief-triage-label brief-triage-label-now"
-                  : "brief-triage-label"
-              }
-            >
-              {label}
-            </span>
-            <AboutLine item={lead} />
-            {when && <span className="t-num">{when}</span>}
-          </p>
-          <WorklistRow
-            // Personal ordering is the queue's, not the focus projection's.
-            allowPin={false}
-            item={lead}
-            position={at + 1}
-            owner=""
-            onOpenEmail={onOpenEmail}
-            onReview={() =>
-              navigate(
-                { screen: "worklist" },
-                new Map([["filter", lead.category]]),
-              )
-            }
-            context={cardVerbs}
-            // The card around this row says whose it is, why it is here and
-            // where it stands in the day. Each is said once, in its own place.
-            framed
-          />
-        </Card>
-      </div>
-      {rows.length > 1 && (
-        <div className="brief-triage-queue">
-          <Eyebrow as="h3" className="brief-triage-queue-head">
-            {t("brief.first.then")}
-          </Eyebrow>
-          {/* An ordered list, so the order reaches a screen reader as the
-              claim it is; the tile states the rank for everybody else. */}
-          <ol className="brief-focus-list">
-            {rows.map((item, index) =>
-              index === at ? null : (
-                <li key={identity(item)}>
-                  <QueueEntry
-                    item={item}
-                    rank={index + 1}
-                    onChoose={() => {
-                      pressed.current = true;
-                      onChoose(item);
-                    }}
-                  />
-                </li>
-              ),
-            )}
-          </ol>
-        </div>
+    <ol className="brief-triage">
+      {rows.map((item, index) =>
+        index === at ? (
+          <li key={identity(item)}>
+            {/* Keyed by the row, so pressing another one mounts a new card and
+                replays its arrival. The press is answered on the card. */}
+            <div ref={takeFocus} tabIndex={-1} className="brief-triage-frame">
+              <OneRowWrite item={lead}>
+                <Card
+                  as="article"
+                  className={
+                    told
+                      ? "brief-triage-lead"
+                      : "brief-triage-lead brief-triage-lead-asks"
+                  }
+                >
+                  <LeadTick item={lead} />
+                  <div className="brief-triage-body">
+                    <div className="brief-triage-lead-head">
+                      {lead.email_summary && (
+                        <Heading size="small" as="h3">
+                          {taskName(lead, viewer, t, locale)}
+                        </Heading>
+                      )}
+                      <TaskMeta item={lead} link={listed} />
+                      {inbox && (
+                        <p className="t-caption brief-triage-facts">
+                          {t(`visibility.${inbox}`)}
+                        </p>
+                      )}
+                    </div>
+                    <WorklistRow
+                      // Personal ordering is the queue's, not the focus projection's.
+                      allowPin={false}
+                      item={lead}
+                      position={at + 1}
+                      owner=""
+                      onOpenEmail={onOpenEmail}
+                      onReview={() =>
+                        navigate(
+                          { screen: "worklist" },
+                          new Map([["filter", lead.category]]),
+                        )
+                      }
+                      context={cardVerbs}
+                      quiet={drafts}
+                      // The card around this row says whose it is, why it is
+                      // here and where it stands in the day, each once.
+                      framed
+                    />
+                  </div>
+                </Card>
+              </OneRowWrite>
+            </div>
+          </li>
+        ) : (
+          <li key={identity(item)}>
+            <QueuedCard
+              item={item}
+              onOpen={() => {
+                pressed.current = true;
+                onChoose(item);
+              }}
+            />
+          </li>
+        ),
       )}
-    </div>
+    </ol>
   );
 }
 
-/** One row still waiting behind the card; a press puts it in hand. */
-function QueueEntry({
+/** A card waiting behind the one in hand, with Done on its tick where offered. */
+function QueuedCard({
   item,
-  rank,
-  onChoose,
-}: Readonly<{ item: WorklistItem; rank: number; onChoose: () => void }>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const line = queueLine(item, t, locale, viewerZone());
-  return (
-    <button type="button" className="brief-focus-item" onClick={onChoose}>
-      <span className="brief-focus-rank t-num">
-        {formatNumber(rank, locale)}
-      </span>
-      <span className="brief-focus-item-title">
-        {briefSubjectLabel(item) ?? itemTitle(item, t, locale)}
-      </span>
-      {line && <span className="t-caption brief-focus-item-line">{line}</span>}
-    </button>
-  );
+  onOpen,
+}: Readonly<{ item: WorklistItem; onOpen: () => void }>) {
+  return <TaskCard item={item} onOpen={onOpen} rowDone={useRowDone(item)} />;
 }
 
-/**
- * Whose row this is, linked: the contact the server put on the row, else the
- * record it is about. The sender of a thread filed under a deal is a contact,
- * and the reply goes to them. Where the message sits (the team's inbox, the
- * reader's own) follows in the access badge's own words.
- */
-function AboutLine({ item }: Readonly<{ item: WorklistItem }>) {
-  const t = useT();
-  const contact = item.contact;
-  const label =
-    contact?.label ??
-    (briefSubjectLabel(item) ? undefined : item.subject?.label);
-  const listed = useListed();
-  const target = contact?.label ? contactHref(contact) : subjectHref(item);
-  const href = target && listed(target);
-  const inbox = item.email_summary?.display_status;
-  return (
-    <>
-      {label && href && (
-        <AppLink className="entity-link" href={href}>
-          {label}
-        </AppLink>
-      )}
-      {inbox && <span>{t(`visibility.${inbox}`)}</span>}
-    </>
-  );
+/** The tick on the card in hand, sharing the one write its row's verbs use. */
+function LeadTick({ item }: Readonly<{ item: WorklistItem }>) {
+  return <TaskTick item={item} rowDone={useRowDone(item)} />;
 }
-
-/**
- * The line under a queued row's name: who it is with and its first reason,
- * through the row's own helpers. Null when the row has neither.
- */
-function queueLine(
-  item: WorklistItem,
-  t: Translator,
-  locale: Locale,
-  zone: string,
-): string | null {
-  // The contact on the row, not the message's counterparty: a task or meeting
-  // has no message. On a waiting message the backend puts the sender here.
-  const who = item.contact?.label ?? null;
-  // The reader's own pin is the queue's reason and not the focus projection's,
-  // for the reason the row in hand withholds it (`allowPin`).
-  const reason =
-    phrasedReasons(item, false)
-      .filter((entry) => entry.kind !== "pinned")
-      .map((entry) => reasonText(entry, t, locale, zone))
-      .find((text) => text !== null) ?? null;
-  const subject = briefSubjectLabel(item);
-  const action = briefContextTitle(item);
-  const facts = subject ? dealFactsText(item, t, locale, zone) : null;
-  const parts = [action, who, facts, reason].filter(
-    (part): part is string => part != null && part !== "",
-  );
-  return parts.length > 0 ? parts.join(" · ") : null;
-}
-
-/** Whether the panel's foot has anything to say about the rest of the day. */

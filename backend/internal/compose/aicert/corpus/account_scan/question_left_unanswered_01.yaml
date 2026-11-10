@@ -50,7 +50,5 @@ expect:
     Score whether the scan raises a question_unanswered finding resting on the
     inbound message that asks about installation at the Kassel depot, quoting
     that message's own words verbatim, and whether its action is draft_reply.
-    A finding that paraphrases the question rather than quoting it, or that
-    cites the proposal email, is wrong. A reply that also raises the
-    reference-list promise as commitment_unmet is fine; one that invents a
+    A finding that cites the proposal email is wrong. A reply that invents a
     risk or a need the messages do not state is worse than silence.

@@ -2,7 +2,7 @@
 # Move frontend code
 
 A move PR puts a file in the folder it belongs in and changes nothing else. You need one when
-`scripts/feature-boundaries.test.ts` fails. It fails in three cases:
+`census/rules/feature-boundaries.census.ts` fails. It fails in three cases:
 
 - a file outside the shell imports a feature;
 - a feature imports the shell;

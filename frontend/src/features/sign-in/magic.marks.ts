@@ -29,6 +29,8 @@ export function markKind(line: MagicLine): MarkKind | null {
       return null;
     case "done":
       return line.actor.type === "agent" ? "agent" : "sync";
+    default:
+      return null;
   }
 }
 

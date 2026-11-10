@@ -21,6 +21,15 @@ func sameAddressSQL(column, param string) string {
 	return "lower(" + column + ") = lower(" + param + ")"
 }
 
+// requestCoversSQL is true when a request covers the recipient address in
+// param. NULL in column is a request recorded on this record, which covers all
+// of its addresses. A list is what a merge left: the addresses of the record
+// the request was made on. So a wrong merge never lends it to the other human's
+// addresses. An empty recipient address (a channel) matches no list.
+func requestCoversSQL(column, param string) string {
+	return "(" + column + " IS NULL OR lower(" + param + "::text) = ANY(" + column + "))"
+}
+
 // AddressHasSubject reports whether any contact or lead holds the address,
 // archived or promoted ones included. Such an address must go to the gate,
 // which answers only for live subjects and refuses the rest.

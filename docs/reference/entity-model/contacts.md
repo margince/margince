@@ -204,7 +204,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `admission_reason_code` | `text` |  |  |
 | `admission_reason_coded_at` | `timestamp with time zone` |  |  |
 | `admission_sender_kind` | `text` |  |  |
-| `admission_source` | `text` |  | One of `verdict`, `heuristic`, `human`. |
+| `admission_source` | `text` |  | One of `verdict`, `heuristic`, `human`, `agent`. |
 | `attempts` | `integer`, default `0` | yes |  |
 | `candidate_company_id` | `uuid` |  | Points at `company.id`. |
 | `company_id` | `uuid` |  | Points at `company.id`. |
@@ -219,7 +219,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `site_unreadable` | `boolean`, default `false` | yes |  |
 | `status` | `text`, default `'pending'::text` | yes | One of `pending`, `company`, `personal`, `provider`, `no_site`. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
-| `source` | `text` |  | One of `site_read`, `heuristic`, `human`. |
+| `source` | `text` |  | One of `site_read`, `heuristic`, `human`, `agent`. |
 | `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |
 
 **Points at**
@@ -235,12 +235,12 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 - `company_domain_disposition_admission_check`: `CHECK (((admission IS NULL) OR (admission = ANY (ARRAY['suppressed', 'admitted']))))`
 - `company_domain_disposition_admission_shape`: `CHECK ((((admission IS NULL) AND (admission_reason IS NULL) AND (admission_source IS NULL) AND (admission_at IS NULL)) OR ((admission IS NOT NULL) AND (admission_reason IS NOT NULL) AND (admission_source IS NOT NULL) AND (admission_at IS NOT NULL))))`
-- `company_domain_disposition_admission_source_check`: `CHECK (((admission_source IS NULL) OR (admission_source = ANY (ARRAY['verdict', 'heuristic', 'human']))))`
+- `company_domain_disposition_admission_source_check`: `CHECK (((admission_source IS NULL) OR (admission_source = ANY (ARRAY['verdict', 'heuristic', 'human', 'agent']))))`
 - `company_domain_disposition_domain_check`: `CHECK (((domain = lower(domain)) AND (domain <> '')))`
 - `company_domain_disposition_pending_reason_check`: `CHECK (((pending_reason IS NULL) OR (pending_reason = ANY (ARRAY['unevidenced', 'stale_evidence', 'near_duplicate', 'forwarded_identity', 'vendor_verdict', 'reserved_domain']))))`
 - `company_domain_disposition_pending_reason_shape`: `CHECK (((pending_reason IS NULL) OR ((status = 'pending') AND (admission IS DISTINCT FROM 'suppressed'))))`
 - `company_domain_disposition_settled_shape`: `CHECK ((((status = 'pending') AND (source IS NULL)) OR ((status = 'company') AND (source IS NOT NULL) AND (company_id IS NOT NULL)) OR ((status = ANY (ARRAY['personal', 'provider', 'no_site'])) AND (source IS NOT NULL))))`
-- `company_domain_disposition_source_check`: `CHECK (((source IS NULL) OR (source = ANY (ARRAY['site_read', 'heuristic', 'human']))))`
+- `company_domain_disposition_source_check`: `CHECK (((source IS NULL) OR (source = ANY (ARRAY['site_read', 'heuristic', 'human', 'agent']))))`
 - `company_domain_disposition_status_check`: `CHECK ((status = ANY (ARRAY['pending', 'company', 'personal', 'provider', 'no_site'])))`
 
 **Indexes**
@@ -567,7 +567,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## contact
 
-35 columns · primary key `(id)` · referenced by 49 foreign keys
+38 columns · primary key `(id)` · referenced by 49 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -578,7 +578,10 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `address_line2` | `text` |  |  |
 | `address_postal_code` | `text` |  |  |
 | `address_region` | `text` |  |  |
+| `anonymized_address_hashes` | `text[]` |  |  |
+| `anonymized_address_key_id` | `text` |  |  |
 | `converted_from_lead_id` | `uuid` |  | Canonical origin pointer if promoted from a lead. |
+| `created_from_activity_id` | `uuid` |  | The note, mail or quick capture this contact was read out of, where one was named at creation. |
 | `entered_at` | `timestamp with time zone`, default `now()` | yes |  |
 | `first_name` | `text` |  |  |
 | `full_name` | `text` | yes | Always present (display name). |
@@ -612,6 +615,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 | Columns | Table | When the parent goes |
 |---|---|---|
 | `converted_from_lead_id` | `lead` | deleting the parent keeps this row and clears the link |
+| `created_from_activity_id` | `activity` | deleting the parent keeps this row and clears the link |
 | `merged_into_id` | `contact` | deleting the parent keeps this row and clears the link |
 | `owner_id` | `app_user` | deleting the parent keeps this row and clears the link |
 | `source_author_id` | `app_user` | deleting the parent keeps this row and clears the link |
@@ -631,19 +635,24 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 **Indexes**
 
+- `contact_confidentiality_hold_ix`: `btree (id) WHERE (narrowing_reason = 'confidentiality_hold')`
 - `contact_pkey`: `unique, btree (id)`
+- `idx_contact_created_from`: `btree (created_from_activity_id) WHERE (created_from_activity_id IS NOT NULL)`
 - `idx_contact_created_keyset`: `btree (created_at DESC, id DESC) WHERE (archived_at IS NULL)`
 - `idx_contact_dedupe_scan`: `btree (updated_at, id) WHERE (archived_at IS NULL)`
 - `idx_contact_exact_digraph_name_key`: `btree (btrim(regexp_replace(replace(f_fold_apostrophes(lower(replace(replace(replace(NORMALIZE(lower(full_name), NFC), 'ä', 'ae'), 'ö', 'oe'), 'ü', 'ue'))), 'ς', 'σ'), '\s+', ' ', 'g'))) WHERE (archived_at IS NULL)`
 - `idx_contact_exact_name_key`: `btree (btrim(regexp_replace(replace(f_fold_apostrophes(lower(full_name)), 'ς', 'σ'), '\s+', ' ', 'g'))) WHERE (archived_at IS NULL)`
 - `idx_contact_from_lead`: `btree (converted_from_lead_id) WHERE (converted_from_lead_id IS NOT NULL)`
+- `idx_contact_keyed_address_hashes`: `btree (anonymized_address_key_id) WHERE (anonymized_address_key_id IS NOT NULL)`
 - `idx_contact_last_activity_keyset`: `btree (last_activity_at DESC NULLS LAST, created_at DESC, id DESC) WHERE (archived_at IS NULL)`
 - `idx_contact_merged_into`: `btree (merged_into_id) WHERE (merged_into_id IS NOT NULL)`
 - `idx_contact_name_keyset`: `btree ("left"(full_name, 256), created_at DESC, id DESC) WHERE (archived_at IS NULL)`
 - `idx_contact_name_keyset_desc`: `btree ("left"(full_name, 256) DESC NULLS LAST, created_at DESC, id DESC) WHERE (archived_at IS NULL)`
 - `idx_contact_name_trgm`: `gin (f_fold_apostrophes(lower(full_name)) gin_trgm_ops)`
+- `idx_contact_name_trigram_candidates`: `btree (hash_array_extended(show_trgm(f_fold_apostrophes(lower(full_name))), (0)::bigint), id) WHERE (archived_at IS NULL)`
 - `idx_contact_owner`: `btree (owner_id) WHERE (archived_at IS NULL)`
 - `idx_contact_search`: `gin (search_tsv)`
+- `idx_contact_unkeyed_address_hashes`: `btree (id) WHERE ((anonymized_address_hashes IS NOT NULL) AND (anonymized_address_key_id IS NULL))`
 - `idx_contact_updated_keyset`: `btree (updated_at DESC NULLS LAST, created_at DESC, id DESC) WHERE (archived_at IS NULL)`
 - `uq_contact_source`: `unique, btree (source_system, source_id) WHERE ((source_system IS NOT NULL) AND (source_id IS NOT NULL))`
 
@@ -656,7 +665,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## contact_acquisition_evidence
 
-10 columns · primary key `(id)` · referenced by 1 foreign key
+13 columns · primary key `(id)` · referenced by 1 foreign key
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -667,6 +676,9 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `note` | `text` |  |  |
 | `occurred_at` | `timestamp with time zone` |  |  |
 | `purpose_claimed` | `text` |  |  |
+| `recorded_for_addresses` | `text[]` |  |  |
+| `request_retracted_at` | `timestamp with time zone` |  |  |
+| `request_retracted_by` | `text` |  |  |
 | `source_entity_id` | `uuid` |  |  |
 | `source_entity_type` | `text` |  |  |
 | `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
@@ -789,17 +801,18 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 **Indexes**
 
 - `contact_email_pkey`: `unique, btree (id)`
-- `idx_contact_email_base`: `btree (regexp_replace(lower(email), '^([^+@]+)\+[^@]*@', '\1@')) WHERE (archived_at IS NULL)`
 - `idx_contact_email_contact`: `btree (contact_id)`
 - `idx_contact_email_correspondence`: `btree (email) WHERE (from_correspondence AND (archived_at IS NULL))`
 - `idx_contact_email_dedupe_scan`: `btree (updated_at, id)`
 - `idx_contact_email_domain_reversed`: `btree (reverse(email_domain_folded) COLLATE "C") WHERE (archived_at IS NULL)`
+- `idx_contact_email_mailbox_base`: `btree (( CASE WHEN (regexp_replace(btrim(lower(email)), '^([^+@]+)\+[^@]*@', '\1@') ~ '^[^@]*@(gmail|googlemail)\.com$') THEN (replace(regexp_replace(regexp_replace(btrim(lower(email)), '^([^+@]+)\+[^@]*@', '\1@'), '@(gmail|googlemail)\.com$', ''), '.', '') || '@gmail.com') ELSE regexp_replace(btrim(lower(email)), '^([^+@]+)\+[^@]*@', '\1@') END)) WHERE (archived_at IS NULL)`
 - `idx_contact_email_trgm`: `gin (f_fold_apostrophes(lower(email)) gin_trgm_ops) WHERE (archived_at IS NULL)`
 - `uq_contact_email_dedupe`: `unique, btree (email) WHERE (archived_at IS NULL)`
 - `uq_contact_email_primary`: `unique, btree (contact_id, email_type) WHERE (is_primary AND (archived_at IS NULL))`
 
 **Triggers**
 
+- `bind_requests_on_address_move`: `BEFORE UPDATE OF contact_id FOR EACH ROW WHEN ((old.contact_id IS DISTINCT FROM new.contact_id)) EXECUTE FUNCTION bind_requests_on_address_move()`
 - `settlement_evidence_share`: `BEFORE INSERT OR DELETE OR UPDATE FOR EACH ROW EXECUTE FUNCTION settlement_evidence_share_contact_email()`
 - `trg_contact_email_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
 
@@ -941,27 +954,41 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## contact_signature_enrich_state
 
-5 columns · primary key `(contact_id)` · referenced by 0 foreign keys
+11 columns · primary key `(contact_id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
-| `activity_id` | `uuid` | yes | Points at `activity.id`. |
-| `attempted_at` | `timestamp with time zone`, default `now()` | yes |  |
+| `activity_id` | `uuid` |  | Points at `activity.id`. |
+| `attempted_at` | `timestamp with time zone`, default `now()` |  |  |
 | `contact_id` | `uuid` | yes | Points at `contact.id`. |
+| `deferred_run_id` | `uuid` |  | Points at `capture_backfill.id`. |
+| `due_at` | `timestamp with time zone`, default `now()` | yes |  |
 | `history_depth` | `smallint` |  |  |
-| `last_activity_at` | `timestamp with time zone` | yes |  |
+| `last_activity_at` | `timestamp with time zone` |  |  |
+| `live_generation` | `bigint`, default `0` | yes |  |
+| `processed_generation` | `bigint`, default `0` | yes |  |
+| `read_snapshot` | `pg_snapshot` |  |  |
+| `requested_generation` | `bigint`, default `0` | yes |  |
 
 **Points at**
 
 | Columns | Table | When the parent goes |
 |---|---|---|
-| `activity_id` | `activity` | deleting the parent deletes this row |
+| `activity_id` | `activity` | deleting the parent keeps this row and clears the link |
 | `contact_id` | `contact` | deleting the parent deletes this row |
+| `deferred_run_id` | `capture_backfill` | deleting the parent keeps this row and clears the link |
+
+**Rules**
+
+- `signature_work_generations`: `CHECK (((processed_generation >= 0) AND (requested_generation >= processed_generation) AND (live_generation >= 0) AND (live_generation <= requested_generation)))`
 
 **Indexes**
 
 - `contact_signature_enrich_state_pkey`: `unique, btree (contact_id)`
 - `idx_contact_signature_enrich_state_activity`: `btree (activity_id)`
+- `idx_signature_live_work_due`: `btree (due_at, contact_id) WHERE ((requested_generation > processed_generation) AND (live_generation > processed_generation))`
+- `idx_signature_work_deferred`: `btree (deferred_run_id) WHERE (deferred_run_id IS NOT NULL)`
+- `idx_signature_work_due`: `btree (due_at, contact_id) WHERE ((requested_generation > processed_generation) AND (live_generation <= processed_generation) AND (deferred_run_id IS NULL))`
 
 ## contact_social
 
@@ -1231,7 +1258,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `partner_accepted_by` | `text` |  | Who accepted the lead for its partner. |
 | `partner_company_id` | `uuid` |  | The partner company that referred this lead. |
 | `phone` | `text` |  | E.164, as a contact's number is. |
-| `product_id` | `uuid` |  | Points at `product.id`. |
+| `product_id` | `uuid` |  | The product the lead is interested in, set by hand or by the web form that captured it. |
 | `project_id` | `uuid` |  | The body of work this lead belongs to; a lead has at most one. |
 | `promoted_at` | `timestamp with time zone` |  |  |
 | `promoted_contact_id` | `uuid` |  | Set on promotion (convenience mirror). |
@@ -1503,7 +1530,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## legal_entity
 
-29 columns · primary key `(id)` · referenced by 3 foreign keys
+29 columns · primary key `(id)` · referenced by 5 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -2162,6 +2189,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 **Rules**
 
+- `technical_lookup_cache_expires_after_creation`: `CHECK ((expires_at > fetched_at))`
 - `technical_lookup_cache_kind_check`: `CHECK ((record_kind = ANY (ARRAY['mx', 'txt', 'dmarc', 'dkim', 'address', 'cname', 'reverse', 'certlog'])))`
 
 **Indexes**

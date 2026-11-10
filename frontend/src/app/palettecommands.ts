@@ -1,6 +1,9 @@
 import { useMemo } from "react";
 import { SCHEDULED_SCREEN } from "../features/mail/scheduledqueue";
-import { useVisibleSettingsPages } from "../features/settings/settingsnav";
+import {
+  useOpensSettingsTab,
+  useVisibleSettingsPages,
+} from "../features/settings/settingsnav";
 import { settingsPageKeywords } from "../features/settings/settingssearch";
 import { useLocale, useT } from "../i18n";
 import { useCompanyContextShown } from "../lib/companycontextreach";
@@ -19,6 +22,7 @@ export function useBuiltinCommands(): Command[] {
   const { locale } = useLocale();
   const visible = useVisibleSettingsPages();
   const seesCompanyContext = useCompanyContextShown();
+  const opensTab = useOpensSettingsTab();
   return useMemo(() => {
     const screens: Command[] = NAV.map((item) => ({
       id: `screen:${item.screen}`,
@@ -53,12 +57,12 @@ export function useBuiltinCommands(): Command[] {
       label: t(`settings.tab.${page.id}`),
       keywords: [
         page.id,
-        ...settingsPageKeywords(page.id, t, { seesCompanyContext }),
+        ...settingsPageKeywords(page.id, t, { seesCompanyContext, opensTab }),
         ...(page.id === "company" && seesCompanyContext
           ? [t("settings.companyRefresh")]
           : []),
       ],
-      type: "screen",
+      type: "setting",
       route: settingsHref(page.id),
     }));
     const offRailScreens: Command[] = [
@@ -77,5 +81,5 @@ export function useBuiltinCommands(): Command[] {
       ...offRailScreens,
       ...settingsScreens,
     ];
-  }, [t, visible, locale, seesCompanyContext]);
+  }, [t, visible, locale, seesCompanyContext, opensTab]);
 }

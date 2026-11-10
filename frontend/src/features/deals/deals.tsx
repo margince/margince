@@ -9,7 +9,7 @@ export {
   type StageTotals,
 } from "../../lib/deals.queries";
 export { buildColumns } from "./deals.columns";
-export { DealScreen, useDeal } from "./deals.detail";
+export { DealScreen } from "./deals.detail";
 export { DealDetails } from "./deals.details";
 export { dealEditFields, usePartnerOptions } from "./deals.fields";
 export { DealsScreen } from "./deals.list";

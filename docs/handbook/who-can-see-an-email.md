@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/capture/connection-settings.tsx frontend/src/components/mail-sharing.tsx frontend/src/features/capture/emailaccesseditor.tsx frontend/src/features/capture/held-threads.tsx backend/internal/modules/capture/mailposture.go backend/internal/modules/capture/sinkaudience.go backend/internal/modules/activities/audience.go backend/internal/modules/activities/audienceholds.go backend/internal/compose/readerrendering -->
+<!-- describes: frontend/src/features/capture/connection-settings.tsx frontend/src/components/mail-sharing.tsx frontend/src/features/capture/emailaccesseditor.tsx frontend/src/features/capture/held-threads.tsx backend/internal/modules/capture/mailposture.go backend/internal/modules/capture/sinkaudience.go backend/internal/modules/activities/audience.go backend/internal/modules/activities/audienceholds.go backend/internal/compose/readerrendering frontend/src/features/settings/internalmailsettings.tsx frontend/src/features/settings/internalmailhistoryscope.tsx frontend/src/features/capture/internalmailhistorychoice.tsx backend/internal/modules/capture/internalmailpolicy.go backend/internal/modules/capture/internalmailcapture.go backend/internal/modules/capture/internalmailhistory.go backend/internal/modules/activities/internalmail.go -->
 # Who can see an email
 
 Two things decide who can read an email in Margince, and **a "no" from either is a
@@ -48,10 +48,52 @@ To see who can read an email in Margince, open the message from a timeline. The 
 - **Shared**: "Everyone in the company can read this."
 - **Team**: "Everyone who can open the records this is filed against can read it."
 - **Participants**: only those on the message can read it.
-- **Selected**: only the colleagues and teams named under it.
+- **Selected**: the named colleagues and teams. Internal mail about work names colleagues only, and the participants on that message keep access.
 - **Withheld**: you are not one of them, so the text is hidden from you.
 
 Also called: email privacy, who can read my mail, email permissions.
+
+In Settings, **Mail not shared with the team** is a place to find and correct a sharing decision.
+Leaving mail unshared needs no action. Search by subject or participant, narrow the dates or reason,
+then open a message to see who can read it and change sharing. Another owner's hold still applies.
+
+**Sender decisions** works the same way: find an address, name or domain, then correct the decision.
+**My overrides** shows your own choices. Removing an override does not restore mail already destroyed.
+
+## Mail between colleagues
+
+Mail between colleagues is not kept by default. An admin can turn on
+**Internal operational mail** in **Settings → Mail capture**. Choose the
+mail connections, then **Choose folders** where a source needs a smaller set.
+Use **Save** to apply the choices. The mailbox still needs its own grant from
+its mail service. The admin must arrange the right approval and staff notice;
+the switch does not check those for them.
+
+New mail from those sources starts with **Participants** access. A participant
+can open one message, choose **Selected**, and name the colleagues who may read
+it. The participants on the message keep access. The choice replaces the named
+readers of that message.
+
+It does not share a thread or give a team access.
+Other members see no message or count. A link to a company, deal or project
+does not change that. This mail adds no contact and is not proof of a client
+reply or a reason to write to a client.
+
+Capture starts with mail received after the source was chosen. To approve an
+older range, select the option to allow a separate internal history import.
+Then set the first date in the field below it.
+That choice starts no import. The mailbox owner opens **Import older email**,
+reads the scope, and chooses **Include authorized internal mail in a new history
+import** before **Start import**. An ordinary history import still leaves
+internal mail out.
+
+The usual import windows and mail rules still apply.
+
+Turning capture off or removing a source stops new internal mail. Stored mail
+keeps its reader limits and the usual privacy rules for files, removal and
+retention. A changed mailbox grant needs a new **Save** before capture starts
+again. **Junk**, **Deleted** and **Drafts** stay out. Meetings keep their usual
+rules.
 
 ## The audience marks
 
@@ -114,7 +156,10 @@ A held Margince message carries a reason, so you can see why it is held:
 
 A later verdict clears some of these and not others:
 
-- **Held until checked** clears once Margince has sorted the thread.
+- **Held until checked** clears once Margince has sorted the thread. It stays
+  on a thread with an attached file Margince could not read, such as a scan,
+  because nobody knows what that file holds. The mailbox owner can still choose
+  **Share with the company**.
 - **Kept private** stays. Only your decision or your agent's sets it, and nothing
   automatic changes it.
 - **Held: counterparty mail** and **Marked confidential** both win over a later
@@ -163,8 +208,8 @@ offers to narrow what is already captured. It never opens up captured mail; to
 open older mail, share its threads one by one.
 
 ### How do I turn email sharing off for the whole company?
-To turn email sharing off for everyone in Margince, an administrator opens **Settings → Capture rules**. In the **Mail sharing and sync** card, they switch off **Share captured mail with the team**.
-1. Open **Settings**, then **Capture rules**.
+To turn email sharing off for everyone in Margince, an administrator opens **Settings → Mail capture**. In the **Mail sharing and sync** card, they switch off **Share captured mail with the team**.
+1. Open **Settings**, then **Mail capture**.
 2. In **Mail sharing and sync**, switch **Share captured mail with the team** off and save.
 
 From then on, only those on each message can see new mail. The card warns: "With email sharing off, the CRM is hard to use".
@@ -173,7 +218,7 @@ Only an administrator or an Ops user can change this.
 
 ## The company-wide floor
 
-**Settings → Capture rules → Mail sharing and sync** decides whether captured mail is
+**Settings → Mail capture → Sharing and sync** decides whether captured mail is
 shared with colleagues at all. It is on by default.
 
 When it is off, every message captured from then on is held to those on it,
@@ -203,12 +248,12 @@ It holds mail from then on, and lifting it opens nothing again: "Lifting applies
 to new mail. Mail already held stays held."
 
 ### How do I share an email thread with my team?
-To share an email thread in Margince, open the captured message from a timeline and choose **Share with the company** beside its visibility mark. Or use **Share with the team** in **Settings → Capture activity → Held threads**.
+To share an email thread in Margince, open the captured message from a timeline and choose **Share with the company** beside its visibility mark. Or use **Share with the team** in **Settings → Connections → Activity → Held threads**.
 1. On a contact, company or deal timeline, open the email.
 2. Beside the mark under the subject, press **Share with the company**. It "Applies to the whole thread."
 3. To go back, press **Make private**.
 
-Or press **Share with the team** on the thread under **Settings → Capture activity → Held threads**.
+Or press **Share with the team** on the thread under **Settings → Connections → Activity → Held threads**.
 Only the mailbox owner can share. If a colleague also holds it, you see how many other seats still do.
 Also called: release an email, unhide a thread, make an email public.
 
@@ -261,8 +306,8 @@ never shows mail from another seat's own mailbox.
 | What you want | Where |
 |---|---|
 | This mailbox's posture | Settings → Connections → Mail visibility |
-| The company-wide floor | Settings → Capture rules → Mail sharing and sync |
+| The company-wide floor | Settings → Mail capture → Sharing and sync |
 | Hold mail with one contact or company | Private correspondence, on the contact's or company's page |
-| Share one thread | The message itself, or Settings → Capture activity → Held threads |
+| Share one thread | The message itself, or Settings → Connections → Activity → Held threads |
 | One logged message's audience | Change visibility, under More actions on its row |
 | Who can see the *record* | The contact or company header |

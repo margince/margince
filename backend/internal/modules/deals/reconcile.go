@@ -38,6 +38,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/meetingoutcome"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
@@ -178,8 +179,9 @@ type followUpCandidate struct {
 // (occurredday.BegunSQL), not from its stored noon.
 //
 // A meeting is evidence only once it is over, the waiting queue's reading: a
-// meeting running right now is not yet a touch to reconcile. It must also have
-// taken place, since storekit.MeetingIsOverSQL calls a canceled one over too.
+// meeting running right now is not yet a touch to reconcile. It must also be
+// recorded held (meetingoutcome.HeldSQL): storekit.MeetingIsOverSQL calls a
+// canceled one over too, and a past meeting nobody reported is no conversation.
 //
 // Extracted from reconcileWorkspace so the statement, its two bounds and the
 // reason for them sit together rather than being read past on the way to the
@@ -212,6 +214,9 @@ func reconcileCandidatesSQL(ctx context.Context, tx pgx.Tx, now time.Time) (stri
 			  AND %[5]s
 			  AND %[4]s
 			  AND (a.kind <> 'meeting' OR (%[1]s AND %[3]s))
+			  -- A call grounds a follow-up only when it reached somebody: a
+			  -- voicemail is no conversation to follow up on.
+			  AND (a.kind <> 'call' OR %[6]s)
 			ORDER BY a.occurred_at DESC, a.id DESC
 			LIMIT 1
 		) ev ON true
@@ -221,9 +226,10 @@ func reconcileCandidatesSQL(ctx context.Context, tx pgx.Tx, now time.Time) (stri
 		LIMIT $2`,
 		storekit.MeetingIsOverSQL("a", "$3"),
 		OpenNextStepSQL("d.id", "$3", current),
-		relstrength.MeetingCountsSQL("a"),
+		meetingoutcome.HeldSQL("a"),
 		occurredday.BegunSQL("a", "$3"),
-		occurredday.FromSQL("a", "$1")), args, nil
+		occurredday.FromSQL("a", "$1"),
+		relstrength.CallCountsSQL("a")), args, nil
 }
 
 func (r *FollowUpReconciler) reconcileWorkspace(ctx context.Context) error {

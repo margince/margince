@@ -377,9 +377,9 @@ export const ATaskBeingHandedOn: Story = {
 
 // The five sources the row could draw and no story showed.
 //
-// Each is drawn from the shape its own producer emits, so the story is a
-// picture of what a reader actually meets rather than of a fixture invented
-// here. Held by TestEverySourceHasARowStory in worklist.storycensus.test.ts,
+// Each is drawn from the shape its own producer emits. So the story is a
+// picture of what a reader meets rather than of a fixture invented here.
+// Held by TestEverySourceHasARowStory in census/rules/worklist.storycensus.census.ts,
 // which fails when a source the queue can draw has no story naming it.
 
 // A brief item: the overnight ranking's pick, with the three verbs it carries.
@@ -537,6 +537,29 @@ export const ACalendarThatStopped: Story = {
       consequence: "mailbox_blind",
       kind: "reauth_required",
       connection: { provider: "gcal", medium: "calendar" },
+      because: [],
+      actions: [],
+    },
+  },
+  render: (args) => {
+    stubRow(false);
+    return <WorklistRow {...args} />;
+  },
+};
+
+// A used booking page that takes no bookings. Its title names the blocker, and
+// the row opens the booking settings, where the host fixes it.
+export const ABookingPageThatIsPaused: Story = {
+  args: {
+    ...baseArgs,
+    item: {
+      occurred_precision: "instant",
+      id: "bh1",
+      source: "booking_health",
+      category: "system",
+      level: 6,
+      consequence: "work_blocked",
+      kind: "calendar_read_only",
       because: [],
       actions: [],
     },
@@ -865,34 +888,6 @@ export const TheRowInHand: Story = {
 // the FOLD, holding the reasons past the third together with why this row beat
 // the one below it — one press for a reader who disagrees with the order, and
 // no line of height for the many who do not.
-// One open customer-support review: its task and the deal's quiet row fold
-// into this one row, which stays while the review is open.
-export const ADealUnderReview: Story = {
-  args: {
-    ...baseArgs,
-    item: {
-      occurred_precision: "instant",
-      id: "01a05500-0000-7000-8000-0000000000db",
-      source: "deal_review",
-      category: "deals_at_risk",
-      level: 4,
-      consequence: "deal_drifts",
-      title: "Turbinenbau retrofit",
-      because: [{ kind: "quiet_days", value: { kind: "days", days: 196 } }],
-      actions: ["open"],
-      subject: {
-        type: "deal",
-        id: "01a05500-0000-7000-8000-0000000000da",
-        label: "Turbinenbau retrofit",
-      },
-    },
-  },
-  render: (args) => {
-    stubRow(false);
-    return <WorklistRow {...args} />;
-  },
-};
-
 export const ADealAtRiskWithItsFigures: Story = {
   args: {
     ...baseArgs,

@@ -34,13 +34,13 @@ import (
 
 // planSystem is this site's prompt.
 const planSystem = `You prepare a salesperson for one meeting, from a JSON briefing about it.
-Return ONLY a JSON object: {"objective":{"text":"...","evidence":[{"entity_type":"activity|deal|contact","entity_id":"..."}]},"opening":{...},"top_risk":{"text":"...","evidence":[...],"say":"...","show":"...","avoid":"..."},"likely_asks":[{"question":"...","basis":"...","evidence":[...],"relevance":"high|medium|low","prepare":"..."}],"questions":[{"ask":"...","why":"...","listen_for":"...","evidence":[...]}],"scenarios":[{"label":"...","play":"...","evidence":[...]}]}.
+Return ONLY a JSON object: {"objective":{"text":"...","evidence":[{"entity_type":"activity|deal|contact","entity_id":"<the record's ref, such as a1>"}]},"opening":{...},"top_risk":{"text":"...","evidence":[...],"say":"...","show":"...","avoid":"..."},"likely_asks":[{"question":"...","basis":"...","evidence":[...],"relevance":"high|medium|low","prepare":"..."}],"questions":[{"ask":"...","why":"...","listen_for":"...","evidence":[...]}],"scenarios":[{"label":"...","play":"...","evidence":[...]}]}.
 Write every word from the briefing and from nothing else. Never invent a fact, a name, a date or a number. If the briefing does not say it, do not write it.
 Each message says whether it is on this meeting's deal ("on_this_deal"), or names the other deal it is filed under and that deal's state. The objective and the opening serve this meeting's deal. A conversation about another deal is background only. Name a deal whose state is "lost" as lost and a "won" one as won, never as a live opportunity.
 Quote what contacts actually asked for. A question that would read the same about any other company is worthless — name the thing this account said, in their words where the briefing has them.
-Cite the ids the briefing gave you, in evidence only. An id must never appear in the text a reader sees.
-"opening" has the same shape as "objective", and every "evidence" list in every field holds objects shaped exactly as in "objective" — {"entity_type":...,"entity_id":...} — never a bare id string.
-Do not write the unknowns: the briefing lists what the record does not say, and that list is not yours to add to.
+Cite the refs the briefing gave you, in evidence only. A ref must never appear in the text a reader sees.
+"opening" has the same shape as "objective", and every "evidence" list in every field holds objects shaped exactly as in "objective" — {"entity_type":...,"entity_id":...} — never a bare ref string.
+The briefing's what_the_record_does_not_say list is already shown to the reader beside your plan: never copy its questions into yours, and add nothing to it.
 At most five likely asks, five questions and three scenarios. Three good questions beat five ordinary ones.
 Never open with "Absolutely", "Great question", "I'd be happy to", "Based on the provided context", or any greeting. No exclamation marks. No praise.
 Say plainly when something is uncertain rather than filling the gap. Omit a field you have nothing real for.
@@ -176,11 +176,12 @@ func promptMessageOf(excerpt ExcerptIn, row HistoryIn) PromptMessage {
 // reason BriefRequest is: a certification case must issue the request
 // production issues, or it measures a copy that stays green through the change
 // that breaks the original.
-func PlanRequest(prompt PlanPrompt, lang string) model.Request {
+func PlanRequest(in Input, floor Plan, lang string) model.Request {
 	fence := promptfence.New()
+	prompt := encodePlanPrompt(planPromptOf(in, floor))
 	return model.Request{
 		System:         planSystemFor(fence, lang),
-		Messages:       []model.Message{{Role: "user", Content: fence.Wrap(encodePlanPrompt(prompt))}},
+		Messages:       []model.Message{{Role: "user", Content: fence.Wrap(planRefs(in, floor).Show(prompt))}},
 		MaxTokens:      ai.ReasoningOutputMaxTokens,
 		SecretStripper: ai.NewSecretStripper(),
 	}

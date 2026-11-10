@@ -56,9 +56,8 @@ func TestATurnIsBoundedTheSameWhoeverWroteIt(t *testing.T) {
 	}
 }
 
-// A model asked for a follow-up invents a subject. The thread's own subject
-// is what the recipient's client groups the mail under, so code sets it.
-func TestAFollowUpOnAThreadOnlyWeWroteKeepsTheThreadSubject(t *testing.T) {
+// A new message keeps its own subject even when only our side has written.
+func TestANewMessageKeepsItsSubjectWithOutboundHistory(t *testing.T) {
 	at := func(hours int) time.Time { return draftedAt.Add(-time.Duration(hours) * time.Hour) }
 	view := viewWith(
 		mail(crmcontracts.ActivityDirectionOutbound, at(48), "Pricing for 40 seats"),
@@ -71,17 +70,8 @@ func TestAFollowUpOnAThreadOnlyWeWroteKeepsTheThreadSubject(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if draft.Subject != "Re: Pricing for 40 seats" {
-		t.Errorf("served subject %q, want the thread's subject behind one reply prefix", draft.Subject)
+	if draft.Subject != "Quick follow-up" {
+		t.Errorf("served subject %q, want the new message's subject", draft.Subject)
 	}
-	if !in.ContinuesThread() || in.Threaded() {
-		t.Errorf("ContinuesThread = %v and Threaded = %v, want true and false: only our side wrote", in.ContinuesThread(), in.Threaded())
-	}
-}
 
-func TestADraftWithNoEmailThreadKeepsItsOwnSubject(t *testing.T) {
-	in := FromView(viewWith(task(draftedAt.Add(-time.Hour), "Call back")), Request{Envelope: envelopeAt(textlang.English, convstate.BandWeeks)})
-	if got := draftcore.ContinueThread("A fresh subject", in); got != "A fresh subject" {
-		t.Errorf("subject %q, want the model's own when there is no thread", got)
-	}
 }

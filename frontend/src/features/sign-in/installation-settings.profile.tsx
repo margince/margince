@@ -17,17 +17,11 @@ import {
   DrawerHead,
 } from "../../design-system/drawerbands";
 import { Heading } from "../../design-system/heading";
+import { LanguageSelect } from "../../design-system/languageselect";
 import { Select } from "../../design-system/select";
 import { formatNumber, identifierNumber, monthName } from "../../format/format";
 import { lockFor } from "../../format/settinglocks";
-import {
-  LOCALES,
-  type Locale,
-  localeNameKey,
-  useLocale,
-  usePlural,
-  useT,
-} from "../../i18n";
+import { LOCALES, type Locale, useLocale, usePlural, useT } from "../../i18n";
 import { useCurrencyNote } from "../../lib/installation-settings.currency";
 import { unwrap } from "../../lib/problem";
 import { fiscalYearLabel } from "./fiscalyear";
@@ -49,10 +43,8 @@ type ForwardMeasure = NonNullable<
 >;
 
 const FORWARD_MEASURES = [
-  "commit_evidence",
-  "qualified_commit_evidence",
+  "likely",
   "weighted",
-  "qualified_weighted",
   "manager_call",
 ] as const satisfies readonly ForwardMeasure[];
 
@@ -121,6 +113,7 @@ export function InstallationProfileDialog({
   const baseLanguage = lockOf("base_language");
   const fiscalYearStart = lockOf("fiscal_year_start_month");
   const forwardMeasure = lockOf("forecast_forward_measure");
+  const likelyThreshold = lockOf("forecast_likely_threshold");
   const { locale } = useLocale();
   const titleId = useId();
   const formId = useId();
@@ -220,32 +213,19 @@ export function InstallationProfileDialog({
               error={refused.get("base_language")}
             >
               {(control) => (
-                <Select
+                <LanguageSelect
                   {...control}
                   // `control.id` is spread through UNCHANGED: `Field` renders its
                   // label with `htmlFor` pointing at it, so replacing it would
                   // leave the combobox with no accessible name. The focus effect
                   // reads that same id back out of the DOM.
                   aria-describedby={describe(control)}
+                  languages={LOCALES}
                   value={draft.base_language}
                   disabled={!canManage || baseLanguage.disabled}
-                  // Language names are proper nouns and stay untranslated, so each
-                  // option is in a language other than the page's. WCAG 2.2 AA
-                  // 3.1.2 asks for `lang`, and our locale codes are its BCP 47 subtags.
-                  options={LOCALES.map((locale) => ({
-                    value: locale,
-                    label: t(localeNameKey(locale)),
-                    lang: locale,
-                  }))}
-                  // `Select` reports a string. Narrowing it back through LOCALES
-                  // makes it a locale without an assertion. It also drops an
-                  // answer the control was never offering.
-                  onChange={(next) => {
-                    const picked = LOCALES.find((locale) => locale === next);
-                    if (picked) {
-                      onChange({ ...draft, base_language: picked });
-                    }
-                  }}
+                  onChange={(picked) =>
+                    onChange({ ...draft, base_language: picked })
+                  }
                 />
               )}
             </Field>
@@ -329,6 +309,46 @@ export function InstallationProfileDialog({
                     if (picked) {
                       onChange({ ...draft, forecast_forward_measure: picked });
                     }
+                  }}
+                />
+              )}
+            </Field>
+          </div>
+
+          <div data-fact="forecast_likely_threshold">
+            <Field
+              label={t("installationSettings.likelyThreshold")}
+              hint={
+                likelyThreshold.disabled
+                  ? likelyThreshold.reason
+                  : t("installationSettings.likelyThreshold.help")
+              }
+              error={refused.get("forecast_likely_threshold")}
+            >
+              {(control) => (
+                <TextInput
+                  {...control}
+                  aria-describedby={describe(control)}
+                  ref={
+                    focus === "forecast_likely_threshold" ? asked : undefined
+                  }
+                  type="number"
+                  inputMode="numeric"
+                  min={1}
+                  max={100}
+                  step={1}
+                  value={String(draft.forecast_likely_threshold || "")}
+                  disabled={!canManage || likelyThreshold.disabled}
+                  // A cleared or broken entry is held as 0, which the server
+                  // refuses on this field, rather than being dropped unseen.
+                  onChange={(event) => {
+                    const percent = Number(event.target.value);
+                    onChange({
+                      ...draft,
+                      forecast_likely_threshold: Number.isFinite(percent)
+                        ? percent
+                        : 0,
+                    });
                   }}
                 />
               )}

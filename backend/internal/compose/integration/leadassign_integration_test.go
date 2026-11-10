@@ -69,13 +69,10 @@ func assignLead(actor context.Context, e *Env, id ids.LeadID, dest ids.UUID) err
 	return err
 }
 
-// A lead nobody owns is the queue every inbound lead lands in, and the whole
-// point of the queue is that somebody can take work out of it. Three seats,
-// three different answers, and the shape of each is what this asserts: a rep
-// may take an ownerless lead for THEMSELVES and hand it to nobody else; a
-// Team Lead may route one to their own team and no further; an admin may
-// place it anywhere a live human seat exists.
-func TestAnOwnerlessLeadIsAssignableWithinTheAssignersOwnReach(t *testing.T) {
+// Inbound leads land ownerless, and somebody must route them out. Any seat that
+// may update leads hands an ownerless lead, or one it may change, to any active
+// colleague. A lead the caller may not change stays with its owner.
+func TestALeadTheCallerMayChangeIsAssignableToAnyColleague(t *testing.T) {
 	e := Setup(t)
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, leadRepPerms())
 	manager := e.As(e.Rep2, []ids.UUID{e.Team1}, leadManagerPerms())
@@ -85,53 +82,53 @@ func TestAnOwnerlessLeadIsAssignableWithinTheAssignersOwnReach(t *testing.T) {
 		if err := assignLead(rep, e, id, e.Rep1); err != nil {
 			t.Fatalf("a rep assigning an ownerless lead to themselves → %v, want allowed", err)
 		}
-		got, err := e.Contacts.GetLead(rep, id, 0)
-		if err != nil {
-			t.Fatalf("reading the lead back: %v", err)
-		}
-		if got.OwnerId == nil || ids.UUID(*got.OwnerId) != e.Rep1 {
-			t.Errorf("owner after self-assignment = %v, want Rep1", got.OwnerId)
-		}
+		mustBeOwnedBy(rep, t, e, id, e.Rep1)
 	})
 
-	t.Run("a rep may not hand an ownerless lead to a teammate", func(t *testing.T) {
+	t.Run("a rep hands an ownerless lead to a teammate", func(t *testing.T) {
 		id := seedOwnerlessLead(t, e, "Rep Hands Off")
-		err := assignLead(rep, e, id, e.Rep2)
-		if !errors.As(err, new(*auth.AssigneeNotAllowedError)) {
-			t.Fatalf("a rep assigning an ownerless lead to a teammate → %v, want AssigneeNotAllowedError", err)
+		if err := assignLead(rep, e, id, e.Rep2); err != nil {
+			t.Fatalf("a rep assigning an ownerless lead to a teammate → %v, want allowed", err)
 		}
-		mustStayUnowned(t, e, id)
+		mustBeOwnedBy(rep, t, e, id, e.Rep2)
 	})
 
-	t.Run("a Team Lead routes an ownerless lead to a teammate", func(t *testing.T) {
+	t.Run("a rep hands their own lead to a colleague on another team", func(t *testing.T) {
+		id := seedOwnerlessLead(t, e, "Rep Passes On")
+		e.WsExec(t, `UPDATE lead SET owner_id = $1 WHERE id = $2`, e.Rep1, id.UUID)
+		if err := assignLead(rep, e, id, e.Rep3); err != nil {
+			t.Fatalf("a rep handing their own lead across teams → %v, want allowed", err)
+		}
+		mustBeOwnedBy(rep, t, e, id, e.Rep3)
+	})
+
+	t.Run("a rep may not take a colleague's lead off them", func(t *testing.T) {
+		id := seedOwnerlessLead(t, e, "Rep Overreaches")
+		e.WsExec(t, `UPDATE lead SET owner_id = $1 WHERE id = $2`, e.Rep3, id.UUID)
+		if err := assignLead(rep, e, id, e.Rep2); !errors.Is(err, apperrors.ErrPermissionDenied) {
+			t.Fatalf("a rep reassigning a lead they may not change → %v, want ErrPermissionDenied", err)
+		}
+		mustBeOwnedBy(rep, t, e, id, e.Rep3)
+	})
+
+	t.Run("a Team Lead routes an ownerless lead outside their own team", func(t *testing.T) {
 		id := seedOwnerlessLead(t, e, "Manager Routes")
-		if err := assignLead(manager, e, id, e.Rep1); err != nil {
-			t.Fatalf("a manager assigning an ownerless lead to a live teammate → %v, want allowed", err)
+		if err := assignLead(manager, e, id, e.Rep3); err != nil {
+			t.Fatalf("a manager assigning an ownerless lead to another team → %v, want allowed", err)
 		}
-		got, err := e.Contacts.GetLead(manager, id, 0)
-		if err != nil {
-			t.Fatalf("reading the lead back: %v", err)
-		}
-		if got.OwnerId == nil || ids.UUID(*got.OwnerId) != e.Rep1 {
-			t.Errorf("owner after the manager's assignment = %v, want Rep1", got.OwnerId)
-		}
+		mustBeOwnedBy(manager, t, e, id, e.Rep3)
 	})
+}
 
-	t.Run("a Team Lead may not route outside their own team", func(t *testing.T) {
-		id := seedOwnerlessLead(t, e, "Manager Overreaches")
-		err := assignLead(manager, e, id, e.Rep3)
-		if !errors.As(err, new(*auth.AssigneeNotAllowedError)) {
-			t.Fatalf("a manager assigning to a user on another team → %v, want AssigneeNotAllowedError", err)
-		}
-		mustStayUnowned(t, e, id)
-	})
-
-	t.Run("an admin places an ownerless lead anywhere", func(t *testing.T) {
-		id := seedOwnerlessLead(t, e, "Admin Places")
-		if err := assignLead(e.Admin(), e, id, e.Rep3); err != nil {
-			t.Fatalf("an admin assigning an ownerless lead across teams → %v, want allowed", err)
-		}
-	})
+func mustBeOwnedBy(reader context.Context, t *testing.T, e *Env, id ids.LeadID, want ids.UUID) {
+	t.Helper()
+	got, err := e.Contacts.GetLead(reader, id, 0)
+	if err != nil {
+		t.Fatalf("reading the lead back: %v", err)
+	}
+	if got.OwnerId == nil || ids.UUID(*got.OwnerId) != want {
+		t.Errorf("owner = %v, want %v", got.OwnerId, want)
+	}
 }
 
 // The destination is a seat, not a row in app_user. A suspended colleague, an
@@ -421,32 +418,37 @@ func TestBulkAssignRefusesAnIneligibleOwnerBeforeWritingAnything(t *testing.T) {
 	}
 }
 
-// A rep may take a lead for themselves and may not hand one to a colleague, in
-// bulk exactly as one at a time: the same gate answers, because the same
+// A rep hands a lead they may change to a colleague, and keeps off a
+// colleague's lead. Bulk answers as one at a time does, because the same
 // writer runs.
 func TestBulkAssignHoldsTheSameRuleAsTheSingleWrite(t *testing.T) {
 	e := Setup(t)
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, leadRepPerms())
-	id := seedOwnerlessLead(t, e, "Bulk Rep Reach")
-
-	if _, err := e.Contacts.AssignLeads(rep, contacts.AssignLeadsInput{
-		OwnerID: ids.From[ids.UserKind](e.Rep2),
-		Leads:   []contacts.AssignLeadItem{{ID: id}},
-	}); !errors.As(err, new(*auth.AssigneeNotAllowedError)) {
-		t.Fatalf("a rep bulk-assigning to a teammate → %v, want AssigneeNotAllowedError", err)
-	}
-	mustStayUnowned(t, e, id)
+	ownerless := seedOwnerlessLead(t, e, "Bulk Rep Hands On")
+	theirs := seedOwnerlessLead(t, e, "Bulk Rep Reach")
+	e.WsExec(t, `UPDATE lead SET owner_id = $1 WHERE id = $2`, e.Rep3, theirs.UUID)
 
 	outcomes, err := e.Contacts.AssignLeads(rep, contacts.AssignLeadsInput{
-		OwnerID: ids.From[ids.UserKind](e.Rep1),
-		Leads:   []contacts.AssignLeadItem{{ID: id}},
+		OwnerID: ids.From[ids.UserKind](e.Rep2),
+		Leads:   []contacts.AssignLeadItem{{ID: ownerless}, {ID: theirs}},
 	})
 	if err != nil {
-		t.Fatalf("a rep bulk-assigning to themselves: %v", err)
+		t.Fatalf("a rep bulk-assigning to a teammate: %v", err)
 	}
-	if outcomes[0].Outcome != crmcontracts.AssignLeadOutcomeKindAssigned {
-		t.Errorf("a rep taking their own lead answered %q, want assigned", outcomes[0].Outcome)
+	want := map[ids.LeadID]crmcontracts.AssignLeadOutcomeKind{
+		ownerless: crmcontracts.AssignLeadOutcomeKindAssigned,
+		theirs:    crmcontracts.AssignLeadOutcomeKindForbidden,
 	}
+	if len(outcomes) != len(want) {
+		t.Fatalf("%d outcomes for %d named leads: every row answers", len(outcomes), len(want))
+	}
+	for _, outcome := range outcomes {
+		if outcome.Outcome != want[outcome.LeadID] {
+			t.Errorf("lead %s answered %q, want %q", outcome.LeadID, outcome.Outcome, want[outcome.LeadID])
+		}
+	}
+	mustBeOwnedBy(rep, t, e, ownerless, e.Rep2)
+	mustBeOwnedBy(rep, t, e, theirs, e.Rep3)
 }
 
 // The contract says 1..500 and nothing between the wire and the store reads

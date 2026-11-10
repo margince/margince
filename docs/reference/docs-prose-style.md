@@ -21,7 +21,7 @@ reads a docs change against this page.
 
 ## One job per page
 
-The tree follows [Diátaxis](https://diataxis.fr/). A page does one of four jobs, and a paragraph that serves
+The tree follows [Diátaxis](https://diataxis.fr/). A page does one job, and a paragraph that serves
 another job is cut or moved to the page that owns it.
 
 | Kind | Where | Holds | Leaves out |
@@ -30,6 +30,7 @@ another job is cut or moved to the page that owns it.
 | How-to | `docs/how-to/` | Steps toward one goal, for a reader who knows the basics | Why the design is this way |
 | Reference | `docs/reference/` | Facts to look up: flags, defaults, tables | Narrative, incidents, essays in table cells |
 | Explanation | `docs/explanation/`, `docs/principles/` | The reasons behind a design, each one specific | Steps, change history |
+| Operations | `docs/operations/` | Steps to install, run and watch Margince | Design reasons and app use |
 
 The handbook (`docs/handbook/`) and `user-guide/` are for those who use Margince, not those who build it. They use
 the words on the screen. Server, transaction, row, token, an API path or a permission key appears only when the

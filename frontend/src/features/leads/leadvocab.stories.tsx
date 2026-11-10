@@ -128,7 +128,7 @@ function story(
 }
 
 const meta = {
-  title: "Settings/Sales/Lead handling/Lead vocabularies",
+  title: "Settings/Sales/Leads/Lead vocabularies",
   component: LeadOriginsCard,
 } satisfies Meta<typeof LeadOriginsCard>;
 export default meta;

@@ -91,16 +91,19 @@ export type TimelineAxis = Readonly<{ range: TimelineRange; far?: number }>;
  * looks back, at least `MIN_LOOKAHEAD_MS`. It leaves room after today (a week,
  * or a sixth of the time before it), so the Today pill never stands on the
  * axis's end. A date further ahead is not stretched to: it sits past a break.
+ * `from` is where the reader's zoom starts the axis, if earlier than every
+ * moment.
  */
 export function axisOf(
   today: number,
   moments: readonly number[],
+  from = today,
 ): TimelineAxis {
-  const first = Math.min(today, ...moments);
+  const first = Math.min(today, from, ...moments);
   const reach = today + Math.max(today - first, MIN_LOOKAHEAD_MS);
   const near = moments.filter((at) => at <= reach);
   const room = Math.max(7 * DAY_MS, (today - first) / 6);
-  const range = rangeOf([today, today + room, ...near]);
+  const range = rangeOf([first, today + room, ...near]);
   const beyond = moments.filter((at) => pastRange(at, range));
   return beyond.length > 0 ? { range, far: Math.min(...beyond) } : { range };
 }
@@ -200,13 +203,18 @@ const KIND_RANK: Readonly<Record<TimelineKind, number>> = {
 
 export type TimelineKind = "done" | "late" | "last" | "ahead" | "end";
 
-export type TimelineItem = Readonly<{ pct: number; kind: TimelineKind }>;
+// `decided` marks a deal's won or lost day, which leads any cluster it is in.
+export type TimelineItem = Readonly<{
+  pct: number;
+  kind: TimelineKind;
+  decided?: boolean;
+}>;
 
 /**
  * Dots that sit closer than `CLUSTER_PX` on a canvas `canvasPx` wide, as one
  * group each, in axis order. `lead` is the member a reader most needs named.
- * That is an overdue promise first, then the last contact, the next date
- * ahead, the horizon, and of the rest the latest.
+ * That is a deal's outcome first, then an overdue promise, the last contact,
+ * the next date ahead, the horizon, and of the rest the latest.
  */
 export function clusterEvents(
   items: readonly TimelineItem[],
@@ -239,6 +247,10 @@ function outranks(
   a: number,
   b: number,
 ): boolean {
+  const decidedA = items[a]?.decided === true;
+  if (decidedA !== (items[b]?.decided === true)) {
+    return decidedA;
+  }
   const kindA = items[a]?.kind ?? "done";
   const kindB = items[b]?.kind ?? "done";
   if (KIND_RANK[kindA] !== KIND_RANK[kindB]) {
@@ -248,11 +260,12 @@ function outranks(
   return kindA === "ahead" ? a < b : a > b;
 }
 
-/** One label to place: its dot's share of the axis, its kind, and the length
- *  of its two lines in characters. */
+/** One label to place: its dot's share of the axis, its kind, whether it
+ *  names a deal's outcome, and the length of its two lines in characters. */
 export type LabelBox = Readonly<{
   pct: number;
   kind: TimelineKind;
+  decided?: boolean;
   titleChars: number;
   subChars: number;
 }>;

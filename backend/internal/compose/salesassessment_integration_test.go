@@ -21,11 +21,17 @@ import (
 // a test can tell a served assessment from one asked again.
 type assessmentLane struct {
 	reply string
-	calls int
+	// answer, when set, writes the reply from the request, so it can name a
+	// record by the ref the request showed.
+	answer func(model.Request) string
+	calls  int
 }
 
-func (l *assessmentLane) Complete(_ context.Context, _ model.Request) (model.Response, error) {
+func (l *assessmentLane) Complete(_ context.Context, req model.Request) (model.Response, error) {
 	l.calls++
+	if l.answer != nil {
+		return model.Response{Text: l.answer(req), ServedModel: "stub"}, nil
+	}
 	return model.Response{Text: l.reply, ServedModel: "stub"}, nil
 }
 
@@ -79,10 +85,8 @@ func TestTheSalesAssessmentKeepsGroundedSentencesAndServesThemAgain(t *testing.T
 }
 
 func TestAssessmentUsesTheDisplayedReceiptAndSeparatesRoleContext(t *testing.T) {
-	e := setupForecast(t)
-	at := clocktest.Now(t)
-	ctx := initiativeManager(e)
-	service := newReportingService(e.Pool, func() time.Time { return at })
+	f := reportingBusiness(t)
+	e, ctx, service := f.env, f.human, f.service
 	selection := crmcontracts.ReportingSelection{Scope: crmcontracts.ReportingScope{Kind: "owner", Id: ptrUUID(e.Rep1)}, Period: "this_quarter", TargetBasis: "fiscal_quarter", CloseWindow: "all_open", Metrics: []crmcontracts.ReportingMetricID{reportingOpenPipeline}, Blocks: []crmcontracts.ReportingBlockKind{}}
 	evaluation, err := service.Evaluate(ctx, selection)
 	if err != nil {
@@ -107,5 +111,18 @@ func TestAssessmentUsesTheDisplayedReceiptAndSeparatesRoleContext(t *testing.T) 
 	}
 	if lane.calls != 2 {
 		t.Fatal("a mismatched receipt reached the model")
+	}
+}
+
+func TestAnEmptyAssessmentDoesNotAskForReassurance(t *testing.T) {
+	e := setupForecast(t)
+	at := clocktest.Now(t)
+	service := newReportingService(e.Pool, func() time.Time { return at })
+	lane := &assessmentLane{reply: `{}`}
+	written := newSalesAssessments(service, newSalesDecisions(InstallationDB(e.Pool)), InstallationDB(e.Pool)).withLane(lane, "empty")
+	selection := crmcontracts.ReportingSelection{Scope: crmcontracts.ReportingScope{Kind: "owner", Id: ptrUUID(e.Rep1)}, Period: "this_quarter", TargetBasis: "fiscal_quarter", CloseWindow: "all_open", Metrics: []crmcontracts.ReportingMetricID{reportingOpenPipeline}}
+	out, err := written.Assess(initiativeManager(e), selection, false)
+	if err != nil || lane.calls != 0 || len(out.Sentences) != 0 || out.GeneratedBy != crmcontracts.WrittenByDeterministic {
+		t.Fatalf("empty assessment: %+v, calls %d, error %v", out, lane.calls, err)
 	}
 }

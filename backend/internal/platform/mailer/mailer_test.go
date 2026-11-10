@@ -5,9 +5,12 @@ package mailer
 
 import (
 	"context"
+	"errors"
 	"net"
+	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/margince/margince/backend/internal/platform/outbound"
 	"github.com/margince/margince/backend/internal/shared/testsmtp"
@@ -18,7 +21,7 @@ func startFakeRelay(t *testing.T, reject bool) *testsmtp.Relay { return testsmtp
 func TestSendWalksTheFullExchangeOnALoopbackRelay(t *testing.T) {
 	relay := startFakeRelay(t, false)
 	host, port := relay.Address(t)
-	s := SMTP{Host: host, Port: port, FromAddress: "crm@example.test"}
+	s := SMTP{Host: host, Port: port, FromAddress: "crm@example.test", Letterhead: fixedLetterhead{}}
 
 	err := s.Send(context.Background(), "ada@example.test", "Reset your password", "the link body")
 	if err != nil {
@@ -32,8 +35,38 @@ func TestSendWalksTheFullExchangeOnALoopbackRelay(t *testing.T) {
 	}
 }
 
+// A caller that stops waiting for the relay stops the exchange too. So the
+// relay cannot take the message after the caller reported it as not taken.
+func TestSendEndsTheExchangeAtTheCallersDeadline(t *testing.T) {
+	relay := startFakeRelay(t, false)
+	relay.HoldAnswer = make(chan struct{})
+	t.Cleanup(func() { close(relay.HoldAnswer) })
+	host, port := relay.Address(t)
+	s := SMTP{Host: host, Port: port, FromAddress: "crm@example.test", Letterhead: fixedLetterhead{}}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+	defer cancel()
+	err := s.Send(ctx, "ada@example.test", "Your invitation", "the link body")
+	if err == nil {
+		t.Fatal("a relay that never answered the message reads as having taken it")
+	}
+	if !errors.Is(err, os.ErrDeadlineExceeded) {
+		t.Errorf("err = %v, want the caller's deadline", err)
+	}
+}
+
+// The exchange ends at the caller's deadline when that comes before its own.
+func TestTheExchangeDeadlineIsTheCallersWhenThatIsSooner(t *testing.T) {
+	callers := time.Date(2020, 1, 1, 9, 0, 0, 0, time.UTC)
+	ctx, cancel := context.WithDeadline(context.Background(), callers)
+	defer cancel()
+	if got := exchangeDeadline(ctx); !got.Equal(callers) {
+		t.Errorf("exchange deadline = %s, want the caller's %s", got, callers)
+	}
+}
+
 func TestSendRefusesHeaderInjection(t *testing.T) {
-	s := SMTP{Host: "127.0.0.1", Port: 25, FromAddress: "crm@example.test"}
+	s := SMTP{Host: "127.0.0.1", Port: 25, FromAddress: "crm@example.test", Letterhead: fixedLetterhead{}}
 	if err := s.Send(context.Background(), "a@b.test\r\nBcc: evil@x.test", "s", "b"); err == nil {
 		t.Fatal("a CRLF recipient was accepted (header injection)")
 	}
@@ -45,11 +78,31 @@ func TestSendRefusesHeaderInjection(t *testing.T) {
 func TestSendSurfacesARefusedRecipient(t *testing.T) {
 	relay := startFakeRelay(t, true)
 	host, port := relay.Address(t)
-	s := SMTP{Host: host, Port: port, FromAddress: "crm@example.test"}
+	s := SMTP{Host: host, Port: port, FromAddress: "crm@example.test", Letterhead: fixedLetterhead{}}
 
 	err := s.Send(context.Background(), "nobody@example.test", "s", "b")
 	if err == nil || !strings.Contains(err.Error(), "refused the recipient") {
 		t.Fatalf("err = %v, want the refused-recipient wrap", err)
+	}
+	if !NotTaken(err) {
+		t.Fatalf("a recipient refused before the body counts as taken: %v", err)
+	}
+}
+
+// A refusal at the message's final line may follow a relay that kept it, so
+// it is never offered as safe to send again.
+func TestARefusalAtTheFinalLineIsNotANotTakenSend(t *testing.T) {
+	relay := startFakeRelay(t, false)
+	relay.RejectMessage = true
+	host, port := relay.Address(t)
+	s := SMTP{Host: host, Port: port, FromAddress: "crm@example.test", Letterhead: fixedLetterhead{}}
+
+	err := s.Send(context.Background(), "ada@example.test", "s", "b")
+	if err == nil || !strings.Contains(err.Error(), "did not accept the message") {
+		t.Fatalf("err = %v, want the refused-message wrap", err)
+	}
+	if NotTaken(err) {
+		t.Fatalf("a refusal at the final line was offered as safe to resend: %v", err)
 	}
 }
 
@@ -66,9 +119,13 @@ func TestSendRefusesAnUnreachableRelay(t *testing.T) {
 	if err := ln.Close(); err != nil {
 		t.Fatal(err)
 	}
-	s := SMTP{Host: "127.0.0.1", Port: tcp.Port, FromAddress: "crm@example.test"}
-	if err := s.Send(context.Background(), "a@b.test", "s", "b"); err == nil || !strings.Contains(err.Error(), "unreachable") {
+	s := SMTP{Host: "127.0.0.1", Port: tcp.Port, FromAddress: "crm@example.test", Letterhead: fixedLetterhead{}}
+	err = s.Send(context.Background(), "a@b.test", "s", "b")
+	if err == nil || !strings.Contains(err.Error(), "unreachable") {
 		t.Fatalf("err = %v, want the unreachable wrap", err)
+	}
+	if !NotTaken(err) {
+		t.Fatalf("an unreachable relay counts as having taken the message: %v", err)
 	}
 }
 

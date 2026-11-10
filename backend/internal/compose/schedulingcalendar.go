@@ -34,6 +34,16 @@ func newSchedulingCalendar(pool *pgxpool.Pool, registry *capture.Registry) sched
 }
 
 func (c schedulingCalendar) Check(ctx context.Context, host ids.UserID, provider string) error {
+	if err := c.hostMayBook(ctx, host); err != nil {
+		return err
+	}
+	_, _, err := c.calendarFor(ctx, host, provider, true)
+	return err
+}
+
+// hostMayBook asks the host's own live authority whether a booking may write
+// their meeting.
+func (c schedulingCalendar) hostMayBook(ctx context.Context, host ids.UserID) error {
 	if c.registry == nil {
 		return apperrors.ErrPermissionDenied
 	}
@@ -49,11 +59,7 @@ func (c schedulingCalendar) Check(ctx context.Context, host ids.UserID, provider
 		Type: principal.PrincipalHuman, ID: "human:" + host.String(), UserID: host.UUID,
 		SeatType: seat, Permissions: rbac.Permissions, TeamIDs: rbac.TeamIDs,
 	})
-	if err := auth.Require(hostCtx, "activity", principal.ActionCreate); err != nil {
-		return err
-	}
-	_, _, err = c.calendarFor(ctx, host, provider, true)
-	return err
+	return auth.Require(hostCtx, "activity", principal.ActionCreate)
 }
 
 // calendarFor is the only door to the registry's calendar. A host with no
@@ -93,11 +99,7 @@ func (c schedulingCalendar) Save(ctx context.Context, host ids.UserID, provider 
 			return connector.CalendarReceipt{}, apperrors.ErrPermissionDenied
 		}
 	}
-	gated, err := c.consentAddresses(ctx, host, in)
-	if err != nil {
-		return connector.CalendarReceipt{}, err
-	}
-	if err := consentGateFor(c.pool).RequireGrantedForEmails(ctx, gated, "transactional"); err != nil {
+	if err := c.checkAppointmentConsent(ctx, host, in); err != nil {
 		return connector.CalendarReceipt{}, err
 	}
 
@@ -117,6 +119,34 @@ func (c schedulingCalendar) Cancel(ctx context.Context, host ids.UserID, provide
 		return err
 	}
 	return scheduler.CalendarCancel(ctx, credential, calendar, event)
+}
+
+// Respond answers an invitation on whichever of the host's calendars Margince
+// may write to and holds the event. A host with neither reads as unconnected.
+func (c schedulingCalendar) Respond(ctx context.Context, host ids.UserID, uid, response string) error {
+	if c.registry == nil {
+		return apperrors.ErrPermissionDenied
+	}
+	outcome := connector.ErrAuthRejected
+	for _, provider := range capture.CalendarProviders() {
+		scheduler, credential, err := c.calendarFor(ctx, host, provider, true)
+		if errors.Is(err, connector.ErrAuthRejected) {
+			continue
+		}
+		if err != nil {
+			return err
+		}
+		responder, ok := scheduler.(connector.CalendarResponder)
+		if !ok {
+			continue
+		}
+		err = responder.CalendarRespond(ctx, credential, uid, response)
+		if !errors.Is(err, connector.ErrCalendarEventMissing) {
+			return err
+		}
+		outcome = err
+	}
+	return outcome
 }
 
 func (c schedulingCalendar) Lookup(ctx context.Context, host ids.UserID, provider string, in connector.CalendarAppointment) (*connector.CalendarReceipt, error) {
@@ -222,4 +252,12 @@ func (c schedulingCalendar) checkCalendar(ctx context.Context, host ids.UserID, 
 		}
 	}
 	return connector.ErrAuthRejected
+}
+
+func (c schedulingCalendar) checkAppointmentConsent(ctx context.Context, host ids.UserID, in connector.CalendarAppointment) error {
+	gated, err := c.consentAddresses(ctx, host, in)
+	if err != nil {
+		return err
+	}
+	return consentGateFor(c.pool).RequireGrantedForEmails(ctx, gated, "transactional")
 }

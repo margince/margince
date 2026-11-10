@@ -2,7 +2,9 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import {
+  type ComponentProps,
   type ReactNode,
+  Suspense,
   useCallback,
   useContext,
   useEffect,
@@ -16,6 +18,7 @@ import { useFocusHandoff } from "../design-system/focushandoff";
 import { Heading } from "../design-system/heading";
 import { DiscardDraftQuestion } from "../design-system/modal";
 import { useT } from "../i18n";
+import { lazy } from "../i18n/lazy";
 import {
   type CallRecord,
   type CallStart,
@@ -25,8 +28,14 @@ import {
 import { useCanWrite } from "../lib/capability";
 import { UnsavedContext, useUnsavedRegistry } from "../lib/unsavedclaims";
 import { EntityRef } from "./entityref";
-import { LogActivityForm } from "./logactivity";
-import { LogActivityAction } from "./logactivity.action";
+
+const LogActivityForm = lazy(async () => ({
+  default: (await import("./logactivity")).LogActivityForm,
+}));
+
+const LogActivityAction = lazy(async () => ({
+  default: (await import("./logactivity.action")).LogActivityAction,
+}));
 
 type StartedCall = CallRecord & Readonly<{ seq: number }>;
 
@@ -70,22 +79,32 @@ export function CallLogHost({ children }: Readonly<{ children: ReactNode }>) {
     <CallStartProvider start={start}>
       {children}
       {call !== null && (
-        <LogActivityAction
-          key={`${call.entityId}:${call.seq}`}
-          entityType={call.entityType}
-          entityId={call.entityId}
-          askedKind="call"
-          openOnMount
-          onClose={close}
-          about={<EntityRef kind="contact" id={call.entityId} asText />}
-        />
+        <Suspense fallback={null}>
+          <LogActivityAction
+            key={`${call.entityId}:${call.seq}`}
+            entityType={call.entityType}
+            entityId={call.entityId}
+            askedKind="call"
+            openOnMount
+            onClose={close}
+            about={<EntityRef kind="contact" id={call.entityId} asText />}
+          />
+        </Suspense>
       )}
     </CallStartProvider>
   );
 }
 
 /** The call log inside a dialog, which must not open a second dialog over itself. */
-export function CallLogInline({
+export function CallLogInline(props: ComponentProps<typeof CallLogInlineBody>) {
+  return (
+    <Suspense fallback={null}>
+      <CallLogInlineBody {...props} />
+    </Suspense>
+  );
+}
+
+function CallLogInlineBody({
   call,
   onClose,
 }: Readonly<{ call: StartedCall; onClose: () => void }>) {

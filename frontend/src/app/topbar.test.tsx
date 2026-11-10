@@ -2,7 +2,13 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 /** @vitest-environment happy-dom */
-import { cleanup, screen, waitFor, within } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { FiltersScreen } from "../features/lists/filters";
@@ -20,8 +26,12 @@ import {
   newClient,
   render,
   renderWith,
+  repSeeing,
+  stubPhoneViewport,
+  TWO_MARKS,
 } from "../testing/shellharness";
 import type { NavSection } from "./nav";
+import { paletteKeyShortcuts } from "./palettehotkey";
 import { TopBar } from "./topbar";
 
 // The sticky strip above every railed page: what is true of the SESSION rather
@@ -165,6 +175,84 @@ describe("Top bar search (AC-shell-7)", () => {
     expect(caps).toHaveLength(2);
     expect(caps[1]).toBe("K");
     expect(caps[0]).toMatch(/^(⌘|Ctrl)$/);
+  });
+
+  // The name is the printed words alone, so a speech-input reader's "click
+  // Search or ask Margince" matches it; a screen reader hears the chord apart.
+  it("takes its name from its printed words and announces the chord apart", () => {
+    renderTopBar({ screen: "home" }, { onToggle: ignoreToggle });
+    const search = screen.getByRole("button", {
+      name: "Search or ask Margince",
+    });
+    expect(search.hasAttribute("aria-label")).toBe(false);
+    expect(search.getAttribute("aria-keyshortcuts")).toBe(
+      paletteKeyShortcuts(navigator.platform),
+    );
+  });
+});
+
+describe("paletteKeyShortcuts", () => {
+  it("spells the chord the caps print", () => {
+    expect(paletteKeyShortcuts("MacIntel")).toBe("Meta+K");
+    expect(paletteKeyShortcuts("Win32")).toBe("Control+K");
+  });
+});
+
+// The page heading under the bar names the page, so a phone's bar spends the
+// trail's room on the company's mark instead.
+describe("Top bar at phone width", () => {
+  it("leads home from the company's mark in place of the trail", () => {
+    stubPhoneViewport();
+    const client = newClient();
+    client.setQueryData(["me"], repSeeing(TWO_MARKS));
+    renderWith(
+      client,
+      <TopBar
+        route={{ screen: "deals" }}
+        collapsed={false}
+        onOpenSearch={ignoreSearch}
+      />,
+    );
+    expect(screen.queryByRole("navigation", { name: "Breadcrumb" })).toBeNull();
+    // The name starts with what the chip prints (WCAG 2.5.3): the initials until
+    // the square mark paints, then nothing.
+    const home = screen.getByRole("link", {
+      name: "DG Demo GmbH home, powered by Margince",
+    });
+    expect(home.getAttribute("href")).toBe("/#/home");
+    const mark = home.querySelector(".ws-chip-company img");
+    expect(mark?.getAttribute("src")).toBe(TWO_MARKS.logo_icon_url);
+    if (mark) fireEvent.load(mark);
+    expect(
+      screen.getByRole("link", { name: "Demo GmbH home, powered by Margince" }),
+    ).toBe(home);
+  });
+
+  it("reads no record name for the trail it does not draw", async () => {
+    const recordReads = (fetch: ReturnType<typeof vi.fn>) =>
+      fetch.mock.calls.filter(([request]) =>
+        String(request instanceof Request ? request.url : request).includes(
+          "/deals/d-1",
+        ),
+      );
+    const wideFetch = vi.fn(async () => new Response(null, { status: 404 }));
+    vi.stubGlobal("fetch", wideFetch);
+    renderTopBar({ screen: "deals", id: "d-1" });
+    await waitFor(() => expect(recordReads(wideFetch)).not.toEqual([]));
+    cleanup();
+
+    stubPhoneViewport();
+    const phoneFetch = vi.fn(async () => new Response(null, { status: 404 }));
+    vi.stubGlobal("fetch", phoneFetch);
+    renderTopBar({ screen: "deals", id: "d-1" });
+    await waitFor(() => expect(phoneFetch).toHaveBeenCalled());
+    expect(recordReads(phoneFetch)).toEqual([]);
+  });
+
+  it("keeps the trail and no mark on a wide screen", () => {
+    renderTopBar({ screen: "deals" });
+    expect(trail()).toBeTruthy();
+    expect(document.querySelector(".topbar .ws-chip")).toBeNull();
   });
 });
 

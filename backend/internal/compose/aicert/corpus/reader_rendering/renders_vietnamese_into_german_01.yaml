@@ -13,7 +13,8 @@ expect:
   outcome: accepted
   answer:
     already_in_target: false
-    keeps: ["Sao Mai", "Minh", "10", "20", "11", "Lê Thu Hà"]
+    # The month may stay "11" or become "November"; the validator holds either.
+    keeps: ["Sao Mai", "Minh", "10", "20", "Lê Thu Hà"]
     omits: []
   bands:
     certified_min: 80

@@ -46,7 +46,7 @@ func TestSignatureEnrichRequestFencesEveryUntrustedFieldUnderTheMarkerItDeclares
 	}
 	content := req.Messages[0].Content
 	openTag, closeTag := "<"+marker+">", "</"+marker+">"
-	signatureTag := "<" + marker + ` source_id="` + cand.ActivityID.String() + `">`
+	signatureTag := "<" + marker + ` source_id="m1">`
 	if !strings.Contains(content, signatureTag+lines+closeTag) {
 		t.Errorf("the signature window is not opened under the declared marker keyed by its activity:\n%s", content)
 	}

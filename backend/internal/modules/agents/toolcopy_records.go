@@ -3,6 +3,8 @@
 
 package agents
 
+import "strings"
+
 // Written copy for the record surface: the generic CRUD verbs, the deal and
 // lead lifecycle transitions, and the configuration read the deal writes
 // depend on. See toolcopy.go for what each field answers.
@@ -22,14 +24,11 @@ var searchRecordsCopy = toolCopy{
 }
 
 var listRecordsCopy = toolCopy{
-	Purpose: "List the records of one record_type that meet exact conditions: every deal in one " +
-		"pipeline, the leads one rep owns, a contact's timeline.",
-	Limits: "It narrows only by the filters listed for that record_type, and answers ONE page: " +
-		"the set continues past it.",
+	Purpose: "List one page of matching records: deals in a pipeline, a rep's leads, or a contact's timeline.",
+	Limits:  "Only declared record_type filters apply. Further pages may exist.",
 	Instead: "Use search_records to find a record by what it is called, and run_report for a count " +
 		"or a total.",
-	Retain: "Pass next_cursor back to read the next page; a call without it re-reads the first. " +
-		"A result's `owner` says who holds it. " + sayWhoseItIs,
+	Retain: "Pass next_cursor for the next page; omit it for the first. `owner` names the holder. " + sayWhoseItIs,
 }
 
 var readViewCopy = toolCopy{
@@ -61,28 +60,32 @@ var readRecordCopy = toolCopy{
 }
 
 var createRecordCopy = toolCopy{
-	Purpose: "Create a contact, company, deal, lead, project, activity or relationship that " +
-		"does not exist yet.",
+	Purpose: "Create ONE contact, company, deal, lead, project, activity or relationship that " +
+		"does not exist yet. Rows from a file, a CSV or a pasted list, each a " +
+		strings.Join(importObjectEnum, ", ") + ", go through preview_import " +
+		"and then commit_import, never one create_record each: the preview checks every row, " +
+		"duplicates included, and its counts are what the user weighs.",
 	Limits: "Creating a deal requires a pipeline_id and a stage_id, and " + pipelinesSource + " is " +
 		"what yields them for a deal that does not exist yet. Only the fields the chosen record_type " +
 		"actually stores are accepted, and a field belonging to a neighbouring type is refused " +
 		"rather than dropped. A CONTACT created here is visible to everyone in the workspace, " +
-		"the same as one a human types in." + pastDayNeedsATime,
+		"the same as one a human types in." + pastDayNeedsATime + meetingStatusRule,
 	Instead: "Record a signed contract with change_offers action record_contract, never as a deal. " +
-		"Search first when the record might already exist — a second copy of a contact or " +
-		"company is a problem that then needs resolve_duplicates to undo. A record that shares only " +
+		"A vCard file goes through change_capture. Before creating one contact or company that might " +
+		"already exist, ask find_records engine identify: it runs the duplicate check a create runs, " +
+		"on name spellings, emails, phones and domains. A second copy is a problem that then needs " +
+		"resolve_duplicates to undo. A record that shares only " +
 		"a name, with a different email, phone or employer, is not proof of a duplicate. When the " +
-		"search finds a contact with the same name at the same employer, ask the human whether " +
+		"check finds a contact with the same name at the same employer, ask the human whether " +
 		"it is the same contact before you link anything to it; two colleagues can share a name. " +
 		"Giving a contact its employer by creating an employment relationship files " +
 		"any same-name contact at that employer for review: the result carries it as " +
 		"duplicate_candidates, and you report the pair as filed, unresolved until the " +
-		"reviewer decides. Several contacts, companies or leads at once — a pasted list, " +
-		"a CSV — go through preview_import, which checks " +
-		"every row and writes nothing; creating them one by one skips that check.",
-	Retain: "The new record's id comes back in the result; keep it for anything that links to it. " +
-		"When the user says where they met the contact, pass that word as offer_tag: it only offers " +
-		"the tag, and change_tags still needs their yes.",
+		"reviewer decides.",
+	Retain: "When the user says where they met the contact, pass that word as offer_tag, also " +
+		"when they want to decide on the tag themselves: it puts no tag on the record and stores " +
+		"nothing, the answer says whether that tag already exists, and change_tags still needs " +
+		"their yes. The new record's id comes back in the result; keep it for anything that links to it.",
 }
 
 var updateRecordCopy = toolCopy{
@@ -94,9 +97,11 @@ var updateRecordCopy = toolCopy{
 		"two records, a human picks. owner_id is NOT neutral — ownership decides visibility, so " +
 		"reassigning moves the record onto someone else's book and can take it off the owner's. " +
 		"An activity moved to another day keeps its time of day unless the user names one; " +
-		`moving a date-only one, send occurred_precision "day" again, or it reads as a time.`,
-	Instead: "Use progress_deal to move a deal between stages, and relink_activity " +
-		"to change what an activity is about; neither is a field edit.",
+		`moving a date-only one, send occurred_precision "day" again, or it reads as a time.` +
+		meetingStatusRule,
+	Instead: "Use progress_deal to move a deal between stages, relink_activity " +
+		"to change what an activity is about, and change_compliance when a contact gave consent " +
+		"or asked to stop; none is a field edit.",
 	Retain: "Send if_version with the version you read. If the call comes back staged, keep its " +
 		"approval id to retry the same change once a human has released it.",
 }
@@ -118,13 +123,12 @@ var logActivityCopy = toolCopy{
 		"and also concerns their company and its deal.",
 	Limits: "It writes history and can add a follow_up_task to a meeting, call or note in one " +
 		"transaction; the task inherits source links and audience, and its assignee must be able to " +
-		"read the source. A source-identity replay returns the original and adds no task. " +
+		"read the source. A source-identity replay adds no task. " +
 		"No deal or field changes; nobody is notified. Unlinked, it is on no timeline; " +
 		"relink_activity links it later (onto a project, after the user's yes)." +
 		pastDayNeedsATime,
-	Instead: "Use progress_deal when the event also moves a deal, so move and note are one " +
-		"act; create_task for something still owed; attach_document for a file, whose text never " +
-		"goes into a note.",
+	Instead: "Use progress_deal when the event also moves a deal; create_task for something " +
+		"still owed; attach_document for a file, whose text never goes into a note.",
 	Retain: "Keep the activity id — draft_outbound and send_outbound identify a conversation " +
 		"by it.",
 }

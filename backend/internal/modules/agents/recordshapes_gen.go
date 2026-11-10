@@ -7,27 +7,25 @@ package agents
 // REQUIRED by the contract; `?` marks one the body may omit.
 
 var createRecordShapes = map[string]string{
-	"contact":           "{address?: {city?: string, country?: string, line1?: string, line2?: string, postal_code?: string, region?: string}, company_id?: uuid, company_name?: string, convert_lead_ids?: [uuid], emails?: [{email: email, email_type?: \"work\"|\"personal\"|\"other\", is_primary?: boolean, position?: integer}], first_name?: string, full_name: string, last_name?: string, owner_id?: uuid, phones?: [{is_primary?: boolean, phone: string, phone_type?: \"work\"|\"mobile\"|\"home\"|\"other\", position?: integer}], social?: object, source?: string, source_author_id?: uuid, source_author_name?: string, source_id?: string, source_system?: string, title?: string}",
-	"company":           "{address?: {city?: string, country?: string, line1?: string, line2?: string, postal_code?: string, region?: string}, description?: string, display_name: string, domains?: [{domain: string, is_primary?: boolean}], email?: email, industry?: string, legal_name?: string, owner_id?: uuid, parent_company_id?: uuid, phone?: string, size_band?: \"1-10\"|\"11-50\"|\"51-200\"|\"201-500\"|\"501-1000\"|\"1001-5000\"|\"5000+\", source?: string, source_author_id?: uuid, source_author_name?: string, source_id?: string, source_system?: string}",
-	"deal":              "{acquisition_source?: string, amount_minor?: integer, commercial_motion?: \"new_business\"|\"renewal\"|\"upsell\"|\"cross_sell\"|\"expansion\"|\"existing_business\", company_id?: uuid, currency?: string, description?: string, expected_arr_minor?: integer, expected_close_date?: YYYY-MM-DD, name: string, owner_id?: uuid, partner_attribution?: \"sourced\"|\"influenced\", partner_company_id?: uuid, pipeline_id: uuid, priority?: \"low\"|\"medium\"|\"high\", project_id?: uuid, source?: string, source_author_id?: uuid, source_author_name?: string, source_id?: string, source_system?: string, stage_id: uuid}",
-	"lead":              "{candidate_company_key?: string, company_name?: string, contact_id?: uuid, email?: email, full_name?: string, industry?: string, linkedin_url?: string, origin?: string, origin_detail?: string, owner_id?: uuid, partner_company_id?: uuid, phone?: string, project_id?: uuid, source?: string, source_author_id?: uuid, source_author_name?: string, source_id?: string, source_system?: string, status?: \"new\"|\"contacted\"|\"engaged\"|\"promoted\"|\"disqualified\", title?: string}",
-	"activity":          "{assignee_id?: uuid, attendee_user_ids?: [uuid], body?: string, channel_provider?: string, direction?: \"inbound\"|\"outbound\", due_at?: rfc3339, duration_seconds?: integer, follow_up_task?: {assignee_id?: uuid, body?: string, due_at?: rfc3339, subject: string}, host_user_id?: uuid, ical_instance?: string, ical_uid?: string, kind: \"email\"|\"call\"|\"meeting\"|\"note\"|\"task\"|\"message\", links?: [{entity_id: uuid, entity_type: \"contact\"|\"company\"|\"deal\"|\"lead\"|\"project\"}], meeting_status?: \"booked\"|\"held\"|\"no_show\"|\"canceled\", occurred_at?: rfc3339, occurred_precision?: \"instant\"|\"day\", participants?: {cc?: [string], from?: string, to?: [string]}, raw?: object, recommendation?: {basis_fingerprint: string, checked_at: rfc3339, deal_id: uuid, policy_version: string, rule: string}, remind_at?: rfc3339, request_activity_id?: uuid, rfc_message_id?: string, source?: string, source_activity_id?: uuid, source_author_id?: uuid, source_author_name?: string, source_id?: string, source_system?: string, subject?: string, thread_key?: string}",
-	"project":           "{company_id: uuid, description?: string, name: string, owner_id?: uuid, source?: string, source_author_id?: uuid, source_author_name?: string, source_id?: string, source_system?: string, started_at?: YYYY-MM-DD, target_end_date?: YYYY-MM-DD}",
-	"relationship":      "{company_id?: uuid, contact_id?: uuid, counterparty_company_id?: uuid, counterparty_contact_id?: uuid, deal_id?: uuid, employment_status?: \"current\"|\"former\", ended_at?: YYYY-MM-DD, ended_precision?: \"day\"|\"month\", is_current_primary?: boolean, kind: \"employment\"|\"deal_stakeholder\"|\"project_stakeholder\"|\"partner_of\"|\"referred_by\"|\"co_sell_with\"|\"works_with\"|\"billing_contact\", project_id?: uuid, role?: string, source?: string, started_at?: YYYY-MM-DD, started_precision?: \"day\"|\"month\"}",
-	"product":           "{active?: boolean, billing_interval_months?: \"1\"|\"3\"|\"6\"|\"12\", billing_model?: \"one_time\"|\"recurring\", component_kind?: \"software\"|\"implementation\"|\"other\", currency: string, default_tax_rate?: number, description?: string, name: string, sku?: string, source?: string, tax_category?: \"standard\"|\"reduced\"|\"exempt\", unit?: string, unit_price_minor: integer}",
-	"offer_template":    "{is_default?: boolean, layout: object, locale?: string, name: string}",
-	"offer":             "{deal_id: uuid, buyer_company_id?: uuid, currency: string, intro_text?: string, language?: string, legal_entity_id?: uuid, line_items?: [{billing_interval_months?: \"1\"|\"3\"|\"6\"|\"12\", billing_model?: \"one_time\"|\"recurring\", description?: string, discount_pct?: number, interval_count?: integer, position?: integer, product_id?: uuid, quantity: number, tax_category?: \"standard\"|\"reduced\"|\"exempt\", tax_rate?: number, unit?: string, unit_price_minor?: integer}], source?: string, template_id?: uuid, terms_text?: string, valid_until?: YYYY-MM-DD}",
-	"deal_room":         "{deal_id: uuid, expires_at?: rfc3339, source?: string, steward_user_id?: uuid, title: string, welcome_message?: string}",
-	"deal_room_thread":  "{deal_room_id: uuid, body: string, document_id?: uuid, request_id?: uuid, required_change?: boolean, source?: string}",
-	"deal_room_comment": "{deal_room_id: uuid, thread_id: uuid, body: string, request_id?: uuid, source?: string}",
+	"contact":        "{address?: {city?: string, country?: string, line1?: string, line2?: string, postal_code?: string, region?: string}, company_id?: uuid, company_name?: string, convert_lead_ids?: [uuid], created_from_activity_id?: uuid, emails?: [{email: email, email_type?: \"work\"|\"personal\"|\"other\", is_primary?: boolean, position?: integer}], first_name?: string, full_name: string, last_name?: string, owner_id?: uuid, phones?: [{is_primary?: boolean, phone: string, phone_type?: \"work\"|\"mobile\"|\"home\"|\"other\", position?: integer}], social?: object, source?: string, source_author_id?: uuid, source_author_name?: string, source_id?: string, source_system?: string, title?: string}",
+	"company":        "{address?: {city?: string, country?: string, line1?: string, line2?: string, postal_code?: string, region?: string}, description?: string, display_name: string, domains?: [{domain: string, is_primary?: boolean}], email?: email, industry?: string, legal_name?: string, owner_id?: uuid, parent_company_id?: uuid, phone?: string, size_band?: \"1-10\"|\"11-50\"|\"51-200\"|\"201-500\"|\"501-1000\"|\"1001-5000\"|\"5000+\", source?: string, source_author_id?: uuid, source_author_name?: string, source_id?: string, source_system?: string}",
+	"deal":           "{acquisition_source?: string, amount_minor?: integer, commercial_motion?: \"new_business\"|\"renewal\"|\"upsell\"|\"cross_sell\"|\"expansion\"|\"existing_business\", company_id?: uuid, currency?: string, description?: string, expected_arr_minor?: integer, expected_close_date?: YYYY-MM-DD, name: string, owner_id?: uuid, partner_attribution?: \"sourced\"|\"influenced\", partner_company_id?: uuid, pipeline_id: uuid, priority?: \"low\"|\"medium\"|\"high\", project_id?: uuid, source?: string, source_author_id?: uuid, source_author_name?: string, source_id?: string, source_system?: string, stage_id: uuid}",
+	"lead":           "{candidate_company_key?: string, company_name?: string, contact_id?: uuid, email?: email, full_name?: string, industry?: string, linkedin_url?: string, origin?: string, origin_detail?: string, owner_id?: uuid, partner_company_id?: uuid, phone?: string, product_id?: uuid, project_id?: uuid, source?: string, source_author_id?: uuid, source_author_name?: string, source_id?: string, source_system?: string, status?: \"new\"|\"contacted\"|\"engaged\"|\"promoted\"|\"disqualified\", title?: string}",
+	"activity":       "{assignee_id?: uuid, attendee_user_ids?: [uuid], body?: string, call_outcome?: \"reached\"|\"not_reached\"|\"voicemail\"|\"call_back_later\"|\"put_through\", channel_provider?: string, deal_filing?: {deal_id?: uuid, record_id: uuid, record_type: \"contact\"|\"company\", skip?: boolean}, direction?: \"inbound\"|\"outbound\", due_at?: rfc3339, due_has_time?: boolean, duration_seconds?: integer, follow_up_task?: {assignee_id?: uuid, body?: string, due_at?: rfc3339, due_has_time?: boolean, subject: string}, host_user_id?: uuid, ical_instance?: string, ical_uid?: string, kind: \"email\"|\"call\"|\"meeting\"|\"note\"|\"task\"|\"message\", links?: [{entity_id: uuid, entity_type: \"contact\"|\"company\"|\"deal\"|\"lead\"|\"project\"}], meeting_status?: \"booked\"|\"held\"|\"no_show\"|\"canceled\", occurred_at?: rfc3339, occurred_precision?: \"instant\"|\"day\", participants?: {cc?: [string], from?: string, to?: [string]}, raw?: object, recommendation?: {basis_fingerprint: string, checked_at: rfc3339, deal_id: uuid, policy_version: string, rule: string}, remind_at?: rfc3339, request_activity_id?: uuid, rfc_message_id?: string, source?: string, source_activity_id?: uuid, source_author_id?: uuid, source_author_name?: string, source_id?: string, source_system?: string, subject?: string, thread_key?: string}",
+	"project":        "{company_id: uuid, description?: string, name: string, owner_id?: uuid, source?: string, source_author_id?: uuid, source_author_name?: string, source_id?: string, source_system?: string, started_at?: YYYY-MM-DD, target_end_date?: YYYY-MM-DD}",
+	"relationship":   "{company_id?: uuid, contact_id?: uuid, counterparty_company_id?: uuid, counterparty_contact_id?: uuid, deal_id?: uuid, employment_status?: \"current\"|\"former\", ended_at?: YYYY-MM-DD, ended_precision?: \"day\"|\"month\", is_current_primary?: boolean, kind: \"employment\"|\"deal_stakeholder\"|\"project_stakeholder\"|\"partner_of\"|\"referred_by\"|\"co_sell_with\"|\"works_with\"|\"billing_contact\", project_id?: uuid, role?: string, source?: string, started_at?: YYYY-MM-DD, started_precision?: \"day\"|\"month\"}",
+	"product":        "{active?: boolean, billing_interval_months?: \"1\"|\"3\"|\"6\"|\"12\", billing_model?: \"one_time\"|\"recurring\", component_kind?: \"software\"|\"implementation\"|\"other\", currency: string, default_tax_rate?: number, description?: string, name: string, sku?: string, source?: string, tax_category?: \"standard\"|\"reduced\"|\"exempt\", unit?: string, unit_price_minor: integer}",
+	"offer_template": "{is_default?: boolean, layout: object, locale?: string, name: string}",
+	"offer":          "{deal_id: uuid, buyer_company_id?: uuid, currency: string, from_deal_revision?: integer, intro_text?: string, language?: string, legal_entity_id?: uuid, line_items?: [{billing_interval_months?: \"1\"|\"3\"|\"6\"|\"12\", billing_model?: \"one_time\"|\"recurring\", description?: string, discount_pct?: number, interval_count?: integer, position?: integer, product_id?: uuid, quantity: number, tax_category?: \"standard\"|\"reduced\"|\"exempt\", tax_rate?: number, unit?: string, unit_price_minor?: integer}], source?: string, template_id?: uuid, terms_text?: string, valid_until?: YYYY-MM-DD}",
+	"deal_room":      "{deal_id: uuid, expires_at?: rfc3339, source?: string, steward_user_id?: uuid, title: string, welcome_message?: string}",
 }
 
 var updateRecordShapes = map[string]string{
 	"contact":        "{address?: {city?: string, country?: string, line1?: string, line2?: string, postal_code?: string, region?: string}, convert_lead_ids?: [uuid], emails?: [{email: email, email_type?: \"work\"|\"personal\"|\"other\", is_primary?: boolean, position?: integer}], first_name?: string, full_name?: string, last_name?: string, owner_id?: uuid, phones?: [{is_primary?: boolean, phone: string, phone_type?: \"work\"|\"mobile\"|\"home\"|\"other\", position?: integer}], relationship_mark?: \"vendor_marketing\", social?: object, title?: string, visibility?: \"workspace\"|\"owner\"}",
 	"company":        "{address?: {city?: string, country?: string, line1?: string, line2?: string, postal_code?: string, region?: string}, assess_against_entity_id?: uuid, description?: string, display_name?: string, domains?: [{domain: string, is_primary?: boolean}], email?: email, industry?: string, legal_name?: string, lifecycle?: \"unknown\"|\"target\"|\"prospect\"|\"opportunity\"|\"onboarding\"|\"live\"|\"customer\"|\"former_customer\"|\"disqualified\", linkedin_url?: string, owner_id?: uuid, parent_company_id?: uuid, phone?: string, relationship_types?: [\"customer\"|\"partner\"|\"supplier\"|\"investor\"|\"portfolio_company\"|\"competitor\"|\"other\"], size_band?: \"1-10\"|\"11-50\"|\"51-200\"|\"201-500\"|\"501-1000\"|\"1001-5000\"|\"5000+\", visibility?: \"workspace\"|\"owner\"}",
-	"deal":           "{acquisition_source?: string, amount_minor?: integer, commercial_motion?: \"new_business\"|\"renewal\"|\"upsell\"|\"cross_sell\"|\"expansion\"|\"existing_business\", company_id?: uuid, currency?: string, description?: string, expected_arr_minor?: integer, expected_close_date?: YYYY-MM-DD, forecast_category?: \"commit\"|\"best_case\"|\"pipeline\"|\"omitted\", fx_rate_date?: YYYY-MM-DD, fx_rate_to_base?: string, lost_reason?: string, name?: string, owner_id?: uuid, partner_attribution?: \"sourced\"|\"influenced\", partner_company_id?: uuid, priority?: \"low\"|\"medium\"|\"high\", project_id?: uuid, status?: \"open\"|\"won\"|\"lost\", wait_until?: YYYY-MM-DD}",
-	"lead":           "{candidate_company_key?: string, company_name?: string, email?: email, full_name?: string, industry?: string, origin?: string, origin_detail?: string, owner_id?: uuid, partner_company_id?: uuid, phone?: string, project_id?: uuid, score?: integer, score_override_reason?: string, source?: string, status?: \"new\"|\"contacted\"|\"engaged\", title?: string}",
-	"activity":       "{assignee_id?: uuid, body?: string, due_at?: rfc3339, is_done?: boolean, meeting_status?: \"booked\"|\"held\"|\"no_show\"|\"canceled\", occurred_at?: rfc3339, occurred_precision?: \"instant\"|\"day\", remind_at?: rfc3339, subject?: string}",
+	"deal":           "{acquisition_source?: string, amount_minor?: integer, commercial_motion?: \"new_business\"|\"renewal\"|\"upsell\"|\"cross_sell\"|\"expansion\"|\"existing_business\", company_id?: uuid, currency?: string, description?: string, expected_arr_minor?: integer, expected_close_date?: YYYY-MM-DD, fx_rate_date?: YYYY-MM-DD, fx_rate_to_base?: string, lost_reason?: string, name?: string, owner_id?: uuid, partner_attribution?: \"sourced\"|\"influenced\", partner_company_id?: uuid, priority?: \"low\"|\"medium\"|\"high\", project_id?: uuid, status?: \"open\"|\"won\"|\"lost\", wait_until?: YYYY-MM-DD, win_probability?: integer}",
+	"lead":           "{candidate_company_key?: string, company_name?: string, email?: email, full_name?: string, industry?: string, origin?: string, origin_detail?: string, owner_id?: uuid, partner_company_id?: uuid, phone?: string, product_id?: uuid, project_id?: uuid, score?: integer, score_override_reason?: string, source?: string, status?: \"new\"|\"contacted\"|\"engaged\", title?: string}",
+	"activity":       "{assignee_id?: uuid, body?: string, call_outcome?: \"reached\"|\"not_reached\"|\"voicemail\"|\"call_back_later\"|\"put_through\", deal_filing?: {deal_id?: uuid, record_id: uuid, record_type: \"contact\"|\"company\", skip?: boolean}, due_at?: rfc3339, due_has_time?: boolean, is_done?: boolean, meeting_status?: \"booked\"|\"held\"|\"no_show\"|\"canceled\", occurred_at?: rfc3339, occurred_precision?: \"instant\"|\"day\", remind_at?: rfc3339, subject?: string}",
 	"project":        "{description?: string, ended_at?: YYYY-MM-DD, name?: string, owner_id?: uuid, started_at?: YYYY-MM-DD, target_end_date?: YYYY-MM-DD}",
 	"relationship":   "{clear_ended_at?: boolean, clear_started_at?: boolean, employment_status?: \"current\"|\"former\", ended_at?: YYYY-MM-DD, ended_precision?: \"day\"|\"month\", is_current_primary?: boolean, role?: string, started_at?: YYYY-MM-DD, started_precision?: \"day\"|\"month\"}",
 	"product":        "{active?: boolean, billing_interval_months?: \"1\"|\"3\"|\"6\"|\"12\", billing_model?: \"one_time\"|\"recurring\"|\"not_specified\", component_kind?: \"software\"|\"implementation\"|\"other\", currency?: string, default_tax_rate?: number, description?: string, name?: string, sku?: string, tax_category?: \"standard\"|\"reduced\"|\"exempt\", unit?: string, unit_price_minor?: integer}",
@@ -54,6 +52,8 @@ const activityKindEnum = `["email","call","meeting","note","task","message"]`
 
 const activityLinkEntityTypeEnum = `["contact","company","deal","lead","project"]`
 
+const activityMeetingStatusEnum = `["booked","held","no_show","canceled"]`
+
 // listRecordFilters is the CONTRACT half of what list_records may be asked to
 // filter by, per record_type: each list operation's OWN declared query
 // parameters, read off crm.yaml rather than authored (A139).
@@ -74,7 +74,7 @@ var listRecordFilters = map[string][]listFilter{
 		{Name: "relationship_mark", Type: "string", Enum: []string{"vendor_marketing", "any"}},
 		{Name: "shared_with_me", Type: "boolean"},
 		{Name: "sort", Type: "string"},
-		{Name: "tag_id", Type: "array"},
+		{Name: "tag_id", Type: "string"},
 		{Name: "tag_mode", Type: "string", Enum: []string{"any", "all", "none"}},
 		{Name: "unassigned", Type: "boolean"},
 	},
@@ -82,7 +82,7 @@ var listRecordFilters = map[string][]listFilter{
 		{Name: "ai_written", Type: "boolean"},
 		{Name: "captured_by_kind", Type: "string", Enum: []string{"human", "agent", "connector", "system"}},
 		{Name: "domain", Type: "string"},
-		{Name: "id", Type: "array"},
+		{Name: "id", Type: "string"},
 		{Name: "include_anchor", Type: "boolean"},
 		{Name: "include_archived", Type: "boolean"},
 		{Name: "industry", Type: "string", Enum: []string{"agriculture", "automotive", "aerospace_defense", "chemicals_materials", "construction", "consumer_goods_retail", "education", "energy_utilities", "entertainment_media", "financial_services", "food_beverage", "government_public_sector", "healthcare", "hospitality_tourism", "insurance", "it_services", "software", "legal_professional_services", "logistics_transport", "manufacturing", "marketing_advertising", "mining_metals", "nonprofit", "pharma_biotech", "real_estate", "telecommunications"}},
@@ -98,7 +98,7 @@ var listRecordFilters = map[string][]listFilter{
 		{Name: "sort", Type: "string"},
 		{Name: "source_id", Type: "string"},
 		{Name: "source_system", Type: "string"},
-		{Name: "tag_id", Type: "array"},
+		{Name: "tag_id", Type: "string"},
 		{Name: "tag_mode", Type: "string", Enum: []string{"any", "all", "none"}},
 		{Name: "unassigned", Type: "boolean"},
 	},
@@ -110,7 +110,6 @@ var listRecordFilters = map[string][]listFilter{
 		{Name: "company_id", Type: "string"},
 		{Name: "country", Type: "string"},
 		{Name: "currency", Type: "string"},
-		{Name: "forecast_category", Type: "string", Enum: []string{"commit", "best_case", "pipeline", "omitted"}},
 		{Name: "include_archived", Type: "boolean"},
 		{Name: "list_id", Type: "string"},
 		{Name: "owner_id", Type: "string"},
@@ -127,11 +126,13 @@ var listRecordFilters = map[string][]listFilter{
 		{Name: "stage_id", Type: "string"},
 		{Name: "stalled", Type: "boolean"},
 		{Name: "status", Type: "string", Enum: []string{"open", "won", "lost"}},
-		{Name: "tag_id", Type: "array"},
+		{Name: "tag_id", Type: "string"},
 		{Name: "tag_mode", Type: "string", Enum: []string{"any", "all", "none"}},
 		{Name: "unassigned", Type: "boolean"},
 		{Name: "value_max", Type: "integer"},
 		{Name: "value_min", Type: "integer"},
+		{Name: "win_probability_max", Type: "integer"},
+		{Name: "win_probability_min", Type: "integer"},
 	},
 	"lead": {
 		{Name: "ai_written", Type: "boolean"},
@@ -152,7 +153,7 @@ var listRecordFilters = map[string][]listFilter{
 		{Name: "sort", Type: "string"},
 		{Name: "source", Type: "string"},
 		{Name: "status", Type: "string", Enum: []string{"new", "contacted", "engaged", "promoted", "disqualified"}},
-		{Name: "tag_id", Type: "array"},
+		{Name: "tag_id", Type: "string"},
 		{Name: "tag_mode", Type: "string", Enum: []string{"any", "all", "none"}},
 		{Name: "unassigned", Type: "boolean"},
 	},
@@ -179,6 +180,7 @@ var listRecordFilters = map[string][]listFilter{
 	},
 	"activity": {
 		{Name: "assignee_id", Type: "string"},
+		{Name: "call_outcome", Type: "string", Enum: []string{"reached", "not_reached", "voicemail", "call_back_later", "put_through"}},
 		{Name: "channel_provider", Type: "string"},
 		{Name: "entity_id", Type: "string"},
 		{Name: "entity_type", Type: "string", Enum: []string{"contact", "company", "deal", "lead", "project"}},

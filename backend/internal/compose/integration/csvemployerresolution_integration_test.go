@@ -8,6 +8,8 @@ package integration
 import (
 	"net/http"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/compose/integration/importjobtest"
 )
 
 func TestCSVEmployerConflictSkipsOnlyTheRefusedRow(t *testing.T) {
@@ -20,8 +22,8 @@ func TestCSVEmployerConflictSkipsOnlyTheRefusedRow(t *testing.T) {
 			t.Fatalf("company: %d", s)
 		}
 	}
-	profile, _ := uploadCSV(t, e, "contact", "Email,Full Name,Company\nbuyer@domain-work.test,Conflicting Buyer,Named Works\nother@fresh-work.test,Other Buyer,Fresh Works\n")
-	run, status := createRunWithMapping(t, e, "contact", profile.SourceRef, map[string]string{"Email": "email", "Full Name": "full_name", "Company": "company_name"})
+	profile, _ := importjobtest.UploadCSV(t, e, "contact", "Email,Full Name,Company\nbuyer@domain-work.test,Conflicting Buyer,Named Works\nother@fresh-work.test,Other Buyer,Fresh Works\n")
+	run, status := importjobtest.CreateRunWithMapping(t, e, "contact", profile.SourceRef, map[string]string{"Email": "email", "Full Name": "full_name", "Company": "company_name"})
 	if status != http.StatusAccepted {
 		t.Fatalf("run: %d", status)
 	}
@@ -39,8 +41,8 @@ func TestCSVEmployerConflictSkipsOnlyTheRefusedRow(t *testing.T) {
 func TestCSVImplicitEmployerIsRecordedForUndo(t *testing.T) {
 	e := setupImportApp(t)
 	before := len(companyRows(t, e))
-	profile, _ := uploadCSV(t, e, "contact", "Email,Full Name,Company\nbuyer@undo-work.test,Dana Buyer,Undo Works\n")
-	run, status := createRunWithMapping(t, e, "contact", profile.SourceRef, map[string]string{"Email": "email", "Full Name": "full_name", "Company": "company_name"})
+	profile, _ := importjobtest.UploadCSV(t, e, "contact", "Email,Full Name,Company\nbuyer@undo-work.test,Dana Buyer,Undo Works\n")
+	run, status := importjobtest.CreateRunWithMapping(t, e, "contact", profile.SourceRef, map[string]string{"Email": "email", "Full Name": "full_name", "Company": "company_name"})
 	if status != http.StatusAccepted {
 		t.Fatalf("run: %d", status)
 	}
@@ -66,8 +68,8 @@ func TestCSVContactUsesConfiguredConsumerDomains(t *testing.T) {
 	if s := e.Call(t, http.MethodPost, "/v1/companies", map[string]any{"source": "manual", "display_name": "Mail Provider", "domains": []map[string]any{{"domain": "mail-provider.test", "is_primary": true}}}, nil, nil); s != http.StatusCreated {
 		t.Fatalf("company: %d", s)
 	}
-	profile, _ := uploadCSV(t, e, "contact", "Email,Full Name\nbuyer@mail-provider.test,Dana Buyer\n")
-	run, status := createRunWithMapping(t, e, "contact", profile.SourceRef, map[string]string{"Email": "email", "Full Name": "full_name"})
+	profile, _ := importjobtest.UploadCSV(t, e, "contact", "Email,Full Name\nbuyer@mail-provider.test,Dana Buyer\n")
+	run, status := importjobtest.CreateRunWithMapping(t, e, "contact", profile.SourceRef, map[string]string{"Email": "email", "Full Name": "full_name"})
 	if status != http.StatusAccepted {
 		t.Fatalf("run: %d", status)
 	}
@@ -93,11 +95,11 @@ func TestCSVReferencesFindEmployersCreatedByEarlierContacts(t *testing.T) {
 	for _, ref := range []string{"Orion Research", "orion-research.test"} {
 		t.Run(ref, func(t *testing.T) {
 			e := setupImportApp(t)
-			profile, status := uploadCSV(t, e, "contact", "Name,Email,Company,Company Ref\nDana,dana@orion-research.test,Orion Research,\nRobin,robin@other-work.test,,"+ref+"\n")
+			profile, status := importjobtest.UploadCSV(t, e, "contact", "Name,Email,Company,Company Ref\nDana,dana@orion-research.test,Orion Research,\nRobin,robin@other-work.test,,"+ref+"\n")
 			if status != http.StatusOK {
 				t.Fatalf("upload: %d", status)
 			}
-			run, status := createRunWithMapping(t, e, "contact", profile.SourceRef, map[string]string{"Name": "full_name", "Email": "email", "Company": "company_name", "Company Ref": "company_ref"})
+			run, status := importjobtest.CreateRunWithMapping(t, e, "contact", profile.SourceRef, map[string]string{"Name": "full_name", "Email": "email", "Company": "company_name", "Company Ref": "company_ref"})
 			if status != http.StatusAccepted {
 				t.Fatalf("stage: %d", status)
 			}
@@ -120,11 +122,11 @@ func TestCSVReferencesFindEmployersCreatedByEarlierContacts(t *testing.T) {
 
 func TestCSVPlannedEmployerDomainsDoNotInventAliasCompanies(t *testing.T) {
 	e := setupImportApp(t)
-	profile, status := uploadCSV(t, e, "contact", "Name,Email,Company,Company Ref\nDana,dana@orion-alias.test,Orion Research,\nRobin,robin@orion-alias.test,Another Name,\nTaylor,taylor@other.test,,Another Name\n")
+	profile, status := importjobtest.UploadCSV(t, e, "contact", "Name,Email,Company,Company Ref\nDana,dana@orion-alias.test,Orion Research,\nRobin,robin@orion-alias.test,Another Name,\nTaylor,taylor@other.test,,Another Name\n")
 	if status != http.StatusOK {
 		t.Fatalf("upload: %d", status)
 	}
-	run, status := createRunWithMapping(t, e, "contact", profile.SourceRef, map[string]string{"Name": "full_name", "Email": "email", "Company": "company_name", "Company Ref": "company_ref"})
+	run, status := importjobtest.CreateRunWithMapping(t, e, "contact", profile.SourceRef, map[string]string{"Name": "full_name", "Email": "email", "Company": "company_name", "Company Ref": "company_ref"})
 	if status != http.StatusAccepted {
 		t.Fatalf("stage: %d", status)
 	}

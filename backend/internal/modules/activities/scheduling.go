@@ -20,6 +20,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/calendarbacking"
@@ -43,6 +44,9 @@ const (
 	defaultSlotDuration    = 30 * time.Minute
 	minSlotDuration        = 15 * time.Minute
 	maxSlotDuration        = 8 * time.Hour
+
+	// The field a refusal names when the fault is in the offered times.
+	optionsField = "options"
 )
 
 // SchedulingArgumentError refuses a from/to/start/end/duration combination no
@@ -97,7 +101,7 @@ var (
 	// Two proposed times that share minutes are one time offered twice, not a
 	// choice. The picker refuses the second; this holds every other door.
 	errProposalTimesOverlap = &SchedulingArgumentError{
-		Field: "options", Code: "times_overlap",
+		Field: optionsField, Code: "times_overlap",
 		Message: "two proposed times overlap; offer times that share no minutes",
 	}
 	// `links` carries minItems: 1 in crm.yaml, and nothing generated enforces
@@ -172,16 +176,14 @@ func (s *Store) Availability(ctx context.Context, host ids.UserID, from, to time
 		rows, err := tx.Query(ctx, fmt.Sprintf(`
 			SELECT a.occurred_at, CASE WHEN a.booking_interval_exact THEN coalesce(a.duration_seconds, 3600) ELSE 3600 END FROM activity a
 			WHERE a.kind = 'meeting' AND a.archived_at IS NULL AND a.occurred_precision = 'instant'
-			  AND (a.host_user_id = $%[1]d
-			       OR EXISTS (SELECT 1 FROM capture_import held WHERE held.activity_id = a.id AND held.user_id = $%[1]d)
-			       OR EXISTS (SELECT 1 FROM activity_participant seat
-			                   WHERE seat.activity_id = a.id AND seat.user_id = $%[1]d AND seat.role IN ('organizer', 'attendee')
-			                     AND seat.response IS DISTINCT FROM 'declined' AND %[4]s))
+			  AND (%[4]s OR (NOT %[7]s AND (a.host_user_id = $%[1]d
+ OR EXISTS (SELECT 1 FROM capture_import held WHERE held.activity_id=a.id AND held.user_id=$%[1]d))))
 			  AND a.occurred_at + (CASE WHEN a.booking_interval_exact THEN coalesce(a.duration_seconds, 3600) ELSE 3600 END) * interval '1 second' > $%[2]d -- meeting end: this read takes instants alone, the rows that hold a host hour
 			  AND a.occurred_at < $%[3]d -- occurred_at raw: the range's upper edge, read for instants alone
 			  AND a.meeting_status IS DISTINCT FROM 'canceled'
+ AND NOT %[6]s
 			  AND %[5]s
-			ORDER BY a.occurred_at`, hostPos, fromPos, toPos, auth.ParticipantStandsSQL("seat", "a"), scope), args...)
+			ORDER BY a.occurred_at`, hostPos, fromPos, toPos, storekit.MeetingResponsibilitySQL("a", fmt.Sprintf("$%d", hostPos)), scope, auth.MeetingSeatDeclinedSQL("a", fmt.Sprintf("$%d", hostPos)), storekit.MeetingHasCalendarRosterSQL("a")), args...)
 		if err != nil {
 			return err
 		}

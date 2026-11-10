@@ -311,7 +311,7 @@ func (s *Service) HiddenBacklog(ctx context.Context) (crmcontracts.HiddenBacklog
 	// is told they may not ask rather than told the backlog is clear. Those are
 	// different answers and the second is the one this endpoint must never give
 	// wrongly.
-	if err := requireLeadTier(ctx); err != nil {
+	if err := RequireLeadTier(ctx); err != nil {
 		return crmcontracts.HiddenBacklog{}, err
 	}
 	asOf := s.now()
@@ -352,7 +352,7 @@ func (s *Service) HiddenBacklog(ctx context.Context) (crmcontracts.HiddenBacklog
 func (s *Service) HiddenBacklogRows(
 	ctx context.Context, rule string,
 ) (crmcontracts.HiddenBacklogRows, error) {
-	if err := requireLeadTier(ctx); err != nil {
+	if err := RequireLeadTier(ctx); err != nil {
 		return crmcontracts.HiddenBacklogRows{}, err
 	}
 	asOf := s.now()
@@ -432,7 +432,7 @@ func (s *Service) ResponseMetrics(
 ) (crmcontracts.ResponseMetrics, error) {
 	// Before the window is even resolved: a refused reader learns nothing about
 	// what this endpoint would have measured.
-	if err := requireLeadTier(ctx); err != nil {
+	if err := RequireLeadTier(ctx); err != nil {
 		return crmcontracts.ResponseMetrics{}, err
 	}
 	if days <= 0 {

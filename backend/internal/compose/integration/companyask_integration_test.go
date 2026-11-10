@@ -37,7 +37,7 @@ func TestCompanyAskAnswersFromTheModelAndReportsTheWriter(t *testing.T) {
 	deal := e.SeedDeal(t, "Fleet retrofit", pipeline, stage, &e.Rep1)
 	e.WsExec(t, `UPDATE deal SET company_id = $2 WHERE id = $1`, deal, company.UUID)
 
-	lane := &countingLane{reply: `{"sentences":[{"text":"One open deal, in Discovery.","evidence":[{"entity_type":"deal","entity_id":"` + deal.String() + `"}]}]}`}
+	lane := &countingLane{reply: `{"sentences":[{"text":"One open deal, in Discovery.","evidence":[{"entity_type":"deal","entity_id":"` + deal.String() + `"}]}]}`, names: map[string]string{deal.String(): "Fleet retrofit"}}
 	svc := briefService(e, lane, "routing-1")
 
 	answer, err := svc.Ask(e.As(e.Rep1, nil, briefReaderPerms), company, crmcontracts.CompanyQuestionWhatsOpen)

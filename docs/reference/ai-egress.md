@@ -44,6 +44,7 @@ bound for its ladder's rungs, and may retain the prompt for debugging.
 | `cold_start` | `cheap_cloud` → `premium` | no | no | no | none | shipped |
 | `corpus_ask` | `premium` | no | no | no | none | shipped |
 | `deal_health` | `cheap_cloud` → `premium` | no | no | no | none | shipped |
+| `deal_verdict` | `local_small` → `cheap_cloud` | no | yes | no | none | shipped |
 | `document_extract` | `premium` | no | yes | no | none | shipped |
 | `draft_reply` | `cheap_cloud` → `premium` | no | no | no | none | shipped |
 | `enrich` | `local_small` → `cheap_cloud` | no | no | no | none | shipped |
@@ -78,6 +79,10 @@ two decide whether a sender or a thread is private, so sending their text to a
 hosted provider would defeat the check. Both declare `local_only`: their prompt
 reaches no hosted provider under any profile, and no decision provider the
 registry does not mark local either.
+
+`voice_build` reads mail too, but only a user's own sent mail, and only after that
+user chose **Learn from sent mail** on their Writing voice page. Its text then goes
+where the task's ladder in the table sends it.
 
 The **Local-only ladder** column names the ladder's tiers and does not say what
 a deployment binds them to. Those tiers are size classes, and for a task that

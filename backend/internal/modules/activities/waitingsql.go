@@ -179,6 +179,7 @@ var waitingSelectSQL = `
 	            AND ours.channel_provider IS NOT DISTINCT FROM a.channel_provider
 	            AND ours.direction = 'outbound'
 	            AND ours.archived_at IS NULL
+	            -- Not an answer (occurredday.AnswersSQL): it only ranks the row, so id order may break a tie.
 	            AND (ours.occurred_at, ours.id) < (a.occurred_at, a.id)),
 	       COALESCE(
 	         (array_agg(ownerDeal.owner_id ORDER BY ownerDeal.id::text)
@@ -341,7 +342,8 @@ var waitingEligibleFromSQL = `FROM activity a
 	   -- deletes the state row. handled lifts only by undo; the customer's next
 	   -- message is a new row with no state.
 	   AND (%[20]s OR NOT ` + readerSetAsideSQL("$%[9]d", "%[15]s") + `)
-		   AND ` + filedUnderALiveContactSQL + ` %[18]s`
+		   AND ` + relationshipmark.SenderMayRaiseWorkSQL("a") + `
+           AND ` + filedUnderALiveContactSQL + ` %[18]s`
 
 // waitingGroupSQL folds the joined links back to one row per message.
 const waitingGroupSQL = `

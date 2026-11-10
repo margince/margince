@@ -65,7 +65,11 @@ const (
 	classProjectHealth = "project_health"
 
 	// KindProjectHealthAI tells a project's owner the health job judged it.
-	KindProjectHealthAI = "project_health_ai"
+	KindProjectHealthAI       = "project_health_ai"
+	KindPrivacyReviewRequired = "privacy_review_required"
+	// KindOptOutReceiptMissed tells the privacy operators a receipt a refusal
+	// requires did not go out.
+	KindOptOutReceiptMissed = noticekeys.OptOutReceiptMissedKind
 
 	KindApprovalPending  = "approval_pending"
 	ClassApprovalPending = KindApprovalPending
@@ -95,6 +99,8 @@ const KindMeetingInvitationAttention = "meeting_invitation_attention"
 
 var classByKind = map[string]string{
 	"data_task_failed":             classSystem,
+	KindPrivacyReviewRequired:      classSystem,
+	KindOptOutReceiptMissed:        classSystem,
 	"automation":                   classAutomation,
 	"lead_sla":                     classLeadSLA,
 	"capture_backlog_stalled":      classCapture,
@@ -463,6 +469,10 @@ func preferenceImage(class string, delivery *string) map[string]any {
 
 // TargetApproval is the target type of a notice that opens a pending decision.
 const TargetApproval = "approval"
+
+// TargetDataTask is the target type of a notice about one background
+// correction run; a client opens System health on it.
+const TargetDataTask = "data_task"
 
 // ApprovalNoticeKey names one announcement of a pending decision across every
 // seat told about it. The writer, the retraction and the centre's routing all

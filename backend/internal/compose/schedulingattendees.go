@@ -18,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/mailidentity"
 	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -99,18 +100,20 @@ func hostSees(err error) (bool, error) {
 
 func (c schedulingCalendar) attendeeCandidates(ctx, hostCtx context.Context, address string) (attendeeCandidates, error) {
 	args := []any{address, owndomain.OfAddress(address)}
-	scope, err := auth.ScopeClauseFor(hostCtx, "contact", "c", func(v any) int { args = append(args, v); return len(args) })
-	if err != nil {
-		return attendeeCandidates{}, err
+	scope := jsonFalse
+	if auth.ReadGranted(hostCtx, "contact") && !mailidentity.HasMachineLocalpart(address) {
+		var err error
+		scope, err = auth.ScopeClauseFor(hostCtx, "contact", "c", func(v any) int { args = append(args, v); return len(args) })
+		if err != nil {
+			return attendeeCandidates{}, err
+		}
+		if scope == "" {
+			scope = jsonTrue
+		}
 	}
-	switch {
-	case !auth.ReadGranted(hostCtx, "contact"):
-		scope = "false"
-	case scope == "":
-		scope = "true"
-	}
+
 	var found attendeeCandidates
-	err = database.WithWorkspaceTx(ctx, c.pool, func(tx pgx.Tx) error {
+	err := database.WithWorkspaceTx(ctx, c.pool, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
 			SELECT 'contact', e.contact_id, '' FROM contact_email e JOIN contact c ON c.id = e.contact_id
 			 WHERE e.email = $1 AND e.archived_at IS NULL AND c.archived_at IS NULL AND (`+scope+`)
@@ -222,6 +225,28 @@ func (c schedulingCalendar) InviteeAddress(ctx context.Context, host ids.UserID,
 // Blocker says why the host's calendar cannot take bookings. It reads the
 // connection's granted scopes and the host's authority, and calls no provider.
 func (c schedulingCalendar) Blocker(ctx context.Context, host ids.UserID, provider string) (crmcontracts.SchedulingProfileBlocker, error) {
+	blocker, err := c.grantBlocker(ctx, host, provider)
+	if err != nil || blocker != crmcontracts.SchedulingProfileBlockerNone {
+		return blocker, err
+	}
+	return blockerOfCheck(c.Check(ctx, host, provider))
+}
+
+// blockerOfCheck reads a refused check as a page that cannot take bookings.
+// Any other failure says nothing about the page.
+func blockerOfCheck(err error) (crmcontracts.SchedulingProfileBlocker, error) {
+	if errors.Is(err, connector.ErrAuthRejected) || errors.Is(err, apperrors.ErrPermissionDenied) {
+		return crmcontracts.SchedulingProfileBlockerCalendarUnavailable, nil
+	}
+	if err != nil {
+		return "", err
+	}
+	return crmcontracts.SchedulingProfileBlockerNone, nil
+}
+
+// grantBlocker is the part of Blocker the stored connection answers alone:
+// whether a live connection exists and whether it may write events.
+func (c schedulingCalendar) grantBlocker(ctx context.Context, host ids.UserID, provider string) (crmcontracts.SchedulingProfileBlocker, error) {
 	if c.registry == nil {
 		return crmcontracts.SchedulingProfileBlockerCalendarUnavailable, nil
 	}
@@ -234,13 +259,6 @@ func (c schedulingCalendar) Blocker(ctx context.Context, host ids.UserID, provid
 	}
 	if !capture.CalendarWriteGranted(provider, scopes) {
 		return crmcontracts.SchedulingProfileBlockerCalendarReadOnly, nil
-	}
-	err = c.Check(ctx, host, provider)
-	if errors.Is(err, connector.ErrAuthRejected) || errors.Is(err, apperrors.ErrPermissionDenied) {
-		return crmcontracts.SchedulingProfileBlockerCalendarUnavailable, nil
-	}
-	if err != nil {
-		return "", err
 	}
 	return crmcontracts.SchedulingProfileBlockerNone, nil
 }

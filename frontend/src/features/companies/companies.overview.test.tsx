@@ -377,7 +377,7 @@ describe("CompanyScreen — the Overview and the details beside it", () => {
       ) ?? [],
     ).map((title) => title.textContent);
     expect(cards).toEqual([
-      "Also on your list",
+      "Other open tasks",
       "Deals and projects",
       "Latest",
       "Contacts",
@@ -574,6 +574,7 @@ describe("CompanyScreen — the Overview and the details beside it", () => {
           data: [
             {
               contact_id: "p-1",
+              attachable: true,
               full_name: "Anna Brandt",
               title: "Head of Procurement",
               primary_email: "anna.brandt@brandt-automotive.de",
@@ -597,11 +598,13 @@ describe("CompanyScreen — the Overview and the details beside it", () => {
     });
     render(<CompanyScreen id="o-1" />);
 
-    // The name opens the record and is the link's whole name. The mark beside
-    // it draws initials as text, which would otherwise be announced first.
+    // The name opens the record. The card's link starts with the initials its
+    // mark prints (WCAG 2.5.3); a plain reference is the name alone.
     // The page names this contact in the roster card and the references beside
     // it. Every one is asserted, since a single lookup misses a stray link.
-    const names = await screen.findAllByRole("link", { name: "Anna Brandt" });
+    const names = await screen.findAllByRole("link", {
+      name: /^(AB\s*)?Anna Brandt$/,
+    });
     for (const each of names) {
       expect(each.getAttribute("href")).toBe("/#/contacts/p-1");
     }

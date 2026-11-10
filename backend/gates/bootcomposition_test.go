@@ -16,9 +16,10 @@ package gates
 
 import (
 	"go/ast"
-	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // The two compose entry points that must travel together. RegisterExtensions
@@ -34,7 +35,7 @@ const (
 
 func TestEveryRoleThatComposesExtensionsRecordsWhatItComposed(t *testing.T) {
 	t.Parallel()
-	roles, err := os.ReadDir("cmd")
+	roles, err := gatekit.ReadDir("cmd")
 	if err != nil {
 		t.Fatalf("reading the process roles under cmd/: %v", err)
 	}

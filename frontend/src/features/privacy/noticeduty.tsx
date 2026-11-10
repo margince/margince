@@ -18,22 +18,23 @@ import { type Fact, FactList } from "../../design-system/factlist";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { QueryStates } from "../../design-system/querystates";
 import { formatDate } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 import { useCan, useCanWrite } from "../../lib/capability";
+import { labelFor } from "../../lib/labelfor";
+import {
+  acquisitionKindLabel,
+  acquisitionRecorder,
+  noticeRuleHint,
+  noticeRuleLabel,
+} from "../../lib/noticeacquisition";
 import { problemMessageOf, unwrap } from "../../lib/problem";
+import { useViewerZone } from "../../lib/viewerzone";
 import type { WorklistItem } from "../worklist/worklist.queries";
 import {
   ControllerMailDialog,
   type ControllerMailIssued,
   type ControllerMailKind,
 } from "./controllermail";
-import {
-  acquisitionKindLabel,
-  acquisitionRecorder,
-  noticeRuleHint,
-  noticeRuleLabel,
-} from "./noticeacquisition";
 import {
   isNoticeResolved,
   NOTICE_STATE_LABEL,
@@ -57,6 +58,7 @@ export function NoticeDuty(
     { item: WorklistItem; contactId: string } | { caseId: string }
   >,
 ) {
+  const readerZone = useViewerZone();
   const t = useT();
   const { locale } = useLocale();
   const item = "item" in props ? props.item : undefined;
@@ -148,7 +150,7 @@ export function NoticeDuty(
         {owed && <p>{t("noticeDuty.what")}</p>}
         <FactList
           className="notice-duty-facts"
-          facts={dutyFacts(item, duty.data, t, locale, viewerZone())}
+          facts={dutyFacts(item, duty.data, t, locale, readerZone)}
         />
         {owed && <p className="t-caption">{t("noticeDuty.how")}</p>}
         <NoticeDutyActions
@@ -265,7 +267,7 @@ function dutyFacts(
     facts.push({
       key: "state",
       term: t("history.field.status"),
-      value: t(NOTICE_STATE_LABEL[duty.state]),
+      value: t(labelFor(NOTICE_STATE_LABEL, duty.state)),
     });
     facts.push({
       key: "owner",
