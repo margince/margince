@@ -414,6 +414,7 @@ export function SegmentedControl<Option extends string>({
   floors,
   label,
   marks,
+  busy,
 }: Readonly<{
   options: readonly Option[];
   value: Option;
@@ -442,9 +443,16 @@ export function SegmentedControl<Option extends string>({
   // thing a screen reader cannot read out and a colour-blind reader may not
   // see. It draws attention; it never carries the meaning alone.
   marks?: Partial<Record<Option, boolean>>;
+  // The option whose choice is being stored. Every option waits until it lands,
+  // so a second press cannot overtake the first.
+  busy?: Option;
 }>) {
   return (
-    <fieldset className="segmented" aria-label={label}>
+    <fieldset
+      className="segmented"
+      aria-label={label}
+      disabled={busy !== undefined}
+    >
       {options.map((option) => {
         const count = counts?.[option];
         return (
@@ -452,6 +460,7 @@ export function SegmentedControl<Option extends string>({
             key={option}
             type="button"
             aria-pressed={option === value}
+            aria-busy={option === busy || undefined}
             onClick={() => onChange(option)}
           >
             {labels[option]}

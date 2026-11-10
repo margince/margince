@@ -72,6 +72,7 @@ func toolRoleApp(t *testing.T, slug string, more ...compose.Option) *apptest.Two
 	}
 	vault := keyvault.NewMemory()
 	calendar := apptest.NewBookingProvider(sweepGmail{next: http.DefaultTransport})
+	sweepCalendar = calendar
 	previous := http.DefaultTransport
 	http.DefaultTransport = calendar
 	t.Cleanup(func() { http.DefaultTransport = previous })
@@ -161,6 +162,10 @@ func callThroughApproval(t *testing.T, e *apptest.AppEnv, client *apptest.MCPCli
 // sweepEmbedder is the embedding lane of the last sweep app, which a seed's
 // reindex worker embeds with.
 var sweepEmbedder search.Embedder
+
+// sweepCalendar is the Google calendar of the last sweep app, which an
+// invitation's seed puts the invited event on.
+var sweepCalendar *apptest.BookingProvider
 
 // sweepVoiceModel is the model the last sweep app's voice builds are worked on.
 var sweepVoiceModel compose.ModelPath
