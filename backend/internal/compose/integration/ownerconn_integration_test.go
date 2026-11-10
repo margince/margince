@@ -31,7 +31,7 @@ func TestATestSharesOneOwnerConnection(t *testing.T) {
 	if FreshOwnerConn(t) == first {
 		t.Fatal("FreshOwnerConn handed out the shared connection")
 	}
-	var parent *pgx.Conn = first
+	parent := first
 	t.Run("a subtest", func(t *testing.T) {
 		if OwnerConn(t) == parent {
 			t.Fatal("a subtest was handed its parent's connection")
@@ -82,25 +82,20 @@ func TestTwoGoroutinesOnTheSharedOwnerConnectionFailLoudly(t *testing.T) {
 	}()
 	// Watched from a connection of its own, so the shared one has one user.
 	watcher := FreshOwnerConn(t)
-	running := false
-	for deadline := time.Now().Add(5 * time.Second); !running; {
-		if time.Now().After(deadline) {
-			t.Fatal("the sleeping query never started")
-		}
-		if err := watcher.QueryRow(context.Background(), `SELECT EXISTS (SELECT 1 FROM pg_stat_activity
+	waiting, stop := context.WithTimeout(context.Background(), 5*time.Second)
+	defer stop()
+	for running := false; !running; {
+		if err := watcher.QueryRow(waiting, `SELECT EXISTS (SELECT 1 FROM pg_stat_activity
 			WHERE pid = $1 AND state = 'active' AND query LIKE '%pg_sleep%')`, pid).Scan(&running); err != nil {
-			t.Fatal(err)
+			t.Fatalf("the sleeping query never started: %v", err)
 		}
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	// Under a second, so a connection that queued the second query behind the
+	// first answers with the deadline instead of conn busy.
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
-	started := time.Now()
-	_, err := shared.Exec(ctx, `SELECT 1`)
-	if err == nil || !strings.Contains(err.Error(), "conn busy") {
+	if _, err := shared.Exec(ctx, `SELECT 1`); err == nil || !strings.Contains(err.Error(), "conn busy") {
 		t.Errorf("a second goroutine on the connection answered %v, want conn busy", err)
-	}
-	if waited := time.Since(started); waited > time.Second {
-		t.Errorf("the refusal took %s; it waited for the other query instead", waited)
 	}
 	if err := <-sleeping; err != nil {
 		t.Errorf("the first query: %v", err)

@@ -9,7 +9,6 @@ import (
 	"context"
 	"maps"
 	"os"
-	"sync"
 	"testing"
 	"time"
 
@@ -215,63 +214,6 @@ func SchemaPool(t *testing.T) *pgxpool.Pool {
 	}
 	t.Cleanup(pool.Close)
 	return pool
-}
-
-// OwnerConn is the schema-owner connection tests use to shift timestamps the
-// app role's workspace-bound path could never touch. A test gets one connection
-// however often it asks: opening one costs a round of authentication, and some
-// helpers ask once per row they seed.
-//
-// The shared connection is handed out only while it is idle. One that a caller
-// closed, or left inside a transaction or a running query, is not shared on:
-// the caller gets a fresh connection instead. A test that needs a second
-// connection of its own, to hold a lock or to race the first, asks
-// FreshOwnerConn for it.
-func OwnerConn(t *testing.T) *pgx.Conn {
-	t.Helper()
-	if held, ok := ownerConns.Load(t); ok {
-		if conn, ok := held.(*pgx.Conn); ok && ownerConnIdle(conn) {
-			return conn
-		}
-		return FreshOwnerConn(t)
-	}
-	conn := FreshOwnerConn(t)
-	ownerConns.Store(t, conn)
-	t.Cleanup(func() { ownerConns.Delete(t) })
-	return conn
-}
-
-// ownerConns holds each running test's shared owner connection, keyed by its *testing.T.
-var ownerConns sync.Map
-
-// ownerConnIdle reports whether conn can be handed to the next caller: open,
-// not in the middle of a query, and outside any transaction.
-func ownerConnIdle(conn *pgx.Conn) bool {
-	pg := conn.PgConn()
-	return !conn.IsClosed() && !pg.IsBusy() && pg.TxStatus() == 'I'
-}
-
-// FreshOwnerConn opens a schema-owner connection of the test's own, closed when
-// the test ends. It is never the one OwnerConn shares.
-func FreshOwnerConn(t *testing.T) *pgx.Conn {
-	t.Helper()
-	dsn := os.Getenv("MARGINCE_TEST_DSN")
-	if dsn == "" {
-		t.Fatal("MARGINCE_TEST_DSN not set — run `make db-up` (integration tests fail loudly, they never skip)")
-	}
-	conn, err := pgx.Connect(context.Background(), dsn)
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() {
-		if conn.IsClosed() {
-			return
-		}
-		if err := conn.Close(context.Background()); err != nil {
-			t.Errorf("closing owner connection: %v", err)
-		}
-	})
-	return conn
 }
 
 // As binds a full operation context for one human principal.
