@@ -235,6 +235,9 @@ func (s *RetentionService) anonymiseOneContact(
 		if err := storekit.LockStopKey(ctx, tx, id.String()); err != nil {
 			return err
 		}
+		if err := storekit.LockSubjectsStopAddresses(ctx, tx, id); err != nil {
+			return err
+		}
 		// The row lock next, so an edit cannot land between the answer and the
 		// scrub. A tag, list membership or note waits on it too: each writer
 		// holds the contact FOR SHARE, or through activity_link's foreign key.

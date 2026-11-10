@@ -86,7 +86,7 @@ func TestASellerReplyInFlightDuringTheErasureIsTombstoned(t *testing.T) {
 		t.Fatalf("the buyer opening a thread: %v", err)
 	}
 	ctx := context.Background()
-	reply, err := OwnerConn(t).Begin(ctx)
+	reply, err := FreshOwnerConn(t).Begin(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}

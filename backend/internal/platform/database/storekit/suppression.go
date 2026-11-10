@@ -272,6 +272,19 @@ func LockChannelIdentities(ctx context.Context, tx pgx.Tx, keys []ChannelIdentit
 // ordering nobody chose. Hashing both into a single sorted, deduplicated set
 // makes that impossible to express.
 func LockSubjectKeys(ctx context.Context, tx pgx.Tx, keys []ChannelIdentityKey, emails []string) error {
+	for _, hash := range SubjectLockKeys(keys, emails) {
+		if _, err := tx.Exec(ctx, `
+			SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`,
+			hash); err != nil {
+			return fmt.Errorf("storekit: locking a subject identifier against a concurrent erasure: %w", err)
+		}
+	}
+	return nil
+}
+
+// SubjectLockKeys keeps session readers and transaction writers in the same
+// identifier namespace, including both supported spellings of an address.
+func SubjectLockKeys(keys []ChannelIdentityKey, emails []string) []string {
 	hashes := make([]string, 0, len(keys)+len(emails))
 	// The unkeyed digest, so the lock never depends on which key is bound.
 	for _, key := range keys {
@@ -282,14 +295,7 @@ func LockSubjectKeys(ctx context.Context, tx pgx.Tx, keys []ChannelIdentityKey, 
 		hashes = append(hashes, identifierDigest(email), identifierDigest(mailidentity.FoldAddress(email)))
 	}
 	slices.Sort(hashes)
-	for _, hash := range slices.Compact(hashes) {
-		if _, err := tx.Exec(ctx, `
-			SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`,
-			hash); err != nil {
-			return fmt.Errorf("storekit: locking a subject identifier against a concurrent erasure: %w", err)
-		}
-	}
-	return nil
+	return slices.Compact(hashes)
 }
 
 // LockTranscriptBody serialises a reading of one activity's transcript against

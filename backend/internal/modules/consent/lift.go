@@ -173,6 +173,9 @@ func (s *Store) liftAdmittedTx(
 	if err := lockSubjectSuppressions(ctx, tx, sub.id); err != nil {
 		return err
 	}
+	if err := storekit.LockSubjectsStopAddresses(ctx, tx, sub.id); err != nil {
+		return err
+	}
 	// EnsureRetractable, which IS EnsureWritable and says so: this is a write
 	// that RELEASES rather than adds, and it reaches an archived subject on
 	// purpose. The named spelling is what distinguishes that deliberate reach
