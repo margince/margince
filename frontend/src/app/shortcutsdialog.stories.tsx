@@ -2,16 +2,14 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { setSingleKeyShortcutsOn } from "../lib/shortcuts";
 import { StoryProviders } from "../testing/story-utils";
 import { ShortcutsDialog } from "./shortcutsdialog";
 import "./account.css";
+import { RestoreSingleKeys } from "../testing/singlekeys-story";
 
-/**
- * The keyboard shortcuts, opened from Help and feedback in the account menu.
- * Three groups: the chords that work anywhere, the save of a multi-line field,
- * and the keys of the Brief's decision deck. The deck's keys use the deck's own
- * words. The caps follow the reader's platform: ⌘ on a Mac, Ctrl elsewhere.
- */
+/** Opened from Help and feedback or with `?`: the keymap's groups, then the
+ *  deck's keys in the deck's own words. Caps follow the reader's platform. */
 const meta: Meta<typeof ShortcutsDialog> = {
   title: "Shell/Keyboard shortcuts",
   component: ShortcutsDialog,
@@ -31,6 +29,29 @@ type Story = StoryObj<typeof ShortcutsDialog>;
 export const Default: Story = {};
 
 export const Dark: Story = {
+  globals: { theme: "dark" },
+};
+
+/** The reader turned single-key shortcuts off, and the dialog says so first. */
+export const SingleKeysOff: Story = {
+  render: () => {
+    setSingleKeyShortcutsOn(false);
+    return (
+      <StoryProviders>
+        <RestoreSingleKeys>
+          <ShortcutsDialog
+            open
+            onClose={() => undefined}
+            returnFocusTo={() => null}
+          />
+        </RestoreSingleKeys>
+      </StoryProviders>
+    );
+  },
+};
+
+export const SingleKeysOffDark: Story = {
+  ...SingleKeysOff,
   globals: { theme: "dark" },
 };
 

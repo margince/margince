@@ -5,6 +5,7 @@ import { CardBoundary } from "../design-system/cardboundary";
 import { useT } from "../i18n";
 import { lazy } from "../i18n/lazy";
 import { useMe } from "../lib/session";
+import { useShortcutHandler } from "../lib/shortcuts";
 import { identityOf } from "./accountidentity";
 import { usePopoverDismiss } from "./popover";
 import "./account.css";
@@ -39,6 +40,12 @@ export function AccountMenu() {
   const [shortcuts, setShortcuts] = useState<"unopened" | "open" | "closed">(
     "unopened",
   );
+  // From Help, focus returns to the trigger; from `?`, to wherever the key was pressed.
+  const [fromHelp, setFromHelp] = useState(false);
+  useShortcutHandler("shortcuts", () => {
+    setFromHelp(false);
+    setShortcuts("open");
+  });
   const trigger = useRef<HTMLButtonElement>(null);
   const menu = useRef<HTMLDivElement>(null);
   const spokenId = useId();
@@ -127,6 +134,7 @@ export function AccountMenu() {
             onFocusLost={closeFromLostFocus}
             onShortcuts={() => {
               dismiss();
+              setFromHelp(true);
               setShortcuts("open");
             }}
           />
@@ -139,7 +147,7 @@ export function AccountMenu() {
           <ShortcutsDialog
             open={shortcuts === "open"}
             onClose={() => setShortcuts("closed")}
-            returnFocusTo={() => trigger.current}
+            returnFocusTo={() => (fromHelp ? trigger.current : null)}
           />
         </Suspense>
       )}

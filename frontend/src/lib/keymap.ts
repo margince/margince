@@ -1,0 +1,302 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+import type { MessageKey } from "../i18n/en";
+import { FIELD_COMMIT_KEY } from "./fieldcommit";
+import type { Route } from "./router";
+import { settingsHref } from "./settingsrouting";
+
+/** `chord` takes ⌘ or Ctrl; `named` is a key the platform answers, listed and never dispatched. */
+export type BindingKeys =
+  | Readonly<{ kind: "chord"; key: string }>
+  | Readonly<{ kind: "single"; key: string }>
+  | Readonly<{ kind: "sequence"; keys: readonly [string, string] }>
+  | Readonly<{ kind: "named"; key: string }>;
+
+export type BindingGroup = "anywhere" | "goto" | "record" | "editing";
+
+type BindingRow = Readonly<{
+  id: string;
+  keys: BindingKeys;
+  group: BindingGroup;
+  labelKey: MessageKey;
+  /** `control`: the focused control answers it, and the dispatcher never does. */
+  answeredBy: "dispatcher" | "control";
+  /** A chord a text field keeps for itself: ⌘B is bold in every editor. */
+  yieldsToFields?: boolean;
+  goesTo?: Route;
+}>;
+
+export const SEQUENCE_WINDOW_MS = 1000;
+
+const GO_TO_LEAD = "g";
+
+const chord = (key: string) => ({ kind: "chord", key }) as const;
+const single = (key: string) => ({ kind: "single", key }) as const;
+const goTo = (key: string) =>
+  ({ kind: "sequence", keys: [GO_TO_LEAD, key] }) as const;
+
+/** Every keyboard shortcut the product binds or lists, in the order the dialog lists them. */
+const BINDING_ROWS = [
+  {
+    id: "search",
+    keys: chord("k"),
+    group: "anywhere",
+    labelKey: "shell.shortcuts.search",
+    answeredBy: "dispatcher",
+  },
+  {
+    id: "search.slash",
+    keys: single("/"),
+    group: "anywhere",
+    labelKey: "shell.shortcuts.search",
+    answeredBy: "dispatcher",
+  },
+  {
+    id: "create",
+    keys: single("c"),
+    group: "anywhere",
+    labelKey: "shell.shortcuts.create",
+    answeredBy: "dispatcher",
+  },
+  {
+    id: "sidebar",
+    keys: chord("b"),
+    group: "anywhere",
+    labelKey: "shell.shortcuts.sidebar",
+    answeredBy: "dispatcher",
+    yieldsToFields: true,
+  },
+  {
+    id: "shortcuts",
+    keys: single("?"),
+    group: "anywhere",
+    labelKey: "shell.shortcuts.list",
+    answeredBy: "dispatcher",
+  },
+  {
+    id: "dismiss",
+    keys: { kind: "named", key: "Escape" },
+    group: "anywhere",
+    labelKey: "shell.shortcuts.dismiss",
+    answeredBy: "control",
+  },
+  {
+    id: "goto.home",
+    keys: goTo("h"),
+    group: "goto",
+    labelKey: "nav.brief",
+    answeredBy: "dispatcher",
+    goesTo: { screen: "home" },
+  },
+  {
+    id: "goto.contacts",
+    keys: goTo("c"),
+    group: "goto",
+    labelKey: "nav.contacts",
+    answeredBy: "dispatcher",
+    goesTo: { screen: "contacts" },
+  },
+  {
+    id: "goto.companies",
+    keys: goTo("o"),
+    group: "goto",
+    labelKey: "nav.companies",
+    answeredBy: "dispatcher",
+    goesTo: { screen: "companies" },
+  },
+  {
+    id: "goto.leads",
+    keys: goTo("l"),
+    group: "goto",
+    labelKey: "nav.leads",
+    answeredBy: "dispatcher",
+    goesTo: { screen: "leads" },
+  },
+  {
+    id: "goto.deals",
+    keys: goTo("d"),
+    group: "goto",
+    labelKey: "nav.deals",
+    answeredBy: "dispatcher",
+    goesTo: { screen: "deals" },
+  },
+  {
+    id: "goto.projects",
+    keys: goTo("p"),
+    group: "goto",
+    labelKey: "nav.projects",
+    answeredBy: "dispatcher",
+    goesTo: { screen: "projects" },
+  },
+  {
+    id: "goto.filters",
+    keys: goTo("f"),
+    group: "goto",
+    labelKey: "filters.title",
+    answeredBy: "dispatcher",
+    goesTo: { screen: "filters" },
+  },
+  {
+    id: "goto.analytics",
+    keys: goTo("a"),
+    group: "goto",
+    labelKey: "nav.analytics",
+    answeredBy: "dispatcher",
+    goesTo: { screen: "analytics" },
+  },
+  {
+    id: "goto.settings",
+    keys: goTo("s"),
+    group: "goto",
+    labelKey: "nav.settings",
+    answeredBy: "dispatcher",
+    goesTo: settingsHref(),
+  },
+  {
+    id: "record.logActivity",
+    keys: single("n"),
+    group: "record",
+    labelKey: "shell.shortcuts.logActivity",
+    answeredBy: "dispatcher",
+  },
+  {
+    id: "record.addTask",
+    keys: single("t"),
+    group: "record",
+    labelKey: "shell.shortcuts.addTask",
+    answeredBy: "dispatcher",
+  },
+  {
+    id: "record.writeEmail",
+    keys: single("m"),
+    group: "record",
+    labelKey: "shell.shortcuts.writeEmail",
+    answeredBy: "dispatcher",
+  },
+  {
+    id: "editing.paragraphSave",
+    keys: chord(FIELD_COMMIT_KEY),
+    group: "editing",
+    labelKey: "shell.shortcuts.paragraphSave",
+    answeredBy: "control",
+  },
+  {
+    id: "editing.sendEmail",
+    keys: chord(FIELD_COMMIT_KEY),
+    group: "editing",
+    labelKey: "shell.shortcuts.sendEmail",
+    answeredBy: "control",
+  },
+  {
+    id: "dialog.submit",
+    keys: chord(FIELD_COMMIT_KEY),
+    group: "editing",
+    labelKey: "shell.shortcuts.submitDialog",
+    answeredBy: "dispatcher",
+  },
+] as const satisfies readonly BindingRow[];
+
+export type ShortcutId = (typeof BINDING_ROWS)[number]["id"];
+
+export type Binding = BindingRow & Readonly<{ id: ShortcutId }>;
+
+export const KEYMAP: readonly Binding[] = BINDING_ROWS;
+
+const BY_ID: ReadonlyMap<ShortcutId, Binding> = new Map(
+  KEYMAP.map((binding) => [binding.id, binding]),
+);
+
+export function binding(id: ShortcutId): Binding {
+  const found = BY_ID.get(id);
+  if (found === undefined) {
+    throw new Error(`no keyboard shortcut is registered as ${id}`);
+  }
+  return found;
+}
+
+/** A shortcut pressed with no modifier, which WCAG 2.1.4 lets a reader turn off. */
+export function isCharacterKey(keys: BindingKeys): boolean {
+  return keys.kind === "single" || keys.kind === "sequence";
+}
+
+export function goToBindingFor(screen: string): Binding | undefined {
+  return KEYMAP.find(
+    (candidate) =>
+      candidate.goesTo?.screen === screen && candidate.goesTo.id === undefined,
+  );
+}
+
+const APPLE_PLATFORM = /mac|iphone|ipad|ipod/i;
+
+/** The platform modifier as the cap its keyboard prints. */
+export function modifierCap(platform: string): string {
+  return APPLE_PLATFORM.test(platform) ? "⌘" : "Ctrl";
+}
+
+const KEY_CAPS: Readonly<Record<string, string>> = {
+  ArrowRight: "→",
+  ArrowLeft: "←",
+  ArrowUp: "↑",
+  ArrowDown: "↓",
+  Escape: "Esc",
+};
+
+/** A `KeyboardEvent.key` value as the cap a keyboard prints for it. */
+export function capOf(key: string): string {
+  return KEY_CAPS[key] ?? (key.length === 1 ? key.toUpperCase() : key);
+}
+
+export function bindingCaps(
+  keys: BindingKeys,
+  platform: string,
+): readonly string[] {
+  switch (keys.kind) {
+    case "chord":
+      return [modifierCap(platform), capOf(keys.key)];
+    case "sequence":
+      return keys.keys.map(capOf);
+    default:
+      return [capOf(keys.key)];
+  }
+}
+
+export function shortcutCaps(
+  id: ShortcutId,
+  platform: string,
+): readonly string[] {
+  return bindingCaps(binding(id).keys, platform);
+}
+
+/**
+ * The `aria-keyshortcuts` value. ARIA has no spelling for a sequence, so its
+ * keys are listed in order, which is also how a screen reader speaks them.
+ */
+export function ariaKeyShortcuts(keys: BindingKeys): string {
+  switch (keys.kind) {
+    case "chord":
+      return `Meta+${capOf(keys.key)} Control+${capOf(keys.key)}`;
+    case "sequence":
+      return keys.keys.join(" ");
+    default:
+      return keys.key;
+  }
+}
+
+const ASCII_LETTER = /^[a-z]$/i;
+const LETTER_CODE = /^Key([A-Z])$/;
+
+/** The key's own letter on a Latin layout, else the letter at its place (`KeyG`
+ *  is g), so a Cyrillic or Greek layout still reaches a letter binding. */
+export function pressedLetter(
+  event: Pick<KeyboardEvent, "key" | "code">,
+): string | null {
+  if (ASCII_LETTER.test(event.key)) {
+    return event.key.toLowerCase();
+  }
+  return LETTER_CODE.exec(event.code)?.[1]?.toLowerCase() ?? null;
+}
+
+export function isLetterKey(key: string): boolean {
+  return ASCII_LETTER.test(key);
+}

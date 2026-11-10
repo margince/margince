@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   type ReactNode,
   Suspense,
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -28,7 +29,7 @@ import { ConfinedAccountScreen, useProbeAnswer } from "./app/confinement";
 import { DateFormatsProvider } from "./app/dateformats";
 import { prefetchHome } from "./app/homeprefetch";
 import { passesOnboardingGate } from "./app/onboarding-gate";
-import { usePaletteHotkey } from "./app/palettehotkey";
+import { type PaletteMode, usePaletteShortcuts } from "./app/palettehotkey";
 import { Shell, useRoute } from "./app/shell";
 import { SourceHost } from "./app/sourcehost";
 import { CallLogHost } from "./components/calllog.host";
@@ -315,6 +316,11 @@ function AuthedApp({
     sessionSeenNow,
   );
   const [paletteOpen, setPaletteOpen] = useState<boolean | null>(null);
+  const [paletteMode, setPaletteMode] = useState<PaletteMode>("all");
+  const showPalette = useCallback((mode: PaletteMode) => {
+    setPaletteMode(mode);
+    setPaletteOpen(true);
+  }, []);
   const gatesPending =
     companyPending || companyZone.pending || progress.pending;
   const shellReady = authed && !gatesPending;
@@ -339,7 +345,12 @@ function AuthedApp({
     }
     return prefetchHome(queryClient, currentParams());
   }, [opensHome, queryClient]);
-  usePaletteHotkey(paletteOpen === true, setPaletteOpen);
+  usePaletteShortcuts(
+    paletteOpen === true,
+    showPalette,
+    () => setPaletteOpen(false),
+    route.screen,
+  );
   useTaskReminderNotifications(authed);
 
   if (me.isPending && refusal === null) {
@@ -421,7 +432,7 @@ function AuthedApp({
             <CallLogHost>
               <SourceHost>
                 <ApprovalHost>
-                  <AuthedShell onOpenSearch={() => setPaletteOpen(true)}>
+                  <AuthedShell onOpenSearch={() => showPalette("all")}>
                     <ScreenView
                       screen={route.screen}
                       id={route.id}
@@ -436,6 +447,7 @@ function AuthedApp({
             <Suspense fallback={null}>
               <CommandPalette
                 open={paletteOpen}
+                mode={paletteMode}
                 onClose={() => setPaletteOpen(false)}
               />
             </Suspense>

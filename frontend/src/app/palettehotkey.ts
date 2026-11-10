@@ -1,37 +1,38 @@
-import { useEffect } from "react";
-import { liveDialogs } from "../design-system/dialogfocus";
-import { modifierCap } from "./hotkeys";
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
 
-const PALETTE_KEY = "k";
+import { liveDialogs } from "../design-system/dialogfocus";
+import { navigate, type Screen } from "../lib/router";
+import { useShortcutHandler } from "../lib/shortcuts";
+import { CREATE_ID, CREATE_SCREENS } from "./nav";
+
+/** What the palette lists: every command, or only the ones that create. */
+export type PaletteMode = "all" | "create";
 
 /**
- * The ⌘K / Ctrl K chord as one cap per key. Both modifiers work, but a surface
- * shows only the one the reader's keyboard has. Pure in `platform`, so a test
- * needs no stub.
+ * The palette's bindings: ⌘K toggles it, `/` opens it, and `C` opens the
+ * screen's own create form or, where it has none, the palette's create list.
  */
-export function paletteHotkeyCaps(platform: string): readonly string[] {
-  return [modifierCap(platform), PALETTE_KEY.toUpperCase()];
-}
-
-export function usePaletteHotkey(
+export function usePaletteShortcuts(
   open: boolean,
-  setOpen: (open: boolean) => void,
-) {
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent) => {
-      if (
-        (event.metaKey || event.ctrlKey) &&
-        event.key.toLowerCase() === PALETTE_KEY
-      ) {
-        event.preventDefault();
-        // An open dialog makes the app unreachable. Only an already-open
-        // palette may handle the shortcut while a dialog exists.
-        if (open || liveDialogs().length === 0) {
-          setOpen(!open);
-        }
-      }
-    };
-    globalThis.addEventListener("keydown", onKey);
-    return () => globalThis.removeEventListener("keydown", onKey);
-  }, [open, setOpen]);
+  show: (mode: PaletteMode) => void,
+  hide: () => void,
+  screen: Screen,
+): void {
+  useShortcutHandler("search", () => {
+    // An open dialog makes the app unreachable; only the palette's own layer may close it.
+    if (open) {
+      hide();
+    } else if (liveDialogs().length === 0) {
+      show("all");
+    }
+  });
+  useShortcutHandler("search.slash", () => show("all"));
+  useShortcutHandler("create", () => {
+    if (CREATE_SCREENS.has(screen)) {
+      navigate({ screen, id: CREATE_ID });
+    } else {
+      show("create");
+    }
+  });
 }

@@ -29,6 +29,7 @@ import { openAsk, type UrlParams } from "../lib/urlstate";
 import { PaletteAnswer, usePaletteAsk } from "./paletteanswer";
 import { useBuiltinCommands } from "./palettecommands";
 import { useConfigurationCommand } from "./paletteconfiguration";
+import type { PaletteMode } from "./palettehotkey";
 import { usePaletteRecents } from "./paletterecents";
 import { type RecentEntry, recentIdentity } from "./paletterecents.storage";
 import { PaletteRow } from "./paletterow";
@@ -92,14 +93,23 @@ export function matchingCommands(
 
 export { useBuiltinCommands } from "./palettecommands";
 
+const CREATE_COMMAND_PREFIX = "action:new-";
+
+/** A command that makes a new record, which `C` lists where a screen has no form of its own. */
+export function isCreateCommand(command: Command): boolean {
+  return command.id.startsWith(CREATE_COMMAND_PREFIX);
+}
+
 export function CommandPalette({
   open,
   onClose,
-  commands,
+  commands: offered,
+  mode = "all",
 }: Readonly<{
   open: boolean;
   onClose: () => void;
   commands: Command[];
+  mode?: PaletteMode;
 }>) {
   const t = useT();
   const [query, setQuery] = useState("");
@@ -134,6 +144,10 @@ export function CommandPalette({
     }
   }, [open]);
 
+  const commands = useMemo(
+    () => (mode === "create" ? offered.filter(isCreateCommand) : offered),
+    [mode, offered],
+  );
   const matched = useMemo(
     () => matchingCommands(commands, query),
     [commands, query],
@@ -146,7 +160,8 @@ export function CommandPalette({
   // then records, so the row Enter takes on a half-typed name is one arrow
   // above the hits it summarises.
   const search = useSearchCommands(query);
-  const recents = usePaletteRecents(open, !query.trim());
+  const listsRecents = mode === "all" && !query.trim();
+  const recents = usePaletteRecents(open, listsRecents);
   const recentCommands: Command[] = recents.entries.map((entry) => ({
     id: `recent:${recentIdentity(entry)}`,
     label: entry.kind === "query" ? entry.text : entry.label,
@@ -192,7 +207,7 @@ export function CommandPalette({
     filtered.length,
     query,
     picked,
-    recents.pending,
+    listsRecents && recents.pending,
   );
   const focusSearch = () => {
     setPicked(null);
@@ -349,7 +364,7 @@ export function CommandPalette({
           {rows.length === 0 && !search.pending && !search.failed && (
             <EmptyState>{t("palette.empty")}</EmptyState>
           )}
-          {!query.trim() && recents.hasStored && (
+          {listsRecents && recents.hasStored && (
             <Eyebrow
               as="h2"
               size="xxsmall"
@@ -369,7 +384,7 @@ export function CommandPalette({
               {t("palette.recent")}
             </Eyebrow>
           )}
-          {!query.trim() && recents.pending && (
+          {listsRecents && recents.pending && (
             <PendingBody label={t("common.loading")} lines={1} />
           )}
           {rows.map((command, index) => (
@@ -407,8 +422,6 @@ function paletteSelection(
   );
   return Math.max(named, 0);
 }
-
-export { paletteHotkeyCaps, usePaletteHotkey } from "./palettehotkey";
 
 export function BuiltinCommandPalette(
   props: Omit<ComponentProps<typeof CommandPalette>, "commands">,

@@ -9,6 +9,7 @@ import { SETTINGS_SCREEN } from "../features/settings/settingsnav";
 import { useLocale, useT } from "../i18n";
 import { lazy } from "../i18n/lazy";
 import { EXTENSION_SCREEN, findExtension } from "../lib/extensions";
+import { shortcutCaps } from "../lib/keymap";
 import {
   leaveRecord,
   listAddress,
@@ -18,7 +19,6 @@ import { type Route, routeHash, useHash } from "../lib/router";
 import { usePhoneViewport } from "../lib/viewport";
 import { AccountMenu } from "./account";
 import { useFiltersCrumbs } from "./filterstrail";
-import { sidebarHotkeyCaps } from "./hotkeys";
 import {
   entryLabel,
   NAV,
@@ -29,7 +29,6 @@ import {
 import { NotificationBell } from "./notificationbell";
 import { OutboxButton } from "./outboxbutton";
 import { resolveTitle, sectionHead, useRouteSubject } from "./pagemeta";
-import { paletteHotkeyCaps } from "./palettehotkey";
 import { useHomeLinkLabel, WorkspaceChip } from "./shellrail";
 import "./topbar.css";
 
@@ -150,13 +149,12 @@ export function TopBarSearch({
         <span className="topbar-searchlabel">{label}</span>
         {/* One cap per KEY, which is how a keyboard shortcut is read: "⌘ then K",
             not the four-character string "⌘K" in one box. The caps come from the
-            palette's own helper, which is also what the label is joined from, so
-            the two spellings ("⌘ K" and "Ctrl K") stay one source.
+            keymap the dispatcher reads, so the cap cannot name another key.
             The whole group is a hint rather than a second name: the aria-label
             above already says what this control does, so nobody is made to
             listen to the shortcut spelled out. */}
         <span className="topbar-keys" aria-hidden>
-          {paletteHotkeyCaps(navigator.platform).map((cap) => (
+          {shortcutCaps("search", navigator.platform).map((cap) => (
             <Kbd key={cap}>{cap}</Kbd>
           ))}
         </span>
@@ -219,7 +217,7 @@ export function TopBar({
             // The shortcut belongs in the tooltip, not in the accessible name:
             // a speech-input user says the words they can read, and "Collapse
             // sidebar ⌘B" is not one of them.
-            title={`${toggleLabel} · ${sidebarHotkeyCaps(navigator.platform).join(" ")}`}
+            title={`${toggleLabel} · ${shortcutCaps("sidebar", navigator.platform).join(" ")}`}
             aria-expanded={!collapsed}
             onClick={onToggle}
           >

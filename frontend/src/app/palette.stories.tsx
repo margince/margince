@@ -86,6 +86,30 @@ export const Default: Story = {
   render: () => palette(noHits),
 };
 
+// What C opens where the screen has no create form of its own: the commands
+// that make a record, and no recent searches above them.
+export const CreateOnly: Story = {
+  render: () => {
+    removeStored(STORAGE_KEYS.paletteRecents);
+    installFetchStub({ "GET /search": noHits, "GET /me": meRoute({}) });
+    return (
+      <StoryProviders>
+        <CommandPalette
+          open
+          mode="create"
+          onClose={() => undefined}
+          commands={COMMANDS}
+        />
+      </StoryProviders>
+    );
+  },
+};
+
+export const CreateOnlyDark: Story = {
+  ...CreateOnly,
+  globals: { theme: "dark" },
+};
+
 // Live record hits under the commands, grouped under the kind each one is, in
 // the reader's language. The mail about the account sits below the account
 // however much higher it ranked: relevance does not compare across kinds, and

@@ -220,6 +220,9 @@ export const GRIDDED_RECORD_SCREENS: ReadonlySet<Screen> = new Set([
 export const CREATE_ID = "new";
 export const IMPORT_ID = "import";
 
+/** The screens whose list opens a create form at `CREATE_ID`, which `C` opens. */
+export const CREATE_SCREENS: ReadonlySet<Screen> = new Set(["deals"]);
+
 // A `titleKey` marks a page of its own below the list; without one the segment
 // is a state of the list itself (`#/deals/new` is the list with its form open).
 const RESERVED_SEGMENTS: Readonly<

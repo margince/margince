@@ -20,6 +20,7 @@ import { RoleBadge } from "../../design-system/rbac";
 import { useSaveDraft } from "../../design-system/savepage";
 import { Select } from "../../design-system/select";
 import { SettingList, SettingRow } from "../../design-system/settingrow";
+import { Switch } from "../../design-system/switch";
 import { TimezoneSelect } from "../../design-system/timezoneselect";
 import { type Toast, useToast } from "../../design-system/toast";
 import {
@@ -32,6 +33,10 @@ import {
 import { problemMessageOf, unwrap } from "../../lib/problem";
 import { useInstallState } from "../../lib/pwa";
 import { useLogout, useMe } from "../../lib/session";
+import {
+  setSingleKeyShortcutsOn,
+  useSingleKeyShortcuts,
+} from "../../lib/shortcuts";
 import {
   setThemeChoice,
   THEME_CHOICES,
@@ -167,6 +172,7 @@ function BrowserPanel() {
     <Panel title={t("account.browserCard")}>
       <SettingList bleed="settings">
         <AppearanceSettingRow />
+        <SingleKeyShortcutsRow />
         <InstallSettingRow install={install} />
       </SettingList>
     </Panel>
@@ -342,6 +348,28 @@ function AppearanceSettingRow() {
           onChange={setDraft}
         />
       }
+    />
+  );
+}
+
+// A Switch writes when turned, so this row stays out of the page's save bar.
+function SingleKeyShortcutsRow() {
+  const t = useT();
+  const on = useSingleKeyShortcuts();
+  return (
+    <SettingRow
+      label={t("account.singleKeyShortcuts")}
+      description={t("account.singleKeyShortcutsHelp")}
+      control={(control) => (
+        <Switch
+          describedBy={control["aria-describedby"]}
+          label={t("account.singleKeyShortcuts")}
+          labelHidden
+          checked={on}
+          testId="single-key-shortcuts-switch"
+          onChange={setSingleKeyShortcutsOn}
+        />
+      )}
     />
   );
 }

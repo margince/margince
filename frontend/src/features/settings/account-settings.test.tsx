@@ -1,10 +1,14 @@
 /** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { PageSaveBar, SavePageProvider } from "../../design-system/savepage";
 import { pickOption } from "../../design-system/select-testing";
+import {
+  setSingleKeyShortcutsOn,
+  singleKeyShortcutsOn,
+} from "../../lib/shortcuts";
 import { meFixture } from "../../testing/mefixture";
 import {
   installFetchStub,
@@ -16,6 +20,7 @@ import { AccountSettings } from "./account-settings";
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  act(() => setSingleKeyShortcutsOn(true));
 });
 
 it("says so on the save bar and under the field when the account refuses the new language", async () => {
@@ -111,4 +116,27 @@ it("saves the picked time zone as the user's own choice", async () => {
       { timezone: "America/New_York", source: "chosen" },
     ]),
   );
+});
+
+// A Switch writes when turned, so the page's save bar never hears of it.
+it("turns single-key shortcuts off for this browser on the flip", async () => {
+  const user = userEvent.setup();
+  installFetchStub({ "GET /me": () => jsonResponse(meFixture({})) });
+  render(
+    <StoryProviders>
+      <SavePageProvider>
+        <AccountSettings />
+        <PageSaveBar />
+      </SavePageProvider>
+    </StoryProviders>,
+  );
+  const shortcuts = await screen.findByRole("switch", {
+    name: "Single-key shortcuts",
+  });
+  expect(shortcuts).toBeChecked();
+
+  await user.click(shortcuts);
+  expect(shortcuts).not.toBeChecked();
+  expect(singleKeyShortcutsOn()).toBe(false);
+  expect(screen.queryByRole("button", { name: "Save" })).toBeNull();
 });

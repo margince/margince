@@ -40,6 +40,11 @@ export const STORAGE_KEYS = {
     lifetime: "device",
   },
   edgeLight: { name: "margince.edgeLight", area: "local", lifetime: "device" },
+  singleKeyShortcuts: {
+    name: "margince.shortcuts.singleKey",
+    area: "local",
+    lifetime: "device",
+  },
   worklistDrawerWide: {
     name: "margince.worklist.drawerWide",
     area: "local",
