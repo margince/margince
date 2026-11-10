@@ -51,7 +51,7 @@ import { RecordRolesCard } from "../records/recordroles";
 import { InstallationSettingsCard } from "../sign-in/installation-settings";
 import { SignInMethodsCard } from "../sign-in/sign-in-methods";
 import { KnowledgeCard } from "../voice-knowledge/knowledge";
-import { VoiceDnaCard } from "../voice-knowledge/voice-dna";
+import { VoiceDnaCard, VoiceIntakeHost } from "../voice-knowledge/voice-dna";
 import { AccountSettings } from "./account-settings";
 import { AcquisitionSourcesCard } from "./acquisitionsources";
 import { FinanceSourceCard } from "./financesource";
@@ -118,6 +118,19 @@ export {
 // and the automations the installation runs unattended. EP09 renders
 // governance; it never authors policy.
 
+// What a page keeps across its tabs. Each tab is remounted on arrival, so
+// work still running when the reader switches tabs lives here instead.
+function PageFrame({
+  id,
+  children,
+}: Readonly<{ id: SettingsPageId; children: ReactNode }>) {
+  return id === "voice" ? (
+    <VoiceIntakeHost>{children}</VoiceIntakeHost>
+  ) : (
+    children
+  );
+}
+
 export function tabContent(
   id: SettingsPageId,
   tab: string,
@@ -144,7 +157,7 @@ export function tabContent(
     case "meetings":
       return <MeetingSettings part={meetingsPart(tab)} />;
     case "voice":
-      return <VoiceDnaCard />;
+      return <VoiceDnaCard tab={tab} />;
     case "agents":
       return <AiAccessTab />;
     case "connections":
@@ -456,20 +469,24 @@ export function SettingsScreen({
         <SettingsTabStrip page={page} tabs={tabs} current={tab} />
       )}
       <SettingsSavePage>
-        <div key={tab} className="settings-stack arrive-stack">
-          {/* Said once, at the top, and only for a page with no open control: the
+        <PageFrame id={page.id}>
+          <div key={tab} className="settings-stack arrive-stack">
+            {/* Said once, at the top, and only for a page with no open control: the
               `looksUp` half of the partition. A reader who can change nothing would
               otherwise infer it from a screenful of disabled cards, and a banner over
               a control that works is worse than silence. */}
-          {address.readOnly && (
-            <Callout kind="standing" title={t("settings.readOnlyPageTitle")}>
-              {t("settings.readOnlyPage")}
-            </Callout>
-          )}
-          <ReviewActionsContext value={reviewActions ?? inheritedReviewActions}>
-            {tabContent(page.id, tab, route)}
-          </ReviewActionsContext>
-        </div>
+            {address.readOnly && (
+              <Callout kind="standing" title={t("settings.readOnlyPageTitle")}>
+                {t("settings.readOnlyPage")}
+              </Callout>
+            )}
+            <ReviewActionsContext
+              value={reviewActions ?? inheritedReviewActions}
+            >
+              {tabContent(page.id, tab, route)}
+            </ReviewActionsContext>
+          </div>
+        </PageFrame>
       </SettingsSavePage>
     </div>
   );

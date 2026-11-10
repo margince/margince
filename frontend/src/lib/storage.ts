@@ -22,11 +22,6 @@ export const STORAGE_KEYS = {
     area: "local",
     lifetime: "seat",
   },
-  homeSwipeSeen: {
-    name: "margince.home.swipeSeen",
-    area: "local",
-    lifetime: "device",
-  },
   locale: { name: "margince.locale", area: "local", lifetime: "device" },
   theme: { name: "margince.theme", area: "local", lifetime: "device" },
   sidebarCollapsed: {
