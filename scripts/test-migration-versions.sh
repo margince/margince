@@ -150,6 +150,24 @@ expect() {
   printf 'ok    %s\n' "$name"
 }
 
+extension_rename() {
+  local dir="$1"
+  mkdir -p "$dir/extensions/notes/migrations" || return
+  printf -- '-- probe\n' > "$dir/extensions/notes/migrations/0010_note.up.sql"
+  printf -- '-- probe\n' > "$dir/extensions/notes/migrations/0010_note.down.sql"
+  git -C "$dir" add -A && git -C "$dir" commit -qm extension && git -C "$dir" branch -f base || return
+  mv "$dir/extensions/notes/migrations/0010_note.up.sql" "$dir/extensions/notes/migrations/0020_note.up.sql" || return
+  mv "$dir/extensions/notes/migrations/0010_note.down.sql" "$dir/extensions/notes/migrations/0020_note.down.sql"
+}
+extension_declared() {
+  extension_rename "$1" || return
+  printf 'ext_notes 0010 0020 note digest\n' > "$1/extensions/notes/migrations/renumbered.txt"
+}
+extension_changed() {
+  extension_declared "$1" || return
+  printf -- '-- changed\n' > "$1/extensions/notes/migrations/0020_note.up.sql"
+}
+
 # ---- the mutations -------------------------------------------------------
 
 untouched() { :; }
@@ -508,6 +526,10 @@ expect "a sync dropping a namespace only develop has fails" \
 expect "a branch cut from develop stays judged against develop" \
   1 synced   cuts_from_develop_below_its_tip "sorts at or below"
 
+expect "an undeclared extension renumber is refused" 1 undeclared extension_rename "renumbered.txt does not declare it"
+expect "a declared unchanged extension renumber passes" 0 undeclared extension_declared "OK: check-migration-versions"
+expect "a declared extension renumber with changed SQL is refused" 1 undeclared extension_changed "its SQL changed"
+
 # ---- census --------------------------------------------------------------
 # TWO guards, because one of them cannot see the other's defect.
 #
@@ -520,7 +542,7 @@ expect "a branch cut from develop stays judged against develop" \
 # So the total is also pinned. A literal here is not duplication of the case
 # list: it is the one fact the case list cannot state about itself, which is how
 # many of it there should be.
-expected_cases=31
+expected_cases=34
 
 declared_cases="$(grep -c '^expect "' "$SELF")"
 if [[ "$ran" -ne "$declared_cases" ]]; then

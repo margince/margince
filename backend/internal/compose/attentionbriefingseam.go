@@ -38,9 +38,16 @@ func (a attentionBriefing) Queue(ctx context.Context) ([]attention.BriefEntry, b
 	// and under a composed read those now ride the page's own transaction. That
 	// is the right fate for both: a brief whose page never rendered was not
 	// opened. Its errors already fail the page, so it needs no detachment.
-	run, err := a.engine.LatestRun(ctx, a.now())
+	now := a.now()
+	held, err := a.engine.SnoozedDeals(ctx, now)
+	if err != nil {
+		return nil, false, time.Time{}, err
+	}
+	run, err := a.engine.LatestRun(ctx, now)
+	ran := true
 	if errors.Is(err, apperrors.ErrNotFound) {
-		return nil, false, time.Time{}, nil
+		ran = false
+		err = nil
 	}
 	if err != nil {
 		return nil, false, time.Time{}, err
@@ -70,6 +77,10 @@ func (a attentionBriefing) Queue(ctx context.Context) ([]attention.BriefEntry, b
 		})
 		named = append(named, item.DealID)
 	}
+	for _, deal := range held {
+		unanswered = append(unanswered, attention.BriefEntry{DealID: deal, Snoozed: true})
+		named = append(named, deal)
+	}
 	resolvable, err := a.figures.Figures(ctx, named)
 	if err != nil {
 		return nil, false, time.Time{}, err
@@ -80,5 +91,5 @@ func (a attentionBriefing) Queue(ctx context.Context) ([]attention.BriefEntry, b
 			entries = append(entries, entry)
 		}
 	}
-	return entries, true, run.AsOf, nil
+	return entries, ran, run.AsOf, nil
 }

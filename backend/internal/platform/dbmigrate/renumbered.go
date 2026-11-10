@@ -98,12 +98,9 @@ func planRenumbers(ns Namespace, recorded map[string]LedgerRow) (renumberPlan, e
 // digest is refused too: here it would vouch for a move, and nothing it
 // recorded can prove one.
 func provenRenumber(namespace string, pair Renumber, old LedgerRow, source map[string]Migration) (Migration, error) {
-	if _, shipped := source[pair.Old]; shipped {
-		return Migration{}, renumberRefusal(namespace, pair, "the old version still ships, so it cannot be a renumber")
-	}
-	current, ok := source[pair.New]
-	if !ok || current.Name != pair.Name {
-		return Migration{}, renumberRefusal(namespace, pair, "the source at the new version does not carry that name")
+	current, err := renumberSource(namespace, pair, source)
+	if err != nil {
+		return Migration{}, err
 	}
 	if old.Name != pair.Name {
 		return Migration{}, renumberRefusal(namespace, pair, fmt.Sprintf("the ledger recorded the old version as %q", old.Name))
@@ -111,13 +108,24 @@ func provenRenumber(namespace string, pair Renumber, old LedgerRow, source map[s
 	if old.Digest == nil {
 		return Migration{}, renumberRefusal(namespace, pair, "the ledger row records no content digest")
 	}
+	if *old.Digest != pair.OldDigest {
+		return Migration{}, renumberRefusal(namespace, pair, "the ledger row records different content from the migration that ships")
+	}
+	return current, nil
+}
+
+func renumberSource(namespace string, pair Renumber, source map[string]Migration) (Migration, error) {
+	if _, shipped := source[pair.Old]; shipped {
+		return Migration{}, renumberRefusal(namespace, pair, "the old version still ships, so it cannot be a renumber")
+	}
+	current, ok := source[pair.New]
+	if !ok || current.Name != pair.Name {
+		return Migration{}, renumberRefusal(namespace, pair, "the source at the new version does not carry that name")
+	}
 	asOld := current
 	asOld.Version = pair.Old
 	if Digest(asOld) != pair.OldDigest {
 		return Migration{}, renumberRefusal(namespace, pair, "the migration that ships no longer has the declared old content")
-	}
-	if *old.Digest != pair.OldDigest {
-		return Migration{}, renumberRefusal(namespace, pair, "the ledger row records different content from the migration that ships")
 	}
 	return current, nil
 }

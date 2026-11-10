@@ -133,7 +133,10 @@ func companyMergeAllowed(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.
 	if err := refuseIfAnchor(ctx, tx, targetID, "target_id", "nothing can be merged into it. Archive the duplicate instead, and edit this one on the company page"); err != nil {
 		return err
 	}
-	return refuseWhenBothCarryProjects(ctx, tx, sourceID, targetID)
+	if err := refuseWhenBothCarryProjects(ctx, tx, sourceID, targetID); err != nil {
+		return err
+	}
+	return refuseCrossCompanyContracts(ctx, tx, sourceID, targetID)
 }
 
 func (s *Store) previewMergeScope(ctx context.Context, tx pgx.Tx, kind string, source, target ids.UUID, out *MergeSurvivorship) error {

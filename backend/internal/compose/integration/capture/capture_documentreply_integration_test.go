@@ -10,6 +10,7 @@ import (
 	"encoding/base64"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -90,7 +91,7 @@ func TestAClearedSendersNewDocumentWaitsForItsOwnVerdict(t *testing.T) {
 	setPosture(t, env, e.Rep1, capturemod.PostureClassified)
 	const sender = "buyer@vendor.example"
 	clearSender(t, e, sender)
-	for _, filename := range []string{"proposal.csv", "passport.png"} {
+	for _, filename := range []string{"proposal.csv", "passport.png", "image001.png"} {
 		t.Run(filename, func(t *testing.T) {
 			key := "new-document-" + filename + "@vendor.example"
 			sync(t, emailWithFile(sender, captureOwner, key, "", filename, []byte("Document details")))
@@ -181,5 +182,58 @@ func TestASharedMailboxDoesNotCommissionADocumentVerdict(t *testing.T) {
 	sync(t, emailWithFile(sender, captureOwner, "shared-doc-reply@vendor.example", root, "proposal.csv", []byte("Price,Total\nWork,10\n")))
 	if got, _ := audienceOf(t, e, activityIDOf(t, e, "shared-doc-reply@vendor.example")); got != "workspace" {
 		t.Fatalf("a shared mailbox's document waited for an unclaimable verdict: %s", got)
+	}
+}
+
+func TestANonclassifiedReopenKeepsTheTriggeringMessage(t *testing.T) {
+	for _, posture := range []string{capturemod.PostureShared, capturemod.PostureHeld} {
+		t.Run(posture, func(t *testing.T) {
+			env := newCaptureEnvWithBlob(t, captureNow, blobstore.NewMemory())
+			e := env.e
+			allowSharedPosture(t, e)
+			setPosture(t, env, e.Rep1, posture)
+			const sender, root = "buyer@vendor.example", "reopen-pointer@vendor.example"
+			clearSender(t, e, sender)
+			seedThreadVerdict(t, e, e.Rep1, root, "cleared", []string{sender})
+			env.sync(t, emailWithFile(sender, captureOwner, "reopen-file@vendor.example", root, "image001.png", []byte("image contents")))
+			activity := activityIDOf(t, e, "reopen-file@vendor.example")
+			var pointer ids.UUID
+			if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+				return tx.QueryRow(e.Admin(), `SELECT first_activity_id FROM capture_thread_verdict WHERE user_id=@user AND thread_key=@thread`, pgx.StrictNamedArgs{"user": e.Rep1, "thread": root}).Scan(&pointer)
+			}); err != nil {
+				t.Fatal(err)
+			}
+			if pointer != activity {
+				t.Fatalf("question points at %s, want %s", pointer, activity)
+			}
+			if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+				_, err := tx.Exec(e.Admin(), `UPDATE capture_thread_verdict SET updated_at = now() - interval '2 minutes' WHERE user_id=@user AND thread_key=@thread`, pgx.StrictNamedArgs{"user": e.Rep1, "thread": root})
+				return err
+			}); err != nil {
+				t.Fatal(err)
+			}
+			store := capturemod.NewThreadVerdictStore(compose.InstallationDB(e.Pool))
+			if _, err := store.RetireExhausted(e.Admin(), "exhausted"); err != nil {
+				t.Fatal(err)
+			}
+			if got := threadVerdictStatus(t, e, e.Rep1, root); got != "pending" {
+				t.Fatalf("nonclassified question became %s", got)
+			}
+			claimed, err := store.ClaimDue(e.Admin(), 10)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(claimed) != 0 {
+				t.Fatalf("nonclassified mailbox commissioned %d verdicts", len(claimed))
+			}
+			setPosture(t, env, e.Rep1, capturemod.PostureClassified)
+			if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+				_, err := tx.Exec(e.Admin(), `UPDATE capture_thread_verdict SET next_attempt_at=@attempt WHERE user_id=@user AND thread_key=@thread`, pgx.StrictNamedArgs{"attempt": captureNow.Add(-time.Hour), "user": e.Rep1, "thread": root})
+				return err
+			}); err != nil {
+				t.Fatal(err)
+			}
+			assertDocumentQuestion(t, env, activity)
+		})
 	}
 }

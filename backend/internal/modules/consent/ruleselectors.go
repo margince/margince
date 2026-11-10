@@ -29,6 +29,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 	"github.com/margince/margince/backend/internal/shared/ports/jurisdiction"
 	"github.com/margince/margince/backend/internal/shared/ports/messagingrules"
@@ -107,10 +108,10 @@ func subjectOfRecipient(ctx context.Context, tx pgx.Tx, r connector.Recipient) (
 // them is decided. The cap lock, the verdict, the cap count and the recorded
 // stamp all read this one answer. So a record edited mid-send cannot make one
 // step judge under a pack another step did not.
-func recipientCountries(ctx context.Context, tx pgx.Tx, recipients []connector.Recipient) ([]RecipientCountry, error) {
+func recipientCountries(ctx context.Context, tx pgx.Tx, recipients []connector.Recipient, requestFor func(connector.Recipient) commsauthz.Request) ([]RecipientCountry, error) {
 	out := make([]RecipientCountry, 0, len(recipients))
 	for _, r := range recipients {
-		country, err := recipientCountryOf(ctx, tx, r)
+		country, err := recipientRequestCountry(ctx, tx, r, requestFor(r))
 		if err != nil {
 			return nil, err
 		}

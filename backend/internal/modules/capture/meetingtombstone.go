@@ -15,6 +15,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
@@ -26,7 +27,7 @@ func (s *Sink) meetingOfOwnEventID(ctx context.Context, tx pgx.Tx, key connector
 	if may, err := s.identityMayCancel(ctx, tx, key); err != nil || !may {
 		return ids.ActivityID{}, false, err
 	}
-	keys := providerMessageKeysSQL("$1", "$2", "$3")
+	keys := storekit.ProviderMessageKeysSQL("$1", "$2", "$3")
 	var own ids.ActivityID
 	err := tx.QueryRow(ctx, `SELECT a.id FROM activity a JOIN capture_import i ON i.activity_id=a.id AND i.user_id=$1
  WHERE i.provider_message_ids @> `+keys+` AND cardinality(`+keys+`) > 0

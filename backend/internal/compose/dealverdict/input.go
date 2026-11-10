@@ -50,10 +50,11 @@ type Input struct {
 
 // Activity is one logged mail, meeting, call or note, newest last.
 type Activity struct {
-	ID         string
-	Kind       string
-	Direction  string
-	OccurredAt time.Time
+	ID          string
+	Kind        string
+	Direction   string
+	FromOurSide bool
+	OccurredAt  time.Time
 	// ArrivedAt is when the activity reached the deal on this server. The
 	// sender cannot set it, so it orders evidence against a colleague's edit.
 	ArrivedAt time.Time

@@ -33,6 +33,16 @@ func (s *Service) thisMorning(ctx context.Context) (theNight, error) {
 	if err != nil {
 		return theNight{}, err
 	}
+	snoozed := map[ids.UUID]bool{}
+	active := make([]BriefEntry, 0, len(queue))
+	for _, entry := range queue {
+		if entry.Snoozed {
+			snoozed[entry.DealID] = true
+		} else {
+			active = append(active, entry)
+		}
+	}
+	queue = active
 	items := make([]crmcontracts.AttentionItem, 0, len(queue))
 	for _, entry := range queue {
 		items = append(items, briefItem(entry))
@@ -50,6 +60,7 @@ func (s *Service) thisMorning(ctx context.Context) (theNight, error) {
 	}
 	return theNight{
 		items:    items,
+		snoozed:  snoozed,
 		state:    state,
 		findings: findingsOf(queue),
 		scores:   scoresOf(queue),
@@ -66,6 +77,7 @@ func (s *Service) thisMorning(ctx context.Context) (theNight, error) {
 // the worklist long after the lane itself has been rendered, and naming them
 // here is what keeps the brief read once for all of them.
 type theNight struct {
+	snoozed  map[ids.UUID]bool
 	items    []crmcontracts.AttentionItem
 	state    crmcontracts.AttentionThisMorningState
 	findings map[ids.UUID]string

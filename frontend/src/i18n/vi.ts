@@ -9764,8 +9764,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "import.reason.lost_reason_missing": "Deal đã thua cần có lý do thua.",
   "import.reason.deal_pipeline_fixed":
     "Deal này nằm trong quy trình khác với quy trình trong tệp. Nhập không chuyển deal giữa các quy trình nên hàng bị bỏ qua.",
+  "companies.contractMergeBlocked":
+    "Một deal có hợp đồng thuộc công ty khác. Hợp đồng trong kho lưu trữ cũng được tính. Liên hệ quản trị viên để sửa liên kết hợp đồng trước khi hợp nhất.",
+  "deals.contractCompanyBlocked":
+    "Deal này có hợp đồng thuộc công ty khác. Hợp đồng trong kho lưu trữ cũng được tính. Liên hệ quản trị viên để sửa liên kết hợp đồng trước khi đổi công ty.",
   "import.reason.deal_company_has_contracts":
-    "Deal này có hợp đồng thuộc một công ty khác với công ty trong hàng này nên hàng bị bỏ qua. Hãy tách các hợp đồng khỏi deal hoặc chuyển từng hợp đồng sang một deal của chính công ty mà hợp đồng đó thuộc về rồi nhập lại.",
+    "Deal này có hợp đồng thuộc một công ty khác với công ty trong hàng này nên hàng bị bỏ qua. Hợp đồng trong kho lưu trữ cũng được tính. Liên hệ quản trị viên để sửa liên kết hợp đồng rồi nhập lại.",
   "import.reason.deal_already_closed":
     "Deal này đã đóng nên hàng bị bỏ qua. Nhập không mở lại deal đã đóng.",
   "import.reason.fx_rate_missing":

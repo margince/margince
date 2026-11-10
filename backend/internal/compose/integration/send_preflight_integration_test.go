@@ -116,7 +116,8 @@ func setupPreflightIn(t *testing.T, extra ...compose.Option) *preflightEnv {
 	}
 	if status := e.Call(t, "POST", "/v1/activities", AnyMap{
 		"kind": "email", "subject": "Inbound question", "direction": "outbound",
-		"links": []AnyMap{{"entity_type": "contact", "entity_id": contact.ID}},
+		"rfc_message_id": "inquiry@preflight.test",
+		"links":          []AnyMap{{"entity_type": "contact", "entity_id": contact.ID}},
 	}, nil, &activity); status != http.StatusCreated {
 		t.Fatalf("log anchor activity → %d", status)
 	}

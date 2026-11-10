@@ -11,6 +11,8 @@ package main
 
 import (
 	"bytes"
+	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -193,5 +195,24 @@ func TestRiverMigrationDSNCarriesTheCeiling(t *testing.T) {
 		if !strings.Contains(got, "idle_in_transaction_session_timeout=0") {
 			t.Errorf("riverMigrationDSN(%q) = %q, want the idle ceiling lifted for DDL", dsn, got)
 		}
+	}
+}
+
+func TestTheExtensionManifestNeedsNoDatabase(t *testing.T) {
+	var output, faults bytes.Buffer
+	if err := run(context.Background(), []string{"extension-manifest"}, &output, &faults); err != nil {
+		t.Fatal(err)
+	}
+	var namespaces []dbmigrate.Namespace
+	if err := json.Unmarshal(output.Bytes(), &namespaces); err != nil {
+		t.Fatal(err)
+	}
+	for _, namespace := range namespaces {
+		if !strings.HasPrefix(namespace.Name, "ext_") || len(namespace.Migrations) == 0 {
+			t.Fatalf("invalid composed namespace: %#v", namespace)
+		}
+	}
+	if err := run(context.Background(), []string{"extension-manifest", "--dsn", "unused"}, &output, &faults); err == nil {
+		t.Fatal("manifest ignored extra arguments")
 	}
 }
