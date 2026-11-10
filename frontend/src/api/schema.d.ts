@@ -27216,6 +27216,12 @@ export interface components {
             agent_writes_per_window: components["schemas"]["AgentRoleAllowanceValue"];
             agent_egress_per_window: components["schemas"]["AgentRoleAllowanceValue"];
             agent_calls_per_window: components["schemas"]["AgentRoleAllowanceValue"];
+            /**
+             * @description Whether this role's agents are held to `mcp_calls_per_minute`. False for the built-in
+             *     Admin role. An agent whose user holds any role that is not paced is not paced. The
+             *     window allowances bind every role either way.
+             */
+            paced_per_minute: boolean;
         };
         AgentRoleAllowanceValue: {
             /** @description The allowance this role gives for the count. */
@@ -27303,7 +27309,7 @@ export interface components {
             defaults: components["schemas"]["AgentAllowanceDefaults"];
             /** @description Every live role, the seeded ones first in their order, then the others by name. */
             roles: components["schemas"]["AgentRoleAllowance"][];
-            /** @description How many tool calls one passport may make per minute. Fixed by the build. */
+            /** @description How many tool calls one passport may make per minute, for a role whose `paced_per_minute` is true. Fixed by the build. */
             mcp_calls_per_minute: number;
             /** @description How many streams one passport may open per minute. Fixed by the build. */
             mcp_stream_opens_per_minute: number;

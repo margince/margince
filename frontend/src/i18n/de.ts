@@ -16157,7 +16157,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "agentAllowances.window.help":
     "Wie lange ein Kontingent gilt. Eine neue Länge beginnt beim nächsten Zurücksetzen, damit kein Passport zu früh ein frisches Kontingent bekommt.",
   "agentAllowances.burst":
-    "Feste Grenzen der MCP-Verbindung: {calls} Aufrufe und {streams} geöffnete Streams pro Minute und Passport, gleich für jede Rolle.",
+    "Feste Grenzen der MCP-Verbindung pro Passport: {streams} geöffnete Streams pro Minute für jede Rolle und die Tool-Aufrufe pro Minute, die jede Rolle zeigt.",
   "agentAllowances.pending.title": "Änderung des Zeitfensters steht aus",
   "agentAllowances.pending.body":
     "Ab {date} UTC dauert jedes Zeitfenster {interval}. Bis dahin zählt das laufende Zeitfenster weiter.",
@@ -16186,6 +16186,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "agentAllowances.roles.rule":
     "Für jede Art bekommt ein Agent den höchsten Wert unter den Rollen seines Mitglieds. Eine Rolle ohne eigenen Wert nutzt den Wert der Installation, Admin kann stattdessen seine Vorgabe bekommen.",
   "agentAllowances.roles.col.role": "Rolle",
+  "agentAllowances.roles.col.pacing": "Tool-Aufrufe pro Minute",
+  "agentAllowances.roles.unpaced": "Keine Grenze",
   "agentAllowances.roles.builtIn": "Mitgeliefert",
   "agentAllowances.roles.source.role": "Für diese Rolle festgelegt",
   "agentAllowances.roles.source.admin_preset": "Admin-Vorgabe",
