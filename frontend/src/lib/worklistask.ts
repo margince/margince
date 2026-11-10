@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import type { WorklistItem } from "../features/worklist/worklist.queries";
 import type { MessageKey } from "../i18n/en";
 import { labelFor } from "./labelfor";
+import type { WorklistItem } from "./worklisttypes";
 
 // What a row asks of its reader, one sentence per source. A row's reasons say
 // why it ranks where it does, and none of them says what to do about it.

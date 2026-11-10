@@ -8,17 +8,17 @@
 // These lines say it from facts the row already carries, and a line whose
 // facts are missing is left out rather than said without them.
 
-import { activityDay } from "../../format/activitywhen";
-import { formatDayMonthNearYear } from "../../format/format.dates";
-import { useNow } from "../../format/now";
-import { type Locale, useLocale } from "../../i18n";
-import type { MessageKey } from "../../i18n/en";
-import { useCompanyZone } from "../../lib/companyzone";
-import { valueFor } from "../../lib/labelfor";
-import { useViewerZone } from "../../lib/viewerzone";
-import { askKey } from "../../lib/worklistask";
-import { dealFactsText, partyName, type T } from "../../lib/worklistcopy";
-import type { WorklistItem } from "./worklist.queries";
+import { activityDay } from "../format/activitywhen";
+import { formatDayMonthNearYear } from "../format/format.dates";
+import { useNow } from "../format/now";
+import { type Locale, useLocale } from "../i18n";
+import type { MessageKey } from "../i18n/en";
+import { useCompanyZone } from "./companyzone";
+import { valueFor } from "./labelfor";
+import { useViewerZone } from "./viewerzone";
+import { askKey } from "./worklistask";
+import { dealFactsText, partyName, type T } from "./worklistcopy";
+import type { WorklistItem } from "./worklisttypes";
 
 type Clock = Readonly<{
   locale: Locale;

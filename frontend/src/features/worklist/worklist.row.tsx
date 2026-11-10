@@ -30,6 +30,7 @@ import {
   eyebrowKeyFor,
   kindClass,
 } from "../../lib/worklisteyebrow";
+import { cardLine, useHappenedClock } from "../../lib/worklisthappened";
 import { useBriefAnswer, withFoldedBrief } from "./worklist.briefverbs";
 import { DepartedOwnerCaption } from "./worklist.departedowner";
 import {
@@ -38,7 +39,6 @@ import {
   useRowPutDown,
 } from "./worklist.dispositions";
 import { WaitingEmailLine } from "./worklist.emailtitle";
-import { cardLine, useHappenedClock } from "./worklist.happened";
 import { hostText } from "./worklist.meetingparties";
 import { useRowSource } from "./worklist.noticesource";
 import { lastTouch } from "./worklist.pane";

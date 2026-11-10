@@ -17,13 +17,13 @@ import {
   reasonText,
   saidByTheWhenLine,
 } from "../../lib/worklistcopy";
-import { useBriefAnswer, withFoldedBrief } from "./worklist.briefverbs";
 import {
   consequenceLine,
   happenedLines,
   todoLine,
   useHappenedClock,
-} from "./worklist.happened";
+} from "../../lib/worklisthappened";
+import { useBriefAnswer, withFoldedBrief } from "./worklist.briefverbs";
 import type { WorklistItem } from "./worklist.queries";
 import { codedDetail } from "./worklist.reader";
 import { rowAnswer } from "./worklist.row.answer";

@@ -58,8 +58,8 @@ import {
   whenText,
 } from "../../lib/worklistcopy";
 import { eyebrowKeyFor } from "../../lib/worklisteyebrow";
+import { eventLine, useHappenedClock } from "../../lib/worklisthappened";
 import type { WorklistItem } from "../../lib/worklisttypes";
-import { eventLine, useHappenedClock } from "../worklist/worklist.happened";
 
 /** The name a card goes by, the way the row in hand names it. */
 export function taskName(

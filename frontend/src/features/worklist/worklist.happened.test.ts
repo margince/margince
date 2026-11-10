@@ -5,13 +5,13 @@ import { describe, expect, it } from "vitest";
 import { browserZone } from "../../format/timezone";
 import type { Locale, Translator } from "../../i18n";
 import { translate } from "../../i18n";
-import { row } from "./worklist.fixtures";
 import {
   cardLine,
   consequenceLine,
   happenedLines,
   todoLine,
-} from "./worklist.happened";
+} from "../../lib/worklisthappened";
+import { row } from "./worklist.fixtures";
 
 const t: Translator = (key, params) => translate("en", key, params);
 
