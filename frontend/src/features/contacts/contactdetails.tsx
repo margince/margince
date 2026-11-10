@@ -125,14 +125,16 @@ export function useContactAboutSections(view: Contact360): DetailSection[] {
           link: Boolean(email),
           reading: email && (
             <>
-              <ContactLink kind="email" value={email} record={record}>
-                <EmailFace address={email} />
-              </ContactLink>
+              <span className="contactlink-copyable">
+                <ContactLink kind="email" value={email} record={record}>
+                  <EmailFace address={email} />
+                </ContactLink>
+                <CopyEmail address={email} />
+              </span>
               <BoughtMark
                 bought={emailRow && bought.get(`email:${emailRow.id}`)}
                 subject={email}
               />
-              <CopyEmail address={email} />
             </>
           ),
         }),
