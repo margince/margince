@@ -19699,8 +19699,10 @@ export interface paths {
         /**
          * Set or clear when buyer access lapses.
          * @description Null clears the bound, leaving access open until the room is closed or
-         *     archived. A past instant is accepted and takes effect immediately — that is
-         *     how access is cut short without ending the room. It decides how long a buyer can
+         *     archived. A past instant is accepted and takes effect at once — that is
+         *     how access is cut short without ending the room. One at or before the room's
+         *     creation is stored as the time of the call, unless a standing expiry has
+         *     already passed, which is kept. It decides how long a buyer can
          *     read the room, so an agent spends `send` on it.
          */
         put: operations["setDealRoomExpiry"];
@@ -52820,7 +52822,11 @@ export interface components {
              * @description Defaults to the deal's owner when omitted.
              */
             steward_user_id?: string | null;
-            /** Format: date-time */
+            /**
+             * Format: date-time
+             * @description When buyer access lapses. A past instant is accepted and stored as the
+             *     time of the call, so the room opens with buyer access already ended.
+             */
             expires_at?: string | null;
             source: string;
         };

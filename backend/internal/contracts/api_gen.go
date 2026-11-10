@@ -43846,9 +43846,12 @@ type CreateDealRequestPriority string
 
 // CreateDealRoomRequest defines model for CreateDealRoomRequest.
 type CreateDealRoomRequest struct {
-	DealId    openapi_types.UUID `json:"deal_id"`
-	ExpiresAt *time.Time         `json:"expires_at,omitempty"`
-	Source    string             `json:"source"`
+	DealId openapi_types.UUID `json:"deal_id"`
+
+	// ExpiresAt When buyer access lapses. A past instant is accepted and stored as the
+	// time of the call, so the room opens with buyer access already ended.
+	ExpiresAt *time.Time `json:"expires_at,omitempty"`
+	Source    string     `json:"source"`
 
 	// StewardUserId Defaults to the deal's owner when omitted.
 	StewardUserId  *openapi_types.UUID `json:"steward_user_id,omitempty"`
