@@ -14299,7 +14299,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "settings.voice.buildFirst": "Voice DNA aufbauen",
   "settings.voice.firstBuildHint":
     "Den ersten Aufbau startest du im Tab „Dein Schreibstil“.",
-  "settings.voice.firstBuildGo": "Zu „Dein Schreibstil“",
+  "settings.voice.firstBuildGo": "„Dein Schreibstil“ öffnen",
   "settings.voice.buildNeedsWords":
     "Ein erster Aufbau braucht noch etwa {n} Wörter. Darunter gibt es nicht genug Text, um daraus zu lernen.",
   "settings.voice.buildProvisional":
