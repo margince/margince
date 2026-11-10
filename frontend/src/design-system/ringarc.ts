@@ -6,11 +6,15 @@ export const RING = { size: 120, radius: 52, stroke: 9 } as const;
 
 export const RING_CIRCUMFERENCE = 2 * Math.PI * RING.radius;
 
-/** The dash that draws `fraction` of the ring from twelve o'clock; a fraction
- *  outside 0 to 1 is held to the ring. */
-export function fillDash(fraction: number): string {
+/** The dash that draws `fraction` of a ring of `radius` from twelve o'clock;
+ *  a fraction outside 0 to 1 is held to the ring. */
+export function fillDash(
+  fraction: number,
+  radius: number = RING.radius,
+): string {
+  const circumference = 2 * Math.PI * radius;
   const held = Math.min(Math.max(fraction, 0), 1);
-  return `${round(held * RING_CIRCUMFERENCE)} ${round(RING_CIRCUMFERENCE)}`;
+  return `${round(held * circumference)} ${round(circumference)}`;
 }
 
 export type RingSegment = Readonly<{ dash: string; offset: number }>;

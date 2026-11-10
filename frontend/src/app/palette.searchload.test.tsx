@@ -74,7 +74,7 @@ describe("a word typed in one burst", () => {
     await pause();
 
     expect(
-      await screen.findByRole("button", { name: "Acme GmbH" }),
+      await screen.findByRole("button", { name: /^AG\s*Acme GmbH$/ }),
     ).toBeTruthy();
     expect(askedWords(fetchMock)).toEqual(["acme"]);
   });
@@ -212,11 +212,13 @@ describe("words typed before the pause after an earlier answer", () => {
 
     await user.type(box, "ab");
     await pause();
-    await screen.findByRole("button", { name: "Abbott AG" });
+    await screen.findByRole("button", { name: /^AA\s*Abbott AG$/ });
     await user.clear(box);
     await user.type(box, "nor");
 
-    expect(screen.queryByRole("button", { name: "Abbott AG" })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: /^AA\s*Abbott AG$/ }),
+    ).toBeNull();
   });
 
   it("keeps the earlier hits while the words only grow", async () => {
@@ -227,10 +229,12 @@ describe("words typed before the pause after an earlier answer", () => {
 
     await user.type(box, "acme");
     await pause();
-    await screen.findByRole("button", { name: "Acme GmbH" });
+    await screen.findByRole("button", { name: /^AG\s*Acme GmbH$/ });
     await user.type(box, " log");
 
-    expect(screen.getByRole("button", { name: "Acme GmbH" })).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: /^AG\s*Acme GmbH$/ }),
+    ).toBeTruthy();
   });
 
   it("keeps the earlier hits when only the case changes", async () => {
@@ -241,11 +245,13 @@ describe("words typed before the pause after an earlier answer", () => {
 
     await user.type(box, "acme");
     await pause();
-    await screen.findByRole("button", { name: "Acme GmbH" });
+    await screen.findByRole("button", { name: /^AG\s*Acme GmbH$/ });
     await user.clear(box);
     await user.type(box, "ACME");
 
-    expect(screen.getByRole("button", { name: "Acme GmbH" })).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: /^AG\s*Acme GmbH$/ }),
+    ).toBeTruthy();
   });
 
   it("drops the earlier failure once the words change subject", async () => {

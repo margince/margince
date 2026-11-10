@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { useT } from "../../i18n";
+import type { Locale } from "../../i18n/locale";
 import {
   problemCodeOf,
   problemMessageOf,
@@ -18,6 +19,7 @@ import {
   draftingSubject,
   fillFromDraft,
   keptTag,
+  servedUntouched,
   useDraftMutation,
 } from "./composedraftcall";
 import type { DraftNeed, PendingAction } from "./composedraftcontext";
@@ -156,7 +158,7 @@ export function useVoiceDraft({
         subject: fields.subject,
         body,
         toEmpty: fields.to.length === 0,
-        rewrite: ask.instruction !== undefined || result.revised === true,
+        rewrite: ask.rewrite === true || result.revised === true,
         setSubject: fields.setSubject,
         setBody: fields.adoptDraftedBody,
         setServedBody: fields.setServedBody,
@@ -169,6 +171,8 @@ export function useVoiceDraft({
       // The rep's words stood in the way, so say the new draft was dropped.
       fields.setDraftKept(!written);
       if (written) {
+        // A pick counts once its words are on screen; a kept body keeps its own.
+        if (ask.language) fields.setLanguage(ask.language);
         setDrafted(result.draft.body);
       }
       revealDraftedBody();
@@ -237,19 +241,33 @@ export function useVoiceDraft({
   // While a rejection is in flight, nothing else may act on its draft. The
   // text stays frozen, so a returned reference names the words on screen.
   const rejectionInFlight = discard.isPending;
-  const ask = (instruction?: string): DraftAsk => ({
-    activityId: answering,
-    subject: draftingSubject(fields.subject),
-    entityType,
-    entityId,
-    followUp,
-    intent,
-    epoch: draftEpoch.current,
-    body,
-    html,
-    grounding: { ...account.grounding, recipientId, projectId },
-    ...(instruction === undefined ? {} : { instruction }),
-  });
+  const ask = (
+    turn: Readonly<{ instruction?: string; language?: Locale }> = {},
+  ): DraftAsk => {
+    const language = turn.language ?? fields.language;
+    return {
+      activityId: answering,
+      subject: draftingSubject(fields.subject),
+      entityType,
+      entityId,
+      followUp,
+      intent,
+      epoch: draftEpoch.current,
+      body,
+      html,
+      grounding: { ...account.grounding, recipientId, projectId },
+      ...(turn.instruction === undefined
+        ? {}
+        : { instruction: turn.instruction }),
+      ...(language ? { language } : {}),
+      // A pick replaces only the model's untouched words. Over the rep's own
+      // words it waits for a model revision.
+      rewrite:
+        turn.instruction !== undefined ||
+        (turn.language !== undefined &&
+          servedUntouched({ text: body, html, served: fields.servedBody })),
+    };
+  };
   const control: PendingAction = {
     run: () => draft.mutate(ask()),
     pending: draft.isPending,
@@ -278,7 +296,9 @@ export function useVoiceDraft({
     drafted,
     need: draftNeed(groundable, recipient),
     // A rewrite replaces the body, so it waits for any draft in flight.
-    rewrite: (instruction: string) => draft.mutate(ask(instruction)),
+    rewrite: (instruction: string) => draft.mutate(ask({ instruction })),
+    // The words on screen, written again in another language under the same ask.
+    relanguage: (language: Locale) => draft.mutate(ask({ language })),
   };
 }
 

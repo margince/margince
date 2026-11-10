@@ -1,0 +1,31 @@
+/* ProbabilityRing: a 14px dial beside its percent, in the green the weighted
+   figure in a board column head wears. */
+
+/* The text sets the baseline, so the percent sits on the line of the figures
+   beside it; the ring centres on the text instead of standing on the line. */
+.probability-ring {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-1);
+  font: var(--fontBodySmall);
+  color: var(--textSecondary);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+/* Drawn from twelve o'clock, clockwise. */
+.probability-ring > svg {
+  flex: none;
+  align-self: center;
+  inline-size: 14px;
+  block-size: 14px;
+  transform: rotate(-90deg);
+}
+/* A tint of the fill rather than a border token: --borderSubtle all but
+   vanished on a dark card, and a ring with no track reads as a stray arc. */
+.probability-ring-track {
+  stroke: color-mix(in srgb, var(--accentText) 22%, transparent);
+}
+.probability-ring-fill {
+  stroke: var(--accentText);
+  stroke-linecap: round;
+}

@@ -45,6 +45,7 @@ const CONTRACT = {
   signed_on: "2025-10-09",
   status: "active",
   under_contract: true,
+  term_state: "in_force",
   auto_renew: false,
   source: "manual",
   captured_by: "human:u-1",

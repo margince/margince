@@ -34,9 +34,8 @@ import { type RecentEntry, recentIdentity } from "./paletterecents.storage";
 import { PaletteRow } from "./paletterow";
 import { SEARCH_PENDING_DELAY_MS, useSearchCommands } from "./palettesearch";
 
-// ⌘K command palette (B-EP09.5, AC-shell-3..7). The command set carries a type
-// tag (screen / action / record); record entries are fed by the search seam
-// once the data layer lands — the ranking mechanics are already here.
+// ⌘K command palette. Each command is a screen, setting, action or record;
+// record rows come from the search seam.
 
 export type Command = {
   id: string;
@@ -47,7 +46,9 @@ export type Command = {
   // the place deals live, Decisions is still the inbox, and someone typing the
   // older word must not be told the screen does not exist.
   keywords?: readonly string[];
-  type: "screen" | "action" | "record";
+  // A settings page is a "setting": several share a list screen's name, and the
+  // badge is what tells the two rows apart.
+  type: "screen" | "setting" | "action" | "record";
   // The heading the row is drawn under, already translated. A record hit names
   // its kind here rather than in a badge, so a list holding a company and three
   // emails reads as two groups and not as four rows saying "Record".

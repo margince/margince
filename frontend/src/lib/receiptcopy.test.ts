@@ -1,7 +1,7 @@
 import { expect, it } from "vitest";
 import { browserZone } from "../format/timezone";
 import { LOCALES, translate } from "../i18n";
-import { receiptBasis, receiptSummary } from "./receiptcopy";
+import { headlineUnder, receiptBasis, receiptSummary } from "./receiptcopy";
 
 it.each(LOCALES)(
   "does not repeat unverified historical forecast prose in %s",
@@ -194,3 +194,31 @@ it.each(LOCALES)(
     expect(receiptBasis(receipt, t, locale)).toBeNull();
   },
 );
+
+it.each([
+  [
+    'Changed the win probability on "Acme rollout": 50% → 0%',
+    "Changed the win probability: 50% → 0%",
+  ],
+  [
+    'Moved "Acme rollout" from Proposal to Negotiation. Probability now 60%',
+    "Moved from Proposal to Negotiation. Probability now 60%",
+  ],
+  ['Reopened "Acme rollout" in Discovery', "Reopened in Discovery"],
+  ["Logged a call", "Logged a call"],
+])("reads %s without the deal it sits under", (headline, expected) => {
+  const result = headlineUnder(
+    {
+      id: "receipt",
+      kind: "deal_probability",
+      summary: headline,
+      headline,
+      occurred_at: "2026-09-13T08:00:00Z",
+      subject: { type: "deal", id: "deal", label: "Acme rollout" },
+    },
+    (key, values) => translate("en", key, values),
+    "en",
+    browserZone(),
+  );
+  expect(result).toBe(expected);
+});
