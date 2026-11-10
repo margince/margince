@@ -50935,6 +50935,9 @@ type KnowledgeClaim struct {
 	// Line The 1-based line of the document where this quote begins, so a reader can open the file and land on it. Absent when the quote could not be located in the passage's own text — a line number pointing at the wrong line is worse than none.
 	Line *int `json:"line,omitempty" minimum:"1"`
 
+	// Meta What the cited document's source said about it (owner, effective date and so on), so a reader sees which version and date the quote comes from. Absent for an uploaded document.
+	Meta *map[string]string `json:"meta,omitempty"`
+
 	// Opens The settings page the claim's handbook section is about, from the page's `opens:` marker. The client shows a button to it only when the reader may open that page.
 	Opens *KnowledgeClaimOpens `json:"opens,omitempty"`
 
@@ -51040,12 +51043,18 @@ type KnowledgeDocument struct {
 	//   model bound now.
 	// - `complete`: every live passage carries a vector under the model bound now.
 	EmbedState KnowledgeEmbedState `json:"embed_state"`
-	Filename   string              `json:"filename"`
-	Id         openapi_types.UUID  `json:"id"`
+
+	// ExternalId The id the document's source gave it (a Google Drive file id), set only on a document an extension keeps in step with that source. Null for an upload.
+	ExternalId *string            `json:"external_id,omitempty"`
+	Filename   string             `json:"filename"`
+	Id         openapi_types.UUID `json:"id"`
 
 	// IngestDetail Why it failed, in words the uploader can act on. Null unless failed.
 	IngestDetail *string                       `json:"ingest_detail,omitempty"`
 	IngestStatus KnowledgeDocumentIngestStatus `json:"ingest_status"`
+
+	// Meta What the source said about the document (owner, department, country, type, effective and review dates, audience), as the extension read it. A field the source did not state is absent, never guessed. Absent for an upload.
+	Meta *map[string]string `json:"meta,omitempty"`
 
 	// Shipped True for a handbook page that ships with Margince. It cannot be deleted: the next update files it again.
 	Shipped bool `json:"shipped"`
@@ -72881,7 +72890,12 @@ type UpdateCorpusJSONBody struct {
 
 // AskCorpusJSONBody defines parameters for AskCorpus.
 type AskCorpusJSONBody struct {
-	Question string `json:"question"`
+	// Audiences Optional. When present and not empty, only documents whose `meta.audience` is one
+	// of these values are searched and cited. Values compare with no case, no accents and
+	// `đ` as `d`. A document with no audience is left out. When no document matches, the
+	// outcome is `not_covered`. Absent or empty, every document is searched.
+	Audiences *[]string `json:"audiences,omitempty"`
+	Question  string    `json:"question"`
 }
 
 // UploadCorpusDocumentMultipartBody defines parameters for UploadCorpusDocument.

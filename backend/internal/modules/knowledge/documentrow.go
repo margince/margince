@@ -19,7 +19,7 @@ import (
 // documentColumns is the read shape over alias d. Its passage columns come from
 // passageColumns, the corpus coverage's own, so a document and its corpus count alike.
 var documentColumns = `d.id, d.corpus_id, d.filename, d.content_type, d.byte_size,
-	d.ingest_status, d.ingest_detail, d.chunk_count, d.created_at, d.managed_source,
+	d.ingest_status, d.ingest_detail, d.chunk_count, d.created_at, d.managed_source, d.external_id, d.meta,
 	` + ingestInFlight + `,
 	(SELECT c.reindexing FROM knowledge_corpus c WHERE c.id = d.corpus_id),
 	` + passageColumns(documentChunks)
@@ -39,9 +39,10 @@ func scanDocument(row pgx.Row, identity string) (crmcontracts.KnowledgeDocument,
 	var status string
 	var chunkCount int
 	var managedSource *string
+	var meta map[string]string
 	var p passageCoverage
 	if err := row.Scan(&id, &corpusID, &doc.Filename, &doc.ContentType, &doc.ByteSize,
-		&status, &doc.IngestDetail, &chunkCount, &doc.CreatedAt, &managedSource,
+		&status, &doc.IngestDetail, &chunkCount, &doc.CreatedAt, &managedSource, &doc.ExternalId, &meta,
 		&p.inFlight, &p.reindexing, &p.total, &p.embedded, &p.identities); err != nil {
 		return crmcontracts.KnowledgeDocument{}, err
 	}
@@ -49,7 +50,10 @@ func scanDocument(row pgx.Row, identity string) (crmcontracts.KnowledgeDocument,
 	doc.CorpusId = openapi_types.UUID(corpusID)
 	doc.IngestStatus = crmcontracts.KnowledgeDocumentIngestStatus(status)
 	doc.ChunkCount = &chunkCount
-	doc.Shipped = managedSource != nil
+	doc.Shipped = managedSource != nil && *managedSource == HandbookSource
+	if len(meta) > 0 {
+		doc.Meta = &meta
+	}
 	doc.Title = shippedTitle(managedSource, doc.Filename)
 	doc.ChunksEmbedded = p.embedded
 	doc.EmbedState = p.state(identity)

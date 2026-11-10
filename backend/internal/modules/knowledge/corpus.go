@@ -397,7 +397,7 @@ func (s *Store) ListCorpora(ctx context.Context) ([]crmcontracts.KnowledgeCorpus
 // Not a GROUP BY join: it drops a corpus with no documents, which must stay in
 // the list reporting zeros.
 var corpusColumns = `c.id, c.name, c.description, c.topic_statement, c.min_similarity,
-	c.default_ask, c.reindexing, c.created_at, c.archived_at, c.managed_source IS NOT NULL,
+	c.default_ask, c.reindexing, c.created_at, c.archived_at, c.managed_source IS NOT DISTINCT FROM '` + HandbookSource + `',
 	(SELECT count(*) FROM knowledge_document d WHERE d.corpus_id = c.id AND d.archived_at IS NULL),
 	(SELECT count(*) FROM knowledge_document d WHERE d.corpus_id = c.id AND d.archived_at IS NULL
 	    AND ` + ingestInFlight + `),

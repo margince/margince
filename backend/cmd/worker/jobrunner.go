@@ -114,6 +114,9 @@ func startJobRunner(ctx context.Context, pool *pgxpool.Pool, vault keyvault.Vaul
 	// message and a mailbox's then reach one set of suppression lists and one
 	// attachment store rather than two that drift.
 	compose.BindExtensionCapture(pool, cfg.captureConfig)
+	// The object store a unit's filed documents are kept in; the same one the
+	// knowledge ingest reads them back from.
+	compose.BindExtensionKnowledge(lanes.blob)
 
 	// A failed read starts the worker on the defaults rather than not at all:
 	// the watch below reads again every minute and moves what differs.

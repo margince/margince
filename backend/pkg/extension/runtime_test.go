@@ -52,6 +52,7 @@ func (r *fakeRuntime) OAuthDisconnect(context.Context, OAuthProvider) error { re
 func (r *fakeRuntime) Deals() Deals         { return nil }
 func (r *fakeRuntime) Authority() Authority { return nil }
 func (r *fakeRuntime) Directory() Directory { return nil }
+func (r *fakeRuntime) Knowledge() Knowledge { return nil }
 
 func (r *fakeRuntime) Tx(ctx context.Context, fn func(context.Context, Tx) error) error {
 	if !r.live {

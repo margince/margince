@@ -29,7 +29,7 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 360 |
-| Columns | 4358 |
+| Columns | 4360 |
 | Foreign keys | 598 |
 | Owning areas | 38 |
 
@@ -342,7 +342,7 @@ erDiagram
 | [`intro_request`](introductions.md#intro_request) | introductions | 31 | 0 |
 | [`knowledge_chunk`](knowledge.md#knowledge_chunk) | knowledge | 11 | 0 |
 | [`knowledge_corpus`](knowledge.md#knowledge_corpus) | knowledge | 12 | 1 |
-| [`knowledge_document`](knowledge.md#knowledge_document) | knowledge | 16 | 1 |
+| [`knowledge_document`](knowledge.md#knowledge_document) | knowledge | 18 | 1 |
 | [`lead`](contacts.md#lead) | contacts | 48 | 18 |
 | [`lead_disqualify_reason`](contacts.md#lead_disqualify_reason) | contacts | 11 | 1 |
 | [`lead_manual_signal`](contacts.md#lead_manual_signal) | contacts | 12 | 0 |

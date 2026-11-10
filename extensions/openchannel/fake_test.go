@@ -471,6 +471,7 @@ func (*fakeRuntime) OAuthDisconnect(context.Context, extension.OAuthProvider) er
 func (*fakeRuntime) Deals() extension.Deals         { return nil }
 func (*fakeRuntime) Authority() extension.Authority { return nil }
 func (*fakeRuntime) Directory() extension.Directory { return nil }
+func (*fakeRuntime) Knowledge() extension.Knowledge { return nil }
 
 // declaredJob is the job named in api/jobs.yaml, spelled here so the fake
 // refuses exactly what the core refuses.

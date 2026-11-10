@@ -41,6 +41,7 @@ coverage-extensions.out
 !/extensions/approvals.lock
 !/extensions/de
 !/extensions/finance-demo
+!/extensions/gdocs
 !/extensions/openchannel
 !/extensions/vn
 # A unit's installed frontend dependencies. Its package.json and the workspace

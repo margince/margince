@@ -363,7 +363,8 @@ func (s *Store) DeleteDocument(ctx context.Context, documentID ids.UUID) error {
 		var doc deletedDocument
 		var shipped bool
 		if err := tx.QueryRow(ctx,
-			`SELECT storage_key, filename, checksum, content_type, chunk_count, managed_source IS NOT NULL
+			`SELECT storage_key, filename, checksum, content_type, chunk_count,
+			        managed_source IS NOT DISTINCT FROM '`+HandbookSource+`'
 			   FROM knowledge_document WHERE id = $1 FOR UPDATE`, documentID).
 			Scan(&doc.storageKey, &doc.filename, &doc.checksum, &doc.contentType, &doc.chunkCount, &shipped); err != nil {
 			return notFoundOr(err, "read the document to delete")

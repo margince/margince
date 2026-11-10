@@ -327,3 +327,15 @@ func TestACommentOverSeveralLinesKeepsTheLineCount(t *testing.T) {
 		t.Fatalf("a comment over several lines moved the text: StartLine %d, %q", got[0].StartLine, got[0].Text)
 	}
 }
+
+// A short first paragraph makes the step back for overlap land one byte into
+// the next span. When that byte is inside a rune, the walk reached the start of
+// the window and gave up, handing back a cut in the middle of a character.
+func TestAShortFirstParagraphNeverStartsASpanInsideARune(t *testing.T) {
+	text := "Đ" + strings.Repeat("a", 117) + "\n\n" + strings.Repeat("từ ", 600)
+	for i, c := range ChunkText(text) {
+		if !utf8.ValidString(c.Text) {
+			t.Fatalf("chunk %d is not valid UTF-8: %q", i, c.Text)
+		}
+	}
+}

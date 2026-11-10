@@ -173,6 +173,10 @@ type Runtime interface {
 	// OAuthApps. It does not revoke the grant at the vendor.
 	OAuthDisconnect(ctx context.Context, provider OAuthProvider) error
 
+	// Knowledge files documents in the unit's own corpus; see knowledge.go. It
+	// answers ErrNoKnowledge for a unit the core keeps no corpus for.
+	Knowledge() Knowledge
+
 	// Deals, Authority and Directory are system reads for a job tick or a bus
 	// delivery, and answer ErrAttendedRead anywhere else. See systemread.go.
 	Deals() Deals

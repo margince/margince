@@ -21,6 +21,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/extsecrets"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
@@ -75,6 +76,9 @@ type extensionRuntimeBinding struct {
 	// impossible. Nil on a role that composed no capture, and the port then
 	// refuses by name rather than half-working.
 	captureSink *capture.Sink
+	// knowledgeBlob is where a unit's filed documents are kept, bound by
+	// BindExtensionKnowledge. Nil on a role with no object store.
+	knowledgeBlob blobstore.Store
 }
 
 // BindExtensionCapture records the capture pipeline a unit's ingress lands
@@ -122,7 +126,11 @@ func BindExtensionRuntime(pool *pgxpool.Pool, vault keyvault.Vault) {
 		slog.Default().Warn("compose: the extension runtime was rebound to a different pool; " +
 			"every extension capability from now on runs against the new one")
 	}
-	extensionRuntimeDeps.extensionRuntimeBinding = extensionRuntimeBinding{pool: pool, vault: vault}
+	// The object store is bound by its own call and kept across this one, so the
+	// order the two run in does not matter.
+	extensionRuntimeDeps.extensionRuntimeBinding = extensionRuntimeBinding{
+		pool: pool, vault: vault, knowledgeBlob: extensionRuntimeDeps.knowledgeBlob,
+	}
 }
 
 // boundExtensionRuntime reads the binding. Read per CALL rather than
