@@ -30,7 +30,7 @@ import (
 )
 
 // PromptVersion changes when the prompt or the reply shape changes.
-const PromptVersion = "2026-11-08.2"
+const PromptVersion = "2026-11-10.1"
 
 // The two drawers that ask. An initiative has a goal and a rule; a custom
 // report has a selection with metrics and charts.
@@ -94,7 +94,7 @@ Return ONLY a JSON object with these keys:
 {"name":"...","filters":[{"field":"product|industry|country|period","value":"...","phrase":"..."}],"metrics":[{"id":"...","phrase":"..."}],"charts":[{"id":"...","phrase":"..."}],"objective":{"metric":"...","target_value":123 or null,"deadline":"YYYY-MM-DD" or null,"phrase":"..."} or null,"clarifications":["..."],"unsupported":[{"phrase":"...","reason":"..."}]}
 "name" is a short name for what was described. "phrase" is the words of the description a value was read from.
 A filter "value" is a product's ref as the catalog shows it (p1, p2, …), an industry's catalog id, an ISO 3166-1 alpha-2 code for a country, or one of the catalog's periods. Name each filter once. Name a filter only when the description asks for it.
-"metrics" and "charts" are catalog ids; a chart must be one a chosen metric draws. For site "initiative_setup" name no metrics and no charts.
+"metrics" and "charts" are catalog ids; a chart must be one a chosen metric draws. For site "custom_report_setup" name, for each chosen metric, a chart it draws, even when the description names no chart: a report with no chart shows nothing. For site "initiative_setup" name no metrics and no charts.
 "objective" is for site "initiative_setup" only: the metric the initiative is measured by, from "objectives", a whole-number target when the description gives one, and a deadline on or after today when it gives one. For "custom_report_setup" it is null. When the description gives no target or no deadline, set that field to null, keep the objective metric, and ask for the missing value in "clarifications".
 "clarifications" are the questions the description leaves open, at most four, each one sentence. "unsupported" names each phrase the catalog cannot express and says why in one sentence.
 Never invent an id. Never write an id in "name", a phrase, a clarification or a reason.
@@ -227,6 +227,7 @@ func Parse(reply string, in Input) (Proposal, error) {
 	for _, chart := range parsed.Charts {
 		g.chart(chart.ID, chart.Phrase)
 	}
+	g.drawUndrawnMetrics()
 	if parsed.Next != nil {
 		g.objective(parsed.Next.Metric, parsed.Next.TargetValue, parsed.Next.Deadline, parsed.Next.Phrase)
 	}
@@ -425,6 +426,24 @@ func (g *gate) chart(id, phrase string) {
 	if len(g.out.Blocks) < maxCharts && !slices.Contains(g.out.Blocks, chart.ID) {
 		g.out.Blocks = append(g.out.Blocks, chart.ID)
 		g.keep("chart", chart.ID, chart.Label, phrase)
+	}
+}
+
+// drawUndrawnMetrics gives a kept metric the reply drew no chart for the first
+// chart the catalog offers it, so the builder opens with a preview. It names no
+// source, because no words of the description asked for that chart.
+func (g *gate) drawUndrawnMetrics() {
+	for _, id := range g.out.Metrics {
+		metric, ok := g.metricOption(id)
+		if !ok || slices.ContainsFunc(metric.Charts, func(chart string) bool { return slices.Contains(g.out.Blocks, chart) }) {
+			continue
+		}
+		for _, chart := range metric.Charts {
+			if _, err := resolve("chart", chart, g.in.Catalog.Charts); err == nil && len(g.out.Blocks) < maxCharts {
+				g.out.Blocks = append(g.out.Blocks, chart)
+				break
+			}
+		}
 	}
 }
 

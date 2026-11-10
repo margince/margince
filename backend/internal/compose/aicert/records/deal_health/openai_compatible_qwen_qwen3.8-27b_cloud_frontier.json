@@ -1,11 +1,11 @@
 {
   "task": "deal_health",
-  "provider": "vllm",
-  "served_model": "mlx-community/Qwen3-14B-4bit",
-  "env_class": "sovereign",
-  "prompt_version": "pf6a2428662e838797693a7ace9468fd2",
+  "provider": "openai_compatible",
+  "served_model": "qwen/qwen3.8-27b",
+  "env_class": "cloud_frontier",
+  "prompt_version": "pa289f5c4952a129547ec627639d22eee",
   "corpus_version": "v1",
-  "verdict": "not_supported",
+  "verdict": "certified",
   "runs": 9,
   "passed": 9,
   "reliability": 1,
@@ -16,34 +16,48 @@
   "certified_scope": "full_invocation",
   "context_applied": false,
   "context_scopes": null,
-  "judge_score_p50": 85,
-  "judge_score_min": 14,
-  "latency_p50": 90826,
-  "latency_p95": 117783,
-  "mean_tokens": 2653,
-  "mean_tokens_in": 2266,
-  "mean_tokens_out": 387,
-  "mean_cached_tokens": 1550,
+  "judge_score_p50": 88,
+  "judge_score_min": 72,
+  "latency_p50": 66571,
+  "latency_p95": 71792,
+  "mean_tokens": 7253,
+  "mean_tokens_in": 2292,
+  "mean_tokens_out": 4960,
+  "mean_cached_tokens": 1393,
   "mean_cache_write_tokens": 0,
   "est_cost_microusd": 0,
-  "judge_served_model": "claude-sonnet-4-6",
+  "judge_served_model": "claude-sonnet-5-5",
   "judge_provider": "claude_cli",
   "self_judged": false,
   "served_identity_source": "echo",
-  "ran_at": "2026-09-28T15:02:02Z",
+  "candidate_upstream": {
+    "only": [
+      "deepinfra"
+    ],
+    "ignore": null,
+    "quantizations": [
+      "bf16"
+    ],
+    "sort": "",
+    "require_parameters": null,
+    "allow_fallbacks": null,
+    "preferred_max_latency_p90": 0,
+    "reasoning_effort": ""
+  },
+  "ran_at": "2026-11-10T04:57:57Z",
   "scenarios": [
     {
       "scenario": "deal_status_offer_left_hanging",
       "site": "deal_status",
-      "stamp": "b5dd42155aa5aeb8e531812b630f738d1e5c359d6db281c8543350d76f588539195ca26f4bcaae0b9dc6924e7ee8ed6e01652debe4eabb7bfa455a75d736bbfd40d019808cccf54c14c22f7c5b28f87852f88aec6adc0e722ed3ab0c24aa0af4",
-      "verdict": "not_supported",
-      "judge_band": "not_supported",
+      "stamp": "65cf19feb85a8c1fef9c5b9ba840b598c352d5e6b157dcc2a10a912d9f90629bda8507b2b6839b7e44429c1029362655f9a972a883e4a2b2442575ae5c9f9251e50e3cb07dce510adc99440a622b63a7cd2c6d265bf5f06d3c988eb57363481d",
+      "verdict": "certified",
+      "judge_band": "certified",
       "runs": 3,
       "passed": 3,
       "judge_scores": [
-        16,
-        14,
-        14
+        90,
+        79,
+        72
       ],
       "bands": {
         "certified_min": 70,
@@ -58,15 +72,15 @@
     {
       "scenario": "deal_status_an_overdue_task_is_not_done_work",
       "site": "deal_status",
-      "stamp": "c7996411a3098c073c5dd94aa53f7969fed6a330e2d703cde7cbd179270503b5ebe5de95ec36c7714aea0f989bcfea48b6fcca393aa92b0e1deb10a47a2a3a91cb9427ec4b9308f389f296da27c92f36c16b6dacff3910c7ace122f678df99d3",
+      "stamp": "818b6808812c9cba67e5e18f3c73cc6a117afde441459ca09c6aaf972bb1278935d51f993f4074f384c8f89e700b7c5f6eb25976d0edd08092a6ff9d8f9cdb24d3ec296cb836294f1f1b2f565a09905ec3f4e5a32aaea886dab4de3ec25d1cdd",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,
       "passed": 3,
       "judge_scores": [
-        88,
+        90,
         82,
-        88
+        90
       ],
       "bands": {
         "certified_min": 70,
@@ -81,15 +95,15 @@
     {
       "scenario": "deal_status_says_nothing_is_wrong_when_nothing_is",
       "site": "deal_status",
-      "stamp": "9539ccc4bca3d80343882cfcf5e83846a56cfc60bb0ae42940b8fe868fdffeabd339c6595fde195c9618025761e4ccdbcb9b7fbd4041ff107ca3d5a592e362d63da2d8616ff18048e698af1b4a3ed185633cc5b9f59bab810b3c4e2c92b86af1",
+      "stamp": "9539ccc4bca3d80343882cfcf5e83846a56cfc60bb0ae42940b8fe868fdffeab790c77c2bcc23cb2ad5846b3de247e59fcede9533d9fbbfb4e8b6ccbd050c947b319436b90f4123515611d069f40c1ef760b305a7ed1235cd891f0aa63f69f81",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,
       "passed": 3,
       "judge_scores": [
-        85,
         88,
-        87
+        72,
+        90
       ],
       "bands": {
         "certified_min": 70,
