@@ -64,6 +64,8 @@
 #                           does this once per run, and its shards read the result
 #   INTEGRATION_BIN_DIR     shard mode only: run each package from the binary
 #                           INTEGRATION_BUILD_OUT left here instead of compiling it
+#   INTEGRATION_TEMPLATE_READY  non-empty: `make test-db-up` built the template
+#                           in this job, so check it instead of building it again
 #   INTEGRATION_TEST_TIMING the test durations to split by (default: the committed
 #                           scripts/integration-test-timing.txt). Every shard of
 #                           one run must read the same file
@@ -235,7 +237,14 @@ fi
 
 # Build the migrated template once, fresh, before fanning out. Every package
 # clones from it (CREATE DATABASE ... TEMPLATE) instead of re-migrating.
-if [[ -z "$BUILD_OUT" ]]; then
+#
+# A CI shard builds it while the binaries compile (`make test-db-up`). It then
+# sets INTEGRATION_TEMPLATE_READY, and this run checks the template and migrates
+# only what is missing instead of building it a second time.
+if [[ -n "${INTEGRATION_TEMPLATE_READY:-}" && -z "$BUILD_OUT" ]]; then
+  echo "test-integration-parallel: checking the migrated template ${TEMPLATE_NAME} built before this run…"
+  ensure_template
+elif [[ -z "$BUILD_OUT" ]]; then
   echo "test-integration-parallel: building migrated template ${TEMPLATE_NAME}…"
   build_template
 fi
