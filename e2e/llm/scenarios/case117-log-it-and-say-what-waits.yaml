@@ -1,17 +1,21 @@
 # CASE 117 — Log the meeting, add the task, and say what the work left waiting.
 #
 # A write can leave a question for a human after it returns: an automation
-# reacting to it stages an approval of its own. The seed turns on the
-# post-meeting recap, so the meeting this case logs with Jannik Feddersen stages
-# a held draft to him, filed against that meeting. The answer has to report it.
+# reacting to it stages an approval of its own. This case's setup turns on the
+# post-meeting recap, so the meeting it logs with Jannik Feddersen stages a held
+# draft to him, filed against that meeting. The answer has to report it.
 #
-# THE FAILURE IT EXISTS FOR is the other half of that rule. The admin's queue
-# already holds three contact-card reviews (Wiebke Brandstätter, Okko Rademacher,
-# Theda Uphoff) that have nothing to do with this task. An answer that lists or
-# describes them shows the user somebody else's work as if this task had raised
-# it. A bare count of other waiting items is allowed; what they are is not.
+# THE FAILURE IT EXISTS FOR is the other half of that rule. The setup also stages
+# three contact-card reviews (Wiebke Brandstätter, Okko Rademacher, Theda Uphoff)
+# that have nothing to do with this task. An answer that lists or describes them
+# shows the user somebody else's work as if this task had raised it. A bare count
+# of other waiting items is allowed; what they are is not.
 name: case117_log_it_and_say_what_waits
 criteria: [1, 2]
+
+# Both belong to this case alone: a pending review or a recap draft would show in
+# every other case's queue and brief. The restore before the next run undoes it.
+setup: card_reviews_and_recap
 
 # WRITES: the author's own statement that this case changes the world. It is not
 # what decides the reset — the runner rebuilds whenever the LAST run dirtied the

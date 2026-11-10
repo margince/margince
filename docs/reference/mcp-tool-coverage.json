@@ -7,8 +7,8 @@
     "never_driven": 10,
     "permitted_but_never_required": 5,
     "tokens_served_but_never_driven": 5303,
-    "use_case_cases": 70,
-    "acceptance_criteria_named": 117,
+    "use_case_cases": 71,
+    "acceptance_criteria_named": 119,
     "tools_added_by_shipped_units": 0,
     "never_driven_but_graded_elsewhere": 2
   },
@@ -814,6 +814,18 @@
           "search": "semantic"
         }
       ]
+    },
+    {
+      "name": "case117_log_it_and_say_what_waits",
+      "title": "Log the meeting, add the task, and say what the work left waiting",
+      "file": "case117-log-it-and-say-what-waits.yaml",
+      "criteria": [
+        1,
+        2
+      ],
+      "requires": [],
+      "requires_one_of": [],
+      "by_model": null
     },
     {
       "name": "case20_put_it_in_the_board_pack",
@@ -3189,6 +3201,18 @@
       "statement": "The model uploads the logo as the company logo and attaches nothing to a record."
     },
     {
+      "case": "case117_log_it_and_say_what_waits",
+      "number": 1,
+      "name": "Report what the write left waiting",
+      "statement": "The model reports the draft an automation staged in reaction to the meeting it logged, as waiting for the user."
+    },
+    {
+      "case": "case117_log_it_and_say_what_waits",
+      "number": 2,
+      "name": "Leave the rest of the queue out",
+      "statement": "The model names no waiting item this task did not cause; at most it counts them."
+    },
+    {
       "case": "case1_log_it",
       "number": 8,
       "name": "Promises come back as suggestions",
@@ -3822,6 +3846,7 @@
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [],
       "permitted_in_cases": [
+        "case117_log_it_and_say_what_waits",
         "case1_log_it",
         "case32_two_words_for_one_thing",
         "case46_get_us_in_a_room",
@@ -3922,6 +3947,7 @@
         "case112_my_plan_and_the_dossier",
         "case113_after_the_sales_review",
         "case114_the_fleet_team",
+        "case117_log_it_and_say_what_waits",
         "case1_log_it",
         "case23_find_us_a_slot",
         "case30_a_word_for_it",
@@ -3994,6 +4020,7 @@
         "case114_the_fleet_team",
         "case115_my_hours_and_my_language",
         "case116_the_rate_and_the_logo",
+        "case117_log_it_and_say_what_waits",
         "case30_a_word_for_it",
         "case31_wrong_word_on_the_record",
         "case32_two_words_for_one_thing",
@@ -4213,6 +4240,7 @@
         "case110_write_greta_a_thank_you"
       ],
       "permitted_in_cases": [
+        "case117_log_it_and_say_what_waits",
         "case1_log_it"
       ],
       "driven": true,
@@ -4266,6 +4294,7 @@
         "case112_my_plan_and_the_dossier",
         "case113_after_the_sales_review",
         "case114_the_fleet_team",
+        "case117_log_it_and_say_what_waits",
         "case1_log_it",
         "case20_put_it_in_the_board_pack",
         "case22_can_i_trust_the_numbers",
@@ -4631,7 +4660,9 @@
         "case56_not_the_same"
       ],
       "required_as_one_of_a_set_by_cases": [],
-      "permitted_in_cases": [],
+      "permitted_in_cases": [
+        "case117_log_it_and_say_what_waits"
+      ],
       "driven": true,
       "required_only_as_one_of_a_set": false,
       "graded_by_certification_tasks": null,

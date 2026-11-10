@@ -1,0 +1,59 @@
+import glob
+import os
+import sys
+import unittest
+
+HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, HERE)
+
+import check  # noqa: E402
+import casesetup  # noqa: E402
+
+
+class SetupStepTest(unittest.TestCase):
+    def test_every_declared_setup_names_a_step(self):
+        declared = {}
+        for path in glob.glob(os.path.join(HERE, "scenarios", "*.yaml")):
+            step = check.parse_scenario(path).get("setup")
+            if step:
+                declared[os.path.basename(path)] = step
+        self.assertIn("case117-log-it-and-say-what-waits.yaml", declared)
+        for scenario, step in declared.items():
+            self.assertIn(step, casesetup.STEPS, f"{scenario} declares setup={step}")
+
+    def test_a_name_no_step_carries_is_refused(self):
+        self.assertEqual(casesetup.main(["casesetup.py", "--known", "card_reviews_and_recap"]), 0)
+        self.assertEqual(casesetup.main(["casesetup.py", "--known", "rm -rf /"]), 1)
+
+    def test_a_shell_command_is_never_run_as_a_step(self):
+        self.assertEqual(casesetup.main(["casesetup.py", "touch /tmp/x", "http://127.0.0.1:9", "/nonexistent"]), 1)
+
+
+class QueueProblemsTest(unittest.TestCase):
+    NAMES = ["Wiebke Brandstätter", "Okko Rademacher"]
+
+    def review(self, name):
+        return {"kind": "vcard_create", "summary": f"This card resembles an existing contact. Create {name} anyway?"}
+
+    def test_the_staged_reviews_and_nothing_else_hold(self):
+        self.assertEqual(casesetup.queue_problems([self.review(n) for n in self.NAMES], self.NAMES), [])
+
+    def test_a_missing_review_is_named(self):
+        self.assertEqual(
+            casesetup.queue_problems([self.review("Wiebke Brandstätter")], self.NAMES),
+            ["no pending card review names Okko Rademacher"],
+        )
+
+    def test_a_held_draft_before_any_meeting_is_named(self):
+        draft = {"kind": "held_draft", "summary": "an automation drafted a reply to someone@example.test"}
+        problems = casesetup.queue_problems([self.review(n) for n in self.NAMES] + [draft], self.NAMES)
+        self.assertEqual(problems, ["a held draft is already waiting: " + draft["summary"]])
+
+    def test_a_name_in_another_kind_is_not_a_review(self):
+        other = {"kind": "held_draft", "summary": "a reply to Okko Rademacher"}
+        self.assertIn("no pending card review names Okko Rademacher",
+                      casesetup.queue_problems([self.review("Wiebke Brandstätter"), other], self.NAMES))
+
+
+if __name__ == "__main__":
+    unittest.main()
