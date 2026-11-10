@@ -15758,7 +15758,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "agentAllowances.window.help":
     "Một hạn mức kéo dài bao lâu. Độ dài mới bắt đầu ở lần đặt lại kế tiếp, nên không passport nào được hạn mức mới sớm.",
   "agentAllowances.burst":
-    "Giới hạn cố định trên kết nối MCP: {calls} lệnh gọi và {streams} lần mở luồng mỗi phút cho mỗi passport, như nhau cho mọi vai trò.",
+    "Giới hạn cố định trên kết nối MCP cho mỗi passport: {streams} lần mở luồng mỗi phút cho mọi vai trò, và số lệnh gọi công cụ mỗi phút như từng vai trò hiển thị.",
   "agentAllowances.pending.title": "Đang chờ đổi khung thời gian",
   "agentAllowances.pending.body":
     "Từ {date} UTC, mỗi khung kéo dài {interval}. Đến lúc đó, khung hiện tại vẫn tiếp tục đếm.",
@@ -15787,6 +15787,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "agentAllowances.roles.rule":
     "Với mỗi loại, agent nhận giá trị cao nhất trong các vai trò của thành viên. Vai trò không có giá trị riêng dùng giá trị của hệ thống, còn Quản trị có thể nhận mức sẵn của Quản trị.",
   "agentAllowances.roles.col.role": "Vai trò",
+  "agentAllowances.roles.col.pacing": "Lệnh gọi công cụ mỗi phút",
+  "agentAllowances.roles.unpaced": "Không giới hạn",
   "agentAllowances.roles.builtIn": "Có sẵn",
   "agentAllowances.roles.source.role": "Đặt cho vai trò này",
   "agentAllowances.roles.source.admin_preset": "Mức sẵn của Quản trị",

@@ -40221,7 +40221,7 @@ components:
       type: object
       additionalProperties: false
       description: One live role and the allowance its users' agents get for each count.
-      required: [role_key, role_name, system, holds_preset, agent_writes_per_window, agent_egress_per_window, agent_calls_per_window]
+      required: [role_key, role_name, system, holds_preset, agent_writes_per_window, agent_egress_per_window, agent_calls_per_window, paced_per_minute]
       properties:
         role_key: { type: string, description: 'The role''s key: its identity, which a rename leaves alone.' }
         role_name: { type: string }
@@ -40234,6 +40234,12 @@ components:
         agent_writes_per_window: { $ref: '#/components/schemas/AgentRoleAllowanceValue' }
         agent_egress_per_window: { $ref: '#/components/schemas/AgentRoleAllowanceValue' }
         agent_calls_per_window: { $ref: '#/components/schemas/AgentRoleAllowanceValue' }
+        paced_per_minute:
+          type: boolean
+          description: |
+            Whether this role's agents are held to `mcp_calls_per_minute`. False for the built-in
+            Admin role. An agent whose user holds any role that is not paced is not paced. The
+            window allowances bind every role either way.
 
     AgentRoleAllowanceValue:
       type: object
@@ -40335,7 +40341,7 @@ components:
           type: array
           items: { $ref: '#/components/schemas/AgentRoleAllowance' }
           description: Every live role, the seeded ones first in their order, then the others by name.
-        mcp_calls_per_minute: { type: integer, description: 'How many tool calls one passport may make per minute. Fixed by the build.' }
+        mcp_calls_per_minute: { type: integer, description: 'How many tool calls one passport may make per minute, for a role whose `paced_per_minute` is true. Fixed by the build.' }
         mcp_stream_opens_per_minute: { type: integer, description: 'How many streams one passport may open per minute. Fixed by the build.' }
 
     UpdateCaptureSettingsRequest:

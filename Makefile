@@ -1885,7 +1885,7 @@ sbom-validate:
 	@echo "validating $(SBOM_DIR)/margince.spdx300.json (SPDX 3.0.1 schema)"
 	@# --fast: exhaustive mode keeps an evaluation trace per node and exhausts the runner's memory on a
 	@# document that digests every committed file; fast mode still fails an invalid document (exit 2).
-	@$(JSONSCHEMA) validate --fast $(SBOM_SCHEMA_DIR)/spdx-3.0.1.schema.json $(SBOM_DIR)/margince.spdx300.json
+	@$(JSONSCHEMA) validate --fast $(SBOM_SCHEMA_DIR)/spdx-3.0.1/spdx-3.0.1.schema.json $(SBOM_DIR)/margince.spdx300.json
 	@echo "OK: three SBOMs valid against their formats"
 
 ## sbom-sign — keyless-sign each generated SBOM with cosign (writes *.cosign.bundle; needs an OIDC token).

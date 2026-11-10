@@ -16066,7 +16066,7 @@ export const en = {
   "agentAllowances.window.help":
     "How long one allowance lasts. A new length starts at the next reset, so no passport gets a fresh allowance early.",
   "agentAllowances.burst":
-    "Fixed limits on the MCP connection: {calls} calls and {streams} stream opens a minute per passport, the same for every role.",
+    "Fixed limits on the MCP connection, per passport: {streams} stream opens a minute for every role, and the tool calls a minute each role shows.",
   "agentAllowances.pending.title": "Window change waiting",
   "agentAllowances.pending.body":
     "Each window lasts {interval} from {date} UTC. Until then the current window keeps counting.",
@@ -16095,6 +16095,8 @@ export const en = {
   "agentAllowances.roles.rule":
     "For each kind, an agent gets the highest value among its user’s roles. A role with no value of its own uses the installation value, and Admin may take its preset instead.",
   "agentAllowances.roles.col.role": "Role",
+  "agentAllowances.roles.col.pacing": "Tool calls a minute",
+  "agentAllowances.roles.unpaced": "No limit",
   "agentAllowances.roles.builtIn": "Built-in",
   "agentAllowances.roles.source.role": "Set for this role",
   "agentAllowances.roles.source.admin_preset": "Admin preset",

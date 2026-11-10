@@ -238,11 +238,10 @@ func operationalMux(srv Server, pool *pgxpool.Pool, log *slog.Logger, identitySv
 	// gate signal: with the connector off none of these routes is
 	// registered, so the mux's own 404 answers all of them identically and
 	// nothing tells a prober which gate is closed.
-	if mcp := srv.mcpHandler(pool, identitySvc, log); mcp != nil {
-		// ONE set of limiters for the whole group: the transport and the
-		// authorization server are two halves of one internet-facing surface,
-		// and a second construction would give each its own private ceilings.
-		mcpLimits := newMCPLimiters()
+	// One set of limiters serves the transport and the authorization server.
+	// They are one surface, so a second set would split its ceilings.
+	mcpLimits := newMCPLimiters()
+	if mcp := srv.mcpHandler(pool, identitySvc, log, mcpLimits); mcp != nil {
 		mux.Handle("/mcp", httpserver.Correlate(httpserver.AccessLog(log, mcpEdge(mcp, mcpLimits, srv.mcpAllowedOrigin))))
 		// The AS endpoints live outside the generated resource surface but
 		// behind the same workspace and session middleware (whose one exemption

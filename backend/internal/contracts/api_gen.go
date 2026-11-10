@@ -31679,7 +31679,7 @@ type AgentAllowanceSettings struct {
 	// Defaults What each agent allowance is before an admin changes it, so a screen never restates them.
 	Defaults AgentAllowanceDefaults `json:"defaults"`
 
-	// McpCallsPerMinute How many tool calls one passport may make per minute. Fixed by the build.
+	// McpCallsPerMinute How many tool calls one passport may make per minute, for a role whose `paced_per_minute` is true. Fixed by the build.
 	McpCallsPerMinute int `json:"mcp_calls_per_minute"`
 
 	// McpStreamOpensPerMinute How many streams one passport may open per minute. Fixed by the build.
@@ -31960,6 +31960,11 @@ type AgentRoleAllowance struct {
 	// HoldsPreset True for the built-in Admin role, which the Admin preset is for, whether or not the
 	// preset binds a count now. Left out of a save, this role returns to the preset.
 	HoldsPreset bool `json:"holds_preset"`
+
+	// PacedPerMinute Whether this role's agents are held to `mcp_calls_per_minute`. False for the built-in
+	// Admin role. An agent whose user holds any role that is not paced is not paced. The
+	// window allowances bind every role either way.
+	PacedPerMinute bool `json:"paced_per_minute"`
 
 	// RoleKey The role's key: its identity, which a rename leaves alone.
 	RoleKey  string `json:"role_key"`
