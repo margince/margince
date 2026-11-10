@@ -9,6 +9,8 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 )
 
 // Saving the meeting settings refuses each mistake on the field it is about:
@@ -16,7 +18,7 @@ import (
 func TestMeetingSettingsRefuseEachMistakeOnItsOwnField(t *testing.T) {
 	e := setupBookingApp(t)
 	e.BootstrapWorkspace(t)
-	enableBookingPage(t, e)
+	apptest.EnableGoogleBookingPage(t, e)
 	valid := func() AnyMap {
 		return AnyMap{
 			"provider": "gcal", "calendar_id": "ada@example.com", "enabled": false, "duration_minutes": 30,

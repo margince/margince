@@ -77,7 +77,7 @@
 
 /* A soft panel, so the advice reads as a note beside the inputs. */
 .vdna-works {
-  padding: var(--space-3) var(--space-4);
+  padding: var(--space-3) var(--padCard);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-sm);
   background: var(--bgChip);
@@ -206,8 +206,7 @@
   margin-top: var(--space-2);
 }
 
-/* The page: one column of sections under the jump bar, the rules and the
-   builds side by side once there is room for both. */
+/* Each tab: one column of sections under the privacy line. */
 .vdna-page {
   display: flex;
   flex-direction: column;
@@ -215,18 +214,20 @@
 }
 
 .vdna-section {
-  scroll-margin-top: calc(var(--controlHeight) + var(--space-6));
+  scroll-margin-top: var(--space-6);
 }
 
 .vdna-section:focus {
   outline: none;
 }
 
-.vdna-split {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 24rem), 1fr));
-  gap: var(--gapCards);
-  align-items: start;
+/* The privacy line, with the build's standing at the far end. */
+.vdna-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
 }
 
 .vdna-privacy {
@@ -347,7 +348,7 @@
 /* On a phone the display line would take five lines for one sentence. */
 @media (max-width: 40rem) {
   .vdna-hero {
-    padding: var(--space-6) var(--space-5);
+    padding: var(--space-6) var(--padPanel);
   }
 
   .vdna-identity {
@@ -386,7 +387,7 @@
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-3) var(--space-5);
-  padding: var(--space-4) var(--space-5);
+  padding: var(--space-4) var(--padPanel);
   border: 1px solid var(--aiMed);
   border-radius: var(--r-lg);
 }
@@ -439,7 +440,7 @@
 .vdna-move {
   height: 100%;
   margin: 0;
-  padding: var(--space-5);
+  padding: var(--space-5) var(--padPanel);
   border: 1px solid var(--aiMed);
   border-radius: var(--r-md);
   background: var(--aiLight);

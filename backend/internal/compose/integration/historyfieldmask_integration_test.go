@@ -14,6 +14,7 @@ package integration
 import (
 	"context"
 	"errors"
+	"reflect"
 	"slices"
 	"strconv"
 	"testing"
@@ -22,6 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
@@ -131,6 +133,37 @@ func TestAMaskedAmountIsGoneFromADealsFieldHistory(t *testing.T) {
 		if !errors.As(err, &refused) || refused.Code != auth.CodeFieldMasked {
 			t.Errorf("filtering by a withheld field → %v, want the %s refusal, never an empty page", err, auth.CodeFieldMasked)
 		}
+	}
+}
+
+// An agent on its user's passport reads the trail its user reads, under the
+// same mask. A role without the record's read grant reads none.
+func TestAnAgentReadsTheFieldHistoryItsUserReads(t *testing.T) {
+	e := Setup(t)
+	reader, _, theirs := maskedMoneyReader(t, e)
+	agent, _ := principal.Actor(reader)
+	agent.Type, agent.ID = principal.PrincipalAgent, "agent:"+ids.NewV7().String()
+	agent.PassportID, agent.OnBehalfOf = ids.NewV7(), agent.UserID
+	filter := privacy.FieldHistoryFilter{EntityType: objDeal, EntityID: theirs}
+
+	human, err := privacy.ListFieldHistory(reader, e.DB(), filter)
+	if err != nil || len(human.Entries) == 0 {
+		t.Fatalf("the user reading the trail = %d entries (%v), want the seeded edits", len(human.Entries), err)
+	}
+	read, err := privacy.ListFieldHistory(principal.WithActor(reader, agent), e.DB(), filter)
+	if err != nil {
+		t.Fatalf("the agent reading its user's trail: %v", err)
+	}
+	same := func(a, b privacy.FieldHistoryEntry) bool {
+		return a.ID == b.ID && a.Field == b.Field && reflect.DeepEqual(a.OldValue, b.OldValue) && reflect.DeepEqual(a.NewValue, b.NewValue)
+	}
+	if !slices.EqualFunc(read.Entries, human.Entries, same) {
+		t.Errorf("the agent read %d entries and its user %d, want the same masked trail", len(read.Entries), len(human.Entries))
+	}
+
+	agent.Permissions.Objects = map[string]principal.ObjectGrant{objPipeline: {Read: true}}
+	if _, err := privacy.ListFieldHistory(principal.WithActor(reader, agent), e.DB(), filter); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("an agent whose user lacks deal read = %v, want permission denied", err)
 	}
 }
 

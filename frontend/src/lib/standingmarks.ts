@@ -7,6 +7,7 @@ import { activityDay, activityHasHappened } from "../format/activitywhen";
 import { formatDayMonth } from "../format/format.dates";
 import type { Locale, Translator } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { labelFor } from "./labelfor";
 import { authorName, correspondenceSide } from "./messagevoice";
 
 type Activity = components["schemas"]["Activity"];
@@ -56,7 +57,7 @@ export function activityMarks(
         activityHasHappened(row, asOf, record),
     )
     .map((row): TimelineMark => {
-      const what = t(KIND_WORD[row.kind]);
+      const what = t(labelFor(KIND_WORD, row.kind));
       return {
         key: row.id,
         at: row.occurred_at,

@@ -179,7 +179,7 @@ func TestEveryDecimalParseIsFencedBeforeBigRatReadsIt(t *testing.T) {
 	judged := 0
 	sawFxRate := false
 	for _, root := range []string{"internal", "cmd"} {
-		err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+		err := gatekit.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 			if err != nil || d.IsDir() {
 				return err
 			}

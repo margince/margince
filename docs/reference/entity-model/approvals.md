@@ -6,7 +6,7 @@ The 3 tables owned by `approvals`, as the migrations build them. [Back to the en
 
 ## approval
 
-37 columns · primary key `(id)` · referenced by 4 foreign keys
+38 columns · primary key `(id)` · referenced by 4 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -31,6 +31,7 @@ The 3 tables owned by `approvals`, as the migrations build them. [Back to the en
 | `kind` | `text` | yes | Examples: coldstart \| send_email \| advance_deal \| promote_lead \| overnight \| deal_follow_up \| commitment_task. |
 | `on_behalf_of` | `uuid` |  | Points at `app_user.id`. |
 | `passport_id` | `uuid` |  | Points at `passport.id`. |
+| `plan_footprint` | `jsonb` |  |  |
 | `proposed_by` | `text` | yes | agent:<id> / connector:<n> that staged this. |
 | `proposed_change` | `jsonb` | yes | The staged diff/payload that will execute on approve. |
 | `requested_decider_id` | `uuid` |  | The member explicitly asked to decide, independent of who has permission to approve. |

@@ -34,6 +34,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 func TestAnonymizeClearsWhatIsKeyedOnTheSubjectsAddress(t *testing.T) {
@@ -41,7 +42,7 @@ func TestAnonymizeClearsWhatIsKeyedOnTheSubjectsAddress(t *testing.T) {
 	if ownerDSN == "" {
 		t.Fatal("MARGINCE_TEST_DSN not set — run `make db-up` (integration tests fail loudly, they never skip)")
 	}
-	ctx := context.Background()
+	ctx := principal.SystemActing(context.Background(), "privacy_test")
 	owner, err := pgx.Connect(ctx, ownerDSN)
 	if err != nil {
 		t.Fatal(err)

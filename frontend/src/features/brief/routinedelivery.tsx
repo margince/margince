@@ -7,6 +7,7 @@ import { QueryStates } from "../../design-system/querystates";
 import { Select } from "../../design-system/select";
 import { SettingRow } from "../../design-system/settingrow";
 import { useT } from "../../i18n";
+import { labelFor } from "../../lib/labelfor";
 import { useMe } from "../../lib/session";
 import { useTeams } from "./teams.queries";
 
@@ -185,7 +186,7 @@ export function RoutineDeliveryRows({
                   )
                   .map((scope) => ({
                     value: scope,
-                    label: t(scopeKeys[scope]),
+                    label: t(labelFor(scopeKeys, scope)),
                   }))}
                 onChange={(value) => {
                   const scope = scopes.find((candidate) => candidate === value);

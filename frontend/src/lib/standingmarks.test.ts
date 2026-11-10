@@ -172,3 +172,20 @@ describe("activityMarks", () => {
     });
   });
 });
+
+describe("an activity kind this build does not know", () => {
+  it("is named with the neutral label rather than a blank", () => {
+    const [mark] = activityMarks(
+      [
+        row({
+          id: "u",
+          kind: "a_kind_from_a_later_release" as Activity["kind"],
+          occurred_at: "2026-08-01T10:00:00Z",
+        }),
+      ],
+      words,
+    );
+    expect(mark?.what).toBe(en["common.unknownValue"]);
+    expect(mark?.title).toBe(en["common.unknownValue"]);
+  });
+});

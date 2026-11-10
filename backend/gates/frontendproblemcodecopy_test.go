@@ -16,7 +16,6 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
-	"os"
 	"path"
 	"path/filepath"
 	"regexp"
@@ -197,7 +196,7 @@ func namesLocal(expr ast.Expr, packageLevel map[any]bool) bool {
 // problemCodeCopy reads the screen's code→catalog-key map.
 func problemCodeCopy(t *testing.T) map[string]string {
 	t.Helper()
-	source, err := os.ReadFile(problemCopyOwner)
+	source, err := gatekit.ReadFile(problemCopyOwner)
 	if err != nil {
 		t.Fatalf("reading %s: %v", problemCopyOwner, err)
 	}

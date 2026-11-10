@@ -12,7 +12,7 @@
 #      a var() reference with a fallback, and `inherit`. A gate that fires on
 #      correct code teaches readers to stop reading it. (A grep reads comments
 #      as it reads code, so a comment naming the class is refused here too;
-#      design-system/mono.test.ts is the arm that reads past one.)
+#      census/rules/mono.census.ts is the arm that reads past one.)
 #
 # Usage: bash frontend/scripts/check-font-lock.test.sh
 

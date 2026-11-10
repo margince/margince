@@ -29,8 +29,29 @@ func (k *withheldOnlyKeeper) Record(context.Context, pgx.Tx, ids.ActivityID, Fil
 	return errors.New("not reached")
 }
 
-func (k *withheldOnlyKeeper) RecordLinks(context.Context, pgx.Tx, ids.ActivityID, FileSource, []MailLink) error {
-	return nil
+func (k *withheldOnlyKeeper) Stored([]StagedFile) ([]StoredFile, error) {
+	return nil, errors.New("withheldOnlyKeeper stores no bytes")
+}
+
+func (k *withheldOnlyKeeper) RecordLinks(context.Context, pgx.Tx, ids.ActivityID, FileSource, []MailLink) (int, error) {
+	return 0, nil
+}
+
+// AdoptWithheld is never reached from a new activity, which is all this double
+// stands in for, so it refuses rather than pretending to adopt.
+func (k *withheldOnlyKeeper) AdoptWithheld(
+	_ context.Context, _ pgx.Tx, _ ids.ActivityID, _ FileSource, _ []CapturedFile,
+) (int, error) {
+	return 0, errors.New("a new activity adopts nothing")
+}
+
+// RecordCopiedWithheld lands in the same recorded list: this double exists to
+// watch what crosses the seam, and both reasons cross it the same way.
+func (k *withheldOnlyKeeper) RecordCopiedWithheld(
+	_ context.Context, _ pgx.Tx, _ ids.ActivityID, _ FileSource, files []CapturedFile,
+) error {
+	k.named = files
+	return k.fail
 }
 
 func (k *withheldOnlyKeeper) RecordWithheld(_ context.Context, _ pgx.Tx, _ ids.ActivityID, _ FileSource, files []CapturedFile) error {
@@ -48,7 +69,7 @@ func TestAWithheldFileIsNamedOrTheCaptureFails(t *testing.T) {
 	activity := ids.From[ids.ActivityKind](ids.NewV7())
 
 	keeper := &withheldOnlyKeeper{}
-	if err := (&Sink{files: keeper}).recordWithheldParts(context.Background(), nil, activity, rec, fields, parts); err != nil {
+	if err := (&Sink{files: keeper}).recordWithheldParts(context.Background(), nil, activity, rec, fields, parts, false); err != nil {
 		t.Fatalf("naming the withheld file: %v", err)
 	}
 	if len(keeper.named) != 1 || keeper.named[0].Filename != "payslip.pdf" || keeper.named[0].PartID != "part:1" {
@@ -56,14 +77,14 @@ func TestAWithheldFileIsNamedOrTheCaptureFails(t *testing.T) {
 	}
 
 	broken := &withheldOnlyKeeper{fail: errors.New("store down")}
-	if err := (&Sink{files: broken}).recordWithheldParts(context.Background(), nil, activity, rec, fields, parts); err == nil {
+	if err := (&Sink{files: broken}).recordWithheldParts(context.Background(), nil, activity, rec, fields, parts, false); err == nil {
 		t.Error("a keeper that could not name the files let the capture through")
 	}
 
-	if err := (&Sink{}).recordWithheldParts(context.Background(), nil, activity, rec, fields, parts); err != nil {
+	if err := (&Sink{}).recordWithheldParts(context.Background(), nil, activity, rec, fields, parts, false); err != nil {
 		t.Errorf("no keeper wired: %v, want the message kept and nothing named", err)
 	}
-	if err := (&Sink{files: broken}).recordWithheldParts(context.Background(), nil, activity, rec, fields, nil); err != nil {
+	if err := (&Sink{files: broken}).recordWithheldParts(context.Background(), nil, activity, rec, fields, nil, false); err != nil {
 		t.Errorf("no parts withheld: %v, want nothing asked of the keeper", err)
 	}
 }

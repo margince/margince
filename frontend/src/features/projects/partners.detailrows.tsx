@@ -6,6 +6,7 @@ import { FieldGuard } from "../../design-system/rbac";
 import { formatDate } from "../../format/format";
 import { useT } from "../../i18n";
 import type { Locale } from "../../i18n/locale";
+import { labelFor } from "../../lib/labelfor";
 import { MARGIN_TIER_LABELS, type Partner } from "./partners.vocab";
 
 // Rows of the Partner tab's read view that say more than the stored value:
@@ -26,7 +27,7 @@ export function MarginTierRow({ partner }: Readonly<{ partner: Partner }>) {
       <dt>{t("partner.marginTier")}</dt>
       <dd>
         <FieldGuard mode={masked ? "masked" : "visible"}>
-          {tier ? t(MARGIN_TIER_LABELS[tier]) : null}
+          {tier ? t(labelFor(MARGIN_TIER_LABELS, tier)) : null}
         </FieldGuard>
       </dd>
     </>

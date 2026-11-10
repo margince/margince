@@ -26,6 +26,7 @@ import (
 	"errors"
 	"io"
 	"log/slog"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -167,15 +168,26 @@ func newTestDeliverer(we *webhookEnv, now *time.Time, client *http.Client) *webh
 func newTestDelivererOn(we *webhookEnv, db *database.DB, now *time.Time, client *http.Client) *webhooks.Deliverer {
 	store := webhooks.NewStore(db, we.cipher)
 	clock := func() time.Time { return *now }
-	return webhooks.NewDeliverer(store, client, clock, identity.NewService(we.pool),
+	return webhooks.NewDeliverer(store, deliveryClient(client), clock, identity.NewService(we.pool),
 		slog.New(slog.NewTextHandler(os.Stderr, nil)))
 }
 
 func newTestDelivererWithResolver(we *webhookEnv, now *time.Time, client *http.Client, resolver authz.Resolver) *webhooks.Deliverer {
 	store := webhooks.NewStore(database.BindTo(we.pool, ids.From[ids.WorkspaceKind](we.wsID)), we.cipher)
 	clock := func() time.Time { return *now }
-	return webhooks.NewDeliverer(store, client, clock, resolver,
+	return webhooks.NewDeliverer(store, deliveryClient(client), clock, resolver,
 		slog.New(slog.NewTextHandler(os.Stderr, nil)))
+}
+
+// deliveryClient is the real delivery client over a test receiver's TLS
+// config, without the netguard dialer that refuses its loopback address. A
+// client with a stand-in transport is kept as it is.
+func deliveryClient(client *http.Client) webhooks.HTTPDoer {
+	transport, ok := client.Transport.(*http.Transport)
+	if !ok {
+		return client
+	}
+	return webhooks.NewDeliveryClient((&net.Dialer{}).DialContext, transport.TLSClientConfig)
 }
 
 // makeEnvelope builds a matching bus envelope naming a deal subject. The

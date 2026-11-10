@@ -144,6 +144,7 @@ type calendarPart struct {
 type partMethods struct {
 	methods  []string
 	disputed bool
+	uid      string
 }
 
 // see records one calendar part. A part whose bytes the collector refused names
@@ -153,7 +154,9 @@ func (c *calendarPart) see(params map[string]string, body []byte) {
 	if body == nil {
 		return
 	}
-	c.parts = append(c.parts, declaredMethods(params, body))
+	part := declaredMethods(params, body)
+	part.uid = eventUID(body)
+	c.parts = append(c.parts, part)
 }
 
 // method is the message's calendar method, resolved against the sender. It is

@@ -16,9 +16,12 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/datatask"
+	"github.com/margince/margince/backend/internal/platform/originalstore"
 )
 
 func runDataTasks(ctx context.Context, args []string, stdout, stderr io.Writer) error {
@@ -55,7 +58,17 @@ func runDataTasks(ctx context.Context, args []string, stdout, stderr io.Writer) 
 		return err
 	}
 	defer pool.Close()
+	// The corrections hash under the keys the root key derives, as the worker's do.
+	compose.UseConfig(dsn.loaded)
+	if err := storekit.RefuseForeignSuppressionKey(ctx, pool); err != nil {
+		return fmt.Errorf("migrate: %w", err)
+	}
 	if action == dataTasksExecute {
+		blob, _, err := blobstore.FromConfig(ctx, dsn.loaded)
+		if err != nil {
+			return fmt.Errorf("migrate: open original storage: %w", err)
+		}
+		ctx = originalstore.Bind(ctx, compose.InstallationDB(pool), blob)
 		return executeDataTasks(ctx, pool, *maxBatches, stdout)
 	}
 	progress, err := dataTaskOperation(ctx, pool, action)

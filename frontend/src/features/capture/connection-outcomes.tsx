@@ -1,3 +1,4 @@
+import { SenderCorrections } from "./capture-sendercorrections";
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
@@ -14,7 +15,11 @@ import { Panel } from "../../design-system/panel";
 import { SettingList, SettingRow } from "../../design-system/settingrow";
 import { formatNumber } from "../../format/format";
 import { type PluralBase, useLocale, usePlural, useT } from "../../i18n";
-import { CAPTURE_REVIEW_PARAM, captureReview } from "../../lib/capturereview";
+import {
+  CAPTURE_REVIEW_PARAM,
+  captureReview,
+  withoutCaptureContact,
+} from "../../lib/capturereview";
 import { problemMessageOf } from "../../lib/problem";
 import { useUrlParams } from "../../lib/urlstate";
 import {
@@ -24,11 +29,11 @@ import {
 } from "../import/linkedin-reach";
 import {
   AwaitingContacts,
-  SenderDecisions,
   useAwaitingDecision,
   useSenders,
 } from "./capture-senders";
 import { HeldThreads, useHeldThreads } from "./held-threads";
+import { heldTotal } from "./held-threads.counts";
 
 // One row per list the mailboxes and LinkedIn import produced. Each list is
 // long and read rarely, so the row says how much there is and opens a drawer.
@@ -46,7 +51,9 @@ export function ConnectionOutcomesCard() {
   const [selected, setSelected] = useState<Outcome | null>(null);
   const open = captureReview(params.get(CAPTURE_REVIEW_PARAM)) ?? selected;
   const setOpen = (outcome: Outcome | null) => {
-    const next = new Map(params);
+    // A contact filter came with a link from a timeline. The row's own View
+    // opens the whole list, and closing the drawer ends the filter.
+    const next = withoutCaptureContact(params);
     next.delete(CAPTURE_REVIEW_PARAM);
     setParams(next);
     setSelected(outcome);
@@ -58,9 +65,9 @@ export function ConnectionOutcomesCard() {
   const waitingCount = waiting.data?.data.length ?? 0;
   const reachCount = reach.data?.accounts_total;
   const counts: Record<Outcome, number | undefined> = {
-    senders: senders.data?.data.length,
+    senders: senders.data?.total ?? senders.data?.data.length,
     waiting: waitingCount,
-    held: held.data?.data.length,
+    held: held.data?.pages[0] && heldTotal(held.data.pages[0]),
     reach: reachCount,
   };
   // A list emptied in the drawer, or about to re-read, may take its row's View
@@ -136,7 +143,7 @@ export function ConnectionOutcomesCard() {
           {senders.data.data.length === 0 ? (
             <EmptyState>{t("senders.emptyBody")}</EmptyState>
           ) : (
-            <SenderDecisions rows={senders.data.data} />
+            <SenderCorrections />
           )}
         </OutcomeDrawer>
       )}
@@ -153,17 +160,13 @@ export function ConnectionOutcomesCard() {
           )}
         </OutcomeDrawer>
       )}
-      {open === "held" && held.data && (
+      {open === "held" && (
         <OutcomeDrawer
           title={t("heldThreads.title")}
           onClose={close}
           returnFocusTo={backTo("held")}
         >
-          {held.data.data.length === 0 ? (
-            <EmptyState>{t("heldThreads.empty")}</EmptyState>
-          ) : (
-            <HeldThreads list={held.data} />
-          )}
+          <HeldThreads />
         </OutcomeDrawer>
       )}
       {open === "reach" && reach.data && (

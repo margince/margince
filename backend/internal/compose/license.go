@@ -169,12 +169,11 @@ func WithLicensePosture(posture func() licensecheck.Posture) Option {
 		// grounds that the assembly already wired it — would take the entitlement
 		// surface down with it.
 		s.licenseHandlers = s.withPosture(posture)
-		// The same posture reaches identity's seat writer as a ceiling, from the
-		// same call: a role that reports what a license grants must not be able to
-		// show an admin a number it does not hold them to. The posture is read at
-		// CALL time, so a license renewed in place raises the ceiling on the next
-		// re-check and one that lapses lowers it, without a restart — and nothing
-		// here touches a seat already in use, only the next one.
+		// The same posture reaches identity's seat writer as a ceiling, so an admin
+		// is held to the number they are shown. It is read at CALL time, so a
+		// license renewed in place raises the ceiling on the next re-check. A seat
+		// already in use is never touched. An invalid posture answers no number,
+		// which reads as no ceiling: seats stay uncapped until it is replaced.
 		s.authHandlers = s.WithSeatCeiling(func() (int, bool) { return posture().Seats() })
 	}
 }

@@ -130,7 +130,7 @@ export function LossReasonsCard() {
   const canEdit = useCanWrite("custom_field", "update");
   // A page the seat only reads says so itself; the card names only the
   // partial case it leaves unsaid.
-  const readOnlyPage = usePageReadOnly("lossreasons");
+  const readOnlyPage = usePageReadOnly("deals", "loss");
   const refusal =
     !readOnlyPage && !canEdit && canCreate
       ? ("leadSources.addOnlyTitle" as const)
@@ -167,7 +167,11 @@ export function LossReasonsCard() {
         ? refusalId
         : undefined,
     onActive: (reason, active) =>
-      update.mutate({ id: reason.id, body: { active } }),
+      update.mutate({
+        id: reason.id,
+        version: reason.version,
+        body: { active },
+      }),
     onRename: (reason) => open({ mode: "rename", reason }),
   });
   const done = { onSuccess: () => setNamingOpen(false) };
@@ -235,7 +239,14 @@ export function LossReasonsCard() {
         nameProblem={refused.nameProblem}
         onSave={(label) => {
           if (naming.mode === "rename") {
-            rename.mutate({ id: naming.reason.id, body: { label } }, done);
+            rename.mutate(
+              {
+                id: naming.reason.id,
+                version: naming.reason.version,
+                body: { label },
+              },
+              done,
+            );
           } else {
             create.mutate({ label }, done);
           }

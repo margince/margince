@@ -240,14 +240,14 @@ const atRiskScanLimit = 25
 // sampling: a deterministic prefix can be explained to a rep, a sample cannot.
 func atRiskLister(pool *pgxpool.Pool, ppl *contacts.Store) agents.AtRiskLister {
 	store := deals.NewStore(InstallationDB(pool), DealsInstallation())
-	return func(ctx context.Context) (agents.AtRiskReport, error) {
+	return func(ctx context.Context, owner *ids.UUID) (agents.AtRiskReport, error) {
 		var out agents.AtRiskReport
 		openStatus := network.DealStatusOpen
 		// One over the cap, so "there was more" is observed rather than
 		// inferred from a full page — a page that happens to be exactly full is
 		// not evidence of a remainder.
 		limit := atRiskScanLimit + 1
-		open, _, err := store.ListDeals(ctx, deals.ListDealsInput{Status: &openStatus, Limit: &limit})
+		open, _, err := store.ListDeals(ctx, deals.ListDealsInput{Status: &openStatus, Limit: &limit, ScopeOwners: riskViewOwners(ctx, owner)})
 		if err != nil {
 			return out, err
 		}

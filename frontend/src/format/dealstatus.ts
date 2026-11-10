@@ -1,14 +1,9 @@
 import type { operations } from "../api/schema";
 import type { MessageKey } from "../i18n/en";
+import { labelFor } from "../lib/labelfor";
 
 type DealStatus = NonNullable<
   NonNullable<operations["listDeals"]["parameters"]["query"]>["status"]
->;
-
-type ForecastFilter = NonNullable<
-  NonNullable<
-    operations["listDeals"]["parameters"]["query"]
-  >["forecast_category"]
 >;
 
 /** A deal's status in words, once for every screen that names one. */
@@ -30,7 +25,7 @@ export function dealStatusFilter(
 
 export function dealStatusLabel(value: string): MessageKey | undefined {
   const status = dealStatusFilter(value);
-  return status && DEAL_STATUS_LABEL[status];
+  return status && labelFor(DEAL_STATUS_LABEL, status);
 }
 
 // Won reads success, lost reads danger, an open deal carries no status tone.
@@ -44,22 +39,4 @@ export function dealStatusTone(
     return "danger";
   }
   return undefined;
-}
-
-// Each record is keyed by the contract's own union, so a value the wire adds
-// fails the build here until it is listed. `slipped` is not in the forecast
-// union: the report derives it from a claimed category and a close date.
-const FORECAST_FILTER: Readonly<Record<ForecastFilter, true>> = {
-  commit: true,
-  best_case: true,
-  pipeline: true,
-  omitted: true,
-};
-
-export function forecastCategoryFilter(
-  value: string | undefined,
-): ForecastFilter | undefined {
-  return Object.keys(FORECAST_FILTER).find(
-    (admitted): admitted is ForecastFilter => admitted === value,
-  );
 }

@@ -105,7 +105,7 @@ func TestTheDefaultThresholdsAreTheOnesTheSpecNames(t *testing.T) {
 		counter Counter
 		want    int
 	}{{Writes, 200}, {Egress, 20}, {Calls, 1000}} {
-		if got := l.of(c.counter); got != c.want {
+		if got := l.Of(c.counter); got != c.want {
 			t.Errorf("%s defaults to %d, and api-rate-limits §2.2 says %d", c.counter, got, c.want)
 		}
 	}
@@ -116,7 +116,7 @@ func TestTheDefaultThresholdsAreTheOnesTheSpecNames(t *testing.T) {
 // be a second, deployment-wide answer to a question only the workspace can
 // answer, and the two would disagree.
 func TestCostHasNoDeploymentWideThreshold(t *testing.T) {
-	got := Limits{}.withDefaults().of(Cost)
+	got := Limits{}.withDefaults().Of(Cost)
 	if got != 0 {
 		t.Errorf("cost resolved a fixed threshold of %d; its ceiling is the workspace's budget share", got)
 	}

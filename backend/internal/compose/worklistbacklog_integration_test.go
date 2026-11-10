@@ -14,8 +14,20 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/approvals"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
+
+func completeCreatedTask(t *testing.T, e *integration.Env, id ids.ActivityID) {
+	t.Helper()
+	current, err := e.Activities.GetActivity(e.Admin(), id, storekit.LiveOnly)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if done, err := e.Activities.CompleteTask(e.Admin(), id, current.UpdatedAt); err != nil || !done {
+		t.Fatalf("completing %s at its stored update: done=%v err=%v", id, done, err)
+	}
+}
 
 // backlogTasks writes more tasks than the task lane's caps, for three seats and
 // nobody: Rep1 and Rep2 share Team1, Rep3 is on Team2.
@@ -34,9 +46,7 @@ func backlogTasks(t *testing.T, r reminderEnv) {
 	write(&r.e.Rep3, "Rep3 due", 5, overdue)
 	write(nil, "Nobody due", 3, overdue)
 	finished := r.task(t, "Rep2 finished", overdue(0), nil, &r.e.Rep2)
-	if done, err := r.e.Activities.CompleteTask(r.e.Admin(), finished, time.Now()); err != nil || !done {
-		t.Fatalf("completing a task: done %v, %v", done, err)
-	}
+	completeCreatedTask(t, r.e, finished)
 	// Due in a week, reminded now: today's work on Rep1's own page only.
 	remind := r.now.Add(-time.Hour)
 	r.task(t, "Rep1 reminded", r.now.AddDate(0, 0, 5), &remind, &r.e.Rep1)
@@ -152,10 +162,7 @@ func TestCompletingSeenTasksDoesNotEndTheTail(t *testing.T) {
 		t.Fatalf("first page: %v, cursor %v", err, first.NextCursor)
 	}
 	for _, row := range first.Queue {
-		done, err := r.e.Activities.CompleteTask(r.e.Admin(), ids.From[ids.ActivityKind](ids.MustParse(row.Id)), time.Now())
-		if err != nil || !done {
-			t.Fatalf("completing %s: done %v, %v", row.Id, done, err)
-		}
+		completeCreatedTask(t, r.e, ids.From[ids.ActivityKind](ids.MustParse(row.Id)))
 		delete(open, row.Id)
 	}
 	cursor := *first.NextCursor

@@ -25,13 +25,13 @@ package privacy
 import (
 	"context"
 	"fmt"
-	"regexp"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // subjectApprovalMatch is the WHERE clause naming every staging that holds the
@@ -65,12 +65,18 @@ import (
 // The export widens onto evidence instead (sarmessages.go), where
 // over-inclusion is admin-mediated and recoverable and over-destruction is not.
 //
+// A decided plan's footprint names the records it touched, so a contact or
+// lead it names is the subject's too.
+//
 // $1 contact, $2 lead ids, $3 ANCHORED address patterns from addressPatterns.
 const subjectApprovalMatch = `
 	   (target_entity_type = 'contact' AND target_entity_id = $1)
 	OR (target_entity_type = 'lead'   AND target_entity_id = ANY($2::uuid[]))
 	OR proposed_change::text ~* ANY($3::text[])
-	OR summary               ~* ANY($3::text[])`
+	OR summary               ~* ANY($3::text[])
+	OR plan_footprint->'refs'->'contact' @> to_jsonb($1::uuid)
+	OR EXISTS (SELECT 1 FROM unnest($2::uuid[]) AS lead
+	            WHERE plan_footprint->'refs'->'lead' @> to_jsonb(lead))`
 
 // blankStagedProposal is what emptying a staged proposal means. It clears the
 // payload, the summary in both forms, and the name of the record it was about.
@@ -89,7 +95,8 @@ const blankStagedProposal = `proposed_change = '{}'::jsonb,
 	       summary         = '',
 	       summary_parts   = NULL,
 	       target_label    = NULL,
-	       evidence        = NULL`
+	       evidence        = NULL,
+	       plan_footprint  = NULL`
 
 // The reasons this package writes onto a proposal it withdraws. Three, because
 // a colleague finding a card gone is owed the difference between a contact who
@@ -148,7 +155,7 @@ func addressPatterns(emails []string) []string {
 			continue
 		}
 		patterns = append(patterns,
-			`(^|[^a-z0-9._%+-])`+regexp.QuoteMeta(strings.ToLower(email))+`($|[^a-z0-9.-])`)
+			values.EmailTextPattern(strings.ToLower(email)))
 	}
 	return patterns
 }
@@ -185,6 +192,11 @@ func redactStagedApprovals(ctx context.Context, tx pgx.Tx, subject ids.ContactID
 	leadIDs := leads
 	if leadIDs == nil {
 		leadIDs = []ids.UUID{}
+	}
+
+	matched, err := scrubbedIDs(ctx, tx, `SELECT id FROM approval WHERE `+subjectApprovalMatch+` FOR UPDATE`, subject.UUID, leadIDs, addresses)
+	if err != nil {
+		return err
 	}
 
 	if err := eraseApprovalNoticesMatching(ctx, tx, subjectWithdrawal, causeContactErasure, subjectApprovalMatch, subject.UUID, leadIDs, addresses); err != nil {
@@ -277,7 +289,7 @@ func redactStagedApprovals(ctx context.Context, tx pgx.Tx, subject ids.ContactID
 		subject.UUID, leadIDs, addresses); err != nil {
 		return fmt.Errorf("emptying the decided approvals naming the subject: %w", err)
 	}
-	return nil
+	return tombstoneCollateralScrubs(ctx, tx, "approval", matched, subjectRedactionReason, subjectRedactionCause)
 }
 
 // evidenceArray is the evidence column read as the array it always is when a
@@ -297,6 +309,11 @@ const evidenceCitesActivity = `
 	  SELECT 1 FROM jsonb_array_elements(` + evidenceArray + `) AS item
 	   WHERE item->>'source_type' = 'activity'
 	     AND item->>'source_id' = ANY($1::text[]))`
+
+// approvalCitesActivity also matches a staging whose stored footprint names
+// one of the activities in $1: its decided summary may repeat their content.
+const approvalCitesActivity = `(` + evidenceCitesActivity + `
+	OR plan_footprint->'refs'->'activity' ?| $1::text[])`
 
 // evidenceCitesSubjectActivity matches a staging whose evidence quotes any
 // activity the subject ($1) is linked to.
@@ -340,6 +357,9 @@ var evidenceCitesSubjectActivity = `
 // is no text left to match against, and the quote is the only place those words
 // still exist.
 //
+// Every matched row's token is spent as the subject scrub spends it, because
+// redemption never reads the blanked payload.
+//
 // Pending rows are expired for the reason the subject scrub expires them — a
 // blanked card left decidable is one a colleague can still approve, and
 // approving it would run its effect against an empty payload.
@@ -362,19 +382,21 @@ func redactApprovalsCitingActivities(ctx context.Context, tx pgx.Tx, activities 
 	for _, activity := range activities {
 		cited = append(cited, activity.String())
 	}
-	if err := eraseApprovalNoticesMatching(ctx, tx, reason, cause, evidenceCitesActivity, cited); err != nil {
+	if err := eraseApprovalNoticesMatching(ctx, tx, reason, cause, approvalCitesActivity, cited); err != nil {
 		return err
 	}
-	if _, err := tx.Exec(ctx, `
+	matched, err := scrubbedIDs(ctx, tx, `
 		UPDATE approval
 		   SET `+blankStagedProposal+`,
 		       status          = CASE WHEN status = 'pending' THEN 'expired' ELSE status END,
 		       decision_reason = CASE WHEN status = 'pending' THEN $2 ELSE decision_reason END,
-		       decided_at      = CASE WHEN status = 'pending' THEN now() ELSE decided_at END
-		 WHERE `+evidenceCitesActivity, cited, reason); err != nil {
+		       decided_at      = CASE WHEN status = 'pending' THEN now() ELSE decided_at END,
+		       consumed_at     = coalesce(consumed_at, now())
+		 WHERE `+approvalCitesActivity+` RETURNING id`, cited, reason)
+	if err != nil {
 		return fmt.Errorf("emptying the proposals quoting the destroyed records: %w", err)
 	}
-	return nil
+	return tombstoneCollateralScrubs(ctx, tx, "approval", matched, reason, cause)
 }
 
 // redactWorkflowRuns empties what an automation planned and produced for the

@@ -116,10 +116,17 @@ func dataTaskProgressWire(p datatask.Progress) crmcontracts.DataTaskProgress {
 	if p.BlockedBy != "" {
 		out.BlockedBy = &p.BlockedBy
 	}
-	if p.LastErrorClass != nil {
-		if detail, ok := jobs.VettedFailure("data_task_run", jobs.SentenceForClass(*p.LastErrorClass)); ok {
-			out.ErrorSentence, out.ErrorRemedy = &detail.Sentence, &detail.Remedy
-		}
+	if detail, ok := dataTaskFailure(p); ok {
+		out.ErrorSentence, out.ErrorRemedy = &detail.Sentence, &detail.Remedy
 	}
 	return out
+}
+
+// dataTaskFailure is what a step's last failure was and what to do about it,
+// as System health and the operator's notice both word it.
+func dataTaskFailure(p datatask.Progress) (jobs.FailureDetail, bool) {
+	if p.LastErrorClass == nil {
+		return jobs.FailureDetail{}, false
+	}
+	return jobs.VettedFailure("data_task_run", jobs.SentenceForClass(*p.LastErrorClass))
 }

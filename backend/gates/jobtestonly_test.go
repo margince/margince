@@ -56,7 +56,7 @@ func TestJobRunnerConfigIsNeverSetInProduction(t *testing.T) {
 	var offenders, permitted []string
 	fset := gatekit.SourceFileSet()
 
-	err := filepath.WalkDir(".", func(path string, d fs.DirEntry, err error) error {
+	err := gatekit.WalkDir(".", func(path string, d fs.DirEntry, err error) error {
 		if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") {
 			return err
 		}

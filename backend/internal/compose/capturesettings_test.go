@@ -72,3 +72,19 @@ func TestCaptureWarnsOnlyAboutSettingsItNoLongerActsOn(t *testing.T) {
 		}
 	}
 }
+
+func TestGmailPacingReadsEffectiveQuotasAndRejectsUnsafeBudgets(t *testing.T) {
+	defaults, _ := captureFrom(t, "version: 1\n")
+	if defaults.GmailMailboxQuota != 6000 || defaults.GmailProjectQuota != 1200000 {
+		t.Fatalf("defaults: %+v", defaults)
+	}
+	configured, _ := captureFrom(t, "capture:\n  gmail_mailbox_quota: 15000\n  gmail_project_quota: 1000000\n")
+	if configured.GmailMailboxQuota != 15000 || configured.GmailProjectQuota != 1000000 {
+		t.Fatalf("effective quotas ignored: %+v", configured)
+	}
+	for _, body := range []string{"capture:\n  gmail_mailbox_quota: 100\n", "capture:\n  gmail_project_quota: -1\n"} {
+		if _, err := configtest.Load(t, body, nil, nil, captureSettings()...); err == nil {
+			t.Fatalf("accepted unsafe quota: %s", body)
+		}
+	}
+}

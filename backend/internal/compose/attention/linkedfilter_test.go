@@ -649,7 +649,7 @@ func TestTheChangedCountMatchesWhatTheLaneOpens(t *testing.T) {
 	day := crmcontracts.Attention{AsOf: rankInstant, AtRisk: lane(lanes...)}
 
 	considered := markChangedSinceBrief(classifyDay(day, rankInstant, dayMoney{}), cutoff)
-	readings := readingsOf(considered, nil, nil)
+	readings := readingsOf(considered, considered, nil, nil)
 	opened := keepFiltered(considered, filterChangedSinceBrief)
 
 	if got, want := int(readings.ChangedSinceBrief), len(opened); got != want {
@@ -681,7 +681,7 @@ func TestTheChangedCountLeavesOutWhatTheDeckAlreadyDrew(t *testing.T) {
 	}
 
 	considered := markChangedSinceBrief(classifyDay(day, rankInstant, dayMoney{}), cutoff)
-	readings := readingsOf(considered, nil, nil)
+	readings := readingsOf(considered, considered, nil, nil)
 
 	if readings.ChangedSinceBrief != 1 {
 		t.Fatalf("counted %d, want 1 — the approval is already a card and the strip does not name it twice",

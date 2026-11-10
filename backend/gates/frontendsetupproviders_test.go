@@ -22,13 +22,13 @@ package gates
 // their installation missing from it.
 
 import (
-	"os"
 	"regexp"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 const setupProvidersFile = "../frontend/src/lib/setup-providers.ts"
@@ -47,7 +47,7 @@ var providerEntry = regexp.MustCompile(
 
 func readSetupOffers(t *testing.T) []setupOffer {
 	t.Helper()
-	raw, err := os.ReadFile(setupProvidersFile)
+	raw, err := gatekit.ReadFile(setupProvidersFile)
 	if err != nil {
 		t.Fatalf("read %s: %v", setupProvidersFile, err)
 	}

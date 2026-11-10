@@ -42,7 +42,8 @@ import (
 
 // GraphEdgeGen keeps the interaction projection current.
 type GraphEdgeGen struct {
-	store *Store
+	store           *Store
+	historyResolver HistoryImportResolver
 }
 
 // NewGraphEdgeGen builds the projection consumer over the search store.
@@ -107,10 +108,17 @@ func (g *GraphEdgeGen) onActivity(ctx context.Context, env events.Envelope, acti
 		return nil
 	}
 	return g.store.db.Tx(ctx, func(tx pgx.Tx) error {
-		if err := RecomputeEdgesForActivities(ctx, tx, []ids.UUID{activityID}); err != nil {
+		var targets edgeTargets
+		var err error
+		if graphArrivalCanWait(env) {
+			err = targets.addArrivals(ctx, tx, g.historyResolver, []events.Envelope{env})
+		} else {
+			err = targets.addActivities(ctx, tx, []ids.UUID{activityID}, true)
+		}
+		if err != nil {
 			return fmt.Errorf("graph-edge: %s: %w", env.Type, err)
 		}
-		return nil
+		return targets.apply(ctx, tx)
 	})
 }
 
@@ -168,7 +176,12 @@ func (t *edgeTargets) addContactEvent(ctx context.Context, tx pgx.Tx, env events
 			return t.addContact(ctx, tx, target)
 		}
 		return nil
-	case "contact.archived", "contact.restored", "contact.updated", "contact.created", "retention.applied":
+	case "contact.archived":
+		// An archived contact has no edges, and dropping them reads no history:
+		// the folds below skip archived contacts, and contact.restored refolds.
+		t.dropped = append(t.dropped, contactID)
+		return nil
+	case "contact.restored", "contact.updated", "contact.created", "retention.applied":
 		return t.addContact(ctx, tx, contactID)
 	default:
 		return nil

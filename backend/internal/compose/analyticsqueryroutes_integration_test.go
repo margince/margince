@@ -82,10 +82,10 @@ func TestAFilterHidingTooFewRecordsIsRefusedAsPrivacy(t *testing.T) {
 	e := setupForecast(t)
 	amount := int64(100_000)
 	for range 6 {
-		e.seedOpenDeal(t, "Big", 20, &e.Rep1, &amount, nil)
+		e.seedOpenDeal(t, "Big", 20, &e.Rep1, &amount)
 	}
 	for range 2 {
-		e.seedOpenDeal(t, "Small", 20, &e.Rep3, &amount, nil)
+		e.seedOpenDeal(t, "Small", 20, &e.Rep3, &amount)
 	}
 	rec := httptest.NewRecorder()
 	e.analyticsRoutes().RunAnalyticsQuery(rec, analyticsRequest(e.reportReaderCtx(), http.MethodPost,
@@ -100,7 +100,7 @@ func TestASavedRunEchoesTheScopeItWasAskedWith(t *testing.T) {
 	e := setupForecast(t)
 	amount := int64(100_000)
 	for range 6 {
-		e.seedOpenDeal(t, "Mine", 20, &e.Rep1, &amount, nil)
+		e.seedOpenDeal(t, "Mine", 20, &e.Rep1, &amount)
 	}
 	routes := e.analyticsRoutes()
 	ctx := e.wideLensCtx(e.Rep3)
@@ -207,10 +207,10 @@ func TestAWithheldCellExplainsToAnEmptyListOverTheWire(t *testing.T) {
 	e := setupForecast(t)
 	amount := int64(100_000)
 	for range 6 {
-		e.seedOpenDeal(t, "Big", 20, &e.Rep1, &amount, nil)
+		e.seedOpenDeal(t, "Big", 20, &e.Rep1, &amount)
 	}
 	for range 2 {
-		e.seedOpenDeal(t, "Small", 20, &e.Rep3, &amount, nil)
+		e.seedOpenDeal(t, "Small", 20, &e.Rep3, &amount)
 	}
 	rec := httptest.NewRecorder()
 	e.analyticsRoutes().ExplainAnalyticsCell(rec, analyticsRequest(e.reportReaderCtx(), http.MethodPost,
@@ -229,7 +229,7 @@ func TestACitedCellNamesItsRecords(t *testing.T) {
 	e := setupForecast(t)
 	amount := int64(100_000)
 	for range 6 {
-		e.seedOpenDeal(t, "Cited Deal", 20, &e.Rep1, &amount, nil)
+		e.seedOpenDeal(t, "Cited Deal", 20, &e.Rep1, &amount)
 	}
 	routes := e.analyticsRoutes()
 	ctx := e.wideLensCtx(e.Rep3)

@@ -27,6 +27,9 @@ run:
     # The vendor live check (make vendor-live). Its scheduled job compiles it
     # only when the vendor key is set, so this pass is what keeps it building.
     - vendorlive
+    - rolesweep
+    # The mail-import load test (docs/how-to/measure-mail-import.md).
+    - loadrig
 
 linters:
   default: standard

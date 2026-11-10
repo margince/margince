@@ -96,6 +96,22 @@ export const NoSubject: Story = {
 };
 
 /** Nothing the sender wrote: a forward carrying no words of its own. */
+// A calendar invitation names an event. The row draws the event's start and
+// an Invitation mark where the mail's words and its move would be.
+export const Invitation: Story = {
+  args: {
+    summary: {
+      ...BASE,
+      subject: "Invitation: Kickoff with Ana Sommer",
+      move: "none",
+      calendar_invitation: {
+        response: "needs_action",
+        starts_at: "2026-09-08T09:00:00Z",
+      },
+    },
+  },
+};
+
 export const NoPreview: Story = {
   args: { summary: { ...BASE, preview: undefined, move: "waiting_for_them" } },
 };
@@ -222,6 +238,7 @@ export const Detail: StoryObj = {
               change_mode: "none",
             },
             can_reply: true,
+            can_forward: true,
             can_relink: false,
             version: 3,
           }),
@@ -274,6 +291,7 @@ export const DetailTextUnreadable: StoryObj = {
               change_mode: "none",
             },
             can_reply: true,
+            can_forward: true,
             can_relink: false,
             version: 3,
           }),

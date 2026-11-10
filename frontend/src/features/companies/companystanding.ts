@@ -10,6 +10,7 @@ import {
   ratingTone,
 } from "../../design-system/readingtone";
 import type { MessageKey } from "../../i18n/en";
+import { labelFor } from "../../lib/labelfor";
 
 type Moment = components["schemas"]["ContactMoment"];
 
@@ -61,7 +62,7 @@ export function companyVerdict({
   }
   const worst = dimensions.find((dimension) => dimension.rating === overall);
   return {
-    word: HEALTH_RATING_LABEL[overall],
+    word: labelFor(HEALTH_RATING_LABEL, overall),
     tone: ratingTone(overall),
     sentence: worst?.reason ?? owed,
   };
@@ -85,7 +86,7 @@ export function companyDimRows(
     key: dimension.key,
     label: HEALTH_DIMENSION_LABEL[dimension.key],
     value: dimension.rating
-      ? HEALTH_RATING_LABEL[dimension.rating]
+      ? labelFor(HEALTH_RATING_LABEL, dimension.rating)
       : withheld
         ? "record.notShown"
         : "standing.notAssessed",

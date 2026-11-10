@@ -113,6 +113,7 @@ func (e *Eraser) redactSubjectTimeline(ctx context.Context, tx pgx.Tx, contactID
 	// is no redelivery left for the key to deduplicate.
 	rows, err := tx.Query(ctx, `
 		UPDATE activity a SET subject = $5, body = NULL, raw = NULL, agenda_fingerprint = NULL,
+ internal_mail_authorization = `+erasedInternalMailAuthorizationSQL+`,
 		  counterparty_email = NULL,
 		  -- What a classifier concluded the message MEANT goes with the words it
 		  -- read. A verdict saying a subject replied negatively is a claim about
@@ -203,7 +204,7 @@ func deleteSubjectListMemberships[ID ids.UUID | ids.ContactID](ctx context.Conte
 	if leads == nil {
 		leads = []ids.UUID{}
 	}
-	args := pgx.StrictNamedArgs{"contact_id": contactID, "leads": leads}
+	args := pgx.StrictNamedArgs{"contact_id": contactID, leadsParameter: leads}
 	if _, err := tx.Exec(ctx, `DELETE FROM list_member_event WHERE `+subject, args); err != nil {
 		return fmt.Errorf("privacy: clearing the subject's list history: %w", err)
 	}
@@ -233,14 +234,20 @@ var subjectActivityEmbeddingsDelete = `
 // activities on the subject's timeline embed text ABOUT them; the vector
 // store must not keep what a similarity probe could partially reconstruct.
 func purgeDerivedTraces(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, displayName string, emails []string, identities []channelIdentity, erased erasedCitations) (rawPurged, aiPayloadsPurged int64, err error) {
+	rawPurged, err = deleteRawOriginalsTx(ctx, tx,
+		`r.payload_object @> jsonb_build_object('matched_subjects', jsonb_build_array(@subject::text))`,
+		pgx.NamedArgs{sqlArgSubject: contactID.String()})
+	if err != nil {
+		return 0, 0, err
+	}
 	for _, email := range emails {
-		tag, execErr := tx.Exec(ctx,
-			`DELETE FROM raw_capture WHERE payload::text ILIKE '%' || $1 || '%' ESCAPE '\'`,
-			storekit.EscapeLike(email))
+		erased, execErr := deleteRawOriginalsTx(ctx, tx,
+			rawEmailMatchSQL("r.payload", "@email::text"),
+			pgx.NamedArgs{sqlArgEmail: email})
 		if execErr != nil {
 			return 0, 0, execErr
 		}
-		rawPurged += tag.RowsAffected()
+		rawPurged += erased
 	}
 	// The 24-hour capture trace, when the deployment enabled payload capture.
 	// The sweep bounds exposure to a day; it does not ANSWER an erasure made
@@ -334,9 +341,9 @@ func purgeDerivedTraces(ctx context.Context, tx pgx.Tx, contactID ids.ContactID,
 	}
 	for _, email := range emails {
 		if _, err := tx.Exec(ctx, `
-			INSERT INTO erasure_suppression (kind, value_hash)
-			VALUES ('email', $1)
-			ON CONFLICT DO NOTHING`, storekit.SuppressionHash(email)); err != nil {
+			INSERT INTO erasure_suppression (kind, value_hash, key_id)
+			VALUES ('email', $1, $2)
+			ON CONFLICT DO NOTHING`, storekit.SuppressionHash(email), storekit.SuppressionKeyID()); err != nil {
 			return 0, 0, err
 		}
 	}

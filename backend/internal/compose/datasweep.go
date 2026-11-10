@@ -39,17 +39,19 @@ import (
 //   - the job runtime, which is River's to manage and not ours to truncate
 //     underneath a running worker.
 var preservedResetTables = map[string]bool{
+	// Cleanup authority must outlive the domain rows that retire their objects.
+	"stored_object_intent":    true,
 	"report_projection_fence": true,
 	"home_read_fence":         true,
 	"data_task_run":           true,
 	"data_task_run_history":   true,
 	// Seeded by its migration; mail captured after a reset is past it anyway.
 	"activity_own_sent_mail_repair_cutoff": true,
-	// The installation's own published wording. Not tenant data: it is the
-	// controller's text, shared across every subject who saw it, and a proof row
-	// surviving the reset would otherwise point at a version the sweep removed.
-	// The migration revokes DELETE on it, so a sweep would abort here anyway.
+	// consent_text_version is the controller's published wording, which a surviving
+	// proof row points at; its migration revokes DELETE. tax_rate holds an admin's
+	// versioned rates, and a trigger refuses its deletes. A sweep would abort on either.
 	"consent_text_version": true,
+	"tax_rate":             true,
 	// identity and auth; an AI tool's connection stays with its passports (passport_grant_fkey is RESTRICT)
 	objectWorkspace: true, "app_user": true, "role": true, "role_assignment": true,
 	"team": true, "team_membership": true,
@@ -335,18 +337,7 @@ func collectWorkspaceSecretRefs(ctx context.Context, tx pgx.Tx) ([]string, error
 	return refs, nil
 }
 
-// likeEscaped makes a literal safe as a LIKE pattern, using `!` as the escape
-// character rather than a backslash.
-//
-// `_` is a LIKE WILDCARD, so the suffix went in as "any character followed by
-// ref" — which finds `href` and `pref` as readily as `_ref`. Harmless only
-// because the vault decides what is a handle, and that is not a reason to ask
-// the wrong question.
-//
-// `!` and not `\`: a backslash has to survive a Go string, an SQL string and
-// LIKE itself, and Postgres rejects an ESCAPE that is not exactly one
-// character — which is what the first attempt produced. `!` cannot appear in a
-// pg_attribute name, so nothing needs escaping that is not being escaped here.
+// The escape character must survive Go and SQL quoting unchanged.
 func likeEscaped(s string) string {
 	return strings.NewReplacer("!", "!!", "_", "!_", "%", "!%").Replace(s)
 }

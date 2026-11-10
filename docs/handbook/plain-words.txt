@@ -219,7 +219,6 @@ cloudflare
 coach
 code
 cold
-collaborate
 collapse
 colleague
 collection
@@ -318,7 +317,6 @@ deliver
 delivery
 demo
 demote
-density
 deny
 depend
 derive
@@ -501,7 +499,6 @@ go
 goal
 gone
 good
-governance
 grant
 graph
 greeting
@@ -527,7 +524,6 @@ head
 header's
 headings
 health
-healthy
 held
 help
 here
@@ -546,7 +542,6 @@ hour
 how
 human
 i
-idea
 if
 ignore
 image
@@ -773,7 +768,6 @@ ok
 old
 older
 oldest
-omit
 on
 onboard
 once
@@ -814,7 +808,6 @@ owner
 owner's
 owners
 ownership
-owner’s
 package
 page
 paid
@@ -1049,6 +1042,7 @@ score
 scorecard
 scrape
 screen
+screenshot
 script
 seal
 search
@@ -1215,6 +1209,7 @@ this
 those
 thread
 three
+threshold
 through
 throughput
 tick
@@ -1263,7 +1258,6 @@ two
 type
 unarchive
 unassigned
-unchecked
 undelete
 under
 undo

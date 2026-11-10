@@ -2,7 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { expect, type Page, type Request, test } from "@playwright/test";
-import { nearestRank } from "./quantile";
+import { nearestRank } from "../src/testing/quantile";
 import { mockApi } from "./seed";
 
 /**

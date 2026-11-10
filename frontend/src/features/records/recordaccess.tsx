@@ -28,9 +28,10 @@ import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useRecordWriteRefusal } from "../../lib/capability";
 import { useMemberName } from "../../lib/membernames";
+import { mayLeaveReach, useLeaveIfOutOfReach } from "../../lib/outofreach";
 import { problemMessageOf, unwrap } from "../../lib/problem";
-import { invalidateRecord, recordWriteKeys } from "../../lib/recordwritekeys";
-import { navigate, navigateReplacing } from "../../lib/router";
+import { invalidateRecord } from "../../lib/recordwritekeys";
+import { navigate } from "../../lib/router";
 import { useViewerId } from "../../lib/session";
 import { HandoverOffer } from "./handoveroffer";
 import { HandoverRequest } from "./handoverrequest";
@@ -86,10 +87,6 @@ const COPY = {
   },
 } as const satisfies Record<RecordKind, Record<string, MessageKey>>;
 
-// The list a reader lands on once a write has taken the record out of their
-// reach, which is where archiving one already takes them.
-const LIST = { contact: "contacts", company: "companies" } as const;
-
 /**
  * Who may read the record, as a chip that opens the answer and the switch.
  *
@@ -116,6 +113,7 @@ export function RecordAccess({
   const sentence = useAudienceSentence(kind, record);
   const viewerId = useViewerId();
   const failure = (error: unknown) => problemMessageOf(error, t);
+  const leaveIfOutOfReach = useLeaveIfOutOfReach(kind);
   const setVisibility = useMutation({
     // Every value the write needs is a VARIABLE, never a closure over the
     // render that drew the control: a click landing between the commit and the
@@ -146,15 +144,10 @@ export function RecordAccess({
       await invalidateRecord(queryClient, kind, id);
     },
     onSuccess: async (_, { id, visibility, mayLoseAccess }) => {
-      if (mayLoseAccess && (await gone(kind, id))) {
-        toast.show(t(copy.leftYourAccess));
-        // Replacing, and forgetting the record's reads: Back must not return
-        // the reader to a page drawn from a cache the server now refuses.
-        navigateReplacing({ screen: LIST[kind] });
-        for (const queryKey of recordWriteKeys(kind, id)) {
-          queryClient.removeQueries({ queryKey });
-        }
-        await queryClient.invalidateQueries({ queryKey: [LIST[kind]] });
+      if (
+        mayLoseAccess &&
+        (await leaveIfOutOfReach(id, t(copy.leftYourAccess)))
+      ) {
         return;
       }
       toast.show(
@@ -207,7 +200,7 @@ export function RecordAccess({
                   id,
                   version: record.version,
                   visibility,
-                  mayLoseAccess: visibility === "owner" && ownerId !== viewerId,
+                  mayLoseAccess: mayLeaveReach(visibility, ownerId, viewerId),
                 })
               }
             />
@@ -333,16 +326,6 @@ const OWNER_HINT = {
 // A probe that fails is NOT an answer of gone: the write landed, and a throw
 // here would turn its success into a refusal. The page's own refetch then
 // reports whatever the network is doing.
-async function gone(kind: RecordKind, id: string): Promise<boolean> {
-  const path = kind === "contact" ? "/contacts/{id}" : "/companies/{id}";
-  try {
-    const { response } = await api.GET(path, { params: { path: { id } } });
-    return response.status === 404;
-  } catch {
-    return false;
-  }
-}
-
 // Who may read the record, true for THIS reader. A private record open in
 // front of anyone but its owner is open because it was shared with them or
 // their team (an administrator's role does not lift owner-privacy), so the

@@ -35,6 +35,7 @@ export function StatStrip({
   label,
   floor,
   density,
+  lead,
 }: Readonly<{
   children: ReactNode;
   // How the strip SITS in the layout around it — it lands on the strip's
@@ -58,6 +59,9 @@ export function StatStrip({
   // rather than being that content. Plate drops the panes for one ground
   // with rules between the cells, for the figures at the foot of a card.
   density?: "compact" | "plate";
+  // A plate heading a card leads with its first figure. That cell is wider
+  // and its figure display-size; the rest stand a step down.
+  lead?: boolean;
 }>) {
   // The column count follows the slots the caller actually drew. A fixed
   // template reserves cells nobody fills, and an empty cell on a plate reads
@@ -85,6 +89,7 @@ export function StatStrip({
       aria-label={label}
       data-testid={testId}
       data-density={density}
+      data-lead={(density === "plate" && lead) || undefined}
     >
       {children}
     </section>

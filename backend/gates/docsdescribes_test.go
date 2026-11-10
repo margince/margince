@@ -19,6 +19,8 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // describesHeader is the line a page carries before its title.
@@ -41,7 +43,7 @@ func TestEveryDescribingPageNamesTheCodeItDescribes(t *testing.T) {
 				continue
 			}
 			pages++
-			raw, err := os.ReadFile(path)
+			raw, err := gatekit.ReadFile(path)
 			if err != nil {
 				t.Fatalf("read %s: %v", path, err)
 			}

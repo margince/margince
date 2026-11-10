@@ -5,9 +5,9 @@
 
 package integration
 
-// Data-subject requests (Art. 15/16/17): the compliance queue is
-// human-only at the transport, the status machine is closed (a closed
-// request never reopens), and closing demands the answer.
+// Data-subject requests (Art. 15/16/17): a user's agent opens and works the
+// queue. A human fulfils an erasure and downloads the package. The status machine
+// is closed (a closed request never reopens), and closing demands the answer.
 
 import (
 	"net/http"
@@ -29,11 +29,11 @@ func TestDataSubjectRequestLifecycle(t *testing.T) {
 		t.Fatalf("create DSR → %d %+v", status, dsr)
 	}
 
-	// Closing without a resolution refuses.
+	// Closing without the identity check refuses.
 	if status := c.Call(t, "PATCH", "/v1/data-subject-requests/"+dsr.ID, AnyMap{
 		"status": "fulfilled",
 	}, nil, nil); status != 422 {
-		t.Fatalf("resolution-less close → %d, want 422", status)
+		t.Fatalf("a close without the identity check → %d, want 422", status)
 	}
 	if status := c.Call(t, "PATCH", "/v1/data-subject-requests/"+dsr.ID, AnyMap{
 		"status": "in_progress",
@@ -41,8 +41,7 @@ func TestDataSubjectRequestLifecycle(t *testing.T) {
 		t.Fatalf("start → %d", status)
 	}
 	if status := c.Call(t, "PATCH", "/v1/data-subject-requests/"+dsr.ID, AnyMap{
-		"status": "fulfilled", "resolution": "erased contact + activities per retention policy",
-		"identity_check": "id_document",
+		"status": "fulfilled", "identity_check": "id_document",
 	}, nil, nil); status != http.StatusOK {
 		t.Fatalf("fulfill → %d", status)
 	}
@@ -62,7 +61,7 @@ func TestDataSubjectRequestLifecycle(t *testing.T) {
 		t.Fatalf("list → %d %+v", status, list)
 	}
 
-	// Agent bearers are rejected at the transport (x-agent-access).
+	// A passport works the queue as its user does.
 	var minted struct {
 		Token string `json:"token"`
 	}
@@ -74,7 +73,7 @@ func TestDataSubjectRequestLifecycle(t *testing.T) {
 	bearer := map[string]string{"Authorization": "Bearer " + minted.Token}
 	if status := c.Call(t, "POST", "/v1/data-subject-requests", AnyMap{
 		"kind": "access", "subject_ref": "x", "due_at": due,
-	}, bearer, nil); status != http.StatusForbidden {
-		t.Fatalf("agent DSR create → %d, want 403 (human-only)", status)
+	}, bearer, nil); status != http.StatusCreated {
+		t.Fatalf("agent DSR create → %d, want 201", status)
 	}
 }

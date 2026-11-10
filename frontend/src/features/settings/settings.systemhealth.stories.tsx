@@ -44,7 +44,7 @@ function story(report: components["schemas"]["SystemHealth"]) {
 }
 const meta = {
   id: "settings-system-health",
-  title: "Settings/Governance/System health/Overview",
+  title: "Settings/System/System health/Overview",
   component: SystemHealthPage,
   parameters: { layout: "fullscreen" },
 } satisfies Meta<typeof SystemHealthPage>;

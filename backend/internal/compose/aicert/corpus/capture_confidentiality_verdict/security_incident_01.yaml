@@ -19,6 +19,7 @@ fixture:
     this — we need to check first whether it was ever used.
 expect:
   outcome: accepted
+  privacy: true
   answer: security_incident
   judge: none
   judge_none_reason: >

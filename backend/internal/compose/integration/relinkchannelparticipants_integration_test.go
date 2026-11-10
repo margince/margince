@@ -219,20 +219,26 @@ func TestContactMergeParticipantPreviewRefusesAnUnreadableRoster(t *testing.T) {
 
 func TestContactMergeParticipantPreviewRefusesATruncatedRoster(t *testing.T) {
 	e, ctx, contactIDs, _, _ := setupChannelParticipantRelink(t)
-	for i := range 498 {
-		if _, _, err := e.Activities.LogActivity(ctx, activities.LogActivityInput{
+	logConversation := func(i int) ids.ActivityID {
+		activity, _, err := e.Activities.LogActivity(ctx, activities.LogActivityInput{
 			Kind: activities.KindMessage, ChannelProvider: rosterProvider, Subject: new(fmt.Sprintf("Conversation %d", i)), Direction: new("inbound"), Source: "manual",
 			Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contactIDs[0]}},
-		}); err != nil {
+		})
+		if err != nil {
 			t.Fatal(err)
 		}
-		if i == 496 {
-			preview, err := e.Contacts.PreviewMergeSurvivorship(ctx, "contact", contactIDs[0], contactIDs[1], nil, nil)
-			if err != nil || len(preview.Participants) != 500 {
-				t.Fatalf("complete roster: %d, %v", len(preview.Participants), err)
-			}
-		}
+		return ids.From[ids.ActivityKind](ids.UUID(activity.Id))
 	}
+	// Conversations far from the cap are copies of one the writer wrote; the two
+	// that reach and pass the cap go through the writer.
+	template := logConversation(0)
+	e.CloneActivity(t, template, 495, nil)
+	logConversation(496)
+	preview, err := e.Contacts.PreviewMergeSurvivorship(ctx, "contact", contactIDs[0], contactIDs[1], nil, nil)
+	if err != nil || len(preview.Participants) != 500 {
+		t.Fatalf("complete roster: %d, %v", len(preview.Participants), err)
+	}
+	logConversation(497)
 	if _, err := e.Contacts.PreviewMergeSurvivorship(ctx, "contact", contactIDs[0], contactIDs[1], nil, nil); !errors.Is(err, apperrors.ErrInvalidArgument) {
 		t.Fatalf("oversized roster: %v", err)
 	}

@@ -336,7 +336,7 @@ func anyLiteralTen(exprs []ast.Expr) bool {
 func handWrittenGoFiles(t *testing.T) []string {
 	t.Helper()
 	var paths []string
-	err := filepath.WalkDir(".", func(path string, entry fs.DirEntry, err error) error {
+	err := gatekit.WalkDir(".", func(path string, entry fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}

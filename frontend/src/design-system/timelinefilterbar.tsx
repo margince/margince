@@ -5,6 +5,7 @@ import { type ReactNode, useId, useState } from "react";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { isImeCommit } from "../lib/imecommit";
+import { labelFor } from "../lib/labelfor";
 import { SearchField } from "./atoms";
 import { DateInput } from "./dateinput";
 import {
@@ -78,7 +79,7 @@ export function TimelineFilterBar({
     { value: "", label: t("timeline.filters.kind.all") },
     ...kinds.map((kind) => ({
       value: kind,
-      label: t(KIND_LABEL[kind]),
+      label: t(labelFor(KIND_LABEL, kind)),
     })),
   ];
   return (

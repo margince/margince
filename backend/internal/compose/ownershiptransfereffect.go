@@ -16,7 +16,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/approvalsubject"
-	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -86,21 +85,20 @@ func (t ownershipTransfers) handOverTx(ctx context.Context, tx pgx.Tx, transfer 
 	if err != nil {
 		return transferHandOver{}, err
 	}
-	consented := auth.WithHandOverConsent(giverCtx, transfer.ToID)
 	from, to := ids.From[ids.UserKind](transfer.FromID), ids.From[ids.UserKind](transfer.ToID)
 	reassigner, ok := target.(bulkReassigner)
 	if !ok {
 		return transferHandOver{}, fmt.Errorf("compose: a %q has no owner to hand on", transfer.RecordType)
 	}
-	if err := reassigner.reassign(consented, tx, transfer.RecordID, to, row.version); err != nil {
+	if err := reassigner.reassign(giverCtx, tx, transfer.RecordID, to, row.version); err != nil {
 		return transferHandOver{}, err
 	}
 	out := transferHandOver{record: row.label}
-	if out.deals, err = t.deals.HandOverRecordDealsTx(consented, tx, transfer.RecordType, transfer.RecordID, from, to); err != nil {
+	if out.deals, err = t.deals.HandOverRecordDealsTx(giverCtx, tx, transfer.RecordType, transfer.RecordID, from, to); err != nil {
 		return transferHandOver{}, err
 	}
 	link := activities.RecordLink{EntityType: transfer.RecordType, ID: transfer.RecordID}
-	out.tasks, err = t.tasks.HandOverRecordTasksTx(consented, tx, link, from, to)
+	out.tasks, err = t.tasks.HandOverRecordTasksTx(giverCtx, tx, link, from, to)
 	return out, err
 }
 

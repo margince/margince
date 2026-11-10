@@ -23,7 +23,6 @@ import (
 	"go/ast"
 	"go/token"
 	"io/fs"
-	"path/filepath"
 	"strings"
 	"testing"
 
@@ -136,7 +135,7 @@ func stagingMethodNames(t *testing.T, fset *token.FileSet) map[string]bool {
 func parseTreeUnder(t *testing.T, fset *token.FileSet, root string) []*ast.File {
 	t.Helper()
 	var files []*ast.File
-	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+	err := gatekit.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}

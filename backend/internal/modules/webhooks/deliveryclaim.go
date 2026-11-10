@@ -24,15 +24,16 @@ var errDeliveryInFlight = fmt.Errorf("this delivery is being sent now; wait for 
 
 // checkReplayable refuses a replay the delivery's state does not allow. A
 // render failure is parked before any attempt with nothing stored, while an
-// empty body that was rendered and sent replays like any other.
+// empty body that was rendered and sent replays like any other. A body the
+// retention window or an erasure cleared is gone, so there is nothing to send.
 func checkReplayable(ctx context.Context, tx pgx.Tx, subID, deliveryID ids.UUID) error {
 	var status string
-	var renderFailed, inFlight bool
+	var renderFailed, inFlight, cleared bool
 	err := tx.QueryRow(ctx, `
 		SELECT status, status = 'dead_lettered' AND attempts = 0 AND payload = '',
-		       claimed_until IS NOT NULL AND claimed_until >= now()
+		       claimed_until IS NOT NULL AND claimed_until >= now(), payload_pruned_at IS NOT NULL
 		FROM webhook_delivery WHERE id = $1 AND subscription_id = $2`,
-		deliveryID, subID).Scan(&status, &renderFailed, &inFlight)
+		deliveryID, subID).Scan(&status, &renderFailed, &inFlight, &cleared)
 	switch {
 	case errors.Is(err, pgx.ErrNoRows):
 		return apperrors.ErrNotFound
@@ -40,6 +41,8 @@ func checkReplayable(ctx context.Context, tx pgx.Tx, subID, deliveryID ids.UUID)
 		return err
 	case renderFailed:
 		return &BadInputError{Field: "delivery", Reason: "this delivery has no body to resend because its template could not be rendered; fix the template and the next event will use it"}
+	case cleared:
+		return &BadInputError{Field: "delivery", Reason: "this delivery's body is no longer kept, so there is nothing to resend"}
 	// A revoked row goes on to the visibility re-check, which keeps it revoked.
 	case status != "dead_lettered" && status != "retrying" && status != "visibility_revoked":
 		return &BadInputError{Field: "delivery", Reason: fmt.Sprintf("a %s delivery cannot be replayed; only a dead-lettered or retrying one can", status)}

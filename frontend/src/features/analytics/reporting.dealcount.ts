@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { formatNumber } from "../../format/format";
+import { formatAnalyticsNumber } from "../../format/format";
 import type { Locale, PluralTranslator } from "../../i18n";
 
 // A stage's value beside how many priced deals make it, so one large bet and
@@ -17,6 +17,6 @@ export function withDealCount(
     ? amount
     : plural("reporting.stageAmountDeals", deals, {
         amount,
-        count: formatNumber(deals, locale),
+        count: formatAnalyticsNumber(deals, locale),
       });
 }

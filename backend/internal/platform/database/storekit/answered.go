@@ -10,7 +10,9 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/mailsubject"
+	"github.com/margince/margince/backend/internal/shared/kernel/meetingoutcome"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
+	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
 // answerArm is one kind of evidence that a message was answered: the rows it
@@ -21,20 +23,20 @@ type answerArm struct {
 	id   string
 }
 
-// Answers follow the source strictly in event time. Capture order cannot break timestamp ties.
+// An answer follows its source in event time (occurredday.AnswersSQL); capture order never breaks a tie.
 // Private off-thread evidence cannot clear another reader's work.
 func answerArms(inbound, until string) []answerArm {
 	return append([]answerArm{threadAnswerArm(inbound, answerLater("answer_thread", inbound, until))},
 		offThreadAnswerArms(inbound, until)...)
 }
 
-// answerLater is a row that is live and happened strictly after the inbound
-// row and no later than until.
+// answerLater is a row that is live, late enough to answer the inbound row,
+// and no later than until.
 func answerLater(row, inbound, until string) string {
 	return fmt.Sprintf(`%[1]s.archived_at IS NULL
 	    AND %[3]s
-	    AND %[1]s.occurred_at > %[2]s.occurred_at -- occurred_at raw: strictly after the inbound row, an ordering of rows
-	`, row, inbound, occurredday.BegunSQL(row, until))
+	    AND %[2]s
+	`, row, occurredday.AnswersSQL(row, inbound), occurredday.BegunSQL(row, until))
 }
 
 // Off-thread mail must be attested and name the sender; Bcc never proves delivery.
@@ -69,9 +71,11 @@ func offThreadAnswerArms(inbound, until string) []answerArm {
 	    SELECT lower(btrim(answer_known.email)) FROM contact_email answer_known
 	     WHERE answer_known.contact_id = answer_asker.contact_id AND answer_known.archived_at IS NULL
 	  ) answer_address`
-	touch := `(answer_touch.kind = '` + string(crmcontracts.ActivityKindCall) + `'
+	// A call answers only when it reached somebody (relstrength.CallCountsSQL):
+	// a voicemail or a call nobody took is no answer.
+	touch := `((answer_touch.kind = '` + string(crmcontracts.ActivityKindCall) + `' AND ` + relstrength.CallCountsSQL("answer_touch") + `)
 	      OR (answer_touch.kind = '` + string(crmcontracts.ActivityKindMeeting) + `'
-	        AND answer_touch.meeting_status = '` + string(crmcontracts.ActivityMeetingStatusHeld) + `'))
+	        AND ` + meetingoutcome.HeldSQL("answer_touch") + `))
 	    AND ` + everyoneReads("answer_touch") + `
 	    AND ` + later("answer_touch")
 	return []answerArm{

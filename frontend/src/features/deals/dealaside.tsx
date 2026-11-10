@@ -29,18 +29,19 @@ import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useAcquisitionSources } from "../../lib/acquisitionsources.queries";
 import { closeDayOf } from "../../lib/closeday";
+import { labelFor } from "../../lib/labelfor";
 import { useListsAvailable, useRecordLists } from "../../lib/lists.queries";
 import { useMemberName } from "../../lib/membernames";
-import { useRecordZone } from "../../lib/recordzone";
 import { routeHash } from "../../lib/router";
 import { useViewerId } from "../../lib/session";
 import { useRecordTags } from "../../lib/tags.queries";
+import { useViewerZone } from "../../lib/viewerzone";
 import {
   MOTION_OPTIONS,
   PRIORITY_OPTIONS,
 } from "./deal360/dealcommercialfields";
-import { forecastLabel } from "./deal360/dealheaderfacts";
 import { useDealEdit } from "./dealedit";
+import { probabilityWords } from "./dealprobability";
 import type { Deal, Stage } from "./deals";
 import "./deal360/deal360.css";
 
@@ -84,8 +85,9 @@ function DealAsideBody({
     deal,
     t,
     locale,
-    zone: useRecordZone(),
+    zone: useViewerZone(),
     row: rowMaker(deal.masked_fields ?? [], t, edit),
+    viewerId,
   };
   const owner = useMemberName(deal.owner_id).data;
   const cf = useObjectCustomFields("deal");
@@ -166,6 +168,7 @@ type Facts = Readonly<{
   locale: Locale;
   zone: string;
   row: RowMaker;
+  viewerId: string | undefined;
 }>;
 
 // A field the reader may not see says so; one nobody filled folds away. A row
@@ -208,6 +211,14 @@ function money(
   return amountMinor == null || !currency
     ? null
     : formatMoneyWhole(amountMinor, currency, locale);
+}
+
+function probabilityReading(facts: Facts): string | null {
+  const { deal, t, locale, viewerId } = facts;
+  const words = probabilityWords(deal, t, locale, viewerId);
+  return words
+    ? [words.value, words.source, words.stage].filter(Boolean).join(" · ")
+    : null;
 }
 
 function day(value: string | null | undefined, facts: Facts) {
@@ -264,11 +275,14 @@ function aboutRows(facts: Facts, stages: readonly Stage[]): DetailRow[] {
         : { keys: ["expected_close_date"], text: dayText(closeDayOf(deal)) },
     ),
     row(
-      "forecast",
-      "deals.filterForecast",
-      deal.forecast_category && forecastLabel(deal.forecast_category, t),
-      "forecast_category",
-      { keys: ["forecast_category"] },
+      "probability",
+      "deal.winProbability",
+      probabilityReading(facts),
+      "win_probability",
+      // A closed deal's stage fixes its probability.
+      deal.status === "won" || deal.status === "lost"
+        ? undefined
+        : { keys: ["win_probability"] },
     ),
     row(
       "wait_until",
@@ -426,7 +440,7 @@ function DealAccount({ companyId }: Readonly<{ companyId: string }>) {
   const name = company?.display_name;
   const stage =
     company?.lifecycle && company.lifecycle !== "unknown"
-      ? t(LIFECYCLE_LABELS[company.lifecycle])
+      ? t(labelFor(LIFECYCLE_LABELS, company.lifecycle))
       : undefined;
   const facts = [
     stage,

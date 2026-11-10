@@ -9,6 +9,7 @@ import {
   StoryProviders,
 } from "../testing/story-utils";
 import { BulkChangeDialog, type BulkChangeRequest } from "./bulkchange";
+import { BulkUndoProvider } from "./bulkundo";
 
 // The preview a bulk verb opens before anything is written, in each state the
 // server can answer with.
@@ -93,11 +94,13 @@ function Dialog({
   });
   return (
     <StoryProviders locale={locale}>
-      <BulkChangeDialog
-        request={request}
-        onClose={() => {}}
-        onDone={() => {}}
-      />
+      <BulkUndoProvider>
+        <BulkChangeDialog
+          request={request}
+          onClose={() => {}}
+          onDone={() => {}}
+        />
+      </BulkUndoProvider>
     </StoryProviders>
   );
 }

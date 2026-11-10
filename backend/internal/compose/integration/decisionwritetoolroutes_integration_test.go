@@ -166,7 +166,7 @@ func TestImportPreviewAndCommitLeaveTheSameOnEitherDoor(t *testing.T) {
 		return "Email,Full Name\n" + prefix + "-one@imports.test," + prefix + " One\n" + prefix + "-two@imports.test," + prefix + " Two\n"
 	}
 
-	profile, status := uploadCSV(t, d.e, "lead", csv("rest"))
+	profile, status := importjobtest.UploadCSV(t, d.e, "lead", csv("rest"))
 	if status != http.StatusOK {
 		t.Fatalf("upload → %d, want 200", status)
 	}

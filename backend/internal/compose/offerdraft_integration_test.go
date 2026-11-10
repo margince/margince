@@ -17,6 +17,7 @@ package compose
 
 import (
 	"context"
+	"maps"
 	"reflect"
 	"strings"
 	"testing"
@@ -30,6 +31,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/promptref"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
@@ -136,6 +138,26 @@ func seedDraftOfferWithDealActivity(ctx context.Context, t *testing.T, e *integr
 	return ids.From[ids.OfferKind](ids.UUID(created.Id)), "activity:" + activityID.String()
 }
 
+// inOfferDraftRefs writes a reply scripted in ids in the refs the drafter's
+// request shows, read through the drafter's own context and rate-card reads.
+func inOfferDraftRefs(ctx context.Context, t *testing.T, d offerDrafter, offerID ids.OfferID, reply string) string {
+	t.Helper()
+	offer, err := d.deals.GetOffer(ctx, offerID, storekit.LiveOnly)
+	if err != nil {
+		t.Fatalf("read the offer: %v", err)
+	}
+	dealContext, err := d.gatherDealContext(ctx, ids.From[ids.DealKind](ids.UUID(offer.DealId)))
+	if err != nil {
+		t.Fatalf("gather the deal context: %v", err)
+	}
+	catalog, err := d.rateCardCatalog(ctx, d.offerLanguage(ctx, offer))
+	if err != nil {
+		t.Fatalf("read the rate card: %v", err)
+	}
+	refs := newOfferDraftRefs(dealContext, catalog)
+	return promptref.Rewrite(reply, refs.sources, refs.products)
+}
+
 // offerLineByDescription finds one line on the offer by description —
 // staged lines land after the seeded human line, but position is an
 // implementation detail these tests should not depend on.
@@ -179,15 +201,16 @@ func TestDraftOfferLinesStagesGroundedLinesAndDiscloses(t *testing.T) {
 	// "grounded" for a price it merely rides alongside (OFFER-AC-14: a
 	// real citation is not itself proof of a price the citation doesn't
 	// state).
-	fake := ai.NewFakeClient().Script(`{"lines":[
+	fake := ai.NewFakeClient()
+	drafter := newOfferDrafterFixture(t, e, fake)
+	fake.Script(inOfferDraftRefs(ctx, t, drafter, offerID, `{"lines":[
 		{"description":"Kickoff workshop","quantity":"1","tax_rate":"19.00",
-		 "evidence_snippet":"agreed to 20000 cents for it","source_id":"` + workshopSource + `",
+		 "evidence_snippet":"agreed to 20000 cents for it","source_id":"`+workshopSource+`",
 		 "conversation_price_minor":20000},
 		{"description":"Follow-up session","quantity":"1","tax_rate":"19.00",
-		 "evidence_snippet":"we'd want a kickoff workshop","source_id":"` + workshopSource + `",
+		 "evidence_snippet":"we'd want a kickoff workshop","source_id":"`+workshopSource+`",
 		 "conversation_price_minor":20000}
-	]}`)
-	drafter := newOfferDrafterFixture(t, e, fake)
+	]}`))
 
 	result, err := drafter.DraftOfferLines(ctx, offerID)
 	if err != nil {
@@ -245,12 +268,13 @@ func TestDraftOfferLinesDropsUngroundedCandidateAsHonestEmpty(t *testing.T) {
 	offerID, source := seedDraftOfferWithDealActivity(ctx, t, e, "Ungrounded-draft deal",
 		"Client mentioned they liked our website.")
 
-	fake := ai.NewFakeClient().Script(`{"lines":[
-		{"description":"Bespoke consulting package","quantity":"1","tax_rate":"19.00",
-		 "evidence_snippet":"this text never appears in the deal's context","source_id":"` + source + `",
-		 "conversation_price_minor":50000}
-	]}`)
+	fake := ai.NewFakeClient()
 	drafter := newOfferDrafterFixture(t, e, fake)
+	fake.Script(inOfferDraftRefs(ctx, t, drafter, offerID, `{"lines":[
+		{"description":"Bespoke consulting package","quantity":"1","tax_rate":"19.00",
+		 "evidence_snippet":"this text never appears in the deal's context","source_id":"`+source+`",
+		 "conversation_price_minor":50000}
+	]}`))
 
 	result, err := drafter.DraftOfferLines(ctx, offerID)
 	if err != nil {
@@ -284,12 +308,13 @@ func TestDraftOfferLinesGroundsPriceOnTheRateCardWhenNoConversationPrice(t *test
 		t.Fatalf("seed product: %v", err)
 	}
 
-	fake := ai.NewFakeClient().Script(`{"lines":[
-		{"description":"Onboarding support","quantity":"1","tax_rate":"19.00",
-		 "evidence_snippet":"ongoing onboarding support for their new hires","source_id":"` + source + `",
-		 "product_id":"` + product.Id.String() + `"}
-	]}`)
+	fake := ai.NewFakeClient()
 	drafter := newOfferDrafterFixture(t, e, fake)
+	fake.Script(inOfferDraftRefs(ctx, t, drafter, offerID, `{"lines":[
+		{"description":"Onboarding support","quantity":"1","tax_rate":"19.00",
+		 "evidence_snippet":"ongoing onboarding support for their new hires","source_id":"`+source+`",
+		 "product_id":"`+product.Id.String()+`"}
+	]}`))
 
 	result, err := drafter.DraftOfferLines(ctx, offerID)
 	if err != nil {
@@ -328,12 +353,13 @@ func TestDraftOfferLinesNeverGroundsARateCardPriceInAMismatchedCurrency(t *testi
 		t.Fatalf("seed product: %v", err)
 	}
 
-	fake := ai.NewFakeClient().Script(`{"lines":[
-		{"description":"Onboarding support","quantity":"1","tax_rate":"19.00",
-		 "evidence_snippet":"ongoing onboarding support for their new hires","source_id":"` + source + `",
-		 "product_id":"` + product.Id.String() + `"}
-	]}`)
+	fake := ai.NewFakeClient()
 	drafter := newOfferDrafterFixture(t, e, fake)
+	fake.Script(inOfferDraftRefs(ctx, t, drafter, offerID, `{"lines":[
+		{"description":"Onboarding support","quantity":"1","tax_rate":"19.00",
+		 "evidence_snippet":"ongoing onboarding support for their new hires","source_id":"`+source+`",
+		 "product_id":"`+product.Id.String()+`"}
+	]}`))
 
 	result, err := drafter.DraftOfferLines(ctx, offerID)
 	if err != nil {
@@ -386,7 +412,7 @@ func TestGroundOfferLinesPropagatesANonNotFoundProductLookupError(t *testing.T) 
 	canceled, cancel := context.WithCancel(ctx)
 	cancel()
 
-	if _, err := drafter.groundOfferLines(canceled, candidates, dealContext, "EUR"); err == nil {
+	if _, err := drafter.groundOfferLines(canceled, candidates, dealContext, "EUR", "en"); err == nil {
 		t.Fatalf("groundOfferLines error = nil, want a propagated error — a failed product lookup must never be silently treated as ungrounded")
 	}
 }
@@ -397,11 +423,12 @@ func TestDraftOfferLinesNeverGuessesAnUngroundedPrice(t *testing.T) {
 	offerID, source := seedDraftOfferWithDealActivity(ctx, t, e, "No-price-draft deal",
 		"The client asked for a custom integration with their internal tools.")
 
-	fake := ai.NewFakeClient().Script(`{"lines":[
-		{"description":"Custom integration","quantity":"1","tax_rate":"19.00",
-		 "evidence_snippet":"custom integration with their internal tools","source_id":"` + source + `"}
-	]}`)
+	fake := ai.NewFakeClient()
 	drafter := newOfferDrafterFixture(t, e, fake)
+	fake.Script(inOfferDraftRefs(ctx, t, drafter, offerID, `{"lines":[
+		{"description":"Custom integration","quantity":"1","tax_rate":"19.00",
+		 "evidence_snippet":"custom integration with their internal tools","source_id":"`+source+`"}
+	]}`))
 
 	result, err := drafter.DraftOfferLines(ctx, offerID)
 	if err != nil {
@@ -431,15 +458,16 @@ func TestDraftOfferLinesDropsStoreInvalidQuantityWithoutErroringTheBatch(t *test
 	// is not a real quantity. Neither may error the whole
 	// AddStagedOfferLines transaction; each must drop, leaving the one
 	// well-formed candidate to stage on its own.
-	fake := ai.NewFakeClient().Script(`{"lines":[
-		{"description":"Workshop","quantity":"1","tax_rate":"19.00",
-		 "evidence_snippet":"wants a workshop","source_id":"` + source + `"},
-		{"description":"Onboarding (scientific notation)","quantity":"1e3","tax_rate":"19.00",
-		 "evidence_snippet":"onboarding session","source_id":"` + source + `"},
-		{"description":"Onboarding (zero quantity)","quantity":"0","tax_rate":"19.00",
-		 "evidence_snippet":"onboarding session","source_id":"` + source + `"}
-	]}`)
+	fake := ai.NewFakeClient()
 	drafter := newOfferDrafterFixture(t, e, fake)
+	fake.Script(inOfferDraftRefs(ctx, t, drafter, offerID, `{"lines":[
+		{"description":"Workshop","quantity":"1","tax_rate":"19.00",
+		 "evidence_snippet":"wants a workshop","source_id":"`+source+`"},
+		{"description":"Onboarding (scientific notation)","quantity":"1e3","tax_rate":"19.00",
+		 "evidence_snippet":"onboarding session","source_id":"`+source+`"},
+		{"description":"Onboarding (zero quantity)","quantity":"0","tax_rate":"19.00",
+		 "evidence_snippet":"onboarding session","source_id":"`+source+`"}
+	]}`))
 
 	result, err := drafter.DraftOfferLines(ctx, offerID)
 	if err != nil {
@@ -478,5 +506,50 @@ func TestDraftOfferLinesStripsSecretsBeforeTheModelCall(t *testing.T) {
 	}
 	if strings.Contains(string(call.Payload), secret) {
 		t.Fatalf("the outbound payload still contains the raw secret: %s", call.Payload)
+	}
+}
+
+// A line the drafter grounds on a product carries the product's name in the
+// offer's language, as a line added by hand does.
+func TestADraftedProductLineTakesTheProductsNameInTheOffersLanguage(t *testing.T) {
+	e := integration.Setup(t)
+	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, offerDraftPerms)
+	offerID, source := seedDraftOfferWithDealActivity(ctx, t, e, "German draft deal",
+		"The client wants ongoing onboarding support for their new hires.")
+	perms := offerDraftPerms
+	perms.Objects = maps.Clone(offerDraftPerms.Objects)
+	perms.Objects["product"] = principal.ObjectGrant{Create: true, Read: true, Update: true}
+	editor := e.As(e.AdminUser, nil, perms)
+	unit := "unit"
+	product, err := e.Deals.CreateProduct(editor, deals.CreateProductInput{
+		Name: "Onboarding Support", Unit: &unit, UnitPriceMinor: 15000, Currency: "EUR", Source: "manual",
+	})
+	if err != nil {
+		t.Fatalf("seed product: %v", err)
+	}
+	productID := ids.From[ids.ProductKind](ids.UUID(product.Id))
+	if _, err := e.Deals.PutProductTranslation(editor, productID, "de", "Einarbeitungsbegleitung", nil); err != nil {
+		t.Fatalf("translate the product: %v", err)
+	}
+	german := "de"
+	if _, _, err := e.Deals.UpdateOffer(ctx, offerID, deals.UpdateOfferInput{Language: &german}); err != nil {
+		t.Fatalf("make the offer German: %v", err)
+	}
+
+	fake := ai.NewFakeClient()
+	drafter := newOfferDrafterFixture(t, e, fake)
+	fake.Script(inOfferDraftRefs(ctx, t, drafter, offerID, `{"lines":[
+		{"description":"Onboarding support","quantity":"1","tax_rate":"19.00",
+		 "evidence_snippet":"ongoing onboarding support for their new hires","source_id":"`+source+`",
+		 "product_id":"`+product.Id.String()+`"}
+	]}`))
+	result, err := drafter.DraftOfferLines(ctx, offerID)
+	if err != nil {
+		t.Fatalf("draft offer lines: %v", err)
+	}
+	offerLineByDescription(t, result.Offer, "Einarbeitungsbegleitung")
+	calls := fake.Calls()
+	if len(calls) == 0 || !strings.Contains(string(calls[0].Payload), "Einarbeitungsbegleitung") {
+		t.Error("the model was shown the rate card's English name, not the offer's German one")
 	}
 }
