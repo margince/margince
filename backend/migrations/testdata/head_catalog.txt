@@ -8198,7 +8198,7 @@ public.sales_goal_plan.owner_id uuid NOT NULL gen=- def=-
 public.sales_goal_plan.published_revision bigint gen=- def=-
 public.sales_goal_plan.sales_goal_plan_draft_revision_js_safe CHECK (((draft_revision >= 1) AND (draft_revision <= '9007199254740991'::bigint)))
 public.sales_goal_plan.sales_goal_plan_one_publication_state CHECK (((published_revision IS NULL) OR (withdrawn_revision IS NULL)))
-public.sales_goal_plan.sales_goal_plan_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES app_user(id)
+public.sales_goal_plan.sales_goal_plan_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES app_user(id) ON DELETE RESTRICT
 public.sales_goal_plan.sales_goal_plan_owner_year UNIQUE (owner_id, year)
 public.sales_goal_plan.sales_goal_plan_pkey PRIMARY KEY (id)
 public.sales_goal_plan.sales_goal_plan_published_revision_js_safe CHECK (((published_revision >= 1) AND (published_revision <= '9007199254740991'::bigint)))
@@ -8221,13 +8221,13 @@ public.sales_goal_plan_revision.origin text NOT NULL gen=- def=-
 public.sales_goal_plan_revision.plan_id uuid NOT NULL gen=- def=-
 public.sales_goal_plan_revision.reason text NOT NULL gen=- def=-
 public.sales_goal_plan_revision.revision bigint NOT NULL gen=- def=-
-public.sales_goal_plan_revision.sales_goal_plan_revision_created_by_fkey FOREIGN KEY (created_by) REFERENCES app_user(id)
+public.sales_goal_plan_revision.sales_goal_plan_revision_created_by_fkey FOREIGN KEY (created_by) REFERENCES app_user(id) ON DELETE RESTRICT
 public.sales_goal_plan_revision.sales_goal_plan_revision_declared_total_js_safe CHECK (((declared_total >= 0) AND (declared_total <= '9007199254740991'::bigint)))
 public.sales_goal_plan_revision.sales_goal_plan_revision_kind_check CHECK ((kind = ANY (ARRAY['draft'::text, 'published'::text, 'discarded'::text, 'withdrawn'::text])))
 public.sales_goal_plan_revision.sales_goal_plan_revision_months_shape CHECK (((jsonb_typeof(months) = 'array'::text) AND (jsonb_array_length(months) = 12)))
 public.sales_goal_plan_revision.sales_goal_plan_revision_origin_check CHECK ((origin = ANY (ARRAY['manual'::text, 'ai'::text, 'adopted'::text])))
 public.sales_goal_plan_revision.sales_goal_plan_revision_pkey PRIMARY KEY (plan_id, revision)
-public.sales_goal_plan_revision.sales_goal_plan_revision_plan_id_fkey FOREIGN KEY (plan_id) REFERENCES sales_goal_plan(id)
+public.sales_goal_plan_revision.sales_goal_plan_revision_plan_id_fkey FOREIGN KEY (plan_id) REFERENCES sales_goal_plan(id) ON DELETE RESTRICT
 public.sales_goal_plan_revision.sales_goal_plan_revision_reason_bounded CHECK (((length(btrim(reason)) >= 1) AND (length(btrim(reason)) <= 1000)))
 public.sales_goal_plan_revision.sales_goal_plan_revision_revision_js_safe CHECK (((revision >= 1) AND (revision <= '9007199254740991'::bigint)))
 public.sales_goal_plan_revision.sales_goal_plan_revision_targets_shape CHECK (((kind = 'published'::text) = (targets IS NOT NULL)))

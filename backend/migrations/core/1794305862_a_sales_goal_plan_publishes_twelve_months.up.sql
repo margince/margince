@@ -5,7 +5,8 @@
 -- The monthly sales_target rows stay the reported goals. The plan holds the
 -- shared draft and the history of what was published, so twelve months are
 -- set, published and withdrawn together. Revisions are never rewritten; the
--- header points at the current draft and publication.
+-- header points at the current draft and publication. Every key RESTRICTs:
+-- the plans are history, kept when a member leaves.
 SET LOCAL lock_timeout = '3s';
 
 CREATE TABLE sales_goal_plan (
@@ -21,7 +22,7 @@ CREATE TABLE sales_goal_plan (
     updated_at timestamptz NOT NULL,
 
     CONSTRAINT sales_goal_plan_pkey PRIMARY KEY (id),
-    CONSTRAINT sales_goal_plan_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES app_user(id),
+    CONSTRAINT sales_goal_plan_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES app_user(id) ON DELETE RESTRICT,
     CONSTRAINT sales_goal_plan_owner_year UNIQUE (owner_id, year),
     CONSTRAINT sales_goal_plan_year_check CHECK (year BETWEEN 2000 AND 2200),
     CONSTRAINT sales_goal_plan_version_js_safe CHECK (version >= 1 AND version <= '9007199254740991'::bigint),
@@ -48,8 +49,8 @@ CREATE TABLE sales_goal_plan_revision (
     created_at timestamptz NOT NULL,
 
     CONSTRAINT sales_goal_plan_revision_pkey PRIMARY KEY (plan_id, revision),
-    CONSTRAINT sales_goal_plan_revision_plan_id_fkey FOREIGN KEY (plan_id) REFERENCES sales_goal_plan(id),
-    CONSTRAINT sales_goal_plan_revision_created_by_fkey FOREIGN KEY (created_by) REFERENCES app_user(id),
+    CONSTRAINT sales_goal_plan_revision_plan_id_fkey FOREIGN KEY (plan_id) REFERENCES sales_goal_plan(id) ON DELETE RESTRICT,
+    CONSTRAINT sales_goal_plan_revision_created_by_fkey FOREIGN KEY (created_by) REFERENCES app_user(id) ON DELETE RESTRICT,
     CONSTRAINT sales_goal_plan_revision_kind_check CHECK (kind IN ('draft', 'published', 'discarded', 'withdrawn')),
     CONSTRAINT sales_goal_plan_revision_origin_check CHECK (origin IN ('manual', 'ai', 'adopted')),
     CONSTRAINT sales_goal_plan_revision_months_shape CHECK (jsonb_typeof(months) = 'array' AND jsonb_array_length(months) = 12),
