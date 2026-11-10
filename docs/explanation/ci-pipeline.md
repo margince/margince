@@ -42,8 +42,10 @@ records and the pages they feed, and a record is published when a maintainer mer
 [the workflows beside the merge gate](../reference/ci-workflows.md#scheduledyml).
 
 **The merge queue is a ruleset setting**, not a file in this tree. Both required checks, `ci` and `cla`,
-run on `merge_group`, and `backend/gates/mergequeuereach_test.go` fails a pull request workflow that does
-not. With no queue rule, no `merge_group` run happens, and a pull request's own run is the merge verdict.
+run on `merge_group`. `backend/gates/mergequeuereach_test.go` fails a pull request workflow that does not,
+unless a waiver names it as advisory. The gate cannot read the ruleset, so a workflow with a waiver that a
+ruleset requires still passes it. With no queue rule, no `merge_group` run happens, and a pull request's
+own run is the merge verdict.
 
 ## Triggers
 
