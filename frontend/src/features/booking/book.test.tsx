@@ -13,6 +13,7 @@ import {
   bookingProfile,
   bookingSlots,
 } from "../../testing/book.testkit";
+import { meFixture } from "../../testing/mefixture";
 import { BookingScreen, PUBLIC_BOOKING_CONSENT } from "./book";
 
 type Call = { method: string; path: string; body: unknown; key: string | null };
@@ -44,15 +45,17 @@ function serve(fail = false) {
                 management_token: "private-link",
               },
             }
-        : path.endsWith("/connectors")
-          ? { data: [bookingConnection] }
-          : path.endsWith("/calendars")
-            ? []
-            : path.endsWith("/availability")
-              ? { slots: bookingSlots, truncated: false }
-              : path.includes("/meeting/")
-                ? bookingInvitation
-                : bookingProfile;
+        : path.endsWith("/v1/me")
+          ? meFixture({ allow: { activity: ["read", "create"] } })
+          : path.endsWith("/connectors")
+            ? { data: [bookingConnection] }
+            : path.endsWith("/calendars")
+              ? []
+              : path.endsWith("/availability")
+                ? { slots: bookingSlots, truncated: false }
+                : path.includes("/meeting/")
+                  ? bookingInvitation
+                  : bookingProfile;
       return new Response(JSON.stringify(reply), {
         status: post ? (fail ? 409 : 201) : 200,
         headers: { "content-type": "application/json" },

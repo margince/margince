@@ -20,6 +20,10 @@ import { STORAGE_KEYS } from "../lib/storage";
 import { setThemeChoice } from "../lib/theme";
 import { bookingProfile } from "../testing/book.testkit";
 import { meFixture } from "../testing/mefixture";
+
+// A seat that may book, so the menu carries its booking link.
+const BOOKER = { allow: { activity: ["read", "create"] } } as const;
+
 import { AccountMenu } from "./account";
 
 const THEME_KEY = STORAGE_KEYS.theme.name;
@@ -47,7 +51,7 @@ const render = (ui: Parameters<typeof rtlRender>[0]) => {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
-  client.setQueryData(["me"], meFixture());
+  client.setQueryData(["me"], meFixture(BOOKER));
   return rtlRender(ui, {
     wrapper: ({ children }) => (
       <QueryClientProvider client={client}>
@@ -63,7 +67,7 @@ const renderNamed = (displayName: string) => {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
-  const me = meFixture();
+  const me = meFixture(BOOKER);
   client.setQueryData(["me"], {
     ...me,
     user: { ...me.user, display_name: displayName },
@@ -178,7 +182,7 @@ describe("AccountMenu", () => {
       const client = new QueryClient({
         defaultOptions: { queries: { retry: false } },
       });
-      client.setQueryData(["me"], meFixture());
+      client.setQueryData(["me"], meFixture(BOOKER));
       client.setQueryData(["scheduling-profile"], {
         ...bookingProfile,
         ...state,
@@ -195,6 +199,38 @@ describe("AccountMenu", () => {
       expect(link.textContent?.includes("Paused")).toBe(paused);
     },
   );
+
+  // GET /scheduling/profile answers only a seat holding activity:create, so a
+  // seat without it is neither offered the link nor sends the read.
+  it("leaves out the booking link for a seat that may not book", async () => {
+    const user = userEvent.setup();
+    const fetched = vi.fn(
+      async (_request: Request | string) => new Response("{}", { status: 404 }),
+    );
+    vi.stubGlobal("fetch", fetched);
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    client.setQueryData(["me"], meFixture({ allow: { activity: ["read"] } }));
+    rtlRender(
+      <QueryClientProvider client={client}>
+        <LocaleProvider initial="en">
+          <AccountMenu />
+        </LocaleProvider>
+      </QueryClientProvider>,
+    );
+    await openMenu(user, railTrigger());
+    expect(screen.getByRole("menuitem", { name: /Settings/ })).toBeTruthy();
+    expect(
+      screen.queryByRole("menuitem", { name: /My booking link/ }),
+    ).toBeNull();
+    const asked = fetched.mock.calls.map(([request]) =>
+      String(request instanceof Request ? request.url : request),
+    );
+    expect(asked.filter((url) => url.includes("/scheduling/profile"))).toEqual(
+      [],
+    );
+  });
 
   // The appearance choice IS a destination now: it lives where the reader can
   // see the document repaint under the open panel, rather than on a form two
@@ -487,7 +523,7 @@ const renderHeadless = () => {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
-  const me = meFixture();
+  const me = meFixture(BOOKER);
   client.setQueryData(["me"], {
     ...me,
     user: { ...me.user, display_name: "", email: "" },
@@ -510,7 +546,7 @@ describe("AccountMenu for a seat with a picture", () => {
     const client = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });
-    const me = meFixture();
+    const me = meFixture(BOOKER);
     const picture = "/v1/users/u-1/avatar?v=3";
     client.setQueryData(["me"], {
       ...me,
@@ -571,7 +607,7 @@ describe("AccountMenu before /me names the seat", () => {
     await openMenu(user, glyphTrigger());
     expect(document.activeElement).toBe(row("Settings"));
 
-    act(() => client.setQueryData(["me"], meFixture()));
+    act(() => client.setQueryData(["me"], meFixture(BOOKER)));
     await waitFor(() => expect(document.activeElement).toBe(head()));
   });
 
@@ -582,7 +618,7 @@ describe("AccountMenu before /me names the seat", () => {
     await user.keyboard("{ArrowDown}");
     expect(document.activeElement).toBe(row("Theme"));
 
-    act(() => client.setQueryData(["me"], meFixture()));
+    act(() => client.setQueryData(["me"], meFixture(BOOKER)));
     await screen.findByRole("menuitem", { name: /account settings/ });
     expect(document.activeElement).toBe(row("Theme"));
   });
@@ -594,7 +630,7 @@ describe("AccountMenu before /me names the seat", () => {
     await user.keyboard("{ArrowDown}{ArrowUp}");
     expect(document.activeElement).toBe(row("Settings"));
 
-    act(() => client.setQueryData(["me"], meFixture()));
+    act(() => client.setQueryData(["me"], meFixture(BOOKER)));
     await screen.findByRole("menuitem", { name: /account settings/ });
     expect(document.activeElement).toBe(row("Settings"));
   });

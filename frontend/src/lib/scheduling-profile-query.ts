@@ -1,22 +1,34 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { useCan } from "./capability";
 import { unwrap } from "./problem";
 
 type Profile = components["schemas"]["SchedulingProfile"];
 
+/**
+ * The signed-in seat's booking profile. A seat that may not book has none: the
+ * server answers only a seat holding activity:create, so without the grant
+ * this asks nothing.
+ */
 export function useSchedulingProfile({
   refreshOnReturn = false,
   enabled = true,
 }: Readonly<{ refreshOnReturn?: boolean; enabled?: boolean }> = {}) {
+  const canBook = useCanBook();
   return useQuery({
     queryKey: ["scheduling-profile"],
-    enabled,
+    enabled: enabled && canBook,
     refetchOnWindowFocus: refreshOnReturn ? "always" : false,
     queryFn: async () => {
       return unwrap(await api.GET("/scheduling/profile"));
     },
   });
+}
+
+/** Whether this seat may book meetings, which is what owning a booking profile takes. */
+export function useCanBook(): boolean {
+  return useCan("activity", "create");
 }
 
 /**
