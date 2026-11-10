@@ -81,6 +81,28 @@ func TestQuietReasonPicksTheDirectionOfTheNewerMessage(t *testing.T) {
 	}
 }
 
+// At one stored instant our message answers theirs only when a date on either side orders them.
+func TestQuietReasonReadsATieByTheAnswerRule(t *testing.T) {
+	them, us := ids.NewV7(), ids.NewV7()
+	names := QuietNames{them: "Anna Weber", us: "Boris Klein"}
+	for _, c := range []struct {
+		name     string
+		dateOnly bool
+		want     string
+	}{
+		{"two instants", false, "Anna Weber wrote"},
+		{"two day entries", true, "We wrote to Boris Klein"},
+	} {
+		got := quietCopyFor("en").quietReason(QuietFacts{
+			LastInbound:  &QuietSide{At: quietAt(-5), DateOnly: c.dateOnly, ContactID: them},
+			LastOutbound: &QuietSide{At: quietAt(-5), DateOnly: c.dateOnly, ContactID: us},
+		}, names, quietToday, time.UTC)
+		if !strings.Contains(got, c.want) {
+			t.Errorf("%s: reason = %q, want %q", c.name, got, c.want)
+		}
+	}
+}
+
 // The facts query accepts any directional activity, so the verb has to match
 // what actually happened. Reporting a phone call as something somebody "wrote"
 // is a small falsehood, and a reader who was on that call stops trusting

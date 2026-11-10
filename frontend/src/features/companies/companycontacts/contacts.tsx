@@ -12,7 +12,11 @@ import {
 import { NewContactAction } from "../../../components/newcontact";
 import { QuickCaptureAction } from "../../../components/quickcapture";
 import { Badge } from "../../../design-system/atoms";
-import { type ActivityMoment, activityDay } from "../../../format/activitywhen";
+import {
+  type ActivityMoment,
+  activityAnswers,
+  activityDay,
+} from "../../../format/activitywhen";
 import { useLocale, useT } from "../../../i18n";
 import { bucketLabel } from "../../../lib/bucketlabel";
 import { labelFor } from "../../../lib/labelfor";
@@ -275,19 +279,26 @@ function LastTouch({ contact }: { readonly contact: CompanyContact }) {
 }
 
 /**
- * The newer of the two direction clocks, read by its own precision. Ordered by
- * the stored times as contacts.EngagementOf orders them, so a tie reads as ours.
+ * The newer of the two direction clocks, read by its own precision. Ours is
+ * newer when it answers theirs, as contacts.EngagementOf reads it.
  */
 function lastWritten(
   contact: CompanyContact,
 ): (ActivityMoment & { theyWrote: boolean }) | undefined {
-  const inbound = contact.last_inbound_at;
-  const outbound = contact.last_outbound_at;
-  if (inbound && (!outbound || Date.parse(inbound) > Date.parse(outbound))) {
-    const precision = contact.last_inbound_precision ?? "instant";
-    return { theyWrote: true, at: inbound, precision };
+  const inbound: ActivityMoment | undefined = contact.last_inbound_at
+    ? {
+        at: contact.last_inbound_at,
+        precision: contact.last_inbound_precision ?? "instant",
+      }
+    : undefined;
+  const outbound: ActivityMoment | undefined = contact.last_outbound_at
+    ? {
+        at: contact.last_outbound_at,
+        precision: contact.last_outbound_precision ?? "instant",
+      }
+    : undefined;
+  if (inbound && (!outbound || !activityAnswers(outbound, inbound))) {
+    return { theyWrote: true, ...inbound };
   }
-  if (!outbound) return undefined;
-  const precision = contact.last_outbound_precision ?? "instant";
-  return { theyWrote: false, at: outbound, precision };
+  return outbound && { theyWrote: false, ...outbound };
 }

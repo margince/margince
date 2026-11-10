@@ -395,6 +395,42 @@ func TestHappenedSQLAnswersTheSharedCases(t *testing.T) {
 	}
 }
 
+// occurredday.AnswersSQL answers the tie cases occurredday.Answers and the
+// frontend's activityAnswers share, so every reader of a tie agrees.
+func TestAnswersSQLAnswersTheSharedCases(t *testing.T) {
+	e := setupSend(t)
+	raw, err := os.ReadFile("../../shared/kernel/occurredday/testdata/answers.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var cases []struct {
+		Name             string    `json:"name"`
+		MessageAt        time.Time `json:"message_at"`
+		MessagePrecision string    `json:"message_precision"`
+		AnswerAt         time.Time `json:"answer_at"`
+		AnswerPrecision  string    `json:"answer_precision"`
+		Answers          bool      `json:"answers"`
+	}
+	if err := json.Unmarshal(raw, &cases); err != nil {
+		t.Fatal(err)
+	}
+	if len(cases) < 9 {
+		t.Fatalf("read %d cases, want the whole table", len(cases))
+	}
+	for _, c := range cases {
+		var answers bool
+		if err := e.owner.QueryRow(context.Background(), fmt.Sprintf(
+			`SELECT %s FROM (VALUES ($1::timestamptz, $2::text)) AS message(occurred_at, occurred_precision),
+			   (VALUES ($3::timestamptz, $4::text)) AS answer(occurred_at, occurred_precision)`,
+			occurredday.AnswersSQL("answer", "message")), c.MessageAt, c.MessagePrecision, c.AnswerAt, c.AnswerPrecision).Scan(&answers); err != nil {
+			t.Fatalf("%s: %v", c.Name, err)
+		}
+		if answers != c.Answers {
+			t.Errorf("%s: SQL says answers = %v, want %v", c.Name, answers, c.Answers)
+		}
+	}
+}
+
 // setInstallationZone names the zone the owner's SQL reads which date is today in.
 func setInstallationZone(t *testing.T, e *sendEnv, name string) {
 	t.Helper()
@@ -454,6 +490,28 @@ func TestLatestPrecisionNamesTheNewestAdmittedRow(t *testing.T) {
 			   ($1 - interval '1 day', 'instant', 'inbound'), ($1 + interval '1 day', 'day', 'inbound'))
 			   AS a(occurred_at, occurred_precision, direction)`,
 			occurredday.LatestPrecisionSQL("a", c.filter)), noon).Scan(&got); err != nil {
+			t.Fatalf("%s: %v", c.name, err)
+		}
+		if got != c.want {
+			t.Errorf("%s: precision = %s, want %s", c.name, got, c.want)
+		}
+	}
+}
+
+// occurredday.LatestAnswerPrecisionSQL reads a day entry that ties an instant as day: the row that answers there.
+func TestLatestAnswerPrecisionNamesTheDayEntryAtATie(t *testing.T) {
+	e := setupSend(t)
+	noon := time.Date(2026, 10, 22, 12, 0, 0, 0, time.UTC)
+	for _, c := range []struct{ name, filter, want string }{
+		{"an instant ties a day entry's noon", "a.occurred_at <= $1", "day"},
+		{"the newest row is an instant", "a.direction = 'outbound'", "instant"},
+		{"the filter admits no row", "a.direction = 'internal'", "none"},
+	} {
+		var got string
+		if err := e.owner.QueryRow(context.Background(), fmt.Sprintf(
+			`SELECT coalesce(%s, 'none') FROM (VALUES ($1::timestamptz, 'day', 'inbound'), ($1, 'instant', 'outbound'),
+			   ($1 + interval '1 day', 'day', 'inbound')) AS a(occurred_at, occurred_precision, direction)`,
+			occurredday.LatestAnswerPrecisionSQL("a", c.filter)), noon).Scan(&got); err != nil {
 			t.Fatalf("%s: %v", c.name, err)
 		}
 		if got != c.want {
