@@ -17,6 +17,17 @@ import {
 /** Where the callback sends a sign-in that did not complete. */
 export const OIDC_FAILURE_HASH = "#/login?oidc=failed";
 
+/** The same failure for a sign-in begun on the consent screen, at CONSENT_PATH. */
+export const OIDC_CONSENT_FAILURE_HASH = "#/oauth-consent?oidc=failed";
+
+/** True on either failed sign-in landing, which the sign-in screen reads. */
+export function isOidcFailureLanding(pathname: string, hash: string): boolean {
+  return (
+    hash === OIDC_FAILURE_HASH ||
+    (pathname === CONSENT_PATH && hash === OIDC_CONSENT_FAILURE_HASH)
+  );
+}
+
 // Long enough for a provider's consent and second factor. A route kept for an
 // attempt the reader gave up on must not open on a later, unrelated visit.
 const KEPT_FOR_MS = 15 * 60 * 1000;
@@ -91,7 +102,7 @@ export function takeReturnRoute(): string | null {
  */
 export function restoreReturnRoute(): void {
   const { hash, pathname, search } = globalThis.location;
-  if (hash === OIDC_FAILURE_HASH) {
+  if (isOidcFailureLanding(pathname, hash)) {
     return;
   }
   const route = takeReturnRoute();

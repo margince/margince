@@ -270,9 +270,10 @@ func (h Handlers) OidcSignInCallback(w http.ResponseWriter, r *http.Request, pro
 	// over r: the detached write inside logOidcFailure derives its own
 	// timeout from whichever ctx is handed to it, so this must be the same
 	// one every other step below already uses.
+	failTo := h.oidcRoutes.FailureURL
 	fail := func(ctx context.Context, reason string, cause error) {
 		h.logOidcFailure(ctx, provider, reason, cause)
-		http.Redirect(w, r, h.oidcRoutes.FailureURL, http.StatusFound)
+		http.Redirect(w, r, failTo, http.StatusFound)
 	}
 
 	source, ok := h.oidcProviders[provider]
@@ -283,6 +284,19 @@ func (h Handlers) OidcSignInCallback(w http.ResponseWriter, r *http.Request, pro
 	if !h.oidcPerIP.Allow(httpserver.ClientIP(r)) {
 		httperr.Write(w, r, apperrors.ErrBudgetExceeded)
 		return
+	}
+	var code, state string
+	if params.Code != nil {
+		code = *params.Code
+	}
+	if params.State != nil {
+		state = *params.State
+	}
+	// Read first so every later refusal of a consent-screen sign-in lands back on
+	// that screen. A state that does not verify cannot vouch for its own flag.
+	st, stateRefusal, stateErr := h.verifiedLoginState(r, provider, state)
+	if stateRefusal == "" && st.ReturnToConsent {
+		failTo = h.oidcRoutes.consentFailureURL()
 	}
 	// Checked on the CALLBACK too, not only at the start, and after the budget
 	// for the same reason it is there. A provider disabled while a browser was
@@ -320,14 +334,6 @@ func (h Handlers) OidcSignInCallback(w http.ResponseWriter, r *http.Request, pro
 		return
 	}
 
-	var code, state string
-	if params.Code != nil {
-		code = *params.Code
-	}
-	if params.State != nil {
-		state = *params.State
-	}
-
 	// The cookie is read and VERIFIED before it is cleared, and before the
 	// `error` check below — both on purpose. This callback is a public GET,
 	// the cookie is SameSite=Lax (so it rides a cross-site top-level
@@ -339,14 +345,8 @@ func (h Handlers) OidcSignInCallback(w http.ResponseWriter, r *http.Request, pro
 	// from Google would then fail "no state cookie" for a flow they never
 	// abandoned. Only a request whose cookie decrypts to a genuinely
 	// matching provider+nonce ever reaches the clear.
-	cookie, err := r.Cookie(oidcLoginCookie)
-	if err != nil {
-		fail(ctx, "no state cookie", nil)
-		return
-	}
-	st, err := h.stateSigner.Verify(cookie.Value)
-	if err != nil || st.Provider != provider || st.Nonce != state {
-		fail(ctx, "state verification", err)
+	if stateRefusal != "" {
+		fail(ctx, stateRefusal, stateErr)
 		return
 	}
 	// The client the flow STARTED on. A stored app resolves per request, so an
@@ -385,6 +385,20 @@ func (h Handlers) OidcSignInCallback(w http.ResponseWriter, r *http.Request, pro
 	}
 	setSessionCookie(w, token)
 	http.Redirect(w, r, h.oidcRoutes.landingURL(st.ReturnToConsent), http.StatusFound)
+}
+
+// verifiedLoginState reads the login-state cookie and checks it belongs to this
+// provider's round trip. A non-empty refusal names why it does not.
+func (h Handlers) verifiedLoginState(r *http.Request, provider, state string) (st OIDCLoginState, refusal string, err error) {
+	cookie, err := r.Cookie(oidcLoginCookie)
+	if err != nil {
+		return OIDCLoginState{}, "no state cookie", err
+	}
+	st, err = h.stateSigner.Verify(cookie.Value)
+	if err != nil || st.Provider != provider || st.Nonce != state {
+		return OIDCLoginState{}, "state verification", err
+	}
+	return st, "", nil
 }
 
 // exchangeAndVerify redeems the authorization code and validates the ID

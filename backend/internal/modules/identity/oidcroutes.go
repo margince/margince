@@ -10,6 +10,7 @@ package identity
 import (
 	"context"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/margince/margince/backend/internal/platform/ratelimit"
@@ -40,6 +41,22 @@ func (r OIDCRoutes) landingURL(returnToConsent bool) string {
 	if !returnToConsent {
 		return r.PostLoginURL
 	}
+	return r.consentScreenURL()
+}
+
+// consentFailureURL is the consent screen with the marker FailureURL's route
+// carries, so the screen tells the reader the sign-in failed.
+func (r OIDCRoutes) consentFailureURL() string {
+	marker := ""
+	if u, err := url.Parse(r.FailureURL); err == nil {
+		if _, query, found := strings.Cut(u.Fragment, "?"); found {
+			marker = "?" + query
+		}
+	}
+	return r.consentScreenURL() + marker
+}
+
+func (r OIDCRoutes) consentScreenURL() string {
 	u, err := url.Parse(r.PostLoginURL)
 	if err != nil || u.Host == "" {
 		return ConsentScreenPath

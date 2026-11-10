@@ -8,6 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   CONSENT_LANDING,
   keepReturnRoute,
+  OIDC_CONSENT_FAILURE_HASH,
   OIDC_FAILURE_HASH,
   restoreReturnRoute,
   takeReturnRoute,
@@ -113,6 +114,21 @@ describe("the route kept across a provider sign-in", () => {
     restoreReturnRoute();
     expect(globalThis.location.hash).toBe(OIDC_FAILURE_HASH);
     expect(takeReturnRoute()).toBe(APPROVAL_LINK);
+  });
+
+  it("leaves the consent request for the sign-in screen when that sign-in failed", () => {
+    const request = "#/oauth-consent?client_id=cl-1&state=s";
+    globalThis.history.replaceState(null, "", `/consent${request}`);
+    keepReturnRoute();
+
+    globalThis.history.replaceState(
+      null,
+      "",
+      `/consent${OIDC_CONSENT_FAILURE_HASH}`,
+    );
+    restoreReturnRoute();
+    expect(globalThis.location.hash).toBe(OIDC_CONSENT_FAILURE_HASH);
+    expect(takeReturnRoute()).toBe(request);
   });
 
   it("never keeps the reset screen, which renders ahead of the session", () => {

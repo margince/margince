@@ -16,7 +16,7 @@ import { providerBrandName } from "../../design-system/provider-mark";
 import { LOCALES, localeNameKey, useLocale, useT } from "../../i18n";
 import { useAuthCapabilities } from "../../lib/capabilities";
 import { useOutageRecovery } from "../../lib/connectivity";
-import { OIDC_FAILURE_HASH, takeReturnRoute } from "../../lib/returnroute";
+import { isOidcFailureLanding, takeReturnRoute } from "../../lib/returnroute";
 import {
   forgetHashCredential,
   takeHashCredential,
@@ -53,13 +53,10 @@ export type AuthNotice =
   | "oidc-failed"
   | null;
 
-// The OIDC callback's neutral-failure redirect lands on OIDC_FAILURE_HASH
-// (cmd/api/googlesignin.go's FailureURL). It is not a Screen this app routes to
-// (no "login" entry in lib/router.tsx's SCREENS). The unauthenticated gate in
-// App.tsx renders AuthScreen ahead of any route match, whatever the hash names.
-// It is consumed the way clearResetHash below scrubs its own marker. It is read
-// once on mount, then rewritten out of the address so a reload or a Back press
-// cannot replay it.
+// The OIDC callback's neutral-failure redirect lands where isOidcFailureLanding
+// says. App.tsx renders AuthScreen there ahead of any route match, whatever the
+// hash names. Like clearResetHash below, it is read once on mount, then
+// rewritten out of the address so a reload or a Back press cannot replay it.
 
 // isOidcFailureMarker is a PURE read — no mutation — so it is safe under
 // React's StrictMode (development only), which double-invokes a useState lazy
@@ -71,7 +68,8 @@ export type AuthNotice =
 // read from the clear (below) removes the impurity instead of working around
 // it, so no double-invoke count changes the answer.
 function isOidcFailureMarker(): boolean {
-  return globalThis.location?.hash === OIDC_FAILURE_HASH;
+  const { pathname = "", hash = "" } = globalThis.location ?? {};
+  return isOidcFailureLanding(pathname, hash);
 }
 
 // clearOidcFailureMarker is the side effect, kept OUT of the initializer and
