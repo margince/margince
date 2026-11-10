@@ -106,8 +106,8 @@ function NewRequestAction() {
   const t = useT();
   const titleId = useId();
   const [creating, setCreating] = useState(false);
-  // Opening a request writes the contact it names (consent/dsr.go CreateDSR).
-  const canOpenRequest = useCanWrite("contact", "update");
+  // Filing a request is working the queue (consent/dsr.go CreateDSR).
+  const canOpenRequest = useCanWrite("privacy_request", "update");
   if (!canOpenRequest) {
     return null;
   }

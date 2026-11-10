@@ -66,7 +66,7 @@ not a question to reconsider, and a draft that opens formally and closes
 familiarly reads as machine-written whichever one it should have picked. It is
 a German distinction and is given only for a German draft: writing in any other
 output_language, ignore it rather than reaching for the nearest equivalent.
-With no register given, use "Sie".
+With no register given, use "Sie", even after a greeting by first name.
 
 WHO IS WRITING
 You write as the sender named by the sender_name and sender_email fields of

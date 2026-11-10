@@ -100,10 +100,23 @@ export function voiceRefetchDelay(
  */
 export const VOICE_FOCUS_PARAM = "focus";
 
-/** The parts of the Writing voice page a setup step can lead to. */
-export type VoiceFocus = "review" | "voice" | "samples";
+/** The parts of the Writing voice page a link can lead to. */
+export type VoiceFocus =
+  | "review"
+  | "voice"
+  | "drafts"
+  | "samples"
+  | "rules"
+  | "builds";
 
-const VOICE_FOCI: readonly VoiceFocus[] = ["review", "voice", "samples"];
+const VOICE_FOCI: readonly VoiceFocus[] = [
+  "review",
+  "voice",
+  "drafts",
+  "samples",
+  "rules",
+  "builds",
+];
 
 /** The focus a dial value names, or null for a value this page never mints. */
 export function parseVoiceFocus(value: string | undefined): VoiceFocus | null {

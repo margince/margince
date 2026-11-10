@@ -68,6 +68,11 @@ func (c *invitationCalendar) Save(_ context.Context, _ ids.UserID, _ string, in 
 	return receipt, nil
 }
 
+// Respond is never reached by a booking.
+func (c *invitationCalendar) Respond(context.Context, ids.UserID, string, string) error {
+	return errors.New("a booking answered an invitation")
+}
+
 func (c *invitationCalendar) Cancel(context.Context, ids.UserID, string, string, string) error {
 	c.canceled++
 	return nil

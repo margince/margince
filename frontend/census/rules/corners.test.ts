@@ -6,7 +6,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { plantedFindings, srcDir } from "../tree";
 import {
-  atRules,
+  aliasOf,
   blocks,
   corneredPseudoElements,
   isRound,
@@ -16,7 +16,6 @@ import {
   radii,
   readsTheLadder,
   rule,
-  SQUIRCLE,
   squircleLadder,
   squircleSelectors,
 } from "./corners.census";
@@ -29,16 +28,30 @@ describe("the ladder itself", () => {
 
   it("runs in fours", () => {
     for (const [name, value] of ladder(tokens)) {
-      if (name === "--r-full") {
+      if (name === "--r-full" || aliasOf(value)) {
         continue;
       }
       const px = Number(value.replace("px", ""));
       expect(
         Number.isInteger(px) && px % 4 === 0,
-        `${name} is ${value}. The ladder runs in fours — 4 / 8 / 12 / 16 / 20 — ` +
+        `${name} is ${value}. The ladder runs in fours, ` +
           `so that a corner is a rung a reader can name rather than a number ` +
           `somebody liked.`,
       ).toBe(true);
+    }
+  });
+
+  it("aliases a rung only to a rung the ladder sizes itself", () => {
+    const base = ladder(tokens);
+    for (const [name, value] of base) {
+      const target = aliasOf(value);
+      if (!target) {
+        continue;
+      }
+      expect(
+        base.get(target),
+        `${name} reads ${target}, which the ladder does not size.`,
+      ).toMatch(/^\d+px$/);
     }
   });
 
@@ -47,6 +60,15 @@ describe("the ladder itself", () => {
     const smooth = squircleLadder(tokens);
     expect(smooth.size).toBeGreaterThan(0);
     for (const [name, value] of base) {
+      if (aliasOf(value)) {
+        expect(
+          smooth.has(name),
+          `${name} reads ${value} and is redeclared in the squircle block. ` +
+            `An alias follows its rung there by itself; a second number is a ` +
+            `second answer that drifts from the first.`,
+        ).toBe(false);
+        continue;
+      }
       if (name === "--r-full") {
         expect(
           smooth.has(name),
@@ -68,32 +90,13 @@ describe("the ladder itself", () => {
     }
   });
 
-  it("caps every rung above --r-sm at --r-sm on a phone, squircle or not", () => {
-    const base = ladder(tokens);
-    const cap = Number(base.get("--r-sm")?.replace("px", ""));
-    const squircleEnd = atRules(tokens, SQUIRCLE)[0]?.end ?? 0;
+  it("keeps one ladder at every width", () => {
     const phone = phoneRungBlocks(tokens);
-    for (const block of phone) {
-      expect(
-        block.start > squircleEnd,
-        `a ${PHONE} block that redeclares a rung sits before the squircle ` +
-          `block, which then wins wherever the browser draws squircles.`,
-      ).toBe(true);
-    }
-    const capped = new Map(phone.flatMap((block) => [...block.rungs]));
-    for (const [name, value] of base) {
-      const px = Number(value.replace("px", ""));
-      if (name === "--r-full" || px <= cap) {
-        expect(capped.has(name), `${name} is redeclared on a phone`).toBe(
-          false,
-        );
-        continue;
-      }
-      expect(
-        capped.get(name),
-        `${name} (${value}) is larger than --r-sm and keeps its size on a phone.`,
-      ).toBe("var(--r-sm)");
-    }
+    expect(
+      phone.flatMap((block) => [...block.rungs.keys()]),
+      `a ${PHONE} block redeclares a rung. A phone and a desktop round alike: ` +
+        `change the rung itself, or alias it to a smaller one.`,
+    ).toEqual([]);
   });
 });
 

@@ -347,10 +347,14 @@ function DealBookMeeting({
     </>
   );
   if (!allowed || !companyId) {
+    // A refusal the page already states wins; otherwise the missing company
+    // is the one thing standing between the reader and a booking.
+    const noCompany = !reasonId && !companyId;
     return (
       <Button
         disabled={pending || !companyId}
         reasonId={reasonId}
+        reason={noCompany ? t("deal.meetNeedsCompany") : undefined}
         title={t("scheduling.bookContact")}
       >
         {face}

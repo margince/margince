@@ -145,6 +145,7 @@ to run the Go unit gates. The other is to boot the sharded Postgres databases.
 |---|---|---|
 | `backend_db` | `backend/**`, `docker-compose.dev.yml`, `go.mod`, `go.work`, `go.work.sum`, `Makefile`, `scripts/**`, `instance/**`, `extensions/**`, `fixtures/**`, `composition/**`, `.github/workflows/ci.yml`, `.github/workflows/_lane-*.yml` (the caller plus every lane it calls, matched by a glob so a new lane is covered the day it lands), `.github/actions/**`, `sonar-project.properties`, `frontend/src/mcp-apps/forbidden.json` | the integration shards and the `integration` fan-in: every lane that opens a database |
 | `backend` | `backend_db` (by YAML anchor, so the two cannot drift) plus every file a Go gate reads without running (listed below) | Go build and gate, the staged `crm-hello` walk, craftsmanship, unit coverage, vuln |
+| `backend_lint` | `backend_db` plus `tools/**`, a module `lint-modules` lints. golangci reads no frontend or docs file | `backend-lint` |
 | `frontend` | `third-party-files.txt`, `frontend/**`, `backend/api/**` (the contract drives FE types), the composition inputs the lane type checks against (`instance/**`, `extensions/**`, `fixtures/**`, `composition/**`, `backend/tools/gen-composition/**`, `Makefile`, `scripts/**`), and the install inputs `pnpm-lock.yaml`, `pnpm-workspace.yaml` and the root `package.json`, plus `.github/actions/install-playwright-chromium/**` (it decides whether the UAT part can run at all, so a change to it cannot be reviewed without the lane it governs), and for the same reason the CI image `.github/ci-image/**` and `.github/actions/ci-image/**` | frontend lane, UAT |
 | `e2e` | `backend/**`, `frontend/**`, `docker-compose.dev.yml`, `instance/**`, `extensions/**`, `fixtures/**`, `composition/**`, `scripts/**`, `Makefile` | full stack live-boot |
 | `images` | `Dockerfile`, `.dockerignore`, `docker-bake.hcl` | `images (build only)` |
@@ -377,18 +378,19 @@ loads that first snapshot forever.
   coverage pass, `live-boot` and `govulncheck`.
 - setup-go still owns the module cache; this action owns the build cache beside it.
 
-Two kinds exist. A build tag and coverage code change the package builds, and only the
+Three kinds exist. A build tag and coverage code change the package builds, and only the
 dependency builds under them are shared:
 
 | Kind | Written by | Read by |
 |---|---|---|
 | `plain` | `cache-warm.yml` job `plain`, its `runner` part | `integration unit coverage`, `live-boot`, `vuln`, and the [CI image](ci-image.md) jobs when they run on the runner |
-| `plain-in-image` | `cache-warm.yml` job `plain`, its `image` part | `deterministic-gates`, `backend-lint` |
+| `plain-in-image` | `cache-warm.yml` job `plain`, its `image` part | `deterministic-gates` |
+| `lint`, `lint-in-image` | `lint-cache.yml`, after each push to `main`: it compiles, and runs no test | `backend-lint` |
 | `integration` | `cache-warm.yml` job `integration` | `integration build`, and every shard for the tools it runs with `go run` |
 
 ### The writer lives in `cache-warm.yml`, on a schedule
 
-`ci.yml` only ever **loads** the cache. The writing lives in
+`ci.yml` only ever **loads** the cache. The writing of `plain` and `integration` lives in
 [`.github/workflows/cache-warm.yml`](../../.github/workflows/cache-warm.yml). It runs on `main` every
 three hours, plus `workflow_dispatch`, and **gates nothing**. GitHub drops some cron runs, so `pace.yml`
 also starts one from a push to `main` once the newest run is three hours old. A red or cancelled run there costs time on
@@ -412,7 +414,7 @@ Three limits shaped that, and each rules out a choice that looks less hard:
 
 There is one writer per kind. Each run of a kind compiles much the same set. So a second writer would add
 nothing but two writers on the same key. And every runner sending up about 550 MB would push out the entry
-they meant to seed. `cache-warm.yml` runs one job per kind, and takes
+they meant to seed. `cache-warm.yml` runs one job per kind it writes, and it and `lint-cache.yml` take
 `concurrency: cancel-in-progress: false`, because a cancelled run saves nothing.
 
 The refresh steps use `!cancelled()`, not `success()`. A red gate still compiled the tree, and that build
@@ -436,10 +438,10 @@ and there it pushes out the `main` entries that every PR loads.
   restore. The save runs under `!cancelled()`, and only if a cache file is newer than the stamp. A
   red lint run still saves, because it read the whole tree. A run that stopped before lint saves
   nothing. The census does not hold this entry back, because golangci replays no test result.
-- `lint-cache.yml` also saves the golangci entry, after each push to `main` or `develop` that changes Go
-  files. A cold pass costs about 39 minutes of CPU, and `internal/compose` imports every module, so an old
-  entry lints close to cold. The job runs `make lint` on the pushed tree from the entry of the push before.
-  Lint keeps the result of each package whose inputs did not change; the job then deletes older entries.
+- `lint-cache.yml` also saves the golangci entry after each push to `main` or `develop` that changes Go files,
+  from the entry of the push before. On `main` it also saves the `lint` build cache, compiled from empty. Lint
+  compiles each package it loads before it reads its own cache. So a build cache hours behind cost minutes,
+  even when every analysis was cached. The job then deletes the older entries.
 - **A new dependency or lint config lints cold.** The key prefix of such a PR matches no `main`
   entry until `cache-warm` runs after the merge.
 - **An old frontend entry is never wrong.** tsc checks the hash of each input against what it stored.
