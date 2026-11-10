@@ -93,6 +93,9 @@ func deleteVisibleLinksOfType(ctx context.Context, tx pgx.Tx, id ids.ActivityID,
 // A moved row leaves its calendar roster. roster_seat says which seat's roster
 // settled the row, and a roster retires only its own rows. A stale seat there
 // lets the organiser's next sync destroy a link a member chose.
+//
+// So the row is the member's from then on: no roster retires it, and none
+// records a later answer on it either. Its last answer stays as it was.
 func repointDisplacedParticipants(ctx context.Context, tx pgx.Tx, id ids.ActivityID, target ids.UUID, displaced []ids.UUID) error {
 	query, args, targetPos, err := participantRelinkQuery(ctx, id, target, displaced)
 	if err != nil {
