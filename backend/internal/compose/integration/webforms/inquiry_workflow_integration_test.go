@@ -6,6 +6,7 @@
 package webforms
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/url"
@@ -16,8 +17,10 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	kevents "github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
@@ -150,4 +153,19 @@ func inquiryVersion(t *testing.T, policy crmcontracts.Automation) map[string]str
 		t.Fatal("the automation response has no edit version")
 	}
 	return map[string]string{"If-Match": strconv.Itoa(*policy.Version)}
+}
+
+func inquirySeatContext(t *testing.T, e *apptest.AppEnv, user ids.UUID) context.Context {
+	t.Helper()
+	workspace, err := e.DB().Workspace(t.Context())
+	if err != nil {
+		t.Fatal(err)
+	}
+	scoped := principal.WithWorkspaceID(t.Context(), workspace.UUID)
+	scoped = principal.WithCorrelationID(scoped, ids.NewV7())
+	live, err := identity.NewService(e.Pool).EffectiveRBAC(scoped, workspace.UUID, user)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return principal.WithActor(scoped, principal.Principal{Type: principal.PrincipalHuman, ID: principal.HumanIDPrefix + user.String(), UserID: user, Permissions: live.Permissions, TeamIDs: live.TeamIDs})
 }

@@ -123,6 +123,14 @@ func (s inquirySettings) previewSelected(ctx context.Context, policyID, owner id
 	if note.Kind != crmcontracts.ActivityKindNote || note.SourceSystem == nil || *note.SourceSystem != provenance.WebFormSource || note.SourceId == nil {
 		return item
 	}
+	ex := automation.Executors{Provider: NewProviderFor(s.db), Authority: identity.NewService(s.db.Pool())}
+	target, err := automation.InquiryTarget(note)
+	if err != nil {
+		return previewItemError(item, err)
+	}
+	if _, err := ex.Provider.Read(ctx, target); err != nil {
+		return previewItemError(item, err)
+	}
 	payload, err := json.Marshal(crmcontracts.PublicEventActivityCaptured{Kind: "note", SourceSystem: note.SourceSystem, WebsiteSubmissionKey: note.SourceId})
 	if err != nil {
 		return previewItemError(item, err)
@@ -131,15 +139,14 @@ func (s inquirySettings) previewSelected(ctx context.Context, policyID, owner id
 	if err != nil {
 		return previewItemError(item, err)
 	}
-	ex := automation.Executors{Provider: NewProviderFor(s.db), Authority: identity.NewService(s.db.Pool())}
 	ev := workflow.Event{WorkspaceID: workspace.UUID, OwnerID: owner, AutomationID: policyID, Params: raw, Payload: payload, Entity: datasource.EntityRef{Type: datasource.EntityActivity, ID: ids.UUID(selected.Id)}}
 	plan, err := automation.NewInquiryService(s.db, newInquiryRouting(s.db)).Preview(ctx, ex, ev)
 	if err != nil {
 		return previewItemError(item, err)
 	}
-	recipient, target := crmcontracts.Id(plan.Recipient), crmcontracts.Id(plan.Target.ID)
+	recipient, wireTarget := crmcontracts.Id(plan.Recipient), crmcontracts.Id(plan.Target.ID)
 	kind := crmcontracts.WebsiteInquiryPreviewItemTargetType(plan.Target.Type)
-	item.Status, item.RecipientId, item.DueAt, item.Reason, item.TargetType, item.TargetId = crmcontracts.WebsiteInquiryPreviewItemStatusEligible, &recipient, &plan.DueAt, &plan.Reason, &kind, &target
+	item.Status, item.RecipientId, item.DueAt, item.Reason, item.TargetType, item.TargetId = crmcontracts.WebsiteInquiryPreviewItemStatusEligible, &recipient, &plan.DueAt, &plan.Reason, &kind, &wireTarget
 	var task struct {
 		System string `json:"source_system"`
 		ID     string `json:"source_id"`
@@ -150,6 +157,8 @@ func (s inquirySettings) previewSelected(ctx context.Context, policyID, owner id
 	_, err = activities.NewStore(s.db).ActivityBySource(ctx, task.System, task.ID, storekit.IncludeArchived)
 	if err == nil {
 		item.Status = crmcontracts.WebsiteInquiryPreviewItemStatusAlreadyHandled
+		reason := "inquiry_task_exists"
+		item.RecipientId, item.DueAt, item.Reason = nil, nil, &reason
 	} else if !errors.Is(err, apperrors.ErrNotFound) {
 		return previewItemError(item, err)
 	}

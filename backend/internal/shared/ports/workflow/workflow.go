@@ -12,6 +12,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -69,6 +70,8 @@ type Spec struct {
 	// answers no. A caller re-driving reads this; a false answer means the run
 	// needs a human rather than a button.
 	RedrivableWithoutDuplicating bool
+	// IgnoreUnmatchedEvents leaves a source occurrence available for a later qualifying event.
+	IgnoreUnmatchedEvents bool
 }
 
 // Trigger binds to the event bus or a schedule: EventType for bus events,
@@ -83,6 +86,12 @@ type Trigger struct {
 	EventType string
 	Schedule  string
 	Filter    map[string]any // cheap envelope pre-filter before Match
+	// AdditionalEventTypes reuse this handler's planner and occurrence identity.
+	AdditionalEventTypes []string
+}
+
+func (t Trigger) MatchesEventType(eventType string) bool {
+	return eventType != "" && (eventType == t.EventType || slices.Contains(t.AdditionalEventTypes, eventType))
 }
 
 // Event is the bus envelope slice a handler sees (events.md §2), plus

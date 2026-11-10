@@ -19,7 +19,6 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/automation"
 	"github.com/margince/margince/backend/internal/modules/contacts"
-	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
@@ -34,10 +33,6 @@ func TestInquiryAssignmentAndItsDurableChoiceCommitTogether(t *testing.T) {
 		t.Fatalf("submission = %d %s", answer.Status, answer.Body)
 	}
 	ctx := t.Context()
-	workspace, err := e.DB().Workspace(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
 	var colleague, lead, note ids.UUID
 	var key string
 	if err := e.Owner.QueryRow(ctx, `SELECT id FROM app_user WHERE status='active' AND NOT is_agent AND archived_at IS NULL ORDER BY created_at LIMIT 1`).Scan(&colleague); err != nil {
@@ -62,13 +57,8 @@ func TestInquiryAssignmentAndItsDurableChoiceCommitTogether(t *testing.T) {
 	if event.Key == nil || *event.Key != key {
 		t.Fatalf("accepted event has no canonical submission identity: %s", payload)
 	}
-	scoped := principal.WithWorkspaceID(context.Background(), workspace.UUID)
-	scoped = principal.WithCorrelationID(scoped, ids.NewV7())
-	live, err := identity.NewService(e.Pool).EffectiveRBAC(scoped, workspace.UUID, colleague)
-	if err != nil {
-		t.Fatal(err)
-	}
-	admit := principal.WithActor(scoped, principal.Principal{Type: principal.PrincipalHuman, ID: principal.HumanIDPrefix + colleague.String(), UserID: colleague, Permissions: live.Permissions, TeamIDs: live.TeamIDs})
+	scoped := inquirySeatContext(t, e, colleague)
+	admit := scoped
 	policy, err := automation.NewAutomationStore(e.DB()).Create(admit, automation.CreateAutomationInput{Key: "route_lead", Name: "Inquiry assignment test", Params: map[string]any{}})
 	if err != nil {
 		t.Fatal(err)

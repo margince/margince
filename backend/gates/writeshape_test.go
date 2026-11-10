@@ -189,8 +189,8 @@ var auditOnlyWrites = gatekit.Waive(map[string]string{
 
 	"internal/modules/consent:stageSubmission":                 "a data subject proposing a correction to their own record through the confirm link. The closed catalog defines no confirm_submission.* type, and the nearest verbs would both be lies: contact.updated would announce a change to a record nothing changed, and approval.requested belongs to the staging engine this deliberately does not use. Nothing downstream can act on it either — only a human accepting the proposal moves anything, and that acceptance emits its own event. The audit row answers \"what did this contact send us, and when\"",
 	"internal/modules/automation:Create":                       "automation config is ratified audit-only \u2014 the closed catalog (events.md \u00a75) defines no automation.* type; the runs it produces are separately recorded in workflow_run",
-	"internal/modules/automation:Update":                       "automation config is ratified audit-only \u2014 the closed catalog (events.md \u00a75) defines no automation.* type; the runs it produces are separately recorded in workflow_run",
-	"internal/modules/automation:Archive":                      "automation config is ratified audit-only \u2014 the closed catalog (events.md \u00a75) defines no automation.* type; the runs it produces are separately recorded in workflow_run",
+	"internal/modules/automation:update":                       "automation config is ratified audit-only \u2014 the closed catalog (events.md \u00a75) defines no automation.* type; the runs it produces are separately recorded in workflow_run",
+	"internal/modules/automation:archive":                      "automation config is ratified audit-only \u2014 the closed catalog (events.md \u00a75) defines no automation.* type; the runs it produces are separately recorded in workflow_run",
 	"internal/modules/automation:pauseRule":                    "a list rule pausing itself is the same automation config change Update makes when a human pauses it, audit-only on the same ground: the closed catalog defines no automation.* type. The owner is told through a notice written in the pause's own transaction, and the list's own change is already announced by list.archived or list.evaluated",
 	"internal/modules/webhooks:CreateSubscription":             "webhook-subscription config is ratified audit-only \u2014 the closed catalog (events.md \u00a75) defines no webhook_subscription.* type; the deliveries it produces are separately recorded in webhook_delivery",
 	"internal/modules/webhooks:UpdateSubscription":             "webhook-subscription config is ratified audit-only \u2014 the closed catalog (events.md \u00a75) defines no webhook_subscription.* type; the deliveries it produces are separately recorded in webhook_delivery",
@@ -198,9 +198,9 @@ var auditOnlyWrites = gatekit.Waive(map[string]string{
 	"internal/modules/webhooks:RotateSecret":                   "webhook-subscription config is ratified audit-only \u2014 the closed catalog (events.md \u00a75) defines no webhook_subscription.* type; the rotation is attributable via its audit row",
 	"internal/modules/webhooks:ArchiveSubscription":            "webhook-subscription config is ratified audit-only \u2014 the closed catalog (events.md \u00a75) defines no webhook_subscription.* type; archive stops delivery and is attributable via its audit row",
 	"internal/modules/webforms:CreateForm":                     "website-form config is ratified audit-only: the closed catalog (events.md \u00a75) defines no web_form.* type; the leads a form lands emit their own events through the contacts and activities stores",
-	"internal/modules/webforms:UpdateForm":                     "website-form config is ratified audit-only: the closed catalog (events.md \u00a75) defines no web_form.* type; the leads a form lands emit their own events through the contacts and activities stores",
+	"internal/modules/webforms:updateForm":                     "website-form config is ratified audit-only: the closed catalog (events.md \u00a75) defines no web_form.* type; the leads a form lands emit their own events through the contacts and activities stores",
 	"internal/modules/webforms:RotateSecret":                   "website-form config is ratified audit-only: the closed catalog (events.md \u00a75) defines no web_form.* type; the leads a form lands emit their own events through the contacts and activities stores; the rotation is attributable via its audit row",
-	"internal/modules/webforms:ArchiveForm":                    "website-form config is ratified audit-only: the closed catalog (events.md \u00a75) defines no web_form.* type; the leads a form lands emit their own events through the contacts and activities stores; archive stops intake and is attributable via its audit row",
+	"internal/modules/webforms:archiveForm":                    "website-form config is ratified audit-only: the closed catalog (events.md \u00a75) defines no web_form.* type; the leads a form lands emit their own events through the contacts and activities stores; archive stops intake and is attributable via its audit row",
 	"internal/modules/webhooks:requireReplay":                  "a human-initiated delivery replay is ratified audit-only \u2014 it re-attempts an existing webhook_delivery; the closed catalog (events.md \u00a75) defines no webhook.* type",
 	"internal/modules/capture:Set":                             "one seat's decision about a sender — capture config on the same ruling as the exclusion list below (EVT-NOEVT-3): the closed catalog defines no verb for a list entry, and the closed-verb law forbids inventing one build-side. Nothing downstream is left stale either, because the decision is read at the point it matters — the verdict engine consults it inside the transaction that judges the sender",
 	"internal/modules/capture:Add":                             "the workspace consumer-mail, own-domain and exclusion lists are capture config, ratified audit-only on the same ruling as the capture-settings write (EVT-NOEVT-3): the closed catalog (events.md \u00a75) defines no verb for a list entry, and the closed-verb law forbids inventing one build-side",
@@ -368,7 +368,7 @@ func TestEveryAuditedMutationEmitsAnEvent(t *testing.T) {
 							switch node.Sel.Name {
 							case "Audit", "AuditWithEvidence", "AuditWithTrail", "AuditEvent", "AuditEventWithEvidence":
 								audits = true
-							case "Emit", "EmitEvent", "EmitEventForEntity", "EmitPipeline", "EmitPipelinePayload":
+							case "Emit", "EmitEvent", "EmitEventEnvelope", "EmitEventForEntity", "EmitPipeline", "EmitPipelinePayload":
 								emits = true
 							}
 						}
@@ -426,7 +426,7 @@ func emissionBearingFunctions(fset *token.FileSet, dir string) (map[string]bool,
 				case *ast.SelectorExpr:
 					if pkg, ok := node.X.(*ast.Ident); ok && pkg.Name == "storekit" {
 						switch node.Sel.Name {
-						case "Emit", "EmitEvent", "EmitEventForEntity", "EmitPipeline", "EmitPipelinePayload":
+						case "Emit", "EmitEvent", "EmitEventEnvelope", "EmitEventForEntity", "EmitPipeline", "EmitPipelinePayload":
 							emits[fn.Name.Name] = true
 						}
 					}

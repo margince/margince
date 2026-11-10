@@ -81,14 +81,9 @@ func (e *WorkflowEngine) runUnfenced(ctx context.Context, h workflow.Handler, ev
 		return e.recordFailedBeforeApply(ctx, h, ev, "matching the trigger: "+sanitizedReason(err), err)
 	}
 	if !matched {
-		if isClockTrigger(h) {
-			// A clock trigger's key is the anchor that makes its condition
-			// true, so the key already exists while the condition is still
-			// false. Recording a non-match here would claim that anchor key
-			// (ON CONFLICT DO NOTHING), and the real firing when the anchor
-			// finally matches would find the row taken and silently never run.
-			// A coarse-pre-filter reject is pre-filter noise, not a
-			// user-meaningful skip — do not persist it.
+		if isClockTrigger(h) || h.Spec().IgnoreUnmatchedEvents {
+			// A later event or scan can qualify for the same source key.
+			// Keeping the key free lets that later firing claim the occurrence.
 			return nil
 		}
 		return e.recordSkip(ctx, h, ev)

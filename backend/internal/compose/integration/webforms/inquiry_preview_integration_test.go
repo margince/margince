@@ -63,10 +63,15 @@ func TestInquiryPreviewWritesNothingAndAgreesWithLiveHandling(t *testing.T) {
 	if assignee != ids.UUID(*preview.Items[0].RecipientId) || !due.Equal(*preview.Items[0].DueAt) {
 		t.Fatalf("live task differs from preview: recipient %s due %s; %+v", assignee, due, preview.Items[0])
 	}
+	preview = crmcontracts.WebsiteInquiryHandlingPreview{}
 	if status := e.Call(t, "POST", path, body, nil, &preview); status != http.StatusOK || preview.Items[0].Status != crmcontracts.WebsiteInquiryPreviewItemStatusAlreadyHandled {
 		t.Fatalf("handled source preview: %d %+v", status, preview)
 	}
+	if preview.Items[0].RecipientId != nil || preview.Items[0].DueAt != nil {
+		t.Fatalf("existing task reported an unapplied proposed assignment: %+v", preview.Items[0])
+	}
 	body["selected"] = []integration.AnyMap{{"id": event.Entity.ID, "version": version + 1}, {"id": ids.NewV7(), "version": 1}}
+	preview = crmcontracts.WebsiteInquiryHandlingPreview{}
 	if status := e.Call(t, "POST", path, body, nil, &preview); status != http.StatusOK || len(preview.Items) != 2 {
 		t.Fatalf("stale/missing source preview: %d %+v", status, preview)
 	}

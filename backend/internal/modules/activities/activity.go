@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
+	"github.com/margince/margince/backend/internal/shared/ports/workflow"
 )
 
 // fieldKind names the activity kind in the write shape's audit and outbox
@@ -30,11 +31,19 @@ const (
 )
 
 // Website consumers need the accepted identity, never a copy of the submitted text.
-func activityCapturedPayload(ctx context.Context, in LogActivityInput) crmcontracts.PublicEventActivityCaptured {
+func activityCapturedPayload(ctx context.Context, in LogActivityInput) (crmcontracts.PublicEventActivityCaptured, error) {
 	p := crmcontracts.PublicEventActivityCaptured{Kind: in.Kind}
 	if in.Kind == string(crmcontracts.ActivityKindNote) && in.SourceSystem != nil && *in.SourceSystem == provenance.WebFormSource && in.SourceID != nil {
 		p.SourceSystem = in.SourceSystem
 		p.WebsiteSubmissionKey = in.SourceID
+		owner, err := workflow.AcceptedInquiryOwner(in.Raw)
+		if err != nil {
+			return p, err
+		}
+		if owner != nil {
+			id := crmcontracts.Id(*owner)
+			p.HandlingAutomationId = &id
+		}
 	}
 	// An import's activities are history, so consumers that react to new work
 	// read the mark and skip them.
@@ -44,7 +53,7 @@ func activityCapturedPayload(ctx context.Context, in LogActivityInput) crmcontra
 	if in.ChannelProvider != "" {
 		p.ChannelProvider = &in.ChannelProvider
 	}
-	return p
+	return p, nil
 }
 
 type LogActivityInput struct {

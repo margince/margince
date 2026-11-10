@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
@@ -19,7 +20,13 @@ import (
 type websiteInquiry struct{ ex Executors }
 
 func (websiteInquiry) Spec() workflow.Spec {
-	return workflow.Spec{Name: inquiryRecipeName, Trigger: workflow.Trigger{EventType: eventActivityCaptured}, Tier: mcp.TierAutoExecute, RedrivableWithoutDuplicating: true}
+	return workflow.Spec{
+		Name:                         inquiryRecipeName,
+		Trigger:                      workflow.Trigger{EventType: eventActivityCaptured, AdditionalEventTypes: []string{eventActivityUpdated}},
+		Tier:                         mcp.TierAutoExecute,
+		RedrivableWithoutDuplicating: true,
+		IgnoreUnmatchedEvents:        true,
+	}
 }
 
 func (websiteInquiry) Match(_ context.Context, ev workflow.Event) (bool, error) {
@@ -31,7 +38,7 @@ func (websiteInquiry) Match(_ context.Context, ev workflow.Event) (bool, error) 
 	if err := json.Unmarshal(ev.Payload, &payload); err != nil {
 		return false, err
 	}
-	if payload.SourceSystem == nil || *payload.SourceSystem != provenance.WebFormSource || payload.WebsiteSubmissionKey == nil {
+	if payload.SourceSystem == nil || *payload.SourceSystem != provenance.WebFormSource || payload.WebsiteSubmissionKey == nil || payload.HandlingAutomationId == nil || ids.UUID(*payload.HandlingAutomationId) != ev.AutomationID {
 		return false, nil
 	}
 	form, _, ok := strings.Cut(*payload.WebsiteSubmissionKey, ":")
@@ -86,7 +93,7 @@ func (w websiteInquiry) Apply(ctx context.Context, ev workflow.Event, effect wor
 
 func (websiteInquiry) IdempotencyKey(ev workflow.Event) string {
 	var payload crmcontracts.PublicEventActivityCaptured
-	if err := json.Unmarshal(ev.Payload, &payload); err != nil || payload.WebsiteSubmissionKey == nil {
+	if err := json.Unmarshal(ev.Payload, &payload); err != nil || payload.WebsiteSubmissionKey == nil || payload.HandlingAutomationId == nil || ids.UUID(*payload.HandlingAutomationId) != ev.AutomationID {
 		return inquiryRecipeName + ":" + ev.ID.String()
 	}
 	return inquiryRecipeName + ":" + *payload.WebsiteSubmissionKey

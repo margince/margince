@@ -33,7 +33,10 @@ import (
 
 // Ordinary direct logs carry no capture identity; website notes are checked separately.
 func TestActivityCapturedPayload_DirectLog(t *testing.T) {
-	payload := activityCapturedPayload(context.Background(), LogActivityInput{Kind: "meeting"})
+	payload, payloadErr := activityCapturedPayload(context.Background(), LogActivityInput{Kind: "meeting"})
+	if payloadErr != nil {
+		t.Fatal(payloadErr)
+	}
 
 	if !reflect.DeepEqual(payload.EventType(), "activity.captured") {
 		t.Errorf("got %v, want %v", payload.EventType(), "activity.captured")
@@ -276,12 +279,19 @@ func TestActivityUpdatedChangedFields_MeetingStatusUntouched(t *testing.T) {
 // work can tell brought-in history from it. A live write carries neither member.
 func TestAnActivityCapturedPayloadNamesTheImportRunThatWroteIt(t *testing.T) {
 	run := ids.NewV7()
-	marked := activityCapturedPayload(storekit.WithImportRun(context.Background(), run), LogActivityInput{Kind: "note"})
+	marked, payloadErr := activityCapturedPayload(storekit.WithImportRun(context.Background(), run), LogActivityInput{Kind: "note"})
+	if payloadErr != nil {
+		t.Fatal(payloadErr)
+	}
 	if marked.Imported == nil || !*marked.Imported ||
 		marked.ImportRunId == nil || ids.UUID(*marked.ImportRunId) != run {
 		t.Fatalf("payload = %+v, want imported with the run's id", marked)
 	}
-	raw, err := json.Marshal(activityCapturedPayload(context.Background(), LogActivityInput{Kind: "note"}))
+	ordinary, payloadErr := activityCapturedPayload(context.Background(), LogActivityInput{Kind: "note"})
+	if payloadErr != nil {
+		t.Fatal(payloadErr)
+	}
+	raw, err := json.Marshal(ordinary)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -304,7 +314,10 @@ func TestOnlyWebsiteNotesCarryAnAcceptedSubmissionKey(t *testing.T) {
 		{"missing source", "note", nil, false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			payload := activityCapturedPayload(context.Background(), LogActivityInput{Kind: tc.kind, SourceSystem: tc.source, SourceID: &key, Body: &body})
+			payload, payloadErr := activityCapturedPayload(context.Background(), LogActivityInput{Kind: tc.kind, SourceSystem: tc.source, SourceID: &key, Body: &body})
+			if payloadErr != nil {
+				t.Fatal(payloadErr)
+			}
 			raw, err := json.Marshal(payload)
 			if err != nil {
 				t.Fatal(err)

@@ -55,5 +55,9 @@ func recordInitialActivity(ctx context.Context, tx pgx.Tx, id ids.ActivityID, in
 	if err != nil {
 		return err
 	}
-	return storekit.EmitEvent(ctx, tx, auditID, id.UUID, activityCapturedPayload(ctx, in))
+	payload, err := activityCapturedPayload(ctx, in)
+	if err != nil {
+		return err
+	}
+	return storekit.EmitEvent(ctx, tx, auditID, id.UUID, payload)
 }

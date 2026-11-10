@@ -2098,6 +2098,11 @@ components:
       required:
         - kind
       properties:
+        handling_automation_id:
+          type: string
+          format: uuid
+          description: Reviewed handling policy on the trusted accepted website note; absent on other activity events.
+
         kind:
           type: string
           description: >-
@@ -2285,6 +2290,11 @@ components:
         The bounded delta of activity.updated. Each field is carried only when this update touched
         it. The key set is fixed, so it is typed rather than an open map.
       properties:
+        handling_automation_id:
+          type: string
+          format: uuid
+          description: The reviewed inquiry policy attached to an accepted website note by its internal handler.
+
         source_activity_id:
           type: string
           format: uuid
@@ -2452,6 +2462,20 @@ components:
       required:
         - changed_fields
       properties:
+        handling_automation_id:
+          type: string
+          format: uuid
+          description: Reviewed handling policy on the trusted accepted website note; absent on other activity events.
+
+        kind:
+          type: string
+          description: Present for a trusted accepted website note whose handling was explicitly reviewed.
+        source_system:
+          type: string
+          description: Present only when a trusted website note acquires its reviewed handling policy.
+        website_submission_key:
+          type: string
+          description: Canonical accepted website key; consumers verify the actual stored note and policy.
         changed_fields:
           $ref: '#/components/schemas/PublicEventActivityChangedFields'
         imported:

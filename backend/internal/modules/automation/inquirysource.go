@@ -67,19 +67,9 @@ func readAcceptedInquiry(ctx context.Context, ex Executors, ev workflow.Event, p
 	if (owner == nil && !allowLegacy) || (owner != nil && *owner != ev.AutomationID) {
 		return inquiryReceipt{}, workflow.Declined("this handling policy does not own the accepted inquiry")
 	}
-	var target datasource.EntityRef
-	for _, link := range *activity.Links {
-		kind := datasource.EntityType(link.EntityType)
-		if kind != datasource.EntityLead && kind != datasource.EntityContact {
-			continue
-		}
-		if target.ID != ids.Nil {
-			return inquiryReceipt{}, errors.New("automation: inquiry has more than one routing target")
-		}
-		target = datasource.EntityRef{Type: kind, ID: ids.UUID(link.EntityId)}
-	}
-	if target.ID == ids.Nil {
-		return inquiryReceipt{}, workflow.Declined("the accepted inquiry has no available lead or contact")
+	target, err := InquiryTarget(activity)
+	if err != nil {
+		return inquiryReceipt{}, err
 	}
 	if _, err := ex.Provider.Read(admit, target); err != nil {
 		if errors.Is(err, apperrors.ErrNotFound) {
@@ -88,4 +78,25 @@ func readAcceptedInquiry(ctx context.Context, ex Executors, ev workflow.Event, p
 		return inquiryReceipt{}, err
 	}
 	return inquiryReceipt{Activity: activity, Target: target, Key: *activity.SourceId}, nil
+}
+
+func InquiryTarget(activity crmcontracts.Activity) (datasource.EntityRef, error) {
+	var target datasource.EntityRef
+	if activity.Links == nil {
+		return target, workflow.Declined("the accepted inquiry has no available lead or contact")
+	}
+	for _, link := range *activity.Links {
+		kind := datasource.EntityType(link.EntityType)
+		if kind != datasource.EntityLead && kind != datasource.EntityContact {
+			continue
+		}
+		if target.ID != ids.Nil {
+			return target, errors.New("automation: inquiry has more than one routing target")
+		}
+		target = datasource.EntityRef{Type: kind, ID: ids.UUID(link.EntityId)}
+	}
+	if target.ID == ids.Nil {
+		return target, workflow.Declined("the accepted inquiry has no available lead or contact")
+	}
+	return target, nil
 }

@@ -85,11 +85,11 @@ func (e *WorkflowEngine) RegisterWorkflow(h workflow.Handler) {
 		//craft:ignore panic-in-domain composition-time registration assertion — fires only while cmd wiring runs, never on a request path
 		panic("crmagents: registering a workflow with no name")
 	}
-	if spec.Trigger.EventType == "" && spec.Trigger.Schedule == "" {
+	if spec.Trigger.EventType == "" && (spec.Trigger.Schedule == "" || len(spec.Trigger.AdditionalEventTypes) > 0) {
 		//craft:ignore panic-in-domain composition-time registration assertion — fires only while cmd wiring runs, never on a request path
 		panic(fmt.Sprintf("crmagents: workflow %s declares no trigger", spec.Name))
 	}
-	if spec.Trigger.EventType != "" && spec.Trigger.Schedule != "" {
+	if spec.Trigger.Schedule != "" && (spec.Trigger.EventType != "" || len(spec.Trigger.AdditionalEventTypes) > 0) {
 		// isClockTrigger (engine_run.go) and runOne's dispatch both
 		// assume EventType/Schedule are mutually exclusive: a handler
 		// setting both would have its non-matches silently swallowed as a
@@ -117,7 +117,7 @@ func (e *WorkflowEngine) RegisterWorkflow(h workflow.Handler) {
 // run row still claims (handler, key), so redelivery stays exactly-once.
 func (e *WorkflowEngine) RegisterSystemWorkflow(h workflow.Handler) {
 	spec := h.Spec()
-	if spec.Name == "" || spec.Trigger.EventType == "" {
+	if spec.Name == "" || spec.Trigger.EventType == "" || spec.Trigger.Schedule != "" {
 		//craft:ignore panic-in-domain composition-time registration assertion — fires only while cmd wiring runs, never on a request path
 		panic("crmagents: system workflow needs a name and an event trigger")
 	}
@@ -168,7 +168,7 @@ func (e *WorkflowEngine) HandleEvent(ctx context.Context, env kevents.Envelope) 
 
 	var firstErr error
 	for _, h := range system {
-		if h.Spec().Trigger.EventType != env.Type {
+		if !h.Spec().Trigger.MatchesEventType(env.Type) {
 			continue
 		}
 		if err := e.runOne(runCtx, h, ev); err != nil && firstErr == nil {
@@ -181,7 +181,7 @@ func (e *WorkflowEngine) HandleEvent(ctx context.Context, env kevents.Envelope) 
 		}
 	}
 	for _, h := range handlers {
-		if h.Spec().Trigger.EventType != env.Type {
+		if !h.Spec().Trigger.MatchesEventType(env.Type) {
 			continue
 		}
 		for _, inst := range instances[h.Spec().Name] {
