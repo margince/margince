@@ -38,6 +38,14 @@ name: _lane-frontend
 
 on:
   workflow_call:
+    inputs:
+      # The caller's `ci-image` job output: a digest-pinned image, or empty when
+      # the run cannot pull one and every job sets up on the runner. A caller
+      # that passes nothing, as main-health.yml does, runs on the runner.
+      ci-image:
+        type: string
+        required: false
+        default: ''
 
 permissions:
   contents: read
@@ -54,6 +62,7 @@ jobs:
     name: fe-quality (ds gates + drift + biome + composed tsc)
     timeout-minutes: 20
     runs-on: ubuntu-latest
+    container: ${{ inputs.ci-image }}
     permissions:
       contents: read
     defaults:
@@ -65,10 +74,13 @@ jobs:
           persist-credentials: false
       # No version input: the pin is package.json's "packageManager", which pnpm
       # and corepack read too. A second one here is refused as a mismatch.
+      # In the image corepack holds that pnpm and Node is installed, so only
+      # the pnpm store is restored.
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        if: inputs.ci-image == ''
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: 24
+          node-version: ${{ inputs.ci-image == '' && '24' || '' }}
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
       # Go, in a FRONTEND job (ADR-0120). The composed SPA lane needs
@@ -81,7 +93,7 @@ jobs:
       # is why the unit and bundle jobs below carry no Go setup.
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          go-version-file: backend/go.mod
+          go-version-file: ${{ inputs.ci-image == '' && 'backend/go.mod' || '' }}
           cache-dependency-path: backend/go.sum
       # Restore only: an entry a PR saved would serve that PR alone, so
       # cache-warm.yml writes the one on main that every PR reads.
@@ -139,6 +151,7 @@ jobs:
     name: fe-unit (vitest + coverage ${{ matrix.shard }}/4)
     timeout-minutes: 20
     runs-on: ubuntu-latest
+    container: ${{ inputs.ci-image }}
     permissions:
       contents: read
     # Every slice reports. fail-fast would cancel the siblings of the first red
@@ -157,10 +170,13 @@ jobs:
           persist-credentials: false
       # No version input: the pin is package.json's "packageManager", which pnpm
       # and corepack read too. A second one here is refused as a mismatch.
+      # In the image corepack holds that pnpm and Node is installed, so only
+      # the pnpm store is restored.
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        if: inputs.ci-image == ''
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: 24
+          node-version: ${{ inputs.ci-image == '' && '24' || '' }}
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
       # FE_COVERAGE=1 instruments the ONE vitest run this slice already performs,
@@ -188,6 +204,7 @@ jobs:
     name: fe-bundle (vite build + storybook)
     timeout-minutes: 20
     runs-on: ubuntu-latest
+    container: ${{ inputs.ci-image }}
     permissions:
       contents: read
     defaults:
@@ -199,10 +216,13 @@ jobs:
           persist-credentials: false
       # No version input: the pin is package.json's "packageManager", which pnpm
       # and corepack read too. A second one here is refused as a mismatch.
+      # In the image corepack holds that pnpm and Node is installed, so only
+      # the pnpm store is restored.
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        if: inputs.ci-image == ''
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: 24
+          node-version: ${{ inputs.ci-image == '' && '24' || '' }}
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
       # Restore only, for the reason given in fe-quality.
@@ -245,6 +265,7 @@ jobs:
     needs: [fe-quality, fe-unit, fe-bundle]
     if: always()
     runs-on: ubuntu-latest
+    container: ${{ inputs.ci-image }}
     permissions:
       contents: read
     defaults:
@@ -282,10 +303,13 @@ jobs:
           persist-credentials: false
       # No version input: the pin is package.json's "packageManager", which pnpm
       # and corepack read too. A second one here is refused as a mismatch.
+      # In the image corepack holds that pnpm and Node is installed, so only
+      # the pnpm store is restored.
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        if: inputs.ci-image == ''
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: 24
+          node-version: ${{ inputs.ci-image == '' && '24' || '' }}
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
       # By PATTERN, so the shard count lives in the matrix above and nowhere

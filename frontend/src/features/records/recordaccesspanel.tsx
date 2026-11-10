@@ -30,6 +30,7 @@ import { RoleBadge } from "../../design-system/rbac";
 import { formatDate, formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { labelFor, UNKNOWN_VALUE_LABEL } from "../../lib/labelfor";
 import { throwProblem } from "../../lib/problem";
 import { useViewerZone } from "../../lib/viewerzone";
 import "./recordaccesspanel.css";
@@ -106,6 +107,8 @@ function reasonPhrase(reason: Reason, { t, date }: ReasonWords): string {
       return t("whoCanSee.reason.allRecords");
     case "write_share":
       return t("whoCanSee.reason.writeShare") + until;
+    default:
+      return t(UNKNOWN_VALUE_LABEL);
   }
 }
 
@@ -201,7 +204,10 @@ function AccessBody({
           return (
             rows.length > 0 && (
               <div key={group} data-testid={`who-can-see-${group}`}>
-                <PanelGroupHead title={t(GROUP_TITLE[group])} level="h3" />
+                <PanelGroupHead
+                  title={t(labelFor(GROUP_TITLE, group))}
+                  level="h3"
+                />
                 {rows.map((m) => (
                   <MemberRow key={m.user_id} member={m} words={words} />
                 ))}

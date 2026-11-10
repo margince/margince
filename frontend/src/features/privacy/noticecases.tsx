@@ -36,6 +36,7 @@ import { formatDate } from "../../format/format";
 import { useNow } from "../../format/now";
 import { type Translator, useLocale, useT } from "../../i18n";
 import { useCan, useCanWrite } from "../../lib/capability";
+import { labelFor } from "../../lib/labelfor";
 import { useMemberName } from "../../lib/membernames";
 import {
   acquisitionCaption,
@@ -319,7 +320,7 @@ function NoticeTable({
           </span>
           {!isDefaultNoticeState(row.state) && (
             <Badge tone={noticeStateTone(row.state)}>
-              {t(NOTICE_STATE_LABEL[row.state])}
+              {t(labelFor(NOTICE_STATE_LABEL, row.state))}
             </Badge>
           )}
           {row.resolution_note && (

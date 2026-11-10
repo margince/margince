@@ -99,7 +99,11 @@ func readContactNotice(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, 
 		&pkg.Emails, &pkg.Phones, &pkg.ChannelIdentities, &pkg.LinkedInConnections, &pkg.Relationships,
 		&pkg.Deals, &pkg.Activities, &pkg.RawCapture, &pkg.Consent, &pkg.CommunicationBases,
 	}
-	sections, err := sarSections(ctx, &pkg, contactID, emails, leads, identities, nil)
+	external, err := subjectExternalOriginalsTx(ctx, tx, contactID, emails)
+	if err != nil {
+		return nil, err
+	}
+	sections, err := sarSections(ctx, &pkg, contactID, emails, leads, identities, nil, external)
 	if err != nil {
 		return nil, err
 	}

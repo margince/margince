@@ -31,6 +31,7 @@ import { Select } from "../../design-system/select";
 import { useToast } from "../../design-system/toast";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { labelFor } from "../../lib/labelfor";
 import { problemCodeOf } from "../../lib/problem";
 import { useMe } from "../../lib/session";
 import {
@@ -89,7 +90,10 @@ export function OwnerPicker({
   const rosterHint = useRosterHint(roster, useRosterPartial("user", true));
   // Naming nobody follows the scope dial, so the empty choice says which
   // population that is; "My Worklist" over the whole team misstates it.
-  const options = [{ value: "", label: t(NOBODY_NAMED[scope]) }, ...contacts];
+  const options = [
+    { value: "", label: t(labelFor(NOBODY_NAMED, scope)) },
+    ...contacts,
+  ];
   return (
     <Field
       label={t("worklist.owner.visibleLabel")}
@@ -173,26 +177,27 @@ export function ReassignForm({
         variant="primary"
         disabled={assignee === "" || reassign.isPending}
         onClick={() => {
-          reassign.mutate(
-            {
+          // mutateAsync, as Take it does: the refetch can drop the row, and
+          // its form with it, before per-call callbacks would run.
+          reassign
+            .mutateAsync({
               activityId: item.id,
               version: item.version,
               assigneeId: assignee,
-            },
-            {
-              onSuccess: () => {
+            })
+            .then(
+              () => {
                 onClose();
                 toast.show(t("worklist.manager.reassigned"));
               },
               // No completion mark on a refusal: the green dot is the region's
               // way of saying "that worked", and a failure wearing it tells the
               // reader the opposite of what the sentence beside it says.
-              onError: () =>
+              () =>
                 toast.show(t("worklist.manager.reassignFailed"), {
                   tone: "danger",
                 }),
-            },
-          );
+            );
         }}
       >
         {t("worklist.manager.reassignConfirm")}

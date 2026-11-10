@@ -1,6 +1,7 @@
 import type { components } from "../../api/schema";
 import type { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { valueFor } from "../../lib/labelfor";
 
 type ConsentVerdict =
   components["schemas"]["ContactConsentGuardEntry"]["verdict"];
@@ -26,7 +27,10 @@ export function consentWord(
 ): string {
   // No entry, and a verdict off a newer server, land on the same word: in both
   // this build has no recorded answer to show.
-  return t((verdict && VERDICT_WORD[verdict]) ?? "contact.consent.unknownWord");
+  return t(
+    (verdict && valueFor(VERDICT_WORD, verdict, undefined)) ??
+      "contact.consent.unknownWord",
+  );
 }
 
 type GuardEntry = components["schemas"]["ContactConsentGuardEntry"];

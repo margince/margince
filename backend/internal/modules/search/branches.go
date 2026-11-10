@@ -184,30 +184,69 @@ func mayRead(ctx context.Context, entity string) bool {
 	return auth.Allows(ctx, entity, principal.ActionRead)
 }
 
-// projectSnippet is `key · company`, with the company named only to a caller
-// who may read that company: naming the account behind a project is a
-// read of the company row, and a searcher with no company grant,
-// or one outside the row's scope — a capture-private company another rep
-// owns — gets the key alone. coalesce keeps the key when the scoped subselect
-// finds no row; concat_ws skips a NULL key rather than printing the dot.
-func projectSnippet(ctx context.Context, fallback string, arg func(any) int) (string, error) {
-	// A denied company grant is the key-only excerpt, not a refusal:
-	// the hit is the project's, which the caller may read.
+// companyReadScope gates naming a company in another record's excerpt. Naming
+// the account behind a hit is a read of the company row.
+//
+// may is false for a caller with no company grant. That is not a refusal: the
+// hit is the record's, and its excerpt falls back to the record's own fields.
+// Otherwise scope is the caller's row scope on alias o, led by `AND`. A company
+// outside it, such as a capture-private one another rep owns, finds no row.
+func companyReadScope(ctx context.Context, arg func(any) int) (scope string, may bool, err error) {
 	if denied := auth.Require(ctx, "company", principal.ActionRead); denied != nil {
 		if !errors.Is(denied, apperrors.ErrPermissionDenied) {
-			return "", denied
+			return "", false, denied
 		}
-		return fallback, nil
+		return "", false, nil
 	}
-	scope, err := auth.ScopeClauseFor(ctx, "company", "o", arg)
+	scope, err = auth.ScopeClauseFor(ctx, "company", "o", arg)
 	if err != nil {
-		return "", err
+		return "", false, err
 	}
 	if scope != "" {
 		scope = " AND " + scope
 	}
+	return scope, true, nil
+}
+
+// projectSnippet is `key · company`, the company named through
+// companyReadScope. A caller who may not read it gets the key alone. coalesce
+// keeps the key when the scoped subselect finds no row; concat_ws skips a NULL
+// key rather than printing the dot.
+func projectSnippet(ctx context.Context, fallback string, arg func(any) int) (string, error) {
+	scope, may, err := companyReadScope(ctx, arg)
+	if err != nil {
+		return "", err
+	}
+	if !may {
+		return fallback, nil
+	}
 	return fmt.Sprintf(`coalesce((SELECT concat_ws(' · ', t.key, o.display_name) FROM company o
 			WHERE o.id = t.company_id AND o.archived_at IS NULL%s), %s)`, scope, fallback), nil
+}
+
+// leadSnippet is the lead's company, named from the linked company where there
+// is one.
+//
+// A rename there moves the lead's own typed spelling out of date, and the hit
+// then shows a name nobody uses any more.
+//
+// The company is named through companyReadScope. A caller without the grant,
+// or outside the row's scope, gets the typed name: the lead's own field.
+func leadSnippet(ctx context.Context, fallback string, arg func(any) int) (string, error) {
+	scope, may, err := companyReadScope(ctx, arg)
+	if err != nil {
+		return "", err
+	}
+	if !may {
+		return fallback, nil
+	}
+	linked := fmt.Sprintf(`(SELECT o.display_name FROM company o
+			WHERE o.id = t.company_id AND o.archived_at IS NULL%s)`, scope)
+	// A lead with a full name is excerpted by its company. One that is only a
+	// company is titled by the typed name. Its excerpt adds the company's own
+	// name only where a rename has moved it away from that title.
+	return fmt.Sprintf(`CASE WHEN t.full_name IS NOT NULL THEN coalesce(%[1]s, t.company_name)
+		ELSE nullif(%[1]s, t.company_name) END`, linked), nil
 }
 
 // excerpt renders the branch's snippet expression for this caller.
@@ -281,7 +320,7 @@ var searchBranches = []searchBranch{
 	// A lead with no full name is already titled by that company.
 	{
 		entity: "lead", table: entityLead, title: "coalesce(full_name, company_name, email)",
-		snippet: "CASE WHEN t.full_name IS NOT NULL THEN t.company_name END", snippetIsContext: true, identifier: storekit.LeadEmails,
+		snippet: "CASE WHEN t.full_name IS NOT NULL THEN t.company_name END", snippetFor: leadSnippet, snippetIsContext: true, identifier: storekit.LeadEmails,
 		nearName: "f_fold_apostrophes(lower(coalesce(%[1]s.full_name, '') || ' ' || coalesce(%[1]s.company_name, '')))",
 	},
 	// A project's name alone does not say which account's work it is, and two

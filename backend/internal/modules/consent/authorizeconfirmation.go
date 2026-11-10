@@ -105,7 +105,7 @@ func confirmKindFor(category commsauthz.Category) (string, bool) {
 	}
 }
 
-// validateOptOutAcknowledgement answers whether this contact is owed a
+// validateOptOutAcknowledgement answers whether this contact or lead is owed a
 // confirmation that their refusal of advertising was received.
 //
 // THE EVIDENCE IS THE STOP ITSELF, which is what makes this validator a
@@ -126,7 +126,11 @@ func validateOptOutAcknowledgement(
 	ctx context.Context, tx pgx.Tx, subject subjectRef, category commsauthz.Category,
 ) (resolution, error) {
 	unsupported := resolution{Category: category, Supported: false, Reason: commsauthz.ReasonNoEvidence}
-	if subject.Kind != entityContact {
+	switch subject.Kind {
+	case entityLead:
+		return leadOptOutAcknowledgement(ctx, tx, subject, category)
+	case entityContact:
+	default:
 		return unsupported, nil
 	}
 	// KIND ONLY, DELIBERATELY NOT purpose_id. A narrow marketing_objection
@@ -165,4 +169,27 @@ func validateOptOutAcknowledgement(
 		Basis:     commsauthz.BasisLegalObligation,
 		Supported: true,
 	}, nil
+}
+
+// leadOptOutAcknowledgement is the lead arm of validateOptOutAcknowledgement.
+// A lead refuses only through a suppression: its own link writes one, and no
+// preference centre speaks for a lead. So the evidence is a live suppression on
+// the lead, of a kind that refused advertising.
+func leadOptOutAcknowledgement(
+	ctx context.Context, tx pgx.Tx, subject subjectRef, category commsauthz.Category,
+) (resolution, error) {
+	var standing bool
+	if err := tx.QueryRow(ctx, `
+		SELECT EXISTS (
+		    SELECT 1 FROM communication_suppression
+		    WHERE lead_id = $1::uuid
+		      AND kind = ANY($2)
+		      AND revoked_at IS NULL
+		)`, subject.ID, acknowledgeableKinds()).Scan(&standing); err != nil {
+		return resolution{}, fmt.Errorf("consent: reading the lead's stop this would acknowledge: %w", err)
+	}
+	if !standing {
+		return resolution{Category: category, Supported: false, Reason: commsauthz.ReasonNoEvidence}, nil
+	}
+	return resolution{Category: category, Basis: commsauthz.BasisLegalObligation, Supported: true}, nil
 }

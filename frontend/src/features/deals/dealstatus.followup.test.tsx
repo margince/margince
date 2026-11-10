@@ -3,7 +3,7 @@
 
 /** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import {
@@ -69,5 +69,81 @@ it("names the follow-up it created and opens that task, not the deal", async () 
   await user.click(screen.getByRole("button", { name: "Open task" }));
   expect(await screen.findByRole("dialog")).toHaveTextContent(
     "Agree the next step",
+  );
+});
+
+it("offers no follow-up to a seat that may not write activities", async () => {
+  installFetchStub({
+    "GET /me": meRoute({ activity: ["read"] }),
+    "GET /deals/demo-deal/status": () =>
+      jsonResponse({
+        deal_id: "demo-deal",
+        story: { sentences: [] },
+        next: {
+          action: "create_task",
+          reason: "Agree the next step",
+          arguments: { subject: "Agree the next step", source: "manual" },
+          evidence: [],
+        },
+        generated_at: "2026-08-24T12:00:00Z",
+        generated_by: "deterministic",
+      }),
+    "GET /deals/demo-deal/coverage": () =>
+      jsonResponse({ stakeholders: [], risks: [] }),
+  });
+  render(
+    <StoryProviders>
+      <DealStatusCardPanel
+        deal={{ id: "demo-deal", name: "Demo deal" }}
+        onOpenEmail={vi.fn()}
+      />
+    </StoryProviders>,
+  );
+
+  // The move is on screen; only its verb is withheld.
+  expect(await screen.findByText("Agree the next step")).toBeVisible();
+  await waitFor(() =>
+    expect(
+      screen.queryByRole("button", { name: "Create follow-up" }),
+    ).not.toBeInTheDocument(),
+  );
+});
+
+it("offers no follow-up draft to a seat that may not write activities", async () => {
+  installFetchStub({
+    "GET /me": meRoute({ activity: ["read"] }),
+    "GET /deals/demo-deal/status": () =>
+      jsonResponse({
+        deal_id: "demo-deal",
+        story: { sentences: [] },
+        next: {
+          action: "draft_email",
+          reason: "Follow up on the meeting",
+          arguments: {
+            activity_id: "m-1",
+            links: [{ entity_type: "contact", entity_id: "p-1" }],
+          },
+          evidence: [],
+        },
+        generated_at: "2026-08-24T12:00:00Z",
+        generated_by: "deterministic",
+      }),
+    "GET /deals/demo-deal/coverage": () =>
+      jsonResponse({ stakeholders: [], risks: [] }),
+  });
+  render(
+    <StoryProviders>
+      <DealStatusCardPanel
+        deal={{ id: "demo-deal", name: "Demo deal" }}
+        onOpenEmail={vi.fn()}
+      />
+    </StoryProviders>,
+  );
+
+  expect(await screen.findByText("Follow up on the meeting")).toBeVisible();
+  await waitFor(() =>
+    expect(
+      screen.queryByRole("button", { name: "Draft follow-up" }),
+    ).not.toBeInTheDocument(),
   );
 });

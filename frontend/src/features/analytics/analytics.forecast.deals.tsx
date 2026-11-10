@@ -89,6 +89,7 @@ function dealColumns(
       key: "deal",
       header: t("forecast.deals.colDeal"),
       grow: true,
+      fold: "title",
       render: (row) => (
         <CellStack>
           <span>{row.deal_name}</span>
@@ -116,13 +117,30 @@ function dealColumns(
       align: "end",
       render: (row) =>
         formatAnalyticsMoneyOrAbsent(row.base_minor ?? null, currency, locale),
+      folded: (row) =>
+        t("forecast.deals.foldedAmount", {
+          amount: formatAnalyticsMoneyOrAbsent(
+            row.base_minor ?? null,
+            currency,
+            locale,
+          ),
+        }),
     },
     {
       key: "weighted",
       header: t("forecast.deals.colWeighted"),
       align: "end",
+      fold: "end",
       render: (row) =>
         formatAnalyticsMoneyOrAbsent(row.weighted_minor, currency, locale),
+      folded: (row) =>
+        t("forecast.deals.foldedWeighted", {
+          amount: formatAnalyticsMoneyOrAbsent(
+            row.weighted_minor,
+            currency,
+            locale,
+          ),
+        }),
     },
   ];
 }
@@ -195,6 +213,7 @@ export function ForecastDeals({
                       <EmptyState>{t("forecast.deals.none")}</EmptyState>
                     ) : (
                       <DataTable<ForecastContribution>
+                        fold
                         label={label}
                         rows={open}
                         rowKey={(row) => row.deal_id}

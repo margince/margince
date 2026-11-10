@@ -25,6 +25,7 @@ import { formatDateAbbrev, formatDayMonth } from "../../format/format.dates";
 import { daysPast } from "../../format/lateness";
 import { formatMoneyOrWord } from "../../format/moneyword";
 import { useLocale, usePlural, useT } from "../../i18n";
+import { labelFor } from "../../lib/labelfor";
 import { usePipelines } from "../../lib/pipelines.queries";
 import { navigate } from "../../lib/router";
 import { useViewerZone } from "../../lib/viewerzone";
@@ -153,7 +154,7 @@ function ProjectDealRow({ deal }: Readonly<{ deal: Deal }>) {
   const closed = deal.closed_at
     ? formatDayMonth(deal.closed_at, locale, readerZone)
     : undefined;
-  let sub = t(DEAL_STATUS_LABEL[deal.status]);
+  let sub = t(labelFor(DEAL_STATUS_LABEL, deal.status));
   if (deal.status === "open" && stage) {
     sub = t("project.deals.openAt", { stage });
   } else if (deal.status !== "open" && closed) {
@@ -353,7 +354,7 @@ function ContractRow({ contract }: Readonly<{ contract: Contract }>) {
       }
       right={
         <Badge tone={contract.status === "active" ? "success" : undefined}>
-          {t(CONTRACT_STATUS_LABEL[contract.status])}
+          {t(labelFor(CONTRACT_STATUS_LABEL, contract.status))}
         </Badge>
       }
     />

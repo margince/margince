@@ -59,6 +59,9 @@
 #                           does this once per run, and its shards read the result
 #   INTEGRATION_BIN_DIR     shard mode only: run each package from the binary
 #                           INTEGRATION_BUILD_OUT left here instead of compiling it
+#   INTEGRATION_TEST_TIMING the test durations to split by (default: the committed
+#                           scripts/integration-test-timing.txt). Every shard of
+#                           one run must read the same file
 #   INTEGRATION_TIMEOUT     per-package go-test timeout, as <seconds>s (default
 #                           900s; the budget column parses this). Resolved in
 #                           scripts/lib-testdb.sh, shared with the one-package lane
@@ -127,6 +130,16 @@ fi
 [[ -z "$BUILD_OUT" ]] || case "$BUILD_OUT" in /*) ;; *) BUILD_OUT="$ROOT/$BUILD_OUT";; esac
 [[ -z "$BIN_DIR" ]] || case "$BIN_DIR" in /*) ;; *) BIN_DIR="$ROOT/$BIN_DIR";; esac
 export BIN_DIR
+
+# A named file that is missing is a broken hand-off, never a reason to fall
+# back to the committed one: a shard that did would deal from other weights
+# than its siblings.
+SHARD_TIMING="${INTEGRATION_TEST_TIMING:-$ROOT/scripts/integration-test-timing.txt}"
+case "$SHARD_TIMING" in /*) ;; *) SHARD_TIMING="$ROOT/$SHARD_TIMING";; esac
+if [[ ! -s "$SHARD_TIMING" ]]; then
+  echo "FAIL: the test durations to split by, $SHARD_TIMING, are missing or empty (INTEGRATION_TEST_TIMING)"
+  exit 1
+fi
 
 # Per-package go-test timeout and its budget rule — shared with the one-package
 # lane (scripts/lib-testdb.sh resolve_it_timeout), so both cost a package the same.
@@ -231,26 +244,7 @@ GO_DIRS=(backend)
 # Later batches reuse that block without entering the worktree dev allocation.
 REDIS_DBS=64
 
-# Candidate packages: every directory in the module that holds test files. Which
-# of them belong to THIS lane is decided by the build-constraint scan in
-# discovery below, never by grepping for the tag's spelling: a header comment may
-# name `go:build integration` while pointing at the DB-backed sibling that owns
-# the other half of a proof, and a package whose tagged files declare no Test
-# function has nothing for this lane to run. Deciding membership here, from the
-# text, is what once handed a Postgres clone to packages with no tagged test.
-CANDIDATES="$(mktemp)"
-for d in "${GO_DIRS[@]}"; do
-  [[ -d "$d" ]] || continue
-  find "$d" -type f -name '*_test.go' -print0 \
-    | xargs -0 -n1 dirname \
-    | LC_ALL=C sort -u \
-    | while IFS= read -r pkgdir; do
-        rel="./${pkgdir#"$d"/}"; [[ "$pkgdir" = "$d" ]] && rel="."
-        echo "$d|$rel"
-      done
-done > "$CANDIDATES"
-
-CONSTRAINT_SCOPE="$(mktemp)" LANE_PKGS="$(mktemp)" WORK="$(mktemp)"
+LANE_PKGS="$(mktemp)" WORK="$(mktemp)"
 DISCOVERY="$(mktemp)" ASSIGNED="$(mktemp)" RAN="$(mktemp)" UNTAGGED="$(mktemp)"
 TIMING="$(mktemp)" TEST_TIMING="$(mktemp)" WALLCLOCK="$(mktemp)" FAILED_PKGS="$(mktemp)"
 # The packages go test KILLED for exceeding the budget. Kept apart from
@@ -283,148 +277,19 @@ export MARGINCE_SQL_CENSUS_DIR="$OUTDIR/sql-census"
 # needs the evidence, because the re-run that would reproduce it usually passes.
 # A green run still cleans up: nobody wants a temp dir per passing run.
 KEEP_LOGS=""
-trap 'rm -f "$CANDIDATES" "$CONSTRAINT_SCOPE" "$LANE_PKGS" "$WORK" "$DISCOVERY" "$ASSIGNED" "$RAN" "$UNTAGGED" "$TIMING" "$TEST_TIMING" "$WALLCLOCK" "$FAILED_PKGS" ${GROUPED:+"$GROUPED"}; [[ -n "$KEEP_LOGS" ]] || rm -rf "$OUTDIR"; rm -rf ${REGEX_DIR:+"$REGEX_DIR"}' EXIT
+trap 'rm -f "$LANE_PKGS" "$WORK" "$DISCOVERY" "$ASSIGNED" "$RAN" "$UNTAGGED" "$TIMING" "$TEST_TIMING" "$WALLCLOCK" "$FAILED_PKGS" ${GROUPED:+"$GROUPED"}; [[ -n "$KEEP_LOGS" ]] || rm -rf "$OUTDIR"; rm -rf ${REGEX_DIR:+"$REGEX_DIR"}' EXIT
 
-# The ONE spelling of "which build constraints does this file declare": the
-# region above the `package` clause, one expression per line. Both passes below
-# read it and judge it differently — the ownership pass asks only whether
-# `integration` appears, discovery holds the expression to a strict allowlist —
-# and a lane that extracted it twice could drift into admitting packages whose
-# files it then refuses to tag.
+# Static discovery of every top-level Test function of every integration-TAGGED
+# file, as "module_dir|rel|TestName"; the rules are in scripts/lib-laneorder.sh.
+# Lane membership comes from the tests found, never from grepping for the tag:
+# a header comment may name `go:build integration`, and a package whose tagged
+# files declare no Test has nothing for this lane to run.
 #
-# scripts/check-test-lanes.sh answers the opposite direction (no unit test opens
-# real infra) and still matches the constraint line with a substring test rather
-# than tokenizing it. That is latent, not live: only bare `integration` exists in
-# the tree. Unifying all three call sites needs a shared shell library neither
-# script has today.
-constraint_exprs() {
-  sed -n '/^package /q;p' "$1" | sed -nE 's|^//go:build ||p; s|^// \+build ||p'
-}
-
-# Which packages does the strict constraint check below apply to? A package
-# qualifies when at least one of its test files names `integration` in its
-# build-constraint region. This is NOT where lane membership is decided — that is
-# derived from discovery further down, from the tests actually found.
-#
-# The pass exists to bound the strict constraint check. That check fails
-# the whole lane on a constraint it cannot decide, because in a package this lane
-# RUNS, a satisfied built-in tag (linux, amd64, cgo, …) would compile under
-# `go test` yet land in no slice — a silently thinner lane. In a package the lane
-# never runs, the same tag is simply none of its business, and failing on it would
-# stop the lane over a file it was never going to execute.
-while IFS='|' read -r d rel; do
-  pkgdir="$d/${rel#./}"; [[ "$rel" = "." ]] && pkgdir="$d"
-  for f in "$pkgdir"/*_test.go; do
-    [[ -e "$f" ]] || continue
-    if constraint_exprs "$f" | grep -qx 'integration'; then
-      echo "$d|$rel"
-      break
-    fi
-  done
-done < "$CANDIDATES" | LC_ALL=C sort -u > "$CONSTRAINT_SCOPE"
-
-# Static discovery: every top-level Test function of every integration-TAGGED
-# file, as "module_dir|rel|TestName". TestMain is a fixture, not a test;
-# a lowercase rune after "Test" makes a plain function, not a test — both
-# match `go test`'s own rules, and the ran==assigned teeth below catch any
-# future divergence between this grep and the compiler's view.
-#
-# Untagged files are excluded here, and that exclusion is the whole point:
-# `-tags=integration` is ADDITIVE, so `go test -tags=integration <pkg>` compiles
-# a package's untagged test files too. Without this the lane re-runs the whole
-# unit suite against real infrastructure, proving nothing `make check` had not
-# already proved — and the counts it reports below say how much that is on the
-# tree in front of it, rather than a number frozen into a comment.
-while IFS='|' read -r d rel; do
-  pkgdir="$d/${rel#./}"; [[ "$rel" = "." ]] && pkgdir="$d"
-  for f in "$pkgdir"/*_test.go; do
-    [[ -e "$f" ]] || continue
-    # Build-constrained files: only allowlisted lone tags are statically
-    # decidable — `integration` is in this lane's build, the manual opt-in
-    # lanes (e2e_llm, livesmoke, voicelive) are not, so those files' tests are skipped
-    # exactly as the compiler skips them. Anything else — an expression
-    # with operators, or a lone tag the allowlist does not know — fails
-    # loudly (on stderr — stdout here feeds the sort) rather than guess:
-    # a satisfied built-in tag (linux, amd64, cgo, …) would compile under
-    # `go test` yet land in no slice, and the ran==assigned teeth cannot
-    # see a test that discovery itself never counted.
-    #
-    # The constraint region is everything ABOVE the `package` clause; the same
-    # scan scripts/check-test-lanes.sh uses. A tag named below it is prose.
-    skip_file=0 tagged=0
-    while IFS= read -r expr; do
-      [[ -n "$expr" ]] || continue
-      case "$expr" in
-        integration) tagged=1 ;;
-        # !integration is the mirror of `integration`: the unit-lane-only gates.
-        # rbacbaselineerafixture_test.go reads git history to derive the baseline
-        # commit's vocabulary, and the integration lanes clone shallow, so those
-        # files are excluded from THIS build exactly as the compiler excludes
-        # them. Statically decidable for the same reason `integration` is — this
-        # lane's build always satisfies the tag.
-        '!integration') skip_file=1 ;;
-        e2e_llm|livesmoke|voicelive) skip_file=1 ;;
-        # `integration && bench` is the benchmark lane (make bench-record,
-        # bench-capture, bench-dispatch, bench-perf, bench-perf-check). It keeps those suites out
-        # of every MERGE gate, which is what matters here — one of them,
-        # bench-perf-check, is run weekly by the scheduled workflow, so "the tag
-        # keeps them out of all automation" would be false.
-        #
-        # It is a CONJUNCTION rather than a lone tag on
-        # purpose: those files use this lane's own harness — apptest.AppEnv,
-        # newCaptureEnv, benchRuns — so they need `integration` to compile at
-        # all, and `bench` is what keeps them out of every merge gate.
-        #
-        # Statically decidable for the same reason the lone tags are: this
-        # lane's build sets `integration` and never sets `bench`, so the
-        # compiler excludes the file and so does this. The general worry above —
-        # a satisfied built-in tag compiling under `go test` yet landing in no
-        # slice — does not apply, because `bench` is not built-in and nothing
-        # in this lane defines it.
-        'integration && bench') skip_file=1 ;;
-        # The weekly role sweep (make test-roles), kept out of the merge gate
-        # the same way and for the same reason as the benchmarks.
-        'integration && rolesweep') skip_file=1 ;;
-        *)
-          echo "FAIL: $f carries build constraint '$expr' — not one the static shard discovery knows" >&2
-          echo "  teach the allowlist in scripts/test-integration-parallel.sh or simplify the constraint" >&2
-          exit 1
-          ;;
-      esac
-    done < <(constraint_exprs "$f")
-    # An unconstrained file is a unit-lane file. Record what it holds, keyed by
-    # package, so the lane can report what it left to `make check` rather than
-    # silently narrowing — a quieter lane and a broken selector look identical.
-    # Keyed, not summed, because only packages that DO own a tagged test were
-    # ever running these: counting the rest would overstate the exclusion.
-    if (( ! tagged && ! skip_file )); then
-      printf '%s|%s|%s\n' "$d" "$rel" "$({ grep -cE '^func Test[A-Za-z0-9_]*\(' "$f" || true; })" >> "$UNTAGGED"
-      continue
-    fi
-    (( skip_file )) && continue
-    # An anchored -run union filters Fuzz and Example functions too, and both are
-    # things `go test` would otherwise run and report. Discovery enumerates only
-    # `func Test…`, so one of those in a tagged file would sit in neither ASSIGNED
-    # nor RAN — and because the teeth compare two sets derived from THIS grep, the
-    # omission would read as green. Before the union covered unsharded runs,
-    # `go test` was the independent authority that caught it; nothing is now, so
-    # the case fails loudly instead of being silently dropped.
-    if grep -qE '^func (Fuzz|Example)[A-Za-z0-9_]*\(' "$f"; then
-      echo "FAIL: $f declares a Fuzz or Example function in the integration lane" >&2
-      echo "  the anchored -run union would filter it out and the ran==assigned teeth cannot see it;" >&2
-      echo "  teach discovery to enumerate it, or move it to the unit lane" >&2
-      exit 1
-    fi
-    # `|| true`: a helper-only test file with no Test functions is fine.
-    { grep -hE '^func Test[A-Za-z0-9_]*\(' "$f" || true; } \
-      | sed -E 's/^func (Test[A-Za-z0-9_]*)\(.*/\1/' \
-      | while IFS= read -r name; do
-          [[ "$name" = "TestMain" ]] && continue
-          [[ "$name" != "Test" && "${name:4:1}" =~ [a-z] ]] && continue
-          echo "$d|$rel|$name"
-        done
-  done
-done < "$CONSTRAINT_SCOPE" | LC_ALL=C sort > "$DISCOVERY"
+# Untagged files are left out, and counted. `-tags=integration` is ADDITIVE, so
+# `go test -tags=integration <pkg>` compiles a package's untagged tests too, and
+# without the -run union the lane would re-run the unit suite against real
+# infrastructure.
+lane_discover "$UNTAGGED" "${GO_DIRS[@]}" > "$DISCOVERY"
 
 NTESTS=$(wc -l < "$DISCOVERY" | tr -d ' ')
 
@@ -489,9 +354,9 @@ if (( SHARD_TOTAL > 0 )); then
   fi
   # Split by measured duration, so slow tests do not land on one shard; the
   # rules live in scripts/lib-laneorder.sh, which is unit-tested. Every shard
-  # computes the same split from the same commit, and the fan-in verifies that
-  # the slices are complete and disjoint instead of trusting it.
-  assign_shard "$DISCOVERY" "$ROOT/scripts/integration-test-timing.txt" "$SHARD_IDX" "$SHARD_TOTAL" > "$ASSIGNED"
+  # computes the same split from the same tree and weights, and the fan-in
+  # verifies that the slices are complete and disjoint instead of trusting it.
+  assign_shard "$DISCOVERY" "$SHARD_TIMING" "$SHARD_IDX" "$SHARD_TOTAL" > "$ASSIGNED"
 else
   # Unsharded: the whole lane is this run's slice. Naming it explicitly is what
   # lets the -run union and the ran==assigned teeth below serve both modes.
@@ -505,17 +370,19 @@ fi
 #
 # A package whose slice weighs more than a quarter of the timeout runs as
 # several parts, each its own process on its own clone. The weights are seconds
-# from one green CI run, and one slice of ./internal/compose has taken 2.6 times
+# from green CI runs, and one slice of ./internal/compose has taken 2.6 times
 # as long on one runner as on another, so a part near the whole timeout would be
 # killed with every test passing.
 PART_SECONDS=$(( ${IT_TIMEOUT%s} / 4 ))
 GROUPED="$(mktemp)"
-split_parts "$ASSIGNED" "$ROOT/scripts/integration-test-timing.txt" "$PART_SECONDS" > "$GROUPED"
+split_parts "$ASSIGNED" "$SHARD_TIMING" "$PART_SECONDS" > "$GROUPED"
 REGEX_DIR="$(mktemp -d)"
 export REGEX_DIR
 : > "$WORK"
-# Longest package first, from what the last run measured — the ordering rules
-# and their rationale live in scripts/lib-laneorder.sh, which is unit-tested.
+# Longest first — the ordering rules and their rationale live in
+# scripts/lib-laneorder.sh, which is unit-tested. A shard orders its parts by
+# the weights it split by; a whole lane orders packages by what the last run on
+# this machine measured.
 #
 # Ordered HERE, before slots are numbered, so each package's -run slice, clone,
 # bucket and Redis db follow it rather than being handed to whoever inherits its
@@ -523,7 +390,10 @@ export REGEX_DIR
 MEASURED_HINT="$ROOT/.tmp/integration-lane-timing.txt"
 BASELINE_HINT="$ROOT/scripts/integration-lane-timing.txt"
 ORDER_HINT="$(resolve_order_hint "$MEASURED_HINT" "$BASELINE_HINT")"
-if [[ -n "$ORDER_HINT" ]]; then
+if (( SHARD_TOTAL > 0 )); then
+  order_by_weight "$GROUPED" "$SHARD_TIMING" > "${GROUPED}.ordered"
+  mv "${GROUPED}.ordered" "$GROUPED"
+elif [[ -n "$ORDER_HINT" ]]; then
   order_by_hint "$GROUPED" "$ORDER_HINT" > "${GROUPED}.ordered"
   mv "${GROUPED}.ordered" "$GROUPED"
 fi
@@ -956,7 +826,10 @@ if [[ -n "$SHARD_OUT" ]]; then
   # from a scrolled log.
   cp "$TIMING" "$SHARD_OUT/timing.txt"
   cp "$TEST_TIMING" "$SHARD_OUT/test-timing.txt"
-  printf 'shard=%s\ntotal=%s\n' "$SHARD_IDX" "$SHARD_TOTAL" > "$SHARD_OUT/meta.txt"
+  # The digest of the weights, so the fan-in names a split from other weights
+  # instead of reporting it as a slicing bug.
+  timing_digest="$(git hash-object --no-filters "$SHARD_TIMING")"
+  printf 'shard=%s\ntotal=%s\ntiming=%s\n' "$SHARD_IDX" "$SHARD_TOTAL" "$timing_digest" > "$SHARD_OUT/meta.txt"
 fi
 
 # Keep the exact success sentinel the gates grep for; the count is informational.

@@ -12,6 +12,7 @@ import { MultiSelect } from "../../design-system/select";
 import { useToast } from "../../design-system/toast";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { labelFor } from "../../lib/labelfor";
 import { problemMessageOf, unwrap } from "../../lib/problem";
 
 type CustomField = components["schemas"]["CustomField"];
@@ -60,7 +61,7 @@ export function ActivityKindsSelect({
       {...aria}
       options={Object.keys(KIND_LABEL)
         .filter(isActivityKind)
-        .map((kind) => ({ value: kind, label: t(KIND_LABEL[kind]) }))}
+        .map((kind) => ({ value: kind, label: t(labelFor(KIND_LABEL, kind)) }))}
       values={values}
       onChange={onChange}
       disabled={disabled}

@@ -8,7 +8,7 @@ import {
   hasTimelineFilters,
   useRecordTimeline,
 } from "../../design-system/recordtimeline";
-import { SurfaceState } from "../../design-system/surfacestate";
+import { omitted, SurfaceState } from "../../design-system/surfacestate";
 import { GroupedTimelineList } from "../../design-system/timeline";
 import { TimelineFilterBar } from "../../design-system/timelinefilterbar";
 import { groupChronology } from "../../design-system/timelinegroups";
@@ -69,6 +69,7 @@ function ContactRowActions({
       entityType="contact"
       entityId={contactId}
       contactId={contactId}
+      contact={view?.contact}
       extra={(row) => (
         <>
           <MeetingBriefAction activity={row} onBriefMeeting={onBriefMeeting} />
@@ -101,6 +102,7 @@ export function ContactLatestInbound({
       latest={latest}
       entityType="contact"
       entityId={contactId}
+      contact={view.contact}
       actions={(activity) => (
         <ContactRowActions
           activity={activity}
@@ -144,18 +146,22 @@ export function ContactTimelineTab({
   const { locale } = useLocale();
   const queryClient = useQueryClient();
   const readerZone = useViewerZone();
-  const { filter, filters, setFilters, openCut, kinds } =
+  const { filter, filters, setFilters, openCut, kinds, read } =
     useChronologyCut(contactId);
   // Every cut renders through the ONE chronicle, off the same groups: the
   // Conversations list is the same rows cut to the exchanges somebody can
   // answer, never a second rendering of what another cut already shows.
   const List =
     filter === "conversations" ? ConversationList : GroupedTimelineList;
+  // Withheld on the 360 is withheld on every cut.
+  // A narrowed read would draw the refusal as a failure.
+  const withheld = view ? omitted(view, "activities") : false;
   // The 360's own page seeds the list; older pages and every narrowed read
   // come from the activity list itself.
   const timeline = useRecordTimeline("contact", contactId, {
-    filters,
+    filters: read,
     firstPage: view?.activities,
+    enabled: !withheld,
   });
   const chronology = useRecordChronology({
     onOpenEmail,
@@ -235,7 +241,7 @@ export function ContactTimelineTab({
               view,
               chronology,
               timeline,
-              hasTimelineFilters(filters),
+              hasTimelineFilters(read) && !withheld,
               loading,
             )}
             emptyLabel={

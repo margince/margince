@@ -217,7 +217,7 @@ func (c *captureClassifyCase) Evaluate(trace aitasks.Trace) aitasks.Outcome {
 // echoed into a record.
 func (c *captureClassifyCase) disagreements(payload classifyPayload) []string {
 	labeled := make(map[string]string, len(payload.Results))
-	for _, r := range payload.Results {
+	for _, r := range resolveClassifyRefs(payload.Results, c.batch) {
 		labeled[r.ID] = r.Label
 	}
 	var out []string

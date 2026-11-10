@@ -21,6 +21,7 @@ import {
   tabOfViewResource,
   UNIT_LABEL,
 } from "../../lib/filtersaddress";
+import { labelFor } from "../../lib/labelfor";
 import { useListsAvailable } from "../../lib/lists.queries";
 import { problemCodeOf, problemMessageOf } from "../../lib/problem";
 import { navigateReplacing } from "../../lib/router";
@@ -270,7 +271,9 @@ function OpenedView({
     <div className="wrap filters-screen">
       <FocusedHead
         title={pin.view.name}
-        facts={t("filters.view.facts", { records: t(TAB_LABEL[tab]) })}
+        facts={t("filters.view.facts", {
+          records: t(labelFor(TAB_LABEL, tab)),
+        })}
         actions={
           // Held with the rows while a save is out: a rename or delete here
           // would race it on the version it is about to advance.
@@ -352,7 +355,7 @@ function OpenedView({
                 dispatch={dispatch}
                 vocabulary={vocabulary}
                 words={plainWords}
-                records={t(UNIT_LABEL[tab])}
+                records={t(labelFor(UNIT_LABEL, tab))}
               />
             </div>
           ) : (

@@ -3,6 +3,7 @@ import type { StandingPeek } from "../../design-system/standingdims";
 import { DEAL_STATUS_LABEL } from "../../format/dealstatus";
 import { formatMoney } from "../../format/format";
 import { formatDayMonth } from "../../format/format.dates";
+import { labelFor } from "../../lib/labelfor";
 import { routeHash } from "../../lib/router";
 import { type PeekWords, partialFoot } from "../../lib/standingpeeks";
 import type { Project360 } from "./projectsections";
@@ -149,7 +150,7 @@ function dealStanding(
   { t, locale, zone }: Pick<PeekWords, "t" | "locale" | "zone">,
 ): string {
   if (deal.status === "open" || !deal.closed_at) {
-    return t(DEAL_STATUS_LABEL[deal.status]);
+    return t(labelFor(DEAL_STATUS_LABEL, deal.status));
   }
   const won = deal.status === "won";
   return t(won ? "project.deals.wonOn" : "project.deals.lostOn", {

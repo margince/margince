@@ -643,7 +643,7 @@ a:not([class]):focus-visible {
    instead. `<kbd>` names a key someone presses rather than text a machine
    reads, so it sits in the body face too — the browser's own sheet would set it
    in monospace, which is why this says so rather than leaving it to inherit.
-   Held by mono.test.ts and check-font-lock.sh: a mono family on any other
+   Held by census/rules/mono.census.ts and check-font-lock.sh: a mono family on any other
    selector fails. */
 code,
 pre,

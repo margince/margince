@@ -45,7 +45,8 @@ func TestAnEarlierAssessmentRequiresItsUncitedInputToRemainReadable(t *testing.T
 		for _, message := range request.Messages {
 			sawUncited = sawUncited || strings.Contains(message.Content, "Budget requires approval")
 		}
-		return model.Response{Text: fmt.Sprintf(`{"story":[{"text":"The scope was discussed.","evidence":[%q]}],"blocker":[],"buyer":[],"verdict":{"standing":"drifting","because":[{"text":"The budget requires approval.","evidence":[%q]}]},"move_reason":[]}`, sources[0].String(), sources[0].String())}, nil
+		scope := refWhere(t, request, "subject", "Scope discussion")
+		return model.Response{Text: fmt.Sprintf(`{"story":[{"text":"The scope was discussed.","evidence":[%q]}],"blocker":[],"buyer":[],"verdict":{"standing":"drifting","because":[{"text":"The budget requires approval.","evidence":[%q]}]},"move_reason":[]}`, scope, scope)}, nil
 	})
 	service := newDealStatusService(e.Pool, func() time.Time { return at }).WithLane(lane, "test")
 	card, err := service.Get(reader, ids.From[ids.DealKind](deal), true)
@@ -92,15 +93,16 @@ func TestAnEarlierAssessmentRequiresItsStakeholderContextToRemainReadable(t *tes
 			}
 			at := time.Date(2026, 10, 12, 9, 0, 0, 0, time.UTC)
 			subject, occurred := "Scope discussion", at.Add(-time.Hour)
-			source, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
+			_, _, err = e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
 				Kind: "call", Subject: &subject, Source: "manual", OccurredAt: &occurred,
 				Links: []activities.ActivityLinkInput{{EntityType: "deal", EntityID: deal.UUID}},
 			})
 			if err != nil {
 				t.Fatal(err)
 			}
-			lane := brainFunc(func(context.Context, model.Request) (model.Response, error) {
-				return model.Response{Text: fmt.Sprintf(`{"story":[{"text":"The scope was discussed.","evidence":[%q]}],"blocker":[],"buyer":[],"verdict":{"standing":"live","because":[{"text":"The scope was discussed with the champion.","evidence":[%q]}]},"move_reason":[]}`, source.Id.String(), source.Id.String())}, nil
+			lane := brainFunc(func(_ context.Context, request model.Request) (model.Response, error) {
+				scope := refWhere(t, request, "subject", subject)
+				return model.Response{Text: fmt.Sprintf(`{"story":[{"text":"The scope was discussed.","evidence":[%q]}],"blocker":[],"buyer":[],"verdict":{"standing":"live","because":[{"text":"The scope was discussed with the champion.","evidence":[%q]}]},"move_reason":[]}`, scope, scope)}, nil
 			})
 			service := newDealStatusService(e.Pool, func() time.Time { return at }).WithLane(lane, "test")
 			reader := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)

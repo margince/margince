@@ -17,24 +17,20 @@ import {
 } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { writtenAsMarkdown } from "../design-system/activitytimeline";
 import { Button } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
-import { markdownLines } from "../design-system/markdown-text";
 import { NextBar } from "../design-system/nextbar";
-import { isTranscriptActivity } from "../design-system/transcriptread";
-import { activityAgo } from "../format/activitywhen";
-import { emailSummaryText } from "../format/emailtext";
-import { useNow } from "../format/now";
-import { type Translator, useLocale, useT } from "../i18n";
+import { type Translator, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { taskWriteKeys, timelineBaseKey } from "../lib/activitykeys";
 import type { EntityKind } from "../lib/entity";
+import { UNKNOWN_VALUE_LABEL } from "../lib/labelfor";
 import { useSourceOpener } from "../lib/opensource";
 import { unwrap } from "../lib/problem";
 import { readStored, STORAGE_KEYS, writeStored } from "../lib/storage";
-import { useViewerZone } from "../lib/viewerzone";
+import { useActivityWritable } from "./activitygate";
 import "./latestinbound.css";
+import { itemWords, When } from "./latestinbound.words";
 
 type Activity = components["schemas"]["Activity"];
 type LatestInbound = components["schemas"]["LatestInbound"];
@@ -108,6 +104,8 @@ type JustInScopeValue = Readonly<{
   refreshKeys?: readonly QueryKey[];
   // The page's own message drawer, where it has one; else the shell's.
   onOpenEmail?: (activityId: string) => void;
+  // The contact whose page this is: a task from the item files under it.
+  contact?: { readonly attachable?: boolean };
 }>;
 
 const JustInContext = createContext<JustInScopeValue | null>(null);
@@ -136,58 +134,9 @@ function kindLabel(kind: LatestInboundKind, t: Translator): string {
       return t("latest.kind.message");
     case "web_form":
       return t("latest.kind.webForm");
+    default:
+      return t(UNKNOWN_VALUE_LABEL);
   }
-}
-
-// The words a reader is shown for the item: what it is about, and the
-// sender's own text. A withheld row has neither, and says only what it is.
-function itemWords(activity: Activity): {
-  subject?: string;
-  excerpt?: string;
-} {
-  if (activity.content_state === "withheld") {
-    return {};
-  }
-  const summary = activity.email_summary;
-  const subject = (summary?.subject ?? activity.subject)?.trim() || undefined;
-  const raw = activity.body ?? "";
-  const excerpt =
-    summary?.preview ??
-    (activity.kind === "email"
-      ? emailSummaryText(raw)
-      : oneLine(activity, raw));
-  return { subject, excerpt: excerpt || undefined };
-}
-
-// A form's note is one answer per line; the row reads them as one line. Text
-// the timeline renders as markdown reads as the text it renders; a chat
-// message's characters are its own.
-function oneLine(activity: Activity, text: string): string {
-  const markdown = writtenAsMarkdown({
-    kind: activity.kind,
-    transcript: isTranscriptActivity(activity),
-  });
-  const lines = markdown
-    ? markdownLines(text)
-    : text.split("\n").map((line) => line.trim());
-  return lines.filter(Boolean).join(" · ");
-}
-
-function When({ activity }: Readonly<{ activity: Activity }>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const zone = useViewerZone();
-  // A minute is the finest unit the label shows.
-  const now = useNow(60_000);
-  const moment = {
-    at: activity.occurred_at,
-    precision: activity.occurred_precision,
-  };
-  return (
-    <time dateTime={activity.occurred_at} className="latest-when">
-      {activityAgo(moment, now, t, locale, zone)}
-    </time>
-  );
 }
 
 function readLabel(kind: LatestInboundKind, t: Translator): string {
@@ -198,6 +147,8 @@ function readLabel(kind: LatestInboundKind, t: Translator): string {
       return t("latest.read.message");
     case "web_form":
       return t("latest.read.webForm");
+    default:
+      return t(UNKNOWN_VALUE_LABEL);
   }
 }
 
@@ -406,6 +357,7 @@ function TaskFromItem({
   const t = useT();
   const queryClient = useQueryClient();
   const { activity, kind, accepts_request } = latest;
+  const writable = useActivityWritable(scope.contact);
   const create = useMutation({
     mutationFn: async () => {
       const about = itemWords(activity).subject ?? kindLabel(kind, t);
@@ -435,7 +387,7 @@ function TaskFromItem({
     },
   });
   // The task reads the item's content, which a withheld row refuses.
-  if (activity.content_state === "withheld") {
+  if (!writable || activity.content_state === "withheld") {
     return null;
   }
   return (
@@ -449,11 +401,8 @@ function TaskFromItem({
   );
 }
 
-/**
- * The item as one line. It shows in the record's head on the other tabs, and
- * above a Next bar that has something more urgent. With no
- * `onOpen` it only says what came in.
- */
+/** The item as one line: in the record's head on the other tabs, and above a
+ *  Next bar with more urgent work. Without `onOpen` it says what came in. */
 export function LatestInboundLine({
   latest,
   onOpen,

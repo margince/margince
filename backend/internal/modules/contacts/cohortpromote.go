@@ -71,15 +71,38 @@ type CohortPromotion struct {
 // addresses reach: the missing links, and the participant rows that named them
 // only by address.
 //
-// The contact is settled against a merge FIRST, for the reason
-// linkActivityToContact settles it: no reader of activity_link walks
-// merged_into_id, so a link written to a retired id leaves the message on a
-// record nobody opens.
+// It is for a transaction that holds no lock on the contact yet. It waits for
+// an activity another transaction holds, so a busy one is repaired in this pass.
 func (s *Store) PromoteContactCohortTx(
 	ctx context.Context, tx pgx.Tx, contactID ids.ContactID,
 ) (CohortPromotion, error) {
+	return s.promoteCohortTx(ctx, tx, contactID, waitForBusyActivities)
+}
+
+// PromoteHeldContactCohortTx is PromoteContactCohortTx for a transaction that
+// already locked or wrote the contact. It skips an activity another
+// transaction holds, and the next pass repairs it.
+func (s *Store) PromoteHeldContactCohortTx(
+	ctx context.Context, tx pgx.Tx, contactID ids.ContactID,
+) (CohortPromotion, error) {
+	return s.promoteCohortTx(ctx, tx, contactID, skipBusyActivities)
+}
+
+// promoteCohortTx locks the activities the pass may write before the contact
+// (cohorthold.go).
+//
+// The contact is settled against a merge before any write, as in
+// linkActivityToContact. No reader of activity_link walks merged_into_id, so a
+// link to a retired id leaves the message on a record nobody opens.
+func (s *Store) promoteCohortTx(
+	ctx context.Context, tx pgx.Tx, contactID ids.ContactID, busy busyActivities,
+) (CohortPromotion, error) {
+	held, err := holdCohortActivities(ctx, tx, contactID, busy)
+	if err != nil {
+		return CohortPromotion{}, err
+	}
 	var canonical ids.ContactID
-	err := tx.QueryRow(ctx,
+	err = tx.QueryRow(ctx,
 		`SELECT coalesce(merged_into_id, id) FROM contact WHERE id = $1 FOR UPDATE`,
 		contactID).Scan(&canonical)
 	// A row the event named and the table no longer holds: erased, or deleted
@@ -95,17 +118,17 @@ func (s *Store) PromoteContactCohortTx(
 		return CohortPromotion{}, fmt.Errorf("contacts: resolving the contact a cohort belongs to: %w", err)
 	}
 	batch := cohortRepairBatch
-	linked, err := linkCapturedCohort(ctx, tx, canonical)
+	linked, err := linkCapturedCohort(ctx, tx, canonical, held)
 	if err != nil {
 		return CohortPromotion{}, err
 	}
-	promoted, err := promoteParticipantsToContact(ctx, tx, nil, canonical, &batch)
+	promoted, err := promoteParticipantsToContact(ctx, tx, held, canonical, &batch)
 	if err != nil {
 		return CohortPromotion{}, err
 	}
 	// After the promotion, never before it: this reads the contact-resolved
 	// attendee rows the promotion above has just written.
-	meetings, err := linkAttendedMeetings(ctx, tx, canonical)
+	meetings, err := linkAttendedMeetings(ctx, tx, canonical, held)
 	if err != nil {
 		return CohortPromotion{}, err
 	}
@@ -192,6 +215,22 @@ func changedActivities(linked, promoted []ids.UUID) []ids.UUID {
 	return out
 }
 
+// capturedCohortMailSQL is the predicate on activity a for the mail
+// linkCapturedCohort files under contact @cohort_contact.
+const capturedCohortMailSQL = `a.captured_by LIKE 'connector:%'
+	   AND a.restricted_at IS NULL
+	   AND a.counterparty_email IN (
+	       SELECT lower(pe.email) FROM contact_email pe
+	        WHERE pe.contact_id = @cohort_contact AND pe.archived_at IS NULL)
+	   AND NOT EXISTS (
+	       SELECT 1 FROM activity_link l
+	        WHERE l.activity_id = a.id AND l.contact_id IS NOT NULL)
+	   -- The same ceiling its sibling arm applies. The trigger refuses a link
+	   -- past it either way; this keeps the sweep skipping an over-full
+	   -- message rather than aborting its batch on one.
+	   AND (SELECT count(*) FROM activity_link cap
+	         WHERE cap.activity_id = a.id) < @ceiling`
+
 // linkCapturedCohort attaches every captured message from any of the contact's
 // live addresses to them.
 //
@@ -214,32 +253,17 @@ func changedActivities(linked, promoted []ids.UUID) []ids.UUID {
 // counterparty, so keying on the counterparty reproduces exactly what a
 // contact-first ordering would have produced — and asks nothing of a kind that
 // never carries one.
-func linkCapturedCohort(ctx context.Context, tx pgx.Tx, contactID ids.ContactID) ([]ids.UUID, error) {
+func linkCapturedCohort(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, held []ids.UUID) ([]ids.UUID, error) {
 	rows, err := tx.Query(ctx, `
 		INSERT INTO activity_link (activity_id, entity_type, contact_id)
-		SELECT a.id, 'contact', $1
+		SELECT a.id, 'contact', @cohort_contact
 		  FROM activity a
-		 WHERE a.captured_by LIKE 'connector:%'
-		   AND a.restricted_at IS NULL
-		   AND a.counterparty_email IN (
-		       SELECT lower(pe.email) FROM contact_email pe
-		        WHERE pe.contact_id = $1 AND pe.archived_at IS NULL)
-		   AND NOT EXISTS (
-		       SELECT 1 FROM activity_link l
-		        WHERE l.activity_id = a.id AND l.contact_id IS NOT NULL)
-		   -- The same ceiling its sibling arm applies, and for the same reason.
-		   -- This arm guarded only on "no contact link exists", so a message
-		   -- already filed under twenty-five companies, deals or projects
-		   -- took a twenty-sixth here: which ceiling held depended on which arm
-		   -- ran. The trigger now refuses the row either way; this keeps the
-		   -- sweep SKIPPING an over-full message rather than aborting its batch
-		   -- on one.
-		   AND (SELECT count(*) FROM activity_link cap
-		         WHERE cap.activity_id = a.id) < $3
+		 WHERE a.id = ANY(@held)
+		   AND `+capturedCohortMailSQL+`
 		 ORDER BY a.occurred_at DESC, a.id
-		 LIMIT $2
+		 LIMIT @batch
 		ON CONFLICT DO NOTHING
-		RETURNING activity_id`, contactID, cohortRepairBatch, maxMeetingLinksPerActivity)
+		RETURNING activity_id`, cohortArgs(contactID, held))
 	if err != nil {
 		return nil, fmt.Errorf("contacts: linking a contact's captured cohort: %w", err)
 	}

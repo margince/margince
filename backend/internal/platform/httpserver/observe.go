@@ -16,6 +16,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/margince/margince/backend/internal/platform/instrument"
 	"github.com/margince/margince/backend/internal/shared/kernel/capabilitypath"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -78,7 +79,7 @@ func InstallProcessLogger(w io.Writer, level, format string) (*slog.Logger, erro
 	if err != nil {
 		return nil, err
 	}
-	logger := slog.New(WithCorrelation(handler))
+	logger := slog.New(WithCorrelation(instrument.LogHandler(handler)))
 	slog.SetDefault(logger)
 	return logger, nil
 }

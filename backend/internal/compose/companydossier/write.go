@@ -32,12 +32,12 @@ import (
 )
 
 const dossierSystem = `You describe one company for a salesperson about to talk to them, from a JSON summary of what their CRM has recorded about it.
-Return ONLY a JSON object: {"sections":[{"kind":"summary|products_services|markets|buying_center|differentiation|firmographics","sentences":[{"text":"...","nature":"fact","evidence":[{"entity_type":"company|fact|profile_field","entity_id":"..."}]}]}]}.
+Return ONLY a JSON object: {"sections":[{"kind":"summary|products_services|markets|buying_center|differentiation|firmographics","sentences":[{"text":"...","nature":"fact","evidence":[{"entity_type":"company|fact|profile_field","entity_id":"<the record's ref, such as pf1>"}]}]}]}.
 The sections answer, in order: what this company is; what they sell; where and to whom; who decides; what they claim sets them apart; their size, age and registration. Omit a section you have nothing real to say in.
 Describe THEM. This is not about our relationship with them, our pipeline, or whether they are a good fit — a different surface answers that, and a sentence here about either belongs there instead.
 Every sentence is a FACT: it restates something the summary says and cites the record it came from. You are rewriting recorded values as prose for a human reader, not drawing conclusions from them. If the summary does not say it, do not write it.
-Cite the ids the summary gave you; a record's entity_type is the key the summary lists it under: profile_field or fact. Every sentence must cite at least one — a sentence you cannot attach a record to is one to leave out.
-Put ids ONLY in evidence. An id must never appear in a sentence's text — the reader sees the text, and an id there is unreadable.
+Cite the refs the summary gave you; a record's entity_type is the key the summary lists it under: profile_field or fact. Every sentence must cite at least one — a sentence you cannot attach a record to is one to leave out.
+Put refs ONLY in evidence. A ref must never appear in a sentence's text — the reader sees the text, and a ref there is unreadable.
 Write plainly, one claim per sentence, and never open two sentences with the company name.`
 
 // dossierSystemFor names THIS call's data boundary; see promptfence.Fence.Rule.
@@ -57,7 +57,7 @@ func DossierRequest(in Input, lang string) model.Request {
 	fence := promptfence.New()
 	return model.Request{
 		System:   dossierSystemFor(fence, lang),
-		Messages: []model.Message{{Role: "user", Content: fence.Wrap(encodeInput(in, lang))}},
+		Messages: []model.Message{{Role: "user", Content: fence.Wrap(summaryRefs(in).Show(encodeInput(in, lang)))}},
 		// Deliberately NOT set: the dossier describes the company, and our own
 		// context is only ever an input to a judgment about fit. A writer given
 		// it would start comparing, which is the other surface's job.
@@ -65,6 +65,13 @@ func DossierRequest(in Input, lang string) model.Request {
 		ResponseSchema: dossierSchema(),
 		SecretStripper: ai.NewSecretStripper(),
 	}
+}
+
+// summaryRefs names each profile field and fact the dossier and growth-fit
+// prompts show by a ref, and reads a reply's citations back. The language
+// words the industry only, so the refs are the same in every language.
+func summaryRefs(in Input) claims.Refs {
+	return claims.MintRefs(encodeInput(in, ""), KnownRecords(in))
 }
 
 // WriteDossier assembles the dossier, degrading to the deterministic floor on
@@ -126,9 +133,10 @@ func ParseDossier(reply string, in Input) ([]Section, error) {
 		return nil, fmt.Errorf("parse the dossier reply: %w", err)
 	}
 	known := KnownRecords(in)
+	shown := summaryRefs(in)
 	bySection := map[string][]claims.Sentence{}
 	for _, section := range parsed.Sections {
-		kept := keepNatures(section.Sentences, known, map[string]bool{natureFact: true})
+		kept := keepNatures(shown.Read(section.Sentences), known, map[string]bool{natureFact: true})
 		bySection[section.Kind] = append(bySection[section.Kind], kept...)
 	}
 	// orderedSections emits only the kinds the contract declares, in reading

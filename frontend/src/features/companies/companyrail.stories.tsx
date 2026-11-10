@@ -67,6 +67,7 @@ const populated: View = {
     data: [
       {
         contact_id: "p-1",
+        attachable: true,
         full_name: "Dana Buyer",
         title: "Head of Fleet",
         deal_roles: [],

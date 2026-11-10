@@ -101,31 +101,15 @@ func floorWindowEnd(currentArg, carriedArg int) string {
 		ownerWindowEnd(currentArg), carriedArg, windowEndOf(fmt.Sprintf("$%d::jsonb", carriedArg)))
 }
 
-// rawCaptureUnshielded keeps the provider original, aliased `r`, of an activity
-// the floor shields or a legal hold reaches. A held message keeps its original
-// as evidence, the same as it keeps its row.
-//
-// Both arms are asked of every activity the original was read into.
-//
-// The hold is asked here as well as at selection. The delete runs later, so a
-// hold placed in between would otherwise reach a chosen row.
-//
-// A restricted sibling shields the original too, to keep the sweep quiet
-// rather than to keep the data.
-//
-// The data is already safe: `raw_capture_id` is `ON DELETE SET NULL`, so the
-// delete updates each linked activity, and the restriction trigger refuses
-// that on a still-restricted row. Unshielded, that refusal aborts the whole
-// stage, which is the cost the predicate above states.
-//
-// The floor arm does not cover this. A restricted row carries a retention
-// class, so that arm answers only while its window is still open.
+// Every linked activity must release an original, including archived ones.
+// A restriction keeps its evidence and would also refuse the unlinking write.
 func rawCaptureUnshielded(currentArg, carriedArg int) string {
-	return `NOT EXISTS (SELECT 1 FROM activity a
-		  WHERE ` + storekit.StoredOriginalSQL("a", "r") + `
-		    AND (` + handelsbriefShielded(currentArg, carriedArg) + `
-		         OR a.restricted_at IS NOT NULL
-		         OR ` + retentionscope.HeldThroughAnyLink("a.id") + `))`
+	return `EXISTS (SELECT 1 FROM activity a WHERE ` + storekit.StoredOriginalSQL("a", "r") + `)
+ AND NOT EXISTS (SELECT 1 FROM activity a
+   WHERE ` + storekit.StoredOriginalSQL("a", "r") + `
+     AND (` + handelsbriefShielded(currentArg, carriedArg) + `
+          OR a.restricted_at IS NOT NULL
+          OR ` + retentionscope.HeldThroughAnyLink("a.id") + `) IS NOT FALSE)`
 }
 
 // windowEndOf is one floor's window end over the activity aliased `a`. floor

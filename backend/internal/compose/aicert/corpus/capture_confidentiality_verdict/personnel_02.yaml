@@ -30,6 +30,7 @@ fixture:
         Quang Le | QA engineer | 1,320 | 1,584
 expect:
   outcome: accepted
+  privacy: true
   answer: personnel
   judge: none
   judge_none_reason: >

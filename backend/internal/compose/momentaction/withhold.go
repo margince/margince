@@ -25,21 +25,17 @@ import (
 
 // writesAnActivity classifies the whole action-kind vocabulary by whether
 // pressing the verb needs `activity.create`. POST /activities does, where the
-// log form and the task form both post, and so does POST /bookings.
+// log form and the task form both post, and so do POST /bookings and every send.
 //
-// EVERY kind carries an answer, including the false ones, because a lookup
-// miss and a "no" are the same value in Go and the miss is the direction that
-// fails open. What makes the false entries load-bearing rather than noise is
-// that nothing here may be absent: gates/momentactionvocabulary_test.go holds
-// these keys equal to the contract's own enum, so a ninth kind cannot reach a
-// reader until somebody has said which of the two it is.
+// Every kind carries an answer, including the false ones. A lookup miss and a
+// "no" are the same value in Go, and the miss fails open.
+// gates/momentactionvocabulary_test.go holds these keys equal to the enum.
 var writesAnActivity = map[crmcontracts.ContactMomentActionKind]bool{
 	// The log form, under its own name and asked as a task. One POST, one grant.
 	crmcontracts.ContactMomentActionKindLogActivity:  true,
 	crmcontracts.ContactMomentActionKindCompleteTask: true,
-	// The composer sends through POST /emails, which is a side service rather
-	// than a record write and asks nothing of `activity.create`.
-	crmcontracts.ContactMomentActionKindDraftReply: false,
+	// The composer's send writes the message as an activity, so it asks `activity.create`.
+	crmcontracts.ContactMomentActionKindDraftReply: true,
 	// Booking creates a meeting through POST /bookings.
 	crmcontracts.ContactMomentActionKindScheduleMeeting: true,
 	// Reads. They navigate; they write nothing.
@@ -62,7 +58,7 @@ func Withhold(ctx context.Context, language string, moment *crmcontracts.Contact
 	if moment.MayBeDone != nil {
 		withholdDone(ctx, said, moment)
 	}
-	if auth.Allows(ctx, "activity", principal.ActionCreate) {
+	if auth.AllowsWrite(ctx, "activity", principal.ActionCreate) {
 		return
 	}
 	block := func(action *crmcontracts.ContactMomentAction) {
@@ -83,11 +79,7 @@ func Withhold(ctx context.Context, language string, moment *crmcontracts.Contact
 		if action.State == crmcontracts.ContactMomentActionStateBlocked {
 			return
 		}
-		reason := blockedWords.Log
-		if action.Kind == crmcontracts.ContactMomentActionKindScheduleMeeting {
-			reason = blockedWords.Book
-		}
-		blockAction(action, said.Say(reason))
+		blockAction(action, said.Say(blockedReason(action.Kind)))
 	}
 	block(&moment.RecommendedAction)
 	if moment.SecondaryActions == nil {
@@ -106,11 +98,23 @@ func withholdDone(ctx context.Context, said langcopy.Spoken, moment *crmcontract
 	if moment.MayBeDone.PromiseType == crmcontracts.ContactMomentMayBeDonePromiseTypeClaim {
 		object, reason = "contact", said.Say(blockedWords.Settle)
 	}
-	if auth.Allows(ctx, object, principal.ActionUpdate) {
+	if auth.AllowsWrite(ctx, object, principal.ActionUpdate) {
 		return
 	}
 	done := &moment.RecommendedAction
 	blockAction(done, reason)
+}
+
+// blockedReason names what the reader may not do, in the verb's own words.
+func blockedReason(kind crmcontracts.ContactMomentActionKind) langcopy.Phrase {
+	switch kind {
+	case crmcontracts.ContactMomentActionKindScheduleMeeting:
+		return blockedWords.Book
+	case crmcontracts.ContactMomentActionKindDraftReply:
+		return blockedWords.Send
+	default:
+		return blockedWords.Log
+	}
 }
 
 func blockAction(action *crmcontracts.ContactMomentAction, reason string) {

@@ -213,7 +213,7 @@ export function usableName(name: string | null | undefined): string | null {
 export function useEntityName(
   kind: EntityKind,
   id: string | null | undefined,
-): { name: string | null; reading: NameReading } {
+): { name: string | null; reading: NameReading; fetching: boolean } {
   const query = useQuery({
     ...entityNameQuery(kind, id ?? ""),
     queryKey: [kind, ENTITY_NAME_KEY, id],
@@ -222,5 +222,12 @@ export function useEntityName(
   // The reading travels with the name, because a caller handed only `null`
   // cannot tell a name that is still coming from one that will never come, and
   // every caller that has had to guess has guessed the id.
-  return { name: usableName(query.data), reading: readingOf(query) };
+  //
+  // `fetching` is true while a read is under way or paused, cached answer or
+  // not. A cached "no name" can be replaced by the read still coming.
+  return {
+    name: usableName(query.data),
+    reading: readingOf(query),
+    fetching: query.fetchStatus !== "idle",
+  };
 }

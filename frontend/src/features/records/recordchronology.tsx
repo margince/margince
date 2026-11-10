@@ -6,6 +6,7 @@ import { EmptyState, PendingBody } from "../../design-system/atoms";
 import { FilterPills } from "../../design-system/filterpills";
 import { LoadMoreButton } from "../../design-system/querystates";
 import type { RecordTimeline } from "../../design-system/recordtimeline";
+import { SurfaceState } from "../../design-system/surfacestate";
 import type { TimelineEntry } from "../../design-system/timelineentry";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
@@ -347,9 +348,26 @@ export function chronologyNotice(
   activitiesEmptyKey: MessageKey,
   filter: TimelineFilter,
   chronology: RecordChronology,
-  exchanges: { loading: boolean; failed: boolean; assembled: boolean },
+  exchanges: {
+    loading: boolean;
+    failed: boolean;
+    assembled: boolean;
+    // The record's read named the activities as hidden from this reader.
+    withheld?: boolean;
+  },
   t: ReturnType<typeof useT>,
 ): ReactNode {
+  if (readsExchangesOnly(filter) && exchanges.withheld) {
+    return (
+      <SurfaceState
+        state="withheld"
+        emptyLabel={t(activitiesEmptyKey)}
+        loadingLabel={t("record.chronologyLoading")}
+      >
+        {null}
+      </SurfaceState>
+    );
+  }
   const timeline = readsExchangesOnly(filter)
     ? exchanges
     : {

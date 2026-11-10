@@ -14,7 +14,7 @@ var queryEnumTable = map[string][]queryEnum{
 	"GET /v1/activities": {
 		{Name: "call_outcome", Values: []string{"reached", "not_reached", "voicemail", "call_back_later", "put_through"}, Array: false, Explode: true},
 		{Name: "entity_type", Values: []string{"contact", "company", "deal", "lead", "project"}, Array: false, Explode: true},
-		{Name: "kind", Values: []string{"email", "call", "meeting", "note", "task", "message"}, Array: false, Explode: true},
+		{Name: "kind", Values: []string{"email", "call", "meeting", "note", "task", "message"}, Array: true, Explode: true},
 	},
 	"GET /v1/activities/deal-filing": {
 		{Name: "record_type", Values: []string{"contact", "company"}, Array: false, Explode: true},
