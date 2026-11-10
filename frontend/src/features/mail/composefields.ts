@@ -5,6 +5,7 @@ import { useCallback, useRef, useState } from "react";
 import type { components } from "../../api/schema";
 import type { ProjectScope } from "../../design-system/projectpicker";
 import { paragraphsFrom } from "../../design-system/richtext";
+import { isLocale, type Locale } from "../../i18n/locale";
 import type { CommunicationContext } from "../../lib/compose-context";
 import type { DraftProvenance, DraftUnavailable } from "./composedraftcall";
 import {
@@ -59,6 +60,7 @@ export type FieldsSnapshot = Readonly<{
   dealId: string;
   reasoning: DraftReason[];
   scope: ProjectScope | undefined;
+  language: Locale | null;
 }>;
 
 export function emptyFields(): FieldsSnapshot {
@@ -79,6 +81,7 @@ export function emptyFields(): FieldsSnapshot {
     dealId: "",
     reasoning: [],
     scope: undefined,
+    language: null,
   };
 }
 
@@ -165,6 +168,8 @@ export function useComposeFields({
   );
   // The words as the model last served them; a rewrite may replace only these.
   const [servedBody, setServedBody] = useState("");
+  // The draft language the rep picked; null leaves it to the correspondence.
+  const [language, setLanguage] = useState<Locale | null>(null);
   // Two non-error outcomes kept out of react-query's error channel, so the
   // form stays usable when the model or mailer is not configured (501).
   const [draftUnavailable, setDraftUnavailable] =
@@ -229,13 +234,16 @@ export function useComposeFields({
           provenance,
           reasoning: account.reasoning,
           scope: account.scope,
+          language,
         }
       : null;
+  // An emptied body sets the marks aside, and the choice stays for the next draft.
   const applyMarks = (marks: DraftMarks | null) => {
     setDraftRef(marks?.draftRef ?? null);
     setProvenance(marks?.provenance ?? null);
     account.setReasoning(marks?.reasoning ?? []);
     account.setScope(marks?.scope);
+    if (marks) setLanguage(marks.language);
   };
 
   const editBody = (next: Readonly<{ html: string; text: string }>) => {
@@ -271,7 +279,13 @@ export function useComposeFields({
   // may still bring the words back, so the disclosure waits for them.
   const clearRejected = () => {
     const rejected: DraftMarks | null = provenance
-      ? { draftRef: null, provenance, reasoning: [], scope: undefined }
+      ? {
+          draftRef: null,
+          provenance,
+          reasoning: [],
+          scope: undefined,
+          language,
+        }
       : null;
     memory.current.remember(body, rejected);
     parked.current = rejected;
@@ -296,6 +310,7 @@ export function useComposeFields({
     const state = saved.editorState;
     setIntent(state?.intent ?? "");
     setServedBody(state?.served_body ?? "");
+    setLanguage(chosenLanguage(state?.language));
     setDraftRef(null);
     setProvenance(
       state?.ai_generated
@@ -326,6 +341,7 @@ export function useComposeFields({
     dealId: account.dealId,
     reasoning: account.reasoning,
     scope: account.scope,
+    language,
   });
 
   const load = (next: FieldsSnapshot) => {
@@ -348,11 +364,12 @@ export function useComposeFields({
     setServedBody(next.servedBody);
     account.setReasoning(next.reasoning);
     account.setScope(next.scope);
+    setLanguage(next.language);
     setDraftUnavailable(null);
   };
 
   return {
-    editorState: editorStateOf({ intent, provenance, servedBody }),
+    editorState: editorStateOf({ intent, provenance, servedBody, language }),
     to,
     setTo,
     cc,
@@ -377,6 +394,8 @@ export function useComposeFields({
     setDraftRef,
     servedBody,
     setServedBody,
+    language,
+    setLanguage,
     draftUnavailable,
     setDraftUnavailable,
     sendUnavailable,
@@ -402,8 +421,16 @@ export function useComposeFields({
 
 export type ComposeFields = ReturnType<typeof useComposeFields>;
 
+// A saved code this build does not ship is no choice it can name again.
+function chosenLanguage(saved: string | undefined): Locale | null {
+  return saved !== undefined && isLocale(saved) ? saved : null;
+}
+
 function editorStateOf(
-  fields: Pick<FieldsSnapshot, "intent" | "provenance" | "servedBody">,
+  fields: Pick<
+    FieldsSnapshot,
+    "intent" | "provenance" | "servedBody" | "language"
+  >,
 ): components["schemas"]["MailDraftEditorState"] {
   return {
     intent: fields.intent,
@@ -413,5 +440,6 @@ function editorStateOf(
       fields.provenance?.voice_profile_version ?? undefined,
     voice_degraded: fields.provenance?.voice_degraded ?? false,
     served_body: fields.servedBody,
+    ...(fields.language ? { language: fields.language } : {}),
   };
 }

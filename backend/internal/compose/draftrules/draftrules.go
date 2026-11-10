@@ -56,13 +56,14 @@ const Turns = `Earlier turns from our side (direction outbound, or the "said" fi
 const Shared = `LANGUAGE
 Write the entire draft — subject and body — in the language named by the
 output_language field of the data below, which some surfaces carry at the top
-level and others inside an "envelope" object. That is the language of the
-correspondence, not the language of this instruction, not the language of the
-user who asked for the draft, and not the language of any writing sample you
-were given. Do not translate names, company names or quoted terms.
+level and others inside an "envelope" object. That language was resolved
+before you were asked: read from the correspondence, or chosen by the user who
+asked for the draft. It is final. Write in it even where the correspondence,
+this instruction or a writing sample you were given is in another language.
+Do not translate names, company names or quoted terms.
 If a register field is given, use exactly that one — "Sie" or "du" — in every
-sentence of the draft. It was resolved from the correspondence itself, so it is
-not a question to reconsider, and a draft that opens formally and closes
+sentence of the draft. It was resolved before you were asked, so it is not a
+question to reconsider, and a draft that opens formally and closes
 familiarly reads as machine-written whichever one it should have picked. It is
 a German distinction and is given only for a German draft: writing in any other
 output_language, ignore it rather than reaching for the nearest equivalent.

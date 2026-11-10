@@ -158,17 +158,21 @@ func (s *Setting[T]) entry() settings.Definition {
 }
 
 // storedText never opens a sealed value: a secret is shown nowhere, so only
-// whether a row exists is read.
-func (s *Setting[T]) storedText(ctx context.Context, db *settings.Store) (string, bool, error) {
+// whether a row exists is read, and its text is nil.
+func (s *Setting[T]) storedText(ctx context.Context, db *settings.Store) (*string, bool, error) {
 	if s.sealed != nil {
 		_, stored, err := settings.GetStored(ctx, db, s.sealed)
-		return "", stored, err
+		return nil, stored, err
 	}
 	v, stored, err := settings.GetStored(ctx, db, s.row)
 	if err != nil {
-		return "", false, err
+		return nil, false, err
 	}
-	return s.spec.Type.Format(v), stored, nil
+	text, ok := s.text(v)
+	if !ok {
+		return nil, stored, nil
+	}
+	return &text, stored, nil
 }
 
 // DefaultText is the default as an operator writes it.
@@ -178,6 +182,16 @@ func (s *Setting[T]) DefaultText() (string, bool) {
 		return "", false
 	}
 	return s.spec.Type.Format(v), true
+}
+
+// text is v as an operator writes it, and false for an object that is JSON
+// null. An optional object's nil pointer holds nothing, and "null" reads as a value.
+func (s *Setting[T]) text(v T) (string, bool) {
+	text := s.spec.Type.Format(v)
+	if _, object := s.spec.Type.(structType[T]); object && text == "null" {
+		return "", false
+	}
+	return text, true
 }
 
 // defaultValue hands the loader the typed default, because formatting it to
@@ -193,12 +207,12 @@ func (s *Setting[T]) parseText(text string) (any, error) { return s.spec.Type.Pa
 func (s *Setting[T]) decodeYAML(n *yaml.Node) (any, error) { return s.spec.Type.DecodeYAML(n) }
 
 //craft:ignore naked-any the registry holds settings of many types behind one erased view
-func (s *Setting[T]) format(v any) string {
+func (s *Setting[T]) format(v any) (string, bool) {
 	typed, ok := v.(T)
 	if !ok {
-		return ""
+		return "", false
 	}
-	return s.spec.Type.Format(typed)
+	return s.text(typed)
 }
 
 //craft:ignore naked-any the registry holds settings of many types behind one erased view
