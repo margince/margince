@@ -24,19 +24,19 @@ records, so a row changes only when a maintainer merges it.
 
 | ID | Operation | Published budget | Measured p95 | Verdict | Measured on |
 |---|---|---|---|---|---|
-| `PERF-1` | Record open (contact/company/deal) | < 100 ms server | 56.9 ms | within budget | 2026-10-29 |
-| `PERF-2` | List/table view (50 rows, filtered) | < 150 ms server | 60.6 ms | within budget | 2026-10-29 |
+| `PERF-1` | Record open (contact/company/deal) | < 100 ms server | 81.6 ms | within budget | 2026-11-10 |
+| `PERF-2` | List/table view (50 rows, filtered) | < 150 ms server | 107 ms | within budget | 2026-11-10 |
 | `PERF-3` | Search (full-text) | < 200 ms | 140 ms | within budget | 2026-10-07 |
 | `PERF-4` | Save/mutation | < 150 ms server | 60.6 ms | within budget | 2026-10-07 |
 | `PERF-5` | AI baseline action (summary/draft) | first token < 1.5 s |  | **not measured** |  |
 | `PERF-6` | Cold start (single binary) | < 2 s |  | **not measured** |  |
-| `PERF-7` | Context-graph assembly | < 300 ms at mid-market | 269 ms | within budget | 2026-10-29 |
-| `PERF-8` | Worklist and Home, as the screen calls them | < 1 s | 1900 ms | over budget (#4912) | 2026-10-29 |
-| `PERF-9` | Analytics screen | < 300 ms | 117 ms | within budget | 2026-10-29 |
-| `PERF-10` | Search as the screen calls it | < 1 s | 478 ms | within budget | 2026-10-29 |
+| `PERF-7` | Context-graph assembly | < 300 ms at mid-market | 862 ms | over budget (#9526) | 2026-11-10 |
+| `PERF-8` | Worklist and Home, as the screen calls them | < 1 s | 1721 ms | over budget (#4912) | 2026-11-10 |
+| `PERF-9` | Analytics screen | < 300 ms | 159 ms | within budget | 2026-11-10 |
+| `PERF-10` | Search as the screen calls it | < 1 s | 772 ms | within budget | 2026-11-10 |
 | `PERF-11` | System health compact overview | < 750 ms | 251 ms | within budget | 2026-11-01 |
 | `PERF-12` | System health diagnostic reads | < 1 s | 76.7 ms | within budget | 2026-11-01 |
-| `LOAD-1` | A cheap request while the team starts at once | < 150 ms | 79.8 ms | within budget | 2026-10-29 |
+| `LOAD-1` | A cheap request while the team starts at once | < 150 ms | 893 ms | over budget (#7068) | 2026-11-10 |
 | `CAP-PARAM-1` | Capture to timeline | 60 s p95 | 39.2 ms | within budget | 2026-08-15 |
 | `MOBILE-AC-2` | Record open, perceived, Fast-3G | < 300 ms perceived | 61.0 ms | within budget | 2026-09-11 |
 
@@ -52,131 +52,132 @@ A row with no data had nothing to time, and its note says why; a row not gated i
 
 | measurement | seat | p50 | p95 | budget | samples | verdict | notes |
 |---|---|---|---|---|---|---|---|
-| `worklist_first_load` | rep | 2082 ms | 2082 ms | 1000 ms | 1 | not gated | one connection dialled before timing; the app's caches start empty |
-| `search_first_load` | rep | 398 ms | 398 ms | 1000 ms | 1 | not gated | one connection dialled before timing; the app's caches start empty |
-| `app_shell_capabilities` | rep | 0.1 ms | 0.1 ms | 150 ms | 30 | within budget | empty on the seeded corpus |
-| `app_shell_me` | rep | 2.2 ms | 2.4 ms | 150 ms | 30 | within budget |  |
-| `app_shell_company_context` | rep | 1.1 ms | 1.3 ms | 150 ms | 30 | within budget |  |
-| `app_shell_installation_settings` | rep | 9.6 ms | 11.4 ms | 150 ms | 30 | within budget |  |
+| `worklist_first_load` | rep | 2744 ms | 2744 ms | 1000 ms | 1 | not gated | one connection dialled before timing; the app's caches start empty |
+| `search_first_load` | rep | 471 ms | 471 ms | 1000 ms | 1 | not gated | one connection dialled before timing; the app's caches start empty |
+| `app_shell_capabilities` | rep | 0.3 ms | 0.4 ms | 150 ms | 30 | within budget | empty on the seeded corpus |
+| `app_shell_me` | rep | 2.7 ms | 4.7 ms | 150 ms | 30 | within budget |  |
+| `app_shell_company_context` | rep | 1.7 ms | 1.8 ms | 150 ms | 30 | within budget |  |
+| `app_shell_installation_settings` | rep | 16.6 ms | 22.8 ms | 150 ms | 30 | within budget |  |
 | `app_shell_onboarding_state` | rep |  |  | 150 ms | 0 | no data | answers 404: nothing of this kind on the seeded corpus |
 | `app_shell_connectors` | rep |  |  | 150 ms | 0 | no data | answers 501 until a mail connector is configured |
-| `app_shell_approvals` | rep | 12.0 ms | 14.0 ms | 150 ms | 30 | within budget |  |
+| `app_shell_approvals` | rep | 14.2 ms | 16.8 ms | 150 ms | 30 | within budget |  |
 | `app_shell_assistant_profile` | rep | 0.1 ms | 0.1 ms | 150 ms | 30 | within budget | empty on the seeded corpus |
-| `app_shell_ai_activity` | rep | 1.4 ms | 1.6 ms | 150 ms | 30 | within budget | empty on the seeded corpus |
-| `app_shell_voice_profiles` | rep | 1.2 ms | 1.3 ms | 150 ms | 30 | within budget | empty on the seeded corpus |
-| `app_shell_scheduling_profile` | rep | 2.5 ms | 2.6 ms | 150 ms | 30 | within budget |  |
-| `app_shell_scheduled_sends` | rep | 1.2 ms | 1.3 ms | 150 ms | 30 | within budget | empty on the seeded corpus |
-| `app_shell_notices` | rep | 1.4 ms | 1.8 ms | 150 ms | 30 | within budget | empty on the seeded corpus |
-| `worklist` | rep | 917 ms | 1137 ms | 1000 ms | 30 | over budget (#4912) |  |
-| `worklist_handled` | rep | 7.2 ms | 7.9 ms | 1000 ms | 30 | within budget |  |
-| `home_brief` | rep | 21.0 ms | 21.9 ms | 1000 ms | 30 | within budget |  |
-| `home_worklist` | rep | 917 ms | 925 ms | 1000 ms | 30 | within budget |  |
-| `home_handled` | rep | 7.3 ms | 8.3 ms | 1000 ms | 30 | within budget |  |
-| `home_magic` | rep | 18.2 ms | 21.5 ms | 1000 ms | 30 | within budget |  |
+| `app_shell_ai_activity` | rep | 2.2 ms | 2.3 ms | 150 ms | 30 | within budget | empty on the seeded corpus |
+| `app_shell_voice_profiles` | rep | 2.0 ms | 2.1 ms | 150 ms | 30 | within budget | empty on the seeded corpus |
+| `app_shell_scheduling_profile` | rep | 3.3 ms | 4.5 ms | 150 ms | 30 | within budget |  |
+| `app_shell_scheduled_sends` | rep | 2.0 ms | 3.1 ms | 150 ms | 30 | within budget | empty on the seeded corpus |
+| `app_shell_notices` | rep | 2.3 ms | 2.9 ms | 150 ms | 30 | within budget | empty on the seeded corpus |
+| `worklist` | rep | 16.5 ms | 17.1 ms | 1000 ms | 30 | within budget |  |
+| `worklist_handled` | rep | 30.0 ms | 48.4 ms | 1000 ms | 30 | within budget |  |
+| `home_brief` | rep | 6.5 ms | 7.5 ms | 1000 ms | 30 | within budget |  |
+| `home_worklist` | rep | 16.3 ms | 17.4 ms | 1000 ms | 30 | within budget |  |
+| `home_handled` | rep | 30.5 ms | 32.6 ms | 1000 ms | 30 | within budget |  |
+| `home_magic` | rep | 4.5 ms | 4.7 ms | 1000 ms | 30 | within budget |  |
 | `home_digest` | rep |  |  | 1000 ms | 0 | no data | answers 501 until a mail connector is configured |
-| `palette_search_contract` | rep | 216 ms | 222 ms | 1000 ms | 30 | within budget |  |
-| `palette_search_angebot` | rep | 87.8 ms | 91.5 ms | 1000 ms | 30 | within budget |  |
-| `palette_search_meeting` | rep | 89.6 ms | 92.6 ms | 1000 ms | 30 | within budget |  |
-| `palette_search_company` | rep | 69.6 ms | 72.3 ms | 1000 ms | 30 | within budget |  |
-| `palette_search_prefix_co` | rep | 469 ms | 478 ms | 1000 ms | 30 | within budget |  |
-| `palette_search_prefix_con` | rep | 428 ms | 437 ms | 1000 ms | 30 | within budget |  |
-| `palette_search_prefix_cont` | rep | 361 ms | 369 ms | 1000 ms | 30 | within budget |  |
-| `palette_search_prefix_ang` | rep | 164 ms | 168 ms | 1000 ms | 30 | within budget |  |
-| `results_search_all` | rep | 217 ms | 222 ms | 1000 ms | 30 | within budget |  |
-| `results_search_activity` | rep | 95.4 ms | 97.9 ms | 1000 ms | 30 | within budget |  |
-| `lists_companies` | rep | 14.0 ms | 16.2 ms | 150 ms | 30 | within budget |  |
-| `lists_companies_q` | rep | 16.1 ms | 17.0 ms | 150 ms | 30 | within budget |  |
-| `lists_contacts` | rep | 38.1 ms | 39.8 ms | 150 ms | 30 | within budget |  |
-| `lists_contacts_q` | rep | 44.5 ms | 46.3 ms | 150 ms | 30 | within budget |  |
-| `lists_deals` | rep | 11.9 ms | 12.6 ms | 150 ms | 30 | within budget |  |
-| `lists_deals_q` | rep | 6.8 ms | 7.6 ms | 150 ms | 30 | within budget |  |
-| `lists_leads` | rep | 43.9 ms | 60.6 ms | 150 ms | 30 | within budget |  |
-| `lists_leads_q` | rep | 4.3 ms | 21.1 ms | 150 ms | 30 | within budget | empty on the seeded corpus |
-| `record_open_contact` | rep | 4.2 ms | 6.5 ms | 100 ms | 30 | within budget |  |
-| `record_open_company` | rep | 8.3 ms | 8.9 ms | 100 ms | 30 | within budget |  |
-| `record_open_deal` | rep | 3.0 ms | 3.2 ms | 100 ms | 30 | within budget |  |
-| `record_open_project` | rep | 2.6 ms | 3.8 ms | 100 ms | 30 | within budget | empty on the seeded corpus |
-| `contact_360` | rep | 93.5 ms | 185 ms | 300 ms | 30 | within budget |  |
-| `company_360` | rep | 254 ms | 269 ms | 300 ms | 30 | within budget | first measurement p95 469 ms over budget; not confirmed on a second measurement |
-| `search_to_deal_search` | rep | 32.8 ms | 36.0 ms | 1000 ms | 30 | within budget |  |
-| `search_to_deal_page` | rep | 41.2 ms | 49.7 ms | 100 ms | 30 | within budget | the page's calls, in parallel: deal, offers, documents, coverage, commitments; offers, documents, commitments empty on the seeded corpus |
-| `search_to_deal_total` | rep | 73.8 ms | 84.3 ms | 1100 ms | 30 | not gated |  |
+| `palette_search_contract` | rep | 328 ms | 338 ms | 1000 ms | 30 | within budget |  |
+| `palette_search_angebot` | rep | 164 ms | 168 ms | 1000 ms | 30 | within budget |  |
+| `palette_search_meeting` | rep | 167 ms | 170 ms | 1000 ms | 30 | within budget |  |
+| `palette_search_company` | rep | 157 ms | 161 ms | 1000 ms | 30 | within budget |  |
+| `palette_search_prefix_co` | rep | 755 ms | 772 ms | 1000 ms | 30 | within budget |  |
+| `palette_search_prefix_con` | rep | 641 ms | 656 ms | 1000 ms | 30 | within budget |  |
+| `palette_search_prefix_cont` | rep | 543 ms | 561 ms | 1000 ms | 30 | within budget |  |
+| `palette_search_prefix_ang` | rep | 149 ms | 155 ms | 1000 ms | 30 | within budget |  |
+| `results_search_all` | rep | 329 ms | 338 ms | 1000 ms | 30 | within budget |  |
+| `results_search_activity` | rep | 189 ms | 192 ms | 1000 ms | 30 | within budget |  |
+| `lists_companies` | rep | 20.9 ms | 29.4 ms | 150 ms | 30 | within budget |  |
+| `lists_companies_q` | rep | 23.5 ms | 27.6 ms | 150 ms | 30 | within budget |  |
+| `lists_contacts` | rep | 80.2 ms | 83.9 ms | 150 ms | 30 | within budget |  |
+| `lists_contacts_q` | rep | 88.0 ms | 93.5 ms | 150 ms | 30 | within budget |  |
+| `lists_deals` | rep | 26.0 ms | 27.8 ms | 150 ms | 30 | within budget |  |
+| `lists_deals_q` | rep | 18.4 ms | 21.2 ms | 150 ms | 30 | within budget |  |
+| `lists_leads` | rep | 62.0 ms | 107 ms | 150 ms | 30 | within budget |  |
+| `lists_leads_q` | rep | 8.7 ms | 53.8 ms | 150 ms | 30 | within budget | empty on the seeded corpus |
+| `record_open_contact` | rep | 10.2 ms | 33.6 ms | 100 ms | 30 | within budget |  |
+| `record_open_company` | rep | 6.5 ms | 8.1 ms | 100 ms | 30 | within budget |  |
+| `record_open_deal` | rep | 7.0 ms | 8.3 ms | 100 ms | 30 | within budget |  |
+| `record_open_project` | rep | 5.1 ms | 6.7 ms | 100 ms | 30 | within budget | empty on the seeded corpus |
+| `contact_360` | rep | 265 ms | 271 ms | 300 ms | 30 | within budget | first measurement p95 421 ms over budget; not confirmed on a second measurement |
+| `company_360` | rep | 413 ms | 851 ms | 300 ms | 30 | over budget (#9526) |  |
+| `search_to_deal_search` | rep | 57.8 ms | 64.9 ms | 1000 ms | 30 | within budget |  |
+| `search_to_deal_page` | rep | 64.6 ms | 81.6 ms | 100 ms | 30 | within budget | the page's calls, in parallel: deal, offers, documents, coverage, commitments; offers, documents, commitments empty on the seeded corpus |
+| `search_to_deal_total` | rep | 121 ms | 139 ms | 1100 ms | 30 | not gated |  |
 | `search_to_company_page_logo` | rep |  |  | 100 ms | 0 | no data | answers 404: nothing of this kind on the seeded corpus |
-| `search_to_company_search` | rep | 96.4 ms | 140 ms | 1000 ms | 30 | within budget |  |
-| `search_to_company_page` | rep | 12.9 ms | 42.5 ms | 100 ms | 30 | within budget | the page's calls, in parallel: company, facts, documents; facts, documents empty on the seeded corpus |
-| `search_to_company_total` | rep | 111 ms | 171 ms | 1100 ms | 30 | not gated |  |
-| `analytics_context` | rep | 2.8 ms | 2.8 ms | 300 ms | 30 | within budget |  |
-| `analytics_metrics` | rep | 1.6 ms | 1.6 ms | 300 ms | 30 | within budget |  |
-| `analytics_framework` | rep | 1.5 ms | 1.6 ms | 300 ms | 30 | within budget |  |
-| `analytics_pipelines` | rep | 2.0 ms | 2.2 ms | 300 ms | 30 | within budget |  |
-| `analytics_evaluate` | rep | 19.5 ms | 23.6 ms | 300 ms | 30 | within budget |  |
-| `app_shell_capabilities` | manager | 0.1 ms | 0.1 ms | 150 ms | 30 | within budget | empty on the seeded corpus |
-| `app_shell_me` | manager | 2.2 ms | 2.3 ms | 150 ms | 30 | within budget |  |
-| `app_shell_company_context` | manager | 1.2 ms | 1.4 ms | 150 ms | 30 | within budget |  |
-| `app_shell_installation_settings` | manager | 11.9 ms | 13.1 ms | 150 ms | 30 | within budget |  |
+| `search_to_company_search` | rep | 161 ms | 220 ms | 1000 ms | 30 | within budget |  |
+| `search_to_company_page` | rep | 25.9 ms | 62.7 ms | 100 ms | 30 | within budget | the page's calls, in parallel: company, facts, documents; facts, documents empty on the seeded corpus |
+| `search_to_company_total` | rep | 190 ms | 268 ms | 1100 ms | 30 | not gated |  |
+| `analytics_context` | rep | 2.7 ms | 3.4 ms | 300 ms | 30 | within budget |  |
+| `analytics_metrics` | rep | 2.1 ms | 2.1 ms | 300 ms | 30 | within budget |  |
+| `analytics_framework` | rep | 2.0 ms | 2.0 ms | 300 ms | 30 | within budget |  |
+| `analytics_pipelines` | rep | 2.8 ms | 2.9 ms | 300 ms | 30 | within budget |  |
+| `analytics_evaluate` | rep | 25.8 ms | 28.5 ms | 300 ms | 30 | within budget |  |
+| `app_shell_capabilities` | manager | 0.1 ms | 0.2 ms | 150 ms | 30 | within budget | empty on the seeded corpus |
+| `app_shell_me` | manager | 2.3 ms | 3.4 ms | 150 ms | 30 | within budget |  |
+| `app_shell_company_context` | manager | 1.5 ms | 1.6 ms | 150 ms | 30 | within budget |  |
+| `app_shell_installation_settings` | manager | 15.1 ms | 15.6 ms | 150 ms | 30 | within budget |  |
 | `app_shell_onboarding_state` | manager |  |  | 150 ms | 0 | no data | answers 404: nothing of this kind on the seeded corpus |
 | `app_shell_connectors` | manager |  |  | 150 ms | 0 | no data | answers 501 until a mail connector is configured |
-| `app_shell_approvals` | manager | 11.5 ms | 13.1 ms | 150 ms | 30 | within budget |  |
+| `app_shell_approvals` | manager | 14.3 ms | 15.7 ms | 150 ms | 30 | within budget |  |
 | `app_shell_assistant_profile` | manager | 0.1 ms | 0.1 ms | 150 ms | 30 | within budget | empty on the seeded corpus |
-| `app_shell_ai_activity` | manager | 1.6 ms | 1.9 ms | 150 ms | 30 | within budget | empty on the seeded corpus |
-| `app_shell_voice_profiles` | manager | 1.4 ms | 1.5 ms | 150 ms | 30 | within budget | empty on the seeded corpus |
-| `app_shell_scheduling_profile` | manager | 2.5 ms | 2.7 ms | 150 ms | 30 | within budget |  |
-| `app_shell_scheduled_sends` | manager | 1.4 ms | 1.5 ms | 150 ms | 30 | within budget | empty on the seeded corpus |
-| `app_shell_notices` | manager | 1.6 ms | 2.0 ms | 150 ms | 30 | within budget | empty on the seeded corpus |
-| `worklist` | manager | 1655 ms | 1900 ms | 1000 ms | 30 | over budget (#4912) |  |
-| `worklist_handled` | manager | 6.8 ms | 7.4 ms | 1000 ms | 30 | within budget |  |
-| `home_brief` | manager | 19.7 ms | 20.7 ms | 1000 ms | 30 | within budget | empty on the seeded corpus |
-| `home_worklist` | manager | 318 ms | 362 ms | 1000 ms | 30 | within budget |  |
-| `home_handled` | manager | 6.8 ms | 7.8 ms | 1000 ms | 30 | within budget |  |
-| `home_magic` | manager | 19.2 ms | 23.6 ms | 1000 ms | 30 | within budget |  |
+| `app_shell_ai_activity` | manager | 2.1 ms | 2.5 ms | 150 ms | 30 | within budget | empty on the seeded corpus |
+| `app_shell_voice_profiles` | manager | 2.2 ms | 2.4 ms | 150 ms | 30 | within budget | empty on the seeded corpus |
+| `app_shell_scheduling_profile` | manager | 3.2 ms | 3.6 ms | 150 ms | 30 | within budget |  |
+| `app_shell_scheduled_sends` | manager | 1.9 ms | 2.0 ms | 150 ms | 30 | within budget | empty on the seeded corpus |
+| `app_shell_notices` | manager | 2.2 ms | 2.8 ms | 150 ms | 30 | within budget | empty on the seeded corpus |
+| `worklist` | manager | 2.4 ms | 4.2 ms | 1000 ms | 30 | within budget |  |
+| `worklist_handled` | manager | 35.0 ms | 52.9 ms | 1000 ms | 30 | within budget |  |
+| `worklist_team` | manager | 1693 ms | 1721 ms | 1000 ms | 30 | over budget (#4912) |  |
+| `home_brief` | manager | 5.6 ms | 6.9 ms | 1000 ms | 30 | within budget | empty on the seeded corpus |
+| `home_worklist` | manager | 2.3 ms | 2.4 ms | 1000 ms | 30 | within budget |  |
+| `home_handled` | manager | 35.3 ms | 45.6 ms | 1000 ms | 30 | within budget |  |
+| `home_magic` | manager | 2.9 ms | 3.1 ms | 1000 ms | 30 | within budget |  |
 | `home_digest` | manager |  |  | 1000 ms | 0 | no data | answers 501 until a mail connector is configured |
-| `palette_search_contract` | manager | 215 ms | 220 ms | 1000 ms | 30 | within budget |  |
-| `palette_search_angebot` | manager | 85.2 ms | 88.8 ms | 1000 ms | 30 | within budget |  |
-| `palette_search_meeting` | manager | 87.8 ms | 91.8 ms | 1000 ms | 30 | within budget |  |
-| `palette_search_company` | manager | 69.8 ms | 73.5 ms | 1000 ms | 30 | within budget |  |
-| `palette_search_prefix_co` | manager | 468 ms | 478 ms | 1000 ms | 30 | within budget |  |
-| `palette_search_prefix_con` | manager | 421 ms | 437 ms | 1000 ms | 30 | within budget |  |
-| `palette_search_prefix_cont` | manager | 358 ms | 365 ms | 1000 ms | 30 | within budget |  |
-| `palette_search_prefix_ang` | manager | 161 ms | 172 ms | 1000 ms | 30 | within budget |  |
-| `results_search_all` | manager | 216 ms | 224 ms | 1000 ms | 30 | within budget |  |
-| `results_search_activity` | manager | 93.6 ms | 96.3 ms | 1000 ms | 30 | within budget |  |
-| `lists_companies` | manager | 13.3 ms | 14.1 ms | 150 ms | 30 | within budget |  |
-| `lists_companies_q` | manager | 16.5 ms | 17.0 ms | 150 ms | 30 | within budget |  |
-| `lists_contacts` | manager | 38.3 ms | 39.9 ms | 150 ms | 30 | within budget |  |
-| `lists_contacts_q` | manager | 44.3 ms | 46.7 ms | 150 ms | 30 | within budget |  |
-| `lists_deals` | manager | 12.0 ms | 12.8 ms | 150 ms | 30 | within budget |  |
-| `lists_deals_q` | manager | 6.9 ms | 7.4 ms | 150 ms | 30 | within budget |  |
-| `lists_leads` | manager | 43.4 ms | 60.2 ms | 150 ms | 30 | within budget |  |
-| `lists_leads_q` | manager | 4.4 ms | 21.3 ms | 150 ms | 30 | within budget | empty on the seeded corpus |
-| `record_open_contact` | manager | 4.1 ms | 6.5 ms | 100 ms | 30 | within budget |  |
-| `record_open_company` | manager | 8.3 ms | 9.1 ms | 100 ms | 30 | within budget |  |
-| `record_open_deal` | manager | 3.0 ms | 3.2 ms | 100 ms | 30 | within budget |  |
-| `record_open_project` | manager | 2.6 ms | 3.9 ms | 100 ms | 30 | within budget | empty on the seeded corpus |
-| `contact_360` | manager | 96.8 ms | 184 ms | 300 ms | 30 | within budget |  |
-| `company_360` | manager | 251 ms | 258 ms | 300 ms | 30 | within budget | first measurement p95 462 ms over budget; not confirmed on a second measurement |
-| `search_to_deal_search` | manager | 33.0 ms | 38.5 ms | 1000 ms | 30 | within budget |  |
-| `search_to_deal_page` | manager | 39.6 ms | 56.9 ms | 100 ms | 30 | within budget | the page's calls, in parallel: deal, offers, documents, coverage, commitments; offers, documents, commitments empty on the seeded corpus |
-| `search_to_deal_total` | manager | 72.8 ms | 91.3 ms | 1100 ms | 30 | not gated |  |
+| `palette_search_contract` | manager | 323 ms | 338 ms | 1000 ms | 30 | within budget |  |
+| `palette_search_angebot` | manager | 160 ms | 164 ms | 1000 ms | 30 | within budget |  |
+| `palette_search_meeting` | manager | 163 ms | 168 ms | 1000 ms | 30 | within budget |  |
+| `palette_search_company` | manager | 156 ms | 159 ms | 1000 ms | 30 | within budget |  |
+| `palette_search_prefix_co` | manager | 747 ms | 761 ms | 1000 ms | 30 | within budget |  |
+| `palette_search_prefix_con` | manager | 637 ms | 653 ms | 1000 ms | 30 | within budget |  |
+| `palette_search_prefix_cont` | manager | 538 ms | 560 ms | 1000 ms | 30 | within budget |  |
+| `palette_search_prefix_ang` | manager | 150 ms | 158 ms | 1000 ms | 30 | within budget |  |
+| `results_search_all` | manager | 324 ms | 339 ms | 1000 ms | 30 | within budget |  |
+| `results_search_activity` | manager | 183 ms | 191 ms | 1000 ms | 30 | within budget |  |
+| `lists_companies` | manager | 21.8 ms | 22.7 ms | 150 ms | 30 | within budget |  |
+| `lists_companies_q` | manager | 26.0 ms | 29.1 ms | 150 ms | 30 | within budget |  |
+| `lists_contacts` | manager | 78.2 ms | 80.5 ms | 150 ms | 30 | within budget |  |
+| `lists_contacts_q` | manager | 87.6 ms | 93.6 ms | 150 ms | 30 | within budget |  |
+| `lists_deals` | manager | 25.1 ms | 26.5 ms | 150 ms | 30 | within budget |  |
+| `lists_deals_q` | manager | 12.5 ms | 13.8 ms | 150 ms | 30 | within budget |  |
+| `lists_leads` | manager | 62.3 ms | 100 ms | 150 ms | 30 | within budget |  |
+| `lists_leads_q` | manager | 8.4 ms | 51.1 ms | 150 ms | 30 | within budget | empty on the seeded corpus |
+| `record_open_contact` | manager | 7.6 ms | 31.2 ms | 100 ms | 30 | within budget |  |
+| `record_open_company` | manager | 4.5 ms | 4.6 ms | 100 ms | 30 | within budget |  |
+| `record_open_deal` | manager | 3.4 ms | 3.5 ms | 100 ms | 30 | within budget |  |
+| `record_open_project` | manager | 3.1 ms | 4.5 ms | 100 ms | 30 | within budget | empty on the seeded corpus |
+| `contact_360` | manager | 267 ms | 274 ms | 300 ms | 30 | within budget | first measurement p95 426 ms over budget; not confirmed on a second measurement |
+| `company_360` | manager | 412 ms | 862 ms | 300 ms | 30 | over budget (#9526) |  |
+| `search_to_deal_search` | manager | 56.8 ms | 64.4 ms | 1000 ms | 30 | within budget |  |
+| `search_to_deal_page` | manager | 62.5 ms | 81.5 ms | 100 ms | 30 | within budget | the page's calls, in parallel: deal, offers, documents, coverage, commitments; offers, documents, commitments empty on the seeded corpus |
+| `search_to_deal_total` | manager | 117 ms | 138 ms | 1100 ms | 30 | not gated |  |
 | `search_to_company_page_logo` | manager |  |  | 100 ms | 0 | no data | answers 404: nothing of this kind on the seeded corpus |
-| `search_to_company_search` | manager | 95.7 ms | 141 ms | 1000 ms | 30 | within budget |  |
-| `search_to_company_page` | manager | 13.4 ms | 44.1 ms | 100 ms | 30 | within budget | the page's calls, in parallel: company, facts, documents; facts, documents empty on the seeded corpus |
-| `search_to_company_total` | manager | 110 ms | 169 ms | 1100 ms | 30 | not gated |  |
-| `analytics_context` | manager | 1.9 ms | 2.5 ms | 300 ms | 30 | within budget |  |
-| `analytics_metrics` | manager | 1.6 ms | 1.8 ms | 300 ms | 30 | within budget |  |
-| `analytics_framework` | manager | 1.6 ms | 1.6 ms | 300 ms | 30 | within budget |  |
-| `analytics_pipelines` | manager | 2.2 ms | 2.4 ms | 300 ms | 30 | within budget |  |
-| `analytics_evaluate` | manager | 114 ms | 117 ms | 300 ms | 30 | within budget |  |
-| `admin_rail_company` | admin | 2.3 ms | 2.6 ms | 150 ms | 30 | within budget |  |
+| `search_to_company_search` | manager | 161 ms | 224 ms | 1000 ms | 30 | within budget |  |
+| `search_to_company_page` | manager | 23.4 ms | 65.1 ms | 100 ms | 30 | within budget | the page's calls, in parallel: company, facts, documents; facts, documents empty on the seeded corpus |
+| `search_to_company_total` | manager | 186 ms | 272 ms | 1100 ms | 30 | not gated |  |
+| `analytics_context` | manager | 2.8 ms | 3.3 ms | 300 ms | 30 | within budget |  |
+| `analytics_metrics` | manager | 2.2 ms | 2.3 ms | 300 ms | 30 | within budget |  |
+| `analytics_framework` | manager | 2.1 ms | 2.2 ms | 300 ms | 30 | within budget |  |
+| `analytics_pipelines` | manager | 2.9 ms | 3.0 ms | 300 ms | 30 | within budget |  |
+| `analytics_evaluate` | manager | 152 ms | 159 ms | 300 ms | 30 | within budget |  |
+| `admin_rail_company` | admin | 2.4 ms | 3.5 ms | 150 ms | 30 | within budget |  |
 | `admin_rail_installation_license` | admin |  |  | 150 ms | 0 | no data | answers 501: this composition serves no license entitlement |
-| `admin_rail_ai_calls` | admin | 5.7 ms | 5.7 ms | 150 ms | 30 | within budget |  |
-| `admin_rail_ai_usage` | admin | 42.1 ms | 43.9 ms | 150 ms | 30 | within budget |  |
-| `admin_rail_ai_budget` | admin | 2.0 ms | 2.2 ms | 150 ms | 30 | within budget |  |
-| `admin_rail_embed_reindex_identities` | admin |  |  | 150 ms | 0 | no data | answers 501 until an embedding model is bound |
-| `morning_load_cheap_route` | team | 6.0 ms | 79.8 ms | 150 ms | 55 | within budget | pool wait 70305 ms in all, 151 ms at most, over 2871 acquires on a pool of 16 |
+| `admin_rail_ai_calls` | admin | 7.4 ms | 8.1 ms | 150 ms | 30 | within budget |  |
+| `admin_rail_ai_usage` | admin | 58.6 ms | 61.4 ms | 150 ms | 30 | within budget |  |
+| `admin_rail_ai_budget` | admin | 2.5 ms | 3.8 ms | 150 ms | 30 | within budget |  |
+| `admin_rail_embed_reindex_identities` | admin | 1.8 ms | 1.8 ms | 150 ms | 30 | within budget |  |
+| `morning_load_cheap_route` | team | 33.7 ms | 893 ms | 150 ms | 34 | over budget (#7068) | pool wait 207650 ms in all, 362 ms at most, over 9081 acquires on a pool of 16 |
 
 ### Known-issue entries that could be removed
 
-- flow morning_load is at or under 80% of its budget for every seat: remove the row for #7068
+- row home_worklist is at or under 80% of its budget for every seat: remove the row for #4912
 
 ## System health
 
@@ -199,27 +200,28 @@ Home's acceptance targets, judged without the known-issue list. A row fails when
 when any round's p95 reached its target, or when an answer was a server error, a refusal or named a
 source it could not read. A pass at 30 samples is exploratory, not a qualification.
 
-**Failed** on 4 of 17 rows.
+**Failed** on 2 of 18 rows.
 
 | requirement | measurement | seat | p95 | target | samples | verdict |
 |---|---|---|---|---|---|---|
-| R02 | `worklist` | rep | 1137 ms | 750 ms | 30 | **FAILED**: p95 1137 ms, over 750 ms |
-| R02 | `worklist` | manager | 1900 ms | 750 ms | 30 | **FAILED**: p95 1900 ms, over 750 ms |
-| R02 | `home_worklist` | rep | 925 ms | 750 ms | 30 | **FAILED**: p95 924 ms, over 750 ms |
-| R02 | `home_worklist` | manager | 362 ms | 750 ms | 30 | pass |
-| R09 | `app_shell_approvals` | rep | 14.0 ms | 100 ms | 30 | pass |
-| R09 | `app_shell_approvals` | manager | 13.1 ms | 100 ms | 30 | pass |
-| R04 | `app_shell_me` | rep | 2.4 ms | 150 ms | 30 | pass |
-| R04 | `app_shell_me` | manager | 2.3 ms | 150 ms | 30 | pass |
-| R04 | `morning_load_cheap_route` | team | 79.8 ms | 150 ms | 55 | pass |
-| R05 | `home_brief` | rep | 21.9 ms | 200 ms | 30 | pass |
-| R05 | `home_brief` | manager | 20.7 ms | 200 ms | 30 | pass |
-| R05 | `home_handled` | rep | 8.3 ms | 200 ms | 30 | pass |
-| R05 | `home_handled` | manager | 7.8 ms | 200 ms | 30 | pass |
-| R05 | `home_magic` | rep | 21.5 ms | 200 ms | 30 | pass |
-| R05 | `home_magic` | manager | 23.6 ms | 200 ms | 30 | pass |
-| R06 | `admin_rail_ai_usage` | admin | 43.9 ms | 100 ms | 30 | pass |
-| R06 | `admin_rail_embed_reindex_identities` | admin |  | 100 ms | 0 | **FAILED**: no data |
+| R02 | `worklist` | rep | 17.1 ms | 750 ms | 30 | pass |
+| R02 | `worklist` | manager | 4.2 ms | 750 ms | 30 | pass |
+| R02 | `worklist_team` | manager | 1721 ms | 1000 ms | 30 | **FAILED**: p95 1720 ms, over 1000 ms |
+| R02 | `home_worklist` | rep | 17.4 ms | 750 ms | 30 | pass |
+| R02 | `home_worklist` | manager | 2.4 ms | 750 ms | 30 | pass |
+| R09 | `app_shell_approvals` | rep | 16.8 ms | 100 ms | 30 | pass |
+| R09 | `app_shell_approvals` | manager | 15.7 ms | 100 ms | 30 | pass |
+| R04 | `app_shell_me` | rep | 4.7 ms | 150 ms | 30 | pass |
+| R04 | `app_shell_me` | manager | 3.4 ms | 150 ms | 30 | pass |
+| R04 | `morning_load_cheap_route` | team | 893 ms | 150 ms | 34 | **FAILED**: p95 892 ms, over 150 ms |
+| R05 | `home_brief` | rep | 7.5 ms | 200 ms | 30 | pass |
+| R05 | `home_brief` | manager | 6.9 ms | 200 ms | 30 | pass |
+| R05 | `home_handled` | rep | 32.6 ms | 200 ms | 30 | pass |
+| R05 | `home_handled` | manager | 45.6 ms | 200 ms | 30 | pass |
+| R05 | `home_magic` | rep | 4.7 ms | 200 ms | 30 | pass |
+| R05 | `home_magic` | manager | 3.1 ms | 200 ms | 30 | pass |
+| R06 | `admin_rail_ai_usage` | admin | 61.4 ms | 100 ms | 30 | pass |
+| R06 | `admin_rail_embed_reindex_identities` | admin | 1.8 ms | 100 ms | 30 | pass |
 
 ## Machines
 
@@ -239,13 +241,13 @@ A latency is only true of the machine that produced it.
 |---|---|---|---|---|---|
 | `capture_to_timeline` | 27.8 ms | 39.2 ms | 42.9 ms | 60000 ms | 20 |
 
-### `make bench-daily` · measured 2026-10-29
+### `make bench-daily` · measured 2026-11-10
 
 | | |
 |---|---|
 | os / arch | darwin / arm64 |
-| cpu | Apple M5 Max (18 cores) |
-| memory | 48 GiB |
+| cpu | Apple M4 (10 cores) |
+| memory | 24 GiB |
 | toolchain | go1.27.3 |
 | postgres | 16.15 |
 

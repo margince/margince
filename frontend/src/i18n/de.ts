@@ -14041,6 +14041,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Alles funktioniert weiter, und nichts ist begrenzt. Konfiguriere ein Lizenz-Token für diese Installation, damit die Plätze mit dem Lizenzumfang abgeglichen werden.",
   "license.refused.title": "Die Lizenz dieser Installation wurde abgelehnt",
   "license.refused.body":
+    "Das für diese Installation konfigurierte Lizenz-Token wurde vorgelegt und abgelehnt. Belegte volle Plätze funktionieren weiter, und bis das Token ersetzt wird, kommt kein voller Platz über das hinzu, was die letzte gültige Lizenz gewährt hat. Prüfe das Token und die Uhr der Installation.",
+  "license.refused.bodyUncapped":
     "Das für diese Installation konfigurierte Lizenz-Token wurde vorgelegt und abgelehnt. Alles funktioniert ohne Begrenzung weiter, bis das Token ersetzt wird. Prüfe das Token und die Uhr der Installation.",
   "license.seats.capacityOnly":
     "Deine Rolle darf den Lizenzumfang nicht sehen.",
