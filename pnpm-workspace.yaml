@@ -43,3 +43,18 @@ overrides:
   # API the consumer was never written against, and swapping a DoS advisory for
   # a broken type generator is not a trade.
   js-yaml: '^4.3.2'
+  # GHSA-g3hv-75wg-m249 (CVE-2026-118764): a medium DoS in minimatch's glob
+  # preprocessing — an attacker-chosen pattern amplifies globParts in the first
+  # phase, and the quadratic pairwise second phase then burns CPU and memory on
+  # the inflated set. Vulnerable from 7.0.0 through 11.0.0; the only fix is
+  # 11.0.1, a major lift from the 10.2.6 the tree resolves. Reached through
+  # eslint, @eslint/config-array, @typescript-eslint/typescript-estree and glob —
+  # all build- and lint-time tooling that globs repo-controlled paths, never a
+  # pattern a user supplies — so the exposure is small, but a medium advisory
+  # open on a public repository costs more than a patch lift.
+  #
+  # Scoped to the vulnerable range, not every minimatch: the tree also resolves
+  # 5.1.9, which sits below the advisory's 7.0.0 floor and must not be dragged
+  # across a major it was never written against. Drop this once every consumer
+  # above resolves minimatch >= 11.0.1 on its own.
+  'minimatch@>=7.0.0 <11.0.1': '11.0.1'
