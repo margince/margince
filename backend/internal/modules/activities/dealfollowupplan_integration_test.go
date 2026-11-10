@@ -87,9 +87,7 @@ func assertBoundedDealFollowUpPlan(t *testing.T, stats string, plan planNode) {
 			attendeeReads += n.ActualLoops
 		case "keyed":
 			keyedReads += n.ActualLoops
-			// Any unique index that leads on id is the key; the planner may
-			// pick one that carries a version beside it.
-			if !strings.HasPrefix(n.IndexCond, "(id = ") || n.ActualRows+n.RemovedByFilter > 1 {
+			if !readByKey(n) || n.ActualRows+n.RemovedByFilter > 1 {
 				t.Errorf("%s statistics: a later activity is read by %s %s on %q, %.0f rows a loop, not by its key",
 					stats, n.NodeType, n.IndexName, n.IndexCond, n.ActualRows+n.RemovedByFilter)
 			}
@@ -114,6 +112,16 @@ func assertBoundedDealFollowUpPlan(t *testing.T, stats string, plan planNode) {
 		t.Errorf("%s statistics: attendees read %.0f times for %d meetings, once per deal instead of once",
 			stats, attendeeReads, planMeetings)
 	}
+}
+
+// readByKey reports whether a scan finds its row through a unique index that
+// leads on id. The planner may pick one that carries a version beside it. A
+// bitmap heap scan holds that condition on the one index scan under it.
+func readByKey(n planNode) bool {
+	if n.NodeType == "Bitmap Heap Scan" && len(n.Plans) == 1 {
+		n = n.Plans[0]
+	}
+	return strings.HasPrefix(n.IndexCond, "(id = ")
 }
 
 // seedDealMeetingsAmongOtherMail files most held meetings under one deal and
