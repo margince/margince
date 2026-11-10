@@ -10,6 +10,7 @@ package identity
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -96,6 +97,79 @@ func TestAVaultlessServiceNeverChallengesConfinesOrEnrols(t *testing.T) {
 	// And enrolment itself stays the not-composed refusal.
 	if _, err := bare.StartTOTPEnrolment(e.asMember()); err == nil {
 		t.Error("a vaultless service accepted a TOTP enrolment; the secret had nowhere safe to live")
+	}
+}
+
+// One installation setting, two sign-in paths, two answers. This pins what the
+// code does today, which the two paths do not agree on.
+//
+// A member who has confirmed a factor is challenged on the password path. A
+// provider signs the same member straight in.
+//
+// A member who has not confirmed one is confined by require_mfa, whatever
+// opened the session. That includes a provider sign-in, which will never ask
+// for the factor they are told to enrol.
+//
+// Which reading is right is an open product decision. Either the provider
+// counts as the second factor, or it challenges as the password path does.
+// Settling it means editing this test, which states the reading it replaces.
+func TestRequireMFAAsksOnlyThePasswordPathWhileConfiningBoth(t *testing.T) {
+	e := setupRevocationEnv(t, "require-mfa-paths")
+	e.withVault()
+	e.requireMFAOn()
+
+	// Confined with no factor, through a provider sign-in that cannot ask for
+	// one. The member is admitted and then held at the enrolment routes.
+	token, err := e.svc.LoginViaFederatedIdentity(e.wsOnlyCtx(), "google",
+		OIDCClaims{Subject: "sub-mfa-paths", Email: e.member.Email})
+	if err != nil {
+		t.Fatalf("provider sign-in: %v", err)
+	}
+	id, err := e.svc.Authenticate(e.wsOnlyCtx(), token)
+	if err != nil {
+		t.Fatalf("authenticate a provider session: %v", err)
+	}
+	if !id.MustEnrolMFA {
+		t.Error("a provider session for a member with no factor is not confined. If provider " +
+			"sessions are now exempt, this test states the reading that replaced")
+	}
+
+	// Now the same member holds a confirmed factor. The password path turns
+	// into a challenge, and the provider path still does not.
+	ctx := e.asMember()
+	secret, err := e.svc.StartTOTPEnrolment(ctx)
+	if err != nil {
+		t.Fatalf("start enrolment: %v", err)
+	}
+	code, err := totpCodeAt(secret, e.svc.now(), totpDigits)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.svc.ConfirmTOTP(ctx, code, hashToken(token)); err != nil {
+		t.Fatalf("confirm: %v", err)
+	}
+
+	if _, _, err := e.svc.Login(e.wsOnlyCtx(), e.member.Email, memberPassword, noDevice); !errors.Is(err, errMFARequired) {
+		t.Errorf("password sign-in with a confirmed factor: err = %v, want %v", err, errMFARequired)
+	}
+	// The provider path opens an unconfined session for the same confirmed
+	// factor rather than challenging it. A refusal is the other reading.
+	signedIn, err := e.svc.LoginViaFederatedIdentity(e.wsOnlyCtx(), "google",
+		OIDCClaims{Subject: "sub-mfa-paths", Email: e.member.Email})
+	if err != nil {
+		t.Fatalf("provider sign-in with a confirmed factor: %v. If the provider path now "+
+			"challenges, this test states the reading that replaced", err)
+	}
+	unconfined, err := e.svc.Authenticate(e.wsOnlyCtx(), signedIn)
+	if err != nil {
+		t.Fatalf("authenticate the provider session: %v", err)
+	}
+	if unconfined.MustEnrolMFA {
+		t.Error("provider session with a confirmed factor is confined, want an unconfined session")
+	}
+	if unconfined.UserID != e.member.UserID {
+		t.Errorf("provider session belongs to %v, want the member %v who confirmed the factor",
+			unconfined.UserID, e.member.UserID)
 	}
 }
 

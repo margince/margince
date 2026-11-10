@@ -53,6 +53,12 @@ export const BUSINESS_PAGES = [
     // holds the read alone. `always` here would put Voice in that reader's rail
     // with nothing on it they could touch.
     changes: acts(writes("voice_profile")),
+    tabs: [
+      { id: "overview" },
+      { id: "samples" },
+      { id: "rules" },
+      { id: "builds" },
+    ],
   },
   {
     id: "agents",

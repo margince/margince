@@ -13134,6 +13134,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "settings.page.records.sub":
     "Trường tùy chỉnh, thẻ dùng chung và vai trò phụ trách gắn với bản ghi.",
   "settings.partsLabel": "Các phần của trang này",
+  "settings.part.voice.overview": "Giọng văn của bạn",
+  "settings.part.voice.samples": "Văn mẫu",
+  "settings.part.voice.rules": "Quy tắc của bạn",
+  "settings.part.voice.builds": "Bản dựng",
   "settings.part.meetings.links": "Liên kết đặt lịch",
   "settings.part.meetings.availability": "Thời gian rảnh",
   "settings.part.meetings.guests": "Trang cho khách",
@@ -13740,13 +13744,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "voice.insights.provenance": "Dựng từ văn mẫu · v{n}",
   "voice.insights.statWords": "Số từ: {count}",
   "voice.insights.statSources": "Số nguồn: {count}",
-  "settings.voice.jumpLabel": "Trên trang này",
-  "settings.voice.jump.voice": "Giọng văn của bạn",
-  "settings.voice.jump.moves": "Nét đặc trưng",
   "settings.voice.jump.drafts": "Xem bản nháp",
-  "settings.voice.jump.sharpen": "Làm sắc nét hơn",
-  "settings.voice.jump.rules": "Quy tắc của bạn",
-  "settings.voice.jump.builds": "Bản dựng",
   "settings.voice.editRules": "Sửa quy tắc",
   "settings.voice.addMore": "Thêm bài viết khác",
   "settings.voice.start.title": "Giọng văn của bạn",
@@ -13965,6 +13963,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Đang dựng giọng văn. Mất khoảng một phút và vẫn tiếp tục nếu bạn rời trang này.",
   "settings.voice.rebuild": "Dựng lại Voice DNA",
   "settings.voice.buildFirst": "Dựng Voice DNA",
+  "settings.voice.firstBuildHint":
+    "Bản dựng đầu tiên bắt đầu ở thẻ Giọng văn của bạn.",
+  "settings.voice.firstBuildGo": "Mở Giọng văn của bạn",
   "settings.voice.buildNeedsWords":
     "Lần dựng đầu tiên cần thêm khoảng {n} từ. Dưới mức đó, chưa đủ văn bản để học.",
   "settings.voice.buildProvisional":
