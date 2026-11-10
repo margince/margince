@@ -239,11 +239,16 @@ const WAITING: AwaitingContact[] = [
     contact_id: "0190b7a2-0000-7000-8000-000000000011",
     display_name: "Jana Keller",
     emails: ["jana@commercetools.com", "j.keller@commercetools.com"],
+    addresses: [
+      { email: "jana@commercetools.com", state: "unsure" },
+      { email: "j.keller@commercetools.com", state: "unjudgeable" },
+    ],
     captured_at: "2026-09-02T08:15:00Z",
   },
   {
     contact_id: "0190b7a2-0000-7000-8000-000000000012",
     emails: ["m.ortiz@steireif.de"],
+    addresses: [{ email: "m.ortiz@steireif.de", state: "classifying" }],
     captured_at: "2026-09-10T14:40:00Z",
   },
 ];

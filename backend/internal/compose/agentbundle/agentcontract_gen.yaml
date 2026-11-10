@@ -16308,6 +16308,19 @@ paths:
           in: query
           schema: {type: string, format: uuid}
           description: The record the staged actions act on. Requires `target_entity_type`.
+        - name: target
+          in: query
+          schema:
+            type: array
+            maxItems: 25
+            items: {type: string}
+          style: form
+          explode: true
+          description: |-
+            Filter to the approvals staged against ANY of these records, each written
+            `<entity_type>:<uuid>` (`contact:…`, `activity:…`). Repeat the parameter for several,
+            up to 25. It answers "what is waiting on the records I touched" without the rest of
+            the queue.
         - name: bundle_id
           in: query
           schema: {type: string, format: uuid}
@@ -27316,7 +27329,7 @@ components:
       type: object
       additionalProperties: false
       description: One of your captured contacts waiting on a sender decision.
-      required: [contact_id, emails, captured_at]
+      required: [contact_id, emails, addresses, captured_at]
       properties:
         contact_id: {type: string, format: uuid}
         display_name: {type: string, description: Absent when the contact has no name.}
@@ -27324,10 +27337,33 @@ components:
           type: array
           items: {type: string}
           description: The contact's live addresses. The decision is made about these senders.
+        addresses:
+          type: array
+          items: {$ref: '#/components/schemas/CaptureAwaitingAddress'}
+          description: Each of `emails`, in the same order, with what it waits on.
         captured_at:
           type: string
           format: date-time
           description: When the contact was created, which is how long it has been waiting.
+    CaptureAwaitingAddress:
+      type: object
+      additionalProperties: false
+      description: One address of a waiting contact, and what it waits on.
+      required: [email, state]
+      properties:
+        email: {type: string}
+        state:
+          type: string
+          enum: [decided, classifying, unsure, queued, unjudgeable]
+          description: |-
+            `decided`: a decision about this sender is recorded, and a pass that applies it is due.
+            `classifying`: the sender classifier has an open question about this sender.
+            `unsure`: the classifier could not tell, so your answer decides.
+            `queued`: nothing was asked yet; a sweep will ask over a message from this address.
+            `unjudgeable`: no pass will settle this address, because no captured message from it
+            remains or someone already worked on the contact. Only you can settle it.
+            `decided`, `classifying` and `queued` wait on the product; `unsure` and `unjudgeable`
+            wait on you.
     CaptureSenderListResponse:
       type: object
       required: [data]

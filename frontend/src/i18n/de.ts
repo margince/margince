@@ -2875,6 +2875,21 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "shell.shortcuts.paragraphSave": "Mehrzeiliges Feld speichern",
   "shell.shortcuts.deckHint":
     "Auf Home merken die Pfeiltasten eine Entscheidung vor. Enter sendet, was vorgemerkt ist.",
+  "shell.shortcuts.create": "Datensatz erstellen",
+  "shell.shortcuts.list": "Tastenkürzel anzeigen",
+  "shell.shortcuts.goto": "Wechseln zu",
+  "shell.shortcuts.gotoHint": "Drücke G, dann den Buchstaben.",
+  "shell.shortcuts.record": "In einem Datensatz",
+  "shell.shortcuts.logActivity": "Aktivität erfassen",
+  "shell.shortcuts.addTask": "Aufgabe hinzufügen",
+  "shell.shortcuts.writeEmail": "Nachricht schreiben",
+  "shell.shortcuts.sendEmail": "E-Mail senden",
+  "shell.shortcuts.submitDialog": "Dialog absenden",
+  "shell.shortcuts.then": "dann",
+  "shell.shortcuts.or": "oder",
+  "shell.shortcuts.singleKeyOff": "Einzeltasten-Kürzel sind deaktiviert",
+  "shell.shortcuts.singleKeyOffHint":
+    "Aktiviere sie unter Einstellungen → Nutzerkonto.",
   "shell.more": "Mehr",
   "shell.unknownPage": "Nicht gefunden",
   "shell.closeMenu": "Schließen",
@@ -11658,6 +11673,29 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "senders.waiting.moreAddresses_other": "+{count} weitere",
   "senders.waiting.openNamed": "{name} öffnen",
   "senders.waiting.openUnnamed": "Kontakt öffnen",
+  "senders.waiting.onMargince": "Wartet auf Margince:",
+  "senders.waiting.onYou": "Wartet auf dich:",
+  "senders.waiting.why.decided":
+    "Die Entscheidung wird bei der nächsten Absenderprüfung übernommen.",
+  "senders.waiting.why.classifying":
+    "Die Absenderprüfung hat diese Absendeadresse noch nicht bewertet.",
+  "senders.waiting.why.unsure":
+    "Die Absenderprüfung konnte es nicht erkennen, daher entscheidet deine Antwort.",
+  "senders.waiting.why.queued":
+    "Die Absenderprüfung sieht sich die E-Mails noch an.",
+  "senders.waiting.why.unjudgeable":
+    "Margince kann diese Absendeadresse nicht selbst prüfen, daher entscheidest nur du.",
+  "senders.waiting.businessFor": "{address} als geschäftlich markieren",
+  "senders.waiting.keepOutFor": "{address} ausschließen",
+  "senders.waiting.businessTitle":
+    "Diese Absendeadresse als geschäftlich markieren?",
+  "senders.waiting.businessBody":
+    "Die E-Mails bleiben als geschäftliche E-Mails erhalten, und der Kontakt wird für dein Unternehmen freigegeben. Jede E-Mail und jeder Termin behält die eigene Freigabe.",
+  "senders.waiting.remove": "Aus Kontakten entfernen",
+  "senders.waiting.removeTitle": "Diesen Kontakt entfernen?",
+  "senders.waiting.removeBody":
+    "Der Kontakt wird archiviert und verschwindet aus dieser Liste. Die E-Mails bleiben, und keine Entscheidung zu den Absendeadressen ändert sich. Du kannst den Kontakt aus den archivierten Kontakten wiederherstellen.",
+  "senders.waiting.removeConfirm": "Kontakt entfernen",
   "connectionOutcomes.title": "Was deine Verbindungen ergeben haben",
   "connectionOutcomes.view": "Ansehen",
   "connectionOutcomes.viewNamed": "{name} ansehen",
@@ -15793,6 +15831,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Die Sprache von Menüs, Seiten und Nachrichten aus Margince. In deinem Konto gespeichert, sie gilt also auf jedem Gerät, auf dem du dich anmeldest.",
   "account.appearanceHelp":
     "Hell, dunkel oder wie dieser Computer eingestellt ist. Gilt nur in diesem Browser. Das Kontomenü ändert dieselbe Einstellung.",
+  "account.singleKeyShortcuts": "Einzeltasten-Kürzel",
+  "account.singleKeyShortcutsHelp":
+    "Buchstaben- und Symboltasten wirken allein als Kürzel. Gilt nur in diesem Browser.",
   "reviewTemplates.questionCount_one": "{count} Frage",
   "reviewTemplates.questionCount_other": "{count} Fragen",
   "reviewTemplates.summary": "{questions}, {required} Pflicht",

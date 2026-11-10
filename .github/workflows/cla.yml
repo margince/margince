@@ -19,14 +19,20 @@ on:
     types: [opened, reopened, synchronize, closed]
   issue_comment:
     types: [created]
+  # `cla` is a required check, so the merge queue waits for it on the queue's
+  # own commit. Every entry passed `cla` on its pull request before it could
+  # join the queue, so the job below skips here, and a skipped check passes.
+  merge_group:
 
 permissions:
   contents: read
 
 # A run in progress is never cancelled, so a signatures commit is not cut off. A
 # pending run GitHub drops loses nothing: the next run reads every sign comment.
+# A queue run has no pull request number; its ref is its own, so no queue run
+# can drop another's pending `cla`.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.event.issue.number }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.event.issue.number || github.ref }}
   cancel-in-progress: false
 
 jobs:

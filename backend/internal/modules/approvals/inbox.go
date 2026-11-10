@@ -153,6 +153,10 @@ type ListInput struct {
 	Kind               *string
 	TargetType         *string
 	TargetID           *ids.UUID
+	// Targets narrows to the rows staged against any of these records. It is
+	// read through the per-row decidability probe like the whole inbox, so a
+	// record the caller cannot see adds nothing. Empty means no filter.
+	Targets []ids.Ref
 	// BundleID narrows the read to the proposals ONE act staged together. It
 	// composes with the other filters rather than replacing them, and it does
 	// not relax the per-row decidability probe: a member the caller could not
@@ -362,6 +366,13 @@ func approvalWhere(in ListInput, from *keysetStart, arg func(any) int) string {
 	}
 	if in.TargetID != nil {
 		terms = append(terms, fmt.Sprintf("target_entity_id = $%d", arg(*in.TargetID)))
+	}
+	if len(in.Targets) > 0 {
+		pairs := make([]string, len(in.Targets))
+		for i, target := range in.Targets {
+			pairs[i] = fmt.Sprintf("($%d::text, $%d::uuid)", arg(target.Type), arg(target.ID))
+		}
+		terms = append(terms, "(target_entity_type, target_entity_id) IN ("+strings.Join(pairs, ", ")+")")
 	}
 	if in.BundleID != nil {
 		terms = append(terms, fmt.Sprintf("bundle_id = $%d", arg(*in.BundleID)))

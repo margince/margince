@@ -27972,11 +27972,29 @@ export interface components {
             display_name?: string;
             /** @description The contact's live addresses. The decision is made about these senders. */
             emails: string[];
+            /** @description Each of `emails`, in the same order, with what it waits on. */
+            addresses: components["schemas"]["CaptureAwaitingAddress"][];
             /**
              * Format: date-time
              * @description When the contact was created, which is how long it has been waiting.
              */
             captured_at: string;
+        };
+        /** @description One address of a waiting contact, and what it waits on. */
+        CaptureAwaitingAddress: {
+            email: string;
+            /**
+             * @description `decided`: a decision about this sender is recorded, and a pass that applies it is due.
+             *     `classifying`: the sender classifier has an open question about this sender.
+             *     `unsure`: the classifier could not tell, so your answer decides.
+             *     `queued`: nothing was asked yet; a sweep will ask over a message from this address.
+             *     `unjudgeable`: no pass will settle this address, because no captured message from it
+             *     remains or someone already worked on the contact. Only you can settle it.
+             *     `decided`, `classifying` and `queued` wait on the product; `unsure` and `unjudgeable`
+             *     wait on you.
+             * @enum {string}
+             */
+            state: "decided" | "classifying" | "unsure" | "queued" | "unjudgeable";
         };
         CaptureSenderListResponse: {
             next_cursor?: string;
@@ -83695,6 +83713,17 @@ export interface operations {
                 target_entity_type?: string;
                 /** @description The record the staged actions act on. Requires `target_entity_type`. */
                 target_entity_id?: string;
+                /**
+                 * @description Filter to the approvals staged against ANY of these records, each written
+                 *     `<entity_type>:<uuid>` (`contact:…`, `activity:…`). Repeat the parameter for several,
+                 *     up to 25. It answers "what is waiting on the records I touched" without the rest of
+                 *     the queue.
+                 *
+                 *     A record outside the caller's row scope adds nothing to the page, never a 403. A
+                 *     malformed item, more than 25, or `target` together with `target_entity_type` or
+                 *     `target_entity_id` is a 422.
+                 */
+                target?: string[];
                 /**
                  * @description Filter to the proposals ONE act staged together (see `Approval.bundle_id`) — today, a
                  *     website read's company facts plus the leads it published. Members the caller could not

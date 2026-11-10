@@ -127,14 +127,15 @@ export const Collapsed: Story = {
   render: level(primary, COLLAPSED, { tasks: 1204, inbox: 12 }),
 };
 
-function LiveCollapsedRail({
+function LiveRail({
   which,
-}: Readonly<{ which: (typeof settings)[number] }>) {
+  collapsed = true,
+}: Readonly<{ which: (typeof settings)[number]; collapsed?: boolean }>) {
   const nav = useRef<HTMLElement | null>(null);
-  const state = useNavTip(true, nav);
+  const state = useNavTip(collapsed, nav);
   return (
     <StoryProviders>
-      <nav ref={nav} className="rail collapsed">
+      <nav ref={nav} className={collapsed ? "rail collapsed" : "rail expanded"}>
         <NavLevelView
           level={which}
           state={state}
@@ -147,7 +148,7 @@ function LiveCollapsedRail({
 }
 
 export const CollapsedTipEscape: Story = {
-  render: () => <LiveCollapsedRail which={primary} />,
+  render: () => <LiveRail which={primary} />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const [row] = canvas.getAllByRole("link");
@@ -160,6 +161,32 @@ export const CollapsedTipEscape: Story = {
     await userEvent.keyboard("{Escape}");
 
     await waitFor(() => expect(canvas.queryByRole("tooltip")).toBeNull());
+  },
+};
+
+/** An expanded row's tip says only its go-to keys: the label is already there. */
+export const GoToTip: Story = {
+  render: () => <LiveRail which={primary} collapsed={false} />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    canvas.getByRole("link", { name: "Contacts" }).focus();
+    await waitFor(() =>
+      expect(canvas.getByRole("tooltip")).toHaveTextContent("G then C"),
+    );
+  },
+};
+
+/** Collapsed, the tip carries the label and the keys. */
+export const CollapsedGoToTip: Story = {
+  render: () => <LiveRail which={primary} />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    canvas.getByRole("link", { name: "Contacts" }).focus();
+    await waitFor(() =>
+      expect(canvas.getByRole("tooltip")).toHaveTextContent(
+        "Contacts · G then C",
+      ),
+    );
   },
 };
 

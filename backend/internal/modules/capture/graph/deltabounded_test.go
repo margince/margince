@@ -378,6 +378,30 @@ func TestAShortRoundIsRefusedEvenAcrossACheckpoint(t *testing.T) {
 	if _, err := conn.pullFolder(ctx, "access", folderInbox, &resumed, anchorAfter, &recordingSink{}, owner); !errors.Is(err, ErrUnreachable) {
 		t.Fatalf("a round one short of the tally answered %v, want it refused", err)
 	}
+	if left := saved.latest(t).Rounds[folderInbox]; left != nil {
+		t.Fatal("the refused round is still saved, so the next cycle resumes the same short census")
+	}
+}
+
+// A fresh round that checkpoints and then closes short leaves no round behind,
+// so the next cycle opens a fresh anchor with a new census.
+func TestAFreshShortRoundLeavesNoRoundToResume(t *testing.T) {
+	p := newPagedProvider(t, pagedEntries(3_000))
+	p.extraHeld = 1
+	api := &pagedAPI{API: NewAPI(p.srv.Client(), p.srv.URL)}
+	conn := New(&fakeOAuth{access: "access-1"}, api)
+	saved := &savedCursors{}
+	ctx := connector.WithSyncCheckpointer(context.Background(), saved)
+	state := cursorState{}
+	if _, err := conn.pullFolder(ctx, "access", folderInbox, &state, anchorAfter, &recordingSink{}, owner); !errors.Is(err, ErrUnreachable) {
+		t.Fatalf("a round one short of the tally answered %v, want it refused", err)
+	}
+	if len(saved.cursors) < 2 {
+		t.Fatalf("the round saved %d cursor(s), want a checkpoint before the refusal", len(saved.cursors))
+	}
+	if left := saved.latest(t).Rounds[folderInbox]; left != nil {
+		t.Fatal("the refused round is still saved, so the next cycle resumes the same short census")
+	}
 }
 
 func TestAnAnchorPastTheCapStopsLoudly(t *testing.T) {

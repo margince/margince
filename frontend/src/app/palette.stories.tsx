@@ -12,7 +12,7 @@ import {
   StoryProviders,
 } from "../testing/story-utils";
 import { CREATE_ID } from "./nav";
-import { type Command, CommandPalette } from "./palette";
+import { type Command, CommandPalette, useBuiltinCommands } from "./palette";
 import { writeRecents } from "./paletterecents.storage";
 
 // The palette had no story at all. It was mounted CLOSED behind the top bar in
@@ -103,6 +103,50 @@ export const SettingBesideScreenPhone: Story = {
   ...SettingBesideScreen,
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
+};
+
+// What C opens off a list screen: the product's create commands and nothing else.
+function CreatePalette() {
+  return (
+    <CommandPalette
+      open
+      mode="create"
+      onClose={() => undefined}
+      commands={useBuiltinCommands()}
+    />
+  );
+}
+
+export const CreateOnly: Story = {
+  render: () => {
+    removeStored(STORAGE_KEYS.paletteRecents);
+    installFetchStub({ "GET /search": noHits, "GET /me": meRoute({}) });
+    return (
+      <StoryProviders>
+        <CreatePalette />
+      </StoryProviders>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement.ownerDocument.body);
+    for (const label of [
+      "New contact",
+      "New company",
+      "New lead",
+      "New deal",
+      "New project",
+    ]) {
+      await expect(
+        await canvas.findByRole("button", { name: new RegExp(label) }),
+      ).toBeInTheDocument();
+    }
+    await expect(canvas.queryByText("Ask your documents")).toBeNull();
+  },
+};
+
+export const CreateOnlyDark: Story = {
+  ...CreateOnly,
+  globals: { theme: "dark" },
 };
 
 // Live record hits under the commands, grouped under the kind each one is, in

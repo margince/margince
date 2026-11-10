@@ -2,8 +2,10 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, within } from "storybook/test";
+import { useState } from "react";
+import { expect, userEvent, within } from "storybook/test";
 import { LocaleProvider } from "../i18n";
+import { useShortcutDispatcher } from "../lib/shortcuts";
 import { Button, Field, TextInput } from "./atoms";
 import { RecordFormDialog } from "./recordformdialog";
 
@@ -79,3 +81,52 @@ export const Drawer: Story = {
 export const FormDark: Story = { ...Form, globals: { theme: "dark" } };
 
 export const DrawerDark: Story = { ...Drawer, globals: { theme: "dark" } };
+
+function CommitDemo() {
+  useShortcutDispatcher();
+  const [created, setCreated] = useState(false);
+  return (
+    <>
+      <p className="t-body">{created ? "Created" : "Not created yet"}</p>
+      <RecordFormDialog
+        open
+        title="New company"
+        onClose={() => undefined}
+        fieldCount={8}
+        form={
+          <form
+            id="story-commit-form"
+            className="form-stack"
+            onSubmit={(event) => {
+              event.preventDefault();
+              setCreated(true);
+            }}
+          >
+            {labels.map((label) => (
+              <Field key={label} label={label}>
+                {(control) => <TextInput {...control} />}
+              </Field>
+            ))}
+          </form>
+        }
+        actions={
+          <Button variant="primary" type="submit" form="story-commit-form">
+            Create
+          </Button>
+        }
+      />
+    </>
+  );
+}
+
+/** Cmd/Ctrl+Enter from a field creates, in the drawer shape too. */
+export const DrawerSubmitsOnCommit: Story = {
+  args: { fieldCount: 8, form: fields(8), actions },
+  render: () => <CommitDemo />,
+  play: async ({ canvasElement }) => {
+    const body = within(canvasElement.ownerDocument.body);
+    await userEvent.click(await body.findByRole("textbox", { name: "City" }));
+    await userEvent.keyboard("{Control>}{Enter}{/Control}");
+    await expect(await body.findByText("Created")).toBeInTheDocument();
+  },
+};

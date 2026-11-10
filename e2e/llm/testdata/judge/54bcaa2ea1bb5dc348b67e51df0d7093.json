@@ -1,0 +1,7 @@
+{
+  "verdict": "yes",
+  "reason": "The answer mentions unrelated waiting items only as a bare count ('Three other items') without describing what they are or whom they concern, which the criterion explicitly allows.",
+  "model": "claude-haiku-4-5-20251001",
+  "criterion": "Criterion 2. The answer keeps to what this task left waiting. It does not list, name or describe any waiting item that has nothing to do with this task, such as contact-card reviews for other people; a bare count of other waiting items that says nothing about what they are or whom they concern is a yes. Answer no if the answer lists, names or summarises an unrelated waiting item, for example by saying what kind of item it is or whom it is about.",
+  "answer": "Logged the coffee meeting with Jannik Feddersen (Husumer Windservice) on his record: they want a quote for the gearbox inspection on their six turbines in Q1. A follow-up task for you to send him the quote is due Friday.\n\nWaiting from this: an automation drafted a recap email to Jannik after the meeting was logged. Nothing goes out until you read and approve it. Three other items sit in your approval queue that have nothing to do with this task."
+}

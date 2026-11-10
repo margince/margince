@@ -2787,6 +2787,20 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "shell.shortcuts.paragraphSave": "Lưu trường nhiều dòng",
   "shell.shortcuts.deckHint":
     "Trên Trang chủ, phím mũi tên chọn một quyết định. Enter gửi các quyết định đã chọn.",
+  "shell.shortcuts.create": "Tạo hồ sơ",
+  "shell.shortcuts.list": "Hiển thị phím tắt",
+  "shell.shortcuts.goto": "Đi tới",
+  "shell.shortcuts.gotoHint": "Nhấn G, rồi nhấn chữ cái.",
+  "shell.shortcuts.record": "Trong hồ sơ",
+  "shell.shortcuts.logActivity": "Ghi nhận hoạt động",
+  "shell.shortcuts.addTask": "Thêm việc cần làm",
+  "shell.shortcuts.writeEmail": "Viết tin nhắn",
+  "shell.shortcuts.sendEmail": "Gửi email",
+  "shell.shortcuts.submitDialog": "Gửi biểu mẫu hộp thoại",
+  "shell.shortcuts.then": "rồi",
+  "shell.shortcuts.or": "hoặc",
+  "shell.shortcuts.singleKeyOff": "Đã tắt phím tắt một phím",
+  "shell.shortcuts.singleKeyOffHint": "Bật lại trong Cài đặt, mục Tài khoản.",
   "shell.more": "Thêm",
   "shell.unknownPage": "Không tìm thấy",
   "shell.closeMenu": "Đóng",
@@ -11353,6 +11367,27 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "senders.waiting.moreAddresses_other": "+{count} địa chỉ khác",
   "senders.waiting.openNamed": "Mở {name}",
   "senders.waiting.openUnnamed": "Mở liên hệ",
+  "senders.waiting.onMargince": "Đang chờ Margince:",
+  "senders.waiting.onYou": "Đang chờ bạn:",
+  "senders.waiting.why.decided":
+    "quyết định sẽ được áp dụng ở lần kiểm tra người gửi tiếp theo.",
+  "senders.waiting.why.classifying":
+    "bước kiểm tra người gửi chưa đánh giá người gửi này.",
+  "senders.waiting.why.unsure":
+    "bước kiểm tra người gửi không xác định được, nên câu trả lời của bạn quyết định.",
+  "senders.waiting.why.queued": "bước kiểm tra người gửi sẽ xem thư của họ.",
+  "senders.waiting.why.unjudgeable":
+    "Margince không thể tự kiểm tra người gửi này, nên chỉ bạn có thể quyết định.",
+  "senders.waiting.businessFor": "Đánh dấu {address} là công việc",
+  "senders.waiting.keepOutFor": "Loại trừ {address}",
+  "senders.waiting.businessTitle": "Đánh dấu người gửi này là công việc?",
+  "senders.waiting.businessBody":
+    "Thư của họ được giữ như thư công việc, và liên hệ này được chia sẻ với công ty của bạn. Mỗi thư và cuộc họp vẫn giữ cách chia sẻ riêng.",
+  "senders.waiting.remove": "Xóa khỏi danh bạ",
+  "senders.waiting.removeTitle": "Xóa liên hệ này?",
+  "senders.waiting.removeBody":
+    "Liên hệ được lưu trữ và rời khỏi danh sách này. Thư vẫn được giữ, và không quyết định nào về người gửi thay đổi. Bạn có thể khôi phục từ các liên hệ đã lưu trữ.",
+  "senders.waiting.removeConfirm": "Xóa liên hệ",
   "connectionOutcomes.title": "Kết quả từ các kết nối của bạn",
   "connectionOutcomes.view": "Xem",
   "connectionOutcomes.viewNamed": "Xem {name}",
@@ -15387,6 +15422,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Ngôn ngữ của menu, trang và tin nhắn từ Margince. Được lưu vào tài khoản của bạn, nên áp dụng trên mọi thiết bị bạn đăng nhập.",
   "account.appearanceHelp":
     "Sáng, tối hoặc theo cài đặt của máy tính này. Chỉ áp dụng trên trình duyệt này. Menu tài khoản đổi cùng cài đặt này.",
+  "account.singleKeyShortcuts": "Phím tắt một phím",
+  "account.singleKeyShortcutsHelp":
+    "Các phím chữ và ký hiệu dùng riêng làm phím tắt, không cần phím bổ trợ. Chỉ áp dụng trên trình duyệt này.",
   "reviewTemplates.questionCount_one": "{count} câu hỏi",
   "reviewTemplates.questionCount_other": "{count} câu hỏi",
   "reviewTemplates.summary": "{questions}, {required} bắt buộc",

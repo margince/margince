@@ -4423,6 +4423,33 @@ func (e BulkVerb) Valid() bool {
 	}
 }
 
+// Defines values for CaptureAwaitingAddressState.
+const (
+	CaptureAwaitingAddressStateClassifying CaptureAwaitingAddressState = "classifying"
+	CaptureAwaitingAddressStateDecided     CaptureAwaitingAddressState = "decided"
+	CaptureAwaitingAddressStateQueued      CaptureAwaitingAddressState = "queued"
+	CaptureAwaitingAddressStateUnjudgeable CaptureAwaitingAddressState = "unjudgeable"
+	CaptureAwaitingAddressStateUnsure      CaptureAwaitingAddressState = "unsure"
+)
+
+// Valid indicates whether the value is a known member of the CaptureAwaitingAddressState enum.
+func (e CaptureAwaitingAddressState) Valid() bool {
+	switch e {
+	case CaptureAwaitingAddressStateClassifying:
+		return true
+	case CaptureAwaitingAddressStateDecided:
+		return true
+	case CaptureAwaitingAddressStateQueued:
+		return true
+	case CaptureAwaitingAddressStateUnjudgeable:
+		return true
+	case CaptureAwaitingAddressStateUnsure:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for CaptureConcernKind.
 const (
 	CaptureConcernKindBackfillFailed  CaptureConcernKind = "backfill_failed"
@@ -37132,8 +37159,36 @@ type CaptureActivityResponse struct {
 	WindowHours int `json:"window_hours"`
 }
 
+// CaptureAwaitingAddress One address of a waiting contact, and what it waits on.
+type CaptureAwaitingAddress struct {
+	Email string `json:"email"`
+
+	// State `decided`: a decision about this sender is recorded, and a pass that applies it is due.
+	// `classifying`: the sender classifier has an open question about this sender.
+	// `unsure`: the classifier could not tell, so your answer decides.
+	// `queued`: nothing was asked yet; a sweep will ask over a message from this address.
+	// `unjudgeable`: no pass will settle this address, because no captured message from it
+	// remains or someone already worked on the contact. Only you can settle it.
+	// `decided`, `classifying` and `queued` wait on the product; `unsure` and `unjudgeable`
+	// wait on you.
+	State CaptureAwaitingAddressState `json:"state"`
+}
+
+// CaptureAwaitingAddressState `decided`: a decision about this sender is recorded, and a pass that applies it is due.
+// `classifying`: the sender classifier has an open question about this sender.
+// `unsure`: the classifier could not tell, so your answer decides.
+// `queued`: nothing was asked yet; a sweep will ask over a message from this address.
+// `unjudgeable`: no pass will settle this address, because no captured message from it
+// remains or someone already worked on the contact. Only you can settle it.
+// `decided`, `classifying` and `queued` wait on the product; `unsure` and `unjudgeable`
+// wait on you.
+type CaptureAwaitingAddressState string
+
 // CaptureAwaitingContact One of your captured contacts waiting on a sender decision.
 type CaptureAwaitingContact struct {
+	// Addresses Each of `emails`, in the same order, with what it waits on.
+	Addresses []CaptureAwaitingAddress `json:"addresses"`
+
 	// CapturedAt When the contact was created, which is how long it has been waiting.
 	CapturedAt time.Time          `json:"captured_at"`
 	ContactId  openapi_types.UUID `json:"contact_id"`
@@ -70230,6 +70285,16 @@ type ListApprovalsParams struct {
 
 	// TargetEntityId The record the staged actions act on. Requires `target_entity_type`.
 	TargetEntityId *openapi_types.UUID `form:"target_entity_id,omitempty" json:"target_entity_id,omitempty"`
+
+	// Target Filter to the approvals staged against ANY of these records, each written
+	// `<entity_type>:<uuid>` (`contact:…`, `activity:…`). Repeat the parameter for several,
+	// up to 25. It answers "what is waiting on the records I touched" without the rest of
+	// the queue.
+	//
+	// A record outside the caller's row scope adds nothing to the page, never a 403. A
+	// malformed item, more than 25, or `target` together with `target_entity_type` or
+	// `target_entity_id` is a 422.
+	Target *[]string `form:"target,omitempty" json:"target,omitempty"`
 
 	// BundleId Filter to the proposals ONE act staged together (see `Approval.bundle_id`) — today, a
 	// website read's company facts plus the leads it published. Members the caller could not
@@ -108463,6 +108528,19 @@ func (siw *ServerInterfaceWrapper) ListApprovals(w http.ResponseWriter, r *http.
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "target_entity_id"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "target_entity_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "target" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "target", r.URL.Query(), &params.Target, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "target"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "target", Err: err})
 		}
 		return
 	}

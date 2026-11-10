@@ -11,10 +11,12 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { useT } from "../i18n";
+import { useShortcutHandler } from "../lib/shortcuts";
 import { UnsavedContext, useUnsavedRegistry } from "../lib/unsavedclaims";
 import { useBackdropDismiss } from "./backdrop";
 import { ConfirmModal } from "./confirmmodal";
 import { useDialogFocus } from "./dialogfocus";
+import { submitDialogForm } from "./dialogsubmit";
 import { IconAction } from "./iconaction";
 import { usePresence } from "./presence";
 import "./atoms.css";
@@ -81,6 +83,7 @@ export function Modal({
   closeReason,
   closeDisabled,
   unsaved = false,
+  commitSubmits = intent === "form",
   children,
 }: Readonly<{
   open: boolean;
@@ -112,6 +115,8 @@ export function Modal({
    * dialog claims one with `useUnsavedGuard` instead.
    */
   unsaved?: boolean;
+  /** ⌘/Ctrl+Enter presses the submit of the form it holds. */
+  commitSubmits?: boolean;
   children: ReactNode;
 }> &
   Expansion) {
@@ -154,6 +159,15 @@ export function Modal({
   });
   const leaving = state === "closing";
   const backdrop = useBackdropDismiss(requestClose, leaving);
+  useShortcutHandler(
+    "dialog.submit",
+    () => {
+      if (dialog.current) {
+        submitDialogForm(dialog.current);
+      }
+    },
+    open && commitSubmits,
+  );
 
   if (!mounted) {
     return null;

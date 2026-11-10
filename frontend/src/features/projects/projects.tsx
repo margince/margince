@@ -126,7 +126,7 @@ export function ProjectKeyChip({
  * One element rather than two renderings, so the dialog behind both is the
  * same dialog with the same fields.
  */
-function NewProjectAction() {
+function NewProjectAction({ open }: Readonly<{ open: boolean }>) {
   const t = useT();
   const form = useProjectCreateForm();
   return (
@@ -134,6 +134,7 @@ function NewProjectAction() {
       label={t("project.new")}
       invalidate="projects"
       screen="projects"
+      listCreate={{ open }}
       create={form.create}
       resolveExisting={(_code, id) => ({ screen: "projects", id })}
       fields={form.fields}
@@ -147,7 +148,9 @@ const PHASE_CHIP_OPTIONS: { value: ProjectPhase; label: MessageKey }[] =
     label: labelFor(PHASE_LABEL, phase),
   }));
 
-export function ProjectsScreen() {
+export function ProjectsScreen({
+  startCreating = false,
+}: Readonly<{ startCreating?: boolean }>) {
   const t = useT();
   const pageName = usePageName("projects");
   const { locale } = useLocale();
@@ -164,7 +167,9 @@ export function ProjectsScreen() {
   // mounts its own copy of this verb, and a button pressed in the table's
   // header a moment before the plate replaces it would open a dialog the
   // swap throws away.
-  const createAction = !state.isPending && <NewProjectAction />;
+  const createAction = !state.isPending && (
+    <NewProjectAction open={startCreating} />
+  );
   // First run: nothing exists and nothing narrows the list. It waits for the
   // views read, since a saved view is reachable only from the rail.
   const firstRun =

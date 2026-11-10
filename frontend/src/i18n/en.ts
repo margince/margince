@@ -2769,6 +2769,20 @@ export const en = {
   "shell.shortcuts.paragraphSave": "Save multi-line field",
   "shell.shortcuts.deckHint":
     "On Home, arrow keys stage a decision. Enter sends what is staged.",
+  "shell.shortcuts.create": "Create record",
+  "shell.shortcuts.list": "Show keyboard shortcuts",
+  "shell.shortcuts.goto": "Go to",
+  "shell.shortcuts.gotoHint": "Press G, then the letter.",
+  "shell.shortcuts.record": "On a record",
+  "shell.shortcuts.logActivity": "Log activity",
+  "shell.shortcuts.addTask": "Add task",
+  "shell.shortcuts.writeEmail": "Write message",
+  "shell.shortcuts.sendEmail": "Send email",
+  "shell.shortcuts.submitDialog": "Submit dialog",
+  "shell.shortcuts.then": "then",
+  "shell.shortcuts.or": "or",
+  "shell.shortcuts.singleKeyOff": "Single-key shortcuts are off",
+  "shell.shortcuts.singleKeyOffHint": "Turn them on in Settings → Account.",
   "shell.more": "More",
   "shell.unknownPage": "Not found",
   "shell.closeMenu": "Close",
@@ -11626,6 +11640,27 @@ export const en = {
   "senders.waiting.moreAddresses_other": "+{count} more",
   "senders.waiting.openNamed": "Open {name}",
   "senders.waiting.openUnnamed": "Open contact",
+  "senders.waiting.onMargince": "Waiting on Margince:",
+  "senders.waiting.onYou": "Waiting on you:",
+  "senders.waiting.why.decided":
+    "the decision is applied at the next sender check.",
+  "senders.waiting.why.classifying":
+    "the sender check has not judged this sender yet.",
+  "senders.waiting.why.unsure":
+    "the sender check could not tell, so your answer decides.",
+  "senders.waiting.why.queued": "the sender check will look at their mail.",
+  "senders.waiting.why.unjudgeable":
+    "Margince cannot check this sender on its own, so only you can decide.",
+  "senders.waiting.businessFor": "Mark {address} as business",
+  "senders.waiting.keepOutFor": "Exclude {address}",
+  "senders.waiting.businessTitle": "Mark this sender as business?",
+  "senders.waiting.businessBody":
+    "Their mail is kept as business mail, and this contact is shared with your company. Each email and meeting keeps its own sharing.",
+  "senders.waiting.remove": "Remove from contacts",
+  "senders.waiting.removeTitle": "Remove this contact?",
+  "senders.waiting.removeBody":
+    "The contact is archived and leaves this list. Its mail stays, and no sender decision changes. You can restore it from archived contacts.",
+  "senders.waiting.removeConfirm": "Remove contact",
   "connectionOutcomes.title": "What your connections found",
   "connectionOutcomes.view": "View",
   "connectionOutcomes.viewNamed": "View {name}",
@@ -15693,6 +15728,9 @@ export const en = {
     "The language of menus, pages and messages from Margince. Saved to your account, so it follows you to every device you sign in on.",
   "account.appearanceHelp":
     "Light, dark or follow this computer’s setting. Applies in this browser only. The account menu changes the same setting.",
+  "account.singleKeyShortcuts": "Single-key shortcuts",
+  "account.singleKeyShortcutsHelp":
+    "Letter and symbol keys work as shortcuts on their own. Applies in this browser only.",
   "reviewTemplates.questionCount_one": "{count} question",
   "reviewTemplates.questionCount_other": "{count} questions",
   "reviewTemplates.summary": "{questions}, {required} required",

@@ -100,6 +100,10 @@ const anchorSeenCap = 100_000
 // keep exact.
 var ErrAnchorTooLarge = errors.New("graph: the anchor window holds more messages than one certified round can count")
 
+// ErrAnchorShort is a census that closed below the folder's tally. It is
+// unreachable, so the cycle retries, but the round it walked is not resumed.
+var ErrAnchorShort = fmt.Errorf("graph: the anchor census closed short: %w", ErrUnreachable)
+
 // DeltaPage is one page of a delta round, handed over before the next page is
 // read, with what a checkpoint stores to continue after it.
 type DeltaPage struct {
@@ -227,7 +231,7 @@ func (a *httpAPI) DeltaInit(ctx context.Context, accessToken, folder string, aft
 	if walked := len(census.seen); walked < held {
 		return "", fmt.Errorf(
 			"graph: the %s anchor closed holding %d message(s) from the window but the folder holds %d since %s: %w",
-			folder, walked, held, census.After.UTC().Format(time.RFC3339), ErrUnreachable)
+			folder, walked, held, census.After.UTC().Format(time.RFC3339), ErrAnchorShort)
 	}
 	return deltaLink, nil
 }

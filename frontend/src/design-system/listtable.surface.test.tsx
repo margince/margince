@@ -21,7 +21,7 @@ afterEach(cleanup);
 // opened nothing, and pressing the menu then opened a form nobody asked for.
 function MountReporter({ onMount }: Readonly<{ onMount: () => void }>) {
   // A verb that does its work at MOUNT, which is the shape `CreateAction`'s
-  // `startOpen` has: read once in `useState`, so a late mount reads it late.
+  // `listCreate.open` has: read once in `useState`, so a late mount reads it late.
   useEffect(() => {
     onMount();
   }, [onMount]);
