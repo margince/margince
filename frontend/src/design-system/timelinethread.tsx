@@ -13,8 +13,6 @@ import "./composed.css";
 import {
   automaticLabel,
   CommitmentReviewFlag,
-  entryDay,
-  entryTimeOfDay,
   groupCountLabel,
   MoveFlag,
   sideClass,
@@ -23,9 +21,9 @@ import {
   TIMELINE_KIND_LABEL,
   type TimelineEntry,
   type TimelineGroup,
-  TimelineWhen,
 } from "./timelineentry";
 import { TimelineBody } from "./timelinetext";
+import { entryDay, entryTimeOfDay, TimelineWhen } from "./timelinewhen";
 
 // How many of a thread's messages stand open before the rest fold behind a
 // count. Three is a conversation a reader takes in at a glance: the ask,
