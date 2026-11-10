@@ -6,8 +6,8 @@ import { expect, test } from "@playwright/test";
 import { mockApi } from "./seed";
 
 // A list that is still loading draws placeholder rows. At phone width a row is
-// a card, and its cells must still be there, or the reader sees blank cards and
-// axe sees rows with no cells.
+// a card, and its cells must still show. Otherwise the reader sees blank cards,
+// and axe sees rows with no cells.
 for (const width of [390, 1440]) {
   test(`the loading rows keep their cells at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 1000 });

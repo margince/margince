@@ -99,8 +99,7 @@ func assertBoundedDealFollowUpPlan(t *testing.T, stats string, plan planNode) {
 			})
 		}
 		read := (n.ActualRows + n.RemovedByFilter) * n.ActualLoops
-		switch n.Alias {
-		case "keyed":
+		if n.Alias == "keyed" {
 			keyedReads += n.ActualLoops
 			if !readByKey(n) || n.ActualRows+n.RemovedByFilter > 1 {
 				t.Errorf("%s statistics: a later activity is read by %s %s on %q, %.0f rows a loop, not by its key",
