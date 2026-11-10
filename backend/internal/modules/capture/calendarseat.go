@@ -17,16 +17,12 @@ import (
 // a delivered-to sighting never binds a seat to an event. Any other record
 // keeps the account-address match.
 func calendarSeatMatch(ctx context.Context, tx pgx.Tx, kind string, attested bool, args *[]any) (string, error) {
-	// An erased seat is nobody to bind. Both callers join app_user on this
-	// fragment and add no liveness test, so an archived account's address wrote
-	// an attendance row naming it.
+	// An erased seat is nobody to bind, and both callers join app_user on this
+	// fragment with no liveness test of their own. archived_at marks the erased
+	// account; a seat that merely left (removed_at) still attended, so it binds.
 	//
-	// It asks only whether the account is erased. A seat that merely left still
-	// attended the meeting.
-	// Factored out front rather than written into one arm.
-	//
-	// `AND` binds tighter than `OR`, so a liveness test beside the login match
-	// leaves the attested arm unguarded.
+	// The test leads the whole fragment. `AND` binds tighter than `OR`, so beside
+	// the login match alone it would leave the attested arm unguarded.
 	alive := "u.archived_at IS NULL AND "
 	login := storekit.SeatLoginIsSQL("u", "inp.address", "inp.domain_folded")
 	if kind != meetingKind || !attested {
