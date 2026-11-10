@@ -4,8 +4,9 @@ site: deal_verdict
 source: hand_authored
 sanitized_by: hand_authored/claude-opus-5
 # The customer's own mail names the month they will sign. The deal still
-# carries a close date two months earlier, so the date should move, and
-# nothing in the mail moves the amount or the chances.
+# carries a close date two months earlier, so the date should move. The mail
+# names no price, and the deal already sits at its raise ceiling, so neither
+# the amount nor the chances move.
 fixture:
   today: "2026-11-04"
   deal:

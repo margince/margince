@@ -761,10 +761,11 @@
   gap: var(--space-2);
 }
 /* The head's words are separate facts, so a dot stands between two of them;
-   the states after them are badges, which carry their own edge. */
-.tl-head-part + .tl-head-part::before {
+   the states after them are badges, which carry their own edge. The dot ends
+   the fact before it, so a head that wraps never opens a line on a dot. */
+.tl-head-part:has(+ .tl-head-part)::after {
   content: "·";
-  margin-inline-end: var(--space-2);
+  margin-inline-start: var(--space-2);
   color: var(--textSecondary);
 }
 /* The verbs share the head line only. Beside the whole body they held a
@@ -857,6 +858,7 @@
 .timeline .tl-title {
   color: var(--textPrimary);
   text-wrap: pretty;
+  overflow-wrap: anywhere;
 }
 /* A withheld row says so where its title would be: the reader's own seat is
    what is being answered, so it reads as a statement, not as a missing one. */
@@ -1126,6 +1128,57 @@
 .tl-msg-open:focus-visible {
   outline: var(--focus-ring);
   outline-offset: -2px;
+}
+
+/* On a phone the date gutter folds above the entry, as `.meta-row` does, and
+   the rail runs beside both. The gutter cost 120px of a 390px row. */
+@media (max-width: 600px) {
+  /* As wide as a thread's icon, so the icon stays inside the list. */
+  .timeline > li {
+    grid-template-columns: 24px minmax(0, 1fr);
+  }
+  .timeline .tl-rail {
+    grid-column: 1;
+    grid-row: 1 / span 2;
+  }
+  .timeline .tl-when {
+    grid-column: 2;
+    grid-row: 1;
+    text-align: start;
+  }
+  .timeline .tl-when-time {
+    display: inline;
+    margin-inline-start: var(--space-2);
+  }
+  .timeline .tl-body {
+    grid-column: 2;
+    grid-row: 2;
+    padding-block-start: var(--space-1);
+  }
+  /* The moment drops under the name, and the words take the full width. */
+  .tl-msg {
+    grid-template-columns: auto minmax(0, 1fr);
+    row-gap: var(--space-1);
+  }
+  .tl-msg > :first-child {
+    grid-column: 1;
+    grid-row: 1 / span 2;
+  }
+  .tl-msg-body {
+    display: contents;
+  }
+  .tl-msg-lead,
+  .tl-msg-when,
+  .tl-msg-body > * {
+    grid-column: 2;
+  }
+  .tl-msg-when {
+    order: 1;
+    white-space: normal;
+  }
+  .tl-msg-body > :not(.tl-msg-lead) {
+    order: 2;
+  }
 }
 
 /* One responsibility row in the Responsible panel (components/recordteam.tsx).

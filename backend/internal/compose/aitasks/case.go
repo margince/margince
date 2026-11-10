@@ -140,10 +140,13 @@ const (
 )
 
 // Outcome is one evaluated run. Detail names why, in the validator's own
-// words, and is what turns a reliability drop into a diagnosis.
+// words, and is what turns a reliability drop into a diagnosis. Leak says the
+// reply failed a privacy check: it showed a reader what they must not see. A
+// reply the validator refused never reached a reader, so it never leaks.
 type Outcome struct {
 	Result string
 	Detail string
+	Leak   bool
 }
 
 // KnownOutcome reports whether result is one of the four things a certified

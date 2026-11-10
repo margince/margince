@@ -123,7 +123,7 @@ only in a production build, and only where the browser has service workers. It a
 window's `load` event, so installing the worker never slows the app's first load. A failed sign-up
 is logged with `console.warn` and changes nothing else.
 
-`frontend/src/app/serviceworker-registrar.test.ts` fails any shipped module but `pwa.ts` that names
+`frontend/census/rules/serviceworker-registrar.census.ts` fails any shipped module but `pwa.ts` that names
 `navigator.serviceWorker` in code. It reads every kind of script under `frontend/src` or the
 frontend of an extension. So a second module that signs up a worker cannot come in without notice.
 

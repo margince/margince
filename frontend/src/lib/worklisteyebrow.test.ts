@@ -18,6 +18,14 @@ function row(over: Partial<WorklistItem>): WorklistItem {
 }
 
 describe("the word above a queue row", () => {
+  it("names a category this build does not know with the neutral label", () => {
+    expect(
+      eyebrowKeyFor(
+        row({ source: "task", category: "later" as WorklistItem["category"] }),
+      ),
+    ).toBe("common.unknownValue");
+  });
+
   // Every overnight row sits in deals_at_risk, because that is where the
   // worklist folds it against the sibling risk row for the same deal. The night
   // knows why it picked each one, and a deal it ranked as winnable announced as

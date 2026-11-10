@@ -9,23 +9,17 @@ package dealverdict
 
 import (
 	"regexp"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 // period is a span of calendar days, both ends included.
 type period struct{ start, end time.Time }
 
 func (p period) holds(day time.Time) bool { return !day.Before(p.start) && !day.After(p.end) }
-
-var monthWords = map[string]time.Month{
-	"january": 1, "januar": 1, "february": 2, "feb": 2, "februar": 2, "march": 3, "mar": 3, "märz": 3,
-	"april": 4, "apr": 4, "mai": 5, "june": 6, "jun": 6, "juni": 6, "july": 7, "jul": 7, "juli": 7,
-	"august": 8, "aug": 8, "september": 9, "sep": 9, "sept": 9, "october": 10, "oct": 10, "oktober": 10, "okt": 10,
-	"november": 11, "nov": 11, "december": 12, "dec": 12, "dezember": 12, "dez": 12,
-}
 
 var (
 	isoDay     = regexp.MustCompile(`\b(\d{4})-(\d{2})-(\d{2})\b`)
@@ -39,12 +33,10 @@ var (
 )
 
 func monthAlternation() string {
-	words := make([]string, 0, len(monthWords))
-	for word := range monthWords {
-		words = append(words, regexp.QuoteMeta(word))
+	words := textlang.MonthWords()
+	for i, word := range words {
+		words[i] = regexp.QuoteMeta(word)
 	}
-	// Longer words first, so "june" is not read as "jun".
-	sort.Slice(words, func(i, j int) bool { return len(words[i]) > len(words[j]) })
 	return strings.Join(words, "|")
 }
 
@@ -59,7 +51,10 @@ func periodsIn(text string, arrived time.Time) []period {
 		out = appendDay(out, atoi(m[3]), atoi(m[2]), atoi(m[1]))
 	}
 	for _, m := range monthName.FindAllStringSubmatch(text, -1) {
-		month := monthWords[strings.ToLower(m[1])]
+		month, ok := textlang.MonthWord(strings.ToLower(m[1]))
+		if !ok {
+			continue
+		}
 		year := yearOrNext(m[2], int(month), arrived)
 		start := time.Date(year, month, 1, 0, 0, 0, 0, time.UTC)
 		out = append(out, period{start: start, end: start.AddDate(0, 1, -1)})

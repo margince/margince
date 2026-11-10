@@ -26,6 +26,24 @@ func boundedDraftEditorState(state crmcontracts.MailDraftEditorState) crmcontrac
 	if state.VoiceProfileVersion != nil && *state.VoiceProfileVersion < 1 {
 		state.VoiceProfileVersion = nil
 	}
+	if state.Filing != nil {
+		selection := make([]crmcontracts.MailDraftGround, 0, 2)
+		seen := map[crmcontracts.MailDraftAnchorType]bool{}
+		for _, ground := range *state.Filing {
+			if ground.AnchorType != crmcontracts.MailDraftAnchorTypeDeal && ground.AnchorType != crmcontracts.MailDraftAnchorTypeProject {
+				continue
+			}
+			if ground.AnchorId == (crmcontracts.Id{}) || seen[ground.AnchorType] {
+				continue
+			}
+			selection = append(selection, ground)
+			seen[ground.AnchorType] = true
+			if len(selection) == 2 {
+				break
+			}
+		}
+		state.Filing = &selection
+	}
 	return state
 }
 

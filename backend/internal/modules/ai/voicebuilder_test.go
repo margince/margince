@@ -179,9 +179,15 @@ func TestDeriveVoiceEnforcesTheWordFloorAndModelPath(t *testing.T) {
 	}
 }
 
-func TestContainsNormalizedFoldsWhitespaceOnly(t *testing.T) {
+func TestContainsNormalizedFoldsWhitespaceAndTypographicPunctuation(t *testing.T) {
 	if !containsNormalized("line one\n  line two", "one line two") {
 		t.Fatal("whitespace folding must let a wrapped quote match")
+	}
+	if !containsNormalized(`I will re-plan around it. It's "done".`, "I will re\u2011plan around it. It\u2019s \u201Cdone\u201D.") {
+		t.Fatal("a typographic hyphen or quote mark must match its ASCII form")
+	}
+	if containsNormalized("I will re-plan around it.", "I will replan around it.") {
+		t.Fatal("folding punctuation must not drop it")
 	}
 	if containsNormalized("some text", "some other text") {
 		t.Fatal("invented words must never match")

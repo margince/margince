@@ -143,20 +143,18 @@ func (s *Store) DirectSend(ctx context.Context, reviewID ids.UUID, in DirectInpu
 	if err := auth.Require(ctx, entityCommunicationException, principal.ActionCreate); err != nil {
 		return Instruction{}, err
 	}
-	// NORMALISED BEFORE ANYTHING READS IT, so the value checked and the value
-	// stored are one value. Trimming only inside the check let " override-v1 "
-	// pass and then land on the row naming a version nothing serves.
-	in.WarningVersion = strings.TrimSpace(in.WarningVersion)
-	in.Explanation = strings.TrimSpace(in.Explanation)
-	if err := validateDirect(in); err != nil {
+	var err error
+	in, err = in.Validated()
+	if err != nil {
 		return Instruction{}, err
 	}
+
 	director := initiatingSeat(ctx)
 	if director.IsZero() {
 		return Instruction{}, apperrors.ErrPermissionDenied
 	}
 	var out Instruction
-	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		review, err := claimReviewForDirectionTx(ctx, tx, reviewID)
 		if err != nil {
 			return err
@@ -304,7 +302,13 @@ func (s *Store) RevokeInstruction(ctx context.Context, id ids.UUID, reason strin
 	})
 }
 
-// validateDirect refuses what the store cannot stand behind.
+// Validated returns the normalized input used by both recording and resuming a send.
+func (in DirectInput) Validated() (DirectInput, error) {
+	in.WarningVersion = strings.TrimSpace(in.WarningVersion)
+	in.Explanation = strings.TrimSpace(in.Explanation)
+	return in, validateDirect(in)
+}
+
 func validateDirect(in DirectInput) error {
 	// THE ACKNOWLEDGEMENT IS THE ACT. Everything else on this row describes a
 	// decision; this is the decision. Writing one without it would record that

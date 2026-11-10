@@ -15,6 +15,7 @@ import {
 } from "../../design-system/querystates";
 import { RecordCardList } from "../../design-system/recordcard";
 import { useT } from "../../i18n";
+import { labelFor } from "../../lib/labelfor";
 import { unwrap } from "../../lib/problem";
 import { navigate, useRoute } from "../../lib/router";
 import {
@@ -147,7 +148,7 @@ export function SearchScreen({
                 },
                 ...SEARCH_HIT_ORDER.map((kind) => ({
                   value: kind as TypeFilter,
-                  label: t(SEARCH_FILTER_KEY[kind]),
+                  label: t(labelFor(SEARCH_FILTER_KEY, kind)),
                 })),
               ]}
             />
@@ -307,7 +308,7 @@ function SearchGroups({
               more && (
                 <Button
                   aria-label={t("search.group.showAllNamed", {
-                    group: t(SEARCH_FILTER_KEY[type]),
+                    group: t(labelFor(SEARCH_FILTER_KEY, type)),
                   })}
                   onClick={() => more.onNarrow(type)}
                 >

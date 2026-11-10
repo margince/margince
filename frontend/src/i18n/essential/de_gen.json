@@ -875,6 +875,7 @@
   "ext.notFound": "In dieser Installation ist keine Erweiterung namens „{name}“ aktiviert.",
   "search.kind.deal": "Deal",
   "common.close": "Schließen",
+  "common.unknownValue": "Sonstiges",
   "common.expand": "Vergrößern",
   "common.collapse": "Verkleinern",
   "format.notForecast": "Nicht prognostiziert",

@@ -17,7 +17,7 @@ when a test you touch reads a date.
 Biome holds the size of a function in product code: 300 lines, blank lines not counted
 (`noExcessiveLinesPerFunction`), and a score of 15 (`noExcessiveCognitiveComplexity`). Test code has
 no such limit. A `biome-ignore` for either rule in product
-code names the issue that splits the function, and `scripts/complexity-waivers.test.ts` checks it.
+code names the issue that splits the function, and `census/rules/complexity-waivers.census.ts` checks it.
 
 `make fe-compiler-lint` runs the rules of the React Compiler (`eslint-plugin-react-hooks`). Two
 examples: no read or write of `ref.current` during render, and no state set in an effect body. Findings from before the
@@ -49,16 +49,16 @@ that looks right, and passes review. So:
 - **Screens do not keep building blocks.** If one screen imports something from a second screen, it
   goes in `src/design-system/`.
 - **If it is not there, add it there**, with a story, and update the README table in the same
-  commit. `catalog.test.ts` fails a shipped component that the table never names.
+  commit. `census/rules/catalog.census.ts` fails a shipped component that the table never names.
 
-`make native-controls`, `catalog.test.ts`, `type-source.test.ts` and the `check-ds-*.sh` and
+`make native-controls`, `census/rules/catalog.census.ts`, `census/rules/type-source.census.ts` and the `check-ds-*.sh` and
 `check-space-tokens.sh` shell gates hold part of this. Not one of them can tell that the component
 you wrote already exists under some other name. The catalog gate makes sure a search finds it; the
 grep is still your job.
 
 **A short label is one `Badge`**: `soft` or `primary`, 7 tones, its icon first. `soft` has a fill
 with some of the tone, plus a line in the tone; `primary` has a fill with all of the tone. `ai` shows
-Sparkles. No `uppercase`, no click; `badge-spelling.test.ts` fails a badge built by hand or a new
+Sparkles. No `uppercase`, no click; `census/rules/badge-spelling.census.ts` fails a badge built by hand or a new
 look for one.
 
 **A settings `Panel` has no `tone`** and at most one primary. System health may tint its one leading action panel with its result tone. A page saves through one `PageSaveBar`
@@ -81,7 +81,7 @@ fails one that does.
 Only the shell (`app/`, `App`) imports a feature, and a feature imports no other feature. Code that
 two features need moves down: to `components/` if it draws, to `lib/` if it does not. A test helper
 that features share goes to `testing/`. Code that one feature alone uses lives in that feature,
-never in `components/`, `lib/` or `format/`. `scripts/feature-boundaries.test.ts` fails both, and
+never in `components/`, `lib/` or `format/`. `census/rules/feature-boundaries.census.ts` fails both, and
 its message says where the file goes. Never add a line to its waiver list.
 
 Move a module with `node scripts/move-modules.ts <from> <to>`, so its imports follow and the PR
@@ -92,7 +92,7 @@ changes nothing else. The steps: [move-frontend-code.md](../docs/how-to/move-fro
 English catalog text follows [`docs/reference/ui-copy-style.md`](../docs/reference/ui-copy-style.md);
 German adds [`ui-copy-style-de.md`](../docs/reference/ui-copy-style-de.md) and Vietnamese adds
 [`ui-copy-style-vi.md`](../docs/reference/ui-copy-style-vi.md). `copy-style.test.ts`,
-`copy-style-de.test.ts` and `copy-style-vi.test.ts` hold only the rules a program can check. The
+`census/rules/copy-style-de.census.ts` and `census/rules/copy-style-vi.census.ts` hold only the rules a program can check. The
 tone, the words, the length and the shape of a message are yours to check before you add or change
 a value.
 
@@ -123,7 +123,7 @@ The rule, and the gate that holds it:
 - A check for an empty value at the start of a `mutationFn` (`if (!form) return`) does not keep you
   safe. It is what *happens* when an old closure runs, and it refuses a form the user has filled in.
   An old closure can also send a form state the user never set.
-- `src/testing/mutation-variable-coverage.test.ts` walks the TSX with the TypeScript compiler API
+- `census/rules/mutation-variable-coverage.census.ts` walks the TSX with the TypeScript compiler API
   and fails on the pattern. Do not find a way past it.
 
 ### Use the app in tests in a way that does not cost clock time

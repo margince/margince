@@ -8,9 +8,9 @@ import "./provider-mark.css";
  * (or connect) providers. These are not design-system colours and must not be
  * tokenised: a provider mark rendered in Ledger Green is a wrong mark, and
  * re-tinting another company's logo is not ours to do. This file is the ONE
- * named exclusion in both colour gates — `scripts/check-ds-purity.sh` and the
- * `keeps literal colours in tokens.css only` case in
- * `design-system/conformance.test.ts` — each carrying that reason.
+ * named exclusion in both colour gates, `scripts/check-ds-purity.sh` and the
+ * colour check in `census/rules/conformance.census.ts`, each carrying that
+ * reason.
  *
  * Lucide ships no brand logos, so the marks are inline SVG. They live in the
  * design system rather than in the auth screen because the mailbox-connect step

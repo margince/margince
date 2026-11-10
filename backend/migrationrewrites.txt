@@ -96,3 +96,6 @@
 1793983530_a_kept_stop_holds_only_its_hash.up.sql | communication_suppression | communication_suppression holds one row per stop a colleague, a subject or a bounce recorded, a handful per stopped contact; the UPDATE clears one column on the stops that name no record, a handful per anonymized contact or pressed link
 1793983530_a_kept_stop_holds_only_its_hash.down.sql | * | the down migration is a single SELECT 1 that changes nothing
 1794189652_the_lifetime_bounds_are_validated.up.sql | meeting_proposal | only proposals whose expiry is not after their creation are touched; the writer produced those only for an option offered with zero notice, so the set is a handful of links that were never openable
+1794215101_large_originals_name_their_stored_object.up.sql | * | defines a retirement trigger whose body runs only on later writes; no existing original is rewritten
+1794215101_large_originals_name_their_stored_object.down.sql | * | refuses removal while external references exist, then removes only schema objects; no original is rewritten
+1794215102_large_original_references_are_valid.down.sql | * | the down migration is a single SELECT 1 that changes nothing

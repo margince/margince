@@ -73,7 +73,7 @@ func TestTheModelCitesTheRecipientAsTheLead(t *testing.T) {
 	t.Parallel()
 	lane := answeringLane{answer: `{"subject":"Your question","body":"Hi Dung,\n\nThanks for writing.",` +
 		`"reasoning":[{"kind":"recipient","label":"Dung Ly Nguyen","entity_type":"lead",` +
-		`"entity_id":"` + someLead.String() + `"}]}`}
+		`"entity_id":"l1"}]}`}
 
 	draft, grounding := draftWith(t, lane)
 
@@ -83,13 +83,13 @@ func TestTheModelCitesTheRecipientAsTheLead(t *testing.T) {
 	followsToTheLead(t, recipientRef(t, draft), grounding)
 }
 
-// A lead's id labelled as a contact names a record that does not exist.
+// A lead's ref labelled as a contact names a record that does not exist.
 // The reason is dropped instead of becoming a chip that opens nothing.
 func TestAModelThatCitesTheLeadAsAContactLosesThatReason(t *testing.T) {
 	t.Parallel()
 	lane := answeringLane{answer: `{"subject":"Your question","body":"Hi Dung,\n\nThanks for writing.",` +
 		`"reasoning":[{"kind":"recipient","label":"Dung Ly Nguyen","entity_type":"contact",` +
-		`"entity_id":"` + someLead.String() + `"}]}`}
+		`"entity_id":"l1"}]}`}
 
 	draft, _ := draftWith(t, lane)
 

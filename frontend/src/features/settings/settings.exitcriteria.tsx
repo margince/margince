@@ -18,6 +18,7 @@ import { IconAction } from "../../design-system/iconaction";
 import { KeyCode } from "../../design-system/keyedname";
 import { SettingList, SettingRow } from "../../design-system/settingrow";
 import { useT } from "../../i18n";
+import { labelFor } from "../../lib/labelfor";
 import { useLegalReviewAvailable } from "../../lib/legalreviews.queries";
 import { problemMessageOf, unwrap } from "../../lib/problem";
 import {
@@ -146,7 +147,7 @@ function CriterionRow({
   return (
     <SettingRow
       label={criterion.label}
-      description={t(CRITERION_KIND_LABEL[criterion.kind])}
+      description={t(labelFor(CRITERION_KIND_LABEL, criterion.kind))}
       value={
         <Badge tone={criterion.required ? "warning" : undefined}>
           {criterion.required
@@ -345,7 +346,7 @@ function kindOptions(
 ) {
   return CRITERION_KINDS.filter(admits).map((kind) => ({
     value: kind,
-    label: t(CRITERION_KIND_LABEL[kind]),
+    label: t(labelFor(CRITERION_KIND_LABEL, kind)),
   }));
 }
 
