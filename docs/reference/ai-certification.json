@@ -6,7 +6,7 @@
     "sites_best_stale": 0,
     "sites_absent": 0,
     "scenarios": 311,
-    "records": 324,
+    "records": 355,
     "bindings": 16,
     "self_judged_records": 0
   },
@@ -3347,7 +3347,7 @@
             "model": "openai/gpt-oss-120b",
             "env": "cloud_frontier"
           },
-          "band": "certified",
+          "band": "supported_degraded",
           "state": "current",
           "fallback": {
             "tier": "cheap_cloud",
@@ -3357,14 +3357,14 @@
               "env": "cloud_frontier"
             },
             "same_model": true,
-            "band": "certified",
+            "band": "supported_degraded",
             "state": "current"
           },
           "abandoned": 0,
-          "runs": 30,
-          "passed": 30,
+          "runs": 33,
+          "passed": 32,
           "cases_failing_often": 0,
-          "cases_below_quality_bar": 0
+          "cases_below_quality_bar": 1
         },
         {
           "task": "capture_confidentiality_verdict",
@@ -3395,8 +3395,8 @@
           "band": "not_supported",
           "state": "current",
           "abandoned": 0,
-          "runs": 153,
-          "passed": 148,
+          "runs": 150,
+          "passed": 145,
           "cases_failing_often": 0,
           "cases_below_quality_bar": 0
         },
@@ -4159,8 +4159,8 @@
         }
       ],
       "bands": {
-        "certified": 15,
-        "supported_degraded": 10,
+        "certified": 14,
+        "supported_degraded": 11,
         "not_supported": 7
       },
       "untested": 3,
@@ -7945,9 +7945,9 @@
           "sites_current": 49,
           "sites_partial": 0,
           "sites_stale": 0,
-          "runs": 1164,
-          "passed": 1144,
-          "reliability": 0.9828178694158075,
+          "runs": 1161,
+          "passed": 1140,
+          "reliability": 0.9819121447028424,
           "slowest_p95_ms": 24754,
           "bands": {
             "certified": 28,
@@ -7969,7 +7969,7 @@
           "runs": 843,
           "passed": 838,
           "reliability": 0.9940688018979834,
-          "slowest_p95_ms": 10685,
+          "slowest_p95_ms": 10422,
           "bands": {
             "certified": 31,
             "supported_degraded": 15,
@@ -8787,8 +8787,8 @@
       "answer": "mostly",
       "sites_shipped": 56,
       "sites_measured": 52,
-      "ready": 36,
-      "usable_with_care": 13,
+      "ready": 35,
+      "usable_with_care": 14,
       "not_reliable_yet": 3,
       "recheck_pending": 18,
       "models": [
@@ -8843,12 +8843,12 @@
           "sites_partial": 0,
           "sites_stale": 0,
           "runs": 1305,
-          "passed": 1230,
-          "reliability": 0.9425287356321839,
+          "passed": 1231,
+          "reliability": 0.9432950191570881,
           "slowest_p95_ms": 9507,
           "bands": {
-            "certified": 20,
-            "supported_degraded": 21,
+            "certified": 19,
+            "supported_degraded": 22,
             "not_supported": 8
           }
         }
@@ -8918,10 +8918,10 @@
             "model": "openai/gpt-oss-120b",
             "env": "cloud_frontier"
           },
-          "band": "certified",
+          "band": "supported_degraded",
           "state": "current",
-          "runs": 21,
-          "passed": 21,
+          "runs": 24,
+          "passed": 23,
           "records": 2
         },
         {
@@ -8962,8 +8962,8 @@
           },
           "band": "not_supported",
           "state": "current",
-          "runs": 153,
-          "passed": 148,
+          "runs": 150,
+          "passed": 145,
           "records": 2
         },
         {
@@ -9271,7 +9271,7 @@
           "band": "supported_degraded",
           "state": "current",
           "runs": 18,
-          "passed": 14,
+          "passed": 16,
           "records": 1
         },
         {
@@ -10424,9 +10424,9 @@
       "sites_current": 49,
       "sites_partial": 0,
       "sites_stale": 3,
-      "runs": 1323,
-      "passed": 1286,
-      "reliability": 0.9720332577475435,
+      "runs": 1320,
+      "passed": 1282,
+      "reliability": 0.9712121212121212,
       "slowest_p95_ms": 24754,
       "bands": {
         "certified": 29,
@@ -10509,7 +10509,7 @@
       "runs": 843,
       "passed": 838,
       "reliability": 0.9940688018979834,
-      "slowest_p95_ms": 10685,
+      "slowest_p95_ms": 10422,
       "bands": {
         "certified": 31,
         "supported_degraded": 15,
@@ -10546,10 +10546,10 @@
       "sites_current": 53,
       "sites_partial": 0,
       "sites_stale": 0,
-      "runs": 1404,
-      "passed": 1379,
-      "reliability": 0.9821937321937322,
-      "slowest_p95_ms": 12711,
+      "runs": 1398,
+      "passed": 1373,
+      "reliability": 0.9821173104434907,
+      "slowest_p95_ms": 28492,
       "bands": {
         "certified": 37,
         "supported_degraded": 14,
@@ -10707,12 +10707,12 @@
       "sites_partial": 0,
       "sites_stale": 0,
       "runs": 1665,
-      "passed": 1547,
-      "reliability": 0.9291291291291291,
+      "passed": 1548,
+      "reliability": 0.9297297297297298,
       "slowest_p95_ms": 9507,
       "bands": {
-        "certified": 23,
-        "supported_degraded": 21,
+        "certified": 22,
+        "supported_degraded": 22,
         "not_supported": 9
       }
     },
@@ -10722,18 +10722,18 @@
         "model": "qwen/qwen3.8-27b",
         "env": "cloud_frontier"
       },
-      "sites": 4,
-      "sites_current": 4,
+      "sites": 53,
+      "sites_current": 53,
       "sites_partial": 0,
       "sites_stale": 0,
-      "runs": 36,
-      "passed": 36,
-      "reliability": 1,
-      "slowest_p95_ms": 191650,
+      "runs": 1380,
+      "passed": 1370,
+      "reliability": 0.9927536231884058,
+      "slowest_p95_ms": 291372,
       "bands": {
-        "certified": 4,
-        "supported_degraded": 0,
-        "not_supported": 0
+        "certified": 37,
+        "supported_degraded": 15,
+        "not_supported": 1
       }
     }
   ],
@@ -12332,8 +12332,8 @@
           "runs": 18,
           "passed": 18,
           "reliability": 1,
-          "latency_p50_ms": 931,
-          "latency_p95_ms": 1118,
+          "latency_p50_ms": 844,
+          "latency_p95_ms": 1219,
           "reported": {
             "accepted": 18,
             "wrong_answer": 0,
@@ -12430,13 +12430,13 @@
           "band": "certified",
           "scenarios_measured": 5,
           "scenarios_total": 5,
-          "runs": 21,
-          "passed": 21,
+          "runs": 18,
+          "passed": 18,
           "reliability": 1,
-          "latency_p50_ms": 1202,
-          "latency_p95_ms": 3267,
+          "latency_p50_ms": 1554,
+          "latency_p95_ms": 5410,
           "reported": {
-            "accepted": 21,
+            "accepted": 18,
             "wrong_answer": 0,
             "invalid": 0,
             "abstained": 0
@@ -12567,16 +12567,39 @@
             "env": "cloud_frontier"
           },
           "state": "current",
+          "band": "supported_degraded",
+          "scenarios_measured": 5,
+          "scenarios_total": 5,
+          "runs": 24,
+          "passed": 23,
+          "reliability": 0.9583333333333334,
+          "latency_p50_ms": 929,
+          "latency_p95_ms": 6097,
+          "reported": {
+            "accepted": 23,
+            "wrong_answer": 1,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "qwen/qwen3.8-27b",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
           "band": "certified",
           "scenarios_measured": 5,
           "scenarios_total": 5,
-          "runs": 21,
-          "passed": 21,
+          "runs": 15,
+          "passed": 15,
           "reliability": 1,
-          "latency_p50_ms": 741,
-          "latency_p95_ms": 1144,
+          "latency_p50_ms": 6709,
+          "latency_p95_ms": 35670,
           "reported": {
-            "accepted": 21,
+            "accepted": 15,
             "wrong_answer": 0,
             "invalid": 0,
             "abstained": 0
@@ -12636,8 +12659,8 @@
           "runs": 9,
           "passed": 9,
           "reliability": 1,
-          "latency_p50_ms": 931,
-          "latency_p95_ms": 1118,
+          "latency_p50_ms": 844,
+          "latency_p95_ms": 1219,
           "reported": {
             "accepted": 9,
             "wrong_answer": 0,
@@ -12659,8 +12682,8 @@
           "runs": 9,
           "passed": 9,
           "reliability": 1,
-          "latency_p50_ms": 1202,
-          "latency_p95_ms": 3267,
+          "latency_p50_ms": 1554,
+          "latency_p95_ms": 5410,
           "reported": {
             "accepted": 9,
             "wrong_answer": 0,
@@ -12682,11 +12705,34 @@
           "runs": 9,
           "passed": 9,
           "reliability": 1,
-          "latency_p50_ms": 741,
-          "latency_p95_ms": 1144,
+          "latency_p50_ms": 929,
+          "latency_p95_ms": 6097,
           "reported": {
             "accepted": 9,
             "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "qwen/qwen3.8-27b",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "supported_degraded",
+          "scenarios_measured": 3,
+          "scenarios_total": 3,
+          "runs": 15,
+          "passed": 13,
+          "reliability": 0.8666666666666667,
+          "latency_p50_ms": 6709,
+          "latency_p95_ms": 35670,
+          "reported": {
+            "accepted": 13,
+            "wrong_answer": 2,
             "invalid": 0,
             "abstained": 0
           },
@@ -13138,6 +13184,29 @@
             "abstained": 0
           },
           "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "qwen/qwen3.8-27b",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 24,
+          "scenarios_total": 24,
+          "runs": 288,
+          "passed": 288,
+          "reliability": 1,
+          "latency_p50_ms": 7272,
+          "latency_p95_ms": 24274,
+          "reported": {
+            "accepted": 288,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
         }
       ]
     },
@@ -13300,8 +13369,8 @@
           "runs": 147,
           "passed": 147,
           "reliability": 1,
-          "latency_p50_ms": 886,
-          "latency_p95_ms": 1134,
+          "latency_p50_ms": 775,
+          "latency_p95_ms": 1131,
           "reported": {
             "accepted": 147,
             "wrong_answer": 0,
@@ -13475,8 +13544,8 @@
           "runs": 147,
           "passed": 147,
           "reliability": 1,
-          "latency_p50_ms": 1183,
-          "latency_p95_ms": 2564,
+          "latency_p50_ms": 1354,
+          "latency_p95_ms": 2133,
           "reported": {
             "accepted": 147,
             "wrong_answer": 0,
@@ -13647,14 +13716,37 @@
           "band": "not_supported",
           "scenarios_measured": 21,
           "scenarios_total": 21,
-          "runs": 153,
-          "passed": 148,
-          "reliability": 0.9673202614379085,
-          "latency_p50_ms": 788,
-          "latency_p95_ms": 1144,
+          "runs": 150,
+          "passed": 145,
+          "reliability": 0.9666666666666667,
+          "latency_p50_ms": 851,
+          "latency_p95_ms": 2462,
           "reported": {
-            "accepted": 148,
+            "accepted": 145,
             "wrong_answer": 5,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "qwen/qwen3.8-27b",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 21,
+          "scenarios_total": 21,
+          "runs": 147,
+          "passed": 147,
+          "reliability": 1,
+          "latency_p50_ms": 8515,
+          "latency_p95_ms": 24950,
+          "reported": {
+            "accepted": 147,
+            "wrong_answer": 0,
             "invalid": 0,
             "abstained": 0
           },
@@ -13971,6 +14063,29 @@
             "abstained": 0
           },
           "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "qwen/qwen3.8-27b",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 2,
+          "scenarios_total": 2,
+          "runs": 18,
+          "passed": 17,
+          "reliability": 0.9444444444444444,
+          "latency_p50_ms": 6723,
+          "latency_p95_ms": 29462,
+          "reported": {
+            "accepted": 17,
+            "wrong_answer": 1,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
         }
       ]
     },
@@ -14278,6 +14393,29 @@
             "abstained": 0
           },
           "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "qwen/qwen3.8-27b",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 5,
+          "scenarios_total": 5,
+          "runs": 15,
+          "passed": 15,
+          "reliability": 1,
+          "latency_p50_ms": 6244,
+          "latency_p95_ms": 59190,
+          "reported": {
+            "accepted": 15,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
         }
       ]
     },
@@ -14570,6 +14708,30 @@
           },
           "stale_reason": "",
           "site_thinking": "low"
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "qwen/qwen3.8-27b",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "supported_degraded",
+          "scenarios_measured": 1,
+          "scenarios_total": 1,
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "latency_p50_ms": 6244,
+          "latency_p95_ms": 59190,
+          "reported": {
+            "accepted": 3,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": "",
+          "site_thinking": "low"
         }
       ]
     },
@@ -14846,6 +15008,29 @@
           "reliability": 1,
           "latency_p50_ms": 681,
           "latency_p95_ms": 2160,
+          "reported": {
+            "accepted": 3,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "qwen/qwen3.8-27b",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "supported_degraded",
+          "scenarios_measured": 1,
+          "scenarios_total": 1,
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "latency_p50_ms": 6244,
+          "latency_p95_ms": 59190,
           "reported": {
             "accepted": 3,
             "wrong_answer": 0,
@@ -15158,6 +15343,30 @@
           "reported": {
             "accepted": 16,
             "wrong_answer": 2,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": "",
+          "site_thinking": "low"
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "qwen/qwen3.8-27b",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 4,
+          "scenarios_total": 4,
+          "runs": 12,
+          "passed": 12,
+          "reliability": 1,
+          "latency_p50_ms": 6244,
+          "latency_p95_ms": 59190,
+          "reported": {
+            "accepted": 12,
+            "wrong_answer": 0,
             "invalid": 0,
             "abstained": 0
           },
@@ -15555,6 +15764,29 @@
           "reported": {
             "accepted": 17,
             "wrong_answer": 1,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "qwen/qwen3.8-27b",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 5,
+          "scenarios_total": 5,
+          "runs": 15,
+          "passed": 15,
+          "reliability": 1,
+          "latency_p50_ms": 8518,
+          "latency_p95_ms": 41771,
+          "reported": {
+            "accepted": 15,
+            "wrong_answer": 0,
             "invalid": 0,
             "abstained": 0
           },
@@ -15966,6 +16198,29 @@
             "abstained": 0
           },
           "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "qwen/qwen3.8-27b",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 3,
+          "scenarios_total": 3,
+          "runs": 9,
+          "passed": 9,
+          "reliability": 1,
+          "latency_p50_ms": 66571,
+          "latency_p95_ms": 71792,
+          "reported": {
+            "accepted": 9,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
         }
       ]
     },
@@ -15978,12 +16233,12 @@
       "best_state": "current",
       "recommended": {
         "binding": {
-          "provider": "gemini",
-          "model": "gemini-3.1-flash-lite",
+          "provider": "openai_compatible",
+          "model": "qwen/qwen3.8-27b",
           "env": "cloud_frontier"
         },
         "band": "certified",
-        "reliability": 0.9111111111111111,
+        "reliability": 1,
         "state": "current"
       },
       "scenarios": [
@@ -16095,6 +16350,29 @@
           "reported": {
             "accepted": 26,
             "wrong_answer": 1,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "qwen/qwen3.8-27b",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 7,
+          "scenarios_total": 7,
+          "runs": 21,
+          "passed": 21,
+          "reliability": 1,
+          "latency_p50_ms": 15699,
+          "latency_p95_ms": 63612,
+          "reported": {
+            "accepted": 21,
+            "wrong_answer": 0,
             "invalid": 0,
             "abstained": 0
           },
@@ -16680,6 +16958,29 @@
             "abstained": 0
           },
           "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "qwen/qwen3.8-27b",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "not_supported",
+          "scenarios_measured": 2,
+          "scenarios_total": 2,
+          "runs": 18,
+          "passed": 18,
+          "reliability": 1,
+          "latency_p50_ms": 51998,
+          "latency_p95_ms": 89773,
+          "reported": {
+            "accepted": 18,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
         }
       ]
     },
@@ -17051,6 +17352,29 @@
             "abstained": 0
           },
           "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "qwen/qwen3.8-27b",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 2,
+          "scenarios_total": 2,
+          "runs": 18,
+          "passed": 18,
+          "reliability": 1,
+          "latency_p50_ms": 51998,
+          "latency_p95_ms": 89773,
+          "reported": {
+            "accepted": 18,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
         }
       ]
     },
@@ -17358,6 +17682,29 @@
           "reliability": 1,
           "latency_p50_ms": 1083,
           "latency_p95_ms": 1834,
+          "reported": {
+            "accepted": 6,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "qwen/qwen3.8-27b",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "supported_degraded",
+          "scenarios_measured": 2,
+          "scenarios_total": 2,
+          "runs": 6,
+          "passed": 6,
+          "reliability": 1,
+          "latency_p50_ms": 51998,
+          "latency_p95_ms": 89773,
           "reported": {
             "accepted": 6,
             "wrong_answer": 0,
@@ -17746,6 +18093,29 @@
             "accepted": 12,
             "wrong_answer": 1,
             "invalid": 2,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "qwen/qwen3.8-27b",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "supported_degraded",
+          "scenarios_measured": 3,
+          "scenarios_total": 3,
+          "runs": 15,
+          "passed": 15,
+          "reliability": 1,
+          "latency_p50_ms": 51998,
+          "latency_p95_ms": 89773,
+          "reported": {
+            "accepted": 15,
+            "wrong_answer": 0,
+            "invalid": 0,
             "abstained": 0
           },
           "stale_reason": ""
@@ -18195,6 +18565,29 @@
             "abstained": 0
           },
           "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "qwen/qwen3.8-27b",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "supported_degraded",
+          "scenarios_measured": 5,
+          "scenarios_total": 5,
+          "runs": 24,
+          "passed": 24,
+          "reliability": 1,
+          "latency_p50_ms": 51998,
+          "latency_p95_ms": 89773,
+          "reported": {
+            "accepted": 24,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
         }
       ]
     },
@@ -18455,6 +18848,29 @@
             "wrong_answer": 1,
             "invalid": 0,
             "abstained": 2
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "qwen/qwen3.8-27b",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 4,
+          "scenarios_total": 4,
+          "runs": 12,
+          "passed": 12,
+          "reliability": 1,
+          "latency_p50_ms": 17007,
+          "latency_p95_ms": 50149,
+          "reported": {
+            "accepted": 12,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
           },
           "stale_reason": ""
         }
@@ -18832,6 +19248,29 @@
           "latency_p95_ms": 9507,
           "reported": {
             "accepted": 18,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "qwen/qwen3.8-27b",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 2,
+          "scenarios_total": 2,
+          "runs": 12,
+          "passed": 12,
+          "reliability": 1,
+          "latency_p50_ms": 127573,
+          "latency_p95_ms": 223062,
+          "reported": {
+            "accepted": 12,
             "wrong_answer": 0,
             "invalid": 0,
             "abstained": 0
@@ -19290,6 +19729,29 @@
             "abstained": 0
           },
           "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "qwen/qwen3.8-27b",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 9,
+          "scenarios_total": 9,
+          "runs": 27,
+          "passed": 27,
+          "reliability": 1,
+          "latency_p50_ms": 11386,
+          "latency_p95_ms": 19151,
+          "reported": {
+            "accepted": 27,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
         }
       ]
     },
@@ -19741,6 +20203,29 @@
             "abstained": 3
           },
           "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "qwen/qwen3.8-27b",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 5,
+          "scenarios_total": 5,
+          "runs": 15,
+          "passed": 15,
+          "reliability": 1,
+          "latency_p50_ms": 14589,
+          "latency_p95_ms": 80239,
+          "reported": {
+            "accepted": 12,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 3
+          },
+          "stale_reason": ""
         }
       ]
     },
@@ -20051,6 +20536,29 @@
             "abstained": 0
           },
           "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "qwen/qwen3.8-27b",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 9,
+          "scenarios_total": 9,
+          "runs": 27,
+          "passed": 27,
+          "reliability": 1,
+          "latency_p50_ms": 9419,
+          "latency_p95_ms": 16480,
+          "reported": {
+            "accepted": 27,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
         }
       ]
     },
@@ -20342,6 +20850,29 @@
           "reported": {
             "accepted": 20,
             "wrong_answer": 7,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "qwen/qwen3.8-27b",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 3,
+          "scenarios_total": 3,
+          "runs": 9,
+          "passed": 9,
+          "reliability": 1,
+          "latency_p50_ms": 12703,
+          "latency_p95_ms": 120039,
+          "reported": {
+            "accepted": 9,
+            "wrong_answer": 0,
             "invalid": 0,
             "abstained": 0
           },
@@ -20664,6 +21195,29 @@
             "abstained": 0
           },
           "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "qwen/qwen3.8-27b",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 2,
+          "scenarios_total": 2,
+          "runs": 12,
+          "passed": 12,
+          "reliability": 1,
+          "latency_p50_ms": 4252,
+          "latency_p95_ms": 6907,
+          "reported": {
+            "accepted": 12,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
         }
       ]
     },
@@ -20833,6 +21387,29 @@
             "abstained": 0
           },
           "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "qwen/qwen3.8-27b",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 9,
+          "scenarios_total": 9,
+          "runs": 33,
+          "passed": 33,
+          "reliability": 1,
+          "latency_p50_ms": 12511,
+          "latency_p95_ms": 34377,
+          "reported": {
+            "accepted": 33,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
         }
       ]
     },
@@ -20879,15 +21456,15 @@
           "band": "supported_degraded",
           "scenarios_measured": 2,
           "scenarios_total": 2,
-          "runs": 18,
-          "passed": 15,
-          "reliability": 0.8333333333333334,
-          "latency_p50_ms": 1161,
-          "latency_p95_ms": 1518,
+          "runs": 15,
+          "passed": 11,
+          "reliability": 0.7333333333333333,
+          "latency_p50_ms": 1232,
+          "latency_p95_ms": 1841,
           "reported": {
-            "accepted": 15,
+            "accepted": 11,
             "wrong_answer": 2,
-            "invalid": 1,
+            "invalid": 2,
             "abstained": 0
           },
           "stale_reason": ""
@@ -20906,8 +21483,8 @@
           "runs": 12,
           "passed": 12,
           "reliability": 1,
-          "latency_p50_ms": 7323,
-          "latency_p95_ms": 10685,
+          "latency_p50_ms": 7593,
+          "latency_p95_ms": 9453,
           "reported": {
             "accepted": 12,
             "wrong_answer": 0,
@@ -20926,13 +21503,13 @@
           "band": "certified",
           "scenarios_measured": 2,
           "scenarios_total": 2,
-          "runs": 15,
-          "passed": 15,
+          "runs": 12,
+          "passed": 12,
           "reliability": 1,
-          "latency_p50_ms": 5486,
-          "latency_p95_ms": 12711,
+          "latency_p50_ms": 6409,
+          "latency_p95_ms": 28492,
           "reported": {
-            "accepted": 15,
+            "accepted": 12,
             "wrong_answer": 0,
             "invalid": 0,
             "abstained": 0
@@ -20950,14 +21527,37 @@
           "scenarios_measured": 2,
           "scenarios_total": 2,
           "runs": 18,
-          "passed": 14,
-          "reliability": 0.7777777777777778,
-          "latency_p50_ms": 1349,
-          "latency_p95_ms": 1631,
+          "passed": 16,
+          "reliability": 0.8888888888888888,
+          "latency_p50_ms": 1467,
+          "latency_p95_ms": 1987,
           "reported": {
-            "accepted": 14,
+            "accepted": 16,
+            "wrong_answer": 1,
+            "invalid": 1,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "qwen/qwen3.8-27b",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 2,
+          "scenarios_total": 2,
+          "runs": 12,
+          "passed": 12,
+          "reliability": 1,
+          "latency_p50_ms": 93119,
+          "latency_p95_ms": 114742,
+          "reported": {
+            "accepted": 12,
             "wrong_answer": 0,
-            "invalid": 4,
+            "invalid": 0,
             "abstained": 0
           },
           "stale_reason": ""
@@ -20973,8 +21573,8 @@
       "best_state": "current",
       "recommended": {
         "binding": {
-          "provider": "gemini",
-          "model": "gemini-3.1-flash-lite",
+          "provider": "openai_compatible",
+          "model": "openai/gpt-oss-120b",
           "env": "cloud_frontier"
         },
         "band": "supported_degraded",
@@ -21009,8 +21609,8 @@
           "runs": 6,
           "passed": 6,
           "reliability": 1,
-          "latency_p50_ms": 1088,
-          "latency_p95_ms": 1299,
+          "latency_p50_ms": 954,
+          "latency_p95_ms": 1274,
           "reported": {
             "accepted": 6,
             "wrong_answer": 0,
@@ -21033,8 +21633,8 @@
           "runs": 6,
           "passed": 6,
           "reliability": 1,
-          "latency_p50_ms": 1703,
-          "latency_p95_ms": 1929,
+          "latency_p50_ms": 2070,
+          "latency_p95_ms": 2502,
           "reported": {
             "accepted": 6,
             "wrong_answer": 0,
@@ -21056,8 +21656,8 @@
           "runs": 6,
           "passed": 6,
           "reliability": 1,
-          "latency_p50_ms": 1699,
-          "latency_p95_ms": 2460,
+          "latency_p50_ms": 3792,
+          "latency_p95_ms": 8740,
           "reported": {
             "accepted": 6,
             "wrong_answer": 0,
@@ -21079,8 +21679,31 @@
           "runs": 6,
           "passed": 6,
           "reliability": 1,
-          "latency_p50_ms": 912,
-          "latency_p95_ms": 1389,
+          "latency_p50_ms": 986,
+          "latency_p95_ms": 1178,
+          "reported": {
+            "accepted": 6,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "qwen/qwen3.8-27b",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "supported_degraded",
+          "scenarios_measured": 2,
+          "scenarios_total": 2,
+          "runs": 6,
+          "passed": 6,
+          "reliability": 1,
+          "latency_p50_ms": 30147,
+          "latency_p95_ms": 71016,
           "reported": {
             "accepted": 6,
             "wrong_answer": 0,
@@ -21100,8 +21723,8 @@
       "best_state": "current",
       "recommended": {
         "binding": {
-          "provider": "gemini",
-          "model": "gemini-3.1-flash-lite",
+          "provider": "openai_compatible",
+          "model": "openai/gpt-oss-120b",
           "env": "cloud_frontier"
         },
         "band": "supported_degraded",
@@ -21136,8 +21759,8 @@
           "runs": 6,
           "passed": 6,
           "reliability": 1,
-          "latency_p50_ms": 1088,
-          "latency_p95_ms": 1299,
+          "latency_p50_ms": 954,
+          "latency_p95_ms": 1274,
           "reported": {
             "accepted": 6,
             "wrong_answer": 0,
@@ -21160,8 +21783,8 @@
           "runs": 6,
           "passed": 6,
           "reliability": 1,
-          "latency_p50_ms": 1703,
-          "latency_p95_ms": 1929,
+          "latency_p50_ms": 2070,
+          "latency_p95_ms": 2502,
           "reported": {
             "accepted": 6,
             "wrong_answer": 0,
@@ -21183,8 +21806,8 @@
           "runs": 6,
           "passed": 6,
           "reliability": 1,
-          "latency_p50_ms": 1699,
-          "latency_p95_ms": 2460,
+          "latency_p50_ms": 3792,
+          "latency_p95_ms": 8740,
           "reported": {
             "accepted": 6,
             "wrong_answer": 0,
@@ -21206,8 +21829,31 @@
           "runs": 6,
           "passed": 6,
           "reliability": 1,
-          "latency_p50_ms": 912,
-          "latency_p95_ms": 1389,
+          "latency_p50_ms": 986,
+          "latency_p95_ms": 1178,
+          "reported": {
+            "accepted": 6,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "qwen/qwen3.8-27b",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "supported_degraded",
+          "scenarios_measured": 2,
+          "scenarios_total": 2,
+          "runs": 6,
+          "passed": 6,
+          "reliability": 1,
+          "latency_p50_ms": 30147,
+          "latency_p95_ms": 71016,
           "reported": {
             "accepted": 6,
             "wrong_answer": 0,
@@ -21597,6 +22243,29 @@
             "accepted": 69,
             "wrong_answer": 1,
             "invalid": 11,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "qwen/qwen3.8-27b",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 9,
+          "scenarios_total": 9,
+          "runs": 27,
+          "passed": 27,
+          "reliability": 1,
+          "latency_p50_ms": 15510,
+          "latency_p95_ms": 53202,
+          "reported": {
+            "accepted": 27,
+            "wrong_answer": 0,
+            "invalid": 0,
             "abstained": 0
           },
           "stale_reason": ""
@@ -22495,6 +23164,29 @@
             "abstained": 0
           },
           "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "qwen/qwen3.8-27b",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 55,
+          "scenarios_total": 55,
+          "runs": 174,
+          "passed": 172,
+          "reliability": 0.9885057471264368,
+          "latency_p50_ms": 38643,
+          "latency_p95_ms": 123510,
+          "reported": {
+            "accepted": 172,
+            "wrong_answer": 0,
+            "invalid": 2,
+            "abstained": 0
+          },
+          "stale_reason": ""
         }
       ]
     },
@@ -22849,6 +23541,29 @@
           "reported": {
             "accepted": 22,
             "wrong_answer": 2,
+            "invalid": 0,
+            "abstained": 3
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "qwen/qwen3.8-27b",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 5,
+          "scenarios_total": 5,
+          "runs": 27,
+          "passed": 27,
+          "reliability": 1,
+          "latency_p50_ms": 34423,
+          "latency_p95_ms": 68520,
+          "reported": {
+            "accepted": 24,
+            "wrong_answer": 0,
             "invalid": 0,
             "abstained": 3
           },
@@ -23232,6 +23947,29 @@
             "abstained": 0
           },
           "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "qwen/qwen3.8-27b",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 3,
+          "scenarios_total": 3,
+          "runs": 15,
+          "passed": 15,
+          "reliability": 1,
+          "latency_p50_ms": 33643,
+          "latency_p95_ms": 96809,
+          "reported": {
+            "accepted": 15,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
         }
       ]
     },
@@ -23532,6 +24270,29 @@
           "reliability": 1,
           "latency_p50_ms": 1260,
           "latency_p95_ms": 4401,
+          "reported": {
+            "accepted": 15,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "qwen/qwen3.8-27b",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 5,
+          "scenarios_total": 5,
+          "runs": 15,
+          "passed": 15,
+          "reliability": 1,
+          "latency_p50_ms": 3753,
+          "latency_p95_ms": 8970,
           "reported": {
             "accepted": 15,
             "wrong_answer": 0,
@@ -23982,6 +24743,29 @@
             "abstained": 14
           },
           "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "qwen/qwen3.8-27b",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 9,
+          "scenarios_total": 9,
+          "runs": 30,
+          "passed": 29,
+          "reliability": 0.9666666666666667,
+          "latency_p50_ms": 19695,
+          "latency_p95_ms": 108756,
+          "reported": {
+            "accepted": 17,
+            "wrong_answer": 1,
+            "invalid": 0,
+            "abstained": 12
+          },
+          "stale_reason": ""
         }
       ]
     },
@@ -24365,6 +25149,29 @@
           "latency_p95_ms": 1768,
           "reported": {
             "accepted": 27,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "qwen/qwen3.8-27b",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 3,
+          "scenarios_total": 3,
+          "runs": 21,
+          "passed": 21,
+          "reliability": 1,
+          "latency_p50_ms": 103234,
+          "latency_p95_ms": 182888,
+          "reported": {
+            "accepted": 21,
             "wrong_answer": 0,
             "invalid": 0,
             "abstained": 0
@@ -24759,6 +25566,29 @@
             "abstained": 0
           },
           "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "qwen/qwen3.8-27b",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 2,
+          "scenarios_total": 2,
+          "runs": 18,
+          "passed": 18,
+          "reliability": 1,
+          "latency_p50_ms": 103234,
+          "latency_p95_ms": 182888,
+          "reported": {
+            "accepted": 18,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
         }
       ]
     },
@@ -25093,6 +25923,29 @@
           "reliability": 1,
           "latency_p50_ms": 1216,
           "latency_p95_ms": 1768,
+          "reported": {
+            "accepted": 3,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "qwen/qwen3.8-27b",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "supported_degraded",
+          "scenarios_measured": 1,
+          "scenarios_total": 1,
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "latency_p50_ms": 103234,
+          "latency_p95_ms": 182888,
           "reported": {
             "accepted": 3,
             "wrong_answer": 0,
@@ -25496,6 +26349,29 @@
             "abstained": 0
           },
           "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "qwen/qwen3.8-27b",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 3,
+          "scenarios_total": 3,
+          "runs": 21,
+          "passed": 21,
+          "reliability": 1,
+          "latency_p50_ms": 103234,
+          "latency_p95_ms": 182888,
+          "reported": {
+            "accepted": 21,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
         }
       ]
     },
@@ -25639,6 +26515,29 @@
           "reported": {
             "accepted": 22,
             "wrong_answer": 2,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "qwen/qwen3.8-27b",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 5,
+          "scenarios_total": 5,
+          "runs": 15,
+          "passed": 15,
+          "reliability": 1,
+          "latency_p50_ms": 103234,
+          "latency_p95_ms": 182888,
+          "reported": {
+            "accepted": 15,
+            "wrong_answer": 0,
             "invalid": 0,
             "abstained": 0
           },
@@ -25980,6 +26879,29 @@
           "reported": {
             "accepted": 4,
             "wrong_answer": 5,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "qwen/qwen3.8-27b",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "supported_degraded",
+          "scenarios_measured": 1,
+          "scenarios_total": 1,
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "latency_p50_ms": 103234,
+          "latency_p95_ms": 182888,
+          "reported": {
+            "accepted": 3,
+            "wrong_answer": 0,
             "invalid": 0,
             "abstained": 0
           },
@@ -26331,6 +27253,29 @@
             "abstained": 0
           },
           "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "qwen/qwen3.8-27b",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "supported_degraded",
+          "scenarios_measured": 2,
+          "scenarios_total": 2,
+          "runs": 12,
+          "passed": 9,
+          "reliability": 0.75,
+          "latency_p50_ms": 103234,
+          "latency_p95_ms": 182888,
+          "reported": {
+            "accepted": 9,
+            "wrong_answer": 0,
+            "invalid": 3,
+            "abstained": 0
+          },
+          "stale_reason": ""
         }
       ]
     },
@@ -26446,6 +27391,29 @@
             "abstained": 0
           },
           "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "qwen/qwen3.8-27b",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 4,
+          "scenarios_total": 4,
+          "runs": 12,
+          "passed": 12,
+          "reliability": 1,
+          "latency_p50_ms": 8605,
+          "latency_p95_ms": 16797,
+          "reported": {
+            "accepted": 12,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
         }
       ]
     },
@@ -26459,11 +27427,11 @@
       "recommended": {
         "binding": {
           "provider": "openai_compatible",
-          "model": "openai/gpt-oss-120b",
+          "model": "qwen/qwen3.8-27b",
           "env": "cloud_frontier"
         },
         "band": "certified",
-        "reliability": 0.989247311827957,
+        "reliability": 1,
         "state": "current"
       },
       "scenarios": [
@@ -27111,6 +28079,29 @@
             "abstained": 0
           },
           "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "qwen/qwen3.8-27b",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 30,
+          "scenarios_total": 30,
+          "runs": 90,
+          "passed": 90,
+          "reliability": 1,
+          "latency_p50_ms": 54076,
+          "latency_p95_ms": 216313,
+          "reported": {
+            "accepted": 90,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
         }
       ]
     },
@@ -27445,6 +28436,29 @@
           "latency_p95_ms": 2219,
           "reported": {
             "accepted": 9,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "qwen/qwen3.8-27b",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "supported_degraded",
+          "scenarios_measured": 1,
+          "scenarios_total": 1,
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "latency_p50_ms": 15923,
+          "latency_p95_ms": 291372,
+          "reported": {
+            "accepted": 3,
             "wrong_answer": 0,
             "invalid": 0,
             "abstained": 0
@@ -27810,6 +28824,29 @@
             "abstained": 0
           },
           "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "qwen/qwen3.8-27b",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "supported_degraded",
+          "scenarios_measured": 1,
+          "scenarios_total": 1,
+          "runs": 9,
+          "passed": 8,
+          "reliability": 0.8888888888888888,
+          "latency_p50_ms": 15923,
+          "latency_p95_ms": 291372,
+          "reported": {
+            "accepted": 8,
+            "wrong_answer": 0,
+            "invalid": 1,
+            "abstained": 0
+          },
+          "stale_reason": ""
         }
       ]
     },
@@ -28170,6 +29207,29 @@
             "abstained": 0
           },
           "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "qwen/qwen3.8-27b",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "supported_degraded",
+          "scenarios_measured": 1,
+          "scenarios_total": 1,
+          "runs": 9,
+          "passed": 9,
+          "reliability": 1,
+          "latency_p50_ms": 15923,
+          "latency_p95_ms": 291372,
+          "reported": {
+            "accepted": 9,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
         }
       ]
     },
@@ -28448,6 +29508,29 @@
           "latency_p95_ms": 2219,
           "reported": {
             "accepted": 9,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "qwen/qwen3.8-27b",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "supported_degraded",
+          "scenarios_measured": 1,
+          "scenarios_total": 1,
+          "runs": 3,
+          "passed": 3,
+          "reliability": 1,
+          "latency_p50_ms": 15923,
+          "latency_p95_ms": 291372,
+          "reported": {
+            "accepted": 3,
             "wrong_answer": 0,
             "invalid": 0,
             "abstained": 0
@@ -28825,6 +29908,29 @@
           "reliability": 1,
           "latency_p50_ms": 756,
           "latency_p95_ms": 925,
+          "reported": {
+            "accepted": 9,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "qwen/qwen3.8-27b",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 3,
+          "scenarios_total": 3,
+          "runs": 9,
+          "passed": 9,
+          "reliability": 1,
+          "latency_p50_ms": 8829,
+          "latency_p95_ms": 41620,
           "reported": {
             "accepted": 9,
             "wrong_answer": 0,
@@ -29260,6 +30366,29 @@
           "latency_p95_ms": 1415,
           "reported": {
             "accepted": 24,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
+            "provider": "openai_compatible",
+            "model": "qwen/qwen3.8-27b",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 5,
+          "scenarios_total": 5,
+          "runs": 15,
+          "passed": 15,
+          "reliability": 1,
+          "latency_p50_ms": 21972,
+          "latency_p95_ms": 56801,
+          "reported": {
+            "accepted": 15,
             "wrong_answer": 0,
             "invalid": 0,
             "abstained": 0
