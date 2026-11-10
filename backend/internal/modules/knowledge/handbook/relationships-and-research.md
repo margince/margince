@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/contacts/contactnetwork frontend/src/features/contacts/contactstanding.ts frontend/src/features/contacts/contactstrengthsentence.ts frontend/src/features/import/linkedin-import.tsx backend/internal/shared/kernel/relstrength backend/internal/modules/introductions backend/internal/modules/contacts/linkedinmatch.go backend/internal/compose/deepread.go backend/internal/platform/webread backend/internal/platform/techprofile -->
+<!-- describes: frontend/src/features/contacts/contactnetwork frontend/src/features/contacts/contactstanding.ts frontend/src/features/contacts/contactstrengthsentence.ts frontend/src/features/import/linkedin-import.tsx backend/internal/shared/kernel/relstrength backend/internal/compose/contact360/lasttouch.go backend/internal/modules/introductions backend/internal/modules/contacts/linkedinmatch.go backend/internal/compose/deepread.go backend/internal/platform/webread backend/internal/platform/techprofile -->
 # Relationships, introductions and research
 
 Four questions go together here. Who here already knows a contact, from mail or from your LinkedIn network? How do you get a warm introduction to someone you do not know? What can Margince read about a company from its own website? And what does the company publicly run?
@@ -36,6 +36,12 @@ Relationship strength in Margince comes from one rule, worked out from captured 
 
 **You cannot change it by hand.** It shows what happened in captured interactions.
 
+Mail that nobody wrote by hand does not count: calendar invitations, notices from sending systems, newsletters and mail Margince sent itself. It stays on the timeline with a label such as "Sent to a mailing list".
+
+A meeting counts once its time has passed, unless it was canceled or marked a no-show. Nobody has to mark it **It happened** first, so a meeting straight from your calendar counts too. A meeting still to come does not count yet. A call counts only if it reached somebody.
+
+Reports of meetings held, and the proof on a deal, ask for more: they count a meeting only once someone marks it **It happened**.
+
 A contact you have **never** had an interaction with has no score at all. One you have not had an interaction with for a long time has a low one.
 
 A recent contact can still score **Weak**. The contact page then names what holds the score down:
@@ -62,6 +68,27 @@ The contact's **Network** tab also shows who can reach them, in four groups: **Y
 It counts and never shows the messages: "{total} interactions in 90 days · {inbound} in, {outbound} out", with "Counts only. The messages stay on the timeline."
 
 Where the map is not complete, it says so: "{count} more not shown.", "Some colleagues are not shown."
+
+### Why do two colleagues see different last-message dates for one contact?
+
+A contact's last-message dates count only the messages you can open. The same rule holds for:
+
+- the date of their last message on the contact's Overview, and the line that says which sides
+  have written;
+- the "No reply to the last message" card;
+- the dates on that contact's Worklist rows.
+
+What this means for you:
+
+
+- A reply on a private thread you are part of counts for you. A colleague who cannot open that
+  thread does not see the reply, and their dates, card and rows stay as they were.
+- When no message you can open has a reply, the Overview shows **None you can open**. A reply you
+  cannot open may still exist.
+- Relationship strength and the colleague network are shared numbers. They count only messages the
+  whole workspace can see, so every colleague reads the same number.
+- In History, a message is shown as theirs or yours by who wrote it. A colleague's mail that reached
+  you as a copy is still your team's.
 
 ### When does the Worklist suggest a quiet contact?
 
@@ -92,7 +119,7 @@ Also called: LinkedIn import, upload my network, Connections.csv, LinkedIn expor
 
 There is no LinkedIn app to approve and nothing calls LinkedIn. You download your own export, and you upload it.
 
-The network you import is **yours alone**. Nobody can upload a network for a colleague, and no colleague, admin included, can open your list. An agent cannot import, read or change it.
+The network you import is **yours alone**. Nobody can upload a network for a colleague, and no colleague, admin included, can open your list. An agent acting for you can import it and read your own reach. No other agent can.
 
 The importer reads LinkedIn's English and German exports. A file it cannot read is refused whole, with nothing imported, and the message says to export the file again.
 
@@ -237,7 +264,7 @@ You can **Withdraw** your own ask; your colleague turns it down with Decline and
 ### Who can see an ask
 An introduction request is open to the two colleagues in it, and nobody else. Any other colleague sees an empty list, so they cannot tell if anyone was asked about a contact.
 
-An agent **may not ask, answer, complete or withdraw** an introduction. Asking a colleague for help is a human's choice. An agent may read who knows whom.
+An agent you connected can ask, answer, complete or withdraw an introduction for you, and sees the asks you are in. It sees no ask a colleague is in without you. The record names the agent as the one who acted.
 
 ### How do I research a company's website?
 To have Margince read a customer company's website, open the company's page. Press **Start company research**, or **Read website again** once it has been read.
@@ -321,7 +348,7 @@ An address Margince cannot split stays whole under **Registered address** in the
   **Weighted deal value today** is always the open deals as they stand now,
   whatever period you pick.
 
-The dossier, the scan and the growth fit are yours alone. An agent cannot read any of them, because each is made from one reader's own view.
+The dossier, the scan and the growth fit are yours alone, because each is made from one reader's own view. An agent you connected reads yours, and no colleague's.
 
 ### When it is not available
 

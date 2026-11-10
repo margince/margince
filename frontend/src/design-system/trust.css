@@ -133,7 +133,7 @@ button.evidence-chip:hover {
 .real-card {
   border: 1px solid var(--groundEdge);
   border-radius: var(--r-md);
-  padding: var(--space-4) var(--space-5);
+  padding: var(--space-4) var(--padPane);
 }
 
 /* The staged proposal's gate, in its two shapes, which want the same air and

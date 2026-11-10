@@ -64,6 +64,7 @@ export const ACTIVITY_LANE: Readonly<Record<ActivityKind, AgentLane>> = {
   // the workspace captured hours ago and reaches a judgement about it. Nothing
   // arrives when it runs.
   request_settlement: "working",
+  deal_verdict: "working",
   // The retrieval is settled before this task is reached — the passages have
   // already cleared the grounding floor — so what the model does here is write
   // the answer from evidence the workspace already holds.
@@ -73,10 +74,13 @@ export const ACTIVITY_LANE: Readonly<Record<ActivityKind, AgentLane>> = {
   growth_fit: "working",
   morning_brief: "working",
   nl_search: "working",
+  reader_rendering: "working",
   offer_draft: "working",
   overnight_at_risk_sweep: "working",
   summarize: "working",
   propose_roles: "working",
+  report_interpret: "working",
+  report_setup: "working",
   transcript_propose: "working",
   weekly_review: "working",
   weekly_learnings: "working",

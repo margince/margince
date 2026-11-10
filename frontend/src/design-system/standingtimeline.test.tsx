@@ -6,13 +6,14 @@ import "@testing-library/jest-dom/vitest";
 
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { UTC_ZONE } from "../format/timezone";
 import {
   StandingTimeline,
   type TimelineEvent,
   type TimelineMark,
 } from "./standingtimeline";
+import type { TimelineHistory } from "./standingtimeline.zoombar";
 
 afterEach(cleanup);
 
@@ -26,7 +27,7 @@ const mark = (
 ): TimelineMark => ({
   precision: "instant",
   kind: "email",
-  direction: "inbound",
+  side: "theirs",
   what: "Email",
   title: "Scope question",
   detail: "From Dana Reyes",
@@ -63,11 +64,20 @@ describe("marks on the line", () => {
     const user = userEvent.setup();
     draw([mark({ key: "m", at: "2026-07-10" })]);
 
-    await user.click(screen.getByRole("button", { name: "Email" }));
+    await user.click(screen.getByRole("button", { name: "Email, 10 Jul" }));
 
     const card = screen.getByRole("region", { name: "Email" });
     expect(card).toHaveTextContent("Scope question");
     expect(card).toHaveTextContent("From Dana Reyes · 10 Jul");
+  });
+
+  it("names a lone chip by its kind and its day, so it is not a second Email button", () => {
+    draw([mark({ key: "m", at: "2026-07-10" })]);
+
+    expect(screen.queryByRole("button", { name: "Email" })).toBeNull();
+    expect(
+      screen.getByRole("button", { name: "Email, 10 Jul" }),
+    ).toBeInTheDocument();
   });
 
   it("draws one chip with a count for marks a day apart, naming the span", async () => {
@@ -79,7 +89,7 @@ describe("marks on the line", () => {
         at: "2026-07-11",
         when: "11 Jul",
         title: "Re: scope",
-        direction: "outbound",
+        side: "ours",
       }),
     ]);
 
@@ -97,7 +107,7 @@ describe("marks on the line", () => {
       [{ at: "2026-07-10", activityIds: ["m"] }],
     );
 
-    expect(screen.queryByRole("button", { name: "Email" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Email, 10 Jul" })).toBeNull();
   });
 
   it("keeps the mark of an event folded into a neighbour's label, which names it nowhere", () => {
@@ -109,13 +119,21 @@ describe("marks on the line", () => {
       ],
     );
 
-    expect(screen.getByRole("button", { name: "Email" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Email, 10 Jul" }),
+    ).toBeInTheDocument();
   });
 
-  it("never draws a mark outside the span the events set, so marks cannot stretch the axis", () => {
+  it("leaves a mark older than the zoom off the line until the reader zooms out", async () => {
+    const user = userEvent.setup();
     draw([mark({ key: "old", at: "2025-01-10" })]);
+    expect(screen.queryByRole("button", { name: "Email, 10 Jul" })).toBeNull();
 
-    expect(screen.queryByRole("button", { name: "Email" })).toBeNull();
+    await user.click(screen.getByRole("button", { name: "All time" }));
+
+    expect(
+      screen.getByRole("button", { name: "Email, 10 Jul" }),
+    ).toBeInTheDocument();
   });
 
   // Read at 23:00 on 13 Aug in Kiritimati: a day entry for the 13th is stored
@@ -127,10 +145,12 @@ describe("marks on the line", () => {
       [],
       "Pacific/Kiritimati",
     );
-    expect(screen.getByRole("button", { name: "Email" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Email, 10 Jul" }),
+    ).toBeInTheDocument();
     cleanup();
     draw([mark({ key: "later", at: today })], [], "Pacific/Kiritimati");
-    expect(screen.queryByRole("button", { name: "Email" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Email, 10 Jul" })).toBeNull();
   });
 
   it("keeps the chips out of the hidden canvas, where a control would be unreachable", () => {
@@ -138,7 +158,7 @@ describe("marks on the line", () => {
 
     expect(
       screen
-        .getByRole("button", { name: "Email" })
+        .getByRole("button", { name: "Email, 10 Jul" })
         .closest("[aria-hidden='true']"),
     ).toBeNull();
   });
@@ -152,7 +172,7 @@ describe("marks on the line", () => {
           at: "2026-07-10",
           title: `Note ${index}`,
           kind: "note",
-          direction: undefined,
+          side: undefined,
         }),
       ),
     );
@@ -179,5 +199,145 @@ describe("a date far ahead", () => {
 
     expect(screen.getByText("August 2029")).toBeInTheDocument();
     expect(screen.queryByText("2028")).toBeNull();
+  });
+});
+
+describe("the zoom", () => {
+  // A row the record's list loaded, mark or not; only its date is read.
+  const row = (at: string) => ({ occurred_at: `${at}T09:00:00Z` });
+  const older = (over: Partial<TimelineHistory>): TimelineHistory => ({
+    activities: [row("2026-08-01")],
+    hasNextPage: true,
+    isFetchingNextPage: false,
+    isError: false,
+    fetchNextPage: () => undefined,
+    ...over,
+  });
+  // An event's label on the canvas, not its line in the screen reader's list.
+  const TITLE = ".standing-timeline-title";
+  const sameMonth: TimelineEvent[] = [
+    { key: "a", at: "2026-08-03", title: "Kickoff", kind: "done" },
+    { key: "b", at: "2026-08-10", title: "Last call", kind: "last" },
+  ];
+  const zoomed = (over: Partial<Parameters<typeof StandingTimeline>[0]> = {}) =>
+    render(
+      <StandingTimeline
+        label="Brandt over time"
+        asOf="2026-08-13T09:00:00Z"
+        record={UTC_ZONE}
+        events={sameMonth}
+        {...over}
+      />,
+    );
+
+  it("opens at a quarter, so a busy month never hides the two before it", () => {
+    zoomed({ marks: [mark({ key: "june", at: "2026-06-02" })] });
+
+    expect(screen.getByRole("button", { name: "Quarter" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(
+      screen.getByRole("button", { name: "Email, 10 Jul" }),
+    ).toBeInTheDocument();
+  });
+
+  it("opens wide enough for every event it names", () => {
+    zoomed({
+      events: [
+        { key: "a", at: "2025-06-01", title: "Kickoff", kind: "done" },
+        ...sameMonth,
+      ],
+    });
+
+    expect(screen.getByRole("button", { name: "All time" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(screen.getByText("Kickoff", { selector: TITLE })).toBeVisible();
+  });
+
+  it("on Month draws only the last month and leaves older events off", async () => {
+    const user = userEvent.setup();
+    zoomed({
+      events: [
+        { key: "a", at: "2026-05-04", title: "Kickoff", kind: "done" },
+        { key: "b", at: "2026-08-10", title: "Last call", kind: "last" },
+      ],
+    });
+    expect(screen.getByText("Kickoff", { selector: TITLE })).toBeVisible();
+
+    await user.click(screen.getByRole("button", { name: "Month" }));
+
+    expect(screen.queryByText("Kickoff", { selector: TITLE })).toBeNull();
+    expect(screen.getByText("Last call", { selector: TITLE })).toBeVisible();
+  });
+
+  it("pages older rows in while the zoom reaches past the oldest one on hand", () => {
+    const fetchNextPage = vi.fn();
+    zoomed({
+      marks: [mark({ key: "m", at: "2026-08-01" })],
+      history: older({ fetchNextPage }),
+    });
+
+    expect(fetchNextPage).toHaveBeenCalledTimes(1);
+    expect(screen.getByText("Loading earlier items…")).toBeInTheDocument();
+  });
+
+  it("asks for nothing once the rows on hand reach the zoom's start", () => {
+    const fetchNextPage = vi.fn();
+    zoomed({
+      history: older({ fetchNextPage, activities: [row("2026-04-01")] }),
+    });
+
+    expect(fetchNextPage).not.toHaveBeenCalled();
+    expect(screen.queryByText("Loading earlier items…")).toBeNull();
+  });
+
+  it("reads a task's date as well, though a task draws no mark", () => {
+    const fetchNextPage = vi.fn();
+    zoomed({
+      marks: [mark({ key: "m", at: "2026-08-01" })],
+      history: older({ fetchNextPage, activities: [row("2026-04-01")] }),
+    });
+
+    expect(fetchNextPage).not.toHaveBeenCalled();
+  });
+
+  it("stops asking once a page fails, so a refusal is not asked again", () => {
+    const fetchNextPage = vi.fn();
+    zoomed({
+      marks: [mark({ key: "m", at: "2026-08-01" })],
+      history: older({ fetchNextPage, isError: true }),
+    });
+
+    expect(fetchNextPage).not.toHaveBeenCalled();
+    expect(
+      screen.getByText("Earlier items could not load. They are in History."),
+    ).toBeInTheDocument();
+  });
+
+  it("stops at 200 rows, tasks included, and leaves the rest to History", () => {
+    const fetchNextPage = vi.fn();
+    const tasks = Array.from({ length: 200 }, () => row("2026-08-01"));
+    zoomed({
+      marks: [mark({ key: "m", at: "2026-08-01" })],
+      history: older({ fetchNextPage, activities: tasks }),
+    });
+
+    expect(fetchNextPage).not.toHaveBeenCalled();
+    expect(
+      screen.getByText("Earlier items are in History."),
+    ).toBeInTheDocument();
+  });
+
+  it("asks for no second page while one is on its way", () => {
+    const fetchNextPage = vi.fn();
+    zoomed({
+      marks: [mark({ key: "m", at: "2026-08-01" })],
+      history: older({ fetchNextPage, isFetchingNextPage: true }),
+    });
+
+    expect(fetchNextPage).not.toHaveBeenCalled();
   });
 });

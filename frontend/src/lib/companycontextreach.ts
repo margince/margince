@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useQuery } from "@tanstack/react-query";
+import { queryOptions, useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useHoldsAdminRole } from "./capability";
@@ -15,14 +15,14 @@ export const companyContextCapabilitiesQueryKey = [
   "company-context-capabilities",
 ];
 
+export const companyContextCapabilitiesOptions = queryOptions({
+  queryKey: companyContextCapabilitiesQueryKey,
+  queryFn: async (): Promise<Capabilities> =>
+    unwrap(await api.GET("/company/context/capabilities")),
+});
+
 export function useCompanyContextCapabilities(enabled = true) {
-  return useQuery({
-    queryKey: companyContextCapabilitiesQueryKey,
-    enabled,
-    queryFn: async (): Promise<Capabilities> => {
-      return unwrap(await api.GET("/company/context/capabilities"));
-    },
-  });
+  return useQuery({ ...companyContextCapabilitiesOptions, enabled });
 }
 
 /** Whether the company-context card draws: for an admin, unless the rollout

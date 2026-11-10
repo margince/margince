@@ -74,7 +74,7 @@ func (t listColleagues) Spec() mcp.ToolSpec {
 		InputSchema: schema(`{"type":"object","properties":{
 			"q":{"type":"string","description":"Narrow by name or email; omit for the whole roster"},
 			"include_inactive":{"type":"boolean","description":"Also list deactivated and suspended seats, for a member administrator only"},
-			"include_invited":{"type":"boolean","description":"Also list invited seats that have not signed in yet"}},
+			"include_invited":{"type":"boolean","deprecated":true,"description":"Deprecated compatibility option. Also list invited seats that have not signed in yet"}},
 			"additionalProperties":false}`),
 		OutputSchema: schemaFor[ListColleaguesResult](),
 	}

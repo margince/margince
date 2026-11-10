@@ -4,9 +4,14 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import { pickOption } from "../../design-system/select-testing";
+import type { Route } from "../../lib/router";
 import type { SettingsPageId } from "../../lib/settingscatalog";
 import { readingsDay } from "../../testing/brief.fixtures";
-import { type GrantSpec, meFixture } from "../../testing/mefixture";
+import {
+  FIXTURE_TIMEZONE,
+  type GrantSpec,
+  meFixture,
+} from "../../testing/mefixture";
 import {
   installFetchStub,
   jsonResponse,
@@ -135,19 +140,20 @@ const WORKING_HOURS: RouteMap = {
         start_time: "09:00",
         end_time: "17:00",
         days: [1, 2, 3, 4, 5],
-        timezone: meFixture().user.timezone,
+        timezone: FIXTURE_TIMEZONE,
       },
     }),
 };
 
+// A `route` arg opens another address of the page, such as one of its tabs.
 function tab(tabId: string, routes: RouteMap) {
-  return () => {
+  return ({ route }: Partial<{ route: Route }>) => {
     // The story's own routes last, so a story about this card can still say
     // something different from the default.
     installFetchStub({ ...SHELL, ...WORKING_HOURS, ...routes });
     return (
       <StoryProviders>
-        <SettingsScreen route={settingsAddress(tabId)} />
+        <SettingsScreen route={route ?? settingsAddress(tabId)} />
       </StoryProviders>
     );
   };
@@ -251,13 +257,6 @@ export const AiAccessDevelopersOpen: Story = {
   play: async ({ canvasElement }) => openDevelopers(canvasElement),
 };
 
-export const AiAccessCodingAgents: Story = {
-  name: "AI access — coding agents",
-  render: tab("agents", aiAccessRoutes),
-  play: async ({ canvasElement }) =>
-    openDevelopers(canvasElement, "Coding agents"),
-};
-
 export const AiAccessAgentRules: Story = {
   name: "AI access — agent rules",
   render: tab("agents", aiAccessRoutes),
@@ -265,16 +264,14 @@ export const AiAccessAgentRules: Story = {
     openDevelopers(canvasElement, "Agent rules"),
 };
 
-// The connector switched off: the picker and the coding-agents card both say so
-// and say what still works. It is the state a default install is in.
+// The connector switched off: the picker says so and what still works. It is
+// the state a default install is in.
 export const AiAccessConnectorOff: Story = {
   name: "AI access — connector off",
   render: tab("agents", {
     ...aiAccessRoutes,
     "GET /.well-known/oauth-protected-resource": connectorOff,
   }),
-  play: async ({ canvasElement }) =>
-    openDevelopers(canvasElement, "Coding agents"),
 };
 
 // The row's menu opens the revoke confirm, left open here so the guarded
@@ -648,23 +645,16 @@ export const VoicePage: Story = catalogPage("voice");
 export const AgentsPage: Story = catalogPage("agents");
 export const NotificationsPage: Story = catalogPage("notifications");
 export const ConnectionsPage: Story = catalogPage("connections");
-export const CaptureActivityPage: Story = catalogPage("capture-activity");
 export const CompanyPage: Story = catalogPage("company");
 export const AuthenticationPage: Story = catalogPage("authentication");
 export const MembersPage: Story = catalogPage("members");
 export const TeamsPage: Story = catalogPage("teams");
 export const RolesPage: Story = catalogPage("roles");
 export const SeatsPage: Story = catalogPage("seats");
-export const PipelinesPage: Story = catalogPage("pipelines");
-export const StageautomationPage: Story = catalogPage("stageautomation");
+export const DealsPage: Story = catalogPage("deals");
 export const LeadsPage: Story = catalogPage("leads");
-export const AcquisitionPage: Story = catalogPage("acquisition");
-export const LossreasonsPage: Story = catalogPage("lossreasons");
 export const PartnersPage: Story = catalogPage("partners");
-export const ReviewtemplatesPage: Story = catalogPage("reviewtemplates");
-export const RecordrolesPage: Story = catalogPage("recordroles");
-export const FieldsPage: Story = catalogPage("fields");
-export const TagsPage: Story = catalogPage("tags");
+export const RecordsPage: Story = catalogPage("records");
 export const ProductsPage: Story = catalogPage("products");
 export const CapturePage: Story = catalogPage("capture");
 export const IntegrationsPage: Story = catalogPage("integrations");

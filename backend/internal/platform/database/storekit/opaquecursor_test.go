@@ -152,3 +152,26 @@ func TestAGenericCursorMissingHalfItsTupleIsRefused(t *testing.T) {
 		t.Errorf("round trip = %+v, want %+v", got, whole)
 	}
 }
+
+// An id page continues from its last id, and the cursor it mints reads back as
+// that id; a last page mints none.
+func TestAnIDPageCursorReadsBackAsTheLastIDOfThePage(t *testing.T) {
+	first, last := ids.NewV7(), ids.NewV7()
+	page := storekit.IDPage([]ids.UUID{first, last}, true)
+	if !page.HasMore {
+		t.Fatal("a page with more behind it answered has_more false")
+	}
+	after, err := storekit.DecodeIDCursor(page.NextCursor)
+	if err != nil || after == nil || *after != last {
+		t.Fatalf("DecodeIDCursor(%q) = %v, %v, want the page's last id %s", page.NextCursor, after, err, last)
+	}
+	if end := storekit.IDPage([]ids.UUID{first}, false); end.HasMore || end.NextCursor != "" {
+		t.Errorf("the last page answered %+v, want no cursor", end)
+	}
+	if start, err := storekit.DecodeIDCursor(""); start != nil || err != nil {
+		t.Errorf("an empty cursor read as %v, %v, want the first page", start, err)
+	}
+	if _, err := storekit.DecodeIDCursor("not-an-id"); !errors.As(err, new(*storekit.MalformedCursorError)) {
+		t.Errorf("a token no page minted gave %v, want MalformedCursorError", err)
+	}
+}

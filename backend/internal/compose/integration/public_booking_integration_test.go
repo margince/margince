@@ -354,7 +354,7 @@ func assertPublicBookingRecovery(t *testing.T, e *apptest.AppEnv, base string, m
 func TestPublicBookingEndToEnd(t *testing.T) {
 	e := setupBookingApp(t)
 	e.BootstrapWorkspace(t)
-	enableBookingPage(t, e)
+	apptest.EnableGoogleBookingPage(t, e)
 	slug := bookingSlug(t, e)
 	monday := nextMonday()
 	purposeID := seededTransactionalPurposeID(t, e)
@@ -386,7 +386,7 @@ func TestPublicBookingEndToEnd(t *testing.T) {
 func TestPublicBookingRateLimited(t *testing.T) {
 	e := setupBookingApp(t)
 	e.BootstrapWorkspace(t)
-	enableBookingPage(t, e)
+	apptest.EnableGoogleBookingPage(t, e)
 	slug := bookingSlug(t, e)
 
 	last := 0
@@ -416,7 +416,7 @@ func TestPublicBookingRateLimited(t *testing.T) {
 func TestAnAnonymousBookingNamesNoPurposeAndStillGrantsTheLane(t *testing.T) {
 	e := setupBookingApp(t)
 	e.BootstrapWorkspace(t)
-	enableBookingPage(t, e)
+	apptest.EnableGoogleBookingPage(t, e)
 	base := "/v1/public/booking/" + bookingSlug(t, e)
 	monday := nextMonday()
 
@@ -450,7 +450,7 @@ func TestAnAnonymousBookingNamesNoPurposeAndStillGrantsTheLane(t *testing.T) {
 func TestAPublicBookingFromASendingSystemsAddressIsRefusedOnTheBookerEmail(t *testing.T) {
 	e := setupBookingApp(t)
 	e.BootstrapWorkspace(t)
-	enableBookingPage(t, e)
+	apptest.EnableGoogleBookingPage(t, e)
 	base := "/v1/public/booking/" + bookingSlug(t, e)
 	monday := nextMonday()
 	before := bookingRows(t, e)

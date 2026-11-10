@@ -135,6 +135,19 @@ func (k capturedFileKeeper) AdoptWithheld(
 	}, carried)
 }
 
+func (k capturedFileKeeper) Stored(staged []capture.StagedFile) ([]capture.StoredFile, error) {
+	out := make([]capture.StoredFile, 0, len(staged))
+	for _, file := range staged {
+		typed, ok := file.(activities.StagedFile)
+		if !ok {
+			return nil, errStagedFileNotOurs
+		}
+		part, key, checksum, size := typed.Location()
+		out = append(out, capture.StoredFile{PartID: part, StorageKey: key, Sha256: checksum, Bytes: int64(size)})
+	}
+	return out, nil
+}
+
 func (k capturedFileKeeper) RecordWithheld(
 	ctx context.Context, tx pgx.Tx, activityID ids.ActivityID,
 	from capture.FileSource, files []capture.CapturedFile,
@@ -161,7 +174,7 @@ func (k capturedFileKeeper) RecordWithheld(
 func (k capturedFileKeeper) RecordLinks(
 	ctx context.Context, tx pgx.Tx, activityID ids.ActivityID,
 	from capture.FileSource, links []capture.MailLink,
-) error {
+) (int, error) {
 	owned := make([]activities.CapturedLink, 0, len(links))
 	for _, link := range links {
 		owned = append(owned, activities.CapturedLink{URL: link.URL, Text: link.Text})

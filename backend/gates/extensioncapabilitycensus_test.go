@@ -31,8 +31,9 @@ package gates
 // only manifests would report a clean sweep over capabilities it cannot see.
 // The declaration the manifest is generated FROM carries all of them.
 //
-// A staged fixture counts as a declarer. CI copies it into the tier and runs the
-// composed build, the unit lane and its self-tests over it. The workflow's own
+// A staged fixture counts as a declarer. CI requires it in instance/go.mod and
+// runs the composed build over it. Then it runs the tests of cmd/, the only
+// importer of the composition, and the fixture's own tests. The workflow's own
 // staging step names it; a fixture nothing stages is walked by nobody.
 
 import (
@@ -65,8 +66,8 @@ const (
 	ciWorkflow = "../.github/workflows/ci.yml"
 )
 
-// stagingStep matches a workflow step copying one fixture unit into the tier.
-var stagingStep = regexp.MustCompile(`cp -R fixtures/extensions/([\w-]+) extensions/`)
+// stagingStep matches a workflow step requiring one fixture unit from its folder.
+var stagingStep = regexp.MustCompile(`=> \.\./fixtures/extensions/([\w-]+)`)
 
 // identityFields are the two fields of extension.Extension that name the unit
 // rather than granting it anything. They are excluded by NAME, and their
@@ -220,7 +221,7 @@ var surfaceConstants = map[string]string{"extension.MigrationsDir": extension.Mi
 // composedLayers is the unit subdirectories the composer reads.
 func composedLayers(t *testing.T) []string {
 	t.Helper()
-	entries, err := os.ReadDir(composerDir)
+	entries, err := gatekit.ReadDir(composerDir)
 	if err != nil {
 		t.Fatalf("reading %s: %v", composerDir, err)
 	}
@@ -259,7 +260,7 @@ func resolveLayer(t *testing.T, expr string) string {
 // drop without a word.
 func liveUnits(t *testing.T) []unit {
 	t.Helper()
-	entries, err := os.ReadDir(tierDir)
+	entries, err := gatekit.ReadDir(tierDir)
 	if err != nil {
 		t.Fatalf("reading %s: %v", tierDir, err)
 	}
@@ -292,8 +293,8 @@ func readUnit(t *testing.T, dir, name string) (unit, bool) {
 	return unit{name: name, capabilities: declaredCapabilities(t, dir), layers: shippedLayers(t, dir)}, true
 }
 
-// stagedFixtures reads every fixture unit the CI workflow copies into the tier.
-// A staged name with no unit behind it fails: the step would copy nothing.
+// stagedFixtures reads every fixture unit the CI workflow requires.
+// A staged name with no unit behind it fails: the step would require nothing.
 func stagedFixtures(t *testing.T) []unit {
 	t.Helper()
 	var units []unit
@@ -315,7 +316,7 @@ func stagedFixtures(t *testing.T) []unit {
 // nothing, and the census that follows depends on that unit reading as empty.
 func declaredCapabilities(t *testing.T, dir string) []string {
 	t.Helper()
-	entries, err := os.ReadDir(dir)
+	entries, err := gatekit.ReadDir(dir)
 	if err != nil {
 		t.Fatalf("reading %s: %v", dir, err)
 	}
@@ -367,7 +368,7 @@ func shippedLayers(t *testing.T, dir string) []string {
 	t.Helper()
 	layers := composedLayers(t)
 	var shipped []string
-	err := filepath.WalkDir(dir, func(path string, entry fs.DirEntry, err error) error {
+	err := gatekit.WalkDir(dir, func(path string, entry fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}

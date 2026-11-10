@@ -28,19 +28,15 @@ import {
 } from "../../lib/capability";
 import { useClaimRecord } from "../../lib/claimrecord";
 import { useMemberName } from "../../lib/membernames";
+import { mayLeaveReach, useLeaveIfOutOfReach } from "../../lib/outofreach";
 import { unwrap } from "../../lib/problem";
 import { navigate } from "../../lib/router";
 import { useMe, useViewerId } from "../../lib/session";
 import { ShareAction } from "../records/share";
 import { CompanyRejectAction } from "./companyreject";
 
-// The account header's editable pieces. They are the owner, changed in place
-// (InlineChoice) rather than through an edit modal, and the write path the
-// lifecycle control (companylifecycle.tsx) shares. The record's own menu
-// (CompanyActionBadges) is the third.
-// The subtitle and facts strip live in companyheaderfacts.tsx and the header's
-// other verbs in companyheaderactions.tsx, so this file holds only the pieces
-// that write.
+// The header's pieces that write: the owner, the lifecycle's shared PATCH and
+// the record menu. The facts and other verbs live in companyheader*.tsx.
 
 type Company = components["schemas"]["Company"];
 type UpdateCompanyRequest = components["schemas"]["UpdateCompanyRequest"];
@@ -50,9 +46,8 @@ type UpdateCompanyRequest = components["schemas"]["UpdateCompanyRequest"];
 // lifecycle change and an owner change cannot end up with different conflict,
 // refusal or invalidation behaviour.
 //
-// It throws on failure rather than swallowing: InlineChoice renders what is
-// thrown beside the control, and the server's problem detail is a better
-// sentence than any this layer could invent.
+// It throws on failure rather than swallowing. InlineChoice shows what is
+// thrown on the field, and the server's problem detail reads best there.
 // useCompanyFieldPatch wires one inline header edit to the query cache: the
 // record, the list it appears in and the 360 that summarizes it all read the
 // value being changed, so all three are refetched rather than left showing the
@@ -157,8 +152,12 @@ export function CompanyOwnerControl({
   const canUpdate = canWriteRow || (!company.owner_id && canClaim);
   const readOnlyReason = useCompanyReadOnlyReason(company);
   const patch = useCompanyFieldPatch(company);
-  const claim = useClaimRecord("company", company.id, company.version);
+  const claim = useMutation({
+    mutationKey: ["company-claim", company.id],
+    mutationFn: useClaimRecord("company", company.id),
+  });
   const viewerId = useViewerId();
+  const leaveIfOutOfReach = useLeaveIfOutOfReach("company");
   const { options: owners, roster } = useRecordOwnerOptions();
   const rosterHint = useRosterHint(roster, useRosterPartial("user", true));
   const ownerName = useMemberName(company.owner_id);
@@ -223,11 +222,21 @@ export function CompanyOwnerControl({
       // Taking an unowned account goes through the claim, the door open to
       // every seat; naming a colleague is a patch, offered only to a reader
       // who can write the row (`nameable`).
-      onSave={(next) =>
-        !company.owner_id && next === viewerId
-          ? claim()
-          : patch({ owner_id: next })
-      }
+      onSave={async (next) => {
+        if (!company.owner_id && next === viewerId) {
+          return claim.mutateAsync(company.version);
+        }
+        await patch({ owner_id: next });
+        // As on a contact: a private account handed on can leave the reader.
+        if (mayLeaveReach(company.visibility, next, viewerId)) {
+          await leaveIfOutOfReach(
+            company.id,
+            t("recordAccess.company.handedOver", {
+              owner: options.find((user) => user.value === next)?.label ?? "",
+            }),
+          );
+        }
+      }}
     />
   );
 }
@@ -349,6 +358,12 @@ export function CompanyActionBadges({
           recordId={company.id}
           disabledReasonId={refusedByState}
         />
+        <ShareAction
+          contactsOnly
+          recordType="company"
+          recordId={company.id}
+          disabledReasonId={refusedByState}
+        />
         {/* The audit spine: who changed this record and when. It reads as an
             inspection of the record rather than part of its story, so it sits
             with the other rare verbs instead of beside the account's own
@@ -391,6 +406,8 @@ export function CompanyActionBadges({
             a reader cannot walk back from the header. */}
         <ArchiveAction
           requires={{ object: "company", action: "delete" }}
+          archivable={company.archivable ?? false}
+          refusedReason={t("company.archiveRefused")}
           disabledReasonId={refusedByState}
           label={t("record.archive")}
           confirmText={t("record.archiveConfirm")}

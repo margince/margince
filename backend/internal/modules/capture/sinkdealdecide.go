@@ -16,6 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
 // sqlUnscoped stands in for a scope clause a caller's grant leaves empty.
@@ -31,6 +32,8 @@ type dealFacts struct {
 	contacts  []ids.UUID
 	companies []ids.UUID
 	thread    []ids.UUID
+	// topicMemo is the digest of the topic question last answered for it.
+	topicMemo string
 }
 
 // readDealFacts reads the facts. refiling reads past the mail's own deal
@@ -44,8 +47,9 @@ func readDealFacts(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, re
 	err := tx.QueryRow(ctx, `
 		SELECT a.kind, a.channel_provider,
 		       EXISTS (SELECT 1 FROM activity_link l WHERE l.activity_id = a.id AND l.entity_type = 'deal'),
-		       (SELECT l.project_id FROM activity_link l WHERE l.activity_id = a.id AND l.entity_type = 'project')
-		  FROM activity a WHERE a.id = $1`, activityID).Scan(&kind, &channel, &filed, &project)
+		       (SELECT l.project_id FROM activity_link l WHERE l.activity_id = a.id AND l.entity_type = 'project'),
+		       coalesce(a.deal_topic_digest, '')
+		  FROM activity a WHERE a.id = $1`, activityID).Scan(&kind, &channel, &filed, &project, &facts.topicMemo)
 	if err != nil {
 		return facts, fmt.Errorf("capture: reading the mail the deal rule files: %w", err)
 	}
@@ -73,8 +77,65 @@ func readDealFacts(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, re
 	return facts, err
 }
 
-// decideDeal is the rule over the facts. It writes nothing.
+// decideDeal is the rule over the facts, less the deals a colleague declined
+// for this mail. Every writer of a machine deal link decides through it, so a
+// decline holds for capture, the refile pass and the repair alike. A
+// suggestion carries the candidates its topic check weighs. It writes nothing.
 func decideDeal(ctx context.Context, tx pgx.Tx, facts dealFacts, candidates DealCandidates) (DealVerdict, error) {
+	verdict, err := decideByRule(ctx, tx, facts, candidates)
+	if err != nil {
+		return verdict, err
+	}
+	switch {
+	case verdict.Outcome == DealLinked:
+		declined, err := dealDeclined(ctx, tx, facts.activity, verdict.Deal)
+		if err != nil || declined {
+			return DealVerdict{Outcome: DealNone, Basis: verdict.Basis}, err
+		}
+		verdict.Candidates = []ids.UUID{verdict.Deal}
+	case verdict.Outcome == DealAmbiguous && verdict.Basis.NeedsTopicCheck():
+		open, err := candidates.OpenDealsOfCompanyUpTo(ctx, tx, verdict.Question.CompanyID, DealTopicCandidates)
+		if err != nil {
+			return DealVerdict{}, err
+		}
+		if verdict.Candidates, err = undeclinedDeals(ctx, tx, facts.activity, open); err != nil {
+			return DealVerdict{}, err
+		}
+	}
+	return verdict, nil
+}
+
+// undeclinedDeals is deals less those a colleague declined for the mail.
+func undeclinedDeals(ctx context.Context, tx pgx.Tx, mail ids.ActivityID, deals []ids.UUID) ([]ids.UUID, error) {
+	var args []any
+	arg := func(v any) string { args = append(args, v); return fmt.Sprintf("$%d", len(args)) }
+	mailArg, dealsArg := arg(mail), arg(deals)
+	query := `SELECT d FROM unnest(` + dealsArg + `::uuid[]) d WHERE NOT ` + provenance.DealDeclinedSQL(mailArg, "d") + ` ORDER BY d`
+	rows, err := tx.Query(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("capture: reading the deals a colleague declined: %w", err)
+	}
+	kept, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+	if err != nil {
+		return nil, fmt.Errorf("capture: reading the deals a colleague declined: %w", err)
+	}
+	return kept, nil
+}
+
+// dealDeclined answers whether a colleague said the mail is not about deal.
+func dealDeclined(ctx context.Context, tx pgx.Tx, mail ids.ActivityID, deal ids.UUID) (bool, error) {
+	var args []any
+	arg := func(v any) string { args = append(args, v); return fmt.Sprintf("$%d", len(args)) }
+	query := `SELECT ` + provenance.DealDeclinedSQL(arg(mail), arg(deal)+"::uuid")
+	var declined bool
+	if err := tx.QueryRow(ctx, query, args...).Scan(&declined); err != nil {
+		return false, fmt.Errorf("capture: reading whether a colleague declined the deal: %w", err)
+	}
+	return declined, nil
+}
+
+// decideByRule is the rule's rungs over the facts.
+func decideByRule(ctx context.Context, tx pgx.Tx, facts dealFacts, candidates DealCandidates) (DealVerdict, error) {
 	// A role that may not read deals files mail under none. That is a
 	// configuration, not a fault.
 	if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
@@ -85,7 +146,7 @@ func decideDeal(ctx context.Context, tx pgx.Tx, facts dealFacts, candidates Deal
 	}
 	if !facts.project.IsZero() {
 		deals, err := candidates.OpenDealsOfProject(ctx, tx, facts.project)
-		return oneDeal(deals, WhichDeal{ProjectID: facts.project}), err
+		return withBasis(oneDeal(deals, WhichDeal{ProjectID: facts.project}), DealBasisProject, DealBasisProject), err
 	}
 	if len(facts.companies) > 1 {
 		return DealVerdict{Outcome: DealConflictingFirms}, nil
@@ -103,19 +164,31 @@ func decideDeal(ctx context.Context, tx pgx.Tx, facts dealFacts, candidates Deal
 	// another company is no clue about this one.
 	switch len(facts.thread) {
 	case 1:
-		return DealVerdict{Outcome: DealLinked, Deal: facts.thread[0]}, nil
+		return DealVerdict{Outcome: DealLinked, Deal: facts.thread[0], Basis: DealBasisThread}, nil
 	case 2:
-		return DealVerdict{Outcome: DealAmbiguous, Question: question}, nil
+		return DealVerdict{Outcome: DealAmbiguous, Question: question, Basis: DealBasisThread}, nil
 	}
 	deals, err := candidates.OpenDealsOfCompany(ctx, tx, company)
 	if err != nil || len(deals) < 2 || len(facts.contacts) == 0 {
-		return oneDeal(deals, question), err
+		return withBasis(oneDeal(deals, question), DealBasisSoleOpenDeal, DealBasisAmbiguous), err
 	}
 	staked, err := candidates.OpenDealsWithStakeholders(ctx, tx, company, facts.contacts)
 	if err != nil || len(staked) == 1 {
-		return oneDeal(staked, question), err
+		return withBasis(oneDeal(staked, question), DealBasisStakeholder, DealBasisAmbiguous), err
 	}
-	return DealVerdict{Outcome: DealAmbiguous, Question: question}, nil
+	return DealVerdict{Outcome: DealAmbiguous, Question: question, Basis: DealBasisAmbiguous}, nil
+}
+
+// withBasis names the rung of a verdict: linked when it found one deal,
+// ambiguous when it found several.
+func withBasis(verdict DealVerdict, linked, ambiguous DealBasis) DealVerdict {
+	switch verdict.Outcome {
+	case DealLinked:
+		verdict.Basis = linked
+	case DealAmbiguous:
+		verdict.Basis = ambiguous
+	}
+	return verdict
 }
 
 // oneDeal turns a candidate read into a verdict: one is the deal, none is no

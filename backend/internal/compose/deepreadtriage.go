@@ -61,7 +61,7 @@ func (w *siteDeepReadWorker) runTriage(ctx context.Context, args SiteDeepReadArg
 		// company with a broken site, so the decision falls to the sender's name.
 		w.log.WarnContext(ctx, "domain triage: the seed page could not be read",
 			"read", args.SiteReadID.String(), "domain", domain, "err", err)
-		return w.resolveUnreachable(ctx, said, args, claim, domain, siteReadWireStatusFailed, said.Say(domainEvidence.NothingRead))
+		return w.resolveUnreachable(ctx, said, args, claim, domain, siteReadWireStatusFailed, said.Say(domainEvidence.NothingRead), true)
 	}
 
 	if contacts.DomainIdentityForwarded(domain, seed.URL) {
@@ -118,7 +118,7 @@ func (w *siteDeepReadWorker) triageWithoutLooking(ctx context.Context, args Site
 		return w.fail(ctx, args.SiteReadID,
 			fmt.Errorf("site deep read %s: %q is not a triageable seed", args.SiteReadID, claim.SeedURL))
 	}
-	return w.resolveUnreachable(ctx, said, args, claim, domain, siteReadWireStatusCancelled, said.Say(domainEvidence.NotAllowed))
+	return w.resolveUnreachable(ctx, said, args, claim, domain, siteReadWireStatusCancelled, said.Say(domainEvidence.NotAllowed), true)
 }
 
 // readAndResolveTriage runs the full read for a domain the seed page did not
@@ -136,7 +136,7 @@ func (w *siteDeepReadWorker) readAndResolveTriage(ctx context.Context, said doma
 		}
 		w.log.WarnContext(ctx, "domain triage: the crawl failed",
 			"read", args.SiteReadID.String(), "domain", domain, "err", err)
-		return w.resolveUnreachable(ctx, said, args, claim, domain, siteReadWireStatusFailed, said.Say(domainEvidence.NothingRead))
+		return w.resolveUnreachable(ctx, said, args, claim, domain, siteReadWireStatusFailed, said.Say(domainEvidence.NothingRead), true)
 	}
 	if contacts.DomainIdentityForwarded(domain, crawl.SeedURL) {
 		return w.withholdForwardedTriage(ctx, said, args, claim, domain, crawl.SeedURL, crawl.Pages)
@@ -164,7 +164,7 @@ func (w *siteDeepReadWorker) readAndResolveTriage(ctx context.Context, said doma
 	if stated == "" && len(extraction.merged.entities) == 0 {
 		// The site read fine and identified nobody. Nothing went wrong, so this
 		// is not a failure — it is an answer the crawl could not supply.
-		return w.resolveUnreachable(ctx, said, args, claim, domain, siteReadWireStatusCancelled, said.Say(domainEvidence.NoCompany))
+		return w.resolveUnreachable(ctx, said, args, claim, domain, siteReadWireStatusCancelled, said.Say(domainEvidence.NoCompany), false)
 	}
 
 	status := siteReadWireStatusDone
@@ -192,11 +192,12 @@ func (w *siteDeepReadWorker) readAndResolveTriage(ctx context.Context, said doma
 // worked exactly as designed, and a worker forbidden to look was obeying an
 // operator — recording either as `failed` would send somebody investigating a
 // read that did what it was told. Each caller therefore names its own terminal
-// status and the sentence that goes on the dossier.
-func (w *siteDeepReadWorker) resolveUnreachable(ctx context.Context, said domainEvidenceCopy, args SiteDeepReadArgs, claim contacts.SiteReadClaim, domain, status, warning string) error {
+// status and the sentence that goes on the dossier, and says whether any read
+// of the site succeeded.
+func (w *siteDeepReadWorker) resolveUnreachable(ctx context.Context, said domainEvidenceCopy, args SiteDeepReadArgs, claim contacts.SiteReadClaim, domain, status, warning string, siteUnreadable bool) error {
 	res, err := w.contacts.ResolveUnreadableDomainTriage(ctx, contacts.ResolveDomainTriageInput{
 		Domain: domain, Evidence: warning, ReadID: args.SiteReadID,
-		SeedURL: contacts.TriageSeedURL(domain),
+		SeedURL: contacts.TriageSeedURL(domain), SiteUnreadable: siteUnreadable,
 	})
 	if err != nil {
 		return w.fail(ctx, args.SiteReadID,

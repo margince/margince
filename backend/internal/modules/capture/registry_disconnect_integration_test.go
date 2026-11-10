@@ -120,7 +120,9 @@ const fixtureOwnerEmail = "fixture-owner@example.test"
 type fixtureAuthority struct{}
 
 func (fixtureAuthority) EffectiveRBAC(context.Context, ids.UUID, ids.UUID) (authz.RBAC, error) {
-	return authz.RBAC{}, nil
+	return authz.RBAC{Permissions: principal.Permissions{Objects: map[string]principal.ObjectGrant{
+		"activity": {Create: true}, "contact": {Create: true}, "lead": {Create: true},
+	}}}, nil
 }
 
 func (fixtureAuthority) SeatType(context.Context, ids.UUID, ids.UUID) (principal.SeatType, error) {

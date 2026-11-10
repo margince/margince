@@ -79,6 +79,7 @@ function presentation(access: Partial<EmailAccess>): EmailPresentation {
     links: [],
     thread: { members: [], next_cursor: null },
     can_reply: true,
+    can_forward: true,
     can_relink: false,
     version: 3,
     access: {
@@ -183,6 +184,35 @@ export const NothingToPress: Story = {
       access={{
         display_status: "participants",
         audience: "participants",
+        can_change: false,
+        change_mode: "none",
+      }}
+    />
+  ),
+};
+
+export const InternalParticipants: Story = {
+  render: () => (
+    <Access
+      access={{
+        display_status: "participants",
+        audience: "participants",
+        explanation: "internal_operational",
+        can_change: true,
+        change_mode: "message_audience",
+        change_scope: "message",
+      }}
+    />
+  ),
+};
+export const InternalNamedColleague: Story = {
+  render: () => (
+    <Access
+      access={{
+        display_status: "selected",
+        audience: "selected",
+        explanation: "internal_operational",
+        selected_members: [{ subject_type: "user", subject_id: ANA }],
         can_change: false,
         change_mode: "none",
       }}

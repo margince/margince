@@ -37,7 +37,6 @@ package gates
 // sentence that could be wrong.
 
 import (
-	"os"
 	"regexp"
 	"slices"
 	"sort"
@@ -45,6 +44,8 @@ import (
 	"testing"
 
 	"gopkg.in/yaml.v3"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // stagedWorkNouns are what a mark may qualify when it is NOT about the
@@ -119,7 +120,7 @@ type summarisedOperation struct {
 // forgot would be a place the rule silently stopped applying.
 func summarisedOperations(t *testing.T) map[string]summarisedOperation {
 	t.Helper()
-	raw, err := os.ReadFile("api/crm.yaml")
+	raw, err := gatekit.ReadFile("api/crm.yaml")
 	if err != nil {
 		t.Fatalf("reading the contract: %v", err)
 	}

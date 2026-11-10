@@ -68,7 +68,7 @@ describe("the grant that opens one settings page", () => {
       }),
     );
     const { unmount } = renderHome();
-    await expectNavSettlesTo(floorPlus("pipelines", "stageautomation"));
+    await expectNavSettlesTo(floorPlus("deals"));
     unmount();
 
     vi.stubGlobal(
@@ -128,7 +128,7 @@ describe("the grant that opens one settings page", () => {
       }),
     );
     renderHome();
-    await expectNavSettlesTo(floorPlus("pipelines", "stageautomation"));
+    await expectNavSettlesTo(floorPlus("deals"));
   });
 
   it("opens Capture for a lone capture_settings read", async () => {
@@ -190,7 +190,7 @@ describe("the grant that opens one settings page", () => {
       }),
     );
     renderHome();
-    await expectNavSettlesTo(floorPlus("pipelines", "stageautomation"));
+    await expectNavSettlesTo(floorPlus("deals"));
   });
 
   it("opens Extensions for a lone extension_access read", async () => {
@@ -235,7 +235,7 @@ describe("the grant that opens one settings page", () => {
       }),
     );
     renderHome();
-    await expectNavSettlesTo(floorPlus("pipelines", "stageautomation"));
+    await expectNavSettlesTo(floorPlus("deals"));
     cleanup();
 
     // And the read is load-bearing rather than decorative: an ADMIN who lost it
@@ -248,7 +248,7 @@ describe("the grant that opens one settings page", () => {
         allow: {
           contact: ["read"],
           system_reset: ["delete"],
-          // The witness: `pipeline` opens Pipelines and Stage automation and
+          // The witness: `pipeline` opens Deals and
           // nothing else, so
           // waiting for that row proves /me resolved before this asserts
           // what is NOT there.
@@ -257,7 +257,7 @@ describe("the grant that opens one settings page", () => {
       }),
     );
     renderHome();
-    await expectNavSettlesTo(floorPlus("pipelines", "stageautomation"));
+    await expectNavSettlesTo(floorPlus("deals"));
   });
 
   it("opens Reset data on the delete verb, and never on a read of the same object", async () => {
@@ -275,7 +275,7 @@ describe("the grant that opens one settings page", () => {
       }),
     );
     renderHome();
-    await expectNavSettlesTo(floorPlus("pipelines", "stageautomation"));
+    await expectNavSettlesTo(floorPlus("deals"));
     cleanup();
 
     vi.stubGlobal(
@@ -301,7 +301,7 @@ describe("the grant that opens one settings page", () => {
         allow: {
           contact: ["read"],
           system_reset: ["delete"],
-          // The witness: `pipeline` opens Pipelines and Stage automation and
+          // The witness: `pipeline` opens Deals and
           // nothing else, so
           // waiting for that row proves /me resolved before this asserts
           // what is NOT there.
@@ -310,7 +310,7 @@ describe("the grant that opens one settings page", () => {
       }),
     );
     renderHome();
-    await expectNavSettlesTo(floorPlus("pipelines", "stageautomation"));
+    await expectNavSettlesTo(floorPlus("deals"));
   });
 
   it("opens Company profile for a lone fx_rate read, and no other page with it", async () => {
@@ -419,7 +419,7 @@ describe("the grant that opens one settings page", () => {
       }),
     );
     renderHome();
-    await expectNavSettlesTo(floorPlus("pipelines", "stageautomation"));
+    await expectNavSettlesTo(floorPlus("deals"));
   });
 
   // The term that was dropped, asserted as an absence so nobody adds it back
@@ -433,7 +433,7 @@ describe("the grant that opens one settings page", () => {
       }),
     );
     renderHome();
-    await expectNavSettlesTo(floorPlus("pipelines", "stageautomation"));
+    await expectNavSettlesTo(floorPlus("deals"));
   });
 
   it("opens Audit log without opening Privacy, for an admin holding the trail read", async () => {
@@ -485,7 +485,7 @@ describe("the grant that opens one settings page", () => {
       }),
     );
     renderHome();
-    await expectNavSettlesTo(floorPlus("pipelines", "stageautomation"));
+    await expectNavSettlesTo(floorPlus("deals"));
   });
 
   it("withholds Company profile from a company writer while the rollout is on", async () => {
@@ -507,7 +507,7 @@ describe("the grant that opens one settings page", () => {
     );
     renderHome();
 
-    await expectNavSettlesTo(floorPlus("pipelines", "stageautomation"));
+    await expectNavSettlesTo(floorPlus("deals"));
     expect(screen.queryByRole("link", { name: labelOf("company") })).toBeNull();
   });
 });

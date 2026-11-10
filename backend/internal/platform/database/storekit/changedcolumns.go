@@ -10,20 +10,8 @@ import (
 	"time"
 )
 
-// ChangedColumns narrows a before/after pair to the columns that actually moved.
-//
-// A field-history projection reads every key in the pair, so carrying an
-// untouched column through would publish "industry: Automotive → Automotive" as
-// a change on a run that only filled the legal name.
-//
-// It reads the UNION of both images, not just the after one: a column the write
-// emptied moves as surely as one it filled, and walking only `after` records no
-// change at all for it. A column missing from either side reads as nil, which is
-// what an absent value means in an audit image.
-//
-// Values compare by deep equality because a column holds whatever SQL type its
-// table gives it — a `[]string` of social handles among them — and Go's `==`
-// panics on the uncomparable ones rather than answering.
+// ChangedColumns keeps audit images from reporting unchanged fields.
+// Missing and empty values represent the same absence.
 //
 //craft:ignore naked-any column values span every SQL type a module owns; these are the schemaless audit images
 func ChangedColumns(before, after map[string]any) (map[string]any, map[string]any) {
@@ -72,16 +60,21 @@ func sameColumnValue(oldValue, newValue any) bool {
 		return true
 	}
 	if oldAt, newAt, bothTimes := instants(oldValue, newValue); bothTimes {
-		return oldAt.Equal(newAt)
+		return SameStoredInstant(oldAt, newAt)
 	}
 	oldJSON, oldErr := json.Marshal(oldValue)
 	newJSON, newErr := json.Marshal(newValue)
 	return oldErr == nil && newErr == nil && bytes.Equal(oldJSON, newJSON)
 }
 
+// SameStoredInstant compares timestamps at PostgreSQL's microsecond precision.
+func SameStoredInstant(a, b time.Time) bool {
+	return a.Truncate(time.Microsecond).Equal(b.Truncate(time.Microsecond))
+}
+
 // instants reads two timestamps, by value or by pointer, as moments. One instant
 // in two zones is one value to the column. The compose layer's sameInstant
-// compares jsonb text read from SQL, a different input, so the two do not share.
+// parses jsonb text before using the same stored-time comparison.
 //
 //craft:ignore naked-any same column-value contract as ChangedColumns
 func instants(a, b any) (time.Time, time.Time, bool) {

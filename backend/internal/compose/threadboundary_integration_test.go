@@ -74,16 +74,19 @@ func TestABareReplyPrefixDrawsNoBoundary(t *testing.T) {
 	}
 }
 
-// The sender's own header names the parent. A message the seat never held cannot split
-// or steer the reply, which keeps the root its header gives it.
+// The sender's own header names the parent. A message the seat never held cannot
+// draw the reply into its conversation, or let the reply move it.
 func TestAParentTheSeatDoesNotHoldDecidesNothing(t *testing.T) {
 	e := integration.Setup(t)
 	captureThreadMail(t, e, e.Rep2, subjectMail("Angebot", seatAddress(t, e, e.Rep2), "foreign@counterparty.example", "Mon, 01 Jun 2026 08:00:00 +0000", ""))
 	captureThreadMail(t, e, e.Rep1, subjectMail("Re: Rechnung März", seatAddress(t, e, e.Rep1), "claimed@counterparty.example", "Tue, 02 Jun 2026 08:00:00 +0000",
 		"foreign@counterparty.example", "foreign@counterparty.example"))
 
-	if got := threadKeyOfMessage(t, e, "claimed@counterparty.example"); got != "foreign@counterparty.example" {
-		t.Errorf("a parent only another seat holds moved the reply to %q, want the root its header names", got)
+	if got := threadKeyOfMessage(t, e, "claimed@counterparty.example"); got == "foreign@counterparty.example" {
+		t.Errorf("a parent only another seat holds drew the reply into its conversation %q", got)
+	}
+	if got := threadKeyOfMessage(t, e, "foreign@counterparty.example"); got != "foreign@counterparty.example" {
+		t.Errorf("the other seat's conversation moved to %q", got)
 	}
 }
 
@@ -139,5 +142,61 @@ func TestASplitConversationAsksAboutItsOwnMessage(t *testing.T) {
 		JOIN activity_identity i ON i.activity_id = v.first_activity_id AND i.identity_kind = 'mail'
 		WHERE v.thread_key = 'invoice@counterparty.example' AND i.identity_key <> 'invoice@counterparty.example'`); got != 0 {
 		t.Errorf("%d verdicts of the split conversation name a message of the conversation it left", got)
+	}
+}
+
+func TestEditedReplySubjectsKeepTheirConversation(t *testing.T) {
+	for _, tc := range []struct{ parent, reply string }{
+		{"[ERP-27] kickoff", "Re: kickoff"},
+		{"Signature requested", "Signature completed"},
+		{"Angebot März", "AW: Angebot April!"},
+		{"Rechnung", "Re: [ERP-27]"},
+		{"Re: [ERP-27]", "Rechnung"},
+	} {
+		t.Run(tc.parent+"/"+tc.reply, func(t *testing.T) {
+			e := integration.Setup(t)
+			addr := seatAddress(t, e, e.Rep1)
+			captureThreadMail(t, e, e.Rep1, subjectMail(tc.parent, addr, "parent@counterparty.example", "Mon, 01 Jun 2026 08:00:00 +0000", ""))
+			reply := subjectMail(tc.reply, addr, "edited@counterparty.example", "Tue, 02 Jun 2026 08:00:00 +0000", "parent@counterparty.example", "parent@counterparty.example")
+			captureThreadMail(t, e, e.Rep1, reply)
+			captureThreadMail(t, e, e.Rep1, reply)
+			if got := threadKeyOfMessage(t, e, "edited@counterparty.example"); got != "parent@counterparty.example" {
+				t.Fatalf("edited reply filed under %q, want parent's conversation", got)
+			}
+		})
+	}
+}
+
+func TestAReplyCannotBridgeSeparateTopics(t *testing.T) {
+	for _, tc := range []struct{ subject, want string }{
+		{"Re: Rechnung März (was: Angebot)", "invoice@counterparty.example"},
+		{"Re:", "invoice@counterparty.example"},
+		{"Re: [ERP-27]", "invoice@counterparty.example"},
+		{"Re: Angebot", "bridge@counterparty.example"},
+	} {
+		t.Run(tc.subject, func(t *testing.T) {
+			e := integration.Setup(t)
+			addr := angebotThread(t, e)
+			captureThreadMail(t, e, e.Rep1, subjectMail("Rechnung März", addr, "invoice@counterparty.example", "Wed, 03 Jun 2026 08:00:00 +0000", "answer@counterparty.example", "opener@counterparty.example", "answer@counterparty.example"))
+			captureThreadMail(t, e, e.Rep1, subjectMail(tc.subject, addr, "bridge@counterparty.example", "Thu, 04 Jun 2026 08:00:00 +0000", "invoice@counterparty.example", "opener@counterparty.example", "answer@counterparty.example", "invoice@counterparty.example"))
+			for message, want := range map[string]string{
+				"opener@counterparty.example":  "opener@counterparty.example",
+				"invoice@counterparty.example": "invoice@counterparty.example",
+				"bridge@counterparty.example":  tc.want,
+			} {
+				if got := threadKeyOfMessage(t, e, message); got != want {
+					t.Fatalf("%s filed under %q, want %q", message, got, want)
+				}
+			}
+		})
+	}
+}
+
+func TestAnEditedReplyWithOnlyItsParentHeaderJoinsTheParent(t *testing.T) {
+	e := integration.Setup(t)
+	addr := angebotThread(t, e)
+	captureThreadMail(t, e, e.Rep1, subjectMail("Re: Angebot April!", addr, "edited@counterparty.example", "Wed, 03 Jun 2026 08:00:00 +0000", "answer@counterparty.example"))
+	if got := threadKeyOfMessage(t, e, "edited@counterparty.example"); got != "opener@counterparty.example" {
+		t.Fatalf("edited reply filed under %q, want parent's conversation", got)
 	}
 }

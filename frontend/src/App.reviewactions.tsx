@@ -1,21 +1,66 @@
-import { type ComponentProps, lazy, type ReactNode, Suspense } from "react";
-import { CompanyDealPicker } from "./components/companydealpicker";
-import { DealSuggestionCard, suggestedName } from "./components/dealsuggestion";
+import { type ComponentProps, type ReactNode, Suspense } from "react";
 import {
+  suggestedName,
   useDealSuggestion,
   useDealSuggestions,
 } from "./components/dealsuggestions.queries";
 import { QueryGate } from "./design-system/querystates";
-import { ApprovalDetailModal } from "./features/automations/approvaleditor";
-import { OpenActivityDrawer } from "./features/voice-knowledge/activitydrawer";
+import { lazy } from "./i18n/lazy";
+
+const SuggestionCard = lazy(async () => ({
+  default: (await import("./components/dealsuggestion")).DealSuggestionCard,
+}));
+function DealSuggestionCard(props: ComponentProps<typeof SuggestionCard>) {
+  return (
+    <Suspense fallback={null}>
+      <SuggestionCard {...props} />
+    </Suspense>
+  );
+}
+const DealPicker = lazy(async () => ({
+  default: (await import("./components/companydealpicker")).CompanyDealPicker,
+}));
+function CompanyDealPicker(props: ComponentProps<typeof DealPicker>) {
+  return (
+    <Suspense fallback={null}>
+      <DealPicker {...props} />
+    </Suspense>
+  );
+}
+
+const LazyApprovalDetailModal = lazy(async () => ({
+  default: (await import("./features/automations/approvaleditor"))
+    .ApprovalDetailModal,
+}));
+function ApprovalDetailModal(
+  props: ComponentProps<typeof LazyApprovalDetailModal>,
+) {
+  return (
+    <Suspense fallback={null}>
+      <LazyApprovalDetailModal {...props} />
+    </Suspense>
+  );
+}
+const LazyOpenActivityDrawer = lazy(async () => ({
+  default: (await import("./features/voice-knowledge/activitydrawer"))
+    .OpenActivityDrawer,
+}));
+function OpenActivityDrawer(
+  props: ComponentProps<typeof LazyOpenActivityDrawer>,
+) {
+  return (
+    <Suspense fallback={null}>
+      <LazyOpenActivityDrawer {...props} />
+    </Suspense>
+  );
+}
+
 import { useT } from "./i18n";
 import { type ReviewActions, ReviewActionsContext } from "./lib/reviewactions";
 
-const NewDealAction = lazy(() =>
-  import("./features/companies/companyactions").then((module) => ({
-    default: module.NewDealAction,
-  })),
-);
+const NewDealAction = lazy(async () => ({
+  default: (await import("./features/companies/companyactions")).NewDealAction,
+}));
 function ComposedNewDealAction(props: ComponentProps<typeof NewDealAction>) {
   return (
     <Suspense fallback={null}>

@@ -65,13 +65,14 @@ func (s *Store) CaptureEmailRequests(ctx context.Context, asOf time.Time) error 
 		if err != nil {
 			return err
 		}
-		assigneeSQL := fmt.Sprintf(emailRequestAssigneeSQL(identities), auth.AssigneeEligibleSQL(actor, "u", arg))
+		assigneeSQL := fmt.Sprintf(emailRequestAssigneeSQL(identities), auth.AssigneeEligibleSQL("u"))
 		wake := messageSnoozeLiftedSQL(fmt.Sprintf("$%d", arg(asOf)), "TRUE")
 		eligible, err := waitingReplyExistsClause(ctx, arg, asOf, nil, nil, domains, nil, automaticRequestHorizonDays,
 			outstandingRequestSQL+`
      AND `+storekit.AutomaticRequestIntentClause("a")+`
      AND a.occurred_at >= $`+fmt.Sprint(arg(asOf.AddDate(0, 0, -automaticRequestHorizonDays)))+`
      AND a.audience = 'workspace' AND a.restricted_at IS NULL
+     AND NOT `+answerableInvitationSQL+`
      AND NOT EXISTS (SELECT 1 FROM activity task WHERE task.source_system = 'email_request' AND task.source_activity_id = a.id)
      AND (`+assigneeSQL+`) IS NOT NULL
      AND NOT `+readerSetAsideSQL("("+assigneeSQL+")", wake), neverRelaxed)

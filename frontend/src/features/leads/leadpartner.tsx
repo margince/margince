@@ -7,17 +7,18 @@ import type {
   CreateField,
   CreateFieldOption,
 } from "../../components/create.fields";
+import { EntityRef } from "../../components/entityref";
 import { Button } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { InlineChoice } from "../../design-system/inlinechoice";
 import type { DetailRow } from "../../design-system/recorddetails";
 import { formatDateAbbrev } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import { useCan } from "../../lib/capability";
 import { leadWriteKeys } from "../../lib/leadkeys";
 import { usePartnerCompanyOptions } from "../../lib/partnerstages.queries";
 import { unwrap } from "../../lib/problem";
+import { useViewerZone } from "../../lib/viewerzone";
 import type { Lead, LeadWriter } from "./leads";
 
 type Translate = ReturnType<typeof useT>;
@@ -36,12 +37,25 @@ export function useLeadPartnerOptions(): CreateFieldOption[] | undefined {
   return granted ? options : undefined;
 }
 
-/** A referring partner's name, or its id when the options do not hold it. */
-export function leadPartnerName(
-  partners: readonly CreateFieldOption[] | undefined,
-  id: string,
-): string {
-  return partners?.find((option) => option.value === id)?.label ?? id;
+/**
+ * A referring partner's name. The options hold only live partners, so one
+ * that is archived, or past the options' page, is named by its own read.
+ */
+export function LeadPartnerName({
+  partners,
+  id,
+}: Readonly<{
+  partners: readonly CreateFieldOption[] | undefined;
+  id: string;
+}>) {
+  return (
+    <EntityRef
+      kind="company"
+      id={id}
+      name={partners?.find((option) => option.value === id)?.label}
+      asText
+    />
+  );
 }
 
 /**
@@ -104,6 +118,7 @@ export function useLeadPartnerRow(
   writer: Pick<LeadWriter, "readOnly" | "readOnlyReason">,
   onSave: (next: string) => Promise<void>,
 ): DetailRow | null {
+  const readerZone = useViewerZone();
   const t = useT();
   const { locale } = useLocale();
   const managesPartners = useCan("partner", "update");
@@ -127,7 +142,11 @@ export function useLeadPartnerRow(
             ...(options ?? []),
           ]}
           render={(value) =>
-            value === "" ? t("field.unset") : leadPartnerName(options, value)
+            value === "" ? (
+              t("field.unset")
+            ) : (
+              <LeadPartnerName partners={options} id={value} />
+            )
           }
           canEdit={!writer.readOnly && !accepted}
           readOnlyReason={
@@ -138,7 +157,7 @@ export function useLeadPartnerRow(
         {accepted ? (
           <span className="t-caption">
             {t("lead.partnerAccepted", {
-              date: formatDateAbbrev(accepted, locale, viewerZone()),
+              date: formatDateAbbrev(accepted, locale, readerZone),
             })}
           </span>
         ) : (

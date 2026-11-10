@@ -2,7 +2,8 @@
 # control faces, pressed and disabled fills, state colours, tints mixed on a
 # rung, and page grounds. A `state:` line is a member's fixed state colour,
 # which outranks the ladder on purpose; its reason follows the bar.
-# surfaces.test.ts holds this list and pins its size; it only shrinks.
+# census/rules/surfaces.census.ts holds this list and pins its size; it only
+# shrinks.
 src/app/agentrail.css: .arloose::after { background: var(--bgElevated) }
 src/app/agentrail.css: .rail .arhit { background: radial-gradient( 70% 70% at 50% 42%, color-mix(in srgb, var(--arTone) 14%, transparent), transparent 72% ), var(--bgElevated) }
 src/app/shell.css: .settingssearch input { background: var(--bgElevated) }
@@ -26,8 +27,6 @@ src/design-system/decisiondeck.css: .ddeck-ghost[data-verdict="edit"] { backgrou
 src/design-system/decisiondeck.css: .ddeck-ghost[data-verdict="reject"] { background: linear-gradient(var(--dangerBg), var(--dangerBg)), var(--bgElevated) }
 src/design-system/filechip.css: .file-chip { background: var(--bgElevated) }
 src/design-system/filterpills.css: .filterpill { background: var(--bgElevated) }
-src/design-system/inlinechoice.css: .inlinechoice-edit [aria-busy="true"] { background: var(--bgElevated) }
-src/design-system/inlinechoice.css: .inlinetext-edit [aria-busy="true"] { background: var(--bgElevated) }
 src/design-system/listtable.css: .lt-bulkbar { background: var(--bgElevated) }
 src/design-system/listtable.css: .lt-frow { background: var(--bgElevated) }
 src/design-system/listtable.css: .lt-perpage .select-control { background: var(--bgElevated) }
@@ -60,8 +59,8 @@ src/design-system/switch.css: .switchknob { background: var(--bgElevated) }
 src/design-system/visibility.css: .visibility { background: var(--bgElevated) }
 src/design-system/visibility.css: .visibility-withheld { background: linear-gradient(var(--warningBg), var(--warningBg)), var(--bgElevated) }
 src/features/contacts/contact360.css: .pe-meeting-date { background: var(--bgElevated) }
-src/features/deals/dealroomthreads.css: .board-doc-kind { background: var(--bgElevated) }
-src/features/deals/dealroomthreads.css: .board-doc-page { background: var(--bgElevated) }
+src/design-system/documenttile.css: .board-doc-kind { background: var(--bgElevated) }
+src/design-system/documenttile.css: .board-doc-page { background: var(--bgElevated) }
 src/features/mail/compose.css: .schedule-hour { background: var(--bgElevated) }
 src/features/onboarding/onboarding-build-scene.css: .ob-build { background: radial-gradient( 760px 520px at 50% 32%, color-mix(in srgb, var(--coreLight) 34%, transparent) 0%, transparent 62% ), linear-gradient( 180deg, color-mix(in srgb, var(--accent) 5%, var(--bgElevated)) 0%, var(--bgElevated) 100% ) }
 src/features/onboarding/onboarding-conversation/conversation.css: .ob-decision-path { background: var(--bgElevated) }
@@ -78,7 +77,7 @@ src/features/onboarding/onboarding.css: .choice-card { background: var(--bgEleva
 src/features/onboarding/onboarding.css: .confirm-origin { background: color-mix(in srgb, var(--bgElevated) 72%, transparent) }
 src/features/onboarding/onboarding.css: .mw-confirm-company { background: color-mix(in srgb, var(--bgElevated) 94%, transparent) }
 src/features/records/customfields.css: .cf-ddl { background: var(--bgElevated) }
-src/features/sign-in/auth.css: .auth-surface { background: radial-gradient( 34% 30% at 24% 26%, color-mix(in srgb, var(--aiLight) 92%, transparent), transparent 66% ), radial-gradient( 30% 28% at 76% 68%, color-mix(in srgb, var(--accentLight) 88%, transparent), transparent 64% ), radial-gradient( 30% 26% at 62% 8%, color-mix(in srgb, var(--coreLight) 70%, transparent), transparent 68% ), var(--bgElevated) }
+src/components/auth-core.css: .auth-surface { background: radial-gradient( 34% 30% at 24% 26%, color-mix(in srgb, var(--aiLight) 92%, transparent), transparent 66% ), radial-gradient( 30% 28% at 76% 68%, color-mix(in srgb, var(--accentLight) 88%, transparent), transparent 64% ), radial-gradient( 30% 26% at 62% 8%, color-mix(in srgb, var(--coreLight) 70%, transparent), transparent 68% ), var(--bgElevated) }
 src/features/sign-in/magic.marks.css: .magic-mark[data-kind="waiting"] { --mark: var(--bgElevated) }
 src/features/worklist/worklist.css: .worklist-row-selected .worklist-rank { color: var(--bgElevated) }
 state: src/design-system/decisioncard.css: .dcard[data-lapsed] { background: var(--bgInset) } | a lapsed proposal recedes to the inset ground

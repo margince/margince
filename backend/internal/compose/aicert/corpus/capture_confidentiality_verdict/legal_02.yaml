@@ -24,6 +24,7 @@ fixture:
     Kanzlei am Hafen
 expect:
   outcome: accepted
+  privacy: true
   answer: legal
   judge: none
   judge_none_reason: >

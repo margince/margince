@@ -42,19 +42,13 @@ import (
 // inventory of the inbox, and the card has three rule rows to seat as well.
 const maxFindings = 4
 
-// The read kinds — the four a finding may carry — derived from the contract
-// so a rename upstream fails here rather than laundering a string past the
-// enum. The rule kinds are the 360's own and the model may not raise them.
+// Contract values keep a renamed finding kind from reaching the model unchanged.
 var readKinds = []crmcontracts.Company360SuggestionKind{
-	crmcontracts.Company360SuggestionKindCommitmentUnmet,
 	crmcontracts.Company360SuggestionKindQuestionUnanswered,
 	crmcontracts.Company360SuggestionKindRiskRaised,
 	crmcontracts.Company360SuggestionKindNeedRaised,
 }
 
-// What performing a finding means, in the reply's own words. `none` is a
-// finding that advises without a button, the honest answer when neither a
-// reply nor a task is the move.
 const (
 	actionDraftReply = "draft_reply"
 	actionAddTask    = "add_task"
@@ -66,22 +60,22 @@ const scanSystem = `You read one account's records for the rep who works it and 
 The data is one JSON object. "account" is how the account stands: its contacts, open deals, open tasks and recent activity by subject. "messages" are the recent exchanges, oldest first, each with its own words; "direction" says who wrote it — "outbound" is us, "inbound" is them — "unread_chars" says how much of a body was cut, "thread" is the same for the messages of one conversation, and "settled": true means a later message or a recorded decision already met what that message asked or promised. "partner": true means the account works with us through a partner programme, and "no_deal_advice": true means deal advice is not wanted for it.
 
 Raise a finding ONLY in these kinds:
-- commitment_unmet — WE said we would do something, in an outbound message, and nothing in the account — no later message of ours, no open task — says it happened.
+- Promises belong to the recorded commitment decisions in each message and the account’s open commitments and tasks. Never raise commitment_unmet or prepare add_task for a promise. Never infer its owner from message direction or the reader of this account.
 - question_unanswered — THEY asked something, in an inbound message, and no later outbound message answers it.
 - risk_raised — they wrote something that puts the relationship or a deal at risk: a budget cut, a competitor, a decision-maker leaving, a delay on their side.
 - need_raised — they wrote about a need, a plan or a purchase that nothing in the account has picked up: no open deal about it, no task.
 
-Return ONLY a JSON object: {"findings":[{"kind":"commitment_unmet|question_unanswered|risk_raised|need_raised","title":"...","reason":"...","message_id":"...","quote":"...","action":"draft_reply|add_task|none"}]}.
+Return ONLY a JSON object: {"findings":[{"kind":"question_unanswered|risk_raised|need_raised","title":"...","reason":"...","message_id":"...","quote":"...","action":"draft_reply|none"}]}.
 
 Rules:
 - At most four findings, the one that most needs attention first. Return {"findings":[]} when nothing does — that is a good answer, not a failure.
-- When they chase something we promised, their chasing message comes first: raise question_unanswered on it, ahead of commitment_unmet on our promise.
-- "message_id" is the id of the ONE message the finding rests on, and "quote" is a verbatim excerpt of that message's "text", between 30 and 200 characters, copied exactly. Never paraphrase a quote and never quote a message you were not given; a finding whose quote is not in its message is dropped.
+- When they chase something we promised, raise question_unanswered on their chasing message.
+- "message_id" is the id of the ONE message the finding rests on, such as m2, and "quote" is the one or two sentences of that message's "text" that carry the finding, never the whole message: between 30 and 200 characters, copied exactly. Never paraphrase a quote and never quote a message you were not given; a finding whose quote is not in its message is dropped.
 - "title" says what to do, in under eight words, starting with a verb. "reason" is one sentence saying what the message says and why it needs attention now. Plain words, addressed to the reader. Never put an id in a title or a reason.
-- "action" is draft_reply when the move is writing back on that message, add_task when it is something to do that is not a reply, and none otherwise.
+- "action" is draft_reply when the move is writing back on that message, and none otherwise. Tasks and promises are handled by the existing recorded decisions. Never create a task from a scan finding.
 - Never raise commitment_unmet or question_unanswered on a message marked "settled". Read every message of a thread before judging what it still owes.
 - When the account says "no_deal_advice": true, never advise opening a deal and never raise need_raised. A partner's business is recorded in the partner programme.
-- Never invent a fact. A finding rests on words in a message, never on what a message does not say. If the account names sections_omitted, say nothing about those subjects at all — the reader is not allowed to see them.`
+- Never invent a fact. A finding rests on words in a message, never on what a message does not say. If the account names sections_omitted, say nothing about those subjects at all — the reader is not allowed to see them. ` + claims.NeverNameTheGap
 
 // scanSystemFor is the whole system prompt: the task, the house voice, the
 // output language, and the fence rule that makes every message body data.
@@ -93,15 +87,15 @@ func scanSystemFor(fence promptfence.Fence, lang string) string {
 // ScanRequest is the one request the scan sends. Exported so the
 // certification case issues the request production sends rather than a copy.
 //
-// The reply schema is built per call: the citation enum is THIS input's
-// message ids, so a fabricated id fails the provider's own validation before
+// The reply schema is built per call. The citation enum is this input's
+// message refs, so a fabricated one fails the provider's own validation before
 // the reply reaches the parser. With no messages there is nothing to cite and
 // the caller does not ask at all.
 func ScanRequest(in Input, lang string) model.Request {
 	fence := promptfence.New()
 	return model.Request{
 		System:                scanSystemFor(fence, lang),
-		Messages:              []model.Message{{Role: "user", Content: fence.Wrap(encodeInput(in))}},
+		Messages:              []model.Message{{Role: "user", Content: fence.Wrap(refsOf(in).payload(in))}},
 		IncludeCompanyContext: true,
 		MaxTokens:             ai.ReasoningOutputMaxTokens,
 		ResponseSchema:        findingsSchema(in),
@@ -110,10 +104,7 @@ func ScanRequest(in Input, lang string) model.Request {
 }
 
 func findingsSchema(in Input) json.RawMessage {
-	messageIDs := make([]string, 0, len(in.Messages))
-	for _, message := range in.Messages {
-		messageIDs = append(messageIDs, message.ID.String())
-	}
+	messageIDs := refsOf(in).messages.All()
 	kinds := make([]string, 0, len(readKinds))
 	for _, kind := range readKinds {
 		kinds = append(kinds, string(kind))
@@ -125,7 +116,7 @@ func findingsSchema(in Input) json.RawMessage {
 			"reason":     schema.String(),
 			"message_id": schema.Enum(messageIDs...),
 			"quote":      schema.String(),
-			"action":     schema.Enum(actionDraftReply, actionAddTask, actionNone),
+			"action":     schema.Enum(actionDraftReply, actionNone),
 		}, "kind", "title", "reason", "message_id", "quote", "action")),
 	}, "findings"))
 }
@@ -215,12 +206,12 @@ func ParseFindings(
 	if parsed.Findings == nil {
 		return nil, nil, errors.New("the reply carries no findings key, so it did not answer the question")
 	}
-	seen := map[string]bool{}
+	seen, refs := map[string]bool{}, refsOf(in)
 	for i, raw := range *parsed.Findings {
 		if len(kept) == maxFindings {
 			break
 		}
-		suggestion, why := ground(raw, companyID, in, langcopy.For(lang))
+		suggestion, why := ground(raw, companyID, in, refs, langcopy.For(lang))
 		if why != "" {
 			refused = append(refused, fmt.Sprintf("finding %d: %s", i+1, why))
 			continue
@@ -235,13 +226,14 @@ func ParseFindings(
 }
 
 // ground turns one raw finding into a suggestion, or says why it cannot.
-func ground(raw rawFinding, companyID ids.CompanyID, in Input, said langcopy.Spoken) (crmcontracts.Company360Suggestion, string) {
+func ground(raw rawFinding, companyID ids.CompanyID, in Input, refs scanRefs, said langcopy.Spoken) (crmcontracts.Company360Suggestion, string) {
 	kind, ok := readKind(raw.Kind)
 	if !ok {
 		return crmcontracts.Company360Suggestion{}, fmt.Sprintf("kind %q is not one the scan raises", clamp(raw.Kind))
 	}
-	message, ok := in.message(raw.MessageID)
-	if !ok {
+	messageID, shown := refs.messages.ID(raw.MessageID)
+	message, ok := in.message(messageID)
+	if !shown || !ok {
 		return crmcontracts.Company360Suggestion{}, fmt.Sprintf("message %q was not among the exchanges given", clamp(raw.MessageID))
 	}
 	if why := standingRefusal(kind, message, in.NoDealAdvice); why != "" {
@@ -250,15 +242,9 @@ func ground(raw rawFinding, companyID ids.CompanyID, in Input, said langcopy.Spo
 	if !claims.Quoted(message.Text, raw.Quote) {
 		return crmcontracts.Company360Suggestion{}, "the quote is not in the message it cites, verbatim"
 	}
-	title, reason := strings.TrimSpace(raw.Title), strings.TrimSpace(raw.Reason)
-	if title == "" || reason == "" {
-		return crmcontracts.Company360Suggestion{}, "a finding needs both a title and a reason"
-	}
-	if claims.SpellsRecordID(title) || claims.SpellsRecordID(reason) {
-		return crmcontracts.Company360Suggestion{}, "an id appears in the title or the reason; ids belong in message_id only"
-	}
-	if raw.Action != actionDraftReply && raw.Action != actionAddTask && raw.Action != actionNone {
-		return crmcontracts.Company360Suggestion{}, fmt.Sprintf("action %q is not one the page performs", clamp(raw.Action))
+	title, reason, why := readWording(raw, refs)
+	if why != "" {
+		return crmcontracts.Company360Suggestion{}, why
 	}
 	quote := claims.CollapseSpace(raw.Quote)
 	if why := quoteOutOfBounds(quote, claims.CollapseSpace(message.Text)); why != "" {
@@ -288,15 +274,23 @@ func ground(raw rawFinding, companyID ids.CompanyID, in Input, said langcopy.Spo
 	case actionDraftReply:
 		out.Action = company360.NewSuggestionAction(crmcontracts.Company360SuggestionActionKindDraftReply)
 		out.Action.ActivityId = &evidence[0].EntityId
-	case actionAddTask:
-		// The page writes the step from the body the finding carries, so the
-		// sentence the reader accepted is the task they get. It hangs on the
-		// account: the one record the scan is certain the finding is about.
-		out.Action = company360.NewSuggestionAction(crmcontracts.Company360SuggestionActionKindAddTask)
-		body := company360.TaskBody(title, "company", companyID.UUID)
-		out.Action.Task = &body
 	}
 	return out, ""
+}
+
+// readWording returns the finding's title and reason, or why they cannot be shown.
+func readWording(raw rawFinding, refs scanRefs) (title, reason, why string) {
+	title, reason = strings.TrimSpace(raw.Title), strings.TrimSpace(raw.Reason)
+	if title == "" || reason == "" {
+		return "", "", "a finding needs both a title and a reason"
+	}
+	if claims.SpellsRecordID(title) || claims.SpellsRecordID(reason) || refs.namedIn(title) || refs.namedIn(reason) {
+		return "", "", "an id appears in the title or the reason; ids belong in message_id only"
+	}
+	if raw.Action != actionDraftReply && raw.Action != actionAddTask && raw.Action != actionNone {
+		return "", "", fmt.Sprintf("action %q is not one the page performs", clamp(raw.Action))
+	}
+	return title, reason, ""
 }
 
 func readKind(name string) (crmcontracts.Company360SuggestionKind, bool) {

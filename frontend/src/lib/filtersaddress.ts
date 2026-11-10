@@ -8,6 +8,7 @@
 import type { components } from "../api/schema";
 import type { PluralBase } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { labelFor } from "./labelfor";
 
 type FilterResource = components["schemas"]["FilterVocabulary"]["resource"];
 type ListRecordType = components["schemas"]["List"]["entity_type"];
@@ -177,7 +178,7 @@ export type FocusedFiltersAddress = Exclude<
 export function fallbackTitleOf(address: FocusedFiltersAddress): MessageKey {
   switch (address.kind) {
     case "new":
-      return NEW_FILTER_LABEL[address.tab];
+      return labelFor(NEW_FILTER_LABEL, address.tab);
     case "view":
       return "filters.library.kindView";
     case "listFilter":

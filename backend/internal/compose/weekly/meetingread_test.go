@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose/weekly/learnings"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -28,7 +29,8 @@ func seatReading(objects ...string) context.Context {
 func repWeekWithMeetings() Review {
 	narrated := time.Date(2026, 10, 26, 8, 0, 0, 0, time.UTC)
 	return Review{
-		Counts: Counts{DealsWon: 2, MeetingsHeld: 5, MeetingsWithNextStep: 3},
+		Counts:        Counts{DealsWon: 2, MeetingsHeld: 5, MeetingsWithNextStep: 3},
+		DailyActivity: []crmcontracts.WeeklyDayActivity{{EmailsSent: 3, MeetingsHeld: 2}},
 		Scorecard: &Scorecard{Lead: &LeadBlock{
 			Advanced: 4, Booked: 6, Held: 5, NoShow: 1, PartialHistory: 2,
 		}},
@@ -53,6 +55,9 @@ func TestARepWeekWithoutActivityReadCarriesNoMeetingFigure(t *testing.T) {
 	lead := wire.Scorecard.Lead
 	if lead.MeetingsBooked+lead.MeetingsHeld+lead.MeetingsNoShow+lead.MeetingsPartialHistory != 0 {
 		t.Errorf("the scorecard's lead block carries a meeting figure: %+v", lead)
+	}
+	if wire.DailyActivity != nil {
+		t.Error("the days of activity travel to a reader who may not read activities")
 	}
 	if wire.Narrative != nil || wire.NarratedAt != nil {
 		t.Errorf("the narrative a model wrote from the meetings travels: %v", wire.Narrative)

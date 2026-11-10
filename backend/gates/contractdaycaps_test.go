@@ -23,10 +23,11 @@ package gates
 // added later either joins this table or is visibly absent from it.
 
 import (
-	"os"
 	"regexp"
 	"strconv"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // dayCaps names each published day bound and where the Go constant that must
@@ -57,7 +58,7 @@ func dayCaps() []struct {
 // constantValue reads one untyped integer constant out of a Go source file.
 func constantValue(t *testing.T, file, name string) int {
 	t.Helper()
-	raw, err := os.ReadFile(file)
+	raw, err := gatekit.ReadFile(file)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -109,7 +110,7 @@ func maximumUnder(t *testing.T, contract, schema string) int {
 func TestPublishedDayCapsMatchTheConstantsThatRefuse(t *testing.T) {
 	t.Parallel()
 
-	raw, err := os.ReadFile("api/crm.yaml")
+	raw, err := gatekit.ReadFile("api/crm.yaml")
 	if err != nil {
 		t.Fatal(err)
 	}

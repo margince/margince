@@ -57,6 +57,23 @@ func TestCommitmentMeaningPreservesDeadlinePrecision(t *testing.T) {
 	}
 }
 
+func TestACommitmentConditionMayDifferInTheCaseOfItsFirstLetter(t *testing.T) {
+	source := "Mira: Nếu ngân sách được duyệt, tôi sẽ gửi bản nháp vào tuần tới."
+	for condition, valid := range map[string]bool{
+		"Nếu ngân sách được duyệt": true,
+		"Ngân sách được duyệt":     true,
+		"ngân sách được duyệt":     true,
+		"nếu ngân sách được duyệt": true,
+		"NGÂN SÁCH được duyệt":     false,
+		"Ngân sách đã được duyệt":  false,
+	} {
+		meaning := &commitmentMeaning{State: "conditional", Condition: condition, DeadlinePrecision: "range", DeadlineQuote: "tuần tới"}
+		if got := validateCommitmentMeaning(meaning, "", source); (got == "") != valid {
+			t.Errorf("%q: valid = %v, want %v (%s)", condition, got == "", valid, got)
+		}
+	}
+}
+
 func TestCommitmentMeaningRefusesMissingOrContradictoryState(t *testing.T) {
 	for _, meaning := range []*commitmentMeaning{
 		nil,

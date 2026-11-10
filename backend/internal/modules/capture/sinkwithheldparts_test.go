@@ -29,8 +29,12 @@ func (k *withheldOnlyKeeper) Record(context.Context, pgx.Tx, ids.ActivityID, Fil
 	return errors.New("not reached")
 }
 
-func (k *withheldOnlyKeeper) RecordLinks(context.Context, pgx.Tx, ids.ActivityID, FileSource, []MailLink) error {
-	return nil
+func (k *withheldOnlyKeeper) Stored([]StagedFile) ([]StoredFile, error) {
+	return nil, errors.New("withheldOnlyKeeper stores no bytes")
+}
+
+func (k *withheldOnlyKeeper) RecordLinks(context.Context, pgx.Tx, ids.ActivityID, FileSource, []MailLink) (int, error) {
+	return 0, nil
 }
 
 // AdoptWithheld is never reached from a new activity, which is all this double

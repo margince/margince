@@ -5,7 +5,11 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Panel } from "../design-system/panel";
 import { translate } from "../i18n";
-import { emptyPage, ListTableHarness, render } from "./listquery.testkit";
+import {
+  emptyPage,
+  ListTableHarness,
+  render,
+} from "../testing/listquery.testkit";
 import { mineEmptyNote } from "./recordlist";
 import { RefusedFiltersNote } from "./refusedfiltersnote";
 

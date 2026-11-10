@@ -4,6 +4,7 @@ import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { en } from "../../i18n/en";
+import { changeChoice } from "../../testing/choicedialog.testkit";
 import { LeadScreen } from "./leads";
 import {
   jsonResponse,
@@ -89,6 +90,8 @@ describe("LeadScreen — archived/terminal is read-only (P-3)", () => {
         contextColumn?.contains(button) ||
         button.closest(".recordtabs-strip") ||
         button.classList.contains("r360-rests-toggle") ||
+        // The timeline's zoom picks how far back the line looks.
+        button.closest(".standing-timeline-head") ||
         // A reading's door, skipped structurally: every stat card says the same
         // word, so a set keyed on "Open" would exempt any control sharing it.
         // The class names a door out of the reading (another screen, a read,
@@ -178,6 +181,9 @@ describe("LeadScreen — archived/terminal is read-only (P-3)", () => {
     // Qualify is gone rather than disabled: a disqualified lead is not a
     // qualifiable one, and the header's primary action is for live leads.
     expect(screen.queryByRole("button", { name: "Qualify" })).toBeNull();
+    const owner = screen.getByText("Unassigned");
+    expect(owner).toHaveAttribute("title", en["lead.terminalReadOnly"]);
+    expect(owner).toHaveAccessibleDescription(reason);
   });
 
   it("shows an 'overridden' badge when the score is human-overridden", async () => {
@@ -426,18 +432,7 @@ describe("LeadScreen — archived/terminal is read-only (P-3)", () => {
     }, "u-9");
     render(<LeadScreen id="l-1" />);
 
-    await userEvent.click(
-      await screen.findByRole("button", { name: "Assign" }),
-    );
-    // The listbox is opened once and the option awaited inside it. Clicking
-    // the trigger again would toggle it shut, and the popup re-renders in
-    // place when the roster lands.
-    await userEvent.click(
-      await screen.findByRole("combobox", { name: "Assign this lead to" }),
-    );
-    await userEvent.click(
-      await screen.findByRole("option", { name: "Dana Fischer" }),
-    );
+    await changeChoice(userEvent.setup(), "Owner", "Dana Fischer");
 
     await waitFor(() => expect(patchBody).toBeTruthy());
     expect(patchBody).toMatchObject({ owner_id: "u-42" });

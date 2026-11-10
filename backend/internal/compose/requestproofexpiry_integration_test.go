@@ -108,4 +108,9 @@ func TestAnExpiredProofTakesTheRequestersReferenceFromTheRequestAndItsAuditImage
 	if trail := readTrail(); strings.Contains(trail, reference) {
 		t.Fatalf("the audit trail still shows the reference: %s", trail)
 	}
+	if n := e.WsCount(t, `SELECT count(*) FROM audit_log
+	 WHERE entity_type='data_subject_request' AND entity_id=$1
+	 AND concat(before::text, after::text, evidence::text) LIKE '%' || $2 || '%'`, request, reference); n != 0 {
+		t.Fatalf("%d stored audit payloads still hold the expired requester's reference", n)
+	}
 }

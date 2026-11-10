@@ -32,10 +32,21 @@ import (
 	"github.com/margince/margince/backend/internal/platform/events"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
+	"github.com/margince/margince/backend/internal/platform/originalstore"
 	"github.com/margince/margince/backend/internal/platform/providerhealthstore"
 	"github.com/margince/margince/backend/internal/platform/ratelimit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
+
+// runPreBootSubcommand answers the commands that end before the boot: the
+// debug subcommands and the config check. handled is true when one ran.
+func runPreBootSubcommand(ctx context.Context, args []string, stdout io.Writer) (handled bool, err error) {
+	if handled, err := runDebugSubcommand(ctx, args, stdout); handled {
+		return true, err
+	}
+	checked, err := checkWorkerConfig(workerFlags(args), config.Environ(), stdout)
+	return checked || err != nil, err
+}
 
 // runDebugSubcommand dispatches the DB-less debug loops — `worker siteread …`
 // (siteread.go) and `worker aitask …` (aitask.go) — and reports whether it
@@ -85,21 +96,33 @@ func workerModelPathSpec(cfg workerConfig, bootstrap deployconfig.Bootstrap) mod
 // many replicas the deployment happens to run, and both ends look correct.
 // This role serves no public edge, but the send job's pacing is a ceiling all
 // the same.
-func openBus(ctx context.Context, cfg workerConfig) (*redis.Client, error) {
-	rdb, err := events.NewClient(ctx, cfg.redisAddr, cfg.redisPassword)
+//
+// The ceilings get a separate client. Each event lane holds a bus connection
+// in a blocking read, which can leave the bus pool with none free. A ceiling
+// on that pool then times out, and every Gmail call fails as unreachable.
+func openBus(ctx context.Context, cfg workerConfig) (bus, coordination *redis.Client, err error) {
+	bus, err = events.NewClient(ctx, cfg.redisAddr, cfg.redisPassword)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	ratelimit.ShareProcess(rdb)
-	ai.ShareProviderHealth(ctx, providerhealthstore.New(rdb))
-	return rdb, nil
+	coordination, err = events.NewClient(ctx, cfg.redisAddr, cfg.redisPassword)
+	if err != nil {
+		//craft:ignore swallowed-errors best-effort close of the bus client after the coordination client failed — the open error is the one to report
+		_ = bus.Close()
+		return nil, nil, err
+	}
+	ratelimit.ShareProcess(coordination)
+	ai.ShareProviderHealth(ctx, providerhealthstore.New(coordination))
+	return bus, coordination, nil
 }
 
-// closeBus releases the bus client at shutdown, reporting a close fault rather
-// than dropping it — by then there is nobody left to return it to.
-func closeBus(rdb *redis.Client, logger *slog.Logger) {
-	if err := rdb.Close(); err != nil {
-		logger.Warn("closing bus client", "err", err)
+// closeBus releases the Redis clients at shutdown, reporting a close fault
+// rather than dropping it. By then there is nobody left to return it to.
+func closeBus(logger *slog.Logger, clients ...*redis.Client) {
+	for _, rdb := range clients {
+		if err := rdb.Close(); err != nil {
+			logger.Warn("closing bus client", "err", err)
+		}
 	}
 }
 
@@ -144,6 +167,8 @@ func startEventLanes(laneCtx context.Context, background *sync.WaitGroup, cfg wo
 	// Before the runner lane: an offer a Surface-B run changes reclaims its
 	// retired rendering from this store.
 	lanes.blob = blob
+	laneCtx = originalstore.Bind(laneCtx, compose.InstallationDB(pool), blob)
+	lanes.ctx = laneCtx
 
 	if err := startRunnerLane(laneCtx, cfg, pool, rdb, vault, modelPath, &lanes, logger, stdout); err != nil {
 		return lanes, err
@@ -327,7 +352,7 @@ func startProjectionLanes(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Cl
 	// model, so it runs on every worker rather than only where a provider is
 	// configured — a deployment without AI still answers "who on our team knows
 	// this contact", which is a deterministic question about our own mail.
-	edges := search.NewGraphEdgeGen(search.NewStore(compose.InstallationDB(pool)))
+	edges := compose.NewGraphEdgeConsumer(pool)
 	_, _ = fmt.Fprintln(stdout, "worker maintaining interaction edges")
 	// Coalesced: a capture burst names the same colleagues event after event,
 	// and one refold per read does their shared pairs once (graphedgebatch.go).
@@ -342,6 +367,12 @@ func startProjectionLanes(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Cl
 	rescope := compose.NewAudienceRescopeGen(pool)
 	_, _ = fmt.Fprintln(stdout, "worker re-scoping derived models on audience changes")
 	background.Go(func() { runSubscriber(ctx, rdb, "cg:audience-rescope", rescope.HandleEvent, logger, 0) })
+
+	// A voice sample read from sent mail follows its mail: archived,
+	// restricted, narrowed or marked confidential, the sample is emptied.
+	voiceCopies := compose.NewVoiceCopyRecheckGen(pool)
+	_, _ = fmt.Fprintln(stdout, "worker emptying voice samples whose mail stopped being learnable")
+	background.Go(func() { runSubscriber(ctx, rdb, "cg:voice-copy-recheck", voiceCopies.HandleEvent, logger, 0) })
 
 	// The LinkedIn ghost matcher (ADR-0078 §8b): a ghost attaches the moment
 	// its contact exists, whoever created them. Deterministic like the edge
@@ -375,8 +406,8 @@ func startProjectionLanes(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Cl
 	startPartnerActivation(ctx, pool, rdb, background, logger, stdout)
 
 	startIntroAdvance(ctx, pool, rdb, background, logger, stdout)
-	startStageProgressionOutcome(ctx, pool, rdb, background, logger, stdout)
 	startApprovalNoticeRetract(ctx, pool, rdb, background, logger, stdout)
+	startScheduledSendStop(ctx, pool, rdb, background, logger, stdout)
 	startNoticeCaseOpen(ctx, pool, rdb, background, logger, stdout)
 
 	startDealRoomTimeline(ctx, pool, rdb, background, logger, stdout)

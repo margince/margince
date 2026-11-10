@@ -58,6 +58,7 @@ func insertTeamReview(ctx context.Context, tx pgx.Tx, review TeamReview) (ids.UU
 	after := map[string]any{
 		"local_week_start": review.LocalWeekStart, "reps_counted": review.Counts.RepsCounted,
 		"summary": review.Summary, "summary_language": review.summaryLanguage(),
+		"leads_withheld": review.LeadsWithheld,
 	}
 	if inserted {
 		if _, err := storekit.Audit(ctx, tx, "create", "team_weekly_review", id, nil, after); err != nil {
@@ -182,6 +183,7 @@ func insertTeamCoverage(ctx context.Context, tx pgx.Tx, reviewID ids.UUID, c Cov
 	add("absent", nullableText(c.Absent))
 	add("base_currency", c.BaseCurrency)
 	add("replan_recommended", c.ReplanRecommended)
+	add("call_needs_review", c.CallNeedsReview)
 	if c.Basis != "" {
 		add("reference_landing_minor", c.ReferenceLandingMinor)
 		add("needed_open_minor", c.NeededOpenMinor)
@@ -205,6 +207,7 @@ func teamReviewColumns(review TeamReview) (insertColumns, []any) {
 		args = append(args, value)
 	}
 	add("numeric_summary", review.NumericSummary)
+	add("leads_withheld", review.LeadsWithheld)
 	add("team_id", review.TeamID)
 	add("team_name", review.TeamName)
 	add("local_week_start", review.LocalWeekStart)

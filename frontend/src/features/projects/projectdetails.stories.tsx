@@ -6,6 +6,7 @@ import { COMPANY, project, project360 } from "../../testing/projects.fixtures";
 import {
   installFetchStub,
   jsonResponse,
+  meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
 import { ProjectDetails, ProjectSubtitle } from "./projectdetails";
@@ -26,6 +27,7 @@ type Story = StoryObj;
 // uses; without them the frames would show the unresolved fallbacks.
 function installReferenceReads(): void {
   installFetchStub({
+    "GET /me": meRoute({ project: ["read"] }),
     "GET /users": () =>
       jsonResponse({
         data: [

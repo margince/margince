@@ -1,116 +1,14 @@
 /* SPDX-License-Identifier: BUSL-1.1 */
 /* SPDX-FileCopyrightText: 2026 Gradion */
 
-/* The resting face of an editable value (InlineText/InlineChoice's closed
- * button): a fact, not a control. No box, no accent colour — that would say
- * "click me" before the reader has asked whether this can be changed at all.
- * A hover or a keyboard focus is the only thing that reveals it: the
- * underline appears, and a chooser's caret fades in beside it. Padding and
- * its matching negative margin cancel exactly, on purpose — the visible TEXT
- * has to land on the same left edge whether the field beside it is this
- * button or a plain read-only span (fieldgrid.css's own shared-edge rule),
- * and a click target smaller than the padded box would be would feel mean. */
-.inline-editable {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-  background: transparent;
-  border: 0;
-  padding: 2px 4px;
-  margin: -2px -4px;
-  border-radius: var(--r-sm);
-  /* A button centres its lines; a value that wraps reads from its start edge. */
-  text-align: start;
-  cursor: pointer;
-  transition: background-color var(--dur-state);
-}
-/* The affordance is a soft fill behind the value, not an underline: an
-   underline reads as a link — somewhere to GO — on the one control whose whole
-   promise is that pressing it keeps you here. The fill is also the shape the
-   field is about to become, so the box a click opens lands where the hover
-   already was. */
-.inline-editable:hover,
-.inline-editable:focus-visible {
-  background: var(--groundHover);
-}
-.inline-editable:focus-visible {
-  outline: var(--focus-ring-forced);
-  outline-offset: 2px;
-  box-shadow: var(--focus-glow);
-}
-
-/* The OPEN text field, sized to the value it replaces rather than to a form.
- * `.input` is a form control: its own font size and its 9px/11px padding make a
- * box half again as tall as the line of text it opens over, so the row jumped
- * every time a reader clicked into it and jumped back when they left — the
- * record moving under the hand that touched it. Here the box is the text's own
- * metrics plus a 1px border, and the border+padding is cancelled by the same
- * negative margin the resting button uses, so the glyph does not move either:
- * the character under the pointer at the click is the character under the caret
- * after it. The width adds those margins back so the field still fills its
- * column edge to edge, which is the one thing it should be bigger than the
- * value for — there has to be room to type. */
-.inlinetext-edit .input {
-  padding: 1px 3px; /* ds:ignore the border's own 1px + this = the resting button's 2px/4px, so the glyph does not move; a scale step here would move it */
-  margin: -2px -4px;
-  width: calc(100% + 8px);
-}
-/* Hears focus leave the day and its calendar, and draws no box of its own. */
-.inlinetext-date {
-  display: contents;
-}
-/* A refused field gives back its block-end overlap: the error line under it
-   moves the row anyway, and the field gap then clears the box as elsewhere. */
-.inlinetext-edit .input[aria-invalid="true"] {
-  margin-block-end: 0;
-}
-
-/* The caret only a chooser draws, and only once the reader has already
- * noticed the underline — two affordances at once would be one more thing to
- * read than free text needs. */
-.inline-editable-caret {
-  opacity: 0;
-  transition: opacity var(--dur-state);
-}
-.inline-editable-choice:hover .inline-editable-caret,
-.inline-editable-choice:focus-visible .inline-editable-caret {
-  opacity: 1;
-}
-
-/*
- * A write in flight is not a refusal, and until this rule they were painted the
- * same. The inline editors set `disabled` for the duration of the save, and the
- * field's disabled state — added at the same time as this — dims to tertiary
- * text on a card fill. That is the treatment that everywhere else in this
- * product means "your seat may not do this": the reader's own edit came back
- * looking rejected.
- *
- * So a busy control keeps its full ink and takes the cursor that means wait,
- * with the turning mark beside it as the actual signal. This is the same
- * argument switch.css makes for the same reason, and the two now agree.
- *
- * After the disabled rules in atoms.css and select.css by cascade order (this
- * sheet is imported later) and at equal specificity, which is what lets the
- * busy claim win over the disabled one.
- */
-.inlinetext-edit [aria-busy="true"],
-.inlinechoice-edit [aria-busy="true"] {
-  color: var(--textPrimary);
-  background: var(--bgElevated);
-  cursor: progress;
-}
-
 /* A suggested value stands in for an empty field, muted: the fact is the
    record's, but not yet this field's. */
 .inlinetext-suggested {
   color: var(--textSecondary);
 }
 
-/* A choice nobody has made, where the reader may not make one either: the
-   words say the field is empty, and the tone keeps them under the filled
-   values around them, the rung the editable placeholder already takes
-   (fieldgrid.css). Carried only on the unset case, so a real value is never
-   dimmed by the same rule. */
+/* A choice nobody has made, where the reader may not make one either: muted
+   like the editable placeholder, and only on the unset case. */
 .inlinechoice-unset {
   color: var(--textSecondary);
 }

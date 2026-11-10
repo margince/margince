@@ -11,11 +11,13 @@ import {
 import { omitted, type SectionState } from "../../design-system/surfacestate";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { labelFor } from "../../lib/labelfor";
 import { useListsAvailable, useRecordLists } from "../../lib/lists.queries";
 import { navigate } from "../../lib/router";
 import { useWriteRefusal } from "./contactactions";
 import { type ConsentRead, useConsentRows } from "./contactconsentpanel";
 import { useContactAboutSections } from "./contactdetails";
+import { ContactSourceReview } from "./contactsourcereview";
 
 export type Contact360 = components["schemas"]["Contact360"];
 type Contact = components["schemas"]["Contact"];
@@ -68,8 +70,8 @@ export function bodyState(withheld: boolean, count: number): SectionState {
 }
 
 /**
- * The left column under the head: About, Ownership and Consent & channels as
- * flat groups. Then the lists the contact is on, the one link to the empty
+ * The left column under the head: About, Ownership, Consent & channels and an
+ * unconfirmed source as flat groups. Then the lists the contact is on, the one link to the empty
  * fields, and the page's footnote. Employers, billing roles, tags, the record's
  * source and the consent proof live on the Network and Research tabs.
  */
@@ -98,9 +100,19 @@ export function ContactRail({
   const about = useContactAboutSections(view);
   const consentRows = useConsentRows(view, consent);
   const listsOn = useListsAvailable();
+  const reviews = view.privacy_source_reviews ?? [];
   const sections: DetailSection[] = [
     ...about,
     { key: "consent", label: t("contact.aside.consent"), rows: consentRows },
+    ...(reviews.length > 0
+      ? [
+          {
+            key: "source",
+            label: t("history.field.source"),
+            children: <ContactSourceReview reviews={reviews} />,
+          },
+        ]
+      : []),
   ];
   // The lists read answers 404 while lists are switched off, so it is asked
   // only where they are on.
@@ -211,5 +223,5 @@ export function directionSentence(
   view: Contact360,
   t: ReturnType<typeof useT>,
 ): string {
-  return t(DIRECTION_SENTENCE[view.relationship_direction ?? "none"]);
+  return t(labelFor(DIRECTION_SENTENCE, view.relationship_direction ?? "none"));
 }

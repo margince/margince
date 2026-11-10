@@ -83,39 +83,56 @@ func (s *Store) SetReplyVerdict(ctx context.Context, id ids.UUID, verdict, class
 	if err := auth.Require(ctx, "activity", principal.ActionUpdate); err != nil {
 		return false, err
 	}
-	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
-		tag, err := tx.Exec(ctx, `
-			UPDATE activity
-			   SET reply_verdict = $2, reply_verdict_at = now(), reply_verdict_by = $3
-			 WHERE id = $1 AND reply_verdict IS NULL AND direction = 'inbound'
-			   AND archived_at IS NULL AND audience = 'workspace' AND restricted_at IS NULL`,
-			id, verdict, classifier)
-		if err != nil {
-			return fmt.Errorf("activities: setting reply verdict: %w", err)
-		}
-		applied = tag.RowsAffected() > 0
-		if !applied {
-			return nil
-		}
-		if err := appendReplyVerdictHistory(ctx, tx, id, &verdict, classifier, false); err != nil {
-			return err
-		}
-		// Audited in the SAME transaction as the column write, so a verdict that
-		// landed is one audit_log can account for — the question this tree
-		// answers for every derived write, asked of the pass that reads customer
-		// correspondence and puts a number on what it read.
-		//
-		// No outbox row beside it, matching owed_verdict's reasoning: the write
-		// shape asks for an event where one has a consumer outside the
-		// transaction, and this has none. The verdict is read from the column by
-		// whatever computes the rate next.
-		if _, err := storekit.AuditEvent(ctx, tx, "update", "activity", id,
-			map[string]any{"reply_verdict": verdict, "reply_verdict_by": classifier}); err != nil {
-			return err
-		}
-		return nil
+	err = s.db.Tx(ctx, func(tx pgx.Tx) (err error) {
+		applied, err = setReplyVerdictTx(ctx, tx, id, verdict, classifier)
+		return err
 	})
 	return applied, err
+}
+
+// SetCaptureLabelAndReply writes a label and the reply verdict that rode its
+// model call in one transaction. A body restore cannot land between the two, so
+// the verdict never outlives the label it was judged with. The version check
+// guards the label, and the transaction holds the row for the reply that follows.
+func (s *Store) SetCaptureLabelAndReply(ctx context.Context, id ids.UUID, label string, readVersion int64, verdict, classifier string) (applied bool, err error) {
+	if err := auth.Require(ctx, "activity", principal.ActionUpdate); err != nil {
+		return false, err
+	}
+	err = s.db.Tx(ctx, func(tx pgx.Tx) (err error) {
+		applied, err = setCaptureLabelTx(ctx, tx, id, label, readVersion)
+		if err != nil || !applied {
+			return err
+		}
+		_, err = setReplyVerdictTx(ctx, tx, id, verdict, classifier)
+		return err
+	})
+	return applied, err
+}
+
+func setReplyVerdictTx(ctx context.Context, tx pgx.Tx, id ids.UUID, verdict, classifier string) (bool, error) {
+	tag, err := tx.Exec(ctx, `
+		UPDATE activity
+		   SET reply_verdict = $2, reply_verdict_at = now(), reply_verdict_by = $3
+		 WHERE id = $1 AND reply_verdict IS NULL AND direction = 'inbound'
+		   AND archived_at IS NULL AND audience = 'workspace' AND restricted_at IS NULL`,
+		id, verdict, classifier)
+	if err != nil {
+		return false, fmt.Errorf("activities: setting reply verdict: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return false, nil
+	}
+	if err := appendReplyVerdictHistory(ctx, tx, id, &verdict, classifier, false); err != nil {
+		return false, err
+	}
+	// Audited in the same transaction as the column write, so a verdict that
+	// landed is one audit_log can account for. No outbox row beside it: the
+	// verdict is read from the column by whatever computes the rate next.
+	if _, err := storekit.AuditEvent(ctx, tx, "update", "activity", id,
+		map[string]any{"reply_verdict": verdict, "reply_verdict_by": classifier}); err != nil {
+		return false, err
+	}
+	return true, nil
 }
 
 // CorrectReplyVerdict records a human disagreeing with the standing verdict.

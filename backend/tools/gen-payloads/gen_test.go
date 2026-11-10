@@ -6,6 +6,8 @@ package main
 import (
 	"strings"
 	"testing"
+
+	"github.com/getkin/kin-openapi/openapi3"
 )
 
 // fixtureSpec is a minimal components-only OpenAPI doc: one plain schema,
@@ -222,5 +224,20 @@ func TestTwoSchemasForOneEventTypeAreRefused(t *testing.T) {
 `
 	if _, err := generateSource([]byte(spec), "testpkg", "", "Samples"); err == nil || !strings.Contains(err.Error(), "two schemas declare") {
 		t.Fatal("a second schema for one event type must fail the generator, not overwrite its sample")
+	}
+}
+
+// A currency sample is a code the API accepts, not prose. The contract declares
+// these fields as plain strings, so only the name says what belongs in them.
+func TestACurrencyFieldSamplesAnISOCode(t *testing.T) {
+	stringSchema := &openapi3.Schema{Type: &openapi3.Types{openapi3.TypeString}}
+	for _, name := range []string{"currency", "currency_at_change", "base_currency"} {
+		if got := sampleValue(stringSchema, name, 0); got != "EUR" {
+			t.Errorf("sampleValue(%q) = %v, want an ISO-4217 code", name, got)
+		}
+	}
+	// Not every name holding the word is a currency field.
+	if got := sampleValue(stringSchema, "currency_mismatch_reason", 0); got == "EUR" {
+		t.Errorf("sampleValue(currency_mismatch_reason) = %v, want the generic sample", got)
 	}
 }

@@ -318,15 +318,18 @@ func lockLeadCompanyBeforeLead(ctx context.Context, tx pgx.Tx, sourceID ids.Lead
 // It does so only when the survivor has none and its name or domain still
 // names that company. A loser relinked since the lock answers a conflict.
 func carryLeadCompanyLink(ctx context.Context, tx pgx.Tx, p *storekit.Patch, target, source crmcontracts.Lead, locked lockedCompany) error {
-	var sourceCompany *ids.CompanyID
-	if source.CompanyId != nil {
-		id := ids.From[ids.CompanyKind](ids.UUID(*source.CompanyId))
-		sourceCompany = &id
+	sourceCompany, err := leadLinkedCompany(ctx, tx, ids.From[ids.LeadKind](ids.UUID(source.Id)))
+	if err != nil {
+		return err
 	}
 	if !sameCompany(sourceCompany, locked.id) {
 		return apperrors.ErrConflict
 	}
-	if target.CompanyId != nil || locked.id == nil || !locked.live {
+	targetCompany, err := leadLinkedCompany(ctx, tx, ids.From[ids.LeadKind](ids.UUID(target.Id)))
+	if err != nil {
+		return err
+	}
+	if targetCompany != nil || locked.id == nil || !locked.live {
 		return nil
 	}
 	name := target.CompanyName

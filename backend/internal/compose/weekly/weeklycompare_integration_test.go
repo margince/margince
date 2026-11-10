@@ -77,11 +77,13 @@ func TestAnUnroutedLeadStillCountsInTheWeekItArrived(t *testing.T) {
 	}
 }
 
-// A meeting is judged by whether it HAPPENED.
+// A meeting is judged by whether it HAPPENED, which only a recorded held
+// outcome says.
 //
 // A booking that was cancelled or no-showed is not a conversation the week can
-// be credited with, and counting it would tell a rep they met four customers
-// when they met one.
+// be credited with. Neither is a past meeting nobody reported, which is
+// awaiting its outcome on the record page. Counting either would tell a rep
+// they met five customers when they met one.
 func TestOnlyMeetingsThatWereHeldCountTowardTheWeek(t *testing.T) {
 	e := setupWeekly(t)
 	owner := integration.OwnerConn(t)
@@ -96,6 +98,12 @@ func TestOnlyMeetingsThatWereHeldCountTowardTheWeek(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
+	if _, err := owner.Exec(ctx, `
+		INSERT INTO activity (id, kind, subject, occurred_at, source, captured_by, host_user_id)
+		VALUES ($1, 'meeting', 'A meeting awaiting its outcome', $2, 'manual', $3, $4)`,
+		ids.NewV7(), inWeek, capturedBy(e.Rep1), e.Rep1); err != nil {
+		t.Fatal(err)
+	}
 
 	review, _, err := e.engine.AssembleFor(e.repCtx, weekClock)
 	if err != nil {
@@ -103,7 +111,7 @@ func TestOnlyMeetingsThatWereHeldCountTowardTheWeek(t *testing.T) {
 	}
 
 	if review.Counts.MeetingsHeld != 1 {
-		t.Errorf("the week counted %d meetings held, want 1 — only one of the four happened",
+		t.Errorf("the week counted %d meetings held, want 1 — only one of the five was reported held",
 			review.Counts.MeetingsHeld)
 	}
 }

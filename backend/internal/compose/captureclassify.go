@@ -232,40 +232,15 @@ func (c *CaptureClassifier) classifyEach(ctx context.Context, msgs []unlabeledMe
 	return labeled, nil
 }
 
-// commitLabel writes one label and the reply verdict riding it.
+// commitLabel writes one label and the reply verdict this call also produced,
+// in one transaction. A label that did not apply takes no reply verdict,
+// because both are about the text read. The reply rides the label's confidence,
+// so a message below the floor stores neither.
 func (c *CaptureClassifier) commitLabel(ctx context.Context, msg unlabeledMessage, v classifyResult, judge string) (bool, error) {
-	applied, err := c.store.SetCaptureLabel(ctx, msg.ID, v.Label)
-	if err != nil {
-		return false, err
-	}
-	return applied, c.recordReply(ctx, msg, v, judge)
-}
-
-// recordReply stores the reply verdict this call also produced, when it produced
-// one. Absent is the common case and a legitimate answer: outbound mail, and any
-// inbound message that does not read as a reply, leave the column NULL — which a
-// rate counts in neither half.
-//
-// It rides the SAME confidence the label was gated on, and the prompt is what
-// makes that honest: it defines `confidence` as covering every judgement in the
-// entry and asks for the LOWER of the two. Without that sentence the number
-// would be the label's alone, and a model sure the mail is a meeting but unsure
-// whether it was a yes would have its guess stored — a number somebody is
-// measured on, resting on a certainty nobody reported.
-//
-// It shares the label's confidence rather than carrying its own. Both judgements
-// come from one reading of one message, and a second number would claim the
-// model reported a separate certainty it was never asked for. The consequence is
-// stated plainly: a message whose LABEL was confident enough to store also
-// stores its reply verdict, and one below the floor stores neither.
-func (c *CaptureClassifier) recordReply(ctx context.Context, msg unlabeledMessage, v classifyResult, judge string) error {
 	if v.Reply == "" {
-		return nil
+		return c.store.SetCaptureLabel(ctx, msg.ID, v.Label, msg.Version)
 	}
-	if _, err := c.store.SetReplyVerdict(ctx, msg.ID, v.Reply, judge); err != nil {
-		return fmt.Errorf("classify: recording the reply verdict: %w", err)
-	}
-	return nil
+	return c.store.SetCaptureLabelAndReply(ctx, msg.ID, v.Label, msg.Version, v.Reply, judge)
 }
 
 // classifyRequest builds the ONE model call that labels one batch. It is a pure
@@ -313,7 +288,12 @@ func (c *CaptureClassifier) ask(ctx context.Context, batch []unlabeledMessage) (
 	if msg := validateClassifyPayload(payload, batch); msg != "" {
 		return nil, "", fmt.Errorf("classify: %s", msg)
 	}
-	return payload.Results, judgeOf(resp), nil
+	return resolveClassifyRefs(payload.Results, batch), judgeOf(resp), nil
+}
+
+// resolveClassifyRefs rewrites each validated result's ref to its activity id.
+func resolveClassifyRefs(results []classifyResult, batch []unlabeledMessage) []classifyResult {
+	return resolveBatchRefs(results, capturelabel.Refs(batch))
 }
 
 // judgeOf names what actually answered.
@@ -355,9 +335,10 @@ func validateClassifyPayload(payload classifyPayload, batch []unlabeledMessage) 
 	// This site's own vocabulary, checked here rather than in the shared id
 	// contract: an error naming the wrong closed set sends a reader to the
 	// wrong prompt.
+	refs := capturelabel.Refs(batch)
 	inbound := make(map[string]bool, len(batch))
 	for _, m := range batch {
-		inbound[m.ID.String()] = m.Inbound
+		inbound[refs.For(m.ID.String())] = m.Inbound
 	}
 	for _, r := range payload.Results {
 		if !classifyLabels[r.Label] {
@@ -385,14 +366,13 @@ func validateClassifyPayload(payload classifyPayload, batch []unlabeledMessage) 
 
 func (r classifyResult) answeredID() string { return r.ID }
 
-// classifyIDs is the ids one batch asks about, in the order it sends them: what
-// the schema lets the model name and what the validator requires it to answer.
+func (r classifyResult) answering(id string) classifyResult { r.ID = id; return r }
+
+// classifyIDs is the refs one batch asks about, in the order it sends them.
+// The schema lets the model name them and the validator requires an answer
+// for each.
 func classifyIDs(batch []unlabeledMessage) []string {
-	requested := make([]string, len(batch))
-	for i, m := range batch {
-		requested[i] = m.ID.String()
-	}
-	return requested
+	return capturelabel.Refs(batch).All()
 }
 
 // classifySchema is the generation-time shape guardrail (§2.8).

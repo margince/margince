@@ -105,6 +105,7 @@ describe("company view — the citations under a finding", () => {
         data: [
           {
             contact_id: "p-9",
+            attachable: true,
             full_name: "Frédéric de Gombert",
             deal_roles: [],
             consent: {},
@@ -433,6 +434,7 @@ describe("company view — the account's own tabs", () => {
           data: [
             {
               contact_id: "p-1",
+              attachable: true,
               full_name: "Christian Hagemeyer",
               title: "Managing director",
               strength: {

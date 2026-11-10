@@ -22,7 +22,9 @@ package capture
 
 import (
 	"context"
+	"crypto/sha256"
 	"fmt"
+	"slices"
 
 	"github.com/jackc/pgx/v5"
 
@@ -70,8 +72,21 @@ type FileKeeper interface {
 		from FileSource, files []CapturedFile) (int, error)
 	// RecordLinks writes a row for each document link a message carried, with
 	// no bytes: the address and the text it was shown under.
+	// It answers how many rows are new; a link already recorded is not.
 	RecordLinks(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID,
-		from FileSource, links []MailLink) error
+		from FileSource, links []MailLink) (int, error)
+	// Stored names where each staged file's bytes now live, so the stored
+	// original can point at the objects instead of carrying the bytes.
+	Stored(staged []StagedFile) ([]StoredFile, error)
+}
+
+// StoredFile is where one staged file's bytes live: the object, its length and
+// the digest of the decoded octets.
+type StoredFile struct {
+	PartID     string
+	StorageKey string
+	Sha256     string
+	Bytes      int64
 }
 
 // CapturedFile is one file a message carried, already bounded, renamed safely
@@ -224,17 +239,17 @@ func (s *Sink) recordParts(
 func (s *Sink) keepParts(
 	ctx context.Context, tx pgx.Tx, activityID ids.ActivityID,
 	rec connector.NormalizedRecord, fields ActivityFields,
-) (connector.NormalizedRecord, error) {
+) (connector.NormalizedRecord, []StagedFile, error) {
 	private, verdict, err := messageIsPrivateTx(ctx, tx, rec, fields)
 	if err != nil {
-		return rec, err
+		return rec, nil, err
 	}
 	// Only a message carrying something asks. copiedOnlyTx reads the owner
 	// identities, and a mail with no parts has nothing to withhold either way.
 	copied := false
 	if !private && len(rec.Parts) > 0 {
 		if copied, err = copiedOnlyTx(ctx, tx, fields); err != nil {
-			return rec, err
+			return rec, nil, err
 		}
 	}
 	var withheldParts []connector.Part
@@ -242,27 +257,27 @@ func (s *Sink) keepParts(
 	case private:
 		rec, withheldParts = stripParts(rec)
 		if err := s.personalPartsWithheld(ctx, tx, rec, len(withheldParts), verdict); err != nil {
-			return rec, err
+			return rec, nil, err
 		}
 	case copied:
 		rec, withheldParts = stripParts(rec)
 		if err := s.copiedPartsWithheld(ctx, tx, rec, len(withheldParts)); err != nil {
-			return rec, err
+			return rec, nil, err
 		}
 	}
 	staged, err := s.stageParts(ctx, rec)
 	if err != nil {
-		return rec, err
+		return rec, nil, err
 	}
 	if err := s.recordParts(ctx, tx, activityID, rec, fields, staged); err != nil {
-		return rec, err
+		return rec, nil, err
 	}
 	if err := s.recordWithheldParts(
 		ctx, tx, activityID, rec, fields, withheldParts, copied,
 	); err != nil {
-		return rec, err
+		return rec, nil, err
 	}
-	return rec, s.recordLinks(ctx, tx, activityID, rec, fields)
+	return rec, staged, s.recordLinks(ctx, tx, activityID, rec, fields)
 }
 
 // recordWithheldParts names the files a withholding message carried, on rows
@@ -317,4 +332,40 @@ func (s *Sink) logPartDrops(ctx context.Context, tx pgx.Tx, rec connector.Normal
 		}
 	}
 	return nil
+}
+
+type capturedFileFingerprint struct {
+	partID, filename, contentType, declaredType string
+	body                                        [sha256.Size]byte
+}
+
+type retryFileKeeper struct {
+	FileKeeper
+	fingerprints []capturedFileFingerprint
+	staged       []StagedFile
+}
+
+func (k *retryFileKeeper) Stage(ctx context.Context, files []CapturedFile) ([]StagedFile, error) {
+	fingerprints := make([]capturedFileFingerprint, len(files))
+	for i, file := range files {
+		fingerprints[i] = capturedFileFingerprint{file.PartID, file.Filename, file.ContentType, file.DeclaredType, sha256.Sum256(file.Body)}
+	}
+	if k.fingerprints != nil && slices.Equal(fingerprints, k.fingerprints) {
+		return k.staged, nil
+	}
+	staged, err := k.FileKeeper.Stage(ctx, files)
+	if err != nil {
+		return nil, err
+	}
+	k.fingerprints, k.staged = fingerprints, staged
+	return staged, nil
+}
+
+func (s *Sink) withRetryFileStage() *Sink {
+	if s.files == nil {
+		return s
+	}
+	clone := *s
+	clone.files = &retryFileKeeper{FileKeeper: s.files}
+	return &clone
 }

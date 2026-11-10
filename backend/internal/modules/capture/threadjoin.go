@@ -25,6 +25,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
@@ -57,25 +58,8 @@ func (s *Sink) WithThreadJoin(j ThreadJoiner) *Sink {
 	return &c
 }
 
-// joinThread records what this email replies to and merges every thread its
-// reply links reach into one.
-//
-// It runs after this seat's import row is written. That holds on every path a
-// capture can take: a new row, a replay, and an import this mailbox took over.
-// The take-over is where an importer's key meets a mailbox's. created says this
-// capture minted the row.
-//
-// The References header is the sender's text, so three rules keep a stranger
-// from steering the join:
-//
-//   - The seat must hold this message (its own import row), and a link counts
-//     only toward a neighbour the seat also holds or is proved to have sent.
-//   - A row this capture just minted got its key from its own header. That key
-//     is merged as a thread only when no other message carries it yet;
-//     otherwise the row stays under it, as every row did before thread
-//     joining, and the conversation its header named is left where it was.
-//   - Only the keys of held neighbours, and a key the row already had before
-//     this capture, are merged whole.
+// joinThread joins keys only when this seat claims every message under them.
+// Import provenance must be written first, including on replays and takeovers.
 func (s *Sink) joinThread(
 	ctx context.Context, tx pgx.Tx, id ids.ActivityID, rec connector.NormalizedRecord, created bool,
 ) error {
@@ -105,36 +89,25 @@ func (s *Sink) joinThread(
 	return s.holdFromJoinedThreadTx(ctx, tx, id)
 }
 
-// mergeLockStatement is one workspace-wide lock for every thread merge. It is
-// spelled once because two callers take it: takeMergeLockFirst before a row is
-// written, and mergeLinkedThreads where the merge happens. Two spellings of one
-// lock name are two locks, and the deadlock ordering would be lost.
-//
-// Held by: TestTheMergeLockHasOneSpelling (backend/gates/mergelockordering_test.go)
-const mergeLockStatement = `SELECT pg_advisory_xact_lock(hashtextextended('thread_merge', 0))`
-
 // mergeLinkedThreads merges the thread keys a held email's reply links reach,
 // under the rules joinThread states.
 func (s *Sink) mergeLinkedThreads(
 	ctx context.Context, tx pgx.Tx, seat ids.UUID, id ids.ActivityID, neighbours []ids.ActivityID, created bool,
 ) error {
-	// Read once without the lock. Nearly every capture finds one key and stops.
-	// A replay that already holds its own row lock must not then wait on the
-	// merge lock for nothing.
+	// Most messages already belong to one component and require no rewrite.
 	keys, err := s.keysToMerge(ctx, tx, seat, id, neighbours, created)
 	if err != nil || len(keys) < 2 {
 		return err
 	}
-	// One lock for every merge in the workspace, and the keys read again under
-	// it. So a concurrent merge cannot retire a key between the read and the
-	// rewrite. takeMergeLockFirst usually holds it already, and an advisory xact
-	// lock is re-entrant within one transaction. Correctness rests on this call;
-	// the probe only decides whether the cost is paid early.
-	if _, err := tx.Exec(ctx, mergeLockStatement); err != nil {
-		return fmt.Errorf("capture: locking the thread merge: %w", err)
+	if err := storekit.LockThreadKeysTx(ctx, tx, keys...); err != nil {
+		return err
 	}
+	lockedKeys := keys
 	if keys, err = s.keysToMerge(ctx, tx, seat, id, neighbours, created); err != nil || len(keys) < 2 {
 		return err
+	}
+	if !slices.Equal(lockedKeys, keys) {
+		return storekit.RetryThreadTransaction(ctx, tx)
 	}
 	into, err := s.threadJoin.Earliest(ctx, tx, keys)
 	if err != nil || into == "" {
@@ -184,7 +157,7 @@ func (s *Sink) keysToMerge(
 		keys = append(keys, own)
 		slices.Sort(keys)
 	}
-	return keys, nil
+	return s.seatClaimsThreadKeysTx(ctx, tx, seat, keys)
 }
 
 // seatHoldsTx answers whether this seat's own mailbox delivered the message:
@@ -224,17 +197,24 @@ func heldNeighbourKeysTx(
 ) ([]string, error) {
 	var args []any
 	arg := func(value any) int { args = append(args, value); return len(args) }
-	// A neighbour on another topic is the conversation this reply left, not one to rejoin.
+	// Word overlap is not transitive; one reply must not bridge two different topics.
 	query := fmt.Sprintf(`
+		WITH held_neighbours AS (
+		    SELECT a.thread_key, a.subject
+		      FROM activity a
+		     WHERE a.thread_key IS NOT NULL AND a.thread_key <> ''
+		       AND a.archived_at IS NULL AND a.id = ANY($%d::uuid[])
+		       AND (a.id = ANY($%d::uuid[]) OR EXISTS (SELECT 1 FROM capture_import ci
+		                    WHERE ci.activity_id = a.id AND ci.user_id = $%d))
+		)
 		SELECT DISTINCT a.thread_key
-		  FROM activity a
+		  FROM held_neighbours a
 		  JOIN activity self ON self.id = $%d
-		 WHERE a.thread_key IS NOT NULL AND a.thread_key <> ''
-		   AND a.archived_at IS NULL
-		   AND a.id = ANY($%d::uuid[])
-		   AND (a.id = ANY($%d::uuid[]) OR EXISTS (SELECT 1 FROM capture_import ci
-		                WHERE ci.activity_id = a.id AND ci.user_id = $%d))
-		   AND %s`, arg(id), arg(neighbours), arg(sent), arg(seat), sameTopicSQL("a", "self"))
+		 WHERE %s
+		   AND NOT EXISTS (SELECT 1 FROM held_neighbours other
+		       WHERE other.thread_key <> a.thread_key
+		         AND mail_topics_differ(a.subject, other.subject))`,
+		arg(neighbours), arg(sent), arg(seat), arg(id), sameTopicSQL("a", "self"))
 	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("capture: reading the threads a reply links: %w", err)

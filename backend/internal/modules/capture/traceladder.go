@@ -152,12 +152,30 @@ func (s *TraceStore) anchorByTraceID(ctx context.Context, tx pgx.Tx, id, caller 
 		a.userID = *owner
 	}
 	if errors.Is(err, pgx.ErrNoRows) {
-		return traceAnchor{}, apperrors.ErrNotFound
+		return traceAnchor{}, missedTrace(ctx, tx, id, shared)
 	}
 	if err != nil {
 		return traceAnchor{}, fmt.Errorf("capture: resolving the trace ladder: %w", err)
 	}
 	return a, nil
+}
+
+// missedTrace answers a trace the anchor did not find. A shared-channel row the
+// caller lacks the grant for is hidden by the gate; any other miss is not found.
+func missedTrace(ctx context.Context, tx pgx.Tx, id ids.UUID, shared bool) error {
+	if shared {
+		return apperrors.ErrNotFound
+	}
+	var hidden bool
+	if err := tx.QueryRow(ctx,
+		`SELECT EXISTS (SELECT 1 FROM capture_trace WHERE id = $1 AND user_id IS NULL)`, id).
+		Scan(&hidden); err != nil {
+		return fmt.Errorf("capture: resolving the trace ladder: %w", err)
+	}
+	if hidden {
+		return auth.HideRow(ctx, traceObject)
+	}
+	return apperrors.ErrNotFound
 }
 
 // anchorByActivityID finds the message behind an activity the caller may read.
@@ -225,5 +243,5 @@ func (s *TraceStore) readRungs(ctx context.Context, tx pgx.Tx, a traceAnchor) ([
 // rather than re-decided, so the drawer and the list it opens from cannot
 // disagree about who may see a shared channel.
 func holdsSharedChannelGrant(ctx context.Context) bool {
-	return auth.Require(ctx, traceObject, principal.ActionRead) == nil
+	return auth.Allows(ctx, traceObject, principal.ActionRead)
 }

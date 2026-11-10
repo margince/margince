@@ -75,7 +75,7 @@ func (s *Store) RecordWithheldFiles(
 			checksum: nullIfEmpty(file.Checksum),
 			withheld: true,
 		}
-		if err := insertCapturedAttachment(ctx, tx, activityID, from, row); err != nil {
+		if _, err := insertCapturedAttachment(ctx, tx, activityID, from, row); err != nil {
 			return err
 		}
 	}

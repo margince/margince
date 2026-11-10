@@ -83,15 +83,19 @@ function MarkChip({
         type="button"
         className="standing-timeline-mark"
         style={{ left: `${px}px` }}
-        aria-label={content.head}
+        aria-label={
+          members.length === 1
+            ? t("standing.mark.label", { what: newest.what, when: newest.when })
+            : content.head
+        }
         aria-haspopup="true"
         aria-expanded={peekOpen}
         {...peekProps}
       >
         <Icon aria-hidden="true" />
-        {members.length === 1 && newest.direction && (
+        {members.length === 1 && newest.side && (
           <span className="standing-timeline-mark-way">
-            {newest.direction === "inbound" ? (
+            {newest.side === "theirs" ? (
               <ArrowDownLeft aria-hidden="true" />
             ) : (
               <ArrowUpRight aria-hidden="true" />

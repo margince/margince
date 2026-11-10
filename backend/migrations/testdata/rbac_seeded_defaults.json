@@ -385,6 +385,12 @@
         "read": true,
         "update": true
       },
+      "tax_rate": {
+        "create": true,
+        "delete": false,
+        "read": true,
+        "update": false
+      },
       "team_admin": {
         "create": true,
         "delete": false,
@@ -814,6 +820,12 @@
         "create": false,
         "delete": false,
         "read": true,
+        "update": false
+      },
+      "tax_rate": {
+        "create": false,
+        "delete": false,
+        "read": false,
         "update": false
       },
       "team_admin": {
@@ -1247,6 +1259,12 @@
         "read": true,
         "update": false
       },
+      "tax_rate": {
+        "create": false,
+        "delete": false,
+        "read": false,
+        "update": false
+      },
       "team_admin": {
         "create": false,
         "delete": false,
@@ -1677,6 +1695,12 @@
         "delete": true,
         "read": true,
         "update": true
+      },
+      "tax_rate": {
+        "create": true,
+        "delete": false,
+        "read": true,
+        "update": false
       },
       "team_admin": {
         "create": false,
@@ -2109,6 +2133,12 @@
         "read": true,
         "update": false
       },
+      "tax_rate": {
+        "create": false,
+        "delete": false,
+        "read": false,
+        "update": false
+      },
       "team_admin": {
         "create": false,
         "delete": false,
@@ -2538,6 +2568,12 @@
         "create": false,
         "delete": false,
         "read": true,
+        "update": false
+      },
+      "tax_rate": {
+        "create": false,
+        "delete": false,
+        "read": false,
         "update": false
       },
       "team_admin": {

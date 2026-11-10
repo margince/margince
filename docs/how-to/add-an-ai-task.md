@@ -77,24 +77,12 @@ one certification run can cover:
 
 ## Steps
 
-1. **Get the declaration into the contract.**
-   `backend/api/ai-tasks.yaml` is a **mirror**.
-   The AI task contract that rules is kept in a specification repository the maintainers own.
-   This file must match it word for word.
-   So the declaration is agreed there first, and lands here as a copy.
+1. **Declare the task in the contract**, `backend/api/ai-tasks.yaml`.
+   This file rules the AI task list; no other document comes before it.
+   To ask for a new task, open an issue with the YAML block below.
+   Add a sentence on what calls it.
 
-   What that means for you depends on where you are:
-
-   - Maintainer, or working with access to the specification: land the declaration in the specification
-     repository. Then copy it into `ai-tasks.yaml` with no change.
-   - Someone outside the team: **open an issue** that asks for the task or site. Fill in the YAML block
-     below, and add a sentence on what calls it. A maintainer lands it in the specification. Your pull request
-     then carries the copy and everything from step 2 on.
-
-     Do not skip to a later step and edit `ai-tasks.yaml` on its own. A mirror with no declaration in the specification behind it cannot be merged, even with a green build.
-     No gate finds this order, because every check compares the code against this repository's copy.
-
-   The declaration itself, the shape to put in that issue and to copy here:
+   The declaration has this shape:
 
    ```yaml
    tasks:
@@ -113,8 +101,9 @@ one certification run can cover:
    ```
 
    - `status`: `shipped` means every name in `sites[]` must exist, be registered, own a certification case
-     and own a corpus scenario. `planned` allows none of the four. Declare `planned` while the site is not written yet.
-     Change it to `shipped` in the commit that adds the site.
+     and own a corpus scenario. A `planned` task lists no `sites[]` at all, and has no case, scenario or record.
+     Declare `planned` while no site is written yet; name the sites to come in `doc`.
+     Add `sites[]` and change it to `shipped` in the commit that adds the first site.
    - `company_context`: `none`, or scopes and `token_budget` (and `conditional` for "only when the caller
      asks"). You must set it: a missing rule is a build error, never a default at run time.
    - `no_payload: true`: content from this task must never reach `ai_call_payload`, for any capture rule the
@@ -152,6 +141,49 @@ one certification run can cover:
    `TestNoModelClientOutsideTheGate` fails a model client built in any other place.
    Keep the builder and the checker in reach: the certification case must call the same two functions.
 
+   Show the model short labels, never a record UUID. Name each record the prompt shows with a
+   `promptref.Refs` table (`backend/internal/shared/kernel/promptref`). Build the table from the
+   records in the order the prompt shows them, in one function that the builder and the parser both
+   call. The parser reads each label of the reply back to its ID, after the shape check has refused
+   any label the call did not show.
+
+   ```go
+   func messageRefs(batch []Message) *promptref.Refs {
+   	refs := promptref.New("m")              // m1, m2, … in batch order
+   	for _, m := range batch {
+   		refs.For(m.ID.String())
+   	}
+   	return refs
+   }
+
+   // builder: the span, the prompt text and the answer enum carry refs
+   fence.WrapAttr("source_id", messageRefs(batch).For(m.ID.String()), body)
+   // parser: after the shape check, read each ref back
+   id, ok := messageRefs(batch).ID(result.ID) // ok is false for a ref never shown
+   ```
+
+   A batch that answers one result per label can use `resolveBatchRefs` in
+   `internal/compose/batchfidelity.go`. A JSON payload built with record IDs goes out through
+   `promptref.Rewrite`, which puts each ID's label in its place. `promptref.Mint` makes those tables
+   from every UUID in the payload, one table for each kind. A site that sends a whole record then
+   misses none. `Refs.NamedIn` finds a label that a reply wrote in reader text. The parser refuses
+   that text as it refuses an ID there.
+
+   Evidence of the shape `{entity_type, entity_id}` reads back through `claims.Refs`, one table for
+   each entity type. `claims.MintRefs` makes it from the payload. `Show` writes the payload with
+   labels, and `Read` turns the labels in the reply back into IDs.
+   `TestNoSiteShowsTheModelARecordUUID` builds every request of every corpus scenario. It fails a
+   site whose prompt, answer schema or tool list carries a UUID.
+
+   A test lane reads the label of a record off a JSON request with `aitest.RefWhere`, by a field
+   the test knows. `aitest.RefBeside` does the same by the record's name. An integration fake for a
+   fenced prompt wraps in `inRefs`, in `internal/compose/refscript_integration_test.go`. It finds
+   each record in the request by text the record shows, and writes the label the request gave it.
+   Why a UUID is a bad name for a model:
+   [prompt-shape.md](../explanation/prompt-shape.md#short-refs-not-record-ids). Before you write
+   the prompt's rules, read
+   [Wording a small model reads wrong](../explanation/prompt-shape.md#wording-a-small-model-reads-wrong).
+
 5. **Register the site and bind its case** with one line in the **census**.
    The census is `compose.NewTaskCensus` in `internal/compose/aitaskregistry.go`.
    It lists every invocation site this build ships, and every start and test run checks it against the
@@ -185,6 +217,7 @@ one certification run can cover:
    | a fixture that is not the shape its site takes | `TestEveryCorpusScenarioPreparesAgainstItsSite` |
    | a closed answer enum with a kind that no accepted corpus scenario names | `TestEveryClosedAnswerKindCarriesAScenario`. Each kind of the enum needs its own accepted scenario; one per site is not enough |
    | a task with no lane, or a lane no role wires | `TestEveryCensusedSiteRidesALaneAProcessRoleWires` |
+   | a prompt, answer schema or tool list that shows a record UUID | `site X shows the model a record UUID` |
    | a new `.go` file with no SPDX header | `TestEveryHandWrittenGoFileCarriesTheLicenseHeader` |
 
 8. **Certify it** once the gates are green. This is the one step that costs money.
@@ -196,7 +229,7 @@ one certification run can cover:
    Read that first, or the run fails on a missing key.
 
    ```
-   # real calls on your key; MODEL is required. JUDGE defaults to claude_cli:claude-sonnet-4-6
+   # real calls on your key; MODEL is required. JUDGE defaults to claude_cli:claude-sonnet-5-5
    make e2e-ai TASK=<your task> MODEL=gemini:gemini-3.1-flash-lite
    make e2e-ai-report                # free: band, scope, binding, counts, scenario coverage
    cd backend && go test ./internal/compose/aicert/ -run TestAICertificationPage -update-ai-cert
@@ -282,8 +315,8 @@ Write the question to the guide for decision models. Do not copy the prompt:
 - A record covers one (provider, model, `env`) binding. An edit to the prompt, the request builder, the grader
   or the score rule gives a new version and marks the record **stale**. Certify again; do not edit a record
   by hand.
-- **Renaming** a task or site starts in the specification, like any other contract change. It then lands
-  here in each place the old name was used. That is the copied declaration, the census line, and the case's
+- **Renaming** a task or site starts in `ai-tasks.yaml`, like any other contract change. It then lands
+  in each place the old name was used. That is the declaration, the census line, and the case's
   `Site()`. It is also the corpus `site:` field, the record folder, and any entry keyed by the old name.
 - **Removing a site** means you also delete its corpus scenarios and its record. A record left behind claims a
   band for a prompt that no longer ships.

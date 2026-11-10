@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../../api/schema";
+import { en } from "../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -10,6 +11,7 @@ import {
   type RouteMap,
   StoryProviders,
 } from "../../testing/story-utils";
+import { FirstCheck } from "./analytics.forecast.firstcheck";
 import { ForecastReview } from "./analytics.forecast.review";
 
 // What should be checked before the forecast call: the coverage line first and
@@ -25,6 +27,7 @@ type Preview = components["schemas"]["ForecastAssurancePreview"];
 
 const RUN: Assurance = {
   run_id: "33333333-3333-4333-8333-333333333333",
+  review_deliveries: { pending: 0, failed: 0, delivered: 0 },
   as_of: "2026-07-14T06:00:00Z",
   status: "complete",
   readiness: "needs_review",
@@ -195,15 +198,22 @@ export const OutOfDate: Story = {
   },
 };
 
-// No run has completed: the endpoint's 404 is its answer, and the panel says
-// the pipeline has not been checked rather than calling it clean.
-export const NotCheckedYet: Story = {
+export const StartInputChecks: Story = {
   render: () => {
     installFetchStub(routes(null, []));
     return (
       <StoryProviders>
-        <ForecastReview />
+        <FirstCheck title={en["review.title"]} />
       </StoryProviders>
     );
   },
+};
+
+export const StartInputChecksOnPhone: Story = {
+  ...StartInputChecks,
+  tags: ["uat-phone"],
+};
+export const StartInputChecksDark: Story = {
+  ...StartInputChecks,
+  globals: { theme: "dark" },
 };

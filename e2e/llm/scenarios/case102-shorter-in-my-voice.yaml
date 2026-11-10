@@ -1,0 +1,27 @@
+# CASE 102 — The Voice DNA is the user's own. Its preferences go to change_my_settings, and no workspace template changes.
+name: case102_shorter_in_my_voice
+criteria: [1]
+writes: true
+
+prompt: |
+  My drafts come out too long. Add to my Voice DNA that I keep mails under five sentences. Create it if I have none.
+
+must_call:
+  - change_my_settings
+
+must_call_with:
+  - change_my_settings.action=update_voice_profile|change_my_settings.action=create_voice_profile
+
+must_call_matching:
+  - 'change_my_settings~(?i)(five|5) sentences'
+
+must_not_call_with:
+  - change_settings~.
+
+may_call:
+  - read_workspace
+  - read_view
+  - whoami
+
+runs: 3
+pass_at: 2

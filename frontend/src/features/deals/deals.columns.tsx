@@ -1,3 +1,4 @@
+import { toBoardDeal } from "../../components/boarddeal";
 import { DealStatusBadge } from "../../components/dealstatusbadge";
 import { EntityRef, type OwnerNaming } from "../../components/entityref";
 import { ownerColumn, tagsColumn } from "../../components/recordlist";
@@ -5,11 +6,15 @@ import { Badge } from "../../design-system/atoms";
 import { CellStrip, type ListColumn } from "../../design-system/listtable";
 import type { BoardMoneyColumn } from "../../design-system/pipelineboard";
 import { FieldGuard } from "../../design-system/rbac";
-import { formatAge, formatDate, formatMoney } from "../../format/format";
+import {
+  formatAge,
+  formatDate,
+  formatMoney,
+  formatPercent,
+} from "../../format/format";
 import type { Locale, useT } from "../../i18n";
 import { closeDayOf } from "../../lib/closeday";
 import type { StageTotals } from "../../lib/deals.queries";
-import { toBoardDeal } from "./boarddeal";
 import type { CompanyNaming } from "./dealcompanymarks";
 import { lastMailColumn } from "./dealmailaside";
 import type { Deal, Stage } from "./deals";
@@ -24,6 +29,8 @@ export function buildColumns(
   // play, which is the ordinary case.
   totalsWithheld?: string,
   owners?: OwnerNaming,
+  uncounted: ReadonlySet<string> = new Set(),
+  ownerPhotos?: ReadonlyMap<string, string>,
 ): BoardMoneyColumn[] {
   return [...stages]
     .sort((a, b) => a.position - b.position)
@@ -40,11 +47,13 @@ export function buildColumns(
         rawMinor: stageTotals?.baseMinor ?? null,
         weightedMinor: stageTotals?.weightedBaseMinor ?? null,
         currency: stageTotals?.currency ?? null,
-        deals: stageDeals.map((deal) => toBoardDeal(deal, naming, owners)),
-        // The true count, not the loaded page's. It falls back to the page
-        // count while totals are still loading, so the column shows some
-        // number rather than a misleading 0.
-        count: stageTotals?.count ?? stageDeals.length,
+        deals: stageDeals.map((deal) =>
+          toBoardDeal(deal, naming, owners, ownerPhotos),
+        ),
+        count: columnCount(
+          stageTotals,
+          uncounted.has(stage.id) ? null : stageDeals.length,
+        ),
         asOf: stageTotals?.asOf ?? null,
         timezone: stageTotals?.timezone ?? null,
         unpricedCount: stageTotals?.unpricedCount ?? null,
@@ -52,6 +61,31 @@ export function buildColumns(
         sumHiddenReason: totalsWithheld,
       };
     });
+}
+
+// The report's count over every matching deal. While the report is pending,
+// withheld or refused, the loaded cards count; before a first read, none do.
+function columnCount<Loaded extends number | null>(
+  stageTotals: StageTotals | undefined,
+  loaded: Loaded,
+): number | Loaded {
+  return stageTotals?.count ?? loaded;
+}
+
+export function boardDealCount(
+  stages: readonly Stage[],
+  totals: Map<string, StageTotals> | null | undefined,
+  deals: readonly Deal[],
+): number {
+  return stages.reduce(
+    (sum, stage) =>
+      sum +
+      columnCount(
+        totals?.get(stage.id),
+        deals.filter((deal) => deal.stage_id === stage.id).length,
+      ),
+    0,
+  );
 }
 
 /**
@@ -162,6 +196,19 @@ export function dealColumns(
       numeric: true,
       sort: "amount_minor",
       cell: (deal) => <AmountCell deal={deal} locale={locale} />,
+    },
+    {
+      // The deal's own probability where one is set, else its stage's: the
+      // chance the forecast weights the amount beside it by.
+      key: "probability",
+      header: t("deal.winProbability"),
+      numeric: true,
+      cell: (deal) =>
+        deal.win_probability == null ? null : (
+          <span className="t-num">
+            {formatPercent(deal.win_probability / 100, locale)}
+          </span>
+        ),
     },
     {
       key: "close",

@@ -276,7 +276,7 @@ func (e *reconcileEnv) readTranscriptFor(
 		t.Fatalf("starting the reading: %v", err)
 	}
 	quiet := slog.New(slog.NewTextHandler(os.Stderr, nil))
-	proposer := NewTranscriptProposer(e.Pool, brain, e.svc, time.Now, quiet)
+	proposer := NewTranscriptProposer(e.Pool, brain, e.svc, func() time.Time { return clocktest.Now(t) }, quiet)
 	worker := withTranscriptReader(principal.WithWorkspaceID(context.Background(), e.WS), requestedBy, started.ID)
 	if err := proposer.Read(worker, e.Activities, started.ID, activity); err != nil {
 		t.Fatalf("reading the transcript: %v", err)
@@ -298,6 +298,7 @@ func (e *reconcileEnv) logTranscript(t *testing.T, subject string, dealIDs ...id
 	body, source := transcriptBody, "transcript"
 	in := activities.LogActivityInput{
 		Kind: "meeting", Subject: &subject, Body: &body, SourceSystem: &source, Source: "manual",
+		OccurredAt:      new(clocktest.Now(t).Add(-time.Hour)),
 		AttendeeUserIDs: []ids.UserID{ids.From[ids.UserKind](e.Rep2)},
 	}
 	for _, deal := range dealIDs {

@@ -5,6 +5,7 @@ import { ADDRESS_FIELDS } from "../../components/companyform";
 import { useEmployerSummary } from "../../components/contactemployersummary";
 import { rosterOwnerName } from "../../components/entityref";
 import { leadHeldNoticeFor } from "../../components/leadheldnotice";
+import { LinkedInChip } from "../../components/linkedinchip";
 import { RailField } from "../../components/railfield";
 import { RecordCustomFields } from "../../components/recordcustomfields";
 import { RecordFields } from "../../components/recordfields";
@@ -16,7 +17,6 @@ import {
   EmailFace,
 } from "../../design-system/contactlink";
 import { FieldRow } from "../../design-system/fieldgrid";
-import { OffsiteLink } from "../../design-system/offsitelink";
 import { RecordCard } from "../../design-system/recordcard";
 import type {
   DetailRow,
@@ -33,16 +33,18 @@ import { industryWords } from "../../format/industry";
 import { linkedinUrl } from "../../format/weburl";
 import { useLocale, useT } from "../../i18n";
 import { useCanWriteRecord } from "../../lib/capability";
+import { currentEmployer } from "../../lib/employmentcurrency";
+import { labelFor } from "../../lib/labelfor";
 import { useMemberName } from "../../lib/membernames";
-import { useRecordZone } from "../../lib/recordzone";
 import { routeHash } from "../../lib/router";
+import { useViewerZone } from "../../lib/viewerzone";
 import { BoughtMark, boughtFields } from "./boughtmarks";
 import { BoughtAttributes } from "./contactboughtattributes";
 import { useContactEdit } from "./contactedit";
 import { ContactSource } from "./contactfacts";
+import { EmployerValue } from "./employerchange";
 import { type ProfileField, proposedEmployer } from "./employerproposal";
 import { ProposedEmployerRow } from "./employerproposalrow";
-import { currentEmployer } from "./employmentcurrency";
 
 type Contact = components["schemas"]["Contact"];
 type Contact360 = components["schemas"]["Contact360"];
@@ -51,7 +53,7 @@ type Employment = components["schemas"]["Contact360Employment"];
 /**
  * The left column's About and Ownership groups. Every field the design
  * lists has a row; an empty one folds behind "Show N empty fields" with the
- * word for its empty state. The rows read; the Research tab's details change them.
+ * word for its empty state.
  */
 export function useContactAboutSections(view: Contact360): DetailSection[] {
   const t = useT();
@@ -78,7 +80,7 @@ export function useContactAboutSections(view: Contact360): DetailSection[] {
     : proposedEmployer(view, view.employments?.data ?? []);
   const owner = rosterOwnerName(contact.owner_id, ownerName, t, notSet);
   const record = { entityType: "contact", entityId: contact.id } as const;
-  // Every row but the employer changes in place; an empty one still folds.
+  // Every row opens its edit from its value; an empty one still folds.
   // A handle (an address or number with its marks and glyphs) lays them out.
   const field = (
     key: string,
@@ -153,13 +155,7 @@ export function useContactAboutSections(view: Contact360): DetailSection[] {
           // connector writes this value, so another host gets no link.
           link: Boolean(linkedinHref),
           text: linkedin,
-          reading: linkedinHref ? (
-            <OffsiteLink href={linkedin}>
-              {linkedinHref.pathname.replace(/^\/|\/$/g, "")}
-            </OffsiteLink>
-          ) : (
-            linkedin
-          ),
+          reading: <LinkedInChip href={linkedin} name={contact.full_name} />,
         }),
         field("title", t("create.contactTitle"), Boolean(contact.title), {
           keys: ["title"],
@@ -214,9 +210,15 @@ function employerValue(
   proposed: ProfileField | undefined,
   notSet: string,
 ): ReactNode {
-  if (employer) return <EmployerCard employment={employer} />;
   if (proposed) return <ProposedEmployerRow view={view} fact={proposed} />;
-  return notSet;
+  return (
+    <EmployerValue
+      view={view}
+      employer={employer}
+      reading={employer && <EmployerCard employment={employer} />}
+      notSet={notSet}
+    />
+  );
 }
 
 /**
@@ -254,9 +256,9 @@ function EmployerCard({ employment }: Readonly<{ employment: Employment }>) {
 }
 
 /**
- * Every field of the contact, each editing in place, with its tags, when it
- * was created and who wrote it. The Research tab draws it: the left column
- * reads the same fields, and this is where they change.
+ * Every field of the contact, each editing from its value, with its tags, when it
+ * was created and who wrote it. The Research tab draws it; the left column edits
+ * its own rows the same way.
  */
 export function ContactDetails({
   contact,
@@ -267,7 +269,7 @@ export function ContactDetails({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const edit = useContactEdit(contact);
   const bought = boughtFields(contact);
   const linkedin =
@@ -291,7 +293,7 @@ export function ContactDetails({
                     readOnly={Boolean(contact.archived_at)}
                   />
                   <span className="t-caption">
-                    {t(EMAIL_TYPE_LABEL[email.email_type ?? "work"])}
+                    {t(labelFor(EMAIL_TYPE_LABEL, email.email_type ?? "work"))}
                   </span>
                   <BoughtMark
                     bought={bought.get(`email:${email.id}`)}
@@ -309,7 +311,7 @@ export function ContactDetails({
                     record={{ entityType: "contact", entityId: contact.id }}
                   />
                   <span className="t-caption">
-                    {t(PHONE_TYPE_LABEL[phone.phone_type ?? "work"])}
+                    {t(labelFor(PHONE_TYPE_LABEL, phone.phone_type ?? "work"))}
                   </span>
                   <BoughtMark
                     bought={bought.get(`phone:${phone.id}`)}

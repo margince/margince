@@ -1,6 +1,7 @@
 import type { components } from "../api/schema";
 import type { Translator } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { labelFor } from "./labelfor";
 
 type AiTask = components["schemas"]["AiTask"];
 
@@ -25,7 +26,11 @@ const TASK_NAME_KEYS: Readonly<Record<AiTask, MessageKey>> = {
   owed_verdict: "aiTask.name.owed_verdict",
   propose_roles: "aiTask.name.propose_roles",
   rate_extract: "aiTask.name.rate_extract",
+  reader_rendering: "aiTask.name.reader_rendering",
+  report_interpret: "aiTask.name.report_interpret",
+  report_setup: "aiTask.name.report_setup",
   request_settlement: "aiTask.name.request_settlement",
+  deal_verdict: "aiTask.name.deal_verdict",
   signal_extract: "aiTask.name.signal_extract",
   site_extract: "aiTask.name.site_extract",
   site_fact_extract: "aiTask.name.site_fact_extract",
@@ -50,7 +55,7 @@ export function aiTaskLabel(
   fallback?: string | null,
 ): string {
   if (task === "embeddings") return t("aiRouting.lane.embeddings");
-  if (task && isAiTask(task)) return t(TASK_NAME_KEYS[task]);
+  if (task && isAiTask(task)) return t(labelFor(TASK_NAME_KEYS, task));
   const name = fallback?.trim();
   return name && name !== task ? name : t("aiTask.name.unknown");
 }

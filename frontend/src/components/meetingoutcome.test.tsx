@@ -102,13 +102,26 @@ function renderCard() {
 }
 
 describe("MeetingOutcome", () => {
-  it("records Held in one press, at the meeting's version, with no dialog", async () => {
+  // The choice records what happened; "Details" below it is the notes.
+  it("names the Held or No-show choice for what it records", async () => {
+    stubServer([]);
+    renderCard();
+
+    await userEvent.click(screen.getByRole("button", { name: /Add notes/ }));
+    const dialog = await screen.findByRole("dialog");
+
+    expect(
+      await within(dialog).findByRole("combobox", { name: "What happened" }),
+    ).toBeTruthy();
+  });
+
+  it("records It happened in one press, at the meeting's version, with no dialog", async () => {
     const sent: Sent[] = [];
     stubServer(sent);
     renderCard();
 
     await userEvent.click(
-      screen.getByRole("button", { name: "Held: Site visit" }),
+      screen.getByRole("button", { name: "It happened: Site visit" }),
     );
 
     expect(await screen.findByText("Meeting outcome recorded")).toBeTruthy();
@@ -123,13 +136,14 @@ describe("MeetingOutcome", () => {
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 
-  it("draws Held first, then Add notes, then Mark as canceled", () => {
+  it("asks How did it go?, then draws It happened, Add notes and Did not happen", () => {
     stubServer([]);
     renderCard();
 
+    expect(screen.getByText("How did it go?")).toBeTruthy();
     expect(
       screen.getAllByRole("button").map((button) => button.textContent),
-    ).toEqual(["Held", "Add notes", "Mark as canceled"]);
+    ).toEqual(["It happened", "Add notes", "Did not happen"]);
   });
 
   it("saves the notes dialog through the one outcome writer", async () => {

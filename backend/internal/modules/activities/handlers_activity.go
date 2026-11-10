@@ -11,6 +11,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 func (h Handlers) ListActivities(w http.ResponseWriter, r *http.Request, params crmcontracts.ListActivitiesParams) {
@@ -29,10 +30,15 @@ func (h Handlers) ListActivities(w http.ResponseWriter, r *http.Request, params 
 		CustomFilters:    httperr.CustomFieldFilters(r),
 	}
 	if params.Kind != nil {
-		k := string(*params.Kind)
-		in.Kind = &k
+		for _, kind := range *params.Kind {
+			in.Kinds = append(in.Kinds, string(kind))
+		}
 	}
 	in.ChannelProvider = params.ChannelProvider
+	if params.CallOutcome != nil {
+		outcome := string(*params.CallOutcome)
+		in.CallOutcome = &outcome
+	}
 	if err := httperr.RequirePair("entity_type", params.EntityType,
 		"entity_id", params.EntityId); err != nil {
 		httperr.Write(w, r, err)
@@ -54,7 +60,22 @@ func (h Handlers) ListActivities(w http.ResponseWriter, r *http.Request, params 
 		writeStoreErr(w, r, err)
 		return
 	}
-	httperr.WriteJSON(w, http.StatusOK, crmcontracts.ActivityListResponse{Data: activities, Page: pageInfo(page)})
+	out := crmcontracts.ActivityListResponse{Data: activities, Page: pageInfo(page)}
+	if h.listCalendar != nil {
+		calendar, owed, err := h.listCalendar(r.Context(), datasource.ActivityListScope{
+			Kinds:    in.Kinds,
+			Windowed: in.OccurredAfter != nil || in.OccurredBefore != nil,
+			Narrowed: in.EntityID != nil || in.AssigneeID != nil || in.WithinProjectID != nil,
+		})
+		if err != nil {
+			httperr.Write(w, r, err)
+			return
+		}
+		if owed {
+			out.Calendar = &calendar
+		}
+	}
+	httperr.WriteJSON(w, http.StatusOK, out)
 }
 
 func (h Handlers) LogActivity(w http.ResponseWriter, r *http.Request, _ crmcontracts.LogActivityParams) {

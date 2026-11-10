@@ -32,21 +32,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
 )
 
-// approvalsHandlersWithEffects wires the approvals HTTP surface with
-// every registered follow-on effect — the decision path and the effects
-// share one service so a released effect can redeem what it decides on.
-//
-// volume is the meter an approved step-up widens, and it is installed HERE
-// and nowhere else: this is the service the HTTP decision path runs on. The
-// other services built from approvalsServiceWithEffects are staging-only — a
-// nightly proposer, a rematch sweep — and none of them ever decides, so having
-// no releaser is the shape of what they do rather than a copy-paste omission.
-//
-// log is installed for the same reason and on the same service: a bundle member
-// whose effect fails AFTER its decision committed is reported to the client by
-// outcome alone, so this is the process that has to carry the cause.
-// It also answers the lane a website lead is told through, installed here
-// alone, for rewireConfirmationLane to fill once the mail lane is wired.
+// approvalsHandlersWithEffects adds the HTTP volume releaser, error logger,
+// and website-lead notice lane to the shared decision effects.
 func approvalsHandlersWithEffects(
 	pool *pgxpool.Pool, volume approvals.VolumeReleaser, log *slog.Logger,
 ) (approvals.Handlers, *siteLeadNoticeLane) {
@@ -54,15 +41,13 @@ func approvalsHandlersWithEffects(
 	return approvals.NewHandlers(approvalsServiceTelling(pool, notices).WithVolumeReleaser(volume).WithLogger(log)), notices
 }
 
-// approvalsServiceWithEffects is the registration list itself, split from the
-// handler wiring so a fitness test can enumerate what is stageable without
-// standing up an HTTP surface. Every kind registered here must carry a
-// decision-grant mapping (TestEveryRegisteredEffectKindHasADecisionGrantMapping).
-func approvalsServiceWithEffects(pool *pgxpool.Pool) *approvals.Service {
+// NewApprovalsServiceWithEffects wires the decision effects used by automatic
+// approval runs. Website-lead decisions need the HTTP notice lane instead.
+func NewApprovalsServiceWithEffects(pool *pgxpool.Pool) *approvals.Service {
 	return approvalsServiceTelling(pool, &siteLeadNoticeLane{})
 }
 
-// approvalsServiceTelling is approvalsServiceWithEffects with the lane a website
+// approvalsServiceTelling is NewApprovalsServiceWithEffects with the lane a website
 // lead is told through. An empty lane refuses every site lead, which is right
 // for the services that only stage.
 func approvalsServiceTelling(pool *pgxpool.Pool, notices *siteLeadNoticeLane) *approvals.Service {
@@ -120,10 +105,6 @@ func approvalsServiceTelling(pool *pgxpool.Pool, notices *siteLeadNoticeLane) *a
 	svc.WithEffect(CommitmentTaskKind, commitmentTaskEffect(svc, commitmentTasks, newContactsStore(InstallationDB(pool))))
 	svc.WithPrecheck(CommitmentTaskKind, commitmentTaskPrecheck(InstallationDB(pool), commitmentTasks))
 	svc.WithDeclinedEffect(CommitmentTaskKind, commitmentTaskDeclineEffect())
-	svc.WithEffect(deals.StageProgressionKind, stageProgressionEffect(svc,
-		deals.NewStore(InstallationDB(pool), DealsInstallation()).
-			WithOwnDomains(ownDomainReader{store: capture.NewOwnDomainStore(InstallationDB(pool))})))
-	svc.WithPrecheck(deals.StageProgressionKind, stageProgressionPrecheck())
 	svc.WithEffect(fxRateProposalKind, fxRateAcceptEffect(svc, deals.NewStore(InstallationDB(pool), DealsInstallation())))
 	return svc
 }

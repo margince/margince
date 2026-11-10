@@ -30,7 +30,7 @@ func TestTeamDecisionResponsibilityTracksLiveMembership(t *testing.T) {
 	now := time.Date(2026, 10, 18, 12, 0, 0, 0, time.UTC)
 	pipeline, open, _ := integration.DealFixture(t, e)
 	deal := e.SeedDeal(t, "Example team renewal", pipeline, open, &e.Rep1)
-	queue := approvalsServiceWithEffects(e.Pool)
+	queue := NewApprovalsServiceWithEffects(e.Pool)
 	decision, err := queue.Stage(onBehalfOf(e.AgentCtx(), e.Rep1), approvals.StageInput{
 		Kind: "advance_deal", ProposedChange: json.RawMessage(`{"stage":"won"}`),
 		DiffHash: "team-owned-stage", TargetType: "deal", TargetID: deal, Summary: "Review renewal stage",
@@ -110,7 +110,7 @@ func TestTeamWorklistExcludesUnlinkedOutsideTasksAndRefusesTheirOwner(t *testing
 		}
 		tasks[owner] = ids.UUID(row.Id).String()
 	}
-	feed := newAttentionService(e.Pool, approvalsServiceWithEffects(e.Pool), func() time.Time { return now })
+	feed := newAttentionService(e.Pool, NewApprovalsServiceWithEffects(e.Pool), func() time.Time { return now })
 	for _, tc := range []struct {
 		name   string
 		reader ids.UUID
@@ -186,7 +186,7 @@ func TestTeamBoardCountsOnlyReadableWaitingMail(t *testing.T) {
 		}
 		judge := principal.SystemActing(e.Admin(), "system:owed_verdict")
 		id := ids.UUID(message.Id)
-		if applied, err := e.Activities.SetCaptureLabel(judge, id, "commitment"); err != nil || applied == private {
+		if applied, err := e.LabelCapture(judge, id, "commitment"); err != nil || applied == private {
 			t.Fatalf("capture label on private=%v: %v %v", private, applied, err)
 		}
 		if private {
@@ -196,7 +196,7 @@ func TestTeamBoardCountsOnlyReadableWaitingMail(t *testing.T) {
 			t.Fatalf("owed verdict: %v %v", applied, err)
 		}
 	}
-	feed := newAttentionService(e.Pool, approvalsServiceWithEffects(e.Pool), func() time.Time { return now })
+	feed := newAttentionService(e.Pool, NewApprovalsServiceWithEffects(e.Pool), func() time.Time { return now })
 	for _, tc := range []struct {
 		reader ids.UUID
 		want   int

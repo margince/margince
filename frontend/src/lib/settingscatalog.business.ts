@@ -5,6 +5,8 @@ import {
   acts,
   always,
   anyOf,
+  companyContext,
+  composedUnits,
   destroys,
   readingIsTheAct,
   reads,
@@ -22,11 +24,21 @@ export const BUSINESS_PAGES = [
     changes: always,
   },
   {
+    id: "notifications",
+    group: "me",
+    scope: "self",
+    requires: always,
+    // Both endpoints read and write the calling seat's rows, so there is
+    // nothing here an admin sets for somebody else and no grant to withhold.
+    changes: always,
+  },
+  {
     id: "meetings",
     group: "me",
     scope: "self",
     requires: always,
     changes: always,
+    tabs: [{ id: "links" }, { id: "availability" }, { id: "guests" }],
   },
   {
     id: "voice",
@@ -38,6 +50,12 @@ export const BUSINESS_PAGES = [
     // holds the read alone. `always` here would put Voice in that reader's rail
     // with nothing on it they could touch.
     changes: acts(writes("voice_profile")),
+    tabs: [
+      { id: "overview" },
+      { id: "samples" },
+      { id: "rules" },
+      { id: "builds" },
+    ],
   },
   {
     id: "agents",
@@ -47,38 +65,25 @@ export const BUSINESS_PAGES = [
     // Passports, connected agents and the autonomy choice are all this reader's.
     changes: always,
   },
-  {
-    id: "notifications",
-    group: "me",
-    scope: "self",
-    requires: always,
-    // Both endpoints read and write the calling seat's rows, so there is
-    // nothing here an admin sets for somebody else and no grant to withhold.
-    changes: always,
-  },
-  // Self: every card is the reader's own. The mail-sharing plate states a
-  // company rule and carries its own "Whole company" badge, changed on Capture
-  // rules; the Telegram bot lives on Integrations.
+  // Mixed: what the reader is connected to is theirs, and the Activity tab's
+  // CaptureExclusionsCard also states company rules behind
+  // `capture_settings:update`. Overnight preparation lives on Account.
   {
     id: "connections",
     group: "me",
-    scope: "self",
-    requires: always,
-    // The mailbox and LinkedIn controls are the reader's own and need no
-    // grant; the mail-sharing plate states a value and offers no control.
-    changes: always,
-  },
-  // Mixed: CaptureExclusionsCard carries both scopes by design, and the
-  // workspace activity view behind `capture_trace:read` is the installation's.
-  // The held threads and senders cards are the reader's own.
-  {
-    id: "capture-activity",
-    group: "me",
     scope: "mixed",
     requires: always,
-    // The reader's own capture trace and their own exclusions. The workspace
-    // half of CaptureExclusionsCard asks `capture_settings:update` itself.
+    // The mailbox, LinkedIn and capture-trace controls are the reader's own and
+    // need no grant; the company half of the exclusions asks its own.
     changes: always,
+    tabs: [
+      { id: "mail" },
+      { id: "addresses" },
+      { id: "linkedin" },
+      // Only a build that composed a unit holding the member's own secret.
+      { id: "accounts", requires: composedUnits("user") },
+      { id: "activity" },
+    ],
   },
 
   {
@@ -89,9 +94,8 @@ export const BUSINESS_PAGES = [
     // is asked as the update: every seeded role reads it for the base currency,
     // and only admin and ops may change it.
     //
-    // The company profile adds no arm. Its read and write both ask the admin
-    // role, which no grant here can spell. So its card asks the role itself and
-    // draws nothing for anyone else on this page.
+    // The company profile adds no arm. Its read and write ask the admin role,
+    // which no grant here can spell. Its tab opens on the card's own answer.
     requires: anyOf(
       writes("installation_settings", ["update"]),
       reads("fx_rate"),
@@ -100,6 +104,26 @@ export const BUSINESS_PAGES = [
       writes("installation_settings", ["update"]),
       writes("fx_rate"),
     ),
+    tabs: [
+      // Each tab is read-only on its own cards' grants, not on the page's.
+      { id: "profile", requires: companyContext, changes: companyContext },
+      {
+        id: "entities",
+        changes: acts(writes("legal_entity"), destroys("legal_entity")),
+      },
+      {
+        id: "regional",
+        changes: acts(writes("installation_settings", ["update"])),
+      },
+      {
+        id: "money",
+        changes: acts(writes("fx_rate"), writes("tax_rate", ["create"])),
+      },
+      {
+        id: "email",
+        changes: acts(writes("installation_settings", ["update"])),
+      },
+    ],
   },
   {
     id: "authentication",
@@ -114,6 +138,7 @@ export const BUSINESS_PAGES = [
       writes("authentication_policy", ["update"]),
       writes("capture_settings", ["update"]),
     ),
+    tabs: [{ id: "methods" }, { id: "apps" }, { id: "grants" }],
   },
 
   // `GET /users` answers 200 to any authenticated principal, because the share
@@ -184,30 +209,54 @@ export const BUSINESS_PAGES = [
     changes: readingIsTheAct,
   },
 
+  // The deal vocabulary on one page. Each tab keeps the grant of the page it
+  // was: pipelines and legal review read `pipeline`, the vocabularies read
+  // `custom_field`, and the forecast rules are installation settings.
   {
-    id: "pipelines",
+    id: "deals",
     group: "sales",
     scope: "workspace",
-    requires: reads("pipeline"),
-    // PipelinesCard creates, renames and removes stages.
-    changes: acts(writes("pipeline"), destroys("pipeline")),
-  },
-  {
-    id: "stageautomation",
-    group: "sales",
-    scope: "workspace",
-    // The report reads stage_progression_outcome through a pipeline-gated
-    // endpoint, so `pipeline` read opens it. That grant also shows the stages
-    // the transitions are between.
-    requires: reads("pipeline"),
-    // The page carries the per-transition switches beneath its report, so it
-    // writes. The table above them is read-only as a layout choice, not a
-    // permission one.
-    //
-    // Update only. A rule is created by the same PUT that edits one, and this
-    // page never creates a pipeline. A custom role with pipeline:create but no
-    // update would see every switch refused.
-    changes: acts(writes("pipeline", ["update"])),
+    requires: anyOf(reads("pipeline"), reads("custom_field")),
+    changes: acts(
+      writes("pipeline"),
+      destroys("pipeline"),
+      writes("custom_field"),
+      writes("installation_settings", ["update"]),
+    ),
+    tabs: [
+      {
+        id: "pipelines",
+        requires: reads("pipeline"),
+        changes: acts(writes("pipeline"), destroys("pipeline")),
+      },
+      // No destroys on the vocabularies: a source, reason or template is
+      // retired through its switch, because a closed deal keeps its code.
+      {
+        id: "sources",
+        requires: reads("custom_field"),
+        changes: acts(writes("custom_field")),
+      },
+      {
+        id: "loss",
+        requires: reads("custom_field"),
+        changes: acts(writes("custom_field")),
+      },
+      {
+        id: "reviews",
+        requires: reads("custom_field"),
+        changes: acts(writes("custom_field", ["update"])),
+      },
+      {
+        id: "legal",
+        requires: reads("pipeline"),
+        changes: acts(writes("pipeline"), destroys("pipeline")),
+      },
+      {
+        id: "forecast",
+        requires: writes("installation_settings", ["update"]),
+        changes: acts(writes("installation_settings", ["update"])),
+      },
+    ],
   },
   {
     id: "leads",
@@ -223,25 +272,6 @@ export const BUSINESS_PAGES = [
     changes: acts(writes("custom_field"), destroys("custom_field")),
   },
   {
-    id: "acquisition",
-    // `custom_field` for the lead page's reason above; no destroys because a
-    // source is retired through its switch rather than deleted.
-    group: "sales",
-    scope: "workspace",
-    requires: reads("custom_field"),
-    changes: acts(writes("custom_field")),
-  },
-  {
-    id: "lossreasons",
-    // `custom_field`, as the vocabularies above: the reasons a deal is lost
-    // for are read by everyone and changed by admin/ops. No destroys: a reason
-    // is retired through its switch, because a lost deal keeps its code.
-    group: "sales",
-    scope: "workspace",
-    requires: reads("custom_field"),
-    changes: acts(writes("custom_field")),
-  },
-  {
     id: "partners",
     // `custom_field`, as the vocabularies above: everyone reads the partner
     // ladder, admin/ops change it. A custom stage nothing uses may be removed.
@@ -250,41 +280,33 @@ export const BUSINESS_PAGES = [
     requires: reads("custom_field"),
     changes: acts(writes("custom_field"), destroys("custom_field")),
   },
+  // What a record carries. Fields and responsibility roles are `custom_field`
+  // vocabulary, read by everyone and changed by admin/ops; tags are their own
+  // object. No destroys on fields or roles: a role is retired through its
+  // switch, because an assignment that carried it must stay resolvable.
   {
-    id: "reviewtemplates",
-    // `custom_field` read, which is what the templates endpoint requires.
-    // Editing a template's questions is `custom_field` update on the server.
+    id: "records",
     group: "sales",
     scope: "workspace",
-    requires: reads("custom_field"),
-    changes: acts(writes("custom_field", ["update"])),
-  },
-  {
-    id: "recordroles",
-    // Same `custom_field` authority as the vocabularies above: everyone reads,
-    // admin/ops write. No destroys: a role is retired through its switch,
-    // because an assignment that carried it must stay resolvable.
-    group: "sales",
-    scope: "workspace",
-    requires: reads("custom_field"),
-    changes: acts(writes("custom_field")),
-  },
-  {
-    id: "fields",
-    group: "sales",
-    scope: "workspace",
-    requires: reads("custom_field"),
-    // customfields.tsx creates and edits; it offers no delete.
-    changes: acts(writes("custom_field")),
-  },
-  {
-    id: "tags",
-    group: "sales",
-    scope: "workspace",
-    requires: reads("tag"),
-    // tagadmin.tsx separates create, rename/merge and archive. Applying a tag to
-    // a record is a different question and lives on the record, not here.
-    changes: acts(writes("tag"), destroys("tag")),
+    requires: anyOf(reads("custom_field"), reads("tag")),
+    changes: acts(writes("custom_field"), writes("tag"), destroys("tag")),
+    tabs: [
+      {
+        id: "fields",
+        requires: reads("custom_field"),
+        changes: acts(writes("custom_field")),
+      },
+      {
+        id: "tags",
+        requires: reads("tag"),
+        changes: acts(writes("tag"), destroys("tag")),
+      },
+      {
+        id: "roles",
+        requires: reads("custom_field"),
+        changes: acts(writes("custom_field")),
+      },
+    ],
   },
   {
     id: "products",

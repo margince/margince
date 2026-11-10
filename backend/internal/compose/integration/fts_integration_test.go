@@ -19,6 +19,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/projects"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 func TestSearchFoldsAccentsAndStemsByLanguage(t *testing.T) {
@@ -210,5 +211,42 @@ func TestProjectSearchSnippetNamesTheCompanyOnlyToACallerWhoMayReadIt(t *testing
 	}
 	if got := snippetFor(e.As(e.Rep1, []ids.UUID{e.Team1}, withoutGrant(roomPerms, "company"))); got != key {
 		t.Errorf("snippet without the company grant = %q, want the key alone", got)
+	}
+}
+
+// A lead's excerpt names its linked company only to a caller who may read that
+// company. The rest get the name typed on the lead, the lead's own field, and
+// never the company's display name.
+func TestALeadsSearchExcerptNamesTheCompanyOnlyToACallerWhoMayReadIt(t *testing.T) {
+	e := Setup(t)
+	company := e.SeedCompany(t, "Nordwind Holding SE", &e.Rep3)
+	lead := ids.NewV7()
+	e.WsExec(t, `INSERT INTO lead (id, owner_id, full_name, company_name, company_id, source, captured_by)
+		VALUES ($1, $2, 'Clara Vogt', 'Nordwind GmbH', $3, 'manual', 'human:x')`, lead, e.Rep3, company)
+	withLeads := withGrant(roomPerms, "lead", principal.ObjectGrant{Read: true})
+	excerptFor := func(ctx context.Context) string {
+		t.Helper()
+		page, err := search.NewStore(e.DB()).Search(ctx, search.Input{Query: "Clara Vogt", Types: []string{"lead"}})
+		if err != nil {
+			t.Fatalf("search leads: %v", err)
+		}
+		for _, hit := range page.Hits {
+			if hit.ID == lead {
+				return hit.Snippet
+			}
+		}
+		t.Fatal("the lead hit is missing, so the excerpt assertion proves nothing")
+		return ""
+	}
+
+	if got := excerptFor(e.As(e.Rep3, []ids.UUID{e.Team2}, withLeads)); got != "Nordwind Holding SE" {
+		t.Errorf("a reader of the company sees %q, want its own name", got)
+	}
+	if got := excerptFor(e.As(e.Rep3, []ids.UUID{e.Team2}, withoutGrant(withLeads, "company"))); got != "Nordwind GmbH" {
+		t.Errorf("without the company grant the excerpt reads %q, want the typed name", got)
+	}
+	e.MakeCapturePrivate(t, "company", company, e.Rep1)
+	if got := excerptFor(e.As(e.Rep3, []ids.UUID{e.Team2}, withLeads)); got != "Nordwind GmbH" {
+		t.Errorf("outside the company's scope the excerpt reads %q, want the typed name", got)
 	}
 }

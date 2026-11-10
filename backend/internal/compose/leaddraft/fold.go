@@ -37,6 +37,7 @@ func FromLead(
 ) contactdraft.Input {
 	return contactdraft.Input{
 		Intent:    strings.TrimSpace(req.Intent),
+		Subject:   strings.TrimSpace(req.Subject),
 		RewriteOf: strings.TrimSpace(req.RewriteOf),
 		Envelope:  envelope,
 		Recipient: recipientOf(lead, activities),

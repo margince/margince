@@ -54,7 +54,7 @@ const (
 	// Permitting the marker without counting it would let it spread quietly and
 	// reopen the class these rules close; pinned, every new one moves a number a
 	// reviewer sees.
-	wantFixtureAnnotations = 78
+	wantFixtureAnnotations = 87
 )
 
 // censusDecl is one package-level declaration this census governs — a map from
@@ -219,7 +219,7 @@ func censusFiles(t *testing.T, what string, keep func(path string) bool) ([]pars
 	t.Helper()
 	fset := gatekit.SourceFileSet()
 	var out []parsedFile
-	err := filepath.WalkDir(backendTree, func(walked string, entry fs.DirEntry, walkErr error) error {
+	err := gatekit.WalkDir(backendTree, func(walked string, entry fs.DirEntry, walkErr error) error {
 		if walkErr != nil || entry.IsDir() {
 			return walkErr
 		}

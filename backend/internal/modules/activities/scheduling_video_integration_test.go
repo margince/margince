@@ -137,6 +137,8 @@ func TestAProposalsVideoChoiceSurvivesTheGuestsAcceptance(t *testing.T) {
 func TestThePublicPageNamesTheVideoAppOnlyWhenMeetingsGetOne(t *testing.T) {
 	f := newInvitationFixture(t)
 	handlers := Handlers{store: f.store}
+	// A paused page names nothing, so the page the guest reads is switched on.
+	savePage(t, f, true)
 	profile := f.setVideoDefault(t, nil)
 	if app := publicVideoApp(f.ctx, t, handlers, *profile.Slug); app != string(crmcontracts.PublicSchedulingProfileVideoAppGoogleMeet) {
 		t.Fatalf("video_app = %q, want google_meet by default", app)
@@ -159,7 +161,7 @@ func TestThePublicPageNamesTheVideoAppOnlyWhenMeetingsGetOne(t *testing.T) {
 func publicVideoApp(ctx context.Context, t *testing.T, handlers Handlers, slug string) string {
 	t.Helper()
 	reply := httptest.NewRecorder()
-	handlers.GetPublicSchedulingProfile(reply, httptest.NewRequest(http.MethodGet, "/public/scheduling", nil).WithContext(ctx), slug)
+	handlers.GetPublicSchedulingProfile(reply, httptest.NewRequest(http.MethodGet, "/public/scheduling", nil).WithContext(ctx), slug, crmcontracts.GetPublicSchedulingProfileParams{})
 	var out crmcontracts.PublicSchedulingProfile
 	if err := json.Unmarshal(reply.Body.Bytes(), &out); err != nil || reply.Code != http.StatusOK {
 		t.Fatalf("public profile: %d %s", reply.Code, reply.Body.String())
@@ -200,3 +202,25 @@ func (acceptingConsent) CaptureLeadBookingConsent(context.Context, ids.LeadID, B
 }
 
 func (acceptingConsent) RecordBookingInquiry(context.Context, ids.UUID, ids.UUID) error { return nil }
+
+func TestTheGuestLengthDoesNotChangeTheHostsSavedDefault(t *testing.T) {
+	f := newInvitationFixture(t)
+	profile := savePage(t, f, true)
+	profile.OfferedLengths = new([]int{45, 60})
+	saved, err := f.store.SaveSchedulingProfile(f.ctx, profile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, test := range []struct{ length, want int }{{45, 45}, {60, 60}, {47, 30}} {
+		reply := httptest.NewRecorder()
+		Handlers{store: f.store}.GetPublicSchedulingProfile(reply, httptest.NewRequest(http.MethodGet, "/profile", nil).WithContext(f.ctx), *saved.Slug, crmcontracts.GetPublicSchedulingProfileParams{L: &test.length})
+		var guest crmcontracts.PublicSchedulingProfile
+		if err := json.Unmarshal(reply.Body.Bytes(), &guest); err != nil || reply.Code != http.StatusOK || guest.DurationMinutes != test.want {
+			t.Fatalf("length %d: %d %s", test.length, reply.Code, reply.Body.String())
+		}
+	}
+	current, err := f.store.SchedulingProfile(f.ctx)
+	if err != nil || current.DurationMinutes != 30 || current.OfferedLengths == nil || len(*current.OfferedLengths) != 2 {
+		t.Fatalf("host profile changed: %+v,%v", current, err)
+	}
+}

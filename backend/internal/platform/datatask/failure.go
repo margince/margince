@@ -21,6 +21,7 @@ func (e *Engine) recordFailure(ctx context.Context, picked selection, cause erro
 	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
 	defer cancel()
 	p := picked.progress
+	p.Title = picked.task.Title
 	ctx = storekit.WithBatch(Acting(ctx, p.TaskID), p.RunID)
 	fault := jobs.FaultContext(ctx, cause)
 	detail, known := jobs.VettedFailure("data_task_run", fault.Error())

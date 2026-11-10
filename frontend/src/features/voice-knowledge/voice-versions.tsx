@@ -13,7 +13,8 @@ import { SurfaceState } from "../../design-system/surfacestate";
 import { formatNumber, identifierNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { problemMessageOf, unwrap } from "../../lib/problem";
-import { useRecordZone } from "../../lib/recordzone";
+import { useViewerZone } from "../../lib/viewerzone";
+import { VOICE_SECTIONS } from "./voice-dna.setup";
 import { parseVoiceInsights, VoiceInsights } from "./voice-insights";
 import { reviewReasonText } from "./voice-review-reason";
 import { changeColumns, versionColumns } from "./voice-versions.tables";
@@ -160,7 +161,9 @@ export function CandidateReview({
     onError: (e: Error) => setError(problemMessageOf(e, t)),
   });
   return (
-    <div className="vdna-review">
+    // Setup's "Review voice" lands focus here, so the reasons and both verbs
+    // are the next thing a keyboard or screen reader reaches.
+    <div id={VOICE_SECTIONS.review} tabIndex={-1} className="vdna-review">
       <b>
         {t("voice.candidate.title", {
           n: identifierNumber(candidate.profile_version),
@@ -232,7 +235,7 @@ export function VoiceHistory({
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const [restoring, setRestoring] = useState<VoiceProfileVersion | null>(null);
   const rolledBack = useRef(false);
   const headingId = useId();
@@ -353,7 +356,7 @@ export function VoiceChangeLog({ profileId }: Readonly<{ profileId: string }>) {
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  const zone = useRecordZone();
+  const zone = useViewerZone();
   const [deltaCursor, setDeltaCursor] = useState<string | undefined>();
   const [allDeltas, setAllDeltas] = useState<VoiceProfileDelta[]>([]);
   const deltas = useQuery({
