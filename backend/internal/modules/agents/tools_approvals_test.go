@@ -112,24 +112,6 @@ func TestAnEmptyQueueAnswersAnEmptyListNotNull(t *testing.T) {
 	}
 }
 
-// An empty queue is not yet "nothing waits" while an automation is still
-// reacting to the records the listing named.
-func TestARunningAutomationTellsTheCallerToCheckAgain(t *testing.T) {
-	for _, tc := range []struct {
-		pending int
-		want    bool
-	}{{pending: 1, want: true}, {pending: 0, want: false}} {
-		inbox := &fakeInbox{page: ApprovalPage{AutomationsPending: tc.pending}}
-		out, err := listApprovalsTool{inbox: inbox}.Handle(context.Background(), json.RawMessage(`{}`))
-		if err != nil {
-			t.Fatalf("Handle: %v", err)
-		}
-		if got := strings.Contains(string(out), `"check_again":`); got != tc.want {
-			t.Errorf("with %d pending the answer carries check_again = %v, want %v: %s", tc.pending, got, tc.want, out)
-		}
-	}
-}
-
 // A bundle decision that moved nothing still answers with a list: the caller
 // asked what happened to every member, and null is not "none of them".
 func TestABundleDecisionAnswersAListEvenWhenNoMemberMoved(t *testing.T) {
