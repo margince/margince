@@ -331,6 +331,10 @@ function entryMoveValue(
 
 export function MoveFlag({ entry }: Readonly<{ entry: TimelineEntry }>) {
   const t = useT();
+  // An open invitation's move is an RSVP, so it says so as EmailEntry does.
+  if (entry.emailSummary?.calendar_invitation && entry.withheld !== true) {
+    return <Badge tone="info">{t("email.invitation.badge")}</Badge>;
+  }
   const move = entryMove(entry);
   if (!move) {
     return null;

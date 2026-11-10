@@ -4,6 +4,7 @@
 // The focus panel's body: the day's rows as cards, the one in hand opened.
 // The panel's head, states and foot are in brief.feed.tsx.
 
+import { ArrowRight } from "lucide-react";
 import { useRef } from "react";
 import {
   TaskNextSteps,
@@ -45,11 +46,20 @@ export function Triage({
   const viewer = useMe(false).data?.user;
   const listed = useListed();
   const writeTo = useWriteTo();
-  // A press removes the pressed button from the list. Focus follows it onto
-  // the card it brought in hand; a first render takes no focus.
+  // A press removes the pressed button, and a finished task takes its card
+  // away. Either way focus moves onto the card now in hand. A first render
+  // takes no focus.
   const pressed = useRef(false);
+  const held = useRef<string | null>(null);
   const takeFocus = (frame: HTMLDivElement | null) => {
-    if (frame && pressed.current) {
+    if (!frame) return;
+    const key = identity(lead);
+    const replaced = held.current !== null && held.current !== key;
+    held.current = key;
+    if (
+      pressed.current ||
+      (replaced && document.activeElement === document.body)
+    ) {
       pressed.current = false;
       frame.focus();
     }
@@ -63,8 +73,10 @@ export function Triage({
   // refused draft still draws its AI button, with the reason under it.
   const target = task?.email_target;
   const drafts = Boolean(target && (writeTo || target.refusal));
+  // Next steps past a task without answering it; past the last it wraps.
+  const next = rows.length > 1 ? rows[(at + 1) % rows.length] : undefined;
   const cardVerbs =
-    onContext || task || taskPending ? (
+    onContext || task || taskPending || next ? (
       <>
         {/* The drafted mail stands beside Done, ahead of the way to read
             more: it is the task's next step, the details are about it. */}
@@ -78,6 +90,18 @@ export function Triage({
             onClick={() => onContext(lead)}
           >
             {t("brief.focus.context")}
+          </Button>
+        )}
+        {next && (
+          <Button
+            variant="ghost"
+            className="brief-triage-next"
+            onClick={() => {
+              pressed.current = true;
+              onChoose(next);
+            }}
+          >
+            {t("brief.focus.next")} <ArrowRight aria-hidden />
           </Button>
         )}
       </>

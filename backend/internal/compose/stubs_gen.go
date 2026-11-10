@@ -87,6 +87,10 @@ func (stubs) SetActivityAudience(w nethttp.ResponseWriter, r *nethttp.Request, i
 	httperr.NotImplemented(w, r, "SetActivityAudience")
 }
 
+func (stubs) AnswerCalendarInvitation(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "AnswerCalendarInvitation")
+}
+
 func (stubs) DeclineActivityDeal(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "DeclineActivityDeal")
 }
