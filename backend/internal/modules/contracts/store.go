@@ -176,14 +176,20 @@ func UnderContractSQL(asOfPos int) string {
 	return contractterm.InForceSQL("", storekit.SQLf("$%d", asOfPos))
 }
 
+// derivedColumns end every read: under_contract, then term_state, in the order
+// scanContract expects. Both are judged on the one as-of day.
+func derivedColumns(asOfPos int) string {
+	return UnderContractSQL(asOfPos) + ", " + contractterm.TermStateSQL("", storekit.SQLf("$%d", asOfPos))
+}
+
 // scanContract reads one row. `active` is the custom-field columns the caller
-// asked for, appended to the select list in the same order — the values land
-// between the core columns and the derived under-contract flag, which is why
-// the flag's destination goes last rather than beside its neighbours.
+// asked for, appended to the select list in the same order. Their values land
+// between the core columns and the derived ones, so the derived go last.
 func scanContract(row pgx.Row, active []fieldcatalog.Column) (crmcontracts.Contract, error) {
 	var (
 		c             crmcontracts.Contract
 		underContract bool
+		termState     string
 		id            ids.UUID
 		companyID     ids.UUID
 		dealID        *ids.UUID
@@ -210,7 +216,7 @@ func scanContract(row pgx.Row, active []fieldcatalog.Column) (crmcontracts.Contr
 		&c.ArchivedAt,
 	}
 	cf := storekit.ScanDests(active)
-	if err := row.Scan(append(append(dests, cf...), &underContract)...); err != nil {
+	if err := row.Scan(append(append(dests, cf...), &underContract, &termState)...); err != nil {
 		return crmcontracts.Contract{}, err
 	}
 	if values := storekit.ExtractValues(active, cf); len(values) > 0 {
@@ -226,6 +232,8 @@ func scanContract(row pgx.Row, active []fieldcatalog.Column) (crmcontracts.Contr
 	contractStatus := crmcontracts.ContractStatus(status)
 	c.Status = &contractStatus
 	c.UnderContract = &underContract
+	term := crmcontracts.ContractTermState(termState)
+	c.TermState = &term
 	c.FxRateDate = datePtr(fxDate)
 	c.StartsOn = datePtr(startsOn)
 	c.EndsOn = datePtr(endsOn)
@@ -307,7 +315,7 @@ func readContract(ctx context.Context, tx pgx.Tx, id ids.ContractID, asOf time.T
 
 	row := tx.QueryRow(ctx, storekit.SQLf(
 		`SELECT %s%s, %s FROM contract WHERE %s`,
-		contractColumns, storekit.SelectSuffix(active), UnderContractSQL(asOfPos), where), args...)
+		contractColumns, storekit.SelectSuffix(active), derivedColumns(asOfPos), where), args...)
 	out, err := scanContract(row, active)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return crmcontracts.Contract{}, apperrors.ErrNotFound

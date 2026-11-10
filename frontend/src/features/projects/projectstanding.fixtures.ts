@@ -101,6 +101,7 @@ export function deliveringProject360(
           source: "manual",
           captured_by: "human:u-me",
           under_contract: true,
+          term_state: "in_force",
           auto_renew: false,
           value_basis: "total",
           version: 1,
