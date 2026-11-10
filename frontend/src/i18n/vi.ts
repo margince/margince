@@ -18549,9 +18549,137 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.pane.conversation": "Chuỗi thư",
   "worklist.pane.openEmail": "Mở email",
   "worklist.pane.deal": "Deal",
-  "worklist.why.title": "Vì sao việc này cần chú ý",
+  "worklist.why.title": "Vì sao việc này có trong danh sách của bạn",
   "worklist.why.reasons": "Lý do",
   "worklist.why.detail": "Chi tiết",
+  "worklist.why.happened": "Điều đã xảy ra",
+  "worklist.why.now": "Vì sao là bây giờ",
+  "worklist.why.consequence": "Nếu không làm gì",
+  "worklist.why.todo": "Việc cần làm",
+  "worklist.happened.customer_waiting":
+    "{name} đã viết vào {when} và chưa có ai trả lời.",
+  "worklist.happened.customer_waiting.bare":
+    "Một tin nhắn đến vào {when} và chưa có ai trả lời.",
+  "worklist.happened.awaiting_reply":
+    "Bạn đã viết cho {name} vào {when} và từ đó chưa có trả lời.",
+  "worklist.happened.awaiting_reply.bare":
+    "Bạn đã viết vào {when} và từ đó chưa có trả lời.",
+  "worklist.happened.lead_response":
+    "{name} đến như một lead vào {when} và chưa được trả lời lần đầu.",
+  "worklist.happened.lead_response.bare":
+    "Lead này đến vào {when} và chưa được trả lời lần đầu.",
+  "worklist.happened.meeting_outcome":
+    "Cuộc họp với {name} diễn ra vào {when} và chưa ghi lại kết quả.",
+  "worklist.happened.meeting_outcome.bare":
+    "Cuộc họp diễn ra vào {when} và chưa ghi lại kết quả.",
+  "worklist.happened.meeting_follow_up":
+    "Bạn đã gặp {name} vào {when} và sau đó chưa gửi gì cho họ.",
+  "worklist.happened.meeting_follow_up.bare":
+    "Cuộc họp diễn ra vào {when} và sau đó chưa gửi gì cho các bên đã tham dự.",
+  "worklist.happened.relationship_decay":
+    "Lần liên hệ cuối được ghi lại với {name} là vào {when}.",
+  "worklist.happened.conversation_claim":
+    "Bạn đã cam kết việc này với {name} vào {when}.",
+  "worklist.happened.conversation_claim.bare":
+    "Bạn đã cam kết việc này trong một cuộc trò chuyện vào {when}.",
+  "worklist.happened.bounce": "Một email gửi {name} bị trả lại vào {when}.",
+  "worklist.happened.bounce.bare": "Một email bị trả lại vào {when}.",
+  "worklist.happened.undelivered":
+    "Một email gửi {name} đã không được gửi vào {when}.",
+  "worklist.happened.undelivered.bare":
+    "Một email đã không được gửi vào {when}.",
+  "worklist.happened.automation_run": "Tự động hóa {name} đã dừng vào {when}.",
+  "worklist.happened.automation_run.bare":
+    "Một tự động hóa đã dừng vào {when}.",
+  "worklist.happened.capture_health":
+    "Hộp thư {name} ngừng thu thập email từ {when}.",
+  "worklist.happened.capture_health.bare":
+    "Một hộp thư ngừng thu thập email từ {when}.",
+  "worklist.happened.ai_work_health": "Tác vụ AI {name} bị lỗi vào {when}.",
+  "worklist.happened.ai_work_health.bare": "Một tác vụ AI bị lỗi vào {when}.",
+  "worklist.happened.failed_approval":
+    "Một hành động bạn đã duyệt cho {name} không chạy vào {when}.",
+  "worklist.happened.failed_approval.bare":
+    "Một hành động bạn đã duyệt không chạy vào {when}.",
+  "worklist.happened.deal_suggestion":
+    "Vào {when}, một cuộc trò chuyện với {name} trông giống một deal mới.",
+  "worklist.happened.deal_suggestion.bare":
+    "Vào {when}, một cuộc trò chuyện trông giống một deal mới.",
+  "worklist.happened.tag_suggestion":
+    "Vào {when}, Margince đã gợi ý một thẻ cho {name}.",
+  "worklist.happened.tag_suggestion.bare":
+    "Vào {when}, Margince đã gợi ý một thẻ cho bản ghi này.",
+  "worklist.happened.domain_question":
+    "Vào {when}, Margince không xác định được {name} làm cho công ty nào.",
+  "worklist.happened.domain_question.bare":
+    "Vào {when}, Margince không ghép được liên hệ này với công ty nào.",
+  "worklist.happened.meeting": "Bạn gặp {name} vào {when}.",
+  "worklist.happened.meeting.bare": "Cuộc họp này diễn ra vào {when}.",
+  "worklist.happened.task": "Việc này đến hạn vào {due}.",
+  "worklist.happened.task.overdue":
+    "Việc này đến hạn vào {due} và vẫn đang mở.",
+  "worklist.happened.task.undated": "Việc này không có ngày đến hạn.",
+  "worklist.happened.deal": "{deal}: {figures}.",
+  "worklist.happened.lastFrom": "Liên hệ gần nhất từ {name}: {when}.",
+  "worklist.happened.lastTo": "Liên hệ gần nhất tới {name}: {when}.",
+  "worklist.happened.noneFrom":
+    "Liên hệ gần nhất từ {name}: không có mục nào bạn mở được.",
+  "worklist.happened.noneTo":
+    "Liên hệ gần nhất tới {name}: không có mục nào bạn mở được.",
+  "worklist.happened.neverFrom": "Liên hệ gần nhất từ {name}: chưa từng có.",
+  "worklist.happened.neverTo": "Liên hệ gần nhất tới {name}: chưa từng có.",
+  "worklist.consequence.buyer_waits": "Họ tiếp tục chờ câu trả lời.",
+  "worklist.consequence.buyer_waits.named": "{name} tiếp tục chờ câu trả lời.",
+  "worklist.consequence.promise_breaks": "Một cam kết của bạn bị lỡ.",
+  "worklist.consequence.promise_breaks.named":
+    "Một cam kết của bạn với {name} bị lỡ.",
+  "worklist.consequence.deal_drifts":
+    "Deal tiếp tục trôi mà không có bước tiếp theo.",
+  "worklist.consequence.deal_drifts.named":
+    "{name} tiếp tục trôi mà không có bước tiếp theo.",
+  "worklist.consequence.deal_slips_past_close":
+    "Deal trễ qua ngày chốt dự kiến.",
+  "worklist.consequence.deal_slips_past_close.named":
+    "{name} trễ qua ngày chốt dự kiến.",
+  "worklist.consequence.meeting_unprepared":
+    "Bạn vào cuộc họp mà chưa chuẩn bị.",
+  "worklist.consequence.task_slips": "Việc này tiếp tục trễ hạn.",
+  "worklist.consequence.work_blocked":
+    "Công việc phụ thuộc vào quyết định này vẫn bị chặn.",
+  "worklist.consequence.customer_never_received":
+    "Tin nhắn không bao giờ đến được với họ.",
+  "worklist.consequence.customer_never_received.named":
+    "{name} không bao giờ nhận được tin nhắn.",
+  "worklist.consequence.you_believe_it_happened":
+    "Bước này trông như đã xong nhưng thực ra chưa diễn ra.",
+  "worklist.consequence.legal_deadline_missed":
+    "Thời hạn pháp lý trôi qua mà không có câu trả lời.",
+  "worklist.consequence.mailbox_blind":
+    "Email trong hộp thư này không vào Margince.",
+  "worklist.consequence.data_drifts": "Các bản ghi tiếp tục lệch nhau.",
+  "worklist.todo.deal_at_risk": "Mở deal và lên kế hoạch cho bước tiếp theo.",
+  "worklist.todo.task":
+    "Làm xong và đánh dấu là xong, hoặc chuyển sang ngày khác.",
+  "worklist.todo.customer_waiting": "Trả lời tin nhắn.",
+  "worklist.todo.awaiting_reply": "Gửi thư nhắc lại.",
+  "worklist.todo.lead_response": "Liên hệ trước khi hết thời gian phản hồi.",
+  "worklist.todo.meeting": "Mở cuộc họp để chuẩn bị.",
+  "worklist.todo.meeting_outcome":
+    "Ghi lại kết quả, hoặc đánh dấu đã hủy nếu cuộc họp không diễn ra.",
+  "worklist.todo.meeting_follow_up": "Gửi thư tiếp nối cho các bên đã tham dự.",
+  "worklist.todo.relationship_decay": "Liên hệ, hoặc tạm gác lại một tháng.",
+  "worklist.todo.conversation_claim": "Làm việc đó, rồi đánh dấu là xong.",
+  "worklist.todo.bounce": "Kiểm tra địa chỉ, rồi gửi lại.",
+  "worklist.todo.undelivered": "Mở email để xem lý do, rồi gửi lại.",
+  "worklist.todo.automation_run": "Kiểm tra nguyên nhân, rồi chạy lại.",
+  "worklist.todo.capture_health":
+    "Kết nối lại hộp thư để thu thập email trở lại.",
+  "worklist.todo.ai_work_health": "Kiểm tra nhà cung cấp AI trong Cài đặt.",
+  "worklist.todo.failed_approval": "Kiểm tra điều đã xảy ra, rồi xác nhận.",
+  "worklist.todo.deal_suggestion": "Tạo deal, hoặc bỏ qua gợi ý.",
+  "worklist.todo.tag_suggestion": "Áp dụng thẻ, hoặc bỏ qua gợi ý.",
+  "worklist.todo.domain_question":
+    "Xác nhận một công ty, chọn một công ty, hoặc ngừng thu thập tên miền này.",
   "worklist.ask.approval":
     "Một agent đã đề xuất thay đổi và đang chờ quyết định. Duyệt hoặc từ chối đề xuất.",
   "worklist.ask.dedupe_candidate":

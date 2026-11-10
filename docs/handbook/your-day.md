@@ -58,6 +58,8 @@ Only the colleague who holds the task is reminded. A colleague who opens your qu
 ### Why is this on my list?
 The open card under **Needs you** on **Home** says what the row asks of you and its one current reason. **View details** adds the messages, contact, deal and every fact behind the row. A meeting with no outcome asks **How did it go?** with **It happened**, **Add notes** and **Did not happen**. A task Margince made for you says what made it. A reminder about a quiet contact, company, deal or lead says so, and asks you to get in touch and then press **Done**. Also called: what is this task, where did this task come from.
 
+The **Why this is on your list** panel in **View details** answers in four parts. **What happened** says the event with its day and the person, such as who wrote and when, when a task fell due, or which automation stopped, and the last contact each way with that contact. **Why now** lists the facts that put the row on your list. **If nothing is done** says what waiting costs, such as a contact who keeps waiting or a deal that drifts. **What to do** says the next step, next to its buttons. The drawer carries the same title as the card.
+
 ### How do I hand a task on to a colleague?
 To hand a task on in Margince, press **More actions** on its Worklist row and choose **Reassign**.
 1. Open **Home** → **Show Worklist** and find the task.

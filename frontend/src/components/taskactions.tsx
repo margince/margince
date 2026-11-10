@@ -406,13 +406,10 @@ function TaskDetailActions({
   return (
     <>
       {!logging && (
-        <TaskNextSteps
-          task={task}
-          className="form-actions task-detail-actions"
-        />
+        <TaskNextSteps task={task} className="task-detail-actions" />
       )}
       {canAct && (
-        <div ref={verbs} className="form-actions task-detail-actions">
+        <div ref={verbs} className="task-detail-verbs">
           <TaskQuickActions
             activityId={task.id}
             version={task.version}
@@ -421,13 +418,11 @@ function TaskDetailActions({
             update={update}
             showDuePicker
           />
+          <Button onClick={() => setLogging(true)}>
+            {t("tasks.log.action")}
+          </Button>
           <WhichDealDecline task={task} />
         </div>
-      )}
-      {canAct && (
-        <Button onClick={() => setLogging(true)}>
-          {t("tasks.log.action")}
-        </Button>
       )}
       {logging && (
         <TaskOutcomeForm task={task} onLogged={() => setLogging(false)} />

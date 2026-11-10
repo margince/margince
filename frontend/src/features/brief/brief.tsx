@@ -17,7 +17,7 @@ import { Heading } from "../../design-system/heading";
 import { PageZones } from "../../design-system/pagezones";
 import { greetingNameOf } from "../../format/greetingname";
 import { useNow } from "../../format/now";
-import { useT } from "../../i18n";
+import { useLocale, useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
 import { markJourney } from "../../lib/journeymarks";
 import { useMagic } from "../../lib/magic.queries";
@@ -67,6 +67,7 @@ import { BriefQueue } from "./brief.queue";
 import { BriefReadingsPending, BriefReadingsStrip } from "./brief.readings";
 import { SchedulePanel } from "./brief.schedule";
 import { BriefSuggestions } from "./brief.suggestions";
+import { taskName } from "./brief.taskcard";
 import { addressFrom, type BriefAddress, paramsFor } from "./brief.view";
 import { WeeklySection, WeekStepper } from "./brief.weekly";
 import { useWeeklyRailShown, WeeklyRail } from "./brief.weekly.rail";
@@ -378,6 +379,8 @@ function FocusDetails({
   onClose: () => void;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
+  const viewer = useMe(false).data?.user;
   const titleId = useId();
   if (item.source === "meeting_outcome") {
     return <MeetingDetailModal item={item} onClose={onClose} />;
@@ -396,8 +399,9 @@ function FocusDetails({
   return (
     <Modal open onClose={onClose} labelledBy={titleId} intent="drawer" fit>
       <DrawerHead>
+        {/* Named as the card names it, so the drawer says what it is about. */}
         <Heading size="large" id={titleId} className="t-h2">
-          {t("brief.focus.context")}
+          {taskName(item, viewer, t, locale)}
         </Heading>
       </DrawerHead>
       <DrawerBody className="form-stack">

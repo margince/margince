@@ -710,7 +710,7 @@ test("a refused Draft email is said once, after every verb in the row", async ()
   });
   const reasons = screen.getAllByText(en["task.next.noAddress"]);
   expect(reasons).toHaveLength(1);
-  const row = email.closest(".form-actions");
+  const row = email.closest(".task-detail-actions");
   expect(reasons[0]?.parentElement).toBe(row);
   expect(row?.lastElementChild).toBe(reasons[0]);
 });
