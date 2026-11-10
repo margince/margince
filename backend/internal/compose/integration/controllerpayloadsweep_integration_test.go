@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -142,7 +143,7 @@ func TestAVaultRefusalLeavesTheReferenceStanding(t *testing.T) {
 // retry and its count are best effort, and expired material must still go.
 func TestAFailedMissedReceiptReadStillDestroysExpiredMaterial(t *testing.T) {
 	p := setupPreflight(t)
-	now := time.Now().UTC()
+	now := clocktest.Now(t).UTC()
 	id := plantExpiredPayload(t, p, "vault-ref-expired", now.Add(-time.Hour))
 	// The owed-receipt retries and their aged-out count both read system_log.
 	if _, err := p.Owner.Exec(context.Background(), `REVOKE SELECT ON system_log FROM margince_app`); err != nil {
