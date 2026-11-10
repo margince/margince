@@ -16,6 +16,18 @@ export type ReportingChart = components["schemas"]["ReportingChart"];
 export type ReportingEvidenceRef =
   components["schemas"]["ReportingEvidenceRef"];
 export type ReportingReport = components["schemas"]["ReportingReport"];
+
+/**
+ * The draft of a report that has published no charts yet, as one an agent
+ * prepares. Its editor reads that draft, since the published revision is empty.
+ */
+export function unpublishedDraft(
+  report: ReportingReport | undefined,
+): number | undefined {
+  return report?.selection.metrics.length === 0
+    ? report.draft_revision
+    : undefined;
+}
 export type ReportingMetricID = components["schemas"]["ReportingMetricID"];
 export type ReportingBlockKind = components["schemas"]["ReportingBlockKind"];
 export type ReportingEdition = components["schemas"]["ReportingEdition"];

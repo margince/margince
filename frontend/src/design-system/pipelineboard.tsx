@@ -80,6 +80,11 @@ export type BoardDeal = BoardRecord & {
    */
   valueMinor: number | null;
   currency: string | null;
+  /**
+   * The chance the deal is won, in percent. Null on a closed deal, whose stage
+   * fixes it at 100 or 0, and on one the server named none for.
+   */
+  probabilityPct?: number | null;
   idleSince: string;
   measuredAt: number;
   /**

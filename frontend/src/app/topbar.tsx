@@ -1,5 +1,5 @@
 import { ArrowLeft, PanelLeftClose, PanelLeftOpen, Search } from "lucide-react";
-import { type RefObject, Suspense, useEffect, useRef } from "react";
+import { type RefObject, Suspense, useEffect, useId, useRef } from "react";
 import { AppLink } from "../design-system/applink";
 import { Kbd } from "../design-system/atoms";
 import { Breadcrumb, type Crumb } from "../design-system/breadcrumb";
@@ -29,7 +29,7 @@ import {
 import { NotificationBell } from "./notificationbell";
 import { OutboxButton } from "./outboxbutton";
 import { resolveTitle, sectionHead, useRouteSubject } from "./pagemeta";
-import { paletteHotkeyCaps } from "./palettehotkey";
+import { paletteHotkeyCaps, paletteKeyShortcuts } from "./palettehotkey";
 import { useHomeLinkLabel, WorkspaceChip } from "./shellrail";
 import "./topbar.css";
 
@@ -143,18 +143,17 @@ export function TopBarSearch({
         ref={buttonRef}
         type="button"
         className="topbar-search"
-        aria-label={label}
+        // Named by its printed words alone; the caps reach a screen reader as
+        // the shortcut they are, never as part of the name.
+        aria-keyshortcuts={paletteKeyShortcuts(navigator.platform)}
         onClick={onOpenSearch}
       >
         <Search size={16} strokeWidth={1.8} aria-hidden />
         <span className="topbar-searchlabel">{label}</span>
         {/* One cap per KEY, which is how a keyboard shortcut is read: "⌘ then K",
             not the four-character string "⌘K" in one box. The caps come from the
-            palette's own helper, which is also what the label is joined from, so
-            the two spellings ("⌘ K" and "Ctrl K") stay one source.
-            The whole group is a hint rather than a second name: the aria-label
-            above already says what this control does, so nobody is made to
-            listen to the shortcut spelled out. */}
+            palette's own helper, so the two spellings ("⌘ K" and "Ctrl K") stay
+            one source. */}
         <span className="topbar-keys" aria-hidden>
           {paletteHotkeyCaps(navigator.platform).map((cap) => (
             <Kbd key={cap}>{cap}</Kbd>
@@ -178,9 +177,19 @@ function TopBarTrail({
 /** The company's mark leading home, where a phone has no room for the trail. */
 function TopBarHome() {
   const label = useHomeLinkLabel();
+  const chipId = useId();
+  const labelId = useId();
+  // WCAG 2.5.3: the name starts with whatever the chip prints, read off the chip.
   return (
-    <AppLink className="topbar-home" href="#/home" aria-label={label}>
-      <WorkspaceChip />
+    <AppLink
+      className="topbar-home"
+      href="#/home"
+      aria-labelledby={`${chipId} ${labelId}`}
+    >
+      <WorkspaceChip id={chipId} />
+      <span id={labelId} hidden>
+        {label}
+      </span>
     </AppLink>
   );
 }

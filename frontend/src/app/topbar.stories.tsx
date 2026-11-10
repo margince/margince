@@ -536,8 +536,9 @@ export const Phone: Story = {
     if (!bar) {
       throw new Error("the top bar is missing");
     }
+    // The chip's initials lead the name while it prints them (WCAG 2.5.3).
     const home = await within(bar).findByRole("link", {
-      name: /^Gradion GmbH home/,
+      name: /^(GG )?Gradion GmbH home, powered by Margince$/,
     });
     await expect(home).toHaveAttribute("href", "/#/home");
     await expect(bar.querySelector(".crumbs")).toBeNull();

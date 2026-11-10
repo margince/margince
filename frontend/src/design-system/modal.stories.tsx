@@ -50,12 +50,14 @@ function IntentDemo({
   title,
   verb,
   danger = false,
+  closeReason,
   children,
 }: Readonly<{
   intent: ModalIntent;
   title: string;
   verb: string;
   danger?: boolean;
+  closeReason?: string;
   children: ReactNode;
 }>) {
   const [open, setOpen] = useState(true);
@@ -68,6 +70,7 @@ function IntentDemo({
         onClose={() => setOpen(false)}
         labelledBy={titleId}
         intent={intent}
+        closeReason={closeReason}
       >
         <Heading size="large" id={titleId} className="t-h2 modal-title">
           {title}
@@ -110,6 +113,32 @@ export const Confirm: Story = {
     </IntentDemo>
   ),
   play: opens("Merge these companies?"),
+};
+
+/** A close control that explains itself stays inside the box, under the button. */
+export const CloseReason: Story = {
+  render: () => (
+    <IntentDemo
+      intent="form"
+      title="Your recovery codes"
+      verb="Done"
+      closeReason="Save the codes, then choose Done."
+    >
+      <p className="t-body">
+        Each code works once if you lose your phone. Keep them somewhere safe.
+      </p>
+      <p className="t-body">
+        The first code on the list is the one to try when you are locked out.
+      </p>
+    </IntentDemo>
+  ),
+  play: opens("Your recovery codes"),
+};
+
+export const PhoneCloseReason: Story = {
+  ...CloseReason,
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
 };
 
 function ContactFields({ more = false }: Readonly<{ more?: boolean }>) {

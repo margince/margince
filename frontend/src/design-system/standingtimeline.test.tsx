@@ -183,6 +183,35 @@ describe("marks on the line", () => {
   });
 });
 
+describe("a deal's outcome", () => {
+  it("stands as a flag in its tone where the deal was decided, not as a dot", () => {
+    const { container } = render(
+      <StandingTimeline
+        label="Brandt over time"
+        asOf="2026-08-13T09:00:00Z"
+        record={UTC_ZONE}
+        events={[
+          { key: "a", at: "2026-06-03", title: "Kickoff", kind: "done" },
+          {
+            key: "c",
+            at: "2026-07-20T10:00:00Z",
+            title: "Lost",
+            kind: "end",
+            outcome: "lost",
+          },
+        ]}
+      />,
+    );
+
+    const flags = container.querySelectorAll(".standing-timeline-flag");
+    expect(flags).toHaveLength(1);
+    expect(flags[0]).toHaveAttribute("data-outcome", "lost");
+    expect(container.querySelectorAll(".standing-timeline-dot")).toHaveLength(
+      1,
+    );
+  });
+});
+
 describe("a date far ahead", () => {
   it("is drawn past a break that names its month and year", () => {
     render(
