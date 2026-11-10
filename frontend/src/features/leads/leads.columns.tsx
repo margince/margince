@@ -18,7 +18,7 @@ import type { useLocale, useT } from "../../i18n";
 import { type LeadOrigin, originLabelFor } from "../../lib/leadorigins";
 import { LeadCompanyName } from "./leadcompany";
 import { openTaskCountLabel } from "./leadopentasks";
-import { leadPartnerName } from "./leadpartner";
+import { LeadPartnerName } from "./leadpartner";
 import {
   SlaBadge,
   StatusBadge,
@@ -150,7 +150,7 @@ function partnerColumns(
       cell: (lead: Lead) =>
         lead.partner_company_id ? (
           <CellStrip>
-            <span>{leadPartnerName(partners, lead.partner_company_id)}</span>
+            <LeadPartnerName partners={partners} id={lead.partner_company_id} />
             {!lead.partner_accepted_at && (
               <Badge tone="warning">{t("lead.partnerAwaiting")}</Badge>
             )}
