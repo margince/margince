@@ -187,6 +187,18 @@ describe("the dots that share a label", () => {
     );
     expect(group?.lead).toBe(1);
   });
+
+  it("lead with a deal's outcome over a late promise or the last contact", () => {
+    const [group] = clusterEvents(
+      [
+        { pct: 50, kind: "late" },
+        { pct: 51, kind: "end", decided: true },
+        { pct: 52, kind: "last" },
+      ],
+      CANVAS,
+    );
+    expect(group?.lead).toBe(1);
+  });
 });
 
 describe("the label rows", () => {

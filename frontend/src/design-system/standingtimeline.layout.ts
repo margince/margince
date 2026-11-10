@@ -203,13 +203,18 @@ const KIND_RANK: Readonly<Record<TimelineKind, number>> = {
 
 export type TimelineKind = "done" | "late" | "last" | "ahead" | "end";
 
-export type TimelineItem = Readonly<{ pct: number; kind: TimelineKind }>;
+// `decided` marks a deal's won or lost day, which leads any cluster it is in.
+export type TimelineItem = Readonly<{
+  pct: number;
+  kind: TimelineKind;
+  decided?: boolean;
+}>;
 
 /**
  * Dots that sit closer than `CLUSTER_PX` on a canvas `canvasPx` wide, as one
  * group each, in axis order. `lead` is the member a reader most needs named.
- * That is an overdue promise first, then the last contact, the next date
- * ahead, the horizon, and of the rest the latest.
+ * That is a deal's outcome first, then an overdue promise, the last contact,
+ * the next date ahead, the horizon, and of the rest the latest.
  */
 export function clusterEvents(
   items: readonly TimelineItem[],
@@ -242,6 +247,10 @@ function outranks(
   a: number,
   b: number,
 ): boolean {
+  const decidedA = items[a]?.decided === true;
+  if (decidedA !== (items[b]?.decided === true)) {
+    return decidedA;
+  }
   const kindA = items[a]?.kind ?? "done";
   const kindB = items[b]?.kind ?? "done";
   if (KIND_RANK[kindA] !== KIND_RANK[kindB]) {

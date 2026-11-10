@@ -67,6 +67,8 @@ export type TimelineEvent = Readonly<{
   // The logged items this event already stands for, so no mark is drawn a
   // second time beside its label.
   activityIds?: readonly string[];
+  // A deal's result on the day it was decided: drawn as a flag, not a dot.
+  outcome?: "won" | "lost";
 }>;
 
 /**
@@ -179,6 +181,7 @@ export function StandingTimeline({
     event,
     pct: axisPct(instant(event.at), axis),
     kind: event.kind,
+    decided: event.outcome !== undefined,
   }));
   const labels = clusterEvents(items, canvasPx).map(({ lead, members }) => {
     const { event, pct: at } = items[lead] ?? { event: shown[0], pct: 0 };
@@ -251,13 +254,22 @@ export function StandingTimeline({
                 </span>
               </span>
             )}
-            {items.map(({ event, pct: at }) => (
-              <span
-                key={event.key}
-                className={`standing-timeline-dot is-${event.kind}`}
-                style={{ left: `${at}%` }}
-              />
-            ))}
+            {items.map(({ event, pct: at }) =>
+              event.outcome ? (
+                <span
+                  key={event.key}
+                  className="standing-timeline-flag"
+                  data-outcome={event.outcome}
+                  style={{ left: `${at}%` }}
+                />
+              ) : (
+                <span
+                  key={event.key}
+                  className={`standing-timeline-dot is-${event.kind}`}
+                  style={{ left: `${at}%` }}
+                />
+              ),
+            )}
             {labels.map(({ event, at, sub }, index) =>
               event ? (
                 <EventLabel
