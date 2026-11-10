@@ -102,17 +102,9 @@ func startJobRunner(ctx context.Context, pool *pgxpool.Pool, vault keyvault.Vaul
 	// already nil where none is configured, and it is the same value
 	// startRunnerLane passes — so the two bindings are idempotent.
 	compose.BindExtensionRuntime(pool, vault)
-	// The capture pipeline a unit's ingress lands through, bound in the same
-	// breath and on the same terms. THIS role is the one that matters: a record
-	// is ingested by unattended work only — a job tick or a subscription
-	// delivery — and both of those run here. A worker that bound the runtime
-	// and not this would serve every other capability and answer
-	// errIngressUnwired to the one capability a connector unit exists for.
-	//
-	// It takes cfg.captureConfig, which is the same deployment config the sweep
-	// registry above is built from, blob store included: a unit's captured
-	// message and a mailbox's then reach one set of suppression lists and one
-	// attachment store rather than two that drift.
+	// The capture pipeline a unit's ingress lands through. Units ingest only from
+	// job ticks and subscription deliveries, and both run in this role. It shares
+	// cfg.captureConfig with the sweep registry, so both reach one attachment store.
 	compose.BindExtensionCapture(pool, cfg.captureConfig)
 
 	// A failed read starts the worker on the defaults rather than not at all:
@@ -121,6 +113,11 @@ func startJobRunner(ctx context.Context, pool *pgxpool.Pool, vault keyvault.Vaul
 	if err != nil {
 		logger.WarnContext(ctx, "schedules: could not read the schedule settings at boot; starting on the defaults until the next check", "err", err)
 		schedules = compose.DefaultSchedules()
+	}
+	if lastRuns, err := compose.ReadLastRuns(ctx, pool); err != nil {
+		logger.WarnContext(ctx, "schedules: could not read when each pass last ran; every pass runs at start", "err", err)
+	} else {
+		schedules.CatchUpFrom(lastRuns)
 	}
 	runner, err := newJobRunner(pool, logger, cfg, schedules, captureReg, watchCfg, vault, lanes, modelPath, weeklyMail)
 	if err != nil {
