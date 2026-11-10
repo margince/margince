@@ -6253,6 +6253,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/activities/{id}/calendar-response": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Accept, tentatively accept or decline a calendar invitation that came by email.
+         * @description Answers the event the invitation names, on the caller's own connected calendar, and the
+         *     calendar tells the organizer. Only the email's `calendar_invitation` offers this, and only
+         *     to a seat whose own mailbox received the invitation.
+         *
+         *     The caller has then dealt with the message, so it leaves their Worklist the way Done does.
+         *     Answering again changes the answer.
+         *
+         *     Reading the message is the licence to answer it: an id the caller cannot read answers 404,
+         *     the same as one that does not exist. A message that is not an open invitation to the caller,
+         *     or a caller with no calendar Margince may write to, answers 422 naming why.
+         */
+        put: operations["answerCalendarInvitation"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/activities/{id}/meeting-brief": {
         parameters: {
             query?: never;
@@ -28136,7 +28168,8 @@ export interface components {
              * @description Whose move it is, derived from what this reader can see of the thread.
              *     `needs_reply` on a message still owed our answer, `waiting_for_them` on one we sent
              *     that is still the last word with them. A calendar invitation, update, cancellation
-             *     or answer is `none` unless someone confirmed it asks us something. `none` also when
+             *     or answer is `none` unless someone confirmed it asks us something, and an invitation
+             *     the reader may still answer is `none` too: `calendar_invitation` carries what it asks. `none` also when
              *     the question cannot be answered honestly — an unanswerable move is not a claim.
              *     A message older than the waiting horizon that nobody kept is `none` too: it is
              *     no longer current work, the same bound the waiting queue and `waiting_reply` apply.
@@ -28153,10 +28186,40 @@ export interface components {
              */
             delivery?: components["schemas"]["EmailDelivery"];
             /**
+             * @description Present when this message is a calendar invitation the reader can still answer: it came
+             *     into the reader's own mailbox, names an event, and that event has not started. A client
+             *     offers the answers here instead of a written reply, because an invitation asks for an
+             *     RSVP. Absent on every other message, and on a withheld one.
+             */
+            calendar_invitation?: components["schemas"]["EmailCalendarInvitation"];
+            /**
              * @description The activity's version, carried so a row can open an editor that writes with
              *     If-Match. A row without it can only read.
              */
             version: components["schemas"]["RowVersion"];
+        };
+        /** @description The reader's own answer to the event an invitation names. */
+        EmailCalendarInvitation: {
+            /**
+             * @description What the reader's calendar holds. `needs_action` until they answer, and while their
+             *     calendar has not synced the event.
+             * @enum {string}
+             */
+            response: "needs_action" | "accepted" | "tentative" | "declined";
+            /**
+             * Format: date-time
+             * @description When the event starts. Absent while the reader's calendar has not synced it.
+             */
+            starts_at?: string;
+            /** @description How to read `starts_at`, present beside it. `day` is an all-day event, so a client draws no time. */
+            starts_precision?: components["schemas"]["OccurredPrecision"];
+        };
+        AnswerCalendarInvitationRequest: {
+            /**
+             * @description The answer the organizer receives. `tentative` is Maybe.
+             * @enum {string}
+             */
+            response: "accepted" | "tentative" | "declined";
         };
         /**
          * @description Whether an outbound message actually left, and why not when it did not.
@@ -68987,6 +69050,36 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    answerCalendarInvitation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AnswerCalendarInvitationRequest"];
+            };
+        };
+        responses: {
+            /** @description The answer the calendar now holds. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmailCalendarInvitation"];
+                };
             };
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];

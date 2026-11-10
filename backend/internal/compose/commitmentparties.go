@@ -64,6 +64,10 @@ const commitmentPartyHeader = "Verified participants (reference, kind, role, nam
 // commitmentPartyPrompt lists the participants under the short refs a reply
 // cites them by; their record keys never reach the model.
 func commitmentPartyPrompt(parties []commitmentParty, source string, refs *promptref.Refs) string {
+	if len(parties) == 0 {
+		// A bare header reads as a list to fill, and a model fills it with names.
+		return "none\n"
+	}
 	var out strings.Builder
 	for _, party := range parties {
 		address := ""

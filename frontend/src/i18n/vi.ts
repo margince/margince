@@ -2103,6 +2103,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.bandCount_one": "{count} việc",
   "worklist.bandCount_other": "{count} việc",
   "brief.focus.context": "Xem chi tiết",
+  "brief.focus.next": "Công việc tiếp theo",
   "brief.queue.back": "Quay lại Danh sách công việc",
   "brief.queue.title": "Danh sách công việc",
   "brief.queue.show": "Xem Danh sách công việc",
@@ -4768,6 +4769,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "visibility.private": "Riêng tư",
   "visibility.withheld": "Bị ẩn",
   "email.access.unnamedMember": "Người dùng cũ",
+  "email.invitation.badge": "Lời mời",
+  "email.invitation.startsAt": "Bắt đầu {when}",
   "email.move.needsReply": "Cần trả lời",
   "email.move.waitingForThem": "Đang chờ họ trả lời",
   "email.detail.loading": "Đang tải email…",
@@ -6483,11 +6486,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "brief.briefedAt": "Margince tóm tắt lúc {time}",
   "brief.task.done": "Đánh dấu xong: {title}",
   "brief.task.reply": "Trả lời {name}: {subject}",
-  "brief.pager.label": "Công việc",
-  "brief.pager.previous": "Công việc trước",
-  "brief.pager.next": "Công việc tiếp theo",
-  "brief.pager.hint":
-    "Vuốt sang trái hoặc phải để xem công việc. Bạn cũng có thể dùng phím mũi tên trên các nút điều hướng.",
   "brief.first.title": "Cần bạn xử lý",
   "brief.intro.waiting": "Đang chờ bạn",
   "brief.intro.meetings": "Cuộc họp hôm nay",
@@ -7329,6 +7327,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "whoCanSee.emails.company":
     "Email xếp vào công ty này có phạm vi đọc riêng. Mở một email trong lịch sử để xem ai có thể đọc.",
   "compose.reply": "Trả lời",
+  "invitation.answer.label": "Trả lời lời mời",
+  "invitation.answer.accepted": "Chấp nhận",
+  "invitation.answer.tentative": "Có thể",
+  "invitation.answer.declined": "Từ chối",
   "compose.writeEmail": "Viết email",
   "compose.relink": "Đổi hồ sơ",
   "compose.previewEmail": "Xem trước",
@@ -13100,6 +13102,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "settings.page.records.sub":
     "Trường tùy chỉnh, thẻ dùng chung và vai trò phụ trách gắn với bản ghi.",
   "settings.partsLabel": "Các phần của trang này",
+  "settings.part.voice.overview": "Giọng văn của bạn",
+  "settings.part.voice.samples": "Văn mẫu",
+  "settings.part.voice.rules": "Quy tắc của bạn",
+  "settings.part.voice.builds": "Bản dựng",
   "settings.part.meetings.links": "Liên kết đặt lịch",
   "settings.part.meetings.availability": "Thời gian rảnh",
   "settings.part.meetings.guests": "Trang cho khách",
@@ -13706,13 +13712,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "voice.insights.provenance": "Dựng từ văn mẫu · v{n}",
   "voice.insights.statWords": "Số từ: {count}",
   "voice.insights.statSources": "Số nguồn: {count}",
-  "settings.voice.jumpLabel": "Trên trang này",
-  "settings.voice.jump.voice": "Giọng văn của bạn",
-  "settings.voice.jump.moves": "Nét đặc trưng",
   "settings.voice.jump.drafts": "Xem bản nháp",
-  "settings.voice.jump.sharpen": "Làm sắc nét hơn",
-  "settings.voice.jump.rules": "Quy tắc của bạn",
-  "settings.voice.jump.builds": "Bản dựng",
   "settings.voice.editRules": "Sửa quy tắc",
   "settings.voice.addMore": "Thêm bài viết khác",
   "settings.voice.start.title": "Giọng văn của bạn",
@@ -13931,6 +13931,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Đang dựng giọng văn. Mất khoảng một phút và vẫn tiếp tục nếu bạn rời trang này.",
   "settings.voice.rebuild": "Dựng lại Voice DNA",
   "settings.voice.buildFirst": "Dựng Voice DNA",
+  "settings.voice.firstBuildHint":
+    "Bản dựng đầu tiên bắt đầu ở thẻ Giọng văn của bạn.",
+  "settings.voice.firstBuildGo": "Mở Giọng văn của bạn",
   "settings.voice.buildNeedsWords":
     "Lần dựng đầu tiên cần thêm khoảng {n} từ. Dưới mức đó, chưa đủ văn bản để học.",
   "settings.voice.buildProvisional":
@@ -16480,6 +16483,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "webhooks.event.activity.updated.label": "Đã đổi hoạt động",
   "webhooks.event.activity.updated.when":
     "Hoạt động được sửa hoặc liên kết với hồ sơ khác.",
+  "webhooks.event.activity.invitation_answered.label": "Đã trả lời lời mời",
+  "webhooks.event.activity.invitation_answered.when":
+    "Ai đó chấp nhận, từ chối hoặc trả lời có thể cho một lời mời lịch trong Margince.",
   "webhooks.event.activity.archived.label":
     "Đã chuyển hoạt động vào kho lưu trữ",
   "webhooks.event.activity.archived.when":
@@ -18569,6 +18575,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Lượt rà soát ban đêm đã đánh dấu deal này. Xử lý, tạm gác, hoặc bỏ qua.",
   "worklist.ask.conversation_claim":
     "Bạn đã cam kết việc này trong một cuộc trao đổi. Làm xong rồi đánh dấu là xong.",
+  "worklist.ask.invitation":
+    "Đây là lời mời lịch. Hãy chấp nhận, trả lời có thể hoặc từ chối, và bên tổ chức sẽ nhận được câu trả lời của bạn.",
   "worklist.ask.customer_waiting":
     "Khách hàng đã viết và chưa có ai trả lời. Trả lời khách hàng.",
   "worklist.ask.lead_response":

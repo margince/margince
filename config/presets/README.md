@@ -74,8 +74,8 @@ for the reason given above for `openrouter_cloud.yaml`.
 the candidate to that profile. The judge is exempt: it is the lane's own grader, and it gets only the
 corpus and the candidate's answer. So either preset may be certified with the default cloud judge.
 
-The committed Gemma records were graded by the default cloud judge: each one names `claude_cli`
-as its `judge_provider`. The Gemma weights are 12b on every tier,
+No record is committed for `gemma4_local_ollama.yaml`: certify it with
+`make e2e-ai ROUTING=config/presets/gemma4_local_ollama.yaml` on a machine that serves it. The Gemma weights are 12b on every tier,
 because that is what a 24GB machine serves wholly on the GPU. The header of the file has the numbers.
 
 On the `routing:` block of the OpenRouter preset, and the measurements behind its defaults:

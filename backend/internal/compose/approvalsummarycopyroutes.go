@@ -163,6 +163,7 @@ var routeVerbsGerman = map[string]string{
 	"send_offer":                         "Angebot versenden",
 	"set_activity_audience":              "Leserkreis einer Aktivität festlegen",
 	"set_activity_disposition":           "Nachricht zurücklegen",
+	"answer_calendar_invitation":         "Auf eine Kalendereinladung antworten",
 	"set_deal_room_expiry":               "Ablauf des Deal-Raums festlegen",
 	"set_lead_manual_signal":             "Manuellen Bewertungsfaktor setzen",
 	"set_thread_audience":                "Leserkreis eines Gesprächsfadens festlegen",
