@@ -70,7 +70,7 @@ func yearTargets(ctx context.Context, tx pgx.Tx, owners []ids.UUID, year int, re
 }
 
 // OwnerGoalYears reads each owner's live monthly goals for a calendar year.
-// readable is false when the reader may not read targets at all; an owner the
+// readable is false when the reader may not read targets at all. An owner the
 // reader may not measure is left out, so the caller tells withheld from unset.
 func (s *Service) OwnerGoalYears(ctx context.Context, tx pgx.Tx, owners []ids.UUID, year int) (goals map[ids.UUID]GoalYear, readable bool, err error) {
 	if !auth.Allows(ctx, "sales_target", principal.ActionRead) {

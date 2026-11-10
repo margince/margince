@@ -96,8 +96,8 @@ func goalPlanState(plan goalPlan, drifted bool) crmcontracts.SalesGoalPlanState 
 	return "no_goal"
 }
 
-// liveMonths is the reported goal of each month, in the plan currency only:
-// a target kept in another currency is never shown as if it were this one.
+// liveMonths is the reported goal of each month, in the plan currency only.
+// A target kept in another currency is never shown as if it were this one.
 func liveMonths(year GoalYear, currency string) crmcontracts.SalesGoalMonths {
 	out := make(crmcontracts.SalesGoalMonths, goalMonths)
 	for month, cell := range year {
@@ -130,8 +130,8 @@ const (
 	maxGoalYear = 2200
 )
 
-// monthTotal adds twelve months exactly. complete is false when a month is
-// not set; a sum past the exact JSON range is refused rather than rounded.
+// monthTotal adds twelve months. complete is false when a month is not set.
+// A sum past the exact JSON range is refused rather than rounded.
 func monthTotal(months []*int64) (total int64, complete bool, err error) {
 	complete = len(months) == goalMonths
 	for index, month := range months {

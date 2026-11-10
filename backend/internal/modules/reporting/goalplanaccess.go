@@ -45,7 +45,7 @@ func (s *Service) goalAccess(ctx context.Context, tx pgx.Tx, owner ids.UUID) (go
 	access := goalAccess{self: !person.IsZero() && person == owner}
 	if !access.self {
 		// The individual-performance switch and the reader's population both
-		// live in this one rule, so a goal is read exactly where its figures are.
+		// live in this one rule, so a goal is read where its figures are.
 		measured, err := s.authority.MeasurableOwners(ctx, tx, []ids.UUID{owner})
 		if err != nil {
 			return goalAccess{}, err

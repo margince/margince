@@ -153,8 +153,8 @@ export function useSalesGoalWrites() {
 }
 
 /**
- * A yearly amount spread over twelve months: the whole-unit floor in each, and
- * one more minor unit in each of the first months until the sum is exact.
+ * A yearly amount spread over twelve months. Each gets a twelfth, rounded down.
+ * The first months get one more minor unit each until the sum is the year.
  */
 export function equalMonths(totalMinor: number): number[] {
   const base = Math.floor(totalMinor / 12);

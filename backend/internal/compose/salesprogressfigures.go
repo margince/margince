@@ -18,8 +18,8 @@ import (
 )
 
 // metricAmount reads one figure of an evaluation as a progress amount. A
-// measured zero is a known amount; a partly priced figure is marked partial,
-// so no completion is claimed on it; any other reading is withheld.
+// measured zero is a known amount. A partly priced figure is partial, so no
+// completion is claimed on it. Any other reading is withheld.
 func metricAmount(evaluation reporting.Evaluation, metric crmcontracts.ReportingMetricID) crmcontracts.SalesProgressAmount {
 	for _, reading := range evaluation.Result.Metrics {
 		if reading.Id != metric {
@@ -64,8 +64,8 @@ func fillFigures(frame progressFrame, headline reporting.Evaluation, goals progr
 			invalid[fact.SourceID] = true
 		}
 	}
-	// The split is settled to each deal's value, so a gap is only a deal the
-	// mix could not read; it is unresolved, never a product or a service.
+	// The split is settled to each deal's value, so a gap is a deal the mix
+	// could not read. It is unresolved, never a product or a service.
 	if gap := *out.Closed.AmountMinor - split[saleProduct] - split[saleService] - split[saleUnresolved]; gap > 0 {
 		split[saleUnresolved] += gap
 	}

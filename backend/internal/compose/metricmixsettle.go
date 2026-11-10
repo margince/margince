@@ -18,8 +18,8 @@ import (
 )
 
 // The sale categories a won deal's value splits into. Software is a product
-// sale and implementation a service; every other kind, a product nobody
-// classified and the part no line carries cannot be called either.
+// sale and implementation a service. Every other kind is unresolved, and so
+// are products nobody classified and the part no line carries.
 const (
 	saleProduct    = "product"
 	saleService    = "service"
@@ -44,7 +44,7 @@ func saleCategory(groupKey string) string {
 var saleCategoryOrder = []string{saleProduct, saleService, saleUnresolved}
 
 // settleShares splits total over weights by largest remainder, in minor units,
-// so the shares add up to total exactly. A tie goes to the earlier weight.
+// so the shares add up to total. A tie goes to the earlier weight.
 func settleShares(total int64, weights []int64) []int64 {
 	out := make([]int64, len(weights))
 	var sum int64
@@ -73,9 +73,9 @@ func settleShares(total int64, weights []int64) []int64 {
 	return out
 }
 
-// settleMix makes each won deal's commercial-mix parts add up to the deal's
-// own converted value, the one bookings_won counts, so the split of closed
-// revenue and its evidence reconcile to the minor unit. The deal value is
+// settleMix makes each won deal's commercial-mix parts add up to the converted
+// value bookings_won counts. So the split of closed revenue and its evidence
+// agree to the minor unit. The deal value is
 // split over the categories first, then each category over its lines, which
 // are ordered by their product id.
 func settleMix(ctx context.Context, tx pgx.Tx, frame crmcontracts.ReportingContext, facts []reporting.Fact) ([]reporting.Fact, error) {

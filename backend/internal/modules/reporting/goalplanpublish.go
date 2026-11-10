@@ -13,8 +13,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// PublishGoalPlan makes the draft the agreed goals: twelve monthly targets, the
-// publication and their audit rows commit together, or none of them does and
+// PublishGoalPlan makes the draft the agreed goals. Twelve monthly targets, the
+// publication and their audit rows commit together. If one fails, none does and
 // the previous publication stays in force.
 func (s *Service) PublishGoalPlan(ctx context.Context, owner ids.UUID, year int, version int64, in crmcontracts.SalesGoalPublishInput) (crmcontracts.SalesGoalPlan, error) {
 	if !in.ConfirmAgreed {

@@ -283,9 +283,9 @@ func (s *Service) EvaluatedReceipt(ctx context.Context, selection crmcontracts.R
 	return out, err
 }
 
-// EvaluateFactsTx evaluates a selection and keeps the facts it was added up
-// from, so a reading that splits the same figure by month, owner or category
-// adds up the very rows Analytics counted.
+// EvaluateFactsTx evaluates a selection and keeps the facts behind it. A
+// reading that splits the figure by month, owner or category then adds up the
+// rows Analytics counted.
 func (s *Service) EvaluateFactsTx(ctx context.Context, tx pgx.Tx, selection crmcontracts.ReportingSelection) (Evaluation, error) {
 	if err := auth.Require(ctx, "report_definition", principal.ActionRead); err != nil {
 		return Evaluation{}, err

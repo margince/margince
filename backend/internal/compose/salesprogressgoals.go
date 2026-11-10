@@ -20,8 +20,8 @@ type progressPeople struct {
 	team bool
 	// owners are the people whose goals count, each one the reader measures.
 	owners []ids.UUID
-	// withheld is a team the reader may not measure member by member: its
-	// goal is the members' goals added up, so it is withheld with them.
+	// withheld is a team the reader may not measure member by member. Its
+	// goal is the sum of the members' goals, so it is withheld with them.
 	withheld bool
 }
 
