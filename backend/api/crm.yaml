@@ -36067,6 +36067,15 @@ paths:
               required: [question]
               properties:
                 question: { type: string, minLength: 1, maxLength: 1000 }
+                audiences:
+                  type: array
+                  maxItems: 20
+                  items: { type: string, minLength: 1, maxLength: 200 }
+                  description: |
+                    Optional. When present and not empty, only documents whose `meta.audience` is one
+                    of these values are searched and cited. Values compare with no case, no accents and
+                    `đ` as `d`. A document with no audience is left out. When no document matches, the
+                    outcome is `not_covered`. Absent or empty, every document is searched.
       responses:
         '200':
           description: The answer, or the refusal — `outcome` says which.
@@ -78373,6 +78382,18 @@ components:
             coverage counts them, so a corpus's documents sum to its own figure.
         embed_state: { $ref: '#/components/schemas/KnowledgeEmbedState' }
         created_at: { type: string, format: date-time }
+        external_id:
+          type: [string, 'null']
+          description: >-
+            The id the document's source gave it (a Google Drive file id), set only on a
+            document an extension keeps in step with that source. Null for an upload.
+        meta:
+          type: object
+          additionalProperties: { type: string }
+          description: >-
+            What the source said about the document (owner, department, country, type,
+            effective and review dates, audience), as the extension read it. A field the
+            source did not state is absent, never guessed. Absent for an upload.
 
     KnowledgeAnswerCorpus:
       type: object
@@ -78455,6 +78476,13 @@ components:
           description: >-
             A verbatim span from the retrieved passages, whitespace-collapsed and
             matched before this claim was allowed to exist.
+        meta:
+          type: object
+          additionalProperties: { type: string }
+          description: >-
+            What the cited document's source said about it (owner, effective date and so
+            on), so a reader sees which version and date the quote comes from. Absent for
+            an uploaded document.
         section:
           $ref: '#/components/schemas/KnowledgeClaimSection'
         opens:

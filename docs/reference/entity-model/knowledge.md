@@ -48,7 +48,7 @@ The 3 tables owned by `knowledge`, as the migrations build them. [Back to the en
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `default_ask` | `boolean`, default `false` | yes | The corpus the command palette's ask lands on. |
 | `description` | `text` |  |  |
-| `managed_source` | `text` |  |  |
+| `managed_source` | `text` |  | One of `handbook`, `gdocs`. |
 | `min_similarity` | `double precision` |  | The grounding floor in force: the cosine a passage must reach before it may be cited at all. |
 | `name` | `text` | yes |  |
 | `reindexing` | `boolean`, default `false` | yes | A re-embed is in flight; every ask answers not_ready until it finishes. |
@@ -60,7 +60,7 @@ The 3 tables owned by `knowledge`, as the migrations build them. [Back to the en
 
 **Rules**
 
-- `knowledge_corpus_managed_source_known`: `CHECK (((managed_source IS NULL) OR (managed_source = 'handbook')))`
+- `knowledge_corpus_managed_source_known`: `CHECK (((managed_source IS NULL) OR (managed_source = ANY (ARRAY['handbook', 'gdocs']))))`
 - `knowledge_corpus_min_similarity_range`: `CHECK (((min_similarity >= (0)::double precision) AND (min_similarity <= (1)::double precision)))`
 
 **Indexes**
@@ -75,7 +75,7 @@ The 3 tables owned by `knowledge`, as the migrations build them. [Back to the en
 
 ## knowledge_document
 
-16 columns · primary key `(id)` · referenced by 1 foreign key
+18 columns · primary key `(id)` · referenced by 1 foreign key
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -85,11 +85,13 @@ The 3 tables owned by `knowledge`, as the migrations build them. [Back to the en
 | `chunk_count` | `integer`, default `0` | yes |  |
 | `content_type` | `text` | yes |  |
 | `corpus_id` | `uuid` | yes | Points at `knowledge_corpus.id`. |
+| `external_id` | `text` |  | The id the document's source gave it (a Google Drive file id), set only on a document an extension keeps in step with that source. |
 | `filename` | `text` | yes |  |
 | `ingest_detail` | `text` |  | Why it failed, in words the uploader can act on. |
 | `ingest_started_at` | `timestamp with time zone` |  |  |
 | `ingest_status` | `text`, default `'queued'::text` | yes | One of `queued`, `running`, `done`, `failed`. |
-| `managed_source` | `text` |  |  |
+| `managed_source` | `text` |  | One of `handbook`, `gdocs`. |
+| `meta` | `jsonb` |  | What the source said about the document (owner, department, country, type, effective and review dates, audience), as the extension read it. |
 | `storage_key` | `text` | yes |  |
 | `archived_at` | `timestamp with time zone` |  | Soft-delete marker. `NULL` means live, and nearly every read filters on it. |
 | `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
@@ -106,13 +108,15 @@ The 3 tables owned by `knowledge`, as the migrations build them. [Back to the en
 
 - `knowledge_document_byte_size_js_safe`: `CHECK (((byte_size >= '-9007199254740991'::bigint) AND (byte_size <= '9007199254740991'::bigint)))`
 - `knowledge_document_detail_shape`: `CHECK (((ingest_status = 'failed') = (ingest_detail IS NOT NULL)))`
-- `knowledge_document_managed_source_known`: `CHECK (((managed_source IS NULL) OR (managed_source = 'handbook')))`
+- `knowledge_document_external_id_shape`: `CHECK ((((external_id IS NULL) OR (managed_source IS NOT NULL)) AND ((meta IS NULL) OR (jsonb_typeof(meta) = 'object'))))`
+- `knowledge_document_managed_source_known`: `CHECK (((managed_source IS NULL) OR (managed_source = ANY (ARRAY['handbook', 'gdocs']))))`
 - `knowledge_document_status_check`: `CHECK ((ingest_status = ANY (ARRAY['queued', 'running', 'done', 'failed'])))`
 
 **Indexes**
 
 - `knowledge_document_by_corpus`: `btree (corpus_id, archived_at)`
 - `knowledge_document_one_per_content`: `unique, btree (corpus_id, checksum) WHERE (archived_at IS NULL)`
+- `knowledge_document_one_per_external_id`: `unique, btree (corpus_id, external_id) WHERE ((external_id IS NOT NULL) AND (archived_at IS NULL))`
 - `knowledge_document_one_per_managed_page`: `unique, btree (corpus_id, filename) WHERE ((managed_source IS NOT NULL) AND (archived_at IS NULL))`
 - `knowledge_document_pkey`: `unique, btree (id)`
 

@@ -205,6 +205,7 @@ var eventShapedUpdates = gatekit.Waive(map[string]string{
 var unresolvableAuditActions = gatekit.Waive(map[string]string{
 	"internal/modules/reporting/persistence.go:recordChange":            "The shared mutation writer requires a non-nil before image for every non-create action before invoking Audit.",
 	"internal/modules/forecasting/capturestatus.go:RecordCaptureStatus": "The locked capture-status row is the before image; only its absence selects create, while update always carries the previously stored status.",
+	"internal/modules/knowledge/external.go:auditAndQueue":              "op is only create or update, and each caller spells it as a literal: the create caller has no prior row and passes none, the update caller passes the replaced document's name and checksum",
 	// The seam that routes an extension's own change, choosing the door from
 	// what the change carries rather than from a verb it cannot read.
 	"internal/compose/extledger.go:recordExtensionChange": "the verb is the unit's own, and the seam picks the door from whether the change declared a before-image, so an update either carries one or is recorded as the occurrence it says it is",

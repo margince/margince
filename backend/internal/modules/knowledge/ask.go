@@ -69,6 +69,9 @@ type Passage struct {
 	// for a passage written before the column existed. A citation says nothing
 	// about where rather than guessing.
 	StartLine int
+	// Meta is what the document's source said about it (owner, effective date
+	// and so on), shown beside a citation. Empty for an uploaded document.
+	Meta map[string]string
 }
 
 // Span is where a quote sits in the document: the half-open range
@@ -146,6 +149,15 @@ type Readiness struct {
 // not reach the model: a claim citing one would pass the quote check and
 // re-open exactly the hole the floor exists to close.
 func (s *Store) Retrieve(ctx context.Context, corpusID ids.UUID, question string, e vectorkit.Embedder) (Readiness, []Passage, error) {
+	return s.RetrieveFor(ctx, corpusID, question, e, nil)
+}
+
+// RetrieveFor is Retrieve held to the documents whose meta audience is one of
+// audiences (see FoldAudience). With none named it is Retrieve. A document with
+// no audience is left out when any is named. The limit is part of the ranking
+// query, so a document left out contributes no passage to anything after it.
+func (s *Store) RetrieveFor(ctx context.Context, corpusID ids.UUID, question string, e vectorkit.Embedder, audiences []string) (Readiness, []Passage, error) {
+	matcher := newAudienceMatcher(audiences)
 	if err := auth.Require(ctx, "knowledge_corpus", principal.ActionRead); err != nil {
 		return Readiness{}, nil, err
 	}
@@ -205,7 +217,7 @@ func (s *Store) Retrieve(ctx context.Context, corpusID ids.UUID, question string
 	// transaction, which is what this is.
 	var grounded []Passage
 	err = s.tx(ctx, func(tx pgx.Tx) (err error) {
-		state, grounded, err = groundedIn(ctx, tx, corpusID, vec, identity)
+		state, grounded, err = groundedIn(ctx, tx, corpusID, vec, identity, matcher)
 		return err
 	})
 	if err != nil {
@@ -224,7 +236,7 @@ func (s *Store) Retrieve(ctx context.Context, corpusID ids.UUID, question string
 // groundedIn settles readiness, ranks, and keeps what clears the floor — all
 // inside ONE transaction, which is the point: see Retrieve.
 func groundedIn(
-	ctx context.Context, tx pgx.Tx, corpusID ids.UUID, vec []float32, identity string,
+	ctx context.Context, tx pgx.Tx, corpusID ids.UUID, vec []float32, identity string, matcher audienceMatcher,
 ) (Readiness, []Passage, error) {
 	state, err := readinessIn(ctx, tx, corpusID, identity)
 	if err != nil {
@@ -233,7 +245,13 @@ func groundedIn(
 	if state.Outcome != crmcontracts.KnowledgeAnswerOutcomeKnowledgeAnswerOutcomeAnswered {
 		return state, nil, nil
 	}
-	passages, err := rankIn(ctx, tx, corpusID, vec, identity)
+	var only []string // nil: every document
+	if matcher != nil {
+		if only, err = allowedDocumentsIn(ctx, tx, corpusID, matcher); err != nil {
+			return state, nil, err
+		}
+	}
+	passages, err := rankIn(ctx, tx, corpusID, vec, identity, only)
 	if err != nil {
 		return state, nil, err
 	}
@@ -334,7 +352,7 @@ func (s *Store) questionVector(ctx context.Context, question string, e vectorkit
 
 // rankIn returns the corpus's closest passages to the question vector, inside
 // the transaction the caller holds.
-func rankIn(ctx context.Context, tx pgx.Tx, corpusID ids.UUID, vec []float32, identity string) ([]Passage, error) {
+func rankIn(ctx context.Context, tx pgx.Tx, corpusID ids.UUID, vec []float32, identity string, only []string) ([]Passage, error) {
 	// The `c.embed_identity = $3` predicate is load-bearing twice over, and
 	// must never be removed. For correctness: a vector from an older binding
 	// lives in a space this query's vector does not share, so ranking against
@@ -343,16 +361,17 @@ func rankIn(ctx context.Context, tx pgx.Tx, corpusID ids.UUID, vec []float32, id
 	// those rows BEFORE the projection computes the distance, which is why it
 	// is a WHERE clause and not a HAVING.
 	rows, err := tx.Query(ctx,
-		`SELECT c.id, c.document_id, d.filename, c.text, coalesce(c.start_line, 0),
+		`SELECT c.id, c.document_id, d.filename, c.text, coalesce(c.start_line, 0), d.meta,
 		        1 - (c.embedding <=> $1::vector) AS sim
 		   FROM knowledge_chunk c
 		   JOIN knowledge_document d ON d.id = c.document_id
 		  WHERE c.corpus_id = $2
 		    AND c.embed_identity = $3
 		    AND c.archived_at IS NULL
+		    AND ($5::uuid[] IS NULL OR c.document_id = ANY($5::uuid[]))
 		  ORDER BY c.embedding <=> $1::vector
 		  LIMIT $4`,
-		vectorkit.Literal(vec), corpusID, identity, RetrieveLimit)
+		vectorkit.Literal(vec), corpusID, identity, RetrieveLimit, only)
 	if err != nil {
 		return nil, fmt.Errorf("rank the corpus's passages: %w", err)
 	}
@@ -360,7 +379,7 @@ func rankIn(ctx context.Context, tx pgx.Tx, corpusID ids.UUID, vec []float32, id
 	var out []Passage
 	for rows.Next() {
 		var p Passage
-		if err := rows.Scan(&p.ChunkID, &p.DocumentID, &p.DocumentName, &p.Text, &p.StartLine, &p.Similarity); err != nil {
+		if err := rows.Scan(&p.ChunkID, &p.DocumentID, &p.DocumentName, &p.Text, &p.StartLine, &p.Meta, &p.Similarity); err != nil {
 			return nil, err
 		}
 		out = append(out, p)

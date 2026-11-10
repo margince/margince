@@ -375,7 +375,7 @@ func (e *corpusAskEngine) ask(w http.ResponseWriter, r *http.Request, id crmcont
 		httperr.Write(w, r, err)
 		return
 	}
-	state, passages, err := e.store.Retrieve(r.Context(), ids.UUID(id), question, e.embedder)
+	state, passages, err := e.store.RetrieveFor(r.Context(), ids.UUID(id), question, e.embedder, derefAudiences(req.Audiences))
 	if err != nil {
 		modelfailure.Write(w, r, err)
 		return
@@ -434,4 +434,11 @@ func (unboundEmbedder) EmbedIdentity() (string, int) { return "", 0 }
 
 func (unboundEmbedder) Embed(context.Context, model.EmbedRequest) (model.Embeddings, error) {
 	return model.Embeddings{}, errors.New("compose: this installation has no embed lane, so nothing can be embedded")
+}
+
+func derefAudiences(a *[]string) []string {
+	if a == nil {
+		return nil
+	}
+	return *a
 }

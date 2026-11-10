@@ -99,3 +99,5 @@
 1794215101_large_originals_name_their_stored_object.up.sql | * | defines a retirement trigger whose body runs only on later writes; no existing original is rewritten
 1794215101_large_originals_name_their_stored_object.down.sql | * | refuses removal while external references exist, then removes only schema objects; no original is rewritten
 1794215102_large_original_references_are_valid.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1794215200_a_google_docs_corpus_and_a_document_that_knows_its_source_id.down.sql | knowledge_corpus, knowledge_document | runs only on a rollback and deletes only the rows of the gdocs source, which is one corpus and the Google Docs a workspace chose to sync
+1794215201_the_google_docs_source_checks_are_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing

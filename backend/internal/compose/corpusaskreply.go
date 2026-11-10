@@ -247,6 +247,7 @@ func groundClaims(asked []askedClaim, passages []knowledge.Passage) []crmcontrac
 			DocumentId:   openapi_types.UUID(p.DocumentID),
 			DocumentName: p.DocumentName,
 			Quote:        strings.TrimSpace(c.Quote),
+			Meta:         claimMeta(p),
 		}
 		if text != "" {
 			claim.Text = &text
@@ -303,6 +304,7 @@ func passageClaims(passages []knowledge.Passage) []crmcontracts.KnowledgeClaim {
 			DocumentId:   openapi_types.UUID(p.DocumentID),
 			DocumentName: p.DocumentName,
 			Quote:        strings.TrimSpace(p.Text),
+			Meta:         claimMeta(p),
 		}
 		// The whole passage IS the quote here, so it begins where the passage
 		// begins — no search needed, and none possible: locating a string
@@ -314,4 +316,15 @@ func passageClaims(passages []knowledge.Passage) []crmcontracts.KnowledgeClaim {
 		}
 	}
 	return claims
+}
+
+// claimMeta is what the document's source said about it, carried onto the claim
+// so a reader sees the owner and the dates beside the quote. Nil when it said
+// nothing, so an uploaded document's claim is unchanged.
+func claimMeta(p knowledge.Passage) *map[string]string {
+	if len(p.Meta) == 0 {
+		return nil
+	}
+	m := p.Meta
+	return &m
 }

@@ -58420,6 +58420,12 @@ export interface components {
             embed_state: components["schemas"]["KnowledgeEmbedState"];
             /** Format: date-time */
             created_at: string;
+            /** @description The id the document's source gave it (a Google Drive file id), set only on a document an extension keeps in step with that source. Null for an upload. */
+            external_id?: string | null;
+            /** @description What the source said about the document (owner, department, country, type, effective and review dates, audience), as the extension read it. A field the source did not state is absent, never guessed. Absent for an upload. */
+            meta?: {
+                [key: string]: string;
+            };
         };
         /** @description The corpus as an ANSWER needs it: enough to name what was searched and to quote the topic statement back in a refusal, and nothing else. It is not KnowledgeCorpus, because that one carries coverage — which the answer already reports at its own top level — and an answer shipping the same counts down two paths is two components rendering different numbers on one screen with nothing to fail when they disagree. The settings a corpus is administered by (min_similarity, default_ask, reindexing) are no business of a reply. */
         KnowledgeAnswerCorpus: {
@@ -58452,6 +58458,10 @@ export interface components {
             end_column?: number;
             /** @description A verbatim span from the retrieved passages, whitespace-collapsed and matched before this claim was allowed to exist. */
             quote: string;
+            /** @description What the cited document's source said about it (owner, effective date and so on), so a reader sees which version and date the quote comes from. Absent for an uploaded document. */
+            meta?: {
+                [key: string]: string;
+            };
             section?: components["schemas"]["KnowledgeClaimSection"];
             opens?: components["schemas"]["KnowledgeClaimOpens"];
         };
@@ -96214,6 +96224,13 @@ export interface operations {
             content: {
                 "application/json": {
                     question: string;
+                    /**
+                     * @description Optional. When present and not empty, only documents whose `meta.audience` is one
+                     *     of these values are searched and cited. Values compare with no case, no accents and
+                     *     `đ` as `d`. A document with no audience is left out. When no document matches, the
+                     *     outcome is `not_covered`. Absent or empty, every document is searched.
+                     */
+                    audiences?: string[];
                 };
             };
         };

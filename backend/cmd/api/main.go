@@ -457,6 +457,7 @@ func blobstoreOptions(ctx context.Context, settings *config.Config, stdout io.Wr
 		return nil, nil
 	}
 	_, _ = fmt.Fprintln(stdout, "api attachments enabled (blobstore configured)")
+	compose.BindExtensionKnowledge(blob)
 	return []compose.Option{compose.WithBlobstore(blob)}, nil
 }
 
