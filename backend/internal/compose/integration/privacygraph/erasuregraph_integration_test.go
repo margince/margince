@@ -18,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -36,6 +37,11 @@ func TestErasureRefoldsARelinkedActivityBeforeItsEventIsDelivered(t *testing.T) 
 		t.Fatal(err)
 	}
 	activityID := ids.UUID(meeting.Id)
+	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AccountRepPerms)
+	if _, err := e.Activities.RelinkActivity(rep, ids.From[ids.ActivityKind](activityID),
+		activities.RelinkActivityInput{EntityType: "contact", EntityID: subject, ReplaceExistingOfType: true}); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Fatalf("rep relinked an activity outside their team: %v", err)
+	}
 	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		return search.RecomputeEdgesForActivities(ctx, tx, []ids.UUID{activityID})
 	}); err != nil {
