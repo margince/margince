@@ -296,8 +296,8 @@ The integration lane on a real Postgres runs **beside** `deterministic-gates` fo
 the longest lane in the pipeline. Running the two slowest jobs one after the other would set the clock
 time of a PR. And `deterministic-gates` itself still catches a broken build.
 
-- The lane is **sharded**. 8 matrix runners each run a fixed part of the tests, picked per test.
-  Splitting per package could go no faster than the largest package, `compose/integration`.
+- The lane is **sharded**. 8 matrix runners share its tests, cut into parts per test. Splitting per
+  package could go no faster than the largest package, `compose/integration`.
 - The `integration` fan-in puts them together again, into the single result the `ci` aggregate reads.
 
 The lane **compiles once**: a part picked per test reaches nearly every package. The `integration build`
@@ -305,15 +305,18 @@ job links each package's test binary with the shards' flags, and each shard runs
 the package directory. A compile error fails the build job, so no shard starts. Each shard still pays
 start-up, the fetch and its own template, so size the matrix from the measured test times.
 
-The shards **split by measured test time**, so they end close together. The fan-in uploads the time
-of every test (`test-timing-integration`). On `main`, the `integration-timing` job of `cache-warm.yml`
-takes each test's mean time over the five newest uploads. It saves the result as the cache entry
-`integration-test-timing-<run>`.
+The shards **share one queue**, so they end close together. Runner speed differs by up to 1.9 times,
+and with a fixed split the fast shards waited for the slow ones. Parts of about 120 seconds of test time
+form groups of about 240 seconds, slowest first. A shard with a free slot claims a group: it creates
+the group's cache entry, which only one job of the run can do. It claims its own groups from the front,
+then those of others from the back ([`lib-shardqueue.sh`](../../scripts/lib-shardqueue.sh)).
 
-The build job restores the newest entry, or takes the committed `scripts/integration-test-timing.txt`
-when none is there, and packs it with the binaries. So every shard of a run splits by one file, and the
-fan-in fails a run whose shards name another digest of it. A test the file does not name counts as its
-package's mean, so old times cost balance and never a test. Each shard starts its slowest part first.
+A run that may not write caches gets a fixed split. After `Re-run failed jobs`, shards skip what passed.
+
+The fan-in uploads each test's time (`test-timing-integration`). On `main`, the `integration-timing`
+job of `cache-warm.yml` saves the mean of the five newest as the entry `integration-test-timing-<run>`.
+The build packs the newest entry, or `scripts/integration-test-timing.txt`, with the binaries; the fan-in
+fails shards with another digest. A test the file does not name counts as its package's mean.
 
 ### The `ci` aggregate is the only required build context
 
