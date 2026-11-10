@@ -23,7 +23,7 @@ fail() {
 # plant <arch>: one platform folder, laid out as the Dockerfile's bundle stage.
 plant() {
 	local dir="$work/bundle/linux_$1"
-	mkdir -p "$dir/bin" "$dir/web" "$dir/deploy/server" "$dir/config"
+	mkdir -p "$dir/bin" "$dir/web" "$dir/deploy/server" "$dir/config" "$dir/licenses"
 	for program in margince-api margince-worker margince-migrate; do
 		printf '#!/bin/sh\necho %s-%s\n' "$program" "$1" >"$dir/bin/$program"
 	done
@@ -33,6 +33,7 @@ plant() {
 	cp "$SCRIPT_DIR/../config/margince.example.yaml" "$dir/config/"
 	cp "$SCRIPT_DIR/../.env.example" "$dir/margince.env.example"
 	echo 'Business Source License 1.1' >"$dir/LICENSE"
+	echo 'Third-party notices' >"$dir/licenses/THIRD-PARTY-NOTICES.txt"
 }
 
 pack() {
@@ -98,6 +99,15 @@ if pack; then
 	fail "a bundle without margince.env.example was packed, and the install has no settings to start from"
 elif ! grep -q 'margince.env.example' "$work/out"; then
 	fail "the refusal does not name the missing template: $(cat "$work/out")"
+fi
+
+# --- a bundle without the third-party notices --------------------------------
+plant arm64
+rm "$work/bundle/linux_arm64/licenses/THIRD-PARTY-NOTICES.txt"
+if pack; then
+	fail "a bundle without the third-party notices was packed, and its Go dependencies ship without their licence texts"
+elif ! grep -q 'licenses/THIRD-PARTY-NOTICES.txt' "$work/out"; then
+	fail "the refusal does not name the missing notices: $(cat "$work/out")"
 fi
 
 if [[ "$FAILURES" -gt 0 ]]; then
