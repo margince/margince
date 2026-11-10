@@ -3,9 +3,9 @@
 
 package contacts
 
-// Contract request → store input mappings, in ONE place: the HTTP handlers and
+// Contract request → store input mappings, in one place. The HTTP handlers and
 // the SoR provider (the MCP surface's door) both decode the same crm.yaml
-// shapes, and a rule kept in only one of them would make the surfaces disagree.
+// shapes. A rule kept in only one of them would make the surfaces disagree.
 
 import (
 	"bytes"

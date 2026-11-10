@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useCallback, useState } from "react";
+import { useState } from "react";
 import { Button } from "../../../design-system/atoms";
 import { ErrorLine } from "../../../design-system/errorline";
 import {
@@ -159,16 +159,13 @@ function AddLink({
   const { search, kindOf } = useRecordTargets();
   // Only the records the chosen type may end on, so a pick is never one the
   // server would refuse for its shape.
-  const searchTargets = useCallback(
-    async (q: string) =>
-      chosen
-        ? (await search(q)).filter((candidate) => {
-            const kind = kindOf(candidate.id);
-            return isLinkEnd(kind) && chosen.to.includes(kind);
-          })
-        : [],
-    [chosen, search, kindOf],
-  );
+  const searchTargets = async (q: string) =>
+    chosen
+      ? (await search(q)).filter((candidate) => {
+          const kind = kindOf(candidate.id);
+          return isLinkEnd(kind) && chosen.to.includes(kind);
+        })
+      : [];
   return (
     <div className="deal-links-add">
       <Select
