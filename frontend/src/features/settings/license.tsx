@@ -27,7 +27,8 @@ import { LicenseHolderCard } from "./licenseholder";
 //   valid, with no seat count  a license that caps nothing: a count, no bar
 //   absent                     no license configured; nothing to measure against
 //   rejected                   asked and told no — a fault with a repair behind
-//                              it, which `absent` is not
+//                              it, which `absent` is not. Its seats stay held
+//                              to the last valid grant, which the server sends
 //
 // The middle case is why `seats_granted` is nullable rather than zero, and why
 // the reading says "no limit" instead of a number: a meter filled against a

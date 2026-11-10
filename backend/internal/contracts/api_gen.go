@@ -52528,8 +52528,10 @@ type LicenseEntitlement struct {
 	// an unlicensed installation is never reported as over a limit it does not have.
 	OverLimit bool `json:"over_limit"`
 
-	// SeatsGranted Full seats the license admits. ABSENT when nothing caps them — no license, or a
-	// grant carrying no seat count — which is not a grant of zero.
+	// SeatsGranted Full seats a new seat is held to. A valid license answers its own grant; a refused
+	// one keeps the last valid grant this process resolved. ABSENT when nothing caps them
+	// — no license, no valid one before a refusal, or a grant carrying no seat count —
+	// which is not a grant of zero.
 	SeatsGranted *int `json:"seats_granted,omitempty" minimum:"0"`
 
 	// SeatsUsed Full seats in use: every one the installation has not withdrawn — neither
