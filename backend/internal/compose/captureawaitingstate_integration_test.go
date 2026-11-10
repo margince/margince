@@ -89,19 +89,21 @@ func TestEachAddressOfAWaitingContactCarriesItsOwnState(t *testing.T) {
 }
 
 // A decision counts as applying only where a pass will apply it. A contact a
-// user worked on is out of both sweeps, so without an open question its
-// owner's decision is left to the owner.
+// user worked on is out of both sweeps. The noise sweep keeps a sender the
+// workspace writes to. Those decisions are left to the owner.
 func TestADecisionNoPassAppliesIsLeftToTheOwner(t *testing.T) {
 	e := integration.Setup(t)
 	want := map[string]capture.AwaitingState{
 		"untouched@kept.test":  capture.AwaitingYourAnswerApplying,
 		"touched@kept.test":    capture.AwaitingNothingToJudge,
 		"nomail@business.test": capture.AwaitingNothingToJudge,
+		"written@kept.test":    capture.AwaitingNothingToJudge,
 	}
 	decisions := map[string]string{
 		"untouched@kept.test":  "keep_out",
 		"touched@kept.test":    "keep_out",
 		"nomail@business.test": "business",
+		"written@kept.test":    "keep_out",
 	}
 	for email, decision := range decisions {
 		contact := seedOwnerPrivateContact(t, e, e.Rep1, email, email)
@@ -112,6 +114,9 @@ func TestADecisionNoPassAppliesIsLeftToTheOwner(t *testing.T) {
 				VALUES ('human', 'user:'||$1::text, 'update', 'contact', $2)`, e.Rep1, contact)
 		}
 	}
+
+	// The noise sweep refuses to retract a sender the workspace writes to.
+	seedOutboundMail(t, e, "written@kept.test", "thanks, let us proceed")
 
 	listed, err := capture.ContactsAwaitingDecisionFor(ownerReader(e, e.Rep1), InstallationDB(e.Pool))
 	if err != nil {

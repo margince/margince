@@ -13,6 +13,7 @@ package capture
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -87,23 +88,14 @@ func (s AwaitingState) Processing() bool {
 // contact aliased contact. The queued arm is StrandedContacts' own filter.
 //
 // A decision counts as applying only where a pass will reach it. That is the
-// owner's open question, the stranded sweep for a business answer, or the
-// noise sweep for a keep_out. Elsewhere it falls through, so the drawer keeps
-// the owner's own ways to settle the contact.
+// owner's open question, or the stranded sweep for an untouched contact it can
+// ask about. A keep_out the noise sweep would apply comes out as
+// keepOutUnlessCorresponded, because only Go can read correspondence.
 func awaitingStateSQL(contact, email string) string {
 	untouched := `NOT ` + contactTouchedByAUser(contact)
-	return `CASE
-	  WHEN EXISTS (SELECT 1 FROM capture_sender_override o
-	                WHERE o.user_id = ` + contact + `.owner_id AND o.address = ` + email + `
-	                  AND (EXISTS (SELECT 1 FROM capture_pending_counterparty q
-	                                WHERE q.email = ` + email + ` AND q.owner_id = o.user_id
-	                                  AND q.status IN ('pending', 'unsure'))
-	                       OR (` + untouched + `
-	                           AND (o.decision = 'keep_out'
-	                                OR (NOT EXISTS (SELECT 1 FROM capture_pending_counterparty q
-	                                                 WHERE q.email = ` + email + `)
-	                                    AND EXISTS (SELECT 1 ` + judgeableMessageFrom(contact, email) + `))))))
-	    THEN '` + string(AwaitingYourAnswerApplying) + `'
+	override := `EXISTS (SELECT 1 FROM capture_sender_override o
+	                WHERE o.user_id = ` + contact + `.owner_id AND o.address = ` + email
+	undecided := `CASE
 	  WHEN EXISTS (SELECT 1 FROM capture_pending_counterparty q
 	                WHERE q.email = ` + email + ` AND q.status = 'pending')
 	    THEN '` + string(AwaitingClassifier) + `'
@@ -114,6 +106,37 @@ func awaitingStateSQL(contact, email string) string {
 	   AND EXISTS (SELECT 1 ` + judgeableMessageFrom(contact, email) + `)
 	    THEN '` + string(AwaitingQueued) + `'
 	  ELSE '` + string(AwaitingNothingToJudge) + `' END`
+	return `CASE
+	  WHEN ` + override + `
+	                  AND (EXISTS (SELECT 1 FROM capture_pending_counterparty q
+	                                WHERE q.email = ` + email + ` AND q.owner_id = o.user_id
+	                                  AND q.status IN ('pending', 'unsure'))
+	                       OR (` + untouched + `
+	                           AND NOT EXISTS (SELECT 1 FROM capture_pending_counterparty q
+	                                            WHERE q.email = ` + email + `)
+	                           AND EXISTS (SELECT 1 ` + judgeableMessageFrom(contact, email) + `))))
+	    THEN '` + string(AwaitingYourAnswerApplying) + `'
+	  WHEN ` + untouched + ` AND ` + override + ` AND o.decision = 'keep_out')
+	    THEN '` + keepOutUnlessCorresponded + `' || (` + undecided + `)
+	  ELSE ` + undecided + ` END`
+}
+
+// keepOutUnlessCorresponded prefixes the state an address has when the noise
+// sweep refuses its keep_out: it refuses a sender the workspace corresponds with.
+const keepOutUnlessCorresponded = "keep_out_unless_corresponded:"
+
+// settleKeepOutTx resolves a keepOutUnlessCorresponded state on the list's own
+// transaction, with the noise sweep's own correspondence read.
+func settleKeepOutTx(ctx context.Context, tx pgx.Tx, email, state string) (AwaitingState, error) {
+	undecided, ok := strings.CutPrefix(state, keepOutUnlessCorresponded)
+	if !ok {
+		return AwaitingState(state), nil
+	}
+	corresponds, err := correspondencePositiveTx(ctx, tx, email)
+	if err != nil || corresponds {
+		return AwaitingState(undecided), err
+	}
+	return AwaitingYourAnswerApplying, nil
 }
 
 // ContactsAwaitingDecisionFor lists the caller's own contacts that are waiting
@@ -160,7 +183,21 @@ func ContactsAwaitingDecisionFor(ctx context.Context, db *database.DB) ([]Awaiti
 			}
 			out = append(out, c)
 		}
-		return rows.Err()
+		if err := rows.Err(); err != nil {
+			return err
+		}
+		rows.Close()
+		for ci := range out {
+			for i := range out[ci].Addresses {
+				address := &out[ci].Addresses[i]
+				state, err := settleKeepOutTx(ctx, tx, address.Email, string(address.State))
+				if err != nil {
+					return err
+				}
+				address.State = state
+			}
+		}
+		return nil
 	})
 	if err != nil {
 		return nil, fmt.Errorf("capture: listing a seat's contacts awaiting a sender decision: %w", err)
