@@ -17,15 +17,22 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/workforce"
 )
 
+// PrivacyReviewer admits the privacy reviewer inside the caller's transaction.
+// The contacts module cannot read who holds that duty, so startup wiring
+// injects the identity check.
 type PrivacyReviewer interface {
 	RequirePrivacyReviewTx(context.Context, pgx.Tx, string) error
 }
 
+// WithPrivacyReviewer sets the check that guards retained signatures. Without
+// one, every read and save of a retained signature is refused.
 func (s *Store) WithPrivacyReviewer(reviewer PrivacyReviewer) *Store {
 	s.privacyReviewer = reviewer
 	return s
 }
 
+// RetainedSignature is the email signature a departed member left behind,
+// with the version a save must name and the sanitized preview.
 type RetainedSignature struct {
 	ID, OwnerID ids.UUID
 	Version     int64
@@ -34,6 +41,8 @@ type RetainedSignature struct {
 	PreviewHTML string
 }
 
+// GetRetainedSignature reads a departed member's signature for the privacy
+// reviewer. A live member's signature answers not found.
 func (s *Store) GetRetainedSignature(ctx context.Context, id ids.UUID) (RetainedSignature, error) {
 	var out RetainedSignature
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
@@ -47,6 +56,8 @@ func (s *Store) GetRetainedSignature(ctx context.Context, id ids.UUID) (Retained
 	return out, err
 }
 
+// SaveRetainedSignature replaces a departed member's signature when expected
+// matches the stored version, so the reviewer saves only the text they read.
 func (s *Store) SaveRetainedSignature(ctx context.Context, id ids.UUID, expected int64, in SaveSignatureInput) (RetainedSignature, error) {
 	in, err := validatedSignature(in)
 	if err != nil {
@@ -123,6 +134,8 @@ func (s *Store) readRetainedSignatureTx(ctx context.Context, tx pgx.Tx, id ids.U
 	return out, err
 }
 
+// WithRetainedSignaturePreview sets the renderer that fills PreviewHTML. It is
+// injected so the preview uses the same sanitizer as the send path.
 func (s *Store) WithRetainedSignaturePreview(preview func(string) (string, error)) *Store {
 	s.signaturePreview = preview
 	return s

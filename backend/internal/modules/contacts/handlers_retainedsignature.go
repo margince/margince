@@ -6,17 +6,21 @@ package contacts
 import (
 	"net/http"
 
+	openapi_types "github.com/oapi-codegen/runtime/types"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
+// WithPrivacyReviewer passes the privacy reviewer check to the store.
 func (h Handlers) WithPrivacyReviewer(reviewer PrivacyReviewer) Handlers {
 	h.store.WithPrivacyReviewer(reviewer)
 	return h
 }
 
+// GetRetainedEmailSignature serves a departed member's signature to the
+// privacy reviewer, with the version a save must send back.
 func (h Handlers) GetRetainedEmailSignature(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
 	saved, err := h.store.GetRetainedSignature(r.Context(), ids.UUID(id))
 	if err != nil {
@@ -26,6 +30,8 @@ func (h Handlers) GetRetainedEmailSignature(w http.ResponseWriter, r *http.Reque
 	httperr.WriteJSON(w, http.StatusOK, retainedSignatureWire(saved))
 }
 
+// SaveRetainedEmailSignature requires body and expected_version to be sent,
+// so a missing field is refused instead of clearing the signature.
 func (h Handlers) SaveRetainedEmailSignature(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
 	var body crmcontracts.SaveRetainedEmailSignatureRequest
 	if !httperr.Decode(w, r, &body) {
@@ -60,6 +66,7 @@ func retainedSignatureWire(saved RetainedSignature) crmcontracts.RetainedEmailSi
 	}
 }
 
+// WithRetainedSignaturePreview passes the preview renderer to the store.
 func (h Handlers) WithRetainedSignaturePreview(preview func(string) (string, error)) Handlers {
 	h.store.WithRetainedSignaturePreview(preview)
 	return h

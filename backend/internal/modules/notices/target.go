@@ -8,6 +8,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
+// TargetRetainedEmailSignature is the target type of a notice about a departed
+// member's signature. The frontend routes this value to the review screen.
 const TargetRetainedEmailSignature = "retained_email_signature"
 
 // Target is the record a notice is about, when it is about one.
