@@ -102,6 +102,25 @@ export function receiptHeadline(
 }
 
 /**
+ * The headline of a change shown under its record's own name, without that
+ * name again. The server quotes the subject in its sentences (`on "Acme"`,
+ * `Moved "Acme" from …`), so the quoted name and the `on` that leads it drop.
+ */
+export function headlineUnder(
+  receipt: Receipt,
+  t: Translator,
+  locale: Locale,
+  zone: string,
+): string {
+  const headline = receiptHeadline(receipt, t, locale, zone);
+  const label = receipt.subject?.label;
+  if (!label) return headline;
+  const quoted = `"${label}"`;
+  const bare = headline.replace(` on ${quoted}`, "");
+  return bare === headline ? headline.replace(` ${quoted}`, "") : bare;
+}
+
+/**
  * Why Margince made the change, as recorded when it acted. A close-date
  * estimate without one names its sales history instead. Null when the server
  * sent no reason this reader may read; the caller says so in words.
