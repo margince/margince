@@ -145,8 +145,12 @@ func newestMessage(
 	if excerpt != nil {
 		found.Excerpt = oneLine(*excerpt)
 	}
-	if found.EarlierOwed, err = activities.EarlierMailOwed(ctx, tx, found.ID, now); err != nil {
-		return lastMessage{}, false, err
+	// Only our own mail can leave an earlier one owed, so an inbound newest
+	// message costs no second read.
+	if found.Direction == "outbound" {
+		if found.EarlierOwed, err = activities.EarlierMailOwed(ctx, tx, found.ID, now); err != nil {
+			return lastMessage{}, false, err
+		}
 	}
 	return found, true, nil
 }

@@ -19,13 +19,14 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // ownThreadPrefix names the threads a hand-logged mail starts. Provider thread
 // keys are RFC 5322 Message-IDs, which always hold an "@", and channel keys
 // name their provider first, so no captured key can take this form.
-const ownThreadPrefix = "logged:"
+const ownThreadPrefix = correspondence.HandLoggedThreadPrefix
 
 // ownThreadKey is the thread a hand-logged mail with no identity starts.
 func ownThreadKey(id ids.UUID) string { return ownThreadPrefix + id.String() }
