@@ -15,9 +15,10 @@ import { Select, type SelectOption } from "../../design-system/select";
 import { isTagTone, TAG_TONES } from "../../design-system/tagpill";
 import { useT } from "../../i18n";
 import { problemMessageOf } from "../../lib/problem";
+import { useCreateTag } from "../../lib/tags.queries";
 import { nearMatches } from "./tagadmin.logic";
 import type { Tag, TagColor } from "./tagadmin.queries";
-import { useCreateTag, useUpdateTag } from "./tagadmin.queries";
+import { useUpdateTag } from "./tagadmin.queries";
 
 // The dialog that coins a tag or corrects one, from Settings › Data model.
 

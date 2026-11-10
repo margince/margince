@@ -6,6 +6,7 @@
 
 import type { components } from "../../api/schema";
 import type { PluralTranslator, Translator } from "../../i18n";
+import { UNKNOWN_VALUE_LABEL } from "../../lib/labelfor";
 
 export type RiskSignal = components["schemas"]["ForecastRiskSignal"];
 
@@ -44,6 +45,8 @@ export function signalSentence(
         : plural("forecast.signal.noReply", signal.days, count(signal.days));
     case "no_next_step":
       return closesSentence(signal.closes_in_days, t, plural, count);
+    default:
+      return t(UNKNOWN_VALUE_LABEL);
   }
 }
 

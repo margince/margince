@@ -86,10 +86,8 @@ func (e *WorkflowEngine) HandleApprovalDecided(ctx context.Context, env kevents.
 // Two callers, and the difference between them is what each is allowed to
 // promise. The decision consumer above uses it for an asking-only kind, where
 // the human's yes IS the outcome and there is no write to join. A release
-// executor uses it after its write has returned, because the record port it
-// writes through owns its own transaction and cannot be joined — so the
-// transition follows the write rather than sharing its commit, and a write that
-// failed leaves the run parked instead of claiming success.
+// executor uses it after a write whose transaction it cannot join. The
+// transition then follows the write instead of sharing its commit.
 //
 // Idempotent by predicate either way: only a still-parked run flips, so
 // redelivery, retry, and a second executor pass all change nothing.
@@ -167,12 +165,9 @@ func (e *WorkflowEngine) MarkRunBlocked(ctx context.Context, approvalID ids.Appr
 // recreate the permanently-parked run this exists to prevent, with the message
 // already sent, and there is no reconciler to lean on.
 //
-// Not every release can do that, and the difference is the record port rather
-// than a lapse. A reassignment writes through datasource.SystemOfRecordProvider,
-// a frozen seam with no transaction-taking variant, so it cannot be joined —
-// that path calls CompleteApprovedRun after its write instead, and accepts a
-// crash gap that leaves the run parked rather than lying. Which shape a kind
-// gets is decided by whether its write can be joined, never by preference.
+// A reassignment joins it when its system of record can write on the caller's
+// transaction. When it cannot, the release calls CompleteApprovedRun after the
+// write, or FailApprovedRun when the write was refused or never confirmed.
 //
 // Idempotent by predicate, exactly like MarkRunBlocked: only a still-parked run
 // flips, so a redelivered or re-driven release changes nothing. Matching on the
@@ -190,6 +185,29 @@ func CompleteApprovedRunTx(ctx context.Context, tx pgx.Tx, approvalID ids.Approv
 		return fmt.Errorf("automation: completing the run a released approval unparked: %w", err)
 	}
 	return nil
+}
+
+// FailApprovedRun lands the terminal 'failed' outcome on the run parked behind
+// a released approval whose write did not land, or was never confirmed.
+//
+// The reason says which. A refusal WriteRefused names keeps its own sentence.
+// Any other error may have come after the write landed, so the run says so.
+func FailApprovedRun(ctx context.Context, db *database.DB, approvalID ids.ApprovalID, cause error) error {
+	reason := unconfirmedWriteText
+	if WriteRefused(cause) {
+		reason = sanitizedReason(cause)
+	}
+	detail, err := reasonDetail(reason)
+	if err != nil {
+		return fmt.Errorf("automation: encoding the failed reason: %w", err)
+	}
+	return db.Tx(ctx, func(tx pgx.Tx) error {
+		_, err := tx.Exec(ctx, `
+			UPDATE workflow_run SET status = 'failed', detail = $2
+			WHERE status = 'requires_approval' AND detail->>'approval_id' = $1`,
+			approvalID.String(), detail)
+		return err
+	})
 }
 
 // StageableKinds are the approval kinds a firing can put in front of a human.

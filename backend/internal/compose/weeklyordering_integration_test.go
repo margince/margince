@@ -144,16 +144,16 @@ func seedMeasuredNarrativeSources(t *testing.T, e *integration.Env) {
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
 	owner := ids.From[ids.UserKind](e.Rep1)
 	pipeline, stage, won := integration.DealFixture(t, e)
-	deal, err := e.Deals.WithClock(func() time.Time { return at }).CreateDeal(ctx, deals.CreateDealInput{Name: "Measured opportunity", PipelineID: pipeline, StageID: stage, OwnerID: &owner, AmountMinor: new(int64(10000)), Currency: new("EUR"), Source: "manual"})
+	deal, err := e.Deals.SetClock(func() time.Time { return at }).CreateDeal(ctx, deals.CreateDealInput{Name: "Measured opportunity", PipelineID: pipeline, StageID: stage, OwnerID: &owner, AmountMinor: new(int64(10000)), Currency: new("EUR"), Source: "manual"})
 	if err != nil {
 		t.Fatal(err)
 	}
 	closedAt := time.Date(2026, 6, 3, 9, 0, 0, 0, time.UTC)
-	if _, err := e.Deals.WithClock(func() time.Time { return closedAt }).AdvanceDeal(ctx, ids.From[ids.DealKind](ids.UUID(deal.Id)), deals.AdvanceDealInput{ToStageID: won, WonWithoutContractReason: new("purchase_order")}); err != nil {
+	if _, err := e.Deals.SetClock(func() time.Time { return closedAt }).AdvanceDeal(ctx, ids.From[ids.DealKind](ids.UUID(deal.Id)), deals.AdvanceDealInput{ToStageID: won, WonWithoutContractReason: new("purchase_order")}); err != nil {
 		t.Fatal(err)
 	}
 	e.WsExec(t, `UPDATE role SET permissions=jsonb_set(permissions,'{objects,lead}','{"read":true}'::jsonb) WHERE key='manager'`)
-	if _, _, err := e.Contacts.WithClock(func() time.Time { return at }).CreateLead(ctx, contacts.CreateLeadInput{FullName: new("Measured lead"), OwnerID: &owner, Source: "manual"}); err != nil {
+	if _, _, err := e.Contacts.SetClock(func() time.Time { return at }).CreateLead(ctx, contacts.CreateLeadInput{FullName: new("Measured lead"), OwnerID: &owner, Source: "manual"}); err != nil {
 		t.Fatal(err)
 	}
 	if _, _, err := e.Activities.WithClock(func() time.Time { return at }).LogActivity(ctx, activities.LogActivityInput{Kind: "task", Subject: new("Send the quote"), AssigneeID: &owner, Source: "manual"}); err != nil {

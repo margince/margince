@@ -64,7 +64,8 @@ func NewGate(authority authz.Resolver, opts ...GateOption) *Gate {
 // building it may cost a database read (the target stage's semantic).
 //
 // The decision order matters. Scope comes first, so a caller without the verb
-// never learns the tier and pays no authority read. Then the live seat ceiling,
+// never learns the tier and pays no authority read. The passport's work areas
+// follow that read, which answers them as they stand. Then the live seat ceiling,
 // the volume ceilings and the tier. A 🟡 outcome (declared or dynamically
 // resolved) returns ErrRequiresApproval. On admission the returned context
 // carries the principal refreshed with the re-derived authority, so downstream
@@ -96,8 +97,8 @@ func (g *Gate) Admit(ctx context.Context, spec mcp.ToolSpec, resolve func() (mcp
 	// listing filter reads the same flag, so what is offered is what is
 	// admitted. Every check below still applies: the seat, the re-derived
 	// RBAC and the volume bounds are not waived by knowing whose seat it is.
-	if !spec.SelfDescribing && !p.Scopes.Has(spec.RequiredScope) {
-		return ctx, &ScopeRequiredError{Tool: spec.Name, Scope: spec.RequiredScope}
+	if err := RequireToolScope(p, spec); err != nil {
+		return ctx, err
 	}
 
 	// Re-derive the granting human's authority through the seam — never
@@ -141,16 +142,23 @@ func (g *Gate) Admit(ctx context.Context, spec mcp.ToolSpec, resolve func() (mcp
 		return ctx, deniedIfGone("the credential or the human behind it", spec.Name, err)
 	}
 	p.SeatType, p.Permissions, p.TeamIDs = seat, rbac.Permissions, rbac.TeamIDs
+	// A passport's areas come from this same read, so a run that authenticated
+	// once is held to a change from its next call.
+	if !p.PassportID.IsZero() {
+		p.Areas = rbac.PassportAreas
+	}
 	ctx = principal.WithActor(ctx, p)
+	if err := AreaRefusal(p, spec); err != nil {
+		return ctx, err
+	}
 
 	// The seat ceiling is checked before tier (A62/ADR-0047): a read seat —
 	// or an agent acting for one — may run only read-scoped tools, whatever
 	// their passport scope or the target's tier would otherwise permit. A
 	// non-read tool is refused outright, never staged for approval, because
 	// no approval can lift a licensing ceiling.
-	if spec.RequiredScope != principal.ScopeRead && !seat.CanMutate() {
-		return ctx, fmt.Errorf("gate: %s needs a full seat; %s acts for a read seat: %w",
-			spec.Name, p.ID, apperrors.ErrSeatTierInsufficient)
+	if err := RequireToolSeat(p, spec); err != nil {
+		return ctx, err
 	}
 
 	// Volume, the third term of "scope ∧ tier ∧ volume" (interfaces.md §2). It
@@ -299,7 +307,7 @@ func (g *Gate) AdmitRead(ctx context.Context) error {
 		return nil
 	}
 	if reading := g.volume.Read(ctx, agentvolume.Calls); reading.Exceeded {
-		return &VolumeExceededError{Reading: reading}
+		return refusalOf("", reading)
 	}
 	return nil
 }

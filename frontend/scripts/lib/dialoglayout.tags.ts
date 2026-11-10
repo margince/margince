@@ -20,7 +20,16 @@ export const opening = (n: ts.Node) => {
   return ts.isJsxSelfClosingElement(n) ? n : undefined;
 };
 
-export const tag = (n: ts.Node) => opening(n)?.tagName.getText() ?? "";
+// The walk asks for the same element's tag many times, once per scope it is
+// judged in. So each tag is read from the source text once.
+const tags = new WeakMap<ts.Node, string>();
+export const tag = (n: ts.Node) => {
+  const known = tags.get(n);
+  if (known !== undefined) return known;
+  const read = opening(n)?.tagName.getText() ?? "";
+  tags.set(n, read);
+  return read;
+};
 
 export const upper = (n: ts.Node) => /^[A-Z]/.test(tag(n));
 
@@ -82,13 +91,20 @@ export function idParts(a: ts.JsxAttribute | undefined): string[] {
 }
 
 /** Each branch of the class list an element's `className` produces. */
-export const variantsOf = (n: ts.Node, given?: Given) =>
-  classVariants(
+const ownVariants = new WeakMap<ts.Node, ReturnType<typeof classVariants>>();
+export const variantsOf = (n: ts.Node, given?: Given) => {
+  // Without props handed in, an element's classes are a fact of its source.
+  const known = given === undefined ? ownVariants.get(n) : undefined;
+  if (known) return known;
+  const read = classVariants(
     n.getSourceFile(),
     attr(n, "className")?.initializer,
     16,
     given,
   );
+  if (given === undefined) ownVariants.set(n, read);
+  return read;
+};
 
 /** Every class any branch of the element's `className` can carry. */
 export const classes = (n: ts.Node) => [...new Set(variantsOf(n).flat())];
@@ -261,12 +277,21 @@ export const definedName = (def: ts.Node) =>
 export const keyOf = (def: ts.Node) =>
   `${def.getSourceFile().fileName}#${definedName(def)}`;
 
+// A tree does not change once parsed, so an element names one definition.
+const definedAt = new WeakMap<ts.Node, { def: ts.Node | undefined }>();
+
 export const defOf = (n: ts.Node) => {
+  const known = definedAt.get(n);
+  if (known) return known.def;
   const name = opening(n)?.tagName;
-  if (!upper(n) || !name) return undefined;
-  return ts.isIdentifier(name)
-    ? definitionOf(name)
-    : definition(n.getSourceFile(), tag(n));
+  const def =
+    !upper(n) || !name
+      ? undefined
+      : ts.isIdentifier(name)
+        ? definitionOf(name)
+        : definition(n.getSourceFile(), tag(n));
+  definedAt.set(n, { def });
+  return def;
 };
 
 // What a name means where it is written: its own scope first, then the file's

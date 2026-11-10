@@ -44,10 +44,13 @@ func TestVerdictRequestFencesTheSenderUnderTheMarkerItDeclares(t *testing.T) {
 		t.Fatalf("got %d messages, want the single user turn", len(req.Messages))
 	}
 	content := req.Messages[0].Content
-	openTag, closeTag := "<"+marker+` id="`+row.ID.String()+`">`, "</"+marker+">"
+	openTag, closeTag := "<"+marker+` id="`+"s1"+`">`, "</"+marker+">"
 	openAt, closeAt := strings.Index(content, openTag), strings.Index(content, closeTag)
 	if openAt < 0 || closeAt < openAt {
 		t.Fatalf("the sender is not wrapped in the declared marker keyed by the row id:\n%s", content)
+	}
+	if strings.Contains(content, row.ID.String()) || strings.Contains(string(req.ResponseSchema), row.ID.String()) {
+		t.Errorf("the request shows the model the row id; it names the sender s1:\n%s", content)
 	}
 	span := content[openAt+len(openTag) : closeAt]
 	for _, sender := range []string{row.DisplayName, row.Email, row.Subject, row.Body} {
@@ -85,7 +88,7 @@ func TestVerdictRequestMintsAFreshBoundaryPerCall(t *testing.T) {
 func TestValidateVerdictPayloadRejectsEveryBrokenBatchContract(t *testing.T) {
 	asked := capture.PendingCounterparty{ID: ids.NewV7()}
 	other := ids.NewV7()
-	ok := verdictResult{ID: asked.ID.String(), Verdict: capture.KindContact, Confidence: 0.9}
+	ok := verdictResult{ID: "s1", Verdict: capture.KindContact, Confidence: 0.9}
 
 	cases := []struct {
 		name    string
@@ -104,6 +107,17 @@ func TestValidateVerdictPayloadRejectsEveryBrokenBatchContract(t *testing.T) {
 			wantMsg: "was not requested",
 		},
 		{
+			// The call showed the ref, so the record id is a ref it never minted.
+			name:    "the record id in place of its ref",
+			results: []verdictResult{{ID: asked.ID.String(), Verdict: capture.KindContact, Confidence: 0.9}},
+			wantMsg: "was not requested",
+		},
+		{
+			name:    "a ref the call did not show",
+			results: []verdictResult{{ID: "s2", Verdict: capture.KindContact, Confidence: 0.9}},
+			wantMsg: "was not requested",
+		},
+		{
 			name:    "the same id answered twice",
 			results: []verdictResult{ok, ok},
 			wantMsg: "appears twice",
@@ -112,17 +126,17 @@ func TestValidateVerdictPayloadRejectsEveryBrokenBatchContract(t *testing.T) {
 			// `unsure` is deliberately not in the vocabulary — abstention is
 			// derived from the floor, never self-declared.
 			name:    "a verdict outside the closed set",
-			results: []verdictResult{{ID: asked.ID.String(), Verdict: capture.PendingStatusUnsure, Confidence: 0.9}},
+			results: []verdictResult{{ID: "s1", Verdict: capture.PendingStatusUnsure, Confidence: 0.9}},
 			wantMsg: "is not one of " + strings.Join(verdictKindNames(), "|"),
 		},
 		{
 			name:    "confidence above one",
-			results: []verdictResult{{ID: asked.ID.String(), Verdict: capture.KindContact, Confidence: 1.5}},
+			results: []verdictResult{{ID: "s1", Verdict: capture.KindContact, Confidence: 1.5}},
 			wantMsg: "outside [0,1]",
 		},
 		{
 			name:    "confidence below zero",
-			results: []verdictResult{{ID: asked.ID.String(), Verdict: capture.KindContact, Confidence: -0.1}},
+			results: []verdictResult{{ID: "s1", Verdict: capture.KindContact, Confidence: -0.1}},
 			wantMsg: "outside [0,1]",
 		},
 		{
@@ -190,7 +204,7 @@ func TestVerdictPayloadReadsAQuotedConfidence(t *testing.T) {
 // read and then rejected rather than being read as a number the floor accepts.
 func TestVerdictPayloadStillRefusesAnOutOfRangeConfidence(t *testing.T) {
 	asked := capture.PendingCounterparty{ID: ids.NewV7()}
-	reply := `{"results":[{"id":"` + asked.ID.String() + `","verdict":"spam","confidence":"1.4"}]}`
+	reply := `{"results":[{"id":"s1","verdict":"spam","confidence":"1.4"}]}`
 
 	var payload verdictPayload
 	if err := json.Unmarshal([]byte(reply), &payload); err != nil {

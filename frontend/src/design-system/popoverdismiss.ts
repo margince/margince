@@ -2,13 +2,12 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { type RefObject, useEffect } from "react";
-import { coveredByDialog } from "./dialogfocus";
+import { coveredByDialog, panelsOpenedFrom } from "./dialogfocus";
 
 /**
- * How an open portalled panel is put away. Escape does it, unless a dialog
- * raised over it owns that key. So does a press anywhere outside both the
- * panel and what opened it. The panel lives at the body. So "outside" has to mean outside
- * both boxes, or a click on a link inside it reads as a click away.
+ * Escape, or a press outside the panel and its anchor, closes the panel.
+ * A dialog raised over it, or a list opened from inside it, owns the key or
+ * the press instead.
  *
  * Shared by `Popover` and `usePeek`, which close the same way.
  */
@@ -31,19 +30,38 @@ export function usePanelDismiss({
       return;
     }
     const onKey = (event: KeyboardEvent) => {
-      if (event.key !== "Escape" || coveredByDialog(anchor.current)) {
+      if (
+        event.key !== "Escape" ||
+        coveredByDialog(anchor.current) ||
+        panelsOpenedFrom(panel.current).length > 0
+      ) {
         return;
       }
       event.preventDefault();
       close("escape");
     };
     const onPointer = (event: MouseEvent) => {
-      if (!(event.target instanceof Node)) {
+      const target = event.target;
+      if (!(target instanceof Node)) {
+        return;
+      }
+      // A dialog raised over the panel, such as a date field's calendar,
+      // owns the press as it owns Escape.
+      if (coveredByDialog(anchor.current)) {
+        return;
+      }
+      // A select's list is portalled to the body, so a press on its option
+      // lands outside the panel; closing then would lose the pick.
+      if (
+        panelsOpenedFrom(panel.current).some((opened) =>
+          opened.contains(target),
+        )
+      ) {
         return;
       }
       if (
-        !anchor.current?.contains(event.target) &&
-        !panel.current?.contains(event.target)
+        !anchor.current?.contains(target) &&
+        !panel.current?.contains(target)
       ) {
         close("outside");
       }

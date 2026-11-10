@@ -39,7 +39,8 @@ const updateActionFloor = 400
 // reason beside it. A waiver carries a sentence about its own key. That lets
 // the next reader tell a decision from an oversight.
 var rewriteAllowed = gatekit.Waive(map[string]string{
-	"provider_run_category_run_fkey": "the composite key (run_id, contact_id, provider) copies two of the run's own columns so a unique index can hold one claim per category. A contact merge rewrites provider_run.contact_id (contacts/mergerelink.go), and the cascade is what carries the copies with it. RESTRICT here would refuse the merge instead",
+	"fk_participant_domain_evidence_version": "the parent clock version is derived metadata, not a client-editable participant version. Date and visibility changes are audited on the parent activity; the cascade and stamp trigger atomically mirror that clock into the existing participant search index. Requiring an independent child write would allow a concurrent reader to trust stale date or privacy evidence",
+	"provider_run_category_run_fkey":         "the composite key (run_id, contact_id, provider) copies two of the run's own columns so a unique index can hold one claim per category. A contact merge rewrites provider_run.contact_id (contacts/mergerelink.go), and the cascade is what carries the copies with it. RESTRICT here would refuse the merge instead",
 })
 
 // rewritingKey is one foreign key whose update action writes the child.

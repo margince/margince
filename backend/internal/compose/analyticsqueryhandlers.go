@@ -51,7 +51,7 @@ func newAnalyticsQueryHandlers(
 func (h analyticsQueryHandlers) GetAnalyticsSchema(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	var schema analyticsquery.Schema
-	if err := h.db.Tx(ctx, func(tx pgx.Tx) error {
+	if err := h.db.TxIsolated(ctx, pgx.RepeatableRead, func(tx pgx.Tx) error {
 		var err error
 		schema, err = AnalyticsSchemaWithCoverage(ctx, tx)
 		return err
@@ -85,7 +85,7 @@ func (h analyticsQueryHandlers) RunAnalyticsQuery(w http.ResponseWriter, r *http
 		answer AnalyticsAnswer
 		runID  *ids.UUID
 	)
-	if err := h.db.Tx(ctx, func(tx pgx.Tx) error {
+	if err := h.db.TxIsolated(ctx, pgx.RepeatableRead, func(tx pgx.Tx) error {
 		var err error
 		answer, err = RunAnalyticsQuery(ctx, tx, q, h.floor)
 		if err != nil {
@@ -134,7 +134,7 @@ func (h analyticsQueryHandlers) ListReportRuns(
 		schema analyticsquery.Schema
 	)
 	ctx := r.Context()
-	if err := h.db.Tx(ctx, func(tx pgx.Tx) error {
+	if err := h.db.TxIsolated(ctx, pgx.RepeatableRead, func(tx pgx.Tx) error {
 		var err error
 		if schema, _, err = AnalyticsSchemaIn(ctx, tx); err != nil {
 			return err
@@ -194,7 +194,7 @@ func (h analyticsQueryHandlers) GetReportRun(
 ) {
 	ctx := r.Context()
 	var run ReportRun
-	if err := h.db.Tx(ctx, func(tx pgx.Tx) error {
+	if err := h.db.TxIsolated(ctx, pgx.RepeatableRead, func(tx pgx.Tx) error {
 		var err error
 		// The caller's floor, not the stored one. A run saved under a laxer
 		// floor must not serve rows this installation would withhold today.
@@ -272,7 +272,7 @@ func (h analyticsQueryHandlers) ExplainReportRunCell(
 
 	ctx := r.Context()
 	var out AnalyticsExplanation
-	if err := h.db.Tx(ctx, func(tx pgx.Tx) error {
+	if err := h.db.TxIsolated(ctx, pgx.RepeatableRead, func(tx pgx.Tx) error {
 		var err error
 		out, err = ExplainReportRunCell(ctx, tx, ids.UUID(runID), group, h.floor)
 		return err
@@ -432,7 +432,7 @@ func (h analyticsQueryHandlers) ExplainAnalyticsCell(w http.ResponseWriter, r *h
 
 	ctx := r.Context()
 	var out AnalyticsExplanation
-	if err := h.db.Tx(ctx, func(tx pgx.Tx) error {
+	if err := h.db.TxIsolated(ctx, pgx.RepeatableRead, func(tx pgx.Tx) error {
 		var err error
 		out, err = ExplainAnalyticsCell(ctx, tx, in, h.floor)
 		return err
@@ -470,13 +470,9 @@ func (h analyticsQueryHandlers) labelledExplanation(
 func (h analyticsQueryHandlers) labelledAnswer(
 	ctx context.Context, q analyticsquery.Query, answer AnalyticsAnswer,
 ) crmcontracts.AnalyticsAnswer {
-	return crmcontracts.AnalyticsAnswer{
-		Columns: answer.Columns, Rows: answer.Rows,
-		Withheld: answer.Withheld, TotalSafe: answer.TotalSafe,
-		SchemaVersion:      answer.SchemaVersion,
-		PopulationNarrowed: populationNarrowedWire(answer.PopulationNarrowed),
-		Labels:             idLabelsWire(analyticsIDLabels(ctx, h.names, q, answer.Rows)),
-	}
+	out := analyticsAnswerWire(answer)
+	out.Labels = idLabelsWire(analyticsIDLabels(ctx, h.names, q, answer.Rows))
+	return out
 }
 
 // idLabelsWire omits the map when nothing was named, rather than sending {}.

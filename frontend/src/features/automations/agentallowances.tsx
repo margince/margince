@@ -5,19 +5,15 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import type { components } from "../../api/schema";
 import { useUnsavedGuard } from "../../components/unsaved";
-import { Button, TextInput } from "../../design-system/atoms";
+import { Button } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
-import { describedByIds } from "../../design-system/describedby";
 import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
-import { Select } from "../../design-system/select";
-import { SettingList, SettingRow } from "../../design-system/settingrow";
 import { StatCard } from "../../design-system/statcard";
 import { StatStrip } from "../../design-system/statstrip";
-import { boundsText } from "../../format/bounds";
 import { formatDateTime, formatNumber } from "../../format/format";
 import { formatInterval } from "../../format/interval";
-import { type FieldLock, lockFor } from "../../format/settinglocks";
+import { lockFor } from "../../format/settinglocks";
 import { UTC_ZONE } from "../../format/timezone";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 import { useCan, useCanWrite } from "../../lib/capability";
@@ -25,25 +21,25 @@ import { problemMessageOf } from "../../lib/problem";
 import { useInstallationSettings } from "../../lib/uploadlimit";
 import { useUpdateInstallationSettings } from "../sign-in/installation-settings";
 import {
-  AGENT_ALLOWANCE_BOUNDS,
   type Allowances,
   COUNTS,
   type Counts,
-  changesOf,
   chosenWindow,
   type Draft,
-  defaultsDraft,
   draftOf,
-  hasRefusal,
-  parseDraft,
+  type RoleAllowance,
+  type RoleDrafts,
+  roleDraftsOf,
 } from "./agentallowances.draft";
+import {
+  AllowanceForm,
+  InstallationHead,
+  roleMapProperty,
+} from "./agentallowances.form";
+import { RolesReadout } from "./agentallowances.roles";
 import { useResetLine } from "./agentusage";
 
 type Locks = components["schemas"]["InstallationSettings"]["locks"];
-
-// The lengths an admin picks from. The one already saved is added when it is
-// not among them, so a value set through the API still shows and keeps.
-const WINDOW_PRESETS = [1, 6, 12, 24, 168] as const;
 
 // What one passport may do in each window: the values at rest, and an edit
 // form behind a button. A count binds within a minute, a window length at the
@@ -71,7 +67,11 @@ export function AgentAllowancesCard() {
           }
           return (
             <AllowancesBody
-              allowances={settings.agent_allowances}
+              allowances={{
+                ...settings.agent_allowances,
+                // A server older than this screen answers without the roles.
+                roles: settings.agent_allowances.roles ?? [],
+              }}
               locks={settings.locks}
               canManage={canManage}
             />
@@ -87,6 +87,7 @@ export function AgentAllowancesCard() {
 function lockedEditReason(locks: Locks, t: Translator): string | undefined {
   const properties = [
     ...COUNTS.map((row) => row.property),
+    ...COUNTS.map((row) => roleMapProperty(row.property)),
     "agent_window_hours",
   ];
   const reasons = properties.map((property) => {
@@ -108,6 +109,11 @@ function AllowancesBody({
   const { locale } = useLocale();
   const queryClient = useQueryClient();
   const [draft, setDraft] = useState<Draft | null>(null);
+  const [roleDrafts, setRoleDrafts] = useState<RoleDrafts>({});
+  // The allowances the form opened on. A save sends what moved from these,
+  // so a refresh mid-edit cannot turn another admin's new value into a change.
+  const [openedOn, setOpenedOn] = useState<Allowances | null>(null);
+  const [toDefaults, setToDefaults] = useState(false);
   useUnsavedGuard(draft !== null);
   // A new allowance is the limit every usage bar is drawn against.
   const update = useUpdateInstallationSettings(() => {
@@ -120,15 +126,34 @@ function AllowancesBody({
   return (
     <>
       {draft === null ? (
-        <AllowanceReadout allowances={allowances} locale={locale} />
+        <>
+          <AllowanceReadout allowances={allowances} locale={locale} />
+          <RolesReadout allowances={allowances} />
+        </>
       ) : (
         <AllowanceForm
-          allowances={allowances}
+          allowances={openedOn ?? allowances}
           locks={locks}
           draft={draft}
+          roleDrafts={roleDrafts}
           locale={locale}
           busy={update.isPending}
-          onDraft={setDraft}
+          toDefaults={toDefaults}
+          onDraft={(next) => {
+            // A new window length rides along with the reset; a typed count
+            // is a choice of its own.
+            if (
+              COUNTS.some((row) => next[row.property] !== draft[row.property])
+            ) {
+              setToDefaults(false);
+            }
+            setDraft(next);
+          }}
+          onRoleDrafts={(next) => {
+            setRoleDrafts(next);
+            setToDefaults(false);
+          }}
+          onToDefaults={() => setToDefaults(true)}
           onSave={(patch) => update.mutate(patch)}
           onCancel={() => {
             setDraft(null);
@@ -156,6 +181,9 @@ function AllowancesBody({
               onClick={() => {
                 update.reset();
                 setDraft(draftOf(allowances));
+                setRoleDrafts(roleDraftsOf(allowances.roles));
+                setOpenedOn(allowances);
+                setToDefaults(false);
               }}
             >
               {t("agentAllowances.edit")}
@@ -191,30 +219,48 @@ function AllowanceReadout({
 }: Readonly<{ allowances: Allowances; locale: Locale }>) {
   const t = useT();
   return (
-    <StatStrip testId="allowance-readout">
-      {COUNTS.map((row) => (
-        <StatCard
-          key={row.property}
-          label={t(`agentAllowances.${row.copy}.label`)}
-          value={formatNumber(allowances[row.property], locale)}
-          detail={t(
-            row.release
-              ? "agentAllowances.note.release"
-              : "agentAllowances.note.stop",
-          )}
-        />
-      ))}
-    </StatStrip>
+    <>
+      <InstallationHead />
+      <StatStrip testId="allowance-readout">
+        {COUNTS.map((row) => (
+          <StatCard
+            key={row.property}
+            label={t(`agentAllowances.${row.copy}.label`)}
+            value={formatNumber(allowances[row.property], locale)}
+            detail={t(
+              row.release
+                ? "agentAllowances.note.release"
+                : "agentAllowances.note.stop",
+            )}
+          />
+        ))}
+      </StatStrip>
+    </>
   );
 }
 
+// A role is at its shipped value for a count when it holds none of its own.
+// The preset's role also needs the preset to bind where it has one.
+function atShippedValue(role: RoleAllowance, property: Counts): boolean {
+  const { source } = role[property];
+  if (source === "role" || source === "installation_kept") {
+    return false;
+  }
+  // Sends have no preset; the preset's role is at its shipped value for the
+  // other counts only while the preset binds.
+  const hasPreset = role.holds_preset && property !== "agent_egress_per_window";
+  return !hasPreset || source === "admin_preset";
+}
+
 // Says in words whether any value is off its default, so a reader of the plain
-// numbers knows if they are looking at what ships.
+// numbers knows if they are looking at what ships. A role's own value is one.
 function DefaultsNote({ allowances }: Readonly<{ allowances: Allowances }>) {
   const t = useT();
   const atDefaults =
     COUNTS.every(
-      (row) => allowances[row.property] === allowances.defaults[row.property],
+      (row) =>
+        allowances[row.property] === allowances.defaults[row.property] &&
+        allowances.roles.every((role) => atShippedValue(role, row.property)),
     ) && chosenWindow(allowances) === allowances.defaults.agent_window_hours;
   return (
     <Callout
@@ -226,193 +272,6 @@ function DefaultsNote({ allowances }: Readonly<{ allowances: Allowances }>) {
       )}
     >
       {t("agentAllowances.state.body")}
-    </Callout>
-  );
-}
-
-function AllowanceForm({
-  allowances,
-  locks,
-  draft,
-  locale,
-  busy,
-  onDraft,
-  onSave,
-  onCancel,
-}: Readonly<{
-  allowances: Allowances;
-  locks: Locks;
-  draft: Draft;
-  locale: Locale;
-  busy: boolean;
-  onDraft: (next: Draft) => void;
-  onSave: (
-    patch: Partial<Record<Counts | "agent_window_hours", number>>,
-  ) => void;
-  onCancel: () => void;
-}>) {
-  const t = useT();
-  const lockOf = (property: keyof Draft): FieldLock =>
-    lockFor(locks, `installation.${property}`, t);
-  const windowLock = lockOf("agent_window_hours");
-  const parsed = parseDraft(draft);
-  const patch = changesOf(allowances, parsed);
-  const changed = Object.keys(patch).length > 0;
-  return (
-    <>
-      <SettingList bleed="settings">
-        {COUNTS.map((row) => {
-          const refused = parsed[row.property] === null;
-          const lock = lockOf(row.property);
-          return (
-            <SettingRow
-              key={row.property}
-              label={t(`agentAllowances.${row.copy}.label`)}
-              description={t(`agentAllowances.${row.copy}.help`)}
-              control={(control) => (
-                <div className="settingrow-measure numbersetting">
-                  <TextInput
-                    {...control}
-                    className="t-num"
-                    data-testid={`allowance-${row.property}`}
-                    inputMode="numeric"
-                    aria-describedby={describedByIds(
-                      control["aria-describedby"],
-                      `${control.id}-note`,
-                    )}
-                    aria-invalid={refused ? true : undefined}
-                    value={draft[row.property]}
-                    disabled={busy || lock.disabled}
-                    onChange={(e) =>
-                      onDraft({ ...draft, [row.property]: e.target.value })
-                    }
-                  />
-                  <span id={`${control.id}-note`} className="t-caption">
-                    {lock.disabled
-                      ? lock.reason
-                      : refused
-                        ? t(
-                            "operations.refusal.count",
-                            boundsText(
-                              AGENT_ALLOWANCE_BOUNDS[row.property],
-                              locale,
-                            ),
-                          )
-                        : t("agentAllowances.default", {
-                            value: formatNumber(
-                              allowances.defaults[row.property],
-                              locale,
-                            ),
-                          })}
-                  </span>
-                </div>
-              )}
-            />
-          );
-        })}
-        <SettingRow
-          label={t("agentAllowances.window.label")}
-          description={
-            windowLock.disabled
-              ? windowLock.reason
-              : t("agentAllowances.window.help")
-          }
-          control={(control) => (
-            <Select
-              {...control}
-              value={draft.agent_window_hours}
-              disabled={busy || windowLock.disabled}
-              options={windowOptions(allowances, locale)}
-              onChange={(value) =>
-                onDraft({ ...draft, agent_window_hours: value })
-              }
-              testId="allowance-agent_window_hours"
-            />
-          )}
-        />
-      </SettingList>
-      <PanelBody className="form-stack">
-        {changed && (
-          <Diff allowances={allowances} patch={patch} locale={locale} />
-        )}
-        <div className="form-actions">
-          <Button
-            variant="primary"
-            disabled={!changed || hasRefusal(parsed)}
-            pending={busy}
-            onClick={() => onSave(patch)}
-          >
-            {t("agentAllowances.save")}
-          </Button>
-          <Button disabled={busy} onClick={onCancel}>
-            {t("agentAllowances.cancel")}
-          </Button>
-          <Button
-            disabled={busy}
-            onClick={() =>
-              onDraft(
-                defaultsDraft(
-                  allowances,
-                  (property) => lockOf(property).disabled,
-                ),
-              )
-            }
-          >
-            {t("agentAllowances.useDefaults")}
-          </Button>
-        </div>
-      </PanelBody>
-    </>
-  );
-}
-
-function windowOptions(allowances: Allowances, locale: Locale) {
-  const hours = new Set<number>([...WINDOW_PRESETS, chosenWindow(allowances)]);
-  return [...hours]
-    .sort((a, b) => a - b)
-    .map((value) => ({
-      value: String(value),
-      label: formatInterval(value * 3_600, locale),
-    }));
-}
-
-// What a save would do, before it does it. A count binds within a minute; a
-// window length waits for the next reset, and the line says so.
-function Diff({
-  allowances,
-  patch,
-  locale,
-}: Readonly<{
-  allowances: Allowances;
-  patch: Partial<Record<Counts | "agent_window_hours", number>>;
-  locale: Locale;
-}>) {
-  const t = useT();
-  const lines = COUNTS.flatMap((row) => {
-    const next = patch[row.property];
-    return next === undefined
-      ? []
-      : [
-          t("agentAllowances.diff.count", {
-            label: t(`agentAllowances.${row.copy}.label`),
-            from: formatNumber(allowances[row.property], locale),
-            to: formatNumber(next, locale),
-          }),
-        ];
-  });
-  const hours = patch.agent_window_hours;
-  return (
-    <Callout tone="warning" title={t("agentAllowances.diff.title")}>
-      {lines.length > 0 && <p>{lines.join(" · ")}</p>}
-      {lines.length > 0 && <p>{t("agentAllowances.diff.counts")}</p>}
-      {hours !== undefined && (
-        <p>
-          {t("agentAllowances.diff.window", {
-            from: formatInterval(chosenWindow(allowances) * 3_600, locale),
-            to: formatInterval(hours * 3_600, locale),
-          })}
-        </p>
-      )}
     </Callout>
   );
 }

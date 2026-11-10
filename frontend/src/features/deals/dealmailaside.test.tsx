@@ -113,7 +113,7 @@ describe("DealMailAside", () => {
     const url = new URL(seen[0] ?? "", "http://test");
     expect(url.searchParams.get("entity_type")).toBe("deal");
     expect(url.searchParams.get("entity_id")).toBe("d1");
-    expect(url.searchParams.get("kind")).toBe("email");
+    expect(url.searchParams.getAll("kind")).toEqual(["email"]);
     expect(url.searchParams.get("limit")).toBe("3");
   });
 

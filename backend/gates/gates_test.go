@@ -18,12 +18,17 @@ package gates
 
 import (
 	"bytes"
+	"flag"
 	"fmt"
 	"os"
 	"os/exec"
+	"slices"
 	"strings"
+	"sync"
 	"testing"
 	"unicode/utf8"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // TestMain puts every gate back at the module root before any of them runs.
@@ -63,7 +68,7 @@ func TestMain(m *testing.M) {
 	// existence check would be satisfied by backend/tools/ and by every
 	// directory under extensions/, each of which carries its own — so it would
 	// answer yes for several wrong landings and only look like a proof.
-	declaration, err := os.ReadFile("go.mod")
+	declaration, err := gatekit.ReadFile("go.mod")
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "gates: reading go.mod to confirm the module root: %v\n", err)
 		os.Exit(1)
@@ -78,7 +83,27 @@ func TestMain(m *testing.M) {
 			wd, modulePath)
 		os.Exit(1)
 	}
-	os.Exit(m.Run())
+	flag.Parse()
+	if !rewritesTheTree() {
+		gatekit.FixTree()
+	}
+	code := m.Run()
+	if err := gatekit.CheckSharedBytes(); err != nil {
+		fmt.Fprintf(os.Stderr, "gates: %v\n", err)
+		code = 1
+	}
+	os.Exit(code)
+}
+
+// rewritesTheTree reports whether this run was given a flag of this package.
+// Every one of them (-update-gate-inventory and its kind) rewrites a file that
+// other gates read; the testing package's own flags rewrite nothing.
+func rewritesTheTree() bool {
+	rewrites := false
+	flag.Visit(func(set *flag.Flag) {
+		rewrites = rewrites || !strings.HasPrefix(set.Name, "test.")
+	})
+	return rewrites
 }
 
 // trackedFile is one entry from the index, with the one mode bit a gate that
@@ -98,9 +123,19 @@ type trackedFile struct {
 // failed to compile under the linter.
 func trackedFiles(t *testing.T) []trackedFile {
 	t.Helper()
-	out, err := exec.Command("git", "-C", repoRoot, "ls-files", "-sz").Output()
+	files, err := trackedIndex()
 	if err != nil {
 		t.Fatalf("listing tracked files: %v (this test must run inside the git worktree)", err)
+	}
+	return slices.Clone(files)
+}
+
+// trackedIndex is the index as one git call per test binary; the run does not
+// change it.
+var trackedIndex = sync.OnceValues(func() ([]trackedFile, error) {
+	out, err := exec.Command("git", "-C", repoRoot, "ls-files", "-sz").Output()
+	if err != nil {
+		return nil, err
 	}
 	var files []trackedFile
 	for row := range strings.SplitSeq(strings.TrimRight(string(out), "\x00"), "\x00") {
@@ -114,8 +149,8 @@ func trackedFiles(t *testing.T) []trackedFile {
 		}
 		files = append(files, trackedFile{path: path, symlink: strings.HasPrefix(meta, "120000")})
 	}
-	return files
-}
+	return files, nil
+})
 
 // mayHoldFolded is the cheap question in front of a case-insensitive scan: it
 // is false only when text is ASCII and holds none of words in any case, so a

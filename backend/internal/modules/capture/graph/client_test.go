@@ -112,8 +112,8 @@ func msStub(t *testing.T) *httptest.Server {
 		})
 	})
 
-	mux.HandleFunc("/me/mailFolders/sentitems", func(w http.ResponseWriter, _ *http.Request) {
-		writeJSON(w, map[string]any{"id": "sent-folder"})
+	mux.HandleFunc("/me/mailFolders/{folder}", func(w http.ResponseWriter, r *http.Request) {
+		writeJSON(w, map[string]any{"id": map[string]string{"sentitems": "sent-folder", "inbox": "inbox-folder"}[r.PathValue("folder")]})
 	})
 
 	mux.HandleFunc("/me/messages/m1/$value", func(w http.ResponseWriter, _ *http.Request) {
@@ -264,13 +264,8 @@ func TestDeltaResumeCollectsAddedAndReportsRemoved(t *testing.T) {
 	if strings.Join(messageIDs(ids), ",") != "m3" {
 		t.Errorf("ids = %v, want [m3] (the tombstoned entry is not fetched)", ids)
 	}
-	// The tombstone travels its OWN way rather than being dropped. A @removed
-	// entry carries no message fields, so there is nothing to fetch — but it is
-	// the owner saying they deleted their copy, and this workspace may be
-	// holding one. Discarding it here is the bug this return value fixed, and
-	// asserting only the fetched ids would not notice it coming back.
-	if strings.Join(removed, ",") != "tombstone" {
-		t.Errorf("removed = %v, want [tombstone] — the deletion was dropped on the floor", removed)
+	if len(removed) != 0 {
+		t.Errorf("folder tombstones cannot prove permanent deletion: %v", removed)
 	}
 	if !strings.Contains(delta, "d2") {
 		t.Errorf("advanced deltaLink = %q, want the d2 link", delta)
@@ -295,7 +290,7 @@ func TestDeltaRefusesOffOriginLink(t *testing.T) {
 
 func TestGetMIMEReturnsRawBytes(t *testing.T) {
 	_, api := newTestClients(t)
-	raw, err := api.GetMIME(context.Background(), "access-2", "m1")
+	raw, err := api.GetMIME(context.Background(), "access-2", "", "m1")
 	if err != nil {
 		t.Fatalf("GetMIME: %v", err)
 	}
@@ -306,7 +301,7 @@ func TestGetMIMEReturnsRawBytes(t *testing.T) {
 
 func TestGetMIMESkipsAVanishedMessage(t *testing.T) {
 	_, api := newTestClients(t)
-	_, err := api.GetMIME(context.Background(), "access-2", "gone")
+	_, err := api.GetMIME(context.Background(), "access-2", "", "gone")
 	if !errors.Is(err, connector.ErrSkip) {
 		t.Fatalf("a 404 (deleted after enumeration) must skip, not wedge the sync, got %v", err)
 	}
@@ -314,7 +309,7 @@ func TestGetMIMESkipsAVanishedMessage(t *testing.T) {
 
 func TestGetMIMERefusesOversizedMessage(t *testing.T) {
 	_, api := newTestClients(t)
-	_, err := api.GetMIME(context.Background(), "access-2", "huge")
+	_, err := api.GetMIME(context.Background(), "access-2", "", "huge")
 	if !errors.Is(err, connector.ErrSkip) {
 		t.Fatalf("an oversized message must be a skip, not truncated capture, got %v", err)
 	}
@@ -322,7 +317,7 @@ func TestGetMIMERefusesOversizedMessage(t *testing.T) {
 
 func TestThrottledCallMapsRateLimitWithRetryAfter(t *testing.T) {
 	_, api := newTestClients(t)
-	_, err := api.GetMIME(context.Background(), "access-2", "throttled")
+	_, err := api.GetMIME(context.Background(), "access-2", "", "throttled")
 	if !errors.Is(err, connector.ErrRateLimited) {
 		t.Fatalf("want ErrRateLimited for a 429, got %v", err)
 	}
@@ -338,8 +333,9 @@ func TestEstimateAfterReadsODataCount(t *testing.T) {
 	if err != nil {
 		t.Fatalf("EstimateAfter: %v", err)
 	}
-	if n != 4200 {
-		t.Errorf("estimate = %d, want 4200 (@odata.count)", n)
+	// Two per folder, summed over Sent Items and Inbox only.
+	if n != 4 {
+		t.Errorf("estimate = %d, want 4 (the @odata.count of each synced folder)", n)
 	}
 }
 
@@ -354,14 +350,14 @@ func messageIDs(msgs []MessageRef) []string {
 }
 
 // The backfill's T1 evidence: Graph names the folder it filed each message in,
-// and SentFolderID resolves the well-known Sent Items id the comparison needs.
+// and FolderID resolves the well-known Sent Items id the comparison needs.
 // Without the pairing the backfill cannot tell the owner's own mail from an
 // inbound message whose From header merely claims to be theirs.
 func TestListAfterCarriesTheParentFolderAgainstSentItems(t *testing.T) {
 	_, api := newTestClients(t)
-	sent, err := api.SentFolderID(context.Background(), "access-2")
+	sent, err := api.FolderID(context.Background(), "access-2", folderSent)
 	if err != nil {
-		t.Fatalf("SentFolderID: %v", err)
+		t.Fatalf("FolderID: %v", err)
 	}
 	inbox, next, err := api.ListAfter(context.Background(), "access-2", time.Time{}, "", 100)
 	if err != nil {
@@ -423,7 +419,7 @@ func TestClientUnreachableWhenServerDown(t *testing.T) {
 // permission — so it has to survive the transport while the class stays put.
 func TestGraphRefusalCarriesMicrosoftsErrorCode(t *testing.T) {
 	mux := http.NewServeMux()
-	mux.HandleFunc("/me/messages", func(w http.ResponseWriter, _ *http.Request) {
+	mux.HandleFunc("/me/mailFolders/{folder}/messages", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusForbidden)
 		//craft:ignore swallowed-errors test stub write
 		_, _ = w.Write([]byte(`{"error":{"code":"Authorization_RequestDenied","message":"Insufficient privileges."}}`))
@@ -482,11 +478,11 @@ func TestRequestOpReducesAURLToItsPath(t *testing.T) {
 // equal to the empty parentFolderId of any message the same degraded response
 // returned, so the ABSENCE of the evidence would read as the evidence and
 // attest a whole page — and the activity natural key would make it permanent.
-func TestSentFolderIDRefusesA2xxThatNamesNoFolder(t *testing.T) {
+func TestFolderIDRefusesA2xxThatNamesNoFolder(t *testing.T) {
 	srv := jsonStub(t, map[string]any{})
-	_, err := NewAPI(srv.Client(), srv.URL).SentFolderID(context.Background(), "access-2")
+	_, err := NewAPI(srv.Client(), srv.URL).FolderID(context.Background(), "access-2", folderSent)
 	if !errors.Is(err, ErrUnreachable) {
-		t.Fatalf("SentFolderID on an id-less 2xx = %v, want ErrUnreachable — an empty id must never reach the comparison", err)
+		t.Fatalf("FolderID on an id-less 2xx = %v, want ErrUnreachable — an empty id must never reach the comparison", err)
 	}
 }
 
@@ -526,7 +522,7 @@ func TestAResponsePastTheBudgetIsRefusedRatherThanDecodedFromItsPrefix(t *testin
 	}))
 	t.Cleanup(srv.Close)
 
-	_, err := NewAPI(srv.Client(), srv.URL).SentFolderID(context.Background(), "access-2")
+	_, err := NewAPI(srv.Client(), srv.URL).FolderID(context.Background(), "access-2", folderSent)
 	if !errors.Is(err, ErrUnreachable) {
 		t.Fatalf("a body past the budget = %v, want ErrUnreachable — a prefix that parses is not the answer", err)
 	}
@@ -825,5 +821,26 @@ func TestASubsecondLowerBoundDoesNotRefuseACompleteAnchor(t *testing.T) {
 	}
 	if len(ids) != 1 {
 		t.Errorf("ids = %v, want the one message the round named", ids)
+	}
+}
+
+// Graph refuses the folder-scoped fetch of a message moved out of that folder
+// since the listing, though the mailbox still holds it. The refusal is a skip.
+func TestAFolderScopedFetchOfAMovedMessageIsASkip(t *testing.T) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/me/mailFolders/inbox-folder/messages/moved/$value", func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+	})
+	mux.HandleFunc("/me/messages/moved/$value", func(w http.ResponseWriter, _ *http.Request) {
+		//craft:ignore swallowed-errors test stub write; a short write surfaces as the client-side assertion
+		_, _ = w.Write([]byte("Subject: now in junk\r\n\r\nbody"))
+	})
+	srv := httptest.NewServer(mux)
+	t.Cleanup(srv.Close)
+
+	_, err := NewAPI(srv.Client(), srv.URL).GetMIME(context.Background(), "access", "inbox-folder", "moved")
+
+	if !errors.Is(err, connector.ErrSkip) {
+		t.Fatalf("GetMIME through the listed folder = %v, want a skip", err)
 	}
 }

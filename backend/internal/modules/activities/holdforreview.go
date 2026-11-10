@@ -104,7 +104,9 @@ func (s *Store) holdForReviewTx(ctx context.Context, origin SendOrigin, in SendE
 		// by anybody.
 		return ids.UUID{}, errNoSchedulingUser
 	}
-	payload, err := json.Marshal(freezePayload(in))
+	frozen := freezePayload(in)
+	frozen.PendingDraftID = idText(in.MailDraftID)
+	payload, err := json.Marshal(frozen)
 	if err != nil {
 		return ids.UUID{}, fmt.Errorf("held send: freezing the refused message: %w", err)
 	}
@@ -374,19 +376,9 @@ func loweredRecipients(in SendEmailInput) []string {
 // forget it is a fact this module may look at before storing a message that
 // names it.
 func anyAddressErased(ctx context.Context, tx pgx.Tx, addresses []string) (bool, error) {
-	if len(addresses) == 0 {
-		return false, nil
-	}
-	hashes := make([]string, 0, len(addresses))
-	for _, address := range addresses {
-		hashes = append(hashes, storekit.SuppressionHash(address))
-	}
-	var erased bool
-	if err := tx.QueryRow(ctx, `
-		SELECT EXISTS (
-			SELECT 1 FROM erasure_suppression
-			 WHERE kind = 'email' AND value_hash = ANY($1))`, hashes).Scan(&erased); err != nil {
+	erased, err := storekit.SuppressedEmails(ctx, tx, addresses)
+	if err != nil {
 		return false, fmt.Errorf("held send: checking whether a recipient has been erased: %w", err)
 	}
-	return erased, nil
+	return len(erased) > 0, nil
 }

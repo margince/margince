@@ -82,8 +82,8 @@ const meta = {
   args: {
     line: LINE,
     since: "2026-09-12T08:00:00Z",
-    // A line names its records, and the names are what opens them.
-    summary: "GEM and 1 more",
+    // A grouped line opens on the count of changes it holds.
+    summary: "View 2 changes",
   },
   render: opener,
 } satisfies Meta<typeof LineRecordsOpener>;
@@ -95,10 +95,19 @@ export const Opened: Story = {
   play: async ({ canvasElement }) => {
     const body = within(canvasElement.ownerDocument.body);
     await userEvent.click(
-      await body.findByRole("button", { name: "GEM and 1 more" }),
+      await body.findByRole("button", { name: "View 2 changes" }),
     );
     const dialog = within(await body.findByRole("dialog"));
     await dialog.findByRole("heading", { name: en["magic.records.title"] });
     await dialog.findByText("Kandu GmbH");
   },
+};
+
+export const LongRecordName: Story = {
+  args: {
+    summary:
+      "overnight_at_risk_sweep:2026-11-02:ac028e011ede4821a2467a462a9cc370_end-2 and 2 more",
+  },
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
 };

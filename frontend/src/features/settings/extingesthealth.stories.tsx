@@ -18,7 +18,7 @@ import { ExtensionIngestHealthCard } from "./extingesthealth";
 // not ask.
 
 const meta = {
-  title: "Settings/Governance/System health/Connector records refused",
+  title: "Settings/System/System health/Connector records refused",
   component: ExtensionIngestHealthCard,
 } satisfies Meta<typeof ExtensionIngestHealthCard>;
 export default meta;

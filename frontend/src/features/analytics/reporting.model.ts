@@ -1,10 +1,11 @@
 import type { components } from "../../api/schema";
 import {
+  formatAnalyticsHours,
+  formatAnalyticsMoney,
+  formatAnalyticsNumber,
   formatDateAbbrev,
+  formatDateAbbrevRange,
   formatDateTime,
-  formatHours,
-  formatMoney,
-  formatMoneyCompact,
   formatNumber,
 } from "../../format/format";
 import type { Locale, Translator } from "../../i18n";
@@ -50,9 +51,10 @@ export function reportingAmount(
 ): string {
   if (value == null) return "—";
   if (reportingMoneyUnit(unit, currency))
-    return currency ? formatMoney(value, currency, locale) : "—";
-  if (unit === "hours") return formatHours(value, locale);
-  return `${formatNumber(value, locale)}${unit === "percent" ? "%" : ""}`;
+    return currency ? formatAnalyticsMoney(value, currency, locale) : "—";
+  if (unit === "hours") return formatAnalyticsHours(value, locale);
+  if (unit === "ratio") return formatNumber(value, locale);
+  return `${formatAnalyticsNumber(value, locale)}${unit === "percent" ? "%" : ""}`;
 }
 
 // Names a metric as the catalog does, in the reader's language.
@@ -116,7 +118,7 @@ export function reportingCompactAmount(
 ): string {
   return value != null && reportingMoneyUnit(unit, currency)
     ? currency
-      ? formatMoneyCompact(value, currency, locale)
+      ? formatAnalyticsMoney(value, currency, locale)
       : "—"
     : reportingAmount(value, unit, currency, locale);
 }
@@ -138,7 +140,12 @@ export function reportingPeriodLabel(
   if (reportingPeriodIsEmpty(interval)) {
     return formatDateAbbrev(interval.start_at, locale, zone);
   }
-  return `${formatDateAbbrev(interval.start_at, locale, zone)} – ${formatDateAbbrev(new Date(Date.parse(interval.end_at) - 1).toISOString(), locale, zone)}`;
+  return formatDateAbbrevRange(
+    interval.start_at,
+    new Date(Date.parse(interval.end_at) - 1).toISOString(),
+    locale,
+    zone,
+  );
 }
 
 export type ReportAction = {

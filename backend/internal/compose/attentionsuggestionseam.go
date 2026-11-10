@@ -9,15 +9,28 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/collections"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 )
 
 // attentionDealSuggestions binds the needs_you lane's suggestion source to the
 // deals store, whose list and count carry the suggestion visibility rule. The
 // rows are shaped by the same wire mapping GET /deal-suggestions answers with.
+//
+// Both suggestion sources reuse their generic plans (database.ReuseGenericPlans).
+// Their statements bind only the visibility rule's values, owners and a limit.
+// The open state is a literal, so one plan serves every reader.
 type attentionDealSuggestions struct{ store *deals.Store }
 
-func (a attentionDealSuggestions) OpenSuggestions(ctx context.Context, limit int) ([]crmcontracts.DealSuggestion, error) {
-	list, _, err := a.store.ListSuggestions(ctx, deals.SuggestionQuery{Limit: limit})
+func (a attentionDealSuggestions) OpenSuggestions(
+	ctx context.Context, owners *storekit.OwnerSet, limit int,
+) ([]crmcontracts.DealSuggestion, error) {
+	var list []deals.Suggestion
+	err := database.ReuseGenericPlans(ctx, func(ctx context.Context) error {
+		var err error
+		list, _, err = a.store.ListSuggestions(ctx, deals.SuggestionQuery{ScopeOwners: owners, Limit: limit})
+		return err
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -28,8 +41,14 @@ func (a attentionDealSuggestions) OpenSuggestions(ctx context.Context, limit int
 	return out, nil
 }
 
-func (a attentionDealSuggestions) CountOpen(ctx context.Context) (int, error) {
-	return a.store.CountOpenSuggestions(ctx)
+func (a attentionDealSuggestions) CountOpen(ctx context.Context, owners *storekit.OwnerSet) (int, error) {
+	var open int
+	err := database.ReuseGenericPlans(ctx, func(ctx context.Context) error {
+		var err error
+		open, err = a.store.CountOpenSuggestions(ctx, deals.SuggestionQuery{ScopeOwners: owners})
+		return err
+	})
+	return open, err
 }
 
 // attentionTagSuggestions binds the needs_you lane's tag suggestions to the
@@ -37,7 +56,12 @@ func (a attentionDealSuggestions) CountOpen(ctx context.Context) (int, error) {
 type attentionTagSuggestions struct{ store *collections.Store }
 
 func (a attentionTagSuggestions) OpenTagSuggestions(ctx context.Context, limit int) ([]crmcontracts.TagSuggestion, error) {
-	list, err := a.store.OpenTagSuggestions(ctx, limit)
+	var list []collections.TagSuggestion
+	err := database.ReuseGenericPlans(ctx, func(ctx context.Context) error {
+		var err error
+		list, err = a.store.OpenTagSuggestions(ctx, limit)
+		return err
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -49,5 +73,11 @@ func (a attentionTagSuggestions) OpenTagSuggestions(ctx context.Context, limit i
 }
 
 func (a attentionTagSuggestions) CountOpenTagSuggestions(ctx context.Context) (int, error) {
-	return a.store.CountOpenTagSuggestions(ctx)
+	var open int
+	err := database.ReuseGenericPlans(ctx, func(ctx context.Context) error {
+		var err error
+		open, err = a.store.CountOpenTagSuggestions(ctx)
+		return err
+	})
+	return open, err
 }

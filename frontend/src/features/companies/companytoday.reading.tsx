@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { AiPending } from "../../design-system/aipending";
 import { PanelRow } from "../../design-system/panel";
 import { useLocale, usePlural, useT } from "../../i18n";
-import { useRecordZone } from "../../lib/recordzone";
+import { useViewerZone } from "../../lib/viewerzone";
 import { type OpenReceipt, WithheldNotice } from "../records/record360";
 import { type AccountScan, scanIsLive } from "./accountscan";
 import {
@@ -85,7 +85,7 @@ export function useTodayReading({
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  const recordZone = useRecordZone();
+  const readerZone = useViewerZone();
   const suggestions = useSuggestionsBody({
     companyId,
     view,
@@ -139,7 +139,7 @@ export function useTodayReading({
     footer: briefFooter(
       commitment,
       suggestions.footer,
-      scanFoot({ scan, t, plural, locale, recordZone }),
+      scanFoot({ scan, t, plural, locale, recordZone: readerZone }),
     ),
     notice: (
       <WithheldNotice sections={withheld.map((source) => t(source.label))} />

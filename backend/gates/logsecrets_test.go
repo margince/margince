@@ -199,7 +199,7 @@ func unguardedCredentialLogs(t *testing.T) []credentialLogSite {
 	// fixtures), not the backend half. An extension logs through the same slog
 	// and handles credentials of its own.
 	for _, root := range []string{"internal", "cmd", "pkg", "../extensions", "../fixtures"} {
-		err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+		err := gatekit.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 			if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") ||
 				strings.HasSuffix(path, "_test.go") || strings.HasSuffix(path, "_gen.go") ||
 				isIntegrationTagged(path) {

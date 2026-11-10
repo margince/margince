@@ -101,3 +101,16 @@ export const FlaggedValueWithUnpricedDealsDark: Story = {
   ...FlaggedValueWithUnpricedDeals,
   globals: { theme: "dark" },
 };
+
+// The strip as Home's Numbers rail draws it: rows with an arrow and rows
+// without one, whose figures end on one edge.
+export const InTheRail: Story = {
+  args: { day: { ...readingsDay({}, [], []), calendar: "not_connected" } },
+  decorators: [
+    (Story) => (
+      <div className="brief-rail" style={{ inlineSize: 360 }}>
+        <Story />
+      </div>
+    ),
+  ],
+};

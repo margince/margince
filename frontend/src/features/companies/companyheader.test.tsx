@@ -521,6 +521,7 @@ describe("the shape of the header's verbs", () => {
       en["log.addTask"],
       en["merge.company"],
       en["record.share"],
+      en["share.companyContacts"],
       en["record.fullHistory"],
       en["company.partnerSetUp"],
       en["record.archive"],

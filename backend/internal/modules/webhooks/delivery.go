@@ -65,6 +65,10 @@ type Deliverer struct {
 	log      *slog.Logger
 	// publicBaseURL is the app's origin for record links; empty sends none.
 	publicBaseURL string
+	// beforeSend runs in each attempt's send check, after the connection is up
+	// and before the row is re-read. Nil outside tests, which use it to change
+	// the row at that point; an error counts as a check that could not run.
+	beforeSend func(context.Context) error
 }
 
 // WithPublicBaseURL sets the origin that record links in a delivery start
@@ -152,9 +156,7 @@ func (d *Deliverer) HandleEvent(ctx context.Context, env kevents.Envelope) error
 	if err != nil {
 		return fmt.Errorf("webhooks: enqueue for %s: %w", env.Type, err)
 	}
-	for _, t := range targets {
-		d.deliverOnce(wsCtx, t)
-	}
+	d.attemptFirst(wsCtx, targets)
 	if visErr != nil {
 		// The visible candidates were enqueued and attempted above (idempotent
 		// on the bus event id); returning the error asks the bus to redeliver
@@ -162,6 +164,23 @@ func (d *Deliverer) HandleEvent(ctx context.Context, env kevents.Envelope) error
 		return fmt.Errorf("webhooks: owner visibility checks failed for event %s: %w", env.EventID, visErr)
 	}
 	return nil
+}
+
+// attemptFirst makes each enqueued delivery's first attempt. Authorizing the
+// owner and sending are not one moment: the owner can be deactivated or
+// replaced in between. So each is checked again right before its POST, as a
+// retry and a replay are, and a delivery whose owner changed is not sent.
+func (d *Deliverer) attemptFirst(ctx context.Context, targets []attemptTarget) {
+	for _, t := range targets {
+		authorized, err := d.attemptStillAuthorized(ctx, t)
+		if err != nil {
+			d.spendUncheckedAttempt(ctx, t, err)
+			continue
+		}
+		if authorized {
+			d.deliverOnce(ctx, t)
+		}
+	}
 }
 
 // ownerCanSee resolves the subscription owner's LIVE RBAC and reports
@@ -188,6 +207,13 @@ func (d *Deliverer) ownerCanSee(ctx context.Context, env kevents.Envelope, owner
 func (d *Deliverer) stillVisible(ctx context.Context, t attemptTarget) (bool, string, error) {
 	if t.entityType == "" || t.entityID.IsZero() {
 		return false, "this delivery predates the subject columns, so its visibility cannot be re-checked", nil
+	}
+	current, err := d.store.subscriptionOwner(ctx, t.subID)
+	if err != nil {
+		return false, "", err
+	}
+	if current != t.ownerID {
+		return false, "the subscription changed owner after this delivery was authorized", nil
 	}
 	ok, err := d.canSee(ctx, t.eventType, t.entityType, t.entityID, t.ownerID)
 	if err != nil {
@@ -366,16 +392,28 @@ func (d *Deliverer) Replay(ctx context.Context, subID, deliveryID ids.UUID) (Del
 // it is logged (the sweeper's re-scan is the recovery, and the row's prior
 // state is safe).
 func (d *Deliverer) deliverOnce(ctx context.Context, t attemptTarget) {
-	res := d.attempt(ctx, t)
+	res := d.attempt(ctx, t, d.sendGuard(ctx, t))
+	if res.withdrawn {
+		// The row was revoked, erased or re-claimed; its new state is not ours to overwrite.
+		d.log.Info("webhooks: delivery withdrawn before its body was sent", "delivery", t.deliveryID, "claim", claimedAt(t))
+		return
+	}
 	if err := d.store.recordOutcome(ctx, t, res, d.clock()); err != nil {
 		d.log.Error("webhooks: recording delivery outcome", "delivery", t.deliveryID, "err", err)
 	}
 }
 
-// attempt signs and POSTs the stored body, returning the outcome. A
+// attempt sends t's body over a connection on which guard holds the row, and
+// decides the outcome from that check first (checkedOutcome).
+func (d *Deliverer) attempt(ctx context.Context, t attemptTarget, guard sendHold) outcome {
+	check := &sendCheck{hold: guard}
+	return checkedOutcome(check, d.post(withSendCheck(ctx, check), t))
+}
+
+// post signs and POSTs the stored body, returning the outcome. A
 // non-2xx or a transport error is a failure; the receiver's response body
 // is read (capped) only to keep the connection reusable and is discarded.
-func (d *Deliverer) attempt(ctx context.Context, t attemptTarget) outcome {
+func (d *Deliverer) post(ctx context.Context, t attemptTarget) outcome {
 	if d.store.cipher == nil {
 		return outcome{failure: "signing key not configured"}
 	}

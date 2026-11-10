@@ -3,8 +3,9 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
+import { userEvent, within } from "storybook/test";
 import { StoryProviders } from "../../testing/story-utils";
-import { AddressBlock } from "./composehead";
+import { AddressBlock, type AddressLine } from "./composehead";
 
 // The mail head's address block: To and Cc standing, Bcc a button until it is
 // asked for, and — under the addresses, because it is about the ones standing
@@ -55,6 +56,9 @@ function Head({
   const [cc, setCc] = useState<string[]>([]);
   const [bcc, setBcc] = useState<string[]>([]);
   const [copiesOpen, setCopiesOpen] = useState(false);
+  const [refused, setRefused] = useState<
+    Readonly<Record<AddressLine, readonly string[]>>
+  >({ to: [], cc: [], bcc: [] });
   return (
     <StoryProviders>
       <AddressBlock
@@ -68,6 +72,10 @@ function Head({
         onOpenCopies={() => setCopiesOpen(true)}
         suggestions={CONTACTS}
         onToEditing={() => {}}
+        refused={refused}
+        onRefuse={(line, parts) =>
+          setRefused((prev) => ({ ...prev, [line]: parts }))
+        }
         invalidTo={invalidTo}
         needTo="Name at least one recipient."
         deadRecipients={deadRecipients}
@@ -120,6 +128,31 @@ export const RecipientBouncing: Story = {
 export const RecipientBouncingDark: Story = {
   globals: { theme: "dark" },
   render: () => <Head deadRecipients={["ada@brandt.example"]} />,
+};
+
+/**
+ * A pasted list: each address a token, and the part that is none left in the
+ * box with the error naming it.
+ */
+export const RecipientRefused: Story = {
+  render: () => <Head start={[]} />,
+  play: async ({ canvasElement }) => {
+    await userEvent.click(within(canvasElement).getByLabelText("To"));
+    await userEvent.paste(
+      "Lars Strojny <lars@brandt.example>; not-an-address, someone@else.example",
+    );
+  },
+};
+
+export const RecipientRefusedDark: Story = {
+  ...RecipientRefused,
+  globals: { theme: "dark" },
+};
+
+export const RecipientRefusedPhone: Story = {
+  ...RecipientRefused,
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
 };
 
 export const Narrow: Story = {

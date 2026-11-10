@@ -33,13 +33,14 @@ const theirAsk = "Before we go further my team wants to see a sample of the driv
 
 // seedInboundAsk is one message they sent, linked to the account, whose
 // words the model may quote — or may not, when its audience excludes the
-// reader.
-func seedInboundAsk(t *testing.T, e *integration.Env, company ids.UUID, audience string) ids.UUID {
+// reader. It is dated from scanAt, the instant the scan reads, so it stays
+// inside the scan's window whatever the calendar says.
+func seedInboundAsk(t *testing.T, e *integration.Env, company ids.UUID, audience string, scanAt time.Time) ids.UUID {
 	t.Helper()
 	owner := integration.OwnerConn(t)
+	at := scanAt.AddDate(0, 0, -12).UTC().Truncate(time.Second)
 	sent := integration.SeedIDRow(t, owner, `INSERT INTO activity (id, kind, direction, subject, body, occurred_at, created_at, source, captured_by, audience)
-		VALUES ($1, 'email', 'inbound', 'Telematics — next steps', $2,
-		        '2026-05-20T10:00:00Z', '2026-05-20T10:00:00Z', 'manual', 'human:x', $3)`, theirAsk, audience)
+		VALUES ($1, 'email', 'inbound', 'Telematics — next steps', $2, $4, $4, 'manual', 'human:x', $3)`, theirAsk, audience, at)
 	e.WsExec(t, `INSERT INTO activity_link (activity_id, entity_type, company_id)
 		VALUES ($1, 'company', $2)`, sent, company)
 	return sent
@@ -54,17 +55,45 @@ type quotingLane struct {
 	calls     int
 }
 
-func (l *quotingLane) Complete(_ context.Context, _ model.Request) (model.Response, error) {
+func (l *quotingLane) Complete(_ context.Context, req model.Request) (model.Response, error) {
 	l.calls++
 	reply, err := json.Marshal(map[string]any{"findings": []map[string]any{{
 		"kind": "question_unanswered", "title": "Send the sample reports",
 		"reason":     "Jonas asked for sample driver reports and nothing has gone out.",
-		"message_id": l.messageID, "quote": l.quote, "action": "draft_reply",
+		"message_id": quotedMessageRef(req, l.quote, l.messageID), "quote": l.quote, "action": "draft_reply",
 	}}})
 	if err != nil {
 		return model.Response{}, err
 	}
 	return model.Response{Text: string(reply)}, nil
+}
+
+// quotedMessageRef is the ref the request shows for the message whose text
+// holds quote, which a model quoting it would cite. It is fallback when the
+// request shows no such message.
+func quotedMessageRef(req model.Request, quote, fallback string) string {
+	for _, message := range req.Messages {
+		start := strings.Index(message.Content, "{")
+		end := strings.LastIndex(message.Content, "}")
+		if start < 0 || end < start {
+			continue
+		}
+		var payload struct {
+			Messages []struct {
+				ID   string `json:"id"`
+				Text string `json:"text"`
+			} `json:"messages"`
+		}
+		if json.Unmarshal([]byte(message.Content[start:end+1]), &payload) != nil {
+			continue
+		}
+		for _, shown := range payload.Messages {
+			if strings.Contains(shown.Text, quote) {
+				return shown.ID
+			}
+		}
+	}
+	return fallback
 }
 
 // scanFor builds the scan over the composite read, recording what it
@@ -86,7 +115,7 @@ func scanFor(e *integration.Env, lane companyscan.Completer, queued *[]companysc
 func TestTheScanReadsTheAccountForTheReaderAndTheReaderCanPutAFindingOff(t *testing.T) {
 	e := integration.Setup(t)
 	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Nordlicht", &e.Rep1))
-	message := seedInboundAsk(t, e, company.UUID, "workspace")
+	message := seedInboundAsk(t, e, company.UUID, "workspace", company360Clock)
 	lane := &quotingLane{messageID: message.String(), quote: "wants to see a sample of the driver reports"}
 	var queued []companyscan.Queued
 	svc, view := scanFor(e, lane, &queued)
@@ -174,7 +203,7 @@ func TestTheScanReadsTheAccountForTheReaderAndTheReaderCanPutAFindingOff(t *test
 func TestAMessageOutsideTheReadersAudienceIsNeverQuoted(t *testing.T) {
 	e := integration.Setup(t)
 	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Nordlicht", &e.Rep1))
-	hidden := seedInboundAsk(t, e, company.UUID, "selected")
+	hidden := seedInboundAsk(t, e, company.UUID, "selected", company360Clock)
 	lane := &quotingLane{messageID: hidden.String(), quote: "wants to see a sample of the driver reports"}
 	var queued []companyscan.Queued
 	svc, _ := scanFor(e, lane, &queued)

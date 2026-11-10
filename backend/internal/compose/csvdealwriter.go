@@ -20,6 +20,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/modules/contracts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -141,6 +142,9 @@ func dealRefusalOf(err error, fields map[string]string, stages dealStages) (migr
 	}
 	if missing, ok := errors.AsType[*deals.MissingFxRateError](err); ok {
 		return migration.Why(migration.ReasonFxRateMissing, "currency", missing.From), true
+	}
+	if _, ok := errors.AsType[*contracts.DealContractsCrossCompanyError](err); ok {
+		return migration.Why(migration.ReasonDealCompanyContracts), true
 	}
 	if _, ok := errors.AsType[*deals.LegalReviewRequiredError](err); ok {
 		return migration.Why(migration.ReasonDealLegalGate), true

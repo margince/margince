@@ -1,10 +1,10 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "../../design-system/atoms";
 import { SurfaceState } from "../../design-system/surfacestate";
-import { viewerZone } from "../../format/timezone";
 import { useT } from "../../i18n";
 import { useOpenEmail } from "../../lib/openemail";
 import { problemCodeOf } from "../../lib/problem";
+import { listIsComplete } from "../../lib/worklistcounts";
 import { OpenEmailDrawer } from "../mail/openemaildrawer";
 import { useWorklistAddress } from "./worklist.address";
 import { WORKLIST_FILTER_PARAM } from "./worklist.header";
@@ -15,6 +15,7 @@ import {
   worklistKey,
 } from "./worklist.queries";
 import "./worklist.css";
+import "./worklist.embedded.css";
 
 // The Worklist: one ranked list, not fourteen lanes.
 //
@@ -33,8 +34,14 @@ import "./worklist.css";
 // it — a reading in the Brief. One spelling of the parameter, two ways in.
 export { WORKLIST_FILTER_PARAM };
 
+import { useViewerZone } from "../../lib/viewerzone";
 import { WorklistBody } from "./worklist.body";
 import { accumulatedDay } from "./worklist.reads";
+
+// Home's drawer restyles the queue as Home's cards (worklist.embedded.css).
+function shellClass(embedded: boolean): string {
+  return embedded ? "wrap worklist worklist-embedded" : "wrap worklist";
+}
 
 // The Worklist screen.
 export function WorklistScreen({
@@ -51,6 +58,7 @@ export function WorklistScreen({
   opensOn?: string;
   embedded?: boolean;
 }> = {}) {
+  const readerZone = useViewerZone();
   const t = useT();
   const {
     scope,
@@ -96,7 +104,7 @@ export function WorklistScreen({
   // reads can serve one row on two pages.
   const queue = day.data ? loadedQueue(day.data.pages) : [];
   return (
-    <div className="wrap worklist">
+    <div className={shellClass(embedded)}>
       {/* No label: the shell already heads this page, and a second "Worklist"
           would be announced twice and nest an h3 above the queue's own h2. */}
       {/* The way BACK, drawn OUTSIDE the surface state.
@@ -142,6 +150,7 @@ export function WorklistScreen({
             onSelect={setSelectedId}
             onOpenEmail={setOpenEmail}
             cursor={day.data?.pages.at(-1)?.next_cursor ?? undefined}
+            complete={listIsComplete(day.data?.pages.at(-1))}
             loadingMore={day.isFetchingNextPage}
             moreFailed={day.isFetchNextPageError}
             onMore={() => void day.fetchNextPage()}
@@ -158,7 +167,7 @@ export function WorklistScreen({
           rather than reset: the walk stays where the reader had paged it. */}
       <OpenEmailDrawer
         activityId={openEmail}
-        zone={viewerZone()}
+        zone={readerZone}
         onClose={() => setOpenEmail(null)}
         onReplySent={() =>
           void queryClient.invalidateQueries({ queryKey: worklistKey })

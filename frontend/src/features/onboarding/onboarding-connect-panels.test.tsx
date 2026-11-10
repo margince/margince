@@ -12,6 +12,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
+import { en } from "../../i18n/en";
 import { installFetchStub, jsonResponse } from "../../testing/story-utils";
 import {
   ImapConnectPanel,
@@ -366,4 +367,35 @@ describe("OAuthReturnPanel reading a reader-typed outcome", () => {
       screen.getByText("Connect again in Settings under Connections."),
     ).toBeInTheDocument();
   });
+});
+
+describe("OAuthReturnPanel after a refused role or seat", () => {
+  it.each([
+    ["contact", en["connectors.roleCannotCapture.contact"]],
+    ["seat", en["connectors.roleCannotCapture.seat"]],
+  ])(
+    "names the missing %s, from the roster's seat answer",
+    async (missing, says) => {
+      installFetchStub({
+        "GET /connectors": () =>
+          jsonResponse({
+            data: [],
+            seat_capture: {
+              allowed: false,
+              reason: "role_cannot_capture",
+              missing,
+            },
+          }),
+      });
+      render(
+        <OAuthReturnPanel
+          outcome="role_cannot_capture"
+          provider="gmail"
+          onDone={vi.fn()}
+        />,
+      );
+
+      expect(await screen.findByText(says)).toBeInTheDocument();
+    },
+  );
 });

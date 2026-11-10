@@ -39,6 +39,7 @@ func (s *Service) PendingForTarget(ctx context.Context, tx pgx.Tx, targetType st
 	in := targetPending(targetType, targetID)
 	eligible := pendingEligible(ctx, tx, p, in, now)
 	out := PendingOnTarget{Approvals: []crmcontracts.Approval{}}
+	var subjects []row
 	err := walkInbox(ctx, tx, in, nil, func(batch []row) (bool, error) {
 		visible, err := eligible(batch)
 		if err != nil {
@@ -51,12 +52,16 @@ func (s *Service) PendingForTarget(ctx context.Context, tx pgx.Tx, targetType st
 			out.Total++
 			if len(out.Approvals) < PendingScanCap {
 				out.Approvals = append(out.Approvals, wire(a, now))
+				subjects = append(subjects, a)
 			}
 		}
 		return false, nil
 	})
 	if err == nil {
 		err = s.assignmentStates(ctx, tx, out.Approvals, commitmentAssignees(out.Approvals))
+	}
+	if err == nil {
+		err = s.readPlans(ctx, out.Approvals, subjects)
 	}
 	if err != nil {
 		return PendingOnTarget{}, err

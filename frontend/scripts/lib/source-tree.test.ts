@@ -13,19 +13,16 @@
 import {
   mkdirSync,
   mkdtempSync,
-  readFileSync,
   rmSync,
   symlinkSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { join } from "node:path";
 import ts from "typescript";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   extensionFilesMatching,
-  extensionFrontendFiles,
   extensionLayers,
   extensionPackageLayers,
   filesUnder,
@@ -310,6 +307,7 @@ describe("the one resolver the import-graph gates share", () => {
       "./f",
       "./g",
     ]);
+    expect(moduleSpecifiers(source, "static")).toEqual(["./b", "./d", "./f"]);
     // `{ type B }` still loads its module under verbatimModuleSyntax.
     expect(moduleSpecifiers(source, "values")).toEqual([
       "./b",
@@ -362,34 +360,5 @@ describe("the one parser the source-wide gates share", () => {
     // re-parsed would pay the whole corpus again for every pass that asks.
     expect(sourceFileAt(file)).toBe(first);
     expect(first.text).toBe("export const a = 1;");
-  });
-
-  // The gates used to call the compiler themselves, and disagreed about the
-  // dialect — one read a `.ts` file as TSX and walked parse recovery for the
-  // rest of the file, reporting PASS over what it had not seen. A single parse
-  // site is what keeps them reading the same tree, and this is what holds it:
-  // a second `ts.createSourceFile` anywhere in the frontend, core or extension
-  // tier, fails here and names itself.
-  it("is the only place the frontend calls the compiler's parser", () => {
-    const frontendRoot = join(
-      dirname(fileURLToPath(import.meta.url)),
-      "..",
-      "..",
-    );
-    const corpus = [
-      ...filesUnder(join(frontendRoot, "src")),
-      ...filesUnder(join(frontendRoot, "scripts")),
-      ...filesUnder(join(frontendRoot, "e2e")),
-      ...extensionFrontendFiles(join(frontendRoot, "..", "extensions")),
-    ];
-    // The census must have read something, or an emptied corpus passes vacuously.
-    expect(corpus.length).toBeGreaterThan(100);
-    // Spelled in two halves so this file does not name itself a parser.
-    const call = ["ts.createSourceFile", "("].join("");
-    const parsers = corpus
-      .filter((file) => readFileSync(file, "utf8").includes(call))
-      .map((file) => file.slice(frontendRoot.length + 1))
-      .sort();
-    expect(parsers).toEqual(["scripts/lib/source-tree.ts"]);
   });
 });

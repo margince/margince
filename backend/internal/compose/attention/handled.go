@@ -82,7 +82,7 @@ func (s *Service) WithReceiptDetails(d ReceiptDetails) *Service {
 
 // HandledForYou is what was done, newest first, from the page `cursor` names.
 func (s *Service) HandledForYou(ctx context.Context, cursor *string) (crmcontracts.HandledForYou, error) {
-	if err := auth.RequireHuman(ctx); err != nil {
+	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return crmcontracts.HandledForYou{}, err
 	}
 	position, err := decodeHandledCursor(cursor)
@@ -171,7 +171,7 @@ func (s *Service) drawReceipts(ctx context.Context, page []Receipt, out *crmcont
 	}
 	subjects := make([]*crmcontracts.AttentionSubject, 0, 2*len(page))
 	for i, receipt := range page {
-		row := handledReceipt(receipt)
+		row := WireReceipt(receipt)
 		if i < len(details) {
 			row.Actor, row.Changes = details[i].Actor, details[i].Changes
 		}
@@ -193,8 +193,8 @@ func (s *Service) drawReceipts(ctx context.Context, page []Receipt, out *crmcont
 	return nil
 }
 
-// handledReceipt is one completed act on the wire.
-func handledReceipt(receipt Receipt) crmcontracts.Receipt {
+// WireReceipt is one completed act on the wire.
+func WireReceipt(receipt Receipt) crmcontracts.Receipt {
 	out := crmcontracts.Receipt{
 		Id:              openapi_types.UUID(receipt.ID),
 		Review:          receipt.Review,
@@ -203,6 +203,9 @@ func handledReceipt(receipt Receipt) crmcontracts.Receipt {
 		Summary:         receipt.Summary,
 		SummaryParts:    receipt.SummaryParts,
 		OccurredAt:      receipt.OccurredAt,
+		Headline:        optionalText(receipt.Headline),
+		Reason:          optionalText(receipt.Reason),
+		CustomerQuote:   optionalText(receipt.CustomerQuote),
 	}
 	// The record it was about, where the act named one. Not every approval is
 	// about a record, and an absent subject is a real state — the client draws
@@ -212,6 +215,14 @@ func handledReceipt(receipt Receipt) crmcontracts.Receipt {
 	}
 	if !receipt.SourceActivityID.IsZero() {
 		out.SourceRecord = subjectOf("activity", receipt.SourceActivityID)
+	}
+	if receipt.Source != "" {
+		source := crmcontracts.ReceiptSource(receipt.Source)
+		out.Source = &source
+	}
+	if !receipt.AuditLogID.IsZero() {
+		auditID := openapi_types.UUID(receipt.AuditLogID)
+		out.AuditLogId = &auditID
 	}
 	// The way back, only where the act carries one. An approval the system
 	// decided is revisitable through the record it named; a correction nobody
@@ -225,4 +236,12 @@ func handledReceipt(receipt Receipt) crmcontracts.Receipt {
 		}
 	}
 	return out
+}
+
+// optionalText is an empty string as an absent field.
+func optionalText(text string) *string {
+	if text == "" {
+		return nil
+	}
+	return &text
 }

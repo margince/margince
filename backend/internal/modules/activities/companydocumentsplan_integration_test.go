@@ -21,9 +21,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// seedBusyAccount writes one account with 5,000 mails and 10,000 of their
-// files, filed through each link arm. Forty quieter accounts hold most of the
-// installation's 90,000 attachments.
+// seedBusyAccount writes one account with 5,000 mails, filed through each link
+// arm, among forty quieter accounts with 40,000 mails between them.
 func seedBusyAccount(ctx context.Context, t *testing.T, tx pgx.Tx, busy ids.UUID) {
 	t.Helper()
 	if _, err := tx.Exec(ctx, `INSERT INTO company (id, display_name, source, captured_by)
@@ -37,7 +36,7 @@ func seedBusyAccount(ctx context.Context, t *testing.T, tx pgx.Tx, busy ids.UUID
 	if _, err := tx.Exec(ctx, `
 	ALTER TABLE activity DISABLE TRIGGER USER; ALTER TABLE activity_link DISABLE TRIGGER USER;
 	ALTER TABLE relationship DISABLE TRIGGER USER; ALTER TABLE deal DISABLE TRIGGER USER;
-	ALTER TABLE attachment DISABLE TRIGGER USER; ALTER TABLE contact DISABLE TRIGGER USER;
+	ALTER TABLE contact DISABLE TRIGGER USER;
 	CREATE TEMP TABLE seeded_busy AS SELECT id FROM company WHERE display_name = 'Busy';
 	INSERT INTO company (display_name, source, captured_by)
 	  SELECT 'Quiet '||g, 'seed', 'system' FROM generate_series(1, 40) g;
@@ -72,15 +71,27 @@ func seedBusyAccount(ctx context.Context, t *testing.T, tx pgx.Tx, busy ids.UUID
 	  SELECT id, 'company', company_id FROM seeded_mail WHERE g % 10 = 0;
 	INSERT INTO activity_link (activity_id, entity_type, deal_id)
 	  SELECT m.id, 'deal', d.id FROM seeded_mail m JOIN deal d ON d.company_id = m.company_id WHERE m.g % 25 = 0;
+	ANALYZE company; ANALYZE contact; ANALYZE relationship; ANALYZE deal;
+	ANALYZE activity; ANALYZE activity_link`); err != nil {
+		t.Fatalf("seeding the busy account: %v", err)
+	}
+}
+
+// seedBusyAccountFiles gives every mail seedBusyAccount wrote two files, so the
+// busy account holds 10,000 of the 90,000, and each account fifty uploads.
+// Only the Documents plan reads files, so only it pays for writing them.
+func seedBusyAccountFiles(ctx context.Context, t *testing.T, tx pgx.Tx) {
+	t.Helper()
+	if _, err := tx.Exec(ctx, `
+	ALTER TABLE attachment DISABLE TRIGGER USER;
 	INSERT INTO attachment (entity_type, entity_id, filename, content_type, byte_size, source, captured_by, storage_key, category)
 	  SELECT 'activity', m.id, 'file-'||m.g||'-'||k||'.pdf', 'application/pdf', 200000, 'imap', 'connector:imap', 'k/'||m.g||'/'||k, 'email_attachment'
 	    FROM seeded_mail m, generate_series(1, 2) k;
 	INSERT INTO attachment (entity_type, entity_id, company_id, filename, content_type, byte_size, source, captured_by, storage_key)
 	  SELECT 'company', c.id, c.id, 'upload-'||c.n||'-'||k||'.pdf', 'application/pdf', 100000, 'upload', 'system', 'u/'||c.n||'/'||k
 	    FROM seeded_company c, generate_series(1, 50) k;
-	ANALYZE company; ANALYZE contact; ANALYZE relationship; ANALYZE deal;
-	ANALYZE activity; ANALYZE activity_link; ANALYZE attachment`); err != nil {
-		t.Fatalf("seeding the busy account: %v", err)
+	ANALYZE attachment`); err != nil {
+		t.Fatalf("seeding the busy account's files: %v", err)
 	}
 }
 
@@ -103,6 +114,7 @@ func TestABusyAccountsDocumentsListStartsFromTheAccount(t *testing.T) {
 	}()
 	busy := ids.NewV7()
 	seedBusyAccount(ctx, t, tx, busy)
+	seedBusyAccountFiles(ctx, t, tx)
 
 	statement, args, err := companyDocumentsQuery(e.as(), busy, DocumentFilters{}, 50)
 	if err != nil {

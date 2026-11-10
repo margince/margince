@@ -224,7 +224,7 @@ const RESOLVED_EXTENSIONS = [".mjs", ".js", ".mts", ".ts", ".jsx", ".tsx"];
 
 // A module FILE: taking the directory `./x` would end a walk before its
 // `index.tsx`, and `./x.css` is no module a walk can parse.
-function isModuleOnDisk(path: string): boolean {
+export function isModuleOnDisk(path: string): boolean {
   return MODULE_FILE.test(path) && existsSync(path) && statSync(path).isFile();
 }
 
@@ -257,14 +257,15 @@ export function resolveRelative(
 // moduleSpecifiers lists what `source` imports, statically or by `import()`.
 // "values" drops only `import type` and `export type … from`, the forms erased.
 export function moduleSpecifiers(
-  source: ts.SourceFile,
-  edges: "all" | "values",
+  source: ts.Node,
+  edges: "all" | "values" | "static",
 ): string[] {
   const found: string[] = [];
   const visit = (node: ts.Node): void => {
     const declared = declaredSpecifier(node, edges);
     if (declared !== null) found.push(declared);
     if (
+      edges !== "static" &&
       ts.isCallExpression(node) &&
       node.expression.kind === ts.SyntaxKind.ImportKeyword &&
       node.arguments.length > 0 &&
@@ -280,7 +281,7 @@ export function moduleSpecifiers(
 
 function declaredSpecifier(
   node: ts.Node,
-  edges: "all" | "values",
+  edges: "all" | "values" | "static",
 ): string | null {
   if (!ts.isImportDeclaration(node) && !ts.isExportDeclaration(node)) {
     return null;
@@ -292,7 +293,7 @@ function declaredSpecifier(
   const typeOnly = ts.isImportDeclaration(node)
     ? node.importClause?.phaseModifier === ts.SyntaxKind.TypeKeyword
     : node.isTypeOnly;
-  return edges === "values" && typeOnly ? null : specifier.text;
+  return edges !== "all" && typeOnly ? null : specifier.text;
 }
 
 // Every literal piece of a JSX `className`, however the caller composed it. A
@@ -363,4 +364,38 @@ export function plantedProgram(
   host.fileExists = (name) => name === fixture || ts.sys.fileExists(name);
   host.readFile = (name) => (name === fixture ? source : ts.sys.readFile(name));
   return ts.createProgram([fixture], options, host);
+}
+
+// checkedProgram is a type-checked program over `roots`, for a gate that has to
+// know what a name REFERS to rather than how it is spelled: a renamed import, a
+// namespace read or a function passed uncalled. It is built here so this file
+// stays the one place the frontend calls the compiler, and every source file it
+// reads goes through parseSource.
+//
+// `overlay` holds files that exist only in memory, for a gate's planted cases.
+// Options come from the app's own tsconfig, so imports resolve the way the
+// build resolves them.
+export function checkedProgram(
+  configPath: string,
+  roots: readonly string[],
+  overlay: ReadonlyMap<string, string> = new Map(),
+): { program: ts.Program; checker: ts.TypeChecker } {
+  const read = ts.readConfigFile(configPath, ts.sys.readFile);
+  const parsed = ts.parseJsonConfigFileContent(
+    read.config,
+    ts.sys,
+    dirname(configPath),
+  );
+  const options = { ...parsed.options, noEmit: true, incremental: false };
+  const host = ts.createCompilerHost(options, true);
+  const readFile = host.readFile.bind(host);
+  const fileExists = host.fileExists.bind(host);
+  host.readFile = (file) => overlay.get(file) ?? readFile(file);
+  host.fileExists = (file) => overlay.has(file) || fileExists(file);
+  host.getSourceFile = (file) => {
+    const text = overlay.get(file) ?? readFile(file);
+    return text === undefined ? undefined : parseSource(file, text);
+  };
+  const program = ts.createProgram([...roots], options, host);
+  return { program, checker: program.getTypeChecker() };
 }

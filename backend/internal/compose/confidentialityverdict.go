@@ -28,10 +28,10 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
-	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -59,6 +59,10 @@ type ConfidentialityVerdictEngine struct {
 	contacts *contacts.Store
 	brain    completer
 	log      *slog.Logger
+	// released ends the contact holds a thread that clears no longer justifies.
+	released *heldContactReleaser
+	// documents reads the files on the message a verdict judges.
+	documents *threadDocuments
 }
 
 // NewConfidentialityVerdictEngine builds the engine over the pool and the model
@@ -67,11 +71,13 @@ type ConfidentialityVerdictEngine struct {
 // not an error.
 func NewConfidentialityVerdictEngine(pool *pgxpool.Pool, brain completer, log *slog.Logger) *ConfidentialityVerdictEngine {
 	return &ConfidentialityVerdictEngine{
-		pool:     pool,
-		threads:  capture.NewThreadVerdictStore(InstallationDB(pool)),
-		contacts: contacts.NewStore(InstallationDB(pool)),
-		brain:    brain,
-		log:      log,
+		pool:      pool,
+		threads:   capture.NewThreadVerdictStore(InstallationDB(pool)),
+		contacts:  contacts.NewStore(InstallationDB(pool)),
+		brain:     brain,
+		log:       log,
+		released:  newHeldContactReleaser(pool, log),
+		documents: newThreadDocuments(pool, nil),
 	}
 }
 
@@ -115,6 +121,7 @@ func (e *ConfidentialityVerdictEngine) RunWorkspace(ctx context.Context, maxVerd
 		maxVerdicts = passCap
 	}
 	judged := 0
+	documents := newDocumentPass()
 	for judged < maxVerdicts {
 		// A claim never takes more than the pass has left. An admin's cap need
 		// not be a multiple of the claim size, and a batch judged past it would
@@ -126,9 +133,9 @@ func (e *ConfidentialityVerdictEngine) RunWorkspace(ctx context.Context, maxVerd
 		if len(batch) == 0 {
 			return nil
 		}
-		reached, err := e.judgeClaimed(wsCtx, batch)
+		reached, err := e.judgeClaimed(wsCtx, batch, documents)
 		judged += reached
-		if ai.IsDeferral(err) {
+		if confidentialityDeferred(err) {
 			// The refund is judgeClaimed's, because it is what knows where it
 			// stopped. Releasing from here would hand back the whole batch,
 			// including the thread already deferred and refunded inside.
@@ -154,7 +161,7 @@ func (e *ConfidentialityVerdictEngine) RunWorkspace(ctx context.Context, maxVerd
 // here rather than in the caller because this is what knows where it stopped:
 // a caller handed the remainder could still pass the whole batch.
 func (e *ConfidentialityVerdictEngine) judgeClaimed(
-	ctx context.Context, claimed []capture.PendingThread,
+	ctx context.Context, claimed []capture.PendingThread, documents *documentPass,
 ) (int, error) {
 	// A LOCAL rather than a method, which is what makes the wrong call
 	// unwritable instead of merely unwritten: only the loop that knows where it
@@ -172,9 +179,9 @@ func (e *ConfidentialityVerdictEngine) judgeClaimed(
 	reached := 0
 	for i, row := range claimed {
 		reached++
-		err := e.judgeOne(ctx, row)
+		err := e.judgeOne(ctx, row, documents)
 		if err != nil {
-			deferred := ai.IsDeferral(err)
+			deferred := confidentialityDeferred(err)
 			backoff := deferralBackoff(err)
 			if deferErr := e.threads.Defer(ctx, row, backoff,
 				"the confidentiality verdict could not be completed", deferred); deferErr != nil {
@@ -203,8 +210,17 @@ func (e *ConfidentialityVerdictEngine) judgeClaimed(
 // An OPENING answer below the floor is not believed: the thread resolves to
 // `unsure`, which holds. A HOLDING answer needs no floor, because requiring
 // confidence to hold would publish exactly the threads the model found hardest.
-func (e *ConfidentialityVerdictEngine) judgeOne(ctx context.Context, row capture.PendingThread) error {
-	results, err := e.ask(ctx, row)
+func (e *ConfidentialityVerdictEngine) judgeOne(
+	ctx context.Context, row capture.PendingThread, documents *documentPass,
+) error {
+	read, err := e.documents.read(ctx, row, documents)
+	if err != nil {
+		return err
+	}
+	if isPersonnelWithoutAModel(read) {
+		return e.apply(ctx, row, capture.VerdictHeld, confidentialityPersonnel, 1)
+	}
+	results, err := e.ask(ctx, read)
 	if err != nil {
 		return err
 	}
@@ -219,8 +235,9 @@ func (e *ConfidentialityVerdictEngine) judgeOne(ctx context.Context, row capture
 		return fmt.Errorf("confidentiality: unknown kind for thread %s", row.ID)
 	}
 	kind := answer.Verdict
-	if status == capture.VerdictCleared && float64(answer.Confidence) < confidentialityFloor {
-		// Below the floor the OPENING answer is discarded and the thread holds.
+	if status == capture.VerdictCleared && !confidentialityOpens(answer, read) {
+		// An opening answer the rule does not believe is discarded, and the
+		// thread holds: below the floor, or with a document nobody read.
 		// The kind is kept as the model gave it, because "the model thought
 		// this was ordinary and was not sure" is what a human reviewing the
 		// backlog needs to see.
@@ -239,12 +256,20 @@ func (e *ConfidentialityVerdictEngine) judgeOne(ctx context.Context, row capture
 func (e *ConfidentialityVerdictEngine) apply(
 	ctx context.Context, row capture.PendingThread, status, kind string, confidence float64,
 ) error {
-	err := database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+	won := false
+	err := withRetryingWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+		won = false
+		if err := storekit.WaitThreadKeysTx(ctx, tx, []string{row.ThreadKey}); err != nil {
+			return err
+		}
+		if err := capture.LockThreadHoldTx(ctx, tx, row.ThreadKey); err != nil {
+			return err
+		}
 		seen, err := threadAddressesTx(ctx, tx, row)
 		if err != nil {
 			return err
 		}
-		won, err := e.threads.ResolveAs(ctx, tx, row, status, kind, confidence, seen, confidentialityReason)
+		won, err = e.threads.ResolveAs(ctx, tx, row, status, kind, confidence, seen, confidentialityReason)
 		if err != nil || !won {
 			// Lost the claim race. Somebody else answered this thread, and
 			// their answer stands: two workers writing different verdicts over
@@ -283,6 +308,9 @@ func (e *ConfidentialityVerdictEngine) apply(
 		// own timeline; the model's answer is not, so the error names what was
 		// attempted without echoing content.
 		return fmt.Errorf("confidentiality: applying %s to a thread: %w", status, err)
+	}
+	if won && status == capture.VerdictCleared {
+		e.released.releaseThread(ctx, row.ThreadKey)
 	}
 	return nil
 }
@@ -417,20 +445,27 @@ func (e *ConfidentialityVerdictEngine) finishSettledThreadsInto(ctx context.Cont
 			tally.processed++
 		}
 	}
-	return nil
+	// After the threads: a contact whose hold ended with one of them is
+	// released on this pass rather than the next.
+	released, err := e.released.reconcileWorkspace(ctx)
+	tally.processed += released
+	return err
 }
 
 // finishOneSettledThread is one thread's repair, in one transaction.
 func (e *ConfidentialityVerdictEngine) finishOneSettledThread(
 	ctx context.Context, t capture.SettledThread,
 ) (bool, error) {
-	done := false
+	done, cleared := false, false
 	// The pass's own provenance, and every write inside the transaction runs
 	// under it: an audit row is written from the actor on the context, so a
 	// stage that opened its transaction with one context and wrote with another
 	// fails at the first audited write.
 	wsCtx := e.workspaceCtx(ctx)
 	err := database.WithWorkspaceTx(wsCtx, e.pool, func(tx pgx.Tx) error {
+		if err := capture.LockThreadHoldTx(wsCtx, tx, t.ThreadKey); err != nil {
+			return err
+		}
 		// Re-read under the lock: the sweep has no claim, so the answer this
 		// pass applies must be the one the row still holds rather than the one
 		// the listing read.
@@ -448,10 +483,14 @@ func (e *ConfidentialityVerdictEngine) finishOneSettledThread(
 			return err
 		}
 		done = len(outcome.Stamped) > 0 || outcome.Reopened != ids.Nil
+		cleared = locked.Status == capture.VerdictCleared
 		return nil
 	})
 	if err != nil {
 		return false, fmt.Errorf("confidentiality: finishing a settled thread: %w", err)
+	}
+	if done && cleared {
+		e.released.releaseThread(wsCtx, t.ThreadKey)
 	}
 	return done, nil
 }

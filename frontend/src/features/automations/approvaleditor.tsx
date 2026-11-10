@@ -27,14 +27,13 @@ import { Heading } from "../../design-system/heading";
 import { Select } from "../../design-system/select";
 import { isRealCalendarDay } from "../../format/calendarday";
 import { formatDateTime } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { approvalHref } from "../../lib/approvalhref";
 import { summaryWords } from "../../lib/approvalpreviewfields";
 import { useApproval } from "../../lib/approvalread";
 import type { Approval } from "../../lib/approvals.queries";
 import { resolveDisplay, stagedDayFormatter } from "./approvaldisplay";
-import { approvalHref } from "./approvalhref";
 import {
   EDITABLE_FIELDS,
   type EditableField,
@@ -44,7 +43,7 @@ import { useApprovalNames } from "./approvalresponsibility";
 import { ApprovalDecider, ApprovalTarget } from "./approvaltarget";
 import "./approvalrow.css";
 import { QueryGate } from "../../design-system/querystates";
-import { useRecordZone } from "../../lib/recordzone";
+import { useViewerZone } from "../../lib/viewerzone";
 import "../../design-system/querystates.css";
 
 // The two slots an ApprovalRow hands to `DecisionCard`: the "view everything"
@@ -101,7 +100,7 @@ export function ApprovalDetailModal({
   const { locale } = useLocale();
   // An approval is a thing the reader must act on, so its timestamps belong on
   // the reader's own clock rather than the record's.
-  const zone = viewerZone();
+  const zone = useViewerZone();
   const headingId = useId();
   const detail = useApproval(approvalId, open);
   return (
@@ -172,18 +171,18 @@ function ApprovalDetailBody({
   const t = useT();
   const change = (approval.proposed_change ?? {}) as Record<string, unknown>;
   const approvalNames = useApprovalNames([approval]);
-  const recordZone = useRecordZone();
+  const readerZone = useViewerZone();
   const display = resolveDisplay(
     approval.kind,
     change,
     t,
-    stagedDayFormatter(locale, recordZone),
+    stagedDayFormatter(locale, readerZone),
     approvalNames,
     approval.requested_decider_id,
     approval.assignee_inactive,
     approval.preview,
     locale,
-    recordZone,
+    readerZone,
   );
   const sentence = summarySentence(approval);
   const named = withoutRepeatedLead(display, sentence).filter(

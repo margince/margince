@@ -87,7 +87,7 @@
 }
 /* An inline span keeps the body's own size: the mono face runs a little wider
    at the same rung, and a size of its own here would be a rung nothing
-   declared (type-source.test.ts). */
+   declared (census/rules/type-source.census.ts). */
 .md :not(pre) > code {
   padding-inline: var(--space-1);
   border-radius: var(--r-xs);
@@ -101,7 +101,7 @@
 }
 
 .md a {
-  color: var(--accent);
+  color: var(--accentText);
   text-decoration: underline;
   text-underline-offset: 2px;
 }

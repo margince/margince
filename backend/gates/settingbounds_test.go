@@ -29,6 +29,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // boundedPropertyFloor guards against a vacuous pass: the contract names this
@@ -99,7 +100,7 @@ func TestEveryScreenBoundMirrorsTheContract(t *testing.T) {
 	t.Parallel()
 	bounded := boundedContractProperties(t)
 	mirrors := 0
-	err := filepath.WalkDir("../frontend/src", func(path string, d os.DirEntry, err error) error {
+	err := gatekit.WalkDir("../frontend/src", func(path string, d os.DirEntry, err error) error {
 		if err != nil || d.IsDir() {
 			if d != nil && d.IsDir() && d.Name() == "node_modules" {
 				return filepath.SkipDir
@@ -109,7 +110,7 @@ func TestEveryScreenBoundMirrorsTheContract(t *testing.T) {
 		if name := d.Name(); !strings.HasSuffix(name, ".tsx") && !strings.HasSuffix(name, ".ts") || strings.Contains(name, ".test.") {
 			return nil
 		}
-		source, readErr := os.ReadFile(path) // #nosec G304,G122 -- a walk over this repository's own frontend tree
+		source, readErr := gatekit.ReadFile(path) // #nosec G304,G122 -- a walk over this repository's own frontend tree
 		if readErr != nil {
 			return readErr
 		}

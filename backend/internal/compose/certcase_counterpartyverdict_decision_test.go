@@ -57,6 +57,11 @@ func assertEveryScenarioHasADecisionForm(t *testing.T, task ai.Task) {
 		if err := json.Unmarshal(sc.Expect.Answer, &expected); err != nil {
 			t.Fatalf("scenario %s: the expected answer is not a label: %v", sc.Name, err)
 		}
+		if _, isLabel := dc.Floors()[expected]; !isLabel {
+			assertASetExpectationSplitsTheLabels(t, sc.Name, expected, dc)
+			prepared++
+			continue
+		}
 		if got := dc.EvaluateDecision(decision.Answer{Choice: expected, Confidence: 1}); got.Result != aitasks.OutcomeAccepted {
 			t.Errorf("scenario %s: its own expected answer grades %s: %s", sc.Name, got.Result, got.Detail)
 		}
@@ -77,4 +82,23 @@ func assertEveryScenarioHasADecisionForm(t *testing.T, task ai.Task) {
 
 func TestTheCounterpartyCaseHasADecisionForm(t *testing.T) {
 	assertEveryScenarioHasADecisionForm(t, ai.TaskCaptureCounterpartyVerdict)
+}
+
+// assertASetExpectationSplitsTheLabels holds an expectation that names a set of
+// answers rather than one label, such as "held". Kept at full confidence, some
+// label must pass it and some must fail it, or it measures nothing.
+func assertASetExpectationSplitsTheLabels(t *testing.T, scenario, expected string, dc aitasks.DecisionCase) {
+	t.Helper()
+	passed, failed := 0, 0
+	for label := range dc.Floors() {
+		switch dc.EvaluateDecision(decision.Answer{Choice: label, Confidence: 1}).Result {
+		case aitasks.OutcomeAccepted:
+			passed++
+		case aitasks.OutcomeWrongAnswer:
+			failed++
+		}
+	}
+	if passed == 0 || failed == 0 {
+		t.Errorf("scenario %s: %q passes %d labels and fails %d; a set expectation must split them", scenario, expected, passed, failed)
+	}
 }

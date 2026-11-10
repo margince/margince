@@ -14,6 +14,8 @@ import (
 	"testing"
 
 	"gopkg.in/yaml.v3"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // The frontend gate is spelled once as `make check-fe` and run by CI as three
@@ -180,7 +182,7 @@ func nameOf(match []string) string {
 // parseMakefile maps every target to what it pulls in and whether it works.
 func parseMakefile(t *testing.T, path string) map[string]*makeTarget {
 	t.Helper()
-	body, err := os.ReadFile(path)
+	body, err := gatekit.ReadFile(path)
 	if err != nil {
 		t.Fatalf("reading %s: %v", path, err)
 	}
@@ -311,7 +313,7 @@ func gateWorkflowDeclaring(t *testing.T, job string) string {
 	}
 	var found []string
 	for _, path := range paths {
-		body, err := os.ReadFile(path) // #nosec G304 -- a repo-relative path from the glob above
+		body, err := gatekit.ReadFile(path) // #nosec G304 -- a repo-relative path from the glob above
 		if err != nil {
 			t.Fatalf("reading %s: %v", path, err)
 		}
@@ -343,7 +345,7 @@ func gateWorkflowDeclaring(t *testing.T, job string) string {
 
 func ciGateTargets(t *testing.T, path string) []string {
 	t.Helper()
-	body, err := os.ReadFile(path) // #nosec G304 -- a repo-relative workflow path
+	body, err := gatekit.ReadFile(path) // #nosec G304 -- a repo-relative workflow path
 	if err != nil {
 		t.Fatalf("reading %s: %v", path, err)
 	}
@@ -393,7 +395,7 @@ func TestEveryLocalFrontendGateLegRunsInCI(t *testing.T) {
 // TestASubMakeBehindAVariableIsStillReadAsLegs holds the expansion this gate's
 // Makefile reading depends on.
 //
-// check-backend hands its 30 gates to a sub-make through ROOT_SCRIPT_GATES
+// check-root-gates hands its gates to a sub-make through ROOT_SCRIPT_GATES
 // rather than spelling them on the line. Before the expansion existed that
 // token stopped the run; the danger in adding it is the opposite one — an
 // expansion that quietly produced NOTHING would leave the fan-out looking like
@@ -508,9 +510,12 @@ func TestTheThreeAssignmentsAreReadAsMakeReadsThem(t *testing.T) {
 // and pass, which is indistinguishable from a fan-out that reaches everything.
 func TestTheFanOutsOwnLegsAreVisibleToThisGate(t *testing.T) {
 	t.Parallel()
-	const fanOutFloor = 20
+	const (
+		fanOutFloor     = 20
+		rootGatesFanOut = "check-root-gates"
+	)
 
-	body, err := os.ReadFile("../Makefile")
+	body, err := gatekit.ReadFile("../Makefile")
 	if err != nil {
 		t.Fatalf("reading ../Makefile: %v", err)
 	}
@@ -522,13 +527,13 @@ func TestTheFanOutsOwnLegsAreVisibleToThisGate(t *testing.T) {
 	}
 
 	targets := parseMakefile(t, "../Makefile")
-	backend, ok := targets["check-backend"]
+	fanOut, ok := targets[rootGatesFanOut]
 	if !ok {
-		t.Fatalf("../Makefile declares no check-backend target — this gate was about to read nothing")
+		t.Fatalf("../Makefile declares no %s target — this gate was about to read nothing", rootGatesFanOut)
 	}
-	if !slices.Contains(backend.pulls, declared[0]) {
-		t.Fatalf("check-backend's fan-out reaches none of ROOT_SCRIPT_GATES — the recipe stopped " +
-			"handing the variable over, or stopped being a $(MAKE) line this gate follows")
+	if !slices.Contains(fanOut.pulls, declared[0]) {
+		t.Fatalf("%s's fan-out reaches none of ROOT_SCRIPT_GATES — the recipe stopped "+
+			"handing the variable over, or stopped being a $(MAKE) line this gate follows", rootGatesFanOut)
 	}
 	// Each expanded word must be a rule this Makefile actually declares. Asking
 	// whether the fan-out CONTAINS the names it was handed would prove nothing —

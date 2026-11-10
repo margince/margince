@@ -8,6 +8,9 @@ import { LocaleProvider } from "./i18n";
 import type { Screen } from "./lib/router";
 import { forgetHashCredential } from "./lib/router";
 import { memoryStorage } from "./testing/appharness";
+// The screens these cases open, loaded while the file is collected. A screen's
+// first import costs seconds; inside a case it races the case's own waiters.
+import "./features/deals/buyerroom";
 
 // The two emailed links that carry a credential in the hash — the Deal Room's
 // buyer invitation and the password reset — through the REAL App, which is
@@ -210,22 +213,21 @@ afterEach(() => {
 });
 
 describe.each(CARRIERS)("$what, and the gates above the route", (carrier) => {
-  it("is out of the address in the same render that puts the skew screen up", () => {
+  it("is out of the address before the version mismatch screen loads", async () => {
     arriveWith(carrier, "cred_midupgrade");
     const sent = stubApi();
 
     mount("1970.42");
 
-    // Both assertions are SYNCHRONOUS, before anything async has had a turn:
-    // one render pass has happened, it rendered the gate instead of the route,
-    // and the address is already clean. Awaiting either would let a later scrub
-    // pass for this one.
-    expect(screen.getByText("App and server versions differ")).toBeTruthy();
+    // Credential removal must precede the lazy boundary loading.
     expect(globalThis.location.hash).toBe(carrier.scrubbed);
     expect(globalThis.location.href).not.toContain("cred_midupgrade");
     // And it was not spent to achieve that: the screen that spends it never
     // mounted, which is the whole premise of the defect.
     expect(sentTo(sent, carrier)).toEqual([]);
+    expect(
+      await screen.findByText("App and server versions differ"),
+    ).toBeTruthy();
   });
 
   // The gate is up, so nothing is mounted that could notice a link, and a
@@ -244,7 +246,9 @@ describe.each(CARRIERS)("$what, and the gates above the route", (carrier) => {
       expect(globalThis.location.hash).toBe(carrier.scrubbed),
     );
     expect(globalThis.location.href).not.toContain("cred_pasted");
-    expect(screen.getByText("App and server versions differ")).toBeTruthy();
+    expect(
+      await screen.findByText("App and server versions differ"),
+    ).toBeTruthy();
     expect(sentTo(sent, carrier)).toEqual([]);
   });
 

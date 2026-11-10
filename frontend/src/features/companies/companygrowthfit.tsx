@@ -17,7 +17,6 @@ import { type Translator, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import type { Locale } from "../../i18n/locale";
 import { unwrap } from "../../lib/problem";
-import { useRecordZone } from "../../lib/recordzone";
 import {
   type BriefSentence,
   type OpenReceipt,
@@ -29,6 +28,8 @@ import {
 // it works today only because the company record page pulls that stylesheet in
 // for its own sake, so this file renders unstyled anywhere else.
 import "./company360.css";
+import { labelFor } from "../../lib/labelfor";
+import { useViewerZone } from "../../lib/viewerzone";
 import { ReassessOutcome, useReassess } from "./companygrowthfit.reassess";
 
 type GrowthFit = components["schemas"]["CompanyGrowthFit"];
@@ -66,7 +67,7 @@ function missingWords(
   return new Intl.ListFormat(INTL_LOCALE[locale], {
     style: "long",
     type: "conjunction",
-  }).format((missing ?? []).map((code) => t(INPUT_LABELS[code])));
+  }).format((missing ?? []).map((code) => t(labelFor(INPUT_LABELS, code))));
 }
 
 type SubScoreDimension = NonNullable<
@@ -123,7 +124,7 @@ export function GrowthFitPanel({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const recordZone = useRecordZone();
+  const readerZone = useViewerZone();
   const fit = useQuery({
     queryKey: ["company-growth-fit", companyId],
     queryFn: async () => {
@@ -171,7 +172,7 @@ export function GrowthFitPanel({
           {readable && (
             <span className="t-caption">
               {t("co.brief.generatedAt", {
-                when: formatDateTime(readable.generated_at, locale, recordZone),
+                when: formatDateTime(readable.generated_at, locale, readerZone),
               })}
             </span>
           )}
@@ -228,7 +229,7 @@ export function GrowthFitPanel({
           <PanelBody>
             <ReassessOutcome
               outcome={outcome}
-              bandLabel={t(BAND_LABELS[outcome.band])}
+              bandLabel={t(labelFor(BAND_LABELS, outcome.band))}
             />
           </PanelBody>
         )}
@@ -259,7 +260,9 @@ function GrowthFitVerdict({ fit }: Readonly<{ fit: GrowthFit }>) {
           own. */}
       <PanelBody>
         <p className="co-growth-fit-band">
-          <Badge tone={BAND_TONES[fit.band]}>{t(BAND_LABELS[fit.band])}</Badge>{" "}
+          <Badge tone={BAND_TONES[fit.band]}>
+            {t(labelFor(BAND_LABELS, fit.band))}
+          </Badge>{" "}
           {/* Both counts, always. A proportion without its denominator is not a
               completeness figure. */}
           <span>
@@ -278,7 +281,7 @@ function GrowthFitVerdict({ fit }: Readonly<{ fit: GrowthFit }>) {
         )}
         {fit.next_step && (
           <p className="co-growth-fit-next">
-            {t(NEXT_STEP_KEYS[fit.next_step], {
+            {t(labelFor(NEXT_STEP_KEYS, fit.next_step), {
               missing: missingWords(t, locale, fit.data_completeness.missing),
             })}
           </p>
@@ -301,7 +304,7 @@ function GrowthFitVerdict({ fit }: Readonly<{ fit: GrowthFit }>) {
                     and renders none, so a row of bare bars would say nothing
                     about which dimension is which. */}
                 <span className="co-growth-fit-score-head">
-                  <span>{t(SUB_SCORE_LABELS[sub.dimension])}</span>
+                  <span>{t(labelFor(SUB_SCORE_LABELS, sub.dimension))}</span>
                   <span className="co-growth-fit-score-value">
                     {formatNumber(sub.score, locale)}
                   </span>
@@ -315,7 +318,7 @@ function GrowthFitVerdict({ fit }: Readonly<{ fit: GrowthFit }>) {
                   max={100}
                   flat
                   dense
-                  label={t(SUB_SCORE_LABELS[sub.dimension])}
+                  label={t(labelFor(SUB_SCORE_LABELS, sub.dimension))}
                 />
                 {/* The reason travels WITH the bar. A number and no sentence is
                     the unexplainable score this model replaced. */}

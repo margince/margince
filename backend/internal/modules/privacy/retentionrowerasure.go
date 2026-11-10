@@ -23,9 +23,12 @@ package privacy
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/originalstore"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -53,14 +56,22 @@ func (*RetentionService) erasePayload(ctx context.Context, tx pgx.Tx, id ids.UUI
 // ran in another transaction, and a jurisdiction change since may shield the
 // message this is the original of.
 func (s *RetentionService) eraseRawCapture(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
+	ctx = originalstore.Bind(ctx, s.db, s.eraser.blob)
+	if _, err := tx.Exec(ctx, `SELECT a.id FROM activity a JOIN raw_capture r ON `+storekit.StoredOriginalSQL("a", "r")+`
+ WHERE r.id = @id ORDER BY a.id FOR UPDATE OF a`, pgx.NamedArgs{"id": id}); err != nil {
+		return err
+	}
+
 	floor, err := ResolveFloorPolicy(ctx, tx, s.eraser.country)
 	if err != nil {
 		return err
 	}
 	floorCurrent, floorCarried := floor.sqlArgs()
-	tag, err := tx.Exec(ctx, `DELETE FROM raw_capture r WHERE r.id = $1 AND `+rawCaptureUnshielded(2, 3),
-		id, floorCurrent, floorCarried)
-	if err == nil && tag.RowsAffected() == 0 {
+	args := []any{id}
+	where := fmt.Sprintf("r.id = $%d AND ", len(args)) + rawCaptureUnshielded(len(args)+1, len(args)+2)
+	args = append(args, floorCurrent, floorCarried)
+	erased, err := deleteRawOriginalsTx(ctx, tx, where, args...)
+	if err == nil && erased == 0 {
 		return errKeptByFloor
 	}
 	return err

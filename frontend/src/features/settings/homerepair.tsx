@@ -12,7 +12,6 @@ import { FilterPills } from "../../design-system/filterpills";
 import { Heading } from "../../design-system/heading";
 import { SettingList, SettingRow } from "../../design-system/settingrow";
 import { formatNumber } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
 import { useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useActivity } from "../../lib/activityread";
@@ -20,6 +19,7 @@ import { approvalQueryKey } from "../../lib/approvalread";
 import { useCanWrite } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
 import { useReviewActions } from "../../lib/reviewactions";
+import { useViewerZone } from "../../lib/viewerzone";
 
 type Review = components["schemas"]["HomeRepairReview"];
 type Task = components["schemas"]["HomeRepairTask"];
@@ -85,6 +85,7 @@ export const HOME_REPAIR_REASON_LABELS: Record<string, MessageKey> = {
 };
 
 function RepairTask({ task }: Readonly<{ task: Task }>) {
+  const readerZone = useViewerZone();
   const t = useT();
   const activity = useActivity(task.id);
   const actions = useReviewActions();
@@ -100,7 +101,7 @@ function RepairTask({ task }: Readonly<{ task: Task }>) {
       {open && actions && (
         <actions.OpenActivityDrawer
           activityId={task.id}
-          zone={viewerZone()}
+          zone={readerZone}
           onClose={() => setOpen(false)}
         />
       )}

@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { AuthCardTitle, AuthExperience } from "../../components/auth-core";
+import { usePageTitle, Wordmark } from "../../components/auth-identity";
 import { Button, Field, TextInput } from "../../design-system/atoms";
 import { usePasswordReveal } from "../../design-system/passwordreveal";
 import { Select } from "../../design-system/select";
 import { jurisdictionName } from "../../format/jurisdiction";
-import { viewerZone } from "../../format/timezone";
+import { browserZone } from "../../format/timezone";
 import {
   detectLocale,
   LOCALES,
@@ -13,9 +14,8 @@ import {
   useLocale,
   useT,
 } from "../../i18n";
-import { usePageTitle, Wordmark } from "./auth";
 import { isTooShort } from "./passwordrule";
-import "./auth.css";
+import "../../components/auth-core.css";
 
 // The first-run claim (ADR-0105). An installation whose deployment file names no
 // bootstrap_admin holds no company, so /v1/me answers 503 and the boundary
@@ -28,11 +28,9 @@ import "./auth.css";
 // it creates is the installation's root. An interface that mints root quietly is
 // not honest about what it is doing.
 
-export type SetupStatus = {
-  claimable: boolean;
-  /** The jurisdiction pack codes this build carries, offered by the claim form. */
-  jurisdictions: readonly string[];
-};
+import type { SetupStatus } from "./setupclaim.queries";
+
+export { fetchSetupStatus, type SetupStatus } from "./setupclaim.queries";
 
 // The claim form's value for "no pack". The Select's "" is "nothing chosen",
 // and the admin must choose, so the explicit answer needs a value of its own.
@@ -78,42 +76,6 @@ function currencyForRegion(
   return (region && REGION_CURRENCY[region]) || "EUR";
 }
 
-/**
- * fetchSetupStatus asks whether this installation is waiting to be claimed.
- *
- * A failure is reported as "not claimable" rather than thrown: this runs only
- * on a boundary that has ALREADY decided the installation is unavailable, and
- * the honest fallback there is the availability screen the user would otherwise
- * have seen. A probe that cannot answer must not replace a true message with a
- * blank one.
- */
-export async function fetchSetupStatus(): Promise<SetupStatus> {
-  try {
-    const response = await fetch("/setup/status", {
-      headers: { Accept: "application/json" },
-    });
-    if (!response.ok) return { claimable: false, jurisdictions: [] };
-    const body: unknown = await response.json();
-    // Narrowed, not asserted: this body arrives from the network, and an `as`
-    // here would promise the compiler a shape nothing checked. Anything that is
-    // not literally `true` reads as not-claimable, which is the safe direction —
-    // the cost of getting it wrong is a claim screen on an installation that
-    // cannot be claimed.
-    if (typeof body === "object" && body !== null && "claimable" in body) {
-      const offered = "jurisdictions" in body ? body.jurisdictions : [];
-      return {
-        claimable: body.claimable === true,
-        jurisdictions: Array.isArray(offered)
-          ? offered.filter((code): code is string => typeof code === "string")
-          : [],
-      };
-    }
-    return { claimable: false, jurisdictions: [] };
-  } catch {
-    return { claimable: false, jurisdictions: [] };
-  }
-}
-
 type ClaimFields = {
   companyName: string;
   adminName: string;
@@ -145,7 +107,7 @@ function claimDefaults(): ClaimFields {
     setupToken: "",
     baseCurrency: currencyForRegion(),
     baseLanguage: detectLocale(),
-    timezone: viewerZone(),
+    timezone: browserZone(),
     country: "",
   };
 }
