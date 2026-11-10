@@ -74,11 +74,12 @@ type aiCertFamilySite struct {
 
 // buildAICertFamilies folds the document's records by model family. A family is
 // graded on its best model per feature, the model a buyer picking that family
-// would run, so a weak model in the family cannot hide a strong one. Only what a
-// preset routes counts: a retired or one-off binding is a model no buyer is
-// given, and grading a family on it answers a question nobody asked.
+// would run, so a weak model in the family cannot hide a strong one. Only a
+// route a preset takes and a record grades counts: a retired or one-off binding
+// is a model no buyer is given, and one the preset sends with other settings
+// than its records were measured on has no grade to list.
 func buildAICertFamilies(doc aiCertDoc, rows []aicert.ReadinessRow) []aiCertFamily {
-	routed, measured := aiCertPresetRoutes(doc.Presets), aiCertMeasuredRoutes(doc.Presets)
+	measured := aiCertMeasuredRoutes(doc.Presets)
 	byName := map[string]*aiCertFamily{}
 	for _, site := range doc.Sites {
 		best := map[string]aiCertRecord{}
@@ -104,7 +105,7 @@ func buildAICertFamilies(doc aiCertDoc, rows []aicert.ReadinessRow) []aiCertFami
 	}
 	var routedRows []aicert.ReadinessRow
 	for _, row := range rows {
-		if routed[aiCertRouteKey(string(row.Site.Task), bindingRefOf(row.Record))] {
+		if measured[aiCertRouteKey(string(row.Site.Task), bindingRefOf(row.Record))] {
 			routedRows = append(routedRows, row)
 		}
 	}
@@ -132,23 +133,6 @@ func eligibleFamilyRecords(site aiCertSite, routed map[string]bool) []aiCertReco
 		}
 	}
 	return eligible
-}
-
-// aiCertPresetRoutes marks a task and binding when some preset sends it a call:
-// the rung that answers it, or the one a failed call falls to.
-func aiCertPresetRoutes(presets []aiCertPreset) map[string]bool {
-	routed := map[string]bool{}
-	for _, p := range presets {
-		for _, row := range p.Tasks {
-			if row.Tier != "" {
-				routed[aiCertRouteKey(row.Task, row.Model)] = true
-			}
-			if row.Fallback != nil {
-				routed[aiCertRouteKey(row.Task, row.Fallback.Model)] = true
-			}
-		}
-	}
-	return routed
 }
 
 // aiCertMeasuredRoutes marks the routes a preset row actually grades: a rung is
