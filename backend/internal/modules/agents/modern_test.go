@@ -466,6 +466,12 @@ func TestTheSurfaceTellsAModelToLookBeforeItReportsTheWorkFinished(t *testing.T)
 		"needs no approval of its own",
 		// And the moment: before telling anyone the work is done.
 		"Before telling anyone the work is finished",
+		// Scoped to the task: the queue also holds colleagues' work, and a
+		// model told only to report what is waiting read all of it out.
+		"with targets naming every record this task created or changed",
+		"the activities and tasks it logged included",
+		"The rest of the queue is not part of the task",
+		"do not list it unless the user asks",
 	} {
 		if !strings.Contains(queueInstruction, want) {
 			t.Errorf("the queue guidance no longer says %q:\n%s", want, queueInstruction)

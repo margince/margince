@@ -56,6 +56,22 @@ func TestAStagedCallOffersTheRelayOnlyWhereTheCredentialCanRelease(t *testing.T)
 	}
 }
 
+// A staged call points at its own proposal, never at the whole queue: a bare
+// list_approvals reads colleagues' waiting work out to the user as well.
+func TestAStagedCallPointsAtItsOwnProposalNotTheQueue(t *testing.T) {
+	for _, releasable := range []bool{true, false} {
+		staged := &workflow.StagedApprovalError{ApprovalID: ids.New[ids.ApprovalKind](), ReleasableByCaller: releasable}
+		text := stagedExplanation(staged)
+		readIt := `read_approval with "staged_action_id": "` + staged.ApprovalID.String() + `"`
+		if !strings.Contains(text, readIt) {
+			t.Errorf("releasable=%v: the explanation does not say %s:\n%s", releasable, readIt, text)
+		}
+		if strings.Contains(text, "list_approvals") {
+			t.Errorf("releasable=%v: the explanation sends the caller to the whole queue:\n%s", releasable, text)
+		}
+	}
+}
+
 // A relink is undoable by where it files, whatever the tool's static tier.
 func TestReleaseUndoableByDestination(t *testing.T) {
 	for _, tc := range []struct {
@@ -133,5 +149,15 @@ func TestAThreadRelinkIsRefusedOnTheExecutionPathAtEveryDestination(t *testing.T
 				t.Errorf("%s onto a %s moved the thread", name, entity)
 			}
 		}
+	}
+}
+
+// With nothing staged there is no id to point at, so the refusal scopes the
+// queue read to the record instead of sending the caller to all of it.
+func TestAnUnstagedApprovalScopesTheQueueReadToItsRecord(t *testing.T) {
+	said := NewDispatcher(NewRegistry(nil, nil), bindAuthenticated, "margince-crm", "test").WithLogger(discardLog()).
+		explain("archive_record", apperrors.ErrRequiresApproval)
+	if !strings.Contains(said, "list_approvals with targets naming this record") {
+		t.Errorf("the refusal does not scope the queue read to the record:\n%s", said)
 	}
 }

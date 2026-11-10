@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 48 |
 | Resources | 14 |
-| Tool catalog | 228.1 KB |
+| Tool catalog | 228.4 KB |
 | Resource catalog | 5.5 KB |
-| Approx. wire tokens | 59806 |
+| Approx. wire tokens | 59886 |
 | Largest tool | `read_context` (11.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -34,9 +34,9 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 |---|---:|---:|---|
 | Output schemas | 50.6 KB | 22% | **No**: a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 53.9 KB | 23% | Yes, every step |
-| Input schemas | 111.8 KB | 49% | Yes, every step |
+| Input schemas | 112.1 KB | 49% | Yes, every step |
 | _Names, annotations, punctuation_ | 11.8 KB | 5% | Partly |
-| **Description + input schema** | **165.7 KB** | **72%** | **the recurring cost** |
+| **Description + input schema** | **166.0 KB** | **72%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -88,7 +88,7 @@ descriptions and input schemas are what each step pays for.
 | [`draft_outbound`](#draft_outbound) | Draft an email or follow-ups |  |  | 517 |
 | [`enrich`](#enrich) | Enrich a company from its website |  |  | 395 |
 | [`find_records`](#find_records) | Find records | yes |  | 1949 |
-| [`list_approvals`](#list_approvals) | List what is waiting for a decision | yes | [`ui://margince/approval-queue.html`](#approval_queue_view) | 401 |
+| [`list_approvals`](#list_approvals) | List what is waiting for a decision | yes | [`ui://margince/approval-queue.html`](#approval_queue_view) | 474 |
 | [`list_documents`](#list_documents) | List a record's documents or read one | yes |  | 331 |
 | [`preview_import`](#preview_import) | Preview an import |  |  | 1012 |
 | [`read_analytics`](#read_analytics) | Write a report or query data | yes |  | 927 |
@@ -5055,12 +5055,13 @@ next_cursor to read on.
 ```text
 The staged actions waiting for a human's decision: what was proposed and what each would do. It is
 where a proposal that is already waiting turns up — a message staged and unsent is not one that
-needs writing again. It lists what the colleague you act for could decide themselves; anything else
-is absent rather than refused. A proposal past its expiry reads as expired and can no longer be
-answered. Personal mutes hide eligible pending rows, so a bundle may be partial. Use include_muted
-for a complete authorized bundle review. Each item carries its one-line summary, not the change
-itself. read_approval opens one and shows what it holds; decide_approvals answers it. Keep the
-staged_action_id you mean to act on, the bundle_id when one act staged several, and next_cursor.
+needs writing again. targets answers what waits on the records you touched. It lists what the
+colleague you act for could decide themselves; anything else is absent rather than refused. A
+proposal past its expiry reads as expired and can no longer be answered. Personal mutes hide
+eligible pending rows, so a bundle may be partial. Use include_muted for a complete authorized
+bundle review. Each item carries its one-line summary, not the change itself. read_approval opens
+one and shows what it holds; decide_approvals answers it. Keep the staged_action_id you mean to act
+on, the bundle_id when one act staged several, and next_cursor.
 ```
 
 Renders its result in [`ui://margince/approval-queue.html`](#approval_queue_view), visible to `model`.
@@ -5109,6 +5110,28 @@ Renders its result in [`ui://margince/approval-queue.html`](#approval_queue_view
     "target_entity_type": {
       "description": "With target_entity_id, the approvals staged against one record.",
       "type": "string"
+    },
+    "targets": {
+      "description": "The approvals staged against any of these records.",
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "id"
+        ],
+        "type": "object"
+      },
+      "maxItems": 25,
+      "type": "array"
     }
   },
   "type": "object"

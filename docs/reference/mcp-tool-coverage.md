@@ -132,7 +132,7 @@ Everything below is the detail behind the two tables above: which tools each job
 | … some case requires as one of a set | 2 |
 | … **no case requires** | 10 |
 | … of those, permitted somewhere but never required | 5 |
-| Prompt tokens spent on tools no case requires | 5230 |
+| Prompt tokens spent on tools no case requires | 5303 |
 | Use cases | 70 |
 | Acceptance criteria the cases declare, each with a statement | 117 |
 
@@ -729,10 +729,10 @@ A tool in the `Permitted in` column is worse than one with nothing: a case is al
 | `run_research` | 776 | - | `case108_ask_sofia_for_an_intro` | - |
 | `read_view` | 638 | - | `case102_shorter_in_my_voice`, `case106_turn_that_rule_off`, `case76_she_said_yes_at_the_fair`, `case77_record_her_yes`, `case91_add_a_review_stage`, `case94_a_field_for_the_region` | - |
 | `change_record_parts` | 621 | - | - | - |
+| `list_approvals` | 474 | - | `case1_log_it`, `case32_two_words_for_one_thing`, `case46_get_us_in_a_room`, `case59_file_it_on_the_meeting_and_the_contract` | - |
 | `change_relationships` | 472 | - | - | - |
 | `decide_approvals` | 429 | - | - | - |
 | `annotate_brief` | 417 | `agent_loop` | - | `morning_brief` |
-| `list_approvals` | 401 | - | `case1_log_it`, `case32_two_words_for_one_thing`, `case46_get_us_in_a_room`, `case59_file_it_on_the_meeting_and_the_contract` | - |
 | `enrich` | 395 | `enrich` | - | - |
 | `read_approval` | 154 | - | `case32_two_words_for_one_thing` | - |
 
