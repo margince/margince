@@ -30971,7 +30971,7 @@ paths:
     get:
       tags: [Brief]
       operationId: getTeamWeeklyReview
-      # No screen reads the team week any more (#10976). The operation stays for
+      # No screen reads the team week any more. The operation stays for
       # clients built against it until its notice window ends.
       deprecated: true
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
