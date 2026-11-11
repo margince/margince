@@ -192,3 +192,17 @@
     background-color var(--dur-state) var(--ease-out),
     color var(--dur-state) var(--ease-out);
 }
+
+/* The box that narrows a long list. It stays at the top while the rows under
+   it scroll, on the popup's own fill so no row shows through it. */
+.select-filter {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  inline-size: 100%;
+  margin-block-end: var(--controlGap);
+}
+.select-empty {
+  padding: var(--controlGap) 9px;
+  color: var(--textSecondary);
+}
