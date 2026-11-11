@@ -197,6 +197,8 @@ function ResultBar({
     product: CATEGORY_GROUP.product,
     service: CATEGORY_GROUP.service,
   };
+  // A withheld total has no length to draw; the headline already says so.
+  if (closed.amount_minor == null) return null;
   return (
     <div className="progress-result-bar">
       <SegmentBar

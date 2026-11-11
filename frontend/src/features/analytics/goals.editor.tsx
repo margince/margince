@@ -71,9 +71,12 @@ export function GoalEditor({ plan }: Readonly<{ plan: SalesGoalPlan }>) {
     reason: reason.trim(),
     origin: "manual" as const,
   };
+  // Publishing sends the saved draft, so the yearly goal on screen must be saved too.
   const unchangedDraft =
     plan.draft !== undefined &&
-    JSON.stringify(plan.draft.months) === JSON.stringify(months);
+    JSON.stringify(plan.draft.months) === JSON.stringify(months) &&
+    (plan.draft.declared_total_minor ?? monthsTotal(plan.draft.months)) ===
+      yearly;
   return (
     <div className="goal-editor">
       <div className="goal-editor-yearly">

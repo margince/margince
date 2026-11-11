@@ -70,4 +70,12 @@ describe("ProgressMonths", () => {
     render(<ProgressMonths progress={{ ...sellerMarch, months }} />);
     expect(screen.queryByText(/so far:/)).toBeNull();
   });
+
+  it("drops the year line while a month's revenue is withheld", () => {
+    const months = sellerMarch.months.map((row, at) =>
+      at === 0 ? { ...row, closed: { status: "withheld" as const } } : row,
+    );
+    render(<ProgressMonths progress={{ ...sellerMarch, months }} />);
+    expect(screen.queryByText(/so far:/)).toBeNull();
+  });
 });

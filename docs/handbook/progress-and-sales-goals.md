@@ -48,6 +48,6 @@ Open **Insights → Sales goals** and pick the year. A manager picks a seller fr
 2. Write a reason and click **Save draft**. A draft changes nothing in Progress until it is published.
 3. Click **Publish**, confirm that the goals were agreed together, and publish. The months now count in Progress.
 
-You can only publish a saved draft whose 12 months are all set and add up to more than zero. If you typed a yearly goal, the months must also add up to it. **Discard draft** removes the draft and keeps what is published; it asks for no reason. **Withdraw** removes published goals; it asks for a reason. Every step is kept in the plan history with who did it and when.
+You can only publish a saved draft whose 12 months are all set and add up to more than zero. If the yearly goal field holds an amount, the months must add up to it. When you change published goals, that field starts with their total. **Discard draft** removes the draft and keeps what is published; it asks for no reason. **Withdraw** removes published goals; it asks for a reason. Every step is kept in the plan history with who did it and when.
 
 Once a plan publishes the months of a seller, those months can only be changed through **Sales goals**.

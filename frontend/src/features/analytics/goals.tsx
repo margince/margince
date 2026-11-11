@@ -87,15 +87,14 @@ export function SalesGoalsScreen() {
         actions={
           <Button
             variant="ghost"
-            onClick={() =>
-              navigate(
-                { screen: "progress" },
-                new Map([
-                  ["period", "year"],
-                  ["year", identifierNumber(year)],
-                ]),
-              )
-            }
+            onClick={() => {
+              const dials = new Map([
+                ["period", "year"],
+                ["year", identifierNumber(year)],
+              ]);
+              if (seller) dials.set("scope", `owner:${seller.owner_id}`);
+              navigate({ screen: "progress" }, dials);
+            }}
           >
             {t("goals.viewProgress")}
           </Button>
@@ -181,11 +180,14 @@ function SellerPlan({
 
 function ReadOnlyPlan({ plan }: Readonly<{ plan: SalesGoalPlan }>) {
   const t = useT();
+  // Before anything is published the seller reads the draft; the state badge says so.
+  const months =
+    !plan.published && plan.draft ? plan.draft.months : plan.live_months;
   return (
     <div className="goal-plan">
       <Callout tone="info" title={t("goals.readOnly")} />
-      <GoalBars months={plan.live_months} />
-      <GoalMonths months={plan.live_months} currency={plan.currency} />
+      <GoalBars months={months} />
+      <GoalMonths months={months} currency={plan.currency} />
     </div>
   );
 }

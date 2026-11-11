@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { AppLink } from "../../design-system/applink";
 import { Avatar } from "../../design-system/avatar";
 import { Callout } from "../../design-system/callout";
 import { DataTable } from "../../design-system/datatable";
@@ -13,7 +14,8 @@ import {
   monthName,
 } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
-import { replaceDial } from "../../lib/urlstate";
+import { routeHash } from "../../lib/router";
+import { hashWithParams, replaceDial, useUrlParams } from "../../lib/urlstate";
 import type {
   SalesProgress,
   SalesProgressMember,
@@ -28,6 +30,12 @@ export function ProgressMembers({
   const t = useT();
   const { locale } = useLocale();
   const { currency } = progress;
+  const [params] = useUrlParams();
+  const sellerHref = (owner: string) =>
+    hashWithParams(
+      routeHash({ screen: "progress" }),
+      new Map([...params, ["scope", `owner:${owner}`]]),
+    );
   return (
     <Panel title={t("progress.team")}>
       <PanelBody>
@@ -48,10 +56,13 @@ export function ProgressMembers({
               {
                 key: "name",
                 header: t("progress.member"),
+                // A row takes no focus, so the name is the keyboard's way in.
                 render: (member) => (
                   <span className="progress-member">
                     <Avatar name={member.name} identity={member.owner_id} />
-                    {member.name}
+                    <AppLink href={sellerHref(member.owner_id)}>
+                      {member.name}
+                    </AppLink>
                   </span>
                 ),
                 fold: "title",
@@ -227,8 +238,15 @@ function MonthsChart({ progress }: Readonly<{ progress: SalesProgress }>) {
 function YearLine({ progress }: Readonly<{ progress: SalesProgress }>) {
   const t = useT();
   const { locale } = useLocale();
+  // A year is compared only when every month has a whole goal and a reading.
+  const whole = progress.months.every(
+    (row) =>
+      row.goal.amount_minor != null &&
+      row.goal.status !== "incomplete" &&
+      (row.closed.status === "ok" || row.closed.status === "not_started"),
+  );
+  if (!whole) return null;
   const goals = progress.months.map((row) => row.goal.amount_minor);
-  if (goals.some((goal) => goal == null)) return null;
   const goal = goals.reduce<number>((sum, each) => sum + (each ?? 0), 0);
   const closed = progress.months.reduce(
     (sum, row) => sum + (row.closed.amount_minor ?? 0),
