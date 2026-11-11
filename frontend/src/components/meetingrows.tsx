@@ -3,33 +3,34 @@
 
 import { Clock, MapPin, Video } from "lucide-react";
 import type { ReactNode } from "react";
-import type { components } from "../../api/schema";
-import { InvitationBadge } from "../../components/booking-meeting-parts";
-import { MeetingOthers } from "../../components/meetingothers";
-import { AppLink } from "../../design-system/applink";
-import { Badge } from "../../design-system/atoms";
-import { AvatarStack } from "../../design-system/avatarstack";
-import { OffsiteLink } from "../../design-system/offsitelink";
-import { PanelBody, PanelRow } from "../../design-system/panel";
+import type { components } from "../api/schema";
+import { AppLink } from "../design-system/applink";
+import { Badge } from "../design-system/atoms";
+import { AvatarStack } from "../design-system/avatarstack";
+import { OffsiteLink } from "../design-system/offsitelink";
+import { PanelBody, PanelRow } from "../design-system/panel";
 import {
   activityDay,
   activityDaysAway,
   activityTimeSpan,
   type OccurredPrecision,
-} from "../../format/activitywhen";
-import { dateTileParts } from "../../format/datetile";
-import { formatDateAbbrev, formatNumber } from "../../format/format";
-import { useLocale, usePlural, useT } from "../../i18n";
-import { PROVIDER_VIDEO_APP, VIDEO_APP_NAME } from "../../lib/booking-video";
-import { useMeetingInvitation } from "../../lib/meeting-invitation-query";
-import { routeHash } from "../../lib/router";
-import { useViewerZone } from "../../lib/viewerzone";
+} from "../format/activitywhen";
+import { dateTileParts } from "../format/datetile";
+import { formatDateAbbrev, formatNumber } from "../format/format";
+import { useLocale, usePlural, useT } from "../i18n";
+import { PROVIDER_VIDEO_APP, VIDEO_APP_NAME } from "../lib/booking-video";
+import { useMeetingInvitation } from "../lib/meeting-invitation-query";
+import { routeHash } from "../lib/router";
+import { useViewerZone } from "../lib/viewerzone";
+import { InvitationBadge } from "./booking-meeting-parts";
+import { MeetingOthers } from "./meetingothers";
+import "./meetingrows.css";
 
 type Activity = components["schemas"]["Activity"];
 type Invitation = components["schemas"]["MeetingInvitation"];
-type NextMeeting = NonNullable<
-  components["schemas"]["Contact360"]["next_meeting"]
->;
+// The contact read's shape. A company's next meeting names its attendees as
+// `display_name` and is mapped onto this one.
+export type NextMeeting = components["schemas"]["Contact360NextMeeting"];
 type InvitationStatus = Invitation["status"];
 
 /**
@@ -75,10 +76,10 @@ function DateTile({
   const zone = useViewerZone();
   const tile = activityDay(at, precision, locale, zone, dateTileParts);
   return (
-    <time className="pe-meeting-date" dateTime={at}>
-      <span className="pe-meeting-date-edge">{tile.weekday}</span>
-      <span className="pe-meeting-day">{tile.day}</span>
-      <span className="pe-meeting-date-edge">{tile.month}</span>
+    <time className="meetingrows-date" dateTime={at}>
+      <span className="meetingrows-date-edge">{tile.weekday}</span>
+      <span className="meetingrows-day">{tile.day}</span>
+      <span className="meetingrows-date-edge">{tile.month}</span>
     </time>
   );
 }
@@ -136,8 +137,8 @@ export function MeetingTitle({
   children: string;
 }>) {
   const className = lead
-    ? "pe-meeting-title pe-meeting-title-lead"
-    : "pe-meeting-title";
+    ? "meetingrows-title meetingrows-title-lead"
+    : "meetingrows-title";
   if (!opens) return <span className={className}>{children}</span>;
   return (
     <AppLink
@@ -215,13 +216,13 @@ export function MeetingRow({
     .join(" · ");
   return (
     <PanelRow>
-      <article className="pe-meeting">
+      <article className="meetingrows-row">
         <DateTile
           at={activity.occurred_at}
           precision={activity.occurred_precision}
         />
-        <div className="pe-meeting-body">
-          <div className="pe-meeting-headline">
+        <div className="meetingrows-body">
+          <div className="meetingrows-headline">
             <MeetingTitle
               activityId={activity.id}
               opens={opensMeetingPage(activity)}
@@ -240,9 +241,9 @@ export function MeetingRow({
               invitation={activity.invitation_status}
             />
           </div>
-          {meta && <p className="t-caption t-num pe-meeting-meta">{meta}</p>}
+          {meta && <p className="t-caption t-num meetingrows-meta">{meta}</p>}
         </div>
-        <div className="pe-meeting-verbs">{verbs}</div>
+        <div className="meetingrows-verbs">{verbs}</div>
       </article>
     </PanelRow>
   );
@@ -285,7 +286,7 @@ export function NextMeetingCard({
 }: Readonly<{
   next: NextMeeting;
   asOf: string;
-  // The meeting's row in the contact's list, which says whether it was booked
+  // The meeting's row in the record's list, which says whether it was booked
   // through Margince. Absent until that list arrives.
   activity?: Activity;
   // Margince's own line about why this meeting is worth reading ahead of.
@@ -306,10 +307,10 @@ export function NextMeetingCard({
   const attendees = next.participants ?? [];
   return (
     <PanelBody>
-      <article className="pe-meeting pe-meeting-lead">
+      <article className="meetingrows-row meetingrows-lead">
         <DateTile at={next.starts_at} precision={next.occurred_precision} />
-        <div className="pe-meeting-body">
-          <div className="pe-meeting-headline">
+        <div className="meetingrows-body">
+          <div className="meetingrows-headline">
             <MeetingTitle activityId={next.activity_id} opens={opens} lead>
               {next.subject ?? t("contact.meetings.untitled")}
             </MeetingTitle>
@@ -323,7 +324,7 @@ export function NextMeetingCard({
               invitation={invitation?.status ?? activity?.invitation_status}
             />
           </div>
-          <ul className="pe-meeting-facts">
+          <ul className="meetingrows-facts">
             {span && (
               <li>
                 <Clock aria-hidden="true" />
@@ -341,7 +342,7 @@ export function NextMeetingCard({
           {(attendees.length > 0 ||
             next.other_participants ||
             next.participants_more) && (
-            <div className="pe-meeting-attendees">
+            <div className="meetingrows-attendees">
               <AvatarStack
                 contacts={attendees.map((who) => ({
                   name: who.full_name,
@@ -359,13 +360,13 @@ export function NextMeetingCard({
             </div>
           )}
           {note && (
-            <p className="pe-meeting-note">
-              <span className="pe-meeting-note-by">{note.by}</span> ·{" "}
+            <p className="meetingrows-note">
+              <span className="meetingrows-note-by">{note.by}</span> ·{" "}
               {note.whyNow}
             </p>
           )}
         </div>
-        <div className="pe-meeting-actions">{verbs}</div>
+        <div className="meetingrows-actions">{verbs}</div>
       </article>
     </PanelBody>
   );

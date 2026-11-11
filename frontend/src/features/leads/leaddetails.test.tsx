@@ -3,9 +3,14 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent, { type UserEvent } from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { en } from "../../i18n/en";
 import { changeChoice } from "../../testing/choicedialog.testkit";
 import { companyNamesAnswer } from "../../testing/companynames.testkit";
+import { listsMe } from "../../testing/lists.fixtures";
+import { installFetchStub } from "../../testing/story-utils";
+import { LeadDetails } from "./leaddetails";
 import { LeadScreen } from "./leads";
+import { useLeadPatch } from "./leads.patch";
 import { jsonResponse, lead, render, stubFetch } from "./leads.testkit";
 
 beforeEach(() => {
@@ -167,5 +172,52 @@ describe("the About company row", () => {
     await user.click(change);
     expect(await screen.findByDisplayValue("Nordwind Logistik")).toBeVisible();
     expect(patches).toEqual([]);
+  });
+});
+
+describe("a lead's Lists group", () => {
+  function Details() {
+    const writer = useLeadPatch(lead, lead.id, () => undefined);
+    return (
+      <LeadDetails lead={lead} writer={writer} terminalReasonId="refused" />
+    );
+  }
+
+  function show(onLists: unknown[] = []) {
+    installFetchStub({
+      "GET /me": listsMe(true, [], {
+        allow: { lead: ["read", "update"], list: ["read", "update"] },
+      }),
+      [`GET /records/lead/${lead.id}/lists`]: () =>
+        jsonResponse({ data: onLists }),
+    });
+    render(<Details />);
+  }
+
+  const group = async () =>
+    within(
+      await screen.findByRole("region", { name: en["lists.record.title"] }),
+    );
+
+  it("offers Add to Shortlist and every list while the lead is on none", async () => {
+    show();
+    const lists = await group();
+    expect(
+      await lists.findByRole("button", { name: en["lists.addToShortlist"] }),
+    ).toBeTruthy();
+    expect(
+      lists
+        .getByRole("link", { name: en["lists.record.allLists"] })
+        .getAttribute("href"),
+    ).toBe("/#/filters/lists");
+  });
+
+  it("keeps the lists it is on beside the verbs", async () => {
+    show([{ id: "s-1", name: "Launch references" }]);
+    const lists = await group();
+    expect(await lists.findByText("Launch references")).toBeTruthy();
+    expect(
+      lists.getByRole("button", { name: en["lists.addToShortlist"] }),
+    ).toBeTruthy();
   });
 });

@@ -2,6 +2,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
 import { type JustIn, JustInScope } from "../../components/latestinbound";
+import { MeetingBriefAction } from "../../components/recordmeetings";
 import { CallAction } from "../../design-system/callaction";
 import { Panel, PanelBody } from "../../design-system/panel";
 import {
@@ -26,7 +27,6 @@ import {
   useChronologyCut,
 } from "../records/recordconversations";
 import { RowAnswerActions, TimelineActions } from "../records/timelineactions";
-import { MeetingBriefAction } from "./contactmeetings";
 import { callBackNumber } from "./contactmemory.rows";
 import { timelineState } from "./contacttimelinestate";
 import "./contact360.css";

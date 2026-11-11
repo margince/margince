@@ -586,7 +586,7 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "A day entry's noon UTC is the next date in UTC+14; only that zone shows the tile counts from and names the date the entry holds.",
   },
   {
-    file: "features/contacts/contactmeetings.held.stories.tsx",
+    file: "components/meetingsheld.stories.tsx",
     why: "A day entry's noon UTC is the next date in UTC+14; only that zone shows the table dates a held meeting by the date it names.",
   },
 ];

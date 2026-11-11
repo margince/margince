@@ -4,6 +4,8 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../../api/schema";
 import { company360 } from "../../testing/company.fixtures";
+import { listsMe, shortlist } from "../../testing/lists.fixtures";
+import type { GrantSpec } from "../../testing/mefixture";
 import {
   installFetchStub,
   jsonResponse,
@@ -126,11 +128,26 @@ const withheld: View = {
   sections_omitted: ["health", "contacts"],
 };
 
-function Rail({ view, row }: Readonly<{ view?: View; row?: Company }>) {
+function listsOn(list: GrantSpec["list"]) {
+  return listsMe(true, [], { allow: { company: ["read", "update"], list } });
+}
+
+function Rail({
+  view,
+  row,
+  me = meRoute({ company: ["read", "update"] }),
+  onLists = [],
+}: Readonly<{
+  view?: View;
+  row?: Company;
+  me?: () => Response;
+  onLists?: readonly unknown[];
+}>) {
   installFetchStub({
     // Without a routed session useCan("company","update") fails closed
     // (useMe's no-authorization fallback) and no field would be editable.
-    "GET /me": meRoute({ company: ["read", "update"] }),
+    "GET /me": me,
+    "GET /records/company/o-1/lists": () => jsonResponse({ data: onLists }),
     // Payment is the third health meter, sourced from usePaymentHealth off
     // this endpoint rather than off view.health. A no_connection reply
     // leaves payment undefined and the meter never draws, so every story in
@@ -168,6 +185,30 @@ function Rail({ view, row }: Readonly<{ view?: View; row?: Company }>) {
 }
 
 export const Populated: Story = { render: () => <Rail view={populated} /> };
+
+// On one Shortlist, for a seat that may change lists: the chip, Add to
+// Shortlist and the way to every list.
+export const ListsWithAddToShortlist: Story = {
+  render: () => (
+    <Rail
+      view={populated}
+      me={listsOn(["read", "create", "update"])}
+      onLists={[shortlist]}
+    />
+  ),
+};
+
+export const ListsOnAPhone: Story = {
+  ...ListsWithAddToShortlist,
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+};
+
+// On no list, for a seat that may only read lists: the group still shows the
+// way to every list, and no Add to Shortlist.
+export const ListsWithoutListGrant: Story = {
+  render: () => <Rail view={populated} me={listsOn(["read"])} />,
+};
 
 export const SectionWithheld: Story = {
   render: () => <Rail view={withheld} />,

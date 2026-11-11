@@ -10869,6 +10869,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
 
   "retention.scopeRawCapture": "Bản gốc tin nhắn đã lưu",
   "retention.scopeDealRiskDay": "Ghi nhận hằng ngày deal trọng yếu có rủi ro",
+  "retention.scopeExtension": "Hồ sơ do tiện ích mở rộng lưu",
   "pipeline.new": "Pipeline mới",
   "pipeline.createRefused":
     "Vai trò của bạn không thể tạo pipeline. Liên hệ quản trị viên.",
@@ -13073,7 +13074,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "cf.retire.body":
     "Trường sẽ bị ẩn khỏi hồ sơ mới và bộ lọc. Giá trị đã lưu vẫn được giữ. Không thể hoàn tác việc lưu trữ.",
   "cf.retire.lists":
-    "Các danh sách tự cập nhật này lọc theo trường này. Các danh sách này vẫn hoạt động với giá trị đã lưu, và mỗi danh sách sẽ nhắc người chịu trách nhiệm thay điều kiện lọc:",
+    "Các danh sách tự cập nhật này lọc theo trường này. Các danh sách này vẫn hoạt động với giá trị đã lưu, và mỗi danh sách sẽ nhắc người phụ trách thay điều kiện lọc:",
   "cf.retire.unseen_one":
     "{count} danh sách tự cập nhật khác mà bạn không có quyền mở cũng lọc theo trường này.",
   "cf.retire.unseen_other":
@@ -16720,7 +16721,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Có ai đó tạo danh sách tự cập nhật hoặc danh sách chọn tay.",
   "webhooks.event.list.updated.label": "Đã đổi cài đặt danh sách",
   "webhooks.event.list.updated.when":
-    "Tên, mục đích, bộ lọc, chia sẻ, nhóm hoặc người chịu trách nhiệm của danh sách thay đổi.",
+    "Tên, mục đích, bộ lọc, chia sẻ, nhóm hoặc người phụ trách của danh sách thay đổi.",
   "webhooks.event.list.archived.label": "Đã chuyển danh sách vào kho lưu trữ",
   "webhooks.event.list.archived.when":
     "Một danh sách được chuyển vào kho lưu trữ.",
@@ -18063,9 +18064,13 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "lists.team.allOwners": "Mọi nhóm của người chịu trách nhiệm",
   "lists.audience.yourTeams": "Nhóm của bạn",
   "lists.audience.ownerTeams": "Nhóm của người chịu trách nhiệm",
+  "lists.audience.ownerOnly": "Người chịu trách nhiệm",
+  "lists.audience.stewardOnly": "Người phụ trách",
+  "lists.audience.youAndSteward": "Bạn và người phụ trách",
+  "lists.audience.ownerAndSteward": "Người chịu trách nhiệm và người phụ trách",
   "lists.audience.unknownTeam":
     "M\u1ed9t nh\u00f3m b\u1ea1n kh\u00f4ng xem \u0111\u01b0\u1ee3c",
-  "lists.health.ownerless": "Chưa ai chịu trách nhiệm",
+  "lists.health.ownerless": "Chưa ai phụ trách",
   "lists.health.invalid":
     "B\u1ed9 l\u1ecdc kh\u00f4ng c\u00f2n d\u00f9ng \u0111\u01b0\u1ee3c",
   "lists.health.retiredField":
@@ -18092,7 +18097,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "lists.filterLine": "Bộ lọc: {sentence}",
   "lists.head.exported_one": "{count} lần, lần gần nhất vào {when}",
   "lists.head.exported_other": "{count} lần, lần gần nhất vào {when}",
-  "lists.fact.steward": "Người chịu trách nhiệm",
+  "lists.fact.steward": "Người phụ trách",
   "lists.fact.exported": "Đã xuất",
   "lists.archived.title": "Danh sách này đang trong kho lưu trữ",
   "lists.archived.body":
@@ -18100,18 +18105,18 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "lists.invalid.title":
     "B\u1ed9 l\u1ecdc n\u00e0y kh\u00f4ng c\u00f2n d\u00f9ng \u0111\u01b0\u1ee3c",
   "lists.invalid.body":
-    "Một trường trong bộ lọc đã thay đổi. Người chịu trách nhiệm danh sách có thể sửa bộ lọc trong trình tạo bộ lọc.",
+    "Một trường trong bộ lọc đã thay đổi. Người phụ trách danh sách có thể sửa bộ lọc trong trình tạo bộ lọc.",
   "lists.ownerless.title":
     "Kh\u00f4ng ai ph\u1ee5 tr\u00e1ch danh s\u00e1ch n\u00e0y",
   "lists.ownerless.body":
-    "Người chịu trách nhiệm danh sách đã rời đi hoặc chưa từng được chỉ định. Thành viên có quyền sửa danh sách nên nhận trách nhiệm danh sách này.",
+    "Người phụ trách danh sách đã rời đi hoặc chưa từng được chỉ định. Thành viên có quyền sửa danh sách nên nhận phụ trách danh sách này.",
   "lists.ownerless.takeOver": "Nh\u1eadn ph\u1ee5 tr\u00e1ch",
   "lists.retiredField.title":
     "B\u1ed9 l\u1ecdc n\u00e0y d\u00f9ng m\u1ed9t tr\u01b0\u1eddng \u0111\u00e3 ng\u1eebng s\u1eed d\u1ee5ng",
   "lists.retiredField.body_one":
-    "{fields} đã ngừng sử dụng. Danh sách vẫn hoạt động với các giá trị đã lưu, và trường đó không còn ghi nhận giá trị mới. Người chịu trách nhiệm danh sách nên thay điều kiện đó trong trình tạo bộ lọc.",
+    "{fields} đã ngừng sử dụng. Danh sách vẫn hoạt động với các giá trị đã lưu, và trường đó không còn ghi nhận giá trị mới. Người phụ trách danh sách nên thay điều kiện đó trong trình tạo bộ lọc.",
   "lists.retiredField.body_other":
-    "{fields} đã ngừng sử dụng. Danh sách vẫn hoạt động với các giá trị đã lưu, và trường đó không còn ghi nhận giá trị mới. Người chịu trách nhiệm danh sách nên thay điều kiện đó trong trình tạo bộ lọc.",
+    "{fields} đã ngừng sử dụng. Danh sách vẫn hoạt động với các giá trị đã lưu, và trường đó không còn ghi nhận giá trị mới. Người phụ trách danh sách nên thay điều kiện đó trong trình tạo bộ lọc.",
   "lists.members.title": "Th\u00e0nh vi\u00ean",
   "lists.members.loading": "\u0110ang t\u1ea3i th\u00e0nh vi\u00ean",
   "lists.members.emptyLive":
@@ -18165,9 +18170,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "lists.record.empty": "Hồ sơ này chưa nằm trong danh sách nào bạn xem được.",
   "lists.record.check": "Kiểm tra với danh sách tự cập nhật",
   "lists.record.checkHint":
-    "Danh sách tự cập nhật thay đổi theo bộ lọc của nó. Chọn một danh sách để xem hồ sơ này có khớp không và vì sao.",
+    "Chỉ kiểm tra được danh sách tự cập nhật. Chọn một danh sách để xem hồ sơ này có khớp không và vì sao.",
+  "lists.record.checkHintAdd":
+    "Chỉ kiểm tra được danh sách tự cập nhật. Dùng “Thêm vào danh sách chọn tay” cho danh sách chọn tay.",
   "lists.record.checkPick": "Chọn danh sách tự cập nhật",
   "lists.record.truncated": "Còn các danh sách khác không hiển thị ở đây.",
+  "lists.record.allLists": "Tất cả danh sách",
   "lists.record.takenOff": "Đã gỡ khỏi {name}",
   "lists.record.putBack": "Đã thêm lại vào {name}",
   "lists.addToShortlist": "Thêm vào danh sách chọn tay",
@@ -18245,7 +18253,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "filters.new.leads": "Bộ lọc lead mới",
   "filters.library.whichRecords": "Lọc loại hồ sơ nào?",
   "filters.library.mine": "Của riêng tôi",
-  "filters.library.shared": "Được chia sẻ",
+  "filters.library.shared": "Được chia sẻ với tôi",
   "filters.library.views": "Chế độ xem đã lưu",
   "filters.library.kindView": "Chế độ xem đã lưu",
   "filters.library.rowMore": "Thao tác khác cho {name}",
@@ -18260,9 +18268,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "filters.library.records.project_one": "{count} dự án",
   "filters.library.records.project_other": "{count} dự án",
   "filters.library.recordsSeen": "{records} bạn xem được",
-  "filters.library.mineEmpty": "Các chế độ xem đã lưu sẽ hiển thị ở đây.",
-  "filters.library.sharedEmpty":
-    "Chưa có danh sách được chia sẻ. Danh sách chia sẻ với một nhóm hoặc cả công ty sẽ hiển thị ở đây.",
+  "filters.library.mineEmpty":
+    "Các chế độ xem bạn lưu và danh sách của bạn sẽ hiển thị ở đây.",
+  "filters.library.sharedEmpty": "Chưa có ai chia sẻ danh sách với bạn.",
   "filters.library.noHits":
     "Không có chế độ xem hay danh sách nào khớp với “{q}”.",
   "filters.library.clearSearch": "Xóa tìm kiếm",
