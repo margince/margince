@@ -73,14 +73,7 @@ func TestProviderSyncCapturesAndRemovesTheRealStoredEmailKey(t *testing.T) {
 					gmailDeletionResponse(t, w, r, mailbox, raw)
 					return
 				}
-				mail := outlookMailPresent
-				if deleting.Load() {
-					mail = outlookMailRemoved
-					if tc.outlookCase != "" {
-						mail = outlookMailHardDeleted
-					}
-				}
-				graphDeletionResponse(t, w, r, server.URL, raw, mail)
+				graphDeletionResponse(t, w, r, server.URL, raw, outlookMail{removed: deleting.Load(), hardDeleted: tc.outlookCase != ""})
 			}
 			server = httptest.NewServer(http.HandlerFunc(handler))
 			defer server.Close()
@@ -117,9 +110,10 @@ func TestProviderSyncCapturesAndRemovesTheRealStoredEmailKey(t *testing.T) {
 			if count := e.WsCount(t, `SELECT count(*) FROM capture_import i JOIN capture_connection c ON c.user_id=i.user_id WHERE c.provider=$1 AND i.provider_message_ids @> ARRAY[c.provider || ':' || c.generation || ':provider-opaque-id']`, tc.provider); count != 1 {
 				t.Fatal("connector did not persist its mailbox-specific provider id")
 			}
-			if tc.outlookCase == "colleague" {
+			switch tc.outlookCase {
+			case "colleague":
 				addImporter(t, e, activityID, e.Rep2)
-			} else if tc.outlookCase == "hold" {
+			case "hold":
 				restrict(t, e, activityID)
 			}
 			deleting.Store(true)
@@ -160,13 +154,7 @@ func gmailDeletionResponse(t *testing.T, w http.ResponseWriter, r *http.Request,
 }
 
 // outlookMail is what the fake Outlook mailbox shows for the one test message.
-type outlookMail int
-
-const (
-	outlookMailPresent outlookMail = iota
-	outlookMailRemoved
-	outlookMailHardDeleted
-)
+type outlookMail struct{ removed, hardDeleted bool }
 
 func graphDeletionResponse(t *testing.T, w http.ResponseWriter, r *http.Request, base, raw string, mail outlookMail) {
 	if r.Header.Get("Prefer") != `IdType="ImmutableId"` {
@@ -177,13 +165,13 @@ func graphDeletionResponse(t *testing.T, w http.ResponseWriter, r *http.Request,
 		mailboxJSON(t, w, map[string]any{"value": []string{}, "@odata.deltaLink": base + r.URL.Path + "?next=1"})
 	case "/me/mailFolders/inbox/messages/delta":
 		value := []map[string]any{{"id": "provider-opaque-id", "receivedDateTime": "2026-06-02T00:00:00Z"}}
-		if mail != outlookMailPresent {
+		if mail.removed {
 			value = []map[string]any{{"id": "provider-opaque-id", "@removed": map[string]string{"reason": "deleted"}}}
 		}
 		mailboxJSON(t, w, map[string]any{"value": value, "@odata.deltaLink": base + r.URL.Path + "?next=1"})
 	case "/me/mailFolders/recoverableitemsdeletions/messages/delta":
 		value := []map[string]any{}
-		if mail == outlookMailHardDeleted && r.URL.Query().Get("next") != "" {
+		if mail.removed && mail.hardDeleted && r.URL.Query().Get("next") != "" {
 			value = append(value, map[string]any{"id": "provider-opaque-id"})
 		}
 		mailboxJSON(t, w, map[string]any{"value": value, "@odata.deltaLink": base + r.URL.Path + "?next=1"})

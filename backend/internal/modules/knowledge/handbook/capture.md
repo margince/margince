@@ -273,16 +273,9 @@ Everything else in the folder capture reads does arrive: newsletters, personal
 mail, and the Gmail Promotions and Social categories. They are handled after
 capture, as *What happens to one message* describes.
 
-**Deleting in your own mailbox can reach Margince.** If you
-delete a captured message in Gmail or Outlook, Margince notices and acts on it.
+**Deleting in your own mailbox can reach Margince.** If you delete a captured message in Gmail or Outlook, Margince notices and acts on it.
 
-- In Gmail, the message must be deleted for good.
-- In Outlook, the message must be hard-deleted: Shift+Delete, or Delete and then
-  empty Deleted Items. Margince then waits 14 days. If you recover the message
-  in that time, it stays. Moving a message to another folder or to the archive
-  never deletes it here.
-
-What happens then depends on who else has it:
+In Gmail, the message must be deleted for good. In Outlook, it must be hard-deleted: Shift+Delete, or Delete and then empty Deleted Items. Margince then waits 14 days, and a message you recover in that time stays. Moving a message to another folder or to the archive never deletes it here. What happens then depends on who else has it:
 
 | Case | What happens |
 |---|---|
