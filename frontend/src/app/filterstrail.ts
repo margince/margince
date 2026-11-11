@@ -40,7 +40,8 @@ function listIdOf(
  */
 export function useFiltersCrumbs(route: Route): readonly Crumb[] | null {
   const t = useT();
-  const directory = useRecordKindDirectory().data?.data ?? [];
+  const directory =
+    useRecordKindDirectory(route.screen === "filters").data?.data ?? [];
   const address = route.screen === "filters" ? filtersAddressOf(route) : null;
   const viewId = address?.kind === "view" ? address.viewId : undefined;
   const view = useSavedView(viewId ?? "", false);

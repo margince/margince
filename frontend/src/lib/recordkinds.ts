@@ -6,11 +6,14 @@ import { unwrap } from "./problem";
 // The record kinds installed extensions add and this seat may read. The
 // generated types carry no enum for them, so the server answers instead. It
 // changes only on deploy or a role change, so it is fetched once per session.
-export function useRecordKindDirectory() {
+// A caller that sits on every screen passes `enabled` so the read waits for
+// the screen that prints a kind's name.
+export function useRecordKindDirectory(enabled = true) {
   return useQuery({
     queryKey: ["record-kinds"],
     queryFn: async () => unwrap(await api.GET("/record-kinds")),
     staleTime: Number.POSITIVE_INFINITY,
+    enabled,
   });
 }
 
