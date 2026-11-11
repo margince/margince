@@ -72,9 +72,7 @@ export const Task: Story = {
         .map((reason) => reason.textContent),
     ).toEqual([en["worklist.because.unassigned"]]);
     await expect(
-      canvas.getByText(
-        "The task with Alice Müller slips further past its date.",
-      ),
+      canvas.getByText("The task with Alice Müller stays undone."),
     ).toBeVisible();
     await expect(
       canvas.getByText(/^Finish the task with Alice Müller and mark it done/),
@@ -145,7 +143,7 @@ export const DealAtRisk: Story = {
     const canvas = within(canvasElement);
     await expect(canvas.getByText(/^Depot rollout: €58,000/)).toBeVisible();
     await expect(
-      canvas.getByText("Depot rollout keeps drifting without a next step."),
+      canvas.getByText("Depot rollout keeps drifting."),
     ).toBeVisible();
     // The figures say what happened, so the ask keeps only its next step.
     await expect(

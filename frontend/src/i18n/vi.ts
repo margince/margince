@@ -18780,7 +18780,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Kiểm tra kết nối lịch để cuộc họp được thu thập trở lại.",
   "worklist.todo.capture_health.calendar.named":
     "Kiểm tra kết nối của {name} để cuộc họp được thu thập trở lại.",
-  "worklist.consequence.task_slips.named": "Việc với {name} tiếp tục trễ hạn.",
+  "worklist.consequence.task_slips.named": "Việc với {name} vẫn chưa được làm.",
   "worklist.happened.customer_waiting":
     "{name} đã viết vào {when} và chưa có ai trả lời.",
   "worklist.happened.customer_waiting.bare":
@@ -18837,6 +18837,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Một lịch chưa thu thập được cuộc họp nào từ {when}.",
   "worklist.happened.ai_work_health": "Tác vụ AI {name} bị lỗi vào {when}.",
   "worklist.happened.ai_work_health.bare": "Một tác vụ AI bị lỗi vào {when}.",
+  "worklist.happened.ai_work_health.stalled":
+    "Tác vụ AI {name} bắt đầu vào {when} nhưng chưa xong.",
+  "worklist.happened.ai_work_health.stalled.bare":
+    "Một tác vụ AI bắt đầu vào {when} nhưng chưa xong.",
   "worklist.happened.failed_approval":
     "Một hành động bạn đã duyệt cho {name} không chạy vào {when}.",
   "worklist.happened.failed_approval.bare":
@@ -18873,17 +18877,15 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.consequence.promise_breaks": "Một cam kết của bạn bị lỡ.",
   "worklist.consequence.promise_breaks.named":
     "Một cam kết của bạn với {name} bị lỡ.",
-  "worklist.consequence.deal_drifts":
-    "Deal tiếp tục trôi mà không có bước tiếp theo.",
-  "worklist.consequence.deal_drifts.named":
-    "{name} tiếp tục trôi mà không có bước tiếp theo.",
+  "worklist.consequence.deal_drifts": "Deal tiếp tục trôi.",
+  "worklist.consequence.deal_drifts.named": "{name} tiếp tục trôi.",
   "worklist.consequence.deal_slips_past_close":
     "Deal trễ qua ngày chốt dự kiến.",
   "worklist.consequence.deal_slips_past_close.named":
     "{name} trễ qua ngày chốt dự kiến.",
   "worklist.consequence.meeting_unprepared":
     "Bạn vào cuộc họp mà chưa chuẩn bị.",
-  "worklist.consequence.task_slips": "Việc này tiếp tục trễ hạn.",
+  "worklist.consequence.task_slips": "Việc này vẫn chưa được làm.",
   "worklist.consequence.work_blocked":
     "Công việc phụ thuộc vào quyết định này vẫn bị chặn.",
   "worklist.consequence.customer_never_received":
@@ -18905,7 +18907,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.todo.lead_response": "Liên hệ ngay; lead mới nguội đi rất nhanh.",
   "worklist.todo.meeting": "Mở cuộc họp để chuẩn bị.",
   "worklist.todo.meeting_outcome":
-    "Ghi lại kết quả, hoặc đánh dấu đã hủy nếu cuộc họp không diễn ra.",
+    "Ghi lại kết quả, hoặc chọn “Không diễn ra” nếu cuộc họp không diễn ra.",
   "worklist.todo.meeting_follow_up": "Gửi thư tiếp nối cho các bên đã tham dự.",
   "worklist.todo.relationship_decay": "Liên hệ, hoặc tạm gác lại một tháng.",
   "worklist.todo.conversation_claim": "Làm việc đó, rồi đánh dấu là xong.",
@@ -18973,7 +18975,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.ask.introduction_request":
     "Một đồng nghiệp nhờ bạn giới thiệu với một liên hệ. Chấp nhận hoặc từ chối yêu cầu.",
   "worklist.ask.meeting_outcome":
-    "Cuộc họp này đã kết thúc và chưa có ghi nhận nào về kết quả. Ghi lại kết quả, hoặc đánh dấu đã hủy nếu cuộc họp không diễn ra.",
+    "Cuộc họp này đã kết thúc và chưa có ghi nhận nào về kết quả. Ghi lại kết quả, hoặc chọn “Không diễn ra” nếu cuộc họp không diễn ra.",
   "worklist.ask.weekly_commitment":
     "Bạn đã lên kế hoạch việc này cho tuần. Làm xong, hoặc dời trong kế hoạch tuần.",
   "worklist.ask.awaiting_reply":

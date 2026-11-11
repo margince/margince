@@ -171,15 +171,19 @@ const dealCompanyCandidatesSQL = `
 	  JOIN company co ON co.id = d.company_id AND co.archived_at IS NULL
 	 WHERE l.activity_id = ANY($1) AND l.deal_id IS NOT NULL %s`
 
-// employerCandidatesSQL reads the live companies a task's contacts work at
-// now, under the company and edge scopes.
+// employerCandidatesSQL reads the live company every contact a task is filed
+// on works at now, under the company and edge scopes. One contact with no
+// visible job there leaves the task with no shared employer.
 var employerCandidatesSQL = `
-	SELECT DISTINCT l.activity_id, co.id, ''::text, ''::text, false
+	SELECT l.activity_id, co.id, ''::text, ''::text, false
 	  FROM activity_link l
 	  JOIN relationship job ON job.contact_id = l.contact_id AND job.kind = 'employment'
 	   AND job.archived_at IS NULL AND ` + employment.IsCurrentSQL("job.ended_at") + `
 	  JOIN company co ON co.id = job.company_id AND co.archived_at IS NULL
-	 WHERE l.activity_id = ANY($1) AND l.contact_id IS NOT NULL %s`
+	 WHERE l.activity_id = ANY($1) AND l.contact_id IS NOT NULL %s
+	 GROUP BY l.activity_id, co.id
+	HAVING count(DISTINCT l.contact_id) = (SELECT count(DISTINCT every.contact_id) FROM activity_link every
+	                                         WHERE every.activity_id = l.activity_id AND every.contact_id IS NOT NULL)`
 
 // candidateQuery is one read of the records a row may be written to. Every
 // table it names is read under that object's grant and row scope.

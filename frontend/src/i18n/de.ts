@@ -19270,7 +19270,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.todo.capture_health.calendar.named":
     "Prüfe die Verbindung von {name}, damit seine Termine wieder erfasst werden.",
   "worklist.consequence.task_slips.named":
-    "Die Aufgabe mit {name} rutscht weiter über ihr Datum.",
+    "Die Aufgabe mit {name} bleibt unerledigt.",
   "worklist.happened.customer_waiting":
     "{name} hat am {when} geschrieben, und noch niemand hat geantwortet.",
   "worklist.happened.customer_waiting.bare":
@@ -19331,6 +19331,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Die KI-Aufgabe {name} ist am {when} fehlgeschlagen.",
   "worklist.happened.ai_work_health.bare":
     "Eine KI-Aufgabe ist am {when} fehlgeschlagen.",
+  "worklist.happened.ai_work_health.stalled":
+    "Die KI-Aufgabe {name} hat am {when} begonnen und ist nicht fertig geworden.",
+  "worklist.happened.ai_work_health.stalled.bare":
+    "Eine KI-Aufgabe hat am {when} begonnen und ist nicht fertig geworden.",
   "worklist.happened.failed_approval":
     "Eine Aktion, die du für {name} freigegeben hast, lief am {when} nicht.",
   "worklist.happened.failed_approval.bare":
@@ -19369,18 +19373,15 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.consequence.promise_breaks": "Eine Zusage von dir wird gebrochen.",
   "worklist.consequence.promise_breaks.named":
     "Eine Zusage von dir an {name} wird gebrochen.",
-  "worklist.consequence.deal_drifts":
-    "Der Deal treibt ohne nächsten Schritt weiter.",
-  "worklist.consequence.deal_drifts.named":
-    "{name} treibt ohne nächsten Schritt weiter.",
+  "worklist.consequence.deal_drifts": "Der Deal treibt weiter.",
+  "worklist.consequence.deal_drifts.named": "{name} treibt weiter.",
   "worklist.consequence.deal_slips_past_close":
     "Der Deal rutscht über sein erwartetes Abschlussdatum.",
   "worklist.consequence.deal_slips_past_close.named":
     "{name} rutscht über das erwartete Abschlussdatum.",
   "worklist.consequence.meeting_unprepared":
     "Du gehst unvorbereitet in den Termin.",
-  "worklist.consequence.task_slips":
-    "Die Aufgabe rutscht weiter über ihr Datum.",
+  "worklist.consequence.task_slips": "Die Aufgabe bleibt unerledigt.",
   "worklist.consequence.work_blocked":
     "Arbeit, die an dieser Entscheidung hängt, bleibt blockiert.",
   "worklist.consequence.customer_never_received": "Die Nachricht kommt nie an.",
@@ -19404,7 +19405,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Melde dich jetzt, ein neuer Lead kühlt schnell ab.",
   "worklist.todo.meeting": "Öffne den Termin, um dich vorzubereiten.",
   "worklist.todo.meeting_outcome":
-    "Halte fest, was dabei herauskam, oder markiere ihn als abgesagt, wenn er nicht stattfand.",
+    "Halte fest, was dabei herauskam, oder wähle „Hat nicht stattgefunden“, wenn er nicht stattfand.",
   "worklist.todo.meeting_follow_up": "Sende den Teilnehmenden ein Follow-up.",
   "worklist.todo.relationship_decay":
     "Melde dich, oder leg es für einen Monat beiseite.",
@@ -19480,7 +19481,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.ask.introduction_request":
     "Ein Teammitglied bittet dich, es einem Kontakt vorzustellen. Nimm die Anfrage an oder lehne sie ab.",
   "worklist.ask.meeting_outcome":
-    "Dieser Termin ist vorbei, und nichts hält fest, wie er gelaufen ist. Halte das Ergebnis fest oder markiere ihn als abgesagt, wenn er nicht stattfand.",
+    "Dieser Termin ist vorbei, und nichts hält fest, wie er gelaufen ist. Halte das Ergebnis fest oder wähle „Hat nicht stattgefunden“, wenn er nicht stattfand.",
   "worklist.ask.weekly_commitment":
     "Du hast das für diese Woche geplant. Erledige es oder verschiebe es in deinem Wochenplan.",
   "worklist.ask.awaiting_reply":

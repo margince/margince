@@ -2,7 +2,6 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { describe, expect, it } from "vitest";
-import { browserZone } from "../../format/timezone";
 import type { Locale, Translator } from "../../i18n";
 import { translate } from "../../i18n";
 import {
@@ -15,12 +14,12 @@ import { row } from "./worklist.fixtures";
 
 const t: Translator = (key, params) => translate("en", key, params);
 
-// The runner's own zone, and every fact at midday UTC, so each falls on the
-// same day east or west of UTC. The reader's now is in the same year.
+// A fixed zone, so each fact falls on the same day on every runner. The
+// reader's now is in the same year.
 const clock = {
   locale: "en" as Locale,
-  zone: browserZone(),
-  recordZone: browserZone(),
+  zone: "UTC",
+  recordZone: "UTC",
   now: new Date("2026-11-10T12:00:00Z"),
 };
 
@@ -87,6 +86,26 @@ describe("what happened behind a row", () => {
         clock,
       ).lines,
     ).toEqual(["The automation Welcome sequence stopped on 9 Nov."]);
+  });
+
+  it("tells a stalled AI task from a failed one, dated by its start", () => {
+    const run = (kind: string) =>
+      happenedLines(
+        row({
+          source: "ai_work_health",
+          kind,
+          occurred_at: "2026-11-09T12:00:00Z",
+          cause_label: "Website triage",
+        }),
+        t,
+        clock,
+      ).lines;
+    expect(run("failed")).toEqual([
+      "The AI task Website triage failed on 9 Nov.",
+    ]);
+    expect(run("stalled")).toEqual([
+      "The AI task Website triage started on 9 Nov and has not finished.",
+    ]);
   });
 
   it("tells a silent connection from one that stopped syncing, mail from calendar", () => {
@@ -173,13 +192,13 @@ describe("what waiting costs", () => {
         }),
         t,
       ),
-    ).toBe("Depot rollout keeps drifting without a next step.");
+    ).toBe("Depot rollout keeps drifting.");
   });
 
   it("names the contact a task is with", () => {
     expect(
       consequenceLine(row({ consequence: "task_slips", contact: SONYA }), t),
-    ).toBe("The task with Sonya Beck slips further past its date.");
+    ).toBe("The task with Sonya Beck stays undone.");
   });
 
   it("says nothing when nothing follows, or when this build has no words", () => {

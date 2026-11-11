@@ -19063,8 +19063,7 @@ export const en = {
     "Check the calendar connection so its meetings are captured again.",
   "worklist.todo.capture_health.calendar.named":
     "Check the connection of {name} so its meetings are captured again.",
-  "worklist.consequence.task_slips.named":
-    "The task with {name} slips further past its date.",
+  "worklist.consequence.task_slips.named": "The task with {name} stays undone.",
   "worklist.happened.customer_waiting":
     "{name} wrote on {when}, and nobody has answered yet.",
   "worklist.happened.customer_waiting.bare":
@@ -19120,6 +19119,10 @@ export const en = {
     "A calendar has captured no meetings since {when}.",
   "worklist.happened.ai_work_health": "The AI task {name} failed on {when}.",
   "worklist.happened.ai_work_health.bare": "An AI task failed on {when}.",
+  "worklist.happened.ai_work_health.stalled":
+    "The AI task {name} started on {when} and has not finished.",
+  "worklist.happened.ai_work_health.stalled.bare":
+    "An AI task started on {when} and has not finished.",
   "worklist.happened.failed_approval":
     "An action you approved on {name} did not run on {when}.",
   "worklist.happened.failed_approval.bare":
@@ -19154,17 +19157,15 @@ export const en = {
   "worklist.consequence.promise_breaks": "A commitment you made is broken.",
   "worklist.consequence.promise_breaks.named":
     "A commitment you made to {name} is broken.",
-  "worklist.consequence.deal_drifts":
-    "The deal keeps drifting without a next step.",
-  "worklist.consequence.deal_drifts.named":
-    "{name} keeps drifting without a next step.",
+  "worklist.consequence.deal_drifts": "The deal keeps drifting.",
+  "worklist.consequence.deal_drifts.named": "{name} keeps drifting.",
   "worklist.consequence.deal_slips_past_close":
     "The deal slips past its expected close date.",
   "worklist.consequence.deal_slips_past_close.named":
     "{name} slips past its expected close date.",
   "worklist.consequence.meeting_unprepared":
     "You go into the meeting unprepared.",
-  "worklist.consequence.task_slips": "The task slips further past its date.",
+  "worklist.consequence.task_slips": "The task stays undone.",
   "worklist.consequence.work_blocked":
     "Work that depends on this decision stays blocked.",
   "worklist.consequence.customer_never_received":
@@ -19186,7 +19187,7 @@ export const en = {
   "worklist.todo.lead_response": "Get in touch now; a new lead cools fast.",
   "worklist.todo.meeting": "Open the meeting to prepare.",
   "worklist.todo.meeting_outcome":
-    "Record what came of it, or mark it canceled if it did not take place.",
+    "Record what came of it, or choose “Did not happen” if it did not take place.",
   "worklist.todo.meeting_follow_up": "Send the attendees a follow-up.",
   "worklist.todo.relationship_decay":
     "Get in touch, or set it aside for a month.",
@@ -19256,7 +19257,7 @@ export const en = {
   "worklist.ask.introduction_request":
     "A colleague asks you to introduce them to a contact. Accept or decline the request.",
   "worklist.ask.meeting_outcome":
-    "This meeting is over and nothing records how it went. Record what came of it, or mark it canceled if it did not take place.",
+    "This meeting is over and nothing records how it went. Record what came of it, or choose “Did not happen” if it did not take place.",
   "worklist.ask.weekly_commitment":
     "You planned this for the week. Do the work, or move it in your weekly plan.",
   "worklist.ask.awaiting_reply":

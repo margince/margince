@@ -205,6 +205,7 @@ func TestATaskOnADealOrOnContactsWritesToTheOneRecordTheyName(t *testing.T) {
 	s.worksAt(t, ben, acme)
 	cara := s.contactAt(t, "Cara Lind", "cara@other.test")
 	s.worksAt(t, cara, globex)
+	dana := s.contactAt(t, "Dana Roth", "dana@freelance.test")
 	contact, company := crmcontracts.ActivityEmailTargetEntityTypeContact, crmcontracts.ActivityEmailTargetEntityTypeCompany
 	for _, tc := range []struct {
 		name  string
@@ -217,6 +218,7 @@ func TestATaskOnADealOrOnContactsWritesToTheOneRecordTheyName(t *testing.T) {
 		{"a deal with two stakeholders", []activities.ActivityLinkInput{s.dealOf(t, &acme, anna, ben)}, company, acme.EntityID, ""},
 		{"a deal with no stakeholder", []activities.ActivityLinkInput{s.dealOf(t, &globex)}, company, globex.EntityID, ""},
 		{"two contacts at one company", []activities.ActivityLinkInput{anna, ben}, company, acme.EntityID, ""},
+		{"two contacts, one of them employed", []activities.ActivityLinkInput{anna, dana}, "", ids.UUID{}, ""},
 		{"two contacts at two companies", []activities.ActivityLinkInput{anna, cara}, "", ids.UUID{}, ""},
 		{"a deal with neither", []activities.ActivityLinkInput{s.dealOf(t, nil)}, "", ids.UUID{}, ""},
 	} {

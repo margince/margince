@@ -257,11 +257,8 @@ export function eventLine(
   clock: Clock,
 ): string | null {
   const keys =
-    item.source === "capture_health"
-      ? captureEventKeys(item)
-      : Object.hasOwn(EVENT, item.source)
-        ? EVENT[item.source]
-        : undefined;
+    stateEventKeys(item) ??
+    (Object.hasOwn(EVENT, item.source) ? EVENT[item.source] : undefined);
   if (!keys || !item.occurred_at) return null;
   const when = activityDay(
     item.occurred_at,
@@ -276,14 +273,18 @@ export function eventLine(
 }
 
 // A capture row's sentence follows what the connection carries. A silent one
-// still syncs and only brings nothing in, so it is not called broken.
-function captureEventKeys(item: WorklistItem) {
+// still syncs and only brings nothing in, so it is not called broken. A
+// stalled AI run has not failed; its date is when it started.
+function stateEventKeys(item: WorklistItem) {
+  if (item.source === "ai_work_health" && item.kind === "stalled")
+    return STATE_EVENT.aiStalled;
+  if (item.source !== "capture_health") return undefined;
   // A failed history import is dated by the import, not by the last sync.
-  if (item.kind === "backfill_failed") return CAPTURE_EVENT.backfill;
+  if (item.kind === "backfill_failed") return STATE_EVENT.backfill;
   const silent = item.kind === "capture_silent";
   if (item.connection?.medium === "calendar")
-    return silent ? CAPTURE_EVENT.calendarSilent : CAPTURE_EVENT.calendar;
-  return silent ? CAPTURE_EVENT.mailboxSilent : CAPTURE_EVENT.mailbox;
+    return silent ? STATE_EVENT.calendarSilent : STATE_EVENT.calendar;
+  return silent ? STATE_EVENT.mailboxSilent : STATE_EVENT.mailbox;
 }
 
 function captureTodoKeys(item: WorklistItem) {
@@ -293,7 +294,11 @@ function captureTodoKeys(item: WorklistItem) {
     : CAPTURE_TODO.mailbox;
 }
 
-const CAPTURE_EVENT = {
+const STATE_EVENT = {
+  aiStalled: {
+    named: "worklist.happened.ai_work_health.stalled",
+    bare: "worklist.happened.ai_work_health.stalled.bare",
+  },
   backfill: {
     named: "worklist.happened.capture_health.backfill",
     bare: "worklist.happened.capture_health.backfill.bare",
