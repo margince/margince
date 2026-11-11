@@ -91,8 +91,8 @@ func seedPlanLines(t *testing.T, e *Env, lines map[string][]ids.UUID) {
 
 const planLinesNaming = `SELECT count(*) FROM weekly_plan_commitment WHERE linked_record_type = $1 AND linked_record_id = $2`
 
-// The weekly plan's declared pair follows a company, a contact and a lead merge,
-// and a line naming a record nobody merged stays where it is.
+// The weekly plan's declared pair follows a company, a contact and a lead
+// merge. A line naming a record nobody merged stays where it is.
 func TestEveryMergeMovesThePlanLinesTheWeeklyPlanDeclared(t *testing.T) {
 	e := Setup(t)
 	admin := e.Admin()

@@ -4,8 +4,8 @@
 package privacy
 
 // The working-record half of an Art. 17 erasure: what a colleague's own record
-// says about the subject in passing, including every table another module or a
-// unit declared for the erasure to reach.
+// says about the subject in passing. It includes every table another module or
+// a unit declared for the erasure to reach.
 
 import (
 	"context"
@@ -41,9 +41,9 @@ func (e *Eraser) redactWorkingRecords(ctx context.Context, tx pgx.Tx, subject id
 }
 
 // erasedMention is what a colleague's own record says instead of the subject's name.
-// A tombstone rather than a blank, for two reasons that recur: the tables refuse an
-// empty one (weekly_plan_commitment_label_present, intro_request_reason_present) and
-// the colleague's record is still entitled to say that something was there.
+// It is a tombstone for two reasons. The tables refuse an empty value
+// (weekly_plan_commitment_label_present, intro_request_reason_present). And the
+// colleague's record may still say that something was there.
 const erasedMention = "(erased: the contact this named exercised erasure)"
 
 // redactDeclaredTables clears what the declared tables (sweepreach) say about

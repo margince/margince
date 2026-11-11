@@ -72,10 +72,10 @@ func relinkCompanySatellites(ctx context.Context, tx pgx.Tx, sourceID, targetID 
 // pointer itself: nothing here is unique per company, so a plain UPDATE can
 // neither collide nor lose a row.
 //
-// The contract row is the reason this is not cosmetic. It is ON DELETE
-// RESTRICT, so a row left on the merged-away company pins that company in place
-// forever, and the archived record can never be erased. The finance and
-// commission rows move through their modules' declarations (sweepreach).
+// The contract row is ON DELETE RESTRICT. A row left on the merged-away
+// company pins that company in place forever, so the archived record can never
+// be erased. The finance and commission rows move through their modules'
+// declarations (sweepreach).
 func repointCompanyReferences(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.CompanyID) error {
 	for _, stmt := range []string{
 		`UPDATE contract SET company_id = $2 WHERE company_id = $1`,

@@ -284,10 +284,10 @@ func purgeAnonymizedContactJudgments(ctx context.Context, tx pgx.Tx, id ids.UUID
 	}
 	if err == nil {
 		// What the declared tables say about them, such as a commitment on a
-		// colleague's weekly plan. The SAME call the Art. 17 cascade makes: the
-		// two acts differ only by the suppression list, and nothing cascades to
-		// these rows, so an anonymize that skipped them would leave the
-		// subject's name beside an "Erased Subject" record.
+		// colleague's weekly plan. The Art. 17 cascade makes the same call, and
+		// the two acts differ only by the suppression list. Nothing cascades to
+		// these rows. An anonymize that skipped them would leave the subject's
+		// name beside an "Erased Subject" record.
 		err = redactDeclaredTables(ctx, tx, ids.From[ids.ContactKind](id))
 	}
 	if err == nil {

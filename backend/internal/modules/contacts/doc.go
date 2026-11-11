@@ -46,17 +46,17 @@
 // list_member, taggable, consent_event and provider_run inside their
 // single transaction — the ratified cross-aggregate ownership call of the
 // primary aggregate.
-// The COMPANY merge relinks further still (mergerelink_company.go), for the
-// same reason and under the same ratification: every table carrying a
-// company_id names a record the merge is retiring, so a row left behind points
-// at something no read returns. That reaches money (contract), responsibility (record_assignment),
-// the per-reader rows (company_brief, company_dossier, company_growth_fit,
-// company_scan, suggestion_dismissal) and the resolution caches (signal,
-// signal_resolution, signal_thread_scan, offer). A table its owner declares
-// (internal/platform/sweepreach) moves through that declaration instead. Which
-// tables those ARE is not this comment's to keep current: the company-merge
-// coverage gate enumerates every foreign key pointing at company and fails on
-// one the merge neither moves nor declares out of scope.
+// The company merge relinks further still (mergerelink_company.go), for the
+// same reason and under the same ratification. Every table carrying a
+// company_id names a record the merge is retiring. A row left behind points at
+// something no read returns. That reaches money (contract) and responsibility
+// (record_assignment). It also reaches the per-reader rows (company_brief,
+// company_dossier, company_growth_fit, company_scan, suggestion_dismissal) and
+// the resolution caches (signal, signal_resolution, signal_thread_scan, offer).
+// A table its owner declares (internal/platform/sweepreach) moves through that
+// declaration instead. The company-merge coverage gate keeps the list current:
+// it enumerates every foreign key pointing at company. It fails on one the
+// merge neither moves nor declares out of scope.
 // The provider_run relink is the merge's alone: it decides which of two
 // colliding LIVE runs keeps the one-live-run index, which is knowable
 // only where both records' run states are visible at once.

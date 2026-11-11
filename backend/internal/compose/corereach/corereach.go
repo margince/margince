@@ -2,9 +2,9 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 // Package corereach builds the set of tables the merge and the erasure reach
-// on their owners' behalf (sweepreach): every core module's declaration plus
-// every composed unit's. Its own package so the boot, the integration harness
-// and the gates read one list.
+// on their owners' behalf (sweepreach). The set is every core module's
+// declaration plus every composed unit's. It is its own package so the boot,
+// the integration harness and the gates read one list.
 package corereach
 
 import (

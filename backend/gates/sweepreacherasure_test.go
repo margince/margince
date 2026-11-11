@@ -4,12 +4,12 @@
 package gates
 
 import (
-	"os"
 	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/corereach"
 	"github.com/margince/margince/backend/internal/platform/sweepreach"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // declaredErasureStatements are the statements the Art. 17 cascade runs for
@@ -18,7 +18,7 @@ import (
 // leaves those tables uncovered here.
 func declaredErasureStatements(t *testing.T) []string {
 	t.Helper()
-	body, err := os.ReadFile("internal/modules/privacy/erasure_declared.go")
+	body, err := gatekit.ReadFile("internal/modules/privacy/erasure_declared.go")
 	if err != nil {
 		t.Fatal(err)
 	}
