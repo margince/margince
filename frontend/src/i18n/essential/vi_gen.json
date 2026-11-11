@@ -2206,5 +2206,7 @@
   "analytics.team.qualificationUnattributed_one": "{count} lần đủ điều kiện đầu tiên chưa ghi nhận người phụ trách. Số của thành viên chỉ tính sự kiện đã phân bổ.",
   "analytics.team.qualificationUnattributed_other": "{count} lần đủ điều kiện đầu tiên chưa ghi nhận người phụ trách. Số của thành viên chỉ tính sự kiện đã phân bổ.",
   "nav.progress": "Tiến độ",
-  "nav.salesGoals": "Mục tiêu doanh số"
+  "nav.salesGoals": "Mục tiêu doanh số",
+  "progress.myTitle": "Tiến độ",
+  "progress.teamTitle": "Tiến độ nhóm"
 }
