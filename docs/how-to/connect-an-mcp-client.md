@@ -73,8 +73,8 @@ The same token is a REST Bearer credential, with the same rules:
 - the live seat and RBAC of the human who gave the grant cap them all. See [mint-a-passport.md](mint-a-passport.md) to issue one by hand.
 
 **How each credential ends.** A connection a client made through OAuth ends at `/oauth/revoke`. A client that
-registered with a secret must sign in with that secret on the call. Without it the route answers `200` and the
-connection stays.
+registered with a secret must sign in with that secret on the call. A call that names that client with a wrong or
+missing secret is refused with `401`. A call with the token alone answers `200`, and the connection stays.
 
 A passport made in Settings or by `POST /passports` ends only in Settings under **AI assistants**, or
 by `DELETE /passports/{id}` from your signed-in session. That route refuses a passport, so a tool cannot end its own.
