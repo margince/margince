@@ -10,16 +10,16 @@
   "totals": {
     "tools": 48,
     "resources": 14,
-    "tool_catalog_bytes": 235690,
+    "tool_catalog_bytes": 235902,
     "resource_catalog_bytes": 5622,
-    "approx_wire_tokens_total": 60328,
+    "approx_wire_tokens_total": 60381,
     "largest_tool_bytes": 11810,
     "largest_tool": "read_context",
     "tool_catalog_composition": {
-      "description_bytes": 55291,
+      "description_bytes": 55503,
       "input_schema_bytes": 116453,
       "output_schema_bytes": 51838,
-      "description_plus_input_schema_bytes": 171744
+      "description_plus_input_schema_bytes": 171956
     }
   },
   "tools": {
@@ -10681,7 +10681,7 @@
           "readOnlyHint": true,
           "title": "Read how this workspace is set up"
         },
-        "description": "member_retirement previews a member removal, or a merge when mode is merge and to_user_id names the survivor. Read how this workspace is set up. colleagues: the seats that can receive work, not the contacts stored as records; q narrows by name. pipelines: every pipeline with its stages, each open, won or lost. channel_providers: the messaging transports. The other topics name what a tool accepts: query (find_records engine query), analytics (read_analytics), record_fields (create_record and update_record), list_filters (find_records engine list), report_vocabulary (read_reports kind run), report_blocks (read_analytics step compose). data_subject_requests, notice_cases, audit_log, legal_holds, restricted_records and record_history are the privacy queues and trail; a project's phase moves and their reasons are in read_project overview. capture_senders, held_threads, counterparty_holds, owner_identities and contacts_awaiting_decision are the user's own mail decisions. my_working_hours and my_brief_delivery are the user's own settings. system_health, job_health, capture_health, recovery_health, automatic_work_health and data_tasks are health and operations pages, each under its own grant. ai_routing, ai_calls, retention_settings, tax_rates, fx_rates and ai_model_rates are separate settings, traces and rates; ask first before ai_calls and ai_call. A q matching nobody answers with every colleague and a warning. A stage's semantic, not its name, says whether it closes a deal, and only a user changes it, in the app. None of the name topics is a prerequisite: each tool refuses an unknown name with the accepted list. Use find_records to find a customer contact; colleagues are seats here. Use read_forecast with view=input_sources to learn whether a number can be trusted: how complete and current the data is. user_id is what assignee_id and owner_id take; never assign to an is_agent seat. Keep pipeline_id and stage_id for a deal. Take every name verbatim; a custom field is spelled cf_\u003cslug\u003e.",
+        "description": "member_retirement previews a member removal, or a merge when mode is merge and to_user_id names the survivor. Read how this workspace is set up. colleagues: the seats that can receive work, not the contacts stored as records; q narrows by name. pipelines: every pipeline with its stages, each open, won or lost. channel_providers: the messaging transports. The other topics name what a tool accepts: query (find_records engine query), analytics (read_analytics), record_fields (create_record and update_record), list_filters (find_records engine list), report_vocabulary (read_reports kind run), report_blocks (read_analytics step compose). data_subject_requests, notice_cases, audit_log, legal_holds, restricted_records and record_history are the privacy queues and trail; a project's phase moves and their reasons are in read_project overview. capture_senders, held_threads, counterparty_holds, owner_identities and contacts_awaiting_decision are the user's own mail decisions. my_working_hours and my_brief_delivery are the user's own settings. system_health, job_health, capture_health, recovery_health, automatic_work_health and data_tasks are health and operations pages, each under its own grant. ai_routing, ai_calls, retention_settings, tax_rates, fx_rates and ai_model_rates are separate settings, traces and rates; ask first before ai_calls and ai_call. A q matching nobody answers with every colleague and a warning. A stage's semantic, not its name, says whether it closes a deal, and only a user changes it, in the app. None of the name topics is a prerequisite: each tool refuses an unknown name with the accepted list. Use find_records to find a customer contact; colleagues are seats here. Use read_forecast with view=input_sources to learn whether a number can be trusted: how complete and current the data is. user_id is what assignee_id and owner_id take; never assign to an is_agent seat. Keep pipeline_id and stage_id for a deal. Take every name verbatim; a custom field is spelled cf_\u003cslug\u003e. (Runs immediately; the user's yes is needed for the actions ai_call, ai_calls, member_retirement, so tell them what the call will change and get it before calling, unless they asked for this call themselves.)",
         "inputSchema": {
           "properties": {
             "action": {
@@ -11356,7 +11356,7 @@
           "readOnlyHint": false,
           "title": "Invite to a meeting"
         },
-        "description": "Put a meeting on the host's calendar. invite creates the calendar event and the provider sends the invitation to every attendee: the contact, and any further addresses. invite reaches attendees outside the workspace, so name them and the time and get the user's yes first; the call stages for approval. Read check_availability before choosing a time. Use change_activities with log to record a meeting without inviting anyone, or one that already happened. Keep the invitation id and inspect its status before claiming it was delivered. A refused or failed invite invited nobody. (Governance: a human approves every call before it runs; requires passport scope \"send\".)",
+        "description": "Put a meeting on the host's calendar. invite creates the calendar event and the provider sends the invitation to every attendee: the contact, and any further addresses. invite reaches attendees outside the workspace and goes out when this call runs, so name them and the time and get the user's yes first. Read check_availability before choosing a time. Use change_activities with log to record a meeting without inviting anyone, or one that already happened. Keep the invitation id and inspect its status before claiming it was delivered. A refused or failed invite invited nobody. (Governance: a human approves every call before it runs; requires passport scope \"send\".)",
         "inputSchema": {
           "properties": {
             "action": {

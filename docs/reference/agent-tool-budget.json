@@ -31,7 +31,7 @@
   "catalog": {
     "tools": 48,
     "system_frame_tokens": 592,
-    "tokens": 40244,
+    "tokens": 40245,
     "median_tool_tokens": 620,
     "mean_tool_tokens": 838
   },
@@ -213,7 +213,7 @@
     },
     {
       "name": "schedule_meeting",
-      "tokens": 420
+      "tokens": 421
     },
     {
       "name": "annotate_brief",
