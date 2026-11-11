@@ -3,7 +3,7 @@
 
 //go:build integration
 
-package compose
+package integration_test
 
 // The provenance filter that makes AI-created records findable
 // (ADR-0075/A121 §3a): captured_by_kind=agent IS the review list, the filter

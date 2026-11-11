@@ -3,7 +3,7 @@
 
 //go:build integration
 
-package compose
+package integration_test
 
 // What a total says about money it could not price.
 //
