@@ -1,23 +1,23 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import type { components } from "../../api/schema";
-import { StatCard } from "../../design-system/statcard";
-import { StatStrip } from "../../design-system/statstrip";
-import { omitted } from "../../design-system/surfacestate";
-import { activityDay } from "../../format/activitywhen";
+import type { components } from "../api/schema";
+import { StatCard } from "../design-system/statcard";
+import { StatStrip } from "../design-system/statstrip";
+import { omitted, type Withholding } from "../design-system/surfacestate";
+import { activityDay } from "../format/activitywhen";
 import {
   formatDayMonthNearYear,
   formatNumber,
   MONEY_ABSENT,
-} from "../../format/format";
-import { useLocale, useT } from "../../i18n";
-import { useViewerZone } from "../../lib/viewerzone";
+} from "../format/format";
+import { useLocale, useT } from "../i18n";
+import { useViewerZone } from "../lib/viewerzone";
 
 type Activity = components["schemas"]["Activity"];
-type Contact360 = components["schemas"]["Contact360"];
-type NextMeeting = NonNullable<
-  components["schemas"]["Contact360"]["next_meeting"]
+type NextMeeting = Pick<
+  components["schemas"]["Contact360NextMeeting"],
+  "starts_at" | "occurred_precision"
 >;
 
 /**
@@ -80,7 +80,7 @@ export function MeetingFigures({
 
 // A cached page outlives a withheld section, so the gate is checked too.
 export function timelineRead(
-  view: Contact360 | undefined,
+  view: Withholding | undefined,
   listed: Readonly<{ isSuccess: boolean; hasNextPage: boolean }>,
 ) {
   const withheld = view !== undefined && omitted(view, "activities");

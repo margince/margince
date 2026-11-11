@@ -3,14 +3,14 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, within } from "storybook/test";
-import type { components } from "../../api/schema";
-import { CompanyZoneProvider } from "../../lib/companyzone";
+import type { components } from "../api/schema";
+import { CompanyZoneProvider } from "../lib/companyzone";
 import {
   installFetchStub,
   meRoute,
   StoryProviders,
-} from "../../testing/story-utils";
-import { HeldMeetingsList } from "./contactmeetings.held";
+} from "../testing/story-utils";
+import { HeldMeetingsList } from "./meetingsheld";
 
 type Activity = components["schemas"]["Activity"];
 
@@ -74,7 +74,7 @@ export const DayOnly: Story = {
   },
   play: async ({ canvasElement }) => {
     const title = await within(canvasElement).findByText("Site visit");
-    const row = title.closest(".pe-meeting");
+    const row = title.closest(".meetingrows-row");
     await expect(row).not.toBeNull();
     await expect(row?.textContent).toMatch(/24 Sept? 2026/);
     await expect(row?.textContent).not.toMatch(/\d{1,2}:\d{2}/);
