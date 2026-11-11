@@ -15,6 +15,11 @@ import { probabilityReason } from "./dealprobability";
 // The probability row draws the figure as a ring. A tip beside it says why the
 // deal has that figure, and the row keeps its edit.
 
+// The signed-in member of meRoute, who owns the deal.
+const VIEWER = "00000000-0000-4000-8000-000000000001";
+
+type Receipt = components["schemas"]["Receipt"];
+
 const deal: components["schemas"]["Deal"] = {
   id: "d1",
   name: "Fleet retrofit",
@@ -30,6 +35,7 @@ const deal: components["schemas"]["Deal"] = {
   win_probability: 35,
   win_probability_source: "margince",
   stage_win_probability: 50,
+  owner_id: VIEWER,
 };
 
 const stages = [
@@ -47,26 +53,34 @@ const QUIET = "No reply from Dana Ruiz since 2 October.";
 
 afterEach(cleanup);
 
-function mount(current: components["schemas"]["Deal"]) {
+// Receipts as the deal's changes list sends them: kind and close-date
+// values, never the moved fields.
+const verdict: Receipt = {
+  id: "r1",
+  kind: "deal_probability",
+  summary: 'Changed the win probability on "Fleet retrofit": 50% → 35%',
+  reason: QUIET,
+  occurred_at: "2026-11-01T02:00:00Z",
+};
+const dateOnly: Receipt = {
+  id: "r2",
+  kind: "close_date_correction",
+  summary: 'Changed the close date on "Fleet retrofit"',
+  reason: "Dana Ruiz moved the kickoff to March.",
+  occurred_at: "2026-11-02T02:00:00Z",
+  close_date_change: { date_changed: true, forecast_changed: false },
+};
+
+function mount(
+  current: components["schemas"]["Deal"],
+  changes: Receipt[] = [verdict],
+) {
   const asked: string[] = [];
   installFetchStub({
     "GET /me": meRoute({ deal: ["read", "update"] }, { seat: "full" }),
     "GET /deals/d1/margince-changes": () => {
       asked.push("changes");
-      return jsonResponse({
-        changes: [
-          {
-            id: "r1",
-            kind: "deal_probability",
-            summary: "Lowered the probability to 35%",
-            reason: QUIET,
-            occurred_at: "2026-11-01T02:00:00Z",
-            changes: [
-              { field: "win_probability_override", before: 50, after: 35 },
-            ],
-          },
-        ],
-      });
+      return jsonResponse({ changes });
     },
   });
   render(
@@ -77,8 +91,16 @@ function mount(current: components["schemas"]["Deal"]) {
   return asked;
 }
 
+async function tipText(): Promise<string> {
+  const mark = await screen.findByRole("button", {
+    name: "Why this probability",
+  });
+  act(() => mark.focus());
+  return (await screen.findByRole("tooltip")).textContent ?? "";
+}
+
 it("quotes Margince's own reason for the figure it lowered, and keeps the edit", async () => {
-  mount(deal);
+  mount(deal, [dateOnly, verdict]);
   // The edit arrives with the reader's grants; the mark is focused after it.
   const edit = await screen.findByRole("button", {
     name: /^Change Probability .*35%/,
@@ -88,11 +110,34 @@ it("quotes Margince's own reason for the figure it lowered, and keeps the edit",
   });
   act(() => mark.focus());
   const tip = await screen.findByRole("tooltip");
-  expect(tip.textContent).toContain(
-    "Margince lowered this from the 50% that the stage Proposal gives.",
-  );
   expect(await screen.findByText(QUIET, { exact: false })).toBe(tip);
+  expect(tip.textContent).toBe(
+    `Margince set this. ${QUIET} Without it, the stage Proposal gives 50%. Type your own figure to override it.`,
+  );
   expect(edit.isConnected).toBe(true);
+});
+
+it("quotes a close-date sweep that also lowered the forecast", async () => {
+  const sweep: Receipt = {
+    ...dateOnly,
+    reason: QUIET,
+    close_date_change: { date_changed: true, forecast_changed: true },
+  };
+  mount(deal, [sweep]);
+  await screen.findByRole("button", { name: /^Change Probability .*35%/ });
+  await tipText();
+  expect(await screen.findByText(QUIET, { exact: false })).toBe(
+    screen.getByRole("tooltip"),
+  );
+});
+
+it("gives a reader who does not own the deal the rule, and asks for no changes", async () => {
+  const asked = mount({ ...deal, owner_id: "u-mia" });
+  await screen.findByRole("button", { name: /^Change Probability .*35%/ });
+  expect(await tipText()).toContain(
+    "Margince may lower a figure nobody set by hand",
+  );
+  expect(asked).toEqual([]);
 });
 
 it("names the colleague who set the figure and asks Margince for nothing", async () => {
@@ -134,7 +179,7 @@ describe("probabilityReason", () => {
         editable: true,
       }),
     ).toBe(
-      "Margince lowered this from the 50% that the deal’s stage gives. Margince lowers a deal nobody set by hand once it goes quiet or its emails point lower. Type your own figure to override it.",
+      "Margince set this. Margince may lower a figure nobody set by hand when the deal goes quiet or its emails point lower. Without it, the deal’s stage gives 50%. Type your own figure to override it.",
     );
   });
 

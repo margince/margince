@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import type { components } from "../../api/schema";
 import { InfoTip } from "../../design-system/infotip";
 import { useLocale, useT } from "../../i18n";
 import { useDealMarginceChanges } from "../../lib/marginchanges";
@@ -9,9 +10,19 @@ import { useViewerId } from "../../lib/session";
 import { probabilityReason } from "./dealprobability";
 import type { Deal } from "./deals";
 
-// The audit column a Margince probability change writes, as its receipt
-// names the field.
-const PROBABILITY_FIELD = "win_probability_override";
+type Receipt = components["schemas"]["Receipt"];
+
+// The two Margince changes that set a deal's own figure: a verdict on the
+// probability, and a close-date sweep that also lowered the forecast.
+function setsProbability(receipt: Receipt): boolean {
+  if (receipt.undo?.reversed) {
+    return false;
+  }
+  return (
+    receipt.kind === "deal_probability" ||
+    receipt.close_date_change?.forecast_changed === true
+  );
+}
 
 type HintProps = Readonly<{
   deal: Deal;
@@ -20,12 +31,16 @@ type HintProps = Readonly<{
 }>;
 
 /**
- * The ⓘ beside a deal's probability that says why it has that figure. Only a
- * figure Margince set asks for the deal's changes, to quote its own reason.
+ * The ⓘ beside a deal's probability that says why it has that figure. Only the
+ * owner of a figure Margince set asks for the deal's changes, to quote its own
+ * reason, because the server writes that reason for the owner alone.
  */
 export function ProbabilityHint(props: HintProps) {
+  const viewerId = useViewerId();
   return props.deal.win_probability_source === "margince" &&
-    props.deal.status === "open" ? (
+    props.deal.status === "open" &&
+    viewerId !== undefined &&
+    props.deal.owner_id === viewerId ? (
     <MarginceProbabilityHint {...props} />
   ) : (
     <ReasonTip {...props} recorded={null} />
@@ -40,9 +55,7 @@ function MarginceProbabilityHint(props: HintProps) {
       (page) => page.changes ?? [],
     ) ?? [];
   // Newest first, so the first change that moved the figure set it.
-  const setter = changes.find((change) =>
-    change.changes?.some((moved) => moved.field === PROBABILITY_FIELD),
-  );
+  const setter = changes.find(setsProbability);
   return (
     <ReasonTip
       {...props}

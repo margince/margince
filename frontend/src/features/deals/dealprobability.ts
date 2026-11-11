@@ -137,26 +137,24 @@ function openReason(
       ? undefined
       : formatPercent(deal.stage_win_probability / 100, locale);
   const override = editable && t("deal.winProbability.reason.override");
+  const stageGives =
+    stagePercent &&
+    t("deal.winProbability.reason.stageGives", {
+      percent: stagePercent,
+      stage,
+    });
   switch (deal.win_probability_source) {
     case "margince":
       return [
-        stagePercent
-          ? t("deal.winProbability.reason.margince", {
-              percent: stagePercent,
-              stage,
-            })
-          : t("deal.winProbability.reason.marginceBare"),
+        t("deal.winProbability.reason.margince"),
         recorded || t("deal.winProbability.reason.marginceRule"),
+        stageGives,
         override,
       ];
     case "human":
       return [
         setterSentence(deal, t, viewerId),
-        stagePercent &&
-          t("deal.winProbability.reason.stageGives", {
-            percent: stagePercent,
-            stage,
-          }),
+        stageGives,
         editable && t("deal.winProbability.reason.clear"),
       ];
     default:

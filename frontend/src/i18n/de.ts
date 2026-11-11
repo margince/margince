@@ -6021,12 +6021,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Ein Teammitglied hat den Wert von Hand gesetzt.",
   "deal.winProbability.reason.stageGives":
     "Ohne ihn gibt {stage} {percent} vor.",
-  "deal.winProbability.reason.margince":
-    "Margince hat den Wert von den {percent} gesenkt, die {stage} vorgibt.",
-  "deal.winProbability.reason.marginceBare":
-    "Margince hat den Wert der Phase gesenkt.",
+  "deal.winProbability.reason.margince": "Margince hat diesen Wert gesetzt.",
   "deal.winProbability.reason.marginceRule":
-    "Margince senkt einen Deal, den niemand von Hand gesetzt hat, wenn er ruht oder E-Mails dagegen sprechen.",
+    "Margince kann eine Wahrscheinlichkeit, die niemand von Hand gesetzt hat, senken, wenn der Deal ruht oder E-Mails dagegen sprechen.",
   "deal.winProbability.reason.override":
     "Gib einen eigenen Wert ein, um ihn zu überschreiben.",
   "deal.winProbability.reason.clear":

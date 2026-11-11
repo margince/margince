@@ -109,6 +109,8 @@ const lowered: Deal = {
   win_probability: 35,
   win_probability_source: "margince",
   stage_win_probability: 50,
+  // The signed-in member of meFixture: only the owner reads Margince's reason.
+  owner_id: "00000000-0000-4000-8000-000000000001",
 };
 
 const proposal: Stage[] = [
@@ -132,12 +134,9 @@ function LoweredColumn() {
           {
             id: "r1",
             kind: "deal_probability",
-            summary: "Lowered the probability to 35%",
+            summary: "Changed the win probability: 50% → 35%",
             reason: "No reply from Dana Ruiz since 2 October.",
             occurred_at: "2026-11-01T02:00:00Z",
-            changes: [
-              { field: "win_probability_override", before: 50, after: 35 },
-            ],
           },
         ],
       }),

@@ -5990,12 +5990,9 @@ export const en = {
   "deal.winProbability.reason.human": "A colleague set this by hand.",
   "deal.winProbability.reason.stageGives":
     "Without it, {stage} gives {percent}.",
-  "deal.winProbability.reason.margince":
-    "Margince lowered this from the {percent} that {stage} gives.",
-  "deal.winProbability.reason.marginceBare":
-    "Margince lowered this from the stage’s figure.",
+  "deal.winProbability.reason.margince": "Margince set this.",
   "deal.winProbability.reason.marginceRule":
-    "Margince lowers a deal nobody set by hand once it goes quiet or its emails point lower.",
+    "Margince may lower a figure nobody set by hand when the deal goes quiet or its emails point lower.",
   "deal.winProbability.reason.override": "Type your own figure to override it.",
   "deal.winProbability.reason.clear":
     "Clear the figure to follow the stage again.",
