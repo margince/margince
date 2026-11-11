@@ -93,6 +93,23 @@ export const WithoutListGrant: Story = {
   },
 };
 
+// Beside a rail that already holds Add to Shortlist and All lists, as on a
+// contact's Research tab: the panel keeps the rows and the Live List check.
+export const BesideARail: Story = {
+  render: () => {
+    stub([{ ...shortlist, health: "ok" }, liveList]);
+    return (
+      <StoryProviders>
+        <RecordListsPanel
+          entityType="company"
+          entityId={MEMBER_ID}
+          ways={false}
+        />
+      </StoryProviders>
+    );
+  },
+};
+
 // On no list the reader can find.
 export const OnNoList: Story = {
   render: () => {

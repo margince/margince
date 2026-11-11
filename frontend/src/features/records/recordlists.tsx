@@ -36,6 +36,9 @@ import { useUndoableRemoval } from "../../lib/undoableremoval";
 
 type RecordRef = Readonly<{ entityType: ListedRecordType; entityId: string }>;
 
+// A page whose rail beside the block already draws `RecordListsWays` passes false.
+type Ways = Readonly<{ ways?: boolean }>;
+
 /**
  * The block as a card of its own, for a record page's column. The server
  * answers no lists for an archived record, so `archived` leaves the card out
@@ -45,7 +48,8 @@ export function RecordListsPanel({
   entityType,
   entityId,
   archived = false,
-}: RecordRef & Readonly<{ archived?: boolean }>) {
+  ways = true,
+}: RecordRef & Ways & Readonly<{ archived?: boolean }>) {
   const t = useT();
   const available = useListsAvailable();
   if (!available || archived) {
@@ -54,14 +58,22 @@ export function RecordListsPanel({
   return (
     <Panel title={t("lists.record.title")}>
       <PanelBody>
-        <RecordListsBody entityType={entityType} entityId={entityId} />
+        <RecordListsBody
+          entityType={entityType}
+          entityId={entityId}
+          ways={ways}
+        />
       </PanelBody>
     </Panel>
   );
 }
 
 /** The block's content, for a host that frames it itself. */
-export function RecordListsBody({ entityType, entityId }: RecordRef) {
+export function RecordListsBody({
+  entityType,
+  entityId,
+  ways = true,
+}: RecordRef & Ways) {
   const t = useT();
   const lists = useRecordLists(entityType, entityId);
   const found = lists.data?.data ?? [];
@@ -98,7 +110,7 @@ export function RecordListsBody({ entityType, entityId }: RecordRef) {
           <p className="t-caption">{t("lists.record.truncated")}</p>
         )}
       </SurfaceState>
-      <RecordListsWays entityType={entityType} entityId={entityId} />
+      {ways && <RecordListsWays entityType={entityType} entityId={entityId} />}
       <CheckAList entityType={entityType} entityId={entityId} />
     </div>
   );

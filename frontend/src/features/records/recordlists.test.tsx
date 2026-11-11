@@ -680,6 +680,19 @@ describe("putting a record on a Shortlist from its lists", () => {
     expect(check).toHaveAccessibleDescription(en["lists.record.checkHint"]);
   });
 
+  it("leaves the verbs to the rail beside it and keeps the Live List check", async () => {
+    serve(listsMe(true), { ways: false });
+    expect(
+      await screen.findByRole("combobox", { name: en["lists.record.check"] }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: en["lists.addToShortlist"] }),
+    ).toBeNull();
+    expect(
+      screen.queryByRole("link", { name: en["lists.record.allLists"] }),
+    ).toBeNull();
+  });
+
   it("links to every list the reader can find", async () => {
     serve(seat({ list: ["read"], company: ["read"] }));
     const link = await screen.findByRole("link", {
