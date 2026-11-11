@@ -40,6 +40,7 @@ const attachmentSource = "upload"
 // Audit payload keys for the attachment write shape.
 const (
 	fieldEntityType = "entity_type"
+	dataTaskRunKey  = "data_task_run"
 	fieldEntityID   = "entity_id"
 	fieldCategory   = "category"
 )

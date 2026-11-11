@@ -136,7 +136,7 @@ func StampProvenSenderTx(ctx context.Context, tx pgx.Tx, activityID, runID ids.U
 	}
 	auditID, err := storekit.AuditWithEvidence(ctx, tx, "update", "activity", activityID,
 		map[string]any{auditFieldProvenSender: nil}, map[string]any{auditFieldProvenSender: contact},
-		map[string]any{"data_task_run": runID.String()})
+		map[string]any{dataTaskRunKey: runID.String()})
 	if err != nil {
 		return false, err
 	}

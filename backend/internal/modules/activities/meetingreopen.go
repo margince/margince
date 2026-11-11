@@ -140,7 +140,7 @@ func ReopenCalendarCancellationTx(ctx context.Context, tx pgx.Tx, c CalendarCanc
 	}
 	auditID, err := storekit.AuditWithEvidence(ctx, tx, "update", "activity", c.ID,
 		map[string]any{auditFieldMeetingStatus: cancelled}, map[string]any{auditFieldMeetingStatus: deref(c.Restore)},
-		map[string]any{"data_task_run": runID.String(), "reopened": CalendarCancellationReopened})
+		map[string]any{dataTaskRunKey: runID.String(), "reopened": CalendarCancellationReopened})
 	if err != nil {
 		return false, err
 	}
