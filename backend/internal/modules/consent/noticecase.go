@@ -255,7 +255,7 @@ func (s *Store) OpenNoticeCasesDueSoonestTx(ctx context.Context, tx pgx.Tx, in N
 	if err != nil {
 		return nil, err
 	}
-	err = database.UseCustomPlansTx(ctx, tx, func() error {
+	err = database.UseCustomPlansTx(ctx, tx, func(ctx context.Context) error {
 		rows, err := tx.Query(ctx, query, args...)
 		if err != nil {
 			return err

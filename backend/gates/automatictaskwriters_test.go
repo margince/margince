@@ -120,7 +120,7 @@ var openTaskReadersElsewhere = map[string]string{
 	"modules/activities/memberhandover.go:ConsolidateMemberTasksTx":       "moves every open task during an admitted identity merge, including tasks no longer current, so none can be left on a hidden account",
 	"compose/automaticworksql.go:automaticItemsSQL":                       "lists what Margince did, done or not, for Done for you; it reports work, it assigns none",
 	"modules/activities/bulkcomplete.go:LockTaskForBulkTx":                "locks one task a human chose to complete",
-	"modules/activities/requestcheck.go:UncheckableRequestReminders":      "annotates tasks the lane already chose; it surfaces no open work of its own",
+	"modules/activities/requestcheck.go:uncheckableReminders":             "annotates tasks the lane already chose; it surfaces no open work of its own",
 	"compose/reportprojects.go:projectCommitmentsSpec":                    "a report over the project's recorded promises, not a personal queue",
 	"modules/activities/companyscope.go:ownQueueClause":                   "narrows a list the caller already gates with the worklist clauses",
 	"modules/activities/companyscope.go:unassignedQueueClause":            "narrows a list the caller already gates with the worklist clauses",

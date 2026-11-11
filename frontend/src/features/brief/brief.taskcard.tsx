@@ -44,6 +44,7 @@ import type { MessageKey } from "../../i18n/en";
 import { useCompanyZone } from "../../lib/companyzone";
 import { useMe } from "../../lib/session";
 import { useViewerZone } from "../../lib/viewerzone";
+import { worklistKey } from "../../lib/workkeys";
 import {
   briefContextTitle,
   briefSubjectLabel,
@@ -60,7 +61,6 @@ import {
 } from "../../lib/worklistcopy";
 import { eyebrowKeyFor } from "../../lib/worklisteyebrow";
 import type { WorklistItem } from "../../lib/worklisttypes";
-import { worklistKey } from "../../lib/workkeys";
 
 /** The name a card goes by, the way the row in hand names it. */
 export function taskName(

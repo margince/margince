@@ -17,13 +17,15 @@ import (
 )
 
 type genericPlanScope struct{}
+type customPlanScope struct{}
 
 // GenericPlansEnabled reports whether the ambient snapshot keeps generic plans.
 // Callers with costly custom-plan fallbacks can keep named statements only here.
 func GenericPlansEnabled(ctx context.Context) bool {
 	scoped, ok := ctx.Value(genericPlanScope{}).(pgx.Tx)
 	tx, joined := snapshotOf(ctx)
-	return ok && joined && tx == scoped
+	custom, _ := ctx.Value(customPlanScope{}).(pgx.Tx)
+	return ok && joined && tx == scoped && custom != tx
 }
 
 // ReuseGenericPlans runs fn with each statement on the ambient snapshot reusing
@@ -35,12 +37,20 @@ func ReuseGenericPlans(ctx context.Context, fn func(context.Context) error) erro
 	if !ok || tx == nil {
 		return fn(ctx)
 	}
-	return ReuseGenericPlansTx(ctx, tx, func() error { return fn(context.WithValue(ctx, genericPlanScope{}, tx)) })
+	if GenericPlansEnabled(ctx) {
+		return fn(ctx)
+	}
+	return ReuseGenericPlansTx(ctx, tx, func() error {
+		scoped := context.WithValue(ctx, genericPlanScope{}, tx)
+		return fn(context.WithValue(scoped, customPlanScope{}, nil))
+	})
 }
 
 // UseCustomPlansTx applies the custom-plan exception to an explicit transaction.
-func UseCustomPlansTx(ctx context.Context, tx pgx.Tx, fn func() error) error {
-	return withPlanCacheMode(ctx, tx, "force_custom_plan", fn)
+func UseCustomPlansTx(ctx context.Context, tx pgx.Tx, fn func(context.Context) error) error {
+	return withPlanCacheMode(ctx, tx, "force_custom_plan", func() error {
+		return fn(context.WithValue(ctx, customPlanScope{}, tx))
+	})
 }
 
 // ReuseGenericPlansTx applies the same scoped mode to an explicit transaction.

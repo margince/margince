@@ -30,11 +30,11 @@ var worklistStages = []string{
 
 // worklistOutsideStatements counts BEGIN, COMMIT, the reads before the day is
 // assembled, and the snapshot's plan-mode setup and restore.
-const worklistOutsideStatements = 7
+const worklistOutsideStatements = 8
 
 // The seeded read includes every bound lane and an open task. Lower this
 // pgx-call ceiling when a batch or empty-set shortcut removes calls.
-const worklistExchangeBudget = 136
+const worklistExchangeBudget = 107
 
 // stageDelta is what one composed read added to the stage collector.
 type stageDelta struct {

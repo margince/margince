@@ -462,32 +462,6 @@ func (a attentionDealStandings) CachedStandings(
 	return out, nil
 }
 
-// attentionSnapshots binds the feed's composed reads to the database seam.
-//
-// The adapter exists because attention takes readers and never a driver: this
-// is the one place the pool and that package meet, which is the same shape
-// every other seam in this file has.
-type attentionSnapshots struct{ pool *pgxpool.Pool }
-
-func (a attentionSnapshots) InSnapshot(ctx context.Context, read string, fn func(context.Context) error) error {
-	return database.WithWorkspaceSnapshot(ctx, a.pool, func(ctx context.Context) error {
-		if read == attention.ReadWorklist {
-			return database.ReuseGenericPlans(ctx, fn)
-		}
-		return fn(ctx)
-	})
-}
-
-func (a attentionSnapshots) Degradable(
-	ctx context.Context, budget time.Duration, fn func(context.Context) error,
-) error {
-	return database.WithDegradableRead(ctx, budget, fn)
-}
-
-func (a attentionSnapshots) Detached(ctx context.Context) context.Context {
-	return database.Detached(ctx)
-}
-
 func (a attentionDomainQuestions) OwnsDomainQuestion(ctx context.Context, domain string) (bool, error) {
 	return a.store.OwnsDomainQuestion(ctx, domain)
 }
