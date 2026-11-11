@@ -14,7 +14,7 @@ import { askKey } from "./worklist.ask";
 import { useBriefAnswer, withFoldedBrief } from "./worklist.briefverbs";
 import type { WorklistItem } from "./worklist.queries";
 import { codedDetail } from "./worklist.reader";
-import { rowAnswer } from "./worklist.row.answer";
+import { inlineDecision, rowAnswer } from "./worklist.row.answer";
 
 import "./worklist.why.css";
 
@@ -69,18 +69,25 @@ export function WorklistWhy({
 }
 
 // The same controls the row draws, so a drawer over the row answers it in place.
+// A decision is answered here, not behind a second drawer. The card takes the
+// place of the Decide button.
 function RowVerbs({ item }: Readonly<{ item: WorklistItem }>) {
   const brief = useBriefAnswer(item);
   const placed = withFoldedBrief(rowAnswer(item, brief), item, brief);
-  if (!placed.primary && !placed.equals && !placed.below) {
+  const decision = inlineDecision(item);
+  const primary = decision ? undefined : placed.primary;
+  if (!decision && !primary && !placed.equals && !placed.below) {
     return null;
   }
   return (
     <>
-      <div className="form-actions">
-        {placed.equals}
-        {placed.primary}
-      </div>
+      {decision}
+      {(primary || placed.equals) && (
+        <div className="form-actions">
+          {placed.equals}
+          {primary}
+        </div>
+      )}
       {placed.below}
     </>
   );

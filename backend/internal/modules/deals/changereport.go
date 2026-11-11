@@ -22,16 +22,15 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// ChangeBundle holds the changes Margince made to one deal that its owner has
-// neither accepted nor undone.
+// ChangeBundle holds the changes Margince made to one deal in the last
+// changeListWindow that its owner has not undone.
 type ChangeBundle struct {
 	DealID   ids.DealID
 	DealName string
 	Version  int64
 	// AuditLogIDs name the changes the list shows, newest first: the order an
 	// Undo takes them back in. UndoableAuditLogIDs is the part of them Undo
-	// can still take back; the rest were edited since and stay listed for
-	// blockedChangeWindow.
+	// can still take back; the rest were edited since.
 	AuditLogIDs         []ids.UUID
 	UndoableAuditLogIDs []ids.UUID
 	Kinds               []string
@@ -55,9 +54,10 @@ type ChangeSummary struct {
 	Truncated bool
 }
 
-// blockedChangeWindow is how long a change edited since stays on the list
-// it can no longer be undone from. After it, the deal's history keeps it.
-const blockedChangeWindow = 14 * 24 * time.Hour
+// changeListWindow is how long a change stays on the list. Nobody is asked to
+// sign a change off, so age is what retires it; the deal's history keeps it,
+// with its Undo.
+const changeListWindow = 7 * 24 * time.Hour
 
 // bundleCap bounds the rows of one summary. The counts come from SQL over
 // every changed deal, so a cut list still reports the true total.
@@ -72,9 +72,10 @@ func kindCountColumns(arg func(any) int, kinds ...string) string {
 	return out.String()
 }
 
-// PendingChangesOwnedBy reads every change Margince made to the reader's own
-// deals that they have not accepted or undone, one bundle per deal. A since
-// keeps only the changes made from then on.
+// PendingChangesOwnedBy reads the changes Margince made to the reader's own
+// deals in the last changeListWindow that they have not undone, one bundle per
+// deal. A since keeps only the changes made from then on. A change accepted
+// through the deprecated accept route stays off the list.
 func (s *Store) PendingChangesOwnedBy(ctx context.Context, since *time.Time) (ChangeSummary, error) {
 	if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
 		return ChangeSummary{}, err
@@ -93,7 +94,7 @@ func (s *Store) PendingChangesOwnedBy(ctx context.Context, since *time.Time) (Ch
 		args := []any{}
 		arg := func(v any) int { args = append(args, v); return len(args) }
 		heldPos, ownerPos, basePos, capPos := arg(heldCorrections), arg(actor.UserID), arg(base), arg(bundleCap+1)
-		sincePos, stagePos, blockedFromPos := arg(since), arg(stageCorrectionKinds), arg(s.clock().Add(-blockedChangeWindow))
+		sincePos, stagePos, listedFromPos := arg(since), arg(stageCorrectionKinds), arg(s.clock().Add(-changeListWindow))
 		counts := kindCountColumns(arg, CloseLostCorrection, VerdictCloseDateCorrection, VerdictAmountCorrection,
 			VerdictProbabilityCorrection, VerdictStageMoveCorrection, DealOpenCorrection, DealReviveCorrection)
 		scope, err := auth.ScopeClauseFor(ctx, dealTable, "d", arg)
@@ -117,7 +118,7 @@ func (s *Store) PendingChangesOwnedBy(ctx context.Context, since *time.Time) (Ch
 			    JOIN deal d ON d.id = c.deal_id
 			    JOIN audit_log a ON a.id = c.audit_log_id AND a.entity_type = 'deal' AND a.entity_id = c.deal_id
 			   WHERE c.correction = ANY($%d) AND c.accepted_at IS NULL AND c.reversed_at IS NULL
-			     AND ($%d::timestamptz IS NULL OR c.applied_at >= $%d)
+			     AND ($%d::timestamptz IS NULL OR c.applied_at >= $%d) AND c.applied_at >= $%d
 			     AND d.owner_id = $%d AND d.archived_at IS NULL%s),
 			bundle AS (
 			  SELECT w.deal_id,
@@ -126,7 +127,6 @@ func (s *Store) PendingChangesOwnedBy(ctx context.Context, since *time.Time) (Ch
 			         array_agg(DISTINCT w.correction) AS kinds,
 			         max(w.applied_at) AS latest
 			    FROM waiting w
-			   WHERE w.undoable OR w.applied_at >= $%d
 			   GROUP BY w.deal_id)
 			SELECT b.deal_id, d.name, d.version, b.audits, b.undoable, b.kinds, b.latest, %s,
 			       count(*) OVER (), count(*) FILTER (WHERE cardinality(b.undoable) > 0) OVER ()%s
@@ -134,7 +134,7 @@ func (s *Store) PendingChangesOwnedBy(ctx context.Context, since *time.Time) (Ch
 			 ORDER BY 8 DESC NULLS LAST, b.latest DESC, b.deal_id
 			 LIMIT $%d`,
 			correctionFieldsStillAppliedSQL("to_jsonb(d)"), correctionStageStillNewestSQL(stagePos),
-			heldPos, sincePos, sincePos, ownerPos, where, blockedFromPos, value, counts, capPos)
+			heldPos, sincePos, sincePos, listedFromPos, ownerPos, where, value, counts, capPos)
 		rows, err := tx.Query(ctx, query, args...)
 		if err != nil {
 			return fmt.Errorf("deals: reading the changes Margince made: %w", err)
