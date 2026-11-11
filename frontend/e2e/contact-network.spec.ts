@@ -192,7 +192,7 @@ test.describe("Network tab — visual weight", () => {
     await page.setViewportSize({ width: 1920, height: 900 });
     await page
       .getByRole("button", {
-        name: "Details und Berechtigungen ausblenden",
+        name: "Seitenleiste einklappen",
         exact: true,
       })
       .click();

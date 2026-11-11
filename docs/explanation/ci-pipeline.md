@@ -93,14 +93,17 @@ pass on its own.
 replaces the review under way, and a merge verdict can never be cancelled. Each queue entry has its own
 ref, so entries never get in each other's way in that group.
 
-`release.yml` and `sbom.yml` do not take from the runner budget. Both are **started by hand only**, so a
-merge triggers neither. They keep their job groups for the case of two dispatch runs at once. There, a
+`release.yml` and `sbom.yml` do not take from the runner budget. A merge triggers neither: `sbom.yml`
+starts by hand, and `release.yml` starts on a `v*` tag or by hand. They keep their job groups for the case of two dispatch runs at once. There, a
 cancel must reach the costly steps that generate output. It must never reach the step that publishes or
 signs; see [the workflows beside the merge gate](../reference/ci-workflows.md).
 
 `scheduled.yml` groups without
 cancelling, because nothing replaces a daily run. `cache-warm.yml` groups without cancelling, because a
 cancelled run saves no cache.
+
+A pull request workflow that also starts with no new commit groups without cancelling, because Renovate
+never merges a head with a `cancelled` check. `backend/gates/samecommitcancel_test.go` holds this.
 
 A skipped required check counts as *passing* on GitHub. That is why the build checks are put together
 in one `ci` job that refuses a skip on `merge_group`; see
@@ -186,11 +189,11 @@ What follows from this:
   matches the `images` scope. It runs the **`images (build only)`** job: a `docker buildx bake` of the
   default group (the three roles) that pushes nothing.
   - There are no registry credentials, no digest, and no release side effect. It answers "does it still
-    build", which nothing else asks now that `release.yml` only runs by hand.
+    build", which nothing else asks now that `release.yml` runs only on a tag or by hand.
   - The scope is those three paths, not `backend/**` or `frontend/**`. The images copy build output, so
     a source change *can* break one without touching any of the three.
-  - But a bake of three roles on every backend PR would cost most of what making `release.yml` run by
-    hand saved. And the compile that catches nearly all of that class already runs in
+  - But a bake of three roles on every backend PR would cost most of what taking `release.yml` off
+    every merge saved. And the compile that catches nearly all of that class already runs in
     `deterministic-gates`. What is left with no cover is a source change that builds and then fails to
     package, which the release still finds.
 - A **PR that only changes the backend** skips the frontend + UAT lanes; a **PR that only changes the
@@ -347,7 +350,7 @@ These jobs are not in `needs`:
 - `integration-build`, `integration-shards`, `integration-unit-coverage`: the `integration` fan-in checks them.
 - `sonarcloud`: not blocking, by decision. Listing it here would make it required in a hidden way.
 - `vuln`, `live-boot`, `home-budget`: advisory. They are the plain next ones to add, since each runs on every change
-  that counts, and a red one does not stop a merge. `home-budget` waits for runs that show its budgets hold.
+  that counts, and a red one does not stop a merge. `home-budget` waits for runs that show its fixed budgets hold.
   - The batch is the reason to wait. Under a merge queue, a flaky job does not cost one more run. It
     fails the whole group it was checked in, and every entry in that group is queued again.
   - Nothing has tested these two under a blocking gate. Make them block once the queue has a measured
@@ -514,7 +517,8 @@ What each job of `ci.yml` checks: [ci-jobs.md](../reference/ci-jobs.md). `determ
   needed about `340s`, of which vitest alone needed about `207s`.
 - **`live-boot`** exists because the integration shards never boot the api or run the seed script.
   Without it, the seed that runs through the API and the boot proof would break with no one seeing.
-- **`home-budget`** holds Home to its fixed budgets on every PR that can reach Home, `develop` included.
+- **`home-budget`** runs on every PR that can reach Home, `develop` included. It fails a PR that makes Home slower
+  than its merge base, measured on the same runner. The fixed budgets stay the bar for making it required.
   What it runs and when it skips: [ci-jobs.md](../reference/ci-jobs.md).
 
 ### What `secret-scan` runs

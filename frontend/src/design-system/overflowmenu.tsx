@@ -128,19 +128,8 @@ export function OverflowMenu({
   /** The trigger's short word, drawn under the glyph in a record's verb bar. */
   word?: string;
   /**
-   * Mount the children immediately rather than on the first open.
-   *
-   * The default defers them, and that is right for a menu drawn per row. A
-   * roster of two hundred rows would otherwise mount two hundred sets of
-   * verbs, and every dialog behind them, before the reader has pressed
-   * anything.
-   *
-   * It is wrong for a control whose job starts at mount. `CreateAction` reads
-   * `startOpen` once, in `useState`, because the meaning "this address opens
-   * the form" has to hang on that. Folded into a deferred menu, the create
-   * dialog that `#/deals/new` asks for never opened. Pressing the menu then
-   * opened it as a surprise. A list header carries one menu per page and a
-   * handful of buttons in it, so mounting them costs nothing there.
+   * Mount the children at once, not on the first open. A list's create reads
+   * `#/<screen>/new` at mount, so a deferred menu would leave its form shut.
    */
   keepMounted?: boolean;
   children: ReactNode;

@@ -6,7 +6,7 @@
     "required_only_as_one_of_a_set": 2,
     "never_driven": 9,
     "permitted_but_never_required": 4,
-    "tokens_served_but_never_driven": 4829,
+    "tokens_served_but_never_driven": 4860,
     "use_case_cases": 71,
     "acceptance_criteria_named": 118,
     "tools_added_by_shipped_units": 0,
@@ -3864,7 +3864,7 @@
     },
     {
       "name": "change_relationships",
-      "tokens": 472,
+      "tokens": 503,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [],
@@ -4185,7 +4185,7 @@
     },
     {
       "name": "read_details",
-      "tokens": 2186,
+      "tokens": 2200,
       "agents": [],
       "required_by_cases": [
         "case112_my_plan_and_the_dossier",

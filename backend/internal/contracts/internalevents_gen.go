@@ -121,7 +121,7 @@ type InternalEventBookingPageUpdated struct {
 // Counts only, no prose and no record data. What a rep's morning HOLDS is already recoverable from the run itself, and what they DID with it from the audit rows brief_item marks write. This payload answers one question the other two cannot: whether they came and looked.
 // Entity-less, and that is what keeps it internal. Every catalogued type that is NOT in the entity-less pipeline class is subscribable by an outside consumer — publicevents_test.go derives the set exactly as webhooks.validateEventTypes does — so naming brief_run here would make "this rep opened their Brief at 06:42" a webhook anyone may select. The run id stays on the system_log row the emit writes, where it is attributable without being deliverable.
 type InternalEventBriefOpened struct {
-	// Items How many items the run held when it was opened, AFTER expired snoozes resurfaced — what the rep actually saw, not what the night ranked. Zero is a real and interesting reading: a quiet morning that was still opened.
+	// Items How many items the GET /v1/brief response showed, with an expired snooze counted as back — what the rep actually saw, not what the night ranked. Zero is a real and interesting reading: a quiet morning that was still opened.
 	Items int `json:"items" minimum:"0"`
 
 	// LocalDay The run's own local day, which is its identity — one run per rep per day. Carried so a consumer can tell today's first open from a re-open of yesterday's without reaching back into brief_run.
@@ -158,6 +158,9 @@ type InternalEventExistingCustomerNoticeCreated struct {
 
 // InternalEventExistingCustomerNoticeWithdrawn An administrator withdrew a collection-notice declaration.
 type InternalEventExistingCustomerNoticeWithdrawn struct{}
+
+// InternalEventInstructionWordingCorrected The original approver attested that a wording correction preserves meaning.
+type InternalEventInstructionWordingCorrected struct{}
 
 // InternalEventInternalMailHistoryCreated A mailbox owner explicitly authorized an internal history import within the administrator's current source policy.
 type InternalEventInternalMailHistoryCreated struct {
@@ -229,11 +232,31 @@ type InternalEventMeetingProposalUpdated struct {
 	Status string `json:"status"`
 }
 
+// InternalEventRecordAssignmentArchived A record responsibility ended and remains in history.
+type InternalEventRecordAssignmentArchived struct{}
+
+// InternalEventRecordAssignmentCreated A record responsibility was assigned.
+type InternalEventRecordAssignmentCreated struct{}
+
+// InternalEventRecordAssignmentUpdated A record responsibility changed.
+type InternalEventRecordAssignmentUpdated struct{}
+
 // InternalEventReportingChanged Reporting configuration or publication changed; consumers re-read authorized state.
 type InternalEventReportingChanged struct {
 	Action string `json:"action"`
 	Object string `json:"object"`
 }
+
+// InternalEventScheduledWordingCorrected A held message retained its approval after an attested spelling or punctuation correction.
+type InternalEventScheduledWordingCorrected struct {
+	Version int64 `json:"version"`
+}
+
+// InternalEventSdrHandoffCreated A prospect handoff was recorded.
+type InternalEventSdrHandoffCreated struct{}
+
+// InternalEventSdrHandoffUpdated A prospect handoff changed without changing its original authorship.
+type InternalEventSdrHandoffUpdated struct{}
 
 // InternalEventTagSuggestionAccepted A user accepted a tag suggestion. The tagging itself is audited on the tag; this records the decision.
 type InternalEventTagSuggestionAccepted struct{}
@@ -302,6 +325,14 @@ func (InternalEventExistingCustomerNoticeWithdrawn) EntityType() string {
 	return "existing_customer_notice"
 }
 
+func (InternalEventInstructionWordingCorrected) EventType() string {
+	return "communication_instruction.updated"
+}
+
+func (InternalEventInstructionWordingCorrected) EntityType() string {
+	return "communication_instruction"
+}
+
 func (InternalEventInternalMailHistoryCreated) EventType() string {
 	return "internal_mail_history.created"
 }
@@ -352,9 +383,33 @@ func (InternalEventMeetingProposalUpdated) EventType() string { return "meeting_
 
 func (InternalEventMeetingProposalUpdated) EntityType() string { return "activity" }
 
+func (InternalEventRecordAssignmentArchived) EventType() string { return "record_assignment.archived" }
+
+func (InternalEventRecordAssignmentArchived) EntityType() string { return "record_assignment" }
+
+func (InternalEventRecordAssignmentCreated) EventType() string { return "record_assignment.created" }
+
+func (InternalEventRecordAssignmentCreated) EntityType() string { return "record_assignment" }
+
+func (InternalEventRecordAssignmentUpdated) EventType() string { return "record_assignment.updated" }
+
+func (InternalEventRecordAssignmentUpdated) EntityType() string { return "record_assignment" }
+
 func (InternalEventReportingChanged) EventType() string { return "reporting.changed" }
 
 func (InternalEventReportingChanged) EntityType() string { return "dynamic" }
+
+func (InternalEventScheduledWordingCorrected) EventType() string { return "scheduled_send.updated" }
+
+func (InternalEventScheduledWordingCorrected) EntityType() string { return "scheduled_send" }
+
+func (InternalEventSdrHandoffCreated) EventType() string { return "sdr_handoff.created" }
+
+func (InternalEventSdrHandoffCreated) EntityType() string { return "sdr_handoff" }
+
+func (InternalEventSdrHandoffUpdated) EventType() string { return "sdr_handoff.updated" }
+
+func (InternalEventSdrHandoffUpdated) EntityType() string { return "sdr_handoff" }
 
 func (InternalEventTagSuggestionAccepted) EventType() string { return "tag_suggestion.accepted" }
 

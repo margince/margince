@@ -186,3 +186,12 @@ date fields after the task ends. Database triggers keep each row's date and visi
 
 The index reads `address_domain_folded`. It finds both a domain and names under it.
 Erasure clears that field, so the row leaves the index.
+
+## Move an extension's migration version
+
+An extension can declare a version move in `migrations/renumbered.txt`, embedded with its SQL files.
+Use the same five-column format as `backend/migrations/renumbered.txt`.
+Its first column is the unit's `ext_<name>` value, from `dbmigrate.NamespaceFor`.
+The loader checks the old content before moving the recorded version.
+The migration-version gate checks extension folders too.
+Without that file, the extension declares no moves.

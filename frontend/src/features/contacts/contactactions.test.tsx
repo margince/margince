@@ -2,11 +2,18 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 /** @vitest-environment happy-dom */
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  render,
+  renderHook,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { en } from "../../i18n/en";
+import { useShortcutDispatcher } from "../../lib/shortcuts";
 import { view } from "../../testing/contactpage.testkit";
 import {
   installFetchStub,
@@ -37,7 +44,19 @@ const reachable: components["schemas"]["Contact360"] = {
   },
 };
 
-function mountHeader(contact = reachable.contact) {
+type Verbs = Readonly<{
+  onWrite: () => void;
+  onLogActivity: () => void;
+  onAddTask: () => void;
+}>;
+
+const noVerbs: Verbs = {
+  onWrite: () => undefined,
+  onLogActivity: () => undefined,
+  onAddTask: () => undefined,
+};
+
+function mountHeader(contact = reachable.contact, verbs = noVerbs) {
   installFetchStub({
     "GET /me": meRoute(
       { contact: ["read", "update"], activity: ["create"] },
@@ -50,10 +69,8 @@ function mountHeader(contact = reachable.contact) {
       <ContactActions
         view={{ ...reachable, contact }}
         contactId={reachable.contact.id}
-        onWrite={() => undefined}
         onResearch={() => undefined}
-        onLogActivity={() => undefined}
-        onAddTask={() => undefined}
+        {...verbs}
       />
     </StoryProviders>,
   );
@@ -123,4 +140,60 @@ it("allows attaching to a readable contact even when its row cannot be edited", 
   expect(
     screen.getByRole("button", { name: en["scheduling.new"] }),
   ).toHaveProperty("disabled", false);
+});
+
+describe("the record keys", () => {
+  const spies = () => ({
+    onWrite: vi.fn(),
+    onLogActivity: vi.fn(),
+    onAddTask: vi.fn(),
+  });
+
+  it("run the verbs the header's own buttons run", async () => {
+    const user = userEvent.setup();
+    renderHook(() => useShortcutDispatcher());
+    const verbs = spies();
+    mountHeader(reachable.contact, verbs);
+    const log = screen.getByRole("button", { name: en["log.title"] });
+    await waitFor(() => expect(log).toHaveProperty("disabled", false));
+    expect(log.getAttribute("aria-keyshortcuts")).toBe("n");
+    expect(
+      screen
+        .getByRole("button", { name: en["contact.action.email"] })
+        .getAttribute("aria-keyshortcuts"),
+    ).toBe("m");
+
+    await user.keyboard("n");
+    expect(verbs.onLogActivity).toHaveBeenCalledOnce();
+    await user.keyboard("t");
+    expect(verbs.onAddTask).toHaveBeenCalledOnce();
+    await user.keyboard("m");
+    expect(verbs.onWrite).toHaveBeenCalledOnce();
+  });
+
+  it("do nothing on a contact the seat may not log against", async () => {
+    const user = userEvent.setup();
+    renderHook(() => useShortcutDispatcher());
+    const verbs = spies();
+    mountHeader({ ...reachable.contact, attachable: false }, verbs);
+    await screen.findByText(en["contact.attachRefused"]);
+
+    await user.keyboard("ntm");
+    expect(verbs.onLogActivity).not.toHaveBeenCalled();
+    expect(verbs.onAddTask).not.toHaveBeenCalled();
+    expect(verbs.onWrite).not.toHaveBeenCalled();
+  });
+
+  it("leave M alone on a contact with nowhere to write to", async () => {
+    const user = userEvent.setup();
+    renderHook(() => useShortcutDispatcher());
+    const verbs = spies();
+    mountHeader({ ...reachable.contact, primary_email: null }, verbs);
+    const log = screen.getByRole("button", { name: en["log.title"] });
+    await waitFor(() => expect(log).toHaveProperty("disabled", false));
+
+    await user.keyboard("mn");
+    expect(verbs.onWrite).not.toHaveBeenCalled();
+    expect(verbs.onLogActivity).toHaveBeenCalledOnce();
+  });
 });

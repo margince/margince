@@ -230,6 +230,9 @@ func (s *Service) readActivities(ctx context.Context, tx pgx.Tx, contactID ids.C
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	contactPos := arg(contactID)
+	if opts.PartyOnly && order == byRecency {
+		extra += " AND " + activities.ContactIsPartySQL(bind(contactPos))
+	}
 	if order != byRecency {
 		identities, err := storekit.MailSeatIdentitiesSQL(ctx, tx, arg)
 		if err != nil {

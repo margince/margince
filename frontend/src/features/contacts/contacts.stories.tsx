@@ -53,6 +53,30 @@ export const ContactsList: Story = {
   },
 };
 
+/** `#/contacts/new`: the list with its create form open, as `C` opens it. */
+export const CreateFormOpen: Story = {
+  render: () => {
+    installFetchStub({
+      "GET /me": meRoute({ contact: ["read", "create"] }),
+      "GET /contacts": () =>
+        jsonResponse({
+          data: [anna],
+          page: { next_cursor: null, has_more: false },
+        }),
+    });
+    return (
+      <StoryProviders>
+        <ContactsScreen startCreating />
+      </StoryProviders>
+    );
+  },
+  play: async () => {
+    await expect(
+      await screen.findByRole("dialog", { name: "New contact" }),
+    ).toBeInTheDocument();
+  },
+};
+
 /** Each address carries its copy glyph, which copies and opens nothing. */
 export const ContactsListCopyAddress: Story = {
   render: () => {
@@ -83,6 +107,43 @@ export const ContactsListCopyAddress: Story = {
     } finally {
       clipboard.restore();
     }
+  },
+};
+
+/** Each address's copy glyph waits for its row: only the hovered row shows one. */
+export const ContactsListCopyOnRowHover: Story = {
+  render: () => {
+    installFetchStub({
+      "GET /me": meRoute({ contact: ["read", "update"] }),
+      "GET /contacts": () =>
+        jsonResponse({
+          data: [
+            { ...anna, primary_email: "anna.weber@brandt.example" },
+            {
+              ...anna,
+              id: "p-2",
+              full_name: "Jonas Keller",
+              primary_email: "jonas.keller@brandt.example",
+            },
+            {
+              ...anna,
+              id: "p-3",
+              full_name: "Mira Hoang",
+              primary_email: "mira.hoang@brandt.example",
+            },
+          ],
+          page: { next_cursor: null, has_more: false },
+        }),
+    });
+    return (
+      <StoryProviders>
+        <ContactsScreen />
+      </StoryProviders>
+    );
+  },
+  play: async () => {
+    const address = await screen.findByText("jonas.keller@brandt.example");
+    await userEvent.hover(address);
   },
 };
 

@@ -146,7 +146,7 @@ function DealCreateAction({
       invalidate="deals"
       screen="deals"
       create={createDeal}
-      startOpen={startOpen}
+      listCreate={{ open: startOpen }}
       onValuesChange={(values) => setFormCompany(values.company_id ?? "")}
       fields={[
         { key: "name", label: "create.dealName", required: true },

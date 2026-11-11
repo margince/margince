@@ -31,6 +31,9 @@ func rewriteTokens(sql string) ([]rewriteToken, error) {
 			if !closed {
 				return nil, errors.New("unterminated SQL span")
 			}
+			if len(out) > 0 && out[len(out)-1].text == "do" && readOnlyMigrationGuard(sql[i:i+n]) {
+				out = out[:len(out)-1]
+			}
 			i += n
 			continue
 		}

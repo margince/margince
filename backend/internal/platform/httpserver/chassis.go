@@ -181,7 +181,9 @@ func BearerToken(header string) string {
 // that could set it could stitch itself into another tenant's story.
 func Correlate(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ctx := principal.WithCorrelationID(r.Context(), ids.NewV7())
+		id := ids.NewV7()
+		ctx := principal.WithCorrelationID(r.Context(), id)
+		w.Header().Set("X-Correlation-ID", id.String())
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }

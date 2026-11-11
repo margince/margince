@@ -19,7 +19,7 @@ func TestDeltaCapturePreservesProviderArrival(t *testing.T) {
 			if resume {
 				from = "https://graph/delta?token=prior"
 			}
-			if _, err := pinnedConn(api).pullFolder(context.Background(), "access", folderInbox, from, time.Time{}, sink, owner, false); err != nil {
+			if _, err := pinnedConn(api).pullFolder(context.Background(), "access", folderInbox, &cursorState{DeltaLink: from}, time.Time{}, sink, owner); err != nil {
 				t.Fatal(err)
 			}
 			if len(sink.recs) != 2 {
@@ -40,14 +40,14 @@ func TestDeltaAPIKeepsArrivalForEachMessage(t *testing.T) {
 	held := 1
 	srv, _ := datedAnchorStub(t, []map[string]any{{"id": "dated", "receivedDateTime": received.Format(time.RFC3339)}, {"id": "unknown"}}, &held)
 	api := NewAPI(srv.Client(), srv.URL)
-	messages, link, err := api.DeltaInit(context.Background(), "access", folderInbox, anchorAfter)
+	messages, link, err := collectAnchor(context.Background(), api, "access", anchorAfter)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(messages) != 2 || !messages[0].ReceivedAt.Equal(received) || !messages[1].ReceivedAt.IsZero() {
 		t.Fatalf("anchor messages = %+v", messages)
 	}
-	messages, _, _, err = api.Delta(context.Background(), "access", link)
+	messages, _, _, err = collectDelta(context.Background(), api, "access", link)
 	if err != nil {
 		t.Fatal(err)
 	}

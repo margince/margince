@@ -113,14 +113,16 @@ The 22 tables owned by `consent`, as the migrations build them. [Back to the ent
 
 ## communication_instruction
 
-19 columns · primary key `(id)` · referenced by 2 foreign keys
+21 columns · primary key `(id)` · referenced by 2 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `acknowledged_at` | `timestamp with time zone` | yes |  |
+| `acknowledged_scope` | `character varying(64)` |  |  |
 | `acknowledged_wording` | `bytea` |  |  |
 | `consumed_at` | `timestamp with time zone` |  |  |
+| `corrected_wording` | `bytea` |  |  |
 | `delivery_id` | `uuid` |  |  |
 | `directed_at` | `timestamp with time zone`, default `now()` | yes |  |
 | `directed_by` | `uuid` | yes | Points at `app_user.id`. |
@@ -167,6 +169,7 @@ The 22 tables owned by `consent`, as the migrations build them. [Back to the ent
 **Triggers**
 
 - `communication_instruction_refuse_rewrite`: `BEFORE DELETE OR UPDATE FOR EACH ROW EXECUTE FUNCTION communication_instruction_refuse_rewrite()`
+- `communication_instruction_wording_correction`: `BEFORE INSERT OR UPDATE FOR EACH ROW EXECUTE FUNCTION guard_instruction_wording_correction()`
 
 ## communication_override
 

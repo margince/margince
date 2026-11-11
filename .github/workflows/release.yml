@@ -1,6 +1,6 @@
 name: Release
 
-# Draft a margince-constellation release, on manual dispatch only. The release
+# Draft a margince-constellation release, on a v* tag or by hand. The release
 # lives in the constellation dist service at test.margince.com, not on GitHub —
 # a constellation release is a server deployment (role images, an incremental
 # patch, SBOMs) and GitHub hosts none of that.
@@ -13,7 +13,13 @@ name: Release
 # behind them. Releasing on every commit spent that budget on a version nobody
 # asked for: the repository is under heavy development and has no real releases
 # yet, which is what the epoch-pinned 1970.* version says out loud. A release is
-# now a decision somebody makes, which is the only cadence a dispatch can have.
+# now a decision somebody makes: a v* tag, or a dispatch for a trial draft.
+#
+# ONE TAG CUTS BOTH RELEASES. On a v* tag this lane drafts the dist release
+# release-tag.yml's GitHub release goes with, versioned by the fixed rule in
+# scripts/release-dist-version.sh: vX.Y.Z becomes YYYY.EDITION.Z. A pre-release
+# tag drafts nothing here, because the dist grammar has none. A dispatch keeps
+# the 1970.<run> trial version below.
 #
 # The GitHub release is NOT here. It belongs to release-tag.yml, which runs on
 # a v* tag: a release page is named with a version somebody chose, and that
@@ -48,6 +54,8 @@ name: Release
 # --patch-base. With no release that went out, the release is the first one and
 # its patch is the whole tree.
 on:
+  push:
+    tags: ['v*']
   workflow_dispatch:
 
 permissions:
@@ -82,6 +90,8 @@ env:
 jobs:
   draft:
     name: Draft release
+    # A pre-release tag has no dist version, so the lane stops before it starts.
+    if: github.ref_type != 'tag' || !contains(github.ref_name, '-')
     timeout-minutes: 30
     # Superseded by a newer run on the same ref: the tip is the commit worth
     # drafting.
@@ -127,10 +137,13 @@ jobs:
           MARGINCE_RELEASE_MANAGEMENT_DIST_TOKEN: ${{ secrets.MARGINCE_DIST_PUBLISHER_TOKEN }}
         run: |
           set -euo pipefail
-          # The year is pinned to the epoch, not the calendar, while the flow
-          # is a PoC: a 1970.* version orders strictly below any real dated
-          # release, so nothing cut here can ever shadow one.
-          version="1970.${GITHUB_RUN_NUMBER}"
+          # A tag names the release by the fixed rule. A dispatch is a trial
+          # draft, pinned to the epoch so it orders below any real release.
+          if [[ "$GITHUB_REF_TYPE" == tag ]]; then
+            version="$(bash scripts/release-dist-version.sh "$GITHUB_REF_NAME" | sed -n 's/^version=//p')"
+          else
+            version="1970.${GITHUB_RUN_NUMBER}"
+          fi
           echo "version=$version" >> "$GITHUB_OUTPUT"
           # The CLI picks the base; the script checks the record and fails
           # closed on anything but a base or the first-release mark.

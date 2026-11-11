@@ -107,7 +107,7 @@ func (s *Service) nameTheEmployers(
 		return nil
 	}
 	var employers map[ids.UUID]crmcontracts.ContactEmployer
-	err := s.degradable(ctx, laneBudget, func(ctx context.Context) error {
+	err := s.degradable(ctx, sourceContactEmployers, laneBudget, func(ctx context.Context) error {
 		var err error
 		employers, err = s.employers.CurrentEmployers(ctx, wanted)
 		return err

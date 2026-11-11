@@ -7,18 +7,15 @@
 
 import { EntityRef } from "../../components/entityref";
 import { BundleUndo } from "../../components/marginchanges";
-import { acceptable, useAcceptChanges } from "../../components/receiptreview";
 import { AppLink } from "../../design-system/applink";
-import { Badge, Button, Card } from "../../design-system/atoms";
+import { Badge, Card } from "../../design-system/atoms";
 import { Disclosure } from "../../design-system/disclosure";
-import { ErrorLine } from "../../design-system/errorline";
 import {
   formatDayMonth,
   formatMoneyWhole,
   formatNumber,
 } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
-import { useCanWrite } from "../../lib/capability";
 import { ENTITY } from "../../lib/entity";
 import type { MarginceChangeBundle } from "../../lib/marginchanges";
 import { routeHash } from "../../lib/router";
@@ -118,10 +115,7 @@ export function DealCard({
   );
 }
 
-/**
- * The deal's own verbs: Undo of every change listed above that the server
- * still allows, and one Mark reviewed for every change still waiting.
- */
+/** The deal's own Undo: every change listed above that the server allows. */
 function DealVerbs({
   group,
   bundle,
@@ -131,39 +125,22 @@ function DealVerbs({
   bundle: MarginceChangeBundle | undefined;
   onSettled: (id: string) => void;
 }>) {
-  const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  const writable = useCanWrite("deal", "update");
-  const waiting = writable ? group.receipts.filter(acceptable) : [];
   const settleAll = () => {
     for (const receipt of group.receipts) onSettled(receipt.id);
   };
-  const review = useAcceptChanges(settleAll);
   const audits = undoableShown(group, bundle);
-  const undo = bundle && audits.length > 1 && (
-    <BundleUndo
-      bundles={[{ ...bundle, audit_log_ids: audits }]}
-      label={plural("brief.done.undoChanges", audits.length, {
-        count: formatNumber(audits.length, locale),
-      })}
-      onDone={settleAll}
-    />
-  );
-  if (!undo && waiting.length === 0) return null;
+  if (!bundle || audits.length <= 1) return null;
   return (
     <div className="brief-done-verbs">
-      <ErrorLine error={review.error} />
-      {undo}
-      {waiting.length > 0 && (
-        <Button
-          variant="primary"
-          pending={review.isPending}
-          onClick={() => review.mutate(waiting)}
-        >
-          {t("brief.changes.markReviewed")}
-        </Button>
-      )}
+      <BundleUndo
+        bundles={[{ ...bundle, audit_log_ids: audits }]}
+        label={plural("brief.done.undoChanges", audits.length, {
+          count: formatNumber(audits.length, locale),
+        })}
+        onDone={settleAll}
+      />
     </div>
   );
 }

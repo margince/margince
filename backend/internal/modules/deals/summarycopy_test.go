@@ -53,7 +53,7 @@ func stageOneFollowUp(t *testing.T, reconciler *FollowUpReconciler, subject *str
 		subject:      subject,
 	}
 	ctx := context.Background()
-	if err := reconciler.stage(ctx, cand, time.Date(2026, 9, 22, 0, 0, 0, 0, time.UTC), summaryIn(ctx, reconciler.language)); err != nil {
+	if err := reconciler.stage(ctx, cand, time.Date(2026, 9, 22, 0, 0, 0, 0, time.UTC), followUpWordsIn(ctx, reconciler.language)); err != nil {
 		t.Fatalf("stage: %v", err)
 	}
 	if len(stager.staged) != 1 {
@@ -70,9 +70,9 @@ func TestAFollowUpFollowsTheInjectedLanguage(t *testing.T) {
 	got := stageOneFollowUp(t, NewFollowUpReconciler(nil, nil, nil).WithBaseLanguage(german), &offer)
 
 	for field, pair := range map[string][2]string{
-		"summary": {got.summary, `Entwirf ein Follow-up zu "Acme Rollout": Nach dem Austausch (call) am 2026-09-21 ist kein nächster Schritt geplant.`},
+		"summary": {got.summary, `Entwirf ein Follow-up zu "Acme Rollout": Nach dem Austausch (call) am 21.09.2026 ist kein nächster Schritt geplant.`},
 		"subject": {got.proposal.Subject, "Follow-up zu Acme Rollout"},
-		"body":    {got.proposal.Body, "Follow-up zum Austausch (call) „Angebot Q4“ vom 2026-09-21. Im Verlauf steht noch kein nächster Schritt."},
+		"body":    {got.proposal.Body, "Follow-up zum Austausch (call) „Angebot Q4“ vom 21.09.2026. Im Verlauf steht noch kein nächster Schritt."},
 	} {
 		if pair[0] != pair[1] {
 			t.Errorf("%s = %q, want %q", field, pair[0], pair[1])
@@ -87,10 +87,10 @@ func TestAFollowUpWithoutAResolverIsEnglish(t *testing.T) {
 	bare := stageOneFollowUp(t, NewFollowUpReconciler(nil, nil, nil), nil)
 
 	for field, pair := range map[string][2]string{
-		"summary":     {bare.summary, `Draft a follow-up on "Acme Rollout" — the call on 2026-09-21 left no next step planned`},
+		"summary":     {bare.summary, `Draft a follow-up on "Acme Rollout" — the call on 21 Sep 2026 left no next step planned`},
 		"subject":     {bare.proposal.Subject, "Follow up on Acme Rollout"},
-		"body":        {bare.proposal.Body, "Follow up on the call from 2026-09-21. No next step is on the timeline yet."},
-		"quoted body": {quoted.proposal.Body, "Follow up on the call “Q4 offer” from 2026-09-21. No next step is on the timeline yet."},
+		"body":        {bare.proposal.Body, "Follow up on the call from 21 Sep 2026. No next step is on the timeline yet."},
+		"quoted body": {quoted.proposal.Body, "Follow up on the call “Q4 offer” from 21 Sep 2026. No next step is on the timeline yet."},
 	} {
 		if pair[0] != pair[1] {
 			t.Errorf("%s = %q, want %q", field, pair[0], pair[1])

@@ -19,7 +19,7 @@ workflow is outside the gate:
 | `pace.yml` | every push to `main` | No (runs after the merge) |
 | `scheduled.yml` | daily and weekly on `main` | No |
 | `sbom.yml` | manual dispatch only | No |
-| `release.yml` | manual dispatch only | No |
+| `release.yml` | `v*` tag push (no pre-release), manual dispatch | No |
 | `release-tag.yml` | `v*` tag push | No (runs on a tag, after every merge) |
 
 `ci.yml` and `cla.yml` run on `merge_group` too, because the queue asks for each required check again.

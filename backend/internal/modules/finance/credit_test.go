@@ -90,6 +90,7 @@ func TestAStoredStatusIsSettledAgainstToday(t *testing.T) {
 		want                  string
 	}{
 		{"open, read past its due date", statusOpen, 50000, 0, 50000, after, statusOverdue},
+		{"open, read late on its due date", statusOpen, 50000, 0, 50000, due.Add(23 * time.Hour), statusOpen},
 		{"overdue with nothing open", statusOverdue, 0, 0, 0, after, statusPaid},
 		{"part paid, read before its due date", statusPartiallyPaid, 50000, 0, 20000, before, statusPartiallyPaid},
 		{"part credited, read before its due date", statusOpen, 50000, 30000, 20000, before, statusOpen},

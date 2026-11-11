@@ -23,7 +23,12 @@ import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
 import { useT } from "../../i18n";
 import { RouteLine } from "./contactroutes";
-import { type IntroRequestInput, useCreateIntroRequest } from "./introrequests";
+import {
+  type IntroRequest,
+  type IntroRequestInput,
+  useCreateIntroRequest,
+  useReplaceIntroRequest,
+} from "./introrequests";
 
 type RouteCandidate = components["schemas"]["ContactGraphRouteCandidate"];
 type FallbackPolicy = components["schemas"]["IntroFallbackPolicy"];
@@ -41,12 +46,14 @@ export function IntroDrawer({
   route,
   open,
   onClose,
+  replacement,
 }: Readonly<{
   contactId: string;
   contactName: string;
   route: RouteCandidate | undefined;
   open: boolean;
   onClose: () => void;
+  replacement?: Pick<IntroRequest, "id" | "version">;
 }>) {
   const t = useT();
   const titleId = useId();
@@ -57,10 +64,16 @@ export function IntroDrawer({
   const [fallback, setFallback] = useState<FallbackPolicy>("none");
 
   const create = useCreateIntroRequest(contactId);
+  const replace = useReplaceIntroRequest(contactId);
+  const [replacementReason, setReplacementReason] = useState("");
+  const saving = replacement ? replace : create;
 
   // An ask with no reason is a favour with no case behind it, and the server
   // refuses it too. Saying so here means the reader learns it before they send.
-  const ready = reason.trim().length > 0 && route !== undefined;
+  const ready =
+    reason.trim().length > 0 &&
+    route !== undefined &&
+    (!replacement || replacementReason.trim().length > 0);
 
   const submit = () => {
     if (!ready || !route) {
@@ -82,16 +95,48 @@ export function IntroDrawer({
       name_drop_allowed: nameDrop,
       fallback_policy: fallback,
     };
-    create.mutate(body, { onSuccess: () => onClose() });
+    if (replacement) {
+      replace.mutate(
+        { ...replacement, reason: replacementReason.trim(), request: body },
+        { onSuccess: onClose },
+      );
+    } else {
+      create.mutate(body, { onSuccess: onClose });
+    }
   };
 
   return (
-    <Modal open={open} onClose={onClose} labelledBy={titleId} intent="drawer">
+    <Modal
+      open={open}
+      onClose={onClose}
+      closeDisabled={saving.isPending}
+      labelledBy={titleId}
+      intent="drawer"
+    >
       <Heading size="large" id={titleId} className="modal-title">
         {t("contact.intro.askTitle", { name: contactName })}
       </Heading>
 
       <div className="form-stack">
+        {replacement ? (
+          <>
+            <p>{t("contact.intro.replaceHint")}</p>
+            <Field
+              label={t("contact.intro.replaceReason")}
+              hint={t("contact.intro.replaceReasonHint")}
+              required
+            >
+              {(control) => (
+                <Textarea
+                  {...control}
+                  value={replacementReason}
+                  onChange={(e) => setReplacementReason(e.target.value)}
+                  maxLength={2000}
+                />
+              )}
+            </Field>
+          </>
+        ) : null}
         {route ? (
           <p className="pn-route">
             <RouteLine route={route} />
@@ -165,16 +210,14 @@ export function IntroDrawer({
             },
           ]}
         />
-        {create.isError ? (
-          <ErrorLine>{t("contact.intro.askFailed")}</ErrorLine>
-        ) : null}
+        {saving.isError ? <ErrorLine error={saving.error} /> : null}
       </div>
       {/* Not "Send": nothing here reaches the contact. */}
       <div className="actions">
-        <Button onClick={onClose} variant="ghost">
+        <Button onClick={onClose} variant="ghost" disabled={saving.isPending}>
           {t("contact.intro.cancel")}
         </Button>
-        <Button onClick={submit} disabled={!ready || create.isPending}>
+        <Button onClick={submit} disabled={!ready} pending={saving.isPending}>
           {t("contact.intro.askAction")}
         </Button>
       </div>

@@ -3127,6 +3127,21 @@
     },
     {
       "tool": "change_relationships",
+      "action": "reassign_handoff",
+      "verb": "reassign_handoff",
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "rep"
+      ],
+      "refused_for": [
+        "read_only"
+      ]
+    },
+    {
+      "tool": "change_relationships",
       "action": "record_introduction",
       "verb": "record_introduction",
       "allowed_for": [
@@ -3162,6 +3177,21 @@
         "manager": "refused",
         "rep": "refused"
       }
+    },
+    {
+      "tool": "change_relationships",
+      "action": "replace_intro_request",
+      "verb": "replace_intro_request",
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "rep"
+      ],
+      "refused_for": [
+        "read_only"
+      ]
     },
     {
       "tool": "change_relationships",
@@ -6413,6 +6443,20 @@
       "tool": "read_details",
       "action": "handled_for_you",
       "verb": "get_handled_for_you",
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ],
+      "refused_for": []
+    },
+    {
+      "tool": "read_details",
+      "action": "handoff_assignee",
+      "verb": "get_handoff_assignee",
       "allowed_for": [
         "admin",
         "management",

@@ -18,17 +18,39 @@ const (
 	HeldByOwner   = "held_by_owner"
 )
 
-var holdingStatuses = [...]string{Held, Unsure, HeldByOwner}
+var statusRules = map[string]struct{ holding, pending bool }{
+	Pending:       {pending: true},
+	Cleared:       {},
+	SharedByOwner: {},
+	Held:          {holding: true},
+	Unsure:        {holding: true},
+	HeldByOwner:   {holding: true},
+}
 
 // HoldingStatuses isolates repair-query arguments from the shared authorization rule.
-func HoldingStatuses() []string { return slices.Clone(holdingStatuses[:]) }
+func HoldingStatuses() []string {
+	var statuses []string
+	for status, rule := range statusRules {
+		if rule.holding {
+			statuses = append(statuses, status)
+		}
+	}
+	slices.Sort(statuses)
+	return statuses
+}
 
 // Holds identifies the settled decisions that withhold thread history.
 func Holds(status string) bool {
-	return slices.Contains(holdingStatuses[:], status)
+	return statusRules[status].holding
+}
+
+// HoldsMessages includes a pending question while its mailbox asks for classification.
+func HoldsMessages(status string) bool {
+	rule := statusRules[status]
+	return rule.holding || rule.pending
 }
 
 // HoldsSQL shares the holding-status rule with set-based readers.
 func HoldsSQL(column string) string {
-	return column + " IN ('" + strings.Join(holdingStatuses[:], "', '") + "')"
+	return column + " IN ('" + strings.Join(HoldingStatuses(), "', '") + "')"
 }
