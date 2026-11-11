@@ -92,7 +92,7 @@ sits on its own at the top. Under it the screens are in three groups:
 
 - **Records**: **Contacts**, **Companies**, **Leads**, **Deals**
 - **Work**: **Projects**, **Filters and views**
-- **Insights**: **Analytics**
+- **Insights**: **Analytics**, **Progress**, **Sales goals**
 
 Settings is not in the sidebar: it is in the account menu at the top right. The
 **Deals** row is the pipeline board; there is no separate Pipeline row. The
@@ -102,7 +102,7 @@ The sidebar has no counts or badges. The Worklist on Home shows those numbers.
 
 ### How do I get around the app?
 To get around Margince, use the sidebar on the left. Or press ⌘K (Ctrl+K on Windows and Linux) to open the command palette, and type where you want to go.
-1. Choose a screen in the sidebar: **Home**, then **Contacts**, **Companies**, **Leads**, **Deals**, **Projects**, **Filters and views** and **Analytics**.
+1. Choose a screen in the sidebar, from **Home** at the top to **Sales goals** at the foot.
 2. Open **Settings** from the account menu at the top right.
 3. To hide the sidebar, choose **Collapse sidebar**, or press ⌘B (Ctrl+B).
 
@@ -114,6 +114,7 @@ Each Margince screen sits in one place in the sidebar, and you reach a few anoth
 - Contacts, companies, leads and deals: the **Records** group.
 - Projects, and saved filters and exports: the **Work** group, under **Projects** and **Filters and views**.
 - Reports and the forecast: **Analytics**, under **Insights**.
+- Results against your sales goal, and the goals: **Progress** and **Sales goals**, under **Insights**.
 - The Worklist, tasks and approvals: **Home**.
 - The pipeline: the **Deals** row, which is the board.
 - Settings: the account menu at the top right, not the sidebar.
@@ -172,7 +173,7 @@ On Windows and Linux, press Ctrl where this list says ⌘.
 | `N` | **Log activity**, on a record |
 | `T` | **Add task**, on a record |
 | `M` | **Write message**, on a record |
-| `⌘↵` | **Save multi-line field** in a field with many lines that you edit, **Send email** in the email editor, or **Submit dialog** in a dialog that holds a form |
+| `⌘↵` | **Save multi-line field** in a record field with many lines that you edit, **Send email** in the email editor, or **Submit dialog** in a dialog that holds a form |
 | `⌘B` | **Show or hide sidebar** |
 | `Esc` | **Close dialog or menu** |
 

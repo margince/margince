@@ -23,6 +23,8 @@ var tableOwners = map[string]string{
 	"report_definition_revision":     "internal/modules/reporting",
 	"sales_target":                   "internal/modules/reporting",
 	"sales_target_revision":          "internal/modules/reporting",
+	"sales_goal_plan":                "internal/modules/reporting",
+	"sales_goal_plan_revision":       "internal/modules/reporting",
 	"report_schedule":                "internal/modules/reporting",
 	"report_execution":               "internal/modules/reporting",
 	"report_edition":                 "internal/modules/reporting",
