@@ -120,7 +120,7 @@ func meetingNotesReaderTx(ctx context.Context, tx pgx.Tx) (notesReader, bool, er
 		SELECT provider, user_id, account_label, provider_scopes FROM capture_connection
 		 WHERE id = @id AND generation = @generation
 		   AND status IN ('connected','error') AND archived_at IS NULL`,
-		pgx.NamedArgs{"id": run.ID, "generation": run.Generation}).Scan(&provider, &owner, &label, &scopes)
+		pgx.NamedArgs{"id": run.ID, argGeneration: run.Generation}).Scan(&provider, &owner, &label, &scopes)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return notesReader{}, false, nil
 	}
@@ -245,7 +245,7 @@ func (s *Sink) MeetingNotesRefused(ctx context.Context) error {
 			return fmt.Errorf("capture: recording the refused notes grant: %w", err)
 		}
 		_, err = storekit.LogSystem(ctx, tx, actionMeetingNotesRefused, map[string]any{
-			detailConnectionID: run.ID.String(), "provider": provider,
+			detailConnectionID: run.ID.String(), detailProvider: provider,
 		})
 		return err
 	})

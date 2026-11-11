@@ -149,9 +149,9 @@ func notesURL(fileID string) string {
 }
 
 // transcriptsOf counts the transcripts landed from one Doc.
-func transcriptsOf(t *testing.T, e *integration.SearchEnv, fileID string) int {
+func notesTranscripts(t *testing.T, e *integration.SearchEnv) int {
 	t.Helper()
-	return countRows(t, e, `SELECT count(*) FROM activity WHERE source_system = 'transcript' AND source_id = '`+notesURL(fileID)+`'`)
+	return countRows(t, e, `SELECT count(*) FROM activity WHERE source_system = 'transcript' AND source_id = '`+notesURL(notesFileID)+`'`)
 }
 
 // A meeting's notes Doc is read through the owner's Docs grant. It lands once,
@@ -170,7 +170,7 @@ func TestMeetingNotesLandOnceAsATranscriptAndQueueAReading(t *testing.T) {
 	if got := docs.readCount(); got != 1 {
 		t.Errorf("the notes Doc was opened %d times over two syncs, want once", got)
 	}
-	if got := transcriptsOf(t, e, notesFileID); got != 1 {
+	if got := notesTranscripts(t, e); got != 1 {
 		t.Fatalf("%d transcripts from the notes Doc, want 1", got)
 	}
 	var (
@@ -232,7 +232,7 @@ func TestANotesDocTakenOffTheEventIsNotRead(t *testing.T) {
 	if got := docs.readCount(); got != 0 {
 		t.Errorf("a Doc taken off the event was opened %d times, want never", got)
 	}
-	if got := transcriptsOf(t, e, notesFileID); got != 0 {
+	if got := notesTranscripts(t, e); got != 0 {
 		t.Errorf("%d transcripts from a removed Doc, want 0", got)
 	}
 }
@@ -250,7 +250,7 @@ func TestANotesGrantOnAnotherAccountReadsNothing(t *testing.T) {
 	if got := docs.readCount(); got != 0 {
 		t.Errorf("a grant on another account opened %d Docs, want none", got)
 	}
-	if got := transcriptsOf(t, e, notesFileID); got != 0 {
+	if got := notesTranscripts(t, e); got != 0 {
 		t.Errorf("%d transcripts through another account, want 0", got)
 	}
 }
@@ -287,7 +287,7 @@ func TestARefusedNotesGrantAsksTheOwnerToReconnect(t *testing.T) {
 	if got := docs.readCount(); got != 1 {
 		t.Errorf("%d Doc reads after the refusal, want only the refused one", got)
 	}
-	if got := transcriptsOf(t, e, notesFileID); got != 0 {
+	if got := notesTranscripts(t, e); got != 0 {
 		t.Errorf("%d transcripts after a refused grant, want 0", got)
 	}
 }
@@ -316,7 +316,7 @@ func TestNotesLandOnlyOnEvidenceStillTrueAtTheWrite(t *testing.T) {
 	if land("myco.example") {
 		t.Error("notes landed after the Doc was taken off the event")
 	}
-	if got := transcriptsOf(t, e, notesFileID); got != 0 {
+	if got := notesTranscripts(t, e); got != 0 {
 		t.Errorf("%d transcripts, want 0", got)
 	}
 }
@@ -360,7 +360,7 @@ func TestAnOutsiderOnTheSeatsWebmailDomainCannotPlantNotes(t *testing.T) {
 	if got := notesRows(t, e, gcalMeeting(t, e).String()); got != 0 {
 		t.Errorf("%d notes links from an outsider on webmail, want 0", got)
 	}
-	if got := docs.readCount(); got != 0 || transcriptsOf(t, e, notesFileID) != 0 {
+	if got := docs.readCount(); got != 0 || notesTranscripts(t, e) != 0 {
 		t.Errorf("an outsider's Doc was opened %d times, want never and no transcript", got)
 	}
 }
@@ -378,7 +378,7 @@ func TestNotesAreNotReadOnceTheOrganizersDomainIsNoLongerOurs(t *testing.T) {
 	_, syncNotes := connectNotes(t, env, docs, captureOwner, &queuedReadings{})
 	syncNotes()
 
-	if got := docs.readCount(); got != 0 || transcriptsOf(t, e, notesFileID) != 0 {
+	if got := docs.readCount(); got != 0 || notesTranscripts(t, e) != 0 {
 		t.Errorf("a Doc of a no-longer-trusted organizer was opened %d times, want never", got)
 	}
 }
@@ -473,7 +473,7 @@ func TestANotesDocAttachedAgainIsReadAgain(t *testing.T) {
 	}
 	_, syncNotes := connectNotes(t, env, &docsFeed{}, captureOwner, &queuedReadings{})
 	syncNotes()
-	if got := transcriptsOf(t, e, notesFileID); got != 1 {
+	if got := notesTranscripts(t, e); got != 1 {
 		t.Errorf("%d transcripts from the Doc attached again, want 1", got)
 	}
 }
@@ -521,7 +521,7 @@ func TestTwoSyncsLandingOneDocAtOnceLandItOnce(t *testing.T) {
 	if second.err != nil || second.landed {
 		t.Errorf("second landing: landed %v, err %v; want it to find the first one's transcript", second.landed, second.err)
 	}
-	if got := transcriptsOf(t, e, notesFileID); got != 1 {
+	if got := notesTranscripts(t, e); got != 1 {
 		t.Errorf("%d transcripts, want 1", got)
 	}
 }
