@@ -11704,6 +11704,21 @@ export const en = {
     "Connect the account you work in. Your email files itself to the right contacts and deals, and your calendar puts meetings on records and gives your booking link your free times.",
   "connectors.provGmail": "Gmail",
   "connectors.provGcal": "Google Calendar",
+  "connectors.provGdocs": "Google Docs",
+  "connectors.cannotReadNotes": "Cannot read meeting notes",
+  "connectors.reconnectToReadNotes":
+    "Reconnect to read meeting notes. Google was not given access to the notes documents.",
+  "connectors.bringsNotes": "Meeting notes",
+  "connectors.notes.name": "Meeting notes",
+  "connectors.notes.desc":
+    "The notes and transcripts Google Meet writes are read from Google Docs and kept on the meeting.",
+  "connectors.notes.connect": "Connect meeting notes",
+  "connectors.notes.stop": "Stop reading meeting notes",
+  "connectors.notes.stopTitle": "Stop reading meeting notes?",
+  "connectors.notes.stopBody":
+    "Margince stops reading the notes Google Meet writes. Mail and calendar keep running, and notes already on meetings stay.",
+  "connectors.notes.otherAccount":
+    "Meeting notes are connected with {notes}, and the calendar with {calendar}. Notes are read only for meetings in the calendar of the account that connected them, so connect meeting notes with {calendar}.",
   "connectors.provGraph": "Outlook",
   "connectors.provGraphCal": "Outlook Calendar",
   "connectors.provImap": "IMAP mailbox",
@@ -15311,6 +15326,7 @@ export const en = {
   "oauthApp.redirectCopiedFor": "Copied {purpose} URI",
   "oauthApp.redirect.mailbox_connect": "Mailbox",
   "oauthApp.redirect.calendar_connect": "Calendar",
+  "oauthApp.redirect.documents_connect": "Meeting notes",
   "oauthApp.redirect.sign_in": "Sign-in",
   "oauthApp.redirect.extension_connect": "Connect",
   "oauthApp.redirectTitle": "Authorized redirect URIs",

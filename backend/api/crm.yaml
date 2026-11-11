@@ -37006,10 +37006,10 @@ components:
       name: provider
       in: path
       required: true
-      schema: { type: string, enum: [gmail, gcal, graph, graphcal, imap, test_mailbox] }
+      schema: { type: string, enum: [gmail, gcal, gdocs, graph, graphcal, imap, test_mailbox] }
       description: |
         The mail/calendar provider (A51 email+calendar parity). Every provider connects through
-        the same operation; gmail/gcal/graph/graphcal authorize by OAuth redirect, imap by
+        the same operation; gmail/gcal/gdocs/graph/graphcal authorize by OAuth redirect, imap by
         credential submission, and test_mailbox connects immediately with neither (a QC-only
         connector, reachable only when the deployment armed operations.allow_test_mailbox — a
         real deployment answers connector_unsupported for it, the same as for an unrecognized
@@ -37017,6 +37017,8 @@ components:
         Microsoft 365 mail+calendar (Outlook via Graph), `imap` = the self-hostable IMAP
         engine. Mail and calendar are always SEPARATE connections on either vendor: one
         consent each, so a contact can bring one without the other and disconnect either.
+        `gdocs` is a Google account's grant to read the Google Docs Meet writes its notes and
+        transcripts into (`documents.readonly`); it is its own connection beside the calendar.
         WhatsApp/Telegram connect is the messaging-channels surface, not this one.
     Id:
       name: id
@@ -39757,12 +39759,13 @@ components:
       properties:
         purpose:
           type: string
-          enum: [sign_in, mailbox_connect, calendar_connect, extension_connect]
+          enum: [sign_in, mailbox_connect, calendar_connect, documents_connect, extension_connect]
           x-extensible-enum: true
           description: >-
             Which flow uses this URL. `sign_in` is the login callback. `mailbox_connect` and
             `calendar_connect` are the per-user mail and calendar consent callbacks, which are
-            SEPARATE connectors served on different paths. `extension_connect` is the consent
+            SEPARATE connectors served on different paths. `documents_connect` is Google's
+            meeting-notes consent callback, a third connector on its own path. `extension_connect` is the consent
             callback of an extension unit's OAuth app, and the only purpose such an app lists. ONE app backs all three on either
             vendor, and registering only some of them fails the others at the consent screen —
             Google says `redirect_uri_mismatch`, Microsoft says `AADSTS50011`, and neither names
@@ -40863,7 +40866,7 @@ components:
       required: [id, provider, status, scopes, can_backfill]
       properties:
         id: { type: string, format: uuid }
-        provider: { type: string, enum: [gmail, gcal, graph, graphcal, imap, test_mailbox], x-extensible-enum: true, description: The mail/calendar provider (A51 email+calendar parity). }
+        provider: { type: string, enum: [gmail, gcal, gdocs, graph, graphcal, imap, test_mailbox], x-extensible-enum: true, description: The mail/calendar/meeting-notes provider (A51 email+calendar parity). }
         can_backfill:
           type: boolean
           description: |
@@ -42520,7 +42523,7 @@ components:
           items:
             type: object
             properties:
-              provider: { type: string, enum: [gmail, gcal, graph, graphcal, imap, test_mailbox], x-extensible-enum: true }
+              provider: { type: string, enum: [gmail, gcal, gdocs, graph, graphcal, imap, test_mailbox], x-extensible-enum: true }
               status: { type: string, enum: [connected, disconnected, error, reauth_required], x-extensible-enum: true }
               last_synced_at: { type: [string, 'null'], format: date-time }
               last_sync_error_class: { type: [string, 'null'] }

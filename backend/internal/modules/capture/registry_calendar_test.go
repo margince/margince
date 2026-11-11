@@ -12,21 +12,7 @@ import (
 )
 
 func TestCalendarWriteGrantMatchesFrontend(t *testing.T) {
-	source, err := os.ReadFile("../../../../frontend/src/lib/connector-status.ts")
-	if err != nil {
-		t.Fatal(err)
-	}
-	table := regexp.MustCompile(`(?s)const CALENDAR_WRITE_SCOPES[^=]*= (\{.*?\});`).FindSubmatch(source)
-	if len(table) != 2 {
-		t.Fatal("calendar grant table missing")
-	}
-	// TypeScript allows trailing commas; JSON is the parsed table's common subset.
-	literal := regexp.MustCompile(`,\s*([}\]])`).ReplaceAll(table[1], []byte("$1"))
-	literal = regexp.MustCompile(`(?m)^(\s*)([A-Za-z][A-Za-z0-9_]*):`).ReplaceAll(literal, []byte(`${1}"${2}":`))
-	var grants map[string][]string
-	if err := json.Unmarshal(literal, &grants); err != nil {
-		t.Fatal(err)
-	}
+	grants := frontendScopeTable(t, "CALENDAR_WRITE_SCOPES")
 	if len(calendarWriteScopes) == 0 || len(grants) != len(calendarWriteScopes) {
 		t.Fatalf("frontend providers %v do not match backend %v", grants, calendarWriteScopes)
 	}
@@ -46,4 +32,26 @@ func TestCalendarWriteGrantMatchesFrontend(t *testing.T) {
 	if CalendarWriteGranted("unknown", []string{"Calendars.ReadWrite"}) {
 		t.Error("unknown provider accepted")
 	}
+}
+
+// frontendScopeTable reads one provider-to-scopes table out of
+// frontend/src/lib/connector-status.ts, the mirror each grant check keeps.
+func frontendScopeTable(t *testing.T, name string) map[string][]string {
+	t.Helper()
+	source, err := os.ReadFile("../../../../frontend/src/lib/connector-status.ts")
+	if err != nil {
+		t.Fatal(err)
+	}
+	table := regexp.MustCompile(`(?s)const ` + name + `[^=]*= (\{.*?\});`).FindSubmatch(source)
+	if len(table) != 2 {
+		t.Fatalf("%s missing from connector-status.ts", name)
+	}
+	// TypeScript allows trailing commas; JSON is the parsed table's common subset.
+	literal := regexp.MustCompile(`,\s*([}\]])`).ReplaceAll(table[1], []byte("$1"))
+	literal = regexp.MustCompile(`(?m)^(\s*)([A-Za-z][A-Za-z0-9_]*):`).ReplaceAll(literal, []byte(`${1}"${2}":`))
+	var grants map[string][]string
+	if err := json.Unmarshal(literal, &grants); err != nil {
+		t.Fatal(err)
+	}
+	return grants
 }
