@@ -34,6 +34,25 @@ export function contact360Query(contactId: string) {
   });
 }
 
+// The contacts around a contact: current colleagues and the others on its deals.
+// One page at the contract's ceiling. The composer matches typed names in it,
+// and a name on a second page would never be offered.
+export function relatedContactsQuery(contactId: string | undefined) {
+  return queryOptions({
+    queryKey: ["contactsRelatedTo", contactId],
+    queryFn:
+      contactId == null
+        ? skipToken
+        : async () =>
+            unwrap(
+              await api.GET("/contacts", {
+                params: { query: { related_to: contactId, limit: 200 } },
+              }),
+            ).data,
+    staleTime: 60_000,
+  });
+}
+
 // A 360 refused while the row is re-read may be an archive the row will report.
 // So the contact page waits for the row before it calls itself unopened.
 export function contactPageState(
