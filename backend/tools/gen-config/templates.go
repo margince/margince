@@ -125,10 +125,12 @@ func yamlScalar(text string) (string, error) {
 
 const envHeader = `# Written by tools/gen-config; run ` + "`make config-gen`" + ` after a change.
 #
-# Every variable a Margince program or image entrypoint reads, commented out at its default. Copy
-# a line to .env.local (git-ignored) and remove its "# " to set it. A secret has no default:
-# write its value here, not a ${file:...} reference, because the entrypoints and ` + "`make dev`" + ` read
-# this file as shell too. What each variable does is in docs/reference/configuration.md.
+# Every variable a Margince program or image entrypoint reads, commented out at its default. To set
+# one, remove its "# " and write the value: on a server in /etc/margince/margince.env, in a checkout
+# in .env.local (git-ignored). A secret has no default: write its value, not a ${file:...}
+# reference, because the entrypoints read this file as shell too. Make the vault root key once,
+# with ` + "`openssl rand -base64 32`" + `, and keep it apart from your backups. Each variable is
+# described in docs/reference/configuration.md of the Margince repository.
 `
 
 // envInputs are the variables .env.example lists beside the settings: those
