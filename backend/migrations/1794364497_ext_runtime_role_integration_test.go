@@ -54,9 +54,14 @@ func TestTheExtRuntimeMigrationRefusesARoleThatHoldsTooMuch(t *testing.T) {
 		// unprivileged runs the migration as a migrator that may not alter roles,
 		// as on a deployed database.
 		unprivileged bool
-		want         string
+		// untouched: the role's pg_authid row must be the same tuple afterwards.
+		// That row is shared by every database, so a needless rewrite collides
+		// with a migration of another database.
+		untouched bool
+		want      string
 	}{
 		{name: "a new role", want: ""},
+		{name: "a role that holds nothing more, left unwritten", setup: `CREATE ROLE ` + probe + ` NOLOGIN NOINHERIT`, untouched: true, want: ""},
 		{name: "a role that may log in, reset by a superuser migrator", setup: `CREATE ROLE ` + probe + ` LOGIN`, want: ""},
 		{name: "a role that may log in", setup: `CREATE ROLE ` + probe + ` LOGIN NOINHERIT`, unprivileged: true, want: "holds an attribute it must not have"},
 		{name: "a role that is a member of margince_app", setup: `CREATE ROLE ` + probe + ` NOLOGIN NOINHERIT; GRANT margince_app TO ` + probe, want: "is a member of margince_app"},
@@ -74,8 +79,17 @@ func TestTheExtRuntimeMigrationRefusesARoleThatHoldsTooMuch(t *testing.T) {
 						t.Fatalf("becoming a migrator that may not alter roles: %v", err)
 					}
 				}
+				before := ""
+				if c.untouched {
+					before = authidRow(t, tx, probe)
+				}
 				if _, err := tx.Exec(ctx, strings.ReplaceAll(upSQL, "ext_runtime", probe)); err != nil {
 					return err
+				}
+				if c.untouched {
+					if after := authidRow(t, tx, probe); after != before {
+						t.Errorf("the migration rewrote a role that already held only what it should (row %s became %s)", before, after)
+					}
 				}
 				// Rolled back whatever happened, so no probe role outlives the case.
 				return errRolledBack
@@ -91,3 +105,15 @@ func TestTheExtRuntimeMigrationRefusesARoleThatHoldsTooMuch(t *testing.T) {
 }
 
 var errRolledBack = errors.New("rolled back on purpose")
+
+// authidRow is the physical address of the role's pg_authid tuple, which every
+// update moves. Reading it needs a superuser.
+func authidRow(t *testing.T, tx pgx.Tx, role string) string {
+	t.Helper()
+	var ctid string
+	err := tx.QueryRow(context.Background(), `SELECT ctid::text FROM pg_authid WHERE rolname = $1`, role).Scan(&ctid)
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		t.Fatalf("reading the probe role's pg_authid row: %v", err)
+	}
+	return ctid
+}

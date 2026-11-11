@@ -79,6 +79,13 @@ var equivalentContent = map[string]map[string][]equivalence{
 			applied: "d5ec53c23e2347fadc65f9bdd9d63e9dfae40c6897c1e1b8c59f046c8e99eb0e",
 			source:  "76336c558410fc1ee67862f22fb4689b5f9655917af35617f55c11b31f154669",
 		}},
+		// The current up half resets the ext_runtime role only when an attribute is
+		// wrong; the applied half reset it always. Both leave the same role and
+		// the same grants, and the down half is unchanged.
+		"1794364497": {{
+			applied: "8e277071e58fc236abf58acb178be1c8efbeb0014ef3440f49db0809546e401c",
+			source:  "5e76f0cc29fdb2f29d7112ba49b2993cc94cc314d0fe29156ccf1b1be6403786",
+		}},
 	},
 }
 

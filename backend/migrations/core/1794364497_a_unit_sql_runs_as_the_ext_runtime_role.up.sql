@@ -14,9 +14,15 @@
 -- skipped grant would leave every unit table refused at run time, with nothing
 -- to say why, and an applied version never runs again.
 --
--- A role that already exists is not trusted. A superuser migrator resets its
--- attributes; every migrator then checks them, its memberships, and its rights
--- outside schema ext, and refuses a role that holds more than it should.
+-- A role that already exists is not trusted. A superuser migrator resets an
+-- attribute that is wrong; any other migrator refuses it. Every migrator then
+-- checks the role's memberships and its rights outside schema ext, and refuses
+-- a role that holds more than it should.
+--
+-- The reset runs only when an attribute is wrong. ALTER ROLE rewrites the
+-- role's row in pg_authid, which every database of the cluster shares, so two
+-- databases migrating at once would both write that row and one would fail
+-- with "tuple concurrently updated".
 --
 -- Tables a unit's migration creates later are covered by the default privileges:
 -- they apply to what THIS role, the one that applies unit migrations, creates in
@@ -27,6 +33,7 @@ DO $$
 DECLARE
   migrator_is_superuser boolean := (SELECT rolsuper FROM pg_roles WHERE rolname = current_user);
   may_create_roles boolean := (SELECT rolsuper OR rolcreaterole FROM pg_roles WHERE rolname = current_user);
+  wrong_attribute boolean;
   found text;
 BEGIN
   IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'ext_runtime') THEN
@@ -34,12 +41,13 @@ BEGIN
       RAISE EXCEPTION 'the ext_runtime role does not exist. As a superuser, run: CREATE ROLE ext_runtime NOLOGIN NOINHERIT; GRANT ext_runtime TO margince_app; then run the migrations again';
     END IF;
     CREATE ROLE ext_runtime NOLOGIN NOINHERIT;
-  ELSIF migrator_is_superuser THEN
-    ALTER ROLE ext_runtime NOLOGIN NOSUPERUSER NOINHERIT NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS;
   END IF;
 
-  IF EXISTS (SELECT FROM pg_roles WHERE rolname = 'ext_runtime'
-             AND (rolcanlogin OR rolsuper OR rolinherit OR rolcreatedb OR rolcreaterole OR rolreplication OR rolbypassrls)) THEN
+  SELECT rolcanlogin OR rolsuper OR rolinherit OR rolcreatedb OR rolcreaterole OR rolreplication OR rolbypassrls
+    INTO wrong_attribute FROM pg_roles WHERE rolname = 'ext_runtime';
+  IF wrong_attribute AND migrator_is_superuser THEN
+    ALTER ROLE ext_runtime NOLOGIN NOSUPERUSER NOINHERIT NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS;
+  ELSIF wrong_attribute THEN
     RAISE EXCEPTION 'the ext_runtime role holds an attribute it must not have. As a superuser, run: ALTER ROLE ext_runtime NOLOGIN NOSUPERUSER NOINHERIT NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS; then run the migrations again';
   END IF;
   SELECT string_agg(granted.rolname, ', ') INTO found
