@@ -26,6 +26,7 @@ const historicalAuditPendingSQL = `EXISTS(
  AND retained.envelope->'entity'->>'id'=certificate.entity_id::text
  AND retained.envelope->'trace'->>'audit_log_id'<>certificate.id::text)`
 
+// HistoricalAuditCursor resumes a retention job without skipping held history.
 type HistoricalAuditCursor struct {
 	After ids.UUID `json:"after"`
 	Until ids.UUID `json:"until"`

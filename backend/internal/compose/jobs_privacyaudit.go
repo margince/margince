@@ -8,9 +8,10 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/riverqueue/river"
+
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/jobs"
-	"github.com/riverqueue/river"
 )
 
 type privacyRetentionCursor struct {

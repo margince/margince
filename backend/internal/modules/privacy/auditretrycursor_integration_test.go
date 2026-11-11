@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -88,7 +89,7 @@ func TestAuditRetrySweepReturnsToHeldLinkedCopiesAfterRelease(t *testing.T) {
 			t.Fatal(err)
 		}
 		service := NewRetentionService(e.db, nil, slog.Default(), nil)
-		runAuditRetrySweep(t, ctx, service)
+		runAuditRetrySweep(ctx, t, service)
 		if err := e.db.Tx(ctx, func(tx pgx.Tx) error {
 			assertLegacyAuditImage(ctx, t, tx, original, true)
 			_, err := tx.Exec(ctx, `UPDATE contact SET legal_hold=false WHERE id=@id`, pgx.StrictNamedArgs{"id": subject})
@@ -96,7 +97,7 @@ func TestAuditRetrySweepReturnsToHeldLinkedCopiesAfterRelease(t *testing.T) {
 		}); err != nil {
 			t.Fatal(err)
 		}
-		runAuditRetrySweep(t, ctx, service)
+		runAuditRetrySweep(ctx, t, service)
 		if err := e.db.Tx(ctx, func(tx pgx.Tx) error {
 			assertLegacyAuditImage(ctx, t, tx, original, false)
 			return nil
@@ -106,7 +107,7 @@ func TestAuditRetrySweepReturnsToHeldLinkedCopiesAfterRelease(t *testing.T) {
 	})
 }
 
-func runAuditRetrySweep(t *testing.T, ctx context.Context, service *RetentionService) {
+func runAuditRetrySweep(ctx context.Context, t *testing.T, service *RetentionService) {
 	t.Helper()
 	var cursor HistoricalAuditCursor
 	for range 20 {
