@@ -115,14 +115,14 @@ const (
 // readCandidates reads every kind of candidate. Only a contact is weighed for
 // a call, meeting or note; a task weighs them all.
 func readCandidates(ctx context.Context, tx pgx.Tx, eligible, tasks []ids.UUID) (map[candidateRead]map[ids.UUID][]emailCandidate, error) {
-	contact, company, deal := scopedTable{"contact", "p"}, scopedTable{"company", "co"}, scopedTable{"deal", "d"}
+	contact, company, deal := scopedTable{linkEntityContact, "p"}, scopedTable{linkEntityCompany, "co"}, scopedTable{linkEntityDeal, "d"}
 	reads := []struct {
 		kind candidateRead
 		candidateQuery
 		rows []ids.UUID
 	}{
 		{candidateContact, candidateQuery{contactCandidatesSQL, []scopedTable{contact}, ""}, eligible},
-		{candidateLead, candidateQuery{leadCandidatesSQL, []scopedTable{{"lead", "ld"}}, ""}, tasks},
+		{candidateLead, candidateQuery{leadCandidatesSQL, []scopedTable{{linkEntityLead, "ld"}}, ""}, tasks},
 		{candidateCompany, candidateQuery{companyCandidatesSQL, []scopedTable{company}, ""}, tasks},
 		{candidateDealContact, candidateQuery{dealContactCandidatesSQL, []scopedTable{contact, deal}, "r"}, tasks},
 		{candidateDealCompany, candidateQuery{dealCompanyCandidatesSQL, []scopedTable{company, deal}, ""}, tasks},
