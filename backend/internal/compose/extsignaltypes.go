@@ -66,3 +66,21 @@ func (s extensionSignals) Create(ctx context.Context, kind string, subject exten
 	published, err := publishOne[crm.Signal](filed)
 	return published, created, err
 }
+
+// preflightExtensionKinds refuses a set whose company types, record kinds,
+// reports or signal types are malformed, before anything is registered.
+func preflightExtensionKinds(exts []extension.Extension) error {
+	for _, preflight := range []func([]extension.Extension) error{preflightCompanyTypes, preflightRecordKinds, preflightReports, preflightSignalTypes} {
+		if err := preflight(exts); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// registerExtensionKinds fills the registries the preflight just passed.
+func registerExtensionKinds(exts []extension.Extension) {
+	for _, register := range []func([]extension.Extension){registerCompanyTypes, registerRecordKinds, registerReports, registerSignalTypes} {
+		register(exts)
+	}
+}
