@@ -97,8 +97,14 @@ is not.
 
 ## Release it when you stop
 
-To finish takes no step from you. GitHub closes the issue when a pull request whose
-body says `Closes #N` merges, but it keeps the labels. So
+GitHub closes an issue when a pull request whose body says `Closes #N` merges into the default branch.
+For work finished on `develop`, close the issue with a link to the landed fix:
+
+```sh
+gh issue close <n> --reason completed --comment "Completed on develop: <commit or merged PR link>."
+```
+
+GitHub keeps the labels when an issue closes. So
 [`issue-closed.yml`](../../.github/workflows/issue-closed.yml) takes
 `status: in progress` off an issue as soon as it closes.
 
