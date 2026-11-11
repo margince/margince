@@ -305,14 +305,7 @@ func (s *Store) ReadTranscript(ctx context.Context, activityID ids.ActivityID) (
 		}
 		out.Lines = transcriptLines(*activity.Body)
 		out.OccurredAt = activity.OccurredAt
-		if activity.Links != nil {
-			for _, link := range *activity.Links {
-				out.Links = append(out.Links, ActivityLinkInput{
-					EntityType: string(link.EntityType),
-					EntityID:   ids.UUID(link.EntityId),
-				})
-			}
-		}
+		out.Links = filedUnder(activity)
 		return nil
 	})
 	return out, err

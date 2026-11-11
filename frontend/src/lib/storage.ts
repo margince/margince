@@ -128,6 +128,13 @@ export const STORAGE_KEYS = {
     area: "local",
     lifetime: "seat",
   },
+  // What the last Undo of many deals answered for each deal. The server keeps
+  // no record of a run, so this browser keeps the last one.
+  lastBulkUndo: {
+    name: "margince.changes.lastBulkUndo",
+    area: "local",
+    lifetime: "seat",
+  },
   // The task reminders this browser has shown as a notification, so each is
   // shown once across its tabs. Seat: the next seat to sign in starts afresh.
   taskRemindersShown: {

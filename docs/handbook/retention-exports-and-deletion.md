@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/compose/erasuremanualreview.go frontend/src/features/privacy frontend/src/features/lists/filterexport.tsx frontend/src/features/import/import.result.tsx backend/internal/modules/privacy backend/internal/modules/consent backend/internal/modules/collections/exportsource.go backend/internal/compose/export.go -->
+<!-- describes: backend/internal/compose/erasuremanualreview.go backend/internal/compose/privacyreview frontend/src/features/privacy frontend/src/features/lists/filterexport.tsx frontend/src/features/import/import.result.tsx backend/internal/modules/privacy backend/internal/modules/consent backend/internal/modules/collections/exportsource.go backend/internal/compose/export.go -->
 # What is kept, what is destroyed
 
 What Margince keeps, for how long, what a delete destroys, and how you get data in and out. Read it before you promise anything to a customer or to someone who checks your records.
@@ -72,6 +72,15 @@ Other note text stays. Reviewers need a full seat, rights to read and delete all
 and read access to the retained content. If no active Admin or Ops member qualifies, erasure stops
 and says how to restore review access and retry.
 
+Some older decided proposals had their text removed by an erasure but no longer say which contact
+they were about. Margince keeps their old history, because it cannot prove whose details it holds.
+After an upgrade, each such proposal gets one **Manual privacy review needed** notification.
+
+The link opens **Settings → Audit log** filtered to that proposal, so you can read its history and
+decide. Reviewers also need to read the audit log. A proposal about a record under legal hold gets
+no notification. If no one can review it, the update stops in **Settings → System health** until
+review access is restored.
+
 The same review access is needed to receive alerts about an opt-out receipt that could not be sent. If no one has it when a receipt is
 missed, the alert arrives within 15 minutes of access being restored. This works only when
 access is restored within 30 days of the missed receipt.
@@ -108,6 +117,19 @@ Also called: data retention, retention period, auto-delete.
 To record consent, or to mark a contact as do-not-contact for a purpose, open the contact. Find the **Communication permissions** panel and choose **Manage consent and proof history**. In the side panel choose **Record consent** for a purpose, or **Withdraw**. Your team cannot record a purpose that needs double opt-in. Instead, choose **Ask them to confirm their details** on the same panel to preview the mail and then send the contact a private link. You add purposes in **Settings → Privacy and retention → Consent purposes → Add purpose**.
 
 Also called: opt-in, opt-out, do not contact, unsubscribe someone, marketing permission, GDPR consent.
+
+### How do I unblock a contact, or remove a stop recorded by mistake?
+To unblock a contact in Margince, open its **Research** tab and find **Stops** in **Communication permissions**. Choose **Correct this stop** if it was recorded by mistake, or **Take back this stop**. Give a reason under **Why (kept in the record history)**. Only the contact can lift a stop they set.
+Also called: unblock a contact, undo do-not-contact, lift an opt-out, contact blocked by mistake.
+
+### How do I take back a recorded request to be contacted?
+To take back or stop a recorded request to be contacted, open the contact's **Research** tab. In **Communication permissions**, choose **Take back this request**, and confirm **Take back this request?**.
+Also called: stop a contact request, withdraw a contact request, undo "asked to be contacted".
+
+### How do I send newsletters to existing customers without consent?
+<!-- opens: settings/privacy -->
+To let existing customers receive newsletters, open **Settings → Privacy and retention**, tab **Existing customers**, and choose **Declare a notice**. The newsletters must be for products like the ones they have. Say where and when the customers were told they can object. This follows German law. Customers of that entity in that period then get your newsletters with an opt-out link.
+Also called: newsletter to customers, opt-in for customers, existing customer exception.
 
 ## Archive is not delete
 

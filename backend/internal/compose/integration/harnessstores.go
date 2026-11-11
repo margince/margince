@@ -32,6 +32,7 @@ func (e *Env) bindStores(db *database.DB) {
 	// cannot import, and compose's installationname suites prove it.
 	// Merge readers use stored plan dates; no current-week calculation is needed.
 	e.Contacts = contacts.NewStore(db).WithConsumerMail(capture.MatcherTx).
+		WithSenderStamp(activities.StampProvenSendersTx).
 		WithParticipantRosterReader(activities.EnsureParticipantRosterVisibleTx).
 		WithProviderRunReader(integrations.ReadRunForContactTx).
 		WithMergeSignalReader(signals.PreviewSignalCarry(nil)).

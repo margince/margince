@@ -31,6 +31,8 @@ const markerHoldLockSQL = `LOCK TABLE company,contact,deal,lead,project,data_sub
 type HistoricalAuditPage struct {
 	Scanned []ids.UUID
 	Changed int
+	// Review names records whose kept copies a reviewer must check by hand.
+	Review []ErasureReviewSource
 }
 
 // RedactHistoricalAuditPageTx advances over the audit primary key, including
@@ -44,8 +46,7 @@ func RedactHistoricalAuditPageTx(ctx context.Context, tx pgx.Tx, after, until id
 		return HistoricalAuditPage{}, err
 	}
 	rows, err := tx.Query(ctx, `SELECT id, entity_type, entity_id,
-	 action=ANY(@erasure_actions) AND before IS NULL AND after IS NULL
-	 AND (evidence ? 'cause' OR evidence ? 'retention_action' OR evidence ? 'emails_suppressed')
+	 `+storekit.PhysicalErasureCertificateSQL("audit_log", "@erasure_actions")+`
 	 FROM audit_log WHERE id > @after AND id < @until ORDER BY id LIMIT @limit`,
 		pgx.StrictNamedArgs{"after": after, "until": until, auditPageLimitParameter: limit, "erasure_actions": storekit.AuditRedactionActions()})
 	if err != nil {
@@ -87,19 +88,15 @@ func redactHistoricalRecord(ctx context.Context, tx pgx.Tx, original ids.UUID, k
 		return false, err
 	}
 	var needed bool
-	if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM audit_log history, audit_log certificate
-	 WHERE certificate.id = @original AND history.entity_type = certificate.entity_type
-	 AND history.entity_id = certificate.entity_id
-	 AND (history.occurred_at, history.id) <= (certificate.occurred_at, certificate.id)
-	 AND `+storekit.AuditRedactionNeededSQL+`)
-	 OR EXISTS (SELECT 1 FROM event_outbox retained, audit_log certificate
-	 WHERE certificate.id = @original AND retained.created_at <= certificate.occurred_at
-	 AND retained.envelope->'entity'->>'type' = certificate.entity_type
-	 AND retained.envelope->'entity'->>'id' = certificate.entity_id::text
-	 AND retained.envelope->'trace'->>'audit_log_id' <> certificate.id::text)`,
+	if err := tx.QueryRow(ctx, `SELECT `+historicalAuditPendingSQL+`
+   FROM audit_log certificate WHERE certificate.id=@original`,
 		pgx.StrictNamedArgs{"original": original}).Scan(&needed); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return false, nil
+		}
 		return false, err
 	}
+
 	if !needed {
 		return false, nil
 	}

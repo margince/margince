@@ -7,13 +7,18 @@ counted, how the count differs by role, and what an agent is told when it stops.
 What an agent may do at all is in
 [Agents, passports and what they may do](agents-and-passports.md).
 
+### How do I change how much an agent may do?
+<!-- opens: settings/usage -->
+To change an agent's allowance in Margince, open **Settings → AI usage**, then **Agent limits**, and press **Edit allowances** on **Agent passport allowances**. Change the values for the whole installation, or for one role under **By role**, and press **Save**. **Use defaults** goes back to the starting values.
+Also called: agent limit, rate limit, quota, raise an agent's allowance, agent calls per day.
+
 ## Allowances per window
 
 Each passport gets an allowance per window: changes made, calls that go out,
 and total calls. Every call counts once, a read too. A long list is still one
 call. By default the window is 24 hours, and the allowances are 200
 changes, 20 calls that go out and 1,000 calls in total. An administrator
-changes them under **Settings › AI usage › Agent passport allowances**: press
+changes them under **Settings → AI usage → Agent limits**, on **Agent passport allowances**: press
 **Edit allowances**, change the values, and press **Save**. One more count shows
 how many AI tokens the agent used; it is only for you to see, and limits
 nothing.

@@ -27,13 +27,37 @@ type tokens struct {
 	reads int
 }
 
-func (t *tokens) source() (string, error) {
+func (t *tokens) source(context.Context) (string, error) {
 	t.reads++
 	return t.token, t.err
 }
 
 func warnLog(into *bytes.Buffer) *slog.Logger {
 	return slog.New(slog.NewTextHandler(into, &slog.HandlerOptions{Level: slog.LevelWarn}))
+}
+
+func TestRecheckBoundsTheTokenRead(t *testing.T) {
+	t.Parallel()
+	reads := 0
+	source := func(ctx context.Context) (string, error) {
+		reads++
+		if reads == 2 {
+			if _, bounded := ctx.Deadline(); !bounded {
+				return "", errors.New("recheck token read has no deadline")
+			}
+		}
+		return "", nil
+	}
+	w, err := NewWatcher(t.Context(), source, fixedClock(checkedAt), slog.New(slog.DiscardHandler), runtimeenv.Test)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := w.Recheck(t.Context()); err != nil {
+		t.Fatal(err)
+	}
+	if reads != 2 {
+		t.Fatalf("token reads = %d, want boot and recheck", reads)
+	}
 }
 
 func TestNewWatcherRefusesARejectedLicense(t *testing.T) {

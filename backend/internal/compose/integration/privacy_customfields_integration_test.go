@@ -24,6 +24,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/customfields"
 	"github.com/margince/margince/backend/internal/modules/privacy"
+	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -170,7 +171,7 @@ func TestErasureScrubsCustomFieldColumns(t *testing.T) {
 		t.Fatalf("fixture stored %d custom values, want %d — the scrub assertion would be vacuous", stored, len(allContactCols))
 	}
 
-	if err := privacy.NewEraser(f.e.DB()).EraseContact(f.e.Admin(), contactID, "test"); err != nil {
+	if err := privacy.NewEraser(f.e.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities).EraseContact(f.e.Admin(), contactID, "test"); err != nil {
 		t.Fatalf("EraseContact: %v", err)
 	}
 

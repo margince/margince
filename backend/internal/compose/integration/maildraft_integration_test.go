@@ -23,6 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/modules/privacy"
+	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -136,7 +137,7 @@ func TestErasingARecipientDeletesTheDraftsAddressedToThem(t *testing.T) {
 	if err != nil {
 		t.Fatalf("contact id %q: %v", p.contactID, err)
 	}
-	if err := privacy.NewEraser(compose.InstallationDB(p.Pool)).EraseContact(
+	if err := privacy.NewEraser(compose.InstallationDB(p.Pool)).WithEdgeInvalidator(search.RecomputeEdgesForActivities).EraseContact(
 		p.privacyAdmin(t), contactID, "art-17"); err != nil {
 		t.Fatalf("erasing the recipient: %v", err)
 	}
@@ -309,7 +310,7 @@ func TestTheExportAndTheErasureAgreeOnWhichDraftsAreTheSubjects(t *testing.T) {
 		t.Errorf("the export carried %d drafts, want exactly the subject's three: %s", len(pkg.DraftMessages), exported)
 	}
 
-	if err := privacy.NewEraser(compose.InstallationDB(p.Pool)).EraseContact(
+	if err := privacy.NewEraser(compose.InstallationDB(p.Pool)).WithEdgeInvalidator(search.RecomputeEdgesForActivities).EraseContact(
 		p.privacyAdmin(t), contactID, "art-17"); err != nil {
 		t.Fatalf("erasing the recipient: %v", err)
 	}

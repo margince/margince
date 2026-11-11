@@ -35,11 +35,11 @@ func TestCaptureRegistryComposition(t *testing.T) {
 	}
 
 	t.Run("the deployment's pair registers the connector", func(t *testing.T) {
-		assertRegisters(t, newCaptureRegistryWithGoogle(nil, nil, nil, gmailApp, CaptureConfig{}), "gmail", "gcal")
+		assertRegisters(t, newCaptureRegistryWithGoogle(nil, nil, nil, gmailApp, CaptureConfig{}), "gmail", "gcal", "gdocs")
 	})
 
 	t.Run("a stored app registers it with no pair composed", func(t *testing.T) {
-		assertRegisters(t, newCaptureRegistryWithGoogle(nil, nil, stored, GmailConfig{}, CaptureConfig{}), "gmail", "gcal")
+		assertRegisters(t, newCaptureRegistryWithGoogle(nil, nil, stored, GmailConfig{}, CaptureConfig{}), "gmail", "gcal", "gdocs")
 	})
 
 	t.Run("neither source carries standing imap, never gmail", func(t *testing.T) {

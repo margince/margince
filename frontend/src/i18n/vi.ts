@@ -2619,7 +2619,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "history.field.body": "Ghi chú",
   "history.field.emails": "Địa chỉ email",
   "history.field.nudge_dismissal": "Đã bỏ qua lời nhắc",
-  "history.field.override_category": "Loại ghi đè",
   "history.field.overrides_carried": "Ghi đè đã chuyển",
   "history.field.phone": "Số điện thoại",
   "history.field.phones": "S\u1ed1 \u0111i\u1ec7n tho\u1ea1i",
@@ -3955,7 +3954,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "roompage.banner.closed":
     "Đã đóng. Người mua vẫn đọc được Deal Room này; không nhận thêm gì nữa.",
   "roompage.banner.expired":
-    "Đã hết hạn. Liên kết của người mua không còn hoạt động.",
+    "Đã hết hạn. Liên kết của người mua hoạt động lại khi bạn đặt ngày kết thúc muộn hơn.",
   "roompage.banner.archived":
     "Đã chuyển vào kho lưu trữ. Không ai có thể vào Deal Room này.",
   "roompage.banner.liveUntil": "Đang mở. Quyền truy cập kết thúc vào {when}.",
@@ -7632,10 +7631,17 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "sendPermission.missingPermission": "Cần được phép gửi thư này",
   "sendPermission.reason.chooseDeal": "Chọn giao dịch cho lần liên hệ lại này.",
   "sendPermission.appliesTo": "Điều này áp dụng cho {address}.",
-  "sendPermission.appliesToAndMore_one":
-    "Điều này áp dụng cho {address} và {count} người nhận khác.",
-  "sendPermission.appliesToAndMore_other":
-    "Điều này áp dụng cho {address} và {count} người nhận khác.",
+  "sendPermission.recipientLine": "{address}: {reason}",
+  "sendPermission.unansweredHeld":
+    "Bước kiểm tra gửi chưa hoàn tất. Nút Gửi chờ đến khi kiểm tra xong.",
+  "sendPermission.recheck": "Kiểm tra lại",
+  "compose.sendWithReason": "Gửi kèm lý do…",
+  "compose.scheduleWithReason": "Lên lịch kèm lý do…",
+  "compose.holdForCheck": "Nút Gửi chờ bước kiểm tra gửi.",
+  "compose.holdRefused":
+    "Không thể gửi. Hãy sửa điều bước kiểm tra ở trên nêu ra, hoặc bỏ người nhận đó.",
+  "compose.holdWithReason":
+    "Bước kiểm tra đã từ chối tin nhắn này. Nút Gửi sẽ hỏi lý do của bạn, và lý do chỉ áp dụng cho riêng tin nhắn này.",
   "sendPermission.appliesToSome_one":
     "Điều này áp dụng cho {count} trên {total} người nhận.",
   "sendPermission.appliesToSome_other":
@@ -7749,15 +7755,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "directSend.reason.legal_obligation": "Nghĩa vụ pháp lý",
   "directSend.reason.other": "Khác",
   "compose.reviewReference": "Phê duyệt",
-  "compose.overrule.open": "Cho phép kèm lý do",
-  "compose.overrule.reasonLabel": "Vì sao tin nhắn này được gửi?",
-  "compose.overrule.hint":
-    "Lý do của bạn được lưu trên từng liên hệ và áp dụng cho loại tin nhắn này cho đến khi bị thu hồi.",
-  "compose.overrule.confirm": "Lưu lý do cho phép",
-  "compose.overrule.recording": "Đang lưu…",
-  "compose.overrule.recorded": "Đã lưu. Hãy bấm Gửi lại.",
-  "compose.overrule.failed":
-    "Chưa lưu được. Hãy thử lại, hoặc mở mục duyệt từ thông báo từ chối ở trên.",
   "compose.draftUnavailable":
     "Không thể soạn nháp bằng AI vì chưa cấu hình mô hình. Vẫn có thể tự viết email.",
   "compose.draftUnsupportedHere":
@@ -11481,6 +11478,21 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Kết nối tài khoản bạn dùng để làm việc. Email của bạn tự được xếp vào đúng liên hệ và deal, còn lịch đưa các cuộc họp lên hồ sơ và cho liên kết đặt lịch biết giờ rảnh của bạn.",
   "connectors.provGmail": "Gmail",
   "connectors.provGcal": "Google Calendar",
+  "connectors.provGdocs": "Google Docs",
+  "connectors.cannotReadNotes": "Không đọc được ghi chú cuộc họp",
+  "connectors.reconnectToReadNotes":
+    "Kết nối lại để đọc ghi chú cuộc họp. Google chưa được cấp quyền truy cập các tài liệu ghi chú.",
+  "connectors.bringsNotes": "Ghi chú cuộc họp",
+  "connectors.notes.name": "Ghi chú cuộc họp",
+  "connectors.notes.desc":
+    "Ghi chú và bản chép lời mà Google Meet viết được đọc từ Google Docs và lưu vào cuộc họp.",
+  "connectors.notes.connect": "Kết nối ghi chú cuộc họp",
+  "connectors.notes.stop": "Ngừng đọc ghi chú cuộc họp",
+  "connectors.notes.stopTitle": "Ngừng đọc ghi chú cuộc họp?",
+  "connectors.notes.stopBody":
+    "Margince ngừng đọc ghi chú do Google Meet viết. Email và lịch vẫn chạy, và ghi chú đã có trên cuộc họp vẫn được giữ.",
+  "connectors.notes.otherAccount":
+    "Ghi chú cuộc họp được kết nối bằng {notes}, còn lịch bằng {calendar}. Ghi chú chỉ được đọc cho các cuộc họp trong lịch của cùng tài khoản, vì vậy hãy kết nối ghi chú cuộc họp bằng {calendar}.",
   "connectors.provGraph": "Outlook",
   "connectors.provGraphCal": "Lịch Outlook",
   "connectors.provImap": "Hộp thư IMAP",
@@ -12704,6 +12716,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "roomtab.manage.textHeading": "Tiêu đề và lời chào",
   "roomtab.manage.welcomeHint": "Đoạn đầu tiên người mua đọc.",
   "roomtab.manage.foot": "Người mua thấy thay đổi ở lần mở phòng tiếp theo.",
+  "roomtab.manage.expiredHint":
+    "Quyền truy cập đã kết thúc. Đặt ngày kết thúc muộn hơn để người mua vào lại.",
   "threads.conversationTitle": "Trao đổi",
   "threads.about": "Về {title}",
   "threads.aboutRemoved": "Về một tài liệu không còn trong phòng",
@@ -15044,6 +15058,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "oauthApp.redirectCopiedFor": "Đã sao chép URI {purpose}",
   "oauthApp.redirect.mailbox_connect": "Hộp thư",
   "oauthApp.redirect.calendar_connect": "Lịch",
+  "oauthApp.redirect.documents_connect": "Ghi chú cuộc họp",
   "oauthApp.redirect.sign_in": "Đăng nhập",
   "oauthApp.redirect.extension_connect": "Kết nối",
   "oauthApp.redirectTitle": "URI chuyển hướng được ủy quyền",
@@ -16810,7 +16825,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Ai đó có thẩm quyền gỡ một lệnh chặn.",
   "webhooks.event.consent.override_recorded.label": "Đã ghi nhận ghi đè",
   "webhooks.event.consent.override_recorded.when":
-    "Nhân viên kinh doanh xác nhận có thể bỏ qua lệnh từ chối tự động cho một loại liên lạc.",
+    "Khi gộp liên hệ, một ngoại lệ đang có được sao chép sang liên hệ còn lại.",
   "webhooks.event.consent.override_lifted.label": "Đã gỡ ghi đè",
   "webhooks.event.consent.override_lifted.when":
     "Ai đó có thẩm quyền gỡ một ghi đè.",
@@ -19198,6 +19213,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "receipt.detail.by": "Người làm",
   "receipt.detail.when": "Thời điểm",
   "receipt.detail.source": "Nguồn",
+  "receipt.detail.sourceAt": "Ngày của nguồn",
+  "receipt.detail.reasonKind": "Lý do",
+  "receipt.detail.reasonKind.rule":
+    "Một quy tắc: Margince đếm những gì dữ liệu cho thấy",
+  "receipt.detail.reasonKind.inference":
+    "Một suy luận: Margince đọc những gì khách hàng đã viết hoặc nói",
   "worklist.handled.showMore": "Xem thêm",
   "worklist.exceptions.empty": "Nhóm không có ngoại lệ nào.",
   "worklist.exceptions.loading": "Đang tải nhóm…",
@@ -21452,6 +21473,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "brief.done.showNew": "Hiện các thay đổi mới",
   "brief.done.history": "Lịch sử thay đổi",
   "brief.done.dealsLabel": "Các giao dịch Margince đã thay đổi",
+  "brief.done.pick": "Hoàn tác thay đổi trên {name}",
   "brief.done.noReason": "Không có lý do",
   "brief.done.markedLost": "Đã đánh dấu là mất",
   "brief.done.customerWrote": "Khách hàng đã viết:",
@@ -21467,10 +21489,15 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "changes.bulk.confirm_other":
     "{count} giao dịch cần bạn xác nhận. Hãy hoàn tác từng giao dịch trên dòng của nó.",
   "changes.bulk.unsent_one": "{count} giao dịch chưa được gửi.",
+  "changes.bulk.settled_one":
+    "{count} giao dịch không còn thay đổi để hoàn tác.",
+  "changes.bulk.settled_other":
+    "{count} giao dịch không còn thay đổi để hoàn tác.",
   "changes.bulk.unsent_other": "{count} giao dịch chưa được gửi.",
   "changes.bulk.confirmOnDeal": "Mở giao dịch để xác nhận hoàn tác.",
   "changes.bulk.retry": "Gửi lại",
   "changes.bulk.unfinished": "Giao dịch chưa hoàn tác hết",
+  "changes.bulk.clear": "Ẩn kết quả này",
   "nav.progress": "Tiến độ",
   "nav.myProgress": "Tiến độ của tôi",
   "nav.salesGoals": "Mục tiêu doanh số",

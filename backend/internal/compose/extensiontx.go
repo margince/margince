@@ -3,18 +3,14 @@
 
 package compose
 
-// The published transaction seam over pgx: the three SQL verbs a unit's own
-// tables need, the door onto the governed core port, and the two cursor
-// adapters behind Rows and Row. Split from extruntime.go, which owns the
-// Runtime's lifetime and scope, when the Runtime grew the port — these are the
-// types a unit HOLDS, and that is one concern.
+// The published transaction seam: the three SQL verbs a unit's own tables
+// need (run by unitsql), and the door onto the governed core port. These are
+// the types a unit holds; extruntime.go owns the Runtime's lifetime and scope.
 
 import (
 	"context"
-	"errors"
 
-	"github.com/jackc/pgx/v5"
-
+	"github.com/margince/margince/backend/internal/compose/unitsql"
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
@@ -29,7 +25,9 @@ import (
 // Runtime is still perfectly live (the callback returned, the call did not).
 // ErrRuntimeExpired there would name the wrong fault.
 type extensionTx struct {
-	tx pgx.Tx
+	// sql runs the unit's own statements as the role that holds only its
+	// tables. Core and Record write outside that role.
+	sql unitsql.Tx
 	// core is what the transaction can reach BESIDE the unit's own SQL, and it
 	// is built by the Runtime rather than by this type: whether the invocation
 	// has a caller, and what the role bound at boot, are facts about the call,
@@ -52,47 +50,15 @@ func (t extensionTx) Record(ctx context.Context, ch extension.Change, ev extensi
 }
 
 func (t extensionTx) Exec(ctx context.Context, sql string, args ...any) (int64, error) {
-	tag, err := t.tx.Exec(ctx, sql, args...)
-	if err != nil {
-		return 0, err
-	}
-	return tag.RowsAffected(), nil
+	return t.sql.Exec(ctx, sql, args...)
 }
 
 //nolint:ireturn // Rows is the published cursor; a unit must never hold pgx.Rows.
 func (t extensionTx) Query(ctx context.Context, sql string, args ...any) (extension.Rows, error) {
-	rows, err := t.tx.Query(ctx, sql, args...)
-	if err != nil {
-		return nil, err
-	}
-	return extensionRows{rows: rows}, nil
+	return t.sql.Query(ctx, sql, args...)
 }
 
 //nolint:ireturn // Row is the published deferred read; the error is deferred to Scan by design.
 func (t extensionTx) QueryRow(ctx context.Context, sql string, args ...any) extension.Row {
-	return extensionRow{row: t.tx.QueryRow(ctx, sql, args...)}
-}
-
-// extensionRows is pgx's cursor behind the published one. The four methods
-// line up exactly, which is why the published seam was spelled this way.
-type extensionRows struct{ rows pgx.Rows }
-
-func (r extensionRows) Next() bool             { return r.rows.Next() }
-func (r extensionRows) Scan(dest ...any) error { return r.rows.Scan(dest...) }
-func (r extensionRows) Err() error             { return r.rows.Err() }
-func (r extensionRows) Close()                 { r.rows.Close() }
-
-// extensionRow defers one read's error to Scan, translating the empty match
-// into the published sentinel — a unit matching on pgx.ErrNoRows would be
-// binding a driver this surface never published.
-type extensionRow struct{ row pgx.Row }
-
-func (r extensionRow) Scan(dest ...any) error {
-	if err := r.row.Scan(dest...); err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return extension.ErrNoRows
-		}
-		return err
-	}
-	return nil
+	return t.sql.QueryRow(ctx, sql, args...)
 }

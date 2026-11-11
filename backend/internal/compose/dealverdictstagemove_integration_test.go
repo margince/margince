@@ -18,6 +18,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/margince/margince/backend/internal/compose/attention"
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -134,7 +135,7 @@ func TestMarginceMovesADealForwardAndUndoMovesItBack(t *testing.T) {
 	if len(changes) != 1 {
 		t.Fatalf("changes = %d, want the one move", len(changes))
 	}
-	summary := stageMoveReceipt(changes[0]).Summary
+	summary := attention.StageMoveReceipt(changes[0]).Summary
 	if !strings.Contains(summary, "They asked for the contract draft") || !strings.Contains(summary, "Probability now") {
 		t.Fatalf("receipt = %q, want the reason and the stage's probability", summary)
 	}
@@ -296,15 +297,20 @@ func (v *stageMoveEnv) seedBuyer(t *testing.T, address string) {
 
 func TestABuyerMilestoneNeedsMailFromABuyerOfTheDeal(t *testing.T) {
 	for _, tc := range []struct {
-		name, from string
-		moves      bool
+		name, from   string
+		moves, moved bool
 	}{
-		{"the deal's stakeholder wrote it", "buyer@customer.example", true},
-		{"somebody who is no contact of the deal wrote it", "stranger@elsewhere.example", false},
+		{"the deal's stakeholder wrote it", "buyer@customer.example", true, false},
+		{"somebody who is no contact of the deal wrote it", "stranger@elsewhere.example", false, false},
+		{"the address was another contact's before the stakeholder's", "buyer@customer.example", false, true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			v := setupStageMove(t)
 			v.seedBuyer(t, "buyer@customer.example")
+			if tc.moved {
+				v.WsExec(t, `INSERT INTO contact_email (contact_id, email, source, captured_by, archived_at)
+					VALUES ($1, 'buyer@customer.example', 'manual', 'human:x', now())`, v.SeedContact(t, "Former Holder", &v.Rep1))
+			}
 			mail := v.seedDealActivity(t, "email", "inbound", tc.from, "", "Please send us the contract draft.")
 			v.buyerCriterion(t, deals.CriterionBuyerConfirmed, mail, "send us the contract draft")
 			v.run(t)

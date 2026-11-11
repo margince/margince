@@ -17,7 +17,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 
-	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/identity"
 )
 
@@ -34,12 +33,7 @@ func addGraphJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerConfig, log
 	addDeclaredWorker[ParticipantBackfillArgs](reg, participants)
 	graphEdges := newGraphEdgeReconcileWorker(pool, log)
 	addDeclaredWorker[GraphEdgeReconcileArgs](reg, graphEdges)
-	// The link-reconcile sweep runs the same cohort repair the capture paths
-	// do, so it carries the same audience derivation: a meeting it files is a
-	// meeting whose no-record hold has stopped being true.
-	links := newLinkReconcileWorker(pool,
-		newContactsStore(InstallationDB(pool)).
-			WithAudienceRecompute(activities.RecomputeAudienceTx), cfg.CaptureConfig, log)
+	links := newLinkReconcileWorker(pool, linkReconcileStore(pool), cfg.CaptureConfig, log)
 	addDeclaredWorker[LinkReconcileArgs](reg, links)
 	rematch := newLinkedInRematchWorker(pool, newContactsStore(InstallationDB(pool)), identity.NewService(pool), log)
 	addDeclaredWorker[LinkedInRematchArgs](reg, rematch)

@@ -122,7 +122,7 @@ func TestTheReadsThatReuseGenericPlansBindNoPartialIndexPredicate(t *testing.T) 
 		t.Fatalf("taking the rep's brief run: %v", err)
 	}
 	if err := database.WithWorkspaceSnapshot(reader, pool, func(ctx context.Context) error {
-		if _, err := emailSummariesReusingPlans(ctx, store, []ids.UUID{ids.UUID(mail.Id)}); err != nil {
+		if _, err := emailSummariesReusingPlans(ctx, store, []ids.UUID{ids.UUID(mail.Id)}, at); err != nil {
 			return err
 		}
 		if _, err := (attentionTasks{store: store}).RemindersForViewer(ctx, at); err != nil {

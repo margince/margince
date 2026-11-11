@@ -12,6 +12,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/margince/margince/backend/internal/compose/oidctoken"
+	"github.com/margince/margince/backend/internal/compose/oidctoken/oidctokentest"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/identity"
@@ -140,11 +142,11 @@ func TestBothSignInProvidersSurviveEachOther(t *testing.T) {
 func TestMicrosoftIssuerBindsTheTokenToTheConfiguredDirectory(t *testing.T) {
 	check := microsoftIssuer([]string{testTenant})
 
-	if err := check(oidcClaims{Iss: testIssuer, Tid: testTenant}); err != nil {
+	if err := check(oidctoken.Claims{Iss: testIssuer, Tid: testTenant}); err != nil {
 		t.Fatalf("the configured directory's own token was rejected: %v", err)
 	}
 
-	cases := map[string]oidcClaims{
+	cases := map[string]oidctoken.Claims{
 		"no tid":            {Iss: testIssuer},
 		"another directory": {Iss: "https://login.microsoftonline.com/99999999-9999-9999-9999-999999999999/v2.0", Tid: "99999999-9999-9999-9999-999999999999"},
 		// A hostile tenant cannot mint for our directory, but it can claim our
@@ -166,14 +168,14 @@ func TestMicrosoftIssuerBindsTheTokenToTheConfiguredDirectory(t *testing.T) {
 // DIRECTORY is the verification, and the issuer check has already refused every
 // token from another one.
 func TestMicrosoftVerifierAdapterReadsTheDirectorysAddress(t *testing.T) {
-	rig := newOIDCTestRig(t)
+	rig := oidctokentest.NewRig(t)
 	adapter := microsoftOIDCVerifierAdapter{
-		v: newOIDCVerifier(rig.jwksURL(), microsoftHostIssuer, identityResolvedPerRequest).
-			withHTTPClient(rig.srv.Client()).setClock(func() time.Time { return rig.base }),
+		v: oidctoken.New(rig.JWKSURL(), microsoftHostIssuer, oidctoken.IdentityResolvedPerRequest).
+			WithHTTPClient(rig.Srv.Client()).SetClock(func() time.Time { return rig.Base }),
 		matchIdentity: microsoftIssuer([]string{testTenant}),
 	}
 
-	tok := rig.mint(t, testKID, "RS256", map[string]any{
+	tok := rig.Mint(t, oidctokentest.KID, "RS256", map[string]any{
 		"iss": testIssuer, "tid": testTenant, "sub": "sub-1", "email": "carol@example.com",
 		"given_name": "Carol", "picture": "https://graph.example/photo",
 	})
@@ -198,7 +200,7 @@ func TestMicrosoftVerifierAdapterReadsTheDirectorysAddress(t *testing.T) {
 
 	// A directory that stamps the standard groups claim gets it passed through
 	// verbatim, feeding the group→role grants downstream.
-	grouped := rig.mint(t, testKID, "RS256", map[string]any{
+	grouped := rig.Mint(t, oidctokentest.KID, "RS256", map[string]any{
 		"iss": testIssuer, "tid": testTenant, "sub": "sub-1", "email": "carol@example.com",
 		"groups": []string{"11111111-aaaa-bbbb-cccc-222222222222"},
 	})
@@ -212,7 +214,7 @@ func TestMicrosoftVerifierAdapterReadsTheDirectorysAddress(t *testing.T) {
 
 	// A work account whose directory publishes no mail attribute still signs
 	// in: its UPN is the address, and it is domain-verified.
-	upnOnly := rig.mint(t, testKID, "RS256", map[string]any{
+	upnOnly := rig.Mint(t, oidctokentest.KID, "RS256", map[string]any{
 		"iss": testIssuer, "tid": testTenant, "sub": "sub-2",
 		"email": "", "preferred_username": "dan@example.com",
 	})
@@ -226,7 +228,7 @@ func TestMicrosoftVerifierAdapterReadsTheDirectorysAddress(t *testing.T) {
 
 	// A token naming no address at all resolves to nobody rather than to the
 	// empty-string account.
-	nameless := rig.mint(t, testKID, "RS256", map[string]any{
+	nameless := rig.Mint(t, oidctokentest.KID, "RS256", map[string]any{
 		"iss": testIssuer, "tid": testTenant, "sub": "sub-3", "email": "",
 	})
 	if claims, err := adapter.Verify(context.Background(), nameless); err != nil || claims.EmailVerified {
@@ -264,7 +266,7 @@ func TestMicrosoftIssuerAcceptsEveryListedDirectoryAndNoOther(t *testing.T) {
 	const second = "22222222-3333-4444-5555-666666666677"
 	check := microsoftIssuer([]string{testTenant, second})
 
-	for name, claims := range map[string]oidcClaims{
+	for name, claims := range map[string]oidctoken.Claims{
 		"the first directory":  {Iss: testIssuer, Tid: testTenant},
 		"the second directory": {Iss: "https://login.microsoftonline.com/" + second + "/v2.0", Tid: second},
 	} {
@@ -275,7 +277,7 @@ func TestMicrosoftIssuerAcceptsEveryListedDirectoryAndNoOther(t *testing.T) {
 		})
 	}
 
-	for name, claims := range map[string]oidcClaims{
+	for name, claims := range map[string]oidctoken.Claims{
 		"a directory nobody listed": {
 			Iss: "https://login.microsoftonline.com/99999999-9999-9999-9999-999999999999/v2.0",
 			Tid: "99999999-9999-9999-9999-999999999999",
@@ -304,7 +306,7 @@ func TestMicrosoftIssuerAcceptsEveryListedDirectoryAndNoOther(t *testing.T) {
 
 // PERSONAL ACCOUNTS ARE ADMITTED BY NAMING THEIR TENANT, and by nothing else.
 func TestPersonalAccountsSignInOnlyWhenTheirTenantIsListed(t *testing.T) {
-	personal := oidcClaims{
+	personal := oidctoken.Claims{
 		Iss: "https://login.microsoftonline.com/" + microsoftConsumerTenant + "/v2.0",
 		Tid: microsoftConsumerTenant,
 	}
@@ -333,16 +335,16 @@ func TestPersonalAccountsSignInOnlyWhenTheirTenantIsListed(t *testing.T) {
 // picks, so only the `email` claim — the one Microsoft made them prove they
 // receive mail at — is taken.
 func TestAPersonalAccountsSignInNameIsNotTakenAsItsAddress(t *testing.T) {
-	rig := newOIDCTestRig(t)
+	rig := oidctokentest.NewRig(t)
 	tenants := []string{testTenant, microsoftConsumerTenant}
 	adapter := microsoftOIDCVerifierAdapter{
-		v: newOIDCVerifier(rig.jwksURL(), microsoftHostIssuer, identityResolvedPerRequest).
-			withHTTPClient(rig.srv.Client()).setClock(func() time.Time { return rig.base }),
+		v: oidctoken.New(rig.JWKSURL(), microsoftHostIssuer, oidctoken.IdentityResolvedPerRequest).
+			WithHTTPClient(rig.Srv.Client()).SetClock(func() time.Time { return rig.Base }),
 		matchIdentity: microsoftIssuer(tenants),
 	}
 
 	consumerIss := "https://login.microsoftonline.com/" + microsoftConsumerTenant + "/v2.0"
-	tok := rig.mint(t, testKID, "RS256", map[string]any{
+	tok := rig.Mint(t, oidctokentest.KID, "RS256", map[string]any{
 		"iss": consumerIss, "tid": microsoftConsumerTenant, "sub": "sub-msa",
 		// EMPTY, not absent from this map: the rig seeds an address into every
 		// token, and the case under test is the one where Microsoft published
@@ -359,7 +361,7 @@ func TestAPersonalAccountsSignInNameIsNotTakenAsItsAddress(t *testing.T) {
 	}
 
 	// The claim Microsoft DID make them prove is still taken.
-	proven := rig.mint(t, testKID, "RS256", map[string]any{
+	proven := rig.Mint(t, oidctokentest.KID, "RS256", map[string]any{
 		"iss": consumerIss, "tid": microsoftConsumerTenant, "sub": "sub-msa",
 		"email": "someone@gmail.test", "preferred_username": "admin@margince.test",
 	})
@@ -373,7 +375,7 @@ func TestAPersonalAccountsSignInNameIsNotTakenAsItsAddress(t *testing.T) {
 
 	// And a WORK account keeps the fallback, or a directory that publishes no
 	// mail attribute could not sign anybody in.
-	work := rig.mint(t, testKID, "RS256", map[string]any{
+	work := rig.Mint(t, oidctokentest.KID, "RS256", map[string]any{
 		"iss": testIssuer, "tid": testTenant, "sub": "sub-work",
 		"email": "", "preferred_username": "dana@corp.test",
 	})

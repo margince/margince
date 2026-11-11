@@ -7,6 +7,7 @@ import (
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -56,6 +57,15 @@ type Receipt struct {
 	// CustomerQuote is the customer's own words the act rests on. It is kept
 	// apart from Reason, which is Margince's reading and never a quote.
 	CustomerQuote string
+	// ReasonKind says whether Reason is a rule or an inference; empty when
+	// the act cannot say.
+	ReasonKind string
+	// CitedActivities are the messages a change rests on. The newest the
+	// reader may open becomes the receipt's source.
+	CitedActivities []ids.UUID
+	// CitedMoments are when the cited messages happened as the change was
+	// written. A message missing here is dated by its live row.
+	CitedMoments map[ids.UUID]deals.CitedMoment
 }
 
 // ReceiptUndo is what a receipt needs to offer a way back.

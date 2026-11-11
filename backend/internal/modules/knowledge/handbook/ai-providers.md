@@ -109,8 +109,8 @@ Gemini on Vertex AI serves the Gemini models. So a model that its own
 Gemini**. Edit one to give Vertex its own price for that model.
 
 ### How do model prices stay current?
-Model prices update on their own once a day. The **Model prices** card under
-Settings → AI shows when they last synced and what changed for each provider.
+Model prices update on their own once a day. The **Model prices** card on
+the **Prices** tab of Settings → **AI models** shows when they last synced and what changed for each provider.
 Anthropic, OpenAI, Google Gemini and Gemini on Vertex AI get prices from
 models.dev when their key works. The OpenRouter models that a model tier uses
 get prices from the OpenRouter list. Other providers keep the prices you set.

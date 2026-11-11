@@ -620,7 +620,6 @@
     "POST /v1/contacts/{id}/brief": "regenerate_contact_brief",
     "POST /v1/contacts/{id}/claims": "record_conversation_claim",
     "POST /v1/contacts/{id}/consent": "record_consent",
-    "POST /v1/contacts/{id}/consent/allow": "allow_contact",
     "POST /v1/contacts/{id}/consent/allow/{overrideId}/revoke": "revoke_contact_override",
     "POST /v1/contacts/{id}/consent/confirm-request": "request_details_confirmation",
     "POST /v1/contacts/{id}/consent/double-opt-in": "issue_double_opt_in",

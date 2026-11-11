@@ -7,7 +7,6 @@ import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { useToast } from "../../design-system/toast";
 import { useT } from "../../i18n";
-import type { MessageKey } from "../../i18n/en";
 import { entityTimelineKeys } from "../../lib/activitykeys";
 import {
   asksWhy,
@@ -30,6 +29,7 @@ import { composedLinks, type Link, type SendGrounding } from "./composelinks";
 import type { RelinkKind } from "./composerelink";
 import type { useSavedDraft } from "./composesaveddraft";
 import { scheduleFields } from "./composeschedule";
+import { sendHoldOf } from "./composesendhold";
 import { SCHEDULED_SCREEN } from "./scheduledqueue";
 import { sendReviewOf } from "./sendreview";
 
@@ -396,6 +396,11 @@ export function useComposeSend({
     ...answer,
     refusal: refusedNow ? { refusals: sendReview?.refusals ?? [] } : null,
   };
+  // A channel reply asks no preview, so only its refused Send can hold it.
+  const hold = sendHoldOf(permission, refusedNow ? sendReview : null);
+  // The reason form for a refused message. A press of "Send with a reason"
+  // opens it once the server has said the message may be directed.
+  const [directOpen, setDirectOpen] = useState(false);
   // Whether the reader has pressed Send. A form that reports gaps before then
   // scolds a reader for not having finished typing.
   const [attempted, setAttempted] = useState(false);
@@ -423,7 +428,27 @@ export function useComposeSend({
       globalThis.requestAnimationFrame(focusFirstMissing);
       return;
     }
-    send.mutate(request);
+    if (hold.blocks) {
+      return;
+    }
+    // The refusal is already about this message, so the press asks for the
+    // reason instead of asking the server the same question again.
+    if (refusedNow && hold.withReason) {
+      setDirectOpen(true);
+      return;
+    }
+    setDirectOpen(false);
+    const askedWithReason = hold.withReason;
+    send.mutate(request, {
+      onError: (error) => {
+        if (
+          askedWithReason &&
+          sendReviewOf(error)?.actions.includes("direct_send")
+        ) {
+          setDirectOpen(true);
+        }
+      },
+    });
   };
   // What this client already knows will stop the send. The mark beside Send
   // makes no passed claim while any of it stands.
@@ -448,28 +473,10 @@ export function useComposeSend({
     confirm,
     clearAttempt: () => setAttempted(false),
     directSent,
+    hold,
+    directOpen,
+    setDirectOpen,
   };
 }
 
 export type ComposeSend = ReturnType<typeof useComposeSend>;
-
-// What the dialog promises. A scheduled message waits and can be withdrawn,
-// so its title and body say so; a channel reply has no send-later field.
-export function sendWording(
-  isChannelReply: boolean,
-  scheduling: boolean,
-): Readonly<{ title: MessageKey; body: MessageKey }> {
-  if (isChannelReply) {
-    return {
-      title: "compose.sendMessageConfirmTitle",
-      body: "compose.sendMessageBody",
-    };
-  }
-  if (scheduling) {
-    return {
-      title: "compose.scheduleConfirmTitle",
-      body: "compose.scheduleBody",
-    };
-  }
-  return { title: "compose.sendConfirmTitle", body: "compose.sendBody" };
-}

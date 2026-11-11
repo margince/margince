@@ -158,6 +158,34 @@ export function missingCalendarWriteGrant(
   );
 }
 
+// Mirror of capture.MeetingNotesGranted; its Go parity test reads this table.
+const MEETING_NOTES_SCOPES: Readonly<Record<string, readonly string[]>> = {
+  gdocs: ["https://www.googleapis.com/auth/documents.readonly"],
+};
+
+/** Whether a meeting-notes connection lacks the grant to read the notes: its
+ *  owner unticked the scope on Google's screen. */
+export function missingMeetingNotesGrant(
+  connection: Pick<CaptureConnection, "provider" | "scopes">,
+): boolean {
+  const grants = MEETING_NOTES_SCOPES[connection.provider];
+  return (
+    grants !== undefined &&
+    !grants.some((scope) => connection.scopes.includes(scope))
+  );
+}
+
+/** Whether a connection's grant is too narrow for what its row offers. */
+function missingGrant(
+  connection: Pick<CaptureConnection, "provider" | "scopes">,
+): boolean {
+  return (
+    missingSendGrant(connection) ||
+    missingCalendarWriteGrant(connection) ||
+    missingMeetingNotesGrant(connection)
+  );
+}
+
 /** The words the Connections page puts on an account and on each service.
  *  Their own keys, never statusLabel's: the Telegram badge reads those. */
 export type ConnectorHealth =
@@ -192,13 +220,9 @@ export function healthBadge(health: ConnectorHealth): HealthBadge {
 }
 
 /** Whether a service needs its owner's consent again: the vendor refused the
- *  grant, or the grant is too narrow to send or to book. */
+ *  grant, or the grant is too narrow to send, to book or to read notes. */
 export function needsReconnect(service: CaptureConnection): boolean {
-  return (
-    service.status === "reauth_required" ||
-    missingSendGrant(service) ||
-    missingCalendarWriteGrant(service)
-  );
+  return service.status === "reauth_required" || missingGrant(service);
 }
 
 /** One service's badge. A grant too narrow to send or to book is named by
@@ -211,6 +235,9 @@ export function serviceBadge(service: CaptureConnection): HealthBadge {
   if (health === "up_to_date" && missingCalendarWriteGrant(service)) {
     return badgeOf("attention", "scheduling.readOnlyBadge");
   }
+  if (health === "up_to_date" && missingMeetingNotesGrant(service)) {
+    return badgeOf("attention", "connectors.cannotReadNotes");
+  }
   return healthBadge(health);
 }
 
@@ -222,6 +249,8 @@ export function serviceReason(service: CaptureConnection): MessageKey | null {
   }
   if (missingSendGrant(service)) return "connectors.reconnectToSend";
   if (missingCalendarWriteGrant(service)) return "scheduling.readOnlyCalendar";
+  if (missingMeetingNotesGrant(service))
+    return "connectors.reconnectToReadNotes";
   return null;
 }
 
@@ -256,11 +285,13 @@ export function serviceHealth(service: ServiceFacts): ConnectorHealth {
 
 /** The account's word. A broken service outranks a running import: the import
  *  shows its own progress, and the reconnect is what the member has to do. A
- *  grant too narrow to send or to book counts as broken, as its row says. */
+ *  grant too narrow to send, to book or to read notes counts as broken, as its
+ *  row says. */
 export function accountHealth(
-  account: Pick<ConnectionAccount, "mail" | "calendar">,
+  account: Pick<ConnectionAccount, "mail" | "calendar"> &
+    Partial<Pick<ConnectionAccount, "notes">>,
 ): ConnectorHealth {
-  const services = [account.mail, account.calendar]
+  const services = [account.mail, account.calendar, account.notes ?? null]
     .filter((service) => service !== null)
     .filter((service) => service.status !== "disconnected");
   if (services.length === 0) return "not_connected";
@@ -269,8 +300,7 @@ export function accountHealth(
     return (
       health === "needs_reconnect" ||
       health === "needs_attention" ||
-      missingSendGrant(service) ||
-      missingCalendarWriteGrant(service)
+      missingGrant(service)
     );
   });
   if (broken) return "needs_attention";

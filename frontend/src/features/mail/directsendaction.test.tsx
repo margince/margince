@@ -14,7 +14,6 @@ const review = (actions: SendReview["actions"]): SendReview => ({
   reviewId: "review-1",
   actions,
   refusals: [],
-  overrulable: [],
 });
 
 function draw(actions: SendReview["actions"]) {
@@ -35,14 +34,6 @@ describe("DirectSendAction", () => {
     expect(
       screen.getByRole("button", { name: /send with a recorded exception/i }),
     ).toBeTruthy();
-  });
-
-  // A rep who cannot direct a send sees the overrule instead, which is a
-  // different component. Drawing a button here that fails when pressed would
-  // be worse than drawing none.
-  it("offers nothing when the server offered the overrule instead", () => {
-    draw(["overrule"]);
-    expect(screen.queryByRole("button")).toBeNull();
   });
 
   // An agent, or a refusal with no message to decide about.
