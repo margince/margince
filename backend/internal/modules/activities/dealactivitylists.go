@@ -33,7 +33,7 @@ func ListActivitiesByDealTx(ctx context.Context, tx pgx.Tx, dealIDs []ids.UUID, 
 		return nil, err
 	}
 	var err error
-	if in.mailIdentities, err = currentTaskMailIdentities(ctx, tx, in); err != nil {
+	if in.mailIdentities, err = listMailSeatIdentities(ctx, tx, in); err != nil {
 		return nil, err
 	}
 	where, content, sorted, args, err := listActivitiesFilter(ctx, in)
