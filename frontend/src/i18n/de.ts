@@ -19243,6 +19243,16 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Ein Gast schlägt eine andere Zeit vor. Verschieb den Termin in deinem Kalender, wenn sie passt, dann markier dies als erledigt.",
   "worklist.ask.meeting.answered":
     "Ein Gast hat auf deine Einladung geantwortet. Markier es als erledigt, sobald du es gesehen hast.",
+  "worklist.ask.changedInvitationNamed":
+    "{name} hat diesen Termin geändert. Prüf die Änderung, dann sag zu, mit Vorbehalt zu oder ab.",
+  "worklist.ask.meetingNamed.updated":
+    "{name} hat diesen Termin geändert. Prüf die Änderung, dann markier ihn als erledigt.",
+  "worklist.ask.meetingNamed.canceled":
+    "{name} hat diesen Termin abgesagt. Es gibt nichts zu beantworten; markier ihn als erledigt, sobald du es gesehen hast.",
+  "worklist.ask.meetingNamed.proposed":
+    "{name} schlägt eine andere Zeit vor. Verschieb den Termin in deinem Kalender, wenn sie passt, dann markier dies als erledigt.",
+  "worklist.ask.meetingNamed.answered":
+    "{name} hat auf deine Einladung geantwortet. Markier es als erledigt, sobald du es gesehen hast.",
   "worklist.ask.customer_waiting":
     "Ein Kunde hat geschrieben, und noch niemand hat geantwortet. Beantworte die Nachricht.",
   "worklist.ask.lead_response":

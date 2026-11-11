@@ -19045,6 +19045,16 @@ export const en = {
     "A guest proposed another time. Move the meeting in your calendar if it suits you, then mark this done.",
   "worklist.ask.meeting.answered":
     "A guest answered your invitation. Mark it done once you have seen it.",
+  "worklist.ask.changedInvitationNamed":
+    "{name} changed this meeting. Check what changed, then accept, say maybe or decline.",
+  "worklist.ask.meetingNamed.updated":
+    "{name} changed this meeting. Check what changed, then mark it done.",
+  "worklist.ask.meetingNamed.canceled":
+    "{name} canceled this meeting. There is nothing to answer; mark it done once you have seen it.",
+  "worklist.ask.meetingNamed.proposed":
+    "{name} proposed another time. Move the meeting in your calendar if it suits you, then mark this done.",
+  "worklist.ask.meetingNamed.answered":
+    "{name} answered your invitation. Mark it done once you have seen it.",
   "worklist.ask.customer_waiting":
     "A customer wrote and nobody has answered yet. Reply to them.",
   "worklist.ask.lead_response":

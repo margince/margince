@@ -72,10 +72,10 @@ export function taskName(
   const sender = partyName(item);
   // A message waiting on the reader is named by the move it asks for.
   // An invitation's subject already names the event it asks about.
-  if (mail?.calendar_invitation && mail.subject) return mail.subject;
   // A later calendar mail is named for its meeting, as the box draws it.
   if (mail?.calendar_change)
     return mail.calendar_change.title ?? mail.subject ?? t("email.noSubject");
+  if (mail?.calendar_invitation && mail.subject) return mail.subject;
   if (mail?.move === "needs_reply" && sender && mail.subject)
     return t("brief.task.reply", { name: sender, subject: mail.subject });
   return (

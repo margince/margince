@@ -10,7 +10,7 @@ import { Panel, PanelBody } from "../../design-system/panel";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 import { useViewerZone } from "../../lib/viewerzone";
 import { factReasons, partyName, reasonText } from "../../lib/worklistcopy";
-import { askKey } from "./worklist.ask";
+import { askSentence } from "./worklist.ask";
 import { useBriefAnswer, withFoldedBrief } from "./worklist.briefverbs";
 import type { WorklistItem } from "./worklist.queries";
 import { codedDetail } from "./worklist.reader";
@@ -37,7 +37,7 @@ export function WorklistWhy({
     <Panel title={t("worklist.why.title")} tone="accent">
       <PanelBody>
         <div className="form-stack">
-          <p>{t(askKey(item))}</p>
+          <p>{askSentence(item, t)}</p>
           {reasons.length > 0 && (
             <ol
               className="worklist-why-reasons"

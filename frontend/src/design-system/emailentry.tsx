@@ -43,12 +43,15 @@ const MOVE_LABEL: Record<string, MessageKey> = {
  * cannot disagree about one message. A withheld message claims no move.
  */
 export function moveLabel(
-  summary: Pick<EmailSummary, "move"> | undefined,
+  summary: Pick<EmailSummary, "move" | "calendar_change"> | undefined,
   withheld: boolean,
 ): MessageKey | undefined {
   if (withheld || !summary) {
     return undefined;
   }
+  // A meeting change is seen, not replied to; only a proposed time may be.
+  const change = summary.calendar_change;
+  if (change && change.kind !== "proposed") return undefined;
   return MOVE_LABEL[summary.move];
 }
 

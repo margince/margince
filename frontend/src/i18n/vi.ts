@@ -18760,6 +18760,16 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Một khách mời đề xuất giờ khác. Dời cuộc họp trong lịch của bạn nếu phù hợp, rồi đánh dấu là xong.",
   "worklist.ask.meeting.answered":
     "Một khách mời đã trả lời lời mời của bạn. Đánh dấu là xong sau khi bạn đã xem.",
+  "worklist.ask.changedInvitationNamed":
+    "{name} đã thay đổi cuộc họp này. Xem thay đổi, rồi chấp nhận, trả lời có thể hoặc từ chối.",
+  "worklist.ask.meetingNamed.updated":
+    "{name} đã thay đổi cuộc họp này. Xem thay đổi, rồi đánh dấu là xong.",
+  "worklist.ask.meetingNamed.canceled":
+    "{name} đã hủy cuộc họp này. Không cần trả lời; đánh dấu là xong sau khi bạn đã xem.",
+  "worklist.ask.meetingNamed.proposed":
+    "{name} đề xuất giờ khác. Dời cuộc họp trong lịch của bạn nếu phù hợp, rồi đánh dấu là xong.",
+  "worklist.ask.meetingNamed.answered":
+    "{name} đã trả lời lời mời của bạn. Đánh dấu là xong sau khi bạn đã xem.",
   "worklist.ask.customer_waiting":
     "Khách hàng đã viết và chưa có ai trả lời. Trả lời khách hàng.",
   "worklist.ask.lead_response":

@@ -29,7 +29,7 @@ import {
   eyebrowKeyFor,
   kindClass,
 } from "../../lib/worklisteyebrow";
-import { askKey } from "./worklist.ask";
+import { askSentence } from "./worklist.ask";
 import { useBriefAnswer, withFoldedBrief } from "./worklist.briefverbs";
 import { DepartedOwnerCaption } from "./worklist.departedowner";
 import {
@@ -395,7 +395,7 @@ function RowAsk({
   const t = useT();
   return framed ? (
     <>
-      <p className="t-body worklist-row-ask">{t(askKey(item))}</p>
+      <p className="t-body worklist-row-ask">{askSentence(item, t)}</p>
       <RowProposal item={item} />
     </>
   ) : null;

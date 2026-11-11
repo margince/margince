@@ -1,8 +1,8 @@
 /* A calendar mail drawn as its meeting: a small calendar page, then the title
  * with what happened, when and where, and what changed. The page and the
  * columns match a meeting row on a record's Meetings tab, so a reader sees the
- * same meeting in both places. An outline only, never a fill: it sits inside
- * a row that is often already on a card. */
+ * same meeting in both places. No outline or fill: it sits inside a mail row
+ * that already has one. */
 
 .meetingchange {
   display: grid;
@@ -10,9 +10,6 @@
   align-items: start;
   gap: var(--space-3);
   min-width: 0;
-  padding: var(--space-3);
-  border: 1px solid var(--borderSubtle);
-  border-radius: var(--r-md);
 }
 
 .meetingchange__date {

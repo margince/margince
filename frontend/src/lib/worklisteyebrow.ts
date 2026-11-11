@@ -22,14 +22,24 @@ export function nonBuyerRequest(item: WorklistItem): boolean {
   );
 }
 
+// One short word for the narrow kind column; the meeting box says what changed.
+function calendarKind(item: WorklistItem): MessageKey | undefined {
+  const mail = item.email_summary;
+  if (mail?.calendar_invitation) return "email.invitation.badge";
+  const change = mail?.calendar_change;
+  if (!change) return undefined;
+  return change.kind === "canceled"
+    ? changeBadge(change).key
+    : "timeline.kind.meeting";
+}
+
 // Labels follow the row's evidence when its broad category would misstate the work.
 export function eyebrowKeyFor(item: WorklistItem): MessageKey {
   if (item.source === "failed_approval")
     return "worklist.source.failed_approval";
   if (nonBuyerRequest(item)) return "worklist.source.awaiting_reply";
-  const change = item.email_summary?.calendar_change;
-  if (change) return changeBadge(change).key;
-  if (item.email_summary?.calendar_invitation) return "email.invitation.badge";
+  const calendar = calendarKind(item);
+  if (calendar) return calendar;
   if (item.source === "notice") return "brief.updates.title";
   if (item.source === "domain_question")
     return "worklist.source.domain_question";

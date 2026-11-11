@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import type { Translator } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import type { CalendarChange } from "../../lib/calendarchange";
+import { type CalendarChange, guestLabel } from "../../lib/calendarchange";
 import { labelFor } from "../../lib/labelfor";
+import { partyName } from "../../lib/worklistcopyreasons";
 import type { WorklistItem } from "./worklist.queries";
 
 // What a row asks of its reader, one sentence per source. A row's reasons say
@@ -53,14 +55,39 @@ const ASK_BY_MEETING_CHANGE: Readonly<
   answered: "worklist.ask.meeting.answered",
 };
 
+const ASK_BY_NAMED_MEETING_CHANGE: Readonly<
+  Record<CalendarChange["kind"], MessageKey>
+> = {
+  updated: "worklist.ask.meetingNamed.updated",
+  canceled: "worklist.ask.meetingNamed.canceled",
+  proposed: "worklist.ask.meetingNamed.proposed",
+  answered: "worklist.ask.meetingNamed.answered",
+};
+
+// Who moved: the guest who answered or proposed, else the mail's sender, who
+// is the organizer for an update or a cancellation.
+function changedBy(item: WorklistItem, change: CalendarChange): string {
+  if (change.by) return guestLabel(change.by);
+  return partyName(item)?.trim() ?? "";
+}
+
 /** The sentence saying what this row asks of its reader. */
-export function askKey(item: WorklistItem): MessageKey {
-  // An invitation waits on an RSVP, not on a written answer.
+export function askSentence(item: WorklistItem, t: Translator): string {
   const change = item.email_summary?.calendar_change;
-  if (item.email_summary?.calendar_invitation)
-    return change
-      ? "worklist.ask.changedInvitation"
-      : "worklist.ask.invitation";
-  if (change) return labelFor(ASK_BY_MEETING_CHANGE, change.kind);
-  return labelFor(ASK_BY_SOURCE, item.source);
+  // An invitation waits on an RSVP, not on a written answer.
+  const invitation = item.email_summary?.calendar_invitation;
+  if (!change)
+    return t(
+      invitation
+        ? "worklist.ask.invitation"
+        : labelFor(ASK_BY_SOURCE, item.source),
+    );
+  const name = changedBy(item, change);
+  if (invitation)
+    return name
+      ? t("worklist.ask.changedInvitationNamed", { name })
+      : t("worklist.ask.changedInvitation");
+  return name
+    ? t(labelFor(ASK_BY_NAMED_MEETING_CHANGE, change.kind), { name })
+    : t(labelFor(ASK_BY_MEETING_CHANGE, change.kind));
 }

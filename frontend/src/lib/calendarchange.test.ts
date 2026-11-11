@@ -100,7 +100,7 @@ describe("what a meeting's later mail says in one line", () => {
 });
 
 describe("the badge a meeting's later mail wears", () => {
-  it("is the change's word on the worklist row as well", () => {
+  it("is one short word in the worklist's kind column", () => {
     const row = {
       id: "i1",
       source: "customer_waiting",
@@ -109,6 +109,11 @@ describe("the badge a meeting's later mail wears", () => {
       email_summary: { calendar_change: change({ kind: "canceled" }) },
     } as unknown as WorklistItem;
     expect(eyebrowKeyFor(row)).toBe("meetingChange.badge.canceled");
+    const moved = {
+      ...row,
+      email_summary: { calendar_change: change({ kind: "updated" }) },
+    } as WorklistItem;
+    expect(eyebrowKeyFor(moved)).toBe("timeline.kind.meeting");
     expect(
       changeBadge(change({ kind: "answered", answer: "accepted" })),
     ).toEqual({ key: "meetingChange.badge.accepted", tone: "success" });

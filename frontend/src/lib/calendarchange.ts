@@ -11,7 +11,7 @@ import {
   activityTimeSpan,
   type OccurredPrecision,
 } from "../format/activitywhen";
-import { formatDateAbbrev } from "../format/format";
+import { formatDayMonthNearYear } from "../format/format";
 import type { Locale, Translator } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 
@@ -53,11 +53,15 @@ type When = Readonly<{
   starts_precision?: OccurredPrecision;
 }>;
 
-/** "Wed 2 Dec, 10:00–11:00", or the day alone for an all-day meeting. */
+/**
+ * "2 Dec, 10:00–11:00", or the day alone for an all-day meeting. The year is
+ * written only outside now's year.
+ */
 export function meetingWhen(
   when: When,
   locale: Locale,
   zone: string,
+  now: Date = new Date(),
 ): string | null {
   if (!when.starts_at) return null;
   const precision = when.starts_precision ?? "instant";
@@ -66,7 +70,7 @@ export function meetingWhen(
     precision,
     locale,
     zone,
-    formatDateAbbrev,
+    (at, lang, read) => formatDayMonthNearYear(at, lang, read, now),
   );
   const span = activityTimeSpan(
     when.starts_at,
