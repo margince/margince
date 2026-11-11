@@ -155,8 +155,8 @@ export const NAV_GROUPS: readonly NavGroup[] = [
         labelKey: "nav.analytics",
         icon: ChartNoAxesCombined,
       },
-      // One reader's own number: closed revenue against the goal. A manager
-      // reads a team here, so the row keeps one name for both.
+      // Closed revenue against the goal. The rail names it My progress or
+      // Team progress (navLabelKey); this key is its name in the shortcuts.
       {
         screen: "progress",
         labelKey: "nav.progress",
@@ -381,9 +381,19 @@ function forkItems(
   }));
 }
 
+// Progress is named for whose number it opens on: a manager reads a team.
+export function navLabelKey(
+  item: NavItem | undefined,
+  readsTeam: boolean,
+): MessageKey | undefined {
+  if (item?.screen !== "progress") return item?.labelKey;
+  return readsTeam ? "progress.teamTitle" : "progress.myTitle";
+}
+
 function primaryLevel(
   route: Route,
   disabled: readonly CoreFeature[],
+  readsTeam: boolean,
 ): NavTrailLevel {
   return {
     groups: NAV_GROUPS.map((group) => ({
@@ -393,7 +403,7 @@ function primaryLevel(
           .filter((item) => screenEnabled(item.screen, disabled))
           .map((item) => ({
             id: item.screen,
-            labelKey: item.labelKey,
+            labelKey: navLabelKey(item, readsTeam) ?? item.labelKey,
             icon: item.icon,
           })),
         ...forkItems(group.headingKey),
@@ -456,9 +466,10 @@ export function railTrail(
   route: Route,
   section?: NavSection,
   disabled: readonly CoreFeature[] = [],
+  readsTeam = false,
 ): readonly NavTrailLevel[] {
   return navTrail(
-    primaryLevel(route, disabled),
+    primaryLevel(route, disabled, readsTeam),
     route,
     activeRowFor(route),
     section,

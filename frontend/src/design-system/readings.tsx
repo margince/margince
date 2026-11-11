@@ -399,11 +399,15 @@ export type BarListRow = Readonly<{
 export function SegmentBar({
   parts,
   marker,
+  ahead,
   label,
   onSelect,
 }: Readonly<{
   parts: SegmentBarParts;
   onSelect?: (key: string) => void;
+  // What may join the parts later but is not counted in them, such as open
+  // deals beside won ones. It sits after the parts as an outline.
+  ahead?: SegmentBarPart;
   // A figure the parts are read against rather than one of them: a line across
   // the track, drawn in ink so it never reads as a fourth part.
   marker?: SegmentBarPart;
@@ -413,7 +417,10 @@ export function SegmentBar({
   const total = parts.reduce((sum, part) => sum + Math.max(0, part.value), 0);
   // The scale is the larger of the parts and the mark. A mark beyond the parts
   // leaves recessed track between them, and that track is the gap.
-  const scale = Math.max(total, marker?.value ?? 0);
+  const scale = Math.max(
+    total + Math.max(0, ahead?.value ?? 0),
+    marker?.value ?? 0,
+  );
   return (
     <div className="segbar">
       <div className="segbar-track" aria-hidden={onSelect ? undefined : true}>
@@ -435,6 +442,12 @@ export function SegmentBar({
             />
           ),
         )}
+        {ahead && ahead.value > 0 && (
+          <span
+            className="segbar-part segbar-ahead"
+            style={{ width: `${percentOf(ahead.value, scale)}%` }}
+          />
+        )}
         {marker && (
           <span
             className="segbar-marker"
@@ -453,6 +466,13 @@ export function SegmentBar({
             <span className="segbar-amount t-num">{part.amount}</span>
           </li>
         ))}
+        {ahead && (
+          <li className="segbar-key">
+            <span className="segbar-swatch segbar-ahead" aria-hidden="true" />
+            {ahead.label}
+            <span className="segbar-amount t-num">{ahead.amount}</span>
+          </li>
+        )}
         {marker && (
           <li className="segbar-key">
             <span className="segbar-swatch-marker" aria-hidden="true" />

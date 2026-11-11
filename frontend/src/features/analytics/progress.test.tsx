@@ -99,35 +99,113 @@ describe("GoalEditor", () => {
   });
 });
 
+// Routes the work lists by path and by page size: a one-row read is a count.
+function stubWork(answer: (url: URL) => unknown) {
+  vi.stubGlobal("fetch", async (input: RequestInfo | URL) => {
+    const url = new URL(input instanceof Request ? input.url : String(input));
+    return jsonResponse(answer(url));
+  });
+}
+
+const lead = (id: string, name: string) => ({
+  id,
+  full_name: name,
+  status: "new",
+  score: 0,
+  source: "manual",
+  captured_by: "human:u1",
+  version: 1,
+  created_at: "2026-08-20T09:00:00Z",
+  updated_at: "2026-08-20T09:00:00Z",
+});
+
+const openDeal = (id: string, name: string, close: string | null) => ({
+  id,
+  name,
+  status: "open",
+  stage_id: null,
+  owner_id: "00000000-0000-4000-8000-0000000000a1",
+  amount_minor: 4_200_000,
+  currency: "EUR",
+  expected_close_date: close,
+  version: 1,
+  created_at: "2026-01-10T09:00:00Z",
+  updated_at: "2026-01-10T09:00:00Z",
+});
+
 describe("ProgressWork", () => {
   it("offers the next page of open leads while the list has more", async () => {
-    const asked: string[] = [];
-    installFetchStub({
-      "GET /leads": () => {
-        asked.push("leads");
-        return jsonResponse({
-          data: [
-            {
-              id: `l-${asked.length}`,
-              full_name: `Lead ${asked.length}`,
-              status: "new",
-              score: 0,
-              source: "manual",
-              captured_by: "human:u1",
-              version: 1,
-              created_at: "2026-08-20T09:00:00Z",
-              updated_at: "2026-08-20T09:00:00Z",
-            },
-          ],
-          page: { next_cursor: "next", has_more: asked.length === 1 },
-        });
-      },
+    let pages = 0;
+    stubWork((url) => {
+      if (
+        !url.pathname.endsWith("/leads") ||
+        url.searchParams.get("limit") === "1"
+      )
+        return { data: [], page: { has_more: false, total: 2 } };
+      pages += 1;
+      return {
+        data: [lead(`l-${pages}`, `Lead ${pages}`)],
+        page: { next_cursor: "next", has_more: pages === 1 },
+      };
     });
     const user = userEvent.setup();
     render(<ProgressWork progress={sellerMarch} />);
     await user.click(await screen.findByRole("button", { name: "Show more" }));
     expect(await screen.findByText("Lead 2")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Show more" })).toBeNull();
+  });
+
+  it("counts the open leads in each status, and all of them on the tab", async () => {
+    const totals: Record<string, number> = { new: 3, contacted: 2, engaged: 1 };
+    stubWork((url) => ({
+      data: [],
+      page: {
+        has_more: false,
+        total: totals[url.searchParams.get("status") ?? ""],
+      },
+    }));
+    render(<ProgressWork progress={sellerMarch} />);
+    expect(
+      await screen.findByRole("button", { name: /^Leads\W*6$/ }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: /^Contacted\W*2$/ }),
+    ).toBeTruthy();
+  });
+
+  it("flags each open deal by what it sells, its close date and its next task", async () => {
+    stubWork((url) => {
+      if (url.pathname.endsWith("/analytics/progress/deals"))
+        return {
+          data: [
+            {
+              deal: openDeal("d1", "Fleet rollout", "2020-01-15"),
+              sale_type: "product_and_service",
+              next_task: { subject: "Send the offer", due_at: null },
+            },
+            {
+              deal: openDeal("d2", "Depot pilot", "2099-06-01"),
+              sale_type: "unclassified",
+            },
+            { deal: openDeal("d3", "Yard sensors", null) },
+          ],
+          page: { has_more: false },
+        };
+      return { data: [], page: { has_more: false } };
+    });
+    const user = userEvent.setup();
+    render(<ProgressWork progress={sellerMarch} />);
+    await user.click(
+      await screen.findByRole("button", { name: /^Deals\W*3$/ }),
+    );
+    expect(await screen.findByText("Fleet rollout")).toBeTruthy();
+    expect(screen.getByText("Product and service")).toBeTruthy();
+    expect(screen.getByText("Overdue")).toBeTruthy();
+    expect(screen.getByText("Send the offer")).toBeTruthy();
+    expect(screen.getByText("Unclassified")).toBeTruthy();
+    expect(screen.getByText("Outside the period")).toBeTruthy();
+    expect(screen.getByText("No date")).toBeTruthy();
+    expect(screen.getAllByText("No next task")).toHaveLength(2);
   });
 });
 

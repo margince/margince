@@ -10,6 +10,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/salesprogress"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/reporting"
@@ -255,7 +256,7 @@ func readReportingBookingsMix(ctx context.Context, tx pgx.Tx, frame crmcontracts
 	}
 	facts, coverage, err := readDealMetricFacts(ctx, tx, frame, reportingBookingsMix, query)
 	if err != nil || frame.ProductId != nil || reportingValueBasis(frame) != reportingValueBasisAll {
-		return dropOverAllocation(facts), coverage, err
+		return salesprogress.DropOverAllocation(facts), coverage, err
 	}
 	facts, err = settleMix(ctx, tx, frame, facts)
 	return facts, coverage, err

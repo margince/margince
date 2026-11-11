@@ -11548,6 +11548,38 @@ paths:
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
+  /analytics/progress/deals:
+    get:
+      tags: [Reports]
+      operationId: listSalesProgressDeals
+      security: [{bearerAuth: []}]
+      summary: The open deals of one seller or team as Progress lists them, each with its sale type and next task.
+      description: |-
+        The deals are the ones `GET /deals?status=open` lists for the same owner or team, under the
+        same row scope and field masks, so a page holds no deal the caller could not open. Each adds
+        the sale type its priced lines show and the next open task a workspace reader may see.
+        The list is the work as it stands now, whatever period Progress reads.
+      parameters:
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+        - name: scope_kind
+          in: query
+          required: false
+          description: Absent reads the caller's own deals.
+          schema: {type: string, enum: [owner, team]}
+        - name: scope_id
+          in: query
+          required: false
+          schema: {type: string, format: uuid}
+      responses:
+        '200':
+          description: A page of open deals.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/SalesProgressDealPage'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /analytics/sales-goals:
     get:
       tags: [Reports]
@@ -44384,6 +44416,40 @@ components:
         closed: {$ref: '#/components/schemas/SalesProgressAmount'}
         planned: {$ref: '#/components/schemas/SalesProgressAmount'}
         delta_minor: {type: integer, format: int64}
+    SalesProgressDealPage:
+      type: object
+      additionalProperties: false
+      required: [data, page]
+      properties:
+        data:
+          type: array
+          items: {$ref: '#/components/schemas/SalesProgressDeal'}
+        page: {$ref: '#/components/schemas/PageInfo'}
+    SalesProgressDeal:
+      type: object
+      additionalProperties: false
+      required: [deal]
+      properties:
+        deal: {$ref: '#/components/schemas/Deal'}
+        sale_type:
+          type: string
+          enum: [product, service, product_and_service, partly_classified, unclassified]
+          description: >-
+            What the deal's priced lines sell. `partly_classified` when lines of another kind or an unpriced remainder sit beside the classified ones, `unclassified` when no line is a product or a service, or the lines add up to more than the deal. Absent when the deal's amount is masked from the caller.
+        next_task:
+          allOf: [{$ref: '#/components/schemas/SalesProgressNextTask'}]
+          description: The earliest-due open task on the deal that every workspace reader may see. Absent when there is none.
+    SalesProgressNextTask:
+      type: object
+      additionalProperties: false
+      required: [subject]
+      properties:
+        subject: {type: string}
+        due_at: {type: [string, 'null'], format: date-time}
+        assignee_id:
+          type: [string, 'null']
+          format: uuid
+          description: Who the task is for. It may differ from the deal's owner.
     SalesProgress:
       type: object
       additionalProperties: false

@@ -2,8 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { Badge, Button, StatCard } from "../../design-system/atoms";
-import { Panel, PanelBody } from "../../design-system/panel";
-import { Meter } from "../../design-system/readings";
+import { SegmentBar, type SegmentBarParts } from "../../design-system/readings";
 import { StatStrip } from "../../design-system/statstrip";
 import {
   formatAnalyticsMoney,
@@ -108,58 +107,123 @@ export function ProgressResult({
   const { closed, goal, completion, currency } = progress;
   const started = progress.state !== "not_started";
   return (
-    <Panel
-      title={t("progress.closedRevenue")}
-      titleAction={
-        <DeltaBadge delta={progress.delta_minor} currency={currency} />
-      }
-    >
-      <PanelBody>
-        <div className="progress-result">
-          <p className="progress-result-figure">
-            {amountText(closed, currency, locale, t)}
+    <section className="progress-hero" aria-label={t("progress.closedRevenue")}>
+      <div className="progress-result">
+        <span className="progress-result-label">
+          {t("progress.closedRevenue")}
+        </span>
+        <p className="progress-result-figure">
+          {amountText(closed, currency, locale, t)}
+        </p>
+        <p className="progress-result-goal">{goalLine(progress, locale, t)}</p>
+        {completion != null && (
+          <p className="progress-result-completion">
+            {t("progress.completion", {
+              percent: formatNumber(Math.round(completion * 100), locale),
+            })}
           </p>
-          <p className="progress-result-goal">
-            {goalLine(progress, locale, t)}
-          </p>
-          {completion != null && (
-            <>
-              <Meter
-                value={Math.min(completion, 1)}
-                max={1}
-                flat
-                label={t("progress.completion", {
-                  percent: formatNumber(Math.round(completion * 100), locale),
-                })}
-              />
-              <p className="t-caption">
-                {t("progress.completion", {
-                  percent: formatNumber(Math.round(completion * 100), locale),
-                })}
-              </p>
-            </>
-          )}
-          {closed.status === "partial" && (
-            <p className="t-caption">{t("progress.partial")}</p>
-          )}
-          {goal.status === "changed_outside_plan" && (
-            <p className="t-caption">{t("progress.goalChanged")}</p>
-          )}
+        )}
+        {closed.status === "partial" && (
+          <p className="t-caption">{t("progress.partial")}</p>
+        )}
+        {goal.status === "changed_outside_plan" && (
+          <p className="t-caption">{t("progress.goalChanged")}</p>
+        )}
+        <div className="progress-result-actions">
+          <DeltaBadge delta={progress.delta_minor} currency={currency} />
           {started && onEvidence && (
-            <div className="card-actions">
-              <Button
-                variant="link"
-                onClick={() =>
-                  onEvidence({ metric: "bookings_won", context_id: "interval" })
-                }
-              >
-                {t("progress.viewClosedDeals")}
-              </Button>
-            </div>
+            <Button
+              variant="link"
+              onClick={() =>
+                onEvidence({ metric: "bookings_won", context_id: "interval" })
+              }
+            >
+              {t("progress.viewClosedDeals")}
+            </Button>
           )}
         </div>
-      </PanelBody>
-    </Panel>
+      </div>
+      <ResultBar progress={progress} onEvidence={onEvidence} />
+    </section>
+  );
+}
+
+// Closed revenue as its sale categories, against the goal, with the planned
+// open deals hatched after it: they may still close, and never count.
+function ResultBar({
+  progress,
+  onEvidence,
+}: Readonly<{ progress: SalesProgress; onEvidence: OpenEvidence }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const { categories, closed, goal, planned, currency } = progress;
+  const money = (minor: number) =>
+    formatAnalyticsMoney(minor, currency, locale);
+  const known =
+    categories.status !== "withheld" && categories.status !== "not_started";
+  const part = (key: string, label: string, minor: number) => ({
+    key,
+    label,
+    value: minor,
+    amount: money(minor),
+  });
+  const product = part(
+    "product",
+    t("progress.productSales"),
+    categories.product_minor,
+  );
+  const service = part(
+    "service",
+    t("progress.serviceSales"),
+    categories.service_minor,
+  );
+  const unresolved = part(
+    "unresolved",
+    t("progress.unclassified"),
+    categories.unresolved_minor,
+  );
+  const whole = part(
+    "closed",
+    t("progress.closedRevenue"),
+    closed.amount_minor ?? 0,
+  );
+  let parts: SegmentBarParts = [whole];
+  if (known)
+    parts =
+      categories.unresolved_minor > 0
+        ? [product, service, unresolved]
+        : [product, service];
+  const groups: Record<string, string | undefined> = {
+    product: CATEGORY_GROUP.product,
+    service: CATEGORY_GROUP.service,
+  };
+  return (
+    <div className="progress-result-bar">
+      <SegmentBar
+        label={t("progress.readings")}
+        parts={parts}
+        marker={
+          goal.amount_minor != null && goal.status !== "incomplete"
+            ? part("goal", t("progress.goal"), goal.amount_minor)
+            : undefined
+        }
+        ahead={
+          planned.amount_minor != null && planned.amount_minor > 0
+            ? part("planned", t("progress.plannedAhead"), planned.amount_minor)
+            : undefined
+        }
+        onSelect={
+          onEvidence && known && closed.amount_minor != null
+            ? (key) =>
+                onEvidence({
+                  metric: "bookings_mix",
+                  context_id: "interval",
+                  ...(groups[key] ? { group_key: groups[key] } : {}),
+                })
+            : undefined
+        }
+      />
+    </div>
   );
 }
 
@@ -194,7 +258,7 @@ export function ProgressReadings({
           })
       : undefined;
   return (
-    <StatStrip label={t("progress.readings")}>
+    <StatStrip label={t("progress.readings")} density="plate">
       <StatCard
         label={t("progress.productSales")}
         value={money(categories.product_minor)}

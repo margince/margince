@@ -21538,6 +21538,33 @@ func (e SalesProgressCategoriesStatus) Valid() bool {
 	}
 }
 
+// Defines values for SalesProgressDealSaleType.
+const (
+	SalesProgressDealSaleTypePartlyClassified  SalesProgressDealSaleType = "partly_classified"
+	SalesProgressDealSaleTypeProduct           SalesProgressDealSaleType = "product"
+	SalesProgressDealSaleTypeProductAndService SalesProgressDealSaleType = "product_and_service"
+	SalesProgressDealSaleTypeService           SalesProgressDealSaleType = "service"
+	SalesProgressDealSaleTypeUnclassified      SalesProgressDealSaleType = "unclassified"
+)
+
+// Valid indicates whether the value is a known member of the SalesProgressDealSaleType enum.
+func (e SalesProgressDealSaleType) Valid() bool {
+	switch e {
+	case SalesProgressDealSaleTypePartlyClassified:
+		return true
+	case SalesProgressDealSaleTypeProduct:
+		return true
+	case SalesProgressDealSaleTypeProductAndService:
+		return true
+	case SalesProgressDealSaleTypeService:
+		return true
+	case SalesProgressDealSaleTypeUnclassified:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for SalesProgressGoalStatus.
 const (
 	SalesProgressGoalStatusChangedOutsidePlan SalesProgressGoalStatus = "changed_outside_plan"
@@ -28375,6 +28402,24 @@ func (e GetSalesProgressParamsScopeKind) Valid() bool {
 	case GetSalesProgressParamsScopeKindOwner:
 		return true
 	case GetSalesProgressParamsScopeKindTeam:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ListSalesProgressDealsParamsScopeKind.
+const (
+	ListSalesProgressDealsParamsScopeKindOwner ListSalesProgressDealsParamsScopeKind = "owner"
+	ListSalesProgressDealsParamsScopeKindTeam  ListSalesProgressDealsParamsScopeKind = "team"
+)
+
+// Valid indicates whether the value is a known member of the ListSalesProgressDealsParamsScopeKind enum.
+func (e ListSalesProgressDealsParamsScopeKind) Valid() bool {
+	switch e {
+	case ListSalesProgressDealsParamsScopeKindOwner:
+		return true
+	case ListSalesProgressDealsParamsScopeKindTeam:
 		return true
 	default:
 		return false
@@ -61240,6 +61285,27 @@ type SalesProgressCategories struct {
 // SalesProgressCategoriesStatus defines model for SalesProgressCategories.Status.
 type SalesProgressCategoriesStatus string
 
+// SalesProgressDeal defines model for SalesProgressDeal.
+type SalesProgressDeal struct {
+	// Deal A deal. Mirrors the `deal` table.
+	Deal Deal `json:"deal"`
+
+	// NextTask The earliest-due open task on the deal that every workspace reader may see. Absent when there is none.
+	NextTask *SalesProgressNextTask `json:"next_task,omitempty"`
+
+	// SaleType What the deal's priced lines sell. `partly_classified` when lines of another kind or an unpriced remainder sit beside the classified ones, `unclassified` when no line is a product or a service, or the lines add up to more than the deal. Absent when the deal's amount is masked from the caller.
+	SaleType *SalesProgressDealSaleType `json:"sale_type,omitempty"`
+}
+
+// SalesProgressDealSaleType What the deal's priced lines sell. `partly_classified` when lines of another kind or an unpriced remainder sit beside the classified ones, `unclassified` when no line is a product or a service, or the lines add up to more than the deal. Absent when the deal's amount is masked from the caller.
+type SalesProgressDealSaleType string
+
+// SalesProgressDealPage defines model for SalesProgressDealPage.
+type SalesProgressDealPage struct {
+	Data []SalesProgressDeal `json:"data"`
+	Page PageInfo            `json:"page"`
+}
+
 // SalesProgressGoal `set` is a complete, positive goal. `zero` is a complete goal of zero: a delta but no
 // completion. `incomplete` gives the known subtotal of the months that have a goal and no
 // completion or delta. `missing` means no month has one. `withheld` means the caller may not
@@ -61308,6 +61374,14 @@ type SalesProgressMonth struct {
 
 // SalesProgressMonthState defines model for SalesProgressMonth.State.
 type SalesProgressMonthState string
+
+// SalesProgressNextTask defines model for SalesProgressNextTask.
+type SalesProgressNextTask struct {
+	// AssigneeId Who the task is for. It may differ from the deal's owner.
+	AssigneeId *openapi_types.UUID `json:"assignee_id,omitempty"`
+	DueAt      *time.Time          `json:"due_at,omitempty"`
+	Subject    string              `json:"subject"`
+}
 
 // SaveContactResearchClaim One claim a human accepted, with the evidence that makes it checkable.
 type SaveContactResearchClaim struct {
@@ -70736,6 +70810,29 @@ type GetSalesProgressParamsPeriod string
 
 // GetSalesProgressParamsScopeKind defines parameters for GetSalesProgress.
 type GetSalesProgressParamsScopeKind string
+
+// ListSalesProgressDealsParams defines parameters for ListSalesProgressDeals.
+type ListSalesProgressDealsParams struct {
+	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
+	// effective `sort` of the originating request (field + direction) plus the last row's keyset
+	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
+	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// together with a `sort` that differs from the one the cursor was minted under returns
+	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
+	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
+	// remaining pages see, so re-issue the query without the cursor when changing filters.
+	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
+
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty" maximum:"200" minimum:"1"`
+
+	// ScopeKind Absent reads the caller's own deals.
+	ScopeKind *ListSalesProgressDealsParamsScopeKind `form:"scope_kind,omitempty" json:"scope_kind,omitempty"`
+	ScopeId   *openapi_types.UUID                    `form:"scope_id,omitempty" json:"scope_id,omitempty"`
+}
+
+// ListSalesProgressDealsParamsScopeKind defines parameters for ListSalesProgressDeals.
+type ListSalesProgressDealsParamsScopeKind string
 
 // ListReportingReportsParams defines parameters for ListReportingReports.
 type ListReportingReportsParams struct {
@@ -92556,6 +92653,9 @@ type ServerInterface interface {
 	// Closed revenue against the sales goal for one seller or team, by month or calendar year.
 	// (GET /analytics/progress)
 	GetSalesProgress(w http.ResponseWriter, r *http.Request, params GetSalesProgressParams)
+	// The open deals of one seller or team as Progress lists them, each with its sale type and next task.
+	// (GET /analytics/progress/deals)
+	ListSalesProgressDeals(w http.ResponseWriter, r *http.Request, params ListSalesProgressDealsParams)
 	// Answer a question nobody wrote a report for.
 	// (POST /analytics/query)
 	RunAnalyticsQuery(w http.ResponseWriter, r *http.Request)
@@ -96096,6 +96196,12 @@ func (_ Unimplemented) GetReportingMetrics(w http.ResponseWriter, r *http.Reques
 // Closed revenue against the sales goal for one seller or team, by month or calendar year.
 // (GET /analytics/progress)
 func (_ Unimplemented) GetSalesProgress(w http.ResponseWriter, r *http.Request, params GetSalesProgressParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The open deals of one seller or team as Progress lists them, each with its sale type and next task.
+// (GET /analytics/progress/deals)
+func (_ Unimplemented) ListSalesProgressDeals(w http.ResponseWriter, r *http.Request, params ListSalesProgressDealsParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -107470,6 +107576,86 @@ func (siw *ServerInterfaceWrapper) GetSalesProgress(w http.ResponseWriter, r *ht
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetSalesProgress(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListSalesProgressDeals operation middleware
+func (siw *ServerInterfaceWrapper) ListSalesProgressDeals(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListSalesProgressDealsParams
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "scope_kind" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "scope_kind", r.URL.Query(), &params.ScopeKind, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "scope_kind"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "scope_kind", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "scope_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "scope_id", r.URL.Query(), &params.ScopeId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "scope_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "scope_id", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListSalesProgressDeals(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -149075,6 +149261,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/analytics/progress", wrapper.GetSalesProgress)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/analytics/progress/deals", wrapper.ListSalesProgressDeals)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/analytics/query", wrapper.RunAnalyticsQuery)

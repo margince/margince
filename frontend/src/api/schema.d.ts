@@ -10037,6 +10037,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/analytics/progress/deals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The open deals of one seller or team as Progress lists them, each with its sale type and next task.
+         * @description The deals are the ones `GET /deals?status=open` lists for the same owner or team, under the
+         *     same row scope and field masks, so a page holds no deal the caller could not open. Each adds
+         *     the sale type its priced lines show and the next open task a workspace reader may see.
+         *     The list is the work as it stands now, whatever period Progress reads.
+         */
+        get: operations["listSalesProgressDeals"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/analytics/sales-goals": {
         parameters: {
             query?: never;
@@ -45836,6 +45859,30 @@ export interface components {
             /** Format: int64 */
             delta_minor?: number;
         };
+        SalesProgressDealPage: {
+            data: components["schemas"]["SalesProgressDeal"][];
+            page: components["schemas"]["PageInfo"];
+        };
+        SalesProgressDeal: {
+            deal: components["schemas"]["Deal"];
+            /**
+             * @description What the deal's priced lines sell. `partly_classified` when lines of another kind or an unpriced remainder sit beside the classified ones, `unclassified` when no line is a product or a service, or the lines add up to more than the deal. Absent when the deal's amount is masked from the caller.
+             * @enum {string}
+             */
+            sale_type?: "product" | "service" | "product_and_service" | "partly_classified" | "unclassified";
+            /** @description The earliest-due open task on the deal that every workspace reader may see. Absent when there is none. */
+            next_task?: components["schemas"]["SalesProgressNextTask"];
+        };
+        SalesProgressNextTask: {
+            subject: string;
+            /** Format: date-time */
+            due_at?: string | null;
+            /**
+             * Format: uuid
+             * @description Who the task is for. It may differ from the deal's owner.
+             */
+            assignee_id?: string | null;
+        };
         SalesProgress: {
             scope: components["schemas"]["ReportingScope"];
             period: {
@@ -76750,6 +76797,46 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    listSalesProgressDeals: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
+                 *     effective `sort` of the originating request (field + direction) plus the last row's keyset
+                 *     (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
+                 *     under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+                 *     together with a `sort` that differs from the one the cursor was minted under returns
+                 *     `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
+                 *     **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
+                 *     remaining pages see, so re-issue the query without the cursor when changing filters.
+                 */
+                cursor?: components["parameters"]["Cursor"];
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
+                limit?: components["parameters"]["Limit"];
+                /** @description Absent reads the caller's own deals. */
+                scope_kind?: "owner" | "team";
+                scope_id?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A page of open deals. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesProgressDealPage"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             422: components["responses"]["ValidationError"];
         };
     };

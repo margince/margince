@@ -12,6 +12,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/reporting"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/httperr"
@@ -30,6 +31,8 @@ type Reading struct {
 	// may measure one by one: the rules Analytics reads its population with.
 	Members    func(ctx context.Context, tx pgx.Tx, scope crmcontracts.ReportingScope) ([]ids.UUID, error)
 	Measurable func(ctx context.Context, tx pgx.Tx) (reporting.MeasurableOwners, error)
+	// Deals lists the open work, under the deal list's own row scope and masks.
+	Deals *deals.Store
 }
 
 // GetSalesProgress answers closed revenue against the goal for one period.

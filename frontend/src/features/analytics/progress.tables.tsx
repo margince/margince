@@ -1,10 +1,17 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { Avatar } from "../../design-system/avatar";
 import { Callout } from "../../design-system/callout";
 import { DataTable } from "../../design-system/datatable";
 import { Panel, PanelBody } from "../../design-system/panel";
-import { identifierNumber, monthName } from "../../format/format";
+import { Meter } from "../../design-system/readings";
+import {
+  formatAnalyticsMoney,
+  formatNumber,
+  identifierNumber,
+  monthName,
+} from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { replaceDial } from "../../lib/urlstate";
 import type {
@@ -41,7 +48,12 @@ export function ProgressMembers({
               {
                 key: "name",
                 header: t("progress.member"),
-                render: (member) => member.name,
+                render: (member) => (
+                  <span className="progress-member">
+                    <Avatar name={member.name} identity={member.owner_id} />
+                    {member.name}
+                  </span>
+                ),
                 fold: "title",
                 grow: true,
               },
@@ -55,8 +67,24 @@ export function ProgressMembers({
                 key: "closed",
                 header: t("progress.closedRevenue"),
                 align: "end",
-                render: (member) =>
-                  amountText(member.closed, currency, locale, t),
+                render: (member) => (
+                  <span className="progress-closedcell">
+                    {amountText(member.closed, currency, locale, t)}
+                    {member.closed.amount_minor != null &&
+                      member.goal.amount_minor != null &&
+                      member.goal.amount_minor > 0 && (
+                        <Meter
+                          dense
+                          value={Math.min(
+                            member.closed.amount_minor,
+                            member.goal.amount_minor,
+                          )}
+                          max={member.goal.amount_minor}
+                          label={t("progress.ofGoal", { name: member.name })}
+                        />
+                      )}
+                  </span>
+                ),
               },
               {
                 key: "delta",
@@ -93,9 +121,12 @@ export function ProgressMonths({
       title={t("progress.months", {
         year: identifierNumber(progress.period.year),
       })}
+      footer={<YearLine progress={progress} />}
     >
       <PanelBody>
+        <MonthsChart progress={progress} />
         <DataTable<SalesProgressMonth>
+          fold
           label={t("progress.months", {
             year: identifierNumber(progress.period.year),
           })}
@@ -106,6 +137,7 @@ export function ProgressMonths({
               key: "month",
               header: t("progress.month"),
               render: (row) => monthName(row.month, locale),
+              fold: "title",
               grow: true,
             },
             {
@@ -135,5 +167,86 @@ export function ProgressMonths({
         />
       </PanelBody>
     </Panel>
+  );
+}
+
+// Each month's goal as an outline and its closed revenue filled inside it. The
+// table below carries the same figures for a screen reader.
+function MonthsChart({ progress }: Readonly<{ progress: SalesProgress }>) {
+  const { locale } = useLocale();
+  const amounts = progress.months.flatMap((row) => [
+    row.goal.amount_minor ?? 0,
+    row.closed.amount_minor ?? 0,
+  ]);
+  const top = Math.max(...amounts, 1);
+  const height = (amount: number | undefined) =>
+    `${((amount ?? 0) / top) * 100}%`;
+  return (
+    <div className="progress-chart" aria-hidden="true">
+      {progress.months.map((row) => {
+        const goal = row.goal.amount_minor;
+        const closed = row.closed.amount_minor;
+        const met = goal != null && closed != null && closed >= goal;
+        return (
+          <div
+            key={row.month}
+            className="progress-chart-month"
+            data-state={row.state}
+            data-met={met || undefined}
+          >
+            <div className="progress-chart-plot">
+              {goal != null && (
+                <span
+                  className="progress-chart-goal"
+                  style={{ height: height(goal) }}
+                />
+              )}
+              {closed != null && row.state !== "not_started" && (
+                <span
+                  className="progress-chart-closed"
+                  style={{ height: height(closed) }}
+                />
+              )}
+            </div>
+            <span className="progress-chart-name">
+              <span className="month-short">
+                {monthName(row.month, locale, "short")}
+              </span>
+              <span className="month-narrow">
+                {monthName(row.month, locale, "narrow")}
+              </span>
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// The year so far against the whole year's goal, once every month has one.
+function YearLine({ progress }: Readonly<{ progress: SalesProgress }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const goals = progress.months.map((row) => row.goal.amount_minor);
+  if (goals.some((goal) => goal == null)) return null;
+  const goal = goals.reduce<number>((sum, each) => sum + (each ?? 0), 0);
+  const closed = progress.months.reduce(
+    (sum, row) => sum + (row.closed.amount_minor ?? 0),
+    0,
+  );
+  const money = (minor: number) =>
+    formatAnalyticsMoney(minor, progress.currency, locale);
+  return (
+    <span className="t-caption t-num">
+      {t("progress.yearLine", {
+        year: identifierNumber(progress.period.year),
+        closed: money(closed),
+        goal: money(goal),
+        percent:
+          goal > 0
+            ? formatNumber(Math.round((closed / goal) * 100), locale)
+            : "–",
+      })}
+    </span>
   );
 }

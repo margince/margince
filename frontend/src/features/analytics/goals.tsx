@@ -4,6 +4,7 @@
 import "./progress.css";
 import { useState } from "react";
 import { Badge, Button, Field } from "../../design-system/atoms";
+import { Avatar } from "../../design-system/avatar";
 import { Callout } from "../../design-system/callout";
 import { DataTable } from "../../design-system/datatable";
 import { FilterBar } from "../../design-system/filterbar";
@@ -14,7 +15,6 @@ import {
   formatAnalyticsMoney,
   formatDateTime,
   identifierNumber,
-  monthName,
 } from "../../format/format";
 import { type Translator, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
@@ -22,6 +22,7 @@ import { labelFor, valueFor } from "../../lib/labelfor";
 import { navigate } from "../../lib/router";
 import { replaceDial, useUrlParams } from "../../lib/urlstate";
 import { useViewerZone } from "../../lib/viewerzone";
+import { GoalBars, GoalMonths } from "./goals.bars";
 import { GoalEditor } from "./goals.editor";
 import {
   type SalesGoalPlan,
@@ -131,9 +132,11 @@ export function SalesGoalsScreen() {
       </FilterBar>
       <QueryGate query={roster} pendingLabel={t("goals.reading")}>
         {(answer) => (
-          <div className="progress-body">
-            {seller && <SellerPlan owner={seller.owner_id} year={year} />}
+          <div className={answer.data.length > 1 ? "goals-board" : undefined}>
             {answer.data.length > 1 && <Roster roster={answer} />}
+            <div className="goals-board-plan">
+              {seller && <SellerPlan owner={seller.owner_id} year={year} />}
+            </div>
           </div>
         )}
       </QueryGate>
@@ -181,52 +184,9 @@ function ReadOnlyPlan({ plan }: Readonly<{ plan: SalesGoalPlan }>) {
   return (
     <div className="goal-plan">
       <Callout tone="info" title={t("goals.readOnly")} />
-      <MonthsTable months={plan.live_months} currency={plan.currency} />
+      <GoalBars months={plan.live_months} />
+      <GoalMonths months={plan.live_months} currency={plan.currency} />
     </div>
-  );
-}
-
-/** The twelve months as published, and their sum. */
-export function MonthsTable({
-  months,
-  currency,
-}: Readonly<{ months: readonly (number | null)[]; currency: string }>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const total = months.every((month) => month !== null)
-    ? months.reduce<number>((sum, month) => sum + (month ?? 0), 0)
-    : null;
-  const rows = [
-    ...months.map((amount, index) => ({
-      key: String(index + 1),
-      label: monthName(index + 1, locale),
-      amount,
-    })),
-    { key: "total", label: t("goals.yearTotal"), amount: total },
-  ];
-  return (
-    <DataTable
-      label={t("goals.months")}
-      rows={rows}
-      rowKey={(row) => row.key}
-      columns={[
-        {
-          key: "month",
-          header: t("progress.month"),
-          grow: true,
-          render: (row) => row.label,
-        },
-        {
-          key: "goal",
-          header: t("progress.goal"),
-          align: "end",
-          render: (row) =>
-            row.amount === null
-              ? t("goals.notSet")
-              : formatAnalyticsMoney(row.amount, currency, locale),
-        },
-      ]}
-    />
   );
 }
 
@@ -295,7 +255,6 @@ function Roster({ roster }: Readonly<{ roster: SalesGoalRoster }>) {
       <PanelBody>
         <DataTable
           label={t("goals.roster")}
-          fold
           rows={roster.data}
           rowKey={(seller) => seller.owner_id}
           onRowClick={(seller) => replaceDial("seller", seller.owner_id)}
@@ -304,26 +263,29 @@ function Roster({ roster }: Readonly<{ roster: SalesGoalRoster }>) {
               key: "name",
               header: t("goals.seller"),
               grow: true,
-              fold: "title",
-              render: (seller) => seller.name,
+              render: (seller) => (
+                <span className="goals-seller">
+                  <Avatar name={seller.name} identity={seller.owner_id} />
+                  <span className="goals-seller-name">
+                    {seller.name}
+                    <span className="t-caption t-num">
+                      {seller.total_minor == null
+                        ? t("goals.notSet")
+                        : formatAnalyticsMoney(
+                            seller.total_minor,
+                            roster.currency,
+                            locale,
+                          )}
+                    </span>
+                  </span>
+                </span>
+              ),
             },
             {
               key: "state",
               header: t("goals.status"),
-              render: (seller) => <PlanStateBadge state={seller.state} />,
-            },
-            {
-              key: "total",
-              header: t("goals.yearTotal"),
               align: "end",
-              render: (seller) =>
-                seller.total_minor == null
-                  ? t("goals.notSet")
-                  : formatAnalyticsMoney(
-                      seller.total_minor,
-                      roster.currency,
-                      locale,
-                    ),
+              render: (seller) => <PlanStateBadge state={seller.state} />,
             },
           ]}
         />
