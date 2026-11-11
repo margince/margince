@@ -124,10 +124,10 @@ func TestNoToolPromisesAnApprovalItsUserSkips(t *testing.T) {
 	}
 }
 
-// The present tense is the form the census missed before: a copy saying a call
-// "stages for approval" read as safe where "staged for approval" was caught,
-// though both make a promise an own-user agent never meets. The gate above sees
-// it in either tense now.
+// The present tense is the form the census missed before. A copy saying a call
+// "stages for approval" read as safe, where "staged for approval" was caught.
+// Both make a promise an own-user agent never meets. The gate above sees it in
+// either tense now.
 func TestPromisesApprovalCatchesEveryTense(t *testing.T) {
 	for _, made := range []string{
 		"the call stages for approval",

@@ -121,9 +121,10 @@ func TestDescribeForClientStatesEachTierDistinctly(t *testing.T) {
 	}
 }
 
-// A read tool that asks for the user's yes first must say so, even though the
-// read scope otherwise carries nothing more: a read that surfaces sensitive
-// diagnostics (get_ai_call) is called unprompted by a client never told to ask.
+// A read tool that asks for the user's yes first must say so. The read scope
+// otherwise carries nothing more, which hid the ask. A read that surfaces AI
+// call diagnostics (get_ai_call) is then called unprompted by a client never
+// told to ask.
 func TestDescribeForClientSurfacesAnAskAReadRequires(t *testing.T) {
 	got := DescribeForClient(mcp.ToolSpec{
 		Name: "get_ai_call", Description: "Read one AI call.",
