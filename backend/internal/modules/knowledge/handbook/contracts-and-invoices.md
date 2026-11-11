@@ -213,4 +213,5 @@ Invoice statuses in Margince are **Draft, Open, Partially paid, Paid, Overdue,
 Disputed, Credited, Void.**
 
 Margince works out **Overdue** against today rather than taking it from the
-accounting system. So it is current even when the last sync is not.
+accounting system. So it is current even when the last sync is not. An invoice
+still open on its due date is not overdue yet; it becomes overdue the day after.

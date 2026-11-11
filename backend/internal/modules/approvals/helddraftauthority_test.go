@@ -33,6 +33,7 @@ func sendGrantHolder(user ids.UUID) principal.Principal {
 		UserID: user,
 		Permissions: principal.Permissions{Objects: map[string]principal.ObjectGrant{
 			objectActivity: {Create: true, Read: true, Update: true, Delete: true},
+			tableContact:   {Read: true},
 		}},
 	}
 }
@@ -87,5 +88,25 @@ func TestAHeldDraftWithNoRepRecordedIsDecidedByNobody(t *testing.T) {
 			t.Errorf("%s can release a held draft that records no rep. A message with nobody recorded is "+
 				"one nobody may send, not one everybody may", who)
 		}
+	}
+}
+
+func TestAHeldDraftNeedsTheGrantsItsCardDiscloses(t *testing.T) {
+	holding := func(objects map[string]principal.ObjectGrant) principal.Principal {
+		return principal.Principal{UserID: ids.New[ids.UserKind]().UUID, Permissions: principal.Permissions{Objects: objects}}
+	}
+	staged := row{Kind: kindHeldDraft}
+
+	createOnly := holding(map[string]principal.ObjectGrant{objectActivity: {Create: true}})
+	if err := requireDecisionGrants(createOnly, staged); err == nil {
+		t.Error("a decider holding only activity.create was offered a card carrying a contact's address and a draft derived from a conversation they cannot read")
+	}
+
+	all := holding(map[string]principal.ObjectGrant{
+		objectActivity: {Create: true, Read: true},
+		tableContact:   {Read: true},
+	})
+	if err := requireDecisionGrants(all, staged); err != nil {
+		t.Errorf("a decider holding activity.create, activity.read and contact read was refused: %v", err)
 	}
 }
