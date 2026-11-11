@@ -174,7 +174,7 @@ describe("an invoice opens as the source's own PDF", () => {
       name: "Open invoice INV-9 as PDF",
     });
     expect(link.getAttribute("href")).toBe(
-      `${globalThis.location.origin}/v1/finance/invoices/${invoice.id}/pdf`,
+      `/v1/finance/invoices/${invoice.id}/pdf`,
     );
     expect(link.getAttribute("target")).toBe("_blank");
   });

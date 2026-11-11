@@ -98,6 +98,25 @@ func (a *sourceAdmin) makeOwnerPrivate(t *testing.T) {
 		owner, "human:"+owner.String(), a.company)
 }
 
+// Once the installation reads a newer source, an invoice the earlier one issued
+// is no longer that source's to open.
+func TestAnInvoiceFromAReplacedConnectionIsNotFound(t *testing.T) {
+	a := setupSourceAdmin(t)
+	invoice := a.mirroredInvoice(t)
+	successor := ids.NewV7()
+	a.ownerExec(t, `
+		INSERT INTO finance_connection (id, provider, status, credential_ref, source, captured_by, created_at)
+		VALUES ($1, $2, 'active', 'offline://successor', 'system', 'system:test', now() + interval '1 second')`,
+		successor, fixtureProviderName)
+	// The package shares one database, and every later test reads the newest connection.
+	t.Cleanup(func() {
+		a.ownerExec(t, `UPDATE finance_connection SET archived_at = now() WHERE id = $1`, successor)
+	})
+
+	expect(t, download(a.documentReader(principal.RowScopeAll), a.handlers, ids.UUID(invoice.Id)),
+		http.StatusNotFound, "not_found")
+}
+
 // documentlessSources offers the suite's ledger from a unit that serves no
 // documents, or one that answers with something other than a PDF.
 type documentlessSources struct{ document Provider }

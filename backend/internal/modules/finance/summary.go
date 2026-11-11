@@ -116,6 +116,7 @@ type connection struct {
 	id            ids.UUID
 	provider      string
 	status        string
+	createdAt     time.Time
 	lastSuccessAt *time.Time
 }
 
@@ -128,11 +129,11 @@ type connection struct {
 // `no_connection` renders it.
 func readConnection(ctx context.Context, tx pgx.Tx) (conn connection, found bool, err error) {
 	err = tx.QueryRow(ctx, `
-		SELECT id, provider, status, last_success_at
+		SELECT id, provider, status, created_at, last_success_at
 		  FROM finance_connection
 		 WHERE archived_at IS NULL AND status <> 'disconnected'
 		 ORDER BY created_at DESC
-		 LIMIT 1`).Scan(&conn.id, &conn.provider, &conn.status, &conn.lastSuccessAt)
+		 LIMIT 1`).Scan(&conn.id, &conn.provider, &conn.status, &conn.createdAt, &conn.lastSuccessAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return connection{}, false, nil
 	}

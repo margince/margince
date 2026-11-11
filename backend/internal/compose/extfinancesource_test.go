@@ -179,11 +179,17 @@ func TestOnlyASourceDeclaringDocumentsServesThem(t *testing.T) {
 	if len(offered) != 2 || offered[0].Documents || !offered[1].Documents {
 		t.Fatalf("offered %+v, want documents on paper_books alone", offered)
 	}
-	paper, _ := composedFinanceSources{}.Open("paper_books", accounting.Connection{})
+	paper, ok := composedFinanceSources{}.Open("paper_books", accounting.Connection{})
+	if !ok {
+		t.Fatal("paper_books was not opened")
+	}
 	if document, err := paper.InvoiceDocument(context.Background(), "INV-7"); err != nil || string(document.Body) != "INV-7" {
 		t.Errorf("InvoiceDocument() = %q, %v; want the unit's document for INV-7", document.Body, err)
 	}
-	bare, _ := composedFinanceSources{}.Open("bare_books", accounting.Connection{})
+	bare, ok := composedFinanceSources{}.Open("bare_books", accounting.Connection{})
+	if !ok {
+		t.Fatal("bare_books was not opened")
+	}
 	if _, err := bare.InvoiceDocument(context.Background(), "INV-7"); !errors.Is(err, apperrors.ErrUnsupportedBySoR) {
 		t.Errorf("a source without documents answered %v, want ErrUnsupportedBySoR", err)
 	}

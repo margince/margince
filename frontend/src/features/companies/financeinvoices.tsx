@@ -131,7 +131,7 @@ function InvoiceNumber({
   }
   return (
     <a
-      href={`${globalThis.location.origin}/v1/finance/invoices/${invoice.id}/pdf`}
+      href={`/v1/finance/invoices/${invoice.id}/pdf`}
       target="_blank"
       rel="noreferrer"
       aria-label={t("finance.openInvoicePdf", { number })}

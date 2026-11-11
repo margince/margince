@@ -11,7 +11,6 @@ import (
 	"io"
 	"net/http"
 	"regexp"
-	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -107,26 +106,28 @@ func (s *Store) servesDocuments(provider string) bool {
 // invoice left behind by an earlier connection is not found: the source that
 // issued it is no longer the one this installation reads.
 func readDocumentTarget(ctx context.Context, tx pgx.Tx, invoiceID ids.UUID) (documentTarget, error) {
-	var target documentTarget
-	var connID ids.UUID
-	var connectedAt time.Time
-	err := tx.QueryRow(ctx, `
-		SELECT i.company_id, i.external_id, i.number, c.provider, c.id, c.created_at
-		  FROM finance_invoice i
-		  JOIN finance_connection c ON c.id = i.connection_id
-		 WHERE i.id = $1 AND i.archived_at IS NULL
-		   AND c.archived_at IS NULL AND c.status <> 'disconnected'
-		   AND c.id = (SELECT id FROM finance_connection
-		                WHERE archived_at IS NULL AND status <> 'disconnected'
-		                ORDER BY created_at DESC LIMIT 1)`, invoiceID).
-		Scan(&target.companyID, &target.externalID, &target.number, &target.provider, &connID, &connectedAt)
+	conn, connected, err := readConnection(ctx, tx)
+	if err != nil {
+		return documentTarget{}, err
+	}
+	if !connected {
+		return documentTarget{}, apperrors.ErrNotFound
+	}
+	target := documentTarget{
+		provider: conn.provider,
+		conn:     SourceConnection{ID: conn.id.String(), ConnectedAt: conn.createdAt},
+	}
+	err = tx.QueryRow(ctx, `
+		SELECT company_id, external_id, number
+		  FROM finance_invoice
+		 WHERE id = $1 AND connection_id = $2 AND archived_at IS NULL`, invoiceID, conn.id).
+		Scan(&target.companyID, &target.externalID, &target.number)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return documentTarget{}, apperrors.ErrNotFound
 	}
 	if err != nil {
 		return documentTarget{}, fmt.Errorf("read the invoice: %w", err)
 	}
-	target.conn = SourceConnection{ID: connID.String(), ConnectedAt: connectedAt}
 	return target, nil
 }
 
