@@ -128,7 +128,7 @@ func TestTheDatabaseRefusesAMisattributedRow(t *testing.T) {
 		 ORDER BY i.id LIMIT 1`, e.connection)
 	for _, test := range []struct {
 		name, statement, want string
-		args             []any
+		args                  []any
 	}{
 		{"an invoice on a company its link does not name", `UPDATE finance_invoice SET company_id = $2 WHERE id = $1`,
 			"finance_invoice_customer_link_fk", []any{invoice, other}},
