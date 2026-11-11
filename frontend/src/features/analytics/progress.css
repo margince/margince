@@ -1,0 +1,338 @@
+.progress-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gapCards);
+}
+
+.progress-result {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.progress-result-figure {
+  margin: 0;
+  font: var(--fontDisplayFigure);
+  font-variant-numeric: tabular-nums;
+}
+
+.progress-result-goal {
+  margin: 0;
+  color: var(--textSecondary);
+}
+
+.progress-definition {
+  margin: 0;
+  max-inline-size: 72ch;
+}
+
+.goal-editor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.goal-editor-yearly {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: var(--gapActions);
+}
+
+.goal-editor-months {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: var(--space-3) var(--space-4);
+}
+
+.goal-editor-sum {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.progress-work {
+  display: flex;
+  flex-direction: column;
+  align-items: start;
+  gap: var(--space-3);
+}
+
+.progress-work > * {
+  align-self: stretch;
+}
+
+.progress-work > :first-child {
+  align-self: start;
+}
+
+.progress-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gapCards);
+}
+
+.goal-plan {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* A refused button carries its reason below it; the others keep their height. */
+.goal-editor .card-actions {
+  align-items: flex-start;
+  margin-top: 0;
+}
+
+/* The headline beside its bar: the figure reads first, the bar shows why. */
+.progress-hero {
+  display: grid;
+  grid-template-columns: minmax(14rem, 18rem) minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-6);
+  padding: var(--padPanel);
+}
+@media (max-width: 720px) {
+  .progress-hero {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.progress-result-label {
+  color: var(--textSecondary);
+  font: var(--fontBodySmall);
+}
+.progress-result-completion {
+  margin: 0;
+  font-weight: var(--fontWeightMedium);
+  font-variant-numeric: tabular-nums;
+}
+.progress-result-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--gapActions);
+  margin-top: var(--space-2);
+}
+.progress-result-bar {
+  min-width: 0;
+}
+
+.progress-basis {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0 0 var(--space-3);
+}
+.progress-basis > div {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.progress-basis dt {
+  color: var(--textSecondary);
+}
+.progress-basis dd {
+  margin: 0;
+  text-align: end;
+}
+
+.progress-member {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+/* The amount over its bar, so a column of bars lines up under the figures. */
+.progress-closedcell {
+  display: inline-grid;
+  justify-items: end;
+  gap: var(--space-1);
+  min-inline-size: 7rem;
+}
+.progress-closedcell > .meterbar {
+  justify-self: stretch;
+  margin: 0;
+}
+
+/* Each month a dashed goal outline with its closed revenue filled inside. */
+.progress-chart {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+}
+.progress-chart-month {
+  display: grid;
+  grid-template-rows: 8rem auto;
+  gap: var(--space-1);
+  min-width: 0;
+}
+.progress-chart-plot {
+  position: relative;
+  display: flex;
+  align-items: end;
+  justify-content: center;
+  border-bottom: 1px solid var(--groundEdge);
+}
+.progress-chart-goal {
+  position: absolute;
+  inset-inline: 12%;
+  bottom: 0;
+  border: 1.5px dashed var(--borderStrong);
+  border-bottom: 0;
+  border-radius: var(--r-xs) var(--r-xs) 0 0;
+}
+.progress-chart-closed {
+  position: relative;
+  inline-size: 52%;
+  border-radius: var(--r-xs) var(--r-xs) 0 0;
+  background: color-mix(in srgb, var(--accent) 55%, var(--bgChip));
+}
+.progress-chart-month[data-met] .progress-chart-closed {
+  background: var(--accent);
+}
+.progress-chart-month[data-state="current"] .progress-chart-goal {
+  border-color: var(--accent);
+}
+.progress-chart-name {
+  color: var(--textSecondary);
+  font: var(--fontBodySmall);
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.progress-chart-month[data-state="current"] .progress-chart-name {
+  color: var(--textPrimary);
+  font-weight: var(--fontWeightMedium);
+}
+
+.progress-work-note {
+  margin: 0 0 var(--space-3);
+}
+/* A cell's figure over its label: a name over its company, a date over its flag. */
+.progress-work-stack {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: start;
+  gap: var(--space-1);
+}
+.progress-work-end {
+  align-items: end;
+}
+.progress-work-none {
+  color: var(--warningText);
+}
+
+/* Sales goals: the sellers beside the one plan in hand. */
+.goals-board {
+  display: grid;
+  grid-template-columns: minmax(16rem, 20rem) minmax(0, 1fr);
+  align-items: start;
+  gap: var(--gapCards);
+}
+.goals-board-plan {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gapCards);
+  min-width: 0;
+}
+@media (max-width: 1000px) {
+  .goals-board {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.goals-seller {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.goals-seller-name {
+  display: flex;
+  flex-direction: column;
+}
+
+.goal-bars {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+.goal-bars-month {
+  display: grid;
+  grid-template-rows: 6rem auto;
+  gap: var(--space-1);
+  min-width: 0;
+}
+.goal-bars-plot {
+  display: flex;
+  align-items: end;
+  justify-content: center;
+  border-bottom: 1px solid var(--groundEdge);
+}
+.goal-bars-bar {
+  inline-size: 60%;
+  border-radius: var(--r-xs) var(--r-xs) 0 0;
+  background: color-mix(in srgb, var(--accent) 55%, var(--bgChip));
+}
+.goal-bars-bar[data-unset] {
+  block-size: 2px;
+  background: var(--borderStrong);
+}
+.goal-bars-name {
+  color: var(--textSecondary);
+  font: var(--fontBodySmall);
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.goal-months {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: var(--space-3) var(--space-4);
+  margin: 0;
+}
+.goal-months > div:not(.goal-months-total) {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+.goal-months dt {
+  color: var(--textSecondary);
+  font: var(--fontBodySmall);
+}
+.goal-months dd {
+  margin: 0;
+}
+.goal-months-total {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: space-between;
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--groundEdge);
+}
+.goal-months-total dt,
+.goal-months-total dd {
+  color: var(--textPrimary);
+  font-weight: var(--fontWeightMedium);
+}
+@media (max-width: 720px) {
+  .goal-months,
+  .goal-editor-months {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* A phone has room for a month's first letter under each bar, not its name. */
+.month-narrow {
+  display: none;
+}
+@media (max-width: 720px) {
+  .month-short {
+    display: none;
+  }
+  .month-narrow {
+    display: inline;
+  }
+  .progress-chart,
+  .goal-bars {
+    gap: var(--space-1);
+  }
+}

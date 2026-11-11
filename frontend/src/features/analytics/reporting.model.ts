@@ -45,6 +45,8 @@ export function reportingQuery(selection: ReportingSelection) {
     end_at: selection.interval?.end_at,
     target_basis: selection.target_basis,
     close_window: selection.close_window,
+    close_start_at: selection.close_interval?.start_at,
+    close_end_at: selection.close_interval?.end_at,
     product_id: selection.product_id,
     initiative_id: selection.initiative_id,
     country: selection.country,
