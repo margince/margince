@@ -56,8 +56,8 @@ export function FieldNeed({
 /**
  * The addresses this message can be built out of.
  *
- * Read off what the composer already holds: the contact it writes to, the people
- * around that contact (colleagues and the others on its deals), the account
+ * Read off what the composer already holds: the contact it writes to, the contacts
+ * around it (colleagues and the others on its deals), the account
  * behind the record, and the workspace's members. A reader remembers a
  * colleague's NAME and not their address, which is why the contact is the label;
  * the address is the value AND the hint beside it, because one contact can have
@@ -65,7 +65,7 @@ export function FieldNeed({
  * identical-looking options.
  *
  * The contact leads, because a message written from a contact's page is
- * overwhelmingly to that contact. The people around it follow, then the
+ * overwhelmingly to that contact. The contacts around it follow, then the
  * account's roster, then the members. A contact with no address on file is not
  * offered: a row that commits an empty recipient is help that refuses at the send.
  */
@@ -112,18 +112,18 @@ export function recipientSuggestions({
       subject && contactCard(subject.id, subject.title, account),
     );
   }
-  for (const person of related) {
+  for (const around of related) {
     offer(
-      person.primary_email,
-      person.full_name,
-      contactCard(person.id, person.title, person.employer?.company_name),
+      around.primary_email,
+      around.full_name,
+      contactCard(around.id, around.title, around.employer?.company_name),
     );
   }
-  for (const person of company?.contacts?.data ?? []) {
+  for (const rostered of company?.contacts?.data ?? []) {
     offer(
-      person.primary_email,
-      person.full_name,
-      contactCard(person.contact_id, person.title, account),
+      rostered.primary_email,
+      rostered.full_name,
+      contactCard(rostered.contact_id, rostered.title, account),
     );
   }
   for (const member of colleagues) {

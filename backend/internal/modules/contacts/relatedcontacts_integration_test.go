@@ -16,8 +16,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// relatedGraph is one buyer with a current colleague, a former one, a person
-// seated beside them on a deal, and a stranger at that person's company.
+// relatedGraph is one buyer with a current colleague, a former one, a contact
+// seated beside them on a deal, and a stranger at that contact's company.
 type relatedGraph struct {
 	buyer, colleague, former, dealPeer, stranger ids.ContactID
 }
@@ -82,7 +82,7 @@ func relatedNames(ctx context.Context, t *testing.T, e *privacyEnv, anchor ids.C
 	t.Helper()
 	rows, _, err := e.store.ListContacts(ctx, ListContactsInput{RelatedTo: &anchor})
 	if err != nil {
-		t.Fatalf("listing the people around %s: %v", anchor, err)
+		t.Fatalf("listing the contacts around %s: %v", anchor, err)
 	}
 	names := make([]string, 0, len(rows))
 	for _, row := range rows {

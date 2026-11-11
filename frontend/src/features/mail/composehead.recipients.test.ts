@@ -35,7 +35,7 @@ describe("recipientSuggestions", () => {
     expect(offered[1]?.label).toBe("Sofia Keller");
   });
 
-  it("offers the people around the contact between it and the members", () => {
+  it("offers the contacts around the contact between it and the members", () => {
     const offered = recipientSuggestions({
       contact: view,
       related: [

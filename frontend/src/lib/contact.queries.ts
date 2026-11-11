@@ -34,7 +34,7 @@ export function contact360Query(contactId: string) {
   });
 }
 
-// The people around a contact: current colleagues and the people on its deals.
+// The contacts around a contact: current colleagues and the others on its deals.
 // One page at the contract's ceiling, because the composer matches names in it
 // as the reader types and a second page would be a name it never offers.
 export function relatedContactsQuery(contactId: string | undefined) {

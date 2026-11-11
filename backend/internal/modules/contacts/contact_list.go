@@ -66,7 +66,7 @@ type ListContactsInput struct {
 	// an edge, not a column on contact, so this is a link predicate too — see
 	// contactEmployerClause.
 	CompanyID *ids.CompanyID
-	// RelatedTo narrows to the people around one contact; see
+	// RelatedTo narrows to the contacts around one contact; see
 	// contactRelatedClause.
 	RelatedTo *ids.ContactID
 	// Membership narrows to one list's members (list_id).

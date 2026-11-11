@@ -455,7 +455,7 @@ export function useComposeRecords({
     projectFiling,
     // Addresses known not to arrive, warned under the fields.
     deadRecipients: deadRecipientsAmong(contact.data, [...addressed]),
-    // The contact, the people around it, the account's roster, the members.
+    // The contact, the contacts around it, the account's roster, the members.
     recipients: recipientSuggestions({
       contact: contact.data,
       related: related.data,

@@ -72002,7 +72002,7 @@ type ListContactsParams struct {
 	// list answers the first.
 	CompanyId *openapi_types.UUID `form:"company_id,omitempty" json:"company_id,omitempty"`
 
-	// RelatedTo The people around this contact: those who work at one of its current employers, and
+	// RelatedTo The contacts around this one: those who work at one of its current employers, and
 	// those who hold a seat on a deal it holds a seat on. The named contact itself is not
 	// in the list. The composer offers this list as recipients. Each link counts only when
 	// the caller may read it: the employment edge, the deal and the named contact itself.

@@ -48,7 +48,7 @@ const CONTACT = {
   sections_omitted: [],
 };
 
-// The people around Dana: a colleague at her company and a partner on her deal.
+// The contacts around Dana: a colleague at her company and a partner on her deal.
 const AROUND_DANA = {
   data: [
     {
@@ -221,9 +221,9 @@ describe("the recipient lines", () => {
     expect(offered).toHaveLength(1);
   });
 
-  // Writing to Dana and copying her colleague is the ordinary case: the people
+  // Writing to Dana and copying her colleague is the ordinary case: the contacts
   // around the contact are offered by name, and picking one addresses them.
-  it("offers the people around the contact by name", async () => {
+  it("offers the contacts around the contact by name", async () => {
     const user = userEvent.setup();
     const sent = stubRoutes();
     render(drawer());

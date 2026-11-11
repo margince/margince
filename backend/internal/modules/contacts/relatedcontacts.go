@@ -15,8 +15,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// contactRelatedClause narrows the list to the people around one contact: its
-// current colleagues and the people seated beside it on a deal.
+// contactRelatedClause narrows the list to the contacts around one contact: its
+// current colleagues and the others seated beside it on a deal.
 //
 // Every hop is the caller's to see. The anchor must be in their contact scope,
 // or the filter would say who sits next to a record they cannot open.
@@ -61,7 +61,7 @@ func anchorColleaguesSQL(ctx context.Context, anchorPos int, arg func(any) int) 
 	return CompanyRosterSQL(ctx, employers, arg)
 }
 
-// anchorDealPeersSQL is everyone holding a current seat on a deal the anchor
+// anchorDealPeersSQL is every contact holding a current seat on a deal the anchor
 // holds a current seat on. A caller who may not read deals gets no clause, so
 // the colleagues alone answer rather than the whole list refusing.
 func anchorDealPeersSQL(ctx context.Context, anchorPos int, arg func(any) int) (string, error) {
