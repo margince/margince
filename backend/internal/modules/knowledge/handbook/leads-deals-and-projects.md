@@ -231,7 +231,7 @@ The new owner must be "an active colleague you may assign work to". That is any 
 Also called: hand over a deal, change deal owner, transfer an opportunity.
 
 ### Can I edit a closed or archived deal?
-A won or lost deal in Margince can still be edited: only its **Stage** ladder is locked until you reopen it. Changing a closed deal's value or currency fixes its exchange rate again.
+A won or lost deal in Margince can still be edited: only its **Stage** ladder and its **Probability** are locked until you reopen it. Changing a closed deal's value or currency fixes its exchange rate again.
 An archived deal cannot be edited: "This deal is archived and takes no changes." Without edit rights you see "You cannot change this deal. Ask its owner to share it, or an administrator for edit rights."
 Also called: change a won deal, fix a lost deal.
 
@@ -250,8 +250,8 @@ No. A deal in Margince stays in the pipeline it was created in, and its stage ca
 Also called: change a deal's pipeline, switch pipeline.
 
 ### Can I set the win probability of one deal?
-Yes. Press **Probability** in the deal's **Details** and enter a number from 0 to 100. Leave it empty to use the stage's probability again (**Settings → Deals**, **Win probability**). Moving the deal to another stage also sets it back to that stage's.
-Also called: deal probability, likelihood, confidence.
+Yes. Press **Probability** in the deal's **Details** and enter a number from 0 to 100. Leave it empty to use the stage's probability again (**Settings → Deals**, **Win probability**). Moving the deal to another stage also sets it back to that stage's. The ⓘ beside the figure says where it comes from: the stage, who set it by hand, or why Margince lowered it.
+Also called: deal probability, likelihood, confidence, why this probability.
 
 ## Projects
 

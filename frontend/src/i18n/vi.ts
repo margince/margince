@@ -5860,6 +5860,23 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deal.winProbability.source.colleague": "do {name} đặt",
   "deal.winProbability.source.margince": "do Margince hạ xuống",
   "deal.winProbability.stageValue": "giai đoạn {percent}",
+  "deal.winProbability.why": "Vì sao có xác suất này",
+  "deal.winProbability.reason.stage": "Đây là con số {stage} đưa ra.",
+  "deal.winProbability.reason.closed":
+    "Deal đã đóng, nên {stage} cố định con số này.",
+  "deal.winProbability.reason.you": "Bạn đã đặt con số này thủ công.",
+  "deal.winProbability.reason.colleague": "{name} đã đặt con số này thủ công.",
+  "deal.winProbability.reason.human":
+    "Một đồng nghiệp đã đặt con số này thủ công.",
+  "deal.winProbability.reason.stageGives":
+    "Nếu không, {stage} đưa ra {percent}.",
+  "deal.winProbability.reason.margince": "Margince đã đặt con số này.",
+  "deal.winProbability.reason.marginceRule":
+    "Margince có thể hạ xác suất không ai đặt thủ công khi deal im lặng hoặc email cho thấy khả năng thấp hơn.",
+  "deal.winProbability.reason.override": "Nhập con số của riêng bạn để ghi đè.",
+  "deal.winProbability.reason.clear": "Xóa con số để theo lại giai đoạn.",
+  "deal.winProbability.reason.stageNamed": "giai đoạn {name}",
+  "deal.winProbability.reason.stageUnnamed": "giai đoạn của deal",
   "deal.winProbability.setByStage":
     "Giai đoạn {stage} đã đặt xác suất thành {percent}",
   "deal.winProbability.band.90_plus": "Từ 90% trở lên",
@@ -9365,6 +9382,21 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "setup.action.ai": "Kết nối",
   "setup.step.aiDone": "{name} đã được kết nối.",
   "setup.step.aiDoneUnnamed": "Một công cụ AI đã được kết nối.",
+  "firstRun.ai.skip": "Để sau",
+  "ob.gate.noModelSub":
+    "Chưa thiết lập nhà cung cấp AI nên Margince chưa đọc được trang web của bạn. Hãy tự nhập thông tin công ty, hoặc thêm khóa ngay.",
+  "ob.gate.addModel": "Thêm khóa AI",
+  "aiSetup.title": "Thiết lập AI",
+  "aiSetup.intro":
+    "Margince cần một nhà cung cấp AI để đọc trang web, soạn thư trả lời và tìm hiểu. Hãy thêm khóa và chọn mô hình sẽ dùng.",
+  "aiSetup.connect": "Kết nối nhà cung cấp",
+  "aiSetup.connected":
+    "Đã kết nối {vendor}. Giờ Margince có thể đọc, soạn thảo và tìm hiểu.",
+  "setup.step.model": "Thiết lập AI",
+  "setup.caption.model":
+    "Thêm khóa của nhà cung cấp AI để Margince đọc trang web, soạn thư trả lời và tìm hiểu.",
+  "setup.action.model": "Thêm khóa",
+  "setup.step.modelDone": "Đã kết nối một nhà cung cấp AI.",
   "ob.conv.connect.aiRow": "Công cụ AI của bạn",
   "ob.conv.connect.aiBody":
     "Hỏi Claude, ChatGPT, Copilot hoặc trình soạn thảo về các deal của bạn, và để nó cập nhật Margince giúp bạn.",
@@ -15482,7 +15514,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "firstRun.continue": "Tiếp tục",
   "firstRun.ai.title": "Chọn nhà cung cấp mô hình",
   "firstRun.ai.sub":
-    "Margince dùng tài khoản riêng của công ty tại nhà cung cấp AI. Có thể đổi mọi thứ ở đây sau, trong Cài đặt, mục AI.",
+    "Margince dùng tài khoản riêng của công ty tại nhà cung cấp AI. Chưa có khóa? Bạn có thể thêm sau trong Cài đặt, mục AI.",
   "firstRun.ai.provider": "Nhà cung cấp",
   "firstRun.ai.key": "Khóa API",
   "firstRun.ai.keyHint": "Lưu trong kho khóa và không bao giờ hiện lại.",

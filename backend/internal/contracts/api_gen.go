@@ -72011,6 +72011,14 @@ type ListContactsParams struct {
 	// "who works there" and "who has ever worked there" are different questions, and the
 	// list answers the first.
 	CompanyId *openapi_types.UUID `form:"company_id,omitempty" json:"company_id,omitempty"`
+
+	// RelatedTo The contacts around this one: those who work at one of its current employers, and
+	// those who hold a seat on a deal it holds a seat on. The named contact itself is not
+	// in the list. The composer offers this list as recipients. Each link counts only when
+	// the caller may read it: the employment edge, the deal and the named contact itself.
+	// A contact the caller may not read relates to nobody, so the answer is an empty page
+	// and does not say whether the contact exists.
+	RelatedTo *openapi_types.UUID `form:"related_to,omitempty" json:"related_to,omitempty"`
 }
 
 // ListContactsParamsCapturedByKind defines parameters for ListContacts.
@@ -117533,6 +117541,19 @@ func (siw *ServerInterfaceWrapper) ListContacts(w http.ResponseWriter, r *http.R
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "company_id"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "company_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "related_to" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "related_to", r.URL.Query(), &params.RelatedTo, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "related_to"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "related_to", Err: err})
 		}
 		return
 	}
