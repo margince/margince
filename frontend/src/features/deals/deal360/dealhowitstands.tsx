@@ -28,6 +28,7 @@ import {
 } from "../../../lib/lossreasons.queries";
 import { dealRoleLabel } from "../../../lib/recordlabels";
 import { routeHash } from "../../../lib/router";
+import { latestWord } from "../../../lib/standinglatest";
 import { useViewerZone } from "../../../lib/viewerzone";
 import { DealStageLadder } from "../deals.stepper";
 import { DealFigures, DealTimeline } from "./dealfigures";
@@ -90,6 +91,14 @@ export function DealHowItStands({
       date={formatDayMonth(readAt, locale, zone)}
       sources={fromRecords ? { by: "records" } : head.sources}
       verdict={verdict}
+      latest={latestWord(inputs.activities, {
+        t,
+        locale,
+        zone,
+        record: zone,
+        asOf: inputs.asOf,
+        onOpen: onOpenHistory,
+      })}
       heroLayout="below"
       hero={
         <DealStageLadder
