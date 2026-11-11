@@ -9,7 +9,7 @@ the same file in its own repository, with released versions in place of local fo
 ```text
 module example.com/acme-margince
 
-go 1.27.3
+go 1.27.4
 
 tool github.com/margince/margince/backend/tools/gen-composition
 

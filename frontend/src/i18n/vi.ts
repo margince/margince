@@ -9381,6 +9381,21 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "setup.action.ai": "Kết nối",
   "setup.step.aiDone": "{name} đã được kết nối.",
   "setup.step.aiDoneUnnamed": "Một công cụ AI đã được kết nối.",
+  "firstRun.ai.skip": "Để sau",
+  "ob.gate.noModelSub":
+    "Chưa thiết lập nhà cung cấp AI nên Margince chưa đọc được trang web của bạn. Hãy tự nhập thông tin công ty, hoặc thêm khóa ngay.",
+  "ob.gate.addModel": "Thêm khóa AI",
+  "aiSetup.title": "Thiết lập AI",
+  "aiSetup.intro":
+    "Margince cần một nhà cung cấp AI để đọc trang web, soạn thư trả lời và tìm hiểu. Hãy thêm khóa và chọn mô hình sẽ dùng.",
+  "aiSetup.connect": "Kết nối nhà cung cấp",
+  "aiSetup.connected":
+    "Đã kết nối {vendor}. Giờ Margince có thể đọc, soạn thảo và tìm hiểu.",
+  "setup.step.model": "Thiết lập AI",
+  "setup.caption.model":
+    "Thêm khóa của nhà cung cấp AI để Margince đọc trang web, soạn thư trả lời và tìm hiểu.",
+  "setup.action.model": "Thêm khóa",
+  "setup.step.modelDone": "Đã kết nối một nhà cung cấp AI.",
   "ob.conv.connect.aiRow": "Công cụ AI của bạn",
   "ob.conv.connect.aiBody":
     "Hỏi Claude, ChatGPT, Copilot hoặc trình soạn thảo về các deal của bạn, và để nó cập nhật Margince giúp bạn.",
@@ -15498,7 +15513,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "firstRun.continue": "Tiếp tục",
   "firstRun.ai.title": "Chọn nhà cung cấp mô hình",
   "firstRun.ai.sub":
-    "Margince dùng tài khoản riêng của công ty tại nhà cung cấp AI. Có thể đổi mọi thứ ở đây sau, trong Cài đặt, mục AI.",
+    "Margince dùng tài khoản riêng của công ty tại nhà cung cấp AI. Chưa có khóa? Bạn có thể thêm sau trong Cài đặt, mục AI.",
   "firstRun.ai.provider": "Nhà cung cấp",
   "firstRun.ai.key": "Khóa API",
   "firstRun.ai.keyHint": "Lưu trong kho khóa và không bao giờ hiện lại.",
