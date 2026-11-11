@@ -7,19 +7,10 @@ import { useMe } from "./session";
 import { readStored, removeStored, STORAGE_KEYS, writeStored } from "./storage";
 
 /**
- * Where "Not now" on a first-run question is remembered.
- *
- * Each question is asked of the contact running the cold start, once. The
- * server has no word for "asked and declined" — a step is simply unconfigured
- * until it is answered, from here or from Settings — so the decline lives in
- * this browser.
- *
- * KEYED BY THE ACCOUNT THAT GAVE IT. A mark keyed on the browser alone outlives
- * the installation it was about: a machine that had run one cold start carried
- * that answer into the next, and the second installation's setup skipped the
- * question with nothing on screen to say why. A re-claimed installation mints
- * its own administrator, so its cold start asks again; the same contact on the
- * same installation is still asked once.
+ * Where "Not now" on a first-run question is remembered. The server only knows
+ * a step as unconfigured, so the decline lives in this browser.
+ * It is keyed by account: a re-claimed installation mints a new administrator,
+ * so its cold start asks again instead of inheriting an old answer.
  */
 export type DeclinableStep = Extract<
   components["schemas"]["InstallationSetupStep"]["step"],
@@ -40,22 +31,17 @@ function declinedKey(step: DeclinableStep, account: string) {
   return { family, member: account };
 }
 
-// The account:step pairs declined in THIS tab, whether or not storage kept it.
+// The account:step pairs declined in this tab, whether or not storage kept them.
 const declinedThisSession = new Set<string>();
 
-/**
- * Forgets the in-tab declines — the counterpart to `localStorage.clear()`,
- * and needed for the same reason: this set is the half of the answer that
- * storage did not keep, so clearing one without the other leaves a decline
- * standing that the caller believes they erased.
- */
+/** Forgets the in-tab declines, the counterpart to `localStorage.clear()`.
+ *  Clearing only storage would leave a decline standing in this set. */
 export function forgetSetupDeclines(): void {
   declinedThisSession.clear();
 }
 
-/** Whether `account` declined `step`. An unknown account — the session probe
- *  has not answered yet — has declined nothing, which is the reading that asks
- *  rather than the one that hides. */
+/** Whether `account` declined `step`. An unknown account has declined
+ *  nothing, so the question is asked rather than hidden. */
 function stepDeclined(step: DeclinableStep, account: string | null): boolean {
   if (account === null) {
     return false;
@@ -88,8 +74,8 @@ function rememberDeclined(step: DeclinableStep, account: string | null): void {
   if (account === null) {
     return;
   }
-  // Recorded here FIRST, and read back first: a browser that refuses storage
-  // still has to honour the answer for as long as the tab is open.
+  // Recorded in the tab first, so a browser that refuses storage still honours
+  // the answer while the tab is open.
   declinedThisSession.add(`${account}:${step}`);
   writeStored(declinedKey(step, account), "1");
   notify();
@@ -119,11 +105,8 @@ function declinedSnapshot(account: string | null): string {
   );
 }
 
-/**
- * The steps this account declined in this browser, live: the answer every
- * caller of `outstandingStep` passes it, so the gate and the act in front of it
- * re-read the same fact the moment it changes.
- */
+/** The steps this account declined in this browser, live. The gate and the
+ *  act in front of it re-read the same fact the moment it changes. */
 export function useSetupDeclines(): ReadonlySet<DeclinableStep> {
   const account = useAccount();
   const snapshot = useSyncExternalStore(

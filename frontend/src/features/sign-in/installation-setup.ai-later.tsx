@@ -11,10 +11,9 @@ import { AiStep } from "./installation-setup.ai-step";
 const ignoreBusy = () => undefined;
 
 /**
- * The first-run AI form, offered in Settings while the installation binds no
- * model: the way back for an admin who skipped it on the cold start. It is the
- * same form rather than the Providers and Tiers cards, because those edit a
- * binding that exists and a first one needs a key and a binding together.
+ * The first-run AI form, offered in Settings while no model is bound.
+ * The Providers and Tiers cards edit a binding that exists. A first binding
+ * needs a key and a binding together, which only this form writes.
  */
 export function AiSetupPanel() {
   const t = useT();

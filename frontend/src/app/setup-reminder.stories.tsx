@@ -213,8 +213,8 @@ export const AiToolLeft: Story = {
   play: openPanel,
 };
 
-// The admin skipped the AI key on first run: setting it up leads the list, and
-// its verb opens Settings, AI models, where the same form waits.
+// The admin skipped the AI key on first run, so setting it up leads the list.
+// Its verb opens Settings, AI models, where the same form waits.
 export const AiKeySkipped: Story = {
   render: () => reminder({ modelUnbound: true }),
   play: openPanel,

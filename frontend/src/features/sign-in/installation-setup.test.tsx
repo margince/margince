@@ -392,8 +392,8 @@ describe("the first-run setup gate", () => {
     expect(writes.length).toBe(0);
   });
 
-  // The model step blocks the website read, not the reader: with no key at
-  // hand they go on to the manual company interview, and Settings asks later.
+  // The model step blocks the website read, not the reader.
+  // With no key at hand they go on to the manual company interview.
   it("lets a reader past the model step with Not now, and remembers it", async () => {
     const { container, writes } = mount(setupReport(false, true));
     const user = userEvent.setup();

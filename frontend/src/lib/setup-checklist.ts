@@ -320,7 +320,7 @@ const storedHidden = () => readStored(STORAGE_KEYS.setupReminderHidden) === "1";
 const watchHidden = (changed: () => void) =>
   watchStored(STORAGE_KEYS.setupReminderHidden, changed);
 
-// Asked only of a reader who may bind a model: a price editor also acts on the
+// Asked only of a reader who may bind a model. A price editor also acts on the
 // models page, and the form there would not draw for them.
 function useModelRead(acts: ReadonlySet<SettingsPageId>) {
   const canBind = useCanWrite("ai_routing", "update");

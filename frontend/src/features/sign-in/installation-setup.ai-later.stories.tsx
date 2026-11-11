@@ -10,8 +10,8 @@ import {
 } from "../../testing/story-utils";
 import { AiSetupPanel } from "./installation-setup.ai-later";
 
-// Settings → AI models on an installation whose admin skipped the first-run AI
-// step: the same form, as a panel, with its verb in the panel's action band.
+// Settings → AI models after the admin skipped the first-run AI step.
+// The same form, as a panel, with its verb in the panel's action band.
 const meta: Meta<typeof AiSetupPanel> = {
   title: "Settings/AI/AI models/Set up AI",
   component: AiSetupPanel,

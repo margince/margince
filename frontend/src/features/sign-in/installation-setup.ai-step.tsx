@@ -83,9 +83,9 @@ function chatListNote(
 }
 
 /**
- * The AI step: one vendor, one key, the two models it will serve. First run
- * asks it on the stage; Settings asks the same form while nothing is bound, so
- * a reader who skipped it has one form to come back to, not two pages.
+ * The AI step: one vendor, one key, the two models it will serve.
+ * First run asks it on the stage. Settings asks the same form while nothing is
+ * bound, so a reader who skipped it comes back to one form.
  */
 export function AiStep({
   onBusy,

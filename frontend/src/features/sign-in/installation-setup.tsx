@@ -66,17 +66,11 @@ type Step = components["schemas"]["InstallationSetupStep"];
 const ASKABLE_STEPS = DECLINABLE_STEPS;
 
 /**
- * The first step that is not done yet AND that this screen can ask for, in the
- * server's order. A step the reader declined is passed over when it does not
- * block, or when it is the model step: what the model blocks is the website
- * read, and a reader who skipped it is offered the manual interview instead.
- * A remembered decline never opens any other gate the server holds shut.
- *
- * `steps` is optional-chained as well as `setup`: an answer that arrives
- * without it is not an answer, and the alternative is this throwing inside a
- * render — which takes down the screen it was meant to stand in front of.
- * Undefined here reads as "nothing outstanding", which lets the reader past
- * rather than trapping them behind a gate that cannot say what it wants.
+ * The first open step this screen can ask for, in the server's order.
+ * A declined step is passed over when it does not block, or when it is the
+ * model step. The model blocks the website read, and the manual interview
+ * stands in for it. A decline never opens any other blocking step.
+ * A report without `steps` reads as nothing outstanding, never as a throw.
  */
 export function outstandingStep(
   setup: Setup | undefined,
