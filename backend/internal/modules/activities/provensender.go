@@ -33,9 +33,8 @@ const evidenceDataTaskRun = "data_task_run"
 
 // provenSenderSQL holds when contact (a SQL expression) is the proven author of
 // the received, live, unheld activity a, linked to it and naming no sender. The
-// stated address is the bare `from` address, else the counterparty. The contact
-// holds it now and no other contact ever held it: a reassigned address proves
-// nothing about who wrote older mail.
+// stated address is the bare `from` address, else the counterparty, and it
+// must prove the contact (relstrength.AddressProvesSQL).
 func provenSenderSQL(contact string) string {
 	return `a.direction = 'inbound' AND a.archived_at IS NULL AND a.restricted_at IS NULL
 	   AND a.kind IN (` + relstrength.ParticipantKindSQLList() + `)
@@ -48,36 +47,46 @@ func provenSenderSQL(contact string) string {
 	                THEN (SELECT CASE WHEN count(DISTINCT lower(sf.address)) = 1 THEN min(lower(sf.address)) END
 	                        FROM activity_participant sf WHERE sf.activity_id = a.id AND sf.role = 'from')
 	                ELSE lower(nullif(btrim(a.counterparty_email), '')) END AS address) stated
-	         JOIN contact_email own ON own.email = stated.address AND own.contact_id = ` + contact + `
-	              AND own.archived_at IS NULL
-	        WHERE NOT EXISTS (SELECT 1 FROM contact_email other
-	                           WHERE other.email = stated.address AND other.contact_id <> ` + contact + `))`
+	        WHERE ` + relstrength.AddressProvesSQL(contact, "stated.address") + `)`
 }
 
-// stampProvenSender makes contact the sender of the activity when
-// provenSenderSQL holds. The contact's own copy row becomes the `from` row, so
-// one contact is not both author and copy of one message. It reports whether it
-// wrote. Every writer that names a sender after the fact calls this.
+// stampProvenSender is StampProvenSendersTx for one activity, reporting
+// whether it wrote.
 func stampProvenSender(ctx context.Context, tx pgx.Tx, activityID, contact ids.UUID) (bool, error) {
-	var stamped int
-	if err := tx.QueryRow(ctx, `
-		WITH proven AS (SELECT a.id FROM activity a WHERE a.id = $1 AND `+provenSenderSQL("$2::uuid")+`),
+	stamped, err := StampProvenSendersTx(ctx, tx, []ids.UUID{activityID}, contact)
+	return len(stamped) > 0, err
+}
+
+// StampProvenSendersTx makes contact the sender of each activity where
+// provenSenderSQL holds, and answers the activities it wrote. The contact's own
+// copy row becomes the `from` row, so one contact is not both author and copy
+// of one message. Every writer that names a sender after the fact calls this;
+// the caller holds the activities and audits the change.
+func StampProvenSendersTx(ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID, contact ids.UUID) ([]ids.UUID, error) {
+	rows, err := tx.Query(ctx, `
+		WITH proven AS (SELECT a.id FROM activity a WHERE a.id = ANY($1) AND `+provenSenderSQL("$2::uuid")+`),
 		promoted AS (
 		  UPDATE activity_participant ap SET role = 'from'
 		    FROM proven
 		   WHERE ap.activity_id = proven.id AND ap.contact_id = $2 AND ap.role = 'cc'
 		     AND ap.user_id IS NULL AND ap.address IS NULL AND ap.channel_user_id IS NULL
-		  RETURNING ap.id),
+		  RETURNING ap.activity_id),
 		inserted AS (
 		  INSERT INTO activity_participant (activity_id, contact_id, role)
-		  SELECT proven.id, $2, 'from' FROM proven WHERE NOT EXISTS (SELECT 1 FROM promoted)
+		  SELECT proven.id, $2, 'from' FROM proven
+		   WHERE NOT EXISTS (SELECT 1 FROM promoted WHERE promoted.activity_id = proven.id)
 		  ON CONFLICT DO NOTHING
-		  RETURNING id)
-		SELECT (SELECT count(*) FROM promoted) + (SELECT count(*) FROM inserted)`,
-		activityID, contact).Scan(&stamped); err != nil {
-		return false, fmt.Errorf("activities: naming the proven sender of %s: %w", activityID, err)
+		  RETURNING activity_id)
+		SELECT activity_id FROM promoted UNION SELECT activity_id FROM inserted`,
+		activityIDs, contact)
+	if err != nil {
+		return nil, fmt.Errorf("activities: naming the proven sender of %d messages: %w", len(activityIDs), err)
 	}
-	return stamped > 0, nil
+	stamped, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+	if err != nil {
+		return nil, fmt.Errorf("activities: naming the proven sender of %d messages: %w", len(activityIDs), err)
+	}
+	return stamped, nil
 }
 
 // provenLinkSQL holds for an activity a that has a linked contact

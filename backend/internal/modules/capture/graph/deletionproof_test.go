@@ -22,6 +22,9 @@ type deletionMailbox struct {
 	cursor connector.Cursor
 }
 
+// holdDays is deletionHold in whole days, so the tests follow the constant.
+const holdDays = int(deletionHold / (24 * time.Hour))
+
 func newDeletionMailbox(t *testing.T) *deletionMailbox {
 	t.Helper()
 	return &deletionMailbox{
@@ -85,15 +88,15 @@ func TestAHardDeletedMessageIsPurgedOnlyAfterTheHold(t *testing.T) {
 			m.api.deletionsIDs = []string{"m1"}
 			m.api.whereIs = map[string]string{"m1": deletionsFolderID}
 			m.day(tc.arriveDay)
-			m.day(tc.arriveDay + 13)
+			m.day(tc.arriveDay + holdDays - 1)
 			if got := m.purged(); len(got) != 0 {
 				t.Fatalf("purged %v before the hold ran out", got)
 			}
-			m.day(tc.arriveDay + 14)
+			m.day(tc.arriveDay + holdDays)
 			if got := m.purged(); len(got) != 1 || got[0] != "m1" {
 				t.Fatalf("purged %v, want m1 once the hold ran out", got)
 			}
-			m.day(tc.arriveDay + 15)
+			m.day(tc.arriveDay + holdDays + 1)
 			if got := m.purged(); len(got) != 1 || len(m.pending()) != 0 {
 				t.Fatalf("purged %v with %v still pending, want one purge and none pending", got, m.pending())
 			}
@@ -144,7 +147,7 @@ func TestARestoreWithinTheHoldKeepsTheMessage(t *testing.T) {
 		m.api.deletionsIDs = []string{"m1"}
 		m.day(0)
 		m.api.whereIs = map[string]string{"m1": "folder-projects"}
-		m.day(14)
+		m.day(holdDays)
 		if got := m.purged(); len(got) != 0 {
 			t.Fatalf("purged %v the owner restored", got)
 		}
@@ -177,7 +180,7 @@ func TestAPendingMessageWhoseIDStopsResolvingIsPurgedOnlyWhenFoundInDeletions(t 
 			}
 			m.api.copiesOf = map[string][]string{internetIDOf("m1"): tc.copiesIn}
 			m.api.findMessageErr = tc.findErr
-			m.day(14)
+			m.day(holdDays)
 			if got := m.purged(); (len(got) == 1) != tc.purged {
 				t.Fatalf("purged %v, want purged=%v", got, tc.purged)
 			}
@@ -197,7 +200,7 @@ func TestAPendingMessageWithNoInternetIDIsKeptOnA404(t *testing.T) {
 		DeltaLink: "d", SentDeltaLink: "s", DeletionsDeltaLink: "x", Email: owner,
 		PendingPurges: map[string]pendingPurge{"m1": {Seen: pinned}},
 	})
-	m.day(14)
+	m.day(holdDays)
 	if got := m.purged(); len(got) != 0 || len(m.pending()) != 0 {
 		t.Fatalf("purged %v with %v pending, want m1 kept and its hold dropped", got, m.pending())
 	}
@@ -249,7 +252,7 @@ func TestAMessageStillInDeletionsWhenTheHoldEndsIsPurged(t *testing.T) {
 	m.api.deletionsIDs = []string{"m1"}
 	m.day(0)
 	m.api.whereIs = map[string]string{"m1": deletionsFolderID}
-	m.day(14)
+	m.day(holdDays)
 	if got := m.purged(); len(got) != 1 || got[0] != "m1" {
 		t.Fatalf("purged %v, want m1", got)
 	}
@@ -260,13 +263,13 @@ func TestAFailedLookupKeepsThePurgePending(t *testing.T) {
 	m.api.deletionsIDs = []string{"m1"}
 	m.day(0)
 	m.api.lookupErrIDs = map[string]error{"m1": ErrUnreachable}
-	m.day(14)
+	m.day(holdDays)
 	if got := m.purged(); len(got) != 0 || len(m.pending()) != 1 {
 		t.Fatalf("purged %v with %v pending after a failed lookup, want nothing purged and m1 pending", got, m.pending())
 	}
 	m.api.lookupErrIDs = nil
 	m.api.whereIs = map[string]string{"m1": deletionsFolderID}
-	m.day(15)
+	m.day(holdDays + 1)
 	if got := m.purged(); len(got) != 1 {
 		t.Fatalf("purged %v once the lookup answered, want m1", got)
 	}
@@ -312,7 +315,7 @@ func TestAFailingDeletionsDeltaFallsBackToABoundedListing(t *testing.T) {
 		t.Fatalf("pending %v, want only the new arrival m1", m.pending())
 	}
 	m.api.whereIs = map[string]string{"m1": deletionsFolderID}
-	m.day(15)
+	m.day(holdDays + 1)
 	if got := m.purged(); len(got) != 1 || got[0] != "m1" {
 		t.Fatalf("purged %v, want m1", got)
 	}

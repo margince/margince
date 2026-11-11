@@ -5684,6 +5684,7 @@ public.idx_contact_email_contact CREATE INDEX idx_contact_email_contact ON publi
 public.idx_contact_email_correspondence CREATE INDEX idx_contact_email_correspondence ON public.contact_email USING btree (email) WHERE (from_correspondence AND (archived_at IS NULL))
 public.idx_contact_email_dedupe_scan CREATE INDEX idx_contact_email_dedupe_scan ON public.contact_email USING btree (updated_at, id)
 public.idx_contact_email_domain_reversed CREATE INDEX idx_contact_email_domain_reversed ON public.contact_email USING btree (reverse(email_domain_folded) COLLATE "C") WHERE (archived_at IS NULL)
+public.idx_contact_email_every_holder CREATE INDEX idx_contact_email_every_holder ON public.contact_email USING btree (email, contact_id)
 public.idx_contact_email_mailbox_base CREATE INDEX idx_contact_email_mailbox_base ON public.contact_email USING btree ((
 CASE
     WHEN (regexp_replace(btrim(lower(email)), '^([^+@]+)\+[^@]*@'::text, '\1@'::text) ~ '^[^@]*@(gmail|googlemail)\.com$'::text) THEN (replace(regexp_replace(regexp_replace(btrim(lower(email)), '^([^+@]+)\+[^@]*@'::text, '\1@'::text), '@(gmail|googlemail)\.com$'::text, ''::text), '.'::text, ''::text) || '@gmail.com'::text)

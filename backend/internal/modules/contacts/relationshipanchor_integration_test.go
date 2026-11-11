@@ -157,7 +157,7 @@ func setupEdgeAnchor(t *testing.T) *edgeAnchorEnv {
 		t.Fatal(err)
 	}
 	testdb.AssertPoolsQuiesced(t)
-	e.store = NewStore(database.BindTo(pool, ids.From[ids.WorkspaceKind](e.ws)))
+	e.store = NewStore(database.BindTo(pool, ids.From[ids.WorkspaceKind](e.ws))).WithSenderStamp(noSenderStamp)
 	return e
 }
 

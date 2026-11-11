@@ -2,8 +2,7 @@
 # Deploy Margince on your own servers
 
 Keep deployment domains, secrets and platform manifests in the repository that holds your deployment.
-For a Linux server without containers, use [install-on-a-server.md](install-on-a-server.md); for every
-role on one host, use [run-with-docker-compose.md](run-with-docker-compose.md).
+For a Linux server without containers, use [install-on-a-server.md](install-on-a-server.md); for every role on one host, use [run-with-docker-compose.md](run-with-docker-compose.md).
 For what each container image expects, use [run-from-container-images.md](run-from-container-images.md); to watch it once it runs, use [watch-an-installation](../operations/observability.md).
 See [self-hosting](../explanation/self-hosting.md) for the role layout and
 [configuration](../reference/configuration.md) for settings.
@@ -68,9 +67,8 @@ Margince needs two Postgres roles that serve and migrate, and a third that only 
 None may be a superuser or hold `BYPASSRLS`: the api refuses to serve on an exempt runtime role.
 
 - **`margince_owner`** owns the database + tables, runs migrations (DDL) and the custom-fields runtime-DDL pool.
-- **`margince_app`** is the runtime role the api + worker connect as. Its table grants are applied by the
-  `0001_baseline` migration, which skips them unless the role already exists. So create the role *before* the
-  first migration runs.
+- **`margince_app`** is the runtime role the api + worker connect as. The `0001_baseline` migration grants
+  its tables only if the role exists, so create the role *before* the first migration runs.
 - **`ext_runtime`** (`NOLOGIN`) runs an extension's SQL and holds only the `ext` schema. An older database
   needs it once: [Add `ext_runtime` to an older database](install-on-a-server.md#add-ext_runtime-to-an-older-database).
 

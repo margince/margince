@@ -29,6 +29,9 @@ import (
 // meetingNotesSource is the source of a transcript landed from a notes Doc.
 const meetingNotesSource = "meeting_notes"
 
+// argLimit names the row bound of a paged read.
+const argLimit = "limit"
+
 // meetingNotesRawKey holds, in the transcript's raw, the meeting and the Doc
 // revision it was read from. source_activity_id is not used: on a meeting it
 // names the task an outcome answers.
@@ -90,7 +93,7 @@ func (s *Store) DueMeetingNotesTx(ctx context.Context, tx pgx.Tx, q MeetingNotes
 		 ORDER BY a.occurred_at DESC, l.id
 		 LIMIT @limit`, pgx.NamedArgs{
 		"owner": q.Owner, "domains": q.Domains, "since": q.Since, "until": q.Until,
-		"transcript": transcriptSourceSystem, paramLimit: q.Limit,
+		"transcript": transcriptSourceSystem, argLimit: q.Limit,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("activities: listing the meeting notes due a reading: %w", err)

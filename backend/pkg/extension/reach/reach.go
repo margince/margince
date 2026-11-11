@@ -113,6 +113,7 @@ func (t Table) Validate() error {
 	return t.validateErase()
 }
 
+// validateErase checks each column the erasure clears.
 func (t Table) validateErase() error {
 	seen := map[string]bool{}
 	for _, c := range t.Erase {

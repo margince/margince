@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package compose
+package securitytxt
 
 import (
 	"os"
@@ -14,8 +14,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/config/configtest"
 )
 
-// The expiry is unquoted on purpose: YAML reads that spelling as a timestamp,
-// and an operator writing it the natural way must still get a working file.
+// An unquoted YAML expiry is a timestamp and must load as an instant.
 const securityTxtConfig = `web:
   security_txt:
     contact:
@@ -26,53 +25,53 @@ const securityTxtConfig = `web:
     preferred_languages: [en, de-CH]
 `
 
-func loadSecurityTxt(t *testing.T, body string) (*SecurityTxt, error) {
+func loadDocument(t *testing.T, body string) (*Document, error) {
 	t.Helper()
-	cfg, err := configtest.Load(t, "version: 1\n"+body, nil, nil, WebSecurityTxt)
+	cfg, err := configtest.Load(t, "version: 1\n"+body, nil, nil, Setting)
 	if err != nil {
 		return nil, err
 	}
-	return config.Val(cfg, WebSecurityTxt), nil
+	return config.Val(cfg, Setting), nil
 }
 
-func mustLoadSecurityTxt(t *testing.T, body string) *SecurityTxt {
+func mustLoadDocument(t *testing.T, body string) *Document {
 	t.Helper()
-	s, err := loadSecurityTxt(t, body)
+	s, err := loadDocument(t, body)
 	if err != nil {
 		t.Fatalf("loading %q: %v", body, err)
 	}
 	return s
 }
 
-func TestSecurityTxtRendersEveryConfiguredFieldInRFC9116Form(t *testing.T) {
+func TestDocumentRendersEveryConfiguredFieldInRFC9116Form(t *testing.T) {
 	want := "Contact: mailto:security@example.org\n" +
 		"Contact: https://example.org/report\n" +
 		"Expires: 2029-12-31T22:00:00Z\n" +
 		"Policy: https://example.org/disclosure\n" +
 		"Preferred-Languages: en, de-CH\n"
-	if got := securityTxtBody(mustLoadSecurityTxt(t, securityTxtConfig)); got != want {
+	if got := Body(mustLoadDocument(t, securityTxtConfig)); got != want {
 		t.Fatalf("body =\n%s\nwant\n%s", got, want)
 	}
 }
 
-func TestSecurityTxtOmitsTheOptionalFieldsItWasNotGiven(t *testing.T) {
-	s := mustLoadSecurityTxt(t, "web: { security_txt: { contact: [\"tel:+1-201-555-0123\"], expires: \"2030-01-01T00:00:00Z\" } }\n")
-	if got, want := securityTxtBody(s), "Contact: tel:+1-201-555-0123\nExpires: 2030-01-01T00:00:00Z\n"; got != want {
+func TestDocumentOmitsTheOptionalFieldsItWasNotGiven(t *testing.T) {
+	s := mustLoadDocument(t, "web: { security_txt: { contact: [\"tel:+1-201-555-0123\"], expires: \"2030-01-01T00:00:00Z\" } }\n")
+	if got, want := Body(s), "Contact: tel:+1-201-555-0123\nExpires: 2030-01-01T00:00:00Z\n"; got != want {
 		t.Fatalf("body = %q, want %q", got, want)
 	}
 }
 
-func TestAnUnsetSecurityTxtRendersNothing(t *testing.T) {
-	s := mustLoadSecurityTxt(t, "")
-	if body := securityTxtBody(s); body != "" {
+func TestAnUnsetDocumentRendersNothing(t *testing.T) {
+	s := mustLoadDocument(t, "")
+	if body := Body(s); body != "" {
 		t.Fatalf("an absent block rendered %q; the route must stay unmounted", body)
 	}
-	if w := securityTxtWarnings(s, clocktest.Now(t)); w != nil {
+	if w := Warnings(s, clocktest.Now(t)); w != nil {
 		t.Fatalf("an absent block warned: %v", w)
 	}
 }
 
-func TestSecurityTxtRefusesWhatRFC9116OrTheFileFormatCannotCarry(t *testing.T) {
+func TestDocumentRefusesWhatRFC9116OrTheFileFormatCannotCarry(t *testing.T) {
 	const expires = `expires: "2030-01-01T00:00:00Z"`
 	cases := map[string]string{
 		"empty block":             `{}`,
@@ -95,7 +94,7 @@ func TestSecurityTxtRefusesWhatRFC9116OrTheFileFormatCannotCarry(t *testing.T) {
 		"unknown field":           `{ contact: ["mailto:a@example.org"], polcy: "https://x.example", ` + expires + ` }`,
 	}
 	for name, block := range cases {
-		_, err := loadSecurityTxt(t, "web: { security_txt: "+block+" }\n")
+		_, err := loadDocument(t, "web: { security_txt: "+block+" }\n")
 		if err == nil {
 			t.Errorf("%s: loaded without error", name)
 			continue
@@ -106,8 +105,8 @@ func TestSecurityTxtRefusesWhatRFC9116OrTheFileFormatCannotCarry(t *testing.T) {
 	}
 }
 
-func TestSecurityTxtWarnsAtBootWhenItsExpiryIsPastOrTooFarOut(t *testing.T) {
-	s := mustLoadSecurityTxt(t, securityTxtConfig)
+func TestDocumentWarnsAtBootWhenItsExpiryIsPastOrTooFarOut(t *testing.T) {
+	s := mustLoadDocument(t, securityTxtConfig)
 	expiry := time.Date(2029, 12, 31, 22, 0, 0, 0, time.UTC)
 	cases := map[string]struct {
 		now  time.Time
@@ -119,7 +118,7 @@ func TestSecurityTxtWarnsAtBootWhenItsExpiryIsPastOrTooFarOut(t *testing.T) {
 		"inside the year":    {expiry.AddDate(0, -6, 0), ""},
 	}
 	for name, tc := range cases {
-		got := strings.Join(securityTxtWarnings(s, tc.now), " ")
+		got := strings.Join(Warnings(s, tc.now), " ")
 		if tc.want == "" && got != "" || !strings.Contains(got, tc.want) {
 			t.Errorf("%s: warnings = %q, want one saying %q", name, got, tc.want)
 		}
@@ -127,21 +126,21 @@ func TestSecurityTxtWarnsAtBootWhenItsExpiryIsPastOrTooFarOut(t *testing.T) {
 }
 
 func TestAnUnparseableExpiryIsLeftToTheLoaderNotWarnedAbout(t *testing.T) {
-	if w := securityTxtWarnings(&SecurityTxt{Expires: "soon"}, clocktest.Now(t)); w != nil {
+	if w := Warnings(&Document{Expires: "soon"}, clocktest.Now(t)); w != nil {
 		t.Fatalf("warned about an expiry the loader refuses: %v", w)
 	}
 }
 
 // A filled-in block, every optional field included, is held to the loader.
-func TestTheDocumentedSecurityTxtBlockLoads(t *testing.T) {
-	raw, err := os.ReadFile("testdata/securitytxt.yaml")
+func TestTheDocumentedDocumentBlockLoads(t *testing.T) {
+	raw, err := os.ReadFile("../testdata/securitytxt.yaml")
 	if err != nil {
 		t.Fatalf("reading the security.txt fixture: %v", err)
 	}
 	if !strings.Contains(string(raw), "security_txt:") {
 		t.Fatal("the fixture no longer holds a security_txt block")
 	}
-	if body := securityTxtBody(mustLoadSecurityTxt(t, string(raw))); !strings.Contains(body, "Policy: ") {
+	if body := Body(mustLoadDocument(t, string(raw))); !strings.Contains(body, "Policy: ") {
 		t.Fatalf("the block rendered without its optional fields:\n%s", body)
 	}
 }
@@ -154,7 +153,7 @@ func TestADateOnlyExpiryIsRefused(t *testing.T) {
     contact: [mailto:security@example.org]
     expires: 2027-01-01
 `
-	if _, err := loadSecurityTxt(t, body); err == nil {
+	if _, err := loadDocument(t, body); err == nil {
 		t.Fatal("a date-only expires loaded; RFC 9116 needs a full RFC 3339 instant")
 	}
 }

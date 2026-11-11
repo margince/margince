@@ -197,7 +197,7 @@ var (
 		name:             "Google",
 		console:          "the Google Cloud console",
 		validateClientID: appVendor.validateGoogleClientID,
-		connectors:       []string{providerGmail, providerGCal, providerGDocs},
+		connectors:       []string{providerGmail, providerGcal, providerGdocs},
 	}
 	microsoftVendor = appVendor{
 		name:             "Microsoft",

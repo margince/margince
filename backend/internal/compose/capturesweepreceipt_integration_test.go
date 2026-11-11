@@ -78,7 +78,7 @@ func latestReceipt(t *testing.T, e *integration.Env, sweep capture.Sweep) stored
 
 func newTestLinkReconcileWorker(e *integration.Env) *linkReconcileWorker {
 	return newLinkReconcileWorker(e.Pool,
-		contacts.NewStore(InstallationDB(e.Pool)).WithAudienceRecompute(activities.RecomputeAudienceTx),
+		contacts.NewStore(InstallationDB(e.Pool)).WithSenderStamp(activities.StampProvenSendersTx).WithAudienceRecompute(activities.RecomputeAudienceTx),
 		CaptureConfig{}, slog.Default())
 }
 

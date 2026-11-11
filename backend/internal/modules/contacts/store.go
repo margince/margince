@@ -56,6 +56,9 @@ type Store struct {
 	// contacts never imports a sibling. Nil files links and derives nothing —
 	// which is what every fixture is until it says otherwise.
 	recomputeAudience AudienceRecompute
+	// stampSenders names a newly filed contact the sender where the stated
+	// address proves it. activities owns that rule and compose injects it.
+	stampSenders SenderStamp
 	// seatReadsLeads answers whether another seat may read leads; see the
 	// type below. Nil is a composition that did not wire it.
 	seatReadsLeads SeatReadsLeads
@@ -188,6 +191,29 @@ type AudienceRecompute func(ctx context.Context, tx pgx.Tx, activityID ids.Activ
 func (s *Store) WithAudienceRecompute(recompute AudienceRecompute) *Store {
 	s.recomputeAudience = recompute
 	return s
+}
+
+// SenderStamp makes contact the proven sender of the held activities it
+// proves, and answers the activities it wrote (activities.StampProvenSendersTx).
+type SenderStamp func(ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID, contact ids.UUID) ([]ids.UUID, error)
+
+// WithSenderStamp wires the proven-sender rule every link this store writes
+// applies. A store that links or promotes without it returns an error.
+func (s *Store) WithSenderStamp(stamp SenderStamp) *Store {
+	s.stampSenders = stamp
+	return s
+}
+
+// WithSenderStamp wires the rule on the store behind the agent provider.
+func (p *Provider) WithSenderStamp(stamp SenderStamp) *Provider {
+	p.store.WithSenderStamp(stamp)
+	return p
+}
+
+// WithSenderStamp wires the rule on the store behind the handlers.
+func (h Handlers) WithSenderStamp(stamp SenderStamp) Handlers {
+	h.store.WithSenderStamp(stamp)
+	return h
 }
 
 // WithVatCheckEnqueue wires the VIES consultation a VAT-number write queues.

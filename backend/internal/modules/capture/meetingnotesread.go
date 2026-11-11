@@ -120,7 +120,7 @@ func meetingNotesReaderTx(ctx context.Context, tx pgx.Tx) (notesReader, bool, er
 		SELECT provider, user_id, account_label, provider_scopes FROM capture_connection
 		 WHERE id = @id AND generation = @generation
 		   AND status IN ('connected','error') AND archived_at IS NULL`,
-		pgx.NamedArgs{"id": run.ID, sqlArgGeneration: run.Generation}).Scan(&provider, &owner, &label, &scopes)
+		pgx.NamedArgs{"id": run.ID, argGeneration: run.Generation}).Scan(&provider, &owner, &label, &scopes)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return notesReader{}, false, nil
 	}

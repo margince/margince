@@ -275,7 +275,7 @@ capture, as *What happens to one message* describes.
 
 **Deleting in your own mailbox can reach Margince.** If you delete a captured message in Gmail or Outlook, Margince notices and acts on it.
 
-In Gmail, the message must be deleted for good. In Outlook, it must be hard-deleted: Shift+Delete, or Delete and then empty Deleted Items. Margince then waits 14 days, and a message you recover in that time stays. Moving a message to another folder or to the archive never deletes it here. What happens then depends on who else has it:
+In Gmail, the message must be deleted for good. In Outlook, it must be hard-deleted: Shift+Delete, or Delete and then empty Deleted Items. Margince then waits 10 days, and a message you recover in that time stays. Outlook keeps it for 14 days, but if you recover it after day 10, the copy in Margince is already gone. Moving a message to another folder or to the archive never deletes it here. What happens then depends on who else has it:
 
 | Case | What happens |
 |---|---|

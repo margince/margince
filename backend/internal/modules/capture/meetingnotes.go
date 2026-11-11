@@ -12,14 +12,14 @@ import (
 // Meet writes its notes and transcripts into, keyed by provider. Held equal to
 // frontend/src/lib/connector-status.ts's MEETING_NOTES_SCOPES by a parity test.
 var meetingNotesScopes = map[string][]string{
-	providerGDocs: {"https://www.googleapis.com/auth/documents.readonly"},
+	providerGdocs: {"https://www.googleapis.com/auth/documents.readonly"},
 }
 
 // meetingNotesCalendars are the calendar providers whose meetings a notes
 // connection reads, keyed by the notes provider. Notes are read only while
 // both connections are on one account.
 var meetingNotesCalendars = map[string]string{
-	providerGDocs: providerGCal,
+	providerGdocs: providerGcal,
 }
 
 // MeetingNotesGranted says whether a connection's granted scopes let it read

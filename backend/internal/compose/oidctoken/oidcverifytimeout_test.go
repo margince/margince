@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package compose
+package oidctoken
 
 // What a slow identity provider costs a sign-in.
 //
@@ -28,7 +28,7 @@ import (
 func TestTheKeyFetchIsActuallyBounded(t *testing.T) {
 	t.Parallel()
 
-	verifier := newOIDCVerifier("https://issuer.test/jwks", nil, nil)
+	verifier := New("https://issuer.test/jwks", nil, nil)
 
 	switch {
 	case verifier.client.Timeout == 0:

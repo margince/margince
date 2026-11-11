@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package compose
+// Package oidctoken verifies the RS256 OIDC ID tokens that Google Pub/Sub and
+// the Google and Microsoft sign-in flows present.
+package oidctoken
 
 // A hand-rolled verifier for an RS256 OIDC ID token — the one Google Pub/Sub
 // attaches to a push request (Authorization: Bearer <jwt>), and the ones the
@@ -34,7 +36,8 @@ import (
 	"github.com/margince/margince/backend/internal/platform/outbound"
 )
 
-const googleJWKSURL = "https://www.googleapis.com/oauth2/v3/certs"
+// GoogleJWKSURL serves the keys Google signs its ID tokens with.
+const GoogleJWKSURL = "https://www.googleapis.com/oauth2/v3/certs"
 
 // oidcSkew tolerates small clock differences on exp/iat.
 const oidcSkew = 2 * time.Minute
@@ -46,11 +49,12 @@ const oidcSkew = 2 * time.Minute
 // would drive one outbound HTTPS fetch (and one hold of v.mu) per request.
 const jwksRefreshCooldown = time.Minute
 
-// errOIDCRejected is the single opaque failure the verifier returns; the
+// ErrRejected is the single opaque failure the verifier returns; the
 // wrapped cause is for server-side logs only.
-var errOIDCRejected = errors.New("oidc: token rejected")
+var ErrRejected = errors.New("oidc: token rejected")
 
-type oidcTokenVerifier struct {
+// Verifier checks an RS256 ID token against one issuer's published keys.
+type Verifier struct {
 	jwksURL string
 	// checkIssuer settles WHOSE token this is, and is separate from
 	// matchIdentity because the two answer different questions and only one of
@@ -58,8 +62,8 @@ type oidcTokenVerifier struct {
 	// positional argument, so a new provider cannot reach the signature check
 	// having forgotten it — the failure that would otherwise let any IdP with a
 	// reachable JWKS mint a token this verifier accepts.
-	checkIssuer   func(oidcClaims) error
-	matchIdentity func(oidcClaims) error
+	checkIssuer   func(Claims) error
+	matchIdentity func(Claims) error
 	client        *http.Client
 	now           func() time.Time
 	// coalesced reports a caller JOINING an in-flight refresh rather than
@@ -106,13 +110,12 @@ type jwksRefreshFlight struct {
 // during a slow response. The bound is set for the expensive one.
 const jwksFetchTimeout = 5 * time.Second
 
-// newOIDCVerifier builds a verifier for one issuer. checkIssuer and
-// matchIdentity are both callbacks so a shared verifier does not need to
-// hardcode which provider — or which caller — it is: Google Pub/Sub and Google
-// sign-in read the same issuer and different identities, while Microsoft reads
-// a different issuer entirely.
-func newOIDCVerifier(jwksURL string, checkIssuer, matchIdentity func(oidcClaims) error) *oidcTokenVerifier {
-	return &oidcTokenVerifier{
+// New builds a verifier for one issuer. checkIssuer and matchIdentity are
+// callbacks, so a shared verifier does not hardcode its provider or its caller.
+// Google Pub/Sub and Google sign-in read one issuer and different identities.
+// Microsoft reads a different issuer entirely.
+func New(jwksURL string, checkIssuer, matchIdentity func(Claims) error) *Verifier {
+	return &Verifier{
 		jwksURL:       jwksURL,
 		checkIssuer:   checkIssuer,
 		matchIdentity: matchIdentity,
@@ -121,39 +124,40 @@ func newOIDCVerifier(jwksURL string, checkIssuer, matchIdentity func(oidcClaims)
 	}
 }
 
-// newGoogleOIDCVerifier is the Google-issuer verifier: an empty jwksURL falls
-// back to Google's own endpoint, and the issuer check is supplied here rather
-// than by each caller so no Google caller can be composed without one.
-func newGoogleOIDCVerifier(jwksURL string, matchIdentity func(oidcClaims) error) *oidcTokenVerifier {
+// NewGoogle is the Google-issuer verifier. An empty jwksURL falls back to
+// Google's own endpoint. The issuer check is supplied here, not by each caller,
+// so no Google caller can be composed without one.
+func NewGoogle(jwksURL string, matchIdentity func(Claims) error) *Verifier {
 	if jwksURL == "" {
-		jwksURL = googleJWKSURL
+		jwksURL = GoogleJWKSURL
 	}
-	return newOIDCVerifier(jwksURL, googleIssuer, matchIdentity)
+	return New(jwksURL, googleIssuer, matchIdentity)
 }
 
-// identityResolvedPerRequest marks a verifier whose identity check arrives with
-// each call, through verifyAs: a sign-in's OAuth client is resolved when the
+// IdentityResolvedPerRequest marks a verifier whose identity check arrives with
+// each call, through VerifyAs. A sign-in's OAuth client is resolved when the
 // flow runs, so no audience is known when the verifier is built. Verify fails
-// closed on it, which is the right answer for a caller that never said whose
-// token it expects.
-func identityResolvedPerRequest(oidcClaims) error {
-	return fmt.Errorf("%w: the identity check belongs to the request", errOIDCRejected)
+// closed on it: the caller never said whose token it expects.
+func IdentityResolvedPerRequest(Claims) error {
+	return fmt.Errorf("%w: the identity check belongs to the request", ErrRejected)
 }
 
 // googleIssuer accepts the two spellings Google issues ID tokens under.
-func googleIssuer(c oidcClaims) error {
+func googleIssuer(c Claims) error {
 	if c.Iss != "accounts.google.com" && c.Iss != "https://accounts.google.com" {
-		return fmt.Errorf("%w: iss %q", errOIDCRejected, c.Iss)
+		return fmt.Errorf("%w: iss %q", ErrRejected, c.Iss)
 	}
 	return nil
 }
 
-func (v *oidcTokenVerifier) withHTTPClient(c *http.Client) *oidcTokenVerifier {
+// WithHTTPClient replaces the client that fetches the keys.
+func (v *Verifier) WithHTTPClient(c *http.Client) *Verifier {
 	v.client = c
 	return v
 }
 
-func (v *oidcTokenVerifier) setClock(now func() time.Time) *oidcTokenVerifier {
+// SetClock replaces the clock that judges exp and iat.
+func (v *Verifier) SetClock(now func() time.Time) *Verifier {
 	v.now = now
 	return v
 }
@@ -163,7 +167,8 @@ type oidcHeader struct {
 	Kid string `json:"kid"`
 }
 
-type oidcClaims struct {
+// Claims are the ID token fields a sign-in or push check reads.
+type Claims struct {
 	Iss           string `json:"iss"`
 	Aud           string `json:"aud"`
 	Sub           string `json:"sub"`
@@ -193,76 +198,76 @@ type oidcClaims struct {
 
 // Verify returns the decoded claims only for a well-formed, correctly-signed
 // token whose issuer and identity both pass the injected checks.
-func (v *oidcTokenVerifier) Verify(ctx context.Context, bearer string) (oidcClaims, error) {
-	return v.verifyAs(ctx, bearer, v.matchIdentity)
+func (v *Verifier) Verify(ctx context.Context, bearer string) (Claims, error) {
+	return v.VerifyAs(ctx, bearer, v.matchIdentity)
 }
 
-// verifyAs is Verify against an identity the CALLER names, for a flow whose
+// VerifyAs is Verify against an identity the CALLER names, for a flow whose
 // OAuth client is resolved per request. The JWKS cache, the signature and the
 // issuer check are the same either way; only the last question — whose token
 // this must be — moves from construction to the call.
-func (v *oidcTokenVerifier) verifyAs(ctx context.Context, bearer string, matchIdentity func(oidcClaims) error) (oidcClaims, error) {
+func (v *Verifier) VerifyAs(ctx context.Context, bearer string, matchIdentity func(Claims) error) (Claims, error) {
 	if bearer == "" {
-		return oidcClaims{}, fmt.Errorf("%w: empty bearer", errOIDCRejected)
+		return Claims{}, fmt.Errorf("%w: empty bearer", ErrRejected)
 	}
 	parts := strings.Split(bearer, ".")
 	if len(parts) != 3 {
-		return oidcClaims{}, fmt.Errorf("%w: not a JWT", errOIDCRejected)
+		return Claims{}, fmt.Errorf("%w: not a JWT", ErrRejected)
 	}
 	hdr, err := decodeHeaderSegment(parts[0])
 	if err != nil {
-		return oidcClaims{}, fmt.Errorf("%w: header: %v", errOIDCRejected, err)
+		return Claims{}, fmt.Errorf("%w: header: %v", ErrRejected, err)
 	}
 	if hdr.Alg != "RS256" {
-		return oidcClaims{}, fmt.Errorf("%w: alg %q not RS256", errOIDCRejected, hdr.Alg)
+		return Claims{}, fmt.Errorf("%w: alg %q not RS256", ErrRejected, hdr.Alg)
 	}
 	key, err := v.key(ctx, hdr.Kid)
 	if err != nil {
-		return oidcClaims{}, fmt.Errorf("%w: key: %v", errOIDCRejected, err)
+		return Claims{}, fmt.Errorf("%w: key: %v", ErrRejected, err)
 	}
 	if err := verifyRS256(key, parts[0]+"."+parts[1], parts[2]); err != nil {
-		return oidcClaims{}, fmt.Errorf("%w: signature: %v", errOIDCRejected, err)
+		return Claims{}, fmt.Errorf("%w: signature: %v", ErrRejected, err)
 	}
 	claims, err := decodeClaimsSegment(parts[1])
 	if err != nil {
-		return oidcClaims{}, fmt.Errorf("%w: claims: %v", errOIDCRejected, err)
+		return Claims{}, fmt.Errorf("%w: claims: %v", ErrRejected, err)
 	}
 	// A rejected token returns the zero value, never the claims it decoded
 	// but refused: a caller that checks err after claims — one careless
 	// read away given every caller here checks err first today — must not
 	// be handed an attacker-controlled email/sub on the rejection path.
 	if err := v.checkClaims(claims, matchIdentity); err != nil {
-		return oidcClaims{}, err
+		return Claims{}, err
 	}
 	return claims, nil
 }
 
-func (v *oidcTokenVerifier) checkClaims(c oidcClaims, matchIdentity func(oidcClaims) error) error {
+func (v *Verifier) checkClaims(c Claims, matchIdentity func(Claims) error) error {
 	// Fail CLOSED on a missing issuer check rather than calling through a nil
 	// and panicking. Both constructors supply one, so this cannot happen today
 	// — but the consequence of it happening is a token nobody has established
 	// the issuer of, and the safe reading of "I was not told whose tokens to
 	// accept" is none.
 	if v.checkIssuer == nil {
-		return fmt.Errorf("%w: no issuer check wired", errOIDCRejected)
+		return fmt.Errorf("%w: no issuer check wired", ErrRejected)
 	}
 	// The same fail-closed reading for the identity: an adapter built without
 	// one is a caller that never said whose token it expects.
 	if matchIdentity == nil {
-		return fmt.Errorf("%w: no identity check wired", errOIDCRejected)
+		return fmt.Errorf("%w: no identity check wired", ErrRejected)
 	}
 	if err := v.checkIssuer(c); err != nil {
 		return err
 	}
 	now := v.now()
 	if c.Exp == 0 || now.After(time.Unix(c.Exp, 0).Add(oidcSkew)) {
-		return fmt.Errorf("%w: expired", errOIDCRejected)
+		return fmt.Errorf("%w: expired", ErrRejected)
 	}
 	if c.Iat == 0 {
-		return fmt.Errorf("%w: missing iat", errOIDCRejected)
+		return fmt.Errorf("%w: missing iat", ErrRejected)
 	}
 	if now.Add(oidcSkew).Before(time.Unix(c.Iat, 0)) {
-		return fmt.Errorf("%w: issued in the future", errOIDCRejected)
+		return fmt.Errorf("%w: issued in the future", ErrRejected)
 	}
 	return matchIdentity(c)
 }
@@ -270,7 +275,7 @@ func (v *oidcTokenVerifier) checkClaims(c oidcClaims, matchIdentity func(oidcCla
 // key returns the cached public key for kid, refreshing the JWKS if the
 // cache is empty, expired, or missing the kid (a rotation) — subject to
 // jwksRefreshCooldown throttling refreshes across calls.
-func (v *oidcTokenVerifier) key(ctx context.Context, kid string) (*rsa.PublicKey, error) {
+func (v *Verifier) key(ctx context.Context, kid string) (*rsa.PublicKey, error) {
 	if kid == "" {
 		return nil, errors.New("no kid")
 	}
@@ -289,7 +294,7 @@ func (v *oidcTokenVerifier) key(ctx context.Context, kid string) (*rsa.PublicKey
 
 // lookupKey reports the cached key for kid, if any, and whether the cache
 // (as a whole) is still within its TTL.
-func (v *oidcTokenVerifier) lookupKey(kid string) (*rsa.PublicKey, bool) {
+func (v *Verifier) lookupKey(kid string) (*rsa.PublicKey, bool) {
 	v.mu.Lock()
 	defer v.mu.Unlock()
 	if k, ok := v.keys[kid]; ok && v.now().Before(v.expires) {
@@ -310,7 +315,7 @@ type jwk struct {
 // completes, further refreshes are throttled for jwksRefreshCooldown. The
 // network fetch runs without holding v.mu — only the flight bookkeeping and
 // the cache swap are locked.
-func (v *oidcTokenVerifier) refresh(ctx context.Context) error {
+func (v *Verifier) refresh(ctx context.Context) error {
 	v.mu.Lock()
 	if fl := v.inflight; fl != nil {
 		v.mu.Unlock()
@@ -349,7 +354,7 @@ func (v *oidcTokenVerifier) refresh(ctx context.Context) error {
 
 // fetchJWKS performs the outbound HTTPS GET and parses the key set. It takes
 // no lock: it is called from refresh with v.mu already released.
-func (v *oidcTokenVerifier) fetchJWKS(ctx context.Context) (map[string]*rsa.PublicKey, time.Time, error) {
+func (v *Verifier) fetchJWKS(ctx context.Context) (map[string]*rsa.PublicKey, time.Time, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, v.jwksURL, nil)
 	if err != nil {
 		return nil, time.Time{}, err
@@ -458,14 +463,14 @@ func decodeHeaderSegment(seg string) (oidcHeader, error) {
 	return hdr, nil
 }
 
-func decodeClaimsSegment(seg string) (oidcClaims, error) {
-	var claims oidcClaims
+func decodeClaimsSegment(seg string) (Claims, error) {
+	var claims Claims
 	b, err := base64.RawURLEncoding.DecodeString(seg)
 	if err != nil {
-		return oidcClaims{}, err
+		return Claims{}, err
 	}
 	if err := json.Unmarshal(b, &claims); err != nil {
-		return oidcClaims{}, err
+		return Claims{}, err
 	}
 	return claims, nil
 }

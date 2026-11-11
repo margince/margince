@@ -260,6 +260,9 @@ var heldDimension = activityDimension{scopeMarkers: heldScopeMarkers, literalMar
 // sender addresses to the system, and must reach held rows too.
 const senderStampReader = "the sender_is_machine repair reads only the id and sender address of received mail, as the system. It must reach held rows, so a lifted hold does not bring back a notice counted as an exchange. No content leaves it"
 
+// subjectMailReader ratifies the notice readers of a subject's own mail.
+const subjectMailReader = "composes correspondence.SubjectMailSQL, which filters archived_at IS NULL on the same activity row. It answers only whether and when the subject wrote to us, never content. A held mail is still the subject's own word for where their address came from"
+
 // restrictedReadersAdmitted ratifies the readers that reach a held row and may.
 //
 // Keyed by FILE AND FUNCTION. It used to be keyed by file, which meant a
@@ -275,6 +278,8 @@ const senderStampReader = "the sender_is_machine repair reads only the id and se
 // ClassifyBacklogPredicate, which filters archived rows. A reason a gate can
 // work out is better computed than written down.
 var restrictedReadersAdmitted = gatekit.Waive(map[string]string{
+	"internal/modules/consent/noticesubjectwrote.go:SubjectMailFromSQL":                 subjectMailReader,
+	"internal/compose/noticesubjectwrote.go:NoticeCaseOpen.settleWhenSubjectWrote":      subjectMailReader,
 	"internal/modules/privacy/sarretainedcopies.go:sarThreadVerdictSection":             "The authorized subject-access export includes a held thread verdict only when its seen addresses name the requested subject. Exported addresses are reduced to that subject and the existing content-disclosure predicate still applies. Cost: a held message's classification can appear in its subject's export.",
 	"internal/modules/privacy/sarmessages.go:sarPartySourceSection":                     "The authorized subject-access export includes held party-source rows only for the requested subject's addresses. Recipients and policy addresses are reduced to that subject, and the existing content-disclosure predicate still applies. Cost: the held row's provider and owner-sender flag can appear in its subject's export.",
 	"internal/modules/activities/dealdeclineproject.go:projectCameFromDeal":             "reads the link and audit rows of the one message the decline already locked and write-checked; only a boolean leaves, never content",

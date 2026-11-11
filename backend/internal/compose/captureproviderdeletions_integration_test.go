@@ -125,7 +125,7 @@ func TestProviderSyncCapturesAndRemovesTheRealStoredEmailKey(t *testing.T) {
 				if e.WsCount(t, `SELECT count(*) FROM activity WHERE id=$1 AND body IS NULL`, activityID) != 0 {
 					t.Fatal("an Outlook hard delete was purged before its hold ran out")
 				}
-				clock = clock.Add(15 * 24 * time.Hour)
+				clock = clock.Add(11 * 24 * time.Hour)
 				if _, err := pull(cursor); err != nil || !bytes.Contains(cursor, []byte(`"internet_message_id":"\u003cstored-rfc@example.test\u003e"`)) {
 					t.Fatalf("the sync after the hold failed (%v), or the hold kept no identity: %s", err, cursor)
 				}
