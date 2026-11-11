@@ -81,6 +81,9 @@ type taskSourcePolicy struct {
 	currency      taskCurrency
 	undated       bool
 	generatedDate bool
+	// outreach: the task asks its owner to write to the record it is filed
+	// on, so it offers Draft email though the product filed it.
+	outreach bool
 }
 
 var taskSourceFamilies = map[string]taskSourcePolicy{
@@ -88,10 +91,10 @@ var taskSourceFamilies = map[string]taskSourcePolicy{
 	// without a date, so it shows with their tasks.
 	provenance.AcceptedRecommendationSource: {currency: currentByItsWriter, undated: true},
 	provenance.CommitmentTaskSource:         {currency: currentByCommitment, undated: true},
-	provenance.EmailRequestSource:           {currency: currentByRequest, undated: true},
+	provenance.EmailRequestSource:           {currency: currentByRequest, undated: true, outreach: true},
 	provenance.NoActivityReminderSource:     {currency: currentByItsWriter},
 	provenance.CheckInCadenceSource:         {currency: currentByItsWriter},
-	provenance.LeadSLATaskSource:            {currency: currentByItsWriter},
+	provenance.LeadSLATaskSource:            {currency: currentByItsWriter, outreach: true},
 	provenance.LeadQualifyTaskSource:        {currency: currentByItsWriter},
 	provenance.AssuranceTaskSource:          {currency: currentByItsWriter},
 	provenance.AnalyticsDecisionSource:      {currency: currentByItsWriter},
@@ -104,6 +107,19 @@ var taskSourceFamilies = map[string]taskSourcePolicy{
 
 // TaskSourceFamilies lists native task sources for the census gate.
 func TaskSourceFamilies() []string { return automaticTaskSources() }
+
+// OutreachTaskSources are the product-filed task sources that ask their owner
+// to write to someone.
+func OutreachTaskSources() []string {
+	var out []string
+	for source, how := range taskSourceFamilies {
+		if how.outreach {
+			out = append(out, source)
+		}
+	}
+	slices.Sort(out)
+	return out
+}
 
 func automaticTaskSources() []string {
 	out := make([]string, 0, len(taskSourceFamilies))
