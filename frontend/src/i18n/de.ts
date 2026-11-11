@@ -6013,6 +6013,26 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deal.winProbability.source.colleague": "von {name} gesetzt",
   "deal.winProbability.source.margince": "von Margince gesenkt",
   "deal.winProbability.stageValue": "Phase {percent}",
+  "deal.winProbability.why": "Warum diese Abschlusschance",
+  "deal.winProbability.reason.stage": "Das ist der Wert, den {stage} vorgibt.",
+  "deal.winProbability.reason.closed":
+    "Der Deal ist abgeschlossen, daher legt {stage} den Wert fest.",
+  "deal.winProbability.reason.you": "Du hast den Wert von Hand gesetzt.",
+  "deal.winProbability.reason.colleague":
+    "{name} hat den Wert von Hand gesetzt.",
+  "deal.winProbability.reason.human":
+    "Ein Teammitglied hat den Wert von Hand gesetzt.",
+  "deal.winProbability.reason.stageGives":
+    "Ohne ihn gibt {stage} {percent} vor.",
+  "deal.winProbability.reason.margince": "Margince hat diesen Wert gesetzt.",
+  "deal.winProbability.reason.marginceRule":
+    "Margince kann eine Wahrscheinlichkeit, die niemand von Hand gesetzt hat, senken, wenn der Deal ruht oder E-Mails dagegen sprechen.",
+  "deal.winProbability.reason.override":
+    "Gib einen eigenen Wert ein, um ihn zu überschreiben.",
+  "deal.winProbability.reason.clear":
+    "Leere das Feld, um wieder der Phase zu folgen.",
+  "deal.winProbability.reason.stageNamed": "die Phase {name}",
+  "deal.winProbability.reason.stageUnnamed": "die Phase des Deals",
   "deal.winProbability.setByStage":
     "Abschlusschance durch die Phase {stage} auf {percent} gesetzt",
   "deal.winProbability.band.90_plus": "90 % oder mehr",

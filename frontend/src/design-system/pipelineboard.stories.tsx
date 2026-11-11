@@ -71,6 +71,8 @@ const boardColumns: BoardMoneyColumn[] = [
       // hidden.
       boardDeal("d2", "Fabrikam expansion", 33_000, 9, {
         probabilityPct: 25,
+        probabilityReason:
+          "Ada Lindqvist set this by hand. Without it, the stage Discovery gives 10%.",
         stalled: true,
         closeDate: "2026-09-30",
         closeDateProvisional: true,

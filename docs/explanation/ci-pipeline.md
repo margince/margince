@@ -228,8 +228,8 @@ changes ──┬─> deterministic-gates *
           ├─> backend-lint *
           ├─> craftsmanship
           ├─> integration  →  _lane-integration.yml ────────────────┐
-          │                     integration-build                   │
-          │                      └─> integration-shards (×8) ┐      │
+          │                     integration-build ┐ (binaries)      │
+          │                     integration-shards (×8) ─────┐      │
           │                     integration-unit-coverage ───┴> fan-in
           ├─> vuln                                              │   │
           ├─> license gate  (`deps` scope)                      │   │
@@ -296,14 +296,14 @@ The integration lane on a real Postgres runs **beside** `deterministic-gates` fo
 the longest lane in the pipeline. Running the two slowest jobs one after the other would set the clock
 time of a PR. And `deterministic-gates` itself still catches a broken build.
 
-- The lane is **sharded**. 8 matrix runners share its tests, cut into parts per test. Splitting per
-  package could go no faster than the largest package, `compose/integration`.
+- The lane is **sharded** per test over 8 runners: per package, `compose/integration` sets the floor.
 - The `integration` fan-in puts them together again, into the single result the `ci` aggregate reads.
 
 The lane **compiles once**: a part picked per test reaches nearly every package. The `integration build`
 job links each package's test binary with the shards' flags, and each shard runs its part from them in
-the package directory. A compile error fails the build job, so no shard starts. Each shard still pays
-start-up, the fetch and its own template, so size the matrix from the measured test times.
+the package directory. The shards start beside the build: stack and template come up while it compiles,
+then they wait for `test-binaries-integration-<attempt>`. A failed build uploads `…-<attempt>-failed`,
+and the shards stop ([`lib-lanebinaries.sh`](../../scripts/lib-lanebinaries.sh)).
 
 The shards **share one queue**, so they end close together. Runner speed differs by up to 1.9 times,
 and with a fixed split the fast shards waited for the slow ones. Parts of about 120 seconds of test time

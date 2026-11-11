@@ -19,14 +19,22 @@ const CIRCLE = {
 /**
  * A deal's win probability inside a line of text: a small ring filled to the
  * percent, then the percent. The figure is the fact, so the ring stays out of
- * the accessible tree and the word for it is spoken, not drawn.
+ * the accessible tree and the word for it is spoken, not drawn. `value` sets
+ * the figure in the type and ink of the row it stands in, as a details row.
  */
-export function ProbabilityRing({ percent }: Readonly<{ percent: number }>) {
+export function ProbabilityRing({
+  percent,
+  value = false,
+}: Readonly<{ percent: number; value?: boolean }>) {
   const t = useT();
   const { locale } = useLocale();
   const fraction = Math.min(Math.max(percent, 0), 100) / 100;
   return (
-    <span className="probability-ring">
+    <span
+      className={
+        value ? "probability-ring probability-ring-value" : "probability-ring"
+      }
+    >
       <svg viewBox={`0 0 ${MINI.size} ${MINI.size}`} aria-hidden="true">
         <circle className="probability-ring-track" {...CIRCLE} />
         {fraction > 0 && (
