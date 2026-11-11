@@ -18,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/assignments"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/dbmigrate"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/migrations"
@@ -105,16 +106,12 @@ func TestMemberHandoverMovesPendingStaffingAndRetainsAcceptedCredit(t *testing.T
 	if err != nil {
 		t.Fatal(err)
 	}
-	custom, err := migrations.Custom()
-	if err != nil {
-		t.Fatal(err)
-	}
 	owner := integration.FreshOwnerConn(t)
 	// The downgrade reverts every newer migration before it reaches the one
 	// that refuses, and the schema is shared by the rest of this test process.
 	// Bring the reverted ones back so a later test finds its tables.
 	t.Cleanup(func() {
-		if _, err := dbmigrate.Up(context.Background(), owner, core, custom); err != nil {
+		if err := testdb.RestoreSchema(context.Background(), owner); err != nil {
 			t.Errorf("restoring the schema after the refused downgrade: %v", err)
 		}
 	})

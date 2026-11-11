@@ -89,3 +89,19 @@ func rebuildSchema(ctx context.Context, owner *pgx.Conn) error {
 	_, err = dbmigrate.Up(ctx, owner, core, custom)
 	return err
 }
+
+// RestoreSchema applies every migration the shared test database is missing.
+// A test that steps the schema down leaves the migrations above its target
+// reverted for the rest of the process, so it calls this when it ends.
+func RestoreSchema(ctx context.Context, owner *pgx.Conn) error {
+	core, err := migrations.Core()
+	if err != nil {
+		return err
+	}
+	custom, err := migrations.Custom()
+	if err != nil {
+		return err
+	}
+	_, err = dbmigrate.Up(ctx, owner, core, custom)
+	return err
+}
