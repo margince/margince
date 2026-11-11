@@ -464,3 +464,38 @@ var repeatedVocabularies = gatekit.Waive(map[string]string{
 // repeatedVocabulariesCeiling only moves down: bind a group to one type,
 // delete its waiver, then lower it.
 const repeatedVocabulariesCeiling = 9
+
+// unreadArrayCheckCeiling is how many catalog CHECKs hold an `= ANY (ARRAY[…])`
+// list this census does not read as a column's vocabulary. Each states a
+// condition inside a wider rule. The ceiling only moves down.
+const unreadArrayCheckCeiling = 28
+
+// TestNoVocabularyCheckHidesFromTheCensus fails when a CHECK with a value
+// list stops being read, so a catalog format change cannot shrink the census.
+func TestNoVocabularyCheckHidesFromTheCensus(t *testing.T) {
+	t.Parallel()
+	raw, err := gatekit.ReadFile(vocabularyCatalog)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var unread []string
+	for line := range strings.SplitSeq(string(raw), "\n") {
+		m := catalogCheckLine.FindStringSubmatch(line)
+		if m == nil || !strings.Contains(m[2], " = ANY (ARRAY[") {
+			continue
+		}
+		if v := wholeVocabularyCheck.FindStringSubmatch(m[2]); v == nil || (v[1] != "" && v[1] != v[2]) {
+			unread = append(unread, line)
+		}
+	}
+	if len(unread) > unreadArrayCheckCeiling {
+		t.Fatalf("%d CHECKs with a value list are not read as a vocabulary, ceiling %d. "+
+			"Teach wholeVocabularyCheck the new form. Raise the ceiling only for a list "+
+			"inside a wider rule:\n%s",
+			len(unread), unreadArrayCheckCeiling, strings.Join(unread, "\n"))
+	}
+	if len(unread) < unreadArrayCheckCeiling {
+		t.Fatalf("only %d unread value-list CHECKs remain; lower unreadArrayCheckCeiling to %d",
+			len(unread), len(unread))
+	}
+}
