@@ -51,6 +51,9 @@ func checkKind(kind string) error {
 // fieldCallOutcome is how a call ended; only a call carries one.
 const fieldCallOutcome = "call_outcome"
 
+// onlyATask names the kind a task-only field belongs to, in its refusal.
+const onlyATask = "a task"
+
 // checkCallOutcomeKind refuses an outcome outside the contract's list, naming
 // the field, and an outcome on anything but a call.
 func checkCallOutcomeKind(kind string, callOutcome *string) error {
@@ -88,7 +91,7 @@ func checkTaskTypeKind(kind string, taskType *crmcontracts.TaskType) error {
 		return &taskTypeValueError{}
 	}
 	if kind != string(crmcontracts.ActivityKindTask) {
-		return &KindFieldError{Field: fieldTaskType, Only: "a task"}
+		return &KindFieldError{Field: fieldTaskType, Only: onlyATask}
 	}
 	return nil
 }
@@ -143,7 +146,7 @@ func checkTaskFieldsKind(kind string, f taskFields) error {
 		{auditFieldIsDone, f.isDone != nil && *f.isDone},
 	} {
 		if set.is {
-			return &KindFieldError{Field: set.field, Only: "a task"}
+			return &KindFieldError{Field: set.field, Only: onlyATask}
 		}
 	}
 	return nil

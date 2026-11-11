@@ -98,11 +98,15 @@ var taskSourceFamilies = map[string]taskSourcePolicy{
 	provenance.AssuranceTaskSource:          {currency: currentByItsWriter, taskType: crmcontracts.TaskTypeReview},
 	provenance.AnalyticsDecisionSource:      {currency: currentByItsWriter, taskType: crmcontracts.TaskTypeReview},
 	provenance.OvernightReconcileSource:     {currency: currentByItsWriter, taskType: crmcontracts.TaskTypeReview},
-	provenance.LeadRepliedSource: {currency: currentByLeadEngagement, undated: true, generatedDate: true,
-		taskType: crmcontracts.TaskTypeReview},
+	provenance.LeadRepliedSource: {
+		currency: currentByLeadEngagement, undated: true, generatedDate: true,
+		taskType: crmcontracts.TaskTypeReview,
+	},
 	// A refused submission has no activity source; the owner decides its lifecycle.
-	provenance.LeadForContactSource: {currency: currentByItsWriter, undated: true, generatedDate: true,
-		taskType: crmcontracts.TaskTypeReview},
+	provenance.LeadForContactSource: {
+		currency: currentByItsWriter, undated: true, generatedDate: true,
+		taskType: crmcontracts.TaskTypeReview,
+	},
 	provenance.WhichDealSource: {currency: currentBySourceMail, taskType: crmcontracts.TaskTypeDecide},
 }
 
