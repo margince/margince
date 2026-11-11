@@ -21,6 +21,7 @@ Also called: model vendor, AI vendor, LLM provider, API key settings.
 ### Can I skip the AI provider when I first set up Margince?
 Yes. On the first setup screen, select **Not now**. Without a provider, Margince
 cannot read your website, so you enter your company details yourself.
+
 To add the key later, select **Finish setup** in the top bar, then **Add key** on
 **Set up AI**. It opens **Settings**, then **AI models**, where the same form
 asks for the provider, the key and the two models. The step stays on the list
