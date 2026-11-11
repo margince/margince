@@ -313,10 +313,10 @@ it("lists the next meeting's attendees as one sentence", () => {
   };
   draw(<SchedulePanel day={day} state="ready" />);
   // One element holds names and commas, so they wrap as text, not as items.
-  const people = screen
+  const attendees = screen
     .getByRole("region")
-    .querySelector(".rail-schedule-people");
-  expect(people?.textContent).toBe("Anna Weber, Ben Ortiz, Rita Rep");
+    .querySelector(".rail-schedule-attendees");
+  expect(attendees?.textContent).toBe("Anna Weber, Ben Ortiz, Rita Rep");
 });
 
 it("opens today's meeting from its title, not the record it is about", () => {

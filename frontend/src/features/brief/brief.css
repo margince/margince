@@ -471,7 +471,7 @@
   overflow-wrap: anywhere;
 }
 /* The attendees take a line of their own and wrap as a sentence. */
-.rail-schedule-people {
+.rail-schedule-attendees {
   flex-basis: 100%;
   min-width: 0;
 }

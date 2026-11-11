@@ -364,7 +364,7 @@ function NextMeetingRow({
           </span>
         )}
         {/* One run of text, so the commas wrap with the names they follow. */}
-        <span className="t-caption rail-schedule-people">
+        <span className="t-caption rail-schedule-attendees">
           {next.participants?.map((participant, index) => (
             <Fragment key={participant.contact_id}>
               {index > 0 && ", "}
