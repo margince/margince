@@ -14,6 +14,7 @@ import {
   digest,
   firstWeek,
   lapsed,
+  meetingRow,
   NOT_FOUND,
   narratedWeek,
   noMarginceChanges,
@@ -521,8 +522,9 @@ const workingMorningRows: WorklistItem[] = [
   },
 ];
 
-export const WorkingMorning: Story = {
-  render: () => {
+/** The working morning, with `meetings` added to the day the rail reads. */
+function workingMorning(meetings: WorklistItem[]) {
+  return () => {
     const day = readingsDay(
       {
         prospecting: 1,
@@ -531,7 +533,7 @@ export const WorkingMorning: Story = {
         revenue_at_risk_minor: 8_900_000,
         revenue_currency: "EUR",
       },
-      workingMorningRows,
+      [...workingMorningRows, ...meetings],
       [],
       { urgent: 7, due: 6 },
     );
@@ -562,7 +564,27 @@ export const WorkingMorning: Story = {
         <BriefScreen />
       </StoryProviders>
     );
-  },
+  };
+}
+
+export const WorkingMorning: Story = { render: workingMorning([]) };
+
+// Two meetings ahead on the day the page is read: the rail's Your day draws a
+// Now stop at the reader's clock, the next meeting on its plate with the way
+// into its brief, and the one after.
+export const MorningWithMeetings: Story = {
+  render: workingMorning([
+    {
+      ...meetingRow("meet-next", false, "2026-09-13T09:00:00Z"),
+      title: "Nordwind onboarding",
+      with_contact: "01a00000-0000-7000-8000-000000000017",
+      move: { action: "open_meeting_brief", activity_id: "meet-next" },
+    },
+    {
+      ...meetingRow("meet-later", true, "2026-09-13T12:00:00Z"),
+      title: "Helio pricing call",
+    },
+  ]),
 };
 
 export const DigestUnavailable: Story = {

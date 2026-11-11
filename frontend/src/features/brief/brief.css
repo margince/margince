@@ -412,13 +412,16 @@
 .rail-schedule-dot::before {
   content: "";
   position: absolute;
-  inset-block: 0;
+  /* Through the row's padding and half the section's gap, so one stop's line
+     meets the next's. */
+  inset-block: calc(-1 * (var(--space-3) + var(--space-1)));
   inset-inline-start: calc(50% - 0.5px);
   inline-size: 1px;
   background: var(--borderStrong);
 }
 .rail-schedule-row:first-child .rail-schedule-dot::before,
-.panel-head + .rail-schedule-row .rail-schedule-dot::before {
+.panel-head + .rail-schedule-row .rail-schedule-dot::before,
+.brief-section-label + .rail-schedule-row .rail-schedule-dot::before {
   inset-block-start: var(--space-3);
 }
 .rail-schedule-row:last-child .rail-schedule-dot::before {
@@ -449,6 +452,39 @@
   align-items: baseline;
   gap: var(--space-2);
   min-width: 0;
+}
+
+/* The Now stop: a ring rather than a disc, so the reader finds where they
+   stand on the line before reading a time. */
+.rail-schedule-now .rail-schedule-dot::after {
+  background: var(--ground);
+  border: 3px solid var(--accent);
+}
+.rail-schedule-title {
+  font-weight: var(--fontWeightMedium);
+}
+
+/* The next meeting stands on its own plate, one rung up the surface ladder:
+   the one stop the reader acts on before it starts. The plate keeps the
+   row's inset, so its time and stop stay on the columns above and below. */
+.rail-schedule-next {
+  margin-inline: calc(-1 * var(--space-2));
+  /* Less the border, so the time and the stop stay on their columns. */
+  padding-inline: calc(var(--space-2) - 1px);
+  border: 1px solid var(--groundEdge);
+  border-radius: var(--r-md);
+}
+.rail-schedule-next::before {
+  content: none;
+}
+.rail-schedule-next .rail-schedule-dot::after {
+  border-color: var(--ground);
+}
+.rail-schedule-next .rail-schedule-what > :first-child {
+  font-weight: var(--fontWeightMedium);
+}
+.rail-schedule-prep {
+  margin-block-start: var(--space-1);
 }
 
 /* What the panel cannot tell you, under what it can. Quiet like every other

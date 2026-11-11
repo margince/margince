@@ -12,20 +12,13 @@ import {
 import type { WorklistItem } from "../worklist/worklist.queries";
 import { SchedulePanel } from "./brief.schedule";
 
-// The two rail panels the morning is read alongside: what the day is booked
-// with, and what this rep owes.
+// Your day, the rail's line through today: a Now stop, the meetings around it,
+// and on a clear day the stop saying so. A read in flight and a read that
+// failed are facts about the request, so they keep the box and claim nothing.
 //
-// THE EMPTY FRAMES ARE THE POINT OF THIS FILE. A panel with nothing in it draws
-// nothing at all — no band, no hairline, no grey sentence — and the rail's own
-// quiet panel carries one line per silent source instead (see
-// `Shell/Home/Page`). Every OTHER state keeps the box: a read in flight and a
-// read that failed are facts about the request, and collapsing them would tell
-// a rep their morning was clear on the strength of an answer nobody received.
-//
-// So a story below that renders an empty frame is passing. Read each one in
-// BOTH themes with the toolbar's Theme control — every colour here is a
-// `color-mix()` of a canonical token, so a surface can be correct in light and
-// wrong in dark.
+// Read each story in BOTH themes with the toolbar's Theme control: every colour
+// here is a `color-mix()` of a canonical token, so a surface can be correct in
+// light and wrong in dark.
 
 /** A row the task lane would send: what this rep owes, with no time on it. */
 function taskRow(id: string, title: string): WorklistItem {
@@ -48,7 +41,10 @@ function panel(node: React.ReactNode) {
     installFetchStub({ "GET /me": meRoute({}) });
     return (
       <StoryProviders>
-        <div className="brief-rail" style={{ maxWidth: 320 }}>
+        <div
+          className="brief-morning page-pane brief-rail"
+          style={{ maxWidth: 360 }}
+        >
           {node}
         </div>
       </StoryProviders>
@@ -56,13 +52,25 @@ function panel(node: React.ReactNode) {
   };
 }
 
+/** A meeting whose row names whose page its brief is read on. */
+function withBrief(item: WorklistItem): WorklistItem {
+  return {
+    ...item,
+    with_contact: "c-1",
+    move: { action: "open_meeting_brief", activity_id: item.id },
+  };
+}
+
 const BOOKED = readingsDay({}, [
-  meetingRow("m1", false, "2026-08-21T07:30:00Z"),
-  meetingRow("m2", true, "2026-08-21T13:00:00Z"),
+  withBrief(meetingRow("m1", false, "2026-08-21T07:30:00Z")),
+  withBrief(meetingRow("m2", true, "2026-08-21T13:00:00Z")),
   taskRow("t1", "Call Alice back"),
 ]);
 
 const CLEAR = readingsDay({}, []);
+
+// Early on the day of BOOKED, before either meeting.
+const NOW = Date.parse("2026-08-21T06:50:00Z");
 
 const meta: Meta = {
   title: "Shell/Home/Schedule",
@@ -77,7 +85,19 @@ type Story = StoryObj;
 // reader has no answer for. The badge rides WITH the title, so a meeting whose
 // name wraps keeps its warning attached to it.
 export const Schedule: Story = {
-  render: panel(<SchedulePanel day={BOOKED} state="ready" />),
+  render: panel(<SchedulePanel day={BOOKED} state="ready" now={NOW} />),
+};
+
+// Mid-morning: the first meeting is under way, so the Now stop sits between
+// the two and the second is the next one, with how soon it starts.
+export const ScheduleMidDay: Story = {
+  render: panel(
+    <SchedulePanel
+      day={BOOKED}
+      state="ready"
+      now={Date.parse("2026-08-21T11:40:00Z")}
+    />,
+  ),
 };
 
 // A meeting known only by its date: its row draws no start time.
@@ -103,9 +123,10 @@ export const ScheduleDateOnlyMeeting: Story = {
   },
 };
 
-// Nothing booked: no panel. The line that says so is on the rail's quiet panel.
-export const ScheduleCollapsed: Story = {
-  render: panel(<SchedulePanel day={CLEAR} state="ready" />),
+// Nothing booked: the Now stop says the rest of the day is clear, so the box
+// never leaves the rail.
+export const ScheduleClearDay: Story = {
+  render: panel(<SchedulePanel day={CLEAR} state="ready" now={NOW} />),
 };
 
 // A meeting booked further out, which the CRM holds whatever the calendar
