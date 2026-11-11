@@ -157,6 +157,7 @@ Each item names its record and shows the facts that call for action. A badge say
 - **Your day** is a line through today. **Now** sits at your clock and says "Free until" the next
   meeting, or "Nothing else booked today". The next meeting says how soon it starts and offers
   **Prepare for meeting**, which opens its brief.
+
 A greeting covers the page on the day's first visit, once per browser, unless your settings turn motion off. It shows the date and the emails synced overnight. It also counts the items waiting on you
 in Today, how many of them are urgent and how many meetings you have. It stands at least 1.5 seconds and lifts once your page is ready, or after 4.5 seconds; any key or click ends it sooner.
 Also called: morning brief, daily brief, today, priorities, top cards, welcome screen.
