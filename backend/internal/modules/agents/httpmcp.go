@@ -64,10 +64,8 @@ type EdgeRefusal interface {
 // credentials to, so where the pointer leads must not be the sender's choice.
 // The challenge is therefore the same for every request, and is built once.
 //
-// The scope hint is not decoration: absent it, a client requests every scope
-// the protected-resource metadata advertises in scopes_supported, including
-// send. Naming "read draft" makes the conservative grant the default, with
-// the human free to widen it on the consent page.
+// The scope hint shapes only what a client asks for. The consent page offers
+// every scope ticked, so the human decides the grant.
 func ResourceMetadataChallenge(origin string) func(*http.Request) string {
 	challenge := `Bearer resource_metadata="` + origin + `/.well-known/oauth-protected-resource", scope="read draft"` // NOSONAR: RFC 9728 challenge, not a secret
 	return func(*http.Request) string { return challenge }

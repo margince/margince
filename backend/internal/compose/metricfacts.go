@@ -10,6 +10,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/salesprogress"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/reporting"
@@ -159,7 +160,9 @@ func reportingClosePredicate(frame crmcontracts.ReportingContext, b *reportingBi
 	if frame.CloseInterval == nil {
 		return ""
 	}
-	return " AND t.expected_close_date >= (timezone(" + b.add(frame.Timezone) + "," + b.add(frame.CloseInterval.StartAt) + "::timestamptz))::date AND t.expected_close_date < (timezone(" + b.add(frame.Timezone) + "," + b.add(frame.CloseInterval.EndAt) + "::timestamptz))::date"
+	// Close dates are whole days: every local day the window touches is in it,
+	// so a window ending mid-day keeps that day.
+	return " AND t.expected_close_date >= (timezone(" + b.add(frame.Timezone) + "," + b.add(frame.CloseInterval.StartAt) + "::timestamptz))::date AND t.expected_close_date <= (timezone(" + b.add(frame.Timezone) + "," + b.add(frame.CloseInterval.EndAt) + "::timestamptz - interval '1 microsecond'))::date"
 }
 
 func readReportingOpen(ctx context.Context, tx pgx.Tx, frame crmcontracts.ReportingContext, _ crmcontracts.ReportingFramework, _ metricEvaluator) ([]reporting.Fact, crmcontracts.ReportingCoverage, error) {
@@ -241,7 +244,7 @@ func readReportingBookingsMix(ctx context.Context, tx pgx.Tx, frame crmcontracts
 	query := closingMetricQuery(true)
 	query.allocatable = false
 	query.binds = binds
-	query.from += " JOIN LATERAL (" + parts + ") part ON part.amount>0"
+	query.from += " JOIN LATERAL (" + parts + ") part ON part.amount<>0"
 	query.key = "COALESCE(closing.id,t.id)::text||':'||part.part"
 	query.value = allocationConvertedSQL("part.amount", "part.currency IS DISTINCT FROM t.currency", "t", "@currency")
 	query.group = func(_ context.Context, b *reportingBindings) (string, string, error) {
@@ -253,5 +256,10 @@ func readReportingBookingsMix(ctx context.Context, tx pgx.Tx, frame crmcontracts
 		label.WriteString(" END")
 		return "'kind:'||part.kind", label.String(), nil
 	}
-	return readDealMetricFacts(ctx, tx, frame, reportingBookingsMix, query)
+	facts, coverage, err := readDealMetricFacts(ctx, tx, frame, reportingBookingsMix, query)
+	if err != nil || frame.ProductId != nil || reportingValueBasis(frame) != reportingValueBasisAll {
+		return salesprogress.DropOverAllocation(facts), coverage, err
+	}
+	facts, err = settleMix(ctx, tx, frame, facts)
+	return facts, coverage, err
 }

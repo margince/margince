@@ -205,14 +205,14 @@ type Server struct {
 	reportSetupHandlers
 	accountCoverageHandlers
 	analyticsContextHandlers
+	salesProgressReading
 	sdrSummaryHandlers
 	assuranceHandlers
 	// The check a human starts: the preview of a first pass, and the pass
 	// itself. In compose because a pass is assembled from the deals and
 	// coverage seams, which assurance owns nothing of.
 	assuranceRunHandlers
-	// The introductions transport: one rep asking a colleague to open a door,
-	// the colleague's bounded answer, and what came of it.
+	// Introductions: one rep asks a colleague to open a door, and what came of it.
 	introductionHandlers
 	initiativeHandlers
 
@@ -228,9 +228,8 @@ type Server struct {
 	// is configured — the route is absent otherwise, never open.
 	gmailPush http.Handler
 
-	// graphPush is the Microsoft Graph change-notification webhook (the same
-	// chassis), injected by WithGraphPush only when a notification token is
-	// configured — the route is absent otherwise, never open.
+	// graphPush is the Microsoft Graph change-notification webhook on the same chassis. WithGraphPush
+	// injects it only when a notification token is configured; otherwise the route is absent.
 	graphPush http.Handler
 
 	// mcpConnectorEnabled is the connector's deployment gate (WithMCPConnector): transport, authorization

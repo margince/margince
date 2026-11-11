@@ -118,6 +118,8 @@ Records, deals and mail in Margince, by page:
 - [Links between records](deal-links.md): linking a deal to a deal, a company
   or a contact with a type, and finding deals by link.
 - [Performance and saved reports](sales-reporting.md): graphs, targets, scheduled editions, comparisons and exports.
+- [Progress and sales goals](progress-and-sales-goals.md): closed revenue against
+  the goal of a seller or a team, and how a manager drafts and publishes the goals.
 - [Analytics and forecasting](analytics.md): the report sections, what each
   number covers, and how to open the deals behind it. Forecast calls and the
   projected landing. The pipeline needed figure, which is not a target.

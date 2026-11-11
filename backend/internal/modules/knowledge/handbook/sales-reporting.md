@@ -16,6 +16,8 @@ The line under **Forecast landing** names what it counts, such as **Won + weight
 
 A salesperson's target is for the month or the fiscal quarter that holds the end of the time span you picked. If the cutoff of today comes first, it is the month or quarter that holds that cutoff. It is compared with the real result for that month or quarter. Changing the time span does not turn today's pipeline into history.
 
+The monthly targets of a seller can come from a published plan on **Sales goals**. Those months change only there; see [Progress and sales goals](progress-and-sales-goals.md).
+
 “This week”, “This month” and “This quarter” follow the calendar of your Margince and start again when that time span starts.
 
 A week starts on Monday at 00:00. At that exact moment the week holds nothing yet, and Analytics says so instead of showing zeros. With “This week”, a monthly target still counts the whole month up to the cutoff.

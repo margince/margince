@@ -86,6 +86,8 @@
     "report_execution.report_execution_owner_id_fkey": "FOREIGN KEY (owner_id) REFERENCES app_user(id)",
     "report_schedule.report_schedule_owner_id_fkey": "FOREIGN KEY (owner_id) REFERENCES app_user(id)",
     "reporting_framework_revision.reporting_framework_revision_created_by_fkey": "FOREIGN KEY (created_by) REFERENCES app_user(id)",
+    "sales_goal_plan.sales_goal_plan_owner_id_fkey": "FOREIGN KEY (owner_id) REFERENCES app_user(id) ON DELETE RESTRICT",
+    "sales_goal_plan_revision.sales_goal_plan_revision_created_by_fkey": "FOREIGN KEY (created_by) REFERENCES app_user(id) ON DELETE RESTRICT",
     "sales_target.sales_target_pipeline_id_fkey": "FOREIGN KEY (pipeline_id) REFERENCES pipeline(id)",
     "sales_target_revision.sales_target_revision_created_by_fkey": "FOREIGN KEY (created_by) REFERENCES app_user(id)"
   },

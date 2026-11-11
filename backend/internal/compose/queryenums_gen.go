@@ -48,7 +48,7 @@ var queryEnumTable = map[string][]queryEnum{
 	},
 	"GET /v1/analytics/evaluate": {
 		{Name: "blocks", Values: []string{"bookings_trend", "stage_distribution", "owner_attainment", "stage_age", "sdr_outcomes", "target_progress", "forecast_support", "pipeline_movement", "metric_reading", "breakdown", "stage_cohort", "lead_cohort"}, Array: true, Explode: true},
-		{Name: "close_window", Values: []string{"fiscal_quarter", "all_open"}, Array: false, Explode: true},
+		{Name: "close_window", Values: []string{"fiscal_quarter", "all_open", "custom"}, Array: false, Explode: true},
 		{Name: "metrics", Values: []string{"bookings_won", "closed_win_rate", "open_pipeline", "stage_age", "qualified_pipeline_created", "meetings_held", "accepted_opportunities", "forecast_landing", "leads_created", "lead_status_moves", "leads_promoted", "leads_qualified", "lead_first_response", "leads_awaiting_response", "leads_awaiting_response_now", "partner_pipeline", "partner_won", "partner_commission", "partner_activity", "stage_conversion", "lead_cohort_outcomes", "bookings_mix", "qualified_opportunities_created", "initiative_pipeline"}, Array: true, Explode: true},
 		{Name: "period", Values: []string{"this_week", "this_month", "last_month", "last_week", "this_quarter", "custom"}, Array: false, Explode: true},
 		{Name: "scope_kind", Values: []string{"owner", "team", "workspace"}, Array: false, Explode: true},
@@ -57,7 +57,7 @@ var queryEnumTable = map[string][]queryEnum{
 	},
 	"GET /v1/analytics/evaluate.csv": {
 		{Name: "blocks", Values: []string{"bookings_trend", "stage_distribution", "owner_attainment", "stage_age", "sdr_outcomes", "target_progress", "forecast_support", "pipeline_movement", "metric_reading", "breakdown", "stage_cohort", "lead_cohort"}, Array: true, Explode: true},
-		{Name: "close_window", Values: []string{"fiscal_quarter", "all_open"}, Array: false, Explode: true},
+		{Name: "close_window", Values: []string{"fiscal_quarter", "all_open", "custom"}, Array: false, Explode: true},
 		{Name: "metrics", Values: []string{"bookings_won", "closed_win_rate", "open_pipeline", "stage_age", "qualified_pipeline_created", "meetings_held", "accepted_opportunities", "forecast_landing", "leads_created", "lead_status_moves", "leads_promoted", "leads_qualified", "lead_first_response", "leads_awaiting_response", "leads_awaiting_response_now", "partner_pipeline", "partner_won", "partner_commission", "partner_activity", "stage_conversion", "lead_cohort_outcomes", "bookings_mix", "qualified_opportunities_created", "initiative_pipeline"}, Array: true, Explode: true},
 		{Name: "period", Values: []string{"this_week", "this_month", "last_month", "last_week", "this_quarter", "custom"}, Array: false, Explode: true},
 		{Name: "scope_kind", Values: []string{"owner", "team", "workspace"}, Array: false, Explode: true},
@@ -66,7 +66,7 @@ var queryEnumTable = map[string][]queryEnum{
 	},
 	"GET /v1/analytics/evidence": {
 		{Name: "blocks", Values: []string{"bookings_trend", "stage_distribution", "owner_attainment", "stage_age", "sdr_outcomes", "target_progress", "forecast_support", "pipeline_movement", "metric_reading", "breakdown", "stage_cohort", "lead_cohort"}, Array: true, Explode: true},
-		{Name: "close_window", Values: []string{"fiscal_quarter", "all_open"}, Array: false, Explode: true},
+		{Name: "close_window", Values: []string{"fiscal_quarter", "all_open", "custom"}, Array: false, Explode: true},
 		{Name: "metric", Values: []string{"bookings_won", "closed_win_rate", "open_pipeline", "stage_age", "qualified_pipeline_created", "meetings_held", "accepted_opportunities", "forecast_landing", "leads_created", "lead_status_moves", "leads_promoted", "leads_qualified", "lead_first_response", "leads_awaiting_response", "leads_awaiting_response_now", "partner_pipeline", "partner_won", "partner_commission", "partner_activity", "stage_conversion", "lead_cohort_outcomes", "bookings_mix", "qualified_opportunities_created", "initiative_pipeline"}, Array: false, Explode: true},
 		{Name: "metrics", Values: []string{"bookings_won", "closed_win_rate", "open_pipeline", "stage_age", "qualified_pipeline_created", "meetings_held", "accepted_opportunities", "forecast_landing", "leads_created", "lead_status_moves", "leads_promoted", "leads_qualified", "lead_first_response", "leads_awaiting_response", "leads_awaiting_response_now", "partner_pipeline", "partner_won", "partner_commission", "partner_activity", "stage_conversion", "lead_cohort_outcomes", "bookings_mix", "qualified_opportunities_created", "initiative_pipeline"}, Array: true, Explode: true},
 		{Name: "period", Values: []string{"this_week", "this_month", "last_month", "last_week", "this_quarter", "custom"}, Array: false, Explode: true},
@@ -79,6 +79,13 @@ var queryEnumTable = map[string][]queryEnum{
 	},
 	"GET /v1/analytics/initiatives/{id}/members": {
 		{Name: "record_type", Values: []string{"lead", "deal"}, Array: false, Explode: true},
+	},
+	"GET /v1/analytics/progress": {
+		{Name: "period", Values: []string{"month", "year"}, Array: false, Explode: true},
+		{Name: "scope_kind", Values: []string{"owner", "team"}, Array: false, Explode: true},
+	},
+	"GET /v1/analytics/progress/deals": {
+		{Name: "scope_kind", Values: []string{"owner", "team"}, Array: false, Explode: true},
 	},
 	"GET /v1/analytics/sdr-summary": {
 		{Name: "scope_kind", Values: []string{"owner", "team", "workspace"}, Array: false, Explode: true},
@@ -330,6 +337,13 @@ var queryMinimumTable = map[string][]queryMinimum{
 		{Name: "framework_revision", Minimum: 0},
 		{Name: "limit", Minimum: 1},
 	},
+	"GET /v1/analytics/progress": {
+		{Name: "month", Minimum: 1},
+		{Name: "year", Minimum: 2000},
+	},
+	"GET /v1/analytics/progress/deals": {
+		{Name: "limit", Minimum: 1},
+	},
 	"GET /v1/analytics/reports": {
 		{Name: "limit", Minimum: 1},
 	},
@@ -350,6 +364,9 @@ var queryMinimumTable = map[string][]queryMinimum{
 	},
 	"GET /v1/analytics/runs": {
 		{Name: "limit", Minimum: 1},
+	},
+	"GET /v1/analytics/sales-goals": {
+		{Name: "year", Minimum: 2000},
 	},
 	"GET /v1/analytics/sdr-summary/handoffs": {
 		{Name: "limit", Minimum: 1},

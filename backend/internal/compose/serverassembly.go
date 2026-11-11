@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/analyticsquery"
 	"github.com/margince/margince/backend/internal/compose/homecache"
 	"github.com/margince/margince/backend/internal/compose/magic"
+	"github.com/margince/margince/backend/internal/compose/salesprogress"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/capture"
@@ -244,6 +245,7 @@ func (s *Server) wireAnalyticsSurface(pool *pgxpool.Pool) {
 	s.analyticsContextHandlers = newAnalyticsContextHandlers(
 		InstallationDB(pool), func() time.Time { return time.Now().UTC() },
 	)
+	s.salesProgressReading = salesprogress.Reading{DB: InstallationDB(pool), Reports: reportingService, Members: reportingMembers, Measurable: readerMeasurableOwners, Deals: deals.NewStore(InstallationDB(pool), DealsInstallation())}
 	s.sdrSummaryHandlers = newSdrSummaryHandlers(
 		InstallationDB(pool), func() time.Time { return time.Now().UTC() },
 	).withTargets(reportingService)
@@ -404,3 +406,6 @@ func newConsentHandlers(pool *pgxpool.Pool) consent.Handlers {
 func (o ownDomainReader) MailSeatIdentitiesSQL(ctx context.Context, tx pgx.Tx, bind func(any) int) (string, error) {
 	return o.store.MailSeatIdentitiesSQL(ctx, tx, bind)
 }
+
+// salesProgressReading names the Progress handlers as the inventory embeds them.
+type salesProgressReading = salesprogress.Reading

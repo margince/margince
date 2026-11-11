@@ -30,9 +30,9 @@ module to put a change in, read [modules.md](../modules.md).
 
 | | |
 |---|--:|
-| Tables | 362 |
-| Columns | 4398 |
-| Foreign keys | 604 |
+| Tables | 364 |
+| Columns | 4418 |
+| Foreign keys | 607 |
 | Owning areas | 39 |
 
 ## The 12 records everything else hangs off
@@ -41,7 +41,7 @@ Ranked by how many foreign keys point at them.
 
 | Record | Lives in | Columns | Foreign keys pointing at it |
 |---|---|--:|--:|
-| [`app_user`](identity.md#app_user) | [identity](identity.md) | 39 | 153 |
+| [`app_user`](identity.md#app_user) | [identity](identity.md) | 39 | 155 |
 | [`company`](contacts.md#company) | [contacts](contacts.md) | 47 | 51 |
 | [`contact`](contacts.md#contact) | [contacts](contacts.md) | 38 | 49 |
 | [`activity`](activities.md#activity) | [activities](activities.md) | 78 | 46 |
@@ -127,7 +127,7 @@ erDiagram
 | [privacy](privacy.md) | 2 |
 | [projects](projects.md) | 3 |
 | [recordlinks](recordlinks.md) | 1 |
-| [reporting](reporting.md) | 12 |
+| [reporting](reporting.md) | 14 |
 | [search](search.md) | 4 |
 | [signals](signals.md) | 2 |
 | [webforms](webforms.md) | 2 |
@@ -175,7 +175,7 @@ erDiagram
 | [`ai_task_run`](aiactivity.md#ai_task_run) | aiactivity | 25 | 0 |
 | [`ai_usage`](ai.md#ai_usage) | ai | 10 | 0 |
 | [`analytics_share`](compose.md#analytics_share) | compose | 16 | 0 |
-| [`app_user`](identity.md#app_user) | identity | 39 | 153 |
+| [`app_user`](identity.md#app_user) | identity | 39 | 155 |
 | [`approval`](approvals.md#approval) | approvals | 38 | 4 |
 | [`approval_autonomy_policy`](approvals.md#approval_autonomy_policy) | approvals | 12 | 0 |
 | [`approval_preference`](approvals.md#approval_preference) | approvals | 3 | 0 |
@@ -428,6 +428,8 @@ erDiagram
 | [`role`](identity.md#role) | identity | 9 | 1 |
 | [`role_assignment`](identity.md#role_assignment) | identity | 6 | 0 |
 | [`runner_job`](agents.md#runner_job) | agents | 10 | 0 |
+| [`sales_goal_plan`](reporting.md#sales_goal_plan) | reporting | 10 | 1 |
+| [`sales_goal_plan_revision`](reporting.md#sales_goal_plan_revision) | reporting | 10 | 0 |
 | [`sales_initiative`](initiatives.md#sales_initiative) | initiatives | 18 | 3 |
 | [`sales_initiative_baseline`](initiatives.md#sales_initiative_baseline) | initiatives | 6 | 0 |
 | [`sales_initiative_member`](initiatives.md#sales_initiative_member) | initiatives | 6 | 0 |
