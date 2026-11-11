@@ -4,12 +4,8 @@
 package compose
 
 // What a failed site read RECORDS, and which failures are worth another try.
-//
-// Before this, every failure was stored as a bare status='failed' with no code,
-// no sentence and no retry time: a real import produced 58 of them, all
-// identical, and the companies behind them kept an empty record whose cause
-// nobody could see. These cases pin each cause to the code an operator groups
-// by and to the retry decision that follows from it.
+// These cases pin each cause to the code an operator groups by and to the retry
+// decision that follows from it.
 
 import (
 	"context"
@@ -100,32 +96,14 @@ func TestDiagnoseCrawlFailureNamesTheCauseAndItsRetryPolicy(t *testing.T) {
 			if detail == "" {
 				t.Error("detail is empty — a failure with no sentence is the state this replaces")
 			}
-			if retry := contacts.SiteReadFailureCodes[code]; retry != tc.wantRetry {
+			// A code outside the store vocabulary would record a real failure as a constraint violation.
+			retry, known := contacts.SiteReadFailureCodes[code]
+			if !known {
+				t.Errorf("code %q is not in the store vocabulary", code)
+			}
+			if retry != tc.wantRetry {
 				t.Errorf("retryable = %v, want %v", retry, tc.wantRetry)
 			}
 		})
-	}
-}
-
-// Every code the classifier can emit has to be one the store and the database
-// accept, or a real failure would be recorded as a constraint violation.
-func TestEveryDiagnosedCodeIsInTheStoreVocabulary(t *testing.T) {
-	t.Parallel()
-	causes := []error{
-		nil,
-		errors.New("unknown"),
-		&webread.StatusError{Status: 403},
-		&webread.StatusError{Status: 500},
-		&webread.StatusError{Status: 404},
-		fmt.Errorf("%w", webread.ErrRobotsDisallowed),
-		fmt.Errorf("%w", context.DeadlineExceeded),
-		&net.DNSError{Err: "no such host"},
-		x509.UnknownAuthorityError{},
-	}
-	for _, cause := range causes {
-		code, _ := diagnoseCrawlFailure(cause)
-		if _, known := contacts.SiteReadFailureCodes[code]; !known {
-			t.Errorf("diagnoseCrawlFailure(%v) produced %q, which the store would reject", cause, code)
-		}
 	}
 }

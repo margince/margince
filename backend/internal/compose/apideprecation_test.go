@@ -37,23 +37,21 @@ func TestEveryDeprecatedOperationAnnouncesThePolicyThroughTheGeneratedRouter(t *
 				t.Errorf("missing notice for %s", route)
 			}
 			requestPath := regexp.MustCompile(`\{[^}]+\}`).ReplaceAllString(httpserver.BaseURL+path, "00000000-0000-0000-0000-000000000001")
-			query := url.Values{}
+			query, header := url.Values{}, http.Header{}
+			// A required parameter's refusal comes before the operation. Every required
+			// query parameter on a deprecated operation takes a uuid.
 			for _, param := range op.Parameters {
-				// Every required query parameter on a deprecated operation takes a uuid.
-				if p := param.Value; p != nil && p.In == "query" && p.Required {
+				if p := param.Value; p != nil && p.Required && p.In == "query" {
 					query.Set(p.Name, "00000000-0000-0000-0000-000000000001")
+				} else if p != nil && p.Required && p.In == "header" {
+					header.Set(p.Name, `"1"`)
 				}
 			}
 			if len(query) > 0 {
 				requestPath += "?" + query.Encode()
 			}
 			request := httptest.NewRequest(method, requestPath, nil)
-			// A required header is a parameter too, and its refusal comes before the operation.
-			for _, param := range op.Parameters {
-				if p := param.Value; p != nil && p.In == "header" && p.Required {
-					request.Header.Set(p.Name, `"1"`)
-				}
-			}
+			request.Header = header
 			response := httptest.NewRecorder()
 			router.ServeHTTP(response, request)
 			if response.Code != http.StatusNoContent {
