@@ -172,6 +172,7 @@ calculated
 calendar
 call
 came
+campaign
 can
 can't
 cancel
@@ -219,7 +220,6 @@ cloudflare
 coach
 code
 cold
-collapse
 colleague
 collection
 colon
@@ -434,6 +434,7 @@ extra
 extract
 facet
 fact
+factor
 fail
 fall
 fallback
@@ -511,6 +512,7 @@ guess
 guest
 had
 half
+halve
 halved
 hand
 handbook
@@ -1176,6 +1178,7 @@ taken
 talk
 target
 task
+taught
 tax
 team
 teammate
@@ -1257,6 +1260,7 @@ two
 type
 unarchive
 unassigned
+unblock
 undelete
 under
 undo

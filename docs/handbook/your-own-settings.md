@@ -183,7 +183,7 @@ Also called: change time zone, my time zone, local time.
 
 ### How do I change the company's time zone?
 <!-- opens: settings/company -->
-To change the company's time zone in Margince, open Settings → **Company profile** and set **Company time zone** in the **Installation** card.
+To change the company's time zone in Margince, open Settings → **Company profile** and set **Company time zone** on its **Regional and calendar** tab.
 Report periods, scheduled jobs, documents sent out and the "today" lists use it, and only Admin and Ops change it. Times on screen stay in your own zone.
 Also called: company time zone, report time zone, installation time zone.
 
@@ -195,7 +195,7 @@ To share your booking link in Margince, open Settings → **Meetings** and choos
 Guests choose a time and enter their own details; you do not need to pick a contact first. With no link yet, the card offers **Create booking link**. You have one link today.
 Also called: booking link, my calendar link, scheduling page.
 
-The link row shows its name, how long it lasts, its video call and status: **Live**, **Paused** or **No invitations**. Its menu holds three choices:
+The link row shows its name, how long it lasts, its video call and status: **Accepting bookings** or **Paused**. Its menu holds three choices:
 
 - **Edit link** opens a side panel. It holds **Meeting name** and how long it lasts
   (one of the given times or **Other**, 15 minutes to 8 hours). It also holds where the meeting
@@ -300,7 +300,7 @@ The tabs, in order:
 **Overnight preparation**, on **Account**, says whether Margince prepares your Morning brief overnight.
 When it is off, the card says **Off** and explains that the brief is not made before you start; nothing else stops working.
 
-**What your connections found** counts what they brought in: **Senders**, **Waiting on a decision** (only while a sender waits), **Held threads** and **Network reach**. Choose **View** on a row to see its list.
+**What your connections found** counts what they brought in. Its rows are **Sender decisions**, **Waiting on a decision** (only while a sender waits), **Mail not shared with the team** and **Network reach**. Choose **View** on a row to see its list.
 
 ### How do I connect my mailbox?
 <!-- opens: settings/connections -->
@@ -318,7 +318,7 @@ All the detail (IMAP settings, importing past mail, reconnecting, and what captu
 The **Activity** tab of Connections says what your connected mail turned into,
 and holds the decisions you make about it. The cards, in order:
 
-**Held threads.** Threads your mailbox is holding back from the team right now, with the reason. **Share with the team** releases one; only you can release yours. When a thread is held, its earlier messages that the team could already read are held too. Sharing the thread again opens them.
+**Mail not shared with the team.** Threads your mailbox is holding back from the team right now, with the reason. Margince keeps them unshared, so no action is needed. To share one, search for it and choose **Preview and change sharing**; only you can share yours. When a thread is held, its earlier messages that the team could already read are held too. Sharing the thread again opens them.
 
 **Capture exclusions** are addresses and domains whose messages never come into the CRM. Your rules apply only to mailboxes you connected. The company's rules apply to everyone, and only an administrator may add or remove one of those. A rule applies from the next message; what is already captured stays.
 
