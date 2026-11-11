@@ -18,8 +18,8 @@ import (
 )
 
 // ProbeExtensionTable creates an ext table for one test, as a unit migration
-// would, with one activity link and one personal column, declares it, and
-// files one row linked to the activity.
+// would. It declares one activity link and one personal column, and files one
+// row linked to the activity.
 func ProbeExtensionTable(t *testing.T, owner *pgx.Conn, name string, activity ids.UUID) (extprivacy.Registry, ids.UUID) {
 	t.Helper()
 	table := pgx.Identifier{"ext", name}.Sanitize()
