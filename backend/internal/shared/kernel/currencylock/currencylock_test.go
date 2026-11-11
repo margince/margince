@@ -13,9 +13,13 @@ func TestTheProseStatesTheFactsItWasWordedFrom(t *testing.T) {
 		lock Lock
 		want []string
 	}{
-		"frozen rates name every kind of record that counts": {
+		"frozen rates name what was counted, and only that": {
+			Lock{Reason: RatesFrozen, Count: 3, Frozen: []Counted{{"deal", 0}, {"finance_invoice", 2}, {"contract", 1}}},
+			[]string{"3 record(s) (mirrored invoices: 2, contracts: 1) have already frozen"},
+		},
+		"frozen rates counted by no table still name the count": {
 			Lock{Reason: RatesFrozen, Count: 3},
-			[]string{"3 record(s)", "closed deals", "sent offers", "mirrored invoices", "contracts", "commission entries"},
+			[]string{"3 record(s) have already frozen"},
 		},
 		"a rate sheet names its count, its base and the repair": {
 			Lock{Reason: RateSheet, Count: 2, BaseCurrency: "EUR"},
@@ -37,6 +41,13 @@ func TestTheProseStatesTheFactsItWasWordedFrom(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestTheProseNamesNoRecordKindItDidNotCount(t *testing.T) {
+	prose := Lock{Reason: RatesFrozen, Count: 1, Frozen: []Counted{{"deal", 0}, {"contract", 1}}}.Prose()
+	if strings.Contains(prose, "closed deals") {
+		t.Errorf("Prose() = %q names closed deals, which counted none", prose)
 	}
 }
 

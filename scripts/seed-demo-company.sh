@@ -226,20 +226,25 @@ fi
 
 if [[ -z "$(psql_one "SELECT 1 FROM finance_customer_link WHERE company_id = '$company_id' AND archived_at IS NULL")" ]]; then
   # The first entry of the finance-demo directory no other company holds.
-  linked="$(psql_one "INSERT INTO finance_customer_link
-      (connection_id, company_id, external_customer_id,
-       sync_hash, source, captured_by)
-    SELECT '$conn_id', '$company_id', 'DEMO-' || lpad(g::text, 4, '0'), 'seed', 'system', 'system:seed'
+  linked="$(psql_one "SELECT 'DEMO-' || lpad(g::text, 4, '0')
       FROM generate_series(1, 50) g
      WHERE NOT EXISTS (SELECT 1 FROM finance_customer_link l
                         WHERE l.connection_id = '$conn_id' AND l.archived_at IS NULL
                           AND l.external_customer_id = 'DEMO-' || lpad(g::text, 4, '0'))
-     ORDER BY g LIMIT 1
-    RETURNING external_customer_id")"
+     ORDER BY g LIMIT 1")"
   if [[ -z "$linked" ]]; then
     echo "  FAIL: every finance-demo customer is already matched to another company" >&2
     exit 1
   fi
+  # A link names an entry of the source's directory, so the entry comes first.
+  # The sync that runs on boot gives it the source's own name.
+  psql_one "INSERT INTO finance_external_customer
+      (connection_id, external_customer_id, display_name, sync_hash, source, captured_by)
+    VALUES ('$conn_id', '$linked', '$linked', '', 'system', 'system:seed')
+    ON CONFLICT (connection_id, external_customer_id) DO NOTHING" >/dev/null
+  psql_one "INSERT INTO finance_customer_link
+      (connection_id, company_id, external_customer_id, sync_hash, source, captured_by)
+    VALUES ('$conn_id', '$company_id', '$linked', 'seed', 'system', 'system:seed')" >/dev/null
   echo "  OK: matched $COMPANY to customer $linked in the source"
 else
   echo "  OK: $COMPANY is already matched"
