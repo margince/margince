@@ -108,7 +108,7 @@ type privacyRetentionWorker struct {
 	identity  *identity.Service
 }
 
-func (w *privacyRetentionWorker) Work(ctx context.Context, _ *river.Job[PrivacyRetentionArgs]) error {
+func (w *privacyRetentionWorker) Work(ctx context.Context, job *river.Job[PrivacyRetentionArgs]) error {
 	// The installation is bound because the erasure and scrub writes this pass
 	// drives still stamp a workspace from the context (storekit.MustWorkspace);
 	// it retires with that helper (ADR-0091 §5).
@@ -126,5 +126,5 @@ func (w *privacyRetentionWorker) Work(ctx context.Context, _ *river.Job[PrivacyR
 	// reads like a binding, and leaves the store holding a context with no
 	// actor in it.
 	passCtx = principal.SystemActing(passCtx, "system")
-	return jobs.FaultContext(ctx, w.retention(InstallationDB(w.pool)).EvaluateInstallation(passCtx))
+	return w.runPass(ctx, passCtx, job)
 }

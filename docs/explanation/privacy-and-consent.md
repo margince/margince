@@ -352,7 +352,12 @@ into consent's handlers.
 - **Article 15 subject access** (`AssembleSAR`) requires `contact.delete` and full row scope.
   One audited export (`action=export`) includes the subject's records, channels, deals, leads,
   activities, attachments and consent. It also includes raw capture, field sources, kept audit
-  payloads, linked room comments, introduction notes and other kept copies. Private mailbox content stays hidden.
+  payloads, linked room comments, introduction notes and other kept copies. A held mail record
+  can supply the subject's verdict and party facts; its content audience still applies.
+
+  The contact who made the link gets their own role and state, with the target's notes and id left out.
+  Each weekly-plan audit image must carry its own subject link to be exported. A current
+  link cannot prove who an earlier label was about. Private mailbox content stays hidden.
 - **The daily retention check** (`RetentionService.EvaluateInstallation`) runs as one River job per
   workspace. The `privacy_retention` dispatcher in `cmd/worker` starts it every `24h` by default.
   Each enabled policy takes its single action in one audited transaction per overdue record.

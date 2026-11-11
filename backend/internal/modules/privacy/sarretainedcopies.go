@@ -39,9 +39,7 @@ func sarRetainedCopySections(ctx context.Context, pkg *SARPackage, identities []
 
 	subjectArg, leadArg, addressArg := len(subjects), len(records), len(addresses)
 	return []sarSection{
-		{&pkg.AuditHistory, storekit.SQLf(`SELECT action, entity_type, entity_id, before, after, evidence, occurred_at
-		 FROM audit_log WHERE (entity_type='contact' AND entity_id=ANY($%[1]d::uuid[]))
-		 OR (entity_type='lead' AND entity_id=ANY($%[2]d::uuid[]))`, subjectArg, leadArg), records},
+		sarAuditHistorySection(pkg, identities, leads),
 		{
 			&pkg.RetainedEvents, storekit.SQLf(`SELECT envelope->>'type' AS type, envelope->'payload' AS payload, created_at, published_at
 		 FROM event_outbox WHERE (envelope->'entity'->>'type'='contact' AND envelope->'entity'->>'id'=ANY(ARRAY(SELECT id::text FROM unnest($%[1]d::uuid[]) id)))
@@ -53,9 +51,16 @@ func sarRetainedCopySections(ctx context.Context, pkg *SARPackage, identities []
 		{&pkg.RoomComments, storekit.SQLf(`SELECT c.id, c.room_id, c.thread_id, c.body, c.created_at
 		 FROM deal_room_comment c JOIN deal_room_participant p ON p.id=c.author_participant_id
 		 WHERE lower(p.email)=ANY($%[1]d::text[])`, addressArg), addresses},
-		{&pkg.Introductions, storekit.SQLf(`SELECT id, contact_id, through_contact_id, forwardable_note, value_for_target,
-		 internal_reason, decision_reason, status, created_at FROM intro_request
-		 WHERE contact_id=ANY($%[1]d::uuid[])`, subjectArg), subjects},
+		{&pkg.Introductions, storekit.SQLf(`SELECT id,
+   CASE WHEN contact_id=ANY($%[1]d::uuid[]) THEN contact_id END AS contact_id,
+   through_contact_id,
+   CASE WHEN contact_id=ANY($%[1]d::uuid[]) THEN forwardable_note END AS forwardable_note,
+   CASE WHEN contact_id=ANY($%[1]d::uuid[]) THEN value_for_target END AS value_for_target,
+   CASE WHEN contact_id=ANY($%[1]d::uuid[]) THEN internal_reason END AS internal_reason,
+   CASE WHEN contact_id=ANY($%[1]d::uuid[]) THEN decision_reason END AS decision_reason,
+   CASE WHEN contact_id=ANY($%[1]d::uuid[]) THEN 'target' ELSE 'intermediary' END AS subject_role,
+   status,created_at FROM intro_request
+   WHERE contact_id=ANY($%[1]d::uuid[]) OR through_contact_id=ANY($%[1]d::uuid[])`, subjectArg), subjects},
 		{&pkg.DuplicateEvidence, `SELECT id, entity_type, confidence, disposition,
           (SELECT coalesce(jsonb_agg(jsonb_build_object('field', item->'field',
             'left_value', CASE WHEN left_contact_id IN (` + contactRows + `) OR left_lead_id IN (` + leadRows + `) THEN item->'left_value' END,
@@ -69,11 +74,16 @@ func sarRetainedCopySections(ctx context.Context, pkg *SARPackage, identities []
 		 FROM capture_test_mailbox_sent WHERE EXISTS (SELECT 1
 		 FROM jsonb_array_elements_text(to_addresses || cc_addresses) address
 		 WHERE lower(btrim(address))=ANY($%[1]d::text[]))`, addressArg), addresses},
-		{&pkg.ThreadVerdicts, storekit.SQLf(`SELECT v.thread_key, v.kind, v.status, v.disposition_reason, v.resolved_at,
-		 ARRAY(SELECT address FROM unnest(v.seen_addresses) address
-		       WHERE lower(btrim(address))=ANY($%[1]d::text[])) AS subject_addresses
-		 FROM capture_thread_verdict v JOIN activity a ON a.id=v.first_activity_id
-		 WHERE a.restricted_at IS NULL AND `+sarContentDisclosed+` AND EXISTS (SELECT 1 FROM unnest(v.seen_addresses) address
-		 WHERE lower(btrim(address))=ANY($%[1]d::text[]))`, addressArg), addresses},
+		sarThreadVerdictSection(pkg, emails),
 	}, nil
+}
+
+func sarThreadVerdictSection(pkg *SARPackage, emails []string) sarSection {
+	args := []any{loweredAddresses(emails)}
+	return sarSection{&pkg.ThreadVerdicts, storekit.SQLf(`SELECT v.thread_key,v.kind,v.status,v.disposition_reason,v.resolved_at,
+ ARRAY(SELECT address FROM unnest(v.seen_addresses) address
+ WHERE lower(btrim(address))=ANY($%[1]d::text[])) AS subject_addresses
+ FROM capture_thread_verdict v JOIN activity a ON a.id=v.first_activity_id
+ WHERE `+sarContentDisclosed+` AND EXISTS(SELECT 1 FROM unnest(v.seen_addresses) address
+ WHERE lower(btrim(address))=ANY($%[1]d::text[]))`, len(args)), args}
 }

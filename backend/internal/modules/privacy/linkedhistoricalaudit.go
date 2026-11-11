@@ -68,8 +68,7 @@ func legacyAuditEntries(ctx context.Context, tx pgx.Tx, after, until ids.UUID, l
 	rows, err := tx.Query(ctx, `SELECT history.id,history.entity_type,history.entity_id,history.action,history.actor_type,history.actor_id,history.occurred_at,
  NOT(history.action=ANY(@verbs))
  AND NOT EXISTS(SELECT 1 FROM audit_log own WHERE own.entity_type=history.entity_type AND own.entity_id=history.entity_id
-  AND own.action=ANY(@verbs) AND own.before IS NULL AND own.after IS NULL
-  AND (own.evidence ? 'cause' OR own.evidence ? 'retention_action' OR own.evidence ? 'emails_suppressed')) AND (
+  AND `+storekit.PhysicalErasureCertificateSQL("own", "@verbs")+`) AND (
  `+storekit.AuditRedactionNeededSQL+`
  OR EXISTS(SELECT 1 FROM event_outbox retained WHERE retained.envelope->'trace'->>'audit_log_id'=history.id::text))
  FROM audit_log history WHERE history.id>@after AND history.id<@until ORDER BY history.id LIMIT @limit`,
@@ -119,6 +118,5 @@ func legacyAuditSubject(ctx context.Context, tx pgx.Tx, entry legacyAuditEntry) 
 	return match, err == nil, err
 }
 
-const legacyPrivacyBoundary = `erasure.action=ANY(@verbs) AND erasure.before IS NULL AND erasure.after IS NULL
- AND (erasure.evidence ? 'cause' OR erasure.evidence ? 'retention_action' OR erasure.evidence ? 'emails_suppressed')
+var legacyPrivacyBoundary = storekit.PhysicalErasureCertificateSQL("erasure", "@verbs") + `
  AND (@occurred,@audit) <= (erasure.occurred_at,erasure.id)`

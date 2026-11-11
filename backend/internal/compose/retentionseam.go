@@ -55,9 +55,7 @@ func NewRetentionServiceFor(db *database.DB, blob blobstore.Store, log *slog.Log
 		WithOutboxReaders(storekit.OutboxReaders{
 			UnreadTypes: assurance.MarkingEventTypes(), NeededBy: []func(string) string{automation.RetryableTriggerSQL},
 		}).
-		WithEdgeInvalidator(func(ctx context.Context, tx pgx.Tx, activityID ids.UUID) error {
-			return search.RecomputeEdgesForActivities(ctx, tx, []ids.UUID{activityID})
-		})
+		WithEdgeInvalidator(search.RecomputeEdgesForActivities)
 }
 
 // RawCapturePurgerFor is capture's purge, as the seam privacy erases through.
@@ -132,7 +130,7 @@ func privacyPayloads(vault keyvault.Vault) privacy.PayloadPurger {
 // deployment that configured neither.
 func ComposedEraser(pool *pgxpool.Pool, blob blobstore.Store, vault keyvault.Vault) *privacy.Eraser {
 	db := InstallationDB(pool)
-	return privacy.NewEraser(db).WithCountry(identity.CountryForDecision).WithBlobstore(blob).WithRawCapturePurger(RawCapturePurgerFor(db)).
+	return privacy.NewEraser(db).WithEdgeInvalidator(search.RecomputeEdgesForActivities).WithCountry(identity.CountryForDecision).WithBlobstore(blob).WithRawCapturePurger(RawCapturePurgerFor(db)).
 		WithPayloadVault(privacyPayloads(vault))
 }
 
