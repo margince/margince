@@ -3,7 +3,7 @@
 
 import { type FormEvent, useState } from "react";
 import type { components } from "../../api/schema";
-import { Disclosure } from "../../design-system/atoms";
+import { Button, Disclosure } from "../../design-system/atoms";
 import { SurfaceState } from "../../design-system/surfacestate";
 import { type Locale, useT } from "../../i18n";
 import { normalizeUrl } from "./onboarding";
@@ -85,6 +85,7 @@ export function OnboardingGate({
   onSubmit,
   onManual,
   onRetryRead,
+  onAddModel,
 }: Readonly<{
   name?: string;
   running: boolean;
@@ -119,6 +120,12 @@ export function OnboardingGate({
   onSubmit: (host: string) => void;
   onManual: () => void;
   onRetryRead?: () => void;
+  /**
+   * Set when the reader skipped the AI step and no model is bound since. No
+   * website can be read then, so the gate offers the manual interview first
+   * and this, the way back to the key.
+   */
+  onAddModel?: () => void;
 }>) {
   const t = useT();
   const [website, setWebsite] = useState("");
@@ -136,6 +143,21 @@ export function OnboardingGate({
           configuredModel={configuredModel}
           uncertainCount={uncertainCount}
         />
+      </GateColumn>
+    );
+  }
+
+  if (onAddModel !== undefined) {
+    return (
+      <GateColumn name={named} noModel>
+        <div className="ob-gate-nomodel">
+          <Button variant="primary" onClick={onManual}>
+            {t("ob.gate.altAction")}
+          </Button>
+          <Button variant="ghost" onClick={onAddModel}>
+            {t("ob.gate.addModel")}
+          </Button>
+        </div>
       </GateColumn>
     );
   }
