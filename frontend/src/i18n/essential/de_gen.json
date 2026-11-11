@@ -928,6 +928,8 @@
   "roster.failedTeams": "Die Teams konnten nicht geladen werden.",
   "owner.rosterFailed": "Die Teammitglieder konnten nicht geladen werden. Lade die Seite neu, um eines zu wählen.",
   "ref.notInRoster": "Aktuell zugewiesen (nicht mehr in der Liste der Nutzenden)",
+  "picker.noMatch": "Kein Treffer",
+  "select.filter": "Liste filtern",
   "app.errorTitle": "Diese Ansicht funktioniert nicht mehr",
   "app.errorBody": "Bitte versuche es erneut. Wenn es wieder fehlschlägt, lade die Seite neu.",
   "app.errorRetry": "Erneut versuchen",

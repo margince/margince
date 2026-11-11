@@ -928,6 +928,8 @@
   "roster.failedTeams": "Không thể tải danh sách nhóm.",
   "owner.rosterFailed": "Không thể tải danh sách thành viên. Hãy tải lại trang để chọn một người.",
   "ref.notInRoster": "Hiện đang được giao (không còn trong danh sách thành viên)",
+  "picker.noMatch": "Không có kết quả phù hợp",
+  "select.filter": "Lọc danh sách",
   "app.errorTitle": "Màn hình này bị lỗi",
   "app.errorBody": "Thử lại. Nếu vẫn lỗi, tải lại trang.",
   "app.errorRetry": "Thử lại",
