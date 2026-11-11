@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { MessageKey } from "../../i18n/en";
+import type { CalendarChange } from "../../lib/calendarchange";
 import { labelFor } from "../../lib/labelfor";
 import type { WorklistItem } from "./worklist.queries";
 
@@ -43,9 +44,23 @@ const ASK_BY_SOURCE: Readonly<Record<WorklistItem["source"], MessageKey>> = {
   batch: "worklist.ask.batch",
 };
 
+const ASK_BY_MEETING_CHANGE: Readonly<
+  Record<CalendarChange["kind"], MessageKey>
+> = {
+  updated: "worklist.ask.meeting.updated",
+  canceled: "worklist.ask.meeting.canceled",
+  proposed: "worklist.ask.meeting.proposed",
+  answered: "worklist.ask.meeting.answered",
+};
+
 /** The sentence saying what this row asks of its reader. */
 export function askKey(item: WorklistItem): MessageKey {
   // An invitation waits on an RSVP, not on a written answer.
-  if (item.email_summary?.calendar_invitation) return "worklist.ask.invitation";
+  const change = item.email_summary?.calendar_change;
+  if (item.email_summary?.calendar_invitation)
+    return change
+      ? "worklist.ask.changedInvitation"
+      : "worklist.ask.invitation";
+  if (change) return labelFor(ASK_BY_MEETING_CHANGE, change.kind);
   return labelFor(ASK_BY_SOURCE, item.source);
 }

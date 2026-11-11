@@ -4942,6 +4942,30 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "email.access.unnamedMember": "Ehemaliges Nutzerkonto",
   "email.invitation.badge": "Einladung",
   "email.invitation.startsAt": "Beginnt {when}",
+  "meetingChange.badge.updated": "Termin geändert",
+  "meetingChange.badge.canceled": "Abgesagt",
+  "meetingChange.badge.proposed": "Neue Zeit vorgeschlagen",
+  "meetingChange.badge.accepted": "Zugesagt",
+  "meetingChange.badge.tentative": "Vielleicht",
+  "meetingChange.badge.declined": "Abgesagt",
+  "meetingChange.line.canceled": "War für {when} geplant",
+  "meetingChange.line.proposed": "{name} schlägt {when} vor",
+  "meetingChange.line.accepted": "{name} hat zugesagt",
+  "meetingChange.line.tentative": "{name} hat mit Vielleicht geantwortet",
+  "meetingChange.line.declined": "{name} hat abgesagt",
+  "meetingChange.line.moved": "Verschoben von {was} auf {when}",
+  "meetingChange.line.movedTo": "Verschoben auf {when}",
+  "meetingChange.line.placed": "Jetzt in {place}",
+  "meetingChange.line.unplaced": "Hat keinen Ort mehr",
+  "meetingChange.line.renamed": "Umbenannt in {title}",
+  "meetingChange.line.added": "Hinzugefügt: {names}",
+  "meetingChange.line.removed": "Entfernt: {names}",
+  "meetingChange.line.details": "Der Organisator hat die Details geändert",
+  "meetingChange.was.time": "Vorher",
+  "meetingChange.was.current": "Gebucht für",
+  "meetingChange.was.location": "Ort war",
+  "meetingChange.was.noPlace": "kein Ort",
+  "meetingChange.was.title": "Titel war",
   "email.move.needsReply": "Antwort nötig",
   "email.move.waitingForThem": "Wartet auf Antwort der Gegenseite",
   "email.detail.loading": "Nachricht wird geladen…",
@@ -19209,6 +19233,16 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Du hast das in einem Gespräch zugesagt. Erledige es und markiere es dann als erledigt.",
   "worklist.ask.invitation":
     "Das ist eine Kalendereinladung. Sag zu, mit Vorbehalt zu oder ab, und der Organisator erhält deine Antwort.",
+  "worklist.ask.changedInvitation":
+    "Der Organisator hat diesen Termin geändert. Prüf die Änderung, dann sag zu, mit Vorbehalt zu oder ab.",
+  "worklist.ask.meeting.updated":
+    "Der Organisator hat diesen Termin geändert. Prüf die Änderung, dann markier ihn als erledigt.",
+  "worklist.ask.meeting.canceled":
+    "Der Organisator hat diesen Termin abgesagt. Es gibt nichts zu beantworten; markier ihn als erledigt, sobald du es gesehen hast.",
+  "worklist.ask.meeting.proposed":
+    "Ein Gast schlägt eine andere Zeit vor. Verschieb den Termin in deinem Kalender, wenn sie passt, dann markier dies als erledigt.",
+  "worklist.ask.meeting.answered":
+    "Ein Gast hat auf deine Einladung geantwortet. Markier es als erledigt, sobald du es gesehen hast.",
   "worklist.ask.customer_waiting":
     "Ein Kunde hat geschrieben, und noch niemand hat geantwortet. Beantworte die Nachricht.",
   "worklist.ask.lead_response":

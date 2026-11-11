@@ -147,6 +147,9 @@ func readEmailPresentation(ctx context.Context, tx pgx.Tx, id ids.ActivityID, th
 	if err := markOpenInvitation(ctx, tx, id, &out.Summary, asOf); err != nil {
 		return crmcontracts.EmailPresentation{}, err
 	}
+	if err := markCalendarChange(ctx, tx, id, &out.Summary); err != nil {
+		return crmcontracts.EmailPresentation{}, err
+	}
 
 	thread, err := readThreadPage(ctx, tx, activity, threadCursor)
 	if err != nil {

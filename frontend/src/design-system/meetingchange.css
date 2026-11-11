@@ -1,0 +1,108 @@
+/* A calendar mail drawn as its meeting: a small calendar page, then the title
+ * with what happened, when and where, and what changed. The page and the
+ * columns match a meeting row on a record's Meetings tab, so a reader sees the
+ * same meeting in both places. An outline only, never a fill: it sits inside
+ * a row that is often already on a card. */
+
+.meetingchange {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: var(--space-3);
+  min-width: 0;
+  padding: var(--space-3);
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--r-md);
+}
+
+.meetingchange__date {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 3.25rem;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--r-sm);
+  background: var(--accentLight);
+  color: var(--accentText);
+  text-align: center;
+}
+.meetingchange__date--off {
+  background: var(--bgInset);
+  color: var(--textSecondary);
+}
+.meetingchange__date-edge {
+  font: var(--fontBodySmall);
+}
+.meetingchange__day {
+  font: var(--fontHeadingSmall);
+}
+
+.meetingchange__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.meetingchange__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
+  min-width: 0;
+}
+
+.meetingchange__title {
+  min-width: 0;
+  color: var(--textPrimary);
+  font: var(--fontBody);
+  font-weight: var(--fontWeightMedium);
+  overflow-wrap: anywhere;
+}
+.meetingchange--canceled .meetingchange__title {
+  color: var(--textSecondary);
+  text-decoration: line-through;
+}
+
+.meetingchange__lead {
+  color: var(--textPrimary);
+}
+
+.meetingchange__facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-3);
+  color: var(--textSecondary);
+}
+.meetingchange__facts > span,
+.meetingchange__changes > span {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-width: 0;
+}
+.meetingchange__facts svg,
+.meetingchange__changes svg {
+  flex: none;
+  width: 14px;
+  height: 14px;
+}
+/* The value that changed reads in full ink; the rest stays secondary. */
+.meetingchange__fact--new {
+  color: var(--textPrimary);
+}
+
+.meetingchange__changes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: var(--space-1) 0 0;
+  padding: var(--space-2) 0 0;
+  border-top: 1px solid var(--borderSubtle);
+  color: var(--textSecondary);
+  font: var(--fontBodySmall);
+}
+.meetingchange__was {
+  color: var(--textSecondary);
+}

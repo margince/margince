@@ -28361,10 +28361,71 @@ export interface components {
              */
             calendar_invitation?: components["schemas"]["EmailCalendarInvitation"];
             /**
+             * @description Present when this message tells the reader something about a meeting rather than asking
+             *     for words: the organizer changed or cancelled it, or a guest proposed another time or
+             *     answered. It came into the reader's own mailbox. A client draws it as the meeting,
+             *     saying what changed. Absent on a first invitation, on every other message, and on a
+             *     withheld one.
+             */
+            calendar_change?: components["schemas"]["EmailCalendarChange"];
+            /**
              * @description The activity's version, carried so a row can open an editor that writes with
              *     If-Match. A row without it can only read.
              */
             version: components["schemas"]["RowVersion"];
+        };
+        /**
+         * @description What a calendar message says happened to its meeting, read against the earlier send of the
+         *     same event in the reader's mailbox. The event fields are the meeting as this message states
+         *     it; `before` holds what the earlier send said of each field in `changed`.
+         */
+        EmailCalendarChange: {
+            /**
+             * @description `updated`: the organizer sent the meeting again with changes. `canceled`: the organizer
+             *     called it off. `proposed`: a guest proposed the time in `starts_at`. `answered`: a guest
+             *     answered, in `answer`.
+             * @enum {string}
+             */
+            kind: "updated" | "canceled" | "proposed" | "answered";
+            title?: string;
+            /** @description Where the meeting is, as the calendar wrote it. Absent when it names no place. */
+            location?: string;
+            /**
+             * Format: date-time
+             * @description When the meeting starts. Absent when the message names no time it can be read in.
+             */
+            starts_at?: string;
+            /** Format: date-time */
+            ends_at?: string;
+            /** @description How to read `starts_at`, present beside it. `day` is an all-day meeting. */
+            starts_precision?: components["schemas"]["OccurredPrecision"];
+            /** @description What differs from the earlier send. Empty when no earlier send is known or nothing a reader sees changed. */
+            changed: ("time" | "location" | "title")[];
+            /** @description The earlier send's value of each field in `changed`. */
+            before?: components["schemas"]["EmailCalendarBefore"];
+            guests_added?: components["schemas"]["EmailCalendarGuest"][];
+            guests_removed?: components["schemas"]["EmailCalendarGuest"][];
+            /** @description The guest who proposed or answered. Absent on `updated` and `canceled`. */
+            by?: components["schemas"]["EmailCalendarGuest"];
+            /**
+             * @description The guest's answer, on `answered`.
+             * @enum {string}
+             */
+            answer?: "accepted" | "tentative" | "declined";
+        };
+        EmailCalendarBefore: {
+            title?: string;
+            location?: string;
+            /** Format: date-time */
+            starts_at?: string;
+            /** Format: date-time */
+            ends_at?: string;
+            starts_precision?: components["schemas"]["OccurredPrecision"];
+        };
+        EmailCalendarGuest: {
+            email: string;
+            /** @description The name the calendar gave. Absent when it gave none. */
+            name?: string;
         };
         /** @description The reader's own answer to the event an invitation names. */
         EmailCalendarInvitation: {

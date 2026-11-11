@@ -1047,6 +1047,72 @@ func (e EmailAccessStatus) Valid() bool {
 	}
 }
 
+// Defines values for EmailCalendarChangeAnswer.
+const (
+	EmailCalendarChangeAnswerAccepted  EmailCalendarChangeAnswer = "accepted"
+	EmailCalendarChangeAnswerDeclined  EmailCalendarChangeAnswer = "declined"
+	EmailCalendarChangeAnswerTentative EmailCalendarChangeAnswer = "tentative"
+)
+
+// Valid indicates whether the value is a known member of the EmailCalendarChangeAnswer enum.
+func (e EmailCalendarChangeAnswer) Valid() bool {
+	switch e {
+	case EmailCalendarChangeAnswerAccepted:
+		return true
+	case EmailCalendarChangeAnswerDeclined:
+		return true
+	case EmailCalendarChangeAnswerTentative:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for EmailCalendarChangeChanged.
+const (
+	Location EmailCalendarChangeChanged = "location"
+	Time     EmailCalendarChangeChanged = "time"
+	Title    EmailCalendarChangeChanged = "title"
+)
+
+// Valid indicates whether the value is a known member of the EmailCalendarChangeChanged enum.
+func (e EmailCalendarChangeChanged) Valid() bool {
+	switch e {
+	case Location:
+		return true
+	case Time:
+		return true
+	case Title:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for EmailCalendarChangeKind.
+const (
+	Answered EmailCalendarChangeKind = "answered"
+	Canceled EmailCalendarChangeKind = "canceled"
+	Proposed EmailCalendarChangeKind = "proposed"
+	Updated  EmailCalendarChangeKind = "updated"
+)
+
+// Valid indicates whether the value is a known member of the EmailCalendarChangeKind enum.
+func (e EmailCalendarChangeKind) Valid() bool {
+	switch e {
+	case Answered:
+		return true
+	case Canceled:
+		return true
+	case Proposed:
+		return true
+	case Updated:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for EmailCalendarInvitationResponse.
 const (
 	EmailCalendarInvitationResponseAccepted    EmailCalendarInvitationResponse = "accepted"
@@ -1136,22 +1202,22 @@ func (e EmailSummaryMove) Valid() bool {
 
 // Defines values for MeetingResponse.
 const (
-	MeetingResponseAccepted    MeetingResponse = "accepted"
-	MeetingResponseDeclined    MeetingResponse = "declined"
-	MeetingResponseNeedsAction MeetingResponse = "needs_action"
-	MeetingResponseTentative   MeetingResponse = "tentative"
+	Accepted    MeetingResponse = "accepted"
+	Declined    MeetingResponse = "declined"
+	NeedsAction MeetingResponse = "needs_action"
+	Tentative   MeetingResponse = "tentative"
 )
 
 // Valid indicates whether the value is a known member of the MeetingResponse enum.
 func (e MeetingResponse) Valid() bool {
 	switch e {
-	case MeetingResponseAccepted:
+	case Accepted:
 		return true
-	case MeetingResponseDeclined:
+	case Declined:
 		return true
-	case MeetingResponseNeedsAction:
+	case NeedsAction:
 		return true
-	case MeetingResponseTentative:
+	case Tentative:
 		return true
 	default:
 		return false
@@ -2635,6 +2701,69 @@ type DealLastEmailDirection string
 // would branch on and never reach.
 type EmailAccessStatus string
 
+// EmailCalendarBefore defines model for EmailCalendarBefore.
+type EmailCalendarBefore struct {
+	EndsAt          *time.Time         `json:"ends_at,omitempty"`
+	Location        *string            `json:"location,omitempty"`
+	StartsAt        *time.Time         `json:"starts_at,omitempty"`
+	StartsPrecision *OccurredPrecision `json:"starts_precision,omitempty"`
+	Title           *string            `json:"title,omitempty"`
+}
+
+// EmailCalendarChange What a calendar message says happened to its meeting, read against the earlier send of the
+// same event in the reader's mailbox. The event fields are the meeting as this message states
+// it; `before` holds what the earlier send said of each field in `changed`.
+type EmailCalendarChange struct {
+	// Answer The guest's answer, on `answered`.
+	Answer *EmailCalendarChangeAnswer `json:"answer,omitempty"`
+
+	// Before The earlier send's value of each field in `changed`.
+	Before *EmailCalendarBefore `json:"before,omitempty"`
+
+	// By The guest who proposed or answered. Absent on `updated` and `canceled`.
+	By *EmailCalendarGuest `json:"by,omitempty"`
+
+	// Changed What differs from the earlier send. Empty when no earlier send is known or nothing a reader sees changed.
+	Changed       []EmailCalendarChangeChanged `json:"changed"`
+	EndsAt        *time.Time                   `json:"ends_at,omitempty"`
+	GuestsAdded   *[]EmailCalendarGuest        `json:"guests_added,omitempty"`
+	GuestsRemoved *[]EmailCalendarGuest        `json:"guests_removed,omitempty"`
+
+	// Kind `updated`: the organizer sent the meeting again with changes. `canceled`: the organizer
+	// called it off. `proposed`: a guest proposed the time in `starts_at`. `answered`: a guest
+	// answered, in `answer`.
+	Kind EmailCalendarChangeKind `json:"kind"`
+
+	// Location Where the meeting is, as the calendar wrote it. Absent when it names no place.
+	Location *string `json:"location,omitempty"`
+
+	// StartsAt When the meeting starts. Absent when the message names no time it can be read in.
+	StartsAt *time.Time `json:"starts_at,omitempty"`
+
+	// StartsPrecision How to read `starts_at`, present beside it. `day` is an all-day meeting.
+	StartsPrecision *OccurredPrecision `json:"starts_precision,omitempty"`
+	Title           *string            `json:"title,omitempty"`
+}
+
+// EmailCalendarChangeAnswer The guest's answer, on `answered`.
+type EmailCalendarChangeAnswer string
+
+// EmailCalendarChangeChanged defines model for EmailCalendarChange.Changed.
+type EmailCalendarChangeChanged string
+
+// EmailCalendarChangeKind `updated`: the organizer sent the meeting again with changes. `canceled`: the organizer
+// called it off. `proposed`: a guest proposed the time in `starts_at`. `answered`: a guest
+// answered, in `answer`.
+type EmailCalendarChangeKind string
+
+// EmailCalendarGuest defines model for EmailCalendarGuest.
+type EmailCalendarGuest struct {
+	Email string `json:"email"`
+
+	// Name The name the calendar gave. Absent when it gave none.
+	Name *string `json:"name,omitempty"`
+}
+
 // EmailCalendarInvitation The reader's own answer to the event an invitation names.
 type EmailCalendarInvitation struct {
 	// Response What the reader's calendar holds. `needs_action` until they answer, and while their
@@ -2714,6 +2843,13 @@ type EmailSummary struct {
 
 	// AttachmentCount How many files came with it. Zero when withheld, like every other count.
 	AttachmentCount int `json:"attachment_count"`
+
+	// CalendarChange Present when this message tells the reader something about a meeting rather than asking
+	// for words: the organizer changed or cancelled it, or a guest proposed another time or
+	// answered. It came into the reader's own mailbox. A client draws it as the meeting,
+	// saying what changed. Absent on a first invitation, on every other message, and on a
+	// withheld one.
+	CalendarChange *EmailCalendarChange `json:"calendar_change,omitempty"`
 
 	// CalendarInvitation Present when this message is a calendar invitation the reader can still answer: it came
 	// into the reader's own mailbox, names an event, and that event has not started. A client

@@ -2,6 +2,7 @@ import { providerName } from "../format/connectorprovider";
 import type { Translator } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { aiTaskLabel } from "./ai-task-label";
+import { changeBadge } from "./calendarchange";
 import { labelFor } from "./labelfor";
 import type { WorklistItem } from "./worklisttypes";
 
@@ -26,6 +27,8 @@ export function eyebrowKeyFor(item: WorklistItem): MessageKey {
   if (item.source === "failed_approval")
     return "worklist.source.failed_approval";
   if (nonBuyerRequest(item)) return "worklist.source.awaiting_reply";
+  const change = item.email_summary?.calendar_change;
+  if (change) return changeBadge(change).key;
   if (item.email_summary?.calendar_invitation) return "email.invitation.badge";
   if (item.source === "notice") return "brief.updates.title";
   if (item.source === "domain_question")

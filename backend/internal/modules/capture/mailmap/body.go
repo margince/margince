@@ -82,8 +82,12 @@ func bodyText(plain, html string) (text string, cut bool) {
 // the same evidence — an invitation — so all three set the flag AND hand their
 // bytes to the collector. The unnamed route did neither for the file until the
 // order in readInlinePart put the collector ahead of the body read.
+//
+// application/ics is the same payload under the type some webmail and
+// Outlook's "add to calendar" attachments declare.
 func isCalendarType(contentType string) bool {
-	return strings.HasPrefix(strings.ToLower(contentType), "text/calendar")
+	declared := strings.ToLower(strings.TrimSpace(contentType))
+	return strings.HasPrefix(declared, "text/calendar") || strings.HasPrefix(declared, "application/ics")
 }
 
 // contentTyped is a part header, attachment or inline alike.

@@ -3,7 +3,11 @@
 
 package mailmap
 
-import "strings"
+import (
+	"strings"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/calendarevent"
+)
 
 // maxCalendarUIDLength bounds what a sender can make the row store. RFC 5545
 // sets no limit; real providers stay far under this one.
@@ -14,35 +18,42 @@ const maxCalendarUIDLength = 255
 // connector keys the same event by this UID, so the two meet on it.
 func eventUID(body []byte) string {
 	inEvent := false
-	for _, line := range unfoldICalendar(body) {
-		name, value, found := strings.Cut(line, ":")
-		if !found {
-			continue
-		}
-		name, _, _ = strings.Cut(name, ";")
+	for _, line := range icalLines(body) {
+		value := strings.TrimSpace(line.value)
 		switch {
-		case strings.EqualFold(name, "BEGIN") && strings.EqualFold(strings.TrimSpace(value), "VEVENT"):
+		case line.is("BEGIN") && strings.EqualFold(value, "VEVENT"):
 			inEvent = true
-		case strings.EqualFold(name, "END") && strings.EqualFold(strings.TrimSpace(value), "VEVENT"):
+		case line.is("END") && strings.EqualFold(value, "VEVENT"):
 			inEvent = false
-		case inEvent && strings.EqualFold(name, "UID"):
-			uid := strings.TrimSpace(value)
-			if len(uid) > maxCalendarUIDLength {
+		case inEvent && line.is("UID"):
+			if len(value) > maxCalendarUIDLength {
 				return ""
 			}
-			return uid
+			return value
 		}
 	}
 	return ""
 }
 
-// uid is the event the message's calendar parts name: the first part that
-// names one. A disputed part names none, for the reason it names no method.
-func (c calendarPart) uid() string {
+// named is the first calendar part that names an event. A disputed part
+// names none, for the reason it names no method.
+func (c calendarPart) named() (partMethods, bool) {
 	for _, part := range c.parts {
 		if !part.disputed && part.uid != "" {
-			return part.uid
+			return part, true
 		}
 	}
-	return ""
+	return partMethods{}, false
+}
+
+// uid is the event the message's calendar parts name.
+func (c calendarPart) uid() string {
+	part, _ := c.named()
+	return part.uid
+}
+
+// event is what the part naming the event says of it, or nil.
+func (c calendarPart) event() *calendarevent.Event {
+	part, _ := c.named()
+	return part.event
 }
