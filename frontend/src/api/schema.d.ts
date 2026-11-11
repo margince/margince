@@ -13179,7 +13179,8 @@ export interface paths {
          *     `as_of` stamps this request's RepeatableRead snapshot. It does not span separate
          *     `/digest`, `/brief` or `/magic` requests, or a multi-page Worklist walk.
          *     Frozen walk membership and freshness metadata do not share a database snapshot
-         *     across pages. Brief opening and snooze resurfacing use their own write transaction.
+         *     across pages. The read writes nothing: a snoozed brief item whose time has come is
+         *     judged at `as_of`, and only `GET /v1/brief` records the brief as opened.
          *     A lane the caller may not read is OMITTED and named in `lanes_omitted` rather
          *     than returned empty — "you may not see this" and "there is none" are different
          *     answers, and a queue that conflated them would tell a rep their day is clear.

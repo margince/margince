@@ -105,10 +105,23 @@ func TestMemberHandoverMovesPendingStaffingAndRetainsAcceptedCredit(t *testing.T
 		t.Fatal(err)
 	}
 	owner := integration.FreshOwnerConn(t)
-	_, err = dbmigrate.Down(t.Context(), owner, core, 1)
+	_, err = dbmigrate.Down(t.Context(), owner, core, stepsDownTo(t, core, "accepted_handoffs_retain_their_receiver"))
 	fault, ok := errors.AsType[*pgconn.PgError](err)
 	if !ok || fault.Code != "23514" {
 		t.Fatalf("unsafe downgrade was not refused: %v", err)
 	}
 	e.WsExec(t, `UPDATE sdr_handoff SET note='Historical correction' WHERE id=$1`, accepted)
+}
+
+// stepsDownTo counts the migrations a downgrade reverts to reach the named one,
+// itself included, so a migration shipped after it does not take its place.
+func stepsDownTo(t *testing.T, core dbmigrate.Namespace, name string) int {
+	t.Helper()
+	for i, m := range core.Migrations {
+		if m.Name == name {
+			return len(core.Migrations) - i
+		}
+	}
+	t.Fatalf("no core migration is named %q", name)
+	return 0
 }
