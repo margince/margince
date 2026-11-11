@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/extprivacy"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
@@ -163,6 +164,13 @@ func (h Handlers) WithStopCarrier(carrier StopCarrier) Handlers {
 // satellitecarry.go.
 func (h Handlers) WithSatelliteCarriers(consent ConsentSatelliteCarrier, intros IntroCarrier) Handlers {
 	h.store = h.store.WithSatelliteCarriers(consent, intros)
+	return h
+}
+
+// WithExtensions wires the extension tables the merge routes check for
+// dependents (mergedependents.go).
+func (h Handlers) WithExtensions(r extprivacy.Registry) Handlers {
+	h.store = h.store.WithExtensions(r)
 	return h
 }
 

@@ -10,16 +10,16 @@
   "totals": {
     "tools": 48,
     "resources": 14,
-    "tool_catalog_bytes": 235746,
+    "tool_catalog_bytes": 235760,
     "resource_catalog_bytes": 5622,
-    "approx_wire_tokens_total": 60342,
+    "approx_wire_tokens_total": 60345,
     "largest_tool_bytes": 11810,
     "largest_tool": "read_context",
     "tool_catalog_composition": {
       "description_bytes": 55315,
-      "input_schema_bytes": 116485,
+      "input_schema_bytes": 116499,
       "output_schema_bytes": 51838,
-      "description_plus_input_schema_bytes": 171800
+      "description_plus_input_schema_bytes": 171814
     }
   },
   "tools": {
@@ -4036,7 +4036,7 @@
               "type": "boolean"
             },
             "cursor": {
-              "description": "list, search only: Keyset cursor from a previous page's next_cursor",
+              "description": "list, search only: The previous page's next_cursor",
               "type": "string"
             },
             "engine": {
@@ -4204,6 +4204,9 @@
                   "type": "string"
                 },
                 "project_id": {
+                  "type": "string"
+                },
+                "related_to": {
                   "type": "string"
                 },
                 "relationship_mark": {

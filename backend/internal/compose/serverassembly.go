@@ -382,7 +382,7 @@ func newConsentHandlers(pool *pgxpool.Pool) consent.Handlers {
 		// Wired with or without a mail lane. A receipt owed where no lane can
 		// send it is one the privacy operators must hear about.
 		WithMissedReceipts(receiptAlarm{db: InstallationDB(pool)}).
-		WithSubjectAccessAssembler(newSubjectAccessAssembler(InstallationDB(pool))).
+		WithSubjectAccessAssembler(newSubjectAccessAssembler(InstallationDB(pool), ExtensionData())).
 		WithInstallationName(consent.InstallationNameFunc(func(ctx context.Context) (string, error) {
 			return identity.InstallationNameForPublicPage(ctx, pool)
 		})).

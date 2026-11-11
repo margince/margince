@@ -187,6 +187,8 @@ ready before we need it, because the first date comes 24 hours after we learn of
   limit on it, and who it is for.
 - [agent-tools.md](reference/agent-tools.md): every agent tool, whether a human must approve it, and the pages
   that go with it.
+- [extension-privacy-and-retention.md](reference/extension-privacy-and-retention.md): how an extension's data
+  follows core's privacy and retention rules, feature by feature.
 - [mcp-protocol.md](reference/mcp-protocol.md): how `/mcp` works: message forms, limits and client sign-in.
 - [mcp-info.md](reference/mcp-info.md): each MCP tool's text as a client sees it. Generated.
 - [ai-prompts.md](reference/ai-prompts.md): every text this build sends to a model. Generated.

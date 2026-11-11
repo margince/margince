@@ -3,7 +3,7 @@
 // instance is the same file, with released versions instead of these folders.
 module github.com/margince/margince/instance
 
-go 1.27.3
+go 1.27.4
 
 require (
 	github.com/margince/margince/backend v0.0.0

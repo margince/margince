@@ -27,6 +27,8 @@ type World = Readonly<{
   reason?: string;
   finished?: boolean;
   aiConnected?: boolean;
+  /** An admin who skipped the AI key on first run: no model is bound. */
+  modelUnbound?: boolean;
 }>;
 
 // An AI tool the reader approved through sign-in, which finishes the AI step.
@@ -75,6 +77,18 @@ function reminder(world: World = {}) {
         }),
       "GET /.well-known/oauth-protected-resource": () =>
         jsonResponse({ resource: "https://margince.example/mcp" }),
+      "GET /installation/setup": () =>
+        jsonResponse({
+          complete: !world.modelUnbound,
+          steps: [
+            {
+              step: "ai_models",
+              configured: !world.modelUnbound,
+              blocking: true,
+            },
+            { step: "oauth_app", configured: true, blocking: false },
+          ],
+        }),
       "GET /passports": () =>
         jsonResponse({
           data: (world.aiConnected ?? world.finished) ? [claudeConnection] : [],
@@ -82,7 +96,10 @@ function reminder(world: World = {}) {
           page: { next_cursor: null, has_more: false },
         }),
     },
-    { voice_profile: ["read", "create", "update"] },
+    {
+      voice_profile: ["read", "create", "update"],
+      ...(world.modelUnbound ? { ai_routing: ["read", "update"] } : {}),
+    },
   );
   return (
     <StoryProviders>
@@ -193,6 +210,13 @@ export const AiToolLeft: Story = {
       finished: true,
       aiConnected: false,
     }),
+  play: openPanel,
+};
+
+// The admin skipped the AI key on first run, so setting it up leads the list.
+// Its verb opens Settings, AI models, where the same form waits.
+export const AiKeySkipped: Story = {
+  render: () => reminder({ modelUnbound: true }),
   play: openPanel,
 };
 

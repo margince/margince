@@ -80,16 +80,31 @@ func TestASalesGoalPlanIsDraftedPublishedAndWithdrawnOverTheWire(t *testing.T) {
 	if status != http.StatusOK || saved.Draft == nil {
 		t.Fatalf("saving the first draft → %d %+v", status, saved)
 	}
+	if n := liveMonthTargets(t, e, owner); n != 0 {
+		t.Errorf("a draft wrote %d monthly targets, want none until it is published", n)
+	}
 	stale := map[string]string{"If-Match": "0", "Idempotency-Key": "stale-draft"}
 	if status := e.Call(t, "PUT", plan+"/draft", draft, stale, nil); status != http.StatusConflict {
 		t.Errorf("a draft sent at the version before it → %d, want 409", status)
 	}
 
 	status, discarded := planWrite(t, e, "DELETE", plan+"/draft", saved.Version, nil)
-	if status != http.StatusOK || discarded.Draft != nil {
-		t.Fatalf("discarding the draft → %d %+v", status, discarded)
+	if status != http.StatusOK || discarded.Draft != nil || discarded.History[len(discarded.History)-1].Kind != "discarded" {
+		t.Fatalf("discarding the draft → %d %+v, want no draft and a discard in the history", status, discarded)
 	}
-	status, saved = planWrite(t, e, "PUT", plan+"/draft", discarded.Version, draft)
+
+	offTotal := yearlyGoal + monthlyGoal
+	uneven := draft
+	uneven.DeclaredTotalMinor = &offTotal
+	_, saved = planWrite(t, e, "PUT", plan+"/draft", discarded.Version, uneven)
+	if status, _ := planWrite(t, e, "POST", plan+"/publish", saved.Version,
+		crmcontracts.SalesGoalPublishInput{Reason: "Agreed", ConfirmAgreed: true}); status != http.StatusUnprocessableEntity {
+		t.Errorf("publishing months that miss the declared year → %d, want 422", status)
+	}
+	if n := liveMonthTargets(t, e, owner); n != 0 {
+		t.Errorf("a refused publication wrote %d monthly targets", n)
+	}
+	status, saved = planWrite(t, e, "PUT", plan+"/draft", saved.Version, draft)
 	if status != http.StatusOK {
 		t.Fatalf("saving the draft again → %d", status)
 	}
@@ -99,8 +114,8 @@ func TestASalesGoalPlanIsDraftedPublishedAndWithdrawnOverTheWire(t *testing.T) {
 	if status != http.StatusOK || published.Published == nil || published.Draft != nil {
 		t.Fatalf("publishing → %d %+v", status, published)
 	}
-	if got := monthsTotal(published.LiveMonths); got != yearlyGoal {
-		t.Errorf("Progress reads %d of live goals, want the published %d", got, yearlyGoal)
+	if got := monthsTotal(published.LiveMonths); got != yearlyGoal || liveMonthTargets(t, e, owner) != 12 {
+		t.Errorf("Progress reads %d of live goals, want the published %d as twelve monthly targets", got, yearlyGoal)
 	}
 
 	progress := readProgress(t, e, fmt.Sprintf("period=year&year=%d&scope_kind=owner&scope_id=%s", year, owner))
@@ -115,6 +130,43 @@ func TestASalesGoalPlanIsDraftedPublishedAndWithdrawnOverTheWire(t *testing.T) {
 	if len(withdrawn.History) < 4 {
 		t.Errorf("the history holds %d events, want the save, discard, publish and withdraw", len(withdrawn.History))
 	}
+	if n := liveMonthTargets(t, e, owner); n != 0 {
+		t.Errorf("a withdrawn plan left %d live monthly targets", n)
+	}
+	var retired crmcontracts.ReportingTargetList
+	mustCall(t, e, "GET", fmt.Sprintf("/v1/analytics/targets?retired=true&period_start=%d-01-01", year), nil, http.StatusOK, &retired)
+	if len(retired.Data) != 1 {
+		t.Fatalf("retired January targets = %d, want the one the plan wrote", len(retired.Data))
+	}
+	january := retired.Data[0]
+	version := map[string]string{"If-Match": strconv.FormatInt(january.Version, 10)}
+	if status := e.Call(t, http.MethodPatch, "/v1/analytics/targets/"+january.Id.String(), monthTarget(owner, year), version, nil); status != http.StatusOK {
+		t.Errorf("changing a month a withdrawn plan held → %d, want 200", status)
+	}
+}
+
+// monthTarget is a January sales goal written past the plan, on the target route.
+func monthTarget(owner string, year int) AnyMap {
+	return AnyMap{
+		"metric": "bookings_won", "scope": AnyMap{"kind": "owner", "id": owner},
+		"period_kind": "month", "period_start": fmt.Sprintf("%d-01-01", year), "value": 1, "reason": "Bypass the plan",
+	}
+}
+
+// liveMonthTargets counts the owner's live monthly targets, which a published
+// plan writes and nothing else should.
+func liveMonthTargets(t *testing.T, e *apptest.AppEnv, owner string) int {
+	t.Helper()
+	var list crmcontracts.ReportingTargetList
+	mustCall(t, e, "GET", "/v1/analytics/targets?retired=false&limit=100", nil, http.StatusOK, &list)
+	count := 0
+	for _, target := range list.Data {
+		scope := target.Definition.Scope
+		if scope.Kind == "owner" && scope.Id != nil && scope.Id.String() == owner {
+			count++
+		}
+	}
+	return count
 }
 
 func TestProgressSplitsWonValueByProductKindAndListsTheOpenWork(t *testing.T) {
@@ -248,12 +300,7 @@ func TestASellerReadsTheirOwnPublishedGoalsButCannotChangeThem(t *testing.T) {
 		t.Fatalf("publishing the seller's goals → %d", status)
 	}
 
-	january := fmt.Sprintf("%d-01-01", year)
-	target := AnyMap{
-		"metric": "bookings_won", "scope": AnyMap{"kind": "owner", "id": user.ID},
-		"period_kind": "month", "period_start": january, "value": 1, "reason": "Bypass the plan",
-	}
-	if status := e.Call(t, http.MethodPost, "/v1/analytics/targets", target, nil, nil); status != http.StatusUnprocessableEntity {
+	if status := e.Call(t, http.MethodPost, "/v1/analytics/targets", monthTarget(user.ID, year), nil, nil); status != http.StatusUnprocessableEntity {
 		t.Errorf("a target written over a published plan's month → %d, want 422", status)
 	}
 
