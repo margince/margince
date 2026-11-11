@@ -14,6 +14,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"math"
 )
 
@@ -21,6 +22,7 @@ import (
 // the backing workflow.Handler's Spec().Name — one vocabulary across
 // the catalog, the engine, and the run records.
 type CatalogEntry struct {
+	Group        crmcontracts.AutomationCatalogEntryGroup
 	Key          string
 	Name         string
 	Description  string
@@ -244,6 +246,7 @@ func seededCatalogEntries() []CatalogEntry {
 	return []CatalogEntry{
 		{
 			Key:          noActivityReminderName,
+			Group:        crmcontracts.AutomationCatalogEntryGroupDeals,
 			Name:         "No-activity reminder",
 			Description:  "Reminds an entity's owner once its most recent captured activity has gone quiet for N days.",
 			Trigger:      noActivityScheduleMarker,
@@ -255,6 +258,7 @@ func seededCatalogEntries() []CatalogEntry {
 		},
 		{
 			Key:          renewalReminderName,
+			Group:        crmcontracts.AutomationCatalogEntryGroupCustomers,
 			Name:         "Renewal reminder",
 			Description:  "Reminds an entity's owner as its configured renewal date approaches.",
 			Trigger:      renewalScheduleMarker,
@@ -266,6 +270,7 @@ func seededCatalogEntries() []CatalogEntry {
 		},
 		{
 			Key:          stageChangeNotifyName,
+			Group:        crmcontracts.AutomationCatalogEntryGroupDeals,
 			Name:         "Stage-change notify",
 			Description:  "Notifies the deal's owner when someone else or an automation moves the deal, including closes. The owner's own moves stay in deal history.",
 			Trigger:      eventDealStageChanged,
@@ -277,6 +282,7 @@ func seededCatalogEntries() []CatalogEntry {
 		},
 		{
 			Key:          routeLeadName,
+			Group:        crmcontracts.AutomationCatalogEntryGroupInquiries,
 			Name:         "Route new lead to a task",
 			Description:  "Mints a follow-up task the moment a new lead is captured, so every lead gets a first next step.",
 			Trigger:      eventLeadCreated,
@@ -288,6 +294,7 @@ func seededCatalogEntries() []CatalogEntry {
 		},
 		{
 			Key:          checkInCadenceName,
+			Group:        crmcontracts.AutomationCatalogEntryGroupCustomers,
 			Name:         "Check-in cadence",
 			Description:  "Reminds an entity's owner to re-engage once it has gone quiet for the automation's own (typically longer) cadence.",
 			Trigger:      checkInCadenceScheduleMarker,
@@ -299,6 +306,7 @@ func seededCatalogEntries() []CatalogEntry {
 		},
 		{
 			Key:          postMeetingRecapName,
+			Group:        crmcontracts.AutomationCatalogEntryGroupMeetings,
 			Name:         "Post-meeting recap draft",
 			Description:  "Drafts a follow-up recap whenever a meeting is logged.",
 			Trigger:      eventActivityCaptured,
@@ -331,6 +339,7 @@ func authorableOnlyCatalogEntries() []CatalogEntry {
 			// resolves single-entity — resolveAssignOwnerTier's own
 			// zero-value case.
 			Key:          assignLeadOwnerName,
+			Group:        crmcontracts.AutomationCatalogEntryGroupInquiries,
 			Name:         "Assign new leads an owner",
 			Description:  "Assigns every new lead an owner: matching rules first, else round-robin across the pool, never exceeding capacity caps.",
 			Trigger:      eventLeadCreated,
@@ -347,6 +356,7 @@ func authorableOnlyCatalogEntries() []CatalogEntry {
 			// stays registered and instantiable rather than removed — an
 			// extra available template, never a seeded seventh.
 			Key:          stageChangeCreateTaskName,
+			Group:        crmcontracts.AutomationCatalogEntryGroupDeals,
 			Name:         "Follow up on stage changes",
 			Description:  "Mints a follow-up task on the deal timeline after every open stage move.",
 			Trigger:      eventDealStageChanged,

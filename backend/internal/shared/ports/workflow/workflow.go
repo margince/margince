@@ -111,6 +111,9 @@ type Event struct {
 	AutomationID ids.UUID
 	Params       json.RawMessage
 
+	// EnabledFrom is set for a reviewed event rule that only acts on new work.
+	EnabledFrom time.Time
+
 	// OwnerID is the human who authored this automation instance
 	// (automation.owner_id) — the "on behalf of" attribute of a firing,
 	// analogous to AutomationID. Zero for a system-seeded automation (no

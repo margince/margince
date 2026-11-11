@@ -55,9 +55,10 @@ func workflowEngineWithDrafter(db *database.DB, drafter activities.EmailDrafter)
 	// Executors ride the same record provider as every other datasource
 	// consumer.
 	ex := automation.Executors{
-		Inquiries: automation.NewInquiryService(db, newInquiryRouting(db)),
-		Provider:  NewProvider(db.Pool()),
-		Approvals: automationApprovalsAdapter{svc: NewApprovalsService(db)},
+		MeetingRecaps: activities.NewStore(db),
+		Inquiries:     automation.NewInquiryService(db, newInquiryRouting(db)),
+		Provider:      NewProvider(db.Pool()),
+		Approvals:     automationApprovalsAdapter{svc: NewApprovalsService(db)},
 		// The zero SendPath is the honest one here: automation.Comms declares
 		// DraftEmail alone, so no send is reachable from this surface to
 		// configure. What an automation composes waits as a held draft, and

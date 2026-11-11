@@ -71,6 +71,7 @@ func (h Handlers) ListAutomationCatalog(w http.ResponseWriter, r *http.Request) 
 		}
 		entry := crmcontracts.AutomationCatalogEntry{
 			Key:          e.Key,
+			Group:        &e.Group,
 			Name:         e.Name,
 			Trigger:      e.Trigger,
 			Action:       e.Action,

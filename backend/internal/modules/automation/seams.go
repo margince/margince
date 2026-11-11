@@ -167,16 +167,21 @@ type EffectClaims interface {
 // unguarded.
 var ErrNoEffectClaims = errors.New("automation: no effect claim store configured, so a create cannot be deduplicated across instances")
 
+type MeetingRecapReader interface {
+	ReadyForRecap(context.Context, ids.ActivityID, time.Time, time.Time) (bool, error)
+}
+
 // Executors bundles every seam ApplyActions may drive a typed action
 // through. One struct rather than a five-parameter signature: adding a
 // seam is one field here, not a break at every existing call site.
 type Executors struct {
-	Inquiries *InquiryService
-	Provider  datasource.SystemOfRecordProvider
-	Approvals Approvals
-	Comms     Comms
-	Notifier  Notifier // the durable notice transport — see Notifier's doc
-	Claims    EffectClaims
+	MeetingRecaps MeetingRecapReader
+	Inquiries     *InquiryService
+	Provider      datasource.SystemOfRecordProvider
+	Approvals     Approvals
+	Comms         Comms
+	Notifier      Notifier // the durable notice transport — see Notifier's doc
+	Claims        EffectClaims
 	// Language is the installation's base language every staged summary is
 	// written in; nil writes English.
 	Language baselanguage.Resolver

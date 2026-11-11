@@ -52728,6 +52728,11 @@ export interface components {
         AutomationCatalogEntry: {
             /** @description Stable type key, e.g. stalled_deal_nudge. */
             key: string;
+            /**
+             * @description The library section for this template.
+             * @enum {string}
+             */
+            group?: "inquiries" | "deals" | "customers" | "meetings" | "lists";
             name: string;
             description?: string;
             /** @description What fires it (e.g. deal.stage_changed or schedule). */

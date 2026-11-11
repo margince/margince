@@ -11,7 +11,8 @@ import (
 
 func inquiryCatalogEntry() CatalogEntry {
 	return CatalogEntry{
-		Key: inquiryRecipeName, Name: "Handle website inquiries",
+		Group: crmcontracts.AutomationCatalogEntryGroupInquiries,
+		Key:   inquiryRecipeName, Name: "Handle website inquiries",
 		Description: "Route accepted website inquiries and give a colleague one task to answer each request.",
 		Trigger:     eventActivityCaptured, Action: string(ActionTypeCreateTask), Tier: tierAutoExecute,
 		ParamsSchema: inquiryPolicySchema(), Validate: validateInquiryParams,

@@ -145,6 +145,10 @@ func listActivitiesFilter(ctx context.Context, in ListActivitiesInput) (
 	if in.ConversationAsOf != nil {
 		where = append(where, relstrength.HappenedByNowSQL("a", fmt.Sprintf("$%d", arg(*in.ConversationAsOf))))
 	}
+	if in.meetingRecapFrom != nil {
+		from := fmt.Sprintf("$%d::timestamptz", arg(*in.meetingRecapFrom))
+		where = append(where, "(a.created_at >= "+from+" OR NOT "+occurredday.MeetingTookPlaceSQL("a", from)+")")
+	}
 	if where, err = appendWaitingReplyClause(ctx, in, arg, where); err != nil {
 		return nil, "", nil, nil, err
 	}

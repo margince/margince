@@ -189,6 +189,7 @@ func (e *WorkflowEngine) HandleEvent(ctx context.Context, env kevents.Envelope) 
 			iev.AutomationID = inst.id.UUID
 			iev.OwnerID = inst.owner
 			iev.Params = inst.params
+			iev.EnabledFrom = inst.enabledFrom
 			if err := e.dispatch(runCtx, h, iev, inst.version); err != nil && firstErr == nil {
 				firstErr = fmt.Errorf("workflow %s: %w", h.Spec().Name, err)
 			}
@@ -231,10 +232,11 @@ func (e *WorkflowEngine) clockHandlers() []workflow.Handler {
 // match-time gate reads it to decide whether a firing has a human
 // authority to re-check at all.
 type automationInstance struct {
-	id      ids.AutomationID
-	owner   ids.UUID
-	params  json.RawMessage
-	version int64
+	id          ids.AutomationID
+	owner       ids.UUID
+	params      json.RawMessage
+	version     int64
+	enabledFrom time.Time
 }
 
 // liveInstances loads the workspace's enabled, unarchived automations,
@@ -244,7 +246,8 @@ func (e *WorkflowEngine) liveInstances(ctx context.Context) (map[string][]automa
 	out := map[string][]automationInstance{}
 	err := e.db.Tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx,
-			`SELECT id, key, params, owner_id, version FROM automation WHERE enabled AND archived_at IS NULL ORDER BY created_at, id`)
+			`SELECT id, key, params, owner_id, version, meeting_recap_from
+			 FROM automation WHERE enabled AND archived_at IS NULL ORDER BY created_at, id`)
 		if err != nil {
 			return err
 		}
@@ -253,11 +256,15 @@ func (e *WorkflowEngine) liveInstances(ctx context.Context) (map[string][]automa
 			var inst automationInstance
 			var key string
 			var owner *ids.UUID
-			if err := rows.Scan(&inst.id, &key, &inst.params, &owner, &inst.version); err != nil {
+			var enabledFrom *time.Time
+			if err := rows.Scan(&inst.id, &key, &inst.params, &owner, &inst.version, &enabledFrom); err != nil {
 				return err
 			}
 			if owner != nil {
 				inst.owner = *owner
+			}
+			if enabledFrom != nil {
+				inst.enabledFrom = *enabledFrom
 			}
 			out[key] = append(out[key], inst)
 		}

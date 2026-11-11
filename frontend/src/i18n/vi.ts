@@ -12788,6 +12788,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "auto.sub": "Quy tắc gắn “Cần duyệt” chuyển hành động vào Phê duyệt trước.",
   "auto.readOnly": "Chỉ đọc: bạn không có quyền thay đổi tự động hóa.",
   "auto.catalog": "Thư viện khởi đầu",
+  "auto.group.inquiries": "Yêu cầu mới",
+  "auto.group.deals": "Thương vụ",
+  "auto.group.customers": "Khách hàng",
+  "auto.group.meetings": "Cuộc họp",
+  "auto.group.lists": "Danh sách",
   "auto.instances": "Tự động hóa đã cấu hình",
   "auto.instances.empty":
     "Chưa có tự động hóa nào. Bắt đầu từ thư viện khởi đầu.",

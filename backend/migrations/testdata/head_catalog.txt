@@ -1832,6 +1832,7 @@ public.automation.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.automation.enabled boolean NOT NULL gen=- def=false
 public.automation.id uuid NOT NULL gen=- def=uuidv7()
 public.automation.key text NOT NULL gen=- def=-
+public.automation.meeting_recap_from timestamp with time zone gen=- def=-
 public.automation.name text NOT NULL gen=- def=-
 public.automation.origin text NOT NULL gen=- def='catalog'::text
 public.automation.owner_id uuid gen=- def=-

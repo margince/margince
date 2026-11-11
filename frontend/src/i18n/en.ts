@@ -13114,6 +13114,11 @@ export const en = {
   "auto.readOnly":
     "Read-only: you do not have permission to change automations.",
   "auto.catalog": "Starter library",
+  "auto.group.inquiries": "New inquiries",
+  "auto.group.deals": "Deals",
+  "auto.group.customers": "Customers",
+  "auto.group.meetings": "Meetings",
+  "auto.group.lists": "Lists",
   "auto.instances": "Configured automations",
   "auto.instances.empty":
     "No automations yet. Start one from the starter library.",

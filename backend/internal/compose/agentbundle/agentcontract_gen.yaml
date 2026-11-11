@@ -50821,6 +50821,10 @@ components:
       required: [key, name, trigger, action, params_schema]
       properties:
         key: {type: string, description: 'Stable type key, e.g. stalled_deal_nudge.'}
+        group:
+          type: string
+          enum: [inquiries, deals, customers, meetings, lists]
+          description: The library section for this template.
         name: {type: string}
         description: {type: string}
         trigger: {type: string, description: 'What fires it (e.g. deal.stage_changed or schedule).'}

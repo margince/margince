@@ -329,17 +329,21 @@ func (s *AutomationStore) update(ctx context.Context, id ids.AutomationID, in Up
 		}
 		a, err = scanAutomation(tx.QueryRow(ctx, storekit.SQLf(`
 			UPDATE automation SET
-			  name = coalesce($2, name),
-			  params = coalesce($3, params),
-			  enabled = coalesce($4, enabled),
-			  owner_id = coalesce($6, owner_id),
-			  setter_passport_id = $7,
-			  paused_reason = CASE WHEN $4::boolean IS NULL THEN paused_reason END,
+			  name = coalesce(@name, name),
+			  params = coalesce(@params, params),
+			  enabled = coalesce(@enabled, enabled),
+			  meeting_recap_from = CASE WHEN key = @recap AND NOT enabled AND @enabled::boolean
+			    THEN @changed ELSE meeting_recap_from END,
+			  owner_id = coalesce(@owner, owner_id),
+			  setter_passport_id = @setter,
+			  paused_reason = CASE WHEN @enabled::boolean IS NULL THEN paused_reason END,
 			  version = version + 1,
-			  updated_at = $5
-			WHERE id = $1
-			RETURNING %s`, automationColumns),
-			id, in.Name, paramsJSON, in.Enabled, s.now().UTC(), in.OwnerID, setter))
+			  updated_at = @changed
+			WHERE id = @id
+			RETURNING %s`, automationColumns), pgx.NamedArgs{
+			"id": id, "name": in.Name, "params": paramsJSON, "enabled": in.Enabled,
+			"changed": s.now().UTC(), "owner": in.OwnerID, "setter": setter, "recap": postMeetingRecapName,
+		}))
 		if err != nil {
 			return err
 		}

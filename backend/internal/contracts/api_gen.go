@@ -3685,6 +3685,33 @@ func (e AutomationStatus) Valid() bool {
 	}
 }
 
+// Defines values for AutomationCatalogEntryGroup.
+const (
+	AutomationCatalogEntryGroupCustomers AutomationCatalogEntryGroup = "customers"
+	AutomationCatalogEntryGroupDeals     AutomationCatalogEntryGroup = "deals"
+	AutomationCatalogEntryGroupInquiries AutomationCatalogEntryGroup = "inquiries"
+	AutomationCatalogEntryGroupLists     AutomationCatalogEntryGroup = "lists"
+	AutomationCatalogEntryGroupMeetings  AutomationCatalogEntryGroup = "meetings"
+)
+
+// Valid indicates whether the value is a known member of the AutomationCatalogEntryGroup enum.
+func (e AutomationCatalogEntryGroup) Valid() bool {
+	switch e {
+	case AutomationCatalogEntryGroupCustomers:
+		return true
+	case AutomationCatalogEntryGroupDeals:
+		return true
+	case AutomationCatalogEntryGroupInquiries:
+		return true
+	case AutomationCatalogEntryGroupLists:
+		return true
+	case AutomationCatalogEntryGroupMeetings:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AutomationCatalogEntryTier.
 const (
 	AutomationCatalogEntryTierAutoExecute          AutomationCatalogEntryTier = "auto_execute"
@@ -36394,6 +36421,9 @@ type AutomationCatalogEntry struct {
 	Action      string  `json:"action"`
 	Description *string `json:"description,omitempty"`
 
+	// Group The library section for this template.
+	Group *AutomationCatalogEntryGroup `json:"group,omitempty"`
+
 	// Key Stable type key, e.g. stalled_deal_nudge.
 	Key  string `json:"key"`
 	Name string `json:"name"`
@@ -36407,6 +36437,9 @@ type AutomationCatalogEntry struct {
 	// Trigger What fires it (e.g. deal.stage_changed or schedule).
 	Trigger string `json:"trigger"`
 }
+
+// AutomationCatalogEntryGroup The library section for this template.
+type AutomationCatalogEntryGroup string
 
 // AutomationCatalogEntryTier confirmation_required actions stage to /approvals at run time.
 type AutomationCatalogEntryTier string

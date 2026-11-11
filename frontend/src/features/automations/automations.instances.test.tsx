@@ -310,6 +310,26 @@ describe("a rule's run history", () => {
 });
 
 describe("the starter library", () => {
+  it("puts each grouped template under its catalog section", async () => {
+    mount(OPERATOR, {}, "library");
+    const meetings = await screen.findByRole("table", {
+      name: en["auto.group.meetings"],
+    });
+    expect(
+      within(meetings).getByTestId("template-post_meeting_recap"),
+    ).toBeInTheDocument();
+    expect(
+      within(meetings).queryByTestId("template-renewal_reminder"),
+    ).toBeNull();
+    const customers = screen.getByRole("table", {
+      name: en["auto.group.customers"],
+    });
+    expect(
+      within(customers).getByTestId("template-renewal_reminder"),
+    ).toBeInTheDocument();
+    expect(screen.getByTestId("template-close_approval")).toBeInTheDocument();
+  });
+
   it("opens a template's create dialog from a press anywhere on its row", async () => {
     const user = userEvent.setup();
     mount(OPERATOR, {}, "library");

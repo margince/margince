@@ -13142,6 +13142,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "auto.readOnly":
     "Nur Lesezugriff: Du hast keine Berechtigung, Automatisierungen zu ändern.",
   "auto.catalog": "Vorlagenbibliothek",
+  "auto.group.inquiries": "Neue Anfragen",
+  "auto.group.deals": "Verkaufschancen",
+  "auto.group.customers": "Kunden",
+  "auto.group.meetings": "Besprechungen",
+  "auto.group.lists": "Listen",
   "auto.instances": "Eingerichtete Automatisierungen",
   "auto.instances.empty":
     "Noch keine Automatisierungen. Starte eine aus der Vorlagenbibliothek.",

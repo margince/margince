@@ -7,8 +7,12 @@ import (
 	"context"
 	"time"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // CustomerMeetingSQL shares the customer-link rule between capture and reporting.
@@ -98,4 +102,25 @@ func openCustomerMeeting(ctx context.Context, asOf time.Time, arg func(any) int)
 		return "", "", err
 	}
 	return customer + " AND " + OpenMeetingStatusSQL, occurredday.MeetingTookPlaceSQL("a", sprintf("$%d::timestamptz", arg(asOf))), nil
+}
+
+// ReadyForRecap checks the meeting as the authorizer can see it.
+func (s *Store) ReadyForRecap(ctx context.Context, id ids.ActivityID, asOf, enabledFrom time.Time) (bool, error) {
+	rows, _, err := s.ListActivities(ctx, ListActivitiesInput{
+		IDs:                  []ids.ActivityID{id},
+		CustomerMeetingsOnly: true,
+		ReadableOnly:         true,
+		WithOutsideParty:     true,
+		ConversationAsOf:     &asOf,
+		meetingRecapFrom:     &enabledFrom,
+	})
+	if err != nil || len(rows) == 0 {
+		return false, err
+	}
+	meeting := rows[0]
+	if meeting.SourceSystem != nil && provenance.ImporterNamespace(*meeting.SourceSystem) {
+		return false, nil
+	}
+	return meeting.MeetingStatus != nil && *meeting.MeetingStatus == crmcontracts.ActivityMeetingStatusHeld &&
+		meeting.Body != nil && values.HasVisibleText(*meeting.Body), nil
 }

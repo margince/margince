@@ -14,6 +14,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"maps"
 	"math"
 
@@ -64,7 +65,8 @@ const listRuleDescription = " It fires from the list's check every 15 minutes, o
 func listRuleEntries() []CatalogEntry {
 	entry := func(key, name, description string, action ActionType, extra map[string]any) CatalogEntry {
 		return CatalogEntry{
-			Key: key, Name: name, Description: description + listRuleDescription,
+			Group: crmcontracts.AutomationCatalogEntryGroupLists,
+			Key:   key, Name: name, Description: description + listRuleDescription,
 			Trigger: eventListEvaluated, Action: string(action), Tier: tierAutoExecute,
 			ParamsSchema: listRuleSchema(extra), Validate: validateListRuleParams(extra),
 			ValidateRefs: validateListRuleRefs,
