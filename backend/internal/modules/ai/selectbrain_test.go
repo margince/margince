@@ -4,6 +4,7 @@
 package ai
 
 import (
+	"fmt"
 	"net/http"
 	"net/url"
 	"strings"
@@ -46,7 +47,13 @@ func selectLocalBrain(cfg ProviderConfig, keys config.Lookup) (model.Client, err
 // fixtureTransport is the fixtures' own connection pool. httptest.Server.Close
 // drops every idle connection of http.DefaultTransport, so on the shared pool a
 // parallel test's Close breaks a request that has just reused a connection.
-var fixtureTransport http.RoundTripper = http.DefaultTransport.(*http.Transport).Clone()
+var fixtureTransport http.RoundTripper = func() http.RoundTripper {
+	base, ok := http.DefaultTransport.(*http.Transport)
+	if !ok {
+		panic(fmt.Sprintf("the fixtures clone http.DefaultTransport, which is a %T here", http.DefaultTransport))
+	}
+	return base.Clone()
+}()
 
 // googleFixture answers the token exchange itself and sends every other
 // Google request to base; any other host is dialled as addressed.
