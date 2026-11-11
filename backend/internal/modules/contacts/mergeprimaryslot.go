@@ -6,9 +6,11 @@ package contacts
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -43,4 +45,16 @@ func archiveDuplicatesKeepingPrimarySlot(ctx context.Context, tx pgx.Tx, merging
 		`a.id = ANY(@heirs) AND a.archived_at IS NULL AND NOT a.is_current_primary
  AND NOT EXISTS (SELECT 1 FROM relationship b WHERE `+mergePrimarySlotWitness+`)`, promoteArgs)
 	return err
+}
+
+// lockMergedEmployments takes the employment lock of each contact whose primary
+// slot the merge can move. It runs before the merge writes any edge row, the
+// order every employment writer keeps (updateRelationshipInTx).
+func lockMergedEmployments(ctx context.Context, tx pgx.Tx, contacts []ids.UUID) error {
+	for _, contact := range slices.Compact(sortedUUIDs(contacts...)) {
+		if err := storekit.LockWriteIdentity(ctx, tx, employmentKind, contact.String()); err != nil {
+			return err
+		}
+	}
+	return nil
 }

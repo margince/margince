@@ -329,6 +329,9 @@ func buildSurvivorshipPatch(target, source crmcontracts.Contact) *storekit.Patch
 }
 
 func relinkContactEdges(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.ContactID) (int64, error) {
+	if err := lockMergedEmployments(ctx, tx, []ids.UUID{sourceID.UUID, targetID.UUID}); err != nil {
+		return 0, err
+	}
 	if err := relinkEmploymentSupport(ctx, tx, sourceID.UUID, targetID.UUID, true); err != nil {
 		return 0, err
 	}
