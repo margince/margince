@@ -405,8 +405,7 @@ test("AC-shell-1k: one h1 per railed page, and on a record it is the record's ow
 test("AC-shell-3/4/5: ⌘K opens focused+empty, filters, Enter navigates", async ({
   page,
 }) => {
-  await page.goto("/#/home");
-  await page.locator("body").click();
+  await openForKeys(page, "home");
   await page.keyboard.press("ControlOrMeta+k");
   const input = page.getByRole("searchbox", { name: "Befehlspalette" });
   await expect(input).toBeFocused();
