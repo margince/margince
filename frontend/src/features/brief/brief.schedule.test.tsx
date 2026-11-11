@@ -10,8 +10,8 @@ import { meetingRow, readingsDay } from "../../testing/brief.fixtures";
 import type { WorklistItem } from "../worklist/worklist.queries";
 import { SchedulePanel } from "./brief.schedule";
 
-// Your day: a cut of the one worklist answer the work column is drawn from,
-// laid on one line with a Now stop, and what it says on a day with no meeting.
+// Your day is a cut of the one worklist answer the work column is drawn from.
+// It lays the meetings on one line with a Now stop, and says so on a clear day.
 
 function taskRow(id: string, title: string): WorklistItem {
   return {
@@ -74,7 +74,7 @@ describe("the schedule panel", () => {
   });
 
   // The Now stop sits where the clock is: after a meeting under way, before
-  // the next one, which alone says how soon it starts and opens its brief.
+  // the next one. Only the next one says how soon it starts and opens its brief.
   it("stands Now between the started meeting and the next one", () => {
     const day = readingsDay({}, [
       { ...meetingRow("m1", true, "2026-09-03T08:00:00Z"), title: "Started" },
@@ -173,7 +173,7 @@ describe("the schedule panel", () => {
     expect(times[0].textContent).not.toBe("");
   });
 
-  // A CLEAR DAY KEEPS THE BOX. The Now stop says the rest of the day is
+  // A clear day keeps the box. The Now stop says the rest of the day is
   // clear, so a reader never wonders whether the meetings failed to load.
   it("says the rest of a day with no meeting is clear", () => {
     const measured = { ...readingsDay({}, []), calendar: "connected" as const };

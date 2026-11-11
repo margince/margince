@@ -16,8 +16,8 @@ import { SchedulePanel } from "./brief.schedule";
 // and on a clear day the stop saying so. A read in flight and a read that
 // failed are facts about the request, so they keep the box and claim nothing.
 //
-// Read each story in BOTH themes with the toolbar's Theme control: every colour
-// here is a `color-mix()` of a canonical token, so a surface can be correct in
+// Read each story in both themes with the toolbar's Theme control. Every colour
+// here is a `color-mix()` of a canonical token. So a surface can be correct in
 // light and wrong in dark.
 
 /** A row the task lane would send: what this rep owes, with no time on it. */
@@ -89,7 +89,7 @@ export const Schedule: Story = {
 };
 
 // Mid-morning: the first meeting is under way, so the Now stop sits between
-// the two and the second is the next one, with how soon it starts.
+// the two. The second is the next one, with how soon it starts.
 export const ScheduleMidDay: Story = {
   render: panel(
     <SchedulePanel

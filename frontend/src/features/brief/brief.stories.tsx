@@ -569,9 +569,9 @@ function workingMorning(meetings: WorklistItem[]) {
 
 export const WorkingMorning: Story = { render: workingMorning([]) };
 
-// Two meetings ahead on the day the page is read: the rail's Your day draws a
-// Now stop at the reader's clock, the next meeting on its plate with the way
-// into its brief, and the one after.
+// Two meetings ahead on the day the page is read. The rail's Your day draws a
+// Now stop at the reader's clock. The next meeting stands on its plate with
+// the way into its brief, and the one after follows.
 export const MorningWithMeetings: Story = {
   render: workingMorning([
     {
