@@ -14,6 +14,7 @@ import type { MessageKey } from "../../i18n/en";
 import { labelFor } from "../../lib/labelfor";
 import type { List } from "../../lib/lists.queries";
 import { useMe } from "../../lib/session";
+import { ownedByReader } from "./library";
 
 const SHARINGS = ["private", "team", "workspace"] as const;
 
@@ -128,19 +129,23 @@ export function ListAudienceFields({
 }
 
 /**
- * Who can find a list, named: a team by its name, the owner's teams as the
- * reader's own when they are the owner.
+ * Who can find a list, named from where the reader stands: their own list
+ * reads as theirs.
  *
  * Returned as a function so a table reads the roster and the session once for
  * all of its rows.
  */
 export function useListAudienceLabel(): (
-  list: Pick<List, "sharing" | "team_id" | "owner_id">,
+  list: Pick<List, "sharing" | "team_id" | "owner_id" | "steward_id">,
 ) => string {
   const t = useT();
   const me = useMe();
   const teamName = useTeamName();
   return (list) => {
+    const ownerIsReader = ownedByReader(list, me.data?.user.id);
+    if (list.sharing === "private") {
+      return t(privateAudienceOf(list, ownerIsReader));
+    }
     if (list.sharing !== "team") {
       return t(labelFor(SHARING_LABEL, list.sharing));
     }
@@ -152,8 +157,28 @@ export function useListAudienceLabel(): (
     if (!list.owner_id) {
       return t("lists.sharing.workspace");
     }
-    return list.owner_id === me.data?.user.id
+    return ownerIsReader
       ? t("lists.audience.yourTeams")
       : t("lists.audience.ownerTeams");
   };
+}
+
+/** Who finds a private list: its owner and its steward, and nobody else. */
+function privateAudienceOf(
+  list: Pick<List, "owner_id" | "steward_id">,
+  ownerIsReader: boolean,
+): MessageKey {
+  const otherSteward =
+    Boolean(list.steward_id) && list.steward_id !== list.owner_id;
+  if (!list.owner_id) {
+    return "lists.audience.stewardOnly";
+  }
+  if (ownerIsReader) {
+    return otherSteward
+      ? "lists.audience.youAndSteward"
+      : "lists.sharing.private";
+  }
+  return otherSteward
+    ? "lists.audience.ownerAndSteward"
+    : "lists.audience.ownerOnly";
 }

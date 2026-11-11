@@ -3834,6 +3834,7 @@ export const en = {
   "timeline.filters.searchOmitsLimited":
     "Search excludes threads whose content you cannot open.",
   "tab.contacts": "Contacts",
+  "tab.companies": "Companies",
   "tab.deals": "Deals",
   "tab.dealRoom": "Deal Room",
   // Shared by the account's own tab and the lead's: both hold a deal AND the
@@ -3843,7 +3844,7 @@ export const en = {
   "tab.tasks": "Tasks",
   "tab.timeline": "History",
   "tab.finance": "Finance",
-  "tab.network": "Network",
+  "tab.network": "Relationships",
   "tab.documents": "Documents",
   "tab.profile": "Profile",
   "tab.meetings": "Meetings",
@@ -11158,6 +11159,7 @@ export const en = {
 
   "retention.scopeRawCapture": "Stored message originals",
   "retention.scopeDealRiskDay": "Daily record of material deals at risk",
+  "retention.scopeExtension": "Records kept by extensions",
   "pipeline.new": "New pipeline",
   "pipeline.createRefused": "Your role cannot create pipelines. Ask an admin.",
   "pipeline.name": "Name",
@@ -17723,8 +17725,8 @@ export const en = {
     "This row’s current version could not be loaded. Reload and retry.",
   // The employers section: every employment edge this contact holds, current
   // one first — a contact can work at more than one company at once.
-  "contact.rail.employmentTitle": "Companies",
-  "contact.rail.noEmployment": "No employment on record.",
+  "contact.rail.employmentTitle": "Work history",
+  "contact.rail.noEmployment": "No work history recorded yet.",
   "contact.rail.noPrimaryEmployer": "No primary employer. Select one.",
   "contact.rail.addEmployment": "Add company",
   "contact.employer.contacts_one": "{count} contact",
@@ -18439,6 +18441,10 @@ export const en = {
   "lists.team.allOwners": "All the owner’s teams",
   "lists.audience.yourTeams": "Your teams",
   "lists.audience.ownerTeams": "The owner’s teams",
+  "lists.audience.ownerOnly": "Its owner",
+  "lists.audience.stewardOnly": "Its steward",
+  "lists.audience.youAndSteward": "You and its steward",
+  "lists.audience.ownerAndSteward": "Its owner and steward",
   "lists.audience.unknownTeam": "A team you cannot see",
   "lists.health.ownerless": "Needs a steward",
   "lists.health.invalid": "Filter no longer works",
@@ -18531,9 +18537,12 @@ export const en = {
   "lists.record.empty": "Not on any list you can find.",
   "lists.record.check": "Check a Live List",
   "lists.record.checkHint":
-    "A Live List updates itself from its filters. Pick one to see whether this record matches, and why.",
+    "Only Live Lists can be checked. Pick one to see whether this record matches, and why.",
+  "lists.record.checkHintAdd":
+    "Only Live Lists can be checked. To put this record on a Shortlist, use “Add to Shortlist”.",
   "lists.record.checkPick": "Pick a Live List",
   "lists.record.truncated": "And more lists not shown here.",
+  "lists.record.allLists": "All lists",
   "lists.record.takenOff": "Taken off {name}",
   "lists.record.putBack": "Back on {name}",
   "lists.addToShortlist": "Add to Shortlist",
@@ -18611,8 +18620,8 @@ export const en = {
   "filters.new.deals": "New deal filter",
   "filters.new.leads": "New lead filter",
   "filters.library.whichRecords": "Filter which records?",
-  "filters.library.mine": "Only me",
-  "filters.library.shared": "Shared",
+  "filters.library.mine": "Mine",
+  "filters.library.shared": "Shared with me",
   "filters.library.views": "Saved views",
   "filters.library.kindView": "Saved view",
   "filters.library.rowMore": "More actions for {name}",
@@ -18627,9 +18636,8 @@ export const en = {
   "filters.library.records.project_one": "{count} project",
   "filters.library.records.project_other": "{count} projects",
   "filters.library.recordsSeen": "{records} you can see",
-  "filters.library.mineEmpty": "Views you save show here.",
-  "filters.library.sharedEmpty":
-    "No shared lists yet. A list shared with a team or everyone shows here.",
+  "filters.library.mineEmpty": "Views you save and lists you own show here.",
+  "filters.library.sharedEmpty": "No one has shared a list with you yet.",
   "filters.library.noHits": "No views or lists match “{q}”.",
   "filters.library.clearSearch": "Clear search",
   "filters.library.noTypeHits.contacts": "No contact views or lists.",

@@ -32,6 +32,7 @@ import {
   useTabWords,
 } from "../../lib/filtersaddress";
 import { navigate } from "../../lib/router";
+import { useMe } from "../../lib/session";
 import { replaceDial, useUrlParams } from "../../lib/urlstate";
 import { useFoldedViewport } from "../../lib/viewport";
 import {
@@ -49,7 +50,9 @@ import {
   isCut,
   isFirstRun,
   type LibraryCut,
+  type LibraryGroup,
   type LibraryItem,
+  listsLanding,
   pillCounts,
   typeOf,
   visibleGroups,
@@ -70,6 +73,9 @@ export function FiltersLibrary({
   const t = useT();
   const folded = useFoldedViewport();
   const listsOn = useListsAvailable();
+  // FiltersScreen draws this page only once the session has answered, so a
+  // list is never filed before its owner can be told from the reader.
+  const readerId = useMe().data?.user.id;
   const [params] = useUrlParams();
   const cut = cutOf(params);
   const reads = useLibraryReads(cut, listsOn);
@@ -84,10 +90,15 @@ export function FiltersLibrary({
     : visibleGroups(
         listsOn ? ["mine", "shared"] : ["mine"],
         shown,
+        readerId,
         narrowed,
         reads.unsettled,
       );
-  const anchors = useAnchorFocus(anchor, listsOn, reads.settled);
+  const anchors = useAnchorFocus(
+    anchor,
+    anchor === "lists" && listsOn ? listsLanding(shown, readerId) : "mine",
+    reads.settled,
+  );
   // Nothing matched only once every read, a capped library's server search
   // included, has answered: until then the match may be out or refused.
   const cutEmpty =
@@ -139,7 +150,7 @@ export function FiltersLibrary({
           ) : (
             <LibraryGroupPanel
               group={listsOn ? group : "views"}
-              rows={shown.filter((item) => groupOf(item) === group)}
+              rows={shown.filter((item) => groupOf(item, readerId) === group)}
               reads={reads}
               narrowed={narrowed}
               captionOf={captionOf}
@@ -445,14 +456,13 @@ function RetryButton({ onRetry }: Readonly<{ onRetry: () => void }>) {
 }
 
 /**
- * `#/filters/views` and `#/filters/lists` land on their group, or on the one
- * drawn when a cut or the first-run plate leaves theirs out. Focus moves one
- * commit after the rows have drawn, so the shell's scroll memory has already
- * put the new page at its top and the move is not undone under the reader.
+ * An address lands on its `landing` group, or on the one drawn when a cut or
+ * the first-run plate leaves that out. Focus waits one commit after the rows
+ * draw, so the shell's scroll memory cannot undo the move.
  */
 function useAnchorFocus(
   anchor: LibraryAnchor | undefined,
-  listsOn: boolean,
+  landing: LibraryGroup,
   settled: boolean,
 ): Readonly<{
   mine: RefObject<HTMLDivElement | null>;
@@ -472,9 +482,8 @@ function useAnchorFocus(
       return;
     }
     landed.current = true;
-    const [own, other] =
-      anchor === "lists" && listsOn ? [shared, mine] : [mine, shared];
+    const [own, other] = landing === "shared" ? [shared, mine] : [mine, shared];
     (own.current ?? other.current)?.focus();
-  }, [ready, anchor, listsOn]);
+  }, [ready, anchor, landing]);
   return { mine, shared };
 }

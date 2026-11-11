@@ -105,9 +105,9 @@ export function ListHealthBadge({
 }
 
 /**
- * Which table a group draws. Only me and Shared carry the kind, since both
- * hold views and lists; Shared adds who can find each row. With lists off,
- * every row is a saved view, so the kind says nothing and is left out.
+ * Which table a group draws. Both list groups carry the kind and who can find
+ * each list, so a list the reader shares reads as shared in their own group.
+ * With lists off, every row is a saved view, and both are left out.
  */
 export type LibraryTableGroup = LibraryGroup | "views";
 
@@ -170,13 +170,15 @@ export function LibraryTable({
     header: t("lists.sharingLabel"),
     render: (item) => (item.kind === "list" ? audienceOf(item.list) : null),
   };
+  const listsHere = group !== "views";
+  const anyList = items.some((item) => item.kind === "list");
   const columns = folded
     ? [name, more]
     : [
         name,
-        ...(group === "views" ? [] : [kind]),
+        ...(listsHere ? [kind] : []),
         records,
-        ...(group === "shared" ? [who] : []),
+        ...(listsHere && anyList ? [who] : []),
         more,
       ];
   return (
@@ -238,7 +240,7 @@ function LibraryFacts({
     <span className="t-caption library-facts">
       {group !== "views" && <LibraryKind item={item} />}
       <LibraryRecords item={item} />
-      {group === "shared" && item.kind === "list" && (
+      {group !== "views" && item.kind === "list" && (
         <span>{audienceOf(item.list)}</span>
       )}
     </span>

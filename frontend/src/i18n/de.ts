@@ -57,7 +57,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "users.retirement.lists":
     "Listen dieses Mitglieds neu zuweisen oder archivieren.",
   "users.retirement.stewarded_lists":
-    "Betreute Listen dieses Mitglieds neu zuweisen oder archivieren.",
+    "Listen, für die dieses Mitglied zuständig ist, neu zuweisen oder archivieren.",
   "users.retirement.mail_drafts":
     "Gespeicherte E-Mail-Entwürfe dieses Mitglieds senden oder verwerfen.",
   "users.retirement.meeting_invitations":
@@ -3886,13 +3886,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "timeline.filters.searchOmitsLimited":
     "Die Suche schließt Threads aus, deren Inhalt du nicht öffnen kannst.",
   "tab.contacts": "Kontakte",
+  "tab.companies": "Unternehmen",
   "tab.deals": "Deals",
   "tab.dealRoom": "Deal Room",
   "tab.dealsProjects": "Deals und Projekte",
   "tab.tasks": "Aufgaben",
   "tab.timeline": "Verlauf",
   "tab.finance": "Finanzen",
-  "tab.network": "Netzwerk",
+  "tab.network": "Beziehungen",
   "tab.documents": "Dokumente",
   "tab.profile": "Profil",
   "tab.meetings": "Termine",
@@ -11184,6 +11185,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "retention.scopeRawCapture": "Gespeicherte Originalnachrichten",
   "retention.scopeDealRiskDay":
     "Tägliche Aufzeichnung wichtiger gefährdeter Deals",
+  "retention.scopeExtension": "Von Erweiterungen gespeicherte Datensätze",
   "pipeline.new": "Neue Pipeline",
   "pipeline.createRefused":
     "Deine Rolle darf keine Pipelines anlegen. Frage einen Admin.",
@@ -13452,7 +13454,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "cf.retire.body":
     "Das Feld verschwindet aus neuen Datensätzen und Filtern. Gespeicherte Werte bleiben erhalten. Das Archivieren lässt sich nicht rückgängig machen.",
   "cf.retire.lists":
-    "Diese Live-Listen filtern danach. Mit den gespeicherten Werten funktionieren sie weiter und bitten ihre Verantwortlichen, die Bedingung zu ersetzen:",
+    "Diese Live-Listen filtern danach. Mit den gespeicherten Werten funktionieren sie weiter und bitten ihre Zuständigen, die Bedingung zu ersetzen:",
   "cf.retire.unseen_one":
     "{count} weitere Live-Liste, die du nicht öffnen kannst, filtert ebenfalls danach.",
   "cf.retire.unseen_other":
@@ -17200,7 +17202,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Jemand erstellt eine Live-Liste oder eine Shortlist.",
   "webhooks.event.list.updated.label": "Listeneinstellungen geändert",
   "webhooks.event.list.updated.when":
-    "Name, Zweck, Filter, Teilen, Team oder Verantwortung einer Liste ändern sich.",
+    "Name, Zweck, Filter, Teilen, Team oder Zuständigkeit einer Liste ändern sich.",
   "webhooks.event.list.archived.label": "Liste archiviert",
   "webhooks.event.list.archived.when": "Eine Liste wird archiviert.",
   "webhooks.event.list.restored.label": "Liste wiederhergestellt",
@@ -17891,8 +17893,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Du kannst diesen Kontakt nicht bearbeiten. Frage die verantwortliche Person, ob sie ihn dir übergibt oder mit dir teilt, oder frage einen Admin.",
   "contact.rail.employmentVersionUnresolved":
     "Die aktuelle Version dieser Zeile konnte nicht geladen werden. Bitte lade die Seite neu und versuche es erneut.",
-  "contact.rail.employmentTitle": "Unternehmen",
-  "contact.rail.noEmployment": "Keine Anstellung erfasst.",
+  "contact.rail.employmentTitle": "Werdegang",
+  "contact.rail.noEmployment": "Noch kein Werdegang erfasst.",
   "contact.rail.noPrimaryEmployer": "Kein Hauptarbeitgeber. Wähle einen aus.",
   "contact.rail.addEmployment": "Unternehmen hinzufügen",
   "contact.employer.contacts_one": "{count} Kontakt",
@@ -18592,8 +18594,13 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lists.team.allOwners": "Alle Teams der verantwortlichen Person",
   "lists.audience.yourTeams": "Deine Teams",
   "lists.audience.ownerTeams": "Die Teams der verantwortlichen Person",
+  "lists.audience.ownerOnly": "Die verantwortliche Person",
+  "lists.audience.stewardOnly": "Die zuständige Person",
+  "lists.audience.youAndSteward": "Du und die zuständige Person",
+  "lists.audience.ownerAndSteward":
+    "Die verantwortliche und die zuständige Person",
   "lists.audience.unknownTeam": "Ein Team, das du nicht sehen kannst",
-  "lists.health.ownerless": "Niemand verantwortlich",
+  "lists.health.ownerless": "Niemand zuständig",
   "lists.health.invalid": "Filter funktioniert nicht mehr",
   "lists.health.retiredField": "Nutzt ein stillgelegtes Feld",
   "lists.col.name": "Name",
@@ -18619,23 +18626,23 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lists.filterLine": "Filter: {sentence}",
   "lists.head.exported_one": "{count}-mal, zuletzt am {when}",
   "lists.head.exported_other": "{count}-mal, zuletzt am {when}",
-  "lists.fact.steward": "Verantwortlich",
+  "lists.fact.steward": "Zuständig",
   "lists.fact.exported": "Exportiert",
   "lists.archived.title": "Diese Liste ist archiviert",
   "lists.archived.body":
     "Bis zur Wiederherstellung ist die Liste schreibgesch\u00fctzt. Mitglieder und Verlauf bleiben erhalten.",
   "lists.invalid.title": "Dieser Filter funktioniert nicht mehr",
   "lists.invalid.body":
-    "Ein Feld im Filter hat sich geändert. Wer für die Liste verantwortlich ist, kann den Filter im Editor korrigieren.",
-  "lists.ownerless.title": "Niemand ist für diese Liste verantwortlich",
+    "Ein Feld im Filter hat sich geändert. Wer für die Liste zuständig ist, kann den Filter im Editor korrigieren.",
+  "lists.ownerless.title": "Niemand ist für diese Liste zuständig",
   "lists.ownerless.body":
-    "Für diese Liste ist niemand mehr verantwortlich, oder es wurde nie jemand festgelegt. Wer die Liste ändern darf, sollte sie übernehmen.",
+    "Für diese Liste ist niemand mehr zuständig, oder es wurde nie jemand festgelegt. Wer die Liste ändern darf, sollte sie übernehmen.",
   "lists.ownerless.takeOver": "\u00dcbernehmen",
   "lists.retiredField.title": "Dieser Filter nutzt ein stillgelegtes Feld",
   "lists.retiredField.body_one":
-    "{fields} wurde stillgelegt. Die Liste arbeitet weiter mit den bereits gespeicherten Werten. Neue Werte werden dort nicht mehr erfasst. Wer die Liste verantwortet, sollte diese Bedingung im Editor ersetzen.",
+    "{fields} wurde stillgelegt. Die Liste arbeitet weiter mit den bereits gespeicherten Werten. Neue Werte werden dort nicht mehr erfasst. Wer für die Liste zuständig ist, sollte diese Bedingung im Editor ersetzen.",
   "lists.retiredField.body_other":
-    "{fields} wurden stillgelegt. Die Liste arbeitet weiter mit den bereits gespeicherten Werten. Neue Werte werden dort nicht mehr erfasst. Wer die Liste verantwortet, sollte diese Bedingungen im Editor ersetzen.",
+    "{fields} wurden stillgelegt. Die Liste arbeitet weiter mit den bereits gespeicherten Werten. Neue Werte werden dort nicht mehr erfasst. Wer für die Liste zuständig ist, sollte diese Bedingungen im Editor ersetzen.",
   "lists.members.title": "Mitglieder",
   "lists.members.loading": "Mitglieder werden geladen",
   "lists.members.emptyLive":
@@ -18687,9 +18694,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lists.record.empty": "Auf keiner Liste, die du finden kannst.",
   "lists.record.check": "Live-Liste pr\u00fcfen",
   "lists.record.checkHint":
-    "Eine Live-Liste aktualisiert sich selbst nach ihren Filtern. Wähle eine, um zu sehen, ob dieser Datensatz passt und warum.",
+    "Nur Live-Listen lassen sich prüfen. Wähle eine, um zu sehen, ob dieser Eintrag passt und warum.",
+  "lists.record.checkHintAdd":
+    "Nur Live-Listen lassen sich prüfen. Für eine Shortlist wähle „Zur Shortlist hinzufügen“.",
   "lists.record.checkPick": "Live-Liste ausw\u00e4hlen",
   "lists.record.truncated": "Und weitere Listen, die hier nicht stehen.",
+  "lists.record.allLists": "Alle Listen",
   "lists.record.takenOff": "Von {name} entfernt",
   "lists.record.putBack": "Wieder auf {name}",
   "lists.addToShortlist": "Zur Shortlist hinzuf\u00fcgen",
@@ -18768,8 +18778,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "filters.new.deals": "Neuer Deal-Filter",
   "filters.new.leads": "Neuer Lead-Filter",
   "filters.library.whichRecords": "Welche Datensätze filtern?",
-  "filters.library.mine": "Privat",
-  "filters.library.shared": "Geteilt",
+  "filters.library.mine": "Meine",
+  "filters.library.shared": "Mit mir geteilt",
   "filters.library.views": "Gespeicherte Ansichten",
   "filters.library.kindView": "Gespeicherte Ansicht",
   "filters.library.rowMore": "Weitere Aktionen für {name}",
@@ -18784,9 +18794,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "filters.library.records.project_one": "{count} Projekt",
   "filters.library.records.project_other": "{count} Projekte",
   "filters.library.recordsSeen": "{records}, die du sehen kannst",
-  "filters.library.mineEmpty": "Hier stehen die Ansichten, die du speicherst.",
-  "filters.library.sharedEmpty":
-    "Noch keine geteilten Listen. Hier steht jede Liste, die mit einem Team oder allen geteilt ist.",
+  "filters.library.mineEmpty":
+    "Hier stehen die Ansichten, die du speicherst, und die Listen, die dir gehören.",
+  "filters.library.sharedEmpty": "Noch hat niemand eine Liste mit dir geteilt.",
   "filters.library.noHits": "Keine Ansicht und keine Liste passt zu „{q}“.",
   "filters.library.clearSearch": "Suche leeren",
   "filters.library.noTypeHits.contacts":

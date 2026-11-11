@@ -16,6 +16,7 @@ func valid() privacy.Table {
 		Links:     []privacy.Link{{Column: "activity_id", Record: privacy.Activity}},
 		Personal:  []string{"body"},
 		Retention: jurisdiction.CommercialCorrespondence,
+		AgeColumn: "created_at",
 	}
 }
 
@@ -34,9 +35,16 @@ func TestTableValidate(t *testing.T) {
 			x.Links = append(x.Links, privacy.Link{Column: "activity_id", Record: privacy.Contact})
 		},
 		"personal column not an ident": func(x *privacy.Table) { x.Personal = []string{"body; drop"} },
+		"personal but no age column":   func(x *privacy.Table) { x.AgeColumn = "" },
+		"age column not an ident":      func(x *privacy.Table) { x.AgeColumn = "created;drop" },
+		"age column is personal":       func(x *privacy.Table) { x.AgeColumn = "body" },
 	}
 	if err := valid().Validate("ext_demo"); err != nil {
 		t.Fatalf("a well-formed declaration was refused: %v", err)
+	}
+	keyOnly := privacy.Table{Name: "ext_demo_seen", Retention: jurisdiction.CommercialCorrespondence}
+	if err := keyOnly.Validate("ext_demo"); err != nil {
+		t.Fatalf("a table with no personal column needs no age column, and was refused: %v", err)
 	}
 	for name, mutate := range cases {
 		x := valid()

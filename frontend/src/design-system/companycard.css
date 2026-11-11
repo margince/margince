@@ -71,6 +71,31 @@
   display: block;
 }
 
+/* A track is one timeline: rows lose their frame, and a rule runs from each
+   mark to the next row's, so the eye reads the companies as one career. */
+.company-card[data-layout="track"] {
+  border-color: transparent;
+}
+.company-card[data-layout="track"]:not(:hover) {
+  background: none;
+}
+.company-card[data-layout="track"] + .company-card[data-layout="track"] {
+  margin-top: 0;
+}
+.company-card[data-layout="track"]:has(
+  + .company-card[data-layout="track"]
+)::before {
+  content: "";
+  position: absolute;
+  inset-inline-start: calc(var(--padCard) + 15px);
+  top: calc(var(--padCard) + 36px);
+  bottom: calc(4px - var(--padCard));
+  width: 2px;
+  border-radius: var(--r-full);
+  corner-shape: round;
+  background: var(--borderSubtle);
+}
+
 /* The verbs wait behind hover or focus so a rarely-used one does not compete
    with the card's own controls. A coarse pointer has no hover, so it stays on. */
 .company-card-actions {

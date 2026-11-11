@@ -29,6 +29,7 @@ import { CompanyDocumentsCard } from "./companydocuments";
 import { EvidenceModal } from "./companyevidence";
 import { CompanyFinanceCard } from "./companyfinance";
 import { useCompanyVerbRefusal } from "./companyheader";
+import { CompanyMeetingsTab } from "./companymeetings";
 import "./company360.css";
 import { useViewerZone } from "../../lib/viewerzone";
 import "./companytabs.css";
@@ -208,6 +209,14 @@ export function CompanyRecordBody({
         onPerform={onPerform}
         taskUpdate={taskUpdate}
       />
+      {tab === "meetings" && !company.archived_at && (
+        <CompanyMeetingsTab
+          companyId={company.id}
+          view={view}
+          loading={loading}
+          onBriefMeeting={setPreparing}
+        />
+      )}
       {/* The composer, anchored on the message a draft_reply suggestion named.
           It is the same modal the timeline's own Reply opens. The advice
           leads to it rather than to a second way to answer. */}

@@ -21,6 +21,8 @@ import type { List } from "../../lib/lists.queries";
 import {
   liveList,
   liveVocabulary,
+  OTHER_OWNER_ID,
+  READER_ID,
   shortlist,
 } from "../../testing/lists.fixtures";
 import { meFixture } from "../../testing/mefixture";
@@ -48,6 +50,13 @@ const DINNER: List = {
   id: "L-dinner",
   name: "Dinner guests",
   sharing: "private",
+  owner_id: READER_ID,
+};
+const THEIRS: List = {
+  ...liveList,
+  id: "L-theirs",
+  name: "Partner referrals",
+  owner_id: OTHER_OWNER_ID,
 };
 const BUILDS: List = {
   ...liveList,
@@ -127,11 +136,11 @@ describe("before the session answers", () => {
 });
 
 describe("with lists on", () => {
-  it("reads every view and every list once, and groups them by who can find them", async () => {
+  it("reads every view and every list once, and groups them by who owns them", async () => {
     const { seen, wrapper } = mountFilters({
       listsOn: true,
       views: [BERLIN, FLEET],
-      lists: [DINNER, liveList, shortlist],
+      lists: [DINNER, liveList, shortlist, THEIRS],
     });
     render(<FiltersScreen />, { wrapper });
     expect(await screen.findByText(liveList.name)).toBeInTheDocument();
@@ -144,10 +153,55 @@ describe("with lists on", () => {
     const mine = region(en["filters.library.mine"]);
     expect(within(mine).getByText(BERLIN.name)).toBeInTheDocument();
     expect(within(mine).getByText(DINNER.name)).toBeInTheDocument();
-    expect(mine.querySelector(".panel-head .t-num")?.textContent).toBe("3");
+    expect(within(mine).getByText(liveList.name)).toBeInTheDocument();
+    expect(mine.querySelector(".panel-head .t-num")?.textContent).toBe("4");
     const shared = region(en["filters.library.shared"]);
     expect(within(shared).getByText(shortlist.name)).toBeInTheDocument();
+    expect(within(shared).getByText(THEIRS.name)).toBeInTheDocument();
     expect(shared.querySelector(".panel-head .t-num")?.textContent).toBe("2");
+  });
+
+  it("files a team list the reader made under their own group, saying who can find it", async () => {
+    const { wrapper } = mountFilters({
+      listsOn: true,
+      lists: [liveList, THEIRS],
+    });
+    render(<FiltersScreen />, { wrapper });
+    await screen.findByText(liveList.name);
+    const mine = region(en["filters.library.mine"]);
+    const shared = region(en["filters.library.shared"]);
+    const own = within(mine).getByRole("row", {
+      name: (name) => name.includes(liveList.name),
+    });
+    expect(
+      within(own).getByText(en["lists.audience.yourTeams"]),
+    ).toBeInTheDocument();
+    expect(
+      within(mine).getByRole("columnheader", {
+        name: en["lists.sharingLabel"],
+      }),
+    ).toBeInTheDocument();
+    expect(within(shared).queryByText(liveList.name)).toBeNull();
+    expect(within(shared).getByText(THEIRS.name)).toBeInTheDocument();
+    expect(within(mine).queryByText(THEIRS.name)).toBeNull();
+    expect(mine.querySelector(".panel-head .t-num")?.textContent).toBe("1");
+    expect(shared.querySelector(".panel-head .t-num")?.textContent).toBe("1");
+  });
+
+  it("says each group is empty in its own words when the reader owns every list", async () => {
+    const { wrapper } = mountFilters({ listsOn: true, lists: [liveList] });
+    render(<FiltersScreen />, { wrapper });
+    await screen.findByText(liveList.name);
+    const shared = region(en["filters.library.shared"]);
+    expect(
+      within(shared).getByText(en["filters.library.sharedEmpty"]),
+    ).toBeInTheDocument();
+    expect(shared.querySelector(".panel-head .t-num")?.textContent).toBe("0");
+    expect(
+      within(region(en["filters.library.mine"])).queryByText(
+        en["filters.library.mineEmpty"],
+      ),
+    ).toBeNull();
   });
 
   it("opens on one plate, with nothing to search, when nothing is saved", async () => {
@@ -607,14 +661,27 @@ describe("archived lists", () => {
 });
 
 describe("a group's own address", () => {
-  it("lands on Shared for #/filters/lists", async () => {
+  it("lands on the reader's own group for #/filters/lists when it holds one of their lists", async () => {
     const { wrapper } = mountFilters({
       listsOn: true,
       views: [BERLIN],
-      lists: [liveList],
+      lists: [liveList, THEIRS],
     });
     render(<FiltersScreen id="lists" />, { wrapper });
     await screen.findByText(liveList.name);
+    await vi.waitFor(() =>
+      expect(region(en["filters.library.mine"]).parentElement).toHaveFocus(),
+    );
+  });
+
+  it("lands on the shared group for #/filters/lists when the reader owns no list", async () => {
+    const { wrapper } = mountFilters({
+      listsOn: true,
+      views: [BERLIN],
+      lists: [THEIRS],
+    });
+    render(<FiltersScreen id="lists" />, { wrapper });
+    await screen.findByText(THEIRS.name);
     await vi.waitFor(() =>
       expect(region(en["filters.library.shared"]).parentElement).toHaveFocus(),
     );
@@ -629,12 +696,12 @@ describe("a group's own address", () => {
     );
   });
 
-  it("lands on Only me for #/filters/lists when the cut leaves Shared out", async () => {
+  it("lands on the reader's own group for #/filters/lists when the cut leaves the shared one out", async () => {
     window.location.hash = "#/filters/lists?type=contacts";
     const { wrapper } = mountFilters({
       listsOn: true,
       views: [BERLIN],
-      lists: [liveList],
+      lists: [THEIRS],
     });
     render(<FiltersScreen id="lists" />, { wrapper });
     await screen.findByText(BERLIN.name);
@@ -646,7 +713,7 @@ describe("a group's own address", () => {
     );
   });
 
-  it("lands on Only me for #/filters/views, when both reads were already held", async () => {
+  it("lands on the reader's own group for #/filters/views, when both reads were already held", async () => {
     const { client, wrapper } = mountFilters({ listsOn: true });
     client.setQueryData(
       ["me"],
@@ -657,7 +724,7 @@ describe("a group's own address", () => {
       truncated: false,
     });
     client.setQueryData(["lists", "all", { includeArchived: false }], {
-      data: [liveList],
+      data: [THEIRS],
       page: { has_more: false },
     });
     render(<FiltersScreen id="views" />, { wrapper });
@@ -666,7 +733,7 @@ describe("a group's own address", () => {
     );
   });
 
-  it("sends #/lists, which names no list, to the shared lists without a history entry", async () => {
+  it("sends #/lists, which names no list, to the library's lists without a history entry", async () => {
     window.location.hash = "#/lists";
     const length = window.history.length;
     const { wrapper } = mountFilters({ listsOn: true });
