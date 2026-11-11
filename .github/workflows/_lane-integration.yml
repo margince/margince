@@ -37,8 +37,10 @@ jobs:
   # the flags the shards ran (scripts/test-integration-parallel.sh,
   # INTEGRATION_BUILD_OUT), and the shards run those binaries.
   #
-  # It needs no database. A package that does not compile fails this job, the
-  # shards then do not start, and the fan-in names the build as the cause.
+  # It needs no database. The shards start beside it and wait for its upload
+  # (scripts/lib-lanebinaries.sh lane_bin_wait). A package that does not
+  # compile fails this job, its last step tells the shards, they stop, and the
+  # fan-in names the build as the cause.
   integration-build:
     name: integration build
     timeout-minutes: 30
@@ -116,14 +118,33 @@ jobs:
       - name: Pack the test binaries
         run: tar -I 'zstd -T0' -cf "$RUNNER_TEMP/integration-bin.tar.zst" -C "$RUNNER_TEMP/integration-bin" .
       # Not named `integration-*`: the fan-in downloads that pattern and has no
-      # use for the binaries.
+      # use for the binaries. The attempt is in the name because a run lists
+      # the artifacts of all its attempts, and a shard runs only its own
+      # attempt's binaries unless this attempt does not build.
       - name: Upload the test binaries
         uses: ./.github/actions/upload-artifact-retried
         with:
-          name: test-binaries-integration
+          name: test-binaries-integration-${{ github.run_attempt }}
           path: ${{ runner.temp }}/integration-bin.tar.zst
           compression-level: '0'
           if-no-files-found: error
+          retention-days: 1
+      # The shards are already waiting, and without this they would wait until
+      # their time limit.
+      - name: Tell the waiting shards that the build failed
+        if: failure() || cancelled()
+        working-directory: .
+        env:
+          JOB_STATUS: ${{ job.status }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/build-failed"
+          echo "integration build, attempt $GITHUB_RUN_ATTEMPT: $JOB_STATUS" > "$RUNNER_TEMP/build-failed/status.txt"
+      - name: Upload the failure for the shards
+        if: failure() || cancelled()
+        uses: ./.github/actions/upload-artifact-retried
+        with:
+          name: test-binaries-integration-${{ github.run_attempt }}-failed
+          path: ${{ runner.temp }}/build-failed/status.txt
           retention-days: 1
 
   # Sharded across independent runners. One runner already fans packages out
@@ -140,13 +161,20 @@ jobs:
   # the longest lane on the build gate serialized the two slowest jobs and
   # dominated PR wall-clock. A broken build is still caught by the Go gate
   # itself, and sonarcloud gates its scan on that result directly.
+  #
+  # No `needs` on the build: a shard checks out, restores its caches, starts its
+  # stack and builds its template while the build compiles, then waits for the
+  # binaries. That moves about two minutes of every shard off the critical path.
+  # The limit is the build's 30 minutes of waiting plus a shard's own run.
   integration-shards:
     name: integration shard (${{ matrix.shard }}/${{ strategy.job-total }})
-    needs: [integration-build]
-    timeout-minutes: 30
+    timeout-minutes: 50
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      # REST calls: a re-run asks at once whether it builds again, and every
+      # wait past 6 minutes asks every 3 minutes whether the build ended.
+      actions: read
     strategy:
       # A red shard must not cancel its siblings: one CI run should report
       # every failing test, not the first shard to trip.
@@ -181,17 +209,39 @@ jobs:
         uses: ./.github/actions/go-build-cache
         with:
           flavor: integration
+      - name: Expose the results service to the next steps
+        uses: ./.github/actions/results-service-env
+      # The same compose stack dev machines use (docker-compose.dev.yml:
+      # Postgres + Redis + MinIO, digest-pinned there) plus scripts/db-init.sql
+      # for the cluster-level margince_app role — migration 0015 GRANTs to it,
+      # and the parallel lane's clones inherit those grants. One stack
+      # definition instead of hand-mirrored GH service containers; the lane's
+      # database admin goes through cmd/migrate's db verbs on the test DSN
+      # (scripts/lib-testdb.sh db_admin), so no host psql is assumed.
+      - name: Start the dev infra stack (compose + app role)
+        run: make db-up
+      # Needs the checkout and not the binaries, so it runs while they build.
+      # The shard step checks it again (INTEGRATION_TEMPLATE_READY).
+      - name: Build the migrated template
+        run: make test-db-up
+      # 1800 s is the build's own time limit: past it no binaries can come.
+      - name: Wait for the test binaries
+        id: binaries
+        working-directory: .
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          name="$(scripts/wait-lane-binaries.sh 1800)"
+          echo "name=$name" >> "$GITHUB_OUTPUT"
       - name: Download the test binaries
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
-          name: test-binaries-integration
+          name: ${{ steps.binaries.outputs.name }}
           path: ${{ runner.temp }}
       - name: Unpack the test binaries
         run: |
           mkdir -p "$RUNNER_TEMP/integration-bin"
           tar -I zstd -xf "$RUNNER_TEMP/integration-bin.tar.zst" -C "$RUNNER_TEMP/integration-bin"
-      - name: Expose the results service to the next steps
-        uses: ./.github/actions/results-service-env
       # The claims of each attempt are their own, so `Re-run failed jobs` gets a
       # fresh queue. When the build did not run again, the green shards of the
       # earlier attempt keep their groups, and the shards that run again skip
@@ -215,19 +265,11 @@ jobs:
         with:
           pattern: integration-shard-*
           path: ${{ runner.temp }}/earlier
-      # The same compose stack dev machines use (docker-compose.dev.yml:
-      # Postgres + Redis + MinIO, digest-pinned there) plus scripts/db-init.sql
-      # for the cluster-level margince_app role — migration 0015 GRANTs to it,
-      # and the parallel lane's clones inherit those grants. One stack
-      # definition instead of hand-mirrored GH service containers; the lane's
-      # database admin goes through cmd/migrate's db verbs on the test DSN
-      # (scripts/lib-testdb.sh db_admin), so no host psql is assumed.
-      - name: Start the dev infra stack (compose + app role)
-        run: make db-up
       # INTEGRATION_SHARD_OUT collects the slice manifests + binary coverage
       # pods the fan-in reconciles and merges — so the scan is NOT a second
       # Postgres/Redis/MinIO stack running the whole lane a second time.
       - name: Integration shard (slice + coverage)
+        id: shard
         env:
           INTEGRATION_SHARD: ${{ matrix.shard }}/${{ strategy.job-total }}
           INTEGRATION_SHARD_OUT: ${{ runner.temp }}/shard-out
@@ -235,6 +277,7 @@ jobs:
           INTEGRATION_TEST_TIMING: ${{ runner.temp }}/integration-bin/test-timing.txt
           INTEGRATION_QUEUE: ${{ steps.queue.outputs.spec }}
           INTEGRATION_QUEUE_DONE: ${{ steps.queue.outputs.later == 'true' && format('{0}/earlier', runner.temp) || '' }}
+          INTEGRATION_TEMPLATE_READY: '1'
           # The tests are DB-bound, not CPU-bound: on the 4-core runner the
           # nproc-derived default leaves the slice mostly waiting on Postgres.
           # So this stays above `min(nproc, 8)` = 4 — the CPU reading behind it
@@ -291,8 +334,11 @@ jobs:
       # empty and `if-no-files-found: error` would turn a cancelled shard into a
       # failed one. That is why the probe on the step above writes to stdout
       # instead: those runs are read from the log, not from an artifact.
+      #
+      # A shard that stopped before its tests, as when the build failed, has no
+      # directory, and an upload would add a second error to the one it gave.
       - name: Upload the shard manifest + coverage pods
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && steps.shard.outcome != 'skipped' }}
         uses: ./.github/actions/upload-artifact-retried
         with:
           name: integration-shard-${{ matrix.shard }}
@@ -378,9 +424,9 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      # The build first: when it fails the shards are skipped, and "shards:
-      # skipped" would name the wrong job. The shards are checked after the
-      # reconcile, which names the tests a red or lost shard took.
+      # The build first: when it fails the shards stop without tests, and
+      # "shards: failure" would name the wrong job. The shards are checked after
+      # the reconcile, which names the tests a red or lost shard took.
       - name: The build and the unit pass are green
         working-directory: .
         env:

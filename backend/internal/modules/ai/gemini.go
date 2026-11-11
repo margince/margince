@@ -215,24 +215,20 @@ func (c *geminiClient) Embed(ctx context.Context, req model.EmbedRequest) (model
 	if embedModel == "" {
 		embedModel = geminiEmbedModel
 	}
-	// One call per input, so a large retrieval batch is N sequential
-	// round-trips.
-	vectors := make([][]float32, 0, len(req.Inputs))
+	vectors, err := c.embedInputs(ctx, embedModel, req.Inputs, req.Dimensions)
+	if err != nil {
+		return model.Embeddings{}, err
+	}
 	dims := 0
-	for _, input := range req.Inputs {
-		values, err := c.embedOne(ctx, embedModel, input, req.Dimensions)
-		if err != nil {
-			return model.Embeddings{}, err
-		}
-		// Every vector must share one width — the store ranks against a fixed
+	for i, values := range vectors {
+		// Every vector must share one width. The store ranks against a fixed
 		// column, so a ragged batch (model/version skew) is a hard error, not a
 		// silently-advertised max.
-		if len(vectors) == 0 {
+		if i == 0 {
 			dims = len(values)
 		} else if len(values) != dims {
 			return model.Embeddings{}, fmt.Errorf("ai: gemini: embedding width skew: got %d, expected %d", len(values), dims)
 		}
-		vectors = append(vectors, values)
 	}
 	return model.Embeddings{Vectors: vectors, Dims: dims}, nil
 }

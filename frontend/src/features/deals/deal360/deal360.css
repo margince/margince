@@ -149,3 +149,10 @@
   padding-bottom: var(--space-3);
   border-bottom: 1px solid var(--borderSubtle);
 }
+
+/* The reason mark keeps clear of the edit pencil that shows on hover. */
+.deal-aside-why {
+  display: inline-flex;
+  vertical-align: middle;
+  margin-inline-start: var(--space-1);
+}

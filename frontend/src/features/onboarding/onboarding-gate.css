@@ -556,3 +556,12 @@
     forced-color-adjust: auto;
   }
 }
+
+/* No model to read with: the manual interview leads, the key is one press
+   back. The same row rhythm as the website field it stands in for. */
+.ob-gate-nomodel {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--gapActions);
+}

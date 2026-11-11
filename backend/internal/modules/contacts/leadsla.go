@@ -110,7 +110,7 @@ func leadTakesFirstResponseSQL(alias, at string) string {
 // matches nothing rather than pretending a default target.
 func slaStateClause(ctx context.Context, policy leadSLAPolicy, state crmcontracts.ListLeadsParamsSlaState, arg func(any) int) string {
 	if !policy.enabled {
-		return "FALSE"
+		return scopeNoRows
 	}
 	deadline := "COALESCE(routed_at, created_at) + $%d * interval '1 minute'"
 	open := leadOwesAReplySQL + " AND "

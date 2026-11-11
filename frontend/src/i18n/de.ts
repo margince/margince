@@ -2403,6 +2403,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "systemJob.erasure_replay": "Erneute Löschung nach einer Wiederherstellung",
   "systemJob.privacy_review": "Datenschutzprüfung nach einer Löschung",
   "systemJob.extension_inventory": "Bestandsaufnahme der Erweiterungen",
+  "systemJob.extension_privacy": "Datenschutzprüfung der Erweiterungen",
   "systemJob.extraction_activity_reannounce":
     "Reparatur extrahierter Aktivitäten",
   "systemJob.forecast_snapshot": "Täglicher Prognose-Snapshot",
@@ -3972,6 +3973,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "standing.title": "Wie es steht · {date}",
   "standing.noteMore": "Mehr anzeigen",
   "standing.noteLess": "Weniger anzeigen",
+  "standing.latest.title": "Zuletzt",
+  "standing.latest.open": "Im Verlauf öffnen",
   "standing.sources.records": "Aus den CRM-Daten",
   "standing.sources.model_one": "Margince · {count} Quelle",
   "standing.sources.model_other": "Margince · {count} Quellen",
@@ -6010,6 +6013,26 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deal.winProbability.source.colleague": "von {name} gesetzt",
   "deal.winProbability.source.margince": "von Margince gesenkt",
   "deal.winProbability.stageValue": "Phase {percent}",
+  "deal.winProbability.why": "Warum diese Abschlusschance",
+  "deal.winProbability.reason.stage": "Das ist der Wert, den {stage} vorgibt.",
+  "deal.winProbability.reason.closed":
+    "Der Deal ist abgeschlossen, daher legt {stage} den Wert fest.",
+  "deal.winProbability.reason.you": "Du hast den Wert von Hand gesetzt.",
+  "deal.winProbability.reason.colleague":
+    "{name} hat den Wert von Hand gesetzt.",
+  "deal.winProbability.reason.human":
+    "Ein Teammitglied hat den Wert von Hand gesetzt.",
+  "deal.winProbability.reason.stageGives":
+    "Ohne ihn gibt {stage} {percent} vor.",
+  "deal.winProbability.reason.margince": "Margince hat diesen Wert gesetzt.",
+  "deal.winProbability.reason.marginceRule":
+    "Margince kann eine Wahrscheinlichkeit, die niemand von Hand gesetzt hat, senken, wenn der Deal ruht oder E-Mails dagegen sprechen.",
+  "deal.winProbability.reason.override":
+    "Gib einen eigenen Wert ein, um ihn zu überschreiben.",
+  "deal.winProbability.reason.clear":
+    "Leere das Feld, um wieder der Phase zu folgen.",
+  "deal.winProbability.reason.stageNamed": "die Phase {name}",
+  "deal.winProbability.reason.stageUnnamed": "die Phase des Deals",
   "deal.winProbability.setByStage":
     "Abschlusschance durch die Phase {stage} auf {percent} gesetzt",
   "deal.winProbability.band.90_plus": "90 % oder mehr",
@@ -9625,6 +9648,21 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "setup.action.ai": "Verbinden",
   "setup.step.aiDone": "{name} ist verbunden.",
   "setup.step.aiDoneUnnamed": "Ein KI-Tool ist verbunden.",
+  "firstRun.ai.skip": "Nicht jetzt",
+  "ob.gate.noModelSub":
+    "Noch ist kein KI-Anbieter eingerichtet, daher kann Margince deine Website nicht lesen. Gib die Angaben zu deinem Unternehmen selbst ein oder füge jetzt einen Schlüssel hinzu.",
+  "ob.gate.addModel": "KI-Schlüssel hinzufügen",
+  "aiSetup.title": "KI einrichten",
+  "aiSetup.intro":
+    "Margince braucht einen KI-Anbieter, um Websites zu lesen, Antworten zu entwerfen und zu recherchieren. Füge einen Schlüssel hinzu und wähle die Modelle.",
+  "aiSetup.connect": "Anbieter verbinden",
+  "aiSetup.connected":
+    "{vendor} ist verbunden. Margince kann jetzt lesen, entwerfen und recherchieren.",
+  "setup.step.model": "KI einrichten",
+  "setup.caption.model":
+    "Füge einen Schlüssel deines KI-Anbieters hinzu, damit Margince Websites liest, Antworten entwirft und recherchiert.",
+  "setup.action.model": "Schlüssel hinzufügen",
+  "setup.step.modelDone": "Ein KI-Anbieter ist verbunden.",
   "ob.conv.connect.aiRow": "Dein KI-Tool",
   "ob.conv.connect.aiBody":
     "Frag Claude, ChatGPT, Copilot oder deinen Editor nach deinen Deals und lass ihn Margince für dich aktualisieren.",
@@ -15890,7 +15928,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "firstRun.continue": "Weiter",
   "firstRun.ai.title": "Modellanbieter auswählen",
   "firstRun.ai.sub":
-    "Margince nutzt deinen Zugang beim KI-Anbieter. All das lässt sich später in den Einstellungen unter KI ändern.",
+    "Margince nutzt deinen Zugang beim KI-Anbieter. Kein Schlüssel zur Hand? Du kannst ihn später in den Einstellungen unter KI hinzufügen.",
   "firstRun.ai.provider": "Anbieter",
   "firstRun.ai.key": "API-Schlüssel",
   "firstRun.ai.keyHint":
