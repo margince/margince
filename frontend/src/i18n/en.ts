@@ -3831,6 +3831,7 @@ export const en = {
   "timeline.filters.searchOmitsLimited":
     "Search excludes threads whose content you cannot open.",
   "tab.contacts": "Contacts",
+  "tab.companies": "Companies",
   "tab.deals": "Deals",
   "tab.dealRoom": "Deal Room",
   // Shared by the account's own tab and the lead's: both hold a deal AND the
@@ -3840,7 +3841,7 @@ export const en = {
   "tab.tasks": "Tasks",
   "tab.timeline": "History",
   "tab.finance": "Finance",
-  "tab.network": "Network",
+  "tab.network": "Relationships",
   "tab.documents": "Documents",
   "tab.profile": "Profile",
   "tab.meetings": "Meetings",
@@ -17674,8 +17675,8 @@ export const en = {
     "This row’s current version could not be loaded. Reload and retry.",
   // The employers section: every employment edge this contact holds, current
   // one first — a contact can work at more than one company at once.
-  "contact.rail.employmentTitle": "Companies",
-  "contact.rail.noEmployment": "No employment on record.",
+  "contact.rail.employmentTitle": "Work history",
+  "contact.rail.noEmployment": "No work history recorded yet.",
   "contact.rail.noPrimaryEmployer": "No primary employer. Select one.",
   "contact.rail.addEmployment": "Add company",
   "contact.employer.contacts_one": "{count} contact",
