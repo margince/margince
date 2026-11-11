@@ -9,12 +9,16 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose/accountdraft"
 	"github.com/margince/margince/backend/internal/compose/company360"
+	"github.com/margince/margince/backend/internal/compose/contact360"
+	"github.com/margince/margince/backend/internal/compose/contactdraft"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -35,6 +39,8 @@ type recipientOnlyFixture struct {
 	janaWrote, weWroteJana              string
 	rubenSigned, rubenUnsigned, rubenOn string
 	rubenCopiedUs, janaCopied           string
+	// rubenTask is due first and filed under Ruben; janaTask is filed under Jana.
+	rubenTask, janaTask string
 }
 
 // The words of Ruben's mail. None of them may reach the model.
@@ -96,7 +102,7 @@ func seedRecipientOnlyAccount(t *testing.T, e *Env) recipientOnlyFixture {
 		f.rubenOn, jana)
 
 	// Ruben writes to someone else and copies us. Our side is on it, Jana is not.
-	f.rubenCopiedUs = mail(ruben, "inbound", "Credit note for the auditors", rubenCopyBody, 20*time.Hour)
+	f.rubenCopiedUs = mail(ruben, "inbound", "Credit note for the auditors", rubenCopyBody, time.Hour)
 	e.WsExec(t, `UPDATE activity_participant SET role = 'cc' WHERE activity_id = $1 AND user_id IS NOT NULL`,
 		f.rubenCopiedUs)
 	// A mail from Ruben that copies Jana is hers: she was on it.
@@ -104,6 +110,25 @@ func seedRecipientOnlyAccount(t *testing.T, e *Env) recipientOnlyFixture {
 		"The kickoff for the route planning pilot can be held at the Bremen depot.", 12*time.Hour)
 	e.WsExec(t, `INSERT INTO activity_participant (activity_id, contact_id, role) VALUES ($1, $2, 'cc')`,
 		f.janaCopied, jana)
+	// Our newest mail on the account went to Ruben, not to Jana.
+	mail(ruben, "outbound", "Your credit note", "Here is the credit note your auditors asked for.", 2*time.Hour)
+
+	task := func(on ids.UUID, subject string, due time.Duration) string {
+		at, dueAt := roomAgo(30*24*time.Hour), roomFixedNow.Add(due)
+		logged, _, err := e.Activities.LogActivity(admin, activities.LogActivityInput{
+			Kind: "task", Subject: &subject, OccurredAt: &at, DueAt: &dueAt,
+			Links: []activities.ActivityLinkInput{
+				{EntityType: "contact", EntityID: on},
+				{EntityType: "company", EntityID: company},
+			},
+		})
+		if err != nil {
+			t.Fatalf("logging task %q: %v", subject, err)
+		}
+		return ids.UUID(logged.Id).String()
+	}
+	f.rubenTask = task(ruben, "Send Ruben the corrected invoice", 24*time.Hour)
+	f.janaTask = task(jana, "Send Jana the depot plan", 3*24*time.Hour)
 	return f
 }
 
@@ -139,6 +164,15 @@ func TestAnAccountDraftReadsOnlyTheRecipientsOwnConversation(t *testing.T) {
 	if !recent[f.janaWrote] || !recent[f.weWroteJana] || !recent[f.janaCopied] {
 		t.Errorf("Jana's own conversation is missing from her draft: %v", recent)
 	}
+	if in.Commitment == nil || in.Commitment.ID != f.janaTask {
+		t.Errorf("the draft's commitment is %+v, want Jana's own task", in.Commitment)
+	}
+	if !sameInstant(view.LastInboundAt, new(roomAgo(12*time.Hour))) {
+		t.Errorf("the draft's last inbound is %v, want the mail Jana was copied on", view.LastInboundAt)
+	}
+	if !sameInstant(view.LastOutboundAt, new(roomAgo(8*24*time.Hour))) {
+		t.Errorf("the draft's last outbound is %v, want our proposal to Jana", view.LastOutboundAt)
+	}
 	payload, err := json.Marshal(in.Fenced())
 	if err != nil {
 		t.Fatalf("encoding the input: %v", err)
@@ -163,6 +197,13 @@ func TestAnAccountDraftReadsOnlyTheRecipientsOwnConversation(t *testing.T) {
 	if !all[f.rubenSigned] || !all[f.rubenUnsigned] || !all[f.rubenOn] || !all[f.rubenCopiedUs] {
 		t.Fatalf("the unnarrowed account lost Ruben's mail, so its absence proves nothing: %v", all)
 	}
+	if unnarrowed.Commitment == nil || unnarrowed.Commitment.ID != f.rubenTask {
+		t.Errorf("the unnarrowed commitment is %+v, want Ruben's task, so its absence proves nothing", unnarrowed.Commitment)
+	}
+	if !sameInstant(wide.LastInboundAt, new(roomAgo(time.Hour))) || !sameInstant(wide.LastOutboundAt, new(roomAgo(2*time.Hour))) {
+		t.Errorf("the unnarrowed account's last touches are %v/%v, want Ruben's newer exchange",
+			wide.LastInboundAt, wide.LastOutboundAt)
+	}
 }
 
 // The service sends the model the narrowed view. A recording lane sees every
@@ -185,7 +226,7 @@ func TestTheModelNeverSeesAColleaguesMail(t *testing.T) {
 			t.Fatalf("encoding a model request: %v", err)
 		}
 		text := string(sent)
-		for _, word := range []string{"9,600", "8,400", "Ruben", "hold the payment", "support took three days", "auditors"} {
+		for _, word := range colleagueWords {
 			if strings.Contains(text, word) {
 				t.Errorf("the model was sent %q from a colleague's mail", word)
 			}
@@ -194,6 +235,122 @@ func TestTheModelNeverSeesAColleaguesMail(t *testing.T) {
 	}
 	if !sawJana {
 		t.Error("the model was not sent Jana's own reply")
+	}
+}
+
+// colleagueWords are phrases only Ruben's mail and task carry.
+var colleagueWords = []string{"9,600", "8,400", "Ruben", "hold the payment", "support took three days", "auditors"}
+
+// The contact page's drafter reads Jana's own timeline. A link files Ruben's
+// mail there too, so the draft's read keeps only what she was a party to.
+func TestAContactDraftLeavesOutAColleaguesMailLinkedToTheRecipient(t *testing.T) {
+	e := Setup(t)
+	f := seedRecipientOnlyAccount(t, e)
+	svc := contactRoomService(e)
+	jana := ContactIDOf(f.jana)
+
+	page, err := svc.AssembleScoped(e.Admin(), jana, contact360.AssembleOptions{WrittenByHumanOnly: true})
+	if err != nil {
+		t.Fatalf("assembling Jana's page: %v", err)
+	}
+	if !contactActivityIDs(page)[f.rubenOn] {
+		t.Fatal("Jana's page does not file Ruben's linked mail, so its absence below proves nothing")
+	}
+	narrowed, err := svc.AssembleScoped(e.Admin(), jana, contact360.AssembleOptions{WrittenByHumanOnly: true, PartyOnly: true})
+	if err != nil {
+		t.Fatalf("assembling Jana's draft view: %v", err)
+	}
+	kept := contactActivityIDs(narrowed)
+	if kept[f.rubenOn] {
+		t.Error("Ruben's mail linked to Jana reached her draft view")
+	}
+	if !kept[f.janaWrote] || !kept[f.janaCopied] {
+		t.Errorf("Jana's own conversation is missing from her draft view: %v", kept)
+	}
+
+	lane := &recordingDraftLane{}
+	_, _, _ = contactdraft.NewService(svc, lane).Draft(e.Admin(), jana, contactdraft.Request{})
+	if len(lane.requests) == 0 {
+		t.Fatal("the contact draft sent the model nothing, so this test proves nothing")
+	}
+	for _, req := range lane.requests {
+		sent, err := json.Marshal(req)
+		if err != nil {
+			t.Fatalf("encoding a model request: %v", err)
+		}
+		for _, word := range colleagueWords {
+			if strings.Contains(string(sent), word) {
+				t.Errorf("the contact draft sent the model %q from a colleague's mail", word)
+			}
+		}
+	}
+}
+
+func contactActivityIDs(page crmcontracts.Contact360) map[string]bool {
+	out := map[string]bool{}
+	if page.Activities == nil {
+		return out
+	}
+	for _, act := range page.Activities.Data {
+		out[ids.UUID(act.Id).String()] = true
+	}
+	return out
+}
+
+// The narrowing runs before the cap. Six newer mails from a colleague would
+// fill the draft's six slots if it ran after, and leave Jana's six out.
+func TestTheRecipientNarrowingRunsBeforeTheCap(t *testing.T) {
+	e := Setup(t)
+	admin := e.Admin()
+	company := e.SeedCompany(t, "Harbourline Freight", &e.Rep1)
+	jana := e.SeedContact(t, "Jana Novak", &e.Rep1)
+	ruben := e.SeedContact(t, "Ruben Hale", &e.Rep1)
+	janaID, companyID := ContactIDOf(jana), companyIDOf(company)
+	if _, err := e.Contacts.CreateRelationship(admin, contacts.CreateRelationshipInput{
+		Kind: "employment", ContactID: &janaID, CompanyID: &companyID,
+	}); err != nil {
+		t.Fatalf("employing Jana at the account: %v", err)
+	}
+	mail := func(from ids.UUID, subject string, ago time.Duration) string {
+		at, direction, body := roomAgo(ago), "inbound", subject+" in full."
+		logged, _, err := e.Activities.LogActivity(admin, activities.LogActivityInput{
+			Kind: "email", Direction: &direction, Subject: &subject, Body: &body, OccurredAt: &at,
+			Links: []activities.ActivityLinkInput{
+				{EntityType: "contact", EntityID: from},
+				{EntityType: "company", EntityID: company},
+			},
+		})
+		if err != nil {
+			t.Fatalf("logging %q: %v", subject, err)
+		}
+		return ids.UUID(logged.Id).String()
+	}
+	want := map[string]bool{}
+	for i := range 6 {
+		want[mail(jana, fmt.Sprintf("Pilot question %d", i), time.Duration(10+i)*24*time.Hour)] = true
+		mail(ruben, fmt.Sprintf("Invoice question %d", i), time.Duration(1+i)*time.Hour)
+	}
+	req := accountdraft.Request{ContactID: jana.String()}
+	opts, err := accountdraft.ViewOptions(req)
+	if err != nil {
+		t.Fatalf("the draft's read options: %v", err)
+	}
+	view, err := companySurfaceService(e).AssembleScoped(admin, companyIDOf(company), opts)
+	if err != nil {
+		t.Fatalf("assembling the draft's view: %v", err)
+	}
+	in, err := accountdraft.FromView(view, req)
+	if err != nil {
+		t.Fatalf("folding the draft's input: %v", err)
+	}
+	got := recentAccountIDs(in.Recent)
+	if len(got) != len(want) {
+		t.Fatalf("the draft read %d items, want Jana's %d", len(got), len(want))
+	}
+	for id := range want {
+		if !got[id] {
+			t.Errorf("Jana's mail %s fell off the draft behind newer colleague mail", id)
+		}
 	}
 }
 

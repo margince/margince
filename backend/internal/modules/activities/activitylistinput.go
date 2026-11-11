@@ -159,7 +159,7 @@ type ListActivitiesInput struct {
 	// before the limit, for a reader of correspondence such as a brief.
 	WrittenByHuman bool
 	// PartyContactID keeps only the rows this contact is a party to
-	// (contactIsPartySQL), before the limit, for a draft written to them.
+	// (ContactIsPartySQL), before the limit, for a draft written to them.
 	// Nil leaves the read unnarrowed.
 	PartyContactID *ids.ContactID
 	// OccurredAfter / OccurredBefore bound the timeline to a range: the

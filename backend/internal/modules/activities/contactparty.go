@@ -10,10 +10,10 @@ import "github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 // by a row.
 const visiblePartyRolesSQL = `('from', 'to', 'cc', 'organizer', 'attendee')`
 
-// contactIsPartySQL admits an activity the contact is a visible party to, by
-// the rule WithContactRole reads. A link is not enough: a thread is linked to
-// everybody it concerns. An unstated copy row is evidence, not a party.
-func contactIsPartySQL(contact string) string {
+// ContactIsPartySQL admits an activity, aliased `a`, the contact is a visible
+// party to, by the rule WithContactRole reads. A link is not enough: a thread
+// is linked to everybody it concerns. An unstated copy row is evidence only.
+func ContactIsPartySQL(contact string) string {
 	return `EXISTS (SELECT 1 FROM activity_participant ap
 		 WHERE ap.activity_id = a.id AND ap.role IN ` + visiblePartyRolesSQL + `
 		   AND ap.response IS DISTINCT FROM 'declined'

@@ -165,9 +165,9 @@ func NewService(view Assembler, lane Completer) *Service {
 	return &Service{view: view, lane: lane, envelope: draftfloor.NewResolver()}
 }
 
-// ViewOptions is the 360 read one draft is folded from. The timeline keeps
-// only the rows a human wrote and the rows the recipient is a party to, both
-// before its cap.
+// ViewOptions is the 360 read one draft is folded from. The timeline and the
+// last-touch dates keep only rows the recipient is a party to, and the open
+// tasks only theirs. The timeline also keeps only rows a human wrote.
 //
 // The recipient narrowing is a privacy rule. A colleague's mail to us
 // from the same company is not the recipient's conversation. A folded item does

@@ -189,7 +189,7 @@ func timelineNarrowings(in ListActivitiesInput, reminders string, arg func(any) 
 		where = append(where, activityLive)
 	}
 	if in.PartyContactID != nil {
-		where = append(where, contactIsPartySQL(sprintf("$%d", arg(*in.PartyContactID))))
+		where = append(where, ContactIsPartySQL(sprintf("$%d", arg(*in.PartyContactID))))
 	}
 	if in.SourceActivityID != nil {
 		where = append(where, sprintf("a.kind = 'task' AND a.source_activity_id = $%d", arg(*in.SourceActivityID)))
