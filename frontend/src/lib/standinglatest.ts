@@ -17,8 +17,8 @@ type Activity = components["schemas"]["Activity"];
 const SAYS_NOTHING = new Set(["calendar", "sending_system", "bulk"]);
 
 /**
- * The newest thing said on the record, from the timeline its page already
- * read: a note, the notes of a call or meeting held, or a message's own text.
+ * The newest thing said on the record, read off the timeline its page holds.
+ * That is a note, the notes of a call or meeting held, or a message's text.
  * A task is a promise, not a state, and withheld or noise rows say nothing a
  * reader may see. Undefined when nothing on the page says anything.
  */
