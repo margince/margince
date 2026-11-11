@@ -3859,6 +3859,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "standing.title": "Tình hình · {date}",
   "standing.noteMore": "Xem thêm",
   "standing.noteLess": "Thu gọn",
+  "standing.latest.title": "Mới nhất",
+  "standing.latest.open": "Mở trong Lịch sử",
   "standing.sources.records": "Từ dữ liệu CRM",
   "standing.sources.model_one": "Margince · {count} nguồn",
   "standing.sources.model_other": "Margince · {count} nguồn",
