@@ -2,10 +2,23 @@
 import "@testing-library/jest-dom/vitest";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
+import { en } from "../../i18n/en";
+import { listsMe, shortlist } from "../../testing/lists.fixtures";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../../testing/story-utils";
 import { CompanyRail } from "./companyrail";
 
 // The Source row under Registration says who wrote the record, in the kind of
@@ -166,6 +179,47 @@ describe("a record an agent created", () => {
     renderRail({ ...COMPANY, captured_by: AGENT });
 
     await waitFor(() => expect(sourceText()).toBe("Automated by an agent"));
+  });
+});
+
+describe("the Lists group", () => {
+  function serve(me: () => Response, onLists: readonly unknown[] = []) {
+    installFetchStub({
+      "GET /me": me,
+      [`GET /records/company/${COMPANY.id}/lists`]: () =>
+        jsonResponse({ data: onLists }),
+    });
+    render(
+      <StoryProviders>
+        <CompanyRail company={COMPANY} loading={false} />
+      </StoryProviders>,
+    );
+  }
+
+  const group = async () =>
+    (
+      await screen.findByRole("heading", { name: en["lists.record.title"] })
+    ).closest("section") as HTMLElement;
+
+  it("offers Add to Shortlist and every list while the company is on none", async () => {
+    serve(listsMe(true));
+    const lists = within(await group());
+    expect(
+      await lists.findByRole("button", { name: en["lists.addToShortlist"] }),
+    ).toBeInTheDocument();
+    expect(
+      lists.getByRole("link", { name: en["lists.record.allLists"] }),
+    ).toHaveAttribute("href", "/#/filters/lists");
+    expect(lists.queryByRole("combobox")).toBeNull();
+  });
+
+  it("keeps the lists it is on beside the verbs", async () => {
+    serve(listsMe(true), [shortlist]);
+    const lists = within(await group());
+    expect(await lists.findByText(shortlist.name)).toBeInTheDocument();
+    expect(
+      lists.getByRole("button", { name: en["lists.addToShortlist"] }),
+    ).toBeInTheDocument();
   });
 });
 

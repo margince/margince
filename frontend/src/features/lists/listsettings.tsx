@@ -12,6 +12,7 @@ import { useT } from "../../i18n";
 import { type List, useUpdateList } from "../../lib/lists.queries";
 import { problemMessageOf } from "../../lib/problem";
 import { useMe } from "../../lib/session";
+import { ownedByReader } from "./library";
 import { ListRuleUses, ruleUsesOf } from "./listrules";
 import { type ListAudience, ListAudienceFields } from "./listsharing";
 
@@ -86,7 +87,7 @@ export function ListSettingsAction({ list }: Readonly<{ list: List }>) {
         <ListAudienceFields
           value={audience}
           onChange={setAudience}
-          ownerIsReader={list.owner_id === me.data?.user.id}
+          ownerIsReader={ownedByReader(list, me.data?.user.id)}
         />
         <ListRuleUses
           rules={ruleUsesOf(list)}
