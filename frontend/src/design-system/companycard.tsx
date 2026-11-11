@@ -33,8 +33,8 @@ export function CompanyCard({
   children?: ReactNode;
   // The verbs, revealed on hover or focus; use an `OverflowMenu`.
   actions?: ReactNode;
-  // `track` draws a run of cards as one timeline: no frame, and a rule joining
-  // each mark to the next, for a list read in date order.
+  // `track` draws a run of cards as one timeline. It drops the frame and joins
+  // each mark to the next.
   layout?: "card" | "track";
 }>) {
   return (

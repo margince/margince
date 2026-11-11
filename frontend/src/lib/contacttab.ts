@@ -11,18 +11,9 @@ import type { Route } from "./router";
 // typed on `ContactTab`, so the next rename fails to compile instead.
 
 /**
- * The tabs, in the concept's order (§5.4). URL-addressable, so a tab
- * survives a reload and can be linked to.
- *
- * Activity and History are ONE tab, as they are on the account page: what was
- * said to a contact and what was changed about them are one chronology to the
- * contact reading them, and the filter above the list is what separates them.
- *
- * Companies is where they work and worked, the mirror of the account's
- * Contacts tab. Network, drawn as "Relationships", follows: who else this contact
- * reaches. It is a tab rather than an overview card because its
- * answer is a working surface — a reader interrogates the routes and the
- * seats — and the overview stack is a glance.
+ * The tabs, in strip order, each URL-addressable. History holds both what was
+ * said and what changed. Companies mirrors the account's Contacts tab.
+ * Network is drawn as "Relationships" and keeps its id so old links hold.
  */
 export const CONTACT_TABS = [
   "overview",

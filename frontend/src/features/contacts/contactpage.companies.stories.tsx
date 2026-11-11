@@ -9,8 +9,8 @@ import { ContactPageV2 } from "./contactpage";
 import { page, populated, type View } from "./contactpage.fixtures";
 import "./contact360.css";
 
-// The contact's Companies tab on the whole page: where they work and worked,
-// drawn as one timeline, and the same tab for a contact with no company.
+// The contact's Companies tab on the whole page, as one timeline. The last
+// story is a contact with no company.
 
 const meta: Meta = { title: "Records/Contact 360/Companies tab" };
 export default meta;
