@@ -171,7 +171,10 @@ The sync records each arrival in its cursor and reports the delete 14 days later
 
 When the 14 days end, the sync looks the message up by its id.
 A restore can change that id, so a 404 leads to a search on its `internetMessageId`.
-A copy found outside that folder is kept, because the owner brought it back.
+Only a copy found in that folder is deleted from Margince.
+
+A copy found in another folder is kept, and so is a message the search cannot find.
+The search does not reach the archive, so a restore there looks like a message with no copy.
 A failed lookup waits for the next sync.
 If the delta of that folder fails, a listing of at most 500 ids takes its place.
 

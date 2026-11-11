@@ -83,6 +83,7 @@ func TestAHardDeletedMessageIsPurgedOnlyAfterTheHold(t *testing.T) {
 			// folder tombstone, which the client reports as nothing.
 			m.day(0)
 			m.api.deletionsIDs = []string{"m1"}
+			m.api.whereIs = map[string]string{"m1": deletionsFolderID}
 			m.day(tc.arriveDay)
 			m.day(tc.arriveDay + 13)
 			if got := m.purged(); len(got) != 0 {
@@ -153,7 +154,7 @@ func TestARestoreWithinTheHoldKeepsTheMessage(t *testing.T) {
 	})
 }
 
-func TestAPendingMessageWhoseIDStopsResolvingIsPurgedOnlyIfGoneEverywhere(t *testing.T) {
+func TestAPendingMessageWhoseIDStopsResolvingIsPurgedOnlyWhenFoundInDeletions(t *testing.T) {
 	for _, tc := range []struct {
 		name     string
 		copiesIn []string
@@ -164,7 +165,7 @@ func TestAPendingMessageWhoseIDStopsResolvingIsPurgedOnlyIfGoneEverywhere(t *tes
 		{"restored, then moved to the Online Archive under a new id", []string{"folder-archive"}, nil, false, false},
 		{"one copy in Deletions and one kept in Inbox", []string{deletionsFolderID, inboxFolderID}, nil, false, false},
 		{"found only in Deletions under a new id", []string{deletionsFolderID}, nil, true, false},
-		{"gone from the whole mailbox", nil, nil, true, false},
+		{"found nowhere, as a restore to the Online Archive reads", nil, nil, false, false},
 		{"the search fails", nil, ErrUnreachable, false, true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -264,6 +265,7 @@ func TestAFailedLookupKeepsThePurgePending(t *testing.T) {
 		t.Fatalf("purged %v with %v pending after a failed lookup, want nothing purged and m1 pending", got, m.pending())
 	}
 	m.api.lookupErrIDs = nil
+	m.api.whereIs = map[string]string{"m1": deletionsFolderID}
 	m.day(15)
 	if got := m.purged(); len(got) != 1 {
 		t.Fatalf("purged %v once the lookup answered, want m1", got)
@@ -309,6 +311,7 @@ func TestAFailingDeletionsDeltaFallsBackToABoundedListing(t *testing.T) {
 	if _, held := m.pending()["m1"]; !held || len(m.pending()) != 1 {
 		t.Fatalf("pending %v, want only the new arrival m1", m.pending())
 	}
+	m.api.whereIs = map[string]string{"m1": deletionsFolderID}
 	m.day(15)
 	if got := m.purged(); len(got) != 1 || got[0] != "m1" {
 		t.Fatalf("purged %v, want m1", got)
@@ -349,6 +352,7 @@ func TestAFailedPurgeFailsTheSync(t *testing.T) {
 	m := newDeletionMailbox(t)
 	m.api.deletionsIDs = []string{"m1"}
 	m.day(0)
+	m.api.whereIs = map[string]string{"m1": deletionsFolderID}
 	m.sink.err = errors.New("the database refused")
 	c := pinnedConn(m.api)
 	c.now = func() time.Time { return pinned.Add(deletionHold) }

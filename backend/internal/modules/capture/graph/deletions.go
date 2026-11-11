@@ -177,10 +177,10 @@ func (c *Connector) purgeDeleted(ctx context.Context, access string, state *curs
 	return nil
 }
 
-// purgeProof looks the message up by its id, then by its internetMessageId:
-// a restore, such as one to the Online Archive, can change the id. Only a
-// find in Deletions, or no copy outside it, proves the deletion. With no
-// internetMessageId a 404 proves nothing, so the message is kept.
+// purgeProof looks the message up by its id, then by its internetMessageId,
+// because a restore can change the id. Only a copy found in Deletions proves
+// the deletion. A copy found nowhere is kept: the Online Archive is outside
+// this search, so a restore there would read as gone.
 func (c *Connector) purgeProof(ctx context.Context, access, deletionsID, id string, entry pendingPurge) purgeVerdict {
 	folder, found, err := c.api.MessageFolder(ctx, access, id)
 	switch {
@@ -195,7 +195,7 @@ func (c *Connector) purgeProof(ctx context.Context, access, deletionsID, id stri
 	if err != nil {
 		return purgeRetry
 	}
-	if slices.ContainsFunc(folders, func(f string) bool { return f != deletionsID }) {
+	if len(folders) == 0 || slices.ContainsFunc(folders, func(f string) bool { return f != deletionsID }) {
 		return purgeCancel
 	}
 	return purgeReport
