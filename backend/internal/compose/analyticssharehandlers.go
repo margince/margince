@@ -197,6 +197,10 @@ func (h analyticsShareHandlers) serveSnapshot(
 		frame.Period, share.Scope, shared.Readings, frame.BaseCurrency, frame.TakenAt)
 	out.Readings.SelfCorrecting = frame.SelfCorrecting
 	out.Readings.ContributionsLimited = &frozen.Limited
+	if frozen.Limited {
+		reason := readerCoverageCopy(ctx, tx).Say(reportingCoverageWords.IndividualOff)
+		out.Readings.ContributionsLimitedReason = &reason
+	}
 	out.Withheld = shared.Withheld
 	// A snapshot frozen before the landing was kept states none.
 	if frame.LandingMeasure == nil {

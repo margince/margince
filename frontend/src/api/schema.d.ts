@@ -45161,6 +45161,8 @@ export interface components {
             workflow: "handoff" | "qualification";
             /** @description Individual performance is off and these figures would show one colleague's work, so `meetings` and `handoffs` are absent. */
             withheld: boolean;
+            /** @description Present when `withheld` is true: the sentence that says why, in the reader's language. It is the `coverage.reason` a reporting chart withheld by the same rule carries. */
+            withheld_reason?: string;
             /** @description A count of rounds below this is too small to compare with another. Show its size, not a rate. */
             small_sample_below: number;
             meetings?: components["schemas"]["SdrTeamMeetings"];
@@ -46860,6 +46862,8 @@ export interface components {
             range_high_minor?: number;
             /** @description True when `contributions` holds only the caller's own deals because the installation switched off individual performance and at least one row was withheld. The totals still include colleagues' deals. On a shared snapshot it says the same of the rows its CSV export holds. */
             contributions_limited?: boolean;
+            /** @description Present when `contributions_limited` is true: the sentence that says why, in the reader's language. It is the `coverage.reason` an owner chart limited by the same switch carries. */
+            contributions_limited_reason?: string;
             /** @description Present only when asked for with `contributions=true`: the deals behind the won and open readings, ordered by deal id, limited to those the caller may read. */
             contributions?: components["schemas"]["ForecastContribution"][];
         };

@@ -60,38 +60,62 @@ func editionCSV(edition crmcontracts.ReportingEdition) ([]byte, error) {
 }
 
 func reportingCSVRows(evaluation crmcontracts.ReportingEvaluation) [][]string {
-	rows := [][]string{{"metric", "block", "label", extractionValueKey, reportingTarget, "comparison", "upper", "unit", reportingCurrency, "context", "coverage", "captured_at"}}
-	appendRow := func(metric, block, label string, value, target, comparison, upper *float64, unit, context, status string) {
+	rows := [][]string{{"metric", "block", "label", extractionValueKey, reportingTarget, "comparison", "upper", "unit", reportingCurrency, "context", "coverage", "withheld", "coverage_reason", "captured_at"}}
+	appendRow := func(metric, block, label string, value, target, comparison, upper *float64, unit, context string, coverage csvCoverage) {
 		// A count or a duration has no currency; naming one would read as money.
 		currency := ""
 		if unit == reportingMoney || unit == evaluation.Context.Currency {
 			unit, currency = reportingMinorUnits, evaluation.Context.Currency
 		}
-		rows = append(rows, []string{metric, block, formulacell.Guard(label), reportingCSVNumber(value), reportingCSVNumber(target), reportingCSVNumber(comparison), reportingCSVNumber(upper), unit, currency, context, status, evaluation.Context.EvaluatedAt.Format(time.RFC3339Nano)})
+		rows = append(rows, []string{metric, block, formulacell.Guard(label), reportingCSVNumber(value), reportingCSVNumber(target), reportingCSVNumber(comparison), reportingCSVNumber(upper), unit, currency, context, coverage.status, strconv.FormatBool(coverage.withheld), coverage.reason, evaluation.Context.EvaluatedAt.Format(time.RFC3339Nano)})
 	}
 	for _, metric := range evaluation.Metrics {
-		appendRow(string(metric.Id), "headline", reportingMetricName(evaluation.Context, metric.Id), metric.Value, metric.Target, nil, nil, metric.Unit, metric.Evidence.ContextId, string(metric.Coverage.Status))
+		covered := csvCoverageOf(metric.Coverage)
+		appendRow(string(metric.Id), "headline", reportingMetricName(evaluation.Context, metric.Id), metric.Value, metric.Target, nil, nil, metric.Unit, metric.Evidence.ContextId, covered)
 		if comparison := metric.TargetComparison; comparison != nil {
 			for _, figure := range targetComparisonCSV(*comparison, metric.Unit) {
-				appendRow(string(metric.Id), reportingTargetComparisonBlock, figure.label, figure.value, nil, nil, nil, figure.unit, figure.context, figure.status)
+				appendRow(string(metric.Id), reportingTargetComparisonBlock, figure.label, figure.value, nil, nil, nil, figure.unit, figure.context, covered.as(figure.status))
 			}
 		}
 		for _, figure := range forecastBasisCSV(metric) {
-			appendRow(string(metric.Id), reportingForecastBasisBlock, figure.label, figure.value, nil, nil, nil, metric.Unit, figure.context, string(metric.Coverage.Status))
+			appendRow(string(metric.Id), reportingForecastBasisBlock, figure.label, figure.value, nil, nil, nil, metric.Unit, figure.context, covered)
 		}
 	}
 	for _, chart := range evaluation.Charts {
+		covered := csvCoverageOf(chart.Coverage)
 		for _, point := range chart.Points {
-			appendRow(string(chart.Metric), string(chart.Kind), point.Label, point.Value, point.Target, point.Comparison, point.Upper, chart.Unit, chart.ContextId, string(point.Status))
+			appendRow(string(chart.Metric), string(chart.Kind), point.Label, point.Value, point.Target, point.Comparison, point.Upper, chart.Unit, chart.ContextId, covered.as(string(point.Status)))
 		}
 		if chart.Opening != nil {
-			appendRow(string(chart.Metric), string(chart.Kind), "opening", chart.Opening, nil, nil, nil, chart.Unit, chart.ContextId, string(chart.Coverage.Status))
+			appendRow(string(chart.Metric), string(chart.Kind), "opening", chart.Opening, nil, nil, nil, chart.Unit, chart.ContextId, covered)
 		}
 		if chart.Closing != nil {
-			appendRow(string(chart.Metric), string(chart.Kind), "closing", chart.Closing, nil, nil, nil, chart.Unit, chart.ContextId, string(chart.Coverage.Status))
+			appendRow(string(chart.Metric), string(chart.Kind), "closing", chart.Closing, nil, nil, nil, chart.Unit, chart.ContextId, covered)
 		}
 	}
 	return rows
+}
+
+// csvCoverage is what one row says of its figure's coverage. The withheld flag
+// and reason are the metric's or chart's, so an owner chart holding only the
+// reader's row says why on every row.
+type csvCoverage struct {
+	status, reason string
+	withheld       bool
+}
+
+func csvCoverageOf(coverage crmcontracts.ReportingCoverage) csvCoverage {
+	out := csvCoverage{status: string(coverage.Status), withheld: coverage.Withheld}
+	if coverage.Reason != nil {
+		out.reason = *coverage.Reason
+	}
+	return out
+}
+
+// as is the same coverage for a figure that carries its own status.
+func (c csvCoverage) as(status string) csvCoverage {
+	c.status = status
+	return c
 }
 
 func encodeReportingCSV(rows [][]string) ([]byte, error) {

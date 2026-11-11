@@ -49096,8 +49096,11 @@ type ForecastReadings struct {
 	Contributions *[]ForecastContribution `json:"contributions,omitempty"`
 
 	// ContributionsLimited True when `contributions` holds only the caller's own deals because the installation switched off individual performance and at least one row was withheld. The totals still include colleagues' deals. On a shared snapshot it says the same of the rows its CSV export holds.
-	ContributionsLimited *bool         `json:"contributions_limited,omitempty"`
-	CurrentCall          *ForecastCall `json:"current_call,omitempty"`
+	ContributionsLimited *bool `json:"contributions_limited,omitempty"`
+
+	// ContributionsLimitedReason Present when `contributions_limited` is true: the sentence that says why, in the reader's language. It is the `coverage.reason` an owner chart limited by the same switch carries.
+	ContributionsLimitedReason *string       `json:"contributions_limited_reason,omitempty"`
+	CurrentCall                *ForecastCall `json:"current_call,omitempty"`
 
 	// EligibleCount Deals considered, priced or not.
 	EligibleCount int `json:"eligible_count"`
@@ -62133,6 +62136,9 @@ type SdrTeamReview struct {
 
 	// WithheldFigures The figures this reader may not see, each needing its own grant of the requesting reader. `meetings` needs activity read and leaves out `meetings` and each `meetings_held`. `handoffs` needs lead read, where handoffs are kept, in either workflow, and leaves out `handoffs` and each member's handoff counts. `leads` needs lead read and leaves out `qualified` and `unanswered`. `qualified` and `unanswered` each leave out that one figure when a field mask withholds a column its reading reads, on some leads or on all: a count over the leads left would read as measured. `targets` needs target read, lead read and an unmasked `qualified`, and leaves out `member_targets` and each `target`. A figure absent and not named here is not measured for this review: a target nobody set, or a target in handoff mode.
 	WithheldFigures []SdrTeamReviewWithheldFigures `json:"withheld_figures"`
+
+	// WithheldReason Present when `withheld` is true: the sentence that says why, in the reader's language. It is the `coverage.reason` a reporting chart withheld by the same rule carries.
+	WithheldReason *string `json:"withheld_reason,omitempty"`
 
 	// Workflow `handoff` when the reporting framework is set up for SDR teams; otherwise `qualification`, and `handoffs` is absent.
 	Workflow SdrTeamReviewWorkflow `json:"workflow"`

@@ -488,7 +488,10 @@ describe("Team prospecting", () => {
     ).toBe(false);
   });
 
+  // The reason is the server's sentence, the one a chart withheld by the same
+  // floor carries. One no copy holds proves the page words none itself.
   it("withholds the figures a lone colleague makes up", async () => {
+    const reason = "The server's one sentence for the small-group floor.";
     open(TEAM_ADDRESS, teamEvaluation, {
       template: "sdr",
       // Offered and answered, so only the withheld team keeps it away.
@@ -496,6 +499,7 @@ describe("Team prospecting", () => {
       team: served(
         teamReview({
           withheld: true,
+          withheld_reason: reason,
           handoffs: undefined,
           meetings: undefined,
           members: [],
@@ -503,11 +507,7 @@ describe("Team prospecting", () => {
         }),
       ),
     });
-    expect(
-      await screen.findByText(
-        /taking another team’s total from it would leave fewer than two/,
-      ),
-    ).toBeVisible();
+    expect(await screen.findByText(reason)).toBeVisible();
     expect(
       screen.queryByRole("region", { name: "Where the team stands" }),
     ).toBeNull();

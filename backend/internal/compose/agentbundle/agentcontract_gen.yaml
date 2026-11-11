@@ -43213,6 +43213,7 @@ components:
           enum: [handoff, qualification]
           description: '`handoff` when the reporting framework is set up for SDR teams; otherwise `qualification`, and `handoffs` is absent.'
         withheld: {type: boolean, description: 'Individual performance is off and these figures would show one colleague''s work, so `meetings` and `handoffs` are absent.'}
+        withheld_reason: {type: string, description: 'Present when `withheld` is true: the sentence that says why, in the reader''s language. It is the `coverage.reason` a reporting chart withheld by the same rule carries.'}
         small_sample_below:
           type: integer
           minimum: 1
@@ -45513,6 +45514,10 @@ components:
           type: boolean
           description: >-
             True when `contributions` holds only the caller's own deals because the installation switched off individual performance and at least one row was withheld. The totals still include colleagues' deals. On a shared snapshot it says the same of the rows its CSV export holds.
+        contributions_limited_reason:
+          type: string
+          description: >-
+            Present when `contributions_limited` is true: the sentence that says why, in the reader's language. It is the `coverage.reason` an owner chart limited by the same switch carries.
         contributions:
           type: array
           items: {$ref: '#/components/schemas/ForecastContribution'}

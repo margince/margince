@@ -77,10 +77,11 @@ func forecastToolReader(pool *pgxpool.Pool) agents.ForecastReader {
 			out = forecastToolResult(period, resolved, assembly.Readings, baseCurrency, at, assembly.Limited)
 			out.SelfCorrecting = &assembly.SelfCorrecting
 			if req.Contributions {
-				visible, limited, err := ForecastReaderContributions(ctx, tx, assembly.Readings.Contributions)
+				visible, reason, err := ForecastReaderContributions(ctx, tx, assembly.Readings.Contributions)
 				if err != nil {
 					return err
 				}
+				limited := reason != ""
 				out.ContributionsLimited = &limited
 				if out.Contributions, err = forecastContributionsToTool(visible); err != nil {
 					return err

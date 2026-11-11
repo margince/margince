@@ -267,6 +267,10 @@ func TestIndividualPerformanceOffKeepsOnlyTheReadersOwnRows(t *testing.T) {
 		t.Fatalf("contributions_limited = %v over HTTP and %v over the tool, want true on both",
 			overHTTP.ContributionsLimited, overTool.ContributionsLimited)
 	}
+	// The page shows the sentence an owner chart limited by the same switch carries.
+	if why := overHTTP.ContributionsLimitedReason; why == nil || *why != reportingCoverageWords.IndividualOff.En {
+		t.Fatalf("contributions_limited_reason = %v, want the owner chart's sentence", why)
+	}
 }
 
 // A seller reading their own forecast with the switch off loses no row, so

@@ -999,8 +999,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "forecast.signal.closesNoStep_one":
     "Chốt sau {count} ngày, chưa đặt bước tiếp theo",
   "forecast.deals.limitedTitle": "Chỉ hiện giao dịch của bạn",
-  "forecast.deals.limited":
-    "Tổng có cả giao dịch của đồng nghiệp, được ẩn ở đây vì hiệu suất cá nhân đang tắt. Mỗi thành viên vẫn thấy giao dịch của chính họ.",
   "forecast.signal.closesNoStep_other":
     "Chốt sau {count} ngày, chưa đặt bước tiếp theo",
   "forecast.signal.closesTomorrow": "Chốt ngày mai, chưa đặt bước tiếp theo",
@@ -7972,8 +7970,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Tìm khách của nhóm xem một nhóm hoặc cả công ty. Hãy chọn ở phạm vi phía trên; công việc của một thành viên nằm trong Tìm khách của tôi.",
   "analytics.team.todaysMembers":
     "Các số liệu này theo nhóm hiện tại. Thành viên đã rời nhóm mang theo những gì họ đã làm trước đây, và thành viên mới mang theo phần của họ.",
-  "analytics.team.withheld":
-    "Hiệu suất của từng thành viên đang tắt. Một số liệu bị ẩn khi có ít hơn hai thành viên khác đóng góp, hoặc khi trừ đi tổng của một nhóm khác sẽ còn ít hơn hai thành viên.",
   "analytics.team.submitted": "Đã bàn giao",
   "analytics.team.accepted": "Được chấp nhận",
   "analytics.team.returned": "Được trả lại",
