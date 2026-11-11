@@ -15,8 +15,8 @@ import (
 	"go/parser"
 	"go/token"
 	"io"
+	"io/fs"
 	"os/exec"
-	"path/filepath"
 	"slices"
 	"strconv"
 	"strings"
@@ -113,30 +113,31 @@ func TestTaskCensusFindsConstantsButDoesNotReadCommentsOrRequires(t *testing.T) 
 	}
 }
 
+// currentTaskLiterals reads the whole compose tree, the same tree the released
+// side archives, so a task declared in a compose subpackage is counted.
 func currentTaskLiterals() ([]string, error) {
-	paths, err := filepath.Glob("internal/compose/*.go")
-	if err != nil {
-		return nil, err
-	}
-	if len(paths) == 0 {
-		return nil, errors.New("empty compose source census")
-	}
 	var out []string
-	for _, path := range paths {
-		if strings.HasSuffix(path, "_test.go") {
-			continue
+	files := 0
+	err := gatekit.WalkDir("internal/compose", func(path string, entry fs.DirEntry, err error) error {
+		if err != nil {
+			return err
 		}
+		if entry.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
+			return nil
+		}
+		files++
 		raw, err := gatekit.ReadFile(path)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		ids, err := sourceTaskIDs(string(raw))
-		if err != nil {
-			return nil, err
-		}
 		out = append(out, ids...)
+		return err
+	})
+	if err == nil && files == 0 {
+		err = errors.New("empty compose source census")
 	}
-	return out, nil
+	return out, err
 }
 
 func releasedTaskLiterals() ([]string, error) {

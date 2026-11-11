@@ -5,7 +5,7 @@
     "sites_best_partial": 0,
     "sites_best_stale": 7,
     "sites_absent": 0,
-    "scenarios": 311,
+    "scenarios": 312,
     "records": 355,
     "bindings": 16,
     "self_judged_records": 0
@@ -16743,6 +16743,12 @@
           "file": "backend/internal/compose/aicert/corpus/draft_reply/account_en_01.yaml"
         },
         {
+          "name": "an_unsigned_colleagues_mail_stays_out_of_an_account_draft",
+          "expects": "accepted",
+          "graded_by": "judge",
+          "file": "backend/internal/compose/aicert/corpus/draft_reply/account_other_contact_stays_out_02.yaml"
+        },
+        {
           "name": "another_contacts_mail_stays_out_of_an_account_draft",
           "expects": "accepted",
           "graded_by": "judge",
@@ -16759,7 +16765,7 @@
           "state": "stale",
           "band": "not_supported",
           "scenarios_measured": 0,
-          "scenarios_total": 2,
+          "scenarios_total": 3,
           "runs": 18,
           "passed": 18,
           "reliability": 1,
@@ -16771,8 +16777,11 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): account_first_touch_with_a_deal_in_flight, another_contacts_mail_stays_out_of_an_account_draft",
+          "stale_reason": "2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): account_first_touch_with_a_deal_in_flight, another_contacts_mail_stays_out_of_an_account_draft",
           "stale_cause": {
+            "case_changed": [
+              "another_contacts_mail_stays_out_of_an_account_draft"
+            ],
             "prompt_changed": [
               "account_first_touch_with_a_deal_in_flight",
               "another_contacts_mail_stays_out_of_an_account_draft"
@@ -16792,7 +16801,7 @@
           "state": "stale",
           "band": "supported_degraded",
           "scenarios_measured": 0,
-          "scenarios_total": 2,
+          "scenarios_total": 3,
           "runs": 3,
           "passed": 3,
           "reliability": 1,
@@ -16824,7 +16833,7 @@
           "state": "stale",
           "band": "supported_degraded",
           "scenarios_measured": 0,
-          "scenarios_total": 2,
+          "scenarios_total": 3,
           "runs": 3,
           "passed": 3,
           "reliability": 1,
@@ -16856,7 +16865,7 @@
           "state": "stale",
           "band": "not_supported",
           "scenarios_measured": 0,
-          "scenarios_total": 2,
+          "scenarios_total": 3,
           "runs": 18,
           "passed": 18,
           "reliability": 1,
@@ -16868,8 +16877,11 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): account_first_touch_with_a_deal_in_flight, another_contacts_mail_stays_out_of_an_account_draft",
+          "stale_reason": "2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): account_first_touch_with_a_deal_in_flight, another_contacts_mail_stays_out_of_an_account_draft",
           "stale_cause": {
+            "case_changed": [
+              "another_contacts_mail_stays_out_of_an_account_draft"
+            ],
             "prompt_changed": [
               "account_first_touch_with_a_deal_in_flight",
               "another_contacts_mail_stays_out_of_an_account_draft"
@@ -16889,7 +16901,7 @@
           "state": "stale",
           "band": "certified",
           "scenarios_measured": 0,
-          "scenarios_total": 2,
+          "scenarios_total": 3,
           "runs": 18,
           "passed": 18,
           "reliability": 1,
@@ -16901,8 +16913,11 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): account_first_touch_with_a_deal_in_flight, another_contacts_mail_stays_out_of_an_account_draft",
+          "stale_reason": "2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): account_first_touch_with_a_deal_in_flight, another_contacts_mail_stays_out_of_an_account_draft",
           "stale_cause": {
+            "case_changed": [
+              "another_contacts_mail_stays_out_of_an_account_draft"
+            ],
             "prompt_changed": [
               "account_first_touch_with_a_deal_in_flight",
               "another_contacts_mail_stays_out_of_an_account_draft"
@@ -16922,7 +16937,7 @@
           "state": "stale",
           "band": "not_supported",
           "scenarios_measured": 0,
-          "scenarios_total": 2,
+          "scenarios_total": 3,
           "runs": 3,
           "passed": 3,
           "reliability": 1,
@@ -16953,7 +16968,7 @@
           "state": "stale",
           "band": "supported_degraded",
           "scenarios_measured": 0,
-          "scenarios_total": 2,
+          "scenarios_total": 3,
           "runs": 6,
           "passed": 6,
           "reliability": 1,
@@ -16984,7 +16999,7 @@
           "state": "stale",
           "band": "supported_degraded",
           "scenarios_measured": 0,
-          "scenarios_total": 2,
+          "scenarios_total": 3,
           "runs": 6,
           "passed": 6,
           "reliability": 1,
@@ -17015,7 +17030,7 @@
           "state": "stale",
           "band": "supported_degraded",
           "scenarios_measured": 0,
-          "scenarios_total": 2,
+          "scenarios_total": 3,
           "runs": 3,
           "passed": 3,
           "reliability": 1,
@@ -17046,7 +17061,7 @@
           "state": "stale",
           "band": "supported_degraded",
           "scenarios_measured": 0,
-          "scenarios_total": 2,
+          "scenarios_total": 3,
           "runs": 3,
           "passed": 3,
           "reliability": 1,
@@ -17077,7 +17092,7 @@
           "state": "stale",
           "band": "certified",
           "scenarios_measured": 0,
-          "scenarios_total": 2,
+          "scenarios_total": 3,
           "runs": 21,
           "passed": 21,
           "reliability": 1,
@@ -17089,8 +17104,11 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): account_first_touch_with_a_deal_in_flight, another_contacts_mail_stays_out_of_an_account_draft",
+          "stale_reason": "2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): account_first_touch_with_a_deal_in_flight, another_contacts_mail_stays_out_of_an_account_draft",
           "stale_cause": {
+            "case_changed": [
+              "another_contacts_mail_stays_out_of_an_account_draft"
+            ],
             "prompt_changed": [
               "account_first_touch_with_a_deal_in_flight",
               "another_contacts_mail_stays_out_of_an_account_draft"
@@ -17110,7 +17128,7 @@
           "state": "stale",
           "band": "not_supported",
           "scenarios_measured": 0,
-          "scenarios_total": 2,
+          "scenarios_total": 3,
           "runs": 18,
           "passed": 18,
           "reliability": 1,
@@ -17122,8 +17140,11 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): account_first_touch_with_a_deal_in_flight, another_contacts_mail_stays_out_of_an_account_draft",
+          "stale_reason": "2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): account_first_touch_with_a_deal_in_flight, another_contacts_mail_stays_out_of_an_account_draft",
           "stale_cause": {
+            "case_changed": [
+              "another_contacts_mail_stays_out_of_an_account_draft"
+            ],
             "prompt_changed": [
               "account_first_touch_with_a_deal_in_flight",
               "another_contacts_mail_stays_out_of_an_account_draft"

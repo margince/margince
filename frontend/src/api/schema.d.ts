@@ -13439,7 +13439,8 @@ export interface paths {
          *     `as_of` stamps this request's RepeatableRead snapshot. It does not span separate
          *     `/digest`, `/brief` or `/magic` requests, or a multi-page Worklist walk.
          *     Frozen walk membership and freshness metadata do not share a database snapshot
-         *     across pages. Brief opening and snooze resurfacing use their own write transaction.
+         *     across pages. The read writes nothing: a snoozed brief item whose time has come is
+         *     judged at `as_of`, and only `GET /v1/brief` records the brief as opened.
          *     A lane the caller may not read is OMITTED and named in `lanes_omitted` rather
          *     than returned empty — "you may not see this" and "there is none" are different
          *     answers, and a queue that conflated them would tell a rep their day is clear.
@@ -14509,6 +14510,47 @@ export interface paths {
         get: operations["getLicenseEntitlement"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/installation/license/check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Re-read the installation's license token now (admin/ops).
+         * @description Runs the api's license re-check at once, instead of waiting for the daily one.
+         *     It re-reads the token where the deployment declares it and checks it OFFLINE
+         *     against the bundled validation module, the same path the daily re-check takes.
+         *     An operator who has swapped the token on the server presses this to see the new
+         *     license without waiting up to a day. A token file is read again; a token from the
+         *     environment (`MARGINCE_LICENSE`) is fixed when the process starts and changes
+         *     only with a restart.
+         *
+         *     It writes nothing and takes no token. Entering or replacing the token stays the
+         *     operator's job on the server. Only the api process that serves
+         *     this request re-checks; the worker and any other api replica keep their own
+         *     daily re-check.
+         *
+         *     The answer is the same body as `GET /installation/license`, read after the
+         *     re-check. A re-check that reached a verdict answers `200`, a refused license
+         *     included: `state` then says `rejected`. A token that could not be read, or a
+         *     module that could not run, is no verdict. The posture the process last resolved
+         *     stands, the fault goes to the server log, and the answer is `503`.
+         *
+         *     Gated on `installation_settings` update (admin and ops), the grant that guards
+         *     installation settings, and on `license` read, which the entitlement in the
+         *     answer needs. Human-only, like the entitlement read.
+         */
+        post: operations["checkLicenseNow"];
         delete?: never;
         options?: never;
         head?: never;
@@ -21088,7 +21130,11 @@ export interface paths {
         };
         /**
          * A team's week, frozen — what each member's week came to, and the one thing to raise.
-         * @description The team half of the weekly. `/worklist/team` answers what the team is carrying NOW,
+         * @deprecated
+         * @description Deprecated: no screen reads the team week. The operation stays callable through
+         *     the notice window in the API compatibility policy.
+         *
+         *     The team half of the weekly. `/worklist/team` answers what the team is carrying NOW,
          *     live and recomputed on every open; this answers what last week WAS, written once when
          *     the week closed, so two weeks can be compared and neither moves under the comparison.
          *
@@ -56934,6 +56980,11 @@ export interface components {
              *     rep who can only see their own work is never offered a switch that would 403.
              */
             scope_options: ("mine" | "unassigned" | "team" | "all")[];
+            /**
+             * @deprecated
+             * @description Deprecated: no screen opens the team week, and the operation it describes,
+             *     `GET /weekly-reviews/team`, is deprecated too. `GET /me` carries the same answer.
+             */
             team_week?: components["schemas"]["TeamWeekReach"];
             /**
              * @description The narrowing this read applied. The same vocabulary the query parameter takes.
@@ -82819,6 +82870,37 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+        };
+    };
+    checkLicenseNow: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The entitlement as the re-check resolved it. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LicenseEntitlement"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            /** @description The token could not be re-read, or the module could not run; the last posture stands. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
         };
     };
     getSeatUsage: {

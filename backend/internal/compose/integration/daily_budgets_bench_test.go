@@ -81,12 +81,12 @@ var DailyKnownIssues = []KnownIssue{
 
 // DailyResult is one row of a flow measured for one seat, as the gate judges it.
 type DailyResult struct {
-	Flow, Row, Seat string
-	Verdict         DailyVerdict
-	Issue           int
-	Status5xx       int
-	Status422       int
-	P95, Budget     time.Duration
+	Flow, Row, Seat  string
+	Verdict          DailyVerdict
+	Issue            int
+	Status5xx        int
+	Status422        int
+	P50, P95, Budget time.Duration
 	// Allow422 marks a flow whose query_too_broad refusal is the known issue itself.
 	Allow422 bool
 	Samples  int

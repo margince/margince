@@ -207,9 +207,11 @@ Notes on some tiers:
   counts as a decided `real`. The exception is an address that a channel connector stands behind:
   that names a contact, but it is not two-way mail.
 
-**After the transaction commits,** the contacts module creates the contact. This happens outside the
-transaction, so a failure there cannot lose the message. Failures are logged for the daily repair
-job.
+**At the end of the same transaction,** the contacts module creates the contact and files the
+message under it. No reader sees the message before it is filed, so the link does not move the Home
+cache's access fence. The step runs inside a savepoint, so a failure there undoes the contact and
+keeps the message. Failures are logged for the daily repair job. A channel record's contact is
+still created after the commit, in its own transaction.
 
 Creating a contact does **not** create their company. That is a separate question, and the answer
 comes from reading the web site of the domain (AI task `site_triage`).

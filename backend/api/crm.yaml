@@ -20307,7 +20307,8 @@ paths:
         `as_of` stamps this request's RepeatableRead snapshot. It does not span separate
         `/digest`, `/brief` or `/magic` requests, or a multi-page Worklist walk.
         Frozen walk membership and freshness metadata do not share a database snapshot
-        across pages. Brief opening and snooze resurfacing use their own write transaction.
+        across pages. The read writes nothing: a snoozed brief item whose time has come is
+        judged at `as_of`, and only `GET /v1/brief` records the brief as opened.
         A lane the caller may not read is OMITTED and named in `lanes_omitted` rather
         than returned empty — "you may not see this" and "there is none" are different
         answers, and a queue that conflated them would tell a rep their day is clear.
@@ -21821,6 +21822,51 @@ paths:
               schema: { $ref: '#/components/schemas/LicenseEntitlement' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+
+  /installation/license/check:
+    post:
+      tags: [Identity]
+      operationId: checkLicenseNow
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
+      x-agent-access: human-only
+      x-human-only-reason: security
+      summary: Re-read the installation's license token now (admin/ops).
+      description: |
+        Runs the api's license re-check at once, instead of waiting for the daily one.
+        It re-reads the token where the deployment declares it and checks it OFFLINE
+        against the bundled validation module, the same path the daily re-check takes.
+        An operator who has swapped the token on the server presses this to see the new
+        license without waiting up to a day. A token file is read again; a token from the
+        environment (`MARGINCE_LICENSE`) is fixed when the process starts and changes
+        only with a restart.
+
+        It writes nothing and takes no token. Entering or replacing the token stays the
+        operator's job on the server. Only the api process that serves
+        this request re-checks; the worker and any other api replica keep their own
+        daily re-check.
+
+        The answer is the same body as `GET /installation/license`, read after the
+        re-check. A re-check that reached a verdict answers `200`, a refused license
+        included: `state` then says `rejected`. A token that could not be read, or a
+        module that could not run, is no verdict. The posture the process last resolved
+        stands, the fault goes to the server log, and the answer is `503`.
+
+        Gated on `installation_settings` update (admin and ops), the grant that guards
+        installation settings, and on `license` read, which the entitlement in the
+        answer needs. Human-only, like the entitlement read.
+      responses:
+        '200':
+          description: The entitlement as the re-check resolved it.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LicenseEntitlement' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '503':
+          description: The token could not be re-read, or the module could not run; the last posture stands.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
 
   /installation/seat-usage:
     get:
@@ -31290,9 +31336,15 @@ paths:
     get:
       tags: [Brief]
       operationId: getTeamWeeklyReview
+      # No screen reads the team week any more. The operation stays for
+      # clients built against it until its notice window ends.
+      deprecated: true
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       summary: A team's week, frozen — what each member's week came to, and the one thing to raise.
       description: |
+        Deprecated: no screen reads the team week. The operation stays callable through
+        the notice window in the API compatibility policy.
+
         The team half of the weekly. `/worklist/team` answers what the team is carrying NOW,
         live and recomputed on every open; this answers what last week WAS, written once when
         the week closed, so two weeks can be compared and neither moves under the comparison.
@@ -76814,7 +76866,12 @@ components:
             The scopes this reader may ask for, narrowest first — derived from their own
             row scope. A client draws a control only when there is more than one, so a
             rep who can only see their own work is never offered a switch that would 403.
-        team_week: { $ref: '#/components/schemas/TeamWeekReach' }
+        team_week:
+          $ref: '#/components/schemas/TeamWeekReach'
+          deprecated: true
+          description: |
+            Deprecated: no screen opens the team week, and the operation it describes,
+            `GET /weekly-reviews/team`, is deprecated too. `GET /me` carries the same answer.
         filter: { type: string, enum: [all, urgent, customer_waiting, leads, prospecting, deals_at_risk, meetings, tasks, decisions, relationships, system, except_decisions, changed_since_brief, upcoming], x-extensible-enum: true, description: 'The narrowing this read applied. The same vocabulary the query parameter takes.' }
         view: { type: string, enum: [today, decisions, system], x-extensible-enum: true, description: 'The view this read answered, after a `filter` alias was read as its view. Absent when the read named no view.' }
         summary: { $ref: '#/components/schemas/WorklistSummary' }

@@ -121,7 +121,7 @@ type InternalEventBookingPageUpdated struct {
 // Counts only, no prose and no record data. What a rep's morning HOLDS is already recoverable from the run itself, and what they DID with it from the audit rows brief_item marks write. This payload answers one question the other two cannot: whether they came and looked.
 // Entity-less, and that is what keeps it internal. Every catalogued type that is NOT in the entity-less pipeline class is subscribable by an outside consumer — publicevents_test.go derives the set exactly as webhooks.validateEventTypes does — so naming brief_run here would make "this rep opened their Brief at 06:42" a webhook anyone may select. The run id stays on the system_log row the emit writes, where it is attributable without being deliverable.
 type InternalEventBriefOpened struct {
-	// Items How many items the run held when it was opened, AFTER expired snoozes resurfaced — what the rep actually saw, not what the night ranked. Zero is a real and interesting reading: a quiet morning that was still opened.
+	// Items How many items the GET /v1/brief response showed, with an expired snooze counted as back — what the rep actually saw, not what the night ranked. Zero is a real and interesting reading: a quiet morning that was still opened.
 	Items int `json:"items" minimum:"0"`
 
 	// LocalDay The run's own local day, which is its identity — one run per rep per day. Carried so a consumer can tell today's first open from a re-open of yesterday's without reaching back into brief_run.
