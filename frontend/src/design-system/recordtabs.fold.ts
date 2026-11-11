@@ -7,7 +7,7 @@
 import {
   type FocusEvent,
   type RefObject,
-  useLayoutEffect,
+  useEffect,
   useMemo,
   useRef,
   useSyncExternalStore,
@@ -113,12 +113,23 @@ export function useFocusKeptOnUnfold(
   open: string,
 ) {
   const inMore = useRef(false);
-  useLayoutEffect(() => {
-    const lost = document.activeElement === document.body;
-    if (!idle || !inMore.current || !lost) return;
+  // Passive, so it runs after the closing menu's own focus restore.
+  useEffect(() => {
+    const element = strip.current;
+    if (!idle || !inMore.current || !element) return;
+    // Focus is lost on the page, on a removed entry, or on the unseen trigger
+    // a closing menu hands it back to.
+    const active = document.activeElement;
+    const more = element.querySelector(".recordtabs-more");
+    const lost =
+      !active ||
+      active === document.body ||
+      !active.isConnected ||
+      more?.contains(active);
+    if (!lost) return;
     inMore.current = false;
-    strip.current
-      ?.querySelector<HTMLElement>(`[data-tab="${CSS.escape(open)}"]`)
+    element
+      .querySelector<HTMLElement>(`[data-tab="${CSS.escape(open)}"]`)
       ?.focus();
   }, [strip, idle, open]);
   return {

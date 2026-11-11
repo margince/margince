@@ -173,13 +173,15 @@ describe("RecordTabs fades only an end that hides tabs", () => {
 // When the row grows wide enough for every tab, "More" goes. A keyboard on it
 // lands on the open tab, not on the page.
 describe("RecordTabs keeps focus when the folded tabs come back", () => {
-  it("moves focus from More to the open tab", () => {
-    let resized: () => void = () => undefined;
+  // Two tabs on a row too narrow for both. The returned call widens it.
+  function foldedStrip() {
+    // The open menu watches its own size too, so every observer hears a resize.
+    const watchers: (() => void)[] = [];
     vi.stubGlobal(
       "ResizeObserver",
       class {
         constructor(changed: () => void) {
-          resized = changed;
+          watchers.push(changed);
         }
         observe() {}
         disconnect() {}
@@ -191,12 +193,32 @@ describe("RecordTabs keeps focus when the folded tabs come back", () => {
       () => room,
     );
     strip();
+    return () => {
+      room = 400;
+      act(() => {
+        for (const changed of watchers) changed();
+      });
+    };
+  }
+
+  it("moves focus from More to the open tab", () => {
+    const grow = foldedStrip();
     const more = screen.getByRole("button", { name: "More sections" });
     expect(screen.queryByRole("button", { name: "Contacts" })).toBeNull();
 
     act(() => more.focus());
-    room = 400;
-    act(() => resized());
+    grow();
+
+    expect(screen.getByRole("button", { name: "Overview" })).toHaveFocus();
+  });
+
+  it("moves focus from an entry in the open menu to the open tab", () => {
+    const grow = foldedStrip();
+    const more = screen.getByRole("button", { name: "More sections" });
+    act(() => more.focus());
+    fireEvent.click(more);
+    act(() => screen.getByRole("button", { name: "Contacts" }).focus());
+    grow();
 
     expect(screen.getByRole("button", { name: "Overview" })).toHaveFocus();
   });
