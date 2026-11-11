@@ -15471,30 +15471,28 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "oauthApp.microsoft.save": "Microsoft-App speichern",
   "oauthApp.drawer.google.title": "Google-App einrichten",
   "oauthApp.drawer.google.intro":
-    "Zwei Schritte in der Google Cloud Console, dann fügst du das Ergebnis hier ein. Du brauchst Zugriff auf das Google-Cloud-Projekt deines Unternehmens.",
+    "Ein paar Schritte in der Google Cloud Console, dann fügst du das Ergebnis hier ein. Du brauchst Zugriff auf das Google-Cloud-Projekt deines Unternehmens.",
   "oauthApp.drawer.google.value":
     "Eine App für das ganze Unternehmen. Sobald sie gespeichert ist, können alle bei {company} Gmail und Google Kalender verbinden, und „Weiter mit Google“ kann auf der Anmeldeseite erscheinen.",
   "oauthApp.drawer.google.step1Title": "OAuth-Client in Google Cloud anlegen",
   "oauthApp.drawer.google.step1Body":
-    "Öffne „APIs und Dienste“, dann „Anmeldedaten“, und lege eine OAuth-Client-ID vom Typ „Webanwendung“ an.",
+    "Wähle ein Projekt für Margince oder lege eines an, öffne „APIs und Dienste“, dann „Anmeldedaten“, und lege eine OAuth-Client-ID vom Typ „Webanwendung“ an. Wähle auf dem Zustimmungsbildschirm unter „Zielgruppe“ die Option „Intern“, wenn alle Anmeldungen über Google-Konten deines Unternehmens laufen: Dann können nur diese Konten die App nutzen, und Google muss die App nicht prüfen. Wähle „Extern“ nur, wenn auch private Gmail-Konten verbunden werden.",
   "oauthApp.drawer.google.step1Link": "Google Cloud Console öffnen",
   "oauthApp.drawer.google.step2Body":
     "Im Client unter „Autorisierte Weiterleitungs-URIs“. Margince listet eine Adresse für alles, wofür diese Installation Google nutzt. Füge sie genau so ein; fehlt eine, bricht Google die Verbindung mit „redirect_uri_mismatch“ ab und nennt die Adresse nicht.",
   "oauthApp.drawer.microsoft.title": "Microsoft-App einrichten",
   "oauthApp.drawer.microsoft.intro":
-    "Zwei Schritte im Microsoft Entra Admin Center, dann fügst du das Ergebnis hier ein. Du brauchst Zugriff auf das Entra-Verzeichnis deines Unternehmens.",
+    "Ein paar Schritte im Microsoft Entra Admin Center, dann fügst du das Ergebnis hier ein. Du brauchst Zugriff auf das Entra-Verzeichnis deines Unternehmens.",
   "oauthApp.drawer.microsoft.value":
     "Eine App für das ganze Unternehmen. Sobald sie gespeichert ist, können alle bei {company} Outlook-E-Mail und -Kalender verbinden, und „Weiter mit Microsoft“ kann auf der Anmeldeseite erscheinen.",
   "oauthApp.drawer.microsoft.step1Title": "App in Microsoft Entra registrieren",
   "oauthApp.drawer.microsoft.step1Body":
-    "Öffne „App-Registrierungen“, registriere eine neue App und füge unter „Zertifikate und Geheimnisse“ einen geheimen Clientschlüssel hinzu.",
+    "Öffne „App-Registrierungen“ und wähle „Neue Registrierung“. Nenne sie Margince und wähle unter „Unterstützte Kontotypen“ die erste Option, nur Konten in diesem Verzeichnis; die Verzeichnis-ID trägst du im letzten Schritt ein. Nur wenn auch Postfächer anderer Unternehmen verbunden werden, wähle die zweite Option, Konten in einem beliebigen Verzeichnis, und lass das Verzeichnis in den Einstellungen leer.",
   "oauthApp.drawer.microsoft.step1Link": "Microsoft Entra Admin Center öffnen",
   "oauthApp.drawer.microsoft.step2Body":
-    "In der App-Registrierung unter „Authentifizierung“ als Umleitungs-URIs der Web-Plattform. Margince listet eine Adresse für alles, wofür diese Installation Microsoft nutzt. Füge sie genau so ein; fehlt eine, bricht Microsoft die Verbindung mit „AADSTS50011“ ab und nennt die Adresse nicht.",
+    "Öffne in der App-Registrierung „Authentifizierung“, wähle „Plattform hinzufügen“, dann „Web“, und füge jede Adresse unten ein. Margince listet eine Adresse für alles, wofür diese Installation Microsoft nutzt. Füge sie genau so ein; fehlt eine, bricht Microsoft die Verbindung mit „AADSTS50011“ ab und nennt die Adresse nicht.",
   "oauthApp.drawer.step2Title": "Diese Weiterleitungsadressen eintragen",
   "oauthApp.drawer.step3Title": "Client-ID und Clientschlüssel einfügen",
-  "oauthApp.drawer.step3Body":
-    "{vendor} zeigt beides an, sobald der Client angelegt ist.",
   "oauthApp.drawer.secretHint":
     "Wird verschlüsselt gespeichert und nie wieder angezeigt. Um ihn später zu ändern, ersetze die App.",
   "oauthApp.drawer.foot": "Gilt für alle, sobald es gespeichert ist.",
@@ -20039,32 +20037,37 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "E-Mail, Kalender und Anmeldung über eine eigene Entra-App.",
   "firstRun.platform.imap": "IMAP",
   "firstRun.platform.imapWhat":
-    "Jedes Postfach verbindet sich mit einem eigenen IMAP-App-Passwort. Angemeldet wird mit E-Mail-Adresse und Passwort.",
-  "firstRun.platform.redirectTitle":
-    "Diese Weiterleitungs-URIs in der App registrieren",
-  "firstRun.platform.redirectHint":
-    "Füge jede URI der App hinzu, bevor du hier speicherst. „Anmeldung“ bringt eine Schaltfläche zum Anmelden auf die Anmeldeseite. Mit „Postfach“ und „Kalender“ können Nutzende ihr eigenes Postfach und ihren eigenen Kalender verbinden. Fehlt eine URI, schlägt die Verbindung am Zustimmungsbildschirm des Anbieters fehl.",
-  "firstRun.google.helpToggle": "Wo du diese Angaben findest",
-  "firstRun.google.helpStep1":
-    "Öffne in der Google Cloud Console ein Projekt und gehe zu „APIs und Dienste“, dann „Anmeldedaten“. Wähle „Anmeldedaten erstellen“, dann „OAuth-Client-ID“, und wähle „Webanwendung“.",
-  "firstRun.google.helpStep2":
-    "Aktiviere die Gmail API und füge dem Zustimmungsbildschirm die Bereiche gmail.readonly, gmail.send und userinfo.profile hinzu (userinfo.profile liefert das Profilbild des Google-Kontos). Die Bereiche werden gemeinsam angefragt, da Google einem bereits ausgestellten Refresh-Token keinen Bereich hinzufügt. Wird ein Bereich später angefordert, muss das Postfach erneut verbunden werden.",
-  "firstRun.google.helpStep3":
-    "Füge unter „Autorisierte Weiterleitungs-URIs“ die oben aufgeführten URIs hinzu. „Postfach“ ist für E-Mails erforderlich. „Kalender“ und „Anmeldung“ aktivieren die jeweilige Funktion.",
-  "firstRun.google.helpStep4":
-    "Kopiere Client-ID und Clientschlüssel in die 2 Felder unten. Der Clientschlüssel wird einmal gesendet, im Schlüsseltresor gespeichert und ist danach nie wieder lesbar.",
-  "firstRun.google.helpConsole": "Google Cloud Console für Anmeldedaten",
-  "firstRun.google.helpDocs":
-    "Alle Voraussetzungen, inklusive Microsoft und IMAP: docs/how-to/connect-a-mailbox.md",
+    "Jedes Postfach verbindet sich über IMAP mit dem Passwort, das sein Maildienst dafür vergibt, oft einem App-Passwort. Angemeldet wird mit E-Mail-Adresse und Passwort.",
+  "oauthApp.steps.google.apisTitle": "Gmail und Google Kalender aktivieren",
+  "oauthApp.steps.google.apisBody":
+    "Aktiviere in der API-Bibliothek die Gmail API und die Google Calendar API. Füge dann auf dem Zustimmungsbildschirm unter „Datenzugriff“ die Bereiche gmail.readonly, gmail.send, calendar.readonly, calendar.events.owned und userinfo.profile hinzu. Diese werden beim Verbinden von Postfach und Kalender bestätigt.",
+  "oauthApp.steps.google.apisLink": "API-Bibliothek öffnen",
+  "oauthApp.steps.google.pasteBody":
+    "Google zeigt beides in einem Dialog, nachdem du „Erstellen“ gewählt hast. Hast du ihn geschlossen, öffne den Client unter „Anmeldedaten“: Oben steht die Client-ID, und „Secret hinzufügen“ erzeugt einen neuen Clientschlüssel.",
+  "oauthApp.steps.microsoft.permissionsTitle":
+    "Zugriff auf Mail und Kalender erlauben",
+  "oauthApp.steps.microsoft.permissionsBody":
+    "Öffne „API-Berechtigungen“, wähle „Berechtigung hinzufügen“, dann „Microsoft Graph“, dann „Delegierte Berechtigungen“. Füge openid, email, profile, offline_access, User.Read, Mail.Read, Mail.Send und Calendars.ReadWrite hinzu. Wähle dann „Administratorzustimmung erteilen“, damit niemand in deinem Unternehmen sie einzeln bestätigen muss.",
+  "oauthApp.steps.microsoft.secretTitle": "Clientschlüssel erstellen",
+  "oauthApp.steps.microsoft.secretBody":
+    "Öffne „Zertifikate & Geheimnisse“ und wähle „Neuer geheimer Clientschlüssel“. Kopiere sofort den „Wert“, nicht die „Geheimnis-ID“: Entra zeigt den Wert nur einmal. Notiere das Ablaufdatum; läuft der Schlüssel ab, synchronisieren die Postfächer erst wieder, wenn hier ein neuer gespeichert ist.",
+  "oauthApp.steps.microsoft.pasteTitle": "IDs und Clientschlüssel einfügen",
+  "oauthApp.steps.microsoft.pasteBody":
+    "Die Übersicht der App zeigt die Anwendungs-ID und die Verzeichnis-ID.",
+  "firstRun.imap.passwordTitle": "IMAP-Passwort besorgen",
+  "firstRun.imap.passwordBody":
+    "Gmail und iCloud brauchen ein App-Passwort, das du erstellst, sobald die Bestätigung in zwei Schritten aktiv ist; das normale Passwort wird abgelehnt. Gmail: Google-Konto, Sicherheit, App-Passwörter. iCloud: Apple-Konto, Anmeldung und Sicherheit, App-spezifische Passwörter. Jeder andere Maildienst sagt auf seiner Hilfeseite, welches Passwort IMAP braucht. Postfächer von Microsoft 365 nehmen über IMAP kein Passwort mehr an: Wähle oben Microsoft 365. Private Postfächer von Outlook.com lassen sich hier nicht verbinden.",
+  "firstRun.imap.serverTitle": "IMAP-Server nachschlagen",
+  "firstRun.imap.serverBody":
+    "Gmail nutzt imap.gmail.com und iCloud nutzt imap.mail.me.com, jeweils auf Port 993. Jeder andere Maildienst nennt seinen Server auf seiner Hilfeseite zu den IMAP-Einstellungen.",
+  "firstRun.imap.connectTitle": "Dein Postfach verbinden",
   "firstRun.platform.imapNote":
-    "Für die ganze Installation wird nichts konfiguriert. Verbinde dein eigenes Postfach jetzt oder später. Weitere Postfächer werden in den Einstellungen unter Verbindungen verbunden, jedes mit eigenem App-Passwort.",
+    "Für die ganze Installation wird nichts konfiguriert. Verbinde dein eigenes Postfach jetzt oder später. Weitere Postfächer werden in den Einstellungen unter Verbindungen verbunden, jedes mit eigenem IMAP-Passwort.",
   "firstRun.platform.skip": "Nicht jetzt",
   "firstRun.needed": "Zum Fortfahren nötig",
   "firstRun.stillNeeded": "Noch erforderlich: {fields}",
   "firstRun.platform.foot":
     "Alle Antworten hier lassen sich später in den Einstellungen ändern.",
-  "firstRun.microsoft.note":
-    "Registriere in Microsoft Entra eine App mit den Weiterleitungs-URIs oben und füge hier ihre Client-ID und ihren Clientschlüssel ein. Binde die App an dein Verzeichnis: Die Postfächer dieses Verzeichnisses verbinden sich über die App, und seine Mitglieder melden sich darüber an.",
   "firstRun.microsoft.helpSignIn":
     "Das Verzeichnis ist hier erforderlich, da es Microsoft auf die Anmeldeseite bringt. Um eine App ohne Verzeichnis zu registrieren (jedes Unternehmen kann ein Postfach verbinden, niemand meldet sich mit Microsoft an), nutze stattdessen die Einstellungen.",
   "firstRun.microsoft.tenantHint":
