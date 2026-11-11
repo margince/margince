@@ -173,7 +173,7 @@ func (s *Server) armMFAEnrolment() {
 			}
 			logger.Error("multi-factor enrolment is OFF although a key vault is configured: " +
 				"the challenge-signing key is missing or shorter than 32 bytes, so a second-factor login could never complete. " +
-				"Set --connector-state-key (MARGINCE_CONNECTOR_STATE_KEY) to at least 32 bytes to enable MFA")
+				"Set --connector-state-key (MARGINCE_CONNECTOR_STATE_KEY) to at least 32 bytes, or unset it to derive one from the vault root key, to enable MFA")
 		}
 		return
 	}
