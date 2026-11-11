@@ -21,7 +21,7 @@ import {
 // each in a pane of its own.
 
 const meta: Meta = {
-  title: "Settings/AI/Automations/Automations",
+  title: "Settings/Data/Automations/Automations",
   parameters: { layout: "padded" },
 };
 export default meta;

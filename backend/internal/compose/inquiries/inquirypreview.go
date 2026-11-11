@@ -27,6 +27,9 @@ import (
 var errLegacyInquiryOwned = errors.New("the earlier lead handling still owns this inquiry")
 
 func (s Settings) Preview(ctx context.Context, id ids.UUID, in crmcontracts.WebsiteInquiryPreviewRequest, now time.Time) (crmcontracts.WebsiteInquiryHandlingPreview, error) {
+	if err := auth.Require(ctx, "activity", principal.ActionCreate); err != nil {
+		return crmcontracts.WebsiteInquiryHandlingPreview{}, err
+	}
 	if err := auth.Require(ctx, "automation", principal.ActionRead); err != nil {
 		return crmcontracts.WebsiteInquiryHandlingPreview{}, err
 	}

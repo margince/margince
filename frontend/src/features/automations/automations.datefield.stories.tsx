@@ -41,7 +41,7 @@ const DATE_COLUMNS = {
 };
 
 const meta: Meta<typeof DateFieldSelect> = {
-  title: "Settings/AI/Automations/Date field picker",
+  title: "Settings/Data/Automations/Date field picker",
   component: DateFieldSelect,
   parameters: { layout: "padded" },
 };

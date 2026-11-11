@@ -24,7 +24,7 @@ import {
 type AutomationRun = components["schemas"]["AutomationRun"];
 
 const meta: Meta = {
-  title: "Settings/AI/Automations/Automation detail",
+  title: "Settings/Data/Automations/Automation detail",
   parameters: { layout: "padded" },
 };
 export default meta;

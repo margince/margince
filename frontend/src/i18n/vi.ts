@@ -16404,7 +16404,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "inquiry.assignment.taskHolder": "Người đang phụ trách nhiệm vụ",
   "inquiry.assignment.newHolder": "Người phụ trách nhiệm vụ mới",
   "inquiry.assignment.movesLead":
-    "Khách hàng tiềm năng và việc xử lý yêu cầu này được giao cho đồng nghiệp này.",
+    "Lead và việc xử lý yêu cầu này được giao cho đồng nghiệp này.",
   "inquiry.assignment.taskOnly":
     "Thao tác này đổi người phụ trách nhiệm vụ yêu cầu. Bản ghi giữ nguyên người phụ trách.",
   "inquiry.currentRecordOwner": "Người phụ trách bản ghi hiện tại",

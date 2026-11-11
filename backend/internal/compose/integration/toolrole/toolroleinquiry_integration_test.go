@@ -17,7 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-func TestInquiryPreviewRecordsTheUnavailableAuthorizersRefusal(t *testing.T) {
+func TestInquiryPreviewRequiresPermissionToCreateTheWorkItPlans(t *testing.T) {
 	recorded := newToolCheckRecorder()
 	const slug = "inquiry-preview-authority"
 	d := toolRoleApp(t, slug, compose.WithToolChecksRecordedForTest(recorded.note))
@@ -36,7 +36,7 @@ func TestInquiryPreviewRecordsTheUnavailableAuthorizersRefusal(t *testing.T) {
 	apptest.AssignRoleTo(t, d.E, slug+"@fable.test", "read_only")
 	got := d.MCP.Call(t, calls[0].verb, args)
 	run, reached := recorded.take(calls[0].verb, human)
-	if !reached || apptest.VerdictOf(got, run.Refused) != apptest.VerdictRefused || !slices.Contains(run.Refused, "row:automation") {
+	if !reached || apptest.VerdictOf(got, run.Refused) != apptest.VerdictRefused || !slices.Contains(run.Refused, "activity.create") {
 		t.Fatalf("preview refusal = %s, recorded = %+v, reached = %v", got.Text, run, reached)
 	}
 }

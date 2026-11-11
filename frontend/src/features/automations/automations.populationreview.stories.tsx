@@ -9,7 +9,7 @@ import { configuredAutomation } from "./automations.fixtures";
 import { ScheduledPopulationReview } from "./automations.populationreview";
 
 const meta: Meta = {
-  title: "Settings/Automations/Initial run",
+  title: "Settings/Data/Automations/Initial run",
 };
 export default meta;
 type Story = StoryObj;

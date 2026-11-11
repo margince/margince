@@ -54,8 +54,7 @@ func TestEveryCompanyKindIDReferenceJoinsTheMerge(t *testing.T) {
 		t.Fatal("the merge path's source yielded no written tables — the scan is broken, not the merge")
 	}
 
-	e := Setup(t)
-	owner := e.Owner
+	owner := SchemaPool(t)
 
 	rows, err := owner.Query(context.Background(), `
 		SELECT c.relname, a.attname

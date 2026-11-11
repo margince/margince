@@ -8,7 +8,7 @@ import { configuredAutomation } from "./automations.fixtures";
 import { AutomationRecipientSummary } from "./automations.recipient";
 
 const meta: Meta<typeof AutomationRecipientSummary> = {
-  title: "Settings/Automations/Recipient",
+  title: "Settings/Data/Automations/Recipient",
   component: AutomationRecipientSummary,
   decorators: [
     (Story) => (

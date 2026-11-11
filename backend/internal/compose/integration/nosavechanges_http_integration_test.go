@@ -482,7 +482,7 @@ func TestAReviewedInquiryPolicySavedUnchangedWritesNothing(t *testing.T) {
 	if status := e.Call(t, "POST", "/v1/web-forms", AnyMap{"name": "Inquiries", "sender": "browser", "allowed_origins": []string{"https://www.example.com"}}, nil, &form); status != http.StatusCreated {
 		t.Fatalf("create form: %d", status)
 	}
-	body := AnyMap{"name": "Website inquiries", "enabled": true, "policy": AnyMap{"form_id": form.ID, "mode": "coordinator", "routing": AnyMap{}, "coordinator_id": apptest.SessionUserID(t, e).String(), "task_title": "Review the website inquiry", "due_in_days": 1, "timezone": "Europe/Berlin"}}
+	body := AnyMap{"name": "Website inquiries", "enabled": true, "policy": AnyMap{"form_id": form.ID, "mode": "coordinator", "routing": AnyMap{}, "coordinator_id": apptest.SessionUserID(t, e), "task_title": "Review the website inquiry", "due_in_days": 1, "timezone": "Europe/Berlin"}}
 	path := "/v1/web-forms/" + form.ID + "/handling"
 	var first crmcontracts.WebsiteInquiryHandling
 	if status := e.Call(t, "PUT", path, body, map[string]string{"If-Match": strconv.FormatInt(form.Version, 10)}, &first); status != http.StatusOK {

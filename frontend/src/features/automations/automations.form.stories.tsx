@@ -14,7 +14,7 @@ import { AutomationDialog } from "./automations.form";
 type CatalogEntry = components["schemas"]["AutomationCatalogEntry"];
 
 const meta: Meta<typeof AutomationDialog> = {
-  title: "Settings/AI/Automations/Automation form",
+  title: "Settings/Data/Automations/Automation form",
   component: AutomationDialog,
   parameters: { layout: "padded" },
 };

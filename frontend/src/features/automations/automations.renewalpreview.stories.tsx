@@ -7,7 +7,7 @@ import { StoryProviders } from "../../testing/story-utils";
 import { RenewalPreviewDetails } from "./automations.renewalpreview";
 
 const meta: Meta<typeof RenewalPreviewDetails> = {
-  title: "Settings/Automations/Renewal preview",
+  title: "Settings/Data/Automations/Renewal preview",
   component: RenewalPreviewDetails,
   decorators: [
     (Story) => (

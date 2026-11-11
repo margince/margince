@@ -16464,7 +16464,8 @@ paths:
       x-mcp-tool: { verb: preview_website_inquiries, router: read_details, action: website_inquiry_preview, tier: auto_execute, scope: read, served_by: route }
       summary: Preview inquiry deadlines and explicitly selected accepted submissions without writing.
       description: |
-        Uses the live inquiry planner and current access checks. Selection is limited to fifty
+        Uses the live inquiry planner and current access checks. The caller must be allowed
+        to create activities before planning this work. Selection is limited to fifty
         source notes with expected versions. The caller and the authorizer must both be able
         to read each source and target. A preview never reserves a recipient or creates work.
       requestBody:

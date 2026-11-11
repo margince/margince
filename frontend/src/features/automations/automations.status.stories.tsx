@@ -9,7 +9,7 @@ import {
 import { configuredAutomation } from "./automations.fixtures";
 import { AutomationStatus } from "./automations.status";
 
-const meta: Meta = { title: "Settings/Automations/Status" };
+const meta: Meta = { title: "Settings/Data/Automations/Status" };
 export default meta;
 type Story = StoryObj;
 
