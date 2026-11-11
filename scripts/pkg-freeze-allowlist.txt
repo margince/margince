@@ -3,11 +3,15 @@
 # ADVISORY (the surface is design-fluid) and consults no allowlist.
 #
 # From v1.0.0 the gate enforces, and a ratified change is recorded here
-# as `<baseline-sha12> <package>: <finding>` — the exact apidiff finding
-# bound to the merge-base commit it was ratified against (the gate
-# prints the ready-to-paste line on failure). The binding is the
-# guarantee: once the ratifying PR merges, every future merge-base is a
-# different commit, so an entry can never license a recurring same-text
-# finding or pre-authorize a future break; superseded entries warn
-# until removed. Package removals are never allowlistable
-# (deprecate-then-major cycle, ADR-0120 §3).
+# as `<package>: <finding> # <reason>`, the gatekit waiver shape: the
+# exact apidiff finding the gate prints, then a reason. The reason
+# states the cost in 20+ characters and cites the ratifying issue as
+# #<number>. The gate prints the line to fill in on failure.
+#
+# The key names no commit, so one entry passes both the pull request and
+# the merge queue. It is the exact finding, so a later, different break
+# of the same symbol is a new finding that the entry does not excuse.
+# An entry left behind after its change merges can excuse nothing new,
+# so the gate only warns about it; remove it with the next edit here.
+# Package removals are never allowlistable (deprecate-then-major cycle,
+# ADR-0120 §3).
