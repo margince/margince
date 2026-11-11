@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -32,13 +33,17 @@ func TestSubjectAccessIncludesHeldCaptureFactsWithinTheContentAudience(t *testin
  VALUES (@id,'email','Held message',now(),'manual','system:privacy_test',@audience,
  now(),now(),'controller_hold',now()+interval '100 years','commercial_correspondence',now())`, pgx.StrictNamedArgs{"id": activity, "audience": audience})
 		mustExec(ctx, t, tx, `INSERT INTO capture_thread_verdict(thread_key,user_id,first_activity_id,seen_addresses)
- VALUES (@key,@user,@activity,@addresses)`, pgx.StrictNamedArgs{"key": activity.String(), "user": user,
-			"activity": activity, "addresses": append(append([]string{}, subject.emails...), "other-private@else.test")})
+ VALUES (@key,@user,@activity,@addresses)`, pgx.StrictNamedArgs{
+			"key": activity.String(), "user": user,
+			"activity": activity, "addresses": append(append([]string{}, subject.emails...), "other-private@else.test"),
+		})
 		mustExec(ctx, t, tx, `INSERT INTO capture_party_source(activity_id,user_id,provider,sent_by_owner,containers,
  containers_known,recipients,policy_addresses,admission_blocked)
  VALUES (@activity,@user,'gmail',false,'{}',true,@addresses,@addresses,false)`,
-			pgx.StrictNamedArgs{"activity": activity, "user": user,
-				"addresses": append(append([]string{}, subject.emails...), "other-private@else.test")})
+			pgx.StrictNamedArgs{
+				"activity": activity, "user": user,
+				"addresses": append(append([]string{}, subject.emails...), "other-private@else.test"),
+			})
 	}
 	var pkg SARPackage
 	sections, err := sarRetainedCopySections(ctx, &pkg, []ids.UUID{subject.contact.UUID}, subject.emails, nil)

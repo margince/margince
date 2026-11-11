@@ -21,8 +21,10 @@ func TestRelatedAuditHistoryProvesEachImageBelongsToTheSubject(t *testing.T) {
 	tx := subjectColumnsTx(ctx, t)
 	subject, other, record := ids.NewV7(), ids.NewV7(), ids.NewV7()
 	image := func(contact ids.UUID, label string) map[string]any {
-		return map[string]any{"linked_record_type": "contact", "linked_record_id": contact,
-			"label": label, "unknown_private_field": "Other private evidence"}
+		return map[string]any{
+			"linked_record_type": "contact", "linked_record_id": contact,
+			"label": label, "unknown_private_field": "Other private evidence",
+		}
 	}
 	for _, change := range [][2]map[string]any{
 		{nil, {"plan_id": ids.NewV7(), "label": "Unproven earlier label"}},
