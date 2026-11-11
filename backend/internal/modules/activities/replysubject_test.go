@@ -48,4 +48,8 @@ func TestOnlyTheAnsweredSubjectIsAReplySubjectOfIt(t *testing.T) {
 			t.Errorf("IsReplySubjectOf(%q) = %v, want %v", subject, got, want)
 		}
 	}
+	// The composer sends the subject with its project tag cut.
+	if !IsReplySubjectOf("Re: "+topic, "Re: [ACME-12] "+topic) {
+		t.Error("a tagged answered subject is not matched by its untagged prefill")
+	}
 }

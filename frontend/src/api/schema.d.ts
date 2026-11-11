@@ -41365,7 +41365,7 @@ export interface components {
         };
         /** @description What every draft-email route takes to steer a draft: the caller's ask and, for a rewrite, the words on the composer's screen. Each route extends it with the fields its own record needs. */
         DraftSteering: {
-            /** @description The subject the caller has written for the draft. A supported language it names outranks every language but `language`: the correspondence, the addressee, the stored label and the draft being rewritten. A subject that names none (empty, a project tag, a name) leaves that order as it was. On a reply, the answered message's own subject (with or without `Re:`) is history and not read as a choice. */
+            /** @description The subject the caller has written for the draft. A supported language detected in it outranks every language but `language`: the correspondence, the addressee, the stored label and the draft being rewritten. When no language is detected in it (empty, a project tag, a name), that order stays as it was. On a reply, the answered message's own subject (with or without `Re:`) is history and not read as a choice. */
             subject?: string | null;
             /** @description Optional steering in the caller's own words ("shorter", "warmer", "ask for Tuesday"). The one input that is NOT untrusted — the caller typed it — and so the only one outside the fence. */
             intent?: string | null;
