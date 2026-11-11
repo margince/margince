@@ -135,7 +135,7 @@ func WithBlobstore(store blobstore.Store) Option {
 		// object store has no restore, and disclosing the stanza instead would
 		// answer Art. 15 with an address the subject cannot resolve.
 		s.consentHandlers = s.WithSubjectAccessAssembler(
-			newSubjectAccessAssembler(InstallationDB(pool)).withBlobstore(store))
+			newSubjectAccessAssembler(InstallationDB(pool), ExtensionData()).withBlobstore(store))
 		s.captureConfig.Blob = store
 		s.activitiesHandlers = s.activitiesHandlers.WithBlobstore(store)
 		s.dealsHandlers = s.dealsHandlers.WithBlobstore(store)

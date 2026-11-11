@@ -11,6 +11,9 @@ package deals
 
 import (
 	"context"
+	"time"
+
+	"github.com/margince/margince/backend/internal/platform/mailcopy"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
@@ -133,6 +136,20 @@ var summaryByLang = map[textlang.Lang]summaryCopy{
 // row, and a sentence in English beats no sentence.
 func summaryIn(ctx context.Context, language baselanguage.Resolver) summaryCopy {
 	return summaryFor(language.Resolve(ctx))
+}
+
+// followUpWords is a follow-up's sentences and the way their language writes a
+// day. A reader sees the day in the sentence, so it is "9 Nov 2026" and never
+// the ISO form a machine reads.
+type followUpWords struct {
+	said summaryCopy
+	day  func(time.Time) string
+}
+
+// followUpWordsIn resolves the installation's base language once, for both.
+func followUpWordsIn(ctx context.Context, language baselanguage.Resolver) followUpWords {
+	lang := language.Resolve(ctx)
+	return followUpWords{said: summaryFor(lang), day: mailcopy.For(string(lang)).Date}
 }
 
 // summaryFor is summaryIn for a caller that already holds the language.

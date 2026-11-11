@@ -197,7 +197,11 @@ function cardHead(
   if (!card.verdict) {
     return { ...unreadHead(deal, t), readAt: card.generated_at };
   }
-  const [lead] = card.verdict.because.sentences;
+  // The records' own "live" call rests on the last activity, which the
+  // Momentum row already dates, so the card says the newest word instead.
+  const restatesMomentum =
+    card.generated_by !== "model" && card.verdict.standing === "live";
+  const [lead] = restatesMomentum ? [] : card.verdict.because.sentences;
   return {
     verdict: {
       word: verdictLabel(card.verdict.standing, t),

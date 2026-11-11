@@ -1503,6 +1503,16 @@ paths:
             (`relationship` kind `employment`, DM-VOCAB-1). A past employer does not match:
             "who works there" and "who has ever worked there" are different questions, and the
             list answers the first.
+        - name: related_to
+          in: query
+          schema: { type: string, format: uuid }
+          description: |
+            The contacts around this one: those who work at one of its current employers, and
+            those who hold a seat on a deal it holds a seat on. The named contact itself is not
+            in the list. The composer offers this list as recipients. Each link counts only when
+            the caller may read it: the employment edge, the deal and the named contact itself.
+            A contact the caller may not read relates to nobody, so the answer is an empty page
+            and does not say whether the contact exists.
       responses:
         '200':
           description: A page of contacts.
@@ -8545,6 +8555,9 @@ paths:
     post:
       tags: [Deals]
       operationId: acceptAppliedDealChange
+      # Margince no longer asks anyone to sign off a change it made: every such
+      # change carries its Undo. The route stays for clients built against it.
+      deprecated: true
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       summary: Accept a recorded automatic deal change.
       description: |
@@ -8552,6 +8565,8 @@ paths:
         audit id). It keeps the applied values;
         acceptance is an audited review decision, not another application of the change.
         Requires the displayed deal version. A reversed or superseded change is refused.
+        An accepted change leaves the pending list and keeps its Undo. Margince itself no
+        longer asks for this; undo a change instead of accepting the ones you keep.
       x-mcp-tool: { verb: accept_applied_deal_change, router: change_attention, action: accept_applied_change, tier: auto_execute, scope: write, served_by: route }
       parameters:
         - name: If-Match
@@ -8603,10 +8618,12 @@ paths:
       tags: [Deals]
       operationId: getPendingMarginceChanges
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
-      summary: The changes Margince made to your deals that you have not accepted or undone.
+      summary: The changes Margince made to your deals in the last 7 days that you have not undone.
       description: |
-        One bundle per deal: every open change Margince made to one of the caller's own deals,
-        newest first inside the bundle. The counts are deals, counted in SQL over every open
+        One bundle per deal: every open change Margince made to one of the caller's own deals
+        in the last 7 days, newest first inside the bundle. An older change stays in the
+        deal's own list with its Undo. A change accepted through the deprecated accept
+        route is left out. The counts are deals, counted in SQL over every open
         change, so a deal changed twice counts once and a cut list never shrinks a count.
         Bundles are ordered by the deal's value in the base currency, the largest first. At
         most 500 bundles; `truncated` says when more exist.
@@ -56115,8 +56132,19 @@ components:
             company's contacts the mail is for.
         email_target:
           $ref: '#/components/schemas/ActivityEmailTarget'
-        source: { type: string }
+        source:
+          type: string
+          description: >-
+            Where the row came from. `manual` is anything typed, by a member or by an assistant
+            working for one, so it never says who typed it: `captured_by` and `recorded_by_agent` do.
         captured_by: { type: string, readOnly: true, description: 'Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied.' }
+        recorded_by_agent:
+          type: boolean
+          readOnly: true
+          description: >-
+            True when an assistant or an agent run wrote this activity: `captured_by` names an
+            agent, or a scheduled agent run filed it. A reader labels such a row as the assistant's
+            whatever `source` says.
         imported_from:
           type: [string, 'null']
           readOnly: true
@@ -76595,11 +76623,11 @@ components:
       required: [kind, accepted, reversed, version, can_undo, can_accept, writable]
       properties:
         kind: { type: string, enum: [close_date, close_lost, amount, probability, stage, deal_open, deal_revive], x-extensible-enum: true }
-        accepted: { type: boolean }
+        accepted: { type: boolean, deprecated: true, description: Whether the change was accepted through the deprecated accept route. }
         reversed: { type: boolean }
         version: { type: integer, format: int64 }
         can_undo: { type: boolean }
-        can_accept: { type: boolean }
+        can_accept: { type: boolean, deprecated: true, description: Whether the deprecated accept route would take this change. }
         writable: { type: boolean, description: Whether this reader may write this deal. }
 
     CloseDateEstimateBasis:
