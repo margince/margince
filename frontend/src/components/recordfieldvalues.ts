@@ -1,4 +1,4 @@
-import { countryBeyondCity } from "../format/address";
+import { postalLines } from "../format/address";
 import { formatDateAbbrev, formatMoney } from "../format/format";
 import { toMinorUnits } from "../format/minorunits";
 import { browserZone } from "../format/timezone";
@@ -63,7 +63,14 @@ export function groupValue(
     isAddressGroup(fields) &&
     !fields.some((f) => maskedFields.includes(f.key))
   ) {
-    return postalLines(values);
+    return postalLines({
+      line1: values.address_line1,
+      line2: values.address_line2,
+      postal_code: values.address_postal_code,
+      city: values.address_city,
+      region: values.address_region,
+      country: values.address_country,
+    });
   }
   return fields
     .map((field) => {
@@ -163,24 +170,4 @@ function isAddressGroup(fields: CreateField[]): boolean {
     fields.length > 0 &&
     fields.every((field) => field.key.startsWith("address_"))
   );
-}
-
-// The address the way a reader writes it on an envelope: street lines, then
-// the postal code before the city, then region and country. One value per
-// line rather than six clauses on dots, which read as a list of unrelated
-// facts. The lines are joined on a newline the value column keeps
-// (`white-space: pre-line`, fieldgrid.css).
-function postalLines(values: Record<string, string>): string {
-  const place = [values.address_postal_code, values.address_city]
-    .filter(Boolean)
-    .join(" ");
-  const area = [
-    values.address_region,
-    countryBeyondCity(values.address_city, values.address_country),
-  ]
-    .filter(Boolean)
-    .join(", ");
-  return [values.address_line1, values.address_line2, place, area]
-    .filter(Boolean)
-    .join("\n");
 }

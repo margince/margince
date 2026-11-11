@@ -14,6 +14,7 @@
 # WHAT A RELEASE CARRIES. The three images, pushed to ghcr.io/margince as
 # ghcr.io/margince/<role>:<tag>; one server bundle per Linux platform (the same
 # binaries and SPA as files, with the units and nginx files a server needs);
+# a compose folder running the images on one host, pinned to their digests;
 # the source SBOMs; images.txt, naming each image by digest; and SHA256SUMS over
 # all of them. Each image and SHA256SUMS are signed keyless with cosign, so one
 # signature vouches for every file on the page. Everything is built and signed
@@ -291,6 +292,15 @@ jobs:
           set -euo pipefail
           docker buildx bake bundle
           bash scripts/release-bundle.sh "$VERSION" "$MARGINCE_BUILD_REVISION" dist/bundle dist/release
+      # The compose folder pins the digests just pushed, and is started here so
+      # one that packs but does not serve fails the release, not a host.
+      - name: Pack the compose folder and start it
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          bash scripts/release-compose.sh "$VERSION" dist/release/images.txt dist/release
+          bash scripts/release-compose-smoke.sh "dist/release/margince-$VERSION-compose.tar.gz"
       # The source SBOMs through the full pinned pipeline, named for the
       # release so a downloaded file says which one it describes.
       - name: Generate the SBOMs
@@ -411,7 +421,8 @@ jobs:
           cat > install.md <<NOTES
           **Containers.** \`ghcr.io/margince/api:$VERSION\`, \`ghcr.io/margince/worker:$VERSION\`
           and \`ghcr.io/margince/web:$VERSION\`, for linux/amd64 and linux/arm64. \`images.txt\`
-          names each by digest. Deploy them with
+          names each by digest. \`margince-$VERSION-compose.tar.gz\` runs them on one host with
+          Docker Compose, pinned to those digests. Deploy them with
           [docs/how-to/deploy-margince.md](https://github.com/margince/margince/blob/main/docs/how-to/deploy-margince.md).
 
           **A server without containers.** \`margince-$VERSION-linux-amd64.tar.gz\` or
