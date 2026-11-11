@@ -228,9 +228,8 @@ type Server struct {
 	// is configured — the route is absent otherwise, never open.
 	gmailPush http.Handler
 
-	// graphPush is the Microsoft Graph change-notification webhook (the same
-	// chassis), injected by WithGraphPush only when a notification token is
-	// configured — the route is absent otherwise, never open.
+	// graphPush is the Microsoft Graph change-notification webhook on the same chassis. WithGraphPush
+	// injects it only when a notification token is configured; otherwise the route is absent.
 	graphPush http.Handler
 
 	// mcpConnectorEnabled is the connector's deployment gate (WithMCPConnector): transport, authorization
