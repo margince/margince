@@ -290,3 +290,32 @@
   flex: none;
   margin-inline-start: auto;
 }
+
+/* The tabs the row has no room for fold behind "More", drawn as one more tab
+   with its chevron after the word. Idle, it is laid out but unseen, so the
+   strip can measure the room it would take. */
+.recordtabs-more {
+  display: inline-flex;
+  flex: none;
+}
+.recordtabs-more[data-idle] {
+  position: absolute;
+  visibility: hidden;
+  pointer-events: none;
+}
+.recordtabs-more .overflow-menu-labelled {
+  flex-direction: row-reverse;
+  gap: var(--space-1);
+  padding: var(--space-3);
+  border: 0;
+  border-block-end: 2px solid transparent;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  color: inherit;
+  font: inherit;
+  font-weight: var(--fontWeightMedium);
+}
+.recordtabs-more .overflow-menu-labelled:hover {
+  border-block-end-color: var(--borderStrong);
+}

@@ -252,3 +252,8 @@
 .reporting-library-body > .btn {
   justify-self: start;
 }
+/* The foot's slot for the chart's table door lays the door out as one of the
+   foot's own items. */
+.reporting-table-slot {
+  display: contents;
+}

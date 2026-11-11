@@ -206,23 +206,19 @@
 .segbar-track {
   position: relative;
   display: flex;
-  height: 12px;
-  background: var(--bgChip);
+  gap: 3px;
+  height: 10px;
   color: var(--textPrimary);
-  border-radius: 0 var(--r-xs) var(--r-xs) 0;
 }
-/* Parts meet on a 2px rule of the ground rather than a stroke: the gap is what
-   separates them, and a border drawn round a part is ink that is not data. */
+/* Parts are pills with air between them rather than a stroke: the gap is what
+   separates them, and a border drawn round a part is ink that is not data. The
+   parts give back what the gaps take, so the whole still spans the track. */
 .segbar-part {
-  flex: none;
+  flex: 0 1 auto;
   box-sizing: border-box;
   height: 100%;
-}
-.segbar-part + .segbar-part {
-  border-left: 2px solid var(--bgElevated);
-}
-.segbar-part:last-of-type {
-  border-radius: 0 var(--r-xs) var(--r-xs) 0;
+  border-radius: var(--r-full);
+  corner-shape: round;
 }
 /* The mark overhangs the track so it reads as a line ACROSS the parts. Its
    flanks are ground, so it stays legible where it lands inside a filled part:

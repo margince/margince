@@ -972,6 +972,8 @@
   "co.brief.nature.assessment": "Đánh giá",
   "co.brief.nature.recommendation": "Gợi ý",
   "record.tabs": "Tab hồ sơ",
+  "record.tabs.more": "Thêm",
+  "record.tabs.moreLabel": "Các mục khác",
   "record.panel.showDetails": "Hiển thị chi tiết",
   "record.panel.hideDetails": "Ẩn chi tiết",
   "co.brief.by.model": "Do Margince viết",

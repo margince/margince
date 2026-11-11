@@ -1,8 +1,9 @@
-import { Button, Disclosure, EmptyState } from "../../design-system/atoms";
+import { Button, EmptyState } from "../../design-system/atoms";
 import { DataTable } from "../../design-system/datatable";
 import { BarList, SegmentBar } from "../../design-system/readings";
 import {
   BulletChart,
+  ChartTableDoor,
   CumulativeChart,
   RangeChart,
 } from "../../design-system/report-charts";
@@ -243,10 +244,7 @@ export function ChartBody({
             reconciliationWarning={t("reporting.reconcile")}
             onSelect={onSelect}
           />
-          <Disclosure
-            className="report-chart-data"
-            summary={t("reporting.data")}
-          >
+          <ChartTableDoor summary={t("reporting.data")}>
             <DataTable
               label={shared.label}
               rows={[
@@ -283,7 +281,7 @@ export function ChartBody({
                 },
               ]}
             />
-          </Disclosure>
+          </ChartTableDoor>
         </>
       );
     case "metric_reading":
@@ -377,7 +375,7 @@ function GroupedBars({
         )}
         onSelect={onSelect}
       />
-      <Disclosure className="report-chart-data" summary={t("reporting.data")}>
+      <ChartTableDoor summary={t("reporting.data")}>
         <DataTable
           label={label}
           rows={chart.points}
@@ -411,7 +409,7 @@ function GroupedBars({
                 ]),
           ]}
         />
-      </Disclosure>
+      </ChartTableDoor>
     </>
   );
 }

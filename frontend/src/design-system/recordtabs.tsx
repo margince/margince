@@ -16,9 +16,12 @@
 // their props and nothing else, and folding this in as a `variant` would put
 // two unrelated layouts behind one name for the sake of one shared signature.
 
+import { ChevronDown } from "lucide-react";
 import { type ReactNode, useRef } from "react";
 import { useT } from "../i18n";
-import { OptionCount } from "./atoms";
+import { Button, OptionCount } from "./atoms";
+import { OverflowMenu } from "./overflowmenu";
+import { useFoldedTabs } from "./recordtabs.fold";
 import { type ClippedEdges, useClippedEdges } from "./scrollregion";
 import "./recordtabs.css";
 
@@ -100,6 +103,21 @@ export function RecordTabs<Option extends string>({
   const t = useT();
   const stripRef = useRef<HTMLFieldSetElement>(null);
   const edges = useClippedEdges(stripRef);
+  // A lone body has nothing to fold, and a strip without a handler has nowhere
+  // to send a folded tab.
+  const folded = useFoldedTabs(stripRef, onChange ? options : [], value);
+  const tabBody = (option: Option) => {
+    const count = counts?.[option];
+    return (
+      <>
+        {labels[option]}
+        {count !== undefined && <OptionCount count={count} />}
+        {marks?.[option] && (
+          <span className="recordtabs-mark" aria-hidden="true" />
+        )}
+      </>
+    );
+  };
 
   return (
     <div className="recordtabs">
@@ -114,37 +132,56 @@ export function RecordTabs<Option extends string>({
           className={stripClass(edges)}
           aria-label={label ?? t("record.tabs")}
         >
-          {options.map((option) => {
-            const count = counts?.[option];
-            const body = (
-              <>
-                {labels[option]}
-                {count !== undefined && <OptionCount count={count} />}
-                {marks?.[option] && (
-                  <span className="recordtabs-mark" aria-hidden="true" />
-                )}
-              </>
-            );
-            // No handler is the lone-body shape above, and there the tab is
-            // where the reader already stands: `aria-current` says so on
-            // something that cannot be pressed, rather than `aria-pressed` on
-            // a button that would answer nothing.
-            return onChange === undefined ? (
-              <span key={option} className="recordtabs-tab" aria-current="page">
-                {body}
-              </span>
-            ) : (
-              <button
-                key={option}
-                type="button"
-                className="recordtabs-tab"
-                aria-pressed={option === value}
-                onClick={() => onChange(option)}
+          {options
+            .filter((option) => !folded.includes(option))
+            .map((option) =>
+              // No handler is the lone-body shape above, and there the tab is
+              // where the reader already stands: `aria-current` says so on
+              // something that cannot be pressed, rather than `aria-pressed`
+              // on a button that would answer nothing.
+              onChange === undefined ? (
+                <span
+                  key={option}
+                  className="recordtabs-tab"
+                  aria-current="page"
+                >
+                  {tabBody(option)}
+                </span>
+              ) : (
+                <button
+                  key={option}
+                  type="button"
+                  className="recordtabs-tab"
+                  data-tab={option}
+                  aria-pressed={option === value}
+                  onClick={() => onChange(option)}
+                >
+                  {tabBody(option)}
+                </button>
+              ),
+            )}
+          {/* Drawn even when nothing folds, unseen, so the strip knows how
+              much room the control takes before it needs it. */}
+          {onChange !== undefined && (
+            <span
+              className="recordtabs-more"
+              data-idle={folded.length === 0 || undefined}
+              aria-hidden={folded.length === 0 || undefined}
+            >
+              <OverflowMenu
+                label={t("record.tabs.moreLabel")}
+                text={t("record.tabs.more")}
+                icon={<ChevronDown aria-hidden="true" />}
+                align="start"
               >
-                {body}
-              </button>
-            );
-          })}
+                {folded.map((option) => (
+                  <Button key={option} onClick={() => onChange(option)}>
+                    {tabBody(option)}
+                  </Button>
+                ))}
+              </OverflowMenu>
+            </span>
+          )}
         </fieldset>
         {trailing != null && (
           <div className="recordtabs-trailing">{trailing}</div>
