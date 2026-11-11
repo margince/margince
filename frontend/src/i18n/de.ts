@@ -11754,7 +11754,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "connectors.notes.stopBody":
     "Margince liest die Notizen von Google Meet nicht mehr. E-Mail und Kalender laufen weiter, und Notizen an Terminen bleiben erhalten.",
   "connectors.notes.otherAccount":
-    "Die Besprechungsnotizen sind mit {notes} verbunden, der Kalender mit {calendar}. Notizen werden nur für Termine im Kalender desselben Kontos gelesen. Verbinden Sie die Besprechungsnotizen daher mit {calendar}.",
+    "Die Besprechungsnotizen sind mit {notes} verbunden, der Kalender mit {calendar}. Notizen werden nur für Termine im Kalender desselben Kontos gelesen. Verbinde die Besprechungsnotizen daher mit {calendar}.",
   "connectors.provGraph": "Outlook",
   "connectors.provGraphCal": "Outlook-Kalender",
   "connectors.provImap": "IMAP-Postfach",

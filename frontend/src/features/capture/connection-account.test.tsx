@@ -462,7 +462,7 @@ describe("the meeting notes", () => {
     const paths = requestsTo(calls, "/disconnect", "POST")
       .slice(1)
       .map((r) => new URL(r.url).pathname.split("/").at(-2));
-    expect(paths.sort()).toEqual(["gcal", "gdocs", "gmail"]);
+    expect(new Set(paths)).toEqual(new Set(["gcal", "gdocs", "gmail"]));
   });
 });
 

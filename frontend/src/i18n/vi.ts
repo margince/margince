@@ -11440,7 +11440,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "connectors.bringsNotes": "Ghi chú cuộc họp",
   "connectors.notes.name": "Ghi chú cuộc họp",
   "connectors.notes.desc":
-    "Ghi chú và bản ghi lời mà Google Meet viết được đọc từ Google Docs và lưu vào cuộc họp.",
+    "Ghi chú và bản chép lời mà Google Meet viết được đọc từ Google Docs và lưu vào cuộc họp.",
   "connectors.notes.connect": "Kết nối ghi chú cuộc họp",
   "connectors.notes.stop": "Ngừng đọc ghi chú cuộc họp",
   "connectors.notes.stopTitle": "Ngừng đọc ghi chú cuộc họp?",
