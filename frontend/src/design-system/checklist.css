@@ -74,12 +74,6 @@
   min-width: 0;
 }
 
-/* A body under a caption is a link, a table or fields; a caption's gap alone
- * would set a field label against the sentence above it. */
-.checklist-body {
-  margin-block-start: var(--space-1);
-}
-
 /* As tall as the mark, so a one-line title sits on its centre. */
 .checklist-title {
   display: flex;

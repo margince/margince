@@ -191,7 +191,7 @@ function SetupForm({
             </QueryGate>
           }
         >
-          <div className="form-stack">
+          <>
             {lockReason !== undefined && (
               <p id={lockId} className="t-caption">
                 {lockReason}
@@ -255,7 +255,7 @@ function SetupForm({
                 )}
               </Field>
             )}
-          </div>
+          </>
         </OAuthAppSteps>
         {/* Last in the body, so a refusal lands beside the Save that drew it. */}
         <WriteRefused titleKey="oauthApp.saveFailed" error={save.error} />

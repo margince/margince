@@ -20014,10 +20014,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Öffne „Zertifikate & Geheimnisse“ und wähle „Neuer geheimer Clientschlüssel“. Kopiere sofort den „Wert“, nicht die „Geheimnis-ID“: Entra zeigt den Wert nur einmal. Notiere das Ablaufdatum; läuft der Schlüssel ab, synchronisieren die Postfächer erst wieder, wenn hier ein neuer gespeichert ist.",
   "oauthApp.steps.microsoft.pasteTitle": "IDs und Clientschlüssel einfügen",
   "oauthApp.steps.microsoft.pasteBody":
-    "Die Übersicht der App zeigt die Anwendungs-ID (Client) und die Verzeichnis-ID (Mandant).",
+    "Die Übersicht der App zeigt die Anwendungs-ID und die Verzeichnis-ID.",
   "firstRun.imap.passwordTitle": "App-Passwort erstellen",
   "firstRun.imap.passwordBody":
-    "Der Maildienst erstellt es, sobald die Bestätigung in zwei Schritten aktiv ist; das normale Passwort wird abgelehnt. Gmail: Google-Konto, Sicherheit, App-Passwörter. Outlook.com: Microsoft-Konto, Sicherheit, Erweiterte Sicherheitsoptionen, App-Kennwörter. iCloud: Apple Account, Anmeldung und Sicherheit, App-spezifische Passwörter. Ein Microsoft-365-Arbeitspostfach hat kein App-Passwort für IMAP: Wähle oben Microsoft 365.",
+    "Der Maildienst erstellt es, sobald die Bestätigung in zwei Schritten aktiv ist; das normale Passwort wird abgelehnt. Gmail: Google-Konto, Sicherheit, App-Passwörter. Outlook.com: Microsoft-Konto, Sicherheit, Erweiterte Sicherheitsoptionen, App-Kennwörter. iCloud: Apple-Konto, Anmeldung und Sicherheit, App-spezifische Passwörter. Ein Microsoft-365-Arbeitspostfach hat kein App-Passwort für IMAP: Wähle oben Microsoft 365.",
   "firstRun.imap.serverTitle": "IMAP-Server nachschlagen",
   "firstRun.imap.serverBody":
     "Gmail nutzt imap.gmail.com, Outlook.com nutzt outlook.office365.com und iCloud nutzt imap.mail.me.com, jeweils auf Port 993. Jeder andere Maildienst nennt seinen Server auf seiner Hilfeseite zu den IMAP-Einstellungen.",

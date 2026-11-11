@@ -119,7 +119,7 @@ export function OAuthAppSteps({
   provider: Vendor;
   /** The redirect URI table, loaded the way the host loads the app. */
   redirects: ReactNode;
-  /** The fields that take the pair, under the last step. */
+  /** The fields that take the pair, as rows of the last step's stack. */
   children: ReactNode;
 }>) {
   const t = useT();
@@ -135,12 +135,13 @@ export function OAuthAppSteps({
         {redirects}
       </ChecklistStep>
       <ConsoleSteps steps={steps.after} />
-      <ChecklistStep
-        state="open"
-        title={t(steps.paste.title)}
-        caption={t(steps.paste.body)}
-      >
-        {children}
+      {/* The caption is the stack's first row, so the fields under it keep
+          the stack's gap rather than a caption's. */}
+      <ChecklistStep state="open" title={t(steps.paste.title)}>
+        <div className="form-stack">
+          <p className="t-caption">{t(steps.paste.body)}</p>
+          {children}
+        </div>
       </ChecklistStep>
     </Checklist>
   );

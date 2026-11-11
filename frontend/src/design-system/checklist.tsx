@@ -128,9 +128,7 @@ export function ChecklistStep({
         {!inline && caption !== undefined && (
           <span className="t-caption">{caption}</span>
         )}
-        {!inline && children !== undefined && (
-          <div className="checklist-body">{children}</div>
-        )}
+        {!inline && children !== undefined && <div>{children}</div>}
       </div>
       {showTrailing && <div className="checklist-action">{trailing}</div>}
     </li>

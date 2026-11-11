@@ -100,7 +100,7 @@ function VendorAppFields({
         provider={vendor}
         redirects={<RedirectUris uris={app.data?.redirect_uris} />}
       >
-        <div className="form-stack">
+        <>
           <Field
             label={t("oauthApp.clientId")}
             error={needed(clientId.trim() === "")}
@@ -151,7 +151,7 @@ function VendorAppFields({
               )}
             </Field>
           )}
-        </div>
+        </>
       </OAuthAppSteps>
       <WriteRefused titleKey="oauthApp.saveFailed" error={save.error} />
       <StageActions>
