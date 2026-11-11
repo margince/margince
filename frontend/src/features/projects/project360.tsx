@@ -31,8 +31,10 @@ import { useT } from "../../i18n";
 import { taskWriteKeys } from "../../lib/activitykeys";
 import { useActivity } from "../../lib/activityread";
 import { useCan } from "../../lib/capability";
+import { labelFor } from "../../lib/labelfor";
 import { unwrap } from "../../lib/problem";
 import { navigate } from "../../lib/router";
+import { useShortcut } from "../../lib/shortcuts";
 import { NewDealAction } from "../companies/companyactions";
 import { ShareAction } from "../records/share";
 import { TaskDetailModal } from "../worklist/taskdetailmodal";
@@ -155,7 +157,7 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
         <>
           {/* Neutral here: the phase is a fact about the project, and How
               it stands carries the reading of how it is going. */}
-          <Badge>{t(PHASE_LABEL[project.phase])}</Badge>
+          <Badge>{t(labelFor(PHASE_LABEL, project.phase))}</Badge>
           {project.key && <ProjectKeyChip projectKey={project.key} dense />}
           <ProjectSharedPill projectId={project.id} />
         </>
@@ -380,13 +382,20 @@ function ProjectActions({
 }>) {
   const t = useT();
   const owner = useOwnerPicker(project.owner_id);
+  const taskRefusedId = refusedReasonId ?? activity.refusedId;
+  const taskKeys = useShortcut(
+    "record.addTask",
+    onAddTask,
+    !activity.pending && !taskRefusedId,
+  );
   return (
     <OverflowMenu label={t("record.moreActions")} word={t("record.verb.more")}>
       {/* First: the most frequent verb in the menu. */}
       <Button
         disabled={activity.pending}
-        reasonId={refusedReasonId ?? activity.refusedId}
+        reasonId={taskRefusedId}
         onClick={onAddTask}
+        aria-keyshortcuts={taskKeys}
       >
         {t("log.addTask")}
       </Button>

@@ -6,7 +6,7 @@ The 33 tables owned by `activities`, as the migrations build them. [Back to the 
 
 ## activity
 
-73 columns · primary key `(id)` · referenced by 45 foreign keys
+78 columns · primary key `(id)` · referenced by 45 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -20,6 +20,7 @@ The 33 tables owned by `activities`, as the migrations build them. [Back to the 
 | `booking_interval_exact` | `boolean`, default `false` | yes |  |
 | `bulk_mail_attested` | `boolean`, default `false` | yes | This message carried an RFC 2369 List-Unsubscribe header, so the SENDER declared it bulk. |
 | `calendar_method` | `text` |  | One of `PUBLISH`, `REQUEST`, `REPLY`, `ADD`, `CANCEL`, `REFRESH` and 2 more. |
+| `calendar_uid` | `text` |  |  |
 | `call_outcome` | `text` |  | How a call ended: reached, not_reached (nobody answered), voicemail (left a voicemail), call_back_later (asked to be called back), put_through (passed to someone else who took it). |
 | `capture_label` | `text` |  | What this message turned out to be, from the batched capture classification. |
 | `capture_label_declined_at` | `timestamp with time zone` |  |  |
@@ -29,6 +30,8 @@ The 33 tables owned by `activities`, as the migrations build them. [Back to the 
 | `claims_host_slot` | `boolean`, default `false` | yes |  |
 | `counterparty_email` | `text` |  |  |
 | `counterparty_outbound_attested` | `boolean`, default `false` | yes |  |
+| `deal_topic_checked_at` | `timestamp with time zone` |  |  |
+| `deal_topic_digest` | `text` |  |  |
 | `direction` | `text` |  | inbound/outbound for email/call; null for note/task. |
 | `domain_evidence_version` | `bigint`, default `0` | yes |  |
 | `done_at` | `timestamp with time zone` |  |  |
@@ -45,6 +48,7 @@ The 33 tables owned by `activities`, as the migrations build them. [Back to the 
 | `is_done` | `boolean`, default `false` | yes | Task only. |
 | `kind` | `text` | yes | Points at `activity_kind.kind`. |
 | `language` | `text` |  | What language this message is written in, read from its own text when it was captured, or when a note, meeting or call was logged or its text edited. |
+| `legal_entity_id` | `uuid` |  | Points at `legal_entity.id`. |
 | `meeting_status` | `text` |  | Set only when kind=meeting. |
 | `occurred_at` | `timestamp with time zone`, default `now()` | yes |  |
 | `occurred_precision` | `text`, default `'instant'::text` | yes | How to read `occurred_at`. |
@@ -73,6 +77,7 @@ The 33 tables owned by `activities`, as the migrations build them. [Back to the 
 | `source_author_name` | `text` |  |  |
 | `source_id` | `text` |  | Provider message/event id; part of the idempotency key. |
 | `subject` | `text` |  |  |
+| `system_text` | `jsonb` |  |  |
 | `thread_key` | `text` |  | The provider's own conversation id (Gmail threadId, Graph conversationId, the RFC822 References root), stamped by capture. |
 | `archived_at` | `timestamp with time zone` |  | Soft-delete marker. `NULL` means live, and nearly every read filters on it. |
 | `captured_by` | `text` | yes | Server-stamped from the authenticated principal (human:<uuid> \| agent:<id> \| connector:<name>); never client-supplied. |
@@ -93,6 +98,7 @@ The 33 tables owned by `activities`, as the migrations build them. [Back to the 
 | `host_user_id` | `app_user` | deleting the parent keeps this row and clears the link |
 | `invitation_sender` | `app_user` | deleting the parent keeps this row and clears the link |
 | `kind` | `activity_kind` | the parent cannot be deleted while this row points at it |
+| `legal_entity_id` | `legal_entity` | the parent cannot be deleted while this row points at it |
 | `raw_capture_id` | `raw_capture` | deleting the parent keeps this row and clears the link |
 | `sent_by_colleague` | `app_user` | deleting the parent keeps this row and clears the link |
 | `source_activity_id` | `activity` | deleting the parent keeps this row and clears the link |
@@ -135,6 +141,7 @@ The 33 tables owned by `activities`, as the migrations build them. [Back to the 
 - `activity_retention_class_known`: `CHECK (((retention_class IS NULL) OR (retention_class = 'commercial_correspondence')))`
 - `activity_retention_class_stamped`: `CHECK (((retention_class IS NULL) = (retention_class_at IS NULL)))`
 - `activity_source_author_needs_a_source`: `CHECK ((((source_author_id IS NULL) AND (source_author_name IS NULL)) OR (source_system IS NOT NULL)))`
+- `activity_system_text_shape`: `CHECK (((system_text IS NULL) OR ((jsonb_typeof(system_text) = 'object') AND (((system_text ->> 'schema_version') = '1') IS TRUE) AND (octet_length((system_text)) <= 8192))))`
 - `activity_task_fields`: `CHECK (((kind = 'task') OR ((due_at IS NULL) AND (assignee_id IS NULL) AND (is_done = false) AND (remind_at IS NULL))))`
 - `activity_version_js_safe`: `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
@@ -180,6 +187,7 @@ The 33 tables owned by `activities`, as the migrations build them. [Back to the 
 - `activity_no_company_meeting_on_rekind`: `BEFORE UPDATE OF kind FOR EACH ROW EXECUTE FUNCTION activity_refuses_becoming_a_company_meeting()`
 - `activity_project_last_activity`: `AFTER UPDATE OF occurred_at, archived_at, audience, origin, kind, meeting_status, occurred_precision, call_outcome FOR EACH ROW WHEN (((old.occurred_at IS DISTINCT FROM new.occurred_at) OR (old.archived_at IS DISTINCT FROM new.archived_at) OR (old.audience IS DISTINCT FROM new.audience) OR (old.origin IS DISTINCT FROM new.origin) OR (old.kind IS DISTINCT FROM new.kind) OR (old.meeting_status IS DISTINCT FROM new.meeting_status) OR (old.occurred_precision IS DISTINCT FROM new.occurred_precision) OR (old.call_outcome IS DISTINCT FROM new.call_outcome))) EXECUTE FUNCTION trg_activity_project_last_activity()`
 - `activity_refuse_restricted_mutation`: `BEFORE DELETE OR UPDATE FOR EACH ROW EXECUTE FUNCTION activity_refuse_restricted_mutation()`
+- `activity_system_text_retire`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION retire_changed_system_text()`
 - `advance_activity_domain_evidence_version`: `BEFORE UPDATE OF occurred_at, occurred_precision, archived_at, restricted_at FOR EACH ROW EXECUTE FUNCTION advance_activity_domain_evidence_version()`
 - `home_read_fence_activity_reach`: `AFTER UPDATE FOR EACH ROW WHEN (((old.audience IS DISTINCT FROM new.audience) OR ((old.restricted_at IS NULL) AND (new.restricted_at IS NOT NULL)) OR ((old.archived_at IS NULL) AND (new.archived_at IS NOT NULL)) OR (old.assignee_id IS DISTINCT FROM new.assignee_id) OR ((old.sent_by_colleague IS NOT NULL) AND (old.sent_by_colleague IS DISTINCT FROM new.sent_by_colleague)) OR (old.captured_by IS DISTINCT FROM new.captured_by) OR (old.source_system IS DISTINCT FROM new.source_system) OR (old.source_activity_id IS DISTINCT FROM new.source_activity_id))) EXECUTE FUNCTION advance_home_read_fence()`
 - `reopen_deleted_signature_source`: `BEFORE DELETE FOR EACH ROW EXECUTE FUNCTION reopen_deleted_signature_source()`
@@ -328,6 +336,7 @@ The 33 tables owned by `activities`, as the migrations build them. [Back to the 
 **Indexes**
 
 - `activity_identity_activity_idx`: `btree (activity_id, identity_kind, identity_key)`
+- `activity_identity_meeting_uid`: `btree ("left"(identity_key, (length(identity_key) - strpos(reverse(identity_key), '/')))) WHERE (identity_kind = 'meeting')`
 - `activity_identity_pkey`: `unique, btree (identity_kind, identity_key)`
 
 ## activity_link
@@ -1158,6 +1167,7 @@ The 33 tables owned by `activities`, as the migrations build them. [Back to the 
 
 **Rules**
 
+- `meeting_proposal_expires_after_creation`: `CHECK ((expires_at > created_at))`
 - `meeting_proposal_token_hash_key`: `UNIQUE (token_hash)`
 
 **Indexes**

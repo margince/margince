@@ -33,9 +33,17 @@ Margince shows each field it found with the text it read it from. Choose **Accep
 Also called: extract from contract, read a PDF, parse an offer.
 
 ### Can I read a note or an email in my own language?
-Yes. Under a note, email, meeting or call written in another language, choose **Show in my language**. Margince shows what the text says in the language you set for yourself. Names, amounts, dates, links, promises and open questions stay as they were. It is marked as written by AI, and **Show original** brings the original back.
+Yes. Under a task, note, email, meeting or call written in another language, choose **Show in my language**. Margince shows what the text says in the language you set for yourself. Names, amounts, dates, links, promises and open questions stay as they were. It is marked as written by AI, and **Show original** brings the original back.
 
 The button also shows when Margince cannot tell which language a text is in. If the text is already in your language, it says so. Nothing is saved: the version in your language is for you, and nobody else sees it. A text that is too long is refused with that reason; read the original instead.
+
+A task the AI generated can show in your language automatically when it becomes visible. This
+uses the same tool and keeps the original task as it was.
+
+Product-written task text,
+notices and proposal text use your display language when Margince can tell where they came from. Names and
+quoted messages stay as written. Older text without this record keeps its original wording.
+
 Also called: translation, show in English, read in German.
 
 ### Which language does the AI write in?

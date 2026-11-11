@@ -164,6 +164,11 @@ changed mid-window would restart every count. The passports of one OAuth grant s
 (`agentvolume.SubjectOf`), so a refresh, which mints a new passport, keeps the count. The per-minute limits of the
 transport stay in the build (`compose/mcpedge.go`).
 
+The limit on tool calls a minute is checked once the passport is known. It reads the roles of the human who granted
+the passport (`agentvolume.Policy.Paced`). A role in `identity.UnpacedRoles`, today `admin`, has no such limit. The
+limit on streams opened a minute and the limits on failed sign-ins hold for every caller. They are checked before the
+passport is known.
+
 **How a client gets a `client_id`.** There are three ways. A client that reads the priority order of the profile
 tries a client it was given first, then a metadata document, then dynamic registration:
 
@@ -182,8 +187,11 @@ tries a client it was given first, then a metadata document, then dynamic regist
   - Margince gets it again when the cache headers of the client say it is old (no less than 5 minutes and no more than
     24 hours). A deleted CIMD client is fetched again on its next sign-in; a disabled one is never fetched.
 - **Dynamic client registration** (`POST /oauth/register`). The profile marks it as old, and Margince **keeps it for
-  the window it still supports**. So a client registered earlier is not cut off by a version it never asked for. It
-  registers public clients only: a request for `client_secret_basic` or `client_secret_post` is refused.
+  the window it still supports**. So a client registered earlier is not cut off by a version it never asked for.
+
+  It registers public clients only. A request for `client_secret_basic` or `client_secret_post` is registered as
+  `none`, as RFC 7591 §3.2.1 allows, and the answer says `none`. The Gemini app asks for a secret method. Any other
+  method is refused. Each refused registration is logged with its error code and the member it refuses, never the value sent.
 
 **Client authentication.** `token_endpoint_auth_methods_supported` and `revocation_endpoint_auth_methods_supported`
 list `none`, `client_secret_basic` and `client_secret_post`, with `none` first: Claude and Codex pick a metadata

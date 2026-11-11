@@ -4,6 +4,7 @@
 package commsauthz
 
 import (
+	"context"
 	"time"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -85,6 +86,11 @@ type Evidence struct {
 	ConsentEventID ids.UUID
 	// BasisID is a durable communication_basis row.
 	BasisID ids.UUID
+	// LeadID is the lead a controller message is filed under. Only the
+	// controller lane sets it; no send door maps it from a request. When set,
+	// the engine decides about that lead alone, at staging and at transmit, and
+	// refuses a recipient address the lead does not hold.
+	LeadID ids.UUID
 }
 
 // Request is one message put to the engine.
@@ -314,4 +320,12 @@ type TransmitTicket struct {
 // dispatcher asks before it transmits.
 func (t TransmitTicket) Current(deliveryID ids.UUID, attempt int) bool {
 	return t.DecisionSetID != ids.UUID{} && t.DeliveryID == deliveryID && t.Attempt == attempt
+}
+
+// TransmitPermit keeps the stop ordering in force through provider handoff.
+// The dispatcher closes it before recording a receipt or a new stop.
+type TransmitPermit interface {
+	Ticket() TransmitTicket
+	Ready(context.Context) error
+	Close(context.Context)
 }

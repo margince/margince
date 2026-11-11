@@ -11,8 +11,11 @@ package privacy
 
 import (
 	"context"
+	"strings"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/originalstore"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -21,7 +24,7 @@ import (
 // query set is compliance-critical — adding or dropping a source changes what
 // the export owes the data subject. It is assembled chapter by chapter, and the
 // order the chapters concatenate in is the order the export runs them in.
-func sarSections(ctx context.Context, pkg *SARPackage, contactID ids.ContactID, emails []string, leads, identities, authored []ids.UUID) ([]sarSection, error) {
+func sarSections(ctx context.Context, pkg *SARPackage, contactID ids.ContactID, emails []string, leads, identities, authored, external []ids.UUID) ([]sarSection, error) {
 	sections := sarIdentitySections(pkg)
 	retained, err := sarRetainedCopySections(ctx, pkg, identities, emails, leads)
 	if err != nil {
@@ -31,12 +34,12 @@ func sarSections(ctx context.Context, pkg *SARPackage, contactID ids.ContactID, 
 	sections = append(sections, sarReportingSections(pkg), sarQuestionSection(pkg, contactID, emails), sarBindingSection(pkg, contactID, emails))
 	sections = append(sections, sarRecordSections(pkg, contactID, leads)...)
 	sections = append(sections, sarMessagingSections(pkg, contactID, emails, leads)...)
-	sections = append(sections, sarConsentSections(pkg)...)
+	sections = append(sections, sarConsentSections(pkg, contactID, emails, leads)...)
 	sections = append(sections, sarRequestSections(pkg, contactID)...)
 	sections = append(sections, sarConsentLinkSections(pkg)...)
 	sections = append(sections, sarCommunicationSections(pkg, emails, leads, identities)...)
 	sections = append(sections, sarJudgementSections(pkg, authored)...)
-	return append(sections, sarProvenanceSections(pkg)...), nil
+	return append(sections, sarProvenanceSections(pkg, contactID, external)...), nil
 }
 
 // sarIdentitySections gather how the subject is identified and where they are
@@ -199,7 +202,7 @@ func sarRecordSections(pkg *SARPackage, contactID ids.ContactID, leads []ids.UUI
 
 // sarContentDisclosed is the export's one rule for whether an activity's (alias
 // `a`) own content travels: only workspace-audience mail.
-const sarContentDisclosed = `a.audience = 'workspace'`
+var sarContentDisclosed = `` + auth.WorkspaceAudienceSQL("a") + ``
 
 // sarRawCaptureLink correlates one raw_capture row to the activities read from
 // it. The clause below asks it four times, twice to decide disclosure and twice
@@ -211,7 +214,7 @@ var sarRawCaptureLink = storekit.StoredOriginalSQL("a", "rc")
 
 // sarConsentSections gather the per-purpose consent state and the proof log
 // behind it — what the subject agreed to, and every change of mind on record.
-func sarConsentSections(pkg *SARPackage) []sarSection {
+func sarConsentSections(pkg *SARPackage, contactID ids.ContactID, emails []string, leads []ids.UUID) []sarSection {
 	return []sarSection{
 		{&pkg.Consent, `SELECT cp.key AS purpose, pc.state, pc.lawful_basis, pc.captured_at
 		   FROM contact_consent pc JOIN consent_purpose cp ON cp.id = pc.purpose_id
@@ -260,9 +263,7 @@ func sarConsentSections(pkg *SARPackage) []sarSection {
 		// short answer. Aliased rather than renamed in the output because every
 		// other section here reports "when we wrote it down" as captured_at, and
 		// the export is read by the subject, not by us.
-		{&pkg.ConsentQualifyingEvents, `SELECT kind, occurred_at, source_entity_type, created_at AS captured_at
-		   FROM consent_qualifying_event
-		   WHERE contact_id = $1`, nil},
+		sarQualifyingEventSection(pkg, contactID, emails, leads),
 		{&pkg.ConfirmSubmissions, `SELECT kind, field, proposed_value, submitted_at, resolution, resolved_at
 		   FROM contact_confirm_submission
 		   WHERE contact_id = $1`, nil},
@@ -296,7 +297,8 @@ func sarConsentSections(pkg *SARPackage) []sarSection {
 // sarProvenanceSections gather where the held data CAME FROM: the raw provider
 // payloads the subject was captured out of, and the per-field record of who
 // captured what from where.
-func sarProvenanceSections(pkg *SARPackage) []sarSection {
+func sarProvenanceSections(pkg *SARPackage, contactID ids.ContactID, external []ids.UUID) []sarSection {
+	rawArgs, externalIDs := sarOriginalArgs(contactID, external)
 	return []sarSection{
 		// Why the installation holds this contact at all: what they did, or
 		// what was done to obtain them. Art. 15(1)(g) asks for the source of
@@ -395,15 +397,13 @@ func sarProvenanceSections(pkg *SARPackage) []sarSection {
 		                          WHERE ` + sarRawCaptureLink + ` AND ` + sarContentDisclosed + `)
 		             AND NOT EXISTS (SELECT 1 FROM activity a
 		                              WHERE ` + sarRawCaptureLink + ` AND NOT ` + sarContentDisclosed + `)
-		            THEN rc.payload END AS payload
+		            THEN ` + originalstore.SQL("rc") + ` END AS payload
 		   FROM raw_capture rc
 		   WHERE EXISTS (SELECT 1 FROM contact_email pe WHERE pe.contact_id = $1
-		                 AND rc.payload::text ILIKE
-		                     '%' || ` + storekit.EscapeLikeSQL("pe.email") + ` || '%' ESCAPE '\')
-		      OR EXISTS (SELECT 1 FROM contact_channel_identity pci WHERE pci.contact_id = $1
-		                 AND rc.source_system = pci.provider
-		                 AND (rc.payload->'message'->'from'->>'id' = pci.channel_user_id
-		                      OR rc.payload->'my_chat_member'->'chat'->>'id' = pci.channel_user_id))`, nil},
+		                 AND ` + rawEmailMatchSQL("rc.payload", "pe.email") + `)
+ OR EXISTS (SELECT 1 FROM contact_channel_identity pci WHERE pci.contact_id = $1
+ AND ` + rawChannelMatchSQL("rc.payload", "rc.source_system", "pci.provider", "pci.channel_user_id") + `)
+ OR rc.id = ANY(` + externalIDs + `)`, rawArgs},
 		{&pkg.FieldOrigins, `SELECT fp.field_name, fp.source, fp.captured_by, fp.captured_at, fp.confidence, fp.evidence_ref
 		   FROM field_provenance fp
 		   WHERE fp.object_type = 'contact' AND fp.object_id = $1`, nil},
@@ -489,4 +489,11 @@ func sarProvenanceSections(pkg *SARPackage) []sarSection {
 		   FROM provider_run pr
 		   WHERE pr.contact_id = $1`, nil},
 	}
+}
+
+func sarQualifyingEventSection(pkg *SARPackage, contactID ids.ContactID, emails []string, leads []ids.UUID) sarSection {
+	args := []any{contactID.UUID, leads, lowercased(emails)}
+	bind := strings.Split(storekit.Placeholders(args), ",")
+	return sarSection{&pkg.ConsentQualifyingEvents, `SELECT kind, occurred_at, source_entity_type, created_at AS captured_at
+	 FROM consent_qualifying_event WHERE contact_id = ` + bind[0] + ` OR lead_id = ANY(` + bind[1] + `) OR ` + recordedRequestAddressScope(bind[2]), args}
 }

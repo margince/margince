@@ -5,7 +5,7 @@
    The size is spelled here and nowhere else — it used to hang off `t-meta`, a
    name no stylesheet ever declared, so the sentence drew at whatever size the
    screen around it happened to set. That name is gone from the tree and
-   `typeclass-coverage.test.ts` fails the next one. */
+   `census/rules/typeclass-coverage.census.ts` fails the next one. */
 .readings-floor {
   margin: var(--space-2) 0 0;
 }

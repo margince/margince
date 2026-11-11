@@ -24,6 +24,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/threadverdict"
 )
 
 // ThreadOutcome is what applying one verdict to a thread changed.
@@ -41,8 +42,9 @@ type ThreadOutcome struct {
 	Reopened ids.UUID
 }
 
-// RecordOutcomeOnThreadTx stamps this seat's verdict onto every message of the
-// thread it had already imported and not yet decided.
+// RecordOutcomeOnThreadTx stamps this seat's verdict onto the messages of the
+// thread it had already imported. An opening verdict takes the undecided ones.
+// A closing verdict (ClosesOpenMessages) also takes the ones already opened.
 //
 // Scoped to the seat whose verdict it is, like the single-message stamp beside
 // it: a thread reaching two mailboxes is two contacts's correspondence, each may
@@ -56,7 +58,8 @@ func (s *ThreadVerdictStore) RecordOutcomeOnThreadTx(
 	if threadKey == "" || user == ids.Nil {
 		return ThreadOutcome{}, nil
 	}
-	undecided, err := undecidedSiblingsTx(ctx, tx, threadKey, user)
+	taken := siblingStatusesTaken(status)
+	undecided, err := siblingsTx(ctx, tx, threadKey, user, taken, ClosesOpenMessages(status))
 	if err != nil {
 		return ThreadOutcome{}, err
 	}
@@ -66,7 +69,7 @@ func (s *ThreadVerdictStore) RecordOutcomeOnThreadTx(
 		// private" is true of the whole conversation whoever wrote which part.
 		// An opening one takes only what the verdict actually read, and it never
 		// read the documents on a message other than the one it judged.
-		if holdingVerdict(status) || (addressWasSeen(sib.from, seen) && !sib.carriesDocument) {
+		if ClosesOpenMessages(status) || (addressWasSeen(sib.from, seen) && !sib.carriesDocument) {
 			out.Stamped = append(out.Stamped, sib.id)
 			continue
 		}
@@ -75,7 +78,7 @@ func (s *ThreadVerdictStore) RecordOutcomeOnThreadTx(
 		}
 	}
 	if len(out.Stamped) > 0 {
-		if err := stampSiblingsTx(ctx, tx, user, out.Stamped, status, kind); err != nil {
+		if err := stampSiblingsTx(ctx, tx, user, out.Stamped, status, kind, taken); err != nil {
 			return ThreadOutcome{}, err
 		}
 	}
@@ -85,6 +88,50 @@ func (s *ThreadVerdictStore) RecordOutcomeOnThreadTx(
 		}
 	}
 	return out, nil
+}
+
+// RecordOutcomeOnWholeThreadTx repeats RecordOutcomeOnThreadTx in this
+// transaction until a pass stamps less than a full batch. The live verdict
+// path calls it, so a thread over one batch long ends with every message
+// decided. Each full pass stamps a full batch that leaves the selection, so
+// the loop ends.
+func (s *ThreadVerdictStore) RecordOutcomeOnWholeThreadTx(
+	ctx context.Context, tx pgx.Tx, threadKey string, user ids.UUID,
+	status, kind string, seen []string,
+) (ThreadOutcome, error) {
+	var whole ThreadOutcome
+	for {
+		pass, err := s.RecordOutcomeOnThreadTx(ctx, tx, threadKey, user, status, kind, seen)
+		if err != nil {
+			return ThreadOutcome{}, err
+		}
+		whole.Stamped = append(whole.Stamped, pass.Stamped...)
+		if whole.Reopened == ids.Nil {
+			whole.Reopened = pass.Reopened
+		}
+		if len(pass.Stamped) < threadSiblingBatch {
+			return whole, nil
+		}
+	}
+}
+
+// openedVerdicts are the import statuses a closing verdict overwrites besides
+// an undecided one.
+var openedVerdicts = []string{VerdictCleared, VerdictSharedByOwner}
+
+// ClosesOpenMessages reports whether a thread verdict closes the seat's
+// messages the thread had already opened.
+func ClosesOpenMessages(status string) bool {
+	return threadverdict.Holds(status)
+}
+
+// siblingStatusesTaken lists the import statuses a thread verdict overwrites on
+// an earlier message of its thread. A NULL status is always taken.
+func siblingStatusesTaken(status string) []string {
+	if ClosesOpenMessages(status) {
+		return append([]string{VerdictPending}, openedVerdicts...)
+	}
+	return []string{VerdictPending}
 }
 
 // threadSiblingBatch bounds one thread's repair. A thread is a conversation
@@ -102,18 +149,22 @@ type sibling struct {
 	carriesDocument bool
 }
 
-// undecidedSiblingsTx reads the messages of this thread that this seat imported
-// and nothing has decided.
+// siblingsTx reads the messages of this thread that this seat imported and
+// whose import status is NULL or one of taken.
 //
 // `pending` counts as undecided alongside NULL: a message that inherited a
 // pending verdict carries the word but no answer, and the derivation reads the
 // two identically.
 //
+// byID orders a closing verdict's page by activity id. The thread-hold data
+// task pages the same rows by activity id, so each page it hands over is the
+// front of this one.
+//
 // Archived and restricted rows are excluded, matching the writer below and the
 // owner's own decision path. A selector that reached rows its writer refuses
 // would return the same page every tick and starve everything behind it.
-func undecidedSiblingsTx(
-	ctx context.Context, tx pgx.Tx, threadKey string, user ids.UUID,
+func siblingsTx(
+	ctx context.Context, tx pgx.Tx, threadKey string, user ids.UUID, taken []string, byID bool,
 ) ([]sibling, error) {
 	rows, err := tx.Query(ctx, `
 		SELECT a.id, lower(btrim(coalesce(a.counterparty_email, ''))), `+storedFilesSQL("a.id", "$5")+`
@@ -121,9 +172,9 @@ func undecidedSiblingsTx(
 		  JOIN capture_import i ON i.activity_id = a.id AND i.user_id = $2
 		 WHERE a.thread_key = $1
 		   AND a.archived_at IS NULL AND a.restricted_at IS NULL
-		   AND (i.verdict_status IS NULL OR i.verdict_status = $3)
-		 ORDER BY a.occurred_at, a.id
-		 LIMIT $4`, threadKey, user, VerdictPending, threadSiblingBatch, maxStoredFiles+1)
+		   AND (i.verdict_status IS NULL OR i.verdict_status = ANY($3))
+		 ORDER BY CASE WHEN $6 THEN a.id END, a.occurred_at, a.id
+		 LIMIT $4`, threadKey, user, taken, threadSiblingBatch, maxStoredFiles+1, byID)
 	if err != nil {
 		return nil, fmt.Errorf("capture: reading a thread's undecided messages: %w", err)
 	}
@@ -154,19 +205,19 @@ func undecidedSiblingsTx(
 // colleague's mailbox is still holding the message — has nothing to report, and
 // an audit row saying otherwise would claim a disclosure that did not happen.
 //
-// The undecided predicate is restated in the UPDATE rather than trusted from
-// the read: between the two, another pass may have decided one of these rows,
-// and overwriting a decision with one taken before it is how a held message
-// becomes an open one.
+// The status predicate is restated in the UPDATE rather than trusted from the
+// read. Between the two, another pass may have decided one of these rows. A
+// decision overwritten by one taken before it is how a held message becomes an
+// open one. Only a closing verdict passes the opened statuses in taken.
 func stampSiblingsTx(
-	ctx context.Context, tx pgx.Tx, user ids.UUID, ids_ []ids.UUID, status, kind string,
+	ctx context.Context, tx pgx.Tx, user ids.UUID, ids_ []ids.UUID, status, kind string, taken []string,
 ) error {
 	_, err := tx.Exec(ctx, `
 		UPDATE capture_import
 		   SET verdict_status = $3, verdict_reason = NULLIF($4, '')
 		 WHERE user_id = $1 AND activity_id = ANY($2)
-		   AND (verdict_status IS NULL OR verdict_status = $5)`,
-		user, ids_, status, rowReasonForKind(kind), VerdictPending)
+		   AND (verdict_status IS NULL OR verdict_status = ANY($5))`,
+		user, ids_, status, rowReasonForKind(kind), taken)
 	if err != nil {
 		return fmt.Errorf("capture: recording a thread verdict on its earlier messages: %w", err)
 	}

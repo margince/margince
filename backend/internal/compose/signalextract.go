@@ -211,9 +211,13 @@ func (p extractPayload) asRead(thread settledThread) extractPayload {
 		return p
 	}
 	events := slices.Clone(*p.Events)
+	parties := thread.partyRefs()
 	for i := range events {
 		events[i].MessageID = thread.messageID(events[i].MessageID)
 		events[i].RestatedMessageID = thread.messageID(events[i].RestatedMessageID)
+		events[i].PromiserRef = partyKey(parties, events[i].PromiserRef)
+		events[i].BuyerRef = partyKey(parties, events[i].BuyerRef)
+		events[i].RecipientRefs = partyKeys(parties, events[i].RecipientRefs)
 	}
 	if len(thread.Focus) > 0 {
 		events = slices.DeleteFunc(events, func(event extractedEvent) bool {
@@ -339,7 +343,7 @@ func threadMessagesStillOpen(ctx context.Context, tx pgx.Tx, thread settledThrea
 	if err := tx.QueryRow(ctx, `
 		SELECT count(*) FROM activity
 		 WHERE id = ANY($1::uuid[]) AND archived_at IS NULL
-		   AND `+activities.AutomaticMailContent,
+		   AND `+activities.AutomaticMailContent("activity"),
 		shown).Scan(&open); err != nil {
 		return false, fmt.Errorf("signal extract: re-checking the messages read: %w", err)
 	}

@@ -14,15 +14,17 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/datatask"
+	"github.com/margince/margince/backend/internal/platform/originalstore"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 func mailRecipientsDataTask() datatask.Task {
 	return datatask.Task{
 		ID: "core/1792592656_mail_recipient_evidence", Version: 1,
-		Title: "Restore captured mail recipients", Requires: []string{"core/1792501453"},
+		Title: systemtext.Literal("datatask.title.core.1792592656_mail_recipient_evidence"), Requires: []string{"core/1792501453"},
 		Steps: []datatask.Step{{
 			Name: "restore_recipient_headers", Limit: 50, MinLimit: 1,
 			Audit:    datatask.AuditPolicy{Reason: "capture stamps the same parsed participant evidence without a separate audit"},
@@ -44,7 +46,7 @@ func restoreMailRecipientsBatch(ctx context.Context, tx pgx.Tx, in datatask.Batc
 	if err != nil {
 		return datatask.BatchOut{}, err
 	}
-	rows, err := tx.Query(ctx, `SELECT a.id, rc.payload `+mailRecipientOriginalScope+` AND a.id > @after ORDER BY a.id LIMIT @batch_limit FOR UPDATE OF a`, pgx.NamedArgs{dataTaskAfterArg: after, "batch_limit": in.Limit})
+	rows, err := tx.Query(ctx, `SELECT a.id, `+originalstore.SQL("rc")+` `+mailRecipientOriginalScope+` AND a.id > @after ORDER BY a.id LIMIT @batch_limit FOR UPDATE OF a`, pgx.NamedArgs{dataTaskAfterArg: after, "batch_limit": in.Limit})
 	if err != nil {
 		return datatask.BatchOut{}, err
 	}
@@ -56,6 +58,10 @@ func restoreMailRecipientsBatch(ctx context.Context, tx pgx.Tx, in datatask.Batc
 	evidence := make([]capture.MailRecipientEvidence, 0, len(originals))
 	for _, original := range originals {
 		scanned = append(scanned, original.ID)
+		original.Payload, err = originalstore.RepairPayload(ctx, original.Payload)
+		if err != nil {
+			return datatask.BatchOut{}, err
+		}
 		// Unreadable evidence must keep the correction pending rather than report success.
 		raw, err := capture.DecodeStoredOriginal(original.Payload)
 		if err != nil {

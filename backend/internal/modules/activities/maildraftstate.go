@@ -9,6 +9,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 // Metadata is bounded independently: it must never prevent saving the message.
@@ -25,6 +26,27 @@ func boundedDraftEditorState(state crmcontracts.MailDraftEditorState) crmcontrac
 	}
 	if state.VoiceProfileVersion != nil && *state.VoiceProfileVersion < 1 {
 		state.VoiceProfileVersion = nil
+	}
+	if state.Language != nil && !textlang.Known(string(*state.Language)) {
+		state.Language = nil
+	}
+	if state.Filing != nil {
+		selection := make([]crmcontracts.MailDraftGround, 0, 2)
+		seen := map[crmcontracts.MailDraftAnchorType]bool{}
+		for _, ground := range *state.Filing {
+			if ground.AnchorType != crmcontracts.MailDraftAnchorTypeDeal && ground.AnchorType != crmcontracts.MailDraftAnchorTypeProject {
+				continue
+			}
+			if ground.AnchorId == (crmcontracts.Id{}) || seen[ground.AnchorType] {
+				continue
+			}
+			selection = append(selection, ground)
+			seen[ground.AnchorType] = true
+			if len(selection) == 2 {
+				break
+			}
+		}
+		state.Filing = &selection
 	}
 	return state
 }

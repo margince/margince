@@ -96,6 +96,7 @@ func base(
 		Consequence:       consequence,
 		Kind:              item.Kind,
 		Title:             item.Title,
+		SystemDisplay:     item.SystemDisplay,
 		SummaryParts:      item.SummaryParts,
 		Detail:            item.Detail,
 		NoticeOrigin:      item.NoticeOrigin,
@@ -351,4 +352,8 @@ func appendReadOnly(row crmcontracts.WorklistItem, verb crmcontracts.WorklistIte
 		return row.Because
 	}
 	return append(row.Because, reason("read_only", nil))
+}
+
+func overdue(item crmcontracts.AttentionItem) bool {
+	return item.Overdue != nil && *item.Overdue
 }

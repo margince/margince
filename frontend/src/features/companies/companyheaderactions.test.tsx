@@ -1,7 +1,13 @@
 /** @vitest-environment happy-dom */
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import {
+  render,
+  renderHook,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { type ReactNode, useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -11,6 +17,7 @@ import { UTC_ZONE } from "../../format/timezone";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
 import { routeHash } from "../../lib/router";
+import { useShortcutDispatcher } from "../../lib/shortcuts";
 import { ViewerZoneProvider } from "../../lib/viewerzone";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import { CompanyActionBadges } from "./companyheader";
@@ -106,21 +113,27 @@ function renderInApp(ui: ReactNode) {
 // open/close wiring rather than a state this test would otherwise own itself.
 // The strip and its menu read one gate, as on the page; Add task is a row of
 // the menu.
-function ActionsHost() {
+function ActionsHost({
+  company = COMPANY,
+  onComposerOpen = () => undefined,
+}: Readonly<{
+  company?: Company;
+  onComposerOpen?: (open: boolean) => void;
+}>) {
   const [drawer, setDrawer] = useState<ActivityDrawer>(null);
   const activity = useActivityGate();
   return (
     <>
       <CompanyHeaderActions
-        company={COMPANY}
+        company={company}
         composerOpen={false}
-        onComposerOpen={() => undefined}
+        onComposerOpen={onComposerOpen}
         drawer={drawer}
         onDrawer={setDrawer}
         activity={activity}
       />
       <CompanyActionBadges
-        company={COMPANY}
+        company={company}
         activity={activity}
         onAddTask={() => setDrawer("task")}
         onOpenHistory={() => undefined}
@@ -148,6 +161,20 @@ function renderActions() {
 // Without this, a read-only seat opened the form, typed a note, and was
 // refused only on submit.
 describe("Log activity and Add task, gated on the create grant", () => {
+  it("refuses Email too, over the same sentence as Log", async () => {
+    stubGrants({});
+    renderActions();
+
+    const log = await screen.findByRole("button", { name: "Log activity" });
+    const email = screen.getByRole("button", {
+      name: en["contact.action.email"],
+    });
+    expect(email.hasAttribute("disabled")).toBe(true);
+    expect(email.getAttribute("aria-describedby")).toBe(
+      log.getAttribute("aria-describedby"),
+    );
+  });
+
   it("refuses both without the grant, over one shared sentence", async () => {
     stubGrants({});
     const user = userEvent.setup();
@@ -386,5 +413,98 @@ describe("Book a meeting from the account", () => {
       url.pathname.endsWith("/contacts"),
     );
     expect(contactsAsked?.searchParams.get("company_id")).toBe(COMPANY.id);
+  });
+});
+
+describe("the record keys", () => {
+  it.each([
+    ["n", en["log.title"]],
+    ["t", en["log.addTask"]],
+  ])("open on %s the drawer its verb opens: %s", async (key, verb) => {
+    stubGrants({ activity: ["create"] });
+    const user = userEvent.setup();
+    renderHook(() => useShortcutDispatcher());
+    renderActions();
+    const log = await screen.findByRole("button", { name: en["log.title"] });
+    await waitFor(() => expect(log.hasAttribute("disabled")).toBe(false));
+
+    await user.keyboard(key);
+    const drawer = await screen.findByRole("dialog");
+    expect(within(drawer).getByRole("heading", { name: verb })).toBeTruthy();
+  });
+
+  it("open the composer on M, and name their keys on the verbs", async () => {
+    stubGrants({ activity: ["create"] });
+    const user = userEvent.setup();
+    renderHook(() => useShortcutDispatcher());
+    const onComposerOpen = vi.fn();
+    renderInApp(<ActionsHost onComposerOpen={onComposerOpen} />);
+    const log = await screen.findByRole("button", { name: en["log.title"] });
+    await waitFor(() => expect(log.hasAttribute("disabled")).toBe(false));
+    expect(log.getAttribute("aria-keyshortcuts")).toBe("n");
+    expect(
+      screen
+        .getByRole("button", { name: en["contact.action.email"] })
+        .getAttribute("aria-keyshortcuts"),
+    ).toBe("m");
+
+    await user.keyboard("m");
+    expect(onComposerOpen).toHaveBeenCalledWith(true);
+    expect((await findAddTask(user)).getAttribute("aria-keyshortcuts")).toBe(
+      "t",
+    );
+  });
+
+  it("do nothing for a seat that may not log", async () => {
+    stubGrants({});
+    const user = userEvent.setup();
+    renderHook(() => useShortcutDispatcher());
+    const onComposerOpen = vi.fn();
+    renderInApp(<ActionsHost onComposerOpen={onComposerOpen} />);
+    await screen.findByText(
+      "You do not have permission to log activities on this record.",
+    );
+
+    await user.keyboard("ntm");
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(onComposerOpen).not.toHaveBeenCalled();
+  });
+
+  it("do nothing on an archived account", async () => {
+    stubGrants({ activity: ["create"] });
+    const user = userEvent.setup();
+    renderHook(() => useShortcutDispatcher());
+    const onComposerOpen = vi.fn();
+    renderInApp(
+      <ActionsHost
+        company={{ ...COMPANY, archived_at: "2026-06-02T08:00:00Z" }}
+        onComposerOpen={onComposerOpen}
+      />,
+    );
+    await screen.findByText(en["record.archivedReadOnly"]);
+
+    await user.keyboard("ntm");
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(onComposerOpen).not.toHaveBeenCalled();
+  });
+
+  it("name no key on an archived account's verbs, since no key presses them", async () => {
+    stubGrants({ activity: ["create"] });
+    const user = userEvent.setup();
+    renderInApp(
+      <ActionsHost
+        company={{ ...COMPANY, archived_at: "2026-06-02T08:00:00Z" }}
+      />,
+    );
+    await screen.findByText(en["record.archivedReadOnly"]);
+
+    const verbs = [
+      screen.getByRole("button", { name: en["log.title"] }),
+      screen.getByRole("button", { name: en["contact.action.email"] }),
+      await findAddTask(user),
+    ];
+    for (const verb of verbs) {
+      expect(verb.hasAttribute("aria-keyshortcuts")).toBe(false);
+    }
   });
 });

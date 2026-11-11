@@ -235,11 +235,9 @@ func (e *ConfidentialityVerdictEngine) judgeOne(
 		return fmt.Errorf("confidentiality: unknown kind for thread %s", row.ID)
 	}
 	kind := answer.Verdict
-	// A thread with documents the verdict never read cannot open: the sender
-	// names the files, so the unread ones are theirs to choose.
-	if status == capture.VerdictCleared &&
-		(float64(answer.Confidence) < confidentialityFloor || read.DocumentsOmitted > 0) {
-		// Below the floor the OPENING answer is discarded and the thread holds.
+	if status == capture.VerdictCleared && !confidentialityOpens(answer, read) {
+		// An opening answer the rule does not believe is discarded, and the
+		// thread holds: below the floor, or with a document nobody read.
 		// The kind is kept as the model gave it, because "the model thought
 		// this was ordinary and was not sure" is what a human reviewing the
 		// backlog needs to see.
@@ -291,7 +289,7 @@ func (e *ConfidentialityVerdictEngine) apply(
 		// import posture for good, because the thread's question is answered
 		// and the unique ledger row stops a second one being opened. Import
 		// order is the accident; the admission rule is unchanged.
-		outcome, err := e.threads.RecordOutcomeOnThreadTx(ctx, tx, row.ThreadKey, row.UserID, status, kind, seen)
+		outcome, err := e.threads.RecordOutcomeOnWholeThreadTx(ctx, tx, row.ThreadKey, row.UserID, status, kind, seen)
 		if err != nil {
 			return err
 		}
@@ -475,7 +473,7 @@ func (e *ConfidentialityVerdictEngine) finishOneSettledThread(
 		if err != nil || !ok {
 			return err
 		}
-		outcome, err := e.threads.RecordOutcomeOnThreadTx(
+		outcome, err := e.threads.RecordOutcomeOnWholeThreadTx(
 			wsCtx, tx, locked.ThreadKey, locked.UserID, locked.Status, locked.Kind, locked.Seen)
 		if err != nil {
 			return err

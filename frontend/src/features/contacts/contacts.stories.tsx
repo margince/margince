@@ -2,7 +2,9 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, screen, userEvent } from "storybook/test";
 import type { components } from "../../api/schema";
+import { stubClipboard } from "../../design-system/clipboard-testing";
 import {
   installFetchStub,
   jsonResponse,
@@ -49,6 +51,70 @@ export const ContactsList: Story = {
       </StoryProviders>
     );
   },
+};
+
+/** `#/contacts/new`: the list with its create form open, as `C` opens it. */
+export const CreateFormOpen: Story = {
+  render: () => {
+    installFetchStub({
+      "GET /me": meRoute({ contact: ["read", "create"] }),
+      "GET /contacts": () =>
+        jsonResponse({
+          data: [anna],
+          page: { next_cursor: null, has_more: false },
+        }),
+    });
+    return (
+      <StoryProviders>
+        <ContactsScreen startCreating />
+      </StoryProviders>
+    );
+  },
+  play: async () => {
+    await expect(
+      await screen.findByRole("dialog", { name: "New contact" }),
+    ).toBeInTheDocument();
+  },
+};
+
+/** Each address carries its copy glyph, which copies and opens nothing. */
+export const ContactsListCopyAddress: Story = {
+  render: () => {
+    installFetchStub({
+      "GET /me": meRoute({ contact: ["read", "update"] }),
+      "GET /contacts": () =>
+        jsonResponse({
+          data: [{ ...anna, primary_email: "anna.weber@brandt.example" }],
+          page: { next_cursor: null, has_more: false },
+        }),
+    });
+    return (
+      <StoryProviders>
+        <ContactsScreen />
+      </StoryProviders>
+    );
+  },
+  play: async () => {
+    const copy = await screen.findByRole("button", {
+      name: "Copy email address",
+    });
+    const clipboard = stubClipboard("accepts");
+    try {
+      await userEvent.click(copy);
+      await screen.findByRole("button", { name: "Email address copied" });
+      await expect(clipboard.written).toEqual(["anna.weber@brandt.example"]);
+      await expect(screen.queryByRole("dialog")).toBeNull();
+    } finally {
+      clipboard.restore();
+    }
+  },
+};
+
+/** The phone card keeps the address and its copy glyph on one line. */
+export const ContactsListCopyAddressPhone: Story = {
+  ...ContactsListCopyAddress,
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
 };
 
 // The list stories below are all about what the TABLE shows, so they share one

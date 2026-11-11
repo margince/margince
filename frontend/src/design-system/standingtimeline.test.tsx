@@ -64,11 +64,20 @@ describe("marks on the line", () => {
     const user = userEvent.setup();
     draw([mark({ key: "m", at: "2026-07-10" })]);
 
-    await user.click(screen.getByRole("button", { name: "Email" }));
+    await user.click(screen.getByRole("button", { name: "Email, 10 Jul" }));
 
     const card = screen.getByRole("region", { name: "Email" });
     expect(card).toHaveTextContent("Scope question");
     expect(card).toHaveTextContent("From Dana Reyes · 10 Jul");
+  });
+
+  it("names a lone chip by its kind and its day, so it is not a second Email button", () => {
+    draw([mark({ key: "m", at: "2026-07-10" })]);
+
+    expect(screen.queryByRole("button", { name: "Email" })).toBeNull();
+    expect(
+      screen.getByRole("button", { name: "Email, 10 Jul" }),
+    ).toBeInTheDocument();
   });
 
   it("draws one chip with a count for marks a day apart, naming the span", async () => {
@@ -98,7 +107,7 @@ describe("marks on the line", () => {
       [{ at: "2026-07-10", activityIds: ["m"] }],
     );
 
-    expect(screen.queryByRole("button", { name: "Email" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Email, 10 Jul" })).toBeNull();
   });
 
   it("keeps the mark of an event folded into a neighbour's label, which names it nowhere", () => {
@@ -110,17 +119,21 @@ describe("marks on the line", () => {
       ],
     );
 
-    expect(screen.getByRole("button", { name: "Email" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Email, 10 Jul" }),
+    ).toBeInTheDocument();
   });
 
   it("leaves a mark older than the zoom off the line until the reader zooms out", async () => {
     const user = userEvent.setup();
     draw([mark({ key: "old", at: "2025-01-10" })]);
-    expect(screen.queryByRole("button", { name: "Email" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Email, 10 Jul" })).toBeNull();
 
     await user.click(screen.getByRole("button", { name: "All time" }));
 
-    expect(screen.getByRole("button", { name: "Email" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Email, 10 Jul" }),
+    ).toBeInTheDocument();
   });
 
   // Read at 23:00 on 13 Aug in Kiritimati: a day entry for the 13th is stored
@@ -132,10 +145,12 @@ describe("marks on the line", () => {
       [],
       "Pacific/Kiritimati",
     );
-    expect(screen.getByRole("button", { name: "Email" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Email, 10 Jul" }),
+    ).toBeInTheDocument();
     cleanup();
     draw([mark({ key: "later", at: today })], [], "Pacific/Kiritimati");
-    expect(screen.queryByRole("button", { name: "Email" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Email, 10 Jul" })).toBeNull();
   });
 
   it("keeps the chips out of the hidden canvas, where a control would be unreachable", () => {
@@ -143,7 +158,7 @@ describe("marks on the line", () => {
 
     expect(
       screen
-        .getByRole("button", { name: "Email" })
+        .getByRole("button", { name: "Email, 10 Jul" })
         .closest("[aria-hidden='true']"),
     ).toBeNull();
   });
@@ -165,6 +180,35 @@ describe("marks on the line", () => {
     await user.click(screen.getByRole("button", { name: /8 entries/ }));
 
     expect(screen.getByRole("region")).toHaveTextContent("2 more in History");
+  });
+});
+
+describe("a deal's outcome", () => {
+  it("stands as a flag in its tone where the deal was decided, not as a dot", () => {
+    const { container } = render(
+      <StandingTimeline
+        label="Brandt over time"
+        asOf="2026-08-13T09:00:00Z"
+        record={UTC_ZONE}
+        events={[
+          { key: "a", at: "2026-06-03", title: "Kickoff", kind: "done" },
+          {
+            key: "c",
+            at: "2026-07-20T10:00:00Z",
+            title: "Lost",
+            kind: "end",
+            outcome: "lost",
+          },
+        ]}
+      />,
+    );
+
+    const flags = container.querySelectorAll(".standing-timeline-flag");
+    expect(flags).toHaveLength(1);
+    expect(flags[0]).toHaveAttribute("data-outcome", "lost");
+    expect(container.querySelectorAll(".standing-timeline-dot")).toHaveLength(
+      1,
+    );
   });
 });
 
@@ -222,7 +266,9 @@ describe("the zoom", () => {
       "aria-pressed",
       "true",
     );
-    expect(screen.getByRole("button", { name: "Email" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Email, 10 Jul" }),
+    ).toBeInTheDocument();
   });
 
   it("opens wide enough for every event it names", () => {

@@ -19,9 +19,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/margince/margince/backend/internal/compose/analyticsquery"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/corefeatures"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
@@ -208,6 +209,9 @@ type reportSpec struct {
 	// with in one installation, keyed by their SQL expression. Empty on every
 	// prebuilt entry; analyticsCatalog fills it per request.
 	customFields map[string]customDimension
+	// filterPredicates replace a filter's rendering against a SET. One %s for
+	// the bound reference; the expression stays in filters for the switch.
+	filterPredicates map[string]string
 	// thresholds are the filters that compare the row against a NUMBER the
 	// caller sends rather than a column it must equal (reportthreshold.go).
 	// Each has a default, so the report answers with no plan at all, and the
@@ -308,6 +312,10 @@ type reportOutcome struct {
 // runSpec executes one validated vocabulary; Run (prebuilt catalog) and
 // runAdHocPlan (schema-descriptor vocabulary) both land here.
 func (e *reportEngine) runSpec(ctx context.Context, report string, spec reportSpec, req reportRequest) (reportOutcome, error) {
+	availability := corefeatures.FromContext(ctx)
+	if !reportAvailable(availability, spec) {
+		return reportOutcome{}, apperrors.ErrNotFound
+	}
 	if err := checkReportScope(spec, req.Scope); err != nil {
 		return reportOutcome{}, err
 	}
@@ -466,22 +474,12 @@ func aggregateSelect(spec reportSpec, agg reportAggregate) (name, sel string, er
 			return "", "", &FieldNotAllowedError{Field: agg.Field, Slot: slotAggregates, Allowed: allowedReportNames(spec.measures)}
 		}
 		return name, fmt.Sprintf("count(%s) AS %s", expr, quoteIdent(name)), nil
-	case aggFnSum, aggFnAvg, aggFnMin, aggFnMax:
+	case aggFnSum, aggFnAvg, aggFnMin, aggFnMax, aggFnMedian, aggFnP75:
 		expr, ok := spec.measures[agg.Field]
 		if !ok {
 			return "", "", &FieldNotAllowedError{Field: agg.Field, Slot: slotAggregates, Allowed: allowedReportNames(spec.measures)}
 		}
 		return name, reportMoneyAggregateSQL(spec, agg, expr) + " AS " + quoteIdent(name), nil
-	case aggFnMedian, aggFnP75:
-		expr, ok := spec.measures[agg.Field]
-		if !ok {
-			return "", "", &FieldNotAllowedError{Field: agg.Field, Slot: slotAggregates, Allowed: allowedReportNames(spec.measures)}
-		}
-		// One renderer for both engines: the fraction, the CASE shape and the
-		// sample floor live in analyticsquery.PercentileExpr, so the screen
-		// and the typed query cannot drift apart about what a median is.
-		return name, analyticsquery.PercentileExpr(expr, analyticsquery.AggFn(agg.Fn)) +
-			" AS " + quoteIdent(name), nil
 	default:
 		return "", "", &FieldNotAllowedError{Field: "fn=" + agg.Fn}
 	}

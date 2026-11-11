@@ -56,7 +56,7 @@ func WithEmailRowFacts(ctx context.Context, tx pgx.Tx, page []crmcontracts.Activ
 		return err
 	}
 	applyEverySeatReach(page, reach)
-	return nil
+	return withCalendarInvitations(ctx, tx, page, asOf)
 }
 
 // applyEverySeatReach widens `team` to `workspace` on the rows a stranger can

@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import type { MessageKey } from "../i18n/en";
+import { labelFor } from "./labelfor";
 import { problemCode, throwProblem } from "./problem";
 
 // The licensed-data-provider status vocabulary, in one place because two
@@ -60,7 +61,7 @@ export function connectionTone(status: ProviderConnectionStatus): StatusTone {
 }
 
 export function connectionLabel(status: ProviderConnectionStatus): MessageKey {
-  return CONNECTION_LABEL[status];
+  return labelFor(CONNECTION_LABEL, status);
 }
 
 // The contact page's fifteen states. Four of them mean "nothing here" and they
@@ -119,7 +120,7 @@ export function profileTone(state: ProviderProfileState): StatusTone {
 }
 
 export function profileLabel(state: ProviderProfileState): MessageKey {
-  return PROFILE_LABEL[state];
+  return labelFor(PROFILE_LABEL, state);
 }
 
 /** The job title a company roster shows for one contact: what a human typed,

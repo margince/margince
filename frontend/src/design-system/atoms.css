@@ -336,6 +336,16 @@
     var(--modal-corner, var(--controlHeight)) +
     var(--space-4)
   );
+  min-block-size: var(--modal-close-reason-clearance, 0);
+}
+/* A close control with a reason hangs up to two caption lines under the
+   button, so the first line of content starts below them. */
+.modal:has(> .modal-close .btn-with-reason) {
+  --modal-close-reason-clearance: calc(
+    var(--controlHeight) +
+    var(--space-1) +
+    var(--space-8)
+  );
 }
 /* An expandable drawer has Expand beside the X, and its title clears both. A
    phone hides Expand, so there the corner is the X alone. */
@@ -444,6 +454,7 @@
   flex-direction: column;
 }
 .modal-drawer:has(> .drawer-head) > .drawer-body {
+  position: relative;
   flex: 1;
   min-block-size: 0;
   overflow-y: auto;
@@ -523,6 +534,7 @@
       :has(> .form-stack:not(.drawer-body) + .actions)
     )
     > .form-stack:where(:not(.drawer-body)) {
+    position: relative;
     flex: 0 1 auto;
     min-block-size: 0;
     overflow-y: auto;
@@ -753,11 +765,13 @@
 .modal .actions:has(.btn-with-reason) > .actions-pair {
   align-items: flex-start;
 }
-.modal .actions .btn-with-reason {
+.modal .actions .btn-with-reason,
+.modal-close .btn-with-reason {
   align-items: flex-end;
   max-inline-size: 24ch;
 }
-.modal .actions .btn-with-reason > .t-caption {
+.modal .actions .btn-with-reason > .t-caption,
+.modal-close .btn-with-reason > .t-caption {
   text-align: end;
 }
 
@@ -781,6 +795,12 @@
      `anywhere`, not `break-word`: only it lowers the min-content size, so a
      flex or grid parent can shrink instead of being pushed off the page. */
   overflow-wrap: anywhere;
+}
+/* In a table a name keeps its words whole: an auto-sized column takes the
+   cell's min-content, and `anywhere` drops it to one letter. A table too wide
+   for its box scrolls; a folded row caps the name at the row's width. */
+.table td .entity-link {
+  overflow-wrap: break-word;
 }
 .entity-link:hover {
   text-decoration: underline;

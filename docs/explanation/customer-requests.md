@@ -17,6 +17,9 @@ is owed only when the owed verdict says `asks_us` or someone took it on. Capture
 method the mail's calendar part names (`REPLY`, `COUNTER` or `DECLINECOUNTER`). The owed verdict
 still reads every such mail, because a sender can put that method on any mail.
 
+A calendar invite the reader may still answer files no reminder task. Its own row offers the answers
+on the reader's calendar instead, so the request writer skips it (`answerableInvitationSQL`).
+
 The activities module owns the request state. Its shared checks serve the email brief, the waiting
 queue and the queue of mail still to classify. They also serve the reminders it files on its own, and
 the deal's read of its own requests. That last read runs apart from the newest history, so a request can
@@ -34,8 +37,9 @@ Other transports and older rows without proof cannot end a request through inbou
 
 The settle pass asks whether the evidence completes the exact request: `settled`, `still_owed`, or
 `unsure` below the confidence floor. A signature notice must name the requested document; matching
-subjects alone prove nothing. The model receives the request and eligible later evidence, marked as
-from them or from us. With no eligible evidence or no model, the request stays owed until someone
+subjects alone prove nothing. The model receives the request and eligible later evidence, marked as from them or from us.
+It also receives the names and count of files attached to our replies. A reply saying
+"attached" without a file does not prove delivery. With no eligible evidence or no model, the request stays owed until someone
 completes its reminder.
 
 A `settled` verdict completes the reminder linked to the evidence, through the ordinary activity writer.
@@ -78,8 +82,9 @@ A message that is not a request is answered by any of:
 - a logged call, or a meeting that did happen, with the contact of the sender. The same with a colleague
   of theirs does not count.
 
-An answer must be later than the mail, not the same moment: a reply in the same second stays owed.
-Mail carries time only to the second, and nothing else says which was first. Evidence off the thread
+An answer must be later than the mail. At one stored moment it answers only when either entry was
+logged by its date alone. Every such entry of one date is stored at one time. Two entries with a time
+of day at one stored moment stay owed, because nothing says which came first. Evidence off the thread
 counts only when the whole workspace may read it. A colleague's private reply or meeting must not clear
 another seat's row, since a row going silent would show that the reply or meeting exists.
 

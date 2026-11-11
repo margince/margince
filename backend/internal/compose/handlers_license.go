@@ -125,7 +125,9 @@ func toContractLicenseEntitlement(posture licensecheck.Posture, used int) crmcon
 		holder := toContractLicenseHolder(posture.License, posture.CheckedAt)
 		out.License = &holder
 	}
-	granted, capped := posture.Seats()
+	// The ceiling a new seat is held to. A refused license keeps the last valid
+	// one, and the screen shows the number an invite is refused against.
+	granted, capped := posture.SeatCeiling()
 	if !capped {
 		// Absent, never zero. A client rendering a missing cap as 0 would tell an
 		// admin their license permits nobody, and `over_limit` stays false because

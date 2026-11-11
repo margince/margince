@@ -47,6 +47,9 @@ func (l *liveInterval) get() time.Duration { return time.Duration(l.nanos.Load()
 type tracked struct {
 	setting string
 	job     *river.PeriodicJob
+	// catchUp is the job's schedule when the book has run history, re-armed
+	// when a changed cadence hands the job back to River.
+	catchUp *catchUpSchedule
 }
 
 // ScheduleBook is the interval every setting-driven schedule currently runs at,
@@ -58,6 +61,10 @@ type ScheduleBook struct {
 	// pending holds the settings whose kinds River refused to take back, so
 	// each check re-registers them until it succeeds, whatever the value.
 	pending map[string]bool
+	// lastRuns and spread are what CatchUpFrom gave the book (jobcatchup.go).
+	// A nil lastRuns means no history, and the passes keep RunOnStart.
+	lastRuns map[string]time.Time
+	spread   time.Duration
 }
 
 // newScheduleBook seeds the book from the values read, one per setting key.
@@ -214,9 +221,9 @@ func (b *ScheduleBook) schedule(spec jobs.Spec, args river.JobArgs, opts *river.
 	if !known {
 		panic("compose: " + spec.Kind + " schedules from " + spec.Cadence.Setting + ", which this book was not read for")
 	}
-	job := river.NewPeriodicJob(live, func() (river.JobArgs, *river.InsertOpts) { return args, opts },
-		&river.PeriodicJobOpts{ID: spec.Kind, RunOnStart: true})
-	b.kinds[spec.Kind] = tracked{setting: spec.Cadence.Setting, job: job}
+	job, catchUp := b.periodicJob(spec.Kind, spec.Kind, live,
+		func() (river.JobArgs, *river.InsertOpts) { return args, opts })
+	b.kinds[spec.Kind] = tracked{setting: spec.Cadence.Setting, job: job, catchUp: catchUp}
 	return job, live.get() > 0
 }
 
@@ -265,6 +272,9 @@ func (b *ScheduleBook) reregister(key string, runner periodicRegistry) error {
 		runner.RemovePeriodic(kind)
 		if b.intervals[key].get() <= 0 {
 			continue
+		}
+		if entry.catchUp != nil {
+			entry.catchUp.rearm()
 		}
 		if err := runner.AddPeriodic(entry.job); err != nil {
 			return fmt.Errorf("compose: rescheduling %s: %w", kind, err)

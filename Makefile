@@ -21,7 +21,7 @@ ROOT_SCRIPT_GATES := check-craft-doc test-dev-isolation test-dev-dsn test-dev-en
   test-dev-cleanup test-disk-headroom \
   test-golangci-guard test-scheduled-report test-renovate-liveness test-pace-workflow test-ci-verdict test-merge-verdict \
   test-review-coverage \
-  test-laneorder test-lane-binaries check-image-pins check-host-ports ci-doc-parity \
+  test-laneorder test-shardqueue test-lane-binaries test-integration-artifacts check-image-pins check-host-ports ci-doc-parity \
   make-target-parity test-make-target-parity contract-breaking-check \
   test-contract-frontend-drift migration-versions test-migration-versions \
   test-lanes env-reads gofmt go-file-length fe-file-length test-fe-file-length test-test-budget rls-store-path \
@@ -32,8 +32,8 @@ ROOT_SCRIPT_GATES := check-craft-doc test-dev-isolation test-dev-dsn test-dev-en
   test-dev-postgres-container test-e2e-llm-check \
   test-release-version-stamped test-closing-declaration test-release-patch-base \
   test-docs-describing \
-  test-craft-review test-release-tag-version test-release-license-stamped \
-  test-release-notes test-release-bundle embedded-binary-licenses third-party-files test-third-party-files \
+  test-craft-review test-release-tag-version test-release-dist-version test-release-license-stamped \
+  test-release-notes test-release-bundle test-backend-notices embedded-binary-licenses third-party-files test-third-party-files \
   test-strict-lint-packages
 
 # How wide the gate fan-out runs: the machine's online core count, so a 4-core
@@ -71,7 +71,7 @@ MINIO_PORT ?= 29000
 # called inside another command's argument would fail unnoticed.
 
 .PHONY: gate-timings
-.PHONY: help help-all install dev-fresh check check-config check-all check-backend check-root-gates check-lane-craft check-lane-gates check-lane-backend check-lane-fe check-q check-go check-gates check-fe dev dev-stop dev-sweep dev-snapshot dev-restore dev-logs infra-up seed-dev seed-analytics verify-boot frontend-check frontend-e2e bench-mobile bench-mobile-check bench-home e2e-company e2e-brief e2e-llm e2e-llm-guards fe-install fe-typecheck fe-typecheck-composed fe-lint fe-compiler-lint fe-build fe-preview fe-format fe-test fe-test-ext fe-ds-gates fe-drift fe-unit fe-unit-merge fe-clock-drift backend-clock-drift fe-edge-padding fe-quality fe-bundle fe-storybook ds-purity font-lock icon-lint ds-spacing ds-spacing-roles space-tokens native-controls ext-imports action-rows storybook fe-uat craft-static craft-review test-craft-review craft-residue craft-prose check-craft-doc test-craft-pin test-golangci-guard test-scheduled-report test-renovate-liveness test-pace-workflow test-ci-verdict test-merge-verdict test-review-coverage test-laneorder test-lane-binaries secret-scan test-secret-scan test-sbom-sign release-sign test-sbom-census embedded-binary-licenses test-embedded-binary-licenses test-dev-dsn test-dev-env-local test-testdb-redis test-lane-timeout-report test-dev-isolation test-dev-cleanup test-disk-headroom test-api-entrypoint check-image-pins check-host-ports ci-doc-parity make-target-parity test-make-target-parity check-ext-migrations check-extension-modules go-work-sum contract-breaking-check contract-frontend-drift test-contract-frontend-drift migration-versions test-migration-versions test-lanes env-reads gofmt lint-modules go-file-length fe-file-length test-fe-file-length test-budget test-input-census test-input-census-judge test-strict-lint-packages test-test-budget comment-budget test-comment-budget comment-density test-keep-unchanged-mtimes test-check-lane-end test-phase-timer comment-stats comment-stats-pin slop-trend rls-store-path no-jurisdiction test-no-jurisdiction pkg-freeze test-release-tag-version test-release-license-stamped test-release-notes test-release-bundle test-release-version-stamped test-closing-declaration test-release-patch-base docs-describing test-docs-describing test-dev-postgres-container test-e2e-llm-check hooks sbom sbom-normalize sbom-supplement sbom-parity sbom-census sbom-validate sbom-sign release-sign sbom-check sbom-gate
+.PHONY: help help-all install dev-fresh check check-config check-all check-backend check-root-gates check-lane-craft check-lane-gates check-lane-backend check-lane-fe check-q check-go check-gates check-fe dev dev-stop dev-sweep dev-snapshot dev-restore dev-logs infra-up seed-dev seed-analytics verify-boot frontend-check frontend-e2e bench-mobile bench-mobile-check bench-home home-budget e2e-company e2e-brief e2e-llm e2e-llm-guards fe-install fe-typecheck fe-typecheck-composed fe-lint fe-compiler-lint fe-build fe-preview fe-format fe-test fe-test-ext fe-ds-gates fe-drift fe-unit fe-census fe-unit-merge fe-clock-drift backend-clock-drift fe-edge-padding fe-quality fe-bundle fe-storybook ds-purity font-lock icon-lint ds-spacing ds-spacing-roles space-tokens native-controls ext-imports action-rows storybook fe-uat craft-static craft-review test-craft-review craft-residue craft-prose check-craft-doc test-craft-pin test-golangci-guard test-scheduled-report test-renovate-liveness test-pace-workflow test-ci-verdict test-merge-verdict test-review-coverage test-laneorder test-shardqueue test-lane-binaries test-integration-artifacts secret-scan test-secret-scan test-sbom-sign release-sign test-sbom-census embedded-binary-licenses test-embedded-binary-licenses test-dev-dsn test-dev-env-local test-testdb-redis test-lane-timeout-report test-dev-isolation test-dev-cleanup test-disk-headroom test-api-entrypoint check-image-pins check-host-ports ci-doc-parity make-target-parity test-make-target-parity check-ext-migrations check-extension-modules go-work-sum contract-breaking-check contract-frontend-drift test-contract-frontend-drift migration-versions test-migration-versions test-lanes env-reads gofmt lint-modules go-file-length fe-file-length test-fe-file-length test-budget test-input-census test-input-census-judge test-strict-lint-packages test-test-budget comment-budget test-comment-budget comment-density test-keep-unchanged-mtimes test-check-lane-end test-phase-timer comment-stats comment-stats-pin slop-trend rls-store-path no-jurisdiction test-no-jurisdiction pkg-freeze test-release-tag-version test-release-dist-version test-release-license-stamped test-release-notes test-release-bundle test-release-version-stamped test-closing-declaration test-release-patch-base docs-describing test-docs-describing test-dev-postgres-container test-e2e-llm-check hooks sbom sbom-normalize sbom-supplement sbom-parity sbom-census sbom-validate sbom-sign release-sign sbom-check sbom-gate
 # Bare `make` lists every command instead of running the first target.
 .DEFAULT_GOAL := help
 
@@ -502,13 +502,12 @@ space-tokens:
 ## native-controls — no browser-drawn control: `<select>`, `<option>`,
 ## `<optgroup>` or a native date input (`type="date"` on `input` or
 ## `TextInput`) anywhere under frontend/src or extensions/*/frontend. It is a
-## vitest fitness function over the TypeScript AST now — see
-## frontend/src/design-system/native-controls.test.ts — so it runs in `fe-unit`
-## with the rest of the suite. This target keeps its name for anyone who runs
-## the gate on its own.
+## census rule over the TypeScript AST — see
+## frontend/census/rules/native-controls.census.ts — so it runs in `fe-census`
+## with the other rules. This target runs that rule alone.
 native-controls:
 	cd frontend && pnpm install --frozen-lockfile && pnpm exec vitest run \
-		src/design-system/native-controls.test.ts
+		-c vitest.census.config.ts -t native-controls
 ## action-rows — two buttons side by side sit in a row that says so: a container
 ## whose element children are two or more buttons takes `gap: var(--gapActions)`,
 ## from a class it names or from its own inline style. The only gate that reads
@@ -516,22 +515,22 @@ native-controls:
 ## stylesheet cannot: a row with no rule at all. `.modal-actions`, `.pn-actions`
 ## and `.worklist-manager-control` were spelled in ten places in the markup and
 ## in no stylesheet, so ten rows of buttons rendered with no gap, no alignment
-## and no margin, and every gate in the tree passed them. A vitest fitness
-## function over the TypeScript AST, so it runs in `fe-unit` with the rest of
-## the suite; this target runs it alone.
+## and no margin, and every gate in the tree passed them. The rule is
+## frontend/census/rules/actionrow.census.ts, so it runs in `fe-census`; this
+## target runs it alone.
 action-rows:
 	cd frontend && pnpm install --frozen-lockfile && pnpm exec vitest run \
-		src/design-system/actionrow.test.ts
+		-c vitest.census.config.ts -t actionrow
 ## ext-imports — a unit screen reaches the core only through the published
 ## surface (frontend/package.json's exports map) and npm only through what its
 ## own package declares. The frontend has no module boundary of its own, so
-## this gate IS the boundary. It is a vitest fitness function over the
-## TypeScript AST now — see frontend/scripts/ext-imports.test.ts, which carries
-## its own fixture suite — so it runs in `fe-unit` with the rest of the suite.
+## this gate IS the boundary. The rule is
+## frontend/census/rules/ext-imports.census.ts, so it runs in `fe-census`;
+## frontend/scripts/ext-imports.test.ts keeps the detector's planted cases.
 ## This target keeps its name for anyone who runs the gate on its own.
 ext-imports:
 	cd frontend && pnpm install --frozen-lockfile && pnpm exec vitest run \
-		scripts/ext-imports.test.ts
+		-c vitest.census.config.ts -t ext-imports
 
 ## seed-dev — create/refresh the demo installation (admin@demo.test /
 ## demo-password-123) through the public API, then seed
@@ -582,6 +581,7 @@ frontend-check:
 	$(MAKE) fe-lint
 	$(MAKE) fe-compiler-lint
 	$(MAKE) fe-unit
+	$(MAKE) fe-census
 	$(MAKE) fe-build
 
 ## fe-ds-gates — the frontend's cheap grep gates on their own, so the CI job that
@@ -676,6 +676,14 @@ fe-unit:
 		$(if $(FE_SHARD),--shard=$(FE_SHARD) --reporter=blob --outputFile=$(FE_BLOB_DIR)/blob-$(subst /,-,$(FE_SHARD)).json --reporter=default) \
 		$(if $(FE_COVERAGE),--coverage.enabled)
 	$(if $(FE_SHARD),,$(if $(FE_COVERAGE),frontend/scripts/check-lcov-paths.sh frontend/coverage/lcov.info))
+
+## fe-census — the whole-tree censuses: frontend/census/census.test.ts walks
+## and parses frontend/src, frontend/scripts and every extension frontend layer
+## once, then runs each rule in frontend/census/rules/ as its own named case.
+## fe-unit excludes census/, so each census runs once, on one parse.
+fe-census:
+	cd frontend && pnpm install --frozen-lockfile && pnpm exec vitest run \
+		-c vitest.census.config.ts
 
 ## fe-unit-merge — one measurement out of the shards' blob reports. CI only:
 ## nothing produces a blob unless FE_SHARD asked for one.
@@ -851,6 +859,14 @@ bench-home:
 	cd frontend && pnpm install --frozen-lockfile && pnpm build && \
 		env -u BASE_URL -u MARGINCE_BENCH_MOBILE MARGINCE_BENCH_HOME=1 BACKEND_PORT=$(BENCH_API_PORT) \
 		pnpm exec playwright test
+
+## home-budget — Home's per-PR budget: the API check on its own corpus (needs
+## db-up), then the day paint and CLS of a production bundle against the
+## running api on BENCH_API_PORT, which holds the seed-dev data. The advisory
+## CI job home-budget runs it; scripts/home-budget.sh has the details.
+home-budget:
+	@test -n "$(BENCH_API_PORT)" || { echo "home-budget: set BENCH_API_PORT to the api port of a running stack"; exit 2; }
+	BENCH_API_PORT=$(BENCH_API_PORT) bash scripts/home-budget.sh
 
 ## bench-mobile-check — the same measurement, writing NOTHING: a check run by
 ## hand without touching the published page, as bench-perf-check is beside
@@ -1284,12 +1300,25 @@ test-review-coverage:
 test-laneorder:
 	@./scripts/test-laneorder.sh
 
+## test-shardqueue — prove the CI integration shards that share one queue claim
+## every group of parts exactly once, a fast shard takes more, and a later
+## attempt skips what passed. A lost or doubled group fails only the fan-in,
+## after the whole lane has run, so the protocol gets a test of its own.
+test-shardqueue:
+	@./scripts/test-shardqueue.sh
+
 ## test-lane-binaries — prove the integration build empties only a directory it
 ## made, and that a shard refuses binaries compiled from other source than its
 ## checkout. Neither fails on its own: one deletes files, the other tests old
 ## code and reports green.
 test-lane-binaries:
 	@./scripts/test-lane-binaries.sh
+
+## test-integration-artifacts — prove a red shard keeps each failing part's log
+## under its own name, and lists every test still owed. A lost log fails nothing
+## on its own: the shard is red either way, and only the evidence is gone.
+test-integration-artifacts:
+	@./scripts/test-integration-artifacts.sh
 
 ## check-image-pins — every `uses:` in .github/workflows/, every container
 ## `image:` (workflow service containers + docker-compose.dev.yml) AND every
@@ -1591,6 +1620,11 @@ test-release-patch-base:
 test-release-tag-version:
 	@./scripts/release-tag-version.test.sh
 
+## test-release-dist-version — the dist version rule's own test: each planted
+## tag maps to its year, edition and patch, and a pre-release drafts nothing.
+test-release-dist-version:
+	@./scripts/release-dist-version.test.sh
+
 ## test-release-license-stamped — the LICENSE release check's own test: the
 ## Change Date and Licensed Work line each release must carry, and what it
 ## refuses. Its one caller is a tag push, like the tag reader's.
@@ -1608,6 +1642,12 @@ test-release-notes:
 ## missing platform or program it refuses. Its one caller is a tag push.
 test-release-bundle:
 	@./scripts/release-bundle.test.sh
+
+## test-backend-notices — the Go notice generator's own test: it writes every
+## linked module's licence text, the toolchain's and the embedded-binary
+## declarations, and fails on a linked module with no licence text.
+test-backend-notices:
+	@./scripts/backend-notices.test.sh
 
 ## no-jurisdiction — pack-boundary fitness gate: no country-specific
 ## regulatory identifier (XRechnung/ZUGFeRD/DATEV/…) or ISO-3166 code appears
@@ -1863,7 +1903,7 @@ sbom-validate:
 	@echo "validating $(SBOM_DIR)/margince.spdx300.json (SPDX 3.0.1 schema)"
 	@# --fast: exhaustive mode keeps an evaluation trace per node and exhausts the runner's memory on a
 	@# document that digests every committed file; fast mode still fails an invalid document (exit 2).
-	@$(JSONSCHEMA) validate --fast $(SBOM_SCHEMA_DIR)/spdx-3.0.1.schema.json $(SBOM_DIR)/margince.spdx300.json
+	@$(JSONSCHEMA) validate --fast $(SBOM_SCHEMA_DIR)/spdx-3.0.1/spdx-3.0.1.schema.json $(SBOM_DIR)/margince.spdx300.json
 	@echo "OK: three SBOMs valid against their formats"
 
 ## sbom-sign — keyless-sign each generated SBOM with cosign (writes *.cosign.bundle; needs an OIDC token).

@@ -16,6 +16,7 @@ import { formatNumber } from "../../format/format";
 import { browserZone } from "../../format/timezone";
 import { useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { labelFor } from "../../lib/labelfor";
 import {
   fillsPage,
   type MagicLane,
@@ -144,7 +145,7 @@ export function MagicPanel({
           {drawsWaiting && shown?.not_shown_count_withheld && (
             <p className="t-caption">{t("magic.visibleScope")}</p>
           )}
-          {coverageIncomplete && (
+          {coverageIncomplete && !drawn.includes("done") && (
             <p className="t-caption">{t("magic.coverageIncomplete")}</p>
           )}
         </SurfaceState>
@@ -156,13 +157,18 @@ export function MagicPanel({
           title={t(
             embedded && lane === "done"
               ? "magic.lane.doneOther"
-              : LANE_HEADING[lane],
+              : labelFor(LANE_HEADING, lane),
           )}
           rows={shown?.[lane] ?? []}
           since={shown?.since}
           zone={zone}
           byDay={byDay}
           fold={lane === "done" ? doneFold : undefined}
+          note={
+            lane === "done" && coverageIncomplete
+              ? t("magic.coverageIncomplete")
+              : undefined
+          }
         />
       ))}
       {notShown.length > 0 && (
@@ -282,7 +288,7 @@ function NotShown({ entries }: Readonly<{ entries: readonly ToldNotShown[] }>) {
         <li className="t-caption" key={entry.reason}>
           {plural("magic.notShown", entry.count, {
             count: formatNumber(entry.count, locale),
-            reason: t(NOT_SHOWN_REASON[entry.reason]),
+            reason: t(labelFor(NOT_SHOWN_REASON, entry.reason)),
           })}
         </li>
       ))}

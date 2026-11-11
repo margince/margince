@@ -52,6 +52,7 @@ const states: { label: string; deal: BoardDeal }[] = [
     deal: boardDeal({
       name: "ERP connector, phase 2",
       closeDate: "2027-03-14",
+      probabilityPct: 40,
       owner: { id: "u-2", name: "Jonas Ritter" },
       lastEmail: lastEmailAgo(2 * DAY_MS, "inbound"),
     }),
@@ -61,6 +62,7 @@ const states: { label: string; deal: BoardDeal }[] = [
     deal: boardDeal({
       name: "deal-de-lumenhealth-x-gradion-dataplatform-migration-2026",
       valueMinor: 12_500_000,
+      probabilityPct: 85,
       lastEmail: lastEmailAgo(5 * DAY_MS, "outbound"),
     }),
   },
@@ -75,6 +77,7 @@ const states: { label: string; deal: BoardDeal }[] = [
       measuredAt: Date.parse("2026-09-15T12:00:00Z"),
       closeDate: "2027-04-30",
       closeDateProvisional: true,
+      probabilityPct: 10,
       lastEmail: lastEmailAgo(23 * DAY_MS, "outbound"),
     }),
   },
@@ -112,7 +115,7 @@ const states: { label: string; deal: BoardDeal }[] = [
   },
   {
     label: "Unpriced, unmailed",
-    deal: boardDeal({ valueMinor: null, currency: null }),
+    deal: boardDeal({ valueMinor: null, currency: null, probabilityPct: 0 }),
   },
   { label: "Staged", deal: boardDeal({ staged: true }) },
   { label: "Archived", deal: boardDeal({ archived: true }) },

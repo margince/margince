@@ -23,20 +23,20 @@ type answerArm struct {
 	id   string
 }
 
-// Answers follow the source strictly in event time. Capture order cannot break timestamp ties.
+// An answer follows its source in event time (occurredday.AnswersSQL); capture order never breaks a tie.
 // Private off-thread evidence cannot clear another reader's work.
 func answerArms(inbound, until string) []answerArm {
 	return append([]answerArm{threadAnswerArm(inbound, answerLater("answer_thread", inbound, until))},
 		offThreadAnswerArms(inbound, until)...)
 }
 
-// answerLater is a row that is live and happened strictly after the inbound
-// row and no later than until.
+// answerLater is a row that is live, late enough to answer the inbound row,
+// and no later than until.
 func answerLater(row, inbound, until string) string {
 	return fmt.Sprintf(`%[1]s.archived_at IS NULL
 	    AND %[3]s
-	    AND %[1]s.occurred_at > %[2]s.occurred_at -- occurred_at raw: strictly after the inbound row, an ordering of rows
-	`, row, inbound, occurredday.BegunSQL(row, until))
+	    AND %[2]s
+	`, row, occurredday.AnswersSQL(row, inbound), occurredday.BegunSQL(row, until))
 }
 
 // Off-thread mail must be attested and name the sender; Bcc never proves delivery.
@@ -102,7 +102,7 @@ func offThreadAnswerArms(inbound, until string) []answerArm {
 }
 
 // Explicit columns keep custom activity fields out of the lateral row shape.
-const answerMailColumns = `answer_mail.id, answer_mail.kind, answer_mail.channel_provider,
+const answerMailColumns = `answer_mail.internal_mail_authorization, answer_mail.thread_key, answer_mail.id, answer_mail.kind, answer_mail.channel_provider,
 	answer_mail.direction, answer_mail.counterparty_outbound_attested, answer_mail.restricted_at,
 	answer_mail.audience, answer_mail.source_activity_id, answer_mail.source_system, answer_mail.source_id, answer_mail.archived_at,
 	answer_mail.occurred_at, answer_mail.occurred_precision, answer_mail.subject`

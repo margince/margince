@@ -24,7 +24,6 @@ func TestRegistryRefusesWhatCannotBeDescribedHonestly(t *testing.T) {
 		"wrong env form":  config.Define(config.Spec[int]{Key: "x", Env: "margince_x", Type: config.Int, Doc: "d"}),
 		"wrong flag form": config.Define(config.Spec[int]{Key: "x", Env: "X_ENV", Flag: "X_y", Type: config.Int, Doc: "d"}),
 		"no doc":          config.Define(config.Spec[int]{Key: "x", Env: "X_ENV", Type: config.Int}),
-		"no env":          config.Define(config.Spec[int]{Key: "x", Type: config.Int, Doc: "d"}),
 		"no type":         config.Define(config.Spec[int]{Key: "x", Env: "X_ENV", Doc: "d"}),
 		"secret default": config.Define(config.Spec[string]{
 			Key: "x", Env: "X_ENV", Type: config.String,

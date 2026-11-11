@@ -14,6 +14,7 @@ import { DateInput, type ISODate } from "../design-system/dateinput";
 import { Heading } from "../design-system/heading";
 import { RecordPicker } from "../design-system/recordpicker";
 import { Select } from "../design-system/select";
+import { dealStatusLabel } from "../format/dealstatus";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { currentEmployerCompanyIds } from "../lib/employmentpages";
@@ -35,6 +36,7 @@ import { entityNameQuery } from "./entityref.queries";
 import "../design-system/querystates.css";
 import { ErrorLine } from "../design-system/errorline";
 import { refuseUnreadableField } from "../design-system/formvalidity";
+import { labelFor } from "../lib/labelfor";
 import {
   type EdgeOption,
   edgeOptions,
@@ -211,9 +213,23 @@ export function AddRelationshipAction({
       const candidates = await searchByEntity(entity, query, companyIds);
       if (entity !== "deal") return candidates;
       return Promise.all(
-        candidates.map((candidate) =>
-          withCompanyCaption(queryClient, candidate, nameLoadFailed),
-        ),
+        candidates.map(async (candidate) => {
+          const named = await withCompanyCaption(
+            queryClient,
+            candidate,
+            nameLoadFailed,
+          );
+          const status =
+            candidate.dealStatus && candidate.dealStatus !== "open"
+              ? dealStatusLabel(candidate.dealStatus)
+              : undefined;
+          return status
+            ? {
+                ...named,
+                detail: [named.detail, t(status)].filter(Boolean).join(" · "),
+              }
+            : named;
+        }),
       );
     },
     [
@@ -222,6 +238,7 @@ export function AddRelationshipAction({
       queryClient,
       nameLoadFailed,
       employerUnavailableMessage,
+      t,
     ],
   );
 
@@ -303,7 +320,7 @@ export function AddRelationshipAction({
                   }}
                   options={options.map((option) => ({
                     value: option.kind,
-                    label: t(KIND_LABELS[option.kind]),
+                    label: t(labelFor(KIND_LABELS, option.kind)),
                   }))}
                 />
               )}
@@ -347,7 +364,7 @@ export function AddRelationshipAction({
             <p>
               {t("rel.addConfirm", {
                 target: target.name,
-                kind: t(KIND_LABELS[kind]),
+                kind: t(labelFor(KIND_LABELS, kind)),
               })}
             </p>
           )}

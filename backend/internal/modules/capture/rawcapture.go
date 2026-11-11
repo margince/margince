@@ -10,8 +10,19 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/originalstore"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+)
+
+const (
+	sqlArgIDs      = "ids"
+	sqlArgKeys     = "keys"
+	sqlArgObject   = "object"
+	sqlArgPayload  = "payload"
+	sqlArgProvider = "provider"
+	sqlArgSource   = "source"
+	sqlArgSystem   = "system"
 )
 
 // RawRecord is one provider original waiting to be stored verbatim.
@@ -44,18 +55,32 @@ type RawRecord struct {
 // into the key, or a second connection's delivery silently destroys the only
 // copy of the first's already-acknowledged payload.
 func InsertRawCaptureTx(ctx context.Context, tx pgx.Tx, rec RawRecord) (ids.UUID, error) {
+	if len(rec.Payload) > originalstore.InlineLimit {
+		var existing ids.UUID
+		err := tx.QueryRow(ctx, `SELECT id FROM raw_capture
+ WHERE source_system = @system AND source_id = @source FOR UPDATE`,
+			pgx.NamedArgs{sqlArgSystem: rec.SourceSystem, sqlArgSource: rec.SourceID}).Scan(&existing)
+		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+			return ids.Nil, fmt.Errorf("capture: lock a redelivered original: %w", err)
+		}
+	}
+	inline, ref, err := originalstore.PrepareTx(ctx, tx, rec.Payload)
+	if err != nil {
+		return ids.Nil, err
+	}
 	var id ids.UUID
-	err := tx.QueryRow(ctx, `
-		INSERT INTO raw_capture (source_system, source_id, payload)
-		VALUES ($1, $2, $3)
+	err = tx.QueryRow(ctx, `
+		INSERT INTO raw_capture (source_system, source_id, payload, payload_object, payload_offload_checked_at)
+		VALUES (@system, @source, @payload, @object::jsonb, now())
 		ON CONFLICT (source_system, source_id) DO UPDATE
-		SET payload = EXCLUDED.payload, received_at = now()
+		SET payload = EXCLUDED.payload, payload_object = EXCLUDED.payload_object,
+ payload_offload_checked_at = now(), received_at = now()
 		RETURNING id`,
-		rec.SourceSystem, rec.SourceID, rec.Payload).Scan(&id)
+		pgx.NamedArgs{sqlArgSystem: rec.SourceSystem, sqlArgSource: rec.SourceID, sqlArgPayload: inline, sqlArgObject: ref}).Scan(&id)
 	if err != nil {
 		return ids.Nil, fmt.Errorf("capture: raw store: %w", err)
 	}
-	return id, nil
+	return id, originalstore.Adopt(ctx, tx, ref)
 }
 
 // GetRawCapturePayloadTx reads back one raw_capture row's verbatim payload —
@@ -66,12 +91,12 @@ func InsertRawCaptureTx(ctx context.Context, tx pgx.Tx, rec RawRecord) (ids.UUID
 // under whatever workspace GUC the caller already set.
 func GetRawCapturePayloadTx(ctx context.Context, tx pgx.Tx, id ids.UUID) ([]byte, error) {
 	var payload []byte
-	err := tx.QueryRow(ctx, `SELECT payload FROM raw_capture WHERE id = $1`, id).Scan(&payload)
+	err := tx.QueryRow(ctx, `SELECT `+originalstore.SQL("r")+` FROM raw_capture r WHERE id = $1`, id).Scan(&payload)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, fmt.Errorf("capture: raw capture %s: %w", id, apperrors.ErrNotFound)
 	}
 	if err != nil {
 		return nil, fmt.Errorf("capture: reading raw capture payload: %w", err)
 	}
-	return payload, nil
+	return originalstore.Decode(ctx, payload)
 }

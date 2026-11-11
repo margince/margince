@@ -18,6 +18,14 @@ function row(over: Partial<WorklistItem>): WorklistItem {
 }
 
 describe("the word above a queue row", () => {
+  it("names a category this build does not know with the neutral label", () => {
+    expect(
+      eyebrowKeyFor(
+        row({ source: "task", category: "later" as WorklistItem["category"] }),
+      ),
+    ).toBe("common.unknownValue");
+  });
+
   // Every overnight row sits in deals_at_risk, because that is where the
   // worklist folds it against the sibling risk row for the same deal. The night
   // knows why it picked each one, and a deal it ranked as winnable announced as
@@ -29,6 +37,15 @@ describe("the word above a queue row", () => {
     expect(
       eyebrowKeyFor(row({ source: "brief_item", kind: "closing_soon" })),
     ).toBe("worklist.signal.closing_soon");
+  });
+
+  it("calls an invitation an invitation, not a waiting customer", () => {
+    const invite = row({
+      source: "customer_waiting",
+      category: "customer_waiting",
+      email_summary: { calendar_invitation: { response: "needs_action" } },
+    } as Partial<WorklistItem>);
+    expect(eyebrowKeyFor(invite)).toBe("email.invitation.badge");
   });
 
   it("keeps the category on every other row", () => {

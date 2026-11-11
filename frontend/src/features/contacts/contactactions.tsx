@@ -18,6 +18,7 @@ import {
   useTransports,
 } from "../../lib/contacttransports";
 import { navigate } from "../../lib/router";
+import { useShortcut } from "../../lib/shortcuts";
 import { EmailVerb } from "../records/recordemail";
 import { ShareAction } from "../records/share";
 import { openContactTab } from "../worklist/worklist.return";
@@ -93,15 +94,25 @@ export function ContactActions({
   const write = primaryTransportAction(transports, t);
   const WriteIcon = write.icon;
   const refusal = writeRefusal({ transports }, t);
+  const logOpen = !logPending && !logRefused;
+  const logKeys = useShortcut("record.logActivity", onLogActivity, logOpen);
+  const taskKeys = useShortcut("record.addTask", onAddTask, logOpen);
+  const writeKeys = useShortcut(
+    "record.writeEmail",
+    onWrite,
+    logOpen && !refusal,
+  );
   return (
     <>
       <EmailVerb
         label={write.label}
         icon={<WriteIcon size={15} aria-hidden="true" />}
-        reason={archived || writeRefusalId ? undefined : refusal}
-        reasonId={archived ?? (refusal ? writeRefusalId : undefined)}
+        disabled={logPending}
+        reason={logRefused || writeRefusalId ? undefined : refusal}
+        reasonId={logRefused ?? (refusal ? writeRefusalId : undefined)}
         onClick={onWrite}
         word={t("record.verb.email")}
+        keyShortcuts={writeKeys}
       />
       <IconAction
         label={t("contact.action.meetings")}
@@ -118,6 +129,7 @@ export function ContactActions({
         reasonId={logRefused}
         onClick={onLogActivity}
         title={t("log.title")}
+        aria-keyshortcuts={logKeys}
       >
         <FileText aria-hidden="true" />
         <VerbWord word={t("record.verb.log")} label={t("log.title")} />
@@ -143,7 +155,12 @@ export function ContactActions({
       >
         {/* First in the menu: the most frequent verb here. Files the task
             against THIS record, in the same form Log activity opens. */}
-        <Button disabled={logPending} reasonId={logRefused} onClick={onAddTask}>
+        <Button
+          disabled={logPending}
+          reasonId={logRefused}
+          onClick={onAddTask}
+          aria-keyshortcuts={taskKeys}
+        >
           {t("contact.action.addTask")}
         </Button>
         <ContactRecordActions

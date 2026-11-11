@@ -54,12 +54,15 @@ func settingsTables(settings []setting) string {
 }
 
 func tableRow(s setting) string {
-	flagCell := emptyCell
+	envCell, flagCell := emptyCell, emptyCell
+	if s.Env() != "" {
+		envCell = codeSpan(s.Env())
+	}
 	if s.Flag() != "" {
 		flagCell = codeSpan("--" + s.Flag())
 	}
 	cells := []string{
-		codeSpan(s.Key()), codeSpan(s.Env()), flagCell, typeCell(s), defaultCell(s),
+		codeSpan(s.Key()), envCell, flagCell, typeCell(s), defaultCell(s),
 		programNames(s.programs), cellText(docText(s.Doc())),
 	}
 	return "| " + strings.Join(cells, " | ") + " |\n"

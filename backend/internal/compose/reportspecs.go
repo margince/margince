@@ -16,9 +16,28 @@ const fieldWinProbabilityBand = "win_probability_band"
 // dimension must never rename a capture target type.
 
 // colMeetingCreditedSeat is the one seat a meeting is listed under where a
-// report filters by colleague (storekit.MeetingCreditedSeatSQL); NULL for every
-// other kind of activity.
-var colMeetingCreditedSeat = "(CASE WHEN t.kind = 'meeting' THEN " + storekit.MeetingCreditedSeatSQL("t") + " END)"
+// report filters by colleague; NULL for every other kind of activity.
+//
+// It reads the host the held transition recorded, through heldTransitionJoin.
+// Today's RSVPs would answer differently once somebody changed their response,
+// which moves a week that has already been read.
+var colMeetingCreditedSeat = "(CASE WHEN t.kind = 'meeting' THEN " +
+	storekit.MeetingCreditedSeatAtChangeSQL("t", heldHostUnrecorded, "held.host_id_at_change") + " END)"
+
+// heldHostUnrecorded is true for a meeting with no recorded held transition,
+// where the current host is the only host there has ever been.
+const heldHostUnrecorded = "held.host_id_at_change IS NULL"
+
+// creditedSeatIsFilter narrows to the meetings one colleague is credited for.
+//
+// A meeting credits everyone the attendance evidence names, so asking whether
+// the set holds them finds it. Comparing the single seat a listing shows
+// answered no for every colleague but the one it happened to pick.
+func creditedSeatIsFilter() string {
+	return "(t.kind = 'meeting' AND EXISTS (SELECT 1 FROM " +
+		storekit.MeetingCreditedSeatsAtChangeSQL("t", heldHostUnrecorded, "held.host_id_at_change") +
+		" WHERE credit.id = %s))"
+}
 
 const (
 	fieldKind          = "kind"
@@ -91,6 +110,7 @@ var prebuiltReports = map[string]reportSpec{
 			fieldAmountMinor:     colAmountMinor,
 			fieldAmountBaseMinor: pipelineBaseValueExpr,
 		},
+		sumCoverage:    baseMoneyCoverage(fieldAmountBaseMinor),
 		nativeMeasures: nativeMoney(fieldAmountMinor),
 		filters: map[string]string{
 			fieldOwnerID:    colOwnerID,
@@ -187,6 +207,7 @@ var prebuiltReports = map[string]reportSpec{
 			fieldAmountMinor:         colAmountMinor,
 			fieldWeightedAmountMinor: weightedAmountMinorExpr,
 		}),
+		sumCoverage:    baseMoneyCoverage(),
 		nativeMeasures: nativeMoney(fieldAmountMinor, fieldWeightedAmountMinor),
 		// No stage_id filter: nothing serves it (the screen groups BY stage_id
 		// instead), and a filter key this report has no caller for is public
@@ -276,6 +297,10 @@ var prebuiltReports = map[string]reportSpec{
 	"activities-by-kind": {
 		entity: datasource.EntityActivity,
 		table:  tableActivity,
+		joins:  []string{heldTransitionJoin},
+		filterPredicates: map[string]string{
+			fieldHostUserID: creditedSeatIsFilter(),
+		},
 		// `activity` has no owner_id column at all, so the population
 		// default's hardcoded `owner_id = caller` clause does not narrow this
 		// report for a non-workspace-scope caller — it renders invalid SQL,
@@ -396,6 +421,7 @@ var prebuiltReports = map[string]reportSpec{
 			fieldAmountMinor:         colAmountMinor,
 			fieldWeightedAmountMinor: weightedAmountMinorExpr,
 		}),
+		sumCoverage:    baseMoneyCoverage(),
 		nativeMeasures: nativeMoney(fieldAmountMinor, fieldWeightedAmountMinor),
 		filters: map[string]string{
 			fieldOwnerID:            colOwnerID,
@@ -424,6 +450,17 @@ var prebuiltReports = map[string]reportSpec{
 		},
 	},
 }
+
+// heldTransitionJoin is the meeting's own held transition, which recorded the
+// host as it stood then. Its latest one, because a meeting re-held under a new
+// host is credited to that host.
+const heldTransitionJoin = `LEFT JOIN LATERAL (
+        SELECT h.host_id_at_change
+        FROM activity_meeting_history h
+        WHERE h.activity_id = t.id AND h.status = 'held'
+        ORDER BY h.effective_at DESC, h.id DESC
+        LIMIT 1
+      ) held ON true`
 
 const currentStageEntryJoin = `LEFT JOIN LATERAL (
 				SELECT max(h.changed_at) AS entered_at

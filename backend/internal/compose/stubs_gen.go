@@ -87,6 +87,14 @@ func (stubs) SetActivityAudience(w nethttp.ResponseWriter, r *nethttp.Request, i
 	httperr.NotImplemented(w, r, "SetActivityAudience")
 }
 
+func (stubs) AnswerCalendarInvitation(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "AnswerCalendarInvitation")
+}
+
+func (stubs) DeclineActivityDeal(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "DeclineActivityDeal")
+}
+
 func (stubs) ClearActivityDisposition(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.ClearActivityDispositionParams) {
 	httperr.NotImplemented(w, r, "ClearActivityDisposition")
 }
@@ -371,7 +379,7 @@ func (stubs) GetAiUsage(w nethttp.ResponseWriter, r *nethttp.Request, params crm
 	httperr.NotImplemented(w, r, "GetAiUsage")
 }
 
-func (stubs) GetAiUsageSummary(w nethttp.ResponseWriter, r *nethttp.Request) {
+func (stubs) GetAiUsageSummary(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.GetAiUsageSummaryParams) {
 	httperr.NotImplemented(w, r, "GetAiUsageSummary")
 }
 
@@ -763,7 +771,7 @@ func (stubs) OidcSignInCallback(w nethttp.ResponseWriter, r *nethttp.Request, pr
 	httperr.NotImplemented(w, r, "OidcSignInCallback")
 }
 
-func (stubs) StartOidcSignIn(w nethttp.ResponseWriter, r *nethttp.Request, provider crmcontracts.StartOidcSignInParamsProvider) {
+func (stubs) StartOidcSignIn(w nethttp.ResponseWriter, r *nethttp.Request, provider crmcontracts.StartOidcSignInParamsProvider, params crmcontracts.StartOidcSignInParams) {
 	httperr.NotImplemented(w, r, "StartOidcSignIn")
 }
 
@@ -1081,6 +1089,10 @@ func (stubs) GetCommunicationReview(w nethttp.ResponseWriter, r *nethttp.Request
 
 func (stubs) RecordCommunicationContext(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID) {
 	httperr.NotImplemented(w, r, "RecordCommunicationContext")
+}
+
+func (stubs) CorrectCommunicationWording(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID) {
+	httperr.NotImplemented(w, r, "CorrectCommunicationWording")
 }
 
 func (stubs) DirectCommunicationSend(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID) {
@@ -1521,6 +1533,10 @@ func (stubs) GetContactConsent(w nethttp.ResponseWriter, r *nethttp.Request, id 
 
 func (stubs) RecordConsent(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.RecordConsentParams) {
 	httperr.NotImplemented(w, r, "RecordConsent")
+}
+
+func (stubs) ListContactOverrides(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.ListContactOverridesParams) {
+	httperr.NotImplemented(w, r, "ListContactOverrides")
 }
 
 func (stubs) AllowContact(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
@@ -2443,6 +2459,10 @@ func (stubs) DecideIntroRequest(w nethttp.ResponseWriter, r *nethttp.Request, id
 	httperr.NotImplemented(w, r, "DecideIntroRequest")
 }
 
+func (stubs) ReplaceIntroRequest(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "ReplaceIntroRequest")
+}
+
 func (stubs) ListCorpora(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "ListCorpora")
 }
@@ -2565,6 +2585,14 @@ func (stubs) GetLead(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontrac
 
 func (stubs) UpdateLead(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.UpdateLeadParams) {
 	httperr.NotImplemented(w, r, "UpdateLead")
+}
+
+func (stubs) RecordLeadQualifyingEvent(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "RecordLeadQualifyingEvent")
+}
+
+func (stubs) RetractLeadQualifyingEvent(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, eventId openapi_types.UUID) {
+	httperr.NotImplemented(w, r, "RetractLeadQualifyingEvent")
 }
 
 func (stubs) ListLeadStops(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
@@ -3143,6 +3171,14 @@ func (stubs) ExcuseNoticeCase(w nethttp.ResponseWriter, r *nethttp.Request, id o
 	httperr.NotImplemented(w, r, "ExcuseNoticeCase")
 }
 
+func (stubs) GetRetainedEmailSignature(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID) {
+	httperr.NotImplemented(w, r, "GetRetainedEmailSignature")
+}
+
+func (stubs) SaveRetainedEmailSignature(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID) {
+	httperr.NotImplemented(w, r, "SaveRetainedEmailSignature")
+}
+
 func (stubs) ListProducts(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListProductsParams) {
 	httperr.NotImplemented(w, r, "ListProducts")
 }
@@ -3637,6 +3673,14 @@ func (stubs) ListMeetingProposals(w nethttp.ResponseWriter, r *nethttp.Request, 
 
 func (stubs) CreateMeetingProposal(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.CreateMeetingProposalParams) {
 	httperr.NotImplemented(w, r, "CreateMeetingProposal")
+}
+
+func (stubs) GetHandoffAssignee(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "GetHandoffAssignee")
+}
+
+func (stubs) ReassignHandoff(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "ReassignHandoff")
 }
 
 func (stubs) Search(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.SearchParams) {

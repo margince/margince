@@ -12,6 +12,8 @@ package capture
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"strings"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -22,17 +24,26 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
-// contactVerdict answers every sender it is asked about as a contact.
-type contactVerdict struct{ disposition ids.UUID }
+// contactVerdict answers every sender it is asked about as a contact, by the
+// ref the request fenced it under.
+type contactVerdict struct{}
 
-func (v contactVerdict) Complete(context.Context, model.Request) (model.Response, error) {
-	payload, err := json.Marshal(map[string]any{"results": []map[string]any{
-		{"id": v.disposition.String(), "verdict": capture.KindContact, "confidence": 0.95},
-	}})
+func (contactVerdict) Complete(_ context.Context, req model.Request) (model.Response, error) {
+	marker, ok := promptfence.MarkerIn(req.System)
+	if !ok {
+		return model.Response{}, errors.New("verdict prompt declared no data boundary")
+	}
+	results := []map[string]any{}
+	for _, part := range strings.Split(req.Messages[0].Content, "<"+marker+` id="`)[1:] {
+		ref, _, _ := strings.Cut(part, `"`)
+		results = append(results, map[string]any{"id": ref, "verdict": capture.KindContact, "confidence": 0.95})
+	}
+	payload, err := json.Marshal(map[string]any{"results": results})
 	if err != nil {
 		return model.Response{}, err
 	}
@@ -63,11 +74,10 @@ func TestABackfillCountsTheContactTheVerdictMakesFromItsMail(t *testing.T) {
 		t.Fatalf("the page itself created %d contacts, want 0: a free-mail sender defers to the verdict", contacts)
 	}
 
-	var disposition ids.UUID
 	var queuedBy *ids.UUID
 	if err := database.WithWorkspaceTx(wsCtx, e.Pool, func(tx pgx.Tx) error {
-		return tx.QueryRow(wsCtx, `SELECT id, backfill_id FROM capture_pending_counterparty WHERE email = 'zoe@gmail.com'`).
-			Scan(&disposition, &queuedBy)
+		return tx.QueryRow(wsCtx, `SELECT backfill_id FROM capture_pending_counterparty WHERE email = 'zoe@gmail.com'`).
+			Scan(&queuedBy)
 	}); err != nil {
 		t.Fatalf("reading the queued sender: %v", err)
 	}
@@ -75,7 +85,7 @@ func TestABackfillCountsTheContactTheVerdictMakesFromItsMail(t *testing.T) {
 		t.Fatalf("the queued sender names run %v, want %v", queuedBy, run.ID)
 	}
 
-	engine := compose.NewCounterpartyVerdictEngine(e.Pool, contactVerdict{disposition: disposition}, compose.CaptureConfig{}, quietLog())
+	engine := compose.NewCounterpartyVerdictEngine(e.Pool, contactVerdict{}, compose.CaptureConfig{}, quietLog())
 	if err := engine.RunWorkspace(wsCtx, 0); err != nil {
 		t.Fatalf("verdict pass: %v", err)
 	}

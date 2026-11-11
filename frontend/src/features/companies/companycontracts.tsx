@@ -35,20 +35,15 @@ import { CustomFieldsPanel } from "./customfields.card";
 // it works today only because the company record page pulls that stylesheet in
 // for its own sake, so this file renders unstyled anywhere else.
 import "./company360.css";
+import { labelFor } from "../../lib/labelfor";
 import { useViewerZone } from "../../lib/viewerzone";
 
 // The account's agreements: what it signed, what each is worth, and when the
 // next one has to be decided.
-//
-// TWO READINGS THAT ARE NOT THE SAME READING, and the whole card turns on
-// keeping them apart.
-//
-// `status` is what a human asserted. `under_contract` is computed from the
-// dates. They disagree exactly when a term has run out and nobody has moved the
-// status yet — the normal state of an account whose expiry proposal is sitting
-// in an approval queue. Showing only the status would render that account as a
-// live customer; showing only the derived reading would erase the pending
-// decision. So a row that has ended while still marked active says both.
+
+// `status` is what a human asserted, and `term_state` is read from the dates. A
+// term that ran out while its status change waits for approval shows both. One
+// alone would show a live customer or hide the pending decision.
 
 type Contract = components["schemas"]["Contract"];
 type ContractStatus = NonNullable<Contract["status"]>;
@@ -338,7 +333,7 @@ function ContractRow({
         </span>
         {contract.status && (
           <Badge tone={STATUS_TONE[contract.status]}>
-            {t(STATUS_LABELS[contract.status])}
+            {t(labelFor(STATUS_LABELS, contract.status))}
           </Badge>
         )}
         {(mayWrite || mayArchive || mayRenewThis) && (
@@ -442,7 +437,7 @@ function ContractTermState({ contract }: Readonly<{ contract: Contract }>) {
 
   // Its dates have run out and nobody has moved the status. Saying only
   // "active" here would present an approval queue as a live agreement.
-  if (contract.under_contract === false && contract.status === "active") {
+  if (contract.term_state === "ended" && contract.status === "active") {
     return (
       <span className="t-caption">{t("contracts.endedPendingStatus")}</span>
     );

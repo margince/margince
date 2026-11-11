@@ -55,6 +55,11 @@ import (
 // ADR-0054 reason as the stager.
 func newContactsHandlers(pool *pgxpool.Pool) contactsHandlers {
 	return withContactMergeCarriers(InstallationDB(pool), contacts.NewHandlers(InstallationDB(pool))).
+		WithPrivacyReviewer(identity.NewServiceFor(InstallationDB(pool))).
+		WithRetainedSignaturePreview(func(source string) (string, error) {
+			markup, _, err := activities.SignatureMarkup(source)
+			return markup, err
+		}).
 		WithFloorCarry(EntityFloorCarry(pool)).
 		WithFieldCatalog(customfields.NewService(pool, nil)).
 		WithMatchStager(linkedInMatchStager(pool)).
@@ -352,8 +357,7 @@ func (s *Server) wireOnboardingSurface(pool *pgxpool.Pool) {
 	}
 }
 
-// newConsentHandlers binds the consent surface to the four edges it cannot
-// reach for itself.
+// newConsentHandlers binds consent to the owners of its outside dependencies.
 //
 // DSR fulfillment executes privacy's erase path, and the subject-access export
 // assembles rows from every module that holds them — injected here so consent
@@ -371,7 +375,11 @@ func (s *Server) wireOnboardingSurface(pool *pgxpool.Pool) {
 // confirmation lane's all-three-or-none rule.
 func newConsentHandlers(pool *pgxpool.Pool) consent.Handlers {
 	return consent.NewHandlers(InstallationDB(pool)).
+		WithEntityNames(consentEntityName).
 		WithEraser(ComposedEraser(pool, nil, nil)).
+		// Wired with or without a mail lane. A receipt owed where no lane can
+		// send it is one the privacy operators must hear about.
+		WithMissedReceipts(receiptAlarm{db: InstallationDB(pool)}).
 		WithSubjectAccessAssembler(newSubjectAccessAssembler(InstallationDB(pool))).
 		WithInstallationName(consent.InstallationNameFunc(func(ctx context.Context) (string, error) {
 			return identity.InstallationNameForPublicPage(ctx, pool)

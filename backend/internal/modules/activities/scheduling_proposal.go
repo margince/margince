@@ -21,6 +21,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 const auditProposalStatus = "proposal_status"
@@ -40,14 +42,35 @@ type proposalLink struct {
 	Expires time.Time `json:"expires_at"`
 }
 
+// proposalLifetimeRefusal refuses a link with no usable lifetime: one that
+// would be expired before a guest could open it. It is refused by name rather
+// than by the column's own CHECK, so the host is told what to change.
+func proposalLifetimeRefusal(created, expires time.Time) error {
+	if expires.After(created) {
+		return nil
+	}
+	return &SchedulingArgumentError{
+		Field: optionsField, Code: "no_usable_lifetime",
+		Message: "Offer a time far enough ahead that the link is still open when it arrives",
+	}
+}
+
 // CreateProposal binds an expiring one-use link to a contact and optional times.
 func (s *Store) CreateProposal(ctx context.Context, in crmcontracts.MeetingProposalRequest) (proposalLink, error) {
 	host, err := schedulingHost(ctx)
 	if err != nil {
 		return proposalLink{}, err
 	}
+	// Read before the expiry is derived, and used for created_at below.
+	//
+	// The expiry can be an option's own start, and a host may set zero notice.
+	// So a clock read after validation can land after a near-term option.
+	created := s.now()
 	expires, err := s.validateProposal(ctx, host, in)
 	if err != nil {
+		return proposalLink{}, err
+	}
+	if err := proposalLifetimeRefusal(created, expires); err != nil {
 		return proposalLink{}, err
 	}
 	token, hash, err := invitationToken()
@@ -60,15 +83,31 @@ func (s *Store) CreateProposal(ctx context.Context, in crmcontracts.MeetingPropo
 	}
 	var id ids.UUID
 	err = s.tx(ctx, func(tx pgx.Tx) error {
-		subject := "Meeting proposed: " + in.Subject
-		row, _, err := s.LogActivityTx(ctx, tx, LogActivityInput{Kind: "note", Subject: &subject, Body: &in.Description, Links: []ActivityLinkInput{{EntityType: linkEntityContact, EntityID: ids.UUID(in.ContactId)}}, Source: sourceManual})
+		subject := fmt.Sprintf(systemtext.Copy("booking.proposed", textlang.English), in.Subject)
+		row, _, err := s.LogActivityTx(ctx, tx, LogActivityInput{SystemText: &systemtext.Message{Subject: systemtext.Sentence("booking.proposed", systemtext.Text(in.Subject))}, Kind: "note", Subject: &subject, Body: &in.Description, Links: []ActivityLinkInput{{EntityType: linkEntityContact, EntityID: ids.UUID(in.ContactId)}}, Source: sourceManual})
 		if err != nil {
 			return err
 		}
 		id = ids.UUID(row.Id)
+		// Read the clock again before writing. Sealing the link and logging the
+		// activity take time, so a zero-notice option can clear the check above
+		// and be gone by now. The row would still satisfy its CHECK, which
+		// compares the expiry with the earlier created_at, while the link it
+		// returns cannot be resolved. The caller's own error path deletes the
+		// sealed link.
+		if !expires.After(s.now()) {
+			return &SchedulingArgumentError{
+				Field:   optionsField,
+				Code:    "no_usable_lifetime",
+				Message: "Offer a time far enough ahead that the link is still open when it arrives",
+			}
+		}
 		args := schedulingArgs{}
-		values := []string{args.add(id), args.add(host), args.add(in), args.add(hash), args.add(expires), args.add(ref)}
-		if _, err := tx.Exec(ctx, `INSERT INTO meeting_proposal(activity_id,host_user_id,request,token_hash,expires_at,link_ref) VALUES(`+strings.Join(values, ",")+`)`, args...); err != nil {
+		// created_at comes from the one clock read above, not from the database
+		// default. A row whose two timestamps come from two clocks can read as
+		// expiring before it was created.
+		values := []string{args.add(id), args.add(host), args.add(in), args.add(hash), args.add(expires), args.add(ref), args.add(created)}
+		if _, err := tx.Exec(ctx, `INSERT INTO meeting_proposal(activity_id,host_user_id,request,token_hash,expires_at,link_ref,created_at) VALUES(`+strings.Join(values, ",")+`)`, args...); err != nil {
 			return err
 		}
 		return auditProposal(ctx, tx, id, "created")

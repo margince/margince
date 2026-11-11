@@ -223,6 +223,7 @@ func (h Handlers) GetWorklist(w http.ResponseWriter, r *http.Request, params crm
 		httperr.Write(w, r, err)
 		return
 	}
+	markRefusedMoves(r.Context(), &out)
 	httperr.WriteJSON(w, http.StatusOK, out)
 }
 

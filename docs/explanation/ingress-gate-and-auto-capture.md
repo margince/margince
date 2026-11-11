@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/pkg/extension/ingress.go backend/internal/compose/extingress.go backend/internal/modules/capture/sink.go backend/internal/modules/capture/sinkensure.go backend/internal/modules/capture/sinkchannel.go backend/internal/modules/capture/pending.go backend/internal/modules/capture/transactional.go backend/internal/compose/captureverdict.go backend/internal/compose/capturejobs.go backend/internal/compose/heldcontactrelease.go -->
+<!-- describes: backend/pkg/extension/ingress.go backend/internal/compose/extingress.go backend/internal/modules/capture/birthdecision.go backend/internal/modules/capture/verdictinherit.go backend/internal/modules/capture/privatedocumentmarkers.go backend/internal/modules/capture/threadverdictdocuments.go backend/internal/modules/capture/sink.go backend/internal/modules/capture/sinkensure.go backend/internal/modules/capture/sinkchannel.go backend/internal/modules/capture/pending.go backend/internal/modules/capture/transactional.go backend/internal/compose/captureverdict.go backend/internal/compose/capturejobs.go backend/internal/compose/heldcontactrelease.go -->
 # The ingress gate, auto-capture, and the verdict engine
 
 What happens to a message **after** a connector pulled it from an outside provider, and before it
@@ -334,6 +334,10 @@ mailbox owner alone:
 - **The thread is on a privacy hold.** A contact visible to the whole workspace, created from mail on
   hold, would show the counterparty that the hold exists to keep private.
 
+For a mailbox set to `classified`, a cleared sender does not clear a new document. Mail with a
+document waits for its own thread verdict. Replies stay held while that verdict is pending. A file name that marks
+private records also holds the mail when its text cannot be read.
+
 A privacy hold on a contact ends when nothing holds it any more. That happens when the thread
 verdict answers `ordinary` or the owner shares the thread. The same contact then opens to the workspace,
 with its ID and its mail. Every check that kept it private is asked again first:
@@ -590,6 +594,18 @@ has a right to.
 | What starts the company check | `backend/internal/compose/capturedomaintriage.go` |
 | Job schedules and time limits | `backend/api/jobs.yaml` |
 | A connector to learn from | `extensions/openchannel/` |
+
+In a classified mailbox, captured image files also require a thread verdict. A file name cannot tell whether an image
+holds private details. The text reader cannot read images, so an image it cannot judge stays
+held for its owner to review. Capture does not record whether a stored image was inline.
+
+A reopened thread keeps the message that caused the new question, even while its mailbox is shared
+or held. It stays pending without a model call until the mailbox is classified again.
+
+Capture counts invited members and members who cannot sign in, so imported mail still belongs to the company.
+It does not match new mail to retired members. A revoked invite still counts as a member who cannot sign in.
+That state cannot be told apart from an imported member.
+
 
 ### Other pages
 

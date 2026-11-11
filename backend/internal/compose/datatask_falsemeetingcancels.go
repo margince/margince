@@ -25,8 +25,10 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/datatask"
+	"github.com/margince/margince/backend/internal/platform/originalstore"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -40,7 +42,7 @@ func falseMeetingCancelsDataTask(now func() time.Time) datatask.Task {
 	since := func() time.Time { return now().Add(-falseCancellationLookback) }
 	return datatask.Task{
 		ID: "core/1794138928_calendar_cancellations_a_guest_caused", Version: 1,
-		Title: "Reopening meetings a guest's calendar cancelled for everybody",
+		Title: systemtext.Literal("datatask.title.core.1794138928_calendar_cancellations_a_guest_caused"),
 		Steps: []datatask.Step{{
 			Name: "reopen_guest_cancellations", Limit: 100, MinLimit: 1,
 			Audit: datatask.AuditPolicy{PerRecord: true},
@@ -211,7 +213,7 @@ func closedOnAnOriginalNowOnTx(ctx context.Context, tx pgx.Tx, c activities.Cale
 // key, and whether one is stored.
 func cancellingOriginalTx(ctx context.Context, tx pgx.Tx, c activities.CalendarCancellation) ([]byte, bool, error) {
 	var payload []byte
-	err := tx.QueryRow(ctx, `SELECT payload FROM raw_capture WHERE source_system = $1 AND source_id = $2`,
+	err := tx.QueryRow(ctx, `SELECT `+originalstore.SQL("r")+` FROM raw_capture r WHERE source_system = $1 AND source_id = $2`,
 		c.Key.SourceSystem, c.Key.SourceID).Scan(&payload)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, false, nil
@@ -219,7 +221,8 @@ func cancellingOriginalTx(ctx context.Context, tx pgx.Tx, c activities.CalendarC
 	if err != nil {
 		return nil, false, wrapFalseCancellation(err)
 	}
-	return payload, true, nil
+	payload, err = originalstore.RepairPayload(ctx, payload)
+	return payload, err == nil, err
 }
 
 // seatDeclinedTx answers whether the cancelling seat declined the meeting: its

@@ -8,6 +8,7 @@ import { type ReactNode, useState } from "react";
 import type { components } from "../api/schema";
 import type { ActivityWhenFormatter } from "../format/activitywhen";
 import { useT } from "../i18n";
+import { labelFor } from "../lib/labelfor";
 import { Button } from "./atoms";
 import { Avatar } from "./avatar";
 import { Callout } from "./callout";
@@ -243,7 +244,6 @@ function OpenMessage({
           type="button"
           className="emailthread__fold"
           aria-expanded="true"
-          aria-label={t("email.thread.fold", { name })}
           onClick={onFold}
         >
           <Avatar name={name} identity={sender?.address ?? name} size="sm" />
@@ -331,8 +331,8 @@ function TextNotice({
     return null;
   }
   return (
-    <Callout kind="standing" title={t(TEXT_NOTICES[completeness])}>
-      {t(TEXT_HINTS[completeness])}
+    <Callout kind="standing" title={t(labelFor(TEXT_NOTICES, completeness))}>
+      {t(labelFor(TEXT_HINTS, completeness))}
     </Callout>
   );
 }

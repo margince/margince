@@ -170,6 +170,7 @@ type Tasks interface {
 
 // Task is one piece of agreed work.
 type Task struct {
+	SystemDisplay    *crmcontracts.SystemDisplay
 	SourceActivityID *ids.UUID
 	Recipients       []crmcontracts.WorklistPromiseRecipient
 	// Commitment marks a task written for a promise read out of a message.
@@ -325,9 +326,10 @@ type Briefing interface {
 // entries. The brief owns what its states mean and what each spells; a copy of
 // that vocabulary here would be a second place to keep it right.
 type BriefEntry struct {
-	ID     ids.UUID
-	DealID ids.UUID
-	Rank   int
+	Snoozed bool
+	ID      ids.UUID
+	DealID  ids.UUID
+	Rank    int
 	// Composite is the night's own score for this deal, between 0 and 1, and
 	// what ranksteps.go's `opportunity` step breaks a tie by.
 	Composite float64
@@ -435,12 +437,13 @@ type Notices interface {
 
 // UnreadNotice is one line still waiting to be seen.
 type UnreadNotice struct {
-	ApprovalID *ids.ApprovalID
-	Origin     *crmcontracts.NoticeOrigin
-	ID         ids.UUID
-	Kind       string
-	Subject    string
-	Body       string
+	SystemDisplay *crmcontracts.SystemDisplay
+	ApprovalID    *ids.ApprovalID
+	Origin        *crmcontracts.NoticeOrigin
+	ID            ids.UUID
+	Kind          string
+	Subject       string
+	Body          string
 	// Target names the record the notice is about, when it names one. Empty
 	// type means it names none — a capture backlog, a coach's word — and the
 	// row then carries no subject, which is what it carried before any notice

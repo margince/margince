@@ -95,6 +95,9 @@ func (s *Service) dealsElsewhere(
 	if elsewhere == nil {
 		elsewhere = map[ids.UUID]bool{}
 	}
+	if s.taskOwner == ids.Nil {
+		maps.Copy(elsewhere, s.briefSnoozed)
+	}
 	if len(deals) == 0 {
 		return elsewhere, nil
 	}

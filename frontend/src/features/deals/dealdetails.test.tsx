@@ -135,3 +135,53 @@ it("names masked money as withheld while leaving unrelated fields editable", asy
     await screen.findByRole("button", { name: /^Change Deal brief/ }),
   ).toBeTruthy();
 });
+
+it("shows why a company change is refused while the deal's contracts name another company", async () => {
+  const user = userEvent.setup();
+  const refusal =
+    "1 contract on this deal (MSA-2026) belongs to another company. Detach it, or file it against a deal of its own company, before changing the company.";
+  installFetchStub({
+    "GET /me": meRoute({ deal: ["read", "update"] }, { seat: "full" }),
+    "GET /companies": () =>
+      jsonResponse({
+        data: [{ id: "c2", display_name: "Contoso", writable: true }],
+        next_cursor: null,
+      }),
+    "PATCH /deals/d1": () =>
+      jsonResponse(
+        {
+          code: "validation_error",
+          detail: refusal,
+          details: {
+            errors: [
+              {
+                field: "company_id",
+                code: "deal_contracts_cross_company",
+                message: refusal,
+              },
+            ],
+          },
+        },
+        422,
+      ),
+  });
+  render(
+    <StoryProviders>
+      <DealDetails deal={deal} meId="u" stages={[]} />
+    </StoryProviders>,
+  );
+  await user.click(
+    await screen.findByRole("button", { name: /^Change Company/ }),
+  );
+  const dialog = await screen.findByRole("dialog");
+  await user.type(within(dialog).getByRole("searchbox"), "Con");
+  await user.click(
+    await within(dialog).findByRole("button", { name: /Contoso/ }),
+  );
+  await user.click(within(dialog).getByRole("button", { name: "Save" }));
+  expect(
+    await within(dialog).findByText(
+      "This deal has contracts belonging to another company. Archived contracts also count. Ask an administrator to correct the contract links before changing the company.",
+    ),
+  ).toBeTruthy();
+});

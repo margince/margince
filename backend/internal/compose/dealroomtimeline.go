@@ -41,6 +41,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 // roomTimelineEntity is the outbox entity type this consumer reacts to. A room
@@ -89,9 +91,10 @@ func (w *DealRoomTimeline) HandleEvent(ctx context.Context, env events.Envelope)
 // roomNoteText is one timeline entry before it has a home: what the room event
 // says, and which deal it says it about.
 type roomNoteText struct {
-	deal    ids.UUID
-	subject string
-	body    string
+	metadata *systemtext.Message
+	deal     ids.UUID
+	subject  string
+	body     string
 }
 
 // roomNote turns one envelope into the note it deserves. The bool says whether
@@ -135,33 +138,32 @@ func roomNote(env events.Envelope) (roomNoteText, bool, error) {
 // Both ride the event (see the payload), so the note keeps saying what was
 // true at the time even after a rename.
 func commentNote(posted dealrooms.CommentPosted) roomNoteText {
-	who := "The seller"
+	whoCode := "room.seller"
 	if posted.Side == roomSideBuyer {
-		who = "The buyer"
+		whoCode = "room.buyer"
 	}
-	// The name when the event carries one. An event minted before the payload
-	// grew those fields carries none, and the note falls back to the side —
-	// vaguer than we want, but true, which the alternative of inventing a name
-	// would not be.
+	who := systemtext.MessageArgument(whoCode)
+	name := systemtext.Literal(whoCode)
 	if posted.AuthorName != nil {
-		who = *posted.AuthorName
+		name = *posted.AuthorName
+		who = systemtext.Text(name)
 	}
-	verb := "replied in the Deal Room"
+	code := "room.reply"
 	if posted.OpensThread {
-		verb = "asked a question in the Deal Room"
+		code = "room.question"
 	}
-	subject := who + " " + verb
-	body := "About the room as a whole."
+	subject := fmt.Sprintf(systemtext.Copy(code, textlang.English), name)
+	bodyPart := systemtext.Sentence("room.whole")
+	body := systemtext.Literal("room.whole")
 	switch {
 	case posted.DocumentTitle != nil:
-		body = "About " + *posted.DocumentTitle + "."
+		bodyPart = systemtext.Sentence("room.named_document", systemtext.Text(*posted.DocumentTitle))
+		body = fmt.Sprintf(systemtext.Copy("room.named_document", textlang.English), *posted.DocumentTitle)
 	case posted.DocumentID != nil:
-		// The thread is about a document whose title the event does not carry.
-		// Saying so beats naming the id, which tells a reader nothing they can
-		// act on.
-		body = "About a document in the room."
+		bodyPart = systemtext.Sentence("room.document")
+		body = systemtext.Literal("room.document")
 	}
-	return roomNoteText{deal: posted.DealID, subject: subject, body: body}
+	return roomNoteText{deal: posted.DealID, subject: subject, body: body, metadata: &systemtext.Message{Subject: systemtext.Sentence(code, who), Body: bodyPart}}
 }
 
 // roomSideBuyer is the payload's spelling of the outside party.
@@ -169,15 +171,11 @@ const roomSideBuyer = "buyer"
 
 // decisionNote records a buyer's verdict on a document version.
 func decisionNote(decided dealrooms.DecisionRecorded) roomNoteText {
-	subject := "The buyer asked for changes to a Deal Room document"
+	code := "room.changes"
 	if decided.Kind == roomDecisionConfirm {
-		subject = "The buyer confirmed a Deal Room document"
+		code = "room.confirmed"
 	}
-	return roomNoteText{
-		deal:    decided.DealID,
-		subject: subject,
-		body:    "A working decision inside the room, not a signature.",
-	}
+	return roomNoteText{deal: decided.DealID, subject: systemtext.Literal(code), body: systemtext.Literal("room.decision"), metadata: &systemtext.Message{Subject: systemtext.Sentence(code), Body: systemtext.Sentence("room.decision")}}
 }
 
 // roomDecisionConfirm is the payload's spelling of an accepted version.
@@ -191,6 +189,7 @@ func (w *DealRoomTimeline) write(ctx context.Context, env events.Envelope, note 
 	system, id := roomTimelineSource, env.EventID.String()
 	_, _, err := w.activities.LogActivity(ctx, activities.LogActivityInput{
 		Kind:         string(crmcontracts.ActivityKindNote),
+		SystemText:   note.metadata,
 		Subject:      &note.subject,
 		Body:         &note.body,
 		OccurredAt:   &env.OccurredAt,

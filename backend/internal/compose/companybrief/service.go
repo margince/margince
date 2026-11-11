@@ -279,7 +279,10 @@ func (s *Service) answerLanguage(ctx context.Context) string {
 // the brief had sections unmarshals into a zero envelope, which reads as a
 // cache MISS and rewrites — rather than as a brief with no sections, which
 // would render as an account nobody could say anything about.
-const storedVersion = 2
+//
+// 3: a message carrying two promises is named by neither, so a brief cached
+// with the first promise's name is rewritten.
+const storedVersion = 3
 
 // stored is the cached payload's shape.
 type stored struct {

@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { MessageKey } from "../../i18n/en";
+import { labelFor } from "../../lib/labelfor";
 import type { WorklistItem } from "./worklist.queries";
 
 // What a row asks of its reader, one sentence per source. A row's reasons say
@@ -44,5 +45,7 @@ const ASK_BY_SOURCE: Readonly<Record<WorklistItem["source"], MessageKey>> = {
 
 /** The sentence saying what this row asks of its reader. */
 export function askKey(item: WorklistItem): MessageKey {
-  return ASK_BY_SOURCE[item.source];
+  // An invitation waits on an RSVP, not on a written answer.
+  if (item.email_summary?.calendar_invitation) return "worklist.ask.invitation";
+  return labelFor(ASK_BY_SOURCE, item.source);
 }

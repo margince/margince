@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { type ReactNode, useId, useState } from "react";
 import { expect, screen, userEvent, within } from "storybook/test";
+import { useShortcutDispatcher } from "../lib/shortcuts";
 import {
   Button,
   Field,
@@ -50,12 +51,14 @@ function IntentDemo({
   title,
   verb,
   danger = false,
+  closeReason,
   children,
 }: Readonly<{
   intent: ModalIntent;
   title: string;
   verb: string;
   danger?: boolean;
+  closeReason?: string;
   children: ReactNode;
 }>) {
   const [open, setOpen] = useState(true);
@@ -68,6 +71,7 @@ function IntentDemo({
         onClose={() => setOpen(false)}
         labelledBy={titleId}
         intent={intent}
+        closeReason={closeReason}
       >
         <Heading size="large" id={titleId} className="t-h2 modal-title">
           {title}
@@ -112,6 +116,32 @@ export const Confirm: Story = {
   play: opens("Merge these companies?"),
 };
 
+/** A close control that explains itself stays inside the box, under the button. */
+export const CloseReason: Story = {
+  render: () => (
+    <IntentDemo
+      intent="form"
+      title="Your recovery codes"
+      verb="Done"
+      closeReason="Save the codes, then choose Done."
+    >
+      <p className="t-body">
+        Each code works once if you lose your phone. Keep them somewhere safe.
+      </p>
+      <p className="t-body">
+        The first code on the list is the one to try when you are locked out.
+      </p>
+    </IntentDemo>
+  ),
+  play: opens("Your recovery codes"),
+};
+
+export const PhoneCloseReason: Story = {
+  ...CloseReason,
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+};
+
 function ContactFields({ more = false }: Readonly<{ more?: boolean }>) {
   const names = more
     ? ["First name", "Last name", "Email", "Phone", "Job title", "Company"]
@@ -138,6 +168,54 @@ export const Form: Story = {
     </IntentDemo>
   ),
   play: opens("New contact at Globex"),
+};
+
+function CommitDemo() {
+  useShortcutDispatcher();
+  const [saved, setSaved] = useState(false);
+  const titleId = useId();
+  const formId = useId();
+  return (
+    <>
+      <p className="t-body">{saved ? "Saved" : "Not saved yet"}</p>
+      <Modal open onClose={() => undefined} labelledBy={titleId} intent="form">
+        <Heading size="large" id={titleId} className="t-h2 modal-title">
+          Rename Globex
+        </Heading>
+        <form
+          id={formId}
+          className="form-stack"
+          onSubmit={(event) => {
+            event.preventDefault();
+            setSaved(true);
+          }}
+        >
+          <Field label="Name">
+            {(control) => <TextInput {...control} defaultValue="Globex" />}
+          </Field>
+        </form>
+        <div className="actions">
+          <Button onClick={() => undefined}>Cancel</Button>
+          <Button variant="primary" type="submit" form={formId}>
+            Save
+          </Button>
+        </div>
+      </Modal>
+    </>
+  );
+}
+
+/** Cmd/Ctrl+Enter from a field presses the form's submit. */
+export const FormSubmitsOnCommit: Story = {
+  render: () => <CommitDemo />,
+  play: async () => {
+    const dialog = within(
+      await screen.findByRole("dialog", { name: "Rename Globex" }),
+    );
+    await userEvent.click(dialog.getByRole("textbox", { name: "Name" }));
+    await userEvent.keyboard("{Control>}{Enter}{/Control}");
+    await expect(await screen.findByText("Saved")).toBeInTheDocument();
+  },
 };
 
 /** Only the body scrolls; the title and the action row stay pinned. */

@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, screen } from "storybook/test";
 import { COMPANY, project } from "../../testing/projects.fixtures";
 import {
   installFetchStub,
@@ -73,6 +74,23 @@ export const List: Story = {
         <ProjectsScreen />
       </StoryProviders>
     );
+  },
+};
+
+/** `#/projects/new`: the list with its create form open, as `C` opens it. */
+export const CreateFormOpen: Story = {
+  render: () => {
+    installList(rows);
+    return (
+      <StoryProviders>
+        <ProjectsScreen startCreating />
+      </StoryProviders>
+    );
+  },
+  play: async () => {
+    await expect(
+      await screen.findByRole("dialog", { name: "New project" }),
+    ).toBeInTheDocument();
   },
 };
 

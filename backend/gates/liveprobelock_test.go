@@ -23,10 +23,12 @@ package gates
 // on "this body names the probe" missed the second shape entirely, and there was
 // a live instance of it.
 //
-// Two things it cannot see, said here rather than left for the next reader to
+// Three things it cannot see, said here rather than left for the next reader to
 // discover. The reach is EXISTENTIAL and unqualified — it answers that a lock is
 // taken somewhere downward, not that it is taken on THIS subject or on an arm
 // the write actually follows; guardedBy names the same hole for its own walk.
+// Nor does it check order: a lock taken after the insert passes the same as
+// one taken before it.
 // And the corpus is what the privacy module DELETEs, so a table the erasure
 // clears by UPDATE-to-NULL is outside it, and so is a restoring UPDATE on the
 // write side. Both are presence checks around a per-site argument the comments
@@ -35,6 +37,7 @@ package gates
 import (
 	"fmt"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 	"testing"
@@ -48,7 +51,14 @@ const (
 	// because it discharges the lock too, it satisfies both halves below.
 	liveProbe     = "EnsureWritableLive"
 	liveProbeHeld = "HoldWritableLive"
-	subjectLock   = "LockSubjectLive"
+	// A deal room decides a buyer may write from the room's STANDING rather
+	// than from a row's liveness, so neither name above reaches it.
+	liveProbeStanding = "readStanding"
+	subjectLock       = "LockSubjectLive"
+	// A buyer seat may hold no contact row, so LockSubjectLive has no subject
+	// to name for it. Its writes share-lock the seat itself, the row the
+	// erasure wipes before it deletes what the seat wrote.
+	seatLock = "holdLiveSeat"
 )
 
 // unlockedLiveWrites records exceptions to holding an erasure-cleared subject.
@@ -71,14 +81,20 @@ func TestALiveProbedWriteOfAHeldRowLocksItsSubject(t *testing.T) {
 
 	var findings []string
 	probed, locked := 0, 0
-	for _, dir := range moduleDirsWith(t, "WritableLive") {
+	// Named, not derived, and the derivation was measured rather than assumed.
+	// Enrolling every writer of an erasure-cleared table instead reaches 282
+	// functions, so the narrowing to a decide-then-write probe is what makes
+	// the gate answerable. The probes themselves share no marker to key on:
+	// one asks whether a row is live, the other whether a room still is.
+	for _, dir := range moduleDirsWith(t, "WritableLive", liveProbeStanding) {
 		graph := packageCallGraph(t, dir)
 		for name := range graph {
 			// Through reaches, which reads identifiers rather than call
 			// edges: both of these are cross-package, and packageCallGraph
 			// records a selector call as an edge only when its base is the
 			// receiver. The Sel is an identifier either way.
-			if !reaches(graph, name, liveProbe) && !reaches(graph, name, liveProbeHeld) {
+			if !reaches(graph, name, liveProbe) && !reaches(graph, name, liveProbeHeld) &&
+				!reaches(graph, name, liveProbeStanding) {
 				continue
 			}
 			probed++
@@ -86,7 +102,8 @@ func TestALiveProbedWriteOfAHeldRowLocksItsSubject(t *testing.T) {
 			if table == "" {
 				continue
 			}
-			if reaches(graph, name, subjectLock) || reaches(graph, name, liveProbeHeld) {
+			if reaches(graph, name, subjectLock) || reaches(graph, name, liveProbeHeld) ||
+				reaches(graph, name, seatLock) {
 				locked++
 				continue
 			}
@@ -121,11 +138,11 @@ func TestALiveProbedWriteOfAHeldRowLocksItsSubject(t *testing.T) {
 }
 
 // moduleDirsWith are the module package directories whose source mentions the
-// given identifier, so the graph is built only where it can matter. Derived from
+// given identifiers, so the graph is built only where it can matter. Derived from
 // the tree rather than listed: a module that starts live-probing joins this
 // census without anybody editing it. The caller passes the SHARED substring of
-// the two probe spellings, so neither has to be enumerated here.
-func moduleDirsWith(t *testing.T, identifier string) []string {
+// the two row-probe spellings, and the standing probe beside it.
+func moduleDirsWith(t *testing.T, identifiers ...string) []string {
 	t.Helper()
 	paths, err := filepath.Glob("internal/modules/*/*.go")
 	if err != nil {
@@ -140,7 +157,9 @@ func moduleDirsWith(t *testing.T, identifier string) []string {
 		if readErr != nil {
 			t.Fatalf("reading %s: %v", path, readErr)
 		}
-		if strings.Contains(string(source), identifier) {
+		if slices.ContainsFunc(identifiers, func(id string) bool {
+			return strings.Contains(string(source), id)
+		}) {
 			dirs[filepath.ToSlash(filepath.Dir(path))] = true
 		}
 	}
@@ -166,8 +185,11 @@ func tablesArticle17Deletes(t *testing.T) map[string]bool {
 	tables := map[string]bool{}
 	for _, entry := range packageCallGraph(t, "internal/modules/privacy") {
 		for _, statement := range entry.statements {
-			for _, m := range deleteRe.FindAllStringSubmatch(statement, -1) {
-				tables[m[1]] = true
+			for _, write := range sqlWrites(statement) {
+				if write.verb != "delete" {
+					continue
+				}
+				tables[write.table] = true
 			}
 		}
 	}
@@ -221,9 +243,12 @@ func firstErasureClearedInsert(graph map[string]*graphFunc, name string, erasure
 			return ""
 		}
 		for _, statement := range entry.statements {
-			for _, m := range insertRe.FindAllStringSubmatch(statement, -1) {
-				if erasureClears[m[1]] {
-					return m[1]
+			for _, write := range sqlWrites(statement) {
+				if write.verb != "insert" {
+					continue
+				}
+				if erasureClears[write.table] {
+					return write.table
 				}
 			}
 		}

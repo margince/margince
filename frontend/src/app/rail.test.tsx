@@ -266,7 +266,7 @@ describe("WorkspaceRail (AC-shell-1/2)", () => {
 
     deals.focus();
     const tip = await screen.findByRole("tooltip");
-    expect(tip.textContent).toBe("Deals");
+    expect(tip.textContent).toBe("Deals · G then D");
 
     await user.keyboard("{Escape}");
     expect(screen.queryByRole("tooltip")).toBeNull();
@@ -288,7 +288,7 @@ describe("WorkspaceRail (AC-shell-1/2)", () => {
     act(() => {
       vi.advanceTimersByTime(500);
     });
-    expect(screen.getByRole("tooltip").textContent).toBe("Deals");
+    expect(screen.getByRole("tooltip").textContent).toBe("Deals · G then D");
     const heard = vi.fn();
     globalThis.addEventListener("keydown", heard);
 
@@ -455,7 +455,7 @@ describe("WorkspaceRail (AC-shell-1/2)", () => {
     // The top bar carries the company's mark at this width, so the menu does not.
     expect(container.querySelector(".railmenu .railhead")).toBeNull();
     expect(container.querySelector(".accountrows")).toBeNull();
-    expect(screen.queryByRole("button", { name: /Account$/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /account$/i })).toBeNull();
     expect(screen.queryByRole("button", { name: "Sign out" })).toBeNull();
   });
 

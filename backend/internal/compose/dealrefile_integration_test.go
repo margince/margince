@@ -41,6 +41,8 @@ type dealRefileFixture struct {
 	closed                                     ids.StageID
 	o                                          *owedEnv
 	contact, company, deal, mail, meeting, old ids.UUID
+	// topic is the model the pass's topic check asks; nil is aboutEveryDeal.
+	topic completer
 }
 
 // refileTestPage is the page a full-page test fills. A page of
@@ -124,7 +126,11 @@ func (f dealRefileFixture) runPaged(t *testing.T, args CapturedDealRefileArgs, p
 	if !ok {
 		t.Fatal("missing job declaration")
 	}
-	production := newCapturedDealRefileWorker(f.o.e.Pool)
+	topic := f.topic
+	if topic == nil {
+		topic = aboutEveryDeal
+	}
+	production := newCapturedDealRefileWorker(f.o.e.Pool, topic)
 	production.page = page
 	worker := rivertest.NewWorker(t, riverpgxv5.New(f.o.e.Pool), &river.Config{}, jobs.Govern(production, spec))
 	var row *rivertype.JobRow
@@ -255,6 +261,24 @@ func TestDealReconsiderationKeepsAHumanFiling(t *testing.T) {
 	}
 }
 
+// A colleague's "not about this deal" holds for the pass. The declined mail
+// stays off the deal, and the meeting the same pass reconsiders lands on it.
+func TestDealReconsiderationLeavesADeclinedDealOff(t *testing.T) {
+	f := newDealRefileFixture(t, 0)
+	integration.ApplyRiverSchema(t)
+	e := f.o.e
+	if _, err := e.Activities.DeclineDeal(e.Admin(), ids.From[ids.ActivityKind](f.mail), &f.deal); err != nil {
+		t.Fatalf("declining the deal as a colleague: %v", err)
+	}
+	f.run(t, f.enqueue(t, "contact.created", f.contact))
+	if got := e.WsCount(t, `SELECT count(*) FROM activity_link WHERE activity_id=$1 AND entity_type='deal'`, f.mail); got != 0 {
+		t.Fatal("the pass filed the mail on the deal it was declined on")
+	}
+	if got := e.WsCount(t, `SELECT count(*) FROM activity_link WHERE activity_id=$1 AND deal_id=$2`, f.meeting, f.deal); got != 1 {
+		t.Fatal("the pass did not file the meeting, so it proves nothing about the mail")
+	}
+}
+
 func TestTheRecoverySweepQueuesTheSameFiniteReconsideration(t *testing.T) {
 	f := newDealRefileFixture(t, 0)
 	integration.ApplyRiverSchema(t)
@@ -298,7 +322,7 @@ func TestTheRecoverySweepQueuesTheSameFiniteReconsideration(t *testing.T) {
 	if err := json.Unmarshal(raw, &args); err != nil {
 		t.Fatal(err)
 	}
-	if !args.Scope.All || args.Correlation.IsZero() || !args.AsOf.Equal(f.o.now) {
+	if !args.Scope.All || !args.Scope.Recheck || args.Correlation.IsZero() || !args.AsOf.Equal(f.o.now) {
 		t.Fatalf("recovery args=%+v", args)
 	}
 	if got := f.o.e.WsCount(t, `SELECT count(*) FROM river_job WHERE kind='captured_deal_refile'`); got != 1 {
@@ -307,6 +331,39 @@ func TestTheRecoverySweepQueuesTheSameFiniteReconsideration(t *testing.T) {
 	f.run(t, args)
 	if got := f.o.e.WsCount(t, `SELECT count(*) FROM activity_link WHERE activity_id=ANY($1) AND deal_id=$2`, []ids.UUID{f.mail, f.meeting}, f.deal); got != 2 {
 		t.Fatalf("recovery filed %d activities", got)
+	}
+}
+
+// The recovery pass rechecks a link the rule wrote on a suggestion before the
+// topic check existed. It takes the link back when the model says the mail is
+// not about the deal.
+func TestTheRecoveryPassRechecksAnOlderSuggestedLink(t *testing.T) {
+	f := newDealRefileFixture(t, 0)
+	integration.ApplyRiverSchema(t)
+	e := f.o.e
+	writer := principal.WithCorrelationID(e.ConnectorOwnerCtx(f.o.owner, "gmail"), ids.NewV7())
+	if err := InstallationDB(e.Pool).Tx(writer, func(tx pgx.Tx) error {
+		_, _, err := ActivityDealFiler{}.FileOnDealIfUnfiled(writer, tx, ids.From[ids.ActivityKind](f.mail), f.deal, nil)
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	ctx := principal.WithCorrelationID(principal.SystemActing(e.Admin(), dealRefileActor), ids.NewV7())
+	var args CapturedDealRefileArgs
+	if err := InstallationDB(e.Pool).Tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		args, err = dealRefilePassArgs(ctx, tx, capture.DealRefileScope{All: true, Recheck: true}, f.o.now, ids.Nil)
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	f.topic = dealTopicStub{answer: func(ids []string) string { return verdictsReply(0.95, dealTopicNotAbout)(ids) }}
+	f.run(t, args)
+	if got := e.WsCount(t, `SELECT count(*) FROM activity_link WHERE activity_id=$1 AND entity_type='deal'`, f.mail); got != 0 {
+		t.Fatal("the recheck kept a link the model says the mail is not about")
+	}
+	if got := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_id=$1 AND evidence->>'reason'='captured_activity_deal_recheck'`, f.mail); got != 1 {
+		t.Fatalf("%d recheck audit rows on the mail, want the retraction", got)
 	}
 }
 
@@ -347,7 +404,7 @@ func TestLeadPromotionReconsidersMailAndMeetingsCapturedBeforeTheDeal(t *testing
 func TestADealCreatedEventFilesPreviouslyCapturedResolvedActivities(t *testing.T) {
 	f := newDealRefileFixture(t, 0)
 	integration.ApplyRiverSchema(t)
-	worker := newCapturedDealRefileWorker(f.o.e.Pool)
+	worker := newCapturedDealRefileWorker(f.o.e.Pool, aboutEveryDeal)
 	if _, err := worker.repairCohorts(principal.SystemActing(f.o.e.Admin(), dealRefileActor), []ids.UUID{f.contact}); err != nil {
 		t.Fatal(err)
 	}
@@ -370,7 +427,7 @@ func TestALateCompanyChangeRetainsBothAuditedCompaniesAndTheCurrentOne(t *testin
 	f := newDealRefileFixture(t, 0)
 	e := f.o.e
 	integration.ApplyRiverSchema(t)
-	worker := newCapturedDealRefileWorker(e.Pool)
+	worker := newCapturedDealRefileWorker(e.Pool, aboutEveryDeal)
 	if _, err := worker.repairCohorts(principal.SystemActing(e.Admin(), dealRefileActor), []ids.UUID{f.contact}); err != nil {
 		t.Fatal(err)
 	}
@@ -465,7 +522,7 @@ func TestDealReconsiderationAdvancesPastAFullPageOfAmbiguousActivities(t *testin
 		t.Fatal(err)
 	}
 	integration.ApplyRiverSchema(t)
-	worker := newCapturedDealRefileWorker(e.Pool)
+	worker := newCapturedDealRefileWorker(e.Pool, aboutEveryDeal)
 	for _, id := range []ids.UUID{f.contact, contact} {
 		if _, err := worker.repairCohorts(principal.SystemActing(e.Admin(), dealRefileActor), []ids.UUID{id}); err != nil {
 			t.Fatal(err)
@@ -488,7 +545,7 @@ func TestDealReconsiderationRecordsARowFaultAndContinues(t *testing.T) {
 	f := newDealRefileFixture(t, 0)
 	e := f.o.e
 	integration.ApplyRiverSchema(t)
-	worker := newCapturedDealRefileWorker(e.Pool)
+	worker := newCapturedDealRefileWorker(e.Pool, aboutEveryDeal)
 	ctx := principal.SystemActing(e.Admin(), dealRefileActor)
 	if _, err := worker.repairCohorts(ctx, []ids.UUID{f.contact}); err != nil {
 		t.Fatal(err)
@@ -538,12 +595,12 @@ func TestAFutureDatedEmailAgesOutWithoutDroppingAnUpcomingMeeting(t *testing.T) 
 	}); err != nil {
 		t.Fatal(err)
 	}
-	worker := newCapturedDealRefileWorker(e.Pool)
+	worker := newCapturedDealRefileWorker(e.Pool, aboutEveryDeal)
 	if _, err := worker.repairCohorts(ctx, []ids.UUID{f.contact}); err != nil {
 		t.Fatal(err)
 	}
+	asOf := receipt.Add(31 * 24 * time.Hour)
 	if err := InstallationDB(e.Pool).Tx(ctx, func(tx pgx.Tx) error {
-		asOf := receipt.Add(31 * 24 * time.Hour)
 		candidates, err := worker.repair.RefileCandidatesTx(ctx, tx, capture.DealRefileScope{All: true}, asOf, ids.Nil, future, capture.DealRefileLimit)
 		if err != nil {
 			return err
@@ -554,12 +611,14 @@ func TestAFutureDatedEmailAgesOutWithoutDroppingAnUpcomingMeeting(t *testing.T) 
 		if !slices.Contains(candidates, f.meeting) {
 			t.Error("receipt age removed an upcoming calendar meeting")
 		}
-		outcome, err := worker.repair.RefileTx(ctx, tx, ids.From[ids.ActivityKind](future), asOf)
-		if err == nil && outcome != capture.DealNone {
-			t.Errorf("direct refile retained old receipt: %s", outcome)
-		}
-		return err
+		return nil
 	}); err != nil {
 		t.Fatal(err)
+	}
+	if _, err := worker.repair.Refile(ctx, e.DB(), ids.From[ids.ActivityKind](future), asOf); err != nil {
+		t.Fatal(err)
+	}
+	if e.WsCount(t, `SELECT count(*) FROM activity_link WHERE activity_id=$1 AND entity_type='deal'`, future) != 0 {
+		t.Error("direct refile retained old receipt")
 	}
 }

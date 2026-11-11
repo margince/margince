@@ -184,3 +184,46 @@ func TestAFileTheVerdictDidNotReadIsJudgedByItsName(t *testing.T) {
 		t.Error("an invoice the verdict read and found ordinary was held by its name")
 	}
 }
+
+func TestUnreadIdentityAndMedicalFilesDoNotChooseThePrivacyKind(t *testing.T) {
+	for _, name := range []string{"passport.pdf", "Befund.jpg", "test_result.pdf"} {
+		row := capture.PendingThread{Attachments: []string{name}}
+		if isPersonnelWithoutAModel(row) {
+			t.Errorf("%s forced the personnel kind", name)
+		}
+		if !hasUnreadNamedFile(row, capture.NamedAsPrivate) {
+			t.Errorf("%s could be opened unread", name)
+		}
+	}
+}
+
+func TestAnImageCannotBecomeAReadableMarkupExcerpt(t *testing.T) {
+	for _, c := range []struct{ filename, mediaType string }{
+		{"diagram.svg", "image/svg+xml"},
+		{"diagram.SVG", "application/octet-stream"},
+		{"document.bin", "IMAGE/SVG+XML; charset=UTF-8"},
+	} {
+		t.Run(c.filename+c.mediaType, func(t *testing.T) {
+			doc := capture.ThreadDocument{Filename: c.filename}
+			raw := []byte(`<svg xmlns="http://www.w3.org/2000/svg"><text>Demo picture</text></svg>`)
+			if err := (&threadDocuments{}).excerpt(context.Background(), &doc, raw, c.mediaType); err != nil {
+				t.Fatal(err)
+			}
+			if !doc.Unreadable || doc.Excerpt != "" {
+				t.Fatalf("image treated as text: unreadable=%v excerpt=%q", doc.Unreadable, doc.Excerpt)
+			}
+		})
+	}
+}
+
+func TestAnImageNeedsNoObjectFetchWithoutAnImageReader(t *testing.T) {
+	files := &fakeAttachments{}
+	reader := &threadDocuments{files: files, slots: make(chan struct{}, 1)}
+	doc := capture.ThreadDocument{AttachmentID: ids.NewV7(), Filename: "diagram.svg", ContentType: "image/svg+xml", ByteSize: 100}
+	if err := reader.readOne(context.Background(), &doc, newDocumentPass()); err != nil {
+		t.Fatal(err)
+	}
+	if !doc.Unreadable || len(files.fetched) != 0 {
+		t.Fatalf("image read: unreadable=%v fetched=%d", doc.Unreadable, len(files.fetched))
+	}
+}

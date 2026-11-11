@@ -6,6 +6,7 @@ import { formatMoney, formatMoneyOrAbsent } from "../../format/format";
 import { formatMoneyOrWord } from "../../format/moneyword";
 import { type Locale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { labelFor } from "../../lib/labelfor";
 
 type Review = components["schemas"]["WeeklyReview"];
 type Outlook = NonNullable<Review["outlook"]>[number];
@@ -118,7 +119,7 @@ export function OutlookPanel({
           },
           ...outlook.map((o) => ({
             key: o.period_kind,
-            header: t(PERIOD_LABEL[o.period_kind]),
+            header: t(labelFor(PERIOD_LABEL, o.period_kind)),
             align: "end" as const,
             render: (row: ForecastRow) => money(o, row.minor(o)),
           })),
@@ -196,6 +197,6 @@ function measureLabel(
   t: ReturnType<typeof useT>,
 ): string | undefined {
   return measure !== undefined && labelled(measure)
-    ? t(MEASURE_LABELS[measure])
+    ? t(labelFor(MEASURE_LABELS, measure))
     : undefined;
 }

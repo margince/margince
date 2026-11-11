@@ -27,9 +27,9 @@ Say whether the evidence shows that the deal's expected close date, its amount, 
 
 You may propose at most one of each:
 "set_close_date": the customer named or agreed a decision, signing or start date, or the evidence makes the current date impossible. "date" is that date as YYYY-MM-DD: after today, at most %d months after today, and named in a cited activity.
-"set_amount": the customer or our offer states a price for this deal in words. "amount" is that price in whole units of "currency", and "quoted_words" copies the words that state it verbatim from one cited activity.
-"set_probability": the evidence clearly moves the chance of winning, such as a verbal yes, a budget freeze or a competitor chosen. "probability" is a whole number from 0 to 100. Lowering it is free; a raise goes no higher than the "Raise limit" listed.
-"move_stage": the evidence shows the deal has reached a later stage, judged by the stage's name and what a sale at that point looks like. "stage_id" is one of the later stages listed; it may skip stages. The deal leaves its own stage and every stage it skips, so each exit criterion listed for those stages needs an entry in "criteria": its "criterion_id", the cited "activity_id" that meets it, and "quoted_words" copied verbatim from that activity. If one is not met, do not move. Never move a deal back, and never to won or lost.
+"set_amount": the customer states a price for this deal in their own current inbound email, outside quoted history. "amount" is that price in whole units of "currency", and "quoted_words" copies the words that state it verbatim from one cited activity.
+"set_probability": the evidence clearly moves the chance of winning, such as a verbal yes, a budget freeze or a competitor chosen, in the customer's own words. Our side's feeling or guess, in a note or anywhere else, moves nothing. "probability" is a whole number from 0 to 100. A decrease requires "quoted_words" copied from the customer's own current inbound email, outside quoted history. A raise sets it to at most the "Highest probability a raise may set" listed, a ceiling and not the size of a step. When that equals the deal's win probability, propose no raise.
+"move_stage": the evidence shows the deal has reached a later stage, judged by the stage's name and what a sale at that point looks like. "stage_id" is one of the later stages listed; it may skip stages, up to the furthest stage whose every criterion below is met and no further. The deal leaves its own stage and every stage it skips, so each exit criterion listed for those stages needs an entry in "criteria": its "criterion_id", the cited "activity_id" that meets it, and "quoted_words" copied verbatim from that activity. If one is not met, do not move. Never move a deal back, and never to won or lost.
 
 Propose nothing when the evidence does not say it. An empty "actions" list is the usual answer.
 Never propose a value the deal already holds. Never close or reopen the deal; that is not yours.
@@ -51,18 +51,20 @@ var PromptVersion = ai.PromptDigest(func(fence promptfence.Fence) string {
 // Prompt is the user turn: the deal's facts, then every activity fenced by
 // its id. No message can close its span and pose as another.
 func Prompt(fence promptfence.Fence, in Input) string {
+	r := refsFor(in)
 	var b strings.Builder
 	fmt.Fprintf(&b, "Today: %s\nDeal: %s\nStage: %s\n", in.Today.Format(time.DateOnly), in.DealName, in.Stage)
 	fmt.Fprintf(&b, "Amount: %s\n", amountText(in.AmountMinor, in.Currency))
 	fmt.Fprintf(&b, "Expected close date: %s%s\n", dateText(in.CloseDate), provisionalText(in.Provisional))
 	fmt.Fprintf(&b, "Win probability: %d%% (%s)\n", in.Probability, in.ProbabilitySource)
-	fmt.Fprintf(&b, "Raise limit: %d%%\n", raiseCeiling(in))
+	fmt.Fprintf(&b, "Highest probability a raise may set: %d%%\n", raiseCeiling(in))
 	for _, stage := range in.Later {
-		fmt.Fprintf(&b, "Later stage: %s (stage_id %s, probability %d%%)\n", stage.Name, stage.ID, stage.Probability)
+		fmt.Fprintf(&b, "Later stage: %s (stage_id %s, probability %d%%)\n",
+			stage.Name, r.stages.For(stage.ID), stage.Probability)
 	}
 	for _, criterion := range in.ExitCriteria {
 		fmt.Fprintf(&b, "Exit criterion of %s: %s (criterion_id %s, kind %s)%s\n",
-			criterion.Stage, criterion.Label, criterion.ID, criterion.Kind, hintText(criterion.Hint))
+			criterion.Stage, criterion.Label, r.criteria.For(criterion.ID), criterion.Kind, hintText(criterion.Hint))
 	}
 	for _, offer := range in.Offers {
 		fmt.Fprintf(&b, "Offer: %s, %s\n", values.MajorUnits(offer.GrossMinor, offer.Currency)+" "+offer.Currency, offer.Status)
@@ -77,7 +79,7 @@ func Prompt(fence promptfence.Fence, in Input) string {
 	for _, activity := range in.Activities {
 		text := fmt.Sprintf("%s %s on %s | %s\n%s", activity.Kind, activity.Direction,
 			activity.OccurredAt.Format(time.DateOnly), activity.Subject, activity.Body)
-		b.WriteString(fence.WrapAttr("activity_id", activity.ID, text) + "\n")
+		b.WriteString(fence.WrapAttr("activity_id", r.activities.For(activity.ID), text) + "\n")
 	}
 	b.WriteString(`Return JSON: { "actions": [ { "kind", "date", "amount", "currency", "quoted_words", "probability", ` +
 		`"stage_id", "criteria", "cited_activity_ids", "reason", "confidence" } ] }. ` +

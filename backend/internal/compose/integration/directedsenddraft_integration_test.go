@@ -26,6 +26,7 @@ func TestAnExceptionSendDiscardsItsSavedDraftWithoutDiscardingNewerLegacyWork(t 
 	} {
 		t.Run(scenario.name, func(t *testing.T) {
 			c := setupConsent(t)
+			c.useReviewableMarketingProfile(t)
 			draft := AnyMap{
 				"anchor_type": "activity", "anchor_id": c.activityID,
 				"to": []string{"subject@consent.test"}, "subject": "Re: Inbound question", "body": "The requested information.",

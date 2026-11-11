@@ -39,7 +39,7 @@ func (g *Gate) AuthorizeTransmit(ctx context.Context, req commsauthz.TransmitReq
 	if err := transmittable(req); err != nil {
 		return commsauthz.TransmitTicket{}, err
 	}
-	legacy := g.legacyTransmitAnswer(ctx, req)
+	legacy := g.legacyTransmitAnswer(ctx, req, true)
 	setID := ids.NewV7()
 	// Counted after the commit, not beside the insert. Two arms return an error
 	// after the rows are written (an unanswerable legacy gate, the wording
@@ -90,7 +90,7 @@ type legacyTransmitAnswer struct {
 	err                   error
 }
 
-func (g *Gate) legacyTransmitAnswer(ctx context.Context, req commsauthz.TransmitRequest) legacyTransmitAnswer {
+func (g *Gate) legacyTransmitAnswer(ctx context.Context, req commsauthz.TransmitRequest, record bool) legacyTransmitAnswer {
 	// The legacy gate's answer, recorded beside the engine's on every row so a
 	// disagreement is readable in the record rather than only in a counter that
 	// dies with the process.
@@ -100,7 +100,7 @@ func (g *Gate) legacyTransmitAnswer(ctx context.Context, req commsauthz.Transmit
 	// which the shipped posture never produces but an operator moving a
 	// category back to observe deliberately does. The dispatcher used to ask it
 	// a second time after the ticket already said yes; that call is gone.
-	legacyErr := g.RequireGrantedForRecipients(ctx, req.Recipients, req.PurposeKey)
+	legacyErr := g.checkGrantedRecipients(ctx, req.Recipients, req.PurposeKey, record)
 	// Three outcomes, and only two of them are answers: granted, not granted,
 	// and anything else. That third one is NOT a no — whether it matters
 	// depends on the posture, and the posture is not known until the modes are
@@ -210,7 +210,9 @@ func (g *Gate) decideRecipients(ctx context.Context, tx pgx.Tx, req commsauthz.T
 	//
 	// Each recipient's country is resolved once, here, and the lock, the
 	// verdict, the count and the recorded stamp all read it.
-	countries, err := recipientCountries(ctx, tx, req.Recipients)
+	countries, err := recipientCountries(ctx, tx, req.Recipients, func(r connector.Recipient) commsauthz.Request {
+		return stagedRequestFor(req, r, claims, threadKey, links)
+	})
 	if err != nil {
 		return commsauthz.DecisionSet{}, nil, err
 	}
@@ -249,7 +251,7 @@ func (g *Gate) decideRecipients(ctx context.Context, tx pgx.Tx, req commsauthz.T
 // read off the caller's label. The purpose key is still in there and still
 // consulted, as the weakest of the four grounds.
 func (g *Gate) decideOne(ctx context.Context, tx pgx.Tx, r connector.Recipient, req commsauthz.Request, phase commsauthz.Phase) (commsauthz.Decision, error) {
-	country, err := recipientCountryOf(ctx, tx, r)
+	country, err := recipientRequestCountry(ctx, tx, r, req)
 	if err != nil {
 		return commsauthz.Decision{}, err
 	}
@@ -260,10 +262,19 @@ func (g *Gate) decideOne(ctx context.Context, tx pgx.Tx, r connector.Recipient, 
 // this recipient, which every step of one decision then shares.
 func (g *Gate) decideOneIn(ctx context.Context, tx pgx.Tx, r connector.Recipient, req commsauthz.Request, phase commsauthz.Phase, country RecipientCountry) (commsauthz.Decision, error) {
 	req, agree := req.CanonicalPurpose()
-	d := commsauthz.Decision{Recipient: r, Resolved: commsauthz.CategoryMarketing,
-		SendingEntity: req.SendingEntity, PurposeKey: req.LegacyPurposeKey}
+	d := commsauthz.Decision{
+		Recipient: r, Requested: req.Context, Resolved: commsauthz.CategoryMarketing,
+		SendingEntity: req.SendingEntity, PurposeKey: req.LegacyPurposeKey,
+	}
 	if !agree {
 		return denyContradiction(d, commsauthz.CategoryMarketing), nil
+	}
+	if !req.Evidence.LeadID.IsZero() {
+		d, err := g.decidePinnedLead(ctx, tx, r, req, d, phase, country)
+		if err != nil {
+			return commsauthz.Decision{}, err
+		}
+		return d, nil
 	}
 	contactID, found, err := resolveContact(ctx, tx, r)
 	if err != nil {
@@ -289,6 +300,13 @@ func (g *Gate) decideOneIn(ctx context.Context, tx pgx.Tx, r connector.Recipient
 		}
 		return requireConsentWhereNothingStandsIn(d, country), nil
 	}
+	return g.decideContactAt(ctx, tx, r, req, d, phase, country, contactID)
+}
+
+func (g *Gate) decideContactAt(
+	ctx context.Context, tx pgx.Tx, r connector.Recipient, req commsauthz.Request,
+	d commsauthz.Decision, phase commsauthz.Phase, country RecipientCountry, contactID string,
+) (commsauthz.Decision, error) {
 	parsed, err := ids.Parse(contactID)
 	if err != nil {
 		return commsauthz.Decision{}, fmt.Errorf("consent: the resolved subject is not an id: %w", err)
@@ -314,7 +332,7 @@ func (g *Gate) decideOneIn(ctx context.Context, tx pgx.Tx, r connector.Recipient
 	address, channelProvider, channelUserID := recipientSubjectAddress(r)
 	d, sendPurpose, err := g.decideResolved(ctx, tx, req, subjectRef{
 		Kind: entityContact, ID: contactID, Address: address,
-		ChannelProvider: channelProvider, ChannelUserID: channelUserID, Country: country,
+		ChannelProvider: channelProvider, ChannelUserID: channelUserID, Country: country, SendingEntity: req.SendingEntity,
 	}, d, phase, stops)
 	if err != nil {
 		return commsauthz.Decision{}, err

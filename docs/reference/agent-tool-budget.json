@@ -31,9 +31,9 @@
   "catalog": {
     "tools": 48,
     "system_frame_tokens": 592,
-    "tokens": 39707,
+    "tokens": 39940,
     "median_tool_tokens": 620,
-    "mean_tool_tokens": 826
+    "mean_tool_tokens": 831
   },
   "agents": [
     {
@@ -85,7 +85,7 @@
   "tool_cost": [
     {
       "name": "read_workspace",
-      "tokens": 2756
+      "tokens": 2767
     },
     {
       "name": "read_reports",
@@ -93,11 +93,11 @@
     },
     {
       "name": "read_details",
-      "tokens": 2167
+      "tokens": 2200
     },
     {
       "name": "change_activities",
-      "tokens": 1957
+      "tokens": 1968
     },
     {
       "name": "find_records",
@@ -113,7 +113,7 @@
     },
     {
       "name": "send_outbound",
-      "tokens": 1680
+      "tokens": 1695
     },
     {
       "name": "change_reports",
@@ -140,12 +140,12 @@
       "tokens": 899
     },
     {
-      "name": "create_record",
-      "tokens": 873
+      "name": "change_compliance",
+      "tokens": 893
     },
     {
-      "name": "change_compliance",
-      "tokens": 834
+      "name": "create_record",
+      "tokens": 873
     },
     {
       "name": "bulk_update_records",
@@ -201,7 +201,11 @@
     },
     {
       "name": "change_relationships",
-      "tokens": 472
+      "tokens": 503
+    },
+    {
+      "name": "list_approvals",
+      "tokens": 474
     },
     {
       "name": "decide_approvals",
@@ -218,10 +222,6 @@
     {
       "name": "read_context",
       "tokens": 413
-    },
-    {
-      "name": "list_approvals",
-      "tokens": 401
     },
     {
       "name": "enrich",

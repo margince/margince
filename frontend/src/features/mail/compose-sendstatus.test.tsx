@@ -238,11 +238,11 @@ describe("an edited message is a different message", () => {
     await fillSendableForm();
     await userEvent.click(screen.getByRole("button", { name: "Send" }));
     const alert = await screen.findByRole("alert");
-    expect(alert).toHaveTextContent("Consent needed for this message");
+    expect(alert).toHaveTextContent("Permission needed for this message");
 
     await edit();
     await waitFor(() => expect(screen.queryByRole("alert")).toBeNull());
-    expect(screen.queryByText("Consent needed for this message")).toBeNull();
+    expect(screen.queryByText("Permission needed for this message")).toBeNull();
   });
 });
 
@@ -413,4 +413,30 @@ describe("whether a refusal is about the message on screen", () => {
       false,
     );
   });
+});
+
+it("carries the selected deal in both the permission check and the queued message", async () => {
+  const sent = stubRoutes({ "POST /emails": () => jsonResponse({}, 201) });
+  render(
+    <ComposeModal
+      entityType="contact"
+      entityId="p-1"
+      initialDealId="deal-one"
+      open
+      onClose={vi.fn()}
+    />,
+  );
+  await screen.findByRole("combobox", { name: WHY_ASK });
+  await fillSendableForm();
+  await waitFor(() =>
+    expect(
+      sent.filter((call) => call.key === "POST /emails:preview").at(-1)?.body,
+    ).toMatchObject({ evidence: { deal_id: "deal-one" } }),
+  );
+  await userEvent.click(screen.getByRole("button", { name: "Send" }));
+  await waitFor(() =>
+    expect(
+      sent.find((call) => call.key === "POST /emails")?.body,
+    ).toMatchObject({ evidence: { deal_id: "deal-one" } }),
+  );
 });

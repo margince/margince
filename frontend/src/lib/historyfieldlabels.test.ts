@@ -3,6 +3,7 @@ import { fileURLToPath } from "node:url";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
 import { sourceFileAt } from "../../scripts/lib/source-tree";
+import { stable } from "../format/collate";
 import { en } from "../i18n/en";
 import {
   historyFieldLabel,
@@ -131,7 +132,7 @@ describe("history field labels", () => {
   // So the corpus is proved to be a real one before it is used.
   it("finds every record type's update body in the contract", () => {
     const byType = fieldsARecordUpdateWrites();
-    expect([...byType.keys()].sort()).toEqual([
+    expect([...byType.keys()].sort(stable)).toEqual([
       "activity",
       "company",
       "contact",
@@ -149,7 +150,7 @@ describe("history field labels", () => {
     const unnamed = [...fieldsARecordUpdateWrites().values()]
       .flat()
       .filter((field) => historyFieldLabelKey(field) === undefined)
-      .sort();
+      .sort(stable);
     expect(unnamed, `fields with no label key: ${unnamed.join(", ")}`).toEqual(
       [],
     );
@@ -162,7 +163,7 @@ describe("history field labels", () => {
     const written = new Set([...fieldsARecordUpdateWrites().values()].flat());
     const orphans = historyFieldLabelled()
       .filter((field) => !written.has(field))
-      .sort();
+      .sort(stable);
     expect(
       orphans,
       `labels for unwritten fields: ${orphans.join(", ")}`,

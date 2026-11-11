@@ -12,23 +12,28 @@
 // the owning row, so a key is provisional exactly while the pair is incomplete. A key
 // still recorded after the grace period is an object whose row never arrived.
 //
-// In platform rather than in one module because six modules put bytes, and a module
+// In platform rather than in one module because modules put bytes, and a module
 // never imports a sibling to borrow a ledger.
 package storedobjects
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"slices"
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
+
+const storageKeyArg = "key"
 
 // Kind names what put the bytes, DECLARED by the writer rather than read off the key.
 //
@@ -43,18 +48,19 @@ type Kind string
 // Every kind a writer may declare. A new one is added here and in the sweep's
 // reference map together; nothing else may name one.
 const (
-	KindAttachment Kind = "attachment"
-	KindKnowledge  Kind = "knowledge"
-	KindLogo       Kind = "logo"
-	KindOffer      Kind = "offer"
-	KindImport     Kind = "import"
-	KindAvatar     Kind = "avatar"
+	KindRawOriginal Kind = "raw_original"
+	KindAttachment  Kind = "attachment"
+	KindKnowledge   Kind = "knowledge"
+	KindLogo        Kind = "logo"
+	KindOffer       Kind = "offer"
+	KindImport      Kind = "import"
+	KindAvatar      Kind = "avatar"
 )
 
 // AllKinds is the vocabulary itself, so a reader of the ledger can be held to
 // covering all of it rather than to a list somebody keeps in step by hand.
 func AllKinds() []Kind {
-	return []Kind{KindAttachment, KindKnowledge, KindLogo, KindOffer, KindImport, KindAvatar}
+	return []Kind{KindRawOriginal, KindAttachment, KindKnowledge, KindLogo, KindOffer, KindImport, KindAvatar}
 }
 
 // declared reports whether a writer may record this kind.
@@ -102,21 +108,7 @@ func (l *Ledger) Record(ctx context.Context, kind Kind, key string) error {
 	// ledger-bound resolve has no single workspace to find.
 	ws := ids.From[ids.WorkspaceKind](storekit.MustWorkspace(ctx))
 	return l.db.ForWorkspace(ws).Tx(ctx, func(tx pgx.Tx) error {
-		// ON CONFLICT because a retried upload of the same id is not an error worth
-		// failing a caller's file over. Both columns are refreshed, and recorded_at
-		// is the one that matters: a retry of a key whose earlier intent has already
-		// aged past the grace period would otherwise inherit that timestamp and be
-		// eligible for the reaper the moment it is recorded — so a sweep running
-		// between this retry's put and its row could delete the bytes just written.
-		// The clock restarts because the WINDOW restarts.
-		_, err := tx.Exec(ctx, `
-			INSERT INTO stored_object_intent (storage_key, kind) VALUES ($1, $2)
-			ON CONFLICT (storage_key) DO UPDATE
-			   SET kind = excluded.kind, recorded_at = now()`, key, string(kind))
-		if err != nil {
-			return fmt.Errorf("record a provisional object: %w", err)
-		}
-		return nil
+		return RecordTx(ctx, tx, kind, key)
 	})
 }
 
@@ -128,10 +120,11 @@ func RecordTx(ctx context.Context, tx pgx.Tx, kind Kind, key string) error {
 	if !declared(kind) {
 		return fmt.Errorf("record a provisional object: %q is not a declared kind", kind)
 	}
-	if _, err := tx.Exec(ctx, `
-		INSERT INTO stored_object_intent (storage_key, kind) VALUES ($1, $2)
-		ON CONFLICT (storage_key) DO UPDATE SET kind = excluded.kind, recorded_at = now()`,
-		key, string(kind)); err != nil {
+	if _, err := tx.Exec(ctx, `SELECT record_stored_object_intent(@kind, @key)`,
+		pgx.NamedArgs{"kind": string(kind), storageKeyArg: key}); err != nil {
+		if fault, ok := errors.AsType[*pgconn.PgError](err); ok && fault.Code == "55000" {
+			return fmt.Errorf("the stored file has expired; upload it again: %w", apperrors.ErrNotFound)
+		}
 		return fmt.Errorf("record a provisional object: %w", err)
 	}
 	return nil
@@ -143,8 +136,20 @@ func RecordTx(ctx context.Context, tx pgx.Tx, kind Kind, key string) error {
 // committed separately could land while the row's transaction then failed, which is
 // the orphan this ledger exists to catch, re-created one step along.
 func Clear(ctx context.Context, tx pgx.Tx, key string) error {
+	var reaping bool
+	err := tx.QueryRow(ctx, `SELECT reaping_since IS NOT NULL FROM stored_object_intent
+ WHERE storage_key = @key FOR UPDATE`, pgx.NamedArgs{storageKeyArg: key}).Scan(&reaping)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("lock a provisional object: %w", err)
+	}
+	if reaping {
+		return fmt.Errorf("the stored file has expired; upload it again: %w", apperrors.ErrNotFound)
+	}
 	if _, err := tx.Exec(ctx,
-		`DELETE FROM stored_object_intent WHERE storage_key = $1`, key); err != nil {
+		`DELETE FROM stored_object_intent WHERE storage_key = @key`, pgx.NamedArgs{storageKeyArg: key}); err != nil {
 		return fmt.Errorf("retire a provisional object: %w", err)
 	}
 	return nil
@@ -174,8 +179,8 @@ func (l *Ledger) ListProvisional(ctx context.Context, before time.Time, limit in
 		rows, err := tx.Query(ctx, `
 			SELECT storage_key, kind, recorded_at
 			  FROM stored_object_intent
-			 WHERE recorded_at < $1
-			 ORDER BY recorded_at
+			 WHERE recorded_at < $1 AND reaped_at IS NULL
+			 ORDER BY coalesce(reaping_since, recorded_at), storage_key
 			 LIMIT $2`, before, limit)
 		if err != nil {
 			return fmt.Errorf("list provisional objects: %w", err)
@@ -196,16 +201,14 @@ func (l *Ledger) ListProvisional(ctx context.Context, before time.Time, limit in
 	return out, nil
 }
 
-// Retire removes one key once its bytes are gone.
-//
-// Called AFTER the object-store delete, so a failed delete leaves the key here and
-// the next pass tries again. The other order would forget an object that is still
-// there, which is the state this ledger exists to make impossible.
-func (l *Ledger) Retire(ctx context.Context, key string) error {
+// Retire forgets an adopted intent only if no writer has renewed it since the scan.
+func (l *Ledger) Retire(ctx context.Context, pending Provisional) error {
 	if err := auth.RequireSystem(ctx); err != nil {
 		return err
 	}
 	return database.WithWorkspaceTx(ctx, l.db.Pool(), func(tx pgx.Tx) error {
-		return Clear(ctx, tx, key)
+		_, err := tx.Exec(ctx, `DELETE FROM stored_object_intent WHERE storage_key = @key
+ AND recorded_at = @recorded AND reaped_at IS NULL`, pgx.NamedArgs{storageKeyArg: pending.Key, "recorded": pending.RecordedAt})
+		return err
 	})
 }

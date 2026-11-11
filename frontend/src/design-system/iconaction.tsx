@@ -74,6 +74,8 @@ type IconActionPress = {
   disclosure?: Readonly<{ expanded: boolean; controls: string }>;
   /** For a glyph whose press opens a dialog, so a reader hears that first. */
   opensDialog?: boolean;
+  /** The `aria-keyshortcuts` of a key that does what the press does; absent while that key does nothing. */
+  keyShortcuts?: string;
   onClick?: () => void;
 };
 
@@ -128,6 +130,7 @@ export function IconAction(
           aria-expanded={props.disclosure?.expanded}
           aria-controls={props.disclosure?.controls}
           aria-haspopup={props.opensDialog ? "dialog" : undefined}
+          aria-keyshortcuts={props.keyShortcuts}
           data-testid={props.testId}
           onClick={props.onClick}
         >

@@ -21,6 +21,7 @@ import { Panel, PanelBody } from "../../design-system/panel";
 import { ServiceList, ServiceRow } from "../../design-system/servicerow";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { labelFor } from "../../lib/labelfor";
 import { navigate, type Route } from "../../lib/router";
 import { settingsHref } from "../../lib/settingsrouting";
 import {
@@ -224,6 +225,6 @@ function checkStatus(source: Source, t: (key: MessageKey) => string) {
     return { tone, label: t("health.checkPassing") } as const;
   return {
     tone: tone === "danger" || tone === "warning" ? tone : "default",
-    label: t(healthAvailability[source.availability]),
+    label: t(labelFor(healthAvailability, source.availability)),
   } as const;
 }

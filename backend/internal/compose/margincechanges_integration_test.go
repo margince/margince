@@ -382,7 +382,7 @@ func TestAMorningIsReadAgainWhenAnyChangeItCountsIsAcceptedOrUndone(t *testing.T
 			t.Fatal(err)
 		}
 		v.deal = ids.UUID(created.Id)
-		v.note = v.logNote(t, "We sign on "+v.lane.date+" for 45,000 EUR a year.")
+		v.note = v.logBuyerMessage(t, "We sign on "+v.lane.date+" for 45,000 EUR a year.")
 		v.run(t)
 	}
 	now := v.now.Add(time.Hour)
@@ -426,7 +426,7 @@ func (l bundleLane) Complete(ctx context.Context, req model.Request) (model.Resp
 	}
 	answer.Actions = append(answer.Actions,
 		map[string]any{
-			"kind": "set_probability", "date": "", "amount": 0, "currency": "", "quoted_words": "", "probability": 5,
+			"kind": "set_probability", "date": "", "amount": 0, "currency": "", "quoted_words": l.move.quote, "probability": 5,
 			"cited_activity_ids": []string{l.move.note}, "reason": "They hesitate", "confidence": 0.9,
 		},
 		map[string]any{
@@ -442,7 +442,7 @@ func (l bundleLane) Complete(ctx context.Context, req model.Request) (model.Resp
 func setupBundle(t *testing.T) *stageMoveEnv {
 	t.Helper()
 	v := setupStageMove(t)
-	v.pass = newDealVerdictPass(v.Pool, bundleLane{move: v.move, date: v.lane.date}, slog.New(slog.DiscardHandler))
+	v.pass = newDealVerdictPass(v.Pool, dealVerdictRefs(bundleLane{move: v.move, date: v.lane.date}), slog.New(slog.DiscardHandler))
 	v.pass.now = func() time.Time { return v.now.Add(time.Minute) }
 	v.run(t)
 	if n := v.WsCount(t, `SELECT count(*) FROM deal_correction WHERE deal_id = $1`, v.deal); n != 3 {

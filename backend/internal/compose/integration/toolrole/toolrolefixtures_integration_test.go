@@ -173,16 +173,20 @@ var routeVerbFixtures = map[string]func(p *recordPool) map[string]any{
 	"save_mail_draft": func(p *recordPool) map[string]any {
 		return map[string]any{"request_body": map[string]any{"anchor_type": "company", "anchor_id": p.take("company")}}
 	},
-	"set_activity_disposition": byID("inbound_email"),
-	"set_thread_audience":      func(p *recordPool) map[string]any { return map[string]any{"thread_key": p.take("captured_thread")} },
-	"hide_deal_document":       dealDocument,
-	"unhide_deal_document":     dealDocument,
-	"accept_deal_suggestion":   byID("deal_suggestion"),
-	"dismiss_deal_suggestion":  byID("deal_suggestion"),
-	"get_deal_suggestion":      byID("deal_suggestion"),
-	"accept_tag_suggestion":    byID("tag_suggestion"),
-	"dismiss_tag_suggestion":   byID("tag_suggestion"),
-	"get_tag_suggestion":       byID("tag_suggestion"),
+	"set_activity_disposition":   byID("inbound_email"),
+	"answer_calendar_invitation": byID("calendar_invitation"),
+	"decline_activity_deal": func(p *recordPool) map[string]any {
+		return map[string]any{"id": p.take("inbound_email"), "request_body": map[string]any{"deal_id": p.take("deal")}}
+	},
+	"set_thread_audience":     func(p *recordPool) map[string]any { return map[string]any{"thread_key": p.take("captured_thread")} },
+	"hide_deal_document":      dealDocument,
+	"unhide_deal_document":    dealDocument,
+	"accept_deal_suggestion":  byID("deal_suggestion"),
+	"dismiss_deal_suggestion": byID("deal_suggestion"),
+	"get_deal_suggestion":     byID("deal_suggestion"),
+	"accept_tag_suggestion":   byID("tag_suggestion"),
+	"dismiss_tag_suggestion":  byID("tag_suggestion"),
+	"get_tag_suggestion":      byID("tag_suggestion"),
 	"acknowledge_approval_failure": func(p *recordPool) map[string]any {
 		approval := p.take("failed_approval")
 		return map[string]any{"id": approval, "request_body": map[string]any{"failed_at": p.fact(approval, "failed_at")}}
@@ -292,6 +296,18 @@ var routeVerbFixtures = map[string]func(p *recordPool) map[string]any{
 	"get_teammate_weekly_plan": func(p *recordPool) map[string]any { return map[string]any{"owner_id": p.take("teammate_plan")} },
 	"answer_weekly_plan_commitment": func(p *recordPool) map[string]any {
 		return map[string]any{"id": p.take("teammate_commitment"), "request_body": map[string]any{"manager_response": "Role sweep"}}
+	},
+	"get_handoff_assignee": byID("sdr_handoff"),
+	"reassign_handoff": func(p *recordPool) map[string]any {
+		id := p.take("sdr_handoff")
+		return map[string]any{"id": id, "request_body": map[string]any{"assigned_to": p.fact(id, "receiver"), "version": 1}}
+	},
+	"replace_intro_request": func(p *recordPool) map[string]any {
+		return map[string]any{"id": p.take("intro_request"), "request_body": map[string]any{
+			"version": 1, "reason": "Choose a different colleague.", "request": map[string]any{
+				"introducer_user_id": p.take("user"), "route_type": "direct", "internal_reason": "Please review this fresh ask.",
+			},
+		}}
 	},
 	"decide_intro_request": byID("intro_ask"),
 	"complete_intro_request": func(p *recordPool) map[string]any {
@@ -421,7 +437,7 @@ var routeVerbFixtures = map[string]func(p *recordPool) map[string]any{
 		return map[string]any{"id": p.fact(run, "contact"), "run_id": run}
 	},
 	"send_message": func(p *recordPool) map[string]any {
-		return map[string]any{"activity_id": p.take("channel_conversation"), "consent_purpose": "transactional"}
+		return map[string]any{"activity_id": p.take("channel_conversation"), "consent_purpose": "transactional", "communication_context": "requested_followup"}
 	},
 	"request_company_vat_check": func(p *recordPool) map[string]any {
 		return map[string]any{"id": p.fact(p.take("profile_field"), "company")}

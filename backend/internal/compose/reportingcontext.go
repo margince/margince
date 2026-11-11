@@ -74,7 +74,7 @@ func reportingContext(ctx context.Context, tx pgx.Tx, selection crmcontracts.Rep
 	if err != nil {
 		return out, err
 	}
-	out.ScopeHoldsDeals = &holds
+	out.ScopeHoldsDeals = holds
 	if err := reportingPipeline(ctx, tx, selection.PipelineId); err != nil {
 		return out, err
 	}

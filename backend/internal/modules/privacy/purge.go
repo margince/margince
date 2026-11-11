@@ -28,6 +28,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/corefeatures"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -77,7 +78,7 @@ func requireContactAnonymise(ctx context.Context) error {
 	if err := auth.RequireHuman(ctx); err != nil {
 		return err
 	}
-	return auth.Require(ctx, "contact", principal.ActionDelete)
+	return auth.Require(corefeatures.RetainedDataContext(ctx), "contact", principal.ActionDelete)
 }
 
 // CheckPurgeAuthority asks what a purge will ask when it runs: the mail grant
@@ -125,14 +126,20 @@ func (s *RetentionService) PurgeActivitiesIf(ctx context.Context, ids []ids.UUID
 
 // purgeOneActivity runs the retention module's own activity/erase executor and
 // audits it as an owner's act. kept reports a message the floor now in force
-// shields, which is left as it is.
+// shields, or a row already gone. Both leave nothing to erase.
 func (s *RetentionService) purgeOneActivity(ctx context.Context, id ids.UUID, reason PurgeReason, check ActivityStillPurgeable) (kept bool, err error) {
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
+		var locked ids.UUID
+		err := tx.QueryRow(ctx, `SELECT id FROM activity
+ WHERE id = @id AND restricted_at IS NULL FOR UPDATE`, pgx.NamedArgs{"id": id}).Scan(&locked)
+		if errors.Is(err, pgx.ErrNoRows) {
+			kept = true
+			return nil
+		}
+		if err != nil {
+			return err
+		}
 		if check != nil {
-			var locked ids.UUID
-			if err := tx.QueryRow(ctx, `SELECT id FROM activity WHERE id = @id FOR UPDATE`, pgx.NamedArgs{"id": id}).Scan(&locked); err != nil {
-				return err
-			}
 			allowed, err := check(ctx, tx, id)
 			if err != nil {
 				return err
@@ -227,6 +234,9 @@ func (s *RetentionService) anonymiseOneContact(
 		// The stop lock before the row lock, the order a stop writer takes them
 		// in. A stop recorded meanwhile is pinned here, or written after.
 		if err := storekit.LockStopKey(ctx, tx, id.String()); err != nil {
+			return err
+		}
+		if err := storekit.LockSubjectsStopAddresses(ctx, tx, id); err != nil {
 			return err
 		}
 		// The row lock next, so an edit cannot land between the answer and the

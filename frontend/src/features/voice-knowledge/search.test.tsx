@@ -100,6 +100,7 @@ const emailPresentation = {
     held_by_others: false,
   },
   can_reply: true,
+  can_forward: true,
   can_relink: false,
   version: 3,
 };
@@ -244,7 +245,7 @@ describe("SearchScreen", () => {
     expect(screen.getByText(/Dana at Acme/)).toBeTruthy();
     // A contact is a record card, named straight from the search result (no
     // per-hit record fetch), whose name links to the record's 360.
-    const hitLink = screen.getByRole("link", { name: "Dana Buyer" });
+    const hitLink = screen.getByRole("link", { name: /^DB\s*Dana Buyer$/ });
     expect(hitLink.getAttribute("href")).toBe("/#/contacts/p1");
     expect(hitLink.className).toContain("record-card-open");
   });
@@ -844,7 +845,9 @@ describe("SearchScreen — a company and the contacts who work there", () => {
     );
     const { container } = render(<SearchScreen q="acme" />);
 
-    const open = await screen.findByRole("link", { name: "Acme GmbH" });
+    const open = await screen.findByRole("link", {
+      name: /^(AG\s*)?Acme GmbH$/,
+    });
     expect(open.getAttribute("href")).toBe("/#/companies/o1");
     expect(open.closest(".record-card")).toBeTruthy();
     expect(
@@ -860,7 +863,7 @@ describe("SearchScreen — a company and the contacts who work there", () => {
       ]),
     );
     const { container } = render(<SearchScreen q="acme" />);
-    await screen.findByRole("link", { name: "Acme GmbH" });
+    await screen.findByRole("link", { name: /^AG\s*Acme GmbH$/ });
     expect(hitRow(container).querySelector(".avatar-img")).toBeNull();
     expect(hitRow(container).querySelector(".avatar")?.textContent).toBe("AG");
   });
@@ -881,14 +884,16 @@ describe("SearchScreen — a company and the contacts who work there", () => {
     );
     render(<SearchScreen q="acme" />);
 
-    const jonas = await screen.findByRole("link", { name: "Jonas Weiß" });
+    const jonas = await screen.findByRole("link", {
+      name: /^JW\s*Jonas Weiß$/,
+    });
     expect(jonas.getAttribute("href")).toBe("/#/contacts/p1");
     const card = jonas.closest(".record-card");
     expect(card?.querySelector(".record-card-position")?.textContent).toBe(
       "Works at Acme GmbH",
     );
     // A contact the word matched by its own name needs no reason given.
-    const own = screen.getByRole("link", { name: "Acme Mustermann" });
+    const own = screen.getByRole("link", { name: /^AM\s*Acme Mustermann$/ });
     expect(own.closest(".record-card")?.textContent).not.toContain("Works at");
     expect(screen.getAllByText(/^Works at/)).toHaveLength(1);
   });

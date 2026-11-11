@@ -706,37 +706,42 @@ describe("ComposeModal draft provenance", () => {
   });
 });
 
-// The send pre-flight's two refusals. Each is a product state with a fix, so
-// each must read as its own copy. It must not fall into the generic failure
-// line that the server's detail string would otherwise land in.
-describe("ComposeModal send refusals", () => {
-  it("tells the rep to reconnect a capture-only mailbox, and where", async () => {
-    const onClose = vi.fn();
-    stubRoutes({
-      "POST /activities/act-1/send-email": () =>
-        problemResponse(
-          validationProblem(
-            "from",
-            "mailbox_not_send_capable",
-            "opaque server wording",
-          ),
-          422,
-        ),
-    });
-    renderComposer(onClose);
-    await screen.findByRole("combobox", { name: WHY_ASK });
-    await fillSendableForm();
-    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+// The 422 the send answers for a mailbox that cannot send: a message fault
+// with its code at the top level and no field named.
+const MAILBOX_NOT_SEND_CAPABLE = {
+  type: "https://errors.gradion.com/mailbox_not_send_capable",
+  title: "Unprocessable Entity",
+  status: 422,
+  code: "mailbox_not_send_capable",
+  detail: "reconnect your mailbox to enable sending",
+};
 
+// Each refusal is a product state with a fix, so each reads as its own copy.
+// None may fall into the generic line.
+describe("ComposeModal send refusals", () => {
+  async function expectReconnect(onClose: () => void) {
     expect(await screen.findByText(/without permission to send/i)).toBeTruthy();
     expect(
       screen
         .getByRole("link", { name: "Reconnect your mailbox" })
         .getAttribute("href"),
     ).toBe("/#/settings/connections");
-    // The refusal replaces the generic line rather than joining it.
-    expect(screen.queryByText("opaque server wording")).toBeNull();
+    expect(screen.queryByText(MAILBOX_NOT_SEND_CAPABLE.detail)).toBeNull();
     expect(onClose).not.toHaveBeenCalled();
+  }
+
+  it("tells the rep to reconnect a mailbox that cannot send, and where", async () => {
+    const onClose = vi.fn();
+    stubRoutes({
+      "POST /activities/act-1/send-email": () =>
+        problemResponse(MAILBOX_NOT_SEND_CAPABLE, 422),
+    });
+    renderComposer(onClose);
+    await screen.findByRole("combobox", { name: WHY_ASK });
+    await fillSendableForm();
+    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+
+    await expectReconnect(onClose);
   });
 
   it("states the one-send-per-recipient rule on a shared unsubscribe token", async () => {
@@ -782,29 +787,35 @@ describe("ComposeModal send refusals", () => {
     expect(await screen.findByText(/opaque server wording/i)).toBeTruthy();
   });
 
-  it("does not read a refusal off the field the server did not assert it about", async () => {
-    // The pointed copy answers a specific input. "Reconnect your mailbox" is
-    // an answer about `from`, and would be the wrong instruction under a later
-    // rule that refused some other field. So the pair is matched, not the code
-    // alone, and an unrecognised pair keeps the server's own wording.
-    stubRoutes({
+  it("tells the rep to reconnect when a scheduled send meets the same refusal", async () => {
+    const onClose = vi.fn();
+    const sent = stubRoutes({
       "POST /activities/act-1/send-email": () =>
-        problemResponse(
-          validationProblem(
-            "recipients",
-            "mailbox_not_send_capable",
-            "opaque server wording",
-          ),
-          422,
-        ),
+        problemResponse(MAILBOX_NOT_SEND_CAPABLE, 422),
     });
-    renderComposer();
+    renderComposer(onClose);
     await screen.findByRole("combobox", { name: WHY_ASK });
     await fillSendableForm();
-    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+    await userEvent.click(
+      screen.getByRole("button", { name: "Other ways to send" }),
+    );
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Schedule send" }),
+    );
+    await userEvent.click(
+      await screen.findByRole("button", { name: /Tomorrow morning/ }),
+    );
+    const confirm = screen
+      .getAllByRole("button", { name: "Schedule send" })
+      .find((button) => !button.closest(".compose-sendmenu"));
+    if (!confirm) throw new Error("the foot offers no Schedule send");
+    await userEvent.click(confirm);
 
-    expect(await screen.findByText(/opaque server wording/i)).toBeTruthy();
-    expect(screen.queryByText(/without permission to send/i)).toBeNull();
+    await expectReconnect(onClose);
+    const scheduled = sent.find(
+      (r) => r.key === "POST /activities/act-1/send-email",
+    );
+    expect(JSON.stringify(scheduled?.body)).toContain("scheduled_at");
   });
 
   it("warns about a second addressee before the send, not after it", async () => {

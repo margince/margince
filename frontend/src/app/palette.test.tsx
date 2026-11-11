@@ -3,27 +3,24 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   cleanup,
   fireEvent,
+  renderHook,
   render as rtlRender,
   screen,
   waitFor,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { type ReactNode, useState } from "react";
+import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { Heading } from "../design-system/heading";
-import { Modal } from "../design-system/modal";
-import { holdExits } from "../design-system/presence-testing";
 import { COMPANY_CONTEXT_ON } from "../features/settings/settingspages.fixtures";
 import { LocaleProvider } from "../i18n";
 import { type GrantSpec, meFixture } from "../testing/mefixture";
 import { steppedClock } from "../testing/steppedclock";
-import { CREATE_ID } from "./nav";
+import { CREATE_ID, CREATE_SCREENS } from "./nav";
 import {
   type Command,
   CommandPalette,
-  paletteHotkeyCaps,
+  isCreateCommand,
   useBuiltinCommands,
-  usePaletteHotkey,
 } from "./palette";
 
 // B-EP09.5 (AC-shell-3..7) and RS-1 (live /search records + see-all)
@@ -88,8 +85,6 @@ const commands: Command[] = [
   },
 ];
 
-// The palette answers to both modifiers, but the affordance may advertise only
-// one, and ⌘ names a key a Windows keyboard does not have.
 // The DESTINATIONS, which is what every assertion below means by a row. Asking
 // sits above them and is not one: it answers a different question and is not
 // something the arrow keys walk, so a test that counted it would be asserting
@@ -99,30 +94,6 @@ function destinationRows(): HTMLElement[] {
     .getAllByRole("button")
     .filter((button) => !button.classList.contains("palette-ask"));
 }
-
-describe("paletteHotkeyCaps", () => {
-  it("names the modifier the platform actually has", () => {
-    expect(paletteHotkeyCaps("MacIntel")).toEqual(["⌘", "K"]);
-    expect(paletteHotkeyCaps("iPhone")).toEqual(["⌘", "K"]);
-    expect(paletteHotkeyCaps("Win32")).toEqual(["Ctrl", "K"]);
-    expect(paletteHotkeyCaps("Linux x86_64")).toEqual(["Ctrl", "K"]);
-  });
-
-  // An unreported platform is far more likely to be Windows or Linux than a Mac,
-  // and Ctrl is the modifier that works on both.
-  it("falls back to Ctrl when the platform is unknown", () => {
-    expect(paletteHotkeyCaps("")).toEqual(["Ctrl", "K"]);
-  });
-
-  // One cap per key, and never a string a caller has to take apart again: the
-  // surface that draws these drew them by splitting "⌘K" with a lookbehind regex,
-  // which does not parse at all on an engine without lookbehind.
-  it("hands back one entry per key, so no caller has to split a string", () => {
-    for (const platform of ["MacIntel", "Win32", ""]) {
-      expect(paletteHotkeyCaps(platform)).toHaveLength(2);
-    }
-  });
-});
 
 describe("CommandPalette (AC-shell-3/4/5/6)", () => {
   it("shows the default command list with type tags, focuses the input", () => {
@@ -503,14 +474,12 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
     render(<CommandPalette open onClose={() => {}} commands={commands} />);
     await user.type(screen.getByRole("searchbox"), "acme");
 
+    // The name starts with the initials the mark prints (WCAG 2.5.3).
     const row = await screen.findByRole("button", {
-      name: "Jonas Weiß Works at Acme GmbH",
+      name: /^JW\s*Jonas Weiß Works at Acme GmbH$/,
     });
     expect(row.querySelector(".sub")?.textContent).toBe("Works at Acme GmbH");
-    // The mark is hidden from the row's name, which is why the name above
-    // carries no initials.
     const mark = row.querySelector(".palette-mark");
-    expect(mark?.getAttribute("aria-hidden")).toBe("true");
     expect(mark?.querySelector(".avatar")?.textContent).toBe("JW");
     const asked = fetchMock.mock.calls.map(([input]) =>
       input instanceof Request ? input.url : String(input),
@@ -716,98 +685,6 @@ describe("a palette that is leaving", () => {
   });
 });
 
-// The shell's wiring, with a dialog the page behind may be holding up.
-function ShellWithDialog({
-  dialogOpen,
-  onDialogClose = () => {},
-}: Readonly<{ dialogOpen: boolean; onDialogClose?: () => void }>) {
-  const [paletteOpen, setPaletteOpen] = useState(false);
-  usePaletteHotkey(paletteOpen, setPaletteOpen);
-  return (
-    <>
-      <CommandPalette
-        open={paletteOpen}
-        onClose={() => setPaletteOpen(false)}
-        commands={commands}
-      />
-      <Modal
-        open={dialogOpen}
-        onClose={onDialogClose}
-        labelledBy="edit-deal"
-        intent="form"
-      >
-        <Heading size="large" id="edit-deal">
-          Edit deal
-        </Heading>
-        <button type="button">Save</button>
-      </Modal>
-    </>
-  );
-}
-
-// An open dialog makes the rest of the app unreachable, and the palette is the
-// rest of the app: raised over one it sat under the dialog's keyboard, so
-// Escape closed the dialog and left the palette standing.
-describe("the palette hotkey", () => {
-  it("does nothing while a dialog is up, and Escape still closes the dialog", async () => {
-    const onDialogClose = vi.fn();
-    render(<ShellWithDialog dialogOpen onDialogClose={onDialogClose} />);
-    const user = userEvent.setup();
-
-    await user.keyboard("{Meta>}k{/Meta}");
-    expect(screen.queryByRole("searchbox")).toBeNull();
-    // The browser's own ⌘K is still withheld: the chord belongs to the product.
-    expect(fireEvent.keyDown(document.body, { key: "k", metaKey: true })).toBe(
-      false,
-    );
-
-    await user.keyboard("{Escape}");
-    expect(onDialogClose).toHaveBeenCalledOnce();
-  });
-
-  it("opens the palette and closes it again on the same chord", async () => {
-    render(<ShellWithDialog dialogOpen={false} />);
-    const user = userEvent.setup();
-
-    await user.keyboard("{Meta>}k{/Meta}");
-    expect(screen.getByRole("searchbox")).toBeTruthy();
-    await user.keyboard("{Meta>}k{/Meta}");
-    expect(screen.queryByRole("searchbox")).toBeNull();
-  });
-
-  it("opens the palette again while its own exit is still playing", async () => {
-    const exits = holdExits();
-    try {
-      render(<ShellWithDialog dialogOpen={false} />);
-      const user = userEvent.setup();
-      await user.keyboard("{Meta>}k{/Meta}");
-      await user.keyboard("{Escape}");
-      expect(document.querySelector(".palette-overlay[inert]")).not.toBeNull();
-
-      await user.keyboard("{Meta>}k{/Meta}");
-      const input = screen.getByRole("searchbox");
-      expect(input.closest("[inert]")).toBeNull();
-    } finally {
-      exits.mockRestore();
-    }
-  });
-
-  it("opens over a dialog that is already on its way out", async () => {
-    const exits = holdExits();
-    try {
-      const view = render(<ShellWithDialog dialogOpen />);
-      view.rerender(<ShellWithDialog dialogOpen={false} />);
-      expect(view.baseElement.querySelector("#edit-deal")).not.toBeNull();
-      const user = userEvent.setup();
-
-      await user.keyboard("{Meta>}k{/Meta}");
-      expect(screen.getByRole("searchbox")).toBeTruthy();
-    } finally {
-      exits.mockRestore();
-    }
-  });
-});
-
 describe("useBuiltinCommands", () => {
   function Probe() {
     return (
@@ -815,15 +692,26 @@ describe("useBuiltinCommands", () => {
     );
   }
 
+  function CreateProbe() {
+    return (
+      <CommandPalette
+        open
+        mode="create"
+        onClose={() => {}}
+        commands={useBuiltinCommands()}
+      />
+    );
+  }
+
   // A /me with no grant at all, which is the harder case: the two settings
   // shortcuts drop out, so anything still offered here is offered because the
   // rail names it rather than because the principal holds something.
-  function renderProbe() {
+  function renderProbe(probe: ReactNode = <Probe />) {
     vi.stubGlobal(
       "fetch",
       vi.fn(async () => jsonResponse(meFixture({ roles: [], allow: {} }))),
     );
-    return render(<Probe />);
+    return render(probe);
   }
 
   // Company profile opens on the catalog's installation grants, and the profile
@@ -918,6 +806,37 @@ describe("useBuiltinCommands", () => {
     await user.clear(box);
     await user.type(box, "website");
     expect(screen.queryByText("Company profile")).toBeNull();
+  });
+
+  // Elsewhere `C` lists these commands, so a list form with none is one that
+  // `C` cannot reach from there.
+  it("offers a create command for each list that opens a create form", () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => jsonResponse(meFixture({ roles: [], allow: {} }))),
+    );
+    const client = new QueryClient();
+    const view = renderHook(() => useBuiltinCommands(), {
+      wrapper: ({ children }) => wrap(children, client),
+    });
+    const routes = view.result.current
+      .filter(isCreateCommand)
+      .map((command) => command.route);
+    expect(new Set(routes.map((route) => route?.screen))).toEqual(
+      CREATE_SCREENS,
+    );
+    expect(routes.every((route) => route?.id === CREATE_ID)).toBe(true);
+  });
+
+  it("names each create command for the record it makes", () => {
+    renderProbe(<CreateProbe />);
+    expect(destinationRows().map((row) => row.textContent)).toEqual([
+      expect.stringContaining("New contact"),
+      expect.stringContaining("New company"),
+      expect.stringContaining("New lead"),
+      expect.stringContaining("New deal"),
+      expect.stringContaining("New project"),
+    ]);
   });
 
   // The two destinations that carry a word the rail no longer prints. A reader

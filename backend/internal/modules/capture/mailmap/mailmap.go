@@ -74,6 +74,7 @@ type Message struct {
 	// inbound invitation is a fact about the message either way.
 	hasCalendarPart bool
 	calendarMethod  string // the part's RFC 5546 method, "" when none is known
+	calendarUID     string // the UID of the event that part names, "" when none
 	// deliveryReport is the RFC 3464 shape — `multipart/report` carrying
 	// `report-type=delivery-status`. Kept in its own right beside
 	// hasCalendarPart, and for the same reason: it is a fact about the message
@@ -194,11 +195,8 @@ func Parse(raw []byte, owner string) (Message, error) {
 	// is the opposite of this rule's purpose. The wrong contacts came from the
 	// outbound direction: the owner invites, and every attendee reads as
 	// somebody the workspace writes to.
-	calendarNotice := direction == connector.DirectionOutbound &&
-		calendarNotification(header, hasCalendarPart)
-	if calendarNotice {
-		machineTouched = true
-	}
+	calendarNotice := direction == connector.DirectionOutbound && calendarNotification(header, hasCalendarPart)
+	machineTouched = machineTouched || calendarNotice
 
 	return Message{
 		messageID:        strings.TrimSpace(messageID),
@@ -219,6 +217,7 @@ func Parse(raw []byte, owner string) (Message, error) {
 		calendarNotice:   calendarNotice,
 		hasCalendarPart:  hasCalendarPart,
 		calendarMethod:   calendar.method(),
+		calendarUID:      calendar.uid(),
 		deliveryReport:   deliveryReport,
 		listUnsubscribe:  hasListUnsubscribe(header.Values("List-Unsubscribe"), viaGroup),
 		participants:     otherParties(toList, ccList, bccList, ownerLower, participantExclusion(counterparty, calendarNotice)),
@@ -423,6 +422,7 @@ func (m Message) ToRecord(connectorName string, raw []byte) connector.Normalized
 			Direction:         m.direction,
 			HasCalendarPart:   m.hasCalendarPart,
 			CalendarMethod:    m.calendarMethod,
+			CalendarUID:       m.calendarUID,
 			BodyCompleteness:  stored,
 			CredentialsMasked: m.masksCredentials(),
 			Envelope:          m.envelope(),

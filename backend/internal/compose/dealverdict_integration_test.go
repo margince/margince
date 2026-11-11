@@ -29,10 +29,23 @@ import (
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
+
+// dealVerdictRefs lets a lane script its reply by record id. The reply reaches
+// the pass in the refs the request showed each activity, stage and criterion by.
+func dealVerdictRefs(lane completer) completer {
+	return inRefs{inner: lane, shown: []shownBy{
+		{key: "activity_id", query: `SELECT left(body, 40) FROM activity WHERE id = $1`},
+		{key: "stage_id", query: `SELECT 'Later stage: ' || name || ' (' FROM stage WHERE id = $1`},
+		{key: "criterion_id", query: `SELECT ': ' || label || ' (criterion_id' FROM stage_exit_criterion WHERE id = $1`},
+	}}
+}
 
 // dealVerdictLane answers every deal with the same three changes, citing the
 // note the test logged. It counts its calls, and runs during while the pass
@@ -61,9 +74,9 @@ func (l *dealVerdictLane) Complete(_ context.Context, _ model.Request) (model.Re
 		 "cited_activity_ids":[%q],"reason":"They will sign then","confidence":0.9},
 		{"kind":"set_amount","date":"","amount":%d,"currency":%q,"quoted_words":%q,
 		 "probability":0,"cited_activity_ids":[%q],"reason":"They named the price","confidence":0.9},
-		{"kind":"set_probability","date":"","amount":0,"currency":"","quoted_words":"","probability":%d,
+		{"kind":"set_probability","date":"","amount":0,"currency":"","quoted_words":%q,"probability":%d,
 		 "cited_activity_ids":[%q],"reason":"They said yes","confidence":0.9}]}`,
-		l.date, *l.cite, amount, currency, quote, *l.cite, l.probability, *l.cite)}, nil
+		l.date, *l.cite, amount, currency, quote, *l.cite, quote, l.probability, *l.cite)}, nil
 }
 
 type dealVerdictEnv struct {
@@ -95,14 +108,14 @@ func setupDealVerdict(t *testing.T) *dealVerdictEnv {
 	// newer than the evidence until a test makes one.
 	v.now = v.dbNow(t)
 	signing := v.now.AddDate(0, 2, 0).Format(time.DateOnly)
-	v.note = v.logNote(t, "The board agreed: we sign on "+signing+" for 45,000 EUR a year.")
-	// A lower probability than the stage's: Margince may lower freely.
+	v.note = v.logBuyerMessage(t, "The board agreed: we sign on "+signing+" for 45,000 EUR a year.")
+	// The buyer's cited confirmation supports a lower probability than the stage's.
 	stagePct, err := strconv.Atoi(v.WsScalar(t, `SELECT `+deals.StageWinProbabilitySQL("d")+` FROM deal d WHERE d.id = $1`, v.deal))
 	if err != nil {
 		t.Fatal(err)
 	}
 	v.lane = &dealVerdictLane{cite: &v.note, date: signing, probability: stagePct - 10}
-	v.pass = newDealVerdictPass(e.Pool, v.lane, slog.New(slog.DiscardHandler))
+	v.pass = newDealVerdictPass(e.Pool, dealVerdictRefs(v.lane), slog.New(slog.DiscardHandler))
 	v.pass.now = func() time.Time { return v.now.Add(time.Minute) }
 	return v
 }
@@ -116,11 +129,11 @@ func (v *dealVerdictEnv) dbNow(t *testing.T) time.Time {
 	return at
 }
 
-func (v *dealVerdictEnv) logNote(t *testing.T, body string) string {
+func (v *dealVerdictEnv) logBuyerMessage(t *testing.T, body string) string {
 	t.Helper()
-	subject, at := "Call notes", v.now
+	subject, at, direction := "Buyer confirmation", v.now, "inbound"
 	note, _, err := v.Activities.LogActivity(v.Admin(), activities.LogActivityInput{
-		Kind: "note", Subject: &subject, Body: &body, OccurredAt: &at, Source: "manual",
+		Kind: "email", Direction: &direction, Subject: &subject, Body: &body, OccurredAt: &at, Source: "manual",
 		Links: []activities.ActivityLinkInput{{EntityType: "deal", EntityID: v.deal}},
 	})
 	if err != nil {
@@ -216,7 +229,7 @@ func TestMarginceSetsWhatTheCustomerSaidAndAnUndoHoldsItBack(t *testing.T) {
 	}
 
 	v.now = v.now.Add(time.Hour)
-	v.note = v.logNote(t, "They confirmed again: yes.")
+	v.note = v.logBuyerMessage(t, "They confirmed again: yes, 45,000 EUR a year.")
 	v.run(t)
 	if got := v.field(t, "win_probability_override"); got != strconv.Itoa(v.lane.probability) {
 		t.Fatalf("after a new note the probability = %q, want Margince to set it again", got)
@@ -400,7 +413,7 @@ func TestAReceiptKeepsTheCurrencyTheAmountWasSetIn(t *testing.T) {
 // A price in a currency with no stored rate is read again once a rate is.
 func TestANewRateMakesANoRateDropDueAgain(t *testing.T) {
 	v := setupDealVerdict(t)
-	v.note = v.logNote(t, "Our budget is 40,000 GBP a year.")
+	v.note = v.logBuyerMessage(t, "Our budget is 40,000 GBP a year.")
 	v.lane.quote = "40,000 GBP"
 	v.run(t)
 	if !strings.Contains(v.outcomes(t), "set_amount="+dealverdict.DroppedNoRate) {
@@ -417,4 +430,84 @@ func TestANewRateMakesANoRateDropDueAgain(t *testing.T) {
 	if v.lane.calls != calls+1 {
 		t.Fatal("a stored rate did not make the no-rate deal due again")
 	}
+}
+
+func TestVerdictNotesTranslateTheInstructionsAndKeepTheirEvidence(t *testing.T) {
+	v := setupDealVerdict(t)
+	v.run(t)
+	textID := v.WsScalar(t, `SELECT a.id::text FROM activity a JOIN activity_link l ON l.activity_id=a.id WHERE l.deal_id=$1 AND a.subject='Margince updated this deal'`, v.deal)
+	id := ids.From[ids.ActivityKind](ids.MustParse(textID))
+	original, err := v.Activities.GetActivity(v.owner(t), id, storekit.LiveOnly)
+	if err != nil || original.Body == nil {
+		t.Fatalf("timeline note missing: %v", err)
+	}
+	for _, language := range []textlang.Lang{textlang.German, textlang.Vietnamese} {
+		shown, err := v.Activities.GetActivity(systemtext.WithLocale(v.owner(t), language), id, storekit.LiveOnly)
+		if err != nil || shown.SystemDisplay == nil || shown.SystemDisplay.Body == nil {
+			t.Fatalf("%s lost the mixed body descriptor: %+v %v", language, shown.SystemDisplay, err)
+		}
+		if *shown.Body != *original.Body || *shown.SystemDisplay.Body == *original.Body {
+			t.Fatal("presentation changed canonical text or failed to translate its instructions")
+		}
+		for line := range strings.SplitSeq(*original.Body, "\n") {
+			if _, evidence, ok := strings.Cut(line, ": "); ok && !strings.Contains(*shown.SystemDisplay.Body, evidence) {
+				t.Fatalf("quoted evidence changed: %q", evidence)
+			}
+		}
+		if shown.SystemDisplay.GeneratedParts != nil {
+			t.Fatal("deterministic instructions were classified as generated prose")
+		}
+	}
+}
+
+func TestAnAgentsNoteIsNotDealVerdictEvidence(t *testing.T) {
+	v := setupDealVerdict(t)
+	subject, body := "Agent assessment", "Budget is 1,000 EUR."
+	note, _, err := v.Activities.LogActivity(v.Admin(), activities.LogActivityInput{
+		Kind: "note", Origin: activities.OriginAgent, Subject: &subject, Body: &body,
+		Source: "manual", Links: []activities.ActivityLinkInput{{EntityType: "deal", EntityID: v.deal}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var read dealVerdictRead
+	if err := database.WithWorkspaceTx(v.Admin(), v.Pool, func(tx pgx.Tx) error {
+		return readVerdictActivities(v.Admin(), tx, v.deal, &read)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if len(read.in.Activities) == 0 {
+		t.Fatal("the buyer evidence disappeared too")
+	}
+	for _, activity := range read.in.Activities {
+		if activity.ID == note.Id.String() {
+			t.Fatal("agent note feeds the verdict")
+		}
+	}
+}
+
+func TestAnInboundCopyFromASeatIsMarkedAsOurWords(t *testing.T) {
+	v := setupDealVerdict(t)
+	direction, subject, body := "inbound", "Copy", "The budget is 1,000 EUR."
+	email := v.WsScalar(t, `SELECT email FROM app_user WHERE id=@user`, pgx.StrictNamedArgs{"user": v.Rep1})
+	mail, _, err := v.Activities.LogActivity(v.Admin(), activities.LogActivityInput{
+		Kind: "email", Direction: &direction, Subject: &subject, Body: &body, EmailFrom: email,
+		Source: "manual", Links: []activities.ActivityLinkInput{{EntityType: "deal", EntityID: v.deal}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var read dealVerdictRead
+	if err := database.WithWorkspaceTx(v.Admin(), v.Pool, func(tx pgx.Tx) error { return readVerdictActivities(v.Admin(), tx, v.deal, &read) }); err != nil {
+		t.Fatal(err)
+	}
+	for _, activity := range read.in.Activities {
+		if activity.ID == mail.Id.String() {
+			if !activity.FromOurSide {
+				t.Fatal("seat copy was treated as buyer words")
+			}
+			return
+		}
+	}
+	t.Fatal("the inbound copy was not read")
 }

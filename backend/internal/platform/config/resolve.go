@@ -45,7 +45,11 @@ func resolve(s Any, layers []layer, readFile func(string) ([]byte, error), geten
 	if _, err := parseChecked(s, ""); err == nil {
 		return resolved{origin: Origin{Source: SourceUnset}}, nil
 	}
-	return resolved{}, fmt.Errorf("%s: required", s.Env())
+	name := s.Env()
+	if name == "" {
+		name = s.Key()
+	}
+	return resolved{}, fmt.Errorf("%s: required", name)
 }
 
 func resolveText(s Any, l layer, text string, refs refReaders) (resolved, error) {

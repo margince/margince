@@ -2,6 +2,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   cleanup,
+  renderHook,
   render as rtlRender,
   screen,
   within,
@@ -11,6 +12,7 @@ import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
+import { useShortcutDispatcher } from "../../lib/shortcuts";
 import { meFixture } from "../../testing/mefixture";
 import { RecordShell } from "../../testing/recordshell.testkit";
 import { LeadScreen } from "./leads";
@@ -201,6 +203,37 @@ describe("the lead header's Log activity and Add task", () => {
 });
 
 describe("the lead header's Email verb", () => {
+  it("refuses Email without the activity grant, over the same sentence as Log", async () => {
+    stubLead();
+    const fetchWithoutGrant = globalThis.fetch;
+    vi.stubGlobal("fetch", async (request: Request) =>
+      request.url.endsWith("/v1/me")
+        ? jsonResponse({
+            user: { id: "u-9", display_name: "Me" },
+            roles: ["read_only"],
+            teams: [],
+            authorization: meFixture({ allow: { lead: ["read"] } })
+              .authorization,
+          })
+        : fetchWithoutGrant(request),
+    );
+    render(<LeadScreen id="l-1" />);
+
+    const email = await screen.findByRole("button", { name: "Email" });
+    const logButton = screen.getByRole("button", { name: "Log activity" });
+    await vi.waitFor(() =>
+      expect(email.getAttribute("aria-describedby")).toBeTruthy(),
+    );
+    expect(email.hasAttribute("disabled")).toBe(true);
+    expect(email.getAttribute("aria-describedby")).toBe(
+      logButton.getAttribute("aria-describedby"),
+    );
+    expect(
+      document.getElementById(email.getAttribute("aria-describedby") ?? "")
+        ?.textContent,
+    ).toBe("You do not have permission to log activities on this record.");
+  });
+
   it("allows outreach without inventing a reply obligation", async () => {
     const user = userEvent.setup();
     stubLead(
@@ -225,5 +258,60 @@ describe("the lead header's Email verb", () => {
         name: "Remove jonas@nordwind.example",
       }),
     ).toBeTruthy();
+  });
+});
+
+describe("the lead's record keys", () => {
+  async function mountLive() {
+    stubLead();
+    renderHook(() => useShortcutDispatcher());
+    render(<LeadScreen id="l-1" />);
+    const logButton = await screen.findByRole("button", {
+      name: "Log activity",
+    });
+    await vi.waitFor(() =>
+      expect(logButton.hasAttribute("disabled")).toBe(false),
+    );
+    return logButton;
+  }
+
+  it.each([
+    ["n", "Log activity"],
+    ["t", "Add task"],
+    ["m", /New email/],
+  ])("open on %s what its verb opens: %s", async (key, name) => {
+    const user = userEvent.setup();
+    await mountLive();
+
+    await user.keyboard(key);
+    expect(await screen.findByRole("dialog", { name })).toBeTruthy();
+  });
+
+  it("name their keys on Log activity, Email and Add task", async () => {
+    const user = userEvent.setup();
+    const logButton = await mountLive();
+    expect(logButton.getAttribute("aria-keyshortcuts")).toBe("n");
+    expect(
+      screen
+        .getByRole("button", { name: "Email" })
+        .getAttribute("aria-keyshortcuts"),
+    ).toBe("m");
+    await user.click(screen.getByRole("button", { name: "More actions" }));
+    const addTask = await screen.findByRole("button", { name: "Add task" });
+    expect(addTask.getAttribute("aria-keyshortcuts")).toBe("t");
+  });
+
+  it("do nothing on a terminal lead", async () => {
+    const user = userEvent.setup();
+    stubLead({
+      status: "disqualified",
+      archived_at: "2026-07-01T00:00:00Z",
+    });
+    renderHook(() => useShortcutDispatcher());
+    render(<LeadScreen id="l-1" />);
+    await screen.findByRole("button", { name: "Email" });
+
+    await user.keyboard("ntm");
+    expect(screen.queryByRole("dialog")).toBeNull();
   });
 });

@@ -276,13 +276,14 @@ func noticeItem(notice UnreadNotice) crmcontracts.AttentionItem {
 		occurred = notice.Origin.OccurredAt
 	}
 	item := crmcontracts.AttentionItem{
-		Id:           notice.ID.String(),
-		NoticeOrigin: notice.Origin,
-		Source:       crmcontracts.AttentionItemSource("notice"),
-		Kind:         &kind,
-		Title:        &subject,
-		OccurredAt:   &occurred,
-		Actions:      []crmcontracts.AttentionItemActions{crmcontracts.AttentionItemActions("acknowledge")},
+		Id:            notice.ID.String(),
+		NoticeOrigin:  notice.Origin,
+		Source:        crmcontracts.AttentionItemSource("notice"),
+		Kind:          &kind,
+		Title:         &subject,
+		SystemDisplay: notice.SystemDisplay,
+		OccurredAt:    &occurred,
+		Actions:       []crmcontracts.AttentionItemActions{crmcontracts.AttentionItemActions("acknowledge")},
 	}
 	if notice.TargetType != "" {
 		item.Subject = subjectOf(notice.TargetType, notice.TargetID)

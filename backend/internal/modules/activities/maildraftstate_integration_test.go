@@ -21,7 +21,8 @@ func TestMailDraftHTTPKeepsEditorState(t *testing.T) {
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	anchor := replyAnchor(e.seedAnchor(t, "", ""))
-	body := fmt.Sprintf(`{"anchor_type":"activity","anchor_id":%q,"body":"Draft words","editor_state":{"intent":"Ask for scope","ai_generated":true}}`, anchor.ID.String())
+	deal := e.seedDeal(t, "Draft context")
+	body := fmt.Sprintf(`{"anchor_type":"activity","anchor_id":%q,"body":"Draft words","editor_state":{"intent":"Ask for scope","ai_generated":true,"filing":[{"anchor_type":"deal","anchor_id":%q}]}}`, anchor.ID.String(), deal.String())
 	request := httptest.NewRequest(http.MethodPut, "/v1/mail-drafts", strings.NewReader(body)).WithContext(ctx)
 	response := httptest.NewRecorder()
 	h := Handlers{store: draftStore(e)}
@@ -36,12 +37,42 @@ func TestMailDraftHTTPKeepsEditorState(t *testing.T) {
 	if saved.EditorState == nil || saved.EditorState.Intent == nil || *saved.EditorState.Intent != "Ask for scope" || saved.EditorState.AiGenerated == nil || !*saved.EditorState.AiGenerated {
 		t.Fatalf("HTTP response lost editor state: %+v", saved.EditorState)
 	}
+	if saved.EditorState.Filing == nil || len(*saved.EditorState.Filing) != 1 ||
+		(*saved.EditorState.Filing)[0].AnchorId != crmcontracts.Id(deal) {
+		t.Fatalf("HTTP response lost the selected deal: %+v", saved.EditorState.Filing)
+	}
 	got, err := draftStore(e).GetMailDraft(ctx, anchor)
 	if err != nil {
 		t.Fatal(err)
 	}
+	if got.Content.EditorState.Filing == nil || len(*got.Content.EditorState.Filing) != 1 ||
+		(*got.Content.EditorState.Filing)[0].AnchorId != crmcontracts.Id(deal) {
+		t.Fatalf("saved draft lost its selected deal: %+v", got.Content.EditorState.Filing)
+	}
 	if got.Content.EditorState.ContentFingerprint == nil {
 		t.Fatal("saved state is not bound to its words")
+	}
+	clearBody := fmt.Sprintf(`{"anchor_type":"activity","anchor_id":%q,"body":"Draft words","editor_state":{"filing":[]}}`, anchor.ID.String())
+	request = httptest.NewRequest(http.MethodPut, "/v1/mail-drafts", strings.NewReader(clearBody)).WithContext(ctx)
+	request.Header.Set("If-Match", fmt.Sprint(saved.Version))
+	response = httptest.NewRecorder()
+	h.SaveMailDraft(response, request, crmcontracts.SaveMailDraftParams{})
+	if response.Code != http.StatusOK {
+		t.Fatalf("clear status %d: %s", response.Code, response.Body)
+	}
+	var cleared crmcontracts.MailDraft
+	if err := json.Unmarshal(response.Body.Bytes(), &cleared); err != nil {
+		t.Fatal(err)
+	}
+	if cleared.EditorState == nil || cleared.EditorState.Filing == nil || len(*cleared.EditorState.Filing) != 0 {
+		t.Fatalf("HTTP response lost the explicit empty filing: %+v", cleared.EditorState)
+	}
+	got, err = draftStore(e).GetMailDraft(ctx, anchor)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Content.EditorState.Filing == nil || len(*got.Content.EditorState.Filing) != 0 {
+		t.Fatalf("saved draft lost the explicit empty filing: %+v", got.Content.EditorState.Filing)
 	}
 }
 
@@ -83,5 +114,53 @@ func TestAnOlderWriterCannotLeaveEditorStateOnDifferentWords(t *testing.T) {
 	}
 	if got.Content.Body != "Different human words" || got.Content.EditorState.AiGenerated != nil || got.Content.EditorState.Intent != nil {
 		t.Fatalf("an older writer left stale attribution: %+v", got.Content)
+	}
+}
+
+// The language a rep chose for the AI draft comes back with the words, so a
+// reload drafts in it again. A code the product does not write is dropped, and
+// the words still save.
+func TestMailDraftHTTPKeepsTheChosenDraftLanguage(t *testing.T) {
+	e := setupSend(t)
+	ctx := e.as(principal.RowScopeAll)
+	h := Handlers{store: draftStore(e)}
+	save := func(anchor MailDraftAnchor, language string) crmcontracts.MailDraft {
+		t.Helper()
+		body := fmt.Sprintf(`{"anchor_type":"activity","anchor_id":%q,"body":"Draft words","editor_state":{"language":%q}}`,
+			anchor.ID.String(), language)
+		response := httptest.NewRecorder()
+		h.SaveMailDraft(response, httptest.NewRequest(http.MethodPut, "/v1/mail-drafts", strings.NewReader(body)).WithContext(ctx),
+			crmcontracts.SaveMailDraftParams{})
+		if response.Code != http.StatusOK {
+			t.Fatalf("saving with language %q answered %d: %s", language, response.Code, response.Body)
+		}
+		var saved crmcontracts.MailDraft
+		if err := json.Unmarshal(response.Body.Bytes(), &saved); err != nil {
+			t.Fatal(err)
+		}
+		return saved
+	}
+
+	chosen := replyAnchor(e.seedAnchor(t, "", ""))
+	save(chosen, "vi")
+	got, err := draftStore(e).GetMailDraft(ctx, chosen)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Content.EditorState.Language == nil || *got.Content.EditorState.Language != crmcontracts.MailDraftEditorStateLanguageVi {
+		t.Fatalf("the saved draft lost the chosen language: %+v", got.Content.EditorState)
+	}
+
+	unknown := replyAnchor(e.seedAnchor(t, "", ""))
+	answered := save(unknown, "fr")
+	if answered.EditorState != nil && answered.EditorState.Language != nil {
+		t.Errorf("an unknown language came back as %q, want it dropped", *answered.EditorState.Language)
+	}
+	got, err = draftStore(e).GetMailDraft(ctx, unknown)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Content.Body != "Draft words" || got.Content.EditorState.Language != nil {
+		t.Fatalf("an unknown language kept %+v with body %q, want the words saved without it", got.Content.EditorState.Language, got.Content.Body)
 	}
 }

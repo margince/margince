@@ -75,6 +75,7 @@
     "advanceProjectPhase": "business",
     "allowContact": "compliance",
     "annotateMorningBrief": "business",
+    "answerCalendarInvitation": "business",
     "answerReportingQuestionCard": "business",
     "answerWeeklyPlanCommitment": "business",
     "applyContactEmploymentImport": "business",
@@ -197,6 +198,7 @@
     "decideIntroRequest": "business",
     "decideLegacyLossReason": "admin_settings",
     "decideLegalReview": "business",
+    "declineActivityDeal": "business",
     "deepReadCompany": "business",
     "deleteAnchorCompanyLogo": "admin_settings",
     "deleteAnchorCompanyLogoIcon": "admin_settings",
@@ -361,6 +363,7 @@
     "getForecastMovement": "business",
     "getForecastStageChances": "business",
     "getHandledForYou": "business",
+    "getHandoffAssignee": "business",
     "getHiddenBacklog": "business",
     "getHiddenBacklogRows": "business",
     "getImportFormat": "business",
@@ -511,6 +514,7 @@
     "listConsumerMailDomains": "workspace_settings",
     "listContactCases": "business",
     "listContactConversationSuggestions": "capture",
+    "listContactOverrides": "compliance",
     "listContactStops": "compliance",
     "listContacts": "business",
     "listCorpora": "business",
@@ -685,11 +689,13 @@
     "readCaptureTracePipeline": "capture",
     "readCorpus": "business",
     "readTranscriptForNextSteps": "business",
+    "reassignHandoff": "business",
     "recordCommunicationContext": "compliance",
     "recordConsent": "compliance",
     "recordConversationClaim": "business",
     "recordForecastCall": "business",
     "recordIntroduction": "business",
+    "recordLeadQualifyingEvent": "compliance",
     "recordQualifyingEvent": "compliance",
     "recordSalesDecision": "business",
     "recordSalesDecisionOutcome": "business",
@@ -729,6 +735,7 @@
     "reorderStages": "admin_settings",
     "replaceAiPriceSync": "admin_settings",
     "replaceDealProducts": "business",
+    "replaceIntroRequest": "business",
     "replaceSalesInitiativeMembers": "business",
     "replyDealRoomThread": "business",
     "requestAttachmentAccess": "business",
@@ -757,6 +764,7 @@
     "resumeDealRoom": "business",
     "retireCustomField": "admin_settings",
     "retractAcquisitionRequest": "compliance",
+    "retractLeadQualifyingEvent": "compliance",
     "retractQualifyingEvent": "compliance",
     "retryAutomationRun": "admin_settings",
     "retryReportingExecution": "business",
@@ -893,6 +901,3152 @@
     "withdrawOwnershipOffer": "business",
     "withdrawOwnershipRequest": "business"
   },
+  "placements": {
+    "EmbedReindexIdentities": "search_index",
+    "EmbedReindexPreview": "search_index",
+    "EmbedReindexStart": "search_index",
+    "EmbedReindexStatus": "search_index",
+    "acceptAppliedDealChange": "deals",
+    "acceptAttachmentExtraction": "documents",
+    "acceptDealSuggestion": "deals",
+    "acceptOffer": "offers",
+    "acceptPartnerLead": "leads",
+    "acceptPublicMeetingProposal": "booking_pages",
+    "acceptTagSuggestion": "tags",
+    "acknowledgeApprovalFailure": "agent_limits",
+    "acknowledgeCompanyView": "companies",
+    "acknowledgeContactView": "contacts",
+    "activateHomeRepair": "system_health",
+    "addConsumerMailDomain": "capture_rules",
+    "addDealLine": "deals",
+    "addDealRoomDocument": "deal_rooms",
+    "addListMember": "lists",
+    "addOfferLineItem": "offers",
+    "addTeamMember": "members",
+    "addWeeklyPlanCommitment": "worklist",
+    "advanceDeal": "deals",
+    "advanceProjectPhase": "projects",
+    "allowContact": "consent",
+    "annotateMorningBrief": "worklist",
+    "answerCalendarInvitation": "activities",
+    "answerReportingQuestionCard": "reports",
+    "answerWeeklyPlanCommitment": "worklist",
+    "applyContactEmploymentImport": "contacts",
+    "applyLegacyLossReasons": "sales_lists",
+    "applyTag": "tags",
+    "applyVoiceProfileVersion": "voice",
+    "approveApproval": "agent_limits",
+    "approveApprovalBundle": "agent_limits",
+    "approveImportRun": "imports",
+    "archiveActivity": "activities",
+    "archiveCompany": "companies",
+    "archiveContact": "contacts",
+    "archiveContract": "contracts",
+    "archiveCorpus": "knowledge",
+    "archiveDeal": "deals",
+    "archiveDealRoom": "deal_rooms",
+    "archiveLegalEntity": "company_profile",
+    "archiveList": "lists",
+    "archiveOffer": "offers",
+    "archiveOfferTemplate": "catalog",
+    "archivePipeline": "pipelines",
+    "archiveProduct": "catalog",
+    "archiveProject": "projects",
+    "archiveRecordAssignment": "sharing",
+    "archiveRelationship": "contacts",
+    "archiveReportingReport": "reports",
+    "archiveRole": "members",
+    "archiveSavedView": "lists",
+    "archiveServiceMember": "members",
+    "archiveSignal": "signals",
+    "archiveStage": "pipelines",
+    "archiveStageExitCriterion": "pipelines",
+    "archiveTag": "tags",
+    "archiveWebForm": "web_forms",
+    "archiveWebhookSubscription": "webhooks",
+    "askAboutCompany": "companies",
+    "askCorpus": "knowledge",
+    "askForWeeklyPlanHelp": "worklist",
+    "assessNoticeSource": "privacy_notices",
+    "assessSalesReview": "reports",
+    "assignLeads": "leads",
+    "assignLegalEntityMember": "company_profile",
+    "assignNoticeCase": "privacy_notices",
+    "assignNoticeCaseReview": "privacy_notices",
+    "backfillEmploymentImport": "contacts",
+    "bookMeeting": "scheduling",
+    "bookPublicMeeting": "booking_pages",
+    "cancelConnectorBackfill": "connectors",
+    "cancelContract": "contracts",
+    "cancelImportRun": "imports",
+    "cancelIntroRequest": "contacts",
+    "cancelScheduledSend": "activities",
+    "catchUpOnRecord": "search",
+    "changeContractStatus": "contracts",
+    "changeMeetingInvitation": "scheduling",
+    "changePassword": "own_security",
+    "changePublicMeetingInvitation": "booking_pages",
+    "changeUserRole": "members",
+    "claimRecord": "sharing",
+    "claimTaskReminderDelivery": "activities",
+    "clearActivityDisposition": "activities",
+    "clearLeadManualSignal": "leads",
+    "clearVoiceCorpus": "voice",
+    "closeDealRoom": "deal_rooms",
+    "closeLostInputCheck": "forecast",
+    "coldStartPreview": "ai_help",
+    "coldStartReadback": "ai_help",
+    "compareReportingEditions": "reports",
+    "completeIntroRequest": "contacts",
+    "completeMfaChallenge": "sign_in",
+    "confirmAnchorCompanySiteRead": "company_profile",
+    "confirmCompanyFact": "companies",
+    "confirmCompanyProfileField": "companies",
+    "confirmMeetingReady": "worklist",
+    "confirmMyTotp": "own_security",
+    "connectChannel": "connectors",
+    "connectConnector": "connectors",
+    "connectExtOauth": "extensions",
+    "connectFinanceSource": "finance_source",
+    "connectProvider": "connectors",
+    "connectorOAuthCallback": "oauth_callbacks",
+    "controlDataTask": "system_health",
+    "correctCommunicationWording": "consent",
+    "correctDealCloseDay": "deals",
+    "correctProjectHealthAssessment": "projects",
+    "countPendingApprovals": "agent_limits",
+    "createAcquisitionSource": "sales_lists",
+    "createAutomation": "automations",
+    "createCaptureCounterpartyHold": "capture_triage",
+    "createCaptureExclusion": "capture_rules",
+    "createCaptureOwnerIdentity": "capture_rules",
+    "createCompany": "companies",
+    "createCompanyFact": "companies",
+    "createConsentPurpose": "consent",
+    "createContact": "contacts",
+    "createContactEnrichmentRun": "contacts",
+    "createContract": "contracts",
+    "createCorpus": "knowledge",
+    "createCustomField": "custom_fields",
+    "createDataSubjectRequest": "privacy_requests",
+    "createDeal": "deals",
+    "createDealOutcomeReview": "deals",
+    "createDealRoom": "deal_rooms",
+    "createFilteredExport": "exports",
+    "createForecastShare": "forecast",
+    "createFormerMember": "members",
+    "createImportRun": "imports",
+    "createIntroRequest": "contacts",
+    "createLead": "leads",
+    "createLeadDisqualifyReason": "sales_lists",
+    "createLeadOrigin": "sales_lists",
+    "createLeadSource": "sales_lists",
+    "createLegalEntity": "company_profile",
+    "createList": "lists",
+    "createLossReason": "sales_lists",
+    "createMeetingInvitation": "scheduling",
+    "createMeetingProposal": "scheduling",
+    "createOffer": "offers",
+    "createOfferTemplate": "catalog",
+    "createPartnerStage": "pipelines",
+    "createPipeline": "pipelines",
+    "createProduct": "catalog",
+    "createProject": "projects",
+    "createProjectHealthAssessment": "projects",
+    "createRecordAssignment": "sharing",
+    "createRecordGrant": "sharing",
+    "createRecordRole": "members",
+    "createRelationship": "contacts",
+    "createReportingReport": "reports",
+    "createReportingSchedule": "reports",
+    "createReportingTarget": "reports",
+    "createRetentionPolicy": "retention",
+    "createRole": "members",
+    "createSalesInitiative": "reports",
+    "createSavedView": "lists",
+    "createSignal": "signals",
+    "createStage": "pipelines",
+    "createStageExitCriterion": "pipelines",
+    "createTag": "tags",
+    "createTask": "activities",
+    "createTeam": "members",
+    "createVoiceBuild": "voice",
+    "createVoiceProfile": "voice",
+    "createWebForm": "web_forms",
+    "createWebhookSubscription": "webhooks",
+    "createWorkspaceEmailDomain": "capture_rules",
+    "deactivateUser": "members",
+    "decideCommissionEntry": "commissions",
+    "decideIntroRequest": "contacts",
+    "decideLegacyLossReason": "sales_lists",
+    "decideLegalReview": "legal_reviews",
+    "declareExistingCustomerNotice": "consent",
+    "declareServiceMember": "members",
+    "declineActivityDeal": "activities",
+    "deepReadCompany": "companies",
+    "deleteAgentClient": "agent_clients",
+    "deleteAiModelRate": "rates",
+    "deleteAiProviderKey": "ai_models",
+    "deleteAnchorCompanyLogo": "company_profile",
+    "deleteAnchorCompanyLogoIcon": "company_profile",
+    "deleteAttachment": "documents",
+    "deleteAutomation": "automations",
+    "deleteCaptureCounterpartyHold": "capture_triage",
+    "deleteCaptureExclusion": "capture_rules",
+    "deleteCaptureOwnerIdentity": "capture_rules",
+    "deleteCaptureSenderDecision": "capture_triage",
+    "deleteCompanyFact": "companies",
+    "deleteCorpusDocument": "knowledge",
+    "deleteLeadDisqualifyReason": "sales_lists",
+    "deleteLeadOrigin": "sales_lists",
+    "deleteLeadSource": "sales_lists",
+    "deleteLegalEntityLogo": "company_profile",
+    "deleteMyAvatar": "own_profile",
+    "deleteOauthApp": "installation",
+    "deletePartnerStage": "pipelines",
+    "deleteProductTranslation": "catalog",
+    "deleteProviderData": "connectors",
+    "deleteRetentionPolicy": "retention",
+    "deleteVoiceCorpusSource": "voice",
+    "deleteVoiceProfile": "voice",
+    "deleteWorkspaceEmailDomain": "capture_rules",
+    "demoteLead": "leads",
+    "describeAnalyticsVocabulary": "reports",
+    "describeListFilters": "search",
+    "describeQueryVocabulary": "search",
+    "describeReadViews": "search",
+    "describeRecordFields": "search",
+    "describeReportBlocks": "reports",
+    "describeReportVocabulary": "reports",
+    "describeRouterActions": "search",
+    "directCommunicationSend": "consent",
+    "disableMyMfa": "own_security",
+    "discardDomainQuestion": "capture_triage",
+    "discardMailDraft": "activities",
+    "discardReportingReportDraft": "reports",
+    "disconnectChannel": "connectors",
+    "disconnectConnector": "connectors",
+    "disconnectFinanceSource": "finance_source",
+    "disconnectProvider": "connectors",
+    "dismissCompanySuggestion": "companies",
+    "dismissConnectorSilence": "connectors",
+    "dismissContactMoment": "contacts",
+    "dismissDealMove": "deals",
+    "dismissDealSuggestion": "deals",
+    "dismissRelationshipNudge": "contacts",
+    "dismissRelationshipNudges": "contacts",
+    "dismissTagSuggestion": "tags",
+    "disposeDedupeCandidate": "duplicates",
+    "disqualifyLead": "leads",
+    "downloadAgentSkillBundle": "passports",
+    "downloadAttachment": "documents",
+    "downloadBuyerRoomDocument": "buyer_rooms",
+    "downloadCorpusDocument": "knowledge",
+    "downloadDataSubjectPackage": "privacy_requests",
+    "downloadExportBundle": "exports",
+    "downloadImportProblems": "imports",
+    "downloadImportTemplate": "imports",
+    "downloadJurisdictionDocument": "installation",
+    "downloadOfferPdf": "offers",
+    "draftCompanyEmail": "companies",
+    "draftContactEmail": "contacts",
+    "draftDealFollowUps": "deals",
+    "draftEmail": "activities",
+    "draftIntroNote": "contacts",
+    "draftIntroRequest": "companies",
+    "draftLeadEmail": "leads",
+    "editWeeklyPlanCommitment": "worklist",
+    "ensureCompanyScan": "companies",
+    "evaluateReporting": "reports",
+    "evaluateReportingReport": "reports",
+    "exchangeDealRoomCredential": "buyer_rooms",
+    "excuseNoticeCase": "privacy_notices",
+    "executeBulkChange": "bulk",
+    "explainAnalyticsCell": "reports",
+    "explainLeadScore": "leads",
+    "explainListMember": "lists",
+    "explainReport": "reports",
+    "explainReportRunCell": "reports",
+    "explainReportingQuestionCard": "reports",
+    "exportForecastShare": "forecast",
+    "exportReportingEdition": "reports",
+    "exportReportingEvaluation": "reports",
+    "extOauthCallback": "oauth_callbacks",
+    "fileChatCapture": "documents",
+    "freezeReportingEdition": "reports",
+    "generateMorningBrief": "worklist",
+    "getAccountCoverage": "reports",
+    "getActingIdentity": "own_profile",
+    "getActivity": "activities",
+    "getActivityDealFiling": "activities",
+    "getActivityProjectFiling": "activities",
+    "getAgentOpenAPIDocument": "system_facts",
+    "getAiBudget": "ai_models",
+    "getAiCall": "ai_models",
+    "getAiCallStats": "ai_models",
+    "getAiHealth": "ai_models",
+    "getAiPriceSync": "ai_models",
+    "getAiProfile": "ai_models",
+    "getAiProviderHealth": "ai_models",
+    "getAiRouting": "ai_models",
+    "getAiRoutingSchema": "ai_models",
+    "getAiStatus": "ai_models",
+    "getAiTaskFlow": "ai_models",
+    "getAiTaskOverrides": "ai_models",
+    "getAiUsage": "ai_models",
+    "getAiUsageSummary": "ai_models",
+    "getAnalyticsContext": "reports",
+    "getAnalyticsSchema": "reports",
+    "getAnchorCompany": "company_profile",
+    "getAnchorCompanyContext": "company_profile",
+    "getAnchorCompanyContextCapabilities": "company_profile",
+    "getAnchorCompanySiteRead": "company_profile",
+    "getAnchorCompanySiteReadLogo": "company_profile",
+    "getApproval": "agent_limits",
+    "getAssistantProfile": "sign_in",
+    "getAttachmentExtraction": "documents",
+    "getAttachmentExtractionReading": "documents",
+    "getAttention": "worklist",
+    "getAuthCapabilities": "sign_in",
+    "getAuthenticationPolicy": "installation",
+    "getAutomaticWorkHealth": "system_health",
+    "getAutomation": "automations",
+    "getAutonomy": "agent_limits",
+    "getAvailability": "scheduling",
+    "getBulkChange": "bulk",
+    "getBuyerRoom": "buyer_rooms",
+    "getCaptureHealth": "system_health",
+    "getCaptureSettings": "capture_rules",
+    "getClaimEvidence": "companies",
+    "getCommissionEntry": "commissions",
+    "getCommissionSummary": "commissions",
+    "getCommunicationReview": "consent",
+    "getCompany": "companies",
+    "getCompany360": "companies",
+    "getCompanyAccess": "companies",
+    "getCompanyBrief": "companies",
+    "getCompanyCaptureTriage": "companies",
+    "getCompanyCoverage": "companies",
+    "getCompanyDossier": "companies",
+    "getCompanyFinanceSummary": "companies",
+    "getCompanyForAddress": "companies",
+    "getCompanyGraph": "companies",
+    "getCompanyGrowthFit": "companies",
+    "getCompanyHierarchyRollup": "companies",
+    "getCompanyLinkedInReach": "contacts",
+    "getCompanyLogo": "companies",
+    "getCompanyLogoIcon": "companies",
+    "getCompanyScan": "companies",
+    "getCompanyStrength": "companies",
+    "getCompanyVatCheck": "companies",
+    "getConfirmDetails": "public_links",
+    "getConnectorBackfillStatus": "connectors",
+    "getConsentRequest": "agent_clients",
+    "getContact": "contacts",
+    "getContact360": "contacts",
+    "getContactAccess": "contacts",
+    "getContactBrief": "contacts",
+    "getContactCase": "duplicates",
+    "getContactCaseSettings": "sales_rules",
+    "getContactConsent": "consent",
+    "getContactConsentGuard": "consent",
+    "getContactEnrichmentRun": "contacts",
+    "getContactGraph": "contacts",
+    "getContactNetwork": "contacts",
+    "getContactProfileFields": "contacts",
+    "getContactStrength": "contacts",
+    "getContract": "contracts",
+    "getControllerParticulars": "privacy_notices",
+    "getCurrentPrincipal": "own_profile",
+    "getCurrentWeeklyPlan": "worklist",
+    "getDataCoverage": "reports",
+    "getDataSubjectRequestDeadline": "privacy_requests",
+    "getDeal": "deals",
+    "getDealCommitments": "deals",
+    "getDealCoverage": "deals",
+    "getDealLines": "deals",
+    "getDealRoom": "deal_rooms",
+    "getDealRoomBrief": "deal_rooms",
+    "getDealStatus": "deals",
+    "getDealSuggestion": "deals",
+    "getDealViability": "deals",
+    "getDealWinEvidence": "deals",
+    "getDedupeCandidate": "duplicates",
+    "getEmailPresentation": "activities",
+    "getEmailSignatureTemplate": "sales_rules",
+    "getExtensionIngestHealth": "system_health",
+    "getExtensionSettings": "extensions",
+    "getFieldHistory": "audit",
+    "getFilterVocabulary": "lists",
+    "getFinanceSource": "finance_source",
+    "getFiscalYearImpact": "installation",
+    "getFollowUpSettings": "sales_rules",
+    "getForecast": "forecast",
+    "getForecastAssurance": "forecast",
+    "getForecastAssuranceEnforcement": "forecast",
+    "getForecastMovement": "forecast",
+    "getForecastStageChances": "forecast",
+    "getHandledForYou": "worklist",
+    "getHandoffAssignee": "leads",
+    "getHiddenBacklog": "worklist",
+    "getHiddenBacklogRows": "worklist",
+    "getImportFormat": "imports",
+    "getImportRun": "imports",
+    "getImportRunReport": "imports",
+    "getInstallationConfiguration": "system_facts",
+    "getInstallationJurisdiction": "installation",
+    "getInstallationSettings": "installation",
+    "getInstallationSetup": "system_facts",
+    "getIntegrationsSettings": "capture_rules",
+    "getJobHealth": "system_health",
+    "getJobHealthHistory": "system_health",
+    "getLatestSiteRead": "companies",
+    "getLatestTechnicalEnrich": "companies",
+    "getLatestTranscriptRead": "activities",
+    "getLatestWeeklyReview": "worklist",
+    "getLead": "leads",
+    "getLeadSettings": "sales_rules",
+    "getLeadSignalCatalog": "sales_lists",
+    "getLegalEntity": "company_profile",
+    "getLegalEntityLogo": "company_profile",
+    "getLegalReview": "legal_reviews",
+    "getLegalReviewSettings": "sales_rules",
+    "getLicenseEntitlement": "system_facts",
+    "getList": "lists",
+    "getMagic": "worklist",
+    "getMagicLineRecords": "worklist",
+    "getMailDraft": "activities",
+    "getMeetingAvailability": "scheduling",
+    "getMeetingBrief": "activities",
+    "getMeetingInvitation": "scheduling",
+    "getMember": "members",
+    "getMorningBrief": "worklist",
+    "getMorningDigest": "capture_triage",
+    "getMyAiActivity": "own_profile",
+    "getMyBriefDelivery": "own_profile",
+    "getMyEmailSignature": "own_profile",
+    "getMyLinkedInAccount": "own_profile",
+    "getMyLinkedInReach": "own_profile",
+    "getMyMfa": "own_security",
+    "getMyWorkingHours": "own_profile",
+    "getNoticeCase": "privacy_notices",
+    "getNoticeCaseReview": "privacy_notices",
+    "getNoticeSourceEvidence": "privacy_notices",
+    "getOauthApp": "installation",
+    "getOffer": "offers",
+    "getOfferTemplate": "catalog",
+    "getOnboardingCompanyProposal": "company_profile",
+    "getOnboardingState": "own_profile",
+    "getOwnershipOffer": "sharing",
+    "getOwnershipRequest": "sharing",
+    "getPartner": "companies",
+    "getPendingMarginceChanges": "deals",
+    "getPipeline": "pipelines",
+    "getPreferenceCenter": "public_links",
+    "getProduct": "catalog",
+    "getProject": "projects",
+    "getProject360": "projects",
+    "getPublicAvailability": "booking_pages",
+    "getPublicBookingCompanyLogo": "booking_pages",
+    "getPublicBookingPreview": "booking_pages",
+    "getPublicMeetingAvailability": "booking_pages",
+    "getPublicMeetingInvitation": "booking_pages",
+    "getPublicMeetingProposal": "booking_pages",
+    "getPublicProposalAvailability": "booking_pages",
+    "getPublicRecordPreview": "public_links",
+    "getPublicSchedulingProfile": "booking_pages",
+    "getRecordContext": "search",
+    "getRecordHistory": "audit",
+    "getRecordLists": "lists",
+    "getRecordTags": "tags",
+    "getRecoveryHealth": "system_health",
+    "getRelationshipNudge": "contacts",
+    "getReplyRecipient": "activities",
+    "getReportRun": "reports",
+    "getReportingEdition": "reports",
+    "getReportingEditionEvidence": "reports",
+    "getReportingEvidence": "reports",
+    "getReportingExecution": "reports",
+    "getReportingFramework": "reports",
+    "getReportingMetrics": "reports",
+    "getReportingReport": "reports",
+    "getReportingTarget": "reports",
+    "getResponseMetrics": "worklist",
+    "getRetainedEmailSignature": "privacy_notices",
+    "getRetentionSettings": "retention",
+    "getSalesInitiative": "reports",
+    "getSavedView": "lists",
+    "getScheduledSend": "activities",
+    "getSchedulingCalendars": "scheduling",
+    "getSchedulingProfile": "scheduling",
+    "getSdrSummary": "reports",
+    "getSdrTeamReview": "reports",
+    "getSeatUsage": "system_facts",
+    "getSignal": "signals",
+    "getSignalIntroPath": "signals",
+    "getSignalWarmth": "signals",
+    "getSiteRead": "companies",
+    "getStage": "pipelines",
+    "getStageAutomationReport": "pipelines",
+    "getStatus": "sign_in",
+    "getSystemHealth": "system_health",
+    "getTag": "tags",
+    "getTagSuggestion": "tags",
+    "getTeamBoard": "worklist",
+    "getTeamExceptions": "worklist",
+    "getTeamMarginceChanges": "worklist",
+    "getTeamWeeklyReview": "worklist",
+    "getTeammateWeeklyPlan": "worklist",
+    "getTranscriptRead": "activities",
+    "getUserAccess": "members",
+    "getUserAvatar": "members",
+    "getUserHandover": "members",
+    "getVoiceBuild": "voice",
+    "getVoiceLearningSummary": "voice",
+    "getVoiceProfile": "voice",
+    "getWebForm": "web_forms",
+    "getWebhookSubscription": "webhooks",
+    "getWorklist": "worklist",
+    "handOverUserWork": "members",
+    "hideDealDocument": "documents",
+    "importCardPhoto": "contacts",
+    "importLinkedInConnections": "own_profile",
+    "importVCards": "contacts",
+    "ingestVoiceCorpusSource": "voice",
+    "inviteDealRoomParticipant": "deal_rooms",
+    "inviteUser": "members",
+    "issueDoubleOptIn": "consent",
+    "issuePassport": "passports",
+    "issueUserPasswordLink": "members",
+    "keepDomainAsVendor": "capture_triage",
+    "keepDomainQuestion": "capture_triage",
+    "launchSalesInitiative": "reports",
+    "learnVoiceFromSentMail": "voice",
+    "liftLeadSuppression": "consent",
+    "liftLegalHold": "retention",
+    "liftSuppression": "consent",
+    "linkCompanyContacts": "companies",
+    "linkContactEmployer": "contacts",
+    "linkFinanceSourceCustomer": "finance_source",
+    "linkLeadCompany": "leads",
+    "listAcquisitionSources": "sales_lists",
+    "listActivities": "activities",
+    "listActivityReviewTemplates": "sales_rules",
+    "listAgentClients": "agent_clients",
+    "listAgentTools": "agent_limits",
+    "listAgentUsageByUser": "agent_limits",
+    "listAiCalls": "ai_models",
+    "listAiModelRates": "rates",
+    "listAiProviderKeys": "ai_models",
+    "listApprovalPreferences": "agent_limits",
+    "listApprovals": "agent_limits",
+    "listAssignableRoles": "members",
+    "listAtRiskRelationships": "deals",
+    "listAttachments": "documents",
+    "listAuditLog": "audit",
+    "listAutomationCatalog": "automations",
+    "listAutomationRuns": "automations",
+    "listAutomations": "automations",
+    "listAvailableModels": "ai_models",
+    "listBlockedDomains": "capture_rules",
+    "listBuyerRoomDocuments": "buyer_rooms",
+    "listBuyerRoomThreads": "buyer_rooms",
+    "listCaptureContactsAwaitingDecision": "capture_triage",
+    "listCaptureCounterpartyHolds": "capture_triage",
+    "listCaptureExclusions": "capture_rules",
+    "listCaptureOwnerIdentities": "capture_rules",
+    "listCaptureSenders": "capture_triage",
+    "listChannelConnections": "connectors",
+    "listChannelProviders": "connectors",
+    "listCommissionEntries": "commissions",
+    "listCompanies": "companies",
+    "listCompanyContacts": "companies",
+    "listCompanyContracts": "contracts",
+    "listCompanyDocuments": "documents",
+    "listCompanyFacts": "companies",
+    "listCompanyLinkCandidates": "companies",
+    "listCompanyOfferedValues": "companies",
+    "listCompanyProfileFields": "companies",
+    "listConfirmSubmissions": "consent",
+    "listConnectorContainers": "connectors",
+    "listConnectors": "connectors",
+    "listConsentPurposes": "consent",
+    "listConsumerMailBaseline": "capture_rules",
+    "listConsumerMailDomains": "capture_rules",
+    "listContactCases": "duplicates",
+    "listContactConversationSuggestions": "capture_triage",
+    "listContactOverrides": "consent",
+    "listContactStops": "consent",
+    "listContacts": "contacts",
+    "listCorpora": "knowledge",
+    "listCorpusDocuments": "knowledge",
+    "listCustomFieldLiveLists": "custom_fields",
+    "listCustomFields": "custom_fields",
+    "listDataSubjectRequests": "privacy_requests",
+    "listDataTasks": "system_health",
+    "listDealDocuments": "documents",
+    "listDealLegalReviews": "legal_reviews",
+    "listDealMarginceChanges": "deals",
+    "listDealOffers": "offers",
+    "listDealOutcomeReviews": "deals",
+    "listDealProducts": "deals",
+    "listDealRoomDocuments": "deal_rooms",
+    "listDealRoomParticipants": "deal_rooms",
+    "listDealRoomThreads": "deal_rooms",
+    "listDealRooms": "deal_rooms",
+    "listDealStakeholders": "deals",
+    "listDealSuggestions": "deals",
+    "listDeals": "deals",
+    "listDedupeCandidates": "duplicates",
+    "listDomainQuestions": "capture_triage",
+    "listExistingCustomerNotices": "consent",
+    "listExtensions": "extensions",
+    "listFinanceSourceCustomers": "finance_source",
+    "listForecastCalls": "forecast",
+    "listForecastShares": "forecast",
+    "listFxRateCurrencies": "rates",
+    "listFxRates": "rates",
+    "listHeldThreads": "capture_triage",
+    "listImportRuns": "imports",
+    "listInputChecks": "forecast",
+    "listIntroPaths": "companies",
+    "listIntroRequests": "contacts",
+    "listLatestInbound": "activities",
+    "listLeadConversationSuggestions": "capture_triage",
+    "listLeadDisqualifyReasons": "sales_lists",
+    "listLeadManualSignals": "leads",
+    "listLeadOrigins": "sales_lists",
+    "listLeadSources": "sales_lists",
+    "listLeadStops": "consent",
+    "listLeads": "leads",
+    "listLegacyLossReasons": "sales_lists",
+    "listLegalEntities": "company_profile",
+    "listLegalEntityMembers": "company_profile",
+    "listLegalHolds": "retention",
+    "listLegalReviews": "legal_reviews",
+    "listListHistory": "lists",
+    "listListMembers": "lists",
+    "listLists": "lists",
+    "listLossReasons": "sales_lists",
+    "listMeetingProposals": "scheduling",
+    "listMyAgentGrants": "agent_limits",
+    "listMyCaptureActivity": "capture_triage",
+    "listMySessions": "own_security",
+    "listNoticeCaseReviews": "privacy_notices",
+    "listNoticeCases": "privacy_notices",
+    "listNotices": "worklist",
+    "listNotificationPreferences": "own_profile",
+    "listOauthApps": "installation",
+    "listOfferTemplates": "catalog",
+    "listOpenCommitments": "activities",
+    "listOwnershipOfferCandidates": "sharing",
+    "listPartnerStages": "pipelines",
+    "listPartners": "partners",
+    "listPassports": "passports",
+    "listPipelines": "pipelines",
+    "listProductTranslations": "catalog",
+    "listProducts": "catalog",
+    "listProjectHealthAssessments": "projects",
+    "listProjectStakeholders": "projects",
+    "listProjects": "projects",
+    "listProviderConnections": "connectors",
+    "listProviderLocations": "ai_models",
+    "listRecordAssignments": "sharing",
+    "listRecordGrants": "sharing",
+    "listRecordRoles": "members",
+    "listRelationships": "contacts",
+    "listReportRuns": "reports",
+    "listReportingEditions": "reports",
+    "listReportingExecutions": "reports",
+    "listReportingReportRevisions": "reports",
+    "listReportingReports": "reports",
+    "listReportingSchedules": "reports",
+    "listReportingTargets": "reports",
+    "listRestrictedActivities": "retention",
+    "listRetentionPolicies": "retention",
+    "listRoles": "members",
+    "listSalesDecisions": "reports",
+    "listSalesInitiativeMembers": "reports",
+    "listSalesInitiatives": "reports",
+    "listSavedViews": "lists",
+    "listScheduledSends": "activities",
+    "listSdrUpcomingMeetings": "reports",
+    "listSdrWaitingHandoffs": "reports",
+    "listSignals": "signals",
+    "listSlippingDeals": "deals",
+    "listStageEvidence": "deals",
+    "listStageExitCriteria": "pipelines",
+    "listStages": "pipelines",
+    "listTags": "tags",
+    "listTaxRates": "rates",
+    "listTeams": "members",
+    "listTransitionPolicies": "pipelines",
+    "listUserSessions": "members",
+    "listUsers": "members",
+    "listVoiceCorpusSources": "voice",
+    "listVoiceProfileDeltas": "voice",
+    "listVoiceProfileVersions": "voice",
+    "listVoiceProfiles": "voice",
+    "listWebForms": "web_forms",
+    "listWebhookDeliveries": "webhooks",
+    "listWebhookSubscriptions": "webhooks",
+    "listWeeklyReviews": "worklist",
+    "listWorkspaceCaptureActivity": "capture_triage",
+    "listWorkspaceEmailDomains": "capture_rules",
+    "logActivity": "activities",
+    "login": "sign_in",
+    "logout": "own_security",
+    "markAllNoticesRead": "worklist",
+    "markBookingPageShared": "scheduling",
+    "markBriefItemActed": "worklist",
+    "markBriefItemDismissed": "worklist",
+    "markNoticeRead": "worklist",
+    "markWorklistRowsDone": "worklist",
+    "mergeCompany": "companies",
+    "mergeContact": "contacts",
+    "mergeContactCase": "duplicates",
+    "mergeMembers": "members",
+    "mergeTags": "tags",
+    "messageAnchorCompanySiteRead": "company_profile",
+    "messageOnboardingCompany": "company_profile",
+    "nameSeats": "members",
+    "offerOwnershipTransfer": "sharing",
+    "oidcSignInCallback": "sign_in",
+    "oneClickUnsubscribe": "public_links",
+    "openBuyerRoomThread": "buyer_rooms",
+    "openDealRoomThread": "deal_rooms",
+    "openForecastShare": "forecast",
+    "pauseDealRoom": "deal_rooms",
+    "pauseReportingSchedules": "system_health",
+    "peekDealRoomCredential": "buyer_rooms",
+    "pinActivityToFloor": "retention",
+    "pinWorklistRow": "worklist",
+    "placeLegalHold": "retention",
+    "prepForMeeting": "search",
+    "prepareProjectHandoff": "projects",
+    "previewAccess": "members",
+    "previewAccountSendAuthorization": "activities",
+    "previewAiBudget": "ai_models",
+    "previewAiRouting": "ai_models",
+    "previewAiTaskOverrides": "ai_models",
+    "previewAutomation": "automations",
+    "previewBulkChange": "bulk",
+    "previewBulkUndo": "bulk",
+    "previewConnectorBackfill": "connectors",
+    "previewContactCaseMerge": "duplicates",
+    "previewContactEmploymentImport": "contacts",
+    "previewControllerMail": "consent",
+    "previewDealRoom": "deal_rooms",
+    "previewEmailSignOff": "activities",
+    "previewFilter": "lists",
+    "previewForecastAssurance": "forecast",
+    "previewHomeRepair": "system_health",
+    "previewLeadPromotion": "leads",
+    "previewMailDealRepair": "system_health",
+    "previewMemberRetirement": "members",
+    "previewNoticeSource": "privacy_notices",
+    "previewReportingReportAsRole": "reports",
+    "previewSendAuthorization": "activities",
+    "previewVoiceCorpusSource": "voice",
+    "previewWebhookBody": "webhooks",
+    "progressDeal": "deals",
+    "promoteLead": "leads",
+    "proposeAiModelRateRefresh": "rates",
+    "proposeDealRoles": "deals",
+    "proposeFilter": "lists",
+    "proposeFxRateRefresh": "rates",
+    "proposeReportSetup": "reports",
+    "publicStopContact": "public_links",
+    "publishCapturedContact": "contacts",
+    "publishReportingFramework": "reports",
+    "publishReportingReportDraft": "reports",
+    "purgeCaptureExclusion": "capture_rules",
+    "putAnchorCompany": "company_profile",
+    "putOnboardingState": "own_profile",
+    "putProductTranslation": "catalog",
+    "putSchedulingAlias": "scheduling",
+    "putSchedulingProfile": "scheduling",
+    "qualifyLead": "leads",
+    "queryWorkspace": "search",
+    "quickCaptureContact": "contacts",
+    "raiseNotice": "worklist",
+    "reactivateUser": "members",
+    "readActivityPipelineTrace": "activities",
+    "readAttachmentForFields": "documents",
+    "readCaptureTracePipeline": "capture_triage",
+    "readCorpus": "knowledge",
+    "readTranscriptForNextSteps": "activities",
+    "reassignHandoff": "leads",
+    "recordAIFeedback": "ai_help",
+    "recordCommunicationContext": "consent",
+    "recordConsent": "consent",
+    "recordConversationClaim": "contacts",
+    "recordForecastCall": "forecast",
+    "recordIntroduction": "contacts",
+    "recordLeadQualifyingEvent": "consent",
+    "recordQualifyingEvent": "consent",
+    "recordSalesDecision": "reports",
+    "recordSalesDecisionOutcome": "reports",
+    "recordTaxRate": "rates",
+    "refreshAiModelRates": "rates",
+    "refreshCompanyDossier": "companies",
+    "refreshCompanyGrowthFit": "companies",
+    "refreshOfferFromDeal": "offers",
+    "regenerateCompanyBrief": "companies",
+    "regenerateContactBrief": "contacts",
+    "regenerateOffer": "offers",
+    "registerAgentClient": "agent_clients",
+    "rejectApproval": "agent_limits",
+    "rejectApprovalBundle": "agent_limits",
+    "rejectCompany": "companies",
+    "rejectOffer": "offers",
+    "rejectVoiceDraft": "voice",
+    "rejectVoiceProfileVersion": "voice",
+    "releaseRestrictedActivity": "retention",
+    "relinkActivities": "activities",
+    "relinkActivity": "activities",
+    "relinkThread": "activities",
+    "removeConsumerMailDomain": "capture_rules",
+    "removeDealLine": "deals",
+    "removeDealRoomDocument": "deal_rooms",
+    "removeListMember": "lists",
+    "removeMember": "members",
+    "removeOfferLineItem": "offers",
+    "removeProjectCompany": "projects",
+    "removeProjectStakeholder": "projects",
+    "removeTag": "tags",
+    "removeTeamMember": "members",
+    "removeUserMfa": "members",
+    "renameCustomField": "custom_fields",
+    "renderActivityForReader": "activities",
+    "renderAnalyticsReport": "reports",
+    "renderOffer": "offers",
+    "renewContract": "contracts",
+    "reopenLead": "leads",
+    "reopenWithheldDomain": "capture_rules",
+    "reopenWorklistRows": "worklist",
+    "reorderPipelines": "pipelines",
+    "reorderStages": "pipelines",
+    "replaceAiBudget": "ai_models",
+    "replaceAiPriceSync": "ai_models",
+    "replaceAiRouting": "ai_models",
+    "replaceAiTaskOverrides": "ai_models",
+    "replaceChannelToken": "connectors",
+    "replaceDealProducts": "deals",
+    "replaceIntroRequest": "contacts",
+    "replaceSalesInitiativeMembers": "reports",
+    "replayWebhookDelivery": "webhooks",
+    "replyBuyerRoomThread": "buyer_rooms",
+    "replyDealRoomThread": "deal_rooms",
+    "requestAttachmentAccess": "documents",
+    "requestCompanyVatCheck": "companies",
+    "requestDealRoomLink": "buyer_rooms",
+    "requestDetailsConfirmation": "consent",
+    "requestLegalReview": "legal_reviews",
+    "requestOwnershipTransfer": "sharing",
+    "requestPasswordReset": "sign_in",
+    "rescheduleScheduledSend": "activities",
+    "resendDealRoomInvitation": "deal_rooms",
+    "resendUserInvite": "members",
+    "resetData": "system_health",
+    "resetPassword": "sign_in",
+    "resolveConfirmSubmission": "consent",
+    "resolveDealRoomThread": "deal_rooms",
+    "resolveEntities": "search",
+    "resolveInputCheck": "forecast",
+    "resolveSignal": "signals",
+    "restoreCaptureOwnerIdentity": "capture_rules",
+    "restoreCompanySuggestion": "companies",
+    "restoreContactMoment": "contacts",
+    "restoreContactProfileField": "contacts",
+    "restoreDealMove": "deals",
+    "restoreList": "lists",
+    "restoreListMember": "lists",
+    "restorePipeline": "pipelines",
+    "restoreRecordChange": "audit",
+    "restoreRelationshipNudge": "contacts",
+    "restoreReportingReportRevision": "reports",
+    "restoreRole": "members",
+    "restoreTag": "tags",
+    "restoreTagApplication": "tags",
+    "resumeDealRoom": "deal_rooms",
+    "resumeTransitionPolicy": "pipelines",
+    "retireCustomField": "custom_fields",
+    "retractAcquisitionRequest": "consent",
+    "retractLeadQualifyingEvent": "consent",
+    "retractQualifyingEvent": "consent",
+    "retryAutomationRun": "automations",
+    "retryReportingExecution": "reports",
+    "revertStageProgression": "deals",
+    "revokeDealRoomParticipant": "deal_rooms",
+    "revokeForecastShare": "forecast",
+    "revokeMySession": "own_security",
+    "revokeOverride": "consent",
+    "revokePassport": "passports",
+    "revokeRecordGrant": "sharing",
+    "revokeUserSession": "members",
+    "rollbackVoiceProfileVersion": "voice",
+    "rotateAgentClientSecret": "agent_clients",
+    "rotateWebFormSecret": "web_forms",
+    "rotateWebhookSecret": "webhooks",
+    "runAnalyticsQuery": "reports",
+    "runContactResearch": "contacts",
+    "runReport": "reports",
+    "saveContactResearch": "contacts",
+    "saveEmailSignatureTemplate": "sales_rules",
+    "saveMailDraft": "activities",
+    "saveMyBriefDelivery": "own_profile",
+    "saveMyDisplayName": "own_profile",
+    "saveMyEmailSignature": "own_profile",
+    "saveMyGreetingName": "own_profile",
+    "saveMyLinkedInAccount": "own_profile",
+    "saveMyLocale": "own_profile",
+    "saveMyTimezone": "own_profile",
+    "saveMyWorkingHours": "own_profile",
+    "saveNotificationPreference": "own_profile",
+    "saveReportingReportDraft": "reports",
+    "saveRetainedEmailSignature": "privacy_notices",
+    "scrapeCompany": "companies",
+    "search": "search",
+    "searchContext": "search",
+    "searchReportEvidence": "reports",
+    "sendCompanyEmail": "activities",
+    "sendEmail": "activities",
+    "sendMessage": "activities",
+    "sendOffer": "offers",
+    "sendPrivacyNotice": "consent",
+    "setActivityAudience": "activities",
+    "setActivityDisposition": "activities",
+    "setAiModelRate": "rates",
+    "setAiProviderKey": "ai_models",
+    "setAiProviderSettings": "ai_models",
+    "setBlockedDomain": "capture_rules",
+    "setCaptureSenderDecision": "capture_triage",
+    "setConnectorContextTag": "connectors",
+    "setConnectorHistoryBaseline": "connectors",
+    "setConnectorMailPosture": "connectors",
+    "setConnectorSignatureEnrichment": "connectors",
+    "setControllerParticulars": "privacy_notices",
+    "setDealRoomExpiry": "deal_rooms",
+    "setForecastAssuranceEnforcement": "forecast",
+    "setFxRate": "rates",
+    "setLeadManualSignal": "leads",
+    "setMyAgentGrant": "agent_limits",
+    "setOauthApp": "installation",
+    "setPassportAreas": "passports",
+    "setProjectCompany": "projects",
+    "setProjectStakeholder": "projects",
+    "setRoleObjectGrant": "members",
+    "setThreadAudience": "activities",
+    "setTransitionPolicy": "pipelines",
+    "setUpPartner": "companies",
+    "setWeeklyPlanCommitmentState": "worklist",
+    "setWeeklyPlanContract": "worklist",
+    "settleConversationClaim": "contacts",
+    "shareCaptureCounterpartyHoldHistory": "capture_triage",
+    "shareCompanyContacts": "companies",
+    "signOutBuyerRoom": "buyer_rooms",
+    "snoozeBriefItem": "worklist",
+    "startAnchorCompanySiteRead": "company_profile",
+    "startConnectorBackfill": "connectors",
+    "startForecastAssuranceRun": "forecast",
+    "startMyTotpEnrolment": "own_security",
+    "startOidcSignIn": "sign_in",
+    "startWeeklyPlan": "worklist",
+    "submitConfirmDetails": "public_links",
+    "submitWebForm": "public_links",
+    "suppressContact": "consent",
+    "syncFinanceSource": "finance_source",
+    "takeOverConversationClaim": "contacts",
+    "technicalEnrichCompany": "companies",
+    "testAiProviderKey": "ai_models",
+    "transferProjectOwnership": "projects",
+    "undoActivityProjectFiling": "activities",
+    "undoBulkChange": "bulk",
+    "undoDedupeDisposition": "duplicates",
+    "undoImportRun": "imports",
+    "undoMarginceChanges": "deals",
+    "undoMeetingReady": "worklist",
+    "undoProjectHealthAssessment": "projects",
+    "unhideDealDocument": "documents",
+    "unlinkFinanceSourceCustomer": "finance_source",
+    "unpinWorklistRow": "worklist",
+    "unsnoozeBriefItem": "worklist",
+    "updateAcquisitionSource": "sales_lists",
+    "updateActivity": "activities",
+    "updateActivityReviewTemplate": "sales_rules",
+    "updateAgentClient": "agent_clients",
+    "updateApprovalPreference": "agent_limits",
+    "updateAttachmentMetadata": "documents",
+    "updateAutomation": "automations",
+    "updateAutonomy": "agent_limits",
+    "updateCaptureSettings": "capture_rules",
+    "updateCompany": "companies",
+    "updateCompanyFact": "companies",
+    "updateCompanyProfileField": "companies",
+    "updateContact": "contacts",
+    "updateContactCaseSettings": "sales_rules",
+    "updateContract": "contracts",
+    "updateCorpus": "knowledge",
+    "updateCustomFieldOptions": "custom_fields",
+    "updateDataSubjectRequest": "privacy_requests",
+    "updateDeal": "deals",
+    "updateDealLine": "deals",
+    "updateDealRoom": "deal_rooms",
+    "updateDealRoomDocument": "deal_rooms",
+    "updateDealRoomParticipant": "deal_rooms",
+    "updateExtensionSettings": "extensions",
+    "updateFollowUpSettings": "sales_rules",
+    "updateImportRun": "imports",
+    "updateInstallationSettings": "installation",
+    "updateIntegrationsSettings": "capture_rules",
+    "updateLead": "leads",
+    "updateLeadDisqualifyReason": "sales_lists",
+    "updateLeadOrigin": "sales_lists",
+    "updateLeadSettings": "sales_rules",
+    "updateLeadSource": "sales_lists",
+    "updateLegalEntity": "company_profile",
+    "updateLegalReviewSettings": "sales_rules",
+    "updateList": "lists",
+    "updateLossReason": "sales_lists",
+    "updateMember": "members",
+    "updateOffer": "offers",
+    "updateOfferLineItem": "offers",
+    "updateOfferTemplate": "catalog",
+    "updatePartnerStage": "pipelines",
+    "updatePipeline": "pipelines",
+    "updatePreferences": "public_links",
+    "updateProduct": "catalog",
+    "updateProject": "projects",
+    "updateProviderConnection": "connectors",
+    "updateRecordAssignment": "sharing",
+    "updateRecordRole": "members",
+    "updateRelationship": "contacts",
+    "updateReportingReport": "reports",
+    "updateReportingSchedule": "reports",
+    "updateReportingTarget": "reports",
+    "updateRetentionPolicy": "retention",
+    "updateRetentionSettings": "retention",
+    "updateRole": "members",
+    "updateSalesInitiative": "reports",
+    "updateSavedView": "lists",
+    "updateSignal": "signals",
+    "updateStage": "pipelines",
+    "updateStageExitCriterion": "pipelines",
+    "updateTag": "tags",
+    "updateTeam": "members",
+    "updateVoiceCorpusSource": "voice",
+    "updateVoiceProfile": "voice",
+    "updateWebForm": "web_forms",
+    "updateWebhookSubscription": "webhooks",
+    "uploadAnchorCompanyLogo": "company_profile",
+    "uploadAnchorCompanyLogoIcon": "company_profile",
+    "uploadAttachment": "documents",
+    "uploadCorpusDocument": "knowledge",
+    "uploadImportSource": "imports",
+    "uploadLegalEntityLogo": "company_profile",
+    "uploadMyAvatar": "own_profile",
+    "upsertPartner": "companies",
+    "useDealEstimate": "deals",
+    "validateImportRun": "imports",
+    "visitList": "lists",
+    "waitInputCheck": "forecast",
+    "withdrawExistingCustomerNotice": "consent",
+    "withdrawLegalReview": "legal_reviews",
+    "withdrawOwnershipOffer": "sharing",
+    "withdrawOwnershipRequest": "sharing"
+  },
+  "verb_placements": {
+    "accept_applied_deal_change": [
+      "deals"
+    ],
+    "accept_attachment_extraction": [
+      "documents"
+    ],
+    "accept_deal_suggestion": [
+      "deals"
+    ],
+    "accept_offer": [
+      "offers"
+    ],
+    "accept_partner_lead": [
+      "leads"
+    ],
+    "accept_tag_suggestion": [
+      "tags"
+    ],
+    "acknowledge_approval_failure": [
+      "agent_limits"
+    ],
+    "acknowledge_company_view": [
+      "companies"
+    ],
+    "acknowledge_contact_view": [
+      "contacts"
+    ],
+    "activate_home_repair": [
+      "system_health"
+    ],
+    "add_capture_exclusion": [
+      "capture_rules"
+    ],
+    "add_consumer_mail_domain": [
+      "capture_rules"
+    ],
+    "add_counterparty_hold": [
+      "capture_triage"
+    ],
+    "add_deal_line": [
+      "deals"
+    ],
+    "add_deal_room_document": [
+      "deal_rooms"
+    ],
+    "add_owner_identity": [
+      "capture_rules"
+    ],
+    "add_team_member": [
+      "members"
+    ],
+    "add_voice_source": [
+      "voice"
+    ],
+    "add_weekly_plan_commitment": [
+      "worklist"
+    ],
+    "add_workspace_email_domain": [
+      "capture_rules"
+    ],
+    "advance_deal": [
+      "deals"
+    ],
+    "advance_project_phase": [
+      "projects"
+    ],
+    "allow_contact": [
+      "consent"
+    ],
+    "annotate_brief": [
+      "worklist"
+    ],
+    "answer_calendar_invitation": [
+      "activities"
+    ],
+    "answer_reporting_question_card": [
+      "reports"
+    ],
+    "answer_weekly_plan_commitment": [
+      "worklist"
+    ],
+    "apply_contact_employment_import": [
+      "contacts"
+    ],
+    "apply_legacy_loss_reasons": [
+      "sales_lists"
+    ],
+    "apply_tag": [
+      "tags"
+    ],
+    "apply_voice_version": [
+      "voice"
+    ],
+    "archive_automation": [
+      "automations"
+    ],
+    "archive_contract": [
+      "contracts"
+    ],
+    "archive_corpus": [
+      "knowledge"
+    ],
+    "archive_deal_room": [
+      "deal_rooms"
+    ],
+    "archive_exit_criterion": [
+      "pipelines"
+    ],
+    "archive_legal_entity": [
+      "company_profile"
+    ],
+    "archive_pipeline": [
+      "pipelines"
+    ],
+    "archive_record": [
+      "activities",
+      "catalog",
+      "companies",
+      "contacts",
+      "deals",
+      "offers",
+      "projects"
+    ],
+    "archive_record_assignment": [
+      "sharing"
+    ],
+    "archive_reporting_report": [
+      "reports"
+    ],
+    "archive_saved_view": [
+      "lists"
+    ],
+    "archive_signal": [
+      "signals"
+    ],
+    "archive_stage": [
+      "pipelines"
+    ],
+    "archive_tag": [
+      "tags"
+    ],
+    "archive_voice_profile": [
+      "voice"
+    ],
+    "archive_web_form": [
+      "web_forms"
+    ],
+    "ask_about_company": [
+      "companies"
+    ],
+    "ask_for_weekly_plan_help": [
+      "worklist"
+    ],
+    "ask_knowledge_corpus": [
+      "knowledge"
+    ],
+    "assess_sales_review": [
+      "reports"
+    ],
+    "assign_legal_entity_member": [
+      "company_profile"
+    ],
+    "assign_notice_case": [
+      "privacy_notices"
+    ],
+    "assign_notice_case_review": [
+      "privacy_notices"
+    ],
+    "at_risk_relationships": [
+      "deals"
+    ],
+    "attach_document": [
+      "documents"
+    ],
+    "backfill_employment_import": [
+      "contacts"
+    ],
+    "build_voice_profile": [
+      "voice"
+    ],
+    "bulk_update_records": [
+      "bulk"
+    ],
+    "cancel_connector_backfill": [
+      "connectors"
+    ],
+    "cancel_contract": [
+      "contracts"
+    ],
+    "cancel_import_run": [
+      "imports"
+    ],
+    "cancel_intro_request": [
+      "contacts"
+    ],
+    "cancel_scheduled_send": [
+      "activities"
+    ],
+    "catch_me_up_on": [
+      "search"
+    ],
+    "change_contract_status": [
+      "contracts"
+    ],
+    "change_lists": [
+      "lists"
+    ],
+    "change_meeting_invitation": [
+      "scheduling"
+    ],
+    "change_record_parts": [
+      "companies",
+      "offers",
+      "projects"
+    ],
+    "change_user_role": [
+      "members"
+    ],
+    "check_availability": [
+      "scheduling"
+    ],
+    "claim_record": [
+      "sharing"
+    ],
+    "clear_activity_disposition": [
+      "activities"
+    ],
+    "clear_lead_manual_signal": [
+      "leads"
+    ],
+    "close_deal_room": [
+      "deal_rooms"
+    ],
+    "commit_import": [
+      "imports"
+    ],
+    "company_coverage": [
+      "deals"
+    ],
+    "complete_intro_request": [
+      "contacts"
+    ],
+    "compose_analytics_report": [
+      "reports"
+    ],
+    "confirm_anchor_company_site_read": [
+      "company_profile"
+    ],
+    "confirm_meeting_ready": [
+      "worklist"
+    ],
+    "confirm_notice_source": [
+      "privacy_notices"
+    ],
+    "control_data_task": [
+      "system_health"
+    ],
+    "correct_deal_close_day": [
+      "deals"
+    ],
+    "correct_project_health_assessment": [
+      "projects"
+    ],
+    "create_acquisition_source": [
+      "sales_lists"
+    ],
+    "create_automation": [
+      "automations"
+    ],
+    "create_contract": [
+      "contracts"
+    ],
+    "create_corpus": [
+      "knowledge"
+    ],
+    "create_custom_field": [
+      "custom_fields"
+    ],
+    "create_deal_outcome_review": [
+      "deals"
+    ],
+    "create_exit_criterion": [
+      "pipelines"
+    ],
+    "create_forecast_share": [
+      "forecast"
+    ],
+    "create_former_member": [
+      "members"
+    ],
+    "create_intro_request": [
+      "contacts"
+    ],
+    "create_lead_disqualify_reason": [
+      "sales_lists"
+    ],
+    "create_lead_origin": [
+      "sales_lists"
+    ],
+    "create_lead_source": [
+      "sales_lists"
+    ],
+    "create_legal_entity": [
+      "company_profile"
+    ],
+    "create_loss_reason": [
+      "sales_lists"
+    ],
+    "create_meeting_proposal": [
+      "scheduling"
+    ],
+    "create_partner_stage": [
+      "pipelines"
+    ],
+    "create_pipeline": [
+      "pipelines"
+    ],
+    "create_project_health_assessment": [
+      "projects"
+    ],
+    "create_record": [
+      "catalog",
+      "companies",
+      "contacts",
+      "deal_rooms",
+      "deals",
+      "leads",
+      "offers",
+      "projects"
+    ],
+    "create_record_assignment": [
+      "sharing"
+    ],
+    "create_record_role": [
+      "members"
+    ],
+    "create_reporting_report": [
+      "reports"
+    ],
+    "create_reporting_schedule": [
+      "reports"
+    ],
+    "create_reporting_target": [
+      "reports"
+    ],
+    "create_sales_initiative": [
+      "reports"
+    ],
+    "create_saved_view": [
+      "lists"
+    ],
+    "create_signal": [
+      "signals"
+    ],
+    "create_stage": [
+      "pipelines"
+    ],
+    "create_tag": [
+      "tags"
+    ],
+    "create_task": [
+      "activities"
+    ],
+    "create_team": [
+      "members"
+    ],
+    "create_voice_profile": [
+      "voice"
+    ],
+    "data_coverage": [
+      "reports"
+    ],
+    "deactivate_user": [
+      "members"
+    ],
+    "decide_approval": [
+      "agent_limits"
+    ],
+    "decide_approval_bundle": [
+      "agent_limits"
+    ],
+    "decide_commission_entry": [
+      "commissions"
+    ],
+    "decide_duplicate": [
+      "duplicates"
+    ],
+    "decide_intro_request": [
+      "contacts"
+    ],
+    "decide_legacy_loss_reason": [
+      "sales_lists"
+    ],
+    "decide_legal_review": [
+      "legal_reviews"
+    ],
+    "decline_activity_deal": [
+      "activities"
+    ],
+    "delete_anchor_company_logo": [
+      "company_profile"
+    ],
+    "delete_anchor_company_logo_icon": [
+      "company_profile"
+    ],
+    "delete_attachment": [
+      "documents"
+    ],
+    "delete_lead_disqualify_reason": [
+      "sales_lists"
+    ],
+    "delete_lead_origin": [
+      "sales_lists"
+    ],
+    "delete_lead_source": [
+      "sales_lists"
+    ],
+    "delete_legal_entity_logo": [
+      "company_profile"
+    ],
+    "demote_lead": [
+      "leads"
+    ],
+    "describe_analytics_vocabulary": [
+      "reports"
+    ],
+    "describe_import_format": [
+      "imports"
+    ],
+    "describe_list_filters": [
+      "search"
+    ],
+    "describe_query_vocabulary": [
+      "search"
+    ],
+    "describe_record_fields": [
+      "search"
+    ],
+    "describe_report_blocks": [
+      "reports"
+    ],
+    "describe_report_vocabulary": [
+      "reports"
+    ],
+    "describe_router_actions": [
+      "search"
+    ],
+    "describe_views": [
+      "search"
+    ],
+    "direct_communication_send": [
+      "consent"
+    ],
+    "discard_domain_question": [
+      "capture_triage"
+    ],
+    "discard_mail_draft": [
+      "activities"
+    ],
+    "discard_reporting_report_draft": [
+      "reports"
+    ],
+    "disconnect_channel": [
+      "connectors"
+    ],
+    "disconnect_connector": [
+      "connectors"
+    ],
+    "disconnect_finance_source": [
+      "finance_source"
+    ],
+    "disconnect_provider": [
+      "connectors"
+    ],
+    "dismiss_company_suggestion": [
+      "companies"
+    ],
+    "dismiss_connector_silence": [
+      "connectors"
+    ],
+    "dismiss_contact_moment": [
+      "contacts"
+    ],
+    "dismiss_deal_move": [
+      "deals"
+    ],
+    "dismiss_deal_suggestion": [
+      "deals"
+    ],
+    "dismiss_relationship_nudge": [
+      "contacts"
+    ],
+    "dismiss_relationship_nudges": [
+      "contacts"
+    ],
+    "dismiss_tag_suggestion": [
+      "tags"
+    ],
+    "disqualify_lead": [
+      "leads"
+    ],
+    "download_attachment": [
+      "documents"
+    ],
+    "download_corpus_document": [
+      "knowledge"
+    ],
+    "download_import_problems": [
+      "imports"
+    ],
+    "download_import_template": [
+      "imports"
+    ],
+    "download_jurisdiction_document": [
+      "installation"
+    ],
+    "download_offer_pdf": [
+      "offers"
+    ],
+    "draft_email": [
+      "activities"
+    ],
+    "draft_follow_ups_for": [
+      "deals"
+    ],
+    "draft_intro_note": [
+      "contacts"
+    ],
+    "draft_intro_request": [
+      "companies"
+    ],
+    "draft_report": [
+      "reports"
+    ],
+    "edit_weekly_plan_commitment": [
+      "worklist"
+    ],
+    "embed_reindex_identities": [
+      "search_index"
+    ],
+    "embed_reindex_preview": [
+      "search_index"
+    ],
+    "embed_reindex_status": [
+      "search_index"
+    ],
+    "enrich": [
+      "companies"
+    ],
+    "enrich_contact_from_provider": [
+      "contacts"
+    ],
+    "ensure_company_scan": [
+      "companies"
+    ],
+    "explain_analytics_cell": [
+      "reports"
+    ],
+    "explain_lead_score": [
+      "leads"
+    ],
+    "explain_report_run_cell": [
+      "reports"
+    ],
+    "explain_reporting_question_card": [
+      "reports"
+    ],
+    "export_forecast_share": [
+      "forecast"
+    ],
+    "forecast_input_checks": [
+      "forecast"
+    ],
+    "forecast_movement": [
+      "forecast"
+    ],
+    "forecast_readings": [
+      "forecast"
+    ],
+    "freeze_reporting_edition": [
+      "reports"
+    ],
+    "generate_morning_brief": [
+      "worklist"
+    ],
+    "get_activity_deal_filing": [
+      "activities"
+    ],
+    "get_activity_project_filing": [
+      "activities"
+    ],
+    "get_ai_budget": [
+      "ai_models"
+    ],
+    "get_ai_call": [
+      "ai_models"
+    ],
+    "get_ai_call_stats": [
+      "ai_models"
+    ],
+    "get_ai_health": [
+      "ai_models"
+    ],
+    "get_ai_profile": [
+      "ai_models"
+    ],
+    "get_ai_provider_health": [
+      "ai_models"
+    ],
+    "get_ai_routing_schema": [
+      "ai_models"
+    ],
+    "get_ai_status": [
+      "ai_models"
+    ],
+    "get_ai_task_flow": [
+      "ai_models"
+    ],
+    "get_ai_task_overrides": [
+      "ai_models"
+    ],
+    "get_ai_usage": [
+      "ai_models"
+    ],
+    "get_ai_usage_summary": [
+      "ai_models"
+    ],
+    "get_analytics_context": [
+      "reports"
+    ],
+    "get_analytics_schema": [
+      "reports"
+    ],
+    "get_anchor_company": [
+      "company_profile"
+    ],
+    "get_anchor_company_context": [
+      "company_profile"
+    ],
+    "get_anchor_company_context_capabilities": [
+      "company_profile"
+    ],
+    "get_anchor_company_site_read": [
+      "company_profile"
+    ],
+    "get_attachment_extraction": [
+      "documents"
+    ],
+    "get_claim_evidence": [
+      "companies"
+    ],
+    "get_communication_review": [
+      "consent"
+    ],
+    "get_company_brief": [
+      "companies"
+    ],
+    "get_company_capture_triage": [
+      "companies"
+    ],
+    "get_company_coverage": [
+      "reports"
+    ],
+    "get_company_dossier": [
+      "companies"
+    ],
+    "get_company_for_address": [
+      "companies"
+    ],
+    "get_company_growth_fit": [
+      "companies"
+    ],
+    "get_company_linked_in_reach": [
+      "contacts"
+    ],
+    "get_company_logo": [
+      "companies"
+    ],
+    "get_company_logo_icon": [
+      "companies"
+    ],
+    "get_company_scan": [
+      "companies"
+    ],
+    "get_contact_brief": [
+      "contacts"
+    ],
+    "get_contact_case_settings": [
+      "sales_rules"
+    ],
+    "get_contact_consent": [
+      "consent"
+    ],
+    "get_contact_consent_guard": [
+      "consent"
+    ],
+    "get_contact_enrichment_run": [
+      "contacts"
+    ],
+    "get_contact_profile_fields": [
+      "contacts"
+    ],
+    "get_contract": [
+      "contracts"
+    ],
+    "get_controller_particulars": [
+      "privacy_notices"
+    ],
+    "get_current_weekly_plan": [
+      "worklist"
+    ],
+    "get_data_subject_request_deadline": [
+      "privacy_requests"
+    ],
+    "get_deal_room_brief": [
+      "deal_rooms"
+    ],
+    "get_deal_suggestion": [
+      "deals"
+    ],
+    "get_deal_win_evidence": [
+      "deals"
+    ],
+    "get_extension_settings": [
+      "extensions"
+    ],
+    "get_field_history": [
+      "audit"
+    ],
+    "get_finance_source": [
+      "finance_source"
+    ],
+    "get_forecast_stage_chances": [
+      "forecast"
+    ],
+    "get_handled_for_you": [
+      "worklist"
+    ],
+    "get_handoff_assignee": [
+      "leads"
+    ],
+    "get_hidden_backlog": [
+      "worklist"
+    ],
+    "get_hidden_backlog_rows": [
+      "worklist"
+    ],
+    "get_latest_weekly_review": [
+      "worklist"
+    ],
+    "get_lead_signal_catalog": [
+      "sales_lists"
+    ],
+    "get_legal_entity": [
+      "company_profile"
+    ],
+    "get_legal_entity_logo": [
+      "company_profile"
+    ],
+    "get_legal_review": [
+      "legal_reviews"
+    ],
+    "get_legal_review_settings": [
+      "sales_rules"
+    ],
+    "get_magic": [
+      "worklist"
+    ],
+    "get_magic_line_records": [
+      "worklist"
+    ],
+    "get_mail_draft": [
+      "activities"
+    ],
+    "get_meeting_availability": [
+      "scheduling"
+    ],
+    "get_member": [
+      "members"
+    ],
+    "get_my_ai_activity": [
+      "own_profile"
+    ],
+    "get_my_email_signature": [
+      "own_profile"
+    ],
+    "get_my_linked_in_account": [
+      "own_profile"
+    ],
+    "get_my_linked_in_reach": [
+      "own_profile"
+    ],
+    "get_notice_case": [
+      "privacy_notices"
+    ],
+    "get_notice_case_review": [
+      "privacy_notices"
+    ],
+    "get_notice_source_evidence": [
+      "privacy_notices"
+    ],
+    "get_ownership_offer": [
+      "sharing"
+    ],
+    "get_ownership_request": [
+      "sharing"
+    ],
+    "get_pending_margince_changes": [
+      "deals"
+    ],
+    "get_record_history": [
+      "audit"
+    ],
+    "get_record_tags": [
+      "tags"
+    ],
+    "get_relationship_nudge": [
+      "contacts"
+    ],
+    "get_report_run": [
+      "reports"
+    ],
+    "get_response_metrics": [
+      "worklist"
+    ],
+    "get_sales_initiative": [
+      "reports"
+    ],
+    "get_saved_view": [
+      "lists"
+    ],
+    "get_scheduled_send": [
+      "activities"
+    ],
+    "get_scheduling_calendars": [
+      "scheduling"
+    ],
+    "get_sdr_summary": [
+      "reports"
+    ],
+    "get_sdr_team_review": [
+      "reports"
+    ],
+    "get_tag": [
+      "tags"
+    ],
+    "get_tag_suggestion": [
+      "tags"
+    ],
+    "get_team_board": [
+      "worklist"
+    ],
+    "get_team_exceptions": [
+      "worklist"
+    ],
+    "get_team_margince_changes": [
+      "worklist"
+    ],
+    "get_team_weekly_review": [
+      "worklist"
+    ],
+    "get_teammate_weekly_plan": [
+      "worklist"
+    ],
+    "get_user_handover": [
+      "members"
+    ],
+    "get_voice_build": [
+      "voice"
+    ],
+    "get_voice_learning_summary": [
+      "voice"
+    ],
+    "get_voice_profile": [
+      "voice"
+    ],
+    "get_web_form": [
+      "web_forms"
+    ],
+    "get_worklist": [
+      "worklist"
+    ],
+    "hand_over_user_work": [
+      "members"
+    ],
+    "hide_deal_document": [
+      "documents"
+    ],
+    "import_linkedin_connections": [
+      "own_profile"
+    ],
+    "import_vcards": [
+      "contacts"
+    ],
+    "intro_path_to": [
+      "companies"
+    ],
+    "invite_deal_room_participant": [
+      "deal_rooms"
+    ],
+    "invite_meeting": [
+      "scheduling"
+    ],
+    "invite_user": [
+      "members"
+    ],
+    "issue_double_opt_in": [
+      "consent"
+    ],
+    "keep_domain_as_company": [
+      "capture_triage"
+    ],
+    "keep_domain_as_vendor": [
+      "capture_triage"
+    ],
+    "launch_sales_initiative": [
+      "reports"
+    ],
+    "lift_capture_exclusion": [
+      "capture_rules"
+    ],
+    "lift_contact_suppression": [
+      "consent"
+    ],
+    "lift_counterparty_hold": [
+      "capture_triage"
+    ],
+    "lift_lead_suppression": [
+      "consent"
+    ],
+    "link_company_contacts": [
+      "companies"
+    ],
+    "link_finance_customer": [
+      "finance_source"
+    ],
+    "link_lead_company": [
+      "leads"
+    ],
+    "list_agent_tools": [
+      "agent_limits"
+    ],
+    "list_ai_calls": [
+      "ai_models"
+    ],
+    "list_ai_model_rates": [
+      "rates"
+    ],
+    "list_approvals": [
+      "agent_limits"
+    ],
+    "list_assignable_roles": [
+      "members"
+    ],
+    "list_audit_log": [
+      "audit"
+    ],
+    "list_automation_runs": [
+      "automations"
+    ],
+    "list_available_models": [
+      "ai_models"
+    ],
+    "list_blocked_domains": [
+      "capture_rules"
+    ],
+    "list_capture_contacts_awaiting_decision": [
+      "capture_triage"
+    ],
+    "list_capture_counterparty_holds": [
+      "capture_triage"
+    ],
+    "list_capture_exclusions": [
+      "capture_rules"
+    ],
+    "list_capture_owner_identities": [
+      "capture_rules"
+    ],
+    "list_capture_senders": [
+      "capture_triage"
+    ],
+    "list_channel_connections": [
+      "connectors"
+    ],
+    "list_channel_providers": [
+      "connectors"
+    ],
+    "list_colleagues": [
+      "members"
+    ],
+    "list_company_contracts": [
+      "contracts"
+    ],
+    "list_company_link_candidates": [
+      "companies"
+    ],
+    "list_company_offered_values": [
+      "companies"
+    ],
+    "list_confirm_submissions": [
+      "consent"
+    ],
+    "list_connector_containers": [
+      "connectors"
+    ],
+    "list_connectors": [
+      "connectors"
+    ],
+    "list_consumer_mail_baseline": [
+      "capture_rules"
+    ],
+    "list_consumer_mail_domains": [
+      "capture_rules"
+    ],
+    "list_contact_overrides": [
+      "consent"
+    ],
+    "list_contact_stops": [
+      "consent"
+    ],
+    "list_corpora": [
+      "knowledge"
+    ],
+    "list_corpus_documents": [
+      "knowledge"
+    ],
+    "list_data_subject_requests": [
+      "privacy_requests"
+    ],
+    "list_deal_legal_reviews": [
+      "legal_reviews"
+    ],
+    "list_deal_margince_changes": [
+      "deals"
+    ],
+    "list_deal_products": [
+      "deals"
+    ],
+    "list_deal_suggestions": [
+      "deals"
+    ],
+    "list_domain_questions": [
+      "capture_triage"
+    ],
+    "list_extensions": [
+      "extensions"
+    ],
+    "list_finance_source_customers": [
+      "finance_source"
+    ],
+    "list_forecast_shares": [
+      "forecast"
+    ],
+    "list_fx_rate_currencies": [
+      "rates"
+    ],
+    "list_fx_rates": [
+      "rates"
+    ],
+    "list_held_threads": [
+      "capture_triage"
+    ],
+    "list_import_runs": [
+      "imports"
+    ],
+    "list_input_checks": [
+      "forecast"
+    ],
+    "list_intro_requests": [
+      "contacts"
+    ],
+    "list_lead_manual_signals": [
+      "leads"
+    ],
+    "list_lead_stops": [
+      "consent"
+    ],
+    "list_legacy_loss_reasons": [
+      "sales_lists"
+    ],
+    "list_legal_entities": [
+      "company_profile"
+    ],
+    "list_legal_entity_members": [
+      "company_profile"
+    ],
+    "list_legal_holds": [
+      "retention"
+    ],
+    "list_legal_reviews": [
+      "legal_reviews"
+    ],
+    "list_meeting_proposals": [
+      "scheduling"
+    ],
+    "list_my_capture_activity": [
+      "capture_triage"
+    ],
+    "list_notice_case_reviews": [
+      "privacy_notices"
+    ],
+    "list_notice_cases": [
+      "privacy_notices"
+    ],
+    "list_notices": [
+      "worklist"
+    ],
+    "list_notification_preferences": [
+      "own_profile"
+    ],
+    "list_ownership_offer_candidates": [
+      "sharing"
+    ],
+    "list_pipelines": [
+      "pipelines"
+    ],
+    "list_product_translations": [
+      "catalog"
+    ],
+    "list_provider_connections": [
+      "connectors"
+    ],
+    "list_provider_locations": [
+      "ai_models"
+    ],
+    "list_record_documents": [
+      "documents"
+    ],
+    "list_records": [
+      "activities",
+      "catalog",
+      "commissions",
+      "companies",
+      "contacts",
+      "deal_rooms",
+      "deals",
+      "leads",
+      "offers",
+      "partners",
+      "projects"
+    ],
+    "list_report_runs": [
+      "reports"
+    ],
+    "list_reporting_report_revisions": [
+      "reports"
+    ],
+    "list_restricted_activities": [
+      "retention"
+    ],
+    "list_retention_policies": [
+      "retention"
+    ],
+    "list_roles": [
+      "members"
+    ],
+    "list_sales_decisions": [
+      "reports"
+    ],
+    "list_sales_initiative_members": [
+      "reports"
+    ],
+    "list_sales_initiatives": [
+      "reports"
+    ],
+    "list_saved_views": [
+      "lists"
+    ],
+    "list_scheduled_sends": [
+      "activities"
+    ],
+    "list_sdr_upcoming_meetings": [
+      "reports"
+    ],
+    "list_sdr_waiting_handoffs": [
+      "reports"
+    ],
+    "list_tags": [
+      "tags"
+    ],
+    "list_tax_rates": [
+      "rates"
+    ],
+    "list_voice_corpus_sources": [
+      "voice"
+    ],
+    "list_voice_profile_deltas": [
+      "voice"
+    ],
+    "list_voice_profile_versions": [
+      "voice"
+    ],
+    "list_voice_profiles": [
+      "voice"
+    ],
+    "list_web_forms": [
+      "web_forms"
+    ],
+    "list_weekly_reviews": [
+      "worklist"
+    ],
+    "list_workspace_capture_activity": [
+      "capture_triage"
+    ],
+    "list_workspace_email_domains": [
+      "capture_rules"
+    ],
+    "log_activity": [
+      "activities"
+    ],
+    "mark_all_notices_read": [
+      "worklist"
+    ],
+    "mark_booking_page_shared": [
+      "scheduling"
+    ],
+    "mark_brief_item_acted": [
+      "worklist"
+    ],
+    "mark_brief_item_dismissed": [
+      "worklist"
+    ],
+    "mark_notice_read": [
+      "worklist"
+    ],
+    "mark_worklist_rows_done": [
+      "worklist"
+    ],
+    "merge_members": [
+      "members"
+    ],
+    "merge_records": [
+      "companies",
+      "contacts",
+      "duplicates"
+    ],
+    "merge_tags": [
+      "tags"
+    ],
+    "message_anchor_company_site_read": [
+      "company_profile"
+    ],
+    "offer_ownership_transfer": [
+      "sharing"
+    ],
+    "open_data_subject_request": [
+      "privacy_requests"
+    ],
+    "open_deal_room_thread": [
+      "deal_rooms"
+    ],
+    "open_forecast_share": [
+      "forecast"
+    ],
+    "pause_deal_room": [
+      "deal_rooms"
+    ],
+    "pin_activity_to_floor": [
+      "retention"
+    ],
+    "pin_worklist_row": [
+      "worklist"
+    ],
+    "place_legal_hold": [
+      "retention"
+    ],
+    "prep_for_meeting": [
+      "search"
+    ],
+    "prepare_handoff": [
+      "projects"
+    ],
+    "preview_account_send_authorization": [
+      "activities"
+    ],
+    "preview_ai_budget": [
+      "ai_models"
+    ],
+    "preview_ai_routing": [
+      "ai_models"
+    ],
+    "preview_ai_task_overrides": [
+      "ai_models"
+    ],
+    "preview_automation": [
+      "automations"
+    ],
+    "preview_connector_backfill": [
+      "connectors"
+    ],
+    "preview_controller_mail": [
+      "consent"
+    ],
+    "preview_email_sign_off": [
+      "activities"
+    ],
+    "preview_filter": [
+      "lists"
+    ],
+    "preview_forecast_assurance": [
+      "forecast"
+    ],
+    "preview_home_repair": [
+      "system_health"
+    ],
+    "preview_import": [
+      "imports"
+    ],
+    "preview_lead_promotion": [
+      "leads"
+    ],
+    "preview_mail_deal_repair": [
+      "system_health"
+    ],
+    "preview_member_retirement": [
+      "members"
+    ],
+    "preview_notice_source": [
+      "privacy_notices"
+    ],
+    "preview_send_authorization": [
+      "activities"
+    ],
+    "preview_voice_source": [
+      "voice"
+    ],
+    "progress_deal": [
+      "deals"
+    ],
+    "promote_lead": [
+      "leads"
+    ],
+    "propose_deal_roles": [
+      "deals"
+    ],
+    "propose_filter": [
+      "lists"
+    ],
+    "propose_fx_rate_refresh": [
+      "rates"
+    ],
+    "propose_report_setup": [
+      "reports"
+    ],
+    "publish_captured_contact": [
+      "contacts"
+    ],
+    "publish_reporting_framework": [
+      "reports"
+    ],
+    "publish_reporting_report_draft": [
+      "reports"
+    ],
+    "put_anchor_company": [
+      "company_profile"
+    ],
+    "put_product_translation": [
+      "catalog"
+    ],
+    "put_scheduling_alias": [
+      "scheduling"
+    ],
+    "put_scheduling_profile": [
+      "scheduling"
+    ],
+    "qualify_lead": [
+      "leads"
+    ],
+    "query_workspace": [
+      "search"
+    ],
+    "raise_notice": [
+      "worklist"
+    ],
+    "reactivate_user": [
+      "members"
+    ],
+    "read_activity_pipeline_trace": [
+      "activities"
+    ],
+    "read_ai_price_sync": [
+      "ai_models"
+    ],
+    "read_ai_routing": [
+      "ai_models"
+    ],
+    "read_approval": [
+      "agent_limits"
+    ],
+    "read_attachment_for_fields": [
+      "documents"
+    ],
+    "read_automatic_work_health": [
+      "system_health"
+    ],
+    "read_brief": [
+      "worklist"
+    ],
+    "read_capture_health": [
+      "system_health"
+    ],
+    "read_capture_trace_pipeline": [
+      "capture_triage"
+    ],
+    "read_card_photo": [
+      "contacts"
+    ],
+    "read_corpus": [
+      "knowledge"
+    ],
+    "read_data_tasks": [
+      "system_health"
+    ],
+    "read_deal_lines": [
+      "deals"
+    ],
+    "read_extension_ingest_health": [
+      "system_health"
+    ],
+    "read_import_report": [
+      "imports"
+    ],
+    "read_installation_jurisdiction": [
+      "installation"
+    ],
+    "read_job_health": [
+      "system_health"
+    ],
+    "read_job_health_history": [
+      "system_health"
+    ],
+    "read_lists": [
+      "lists"
+    ],
+    "read_my_brief_delivery": [
+      "own_profile"
+    ],
+    "read_my_working_hours": [
+      "own_profile"
+    ],
+    "read_onboarding_company_proposal": [
+      "company_profile"
+    ],
+    "read_onboarding_state": [
+      "own_profile"
+    ],
+    "read_project_360": [
+      "projects"
+    ],
+    "read_record": [
+      "activities",
+      "catalog",
+      "commissions",
+      "companies",
+      "contacts",
+      "deal_rooms",
+      "deals",
+      "leads",
+      "offers",
+      "projects"
+    ],
+    "read_recovery_health": [
+      "system_health"
+    ],
+    "read_reporting": [
+      "commissions",
+      "reports"
+    ],
+    "read_retention_settings": [
+      "retention"
+    ],
+    "read_site_read_logo": [
+      "company_profile"
+    ],
+    "read_system_health": [
+      "system_health"
+    ],
+    "read_transcript_for_next_steps": [
+      "activities"
+    ],
+    "read_view": [
+      "activities",
+      "automations",
+      "bulk",
+      "capture_triage",
+      "companies",
+      "consent",
+      "contacts",
+      "custom_fields",
+      "deals",
+      "documents",
+      "duplicates",
+      "forecast",
+      "imports",
+      "lists",
+      "members",
+      "pipelines",
+      "projects",
+      "reports",
+      "sales_lists",
+      "sales_rules",
+      "scheduling",
+      "sharing",
+      "signals",
+      "system_facts"
+    ],
+    "reassign_handoff": [
+      "leads"
+    ],
+    "record_communication_context": [
+      "consent"
+    ],
+    "record_consent": [
+      "consent"
+    ],
+    "record_conversation_claim": [
+      "contacts"
+    ],
+    "record_forecast_call": [
+      "forecast"
+    ],
+    "record_introduction": [
+      "contacts"
+    ],
+    "record_lead_qualifying_event": [
+      "consent"
+    ],
+    "record_qualifying_event": [
+      "consent"
+    ],
+    "record_sales_decision": [
+      "reports"
+    ],
+    "record_sales_decision_outcome": [
+      "reports"
+    ],
+    "record_tax_rate": [
+      "rates"
+    ],
+    "refresh_ai_model_rates": [
+      "rates"
+    ],
+    "refresh_company_dossier": [
+      "companies"
+    ],
+    "refresh_company_growth_fit": [
+      "companies"
+    ],
+    "refresh_offer_from_deal": [
+      "offers"
+    ],
+    "regenerate_company_brief": [
+      "companies"
+    ],
+    "regenerate_contact_brief": [
+      "contacts"
+    ],
+    "regenerate_offer": [
+      "offers"
+    ],
+    "reject_offer": [
+      "offers"
+    ],
+    "reject_voice_version": [
+      "voice"
+    ],
+    "relink_activities": [
+      "activities"
+    ],
+    "relink_activity": [
+      "activities"
+    ],
+    "relink_thread": [
+      "activities"
+    ],
+    "remove_consumer_mail_domain": [
+      "capture_rules"
+    ],
+    "remove_deal_line": [
+      "deals"
+    ],
+    "remove_deal_room_document": [
+      "deal_rooms"
+    ],
+    "remove_tag": [
+      "tags"
+    ],
+    "remove_team_member": [
+      "members"
+    ],
+    "remove_workspace_email_domain": [
+      "capture_rules"
+    ],
+    "remove_workspace_member": [
+      "members"
+    ],
+    "rename_custom_field": [
+      "custom_fields"
+    ],
+    "render_offer": [
+      "offers"
+    ],
+    "renew_contract": [
+      "contracts"
+    ],
+    "reopen_lead": [
+      "leads"
+    ],
+    "reopen_withheld_domain": [
+      "capture_rules"
+    ],
+    "reopen_worklist_rows": [
+      "worklist"
+    ],
+    "reorder_pipelines": [
+      "pipelines"
+    ],
+    "reorder_stages": [
+      "pipelines"
+    ],
+    "replace_deal_products": [
+      "deals"
+    ],
+    "replace_intro_request": [
+      "contacts"
+    ],
+    "replace_sales_initiative_members": [
+      "reports"
+    ],
+    "reply_deal_room_thread": [
+      "deal_rooms"
+    ],
+    "request_attachment_access": [
+      "documents"
+    ],
+    "request_company_vat_check": [
+      "companies"
+    ],
+    "request_details_confirmation": [
+      "consent"
+    ],
+    "request_legal_review": [
+      "legal_reviews"
+    ],
+    "request_ownership_transfer": [
+      "sharing"
+    ],
+    "reschedule_scheduled_send": [
+      "activities"
+    ],
+    "resend_deal_room_invitation": [
+      "deal_rooms"
+    ],
+    "resend_member_invite": [
+      "members"
+    ],
+    "resolve_confirm_submission": [
+      "consent"
+    ],
+    "resolve_deal_room_thread": [
+      "deal_rooms"
+    ],
+    "resolve_entities": [
+      "search"
+    ],
+    "resolve_input_check": [
+      "forecast"
+    ],
+    "resolve_signal": [
+      "signals"
+    ],
+    "restore_company_suggestion": [
+      "companies"
+    ],
+    "restore_contact_moment": [
+      "contacts"
+    ],
+    "restore_contact_profile_field": [
+      "contacts"
+    ],
+    "restore_deal_move": [
+      "deals"
+    ],
+    "restore_owner_identity": [
+      "capture_rules"
+    ],
+    "restore_pipeline": [
+      "pipelines"
+    ],
+    "restore_relationship_nudge": [
+      "contacts"
+    ],
+    "restore_reporting_report_revision": [
+      "reports"
+    ],
+    "restore_tag": [
+      "tags"
+    ],
+    "resume_deal_room": [
+      "deal_rooms"
+    ],
+    "retire_custom_field": [
+      "custom_fields"
+    ],
+    "retract_acquisition_request": [
+      "consent"
+    ],
+    "retract_lead_qualifying_event": [
+      "consent"
+    ],
+    "retract_qualifying_event": [
+      "consent"
+    ],
+    "retry_automation_run": [
+      "automations"
+    ],
+    "retry_reporting_execution": [
+      "reports"
+    ],
+    "review_commitments": [
+      "activities"
+    ],
+    "revoke_contact_override": [
+      "consent"
+    ],
+    "revoke_deal_room_participant": [
+      "deal_rooms"
+    ],
+    "revoke_forecast_share": [
+      "forecast"
+    ],
+    "revoke_record_share": [
+      "sharing"
+    ],
+    "rollback_voice_version": [
+      "voice"
+    ],
+    "run_analytics_query": [
+      "reports"
+    ],
+    "run_contact_research": [
+      "contacts"
+    ],
+    "run_report": [
+      "reports"
+    ],
+    "save_contact_research": [
+      "contacts"
+    ],
+    "save_email_signature_template": [
+      "sales_rules"
+    ],
+    "save_mail_draft": [
+      "activities"
+    ],
+    "save_my_display_name": [
+      "own_profile"
+    ],
+    "save_my_email_signature": [
+      "own_profile"
+    ],
+    "save_my_greeting_name": [
+      "own_profile"
+    ],
+    "save_my_linked_in_account": [
+      "own_profile"
+    ],
+    "save_my_locale": [
+      "own_profile"
+    ],
+    "save_my_onboarding_state": [
+      "own_profile"
+    ],
+    "save_my_timezone": [
+      "own_profile"
+    ],
+    "save_my_working_hours": [
+      "own_profile"
+    ],
+    "search_context": [
+      "search"
+    ],
+    "search_records": [
+      "search"
+    ],
+    "search_report_evidence": [
+      "reports"
+    ],
+    "send_company_email": [
+      "activities"
+    ],
+    "send_email": [
+      "activities"
+    ],
+    "send_message": [
+      "activities"
+    ],
+    "send_offer": [
+      "offers"
+    ],
+    "send_privacy_notice": [
+      "consent"
+    ],
+    "set_activity_audience": [
+      "activities"
+    ],
+    "set_activity_disposition": [
+      "activities"
+    ],
+    "set_ai_model_rate": [
+      "rates"
+    ],
+    "set_ai_price_sync": [
+      "ai_models"
+    ],
+    "set_blocked_domain": [
+      "capture_rules"
+    ],
+    "set_capture_sender_decision": [
+      "capture_triage"
+    ],
+    "set_connector_context_tag": [
+      "connectors"
+    ],
+    "set_connector_history_baseline": [
+      "connectors"
+    ],
+    "set_connector_mail_posture": [
+      "connectors"
+    ],
+    "set_connector_signature_enrichment": [
+      "connectors"
+    ],
+    "set_deal_room_expiry": [
+      "deal_rooms"
+    ],
+    "set_fx_rate": [
+      "rates"
+    ],
+    "set_lead_manual_signal": [
+      "leads"
+    ],
+    "set_thread_audience": [
+      "activities"
+    ],
+    "set_up_partner": [
+      "companies"
+    ],
+    "set_weekly_plan_commitment_state": [
+      "worklist"
+    ],
+    "set_weekly_plan_contract": [
+      "worklist"
+    ],
+    "settle_conversation_claim": [
+      "contacts"
+    ],
+    "share_company_contacts": [
+      "companies"
+    ],
+    "share_counterparty_hold_history": [
+      "capture_triage"
+    ],
+    "share_record": [
+      "sharing"
+    ],
+    "snooze_brief_item": [
+      "worklist"
+    ],
+    "start_connector_backfill": [
+      "connectors"
+    ],
+    "start_forecast_assurance_run": [
+      "forecast"
+    ],
+    "start_search_reindex": [
+      "search_index"
+    ],
+    "start_weekly_plan": [
+      "worklist"
+    ],
+    "suppress_contact": [
+      "consent"
+    ],
+    "sync_finance_source": [
+      "finance_source"
+    ],
+    "take_over_conversation_claim": [
+      "contacts"
+    ],
+    "transfer_project_ownership": [
+      "projects"
+    ],
+    "undo_import_run": [
+      "imports"
+    ],
+    "undo_meeting_ready": [
+      "worklist"
+    ],
+    "unhide_deal_document": [
+      "documents"
+    ],
+    "unlink_finance_customer": [
+      "finance_source"
+    ],
+    "unpin_worklist_row": [
+      "worklist"
+    ],
+    "unsnooze_brief_item": [
+      "worklist"
+    ],
+    "update_acquisition_source": [
+      "sales_lists"
+    ],
+    "update_activity_review_template": [
+      "sales_rules"
+    ],
+    "update_attachment_metadata": [
+      "documents"
+    ],
+    "update_automation": [
+      "automations"
+    ],
+    "update_contact_case_settings": [
+      "sales_rules"
+    ],
+    "update_contract": [
+      "contracts"
+    ],
+    "update_corpus": [
+      "knowledge"
+    ],
+    "update_custom_field_options": [
+      "custom_fields"
+    ],
+    "update_data_subject_request": [
+      "privacy_requests"
+    ],
+    "update_deal_line": [
+      "deals"
+    ],
+    "update_deal_room": [
+      "deal_rooms"
+    ],
+    "update_deal_room_document": [
+      "deal_rooms"
+    ],
+    "update_deal_room_participant": [
+      "deal_rooms"
+    ],
+    "update_exit_criterion": [
+      "pipelines"
+    ],
+    "update_follow_up_settings": [
+      "sales_rules"
+    ],
+    "update_import_run": [
+      "imports"
+    ],
+    "update_lead_disqualify_reason": [
+      "sales_lists"
+    ],
+    "update_lead_origin": [
+      "sales_lists"
+    ],
+    "update_lead_settings": [
+      "sales_rules"
+    ],
+    "update_lead_source": [
+      "sales_lists"
+    ],
+    "update_legal_entity": [
+      "company_profile"
+    ],
+    "update_legal_review_settings": [
+      "sales_rules"
+    ],
+    "update_loss_reason": [
+      "sales_lists"
+    ],
+    "update_member": [
+      "members"
+    ],
+    "update_partner_stage": [
+      "pipelines"
+    ],
+    "update_pipeline": [
+      "pipelines"
+    ],
+    "update_record": [
+      "activities",
+      "catalog",
+      "companies",
+      "contacts",
+      "deals",
+      "leads",
+      "offers",
+      "projects"
+    ],
+    "update_record_assignment": [
+      "sharing"
+    ],
+    "update_record_role": [
+      "members"
+    ],
+    "update_reporting_report": [
+      "reports"
+    ],
+    "update_reporting_schedule": [
+      "reports"
+    ],
+    "update_reporting_target": [
+      "reports"
+    ],
+    "update_sales_initiative": [
+      "reports"
+    ],
+    "update_saved_view": [
+      "lists"
+    ],
+    "update_signal": [
+      "signals"
+    ],
+    "update_stage": [
+      "pipelines"
+    ],
+    "update_tag": [
+      "tags"
+    ],
+    "update_team": [
+      "members"
+    ],
+    "update_voice_profile": [
+      "voice"
+    ],
+    "update_voice_source": [
+      "voice"
+    ],
+    "update_web_form": [
+      "web_forms"
+    ],
+    "upload_company_logo": [
+      "company_profile"
+    ],
+    "upload_company_logo_icon": [
+      "company_profile"
+    ],
+    "upload_corpus_document": [
+      "knowledge"
+    ],
+    "upload_legal_entity_logo": [
+      "company_profile"
+    ],
+    "upsert_partner": [
+      "companies"
+    ],
+    "use_deal_estimate": [
+      "deals"
+    ],
+    "validate_import_run": [
+      "imports"
+    ],
+    "visit_list": [
+      "lists"
+    ],
+    "whats_slipping_this_week": [
+      "deals"
+    ],
+    "who_knows": [
+      "contacts"
+    ],
+    "whoami": [
+      "own_profile"
+    ],
+    "withdraw_capture_sender_decision": [
+      "capture_triage"
+    ],
+    "withdraw_legal_review": [
+      "legal_reviews"
+    ],
+    "withdraw_owner_identity": [
+      "capture_rules"
+    ],
+    "withdraw_ownership_offer": [
+      "sharing"
+    ],
+    "withdraw_ownership_request": [
+      "sharing"
+    ]
+  },
   "verbs": {
     "accept_applied_deal_change": [
       "business"
@@ -964,6 +4118,9 @@
       "compliance"
     ],
     "annotate_brief": [
+      "business"
+    ],
+    "answer_calendar_invitation": [
       "business"
     ],
     "answer_reporting_question_card": [
@@ -1272,6 +4429,9 @@
       "admin_settings"
     ],
     "decide_legal_review": [
+      "business"
+    ],
+    "decline_activity_deal": [
       "business"
     ],
     "delete_anchor_company_logo": [
@@ -1613,6 +4773,9 @@
     "get_handled_for_you": [
       "business"
     ],
+    "get_handoff_assignee": [
+      "business"
+    ],
     "get_hidden_backlog": [
       "business"
     ],
@@ -1885,6 +5048,9 @@
     ],
     "list_consumer_mail_domains": [
       "workspace_settings"
+    ],
+    "list_contact_overrides": [
+      "compliance"
     ],
     "list_contact_stops": [
       "compliance"
@@ -2337,6 +5503,9 @@
       "operator",
       "workspace_settings"
     ],
+    "reassign_handoff": [
+      "business"
+    ],
     "record_communication_context": [
       "compliance"
     ],
@@ -2351,6 +5520,9 @@
     ],
     "record_introduction": [
       "business"
+    ],
+    "record_lead_qualifying_event": [
+      "compliance"
     ],
     "record_qualifying_event": [
       "compliance"
@@ -2448,6 +5620,9 @@
     "replace_deal_products": [
       "business"
     ],
+    "replace_intro_request": [
+      "business"
+    ],
     "replace_sales_initiative_members": [
       "business"
     ],
@@ -2527,6 +5702,9 @@
       "admin_settings"
     ],
     "retract_acquisition_request": [
+      "compliance"
+    ],
+    "retract_lead_qualifying_event": [
       "compliance"
     ],
     "retract_qualifying_event": [

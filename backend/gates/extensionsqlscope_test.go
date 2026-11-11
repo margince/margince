@@ -412,6 +412,8 @@ var sqlStatementShapes = []struct{ opener, companion string }{
 	{"with", " as "},
 	{"merge", " into "},
 	{"create", " table "},
+	{"create", " function "},
+	{"create", " procedure "},
 	{"alter", " table "},
 	{"drop", " table "},
 	// TRUNCATE's companion is the optional TABLE word, which makes the bare
@@ -457,7 +459,15 @@ func looksLikeSQL(text string) bool {
 // which is the difference between reading `DO $$ BEGIN DELETE FROM contact; END
 // $$` and reading `DO`.
 func stripNoise(text string) string {
-	if opensDoBlock(text) {
+	fields := strings.Fields(sqlComments.ReplaceAllString(text, " "))
+	routine := len(fields) > 1 && strings.EqualFold(fields[0], "create")
+	if routine {
+		if len(fields) > 3 && strings.EqualFold(fields[1], "or") && strings.EqualFold(fields[2], "replace") {
+			fields = append(fields[:1:1], fields[3:]...)
+		}
+		routine = strings.EqualFold(fields[1], "function") || strings.EqualFold(fields[1], "procedure")
+	}
+	if opensDoBlock(text) || routine {
 		return sqlComments.ReplaceAllString(text, " ")
 	}
 	return sqlNoise.ReplaceAllString(text, " ")
@@ -485,7 +495,7 @@ var (
 	// has no backreference), so it matches the nearest closing delimiter of the
 	// same SHAPE, which over-strips only a statement carrying two
 	// differently-tagged bodies.
-	sqlNoise = regexp.MustCompile(`--[^\n]*|(?s)/\*.*?\*/|'(?:[^']|'')*'|(?s)\$[A-Za-z0-9_]*\$.*?\$[A-Za-z0-9_]*\$`)
+	sqlNoise = regexp.MustCompile(`--[^\n]*|(?s)/\*.*?\*/|[eE]'(?:[^'\\]|\\.|'')*'|'(?:[^']|'')*'|(?s)\$[A-Za-z0-9_]*\$.*?\$[A-Za-z0-9_]*\$`)
 
 	// sqlToken splits a statement into names (a dotted chain of bare or quoted
 	// identifiers, held together so `"ext"."ext_notes_note"` is one token),

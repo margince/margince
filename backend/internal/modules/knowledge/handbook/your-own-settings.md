@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/settings/account-settings.tsx frontend/src/features/settings/notification-settings.tsx frontend/src/features/sign-in/mfasetup.tsx frontend/src/features/booking/booking-setup.tsx frontend/src/features/voice-knowledge/voice-dna.tsx frontend/src/features/capture/connection-settings.tsx backend/internal/modules/identity/mfa.go backend/internal/modules/activities/scheduling_profile.go frontend/src/features/settings/settingssignaturerow.tsx backend/internal/modules/contacts/emailsignature.go backend/internal/modules/activities/signature.go frontend/src/app/setup-reminder.tsx frontend/src/app/account.tsx backend/internal/modules/identity/avatar.go backend/internal/modules/identity/providerpicture.go backend/internal/modules/identity/federatedidentity.go backend/internal/compose/avatarprovider.go backend/internal/compose/connectors_picture.go -->
+<!-- describes: frontend/src/features/settings/account-settings.tsx frontend/src/features/settings/notification-settings.tsx frontend/src/features/sign-in/mfasetup.tsx frontend/src/features/booking/booking-setup.tsx frontend/src/features/voice-knowledge/voice-dna.tsx frontend/src/features/capture/connection-settings.tsx backend/internal/modules/identity/mfa.go backend/internal/modules/activities/scheduling_profile.go frontend/src/features/settings/settingssignaturerow.tsx backend/internal/modules/contacts/emailsignature.go backend/internal/modules/activities/signature.go frontend/src/app/setup-reminder.tsx frontend/src/app/account.tsx backend/internal/modules/identity/avatar.go backend/internal/modules/identity/providerpicture.go backend/internal/modules/identity/federatedidentity.go backend/internal/compose/avatarprovider.go backend/internal/compose/connectors_picture.go frontend/src/lib/shortcuts.ts -->
 # Your own settings
 
 Your own settings in Margince are the pages under **You** in Settings: **Account**, **Notifications**, **Meetings**, **Writing voice**, **AI assistants** and **Connections**. Everything here changes your own seat and nobody else's.
@@ -48,9 +48,9 @@ In **Appointments**, edit the booking link to offer more choices for meeting min
 
 ## Account
 
-The Account page in Settings has three panels. **Profile** holds who you are: your picture, your display and greeting names, and your email signature. **Security** holds your password and two-step sign-in, and **Sign out**. **Language and appearance** holds which language the product uses with you (English, Deutsch or Tiếng Việt), and how it looks. **Appearance** is here as well as in the account menu, where it is called **Theme**. Both change the same setting.
+The Account page in Settings has four panels. **Profile** holds who you are: your picture, your display and greeting names, and your email signature. **Sign-in** holds your password, two-step sign-in and **Sign out**. **Language and time zone** holds which language the product uses with you (English, Deutsch or Tiếng Việt), and your time zone. **This browser** holds what applies in this browser only: **Appearance** and **Single-key shortcuts**. **Appearance** is also in the account menu, where it is called **Theme**, and both change the same setting.
 
-Where your browser can add Margince to this device as an app, a fourth panel shows: **This device**. It offers **Install**, says how to add the app, or says **Installed**.
+Where your browser can add Margince to this device as an app, **This browser** also has a **Margince app** row. It offers **Install**, says how to add the app, or says **Installed**.
 
 ### How do I change my password?
 <!-- opens: settings/account -->
@@ -75,11 +75,13 @@ Margince shows the backup codes once, and never again. The row then reads "On ·
 A setup you started and did not finish shows **Not finished**. **Discard setup** removes it, with no code needed.
 
 ### What if Margince asks me to set up two-step sign-in before I can continue?
-Your installation requires two-step sign-in, and you have not set it up yet. After your password, Margince shows **Set up two-step sign-in**.
+Your installation requires two-step sign-in for password sessions, and you have not set it up yet. After your password, Margince shows **Set up two-step sign-in**. Google and Microsoft manage their own MFA; provider sessions do not require Margince setup.
 Choose **Set up**. The steps are the same as on the **Account** page, from the picture to **Turn on**.
 Keep your **Recovery codes**, choose **Done**, and Margince opens.
 
-If you are already signed in when the switch goes on, you see this page the next time Margince checks. **Sign out** leaves without setting it up. Also called: required two-step sign-in, must set up, cannot continue.
+If you already have a password session when the switch goes on, you see this page the next time Margince checks. **Sign out** leaves without setting it up. Also called: required two-step sign-in, must set up, cannot continue.
+
+Older sessions keep the password rule until the next sign-in. Changing a password opens a password session, so the rule applies to it too.
 
 ### How do I sign in with two-step sign-in?
 To sign in to Margince with two-step sign-in, enter your email and password as usual. Margince then shows **Verification code**.
@@ -94,7 +96,7 @@ To turn off two-step sign-in in Margince, open Settings → **Account**, choose 
 The code is one your phone app shows now, or one of your backup codes. Your backup codes stop working with it.
 For new backup codes, or to move to a new phone, remove it and set it up again.
 
-If your installation requires two-step sign-in, Margince asks you to set it up again straight away. That is also how you get new backup codes there. Also called: new phone, new backup codes, lost phone.
+If your installation requires two-step sign-in for password sessions, Margince asks you to set it up again in those sessions. That is also how you get new backup codes there. Also called: new phone, new backup codes, lost phone.
 
 Keep your backup codes where you can find them without your phone. If you lose both, an administrator can remove two-step sign-in for you from **Settings → Members**. You then sign in with your password and set it up again.
 
@@ -134,6 +136,15 @@ To change the theme in Margince, open Settings → **Account** and pick a choice
 You can do the same from the account menu at the top right, under **Theme**. Both change the same setting.
 **System** follows the light or dark setting of your computer or phone, and keeps following it.
 Also called: dark mode, light mode, appearance, colour scheme.
+
+### How do I turn off single-key shortcuts?
+<!-- opens: settings/account -->
+To turn off the keyboard shortcuts that are one key, open Settings → **Account**. Turn off **Single-key shortcuts** in the **This browser** card.
+The change is made at once, and applies in this browser only. Another browser or computer keeps its own choice.
+
+With it off, `?`, `/`, `C`, `G`, `N` and the other one-key shortcuts do nothing. `⌘K`, `⌘B`, `⌘↵` and `Esc` keep working.
+The full list of shortcuts is in [What Margince is](what-margince-is.md#what-keyboard-shortcuts-does-margince-have).
+Also called: turn off keys, keyboard shortcuts, single key.
 
 ## Meetings
 
@@ -232,13 +243,13 @@ The Writing voice page in Settings holds your **Voice DNA**: your personal writi
 ### How do I set up my writing voice?
 <!-- opens: settings/voice -->
 To set up your writing voice in Margince, open Settings → **Writing voice**, add writing samples, then choose **Build Voice DNA**.
-1. Under **Add your writing**, drop or pick files, several at once. After that, add more under **Make it sharper**. **Add writing** at the top takes you there.
+1. Under **Add your writing**, drop or pick files, several at once. After that, add more on the **Writing samples** tab. **Add writing** at the top takes you there.
 2. The files can be `.txt`, `.md`, `.pdf`, `.docx`, `.vtt`, `.srt` or `.json`. To add text without a file, paste it in **Paste text** and choose **Add text**.
    To use mail you sent, choose **Learn from sent mail**. Margince then reads up to your 200 most recent sent mails.
 3. Add at least 800 words of your own writing. The bar shows how far you are.
 4. At the top of the page, choose **Build Voice DNA**. It takes about 60 seconds, and goes on if you leave the page.
 
-When a build finishes, read what it learned at the top of the page. Then choose **Use this version** or **Discard this version**. After the first build, **Rebuild Voice DNA** is under **Builds**. Notes on how you want to sound go in **Preferences** under **Your rules**, then **Save preferences**. The bar at the top of the page takes you to each section. Also called: tone, writing style, Voice DNA, sound like me, learn from my email.
+When a build finishes, read what it learned at the top of the page. Then choose **Use this version** or **Discard this version**. The page has four tabs: **Your voice**, **Writing samples**, **Your rules** and **Builds**. After the first build, **Rebuild Voice DNA** is on the **Builds** tab. Notes on how you want to sound go in **Preferences** on the **Your rules** tab, then **Save preferences**. Also called: tone, writing style, Voice DNA, sound like me, learn from my email.
 
 The best samples are emails you sent, then proposals and posts, then the written record of calls or meetings. Leave out text others wrote, and AI drafts: Margince learns a different voice from them. A read-only seat sees the page and cannot change it.
 
@@ -307,7 +318,7 @@ All the detail (IMAP settings, importing past mail, reconnecting, and what captu
 The **Activity** tab of Connections says what your connected mail turned into,
 and holds the decisions you make about it. The cards, in order:
 
-**Held threads.** Threads your mailbox is holding back from the team right now, with the reason. **Share with the team** releases one; only you can release yours.
+**Held threads.** Threads your mailbox is holding back from the team right now, with the reason. **Share with the team** releases one; only you can release yours. When a thread is held, its earlier messages that the team could already read are held too. Sharing the thread again opens them.
 
 **Capture exclusions** are addresses and domains whose messages never come into the CRM. Your rules apply only to mailboxes you connected. The company's rules apply to everyone, and only an administrator may add or remove one of those. A rule applies from the next message; what is already captured stays.
 

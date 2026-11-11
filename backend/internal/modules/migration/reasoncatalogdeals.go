@@ -27,6 +27,7 @@ const (
 	ReasonLostReasonMissing      ReasonCode = "lost_reason_missing"
 	ReasonDealPipelineFixed      ReasonCode = "deal_pipeline_fixed"
 	ReasonDealAlreadyClosed      ReasonCode = "deal_already_closed"
+	ReasonDealCompanyContracts   ReasonCode = "deal_company_has_contracts"
 	ReasonFxRateMissing          ReasonCode = "fx_rate_missing"
 	ReasonDealLegalGate          ReasonCode = "deal_legal_gate"
 	ReasonPipelineNoOpenStage    ReasonCode = "pipeline_no_open_stage"
@@ -102,6 +103,11 @@ var dealReasons = map[ReasonCode]reasonEntry{
 		textlang.English:    "This deal is already closed, so the row is skipped. An import does not reopen a closed deal.",
 		textlang.German:     "Dieser Deal ist bereits abgeschlossen, daher wird die Zeile übersprungen. Ein Import öffnet keinen abgeschlossenen Deal wieder.",
 		textlang.Vietnamese: "Deal này đã đóng nên hàng bị bỏ qua. Nhập không mở lại deal đã đóng.",
+	}},
+	ReasonDealCompanyContracts: {params: nil, text: map[textlang.Lang]string{
+		textlang.English:    "This deal has contracts that name a company other than the one in this row, so the row is skipped. Archived contracts also count. Ask an administrator to correct the contract links, then import again.",
+		textlang.German:     "Für diesen Deal sind Verträge hinterlegt, die ein anderes Unternehmen als das in dieser Zeile nennen, daher wird die Zeile übersprungen. Auch archivierte Verträge zählen. Bitte einen Administrator, die Vertragsverknüpfungen zu korrigieren, und importiere erneut.",
+		textlang.Vietnamese: "Deal này có hợp đồng thuộc một công ty khác với công ty trong hàng này nên hàng bị bỏ qua. Hợp đồng đã lưu trữ cũng được tính. Hãy nhờ quản trị viên sửa liên kết hợp đồng rồi nhập lại.",
 	}},
 	ReasonFxRateMissing: {params: []string{"currency"}, text: map[textlang.Lang]string{
 		textlang.English:    "No exchange rate for {currency} is on file for the day this deal closed, so the row is skipped. Add the rate, then import again.",

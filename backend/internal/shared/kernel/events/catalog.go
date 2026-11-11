@@ -24,14 +24,21 @@ var catalog = map[string]struct {
 	stream  string
 	version int
 }{
-	"internal_mail_history.created": {captureStreamEntity, 1},
-	"capture_settings.updated":      {captureStreamEntity, 1},
-	"contact.created":               {contactStreamEntity, 1},
-	"contact.updated":               {contactStreamEntity, 1},
-	"contact.archived":              {contactStreamEntity, 1},
-	"contact.merged":                {contactStreamEntity, 1},
-	"contact.restored":              {contactStreamEntity, 1},
-	"consent.changed":               {contactStreamEntity, 1},
+	"sdr_handoff.created":               {leadStreamEntity, 1},
+	"sdr_handoff.updated":               {leadStreamEntity, 1},
+	"record_assignment.created":         {identityStreamEntity, 1},
+	"record_assignment.updated":         {identityStreamEntity, 1},
+	"record_assignment.archived":        {identityStreamEntity, 1},
+	"communication_instruction.updated": {activityStreamEntity, 1},
+	"scheduled_send.updated":            {activityStreamEntity, 1},
+	"internal_mail_history.created":     {captureStreamEntity, 1},
+	"capture_settings.updated":          {captureStreamEntity, 1},
+	"contact.created":                   {contactStreamEntity, 1},
+	"contact.updated":                   {contactStreamEntity, 1},
+	"contact.archived":                  {contactStreamEntity, 1},
+	"contact.merged":                    {contactStreamEntity, 1},
+	"contact.restored":                  {contactStreamEntity, 1},
+	"consent.changed":                   {contactStreamEntity, 1},
 	// Somebody recorded that we may not write to a subject. Its own type rather
 	// than a consent.changed, because a suppression is not the absence of
 	// consent: it outranks a grant and a later re-grant does not erase it, so a
@@ -236,6 +243,9 @@ var catalog = map[string]struct {
 	// disposition_recorded's enum is closed at v1, and a new value would break
 	// subscribers that validate it.
 	"activity.marked_handled": {activityStreamEntity, 1},
+	// One reader answered a calendar invitation that came by email. Its own
+	// type because the answer went to the organizer, not into the message.
+	"activity.invitation_answered": {activityStreamEntity, 1},
 	// One attendee said they are ready for a meeting, or took it back. Its
 	// own type because it is one attendee's state, not a change to the meeting.
 	"activity.readiness_recorded": {activityStreamEntity, 1},

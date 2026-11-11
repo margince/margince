@@ -47,6 +47,7 @@ allow:
 ignore-packages:
   - github.com/margince/margince/* # our own Go modules
   - example.margince.dev/* # committed extension stubs (ADR-0120), first-party
+  - example.invalid/margince/fixtures/* # first-party negative migration fixtures, repository BUSL-1.1
   - SonarSource/sonarqube-scan-action # LGPL-3.0-only CI scanner action, runs in CI only, never shipped
   # Local composite actions under .github/actions/ — first-party files carrying
   # the repo's own BUSL-1.1, not a third-party dependency. They cannot be handled
@@ -70,6 +71,22 @@ ignore-packages:
   # Globbed so calling a second workflow is covered on the day it happens rather
   # than the day it turns the gate red.
   - ./.github/workflows/* # first-party reusable workflows (BUSL-1.1, same as the repo)
+  # The SPDX 3.0.1 JSON schema that `make sbom-validate` reads. It is a copied
+  # validation input, never built into or shipped with the product, under
+  # Community-Spec-1.0. That licence stays out of `allow`; third-party-files.txt
+  # records the file, and `make third-party-files` checks its licence against
+  # copied-file-licenses below.
+  - sbom-schemas/spdx-3.0.1/spdx-3.0.1.schema.json # copied SPDX schema, Community-Spec-1.0, never shipped
+
+# Licences accepted for the copied files third-party-files.txt records. grant
+# does not read this key; scripts/third_party_files.py does. A copied file's
+# licence is checked against this list only. A licence here that is not in
+# `allow` is accepted for no package, so its copied file must also be named
+# in ignore-packages.
+copied-file-licenses:
+  - Apache-2.0
+  - MIT
+  - Community-Spec-1.0
 
 require-license: true # When true, deny packages with no detected licenses
 require-known-license: true

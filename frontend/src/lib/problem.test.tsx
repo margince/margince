@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { translate } from "../i18n";
 import { ConnectivityError } from "./connectivity";
 import {
+  EmptySuccessError,
   isConsentNotGranted,
   logUnexpectedError,
   ProblemError,
@@ -140,7 +141,7 @@ describe("problemMessage", () => {
     ).toBe("permission denied");
   });
 
-  it("keeps the server detail for an unrelated code even with a translator", () => {
+  it("keeps an unknown English API detail for an English reader", () => {
     expect(
       problemMessage({ code: "conflict", detail: "name already taken" }, t),
     ).toBe("name already taken");
@@ -186,22 +187,22 @@ describe("problemFieldErrors", () => {
     expect(
       problemFieldErrors({
         code: "validation_error",
-        detail: "reconnect your mailbox",
+        detail: "one addressee at a time",
         details: {
           errors: [
             {
-              field: "from",
-              code: "mailbox_not_send_capable",
-              message: "reconnect your mailbox",
+              field: "recipients",
+              code: "shared_unsubscribe_token",
+              message: "one addressee at a time",
             },
           ],
         },
       }),
     ).toEqual([
       {
-        field: "from",
-        code: "mailbox_not_send_capable",
-        message: "reconnect your mailbox",
+        field: "recipients",
+        code: "shared_unsubscribe_token",
+        message: "one addressee at a time",
       },
     ]);
   });
@@ -229,9 +230,9 @@ describe("problemFieldErrors", () => {
         details: {
           errors: [
             {
-              field: "from",
-              code: "mailbox_not_send_capable",
-              message: "reconnect your mailbox",
+              field: "recipients",
+              code: "shared_unsubscribe_token",
+              message: "one addressee at a time",
             },
           ],
         },
@@ -247,7 +248,7 @@ describe("problemFieldErrors", () => {
         code: "validation_error",
         details: {
           errors: [
-            { field: "from", code: "mailbox_not_send_capable" },
+            { field: "recipients", code: "shared_unsubscribe_token" },
             { code: "shared_unsubscribe_token", message: "one at a time" },
             null,
           ],
@@ -260,7 +261,7 @@ describe("problemFieldErrors", () => {
     const problem = {
       code: "validation_error",
       details: {
-        errors: [{ field: "from", code: "not_send_capable", message: "fix" }],
+        errors: [{ field: "to", code: "invalid_address", message: "fix" }],
       },
     };
     let thrown: unknown;
@@ -270,7 +271,7 @@ describe("problemFieldErrors", () => {
       thrown = error;
     }
     expect(problemFieldErrorsOf(thrown)).toEqual([
-      { field: "from", code: "not_send_capable", message: "fix" },
+      { field: "to", code: "invalid_address", message: "fix" },
     ]);
     expect(problemFieldErrorsOf(new Error("network down"))).toEqual([]);
     expect(problemFieldErrorsOf(problem)).toEqual([]);
@@ -318,7 +319,7 @@ describe("isConsentNotGranted", () => {
 // bug in a handler states our internals in wording nobody wrote for a user. At
 // the point of rendering the two look alike unless the type is checked here.
 describe("problemMessageOf", () => {
-  it("shows the server's own detail when the failure carries a problem", () => {
+  it("keeps English problem detail for the English reader", () => {
     expect(
       problemMessageOf(new ProblemError({ detail: "email taken" }), t),
     ).toBe("email taken");
@@ -348,7 +349,7 @@ describe("problemMessageOf", () => {
     }
   });
 
-  it("keeps the server's words whenever the body carries any", () => {
+  it("keeps an English server title for the English reader", () => {
     // The line above must not become a way to lose a real detail. A body with
     // a detail, or with only a title, still speaks for itself. A blank detail
     // is not words and would render an empty error state, so the reader gets
@@ -495,3 +496,59 @@ describe("logUnexpectedError", () => {
     expect(logged).not.toHaveBeenCalled();
   });
 });
+
+describe("a success that carried no body", () => {
+  it("throws rather than answering undefined, so the reader fails at the call", () => {
+    expect(() => unwrap({ response: { status: 200 } })).toThrow(
+      EmptySuccessError,
+    );
+  });
+
+  it("keeps the statuses whose body is absent by the contract", () => {
+    for (const status of [202, 204, 205, 304]) {
+      expect(unwrap({ response: { status } })).toBeUndefined();
+    }
+  });
+
+  it("leaves a result assembled by hand alone", () => {
+    // No response means nothing was received, so there is no server answer to
+    // judge. Fixtures and composed results read as they always did.
+    expect(unwrap({})).toBeUndefined();
+    expect(unwrap({ data: { id: "a" } })).toEqual({ id: "a" });
+  });
+
+  it("reports the problem first when a body carries one", () => {
+    expect(() =>
+      unwrap({ error: { title: "nope" }, response: { status: 500 } }),
+    ).toThrow(/nope/);
+  });
+
+  it("does not call a failure with no body a success", () => {
+    // A 404 or a 500 that carried nothing is a refusal, not a truncated
+    // answer. Called an empty success it would read to the reader as a
+    // broken server rather than the verdict it is.
+    for (const status of [400, 404, 409, 500, 503]) {
+      expect(() => unwrap({ response: { status } })).not.toThrow(
+        EmptySuccessError,
+      );
+    }
+  });
+});
+
+for (const locale of ["de", "vi"] as const) {
+  it(`keeps unknown English API detail out of ${locale} reader copy`, () => {
+    const local = Object.assign(
+      (key: Parameters<typeof translate>[1]) => translate(locale, key),
+      { locale },
+    );
+    const problem = {
+      code: "unmapped",
+      detail: "An English diagnostic",
+      title: "Server failure",
+    };
+    expect(problemMessage(problem, local)).toBe(local("common.errorNoCause"));
+    expect(problemMessageOf(new ProblemError(problem), local)).toBe(
+      local("common.errorNoCause"),
+    );
+  });
+}

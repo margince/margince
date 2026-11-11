@@ -9,12 +9,19 @@ package consent
 // everything it was decided on is unchanged.
 
 import (
+	"sync"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
+	"github.com/margince/margince/backend/internal/shared/ports/messagingrules"
 )
+
+var reviewableRecheckCountry = sync.OnceValue(func() string {
+	messagingrules.Register(messagingrules.Rules{Jurisdiction: "zl", Version: 2})
+	return "zl"
+})
 
 func TestTheRecheckKeepsTheSetWhileNothingChanged(t *testing.T) {
 	e := setupResolve(t)
@@ -37,9 +44,7 @@ func TestACountryChangedBeforeTheWireRecordsANewSet(t *testing.T) {
 	e := setupResolve(t)
 	delivery, authorize := e.stagedMarketingDelivery(t)
 	issued := authorize(1)
-	if _, err := e.owner.Exec(e.ctx, `UPDATE contact SET address_country = 'DE' WHERE id = $1`, e.contact); err != nil {
-		t.Fatalf("moving the contact to Germany: %v", err)
-	}
+	e.livesIn(t, reviewableRecheckCountry())
 
 	fresh, err := e.gate.RecheckTransmit(e.ctx, transmitRequestForTest(e, delivery, 1), issued)
 	if err != nil {

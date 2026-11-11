@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
@@ -139,7 +140,7 @@ func (f fxRefresh) run(ctx context.Context) error {
 			return fmt.Errorf("fx refresh: identity %s: %w", cur, err)
 		}
 		if err := stageRateProposal(ctx, f.svc, fxRateProposalKind, fxRateTargetType, ws,
-			fxRateProposal{FromCurrency: cur, Rate: newRate, ExpectedPriorRate: prior}, identity, summary); err != nil {
+			fxRateProposal{FromCurrency: cur, Rate: newRate, ExpectedPriorRate: prior}, identity, summary, fxSummaryMetadata(cur, base, newRate, prior)); err != nil {
 			return fmt.Errorf("fx refresh: stage %s: %w", cur, err)
 		}
 		staged++
@@ -320,4 +321,12 @@ func newFxRefreshWorker(pool *pgxpool.Pool, brain completer, url string, bootstr
 		pool:                pool,
 		log:                 log,
 	}}
+}
+
+func fxSummaryMetadata(currency, base, rate, prior string) *systemtext.Message {
+	previous := systemtext.Text(prior)
+	if prior == "" {
+		previous = systemtext.MessageArgument("approval.fxNoRateInForce")
+	}
+	return &systemtext.Message{Version: 1, Subject: systemtext.Sentence("approval.fxRateChanged", systemtext.Text(currency), systemtext.Text(base), systemtext.Text(rate), previous)}
 }

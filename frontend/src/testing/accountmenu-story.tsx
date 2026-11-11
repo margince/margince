@@ -60,7 +60,7 @@ export async function openMenu({
   canvasElement: HTMLElement;
 }) {
   const canvas = within(canvasElement);
-  await userEvent.click(canvas.getByRole("button", { name: /Account$/ }));
+  await userEvent.click(canvas.getByRole("button", { name: /account$/i }));
   await canvas.findByRole("menu", { name: "Account" });
 }
 

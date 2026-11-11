@@ -3,14 +3,6 @@
 
 package privacy
 
-// GDPR Art. 15 subject-access assembly (admin-mediated in V1): one
-// operation gathers everything held about a contact — the normalized
-// row, channels, relationships, deals they hold a stake in, timeline
-// activities, consent state and proof log, and the raw capture
-// payloads that mention them — into a single export package. The
-// export is itself audited (action=export): who pulled whose data,
-// when.
-
 import (
 	"context"
 	"fmt"
@@ -20,6 +12,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/corefeatures"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -231,6 +224,7 @@ type SARPackage struct {
 // a human holding the contact.delete grant (the same trust level erasure needs)
 // over an unbounded row scope — see the checks below.
 func AssembleSAR(ctx context.Context, db *database.DB, contactID ids.ContactID) (SARPackage, error) {
+	ctx = corefeatures.RetainedDataContext(ctx)
 	if err := auth.Require(ctx, "contact", principal.ActionDelete); err != nil {
 		return SARPackage{}, err
 	}
@@ -276,7 +270,11 @@ func AssembleSAR(ctx context.Context, db *database.DB, contactID ids.ContactID) 
 		if err != nil {
 			return err
 		}
-		sections, err := sarSections(ctx, &pkg, contactID, emails, leads, identities, authored)
+		external, err := subjectExternalOriginalsTx(ctx, tx, contactID, emails)
+		if err != nil {
+			return err
+		}
+		sections, err := sarSections(ctx, &pkg, contactID, emails, leads, identities, authored, external)
 		if err != nil {
 			return err
 		}
@@ -303,6 +301,9 @@ func AssembleSAR(ctx context.Context, db *database.DB, contactID ids.ContactID) 
 				return err
 			}
 			*section.dest = rows
+		}
+		if err := resolveSAROriginals(ctx, pkg.RawCapture); err != nil {
+			return err
 		}
 		if err := appendActivityCustomValues(ctx, tx, pkg.Activities); err != nil {
 			return err
@@ -437,12 +438,9 @@ func subjectReach(ctx context.Context, tx pgx.Tx, contactID ids.ContactID) ([]st
 	// promotions loses the lead-keyed proof A6 leaves on the lead.
 	// A lead never promoted but holding one of the subject's addresses is
 	// theirs too. The Leads section exports it, so its history comes with it.
-	rows, err := tx.Query(ctx, `
-		SELECT id FROM lead
-		 WHERE promoted_contact_id = $1
-		    OR promoted_contact_id IN (SELECT id FROM contact WHERE merged_into_id = $1)
-		    OR email = ANY($2::text[])`,
-		contactID.UUID, loweredAddresses(emails))
+	args := []any{contactID.UUID, loweredAddresses(emails)}
+	bind := strings.Split(storekit.Placeholders(args), ",")
+	rows, err := tx.Query(ctx, `SELECT id FROM lead WHERE `+leadTwinOf(bind[0], bind[1]), args...)
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("reading the subject's lead twins for the export: %w", err)
 	}

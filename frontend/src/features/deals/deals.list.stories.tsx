@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, userEvent, waitFor, within } from "storybook/test";
+import { expect, screen, userEvent, waitFor, within } from "storybook/test";
 import { playOpenView } from "../../testing/listview.play";
 import {
   installFetchStub,
@@ -182,6 +182,23 @@ export const BoardInListSurface: Story = {
         <DealsScreen />
       </StoryProviders>
     );
+  },
+};
+
+/** `#/deals/new`: the board with its create form open, as `C` opens it. */
+export const CreateFormOpen: Story = {
+  render: () => {
+    installBoardStub();
+    return (
+      <StoryProviders>
+        <DealsScreen startCreating />
+      </StoryProviders>
+    );
+  },
+  play: async () => {
+    await expect(
+      await screen.findByRole("dialog", { name: "New deal" }),
+    ).toBeInTheDocument();
   },
 };
 

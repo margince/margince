@@ -19,6 +19,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 // redactSubjectTimeline erases the subject's free text from the activity
@@ -111,8 +112,10 @@ func (e *Eraser) redactSubjectTimeline(ctx context.Context, tx pgx.Tx, contactID
 	// capture idempotency key, but the same erasure arms the suppression list,
 	// and Sink.Upsert refuses a suppressed account before it writes — so there
 	// is no redelivery left for the key to deduplicate.
+	args := []any{contactID, emails, floorCurrent, floorCarried, erasedName, channelKeys}
+	args = append(args, systemtext.BoundLiteral("core.erased_subject", erasedName))
 	rows, err := tx.Query(ctx, `
-		UPDATE activity a SET subject = $5, body = NULL, raw = NULL, agenda_fingerprint = NULL,
+		UPDATE activity a SET subject = $5, body = NULL, system_text = `+fmt.Sprintf("$%d", len(args))+`, raw = NULL, agenda_fingerprint = NULL,
  internal_mail_authorization = `+erasedInternalMailAuthorizationSQL+`,
 		  counterparty_email = NULL,
 		  -- What a classifier concluded the message MEANT goes with the words it
@@ -138,7 +141,7 @@ func (e *Eraser) redactSubjectTimeline(ctx context.Context, tx pgx.Tx, contactID
 		    OR a.id IN (`+unlinkedSubjectMail+`)
 		    OR a.id IN (`+unlinkedSubjectChannel+`))
 		  `+correspondenceFloorPredicate(3, 4)+`
-		RETURNING a.id`, contactID, emails, floorCurrent, floorCarried, erasedName, channelKeys)
+		RETURNING a.id`, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -234,14 +237,20 @@ var subjectActivityEmbeddingsDelete = `
 // activities on the subject's timeline embed text ABOUT them; the vector
 // store must not keep what a similarity probe could partially reconstruct.
 func purgeDerivedTraces(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, displayName string, emails []string, identities []channelIdentity, erased erasedCitations) (rawPurged, aiPayloadsPurged int64, err error) {
+	rawPurged, err = deleteRawOriginalsTx(ctx, tx,
+		`r.payload_object @> jsonb_build_object('matched_subjects', jsonb_build_array(@subject::text))`,
+		pgx.NamedArgs{sqlArgSubject: contactID.String()})
+	if err != nil {
+		return 0, 0, err
+	}
 	for _, email := range emails {
-		tag, execErr := tx.Exec(ctx,
-			`DELETE FROM raw_capture WHERE payload::text ILIKE '%' || $1 || '%' ESCAPE '\'`,
-			storekit.EscapeLike(email))
+		erased, execErr := deleteRawOriginalsTx(ctx, tx,
+			rawEmailMatchSQL("r.payload", "@email::text"),
+			pgx.NamedArgs{sqlArgEmail: email})
 		if execErr != nil {
 			return 0, 0, execErr
 		}
-		rawPurged += tag.RowsAffected()
+		rawPurged += erased
 	}
 	// The 24-hour capture trace, when the deployment enabled payload capture.
 	// The sweep bounds exposure to a day; it does not ANSWER an erasure made

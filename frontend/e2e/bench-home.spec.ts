@@ -1,6 +1,10 @@
+import { mkdir, writeFile } from "node:fs/promises";
+import { dirname } from "node:path";
 import { expect, type Locator, type Page, test } from "@playwright/test";
+import { HOME_DAY_TIMING } from "../src/features/brief/elementtiming";
 import { de } from "../src/i18n/de";
-import type { JourneyMark } from "../src/lib/journeymarks";
+import { type JourneyMark, journeyMarkName } from "../src/lib/journeymarks";
+import type { RetainedAnswer } from "../src/testing/homeanswers.judge";
 import {
   type Answer,
   budgetSamples,
@@ -14,19 +18,27 @@ import {
   readerFrom,
   readOf,
   tally,
+  type Vitals,
+  vitalsP95,
+  vitalsReasons,
   withheldSources,
 } from "../src/testing/homejourney.judge";
+import { nearestRank } from "../src/testing/quantile";
 import {
   AnswerLog,
+  fixedProfile,
   GLANCE,
   holdWorklist,
   journeyMarks,
   probeClick,
+  recordVitals,
+  settledVitals,
   startJourney,
   watchScreen,
   worklistFetches,
 } from "./homejourney";
-import { nearestRank } from "./quantile";
+import { HomePhaseLog } from "./homephases";
+import { refocusStaleHome } from "./homevisibility";
 
 /**
  * R01 and R07 on a production build against a live api (`make bench-home`).
@@ -38,8 +50,8 @@ import { nearestRank } from "./quantile";
  *  - return: from Home to Contacts and back through the rail, in one
  *    document. Budget: useful again p95 200 ms, and the day never leaves the
  *    screen once it is back.
- *  - refresh: a synthetic `visibilitychange` (a headless browser never hides
- *    a page, so a real tab switch fires none) makes the live reads refetch.
+ *  - refresh: age the cache's Date.now input past its freshness window, then
+ *    emit a hidden/visible transition; performance time stays native.
  *    The day's answer is held while the queue button is clicked, so every
  *    click lands during the refetch. The day stays on screen for the same
  *    reader throughout, and the button answers within 200 ms at p95.
@@ -49,9 +61,18 @@ import { nearestRank } from "./quantile";
  * (src/testing/homejourney.judge.ts). A journey whose sections answered with
  * a gap counts as degraded, never as complete. A failed or timed-out
  * journey is counted as such, never as a latency.
+ *
+ * A fourth case, vitals, repeats the load on a fixed CPU and network profile
+ * and judges when Home's day content paints (Element Timing) and CLS. `BENCH_HOME_PROFILE=ci` runs only that
+ * case, on fewer samples, for the per-PR check (`make home-budget`).
  */
 
-const SAMPLES = Number(process.env.BENCH_HOME_SAMPLES ?? 20);
+const PROFILE = process.env.BENCH_HOME_PROFILE ?? "";
+if (PROFILE !== "" && PROFILE !== "ci") {
+  throw new Error(`BENCH_HOME_PROFILE=${PROFILE}: only "ci" or unset`);
+}
+const CI_PROFILE = PROFILE === "ci";
+const SAMPLES = Number(process.env.BENCH_HOME_SAMPLES ?? (CI_PROFILE ? 5 : 20));
 const EXPECTED = expectationFrom(process.env.BENCH_HOME_EXPECT ?? "work");
 const LOAD_BUDGET_MS = { "home:useful": 2_000, "home:complete": 2_500 };
 const RETURN_BUDGET_MS = 200;
@@ -90,6 +111,10 @@ const queueButton = (page: Page, open: boolean): Locator =>
   });
 
 type Reader = { id: string; greeting: string | null };
+const phaseLogs = new WeakMap<Page, HomePhaseLog>();
+test.afterEach(async ({ page }) => {
+  await phaseLogs.get(page)?.close();
+});
 
 // One worker, in order, and a failed journey does not skip the next: each
 // journey's numbers are worth reading whatever the one before it did.
@@ -138,16 +163,21 @@ async function finishOnboarding(page: Page) {
 /** Opens a signed-in page whose first load has filled the browser cache. */
 async function warmHome(
   page: Page,
-): Promise<{ reader: Reader; log: AnswerLog }> {
+): Promise<{ reader: Reader; log: AnswerLog; phases: HomePhaseLog | null }> {
   // The default buffer of 250 entries fills with the bundle's own files before
   // the worklist request is made.
   await page.addInitScript(() =>
     performance.setResourceTimingBufferSize(5_000),
   );
   const reader = await signIn(page);
-  const log = new AnswerLog(page);
-  await loadHome(page, log, reader, 0);
-  return { reader, log };
+  const phases =
+    process.env.BENCH_HOME_PHASES === "off"
+      ? null
+      : await HomePhaseLog.install(page);
+  if (phases) phaseLogs.set(page, phases);
+  const log = new AnswerLog(page, phases ?? undefined, reader.id);
+  await loadHome(page, log, reader, 0, phases);
+  return { reader, log, phases };
 }
 
 /** Waits until mark journey `id` has set a final Home mark; false on timeout. */
@@ -171,14 +201,18 @@ async function settledMarks(page: Page, id: string): Promise<boolean> {
  * The answers of `journey`, once every Home read has answered and no retry of
  * it is due. On a timeout the judgement names each read that never answered.
  */
-async function answersOf(log: AnswerLog, journey: string): Promise<Answer[]> {
+async function answersOf(
+  log: AnswerLog,
+  journey: string,
+  retain = false,
+): Promise<Answer[]> {
   await expect
-    .poll(() => log.settled(journey, HOME_READS), {
+    .poll(() => log.settled(journey, HOME_READS, retain), {
       timeout: JOURNEY_TIMEOUT_MS,
     })
     .toBe(true)
     .catch(() => undefined);
-  return log.close(journey);
+  return log.close(journey, retain);
 }
 
 /** Whether the day and the reader's greeting are on screen right now. */
@@ -223,6 +257,8 @@ async function loadHome(
   log: AnswerLog,
   reader: Reader,
   sample: number,
+  phases: HomePhaseLog | null,
+  deferPhase = false,
 ): Promise<Journey> {
   const journey = `load-${sample}`;
   log.begin(journey);
@@ -236,7 +272,9 @@ async function loadHome(
     ...(await screenReasons(page, reader)),
   ];
   const marks = await journeyMarks(page, "", HOME_MARKS);
-  return judged(marks, settled, answers, reasons, 0);
+  const result = judged(marks, settled, answers, reasons, 0);
+  if (!deferPhase) await attachPhases(phases, journey, marks, result);
+  return result;
 }
 
 /** From Home to Contacts and back through the rail, in the same document. */
@@ -245,6 +283,7 @@ async function returnHome(
   log: AnswerLog,
   reader: Reader,
   sample: number,
+  phases: HomePhaseLog | null,
 ): Promise<Journey> {
   const away = `away-${sample}`;
   log.begin(away);
@@ -258,7 +297,7 @@ async function returnHome(
   const probe = await probeClick(page, HOME_LINK, DAY_ON_SCREEN);
   await homeLink(page).click();
   const settled = await settledMarks(page, journey);
-  const answers = await answersOf(log, journey);
+  const answers = await answersOf(log, journey, true);
   const { clickAt, answeredAt } = await probe.evaluate((p) => p.result());
   const frames = await screen.evaluate((s) => s.stop());
   const reasons = degradedReasons(answers, EXPECTED, reader.id);
@@ -270,7 +309,46 @@ async function returnHome(
   // The screen's own answer beside the marks: the first frame showing the day.
   if (clickAt !== undefined && answeredAt !== undefined)
     result.times["day on screen"] = Math.round(answeredAt - clickAt);
+  await attachPhases(
+    phases,
+    journey,
+    marks,
+    result,
+    clickAt ?? opened,
+    "return",
+    log.retainedAnswers(journey),
+  );
   return result;
+}
+
+async function attachPhases(
+  phases: HomePhaseLog | null,
+  journey: string,
+  marks: Partial<Record<JourneyMark, number>>,
+  result: Journey,
+  anchorMs = 0,
+  kind: "load" | "return" | "refresh" = "load",
+  retainedAnswers: readonly RetainedAnswer[] = [],
+  cacheAgeAdvancedMs = 0,
+) {
+  if (!phases) return;
+  const measured = await phases.snapshot(journey, {
+    marks,
+    anchorMs,
+    kind,
+    outcome: result.outcome,
+    reasons: result.reasons,
+    times: result.times,
+    retainedAnswers,
+    cacheAgeAdvancedMs,
+  });
+  const artifactPath = test.info().outputPath(`home-phases-${journey}.json`);
+  await mkdir(dirname(artifactPath), { recursive: true });
+  await writeFile(artifactPath, JSON.stringify(measured, null, 2));
+  await test.info().attach(`home-phases-${journey}`, {
+    path: artifactPath,
+    contentType: "application/json",
+  });
 }
 
 /**
@@ -282,23 +360,24 @@ async function refreshHome(
   log: AnswerLog,
   reader: Reader,
   sample: number,
+  phases: HomePhaseLog | null,
 ): Promise<Journey> {
   const journey = `refresh-${sample}`;
   log.begin(journey);
   const opened = await startJourney(page, journey);
   const screen = await watchScreen(page, DAY_ON_SCREEN, reader.greeting);
   const probe = await probeClick(page, QUEUE_BUTTON, QUEUE_OPEN);
-  const held = await holdWorklist(page);
+  const held = await holdWorklist(page, phases?.intercept);
+  let cacheAgeAdvancedMs = 0;
   try {
     const refetch = page.waitForRequest(
       (request) =>
         readOf(new URL(request.url()), request.method()) === "worklist",
       { timeout: JOURNEY_TIMEOUT_MS },
     );
-    await page.evaluate(() =>
-      window.dispatchEvent(new Event("visibilitychange")),
-    );
+    cacheAgeAdvancedMs = await refocusStaleHome(page);
     await refetch;
+    await held.ready;
     await queueButton(page, false).click();
     await expect(queueButton(page, true)).toBeVisible();
   } finally {
@@ -322,12 +401,24 @@ async function refreshHome(
   const times: Record<string, number> = { "retained gap": gap };
   if (clickAt !== undefined && answeredAt !== undefined)
     times.interaction = Math.round(answeredAt - clickAt);
-  return {
+  const result: Journey = {
     outcome: reasons.length > 0 ? "degraded" : "complete",
     times,
     reasons,
     withheld: withheldSources(answers),
   };
+  const marks = await journeyMarks(page, journey, HOME_MARKS);
+  await attachPhases(
+    phases,
+    journey,
+    marks,
+    result,
+    opened,
+    "refresh",
+    [],
+    cacheAgeAdvancedMs,
+  );
+  return result;
 }
 
 function report(kind: string, journeys: readonly Journey[]) {
@@ -367,10 +458,11 @@ function expectAllComplete(kind: string, journeys: readonly Journey[]) {
 }
 
 test("load: Home becomes useful and complete within R01", async ({ page }) => {
-  const { reader, log } = await warmHome(page);
+  test.skip(CI_PROFILE, "the ci profile runs the vitals load alone");
+  const { reader, log, phases } = await warmHome(page);
   const loads: Journey[] = [];
   for (let i = 1; i <= SAMPLES; i++) {
-    loads.push(await loadHome(page, log, reader, i));
+    loads.push(await loadHome(page, log, reader, i, phases));
   }
   report("load", loads);
   // The last load's api requests, so a slow mark names the request it waited on.
@@ -399,10 +491,11 @@ test("load: Home becomes useful and complete within R01", async ({ page }) => {
 test("return: Home is useful again within 200 ms and keeps its day", async ({
   page,
 }) => {
-  const { reader, log } = await warmHome(page);
+  test.skip(CI_PROFILE, "the ci profile runs the vitals load alone");
+  const { reader, log, phases } = await warmHome(page);
   const returns: Journey[] = [];
   for (let i = 1; i <= SAMPLES; i++) {
-    returns.push(await returnHome(page, log, reader, i));
+    returns.push(await returnHome(page, log, reader, i, phases));
   }
   report("return", returns);
   expectAllComplete("return", returns);
@@ -416,10 +509,11 @@ test("return: Home is useful again within 200 ms and keeps its day", async ({
 test("refresh: the day stays for its reader and the queue answers within 200 ms", async ({
   page,
 }) => {
-  const { reader, log } = await warmHome(page);
+  test.skip(CI_PROFILE, "the ci profile runs the vitals load alone");
+  const { reader, log, phases } = await warmHome(page);
   const refreshes: Journey[] = [];
   for (let i = 1; i <= SAMPLES; i++) {
-    refreshes.push(await refreshHome(page, log, reader, i));
+    refreshes.push(await refreshHome(page, log, reader, i, phases));
   }
   report("refresh", refreshes);
   expectAllComplete("refresh", refreshes);
@@ -427,4 +521,176 @@ test("refresh: the day stays for its reader and the queue answers within 200 ms"
     p95(refreshes, "interaction"),
     "interaction during refresh p95",
   ).toBeLessThanOrEqual(INTERACTION_BUDGET_MS);
+});
+
+test("vitals: the day paint and CLS stay in budget on a fixed profile", async ({
+  page,
+}) => {
+  await recordVitals(page);
+  const { reader, log, phases } = await warmHome(page);
+  await fixedProfile(page);
+  const loads: Journey[] = [];
+  const vitals: Vitals[] = [];
+  for (let i = 1; i <= SAMPLES; i++) {
+    loads.push(await loadHome(page, log, reader, i, phases, true));
+    vitals.push(await settledVitals(page, JOURNEY_TIMEOUT_MS));
+    await attachPhases(
+      phases,
+      `load-${i}`,
+      await journeyMarks(page, "", HOME_MARKS),
+      loads[loads.length - 1],
+    );
+  }
+  report("vitals", loads);
+  const p95 = vitalsP95(vitals);
+  // One line the home-budget script copies into the job summary.
+  console.log(
+    `bench-home: vitals day_paint_p95_ms=${Math.round(p95.dayPaintMs)} cls_p95=${p95.cls.toFixed(3)} samples=${vitals.length}`,
+  );
+  expectAllComplete("vitals", loads);
+  expect(vitalsReasons(vitals), "the vitals budget").toEqual([]);
+});
+
+/**
+ * The vitals check against pages built to break it or keep it. A recorder or
+ * a judge that sees too little or too much fails one of them. They need no
+ * api: each page is served here.
+ */
+test.describe("vitals: pages built to break or keep the budget", () => {
+  const PAGE = "http://vitals.test/";
+  const TEXT = "Pipeline review for the week ahead. ".repeat(40);
+  const BLOCK = `<p style="font-size:40px;margin:0">${TEXT}</p>`;
+  const SECTION = `<section id="brief-today" elementtiming="${HOME_DAY_TIMING}">`;
+  const DAY = `${SECTION}<p>Today</p></section>`;
+  // `complete()` sets Home's final mark, where the bench starts to settle.
+  const COMPLETE = `<script>
+    const complete = () => performance.mark(${JSON.stringify(journeyMarkName("home:complete"))});
+  </script>`;
+
+  async function vitalsOf(page: Page, body: string): Promise<string[]> {
+    await recordVitals(page);
+    await page.route(PAGE, (route) =>
+      route.fulfill({ contentType: "text/html", body: COMPLETE + body }),
+    );
+    await page.goto(PAGE);
+    return vitalsReasons([await settledVitals(page, 10_000)]);
+  }
+
+  test("a larger block drawn in the day content after 1.5 s fails", async ({
+    page,
+  }) => {
+    const reasons = await vitalsOf(
+      page,
+      `<main>${DAY}</main><script>
+        setTimeout(() => {
+          document.querySelector("section").insertAdjacentHTML("beforeend", ${JSON.stringify(BLOCK)});
+          complete();
+        }, 1500);
+      </script>`,
+    );
+    expect(reasons).toEqual([
+      expect.stringMatching(/^day paint p95 \d+ ms is over 1000 ms$/),
+    ]);
+  });
+
+  test("a larger block drawn in the day content after Home's final mark still counts", async ({
+    page,
+  }) => {
+    const reasons = await vitalsOf(
+      page,
+      `<main>${DAY}</main><script>
+        setTimeout(complete, 300);
+        setTimeout(() => document.querySelector("section").insertAdjacentHTML("beforeend", ${JSON.stringify(BLOCK)}), 1200);
+      </script>`,
+    );
+    expect(reasons).toEqual([
+      expect.stringMatching(/^day paint p95 \d+ ms is over 1000 ms$/),
+    ]);
+  });
+
+  test("day content mounted inside a larger tree is timed", async ({
+    page,
+  }) => {
+    const reasons = await vitalsOf(
+      page,
+      `<main></main><script>
+        document.querySelector("main").innerHTML = ${JSON.stringify(`<div>${DAY}</div>`)};
+        complete();
+      </script>`,
+    );
+    expect(reasons).toEqual([]);
+  });
+
+  // Chrome times a faded block when its fade ends, not when it is drawn.
+  test("day content inside a block that fades in is timed when drawn", async ({
+    page,
+  }) => {
+    const reasons = await vitalsOf(
+      page,
+      `<style>
+        @keyframes arrive { from { opacity: 0; } }
+        main > * { animation: arrive 1500ms ease-out 100ms backwards; }
+      </style><main><div>${DAY}</div></main><script>complete();</script>`,
+    );
+    expect(reasons).toEqual([]);
+  });
+
+  test("a layout shift of 0.2 or more fails CLS", async ({ page }) => {
+    const reasons = await vitalsOf(
+      page,
+      `<main><div id="top"></div>${DAY}${BLOCK}</main><script>
+        setTimeout(() => { document.getElementById("top").style.height = "400px"; complete(); }, 300);
+      </script>`,
+    );
+    expect(reasons).toEqual([
+      expect.stringMatching(/^CLS p95 0\.\d+ is over 0\.1$/),
+    ]);
+  });
+
+  test("a load whose day content never paints fails rather than passes", async ({
+    page,
+  }) => {
+    const reasons = await vitalsOf(
+      page,
+      `<main>${SECTION}</section>${BLOCK}</main><script>complete();</script>`,
+    );
+    expect(reasons).toEqual(["load 1: Home's day content never painted"]);
+  });
+
+  test("a marked block outside the day root does not count", async ({
+    page,
+  }) => {
+    const reasons = await vitalsOf(
+      page,
+      `<main>${SECTION}</section></main>
+      <aside><p elementtiming="${HOME_DAY_TIMING}">Not the day</p></aside>
+      <script>complete();</script>`,
+    );
+    expect(reasons).toEqual(["load 1: Home's day content never painted"]);
+  });
+
+  test("a page with two day roots fails", async ({ page }) => {
+    const reasons = await vitalsOf(
+      page,
+      `<main>${DAY}${DAY}</main><script>complete();</script>`,
+    );
+    expect(reasons).toEqual(["load 1: Home has 2 day roots, not one"]);
+  });
+
+  // The shell's block lands late, larger than all of the day. The day's last
+  // small paint comes after it, so the load settles only once both are drawn.
+  test("a larger, later paint outside the day content does not count", async ({
+    page,
+  }) => {
+    const reasons = await vitalsOf(
+      page,
+      `<header id="shell"></header><main>${DAY}</main><script>
+        const day = (html) => document.querySelector("section").insertAdjacentHTML("beforeend", html);
+        setTimeout(() => day("<p>The rest of the day, and more of it</p>"), 300);
+        setTimeout(() => { document.getElementById("shell").innerHTML = ${JSON.stringify(BLOCK)}; }, 1100);
+        setTimeout(() => { day("<p>.</p>"); complete(); }, 1300);
+      </script>`,
+    );
+    expect(reasons).toEqual([]);
+  });
 });

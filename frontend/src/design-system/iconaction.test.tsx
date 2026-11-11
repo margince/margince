@@ -126,3 +126,28 @@ describe("a glyph that goes somewhere", () => {
     expect(screen.getByRole("tooltip").textContent).toBe("Call");
   });
 });
+
+describe("a glyph verb a key also presses", () => {
+  it("names the key, and names none where the caller gave none", () => {
+    render(
+      <>
+        <IconAction
+          label="Email"
+          keyShortcuts="m"
+          icon={<span aria-hidden="true">@</span>}
+        />
+        <IconAction label="Call" icon={<span aria-hidden="true">c</span>} />
+      </>,
+    );
+    expect(
+      screen
+        .getByRole("button", { name: "Email" })
+        .getAttribute("aria-keyshortcuts"),
+    ).toBe("m");
+    expect(
+      screen
+        .getByRole("button", { name: "Call" })
+        .hasAttribute("aria-keyshortcuts"),
+    ).toBe(false);
+  });
+});

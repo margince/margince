@@ -61,6 +61,7 @@ const boardColumns: BoardMoneyColumn[] = [
     currency: "EUR",
     deals: [
       boardDeal("d1", "Contoso renewal", 12_000, 3, {
+        probabilityPct: 10,
         singleThreaded: true,
         closeDate: "2026-10-14",
         owner: { id: "u-1", name: "Ada Lindqvist" },
@@ -69,6 +70,7 @@ const boardColumns: BoardMoneyColumn[] = [
       // A close date the nightly run set and nobody confirmed: marked, not
       // hidden.
       boardDeal("d2", "Fabrikam expansion", 33_000, 9, {
+        probabilityPct: 25,
         stalled: true,
         closeDate: "2026-09-30",
         closeDateProvisional: true,
@@ -85,6 +87,7 @@ const boardColumns: BoardMoneyColumn[] = [
     currency: "EUR",
     deals: [
       boardDeal("d3", "Globex onboarding", 28_000, 14, {
+        probabilityPct: 30,
         owner: { id: "u-2", name: "Tim Rasche" },
       }),
     ],
@@ -107,6 +110,7 @@ const boardColumns: BoardMoneyColumn[] = [
     currency: "EUR",
     deals: [
       boardDeal("d4", "Initech upgrade", 54_000, 21, {
+        probabilityPct: 80,
         singleThreaded: true,
       }),
     ],

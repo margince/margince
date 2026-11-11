@@ -19,6 +19,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	capturemod "github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/capture/mailmap"
+	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -314,6 +315,9 @@ type captureEnv struct {
 	// the provider reports — the account it authenticates as, in particular,
 	// which is what a rebind is.
 	conn *mailBatchConnector
+	// topic is the model the deal topic check asks, shared with the refile
+	// pass a test builds with refiler.
+	topic *topicModel
 }
 
 // captureNow is the fixed clock the capture harness runs on: the day after the
@@ -328,9 +332,17 @@ func newCaptureEnv(t *testing.T) captureEnv {
 // newCaptureEnvAt is the harness on another fixed clock.
 func newCaptureEnvAt(t *testing.T, now time.Time) captureEnv {
 	t.Helper()
+	return newCaptureEnvWithBlob(t, now, nil)
+}
+
+func newCaptureEnvWithBlob(t *testing.T, now time.Time, blob blobstore.Store) captureEnv {
+	t.Helper()
 	e := integration.SetupSearch(t)
 	conn := &mailBatchConnector{}
-	registry := compose.NewCaptureRegistry(e.Pool, newTestKeyvault(t, e), compose.CaptureConfig{Now: func() time.Time { return now }})
+	topic := &topicModel{}
+	registry := compose.NewCaptureRegistry(e.Pool, newTestKeyvault(t, e), compose.CaptureConfig{
+		Now: func() time.Time { return now }, DealTopicBrain: topic, Blob: blob,
+	})
 	registry.Register(conn)
 
 	seedCaptureRole(t, e)
@@ -417,7 +429,10 @@ func newCaptureEnvAt(t *testing.T, now time.Time) captureEnv {
 	if verified {
 		t.Fatal("a mailbox must not verify its own domain — the company's claim does that")
 	}
-	return captureEnv{e: e, sync: sync, syncSent: syncSent, registry: registry, conn: conn, syncFiledUnderDeal: syncFiledUnderDeal, syncAsKind: syncAsKind, syncInContainer: syncInContainer}
+	return captureEnv{
+		e: e, sync: sync, syncSent: syncSent, registry: registry, conn: conn, topic: topic,
+		syncFiledUnderDeal: syncFiledUnderDeal, syncAsKind: syncAsKind, syncInContainer: syncInContainer,
+	}
 }
 
 // emailCC builds a message that copies a third party — the introduction shape:

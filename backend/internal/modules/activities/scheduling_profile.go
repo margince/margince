@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
@@ -46,6 +47,9 @@ type SchedulingCalendar interface {
 	Lookup(context.Context, ids.UserID, string, connector.CalendarAppointment) (*connector.CalendarReceipt, error)
 	Save(context.Context, ids.UserID, string, connector.CalendarAppointment) (connector.CalendarReceipt, error)
 	Cancel(context.Context, ids.UserID, string, string, string) error
+	// Respond answers the event with this iCalendar UID on the host's own
+	// connected calendar, which tells its organizer.
+	Respond(ctx context.Context, host ids.UserID, uid, response string) error
 }
 
 // WithSchedulingCalendar binds provider operations without coupling domain modules.
@@ -74,8 +78,8 @@ func schedulingHost(ctx context.Context) (ids.UserID, error) {
 
 func defaultSchedulingProfile() crmcontracts.SchedulingProfile {
 	return crmcontracts.SchedulingProfile{
-		CalendarId: "primary", DurationMinutes: 30,
-		NoticeMinutes: 120, HorizonDays: 30, BufferMinutes: 10, Title: "Let's meet",
+		CalendarId: "primary", DurationMinutes: 30, UseDefaultTitle: new(true),
+		NoticeMinutes: 120, HorizonDays: 30, BufferMinutes: 10, Title: systemtext.Literal("booking.lets_meet"),
 	}
 }
 
@@ -91,6 +95,7 @@ func videoCallFor(profile crmcontracts.SchedulingProfile, requested *bool) bool 
 
 func (s *Store) hostSchedulingProfile(ctx context.Context, host ids.UserID) (crmcontracts.SchedulingProfile, error) {
 	profile := defaultSchedulingProfile()
+	defaultTitle := true
 	var name string
 	err := s.tx(ctx, func(tx pgx.Tx) error {
 		args := []any{host}
@@ -99,7 +104,7 @@ func (s *Store) hostSchedulingProfile(ctx context.Context, host ids.UserID) (crm
 		if err != nil {
 			return err
 		}
-		var stored *crmcontracts.SchedulingProfile
+		var stored *storedSchedulingProfile
 		var slug string
 		err = tx.QueryRow(ctx, fmt.Sprintf(`SELECT slug, scheduling_policy FROM booking_page
    WHERE host_user_id = $%d AND revoked_at IS NULL ORDER BY created_at DESC LIMIT 1`, len(args)), args...).Scan(&slug, &stored)
@@ -110,7 +115,8 @@ func (s *Store) hostSchedulingProfile(ctx context.Context, host ids.UserID) (crm
 			return err
 		}
 		if stored != nil {
-			profile = *stored
+			profile = stored.SchedulingProfile
+			defaultTitle = stored.DefaultTitle
 		}
 		profile.Slug = &slug
 		profile.Alias = nil
@@ -120,6 +126,10 @@ func (s *Store) hostSchedulingProfile(ctx context.Context, host ids.UserID) (crm
 		}
 		return err
 	})
+	profile.UseDefaultTitle = new(defaultTitle)
+	if defaultTitle {
+		profile.Title = systemtext.Copy("booking.lets_meet", systemtext.Locale(ctx))
+	}
 	profile.HostName = &name
 
 	if err == nil && profile.Slug != nil {
@@ -407,11 +417,12 @@ func schedulingAccountName(ctx context.Context, tx pgx.Tx, host ids.UserID) (str
 }
 
 func (s *Store) persistSchedulingProfile(ctx context.Context, host ids.UserID, profile crmcontracts.SchedulingProfile) error {
+	canonicalDefault := systemtext.Copy("booking.lets_meet", s.footerLanguage(ctx, "", ""))
 	return s.tx(ctx, func(tx pgx.Tx) error {
 		if err := storekit.LockWriteIdentity(ctx, tx, "booking_page", host.String()); err != nil {
 			return err
 		}
-		var before *crmcontracts.SchedulingProfile
+		var before *storedSchedulingProfile
 		var id ids.UUID
 		args := []any{host}
 		err := tx.QueryRow(ctx, fmt.Sprintf(`SELECT id, scheduling_policy FROM booking_page WHERE host_user_id=$%d AND revoked_at IS NULL ORDER BY created_at DESC LIMIT 1 FOR UPDATE`, len(args)), args...).Scan(&id, &before)
@@ -426,15 +437,16 @@ func (s *Store) persistSchedulingProfile(ctx context.Context, host ids.UserID, p
 		}
 		profile.Slug, profile.Alias, profile.PublicUrl, profile.ReplaceLink = nil, nil, nil, nil
 		profile.HostName, profile.Blocker = nil, nil
-		args = []any{profile, id}
+		stored := schedulingProfileToStore(ctx, profile, before, canonicalDefault)
+		args = []any{stored, id}
 		if _, err := tx.Exec(ctx, fmt.Sprintf(`UPDATE booking_page SET scheduling_policy=$%d WHERE id=$%d`, len(args)-1, len(args)), args...); err != nil {
 			return err
 		}
 		var audit ids.UUID
 		if before == nil {
-			audit, err = storekit.AuditEvent(ctx, tx, "create", "booking_page", id, profile)
+			audit, err = storekit.AuditEvent(ctx, tx, "create", "booking_page", id, stored)
 		} else {
-			audit, err = storekit.Audit(ctx, tx, "update", "booking_page", id, before, profile)
+			audit, err = storekit.Audit(ctx, tx, "update", "booking_page", id, before, stored)
 		}
 		if err != nil {
 			return err

@@ -1,18 +1,18 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
-import { dirname, join, relative, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { en } from "../../src/i18n/en";
-import { extensionLayers, filesMatching } from "./source-tree";
+import ts from "typescript";
+import { stable } from "../../src/format/collate";
 
-// Derived from every shipped catalog of a locale, core and extension: a gate
-// that names one file reads a smaller tree and still passes.
+// Every shipped catalog of a locale, core and extension: a gate that names one
+// file reads a smaller tree and still passes.
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, "..", "..", "..");
-const extensionsDir = resolve(repoRoot, "extensions");
 
 type Catalog = Readonly<Record<string, string>>;
 export type LocaleCopy = Readonly<{
@@ -27,7 +27,7 @@ export type LocaleEntry = readonly [
   english: string,
 ];
 
-function readJsonCatalog(path: string): Catalog {
+export function readJsonCatalog(path: string): Catalog {
   const parsed: unknown = JSON.parse(readFileSync(path, "utf8"));
   if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
     throw new Error(`${path} is not a JSON object of message keys`);
@@ -42,27 +42,81 @@ function readJsonCatalog(path: string): Catalog {
   return catalog;
 }
 
-// Found the way a bundler finds one: a `<locale>.json` inside a frontend layer,
-// at whatever depth the unit put it.
-function unitCopy(locale: string): LocaleCopy[] {
-  return extensionLayers(extensionsDir)
-    .flatMap((layer) => filesMatching(layer, new RegExp(`^${locale}\\.json$`)))
-    .sort()
-    .map((path) => ({
-      source: relative(repoRoot, path),
-      catalog: readJsonCatalog(path),
-      english: readJsonCatalog(join(dirname(path), "en.json")),
-    }));
+// Listed by git, so a unit catalog in any layer counts.
+function listedUnitCatalogs(locale: string): string[] {
+  const listed = execFileSync(
+    "git",
+    [
+      "ls-files",
+      "-z",
+      "--cached",
+      "--others",
+      "--exclude-standard",
+      "extensions",
+    ],
+    { cwd: repoRoot, encoding: "utf8" },
+  );
+  const catalog = new RegExp(`(?:^|/)frontend/(?:.+/)?${locale}\\.json$`);
+  return listed
+    .split("\0")
+    .filter((path) => catalog.test(path) && !path.includes("/node_modules/"));
 }
 
-export function localeCatalogs(
-  locale: string,
-  core: Catalog,
-): readonly LocaleCopy[] {
-  return [
-    { source: `frontend/src/i18n/${locale}.ts`, catalog: core, english: en },
-    ...unitCopy(locale),
-  ];
+/** Each unit's `<locale>.json`, with the en.json beside it. */
+export function listedUnitCopy(locale: string): LocaleCopy[] {
+  return listedUnitCatalogs(locale)
+    .sort(stable)
+    .map((path) => {
+      const full = join(repoRoot, path);
+      return {
+        source: path,
+        catalog: readJsonCatalog(full),
+        english: readJsonCatalog(join(dirname(full), "en.json")),
+      };
+    });
+}
+
+/**
+ * The catalog a parsed module declares as the object literal `name`. A value
+ * that is not a quoted key and a string throws, so no entry goes unread.
+ */
+export function catalogDeclaredIn(
+  source: ts.SourceFile,
+  name: string,
+): Catalog {
+  const catalog: Record<string, string> = {};
+  let found = false;
+  const visit = (node: ts.Node): void => {
+    if (
+      ts.isVariableDeclaration(node) &&
+      ts.isIdentifier(node.name) &&
+      node.name.text === name &&
+      node.initializer &&
+      ts.isObjectLiteralExpression(node.initializer)
+    ) {
+      found = true;
+      for (const property of node.initializer.properties) {
+        if (
+          !ts.isPropertyAssignment(property) ||
+          !ts.isStringLiteral(property.name) ||
+          !ts.isStringLiteralLike(property.initializer)
+        ) {
+          throw new Error(
+            `${source.fileName}: a ${name} entry is not a quoted key and a string`,
+          );
+        }
+        catalog[property.name.text] = property.initializer.text;
+      }
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(source);
+  if (!found) {
+    throw new Error(
+      `${source.fileName} no longer declares ${name} as an object`,
+    );
+  }
+  return catalog;
 }
 
 export function catalogEntries(catalogs: readonly LocaleCopy[]): LocaleEntry[] {

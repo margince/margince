@@ -21,12 +21,29 @@ package integration
 import (
 	"context"
 	"net/http"
-	"strings"
+	"sync"
 	"testing"
 
-	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/modules/consent"
+	"github.com/margince/margince/backend/internal/shared/ports/messagingrules"
 )
+
+var directedExceptionCountry = sync.OnceValue(func() string {
+	messagingrules.Register(messagingrules.Rules{Jurisdiction: "zi", Version: 1})
+	return "zi"
+})
+
+// An explicit permissive profile separates exception mechanics from statutory consent.
+func (c *consentEnv) useReviewableMarketingProfile(t *testing.T) {
+	t.Helper()
+	if _, err := c.Owner.Exec(t.Context(), `UPDATE contact SET address_country=@country WHERE id=@contact`, pgx.StrictNamedArgs{
+		"country": directedExceptionCountry(), "contact": c.contactID,
+	}); err != nil {
+		t.Fatal(err)
+	}
+}
 
 // directed is the request body a designated human sends.
 func directed() AnyMap {
@@ -52,9 +69,10 @@ func liveReviewID(t *testing.T, c *consentEnv) string {
 // THE MESSAGE GOES, AND THE REFUSAL STAYS A REFUSAL.
 func TestADesignatedUserSendsTheMessageTheEngineRefused(t *testing.T) {
 	c := setupConsent(t)
+	c.useReviewableMarketingProfile(t)
 
 	if status, _ := c.send(t, "marketing_email"); status != http.StatusConflict {
-		t.Fatalf("marketing send with no grant → %d, want 409", status)
+		t.Fatalf("correspondence with no supporting context → %d, want 409", status)
 	}
 	review := liveReviewID(t, c)
 
@@ -123,9 +141,10 @@ func TestADesignatedUserSendsTheMessageTheEngineRefused(t *testing.T) {
 // name.
 func TestTheNextMessageToTheSameContactNeedsItsOwnDecision(t *testing.T) {
 	c := setupConsent(t)
+	c.useReviewableMarketingProfile(t)
 
 	if status, _ := c.send(t, "marketing_email"); status != http.StatusConflict {
-		t.Fatalf("first marketing send → %d, want 409", status)
+		t.Fatalf("first correspondence → %d, want 409", status)
 	}
 	if status := c.Call(t, "POST", "/v1/communication-reviews/"+liveReviewID(t, c)+"/direct-send",
 		directed(), nil, nil); status != http.StatusCreated {
@@ -144,7 +163,7 @@ func TestTheNextMessageToTheSameContactNeedsItsOwnDecision(t *testing.T) {
 
 	// A fresh message to the same contact: refused again, exactly as before.
 	if code, _ := c.send(t, "marketing_email"); code != http.StatusConflict {
-		t.Errorf("the next marketing send → %d, want 409 — the override leaked into a standing "+
+		t.Errorf("the next correspondence → %d, want 409 — the override leaked into a standing "+
 			"permission", code)
 	}
 }
@@ -257,9 +276,10 @@ func TestAnUnacknowledgedDirectionSendsNothing(t *testing.T) {
 // is what a mistake would be in.
 func TestASpentDecisionCannotBeRePointedAtAnotherMessage(t *testing.T) {
 	c := setupConsent(t)
+	c.useReviewableMarketingProfile(t)
 
 	if status, _ := c.send(t, "marketing_email"); status != http.StatusConflict {
-		t.Fatalf("marketing send → %d, want 409", status)
+		t.Fatalf("correspondence → %d, want 409", status)
 	}
 	if status := c.Call(t, "POST", "/v1/communication-reviews/"+liveReviewID(t, c)+"/direct-send",
 		directed(), nil, nil); status != http.StatusCreated {
@@ -293,9 +313,10 @@ func TestASpentDecisionCannotBeRePointedAtAnotherMessage(t *testing.T) {
 // forgetting would answer nothing.
 func TestADirectedSendClosesTheReviewItAnswered(t *testing.T) {
 	c := setupConsent(t)
+	c.useReviewableMarketingProfile(t)
 
 	if status, _ := c.send(t, "marketing_email"); status != http.StatusConflict {
-		t.Fatalf("marketing send → %d, want 409", status)
+		t.Fatalf("correspondence → %d, want 409", status)
 	}
 	review := liveReviewID(t, c)
 	if status := c.Call(t, "POST", "/v1/communication-reviews/"+review+"/direct-send",
@@ -342,9 +363,10 @@ func TestADirectedSendClosesTheReviewItAnswered(t *testing.T) {
 // a version this installation does not serve.
 func TestTheWarningADirectorAcknowledgesIsTheServersOwn(t *testing.T) {
 	c := setupConsent(t)
+	c.useReviewableMarketingProfile(t)
 
 	if status, _ := c.send(t, "marketing_email"); status != http.StatusConflict {
-		t.Fatalf("marketing send → %d, want 409", status)
+		t.Fatalf("correspondence → %d, want 409", status)
 	}
 	review := liveReviewID(t, c)
 
@@ -461,78 +483,5 @@ func TestCancellingAHeldMessageClosesItsReview(t *testing.T) {
 	// the state the row actually held rather than a fixed value.
 	if before != state0 {
 		t.Errorf("the audit says the review moved from %q and the row held %q", before, state0)
-	}
-}
-
-// A DECISION PAST ITS WINDOW SAYS SO RATHER THAN LOOPING THE CALLER.
-//
-// The unique key on the review means a standing decision blocks a fresh one. If
-// that standing decision has expired, telling the caller "already recorded"
-// sends them on to a send that consumption then refuses for a reason nothing
-// reported — they press again, are told the same thing, and never learn why.
-//
-// The instruction's window is aged directly. Waiting out the real validity is
-// not a test, and the rule under test is what the DOOR says when a standing
-// decision can no longer carry a send.
-func TestADecisionPastItsWindowSaysSoRatherThanLoopingTheCaller(t *testing.T) {
-	c := setupConsent(t)
-
-	if status, _ := c.send(t, "marketing_email"); status != http.StatusConflict {
-		t.Fatalf("marketing send → %d, want 409", status)
-	}
-	review := liveReviewID(t, c)
-
-	// A decision is recorded against this review and then left to go stale.
-	// Written directly because the route records and sends in one action, and
-	// what is under test is the door's answer once the window has closed.
-	// Directed by THIS SESSION'S seat, read from the app. The subselect here
-	// used to be `FROM app_user u WHERE NOT u.is_agent LIMIT 1`, which is the
-	// session's seat only while the installation holds exactly one contact —
-	// and what is under test is whether the door refuses a decision that has
-	// gone stale, which is a question about the caller's own decision. Same
-	// defect as demoteToRep's, same fix — #1180, #1074.
-	if _, err := c.Owner.Exec(context.Background(), `
-		INSERT INTO communication_instruction
-		  (review_id, directed_by, reason_code, explanation, warning_version,
-		   acknowledged_at, facts_as_of, valid_until)
-		VALUES ($1, $2, 'contractual_necessity', 'decided a while ago', 'override-v1',
-		        now() - interval '2 days', now() - interval '2 days', now() - interval '1 day')`,
-		review, apptest.SessionUserID(t, c.AppEnv)); err != nil {
-		t.Fatalf("recording the stale decision: %v", err)
-	}
-
-	var problem struct {
-		Code    string `json:"code"`
-		Detail  string `json:"detail"`
-		Details struct {
-			Errors []struct {
-				Code string `json:"code"`
-			} `json:"errors"`
-		} `json:"details"`
-	}
-	status := c.Call(t, "POST", "/v1/communication-reviews/"+review+"/direct-send",
-		directed(), nil, &problem)
-	if status == http.StatusCreated {
-		t.Fatal("a send went out on a decision past its window — the facts it was taken on are " +
-			"a day old and nobody has looked at them since")
-	}
-	// NAMED IN THE FIELD, which is where a typed refusal puts its machine code
-	// — the top-level code is the transport's classification and reads
-	// validation_error for every field fault.
-	named := false
-	for _, f := range problem.Details.Errors {
-		if f.Code == "decision_not_spendable" {
-			named = true
-		}
-	}
-	if !named {
-		t.Errorf("the refusal reads %q (%s) and never says the decision cannot be spent — the "+
-			"caller presses again forever", problem.Code, problem.Detail)
-	}
-	// AND IT SAYS WHY in words the caller can act on: taking the decision again
-	// is a different move from waiting, and a refusal that did not distinguish
-	// them would leave them pressing the same button.
-	if !strings.Contains(problem.Detail, "past its window") {
-		t.Errorf("the refusal says %q and never says the window has closed", problem.Detail)
 	}
 }

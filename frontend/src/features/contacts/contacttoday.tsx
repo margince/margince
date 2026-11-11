@@ -15,6 +15,7 @@ import { useLocale, usePlural, useT } from "../../i18n";
 import { latePromise } from "../../lib/latepromise";
 import { useSourceOpener } from "../../lib/opensource";
 import { tasksPeek } from "../../lib/standingpeeks";
+import { displayedSubject } from "../../lib/systemdisplay";
 import { taskDetail } from "../../lib/taskdetail";
 import { MoveButton } from "../records/movebutton";
 import { basisAddsARecord } from "../records/record360";
@@ -255,7 +256,7 @@ function TaskBar({
     latePromise(task.due_at, view.as_of, zone, "task", { t, plural, locale });
   return (
     <RecordNextBar
-      title={task.subject ?? t("task.untitled")}
+      title={displayedSubject(task) ?? t("task.untitled")}
       late={late ? { label: late.badge, tone: "danger" } : undefined}
       detail={taskDetail(task)}
       sub={taskLine([
@@ -360,12 +361,11 @@ function ActionVerb({
   onAction: (action: ContactMomentAction) => void;
 }>) {
   const t = useT();
-  const gate = useActivityGate(
-    contact,
+  const permissionRefusal =
     action.kind === "schedule_meeting"
       ? "scheduling.bookRefused"
-      : "record.logActivityRefused",
-  );
+      : "record.logActivityRefused";
+  const gate = useActivityGate(contact, permissionRefusal);
   const attaches =
     action.destination?.surface === "booking" ||
     action.destination?.surface === "activity_log";
@@ -373,17 +373,25 @@ function ActionVerb({
   // A rule ladder picks the verb, not a model. Only the bar's lead verb is
   // filled; a press that has the model write the mail carries the ✦.
   const drafts = momentDrafts(action);
+  // A sent mail files under this contact as a log or booking does.
+  const files = attaches || drafts;
+  // Not drawn: the press files an activity the server refuses this seat.
+  if (files && gate.refusalKey === permissionRefusal) {
+    return null;
+  }
   const variant = verbVariant(drafts, primary === true);
   return (
     <span className="today-verb">
       <Button
         variant={variant}
+        // The server wrote the label, so it may be one long word that has to wrap.
+        className="btn-valuelabel"
         onClick={() => onAction(action)}
-        disabled={attaches && gate.pending}
+        disabled={files && gate.pending}
         reason={
           blocked
             ? blockedReason(action, t)
-            : attaches && gate.refusalKey
+            : files && gate.refusalKey
               ? t(gate.refusalKey)
               : undefined
         }

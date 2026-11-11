@@ -13,11 +13,12 @@ import { ListChecks } from "lucide-react";
 import { useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import { useActivityWritable } from "../../components/activitygate";
 import { useTaskUpdate } from "../../components/taskactions";
 import { Button } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { useT } from "../../i18n";
-import { useCan } from "../../lib/capability";
+import { useCanWrite } from "../../lib/capability";
 import { refreshSuggestedMoves, useCurrentMove } from "../../lib/currentmove";
 import { useOpenEmail } from "../../lib/openemail";
 import { unwrap } from "../../lib/problem";
@@ -32,6 +33,8 @@ export type PerformableMove = {
   action: string;
   recommendation?: components["schemas"]["RecommendationReceipt"];
   arguments?: Record<string, unknown>;
+  // Set by the server when this reader may not take the verb; drawn as refused.
+  blocked_reason?: string;
 };
 
 // activityIdOf reads the one operand the meeting-brief verb takes. The
@@ -105,7 +108,7 @@ export function MoveButton({
   const [taskId, setTaskId] = useState<string | null>(null);
   const openTask = useCurrentMove<string>(setTaskId);
   const openBrief = useCurrentMove<string>(setBriefId);
-  const canUpdateTask = useCan("activity", "update");
+  const canUpdateTask = useCanWrite("activity", "update");
   const taskUpdate = useTaskUpdate([
     ...taskRefreshKeys,
     ...(dealId ? [["deal-status", dealId]] : []),
@@ -193,24 +196,14 @@ export function MoveButton({
         </>
       );
     case "create_task":
-      // No body, no button: a click that sent {} would only be refused.
-      if (!taskBody) {
-        return null;
-      }
       return (
-        <>
-          {/* A rule wrote the task and pressing this accepts it. No model
-              runs on the press, so it is the plain primary, not indigo. */}
-          <Button
-            variant="primary"
-            pending={createTask.isPending}
-            onClick={() => createTask.mutate(taskBody)}
-          >
-            <ListChecks aria-hidden />
-            {t("deal360.createTask")}
-          </Button>
-          <ErrorLine error={createTask.error} />
-        </>
+        <CreateTaskVerb
+          body={taskBody}
+          refused={move.blocked_reason}
+          pending={createTask.isPending}
+          error={createTask.error}
+          onCreate={createTask.mutate}
+        />
       );
     case "draft_email":
       // Only the follow-up after a meeting draws a button: it names who the
@@ -225,6 +218,7 @@ export function MoveButton({
           meetingId={activityId}
           recipients={recipientsOf(move)}
           recommendation={move.recommendation}
+          refused={move.blocked_reason}
         />
       );
     case "open_meeting_brief":
@@ -271,14 +265,17 @@ function FollowUpDraft({
   meetingId,
   recipients,
   recommendation,
+  refused,
 }: Readonly<{
   recommendation?: components["schemas"]["RecommendationReceipt"];
+  refused?: string;
   dealId?: string;
   meetingId: string;
   recipients: readonly string[];
 }>) {
   const t = useT();
   const queryClient = useQueryClient();
+  const writable = useActivityWritable();
   const [target, setTarget] = useState<{
     dealId?: string;
     meetingId: string;
@@ -288,10 +285,14 @@ function FollowUpDraft({
   const selected = target ?? { dealId, meetingId, recipients };
   const [contact, ...alsoTo] = selected.recipients;
   if (contact === undefined) return null;
+  // The server's refusal is drawn with its reason; without one, a seat that
+  // may not write is offered nothing.
+  if (!writable && refused === undefined) return null;
   return (
     <>
       <Button
         variant="ai"
+        reason={refused}
         pending={check.isPending}
         onClick={() =>
           check.mutate({
@@ -324,6 +325,44 @@ function FollowUpDraft({
           }}
         />
       )}
+    </>
+  );
+}
+
+// A rule wrote the task and pressing this accepts it. No model runs on the
+// press, so it is the plain primary, not indigo.
+function CreateTaskVerb({
+  body,
+  refused,
+  pending,
+  error,
+  onCreate,
+}: Readonly<{
+  body: Record<string, unknown> | undefined;
+  refused?: string;
+  pending: boolean;
+  error: unknown;
+  onCreate: (body: Record<string, unknown>) => void;
+}>) {
+  const t = useT();
+  const writable = useActivityWritable();
+  // No body, no button: a click that sent {} would only be refused, and so
+  // would any press from a seat that may not write activities.
+  if (!body || (!writable && refused === undefined)) {
+    return null;
+  }
+  return (
+    <>
+      <Button
+        variant="primary"
+        reason={refused}
+        pending={pending}
+        onClick={() => onCreate(body)}
+      >
+        <ListChecks aria-hidden />
+        {t("deal360.createTask")}
+      </Button>
+      <ErrorLine error={error} />
     </>
   );
 }

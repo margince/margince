@@ -17,9 +17,11 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose"
+	ps "github.com/margince/margince/backend/internal/compose/programsettings"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/certlog"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/dnsread"
 	"github.com/margince/margince/backend/internal/platform/geocode"
 	"github.com/margince/margince/backend/internal/platform/jobs"
@@ -60,6 +62,7 @@ func graphWatchConfig(cfg workerConfig) compose.GraphWatchConfig {
 // is unchanged; only the scheduler is River now. The returned stop function
 // drains in-flight jobs on shutdown.
 func startJobRunner(ctx context.Context, pool *pgxpool.Pool, vault keyvault.Vault, logger *slog.Logger, cfg workerConfig, modelPath compose.ModelPath, lanes workerLanes, weeklyMail compose.WeeklyMailConfig, stdout io.Writer) (func(), error) {
+	_, _ = fmt.Fprintln(stdout, weeklyMailBanner(weeklyMail))
 	// The sweep registry is always live — the standing IMAP connector needs
 	// no deployment config; gmail joins it when the OAuth app is configured.
 	// The vault holds every connection's sealed credential (the standing
@@ -74,6 +77,9 @@ func startJobRunner(ctx context.Context, pool *pgxpool.Pool, vault keyvault.Vaul
 	// attachment would be dropped in production while every test that composes
 	// an api server passed.
 	cfg.captureConfig.Blob = lanes.blob
+	// The deal topic check rides the classify lane: capture asks it before it
+	// files a mail on a deal it only suggests.
+	cfg.captureConfig.DealTopicBrain = modelPath.CaptureClassify
 	captureReg := compose.CaptureSyncRegistry(pool, vault, compose.GmailConfig{
 		ClientID:     cfg.gmailClientID,
 		ClientSecret: cfg.gmailClientSecret,
@@ -98,17 +104,9 @@ func startJobRunner(ctx context.Context, pool *pgxpool.Pool, vault keyvault.Vaul
 	// already nil where none is configured, and it is the same value
 	// startRunnerLane passes — so the two bindings are idempotent.
 	compose.BindExtensionRuntime(pool, vault)
-	// The capture pipeline a unit's ingress lands through, bound in the same
-	// breath and on the same terms. THIS role is the one that matters: a record
-	// is ingested by unattended work only — a job tick or a subscription
-	// delivery — and both of those run here. A worker that bound the runtime
-	// and not this would serve every other capability and answer
-	// errIngressUnwired to the one capability a connector unit exists for.
-	//
-	// It takes cfg.captureConfig, which is the same deployment config the sweep
-	// registry above is built from, blob store included: a unit's captured
-	// message and a mailbox's then reach one set of suppression lists and one
-	// attachment store rather than two that drift.
+	// The capture pipeline a unit's ingress lands through. Units ingest only from
+	// job ticks and subscription deliveries, and both run in this role. It shares
+	// cfg.captureConfig with the sweep registry, so both reach one attachment store.
 	compose.BindExtensionCapture(pool, cfg.captureConfig)
 
 	// A failed read starts the worker on the defaults rather than not at all:
@@ -117,6 +115,11 @@ func startJobRunner(ctx context.Context, pool *pgxpool.Pool, vault keyvault.Vaul
 	if err != nil {
 		logger.WarnContext(ctx, "schedules: could not read the schedule settings at boot; starting on the defaults until the next check", "err", err)
 		schedules = compose.DefaultSchedules()
+	}
+	if lastRuns, err := compose.ReadLastRuns(ctx, pool); err != nil {
+		logger.WarnContext(ctx, "schedules: could not read when each pass last ran; every pass runs at start", "err", err)
+	} else {
+		schedules.CatchUpFrom(lastRuns)
 	}
 	runner, err := newJobRunner(pool, logger, cfg, schedules, captureReg, watchCfg, vault, lanes, modelPath, weeklyMail)
 	if err != nil {
@@ -204,8 +207,9 @@ func newJobRunner(pool *pgxpool.Pool, logger *slog.Logger, cfg workerConfig, sch
 		return nil, err
 	}
 	return compose.NewJobRunner(pool, logger, compose.JobRunnerConfig{
-		ListsEnabled:  cfg.listsEnabled,
-		DataTasksPace: cfg.dataTasksPace,
+		ListsEnabled:         cfg.listsEnabled,
+		DisabledCoreFeatures: config.Val(cfg.settings, ps.CoreFeaturesDisabled),
+		DataTasksPace:        cfg.dataTasksPace,
 		// Every setting-driven schedule, read once here and kept current by
 		// the watch startJobRunner starts.
 		Schedules: schedules,

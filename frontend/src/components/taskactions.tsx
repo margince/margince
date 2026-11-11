@@ -12,7 +12,6 @@ import { DateInput } from "../design-system/dateinput";
 import { focusableWithin } from "../design-system/dialogfocus";
 import { DrawerBody, DrawerHead } from "../design-system/drawerbands";
 import { Heading } from "../design-system/heading";
-import { NoteMarkdown } from "../design-system/markdown";
 import { provenanceOf } from "../design-system/provenanceof";
 import { SourceEvidence } from "../design-system/sourceevidence";
 import { formatActivityWhen } from "../format/activitywhen";
@@ -26,6 +25,7 @@ import { useCanWriteRecord } from "../lib/capability";
 import { TaskTimeField } from "./followuptaskfields";
 import { mostSpecificFirst, RecordLinks } from "./recordlinks";
 import { TaskAssignee } from "./taskassignee";
+import { TaskDetailReading, TaskDetailTitle } from "./taskdetailtext";
 import "./taskactions.css";
 import { ErrorLine } from "../design-system/errorline";
 import { useActivity } from "../lib/activityread";
@@ -39,6 +39,7 @@ import { TaskNextSteps } from "./tasknextsteps";
 import { taskOriginKey } from "./taskorigin";
 import { TaskOutcomeForm } from "./taskoutcome";
 import type { useTaskUpdate } from "./taskwrite";
+import { WhichDealDecline } from "./whichdealdecline";
 
 // Acting on a task from the record it belongs to. The tasks screen owns the
 // standing work queue; this is the same two verbs (complete, snooze) offered
@@ -292,7 +293,7 @@ export function TaskDetailDialog({
     >
       <DrawerHead className="task-detail-head">
         <Heading size="large" id={titleId} className="t-h2">
-          {task?.subject ?? t("tasks.detail")}
+          <TaskDetailTitle task={task} />
         </Heading>
       </DrawerHead>
       <DrawerBody ref={body}>
@@ -302,12 +303,7 @@ export function TaskDetailDialog({
           {task && (
             <div className="form-stack">
               {origin && <p className="t-body">{t(origin)}</p>}
-              {/* Markdown, as the timeline draws the same body. */}
-              {task.body && (
-                <div className="t-body task-detail-body">
-                  <NoteMarkdown source={task.body} />
-                </div>
-              )}
+              <TaskDetailReading task={task} />
               <div className="t-caption task-detail-meta">
                 {/* In the same tab: the reader opened the panel to learn what the
                   task is about, and following its record is leaving for it. */}
@@ -420,6 +416,7 @@ function TaskDetailActions({
             update={update}
             showDuePicker
           />
+          <WhichDealDecline task={task} />
         </div>
       )}
       {canAct && (

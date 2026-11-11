@@ -268,7 +268,7 @@ func TestACommittedVerdictWithoutContextCarriesNoPlan(t *testing.T) {
 		Kind: "send_email", Status: "pending", ProposedChange: json.RawMessage(`{"to":["buyer@example.test"]}`), Summary: &summary,
 		SummaryParts: json.RawMessage(`{"sentence":"Write to the buyer","fields":[{"field":"to","value":"buyer@example.test"}],"more_fields":0}`),
 	}
-	rows := []crmcontracts.Approval{wire(subject, svc.now())}
+	rows := []crmcontracts.Approval{wire(context.Background(), subject, svc.now())}
 	if rows[0].SummaryParts == nil {
 		t.Fatal("the fixture's parts did not read back, so the check below proves nothing")
 	}

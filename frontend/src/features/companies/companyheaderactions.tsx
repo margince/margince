@@ -13,6 +13,7 @@ import { VerbWord } from "../../design-system/iconaction";
 import { ListPopover } from "../../design-system/listpopover";
 import { useT } from "../../i18n";
 import { navigate } from "../../lib/router";
+import { useShortcut } from "../../lib/shortcuts";
 import { ComposeModal } from "../mail/compose";
 import { EmailVerb } from "../records/recordemail";
 
@@ -70,6 +71,17 @@ export function CompanyHeaderActions({
   const bookRefusedId = useId();
   const logRefused = archived ?? activity.refusedId;
   const logPending = !archived && activity.pending;
+  const logOpen = !logPending && !logRefused;
+  const logKeys = useShortcut(
+    "record.logActivity",
+    () => onDrawer("log"),
+    logOpen,
+  );
+  const writeKeys = useShortcut(
+    "record.writeEmail",
+    () => onComposerOpen(true),
+    logOpen,
+  );
   return (
     <>
       {archived && !archivedReasonId && (
@@ -86,7 +98,9 @@ export function CompanyHeaderActions({
         company={company}
         open={composerOpen}
         onOpen={onComposerOpen}
-        disabledReasonId={archived}
+        disabledReasonId={logRefused}
+        disabled={logPending}
+        keyShortcuts={writeKeys}
       />
       <CompanyBookMeeting
         companyId={company.id}
@@ -104,6 +118,7 @@ export function CompanyHeaderActions({
         reasonId={logRefused}
         title={t("log.title")}
         onClick={() => onDrawer("log")}
+        aria-keyshortcuts={logKeys}
       >
         <FileText aria-hidden="true" />
         <VerbWord word={t("record.verb.log")} label={t("log.title")} />
@@ -185,11 +200,15 @@ function CompanyWriteEmail({
   open,
   onOpen,
   disabledReasonId,
+  disabled,
+  keyShortcuts,
 }: Readonly<{
   company: Company;
   open: boolean;
   onOpen: (open: boolean) => void;
   disabledReasonId?: string;
+  disabled?: boolean;
+  keyShortcuts?: string;
 }>) {
   // Whether the verb has ever been pressed. `open` belongs to the page, so
   // this is the composer's own memory of having been asked for.
@@ -201,7 +220,12 @@ function CompanyWriteEmail({
     <>
       {/* The shared Email verb: icon-only with its name on hover, the same
           control every record header draws, found by its place and its word. */}
-      <EmailVerb reasonId={disabledReasonId} onClick={() => onOpen(true)} />
+      <EmailVerb
+        disabled={disabled}
+        reasonId={disabledReasonId}
+        keyShortcuts={keyShortcuts}
+        onClick={() => onOpen(true)}
+      />
       {/* Not drawn until the verb has been pressed once, and mounted from
           then on. A composer mounted with the record would read on every
           render of a page nobody is writing from; one unmounted the moment it

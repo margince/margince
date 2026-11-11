@@ -6,6 +6,7 @@ import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import type { ProjectScope } from "../../design-system/projectpicker";
 import type { useT } from "../../i18n";
+import type { Locale } from "../../i18n/locale";
 import { throwProblem } from "../../lib/problem";
 import { stripEveryKeyTag, withSubjectTag } from "../projects/projectrecord";
 import type { RelinkKind } from "./composerelink";
@@ -18,7 +19,11 @@ type Translate = ReturnType<typeof useT>;
 // from the fields it filled, because the disclosure is owed for the call.
 export type DraftProvenance = Pick<
   EmailDraft,
-  "ai_generated" | "ai_disclosure" | "voice_profile_version" | "voice_degraded"
+  | "ai_generated"
+  | "ai_disclosure"
+  | "voice_profile_version"
+  | "voice_degraded"
+  | "language"
 >;
 
 // Why a draft is not on offer. "no_model" is the deployment's answer, while
@@ -27,7 +32,7 @@ export type DraftUnavailable = "no_model" | "unsupported_origin";
 
 // The three choices a rep made on the account-started path. It travels as the
 // mutation variable of the draft and the send, so a stale closure cannot
-// change it (see mutation-variable-coverage.test.ts).
+// change it (see census/rules/mutation-variable-coverage.census.ts).
 export type Grounding = {
   recipientId: string;
   dealId: string;
@@ -56,6 +61,7 @@ export type DraftResult =
             | "ai_disclosure"
             | "voice_profile_version"
             | "voice_degraded"
+            | "language"
           >
         >;
       // Account path only: a reply explains itself by the message it answers.
@@ -82,6 +88,10 @@ export type DraftAsk = Readonly<{
   body: string;
   html: string;
   instruction?: string;
+  // The language the rep chose, named on every ask, since the server keeps none.
+  language?: Locale;
+  // The answer replaces the body on screen: a rewrite verb or a new language.
+  rewrite?: boolean;
 }>;
 
 export function fillFromDraft(
@@ -128,6 +138,7 @@ export function fillFromDraft(
       ai_disclosure: drafted.ai_disclosure,
       voice_profile_version: drafted.voice_profile_version,
       voice_degraded: drafted.voice_degraded ?? false,
+      language: drafted.language,
     });
     form.setReasoning(result.reasoning ?? []);
     form.setScope(result.scope);
@@ -148,25 +159,21 @@ export function keptTag(subject: string): string {
 // The reply-side draft answers the message it is anchored to.
 async function draftFromActivity({
   activityId,
-  intent,
-  rewriteOf,
-  subject,
+  steer,
   t,
 }: Readonly<{
   activityId: string;
-  intent: string;
-  rewriteOf: string;
-  subject?: string;
+  steer: Steer;
   t: Translate;
 }>): Promise<DraftResult> {
   const { data, error, response } = await api.POST(
     "/activities/{id}/draft-email",
     {
       params: { path: { id: activityId } },
-      body: steering(intent, rewriteOf, subject),
+      body: steering(steer),
     },
   );
-  return draftAnswer(response, error, data, t, rewriteOf);
+  return draftAnswer(response, error, data, t, steer.rewriteOf);
 }
 
 // A 2xx is read as a draft only when it has the two fields the contract
@@ -207,12 +214,23 @@ export function draftingSubject(subject: string | undefined): string {
   return stripEveryKeyTag(subject ?? "").trim();
 }
 
-function steering(intent: string, rewriteOf: string, subject?: string) {
-  const written = draftingSubject(subject);
+// What every draft route reads the same way. `rewriteOf` is the body on
+// screen, so "make it shorter" revises this draft.
+type Steer = Readonly<{
+  intent: string;
+  rewriteOf: string;
+  subject?: string;
+  language?: Locale;
+}>;
+
+function steering(steer: Steer) {
+  const { intent, rewriteOf, language } = steer;
+  const written = draftingSubject(steer.subject);
   return {
     ...(intent.trim() ? { intent: intent.trim() } : {}),
     ...(written ? { subject: written } : {}),
     ...(rewriteOf.trim() ? { rewrite_of: rewriteOf.trim() } : {}),
+    ...(language ? { language } : {}),
   };
 }
 
@@ -231,6 +249,13 @@ function rewriteOfAsk(ask: DraftAsk): string {
 // formatting or a link the rep added, and a plain-text rewrite would drop it.
 function hasRepFormatting(html: string): boolean {
   return /<(?!\/?(?:p|br)\b)[a-z]/i.test(html);
+}
+
+/** Whether the body is still the model's served words, with nothing the rep added. */
+export function servedUntouched(
+  body: Readonly<{ text: string; html: string; served: string }>,
+): boolean {
+  return body.text === body.served && !hasRepFormatting(body.html);
 }
 
 // A follow-up after a meeting: everyone else it was with, and the meeting
@@ -253,22 +278,18 @@ function followUpBody(followUp: FollowUp | undefined) {
 // recipient to name and no deal or project to pick.
 async function draftFromLead({
   entityId,
-  intent,
-  rewriteOf,
-  subject,
+  steer,
   t,
 }: Readonly<{
   entityId: string;
-  intent: string;
-  rewriteOf: string;
-  subject?: string;
+  steer: Steer;
   t: Translate;
 }>): Promise<DraftResult> {
   const { data, error, response } = await api.POST("/leads/{id}/draft-email", {
     params: { path: { id: entityId } },
-    body: steering(intent, rewriteOf, subject),
+    body: steering(steer),
   });
-  return draftAnswer(response, error, data, t, rewriteOf);
+  return draftAnswer(response, error, data, t, steer.rewriteOf);
 }
 
 // The contact-started draft. The record in the path is the recipient, and the
@@ -277,17 +298,13 @@ async function draftFromContact({
   entityId,
   followUp,
   projectId,
-  intent,
-  rewriteOf,
-  subject,
+  steer,
   t,
 }: Readonly<{
   entityId: string;
   followUp?: FollowUp;
   projectId: string;
-  intent: string;
-  rewriteOf: string;
-  subject?: string;
+  steer: Steer;
   t: Translate;
 }>): Promise<DraftResult> {
   const { data, error, response } = await api.POST(
@@ -297,11 +314,11 @@ async function draftFromContact({
       body: {
         ...followUpBody(followUp),
         ...(projectId ? { project_id: projectId } : {}),
-        ...steering(intent, rewriteOf, subject),
+        ...steering(steer),
       },
     },
   );
-  return draftAnswer(response, error, data, t, rewriteOf);
+  return draftAnswer(response, error, data, t, steer.rewriteOf);
 }
 
 // The account-started draft. It grounds itself in the record it was started
@@ -313,9 +330,7 @@ async function draftFromAccount({
   recipientId,
   dealId,
   projectId,
-  intent,
-  rewriteOf,
-  subject,
+  steer,
   t,
 }: Readonly<{
   entityType: RelinkKind;
@@ -324,25 +339,14 @@ async function draftFromAccount({
   recipientId: string;
   dealId: string;
   projectId: string;
-  intent: string;
-  // The body on screen, so "make it shorter" revises this draft.
-  rewriteOf: string;
-  subject?: string;
+  steer: Steer;
   t: Translate;
 }>): Promise<DraftResult> {
   if (entityType === "lead") {
-    return draftFromLead({ entityId, intent, rewriteOf, subject, t });
+    return draftFromLead({ entityId, steer, t });
   }
   if (entityType === "contact") {
-    return draftFromContact({
-      entityId,
-      followUp,
-      projectId,
-      intent,
-      rewriteOf,
-      subject,
-      t,
-    });
+    return draftFromContact({ entityId, followUp, projectId, steer, t });
   }
   // A deal has no draft route: writing to a contact of a nearby account would
   // start a conversation the rep never chose.
@@ -358,11 +362,11 @@ async function draftFromAccount({
         ...(dealId ? { deal_id: dealId } : {}),
         // The server scopes the grounding read to this project.
         ...(projectId ? { project_id: projectId } : {}),
-        ...steering(intent, rewriteOf, subject),
+        ...steering(steer),
       },
     },
   );
-  return draftAnswer(response, error, data, t, rewriteOf);
+  return draftAnswer(response, error, data, t, steer.rewriteOf);
 }
 
 // The drafting call for every origin. They answer one shape, so the fill
@@ -392,26 +396,22 @@ export function useDraftMutation({
     mutationFn: async (ask: DraftAsk): Promise<DraftResult> => {
       resetUnavailable();
       const { grounding, activityId, entityType } = ask;
-      const intentOf = ask.instruction ?? ask.intent;
-      // The body on screen goes with every ask, so words the rep wrote are
-      // revised rather than ignored. A blank body asks for a first draft.
-      const rewriteOf = rewriteOfAsk(ask);
+      const steer = {
+        intent: ask.instruction ?? ask.intent,
+        // The body on screen goes with every ask, so words the rep wrote are
+        // revised rather than ignored. A blank body asks for a first draft.
+        rewriteOf: rewriteOfAsk(ask),
+        language: ask.language,
+      };
       if (activityId) {
-        return draftFromActivity({
-          activityId,
-          intent: intentOf,
-          rewriteOf,
-          t,
-        });
+        return draftFromActivity({ activityId, steer, t });
       }
       return draftFromAccount({
         entityType,
         entityId: ask.entityId,
         followUp: ask.followUp,
         ...grounding,
-        intent: intentOf,
-        subject: ask.subject,
-        rewriteOf,
+        steer: { ...steer, subject: ask.subject },
         t,
       });
     },

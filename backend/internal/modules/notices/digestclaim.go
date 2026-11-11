@@ -386,7 +386,7 @@ func unreadInWindow(ctx context.Context, tx pgx.Tx, user ids.UserID, w Window) (
 	window := digestWindowSQL(arg(w.from()), arg(w.Morning))
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT notice.id, notice.kind, notice.subject, notice.body,
-		       notice.target_type, notice.target_id, notice.created_at, notice.origin, coalesce(notice.dedupe_key,'')
+		       notice.target_type, notice.target_id, notice.created_at, notice.origin, coalesce(notice.dedupe_key,''), notice.system_text
 		  FROM notice
 		 WHERE notice.recipient_user_id = $%d
 		   AND %s
@@ -404,7 +404,7 @@ func unreadInWindow(ctx context.Context, tx pgx.Tx, user ids.UserID, w Window) (
 		var targetType *string
 		var targetID *ids.UUID
 		if scanErr := rows.Scan(&n.ID, &n.Kind, &n.Subject, &n.Body,
-			&targetType, &targetID, &n.CreatedAt, &n.Origin, &noticeKey); scanErr != nil {
+			&targetType, &targetID, &n.CreatedAt, &n.Origin, &noticeKey, &n.SystemText); scanErr != nil {
 			return nil, scanErr
 		}
 		if targetType != nil && targetID != nil {
@@ -414,6 +414,7 @@ func unreadInWindow(ctx context.Context, tx pgx.Tx, user ids.UserID, w Window) (
 			typed := ids.From[ids.ApprovalKind](approval)
 			n.ApprovalID = &typed
 		}
+		n.Target = resolvedNoticeTarget(n.Target, n.Kind, n.SystemText)
 		held = append(held, n)
 	}
 	return held, rows.Err()

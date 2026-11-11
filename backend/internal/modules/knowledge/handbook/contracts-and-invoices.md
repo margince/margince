@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/projects/contractform.tsx frontend/src/features/projects/contractlifecycle.tsx frontend/src/features/companies/companycontracts.tsx frontend/src/components/contractterms.tsx frontend/src/features/companies/companyfinance.tsx frontend/src/features/settings/financesource.tsx backend/internal/modules/contracts backend/internal/modules/finance backend/internal/modules/deals/win_evidence.go -->
+<!-- describes: frontend/src/features/projects/contractform.tsx frontend/src/features/projects/contractlifecycle.tsx frontend/src/features/projects/contractrenewal.ts frontend/src/features/companies/companycontracts.tsx frontend/src/components/contractterms.tsx frontend/src/features/companies/companyfinance.tsx frontend/src/features/settings/financesource.tsx backend/internal/modules/contracts backend/internal/modules/finance backend/internal/modules/deals/win_evidence.go -->
 # Contracts and invoices
 
 Contracts and invoices both live on a company's own page in Margince. The
@@ -91,7 +91,9 @@ A contract has five statuses: **Draft, Active, Expired, Canceled, Superseded.**
 
 **A contract's status never changes by date.** A human makes every change. A
 term whose end date has passed while nobody has changed the status reads "Term
-ended, status pending". It does not switch to Expired by itself.
+ended, status pending". It does not switch to Expired by itself. An active
+contract whose start date is in the future is not under contract yet, and it does
+not read as ended.
 
 On its own, the record shows whether the company is **under contract** as of
 today, worked out from the dates. That reading can disagree with the status, and

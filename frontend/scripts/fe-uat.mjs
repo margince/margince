@@ -1,10 +1,3 @@
-// Change-scoped Storybook render + capture UAT lane. For frontend-only diffs:
-// renders the CHANGED component's stories in isolation and screenshots them —
-// no live stack, no DB. It is a GATE: it fails on a render error, on a changed
-// component that has no story, and on a changed story the build does not
-// register — and writes a machine-readable manifest a UAT runner can consume.
-// Built for this repo's plain frontend/.
-//
 // Usage: node frontend/scripts/fe-uat.mjs [--allow-missing | --all-stories]
 //   --allow-missing  do not fail when a changed component has no story yet
 //   --all-stories    render every story the build registers, whatever the diff
@@ -21,6 +14,7 @@ import { availableParallelism } from "node:os";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { importSpecifiers } from "./lib/import-specifiers.mjs";
+import { stable } from "./lib/stable.mjs";
 import { isDocsPage, storyCensus } from "./lib/story-files.ts";
 import { outcomeErrors, SETTLED_EVENTS } from "./lib/story-outcome.mjs";
 import {
@@ -56,7 +50,14 @@ import {
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const staticDir = join(repoRoot, "frontend/storybook-static");
-const outDir = join(repoRoot, ".tmp/fe-uat");
+const outDir = resolve(
+  process.env.FE_UAT_OUTPUT_DIR || join(repoRoot, ".tmp/fe-uat"),
+);
+const theme = process.env.FE_UAT_THEME ?? "light";
+if (theme !== "light" && theme !== "dark") {
+  console.error("fe-uat: FE_UAT_THEME must be light or dark");
+  process.exit(2);
+}
 const allowMissing = process.argv.includes("--allow-missing");
 let scope = scopeFor(process.argv);
 
@@ -226,7 +227,7 @@ for (const f of changed) {
       missing.push({ component: f });
     } else {
       for (const story of covering) storyFiles.add(story);
-      fanOut.set(f, [...covering].sort());
+      fanOut.set(f, [...covering].sort(stable));
     }
   }
 }
@@ -267,7 +268,7 @@ async function captureStory(page, port, story) {
   });
 
   await page.goto(
-    `http://localhost:${port}/iframe.html?id=${story.id}&viewMode=story`,
+    `http://localhost:${port}/iframe.html?id=${story.id}&viewMode=story&globals=theme:${theme}`,
     {
       waitUntil: "networkidle",
     },
@@ -307,9 +308,26 @@ async function captureStory(page, port, story) {
   await page.waitForTimeout(250);
   const png = join(outDir, `${story.id}.png`);
   await page.screenshot({ path: png });
+  const expectedTheme = await page.evaluate(
+    (requested) =>
+      globalThis.__STORYBOOK_PREVIEW__?.currentRender?.story?.storyGlobals
+        ?.theme ?? requested,
+    theme,
+  );
+  const drawnTheme = await page.getAttribute("html", "data-theme");
+  if (drawnTheme !== expectedTheme) {
+    errors.push(`theme is ${drawnTheme}, expected ${expectedTheme}`);
+  }
   const pass = rendered && errors.length === 0;
   console.log(pass ? `✓ ${story.id}` : `✗ ${story.id} — ${errors.join("; ")}`);
-  return { id: story.id, pass, png: relative(repoRoot, png), errors };
+  return {
+    id: story.id,
+    pass,
+    png: relative(repoRoot, png),
+    theme: drawnTheme,
+    expectedTheme,
+    errors,
+  };
 }
 
 async function openPage(browser, lane) {
@@ -346,7 +364,14 @@ function captureThrew(story, error) {
 function writeManifest(fields) {
   mkdirSync(outDir, { recursive: true });
   const fanOutMap = Object.fromEntries(fanOutByReach);
-  const manifest = { scope, base, head, fanOut: fanOutMap, ...fields };
+  const manifest = {
+    scope,
+    base,
+    head,
+    requestedTheme: theme,
+    fanOut: fanOutMap,
+    ...fields,
+  };
   writeFileSync(
     join(outDir, "manifest.json"),
     `${JSON.stringify(manifest, null, 2)}\n`,

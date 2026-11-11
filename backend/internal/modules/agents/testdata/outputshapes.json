@@ -11502,6 +11502,14 @@
                 "type": "integer",
                 "minimum": 0
               },
+              "record_assignment": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "sdr_handoff": {
+                "type": "integer",
+                "minimum": 0
+              },
               "task": {
                 "type": "integer",
                 "minimum": 0
@@ -11518,6 +11526,8 @@
               "lead",
               "list",
               "project",
+              "record_assignment",
+              "sdr_handoff",
               "task",
               "webhook"
             ]
@@ -15733,6 +15743,9 @@
                     "status": {
                       "type": "string"
                     },
+                    "term_state": {
+                      "type": "string"
+                    },
                     "title": {
                       "type": "string"
                     },
@@ -15748,6 +15761,7 @@
                     "contract_number",
                     "currency",
                     "status",
+                    "term_state",
                     "title",
                     "under_contract"
                   ]

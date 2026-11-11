@@ -792,27 +792,16 @@ func TestARefusedSendNamesItsReviewWhereAMachineCanReadIt(t *testing.T) {
 			"body cannot find the work this left behind",
 			problem.Details.ReviewID, reviews[0].id)
 	}
-	// NAMED EXACTLY, not merely non-empty. A test that accepted any list would
-	// pass while the refusal promised a move this caller cannot make — which is
-	// the bug it exists to catch.
-	//
-	// The fixture signs in as an admin, who holds communication_exception — so
-	// the move offered is the SEND rather than the ask. Which one a human sees
-	// is the server's decision and turns on that grant; the test below takes
-	// the grant away and watches the offer change.
-	if len(problem.Details.AvailableActions) != 1 ||
-		problem.Details.AvailableActions[0] != "direct_send" {
-		t.Errorf("the refusal offers %v, want exactly [direct_send] — a rep who may overrule the "+
-			"engine is offered the send, not a note asking somebody else to",
-			problem.Details.AvailableActions)
+	if len(problem.Details.AvailableActions) != 0 {
+		t.Errorf("unsupported marketing offers %v, want no staff exception", problem.Details.AvailableActions)
 	}
 	// The engine's own reason per address, so the composer says why this
 	// recipient stopped instead of one consent sentence for every refusal.
 	if len(problem.Details.Refusals) != 1 ||
 		problem.Details.Refusals[0].Address != "subject@consent.test" ||
-		problem.Details.Refusals[0].ReasonCode != "no_marketing_consent" ||
+		problem.Details.Refusals[0].ReasonCode != "marketing_permission_required" ||
 		problem.Details.Refusals[0].Category != "marketing" {
-		t.Errorf("the refusal names %+v, want subject@consent.test refused for no_marketing_consent under marketing",
+		t.Errorf("the refusal names %+v, want subject@consent.test refused for marketing_permission_required under marketing",
 			problem.Details.Refusals)
 	}
 }
@@ -823,6 +812,7 @@ func TestARefusedSendNamesItsReviewWhereAMachineCanReadIt(t *testing.T) {
 // each contact and category the rep's vouch must cover.
 func TestARepWhoCannotDirectASendIsOfferedTheOverrule(t *testing.T) {
 	c := setupConsent(t)
+	c.useReviewableMarketingProfile(t)
 
 	// The seat loses the grant that makes somebody a director.
 	if _, err := c.Owner.Exec(context.Background(), `
@@ -845,7 +835,7 @@ func TestARepWhoCannotDirectASendIsOfferedTheOverrule(t *testing.T) {
 		"subject": "Re: Inbound question", "body": "answer",
 		"to": []string{"subject@consent.test"}, "consent_purpose": "marketing_email",
 	}, nil, &problem); status != http.StatusConflict {
-		t.Fatalf("marketing send with no grant → %d, want 409", status)
+		t.Fatalf("correspondence with no supporting context → %d, want 409", status)
 	}
 	if len(problem.Details.AvailableActions) != 1 ||
 		problem.Details.AvailableActions[0] != "overrule" {
@@ -903,6 +893,7 @@ func TestARepWhoMayNotEditTheContactIsOfferedNoOverrule(t *testing.T) {
 // legacy one.
 func TestNamingTheKindIsEnoughWithoutTheLegacyKey(t *testing.T) {
 	c := setupConsent(t)
+	c.activityID = logConsentInbound(t, c.AppEnv, c.contactID)
 
 	status := c.Call(t, "POST", "/v1/activities/"+c.activityID+"/send-email", AnyMap{
 		"subject": "Re: Inbound question", "body": "answer",

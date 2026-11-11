@@ -16,6 +16,7 @@ import { useLocale, useT } from "../../i18n";
 import { activityFollowUpsKey } from "../../lib/activitykeys";
 import { useCanWrite } from "../../lib/capability";
 import { problemCodeOf, unwrap } from "../../lib/problem";
+import { displayedSubject } from "../../lib/systemdisplay";
 import { useViewerZone } from "../../lib/viewerzone";
 
 export function ActivityFollowUps({
@@ -133,7 +134,7 @@ function FollowUpRow({
         <Button variant="link" onClick={() => onOpen(task.id)}>
           {task.content_state === "withheld"
             ? t("timeline.withheld")
-            : task.subject || t("timeline.kind.task")}
+            : displayedSubject(task) || t("timeline.kind.task")}
         </Button>
         <Badge tone={task.is_done ? "success" : "default"}>
           {t(task.is_done ? "tasks.isDone" : "activity.followUpOpen")}

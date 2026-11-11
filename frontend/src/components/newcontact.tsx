@@ -45,7 +45,11 @@ async function createContact(
 // so its box is left out and the company goes as `company_id`.
 export function NewContactAction({
   company,
-}: Readonly<{ company?: HomeCompany }>) {
+  listCreate,
+}: Readonly<{
+  company?: HomeCompany;
+  listCreate?: Readonly<{ open: boolean }>;
+}>) {
   const t = useT();
   const queryClient = useQueryClient();
   const cf = useObjectCustomFields("contact", "create");
@@ -57,6 +61,7 @@ export function NewContactAction({
       label={t("create.contact")}
       invalidate={company?.listKey ?? "contacts"}
       screen="contacts"
+      listCreate={listCreate}
       create={(values, rows, key, extra) =>
         createContact(
           company ? { ...values, company_id: company.id } : values,

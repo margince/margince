@@ -5,6 +5,7 @@ package compose
 
 import (
 	"context"
+	"errors"
 	"io"
 	"sync/atomic"
 	"time"
@@ -30,11 +31,15 @@ func WriteJobProcessMetrics(w io.Writer) {
 }
 
 type sessionBudgetWorker[T river.JobArgs] struct {
-	work  jobs.WorkOnly[T]
-	slots chan struct{}
+	work        jobs.WorkOnly[T]
+	slots       chan struct{}
+	withContext func(context.Context) context.Context
 }
 
 func (w sessionBudgetWorker[T]) Work(ctx context.Context, job *river.Job[T]) error {
+	if w.withContext != nil {
+		ctx = w.withContext(ctx)
+	}
 	if w.slots != nil {
 		ctx = context.WithValue(ctx, sessionBudgetKey{}, w.slots)
 	}
@@ -56,6 +61,6 @@ func takeSessionSlot(ctx context.Context) (func(), error) {
 		return nil, ctx.Err()
 	default:
 		sessionBudgetSnoozes.Add(1)
-		return nil, river.JobSnooze(5 * time.Second)
+		return nil, errors.Join(database.ErrSessionBudgetBusy, river.JobSnooze(5*time.Second))
 	}
 }

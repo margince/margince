@@ -8,7 +8,7 @@ workflow is outside the gate:
 
 | Workflow | What starts it | Blocks a merge? |
 |---|---|---|
-| `cla.yml` | `pull_request_target` (`opened`, `reopened`, `synchronize`, `closed`); a PR comment that contains `recheck` or `Contributor License Agreement` | Yes, for an author outside the Margince team |
+| `cla.yml` | `pull_request_target` (`opened`, `reopened`, `synchronize`, `closed`); a PR comment that contains `recheck` or `Contributor License Agreement`; `merge_group` | Yes, for an author outside the Margince team |
 | `cache-warm.yml` | `pace.yml`, `main` every three hours, manual dispatch | No |
 | `merge-attest.yml` | every push to `main` | No (runs after the merge) |
 | `review-coverage.yml` | pull request events, a sent review | No |
@@ -19,20 +19,20 @@ workflow is outside the gate:
 | `pace.yml` | every push to `main` | No (runs after the merge) |
 | `scheduled.yml` | daily and weekly on `main` | No |
 | `sbom.yml` | manual dispatch only | No |
-| `release.yml` | manual dispatch only | No |
+| `release.yml` | `v*` tag push (no pre-release), manual dispatch | No |
 | `release-tag.yml` | `v*` tag push | No (runs on a tag, after every merge) |
 
-The merge queue rule is off, so the `merge_group` trigger in `ci.yml` does not run.
+`ci.yml` and `cla.yml` run on `merge_group` too, because the queue asks for each required check again.
 `main-health.yml` is the only workflow that publishes the SonarCloud analysis of `main`.
 
 ## `cla.yml`
 
-Asks every commit author outside the Margince team to accept [CLA.md](../../CLA.md), and
-records each acceptance in a separate signatures repository. Team members and tool accounts are on an
-allowlist, read from GitHub on every run, so the check passes for them at once. It runs on
-`pull_request_target`, because recording needs a secret a fork run never gets, and so it never checks
-out the pull request's code. `backend/gates/cla_test.go` holds every version of the agreement the workflow names to
-the one in `CLA.md`.
+Asks every commit author outside the Margince team to accept [CLA.md](../../CLA.md), and records each
+acceptance in a separate signatures repository. Team members and tool accounts are on an allowlist, read
+from GitHub on every run, so the check passes for them at once. It runs on `pull_request_target`, because
+recording needs a secret a fork run never gets, and so it never checks out the pull request's code. On
+`merge_group` its job skips, which passes: each entry passed `cla` before it could join the queue.
+`backend/gates/cla_test.go` holds every version of the agreement the workflow names to the one in `CLA.md`.
 
 ## `cache-warm.yml`
 
@@ -45,6 +45,9 @@ for why it does not run on each push.
 GitHub drops some of the cron runs. So `pace.yml` starts it from a push to `main` once the newest run is
 three hours old, as it does for `main-health.yml`. Why `ci.yml` saves neither lint cache: [The lint
 caches are saved on `main` only](../explanation/ci-pipeline.md#the-lint-caches-are-saved-on-main-and-the-golangci-one-on-develop-too).
+Its `ci-image` job builds the [CI image](../explanation/ci-image.md), and `plain` warms the caches of
+the runner and, if the image can be pulled, of the image. `lint-cache.yml` lints in it, or else on the runner.
+`integration-timing` saves the test times the integration shards split by (cache `integration-test-timing-<run>`), each test's mean over the five newest `test-timing-integration` artifacts.
 
 ## `merge-attest.yml`
 

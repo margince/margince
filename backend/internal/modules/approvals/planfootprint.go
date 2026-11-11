@@ -37,7 +37,7 @@ func (s *Service) WithPlanSight(sight PlanSight) *Service {
 // planFootprint builds the footprint of a's plan, with edited in place of the
 // staged call when the decision carries an edit.
 func (s *Service) planFootprint(ctx context.Context, a row, edited json.RawMessage) (*approvalplan.Footprint, error) {
-	proposal, err := editedProposal(a, edited, s.now())
+	proposal, err := editedProposal(ctx, a, edited, s.now())
 	if err != nil {
 		return nil, err
 	}
@@ -117,7 +117,7 @@ func (s *Service) pastPlanHidden(ctx context.Context, approval crmcontracts.Appr
 	if err != nil && !errors.Is(err, errNoPastFootprint) {
 		return false, err
 	}
-	if footprint == nil && s.runsAsAgent(stagedByRow(subject)) {
+	if footprint == nil && s.runsAsAgent(subject) {
 		return true, nil
 	}
 	clears, err := s.planSight.Clears(ctx, approval, footprint)

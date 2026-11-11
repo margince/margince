@@ -19,8 +19,11 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/dealverdict"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
+	"github.com/margince/margince/backend/internal/shared/kernel/workforce"
 )
 
 // dealVerdictActivities bounds the activities one verdict reads, newest first.
@@ -107,10 +110,12 @@ func readVerdictDeal(ctx context.Context, tx pgx.Tx, deal ids.UUID, read *dealVe
 func readVerdictActivities(ctx context.Context, tx pgx.Tx, deal ids.UUID, read *dealVerdictRead) error {
 	rows, err := tx.Query(ctx, `
 		SELECT a.id::text, a.kind, coalesce(a.direction, ''), a.occurred_at, coalesce(a.subject, ''),
-		       left(coalesce(a.body, ''), $2), greatest(a.created_at, l.created_at), greatest(a.updated_at, l.created_at)
+		       left(coalesce(a.body, ''), $2), greatest(a.created_at, l.created_at), greatest(a.updated_at, l.created_at),
+ EXISTS (SELECT 1 FROM activity_participant p WHERE p.activity_id=a.id AND p.role='from' AND `+auth.ParticipantStandsSQL("p", "a")+`
+ AND (p.user_id IS NOT NULL OR EXISTS (SELECT 1 FROM app_user u WHERE `+storekit.SeatLoginIsSQL("u", "p.address", "p.address_domain_folded")+` AND `+workforce.CaptureSeatSQL("u")+`)))
 		  FROM activity_link l JOIN activity a ON a.id = l.activity_id
 		 WHERE l.deal_id = $1 AND a.archived_at IS NULL AND a.kind IN ('email', 'meeting', 'call', 'note')
-		   AND `+visibleToAllSQL("a")+` AND `+relstrength.OriginIsEngagementSQL("a")+`
+		   AND `+visibleToAllSQL("a")+` AND `+relstrength.OriginIsEngagementSQL("a")+` AND a.origin <> 'agent'
 		 ORDER BY a.occurred_at DESC, a.id DESC LIMIT $3`, deal, dealVerdictBodyChars, dealVerdictActivities)
 	if err != nil {
 		return fmt.Errorf("compose: reading the deal's activities: %w", err)
@@ -120,7 +125,7 @@ func readVerdictActivities(ctx context.Context, tx pgx.Tx, deal ids.UUID, read *
 		var activity dealverdict.Activity
 		var arrived time.Time
 		if err := rows.Scan(&activity.ID, &activity.Kind, &activity.Direction, &activity.OccurredAt,
-			&activity.Subject, &activity.Body, &activity.ArrivedAt, &arrived); err != nil {
+			&activity.Subject, &activity.Body, &activity.ArrivedAt, &arrived, &activity.FromOurSide); err != nil {
 			return err
 		}
 		read.in.Activities = append(read.in.Activities, activity)

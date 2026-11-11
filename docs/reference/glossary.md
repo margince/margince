@@ -17,9 +17,11 @@ here: put it in the area's word list instead. A name that no plain page uses mus
 | backend | The Go server code under `backend/`. |
 | Beschäftigteninformation | The German notice each employee gets before their mailbox is read (Art. 13 GDPR). |
 | BUSL | The Business Source License 1.1, the license Margince uses. |
+| challenge | A check a WAF puts to the browser in the app's place, which only a page load can pass. |
 | changelog | A file listing the changes of each release, which this repository does not keep. |
 | CI | Continuous integration: the checks GitHub runs on every pull request. |
 | CIMD | Client ID Metadata Document: an AI tool's ID that is the URL of a file describing it. |
+| CLS | Cumulative Layout Shift: how far content moves on screen while a page loads. |
 | Compose | Docker Compose, which starts Postgres and Redis for local work. |
 | Conventional | Conventional Commits, a format for commit messages. |
 | Copilot | Microsoft's AI assistant, whose Copilot Studio builds agents that connect to Margince. |
@@ -55,6 +57,7 @@ here: put it in the area's word list instead. A name that no plain page uses mus
 | JPEG | A common photo file format, saved as .jpg or .jpeg. |
 | Jurisdiction | The settings page where an admin chooses the law an installation follows. |
 | Langdock | A service that serves OpenAI, Gemini and Claude models on one key. |
+| Launchpad | The Ubuntu project service that records each package Ubuntu publishes. |
 | LICENSE | The file at the repository root that holds the license text. |
 | LinkedIn | The professional network whose contact export Margince can import. |
 | locale | The date or time format of the reader's language, as a setting value. |
@@ -92,12 +95,14 @@ here: put it in the area's word list instead. A name that no plain page uses mus
 | Telegram | A chat app Margince can send messages through. |
 | terminal | The window where you type commands, such as `claude` or `codex`. |
 | Typeform | An online form tool that can send each answer to a webhook address. |
+| Ubuntu | The Linux distribution the CI image is built on, pinned to 24.04. |
 | UTF | The Unicode text encoding family, as in UTF-8. |
 | VAT | Value added tax, and the tax number a company is registered under. |
 | vi | The language code for Vietnamese, as a setting value. |
 | Visual | Part of the name Visual Studio, Microsoft's code editor, which can connect to Margince. |
 | Vite | The build and dev server tool for the web app. |
 | vLLM | A server that runs language models on your own machines. |
+| WAF | A web application firewall: a filter at the edge that can answer a request in the app's place. |
 | Webflow | A website builder whose forms can send each entry to a webhook address. |
 | webhook | A message one tool sends to another tool's address when a chosen event happens. |
 | WebP | A modern image file format, saved as .webp. |

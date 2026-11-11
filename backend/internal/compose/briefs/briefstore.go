@@ -417,20 +417,25 @@ func readRunItems(ctx context.Context, tx pgx.Tx, runID ids.UUID) ([]BriefRunIte
 	}
 	q += " ORDER BY bi.rank"
 
-	rows, err := tx.Query(ctx, q, args...)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
+	// It keys on the run and spells the state as a literal, so one generic plan
+	// serves every reader. Planned per call, it costs more to plan than to run.
 	var items []BriefRunItem
-	for rows.Next() {
-		item, err := scanBriefItem(rows)
+	err = database.ReuseGenericPlansTx(ctx, tx, func() error {
+		rows, err := tx.Query(ctx, q, args...)
 		if err != nil {
-			return nil, err
+			return err
 		}
-		items = append(items, item)
-	}
-	return items, rows.Err()
+		defer rows.Close()
+		for rows.Next() {
+			item, err := scanBriefItem(rows)
+			if err != nil {
+				return err
+			}
+			items = append(items, item)
+		}
+		return rows.Err()
+	})
+	return items, err
 }
 
 // resurfaceExpiredSnoozes flips a run's finished snoozes back to actionable —
@@ -444,13 +449,13 @@ func readRunItems(ctx context.Context, tx pgx.Tx, runID ids.UUID) ([]BriefRunIte
 // guard ask — three readers of one question, and a fourth spelling here would
 // be the one that disagrees.
 func resurfaceExpiredSnoozes(ctx context.Context, tx pgx.Tx, runID ids.UUID, now time.Time) error {
-	lifted := briefSnoozeLiftedSQL("bi.deal_id", "bi.reopen_on", "bi.reopen_ref", "bi.state_at", "$2")
+	holding := briefSnoozeHoldsSQL("bi", "@now")
 	resurfaced, err := collectIDList(tx.Query(ctx, fmt.Sprintf(`
 		UPDATE brief_item bi
 		SET state = 'new', state_at = NULL, snoozed_until = NULL, reopen_on = NULL, reopen_ref = NULL
-		WHERE bi.brief_run_id = $1 AND bi.state = 'snoozed'
-		  AND CASE WHEN bi.reopen_on = 'time' THEN bi.snoozed_until <= $2 ELSE %s END
-		RETURNING bi.id`, lifted), runID, now.UTC()))
+		WHERE bi.brief_run_id = @run AND bi.state = 'snoozed'
+		  AND NOT %s
+		RETURNING bi.id`, holding), pgx.StrictNamedArgs{"run": runID, "now": now.UTC()}))
 	if err != nil {
 		return err
 	}

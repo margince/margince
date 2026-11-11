@@ -90,9 +90,9 @@ The commands above also follow these rules:
 - **Use separate folders for each pass.** Give each pass its own `TRACE=` and `RESUME=`. Then they can run
   at the same time. The records they write are separate: one file for each
   task, provider, model and environment. And no pass replays the journal of the other.
-- **`RESUME=` is a cache that lasts 6 hours.** It holds only for the same program. Any Go edit makes
-  the whole journal stale. So finish the work in section 3 and the fix before you start a run that stopped early
-  again, or the whole run costs money again.
+- **`RESUME=` is a cache that lasts 6 hours.** A replay keeps what the models said, and the code
+  that runs now grades it again. So a Go edit does not empty the journal. A change to a scenario,
+  or to a request a site or the judge is sent, does: those runs cost money again.
 
 Expect these outcomes:
 
@@ -205,6 +205,61 @@ why the certification tests alone leave it green, while CI is red.
 Then run the whole package, and not only your own tests by name:
 `go test ./internal/compose/ -count=1`. A drift gate that you would not think to name
 may be the one that catches this.
+
+## Make a run take less time
+
+A run calls the candidate and then the judge, for every run of every scenario. These settings decide
+how long that takes:
+
+- **`PARALLEL=<n>`** (default `4`) measures that many runs of a task at once. The record is the same one
+  `PARALLEL=1` writes. Add to it until the plan of the judge or the rate limit of the candidate pushes
+  back.
+- **`SITE=<variant>` and `SCENARIO=<regexp>`** measure part of a task, such as the one site a prompt fix
+  changed. The rows measured replace theirs in the committed record, and the verdict is worked out
+  again from every row. The task needs a committed record with a row for every other scenario.
+- **`RUNS=3`** while you look for a fix. Leave it out for the run that writes the record you commit.
+- **A restart replays.** The journal under `RESUME=` keeps what the models said, and the code you
+  build now grades it again. Only a scenario whose case, prompt or judge request changed costs money
+  again ([resume](certify-an-ai-model.md#5-when-the-network-drops-in-the-middle-of-a-run)).
+- **Separate tasks can run side by side.** Give each `TASK=` its own `RESUME=<dir>` ([resume](certify-an-ai-model.md#5-when-the-network-drops-in-the-middle-of-a-run)), and
+  watch how much RAM the machine has left.
+
+Fix in batches. Wait for a run to end, and read every failed scenario in the trace ([trace](certify-an-ai-model.md#4-see-the-prompts--trace-requestresponse-for-tuning)).
+Fix the prompt, case or validator each one points to, and run again once. A fix made while a run is still
+going leaves that run measuring a prompt you have already changed.
+
+## What a run costs and how long it takes
+
+The last full run of each model family, with the default `PARALLEL=4`, judged by `claude-sonnet-5-5`.
+Runs graded by an earlier judge are not in this table. The judge runs on the Claude plan, so it adds
+time and no cost per call. The cost is the candidate's tokens at the
+list price of the provider that served them.
+
+| Model family | Served by | Scope | Time | Model calls | Tokens in / out | Cost |
+|---|---|---|---|---|---|---|
+| `openai/gpt-oss-120b` | OpenRouter, mostly Cerebras (`fp16`) | 28 tasks | 57 minutes | 1,712 | 3,440,000 / 1,140,000 | about $2 |
+| `google/gemma-4-31b-it` | OpenRouter, provider `crusoe` (`bf16`), pinned | every task but `document_extract` | 53 minutes | 1,581 | 2,720,000 / 215,000 | about $0.50 |
+| `qwen/qwen3.8-27b` | OpenRouter, provider `deepinfra` (`bf16`), pinned | every task but `document_extract` | 254 minutes | 1,457 | 2,610,000 / 2,170,000 | about $4.50 |
+| Gemini preset (`gemini-3.6-flash`, `gemini-3.1-flash-lite`) | Gemini API | the stale tasks of both models | 56 minutes | 1,528 | 2,870,000 / 472,000 | about $3 |
+
+A run after a fix batch measures only the cases whose stamp moved. Each of those ran for 12 to 35 minutes.
+
+The provider decides most of the cost. The default upstream picks the provider that returns the most
+tokens a second, which often costs more. Pin one with `UPSTREAM='{"only":["<provider>"]}'`
+when the price matters more than the time.
+
+**Update this table after every full run.** Replace the row of the model family you ran; add a row
+for a new one. Save the run's output to a file, then let the script read it, the journal and the trace:
+
+```bash
+make -C backend e2e-ai MODEL=<provider>:<model> RESUME=$PWD/.tmp/aicert/resume-<family> > run.log 2>&1
+scripts/aicert-run-cost.sh run.log .tmp/aicert/resume-<family>
+```
+
+It prints the time, the calls, and the tokens, serving provider and cost of each model. It looks up an
+OpenRouter model's price for the provider that served it. Give any other model's price in USD per
+1,000,000 tokens, as `PRICE_gemini_3_6_flash="0.75,3.75"` before the command. A change to the script
+runs its own test: `bash scripts/aicert-run-cost.test.sh`.
 
 ## What this loop does not tell you
 

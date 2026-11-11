@@ -451,9 +451,25 @@ func classifyError(err error) string {
 		return sentinelRequestRejected
 	case errors.Is(err, ErrOutputRejected):
 		return sentinelOutputRejected
+	// The caller's own cancellation, last: a named outcome the cancelled
+	// attempt still reached keeps its own sentinel.
+	case errors.Is(err, context.Canceled):
+		return sentinelCanceled
 	default:
-		return "provider_error"
+		return sentinelProviderError
 	}
+}
+
+// sentinelFor is classifyError for an attempt made on the caller's ctx. A
+// provider's client reports a caller's cancellation as a broken connection or
+// a timeout, so those two become canceled. A named outcome, such as a quota or
+// a withheld answer, keeps its own sentinel.
+func sentinelFor(ctx context.Context, err error) string {
+	sentinel := classifyError(err)
+	if (sentinel == sentinelProviderError || sentinel == sentinelTimeout) && errors.Is(ctx.Err(), context.Canceled) {
+		return sentinelCanceled
+	}
+	return sentinel
 }
 
 // isDeadline reports whether err is a deadline firing. The HTTP client's own

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { stable } from "../format/collate";
 import { en } from "./en";
 import {
   catalogs,
@@ -37,6 +38,7 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "lead.card.askedQuote",
   "signatureTemplate.placeholder",
   "agent.fact.sourceOnProvider",
+  "standing.mark.label",
   // The promiser and stored summary are values separated by punctuation.
   "magic.action.approval_commitment_task_named",
   "magic.action.approval_commitment_task_summary",
@@ -350,18 +352,22 @@ const KEPT_IN_ENGLISH = new Set<string>([
 // hand-maintained locale list is a list that drifts.
 
 function placeholders(message: string): string[] {
-  return [...message.matchAll(/\{(\w+)\}/g)].map((match) => match[1]).sort();
+  return [...message.matchAll(/\{(\w+)\}/g)]
+    .map((match) => match[1])
+    .sort(stable);
 }
 
 describe("i18n catalogs", () => {
   it("LOCALES lists exactly the registered catalogs", () => {
-    expect([...LOCALES].sort()).toEqual(Object.keys(catalogs).sort());
+    expect([...LOCALES].sort(stable)).toEqual(
+      Object.keys(catalogs).sort(stable),
+    );
   });
 
   it("every catalog has exact key parity with en", () => {
-    const expected = Object.keys(en).sort();
+    const expected = Object.keys(en).sort(stable);
     for (const [locale, catalog] of Object.entries(catalogs)) {
-      expect(Object.keys(catalog).sort(), locale).toEqual(expected);
+      expect(Object.keys(catalog).sort(stable), locale).toEqual(expected);
     }
   });
 

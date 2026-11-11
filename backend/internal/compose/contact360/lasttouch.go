@@ -158,18 +158,16 @@ func LastTouchFor(ctx context.Context, tx pgx.Tx, contactIDs []ids.ContactID, op
 	}
 	// One copy of the content gate for all directions. Postgres plans each
 	// copy, and the pooled connection keeps that memory.
-	readable, err := auth.ContentReadableActivitiesSQL(ctx, fmt.Sprintf(`
-		SELECT l.activity_id FROM activity_link l WHERE l.contact_id = ANY($%[1]d)
-		UNION ALL
-		SELECT ap.activity_id FROM activity_participant ap WHERE ap.contact_id = ANY($%[1]d)`, wantedPos), arg)
+	readable, err := auth.ContentReadableActivitiesSQL(ctx, "SELECT reach.activity_id FROM reach", arg)
 	if err != nil {
 		return nil, err
 	}
 	// The activities this contact is on, shared by both directions; the
-	// inbound arm adds authorship on top.
-	reached := fmt.Sprintf(`FROM activity a
-		WHERE a.archived_at IS NULL AND %s AND a.id IN (SELECT id FROM readable_activity)%s%s`,
-		fmt.Sprintf(contactReachesActivity, "c.id"), projectScope(opts, arg), auth.ReaderlessAudience(ctx, "a"))
+	// inbound arm adds authorship on top. Each walk starts from the contact's
+	// own reach, so its cost is that contact's activity, not every readable row.
+	reached := fmt.Sprintf(`FROM reach JOIN activity a ON a.id = reach.activity_id
+		WHERE reach.contact_id = c.id AND a.archived_at IS NULL AND a.id IN (SELECT id FROM readable_activity)%s%s`,
+		projectScope(opts, arg), auth.ReaderlessAudience(ctx, "a"))
 	asOf := "now()"
 	if !opts.AsOf.IsZero() {
 		asOf = fmt.Sprintf("$%d::timestamptz", arg(opts.AsOf))
@@ -180,24 +178,25 @@ func LastTouchFor(ctx context.Context, tx pgx.Tx, contactIDs []ids.ContactID, op
 	exchange := relstrength.ContactExchangeSQL("a", "c.id", asOf)
 	// One newest row per direction carries its time and its precision together.
 	query := fmt.Sprintf(`
-		WITH readable_activity AS MATERIALIZED (%[9]s)
+		WITH reach AS MATERIALIZED (%[10]s), readable_activity AS MATERIALIZED (%[9]s)
 		SELECT c.id, inbound.touched_at, outbound.touched_at, live.touched_at, exchange.touched_at, preceding.touched_at,
 		       coalesce(inbound.touched_precision, ''), coalesce(outbound.touched_precision, ''), coalesce(exchange.touched_precision, ''),
 		       coalesce(live.touched_precision, ''), coalesce(preceding.touched_precision, ''),
 		       inbound.touched_id, outbound.touched_id, live.touched_id
 		FROM contact c
 		LEFT JOIN LATERAL (SELECT a.occurred_at AS touched_at, a.occurred_precision AS touched_precision, a.id AS touched_id
-		                     %[1]s AND %[2]s %[8]s) inbound ON true
+		                     %[1]s AND %[2]s %[11]s) inbound ON true
 		LEFT JOIN LATERAL (SELECT a.occurred_at AS touched_at, a.occurred_precision AS touched_precision, a.id AS touched_id
-		                     %[1]s AND %[5]s %[8]s) outbound ON true
+		                     %[1]s AND %[5]s %[12]s) outbound ON true
 		LEFT JOIN LATERAL (SELECT a.occurred_at AS touched_at, a.occurred_precision AS touched_precision, a.id AS touched_id
-		                     %[1]s AND %[2]s AND NOT %[6]s %[8]s) live ON true
+		                     %[1]s AND %[2]s AND NOT %[6]s %[11]s) live ON true
 		LEFT JOIN LATERAL (SELECT a.occurred_at AS touched_at, a.occurred_precision AS touched_precision
 		                     %[1]s AND %[7]s %[8]s) exchange ON true
 		LEFT JOIN LATERAL (SELECT a.occurred_at AS touched_at, a.occurred_precision AS touched_precision
 		                     %[1]s AND %[7]s AND a.occurred_at < inbound.touched_at %[8]s) preceding ON true -- occurred_at raw: the touch before the newest inbound, an ordering of rows
 		WHERE c.id = ANY($%[3]d) AND c.archived_at IS NULL AND (%[4]s)`,
-		reached, inbound, wantedPos, visible, outbound, activities.ImportedHistorySQL, exchange, newestRow, readable)
+		reached, inbound, wantedPos, visible, outbound, activities.ImportedHistorySQL, exchange, newestRow, readable,
+		fmt.Sprintf(contactReach, wantedPos), newestTheirs, newestOurs)
 	// Inside a composed read it reuses its generic plan. It keys on the contacts
 	// and spells every kind as a literal, and it plans far slower than it runs.
 	err = database.ReuseGenericPlans(ctx, func(ctx context.Context) error {
@@ -227,5 +226,20 @@ func scanLastTouches(ctx context.Context, tx pgx.Tx, query string, args []any, o
 	return rows.Err()
 }
 
+// contactReach is contactReachesActivity for a set of contacts, each activity
+// paired with the contact it reaches. An activity can reach a contact twice,
+// by a link and as a participant; the newest-row pick is the same row either way.
+const contactReach = `
+		SELECT l.contact_id, l.activity_id FROM activity_link l WHERE l.contact_id = ANY($%[1]d)
+		UNION ALL
+		SELECT ap.contact_id, ap.activity_id FROM activity_participant ap WHERE ap.contact_id = ANY($%[1]d)`
+
 // newestRow picks a direction's newest row, the one max(a.occurred_at) names.
 const newestRow = "ORDER BY a.occurred_at DESC, a.id DESC LIMIT 1"
+
+// newestTheirs and newestOurs break a tie by precision, so occurredday.Answers between the two picks decides the
+// whole tie.
+var (
+	newestTheirs = "ORDER BY a.occurred_at DESC, " + occurredday.AnsweredTieOrderSQL("a") + ", a.id DESC LIMIT 1"
+	newestOurs   = "ORDER BY a.occurred_at DESC, " + occurredday.AnswerTieOrderSQL("a") + ", a.id DESC LIMIT 1"
+)

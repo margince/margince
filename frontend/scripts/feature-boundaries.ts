@@ -16,6 +16,7 @@ import { existsSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
+import { stable } from "../src/format/collate";
 import { reachedModules } from "./lib/bundle-reach.ts";
 import {
   filesMatching,
@@ -220,5 +221,5 @@ export function judge(found: readonly string[], ledger: Set<string>): string[] {
       failures.push(`${line}: fixed. Delete its line from ${where}.`);
     }
   }
-  return failures.sort();
+  return failures.sort(stable);
 }

@@ -3,24 +3,8 @@
 
 package activities
 
-// Firing a message that was stopped and has since been decided about.
-//
-// A send the consent engine refused is frozen into a held scheduled_send
-// (holdforreview.go) so the review recording that refusal has something a
-// human can act on. This is the act: the held row is claimed, the message it
-// froze is replayed through the ordinary send, and the consent engine is asked
-// again.
-//
-// THE ENGINE IS ASKED AGAIN, AND IT WILL REFUSE AGAIN. That is the point. The
-// refusal is real and stays on record; what lets the message through is a
-// decision a named human already recorded against this message's review, which
-// the staging path finds and spends. Nothing here overrules anything — this
-// code does not know whether an instruction exists, and must not, or the
-// authority question would be answered in two places.
-//
-// SO A RESUME WITH NO DECISION BEHIND IT IS REFUSED, exactly as the first
-// attempt was. A rep can press Resume on their own refusal and will be told the
-// same thing they were told before, which is the honest answer.
+// A held message is replayed through the current send checks. It uses ordinary
+// permission when available, or a recorded instruction for an eligible refusal.
 
 import (
 	"context"
@@ -94,6 +78,9 @@ func (s *Store) ResumeHeldSend(
 			return err
 		} else if !found {
 			return apperrors.ErrNotFound
+		}
+		if claimed.RowVersion != held.RowVersion {
+			return apperrors.ErrVersionSkew
 		}
 		sent, err = s.SendPreparedTx(ctx, tx, origin, prepared, stager)
 		if err != nil {

@@ -18,12 +18,12 @@ import {
   type WorklistItem,
   worklistKey,
 } from "../worklist/worklist.queries";
-import { CardPager } from "./brief.cardpager";
 import { Triage } from "./brief.focus";
 import { identity } from "./brief.focuslink";
 import { HomeListReturnScope } from "./brief.queue";
 import { laneUnread } from "./brief.readings.honesty";
 import { waitingRows } from "./brief.sentence";
+import { HOME_DAY_TIMING } from "./elementtiming";
 
 import "../worklist/worklist.css";
 import { useViewerZone } from "../../lib/viewerzone";
@@ -64,7 +64,12 @@ export function BriefFeed({
     !day?.focus || day.readings?.more_available || laneUnread(day),
   );
   return (
-    <section id="brief-today" className="brief-first" aria-labelledby={titleId}>
+    <section
+      id="brief-today"
+      className="brief-first"
+      aria-labelledby={titleId}
+      elementtiming={HOME_DAY_TIMING}
+    >
       <div className="brief-first-head">
         <Eyebrow as="h2" id={titleId}>
           {t("brief.first.title")}
@@ -116,21 +121,14 @@ export function BriefFeed({
           {rows.length === 0 && partial && <p>{t("brief.feed.incomplete")}</p>}
           {lead && (
             <HomeListReturnScope>
-              <FeedPager
+              <Triage
                 rows={rows}
                 at={at}
-                choose={choose}
-                title={lead.title ?? ""}
-              >
-                <Triage
-                  rows={rows}
-                  at={at}
-                  lead={lead}
-                  onChoose={choose}
-                  onOpenEmail={setOpenEmail}
-                  onContext={onContext}
-                />
-              </FeedPager>
+                lead={lead}
+                onChoose={choose}
+                onOpenEmail={setOpenEmail}
+                onContext={onContext}
+              />
             </HomeListReturnScope>
           )}
         </SurfaceState>
@@ -161,30 +159,4 @@ function useCardChoice(rows: readonly WorklistItem[]) {
     choose: (item: WorklistItem) =>
       setChoice({ key: identity(item), at: Math.max(0, rows.indexOf(item)) }),
   };
-}
-
-function FeedPager({
-  rows,
-  at,
-  choose,
-  title,
-  children,
-}: Readonly<{
-  rows: readonly WorklistItem[];
-  at: number;
-  choose: (item: WorklistItem) => void;
-  title: string;
-  children: ReactNode;
-}>) {
-  const previous = rows[at - 1];
-  const next = rows[at + 1];
-  return (
-    <CardPager
-      previous={previous ? () => choose(previous) : undefined}
-      next={next ? () => choose(next) : undefined}
-      title={title}
-    >
-      {children}
-    </CardPager>
-  );
 }

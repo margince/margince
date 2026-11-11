@@ -150,6 +150,24 @@ expect() {
   printf 'ok    %s\n' "$name"
 }
 
+extension_rename() {
+  local dir="$1"
+  mkdir -p "$dir/extensions/notes/migrations" || return
+  printf -- '-- probe\n' > "$dir/extensions/notes/migrations/0010_note.up.sql"
+  printf -- '-- probe\n' > "$dir/extensions/notes/migrations/0010_note.down.sql"
+  git -C "$dir" add -A && git -C "$dir" commit -qm extension && git -C "$dir" branch -f base || return
+  mv "$dir/extensions/notes/migrations/0010_note.up.sql" "$dir/extensions/notes/migrations/0020_note.up.sql" || return
+  mv "$dir/extensions/notes/migrations/0010_note.down.sql" "$dir/extensions/notes/migrations/0020_note.down.sql"
+}
+extension_declared() {
+  extension_rename "$1" || return
+  printf 'ext_notes 0010 0020 note digest\n' > "$1/extensions/notes/migrations/renumbered.txt"
+}
+extension_changed() {
+  extension_declared "$1" || return
+  printf -- '-- changed\n' > "$1/extensions/notes/migrations/0020_note.up.sql"
+}
+
 # ---- the mutations -------------------------------------------------------
 
 untouched() { :; }
@@ -182,6 +200,40 @@ renumbers_one() {
   git -C "$1" rm -q "backend/migrations/core/0002_beta.up.sql" "backend/migrations/core/0002_beta.down.sql" || return 1
   printf -- '-- probe\n' > "$1/backend/migrations/core/1799999999_beta.up.sql"
   printf -- '-- probe\n' > "$1/backend/migrations/core/1799999999_beta.down.sql"
+}
+
+# declare_renumber <dir> <line> — one line of backend/migrations/renumbered.txt.
+# The gate reads the first four columns; a Go test holds the digest in the
+# fifth, so a placeholder stands in for it here.
+declare_renumber() {
+  printf '%s olddigest\n' "$2" >> "$1/backend/migrations/renumbered.txt"
+}
+
+# The same renumber, declared: `migrate up` moves the ledger row forward.
+renumbers_one_declared() {
+  renumbers_one "$1" || return 1
+  declare_renumber "$1" "core 0002 1799999999 beta"
+}
+
+# The same renumber, declared, but the SQL changed on the way: the declaration
+# claims bytes the new file does not have.
+renumbers_one_changed_declared() {
+  renumbers_one_declared "$1" || return 1
+  printf -- '-- probe, edited\n' > "$1/backend/migrations/core/1799999999_beta.up.sql"
+}
+
+# A second copy of a shipped migration under a new version, the old one kept:
+# a fresh database runs its SQL twice.
+keeps_old_and_adds_same_name() {
+  printf -- '-- probe\n' > "$1/backend/migrations/core/1799999999_beta.up.sql"
+  printf -- '-- probe\n' > "$1/backend/migrations/core/1799999999_beta.down.sql"
+}
+
+# The same renumber with a declaration for some other pair: only the exact
+# pair the migrator would move excuses it.
+renumbers_one_declared_elsewhere() {
+  renumbers_one "$1" || return 1
+  declare_renumber "$1" "core 0002 1799999998 beta"
 }
 
 # A genuine consolidation: every version replaced, and FEWER of them.
@@ -346,6 +398,13 @@ sync_restamp() {
 syncs_and_restamps_above_main() {
   diverge "$1" 1700000006_landed_on_main 1700000005_waiting_on_develop || return 1
   git -C "$1" merge -q --no-edit mainline || return 1
+  sync_restamp "$1" || return 1
+  local ns=core
+  declare_renumber "$1" "$ns 1700000005 1700000007 waiting_on_develop"
+}
+syncs_and_restamps_without_declaring() {
+  diverge "$1" 1700000006_landed_on_main 1700000005_waiting_on_develop || return 1
+  git -C "$1" merge -q --no-edit mainline || return 1
   sync_restamp "$1"
 }
 syncs_without_restamping() {
@@ -406,6 +465,16 @@ expect "a consolidation fails when NOT declared" \
   1 plain    consolidates         "is claimed by two different migrations"
 expect "a renumbered migration fails when not declared" \
   1 plain    renumbers_one        "but this branch no longer has it"
+expect "an undeclared renumber with identical SQL names the missing declaration" \
+  1 plain    renumbers_one        "renumbered.txt does not declare it"
+expect "a declared renumber passes" \
+  0 plain    renumbers_one_declared "OK: check-migration-versions"
+expect "a renumber declared under another pair fails" \
+  1 plain    renumbers_one_declared_elsewhere "'core 0002 1799999999 beta <old digest>'"
+expect "a declared renumber whose SQL changed fails" \
+  1 plain    renumbers_one_changed_declared "but its SQL changed since base"
+expect "a branch keeping a migration and adding it under a second version fails" \
+  1 plain    keeps_old_and_adds_same_name "carries 'beta' twice"
 expect "a repair that keeps one collision claimant is not read as vanished" \
   0 plain    repairs_a_base_collision "repairing, not colliding"
 expect "emptying a namespace still reports its vanished versions" \
@@ -444,6 +513,8 @@ expect "the same tree judged against develop alone fails" \
   1 plain    syncs_main_below_develop "sorts at or below"
 expect "a sync re-stamping develop's migration above main passes" \
   0 synced   syncs_and_restamps_above_main "OK: check-migration-versions"
+expect "a sync re-stamping develop's migration without declaring it fails" \
+  1 synced   syncs_and_restamps_without_declaring "moved from 1700000005 to 1700000007"
 expect "a sync leaving develop's migration below main fails" \
   1 synced   syncs_without_restamping "sorts at or below"
 expect "a sync keeping one migration at two stamps fails" \
@@ -454,6 +525,10 @@ expect "a sync dropping a namespace only develop has fails" \
   1 synced   syncs_dropping_develops_namespace "extra migration 'extra_table' is on"
 expect "a branch cut from develop stays judged against develop" \
   1 synced   cuts_from_develop_below_its_tip "sorts at or below"
+
+expect "an undeclared extension renumber is refused" 1 undeclared extension_rename "renumbered.txt does not declare it"
+expect "a declared unchanged extension renumber passes" 0 undeclared extension_declared "OK: check-migration-versions"
+expect "a declared extension renumber with changed SQL is refused" 1 undeclared extension_changed "its SQL changed"
 
 # ---- census --------------------------------------------------------------
 # TWO guards, because one of them cannot see the other's defect.
@@ -467,7 +542,7 @@ expect "a branch cut from develop stays judged against develop" \
 # So the total is also pinned. A literal here is not duplication of the case
 # list: it is the one fact the case list cannot state about itself, which is how
 # many of it there should be.
-expected_cases=25
+expected_cases=34
 
 declared_cases="$(grep -c '^expect "' "$SELF")"
 if [[ "$ran" -ne "$declared_cases" ]]; then

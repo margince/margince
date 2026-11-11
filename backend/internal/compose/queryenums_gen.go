@@ -14,7 +14,7 @@ var queryEnumTable = map[string][]queryEnum{
 	"GET /v1/activities": {
 		{Name: "call_outcome", Values: []string{"reached", "not_reached", "voicemail", "call_back_later", "put_through"}, Array: false, Explode: true},
 		{Name: "entity_type", Values: []string{"contact", "company", "deal", "lead", "project"}, Array: false, Explode: true},
-		{Name: "kind", Values: []string{"email", "call", "meeting", "note", "task", "message"}, Array: false, Explode: true},
+		{Name: "kind", Values: []string{"email", "call", "meeting", "note", "task", "message"}, Array: true, Explode: true},
 	},
 	"GET /v1/activities/deal-filing": {
 		{Name: "record_type", Values: []string{"contact", "company"}, Array: false, Explode: true},
@@ -33,7 +33,7 @@ var queryEnumTable = map[string][]queryEnum{
 		{Name: "window", Values: []string{"24h", "7d", "30d"}, Array: false, Explode: true},
 	},
 	"GET /v1/ai/calls": {
-		{Name: "outcome", Values: []string{"answered", "fallback", "declined", "failed"}, Array: false, Explode: true},
+		{Name: "outcome", Values: []string{"answered", "fallback", "declined", "canceled", "failed"}, Array: false, Explode: true},
 	},
 	"GET /v1/analytics/account-coverage": {
 		{Name: "scope_kind", Values: []string{"owner", "team", "workspace"}, Array: false, Explode: true},
@@ -102,6 +102,9 @@ var queryEnumTable = map[string][]queryEnum{
 	},
 	"GET /v1/attachments/{id}/extraction": {
 		{Name: "question", Values: []string{"deal_facts", "chat_capture"}, Array: false, Explode: true},
+	},
+	"GET /v1/auth/oidc/{provider}/start": {
+		{Name: "return", Values: []string{"consent"}, Array: false, Explode: true},
 	},
 	"GET /v1/automations/{id}/runs": {
 		{Name: "outcome", Values: []string{"fired", "failed", "blocked", "skipped", "queued_for_approval"}, Array: false, Explode: true},
@@ -421,6 +424,9 @@ var queryMinimumTable = map[string][]queryMinimum{
 		{Name: "limit", Minimum: 1},
 	},
 	"GET /v1/contacts/{id}/access": {
+		{Name: "limit", Minimum: 1},
+	},
+	"GET /v1/contacts/{id}/consent/allow": {
 		{Name: "limit", Minimum: 1},
 	},
 	"GET /v1/context-search": {

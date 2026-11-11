@@ -198,7 +198,7 @@ const (
 // TaskContractHash is the sha256 of api/ai-tasks.yaml at generation
 // time: a build fingerprint the cert runner can compare against a
 // freshly hashed contract file to catch a stale generated table.
-const TaskContractHash = "ea2522fe9e36f576d1e83fd8c88466488c9f09acd285f32e0c0008a019bf5069"
+const TaskContractHash = "0117180ee08b2783f8c9111aad8c3de026d815de0beb813e0505ba519bfee71b"
 
 // AllTasks returns every contract task, sorted — the completeness
 // check a certification run walks to prove it covers every routed
@@ -441,6 +441,7 @@ var taskSites = map[Task][]Site{
 	},
 	TaskCaptureClassify: {
 		{Name: "classify", Kind: "one_shot"},
+		{Name: "deal_topic", Kind: "one_shot"},
 	},
 	TaskCaptureConfidentialityVerdict: {
 		{Name: "thread", Kind: "one_shot"},

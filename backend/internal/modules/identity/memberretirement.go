@@ -25,6 +25,7 @@ import (
 type MemberWorkInspection struct {
 	Owned        crmcontracts.HandoverCounts
 	VisibleOwned crmcontracts.HandoverCounts
+	Transferable crmcontracts.HandoverCounts
 	Signals      int
 	Blockers     []crmcontracts.MemberRetirementBlocker
 	Stamp        string
@@ -32,7 +33,7 @@ type MemberWorkInspection struct {
 
 // MemberWork delegates work movement to the modules that own those records.
 type MemberWork interface {
-	Inspect(context.Context, pgx.Tx, ids.UUID, bool) (MemberWorkInspection, error)
+	Inspect(context.Context, pgx.Tx, ids.UUID, *ids.UUID, bool) (MemberWorkInspection, error)
 	Retire(context.Context, pgx.Tx, ids.UUID, *ids.UUID, bool) error
 }
 
@@ -122,7 +123,7 @@ func (s *Service) retirementPreviewTx(ctx context.Context, tx pgx.Tx, actor Iden
 	if s.memberWork == nil {
 		return out, apperrors.ErrConflict
 	}
-	work, err := s.memberWork.Inspect(ctx, tx, source.UUID, lock)
+	work, err := s.memberWork.Inspect(ctx, tx, source.UUID, target, lock)
 	if err != nil {
 		return out, err
 	}
@@ -151,7 +152,8 @@ func applyRetirementWork(out *crmcontracts.MemberRetirementPreview, work MemberW
 	} else if work.Owned.Task > work.VisibleOwned.Task {
 		out.Blockers = append(out.Blockers, "private_tasks")
 	}
-	if work.Owned.Project > work.VisibleOwned.Project {
+	if work.Owned.Project > work.VisibleOwned.Project || (target != nil &&
+		(work.Owned.RecordAssignment > work.Transferable.RecordAssignment || work.Owned.SdrHandoff > work.Transferable.SdrHandoff)) {
 		out.Blockers = append(out.Blockers, "work_not_transferable")
 	}
 	if merge || member.Status == userStatusDeactivated {
@@ -181,7 +183,7 @@ func applyMergeEligibility(out *crmcontracts.MemberRetirementPreview, member ret
 }
 
 func memberHasWork(c crmcontracts.HandoverCounts) bool {
-	return c.Contact+c.Company+c.Deal+c.Lead+c.Project+c.Task+c.List > 0
+	return MemberWorkCount(c) > 0
 }
 
 // RetireMember moves work and retires the source as one atomic change.
@@ -190,7 +192,9 @@ func (s *Service) RetireMember(ctx context.Context, actor Identity, source ids.U
 	if err != nil {
 		return err
 	}
-	err = s.db.Tx(ctx, func(tx pgx.Tx) error { return s.retireMemberTx(ctx, tx, actor, source, target, token, merge) })
+	err = storekit.RetryLockCycles(ctx, func() error {
+		return s.db.Tx(ctx, func(tx pgx.Tx) error { return s.retireMemberTx(ctx, tx, actor, source, target, token, merge) })
+	})
 	if err == nil && s.captureReaper != nil {
 		s.captureReaper(ctx, source)
 	}
@@ -278,6 +282,9 @@ func readRetirementTarget(ctx context.Context, tx pgx.Tx, source ids.UserID, tar
 
 func (s *Service) retireMemberTx(ctx context.Context, tx pgx.Tx, actor Identity, source ids.UserID, target *ids.UUID, token string, merge bool) error {
 	if err := lockAuthorization(ctx, tx); err != nil {
+		return err
+	}
+	if err := lockMemberAddressClaims(ctx, tx, source); err != nil {
 		return err
 	}
 	if err := confirmMemberAdministrator(ctx, tx, actor.UserID); err != nil {

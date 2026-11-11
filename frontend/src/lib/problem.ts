@@ -1,6 +1,7 @@
 import { openingCase } from "../format/collate";
-import type { Locale } from "../i18n";
+import { type Locale, translate } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { effectiveDisplayLocale } from "../i18n/locale";
 import { ConnectivityError, writeFailureKey } from "./connectivity";
 import {
   type FieldProblem,
@@ -21,42 +22,8 @@ export {
   problemFieldErrors,
 } from "./problembody";
 
-// RFC 7807 bodies carry the server's own detail. Surface it instead of a
-// generic failure, so the error state names its cause. `null` says the body
-// carried no such text: a non-OK response with no body, or a body that was
-// never RFC 7807.
-//
-// That is why this sits apart from problemMessage below. "The server described
-// this failure" and "the server said nothing a reader can use" are different
-// facts. Only the second may be answered with catalog copy. A caller that
-// cannot tell them apart invents copy over a real detail, or shows a
-// placeholder as though the server had spoken.
-//
-// A refusal is the opposite case. `permission_denied` is one code over two
-// authorities. One is an object-RBAC denial (this role does not admit the
-// action on this kind of record). The other is a row-authority denial (the
-// record is on screen through a read share). Nothing on the wire says which. So the
-// catalog copy replaces the server's detail and does not guess. Copy that
-// named the wrong authority would be worse than the bare sentinel.
-//
-// Replacing it loses nothing a reader wanted; know this before trying to "keep
-// the more specific answer". `httperr` builds a refusal's detail from
-// `err.Error()`, and every producer of this sentinel wraps it with internals.
-// `auth.Require` sends the RBAC object and verb ("contact.update: permission
-// denied"); the admission gate sends its spec name and resolver state. None of
-// that is copy, and showing it would leak the shape of the authority model to
-// a client. No path sends a sentence written for a reader here.
-//
-// `seat_tier_insufficient` is the licensing ceiling, a third kind of refusal.
-// It is decided before any role is consulted, so a reader whose role admits
-// the action is refused anyway. Its server detail is the bare sentinel ("seat
-// tier insufficient"). That names a concept no reader has met and offers
-// nothing to do. So the catalog copy replaces it and points at the one contact
-// who can lift the ceiling. It names "the seat", not "your seat". The same code
-// answers a read seat's own mutation and an agent passport acting for one. It
-// also answers a grant that would give a read seat write access. A surface
-// that knows whose seat it is (sharerevoke.tsx knows it is the recipient's) says so
-// before it gets here.
+// Known codes select localized copy. Compatibility API details are English;
+// other readers receive local fallback wording for an unknown code.
 function problemDetail(
   problem: unknown,
   t?: (key: MessageKey) => string,
@@ -67,6 +34,7 @@ function problemDetail(
     PROBLEM_CODE_COPY.get(problemCode(problem) ?? "") ??
     fieldCopyKey(problem);
   if (t && copyKey) return t(copyKey);
+  if (t && problemLocale(t) !== "en") return null;
   if (isRecord(problem)) {
     // A field present but blank puts no words on the screen, like an absent one.
     // So it falls through to the title, then to the caller's own copy, instead
@@ -76,6 +44,12 @@ function problemDetail(
     return detail ?? title;
   }
   return null;
+}
+
+function problemLocale(t: (key: MessageKey) => string): string {
+  return "locale" in t && typeof t.locale === "string"
+    ? t.locale
+    : effectiveDisplayLocale();
 }
 
 // A module's own refusal reaches the wire as a `validation_error` with its code
@@ -100,7 +74,10 @@ export function problemMessage(
   // also the message a ProblemError carries into a stack trace, where an empty
   // string would name nothing. problemMessageOf is the reader's path and
   // answers that same body with catalog copy in the reader's own language.
-  return problemDetail(problem, t) ?? "request failed";
+  return (
+    problemDetail(problem, t) ??
+    (t ? t("common.errorNoCause") : "request failed")
+  );
 }
 
 // A create/update whose server error must stay structured (not just its
@@ -125,16 +102,56 @@ export function throwProblem(
 // The data arm of an API call's result: the arm whose error is absent.
 type ApiAnswer<R> = R extends { data: infer D; error?: undefined } ? D : never;
 
+// EmptySuccessError is a success that carried no body where the contract says
+// one belongs: a proxy's interstitial with a 200 on it, or a truncated answer.
+//
+// It is an Error rather than `undefined` data so a reader fails where the call
+// is, not later where a field is read.
+//
+// Not retried. An intermediary can answer a read with a challenge carrying a
+// success status.
+//
+// A retry would ask it again for every attempt the policy allows, and the
+// challenge still stands.
+//
+// queryclient.test.ts holds that, under "never retries a challenge an
+// intermediary answered with".
+export class EmptySuccessError extends Error {
+  readonly status: number;
+  constructor(status: number, t?: (key: MessageKey) => string) {
+    super(problemMessage(null, t));
+    this.name = "EmptySuccessError";
+    this.status = status;
+  }
+}
+
+// bodilessStatuses are the answers whose data is absent BY the contract, so an
+// absent body is the documented one rather than a broken one.
+const bodilessStatuses = new Set([202, 204, 205, 304]);
+
 // unwrap answers an API call's data, or throws its problem as throwProblem does.
-export function unwrap<R extends { data?: unknown; error?: unknown }>(
-  result: R,
-  t?: (key: MessageKey) => string,
-): ApiAnswer<R>;
+//
+// A success with no data throws too, but only when a real response says a body
+// was due. A result assembled by hand carries no response, and those keep the
+// old reading: the invariant is about what a server sent.
+export function unwrap<
+  R extends { data?: unknown; error?: unknown; response?: { status: number } },
+>(result: R, t?: (key: MessageKey) => string): ApiAnswer<R>;
 export function unwrap(
-  result: { data?: unknown; error?: unknown },
+  result: { data?: unknown; error?: unknown; response?: { status: number } },
   t?: (key: MessageKey) => string,
 ): unknown {
   if (result.error) throwProblem(result.error, t);
+  const status = result.response?.status;
+  if (
+    result.data === undefined &&
+    status !== undefined &&
+    status >= 200 &&
+    status < 300 &&
+    !bodilessStatuses.has(status)
+  ) {
+    throw new EmptySuccessError(status, t);
+  }
   return result.data;
 }
 
@@ -195,7 +212,18 @@ export function problemFieldSentencesOf(
 ): ReadonlyMap<string, string> {
   return new Map(
     problemFieldErrorsOf(error).map((fault) => {
-      const sentence = openingCase(fault.message.trim(), locale);
+      const key = PROBLEM_CODE_COPY.get(fault.code);
+      const message = key
+        ? translate(locale, key)
+        : locale === "en"
+          ? fault.message
+          : translate(
+              locale,
+              fault.code === "required"
+                ? "record.fieldRequired"
+                : "common.fieldInvalid",
+            );
+      const sentence = openingCase(message, locale);
       return [fault.field, /[.!?]$/.test(sentence) ? sentence : `${sentence}.`];
     }),
   );

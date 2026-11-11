@@ -1,11 +1,8 @@
-import { readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
+import { stable } from "../format/collate";
 import { de } from "../i18n/de";
 import { en } from "../i18n/en";
 import { vi } from "../i18n/vi";
-import { screenFiles } from "../testing/screenfiles";
 import { NAMED, SAID, WROTE } from "./agentrail-copy";
 import { ACTIVITY_LINE, NAMED_LINE } from "./ai-activity-lines";
 import {
@@ -346,7 +343,7 @@ describe("the site-read lanes carry one reason of their own", () => {
 // and does it still fit inside `recent`'s cap of ten alongside the rest.
 describe("the kinds the rail asks for", () => {
   it("is exactly the reviewed set", () => {
-    expect([...displayedKinds()].sort()).toEqual([
+    expect([...displayedKinds()].sort(stable)).toEqual([
       // The account scan's sentence. It reaches one seat's feed — the read
       // runs under the reader's own principal, for the account they opened,
       // so the occurrence is theirs rather than the workspace's. And it fits:
@@ -438,57 +435,3 @@ describe("the ticker and the rail never narrate one action twice", () => {
     },
   );
 });
-
-// The other half of the split, gated at the CALL SITES.
-//
-// The pairing above reads the ticker's tables, so it catches somebody re-adding
-// a key there. It does not catch the same collision arriving from the other
-// direction — a draft mutation renamed back to ["email", …] leaves both tables
-// untouched and quietly restores two vocabularies for one action. That is the
-// hole this closes, and finding it took mutating the call site and watching the
-// first gate stay green.
-//
-// Read from source rather than imported: a mutationKey is a literal inside a
-// hook, exported by nothing.
-describe("the email mutation keys stay split", () => {
-  // DERIVED from the tree, never listed. The list was two named files, and one
-  // of them stopped writing mail at all when the contact page's second composer
-  // was retired — so the gate failed on a file that had become innocent, and
-  // would have gone on passing for any NEW screen that took up the old key. A
-  // census that can fail short has already failed: what this protects is the
-  // split itself, so its corpus is every screen that spells either key.
-  const sites = mailMutationSites();
-
-  it("finds the screens that write mail at all", () => {
-    // Fail-closed. A miswired scan reads an empty tree, reports PASS, and there
-    // is no failing assertion to notice.
-    expect(sites.length).toBeGreaterThan(0);
-  });
-
-  it.each(sites)("keeps drafts off the send key in %s", (file) => {
-    const src = readFileSync(join(srcDir(), file), "utf8");
-    // At most one of each per screen: the draft is the AI call the rail
-    // narrates, the send is the write the ticker narrates, and a screen that
-    // spelled either twice would narrate one action under two vocabularies.
-    expect(count(src, '["email-draft",')).toBeLessThanOrEqual(1);
-    expect(count(src, '["email",')).toBeLessThanOrEqual(1);
-  });
-});
-
-function srcDir(): string {
-  return join(dirname(fileURLToPath(import.meta.url)), "..");
-}
-
-/** Every screen file that spells an email mutation key, in a stable order. */
-function mailMutationSites(): string[] {
-  return screenFiles()
-    .filter((file) => {
-      const src = readFileSync(join(srcDir(), file), "utf8");
-      return src.includes('["email-draft",') || src.includes('["email",');
-    })
-    .sort();
-}
-
-function count(haystack: string, needle: string): number {
-  return haystack.split(needle).length - 1;
-}

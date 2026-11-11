@@ -33,6 +33,16 @@ import (
 // noSessionDetail is the 401 a buyer reads. It names no room and no reason.
 const noSessionDetail = "this link no longer admits you: ask for a new one"
 
+// writeBuyerFault answers a buyer request's error. A seat revoked after the
+// session resolved refuses with ErrSessionRefused, which is the same 401.
+func writeBuyerFault(w http.ResponseWriter, r *http.Request, err error) {
+	if errors.Is(err, ErrSessionRefused) {
+		httperr.Unauthorized(w, r, noSessionDetail)
+		return
+	}
+	httperr.Write(w, r, err)
+}
+
 // requireCredential trims the credential and answers the contract's 422 for an
 // empty one. An empty credential is not a guess at a real one, so refusing it
 // by shape tells a caller nothing about any room.
@@ -181,7 +191,7 @@ func (h Handlers) GetBuyerRoom(w http.ResponseWriter, r *http.Request) {
 	}
 	view, err := h.store.BuyerView(r.Context(), sess)
 	if err != nil {
-		httperr.Write(w, r, err)
+		writeBuyerFault(w, r, err)
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, view)
@@ -195,7 +205,7 @@ func (h Handlers) SignOutBuyerRoom(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := h.store.SignOut(r.Context(), sess); err != nil {
-		httperr.Write(w, r, err)
+		writeBuyerFault(w, r, err)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -210,7 +220,7 @@ func (h Handlers) ListBuyerRoomDocuments(w http.ResponseWriter, r *http.Request)
 	}
 	docs, err := h.store.BuyerDocuments(r.Context(), sess)
 	if err != nil {
-		httperr.Write(w, r, err)
+		writeBuyerFault(w, r, err)
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, crmcontracts.BuyerRoomDocumentListResponse{Data: docs})
@@ -224,17 +234,17 @@ func (h Handlers) DownloadBuyerRoomDocument(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	if h.documents == nil {
-		httperr.Write(w, r, errNoDocumentStore)
+		writeBuyerFault(w, r, errNoDocumentStore)
 		return
 	}
 	file, err := h.store.BuyerDocumentLocator(r.Context(), sess, documentIDOf(documentID))
 	if err != nil {
-		httperr.Write(w, r, err)
+		writeBuyerFault(w, r, err)
 		return
 	}
 	body, _, err := h.documents.Get(r.Context(), file.StorageKey)
 	if err != nil {
-		httperr.Write(w, r, fmt.Errorf("open deal room document %s: %w", documentID, err))
+		writeBuyerFault(w, r, fmt.Errorf("open deal room document %s: %w", documentID, err))
 		return
 	}
 	// Recorded once the bytes are in hand and BEFORE a single one is written,
@@ -242,7 +252,7 @@ func (h Handlers) DownloadBuyerRoomDocument(w http.ResponseWriter, r *http.Reque
 	// refused, and a bookkeeping failure is still answerable as an error
 	// rather than as a truncated file.
 	if err := h.store.NoteDocumentDelivered(r.Context(), sess, documentIDOf(documentID)); err != nil {
-		httperr.Write(w, r, err)
+		writeBuyerFault(w, r, errors.Join(err, body.Close()))
 		return
 	}
 	contentType := "application/octet-stream"
@@ -273,7 +283,7 @@ func (h Handlers) ListBuyerRoomThreads(w http.ResponseWriter, r *http.Request, p
 	}
 	threads, err := h.store.BuyerThreads(r.Context(), sess, optionalUUID(params.DocumentId))
 	if err != nil {
-		httperr.Write(w, r, err)
+		writeBuyerFault(w, r, err)
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, crmcontracts.DealRoomThreadListResponse{Data: threads})
@@ -292,12 +302,12 @@ func (h Handlers) OpenBuyerRoomThread(w http.ResponseWriter, r *http.Request) {
 	}
 	in, err := openThreadInput(req, false)
 	if err != nil {
-		httperr.Write(w, r, err)
+		writeBuyerFault(w, r, err)
 		return
 	}
 	thread, err := h.store.OpenBuyerThread(r.Context(), sess, in)
 	if err != nil {
-		httperr.Write(w, r, err)
+		writeBuyerFault(w, r, err)
 		return
 	}
 	httperr.WriteJSON(w, http.StatusCreated, thread)
@@ -316,12 +326,12 @@ func (h Handlers) ReplyBuyerRoomThread(w http.ResponseWriter, r *http.Request, t
 	}
 	body, source, err := commentInput(req, false)
 	if err != nil {
-		httperr.Write(w, r, err)
+		writeBuyerFault(w, r, err)
 		return
 	}
 	thread, err := h.store.ReplyAsBuyer(r.Context(), sess, ids.UUID(threadID), body, source, optionalUUID(req.RequestId))
 	if err != nil {
-		httperr.Write(w, r, err)
+		writeBuyerFault(w, r, err)
 		return
 	}
 	httperr.WriteJSON(w, http.StatusCreated, thread)

@@ -37,7 +37,7 @@ type attendeeCandidates struct {
 	held          bool
 }
 
-// ResolveAttendees resolves each address contact first, then live colleague,
+// ResolveAttendees resolves each address contact first, then a live or invited colleague,
 // then lead, under the host's row scope. Contact first keeps a contact who
 // withdrew consent from passing as a colleague. An address any contact or lead
 // holds asks the consent gate even when the host cannot see that record.
@@ -100,26 +100,24 @@ func hostSees(err error) (bool, error) {
 
 func (c schedulingCalendar) attendeeCandidates(ctx, hostCtx context.Context, address string) (attendeeCandidates, error) {
 	args := []any{address, owndomain.OfAddress(address)}
-	scope, err := auth.ScopeClauseFor(hostCtx, "contact", "c", func(v any) int { args = append(args, v); return len(args) })
-	if err != nil {
-		return attendeeCandidates{}, err
+	scope := jsonFalse
+	if auth.ReadGranted(hostCtx, "contact") && !mailidentity.HasMachineLocalpart(address) {
+		var err error
+		scope, err = auth.ScopeClauseFor(hostCtx, "contact", "c", func(v any) int { args = append(args, v); return len(args) })
+		if err != nil {
+			return attendeeCandidates{}, err
+		}
+		if scope == "" {
+			scope = jsonTrue
+		}
 	}
-	switch {
-	case !auth.ReadGranted(hostCtx, "contact"):
-		scope = "false"
-	case scope == "":
-		scope = "true"
-	}
-	// A technical address names no contact, even one stored before the rule.
-	if mailidentity.HasMachineLocalpart(address) {
-		scope, args = "false", args[:2]
-	}
+
 	var found attendeeCandidates
-	err = database.WithWorkspaceTx(ctx, c.pool, func(tx pgx.Tx) error {
+	err := database.WithWorkspaceTx(ctx, c.pool, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
 			SELECT 'contact', e.contact_id, '' FROM contact_email e JOIN contact c ON c.id = e.contact_id
 			 WHERE e.email = $1 AND e.archived_at IS NULL AND c.archived_at IS NULL AND (`+scope+`)
-			UNION SELECT 'user', u.id, u.display_name FROM app_user u WHERE `+storekit.SeatLoginIsSQL("u", "$1", "$2")+` AND `+workforce.LiveHumanSQL("u")+`
+			UNION SELECT 'user', u.id, u.display_name FROM app_user u WHERE `+storekit.SeatLoginIsSQL("u", "$1", "$2")+` AND `+workforce.AskableMemberSQL("u")+`
 			UNION SELECT 'lead', l.id, '' FROM lead l WHERE l.email = $1 AND l.archived_at IS NULL AND l.promoted_contact_id IS NULL
 			ORDER BY 1, 2`, args...)
 		if err != nil {

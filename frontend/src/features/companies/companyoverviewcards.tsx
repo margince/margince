@@ -21,6 +21,8 @@ import { formatDayMonth, formatDueCompact } from "../../format/format.dates";
 import { PHASE_LABEL } from "../../format/projectphase";
 import { useLocale, usePlural, useT } from "../../i18n";
 import type { CompanyTab } from "../../lib/companytab";
+import { useDisabledCoreFeatures } from "../../lib/corefeatures";
+import { labelFor } from "../../lib/labelfor";
 import { usePipelines } from "../../lib/pipelines.queries";
 import { routeHash } from "../../lib/router";
 import { useViewerZone } from "../../lib/viewerzone";
@@ -243,7 +245,13 @@ function DealsAndProjects({
   onOpenTab,
 }: Readonly<{ view: Company360; onOpenTab: (tab: CompanyTab) => void }>) {
   const t = useT();
-  const rows = workInFlight(view);
+  const disabled = useDisabledCoreFeatures();
+  const rows = workInFlight(view).filter(
+    (row) => !disabled.includes(row.kind === "deal" ? "deals" : "projects"),
+  );
+  if (disabled.includes("deals") && disabled.includes("projects")) {
+    return null;
+  }
   return (
     <OverviewCard
       title={t("tab.dealsProjects")}
@@ -324,7 +332,7 @@ function ProjectItem({
   const zone = useViewerZone();
   const sub = [
     t("co.overview.project"),
-    t(PHASE_LABEL[project.phase]),
+    t(labelFor(PHASE_LABEL, project.phase)),
     project.target_end_date &&
       t("co.overview.ends", {
         date: formatDayMonth(project.target_end_date, locale, zone),
@@ -352,7 +360,11 @@ function ContactsCard({
   onOpenTab,
 }: Readonly<{ view: Company360; onOpenTab: (tab: CompanyTab) => void }>) {
   const t = useT();
+  const disabled = useDisabledCoreFeatures();
   const contacts = strongestContacts(view);
+  if (disabled.includes("contacts")) {
+    return null;
+  }
   return (
     <OverviewCard
       title={t("tab.contacts")}

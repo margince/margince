@@ -16,7 +16,9 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture/graphcal"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/datatask"
+	"github.com/margince/margince/backend/internal/platform/originalstore"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 // meetingSeriesSlotsDataTask keys each stored occurrence of a recurring
@@ -29,7 +31,7 @@ func meetingSeriesSlotsDataTask(pool *pgxpool.Pool) datatask.Task {
 	meetings := activities.NewStore(InstallationDB(pool))
 	return datatask.Task{
 		ID: "core/1793916347_meeting_series_slot_identities", Version: 1,
-		Title: "Keying recurring meetings by their slot in the series",
+		Title: systemtext.Literal("datatask.title.core.1793916347_meeting_series_slot_identities"),
 		Steps: []datatask.Step{{
 			Name: "rekey_series_slots", Limit: 200, MinLimit: 1,
 			Audit:    datatask.AuditPolicy{Reason: "every calendar sync claims and retires the same meeting identities without an audit (activities.ClaimIdentity)"},
@@ -78,7 +80,7 @@ func listStoredOccurrences(ctx context.Context, tx pgx.Tx, selection string, in 
 		return nil, err
 	}
 	rows, err := tx.Query(ctx, `SELECT rc.id, own.id, rc.source_system, own.captured_by,
-		       CASE WHEN own.restricted_at IS NULL THEN rc.payload END `+selection+`
+		       CASE WHEN own.restricted_at IS NULL THEN `+originalstore.SQL("rc")+` END `+selection+`
 		  AND rc.id > $2 ORDER BY rc.id LIMIT $3`, seriesCalendars, after, in.Limit)
 	if err != nil {
 		return nil, fmt.Errorf("compose: listing stored meeting occurrences: %w", err)
@@ -134,6 +136,10 @@ func rekeySeriesSlotsBatch(ctx context.Context, tx pgx.Tx, in datatask.BatchIn) 
 	rekeyed := 0
 	for _, o := range occurrences {
 		scanned = append(scanned, o.original)
+		o.payload, err = originalstore.RepairPayload(ctx, o.payload)
+		if err != nil {
+			return datatask.BatchOut{}, err
+		}
 		slot, ok := slotOf(o.source, o.payload)
 		if !ok {
 			continue

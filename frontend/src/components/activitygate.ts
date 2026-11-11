@@ -43,3 +43,13 @@ export function useActivityGate(
     sentenceId,
   };
 }
+
+/**
+ * Whether a lone verb that writes an activity is offered; one refused is not
+ * drawn. `contact` is the contact the write files under, where it names one.
+ */
+export function useActivityWritable(contact?: {
+  readonly attachable?: boolean;
+}): boolean {
+  return useActivityGate(contact).refusalKey === undefined;
+}

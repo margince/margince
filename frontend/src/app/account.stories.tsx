@@ -30,13 +30,13 @@ type Story = StoryObj<typeof AccountMenu>;
 
 /**
  * The top bar: the seat's chip alone, a circle filling the bar's square inside
- * a control-edge ring. The initials are hidden, so the button's name is "Account".
+ * a control-edge ring. The name starts with the initials the chip prints.
  */
 export const TopBar: Story = {
   name: "Top bar trigger",
   play: async ({ canvasElement }) => {
     const trigger = await within(canvasElement).findByRole("button", {
-      name: "Account",
+      name: /account$/i,
     });
     const face = await waitFor(() => {
       const chip = trigger.querySelector(".avatar");
@@ -61,7 +61,7 @@ export const TopBarPhoto: Story = {
   name: "Top bar trigger with a picture",
   play: async ({ canvasElement }) => {
     const trigger = await within(canvasElement).findByRole("button", {
-      name: "Account",
+      name: /account$/i,
     });
     await waitFor(() =>
       expect(trigger.querySelector(".avatar-photo img")).not.toBeNull(),
@@ -184,7 +184,7 @@ export const TopBarMenuPhone: Story = {
     await openMenu(context);
     const bar = context.canvasElement.querySelector<HTMLElement>(".topbar");
     if (!bar) throw new Error("the top bar is missing");
-    const trigger = within(bar).getByRole("button", { name: /Account$/ });
+    const trigger = within(bar).getByRole("button", { name: /account$/i });
     const menu = await within(document.body).findByRole("menu");
     const inner =
       bar.getBoundingClientRect().right -

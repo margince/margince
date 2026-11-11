@@ -33,6 +33,7 @@ import { useLocale, useT } from "../../../i18n";
 import { dealRecordKeys } from "../../../lib/activitykeys";
 import { unwrap } from "../../../lib/problem";
 import { navigate } from "../../../lib/router";
+import { useShortcut } from "../../../lib/shortcuts";
 import { RecordEmailVerb } from "../../records/recordemail";
 import { ShareAction } from "../../records/share";
 import { probabilitySetNote } from "../dealprobability";
@@ -50,7 +51,18 @@ type Stage = components["schemas"]["Stage"];
 function DealEmailVerb({
   deal,
   disabledReasonId,
-}: Readonly<{ deal: Deal; disabledReasonId?: string }>) {
+  disabled,
+  keyShortcuts,
+  open,
+  onOpenChange,
+}: Readonly<{
+  deal: Deal;
+  disabledReasonId?: string;
+  disabled?: boolean;
+  keyShortcuts?: string;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}>) {
   // The same coverage read the readings band and the coverage card already
   // make, served from one cache entry — so asking here costs no request.
   const coverage = useDealCoverage(deal.id, !deal.archived_at);
@@ -65,6 +77,10 @@ function DealEmailVerb({
       // over what the reader typed.
       recordAddress={recordAddress}
       disabledReasonId={disabledReasonId}
+      disabled={disabled}
+      keyShortcuts={keyShortcuts}
+      open={open}
+      onOpenChange={onOpenChange}
     />
   );
 }
@@ -194,6 +210,23 @@ export function DealActions({
   const activity = useActivityGate();
   const logRefused = refusedByArchive ?? activity.refusedId;
   const logPending = !refusedByArchive && activity.pending;
+  const [writing, setWriting] = useState(false);
+  const logOpen = !logPending && !logRefused;
+  const logKeys = useShortcut(
+    "record.logActivity",
+    () => setDrawer("log"),
+    logOpen,
+  );
+  const taskKeys = useShortcut(
+    "record.addTask",
+    () => setDrawer("task"),
+    logOpen,
+  );
+  const writeKeys = useShortcut(
+    "record.writeEmail",
+    () => setWriting(true),
+    logOpen,
+  );
   return (
     <>
       {!refusedByArchive && activity.refusedId && (
@@ -203,7 +236,14 @@ export function DealActions({
           this deal: the same two groups, in the same order, that the contact,
           company and lead headers draw. A rep moving between records must not
           have to re-find the verb they just used on the last one. */}
-      <DealEmailVerb deal={deal} disabledReasonId={refusedByArchive} />
+      <DealEmailVerb
+        deal={deal}
+        disabledReasonId={logRefused}
+        disabled={logPending}
+        open={writing}
+        onOpenChange={setWriting}
+        keyShortcuts={writeKeys}
+      />
       <Button
         disabled={logPending}
         reasonId={logRefused}
@@ -225,6 +265,7 @@ export function DealActions({
         reasonId={logRefused}
         title={t("log.title")}
         onClick={() => setDrawer("log")}
+        aria-keyshortcuts={logKeys}
       >
         <FileText aria-hidden="true" />
         <VerbWord word={t("record.verb.log")} label={t("log.title")} />
@@ -258,6 +299,7 @@ export function DealActions({
           disabled={logPending}
           reasonId={logRefused}
           onClick={() => setDrawer("task")}
+          aria-keyshortcuts={taskKeys}
         >
           {t("log.addTask")}
         </Button>
@@ -341,10 +383,14 @@ function DealBookMeeting({
     </>
   );
   if (!allowed || !companyId) {
+    // A refusal the page already states wins; otherwise the missing company
+    // is the one thing standing between the reader and a booking.
+    const noCompany = !reasonId && !companyId;
     return (
       <Button
         disabled={pending || !companyId}
         reasonId={reasonId}
+        reason={noCompany ? t("deal.meetNeedsCompany") : undefined}
         title={t("scheduling.bookContact")}
       >
         {face}

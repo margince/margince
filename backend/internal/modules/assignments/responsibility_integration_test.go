@@ -257,8 +257,8 @@ func TestAnArchivedAccountTakesNoNewResponsibility(t *testing.T) {
 	}
 }
 
-// An invited colleague can be given a responsibility before their first
-// sign-in; a suspended one cannot. The picker offers the same split.
+// API compatibility keeps invited colleagues assignable before their first
+// sign-in. Suspended colleagues cannot take on a responsibility.
 func TestAnInvitedColleagueTakesAResponsibilityAndASuspendedOneDoesNot(t *testing.T) {
 	e := setupRoleEnv(t)
 	ctx := e.actingAs(e.admin, companyCRUD, principal.RowScopeAll)

@@ -126,6 +126,15 @@ func Happened(kind string, m Moment, asOf time.Time, zone *time.Location) bool {
 	return Begun(m, asOf, zone)
 }
 
+// Answers reports whether answer is stored after message, or at one stored instant with a date on
+// either side. Two instants at one stored instant stay unordered: an id orders capture, not messages.
+func Answers(answer, message Moment) bool {
+	if answer.At.Equal(message.At) {
+		return answer.DateOnly || message.DateOnly
+	}
+	return answer.At.After(message.At)
+}
+
 // DaysSince counts the calendar days from the date an activity names to
 // today's date in zone. A day entry dated today is zero days old.
 func DaysSince(m Moment, asOf time.Time, zone *time.Location) int {
@@ -149,6 +158,13 @@ func DaysBetween(from, to Moment, zone *time.Location) int {
 func BegunSQL(alias, asOf string) string {
 	return fmt.Sprintf(`(%[1]s.occurred_at <= greatest(%[2]s, %[3]s) AND (%[1]s.occurred_precision = 'day' OR %[1]s.occurred_at <= %[2]s))`,
 		alias, asOf, TodayAnchorSQL(asOf))
+}
+
+// AnswersSQL is Answers for the activities under the aliases answer and
+// message. Its leading bound alone keeps a range scan on an index ending in occurred_at.
+func AnswersSQL(answer, message string) string {
+	return fmt.Sprintf(`(%[1]s.occurred_at >= %[2]s.occurred_at AND (%[1]s.occurred_at > %[2]s.occurred_at OR %[1]s.occurred_precision = 'day' OR %[2]s.occurred_precision = 'day'))`,
+		answer, message)
 }
 
 // MeetingTookPlaceSQL is MeetingTookPlace for the meeting under alias at asOf,
@@ -193,20 +209,42 @@ func ProvenSQL(alias string) string {
 // aggregate of two maxima, so no group is sorted, and null when filter admits no row.
 // An empty alias reads bare columns, and an empty filter admits every row.
 func LatestPrecisionSQL(alias, filter string) string {
+	return precisionAtNewestSQL(alias, filter, "instant", "day")
+}
+
+// LatestAnswerPrecisionSQL is LatestPrecisionSQL for the side that answers: day when a day entry ties the newest
+// instant, as AnswerTieOrderSQL picks.
+func LatestAnswerPrecisionSQL(alias, filter string) string {
+	return precisionAtNewestSQL(alias, filter, "day", "instant")
+}
+
+func precisionAtNewestSQL(alias, filter, atTie, otherwise string) string {
 	column := func(name string) string {
 		if alias == "" {
 			return name
 		}
 		return alias + "." + name
 	}
-	at, instant := column("occurred_at"), column("occurred_precision")+" = 'instant'"
-	admitted, newestInstant := "", " FILTER (WHERE "+instant+")"
+	at, tied := column("occurred_at"), column("occurred_precision")+" = '"+atTie+"'"
+	admitted, newestTied := "", " FILTER (WHERE "+tied+")"
 	if filter != "" {
 		admitted = " FILTER (WHERE " + filter + ")"
-		newestInstant = " FILTER (WHERE " + instant + " AND (" + filter + "))"
+		newestTied = " FILTER (WHERE " + tied + " AND (" + filter + "))"
 	}
-	return fmt.Sprintf(`(CASE WHEN max(%[1]s)%[2]s = max(%[1]s)%[3]s THEN 'instant'
-		WHEN max(%[1]s)%[3]s IS NOT NULL THEN 'day' END)`, at, newestInstant, admitted)
+	return fmt.Sprintf(`(CASE WHEN max(%[1]s)%[2]s = max(%[1]s)%[3]s THEN '%[4]s'
+		WHEN max(%[1]s)%[3]s IS NOT NULL THEN '%[5]s' END)`, at, newestTied, admitted, atTie, otherwise)
+}
+
+// AnswerTieOrderSQL orders the newest rows of the side that answers, under alias, after occurred_at. A day entry
+// comes first: at one stored instant it answers every row of theirs (Answers).
+func AnswerTieOrderSQL(alias string) string {
+	return "(" + alias + ".occurred_precision = 'day') DESC"
+}
+
+// AnsweredTieOrderSQL is AnswerTieOrderSQL for the side being answered. An instant comes first, the row a tie
+// may leave owed.
+func AnsweredTieOrderSQL(alias string) string {
+	return "(" + alias + ".occurred_precision = 'instant') DESC"
 }
 
 // dateEndSQL is when the date the day entry under alias names ends in the

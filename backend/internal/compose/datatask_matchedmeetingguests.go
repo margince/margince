@@ -19,8 +19,10 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/datatask"
+	"github.com/margince/margince/backend/internal/platform/originalstore"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/ports/authz"
 )
 
@@ -32,7 +34,7 @@ func matchedMeetingGuestsDataTask(pool *pgxpool.Pool) datatask.Task {
 	authority := identity.NewService(pool)
 	return datatask.Task{
 		ID: "core/1792998483_matched_meeting_guests", Version: 1,
-		Title: "Adding calendar guests to matched meetings", Requires: []string{"core/1792998482"},
+		Title: systemtext.Literal("datatask.title.core.1792998483_matched_meeting_guests"), Requires: []string{"core/1792998482"},
 		Steps: []datatask.Step{{
 			Name: "add_calendar_guests", Limit: 100, MinLimit: 1,
 			Audit:    datatask.AuditPolicy{PerRecord: true},
@@ -70,7 +72,7 @@ func addMatchedMeetingGuestsBatch(ctx context.Context, tx pgx.Tx, authority auth
 	if err != nil {
 		return datatask.BatchOut{}, err
 	}
-	rows, err := tx.Query(ctx, `SELECT rc.id, rc.payload `+matchedOriginalsSQL+`
+	rows, err := tx.Query(ctx, `SELECT rc.id, `+originalstore.SQL("rc")+` `+matchedOriginalsSQL+`
 		  AND rc.id > $2 ORDER BY rc.id LIMIT $3`, sourceGCal, after, in.Limit)
 	if err != nil {
 		return datatask.BatchOut{}, fmt.Errorf("compose: listing stored calendar originals: %w", err)
@@ -90,6 +92,10 @@ func addMatchedMeetingGuestsBatch(ctx context.Context, tx pgx.Tx, authority auth
 	changed := 0
 	for _, o := range originals {
 		scanned = append(scanned, o.id)
+		o.payload, err = originalstore.RepairPayload(ctx, o.payload)
+		if err != nil {
+			return datatask.BatchOut{}, err
+		}
 		added, err := addGuestsFromOriginal(ctx, tx, authority, o.payload, in.RunID)
 		if err != nil {
 			return datatask.BatchOut{}, err

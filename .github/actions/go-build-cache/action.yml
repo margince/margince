@@ -43,7 +43,9 @@ inputs:
   flavor:
     description: >-
       Which set of compiled artifacts this job produces, and therefore which
-      cache it shares. `plain` is the untagged build/vet/lint/unit compile;
+      cache it shares. `plain` is the untagged build/vet/unit compile;
+      `lint` is what backend-lint loads (vet's untagged compile and golangci's
+      tagged one), written by lint-cache.yml after each push to main;
       `integration` is the `-tags=integration -cover -coverpkg=./...` compile
       the lane's build job does. They are separate keys because a build tag and coverage
       instrumentation both change the package builds themselves — only the
@@ -62,11 +64,14 @@ outputs:
 runs:
   using: composite
   steps:
+    # Go keys a compile on the directory it read, and the CI image puts the
+    # checkout and the module cache at other paths than a bare runner does, so
+    # an entry written in one environment misses in the other. Each keeps its own.
     - name: Compute the cache key for this flavor
       id: key
       shell: bash
       run: |
-        prefix="go-build-${{ inputs.flavor }}-${{ runner.os }}-${{ runner.arch }}"
+        prefix="go-build-${{ inputs.flavor }}-${MARGINCE_CI_IMAGE:+in-image-}${{ runner.os }}-${{ runner.arch }}"
         deps="${{ hashFiles('backend/go.mod', 'backend/go.sum', 'go.work', 'go.work.sum') }}"
         {
           echo "key=$prefix-$deps-${{ github.sha }}"

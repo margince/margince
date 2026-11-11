@@ -36,8 +36,11 @@ export const BUSINESS_PAGES = [
     id: "meetings",
     group: "me",
     scope: "self",
-    requires: always,
-    changes: always,
+    // The booking profile belongs to a seat that may book: the server answers
+    // GET /scheduling/profile only with activity:create. A seat without it has
+    // nothing here to open, and the setup checklist asks it for nothing.
+    requires: writes("activity", ["create"]),
+    changes: acts(writes("activity", ["create"])),
     tabs: [{ id: "links" }, { id: "availability" }, { id: "guests" }],
   },
   {
@@ -50,6 +53,12 @@ export const BUSINESS_PAGES = [
     // holds the read alone. `always` here would put Voice in that reader's rail
     // with nothing on it they could touch.
     changes: acts(writes("voice_profile")),
+    tabs: [
+      { id: "overview" },
+      { id: "samples" },
+      { id: "rules" },
+      { id: "builds" },
+    ],
   },
   {
     id: "agents",

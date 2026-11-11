@@ -7,6 +7,7 @@ import { Callout } from "../design-system/callout";
 import { Eyebrow } from "../design-system/eyebrow";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { labelFor } from "../lib/labelfor";
 import { mayDecidePair, PairActions } from "./contactcase.pair";
 import type { ContactCase, ContactCaseOutcome } from "./contactcase.queries";
 import { memberLabel } from "./contactcase.selection";
@@ -138,7 +139,7 @@ export function CasePreview({
         <PreviewList
           title={t("contactCase.preview.skippedTitle")}
           lines={outcome.skipped.map((skip) =>
-            t(SKIP_REASONS[skip.reason], { name: skip.name }),
+            t(labelFor(SKIP_REASONS, skip.reason), { name: skip.name }),
           )}
         />
       )}

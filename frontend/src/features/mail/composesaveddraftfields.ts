@@ -1,16 +1,24 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import type { components } from "../../api/schema";
 import { paragraphsFrom } from "../../design-system/richtext";
 import { localDateTimeValue } from "../../format/calendarday";
+import { stable } from "../../format/collate";
 import type { ChosenFile } from "./composeattachments";
+import type { Grounding } from "./composedraftcall";
 import type { ComposeFields } from "./composefields";
-import type { MailDraft, SavedDraftFields } from "./composesaveddraftcalls";
+import {
+  groundedFiling,
+  type MailDraft,
+  type SavedDraftFields,
+} from "./composesaveddraftcalls";
 
 /** What the composer holds that a saved draft keeps. */
 export function savedFieldsOf(
   fields: ComposeFields,
   files: readonly ChosenFile[],
+  filing: Partial<Grounding> | null,
 ): SavedDraftFields {
   return {
     to: fields.to,
@@ -22,8 +30,20 @@ export function savedFieldsOf(
     files,
     context: fields.context,
     sendAt: fields.sendAt,
-    editorState: fields.editorState,
+    editorState: {
+      ...fields.editorState,
+      filing: selectedFiling(filing),
+    },
   };
+}
+
+function selectedFiling(filing: Partial<Grounding> | null) {
+  const selection: components["schemas"]["MailDraftGround"][] = [];
+  if (filing?.dealId)
+    selection.push({ anchor_type: "deal", anchor_id: filing.dealId });
+  if (filing?.projectId)
+    selection.push({ anchor_type: "project", anchor_id: filing.projectId });
+  return selection;
 }
 
 /** What a saved draft puts back in the composer. */
@@ -54,6 +74,14 @@ function sameList(a: readonly string[], b: readonly string[]): boolean {
   return a.length === b.length && a.every((value, index) => value === b[index]);
 }
 
+const filingKeys = (fields: SavedDraftFields) =>
+  (
+    fields.editorState?.filing ??
+    selectedFiling(groundedFiling(fields.grounding))
+  )
+    .map((ground) => `${ground.anchor_type}:${ground.anchor_id}`)
+    .sort(stable);
+
 function sameEditorState(
   a: SavedDraftFields["editorState"],
   b: SavedDraftFields["editorState"],
@@ -64,7 +92,8 @@ function sameEditorState(
     (a?.ai_disclosure ?? "") === (b?.ai_disclosure ?? "") &&
     a?.voice_profile_version === b?.voice_profile_version &&
     (a?.voice_degraded ?? false) === (b?.voice_degraded ?? false) &&
-    (a?.served_body ?? "") === (b?.served_body ?? "")
+    (a?.served_body ?? "") === (b?.served_body ?? "") &&
+    a?.language === b?.language
   );
 }
 
@@ -91,6 +120,7 @@ export function sameFields(a: SavedDraftFields, b: SavedDraftFields): boolean {
     sameList(idsOf(a.files), idsOf(b.files)) &&
     a.context === b.context &&
     a.sendAt === b.sendAt &&
+    sameList(filingKeys(a), filingKeys(b)) &&
     sameEditorState(a.editorState, b.editorState)
   );
 }

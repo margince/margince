@@ -5,6 +5,7 @@ import type { components } from "../../api/schema";
 import type { StatusKind } from "../../design-system/statusbadge";
 import { formatAiRunCost } from "../../format/aicost";
 import type { Locale, useT } from "../../i18n";
+import { UNKNOWN_VALUE_LABEL } from "../../lib/labelfor";
 
 type T = ReturnType<typeof useT>;
 export type AiCallSummary = components["schemas"]["AiCallSummary"];
@@ -17,6 +18,7 @@ export const CALL_OUTCOMES = [
   "answered",
   "fallback",
   "declined",
+  "canceled",
   "failed",
 ] as const satisfies readonly CallOutcome[];
 
@@ -35,6 +37,7 @@ export const OUTCOME_KIND: Readonly<Record<CallOutcome, StatusKind>> = {
   answered: "done",
   fallback: "attention",
   declined: "neutral",
+  canceled: "neutral",
   failed: "failure",
 };
 
@@ -56,8 +59,12 @@ export function outcomeLabel(outcome: CallOutcome, t: T): string {
       return t("aicalls.outcome.fallback");
     case "declined":
       return t("aicalls.outcome.declined");
+    case "canceled":
+      return t("aicalls.outcome.canceled");
     case "failed":
       return t("aicalls.outcome.error");
+    default:
+      return t(UNKNOWN_VALUE_LABEL);
   }
 }
 

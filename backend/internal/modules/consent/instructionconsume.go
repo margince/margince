@@ -61,6 +61,7 @@ const (
 // LiveInstruction is a decision that can still be spent, read under the lock
 // that will spend it.
 type LiveInstruction struct {
+	Refusals []RefusedRecipient
 	ID       ids.UUID
 	ReviewID ids.UUID
 	IntentID ids.UUID
@@ -68,6 +69,7 @@ type LiveInstruction struct {
 	// Empty on a decision written before this was recorded, and an absent
 	// fingerprint is nothing to disagree with rather than a mismatch.
 	Acknowledged []byte
+	Scope        string
 	// GivenByAdmin says an admin gave the exception, so it may answer a refusal
 	// only an admin may (DecisionSet.ExceptionMayAnswer).
 	GivenByAdmin bool
@@ -107,26 +109,22 @@ func (e *InstructionStaleError) FieldFault() (field, code, message string) {
 //
 // A zero id means no live decision, which is the ordinary case for every
 // message in the installation and is not an error.
-// ONE CLOCK DECIDES. The window is asked of the DATABASE rather than of this
-// process, because the other side of the same question — whether a standing
-// decision can still be spent (standingdecision.go) — is asked there. Two
-// clocks would disagree at the boundary and under skew: the door would say
-// reusable, consumption would find nothing live, and the caller would get a
-// generic consent refusal instead of the sentence saying their decision has
-// expired.
+// Age requires the current execution check rather than a second human
+// acknowledgement. The recorded decision and its dates remain unchanged.
 func liveInstructionForIntentTx(ctx context.Context, tx pgx.Tx, intentID ids.UUID) (LiveInstruction, error) {
 	var out LiveInstruction
 	err := tx.QueryRow(ctx, `
-		SELECT i.id, i.review_id, r.delivery_intent_id, i.acknowledged_wording, i.given_by_admin
+		SELECT i.id, i.review_id, r.delivery_intent_id,
+		       coalesce(i.corrected_wording, i.acknowledged_wording),
+		       i.given_by_admin, r.refusals, coalesce(i.acknowledged_scope, '')
 		  FROM communication_instruction i
 		  JOIN communication_review r ON r.id = i.review_id
 		 WHERE r.delivery_intent_id = $1
 		   AND i.status = 'directed'
-		   AND i.valid_until > now()
 		 ORDER BY i.directed_at DESC
 		 LIMIT 1
 		   FOR UPDATE OF i`, intentID).
-		Scan(&out.ID, &out.ReviewID, &out.IntentID, &out.Acknowledged, &out.GivenByAdmin)
+		Scan(&out.ID, &out.ReviewID, &out.IntentID, &out.Acknowledged, &out.GivenByAdmin, &out.Refusals, &out.Scope)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return LiveInstruction{}, nil
 	}
@@ -161,6 +159,15 @@ func consumeInstructionTx(
 	if len(inst.Acknowledged) > 0 && !bytes.Equal(inst.Acknowledged, wording[:]) {
 		return &InstructionStaleError{
 			Why: "the message has been edited since it was acknowledged",
+		}
+	}
+	if inst.Scope != "" {
+		message, err := instructionMessageTx(ctx, tx, inst.IntentID)
+		if err != nil {
+			return err
+		}
+		if !message.Known || message.Scope != inst.Scope {
+			return &InstructionStaleError{Why: "the recipients, sender or purpose changed; approve this message again"}
 		}
 	}
 	tag, err := tx.Exec(ctx, `
@@ -209,34 +216,6 @@ func consumeInstructionTx(
 	return nil
 }
 
-// acknowledgedWordingTx answers the fingerprint of the message this review
-// holds — what the human was looking at when they acknowledged.
-//
-// NOT FOUND IS NOT A FAULT, and this is the one place that judgement matters.
-// A review whose held message has been cancelled or emptied — by an erasure, or
-// by a rep who resumed it another way — has no wording to compare. Inventing a
-// mismatch there would refuse a send for a reason nobody can act on; the
-// caller treats an absent fingerprint as nothing to disagree with, exactly as
-// the staging-to-transmit check does (authorizecontent.go).
-func acknowledgedWordingTx(ctx context.Context, tx pgx.Tx, intentID ids.UUID) ([32]byte, bool, error) {
-	if intentID.IsZero() {
-		return [32]byte{}, false, nil
-	}
-	var subject, body, htmlBody string
-	err := tx.QueryRow(ctx, `
-		SELECT coalesce(payload->>'subject', ''),
-		       coalesce(payload->>'body', ''),
-		       coalesce(payload->>'html_body', '')
-		  FROM scheduled_send WHERE id = $1`, intentID).Scan(&subject, &body, &htmlBody)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return [32]byte{}, false, nil
-	}
-	if err != nil {
-		return [32]byte{}, false, fmt.Errorf("consent: reading the message that was acknowledged: %w", err)
-	}
-	return SendingDigest(subject, body, htmlBody), true, nil
-}
-
 // AuthorizeDirectedExecutionTx asks whether a refused message may go out anyway
 // on a recorded decision, and spends that decision if it may.
 //
@@ -277,6 +256,9 @@ func (g *Gate) AuthorizeDirectedExecutionTx(
 	// whoever gave it: the decision stays unspent and the refusal stands.
 	if !set.ExceptionMayAnswer(inst.GivenByAdmin) {
 		return ids.UUID{}, nil
+	}
+	if err := instructionScopeStillFits(ctx, tx, inst.Refusals, set); err != nil {
+		return ids.UUID{}, err
 	}
 	if err := consumeInstructionTx(ctx, tx, inst, deliveryID, wording); err != nil {
 		return ids.UUID{}, err

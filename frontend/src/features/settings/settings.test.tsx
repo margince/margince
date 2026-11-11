@@ -25,6 +25,7 @@ import { SIGN_OFF_QUERY } from "../mail/composesignoff";
 import { SettingsScreen, tabContent } from "./settings";
 import { AuditLogCard } from "./settings-audit";
 import { healthReport } from "./systemhealth.fixtures";
+import "./systemhealthdiagnostics";
 
 // What a principal is SERVED once an entry opens: the identity and locale
 // surfaces on Account, the rows that read as WITHHELD rather than absent, and
@@ -159,7 +160,7 @@ describe("SettingsScreen RBAC surfaces", () => {
     // The menu's own radio, read through the menu rather than through the store
     // underneath it. `setThemeChoice` publishes to `useSyncExternalStore`
     // subscribers, and this is one of them.
-    await user.click(screen.getByRole("button", { name: "Account" }));
+    await user.click(screen.getByRole("button", { name: /account$/i }));
     await user.click(await screen.findByRole("menuitem", { name: "Theme" }));
     expect(screen.getByRole("radio", { name: "Dark" })).toBeChecked();
   });

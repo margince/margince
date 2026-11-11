@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, within } from "storybook/test";
+import { expect, screen, within } from "storybook/test";
 import type { components } from "../../api/schema";
 import { playOpenView } from "../../testing/listview.play";
 import {
@@ -55,6 +55,7 @@ const MANAGER: { roles?: string[]; seat?: "full" | "read" } = {
 function leads(
   rows: Lead[],
   identity: { roles?: string[]; seat?: "full" | "read" } = MANAGER,
+  startCreating = false,
 ) {
   return () => {
     installFetchStub({
@@ -67,7 +68,7 @@ function leads(
     });
     return (
       <StoryProviders>
-        <LeadsScreen />
+        <LeadsScreen startCreating={startCreating} />
       </StoryProviders>
     );
   };
@@ -112,6 +113,16 @@ export const RepOpensOnTheirOwn: Story = {
 /** Nobody has routed a lead here yet. An empty queue is a real state and says
  *  so, rather than drawing a table with no rows. */
 export const EmptyQueue: Story = { render: leads([]) };
+
+/** `#/leads/new`: the queue with its create form open, as `C` opens it. */
+export const CreateFormOpen: Story = {
+  render: leads([lead()], MANAGER, true),
+  play: async () => {
+    await expect(
+      await screen.findByRole("dialog", { name: "New lead" }),
+    ).toBeInTheDocument();
+  },
+};
 
 /** Four-digit scores: the width at which de-DE first groups, read down one
  *  column. */

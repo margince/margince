@@ -146,6 +146,39 @@ func loadAICertPresets(t *testing.T) []aiCertPreset {
 	if len(presets) == 0 {
 		t.Fatalf("no presets found in %s — the by-preset section would report an empty tree as a finding", aiCertPresetDir)
 	}
+	return orderAICertPresets(t, presets)
+}
+
+// aiCertPresetOrder is the order a reader meets the presets in. The model
+// vendors' own clouds come first, the shipped Gemini default leading. Then come
+// open-weight models a broker serves, then presets on the buyer's own machine.
+// A preset missing from the list fails the page, so its place is chosen.
+var aiCertPresetOrder = []string{
+	"gemini_cloud.yaml",
+	"gemini_vertex_eu.yaml",
+	"openrouter_openai.yaml",
+	"openrouter_cloud.yaml",
+	"consumer_class_brokered.yaml",
+	"openrouter_cloud_eu.yaml",
+	"gemma4_local_ollama.yaml",
+	"qwen3_local_vllm.yaml",
+}
+
+func orderAICertPresets(t *testing.T, presets []aiCertPreset) []aiCertPreset {
+	t.Helper()
+	rank := map[string]int{}
+	for i, file := range aiCertPresetOrder {
+		rank[file] = i
+	}
+	for _, p := range presets {
+		if _, ok := rank[p.File]; !ok {
+			t.Errorf("preset %s has no place in aiCertPresetOrder, so the page cannot say where a reader meets it", p.File)
+		}
+	}
+	if len(presets) != len(aiCertPresetOrder) {
+		t.Errorf("aiCertPresetOrder names %d presets and %s holds %d", len(aiCertPresetOrder), aiCertPresetDir, len(presets))
+	}
+	sort.SliceStable(presets, func(i, j int) bool { return rank[presets[i].File] < rank[presets[j].File] })
 	return presets
 }
 
@@ -389,7 +422,10 @@ func assertAICertPresetsAreAttributed(t *testing.T, presets []aiCertPreset, doc 
 // aiCertUnmeasuredWaivers names the presets allowed to reach no measured band,
 // each with why. An entry is stale once its preset is measured or gone
 // (AssertAllMatched), or once any record measures one of its models.
-var aiCertUnmeasuredWaivers = gatekit.Waive(map[string]string{})
+var aiCertUnmeasuredWaivers = gatekit.Waive(map[string]string{
+	"gemma4_local_ollama.yaml": "kept as the worked example of a local preset; no record is committed for it, so the page says untested",
+	"qwen3_local_vllm.yaml":    "kept as the worked example of a vLLM preset; no record is committed for it, so the page says untested",
+})
 
 // unmeasuredPresetProblems asks, PER PRESET and not summed across them,
 // whether each reaches a measured band. A total hides the failure this asks

@@ -69,8 +69,10 @@ type Store struct {
 	// default: a role that transmits without one files every sent message
 	// under an identity that exists nowhere on the wire, and duplicates it on
 	// the timeline, silently.
-	identity        MessageIdentityReconciler
-	partyAdmission  func(context.Context, ids.ActivityID) error
+	identity       MessageIdentityReconciler
+	partyAdmission func(context.Context, ids.ActivityID) error
+	// receiptPage bounds one overdue-receipt read; zero is defaultReceiptPage.
+	receiptPage     int
 	partySettlement func(context.Context, pgx.Tx, ids.ActivityID) error
 	// bounce is told when a delivery dies permanently, so the module owning
 	// communication policy can stop writing to the address. An OPTION rather
@@ -80,6 +82,9 @@ type Store struct {
 	// suppressions exist. The production wiring is in compose/, and a gate
 	// holds that it is present there.
 	bounce BounceObserver
+	// echoIdentity recovers a stamped identity the read-back could not
+	// (echoidentity.go). Nil leaves such a message on its staged identity.
+	echoIdentity EchoIdentity
 }
 
 // StoreOption adjusts a store after construction.
@@ -307,12 +312,12 @@ func marshalList(values []string) ([]byte, error) {
 // with a second query: the row is already being written, and a separate read
 // would be a second chance for the two to disagree.
 func (s *Store) RecordSent(ctx context.Context, id ids.UUID, receipt connector.SendReceipt) error {
-	activityID, staged, err := s.commitReceipt(ctx, id, receipt)
+	sent, err := s.commitReceipt(ctx, id, receipt)
 	if err != nil {
 		return err
 	}
-	s.reconcileIdentity(ctx, id, activityID, staged, receipt.RFC822MessageID)
-	s.admitSentParties(ctx, activityID)
+	s.reconcileIdentity(ctx, id, sent.activity, sent.staged, s.identityAfterReceipt(ctx, id, sent, receipt))
+	s.admitSentParties(ctx, sent.activity)
 	return nil
 }
 
@@ -327,12 +332,11 @@ func (s *Store) RecordSent(ctx context.Context, id ids.UUID, receipt connector.S
 // delivery back to a ladder that cannot tell it went. The staged identity that
 // comes back is then empty, which the reconcile reads as "nothing to re-key" —
 // the correct answer for a transport with no mail identity at all.
-func (s *Store) commitReceipt(ctx context.Context, id ids.UUID, receipt connector.SendReceipt) (ids.ActivityID, string, error) {
+func (s *Store) commitReceipt(ctx context.Context, id ids.UUID, receipt connector.SendReceipt) (sentReceipt, error) {
 	ctx, cancel := detachedWrite(ctx)
 	defer cancel()
 
-	var activityID ids.ActivityID
-	var staged string
+	sent := sentReceipt{providerSentID: receipt.ProviderMessageID, sentAt: s.now().UTC()}
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		// inflight_at is cleared with the receipt: the outcome is now KNOWN, and
 		// a sent row still carrying the marker would read as a transmission
@@ -343,19 +347,19 @@ func (s *Store) commitReceipt(ctx context.Context, id ids.UUID, receipt connecto
 		arg := func(v any) string { args = append(args, v); return "$" + strconv.Itoa(len(args)) }
 		query := `
 			UPDATE comms_outbound
-			   SET status = 'sent', party_admission_pending = true, provider_message_id = ` + arg(receipt.ProviderMessageID) + `, sent_at = ` + arg(s.now().UTC()) + `,
+			   SET status = 'sent', party_admission_pending = true, provider_message_id = ` + arg(receipt.ProviderMessageID) + `, sent_at = ` + arg(sent.sentAt) + `,
 			       reason = NULL, inflight_at = NULL, from_address = coalesce(nullif(` + arg(receipt.FromAddress) + `, ''), from_address)
 			 WHERE id = ` + arg(id) + ` AND status = 'pending'
-			RETURNING activity_id, coalesce(message_id, '')`
-		return tx.QueryRow(ctx, query, args...).Scan(&activityID, &staged)
+			RETURNING activity_id, coalesce(message_id, ''), coalesce(user_id, '00000000-0000-0000-0000-000000000000'), provider`
+		return tx.QueryRow(ctx, query, args...).Scan(&sent.activity, &sent.staged, &sent.seat, &sent.provider)
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
-		return ids.ActivityID{}, "", ErrTerminal
+		return sentReceipt{}, ErrTerminal
 	}
 	if err != nil {
-		return ids.ActivityID{}, "", fmt.Errorf("comms: recording the send receipt: %w", err)
+		return sentReceipt{}, fmt.Errorf("comms: recording the send receipt: %w", err)
 	}
-	return activityID, staged, nil
+	return sent, nil
 }
 
 // detachedWriteTimeout bounds a write the caller's cancellation no longer

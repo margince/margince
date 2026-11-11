@@ -165,3 +165,31 @@ The [flow declarations](../../backend/internal/compose/integration/daily_systemh
 The Overview and Diagnostics have their own budget IDs in the [budget registry](../../backend/internal/compose/integration/daily_budgets_bench_test.go).
 The app-shell flow and the rep and manager flows keep their own budgets.
 HTTP timings do not measure browser rendering, cache return or hidden-page polling. Check those with the browser tests as well.
+
+## Separate browser phases on Home
+
+`make bench-home` attaches a JSON phase record for each load, return and refresh.
+The [recorder](../../frontend/e2e/homephases.ts) uses the existing request ledger and journey marks.
+Its [judge](../../frontend/src/testing/homephases.judge.ts) keeps invalid or unavailable durations as `null`.
+Resource timings and readiness marks use the document clock; request total stays separate from readiness.
+Application time starts at navigation or the journey's click or refresh mark.
+Failures, requests still running and retry attempts remain under the journey that started them.
+On a route return, fresh answers may come from the same reader and document.
+The judge records their source journey and age; a failed, started or stale read cannot borrow one.
+Refocus advances the cache's `Date.now` input past its freshness window.
+Browser performance time and the server clock stay unchanged.
+
+Time before native fetch belongs to the application. Browser pre-send time includes connection work;
+DNS, connection and TLS intervals help explain it and can overlap. It is not a measure of SQL time.
+Chromium's send boundary separates sending from response waiting. Server timings, when supplied,
+remain a separate list. Missing send or server evidence does not become zero.
+An intercepted refresh names its test hold and leaves network phases unknown.
+The response's `X-Correlation-ID` joins the server's request scope and access log; a client cannot choose it.
+
+Each record names the loaded bundle files, navigation kind and cache policy, with per-request cache evidence.
+Set `BENCH_HOME_CORPUS` to the fictional dataset revision and `GITHUB_SHA` to the built commit when qualifying a run.
+Those fields are declarations; loaded asset names show what the browser used.
+Absent or empty declarations stay unknown. Compare runs only after checking their corpus, bundles and cache evidence.
+`BENCH_HOME_PHASES=off` leaves the recorder out for a comparison using the same budgets.
+The recorder runs in the benchmark; it sends no browser measurements to the app.
+Controlled HTTP fixtures in `frontend/e2e/homephases.spec.ts` check delays, cancellation and retries.

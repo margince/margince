@@ -41,6 +41,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
 
@@ -74,6 +75,7 @@ func (t extensionTool) StageInfo(ctx context.Context, in json.RawMessage) (agent
 		return agents.StageInfo{}, err
 	}
 	return agents.StageInfo{
+		SystemText: &systemtext.Message{Subject: systemtext.Prose(systemtext.Quote, "")},
 		TargetType: t.subject.Table,
 		TargetID:   id,
 		// No version. A unit's row carries no version this surface can read, so
@@ -159,10 +161,11 @@ func extensionStagingKinds(tools []mcp.Tool) []approvals.ExtensionKind {
 			continue
 		}
 		kinds = append(kinds, approvals.ExtensionKind{
-			Verb:        t.spec.Name,
-			TargetTable: t.subject.Table,
-			RbacObject:  t.rbacObject,
-			RbacAction:  principal.Action(t.rbacAction),
+			Verb:          t.spec.Name,
+			TargetTable:   t.subject.Table,
+			RbacObject:    t.rbacObject,
+			RbacAction:    principal.Action(t.rbacAction),
+			RequiredScope: t.spec.RequiredScope,
 		})
 	}
 	return kinds

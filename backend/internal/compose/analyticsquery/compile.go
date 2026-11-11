@@ -20,6 +20,8 @@ import (
 	"fmt"
 	"slices"
 	"strings"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/moneytotal"
 )
 
 // Plan is a compiled query: the statement, its arguments, and what the columns
@@ -276,10 +278,14 @@ func aggregateSQL(entity Entity, m Measure) (string, error) {
 	if m.Fn == CountDistinct {
 		return fmt.Sprintf("count(DISTINCT %s)", field.Expr), nil
 	}
+	rendered := fmt.Sprintf("%s(%s)", m.Fn, field.Expr)
 	if m.Fn == Median || m.Fn == P75 {
-		return PercentileExpr(field.Expr, m.Fn), nil
+		rendered = PercentileExpr(field.Expr, m.Fn)
 	}
-	return fmt.Sprintf("%s(%s)", m.Fn, field.Expr), nil
+	if field.Unpriced != "" && foldsValues[m.Fn] {
+		rendered = moneytotal.CompleteAggregateSQL(rendered, "sum("+field.Unpriced+")", m.Fn == Sum)
+	}
+	return rendered, nil
 }
 
 // PercentileExpr renders a percentile over a TRUSTED schema expression. Both
@@ -337,6 +343,20 @@ func whereClauses(entity Entity, filters []Filter, arg func(any) string) ([]stri
 				return nil, err
 			}
 			out = append(out, clause)
+			continue
+		}
+		if field.Predicate != "" {
+			// A set holds the value or it does not, so no other comparison
+			// means anything here. Answering one of them against the single
+			// listing value is the defect this replaces.
+			if f.Op != OpEq {
+				return nil, &RefusalError{
+					Kind:    RefusalUnsupported,
+					Message: fmt.Sprintf("%s holds a set, which %s cannot compare", f.Field, f.Op),
+					Suggest: fmt.Sprintf("filter %s with %s", f.Field, OpEq),
+				}
+			}
+			out = append(out, fmt.Sprintf(field.Predicate, arg(f.Value)))
 			continue
 		}
 		form := filterSQL[f.Op]

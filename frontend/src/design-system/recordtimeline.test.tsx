@@ -11,6 +11,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
+import { stable } from "../format/collate";
 import { LocaleProvider, useT } from "../i18n";
 import { withEmailOpener } from "../lib/openemail";
 import { ViewerZoneProvider } from "../lib/viewerzone";
@@ -229,7 +230,7 @@ describe("a record timeline you can work in", () => {
     expect(await screen.findByText("Fleet renewal")).toBeTruthy();
     // The open is exactly one request, with nothing a filter would add.
     expect(feed.calls).toHaveLength(1);
-    expect([...feed.last().searchParams.keys()].sort()).toEqual([
+    expect([...feed.last().searchParams.keys()].sort(stable)).toEqual([
       "entity_id",
       "entity_type",
       "limit",
@@ -326,7 +327,9 @@ describe("a record timeline you can work in", () => {
       page: { has_more: false },
     });
 
-    expect(renderedActivityIds().sort()).toEqual([NEWEST.id, OLDER.id].sort());
+    expect(renderedActivityIds().sort(stable)).toEqual(
+      [NEWEST.id, OLDER.id].sort(stable),
+    );
   });
 
   it("sends the kind to the server rather than filtering the page it holds", async () => {
@@ -340,7 +343,7 @@ describe("a record timeline you can work in", () => {
 
     await pickOption(user, screen.getByLabelText("Activity kind"), "Tasks");
     await waitFor(() =>
-      expect(feed.last().searchParams.get("kind")).toBe("task"),
+      expect(feed.last().searchParams.getAll("kind")).toEqual(["task"]),
     );
   });
 

@@ -14,24 +14,23 @@ import { describedByIds } from "../../design-system/describedby";
 import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
 import { IdentityFact, IdentityLine } from "../../design-system/identityline";
+import { LanguageSelect } from "../../design-system/languageselect";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
 import { RoleBadge } from "../../design-system/rbac";
 import { useSaveDraft } from "../../design-system/savepage";
-import { Select } from "../../design-system/select";
 import { SettingList, SettingRow } from "../../design-system/settingrow";
+import { Switch } from "../../design-system/switch";
 import { TimezoneSelect } from "../../design-system/timezoneselect";
 import { type Toast, useToast } from "../../design-system/toast";
-import {
-  LOCALES,
-  type Locale,
-  localeNameKey,
-  useLocale,
-  useT,
-} from "../../i18n";
+import { LOCALES, type Locale, useLocale, useT } from "../../i18n";
 import { problemMessageOf, unwrap } from "../../lib/problem";
 import { useInstallState } from "../../lib/pwa";
 import { useLogout, useMe } from "../../lib/session";
+import {
+  setSingleKeyShortcutsOn,
+  useSingleKeyShortcuts,
+} from "../../lib/shortcuts";
 import {
   setThemeChoice,
   THEME_CHOICES,
@@ -167,6 +166,7 @@ function BrowserPanel() {
     <Panel title={t("account.browserCard")}>
       <SettingList bleed="settings">
         <AppearanceSettingRow />
+        <SingleKeyShortcutsRow />
         <InstallSettingRow install={install} />
       </SettingList>
     </Panel>
@@ -209,27 +209,16 @@ function LanguageSettingRow() {
       description={t("account.languageHelp")}
       control={(control) => (
         <div className="form-stack settingrow-measure">
-          <Select
+          <LanguageSelect
             {...control}
             aria-describedby={describedByIds(
               control["aria-describedby"],
               remember.isError && refusalId,
             )}
             className="settingrow-measure"
+            languages={LOCALES}
             value={shown}
-            // Narrowed through the list the options were built from, so the
-            // answer is a Locale with no assertion.
-            onChange={(next) => {
-              const picked = LOCALES.find((option) => option === next);
-              if (picked) setDraft(picked);
-            }}
-            // Each language name is in its own language, so each carries `lang`
-            // (WCAG 2.2 AA 3.1.2); a locale code is already a BCP 47 subtag.
-            options={LOCALES.map((option) => ({
-              value: option,
-              label: t(localeNameKey(option)),
-              lang: option,
-            }))}
+            onChange={setDraft}
           />
           {/* The bar carries the summary; this names the field it is about. */}
           <ErrorLine id={refusalId}>
@@ -342,6 +331,28 @@ function AppearanceSettingRow() {
           onChange={setDraft}
         />
       }
+    />
+  );
+}
+
+// A Switch writes when turned, so this row stays out of the page's save bar.
+function SingleKeyShortcutsRow() {
+  const t = useT();
+  const on = useSingleKeyShortcuts();
+  return (
+    <SettingRow
+      label={t("account.singleKeyShortcuts")}
+      description={t("account.singleKeyShortcutsHelp")}
+      control={(control) => (
+        <Switch
+          describedBy={control["aria-describedby"]}
+          label={t("account.singleKeyShortcuts")}
+          labelHidden
+          checked={on}
+          testId="single-key-shortcuts-switch"
+          onChange={setSingleKeyShortcutsOn}
+        />
+      )}
     />
   );
 }

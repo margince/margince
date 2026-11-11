@@ -93,10 +93,9 @@ type ConsentGate interface {
 	// returns is what transmit demands: a send with no current ticket is a
 	// send nobody can account for.
 	AuthorizeTransmit(ctx context.Context, req commsauthz.TransmitRequest) (commsauthz.TransmitTicket, error)
-	// RecheckTransmit asks the same question again right before the provider
-	// call. It returns the issued ticket when the answer is unchanged, and a
-	// newly recorded one when a stop or a retraction changed it.
-	RecheckTransmit(ctx context.Context, req commsauthz.TransmitRequest, issued commsauthz.TransmitTicket) (commsauthz.TransmitTicket, error)
+	// AcquireTransmitPermit rechecks permission and holds its stop ordering.
+	// A nil permit postpones an attempt whose communication keys are held.
+	AcquireTransmitPermit(ctx context.Context, req commsauthz.TransmitRequest, issued commsauthz.TransmitTicket) (commsauthz.TransmitPermit, error)
 }
 
 // BounceObserver is told when a delivery report says an address is permanently

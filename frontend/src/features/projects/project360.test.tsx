@@ -5,6 +5,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   cleanup,
+  renderHook,
   render as rtlRender,
   screen,
   waitFor,
@@ -15,11 +16,13 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
+import { useShortcutDispatcher } from "../../lib/shortcuts";
 import { jsonResponse } from "../../testing/company.fixtures";
 import { meFixture } from "../../testing/mefixture";
 import { project, project360 } from "../../testing/projects.fixtures";
 import { RecordShell } from "../../testing/recordshell.testkit";
 import { ProjectScreen } from "./project360";
+import type { Project } from "./projects.form";
 import { projectsBackend } from "./projects.testing";
 
 // The project page: every section drawn from one Project360, a withheld
@@ -642,5 +645,67 @@ describe("a commitment's task detail", () => {
         name: en["tasks.complete"],
       }),
     ).toBeTruthy();
+  });
+});
+
+// A phase a newer server added still reads in the head's badge, not as a blank.
+describe("a phase this build does not know", () => {
+  it("names it with the neutral label in the head and the details", async () => {
+    projectsBackend({
+      view: project360({
+        project: project({
+          phase: "a_phase_from_a_later_release" as Project["phase"],
+        }),
+      }),
+    });
+    render(<ProjectScreen id="pr-1" />);
+    await screen.findByRole("heading", { name: "CRM rollout" });
+    expect(screen.getAllByText(en["common.unknownValue"]).length).toBe(2);
+  });
+});
+
+describe("the project's record keys", () => {
+  async function mountProject(view = project360()) {
+    projectsBackend({ view });
+    renderHook(() => useShortcutDispatcher());
+    render(<ProjectScreen id="pr-1" />);
+    await screen.findByRole("heading", { name: "CRM rollout" });
+    return screen.getByRole("button", { name: en["log.title"] });
+  }
+
+  it.each([
+    ["n", en["log.title"]],
+    ["t", en["log.addTask"]],
+  ])("open on %s the drawer its verb opens: %s", async (key, verb) => {
+    const user = userEvent.setup();
+    const log = await mountProject();
+    await waitFor(() => expect(log.hasAttribute("disabled")).toBe(false));
+    expect(log.getAttribute("aria-keyshortcuts")).toBe("n");
+
+    await user.keyboard(key);
+    const drawer = await screen.findByRole("dialog");
+    expect(within(drawer).getByRole("heading", { name: verb })).toBeTruthy();
+  });
+
+  it("bind no M: a project has no Email verb", async () => {
+    const user = userEvent.setup();
+    const log = await mountProject();
+    await waitFor(() => expect(log.hasAttribute("disabled")).toBe(false));
+
+    await user.keyboard("m");
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("do nothing on a project this caller may not change", async () => {
+    const user = userEvent.setup();
+    await mountProject(
+      project360({
+        project: project({ owner_id: "u-someone-else", writable: false }),
+      }),
+    );
+    await screen.findByText(/You cannot edit this project/);
+
+    await user.keyboard("nt");
+    expect(screen.queryByRole("dialog")).toBeNull();
   });
 });

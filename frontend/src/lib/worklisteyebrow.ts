@@ -2,6 +2,7 @@ import { providerName } from "../format/connectorprovider";
 import type { Translator } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { aiTaskLabel } from "./ai-task-label";
+import { labelFor } from "./labelfor";
 import type { WorklistItem } from "./worklisttypes";
 
 /** The signals the overnight run can name, and the only ones this eyebrow trusts. */
@@ -25,6 +26,7 @@ export function eyebrowKeyFor(item: WorklistItem): MessageKey {
   if (item.source === "failed_approval")
     return "worklist.source.failed_approval";
   if (nonBuyerRequest(item)) return "worklist.source.awaiting_reply";
+  if (item.email_summary?.calendar_invitation) return "email.invitation.badge";
   if (item.source === "notice") return "brief.updates.title";
   if (item.source === "domain_question")
     return "worklist.source.domain_question";
@@ -39,7 +41,7 @@ export function eyebrowKeyFor(item: WorklistItem): MessageKey {
     }
   }
   if (item.source === "brief_item") return "search.kind.deal";
-  return CATEGORY_LABEL[item.category];
+  return labelFor(CATEGORY_LABEL, item.category);
 }
 
 /**

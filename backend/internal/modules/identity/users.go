@@ -88,8 +88,11 @@ func (s *Service) ReactivateUser(ctx context.Context, actor Identity, userID ids
 	if err != nil {
 		return err
 	}
-	return s.db.Tx(ctx, func(tx pgx.Tx) error {
+	reactivate := func(tx pgx.Tx) error {
 		if err := lockAuthorization(ctx, tx); err != nil {
+			return err
+		}
+		if err := lockMemberAddressClaims(ctx, tx, userID); err != nil {
 			return err
 		}
 		// Restoring an admin somebody removed is the mirror of removing one, so
@@ -160,7 +163,8 @@ func (s *Service) ReactivateUser(ctx context.Context, actor Identity, userID ids
 		}
 		return storekit.EmitEvent(ctx, tx, auditID, userID.UUID,
 			userReactivatedPayload(userID, actor.UserID, restored))
-	})
+	}
+	return storekit.RetryLockCycles(ctx, func() error { return s.db.Tx(ctx, reactivate) })
 }
 
 // userReactivatedPayload builds user.reactivated's typed payload.
@@ -225,8 +229,11 @@ func (s *Service) DeactivateUser(ctx context.Context, actor Identity, in Deactiv
 	if err != nil {
 		return err
 	}
-	if err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+	deactivate := func(tx pgx.Tx) error {
 		if err := lockAuthorization(ctx, tx); err != nil {
+			return err
+		}
+		if err := lockMemberAddressClaims(ctx, tx, in.UserID); err != nil {
 			return err
 		}
 		// A delegated holder must not lock out an administrator. The last-admin
@@ -271,7 +278,8 @@ func (s *Service) DeactivateUser(ctx context.Context, actor Identity, in Deactiv
 		}
 		return storekit.EmitEvent(ctx, tx, auditID, in.UserID.UUID,
 			userDeactivatedPayload(in.UserID, actor.UserID, in.Reason))
-	}); err != nil {
+	}
+	if err := storekit.RetryLockCycles(ctx, func() error { return s.db.Tx(ctx, deactivate) }); err != nil {
 		return err
 	}
 	// The withdrawal above committed, so the mailbox has already stopped being
@@ -356,8 +364,13 @@ func endCredentialAuthority(ctx context.Context, tx pgx.Tx, userID ids.UserID, r
 	if err := revokeGrantsOfUserTx(ctx, tx, userID, reason); err != nil {
 		return err
 	}
+	// A code committed after this transaction began was created later than
+	// now(). Ending it at now() would date its expiry before its creation, and
+	// the lifetime check would refuse the whole revocation. Such a code closes
+	// just after its own creation instead, which is still before anyone uses it.
 	if _, err := tx.Exec(ctx,
-		`UPDATE oauth_authorization_code SET expires_at = now()
+		`UPDATE oauth_authorization_code
+		    SET expires_at = greatest(now(), created_at + interval '1 microsecond')
 		  WHERE user_id = $1 AND consumed_at IS NULL AND expires_at > now()`,
 		userID); err != nil {
 		return err

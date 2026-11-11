@@ -226,7 +226,7 @@
   gap: var(--controlGap);
 }
 /* Neutral, not the accent: it says the list left its view, and the accent is
-   the primary action's (selectedstate.test.ts). */
+   the primary action's (census/rules/selectedstate.census.ts). */
 .lt-vdot {
   inline-size: 6px;
   block-size: 6px;
@@ -511,7 +511,7 @@
  * menu. The numbers live in tokens.css — `--menuMinInlineSize`,
  * `--menuMaxBlockSize` and `--controlGap` for the inset — because a surface
  * that spells its own is a second answer to how wide a menu is, and the five
- * had five. `menu-anatomy.test.ts` is what holds them to it.
+ * had five. `census/rules/menu-anatomy.census.ts` is what holds them to it.
  *
  * A fieldset carries its own margin, which is reset before the look applies;
  * the min-inline-size the UA gives it is replaced by the anatomy's own floor
@@ -1210,7 +1210,7 @@
 .lt-pager button {
   /* A page step is a control, so it takes the control height in both axes —
      square until a three-digit page number widens it. It had a rung of its own
-     at 26, which is the drift `controlheight.test.ts` exists to stop. */
+     at 26, which is the drift `census/rules/controlheight.census.ts` exists to stop. */
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1343,9 +1343,11 @@
    * holds the grid together, but in a card it would read as a missing answer to
    * a question nobody asked. A cell renderer may wrap nothing in an element, so
    * a cell counts as empty when nothing in it holds text or draws itself. Bare
-   * text (the empty list's own line) counts as content. */
+   * text (the empty list's own line) counts as content. A loading row's bone
+   * is a placeholder, not a missing answer, so it keeps its cells. */
   .lt-table
-  td:is(:empty, :not(:has(:not(:empty), img, svg, input)):has(> :empty)) {
+    tr:not(.lt-loading)
+    > td:is(:empty, :not(:has(:not(:empty), img, svg, input)):has(> :empty)) {
     display: none;
   }
 

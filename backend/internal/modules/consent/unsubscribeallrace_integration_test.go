@@ -33,6 +33,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -150,33 +151,7 @@ func waitUntilNBlockedBy(t *testing.T, holder *pgx.Conn, want int) {
 // anyone waiting" this file's header warns about.
 func waitUntilBlockedByPID(t *testing.T, prober *pgx.Conn, holderPID, want int) {
 	t.Helper()
-	ctx := context.Background()
-	deadline := time.Now().Add(30 * time.Second)
-	for {
-		// pg_stat_activity is materialized once per transaction and cached
-		// until it ends, so a probe that did not clear it cannot see a backend
-		// that dialled after the snapshot was taken — the wait then runs to its
-		// deadline over contention that is really there.
-		if _, err := prober.Exec(ctx, `SELECT pg_stat_clear_snapshot()`); err != nil {
-			t.Fatalf("clearing the stats snapshot before probing: %v", err)
-		}
-		var waiting int
-		if err := prober.QueryRow(ctx,
-			`SELECT count(*) FROM pg_stat_activity WHERE $1 = ANY(pg_blocking_pids(pid))`,
-			holderPID).Scan(&waiting); err != nil {
-			t.Fatalf("reading who this connection is blocking: %v", err)
-		}
-		if waiting >= want {
-			return
-		}
-		if time.Now().After(deadline) {
-			t.Fatalf("%d backend(s) ever waited on the lock this connection holds, want %d: the "+
-				"press did not reach it, so this case interleaved nothing and would pass over "+
-				"the defect it is named for", waiting, want)
-		}
-		//craft:ignore test-sleep the wait IS on the condition — pg_blocking_pids, asked in the loop above. This paces the asking so the poll does not compete with the press for a pool connection, which CodeRabbit raised on #4631; removing it makes the test flakier, not less.
-		time.Sleep(20 * time.Millisecond)
-	}
+	testdb.AwaitQueuedBehind(t, prober, int32(holderPID), want, nil, "the press")
 }
 
 // Two multi-purpose consent transactions for one contact do not interleave.

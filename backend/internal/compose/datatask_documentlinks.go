@@ -15,8 +15,10 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture/mailmap"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/datatask"
+	"github.com/margince/margince/backend/internal/platform/originalstore"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 // documentLinksDataTask records the document links of mail captured before link
@@ -26,7 +28,7 @@ import (
 func documentLinksDataTask() datatask.Task {
 	return datatask.Task{
 		ID: "core/1792860002_document_links_from_stored_mail", Version: 1,
-		Title: "Record document links sent in captured mail", Requires: []string{"core/1792896283"},
+		Title: systemtext.Literal("datatask.title.core.1792860002_document_links_from_stored_mail"), Requires: []string{"core/1792896283"},
 		Steps: []datatask.Step{{
 			Name: "record_document_links", Limit: 50, MinLimit: 1,
 			Audit:    datatask.AuditPolicy{PerRecord: true},
@@ -51,7 +53,7 @@ func recordDocumentLinksBatch(ctx context.Context, tx pgx.Tx, in datatask.BatchI
 	if err != nil {
 		return datatask.BatchOut{}, err
 	}
-	rows, err := tx.Query(ctx, `SELECT a.id, a.source_system, a.source_id, a.captured_by, rc.payload `+
+	rows, err := tx.Query(ctx, `SELECT a.id, a.source_system, a.source_id, a.captured_by, `+originalstore.SQL("rc")+` `+
 		mailRecipientOriginalScope+` AND a.id > @scan_after ORDER BY a.id LIMIT @scan_limit FOR UPDATE OF a`,
 		pgx.NamedArgs{"scan_after": after, "scan_limit": in.Limit})
 	if err != nil {
@@ -71,6 +73,10 @@ func recordDocumentLinksBatch(ctx context.Context, tx pgx.Tx, in datatask.BatchI
 	}
 	keeper := capturedFileKeeper{store: activities.NewStore(nil)}
 	for _, mail := range mails {
+		mail.Payload, err = originalstore.RepairPayload(ctx, mail.Payload)
+		if err != nil {
+			return datatask.BatchOut{}, err
+		}
 		// An unreadable original is an outcome of the run. The batch moves past it.
 		if err := recordStoredMailLinks(ctx, tx, keeper, mail); err != nil && !errors.Is(err, errUnreadableOriginal) {
 			return datatask.BatchOut{}, err

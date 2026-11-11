@@ -100,6 +100,8 @@ func sqlLiterals(t *testing.T, path string, constants ...map[string]string) []st
 // privacy package: retention.go also writes subject tables, and a retention sweep
 // must not satisfy "Art. 17 reaches this table".
 var erasureCascadeFiles = []string{
+	"internal/modules/privacy/originalobjects.go",
+	"internal/modules/privacy/raworiginalsubjects.go",
 	"internal/platform/database/storekit/auditredaction.go",
 	// Capture owns the projection purge reached through privacy.RawCapturePurger.
 	"internal/modules/capture/partysourceerase.go",
@@ -154,6 +156,7 @@ var erasureCascadeFiles = []string{
 	// The drafts a rep started to the subject and never sent. Same Art. 17
 	// transaction; its own file because the table is not the eraser's own.
 	"internal/modules/privacy/maildrafts.go",
+	"internal/modules/privacy/erasure_leaddeliveries.go",
 	// The live capabilities over the subject's consent record — the
 	// preference-center token and the double-opt-in token. Split out of
 	// erasure.go for the same size reason as the timeline, and named here for
@@ -178,6 +181,9 @@ var erasureCascadeFiles = []string{
 	// destructive engine and both reach it.
 	"internal/modules/privacy/erasure_approvals.go",
 	"internal/modules/privacy/erasure_approvalnotices.go",
+	// The missed-receipt notices that name the subject. Same Art. 17
+	// transaction; retracted and detached from the erased record.
+	"internal/modules/privacy/erasure_receiptnotices.go",
 	// The readings of the transcripts the timeline scrub just emptied — same
 	// transaction, its own file for the same both-engines reason.
 	"internal/modules/privacy/transcriptreadings.go",
@@ -430,15 +436,8 @@ func oneStatementCarries(statements []string, assignments []string) bool {
 	return false
 }
 
-// sweepPurges reports whether the sweep deletes from table under every declared
-// predicate — one delete per predicate, so a declaration names the acts rather
-// than the table.
-//
-// Through deleteRe, the matcher tableownership_test.go already derives its own
-// answer from, rather than a second spelling here. The hand-written one this
-// replaced looked for "delete from <table> " and its end-of-string twin, and
-// went blind on a trailing `;` or `)` — both of which end a statement in this
-// tree, and both of which would have reported a purge that exists as missing.
+// Each declared predicate needs a delete; a table-level match could hide a
+// missing purge for one retained record shape.
 func sweepPurges(statements []string, table string, predicates []string) bool {
 	for _, predicate := range predicates {
 		found := false
@@ -446,8 +445,8 @@ func sweepPurges(statements []string, table string, predicates []string) bool {
 			if !strings.Contains(stmt, strings.ToLower(predicate)) {
 				continue
 			}
-			for _, m := range deleteRe.FindAllStringSubmatch(stmt, -1) {
-				if m[1] == table {
+			for _, write := range sqlWrites(stmt) {
+				if write.verb == "delete" && write.table == table {
 					found = true
 				}
 			}
@@ -496,7 +495,7 @@ func statementDestroying(statements []string, table, column string) string {
 		if !writesTable {
 			continue
 		}
-		if deleteRe.MatchString(stmt) {
+		if sqlWritesVerb(stmt, "delete") {
 			return stmt
 		}
 		if sets := setAssignments(stmt); sets != "" && needle.MatchString("SET "+strings.ToLower(sets)) {
@@ -538,7 +537,7 @@ func statementDestroying(statements []string, table, column string) string {
 // reader can follow, not a column hidden from one.
 func assembledSetTarget(statements []string) string {
 	for _, stmt := range statements {
-		if !updateRe.MatchString(stmt) {
+		if !sqlWritesVerb(stmt, "update") {
 			continue
 		}
 		assignments := strings.TrimSpace(setAssignments(stmt))

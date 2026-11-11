@@ -28,6 +28,7 @@ function contact(
 ) {
   return {
     contact_id: id,
+    attachable: true,
     full_name: name,
     title: "Head of Fleet",
     primary_email: `${id}@brandt.example`,
@@ -87,10 +88,9 @@ describe("the Overview's Contacts card", () => {
       }),
     });
     const contacts = within(card("Contacts"));
-    expect(contacts.getByRole("link", { name: "Dana Buyer" })).toHaveAttribute(
-      "href",
-      "/#/contacts/p-2",
-    );
+    expect(
+      contacts.getByRole("link", { name: /^DB\s*Dana Buyer$/ }),
+    ).toHaveAttribute("href", "/#/contacts/p-2");
     expect(contacts.getByText("Lena Middle")).toBeInTheDocument();
     expect(contacts.queryByText("Ravi Weak")).toBeNull();
     expect(contacts.getByText("Champion")).toBeInTheDocument();
@@ -301,9 +301,8 @@ describe("the details' Way in row", () => {
       }),
     });
     expect(screen.getByText("Way in")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Dana Buyer" })).toHaveAttribute(
-      "href",
-      "/#/contacts/p-2",
-    );
+    expect(
+      screen.getByRole("link", { name: /^DB\s*Dana Buyer$/ }),
+    ).toHaveAttribute("href", "/#/contacts/p-2");
   });
 });

@@ -26,6 +26,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -36,6 +37,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/diffhash"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 // linkedInMatchKind is the staging kind. One per suggested match, not one per
@@ -230,6 +232,7 @@ func stageOneLinkedInMatch(ctx context.Context, svc *approvals.Service, said app
 		JoinPending:    true,
 		Summary: fmt.Sprintf(said.linkedInLooksLike,
 			m.ConnectionName, employerOrPlaceholder(said, m.ConnectionCompany), m.ContactName),
+		SystemText: &systemtext.Message{Version: 1, Subject: systemtext.Sentence("approval.linkedInLooksLike", systemtext.Text(m.ConnectionName), employerArgument(m.ConnectionCompany), systemtext.Text(m.ContactName))},
 	})
 	if errors.Is(err, approvals.ErrNoDecider) {
 		return false, nil
@@ -373,4 +376,11 @@ func linkedInMatchAcceptEffect(svc *approvals.Service, store *contacts.Store) ap
 			return store.ApplyLinkedInMatchTx(ctx, tx, apply)
 		})
 	}
+}
+
+func employerArgument(company string) systemtext.Argument {
+	if strings.TrimSpace(company) == "" {
+		return systemtext.MessageArgument("approval.unnamedEmployer")
+	}
+	return systemtext.Text(company)
 }

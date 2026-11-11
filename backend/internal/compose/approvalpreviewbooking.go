@@ -6,7 +6,6 @@ package compose
 import (
 	"context"
 	"errors"
-	"strings"
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -30,6 +29,9 @@ func (r approvalPreviewReader) bookingPreview(ctx context.Context, approval crmc
 		return out, nil
 	}
 	command := bookingPreviewCommand(in, host)
+	if in.Subject == nil || *in.Subject == "" {
+		command.Subject = r.activities.DefaultMeetingSubject(ctx)
+	}
 	if err := r.requireBookingPreviewTarget(ctx, approval, command); err != nil {
 		if previewUnavailable(err) {
 			return out, nil
@@ -66,12 +68,11 @@ func bookingPreviewHost(approval crmcontracts.Approval, in crmcontracts.BookMeet
 	if in.HostUserId != nil {
 		return ids.UUID(*in.HostUserId), nil
 	}
-	if actor, ok := strings.CutPrefix(approval.ProposedBy, "human:"); ok {
-		host, err := ids.Parse(actor)
-		if err == nil {
-			return host, nil
-		}
+	actor, err := creationActor(approval)
+	if err == nil && !actor.UserID.IsZero() {
+		return actor.UserID, nil
 	}
+
 	return ids.Nil, apperrors.ErrInvalidArgument
 }
 

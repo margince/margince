@@ -21,6 +21,7 @@ import { Heading } from "../../design-system/heading";
 import { Chip } from "../../design-system/readings";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { labelFor, valueFor } from "../../lib/labelfor";
 import { unwrap } from "../../lib/problem";
 import { useSavedViews } from "../../lib/savedviews.queries";
 import { useViewerZone } from "../../lib/viewerzone";
@@ -86,7 +87,11 @@ const PHASE_TONE = {
 /** The phase as a status pill: closed is the one terminal reading. */
 export function PhaseBadge({ phase }: Readonly<{ phase: ProjectPhase }>) {
   const t = useT();
-  return <Badge tone={PHASE_TONE[phase]}>{t(PHASE_LABEL[phase])}</Badge>;
+  return (
+    <Badge tone={valueFor(PHASE_TONE, phase, "default")}>
+      {t(labelFor(PHASE_LABEL, phase))}
+    </Badge>
+  );
 }
 
 /**
@@ -121,7 +126,7 @@ export function ProjectKeyChip({
  * One element rather than two renderings, so the dialog behind both is the
  * same dialog with the same fields.
  */
-function NewProjectAction() {
+function NewProjectAction({ open }: Readonly<{ open: boolean }>) {
   const t = useT();
   const form = useProjectCreateForm();
   return (
@@ -129,6 +134,7 @@ function NewProjectAction() {
       label={t("project.new")}
       invalidate="projects"
       screen="projects"
+      listCreate={{ open }}
       create={form.create}
       resolveExisting={(_code, id) => ({ screen: "projects", id })}
       fields={form.fields}
@@ -137,9 +143,14 @@ function NewProjectAction() {
 }
 
 const PHASE_CHIP_OPTIONS: { value: ProjectPhase; label: MessageKey }[] =
-  PROJECT_PHASES.map((phase) => ({ value: phase, label: PHASE_LABEL[phase] }));
+  PROJECT_PHASES.map((phase) => ({
+    value: phase,
+    label: labelFor(PHASE_LABEL, phase),
+  }));
 
-export function ProjectsScreen() {
+export function ProjectsScreen({
+  startCreating = false,
+}: Readonly<{ startCreating?: boolean }>) {
   const t = useT();
   const pageName = usePageName("projects");
   const { locale } = useLocale();
@@ -156,7 +167,9 @@ export function ProjectsScreen() {
   // mounts its own copy of this verb, and a button pressed in the table's
   // header a moment before the plate replaces it would open a dialog the
   // swap throws away.
-  const createAction = !state.isPending && <NewProjectAction />;
+  const createAction = !state.isPending && (
+    <NewProjectAction open={startCreating} />
+  );
   // First run: nothing exists and nothing narrows the list. It waits for the
   // views read, since a saved view is reachable only from the rail.
   const firstRun =

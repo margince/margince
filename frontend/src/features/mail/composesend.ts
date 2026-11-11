@@ -17,6 +17,7 @@ import {
 import {
   isConsentNotGranted,
   ProblemError,
+  problemCodeOf,
   problemFieldErrorsOf,
   problemMessageOf,
   throwProblem,
@@ -24,9 +25,8 @@ import {
 import { navigate } from "../../lib/router";
 import { useSendPermission } from "../../lib/usesendpermission";
 import type { ChosenFile } from "./composeattachments";
-import type { Grounding } from "./composedraftcall";
 import type { ComposeFields } from "./composefields";
-import { composedLinks, type Link } from "./composelinks";
+import { composedLinks, type Link, type SendGrounding } from "./composelinks";
 import type { RelinkKind } from "./composerelink";
 import type { useSavedDraft } from "./composesaveddraft";
 import { scheduleFields } from "./composeschedule";
@@ -40,21 +40,20 @@ type Preview = components["schemas"]["SendAuthorizationPreview"];
 // the server's own message, so this surface invents no copy for it.
 export type Refusal = "consent" | "mailbox" | "sharedUnsubscribe" | null;
 
-// Consent is a sentinel-mapped 409 that names itself. The two pre-flight
-// refusals are 422s, told apart by the field and code the server asserted.
+// Consent is a 409 naming itself, a mailbox that cannot send a 422 naming no
+// field, and a shared unsubscribe link a 422 field fault on the recipients.
 export function refusalOf(error: unknown): Refusal {
   if (error instanceof ProblemError && isConsentNotGranted(error.problem)) {
     return "consent";
   }
-  for (const { field, code } of problemFieldErrorsOf(error)) {
-    if (field === "from" && code === "mailbox_not_send_capable") {
-      return "mailbox";
-    }
-    if (field === "recipients" && code === "shared_unsubscribe_token") {
-      return "sharedUnsubscribe";
-    }
+  if (problemCodeOf(error) === "mailbox_not_send_capable") {
+    return "mailbox";
   }
-  return null;
+  const shared = problemFieldErrorsOf(error).some(
+    ({ field, code }) =>
+      field === "recipients" && code === "shared_unsubscribe_token",
+  );
+  return shared ? "sharedUnsubscribe" : null;
 }
 
 type SendRequest = {
@@ -75,6 +74,7 @@ type SendRequest = {
     // Left out on a reply: the engine resolves it from the anchor, and a
     // contradicting claim is recorded as unsupported.
     communication_context?: CommunicationContext;
+    evidence?: components["schemas"]["CommunicationEvidence"];
     scheduled_at?: string;
     scheduled_tz?: string;
   };
@@ -162,6 +162,7 @@ function sendRequest(
     files: readonly ChosenFile[];
     heldDraftId: string | undefined;
     context: CommunicationContext | undefined;
+    evidence?: components["schemas"]["CommunicationEvidence"];
     links: Link[];
     answerAtSend: Preview | undefined;
   }>,
@@ -185,6 +186,7 @@ function sendRequest(
       draft_ref: fields.draftRef ?? undefined,
       mail_draft_id: where.heldDraftId,
       communication_context: where.context,
+      evidence: where.evidence,
       ...scheduleFields(fields.sendAt),
     },
     channelBody: {
@@ -225,7 +227,7 @@ function messageOf(request: SendRequest): string {
   });
 }
 
-// 201 is a message that goes later; 202 is one that has gone.
+// Both responses accept delivery; only 201 names a scheduled release.
 type SendOutcome =
   | { sent: false }
   | { sent: true; scheduled: boolean; activity: unknown };
@@ -263,7 +265,7 @@ export function useComposeSend({
   sourceBlocked?: boolean;
   anchorActivity: Activity | undefined;
   /** What a new message is about; null on an anchored send. */
-  grounding: Grounding | null;
+  grounding: SendGrounding | null;
   projectId: string;
   needsDeal: boolean;
   savedDraft: ReturnType<typeof useSavedDraft>;
@@ -327,12 +329,11 @@ export function useComposeSend({
       finishSent();
     },
   });
-  // A message sent past its refusal as a recorded exception. The refusal it
-  // answered is cleared with the rest, so nothing on screen invites a second
-  // send of a message that has gone.
+  // Clearing the refusal and draft after staging keeps this composer from
+  // offering the same held message again.
   const directSent = () => {
     send.reset();
-    toast.show(t("directSend.sent"));
+    toast.show(t("directSend.queued"));
     finishSent();
   };
 
@@ -362,6 +363,10 @@ export function useComposeSend({
     grounding,
     projectId,
   );
+  const contextDealId = (answering ? anchorActivity?.links : links)?.find(
+    (link) => link.entity_type === "deal",
+  )?.entity_id;
+  const evidence = contextDealId ? { deal_id: contextDealId } : undefined;
   // The engine's answer, asked while the rep writes. Bcc is in the question,
   // because consent is owed to everyone who receives the message.
   const answer = useSendPermission({
@@ -369,6 +374,7 @@ export function useComposeSend({
     anchorActivityId: answering,
     links,
     context: claimedContext,
+    evidence,
     enabled: open && !isChannelReply,
   });
   // A consent refusal joins the engine's answer as one status, and only while
@@ -379,6 +385,7 @@ export function useComposeSend({
     files,
     heldDraftId: savedDraft.held?.id,
     context: claimedContext,
+    evidence,
     links,
     answerAtSend: answer.preview,
   });
@@ -434,6 +441,7 @@ export function useComposeSend({
     sendReview,
     sendError,
     claimedContext,
+    contextDealId,
     permission,
     flagged,
     fieldsRef,

@@ -119,6 +119,7 @@ type Project360Contract struct {
 	ContractNumber string     `json:"contract_number"`
 	Status         string     `json:"status"`
 	UnderContract  bool       `json:"under_contract"`
+	TermState      string     `json:"term_state"`
 	ValueMinor     *int64     `json:"value_minor,omitempty"`
 	Currency       string     `json:"currency"`
 	StartsOn       *time.Time `json:"starts_on,omitempty"`

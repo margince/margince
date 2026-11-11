@@ -180,8 +180,10 @@ var piiTables = map[string]piiHandling{
 	"activity": {
 		erasureWrite: true,
 		sarRead:      true,
+		sarWithholds: []string{"system_text"},
 		retentionErasures: []string{
 			"body = NULL",
+			"system_text = @system_text",
 			"raw = NULL",
 			// The tombstone is part of the erasure, not decoration beside it:
 			// the row keeps saying a meeting happened while saying nothing
@@ -523,6 +525,7 @@ var piiTables = map[string]piiHandling{
 // privacy's own TestEveryPromisedTableIsActuallyAssembled asks that half, from
 // the only package that can call sarSections.
 var sarAssemblyFiles = []string{
+	"internal/modules/privacy/raworiginalsubjects.go",
 	"internal/modules/privacy/sarretainedcopies.go",
 	"internal/modules/privacy/sarreporting.go",
 	"internal/modules/privacy/reportingquestions.go",

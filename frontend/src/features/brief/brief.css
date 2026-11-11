@@ -130,6 +130,7 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
+  min-height: var(--space-5);
   gap: var(--space-1) var(--space-2);
   margin: 0;
   color: var(--textSecondary);
@@ -699,7 +700,8 @@
    room there is. */
 @media (pointer: coarse) {
   .rail-count-go,
-  .record-details-toggle {
+  .record-details-toggle,
+  .brief-done-band > .btn {
     min-height: max(var(--controlHeight), 44px);
   }
 }
@@ -733,9 +735,23 @@
   flex-direction: column;
   gap: var(--space-6);
 }
-/* Done for you: one deal per row, parted by hairlines, its changes under
-   its name. Each change reads what moved, then why, then its verbs, with no
-   card around it and no footer of its own. */
+/* Done for you: one card per deal under a band like Needs you. A card's
+   changes run down one line of steps, newest first, and its verbs close it.
+   Only the open card shows its steps; a closed one says where the deal ended. */
+.brief-done {
+  gap: var(--space-3);
+}
+.brief-done-band {
+  border-color: var(--aiMed);
+  background: var(--bgNoticeAi);
+}
+.brief-morning .brief-done-band > .t-eyebrow,
+.brief-done-band > .t-eyebrow {
+  color: var(--aiText);
+}
+.brief-done-band > .brief-first-count {
+  color: var(--aiText);
+}
 .brief-done-deals,
 .brief-done-changes {
   display: grid;
@@ -744,68 +760,187 @@
   list-style: none;
 }
 .brief-done-deals {
-  gap: var(--space-4);
-}
-.brief-done-deal {
-  display: grid;
-  gap: var(--space-2);
-}
-.brief-done-deal + .brief-done-deal {
-  padding-block-start: var(--space-4);
-  border-block-start: 1px solid var(--borderSubtle);
-}
-.brief-done-name {
-  margin: 0;
-  overflow-wrap: anywhere;
-}
-.brief-done-changes {
   gap: var(--space-3);
 }
+.brief-done-deal {
+  padding: var(--space-4) var(--space-5);
+}
+.brief-done-fold.disclosure {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.brief-done-fold > .disclosure-summary {
+  align-items: start;
+  font-weight: var(--fontWeightRegular);
+}
+.brief-done-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-2) var(--space-3);
+  align-items: baseline;
+}
+.brief-done-name {
+  font: var(--fontHeadingXSmall);
+  overflow-wrap: anywhere;
+}
+.brief-done-name a {
+  color: var(--textPrimary);
+}
+.brief-done-latest,
+.brief-done-when {
+  color: var(--textSecondary);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.brief-done-chips {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.brief-done-chips:empty {
+  display: none;
+}
+.brief-done-net {
+  grid-column: 1 / -1;
+  color: var(--textSecondary);
+}
+/* The steps: a dot per change on a hairline spine. The dot is indigo while
+   the change waits, since Margince made it, and grey once it is settled. */
+.brief-done-changes {
+  position: relative;
+  gap: var(--space-4);
+  margin-block-start: var(--space-4);
+}
+.brief-done-changes::before {
+  content: "";
+  position: absolute;
+  inset-block: var(--space-2);
+  inset-inline-start: 5px;
+  inline-size: 1px;
+  background: var(--borderSubtle);
+}
 .brief-done-change {
+  position: relative;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   column-gap: var(--space-3);
   row-gap: var(--space-1);
   align-items: baseline;
+  padding-inline-start: var(--space-6);
+}
+.brief-done-change::before {
+  content: "";
+  position: absolute;
+  inset-block-start: 5px;
+  inset-inline-start: 0;
+  inline-size: 11px;
+  block-size: 11px;
+  box-sizing: border-box;
+  border: 2px solid var(--ai);
+  border-radius: var(--r-full);
+  corner-shape: round;
+  background: var(--ground);
+}
+.brief-done-change:not([data-state="open"])::before {
+  border-color: var(--borderStrong);
+}
+.brief-done-change[data-state="replaced"] > .brief-done-what,
+.brief-done-change[data-state="replaced"] > .brief-done-reason {
+  color: var(--textSecondary);
 }
 .brief-done-what,
 .brief-done-reason {
   margin: 0;
   overflow-wrap: anywhere;
 }
-.brief-done-when {
+.brief-done-what {
+  font-weight: var(--fontWeightMedium);
+}
+.brief-done-reason {
   color: var(--textSecondary);
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
 }
 .brief-done-change > .brief-done-reason,
 .brief-done-change > .brief-done-quote,
-.brief-done-change > .disclosure,
 .brief-done-change > .brief-done-controls {
   grid-column: 1 / -1;
 }
-.brief-done-change > .disclosure {
-  margin-block: 0;
-}
 .brief-done-quote {
   margin: 0;
-  padding-inline-start: var(--space-3);
-  border-inline-start: 2px solid var(--borderSubtle);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--r-md);
+  background: var(--bgWell);
 }
 .brief-done-quote blockquote {
   margin: 0;
   overflow-wrap: anywhere;
 }
-.brief-done-controls,
+/* A change's own verbs sit as one quiet line; its Details opens under them. */
+.brief-done-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-4);
+  color: var(--textSecondary);
+}
+.brief-done-controls > p {
+  margin: 0;
+}
+.brief-done-controls .disclosure {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.brief-done-controls .disclosure[open] {
+  flex-basis: 100%;
+}
+.brief-done-controls .disclosure-summary {
+  display: inline-flex;
+  font-weight: var(--fontWeightRegular);
+}
+.brief-done-verbs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--gapActions);
+  margin-block-start: var(--space-4);
+  padding-block-start: var(--space-4);
+  border-block-start: 1px solid var(--borderSubtle);
+}
+.brief-done-verbs > .t-danger {
+  flex-basis: 100%;
+}
 .brief-done-foot {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: var(--gapActions);
 }
-.brief-done-foot {
-  padding-block-start: var(--space-4);
+@media (max-width: 640px) {
+  .brief-done-deal {
+    padding: var(--space-4);
+  }
+  .brief-done-change {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .brief-done-when {
+    grid-row: 2;
+  }
+  .brief-done-verbs {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .brief-done-verbs > .btn {
+    justify-content: center;
+  }
+  .brief-done-verbs > .btn-primary {
+    order: -1;
+  }
 }
+
 /* The name moves to its own line whole rather than breaking after the lead. */
 .glance-greeting-name {
   display: inline-block;

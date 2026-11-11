@@ -179,19 +179,19 @@ func (e ActivityKind) Valid() bool {
 
 // Defines values for ActivityLanguage.
 const (
-	De ActivityLanguage = "de"
-	En ActivityLanguage = "en"
-	Vi ActivityLanguage = "vi"
+	ActivityLanguageDe ActivityLanguage = "de"
+	ActivityLanguageEn ActivityLanguage = "en"
+	ActivityLanguageVi ActivityLanguage = "vi"
 )
 
 // Valid indicates whether the value is a known member of the ActivityLanguage enum.
 func (e ActivityLanguage) Valid() bool {
 	switch e {
-	case De:
+	case ActivityLanguageDe:
 		return true
-	case En:
+	case ActivityLanguageEn:
 		return true
-	case Vi:
+	case ActivityLanguageVi:
 		return true
 	default:
 		return false
@@ -1047,6 +1047,30 @@ func (e EmailAccessStatus) Valid() bool {
 	}
 }
 
+// Defines values for EmailCalendarInvitationResponse.
+const (
+	EmailCalendarInvitationResponseAccepted    EmailCalendarInvitationResponse = "accepted"
+	EmailCalendarInvitationResponseDeclined    EmailCalendarInvitationResponse = "declined"
+	EmailCalendarInvitationResponseNeedsAction EmailCalendarInvitationResponse = "needs_action"
+	EmailCalendarInvitationResponseTentative   EmailCalendarInvitationResponse = "tentative"
+)
+
+// Valid indicates whether the value is a known member of the EmailCalendarInvitationResponse enum.
+func (e EmailCalendarInvitationResponse) Valid() bool {
+	switch e {
+	case EmailCalendarInvitationResponseAccepted:
+		return true
+	case EmailCalendarInvitationResponseDeclined:
+		return true
+	case EmailCalendarInvitationResponseNeedsAction:
+		return true
+	case EmailCalendarInvitationResponseTentative:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for EmailDeliveryState.
 const (
 	Bounced EmailDeliveryState = "bounced"
@@ -1112,22 +1136,22 @@ func (e EmailSummaryMove) Valid() bool {
 
 // Defines values for MeetingResponse.
 const (
-	Accepted    MeetingResponse = "accepted"
-	Declined    MeetingResponse = "declined"
-	NeedsAction MeetingResponse = "needs_action"
-	Tentative   MeetingResponse = "tentative"
+	MeetingResponseAccepted    MeetingResponse = "accepted"
+	MeetingResponseDeclined    MeetingResponse = "declined"
+	MeetingResponseNeedsAction MeetingResponse = "needs_action"
+	MeetingResponseTentative   MeetingResponse = "tentative"
 )
 
 // Valid indicates whether the value is a known member of the MeetingResponse enum.
 func (e MeetingResponse) Valid() bool {
 	switch e {
-	case Accepted:
+	case MeetingResponseAccepted:
 		return true
-	case Declined:
+	case MeetingResponseDeclined:
 		return true
-	case NeedsAction:
+	case MeetingResponseNeedsAction:
 		return true
-	case Tentative:
+	case MeetingResponseTentative:
 		return true
 	default:
 		return false
@@ -1653,6 +1677,45 @@ func (e SignalResolutionOutcome) Valid() bool {
 	}
 }
 
+// Defines values for SystemDisplayGeneratedParts.
+const (
+	Body    SystemDisplayGeneratedParts = "body"
+	Subject SystemDisplayGeneratedParts = "subject"
+)
+
+// Valid indicates whether the value is a known member of the SystemDisplayGeneratedParts enum.
+func (e SystemDisplayGeneratedParts) Valid() bool {
+	switch e {
+	case Body:
+		return true
+	case Subject:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SystemDisplayLocale.
+const (
+	SystemDisplayLocaleDe SystemDisplayLocale = "de"
+	SystemDisplayLocaleEn SystemDisplayLocale = "en"
+	SystemDisplayLocaleVi SystemDisplayLocale = "vi"
+)
+
+// Valid indicates whether the value is a known member of the SystemDisplayLocale enum.
+func (e SystemDisplayLocale) Valid() bool {
+	switch e {
+	case SystemDisplayLocaleDe:
+		return true
+	case SystemDisplayLocaleEn:
+		return true
+	case SystemDisplayLocaleVi:
+		return true
+	default:
+		return false
+	}
+}
+
 // Activity A polymorphic timeline item. Mirrors the `activity` table + `activity_link`.
 // **Per-kind field constraints** (enforced server-side to match the DB `activity_task_fields`
 // CHECK; the OpenAPI cannot express these conditionally): `due_at`/`assignee_id`/`is_done`/
@@ -1817,8 +1880,9 @@ type Activity struct {
 	SourceId *string `json:"source_id,omitempty"`
 
 	// SourceSystem Which system this record came from: `email` for any captured or sent mail (one identity across gmail/outlook/imap), else gcal/outlook/transcript or a caller's own. Idempotency key part.
-	SourceSystem *string `json:"source_system,omitempty"`
-	Subject      *string `json:"subject,omitempty"`
+	SourceSystem  *string        `json:"source_system,omitempty"`
+	Subject       *string        `json:"subject,omitempty"`
+	SystemDisplay *SystemDisplay `json:"system_display,omitempty"`
 
 	// ThreadKey The provider's own conversation id (Gmail threadId, Graph conversationId, the RFC822 References root), stamped by capture. It is what makes a thread a thread: grouping by subject would merge two unrelated "Re: Update" exchanges and split one that was renamed mid-conversation. Null on anything capture did not thread — a note, a task, a message whose provider offered none.
 	ThreadKey *string   `json:"thread_key,omitempty"`
@@ -2298,9 +2362,12 @@ type CreateActivityRequest struct {
 	IcalInstance *string `json:"ical_instance,omitempty"`
 
 	// IcalUid The calendar event's iCal UID. Meeting only. A recurring series shares one UID across every occurrence, so this identifies the series and `ical_instance` identifies the occurrence within it; neither alone identifies a meeting.
-	IcalUid *string                   `json:"ical_uid,omitempty"`
-	Kind    CreateActivityRequestKind `json:"kind"`
-	Links   *[]struct {
+	IcalUid *string `json:"ical_uid,omitempty"`
+
+	// InReplyToActivityId The email this one replies to. Email only. The reply is filed on that mail's conversation, so it answers the mail as a reply on its thread does. The mail must be one the caller can read, and with the same correspondent: the same counterparty address or a contact both are filed under. A mail logged before conversations were kept has none to join, and the reply starts its own. Not combined with `thread_key`.
+	InReplyToActivityId *string                   `json:"in_reply_to_activity_id,omitempty"`
+	Kind                CreateActivityRequestKind `json:"kind"`
+	Links               *[]struct {
 		EntityId   string                               `json:"entity_id"`
 		EntityType CreateActivityRequestLinksEntityType `json:"entity_type"`
 	} `json:"links,omitempty"`
@@ -2347,7 +2414,7 @@ type CreateActivityRequest struct {
 	SourceSystem     *string `json:"source_system,omitempty"`
 	Subject          *string `json:"subject,omitempty"`
 
-	// ThreadKey The conversation this message belongs to. Email only. Defaults to `rfc_message_id` when absent, which files a message under itself — the same root a captured message takes when it starts a thread.
+	// ThreadKey The conversation this message belongs to. Email only. Defaults to `rfc_message_id` when absent, which files a message under itself — the same root a captured message takes when it starts a thread. A mail logged by hand with neither starts a conversation of its own.
 	ThreadKey            *string                `json:"thread_key,omitempty"`
 	AdditionalProperties map[string]interface{} `json:"-"`
 }
@@ -2563,6 +2630,23 @@ type DealLastEmailDirection string
 // would branch on and never reach.
 type EmailAccessStatus string
 
+// EmailCalendarInvitation The reader's own answer to the event an invitation names.
+type EmailCalendarInvitation struct {
+	// Response What the reader's calendar holds. `needs_action` until they answer, and while their
+	// calendar has not synced the event.
+	Response EmailCalendarInvitationResponse `json:"response"`
+
+	// StartsAt When the event starts. Absent while the reader's calendar has not synced it.
+	StartsAt *time.Time `json:"starts_at,omitempty"`
+
+	// StartsPrecision How to read `starts_at`, present beside it. `day` is an all-day event, so a client draws no time.
+	StartsPrecision *OccurredPrecision `json:"starts_precision,omitempty"`
+}
+
+// EmailCalendarInvitationResponse What the reader's calendar holds. `needs_action` until they answer, and while their
+// calendar has not synced the event.
+type EmailCalendarInvitationResponse string
+
 // EmailDelivery Whether an outbound message actually left, and why not when it did not.
 //
 // The timeline carried DIRECTION alone, which reads as a delivery state and is not one:
@@ -2626,6 +2710,12 @@ type EmailSummary struct {
 	// AttachmentCount How many files came with it. Zero when withheld, like every other count.
 	AttachmentCount int `json:"attachment_count"`
 
+	// CalendarInvitation Present when this message is a calendar invitation the reader can still answer: it came
+	// into the reader's own mailbox, names an event, and that event has not started. A client
+	// offers the answers here instead of a written reply, because an invitation asks for an
+	// RSVP. Absent on every other message, and on a withheld one.
+	CalendarInvitation *EmailCalendarInvitation `json:"calendar_invitation,omitempty"`
+
 	// Counterparty Who the message was with, named for the row: "Ana Sommer", or "Ana Sommer +2" when
 	// the exchange had more. Null when no participant resolves to a name this caller may
 	// see — the row then says the direction alone rather than inventing a stranger.
@@ -2668,7 +2758,8 @@ type EmailSummary struct {
 	// Move Whose move it is, derived from what this reader can see of the thread.
 	// `needs_reply` on a message still owed our answer, `waiting_for_them` on one we sent
 	// that is still the last word with them. A calendar invitation, update, cancellation
-	// or answer is `none` unless someone confirmed it asks us something. `none` also when
+	// or answer is `none` unless someone confirmed it asks us something, and an invitation
+	// the reader may still answer is `none` too: `calendar_invitation` carries what it asks. `none` also when
 	// the question cannot be answered honestly — an unanswerable move is not a claim.
 	// A message older than the waiting horizon that nobody kept is `none` too: it is
 	// no longer current work, the same bound the waiting queue and `waiting_reply` apply.
@@ -2700,7 +2791,8 @@ type EmailSummaryDirection string
 // EmailSummaryMove Whose move it is, derived from what this reader can see of the thread.
 // `needs_reply` on a message still owed our answer, `waiting_for_them` on one we sent
 // that is still the last word with them. A calendar invitation, update, cancellation
-// or answer is `none` unless someone confirmed it asks us something. `none` also when
+// or answer is `none` unless someone confirmed it asks us something, and an invitation
+// the reader may still answer is `none` too: `calendar_invitation` carries what it asks. `none` also when
 // the question cannot be answered honestly — an unanswerable move is not a claim.
 // A message older than the waiting horizon that nobody kept is `none` too: it is
 // no longer current work, the same bound the waiting queue and `waiting_reply` apply.
@@ -3141,6 +3233,21 @@ type SourceQuoteProof struct {
 	Sha256 string `json:"sha256"`
 	Start  int    `json:"start" minimum:"0"`
 }
+
+// SystemDisplay defines model for SystemDisplay.
+type SystemDisplay struct {
+	Body           *string                        `json:"body,omitempty"`
+	GeneratedParts *[]SystemDisplayGeneratedParts `json:"generated_parts,omitempty"`
+	Locale         SystemDisplayLocale            `json:"locale"`
+	SourceVersion  *int64                         `json:"source_version,omitempty"`
+	Subject        *string                        `json:"subject,omitempty"`
+}
+
+// SystemDisplayGeneratedParts defines model for SystemDisplay.GeneratedParts.
+type SystemDisplayGeneratedParts string
+
+// SystemDisplayLocale defines model for SystemDisplay.Locale.
+type SystemDisplayLocale string
 
 // WebFormConsent The consent box the form showed. Absent when the form shows none.
 type WebFormConsent struct {
@@ -3646,6 +3753,14 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 		delete(object, "subject")
 	}
 
+	if raw, found := object["system_display"]; found {
+		err = json.Unmarshal(raw, &a.SystemDisplay)
+		if err != nil {
+			return fmt.Errorf("error reading 'system_display': %w", err)
+		}
+		delete(object, "system_display")
+	}
+
 	if raw, found := object["thread_key"]; found {
 		err = json.Unmarshal(raw, &a.ThreadKey)
 		if err != nil {
@@ -4065,6 +4180,13 @@ func (a Activity) MarshalJSON() ([]byte, error) {
 		object["subject"], err = json.Marshal(a.Subject)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'subject': %w", err)
+		}
+	}
+
+	if a.SystemDisplay != nil {
+		object["system_display"], err = json.Marshal(a.SystemDisplay)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'system_display': %w", err)
 		}
 	}
 
@@ -5068,6 +5190,14 @@ func (a *CreateActivityRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "ical_uid")
 	}
 
+	if raw, found := object["in_reply_to_activity_id"]; found {
+		err = json.Unmarshal(raw, &a.InReplyToActivityId)
+		if err != nil {
+			return fmt.Errorf("error reading 'in_reply_to_activity_id': %w", err)
+		}
+		delete(object, "in_reply_to_activity_id")
+	}
+
 	if raw, found := object["kind"]; found {
 		err = json.Unmarshal(raw, &a.Kind)
 		if err != nil {
@@ -5334,6 +5464,13 @@ func (a CreateActivityRequest) MarshalJSON() ([]byte, error) {
 		object["ical_uid"], err = json.Marshal(a.IcalUid)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'ical_uid': %w", err)
+		}
+	}
+
+	if a.InReplyToActivityId != nil {
+		object["in_reply_to_activity_id"], err = json.Marshal(a.InReplyToActivityId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'in_reply_to_activity_id': %w", err)
 		}
 	}
 

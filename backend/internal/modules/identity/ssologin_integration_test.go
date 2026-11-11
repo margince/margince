@@ -352,3 +352,38 @@ func TestOIDCSignInFullRoundTripRefusesUnknownEmail(t *testing.T) {
 		}
 	}
 }
+
+// A sign-in started from the OAuth consent screen lands back on that screen,
+// on the SPA's origin. Every other sign-in lands on the post-login page.
+func TestOIDCSignInLandsOnTheConsentScreenOnlyWhenTheStateSaysSo(t *testing.T) {
+	svc, _, _, email := seedSSOEnv(t, "sso-consent-landing")
+	for _, tc := range []struct {
+		name            string
+		returnToConsent bool
+		want            string
+	}{
+		{"from the consent screen", true, "https://spa.example.com" + ConsentScreenPath},
+		{"from the sign-in page", false, "https://spa.example.com/"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			h := Handlers{svc: svc}.WithOIDCProviders(
+				map[string]OIDCProviderSource{"google": FixedOIDCProvider(OIDCProvider{
+					Config:    OIDCProviderConfig{Key: "google", ClientID: "cid", AuthURL: "https://accounts.google.com/o/oauth2/v2/auth"},
+					Verifier:  fixedVerifier{email: email, sub: "sub-carol", emailVerified: true},
+					Exchanger: fixedExchanger{idToken: "unused-by-fixedVerifier"},
+				})},
+				fixedStateSigner{provider: "google", clientID: "cid", nonce: "n1", codeVerifier: "v1", returnToConsent: tc.returnToConsent},
+				OIDCRoutes{RedirectBase: "https://api.example.com", PostLoginURL: "https://spa.example.com/", FailureURL: "https://spa.example.com/#/login?oidc=failed"},
+			)
+			req := httptest.NewRequest(http.MethodGet, "/v1/auth/oidc/google/callback?code=c&state=n1", nil)
+			req.AddCookie(&http.Cookie{Name: oidcLoginCookie, Value: "irrelevant-fixedStateSigner-ignores-it"})
+			rec := httptest.NewRecorder()
+
+			h.OidcSignInCallback(rec, req, "google", callbackParams("c", "n1"))
+
+			if rec.Code != http.StatusFound || rec.Header().Get("Location") != tc.want {
+				t.Fatalf("status=%d location=%q, want 302 to %q", rec.Code, rec.Header().Get("Location"), tc.want)
+			}
+		})
+	}
+}

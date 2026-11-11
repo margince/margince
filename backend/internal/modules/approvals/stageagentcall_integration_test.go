@@ -48,7 +48,10 @@ func (e *stagingEnv) asPassport(passport ids.UUID) context.Context {
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:" + passport.String(),
-		OnBehalfOf: e.rep, PassportID: passport,
+		OnBehalfOf: e.rep, UserID: e.rep, PassportID: passport, SeatType: principal.SeatFull,
+		Permissions: grantsFor(map[string]principal.ObjectGrant{
+			"company": {Read: true, Update: true}, "tag": {Read: true, Update: true},
+		}),
 	})
 }
 
@@ -404,7 +407,7 @@ func TestAStagedCallKeepsItsSummaryPartsCleaned(t *testing.T) {
 	if err != nil {
 		t.Fatalf("reading the staged row: %v", err)
 	}
-	got := wire(stored, e.svc.now()).SummaryParts
+	got := wire(context.Background(), stored, e.svc.now()).SummaryParts
 	want := []crmcontracts.ApprovalSummaryField{{Field: "depth", Value: "2, note=x"}}
 	if got == nil || got.Sentence != "Read stainzer.at" || !slices.Equal(got.Fields, want) {
 		t.Errorf("read back parts %+v, want the sentence and %+v", got, want)
@@ -415,7 +418,7 @@ func TestAStagedCallKeepsItsSummaryPartsCleaned(t *testing.T) {
 	if err != nil {
 		t.Fatalf("staging without parts: %v", err)
 	}
-	if row, err := e.svc.Get(e.asDecider(), plain); err != nil || wire(row, e.svc.now()).SummaryParts != nil {
+	if row, err := e.svc.Get(e.asDecider(), plain); err != nil || wire(context.Background(), row, e.svc.now()).SummaryParts != nil {
 		t.Errorf("a staging without parts read back %v (err %v), want none", row.SummaryParts, err)
 	}
 }

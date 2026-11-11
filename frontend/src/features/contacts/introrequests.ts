@@ -186,3 +186,21 @@ function useAskInvalidation(contactId: string) {
     void qc.invalidateQueries({ queryKey: ["contact-graph", contactId] });
   };
 }
+
+export function useReplaceIntroRequest(contactId: string) {
+  const invalidate = useAskInvalidation(contactId);
+  return useMutation({
+    mutationKey: ["introRequest.replace", contactId],
+    mutationFn: async ({
+      id,
+      ...body
+    }: components["schemas"]["IntroRequestReplaceInput"] & { id: string }) =>
+      unwrap(
+        await api.POST("/intro-requests/{id}/replace", {
+          params: { path: { id } },
+          body,
+        }),
+      ),
+    onSuccess: invalidate,
+  });
+}

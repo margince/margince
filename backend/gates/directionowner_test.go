@@ -35,14 +35,19 @@ var literalDirection = regexp.MustCompile(`direction\s*(=|<>|IS DISTINCT FROM|IS
 // messageStateReaders read a direction to answer a question about one message
 // or thread, not which sides of a relationship have written.
 var messageStateReaders = gatekit.Waive(map[string]string{
+	"internal/modules/activities/calendarinvitation.go":   "asks whether one inbound message is an invitation the reader may answer; it never counts which side of a relationship wrote",
 	"internal/modules/activities/taskanswered.go":         "Checks one attested outgoing message and its actual sending seat to complete that seat's tasks; it does not count relationship sides.",
 	"internal/modules/capture/senderstanding.go":          "asks whether the one message a sender ledger row names was sent by the mailbox owner, as the verdict's claim does, never which side of a relationship wrote",
 	"internal/modules/capture/conversationsuggestions.go": "Selects copied recipients of one stored outbound message under its content gate. It asks about that message, never counts which side of a relationship wrote.",
 	"internal/compose/signalscan.go": "asks whether the account's newest message is ours; a colleague's reply " +
 		"at the account answers us there by design",
 	"internal/modules/activities/awaitingreply.go": "asks whether our message on a thread is still waiting for any answer",
+	"internal/modules/capture/sentecho.go": "finds the seat's own captured copy of one sent message by its provider id; " +
+		"it never counts which side of a relationship wrote",
 	"internal/modules/activities/meetingfollowup.go": "asks whether anything of ours followed a meeting, " +
 		"not who on their side wrote",
+	"internal/modules/activities/lastexchange.go": "asks of one outbound mail which inbound mail came " +
+		"before it from the same correspondent, to read that mail's badge; it never counts which sides wrote",
 })
 
 func TestEveryExchangeReaderAsksTheDirectionRule(t *testing.T) {
@@ -148,7 +153,7 @@ func TestTheDirectionCensusSeesAPlantedReader(t *testing.T) {
 // per-entry reasons.
 const (
 	directionRegisterPath = "directionspellers.txt"
-	directionDebtCeiling  = 56
+	directionDebtCeiling  = 55
 )
 
 func readDirectionRegister(t *testing.T) map[string]bool {

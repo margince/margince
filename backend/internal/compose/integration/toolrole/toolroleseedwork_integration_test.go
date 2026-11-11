@@ -55,6 +55,18 @@ func workSeeders(s sweepSeed) map[string]func() string {
 				"source": "manual", "rfc_message_id": "<sweep-" + ids.NewV7().String() + "@role-sweep.test>",
 			})
 		},
+		// An invitation the seat's own mailbox received, for an event its calendar holds.
+		"calendar_invitation": func() string {
+			uid := "sweep-" + ids.NewV7().String() + "@role-sweep.test"
+			email := s.post("/v1/activities", integration.AnyMap{
+				"kind": "email", "direction": "inbound", "subject": "Invitation: Role sweep", "source": "manual",
+				"rfc_message_id": "<" + uid + ">",
+			})
+			s.ownerExec(`UPDATE activity SET calendar_method = 'REQUEST', calendar_uid = $2 WHERE id = $1`, email, uid)
+			s.ownerExec(`INSERT INTO capture_import (activity_id, user_id) VALUES ($1, $2)`, email, apptest.SessionUserID(s.t, s.e))
+			sweepCalendar.Invite(uid)
+			return email
+		},
 		"mail_draft": func() string {
 			company := s.create["company"]()
 			var draft struct {
@@ -178,7 +190,7 @@ func consentedContact(s sweepSeed) string {
 	// Transactional consent holds where a live deal stakes the recipient, the
 	// message answered is filed on it, and the recipient asked about it.
 	deal := apptest.StakeOnOpenDeal(s.t, s.e, "Sweep "+ids.NewV7().String(), apptest.DefaultPipeline(s.t, s.e), contact)
-	apptest.AskedAboutTheDeal(s.t, s.e, contact, email, deal)
+	recordReplyRequest(s, contact, deal)
 	anchor := s.post("/v1/activities", integration.AnyMap{
 		"kind": "email", "subject": "Role sweep", "direction": "inbound", "source": "manual",
 		"links": []integration.AnyMap{{"entity_type": "contact", "entity_id": contact}, {"entity_type": "deal", "entity_id": deal}},
@@ -187,6 +199,19 @@ func consentedContact(s sweepSeed) string {
 	s.pool.note(contact, "anchor", anchor)
 	s.pool.note(contact, "deal", deal)
 	return contact
+}
+
+// The real writer binds the request to the sending entity even when the sweep
+// has created other legal entities for unrelated tool calls.
+func recordReplyRequest(s sweepSeed, contact, deal string) {
+	request := integration.AnyMap{
+		"kind": "requested_by_subject", "note": "They asked by phone for a reply about this inquiry.",
+		"occurred_at": clocktest.Now(s.t).UTC().Format(time.RFC3339),
+	}
+	if deal != "" {
+		request["about_deal"] = deal
+	}
+	s.call("POST", "/v1/contacts/"+contact+"/consent/qualifying-events", request, nil, nil)
 }
 
 // bookedSlots counts the half hours the sweep has booked, so no two bookings
@@ -357,6 +382,7 @@ func meetingSeeders(s sweepSeed) map[string]func() string {
 			c.BindIdentity(s.t)
 			c.SeedInboundMessage(s.t)
 			c.GrantConsent(s.t, "transactional")
+			recordReplyRequest(s, c.ContactID, "")
 			connected()
 			return c.ActivityID
 		},

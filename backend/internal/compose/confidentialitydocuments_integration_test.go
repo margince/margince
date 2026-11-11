@@ -10,6 +10,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"image"
+	"image/png"
 	"log/slog"
 	"os"
 	"strings"
@@ -272,7 +274,9 @@ func TestAStaffInvoiceAndCostPlusSheetStayPrivateWhateverTheModelSays(t *testing
 	}
 }
 
-func TestAScanUnderAPlainNameIsLeftToTheModel(t *testing.T) {
+// A scan under a plain name is still asked of the model, which keeps its kind
+// on the thread. A confident "ordinary" does not open it: nobody read the file.
+func TestAScanUnderAPlainNameIsAskedButNeverOpened(t *testing.T) {
 	e := integration.Setup(t)
 	blob := blobstore.NewMemory()
 	mail := seedHeldThreadMail(t, e, "thread-scanned-map", "office@gradion.example", "Directions to the venue")
@@ -287,8 +291,8 @@ func TestAScanUnderAPlainNameIsLeftToTheModel(t *testing.T) {
 	if brain.asked != 1 {
 		t.Fatalf("the model was asked %d times, want once: only a file named as private skips it", brain.asked)
 	}
-	if got := threadStatus(t, e, thread); got != capture.VerdictCleared {
-		t.Errorf("thread status = %q, want cleared as the model answered", got)
+	if got := threadStatus(t, e, thread); got != capture.VerdictUnsure {
+		t.Errorf("thread status = %q, want unsure: a file nobody read keeps the thread held", got)
 	}
 }
 
@@ -329,5 +333,35 @@ func TestAnEarlierReplyCarryingASalarySheetIsNotOpenedWithItsThread(t *testing.T
 	}
 	if got := threadStatus(t, e, thread); got != capture.VerdictHeld {
 		t.Fatalf("thread status = %q, want held once the sheet is read", got)
+	}
+}
+
+func TestAnUnreadableImageCannotBeOpenedByAConfidentAnswer(t *testing.T) {
+	var picture bytes.Buffer
+	if err := png.Encode(&picture, image.NewRGBA(image.Rect(0, 0, 2, 2))); err != nil {
+		t.Fatal(err)
+	}
+	for _, file := range []struct {
+		name, media string
+		raw         []byte
+	}{
+		{"image001.png", "image/png", picture.Bytes()},
+		{"diagram.svg", "image/svg+xml", []byte(`<svg xmlns="http://www.w3.org/2000/svg"><text>Demo picture</text></svg>`)},
+	} {
+		t.Run(file.name, func(t *testing.T) {
+			e := integration.Setup(t)
+			blob := blobstore.NewMemory()
+			mail := seedHeldThreadMail(t, e, "thread-unreadable-image", "buyer@example.test", "Documents")
+			captureMailDocument(t, e, blob, mail, file.name, file.media, file.raw)
+			thread := seedThreadQuestion(t, e, "thread-unreadable-image", mail)
+			brain := &alwaysOrdinaryBrain{}
+			engine := NewConfidentialityVerdictEngine(e.Pool, brain, slog.Default()).WithObjectStore(blob)
+			if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
+				t.Fatal(err)
+			}
+			if brain.asked != 1 || threadStatus(t, e, thread) != capture.VerdictUnsure || activityAudience(t, e, mail) != "participants" {
+				t.Fatalf("unreadable image: calls=%d status=%s audience=%s", brain.asked, threadStatus(t, e, thread), activityAudience(t, e, mail))
+			}
+		})
 	}
 }

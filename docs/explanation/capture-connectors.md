@@ -151,12 +151,19 @@ A missing value stays unknown. `source_occurred_at` keeps the message date apart
 A reply can join mail sent from Margince before the mailbox captures its sent copy.
 The stored sender identity proves ownership. A message from another seat cannot join this way.
 
-When Gmail deletes a message for good, the mailbox's own message id reaches the existing erase path (`SelectRemovedPurgeTx`).
-Normal Gmail, Outlook and calendar syncs fill `capture_import.provider_message_ids`; each id carries its provider and connection generation.
-A calendar tombstone that names only its own event id finds the meeting through these ids, and only through the syncing seat's own.
+Gmail sends the mailbox message id when mail is gone for good. Margince uses that id to delete its own copy.
 
-Older mail with no id stays until a normal sync sees it again. A colleague's copy, mail written in Margince and statutory duties keep a message.
-Moving Outlook mail to another folder never erases it, because a move to an archive can look like a delete. Outlook never erases mail on its own.
+Normal Gmail, Outlook and calendar syncs fill `capture_import.provider_message_ids`.
+Each id holds the provider and connection `generation`.
+When a calendar reports an event is gone, its event id finds the meeting through these ids.
+Only the syncing seat's own ids count.
+
+Older mail with no id stays until a normal sync sees it again.
+
+A colleague's copy, mail sent from Margince and the law can keep a message.
+A hold or an open request to erase data can keep it too.
+Changes to a folder in Outlook do not delete the copy in Margince.
+A move to an archive can look like mail gone for good, so Outlook mail stays.
 
 ## Credentials & the vault
 
@@ -312,7 +319,12 @@ whole credential bundle, app password too, into the vault. The row holds only th
 `credential_ref`. From then on, the background sweep connects again each time with the sealed credential.
 
 It moves a **UID watermark** forward (`uidvalidity` + `last_uid`, bound to the mailbox it was taken in),
-so each pull resumes where the last one stopped. **Disconnect deletes the sealed credential**. So an app
+so each pull resumes where the last one stopped. A pull reads at most its page of new mail. It asks for UID
+ranges from the watermark up, and doubles a range while it comes back short. A server with `ESEARCH` first
+names the lowest new UID, so a gap costs nothing. Without it, a range below the newest message that holds no
+mail can never fill, so the watermark moves past it.
+
+**Disconnect deletes the sealed credential**. So an app
 password you handed over can be revoked from inside the product. That is the promise about who holds it
 that you can depend on.
 

@@ -28,9 +28,11 @@ import {
 } from "../../lib/capability";
 import { useClaimRecord } from "../../lib/claimrecord";
 import { useMemberName } from "../../lib/membernames";
+import { mayLeaveReach, useLeaveIfOutOfReach } from "../../lib/outofreach";
 import { unwrap } from "../../lib/problem";
 import { navigate } from "../../lib/router";
 import { useMe, useViewerId } from "../../lib/session";
+import { useShortcut } from "../../lib/shortcuts";
 import { ShareAction } from "../records/share";
 import { CompanyRejectAction } from "./companyreject";
 
@@ -156,6 +158,7 @@ export function CompanyOwnerControl({
     mutationFn: useClaimRecord("company", company.id),
   });
   const viewerId = useViewerId();
+  const leaveIfOutOfReach = useLeaveIfOutOfReach("company");
   const { options: owners, roster } = useRecordOwnerOptions();
   const rosterHint = useRosterHint(roster, useRosterPartial("user", true));
   const ownerName = useMemberName(company.owner_id);
@@ -220,11 +223,21 @@ export function CompanyOwnerControl({
       // Taking an unowned account goes through the claim, the door open to
       // every seat; naming a colleague is a patch, offered only to a reader
       // who can write the row (`nameable`).
-      onSave={(next) =>
-        !company.owner_id && next === viewerId
-          ? claim.mutateAsync(company.version)
-          : patch({ owner_id: next })
-      }
+      onSave={async (next) => {
+        if (!company.owner_id && next === viewerId) {
+          return claim.mutateAsync(company.version);
+        }
+        await patch({ owner_id: next });
+        // As on a contact: a private account handed on can leave the reader.
+        if (mayLeaveReach(company.visibility, next, viewerId)) {
+          await leaveIfOutOfReach(
+            company.id,
+            t("recordAccess.company.handedOver", {
+              owner: options.find((user) => user.value === next)?.label ?? "",
+            }),
+          );
+        }
+      }}
     />
   );
 }
@@ -289,6 +302,11 @@ export function CompanyActionBadges({
   const partnerUnreadable =
     useMe().data?.authorization !== undefined && !readsPartners;
   const isPartner = (company.relationship_types ?? []).includes("partner");
+  const taskKeys = useShortcut(
+    "record.addTask",
+    onAddTask,
+    !company.archived_at && !activity.pending && !activity.refusedId,
+  );
   return (
     <>
       {/* What the company IS to us, and whether it is archived, are drawn
@@ -311,6 +329,7 @@ export function CompanyActionBadges({
           disabled={!company.archived_at && activity.pending}
           reasonId={company.archived_at ? menuReasonId : activity.refusedId}
           onClick={onAddTask}
+          aria-keyshortcuts={taskKeys}
         >
           {t("log.addTask")}
         </Button>

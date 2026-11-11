@@ -62,7 +62,7 @@ func holdSettlementEvidenceTx(ctx context.Context, tx pgx.Tx, request RepliedReq
 		// activity and find the answers again for each one.
 		_, err = tx.Exec(ctx, `SELECT seen.id FROM activity seen
 		  WHERE seen.id IN (SELECT answered.id FROM activity a
-		    CROSS JOIN LATERAL (`+settlementAnswersSQL()+`) answered WHERE a.id = $2)
+		    CROSS JOIN LATERAL (`+settlementAnswersSQL()+` UNION `+settlementContextSQL()+`) answered WHERE a.id = $2)
 		  FOR SHARE OF seen`, request.AsOf, request.RequestID)
 	}
 	if err == nil && live {
@@ -99,7 +99,7 @@ func requestStillWritable(ctx context.Context, tx pgx.Tx, requestID ids.UUID) (b
 	err := tx.QueryRow(ctx, `
 		SELECT true FROM activity
 		 WHERE id = $1 AND archived_at IS NULL
-		   AND audience = 'workspace' AND restricted_at IS NULL
+		   AND `+auth.WorkspaceAudienceSQL("activity")+` AND restricted_at IS NULL
 		   FOR NO KEY UPDATE`, requestID).Scan(&live)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return false, nil

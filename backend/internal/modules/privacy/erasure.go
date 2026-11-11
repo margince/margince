@@ -21,7 +21,9 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/corefeatures"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/originalstore"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/erasureaccount"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -90,11 +92,12 @@ func (e *Eraser) EraseContact(ctx context.Context, contactID ids.UUID, reason st
 //
 //nolint:gocognit,cyclop // the rename added no branch: this body is what it was under the old noun.
 func (e *Eraser) EraseContactCounted(ctx context.Context, contactID ids.UUID, reason string) (erased erasureaccount.Account, err error) {
+	ctx = originalstore.Bind(corefeatures.RetainedDataContext(ctx), e.db, e.blob)
 	if err := auth.Require(ctx, "contact", principal.ActionDelete); err != nil {
 		return erasureaccount.Account{}, err
 	}
 	subject := ids.From[ids.ContactKind](contactID)
-	err = e.db.Tx(ctx, func(raw pgx.Tx) error {
+	err = e.withPreparedOriginalErasure(ctx, subject, func(raw pgx.Tx, prepared originalMatches) error {
 		tx := newTallyTx(raw)
 		floor, err := e.erasableUnderFloor(ctx, tx, subject)
 		if err != nil {
@@ -120,7 +123,7 @@ func (e *Eraser) EraseContactCounted(ctx context.Context, contactID ids.UUID, re
 		// holding the same identifier would be left named, reachable, and
 		// stripped of the evidence that was never this request's to destroy
 		// (erasure_rivals.go).
-		if err := refuseRivalIdentifierHolders(ctx, tx, subject, emails, identities); err != nil {
+		if err := freezeSubjectOriginalsTx(ctx, tx, subject, keys, prepared); err != nil {
 			return err
 		}
 
@@ -148,12 +151,15 @@ func (e *Eraser) EraseContactCounted(ctx context.Context, contactID ids.UUID, re
 		// hold the subject's address and the body before any activity exists, so
 		// nothing above this line can reach them — and a scheduled one would
 		// otherwise fire the morning after this erasure certified the data destroyed.
-		if err := redactUnsentMessages(ctx, tx, reason, subject, leadsWiped, emails); err != nil {
+		if err := redactUnsentMessages(ctx, tx, reason, subject, leadsWiped, emails, e.payloads); err != nil {
 			return err
 		}
 		// And the ones nobody has DECIDED yet, one step earlier in the same life
 		// — a staged draft and the run that composed it (erasure_approvals.go).
 		if err := redactStagedApprovals(ctx, tx, subject, leadsWiped, emails); err != nil {
+			return err
+		}
+		if err := eraseReceiptNotices(ctx, tx, subject, leadsWiped, reason); err != nil {
 			return err
 		}
 		// The proposals READ OUT OF the timeline rows just redacted, after the

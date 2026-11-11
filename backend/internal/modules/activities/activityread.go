@@ -298,7 +298,7 @@ func readActivityRow(ctx context.Context, tx pgx.Tx, id ids.ActivityID, archived
 	if archived == storekit.LiveOnly {
 		q += ` AND a.archived_at IS NULL`
 	}
-	a, err := scanActivity(tx.QueryRow(ctx, q, args...))
+	a, err := scanActivity(ctx, tx.QueryRow(ctx, q, args...))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return crmcontracts.Activity{}, apperrors.ErrNotFound
 	}
@@ -382,13 +382,13 @@ func AttachLinks(ctx context.Context, tx pgx.Tx, activities []crmcontracts.Activ
 
 // scanActivityPage scans one row of a sorted page: the projection every reader
 // of an activity takes, and the sort's cursor key where the sort appends one.
-func scanActivityPage(row pgx.Row, sorted *storekit.ListSort) (crmcontracts.Activity, *string, error) {
+func scanActivityPage(ctx context.Context, row pgx.Row, sorted *storekit.ListSort) (crmcontracts.Activity, *string, error) {
 	var key *string
 	var dest []any
 	if sorted.CursorKeySuffix() != "" {
 		dest = append(dest, &key)
 	}
-	out, err := scanActivity(storekit.TrailingColumns{Row: row, Dest: dest})
+	out, err := scanActivity(ctx, storekit.TrailingColumns{Row: row, Dest: dest})
 	return out, key, err
 }
 
@@ -398,12 +398,12 @@ func scanActivityPage(row pgx.Row, sorted *storekit.ListSort) (crmcontracts.Acti
 // a column added or moved carries its own destination with it — the transposed
 // scan that used to be possible among the string-ish neighbours has no second
 // list to disagree with.
-func scanActivity(row pgx.Row) (crmcontracts.Activity, error) {
+func scanActivity(ctx context.Context, row pgx.Row) (crmcontracts.Activity, error) {
 	var s activityScan
 	if err := row.Scan(activityScanTargets(&s)...); err != nil {
 		return crmcontracts.Activity{}, err
 	}
-	return s.record(), nil
+	return s.record(ctx), nil
 }
 
 // CountActivities answers how many rows the SAME narrowing matches, with no

@@ -217,13 +217,13 @@ admin can also change under Settings. One that also says kept by a reset keeps i
 | `ai_fake` | `MARGINCE_AI_FAKE` | `--ai-fake` | `bool` | `false` | api, worker | Drive the AI surfaces with the offline fake model when nothing else can serve (dev and test only). |
 | `ai_routing` | `MARGINCE_AI_ROUTING` | `--ai-routing` | `string` | — | api, worker | Ignored; kept so existing command lines parse. |
 | `api_base_url` | `MARGINCE_API_BASE_URL` | `--api-base-url` | `string` | — | api | External base of the api for the OAuth `redirect_uri` when the api and the SPA are on different origins; defaults to `--public-base-url`. |
-| `blobstore_access_key` | `MARGINCE_BLOBSTORE_ACCESS_KEY` | — | `string`, secret | — | api, worker | Access key for the object store. |
-| `blobstore_bucket` | `MARGINCE_BLOBSTORE_BUCKET` | — | `string` | — | api, worker | Bucket attachments are written to. |
-| `blobstore_endpoint` | `MARGINCE_BLOBSTORE_ENDPOINT` | — | `string` | — | api, worker | Endpoint of an object store such as MinIO for attachment bytes; it wins over `MARGINCE_BLOBSTORE_PATH`, and with both unset the attachment endpoints answer 501. |
-| `blobstore_path` | `MARGINCE_BLOBSTORE_PATH` | — | `string` | — | api, worker | Directory attachment bytes are written to when there is no object storage service; ignored when `MARGINCE_BLOBSTORE_ENDPOINT` is set. |
-| `blobstore_region` | `MARGINCE_BLOBSTORE_REGION` | — | `string` | — | api, worker | Region the bucket lives in. |
-| `blobstore_secret_key` | `MARGINCE_BLOBSTORE_SECRET_KEY` | — | `string`, secret | — | api, worker | Secret key for the object store. |
-| `blobstore_use_ssl` | `MARGINCE_BLOBSTORE_USE_SSL` | — | `bool` | `false` | api, worker | Reach the object store over TLS. |
+| `blobstore_access_key` | `MARGINCE_BLOBSTORE_ACCESS_KEY` | — | `string`, secret | — | api, migrate, worker | Access key for the object store. |
+| `blobstore_bucket` | `MARGINCE_BLOBSTORE_BUCKET` | — | `string` | — | api, migrate, worker | Bucket attachments are written to. |
+| `blobstore_endpoint` | `MARGINCE_BLOBSTORE_ENDPOINT` | — | `string` | — | api, migrate, worker | Endpoint of an object store such as MinIO for attachment bytes; it wins over `MARGINCE_BLOBSTORE_PATH`, and with both unset the attachment endpoints answer 501. |
+| `blobstore_path` | `MARGINCE_BLOBSTORE_PATH` | — | `string` | — | api, migrate, worker | Directory attachment bytes are written to when there is no object storage service; ignored when `MARGINCE_BLOBSTORE_ENDPOINT` is set. |
+| `blobstore_region` | `MARGINCE_BLOBSTORE_REGION` | — | `string` | — | api, migrate, worker | Region the bucket lives in. |
+| `blobstore_secret_key` | `MARGINCE_BLOBSTORE_SECRET_KEY` | — | `string`, secret | — | api, migrate, worker | Secret key for the object store. |
+| `blobstore_use_ssl` | `MARGINCE_BLOBSTORE_USE_SSL` | — | `bool` | `false` | api, migrate, worker | Reach the object store over TLS. |
 | `certlog_base_url` | `MARGINCE_CERTLOG_BASE_URL` | `--certlog-base-url` | `string` | — | worker | Base URL of a certificate log, or public for a free public one; unset makes no outbound lookups of what a company runs. |
 | `connector_state_key` | `MARGINCE_CONNECTOR_STATE_KEY` | `--connector-state-key` | `string`, secret | — | api | HMAC key of at least 32 bytes signing the OAuth connect state and the questions an MCP tool asks in the chat; required for the Gmail and Graph connect flows. |
 | `dsn` | `MARGINCE_DSN` | `--dsn` | `string`, secret | — | api, migrate, worker | Postgres DSN of the runtime app role; migrate falls back to it when `MARGINCE_OWNER_DSN` is unset. |
@@ -380,6 +380,12 @@ admin can also change under Settings. One that also says kept by a reset keeps i
 | `email.smtp.port` | `MARGINCE_SMTP_PORT` | — | `int` | `0` | api, worker | SMTP relay port, 1 to 65535 when email.enabled. |
 | `email.smtp.username` | `MARGINCE_SMTP_USERNAME` | — | `string` | — | api, worker | SMTP relay user; unset sends without signing in. |
 
+### `features`
+
+| Key | Env | Flag | Type | Default | Programs | Doc |
+|---|---|---|---|---|---|---|
+| `features.disabled` | — | — | `list<string>` | `""` | api, worker | Main-menu features to turn off; their pages and API and agent calls are not available, and their data is kept. |
+
 ### `identity`
 
 | Key | Env | Flag | Type | Default | Programs | Doc |
@@ -389,7 +395,7 @@ admin can also change under Settings. One that also says kept by a reset keeps i
 | `identity.oauth_dynamic_registration` | `MARGINCE_IDENTITY_OAUTH_DYNAMIC_REGISTRATION` | — | `bool`, stored, kept by a reset | `true` | api, worker | AI tools may register their own OAuth client (DCR) for new sign-ins. |
 | `identity.oauth_metadata_documents` | `MARGINCE_IDENTITY_OAUTH_METADATA_DOCUMENTS` | — | `bool`, stored, kept by a reset | `true` | api, worker | AI tools may sign in with a client ID that is the URL of their metadata document (CIMD). |
 | `identity.oidc_group_role_map` | `MARGINCE_IDENTITY_OIDC_GROUP_ROLE_MAP` | — | `map<string,string>`, stored, kept by a reset | — | api, worker | The role each directory group grants at sign-in, as group:role pairs; it only grants, and never removes a role. |
-| `identity.require_mfa` | `MARGINCE_IDENTITY_REQUIRE_MFA` | — | `bool`, stored, kept by a reset | `false` | api, worker | Every member must use two-step sign-in. |
+| `identity.require_mfa` | `MARGINCE_IDENTITY_REQUIRE_MFA` | — | `bool`, stored, kept by a reset | `false` | api, worker | Password sign-in needs two-step sign-in; Google and Microsoft check their own sign-ins. |
 | `identity.require_sso` | `MARGINCE_IDENTITY_REQUIRE_SSO` | — | `bool`, stored, kept by a reset | `false` | api, worker | Members other than admins sign in only through a sign-in provider. |
 
 ### `installation`
@@ -544,6 +550,44 @@ nobody. The log then warns with the key and the source of the setting.
 
 A boot-set `deals.legal_review_enabled` wins over `seeds.legal_review`, and a boot-set
 `privacy.retain_only` wins over `seeds.retention.default_policy`.
+
+## Time-zone data
+
+Which day a moment falls on is answered twice. Go answers it for the runs that
+sweep by date, and SQL answers it for the reports that bucket by date. Each
+answer comes from its own copy of the IANA time-zone database, and the two
+copies update separately.
+
+The `api` and `worker` binaries embed a copy, because both import
+`time/tzdata`. Postgres carries its own, which comes with its image.
+`cmd/migrate` embeds none.
+
+Go reads `ZONEINFO` first, then the zone files of the host, then its embedded
+copy. So the embedded copy answers only where the host has no zone files. It is
+fixed at the version the binary was built with. Two ways to serve a newer
+version without building again:
+
+- set `ZONEINFO` to a zone file archive, or
+- give the host current zone files, which the binaries then read first.
+
+An image built `FROM scratch` holds no zone files of its own. It reads the
+embedded copy, and stays at its build version until it is built again.
+
+The pair that matters is Go against Postgres. A country changes when its clocks
+move, and one copy learns of it before the other. From then on one
+moment falls on two different days. The sweep and the report disagree about
+which day it is, and neither reports a fault.
+
+`TestGoAndPostgresBucketAnInstantAlike` in
+`backend/internal/compose/tzdataskew_integration_test.go` holds the pair. It
+asks both engines for every 15 minutes of the next 14 months, in zones
+whose rules have moved. It fails naming the first moment they place
+differently.
+
+What a browser holds is its own third copy. It decides what a reader is shown,
+and it reaches what is stored in two ways. Setting up an account and the zone setting
+store the zone name the browser reports. A scheduled send stores the moment the
+browser works out from the time a rep picked, by the browser's own rules.
 
 ## The files of a dev stack
 

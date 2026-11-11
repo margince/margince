@@ -107,7 +107,7 @@ func TestAClaimQuotingItsPassageIsKept(t *testing.T) {
 	passages := askPassages()
 	kept, err := GroundCorpusAnswer(corpusReply(askedClaim{
 		Text:  "Messages are kept for 400 days.",
-		ID:    passages[0].ChunkID.String(),
+		ID:    firstPassageRef,
 		Quote: "kept for 400 days",
 	}), passages)
 	if err != nil {
@@ -132,7 +132,7 @@ func TestAClaimCarriesWhereItsQuoteStartsAndEnds(t *testing.T) {
 	passages[0].StartLine = 12
 	kept, err := GroundCorpusAnswer(corpusReply(askedClaim{
 		Text:  "Messages are kept for 400 days.",
-		ID:    passages[0].ChunkID.String(),
+		ID:    firstPassageRef,
 		Quote: "kept for 400 days",
 	}), passages)
 	if err != nil {
@@ -154,7 +154,7 @@ func TestARewrappedQuoteIsMeasuredOnTheFormThatMatched(t *testing.T) {
 	passages[0].StartLine = 12
 	kept, err := GroundCorpusAnswer(corpusReply(askedClaim{
 		Text:  "Messages are kept for 400 days.",
-		ID:    passages[0].ChunkID.String(),
+		ID:    firstPassageRef,
 		Quote: "kept for\n    400 days",
 	}), passages)
 	if err != nil {
@@ -174,7 +174,7 @@ func TestAClaimThePassageCannotPlaceCarriesNoRange(t *testing.T) {
 	passages := askPassages()
 	kept, err := GroundCorpusAnswer(corpusReply(askedClaim{
 		Text:  "Messages are kept for 400 days.",
-		ID:    passages[0].ChunkID.String(),
+		ID:    firstPassageRef,
 		Quote: "kept for 400 days",
 	}), passages)
 	if err != nil {
@@ -209,7 +209,7 @@ func TestAParaphrasedQuoteIsDropped(t *testing.T) {
 	passages := askPassages()
 	kept, err := GroundCorpusAnswer(corpusReply(askedClaim{
 		Text:  "Messages are kept for 400 days.",
-		ID:    passages[0].ChunkID.String(),
+		ID:    firstPassageRef,
 		Quote: "retained for four hundred days",
 	}), passages)
 	if err != nil {
@@ -226,7 +226,7 @@ func TestAQuoteReWrappedAcrossLinesIsStillVerbatim(t *testing.T) {
 	passages := askPassages()
 	kept, err := GroundCorpusAnswer(corpusReply(askedClaim{
 		Text:  "Messages are kept for 400 days.",
-		ID:    passages[0].ChunkID.String(),
+		ID:    firstPassageRef,
 		Quote: "kept for\n   400 days",
 	}), passages)
 	if err != nil {
@@ -244,7 +244,7 @@ func TestAQuoteWithChangedCapitalisationIsDropped(t *testing.T) {
 	passages := askPassages()
 	kept, err := GroundCorpusAnswer(corpusReply(askedClaim{
 		Text:  "Messages are kept for 400 days.",
-		ID:    passages[0].ChunkID.String(),
+		ID:    firstPassageRef,
 		Quote: "Kept For 400 Days",
 	}), passages)
 	if err != nil {
@@ -263,7 +263,7 @@ func TestAnEmptyQuoteIsDropped(t *testing.T) {
 	passages := askPassages()
 	kept, err := GroundCorpusAnswer(corpusReply(askedClaim{
 		Text:  "Messages are kept for 400 days.",
-		ID:    passages[0].ChunkID.String(),
+		ID:    firstPassageRef,
 		Quote: "   ",
 	}), passages)
 	if err != nil {
@@ -298,7 +298,7 @@ func TestAnAnswerWhoseClaimsAllFailIsNotCovered(t *testing.T) {
 	passages := askPassages()
 	lane := &fixedLane{text: corpusReply(askedClaim{
 		Text:  "The Professional plan is 49 EUR per seat.",
-		ID:    passages[0].ChunkID.String(),
+		ID:    firstPassageRef,
 		Quote: "49 EUR per seat",
 	})}
 	answer := AnswerCorpus(t.Context(), lane, answeredState(), "what does it cost", passages,
@@ -398,7 +398,7 @@ func TestTheRequestOffersOnlyThisCallsPassageIDs(t *testing.T) {
 	req := CorpusAskRequest("how long are messages kept", passages, string(textlang.English))
 
 	schemaText := string(req.ResponseSchema)
-	if !strings.Contains(schemaText, passages[0].ChunkID.String()) {
+	if !strings.Contains(schemaText, `"`+firstPassageRef+`"`) || strings.Contains(schemaText, passages[0].ChunkID.String()) {
 		t.Fatal("the schema does not offer the passage this call retrieved")
 	}
 	// And the passage's own text reaches the model, or there is nothing to
@@ -472,7 +472,7 @@ func TestAWrittenAnswerIsNeverUnreviewed(t *testing.T) {
 	passages := askPassages()
 	lane := &fixedLane{text: corpusReply(askedClaim{
 		Text:  "Messages are kept for 400 days.",
-		ID:    passages[0].ChunkID.String(),
+		ID:    firstPassageRef,
 		Quote: "kept for 400 days",
 	})}
 	answer := AnswerCorpus(t.Context(), lane, answeredState(), "how long are messages kept",
@@ -516,7 +516,7 @@ func TestAnUnreadableReplyIsReAskedThroughTheSitesOwnRefusal(t *testing.T) {
 		text: "here you go: {claims: none}",
 		second: corpusReply(askedClaim{
 			Text:  "Messages are kept for 400 days.",
-			ID:    passages[0].ChunkID.String(),
+			ID:    firstPassageRef,
 			Quote: "kept for 400 days",
 		}),
 	}
@@ -606,7 +606,7 @@ func TestClaimsAreDroppedWhenTheModelDeclaredItCannotAnswer(t *testing.T) {
 	passages := askPassages()
 	answer, err := GroundCorpusAnswer(
 		`{"coverage":"does_not_answer","summary":"Not covered.","claims":[{"text":"Messages are kept for 400 days.","id":"`+
-			passages[0].ChunkID.String()+`","quote":"kept for 400 days"}]}`, passages)
+			firstPassageRef+`","quote":"kept for 400 days"}]}`, passages)
 	if err != nil {
 		t.Fatalf("ground: %v", err)
 	}
@@ -632,7 +632,7 @@ func TestAReplyWithoutAClaimsKeyIsReAsked(t *testing.T) {
 		text: `{}`,
 		second: corpusReply(askedClaim{
 			Text:  "Messages are kept for 400 days.",
-			ID:    passages[0].ChunkID.String(),
+			ID:    firstPassageRef,
 			Quote: "kept for 400 days",
 		}),
 	}
@@ -690,7 +690,7 @@ func TestOnlyADeclaredRefusalKeepsItsSentence(t *testing.T) {
 			name: "the model declared an answer and grounded none of it",
 			reply: corpusAnswered("Messages are kept for 30 days.", askedClaim{
 				Text:  "Messages are kept for 30 days.",
-				ID:    passages[0].ChunkID.String(),
+				ID:    firstPassageRef,
 				Quote: "kept for 30 days",
 			}),
 			wantSummary: "",
@@ -737,8 +737,8 @@ func TestASummaryGoesWhenTheQuoteCheckRenumbersTheClaims(t *testing.T) {
 		Coverage: &covered,
 		Summary:  "Kept for 400 days. [1] Purged nightly. [2]",
 		Claims: &[]askedClaim{
-			{Text: "A sentence nothing holds up.", ID: passages[0].ChunkID.String(), Quote: "no passage says this"},
-			{Text: "Messages are kept for 400 days.", ID: passages[0].ChunkID.String(), Quote: "kept for 400 days"},
+			{Text: "A sentence nothing holds up.", ID: firstPassageRef, Quote: "no passage says this"},
+			{Text: "Messages are kept for 400 days.", ID: firstPassageRef, Quote: "kept for 400 days"},
 		},
 	})
 	if err != nil {
@@ -763,7 +763,7 @@ func TestAGroundedAnswerKeepsItsSummary(t *testing.T) {
 	passages := askPassages()
 	lane := &fixedLane{text: corpusAnswered("Messages are kept for 400 days. [1]", askedClaim{
 		Text:  "Messages are kept for 400 days.",
-		ID:    passages[0].ChunkID.String(),
+		ID:    firstPassageRef,
 		Quote: "kept for 400 days",
 	})}
 	answer := AnswerCorpus(t.Context(), lane, answeredState(), "how long are messages kept",

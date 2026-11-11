@@ -136,7 +136,14 @@ func ledgerAtHead(ctx context.Context, owner *pgx.Conn) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("loading the embedded custom migrations: %w", err)
 	}
-	for _, ns := range []dbmigrate.Namespace{core, custom} {
+	extra, err := testExtensionNamespaces()
+	if err != nil {
+		return "", err
+	}
+	if reason, err := unlistedExtensionLedger(ctx, owner, extra); err != nil || reason != "" {
+		return reason, err
+	}
+	for _, ns := range append([]dbmigrate.Namespace{core, custom}, extra...) {
 		recorded, err := recordedMigrations(ctx, owner, "schema_migrations_"+ns.Name)
 		if err != nil {
 			return "", err
@@ -148,28 +155,21 @@ func ledgerAtHead(ctx context.Context, owner *pgx.Conn) (string, error) {
 	return "", nil
 }
 
-// recordedRow is one tracking-table row as the probe reads it. digest is empty
-// when the column is NULL, which is a row written before the digest existed.
-type recordedRow struct {
-	name   string
-	digest string
-}
-
-func recordedMigrations(ctx context.Context, owner *pgx.Conn, table string) (map[string]recordedRow, error) {
+func recordedMigrations(ctx context.Context, owner *pgx.Conn, table string) (map[string]dbmigrate.LedgerRow, error) {
 	// The table name is this package's own constant prefix plus a namespace
 	// from the embedded migrations, never caller input, and dbmigrate.Up
 	// interpolates the identical string.
-	rows, err := owner.Query(ctx, `SELECT version, name, coalesce(content_digest, '') FROM `+table)
+	rows, err := owner.Query(ctx, `SELECT version, name, content_digest FROM `+pgx.Identifier{table}.Sanitize())
 	if err != nil {
 		return nil, fmt.Errorf("reading %s: %w", table, err)
 	}
 	defer rows.Close()
 
-	recorded := map[string]recordedRow{}
+	recorded := map[string]dbmigrate.LedgerRow{}
 	for rows.Next() {
 		var version string
-		var row recordedRow
-		if err := rows.Scan(&version, &row.name, &row.digest); err != nil {
+		var row dbmigrate.LedgerRow
+		if err := rows.Scan(&version, &row.Name, &row.Digest); err != nil {
 			return nil, fmt.Errorf("reading %s: %w", table, err)
 		}
 		recorded[version] = row
@@ -189,15 +189,22 @@ func recordedMigrations(ctx context.Context, owner *pgx.Conn, table string) (map
 // objects this binary's migrations never created and its tests know nothing
 // about, and every version this binary embeds is present, so a one-way check
 // passes over it. Extra versions are the only evidence of that shape.
-func namespaceAtHead(ns dbmigrate.Namespace, recorded map[string]recordedRow) string {
+//
+// It judges the ledger as the migrator leaves it. Migrate moves a declared
+// renumber's old row, so that row is no reason to rebuild the template.
+func namespaceAtHead(ns dbmigrate.Namespace, recorded map[string]dbmigrate.LedgerRow) string {
+	recorded, err := dbmigrate.Reconciled(ns, recorded)
+	if err != nil {
+		return err.Error()
+	}
 	for _, m := range ns.Migrations {
 		row, ok := recorded[m.Version]
 		switch {
 		case !ok:
 			return fmt.Sprintf("%s %s_%s is embedded but not recorded — this database is behind this binary", ns.Name, m.Version, m.Name)
-		case row.name != m.Name:
-			return fmt.Sprintf("%s %s was applied as %q but this binary carries %q there — the version was renumbered", ns.Name, m.Version, row.name, m.Name)
-		case row.digest == "":
+		case row.Name != m.Name:
+			return fmt.Sprintf("%s %s was applied as %q but this binary carries %q there — the version was renumbered", ns.Name, m.Version, row.Name, m.Name)
+		case row.Digest == nil:
 			// The refusal an upgrading operator ACTUALLY meets, and the reason
 			// the column-count branch above is not: trackingTable's
 			// ALTER TABLE ... ADD COLUMN IF NOT EXISTS runs on every migrate, and
@@ -207,7 +214,7 @@ func namespaceAtHead(ns dbmigrate.Namespace, recorded map[string]recordedRow) st
 			// that reason.
 			return fmt.Sprintf("%s %s_%s recorded no content digest, so what it applied cannot be compared with what this binary embeds; this template predates content digests and rows are never back-filled", ns.Name, m.Version, m.Name)
 		// The migrator and reuse check must accept the same admitted content.
-		case !dbmigrate.ContentAdmitted(ns.Name, m, row.digest):
+		case !dbmigrate.ContentAdmitted(ns.Name, m, *row.Digest):
 			return fmt.Sprintf("%s %s_%s was applied from different content than this binary embeds — the migration was edited after this database was migrated", ns.Name, m.Version, m.Name)
 		}
 	}

@@ -57,6 +57,9 @@ import (
 // a failing gate: the gate's message says to clear the column, or to say here
 // why it stays.
 var erasureColumnBaseline = map[string][]string{
+	// Raw originals are deleted in full after their positive subject match is recorded.
+	// The preparatory metadata write leaves these columns for that deletion.
+	"raw_capture": {"parts_slim_outcome", "payload", "source_id", "source_system"},
 	// Audit identity and authority remain immutable when retained payloads are removed.
 	"audit_log": {"action", "actor_id", "actor_type", "authorization_rule", "entity_type"},
 	// Closed vocabularies, actor stamps and opaque thread keys survive the personal text.
@@ -171,6 +174,9 @@ var erasureColumnBaseline = map[string][]string{
 		// One of the eight iCalendar method words RFC 5546 defines, enforced by
 		// a CHECK. Nothing the subject wrote beyond which scheduling act it was.
 		"calendar_method",
+		// The event's iCalendar UID, a key the organizer's calendar made, kept
+		// as the redaction keeps a mail's message-id: it names no subject.
+		"calendar_uid",
 		// One of four words, enforced by a CHECK: how much of
 		// the mail's text the parser decoded. Nothing the subject wrote.
 		"body_completeness",
@@ -184,6 +190,9 @@ var erasureColumnBaseline = map[string][]string{
 		// declined.
 		"capture_label_declined_ruleset",
 		"owed_verdict_declined_ruleset",
+		// The deal topic memo: a digest of candidate deal ids and the prompt.
+		// Nothing the subject wrote.
+		"deal_topic_digest",
 		"captured_by",
 		"channel_provider",
 		"direction",

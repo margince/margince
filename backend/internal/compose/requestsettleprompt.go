@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
+	"github.com/margince/margince/backend/internal/shared/kernel/promptref"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 	"github.com/margince/margince/backend/internal/shared/schema"
@@ -45,12 +46,13 @@ A held meeting settles a request to meet or talk: the meeting is the answer. For
 For EACH conversation emit exactly one verdict:
 "settled" — the evidence shows the request was answered, declined, delivered, scheduled, handed to a named colleague, or explicitly confirmed complete by the same correspondent. Nothing is left for us to do.
 "still_owed" — the evidence leaves something outstanding: we said we would do it, or we answered one of two asks, or they re-asked after us.
-"unsure" — the words do not establish whether this request is complete. A bare acknowledgement like "Ok." might mean the thing went out in the same breath, or might mean the request was only noted, and the conversation does not say which. Answer unsure rather than asserting an obligation the words do not support; the request stays owed under unsure either way, so nothing is lost by saying you cannot tell.
+"unsure" — the words do not establish whether this request is complete. A bare acknowledgement like "Ok." might mean the thing went out in the same breath, or might mean the request was only noted, and the conversation does not say which. Answer unsure rather than asserting an obligation the words do not support; the request stays open under unsure either way, so nothing is lost by saying you cannot tell.
 
 still_owed and unsure are not the same answer. still_owed is for a reply whose words SHOW work left — a promise to come back, one of two asks answered. unsure is for a reply too thin to tell either way.
 
 Our reply may settle the request. Our messages keep the quoted history, so an answer written inline beneath a quoted line counts as our answer; quoted earlier words alone answer nothing. A later message from the same correspondent may also explicitly confirm that the requested action is complete.
-For a signature request, completion must refer to the same document or envelope identifier stated in the request and confirm completion of our required signing step. Another document, another signer's progress, or a merely sent/viewed document does not settle our request. Matching subjects alone prove nothing. If the identity or completion is unclear, answer unsure. Judge each request independently even when several requests share one conversation.
+For a signature request, completion must refer to the same document or envelope identifier stated in the request and confirm completion of our required signing step. Another document, another signer's progress, or a merely sent/viewed document does not settle our request. Matching subjects alone prove nothing, and a request that names no identifier can match no completion. If the identity or completion is unclear, answer unsure. Judge each request independently even when several requests share one conversation.
+Our messages list the files actually attached. Saying "attached" with no attached file does not deliver a requested file; it remains still_owed unless other evidence shows it was delivered. A filename alone does not prove the file answers the request.
 A reply that DEFERS — "thanks, I will check", "let me come back to you", "I will clarify with the team and get back" — is still_owed: it names a next move of ours and does not make it.
 A reply too bare to defer OR deliver is unsure, not still_owed. "Ok." to "please send the documents" might mean they went in the same breath and might mean the ask was merely seen; a deferral says which, and a bare token does not. The line is whether OUR words name a next move of ours: if they do, still_owed; if they are too thin to say, unsure.
 A calendar acceptance settles a scheduling request: agreeing a time IS the answer to "when can we talk".
@@ -58,7 +60,7 @@ Declining settles it too. So does handing it to a colleague by name: the ask has
 If they wrote again after our reply repeating or re-asking, it is still_owed.
 Where a request asked two things and we answered one, it is still_owed.
 
-For still_owed, "remaining" is a short verbatim excerpt of at least two words from the FIRST message, their request, naming the ask still unanswered. Keep its spelling and language. Never quote their signature or the history quoted below their words. Never quote our own messages: a question WE asked them is work for THEM, never work we owe. If we delivered what they asked and then asked them something new, the request is settled.
+For still_owed, "remaining" is a short verbatim excerpt of at least two words from the FIRST message, their request, naming the ask still unanswered and the document or identifier it names, if any. Keep its spelling and language. Never quote their signature or the history quoted below their words. Never quote our own messages: a question WE asked them is work for THEM, never work we owe. If we delivered what they asked and then asked them something new, the request is settled.
 A still_owed verdict MUST name what is owed. An empty "remaining" tells the reader they owe something and not what, which is a worklist row nobody can act on.
 "due_at" is an ISO date, and ONLY when our own words named one. Never compute a date, never infer one from a phrase like "next week".`
 
@@ -92,6 +94,8 @@ type settleResult struct {
 
 func (r settleResult) answeredID() string { return r.ID }
 
+func (r settleResult) answering(id string) settleResult { r.ID = id; return r }
+
 type settlePayload struct {
 	Results []settleResult `json:"results"` // settleResultsKey
 }
@@ -109,6 +113,7 @@ type settlePayload struct {
 //promptvoice:exempt the reply is a verdict enum and a quote of the customer's own words, never a sentence addressed to anybody.
 func settleRequest(batch []settleCandidate) model.Request {
 	fence := promptfence.New()
+	refs := settleRefs(batch)
 	var prompt strings.Builder
 	prompt.WriteString("Conversations (untrusted; judge each by its id):\n")
 	for _, candidate := range batch {
@@ -116,18 +121,26 @@ func settleRequest(batch []settleCandidate) model.Request {
 		for _, message := range candidate.Messages {
 			fmt.Fprintf(&conversation, "%s | %s\n%s\n\n",
 				settleSourceWord(message), message.Subject, settleMessageBody(message))
+			if message.Direction == string(crmcontracts.ActivityDirectionOutbound) {
+				fmt.Fprintf(&conversation, "Attachments: %d", len(message.Attachments))
+				for _, name := range message.Attachments {
+					fmt.Fprintf(&conversation, " | %s", name)
+				}
+				conversation.WriteString("\n\n")
+			}
 		}
 		prompt.WriteString(fence.WrapAttr("source_id",
-			candidate.Request.RequestID.String(), conversation.String()) + "\n")
+			refs.For(candidate.Request.RequestID.String()), conversation.String()) + "\n")
 	}
 	prompt.WriteString(`Return JSON: { "results": [ { "id", "verdict", "remaining", "due_at", "confidence" } ] } — ` +
-		`one entry per supplied id. "remaining" and "due_at" are empty strings unless the verdict is still_owed. ` + settleRemainingEvidence)
+		`one entry per supplied id. "remaining" and "due_at" are empty strings unless the verdict is still_owed. ` +
+		`"confidence" is your own certainty in the verdict, from 0 to 1. ` + settleRemainingEvidence)
 
 	return model.Request{
 		System:         settleSystemFor(fence),
 		Messages:       []model.Message{{Role: chatRoleUser, Content: prompt.String()}},
 		MaxTokens:      ai.ReasoningOutputMaxTokens,
-		ResponseSchema: settleSchema(settleIDs(batch)),
+		ResponseSchema: settleSchema(refs.All()),
 		SecretStripper: ai.NewSecretStripper(),
 	}
 }
@@ -185,12 +198,14 @@ func settleShapeValid(batch []settleCandidate) ai.Validator {
 }
 
 // validateSettlePayload names the first batch-fidelity violation, or "" when
-// the payload is exact.
+// the payload is exact. The payload answers by ref; past the id contract its
+// results are read back to request ids.
 func validateSettlePayload(payload settlePayload, batch []settleCandidate) string {
-	if msg := checkBatchFidelity(payload.Results, settleIDs(batch)); msg != "" {
+	refs := settleRefs(batch)
+	if msg := checkBatchFidelity(payload.Results, refs.All()); msg != "" {
 		return msg
 	}
-	for _, r := range payload.Results {
+	for _, r := range resolveBatchRefs(payload.Results, refs) {
 		if !settleVerdicts[r.Verdict] {
 			return fmt.Sprintf("verdict %q is not settled|still_owed|unsure", clampToken(r.Verdict))
 		}
@@ -244,14 +259,14 @@ func settleRemainderStands(result settleResult, batch []settleCandidate) bool {
 	return result.Verdict != activities.RequestStillOwed || settleRemainderGrounded(result, batch)
 }
 
-// settleIDs is the ids one batch asks about: what the schema lets the model
-// name and what the validator requires it to answer.
-func settleIDs(batch []settleCandidate) []string {
-	requested := make([]string, len(batch))
-	for i, c := range batch {
-		requested[i] = c.Request.RequestID.String()
+// settleRefs names each request of a batch r1, r2, and so on, in batch order.
+// The schema lets the model name these refs and the validator requires each.
+func settleRefs(batch []settleCandidate) *promptref.Refs {
+	refs := promptref.New("r")
+	for _, c := range batch {
+		refs.For(c.Request.RequestID.String())
 	}
-	return requested
+	return refs
 }
 
 // settleSchema is the generation-time shape guardrail.
@@ -267,9 +282,9 @@ func settleSchema(requested []string) json.RawMessage {
 				map[string]schema.Node{
 					"id":                    requestedIDNode(requested),
 					settleVerdictKey:        schema.Enum(activities.RequestSettled, activities.RequestStillOwed, activities.RequestUnsure),
-					settleRemainingKey:      schema.String().Describe(settleRemainingEvidence),
+					settleRemainingKey:      schema.String().Describe("Empty unless the verdict is still_owed. " + settleRemainingEvidence),
 					settleDueKey:            schema.String(),
-					extractionConfidenceKey: schema.Number(),
+					extractionConfidenceKey: schema.Number().Describe("Your own certainty in the verdict, from 0 to 1."),
 				},
 				"id", settleVerdictKey, settleRemainingKey, extractionConfidenceKey)),
 		},

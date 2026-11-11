@@ -86,8 +86,12 @@ func analyticsSchemaFrom(ctx context.Context, specs map[string]reportSpec) analy
 		addFields(entity.Fields, grantedFilters(ctx, spec), analyticsquery.KindFilter)
 		addFields(entity.Fields, onlyKeys(granted.dimensions, granted.rowMoments), analyticsquery.KindFilter)
 		for name, field := range entity.Fields {
+			// The same template the report engine renders, so one declaration
+			// decides the question both doors ask.
+			field.Predicate = spec.filterPredicates[name]
 			field.Domain = filterDomain(spec, field.Expr)
 			field.Currency = granted.perRowCurrency(name)
+			field.Unpriced = granted.sumCoverage[name]
 			field.Period = periodFieldOf(name, field.Expr)
 			if custom, ok := spec.customFields[field.Expr]; ok {
 				field = custom.describe(field)
@@ -189,6 +193,7 @@ func schemaVersion(entities map[string]analyticsquery.Entity) string {
 			sum.Write([]byte(field))
 			sum.Write([]byte(entity.Fields[field].Expr))
 			sum.Write([]byte(entity.Fields[field].Kind))
+			sum.Write([]byte(entity.Fields[field].Predicate))
 			writeCustomMeaning(sum, entity.Fields[field])
 			if money := entity.Fields[field].Currency; money != nil {
 				sum.Write([]byte("currency:" + money.By + ":" + money.Base))

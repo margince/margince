@@ -68,6 +68,7 @@ const PRESENTATION: EmailPresentation = {
     change_mode: "none",
   },
   can_reply: true,
+  can_forward: true,
   can_relink: false,
   version: 3,
 };
@@ -140,7 +141,8 @@ describe("the email drawer's verbs", () => {
     });
     await user.click(
       await screen.findByRole("button", {
-        name: "Fold the message from Ana Sommer",
+        name: /^AS\s*Ana Sommer/,
+        expanded: true,
       }),
     );
     current = {
@@ -156,7 +158,8 @@ describe("the email drawer's verbs", () => {
     expect(screen.queryByRole("article", { name: "Ana Sommer" })).toBeNull();
     await user.click(
       screen.getByRole("button", {
-        name: "Fold the message from Latest sender",
+        name: /^LS\s*Latest sender/,
+        expanded: true,
       }),
     );
     await act(() =>
@@ -201,6 +204,7 @@ describe("the email drawer's verbs", () => {
             id: LATEST,
             body: "Private newer text",
             can_reply: true,
+            can_forward: true,
             access: { ...PRESENTATION.access, content_state: "withheld" },
           }),
       },

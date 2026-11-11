@@ -119,7 +119,7 @@ func (s *Service) ChangePassword(ctx context.Context, current, next string) (str
 		}
 		// AFTER the revocation, which ends every session by user id: minted
 		// before it, the fresh session would be revoked in the same breath.
-		if err := insertSession(ctx, tx, userID, tokenHash); err != nil {
+		if err := insertSession(ctx, tx, userID, tokenHash, false); err != nil {
 			return err
 		}
 		return logAuthEvent(ctx, tx, userID, "password_changed",

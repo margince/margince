@@ -131,7 +131,7 @@ func (s *Store) ListForRecord(
 	}
 	var out []crmcontracts.RecordAssignment
 	err = s.tx(ctx, func(tx pgx.Tx) error {
-		if err := ensureParentReadable(ctx, tx, rt, id); err != nil {
+		if err := ensureParentReadable(ctx, tx, rt, id, false); err != nil {
 			return err
 		}
 		rows, err := tx.Query(ctx,
@@ -174,18 +174,26 @@ func parentColumn(rt crmcontracts.AssignmentRecordType) (string, error) {
 // its parent: the record ids it carries are references, and handing one back
 // unbounded would tell a caller a record exists that they cannot open.
 func readAssignment(ctx context.Context, tx pgx.Tx, id ids.UUID) (crmcontracts.RecordAssignment, error) {
+	row, err := readAssignmentRow(ctx, tx, id)
+	if err != nil {
+		return crmcontracts.RecordAssignment{}, err
+	}
+	return row.wire(), nil
+}
+
+func readAssignmentRow(ctx context.Context, tx pgx.Tx, id ids.UUID) (assignmentRow, error) {
 	row := tx.QueryRow(ctx, assignmentSelect+` WHERE a.id = $1`, id)
 	r, err := scanAssignmentRow(row)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return crmcontracts.RecordAssignment{}, apperrors.ErrNotFound
+		return assignmentRow{}, apperrors.ErrNotFound
 	}
 	if err != nil {
-		return crmcontracts.RecordAssignment{}, fmt.Errorf("read record assignment: %w", err)
+		return assignmentRow{}, fmt.Errorf("read record assignment: %w", err)
 	}
-	if err := ensureParentReadable(ctx, tx, r.RecordType, r.RecordID); err != nil {
-		return crmcontracts.RecordAssignment{}, err
+	if err := ensureParentReadable(ctx, tx, r.RecordType, r.RecordID, false); err != nil {
+		return assignmentRow{}, err
 	}
-	return r.wire(), nil
+	return r, nil
 }
 
 // lockAssignment holds the parent, then locks the assignment row the reassign
@@ -263,17 +271,8 @@ func roleLookupError(err error) error {
 	return fmt.Errorf("read record role: %w", err)
 }
 
-// ensureSubjectAssignable refuses an assignee that does not exist, and refuses
-// a deactivated user for a NEW assignment while leaving existing ones standing:
-// history keeps its name, but nobody is newly made responsible for work they
-// have left.
-//
-// FOR SHARE, not a bare read: the foreign key enforces that the subject EXISTS,
-// never that it is still active, so without the lock a deactivation committing
-// between this check and the insert would leave somebody newly responsible for
-// work on the day they left. A share lock rather than an exclusive one because
-// this transaction only needs the row to hold still — it writes nothing to it,
-// and two assignments naming the same colleague must not queue behind each other.
+// Hold the subject stable until the assignment commits, so deactivation cannot overtake it.
+// Staffing grants no access; retirement also checks that the successor can work the parent.
 func ensureSubjectAssignable(
 	ctx context.Context, tx pgx.Tx, kind crmcontracts.AssignmentSubjectKind, id ids.UUID,
 ) error {
@@ -306,8 +305,8 @@ func ensureSubjectAssignable(
 		}
 		return fmt.Errorf("read app_user: %w", err)
 	}
-	// Existing invited holders remain editable, and compatibility clients may still name them.
-	// The product picker offers only active colleagues.
+	// API clients may name agent seats and invited members for compatibility.
+	// The picker offers active human colleagues.
 	if status == "suspended" || status == "deactivated" || archivedAt != nil {
 		return &values.ParseError{
 			Field: fieldSubjectID, Code: "inactive_user",

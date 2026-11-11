@@ -6,7 +6,7 @@
 
 The Worklist is the ranked to-do list in Margince: one list of everything waiting on you, in the order Margince ranks them. That is buyers to answer, tasks due, promises made, deals at risk and items to check. It lives on **Home**. Press **Show Worklist** to open it as a panel over the page; **Hide Worklist** closes it. It has no sidebar row of its own.
 
-Move through the task card by dragging it or using the **Previous task** and **Next task** buttons. The arrow keys work on those buttons. Moving between tasks changes only which task you see.
+Under **Needs you**, every task is its own card, and the first one is open. Press another card to open it in its place. **Next task** on the open card opens the one after it, and after the last card it goes back to the first. Opening a card changes only which task you see.
 
 When you email a task's contact after the task was created, Margince marks the task done and shows a receipt in **Done for you**. Bulk mail and a contact named only in Bcc do not count. **Undo** reopens the task; the same email will not close it again. This includes tasks from website requests.
 
@@ -40,6 +40,7 @@ To snooze a Worklist item in Margince, press **More actions** at the end of its 
    reply**.
 4. The note that follows offers **Undo**.
 
+Snoozing a deal also hides its at-risk row until the snooze ends. Its tasks remain separate work.
 A snooze changes your list only. A reply that came in before you snoozed does not end it. Also called: remind me later, postpone, hide for now.
 
 ### How do I pin an item to the top of my worklist?
@@ -183,11 +184,13 @@ The work counts come from the current Worklist read. The greeting's email count 
 **Since your last brief** says when some activity could not be counted. Its count then says how much it could count, and an empty list does not mean nothing happened. A change that covers several records lists each record with its time and its full values, before and after. Each record keeps the review its change allows: **Mark reviewed** or **Undo**.
 
 ### Done for you
-**Done for you**, on **Today**, shows what Margince finished for you. The deals it changed come first, under a count of those that wait for your review, then **Other updates**. Each deal lists every change: what moved and when, and why Margince did it. When a change rests on the customer's own words, they show under "The customer wrote:". A deal Margince closed reads **Marked lost**, and "Reason unavailable" when you may not read why. Only the deal's owner reads why.
+**Done for you**, on **Today**, shows what Margince finished for you. Its band counts the deals that wait for your review and holds **Change history**, which opens **Change history** on the Worklist. Each deal it changed is a card, then **Other updates** follows. One card is open at a time; a closed card shows the deal's newest change, and a press opens it.
 
-**Details** shows who made the change and each value before and after. It also names the email, call or meeting it came from, unless you cannot open it. **Mark reviewed** says you have seen a change. It does not run the change again or make an estimate a customer promise, and the change keeps its **Undo**. **Undo** puts the deal back. A deal with two or more waiting changes also offers **Undo 2 changes**, which takes back the changes listed and none that arrived since.
+An open card lists every change on the deal, newest first: what moved and when, and why Margince did it. When a change rests on the customer's own words, they show under "The customer wrote:". A deal Margince closed reads **Marked lost**, and "Reason unavailable" when you may not read why. Only the deal's owner reads why. A change a later one replaced is grey and reads "Replaced by a later change".
 
-Home shows the first five deals. **Review all 6 deals** opens a list of every waiting deal, in the same rows. **Undo changes on 6 deals** at its foot takes back the deals listed when you opened it. When some deals cannot be sent, the answer counts them and offers **Send again**, which reads them again and sends only those that still wait. **View change history** opens **Change history** on the Worklist. See [Approvals](approvals.md#can-i-undo-what-the-ai-changed).
+**Details** under a change shows who made it and each value before and after. It also names the email, call or meeting it came from, unless you cannot open it. **Undo** under a change puts that change back. At the foot of the card, **Mark reviewed** says you have seen every change still waiting on the deal. It does not run a change again or make an estimate a customer promise, and each change keeps its **Undo**. A deal with two or more waiting changes also offers **Undo 2 changes**, which takes back the changes listed and none that arrived since.
+
+Home shows the first five deals. **Review all 6 deals** opens a list of every waiting deal, in the same cards. **Undo changes on 6 deals** at its foot takes back the deals listed when you opened it. When some deals cannot be sent, the answer counts them and offers **Send again**, which reads them again and sends only those that still wait. See [Approvals](approvals.md#can-i-undo-what-the-ai-changed). When some activity could not be counted, **Other updates** says so under its list.
 
 A deal that changed again reads "This deal changed again. Open the deal to review its current state." An undone or replaced change cannot be marked reviewed. To make Margince ask first, see [Approvals](approvals.md). Also called: automatic changes, review changes, accept a change, check applied changes.
 
@@ -232,6 +235,14 @@ It is due on a day the email names, such as "Deadline: 27 October", and has **No
   stays until someone handles it.
 - Private mail is left out. When it is not clear whose task it is, Margince leaves the email for review.
 Also called: customer request, email nobody answered, email to-do.
+
+### How do I answer a calendar invitation?
+An email that invites you to a meeting shows **Accept**, **Maybe** and **Decline** in place of **Reply**. That is on Home, in the Worklist, in a record's **History** and in the email reader.
+- Your answer goes out through your own connected calendar, which lets the sender know. Without a connected calendar, Margince says so under the answers.
+- The card is tagged **Invitation** and shows when the meeting starts. It stays under **Needs you** until you answer, and Margince files no reminder task for it.
+- You can change your answer later: your current answer shows pressed.
+- **Reply** stays in the email reader, for proposing another time.
+Also called: meeting invite, accept an invite, decline a meeting.
 
 ## The Worklist
 

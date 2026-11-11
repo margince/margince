@@ -13,6 +13,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/contractterm"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -59,6 +60,24 @@ func TestUnderContractUsesOneAsOfParameter(t *testing.T) {
 	}
 	if strings.Contains(sql, "now()") || strings.Contains(sql, "CURRENT_DATE") {
 		t.Errorf("the as-of date is the caller's, never the database's clock; got:\n%s", sql)
+	}
+}
+
+// The kernel spells the term states without the generated contract. Each
+// spelling must be one the contract's enum declares, and every one it declares.
+func TestTermStatesAreTheContractsEnum(t *testing.T) {
+	kernel := map[string]crmcontracts.ContractTermState{
+		contractterm.TermNotStarted: crmcontracts.ContractTermStateNotStarted,
+		contractterm.TermInForce:    crmcontracts.ContractTermStateInForce,
+		contractterm.TermEnded:      crmcontracts.ContractTermStateEnded,
+	}
+	for spelled, declared := range kernel {
+		if string(declared) != spelled || !declared.Valid() {
+			t.Errorf("kernel spells %q, the contract declares %q", spelled, declared)
+		}
+	}
+	if sql := contractterm.TermStateSQL("", "$1"); strings.Count(sql, "'") != 2*len(kernel) {
+		t.Errorf("term state SQL yields a state the contract does not declare:\n%s", sql)
 	}
 }
 

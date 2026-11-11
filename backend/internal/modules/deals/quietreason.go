@@ -13,6 +13,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
 // pacedBasis names the observations behind an unconfirmed estimate.
@@ -29,7 +30,7 @@ type QuietNames map[ids.UUID]string
 // day counts land in the workspace's calendar rather than the server's.
 func (said quietCopy) quietReason(facts QuietFacts, names QuietNames, today time.Time, loc *time.Location) string {
 	inbound, outbound := facts.LastInbound, facts.LastOutbound
-	if inbound != nil && (outbound == nil || outbound.At.Before(inbound.At)) {
+	if inbound != nil && (outbound == nil || !occurredday.Answers(outbound.moment(), inbound.moment())) {
 		phrase := quietWords.InMessage
 		switch crmcontracts.ActivityKind(inbound.Kind) {
 		case crmcontracts.ActivityKindCall:
@@ -50,6 +51,10 @@ func (said quietCopy) quietReason(facts QuietFacts, names QuietNames, today time
 		return fmt.Sprintf(said.Say(phrase), quietWho(outbound, names, said.Say(unknown)), quietDay(outbound.At, loc), said.quietFor(outbound.At, today, loc))
 	}
 	return said.Say(quietWords.NoCorrespondence)
+}
+
+func (side *QuietSide) moment() occurredday.Moment {
+	return occurredday.Moment{At: side.At, DateOnly: side.DateOnly}
 }
 
 // quietWho names the counterparty, falling back to a generic noun. The fallback

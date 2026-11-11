@@ -196,6 +196,10 @@ export interface paths {
          *     administrator of any tenant can set any of their own users' mail attribute to
          *     any string — so a multi-tenant authority is refused at boot rather than
          *     served here.
+         *
+         *     `return=consent` comes from the OAuth consent screen's own buttons. The
+         *     signed state cookie keeps it, and a completed sign-in then lands back on that
+         *     fixed consent path instead of the post-login page. It carries no address.
          */
         get: operations["startOidcSignIn"];
         put?: never;
@@ -1863,6 +1867,58 @@ export interface paths {
          *     it — the row stays, and the history keeps it.
          */
         post: operations["cancelIntroRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/sdr-handoffs/{id}/assignee": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /** Read the current receiver and reassignment version of a prospect handoff. */
+        get: operations["getHandoffAssignee"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Choose a colleague who can work a waiting prospect handoff.
+         * @description Requires write access to the prospect and an active colleague with the same
+         *     access. Accepted handoffs retain their original decision and attribution.
+         */
+        patch: operations["reassignHandoff"];
+        trace?: never;
+    };
+    "/intro-requests/{id}/replace": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Withdraw your ask and make a fresh ask through another route.
+         * @description Only the original requester may replace an open ask. The replacement concerns the
+         *     same contact and starts with no decision or approval. Both changes commit together;
+         *     an invalid replacement leaves the original ask open. The old ask remains private
+         *     to its original parties. Choosing another introducer does not transfer a personal
+         *     relationship or permission to name-drop.
+         */
+        post: operations["replaceIntroRequest"];
         delete?: never;
         options?: never;
         head?: never;
@@ -6173,6 +6229,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/activities/{id}/calendar-response": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Accept, tentatively accept or decline a calendar invitation that came by email.
+         * @description Answers the event the invitation names, on the caller's own connected calendar, and the
+         *     calendar tells the organizer. Only the email's `calendar_invitation` offers this, and only
+         *     to a seat whose own mailbox received the invitation.
+         *
+         *     The caller has then dealt with the message, so it leaves their Worklist the way Done does.
+         *     Answering again changes the answer.
+         *
+         *     Reading the message is the licence to answer it: an id the caller cannot read answers 404,
+         *     the same as one that does not exist. A message that is not an open invitation to the caller,
+         *     or a caller with no calendar Margince may write to, answers 422 naming why.
+         */
+        put: operations["answerCalendarInvitation"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/activities/{id}/meeting-brief": {
         parameters: {
             query?: never;
@@ -6338,6 +6426,43 @@ export interface paths {
          *     (migration 1788000100).
          */
         post: operations["relinkActivity"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/activities/{id}/deal-decline": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Say a captured message is not about a deal, or about none of the deals its question offered.
+         * @description With `deal_id`, the message is not about that deal. Its link to the deal comes off, and no
+         *     automatic pass (capture, the refile pass, the repair) files it on that deal again. Other
+         *     deals stay open to it, and a colleague's own relink still files it anywhere.
+         *
+         *     A project link that came from the deal comes off with it, through the same rules as the
+         *     project-filing undo. It stays when the project was filed some other way, when a retention
+         *     rule keeps it, or when the caller cannot read the project. An agent's decline takes it off
+         *     as a member's does. `project_kept` says so.
+         *
+         *     Without `deal_id`, the answer is "none of them" to the open "Which deal is this about?"
+         *     question of the message's conversation. Each deal the question offered is declined on the
+         *     message and on each unfiled message of the conversation, and the question is done. A
+         *     message with no open question answers 422.
+         *
+         *     Declining a deal already declined is the same success and writes nothing.
+         */
+        post: operations["declineActivityDeal"];
         delete?: never;
         options?: never;
         head?: never;
@@ -6859,8 +6984,8 @@ export interface paths {
         head?: never;
         /**
          * Move a scheduled message to a different moment.
-         * @description Time only. The content is what the approval bound to, so changing it is
-         *     cancel-and-recompose, which re-enters every gate from the top (ADR-0104 §5).
+         * @description Time only. An attested spelling or punctuation correction uses the communication review's
+         *     wording-correction route. Other content changes need cancel-and-recompose and fresh checks.
          */
         patch: operations["rescheduleScheduledSend"];
         trace?: never;
@@ -14895,11 +15020,14 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * What AI cost this month so far, as one figure.
-         * @description The sum of every `cost_est_minor` line `GET /ai/usage` reports for its default window
-         *     (the first day of the current UTC month through now), computed the same way and admitted
-         *     by the same grant. For a page that shows only the month's total and needs none of the
-         *     report's lines, budget or decisions.
+         * What AI cost over a window, this month by default, as one figure.
+         * @description The sum of every `cost_est_minor` line `GET /ai/usage` reports for the same window,
+         *     computed the same way and admitted by the same grant. For a page that shows only a
+         *     total and needs none of the report's lines, budget or decisions.
+         *
+         *     The window defaults to the installation's UTC month. A reader whose own month differs
+         *     sends it, so one figure answers for both: a surface that names a month and a surface
+         *     beside it that totals one cannot disagree about which month that is.
          */
         get: operations["getAiUsageSummary"];
         put?: never;
@@ -16348,6 +16476,10 @@ export interface paths {
          *     read it, was shown the compliance warning, acknowledged it, and decided in writing that the
          *     message goes — and then sends the exact message the review was holding.
          *
+         *     Current permission is checked again before an exception is recorded. If new evidence or a
+         *     consent grant now permits the held message, it is queued under that permission with no
+         *     exception instruction. The caller's authority and request validation still apply.
+         *
          *     NOTHING ABOUT THE REFUSAL CHANGES. No consent is written and no stop is lifted. The decision
          *     rows still read `deny`; what changes is one column saying the message left under a human's
          *     instruction rather than under the engine's permission. A subject asking later why they
@@ -16367,6 +16499,31 @@ export interface paths {
          *     goes. The next message to the same contact needs its own.
          */
         post: operations["directCommunicationSend"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/communication-reviews/{id}/correct-wording": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Keep the original approval for a spelling or punctuation correction.
+         * @description The original human approver confirms that meaning is unchanged. The same instruction
+         *     remains attached to the held message. Recipients, sender, purpose, attachments and other
+         *     scope fields cannot be edited here. A change in meaning needs a new message approval.
+         *     The message remains held; its normal send path checks current permission and stops again.
+         */
+        post: operations["correctCommunicationWording"];
         delete?: never;
         options?: never;
         head?: never;
@@ -17415,7 +17572,16 @@ export interface paths {
             };
             cookie?: never;
         };
-        get?: never;
+        /**
+         * List the contact's standing exceptions and their exact scope.
+         * @description Live standing exceptions, newest saved or carried record first. Each names its message category and sending
+         *     company. These records grant no marketing consent. Every message is checked separately.
+         *     An older record with no sending company is shown without inferring one.
+         *
+         *     `may_revoke` uses the same authority and record-access checks as `revokeOverride`.
+         *     Revocation takes back that recorded exception and its carried copies, with a reason.
+         */
+        get: operations["listContactOverrides"];
         put?: never;
         /**
          * Record a standing vouch that a machine-level refusal for one category may be overruled.
@@ -17690,11 +17856,11 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Record the exchange that makes business correspondence lawful.
+         * Record an exchange for scoped correspondence.
          * @description A qualifying event is what a `business_correspondence` verdict reads to answer whether
          *     we may write to somebody at all (`getContactConsentGuard`). Most arrive on their own —
-         *     an inbound message, an inquiry, an open deal are all derived from records the product
-         *     already holds. Two cannot: **a card handed over in person**, and **a request the contact
+         *     an inbound message, an inquiry or a meeting can come from records the product already
+         *     holds. An open deal alone does not prove a request. Two kinds need a colleague's statement: **a card handed over in person**, and **a request the contact
          *     made themselves** by phone or across a counter. Both happened away from every system and
          *     are facts only the colleague who was there can state.
          *
@@ -17742,6 +17908,58 @@ export interface paths {
          *     user's statement about what a contact said.
          */
         post: operations["retractQualifyingEvent"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/leads/{id}/consent/qualifying-events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record an exchange with a lead.
+         * @description Records the same scoped exchange as the contact route, against the existing lead.
+         *     Requires permission to update that lead. It does not convert the lead, send a message
+         *     or grant marketing consent. A request names its sending company and, when supplied,
+         *     its deal. An agent asks its user first because the exchange is the user's statement.
+         */
+        post: operations["recordLeadQualifyingEvent"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/leads/{id}/consent/qualifying-events/{event_id}/retract": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+                event_id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Take back a recorded lead exchange.
+         * @description Withdraws a hand-recorded exchange using the same rules as the contact route.
+         *     The row remains as a record, and no send relies on it after withdrawal.
+         *     Requires permission to update the lead. An agent asks its user first.
+         */
+        post: operations["retractLeadQualifyingEvent"];
         delete?: never;
         options?: never;
         head?: never;
@@ -19623,8 +19841,10 @@ export interface paths {
         /**
          * Set or clear when buyer access lapses.
          * @description Null clears the bound, leaving access open until the room is closed or
-         *     archived. A past instant is accepted and takes effect immediately — that is
-         *     how access is cut short without ending the room. It decides how long a buyer can
+         *     archived. A past instant is accepted and takes effect at once — that is
+         *     how access is cut short without ending the room. One at or before the room's
+         *     creation is stored as the time of the call, unless a standing expiry has
+         *     already passed, which is kept. It decides how long a buyer can
          *     read the room, so an agent spends `send` on it.
          */
         put: operations["setDealRoomExpiry"];
@@ -22570,8 +22790,10 @@ export interface paths {
          *     exist to give: for each company on file, how many of your connections work
          *     there, and how many of those are already contacts.
          *
-         *     Ranked by connection count, then by name, so two reads of an unchanged network
-         *     return the same order.
+         *     Ranked by connection count, then by name, then by company id, so two reads of an
+         *     unchanged network return the same order. The ranking pages: `next_cursor`
+         *     resumes after the last account returned, and a cursor that names no position in
+         *     this ranking is refused with 422.
          *
          *     Only companies the caller can READ appear, under the ordinary company
          *     row scope. A connection whose employer resolved to no account is not reported
@@ -22616,6 +22838,32 @@ export interface paths {
          *     is a deliberate act of its own, not a side effect of editing a URL.
          */
         put: operations["saveMyLinkedInAccount"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/privacy/retained-signatures/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * Review a retained signature whose owner cannot review it.
+         * @description Active human privacy controllers with unrestricted contact read and deletion rights may review a signature whose owner is not an active human member. Opening the review leaves the original unchanged.
+         */
+        get: operations["getRetainedEmailSignature"];
+        /**
+         * Save a human review of a retained member signature.
+         * @description The controller policy and owner eligibility are checked again at save. The stored version must match the review. Archived signatures stay archived. Text is changed only by the human's explicit save.
+         */
+        put: operations["saveRetainedEmailSignature"];
         post?: never;
         delete?: never;
         options?: never;
@@ -25870,9 +26118,9 @@ export interface components {
              */
             require_sso?: boolean;
             /**
-             * @description Make a second factor mandatory: a member without a confirmed authenticator is
-             *     confined to the MFA enrolment routes until they set one up. Omit to leave the policy
-             *     unchanged.
+             * @description Require a second factor for password sign-in. Password sessions without a confirmed
+             *     authenticator are confined to MFA enrolment routes. Provider sessions rely on the
+             *     provider’s MFA policy. Omit to leave unchanged.
              */
             require_mfa?: boolean;
             /**
@@ -26097,8 +26345,10 @@ export interface components {
              */
             state: "valid" | "absent" | "rejected";
             /**
-             * @description Full seats the license admits. ABSENT when nothing caps them — no license, or a
-             *     grant carrying no seat count — which is not a grant of zero.
+             * @description Full seats a new seat is held to. A valid license answers its own grant; a refused
+             *     one keeps the last valid grant this process resolved. ABSENT when nothing caps them
+             *     — no license, no valid one before a refusal, or a grant carrying no seat count —
+             *     which is not a grant of zero.
              */
             seats_granted?: number;
             /**
@@ -26529,10 +26779,9 @@ export interface components {
              */
             require_sso: boolean;
             /**
-             * @description When true, a second factor is mandatory: a member with no confirmed authenticator
-             *     is admitted only to the MFA enrolment routes until they set one up, the same
-             *     confinement a forced password change uses. A member who already holds a factor is
-             *     unaffected — they are challenged for it at sign-in either way.
+             * @description When true, password sessions without a confirmed authenticator are confined to
+             *     MFA enrolment routes. Provider sessions rely on the provider’s MFA policy.
+             *     Password sign-in with a confirmed factor always requires a challenge.
              */
             require_mfa: boolean;
             /**
@@ -27082,6 +27331,12 @@ export interface components {
             agent_writes_per_window: components["schemas"]["AgentRoleAllowanceValue"];
             agent_egress_per_window: components["schemas"]["AgentRoleAllowanceValue"];
             agent_calls_per_window: components["schemas"]["AgentRoleAllowanceValue"];
+            /**
+             * @description Whether this role's agents are held to `mcp_calls_per_minute`. False for the built-in
+             *     Admin role. An agent whose user holds any role that is not paced is not paced. The
+             *     window allowances bind every role either way.
+             */
+            paced_per_minute: boolean;
         };
         AgentRoleAllowanceValue: {
             /** @description The allowance this role gives for the count. */
@@ -27169,7 +27424,7 @@ export interface components {
             defaults: components["schemas"]["AgentAllowanceDefaults"];
             /** @description Every live role, the seeded ones first in their order, then the others by name. */
             roles: components["schemas"]["AgentRoleAllowance"][];
-            /** @description How many tool calls one passport may make per minute. Fixed by the build. */
+            /** @description How many tool calls one passport may make per minute, for a role whose `paced_per_minute` is true. Fixed by the build. */
             mcp_calls_per_minute: number;
             /** @description How many streams one passport may open per minute. Fixed by the build. */
             mcp_stream_opens_per_minute: number;
@@ -27773,11 +28028,29 @@ export interface components {
             display_name?: string;
             /** @description The contact's live addresses. The decision is made about these senders. */
             emails: string[];
+            /** @description Each of `emails`, in the same order, with what it waits on. */
+            addresses: components["schemas"]["CaptureAwaitingAddress"][];
             /**
              * Format: date-time
              * @description When the contact was created, which is how long it has been waiting.
              */
             captured_at: string;
+        };
+        /** @description One address of a waiting contact, and what it waits on. */
+        CaptureAwaitingAddress: {
+            email: string;
+            /**
+             * @description `decided`: a decision about this sender is recorded, and a pass that applies it is due.
+             *     `classifying`: the sender classifier has an open question about this sender.
+             *     `unsure`: the classifier could not tell, so your answer decides.
+             *     `queued`: nothing was asked yet; a sweep will ask over a message from this address.
+             *     `unjudgeable`: no pass will settle this address, because no captured message from it
+             *     remains or someone already worked on the contact. Only you can settle it.
+             *     `decided`, `classifying` and `queued` wait on the product; `unsure` and `unjudgeable`
+             *     wait on you.
+             * @enum {string}
+             */
+            state: "decided" | "classifying" | "unsure" | "queued" | "unjudgeable";
         };
         CaptureSenderListResponse: {
             next_cursor?: string;
@@ -28012,7 +28285,8 @@ export interface components {
              * @description Whose move it is, derived from what this reader can see of the thread.
              *     `needs_reply` on a message still owed our answer, `waiting_for_them` on one we sent
              *     that is still the last word with them. A calendar invitation, update, cancellation
-             *     or answer is `none` unless someone confirmed it asks us something. `none` also when
+             *     or answer is `none` unless someone confirmed it asks us something, and an invitation
+             *     the reader may still answer is `none` too: `calendar_invitation` carries what it asks. `none` also when
              *     the question cannot be answered honestly — an unanswerable move is not a claim.
              *     A message older than the waiting horizon that nobody kept is `none` too: it is
              *     no longer current work, the same bound the waiting queue and `waiting_reply` apply.
@@ -28029,10 +28303,40 @@ export interface components {
              */
             delivery?: components["schemas"]["EmailDelivery"];
             /**
+             * @description Present when this message is a calendar invitation the reader can still answer: it came
+             *     into the reader's own mailbox, names an event, and that event has not started. A client
+             *     offers the answers here instead of a written reply, because an invitation asks for an
+             *     RSVP. Absent on every other message, and on a withheld one.
+             */
+            calendar_invitation?: components["schemas"]["EmailCalendarInvitation"];
+            /**
              * @description The activity's version, carried so a row can open an editor that writes with
              *     If-Match. A row without it can only read.
              */
             version: components["schemas"]["RowVersion"];
+        };
+        /** @description The reader's own answer to the event an invitation names. */
+        EmailCalendarInvitation: {
+            /**
+             * @description What the reader's calendar holds. `needs_action` until they answer, and while their
+             *     calendar has not synced the event.
+             * @enum {string}
+             */
+            response: "needs_action" | "accepted" | "tentative" | "declined";
+            /**
+             * Format: date-time
+             * @description When the event starts. Absent while the reader's calendar has not synced it.
+             */
+            starts_at?: string;
+            /** @description How to read `starts_at`, present beside it. `day` is an all-day event, so a client draws no time. */
+            starts_precision?: components["schemas"]["OccurredPrecision"];
+        };
+        AnswerCalendarInvitationRequest: {
+            /**
+             * @description The answer the organizer receives. `tentative` is Maybe.
+             * @enum {string}
+             */
+            response: "accepted" | "tentative" | "declined";
         };
         /**
          * @description Whether an outbound message actually left, and why not when it did not.
@@ -28245,7 +28549,19 @@ export interface components {
             links: components["schemas"]["ActivityLink"][];
             thread?: components["schemas"]["EmailThreadPage"];
             access: components["schemas"]["EmailAccess"];
+            /**
+             * @description True when this reader may answer the message: they read it inside its audience and
+             *     hold `activity.create`, because a reply is a new message they write. False otherwise:
+             *     a read seat's send is refused with `403 seat_tier_insufficient`, and a full seat's
+             *     without the grant with `403 permission_denied`.
+             */
             can_reply: boolean;
+            /**
+             * @description True when this reader holds `activity.create`. A forward is a new message the reader
+             *     writes to whoever they choose, so it asks nothing of the message's audience beyond
+             *     this read.
+             */
+            can_forward: boolean;
             can_relink: boolean;
             /** @description The activity's version, for the If-Match its own actions send. */
             version: components["schemas"]["RowVersion"];
@@ -29828,9 +30144,9 @@ export interface components {
             /** @description Per task, how often the decision model was consulted over the same window and how often its answer stood. Read from the ai_call trace, one logical call counted once, because the metered calls above count attempts and cannot give a rate. Empty when no call in the window consulted a decision model. */
             decisions?: components["schemas"]["AiDecisionSummary"][];
         };
-        /** @description The month's AI spend so far, summed from the lines GET /ai/usage prices. */
+        /** @description The AI spend over the requested window, summed from the lines GET /ai/usage prices. */
         AiUsageSummary: {
-            /** @description Sum of the month's `cost_est_minor` lines from GET /ai/usage, in minor units of `currency`. Omitted, not 0, when no line carries a price: then nobody knows what the month cost, which is not the same as a month that cost nothing. */
+            /** @description Sum of the window's `cost_est_minor` lines from GET /ai/usage, in minor units of `currency`. Omitted, not 0, when no line carries a price: then nobody knows what the window cost, which is not the same as a window that cost nothing. */
             cost_est_minor?: number;
             /** @description ISO-4217 of cost_est_minor — always USD in phase 1 (ADR-0067). */
             currency: string;
@@ -29887,6 +30203,7 @@ export interface components {
              *     The three codes a 429 produces are worth naming, because they have different remedies and an operator reads this to choose one. `provider_quota` — the account is out of budget or over its quota, which a human tops up. `provider_throttled` — an ordinary burst limit, which clears by itself. `provider_refused` — the provider turned the call away and said nothing about why, so the model was never reached and no claim is made about the cause.
              *     Three codes are not failures. Two are outcomes, where a model was reached and decided. `output_withheld` — the provider declined to deliver the answer: a refusal, a safety or recitation stop, a content filter, a blocked prompt. `output_rejected` — the task's own check refused the answer on every attempt, so the caller was served nothing. The third, `request_rejected`, is the provider's refusal rather than a model outcome: its own error code named the request malformed, which is a defect on the calling side.
              *     `timeout` — the attempt's deadline stopped it: the task's model call timeout on a ladder attempt, its decision model timeout on a decision attempt. A failure like `provider_error`, named apart so a slow host can be told from a broken one. A caller's own cancellation is never a timeout.
+             *     `canceled` — the caller stopped waiting: a page closed or reloaded, a job shut down. No further attempt runs. The call stays in the trace under this sentinel, so how often users abandon a slow request can still be read, but it is not a provider failure: exclude it from an error rate as `output_withheld` is excluded.
              *     `provider_error` is the FALLBACK: a provider failure naming none of those. It covers a connection or TLS fault and a non-429 server error as well as a call the model answered badly, so it says the provider failed and nothing about how far the request got.
              */
             error_sentinel?: string | null;
@@ -29902,10 +30219,10 @@ export interface components {
             estimated_cost_microusd?: number;
         };
         /**
-         * @description How one call ended, as a reader scans for it. `declined`: the model was reached and withheld or rejected the answer. `failed`: any other error code. `fallback`: it answered, but degraded, after a decision model fell back, or after a retry. `answered`: first try.
+         * @description How one call ended, as a reader scans for it. `declined`: the model was reached and withheld or rejected the answer. `canceled`: the caller stopped waiting, and no further attempt ran. `failed`: any other error code. `fallback`: it answered, but degraded, after a decision model fell back, or after a retry. `answered`: first try.
          * @enum {string}
          */
-        AiCallOutcome: "answered" | "fallback" | "declined" | "failed";
+        AiCallOutcome: "answered" | "fallback" | "declined" | "canceled" | "failed";
         /**
          * @description The configuration an AI call ran under, resolved from its `config_hash`.
          *
@@ -30201,7 +30518,7 @@ export interface components {
          * @description Why a row was skipped or warned about, so a screen can say it in the reader's language with `params`. One closed list, the same one the server reports from; `reason` is the English sentence for a reader that does not know a code. `run_in_flight` is the one refusal code: it answers a commit or undo on a run another attempt holds, and no row carries it.
          * @enum {string}
          */
-        ImportReasonCode: "activity_empty" | "activity_held" | "address_erased" | "address_not_split" | "activity_link_ambiguous" | "activity_link_ambiguous_dropped" | "activity_type_unknown" | "activity_type_unnamed" | "activity_unlinked" | "amount_negative" | "author_too_long" | "cannot_create" | "cannot_create_tags" | "cannot_edit" | "cannot_edit_and_tag" | "cannot_link_stakeholders" | "cannot_read_pipelines" | "cannot_read_tags" | "cannot_write_type" | "close_date_future" | "close_date_past" | "company_duplicate_found" | "company_duplicate_skipped" | "company_link_on_meeting" | "company_name_empty" | "contact_duplicate_found" | "contact_duplicate_skipped" | "contact_email_held" | "contact_holds_lead" | "contact_not_found" | "contact_not_found_dropped" | "contact_unnamed" | "currency_not_a_code" | "currency_unset" | "deal_already_closed" | "deal_legal_gate" | "deal_not_found" | "deal_not_found_dropped" | "deal_pipeline_fixed" | "description_too_long" | "direction_unknown" | "domain_held" | "duplicate_email" | "duration_not_valid_for_kind" | "email_names_no_contact" | "duration_out_of_range" | "employer_column_empty" | "employer_column_empty_dropped" | "employer_not_found" | "employer_not_found_dropped" | "employer_refused" | "employer_will_create" | "empty_payload" | "field_inactive" | "fx_rate_missing" | "id_not_a_company_id" | "id_not_visible" | "id_on_non_company" | "lead_not_found" | "lead_not_found_dropped" | "lead_status_not_importable" | "lead_status_unknown" | "link_ambiguous" | "link_ambiguous_dropped" | "link_contact_not_imported" | "link_edge_unsupported" | "link_malformed" | "link_not_attachable" | "link_not_found" | "link_not_found_dropped" | "link_row_not_imported" | "link_row_skipped" | "link_row_skipped_dropped" | "link_type_unknown" | "linkedin_held" | "lost_reason_missing" | "meeting_not_taken_place" | "meeting_status_not_valid_for_kind" | "meeting_status_unknown" | "message_not_importable" | "natural_key_taken" | "not_a_date" | "note_repeated" | "not_a_domain" | "not_a_number" | "not_an_amount" | "not_an_email" | "not_yes_no" | "occurred_at_future" | "occurred_at_unnamed" | "option_not_allowed" | "option_not_in_list" | "options_need_semicolons" | "owner_refused" | "owner_unknown" | "phone_needs_country" | "pipeline_no_open_stage" | "pipeline_unknown" | "pipeline_unnamed" | "record_archived" | "ref_taken_by_another_company" | "row_key_empty" | "row_key_repeated" | "run_in_flight" | "size_band_invalid" | "stage_unknown" | "stage_unnamed" | "tag_created" | "tag_name_invalid" | "tag_new" | "task_not_importable" | "timestamp_needs_zone" | "too_many_links" | "undo_edited" | "undo_failed" | "undo_grant_lost" | "undo_not_visible" | "undo_rule_protects" | "undo_still_referenced" | "value_refused" | "value_unreadable";
+        ImportReasonCode: "activity_empty" | "activity_held" | "address_erased" | "address_not_split" | "activity_link_ambiguous" | "activity_link_ambiguous_dropped" | "activity_type_unknown" | "activity_type_unnamed" | "activity_unlinked" | "amount_negative" | "author_too_long" | "cannot_create" | "cannot_create_tags" | "cannot_edit" | "cannot_edit_and_tag" | "cannot_link_stakeholders" | "cannot_read_pipelines" | "cannot_read_tags" | "cannot_write_type" | "close_date_future" | "close_date_past" | "company_duplicate_found" | "company_duplicate_skipped" | "company_link_on_meeting" | "company_name_empty" | "contact_duplicate_found" | "contact_duplicate_skipped" | "contact_email_held" | "contact_holds_lead" | "contact_not_found" | "contact_not_found_dropped" | "contact_unnamed" | "currency_not_a_code" | "currency_unset" | "deal_already_closed" | "deal_company_has_contracts" | "deal_legal_gate" | "deal_not_found" | "deal_not_found_dropped" | "deal_pipeline_fixed" | "description_too_long" | "direction_unknown" | "domain_held" | "duplicate_email" | "duration_not_valid_for_kind" | "email_names_no_contact" | "duration_out_of_range" | "employer_column_empty" | "employer_column_empty_dropped" | "employer_not_found" | "employer_not_found_dropped" | "employer_refused" | "employer_will_create" | "empty_payload" | "field_inactive" | "fx_rate_missing" | "id_not_a_company_id" | "id_not_visible" | "id_on_non_company" | "lead_not_found" | "lead_not_found_dropped" | "lead_status_not_importable" | "lead_status_unknown" | "link_ambiguous" | "link_ambiguous_dropped" | "link_contact_not_imported" | "link_edge_unsupported" | "link_malformed" | "link_not_attachable" | "link_not_found" | "link_not_found_dropped" | "link_row_not_imported" | "link_row_skipped" | "link_row_skipped_dropped" | "link_type_unknown" | "linkedin_held" | "lost_reason_missing" | "meeting_not_taken_place" | "meeting_status_not_valid_for_kind" | "meeting_status_unknown" | "message_not_importable" | "natural_key_taken" | "not_a_date" | "note_repeated" | "not_a_domain" | "not_a_number" | "not_an_amount" | "not_an_email" | "not_yes_no" | "occurred_at_future" | "occurred_at_unnamed" | "option_not_allowed" | "option_not_in_list" | "options_need_semicolons" | "owner_refused" | "owner_unknown" | "phone_needs_country" | "pipeline_no_open_stage" | "pipeline_unknown" | "pipeline_unnamed" | "record_archived" | "ref_taken_by_another_company" | "row_key_empty" | "row_key_repeated" | "run_in_flight" | "size_band_invalid" | "stage_unknown" | "stage_unnamed" | "tag_created" | "tag_name_invalid" | "tag_new" | "task_not_importable" | "timestamp_needs_zone" | "too_many_links" | "undo_edited" | "undo_failed" | "undo_grant_lost" | "undo_not_visible" | "undo_rule_protects" | "undo_still_referenced" | "value_refused" | "value_unreadable";
         /**
          * @description Exactly one of two shapes: `object` and `mapping` (and optionally
          *     `source_key`) for one CSV, or `parts` for a ZIP, each part with its own
@@ -30749,6 +31066,7 @@ export interface components {
         };
         /** @description One durable line addressed to one contact, as the raising call returns it. */
         Notice: {
+            system_display?: components["schemas"]["SystemDisplay"];
             /** Format: uuid */
             id: string;
             kind: components["schemas"]["NoticeKind"];
@@ -30808,6 +31126,7 @@ export interface components {
          *     whether they have already answered it.
          */
         NotificationItem: {
+            system_display?: components["schemas"]["SystemDisplay"];
             /** Format: uuid */
             id: string;
             /**
@@ -30845,7 +31164,8 @@ export interface components {
                  *     corrections list rather than that run: a manual re-run replaces the `run_id`, so the
                  *     one a notice names may no longer be listed. Manual privacy reviews use
                  *     `knowledge_document` (download the retained file), `email_signature` (the
-                 *     recipient's own account settings), `activity` (open the retained note in its
+                 *     recipient's own account settings), `retained_email_signature` (the departed member's
+                 *     signature in the controller review), `activity` (open the retained note in its
                  *     drawer), `legal_entity` (Company settings), or `signature_template` (Company
                  *     settings; `id` identifies the erasure whose review flagged the workspace template).
                  */
@@ -33204,6 +33524,8 @@ export interface components {
             /** Format: uuid */
             contact_id: string;
             full_name: string;
+            /** @description Whether this caller may file an activity under this contact. Computed with the same row-scope and write-share predicate the attach gate uses, so a mail started from the company links only the recipients this is true for. A read-only share grants no attach right. The server rechecks every write. */
+            attachable: boolean;
             title?: string | null;
             /** @description A provider-sourced job title, populated ONLY where the canonical title is empty (PO-EXT-9): a bought title fills a blank, never overwrites or seconds one a human typed. */
             provider_title?: string | null;
@@ -33601,6 +33923,13 @@ export interface components {
                  *     governed endpoint the task form uses, so it is theirs, audited and undoable.
                  */
                 task?: components["schemas"]["CreateTaskRequest"] | null;
+                /**
+                 * @description Present when this reader may not take the action, and says why in the reader's
+                 *     language. A client draws the button disabled with this sentence. `draft_reply`
+                 *     and `add_task` write an activity, so a seat without `activity.create`, or a
+                 *     seat that may not write at all, gets one.
+                 */
+                blocked_reason?: string;
             } | null;
         };
         /**
@@ -34686,13 +35015,10 @@ export interface components {
             sentences: components["schemas"]["CompanyBriefSentence"][];
         };
         /**
-         * @description Whether an outbound message to this contact is allowed right now, per purpose and
-         *     channel, WITH the reason (ADR-0098 D6).
-         *
-         *     Computed by the same gate the dispatcher runs at transmit time, so the preview a
-         *     composer shows and the check that fires at send cannot drift. The transmit-time
-         *     recheck stays authoritative and refuses with the newer answer when state changed
-         *     after the drawer opened.
+         * @description Facts recorded for this contact, per purpose and channel, with their reason.
+         *     This summary does not authorize a message. Each message is checked for its
+         *     recipient, sending company, context and current evidence when it is staged
+         *     and before a provider receives it.
          */
         ContactConsentGuard: {
             /** Format: uuid */
@@ -34703,11 +35029,9 @@ export interface components {
             purpose_key: string;
             purpose_label?: string | null;
             /**
-             * @description Which gate this purpose answers to (ADR-0098 D1). `business_correspondence` and
-             *     `transactional` are never consent-gated — their lawful basis is Art 6(1)(b)/(f), and
-             *     treating a reply to someone who wrote to us as a consent violation is a frame that is
-             *     legally wrong. `marketing` needs express consent with double-opt-in proof; the §7(3)
-             *     existing-customer exception is not offered. `phone_outreach` is specced and dormant.
+             * @description The class this purpose belongs to. The row reports facts for that class;
+             *     it does not permit every message. The send check applies the market's
+             *     rules, the sending company and current evidence to the exact message.
              * @enum {string}
              */
             purpose_class: "business_correspondence" | "transactional" | "marketing" | "phone_outreach";
@@ -34736,10 +35060,9 @@ export interface components {
             qualifying_event?: components["schemas"]["ConsentQualifyingEvent"];
         };
         /**
-         * @description The deterministic event that makes business correspondence lawful (ADR-0098 D2): an
-         *     inbound message, an inquiry they initiated, an active deal with their company, or
-         *     a recorded in-person exchange. Recording WHICH event and when is what makes the Art
-         *     6(1)(f) balancing accountable rather than merely asserted.
+         * @description A recorded exchange that may support a scoped message. The send check also
+         *     uses its sending company, request or deal context, current stops and source
+         *     visibility. An open deal alone does not show that the subject asked for mail.
          */
         ConsentQualifyingEvent: {
             /**
@@ -35107,6 +35430,28 @@ export interface components {
              */
             source_activity_id?: string;
             version: number;
+        };
+        HandoffAssignee: {
+            /** Format: uuid */
+            id: string;
+            /** Format: int64 */
+            version: number;
+            /** @enum {string} */
+            status: "submitted" | "accepted" | "rejected" | "recycled";
+            /** Format: uuid */
+            assigned_to?: string;
+            can_reassign: boolean;
+        };
+        HandoffAssigneeInput: {
+            /** Format: uuid */
+            assigned_to: string;
+            /** Format: int64 */
+            version: number;
+        };
+        IntroRequestReplaceInput: {
+            version: number;
+            reason: string;
+            request: components["schemas"]["IntroRequestInput"];
         };
         IntroRequestCancelInput: {
             reason?: string;
@@ -35523,6 +35868,14 @@ export interface components {
              *     nothing to do (`none`).
              */
             readonly fingerprint?: string;
+            /**
+             * @description Present when this reader may not take the move, and says why in the reader's
+             *     language. A client draws the verb disabled with this sentence. `draft_email`
+             *     and `create_task` write an activity, so a seat without `activity.create`, or a
+             *     seat that may not write at all, gets one. The stored card never carries it; it
+             *     is set for each reader.
+             */
+            blocked_reason?: string;
         };
         /** @description The rule and current facts behind a suggested action. The server checks these facts again when accepting the suggestion; the receipt grants no authority. Replaying the same accepted observation returns its original task. */
         RecommendationReceipt: {
@@ -36262,6 +36615,21 @@ export interface components {
              */
             sections_omitted: ("stakeholders" | "our_side" | "risks")[];
         };
+        RetainedEmailSignature: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            owner_id: string;
+            owner_name: string;
+            version: components["schemas"]["RowVersion"];
+            signature: components["schemas"]["EmailSignature"];
+            /** @description The saved markup through the send path's signature sanitizer. */
+            readonly preview_html: string;
+        };
+        SaveRetainedEmailSignatureRequest: components["schemas"]["SaveEmailSignatureRequest"] & {
+            /** Format: int64 */
+            expected_version: number;
+        };
         EmailSignature: {
             /**
              * @description Plain-text fallback after personal HTML and the company template.
@@ -36650,6 +37018,11 @@ export interface components {
         };
         LinkedInReachResponse: {
             accounts: components["schemas"]["LinkedInReachAccount"][];
+            /**
+             * @description Send this back as `cursor` to continue past the last account of this page.
+             *     Absent on the last page, so a client walking until it disappears stops.
+             */
+            next_cursor?: string;
             /** @description Every account reached, not just the page returned — a truncated list read as the whole network would understate reach. */
             accounts_total: number;
             /**
@@ -38000,7 +38373,10 @@ export interface components {
              * @description Expected annual recurring revenue in minor units of `currency`. Null means no recurring component, which is not zero.
              */
             expected_arr_minor?: number | null;
-            /** Format: uuid */
+            /**
+             * Format: uuid
+             * @description The company this deal is for. Changing it is refused 422 (`deal_contracts_cross_company`) while contracts filed against the deal name another company, because a contract on a deal is visible through that deal alone. Archived contracts also count. Ask an administrator to correct the contract links before changing the company. An edit never changes a contract's company; only a company merge does. Null clears the company and is not refused.
+             */
             company_id?: string | null;
             /**
              * Format: uuid
@@ -38308,6 +38684,15 @@ export interface components {
              *     no longer under contract and still reports the status it was left in.
              */
             readonly under_contract: boolean;
+            /**
+             * @description Where today falls in the agreement's dated term, read from the dates alone
+             *     (CONTRACT-FORM-1): `not_started` before `starts_on`, `ended` after the earlier
+             *     of `ends_on` and `cancellation_effective_on`, `in_force` between. It tells an
+             *     agreement that has not begun from one that has run out, which `under_contract`
+             *     = false cannot, and it ignores `status` and archival as `under_contract` does not.
+             * @enum {string}
+             */
+            readonly term_state: "not_started" | "in_force" | "ended";
             source: string;
             /** @description The principal that recorded this agreement, prefixed by kind ("human:<id>" / "agent:<id>"). Server-stamped from the authenticated caller, never client-supplied — an agent acting under a passport is not a row in app_user, so this is not a user id. */
             readonly captured_by: string;
@@ -38854,6 +39239,10 @@ export interface components {
             webhook: number;
             /** @description Live lists owned by the member. */
             list: number;
+            /** @description Waiting prospect handoffs assigned to the member. */
+            sdr_handoff: number;
+            /** @description Current user responsibilities on records. */
+            record_assignment: number;
         };
         UserHandover: {
             owned: components["schemas"]["HandoverCounts"];
@@ -39616,6 +40005,8 @@ export interface components {
             horizon_days: number;
             buffer_minutes: number;
             title: string;
+            /** @description Use the built-in meeting title. Explicitly false preserves the supplied title as custom wording. */
+            use_default_title?: boolean;
             location: string;
             /** @description Derived from the host account display name; request values are ignored. Names longer than 200 characters are abbreviated for this profile. */
             host_name?: string;
@@ -39873,6 +40264,7 @@ export interface components {
          *     `withheld`.
          */
         Activity: {
+            system_display?: components["schemas"]["SystemDisplay"];
             /** @description Whether this caller may replace selected individual readers of this internal operational message. Absent for ordinary or withheld activities. */
             readonly can_share_internal?: boolean;
             /** @description Whether THIS caller may change THIS activity: the same question the server's write gate answers on a mutation — an `activity:update` grant, plus authorship, assignment or a linked record the caller may change, or an unbounded seat. Server-computed per row, per caller. It is a UX signal, never the enforcement. A client uses it to draw or withhold edit affordances so a reader is not offered a control the save would refuse; the server refuses an unauthorized write with 403 whatever this said. Absent means NOT writable, so a client reading a response from a server too old to send it fails closed. */
@@ -40343,8 +40735,13 @@ export interface components {
             } | null;
             /** @description This message's RFC 5322 Message-ID, angle brackets optional. Email only. It is the identity a later capture of the same message resolves against, so an import that supplies it is recognised rather than duplicated. */
             rfc_message_id?: string | null;
-            /** @description The conversation this message belongs to. Email only. Defaults to `rfc_message_id` when absent, which files a message under itself — the same root a captured message takes when it starts a thread. */
+            /** @description The conversation this message belongs to. Email only. Defaults to `rfc_message_id` when absent, which files a message under itself — the same root a captured message takes when it starts a thread. A mail logged by hand with neither starts a conversation of its own. */
             thread_key?: string | null;
+            /**
+             * Format: uuid
+             * @description The email this one replies to. Email only. The reply is filed on that mail's conversation, so it answers the mail as a reply on its thread does. The mail must be one the caller can read, and with the same correspondent: the same counterparty address or a contact both are filed under. A mail logged before conversations were kept has none to join, and the reply starts its own. Not combined with `thread_key`.
+             */
+            in_reply_to_activity_id?: string | null;
             /** @description The calendar event's iCal UID. Meeting only. A recurring series shares one UID across every occurrence, so this identifies the series and `ical_instance` identifies the occurrence within it; neither alone identifies a meeting. */
             ical_uid?: string | null;
             /** @description Which occurrence of `ical_uid` this is — the occurrence's own original start, as the calendar states it. Meeting only. Required whenever `ical_uid` is given, because a series without an occurrence names every meeting in it at once. */
@@ -40453,6 +40850,25 @@ export interface components {
              *     owner, keeps their own choice.
              */
             permanent?: boolean;
+        };
+        DeclineActivityDealRequest: {
+            /**
+             * Format: uuid
+             * @description The deal the message is not about. Leave it out to answer "none of them".
+             */
+            deal_id?: string;
+        };
+        ActivityDealDecline: {
+            /** @description The deals this call declined on the message. A deal declined before is not listed again. */
+            declined_deal_ids: string[];
+            /** @description A deal link came off the message. */
+            unlinked: boolean;
+            /** @description The project link that came from a declined deal came off the message. */
+            project_unfiled: boolean;
+            /** @description A project link came from a declined deal and stays, because a retention rule keeps it or the caller cannot read the project. */
+            project_kept: boolean;
+            /** @description The open deal questions of the conversation this call marked done. */
+            questions_closed: number;
         };
         SetActivityDispositionRequest: {
             /**
@@ -40905,6 +41321,11 @@ export interface components {
              *     Absent or empty is a first draft.
              */
             rewrite_of?: string | null;
+            /**
+             * @description The language the caller chose for the draft. It outranks every language the server would read from the correspondence, the addressee, the rep and the installation, and the greeting, register, provenance notice and deterministic fallback all follow it. Absent leaves the choice to the server, which reads it from the correspondence. The server keeps no choice between calls, so a rewrite that should stay in the chosen language names it again. A code outside this list is `422` on `language`.
+             * @enum {string}
+             */
+            language?: "en" | "de" | "vi";
         };
         /** @description A drafted email (never sent by drafting). Send via /activities/{id}/send-email (🟡). */
         EmailDraft: {
@@ -40923,6 +41344,11 @@ export interface components {
             readonly draft_ref: string | null;
             /** @description True when the sender's voice could not even be looked up, so this draft may be missing a voice its sender built. Distinct from voice_profile_version being null, which also covers the ordinary no-profile case. A client should say so: the sender cannot detect a missing voice by reading the text. Absent reads as false. */
             readonly voice_degraded?: boolean;
+            /**
+             * @description The language this draft is written in: the `language` the request named, else the one the server resolved from the correspondence. The model draft and the deterministic fallback report it alike. A client shows it as the composer's current choice and names it again on a rewrite that must keep it.
+             * @enum {string}
+             */
+            readonly language?: "en" | "de" | "vi";
         };
         /**
          * @description Who a reply to a message is addressed to: one contact, resolved from the
@@ -41010,6 +41436,11 @@ export interface components {
              *     A client should say so beside the note, for the same reason voice_degraded is said: a reader fluent only in the default cannot tell a fallback from a choice, and would forward an English note to a customer who writes in German believing the product had checked. Absent reads as false.
              */
             readonly language_undetermined?: boolean;
+            /**
+             * @description The language this draft is written in: the `language` the request named, else the one the server resolved from the record's correspondence. The model draft and the deterministic floor report it alike. Absent on an introduction request or note, which reads its language on its own and says so through `language_undetermined`.
+             * @enum {string}
+             */
+            readonly language?: "en" | "de" | "vi";
         };
         /**
          * @description One thing the draft was written from, named so the reader can check it rather than
@@ -41392,6 +41823,8 @@ export interface components {
         };
         /** @description The author's drafting purpose and presentation state, restored with the words. These client-supplied values grant no send permission and do not attest model execution. */
         MailDraftEditorState: {
+            /** @description The deal and project selected in the composer. An empty list clears the selection. Omission keeps the older draft's grounding as the restore default. These are filing choices, not evidence of a request or permission to send. The send checks each link. */
+            filing?: components["schemas"]["MailDraftGround"][];
             /** @description Server binding to the saved words, used only to retire stale editor state. */
             readonly content_fingerprint?: string;
             intent?: string;
@@ -41400,6 +41833,11 @@ export interface components {
             voice_profile_version?: number;
             voice_degraded?: boolean;
             served_body?: string;
+            /**
+             * @description The language the author chose for the AI draft, restored with the words so the composer names it again on the next draft request. Absent when they chose none, and the next draft follows the correspondence. A code outside this list is dropped and the draft still saves, so the answer comes back without it.
+             * @enum {string}
+             */
+            language?: "en" | "de" | "vi";
         };
         /**
          * @description The composer's fields as they stand. Every content field is optional and an omitted
@@ -41586,10 +42024,23 @@ export interface components {
             allowed: boolean;
             recipients: components["schemas"]["SendAuthorizationPreviewRecipient"][];
         };
+        /** @description An existing recipient record the caller can read. */
+        CommunicationEvidenceSubject: {
+            /** @enum {string} */
+            entity_type: "contact" | "lead";
+            /** Format: uuid */
+            entity_id: string;
+        };
         /** @description One recipient's answer. It describes the MESSAGE, never the contact's file. */
         SendAuthorizationPreviewRecipient: {
             /** Format: email */
             address: string;
+            /**
+             * @description The existing contact or lead this recipient resolves to, only when the caller
+             *     can read it. Absent for newly filed addresses and records unavailable to the
+             *     caller. Recording an exchange still requires permission to update that record.
+             */
+            evidence_subject?: components["schemas"]["CommunicationEvidenceSubject"];
             /**
              * @description `allow` would send. `deny` would refuse. `review` is not a soft allow — it means
              *     the record does not carry this message on its own and names what is missing.
@@ -42686,7 +43137,7 @@ export interface components {
          */
         AssignmentRecordType: "company" | "deal" | "project";
         /**
-         * @description Whether the responsible party is one colleague or a whole team.
+         * @description Whether the responsible party is one member or a whole team.
          * @enum {string}
          */
         AssignmentSubjectKind: "user" | "team";
@@ -42745,6 +43196,7 @@ export interface components {
         RecordAssignmentListResponse: {
             data: components["schemas"]["RecordAssignment"][];
         };
+        /** @description A responsibility may name an agent seat as well as a human member. It grants no record access. The web picker lists active human colleagues. */
         CreateRecordAssignmentRequest: {
             subject_kind: components["schemas"]["AssignmentSubjectKind"];
             /** Format: uuid */
@@ -43200,18 +43652,18 @@ export interface components {
             /** @description The engagement named in the cited words, when present. Never inferred from the company name. */
             workstream?: string;
         };
-        /** @description One rep's statement about one contact, answering one refusal. */
+        /** @description One rep's statement about one recipient, answering one refusal. */
         RecordCommunicationContextRequest: {
             /**
              * Format: uuid
-             * @description The contact this statement is about. It must be somebody this review was refused for,
-             *     and the refusal must be one a statement can answer — a review naming three contacts
+             * @description The lead or contact this statement is about. It must be somebody this review was refused for,
+             *     and the refusal must be one a statement can answer — a review naming three recipients
              *     takes three statements, not one copied across them.
              */
             subject_id: string;
             /**
              * @description How it happened. `in_person` is an exchange in a room, a card handed over at a stand
-             *     included; `requested_by_subject` is the contact asking us to write to them by phone or
+             *     included; `requested_by_subject` is the recipient asking us to write to them by phone or
              *     across a counter. `in_person` supports personal one-to-one follow-up mail, never
              *     marketing or a newsletter. A meeting owes no notice. A caller who may change notice cases
              *     settles the contact's open source reviews as information given at the meeting, as a
@@ -43229,6 +43681,11 @@ export interface components {
         };
         /** @description One exchange that makes ordinary business correspondence lawful. */
         RecordQualifyingEventRequest: {
+            /**
+             * Format: uuid
+             * @description The visible deal this exchange concerned. Omit for a request with no deal.
+             */
+            about_deal?: string;
             /**
              * @description The two kinds a human may state. `in_person` is an exchange that happened in a room —
              *     a card handed over at a stand. `requested_by_subject` is the contact asking us to write
@@ -43780,7 +44237,20 @@ export interface components {
             /** @description Opaque cursor for the next page, or null if none. */
             next_cursor?: string | null;
         };
+        SystemDisplay: {
+            /** @enum {string} */
+            locale: "en" | "de" | "vi";
+            subject?: string;
+            body?: string;
+            generated_parts?: ("subject" | "body")[];
+            /** Format: int64 */
+            source_version?: number;
+        };
         ActivityReaderRenderingRequest: {
+            /** @enum {string} */
+            part?: "subject" | "body";
+            /** Format: int64 */
+            expected_source_version?: number;
             /**
              * @description The language to show the text in, normally the reader's interface language.
              *     Absent means the language the reader chose for their seat, else the
@@ -43794,6 +44264,10 @@ export interface components {
          *     nowhere.
          */
         ActivityReaderRendering: {
+            /** Format: int64 */
+            source_version?: number;
+            /** @enum {string} */
+            part?: "subject" | "body";
             /** Format: uuid */
             activity_id: string;
             /**
@@ -45673,6 +46147,8 @@ export interface components {
             pipelines?: components["schemas"]["Pipeline"][];
         };
         MeResponse: {
+            /** @description Whether this human caller may use the configured activity reader-rendering lane. Absent or false keeps generated text original until an explicit request. */
+            reader_rendering_available?: boolean;
             analytics_startup?: components["schemas"]["AnalyticsStartup"];
             user: components["schemas"]["User"];
             /** @description The installation's company name (the installation.name setting). Shown as the typed-confirmation target of the "Reset data" action — the exact string that endpoint validates. */
@@ -46944,6 +47420,11 @@ export interface components {
             logo_icon_url?: string;
         };
         /**
+         * @description A core destination in the main menu. Disabling one keeps its stored data.
+         * @enum {string}
+         */
+        CoreFeature: "home" | "contacts" | "companies" | "leads" | "deals" | "projects" | "filters" | "analytics";
+        /**
          * @description Which settings surfaces EXIST in this installation, independently of whether this caller may read them. A surface can be absent for two unrelated reasons — the installation never enabled it, or this caller holds no grant on it — and settings navigation has to tell them apart: the first is not a destination at all, the second is a destination that explains itself.
          *     Deployment facts only, never per-caller ones. Nothing here narrows with a role, so it discloses no more than the deployment file already tells every seat. A caller capability belongs beside `admin_password_link` instead, which folds the caller's role into its answer for exactly that reason.
          *     Carried on `/me` so navigation, the command palette, settings home and settings search can resolve from ONE cached snapshot. Each of those surfaces has to agree about which pages exist, and a screen-specific probe alongside them is how they came to disagree: the rail asked, the palette did not, and a page appeared in one and not the other.
@@ -46955,7 +47436,9 @@ export interface components {
              * @description Deprecated. Still required and returned for compatibility throughout the API notice window. New clients read `read_enabled` from `GET /company/context/capabilities` instead. This field continues to report whether the company-context rollout has typed reads active. It does not gate the installation's Company settings page.
              */
             company_context: boolean;
-            /** @description Reporting is always available. Retained for compatibility with older clients. */
+            /** @description Core features turned off in the configuration file. Their pages, API operations and agent tools are unavailable. Their data stays stored for when they are turned on again. An omitted or empty list keeps every core feature available. */
+            disabled_features?: components["schemas"]["CoreFeature"][];
+            /** @description Whether reporting is enabled in this installation. */
             reporting?: boolean;
             /** @description True when Live Lists and Shortlists are on (`lists.enabled`, on by default). False when an operator has switched them off: the `/lists` routes answer 404, no agent tool reaches them, and no screen offers them. */
             lists?: boolean;
@@ -48612,7 +49095,7 @@ export interface components {
             /** @description Verbatim source text (from the page, the pasted text, or the user's own words) — non-empty or the field is absent. */
             evidence_snippet: string;
             /**
-             * @description Where evidence_snippet came from. For self_description the "evidence" is the user's own statement — a self-declared ICP is grounded in that statement (B-E01.13), not fabricated.
+             * @description Where evidence_snippet came from. For self_description the "evidence" is the user's own statement — a self-declared ICP is grounded in that statement, not fabricated.
              * @enum {string}
              */
             source_kind: "url" | "text" | "self_description";
@@ -49886,6 +50369,7 @@ export interface components {
         };
         /** @description A staged 🟡 confirm-first action awaiting human decision. */
         Approval: {
+            system_display?: components["schemas"]["SystemDisplay"];
             preview?: components["schemas"]["ApprovalPreview"];
             /** @description For a pending commitment, whether its named task assignee cannot receive the task. True for deactivated, archived, missing, or agent seats. An invited colleague can. Absent for an unassigned proposal. This is current decision context, not a change to the staged assignee. */
             readonly assignee_inactive?: boolean;
@@ -50933,6 +51417,10 @@ export interface components {
             subject_id?: string;
             reason_code: string;
             category?: string;
+            /** Format: uuid */
+            sending_entity_id?: string;
+            sending_entity_name?: string;
+            requested_category?: string;
         };
         /**
          * @description What a refused send left behind. A SNAPSHOT of the engine's answer at the moment it was
@@ -50968,6 +51456,7 @@ export interface components {
             reason_code: string;
             /** @description What was refused, per recipient. Empty once an erasure has cleared the subject from it. */
             refusals: components["schemas"]["RefusedRecipient"][];
+            wording_correction?: components["schemas"]["WordingCorrectionContext"];
             /**
              * @description What somebody must be shown before they direct this send, and the version their
              *     acknowledgement will name. Served rather than composed by the client: an instruction's
@@ -50993,6 +51482,37 @@ export interface components {
              *     server's words while showing them its own.
              */
             text: string;
+        };
+        /**
+         * @description The current approved wording, visible only to its original human approver while the
+         *     decision is unspent. The original reason remains on the instruction.
+         */
+        WordingCorrectionContext: {
+            /** Format: uuid */
+            instruction_id: string;
+            /** Format: int64 */
+            version: number;
+            subject: string;
+            body: string;
+            html_body: string;
+            wording_digest: string;
+            reason_code: string;
+            explanation: string;
+            warning_version: string;
+        };
+        CorrectCommunicationWordingRequest: {
+            /** Format: int64 */
+            version: number;
+            expected_wording: string;
+            subject: string;
+            body: string;
+            html_body: string;
+            /** @description The original approver attests that only spelling or punctuation changed and meaning is unchanged. */
+            meaning_unchanged: boolean;
+        };
+        WordingCorrectionResult: {
+            /** Format: int64 */
+            version: number;
         };
         /**
          * @description A designated human's decision that one refused message goes out anyway. Every field is frozen
@@ -52039,7 +52559,7 @@ export interface components {
              */
             occurred_at: string;
             /**
-             * @description Maps 1:1 to automation_run.status (data-model §12.5); `blocked` added by ADR-0035 Am.1.
+             * @description Maps 1:1 to automation_run.status; `blocked` added by ADR-0035 Am.1.
              * @enum {string}
              */
             outcome: "fired" | "failed" | "blocked" | "skipped" | "queued_for_approval";
@@ -52594,11 +53114,8 @@ export interface components {
          */
         DealRoomState: "draft" | "building" | "ready" | "publishing" | "live" | "paused" | "closed" | "expired" | "archived";
         /**
-         * @description One buyer-facing room per deal. Mirrors the `deal_room` table.
-         *
-         *     The fields here are the WORKING copy — what a buyer actually reads is the
-         *     latest release, which freezes these values at publish time. Editing a live
-         *     room's title changes nothing for the buyer until someone publishes again.
+         * @description One buyer-facing room per deal. Changes to a live room are visible to
+         *     invited buyers as soon as they are saved.
          */
         DealRoom: {
             /** Format: uuid */
@@ -52619,6 +53136,10 @@ export interface components {
              *     deleted, which is the state a steward transfer exists to repair.
              */
             steward_user_id?: string | null;
+            /** @description Whether this caller may write the room's live deal. The caller also needs the room update grant, and finished rooms refuse content changes. */
+            readonly writable?: boolean;
+            /** @description No active human is set as steward. Authorized room editors should select a replacement; buyer access and existing questions remain available. */
+            readonly needs_steward?: boolean;
             /**
              * Format: date-time
              * @description When buyer access lapses on its own. Extending is an explicit human act.
@@ -52655,7 +53176,11 @@ export interface components {
              * @description Defaults to the deal's owner when omitted.
              */
             steward_user_id?: string | null;
-            /** Format: date-time */
+            /**
+             * Format: date-time
+             * @description When buyer access lapses. A past instant is accepted and stored as the
+             *     time of the call, so the room opens with buyer access already ended.
+             */
             expires_at?: string | null;
             source: string;
         };
@@ -53613,6 +54138,31 @@ export interface components {
              * @enum {string|null}
              */
             lift_blocked_by?: "address" | "restriction" | "subject_decision" | "level" | "permission" | null;
+        };
+        /** @description A recorded exception for one contact, message category and sending company. */
+        StandingOverride: {
+            /** Format: uuid */
+            override_id: string;
+            /** @description The message category recorded by the exception; an older category is not a new permission. */
+            category: string;
+            reason: string;
+            authority: string;
+            /** Format: date-time */
+            saved_at: string;
+            /**
+             * Format: date-time
+             * @description Original recording time, when retained provenance establishes it. Unknown for an erased origin or an older unmarked record.
+             */
+            recorded_at?: string | null;
+            recorded_by_name?: string | null;
+            /** Format: uuid */
+            sending_entity_id?: string | null;
+            sending_entity_name?: string | null;
+            may_revoke: boolean;
+        };
+        StandingOverridesPage: {
+            data: components["schemas"]["StandingOverride"][];
+            page: components["schemas"]["PageInfo"];
         };
         /** @description The standing override just recorded, by id. The category and reason are what the caller sent and the authority is their own session's, so the id is the one fact the caller could not have known — and the handle a later revoke takes. */
         RecordedOverride: {
@@ -55389,6 +55939,7 @@ export interface components {
          *     adds none.
          */
         AttentionItem: {
+            system_display?: components["schemas"]["SystemDisplay"];
             /** @description Sent as true on a task whose reminder is due for the reader, who is its assignee and reads their own work. Absent otherwise. */
             reminder_due?: boolean;
             /** @description Our later mail on the promise's thread to one of its recipients, which may have kept it. The row then asks whether it is done instead of listing it as open. Absent when there is no such mail or the reader answered Not yet to this mail. */
@@ -56255,6 +56806,7 @@ export interface components {
          *     client draws the summary alone rather than inventing something to open.
          */
         Receipt: {
+            system_display?: components["schemas"]["SystemDisplay"];
             close_date_change?: components["schemas"]["CloseDateChange"];
             /**
              * Format: uuid
@@ -57032,6 +57584,7 @@ export interface components {
          *     browser does not.
          */
         WorklistItem: {
+            system_display?: components["schemas"]["SystemDisplay"];
             /** @description On an approval, its title taken apart, so the row shows the sentence as its title and the proposed values as its supporting line. Absent when the title is a sentence alone. */
             summary_parts?: components["schemas"]["ApprovalSummaryParts"];
             /** @description Our later mail on the promise's thread to one of its recipients, which may have kept it. The row then asks whether it is done instead of listing it as open. Absent when there is no such mail or the reader answered Not yet to this mail. */
@@ -58056,6 +58609,13 @@ export interface components {
             arguments?: {
                 [key: string]: unknown;
             };
+            /**
+             * @description Present when this reader may not take the verb, and says why in the reader's
+             *     language. A client draws the verb disabled with this sentence. `draft_reply`,
+             *     `draft_email` and `create_task` write an activity, so a seat without
+             *     `activity.create`, or a seat that may not write at all, gets one.
+             */
+            blocked_reason?: string;
         };
         /**
          * @description A group of routine decisions that read alike, standing on the queue as one row.
@@ -58593,6 +59153,20 @@ export interface components {
                 "application/problem+json": components["schemas"]["Problem"];
             };
         };
+        /**
+         * @description The send failed validation, or no mailbox can carry it. The second answers with the top-level
+         *     `code: mailbox_not_send_capable` and no `details.errors`, because no field of the request can
+         *     fix it: the sender must connect a mailbox that can send, or an administrator must set up
+         *     sending for the installation. A scheduled send is checked the same way when it is created.
+         */
+        SendValidationError: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/problem+json": components["schemas"]["Problem"];
+            };
+        };
     };
     parameters: {
         /** @description The type of the record to build around. */
@@ -59007,7 +59581,10 @@ export interface operations {
     };
     startOidcSignIn: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Land a completed sign-in on the OAuth consent screen. */
+                return?: "consent";
+            };
             header?: never;
             path: {
                 provider: "google" | "microsoft";
@@ -59025,6 +59602,7 @@ export interface operations {
                 content?: never;
             };
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
             /** @description Rate-limited per client IP. */
             429: {
                 headers: {
@@ -61367,6 +61945,97 @@ export interface operations {
         responses: {
             /** @description The ask is withdrawn. */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IntroRequest"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    getHandoffAssignee: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Current assignment, scoped through the prospect. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HandoffAssignee"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    reassignHandoff: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HandoffAssigneeInput"];
+            };
+        };
+        responses: {
+            /** @description Current assignment after reassignment. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HandoffAssignee"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    replaceIntroRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IntroRequestReplaceInput"];
+            };
+        };
+        responses: {
+            /** @description The fresh ask; the original ask is withdrawn. */
+            201: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -68184,7 +68853,8 @@ export interface operations {
                 sort?: components["parameters"]["Sort"];
                 /** @description Include soft-deleted (archived) rows. Default false. */
                 include_archived?: components["parameters"]["IncludeArchived"];
-                kind?: "email" | "call" | "meeting" | "note" | "task" | "message";
+                /** @description Activities of these kinds. Repeat the parameter for several (`kind=email&kind=message`), so a page of one kind of work is never filled by another kind it does not show. */
+                kind?: ("email" | "call" | "meeting" | "note" | "task" | "message")[];
                 /** @description Calls that ended this way. Matches calls only. */
                 call_outcome?: "reached" | "not_reached" | "voicemail" | "call_back_later" | "put_through";
                 /**
@@ -68637,6 +69307,36 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
+    answerCalendarInvitation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AnswerCalendarInvitationRequest"];
+            };
+        };
+        responses: {
+            /** @description The answer the calendar now holds. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmailCalendarInvitation"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
     getMeetingBrief: {
         parameters: {
             query?: {
@@ -68804,6 +69504,38 @@ export interface operations {
             404: components["responses"]["NotFound"];
             409: components["responses"]["VersionConflict"];
             422: components["responses"]["ValidationError"];
+        };
+    };
+    declineActivityDeal: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DeclineActivityDealRequest"];
+            };
+        };
+        responses: {
+            /** @description What the decline did. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActivityDealDecline"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+            423: components["responses"]["RetentionHeld"];
         };
     };
     getActivityProjectFiling: {
@@ -69258,6 +69990,18 @@ export interface operations {
             };
         };
         responses: {
+            /**
+             * @description Scheduled, not sent (ADR-0104). No activity and no delivery row exist yet;
+             *     the timeline stays silent until it fires.
+             */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScheduledSend"];
+                };
+            };
             /** @description Accepted for send (queued); the resulting activity is logged. */
             202: {
                 headers: {
@@ -69291,7 +70035,7 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            422: components["responses"]["ValidationError"];
+            422: components["responses"]["SendValidationError"];
         };
     };
     sendCompanyEmail: {
@@ -69393,7 +70137,7 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            422: components["responses"]["ValidationError"];
+            422: components["responses"]["SendValidationError"];
         };
     };
     listScheduledSends: {
@@ -82223,14 +82967,19 @@ export interface operations {
     };
     getAiUsageSummary: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Default: the first day of the current UTC month. Must not be after `to`. */
+                from?: string;
+                /** @description Default: today. At most 366 days after `from`. */
+                to?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description The month's spend. */
+            /** @description The window's spend. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -82241,6 +82990,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["PermissionDenied"];
+            422: components["responses"]["ValidationError"];
         };
     };
     listAgentUsageByUser: {
@@ -83142,6 +83892,17 @@ export interface operations {
                 /** @description The record the staged actions act on. Requires `target_entity_type`. */
                 target_entity_id?: string;
                 /**
+                 * @description Filter to the approvals staged against ANY of these records, each written
+                 *     `<entity_type>:<uuid>` (`contact:…`, `activity:…`). Repeat the parameter for several,
+                 *     up to 25. It answers "what is waiting on the records I touched" without the rest of
+                 *     the queue.
+                 *
+                 *     A record outside the caller's row scope adds nothing to the page, never a 403. A
+                 *     malformed item, more than 25, or `target` together with `target_entity_type` or
+                 *     `target_entity_id` is a 422.
+                 */
+                target?: string[];
+                /**
                  * @description Filter to the proposals ONE act staged together (see `Approval.bundle_id`) — today, a
                  *     website read's company facts plus the leads it published. Members the caller could not
                  *     decide are absent from this page exactly as they are absent from the unfiltered inbox,
@@ -83962,6 +84723,45 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Activity"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    correctCommunicationWording: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CorrectCommunicationWordingRequest"];
+            };
+        };
+        responses: {
+            /** @description Wording saved under the same approval. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WordingCorrectionResult"];
+                };
+            };
+            /** @description The correction confirmation or input is invalid. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             403: components["responses"]["Forbidden"];
@@ -85557,6 +86357,47 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
+    listContactOverrides: {
+        parameters: {
+            query?: {
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
+                limit?: components["parameters"]["Limit"];
+                /**
+                 * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
+                 *     effective `sort` of the originating request (field + direction) plus the last row's keyset
+                 *     (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
+                 *     under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+                 *     together with a `sort` that differs from the one the cursor was minted under returns
+                 *     `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
+                 *     **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
+                 *     remaining pages see, so re-issue the query without the cursor when changing filters.
+                 */
+                cursor?: components["parameters"]["Cursor"];
+            };
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The live standing exceptions and their scope. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StandingOverridesPage"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
     allowContact: {
         parameters: {
             query?: never;
@@ -85852,7 +86693,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Recorded. The contact's business-correspondence verdict now reads it. */
+            /** @description Recorded. This sends no message and grants no marketing consent. */
             201: {
                 headers: {
                     [name: string]: unknown;
@@ -85901,6 +86742,63 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    recordLeadQualifyingEvent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecordQualifyingEventRequest"];
+            };
+        };
+        responses: {
+            /** @description Recorded. This sends no message and grants no marketing consent. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QualifyingEventRecord"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    retractLeadQualifyingEvent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+                event_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Withdrawn. Sends no longer rely on this exchange. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -91886,11 +92784,12 @@ export interface operations {
                 scope_id?: string;
                 /**
                  * @description The instant to count at, so the summary describes the same moment as an evaluation
-                 *     read beside it (its `context.evaluated_at`). Omitted means now. A future instant is
-                 *     refused, since nothing has happened by then to count. It bounds each handoff's state,
-                 *     submitter and reason, and which meetings existed. The recipient, whether that
-                 *     recipient can still act, team membership and a meeting's status keep no history, so
-                 *     they read as they stand now. An `as_of` far in the past is not a historical report.
+                 *     read moments earlier (its `context.evaluated_at`). Omitted means now. It pairs two
+                 *     reads; it is not a historical report. A future instant is refused (`future`), and so
+                 *     is one more than 15 minutes before now (`too_old`); a client that is refused reads
+                 *     again at a fresh instant. It bounds each handoff's state, submitter and reason, and
+                 *     which meetings existed. The recipient, whether that recipient can still act, team
+                 *     membership and a meeting's status keep no history, so they read as they stand now.
                  */
                 as_of?: string;
             };
@@ -91929,8 +92828,10 @@ export interface operations {
                 limit?: number;
                 /**
                  * @description The instant to list at, so the rows describe the same moment as a summary read beside
-                 *     them (its `as_of`). Omitted means now; a future instant is refused. It bounds the same
-                 *     facts as the summary's `as_of`: the recipient and team membership read as they stand now.
+                 *     them (its `as_of`). Omitted means now. It is refused on the same terms as the
+                 *     summary's `as_of`: a future instant (`future`), or one more than 15 minutes before
+                 *     now (`too_old`). It bounds the same facts, and the recipient and team membership read
+                 *     as they stand now.
                  */
                 as_of?: string;
             };
@@ -93354,6 +94255,14 @@ export interface operations {
             query?: {
                 /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
+                /**
+                 * @description Opaque position from a prior answer's `next_cursor`, which resumes the ranking after
+                 *     the last account returned. A cursor that names no position in this ranking, such
+                 *     as one from another route, is refused with 422.
+                 *     The ranking is by live connection counts, so an import between two pages can move
+                 *     an account across the cut: re-read from the top to see the network as it is now.
+                 */
+                cursor?: string;
             };
             header?: never;
             path?: never;
@@ -93421,6 +94330,63 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    getRetainedEmailSignature: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The retained signature and its owner. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RetainedEmailSignature"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    saveRetainedEmailSignature: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveRetainedEmailSignatureRequest"];
+            };
+        };
+        responses: {
+            /** @description The retained signature and its owner. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RetainedEmailSignature"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
         };
     };

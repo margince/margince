@@ -17,6 +17,7 @@ import { Badge } from "../design-system/atoms";
 import { useHoverIntent } from "../design-system/hoverintent";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
+import { useDisabledCoreFeatures } from "../lib/corefeatures";
 import { navigate, type Route, routeHash } from "../lib/router";
 import {
   currentClaim,
@@ -27,9 +28,10 @@ import {
   type NavSection,
   type NavTrailLevel,
   navEntryHref,
-  navLevelRoute,
   railTrail,
+  walkUpTarget,
 } from "./nav";
+import { type TipState, useRowTip } from "./navrowtip";
 
 // ONE navigation level, whatever its depth. The rail's ten destinations and the
 // entries of a section drilled into from them render through this, so the two
@@ -128,17 +130,6 @@ export function useNavWalk(route: Route, remembers: boolean): NavWalkStore {
   return walk;
 }
 
-// The address the way back leads to. Below the section's own level it is the
-// entry the reader drilled through — that entry's own address is what names the
-// shallower level. At the section's own level there is no address above it
-// INSIDE the section, so the walk leaves: back to where the reader came in from.
-function walkUpTarget(parent: NavTrailLevel | undefined, origin: Route): Route {
-  if (!parent || parent.path.length === 0 || !parent.activeId) {
-    return origin;
-  }
-  return navLevelRoute(parent.path, parent.activeId);
-}
-
 /**
  * The level the sidebar is showing, and the two ways a reader moves between
  * levels.
@@ -155,7 +146,8 @@ export function useNavLevel(
   container: RefObject<HTMLElement | null>,
   onNavigate: () => void,
 ) {
-  const trail = railTrail(route, section);
+  const disabled = useDisabledCoreFeatures();
+  const trail = railTrail(route, section, disabled);
   const depth = trail.length - 1;
   const shown = trail[depth];
   if (shown === undefined)
@@ -178,7 +170,7 @@ export function useNavLevel(
   // direction that drops focus to <body> without saying so, so they are counted
   // here rather than left to be discovered one at a time.
   const onWalkUp = () => {
-    const target = walkUpTarget(parent, walk.origin());
+    const target = walkUpTarget(parent, walk.origin(), disabled);
     walk.claim(routeHash(target));
     navigate(target);
   };
@@ -220,12 +212,6 @@ function drawsRow(level: NavTrailLevel, rows: NavRows, id: string): boolean {
   return (level.barIds?.has(id) ?? false) === (rows === "bar");
 }
 
-type TipState = Readonly<{
-  collapsed: boolean;
-  tip: string | null;
-  onTip: (key: string | null, by?: "pointer" | "focus") => void;
-}>;
-
 function NavLevelRow({
   level,
   entry,
@@ -247,11 +233,12 @@ function NavLevelRow({
   const label = entryLabel(entry, locale, t);
   const active = level.activeId === entry.id;
   const key = navTipKey(level, entry.id);
+  const tip = useRowTip(state, { key, level, id: entry.id, label });
   // The rail's tips wait for the pointer to settle like every other popover.
   // A rail crossed on the way to the work column fired one tip per row it
   // passed, which read as the rail flickering rather than as a page answering.
   const hover = useHoverIntent(
-    () => state.onTip(key, "pointer"),
+    () => tip.raise("pointer"),
     () => state.onTip(null),
   );
   return (
@@ -262,7 +249,7 @@ function NavLevelRow({
       aria-current={active ? currentClaim(level) : undefined}
       onPointerEnter={hover.onPointerEnter}
       onPointerLeave={hover.onPointerLeave}
-      onFocus={() => state.onTip(key, "focus")}
+      onFocus={() => tip.raise("focus")}
       onBlur={() => state.onTip(null)}
       onClick={() => onSelect(entry)}
     >
@@ -284,9 +271,9 @@ function NavLevelRow({
           row and never tears it away mid-read (WCAG 1.4.13, hoverable). A
           sibling could not manage that without making the wrapper itself
           interactive. */}
-      {state.collapsed && state.tip === key && (
+      {tip.text !== null && state.tip === key && (
         <span className="navtip" role="tooltip">
-          {label}
+          {tip.text}
         </span>
       )}
     </AppLink>

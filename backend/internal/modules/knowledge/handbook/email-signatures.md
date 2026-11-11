@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/settings/settingssignaturerow.tsx frontend/src/features/mail/composesignoff.tsx backend/internal/modules/contacts/emailsignature.go backend/internal/modules/activities/signature.go backend/internal/modules/activities/signaturetemplate.go frontend/src/features/settings/legalentityeditor.tsx -->
+<!-- describes: frontend/src/features/settings/retainedsignature.tsx backend/internal/modules/contacts/retainedsignature.go frontend/src/features/settings/settingssignaturerow.tsx frontend/src/features/mail/composesignoff.tsx backend/internal/modules/contacts/emailsignature.go backend/internal/modules/activities/signature.go backend/internal/modules/activities/signaturetemplate.go frontend/src/features/settings/legalentityeditor.tsx -->
 # Your email signature
 
 Open **Settings → Account → Edit signature**. Choose **Plain text** to write a
@@ -30,3 +30,20 @@ also has a formatted version when the signature uses HTML.
 
 The sign-off comes above any required notice and the unsubscribe footer. An email
 an agent sends carries no sign-off. AI drafts never add one.
+
+## Review a retained signature for an inactive member
+
+A **Manual privacy review needed** notification opens the retained signature it
+names. A privacy controller can read its plain text, HTML, title and phone, then
+edit them and choose the page's **Save**. Opening it keeps the original text.
+The preview shows the saved HTML with images from other sites and scripts removed.
+
+A controller needs a full seat, an Admin or Ops role, and access to read and erase
+all contacts without hidden fields. A read-only seat cannot review it. The owner
+must not be an active human member; their signature becomes private again
+if they become active. Your own signature stays separate from this review.
+
+If another controller changes a field you did not edit, Margince keeps their change when saving
+yours. If you both changed the same field, your draft stays. Review **Latest saved version**, then
+choose **Use latest version** or **Keep my draft** before saving again. Keeping your draft replaces
+the displayed fields with your values. Saving a retained signature does not restore an archived signature.

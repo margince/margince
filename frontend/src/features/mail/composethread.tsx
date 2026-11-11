@@ -128,7 +128,7 @@ export function useRecentConversations(
             query: {
               entity_type: entityType,
               entity_id: entityId,
-              kind: "email",
+              kind: ["email"],
               limit: SCANNED,
               ...(pageParam ? { cursor: pageParam } : {}),
               ...(term ? { q: term } : {}),

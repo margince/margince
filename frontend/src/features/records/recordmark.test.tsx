@@ -83,6 +83,7 @@ const noMore = { next_cursor: null, has_more: false };
 
 const dana = {
   contact_id: "p-1",
+  attachable: true,
   full_name: "Dana Buyer",
   title: "VP Procurement",
   strength: { score: 40, bucket: "moderate", factors: {}, inbound_90d: 1 },
@@ -129,7 +130,9 @@ describe("a record's mark", () => {
     );
     render(<CompanyScreen id={company.id} />);
     // The best route in names her too, so the card is one of several links.
-    await screen.findAllByRole("link", { name: danaCarded.full_name });
+    await screen.findAllByRole("link", {
+      name: /^(DB\s*)?Dana Buyer-Lang$/,
+    });
     expect(meshBeside(danaCarded.full_name, ".record-card")).toBe(
       meshKeyedOn(dana.contact_id),
     );

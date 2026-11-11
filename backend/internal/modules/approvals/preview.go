@@ -58,7 +58,7 @@ func (s *Service) checkPreview(ctx context.Context, a row, edited json.RawMessag
 	if s.preview == nil {
 		return nil
 	}
-	proposal, err := editedProposal(a, edited, s.now())
+	proposal, err := editedProposal(ctx, a, edited, s.now())
 	if err != nil {
 		return err
 	}
@@ -71,8 +71,8 @@ func (s *Service) checkPreview(ctx context.Context, a row, edited json.RawMessag
 
 // editedProposal is a in the contract shape, carrying edited in place of
 // the staged call when a decision edits it.
-func editedProposal(a row, edited json.RawMessage, now time.Time) (crmcontracts.Approval, error) {
-	proposal := wire(a, now)
+func editedProposal(ctx context.Context, a row, edited json.RawMessage, now time.Time) (crmcontracts.Approval, error) {
+	proposal := wire(ctx, a, now)
 	if len(edited) > 0 {
 		change, err := diffhash.DecodeObject(edited)
 		if err != nil {
@@ -124,7 +124,7 @@ func (s *Service) readPlans(ctx context.Context, rows []crmcontracts.Approval, s
 			return err
 		}
 		rows[i].Preview = preview
-		read := approvalplan.PreviewRead{Preview: preview, BuiltAsAgent: s.runsAsAgent(stagedByRow(subjects[i])), HeldBack: heldBack}
+		read := approvalplan.PreviewRead{Preview: preview, BuiltAsAgent: s.runsAsAgent(subjects[i]), HeldBack: heldBack}
 		if rows[i].Status != crmcontracts.ApprovalStatusPending {
 			if read.FootprintHidden, err = s.pastPlanHidden(ctx, rows[i], subjects[i]); err != nil {
 				return err
@@ -185,7 +185,7 @@ func previewCoTargetPinned(subject row, proposal crmcontracts.Approval) bool {
 	switch subject.Kind {
 	case "advance_deal", "progress_deal":
 		entityType, field = "stage", "to_stage_id"
-	case "merge_tags":
+	case previewMergeTags:
 		entityType, field = "tag", "into_tag_id"
 	default:
 		return true
@@ -227,4 +227,7 @@ const (
 	previewIncomplete = "incomplete"
 )
 
-const previewMergeRecords = "merge_records"
+const (
+	previewMergeRecords = "merge_records"
+	previewMergeTags    = "merge_tags"
+)

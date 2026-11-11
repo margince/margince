@@ -67,6 +67,7 @@ BENCH_DB_NAME                ?= margince_bench
 BENCH_DAILY_DB_NAME          ?= margince_bench_daily
 BENCH_DAILY_TEST             ?= TestDailyUseBudgets
 BENCH_BACKLOG_DB_NAME        ?= margince_bench_backlog
+BENCH_HOME_DB_NAME           ?= margince_bench_home
 export MARGINCE_TEST_APP_DSN ?= postgres://margince_app:margince_app_dev@localhost:$(PG_PORT)/$(TEST_DB_NAME)
 export MARGINCE_TEST_REDIS    ?= localhost:$(REDIS_PORT)
 export MARGINCE_TEST_REDIS_DB ?= 15
@@ -116,7 +117,7 @@ TEST_EXEC_FLAGS = $(if $(TEST_EXEC),-count=1 -exec $(TEST_EXEC))
 
 .DEFAULT_GOAL := help
 
-.PHONY: perfdoc config-gen help check check-static build test test-cached test-uncached test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe ai-eval test-db-up test-it test-roles test-integration-serial lint lint-base lint-strict lint-modules lint-tool arch-lint vet gen gen-workflow mcp-apps-vocab drift composition check-composition test-extensions db-up db-init db-wait seed-reset seed-dev-db migrate migrate-up migrate-down run psql redis-cli tidy dev infra-down infra-logs infra-reset clean vuln vendor-live tools tools-go hooks
+.PHONY: perfdoc config-gen help check check-static build fetch-test-deps test test-cached test-uncached test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe ai-eval test-db-up test-it test-roles test-integration-serial lint lint-base lint-strict lint-modules lint-tool arch-lint vet gen gen-workflow mcp-apps-vocab drift composition check-composition test-extensions db-up db-init db-wait seed-reset seed-dev-db migrate migrate-up migrate-down run psql redis-cli tidy dev infra-down infra-logs infra-reset clean vuln vendor-live tools tools-go hooks
 
 help: ## List targets with their descriptions (the default goal)
 	@grep -hE '^[a-zA-Z][a-zA-Z0-9_-]*:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-18s %s\n", $$1, $$2}'
@@ -226,6 +227,16 @@ test-extensions: composition ## Every enabled extension's own test lane (each un
 build: composition ## Compile every package (composed workspace)
 	$(GOWORK_COMPOSED) $(GO) build ./...
 
+# fetch-test-deps resolves what only a TAGGED TEST imports, which `build` never
+# reaches: `go build ./...` reads no `_test.go`, so a module imported from one
+# is still missing after it.
+#
+# The clock-drift lane is why this is a target. It downloads at the real date
+# because a runner 200 days ahead verifies no certificate, and a fetch there
+# fails as `[setup failed]` on a package that reads as a test finding.
+fetch-test-deps: composition ## Download what the tagged suites import, nothing else
+	$(GOWORK_COMPOSED) $(GO) list -tags=integration -deps -test ./... > /dev/null
+
 vet: composition ## Run go vet over every package, untagged (composed workspace)
 	# UNTAGGED, and only untagged. The tagged lanes are vetted by `make lint`:
 	# .golangci.yml carries every build tag that gates a file in this tree and
@@ -321,7 +332,7 @@ e2e-siteread: composition ## Deep-read quality floor vs the real gradion.com (pa
 # JUDGE is a SECOND model on purpose: one grading itself is certified by
 # construction. ONE judge grades every task of a run — a judge swap flips
 # verdicts on the same candidate — and a task whose candidate is the judge is
-# refused before the first paid call. The default is claude-sonnet-4-6 through
+# refused before the first paid call. The default is claude-sonnet-5-5 through
 # `claude -p` on a Claude Code subscription (CLAUDE_CODE_OAUTH_TOKEN), which
 # costs nothing per run; a run certifying a Claude candidate names another judge.
 # The defaults sit on the exported names, so an operator's environment wins;
@@ -330,7 +341,7 @@ e2e-siteread: composition ## Deep-read quality floor vs the real gradion.com (pa
 # the OpenRouter host only when neither BASE_URL nor MARGINCE_AICERT_BASE_URL is
 # set, and otherwise the lane hands it the candidate's broker. A native vendor
 # judge, and a claude_cli one (the CLI dials its own host), leaves it empty.
-AICERT_DEFAULT_JUDGE           := claude_cli:claude-sonnet-4-6
+AICERT_DEFAULT_JUDGE           := claude_cli:claude-sonnet-5-5
 MARGINCE_AICERT_ROUTING        ?=
 MARGINCE_AICERT_MODEL          ?=
 MARGINCE_AICERT_BASE_URL       ?=
@@ -359,6 +370,8 @@ endif
 # it is scored, so a run cut short by a dropped connection is restarted without
 # paying for the runs it already made. A journaled run is replayed only on the
 # same bindings, profile, corpus and scenario stamp, and only within six hours.
+# A replay keeps what the models said and grades it with the code that runs now,
+# so a rebuild after an unrelated change still replays.
 # ON by default for the same reasons TRACE is, plus one of its own: the run you
 # most need it for is the long one nobody thought to enable it before.
 # `RESUME=<dir>` picks a directory; `RESUME=` (empty) turns it off, which is how
@@ -367,6 +380,16 @@ RESUME ?= 1
 # STALE_ONLY skips a model whose committed record is already current for this
 # build, so a sweep pays only for what changed. `STALE_ONLY=0` re-measures it.
 STALE_ONLY ?= 1
+# PARALLEL is how many runs of one task are in flight at once, each a candidate
+# call, its grading and its judge calls. The record is the one a sequential run
+# builds; PARALLEL=1 runs them one after another.
+PARALLEL ?= 4
+# SITE= and SCENARIO= (a Go regular expression on the scenario name) measure part
+# of each task. The rows they measure replace their own in the committed record
+# and the verdict is recomputed from every row; a task with no committed record
+# is refused rather than written from the part.
+SITE ?=
+SCENARIO ?=
 ifeq ($(RESUME),1)
 override RESUME := $(CURDIR)/../.tmp/aicert/resume
 endif
@@ -402,7 +425,7 @@ AICERT_TIMEOUT ?= 90m
 # than 5 — about 1.4 calls a run, more on a model that scores low. A
 # borderline scenario extends from 3 runs to at most 9, so one scenario costs at
 # most 9 candidate and 27 judge calls; a settled one 3 runs and about 4.
-e2e-ai: composition ## Certify AI tasks (paid: real model + network; opt-in). ROUTING=config/margince.dev.yaml certifies what a deployment binds, per task; or MODEL=prov:model for one candidate. One judge grades the run: JUDGE=claude_cli:claude-sonnet-4-6 by default, through `claude -p` on CLAUDE_CODE_OAUTH_TOKEN (refuses Claude candidates); JUDGE=openai_compatible:anthropic/claude-sonnet-4.6 JUDGE_UPSTREAM='{}' pays OpenRouter for the same model, JUDGE=gemini:gemini-3.1-flash-lite where the run certifies no Gemini model. BYOK key auto-loaded from .env.local. TASK=x RUNS=<n> BASE_URL=... UPSTREAM='{"quantizations":["bf16"]}' JUDGE_UPSTREAM='{}' (the broker's own routing for the judge) PROFILE=cloud_frontier (ignored under ROUTING) AICERT_TIMEOUT=90m RESUME= to re-pay for every run. Under ROUTING= every distinct rung of a task's ladder is certified, fallback included; STALE_ONLY=0 re-measures records already current
+e2e-ai: composition ## Certify AI tasks (paid: real model + network; opt-in). ROUTING=config/margince.dev.yaml certifies what a deployment binds, per task; or MODEL=prov:model for one candidate. One judge grades the run: JUDGE=claude_cli:claude-sonnet-5-5 by default, through `claude -p` on CLAUDE_CODE_OAUTH_TOKEN (refuses Claude candidates; MAX_THINKING_TOKENS=<n> caps its thinking); JUDGE=openai_compatible:anthropic/claude-sonnet-4.6 JUDGE_UPSTREAM='{}' pays OpenRouter for the same model, JUDGE=gemini:gemini-3.1-flash-lite where the run certifies no Gemini model. BYOK key auto-loaded from .env.local. TASK=x RUNS=<n> BASE_URL=... UPSTREAM='{"quantizations":["bf16"]}' JUDGE_UPSTREAM='{}' (the broker's own routing for the judge) PROFILE=cloud_frontier (ignored under ROUTING) AICERT_TIMEOUT=90m RESUME= to re-pay for every run. PARALLEL=4 runs of a task in flight at once (1 = one after another). SITE=<variant> and SCENARIO=<regexp> measure part of a task and merge its rows into the committed record. Under ROUTING= every distinct rung of a task's ladder is certified, fallback included; STALE_ONLY=0 re-measures records already current
 	$(LOAD_ENV_LOCAL) MARGINCE_AICERT=1 MARGINCE_AICERT_TASK=$(TASK) \
 	  MARGINCE_AICERT_ROUTING=$(if $(ROUTING),$(CURDIR)/../$(ROUTING),$(MARGINCE_AICERT_ROUTING)) \
 	  MARGINCE_AICERT_MODEL=$(if $(MODEL),$(MODEL),$(MARGINCE_AICERT_MODEL)) \
@@ -412,6 +435,7 @@ e2e-ai: composition ## Certify AI tasks (paid: real model + network; opt-in). RO
 	  MARGINCE_AICERT_UPSTREAM='$(if $(UPSTREAM),$(UPSTREAM),$(MARGINCE_AICERT_UPSTREAM))' \
 	  MARGINCE_AICERT_JUDGE_UPSTREAM='$(JUDGE_UPSTREAM)' \
 	  MARGINCE_AICERT_RUNS=$(RUNS) MARGINCE_AICERT_TRACE="$(TRACE)" MARGINCE_AICERT_RESUME="$(RESUME)" MARGINCE_AICERT_STALE_ONLY=$(STALE_ONLY) \
+	  MARGINCE_AICERT_PARALLEL=$(PARALLEL) MARGINCE_AICERT_SITE='$(SITE)' MARGINCE_AICERT_SCENARIO='$(SCENARIO)' \
 	  $(GOWORK_COMPOSED) $(GO) test -tags e2e_llm ./internal/compose/aicert/ -run TestE2ECertify -v -count=1 -timeout $(AICERT_TIMEOUT)
 
 e2e-ai-report: ## Print the certification readiness report — every shipped site, its band, and whether its record is current, stale or absent — from internal/compose/aicert/{corpus,records}/.
@@ -490,8 +514,10 @@ LANE_BUDGET_ENV = $(shell bash -c 'cd .. && source scripts/lib-testdb.sh && decl
 
 test-integration-serial: composition ## Escape hatch: the old sequential lane, all packages on the shared margince_test DB (debugging a parallel-isolation issue).
 	@$(GOWORK_COMPOSED) bash -c 'cd .. && source scripts/lib-testdb.sh && parse_test_dsn && ensure_template'
-	@log=$$(mktemp); st=$$(mktemp); \
-	{ $(GOWORK_COMPOSED) env $(LANE_BUDGET_ENV) $(GO) test -tags integration -p 1 -v ./... 2>&1; echo $$? >"$$st"; } | tee "$$log"; \
+	@log=$$(mktemp); st=$$(mktemp); manifest=$$(mktemp); \
+	trap 'rm -f "$$manifest"' EXIT; \
+	$(GOWORK_COMPOSED) $(GO) run ./cmd/migrate extension-manifest >"$$manifest" || exit $$?; \
+	{ $(GOWORK_COMPOSED) env MARGINCE_TEST_EXTENSION_MANIFEST="$$manifest" $(LANE_BUDGET_ENV) $(GO) test -tags integration -p 1 -v ./... 2>&1; echo $$? >"$$st"; } | tee "$$log"; \
 	code=$$(cat "$$st"); rm -f "$$st"; \
 	if [ "$$code" -ne 0 ]; then rm -f "$$log"; exit "$$code"; fi; \
 	if grep -q -- '--- SKIP' "$$log"; then \
@@ -598,25 +624,36 @@ bench-capture: composition ## CAP-PARAM-1 capture-to-timeline latency, 60s p95 (
 bench-dispatch: composition ## AC-W2 workflow trigger->dispatch p95, 200ms over the seeded dataset (needs db-up)
 	$(GOWORK_COMPOSED) $(GO) test -tags 'integration bench' -run TestWorkflowTriggerToDispatchP95HoldsOnTheSeededDataset -count=1 -v -timeout 15m ./internal/compose/integration
 
+# The test DSNs for a database bench_db made, as variable assignments that go in
+# front of `go test`. cache_statement is pgx's default, which the API and test
+# pools both keep; named because without it no generic plan can appear.
+BENCH_DSN_ENV = sep="?"; case "$$BENCH_APP_DSN" in *\?*) sep="&";; esac; \
+  MARGINCE_TEST_DSN="$$BENCH_OWNER_DSN" MARGINCE_TEST_APP_DSN="$${BENCH_APP_DSN}$${sep}default_query_exec_mode=cache_statement"
+
 # Leaves its database behind: the corpus and its plans are what you debug a slow
 # row with, and bench-daily-clean is the only thing that drops it. A failed run
 # has still written its record but stops before perfdoc; `make perfdoc` renders it.
-# cache_statement is pgx's default, which the API and test pools both keep; named
-# here because without it no generic plan can appear. `|| exit` stops a failed bench_db.
+# `|| exit` stops a failed bench_db.
 bench-daily: composition ## Daily-use screens for a rep and a manager over HTTP, mid-market tier; records and re-renders the budget pages (needs db-up; leaves margince_bench_daily, see bench-daily-clean; after a failed run, make perfdoc)
 	@$(GOWORK_COMPOSED) bash -c '$(GO) test -tags "integration bench" -list "^$(BENCH_DAILY_TEST)$$" ./internal/compose/integration | grep -Fx "$(BENCH_DAILY_TEST)" >/dev/null || { echo "Unknown benchmark test: $(BENCH_DAILY_TEST)" >&2; exit 1; }; cd .. && source scripts/lib-testdb.sh && parse_test_dsn && bench_db $(BENCH_DAILY_DB_NAME) && cd backend || exit; \
-	  sep="?"; case "$$BENCH_APP_DSN" in *\?*) sep="&";; esac; \
-	  MARGINCE_TEST_DSN="$$BENCH_OWNER_DSN" MARGINCE_TEST_APP_DSN="$${BENCH_APP_DSN}$${sep}default_query_exec_mode=cache_statement" \
+	  $(BENCH_DSN_ENV) \
 	  $(GO) test -tags "integration bench" -run "^$(BENCH_DAILY_TEST)$$" -count=1 -v -timeout 120m ./internal/compose/integration'
 	@$(MAKE) --no-print-directory perfdoc
+
+# Home's API budget on its own small corpus. It records nothing and drops its
+# database at the end, so a run leaves no state behind.
+home-budget-api: composition ## Home's reads for the heaviest owner, cold and warm, against fixed p95 budgets (needs db-up; make home-budget runs it)
+	@$(GOWORK_COMPOSED) bash -c 'cd .. && source scripts/lib-testdb.sh && parse_test_dsn && bench_db $(BENCH_HOME_DB_NAME) && cd backend || exit; \
+	  $(BENCH_DSN_ENV) \
+	  $(GO) test -tags "integration bench" -run "^TestHomeBudget$$" -count=1 -v -timeout 20m ./internal/compose/integration; st=$$?; \
+	  cd .. && db_admin drop-db --name $(BENCH_HOME_DB_NAME) >/dev/null || st=1; exit $$st'
 
 # The Worklist over a synthetic backlog past every lane bound, on a small daily
 # corpus: the stage 0 measurement of the Worklist redesign. It records nothing.
 # MARGINCE_BENCH_BACKLOG_SIZES picks the candidate counts (default 100,1000,10000).
 bench-worklist-backlog: composition ## Worklist first page, walk and whole-source enumeration over a growing synthetic backlog (needs db-up; leaves margince_bench_backlog)
 	@$(GOWORK_COMPOSED) bash -c 'cd .. && source scripts/lib-testdb.sh && parse_test_dsn && bench_db $(BENCH_BACKLOG_DB_NAME) && cd backend || exit; \
-	  sep="?"; case "$$BENCH_APP_DSN" in *\?*) sep="&";; esac; \
-	  MARGINCE_TEST_DSN="$$BENCH_OWNER_DSN" MARGINCE_TEST_APP_DSN="$${BENCH_APP_DSN}$${sep}default_query_exec_mode=cache_statement" \
+	  $(BENCH_DSN_ENV) \
 	  $(GO) test -tags "integration bench" -run "^TestDailyWorklistBacklog$$" -count=1 -v -timeout 180m ./internal/compose/integration'
 	@$(GO) test -run '^$$' -bench '^BenchmarkRankingAWholeBacklog$$' -benchmem ./internal/compose/attention
 
@@ -802,12 +839,11 @@ drift: ## Fail when a committed generated file drifted from what its generator p
 	# page went on publishing an older machine's numbers under a date no record
 	# held. A page that is merely stale says so; one that disagrees with its own
 	# source reads as current and is believed.
-	git diff --exit-code -- '*_gen.go' internal/compose/agentbundle/agentcontract_gen.yaml internal/compose/agentbundle/agentindex_gen.txt internal/contracts/ ../config/margince.schema.json ../config/margince.example.yaml ../config/margince.defaults.yaml ../.env.example ../docs/reference/configuration.md '../extensions/*/manifest.generated.json' internal/modules/agents/apps/forbidden.json internal/modules/agents/apps/actions.json 'internal/modules/knowledge/handbook/*.md' ../docs/reference/performance-budgets.md ../docs/reference/benchmark.md ../docs/reference/ai-provider-outages.md
-	# git diff ignores UNTRACKED files, so a new (or gen-recreated after a
-	# committed deletion) manifest that was never `git add`ed would slip past
-	# the diff above — fail explicitly when a generated manifest is uncommitted.
-	@u="$$(git ls-files --others --exclude-standard -- '../extensions/*/manifest.generated.json')"; \
-		[ -z "$$u" ] || { echo "drift: uncommitted generated manifest(s):" >&2; echo "$$u" >&2; exit 1; }
+	git diff --exit-code -- '*_gen.go' '*_gen.json' internal/compose/agentbundle/agentcontract_gen.yaml internal/compose/agentbundle/agentindex_gen.txt internal/contracts/ ../config/margince.schema.json ../config/margince.example.yaml ../config/margince.defaults.yaml ../.env.example ../docs/reference/configuration.md '../extensions/*/manifest.generated.json' internal/modules/agents/apps/forbidden.json internal/modules/agents/apps/actions.json 'internal/modules/knowledge/handbook/*.md' ../docs/reference/performance-budgets.md ../docs/reference/benchmark.md ../docs/reference/ai-provider-outages.md
+	# Untracked generated outputs are absent from git diff, including files a
+	# generator recreates after a committed deletion.
+	@u="$$(git ls-files --others --exclude-standard -- '../extensions/*/manifest.generated.json' '*_gen.json')"; \
+		[ -z "$$u" ] || { echo "drift: uncommitted generated artifact(s):" >&2; echo "$$u" >&2; exit 1; }
 	# Same blind spot, same guard: a handbook page copied in by handbook-embed
 	# and never `git add`ed is untracked, so the diff above sees nothing while
 	# the binary would ship a page no reviewer read.

@@ -76,6 +76,7 @@ type Evaluation struct {
 
 // Evaluator shares calculations across transport and publication boundaries.
 type Evaluator interface {
+	FeaturesAvailable(context.Context, crmcontracts.ReportingSelection) bool
 	ProjectFrozen(crmcontracts.ReportingEvaluation, []Fact) (crmcontracts.ReportingEvaluation, error)
 	Catalog(context.Context, textlang.Lang) (crmcontracts.ReportingCatalog, error)
 	Evaluate(context.Context, pgx.Tx, crmcontracts.ReportingSelection, crmcontracts.ReportingFramework, time.Time) (Evaluation, error)

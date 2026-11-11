@@ -82,6 +82,7 @@ ready before we need it, because the first date comes 24 hours after we learn of
   Worklist before a repair. It changes nothing.
 - [how-to/rename-key-named-deals.md](how-to/rename-key-named-deals.md): rename imported deals whose name
   is the source key. Test with a dry run first.
+- [how-to/turn-off-core-features.md](how-to/turn-off-core-features.md): turn off core features in the file.
 - [how-to/operate-reporting.md](how-to/operate-reporting.md): run sales reports and their schedules.
 - [how-to/pre-register-a-forecast-evaluation.md](how-to/pre-register-a-forecast-evaluation.md): set the values
   a new forecast model is tested against, before it is scored.
@@ -136,6 +137,10 @@ ready before we need it, because the first date comes 24 hours after we learn of
   which part.
 - [run-a-restore-drill.md](how-to/run-a-restore-drill.md): test that a copy of your data can be
   used, and record the time it takes.
+- [run-from-container-images.md](how-to/run-from-container-images.md): what each image holds, and
+  which part starts first.
+- [watch-a-running-installation.md](how-to/watch-a-running-installation.md): what each program can
+  measure, and how to watch it.
 - [build-a-custom-margince.md](how-to/build-a-custom-margince.md): which extension code a build
   holds, and how to compose one.
 - [certify-an-ai-model.md](how-to/certify-an-ai-model.md): test a model against a task before you use it
@@ -348,6 +353,8 @@ A generated page, and each `perfbench/` record, says so in its first line. Do no
 #### Build and merge
 
 - [ci-pipeline.md](explanation/ci-pipeline.md): how the merge check runs on GitHub.
+- [ci-image.md](explanation/ci-image.md): the image some merge check jobs run in, when it can be pulled,
+  and its pins.
 
 ### Run it in production
 

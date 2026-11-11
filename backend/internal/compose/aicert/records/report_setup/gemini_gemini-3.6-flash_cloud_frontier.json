@@ -1,0 +1,129 @@
+{
+  "task": "report_setup",
+  "provider": "gemini",
+  "served_model": "gemini-3.6-flash",
+  "env_class": "cloud_frontier",
+  "prompt_version": "p36d82e96a5f1530f86b3c1bbac2816ec",
+  "corpus_version": "v1",
+  "verdict": "certified",
+  "runs": 12,
+  "passed": 12,
+  "reliability": 1,
+  "reported_accepted": 12,
+  "reported_wrong_answer": 0,
+  "reported_invalid": 0,
+  "reported_abstained": 0,
+  "certified_scope": "full_invocation",
+  "context_applied": false,
+  "context_scopes": null,
+  "judge_score_p50": 96,
+  "judge_score_min": 95,
+  "latency_p50": 2070,
+  "latency_p95": 2502,
+  "mean_tokens": 1052,
+  "mean_tokens_in": 862,
+  "mean_tokens_out": 189,
+  "mean_cached_tokens": 0,
+  "mean_cache_write_tokens": 0,
+  "est_cost_microusd": 1355,
+  "judge_served_model": "claude-sonnet-5-5",
+  "judge_provider": "claude_cli",
+  "self_judged": false,
+  "served_identity_source": "response",
+  "thinking_level": "low",
+  "ran_at": "2026-11-10T09:18:42Z",
+  "scenarios": [
+    {
+      "scenario": "custom_report_setup_names_back_a_measure_it_cannot_express",
+      "site": "custom_report_setup",
+      "stamp": "b204d757a75abab868ada3364f90cb219dfbb31b032c98448369538bdd4eabe8632f9736ec9f68073b0bfcb8f1f7130e2d2340030750b6fee426513f50aa0b133932271c32f456eaf28f78ee30b655745400a51713b0c0e7024394dfdb0cd4d1",
+      "verdict": "certified",
+      "judge_band": "certified",
+      "runs": 3,
+      "passed": 3,
+      "judge_scores": [
+        96,
+        95,
+        96
+      ],
+      "bands": {
+        "certified_min": 70,
+        "degraded_min": 50,
+        "floor": 40
+      },
+      "reported_accepted": 3,
+      "reported_wrong_answer": 0,
+      "reported_invalid": 0,
+      "reported_abstained": 0
+    },
+    {
+      "scenario": "custom_report_setup_picks_metrics_and_the_charts_they_draw",
+      "site": "custom_report_setup",
+      "stamp": "3fec730ae4e5e137ce0fbcbc9b36e42a2cbdb780937f5c19714baaf8928ef586e5e94b57758dbf0da945962643bc9b11287d468da71d51c08df79b466b49b8d936701601d2d17e854d9619e523f76a4ece81d323bf8bf35fb2fce9fe14759e45",
+      "verdict": "certified",
+      "judge_band": "certified",
+      "runs": 3,
+      "passed": 3,
+      "judge_scores": [
+        97,
+        97,
+        97
+      ],
+      "bands": {
+        "certified_min": 70,
+        "degraded_min": 50,
+        "floor": 40
+      },
+      "reported_accepted": 3,
+      "reported_wrong_answer": 0,
+      "reported_invalid": 0,
+      "reported_abstained": 0
+    },
+    {
+      "scenario": "initiative_setup_asks_about_a_target_the_words_leave_open",
+      "site": "initiative_setup",
+      "stamp": "3c512c8d7bfa57b4e2161bcf52e96399ec854db673c2585f38fe244d1b0807a598e416ddb745fdfd8e231abe6b761699105c288beacddefdad58184d0cb03464fb85c268a5cb9e874d260900733a725268514217972f279cb91056e2f00bc774",
+      "verdict": "certified",
+      "judge_band": "certified",
+      "runs": 3,
+      "passed": 3,
+      "judge_scores": [
+        96,
+        95,
+        96
+      ],
+      "bands": {
+        "certified_min": 70,
+        "degraded_min": 50,
+        "floor": 40
+      },
+      "reported_accepted": 3,
+      "reported_wrong_answer": 0,
+      "reported_invalid": 0,
+      "reported_abstained": 0
+    },
+    {
+      "scenario": "initiative_setup_reads_a_goal_with_a_target_and_deadline",
+      "site": "initiative_setup",
+      "stamp": "3d85d85aa3e5b4ab853daf59ea2fd92d9bcade4b369e6af2da65d73fcf3cbf9f8cc24741e122d44ba5dce9788ae3fab81c2b93392c203472a7346e2e32ed30723cd5c7f6b39bf2c64d7d13538e657d81fa62f53ccf349a7fd698cd33d6f772ca",
+      "verdict": "certified",
+      "judge_band": "certified",
+      "runs": 3,
+      "passed": 3,
+      "judge_scores": [
+        96,
+        96,
+        97
+      ],
+      "bands": {
+        "certified_min": 70,
+        "degraded_min": 50,
+        "floor": 40
+      },
+      "reported_accepted": 3,
+      "reported_wrong_answer": 0,
+      "reported_invalid": 0,
+      "reported_abstained": 0
+    }
+  ]
+}

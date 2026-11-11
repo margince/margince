@@ -156,6 +156,7 @@ function useTagSwitch({
 
 function useProjectFiling(input: {
   activityId?: string;
+  initialProjectId?: string;
   /** The deal the message is written from, when it is one. */
   anchorDealId?: string;
   anchorProjectId?: string | null;
@@ -169,7 +170,11 @@ function useProjectFiling(input: {
   const thread = useThreadProject(input.activityId, input.open);
   // An empty string is a real answer ("None"), so unanswered is undefined.
   const filingKey = input.activityId ?? "";
-  const [picks, setPicks] = useState<Record<string, string>>({});
+  const [picks, setPicks] = useState<Record<string, string>>(() =>
+    input.initialProjectId === undefined
+      ? {}
+      : { [filingKey]: input.initialProjectId },
+  );
   const picked = picks[filingKey];
   const setPicked = useCallback(
     (next: string) => {
@@ -194,7 +199,13 @@ function useProjectFiling(input: {
   const chosen = picked ?? suggested;
   // The account path has nothing to suggest from, so a company with one live
   // project defaults to it. The two rules never fire together.
-  useSoleProjectDefault(input.projects, chosen, setPicked, filingKey);
+  const defaultProject = useCallback(
+    (next: string) => {
+      if (picked === undefined) setPicked(next);
+    },
+    [picked, setPicked],
+  );
+  useSoleProjectDefault(input.projects, chosen, defaultProject, filingKey);
   // A value the option list lacks shows as no choice. Writing that back would
   // race the adoption above, so it is only read.
   const offered =
@@ -243,6 +254,7 @@ function useProjectFiling(input: {
     }
   }, [open, awaiting, carried, filingKey, tag, ownTag, subject, setSubject]);
   return {
+    draftProjectId: chosen,
     projectId,
     setProjectId: chooseProject,
     /** Empty when the chosen project has no tag to offer. */
@@ -256,35 +268,52 @@ function useProjectFiling(input: {
 /**
  * The contact an address belongs to, read off the two 360s the composer already
  * holds. Addresses compare case-blind, the way a mailbox does. An address
- * neither names is no contact the composer can record anything on.
+ * neither names is no contact the composer can record anything on. Of two
+ * contacts on one address, the first the sender may attach to wins.
  */
 export function contactsByAddress(
   contact: ReturnType<typeof useContact360>["data"],
   company: ReturnType<typeof useCompany360>["data"],
 ): (address: string) => string | undefined {
-  const owners = new Map<string, string>();
-  const own = (address: string | null | undefined, contactId: string) => {
+  const owners = new Map<string, { id: string; attachable: boolean }>();
+  const own = (
+    address: string | null | undefined,
+    owner: { id: string; attachable: boolean },
+  ) => {
     const key = address?.trim().toLowerCase();
-    if (key && !owners.has(key)) owners.set(key, contactId);
+    const held = key ? owners.get(key) : undefined;
+    if (key && (!held || (owner.attachable && !held.attachable))) {
+      owners.set(key, owner);
+    }
   };
   const subject = contact?.contact;
   for (const address of subject?.emails ?? []) {
-    if (subject) own(address.email, subject.id);
+    if (subject) {
+      own(address.email, {
+        id: subject.id,
+        attachable: subject.attachable === true,
+      });
+    }
   }
   for (const member of company?.contacts?.data ?? []) {
-    own(member.primary_email, member.contact_id);
+    own(member.primary_email, {
+      id: member.contact_id,
+      attachable: member.attachable,
+    });
   }
-  return (address) => owners.get(address.trim().toLowerCase());
+  return (address) => owners.get(address.trim().toLowerCase())?.id;
 }
 
 /**
- * Who an account-started message is to: the first address in To that belongs
- * to one of the account's contacts. The draft is written for that contact, and
- * the send is linked to them. A second picker could only disagree with To.
+ * The account contact the draft is for (first in To), and those the send links.
+ * Bcc is left out: its link would show every reader whom the mail hid.
  */
 export function useAccountRecipient(
   companyId: string | undefined,
-  to: readonly string[],
+  addressed: Readonly<{
+    to: readonly string[];
+    cc: readonly string[];
+  }>,
   // The contact a verb on the account started from, offered into an empty To
   // unless the caller holds the record's own address.
   started: Readonly<{ contactId?: string; recordAddress?: string }>,
@@ -293,12 +322,29 @@ export function useAccountRecipient(
   const contacts = company.data?.contacts?.data ?? [];
   const ownerOf = contactsByAddress(undefined, company.data);
   const recipientId =
-    to.map(ownerOf).find((owner) => owner !== undefined) ?? "";
+    addressed.to.map(ownerOf).find((owner) => owner !== undefined) ?? "";
+  const attachable = new Set(
+    contacts
+      .filter((contact) => contact.attachable)
+      .map((contact) => contact.contact_id),
+  );
+  const contactIds = [
+    ...new Set(
+      [...addressed.to, ...addressed.cc]
+        .map(ownerOf)
+        // One the sender may not attach to would refuse the whole send.
+        .filter(
+          (owner): owner is string =>
+            owner !== undefined && attachable.has(owner),
+        ),
+    ),
+  ];
   const startedFrom = contacts.find(
     (contact) => contact.contact_id === started.contactId,
   );
   return {
     recipientId,
+    contactIds,
     offeredAddress:
       started.recordAddress ?? startedFrom?.primary_email ?? undefined,
     // An account with no contact leaves the draft nobody to write for.
@@ -337,6 +383,7 @@ export function useComposeRecords({
   subject,
   setSubject,
   addressed,
+  initialProjectId,
 }: Readonly<{
   open: boolean;
   isChannelReply: boolean;
@@ -349,6 +396,7 @@ export function useComposeRecords({
   setSubject: (next: string) => void;
   /** Everybody on the message: To, Cc and Bcc. */
   addressed: readonly string[];
+  initialProjectId?: string;
 }>) {
   // A channel reply's recipient is resolved on the server, so it asks nothing.
   const recipientContact = isChannelReply
@@ -381,6 +429,7 @@ export function useComposeRecords({
     anchorCompany,
   });
   const projectFiling = useProjectFiling({
+    initialProjectId,
     activityId: answering,
     anchorDealId: entityType === "deal" ? entityId : undefined,
     anchorProjectId: anchorProject.projectId,
@@ -396,7 +445,6 @@ export function useComposeRecords({
       entityType === "contact"
         ? contact.data?.contact?.full_name
         : anchorCompany.data?.company?.display_name,
-    contactOf: contactsByAddress(contact.data, anchorCompany.data),
     reachableProjects,
     projectFiling,
     // Addresses known not to arrive, warned under the fields.

@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/threadverdict"
 )
 
 // holdFromJoinedThreadTx closes a message the join moved into a held
@@ -54,6 +55,10 @@ func (s *Sink) holdFromJoinedThreadTx(ctx context.Context, tx pgx.Tx, id ids.Act
 			return nil
 		}
 		return fmt.Errorf("capture: reading the joined thread's verdict: %w", err)
+	}
+	status, err = applicableThreadVerdictTx(ctx, tx, status)
+	if err != nil {
+		return err
 	}
 	if !holdsItsMessages(status) {
 		return nil
@@ -101,13 +106,6 @@ func (s *Sink) holdFromJoinedThreadTx(ctx context.Context, tx pgx.Tx, id ids.Act
 	return nil
 }
 
-// holdsItsMessages names the verdicts under which a conversation's messages are
-// not the workspace's to read. It is bornAudience's own list, asked of a verdict
-// the join supplied rather than one the birth decision read.
 func holdsItsMessages(status string) bool {
-	switch status {
-	case VerdictHeld, VerdictUnsure, VerdictHeldByOwner, VerdictPending:
-		return true
-	}
-	return false
+	return threadverdict.HoldsMessages(status)
 }

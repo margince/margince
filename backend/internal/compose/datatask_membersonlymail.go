@@ -14,8 +14,10 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture/mailmap"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/datatask"
+	"github.com/margince/margince/backend/internal/platform/originalstore"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 // membersOnlyMailDataTask holds the stored mail between members that capture
@@ -31,7 +33,7 @@ import (
 func membersOnlyMailDataTask() datatask.Task {
 	return datatask.Task{
 		ID: "core/1792838024_members_only_mail", Version: 1,
-		Title: "Holding mail between colleagues", Requires: []string{"core/1788316744"},
+		Title: systemtext.Literal("datatask.title.core.1792838024_members_only_mail"), Requires: []string{"core/1788316744"},
 		Steps: []datatask.Step{
 			{
 				Name: "hold_members_only_mail", Limit: 200, MinLimit: 10,
@@ -52,7 +54,7 @@ func membersOnlyMailDataTask() datatask.Task {
 // a statutory hold is never read; MembersOnlyHoldable repeats that under lock.
 var membersOnlyMailFrom = `FROM activity a
   LEFT JOIN LATERAL (
-       SELECT rc.payload FROM raw_capture rc
+       SELECT ` + originalstore.SQL("rc") + ` AS payload FROM raw_capture rc
         WHERE ` + storedMailOriginal + `
         LIMIT 1) original ON ` + storedMailProvider + `
  WHERE a.restricted_at IS NULL AND ` + activities.MembersOnlyHoldable
@@ -89,6 +91,10 @@ func holdMembersOnlyMailBatch(ctx context.Context, tx pgx.Tx, in datatask.BatchI
 	var hold []ids.ActivityID
 	for _, candidate := range candidates {
 		scanned = append(scanned, candidate.ID)
+		candidate.Payload, err = originalstore.RepairPayload(ctx, candidate.Payload)
+		if err != nil {
+			return datatask.BatchOut{}, err
+		}
 		parties, readable := originalParties(candidate.Payload)
 		if !readable {
 			// Left open, like mail with no original: one corrupt row must not

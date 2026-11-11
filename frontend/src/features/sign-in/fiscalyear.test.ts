@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { stable } from "../../format/collate";
 import { monthName } from "../../format/format";
 import { fiscalYearLabel } from "./fiscalyear";
 
@@ -42,7 +43,7 @@ describe("the label a fiscal year carries", () => {
       fiscalYearLabel(4, 2099),
       fiscalYearLabel(4, 2025),
     ];
-    expect([...labels].sort()).toEqual([
+    expect([...labels].sort(stable)).toEqual([
       "FY2024/25",
       "FY2025/26",
       "FY2026/27",

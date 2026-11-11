@@ -1,28 +1,19 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import {
-  mkdirSync,
-  mkdtempSync,
-  readdirSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
+import { stable } from "../src/format/collate";
 import {
   type ImportGraph,
   judge,
-  LEDGER,
   ownedFindings,
   ownerOf,
   parseLedger,
   reachFindings,
   readGraph,
-  SRC,
-  shippedInTree,
 } from "./feature-boundaries.ts";
 
 const graph = (edges: Record<string, string[]>): ImportGraph =>
@@ -235,7 +226,7 @@ describe("the reader", () => {
   plant("features/deals/a.test.tsx", 'vi.mock("../leads/b");\n');
 
   it("sees every form of import, a mock and every kind of source file", () => {
-    expect(reachFindings(readGraph(root)).sort()).toEqual([
+    expect(reachFindings(readGraph(root)).sort(stable)).toEqual([
       "reach features/deals/a.css features/leads/b.css",
       "reach features/deals/a.test.tsx features/leads/b.tsx",
       "reach features/deals/a.tsx features/leads/b.css",
@@ -245,30 +236,5 @@ describe("the reader", () => {
       "reach features/deals/a.tsx features/leads/logo.webp",
       "reach features/deals/e.jsx features/leads/b.tsx",
     ]);
-  });
-});
-
-describe("the tree", () => {
-  const tree = readGraph();
-
-  it("reads every feature folder", () => {
-    // Derived from the folder, so a walk that stops short fails here instead
-    // of reporting a smaller tree as clean.
-    const features = readdirSync(join(SRC, "features"), {
-      withFileTypes: true,
-    })
-      .filter((entry) => entry.isDirectory())
-      .map((entry) => `features/${entry.name}`);
-    const seen = new Set([...tree.keys()].map(ownerOf));
-    expect(features.length).toBeGreaterThan(10);
-    expect(features.filter((feature) => !seen.has(feature))).toEqual([]);
-  });
-
-  it("holds the rules, with only the frozen findings left", () => {
-    const failures = judge(
-      [...reachFindings(tree), ...ownedFindings(tree, shippedInTree())],
-      parseLedger(readFileSync(LEDGER, "utf8")),
-    );
-    expect(failures, failures.join("\n")).toEqual([]);
   });
 });

@@ -16,6 +16,7 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { screenEnabled, useDisabledCoreFeatures } from "./corefeatures";
 import { useNotificationPermission } from "./notificationpermission";
 import { unwrap } from "./problem";
 import { navigate, parseHash, routeHash } from "./router";
@@ -143,7 +144,9 @@ function show(task: Activity, t: (key: MessageKey) => string): void {
 export function useTaskReminderNotifications(signedIn: boolean): void {
   const t = useT();
   const client = useQueryClient();
-  const granted = useNotificationPermission() === "granted" && signedIn;
+  const homeEnabled = screenEnabled("home", useDisabledCoreFeatures());
+  const granted =
+    useNotificationPermission() === "granted" && signedIn && homeEnabled;
   const due = useQuery({
     queryKey: ["task-reminders"],
     enabled: granted,
@@ -158,7 +161,12 @@ export function useTaskReminderNotifications(signedIn: boolean): void {
         const page = unwrap(
           await api.GET("/activities", {
             params: {
-              query: { reminder_due: true, kind: "task", limit: PAGE, cursor },
+              query: {
+                reminder_due: true,
+                kind: ["task"],
+                limit: PAGE,
+                cursor,
+              },
             },
           }),
           t,

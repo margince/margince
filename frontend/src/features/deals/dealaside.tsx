@@ -29,6 +29,7 @@ import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useAcquisitionSources } from "../../lib/acquisitionsources.queries";
 import { closeDayOf } from "../../lib/closeday";
+import { labelFor } from "../../lib/labelfor";
 import { useListsAvailable, useRecordLists } from "../../lib/lists.queries";
 import { useMemberName } from "../../lib/membernames";
 import { routeHash } from "../../lib/router";
@@ -439,7 +440,7 @@ function DealAccount({ companyId }: Readonly<{ companyId: string }>) {
   const name = company?.display_name;
   const stage =
     company?.lifecycle && company.lifecycle !== "unknown"
-      ? t(LIFECYCLE_LABELS[company.lifecycle])
+      ? t(labelFor(LIFECYCLE_LABELS, company.lifecycle))
       : undefined;
   const facts = [
     stage,

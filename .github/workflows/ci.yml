@@ -109,6 +109,8 @@ jobs:
       # The database-bearing subset of `backend`. See the filter below for why
       # the two differ, and by exactly what.
       backend_db: ${{ steps.filter.outputs.backend_db == 'true' || github.event_name == 'merge_group' }}
+      # What backend-lint reads. See the filter below.
+      backend_lint: ${{ steps.filter.outputs.backend_lint == 'true' || github.event_name == 'merge_group' }}
       frontend: ${{ steps.filter.outputs.frontend == 'true' || github.event_name == 'merge_group' }}
       e2e: ${{ steps.filter.outputs.e2e == 'true' || github.event_name == 'merge_group' }}
       deps: ${{ steps.filter.outputs.deps == 'true' || github.event_name == 'merge_group' }}
@@ -296,6 +298,17 @@ jobs:
               # unreviewable without the lane it governs, and the one that
               # introduced it would have merged never once executed.
               - '.github/actions/install-playwright-chromium/**'
+              # And the image the lane runs in, and the action that finds or
+              # builds it, for the same reason: they hold its Node, pnpm and
+              # browser.
+              - '.github/ci-image/**'
+              - '.github/actions/ci-image/**'
+            # What backend-lint reads: `backend_db` plus `tools/`, a module
+            # lint-modules lints. Not `backend`: its frontend/ and docs/ paths are
+            # there for Go gates that read them, and golangci reads Go only.
+            backend_lint:
+              - *backend_db
+              - 'tools/**'
             e2e:
               - 'backend/**'
               - 'frontend/**'
@@ -382,6 +395,40 @@ jobs:
               - '.github/workflows/**'
               - '.github/actions/**'
 
+  # The image the toolchain jobs run in, named by digest. Beside `changes`, not
+  # behind it: when the image exists this is a lookup that ends first.
+  #
+  # A run that can push builds and pushes a missing image here, so a pull
+  # request that changes an input runs its own jobs on the image it brings. A
+  # fork's token cannot push, and an image only a login can pull is one no job
+  # can start in; in both cases the output is empty and every job sets up on
+  # the runner. scripts/ci-verdict.sh reads this job like any other, so an
+  # image that fails to build fails `ci` rather than skipping the jobs that
+  # need it into a pass.
+  #
+  # Sixty minutes, because a build fetches every Debian package from the
+  # snapshot archive, and that host has taken over twenty minutes for one set.
+  ci-image:
+    name: ci-image
+    timeout-minutes: 60
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      pinned-image: ${{ steps.image.outputs.pinned-image }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Find or build the CI image
+        id: image
+        uses: ./.github/actions/ci-image
+        with:
+          push: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+          token: ${{ github.token }}
+
   # The deterministic merge gate: build, vet, lint (baseline + new-code
   # strict), arch-lint, unit + root fitness tests (incl. audit_log enum
   # coherence and the contract $ref pre-flight), generated-drift, and the
@@ -390,9 +437,13 @@ jobs:
   deterministic-gates:
     name: deterministic-gates (${{ matrix.part }})
     timeout-minutes: 30
-    needs: [changes]
+    needs: [changes, ci-image]
     if: needs.changes.outputs.backend == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
     runs-on: ubuntu-latest
+    # In the CI image when this run can pull it, and on the runner when the
+    # name is empty; the steps marked for the runner then install what the
+    # image would have held.
+    container: ${{ needs.ci-image.outputs.pinned-image }}
     permissions:
       contents: read
     # The uncached root fitness packages were most of the test leg, so they get
@@ -420,9 +471,11 @@ jobs:
           # the first time a gate asks for it.
           fetch-depth: 0
           filter: blob:none
+      # In the image Go is already there, so no version is asked for and
+      # setup-go only restores the module cache.
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          go-version-file: backend/go.mod
+          go-version-file: ${{ needs.ci-image.outputs.pinned-image == '' && 'backend/go.mod' || '' }}
           cache-dependency-path: backend/go.sum
       # The shared Go build cache (see .github/actions/go-build-cache): this job
       # compiles the untagged tree twice over — `go build ./...` plus the unit
@@ -436,8 +489,9 @@ jobs:
       # `make tools` compiles golangci-lint, go-arch-lint, govulncheck and
       # oasdiff into ~/go/bin, which setup-go's caches do not cover. Restored,
       # never saved: an entry a PR saves serves that PR alone, so cache-warm.yml
-      # writes the one on main that every PR reads.
+      # writes the one on main that every PR reads. The image holds them.
       - name: Gate binaries on PATH
+        if: needs.ci-image.outputs.pinned-image == ''
         uses: ./.github/actions/gate-binaries
       # The backend half of the merge gate in one pass:
       # check-craft-doc, image pins, contract-breaking, migration-versions,
@@ -558,9 +612,10 @@ jobs:
   backend-lint:
     name: backend-lint (${{ matrix.pass }})
     timeout-minutes: 30
-    needs: [changes]
-    if: needs.changes.outputs.backend == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
+    needs: [changes, ci-image]
+    if: needs.changes.outputs.backend_lint == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
     runs-on: ubuntu-latest
+    container: ${{ needs.ci-image.outputs.pinned-image }}
     permissions:
       contents: read
     # The baseline pass loads the whole tree, so it gets a runner. The strict
@@ -590,14 +645,18 @@ jobs:
           filter: ${{ matrix.filter }}
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          go-version-file: backend/go.mod
+          go-version-file: ${{ needs.ci-image.outputs.pinned-image == '' && 'backend/go.mod' || '' }}
           cache-dependency-path: backend/go.sum
+      # golangci loads every package before it reads its own cache, and that
+      # load compiles whatever the Go build cache lacks. lint-cache.yml saves
+      # this flavor after each push to main, so the load starts from the tip.
       - name: Restore the Go build cache
         id: go-cache
         uses: ./.github/actions/go-build-cache
         with:
-          flavor: plain
+          flavor: lint
       - name: Gate binaries on PATH
+        if: needs.ci-image.outputs.pinned-image == ''
         uses: ./.github/actions/gate-binaries
       - name: Compute the golangci cache key
         id: golangci-key
@@ -943,11 +1002,6 @@ jobs:
     # every other backend producer — must genuinely have SUCCEEDED, not merely
     # not-failed.
     #
-    # On merge_group the classifier is overridden and every producer runs, so the
-    # clause is satisfied whenever the lane is green. It is kept rather than
-    # simplified away because it is the thing that would catch a future event, or
-    # a future skip, that reintroduces a partial scan.
-    #
     # deterministic-gates is gated directly, not just transitively. Now that
     # integration runs in parallel with the build gate rather than behind it, a
     # failed build no longer skips integration — it can still go green on its
@@ -956,22 +1010,29 @@ jobs:
     # Analysis" check over a broken build (result == 'failure' fails this
     # condition, so the scan is skipped); the PR is already red, so nothing that
     # wasn't already blocked is blocked.
-    # `ci` is in needs for the merge_group case ONLY, and it is not a cycle: the
-    # aggregate deliberately omits sonarcloud from its own needs, so nothing waits
-    # on this job to reach a verdict — the queue merges on `ci` alone and this scan
-    # may finish after the merge.
+    #
+    # It waits for its coverage producers and nothing else, so it starts as the
+    # last of them ends: on a full run, the integration fan-in. SonarCloud reads coverage only from the report
+    # files present when the scanner runs, and a second analysis of a pull request
+    # replaces the first, so no part of the scan can start before the last
+    # producer ends. The `ci` aggregate is not a producer.
+    #
+    # A merge_group build is not scanned. Publishing it as `main` needed the `ci`
+    # verdict first, or a build that does not merge would replace main's stored
+    # analysis, and that kept every pull request's scan waiting for `ci` too.
+    # main-health.yml publishes main's analysis from main itself.
     # A pull request into develop skips the scan: develop's pull request into
     # main is scanned before any of it reaches main.
-    needs: [ci, changes, deterministic-gates, integration, frontend]
+    needs: [changes, deterministic-gates, integration, frontend]
     if: >-
       !cancelled()
+      && github.event_name != 'merge_group'
       && needs.changes.outputs.full_lane == 'true'
       && (needs.deterministic-gates.result == 'success' || needs.deterministic-gates.result == 'skipped')
       && (needs.integration.result == 'success' || needs.integration.result == 'skipped')
       && (needs.frontend.result == 'success' || needs.frontend.result == 'skipped')
       && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
       && (github.event_name == 'pull_request' || needs.integration.result == 'success')
-      && (github.event_name != 'merge_group' || needs.ci.result == 'success')
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -1020,27 +1081,6 @@ jobs:
         with:
           name: fe-coverage-ext
           path: frontend/coverage-ext
-      # A merge_group run publishes as `main`, and that is not a fiction: the
-      # queue builds `main + the queued entries`, which is byte-for-byte the tree
-      # main becomes when the batch merges. Measuring it here is the same
-      # measurement the old push-to-main scan took, one step earlier.
-      #
-      # Without this override the scanner reads GITHUB_REF and files the analysis
-      # under `gh-readonly-queue/main/pr-N-<sha>` — a branch that is deleted
-      # minutes later. Nothing would ever update main again, and main's stored
-      # analysis does not disappear when it stops being refreshed: it FREEZES. The
-      # nightly `quality-gate` job in scheduled.yml reads `?branch=main` and would
-      # keep reporting the last real verdict indefinitely, which is a green that
-      # measures nothing — the exact failure this pipeline change exists to end.
-      #
-      # What makes it safe is the `needs.ci.result == 'success'` clause above, and
-      # nothing weaker would: this job's other conditions cover only its COVERAGE
-      # producers, so without that clause a merge_group build whose secret-scan,
-      # license-gate or craft-residue failed would still publish. That tree
-      # does not merge — and it would have replaced the stored analysis every
-      # scheduled check reads for main, describing a tree main never became.
-      # Requiring the aggregate verdict is what makes "published as main" mean
-      # "became main".
       - name: SonarCloud scan
         if: ${{ env.SONAR_TOKEN != '' }}
         # A CAP ON THE HANG, not on the scan. A whole scan, upload and
@@ -1067,26 +1107,22 @@ jobs:
           #
           # An analysis carrying no `sonar.branch.name` is filed as the
           # project's MAIN branch. On a pull request that is right — the action
-          # sets sonar.pullrequest.* itself and the scan decorates the PR — and
-          # on merge_group the ref is the queue's ephemeral one, so `main` is
-          # named outright. Every OTHER event fell through to the same empty
+          # sets sonar.pullrequest.* itself and the scan decorates the PR.
+          # Every OTHER event fell through to the same empty
           # argument, and a workflow_dispatch has no pull-request context: a
           # run dispatched on a feature branch published that branch's tree as
           # main's stored verdict, which is the one every scheduled check reads.
           #
           # It is not hypothetical and it is not rare. `main`'s two most recent
           # analyses were `issue-1985-agent-carriage` and
-          # `issue-2381-ast-censuses`, neither revision a commit on main, while
-          # merge_group — the one event this argument covered — has not fired
-          # since 2026-08-20. So the quality gate has been reporting on feature
-          # branches for as long as anyone has been dispatching this workflow,
-          # including a bug already fixed on main and a new-code coverage figure
-          # belonging to somebody's diff.
+          # `issue-2381-ast-censuses`, neither revision a commit on main. So the
+          # quality gate reported on feature branches for as long as anyone
+          # dispatched this workflow, including a bug already fixed on main and a
+          # new-code coverage figure belonging to somebody's diff.
           #
           # `main` when the ref genuinely IS main, so a dispatch there refreshes
-          # the verdict that no merge_group is left to refresh; the branch's own
-          # name otherwise, so a dispatched branch is filed as itself and can
-          # only ever describe itself.
+          # main's verdict; the branch's own name otherwise, so a dispatched
+          # branch is filed as itself and can only ever describe itself.
           # The empty case is LAST on purpose. `&&` here yields its right
           # operand, and an empty string is falsy, so `pull_request && ''`
           # would fall straight through the `||` beside it and hand a pull
@@ -1094,7 +1130,7 @@ jobs:
           # arms so that only a truthy argument short-circuits is what keeps
           # the PR arm empty.
           args: >-
-            ${{ (github.event_name == 'merge_group' || github.ref_name == 'main')
+            ${{ github.ref_name == 'main'
                 && '-Dsonar.branch.name=main'
              || (github.event_name != 'pull_request'
                 && format('-Dsonar.branch.name={0}', github.ref_name))
@@ -1193,6 +1229,116 @@ jobs:
         if: failure()
         run: cat "$RUNNER_TEMP/api.log" || true
 
+  # Home's per-PR budget (scripts/home-budget.sh): the API p95 of Home's reads,
+  # cold and warm, on a small corpus of its own, then the day paint and CLS of a
+  # production bundle against an api booted the way live-boot boots it.
+  # ADVISORY: it is not in the `ci` fan-in, and a red run stops no merge. The
+  # scope step skips the rest when the diff cannot reach Home
+  # (scripts/home-budget-scope.sh); a push or a merge group always runs.
+  home-budget:
+    name: home-budget (advisory)
+    timeout-minutes: 30
+    needs: [changes]
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          # The scope step diffs against the pull request's base branch.
+          fetch-depth: 0
+      # No version input: the pin is package.json's "packageManager".
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      # The scope step walks the frontend's import graph, which needs TypeScript.
+      - name: Install deps
+        working-directory: frontend
+        timeout-minutes: 5
+        run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Decide whether the change can reach Home
+        id: scope
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          if [ "$EVENT" = "pull_request" ]; then
+            bash scripts/home-budget-scope.sh "origin/$BASE_REF"
+          else
+            echo "home-budget-scope: run=true ($EVENT runs the whole check)"
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        if: steps.scope.outputs.run == 'true'
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+      - name: Restore the Go build cache
+        if: steps.scope.outputs.run == 'true'
+        uses: ./.github/actions/go-build-cache
+        with:
+          flavor: plain
+      - name: Boot the dev stack and migrate
+        if: steps.scope.outputs.run == 'true'
+        run: make db-up && make migrate
+      # The same throwaway first-run configuration live-boot writes.
+      - name: Write the deployment configuration
+        if: steps.scope.outputs.run == 'true'
+        run: |
+          printf '%s' "operator-supplied-first-password" > "$RUNNER_TEMP/admin-password"
+          chmod 600 "$RUNNER_TEMP/admin-password"
+          cat > "$RUNNER_TEMP/margince.yaml" <<EOF
+          version: 1
+          workspace:
+            name: Demo Workspace
+            base_currency: EUR
+            timezone: Europe/Berlin
+          bootstrap_admin:
+            email: admin@demo.test
+            display_name: Demo Admin
+            password_file: $RUNNER_TEMP/admin-password
+          EOF
+      - name: Start the api
+        if: steps.scope.outputs.run == 'true'
+        working-directory: backend
+        env:
+          MARGINCE_ENV: dev
+        run: |
+          GOWORK="$PWD/../go.work" go run ./tools/gen-composition -include-development
+          GOWORK="$PWD/../build/composition/go.work" \
+            go run ./cmd/api --dsn "postgres://margince_app:margince_app_dev@localhost:15432/margince" \
+            --config "$RUNNER_TEMP/margince.yaml" \
+            > "$RUNNER_TEMP/api.log" 2>&1 &
+          for _ in $(seq 1 60); do
+            curl -fsS http://localhost:8080/readyz >/dev/null 2>&1 && exit 0
+            sleep 1
+          done
+          echo "api never became ready" >&2
+          cat "$RUNNER_TEMP/api.log" >&2
+          exit 1
+      - name: Seed the demo workspace
+        if: steps.scope.outputs.run == 'true'
+        run: make seed-dev
+      - name: Install the Playwright Chromium browser
+        if: steps.scope.outputs.run == 'true'
+        uses: ./.github/actions/install-playwright-chromium
+      # Writes the wall time of each half, the API rows and the vitals line to
+      # the job summary, pass or fail.
+      - name: Home budget
+        if: steps.scope.outputs.run == 'true'
+        run: make home-budget BENCH_API_PORT=8080
+      - name: API log (on failure)
+        if: failure()
+        run: cat "$RUNNER_TEMP/api.log" || true
+
   # The SPA lane. Its four jobs live in
   # .github/workflows/_lane-frontend.yml (fe-quality, fe-unit, fe-bundle and the
   # fan-in that carries their verdict).
@@ -1200,9 +1346,11 @@ jobs:
   # As with the integration lane, the conditional lives HERE and not inside the
   # lane, so a skip always means the caller skipped the lane.
   frontend:
-    needs: [changes]
+    needs: [changes, ci-image]
     if: needs.changes.outputs.frontend == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
     uses: ./.github/workflows/_lane-frontend.yml
+    with:
+      ci-image: ${{ needs.ci-image.outputs.pinned-image }}
 
   # The UAT lane: the AC-<screen>-N screen-acceptance criteria as named
   # Playwright tests, plus the axe WCAG 2.2 AA gate, the 390px
@@ -1230,9 +1378,13 @@ jobs:
     # both gate the merge, the sequence would be the aggregate's wall clock on
     # every frontend change. What the order saved was this job's runner minutes
     # on a change biome would have refused, which is cheaper than the wait.
-    needs: [changes]
+    needs: [changes, ci-image]
     if: needs.changes.outputs.frontend == 'true' && needs.changes.outputs.full_lane == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
     runs-on: ubuntu-latest
+    # The image holds Chromium and the libraries it needs, so a hung package
+    # mirror cannot stop this lane before a test runs. An empty name runs it
+    # on the runner, where the install action below fetches both.
+    container: ${{ needs.ci-image.outputs.pinned-image }}
     permissions:
       contents: read
     defaults:
@@ -1244,10 +1396,13 @@ jobs:
           persist-credentials: false
       # No version input: the pin is package.json's "packageManager", which pnpm
       # and corepack read too. A second one here is refused as a mismatch.
+      # The image's corepack holds that pnpm already.
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        if: needs.ci-image.outputs.pinned-image == ''
+      # In the image Node is already there, so only the pnpm store is restored.
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: 24
+          node-version: ${{ needs.ci-image.outputs.pinned-image == '' && '24' || '' }}
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
       - name: Install deps
@@ -1260,6 +1415,7 @@ jobs:
       # apt inside the runner and an unresponsive mirror hangs with no output.
       # It also says which half hung, which one folded step could not.
       - name: Install the Playwright Chromium browser
+        if: needs.ci-image.outputs.pinned-image == ''
         uses: ./.github/actions/install-playwright-chromium
       - name: Screen-acceptance UAT (build → preview → AC + axe)
         run: make frontend-e2e E2E_ARGS=--shard=${{ matrix.shard }}/3
@@ -1283,11 +1439,14 @@ jobs:
   #                                blocking by the back door.
   #   vuln, live-boot            — advisory today, and deliberately still
   #                                advisory here. See below.
+  #   home-budget                — advisory while its budgets are measured
+  #                                for feasibility; it joins as its own change.
   #
   # WHAT THE REPOSITORY ACTUALLY REQUIRES, said once and only here so the file
   # cannot answer it twice with different answers: `ci` — this job — is the ONE
-  # required context, from the `main-required-status-checks` ruleset. There is no
-  # classic branch protection at all. `main-required-ai-reviewers` names
+  # required context this workflow reports, from the `main-required-status-checks`
+  # ruleset; the other is `cla`, from cla.yml. There is no classic branch
+  # protection at all. `main-required-ai-reviewers` names
   # CodeRabbit and is DISABLED. Nothing else is required, SonarCloud included,
   # and three comments in this file used to say otherwise (margince/margince#2544).
   #
@@ -1364,6 +1523,9 @@ jobs:
     # which is the whole failure mode this job exists to end.
     if: always()
     needs:
+      # A failed image build skips every job that needs it, and a skip passes
+      # on a pull request; this entry is what turns that failure red.
+      - ci-image
       - deterministic-gates
       - test-budget
       - backend-lint
@@ -1374,10 +1536,11 @@ jobs:
       - frontend
       # The screen-acceptance lane gates the merge. It was advisory on the
       # argument that a flaky job under a merge queue re-queues every entry in
-      # its group; the queue is not in use, and an advisory lane is one a red
-      # verdict never stops anybody on. Its classifier skip is admissible here
-      # for the same reason `frontend`'s is: on a pull request a skip means out
-      # of scope, and on the merge queue every scope is true so it cannot skip.
+      # its group; an advisory lane is one a red verdict never stops anybody
+      # on, and a flake it shows is a test to fix. Its classifier skip is
+      # admissible here for the same reason `frontend`'s is: on a pull request
+      # a skip means out of scope, and on the merge queue every scope is true
+      # so it cannot skip.
       - uat
       - license-gate
       - images
@@ -1388,9 +1551,14 @@ jobs:
       run:
         working-directory: .
     steps:
+      # The verdict reads one script. The whole tree took 12 of this job's 16 s,
+      # and this job is the last step to every pull request's result.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          filter: blob:none
+          sparse-checkout: scripts/ci-verdict.sh
+          sparse-checkout-cone-mode: false
       - name: Verdict
         env:
           CI_VERDICT_NEEDS: ${{ toJSON(needs) }}

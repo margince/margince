@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { describe, expect, it } from "vitest";
+import { stable } from "../../format/collate";
 import { stepOfRun, type WizardStep } from "./importflow";
 import { moving, wroteNothing } from "./importrun";
 import type { ImportRun } from "./importtypes";
@@ -34,12 +35,20 @@ const STEP_OF_STATUS = {
 
 describe("stepOfRun", () => {
   it("stepOfRun answers every status", () => {
-    expect([...STATUSES].sort()).toEqual(Object.keys(STEP_OF_STATUS).sort());
+    expect([...STATUSES].sort(stable)).toEqual(
+      Object.keys(STEP_OF_STATUS).sort(stable),
+    );
     for (const status of STATUSES) {
       expect(stepOfRun(status, "map")).toBe(STEP_OF_STATUS[status]);
     }
     expect(stepOfRun("pending", "files")).toBe("files");
     expect(stepOfRun(undefined, "map")).toBe("test");
+  });
+
+  it("keeps a run in a status this build does not know on the test step", () => {
+    expect(stepOfRun("paused_later" as ImportRun["status"], "map")).toBe(
+      "test",
+    );
   });
 });
 

@@ -5,6 +5,7 @@ import { useCallback, useRef, useState } from "react";
 import type { components } from "../../api/schema";
 import type { ProjectScope } from "../../design-system/projectpicker";
 import { paragraphsFrom } from "../../design-system/richtext";
+import { isLocale, type Locale } from "../../i18n/locale";
 import type { CommunicationContext } from "../../lib/compose-context";
 import type { DraftProvenance, DraftUnavailable } from "./composedraftcall";
 import {
@@ -20,33 +21,20 @@ import type { EditSeed } from "./schedulededit";
 
 type DraftReason = components["schemas"]["AccountDraftReason"];
 
-// The account-started path's grounding: the deal and the project a draft is
-// written for, with what the server said it wrote from. The recipient is not
-// held here: it is whoever from the account stands first in To.
+// The chosen deal and the server's report of what its draft read.
 function useAccountGrounding(edit: EditSeed | undefined) {
   const [dealId, setDealId] = useState(edit?.dealId ?? "");
-  // The project scopes the draft's grounding and files the sent message.
-  const [projectId, setProjectId] = useState(edit?.projectId ?? "");
   const [reasoning, setReasoning] = useState<DraftReason[]>([]);
   // The server's scope report for the draft on screen, retired with the
   // reasons because it describes the same read.
   const [scope, setScope] = useState<ProjectScope | undefined>(undefined);
-  // A new project retires the draft written for the previous one.
-  // A re-draft could not repair it, because the fill leaves a full field alone.
-  const reground = (apply: (next: string) => void) => (next: string) => {
-    apply(next);
-    setReasoning([]);
-    setScope(undefined);
-  };
   return {
     // A deal is chosen beside the project, among what the message is about.
     // The words stay: they are the rep's to read again, and a draft still in
     // flight for the old deal is dropped when it lands.
     dealId,
     setDealId,
-    projectId,
-    setProjectId: reground(setProjectId),
-    grounding: { dealId, projectId },
+    grounding: { dealId },
     reasoning,
     setReasoning,
     scope,
@@ -69,8 +57,10 @@ export type FieldsSnapshot = Readonly<{
   provenance: DraftProvenance | null;
   draftRef: string | null;
   servedBody: string;
+  dealId: string;
   reasoning: DraftReason[];
   scope: ProjectScope | undefined;
+  language: Locale | null;
 }>;
 
 export function emptyFields(): FieldsSnapshot {
@@ -88,8 +78,10 @@ export function emptyFields(): FieldsSnapshot {
     provenance: null,
     draftRef: null,
     servedBody: "",
+    dealId: "",
     reasoning: [],
     scope: undefined,
+    language: null,
   };
 }
 
@@ -176,6 +168,8 @@ export function useComposeFields({
   );
   // The words as the model last served them; a rewrite may replace only these.
   const [servedBody, setServedBody] = useState("");
+  // The draft language the rep picked; null leaves it to the correspondence.
+  const [language, setLanguage] = useState<Locale | null>(null);
   // Two non-error outcomes kept out of react-query's error channel, so the
   // form stays usable when the model or mailer is not configured (501).
   const [draftUnavailable, setDraftUnavailable] =
@@ -215,22 +209,7 @@ export function useComposeFields({
     memory.current.forget();
     parked.current = null;
   };
-  // A new grounding clears drafted text alone. `draftRef` and `provenance`
-  // are set by the fill, so a rep's own typed message stays.
-  const account = {
-    ...grounding,
-    setProjectId: (next: string) => {
-      grounding.setProjectId(next);
-      if (!provenance && !draftRef) return;
-      setBody("");
-      setHtml("");
-      setSubject("");
-      setTo([]);
-      setDraftRef(null);
-      setProvenance(null);
-      forgetMarks();
-    },
-  };
+  const account = grounding;
 
   // A new transport changes what is being written. A subject or address left
   // standing would be one the channel send never uses.
@@ -255,13 +234,16 @@ export function useComposeFields({
           provenance,
           reasoning: account.reasoning,
           scope: account.scope,
+          language,
         }
       : null;
+  // An emptied body sets the marks aside, and the choice stays for the next draft.
   const applyMarks = (marks: DraftMarks | null) => {
     setDraftRef(marks?.draftRef ?? null);
     setProvenance(marks?.provenance ?? null);
     account.setReasoning(marks?.reasoning ?? []);
     account.setScope(marks?.scope);
+    if (marks) setLanguage(marks.language);
   };
 
   const editBody = (next: Readonly<{ html: string; text: string }>) => {
@@ -297,7 +279,13 @@ export function useComposeFields({
   // may still bring the words back, so the disclosure waits for them.
   const clearRejected = () => {
     const rejected: DraftMarks | null = provenance
-      ? { draftRef: null, provenance, reasoning: [], scope: undefined }
+      ? {
+          draftRef: null,
+          provenance,
+          reasoning: [],
+          scope: undefined,
+          language,
+        }
       : null;
     memory.current.remember(body, rejected);
     parked.current = rejected;
@@ -322,6 +310,7 @@ export function useComposeFields({
     const state = saved.editorState;
     setIntent(state?.intent ?? "");
     setServedBody(state?.served_body ?? "");
+    setLanguage(chosenLanguage(state?.language));
     setDraftRef(null);
     setProvenance(
       state?.ai_generated
@@ -349,11 +338,14 @@ export function useComposeFields({
     provenance,
     draftRef,
     servedBody,
+    dealId: account.dealId,
     reasoning: account.reasoning,
     scope: account.scope,
+    language,
   });
 
   const load = (next: FieldsSnapshot) => {
+    grounding.setDealId(next.dealId);
     draftEpoch.current += 1;
     forgetMarks();
     forgetRefusals();
@@ -372,11 +364,12 @@ export function useComposeFields({
     setServedBody(next.servedBody);
     account.setReasoning(next.reasoning);
     account.setScope(next.scope);
+    setLanguage(next.language);
     setDraftUnavailable(null);
   };
 
   return {
-    editorState: editorStateOf({ intent, provenance, servedBody }),
+    editorState: editorStateOf({ intent, provenance, servedBody, language }),
     to,
     setTo,
     cc,
@@ -401,6 +394,8 @@ export function useComposeFields({
     setDraftRef,
     servedBody,
     setServedBody,
+    language,
+    setLanguage,
     draftUnavailable,
     setDraftUnavailable,
     sendUnavailable,
@@ -426,8 +421,16 @@ export function useComposeFields({
 
 export type ComposeFields = ReturnType<typeof useComposeFields>;
 
+// A saved code this build does not ship is no choice it can name again.
+function chosenLanguage(saved: string | undefined): Locale | null {
+  return saved !== undefined && isLocale(saved) ? saved : null;
+}
+
 function editorStateOf(
-  fields: Pick<FieldsSnapshot, "intent" | "provenance" | "servedBody">,
+  fields: Pick<
+    FieldsSnapshot,
+    "intent" | "provenance" | "servedBody" | "language"
+  >,
 ): components["schemas"]["MailDraftEditorState"] {
   return {
     intent: fields.intent,
@@ -437,5 +440,6 @@ function editorStateOf(
       fields.provenance?.voice_profile_version ?? undefined,
     voice_degraded: fields.provenance?.voice_degraded ?? false,
     served_body: fields.servedBody,
+    ...(fields.language ? { language: fields.language } : {}),
   };
 }
