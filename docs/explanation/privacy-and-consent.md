@@ -47,9 +47,9 @@ its **proof**, and records a **decision** per recipient:
   proof may carry no purpose key to match. `communication_suppression` records the other stops: an
   Article 21 objection, a legal limit on use, a subject's request to stop, a hard bounce. No stop
   ends by itself, and no mode turns either one off.
-- **A user may override a refused send.** The override stands separate from consent.
-  `communication_override` (`consent.Allow`) records a statement for one contact, category and
-  sending company. It grants no consent. Each message gets its own check.
+- A `communication_override` row lets a refused send through for one contact, category and
+  sending company. No route records a new one, and the rows on file count until revoked. A row
+  grants no consent, and each message gets its own check.
 
   It turns nothing absolute. `Decision.CanBeOverruledByCategory` asks the question only for a
   reading by the machine that is not absolute and that has a category. The `absoluteDenials` below
@@ -229,7 +229,7 @@ counts either. So a seat cannot make this ground by copying the contact.
 
 The rule reads the thread key and records its basis against that thread. So it never becomes
 standing permission for the contact. It never supports a message the sender calls marketing.
-`copiedOnThisMatter` holds the whole rule.
+`copiedOnThisMatter` holds the whole rule. A follow-up the contact asked for rests on a message they wrote; [who sent a received message](relationship-graph.md#who-sent-a-received-message) says how the record names that author.
 
 An open deal the contact is a stakeholder on supports a follow-up only when the record shows them
 asking about that deal (`requestedNegotiation`). That is mail they wrote or a meeting they joined,
@@ -342,20 +342,20 @@ into consent's handlers.
   can match the wrong copy. Closed requests whose identifiers the machine retired match too. Any hold, a case with
   `dispute_open` set, or a conflicting CRM write defers these fixes. Nightly retention retries them.
 
-  Full names and addresses are removed from notes without contact or lead links. Other text stays.
-  Restricted or held notes, possible name matches, descriptions, signatures and matching uploaded
-  files get a notice for a human review. Files and search copies are kept as they are. Possible text
-  matches do not go into subject exports. If no one can review them, an admin must restore review
-  access before retrying.
+  Full names and addresses are removed from notes without a contact or lead link. Other text stays.
+  Held notes, name matches, shared text, signatures and matched uploads get a notice for human review.
+  Files and search copies stay as they are. Possible matches stay out of subject exports.
+  An admin must restore review access before retrying when no reviewer can read the record.
 - **The suppression list** hashes each erased address and handle. Capture, import and typed creates
   refuse a later match. Public booking can still create one; refusal there would reveal erasures.
 - **Article 15 subject access** (`AssembleSAR`) requires `contact.delete` and full row scope.
-  One audited export (`action=export`) includes the subject's records, channels, deals, leads,
-  activities, attachments and consent. It also includes raw capture, field sources, kept audit
-  payloads, linked room comments, introduction notes and other kept copies. Private mailbox content stays hidden.
-- **The daily retention check** (`RetentionService.EvaluateInstallation`) runs as one River job per
-  workspace. The `privacy_retention` dispatcher in `cmd/worker` starts it every `24h` by default.
-  Each enabled policy takes its single action in one audited transaction per overdue record.
+  One audited export (`action=export`) includes the subject's records, mail, consent and kept copies.
+  Held mail can supply the subject's verdict and party facts; its content audience still applies.
+  The contact who made the link gets their role and state, with the target's notes and id left out.
+  Each weekly-plan audit image must prove its own subject link; a later link proves no earlier label.
+  Private mailbox content stays hidden.
+- **The daily retention check** runs as the `privacy_retention` River job every `24h` by default.
+  `RetentionService.EvaluateInstallation` applies each policy in one audited write per overdue record.
 
   Each workspace's failure stays on its own job. Held records and activities linked to held
   contacts, companies or deals are kept as they are. An unknown policy scope is skipped with a logged error.

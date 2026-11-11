@@ -80,20 +80,13 @@ func addPrivacyRetentionJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunner
 	return periodicFor(cfg, PrivacyRetentionArgs{})
 }
 
-// PrivacyRetentionArgs evaluates the retention policies.
-//
-// It used to be a dispatcher that enumerated every workspace and enqueued one
-// child per tenant. Under one installation that enumeration reads a single row,
-// so the pair collapsed into this (ADR-0091 §5, ADR-0103 §1).
+// PrivacyRetentionArgs schedules retention policies and historical audit cleanup.
 type PrivacyRetentionArgs struct{}
 
-// Kind is the stable job identifier River persists in river_job. It is the
-// DISPATCHER's old kind, deliberately: it is the name operators alert on.
+// Kind names the persisted River job.
 func (PrivacyRetentionArgs) Kind() string { return "privacy_retention" }
 
-// InsertOpts carries the attempt cap the declaration publishes, because the
-// periodic insert supplies uniqueness and no attempt policy of its own. Held
-// equal to api/jobs.yaml by TestArgsOwnedAttemptCapsMatchTheirDeclaration.
+// InsertOpts keeps one pass active while its bounded pages yield.
 func (PrivacyRetentionArgs) InsertOpts() river.InsertOpts {
 	return *jobs.QueuedAs[PrivacyRetentionArgs](&river.InsertOpts{
 		MaxAttempts: 3,
@@ -108,23 +101,13 @@ type privacyRetentionWorker struct {
 	identity  *identity.Service
 }
 
-func (w *privacyRetentionWorker) Work(ctx context.Context, _ *river.Job[PrivacyRetentionArgs]) error {
-	// The installation is bound because the erasure and scrub writes this pass
-	// drives still stamp a workspace from the context (storekit.MustWorkspace);
-	// it retires with that helper (ADR-0091 §5).
+func (w *privacyRetentionWorker) Work(ctx context.Context, job *river.Job[PrivacyRetentionArgs]) error {
+	// Store writers still require the installation workspace.
 	passCtx, err := installationJobCtx(ctx, w.identity)
 	if err != nil {
 		return jobs.FaultContext(ctx, err)
 	}
-	// Who acted, and under which pass. The engine writes an audit row and an
-	// outbox event per record it retires, so without this those rows would
-	// carry no actor and no correlation id — never that the machine moved it on
-	// a schedule, which is the whole answer a retention audit is read for.
-	//
-	// Assigned rather than passed inline, because jobactor_test.go reads the
-	// assignment: a binder called for its return value and dropped compiles,
-	// reads like a binding, and leaves the store holding a context with no
-	// actor in it.
+	// Domain, audit and outbox rows name the system actor for this job.
 	passCtx = principal.SystemActing(passCtx, "system")
-	return jobs.FaultContext(ctx, w.retention(InstallationDB(w.pool)).EvaluateInstallation(passCtx))
+	return jobs.FaultContext(ctx, w.runPass(ctx, passCtx, job))
 }

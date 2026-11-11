@@ -7,6 +7,7 @@ package main
 import (
 	"flag"
 	"log"
+	"os"
 	"time"
 
 	"github.com/getkin/kin-openapi/openapi3"
@@ -19,6 +20,7 @@ func main() {
 	current := flag.String("current", "", "candidate contract")
 	release := flag.String("release", "", "candidate release version; required for removals")
 	at := flag.String("at", "", "RFC3339 evaluation time; defaults to now")
+	ratifiedFile := flag.String("ratified-removals", "", "operations a maintainer ratified removing without a notice")
 	flag.Parse()
 	if *base == "" || *current == "" {
 		log.Fatal("check-apideprecation: -base and -current are required")
@@ -40,7 +42,21 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	if err := apideprecation.CheckChanges(before, after, *release, now); err != nil {
+	var ratified apideprecation.RatifiedRemovals
+	if *ratifiedFile != "" {
+		file, err := os.Open(*ratifiedFile)
+		if err != nil {
+			log.Fatal(err)
+		}
+		ratified, err = apideprecation.ParseRatifiedRemovals(file)
+		if closeErr := file.Close(); err == nil {
+			err = closeErr
+		}
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+	if err := apideprecation.CheckChangesRatified(before, after, *release, now, ratified); err != nil {
 		log.Fatal(err)
 	}
 	log.Print("API release notices and removal dates hold")

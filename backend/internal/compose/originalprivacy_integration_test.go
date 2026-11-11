@@ -92,7 +92,7 @@ func TestOriginalErasureRetriesAfterDeletionAndTransactionRollback(t *testing.T)
 	row := storeSubjectOriginal(t, e, blob, "subject", email)
 	other := storeSubjectOriginal(t, e, blob, "unrelated", "somebody-else@example.test")
 	purger := &failingOriginalCertificate{fail: true}
-	eraser := privacy.NewEraser(e.DB()).WithBlobstore(blob).WithRawCapturePurger(purger)
+	eraser := eraserWithGraph(e.DB()).WithBlobstore(blob).WithRawCapturePurger(purger)
 	if err := eraser.EraseContact(e.Admin(), contact, "subject request"); err == nil {
 		t.Fatal("the final transaction failure was hidden")
 	}
@@ -133,7 +133,7 @@ func TestFailedOriginalDeletionKeepsErasureRetryable(t *testing.T) {
 	blob := &failingOriginalBlob{Store: blobstore.NewMemory()}
 	row := storeSubjectOriginal(t, e, blob, "delete", email)
 	blob.failDelete = true
-	eraser := privacy.NewEraser(e.DB()).WithBlobstore(blob)
+	eraser := eraserWithGraph(e.DB()).WithBlobstore(blob)
 	if err := eraser.EraseContact(e.Admin(), contact, "subject request"); err == nil {
 		t.Fatal("failed object deletion certified erasure")
 	}

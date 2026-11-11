@@ -55,7 +55,7 @@ func TestErasureDestroysTheCachedBriefEveryReaderHeld(t *testing.T) {
 	cacheABrief(t, e, subject, "fp-1")
 	cacheABrief(t, e, bystander, "fp-1")
 
-	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), subject, "subject request"); err != nil {
+	if err := eraserWithGraph(e.DB()).EraseContact(e.Admin(), subject, "subject request"); err != nil {
 		t.Fatalf("EraseContact → %v", err)
 	}
 	if n := cachedBriefs(t, e, subject); n != 0 {
@@ -131,7 +131,7 @@ func TestABriefComposedBeforeAnErasureCannotLandAfterIt(t *testing.T) {
 	e := integration.Setup(t)
 	subject := e.SeedContact(t, "Briefed Subject", &e.AdminUser)
 
-	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), subject, "subject request"); err != nil {
+	if err := eraserWithGraph(e.DB()).EraseContact(e.Admin(), subject, "subject request"); err != nil {
 		t.Fatalf("EraseContact → %v", err)
 	}
 	if err := saveABrief(e, subject); err != nil {
@@ -218,7 +218,7 @@ func TestTheBriefWriterItselfDeclinesToCacheAnErasedSubject(t *testing.T) {
 			"would pass on a writer that never writes", n)
 	}
 
-	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), subject, "subject request"); err != nil {
+	if err := eraserWithGraph(e.DB()).EraseContact(e.Admin(), subject, "subject request"); err != nil {
 		t.Fatalf("EraseContact → %v", err)
 	}
 	if _, err := svc.Get(e.Admin(), ids.From[ids.ContactKind](subject), true); err != nil {
@@ -260,7 +260,7 @@ func TestAnUndestroyableCachedBriefStopsTheWholeErasure(t *testing.T) {
 	subject := e.SeedContact(t, "Briefed Subject", &e.AdminUser)
 	cacheABrief(t, e, subject, refusedFingerprint)
 
-	err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), subject, "subject request")
+	err := eraserWithGraph(e.DB()).EraseContact(e.Admin(), subject, "subject request")
 	if err == nil {
 		t.Fatal("the erasure reported success though the cached brief could not be destroyed")
 	}

@@ -11,7 +11,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"maps"
 
 	"github.com/jackc/pgx/v5"
 
@@ -20,6 +19,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
@@ -83,8 +83,7 @@ func (s *Store) applyVerdictStageMove(
 	if err != nil || admitted != VerdictApplied {
 		return admitted, current, err
 	}
-	evidence := map[string]any{CorrectionKindEvidenceKey: VerdictStageMoveCorrection, basisOwnerKey: in.Owner.String()}
-	maps.Copy(evidence, change.Evidence)
+	evidence := verdictEvidence(in, change)
 	moved, refused, err := s.advanceInSavepoint(ctx, tx, in.DealID, AdvanceDealInput{
 		ToStageID: change.ToStageID, auditEvidence: evidence,
 		// The target is an open stage, so the move claims no win.
@@ -340,9 +339,7 @@ func (s *Store) buyerWrote(ctx context.Context, tx pgx.Tx, deal ids.DealID, acti
 		   AND ((r.kind = 'employment' AND r.company_id = d.company_id AND `+employment.IsCurrentSQL("r.ended_at")+`)
 		        OR (r.kind = 'deal_stakeholder' AND r.deal_id = d.id))
 		 WHERE a.id = $2 AND a.kind = 'email'
-		   AND (r.contact_id = p.contact_id
-		        OR EXISTS (SELECT 1 FROM contact_email ce
-		                    WHERE ce.contact_id = r.contact_id AND lower(ce.email) = lower(p.address)))
+		   AND `+relstrength.ParticipantNamesSQL("r.contact_id", "p")+`
 		   FOR SHARE OF r`, deal, activity)
 	if err != nil {
 		return false, fmt.Errorf("deals: reading who wrote a cited mail: %w", err)

@@ -21,7 +21,6 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
-	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -195,7 +194,7 @@ func TestErasingTheContactErasesTheFiledScreenshot(t *testing.T) {
 	if _, _, err := f.blob.Get(ctx, key); err != nil {
 		t.Fatalf("precondition: the screenshot's bytes are stored: %v", err)
 	}
-	if err := privacy.NewEraser(f.env.DB()).WithBlobstore(f.blob).EraseContact(ctx, f.contact, "test-erasure"); err != nil {
+	if err := eraserWithGraph(f.env.DB()).WithBlobstore(f.blob).EraseContact(ctx, f.contact, "test-erasure"); err != nil {
 		t.Fatalf("EraseContact: %v", err)
 	}
 	if _, _, err := f.blob.Get(ctx, key); !errors.Is(err, blobstore.ErrNotFound) {

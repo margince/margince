@@ -60,7 +60,7 @@ func TestTheRepairSweepActuallyRepairsWhenDrivenAsTheJob(t *testing.T) {
 	// The per-workspace turn, which is what River's row walks rather than what
 	// it carries (ADR-0103): Work enumerates the fleet, and this suite is about
 	// one tenant. It is the same code Work calls per tenant.
-	worker := compose.NewLinkReconcileWorkspaceWorkerForTest(e.Pool, store)
+	worker := compose.NewLinkReconcileWorkspaceWorkerForTest(e.Pool)
 	if err := worker.ReconcileWorkspaceForTest(context.Background(), e.WS); err != nil {
 		t.Fatalf("the sweep failed: %v", err)
 	}

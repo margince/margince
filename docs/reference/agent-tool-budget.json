@@ -31,7 +31,7 @@
   "catalog": {
     "tools": 48,
     "system_frame_tokens": 592,
-    "tokens": 40258,
+    "tokens": 40244,
     "median_tool_tokens": 620,
     "mean_tool_tokens": 838
   },
@@ -141,7 +141,7 @@
     },
     {
       "name": "change_compliance",
-      "tokens": 893
+      "tokens": 879
     },
     {
       "name": "create_record",

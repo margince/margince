@@ -4,6 +4,8 @@
 package dbmigrate
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -175,5 +177,46 @@ func TestTwoOldVersionsOfOneMigrationEndAsOneRow(t *testing.T) {
 	}
 	if len(plan.ledger) != 1 || len(plan.steps) != 2 || plan.steps[0].dropOld || !plan.steps[1].dropOld {
 		t.Fatalf("ledger = %v, steps = %+v; want 0005 moved, then 0010 dropped", plan.ledger, plan.steps)
+	}
+}
+
+// A database that applied a moved migration in a form an equivalence entry
+// names for the new version is moved, not stopped. Read from the shipped
+// renumbered.txt and equivalentContent, so every such pair is asked.
+func TestARenumberFromEquivalentContentMovesTheRecordedRow(t *testing.T) {
+	t.Parallel()
+	text, err := os.ReadFile(filepath.Join("..", "..", "..", "migrations", "renumbered.txt"))
+	if err != nil {
+		t.Fatalf("reading renumbered.txt: %v", err)
+	}
+	declared, err := ParseRenumbers(string(text))
+	if err != nil {
+		t.Fatalf("parsing renumbered.txt: %v", err)
+	}
+	shipped := map[string]Migration{}
+	for _, m := range loadNamespaceMigrations(t, "core") {
+		shipped[m.Version] = m
+	}
+	asked := 0
+	for _, pair := range declared["core"] {
+		for _, eq := range equivalentContent["core"][pair.New] {
+			asked++
+			ns := Namespace{Name: "core", Migrations: []Migration{shipped[pair.New]}, Renumbered: []Renumber{pair}}
+			plan, err := planRenumbers(ns, map[string]LedgerRow{pair.Old: {Name: pair.Name, Digest: new(eq.applied)}})
+			if err != nil {
+				t.Errorf("%s -> %s: a database holding the equivalent content was refused: %v", pair.Old, pair.New, err)
+				continue
+			}
+			if len(plan.steps) != 1 || plan.steps[0].recorded != eq.applied {
+				t.Errorf("%s -> %s: steps = %+v, want one move matching the recorded digest", pair.Old, pair.New, plan.steps)
+			}
+			stranger := "bb" + strings.Repeat("0", 62)
+			if _, err := planRenumbers(ns, map[string]LedgerRow{pair.Old: {Name: pair.Name, Digest: &stranger}}); err == nil {
+				t.Errorf("%s -> %s: content no entry names was moved", pair.Old, pair.New)
+			}
+		}
+	}
+	if asked == 0 {
+		t.Fatal("no renumbered pair has an equivalence entry, so nothing here was asked; remove this test with the last such entry")
 	}
 }

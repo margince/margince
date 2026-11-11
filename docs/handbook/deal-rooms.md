@@ -58,7 +58,7 @@ To pause or close a Deal Room in Margince, open the deal's **Deal Room** tab and
    - **Closed**: "Buyers can still read. Nothing new can be added."
 2. Set **Access ends on**: "Leave empty for no end date. The day is read in UTC."
 3. Click **Save changes**.
-A paused room also shows **Resume** in the notice on the tab. A closed, expired or archived room cannot be changed here: "This room has ended. Its shared content is kept as a record."
+A paused room also shows **Resume** in the notice on the tab. A closed or archived room cannot be changed here: "This room has ended. Its shared content is kept as a record."
 Without permission to change Deal Rooms, **Manage room** is not shown.
 Also called: stop sharing, lock the room, expire the room.
 
@@ -140,6 +140,11 @@ or say anything more. They read the *live* room, so a file you later archive
 on the deal stops being there too.
 
 Nobody sets **Expired**. A room expires the moment its access end date passes.
+This holds for a paused or closed room too, and you and the buyer see the same state.
+An expired room cannot be paused or closed. To open it again, set a later end date.
+
+Once a room has expired, you can open a new Deal Room on the deal. From then on,
+the old room cannot take an end date later than the moment the new room opened.
 
 You can still **revoke somebody** from a closed room, on its page. So you can
 remove someone from a room that holds your signed contract, months after the
@@ -149,7 +154,7 @@ deal closed.
 
 A Deal Room's end date is set in **Access ends on**, under **Manage room**:
 access stops on that day. Setting one in the past takes effect at once. That is how you cut access
-short without ending the room.
+short without ending the room. A later date lets buyers in again.
 
 One thing to know: the date is read in **UTC**, not in your own time zone. If
 you are west of UTC, you lose part of that last day.
@@ -203,8 +208,12 @@ last seen, and "Documents downloaded: {count}".
 Closing, winning or losing the deal **does not change its Deal Room**. The room
 keeps working until you pause, close or expire it.
 
-**Archiving the deal** blocks the one action that gives access back: you cannot
-resume a paused room on an archived deal. Pause and close, which take access
+**Removing a colleague** from the workspace is not held up by a room they are
+the contact of once that room has expired. If you later give that room a later
+end date, it loses its contact and asks you to name a new one.
+
+**Archiving the deal** blocks the actions that give access back. You cannot
+resume a paused room or set a later end date on an archived deal. Pause and close, which take access
 away, still work.
 
 **Erasing a contact** removes and revokes their seat. It also deletes their

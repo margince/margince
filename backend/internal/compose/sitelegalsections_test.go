@@ -121,7 +121,7 @@ func TestLegalHeadingRecoveryCannotIntroduceUnprintedText(t *testing.T) {
 func TestCertificationReadsTheSameLegalHeadingEvidence(t *testing.T) {
 	doc := `<h2>Acme Singapore</h2><p>Acme Pte. Ltd.</p><p>77 High Street, Singapore 179433</p><p>Business Profile: 201629357M</p>`
 	page, _, _ := legalHTMLPage(doc)
-	fixture := sitePageFactsJSON(t, sitePageFactsFixture{
+	fixture := fixtureJSON(t, sitePageFactsFixture{
 		URL: page.URL, Kind: page.Kind, Text: page.Text, Sections: page.Sections,
 	})
 	reply := `{"facts":[{"f":"location","v":"Singapore","e":"s0"}],"entities":[{"n":"Acme Pte. Ltd.","a":"77 High Street, Singapore 179433","r":"201629357M","e":"s0"}]}`

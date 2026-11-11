@@ -138,14 +138,43 @@ func AwaitTwoDispatchArrivals(ctx context.Context, t *testing.T, completed <-cha
 				continue
 			}
 			seen[ev.Job.ID] = struct{}{}
+			arrived := time.Now()
 			if len(seen) == 1 {
-				first = time.Now()
+				first = arrived
 			} else {
-				second = time.Now()
+				second = arrived
 			}
 		}
 	}
 	return first, second
+}
+
+// AwaitIdleBetweenPasses waits for one pass of kind to complete. It answers how
+// long until a second pass first reported, by yielding or by completing. Both
+// times are the observer's clock, as in AwaitTwoDispatchArrivals. It is for a pass that yields between pages, whose
+// own length would otherwise count as the schedule's.
+func AwaitIdleBetweenPasses(ctx context.Context, t *testing.T, completed, snoozed <-chan *river.Event, kind string) time.Duration {
+	t.Helper()
+	var firstID int64
+	var firstDone time.Time
+	for {
+		var ev *river.Event
+		select {
+		case <-ctx.Done():
+			t.Fatalf("no second %s pass reported: %v — the pass fired at boot and then never again, so the operator's interval is not what schedules it", kind, ctx.Err())
+		case ev = <-completed:
+		case ev = <-snoozed:
+		}
+		if ev == nil || ev.Job == nil || ev.Job.Kind != kind {
+			continue
+		}
+		switch {
+		case firstDone.IsZero() && ev.Kind == river.EventKindJobCompleted:
+			firstID, firstDone = ev.Job.ID, time.Now()
+		case !firstDone.IsZero() && ev.Job.ID != firstID:
+			return time.Since(firstDone)
+		}
+	}
 }
 
 // StartTestJobRunner boots a worker-role job runner over cfg and returns it

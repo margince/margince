@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/margince/margince/backend/internal/compose/attention"
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -128,7 +129,7 @@ func TestEstimateReceiptUsesOnlyRecordedAuthorizedObservations(t *testing.T) {
 		if err != nil || len(rows) != 1 {
 			t.Fatalf("receipts = %+v, %v", rows, err)
 		}
-		projected := correctionValues(rows[0])
+		projected := attention.CorrectionValues(rows[0])
 		if (projected.EstimateBasis == nil) != (rows[0].EstimateBasis == nil) {
 			t.Fatal("wire lost estimate basis")
 		}

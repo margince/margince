@@ -9,11 +9,13 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
 import { meFixture } from "../../testing/mefixture";
-import { HandledForYouPanel } from "./worklist.handled";
+import { CHANGE_HISTORY_ID, HandledForYouPanel } from "./worklist.handled";
 
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  vi.restoreAllMocks();
+  window.location.hash = "";
 });
 
 // What a reader is told about work already done, and the one thing this panel
@@ -336,3 +338,82 @@ function panel(
     </QueryClientProvider>
   );
 }
+
+describe("a link to the Change history", () => {
+  it("lands on the panel once it has read its list, then lets the address go", async () => {
+    stubHandled({
+      as_of: "2026-09-05T09:00:00Z",
+      truncated: false,
+      receipts: [
+        {
+          id: "01a05500-0000-7000-8000-00000000e009",
+          kind: "email_sent",
+          summary: "Sent the confirmation to Kirsten",
+          occurred_at: "2026-09-05T08:00:00Z",
+        },
+      ],
+    });
+    const scrolled = vi.fn();
+    vi.spyOn(Element.prototype, "scrollIntoView").mockImplementation(function (
+      this: Element,
+    ) {
+      scrolled(this.id);
+    });
+    window.location.hash = "#/?queue=1&queue_at=history";
+
+    render(panel());
+    await screen.findByText("Sent the confirmation to Kirsten");
+
+    await waitFor(() =>
+      expect(scrolled).toHaveBeenCalledWith(CHANGE_HISTORY_ID),
+    );
+    expect(document.activeElement?.id).toBe(CHANGE_HISTORY_ID);
+    expect(window.location.hash).toBe("#/?queue=1");
+  });
+
+  it("lands on the panel's empty sentence when nothing was done", async () => {
+    stubHandled({
+      as_of: "2026-09-05T09:00:00Z",
+      truncated: false,
+      receipts: [],
+    });
+    const scrolled = vi.fn();
+    vi.spyOn(Element.prototype, "scrollIntoView").mockImplementation(function (
+      this: Element,
+    ) {
+      scrolled(this.id);
+    });
+    window.location.hash = "#/?queue=1&queue_at=history";
+
+    render(panel());
+    expect(await screen.findByText(en["worklist.handled.empty"])).toBeTruthy();
+    await waitFor(() =>
+      expect(scrolled).toHaveBeenCalledWith(CHANGE_HISTORY_ID),
+    );
+    expect(window.location.hash).toBe("#/?queue=1");
+    // Still there once the address let go of the panel.
+    expect(screen.getByText(en["worklist.handled.empty"])).toBeTruthy();
+  });
+
+  it("stays where the reader is when the address names no panel", async () => {
+    stubHandled({
+      as_of: "2026-09-05T09:00:00Z",
+      truncated: false,
+      receipts: [
+        {
+          id: "01a05500-0000-7000-8000-00000000e010",
+          kind: "email_sent",
+          summary: "Sent the reminder to Kirsten",
+          occurred_at: "2026-09-05T08:00:00Z",
+        },
+      ],
+    });
+    const scrolled = vi.fn();
+    vi.spyOn(Element.prototype, "scrollIntoView").mockImplementation(scrolled);
+    window.location.hash = "#/?queue=1";
+
+    render(panel());
+    await screen.findByText("Sent the reminder to Kirsten");
+    expect(scrolled).not.toHaveBeenCalled();
+  });
+});

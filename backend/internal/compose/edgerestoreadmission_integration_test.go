@@ -29,7 +29,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/contacts"
-	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -129,7 +128,7 @@ func TestALinkWhoseOtherEndWasErasedIsNotReversible(t *testing.T) {
 	edge := seedEmploymentEdge(t, e, contact, company)
 	auditID := latestAuditRowID(t, e, edgeEntityType, edge, "create")
 
-	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(),
+	if err := eraserWithGraph(e.DB()).EraseContact(e.Admin(),
 		contact, "art-17"); err != nil {
 		t.Fatalf("erasing the subject: %v", err)
 	}

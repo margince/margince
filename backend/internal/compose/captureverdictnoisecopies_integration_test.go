@@ -156,7 +156,7 @@ func TestAControllerReleaseClearsTheReplyVerdictOfTheMessageItEmpties(t *testing
 	if err != nil {
 		t.Fatal(err)
 	}
-	eraser := privacy.NewEraser(e.DB()).WithRawCapturePurger(RawCapturePurgerFor(e.DB()))
+	eraser := eraserWithGraph(e.DB()).WithRawCapturePurger(RawCapturePurgerFor(e.DB()))
 	if err := eraser.ReleaseRestriction(releaseControllerCtx(e), held, reason); err != nil {
 		t.Fatalf("releasing → %v", err)
 	}

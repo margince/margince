@@ -6,13 +6,14 @@
 #   scripts/home-budget-compare.sh HEAD_LOG BASE_LOG
 #
 # Each log holds the lines the check prints: `home-budget: row NAME p50=Xms
-# p95=Yms ...` from the API half and `bench-home: vitals day_paint_p50_ms=X
-# day_paint_p95_ms=Y cls_p95=Z ...` from the browser half. A base built before
+# p95=Yms ...` from the API half and `bench-home: vitals lcp_p95_ms=L
+# day_paint_p50_ms=X day_paint_p95_ms=Y cls_p95=Z ...` from the browser half. A base built before
 # p50 was printed contributes its p95 alone.
 #
 # A metric regresses when the change's value is above the base's by more than
 # the margin: 20% of the base or 100 ms, whichever is larger; for CLS, 20% or
-# 0.05. A metric the base lacks is listed and not judged. Runner speed moves
+# 0.05. A metric the base lacks is listed and not judged; one the change
+# stops printing fails the comparison. Runner speed moves
 # both runs alike, so only the change's own cost is left in the difference.
 #
 # Prints a Markdown table. Exits 1 when any metric regressed, 0 otherwise,
@@ -38,6 +39,10 @@ metrics() {
     }
     /bench-home: vitals / {
       for (i = 1; i <= NF; i++) {
+        if ($i ~ /^lcp_p95_ms=[0-9]+$/) {
+          split($i, kv, "=")
+          print "lcp.p95", kv[2]
+        }
         if ($i ~ /^day_paint_p(50|95)_ms=[0-9]+$/) {
           split($i, kv, "=")
           sub(/_ms$/, "", kv[1])
@@ -69,6 +74,7 @@ awk '
   NR == FNR { base[$1] = $2; next }
   {
     name = $1; value = $2
+    seen[name] = 1
     if (!(name in base)) {
       rows = rows sprintf("| %s | — | %s | — | not in base |\n", name, value)
       next
@@ -84,12 +90,22 @@ awk '
     rows = rows sprintf(fmt, name, base[name], value, limit, verdict)
   }
   END {
+    for (name in base) {
+      if (!(name in seen)) {
+        rows = rows sprintf("| %s | %s | — | — | **missing** |\n", name, base[name])
+        missing++
+      }
+    }
     print "| Metric | Merge base | This change | Limit | Verdict |"
     print "| --- | --- | --- | --- | --- |"
     printf "%s", rows
     print ""
     if (slower > 0) {
       printf "home-budget-compare: %d metric(s) slower than the merge base past the margin\n", slower
+      exit 1
+    }
+    if (missing > 0) {
+      printf "home-budget-compare: %d metric(s) missing from this change\n", missing
       exit 1
     }
     print "home-budget-compare: no metric is slower than the merge base past the margin"

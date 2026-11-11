@@ -36,6 +36,8 @@ export type SendStatus = Readonly<{
   deciding?: RefusedRecipient;
   /** How many recipients refuse, the deciding one included. */
   refusing: number;
+  /** Every refused recipient, in the server's order. */
+  refused: readonly RefusedRecipient[];
   /** How many recipients the answer covers; 0 where the server did not say. */
   recipients: number;
 }>;
@@ -106,6 +108,7 @@ function statusOf(
       : "restricted",
     deciding,
     refusing: refusals.length,
+    refused: refusals,
     recipients,
   };
 }
@@ -130,7 +133,7 @@ export function previewStatus(
     unanswered: boolean;
   }>,
 ): SendStatus {
-  const none = { refusing: 0, recipients: 0 };
+  const none = { refusing: 0, refused: [], recipients: 0 };
   if (answer.unanswered) return { kind: "unavailable", ...none };
   if (answer.asking) return { kind: "checking", ...none };
   const { preview } = answer;
@@ -143,6 +146,7 @@ export function previewStatus(
     return {
       kind: "ready",
       refusing: 0,
+      refused: [],
       recipients: preview.recipients.length,
     };
   }

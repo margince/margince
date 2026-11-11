@@ -151,7 +151,7 @@ func checkLeadExchangeExportAndErasure(t *testing.T, historicalAddress bool) {
 	if _, contains := exported.ConsentQualifyingEvents[0]["note"]; contains {
 		t.Fatal("export disclosed a colleague's free-text note")
 	}
-	if err := privacy.NewEraser(f.e.DB()).EraseContact(f.ctx, contactID.UUID, "Subject asked for erasure."); err != nil {
+	if err := eraserWithGraph(f.e.DB()).EraseContact(f.ctx, contactID.UUID, "Subject asked for erasure."); err != nil {
 		t.Fatal(err)
 	}
 	if err := f.e.DB().Tx(f.ctx, func(tx pgx.Tx) error {

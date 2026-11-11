@@ -129,6 +129,9 @@ func prepareLoggedActivity(ctx context.Context, tx pgx.Tx, in *LogActivityInput)
 	if err := admitLoggedPrecision(in); err != nil {
 		return err
 	}
+	if err := checkLoggedSender(*in); err != nil {
+		return err
+	}
 	if err := prepareFollowUpSource(ctx, tx, in); err != nil {
 		return err
 	}

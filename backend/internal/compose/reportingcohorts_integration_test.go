@@ -13,7 +13,6 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
-	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/modules/reporting"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -294,7 +293,7 @@ func TestLeadCohortFollowsArrivalsToTheirOutcomeForTheOwnerTheyArrivedWith(t *te
 	if _, err := store.UpdateLead(ctx, claimed, contacts.UpdateLeadInput{OwnerID: &rep1}); err != nil {
 		t.Fatal(err)
 	}
-	if err := privacy.NewEraser(InstallationDB(e.Pool)).EraseContact(ctx, ids.UUID(erased.Id), "subject request"); err != nil {
+	if err := eraserWithGraph(InstallationDB(e.Pool)).EraseContact(ctx, ids.UUID(erased.Id), "subject request"); err != nil {
 		t.Fatal(err)
 	}
 

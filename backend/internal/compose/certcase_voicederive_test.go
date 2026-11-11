@@ -85,15 +85,6 @@ func voiceDeriveGroundedReply(t *testing.T, sampleID, quote string) string {
 	}))
 }
 
-func voiceDeriveFixtureJSON(t *testing.T, f voiceDeriveFixture) json.RawMessage {
-	t.Helper()
-	raw, err := json.Marshal(f)
-	if err != nil {
-		t.Fatalf("encoding the fixture: %v", err)
-	}
-	return raw
-}
-
 func voiceDeriveExpectationJSON(t *testing.T, registers ...string) json.RawMessage {
 	t.Helper()
 	raw, err := json.Marshal(registers)
@@ -107,7 +98,7 @@ func runVoiceDeriveCase(
 	t *testing.T, fixture voiceDeriveFixture, expected json.RawMessage, reply string,
 ) (aitasks.Outcome, aitasks.Trace) {
 	t.Helper()
-	prepared, err := voiceDeriveCases{}.Prepare(voiceDeriveFixtureJSON(t, fixture), expected)
+	prepared, err := voiceDeriveCases{}.Prepare(fixtureJSON(t, fixture), expected)
 	if err != nil {
 		t.Fatalf("preparing the case: %v", err)
 	}
@@ -342,7 +333,7 @@ func TestVoiceDeriveCaseRefusesWhatThisSiteCannotMeasure(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			_, err := voiceDeriveCases{}.Prepare(voiceDeriveFixtureJSON(t, tc.fixture), tc.expected)
+			_, err := voiceDeriveCases{}.Prepare(fixtureJSON(t, tc.fixture), tc.expected)
 			if err == nil {
 				t.Fatal("Prepare accepted a scenario this site cannot measure")
 			}
@@ -473,7 +464,7 @@ func TestVoiceDeriveCaseRunsWhatProductionRuns(t *testing.T) {
 // asking a scenario author to invent a value that changes nothing.
 func TestVoiceDeriveFixtureCarriesOnlyWhatProductionIsGiven(t *testing.T) {
 	var fields map[string]json.RawMessage
-	if err := json.Unmarshal(voiceDeriveFixtureJSON(t, voiceDeriveCorpusFixture()), &fields); err != nil {
+	if err := json.Unmarshal(fixtureJSON(t, voiceDeriveCorpusFixture()), &fields); err != nil {
 		t.Fatalf("decoding the fixture: %v", err)
 	}
 	given := map[string]bool{"personality": true, "samples": true}

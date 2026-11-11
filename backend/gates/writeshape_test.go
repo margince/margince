@@ -33,7 +33,7 @@ import (
 // events.md gains the missing event types, wiring storekit.Emit into
 // these mutations removes the entries.
 var auditOnlyWrites = gatekit.Waive(map[string]string{
-	"internal/modules/privacy:redactLinkedHistoricalEntry":  "records payload removal on one immutable audit-row ID. No domain record or erasure boundary changes, and its old event copies are cancelled; publishing a new domain erasure would misstate later work",
+	"internal/modules/privacy:correctLinkedHistoricalEntry": "records payload removal on one immutable audit-row ID. No domain record or erasure boundary changes, and its old event copies are cancelled; publishing a new domain erasure would misstate later work",
 	"internal/modules/consent:finalizeErasureFulfil":        "anonymizes the fulfilled rights case after the contact erasure committed. The contact erasure already emits retention.applied. This certificate clears the case audit payloads; the closed event catalog has no rights-case event and publishing another contact erasure would duplicate that domain action",
 	"internal/modules/privacy:redactHistoricalRecord":       "removes retained infrastructure payloads under an earlier privacy certificate. The record and its erasure boundary do not change. Re-emitting a domain erasure could make consumers discard later authorized work; the audit_log update entry records the payload removal without publishing a false domain change",
 	"internal/modules/privacy:scrubDedupeEvidence":          "closing duplicate questions during subject erasure records only archive flags and the reason. The closed event catalog has no dedupe type or subscriber; the enclosing erasure records its own outcome",

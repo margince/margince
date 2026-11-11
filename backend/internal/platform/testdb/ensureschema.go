@@ -12,6 +12,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/dbmigrate"
+	"github.com/margince/margince/backend/internal/platform/sweepreach"
 	"github.com/margince/margince/backend/migrations"
 )
 
@@ -30,6 +31,9 @@ import (
 // to be true, and why every one of those conditions is load-bearing rather than
 // defensive.
 func EnsureSchema(ctx context.Context, owner *pgx.Conn) error {
+	// A suite merges and erases on a test database without booting; one that
+	// needs the declared tables installs them itself (integration.Setup).
+	sweepreach.InstallForTestDatabase()
 	migrateOnce.Do(func() {
 		reusable, reason, err := reusableClone(ctx, owner)
 		if err != nil {
