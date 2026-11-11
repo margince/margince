@@ -33196,6 +33196,9 @@ type AiFieldError struct {
 	// Field The path of the refused key.
 	Field string `json:"field"`
 
+	// Max The limit a `too_long` refusal names, in characters. Absent when the refusal states none.
+	Max *int `json:"max,omitempty"`
+
 	// Message What is wrong and what to write instead.
 	Message string `json:"message"`
 }
@@ -43163,6 +43166,14 @@ type ContactMoment struct {
 	// Confidence `observed_fact` is a thing that happened; the softer values exist for sources that infer rather than observe.
 	Confidence ContactMomentConfidence `json:"confidence"`
 
+	// Done Present on an `awaiting_reply` or `gone_quiet` moment when a Done would change something
+	// for this reader: they may mark the message, and have not set it aside yet. `Done` puts
+	// `handled` on the message through `PUT /activities/{id}/disposition`, the state the
+	// Worklist's Done writes, so the card and the Worklist row leave together for this reader.
+	// `DELETE /activities/{id}/disposition` takes it back. A newer message either way brings the
+	// card back. Absent on every other moment.
+	Done *ContactMomentDone `json:"done,omitempty"`
+
 	// Evidence What the moment is derived from. Never empty — a reason with no evidence is an opinion.
 	Evidence []ContactMomentEvidence `json:"evidence"`
 
@@ -43255,6 +43266,17 @@ type ContactMomentDestinationEntityType string
 
 // ContactMomentDestinationSurface `composer` — the outbound draft drawer. `meeting_brief` — the pre-meeting dossier. `research` — the deep-research drawer. `record` — another record page. `task` — the task sheet. `activity_log` — the log-activity form, for writing down a note or a meeting that happened off-system. `booking` — arrange a calendar invitation with this contact. `privacy_notice` — open the disclosure case named by entity_id directly.
 type ContactMomentDestinationSurface string
+
+// ContactMomentDone Present on an `awaiting_reply` or `gone_quiet` moment when a Done would change something
+// for this reader: they may mark the message, and have not set it aside yet. `Done` puts
+// `handled` on the message through `PUT /activities/{id}/disposition`, the state the
+// Worklist's Done writes, so the card and the Worklist row leave together for this reader.
+// `DELETE /activities/{id}/disposition` takes it back. A newer message either way brings the
+// card back. Absent on every other moment.
+type ContactMomentDone struct {
+	// ActivityId The message we sent last, which the card rests on and a Done marks.
+	ActivityId openapi_types.UUID `json:"activity_id"`
+}
 
 // ContactMomentEvidence One thing that actually happened, which the reader can open.
 type ContactMomentEvidence struct {
@@ -47836,8 +47858,9 @@ type EmailSignatureTemplate struct {
 	// `{phone}`, `{logo}` and `{imprint}`. `{logo}` embeds the logo of the legal entity the
 	// sender works for, sized for mail, in the message itself; the default entity's logo is
 	// the company's own, and an entity with no logo shows none. `{imprint}` is that entity's
-	// imprint, escaped, with its line breaks kept. A send keeps paragraphs, line breaks, bold, italic, underline, links
-	// and spans with a colour and a pixel size, and drops everything else. Empty means
+	// imprint, escaped, with its line breaks kept. A send keeps paragraphs, line breaks, bold, italic, underline, links,
+	// tables, divs, layout styles and `https` images with their width and height. It drops scripts, event
+	// handlers, forms, frames, `javascript:` and `data:` addresses and `url()` in styles. Empty means
 	// none: each member uses personal HTML, plain text or the closing line.
 	Template string `json:"template"`
 }
@@ -56930,7 +56953,8 @@ type Problem struct {
 	Detail *string `json:"detail,omitempty"`
 
 	// Details Structured machine context — e.g. `existing_id` on 409 duplicate, or an
-	// `errors` array of `{ field, code, message }` on 422 validation.
+	// `errors` array of `{ field, code, message }` on 422 validation. A `too_long`
+	// entry also carries `max`, the limit in characters.
 	//
 	// A 429 that an agent's limit answers carries `limit`: `kind` names it (`calls`,
 	// `writes` or `egress` for a window allowance, `pacing` for the per-minute limit),

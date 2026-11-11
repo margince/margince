@@ -6208,7 +6208,10 @@ export interface paths {
          *     still see it. The Worklist offers `not_mine` only on a row whose owner is not the reader.
          *
          *     `handled` names no moment and nothing lifts it: the reader dealt with the message another
-         *     way. The customer's next message is new work, so it comes back on its own.
+         *     way. The customer's next message is new work, so it comes back on its own. `handled` also
+         *     takes a message we sent, when it is the reader's own newest message to a contact and nobody
+         *     has written since: the reader needs no reply to it. Any other message we sent is refused with
+         *     `not_your_waiting_message`, and a note, task or meeting with `not_a_message`.
          *
          *     A snooze names a moment still ahead and lifts on its own. `not_mine` names no moment: it
          *     stands until the reader picks the message back up, or until the record it is filed under
@@ -30341,6 +30344,8 @@ export interface components {
             code: string;
             /** @description What is wrong and what to write instead. */
             message: string;
+            /** @description The limit a `too_long` refusal names, in characters. Absent when the refusal states none. */
+            max?: number;
         };
         /** @description AI usage + budget (AIRT-WIRE-1): the AIRT-PARAM-33 meter aggregated per day × task × tier, plus the budget band. Token-denominated; cost_est_minor is computed on read from the workspace's ai_model_rate price sheet as of each call's day (ADR-0067, price-on-read) — omitted, never a fabricated 0, when a task line's window carries no priced call, and accompanied by unpriced_calls when it is a partial total. */
         AiUsage: {
@@ -31471,7 +31476,8 @@ export interface components {
             instance?: string;
             /**
              * @description Structured machine context — e.g. `existing_id` on 409 duplicate, or an
-             *     `errors` array of `{ field, code, message }` on 422 validation.
+             *     `errors` array of `{ field, code, message }` on 422 validation. A `too_long`
+             *     entry also carries `max`, the limit in characters.
              *
              *     A 429 that an agent's limit answers carries `limit`: `kind` names it (`calls`,
              *     `writes` or `egress` for a window allowance, `pacing` for the per-minute limit),
@@ -35736,6 +35742,22 @@ export interface components {
             recommended_action: components["schemas"]["ContactMomentAction"];
             secondary_actions?: components["schemas"]["ContactMomentAction"][];
             may_be_done?: components["schemas"]["ContactMomentMayBeDone"];
+            done?: components["schemas"]["ContactMomentDone"];
+        };
+        /**
+         * @description Present on an `awaiting_reply` or `gone_quiet` moment when a Done would change something
+         *     for this reader: they may mark the message, and have not set it aside yet. `Done` puts
+         *     `handled` on the message through `PUT /activities/{id}/disposition`, the state the
+         *     Worklist's Done writes, so the card and the Worklist row leave together for this reader.
+         *     `DELETE /activities/{id}/disposition` takes it back. A newer message either way brings the
+         *     card back. Absent on every other moment.
+         */
+        ContactMomentDone: {
+            /**
+             * Format: uuid
+             * @description The message we sent last, which the card rests on and a Done marks.
+             */
+            activity_id: string;
         };
         /**
          * @description Present when the moment is a promise we owe AND we wrote to the contact after it was
@@ -36902,8 +36924,9 @@ export interface components {
              *     `{phone}`, `{logo}` and `{imprint}`. `{logo}` embeds the logo of the legal entity the
              *     sender works for, sized for mail, in the message itself; the default entity's logo is
              *     the company's own, and an entity with no logo shows none. `{imprint}` is that entity's
-             *     imprint, escaped, with its line breaks kept. A send keeps paragraphs, line breaks, bold, italic, underline, links
-             *     and spans with a colour and a pixel size, and drops everything else. Empty means
+             *     imprint, escaped, with its line breaks kept. A send keeps paragraphs, line breaks, bold, italic, underline, links,
+             *     tables, divs, layout styles and `https` images with their width and height. It drops scripts, event
+             *     handlers, forms, frames, `javascript:` and `data:` addresses and `url()` in styles. Empty means
              *     none: each member uses personal HTML, plain text or the closing line.
              */
             template: string;

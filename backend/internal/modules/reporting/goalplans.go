@@ -6,7 +6,6 @@ package reporting
 import (
 	"context"
 	"strconv"
-	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -155,10 +154,7 @@ func checkGoalReason(reason string) error {
 	if !values.HasVisibleText(reason) {
 		return refuse("reason", "required", "enter a reason")
 	}
-	if utf8.RuneCountInString(reason) > 1000 {
-		return refuse("reason", "too_long", "a reason holds at most 1000 characters")
-	}
-	return nil
+	return refuseLongReason(reason)
 }
 
 // planForWrite locks the seller's year and checks the version the caller saw;

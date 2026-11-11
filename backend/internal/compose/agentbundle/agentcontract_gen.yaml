@@ -29309,6 +29309,7 @@ components:
         field: {type: string, description: 'The path of the refused key.'}
         code: {type: string}
         message: {type: string, description: 'What is wrong and what to write instead.'}
+        max: {type: integer, description: 'The limit a `too_long` refusal names, in characters. Absent when the refusal states none.'}
     AiUsage:
       type: object
       required: [days, budget]
@@ -30274,7 +30275,8 @@ components:
           additionalProperties: true
           description: |-
             Structured machine context — e.g. `existing_id` on 409 duplicate, or an
-            `errors` array of `{ field, code, message }` on 422 validation.
+            `errors` array of `{ field, code, message }` on 422 validation. A `too_long`
+            entry also carries `max`, the limit in characters.
     PageInfo:
       type: object
       required: [has_more]
@@ -34543,6 +34545,23 @@ components:
           items: {$ref: '#/components/schemas/ContactMomentAction'}
         may_be_done:
           $ref: '#/components/schemas/ContactMomentMayBeDone'
+        done:
+          $ref: '#/components/schemas/ContactMomentDone'
+    ContactMomentDone:
+      type: object
+      description: |-
+        Present on an `awaiting_reply` or `gone_quiet` moment when a Done would change something
+        for this reader: they may mark the message, and have not set it aside yet. `Done` puts
+        `handled` on the message through `PUT /activities/{id}/disposition`, the state the
+        Worklist's Done writes, so the card and the Worklist row leave together for this reader.
+        `DELETE /activities/{id}/disposition` takes it back. A newer message either way brings the
+        card back. Absent on every other moment.
+      required: [activity_id]
+      properties:
+        activity_id:
+          type: string
+          format: uuid
+          description: The message we sent last, which the card rests on and a Done marks.
     ContactMomentMayBeDone:
       type: object
       description: |-
@@ -35796,7 +35815,7 @@ components:
             With none set, a send closes with a greeting and the member's name.
         html:
           type: string
-          maxLength: 2000
+          maxLength: 10000
           description: |-
             Saved personal HTML, trimmed at both ends. Rendering sanitizes it without
             expanding placeholders. Empty sanitized content uses the usual fallback.
@@ -35827,8 +35846,9 @@ components:
             `{phone}`, `{logo}` and `{imprint}`. `{logo}` embeds the logo of the legal entity the
             sender works for, sized for mail, in the message itself; the default entity's logo is
             the company's own, and an entity with no logo shows none. `{imprint}` is that entity's
-            imprint, escaped, with its line breaks kept. A send keeps paragraphs, line breaks, bold, italic, underline, links
-            and spans with a colour and a pixel size, and drops everything else. Empty means
+            imprint, escaped, with its line breaks kept. A send keeps paragraphs, line breaks, bold, italic, underline, links,
+            tables, divs, layout styles and `https` images with their width and height. It drops scripts, event
+            handlers, forms, frames, `javascript:` and `data:` addresses and `url()` in styles. Empty means
             none: each member uses personal HTML, plain text or the closing line.
     EmailSignOffRequest:
       type: object
@@ -35856,7 +35876,7 @@ components:
           description: The workspace template as edited. Empty previews a workspace with none.
         html:
           type: string
-          maxLength: 2000
+          maxLength: 10000
           description: |-
             Personal HTML as typed. Empty clears it; omitted on a write or preview
             leaves it unchanged. Rendering uses the signature sanitizer without
@@ -35904,7 +35924,7 @@ components:
             is a document riding on every message.
         html:
           type: string
-          maxLength: 2000
+          maxLength: 10000
           description: |-
             Personal HTML as typed. Empty clears it; omitted on a write or preview
             leaves it unchanged. Rendering uses the signature sanitizer without

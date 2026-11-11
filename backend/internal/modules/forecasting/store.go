@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -453,9 +454,9 @@ func nullIfEmpty(s string) *string {
 // field so the answer points at what to shorten.
 func bounded(field, value string, limit int) (string, error) {
 	trimmed := strings.TrimSpace(value)
-	if len(trimmed) > limit {
+	if utf8.RuneCountInString(trimmed) > limit {
 		return "", &values.ParseError{
-			Field: field, Code: "too_long",
+			Field: field, Code: "too_long", Max: limit,
 			Message: fmt.Sprintf("%s is at most %d characters", field, limit),
 		}
 	}

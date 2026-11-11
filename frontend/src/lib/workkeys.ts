@@ -10,6 +10,9 @@ export const nudgeDismissalKey = ["nudge-dismissal"] as const;
 // Every cached contact duplicate case. A case is read off its pairs, so a pair
 // decision anywhere makes all of them stale.
 export const contactCasesKey = ["contact-case"] as const;
+// Every cached page of data-subject requests. A request names its subject's
+// label, so a contact merge stales it as well as the privacy screen's writes.
+export const dsrsKey = ["dsrs"] as const;
 
 export async function invalidateHandledChange(
   client: QueryClient,

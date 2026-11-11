@@ -221,7 +221,7 @@ describe("the subject-request table", () => {
     await pickOption(
       user,
       within(dialog).getByLabelText(en["privacy.kind"]),
-      en["privacy.kindAccess"],
+      en["privacy.kindRectify"],
     );
     await user.type(
       within(dialog).getByLabelText(en["privacy.subjectRef"]),

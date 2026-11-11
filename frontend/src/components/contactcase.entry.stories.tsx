@@ -2,13 +2,13 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { ANA, contactCase } from "../../testing/contactcase.fixtures";
+import { ANA, contactCase } from "../testing/contactcase.fixtures";
 import {
   jsonResponse,
   StoryProviders,
   stubWithSession,
-} from "../../testing/story-utils";
-import { ContactCaseEntry } from "./contactcaseentry";
+} from "../testing/story-utils";
+import { ContactCaseEntry } from "./contactcase.entry";
 
 // The contact page's door to its open duplicate case, in the header's pills.
 const meta: Meta = { title: "Records/Contact 360/Possible duplicates" };

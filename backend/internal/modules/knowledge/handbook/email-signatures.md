@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/settings/retainedsignature.tsx backend/internal/modules/contacts/retainedsignature.go frontend/src/features/settings/settingssignaturerow.tsx frontend/src/features/mail/composesignoff.tsx backend/internal/modules/contacts/emailsignature.go backend/internal/modules/activities/signature.go backend/internal/modules/activities/signaturetemplate.go frontend/src/features/settings/legalentityeditor.tsx -->
+<!-- describes: frontend/src/features/settings/retainedsignature.tsx backend/internal/modules/contacts/retainedsignature.go frontend/src/features/settings/settingssignaturerow.tsx frontend/src/features/mail/composesignoff.tsx backend/internal/modules/contacts/emailsignature.go backend/internal/modules/activities/signature.go backend/internal/modules/activities/signaturetemplate.go frontend/src/features/settings/legalentityeditor.tsx frontend/src/features/settings/settingssignatureeditor.tsx backend/internal/modules/activities/htmlsanitize.go backend/internal/modules/activities/signaturepolicy.go backend/internal/compose/signaturepreviewimages.go -->
 # Your email signature
 
 Open **Settings → Account → Edit signature**. Choose **Plain text** to write a
@@ -19,9 +19,22 @@ can also show that company's imprint.
 The greeting follows the message's language. When the message is too short to
 tell, Margince uses the installation's language, then English.
 
-The HTML preview shows what a send keeps. Images from websites and scripts are
-removed. Only the built-in logo of the company you work for can be embedded; other image attachments
-are removed too.
+Personal HTML can be up to 10,000 characters, counted as you typed or pasted
+it. Past 8,000 characters the field shows a count, and it turns red past the
+limit. **Save** then tells you the signature is too long.
+
+The HTML preview shows what a send keeps. A signature pasted from your mail
+client keeps its tables, layout, colours and logo. Images from `https` addresses
+are kept at the size you set. Images from other addresses are removed, and so
+are scripts, forms and embedded pages.
+
+The preview shows each image from a copy Margince fetches. If an image cannot be
+fetched, the preview shows a box of its size with its name. A list of approvals
+shows each image as that box. The sent mail still links the image.
+
+To show the logo of the company you work for without hosting it yourself, write
+`<img src="cid:signature-logo@margince">`. Margince embeds that logo in the
+mail itself.
 
 If no text remains, the usual fallback signs the mail.
 The settings row names the format you saved; check the preview for the result.
@@ -36,7 +49,8 @@ an agent sends carries no sign-off. AI drafts never add one.
 A **Manual privacy review needed** notification opens the retained signature it
 names. A privacy controller can read its plain text, HTML, title and phone, then
 edit them and choose the page's **Save**. Opening it keeps the original text.
-The preview shows the saved HTML with images from other sites and scripts removed.
+The preview shows the saved HTML as a send keeps it, with scripts and images
+that are not from `https` addresses removed.
 
 A controller needs a full seat, an Admin or Ops role, and access to read and erase
 all contacts without hidden fields. A read-only seat cannot review it. The owner

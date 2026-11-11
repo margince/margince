@@ -142,11 +142,11 @@ export function SignatureSettingRow({ toast }: Readonly<{ toast: Toast }>) {
             previewHtml={
               shown.format === "html" || templated ? rendered?.html : undefined
             }
-            htmlHint={t(
+            htmlHint={
               templated
                 ? "settings.signatureHtmlHintTemplate"
-                : "settings.signatureHtmlHintPlain",
-            )}
+                : "settings.signatureHtmlHintPlain"
+            }
             disabled={save.isPending}
             change={change}
           />

@@ -47,7 +47,12 @@ export function NextBar({
   insight?: ReactNode;
   // The verb that settles the move, as the caller's own `Button`.
   action?: ReactNode;
-  snooze?: Readonly<{ onSnooze: () => void; pending?: boolean }>;
+  // `label` names what the deferral does where it is no snooze to a date.
+  snooze?: Readonly<{
+    onSnooze: () => void;
+    pending?: boolean;
+    label?: string;
+  }>;
   // The other open tasks, behind a link to the record's task list. `peek`
   // names them on hover and focus, so "+2 tasks" is never a lone number.
   more?: NextBarMore;
@@ -98,7 +103,7 @@ export function NextBar({
                 onClick={snooze.onSnooze}
                 pending={snooze.pending}
               >
-                {t("standing.next.snooze")}
+                {snooze.label ?? t("standing.next.snooze")}
               </Button>
             )}
             {more && more.count > 0 && <MoreTasks more={more} />}

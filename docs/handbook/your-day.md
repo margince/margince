@@ -318,7 +318,7 @@ Taking an item off the Worklist uses four choices, and they reach different numb
 | **Not mine** | "Removed from your list. It comes back if the record changes hands." | **Your list only** |
 | **Not a customer** | "Removed from every list." | **Everybody** |
 
-**Done** is for a message you handled another way: by phone, in a meeting, or with no reply owed. It does not count as a reply sent.
+**Done** is for a message you handled another way: by phone, in a meeting, or with no reply owed. It does not count as a reply sent. **Done** on a contact's **Waiting for their reply** card is the same choice. The Worklist row for that message leaves too, and a **Done** on the row hides the card.
 
 On any other row, **Done** says "Marked done for you. It comes back if something new happens on it." A deal comes back after new activity or once its close date passes. A system or delivery row comes back when it fails again.
 

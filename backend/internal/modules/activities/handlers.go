@@ -18,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/signature"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
@@ -58,6 +59,9 @@ type Handlers struct {
 	// send (WithScheduleTimer wires it), because accepting "send it Monday"
 	// with nothing to wake it is a promise this surface cannot keep.
 	timer ScheduleTimer
+	// signatureImages draws a sign-off preview's https images; nil leaves
+	// them as addresses the app's page will not load.
+	signatureImages signature.PreviewImages
 	// The public-booking capture seams; nil fails closed
 	// (WithPublicBooking wires them).
 	publicContacts ContactEnsurer

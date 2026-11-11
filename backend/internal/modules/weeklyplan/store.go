@@ -330,7 +330,7 @@ func bounded(field, value string, limit int) (string, error) {
 	// did not.
 	if utf8.RuneCountInString(trimmed) > limit {
 		return "", &values.ParseError{
-			Field: field, Code: "too_long",
+			Field: field, Code: "too_long", Max: limit,
 			Message: fmt.Sprintf("%s is at most %d characters", field, limit),
 		}
 	}

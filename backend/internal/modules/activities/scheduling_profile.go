@@ -246,7 +246,7 @@ func validateSchedulingProfile(p crmcontracts.SchedulingProfile) error {
 	}
 	if p.BlockingCalendars != nil && slices.ContainsFunc(*p.BlockingCalendars, func(id string) bool { return utf8.RuneCountInString(id) > maxSchedulingCalendar }) {
 		return &SchedulingArgumentError{
-			Field: fieldBlockingCalendars, Code: codeTooLong,
+			Field: fieldBlockingCalendars, Code: codeTooLong, Max: maxSchedulingCalendar,
 			Message: fmt.Sprintf("A calendar id may be at most %d characters", maxSchedulingCalendar),
 		}
 	}
@@ -383,13 +383,13 @@ func validateSchedulingLimits(p crmcontracts.SchedulingProfile) error {
 	}
 	if utf8.RuneCountInString(p.Title) > maxSchedulingTitle {
 		return &SchedulingArgumentError{
-			Field: "title", Code: codeTooLong,
+			Field: "title", Code: codeTooLong, Max: maxSchedulingTitle,
 			Message: fmt.Sprintf("The title may be at most %d characters", maxSchedulingTitle),
 		}
 	}
 	if utf8.RuneCountInString(p.Location) > maxSchedulingLocation {
 		return &SchedulingArgumentError{
-			Field: "location", Code: codeTooLong,
+			Field: "location", Code: codeTooLong, Max: maxSchedulingLocation,
 			Message: fmt.Sprintf("The location may be at most %d characters", maxSchedulingLocation),
 		}
 	}
@@ -398,7 +398,7 @@ func validateSchedulingLimits(p crmcontracts.SchedulingProfile) error {
 	}
 	if utf8.RuneCountInString(p.CalendarId) > maxSchedulingCalendar {
 		return &SchedulingArgumentError{
-			Field: "calendar_id", Code: codeTooLong,
+			Field: "calendar_id", Code: codeTooLong, Max: maxSchedulingCalendar,
 			Message: fmt.Sprintf("The calendar id may be at most %d characters", maxSchedulingCalendar),
 		}
 	}
