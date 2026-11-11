@@ -125,9 +125,9 @@ type appVendor struct {
 	// directoryPinned reports whether Tenant means anything for this vendor.
 	directoryPinned bool
 	// connectors names the capture connectors this one app authorizes. One
-	// Google project backs Gmail, Google Calendar and Google Docs; one Entra registration
-	// backs Outlook mail and Outlook calendar — which is why the app is keyed
-	// by VENDOR and not by connector.
+	// Google project backs Gmail, Google Calendar and Google Docs. One Entra
+	// registration backs Outlook mail and calendar. So the app is keyed by
+	// vendor, not by connector.
 	//
 	// Held here because a refresh token belongs to the client that issued it:
 	// replacing the client id makes every connection under these names

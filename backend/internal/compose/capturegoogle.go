@@ -234,11 +234,10 @@ func WithGmailCapture(c GmailConfig, cfg CaptureConfig) Option {
 		// deployment's origins rather than of anything the operator has yet
 		// configured, and it is not derivable from the sign-in one — that rides a
 		// different base on a split deployment.
-		// EVERY connector, under the keys their own routes are served on. Gmail,
-		// Calendar and Docs are separate flows sharing one Google app, so an
-		// operator who registers only one gets redirect_uri_mismatch on the
-		// others — and the key is `gmail`/`gcal`/`gdocs`, never the `google` the
-		// sign-in route uses. A SLICE, not a map: this list is a contract array
+		// Every connector, under the keys its own routes are served on. Gmail,
+		// Calendar and Docs are separate flows sharing one Google app.
+		// An operator who registers only one gets redirect_uri_mismatch on the
+		// others. The key is `gmail`/`gcal`/`gdocs`, never the sign-in `google`. A SLICE, not a map: this list is a contract array
 		// an operator reads top to bottom, and Go randomizes map iteration.
 		for _, connector := range googleBackedConnectors {
 			if uri := connectorCallbackURL(c.APIBaseURL, c.PublicBaseURL, connector.provider); uri != "" {

@@ -123,8 +123,8 @@ export function AccountServices({
 
 type ServiceKind = "mail" | "calendar" | "notes";
 
-// Meeting notes is a row on Connections only: the connect flow and onboarding
-// offer mail and calendar, so it sits beside their words rather than in them.
+// Meeting notes is a row on Connections only. The connect flow and onboarding
+// offer mail and calendar, so its words sit beside theirs.
 const ROW_WORDS: Record<ServiceKind, { name: MessageKey; desc: MessageKey }> = {
   ...SERVICE_WORDS,
   notes: { name: "connectors.notes.name", desc: "connectors.notes.desc" },

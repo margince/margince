@@ -10,10 +10,10 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 )
 
-// The calendar set is the OAuth set minus the mail and meeting-notes sets, and
-// it has to come out as the two calendars this product actually connects.
-// Derivation can quietly empty it: a mail list covering every OAuth provider
-// would tell every host their calendar is unconnected.
+// The calendar set is the OAuth set minus the mail and meeting-notes sets.
+// It has to come out as the two calendars this product connects.
+// Derivation can empty it: a mail list covering every OAuth provider would
+// tell every host their calendar is unconnected.
 func TestTheCalendarProvidersAreTheOAuthProvidersThatAreNotMailOrNotes(t *testing.T) {
 	want := []string{providerGcal, providerGraphCal}
 	if !slices.Equal(calendarProviders, want) {
