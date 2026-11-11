@@ -21019,6 +21019,7 @@ const (
 	RetentionScopeDealRiskDay            RetentionScope = "deal_risk_day"
 	RetentionScopeDeallost               RetentionScope = "deal/lost"
 	RetentionScopeDealwon                RetentionScope = "deal/won"
+	RetentionScopeExtension              RetentionScope = "extension"
 	RetentionScopeLeadunconverted        RetentionScope = "lead/unconverted"
 	RetentionScopeRawCapture             RetentionScope = "raw_capture"
 	RetentionScopeReportEdition          RetentionScope = "report_edition"
@@ -21040,6 +21041,8 @@ func (e RetentionScope) Valid() bool {
 	case RetentionScopeDeallost:
 		return true
 	case RetentionScopeDealwon:
+		return true
+	case RetentionScopeExtension:
 		return true
 	case RetentionScopeLeadunconverted:
 		return true
@@ -45104,6 +45107,9 @@ type CreateRetentionPolicyRequest struct {
 	// evaluator has a selector for. The enum IS the authorable set, so a client cannot offer a
 	// scope that would be stored and then skipped every pass. `activity` is the bare object type
 	// (the row whose `category` is null); every other value carries its category after the slash.
+	// `extension` is the rows of every extension table that declares an age column: `anonymize`
+	// clears their declared personal columns, `erase` deletes them, and the table's retention
+	// class is the floor.
 	//
 	// Extending this enum means adding a selector in the same change.
 	Scope RetentionScope `json:"scope"`
@@ -56888,6 +56894,9 @@ type PrivacyInformationRetention struct {
 	// evaluator has a selector for. The enum IS the authorable set, so a client cannot offer a
 	// scope that would be stored and then skipped every pass. `activity` is the bare object type
 	// (the row whose `category` is null); every other value carries its category after the slash.
+	// `extension` is the rows of every extension table that declares an age column: `anonymize`
+	// clears their declared personal columns, `erase` deletes them, and the table's retention
+	// class is the floor.
 	//
 	// Extending this enum means adding a selector in the same change.
 	Scope RetentionScope `json:"scope"`
@@ -60657,6 +60666,9 @@ type RetentionPolicy struct {
 	// evaluator has a selector for. The enum IS the authorable set, so a client cannot offer a
 	// scope that would be stored and then skipped every pass. `activity` is the bare object type
 	// (the row whose `category` is null); every other value carries its category after the slash.
+	// `extension` is the rows of every extension table that declares an age column: `anonymize`
+	// clears their declared personal columns, `erase` deletes them, and the table's retention
+	// class is the floor.
 	//
 	// Extending this enum means adding a selector in the same change.
 	Scope RetentionScope `json:"scope"`
@@ -60674,6 +60686,9 @@ type RetentionPolicy struct {
 // evaluator has a selector for. The enum IS the authorable set, so a client cannot offer a
 // scope that would be stored and then skipped every pass. `activity` is the bare object type
 // (the row whose `category` is null); every other value carries its category after the slash.
+// `extension` is the rows of every extension table that declares an age column: `anonymize`
+// clears their declared personal columns, `erase` deletes them, and the table's retention
+// class is the floor.
 //
 // Extending this enum means adding a selector in the same change.
 type RetentionScope string

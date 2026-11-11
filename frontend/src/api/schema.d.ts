@@ -51348,11 +51348,14 @@ export interface components {
          *     evaluator has a selector for. The enum IS the authorable set, so a client cannot offer a
          *     scope that would be stored and then skipped every pass. `activity` is the bare object type
          *     (the row whose `category` is null); every other value carries its category after the slash.
+         *     `extension` is the rows of every extension table that declares an age column: `anonymize`
+         *     clears their declared personal columns, `erase` deletes them, and the table's retention
+         *     class is the floor.
          *
          *     Extending this enum means adding a selector in the same change.
          * @enum {string}
          */
-        RetentionScope: "report_edition" | "lead/unconverted" | "activity" | "activity/transcript" | "contact/no_consent_no_deal" | "deal/lost" | "deal/won" | "ai_call_payload/content" | "raw_capture" | "deal_risk_day";
+        RetentionScope: "report_edition" | "lead/unconverted" | "activity" | "activity/transcript" | "contact/no_consent_no_deal" | "deal/lost" | "deal/won" | "ai_call_payload/content" | "raw_capture" | "deal_risk_day" | "extension";
         /**
          * @description What happens to a record past its window. One action per policy row — a ladder is separate
          *     rows at increasing `retain_days`, never a multi-action row. `archive` retains the record;

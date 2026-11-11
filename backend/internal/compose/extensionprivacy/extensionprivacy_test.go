@@ -17,6 +17,7 @@ func note(name string) privacy.Table {
 		Links:     []privacy.Link{{Column: "contact_id", Record: privacy.Contact}},
 		Personal:  []string{"body"},
 		Retention: jurisdiction.CommercialCorrespondence,
+		AgeColumn: "noted_at",
 	}
 }
 
