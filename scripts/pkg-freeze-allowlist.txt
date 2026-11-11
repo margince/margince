@@ -3,10 +3,15 @@
 # ADVISORY (the surface is design-fluid) and consults no allowlist.
 #
 # From v1.0.0 the gate enforces, and a ratified change is recorded here
-# as `<package> <symbol> <reason>`, keyed on its subject like a gatekit
-# waiver. The symbol is the name apidiff prints before the first ": "
-# of its finding. The reason states the cost in 20+ characters and
-# cites the ratifying issue as #<number>. The gate prints the line to
-# fill in on failure. Remove an entry once its change has merged: the
-# gate warns about entries that match no finding. Package removals are
-# never allowlistable (deprecate-then-major cycle, ADR-0120 §3).
+# as `<package>: <finding> # <reason>`, the gatekit waiver shape: the
+# exact apidiff finding the gate prints, then a reason. The reason
+# states the cost in 20+ characters and cites the ratifying issue as
+# #<number>. The gate prints the line to fill in on failure.
+#
+# The key names no commit, so one entry passes both the pull request and
+# the merge queue. It is the exact finding, so a later, different break
+# of the same symbol is a new finding that the entry does not excuse.
+# An entry left behind after its change merges can excuse nothing new,
+# so the gate only warns about it; remove it with the next edit here.
+# Package removals are never allowlistable (deprecate-then-major cycle,
+# ADR-0120 §3).

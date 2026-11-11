@@ -1706,14 +1706,14 @@ go-work-sum:
 ## on a pull request, else origin/main). ADVISORY before the first v1+
 ## release tag (the surface is design-fluid: incompatible changes print,
 ## never block); ENFORCING from v1.0.0 — then a ratified change is a
-## `<package> <symbol> <reason citing #issue>` line in
+## `<package>: <finding> # <reason citing #issue>` line in
 ## scripts/pkg-freeze-allowlist.txt, and package removals are never
 ## allowlistable.
 pkg-freeze:
 	@./scripts/check-pkg-freeze.sh
 
 ## test-pkg-freeze — the freeze gate's own test: a ratified entry passes the
-## pull request and the merge queue, and an unratified break still fails.
+## pull request and the merge queue, and excuses only its exact finding.
 test-pkg-freeze:
 	@./scripts/check-pkg-freeze.test.sh
 
