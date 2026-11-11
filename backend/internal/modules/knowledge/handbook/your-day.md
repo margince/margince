@@ -120,7 +120,7 @@ A meeting that starts within 2 hours is urgent until you are ready. Then it stay
 When the start time, the guests or the invite's agenda change, the row asks again. It names what changed, for example "Changed since you were ready: start time". A note you type into the meeting does not ask again. If it fails: "You were not marked ready. Retry." Also called: prepared, meeting prep, ready for the call.
 
 ### What can I do from a task?
-Every task has a type, and the type decides its one step. The type shows as a chip on the card. Pick it under **Task type** when you add a task; **Write** is chosen until you change it.
+Every task has a type, and the type decides its one step. The type shows as a chip on the open task card on **Home**. Pick it under **Task type** when you add a task; **Write** is chosen until you change it.
 
 | Type | The step |
 | --- | --- |
@@ -129,7 +129,7 @@ Every task has a type, and the type decides its one step. The type shows as a ch
 | **Call** | The contact's number with **Copy number**, and **Call** |
 | **Meet** | **Book a meeting** with the task's contact |
 | **Review** | Opens the record to check, such as **Review lead** |
-| **Decide** | The deals the email may be about, as cards, and **Link email to deal** |
+| **Decide** | The deals the email may be about, as cards, and **Link email thread to deal** |
 | **Do** | No step of its own: **Done** is the step |
 
 Tasks Margince makes get the type of the work that made them. An email request is a **Reply**; a new lead to check is a **Review**. A task made before types existed gets one the same way, and a task you typed by hand is a **Write**.
@@ -138,7 +138,7 @@ Tasks Margince makes get the type of the work that made them. An email request i
 
 A task filed on no record has no one to write to and offers none. **Draft email** is refused with the reason for a closed lead with no linked company, and for a lead or contact with no email address. An archived contact is refused too. A task linked to one contact also offers **Open contact**. The task's row on a timeline offers **Write email** to the same contact, lead or company.
 
-**Call** and **Book a meeting** go to the first contact the task is filed on, and an archived contact gets neither. **Call** dials and opens **Log activity** on **Call** under the task, which does not complete the task. A done or read-only task offers the same steps. On the open card under **Needs you** on **Home**, the step is the colour button and **Done** is a plain one. A **Do** task, or one whose step has nothing to act on, keeps **Done** as the colour button.
+**Call** and **Book a meeting** go to the first contact the task is filed on, and an archived contact gets neither. **Call** dials. If you may log activity, it also opens **Log activity** on **Call** under the task, which does not complete the task. A done or read-only task offers the same steps. On the open card under **Needs you** on **Home**, the step is the colour button and **Done** is a plain one. A **Do** task, or one whose step has nothing to act on, keeps **Done** as the colour button.
 
 ### How do I plan my week?
 To plan your week in Margince, open **Home**, switch the view to **Weekly** and add items under

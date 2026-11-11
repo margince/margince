@@ -14,7 +14,7 @@ import type { MessageKey } from "../i18n/en";
 import { intentAbout } from "../lib/compose.intent";
 import { ENTITY } from "../lib/entity";
 import { valueFor } from "../lib/labelfor";
-import { navigate, type Route, routeHash } from "../lib/router";
+import { type Route, routeHash } from "../lib/router";
 import { useTaskContact } from "../lib/taskcontact";
 import { taskTypeOf } from "../lib/tasktype";
 import { useWriteTo } from "../lib/writeto";
@@ -176,14 +176,12 @@ function CallSteps({ contact }: Readonly<{ contact: Contact }>) {
 /** The booking flow, opened on the contact the task is owed to. */
 function MeetStep({ contactId }: Readonly<{ contactId: string }>) {
   const t = useT();
-  return (
-    <Button
-      variant="primary"
-      onClick={() => navigate({ screen: "book", id: `contact-${contactId}` })}
-    >
-      <CalendarPlus aria-hidden="true" />
-      {t("scheduling.bookContact")}
-    </Button>
+  return linkVerb(
+    routeHash({ screen: "book", id: `contact-${contactId}` }),
+    <CalendarPlus aria-hidden="true" />,
+    t("scheduling.bookContact"),
+    undefined,
+    "btn btn-primary",
   );
 }
 
@@ -212,11 +210,12 @@ function reviewRecord(task: Activity): ReviewRecord | undefined {
 
 function ReviewStep({ record }: Readonly<{ record: ReviewRecord }>) {
   const t = useT();
-  return (
-    <Button variant="primary" onClick={() => navigate(record.route)}>
-      <ClipboardCheck aria-hidden="true" />
-      {t(record.verb)}
-    </Button>
+  return linkVerb(
+    routeHash(record.route),
+    <ClipboardCheck aria-hidden="true" />,
+    t(record.verb),
+    undefined,
+    "btn btn-primary",
   );
 }
 

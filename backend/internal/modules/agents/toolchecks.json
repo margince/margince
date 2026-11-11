@@ -2175,20 +2175,20 @@
     },
     "list_records": {
       "checks": [
-        "activity.read,commission.read,company.read,deal_room.read,offer_template.read,product.read",
-        "activity.read,commission.read,company.read,deal_room.update,offer_template.read,product.read",
+        "activity.read,commission.read,company.read,deal_room.read,lead.read,offer_template.read,product.read",
+        "activity.read,commission.read,company.read,deal_room.update,lead.read,offer_template.read,product.read",
         "activity.read,commission.read,contact.read,deal_room.read,lead.read,offer_template.read,partner.read,product.read,project.read",
         "activity.read,commission.read,contact.read,deal_room.update,lead.read,offer_template.read,partner.read,product.read,project.read",
-        "activity.read,company.read,deal.read,deal_room.read,offer_template.read,product.read",
-        "activity.read,company.read,deal.read,deal_room.update,offer_template.read,product.read",
+        "activity.read,company.read,deal.read,deal_room.read,lead.read,offer_template.read,product.read",
+        "activity.read,company.read,deal.read,deal_room.update,lead.read,offer_template.read,product.read",
         "activity.read,contact.read,deal.read,deal_room.read,lead.read,offer_template.read,partner.read,product.read,project.read",
         "activity.read,contact.read,deal.read,deal_room.update,lead.read,offer_template.read,partner.read,product.read,project.read",
-        "commission.read,company.read,deal_room.read,offer_template.read,product.read,relationship.read",
-        "commission.read,company.read,deal_room.update,offer_template.read,product.read,relationship.read",
+        "commission.read,company.read,deal_room.read,lead.read,offer_template.read,product.read,relationship.read",
+        "commission.read,company.read,deal_room.update,lead.read,offer_template.read,product.read,relationship.read",
         "commission.read,deal_room.read,lead.read,offer_template.read,partner.read,product.read,project.read,relationship.read",
         "commission.read,deal_room.update,lead.read,offer_template.read,partner.read,product.read,project.read,relationship.read",
-        "company.read,deal.read,deal_room.read,offer_template.read,product.read,relationship.read",
-        "company.read,deal.read,deal_room.update,offer_template.read,product.read,relationship.read",
+        "company.read,deal.read,deal_room.read,lead.read,offer_template.read,product.read,relationship.read",
+        "company.read,deal.read,deal_room.update,lead.read,offer_template.read,product.read,relationship.read",
         "deal.read,deal_room.read,lead.read,offer_template.read,partner.read,product.read,project.read,relationship.read",
         "deal.read,deal_room.update,lead.read,offer_template.read,partner.read,product.read,project.read,relationship.read"
       ]

@@ -273,7 +273,7 @@ const offeredDeal = (id: string, name: string, amount: number) => () =>
     expected_close_date: "2026-12-15",
   });
 
-/** A deal question in hand: the deals as cards, then Link email to deal. */
+/** A deal question in hand: the deals as cards, then Link email thread to deal. */
 export const DecideTaskInHand: Story = {
   render: typedPanel({
     type: "decide",

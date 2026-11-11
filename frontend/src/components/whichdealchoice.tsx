@@ -6,7 +6,7 @@ import { Handshake } from "lucide-react";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { Button } from "../design-system/atoms";
+import { Button, Skeleton } from "../design-system/atoms";
 import { type Choice, ChoiceList } from "../design-system/choicelist";
 import { ErrorLine } from "../design-system/errorline";
 import { useToast } from "../design-system/toast";
@@ -18,7 +18,7 @@ import {
 import { formatMoneyOrWord } from "../format/moneyword";
 import { type Translator, useLocale, useT } from "../i18n";
 import { TASK_QUEUE_KEY } from "../lib/activitykeys";
-import { unwrap } from "../lib/problem";
+import { problemStatus, unwrap } from "../lib/problem";
 import { useViewerZone } from "../lib/viewerzone";
 import { worklistKey } from "../lib/workkeys";
 import { WHICH_DEAL_SOURCE, WhichDealDecline } from "./whichdealdecline";
@@ -47,8 +47,8 @@ export function asksWhichDeal(task: Activity): boolean {
 
 /**
  * The deal question as a choice. Each deal the mail may be about is a card
- * with its value and close date, then comes Link mail to deal. Filing the mail on a
- * deal answers the question, so the task leaves the list.
+ * with its value and close date, then comes Link email thread to deal. Filing
+ * the thread on a deal answers the question, so the task leaves the list.
  */
 export function WhichDealChoice({ task }: Readonly<{ task: Activity }>) {
   const t = useT();
@@ -67,6 +67,32 @@ export function WhichDealChoice({ task }: Readonly<{ task: Activity }>) {
     deals.flatMap((read) => (read.data ? [read.data] : [])),
   );
   if (!mail || !asksWhichDeal(task)) return null;
+  // A deal gone or out of reach (404) is no choice; any other failure leaves
+  // the question unanswerable until a retry reads every deal offered.
+  const failed = deals.filter(
+    (read) => read.isError && problemStatus(read.error) !== 404,
+  );
+  if (failed.length > 0) {
+    return (
+      <ErrorLine
+        error={failed[0]?.error}
+        inline
+        actions={
+          <Button
+            variant="link"
+            onClick={() => {
+              for (const read of failed) void read.refetch();
+            }}
+          >
+            {t("common.retry")}
+          </Button>
+        }
+      />
+    );
+  }
+  if (deals.some((read) => read.isPending)) {
+    return <Skeleton width="100%" height="4rem" />;
+  }
   return (
     <div className="which-deal-choice">
       {choices.length > 0 && (

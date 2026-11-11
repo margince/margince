@@ -105,7 +105,8 @@ it("a task to do has no step of its own, so Done is the filled button", async ()
   showLead(LEAD, "do");
 
   const card = within(await screen.findByRole("article"));
-  await card.findByRole("button", { name: en["brief.focus.context"] });
+  // The type chip comes with the fetched task, so the Do step is settled.
+  await card.findByText(en["task.type.do"]);
   expect(
     card
       .getByRole("button", { name: en["tasks.complete"] })

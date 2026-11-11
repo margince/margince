@@ -679,12 +679,37 @@ test.each([
   expect(call()?.getAttribute("href")).toBe("tel:+49301234567");
 });
 
+/** Waits until the contact was read and the step stopped waiting on it, so a
+ *  missing Call is the settled answer, not the pending one. */
+async function contactSettled(read: () => boolean) {
+  await waitFor(() => expect(read()).toBe(true));
+  await waitFor(() =>
+    expect(document.querySelector(".task-next-pending")).toBeNull(),
+  );
+}
+
+function countedContact(contact: Record<string, unknown>) {
+  let read = false;
+  return {
+    read: () => read,
+    route: () => {
+      read = true;
+      return jsonResponse(contact);
+    },
+  };
+}
+
 test("a call task whose contact has no phone gets no Call", async () => {
-  stubNextSteps({ taskType: "call", contact: { ...ALICE, phones: [] } });
+  const contact = countedContact({ ...ALICE, phones: [] });
+  stubNextSteps({
+    taskType: "call",
+    routes: { "GET /contacts/c-1": contact.route },
+  });
   openTaskWith();
 
   await screen.findByRole("button", { name: "Open original" });
-  await waitFor(() => expect(call()).toBeNull());
+  await contactSettled(contact.read);
+  expect(call()).toBeNull();
 });
 
 test("a contact with no address gets Draft email refused with the reason", async () => {
@@ -713,14 +738,19 @@ test("an archived contact gets a refused Draft email, and can still be opened", 
 });
 
 test("an archived contact gets no Call on a call task", async () => {
+  const contact = countedContact({
+    ...ALICE,
+    archived_at: "2026-09-01T00:00:00Z",
+  });
   stubNextSteps({
     taskType: "call",
-    contact: { ...ALICE, archived_at: "2026-09-01T00:00:00Z" },
+    routes: { "GET /contacts/c-1": contact.route },
   });
   openTaskWith();
 
   await screen.findByRole("button", { name: "Open original" });
-  await waitFor(() => expect(call()).toBeNull());
+  await contactSettled(contact.read);
+  expect(call()).toBeNull();
 });
 
 test("a refused Draft email is said once, after every verb in the row", async () => {

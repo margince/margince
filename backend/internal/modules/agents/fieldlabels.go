@@ -188,7 +188,7 @@ var fieldLabelsByLang = map[textlang.Lang]map[string]string{
 		"project_id":               "Projekt",
 		"relationship_types":       "Beziehungstypen",
 		"due_has_time":             "Fällig zu einer Uhrzeit",
-		"task_type":                "Art der Aufgabe",
+		"task_type":                "Aufgabentyp",
 		"call_outcome":             "Ergebnis des Anrufs",
 		"remind_at":                "Erinnerung",
 		"role":                     "Rolle",

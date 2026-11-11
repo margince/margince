@@ -55,28 +55,30 @@ function show(task: Activity, routes: Parameters<typeof installFetchStub>[0]) {
   );
 }
 
-it("a meeting task opens the booking for the contact it is filed on", async () => {
+it("a meeting task links to the booking for the contact it is filed on", async () => {
   const user = userEvent.setup();
   show({ ...TASK, task_type: "meet" }, {});
+  const book = routeHash({ screen: "book", id: "contact-c-1" });
 
-  await user.click(
-    await screen.findByRole("button", { name: en["scheduling.bookContact"] }),
-  );
-  expect(globalThis.location.hash).toBe(
-    routeHash({ screen: "book", id: "contact-c-1" }),
-  );
+  const link = await screen.findByRole("link", {
+    name: en["scheduling.bookContact"],
+  });
+  expect(link.getAttribute("href")).toContain(book);
+  await user.click(link);
+  expect(globalThis.location.hash).toBe(book);
 });
 
-it("a review task opens the most specific record it is filed on", async () => {
+it("a review task links to the most specific record it is filed on", async () => {
   const user = userEvent.setup();
   show({ ...TASK, task_type: "review" }, {});
+  const deal = routeHash({ screen: "deals", id: "d-1" });
 
-  await user.click(
-    await screen.findByRole("button", { name: en["task.next.reviewDeal"] }),
-  );
-  expect(globalThis.location.hash).toBe(
-    routeHash({ screen: "deals", id: "d-1" }),
-  );
+  const link = await screen.findByRole("link", {
+    name: en["task.next.reviewDeal"],
+  });
+  expect(link.getAttribute("href")).toContain(deal);
+  await user.click(link);
+  expect(globalThis.location.hash).toBe(deal);
 });
 
 it("a task to do has no step: Done is the whole of it", async () => {
@@ -133,4 +135,39 @@ it("a deal question lists the open deals offered and files the mail on the one p
       replace_existing_of_type: false,
     },
   ]);
+});
+
+it("a deal question offers no answer until every deal offered has been read", async () => {
+  const user = userEvent.setup();
+  let failing = true;
+  const deal = (id: string, name: string) =>
+    jsonResponse({ id, name, status: "open", currency: "EUR" });
+  show(
+    {
+      ...TASK,
+      task_type: "decide",
+      source_system: "which_deal",
+      source_activity_id: "mail-1",
+      raw: { offered_deal_ids: ["d-1", "d-2"] },
+    },
+    {
+      "GET /deals/d-1": () => deal("d-1", "Nordwind renewal 2027"),
+      "GET /deals/d-2": () =>
+        failing
+          ? jsonResponse({ title: "Unavailable", status: 503 }, 503)
+          : deal("d-2", "Nordwind pilot"),
+    },
+  );
+
+  const retry = await screen.findByRole("button", { name: en["common.retry"] });
+  expect(screen.queryByRole("radio")).toBeNull();
+  expect(
+    screen.queryByRole("button", { name: en["tasks.whichDeal.none"] }),
+  ).toBeNull();
+  failing = false;
+  await user.click(retry);
+  expect(await screen.findByRole("radio", { name: /pilot/ })).toBeTruthy();
+  expect(
+    screen.getByRole("button", { name: en["tasks.whichDeal.none"] }),
+  ).toBeTruthy();
 });

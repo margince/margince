@@ -3296,7 +3296,7 @@ type SystemDisplayGeneratedParts string
 // SystemDisplayLocale defines model for SystemDisplay.Locale.
 type SystemDisplayLocale string
 
-// TaskType What kind of work a task asks for, which decides the one step a screen offers for it. `reply` answers a message someone sent; `write` starts a mail the owner owes; `call` phones a contact; `meet` books a meeting; `review` checks a record; `decide` picks between options the task names; `do` is work outside Margince that is finished by ticking it off. A client that meets a value it does not know treats it as `do`.
+// TaskType What kind of work a task asks for, which decides the one step a screen offers for it. `reply` answers a message someone sent; `write` starts a mail the owner owes; `call` phones a contact; `meet` books a meeting; `review` checks a record; `decide` picks the deal an email is about, from the deals the task offers, and without such a question its only step is ticking it off; `do` is work outside Margince that is finished by ticking it off. A client that meets a value it does not know treats it as `do`.
 type TaskType string
 
 // WebFormConsent The consent box the form showed. Absent when the form shows none.

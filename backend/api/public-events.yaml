@@ -2376,6 +2376,11 @@ components:
         call_outcome_cleared:
           type: boolean
           description: True when this update removed the call's outcome, so the call has none again and counts as contact as before.
+        task_type:
+          type: string
+          enum: [reply, write, call, meet, review, decide, do]
+          x-enum-varnames: [TaskBecameReply, TaskBecameWrite, TaskBecameCall, TaskBecameMeet, TaskBecameReview, TaskBecameDecide, TaskBecameDo]
+          description: The task's new type, which decides its one step (absent when this update did not touch it). Task rows only.
         relinked:
           $ref: '#/components/schemas/PublicEventActivityRelinkedRef'
         direction:

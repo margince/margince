@@ -207,6 +207,20 @@ func TestEmailRequestFromNarrowedMailIsPersonal(t *testing.T) {
 	}
 }
 
+// Accepting a request keeps the type the human picked; with none it reads Reply.
+func TestAcceptingARequestKeepsTheChosenTaskType(t *testing.T) {
+	e := setupLoad(t)
+	source := seedEmailRequest(t, e, "Call me about the renewal", "commitment", OwedVerdictAsksUs)
+	call := crmcontracts.TaskTypeCall
+	taken, created, err := storeKnowing(e).LogActivity(e.asSeat(e.rep), LogActivityInput{Kind: "task", Source: "manual", RequestActivityID: &source, TaskType: &call})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !created || taken.TaskType == nil || *taken.TaskType != call {
+		t.Fatalf("accepted request reads type %v (created=%v), want call", taken.TaskType, created)
+	}
+}
+
 func TestEmailMoveUsesTheConversationAndActionEvidence(t *testing.T) {
 	e := setupLoad(t)
 	first := seedEmailRequest(t, e, "Send the report", "commitment", OwedVerdictAsksUs)
