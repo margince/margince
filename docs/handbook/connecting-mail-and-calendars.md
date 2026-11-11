@@ -57,13 +57,16 @@ A calendar brings meetings from 90 days back to one year from now, and the windo
 Also called: calendar sync, sync meetings, link my agenda.
 
 ### How do I let Margince read my Google Meet notes?
-To let Margince read the notes and transcripts Google Meet writes, choose **Connect meeting notes** in the **Meeting notes** row of your Google account in **Settings → Connections**.
+Margince can read the notes and transcripts Google Meet writes. You connect this in **Settings → Connections**.
 1. Open **Settings**, then **Connections**.
 2. In your Google account, find the **Meeting notes** row and choose **Connect meeting notes**.
-3. Approve access on Google's screen. Google asks for this on its own screen, apart from mail and calendar.
+3. Approve access on the Google screen. Google asks for this apart from mail and calendar.
+
 Margince may then open a Google Doc by its address, and nothing else in your Drive. It cannot list or search your files. It reads only the notes and transcripts Google Meet adds to a meeting in your calendar.
+
 Connect meeting notes with the same Google account as your calendar. Notes are read only for meetings in that account's calendar, and the row says so when the two accounts differ.
-If you untick the permission on Google's screen, the row says **Cannot read meeting notes** and the account offers **Reconnect**.
+
+If you untick the permission on the Google screen, the row says **Cannot read meeting notes** and the account offers **Reconnect**.
 To stop it, choose **Stop reading meeting notes** in the row. Mail and calendar keep running, and notes already on a meeting stay. Disconnecting the whole account stops it too.
 Also called: Google Docs, Meet transcripts, Gemini notes, meeting minutes.
 

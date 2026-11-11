@@ -119,7 +119,7 @@ and allow `<api-base>/v1/connectors/gdocs/callback` (in dev: `http://localhost:8
 
 It asks for `documents.readonly` and `userinfo.email` as its own grant, and never sets `include_granted_scopes`. Put
 both on the consent screen. `documents.readonly` opens one Doc by its id; it cannot list or search Drive. Google
-counts it as a sensitive scope. `userinfo.email` names the account that connected. The calendar connection keeps
+reviews an app that asks for it before it leaves test mode. `userinfo.email` names the account that connected. The calendar connection keeps
 its own grant.
 
 ## The same steps from a script

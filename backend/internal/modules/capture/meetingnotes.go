@@ -19,12 +19,7 @@ var meetingNotesScopes = map[string][]string{
 // meeting notes. A Docs connection whose owner unticked the scope on Google's
 // screen holds none, and reads nothing until it is reconnected.
 func MeetingNotesGranted(provider string, scopes []string) bool {
-	for _, grant := range meetingNotesScopes[provider] {
-		if slices.Contains(scopes, grant) {
-			return true
-		}
-	}
-	return false
+	return scopeGranted(meetingNotesScopes, provider, scopes)
 }
 
 // MeetingNotesProviders are the providers whose connection reads meeting notes.

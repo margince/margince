@@ -12,12 +12,8 @@ import (
 
 // The calendar set is the OAuth set minus the mail and meeting-notes sets, and
 // it has to come out as the two calendars this product actually connects.
-//
-// Derivation is what keeps it in step with the vocabulary, and it is also what
-// can quietly empty it: a mail list that grew to cover every OAuth provider
-// would leave no calendars, and the scheduling seam would then tell every host
-// their calendar is unconnected — a true statement about nothing, raised so
-// often that the reader it was written for stops reading it.
+// Derivation can quietly empty it: a mail list covering every OAuth provider
+// would tell every host their calendar is unconnected.
 func TestTheCalendarProvidersAreTheOAuthProvidersThatAreNotMailOrNotes(t *testing.T) {
 	want := []string{providerGcal, providerGraphCal}
 	if !slices.Equal(calendarProviders, want) {
