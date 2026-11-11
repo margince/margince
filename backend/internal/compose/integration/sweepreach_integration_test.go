@@ -30,12 +30,14 @@ import (
 )
 
 // unitNote is a unit table holding a company id, a contact id and free text
-// about the contact.
+// about the contact. Its record pair has no foreign key, so one uuid can appear
+// under two kinds.
 var unitNote = reach.Table{
 	Name: "ext_reachtest_note",
 	Links: []reach.Link{
 		{Column: "company_id", Record: reach.Company},
 		{Column: "contact_id", Record: reach.Contact},
+		{Column: "record_id", KindColumn: "record_type"},
 	},
 	Erase: []reach.Clear{
 		{Column: "body", To: reach.Tombstone},
@@ -55,7 +57,8 @@ func withUnitNoteTable(t *testing.T) {
 	if _, err := owner.Exec(ctx, `
 		CREATE TABLE ext.ext_reachtest_note (
 		  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-		  company_id uuid, contact_id uuid, body text NOT NULL);
+		  company_id uuid, contact_id uuid, body text NOT NULL,
+		  record_type text, record_id uuid);
 		GRANT SELECT, INSERT, UPDATE, DELETE ON ext.ext_reachtest_note TO margince_app`); err != nil {
 		t.Fatal(err)
 	}
@@ -130,6 +133,34 @@ func TestEveryMergeMovesThePlanLinesTheWeeklyPlanDeclared(t *testing.T) {
 	}
 	if n := e.WsCount(t, planLinesNaming, "company", bystander); n != 1 {
 		t.Errorf("the bystander company holds %d plan lines, want its own 1", n)
+	}
+}
+
+// The kind column decides which rows move. A contact-kind row holding the
+// merged company's uuid names some other record and stays where it is.
+func TestACompanyMergeLeavesARowOfAnotherKindWithTheSameID(t *testing.T) {
+	e := Setup(t)
+	withUnitNoteTable(t)
+	src, tgt := seedMergePair(t, e, "Same id")
+	e.WsExec(t, `INSERT INTO ext.ext_reachtest_note (record_type, record_id, body) VALUES ('company', $1, 'a'), ('contact', $1, 'b')`, src)
+
+	if _, err := e.Contacts.MergeCompany(e.Admin(), src, tgt, nil); err != nil {
+		t.Fatalf("merge: %v", err)
+	}
+	const naming = `SELECT count(*) FROM ext.ext_reachtest_note WHERE record_type = $1 AND record_id = $2`
+	for _, c := range []struct {
+		kind   string
+		record ids.UUID
+		want   int
+	}{
+		{"company", src.UUID, 0},
+		{"company", tgt.UUID, 1},
+		{"contact", src.UUID, 1},
+		{"contact", tgt.UUID, 0},
+	} {
+		if n := e.WsCount(t, naming, c.kind, c.record); n != c.want {
+			t.Errorf("%d %s-kind unit notes name %s, want %d", n, c.kind, c.record, c.want)
+		}
 	}
 }
 
