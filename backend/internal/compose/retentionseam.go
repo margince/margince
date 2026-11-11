@@ -124,13 +124,17 @@ func privacyPayloads(vault keyvault.Vault) privacy.PayloadPurger {
 	return controllerPayloads{v: vault}
 }
 
+func eraserWithGraph(db *database.DB) *privacy.Eraser {
+	return privacy.NewEraser(db).WithEdgeInvalidator(search.RecomputeEdgesForActivities)
+}
+
 // ComposedEraser is the eraser an Art. 17 erasure runs through, with every
 // seam it needs to destroy the bytes behind the rows: the object store, the
 // payload vault and capture's raw-capture purge. blob and vault may be nil in a
 // deployment that configured neither.
 func ComposedEraser(pool *pgxpool.Pool, blob blobstore.Store, vault keyvault.Vault) *privacy.Eraser {
 	db := InstallationDB(pool)
-	return privacy.NewEraser(db).WithEdgeInvalidator(search.RecomputeEdgesForActivities).WithCountry(identity.CountryForDecision).WithBlobstore(blob).WithRawCapturePurger(RawCapturePurgerFor(db)).
+	return eraserWithGraph(db).WithCountry(identity.CountryForDecision).WithBlobstore(blob).WithRawCapturePurger(RawCapturePurgerFor(db)).
 		WithPayloadVault(privacyPayloads(vault))
 }
 

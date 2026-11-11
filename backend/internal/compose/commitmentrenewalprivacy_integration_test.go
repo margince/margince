@@ -44,7 +44,7 @@ func TestErasingEitherCitationWithdrawsTheRenewedProposal(t *testing.T) {
 			f := setupRenewalPrivacy(t, 0.75)
 			subject := f.e.SeedContact(t, "Citation subject", &f.e.Rep1)
 			integration.LinkActivity(t, integration.OwnerConn(t), f.messages[message], "contact", subject)
-			if err := privacy.NewEraser(f.e.DB()).WithRawCapturePurger(RawCapturePurgerFor(f.e.DB())).EraseContact(f.e.Admin(), subject, "Subject requested erasure"); err != nil {
+			if err := eraserWithGraph(f.e.DB()).WithRawCapturePurger(RawCapturePurgerFor(f.e.DB())).EraseContact(f.e.Admin(), subject, "Subject requested erasure"); err != nil {
 				t.Fatal(err)
 			}
 			if got := f.e.WsCount(t, `SELECT count(*) FROM activity WHERE id=$1 AND body IS NULL`, f.messages[message]); got != 1 {
@@ -62,7 +62,7 @@ func TestErasingRenewalRemovesTheWorkDerivedFromItsWords(t *testing.T) {
 	assertNonActionRereadPreservesAdmission(t, f)
 	subject := f.e.SeedContact(t, "Renewal subject", &f.e.Rep1)
 	integration.LinkActivity(t, integration.OwnerConn(t), f.messages[1], "contact", subject)
-	if err := privacy.NewEraser(f.e.DB()).WithRawCapturePurger(RawCapturePurgerFor(f.e.DB())).EraseContact(f.e.Admin(), subject, "Subject requested erasure"); err != nil {
+	if err := eraserWithGraph(f.e.DB()).WithRawCapturePurger(RawCapturePurgerFor(f.e.DB())).EraseContact(f.e.Admin(), subject, "Subject requested erasure"); err != nil {
 		t.Fatal(err)
 	}
 	if got := f.e.WsCount(t, `SELECT count(*) FROM activity WHERE id=$1 AND body IS NULL`, f.messages[1]); got != 1 {
@@ -206,7 +206,7 @@ func TestHeldDerivedWorkSurvivesErasureWithoutReleasingItsContent(t *testing.T) 
 		t.Fatal("fixture task was not indexed before erasure")
 	}
 	before := f.e.WsScalar(t, `SELECT to_jsonb(a)::text FROM activity a WHERE id=$1`, f.work)
-	if err := privacy.NewEraser(f.e.DB()).WithRawCapturePurger(RawCapturePurgerFor(f.e.DB())).EraseContact(f.e.Admin(), subject, "Subject requested erasure"); err != nil {
+	if err := eraserWithGraph(f.e.DB()).WithRawCapturePurger(RawCapturePurgerFor(f.e.DB())).EraseContact(f.e.Admin(), subject, "Subject requested erasure"); err != nil {
 		t.Fatal(err)
 	}
 	if got := f.e.WsCount(t, `SELECT count(*) FROM activity WHERE id=$1 AND body IS NULL`, f.messages[1]); got != 1 {
@@ -248,7 +248,7 @@ func TestHeldDerivedWorkSurvivesErasureWithoutReleasingItsContent(t *testing.T) 
 	integration.LinkActivity(t, integration.OwnerConn(t), f.messages[0], "contact", originalSubject)
 	redactions := f.e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_id=$1 AND after ? 'commitment_admission_redacted'`, f.messages[0])
 	audits := f.e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_id=$1`, f.work)
-	if err := privacy.NewEraser(f.e.DB()).WithRawCapturePurger(RawCapturePurgerFor(f.e.DB())).EraseContact(f.e.Admin(), originalSubject, "Subject requested erasure"); err != nil {
+	if err := eraserWithGraph(f.e.DB()).WithRawCapturePurger(RawCapturePurgerFor(f.e.DB())).EraseContact(f.e.Admin(), originalSubject, "Subject requested erasure"); err != nil {
 		t.Fatal(err)
 	}
 	if got := f.e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_id=$1`, f.work); got != audits {
@@ -509,7 +509,7 @@ func TestErasingLegacyCommitmentsAlsoPreservesHeldEvidence(t *testing.T) {
 				}
 			}
 			before := f.e.WsScalar(t, `SELECT to_jsonb(a)::text FROM activity a WHERE id=$1`, f.work)
-			if err := privacy.NewEraser(f.e.DB()).WithRawCapturePurger(RawCapturePurgerFor(f.e.DB())).EraseContact(f.e.Admin(), subject, "Subject requested erasure"); err != nil {
+			if err := eraserWithGraph(f.e.DB()).WithRawCapturePurger(RawCapturePurgerFor(f.e.DB())).EraseContact(f.e.Admin(), subject, "Subject requested erasure"); err != nil {
 				t.Fatal(err)
 			}
 			if held {
@@ -549,7 +549,7 @@ func TestDirectTaskErasureCompletesItsSuspendedEvidenceCleanup(t *testing.T) {
 	if err := holds.SetLegalHold(f.e.Admin(), "contact", f.contact.UUID, true, "Preserve proceedings evidence"); err != nil {
 		t.Fatal(err)
 	}
-	eraser := privacy.NewEraser(f.e.DB()).WithRawCapturePurger(RawCapturePurgerFor(f.e.DB()))
+	eraser := eraserWithGraph(f.e.DB()).WithRawCapturePurger(RawCapturePurgerFor(f.e.DB()))
 	if err := eraser.EraseContact(f.e.Admin(), subject, "Subject requested erasure"); err != nil {
 		t.Fatal(err)
 	}

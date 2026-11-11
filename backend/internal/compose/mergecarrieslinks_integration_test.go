@@ -34,7 +34,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/introductions"
-	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -591,7 +590,7 @@ func TestErasingTheSurvivorErasesWhatTheMergeCarried(t *testing.T) {
 	c.preferenceLink(t, "erase@carry.test")
 	c.merge(t, retired, survivor)
 
-	if err := privacy.NewEraser(c.e.DB()).EraseContact(c.admin, survivor.UUID, "subject request"); err != nil {
+	if err := eraserWithGraph(c.e.DB()).EraseContact(c.admin, survivor.UUID, "subject request"); err != nil {
 		t.Fatalf("erasing the survivor: %v", err)
 	}
 

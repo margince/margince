@@ -26,6 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/privacy"
+	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -319,7 +320,7 @@ func TestAICallPayloadErasureCascadePurgesSubjectMentions(t *testing.T) {
 	control := seedAgedPayload(t, e, 1,
 		`{"messages":[{"role":"user","content":"unrelated request"}]}`)
 
-	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), contactID, "test"); err != nil {
+	if err := privacy.NewEraser(e.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities).EraseContact(e.Admin(), contactID, "test"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -370,7 +371,7 @@ func TestAICallPayloadErasureReachesACallThatNamedTheRecord(t *testing.T) {
 	aboutSomebodyElse := seedCitedPayload(t, e, "contact", ids.NewV7(),
 		`{"messages":[{"role":"user","content":"draft something warm"}]}`)
 
-	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), contactID, "test"); err != nil {
+	if err := privacy.NewEraser(e.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities).EraseContact(e.Admin(), contactID, "test"); err != nil {
 		t.Fatal(err)
 	}
 

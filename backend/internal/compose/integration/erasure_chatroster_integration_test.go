@@ -22,6 +22,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/modules/privacy"
+	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -98,7 +99,7 @@ func TestErasingASubjectRemovesTheRosterRowsNamingTheirAccount(t *testing.T) {
 		t.Fatal("the fixture did not seed both roster rows")
 	}
 
-	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), contactID, "art-17"); err != nil {
+	if err := privacy.NewEraser(e.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities).EraseContact(e.Admin(), contactID, "art-17"); err != nil {
 		t.Fatalf("EraseContact: %v", err)
 	}
 

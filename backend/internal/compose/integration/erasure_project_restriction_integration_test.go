@@ -23,6 +23,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/privacy"
+	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -104,7 +105,7 @@ func TestErasureHoldsCorrespondenceHeldOnlyByAProject(t *testing.T) {
 		activities.RelinkActivityInput{EntityType: "project", EntityID: f.project}); err != nil {
 		t.Fatalf("filing the email under its project: %v", err)
 	}
-	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), f.contact, "test"); err != nil {
+	if err := privacy.NewEraser(e.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities).EraseContact(e.Admin(), f.contact, "test"); err != nil {
 		t.Fatalf("erasing the subject: %v", err)
 	}
 
@@ -132,7 +133,7 @@ func TestErasureStampsAPreStampProjectLinkAndHoldsIt(t *testing.T) {
 	e.WsExec(t, `INSERT INTO activity_link (activity_id, entity_type, project_id)
 		VALUES ($1, 'project', $2)`, f.email, f.project)
 
-	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), f.contact, "test"); err != nil {
+	if err := privacy.NewEraser(e.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities).EraseContact(e.Admin(), f.contact, "test"); err != nil {
 		t.Fatalf("erasing the subject over a pre-stamp project link: %v", err)
 	}
 
@@ -164,7 +165,7 @@ func TestTheRestrictedListNamesTheHoldingProject(t *testing.T) {
 		activities.RelinkActivityInput{EntityType: "project", EntityID: f.project}); err != nil {
 		t.Fatalf("filing the email under its project: %v", err)
 	}
-	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), f.contact, "test"); err != nil {
+	if err := privacy.NewEraser(e.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities).EraseContact(e.Admin(), f.contact, "test"); err != nil {
 		t.Fatalf("erasing the subject: %v", err)
 	}
 
@@ -231,7 +232,7 @@ func TestANoteFiledUnderAProjectIsStampedAndStillErased(t *testing.T) {
 		t.Fatal("fixture drift: the note was not stamped, so this test cannot prove the class is inert on a note")
 	}
 
-	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), f.contact, "test"); err != nil {
+	if err := privacy.NewEraser(e.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities).EraseContact(e.Admin(), f.contact, "test"); err != nil {
 		t.Fatalf("erasing the subject: %v", err)
 	}
 

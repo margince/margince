@@ -20,6 +20,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/privacy"
+	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/employment"
@@ -282,7 +283,7 @@ func TestDeletingBoughtDataUnmarksWhatItClearedAndKeepsWhatItCouldNot(t *testing
 		t.Errorf("a contact the deletion could not write kept its bought title but lost the mark: %v", got)
 	}
 
-	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), unreachable, "test"); err != nil {
+	if err := privacy.NewEraser(e.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities).EraseContact(e.Admin(), unreachable, "test"); err != nil {
 		t.Fatal(err)
 	}
 	if got := boughtTargets(e.Admin(), t, store, unreachable); len(got) != 0 {

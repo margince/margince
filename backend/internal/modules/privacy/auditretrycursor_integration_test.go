@@ -22,8 +22,14 @@ import (
 func TestAuditRetryCursorCountsHeldRowsAgainstItsPageAndContinues(t *testing.T) {
 	e := setupAuditBoundary(t)
 	withAuditRetryFixture(t, e, func(ctx context.Context) {
-		var boundary, later ids.UUID
+		var start, boundary, later ids.UUID
 		if err := e.db.Tx(ctx, func(tx pgx.Tx) error {
+			var err error
+			start, err = storekit.AuditWithEvidence(ctx, tx, "erase", "contact", ids.NewV7(), nil, nil,
+				map[string]any{"cause": "contact_erasure"})
+			if err != nil {
+				return err
+			}
 			if _, err := tx.Exec(ctx, `UPDATE contact SET legal_hold=true WHERE id=@id`, pgx.StrictNamedArgs{"id": e.contact}); err != nil {
 				return err
 			}
@@ -37,14 +43,14 @@ func TestAuditRetryCursorCountsHeldRowsAgainstItsPageAndContinues(t *testing.T) 
 			}
 			other := ids.NewV7()
 			later = seedPersonalAudit(ctx, t, tx, "contact", other)
-			_, err := storekit.AuditWithEvidence(ctx, tx, "erase", "contact", other, nil, nil,
+			_, err = storekit.AuditWithEvidence(ctx, tx, "erase", "contact", other, nil, nil,
 				map[string]any{"cause": "contact_erasure"})
 			return err
 		}); err != nil {
 			t.Fatal(err)
 		}
 		service := NewRetentionService(e.db, nil, slog.Default(), nil)
-		cursor, done, err := service.RetryHistoricalAuditPage(ctx, HistoricalAuditCursor{})
+		cursor, done, err := service.RetryHistoricalAuditPage(ctx, HistoricalAuditCursor{After: start})
 		if err != nil {
 			t.Fatal(err)
 		}
