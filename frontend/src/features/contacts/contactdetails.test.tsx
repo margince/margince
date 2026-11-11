@@ -260,12 +260,14 @@ describe("the address in the About group", () => {
     );
   }
 
-  it("is the server's address, not the first row", async () => {
+  it("leads with the server's address, not the first row", async () => {
     show("dana.private@brandt.example");
-    expect(
-      await screen.findByText("dana.private@brandt.example"),
-    ).toBeInTheDocument();
-    expect(screen.queryByText("dana@brandt.example")).toBeNull();
+    await screen.findByText("dana.private@brandt.example");
+    const lines = screen.getAllByRole("link", { name: /@brandt\.example$/ });
+    expect(lines.map((line) => line.textContent)).toEqual([
+      "dana.private@brandt.example",
+      "dana@brandt.example",
+    ]);
   });
 
   it("is empty when the server names none", async () => {
