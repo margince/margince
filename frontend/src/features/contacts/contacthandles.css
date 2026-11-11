@@ -1,0 +1,54 @@
+/* Two or more addresses take the column's whole width under their label, a
+   line each: the address first, its kind at the line's end. */
+.contacthandles {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-inline-size: 0;
+  inline-size: 100%;
+}
+.contacthandles > .fieldgrid-handle {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  column-gap: var(--space-2);
+  min-inline-size: 0;
+}
+.contacthandles > .fieldgrid-handle > :first-child {
+  flex: 0 1 auto;
+  max-inline-size: none;
+  min-inline-size: 0;
+}
+/* A long address keeps one line and ends in an ellipsis; copy gives it whole. */
+.contacthandles .contactlink-copyable > :not(.copy-action) {
+  white-space: nowrap;
+}
+.contacthandles > .fieldgrid-handle > .t-caption {
+  margin-inline-start: auto;
+  color: var(--textSecondary);
+}
+.contacthandles-more {
+  align-self: flex-start;
+}
+/* The stack fills the row, so every kind lines up at the same edge. */
+.fieldgrid-handle:has(.contacthandles) > .editable-value,
+.editable-value:has(> .editable-value-face > .contacthandles),
+.editable-value-face:has(> .contacthandles) {
+  display: flex;
+  flex: 1 1 auto;
+  min-inline-size: 0;
+  max-inline-size: none;
+}
+.contacthandles > .fieldgrid-handle > .callaction-chats {
+  order: 0;
+}
+/* The copy glyph shows for the line under the pointer, not the whole stack. */
+@media (hover: hover) {
+  .recorddetails
+    .contacthandles
+    > .fieldgrid-handle:not(:hover, :focus-within)
+    .copy-action {
+    max-inline-size: 0;
+    overflow: hidden;
+  }
+}
