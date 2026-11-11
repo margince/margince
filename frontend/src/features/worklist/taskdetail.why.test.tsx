@@ -140,6 +140,29 @@ test("a task a colleague typed claims no automation", async () => {
   ).toBeNull();
 });
 
+// The row's due day is the event, so its "due today" is not said a second time.
+test("a dated task says when it fell due, once", async () => {
+  openTask(QUIET_REMINDER, {
+    ...ROW,
+    due_at: "2026-09-10T21:59:59Z",
+    overdue: true,
+    because: [{ kind: "overdue" }, { kind: "unassigned" }],
+  });
+
+  expect(
+    await screen.findByText(/^It was due on .* and is still open\.$/),
+  ).toBeTruthy();
+  const reasons = screen.getByRole("list", {
+    name: en["worklist.why.reasons"],
+  });
+  expect(
+    within(reasons)
+      .getAllByRole("listitem")
+      .map((reason) => reason.textContent),
+  ).toEqual([en["worklist.because.unassigned"]]);
+  expect(screen.getByText(en["worklist.consequence.task_slips"])).toBeTruthy();
+});
+
 test("a task opened from a record page has no list to explain it", async () => {
   openTask(QUIET_REMINDER);
 
@@ -150,7 +173,7 @@ test("a task opened from a record page has no list to explain it", async () => {
 test("a row with no reasons still says what it asks", async () => {
   openTask(QUIET_REMINDER, { ...ROW, because: [], consequence: "none" });
 
-  expect(await screen.findByText(en["worklist.ask.task"])).toBeTruthy();
+  expect(await screen.findByText(en["worklist.todo.task"])).toBeTruthy();
   expect(
     screen.queryByRole("list", { name: en["worklist.why.reasons"] }),
   ).toBeNull();

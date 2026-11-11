@@ -5,12 +5,17 @@ package activities
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/contactaddress"
+	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -42,6 +47,10 @@ type emailCandidate struct {
 // emailCandidates is everything one row is filed under that the rule weighs.
 type emailCandidates struct {
 	contacts, leads, companies []emailCandidate
+	// dealContacts and dealCompanies are the live stakeholders and the
+	// company of the deals a task is filed on. employers are the companies
+	// its linked contacts work at now.
+	dealContacts, dealCompanies, employers []emailCandidate
 }
 
 // pickEmailTarget is the one rule for who an email about a row goes to:
@@ -49,21 +58,15 @@ type emailCandidates struct {
 //   - exactly one linked contact;
 //   - else exactly one live linked lead (two live leads name nobody);
 //   - else exactly one linked company;
-//   - else a closed lead, refused, so the reader is told why.
+//   - else a closed lead, refused, so the reader is told why;
+//   - else the one stakeholder of the task's deal, else that deal's company;
+//   - else the one company the task's contacts work at.
 //
-// Leads and companies are weighed for a task only. A call, meeting or note is
-// written about its contact, and its rule is unchanged.
+// Leads, companies and deals are weighed for a task only. A call, meeting or
+// note is written about its contact, and its rule is unchanged.
 func pickEmailTarget(kind crmcontracts.ActivityKind, found emailCandidates) (EmailTarget, bool) {
 	if len(found.contacts) == 1 {
-		contact := found.contacts[0]
-		target := EmailTarget{EntityType: crmcontracts.ActivityEmailTargetEntityTypeContact, EntityID: contact.id, Address: contact.address}
-		switch {
-		case contact.closed:
-			target.Address, target.Refusal = "", crmcontracts.ActivityEmailTargetRefusalArchived
-		case contact.address == "":
-			target.Refusal = crmcontracts.ActivityEmailTargetRefusalNoAddress
-		}
-		return target, true
+		return contactTarget(found.contacts[0]), true
 	}
 	if kind != crmcontracts.ActivityKindTask {
 		return EmailTarget{}, false
@@ -87,14 +90,47 @@ func pickEmailTarget(kind crmcontracts.ActivityKind, found emailCandidates) (Ema
 	case len(live) > 1:
 		return EmailTarget{}, false
 	case len(found.companies) == 1:
-		return EmailTarget{EntityType: crmcontracts.ActivityEmailTargetEntityTypeCompany, EntityID: found.companies[0].id}, true
+		return companyTarget(found.companies[0]), true
 	case len(found.companies) == 0 && len(closed) == 1:
 		return EmailTarget{
 			EntityType: crmcontracts.ActivityEmailTargetEntityTypeLead, EntityID: closed[0].id,
 			Refusal: crmcontracts.ActivityEmailTargetRefusalLeadClosed,
 		}, true
 	}
+	return inferredTarget(found)
+}
+
+// inferredTarget names a recipient for a task filed on no one it can write
+// to. That is its deal's one stakeholder, else the deal's company, else the
+// one company its contacts share. A company's composer asks which contact.
+func inferredTarget(found emailCandidates) (EmailTarget, bool) {
+	if len(found.companies) > 0 || len(found.leads) > 0 {
+		return EmailTarget{}, false
+	}
+	switch {
+	case len(found.contacts) == 0 && len(found.dealContacts) == 1:
+		return contactTarget(found.dealContacts[0]), true
+	case len(found.contacts) == 0 && len(found.dealCompanies) == 1:
+		return companyTarget(found.dealCompanies[0]), true
+	case len(found.contacts) > 1 && len(found.employers) == 1:
+		return companyTarget(found.employers[0]), true
+	}
 	return EmailTarget{}, false
+}
+
+func contactTarget(contact emailCandidate) EmailTarget {
+	target := EmailTarget{EntityType: crmcontracts.ActivityEmailTargetEntityTypeContact, EntityID: contact.id, Address: contact.address}
+	switch {
+	case contact.closed:
+		target.Address, target.Refusal = "", crmcontracts.ActivityEmailTargetRefusalArchived
+	case contact.address == "":
+		target.Refusal = crmcontracts.ActivityEmailTargetRefusalNoAddress
+	}
+	return target
+}
+
+func companyTarget(company emailCandidate) EmailTarget {
+	return EmailTarget{EntityType: crmcontracts.ActivityEmailTargetEntityTypeCompany, EntityID: company.id}
 }
 
 // leadCandidatesSQL reads the leads a task is filed under, under the lead scope.
@@ -112,29 +148,96 @@ const companyCandidatesSQL = `
 	  JOIN company co ON co.id = l.company_id AND co.archived_at IS NULL
 	 WHERE l.activity_id = ANY($1) AND l.company_id IS NOT NULL %s`
 
-// linkedCandidates reads one kind of linked record per row, under that object's
-// grant and row scope. A caller without the grant is told about none.
-func linkedCandidates(
-	ctx context.Context, tx pgx.Tx, object, alias, query string, rows []ids.UUID,
-) (map[ids.UUID][]emailCandidate, error) {
+// dealContactCandidatesSQL reads the live stakeholders of the deals a task is
+// filed on, under the contact, deal and edge scopes.
+const dealContactCandidatesSQL = `
+	SELECT DISTINCT l.activity_id, p.id, p.full_name,
+	       coalesce((SELECT pe.email FROM contact_email pe
+	                  WHERE pe.contact_id = p.id AND pe.archived_at IS NULL` + contactaddress.ReachableOrder + `
+	                  LIMIT 1), ''),
+	       false
+	  FROM activity_link l
+	  JOIN deal d ON d.id = l.deal_id AND d.archived_at IS NULL
+	  JOIN relationship r ON r.deal_id = d.id AND r.kind = 'deal_stakeholder' AND r.archived_at IS NULL
+	  JOIN contact p ON p.id = r.contact_id AND p.archived_at IS NULL
+	 WHERE l.activity_id = ANY($1) AND l.deal_id IS NOT NULL %s`
+
+// dealCompanyCandidatesSQL reads the live companies of the deals a task is
+// filed on, under the company and deal scopes.
+const dealCompanyCandidatesSQL = `
+	SELECT DISTINCT l.activity_id, co.id, ''::text, ''::text, false
+	  FROM activity_link l
+	  JOIN deal d ON d.id = l.deal_id AND d.archived_at IS NULL
+	  JOIN company co ON co.id = d.company_id AND co.archived_at IS NULL
+	 WHERE l.activity_id = ANY($1) AND l.deal_id IS NOT NULL %s`
+
+// employerCandidatesSQL reads the live company every contact a task is filed
+// on works at now, under the company and edge scopes. One contact with no
+// visible job there leaves the task with no shared employer.
+var employerCandidatesSQL = `
+	SELECT l.activity_id, co.id, ''::text, ''::text, false
+	  FROM activity_link l
+	  JOIN relationship job ON job.contact_id = l.contact_id AND job.kind = 'employment'
+	   AND job.archived_at IS NULL AND ` + employment.IsCurrentSQL("job.ended_at") + `
+	  JOIN company co ON co.id = job.company_id AND co.archived_at IS NULL
+	 WHERE l.activity_id = ANY($1) AND l.contact_id IS NOT NULL %s
+	 GROUP BY l.activity_id, co.id
+	HAVING count(DISTINCT l.contact_id) = (SELECT count(DISTINCT every.contact_id) FROM activity_link every
+	                                         WHERE every.activity_id = l.activity_id AND every.contact_id IS NOT NULL)`
+
+// candidateQuery is one read of the records a row may be written to. Every
+// table it names is read under that object's grant and row scope.
+type candidateQuery struct {
+	query  string
+	scopes []scopedTable
+	// edge is the alias of the relationship table it reads, if any.
+	edge string
+}
+
+type scopedTable struct{ object, alias string }
+
+// linkedCandidates reads one kind of record per row. A caller without a grant
+// for any table the read names is told about none.
+func linkedCandidates(ctx context.Context, tx pgx.Tx, read candidateQuery, rows []ids.UUID) (map[ids.UUID][]emailCandidate, error) {
 	out := map[ids.UUID][]emailCandidate{}
-	if len(rows) == 0 || !auth.ReadGranted(ctx, object) {
+	if len(rows) == 0 {
 		return out, nil
 	}
 	args := []any{rows}
-	scope, err := auth.ScopeClauseFor(ctx, object, alias, func(v any) int {
+	arg := func(v any) int {
 		args = append(args, v)
 		return len(args)
-	})
-	if err != nil {
-		return nil, err
 	}
-	if scope != "" {
-		scope = `AND (` + scope + `)`
+	var clauses []string
+	for _, table := range read.scopes {
+		if !auth.ReadGranted(ctx, table.object) {
+			return out, nil
+		}
+		scope, err := auth.ScopeClauseFor(ctx, table.object, table.alias, arg)
+		if err != nil {
+			return nil, err
+		}
+		clauses = append(clauses, scope)
 	}
-	found, err := tx.Query(ctx, fmt.Sprintf(query, scope), args...)
+	if read.edge != "" {
+		scope, err := auth.EdgeReadScope(ctx, read.edge, arg)
+		if errors.Is(err, apperrors.ErrPermissionDenied) {
+			return out, nil
+		}
+		if err != nil {
+			return nil, err
+		}
+		clauses = append(clauses, scope)
+	}
+	var where strings.Builder
+	for _, clause := range clauses {
+		if clause != "" {
+			where.WriteString(` AND (` + clause + `)`)
+		}
+	}
+	found, err := tx.Query(ctx, fmt.Sprintf(read.query, where.String()), args...)
 	if err != nil {
-		return nil, fmt.Errorf("activities: reading the %s each row is filed on: %w", object, err)
+		return nil, fmt.Errorf("activities: reading the %s each row is filed on: %w", read.scopes[0].object, err)
 	}
 	defer found.Close()
 	for found.Next() {

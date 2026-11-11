@@ -56,6 +56,8 @@ describe("itemTitle — a deal named by its company and stage", () => {
       because: [unknown],
       actions: ["open"],
     };
-    expect(itemTitle(item, inLocale("en"), "en")).toBe(named);
+    expect(itemTitle(item, inLocale("en"), "en")).toBe(
+      `${named} has gone quiet`,
+    );
   });
 });

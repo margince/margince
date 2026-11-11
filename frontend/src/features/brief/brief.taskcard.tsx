@@ -8,8 +8,6 @@ import {
   CalendarClock,
   CalendarDays,
   Circle,
-  FolderKanban,
-  Handshake,
   Hourglass,
   type LucideIcon,
   Mail,
@@ -21,6 +19,7 @@ import {
   UserPlus,
 } from "lucide-react";
 import { MayBeDone } from "../../components/maybedone";
+import { RECORD_CHIP_ICONS } from "../../components/recordlinks";
 import { useTaskDone } from "../../components/taskactions";
 import { Badge, Card } from "../../design-system/atoms";
 import { Avatar } from "../../design-system/avatar";
@@ -60,6 +59,7 @@ import {
   whenText,
 } from "../../lib/worklistcopy";
 import { eyebrowKeyFor } from "../../lib/worklisteyebrow";
+import { eventLine, useHappenedClock } from "../../lib/worklisthappened";
 import type { WorklistItem } from "../../lib/worklisttypes";
 
 /** The name a card goes by, the way the row in hand names it. */
@@ -88,8 +88,8 @@ export function taskName(
 }
 
 /**
- * The line under a card's name: what to do. The agent's own move first, then
- * the first reason the row is here, then the producer's own supporting line.
+ * The line under a card's name. The agent's own move first, then the row's
+ * event, then the first reason it is here, then the producer's own line.
  * Null when the row has none of them: the kind's stock sentence on every card
  * would be one line said six times.
  */
@@ -98,12 +98,13 @@ export function taskLine(
   t: Translator,
   locale: Locale,
   zone: string,
+  event: string | null = null,
 ): string | null {
   // The meta row's badges carry the clock, so the line leaves it out.
   const reason = phrasedReasons(item, true)
     .map((entry) => reasonText(entry, t, locale, zone, partyName(item)))
     .find((text) => text !== null);
-  return briefContextTitle(item) ?? reason ?? (item.detail || null);
+  return briefContextTitle(item) ?? event ?? reason ?? (item.detail || null);
 }
 
 /** Done on a row that is not a task: the queue's put-down, handed in. */
@@ -179,7 +180,8 @@ export function TaskCard({
   const { locale } = useLocale();
   const zone = useViewerZone();
   const viewer = useMe(false).data?.user;
-  const line = taskLine(item, t, locale, zone);
+  const clock = useHappenedClock();
+  const line = taskLine(item, t, locale, zone, eventLine(item, t, clock));
   return (
     <Card as="article" className="brief-task">
       <TaskTick item={item} rowDone={rowDone} />
@@ -342,11 +344,8 @@ type Named = Readonly<{
   mark: "avatar" | LucideIcon;
 }>;
 
-const SUBJECT_ICONS: Partial<Record<string, LucideIcon>> = {
-  deal: Handshake,
-  lead: UserPlus,
-  project: FolderKanban,
-};
+// The task details panel draws its records with the same marks.
+const SUBJECT_ICONS: Partial<Record<string, LucideIcon>> = RECORD_CHIP_ICONS;
 
 /**
  * Who the work is with and what it is about. That is the contact, then their

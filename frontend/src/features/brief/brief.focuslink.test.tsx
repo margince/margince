@@ -31,11 +31,12 @@ it("opens the named row beside the day, and closing clears the address", async (
   render(<BriefScreen />);
 
   const dialog = await screen.findByRole("dialog");
+  // Named as its card is, so the drawer says which row it opened.
   expect(
-    within(dialog).getByRole("heading", { name: en["brief.focus.context"] }),
+    within(dialog).getByRole("heading", { name: /quarterly review/ }),
   ).toBeTruthy();
   // m2 is the prepared meeting; only m1 carries the unprepared reason.
-  expect(dialog.textContent).toContain(en["worklist.ask.meeting"]);
+  expect(dialog.textContent).toContain(en["worklist.todo.meeting"]);
   expect(dialog.textContent).not.toContain(
     en["worklist.because.meeting_unprepared"],
   );

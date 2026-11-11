@@ -431,7 +431,7 @@ test("a task a colleague typed carries no AI mark", async () => {
   expect(screen.queryByText("AI-assisted")).toBeNull();
 });
 
-// The record a task is filed under, named and reachable from the panel.
+// The records a task is filed under, as chips that open them from the panel.
 
 function stubFiledTask(links: { entity_type: string; entity_id: string }[]) {
   installFetchStub({
@@ -466,8 +466,17 @@ test("a task filed under a deal and its company names the deal first", async () 
 
   const deal = await screen.findByRole("link", { name: "Brandt renewal 2027" });
   await screen.findByRole("link", { name: "Brandt Automotive" });
-  const names = screen.getAllByRole("link").map((link) => link.textContent);
-  expect(names).toEqual(["Brandt renewal 2027", "Brandt Automotive"]);
+  const chips = screen.getAllByRole("link");
+  expect(chips.map((chip) => chip.className)).toEqual([
+    "chip chip-dense chip-link",
+    "chip chip-dense chip-lead chip-link",
+  ]);
+  // The company chip leads with its avatar, the deal chip with its kind's icon.
+  expect(chips[1]?.querySelector(".chip-mark")?.textContent).toBe("BA");
+  expect(chips.map((chip) => chip.lastElementChild?.textContent)).toEqual([
+    "Brandt renewal 2027",
+    "Brandt Automotive",
+  ]);
   // Opened in place: following the record is leaving the panel for it.
   expect(deal.getAttribute("href")).toBe("/#/deals/deal-1");
   expect(deal.getAttribute("target")).toBeNull();
@@ -710,7 +719,7 @@ test("a refused Draft email is said once, after every verb in the row", async ()
   });
   const reasons = screen.getAllByText(en["task.next.noAddress"]);
   expect(reasons).toHaveLength(1);
-  const row = email.closest(".form-actions");
+  const row = email.closest(".task-detail-actions");
   expect(reasons[0]?.parentElement).toBe(row);
   expect(row?.lastElementChild).toBe(reasons[0]);
 });

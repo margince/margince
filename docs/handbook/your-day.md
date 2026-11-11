@@ -26,8 +26,7 @@ There is no separate Worklist page, Today page or Inbox page. Also called: to-do
 To make your Worklist fill the window in Margince, press **Expand** at the top of its panel.
 1. Open **Home** → **Show Worklist**.
 2. Press **Expand**, next to the close button. Press **Collapse** to make it narrow again.
-3. This browser keeps the size you chose, from any way you open the Worklist. On a phone the panel
-   always fills the screen.
+3. This browser keeps the size you chose, from any way you open the Worklist. On a phone the panel always fills the screen.
 
 On a big screen the panel stops before its rows get too long to read. Also called: full screen, big worklist, wide view.
 
@@ -36,8 +35,7 @@ To snooze a Worklist item in Margince, press **More actions** at the end of its 
 **Snooze**. It comes back tomorrow ("Back on your list tomorrow.").
 1. Open **Home** → **Show Worklist**.
 2. At the end of the row, press **More actions**, the button with three dots.
-3. Choose **Snooze** for one day, or **Snooze for 3 days**, **Snooze for 7 days** or **Until they
-   reply**.
+3. Choose **Snooze** for one day, or **Snooze for 3 days**, **Snooze for 7 days** or **Until they reply**.
 4. The note that follows offers **Undo**.
 
 Snoozing a deal also hides its at-risk row until the snooze ends. Its tasks remain separate work.
@@ -46,8 +44,7 @@ A snooze changes your list only. A reply that came in before you snoozed does no
 ### How do I pin an item to the top of my worklist?
 To pin a Worklist item in Margince, press **More actions** on its row and choose **Pin**. It moves to the top of your Worklist.
 1. Open **Home** → **Show Worklist**.
-2. Press **More actions** at the end of the row and choose **Pin**. Choose **Unpin** there to put
-   it back in its ranked place.
+2. Press **More actions** at the end of the row and choose **Pin**. Choose **Unpin** there to put it back in its ranked place.
 
 A pin changes the order of your own list only, and changes nothing for colleagues; how urgent it is stays the same. You hold at most 50 pins: a newer one takes the place of your oldest. If it fails: "Item was not pinned. Retry." Quiet contacts under **Optional reconnections** stay outside work counts, even with an open deal, until you pin them or add a task. Also called: star, flag, keep on top.
 
@@ -57,9 +54,13 @@ A task leads your Worklist and **Needs you** on **Home** when you hold it and it
 Only the colleague who holds the task is reminded. A colleague who opens your queue sees the task in its usual place, and a task nobody holds reminds nobody. A reminder stays at the top for 30 days after its time. Also called: reminder, remind me, notify me.
 
 ### Why is this on my list?
-The open card under **Needs you** on **Home** says what the row asks of you and its one current reason. **View details** adds the messages, contact, deal and every fact behind the row. An approval card shows what the agent proposes, such as the task it would add with its due day and note. Its **View details** holds the decision, so you can approve, edit or reject it there.
+The open card under **Needs you** on **Home** says what happened, what to do next and its one current reason. **View details** adds the messages, contact, deal and every fact behind the row. An approval card shows what the agent proposes, such as the task it would add with its due day and note. Its **View details** holds the decision, so you can approve, edit or reject it there.
 
 A meeting with no outcome asks **How did it go?** with **It happened**, **Add notes** and **Did not happen**. A task Margince made for you says what made it. A reminder about a quiet contact, company, deal or lead says so, and asks you to get in touch and then press **Done**. Also called: what is this task, where did this task come from.
+
+The **Why this is on your list** panel in **View details** answers in four parts. **What happened** says the event, its day and who it is with. For a contact it also gives the last contact each way. **Why now** lists the facts that put the row on your list.
+
+**If nothing is done** says what waiting costs, such as a contact who keeps waiting. **What to do** names the next step and who it is with. The title on the card and in **View details** says what is wrong, such as a deal that has gone quiet.
 
 ### How do I hand a task on to a colleague?
 To hand a task on in Margince, press **More actions** on its Worklist row and choose **Reassign**.
@@ -74,10 +75,8 @@ A task nobody holds shows **Take it** on its row when you may change it. Switch 
 ### How do I remove something from my worklist?
 To take an item off your Worklist in Margince, press **Done** on its row. For **Not mine** or **Not a customer**, press **More actions** at the end of the row.
 1. Open **Home** → **Show Worklist** and find the row.
-2. Press **Done** if you handled it another way, such as by phone. On a phone, **Done** is in
-   **More actions**.
-3. Or press **More actions** and choose **Not mine** if someone else should answer, or **Not a
-   customer**.
+2. Press **Done** if you handled it another way, such as by phone. On a phone, **Done** is in **More actions**.
+3. Or press **More actions** and choose **Not mine** if someone else should answer, or **Not a customer**.
 4. Press **Undo** in the note if you picked wrong.
 
 A follow-up, meeting, deal risk or system problem can offer **Done** to clear your list. A deal suggestion offers its next action, or **Open deal**, plus **Mark handled**. Marking it handled clears the suggestion; it does not change the deal.
@@ -123,6 +122,8 @@ When the start time, the guests or the invite's agenda change, the row asks agai
 
 ### What can I do from a task?
 A task linked to one contact offers **Draft email** and **Open contact**. **Draft email** opens the composer already drafting a message about the task; with no connected mailbox it is **Email** and opens your own mail app. A task with no single contact drafts to its one open lead, or with none, to its one linked company. For a company the composer asks which contact it is for; a task on two open leads offers none. A closed lead with no linked company, or a lead with no email address, gets **Draft email** refused with the reason. The task's row on a timeline offers **Write email** to the same contact, lead or company.
+
+Where a task offers **Draft email**, one filed on a deal alone drafts to the deal's one contact, else to the deal's company. One on several contacts and no open lead drafts to the company they all work at now. Of the tasks Margince files, only those that ask you to write offer it. Examples are answering an email request or following up a new lead. A task filed on no record has no one to write to and offers none.
 
 It offers **Call** whenever the contact has a phone number, including on a task typed by hand. A done or read-only task offers the same steps. **Draft email** is refused with a reason when the contact has no email address or is archived. **Call** dials and opens **Log activity** on **Call** under the task, which does not complete the task; an archived contact gets no **Call**. The open card under **Needs you** on **Home** offers **Call** and **Draft email** the same way, beside **Done**, with no **Open contact**. With **Draft email** on the card, **Done** is a plain button, so the card has one colour button.
 
