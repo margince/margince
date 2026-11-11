@@ -105,7 +105,7 @@ func lockErasedSeats(ctx context.Context, tx pgx.Tx, after ids.UUID, limit int) 
 		WHERE `+erasedSeatSQL+` AND p.id > @after
 		ORDER BY p.id LIMIT @limit
 		FOR UPDATE OF p FOR SHARE OF a`,
-		pgx.StrictNamedArgs{"erased": erasedEmail, "erase": actionErase, "after": after, "limit": limit})
+		pgx.StrictNamedArgs{"erased": erasedEmail, "erase": actionErase, rekeyAfterParameter: after, "limit": limit})
 	if err != nil {
 		return nil, fmt.Errorf("read erased deal room seats: %w", err)
 	}
