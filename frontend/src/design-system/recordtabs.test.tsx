@@ -18,6 +18,7 @@ import { RecordTabs } from "./recordtabs";
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
+  vi.unstubAllGlobals();
 });
 
 type Body = "overview" | "contacts";
@@ -166,5 +167,37 @@ describe("RecordTabs fades only an end that hides tabs", () => {
     const tabs = sized(300, 300);
     expect(tabs).not.toHaveClass("is-clipped-start");
     expect(tabs).not.toHaveClass("is-clipped-end");
+  });
+});
+
+// When the row grows wide enough for every tab, "More" goes. A keyboard on it
+// lands on the open tab, not on the page.
+describe("RecordTabs keeps focus when the folded tabs come back", () => {
+  it("moves focus from More to the open tab", () => {
+    let resized: () => void = () => undefined;
+    vi.stubGlobal(
+      "ResizeObserver",
+      class {
+        constructor(changed: () => void) {
+          resized = changed;
+        }
+        observe() {}
+        disconnect() {}
+      },
+    );
+    let room = 150;
+    vi.spyOn(HTMLElement.prototype, "offsetWidth", "get").mockReturnValue(100);
+    vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockImplementation(
+      () => room,
+    );
+    strip();
+    const more = screen.getByRole("button", { name: "More sections" });
+    expect(screen.queryByRole("button", { name: "Contacts" })).toBeNull();
+
+    act(() => more.focus());
+    room = 400;
+    act(() => resized());
+
+    expect(screen.getByRole("button", { name: "Overview" })).toHaveFocus();
   });
 });
