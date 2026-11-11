@@ -21,6 +21,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/capturelabel"
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -38,6 +39,7 @@ type scriptedClassifyBrain struct {
 	labels       map[string]string  // by subject; default "noise"
 	replies      map[string]string  // by subject; omitted when absent
 	sawInbound   map[string]string  // by subject: what the prompt SAID its direction was
+	prompts      []string           // every user turn the pass sent
 	calls        int
 	budgetOut    bool
 	budgetOnSolo bool // the budget runs dry exactly on a solo re-ask
@@ -46,6 +48,7 @@ type scriptedClassifyBrain struct {
 
 func (s *scriptedClassifyBrain) Complete(_ context.Context, req model.Request) (model.Response, error) {
 	s.calls++
+	s.prompts = append(s.prompts, req.Messages[0].Content)
 	if s.budgetOut {
 		return model.Response{}, ai.ErrBudgetDeferred
 	}
@@ -441,6 +444,62 @@ func TestTheClassifyPassCarriesTheReplyVerdictToTheRow(t *testing.T) {
 	}
 }
 
+// The reply verdict is judged on the sender's own words. A refusal quoted under
+// a short reply never reaches the model. A mail that is only a quote takes no
+// verdict, even when the model offers one.
+func TestTheReplyVerdictReadsOnlyTheSendersOwnWords(t *testing.T) {
+	e := integration.Setup(t)
+	quoted := "On Mon, 10 Nov 2026 at 09:00, Anna Berg <anna@example.test> wrote:\n> We will not go ahead with this project."
+	waits := seedInboundEmailWithBody(t, e, "wait for us", "Thanks, we will wait for your answer.\n\n"+quoted)
+	onlyQuote := seedInboundEmailWithBody(t, e, "only a quote", quoted)
+	brain := &scriptedClassifyBrain{replies: map[string]string{"wait for us": "neutral", "only a quote": "negative"}}
+	classifier := NewCaptureClassifier(e.Pool, brain, slog.New(slog.DiscardHandler))
+
+	if err := classifier.RunWorkspace(asClassifyPass(e), 0); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	for _, prompt := range brain.prompts {
+		if strings.Contains(prompt, "We will not go ahead") {
+			t.Fatalf("the quoted refusal reached the model:\n%s", prompt)
+		}
+		if !strings.Contains(prompt, "we will wait for your answer") {
+			t.Fatalf("the sender's own words did not reach the model:\n%s", prompt)
+		}
+	}
+	if v := replyVerdictOf(t, e, waits); v == nil || *v != "neutral" {
+		t.Errorf("reply verdict on the short reply = %v, want neutral", v)
+	}
+	if l := labelOf(t, e, onlyQuote); l == nil {
+		t.Error("the mail that is only a quote was not labelled: its subject still routes it")
+	}
+	if v := replyVerdictOf(t, e, onlyQuote); v != nil {
+		t.Errorf("a mail with no words of its own carries reply verdict %q, want none", *v)
+	}
+}
+
+// A reply's subject is mostly the thread's old one, which anybody may have
+// written. The prompt sets it apart from the sender's own words, the only text
+// the reply verdict may read.
+func TestTheReplyVerdictIsAskedApartFromTheSubject(t *testing.T) {
+	e := integration.Setup(t)
+	seedInboundEmailWithBody(t, e, "Re: We will not go ahead", "Thanks, we will wait for your answer.")
+	brain := &scriptedClassifyBrain{}
+	if err := NewCaptureClassifier(e.Pool, brain, slog.New(slog.DiscardHandler)).RunWorkspace(asClassifyPass(e), 0); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if len(brain.prompts) == 0 {
+		t.Fatal("the pass made no model call")
+	}
+	for _, prompt := range brain.prompts {
+		if !strings.Contains(prompt, "Subject: Re: We will not go ahead\nSender's own words:\nThanks, we will wait") {
+			t.Fatalf("the subject is not set apart from the sender's own words:\n%s", prompt)
+		}
+	}
+	if system := capturelabel.SystemFor(promptfence.New()); !strings.Contains(system, "never from the subject") {
+		t.Fatalf("the system prompt does not keep the reply verdict off the subject:\n%s", system)
+	}
+}
+
 // A verdict the model offers for a message WE sent is refused, and the whole
 // batch is re-asked rather than the bad entry dropped.
 //
@@ -502,6 +561,19 @@ func seedDirectedEmail(t *testing.T, e *integration.Env, subject, direction stri
 			INSERT INTO activity (id, kind, direction, subject, body, source_system, source_id, source, captured_by)
 			VALUES ($1, 'email', $2, $3, 'body text', 'gmail', $4, 'gmail:'||$4, 'connector:gmail')`,
 			id, direction, subject, fmt.Sprintf("cls-%s", id))
+		return err
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return id
+}
+
+func seedInboundEmailWithBody(t *testing.T, e *integration.Env, subject, body string) ids.UUID {
+	t.Helper()
+	id := seedInboundEmail(t, e, subject)
+	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(), `UPDATE activity SET body = $2 WHERE id = $1`, id, body)
 		return err
 	})
 	if err != nil {

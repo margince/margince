@@ -12,6 +12,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -30,11 +31,11 @@ func earlierRequestsOnCard(ctx context.Context, tx pgx.Tx, card ids.ActivityID) 
 	cardID := arg(card)
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT a.id FROM activity a
-		  JOIN activity card ON card.id = $%[1]d AND card.owed_verdict = '`+OwedVerdictAsksUs+`'
+		  JOIN activity card ON card.id = $%[1]d AND `+storekit.AsksUsClause("card")+`
 		 WHERE a.archived_at IS NULL AND a.thread_key = card.thread_key AND a.kind = card.kind
 		   AND coalesce(a.channel_provider, '') = coalesce(card.channel_provider, '')
 		   AND (a.occurred_at, a.id) < (card.occurred_at, card.id)
-		   AND a.owed_verdict = '`+OwedVerdictAsksUs+`'
+		   AND `+storekit.AsksUsClause("a")+`
 		   AND `+requestOpenSQL+`
 		   AND %[2]s`, cardID, content), args...)
 	if err != nil {

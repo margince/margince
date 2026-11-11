@@ -243,9 +243,14 @@ type fieldError struct {
 	field string
 	code  string
 	msg   string
+	// max is the limit a too_long refusal names.
+	max int
 }
 
 func (e *fieldError) Error() string { return e.msg }
+
+// FieldMax is the limit the refusal names; zero states none.
+func (e *fieldError) FieldMax() int { return e.max }
 
 func (e *fieldError) FieldFault() (field, code, message string) {
 	return e.field, e.code, e.msg

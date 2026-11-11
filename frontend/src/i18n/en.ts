@@ -2892,6 +2892,9 @@ export const en = {
   "action.booking": "Booking page",
 
   "common.fieldInvalid": "Check this value and try again.",
+  "common.fieldTooLongMax": "{field}: at most {max} characters.",
+  "common.valueTooLongMax": "This value is at most {max} characters.",
+  "common.valueTooLong": "This value is too long.",
   "common.undo": "Undo",
   "common.close": "Close",
   "common.unknownValue": "Other",
@@ -8841,15 +8844,17 @@ export const en = {
   "signatureTemplate.label": "Template (HTML)",
   "signatureTemplate.placeholder": "<p><b>{name}</b><br>{title}<br>{phone}</p>",
   "signatureTemplate.hint":
-    "Use {name}, {title}, {phone}, {logo} and {imprint}. {logo} is the logo of the sender’s legal entity, embedded in the mail, and {imprint} is its imprint. A legal entity with its own template uses that one. Paragraphs, line breaks, bold, italic, underline, links, and color and pixel size on a span are kept. Empty turns the template off.",
+    "Use {name}, {title}, {phone}, {logo} and {imprint}. {logo} is the logo of the sender’s legal entity, embedded in the mail, and {imprint} is its imprint. A legal entity with its own template uses that one. Paragraphs, line breaks, bold, italic, underline, links, tables, layout styles and images from https addresses are kept. Scripts and forms are removed. Empty turns the template off.",
   "settings.signatureFormat": "Format",
   "settings.signatureFormatText": "Plain text",
   "settings.signatureFormatHtml": "HTML",
   "settings.signatureHtmlLabel": "HTML signature",
   "settings.signatureHtmlHintTemplate":
-    "Your mail carries this instead of the company template. Leave it empty to use the company template again. Remote images and scripts are removed.",
+    "Your mail carries this instead of the company template. Leave it empty to use the company template again. Up to {max} characters. Tables, layout and images from https addresses are kept; scripts and forms are removed.",
   "settings.signatureHtmlHintPlain":
-    "Leave this empty to use your plain text again. Remote images and scripts are removed.",
+    "Leave this empty to use your plain text again. Up to {max} characters. Tables, layout and images from https addresses are kept; scripts and forms are removed.",
+  "settings.signatureHtmlCount_one": "{count} of {max} character",
+  "settings.signatureHtmlCount_other": "{count} of {max} characters",
   "settings.signatureOwnHtml": "Your HTML signature",
   "settings.signatureReviewTitle": "Review {name}’s retained signature",
   "settings.signatureReviewIntro":
@@ -11013,8 +11018,11 @@ export const en = {
   "privacy.openRequest": "Open request",
   "privacy.erasureNeedsContact":
     "An erasure request must name a contact in this company, because fulfilling it erases that record. A free-text subject cannot be erased.",
-  "privacy.accessManual":
-    "An access request is fulfilled manually: record what you sent in the resolution. This system does not assemble or export the data for you.",
+  "privacy.accessPicksContact":
+    "Pick the contact this request is about. You can then download everything held about them from the request.",
+  "privacy.downloadPackage": "Download data package",
+  "privacy.possibleDuplicates":
+    "Other records may be the same person. Check them before you answer.",
   "privacy.fulfilErasureTitle": "Fulfill erasure request",
   "privacy.erasureIrreversible":
     "This permanently erases the contact across the whole system: record, captured activity and derived values. It cannot be undone. The erasure itself is audited.",
@@ -19231,6 +19239,9 @@ export const en = {
     "A tag was suggested for this record. Apply it, or dismiss the suggestion.",
   "worklist.ask.task":
     "This task is open. Do the work and mark it done, or move it to another day.",
+  "worklist.ask.task_unchecked":
+    "Margince cannot check whether this was answered: the mail’s text can no longer be read. Mark it done once it is handled.",
+  "worklist.ask.task_unchecked_reply": "Latest reply sent: {date}",
   "worklist.ask.brief_item":
     "The overnight review flagged this deal. Act on it, set it aside, or dismiss it.",
   "worklist.ask.conversation_claim":
@@ -19720,7 +19731,7 @@ export const en = {
   "worklist.untitled.task": "Untitled task",
   "worklist.untitled.brief_item": "Deal to review",
   "worklist.mayBeDone.asked":
-    "You may have done this: you wrote to them on {date}.",
+    "This may be done: an email went to them on {date}.",
   "worklist.mayBeDone.done": "Done",
   "worklist.mayBeDone.notYet": "Not yet",
   "worklist.recipients.label": "Recipients",
@@ -20207,6 +20218,10 @@ export const en = {
     "Nothing is sent to the provider until you select Continue.",
   "contact.card.dealTitle": "The deal {name} decides",
   "contact.card.deals": "Deals",
+  "contact.card.openTasks": "Open tasks",
+  "contact.card.noOpenTasks": "No open tasks",
+  "contact.moment.doneToast":
+    "Marked done. It comes back when either of you writes again.",
   "contact.card.understandingTitle": "Understanding {name}",
   "contact.card.correct": "Correct something",
   "contact.card.said": "What was said",

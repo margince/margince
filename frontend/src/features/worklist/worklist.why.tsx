@@ -8,9 +8,14 @@
 // ranks against the rest of the queue.
 
 import type { ReactNode } from "react";
+import { Button } from "../../design-system/atoms";
 import { Eyebrow } from "../../design-system/eyebrow";
 import { Panel, PanelBody } from "../../design-system/panel";
-import { type Locale, type Translator, useT } from "../../i18n";
+import { formatActivityWhen } from "../../format/activitywhen";
+import { type Locale, type Translator, useLocale, useT } from "../../i18n";
+import { useSourceOpener } from "../../lib/opensource";
+import { useViewerZone } from "../../lib/viewerzone";
+import { saysOpen } from "../../lib/worklistask";
 import {
   factReasons,
   partyName,
@@ -18,12 +23,12 @@ import {
   saidByTheWhenLine,
 } from "../../lib/worklistcopy";
 import {
-  consequenceLine,
   happenedLines,
   todoLine,
   useHappenedClock,
 } from "../../lib/worklisthappened";
 import { useBriefAnswer, withFoldedBrief } from "./worklist.briefverbs";
+import { consequenceLine } from "./worklist.consequence";
 import type { WorklistItem } from "./worklist.queries";
 import { codedDetail } from "./worklist.reader";
 import { inlineDecision, rowAnswer } from "./worklist.row.answer";
@@ -52,6 +57,8 @@ export function WorklistWhy({
   );
   const consequence = consequenceLine(item, t);
   const detail = codedDetail(item, t);
+  // A row asking whether our later mail kept its promise has no ask to say.
+  const open = saysOpen(item);
   return (
     <Panel title={t("worklist.why.title")} tone="accent">
       <PanelBody>
@@ -97,10 +104,13 @@ export function WorklistWhy({
               <p>{consequence}</p>
             </WhySection>
           )}
-          <WhySection heading={t("worklist.why.todo")}>
-            <p>{todoLine(item, t, told)}</p>
-            {answer && <RowVerbs item={item} />}
-          </WhySection>
+          {(open || answer) && (
+            <WhySection heading={t("worklist.why.todo")}>
+              {open && <p>{todoLine(item, t, told)}</p>}
+              <OurLastReply item={item} />
+              {answer && <RowVerbs item={item} />}
+            </WhySection>
+          )}
         </div>
       </PanelBody>
     </Panel>
@@ -118,6 +128,37 @@ function WhySection({
       </Eyebrow>
       {children}
     </section>
+  );
+}
+
+// The reply a reader can open to judge for themselves a request Margince
+// cannot check.
+function OurLastReply({ item }: Readonly<{ item: WorklistItem }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const zone = useViewerZone();
+  const openerFor = useSourceOpener();
+  const reply = item.request_check?.our_last_reply;
+  if (!reply) return null;
+  const label = t("worklist.ask.task_unchecked_reply", {
+    date: formatActivityWhen(
+      reply.occurred_at,
+      reply.occurred_precision,
+      locale,
+      zone,
+    ),
+  });
+  const open = openerFor({ id: reply.activity_id, kind: "email" });
+  return (
+    <p>
+      {open ? (
+        <Button variant="link" onClick={open}>
+          {label}
+        </Button>
+      ) : (
+        label
+      )}
+    </p>
   );
 }
 

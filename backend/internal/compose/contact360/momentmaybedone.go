@@ -29,6 +29,15 @@ func promiseFollowUps(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, n
 			bases = append(bases, activities.PromiseBasis{PromiseID: ids.UUID(promise), SourceActivityID: ids.UUID(*source), RecipientContactID: contactID.UUID})
 		}
 	}
+	if page.NextSteps != nil {
+		// Only a task written for a promise read out of a message. A reply
+		// reminder has its own judge, and a hand task names no promise.
+		for _, task := range page.NextSteps.Data {
+			if task.SourceSystem != nil && *task.SourceSystem == activities.CommitmentTaskSource {
+				add(task.Id, task.SourceActivityId)
+			}
+		}
+	}
 	if page.Claims != nil {
 		for _, claim := range *page.Claims {
 			if claim.Kind == crmcontracts.ConversationClaimKindCommitmentOurs && claim.Status == crmcontracts.ConversationClaimStatusOpen {
@@ -43,6 +52,9 @@ func promiseFollowUps(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, n
 type owedPromise struct {
 	kind crmcontracts.ContactMomentMayBeDonePromiseType
 	id   crmcontracts.Id
+	// key is the task a claim became, else the promise itself. The Worklist
+	// keys by task, so one Not yet holds on both.
+	key crmcontracts.Id
 	// holder is the plain card's holder marker, so a Not yet given while a
 	// colleague held the task lifts once it becomes the reader's.
 	holder string
@@ -51,15 +63,46 @@ type owedPromise struct {
 // promiseBehind finds the task or claim a promise card was built from. A card
 // from any other rung has none.
 func promiseBehind(ctx context.Context, moment crmcontracts.ContactMoment, page *crmcontracts.Contact360) (owedPromise, bool) {
+	if moment.ClaimKey == overdueTaskKey || moment.ClaimKey == openTaskKey {
+		if len(moment.Evidence) == 0 || moment.Evidence[0].Id == nil {
+			return owedPromise{}, false
+		}
+		task, ok := nextStep(page, *moment.Evidence[0].Id)
+		if !ok {
+			return owedPromise{}, false
+		}
+		return owedPromise{kind: crmcontracts.ContactMomentMayBeDonePromiseTypeTask, id: task.Id, key: task.Id, holder: heldMarker(ctx, task)}, true
+	}
 	if page.Claims == nil {
 		return owedPromise{}, false
 	}
 	for _, claim := range *page.Claims {
-		if moment.ClaimKey == claimMomentKey(overdueClaimRung, claim) || moment.ClaimKey == claimMomentKey(openClaimRung, claim) {
-			return owedPromise{kind: crmcontracts.ContactMomentMayBeDonePromiseTypeClaim, id: claim.Id}, true
+		if moment.ClaimKey != claimMomentKey(overdueClaimRung, claim) && moment.ClaimKey != claimMomentKey(openClaimRung, claim) {
+			continue
 		}
+		promise := owedPromise{kind: crmcontracts.ContactMomentMayBeDonePromiseTypeClaim, id: claim.Id, key: claim.Id}
+		if claim.TaskActivityId != nil {
+			promise.key = *claim.TaskActivityId
+			promise.holder = momentaction.HeldMarker(ctx, nil)
+			if task, ok := nextStep(page, *claim.TaskActivityId); ok {
+				promise.holder = heldMarker(ctx, task)
+			}
+		}
+		return promise, true
 	}
 	return owedPromise{}, false
+}
+
+func nextStep(page *crmcontracts.Contact360, id openapi_types.UUID) (crmcontracts.Activity, bool) {
+	if page.NextSteps == nil {
+		return crmcontracts.Activity{}, false
+	}
+	for _, task := range page.NextSteps.Data {
+		if task.Id == id {
+			return task, true
+		}
+	}
+	return crmcontracts.Activity{}, false
 }
 
 // mayBeDone turns a promise card into the question whether our later mail
@@ -73,9 +116,9 @@ func (said momentCopy) mayBeDone(ctx context.Context, moment crmcontracts.Contac
 	if !ok {
 		return crmcontracts.ContactMoment{}, false
 	}
-	q := momentaction.DoneQuestion{Plain: moment, Kind: promise.kind, PromiseID: promise.id, Sent: sent, Key: momentaction.DoneKey(promise.id)}
+	q := momentaction.DoneQuestion{Plain: moment, Kind: promise.kind, PromiseID: promise.id, Sent: sent, Key: momentaction.DoneKey(promise.key)}
 	evidence := momentaction.DoneEvidence(said.Spoken, q)
-	return momentaction.AskDone(said.Spoken, said.zone, q, evidence, momentaction.DoneFingerprint(promise.id, sent, promise.holder)), true
+	return momentaction.AskDone(said.Spoken, said.zone, q, evidence, momentaction.DoneFingerprint(promise.key, sent, promise.holder)), true
 }
 
 // proposer asks the may-be-done question in place of a promise card. After the

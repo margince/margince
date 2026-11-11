@@ -11,18 +11,18 @@
       "covered": 29,
       "sign_in": 1,
       "no_signed_in_user": 0,
-      "web_app_calls": 878,
+      "web_app_calls": 879,
       "web_app_calls_open": 742,
       "web_app_calls_ask_first": 102,
       "web_app_calls_pending": 0,
-      "web_app_calls_security": 120,
+      "web_app_calls_security": 121,
       "web_app_calls_covered": 15,
       "parity_signed_in_percent": 83.5,
-      "parity_web_app_percent": 84.5
+      "parity_web_app_percent": 84.4
     },
     "open_with_no_web_app_call_found": 111,
-    "parity_web_app_counting_covered_percent": 86.2,
-    "parity_web_app_once_pending_is_open_percent": 86.2
+    "parity_web_app_counting_covered_percent": 86.1,
+    "parity_web_app_once_pending_is_open_percent": 86.1
   },
   "web_app_scan": {
     "computed_calls_no_path_was_found_for": []
@@ -625,14 +625,14 @@
       "covered": 0,
       "sign_in": 0,
       "no_signed_in_user": 0,
-      "web_app_calls": 53,
+      "web_app_calls": 54,
       "web_app_calls_open": 38,
       "web_app_calls_ask_first": 16,
       "web_app_calls_pending": 0,
-      "web_app_calls_security": 15,
+      "web_app_calls_security": 16,
       "web_app_calls_covered": 0,
       "parity_signed_in_percent": 71.6,
-      "parity_web_app_percent": 71.6,
+      "parity_web_app_percent": 70.3,
       "areas": [
         {
           "key": "consent",
@@ -665,14 +665,14 @@
           "covered": 0,
           "sign_in": 0,
           "no_signed_in_user": 0,
-          "web_app_calls": 4,
+          "web_app_calls": 5,
           "web_app_calls_open": 4,
           "web_app_calls_ask_first": 2,
           "web_app_calls_pending": 0,
-          "web_app_calls_security": 0,
+          "web_app_calls_security": 1,
           "web_app_calls_covered": 0,
           "parity_signed_in_percent": 80,
-          "parity_web_app_percent": 100
+          "parity_web_app_percent": 80
         },
         {
           "key": "privacy_notices",
@@ -9051,7 +9051,8 @@
       ],
       "group": "compliance",
       "area": "privacy_requests",
-      "state": "security"
+      "state": "security",
+      "web_app": "direct"
     },
     {
       "method": "GET",

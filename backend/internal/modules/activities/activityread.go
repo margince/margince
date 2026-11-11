@@ -95,7 +95,7 @@ const (
 // tie-breaker. ListSort carries one, deliberately — a keyset cursor over two
 // sort keys is a different machine — so this arm keeps its order, refuses a
 // caller's sort outright rather than ignoring it, and hands out no cursor.
-const requestPriorityOrder = " ORDER BY (a.owed_verdict = 'asks_us') DESC NULLS LAST, a.occurred_at DESC, a.id DESC"
+var requestPriorityOrder = " ORDER BY coalesce(" + storekit.AsksUsClause("a") + ", false) DESC, a.occurred_at DESC, a.id DESC"
 
 // TimelineCursor mints the token the activity list continues from, for a
 // SECTION that paged the same rows itself.
@@ -464,7 +464,7 @@ func (s *Store) CountActivities(ctx context.Context, in ListActivitiesInput) (in
 		// planner reads the wrapper for what it is.
 		return tx.QueryRow(ctx,
 			`SELECT count(*) FROM (SELECT `+columns+
-				` FROM activity a WHERE `+strings.Join(where, " AND ")+`) counted`, waitingListArgs(in, args)...).Scan(&total)
+				` FROM activity a WHERE `+strings.Join(where, " AND ")+`) counted`, waitingListArgs(ctx, in, args)...).Scan(&total)
 	})
 	return total, err
 }

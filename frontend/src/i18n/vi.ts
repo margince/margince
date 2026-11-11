@@ -2891,6 +2891,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "action.booking": "Trang đặt lịch",
 
   "common.fieldInvalid": "Kiểm tra giá trị này và thử lại.",
+  "common.fieldTooLongMax": "{field}: tối đa {max} ký tự.",
+  "common.valueTooLongMax": "Giá trị này có tối đa {max} ký tự.",
+  "common.valueTooLong": "Giá trị này quá dài.",
   "common.undo": "Hoàn tác",
   "common.close": "Đóng",
   "common.unknownValue": "Khác",
@@ -8648,15 +8651,17 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "signatureTemplate.label": "Mẫu (HTML)",
   "signatureTemplate.placeholder": "<p><b>{name}</b><br>{title}<br>{phone}</p>",
   "signatureTemplate.hint":
-    "Dùng {name}, {title}, {phone}, {logo} và {imprint}. {logo} là logo của pháp nhân mà thành viên làm việc cho, nhúng trong thư, và {imprint} là thông tin pháp lý của pháp nhân đó. Pháp nhân có mẫu riêng sẽ dùng mẫu đó. Mẫu giữ nguyên đoạn văn, ngắt dòng, chữ đậm, chữ nghiêng, gạch chân, liên kết, cùng màu chữ và cỡ chữ theo pixel trên span. Để trống sẽ tắt mẫu.",
+    "Dùng {name}, {title}, {phone}, {logo} và {imprint}. {logo} là logo của pháp nhân mà thành viên làm việc cho, nhúng trong thư, và {imprint} là thông tin pháp lý của pháp nhân đó. Pháp nhân có mẫu riêng sẽ dùng mẫu đó. Mẫu giữ nguyên đoạn văn, ngắt dòng, chữ đậm, chữ nghiêng, gạch chân, liên kết, bảng, kiểu bố cục và hình ảnh từ địa chỉ https. Mã script và biểu mẫu sẽ bị xóa. Để trống sẽ tắt mẫu.",
   "settings.signatureFormat": "Định dạng",
   "settings.signatureFormatText": "Văn bản thuần",
   "settings.signatureFormatHtml": "Mã HTML",
   "settings.signatureHtmlLabel": "Chữ ký HTML",
   "settings.signatureHtmlHintTemplate":
-    "Chữ ký này thay thế mẫu của công ty. Để trống để dùng lại mẫu của công ty. Hình ảnh từ xa và mã script sẽ bị xóa.",
+    "Chữ ký này thay thế mẫu của công ty. Để trống để dùng lại mẫu của công ty. Tối đa {max} ký tự. Bảng, bố cục và hình ảnh từ địa chỉ https được giữ lại; mã script và biểu mẫu sẽ bị xóa.",
   "settings.signatureHtmlHintPlain":
-    "Để trống để dùng lại chữ ký văn bản thuần. Hình ảnh từ xa và mã script sẽ bị xóa.",
+    "Để trống để dùng lại chữ ký văn bản thuần. Tối đa {max} ký tự. Bảng, bố cục và hình ảnh từ địa chỉ https được giữ lại; mã script và biểu mẫu sẽ bị xóa.",
+  "settings.signatureHtmlCount_one": "{count}/{max} ký tự",
+  "settings.signatureHtmlCount_other": "{count}/{max} ký tự",
   "settings.signatureOwnHtml": "Chữ ký HTML của bạn",
   "settings.signatureReviewTitle": "Kiểm tra chữ ký được giữ lại của {name}",
   "settings.signatureReviewIntro":
@@ -10749,8 +10754,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "privacy.openRequest": "Mở yêu cầu",
   "privacy.erasureNeedsContact":
     "Yêu cầu xóa dữ liệu phải nêu một liên hệ trong công ty này, vì đáp ứng yêu cầu sẽ xóa hồ sơ đó. Không thể xóa chủ thể dạng văn bản tự do.",
-  "privacy.accessManual":
-    "Yêu cầu truy cập được đáp ứng thủ công: ghi lại nội dung đã gửi vào phần kết quả xử lý. Hệ thống này không tự tập hợp hay xuất dữ liệu thay bạn.",
+  "privacy.accessPicksContact":
+    "Chọn liên hệ mà yêu cầu này nói đến. Sau đó bạn có thể tải xuống mọi dữ liệu đang lưu về họ ngay trong yêu cầu.",
+  "privacy.downloadPackage": "Tải xuống gói dữ liệu",
+  "privacy.possibleDuplicates":
+    "Các hồ sơ khác có thể là cùng một người. Hãy kiểm tra chúng trước khi trả lời.",
   "privacy.fulfilErasureTitle": "Đáp ứng yêu cầu xóa dữ liệu",
   "privacy.erasureIrreversible":
     "Thao tác này xóa vĩnh viễn liên hệ trên toàn hệ thống: hồ sơ, hoạt động đã thu thập và các giá trị dẫn xuất. Không thể hoàn tác. Bản thân thao tác xóa cũng được ghi vào nhật ký hoạt động.",
@@ -18949,6 +18957,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Một thẻ được gợi ý cho hồ sơ này. Áp dụng thẻ, hoặc bỏ qua gợi ý.",
   "worklist.ask.task":
     "Việc này đang mở. Làm xong và đánh dấu là xong, hoặc chuyển sang ngày khác.",
+  "worklist.ask.task_unchecked":
+    "Margince không thể kiểm tra việc này đã được trả lời chưa: nội dung thư không còn đọc được. Hãy đánh dấu là xong khi đã xong.",
+  "worklist.ask.task_unchecked_reply": "Trả lời đã gửi gần nhất: {date}",
   "worklist.ask.brief_item":
     "Lượt rà soát ban đêm đã đánh dấu deal này. Xử lý, tạm gác, hoặc bỏ qua.",
   "worklist.ask.conversation_claim":
@@ -19446,7 +19457,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.untitled.task": "Việc cần làm chưa có tiêu đề",
   "worklist.untitled.brief_item": "Deal cần xem lại",
   "worklist.mayBeDone.asked":
-    "Có thể bạn đã làm việc này: bạn đã viết cho họ vào ngày {date}.",
+    "Việc này có thể đã xong: một email đã được gửi cho họ vào ngày {date}.",
   "worklist.mayBeDone.done": "Hoàn thành",
   "worklist.mayBeDone.notYet": "Chưa",
   "worklist.recipients.label": "Liên hệ nhận",
@@ -19897,6 +19908,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Chưa gửi gì tới nhà cung cấp cho đến khi bạn chọn Tiếp tục.",
   "contact.card.dealTitle": "Deal {name} quyết định",
   "contact.card.deals": "Deal",
+  "contact.card.openTasks": "Việc cần làm đang mở",
+  "contact.card.noOpenTasks": "Không có việc cần làm đang mở",
+  "contact.moment.doneToast":
+    "Đã đánh dấu xong. Mục này sẽ quay lại khi một trong hai bên viết tiếp.",
   "contact.card.understandingTitle": "Hiểu {name}",
   "contact.card.correct": "Sửa thông tin",
   "contact.card.said": "Những gì đã trao đổi",

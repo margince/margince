@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -57,8 +58,8 @@ func cleanBody(body string) (string, error) {
 	if trimmed == "" {
 		return "", &fieldError{field: "body", code: codeRequired, msg: "a comment needs some words"}
 	}
-	if len(trimmed) > commentLimit {
-		return "", &fieldError{field: "body", code: codeTooLong, msg: fmt.Sprintf("a comment is at most %d characters", commentLimit)}
+	if utf8.RuneCountInString(trimmed) > commentLimit {
+		return "", &fieldError{field: "body", code: codeTooLong, max: commentLimit, msg: fmt.Sprintf("a comment is at most %d characters", commentLimit)}
 	}
 	return trimmed, nil
 }

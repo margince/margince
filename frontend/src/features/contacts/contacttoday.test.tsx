@@ -682,7 +682,9 @@ it("shows a privacy duty in place of the quiet answer and opens its review actio
   );
   expect(screen.getByText("Privacy notice owed")).not.toBeNull();
   expect(
-    screen.queryByRole("button", { name: en["standing.next.snooze"] }),
+    screen.queryByRole("button", {
+      name: en["worklist.disposition.verb.notNow"],
+    }),
   ).toBeNull();
   expect(screen.queryByText(en["standing.next.noTask"])).toBeNull();
   await user.click(screen.getByRole("button", { name: "Review privacy duty" }));

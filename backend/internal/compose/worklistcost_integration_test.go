@@ -28,15 +28,19 @@ var worklistStages = []string{
 	"meeting_horizon", "rank", "row_names",
 }
 
-// worklistOutsideStatements are the statements a worklist read sends outside
-// every stage: BEGIN, COMMIT and the reads before the day is assembled.
-const worklistOutsideStatements = 5
+// worklistOutsideStatements counts BEGIN, COMMIT, the reads before the day is
+// assembled, and the snapshot's plan-mode setup and restore.
+const worklistOutsideStatements = 8
+
+// The seeded read includes every bound lane and an open task. Lower this
+// pgx-call ceiling when a batch or empty-set shortcut removes calls.
+const worklistExchangeBudget = 106
 
 // stageDelta is what one composed read added to the stage collector.
 type stageDelta struct {
-	statements, clipped int64
-	runs                map[attention.StageKey]uint64
-	byKey               map[attention.StageKey]int64
+	statements, exchanges, clipped int64
+	runs                           map[attention.StageKey]uint64
+	byKey                          map[attention.StageKey]int64
 }
 
 // meterRead runs read under a fresh meter and answers what the collector and
@@ -58,8 +62,10 @@ func meterRead(ctx context.Context, t *testing.T, read func(context.Context) err
 		delta.runs[key] = runs
 		delta.byKey[key] = cost.Statements - before[key].Statements
 		delta.statements += delta.byKey[key]
+		delta.exchanges += cost.Exchanges - before[key].Exchanges
 		delta.clipped += cost.Clipped - before[key].Clipped
-		t.Logf("%s %-28s %3d statements, %6.2f ms pgx", key.Read, key.Stage, delta.byKey[key],
+		t.Logf("%s %-28s %3d statements, %3d exchanges, %6.2f ms pgx", key.Read, key.Stage, delta.byKey[key],
+			cost.Exchanges-before[key].Exchanges,
 			(cost.DB.Sum()-before[key].DB.Sum())*1000)
 	}
 	return delta, meter.Cost()
@@ -95,10 +101,17 @@ func TestAWorklistReadsStatementsAddUpToWhatThePoolSaw(t *testing.T) {
 	}
 
 	delta, seen := meterRead(e.Admin(), t, read)
+	t.Logf("worklist statements=%d exchanges=%d prepares=%d transactions=%d", seen.Statements, seen.Exchanges, seen.Prepares, seen.Transactions)
 
 	if seen.Statements == 0 || delta.statements != seen.Statements {
 		t.Fatalf("the stages counted %d statements, the pool's tracer saw %d; every statement belongs to one stage",
 			delta.statements, seen.Statements)
+	}
+	if seen.Exchanges == 0 || delta.exchanges != seen.Exchanges {
+		t.Fatalf("the stages counted %d exchanges, the pool's tracer saw %d", delta.exchanges, seen.Exchanges)
+	}
+	if seen.Exchanges > worklistExchangeBudget {
+		t.Errorf("worklist used %d database exchanges, budget %d", seen.Exchanges, worklistExchangeBudget)
 	}
 	for key := range delta.runs {
 		if key.Read != attention.ReadWorklist {

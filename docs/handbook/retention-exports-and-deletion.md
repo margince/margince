@@ -86,7 +86,7 @@ missed, the alert arrives within 15 minutes of access being restored. This works
 access is restored within 30 days of the missed receipt.
 
 ### How do I answer a data access request?
-To log a GDPR access request, an admin opens **Settings → Privacy and retention → Requests → Privacy** and chooses **New request**. Set **Kind** to **Access**, fill **Subject reference** and **Due**, and choose **Open request**. The app says: "An access request is fulfilled manually: record what you sent in the resolution. This system does not assemble or export the data for you." Bring the data together (or have the package made, see below) and send it. Then write the **Resolution**, fill **How the identity was checked** and choose **Fulfill**.
+To log a GDPR access request, an admin opens **Settings → Privacy and retention → Requests → Privacy** and chooses **New request**. Set **Kind** to **Access**, pick the **Contact** the request is about, and choose **Open request**. Margince works out the due date. Open the request and choose **Download data package** (see [Access requests](#access-requests)). Send the file to the contact who asked. Then write the **Resolution**, fill **How the identity was checked** and choose **Fulfill**.
 
 Open a closed request to read its proof, including its reference, identity check, answer date and how long the proof is kept.
 An erasure proof also counts changes to stored entries.
@@ -281,18 +281,26 @@ If someone disputes the answer, open the closed request and choose **Record a co
 
 ### Access requests
 
-The screen says:
+An access request **names a contact**, picked the same way as for an erasure. The form says: "Pick the contact this request is about. You can then download everything held about them from the request."
 
-> An access request is fulfilled manually: record what you sent in the
-> resolution. This system does not assemble or export the data for you.
-
-There is no "download everything about this contact" button in the app, but Margince can put together the Art. 15 package. It holds the contact's record, their mail, their consent history, and the facts that show why the contact is in Margince at all. Ask whoever runs your Margince to download it for you.
+Open the request and choose **Download data package**. The file is the Art. 15 package. It holds the contact's record, their mail, their consent history, and the facts that show why the contact is in Margince at all.
 
 - **Only a human user can have it made**, never an agent. By default that
-  is an admin. A custom role can also be given the permission for privacy requests. The user who holds it also needs to delete contacts and to see every record in the company.
+  is an admin. A custom role can also be given the permission for privacy requests. The user who holds it also needs to delete contacts and to see every record in the company. Anyone else who chooses the button sees why it was refused, and no file is saved.
 - **It answers access requests only**, never erasure or rectify requests.
 - **It does not close the request.** Mark it fulfilled yourself once you have
   really sent it, and record what you sent in the resolution.
+- **Every download goes into the audit log**, on the contact.
+
+An access request logged earlier with a free-text subject names no contact, so it has no button. Open a new request with the contact picked.
+
+The button stays when the contact was archived after the request was opened. If Margince cannot export the contact, the button shows the reason instead of saving a file.
+
+### Possible duplicates on a request
+
+Someone can sit in Margince as two contacts, for example one with a work address and one with a private address. When the request's contact is in an open duplicate case, the request says: "Other records may be the same person. Check them before you answer." Beside it is the **Possible duplicates** button with a count. It opens the same review the Worklist and the contact page open, with the reason each pair was matched.
+
+This message changes nothing by itself. It merges nothing and adds nothing to the package. If both records are one contact, merge them in the review. The request keeps naming the contact it was opened for. Its package then holds the contact that was kept, and every record merged into it. The count holds only contacts you can see.
 
 ### Erasure requests
 

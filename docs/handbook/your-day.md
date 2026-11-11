@@ -8,7 +8,7 @@ The Worklist is the ranked to-do list in Margince: one list of everything waitin
 
 Under **Needs you**, every task is its own card, and the first one is open. Press another card to open it in its place. **Next task** on the open card opens the one after it, and after the last card it goes back to the first. Opening a card changes only which task you see.
 
-When you email a task's contact after the task was created, Margince marks the task done and shows a receipt in **Done for you**. Bulk mail and a contact named only in Bcc do not count. **Undo** reopens the task; the same email will not close it again. This includes tasks from website requests.
+When you email a task's contact after the task was created, Margince marks the task done and shows a receipt in **Done for you**. Bulk mail and a contact named only in Bcc do not count. **Undo** reopens the task; the same email will not close it again. This includes tasks from website requests. After an upgrade, Margince applies this rule once to the email it already holds, and those tasks show in **Done for you** with **Undo** too.
 
 Open a task's details and choose **Log what happened** to record the outcome and attach files. **Mark task done** starts selected. Clear it to keep the task open after logging the outcome.
 
@@ -58,9 +58,7 @@ The open card under **Needs you** on **Home** says what happened, what to do nex
 
 A meeting with no outcome asks **How did it go?** with **It happened**, **Add notes** and **Did not happen**. A task Margince made for you says what made it. A reminder about a quiet contact, company, deal or lead says so, and asks you to get in touch and then press **Done**. Also called: what is this task, where did this task come from.
 
-The **Why this is on your list** panel in **View details** answers in four parts. **What happened** says the event, its day and who it is with. For a contact it also gives the last contact each way. **Why now** lists the facts that put the row on your list.
-
-**If nothing is done** says what waiting costs, such as a contact who keeps waiting. **What to do** names the next step and who it is with. The title on the card and in **View details** says what is wrong, such as a deal that has gone quiet.
+The **Why this is on your list** panel in **View details** answers in four parts. **What happened** says the event, its day and who it is with, and for a contact the last contact each way. **Why now** lists the facts that put the row on your list. **If nothing is done** says what waiting costs, such as a contact who keeps waiting. **What to do** names the next step and who it is with. The title on the card and in **View details** says what is wrong, such as a deal that has gone quiet.
 
 ### How do I hand a task on to a colleague?
 To hand a task on in Margince, press **More actions** on its Worklist row and choose **Reassign**.
@@ -231,7 +229,9 @@ When Margince reads old mail, it checks newer messages before it creates work. W
 
 A future deadline can keep an old promise current. If later context has not been read, Margince does not create the task.
 
-Check the quoted words and any later replies before adding a follow-up from the linked record. A conversation promise can ask **You may have done this** after a later reply. Choose **Done** or **Not yet**. A task linked to the contact follows the automatic rule above, with **Undo**.
+Check the quoted words and any later replies before adding a follow-up from the linked record. A task linked to the contact follows the automatic rule above, with **Undo**.
+
+A later reply on the promise's thread may keep a promise that rule did not close, such as a colleague's reply. Margince then asks **This may be done**, naming the day the email went out. Home, the Worklist, the contact page and the company page ask the same question. While they ask, the task is not shown as overdue. Choose **Done** or **Not yet**. **Not yet** shows the task as before on every page, until someone writes on the thread again.
 
 Also called: action items, follow-ups from a meeting, commitments in an email.
 
@@ -317,7 +317,7 @@ Taking an item off the Worklist uses four choices, and they reach different numb
 | **Not mine** | "Removed from your list. It comes back if the record changes hands." | **Your list only** |
 | **Not a customer** | "Removed from every list." | **Everybody** |
 
-**Done** is for a message you handled another way: by phone, in a meeting, or with no reply owed. It does not count as a reply sent.
+**Done** is for a message you handled another way: by phone, in a meeting, or with no reply owed. It does not count as a reply sent. **Done** on a contact's **Waiting for their reply** card is the same choice. The Worklist row for that message leaves too, and a **Done** on the row hides the card.
 
 On any other row, **Done** says "Marked done for you. It comes back if something new happens on it." A deal comes back after new activity or once its close date passes. A system or delivery row comes back when it fails again.
 

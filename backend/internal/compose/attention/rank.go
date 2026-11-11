@@ -437,3 +437,9 @@ func scoreValue(score float64) *crmcontracts.WorklistValue {
 func overdueAt(due *time.Time, asOf time.Time) bool {
 	return deadline.Passed(due, asOf)
 }
+
+// taskLateAt keeps a task that asks whether our later mail kept it off the
+// late list. Not yet removes the question, and the task is late again.
+func taskLateAt(due *time.Time, asOf time.Time, asks *crmcontracts.WorklistMayBeDone) bool {
+	return asks == nil && overdueAt(due, asOf)
+}

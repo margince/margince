@@ -55,7 +55,10 @@ func validateBookingAlias(alias string) error {
 	case length < bookingAliasMin:
 		return aliasRefusal("too_short", fmt.Sprintf("Use at least %d characters", bookingAliasMin))
 	case length > bookingAliasMax:
-		return aliasRefusal("too_long", fmt.Sprintf("Use at most %d characters", bookingAliasMax))
+		return &SchedulingArgumentError{
+			Field: aliasField, Code: "too_long", Max: bookingAliasMax,
+			Message: fmt.Sprintf("Use at most %d characters", bookingAliasMax),
+		}
 	}
 	if !bookingAliasShape.MatchString(alias) {
 		return aliasRefusal("invalid", "Use letters, digits and hyphens, starting and ending with a letter or digit")

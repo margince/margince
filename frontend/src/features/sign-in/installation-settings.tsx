@@ -17,7 +17,7 @@ import { useCanWrite } from "../../lib/capability";
 // Each row opens the shared sparse-patch form with its own field focused.
 import { useCurrencyNote } from "../../lib/installation-settings.currency";
 import {
-  problemFieldErrorsOf,
+  problemFieldSentencesOf,
   problemMessageOf,
   unwrap,
 } from "../../lib/problem";
@@ -234,12 +234,7 @@ function InstallationSettingsForm({
   // Keyed by the wire field name because that is what the server asserts. The
   // patch is sparse and built from the same names, so the two cannot drift
   // without the request itself being wrong.
-  const refused = new Map(
-    problemFieldErrorsOf(update.error).map((problem) => [
-      problem.field,
-      problem.message,
-    ]),
-  );
+  const refused = problemFieldSentencesOf(update.error, locale);
 
   const dirty = EDITABLE_FACTS.some((fact) => draft[fact] !== settings[fact]);
   // The claim the Save button's own condition was already making privately.

@@ -435,7 +435,7 @@ func TestASecondCopyOfARatifiedWriteIsNotCoveredByTheFirst(t *testing.T) {
 		table = "activity_link"
 		first = "ensure.go:Store.linkActivityToContact"
 	)
-	const ratifiedStmt = "INSERT INTO activity_link (activity_id, entity_type, contact_id) …"
+	const ratifiedStmt = "WITH canonical AS ( …"
 	ratified := tableWrite{
 		pos: "internal/modules/contacts/ensure.go:1:1", table: table, site: first, stmt: ratifiedStmt,
 	}

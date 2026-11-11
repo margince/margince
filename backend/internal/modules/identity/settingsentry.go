@@ -72,8 +72,8 @@ var Name = config.DefineStored(config.Spec[string]{
 	Env:  "MARGINCE_INSTALLATION_NAME",
 	Type: config.String,
 	Validate: func(v string) error {
-		if code, why := values.CompanyNameFault(v); code != "" {
-			return errors.New(why)
+		if refused := values.CompanyNameFault("installation.name", v); refused != nil {
+			return errors.New(refused.Message)
 		}
 		return nil
 	},

@@ -87,6 +87,36 @@ unset MIGRATION_VERSIONS_BASELINE_RESET
 unset MIGRATION_VERSIONS_REQUIRE_BASE
 unset MIGRATION_VERSIONS_MAIN_REF
 
+# The gate asks backend/tools/check-equivalentmove, through `go run`, whether a
+# declared move with edited SQL is a checked equivalence. A fixture has no Go
+# module, so this `go` answers in its place: it admits exactly the moves the
+# fixture lists in equivalent-moves.txt as "<ns> <old> <new> <name> <old up
+# blob> <new up blob>", which also proves the gate passed the right bytes.
+# backend/tools/check-equivalentmove's own test holds the real answer.
+STUB_BIN="$(mktemp -d)"
+trap 'rm -rf "$STUB_BIN"' EXIT
+cat >"$STUB_BIN/go" <<'STUB'
+#!/usr/bin/env bash
+[[ "$1 $2" = "run ./tools/check-equivalentmove" ]] || exit 3
+shift 2
+while [[ $# -gt 1 ]]; do
+  case "$1" in
+    -namespace) ns="$2" ;; -name) name="$2" ;; -old) old="$2" ;; -new) new="$2" ;;
+    -old-up) old_up="$2" ;; -new-up) new_up="$2" ;;
+  esac
+  shift 2
+done
+claim="$ns $old $new $name $(git hash-object "$old_up") $(git hash-object "$new_up")"
+if grep -qxF "$claim" ../equivalent-moves.txt 2>/dev/null; then
+  echo "$ns ${old}_$name: a checked equivalence admits its content at $new"
+  exit 0
+fi
+echo "$ns ${old}_$name: no checked equivalence admits its content at $new"
+exit 1
+STUB
+chmod +x "$STUB_BIN/go"
+export PATH="$STUB_BIN:$PATH"
+
 # expect <name> <want-exit> <declared-reset> <mutation-fn> <want-diagnostic>
 #
 # The DIAGNOSTIC is required, not decoration. An exit code alone makes every
@@ -220,6 +250,27 @@ renumbers_one_declared() {
 renumbers_one_changed_declared() {
   renumbers_one_declared "$1" || return 1
   printf -- '-- probe, edited\n' > "$1/backend/migrations/core/1799999999_beta.up.sql"
+}
+
+# record_equivalence <dir> <ns> <old> <new> <name> <old up> <new up> — what the
+# stub `go` admits, standing in for an entry in dbmigrate's equivalence.go.
+record_equivalence() {
+  printf '%s %s %s %s %s %s\n' "$2" "$3" "$4" "$5" \
+    "$(printf -- "$6" | git hash-object --stdin)" "$(printf -- "$7" | git hash-object --stdin)" \
+    >> "$1/equivalent-moves.txt"
+}
+
+# The changed renumber, with its edit recorded as a checked equivalence: the
+# migrator admits a database holding the old bytes, so the gate does too.
+renumbers_one_changed_equivalent() {
+  renumbers_one_changed_declared "$1" || return 1
+  record_equivalence "$1" core 0002 1799999999 beta '-- probe\n' '-- probe, edited\n'
+}
+
+# An equivalence recorded for other content excuses nothing.
+renumbers_one_changed_other_equivalent() {
+  renumbers_one_changed_declared "$1" || return 1
+  record_equivalence "$1" core 0002 1799999999 beta '-- probe\n' '-- probe, edited twice\n'
 }
 
 # A second copy of a shipped migration under a new version, the old one kept:
@@ -402,6 +453,19 @@ syncs_and_restamps_above_main() {
   local ns=core
   declare_renumber "$1" "$ns 1700000005 1700000007 waiting_on_develop"
 }
+# The back-sync shape: develop's migration re-stamped above main with its SQL
+# edited, judged against develop's old bytes.
+syncs_and_restamps_with_an_edit() {
+  syncs_and_restamps_above_main "$1" || return 1
+  local restamped=("$1"/backend/migrations/core/*_waiting_on_develop.up.sql)
+  [[ "${#restamped[@]}" -eq 1 ]] || return 1
+  printf -- '-- probe, edited\n' > "${restamped[0]}"
+}
+syncs_and_restamps_with_an_equivalent_edit() {
+  syncs_and_restamps_with_an_edit "$1" || return 1
+  local ns=core
+  record_equivalence "$1" "$ns" 1700000005 1700000007 waiting_on_develop '-- probe\n' '-- probe, edited\n'
+}
 syncs_and_restamps_without_declaring() {
   diverge "$1" 1700000006_landed_on_main 1700000005_waiting_on_develop || return 1
   git -C "$1" merge -q --no-edit mainline || return 1
@@ -473,6 +537,10 @@ expect "a renumber declared under another pair fails" \
   1 plain    renumbers_one_declared_elsewhere "'core 0002 1799999999 beta <old digest>'"
 expect "a declared renumber whose SQL changed fails" \
   1 plain    renumbers_one_changed_declared "but its SQL changed since base"
+expect "a declared renumber whose SQL changed to a checked equivalent passes" \
+  0 plain    renumbers_one_changed_equivalent "a checked equivalence admits"
+expect "an equivalence recorded for other content does not excuse an edit" \
+  1 plain    renumbers_one_changed_other_equivalent "no checked equivalence admits"
 expect "a branch keeping a migration and adding it under a second version fails" \
   1 plain    keeps_old_and_adds_same_name "carries 'beta' twice"
 expect "a repair that keeps one collision claimant is not read as vanished" \
@@ -513,6 +581,10 @@ expect "the same tree judged against develop alone fails" \
   1 plain    syncs_main_below_develop "sorts at or below"
 expect "a sync re-stamping develop's migration above main passes" \
   0 synced   syncs_and_restamps_above_main "OK: check-migration-versions"
+expect "a sync re-stamping develop's migration with edited SQL fails" \
+  1 synced   syncs_and_restamps_with_an_edit "but its SQL changed since base"
+expect "a sync re-stamping develop's migration with a checked equivalent edit passes" \
+  0 synced   syncs_and_restamps_with_an_equivalent_edit "a checked equivalence admits"
 expect "a sync re-stamping develop's migration without declaring it fails" \
   1 synced   syncs_and_restamps_without_declaring "moved from 1700000005 to 1700000007"
 expect "a sync leaving develop's migration below main fails" \
@@ -542,7 +614,7 @@ expect "a declared extension renumber with changed SQL is refused" 1 undeclared 
 # So the total is also pinned. A literal here is not duplication of the case
 # list: it is the one fact the case list cannot state about itself, which is how
 # many of it there should be.
-expected_cases=34
+expected_cases=38
 
 declared_cases="$(grep -c '^expect "' "$SELF")"
 if [[ "$ran" -ne "$declared_cases" ]]; then
