@@ -55,6 +55,16 @@ const gcal: CaptureConnection = {
   backfill: undefined,
 };
 
+const gdocs: CaptureConnection = {
+  ...gcal,
+  id: "018f3a1b-0000-7000-8000-0000000000cd",
+  provider: "gdocs",
+  scopes: [
+    "https://www.googleapis.com/auth/documents.readonly",
+    "https://www.googleapis.com/auth/userinfo.email",
+  ],
+};
+
 const running: BackfillStatus = {
   state: "running",
   window: "6m",
@@ -350,6 +360,109 @@ describe("each service's health", () => {
     );
     const [connect] = requestsTo(calls, "/gcal/connect", "POST");
     expect(await connect.clone().json()).toEqual({ return_to: "settings" });
+  });
+});
+
+describe("the meeting notes", () => {
+  it("offers Google's meeting notes as their own consent", async () => {
+    vi.stubGlobal("location", locationDouble({ assign: vi.fn() }));
+    const calls = stubApi({
+      "POST /connectors/gdocs/connect": () =>
+        jsonResponse({ authorize_url: "https://accounts.google/consent" }),
+    });
+    renderAccount([gmail, gcal]);
+    const notes = await screen.findByTestId("connector-notes-missing");
+
+    await userEvent.click(
+      within(notes).getByRole("button", { name: "Connect meeting notes" }),
+    );
+    await waitFor(() =>
+      expect(requestsTo(calls, "/gdocs/connect", "POST")).toHaveLength(1),
+    );
+    const [connect] = requestsTo(calls, "/gdocs/connect", "POST");
+    expect(await connect.clone().json()).toEqual({ return_to: "settings" });
+  });
+
+  it("asks for the notes consent again when Google was refused the Docs scope", async () => {
+    vi.stubGlobal("location", locationDouble({ assign: vi.fn() }));
+    const calls = stubApi({
+      "POST /connectors/gdocs/connect": () =>
+        jsonResponse({ authorize_url: "https://accounts.google/consent" }),
+    });
+    renderAccount([
+      gmail,
+      gcal,
+      { ...gdocs, scopes: ["https://www.googleapis.com/auth/userinfo.email"] },
+    ]);
+    const notes = await screen.findByTestId("connector-gdocs");
+
+    expect(
+      within(notes).getByText("Cannot read meeting notes"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/Reconnect to read meeting notes/),
+    ).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Reconnect" }));
+    await waitFor(() =>
+      expect(requestsTo(calls, "/gdocs/connect", "POST")).toHaveLength(1),
+    );
+    expect(requestsTo(calls, "/gmail/connect", "POST")).toHaveLength(0);
+  });
+
+  it("says when the notes come from another Google account than the calendar", async () => {
+    stubApi();
+    renderAccount([
+      gmail,
+      gcal,
+      { ...gdocs, account_label: "other@example.de" },
+    ]);
+    const notes = await screen.findByTestId("connector-gdocs");
+    expect(
+      within(notes).getByTestId("connector-notes-other-account"),
+    ).toHaveTextContent(
+      "Meeting notes are connected with other@example.de, and the calendar with lars@example.de.",
+    );
+  });
+
+  it("stops the meeting notes alone, and the whole account with them", async () => {
+    const calls = stubApi({
+      "POST /disconnect": () => new Response(null, { status: 204 }),
+    });
+    renderAccount([gmail, gcal, gdocs]);
+    const notes = await screen.findByTestId("connector-gdocs");
+    expect(within(notes).getByText("Up to date")).toBeInTheDocument();
+
+    await userEvent.click(
+      within(notes).getByRole("button", { name: "Stop reading meeting notes" }),
+    );
+    const confirm = await screen.findByRole("dialog", {
+      name: "Stop reading meeting notes?",
+    });
+    await userEvent.click(
+      within(confirm).getByRole("button", { name: "Disconnect" }),
+    );
+    await waitFor(() =>
+      expect(requestsTo(calls, "/disconnect", "POST")).toHaveLength(1),
+    );
+    const [alone] = requestsTo(calls, "/disconnect", "POST");
+    expect(new URL(alone.url).pathname.endsWith("/gdocs/disconnect")).toBe(
+      true,
+    );
+
+    await chooseAccountVerb("Disconnect");
+    const whole = await screen.findByRole("dialog", {
+      name: "Disconnect lars@example.de?",
+    });
+    await userEvent.click(
+      within(whole).getByRole("button", { name: "Disconnect" }),
+    );
+    await waitFor(() =>
+      expect(requestsTo(calls, "/disconnect", "POST")).toHaveLength(4),
+    );
+    const paths = requestsTo(calls, "/disconnect", "POST")
+      .slice(1)
+      .map((r) => new URL(r.url).pathname.split("/").at(-2));
+    expect(paths.sort()).toEqual(["gcal", "gdocs", "gmail"]);
   });
 });
 

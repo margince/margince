@@ -125,7 +125,7 @@ type appVendor struct {
 	// directoryPinned reports whether Tenant means anything for this vendor.
 	directoryPinned bool
 	// connectors names the capture connectors this one app authorizes. One
-	// Google project backs Gmail and Google Calendar; one Entra registration
+	// Google project backs Gmail, Google Calendar and Google Docs; one Entra registration
 	// backs Outlook mail and Outlook calendar — which is why the app is keyed
 	// by VENDOR and not by connector.
 	//
@@ -197,7 +197,7 @@ var (
 		name:             "Google",
 		console:          "the Google Cloud console",
 		validateClientID: appVendor.validateGoogleClientID,
-		connectors:       []string{"gmail", "gcal"},
+		connectors:       []string{"gmail", "gcal", "gdocs"},
 	}
 	microsoftVendor = appVendor{
 		name:             "Microsoft",

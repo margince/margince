@@ -202,6 +202,7 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "worklist.partial",
   // Brand and provider names: proper nouns, not translated in any locale.
   "connectors.provGcal",
+  "connectors.provGdocs",
   "connectors.provGmail",
   "connectors.provGraph",
   "connectors.provTelegram",

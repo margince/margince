@@ -105,3 +105,4 @@
 1794363873_a_room_past_its_end_frees_its_deal.down.sql | deal_room | runs only on a rollback and rewrites only an expired room left beside a newer open room on the same deal, at most a few rows per deal
 1794364497_a_unit_sql_runs_as_the_ext_runtime_role.up.sql | * | the procedural body creates one role where it may and grants privileges on the ext schema; it reads and writes no row
 1794364497_a_unit_sql_runs_as_the_ext_runtime_role.down.sql | * | the procedural body only grants and revokes privileges on the ext schema; it reads and writes no row
+1794379079_a_google_docs_connection_reads_meeting_notes.down.sql | *, capture_connection | runs only on a rollback; the DO block only counts and refuses, and the DELETE reaches withdrawn gdocs connections, at most one row per seat
