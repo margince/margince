@@ -3929,6 +3929,8 @@ export const en = {
   "standing.title": "How it stands · {date}",
   "standing.noteMore": "Show more",
   "standing.noteLess": "Show less",
+  "standing.latest.title": "Latest",
+  "standing.latest.open": "Open in History",
   "standing.sources.records": "From CRM records",
   "standing.sources.model_one": "Margince · {count} source",
   "standing.sources.model_other": "Margince · {count} sources",

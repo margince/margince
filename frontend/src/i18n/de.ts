@@ -3975,6 +3975,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "standing.title": "Wie es steht · {date}",
   "standing.noteMore": "Mehr anzeigen",
   "standing.noteLess": "Weniger anzeigen",
+  "standing.latest.title": "Zuletzt",
+  "standing.latest.open": "Im Verlauf öffnen",
   "standing.sources.records": "Aus den CRM-Daten",
   "standing.sources.model_one": "Margince · {count} Quelle",
   "standing.sources.model_other": "Margince · {count} Quellen",
