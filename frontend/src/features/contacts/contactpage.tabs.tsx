@@ -22,6 +22,7 @@ import { ContactTimelineTab } from "./contacttabs";
 export const TAB_LABEL_KEYS: Readonly<Record<ContactTab, MessageKey>> = {
   overview: "tab.overview",
   timeline: "tab.timeline",
+  companies: "tab.companies",
   network: "tab.network",
   deals: "tab.deals",
   meetings: "tab.meetings",
@@ -69,6 +70,7 @@ export function ContactRecordTabs({
       labels={{
         overview: t(TAB_LABEL_KEYS.overview),
         timeline: t(TAB_LABEL_KEYS.timeline),
+        companies: t(TAB_LABEL_KEYS.companies),
         network: t(TAB_LABEL_KEYS.network),
         deals: t(TAB_LABEL_KEYS.deals),
         meetings: t(TAB_LABEL_KEYS.meetings),
@@ -134,19 +136,16 @@ export function ContactTabPanel({
           onBriefMeeting={onBriefMeeting}
         />
       );
+    case "companies":
+      return <Employers view={view} />;
     case "network":
       return (
-        // Where they work, and worked, with the way to add or end a job:
-        // the relationship tab's first question.
-        <div className="record-stack">
-          <Employers view={view} />
-          <NetworkTab
-            contactId={contactId}
-            view={view}
-            onOpenEmail={onOpenEmail}
-            onWrite={onWrite}
-          />
-        </div>
+        <NetworkTab
+          contactId={contactId}
+          view={view}
+          onOpenEmail={onOpenEmail}
+          onWrite={onWrite}
+        />
       );
     case "deals":
       return <ContactDealsTab view={view} />;

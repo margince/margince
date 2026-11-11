@@ -374,7 +374,7 @@ describe("The signature’s company on the Company card", () => {
     );
 
     expect(
-      await screen.findByText("No employment on record."),
+      await screen.findByText("No work history recorded yet."),
     ).toBeInTheDocument();
     expect(screen.queryByText(PROPOSAL)).toBeNull();
   });
