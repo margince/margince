@@ -230,7 +230,7 @@ A company's **Contacts** tab has a path of its own with fewer steps. **Request i
 To answer an introduction request in Margince, open it from your Worklist or from the contact's **Relationships** tab. Press **Answer**, choose your answer, and press **Record answer**.
 1. Open the request ("Introduction requested by colleague" in your Worklist, or under **Introductions** on the contact's Relationships tab).
 2. Press **Answer**.
-3. Choose **Make introduction**, **Let them mention you**, **Suggest someone else** or **Decline**, and add a **Comment** if it helps.
+3. Choose **Make introduction**, **Let them mention you** or **Decline**, and add a **Comment** if it helps.
 4. Press **Record answer**.
 Your colleague sees your comment as written.
 Also called: respond to an intro, accept or decline an introduction.
@@ -238,7 +238,7 @@ Also called: respond to an intro, accept or decline an introduction.
 ### What your colleague sees, and the four answers
 The ask reaches your colleague in two places: on that contact's Relationships tab, and as an item in their own Worklist.
 
-There are four answers:
+There are four answers. The **Answer** form offers three of them, because **Suggest someone else** needs a named colleague:
 
 | Answer | What it means |
 |---|---|
