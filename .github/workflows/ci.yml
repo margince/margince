@@ -1231,13 +1231,15 @@ jobs:
 
   # Home's per-PR budget (scripts/home-budget.sh): the API p95 of Home's reads,
   # cold and warm, on a small corpus of its own, then the day paint and CLS of a
-  # production bundle against an api booted the way live-boot boots it.
+  # production bundle against an api booted the way live-boot boots it. While
+  # advisory, it measures the base commit on the same runner too and fails only
+  # when the change is slower past a margin, so runner speed cannot redden it.
   # ADVISORY: it is not in the `ci` fan-in, and a red run stops no merge. The
   # scope step skips the rest when the diff cannot reach Home
   # (scripts/home-budget-scope.sh); a push or a merge group always runs.
   home-budget:
     name: home-budget (advisory)
-    timeout-minutes: 30
+    timeout-minutes: 60
     needs: [changes]
     if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     runs-on: ubuntu-latest
@@ -1332,8 +1334,33 @@ jobs:
         uses: ./.github/actions/install-playwright-chromium
       # Writes the wall time of each half, the API rows and the vitals line to
       # the job summary, pass or fail.
+      # The commit this change is judged against: a pull request's merge base,
+      # a push's previous tip, a merge group's base. A new branch has none, and
+      # then the fixed budgets judge it.
+      - name: Choose the base to compare with
+        id: base
+        if: steps.scope.outputs.run == 'true'
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref }}
+          BEFORE: ${{ github.event.before }}
+          GROUP_BASE: ${{ github.event.merge_group.base_sha }}
+        run: |
+          case "$EVENT" in
+            pull_request) base="$(git merge-base "origin/$BASE_REF" HEAD)" ;;
+            merge_group) base="$GROUP_BASE" ;;
+            push) base="$BEFORE" ;;
+            *) base="" ;;
+          esac
+          if [ -n "$base" ] && ! git cat-file -e "$base^{commit}" 2>/dev/null; then
+            echo "home-budget: base $base is not in this clone, so the fixed budgets judge"
+            base=""
+          fi
+          echo "sha=$base" >> "$GITHUB_OUTPUT"
       - name: Home budget
         if: steps.scope.outputs.run == 'true'
+        env:
+          HOME_BUDGET_BASE: ${{ steps.base.outputs.sha }}
         run: make home-budget BENCH_API_PORT=8080
       - name: API log (on failure)
         if: failure()

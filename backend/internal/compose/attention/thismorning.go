@@ -27,9 +27,9 @@ import (
 // this lane is a worklist that must be finishable and a row that cannot be
 // removed is the opposite of finishing. Home still shows what was answered,
 // which is where a rep looks to see what she did.
-func (s *Service) thisMorning(ctx context.Context) (theNight, error) {
+func (s *Service) thisMorning(ctx context.Context, now time.Time) (theNight, error) {
 	defer timeStage(ctx, "this_morning")()
-	queue, ran, asOf, err := s.briefing.Queue(ctx)
+	queue, ran, asOf, err := s.briefing.Queue(ctx, now)
 	if err != nil {
 		return theNight{}, err
 	}

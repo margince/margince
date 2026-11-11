@@ -254,9 +254,10 @@ many: a user can be in several). Teams do several jobs:
    should take up with them. Row scope does not answer it, because a `read_only` seat reaches
    every record and leads nobody.
 
-   `auth.TeamWeekReachOf` answers it once, for both `GET /weekly-reviews/team` and the
-   `team_week` field of the Worklist. That field is what Home offers the week on, so Home never
-   offers a week the server refuses. The `team` scope of the Worklist is the team's live work, and
+   `auth.TeamWeekReachOf` answers it once, for `GET /weekly-reviews/team` and for the
+   `team_week` field of `GET /me` and the Worklist. The delivery settings screen reads it from
+   `GET /me` to list the teams a lead may pick for the weekly mail. So it never offers a team the
+   server refuses. The `team` scope of the Worklist is the team's live work, and
    stays on row scope.
 
    Every arm needs `deal.read`, because the week carries the money on deals. A seat that holds

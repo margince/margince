@@ -376,9 +376,9 @@ components:
           type: integer
           minimum: 0
           description: >-
-            How many items the run held when it was opened, AFTER expired
-            snoozes resurfaced — what the rep actually saw, not what the night
-            ranked. Zero is a real and interesting reading: a quiet morning
+            How many items the GET /v1/brief response showed, with an expired
+            snooze counted as back — what the rep actually saw, not what the
+            night ranked. Zero is a real and interesting reading: a quiet morning
             that was still opened.
         unread:
           type: integer

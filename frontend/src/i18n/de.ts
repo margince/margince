@@ -14068,6 +14068,13 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "license.renewal.title": "Lizenz muss erneuert werden",
   "license.renewal.body":
     "Die Lizenz läuft am {expiry} ab. Vor diesem Datum ändert sich nichts.",
+  "license.check.button": "Jetzt prüfen",
+  "license.check.hint":
+    "Liest die Lizenz-Token-Datei auf dem Server sofort neu ein, statt bei der nächsten täglichen Prüfung. Tausche die Datei vorher aus. Ein Token aus einer Umgebungsvariable gilt erst nach einem Neustart.",
+  "license.check.done":
+    "Lizenz-Token neu eingelesen. Diese Karte zeigt das Ergebnis.",
+  "license.check.failed":
+    "Das Lizenz-Token ließ sich nicht neu einlesen. Das letzte Ergebnis gilt weiter, und das Server-Log nennt den Grund.",
   "license.counting":
     "Volle Plätze, die nicht deaktiviert oder gesperrt sind, Agenten eingeschlossen. Leseplätze sind unbegrenzt und zählen nicht mit.",
   "settings.rates.fxTitle": "Wechselkurse",

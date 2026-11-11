@@ -322,7 +322,7 @@ func (s *Service) assembleDay(ctx context.Context) (crmcontracts.Attention, besi
 	}
 	var omitted []crmcontracts.AttentionLanesOmitted
 
-	night, err := s.thisMorning(ctx)
+	night, err := s.thisMorning(ctx, asOf)
 	omitted, err = fill(omitted, "this_morning", err, func() {
 		out.ThisMorning = night.items
 		out.Counts.ThisMorning = len(night.items)

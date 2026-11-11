@@ -153,7 +153,7 @@ When more seats are in use than the licence allows, Margince says:
 
 Nobody loses a role. Nobody is signed out. Only the *next* seat is refused.
 
-Margince checks the licence itself when it starts. The licence check never calls out or reports back to anyone.
+Margince checks the licence itself when it starts, and again once a day. The licence check never calls out or reports back to anyone. When your server admin replaces the licence file, an admin or ops member can press **Check now** on this page to check it at once. You cannot type a licence into Margince.
 
 ## The six roles
 

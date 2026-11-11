@@ -45,6 +45,7 @@ func (a *assembly) readTimeline() error {
 		Limit:            &limit,
 		WithinProjectID:  a.opts.ProjectID,
 		WrittenByHuman:   a.opts.WrittenByHumanOnly,
+		PartyContactID:   a.opts.PartyContactID,
 		ConversationAsOf: conversationAsOf,
 		AsOf:             &a.now,
 		Columns:          a.activityColumns,
