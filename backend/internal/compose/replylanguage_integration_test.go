@@ -123,8 +123,8 @@ func storeOldRuleLanguage(t *testing.T, e *integration.Env, activity ids.UUID, l
 	e.WsExec(t, `UPDATE activity SET language = $2 WHERE id = $1`, activity, lang)
 }
 
-// A language the rep chose is what the model is told over an English thread.
-// It is the one thing in the request that changes.
+// A language the rep chose, or else a subject they wrote, is what the model is
+// told over an English thread. A choice is the one thing in the request that changes.
 func TestAChosenLanguageIsTheOneTheModelIsTold(t *testing.T) {
 	o := setupOwed(t)
 	e := o.e
@@ -133,8 +133,9 @@ func TestAChosenLanguageIsTheOneTheModelIsTold(t *testing.T) {
 
 	derivedLang, derived := replyLangSteeredPrompt(t, e, anchor, draftfloor.Steering{})
 	chosenLang, chosen := replyLangSteeredPrompt(t, e, anchor, draftfloor.Steering{Language: textlang.Vietnamese})
-	if derivedLang != "en" || chosenLang != "vi" {
-		t.Fatalf("output language = %q unsteered and %q with vi chosen, want en and vi", derivedLang, chosenLang)
+	subjectLang, _ := replyLangSteeredPrompt(t, e, anchor, draftfloor.Steering{Subject: "Unsere nächsten Schritte für das gemeinsame Projekt"})
+	if derivedLang != "en" || chosenLang != "vi" || subjectLang != "de" {
+		t.Fatalf("output language = %q unsteered, %q with vi chosen, %q under a German subject; want en, vi, de", derivedLang, chosenLang, subjectLang)
 	}
 	want := withoutFence(derived)
 	got := strings.Replace(withoutFence(chosen), `"output_language":"vi"`, `"output_language":"en"`, 1)
