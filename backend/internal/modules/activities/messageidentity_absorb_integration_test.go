@@ -23,18 +23,17 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
-// seedCapturedEcho writes the row the Gmail sync leaves behind when it re-reads
-// this installation's own Sent copy: an outbound email keyed on the identity
-// the provider stamped, with the connector's own provenance — 'gmail:<id>' and
-// 'connector:gmail' are exactly what capture's sink writes for it, and they are
-// what the absorb reads to tell an echo from any other row that happens to hold
-// the key.
+const capturedEchoSubject, capturedEchoBody = "Re: pricing", "The provider-filed copy."
+
 func (e *sendEnv) seedCapturedEcho(t *testing.T) ids.ActivityID {
 	t.Helper()
 	return e.seedEcho(t, echoSeed{
@@ -44,9 +43,7 @@ func (e *sendEnv) seedCapturedEcho(t *testing.T) ids.ActivityID {
 	})
 }
 
-// echoSeed is one candidate row on the stamped natural key. Every field it
-// exposes is one the absorb's lookup reads, so a case can seed a row that holds
-// the key and is NOT this message's echo.
+// These rows share the RFC identity without attesting the provider-filed copy.
 type echoSeed struct {
 	direction    string
 	kind         string
@@ -59,11 +56,20 @@ func (e *sendEnv) seedEcho(t *testing.T, seed echoSeed) ids.ActivityID {
 	t.Helper()
 	id := ids.New[ids.ActivityKind]()
 	if _, err := e.owner.Exec(context.Background(), `
-		INSERT INTO activity (id, kind, subject, occurred_at, direction, source_system, source_id, source, captured_by, thread_key, counterparty_email)
-		VALUES ($1, $2, 'Re: pricing', now(), $3,
-		        'gmail', $4, $5, $6, $4, NULLIF($7, ''))`,
-		id, seed.kind, seed.direction, stampedIdentity, seed.source, seed.capturedBy,
-		seed.counterparty); err != nil {
+		INSERT INTO activity (id, kind, subject, occurred_at, direction, source_system, source_id, source, captured_by, thread_key, counterparty_email, body)
+		VALUES (@id, @kind, @subject, now(), @direction,
+		        'gmail', @stamped, @source, @captured_by, @stamped, NULLIF(@counterparty, ''), @body)`,
+		pgx.StrictNamedArgs{
+			"id":           id,
+			"kind":         seed.kind,
+			"subject":      capturedEchoSubject,
+			"direction":    seed.direction,
+			"stamped":      stampedIdentity,
+			"source":       seed.source,
+			"captured_by":  seed.capturedBy,
+			"counterparty": seed.counterparty,
+			"body":         capturedEchoBody,
+		}); err != nil {
 		t.Fatalf("seeding the row on the stamped identity: %v", err)
 	}
 	return id
@@ -178,7 +184,10 @@ func (e *sendEnv) queueCounterpartyReview(t *testing.T, activityID ids.ActivityI
 // the two rows had never collided at all.
 func (e *sendEnv) reconcileAbsorbing(t *testing.T, survivor ids.ActivityID) {
 	t.Helper()
-	e.reconcile(t, survivor, stampedIdentity)
+	ctx := connector.WithSentEcho(e.asSendWorker(), connector.SentEcho{
+		Identity: stampedIdentity, Subject: capturedEchoSubject, Body: capturedEchoBody,
+	})
+	e.reconcileAs(ctx, t, survivor, stampedIdentity)
 
 	var holders int
 	if err := e.owner.QueryRow(context.Background(), `
@@ -461,28 +470,17 @@ func TestAbsorbRefusesARowThatIsNotThisMessagesEcho(t *testing.T) {
 		name string
 		seed echoSeed
 	}{
-		// A message this mailbox RECEIVED. Whatever put the send's stamped
-		// identity on it, capture never derived it from a copy of this send.
+		{"unattested own-shaped copy", echoSeed{
+			direction: "outbound", kind: "email", source: "gmail:x",
+			capturedBy: "connector:gmail", counterparty: counterparty,
+		}},
 		{"inbound", echoSeed{direction: "inbound", kind: "email", source: "gmail:x", capturedBy: "connector:gmail", counterparty: counterparty}},
-		// A row a human filed. The connector provenance is what capture's sink
-		// validates against the acting connector before it writes anything;
-		// without it there is no evidence the provider produced this row at all.
 		{"human-authored", echoSeed{direction: "outbound", kind: "email", source: "manual", capturedBy: "human:x", counterparty: counterparty}},
-		// Not a message. The natural key spans every kind, so a calendar event
-		// filed under the same source system can hold it.
 		{"not an email", echoSeed{direction: "outbound", kind: "meeting", source: "gmail:x", capturedBy: "connector:gmail", counterparty: counterparty}},
-		// THE SAME-SHAPED BYSTANDER, and the reason the counterparty is in the
-		// predicate at all: a connector-captured outbound Gmail message, filed
-		// after this send, satisfying every OTHER condition — but addressed to
-		// somebody else. Without that column this row would be archived on a
-		// remote provider's say-so, and every case above would still pass.
 		{"another recipient", echoSeed{
 			direction: "outbound", kind: "email", source: "gmail:x",
 			capturedBy: "connector:gmail", counterparty: "someone.else@example.test",
 		}},
-		// The same row with no counterparty recorded at all. NULL matches
-		// nothing, which is the safe direction: an unaddressed row is one
-		// nothing shows to be this message's echo.
 		{"no recipient recorded", echoSeed{
 			direction: "outbound", kind: "email", source: "gmail:x", capturedBy: "connector:gmail",
 		}},

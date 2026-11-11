@@ -175,16 +175,17 @@ Using an instruction checks these facts:
   allows no send.
 - **It is this message.** An instruction is made against one review, and that review holds one
   message.
-- **The scope still fits.** The recipient, sending company, purpose and deal still match the review.
-- **The message has not changed**, where there is a fingerprint to check. The sender confirmed they would send
-  that subject and body. An edit after that is a message nobody signed for. Some
-  instructions are not held back: one with no fingerprint, or one against a review whose held message
-  could not be read. Holding it back would refuse a send for a reason nobody can act on.
+- **The scope still fits.** New instructions freeze the recipients, sender, purpose, attachments
+  and other message context. A change to that scope needs a new decision.
+- **The wording is approved**, where there is a fingerprint to check. After an approved send fails,
+  the sender may confirm a small edit keeps its meaning. They must have given the original approval; [Sending mail](../handbook/sending-mail.md) names the allowed edits. The original approval stays
+  fixed; the edited message has a separate fingerprint. Other edits need a new decision.
+  Older instructions with no fingerprint keep their existing send behavior, but cannot keep approval through this edit.
 - **It is used once.** The row moves to `consumed` and names its delivery inside the same transaction
   that stages the message. So a retry, a double click or a job delivered twice cannot use it twice.
 
 An old facts window does not by itself ask for another statement. Each retry checks current
-support and stops. The original author, scope, words and dates stay on the record.
+support and stops. The original author, approval, scope and dates stay on the record.
 
 Directing a send answers to `communication_exception`, its own RBAC object, not a part of
 consent's settings. The two are different authorities. Consent's settings decide who may change the

@@ -3820,7 +3820,15 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "co.aside.visibleEveryone": "Alle",
   "co.aside.visibleOnlyYou": "Nur dich",
   "co.aside.visibleOnly": "Nur {owner}",
-  "co.aside.visibleOnlyOwner": "Nur die zuständige Person",
+  "co.aside.visibleOnlyOwner": "Nur die verantwortliche Person",
+  "co.aside.visibleYouAndShared_one": "Dich · {count} Freigabe",
+  "co.aside.visibleYouAndShared_other": "Dich · {count} Freigaben",
+  "co.aside.visibleOwnerAndShared_one": "{owner} · {count} Freigabe",
+  "co.aside.visibleOwnerAndShared_other": "{owner} · {count} Freigaben",
+  "co.aside.visibleTheOwnerAndShared_one":
+    "Die verantwortliche Person · {count} Freigabe",
+  "co.aside.visibleTheOwnerAndShared_other":
+    "Die verantwortliche Person · {count} Freigaben",
   "co.aside.vatId": "USt-IdNr.",
   "co.aside.add": "Hinzufügen…",
   "co.strip.unanswered": "Unbeantwortet",
@@ -4596,6 +4604,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "approval.field.because": "Grund",
   "approval.field.lost_reason": "Warum er verloren ging",
   "approval.field.note": "Notiz",
+  "approval.field.task": "Aufgabe",
   "approval.kind.transcript_proposal":
     "Nächsten Schritt aus Transkript erstellen",
   "approval.kind.stage_progression": "Deal-Phase voranbringen",
@@ -7871,6 +7880,24 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.sendMessageConfirmTitle": "Nachricht senden",
   "compose.sendMessageBody":
     "Die Nachricht wird sofort gesendet. Das lässt sich nicht rückgängig machen.",
+  "directSend.existingApproval":
+    "Deine Freigabe für diese Nachricht gilt weiterhin. Der ursprüngliche Grund bleibt dokumentiert.",
+  "directSend.correctWording":
+    "Rechtschreibung oder Zeichensetzung korrigieren",
+  "directSend.correctionTitle": "Text korrigieren und Freigabe behalten",
+  "directSend.correctionSave": "Korrektur speichern",
+  "directSend.correctionScope":
+    "Korrigiere nur Rechtschreibung oder Zeichensetzung. Empfangende, Absendeadresse, Zweck und Anhänge bleiben gleich. Inhaltliche Änderungen brauchen eine neue Freigabe.",
+  "directSend.correctionAcknowledge":
+    "Ich bestätige, dass nur Rechtschreibung oder Zeichensetzung geändert wurden. Bedeutung und Fakten sind unverändert.",
+  "directSend.correctionNeedsEdit":
+    "Korrigiere zuerst Rechtschreibung oder Zeichensetzung.",
+  "directSend.correctionNeedsConfirmation":
+    "Bestätige, dass Bedeutung und Fakten unverändert sind.",
+  "directSend.correctionNeedsText":
+    "Betreff und Nachrichtentext dürfen nicht leer sein.",
+  "directSend.correctionFailed":
+    "Die Korrektur wurde nicht gespeichert. Öffne die Prüfung erneut, um die aktuelle Nachricht und Freigabe zu prüfen.",
   "directSend.open": "Mit erfasster Ausnahme senden",
   "directSend.queued": "Zum Senden als festgehaltene Ausnahme vorgemerkt.",
   "directSend.opening": "Wird geöffnet…",
@@ -8511,6 +8538,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.sdrReading.leads_awaiting_response":
     "Leads, die noch auf eine erste Antwort warten",
   "analytics.sdrQualifiedOf": "{qualified} von {arrived}",
+  "analytics.handoffReassign": "Übergabe neu zuweisen",
+  "analytics.handoffReassignHint":
+    "Wähle ein aktives Teammitglied, das diesen Interessenten bearbeiten darf. Angenommene Übergaben behalten ihre ursprüngliche Zuordnung.",
+  "analytics.handoffReassignUnavailable":
+    "Wähle ein Teammitglied, sobald die aktuelle Zuweisung geladen ist. Die Übergabe muss noch auf eine Antwort warten und du brauchst Schreibzugriff.",
   "analytics.sdrWaiting": "Übergaben, die auf andere warten",
   "analytics.sdrWaitingIntro":
     "Übergaben, die du eingereicht hast und über die noch niemand entschieden hat. Eine zurückgegebene und neu eingereichte Übergabe wartet ab der neuen Einreichung.",
@@ -10041,8 +10073,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Ein verlorener Deal braucht den Grund, warum er verloren ging.",
   "import.reason.deal_pipeline_fixed":
     "Dieser Deal liegt in einer anderen Pipeline als in der Datei angegeben. Ein Import verschiebt keinen Deal zwischen Pipelines, daher wird die Zeile übersprungen.",
+  "companies.contractMergeBlocked":
+    "Ein Deal hat Verträge, die zu einem anderen Unternehmen gehören. Archivierte Verträge zählen ebenfalls. Bitte wende dich vor dem Zusammenführen an einen Admin, um die Vertragsverknüpfungen zu korrigieren.",
+  "deals.contractCompanyBlocked":
+    "Dieser Deal hat Verträge, die zu einem anderen Unternehmen gehören. Auch archivierte Verträge zählen. Bitte wende dich vor dem Unternehmenswechsel an einen Admin, um die Vertragsverknüpfungen zu korrigieren.",
   "import.reason.deal_company_has_contracts":
-    "Für diesen Deal sind Verträge hinterlegt, die ein anderes Unternehmen als das in dieser Zeile nennen, daher wird die Zeile übersprungen. Löse die Verträge vom Deal oder ordne jeden einem Deal seines eigenen Unternehmens zu und importiere erneut.",
+    "Für diesen Deal sind Verträge hinterlegt, die ein anderes Unternehmen als das in dieser Zeile nennen, daher wird die Zeile übersprungen. Auch archivierte Verträge zählen. Bitte wende dich an einen Admin, um die Vertragsverknüpfungen zu korrigieren. Importiere danach erneut.",
   "import.reason.deal_already_closed":
     "Dieser Deal ist bereits abgeschlossen, daher wird die Zeile übersprungen. Ein Import öffnet keinen abgeschlossenen Deal wieder.",
   "import.reason.fx_rate_missing":
@@ -14014,6 +14050,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Alles funktioniert weiter, und nichts ist begrenzt. Konfiguriere ein Lizenz-Token für diese Installation, damit die Plätze mit dem Lizenzumfang abgeglichen werden.",
   "license.refused.title": "Die Lizenz dieser Installation wurde abgelehnt",
   "license.refused.body":
+    "Das für diese Installation konfigurierte Lizenz-Token wurde vorgelegt und abgelehnt. Belegte volle Plätze funktionieren weiter, und bis das Token ersetzt wird, kommt kein voller Platz über das hinzu, was die letzte gültige Lizenz gewährt hat. Prüfe das Token und die Uhr der Installation.",
+  "license.refused.bodyUncapped":
     "Das für diese Installation konfigurierte Lizenz-Token wurde vorgelegt und abgelehnt. Alles funktioniert ohne Begrenzung weiter, bis das Token ersetzt wird. Prüfe das Token und die Uhr der Installation.",
   "license.seats.capacityOnly":
     "Deine Rolle darf den Lizenzumfang nicht sehen.",
@@ -14039,6 +14077,13 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "license.renewal.title": "Lizenz muss erneuert werden",
   "license.renewal.body":
     "Die Lizenz läuft am {expiry} ab. Vor diesem Datum ändert sich nichts.",
+  "license.check.button": "Jetzt prüfen",
+  "license.check.hint":
+    "Liest die Lizenz-Token-Datei auf dem Server sofort neu ein, statt bei der nächsten täglichen Prüfung. Tausche die Datei vorher aus. Ein Token aus einer Umgebungsvariable gilt erst nach einem Neustart.",
+  "license.check.done":
+    "Lizenz-Token neu eingelesen. Diese Karte zeigt das Ergebnis.",
+  "license.check.failed":
+    "Das Lizenz-Token ließ sich nicht neu einlesen. Das letzte Ergebnis gilt weiter, und das Server-Log nennt den Grund.",
   "license.counting":
     "Volle Plätze, die nicht deaktiviert oder gesperrt sind, Agenten eingeschlossen. Leseplätze sind unbegrenzt und zählen nicht mit.",
   "settings.rates.fxTitle": "Wechselkurse",
@@ -14727,6 +14772,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "users.handover.tasks_other": "{count} offene Aufgaben",
   "users.handover.webhooks_one": "{count} Webhook",
   "users.handover.webhooks_other": "{count} Webhooks",
+  "users.handover.handoffs_one": "{count} offene Übergabe",
+  "users.handover.handoffs_other": "{count} offene Übergaben",
+  "users.handover.responsibilities_one": "{count} Datensatzverantwortung",
+  "users.handover.responsibilities_other": "{count} Datensatzverantwortungen",
   "users.handover.lists_one": "{count} Liste",
   "users.handover.lists_other": "{count} Listen",
   "users.removeMfa": "Zweistufige Anmeldung entfernen",
@@ -17601,6 +17650,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.intro.whenYesterday": "letzter Kontakt gestern",
   "contact.intro.whenDays": "letzter Kontakt vor {days} Tagen",
   "contact.intro.whenNever": "kein Kontakt in letzter Zeit",
+  "contact.intro.replaceAction": "Anderes Teammitglied auswählen",
+  "contact.intro.replaceHint":
+    "Prüfe einen neuen Weg und eine neue Anfrage. Die bisherige Anfrage bleibt offen, bis die neue gespeichert ist. Das neue Teammitglied entscheidet selbst; eine frühere Zustimmung wird nicht übernommen.",
+  "contact.intro.replaceReasonHint":
+    "Das Teammitglied aus der bisherigen Anfrage kann diese Begründung lesen.",
+  "contact.intro.replaceReason": "Warum ersetzt du diese Anfrage?",
   "contact.intro.askTitle": "Vorstellung bei {name} anfragen",
   "contact.intro.recordAction": "Eine Vorstellung erfassen",
   "contact.intro.recordTitle": "Vorstellung bei {name} erfassen",
@@ -17629,8 +17684,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.intro.recordedIntroduced": "hat vorgestellt",
   "contact.intro.cancel": "Abbrechen",
   "contact.intro.askAction": "Vorstellung anfragen",
-  "contact.intro.askFailed":
-    "Die Anfrage konnte nicht gespeichert werden. Bitte versuche es erneut.",
   "contact.intro.reasonLabel": "Grund der Anfrage",
   "contact.intro.reasonHint":
     "Das liest dein Teammitglied, nicht der Kontakt. Beschreibe, warum sich die Vorstellung lohnt.",
@@ -21083,6 +21136,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "scheduling.pause": "Buchungen pausieren",
   "record.details.showEmpty_one": "{count} leeres Feld zeigen",
   "record.details.showEmpty_other": "{count} leere Felder zeigen",
+  "contact.handles.more_one": "+{count} weitere",
+  "contact.handles.more_other": "+{count} weitere",
+  "contact.handles.fewer": "Weniger anzeigen",
   "record.details.hideEmpty": "Leere Felder ausblenden",
   "record.verb.email": "E-Mail",
   "record.verb.call": "Anruf",
@@ -21714,10 +21770,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.done.changeCount_other": "{count} Änderungen",
   "brief.done.steps": "Änderungen an diesem Deal, neueste zuerst",
   "brief.done.title": "Für dich erledigt",
-  "brief.done.waiting_one": "{count} Deal wartet auf deine Prüfung",
-  "brief.done.waiting_other": "{count} Deals warten auf deine Prüfung",
-  "brief.done.reviewAll_one": "{count} Deal prüfen",
-  "brief.done.reviewAll_other": "Alle {count} Deals prüfen",
+  "brief.done.seeAll_one": "{count} Deal ansehen",
+  "brief.done.seeAll_other": "Alle {count} Deals ansehen",
   "brief.done.drawerTitle_one": "{count} Deal, den Margince geändert hat",
   "brief.done.drawerTitle_other": "{count} Deals, die Margince geändert hat",
   "changes.undoDeals_one": "Änderungen an {count} Deal rückgängig machen",
@@ -21732,8 +21786,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.done.noReason": "Grund nicht verfügbar",
   "brief.done.markedLost": "Als verloren markiert",
   "brief.done.customerWrote": "Der Kunde schrieb:",
-  "brief.changes.markReviewed": "Als geprüft markieren",
-  "brief.changes.reviewed": "Geprüft",
   "magic.lane.doneOther": "Weitere Änderungen",
   "changes.bulk.undone_one": "Auf {count} Deal rückgängig gemacht.",
   "changes.bulk.undone_other": "Auf {count} Deals rückgängig gemacht.",

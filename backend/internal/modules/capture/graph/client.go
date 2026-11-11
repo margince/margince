@@ -119,25 +119,16 @@ type API interface {
 	// Profile returns the mailbox owner's address (mail, falling back to
 	// userPrincipalName for a mailbox with no mail attribute).
 	Profile(ctx context.Context, accessToken string) (email string, err error)
-	// DeltaInit starts a fresh delta over ONE well-known folder, bounded to
-	// messages received on or after the given instant, walks it to completion,
-	// and returns the deltaLink the next Delta resumes from. A walk that ends
-	// holding fewer messages than the folder reports for that window is
-	// refused rather than returned: the watermark only moves forward, so a
-	// short anchor would drop what it missed for good.
-	//
-	// Per folder rather than over the whole mailbox: /me/messages/delta would
-	// also yield Drafts, Deleted Items and Junk. A draft was never sent, so
-	// putting one on a customer's timeline would be recording a message that
-	// does not exist.
-	DeltaInit(ctx context.Context, accessToken, folder string, after time.Time) (messages []MessageRef, deltaLink string, err error)
-	// Delta resumes a folder's delta from a stored deltaLink and returns the
-	// message ids added/changed since plus the advanced deltaLink;
-	// ErrDeltaGone if Graph no longer honors the link.
-	// Delta returns the ids added or changed since deltaLink, the ids Graph
-	// permanently deleted in the same round, and the link to resume from.
-	// Folder moves remain available through their immutable message ids.
-	Delta(ctx context.Context, accessToken, deltaLink string) (messages []MessageRef, removed []string, newDeltaLink string, err error)
+	// DeltaInit starts a delta over one folder from the given instant, or
+	// resumes a stored anchor round. It hands each page to visit and returns
+	// the deltaLink. A census short of the folder's tally is refused, because
+	// the watermark only moves forward. It is per folder because the mailbox
+	// delta also yields drafts, which were never sent.
+	DeltaInit(ctx context.Context, accessToken, folder string, after time.Time, resume *DeltaResume, visit PageVisitor) (deltaLink string, err error)
+	// Delta resumes a folder's delta from a stored deltaLink or checkpointed
+	// page. It hands each page to visit and returns the advanced deltaLink.
+	// It returns ErrDeltaGone when Graph no longer honors the link.
+	Delta(ctx context.Context, accessToken, deltaLink string, resume *DeltaResume, visit PageVisitor) (newDeltaLink string, err error)
 	// EnsureSubscription registers or renews the Graph change-notification
 	// subscription pointing at notificationURL, carrying clientState, and
 	// reports the subscription that now covers this mailbox.

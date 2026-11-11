@@ -31,8 +31,8 @@ A message from the customer that only its participants can see also keeps the
 deal open. Margince reads only its date.
 
 Margince closes the deal for its owner. The close shows on the owner's **Home**
-under **Done for you**, with the reason and **Undo**. It stays there until the
-owner marks it reviewed or undoes it. The deal's timeline gets a note about the close.
+under **Done for you**, with the reason and **Undo**. It stays there for 7 days
+unless the owner undoes it. The deal's timeline gets a note about the close.
 
 **Undo** puts the deal back in the stage it was closed from. Changes made to the
 deal since the close stay as they are. Undo is refused when someone moved the
@@ -53,11 +53,11 @@ every open deal. It may then set three things for the owner:
 - **The close date**, when a message names the day or the month the customer
   will decide or sign. Margince sets a date only inside a day, a month or a
   quarter the words of the message name.
-- **The amount**, when the customer or your offer names a price for the deal.
-  Margince sets the price the words state, to the cent.
+- **The amount**, when the customer names a price in their current email.
+  Margince sets the price the words state, to the cent. Our own words and quoted history do not count.
 - **The win probability**, when the evidence clearly moves it. Margince may
-  lower it for any reason the evidence gives. It never raises it above the
-  probability of the deal's stage.
+  lower it when words from the customer support the change. It never raises it above the
+  probability of the deal's stage. To lower it, Margince needs a quote from the current email.
 
 Margince reads a deal again only when something new arrived on it, its close
 date passed, or its owner changed a switch. A deal whose price had no exchange
@@ -112,8 +112,8 @@ A close date from the customer is no longer an estimate, so Margince marks it
 as confirmed. **Undo** marks it as an estimate again.
 
 Each change shows on the owner's **Home** under **Done for you**, with the
-old and new value, the reason and **Undo**. It stays there until the owner
-marks it reviewed or undoes it. The deal's timeline gets one note for the night's
+old and new value, the reason and **Undo**. It stays there for 7 days unless
+the owner undoes it. The deal's timeline gets one note for the night's
 changes.
 
 **Undo** puts the old value back. It is refused when someone changed the field

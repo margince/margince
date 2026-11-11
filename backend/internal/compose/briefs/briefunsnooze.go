@@ -46,9 +46,7 @@ import (
 // applies to a second mark.
 //
 // An item whose snooze condition has already lifted is still snoozed here. The
-// row says so until a read re-surfaces it, the write is identical either way,
-// and asking briefItemActionable would make the answer depend on whether a read
-// had run rather than on what the rep did.
+// row says so, and the write is identical either way.
 //
 // No clock, unlike every mark beside it. Those stamp state_at; this clears it,
 // because brief_item_state_stamped pairs a stamp with a decision and an item

@@ -21,10 +21,7 @@ type FinanceSummary = components["schemas"]["CompanyFinanceSummary"];
 // balance it is, how late this customer usually pays, and the two halves of
 // the open balance drawn against each other.
 //
-// The hero figure is drawn whatever the rest of the panel can say. The
-// sentence and the bar under it each appear only when their own inputs
-// arrived, so a customer with no settled invoices gets the figure and nothing
-// invented beneath it.
+// The figure always draws; the sentence and the bar need their own inputs.
 export function OverdueLead({
   summary,
 }: Readonly<{ summary: FinanceSummary }>) {
@@ -36,7 +33,7 @@ export function OverdueLead({
       <FinanceFigure
         label={t("finance.overdue")}
         value={amountOf(summary.overdue, locale)}
-        hero
+        hero={(summary.overdue?.amount_minor ?? 0) > 0}
         // An overdue figure is a call to action, and the server withholds it
         // once the relationship has ended rather than sending a number that
         // would read as a collection to make. A bare dash here would say "we

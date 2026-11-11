@@ -218,7 +218,6 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attenti
 			// The same reader WithDealFacts binds below, so the lane keeps an
 			// entry exactly when the figures pass can state its deal.
 			figures: attentionDealFacts{store: deals.NewStore(db, DealsInstallation())},
-			now:     now,
 		},
 		nil, // Assigned promises are tasks; taskless claims name no personal owner.
 		atRisk,

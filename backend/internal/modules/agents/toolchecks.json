@@ -1431,6 +1431,11 @@
         "pipeline.read"
       ]
     },
+    "get_handoff_assignee": {
+      "checks": [
+        "lead.read"
+      ]
+    },
     "get_hidden_backlog": {
       "checks": [
         "activity.read",
@@ -2840,6 +2845,12 @@
         "deal.read"
       ]
     },
+    "reassign_handoff": {
+      "checks": [
+        "lead.read",
+        "lead.update"
+      ]
+    },
     "record_communication_context": {
       "checks": [
         "contact.update"
@@ -3075,6 +3086,14 @@
         "deal.read",
         "deal.update",
         "product.read"
+      ]
+    },
+    "replace_intro_request": {
+      "checks": [
+        "contact.read",
+        "introduction.create",
+        "introduction.read",
+        "introduction.update"
       ]
     },
     "replace_sales_initiative_members": {

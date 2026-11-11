@@ -23,7 +23,7 @@ The test company has 250,000 contacts at 10,000 companies, 25,000 deals, 100,000
 500 projects and 500,000 activities, owned by 12 reps under 2 managers.
 It also holds 20,000 model calls this month, 1,560 approvals waiting, 480 applied today and 240 expired.
 
-Measured on 2026-10-29 on Apple M5 Max (18 cores, 48 GiB), Postgres 16.15.
+Measured on 2026-11-10 on Apple M4 (10 cores, 24 GiB), Postgres 16.15.
 Each time is the p95 of its rows: 95 in every 100 tries were faster.
 
 Rounding: under 250 ms reads "under a quarter of a second", under 1 s "under a second",
@@ -40,22 +40,22 @@ How a case is chosen and added: [design-a-bench-case.md](../how-to/design-a-benc
 | Moment | Rep | Manager | In plain words |
 |---|---|---|---|
 | Opening the app | 🟢 Under a quarter of a second | 🟢 Under a quarter of a second | Fast. |
-| The Worklist | 🟡 About 1.1 seconds | 🟡 About 1.9 seconds | Slower than we promise: we are working on it ([#4912](https://github.com/margince/margince/issues/4912)). We promise under 1 second. |
-| Home | 🟢 Under a second | 🟢 Under a second | Fast. |
+| The Worklist | 🟢 Under a quarter of a second | 🟡 About 1.7 seconds | Slower than we promise: we are working on it ([#4912](https://github.com/margince/margince/issues/4912)). We promise under 1 second. |
+| Home | 🟢 Under a quarter of a second | 🟢 Under a quarter of a second | Fast. |
 
 The first open after a restart is slower, because nothing is warmed up yet:
 
-- The Worklist for a rep, first open after a restart: about 2.1 seconds.
+- The Worklist for a rep, first open after a restart: about 2.7 seconds.
 - Search for a rep, first open after a restart: under a second.
 
 ## How quickly do I find a customer?
 
 | Moment | Rep | Manager | In plain words |
 |---|---|---|---|
-| Typing a name in the search box | 🟢 Under a quarter of a second | 🟢 Under a quarter of a second | Fast. |
+| Typing a name in the search box | 🟢 Under a second | 🟢 Under a second | Fast. |
 | Typing the first few letters | 🟢 Under a second | 🟢 Under a second | Fast. |
-| The full search results | 🟢 Under a quarter of a second | 🟢 Under a quarter of a second | Fast. |
-| Search, then open the company | 🟢 Under a quarter of a second | 🟢 Under a quarter of a second | Fast. |
+| The full search results | 🟢 Under a second | 🟢 Under a second | Fast. |
+| Search, then open the company | 🟢 Under a second | 🟢 Under a second | Fast. |
 
 ## How quickly do I find a deal?
 
@@ -69,8 +69,8 @@ The first open after a restart is slower, because nothing is warmed up yet:
 |---|---|---|---|
 | A list of 50 records | 🟢 Under a quarter of a second | 🟢 Under a quarter of a second | Fast. |
 | Opening a record | 🟢 Under a quarter of a second | 🟢 Under a quarter of a second | Fast. |
-| A contact's whole story | 🟢 Under a quarter of a second | 🟢 Under a quarter of a second | Fast. |
-| A company's whole page | 🟢 Under a second | 🟢 Under a second | Fast. |
+| A contact's whole story | 🟢 Under a second | 🟢 Under a second | Fast. |
+| A company's whole page | 🟡 About 0.9 seconds | 🟡 About 0.9 seconds | Slower than we promise: we are working on it ([#9526](https://github.com/margince/margince/issues/9526)). We promise under 0.3 seconds. |
 
 ## How fast is the analytics screen?
 
@@ -84,7 +84,7 @@ Every rep and manager opens the app, the Worklist, Home and a few records at the
 
 | Moment | Whole team | In plain words |
 |---|---|---|
-| A small request while everyone starts | 🟢 Under a quarter of a second | Fast. |
+| A small request while everyone starts | 🟡 About 0.9 seconds | Slower than we promise: we are working on it ([#7068](https://github.com/margince/margince/issues/7068)). We promise under 0.2 seconds. |
 
 ## What else did we measure?
 

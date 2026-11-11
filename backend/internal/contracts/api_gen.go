@@ -13471,6 +13471,30 @@ func (e GrowthFitSubScoreDimension) Valid() bool {
 	}
 }
 
+// Defines values for HandoffAssigneeStatus.
+const (
+	HandoffAssigneeStatusAccepted  HandoffAssigneeStatus = "accepted"
+	HandoffAssigneeStatusRecycled  HandoffAssigneeStatus = "recycled"
+	HandoffAssigneeStatusRejected  HandoffAssigneeStatus = "rejected"
+	HandoffAssigneeStatusSubmitted HandoffAssigneeStatus = "submitted"
+)
+
+// Valid indicates whether the value is a known member of the HandoffAssigneeStatus enum.
+func (e HandoffAssigneeStatus) Valid() bool {
+	switch e {
+	case HandoffAssigneeStatusAccepted:
+		return true
+	case HandoffAssigneeStatusRecycled:
+		return true
+	case HandoffAssigneeStatusRejected:
+		return true
+	case HandoffAssigneeStatusSubmitted:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for HealthActionDestination.
 const (
 	HealthActionDestinationConfiguration HealthActionDestination = "configuration"
@@ -31229,9 +31253,14 @@ type Activity struct {
 	OffersEmail bool                    `json:"offers_email"`
 	Raw         *map[string]interface{} `json:"raw,omitempty"`
 
+	// RecordedByAgent True when an assistant or an agent run wrote this activity: `captured_by` names an agent, or a scheduled agent run filed it. A reader labels such a row as the assistant's whatever `source` says.
+	RecordedByAgent *bool `json:"recorded_by_agent,omitempty"`
+
 	// RemindAt Task only. When the reminder comes due. From that instant, for up to 30 days, the task leads its assignee's own Worklist with the reason `reminder_due`, and `GET /v1/activities?reminder_due=true` lists it for them. Nobody else is reminded, and a task with no assignee reminds nobody. Moving `due_at` on a task whose reminder has passed clears this field, unless the same patch names it.
 	RemindAt *time.Time `json:"remind_at,omitempty"`
-	Source   string     `json:"source"`
+
+	// Source Where the row came from. `manual` is anything typed, by a member or by an assistant working for one, so it never says who typed it: `captured_by` and `recorded_by_agent` do.
+	Source string `json:"source"`
 
 	// SourceActivityId The conversation or note this task follows from, whether added by a human or read from a conversation. Opening the source requires current source access. A task cannot grant access to its source or disclose content from a withheld source.
 	SourceActivityId *openapi_types.UUID `json:"source_activity_id,omitempty"`
@@ -33987,7 +34016,12 @@ type AnswerCalendarInvitationRequestResponse string
 
 // AppliedDealChangeReview The recorded automatic change and its current review state.
 type AppliedDealChangeReview struct {
-	Accepted  bool                        `json:"accepted"`
+	// Accepted Whether the change was accepted through the deprecated accept route.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	Accepted bool `json:"accepted"`
+
+	// CanAccept Whether the deprecated accept route would take this change.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	CanAccept bool                        `json:"can_accept"`
 	CanUndo   bool                        `json:"can_undo"`
 	Kind      AppliedDealChangeReviewKind `json:"kind"`
@@ -38508,6 +38542,10 @@ type CommunicationReview struct {
 	// it. Both together, because a surface that could get one without the other would show words
 	// while naming a different version.
 	Warning *OverrideWarning `json:"warning,omitempty"`
+
+	// WordingCorrection The current approved wording, visible only to its original human approver while the
+	// decision is unspent. The original reason remains on the instruction.
+	WordingCorrection *WordingCorrectionContext `json:"wording_correction,omitempty"`
 }
 
 // CommunicationReviewKind defines model for CommunicationReview.Kind.
@@ -43699,6 +43737,18 @@ type ConversationSuggestionListResponse struct {
 
 // CoreFeature A core destination in the main menu. Disabling one keeps its stored data.
 type CoreFeature string
+
+// CorrectCommunicationWordingRequest defines model for CorrectCommunicationWordingRequest.
+type CorrectCommunicationWordingRequest struct {
+	Body            string `json:"body"`
+	ExpectedWording string `json:"expected_wording"`
+	HtmlBody        string `json:"html_body"`
+
+	// MeaningUnchanged The original approver attests that only spelling or punctuation changed and meaning is unchanged.
+	MeaningUnchanged bool   `json:"meaning_unchanged"`
+	Subject          string `json:"subject"`
+	Version          int64  `json:"version" minimum:"1"`
+}
 
 // CorrectDealCloseDayRequest defines model for CorrectDealCloseDayRequest.
 type CorrectDealCloseDayRequest struct {
@@ -48915,6 +48965,24 @@ type HandledForYou struct {
 	Truncated bool `json:"truncated"`
 }
 
+// HandoffAssignee defines model for HandoffAssignee.
+type HandoffAssignee struct {
+	AssignedTo  *openapi_types.UUID   `json:"assigned_to,omitempty"`
+	CanReassign bool                  `json:"can_reassign"`
+	Id          openapi_types.UUID    `json:"id"`
+	Status      HandoffAssigneeStatus `json:"status"`
+	Version     int64                 `json:"version"`
+}
+
+// HandoffAssigneeStatus defines model for HandoffAssignee.Status.
+type HandoffAssigneeStatus string
+
+// HandoffAssigneeInput defines model for HandoffAssigneeInput.
+type HandoffAssigneeInput struct {
+	AssignedTo openapi_types.UUID `json:"assigned_to"`
+	Version    int64              `json:"version" minimum:"1"`
+}
+
 // HandoverCounts Live records per kind.
 type HandoverCounts struct {
 	Company int `json:"company" minimum:"0"`
@@ -48925,6 +48993,12 @@ type HandoverCounts struct {
 	// List Live lists owned by the member.
 	List    int `json:"list" minimum:"0"`
 	Project int `json:"project" minimum:"0"`
+
+	// RecordAssignment Current user responsibilities on records.
+	RecordAssignment int `json:"record_assignment" minimum:"0"`
+
+	// SdrHandoff Waiting prospect handoffs assigned to the member.
+	SdrHandoff int `json:"sdr_handoff" minimum:"0"`
 
 	// Task Open tasks assigned to the member.
 	Task int `json:"task" minimum:"0"`
@@ -51030,6 +51104,15 @@ type IntroRequestListResponse struct {
 	Data []IntroRequest `json:"data"`
 }
 
+// IntroRequestReplaceInput defines model for IntroRequestReplaceInput.
+type IntroRequestReplaceInput struct {
+	Reason string `json:"reason"`
+
+	// Request The ask. There is no requester field: that is the authenticated contact, so one rep cannot put an ask in another's name.
+	Request IntroRequestInput `json:"request"`
+	Version int               `json:"version"`
+}
+
 // IntroRequestStatus Where the ask stands.
 //
 // `requested` is waiting on the colleague. The four answers are `accepted`,
@@ -52528,8 +52611,10 @@ type LicenseEntitlement struct {
 	// an unlicensed installation is never reported as over a limit it does not have.
 	OverLimit bool `json:"over_limit"`
 
-	// SeatsGranted Full seats the license admits. ABSENT when nothing caps them — no license, or a
-	// grant carrying no seat count — which is not a grant of zero.
+	// SeatsGranted Full seats a new seat is held to. A valid license answers its own grant; a refused
+	// one keeps the last valid grant this process resolved. ABSENT when nothing caps them
+	// — no license, no valid one before a refusal, or a grant carrying no seat count —
+	// which is not a grant of zero.
 	SeatsGranted *int `json:"seats_granted,omitempty" minimum:"0"`
 
 	// SeatsUsed Full seats in use: every one the installation has not withdrawn — neither
@@ -52735,6 +52820,10 @@ type LinkedInReachResponse struct {
 
 	// AccountsTotal Every account reached, not just the page returned — a truncated list read as the whole network would understate reach.
 	AccountsTotal int `json:"accounts_total" minimum:"0"`
+
+	// NextCursor Send this back as `cursor` to continue past the last account of this page.
+	// Absent on the last page, so a client walking until it disappears stops.
+	NextCursor *string `json:"next_cursor,omitempty"`
 
 	// UnresolvedConnections Connections whose employer matched no account on file. Reported because it is
 	// the honest size of what this view cannot show, and because it is the number
@@ -64709,7 +64798,7 @@ type UpdateDealRequest struct {
 	// CommercialMotion Why this deal exists commercially: `new_business` (first purchase by this customer), `renewal` (continuing an agreement, when that is the primary purpose), `upsell` (more capacity or a higher tier of something they already have), `cross_sell` (a different offering to an existing customer), `expansion` (growth spanning offerings, or outside the more specific choices), `existing_business` (the relationship is known, the motion is not). A combined renewal-and-growth deal takes its PRIMARY purpose — one value is a reporting classification, not revenue split across motions. Null means unknown, which is different from `existing_business`: unknown has not been asked, `existing_business` has been asked and answered "not more precisely than this".
 	CommercialMotion *UpdateDealRequestCommercialMotion `json:"commercial_motion,omitempty"`
 
-	// CompanyId The company this deal is for. Changing it is refused 422 (`deal_contracts_cross_company`) while contracts filed against the deal name another company, because a contract on a deal is visible through that deal alone. Detach those contracts (`deal_id: null` on the contract) or file each against a deal of its own company first; an edit never changes a contract's company, only a company merge does. Null clears the company and is not refused.
+	// CompanyId The company this deal is for. Changing it is refused 422 (`deal_contracts_cross_company`) while contracts filed against the deal name another company, because a contract on a deal is visible through that deal alone. Archived contracts also count. Ask an administrator to correct the contract links before changing the company. An edit never changes a contract's company; only a company merge does. Null clears the company and is not refused.
 	CompanyId *openapi_types.UUID `json:"company_id,omitempty"`
 	Currency  *string             `json:"currency,omitempty"`
 
@@ -67221,6 +67310,25 @@ type WeeklyScorecardLeadBlock struct {
 	// are a floor, and a reader should say so.
 	MeetingsPartialHistory int `json:"meetings_partial_history" minimum:"0"`
 	Promoted               int `json:"promoted" minimum:"0"`
+}
+
+// WordingCorrectionContext The current approved wording, visible only to its original human approver while the
+// decision is unspent. The original reason remains on the instruction.
+type WordingCorrectionContext struct {
+	Body           string             `json:"body"`
+	Explanation    string             `json:"explanation"`
+	HtmlBody       string             `json:"html_body"`
+	InstructionId  openapi_types.UUID `json:"instruction_id"`
+	ReasonCode     string             `json:"reason_code"`
+	Subject        string             `json:"subject"`
+	Version        int64              `json:"version"`
+	WarningVersion string             `json:"warning_version"`
+	WordingDigest  string             `json:"wording_digest"`
+}
+
+// WordingCorrectionResult defines model for WordingCorrectionResult.
+type WordingCorrectionResult struct {
+	Version int64 `json:"version"`
 }
 
 // WorkArea One area of work a passport may be limited to. Each operation an agent can call sits in one
@@ -74367,6 +74475,13 @@ type ImportLinkedInConnectionsMultipartBody struct {
 type GetMyLinkedInReachParams struct {
 	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty" maximum:"200" minimum:"1"`
+
+	// Cursor Opaque position from a prior answer's `next_cursor`, which resumes the ranking after
+	// the last account returned. A cursor that names no position in this ranking, such
+	// as one from another route, is refused with 422.
+	// The ranking is by live connection counts, so an import between two pages can move
+	// an account across the cut: re-read from the top to see the network as it is now.
+	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
 }
 
 // SaveNotificationPreferenceJSONBody defines parameters for SaveNotificationPreference.
@@ -77614,6 +77729,9 @@ type DecideCommissionEntryJSONRequestBody = DecideCommissionRequest
 // RecordCommunicationContextJSONRequestBody defines body for RecordCommunicationContext for application/json ContentType.
 type RecordCommunicationContextJSONRequestBody = RecordCommunicationContextRequest
 
+// CorrectCommunicationWordingJSONRequestBody defines body for CorrectCommunicationWording for application/json ContentType.
+type CorrectCommunicationWordingJSONRequestBody = CorrectCommunicationWordingRequest
+
 // DirectCommunicationSendJSONRequestBody defines body for DirectCommunicationSend for application/json ContentType.
 type DirectCommunicationSendJSONRequestBody = DirectCommunicationSendRequest
 
@@ -78025,6 +78143,9 @@ type CompleteIntroRequestJSONRequestBody = IntroRequestCompleteInput
 // DecideIntroRequestJSONRequestBody defines body for DecideIntroRequest for application/json ContentType.
 type DecideIntroRequestJSONRequestBody = IntroRequestDecisionInput
 
+// ReplaceIntroRequestJSONRequestBody defines body for ReplaceIntroRequest for application/json ContentType.
+type ReplaceIntroRequestJSONRequestBody = IntroRequestReplaceInput
+
 // CreateCorpusJSONRequestBody defines body for CreateCorpus for application/json ContentType.
 type CreateCorpusJSONRequestBody CreateCorpusJSONBody
 
@@ -78420,6 +78541,9 @@ type PutSchedulingAliasJSONRequestBody = SchedulingAliasRequest
 
 // CreateMeetingProposalJSONRequestBody defines body for CreateMeetingProposal for application/json ContentType.
 type CreateMeetingProposalJSONRequestBody = MeetingProposalRequest
+
+// ReassignHandoffJSONRequestBody defines body for ReassignHandoff for application/json ContentType.
+type ReassignHandoffJSONRequestBody = HandoffAssigneeInput
 
 // CreateSignalJSONRequestBody defines body for CreateSignal for application/json ContentType.
 type CreateSignalJSONRequestBody = CreateSignalRequest
@@ -78981,6 +79105,14 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 		delete(object, "raw")
 	}
 
+	if raw, found := object["recorded_by_agent"]; found {
+		err = json.Unmarshal(raw, &a.RecordedByAgent)
+		if err != nil {
+			return fmt.Errorf("error reading 'recorded_by_agent': %w", err)
+		}
+		delete(object, "recorded_by_agent")
+	}
+
 	if raw, found := object["remind_at"]; found {
 		err = json.Unmarshal(raw, &a.RemindAt)
 		if err != nil {
@@ -79416,6 +79548,13 @@ func (a Activity) MarshalJSON() ([]byte, error) {
 		object["raw"], err = json.Marshal(a.Raw)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'raw': %w", err)
+		}
+	}
+
+	if a.RecordedByAgent != nil {
+		object["recorded_by_agent"], err = json.Marshal(a.RecordedByAgent)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'recorded_by_agent': %w", err)
 		}
 	}
 
@@ -92188,6 +92327,9 @@ type ServerInterface interface {
 	// Answer a refusal by saying what happened away from the system.
 	// (POST /communication-reviews/{id}/context)
 	RecordCommunicationContext(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// Keep the original approval for a spelling or punctuation correction.
+	// (POST /communication-reviews/{id}/correct-wording)
+	CorrectCommunicationWording(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// Send a refused message anyway, on a named human's recorded decision.
 	// (POST /communication-reviews/{id}/direct-send)
 	DirectCommunicationSend(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
@@ -92692,7 +92834,7 @@ type ServerInterface interface {
 	// Download the Art. 15 package an access request asks for.
 	// (GET /data-subject-requests/{id}/package)
 	DownloadDataSubjectPackage(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
-	// The changes Margince made to your deals that you have not accepted or undone.
+	// The changes Margince made to your deals in the last 7 days that you have not undone.
 	// (GET /deal-corrections/pending)
 	GetPendingMarginceChanges(w http.ResponseWriter, r *http.Request)
 	// Undo several changes Margince made, one deal at a time.
@@ -93169,6 +93311,9 @@ type ServerInterface interface {
 	// The installation's entitlement and seat usage (admin/ops).
 	// (GET /installation/license)
 	GetLicenseEntitlement(w http.ResponseWriter, r *http.Request)
+	// Re-read the installation's license token now (admin/ops).
+	// (POST /installation/license/check)
+	CheckLicenseNow(w http.ResponseWriter, r *http.Request)
 	// Every vendor whose OAuth app this installation can hold, and whether it holds one.
 	// (GET /installation/oauth-apps)
 	ListOauthApps(w http.ResponseWriter, r *http.Request)
@@ -93211,6 +93356,9 @@ type ServerInterface interface {
 	// Answer an ask made of you.
 	// (POST /intro-requests/{id}/decision)
 	DecideIntroRequest(w http.ResponseWriter, r *http.Request, id Id)
+	// Withdraw your ask and make a fresh ask through another route.
+	// (POST /intro-requests/{id}/replace)
+	ReplaceIntroRequest(w http.ResponseWriter, r *http.Request, id Id)
 	// The document corpora this workspace has defined.
 	// (GET /knowledge/corpora)
 	ListCorpora(w http.ResponseWriter, r *http.Request)
@@ -94120,6 +94268,12 @@ type ServerInterface interface {
 	// Create a personal, expiring invitation without reserving time or sending mail.
 	// (POST /scheduling/proposals)
 	CreateMeetingProposal(w http.ResponseWriter, r *http.Request, params CreateMeetingProposalParams)
+	// Read the current receiver and reassignment version of a prospect handoff.
+	// (GET /sdr-handoffs/{id}/assignee)
+	GetHandoffAssignee(w http.ResponseWriter, r *http.Request, id Id)
+	// Choose a colleague who can work a waiting prospect handoff.
+	// (PATCH /sdr-handoffs/{id}/assignee)
+	ReassignHandoff(w http.ResponseWriter, r *http.Request, id Id)
 	// Cross-object search (contacts, companies, deals, activities, leads).
 	// (GET /search)
 	Search(w http.ResponseWriter, r *http.Request, params SearchParams)
@@ -96142,6 +96296,12 @@ func (_ Unimplemented) RecordCommunicationContext(w http.ResponseWriter, r *http
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Keep the original approval for a spelling or punctuation correction.
+// (POST /communication-reviews/{id}/correct-wording)
+func (_ Unimplemented) CorrectCommunicationWording(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Send a refused message anyway, on a named human's recorded decision.
 // (POST /communication-reviews/{id}/direct-send)
 func (_ Unimplemented) DirectCommunicationSend(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
@@ -97150,7 +97310,7 @@ func (_ Unimplemented) DownloadDataSubjectPackage(w http.ResponseWriter, r *http
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// The changes Margince made to your deals that you have not accepted or undone.
+// The changes Margince made to your deals in the last 7 days that you have not undone.
 // (GET /deal-corrections/pending)
 func (_ Unimplemented) GetPendingMarginceChanges(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -98104,6 +98264,12 @@ func (_ Unimplemented) GetLicenseEntitlement(w http.ResponseWriter, r *http.Requ
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Re-read the installation's license token now (admin/ops).
+// (POST /installation/license/check)
+func (_ Unimplemented) CheckLicenseNow(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Every vendor whose OAuth app this installation can hold, and whether it holds one.
 // (GET /installation/oauth-apps)
 func (_ Unimplemented) ListOauthApps(w http.ResponseWriter, r *http.Request) {
@@ -98185,6 +98351,12 @@ func (_ Unimplemented) CompleteIntroRequest(w http.ResponseWriter, r *http.Reque
 // Answer an ask made of you.
 // (POST /intro-requests/{id}/decision)
 func (_ Unimplemented) DecideIntroRequest(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Withdraw your ask and make a fresh ask through another route.
+// (POST /intro-requests/{id}/replace)
+func (_ Unimplemented) ReplaceIntroRequest(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -100003,6 +100175,18 @@ func (_ Unimplemented) ListMeetingProposals(w http.ResponseWriter, r *http.Reque
 // Create a personal, expiring invitation without reserving time or sending mail.
 // (POST /scheduling/proposals)
 func (_ Unimplemented) CreateMeetingProposal(w http.ResponseWriter, r *http.Request, params CreateMeetingProposalParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Read the current receiver and reassignment version of a prospect handoff.
+// (GET /sdr-handoffs/{id}/assignee)
+func (_ Unimplemented) GetHandoffAssignee(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Choose a colleague who can work a waiting prospect handoff.
+// (PATCH /sdr-handoffs/{id}/assignee)
+func (_ Unimplemented) ReassignHandoff(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -112512,6 +112696,38 @@ func (siw *ServerInterfaceWrapper) RecordCommunicationContext(w http.ResponseWri
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.RecordCommunicationContext(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CorrectCommunicationWording operation middleware
+func (siw *ServerInterfaceWrapper) CorrectCommunicationWording(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CorrectCommunicationWording(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -127406,6 +127622,26 @@ func (siw *ServerInterfaceWrapper) GetLicenseEntitlement(w http.ResponseWriter, 
 	handler.ServeHTTP(w, r)
 }
 
+// CheckLicenseNow operation middleware
+func (siw *ServerInterfaceWrapper) CheckLicenseNow(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CheckLicenseNow(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListOauthApps operation middleware
 func (siw *ServerInterfaceWrapper) ListOauthApps(w http.ResponseWriter, r *http.Request) {
 
@@ -127755,6 +127991,40 @@ func (siw *ServerInterfaceWrapper) DecideIntroRequest(w http.ResponseWriter, r *
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.DecideIntroRequest(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ReplaceIntroRequest operation middleware
+func (siw *ServerInterfaceWrapper) ReplaceIntroRequest(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ReplaceIntroRequest(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -132222,6 +132492,19 @@ func (siw *ServerInterfaceWrapper) GetMyLinkedInReach(w http.ResponseWriter, r *
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
 		}
 		return
 	}
@@ -141021,6 +141304,74 @@ func (siw *ServerInterfaceWrapper) CreateMeetingProposal(w http.ResponseWriter, 
 	handler.ServeHTTP(w, r)
 }
 
+// GetHandoffAssignee operation middleware
+func (siw *ServerInterfaceWrapper) GetHandoffAssignee(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetHandoffAssignee(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ReassignHandoff operation middleware
+func (siw *ServerInterfaceWrapper) ReassignHandoff(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ReassignHandoff(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // Search operation middleware
 func (siw *ServerInterfaceWrapper) Search(w http.ResponseWriter, r *http.Request) {
 
@@ -147865,6 +148216,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/communication-reviews/{id}/context", wrapper.RecordCommunicationContext)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/communication-reviews/{id}/correct-wording", wrapper.CorrectCommunicationWording)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/communication-reviews/{id}/direct-send", wrapper.DirectCommunicationSend)
 	})
 	r.Group(func(r chi.Router) {
@@ -148846,6 +149200,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/installation/license", wrapper.GetLicenseEntitlement)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/installation/license/check", wrapper.CheckLicenseNow)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/installation/oauth-apps", wrapper.ListOauthApps)
 	})
 	r.Group(func(r chi.Router) {
@@ -148886,6 +149243,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/intro-requests/{id}/decision", wrapper.DecideIntroRequest)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/intro-requests/{id}/replace", wrapper.ReplaceIntroRequest)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/knowledge/corpora", wrapper.ListCorpora)
@@ -149795,6 +150155,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/scheduling/proposals", wrapper.CreateMeetingProposal)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/sdr-handoffs/{id}/assignee", wrapper.GetHandoffAssignee)
+	})
+	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/sdr-handoffs/{id}/assignee", wrapper.ReassignHandoff)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/search", wrapper.Search)

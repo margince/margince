@@ -47,10 +47,6 @@ var boundedButWhole = gatekit.Waive(map[string]string{
 		"the route answers only under `history=true` — it takes a cursor and carries a `page` " +
 		"for that arm, and the required set is the CURRENT explanation's, where there is one " +
 		"score and nothing to continue",
-	"getMyLinkedInReach (/me/linkedin-reach)": "ranked by connection count and bounded, and the " +
-		"answer carries `accounts_total` — every account reached rather than the page returned — " +
-		"so a reader is never handed a truncated list as the whole network. The tail is still " +
-		"unreachable; issue 5730",
 	"getMagic (/magic)": "a WINDOW rather than a queue: the read reports from `since`, defaulting " +
 		"to the reader's last brief cutoff, so its bound cuts a period a reader has already been " +
 		"shown rather than a backlog that accumulates. The contract says a cursor arrives with " +

@@ -152,3 +152,64 @@ func TestExtensionNamespacesRefusesAMigrationThatCannotBeReverted(t *testing.T) 
 		t.Errorf("error %q does not name the offending unit", err)
 	}
 }
+
+func TestExtensionRenumbersUseTheSameLedgerReconciliation(t *testing.T) {
+	migration := Migration{Version: "0020", Name: "note", UpSQL: "SELECT 1", DownSQL: "SELECT 2"}
+	old := migration
+	old.Version = "0010"
+	files := unitFS(map[string]string{
+		"0020_note.up.sql":   migration.UpSQL,
+		"0020_note.down.sql": migration.DownSQL,
+		"renumbered.txt":     "ext_foo 0010 0020 note " + Digest(old) + "\n",
+	})
+	namespaces, err := ExtensionNamespaces([]extension.Extension{{Name: "foo", Version: "1.0.0", Migrations: files}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	oldDigest := Digest(old)
+	ledger, err := Reconciled(namespaces[0], map[string]LedgerRow{"0010": {Name: "note", Digest: &oldDigest}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(ledger) != 1 || ledger["0020"].Digest == nil || *ledger["0020"].Digest != Digest(migration) {
+		t.Fatalf("reconciled ledger: %#v", ledger)
+	}
+}
+
+func TestAnExtensionCannotDeclareAnotherNamespacesRenumber(t *testing.T) {
+	for _, declaration := range []string{"ext_other 0010 0020 note digest", "core 0010 0020 note digest", "malformed"} {
+		_, err := ExtensionNamespaces([]extension.Extension{{Name: "foo", Version: "1.0.0", Migrations: unitFS(map[string]string{
+			"0020_note.up.sql": "SELECT 1", "0020_note.down.sql": "SELECT 2", "renumbered.txt": declaration,
+		})}})
+		if err == nil {
+			t.Errorf("accepted declaration %q", declaration)
+		}
+	}
+}
+
+func TestExtensionRenumbersProveTheirSourceBeforeAnyDatabaseExists(t *testing.T) {
+	migration := Migration{Version: "0020", Name: "note", UpSQL: "SELECT 1", DownSQL: "SELECT 2"}
+	old := migration
+	old.Version = "0010"
+	for _, invalid := range []string{"wrong_digest", "missing_target", "old_still_ships", "wrong_name"} {
+		t.Run(invalid, func(t *testing.T) {
+			files := map[string]string{
+				"0020_note.up.sql": migration.UpSQL, "0020_note.down.sql": migration.DownSQL,
+				"renumbered.txt": "ext_foo 0010 0020 note " + Digest(old),
+			}
+			switch invalid {
+			case "wrong_digest":
+				files["renumbered.txt"] = "ext_foo 0010 0020 note wrong"
+			case "missing_target":
+				files["renumbered.txt"] = "ext_foo 0010 0030 note " + Digest(old)
+			case "old_still_ships":
+				files["0010_note.up.sql"], files["0010_note.down.sql"] = migration.UpSQL, migration.DownSQL
+			case "wrong_name":
+				files["renumbered.txt"] = "ext_foo 0010 0020 other " + Digest(old)
+			}
+			if _, err := ExtensionNamespaces([]extension.Extension{{Name: "foo", Version: "1.0.0", Migrations: unitFS(files)}}); err == nil {
+				t.Fatal("invalid renumber source accepted")
+			}
+		})
+	}
+}

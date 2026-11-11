@@ -130,6 +130,11 @@ func fileUnderParticipants(tx pgx.Tx, activityID ids.ActivityID, f participantFi
 	if err != nil {
 		return 0, err
 	}
+	return fileUnderRecords(tx, records, f)
+}
+
+// fileUnderRecords is fileUnderParticipants over records the caller already read.
+func fileUnderRecords(tx pgx.Tx, records []participantRecord, f participantFiling) (int, error) {
 	written := 0
 	for _, record := range records {
 		if written >= f.budget {

@@ -59,6 +59,7 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `POST /intro-requests/{id}/decision` | decideIntroRequest | Answer an ask made of you. | Change records | at once |
 | `POST /intro-requests/{id}/complete` | completeIntroRequest | Record that the introduction happened, or that the name was used. | Change records | at once |
 | `POST /intro-requests/{id}/cancel` | cancelIntroRequest | Withdraw an ask you made. | Change records | at once |
+| `POST /intro-requests/{id}/replace` | replaceIntroRequest | Withdraw your ask and make a fresh ask through another route. | Change records | at once |
 | `GET /contacts/{id}/profile-fields` | getContactProfileFields | The evidence sidecar for this contact's enriched fields — each value with the verbatim snippet it was read from. | Read records | at once |
 | `POST /contacts/{id}/profile-fields/{field}/restore` | restoreContactProfileField | Put back the value a newer statement replaced. | Change records | at once |
 | `GET /contacts/{id}/strength` | getContactStrength | Relationship strength for a contact (deterministic recency × frequency × reciprocity). | Read records | at once |
@@ -213,7 +214,7 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `POST /deals/{id}/lines/estimate` | useDealEstimate | Return a deal with no lines to a typed estimate. | Change records | at once |
 | `POST /deals/{id}/applied-changes/{changeId}/accept` | acceptAppliedDealChange | Accept a recorded automatic deal change. | Change records | at once |
 | `GET /deals/{id}/margince-changes` | listDealMarginceChanges | Every change Margince made to this deal, newest first. | Read records | at once |
-| `GET /deal-corrections/pending` | getPendingMarginceChanges | The changes Margince made to your deals that you have not accepted or undone. | Read records | at once |
+| `GET /deal-corrections/pending` | getPendingMarginceChanges | The changes Margince made to your deals in the last 7 days that you have not undone. | Read records | at once |
 | `GET /deals/{id}/stage-evidence` | listStageEvidence | What has been observed about this deal against its stage's criteria. | Read records | at once |
 | `GET /deals/{id}/win-evidence` | getDealWinEvidence | Whether the deal has the signed agreement a win rests on. | Read records | at once |
 | `GET /acquisition-sources` | listAcquisitionSources | List deal acquisition sources, active and retired, in display order. | Read records | at once |
@@ -380,6 +381,8 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 
 | Call | operationId | What it does | Permission | Runs |
 | --- | --- | --- | --- | --- |
+| `GET /sdr-handoffs/{id}/assignee` | getHandoffAssignee | Read the current receiver and reassignment version of a prospect handoff. | Read records | at once |
+| `PATCH /sdr-handoffs/{id}/assignee` | reassignHandoff | Choose a colleague who can work a waiting prospect handoff. | Change records | at once |
 | `GET /leads` | listLeads | List leads (their OWN list, distinct from contacts; cursor-paginated). | Read records | at once |
 | `POST /leads` | createLead | Create a lead. | Change records | at once |
 | `GET /leads/settings` | getLeadSettings | How this installation handles leads. | Read records | at once |

@@ -16,10 +16,12 @@ import { Panel, PanelBody } from "../../design-system/panel";
 import { formatDate } from "../../format/format";
 import { INTRO_STATUS_LABELS as STATUS_LABEL } from "../../format/introstatus";
 import { useLocale, useT } from "../../i18n";
+import { useCanWrite } from "../../lib/capability";
 import { labelFor } from "../../lib/labelfor";
 import { useViewerId } from "../../lib/session";
 import { useViewerZone } from "../../lib/viewerzone";
 import { IntroDecisionDrawer } from "./introdecision";
+import { IntroReplacement } from "./introreplace";
 import {
   type IntroRequest,
   useCancelIntroRequest,
@@ -62,6 +64,7 @@ export function IntroAsksPanel({
   const viewerUserId = useViewerId();
   const asks = useIntroRequests(contactId);
   const [deciding, setDeciding] = useState<IntroRequest | undefined>();
+  const [replacing, setReplacing] = useState<IntroRequest>();
   // Shared across the whole card, not per-row — each mutation's own
   // `.variables.id` is what AskRow reads to tell whether ITS row is the one
   // a given pending state or failure belongs to, rather than a separate
@@ -109,11 +112,20 @@ export function IntroAsksPanel({
               complete={complete}
               cancel={cancel}
               onAnswer={() => setDeciding(ask)}
+              onReplace={() => setReplacing(ask)}
             />
           ))}
         </ul>
       </PanelBody>
 
+      {replacing ? (
+        <IntroReplacement
+          contactId={contactId}
+          contactName={contactName}
+          request={replacing}
+          onClose={() => setReplacing(undefined)}
+        />
+      ) : null}
       {deciding ? (
         <IntroDecisionDrawer
           contactId={contactId}
@@ -137,12 +149,14 @@ function AskRow({
   complete,
   cancel,
   onAnswer,
+  onReplace,
 }: Readonly<{
   ask: IntroRequest;
   viewerUserId: string | undefined;
   complete: CompleteMutation;
   cancel: CancelMutation;
   onAnswer: () => void;
+  onReplace: () => void;
 }>) {
   const t = useT();
   // Only the colleague being asked may answer, and only while the ask is
@@ -183,14 +197,12 @@ function AskRow({
         </Button>
       ) : null}
       {isRequester && WITHDRAWABLE.has(ask.status) ? (
-        <Button
-          variant="ghost"
-          onClick={() => cancel.mutate({ id: ask.id, version: ask.version })}
-          pending={cancellingThis && cancel.isPending}
-          disabled={completingThis && complete.isPending}
-        >
-          {t("contact.intro.withdrawAction")}
-        </Button>
+        <RequesterActions
+          onReplace={onReplace}
+          onWithdraw={() => cancel.mutate({ id: ask.id, version: ask.version })}
+          cancelling={cancellingThis && cancel.isPending}
+          completing={completingThis && complete.isPending}
+        />
       ) : null}
       {completingThis && complete.isError ? (
         <p role="alert">
@@ -267,3 +279,40 @@ function outcomeFor(
 // Every status the contract admits has words here, so a state the server can
 // send cannot reach a reader as a raw enum. A name-drop and an introduction
 // read differently on purpose: they are different events.
+
+function RequesterActions({
+  onReplace,
+  onWithdraw,
+  cancelling,
+  completing,
+}: Readonly<{
+  onReplace: () => void;
+  onWithdraw: () => void;
+  cancelling: boolean;
+  completing: boolean;
+}>) {
+  const t = useT();
+  const canCreate = useCanWrite("introduction", "create");
+  const canUpdate = useCanWrite("introduction", "update");
+  return (
+    <>
+      {canCreate && canUpdate ? (
+        <Button
+          variant="ghost"
+          onClick={onReplace}
+          disabled={cancelling || completing}
+        >
+          {t("contact.intro.replaceAction")}
+        </Button>
+      ) : null}
+      <Button
+        variant="ghost"
+        onClick={onWithdraw}
+        pending={cancelling}
+        disabled={completing}
+      >
+        {t("contact.intro.withdrawAction")}
+      </Button>
+    </>
+  );
+}

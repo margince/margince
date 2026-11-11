@@ -122,6 +122,7 @@ type Review struct {
 	InitiatedBy ids.UUID
 	Refusals    []RefusedRecipient
 	ReasonCode  string
+	Correction  *WordingCorrectionContext
 }
 
 // OpenReviewTx records one refusal, inside the transaction that refused.
@@ -265,7 +266,17 @@ func (s *Store) ReviewForReader(ctx context.Context, id ids.UUID) (Review, error
 			return err
 		}
 		out.State = openStateFor(out.State, out.Refusals)
-		return s.nameReviewEntities(ctx, tx, out.Refusals)
+		if err := s.nameReviewEntities(ctx, tx, out.Refusals); err != nil {
+			return err
+		}
+		correction, available, err := wordingCorrectionForReviewTx(ctx, tx, out.ID)
+		if err != nil {
+			return err
+		}
+		if available {
+			out.Correction = &correction
+		}
+		return nil
 	})
 	return out, err
 }

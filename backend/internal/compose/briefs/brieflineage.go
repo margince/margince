@@ -77,12 +77,16 @@ func briefLineage(
 	// history, but the act is what the rep last said about it and the card must
 	// not reopen an argument they already closed.
 	//
+	// A snooze that no longer holds is not a mark. The rep has the item back,
+	// and the dismissal before it is still the last thing they said.
+	//
 	// `bi.state <> 'new'` is kept deliberately: it is what idx_brief_item_deal
 	// is partial on, so dropping it for readability would fall off the index
 	// this query is shaped around.
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	orderPos, userPos, nowPos := arg(order), arg(userID), arg(now.UTC())
+	orderPos, userPos := arg(order), arg(userID)
+	asOf := fmt.Sprintf("$%d::timestamptz", arg(now.UTC()))
 	// The line names the activity's moment, so only one the rep may read can
 	// date it — the candidate query admits a returning deal on the same terms.
 	readable, err := briefActivityClause(ctx, "a", arg)
@@ -107,6 +111,7 @@ func briefLineage(
 			 WHERE bi.deal_id = ANY($%d)
 			   AND br.user_id = $%d
 			   AND bi.state <> 'new'
+			   AND (bi.state <> 'snoozed' OR %s)
 			 ORDER BY bi.deal_id, bi.state_at DESC
 		)
 		SELECT m.deal_id, m.state_at, MIN(a.occurred_at)
@@ -123,7 +128,7 @@ func briefLineage(
 		   -- would put a deal back with no line explaining it.
 		   AND %s
 		   AND %s
-		 GROUP BY m.deal_id, m.state_at`, orderPos, userPos, dealScope, occurredday.HappenedSQL("a", fmt.Sprintf("$%d", nowPos)), readable),
+		 GROUP BY m.deal_id, m.state_at`, orderPos, userPos, briefSnoozedSQL(asOf), dealScope, occurredday.HappenedSQL("a", asOf), readable),
 		args...)
 	if err != nil {
 		return nil, err

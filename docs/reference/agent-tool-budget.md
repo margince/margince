@@ -23,7 +23,7 @@ The heaviest menu is `overnight_at_risk_sweep`: 6576 of the window's 32768 token
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | `morning_brief` | 5 | 5 of 48 | 2131 | 1617 | 4340 | 13% | 18870 | 0 | 5 |
 | `overnight_at_risk_sweep` | 7 | 7 of 48 | 3436 | 2548 | 6576 | 20% | 16634 | 4 | 6 |
-| _whole served catalog's listing, for scale; no run is offered it_ | 48 |  | 39895 |  |  | 121% |  |  |  |
+| _whole served catalog's listing, for scale; no run is offered it_ | 48 |  | 39940 |  |  | 121% |  |  |  |
 
 ### `morning_brief`
 
@@ -57,9 +57,9 @@ gone quiet, or missing next steps. First call whats_slipping_this_week: in this 
 the at-risk deals your member owns. Each other member's run sweeps that member's deals, and a deal
 whose owner has not granted this sweep is swept by nobody, so do not read or log on a deal outside
 that list. A deal the retrieved context mentions is one example, not the sweep, so do not read or
-log on it before that list. Then read each listed deal and log ONE note activity per at-risk deal
-summarizing the risk and the evidence (cite the records you read). Do not advance stages, send
-anything, or archive anything.
+log on it before that list. Then read each listed deal and log ONE note activity per at-risk deal.
+Its subject names the risk; its body states the finding and the evidence (cite the records you
+read). A note without a body is refused. Do not advance stages, send anything, or archive anything.
 ```
 
 Attaches 7 tools and pays 6576 tokens on every step (3436 listing, 2548 step schema), leaving

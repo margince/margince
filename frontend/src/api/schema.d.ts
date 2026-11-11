@@ -1873,6 +1873,58 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/sdr-handoffs/{id}/assignee": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /** Read the current receiver and reassignment version of a prospect handoff. */
+        get: operations["getHandoffAssignee"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Choose a colleague who can work a waiting prospect handoff.
+         * @description Requires write access to the prospect and an active colleague with the same
+         *     access. Accepted handoffs retain their original decision and attribution.
+         */
+        patch: operations["reassignHandoff"];
+        trace?: never;
+    };
+    "/intro-requests/{id}/replace": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Withdraw your ask and make a fresh ask through another route.
+         * @description Only the original requester may replace an open ask. The replacement concerns the
+         *     same contact and starts with no decision or approval. Both changes commit together;
+         *     an invalid replacement leaves the original ask open. The old ask remains private
+         *     to its original parties. Choosing another introducer does not transfer a personal
+         *     relationship or permission to name-drop.
+         */
+        post: operations["replaceIntroRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/contacts/{id}/profile-fields": {
         parameters: {
             query?: never;
@@ -5621,10 +5673,13 @@ export interface paths {
         put?: never;
         /**
          * Accept a recorded automatic deal change.
+         * @deprecated
          * @description Records the human's acceptance of a change Margince made to a deal (its
          *     audit id). It keeps the applied values;
          *     acceptance is an audited review decision, not another application of the change.
          *     Requires the displayed deal version. A reversed or superseded change is refused.
+         *     An accepted change leaves the pending list and keeps its Undo. Margince itself no
+         *     longer asks for this; undo a change instead of accepting the ones you keep.
          */
         post: operations["acceptAppliedDealChange"];
         delete?: never;
@@ -5668,9 +5723,11 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * The changes Margince made to your deals that you have not accepted or undone.
-         * @description One bundle per deal: every open change Margince made to one of the caller's own deals,
-         *     newest first inside the bundle. The counts are deals, counted in SQL over every open
+         * The changes Margince made to your deals in the last 7 days that you have not undone.
+         * @description One bundle per deal: every open change Margince made to one of the caller's own deals
+         *     in the last 7 days, newest first inside the bundle. An older change stays in the
+         *     deal's own list with its Undo. A change accepted through the deprecated accept
+         *     route is left out. The counts are deals, counted in SQL over every open
          *     change, so a deal changed twice counts once and a cut list never shrinks a count.
          *     Bundles are ordered by the deal's value in the base currency, the largest first. At
          *     most 500 bundles; `truncated` says when more exist.
@@ -6932,8 +6989,8 @@ export interface paths {
         head?: never;
         /**
          * Move a scheduled message to a different moment.
-         * @description Time only. The content is what the approval bound to, so changing it is
-         *     cancel-and-recompose, which re-enters every gate from the top (ADR-0104 §5).
+         * @description Time only. An attested spelling or punctuation correction uses the communication review's
+         *     wording-correction route. Other content changes need cancel-and-recompose and fresh checks.
          */
         patch: operations["rescheduleScheduledSend"];
         trace?: never;
@@ -13127,7 +13184,8 @@ export interface paths {
          *     `as_of` stamps this request's RepeatableRead snapshot. It does not span separate
          *     `/digest`, `/brief` or `/magic` requests, or a multi-page Worklist walk.
          *     Frozen walk membership and freshness metadata do not share a database snapshot
-         *     across pages. Brief opening and snooze resurfacing use their own write transaction.
+         *     across pages. The read writes nothing: a snoozed brief item whose time has come is
+         *     judged at `as_of`, and only `GET /v1/brief` records the brief as opened.
          *     A lane the caller may not read is OMITTED and named in `lanes_omitted` rather
          *     than returned empty — "you may not see this" and "there is none" are different
          *     answers, and a queue that conflated them would tell a rep their day is clear.
@@ -14197,6 +14255,47 @@ export interface paths {
         get: operations["getLicenseEntitlement"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/installation/license/check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Re-read the installation's license token now (admin/ops).
+         * @description Runs the api's license re-check at once, instead of waiting for the daily one.
+         *     It re-reads the token where the deployment declares it and checks it OFFLINE
+         *     against the bundled validation module, the same path the daily re-check takes.
+         *     An operator who has swapped the token on the server presses this to see the new
+         *     license without waiting up to a day. A token file is read again; a token from the
+         *     environment (`MARGINCE_LICENSE`) is fixed when the process starts and changes
+         *     only with a restart.
+         *
+         *     It writes nothing and takes no token. Entering or replacing the token stays the
+         *     operator's job on the server. Only the api process that serves
+         *     this request re-checks; the worker and any other api replica keep their own
+         *     daily re-check.
+         *
+         *     The answer is the same body as `GET /installation/license`, read after the
+         *     re-check. A re-check that reached a verdict answers `200`, a refused license
+         *     included: `state` then says `rejected`. A token that could not be read, or a
+         *     module that could not run, is no verdict. The posture the process last resolved
+         *     stands, the fault goes to the server log, and the answer is `503`.
+         *
+         *     Gated on `installation_settings` update (admin and ops), the grant that guards
+         *     installation settings, and on `license` read, which the entitlement in the
+         *     answer needs. Human-only, like the entitlement read.
+         */
+        post: operations["checkLicenseNow"];
         delete?: never;
         options?: never;
         head?: never;
@@ -16447,6 +16546,31 @@ export interface paths {
          *     goes. The next message to the same contact needs its own.
          */
         post: operations["directCommunicationSend"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/communication-reviews/{id}/correct-wording": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Keep the original approval for a spelling or punctuation correction.
+         * @description The original human approver confirms that meaning is unchanged. The same instruction
+         *     remains attached to the held message. Recipients, sender, purpose, attachments and other
+         *     scope fields cannot be edited here. A change in meaning needs a new message approval.
+         *     The message remains held; its normal send path checks current permission and stops again.
+         */
+        post: operations["correctCommunicationWording"];
         delete?: never;
         options?: never;
         head?: never;
@@ -20750,7 +20874,11 @@ export interface paths {
         };
         /**
          * A team's week, frozen — what each member's week came to, and the one thing to raise.
-         * @description The team half of the weekly. `/worklist/team` answers what the team is carrying NOW,
+         * @deprecated
+         * @description Deprecated: no screen reads the team week. The operation stays callable through
+         *     the notice window in the API compatibility policy.
+         *
+         *     The team half of the weekly. `/worklist/team` answers what the team is carrying NOW,
          *     live and recomputed on every open; this answers what last week WAS, written once when
          *     the week closed, so two weeks can be compared and neither moves under the comparison.
          *
@@ -22713,8 +22841,10 @@ export interface paths {
          *     exist to give: for each company on file, how many of your connections work
          *     there, and how many of those are already contacts.
          *
-         *     Ranked by connection count, then by name, so two reads of an unchanged network
-         *     return the same order.
+         *     Ranked by connection count, then by name, then by company id, so two reads of an
+         *     unchanged network return the same order. The ranking pages: `next_cursor`
+         *     resumes after the last account returned, and a cursor that names no position in
+         *     this ranking is refused with 422.
          *
          *     Only companies the caller can READ appear, under the ordinary company
          *     row scope. A connection whose employer resolved to no account is not reported
@@ -26266,8 +26396,10 @@ export interface components {
              */
             state: "valid" | "absent" | "rejected";
             /**
-             * @description Full seats the license admits. ABSENT when nothing caps them — no license, or a
-             *     grant carrying no seat count — which is not a grant of zero.
+             * @description Full seats a new seat is held to. A valid license answers its own grant; a refused
+             *     one keeps the last valid grant this process resolved. ABSENT when nothing caps them
+             *     — no license, no valid one before a refusal, or a grant carrying no seat count —
+             *     which is not a grant of zero.
              */
             seats_granted?: number;
             /**
@@ -35350,6 +35482,28 @@ export interface components {
             source_activity_id?: string;
             version: number;
         };
+        HandoffAssignee: {
+            /** Format: uuid */
+            id: string;
+            /** Format: int64 */
+            version: number;
+            /** @enum {string} */
+            status: "submitted" | "accepted" | "rejected" | "recycled";
+            /** Format: uuid */
+            assigned_to?: string;
+            can_reassign: boolean;
+        };
+        HandoffAssigneeInput: {
+            /** Format: uuid */
+            assigned_to: string;
+            /** Format: int64 */
+            version: number;
+        };
+        IntroRequestReplaceInput: {
+            version: number;
+            reason: string;
+            request: components["schemas"]["IntroRequestInput"];
+        };
         IntroRequestCancelInput: {
             reason?: string;
             version: number;
@@ -36915,6 +37069,11 @@ export interface components {
         };
         LinkedInReachResponse: {
             accounts: components["schemas"]["LinkedInReachAccount"][];
+            /**
+             * @description Send this back as `cursor` to continue past the last account of this page.
+             *     Absent on the last page, so a client walking until it disappears stops.
+             */
+            next_cursor?: string;
             /** @description Every account reached, not just the page returned — a truncated list read as the whole network would understate reach. */
             accounts_total: number;
             /**
@@ -38267,7 +38426,7 @@ export interface components {
             expected_arr_minor?: number | null;
             /**
              * Format: uuid
-             * @description The company this deal is for. Changing it is refused 422 (`deal_contracts_cross_company`) while contracts filed against the deal name another company, because a contract on a deal is visible through that deal alone. Detach those contracts (`deal_id: null` on the contract) or file each against a deal of its own company first; an edit never changes a contract's company, only a company merge does. Null clears the company and is not refused.
+             * @description The company this deal is for. Changing it is refused 422 (`deal_contracts_cross_company`) while contracts filed against the deal name another company, because a contract on a deal is visible through that deal alone. Archived contracts also count. Ask an administrator to correct the contract links before changing the company. An edit never changes a contract's company; only a company merge does. Null clears the company and is not refused.
              */
             company_id?: string | null;
             /**
@@ -39131,6 +39290,10 @@ export interface components {
             webhook: number;
             /** @description Live lists owned by the member. */
             list: number;
+            /** @description Waiting prospect handoffs assigned to the member. */
+            sdr_handoff: number;
+            /** @description Current user responsibilities on records. */
+            record_assignment: number;
         };
         UserHandover: {
             owned: components["schemas"]["HandoverCounts"];
@@ -40301,9 +40464,12 @@ export interface components {
             /** @description Whether Write email on this row opens with a recipient filled in: true exactly when `GET /activities/{id}/reply-recipient` answers a non-empty `address` for a call, meeting, note or task. Both are computed by one rule, the one `email_target` states. Always false for an email or a message, which are answered with Reply instead, for an archived row, for a task the product filed itself (`automatic_kind` product), and for a row whose content is withheld from the caller. False for a company target too, which has no single address: the composer asks which of the company's contacts the mail is for. */
             offers_email: boolean;
             email_target?: components["schemas"]["ActivityEmailTarget"];
+            /** @description Where the row came from. `manual` is anything typed, by a member or by an assistant working for one, so it never says who typed it: `captured_by` and `recorded_by_agent` do. */
             source: string;
             /** @description Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied. */
             readonly captured_by: string;
+            /** @description True when an assistant or an agent run wrote this activity: `captured_by` names an agent, or a scheduled agent run filed it. A reader labels such a row as the assistant's whatever `source` says. */
+            readonly recorded_by_agent?: boolean;
             /** @description Which import wrote this record, so a screen can say "Imported from <name>" instead of "Typed by you". Null when no import wrote it. The name is the source the import was run for (`bundle`); an empty string is an import that was given none. Derived from `source_system`, whose reserved `mirror:` prefix is never shown. */
             readonly imported_from?: string | null;
             /**
@@ -51344,6 +51510,7 @@ export interface components {
             reason_code: string;
             /** @description What was refused, per recipient. Empty once an erasure has cleared the subject from it. */
             refusals: components["schemas"]["RefusedRecipient"][];
+            wording_correction?: components["schemas"]["WordingCorrectionContext"];
             /**
              * @description What somebody must be shown before they direct this send, and the version their
              *     acknowledgement will name. Served rather than composed by the client: an instruction's
@@ -51369,6 +51536,37 @@ export interface components {
              *     server's words while showing them its own.
              */
             text: string;
+        };
+        /**
+         * @description The current approved wording, visible only to its original human approver while the
+         *     decision is unspent. The original reason remains on the instruction.
+         */
+        WordingCorrectionContext: {
+            /** Format: uuid */
+            instruction_id: string;
+            /** Format: int64 */
+            version: number;
+            subject: string;
+            body: string;
+            html_body: string;
+            wording_digest: string;
+            reason_code: string;
+            explanation: string;
+            warning_version: string;
+        };
+        CorrectCommunicationWordingRequest: {
+            /** Format: int64 */
+            version: number;
+            expected_wording: string;
+            subject: string;
+            body: string;
+            html_body: string;
+            /** @description The original approver attests that only spelling or punctuation changed and meaning is unchanged. */
+            meaning_unchanged: boolean;
+        };
+        WordingCorrectionResult: {
+            /** Format: int64 */
+            version: number;
         };
         /**
          * @description A designated human's decision that one refused message goes out anyway. Every field is frozen
@@ -56334,6 +56532,11 @@ export interface components {
              *     rep who can only see their own work is never offered a switch that would 403.
              */
             scope_options: ("mine" | "unassigned" | "team" | "all")[];
+            /**
+             * @deprecated
+             * @description Deprecated: no screen opens the team week, and the operation it describes,
+             *     `GET /weekly-reviews/team`, is deprecated too. `GET /me` carries the same answer.
+             */
             team_week?: components["schemas"]["TeamWeekReach"];
             /**
              * @description The narrowing this read applied. The same vocabulary the query parameter takes.
@@ -56629,11 +56832,19 @@ export interface components {
         AppliedDealChangeReview: {
             /** @enum {string} */
             kind: "close_date" | "close_lost" | "amount" | "probability" | "stage" | "deal_open" | "deal_revive";
+            /**
+             * @deprecated
+             * @description Whether the change was accepted through the deprecated accept route.
+             */
             accepted: boolean;
             reversed: boolean;
             /** Format: int64 */
             version: number;
             can_undo: boolean;
+            /**
+             * @deprecated
+             * @description Whether the deprecated accept route would take this change.
+             */
             can_accept: boolean;
             /** @description Whether this reader may write this deal. */
             writable: boolean;
@@ -61801,6 +62012,97 @@ export interface operations {
         responses: {
             /** @description The ask is withdrawn. */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IntroRequest"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    getHandoffAssignee: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Current assignment, scoped through the prospect. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HandoffAssignee"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    reassignHandoff: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HandoffAssigneeInput"];
+            };
+        };
+        responses: {
+            /** @description Current assignment after reassignment. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HandoffAssignee"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    replaceIntroRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IntroRequestReplaceInput"];
+            };
+        };
+        responses: {
+            /** @description The fresh ask; the original ask is withdrawn. */
+            201: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -81855,6 +82157,37 @@ export interface operations {
             403: components["responses"]["Forbidden"];
         };
     };
+    checkLicenseNow: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The entitlement as the re-check resolved it. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LicenseEntitlement"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            /** @description The token could not be re-read, or the module could not run; the last posture stands. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     getSeatUsage: {
         parameters: {
             query?: never;
@@ -84488,6 +84821,45 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Activity"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    correctCommunicationWording: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CorrectCommunicationWordingRequest"];
+            };
+        };
+        responses: {
+            /** @description Wording saved under the same approval. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WordingCorrectionResult"];
+                };
+            };
+            /** @description The correction confirmation or input is invalid. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
                 };
             };
             403: components["responses"]["Forbidden"];
@@ -93981,6 +94353,14 @@ export interface operations {
             query?: {
                 /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
+                /**
+                 * @description Opaque position from a prior answer's `next_cursor`, which resumes the ranking after
+                 *     the last account returned. A cursor that names no position in this ranking, such
+                 *     as one from another route, is refused with 422.
+                 *     The ranking is by live connection counts, so an import between two pages can move
+                 *     an account across the cut: re-read from the top to see the network as it is now.
+                 */
+                cursor?: string;
             };
             header?: never;
             path?: never;

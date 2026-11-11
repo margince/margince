@@ -242,7 +242,7 @@ func TestProfileFallsBackToUPN(t *testing.T) {
 
 func TestDeltaInitWalksPagesFiltersTombstonesAndReturnsDeltaLink(t *testing.T) {
 	_, api := newTestClients(t)
-	ids, delta, err := api.DeltaInit(context.Background(), "access-2", folderInbox, time.Date(2026, 7, 11, 0, 0, 0, 0, time.UTC))
+	ids, delta, err := collectAnchor(context.Background(), api, "access-2", time.Date(2026, 7, 11, 0, 0, 0, 0, time.UTC))
 	if err != nil {
 		t.Fatalf("DeltaInit: %v", err)
 	}
@@ -257,7 +257,7 @@ func TestDeltaInitWalksPagesFiltersTombstonesAndReturnsDeltaLink(t *testing.T) {
 func TestDeltaResumeCollectsAddedAndReportsRemoved(t *testing.T) {
 	srv := msStub(t)
 	api := NewAPI(srv.Client(), srv.URL)
-	ids, removed, delta, err := api.Delta(context.Background(), "access-2", srv.URL+"/me/mailFolders/inbox/messages/delta?%24deltatoken=d1")
+	ids, removed, delta, err := collectDelta(context.Background(), api, "access-2", srv.URL+"/me/mailFolders/inbox/messages/delta?%24deltatoken=d1")
 	if err != nil {
 		t.Fatalf("Delta: %v", err)
 	}
@@ -275,7 +275,7 @@ func TestDeltaResumeCollectsAddedAndReportsRemoved(t *testing.T) {
 func TestDeltaGoneMapsCursorSentinel(t *testing.T) {
 	srv := msStub(t)
 	api := NewAPI(srv.Client(), srv.URL)
-	if _, _, _, err := api.Delta(context.Background(), "access-2", srv.URL+"/me/mailFolders/inbox/messages/delta?%24deltatoken=gone"); !errors.Is(err, ErrDeltaGone) {
+	if _, _, _, err := collectDelta(context.Background(), api, "access-2", srv.URL+"/me/mailFolders/inbox/messages/delta?%24deltatoken=gone"); !errors.Is(err, ErrDeltaGone) {
 		t.Fatalf("want ErrDeltaGone for a 410 delta, got %v", err)
 	}
 }
@@ -283,7 +283,7 @@ func TestDeltaGoneMapsCursorSentinel(t *testing.T) {
 func TestDeltaRefusesOffOriginLink(t *testing.T) {
 	srv := msStub(t)
 	api := NewAPI(srv.Client(), srv.URL)
-	if _, _, _, err := api.Delta(context.Background(), "access-2", "https://attacker.example/steal-token"); err == nil {
+	if _, _, _, err := collectDelta(context.Background(), api, "access-2", "https://attacker.example/steal-token"); err == nil {
 		t.Fatal("Delta must refuse a deltaLink that points off the Graph API")
 	}
 }
@@ -593,8 +593,7 @@ func datedAnchorStub(t *testing.T, value []map[string]any, held *int) (*httptest
 
 func TestAnAnchorHoldingFewerThanTheFolderReportsIsRefused(t *testing.T) {
 	srv, _ := anchorStub(t, []string{"m1"}, 5)
-	ids, delta, err := NewAPI(srv.Client(), srv.URL).
-		DeltaInit(context.Background(), "at", folderInbox, anchorAfter)
+	ids, delta, err := collectAnchor(context.Background(), NewAPI(srv.Client(), srv.URL), "at", anchorAfter)
 	if !errors.Is(err, ErrUnreachable) {
 		t.Fatalf("err = %v, want ErrUnreachable — a round that closed short of the folder's own tally", err)
 	}
@@ -610,8 +609,7 @@ func TestAnAnchorHoldingMoreThanTheFolderReportsStands(t *testing.T) {
 	// A message arriving mid-walk is inside the walk and outside the closed
 	// window the tally covers. That gap must not read as a short round.
 	srv, _ := anchorStub(t, []string{"m1", "m2", "m3"}, 2)
-	ids, delta, err := NewAPI(srv.Client(), srv.URL).
-		DeltaInit(context.Background(), "at", folderInbox, anchorAfter)
+	ids, delta, err := collectAnchor(context.Background(), NewAPI(srv.Client(), srv.URL), "at", anchorAfter)
 	if err != nil {
 		t.Fatalf("DeltaInit: %v", err)
 	}
@@ -624,8 +622,7 @@ func TestTheAnchorsTallyCoversTheWindowTheWalkOpenedIn(t *testing.T) {
 	after := anchorAfter
 	opened := time.Now().UTC()
 	srv, filter := anchorStub(t, []string{"m1"}, 1)
-	if _, _, err := NewAPI(srv.Client(), srv.URL).
-		DeltaInit(context.Background(), "at", folderInbox, after); err != nil {
+	if _, _, err := collectAnchor(context.Background(), NewAPI(srv.Client(), srv.URL), "at", after); err != nil {
 		t.Fatalf("DeltaInit: %v", err)
 	}
 	closed := time.Now().UTC()
@@ -653,8 +650,7 @@ func TestTheAnchorsTallyCoversTheWindowTheWalkOpenedIn(t *testing.T) {
 // of none. The reconciliation would pass every round while measuring nothing.
 func TestATallyWithNoCountIsRefusedRatherThanReadAsZero(t *testing.T) {
 	srv, _ := datedAnchorStub(t, entriesFor([]string{"m1"}), nil)
-	_, _, err := NewAPI(srv.Client(), srv.URL).
-		DeltaInit(context.Background(), "at", folderInbox, anchorAfter)
+	_, _, err := collectAnchor(context.Background(), NewAPI(srv.Client(), srv.URL), "at", anchorAfter)
 	if !errors.Is(err, ErrUnreachable) {
 		t.Fatalf("err = %v, want ErrUnreachable — a tally read as zero passes every round while "+
 			"measuring nothing, which is this guard wearing the costume of a green check", err)
@@ -675,7 +671,7 @@ func TestAnEntryOlderThanTheWindowDoesNotStandInForOneInsideIt(t *testing.T) {
 		{"id": "changed-old-message", "receivedDateTime": after.Add(-30 * 24 * time.Hour).Format(time.RFC3339)},
 	}, &held)
 
-	ids, _, err := NewAPI(srv.Client(), srv.URL).DeltaInit(context.Background(), "at", folderInbox, after)
+	ids, _, err := collectAnchor(context.Background(), NewAPI(srv.Client(), srv.URL), "at", after)
 	if !errors.Is(err, ErrUnreachable) {
 		t.Fatalf("err = %v, want ErrUnreachable: the round holds ONE message from the window and the "+
 			"folder reports two, and an entry from a month earlier is not the missing one", err)
@@ -695,7 +691,7 @@ func TestAnEntryOutsideTheWindowIsStillReturnedToBeFetched(t *testing.T) {
 		{"id": "changed-old-message", "receivedDateTime": after.Add(-30 * 24 * time.Hour).Format(time.RFC3339)},
 	}, &held)
 
-	ids, _, err := NewAPI(srv.Client(), srv.URL).DeltaInit(context.Background(), "at", folderInbox, after)
+	ids, _, err := collectAnchor(context.Background(), NewAPI(srv.Client(), srv.URL), "at", after)
 	if err != nil {
 		t.Fatalf("DeltaInit: %v", err)
 	}
@@ -719,8 +715,7 @@ func TestAnOffOriginDeltaLinkIsRefusedRatherThanStored(t *testing.T) {
 	srv := httptest.NewServer(mux)
 	t.Cleanup(srv.Close)
 
-	_, delta, err := NewAPI(srv.Client(), srv.URL).
-		DeltaInit(context.Background(), "at", folderInbox, anchorAfter)
+	_, delta, err := collectAnchor(context.Background(), NewAPI(srv.Client(), srv.URL), "at", anchorAfter)
 	if err == nil {
 		t.Fatalf("DeltaInit accepted an off-origin deltaLink and would have stored %q as the cursor", delta)
 	}
@@ -757,7 +752,7 @@ func TestAnUndatedEntryDoesNotStandInForOneInsideTheWindow(t *testing.T) {
 		{"id": "no-instant"},
 	}, &held)
 
-	_, _, err := NewAPI(srv.Client(), srv.URL).DeltaInit(context.Background(), "at", folderInbox, anchorAfter)
+	_, _, err := collectAnchor(context.Background(), NewAPI(srv.Client(), srv.URL), "at", anchorAfter)
 	if !errors.Is(err, ErrUnreachable) {
 		t.Fatalf("err = %v, want ErrUnreachable: one entry belongs to the window, one says nothing, "+
 			"and the folder reports two", err)
@@ -784,8 +779,7 @@ func TestTheAnchorAsksForTheFieldItReconcilesOn(t *testing.T) {
 	srv = httptest.NewServer(mux)
 	t.Cleanup(srv.Close)
 
-	if _, _, err := NewAPI(srv.Client(), srv.URL).
-		DeltaInit(context.Background(), "at", folderInbox, anchorAfter); err != nil {
+	if _, _, err := collectAnchor(context.Background(), NewAPI(srv.Client(), srv.URL), "at", anchorAfter); err != nil {
 		t.Fatalf("DeltaInit: %v", err)
 	}
 	if !strings.Contains(selected, "receivedDateTime") {
@@ -814,7 +808,7 @@ func TestASubsecondLowerBoundDoesNotRefuseACompleteAnchor(t *testing.T) {
 		{"id": "arrived-in-the-truncated-remainder", "receivedDateTime": "2026-07-11T00:00:00Z"},
 	}, &held)
 
-	ids, _, err := NewAPI(srv.Client(), srv.URL).DeltaInit(context.Background(), "at", folderInbox, after)
+	ids, _, err := collectAnchor(context.Background(), NewAPI(srv.Client(), srv.URL), "at", after)
 	if err != nil {
 		t.Fatalf("DeltaInit: %v — Microsoft counted this message and the reconciliation did not, "+
 			"which is a rounding difference reported as a short round", err)
