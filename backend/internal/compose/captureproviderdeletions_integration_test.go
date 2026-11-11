@@ -73,7 +73,14 @@ func TestProviderSyncCapturesAndRemovesTheRealStoredEmailKey(t *testing.T) {
 					gmailDeletionResponse(t, w, r, mailbox, raw)
 					return
 				}
-				graphDeletionResponse(t, w, r, server.URL, raw, deleting.Load(), tc.outlookCase != "")
+				mail := outlookMailPresent
+				if deleting.Load() {
+					mail = outlookMailRemoved
+					if tc.outlookCase != "" {
+						mail = outlookMailHardDeleted
+					}
+				}
+				graphDeletionResponse(t, w, r, server.URL, raw, mail)
 			}
 			server = httptest.NewServer(http.HandlerFunc(handler))
 			defer server.Close()
@@ -152,7 +159,16 @@ func gmailDeletionResponse(t *testing.T, w http.ResponseWriter, r *http.Request,
 	}
 }
 
-func graphDeletionResponse(t *testing.T, w http.ResponseWriter, r *http.Request, base, raw string, deleting, hardDelete bool) {
+// outlookMail is what the fake Outlook mailbox shows for the one test message.
+type outlookMail int
+
+const (
+	outlookMailPresent outlookMail = iota
+	outlookMailRemoved
+	outlookMailHardDeleted
+)
+
+func graphDeletionResponse(t *testing.T, w http.ResponseWriter, r *http.Request, base, raw string, mail outlookMail) {
 	if r.Header.Get("Prefer") != `IdType="ImmutableId"` {
 		t.Error("Outlook request omitted immutable ids")
 	}
@@ -161,13 +177,13 @@ func graphDeletionResponse(t *testing.T, w http.ResponseWriter, r *http.Request,
 		mailboxJSON(t, w, map[string]any{"value": []string{}, "@odata.deltaLink": base + r.URL.Path + "?next=1"})
 	case "/me/mailFolders/inbox/messages/delta":
 		value := []map[string]any{{"id": "provider-opaque-id", "receivedDateTime": "2026-06-02T00:00:00Z"}}
-		if deleting {
+		if mail != outlookMailPresent {
 			value = []map[string]any{{"id": "provider-opaque-id", "@removed": map[string]string{"reason": "deleted"}}}
 		}
 		mailboxJSON(t, w, map[string]any{"value": value, "@odata.deltaLink": base + r.URL.Path + "?next=1"})
 	case "/me/mailFolders/recoverableitemsdeletions/messages/delta":
 		value := []map[string]any{}
-		if deleting && hardDelete && r.URL.Query().Get("next") != "" {
+		if mail == outlookMailHardDeleted && r.URL.Query().Get("next") != "" {
 			value = append(value, map[string]any{"id": "provider-opaque-id"})
 		}
 		mailboxJSON(t, w, map[string]any{"value": value, "@odata.deltaLink": base + r.URL.Path + "?next=1"})

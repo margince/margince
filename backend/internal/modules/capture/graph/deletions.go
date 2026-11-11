@@ -3,7 +3,7 @@
 
 package graph
 
-// The proof an Outlook message was deleted on purpose. A folder tombstone or
+// The proof an Outlook message was deleted by its owner. A folder tombstone or
 // a 404 cannot be that proof: a move to the Online Archive changes even the
 // immutable id. Arrival in Recoverable Items Deletions can, and the purge
 // waits deletionHold so a restore in that window keeps the message.
