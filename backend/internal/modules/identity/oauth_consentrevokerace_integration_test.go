@@ -86,13 +86,10 @@ func TestAConsentMintingWhileARevocationHoldsTheMemberIsRefused(t *testing.T) {
 	consenter := e.member
 	consenter.SessionID = e.seedLiveSession(t, e.member.UserID)
 
+	// The real cascade, held open: it takes the member's app_user row FOR UPDATE
+	// itself, so the mint queued behind it serializes against production locking,
+	// not a lock the test reproduced.
 	revoke := e.holdOpen(t, func(ctx context.Context, tx pgx.Tx) error {
-		// The exclusive app_user lock every real caller takes before the cascade
-		// (a password change's own UPDATE, memberedit's FOR UPDATE), reproduced so
-		// the mint queued behind it serializes against the real revoke below.
-		if _, err := tx.Exec(ctx, `SELECT 1 FROM app_user WHERE id = $1 FOR UPDATE`, e.member.UserID); err != nil {
-			return err
-		}
 		return endCredentialAuthority(selfActorCtx(ctx, e.member.UserID), tx, e.member.UserID, passwordChangeRevokeReason)
 	})
 
@@ -139,9 +136,6 @@ func TestACodeMintedBeforeTheRevocationIsEndedByIt(t *testing.T) {
 	}
 	revokeCtx := e.wsCtx(e.admin)
 	if err := e.svc.db.Tx(revokeCtx, func(tx pgx.Tx) error {
-		if _, err := tx.Exec(revokeCtx, `SELECT 1 FROM app_user WHERE id = $1 FOR UPDATE`, e.member.UserID); err != nil {
-			return err
-		}
 		return endCredentialAuthority(selfActorCtx(revokeCtx, e.member.UserID), tx, e.member.UserID, passwordChangeRevokeReason)
 	}); err != nil {
 		t.Fatalf("the revocation after the mint: %v", err)

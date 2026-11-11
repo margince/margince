@@ -361,6 +361,17 @@ func (s *Service) revokeBorrowedAuthority(ctx context.Context, tx pgx.Tx, userID
 // principal for a caller with no live Identity): the audit rows this writes
 // and the passport.revoked event both name who ended the authority.
 func endCredentialAuthority(ctx context.Context, tx pgx.Tx, userID ids.UserID, reason string) error {
+	// The member's row is taken first, so the whole cascade serializes against a
+	// consent minting an authorization code in another transaction: that mint
+	// takes the same row FOR SHARE before it writes (reconfirmConsentAuthority,
+	// oauth_consentcommit.go), so a code racing this revoke is either caught by
+	// the sweep below or held until it commits and then caught. Every caller
+	// already holds this row exclusively; re-taking it here is a no-op in their
+	// transaction, and holding the guarantee in the cascade keeps it from resting
+	// on each caller remembering to lock first.
+	if _, err := tx.Exec(ctx, `SELECT 1 FROM app_user WHERE id = $1 FOR UPDATE`, userID); err != nil {
+		return err
+	}
 	if err := revokeGrantsOfUserTx(ctx, tx, userID, reason); err != nil {
 		return err
 	}

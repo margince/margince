@@ -88,14 +88,14 @@ var errConsentAuthorityEnded = errors.New("identity: the consent's authority end
 
 // reconfirmConsentAuthority refuses a consent whose authority ended after the
 // request was admitted but before the code is written here. The revocation
-// cascade (endCredentialAuthority) and every caller of it hold the member's
-// app_user row FOR UPDATE for the whole of the revoke, so taking it FOR SHARE
-// makes this mint and that revoke SERIALIZE rather than interleave: a revoke in
-// flight blocks this read until it commits, and a later revoke blocks on this
-// read until the code commits where the revoke's own sweep then ends it. With
-// the two ordered, re-reading the session under a fresh snapshot sees the
-// revocation that a password change made to it. Run inside the mint's
-// transaction, before the code row is written.
+// cascade (endCredentialAuthority) takes the member's app_user row FOR UPDATE
+// for the whole of the revoke, so taking it FOR SHARE here makes this mint and
+// that revoke SERIALIZE rather than interleave: a revoke in flight blocks this
+// read until it commits, and a mint that writes first blocks the revoke until
+// its code exists for the revoke's own sweep to end. With the two ordered,
+// re-reading the session under a fresh snapshot sees the revocation a password
+// change made to it. Run inside the mint's transaction, before the code is
+// written.
 func reconfirmConsentAuthority(ctx context.Context, tx pgx.Tx, id Identity) error {
 	var ok bool
 	switch err := tx.QueryRow(ctx,
@@ -147,9 +147,7 @@ func (s *Service) mintConsentedAuthorizationCode(
 		storedScopes = append(append([]string{}, scopes...), scopeOfflineAccess)
 	}
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
-		// First, before anything is written: refuse a consent whose authority a
-		// concurrent revocation ended. This orders the mint against that revoke, so
-		// a code minted in its window is either caught by it or never written.
+		// Before anything is written, refuse a consent a concurrent revocation ended.
 		if err := reconfirmConsentAuthority(ctx, tx, id); err != nil {
 			return err
 		}
