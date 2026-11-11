@@ -40,6 +40,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/compose/corereach"
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
@@ -170,14 +171,25 @@ func scrubbedTypesInPrivacy(t *testing.T) (map[string]bool, []string) {
 		if parseErr != nil {
 			t.Fatalf("parsing %s: %v", name, parseErr)
 		}
-		var insideCollateralWriter bool
+		var insideCollateralWriter, insideDeclaredWriter bool
 		ast.Inspect(file, func(n ast.Node) bool {
 			if fn, ok := n.(*ast.FuncDecl); ok {
 				insideCollateralWriter = fn.Name.Name == "tombstoneCollateralScrubs" || fn.Name.Name == "certifyCollateralScrub"
+				insideDeclaredWriter = fn.Name.Name == "redactDeclaredTables"
 				return true
 			}
 			call, ok := n.(*ast.CallExpr)
 			if !ok || !isScrubTombstoneCall(call) {
+				return true
+			}
+			// The declared tables' writer takes its record types from the
+			// declarations, so those are what it stamps.
+			if insideDeclaredWriter {
+				for _, o := range corereach.Tables() {
+					if len(o.Table.Erase) > 0 {
+						found[o.Table.Name] = true
+					}
+				}
 				return true
 			}
 			// A tombstone site whose entity type is not a literal cannot be read

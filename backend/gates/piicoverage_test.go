@@ -634,6 +634,11 @@ func TestErasureAndSARReachEveryPIITable(t *testing.T) {
 			}
 		}
 	}
+	for _, stmt := range declaredErasureStatements(t) {
+		for _, table := range sqlWriteTargets(stmt) {
+			writes[table] = true
+		}
+	}
 	// Each swept table keeps the text of the sweep statements that write it, so
 	// the declared erasure assignments are checked against the statement that
 	// erases THIS table rather than against retention.go as a whole.

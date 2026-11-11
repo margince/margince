@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"io/fs"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
@@ -157,6 +158,34 @@ func TestTheInstrumentationEdgeAnswersGetPingAndRefusesPost(t *testing.T) {
 		edge.ServeHTTP(rec, httptest.NewRequest(method, "/ping", nil))
 		if rec.Code != want {
 			t.Errorf("%s /ping = %d, want %d", method, rec.Code, want)
+		}
+	}
+}
+
+func TestTheFixtureReachesATableItsMigrationCreates(t *testing.T) {
+	e := New()
+	if len(e.Reach) != 1 {
+		t.Fatalf("declaration reaches %d tables, want the one note table", len(e.Reach))
+	}
+	table := e.Reach[0]
+	if err := table.Validate(); err != nil {
+		t.Fatalf("reach: %v", err)
+	}
+	sql, err := fs.ReadFile(e.Migrations, "migrations/0001_note.up.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(sql), "."+table.Name+" (") {
+		t.Fatalf("the migration does not create %s", table.Name)
+	}
+	for _, l := range table.Links {
+		if !strings.Contains(string(sql), "\n    "+l.Column+" ") {
+			t.Errorf("the migration has no column %s, which the reach links", l.Column)
+		}
+	}
+	for _, c := range table.Erase {
+		if !strings.Contains(string(sql), "\n    "+c.Column+" ") {
+			t.Errorf("the migration has no column %s, which the erasure clears", c.Column)
 		}
 	}
 }
