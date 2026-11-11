@@ -85,6 +85,12 @@ To is on the form. **Cc and Bcc** is a link until you press it. Then Bcc says
 what it means: other recipients cannot see these addresses, or that anyone else
 has a copy. A recipient Margince knows shows as the contact's name. Point at the name, or reach it with Tab, to see the address and the company.
 
+Type a name or an address in **To**, **Cc** or **Bcc** to pick a recipient. When you write to a
+contact, the list offers that contact first, then the people around them: colleagues at the
+company they work at now, and the people on the same deals. From a company, deal or project, the
+company's contacts are offered. Your own colleagues in Margince come last. You only see people you
+can open in Margince.
+
 A channel reply, such as Telegram, drops the subject and Cc, because the channel
 has neither.
 

@@ -1503,6 +1503,16 @@ paths:
             (`relationship` kind `employment`, DM-VOCAB-1). A past employer does not match:
             "who works there" and "who has ever worked there" are different questions, and the
             list answers the first.
+        - name: related_to
+          in: query
+          schema: { type: string, format: uuid }
+          description: |
+            The people around this contact: those who work at one of its current employers, and
+            those who hold a seat on a deal it holds a seat on. The named contact itself is not
+            in the list. The composer offers this list as recipients. Each link counts only when
+            the caller may read it: the employment edge, the deal and the named contact itself.
+            A contact the caller may not read relates to nobody, so the answer is an empty page
+            and does not say whether the contact exists.
       responses:
         '200':
           description: A page of contacts.

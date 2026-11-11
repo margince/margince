@@ -48,6 +48,25 @@ const CONTACT = {
   sections_omitted: [],
 };
 
+// The people around Dana: a colleague at her company and a partner on her deal.
+const AROUND_DANA = {
+  data: [
+    {
+      id: "p-2",
+      full_name: "Cole League",
+      title: "Head of IT",
+      primary_email: "cole@nordwand.example",
+      employer: { company_id: "co-1", company_name: "Nordwand" },
+    },
+    {
+      id: "p-3",
+      full_name: "Petra Partner",
+      primary_email: "petra@partner.example",
+    },
+  ],
+  page: { has_more: false },
+};
+
 const FILES = {
   data: [
     {
@@ -114,6 +133,12 @@ function stubRoutes(
       const override = overrides[key];
       if (override) return override();
       if (key === "GET /contacts/p-1/360") return jsonResponse(CONTACT);
+      if (
+        key === "GET /contacts" &&
+        url.searchParams.get("related_to") === "p-1"
+      ) {
+        return jsonResponse(AROUND_DANA);
+      }
       if (key === "GET /attachments") return jsonResponse(FILES);
       if (key === "POST /emails") return jsonResponse(SENT_ACTIVITY, 202);
       if (isPreviewDoor(url.pathname)) {
@@ -194,6 +219,28 @@ describe("the recipient lines", () => {
     });
     // Her OTHER address: the one already in the To line is not on offer.
     expect(offered).toHaveLength(1);
+  });
+
+  // Writing to Dana and copying her colleague is the ordinary case: the people
+  // around the contact are offered by name, and picking one addresses them.
+  it("offers the people around the contact by name", async () => {
+    const user = userEvent.setup();
+    const sent = stubRoutes();
+    render(drawer());
+
+    await user.click(await screen.findByLabelText("To"));
+    await user.keyboard("cole");
+    await user.click(
+      await screen.findByRole("option", { name: /Cole League/ }),
+    );
+    expect(screen.queryByRole("option", { name: /Petra Partner/ })).toBeNull();
+    await fillAndSend(user);
+
+    await waitFor(() => expect(sentMail(sent)).toBeTruthy());
+    expect(sentMail(sent)?.to).toEqual([
+      "dana@brandt.example",
+      "cole@nordwand.example",
+    ]);
   });
 
   // The list is HELP, never a constraint: a first message to somebody nobody
