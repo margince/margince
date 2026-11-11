@@ -18,6 +18,7 @@ import (
 
 	"github.com/margince/margince/backend/pkg/extension"
 	"github.com/margince/margince/backend/pkg/extension/jurisdiction"
+	"github.com/margince/margince/backend/pkg/extension/privacy"
 	"github.com/margince/margince/backend/pkg/extension/reach"
 )
 
@@ -36,7 +37,7 @@ var note = reach.Table{
 // entry: a contract-only request reaches the manifest and serves
 // nothing. The subscription puts a declared system read in the extension lane,
 // and the panel puts the frontend layer and a panel slot there. The note
-// table puts a migrations layer and a Reach declaration there.
+// table puts a migrations layer, a Reach and a Privacy declaration there.
 func New() extension.Extension {
 	return extension.Extension{
 		Name:          "crm-hello",
@@ -56,6 +57,14 @@ func New() extension.Extension {
 		Instrumentation: &extension.Instrumentation{Start: startInstrumentation, Browser: "instrument", Edge: instrumentationEdge()},
 		Migrations:      migrations,
 		Reach:           []reach.Table{note},
+		// The same links as note, which the merge moves, so they never refuse
+		// a merge. A subject export serves the body.
+		Privacy: []privacy.Table{{
+			Name:      "ext_crm_hello_note",
+			Links:     []privacy.Link{{Column: "company_id", Record: privacy.Company}, {Column: "contact_id", Record: privacy.Contact}},
+			Personal:  []string{"body"},
+			Retention: jurisdiction.CommercialCorrespondence,
+		}},
 	}
 }
 

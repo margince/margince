@@ -517,6 +517,10 @@ A row belongs to a subject when one of its links names the subject. Erasure and 
 `contact`, `lead` or `activity`. A `company` link only feeds the merge check, so a table with personal columns
 needs one of the other three.
 
+The merge check refuses to merge away a record that a link names. Declare the same column in the unit's
+`Reach` field, and the merge moves it onto the record that stays instead. `fixtures/extensions/crm-hello`
+declares its note table in both.
+
 A table with no `Links` and no `Personal` columns declares that it holds no personal data. A table with
 personal columns needs a `uuid` column named `id`.
 

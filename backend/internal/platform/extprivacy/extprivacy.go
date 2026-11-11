@@ -18,8 +18,10 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/sweepreach"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/pkg/extension/privacy"
+	"github.com/margince/margince/backend/pkg/extension/reach"
 )
 
 // Schema is where every extension table lives.
@@ -60,10 +62,20 @@ type linkedColumn struct {
 	column string
 }
 
-// CountDependents counts the rows of every declared table that name the record.
+// CountDependents counts the rows of every declared table that name the record
+// and that a merge of it would leave behind. A link column the unit also
+// declares in its Reach is one the merge moves onto the survivor
+// (sweepreach.Relink), so it is not counted and does not refuse the merge.
 func (r Registry) CountDependents(ctx context.Context, tx pgx.Tx, kind privacy.RecordKind, id ids.UUID) (int64, error) {
+	moved, err := sweepreach.MovedColumns(reach.Record(kind))
+	if err != nil {
+		return 0, fmt.Errorf("extprivacy: reading which columns the merge moves: %w", err)
+	}
 	var total int64
 	for _, lc := range r.linked(kind) {
+		if moved[sweepreach.Column{Schema: Schema, Table: lc.table.Name, Name: lc.column}] {
+			continue
+		}
 		var n int64
 		q := "SELECT count(*) FROM " + qualified(lc.table.Name) + " WHERE " + pgx.Identifier{lc.column}.Sanitize() + " = $1"
 		if err := tx.QueryRow(ctx, q, id).Scan(&n); err != nil {

@@ -28,7 +28,7 @@ does the work itself:
 | Audit | Writes an `anonymize` audit entry and a `retention.applied` event for each cleared row. It then strips the before and after images from the row's earlier audit entries, and drops their events that have not been sent. |
 | Subject export | Lists the declared columns of the same rows under `extension_data`. A table with no personal column is not read. |
 | Delete of a contact, lead, company or activity | Nothing. Delete archives the record, and the row stays, so extension rows still name a record that answers. |
-| Merge of a contact, lead or company | Refuses with a conflict that counts the rows linking to it. Archive the record instead. Core deletes no contact or company. |
+| Merge of a contact, lead or company | Moves a link column the unit also declares in `Reach` onto the record that stays. Refuses with a conflict that counts the rows of every other link to the record. Archive the record instead. Core deletes no contact or company. |
 | A lead from a web form is erased because its notice failed. This is the one lead core deletes | Clears the rows linked to the lead, and to the notice mail it deletes, before the lead goes. |
 
 A row whose link is still empty names no record, so no erasure or export can find it. A message that reached

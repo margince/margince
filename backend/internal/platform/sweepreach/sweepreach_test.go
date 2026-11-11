@@ -93,3 +93,46 @@ func TestAnUnsealedSetRefusesTheMergeAndTheErasure(t *testing.T) {
 		t.Errorf("Erase() = %v, want ErrNotSealed", err)
 	}
 }
+
+// The dependents check of a merge skips exactly the columns Relink moves, so
+// the two must agree per record kind.
+func TestTheMovedColumnsAreTheOnesRelinkMovesForThatKind(t *testing.T) {
+	installed.mu.Lock()
+	tables, sealed := installed.tables, installed.sealed
+	installed.mu.Unlock()
+	t.Cleanup(func() {
+		installed.mu.Lock()
+		installed.tables, installed.sealed = tables, sealed
+		installed.mu.Unlock()
+	})
+	if err := Install([]Owned{{Owner: "a", Schema: "ext", Table: reach.Table{Name: "ext_a_note", Links: []reach.Link{
+		{Column: "company_id", Record: reach.Company},
+		{Column: "contact_id", Record: reach.Contact},
+		{Column: "record_id", KindColumn: "record_type"},
+	}}}}); err != nil {
+		t.Fatal(err)
+	}
+	column := func(name string) Column { return Column{Schema: "ext", Table: "ext_a_note", Name: name} }
+
+	for record, want := range map[reach.Record][]Column{
+		reach.Company: {column("company_id"), column("record_id")},
+		reach.Contact: {column("contact_id"), column("record_id")},
+		reach.Lead:    {column("record_id")},
+	} {
+		moved, err := MovedColumns(record)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(moved) != len(want) {
+			t.Errorf("a %s merge moves %v, want %v", record, moved, want)
+		}
+		for _, c := range want {
+			if !moved[c] {
+				t.Errorf("a %s merge does not move %s.%s", record, c.Table, c.Name)
+			}
+		}
+	}
+	if _, err := MovedColumns("activity"); err == nil {
+		t.Error("MovedColumns accepted a record kind no merge moves")
+	}
+}
