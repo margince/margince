@@ -51,6 +51,7 @@ import {
 import type { WorklistItem } from "../worklist/worklist.queries";
 import { BriefScreen } from "./brief";
 import type { MorningDigest } from "./brief.queries";
+import { briefReady } from "./meetingbrief/fixtures";
 
 // Decisions share the ranked agenda. Their full proposal opens in the same
 // review drawer used by the worklist, and accepting one refreshes the agenda.
@@ -554,6 +555,9 @@ function workingMorning(meetings: WorklistItem[]) {
           }),
         [`GET /deals/${dealID}`]: () =>
           jsonResponse({ id: dealID, name: "PIM Rollout phase 2" }),
+        // The brief Prepare for meeting has Margince write.
+        "GET /activities/meet-next/meeting-brief": () =>
+          jsonResponse(briefReady),
         "POST /reports/deals-by-stage": () =>
           jsonResponse({ rows: [], columns: [] }),
       },

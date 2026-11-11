@@ -82,7 +82,14 @@ type Story = StoryObj;
 // reader has no answer for. The badge rides WITH the title, so a meeting whose
 // name wraps keeps its warning attached to it.
 export const Schedule: Story = {
-  render: panel(<SchedulePanel day={BOOKED} state="ready" now={NOW} />),
+  render: panel(
+    <SchedulePanel
+      day={BOOKED}
+      state="ready"
+      now={NOW}
+      onPrepareMeeting={() => undefined}
+    />,
+  ),
 };
 
 // Mid-morning: the first meeting is under way, so the Now stop sits between
@@ -93,6 +100,7 @@ export const ScheduleMidDay: Story = {
       day={BOOKED}
       state="ready"
       now={Date.parse("2026-08-21T11:40:00Z")}
+      onPrepareMeeting={() => undefined}
     />,
   ),
 };
@@ -123,7 +131,14 @@ export const ScheduleDateOnlyMeeting: Story = {
 // Nothing booked: the Now stop says the rest of the day is clear, so the box
 // never leaves the rail.
 export const ScheduleClearDay: Story = {
-  render: panel(<SchedulePanel day={CLEAR} state="ready" now={NOW} />),
+  render: panel(
+    <SchedulePanel
+      day={CLEAR}
+      state="ready"
+      now={NOW}
+      onPrepareMeeting={() => undefined}
+    />,
+  ),
 };
 
 // A meeting booked further out, which the CRM holds whatever the calendar
@@ -165,6 +180,7 @@ export const LongTitleAndAttendees: Story = {
         ])}
         state="ready"
         now={NOW}
+        onPrepareMeeting={() => undefined}
         onOpenMeeting={() => undefined}
       />
       <SchedulePanel

@@ -71,6 +71,7 @@ import { addressFrom, type BriefAddress, paramsFor } from "./brief.view";
 import { WeeklySection, WeekStepper } from "./brief.weekly";
 import { useWeeklyRailShown, WeeklyRail } from "./brief.weekly.rail";
 import { BriefCoverage } from "./briefcoverage";
+import { ContactMeetingBrief } from "./meetingbrief";
 import "./brief.css";
 
 // The dials that narrow the drawer. The Home button clears them, so it always
@@ -416,15 +417,28 @@ function FocusDetails({
   );
 }
 
-// The schedule, whose meeting titles open the meeting over Home.
+// The schedule, whose meeting titles open the meeting over Home and whose
+// next meeting's brief opens there too.
 function ScheduleWithMeetings({
   day,
   state,
 }: Readonly<Omit<ComponentProps<typeof SchedulePanel>, "onOpenMeeting">>) {
   const [meeting, setMeeting] = useState<string | null>(null);
+  const [prepFor, setPrepFor] = useState<string | null>(null);
   return (
     <>
-      <SchedulePanel day={day} state={state} onOpenMeeting={setMeeting} />
+      <SchedulePanel
+        day={day}
+        state={state}
+        onOpenMeeting={setMeeting}
+        onPrepareMeeting={setPrepFor}
+      />
+      {/* Opening it is what has Margince write the brief. */}
+      <ContactMeetingBrief
+        activityId={prepFor}
+        open={prepFor !== null}
+        onClose={() => setPrepFor(null)}
+      />
       {meeting && (
         <ActivityDetailModal
           activityId={meeting}

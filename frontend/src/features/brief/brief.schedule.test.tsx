@@ -1,6 +1,12 @@
 /** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, within } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { formatDateAbbrev, formatTimeOfDay } from "../../format/format";
 import { browserZone } from "../../format/timezone";
@@ -78,18 +84,15 @@ describe("the schedule panel", () => {
   it("stands Now between the started meeting and the next one", () => {
     const day = readingsDay({}, [
       { ...meetingRow("m1", true, "2026-09-03T08:00:00Z"), title: "Started" },
-      {
-        ...meetingRow("m2", true, "2026-09-03T10:00:00Z"),
-        title: "Next up",
-        with_contact: "contact-1",
-        move: { action: "open_meeting_brief", activity_id: "m2" },
-      },
+      { ...meetingRow("m2", true, "2026-09-03T10:00:00Z"), title: "Next up" },
     ]);
+    const prepared: string[] = [];
     draw(
       <SchedulePanel
         day={day}
         state="ready"
         now={Date.parse("2026-09-03T09:40:00Z")}
+        onPrepareMeeting={(id) => prepared.push(id)}
       />,
     );
 
@@ -102,11 +105,13 @@ describe("the schedule panel", () => {
     expect(rows[1].textContent).not.toContain("Free until");
     expect(rows[2].classList.contains("rail-schedule-next")).toBe(true);
     expect(rows[2].textContent).toContain("in 20 minutes");
-    expect(
-      within(rows[2] as HTMLElement)
-        .getByRole("link", { name: en["worklist.verb.open_meeting_brief"] })
-        .getAttribute("href"),
-    ).toContain("contact-1");
+    // Only the next meeting offers a brief, and pressing it asks for that one.
+    const prepare = en["worklist.verb.open_meeting_brief"];
+    expect(within(rows[0] as HTMLElement).queryByText(prepare)).toBeNull();
+    fireEvent.click(
+      within(rows[2] as HTMLElement).getByRole("button", { name: prepare }),
+    );
+    expect(prepared).toEqual(["m2"]);
   });
 
   it("says the reader is free until the next meeting", () => {

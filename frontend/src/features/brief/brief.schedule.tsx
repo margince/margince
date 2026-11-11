@@ -19,12 +19,7 @@ import { isUnprepared } from "../../lib/meetingreadiness";
 import { routeHash } from "../../lib/router";
 import { settingsHref } from "../../lib/settingsrouting";
 import { useViewerZone } from "../../lib/viewerzone";
-import {
-  itemTitle,
-  moveHref,
-  moveLabel,
-  rowHref,
-} from "../../lib/worklistcopy";
+import { itemTitle, moveHref, rowHref } from "../../lib/worklistcopy";
 import type { Worklist, WorklistItem } from "../worklist/worklist.queries";
 import {
   type CalendarDay,
@@ -76,12 +71,15 @@ export function SchedulePanel({
   day,
   state,
   onOpenMeeting,
+  onPrepareMeeting,
   now,
 }: Readonly<{
   day: Worklist | undefined;
   state: SectionState;
   /** Opens one meeting by its activity id; without it the title is text. */
   onOpenMeeting?: (id: string) => void;
+  /** Has Margince write the next meeting's brief; without it there is no button. */
+  onPrepareMeeting?: (id: string) => void;
   /** The clock the Now stop is read against; the live minute when absent. */
   now?: number;
 }>) {
@@ -116,6 +114,7 @@ export function SchedulePanel({
                 key={item.id}
                 item={item}
                 onOpenMeeting={onOpenMeeting}
+                onPrepare={item === next ? onPrepareMeeting : undefined}
                 countdownFrom={item === next ? at : undefined}
               />
             ))}
@@ -190,10 +189,12 @@ function NowRow({
 function MeetingRow({
   item,
   onOpenMeeting,
+  onPrepare,
   countdownFrom,
 }: Readonly<{
   item: WorklistItem;
   onOpenMeeting?: (id: string) => void;
+  onPrepare?: (id: string) => void;
   /** The clock to count down from; set only on the next meeting. */
   countdownFrom?: number;
 }>) {
@@ -209,7 +210,6 @@ function MeetingRow({
           locale,
         )
       : null;
-  const brief = isNext ? moveHref(item) : undefined;
   return (
     <PanelRow
       className={
@@ -229,10 +229,14 @@ function MeetingRow({
             )}
           </span>
         )}
-        {brief && (
-          <AppLink className="btn btn-ghost rail-schedule-prep" href={brief}>
-            {moveLabel(item, t)}
-          </AppLink>
+        {onPrepare && (
+          <Button
+            variant="ai"
+            className="rail-schedule-prep"
+            onClick={() => onPrepare(item.id)}
+          >
+            {t("worklist.verb.open_meeting_brief")}
+          </Button>
         )}
       </span>
     </PanelRow>
