@@ -289,6 +289,9 @@ func reminderReaderFor(ctx context.Context, scope attention.TaskScope) ids.UUID 
 // whole page in one read. Both reads key on the page's ids, so their generic
 // plans are reused (database.ReuseGenericPlans).
 func (t attentionTasks) markReadOnly(ctx context.Context, tasks []attention.Task, asOf time.Time) ([]attention.Task, error) {
+	if len(tasks) == 0 {
+		return tasks, nil
+	}
 	named := make([]ids.UUID, len(tasks))
 	for i, task := range tasks {
 		named[i] = task.ID

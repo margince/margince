@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/compose/dealstatus backend/internal/platform/database/storekit/leadengagement.go backend/internal/compose/leadworktasks.go backend/internal/compose/attention backend/internal/compose/attentionseam.go backend/internal/platform/database/planreuse.go backend/internal/modules/activities/waitingsql.go backend/internal/modules/consent/noticecase.go backend/internal/compose/commitmentdispatch.go backend/internal/compose/commitmentsettle.go backend/internal/compose/weekly backend/internal/compose/weeklyjobs.go backend/internal/modules/deals/closedate.go backend/internal/modules/deals/changeacceptance.go frontend/src/features/brief/brief.queue.tsx backend/internal/compose/slipping.go backend/internal/compose/attentionriskseam.go backend/internal/modules/deals/deal_read.go backend/internal/modules/deals/atrisklist.go -->
+<!-- describes: backend/internal/compose/dealstatus backend/internal/platform/database/storekit/leadengagement.go backend/internal/compose/leadworktasks.go backend/internal/compose/attention backend/internal/compose/attentionseam.go backend/internal/compose/worklistmetrics.go backend/internal/platform/database/statementmeter.go backend/internal/platform/database/planreuse.go backend/internal/modules/activities/waitingsql.go backend/internal/modules/consent/noticecase.go backend/internal/compose/commitmentdispatch.go backend/internal/compose/commitmentsettle.go backend/internal/compose/weekly backend/internal/compose/weeklyjobs.go backend/internal/modules/deals/closedate.go backend/internal/modules/deals/changeacceptance.go frontend/src/features/brief/brief.queue.tsx backend/internal/compose/slipping.go backend/internal/compose/attentionriskseam.go backend/internal/modules/deals/deal_read.go backend/internal/modules/deals/atrisklist.go -->
 # Home and the Worklist: how the day is ranked
 
 Home has one ranking engine behind three views: the Worklist, the **Needs you** section on Home, and the
@@ -27,6 +27,10 @@ named plans inside the snapshot. Outside that read, the waiting walk plans with 
 values so it can stop at the cap. The privacy notice queue uses a custom plan because its bound state list
 must be visible to the partial-index planner. The plan-mode scopes restore the mode they found
 before the next read.
+
+The stage metrics count database calls as well as statements, with a batch counted as one exchange.
+Internal plan lookups can cost another protocol round trip. The Worklist integration read holds a
+limit of 136 exchanges for a seeded open-task day.
 
 ## How a row is ranked
 

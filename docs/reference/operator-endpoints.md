@@ -76,6 +76,7 @@ Served next to `/v1`:
   |---|---|---|
   | `margince_worklist_stage_duration_seconds` | histogram | `read`, `stage` |
   | `margince_worklist_stage_statements_total` | counter | `read`, `stage` |
+  | `margince_worklist_stage_exchanges_total` | counter | `read`, `stage` |
   | `margince_worklist_stage_statement_errors_total` | counter | `read`, `stage` |
   | `margince_worklist_stage_db_seconds` | histogram | `read`, `stage` |
   | `margince_worklist_stage_pool_wait_seconds` | histogram | `read`, `stage` |
@@ -126,6 +127,9 @@ Served next to `/v1`:
   - `margince_worklist_stage_statements_total` counts each `Query`, `QueryRow`, `Exec`, `Prepare`
     and `CopyFrom` call, and each query of a batch whose result pgx read. A `Prepare` that pgx makes
     inside one of these calls is part of that call.
+  - `margince_worklist_stage_exchanges_total` counts each pgx query or transaction call once.
+    A batch counts once even when it holds many queries. An internal plan lookup can add a
+    protocol round trip that this counter does not see.
   - `margince_worklist_stage_statement_errors_total` counts those that ended in an error or a
     cancel, and a batch that failed before any of its queries ran.
   - `margince_worklist_stage_db_seconds` is time inside pgx statement calls. It starts when the call
