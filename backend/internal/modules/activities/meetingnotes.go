@@ -61,8 +61,8 @@ type MeetingNotesInput struct {
 
 // meetingNotesReadable is the evidence a notes link must still have when it is
 // listed and again when its text lands. The link is live on a live meeting.
-// The owner is on that meeting, and its organizer is on one of the trusted own
-// domains or a subdomain, because Google writes the notes into the organizer's Drive.
+// The owner is on that meeting. Its organizer is on a trusted own domain or a
+// subdomain of one, because Google writes the notes into the organizer's Drive.
 const meetingNotesReadable = `
 	    l.entity_type = 'activity' AND l.entity_id = a.id AND l.category = '` + categoryLink + `'
 	AND l.archived_at IS NULL AND l.external_source_id = '` + meetingDocumentSource + `' || a.id::text
@@ -107,7 +107,7 @@ func (s *Store) DueMeetingNotesTx(ctx context.Context, tx pgx.Tx, q MeetingNotes
 // removed Doc.
 //
 // The transcript is keyed by the Doc's address, and the key is locked first.
-// Two colleagues' syncs reading one Doc at once then land it once: the second
+// Two colleagues' syncs reading one Doc at once then land it once. The second
 // waits, and finds the first one's transcript instead of failing on the key.
 //
 // The transcript takes the meeting's audience, members and parties, so who may

@@ -77,9 +77,9 @@ func meetingDocumentFileID(address string) (string, bool) {
 // recordMeetingDocuments writes a link row on the meeting for each notes or
 // transcript document the event lists. It runs on every sync of the meeting,
 // because Google attaches the notes after the meeting ends. A later sync of an
-// event that lists all its documents archives the rows of those taken off it,
-// and brings back a row it archived once the Doc is listed again. The notes
-// reader then opens only a Doc the meeting carries now.
+// event that lists all its documents archives the rows of those taken off it.
+// It brings back such a row once the Doc is listed again. The notes reader
+// then opens only a Doc the meeting carries now.
 //
 // A Doc counts only when the organizer is on a trusted own domain. A shared
 // webmail domain is never one, so an outsider on the seat's own webmail
@@ -140,8 +140,8 @@ func meetingDocumentLinks(fields ActivityFields) ([]MailLink, []string) {
 }
 
 // organizerTrustedTx reports whether the meeting's organizer is on one of the
-// workspace's trusted own domains, the answer the rest of capture gives to
-// "is this our company".
+// workspace's trusted own domains. Capture gives that answer everywhere it
+// asks "is this our company".
 func organizerTrustedTx(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord) (bool, error) {
 	for _, party := range slices.Concat(rec.Participants, rec.WithheldParties) {
 		if party.Role != connector.ParticipantRoleOrganizer {

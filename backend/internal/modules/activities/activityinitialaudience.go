@@ -74,7 +74,7 @@ func recordInitialActivity(ctx context.Context, tx pgx.Tx, id ids.ActivityID, in
 func inheritAudienceTx(ctx context.Context, tx pgx.Tx, id, from ids.ActivityID) error {
 	if _, err := tx.Exec(ctx, `
 		UPDATE activity t SET audience = f.audience, audience_reason = f.audience_reason
-		  FROM activity f WHERE t.id = $1 AND f.id = $2`, id, from); err != nil {
+		  FROM activity f WHERE t.id = $1 AND t.archived_at IS NULL AND f.id = $2`, id, from); err != nil {
 		return fmt.Errorf("activities: copying a meeting's audience: %w", err)
 	}
 	rows, err := tx.Query(ctx,

@@ -122,8 +122,8 @@ func (s *Store) RetireCapturedLinks(
 }
 
 // RestoreCapturedLinks brings back the link rows one source recorded on an
-// activity, at a listed address, that RetireCapturedLinks archived. A row a
-// person archived stays archived: only an archive whose reason is that the
+// activity, at a listed address, that RetireCapturedLinks archived. A row
+// archived by hand stays archived: only an archive whose reason is that the
 // source stopped listing it is undone. Each is audited as a restore.
 func (s *Store) RestoreCapturedLinks(
 	ctx context.Context, tx pgx.Tx, activityID ids.ActivityID,
