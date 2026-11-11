@@ -53,11 +53,11 @@ every open deal. It may then set three things for the owner:
 - **The close date**, when a message names the day or the month the customer
   will decide or sign. Margince sets a date only inside a day, a month or a
   quarter the words of the message name.
-- **The amount**, when the customer or your offer names a price for the deal.
-  Margince sets the price the words state, to the cent.
+- **The amount**, when the customer names a price in their current email.
+  Margince sets the price the words state, to the cent. Our own words and quoted history do not count.
 - **The win probability**, when the evidence clearly moves it. Margince may
-  lower it for any reason the evidence gives. It never raises it above the
-  probability of the deal's stage.
+  lower it when words from the customer support the change. It never raises it above the
+  probability of the deal's stage. To lower it, Margince needs a quote from the current email.
 
 Margince reads a deal again only when something new arrived on it, its close
 date passed, or its owner changed a switch. A deal whose price had no exchange

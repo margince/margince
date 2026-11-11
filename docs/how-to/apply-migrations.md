@@ -146,6 +146,27 @@ Neither case sets a rule for others. The second needed every database to be one 
 `scripts/migration-baseline.sh verify` also needed to prove that the baseline builds the same schema as the
 history, byte for byte. Without both, never edit a shipped migration.
 
+## A migration that moved to a new version
+
+A sync can give a develop migration a new version above what main carries. A database that applied the
+old version has already run that SQL. If the new version counted as not applied, `migrate up` would run
+the SQL again and fail.
+
+So every such move is declared in `backend/migrations/renumbered.txt`, one line per move:
+`core old_version new_version name`. Declare a move only when the SQL did not change at all.
+
+`migrate up` moves the ledger row of a declared old version to the new version. It does this first, under
+the migration lock, in one transaction for each folder. It moves a row only if the checksum in that row
+proves the database ran the same SQL that now ships. Otherwise it stops, names the move and applies nothing.
+That happens when the row has no checksum, when the checksum differs, or when the ledger already holds the
+new version with other SQL. It prints how many rows it moved.
+
+`scripts/check-migration-versions.sh` fails a move that `renumbered.txt` does not declare. It matches by
+name, so a move fails even when the SQL stayed the same.
+
+An older binary started after this move runs the moved migrations again and stops with an error. To go
+back to an older binary, restore the database from a copy taken before the upgrade.
+
 ## Data tasks
 
 Move work whose cost grows with records into a
@@ -165,3 +186,12 @@ date fields after the task ends. Database triggers keep each row's date and visi
 
 The index reads `address_domain_folded`. It finds both a domain and names under it.
 Erasure clears that field, so the row leaves the index.
+
+## Move an extension's migration version
+
+An extension can declare a version move in `migrations/renumbered.txt`, embedded with its SQL files.
+Use the same five-column format as `backend/migrations/renumbered.txt`.
+Its first column is the unit's `ext_<name>` value, from `dbmigrate.NamespaceFor`.
+The loader checks the old content before moving the recorded version.
+The migration-version gate checks extension folders too.
+Without that file, the extension declares no moves.

@@ -131,7 +131,7 @@ export const AppliedAndChanged: Story = {
 // The search and View stand at one height.
 async function expectOneHeight(canvasElement: HTMLElement) {
   const canvas = within(canvasElement);
-  const search = await canvas.findByRole("searchbox", { name: "Search" });
+  const search = await canvas.findByRole("combobox", { name: "Search" });
   const view = await canvas.findByRole("button", { name: /^View/ });
   await waitFor(() => expect(view).toBeVisible());
   const field = search.closest(".lt-search");

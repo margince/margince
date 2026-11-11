@@ -33,7 +33,7 @@ var queryEnumTable = map[string][]queryEnum{
 		{Name: "window", Values: []string{"24h", "7d", "30d"}, Array: false, Explode: true},
 	},
 	"GET /v1/ai/calls": {
-		{Name: "outcome", Values: []string{"answered", "fallback", "declined", "failed"}, Array: false, Explode: true},
+		{Name: "outcome", Values: []string{"answered", "fallback", "declined", "canceled", "failed"}, Array: false, Explode: true},
 	},
 	"GET /v1/analytics/account-coverage": {
 		{Name: "scope_kind", Values: []string{"owner", "team", "workspace"}, Array: false, Explode: true},
@@ -102,6 +102,9 @@ var queryEnumTable = map[string][]queryEnum{
 	},
 	"GET /v1/attachments/{id}/extraction": {
 		{Name: "question", Values: []string{"deal_facts", "chat_capture"}, Array: false, Explode: true},
+	},
+	"GET /v1/auth/oidc/{provider}/start": {
+		{Name: "return", Values: []string{"consent"}, Array: false, Explode: true},
 	},
 	"GET /v1/automations/{id}/runs": {
 		{Name: "outcome", Values: []string{"fired", "failed", "blocked", "skipped", "queued_for_approval"}, Array: false, Explode: true},
@@ -423,6 +426,9 @@ var queryMinimumTable = map[string][]queryMinimum{
 	"GET /v1/contacts/{id}/access": {
 		{Name: "limit", Minimum: 1},
 	},
+	"GET /v1/contacts/{id}/consent/allow": {
+		{Name: "limit", Minimum: 1},
+	},
 	"GET /v1/context-search": {
 		{Name: "limit", Minimum: 1},
 	},
@@ -586,6 +592,7 @@ var deprecationTable = map[string]map[string]string{
 	"GET /v1/lead-sources":                                       {"Link": "</v1/openapi.json>; rel=\"deprecation\"; type=\"application/json\", <https://github.com/margince/margince/blob/develop/docs/reference/api-compatibility.md>; rel=\"deprecation\"; type=\"text/markdown\""},
 	"GET /v1/stage-automation/policies/{id}":                     {"Link": "</v1/openapi.json>; rel=\"deprecation\"; type=\"application/json\", <https://github.com/margince/margince/blob/develop/docs/reference/api-compatibility.md>; rel=\"deprecation\"; type=\"text/markdown\""},
 	"GET /v1/stage-automation/report":                            {"Link": "</v1/openapi.json>; rel=\"deprecation\"; type=\"application/json\", <https://github.com/margince/margince/blob/develop/docs/reference/api-compatibility.md>; rel=\"deprecation\"; type=\"text/markdown\""},
+	"GET /v1/weekly-reviews/team":                                {"Link": "</v1/openapi.json>; rel=\"deprecation\"; type=\"application/json\", <https://github.com/margince/margince/blob/develop/docs/reference/api-compatibility.md>; rel=\"deprecation\"; type=\"text/markdown\""},
 	"PATCH /v1/lead-sources/{id}":                                {"Link": "</v1/openapi.json>; rel=\"deprecation\"; type=\"application/json\", <https://github.com/margince/margince/blob/develop/docs/reference/api-compatibility.md>; rel=\"deprecation\"; type=\"text/markdown\""},
 	"POST /v1/ai-model-rates/propose-refresh":                    {"Link": "</v1/openapi.json>; rel=\"deprecation\"; type=\"application/json\", <https://github.com/margince/margince/blob/develop/docs/reference/api-compatibility.md>; rel=\"deprecation\"; type=\"text/markdown\""},
 	"POST /v1/companies/{id}/brief":                              {"Link": "</v1/openapi.json>; rel=\"deprecation\"; type=\"application/json\", <https://github.com/margince/margince/blob/develop/docs/reference/api-compatibility.md>; rel=\"deprecation\"; type=\"text/markdown\""},

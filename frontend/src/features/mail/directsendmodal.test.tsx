@@ -1,4 +1,5 @@
 /** @vitest-environment happy-dom */
+import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -130,4 +131,80 @@ describe("DirectSendModal", () => {
     await user.keyboard("first{Enter}second");
     expect((reason as HTMLTextAreaElement).value).toContain("\n");
   });
+});
+
+it("shows the specific recipient, refusal, purpose and sending company", () => {
+  open({
+    review: {
+      ...review,
+      refusals: [
+        {
+          address: "alex@example.test",
+          reason_code: "no_compatible_evidence",
+          category: "requested_followup",
+          sending_entity_name: "Example Company",
+        },
+      ],
+    },
+  });
+  expect(screen.getByText("alex@example.test")).toBeTruthy();
+  expect(screen.getByText("Sending company: Example Company")).toBeTruthy();
+  expect(screen.getByText("Follow-up they requested")).toBeTruthy();
+});
+
+it("requires a new acknowledgement when the served warning version changes", async () => {
+  const user = userEvent.setup();
+  const { rerender } = open();
+  await user.click(screen.getByRole("checkbox"));
+  rerender(
+    <QueryClientProvider client={new QueryClient()}>
+      <DirectSendModal
+        open
+        onClose={vi.fn()}
+        review={{
+          ...review,
+          warning: { version: "override-new", text: "Read the new warning." },
+        }}
+      />
+    </QueryClientProvider>,
+  );
+  expect((screen.getByRole("checkbox") as HTMLInputElement).checked).toBe(
+    false,
+  );
+});
+
+it("keeps the recorded reason locked while entering and leaving wording correction", async () => {
+  const user = userEvent.setup();
+  open({
+    review: {
+      ...review,
+      wording_correction: {
+        instruction_id: "instruction-1",
+        version: 7,
+        subject: "Requested information",
+        body: "Thank yuo.",
+        html_body: "",
+        wording_digest: "a".repeat(64),
+        reason_code: "contractual_necessity",
+        explanation: "The contract requires this notice.",
+        warning_version: "override-v1",
+      },
+    },
+  });
+  expect(screen.getByRole("combobox")).toBeDisabled();
+  expect(screen.getByRole("textbox", { name: "Explanation" })).toHaveValue(
+    "The contract requires this notice.",
+  );
+  expect(screen.getByRole("textbox", { name: "Explanation" })).toBeDisabled();
+  await user.click(
+    screen.getByRole("button", { name: "Correct spelling or punctuation" }),
+  );
+  expect(screen.getByRole("textbox", { name: "Subject" })).toHaveValue(
+    "Requested information",
+  );
+  await user.click(screen.getByRole("button", { name: "Cancel" }));
+  expect(screen.getByRole("textbox", { name: "Explanation" })).toHaveValue(
+    "The contract requires this notice.",
+  );
+  expect(screen.getByRole("textbox", { name: "Explanation" })).toBeDisabled();
 });

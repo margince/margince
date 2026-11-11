@@ -59,7 +59,8 @@ type SenderOverride struct {
 
 // SenderOverrideStore holds what contacts decided.
 type SenderOverrideStore struct {
-	db *database.DB
+	db             *database.DB
+	withdrawReview ReviewWithdrawer
 }
 
 // NewSenderOverrideStore builds the store.
@@ -150,9 +151,11 @@ func (s *SenderOverrideStore) Set(ctx context.Context, address, decision string)
 		// The object spelled as a literal, not through the constant: the audit
 		// gate reads call sites to tell an entity named at runtime from one
 		// named in the source, and a constant is something it cannot resolve.
-		_, err = storekit.AuditEvent(ctx, tx, "update", "capture_settings", storekit.MustWorkspace(ctx),
-			map[string]any{fieldDecision: decision, "overruled_kind": kind})
-		return err
+		if _, err := storekit.AuditEvent(ctx, tx, "update", "capture_settings", storekit.MustWorkspace(ctx),
+			map[string]any{fieldDecision: decision, "overruled_kind": kind}); err != nil {
+			return err
+		}
+		return s.handOverToVerdictTx(ctx, tx, actor.UserID, folded)
 	})
 	return out, err
 }

@@ -40,6 +40,7 @@ To snooze a Worklist item in Margince, press **More actions** at the end of its 
    reply**.
 4. The note that follows offers **Undo**.
 
+Snoozing a deal also hides its at-risk row until the snooze ends. Its tasks remain separate work.
 A snooze changes your list only. A reply that came in before you snoozed does not end it. Also called: remind me later, postpone, hide for now.
 
 ### How do I pin an item to the top of my worklist?

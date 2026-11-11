@@ -11502,6 +11502,14 @@
                 "type": "integer",
                 "minimum": 0
               },
+              "record_assignment": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "sdr_handoff": {
+                "type": "integer",
+                "minimum": 0
+              },
               "task": {
                 "type": "integer",
                 "minimum": 0
@@ -11518,6 +11526,8 @@
               "lead",
               "list",
               "project",
+              "record_assignment",
+              "sdr_handoff",
               "task",
               "webhook"
             ]

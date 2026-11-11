@@ -53,14 +53,14 @@ func subjectQuestionSources(contact, emails string) string {
 
 // leadTwinOf selects the leads that are the subject bound as contact, before or
 // after promotion, merge or conversion, or by their address in emails. These are
-// the leads anonymizeLeadTwins wipes. Its statement keeps its own copy, since
-// waivers key on that statement's text, and a test in this package holds the
-// two equal.
+// the leads anonymizeLeadTwins wipes. Exports, erasure and retained reporting
+// use this predicate so a historical contact link has the same reach in each.
 func leadTwinOf(contact, emails string) string {
 	return `promoted_contact_id = ` + contact + `
+		     OR promoted_contact_id IN (SELECT id FROM contact WHERE merged_into_id = ` + contact + `)
 		     OR from_contact_id = ` + contact + `
 		     OR from_contact_id IN (SELECT id FROM contact WHERE merged_into_id = ` + contact + `)
-		     OR id IN (SELECT converted_from_lead_id FROM contact WHERE id = ` + contact + ` AND converted_from_lead_id IS NOT NULL)
+		     OR id IN (SELECT converted_from_lead_id FROM contact WHERE (id = ` + contact + ` OR merged_into_id = ` + contact + `) AND converted_from_lead_id IS NOT NULL)
 		     OR (email IS NOT NULL AND lower(email) = ANY(` + emails + `))`
 }
 

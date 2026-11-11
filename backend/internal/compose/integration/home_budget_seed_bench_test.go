@@ -61,7 +61,19 @@ func seedHomeProfile(t *testing.T, e *apptest.AppEnv, seats Seats) HomeProfile {
 		t.Fatalf("counting the heaviest owner's contacts: %v", err)
 	}
 	assertHomeProfile(t, e, profile)
+	settleHomeCorpus(t, e)
 	return profile
+}
+
+// settleHomeCorpus vacuums and analyzes the whole bench database. Otherwise
+// autovacuum first reaches the fresh corpus during the timed rounds and slows
+// the reads it overlaps. A server with few databases, as in CI, visits each
+// one often.
+func settleHomeCorpus(t *testing.T, e *apptest.AppEnv) {
+	t.Helper()
+	if _, err := e.Owner.Exec(context.Background(), `VACUUM ANALYZE`); err != nil {
+		t.Fatalf("vacuuming the seeded Home corpus: %v", err)
+	}
 }
 
 // heaviestOwner is the rep who owns the most contacts: Home's worst seat,

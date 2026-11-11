@@ -13,10 +13,14 @@ import {
   bookingProfile,
   bookingSlots,
 } from "../../testing/book.testkit";
+import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import { BookingScreen, PUBLIC_BOOKING_CONSENT } from "./book";
 
 type Call = { method: string; path: string; body: unknown; key: string | null };
-function serve(fail = false) {
+type Seat = { allow: GrantSpec };
+const BOOKER: GrantSpec = { activity: ["read", "create"] };
+// The seat is read on every /me answer, so a test can withdraw a grant mid-run.
+function serve(fail = false, seat: Seat = { allow: BOOKER }) {
   const calls: Call[] = [];
   vi.stubGlobal(
     "fetch",
@@ -44,15 +48,17 @@ function serve(fail = false) {
                 management_token: "private-link",
               },
             }
-        : path.endsWith("/connectors")
-          ? { data: [bookingConnection] }
-          : path.endsWith("/calendars")
-            ? []
-            : path.endsWith("/availability")
-              ? { slots: bookingSlots, truncated: false }
-              : path.includes("/meeting/")
-                ? bookingInvitation
-                : bookingProfile;
+        : path.endsWith("/v1/me")
+          ? meFixture({ allow: seat.allow })
+          : path.endsWith("/connectors")
+            ? { data: [bookingConnection] }
+            : path.endsWith("/calendars")
+              ? []
+              : path.endsWith("/availability")
+                ? { slots: bookingSlots, truncated: false }
+                : path.includes("/meeting/")
+                  ? bookingInvitation
+                  : bookingProfile;
       return new Response(JSON.stringify(reply), {
         status: post ? (fail ? 409 : 201) : 200,
         headers: { "content-type": "application/json" },
@@ -62,18 +68,20 @@ function serve(fail = false) {
   return calls;
 }
 function mount(hostSlug?: string) {
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
   render(
-    <QueryClientProvider
-      client={
-        new QueryClient({ defaultOptions: { queries: { retry: false } } })
-      }
-    >
+    <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
         <BookingScreen hostSlug={hostSlug} />
       </LocaleProvider>
     </QueryClientProvider>,
   );
+  return client;
 }
+const asksProfile = (calls: Call[]) =>
+  calls.some((call) => call.path.endsWith("/scheduling/profile"));
 // The guest page lists the chosen day's times by their time alone; the day is
 // the calendar's, and the first day with a free time is chosen for the guest.
 const slotName = (index: number, zone = browserZone()) =>
@@ -105,6 +113,46 @@ it("offers one reusable copy action without requiring a contact", async () => {
   ).toBeNull();
   expect(calls.some((call) => call.path.includes("/contacts"))).toBe(false);
 });
+it("answers a seat that may not book on the booking preview as on its own link page", async () => {
+  const calls = serve(false, { allow: { activity: ["read"] } });
+  mount("preview");
+  expect(
+    await screen.findByText(/You do not have permission for this action/),
+  ).toBeTruthy();
+  expect(screen.queryByText("Loading…")).toBeNull();
+  expect(asksProfile(calls)).toBe(false);
+});
+
+it("answers a seat that may not book on its own link page instead of loading forever", async () => {
+  const calls = serve(false, { allow: { activity: ["read"] } });
+  mount();
+  expect(
+    await screen.findByText(/You do not have permission for this action/),
+  ).toBeTruthy();
+  expect(screen.queryByText("Loading…")).toBeNull();
+  expect(screen.queryByRole("button", { name: "Copy link" })).toBeNull();
+  expect(asksProfile(calls)).toBe(false);
+});
+
+it("drops the cached booking link once the seat loses the grant to book", async () => {
+  const seat: Seat = { allow: BOOKER };
+  const calls = serve(false, seat);
+  const client = mount();
+  expect(
+    await screen.findByDisplayValue(bookingProfile.public_url ?? ""),
+  ).toBeTruthy();
+  const asked = calls.length;
+  seat.allow = { activity: ["read"] };
+  await client.refetchQueries({ queryKey: ["me"] });
+  await waitFor(() =>
+    expect(
+      screen.queryByDisplayValue(bookingProfile.public_url ?? ""),
+    ).toBeNull(),
+  );
+  expect(screen.queryByRole("button", { name: "Copy link" })).toBeNull();
+  expect(asksProfile(calls.slice(asked))).toBe(false);
+});
+
 it("submits a real invitation only after the visitor confirms their details and consent", async () => {
   inBookingMonth();
   const user = userEvent.setup();

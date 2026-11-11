@@ -102,7 +102,7 @@ func EmailSummariesByIDBatch(
 		if err := rows.Scan(activityScanTargets(&scan)...); err != nil {
 			return nil, fmt.Errorf("activities: scanning an email summary: %w", err)
 		}
-		admitted = append(admitted, scan.record())
+		admitted = append(admitted, scan.record(ctx))
 	}
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("activities: reading email summaries for a page: %w", err)

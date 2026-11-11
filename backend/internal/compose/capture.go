@@ -24,6 +24,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture/offlinedemo"
 	"github.com/margince/margince/backend/internal/modules/capture/telegram"
 	"github.com/margince/margince/backend/internal/modules/capture/testmailbox"
+	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
@@ -239,6 +240,12 @@ func NewCaptureRegistry(pool *pgxpool.Pool, vault keyvault.Vault, cfg CaptureCon
 	return r
 }
 
+// NewCaptureSink is newCaptureSink for callers outside compose: the
+// integration suite captures through the sink production composes.
+func NewCaptureSink(pool *pgxpool.Pool, cfg CaptureConfig) *capture.Sink {
+	return newCaptureSink(pool, cfg)
+}
+
 // newCaptureSink assembles the ONE fully-guarded Sink over the pool — the
 // merge-stager and the counterparty auto-create resolver attached. Every
 // capture path shares this spelling: the connector
@@ -268,6 +275,9 @@ func newCaptureSink(pool *pgxpool.Pool, cfg CaptureConfig) *capture.Sink {
 	}
 	return capture.NewSink(InstallationDB(pool)).
 		WithPartyAuthority(identity.NewServiceFor(InstallationDB(pool))).
+		// A seat's own sent echo re-keys the send it copies when the send's
+		// read-back failed, through the module that owns the deliveries.
+		WithSentEchoAdoption(comms.NewStore(InstallationDB(pool), time.Now, activities.NewStore(InstallationDB(pool))).AdoptEchoIdentityTx).
 		WithPartyReceiptSettlement(sentPartySettlement(pool)).
 		WithMessagePurger(purgeRemoved).
 		// The files a captured message carried, written by the module that owns

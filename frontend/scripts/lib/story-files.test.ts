@@ -8,6 +8,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, relative } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { stable } from "../../src/format/collate";
 import { storyCensus, storySuffixes } from "./story-files";
 
 const main = (globs: string) =>
@@ -83,10 +84,9 @@ describe("storyCensus walks every file Storybook loads", () => {
       main('"../src/**/*.mdx", "../src/**/*.stories.@(ts|tsx)"'),
     );
     const census = storyCensus(root);
-    expect(census.files.map((file) => relative(root, file)).sort()).toEqual([
-      "src/introduction.mdx",
-      "src/screens/brief.stories.tsx",
-    ]);
+    expect(
+      census.files.map((file) => relative(root, file)).sort(stable),
+    ).toEqual(["src/introduction.mdx", "src/screens/brief.stories.tsx"]);
   });
 
   it("reads nothing, and says so, when a glob cannot be read", () => {

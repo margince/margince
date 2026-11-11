@@ -100,10 +100,32 @@ func (w *controllerPayloadSweepWorker) alarmMissedReceipts(ctx context.Context) 
 	if failed := w.alarm.raiseOverdue(ctx, w.store, now, overdue); failed > 0 {
 		w.log.ErrorContext(ctx, "overdue controller receipts could not be raised to the privacy operators", "count", failed)
 	}
+	w.raiseOwedReceipts(ctx, now)
 	if err := w.alarm.settleSent(ctx, w.store); err != nil {
 		return fmt.Errorf("settling missed-receipt notices: %w", err)
 	}
 	return nil
+}
+
+// raiseOwedReceipts raises again each missed receipt whose alarm failed, and
+// reports the ones that left the window unraised. Both are best effort. A
+// failed read is logged and retried next pass, so it never holds back the
+// destruction of expired material that follows.
+func (w *controllerPayloadSweepWorker) raiseOwedReceipts(ctx context.Context, now time.Time) {
+	failed, err := w.alarm.raiseOwed(ctx, now, controllerPayloadSweepBatch, controllerPayloadSweepCap)
+	if err != nil {
+		w.log.ErrorContext(ctx, "reading the missed controller receipts still owed failed", "err", err)
+	}
+	if failed > 0 {
+		w.log.ErrorContext(ctx, "missed controller receipts still could not be raised to the privacy operators", "count", failed)
+	}
+	agedOut, err := w.alarm.agedOut(ctx, now)
+	if err != nil {
+		w.log.ErrorContext(ctx, "counting the missed controller receipts no sweep raised failed", "err", err)
+	}
+	if agedOut > 0 {
+		w.log.ErrorContext(ctx, "missed controller receipts were never raised and are no longer retried", "count", agedOut)
+	}
 }
 
 func (w *controllerPayloadSweepWorker) Work(ctx context.Context, _ *river.Job[ControllerPayloadSweepArgs]) error {

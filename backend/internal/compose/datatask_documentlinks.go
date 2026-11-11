@@ -18,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/originalstore"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 // documentLinksDataTask records the document links of mail captured before link
@@ -27,7 +28,7 @@ import (
 func documentLinksDataTask() datatask.Task {
 	return datatask.Task{
 		ID: "core/1792860002_document_links_from_stored_mail", Version: 1,
-		Title: "Record document links sent in captured mail", Requires: []string{"core/1792896283"},
+		Title: systemtext.Literal("datatask.title.core.1792860002_document_links_from_stored_mail"), Requires: []string{"core/1792896283"},
 		Steps: []datatask.Step{{
 			Name: "record_document_links", Limit: 50, MinLimit: 1,
 			Audit:    datatask.AuditPolicy{PerRecord: true},

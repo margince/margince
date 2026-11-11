@@ -218,7 +218,6 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attenti
 			// The same reader WithDealFacts binds below, so the lane keeps an
 			// entry exactly when the figures pass can state its deal.
 			figures: attentionDealFacts{store: deals.NewStore(db, DealsInstallation())},
-			now:     now,
 		},
 		nil, // Assigned promises are tasks; taskless claims name no personal owner.
 		atRisk,
@@ -401,7 +400,13 @@ type attentionDomainQuestions struct{ store *contacts.Store }
 // human's id itself, which is what lets the queue row claim the reader as its
 // owner without a second field restating it.
 func (a attentionDomainQuestions) OpenDomainQuestions(ctx context.Context) ([]attention.DomainQuestion, error) {
-	rows, err := a.store.OpenDomainQuestionsForOwner(ctx)
+	// The read binds only the owner, so one generic plan serves every reader.
+	var rows []contacts.DomainQuestion
+	err := database.ReuseGenericPlans(ctx, func(ctx context.Context) error {
+		var err error
+		rows, err = a.store.OpenDomainQuestionsForOwner(ctx)
+		return err
+	})
 	if err != nil {
 		return nil, err
 	}

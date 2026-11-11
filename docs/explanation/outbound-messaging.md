@@ -1,11 +1,9 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/modules/comms/dispatcher.go backend/internal/modules/comms/store.go backend/internal/modules/comms/storechannel.go backend/internal/modules/comms/gates.go backend/internal/modules/comms/sendseam.go backend/internal/modules/comms/policy.go backend/internal/modules/activities/email.go backend/internal/modules/activities/channelsend.go -->
+<!-- describes: backend/internal/modules/comms/dispatcher.go backend/internal/modules/comms/store.go backend/internal/modules/comms/storechannel.go backend/internal/modules/comms/gates.go backend/internal/modules/comms/transmit.go backend/internal/modules/comms/handoff.go backend/internal/modules/consent/transmitpermit.go backend/internal/platform/database/sessionlease.go backend/internal/modules/comms/sendseam.go backend/internal/modules/comms/policy.go backend/internal/modules/activities/email.go backend/internal/modules/activities/channelsend.go -->
 # Outbound messaging: the delivery work behind a sent message
 
-`internal/modules/comms` is how Margince sends a message out. It holds the durable record of what was
-staged to go. It holds the rules that decide whether it may go now, and the dispatcher that hands it to
-a provider. Read it beside [capture-connectors.md](capture-connectors.md): capture is the governed way
-in, and comms is what happens when a rep, or a governed agent, answers.
+`internal/modules/comms` holds each staged delivery, checks whether it may go, and hands it to a provider.
+[capture-connectors.md](capture-connectors.md) describes how messages come in.
 
 For the short version see [reference/modules.md](../reference/modules.md). To connect a transport and
 send something, see [how-to/connect-a-mailbox.md](../how-to/connect-a-mailbox.md) or
@@ -349,6 +347,27 @@ could carry is **recorded, never used**. Every failure comes down to one result:
 one duplicate timeline row*, with a `comms_identity_reconcile_failed` note in `system_log` for the
 operator.
 
+### When the read-back fails
+
+The connector reads the sent copy back to learn the identity the provider set. That read can fail
+after the send worked. `connector.SendReceipt.IdentityUnread` says how, and the send still counts as
+sent:
+
+- **Denied** (a refused read, such as a missing read scope): no later read answers either.
+  `RecordSent` writes a `comms_identity_reconcile_failed` note with the reason `read_denied`.
+- **Transient** (a rate limit, a server fault, a lost connection): the captured copy of the message
+  carries the identity. `RecordSent` looks for that copy by the provider's message id
+  (`capture.EchoIdentityTx`) and moves the send onto it, as for a read-back that answered.
+
+The copy can also come after the receipt, which is the usual order. The capture sink then calls
+`comms.Store.AdoptEchoIdentityTx` in its own transaction, before it writes anything. That moves the
+seat's send onto the copy's identity, so the copy lands on the send as a replay. It looks only at the
+seat's own deliveries, by seat, provider and provider message id.
+
+Both sides first take one lock on that seat, provider and message id
+(`storekit.LockSentEchoKey`). Whichever comes second sees what the first committed. Nothing is sent
+again, and no table or job is added: the mailbox's normal sync delivers the copy.
+
 `thread_key` moves only when it was the same as the message's own identity. The first message of a
 conversation moves onto the identity others will reply to. The thread key of a **reply** belongs to the
 conversation it is part of.
@@ -446,8 +465,8 @@ capture asks how a record names its human:
 - **`shapeChannel`** → channel = the identity's own **provider** (`telegram`), and the contact resolved
   from `contact_channel_identity`. The provider *is* the channel kind there.
 
-A missing contact is not a fault. The step that creates contacts runs after the capture transaction
-commits. So a sender who writes for the first time has no contact yet, on either channel kind.
+A missing contact is not a fault. The step that creates contacts runs after this one, later in the
+capture. So a sender who writes for the first time has no contact yet, on either channel kind.
 
 The
 wrong shapes return their own error values instead of a silent miss. One is a record that names its
@@ -546,6 +565,14 @@ sending.
 - **It is decided twice and recorded both times.** Staging refuses what may never go. The send step
   catches what changed while the message waited: revoked consent, a block, a bounce for good, an edit
   to the text.
+- **Stops share the send fence.** The final permission read holds shared subject and address locks.
+  A stop that commits first blocks the send; a stop during the provider call waits for release.
+  The handoff and release deadlines leave time for the stop to commit. Credential refresh, lookup
+  of an earlier send and receipt reads stay outside this fence.
+
+  A timed-out send has an unknown outcome and is never retried. A lost lease is logged: the database and provider cannot commit
+  together, and accepted mail may reach its reader later. Receipt writes follow release, so their
+  time differs from the time the provider accepted the message.
 - **Receipt before ledger.** A message the provider accepted may never end up recorded as not sent.
 - **Park only on an answer**, never on a failure to get one.
 - **A seam that cannot find a past send** marks the row as sending first, and never tries an unknown

@@ -1532,7 +1532,6 @@ up
 update
 upkeep
 upload
-upper
 upsert
 upstream
 uptime

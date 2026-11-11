@@ -2275,6 +2275,7 @@ export const en = {
   "systemJob.ai_price_sync": "Model price update",
   "systemJob.alias_discovery": "Mail address discovery",
   "systemJob.approval_expiry": "Approval expiry",
+  "systemJob.approval_owner_notice": "Approval handover notice",
   "systemJob.approval_notice_reconcile": "Pending approval notice cleanup",
   "systemJob.approval_notice_retract": "Approval notice withdrawal",
   "systemJob.approval_notify": "Approval notification",
@@ -2672,8 +2673,10 @@ export const en = {
   "history.field.partner_company_id": "Partner",
   "history.field.project_id": "Project",
   "history.field.product_id": "Product",
+  "history.field.legal_entity_id": "Sending company",
   "history.field.about_deal": "Deal it was about",
-  "history.field.qualifying_event": "Qualifying event",
+  "history.field.qualifying_event": "Recorded exchange",
+  "history.value.exchange.requested": "Asked to be contacted",
   "history.field.qualifying_event_retracted": "Recorded exchange withdrawn",
   "history.field.acquisition_request_retracted":
     "Acquisition request withdrawn",
@@ -2766,6 +2769,20 @@ export const en = {
   "shell.shortcuts.paragraphSave": "Save multi-line field",
   "shell.shortcuts.deckHint":
     "On Home, arrow keys stage a decision. Enter sends what is staged.",
+  "shell.shortcuts.create": "Create record",
+  "shell.shortcuts.list": "Show keyboard shortcuts",
+  "shell.shortcuts.goto": "Go to",
+  "shell.shortcuts.gotoHint": "Press G, then the letter.",
+  "shell.shortcuts.record": "On a record",
+  "shell.shortcuts.logActivity": "Log activity",
+  "shell.shortcuts.addTask": "Add task",
+  "shell.shortcuts.writeEmail": "Write message",
+  "shell.shortcuts.sendEmail": "Send email",
+  "shell.shortcuts.submitDialog": "Submit dialog",
+  "shell.shortcuts.then": "then",
+  "shell.shortcuts.or": "or",
+  "shell.shortcuts.singleKeyOff": "Single-key shortcuts are off",
+  "shell.shortcuts.singleKeyOffHint": "Turn them on in Settings → Account.",
   "shell.more": "More",
   "shell.unknownPage": "Not found",
   "shell.closeMenu": "Close",
@@ -2874,6 +2891,7 @@ export const en = {
   "action.newDeal": "New deal",
   "action.booking": "Booking page",
 
+  "common.fieldInvalid": "Check this value and try again.",
   "common.undo": "Undo",
   "common.close": "Close",
   "common.unknownValue": "Other",
@@ -3271,7 +3289,7 @@ export const en = {
   // comes back 404, so by the time this is read the record is one they may know
   // about. Two sentences, no dash (VOICE-RULE-5).
   "common.individualPerformanceOff":
-    "An administrator switched off individual performance. You can see your own figures. A figure is withheld when fewer than two other members make it up, or when taking another team’s total from it would leave fewer than two.",
+    "An administrator switched off individual performance. You can see your own figures. A figure is withheld when fewer than two other members make it up, or when taking another team’s total from it would leave fewer than two. A forecast is withheld in full if any of its groups would show one colleague’s figures.",
   "common.permissionDenied":
     "You do not have permission for this action. Ask an administrator, or the user who shared this record, to extend your access.",
   // The licensing ceiling, decided before any role is consulted: a read seat is
@@ -3380,6 +3398,8 @@ export const en = {
 
   "list.headActions": "More actions",
   "list.search": "Search",
+  "list.searchFor": "Search for “{query}”",
+  "list.filterSuggestionsFailed": "Filter suggestions did not load.",
   "list.showArchived": "Show archived",
   "list.viewToggleOn": "On",
   "list.viewToggleOff": "Off",
@@ -3502,6 +3522,17 @@ export const en = {
     "Sends stop resting on it, including a message already queued on it. The request stays on the record as withdrawn and cannot be restored.",
   "consent.acquisitionRequest":
     "When this contact was added, they asked for a quote or a meeting, or said face to face that they may be written to.",
+  "consent.exceptionUnknownOrigin": "Original author and date unavailable.",
+  "consent.exceptionsTitle": "Standing exceptions",
+  "consent.exceptionsScope":
+    "Each exception covers one purpose and one sending company. It grants no marketing consent. Every message is checked again.",
+  "consent.exceptionOtherPurpose": "Other recorded purpose",
+  "consent.exceptionCompany": "Sending company: {name}",
+  "consent.exceptionUnnamedCompany": "Sending company name not set.",
+  "consent.exceptionUnknownCompany": "Sending company not recorded.",
+  "consent.exceptionRevoke": "Revoke exception",
+  "consent.exceptionRevokeBody":
+    "Future messages can no longer use this exception. Consent records and contact requests stay as they are.",
   "consent.stopsTitle": "Stops",
   "consent.stopKind.subject_request": "Asked not to be contacted",
   "consent.stopKind.marketing_objection": "Objected to marketing",
@@ -3965,6 +3996,9 @@ export const en = {
     "This deal has no Deal Room yet. Open one from the deal page.",
   "roompage.backToDeal": "← Back to deal",
   "roompage.accessMenu": "Room access",
+  "room.stewardNeeded.title": "New contact needed",
+  "room.stewardNeeded.body":
+    "Choose an active colleague to answer buyers. Existing questions and room access stay as they are.",
   "roompage.manage": "Manage room",
   "roompage.pause": "Pause",
   "roompage.pauseHint":
@@ -7546,12 +7580,16 @@ export const en = {
   "compose.newThread": "New thread",
   "compose.copies": "Cc and Bcc",
   "compose.signsOffAs": "Signs off as “{closing}”.",
-  "compose.reasonRecord": "Keep as a standing reason",
-  "compose.reasonStanding":
-    "A standing reason covers this kind of message to {address} from your company until someone revokes it. It is your word, not their consent.",
-  "compose.reasonRecordFor":
-    "Keep as a standing reason: {reason}, for {address}",
-  "compose.reasonLabel": "Why you may write to {address}",
+  "compose.fact.open": "Record what happened",
+  "compose.fact.title": "Record the exchange with {address}",
+  "compose.fact.scope":
+    "Records the exchange with {address} for the sending company. It does not send this email, record marketing consent or create an exception.",
+  "compose.fact.kind": "What happened?",
+  "compose.fact.request": "They asked me to write",
+  "compose.fact.quoteRequest": "They asked for this quote",
+  "compose.fact.met": "Met face to face",
+  "compose.fact.note": "What was agreed?",
+  "compose.fact.save": "Record the exchange",
   "compose.replyIntent": "Purpose of the reply",
   "compose.newIntent": "Purpose of the email",
   "compose.draftReply": "Draft reply",
@@ -7841,8 +7879,24 @@ export const en = {
   "compose.sendMessageConfirmTitle": "Send message",
   "compose.sendMessageBody":
     "The message is sent immediately. This cannot be undone.",
+  "directSend.existingApproval":
+    "Your one-message approval still stands. Its original reason stays on record.",
+  "directSend.correctWording": "Correct spelling or punctuation",
+  "directSend.correctionTitle": "Correct wording and keep your approval",
+  "directSend.correctionSave": "Save correction",
+  "directSend.correctionScope":
+    "Correct spelling or punctuation only. Recipients, sender, purpose and attachments stay the same. Changes in meaning need a new message approval.",
+  "directSend.correctionAcknowledge":
+    "I confirm that only spelling or punctuation changed. The meaning and facts are unchanged.",
+  "directSend.correctionNeedsEdit":
+    "Make a spelling or punctuation correction first.",
+  "directSend.correctionNeedsConfirmation":
+    "Confirm that the meaning and facts are unchanged.",
+  "directSend.correctionNeedsText": "Keep a subject and a message body.",
+  "directSend.correctionFailed":
+    "The correction was not saved. Reopen the review to check the current message and approval.",
   "directSend.open": "Send with a recorded exception",
-  "directSend.sent": "Sent as a recorded exception.",
+  "directSend.queued": "Queued as a recorded exception.",
   "directSend.opening": "Opening…",
   "directSend.alreadySettled":
     "This has already been decided. Open the review for the outcome.",
@@ -8452,6 +8506,11 @@ export const en = {
   "analytics.sdrReading.leads_awaiting_response":
     "Leads still waiting for a first reply",
   "analytics.sdrQualifiedOf": "{qualified} of {arrived}",
+  "analytics.handoffReassign": "Reassign handoff",
+  "analytics.handoffReassignHint":
+    "Choose an active colleague who can work this prospect. Accepted handoffs keep their original attribution.",
+  "analytics.handoffReassignUnavailable":
+    "Choose a colleague after the current assignment loads. Reassignment requires write access and a handoff still waiting for an answer.",
   "analytics.sdrWaiting": "Handoffs waiting on others",
   "analytics.sdrWaitingIntro":
     "Handoffs you submitted that nobody has decided yet. A handoff that was sent back and submitted again waits from the new submission.",
@@ -8767,6 +8826,20 @@ export const en = {
   "settings.signatureHtmlHintPlain":
     "Leave this empty to use your plain text again. Remote images and scripts are removed.",
   "settings.signatureOwnHtml": "Your HTML signature",
+  "settings.signatureReviewTitle": "Review {name}’s retained signature",
+  "settings.signatureReviewIntro":
+    "The owner cannot review this signature themselves. The original stays until you save your changes. Check every field before choosing what to remove.",
+  "settings.signatureReviewPreview": "Saved signature preview",
+  "settings.signatureReviewReload": "Reload this signature before editing it.",
+  "settings.signatureReviewChangedTitle": "The signature changed",
+  "settings.signatureReviewChanged":
+    "Another controller saved changes. Review the latest version below. Keep your draft only if you want it to replace those fields.",
+  "settings.signatureReviewLatest": "Latest saved version",
+  "settings.signatureReviewUseLatest": "Use latest version",
+  "settings.signatureReviewKeepDraft": "Keep my draft",
+  "settings.signatureReviewLoading": "Loading the retained signature…",
+  "settings.signatureReviewSaved": "Signature review saved",
+  "settings.signatureReviewMember": "the member",
   "settings.signature": "Email signature",
   "settings.signatureSub":
     "Added below every message you send, above the unsubscribe footer.",
@@ -9984,8 +10057,12 @@ export const en = {
     "A lost deal needs the reason it was lost.",
   "import.reason.deal_pipeline_fixed":
     "This deal is in another pipeline than the file names. An import does not move a deal between pipelines, so the row is skipped.",
+  "companies.contractMergeBlocked":
+    "A deal has contracts belonging to another company. Archived contracts also count. Ask an administrator to correct the contract links before merging.",
+  "deals.contractCompanyBlocked":
+    "This deal has contracts belonging to another company. Archived contracts also count. Ask an administrator to correct the contract links before changing the company.",
   "import.reason.deal_company_has_contracts":
-    "This deal has contracts that name a company other than the one in this row, so the row is skipped. Detach the contracts from the deal, or file each against a deal of its own company, then import again.",
+    "This deal has contracts that name a company other than the one in this row, so the row is skipped. Archived contracts also count. Ask an administrator to correct the contract links, then import again.",
   "import.reason.deal_already_closed":
     "This deal is already closed, so the row is skipped. An import does not reopen a closed deal.",
   "import.reason.fx_rate_missing":
@@ -11569,6 +11646,27 @@ export const en = {
   "senders.waiting.moreAddresses_other": "+{count} more",
   "senders.waiting.openNamed": "Open {name}",
   "senders.waiting.openUnnamed": "Open contact",
+  "senders.waiting.onMargince": "Waiting on Margince:",
+  "senders.waiting.onYou": "Waiting on you:",
+  "senders.waiting.why.decided":
+    "the decision is applied at the next sender check.",
+  "senders.waiting.why.classifying":
+    "the sender check has not judged this sender yet.",
+  "senders.waiting.why.unsure":
+    "the sender check could not tell, so your answer decides.",
+  "senders.waiting.why.queued": "the sender check will look at their mail.",
+  "senders.waiting.why.unjudgeable":
+    "Margince cannot check this sender on its own, so only you can decide.",
+  "senders.waiting.businessFor": "Mark {address} as business",
+  "senders.waiting.keepOutFor": "Exclude {address}",
+  "senders.waiting.businessTitle": "Mark this sender as business?",
+  "senders.waiting.businessBody":
+    "Their mail is kept as business mail, and this contact is shared with your company. Each email and meeting keeps its own sharing.",
+  "senders.waiting.remove": "Remove from contacts",
+  "senders.waiting.removeTitle": "Remove this contact?",
+  "senders.waiting.removeBody":
+    "The contact is archived and leaves this list. Its mail stays, and no sender decision changes. You can restore it from archived contacts.",
+  "senders.waiting.removeConfirm": "Remove contact",
   "connectionOutcomes.title": "What your connections found",
   "connectionOutcomes.view": "View",
   "connectionOutcomes.viewNamed": "View {name}",
@@ -12564,7 +12662,7 @@ export const en = {
   "forcedMfa.pageTitle": "Set up two-step sign-in",
   "forcedMfa.title": "Set up two-step sign-in",
   "forcedMfa.body":
-    "This installation requires two-step sign-in. Set up an authenticator app to continue.",
+    "Password sign-in requires two-step sign-in. Set up an authenticator app to continue.",
   "forcedMfa.alreadyOn": "Two-step sign-in is already on.",
   "forcedMfa.continue": "Continue",
   "forcedPassword.pageTitle": "Set password",
@@ -12877,6 +12975,7 @@ export const en = {
     "Leave empty for no end date. The day is read in UTC.",
   "roomtab.manage.contactLabel": "Your contact",
   "roomtab.manage.contactHint": "The colleague a buyer turns to.",
+  "roomtab.manage.contactMissing": "No active contact",
   "roomtab.manage.contactOwner": "The deal’s owner",
   "roomtab.manage.textHeading": "Title and welcome",
   "roomtab.manage.welcomeHint": "The first paragraph a buyer reads.",
@@ -13889,6 +13988,8 @@ export const en = {
     "Everything keeps working and nothing is capped. Configure a license token for this installation to count seats against a grant.",
   "license.refused.title": "This installation’s license was refused",
   "license.refused.body":
+    "The license token configured for this installation was presented and rejected. Full seats in use keep working, and no full seat is added beyond what the last valid license granted, until it is replaced. Check the token and the installation’s clock.",
+  "license.refused.bodyUncapped":
     "The license token configured for this installation was presented and rejected. Everything keeps working, uncapped, until it is replaced. Check the token and the installation’s clock.",
   "license.seats.capacityOnly": "Your role cannot see the license entitlement.",
   "license.seats.title": "Seats",
@@ -13913,6 +14014,12 @@ export const en = {
   "license.renewal.title": "License needs renewal",
   "license.renewal.body":
     "The license expires on {expiry}. Nothing changes before that date.",
+  "license.check.button": "Check now",
+  "license.check.hint":
+    "Reads the license token file on the server again now, instead of at the next daily check. Replace the file first. A token set in an environment variable applies only after a restart.",
+  "license.check.done": "License token read again. This card shows the result.",
+  "license.check.failed":
+    "The license token could not be read again. The last result stands, and the server log says why.",
   "license.counting":
     "Full seats that are not deactivated or suspended, agents included. Read-only seats are unlimited and not counted.",
   "settings.rates.fxTitle": "Currency rates",
@@ -14585,6 +14692,10 @@ export const en = {
   "users.handover.tasks_other": "{count} open tasks",
   "users.handover.webhooks_one": "{count} webhook",
   "users.handover.webhooks_other": "{count} webhooks",
+  "users.handover.handoffs_one": "{count} pending handoff",
+  "users.handover.handoffs_other": "{count} pending handoffs",
+  "users.handover.responsibilities_one": "{count} record responsibility",
+  "users.handover.responsibilities_other": "{count} record responsibilities",
   "users.handover.lists_one": "{count} list",
   "users.handover.lists_other": "{count} lists",
   "users.removeMfa": "Remove two-step sign-in",
@@ -14867,6 +14978,7 @@ export const en = {
   "aicalls.outcome.ok": "Answered",
   "aicalls.outcome.fallback": "Fallback",
   "aicalls.outcome.declined": "Declined",
+  "aicalls.outcome.canceled": "Canceled",
   "aicalls.outcome.error": "Failed",
   "aicalls.filter.search": "Search calls",
   "aicalls.filter.searchPlaceholder": "Search feature, model or error",
@@ -14948,6 +15060,7 @@ export const en = {
   "aicalls.sentinel.provider_refused": "Refused by provider",
   "aicalls.sentinel.provider_error": "Provider failed",
   "aicalls.sentinel.timeout": "Timed out",
+  "aicalls.sentinel.canceled": "Canceled by the caller",
   "aicalls.sentinel.output_withheld": "Answer withheld",
   "aicalls.sentinel.output_rejected": "Answer rejected",
   "aicalls.sentinel.request_rejected": "Request rejected",
@@ -15128,14 +15241,16 @@ export const en = {
     "Always available, so nobody is locked out when another method is off.",
   "signInMethods.noneConfigured":
     "This installation has no external provider configured. Password is the only sign-in method.",
-  "signInMethods.requireMfa": "Require second factor",
+  "signInMethods.requireMfa": "Require second factor for passwords",
+  "signInMethods.requireMfaAction": "Require",
   "signInMethods.requireMfaHint":
-    "Every member needs two-step sign-in turned on to use Margince.",
-  "signInMethods.requireMfaConfirmTitle": "Require second factor?",
+    "Password sign-in requires Margince two-step sign-in. Google and Microsoft manage their own MFA.",
+  "signInMethods.requireMfaConfirmTitle":
+    "Require second factor for passwords?",
   "signInMethods.requireMfaConfirmBody":
-    "Members without two-step sign-in are asked to set it up before they can continue.",
+    "Members signing in with a password must set up two-step sign-in before they can continue.",
   "signInMethods.requireMfaConfirmSelf":
-    "You have not set up two-step sign-in yet, so you are asked to set it up too.",
+    "Signing in with a password will require setting up two-step sign-in for this account too.",
   "groupRoles.title": "Group role grants",
   "groupRoles.sub":
     "When someone you invited signs in with Google or Microsoft, they get the role mapped to a group they belong to in your company directory. Nobody gets in without an invitation.",
@@ -15631,6 +15746,9 @@ export const en = {
     "The language of menus, pages and messages from Margince. Saved to your account, so it follows you to every device you sign in on.",
   "account.appearanceHelp":
     "Light, dark or follow this computer’s setting. Applies in this browser only. The account menu changes the same setting.",
+  "account.singleKeyShortcuts": "Single-key shortcuts",
+  "account.singleKeyShortcutsHelp":
+    "Letter and symbol keys work as shortcuts on their own. Applies in this browser only.",
   "reviewTemplates.questionCount_one": "{count} question",
   "reviewTemplates.questionCount_other": "{count} questions",
   "reviewTemplates.summary": "{questions}, {required} required",
@@ -16031,7 +16149,7 @@ export const en = {
   "agentAllowances.window.help":
     "How long one allowance lasts. A new length starts at the next reset, so no passport gets a fresh allowance early.",
   "agentAllowances.burst":
-    "Fixed limits on the MCP connection: {calls} calls and {streams} stream opens a minute per passport, the same for every role.",
+    "Fixed limits on the MCP connection, per passport: {streams} stream opens a minute for every role, and the tool calls a minute each role shows.",
   "agentAllowances.pending.title": "Window change waiting",
   "agentAllowances.pending.body":
     "Each window lasts {interval} from {date} UTC. Until then the current window keeps counting.",
@@ -16060,6 +16178,8 @@ export const en = {
   "agentAllowances.roles.rule":
     "For each kind, an agent gets the highest value among its user’s roles. A role with no value of its own uses the installation value, and Admin may take its preset instead.",
   "agentAllowances.roles.col.role": "Role",
+  "agentAllowances.roles.col.pacing": "Tool calls a minute",
+  "agentAllowances.roles.unpaced": "No limit",
   "agentAllowances.roles.builtIn": "Built-in",
   "agentAllowances.roles.source.role": "Set for this role",
   "agentAllowances.roles.source.admin_preset": "Admin preset",
@@ -17348,6 +17468,12 @@ export const en = {
   "contact.intro.whenYesterday": "last contact yesterday",
   "contact.intro.whenDays": "last contact {days} days ago",
   "contact.intro.whenNever": "no recent contact",
+  "contact.intro.replaceAction": "Choose another colleague",
+  "contact.intro.replaceHint":
+    "Review a fresh route and ask. The old ask stays open until the replacement succeeds. The new colleague must decide for themselves; earlier approval does not carry over.",
+  "contact.intro.replaceReasonHint":
+    "The colleague on the original ask can read this reason.",
+  "contact.intro.replaceReason": "Why are you replacing this ask?",
   "contact.intro.askTitle": "Ask for an introduction to {name}",
   "contact.intro.recordAction": "Record an introduction",
   "contact.intro.recordTitle": "Record an introduction to {name}",
@@ -17376,7 +17502,6 @@ export const en = {
   "contact.intro.recordedIntroduced": "introduced",
   "contact.intro.cancel": "Cancel",
   "contact.intro.askAction": "Request introduction",
-  "contact.intro.askFailed": "The request was not recorded. Retry.",
   "contact.intro.reasonLabel": "Reason for request",
   "contact.intro.reasonHint":
     "Your colleague reads this, not the contact. State why the introduction is worth making.",
@@ -17623,9 +17748,7 @@ export const en = {
     "No marketing permission recorded",
   "contact.consent.fact.notAllowed": "Not allowed for this purpose",
   "contact.consent.fact.nothingRecorded": "Nothing recorded yet",
-  "contact.consent.allowedWord": "Allowed",
-  "contact.consent.blockedWord": "Blocked",
-  "contact.consent.unknownWord": "Unknown",
+  "contact.consent.fact.purposeSupported": "Supported for this purpose",
 
   "contact.moment.rule.privacy_notice_due": "Privacy notice owed",
   "contact.moment.rule.meeting_prep": "Meeting soon",
@@ -20559,6 +20682,7 @@ export const en = {
   "aiOutcome.gaveUp.last_one": "{count} {reason} → no answer",
   "aiOutcome.gaveUp.last_other": "{count} {reason} → no answer",
   "aiOutcome.gaveUp.timeout": "timed out",
+  "aiOutcome.gaveUp.canceled": "canceled by the caller",
   "aiOutcome.gaveUp.failed": "failed",
   "aiOutcome.gaveUp.throttled": "throttled",
   "aiOutcome.gaveUp.quota": "out of quota",

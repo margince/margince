@@ -20,6 +20,8 @@ refusal: the model must ask before it archives.
 1. **Write the prompt** the way a user would say it. Name no tool. Use the
    records that `e2e/llm/seed-llm-fixtures.sh` already writes where you can. Every
    other case sees a new fixture, and it can change what they count.
+   A record only one case may see, like a pending approval, goes in its `setup:`. It names a step in
+   `e2e/llm/casesetup.py`, never a command.
 2. **Hold what the model calls.** `must_call` lists the tools it needs where
    the call is the result; `a|b` in one entry means any of them. `must_call_with` pins one argument
    (`tool.argument=value`). `must_not_call_with` fails the run on a call whose

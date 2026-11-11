@@ -314,6 +314,14 @@ RUN --mount=type=cache,id=margince-gobuild,target=/root/.cache/go-build \
     && GOWORK=/src/build/composition/go.work CGO_ENABLED=0 GOOS=linux GOARCH=$TARGETARCH \
         go build -ldflags="$stamp" -o /bin/margince-migrate ./cmd/migrate
 
+# ── notices: licence texts of what the Go programs link ───────────────────────
+# One file for the three programs, written from the packages they link, so the
+# api image, the worker image and the server bundle ship the same text. The
+# build fails on a linked module with no licence text rather than shipping a
+# file that claims completeness. The web image carries its own notices.
+FROM gobase AS notices
+RUN GOWORK=/src/build/composition/go.work sh /src/scripts/backend-notices.sh /out/THIRD-PARTY-NOTICES.txt
+
 # ── api: runtime ──────────────────────────────────────────────────────────────
 # cmd/api — the HTTP process role (serves /v1 + /healthz + /readyz + /metrics).
 FROM alpine:3.24@sha256:294b683cb724975bec92580e1e685676bd4b50bda910ddb8c51d4cabeaec77e6 AS api
@@ -322,6 +330,7 @@ RUN apk add --no-cache ca-certificates tzdata
 
 COPY --from=api-build /bin/margince-api /usr/local/bin/margince-api
 COPY --from=api-build /bin/margince-migrate /usr/local/bin/margince-migrate
+COPY --from=notices /out/THIRD-PARTY-NOTICES.txt /licenses/THIRD-PARTY-NOTICES.txt
 COPY scripts/deploy/api-entrypoint.sh /usr/local/bin/entrypoint.sh
 
 # The release version, a second time, as a file in the image.
@@ -362,6 +371,7 @@ FROM alpine:3.24@sha256:294b683cb724975bec92580e1e685676bd4b50bda910ddb8c51d4cab
 RUN apk add --no-cache ca-certificates tzdata
 
 COPY --from=worker-build /bin/margince-worker /usr/local/bin/margince-worker
+COPY --from=notices /out/THIRD-PARTY-NOTICES.txt /licenses/THIRD-PARTY-NOTICES.txt
 COPY scripts/deploy/worker-entrypoint.sh /usr/local/bin/entrypoint.sh
 
 # The in-image release version; the api runtime stage carries why.
@@ -417,6 +427,7 @@ COPY scripts/deploy/ /deploy/
 COPY config/margince.example.yaml /config/margince.example.yaml
 COPY .env.example /margince.env.example
 COPY LICENSE /LICENSE
+COPY --from=notices /out/THIRD-PARTY-NOTICES.txt /licenses/THIRD-PARTY-NOTICES.txt
 
 # Exported as files and never run, so no account is named; a non-root id keeps
 # a `docker run` of it from starting as root.

@@ -164,12 +164,8 @@ func TestConcurrentOlderRenewalCannotOverwriteCommittedNewerWork(t *testing.T) {
 	}()
 	observer := integration.OwnerConn(t)
 	testdb.WaitForContention(t, done, "older renewal bypassed the source lock", "older renewal never reached the source lock", func(probe context.Context) (bool, error) {
-		if _, err := observer.Exec(probe, `SELECT pg_stat_clear_snapshot()`); err != nil {
-			return false, err
-		}
-		var blocked bool
-		err := observer.QueryRow(probe, `SELECT EXISTS (SELECT 1 FROM pg_stat_activity WHERE $1 = ANY(pg_blocking_pids(pid)))`, pid).Scan(&blocked)
-		return blocked, err
+		queued, err := testdb.QueuedBehind(probe, observer, int32(pid))
+		return queued > 0, err
 	})
 	close(release)
 	if err := <-winner; err != nil {
@@ -228,12 +224,8 @@ func TestErasingOldRenewalWaitsForTheTaskAndRechecksItsEvidence(t *testing.T) {
 			erased <- privacy.NewEraser(f.e.DB()).WithRawCapturePurger(RawCapturePurgerFor(f.e.DB())).EraseContact(eraseCtx, subject, "Subject requested erasure")
 		}()
 		testdb.WaitForContention(t, done, "erasure did not wait for task renewal", "erasure never reached the held task", func(probe context.Context) (bool, error) {
-			if _, err := observer.Exec(probe, `SELECT pg_stat_clear_snapshot()`); err != nil {
-				return false, err
-			}
-			var blocked bool
-			err := observer.QueryRow(probe, `SELECT EXISTS (SELECT 1 FROM pg_stat_activity WHERE $1 = ANY(pg_blocking_pids(pid)))`, pid).Scan(&blocked)
-			return blocked, err
+			queued, err := testdb.QueuedBehind(probe, observer, int32(pid))
+			return queued > 0, err
 		})
 		_, _, err := dispatcher.DispatchTx(ctx, tx, c, ids.NewV7())
 		return err

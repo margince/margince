@@ -20,12 +20,16 @@ import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
-import { Checkbox, Field } from "../../design-system/atoms";
+import { Button, Checkbox, Field, Textarea } from "../../design-system/atoms";
 import { ConfirmModal } from "../../design-system/confirmmodal";
 import { ErrorLine } from "../../design-system/errorline";
 import { Select } from "../../design-system/select";
+import { sendingCompanyScope } from "../../format/sendingcompany";
+import { sendPermissionReasonKey } from "../../format/sendpermissionreason";
 import { useT } from "../../i18n";
+import { communicationContextLabel } from "../../lib/compose-context";
 import { throwProblem } from "../../lib/problem";
+import { WordingCorrectionModal } from "./wordingcorrectionmodal";
 
 // The review as this modal needs it: which message, and the caution the server
 // serves for it. Taken from the generated contract rather than restated, so a
@@ -94,24 +98,29 @@ export function DirectSendModal({
   onSent?: (activityId: string) => void;
 }>) {
   const t = useT();
+  const correction = review.wording_correction;
+  const prior = correction ?? {
+    reason_code: "other",
+    explanation: "",
+    version: "new",
+  };
+  const recordedReason =
+    REASON_CODES.find((code) => code === prior.reason_code) ?? "other";
+  const [editingWording, setEditingWording] =
+    useState<CommunicationReview["wording_correction"]>();
   const [acknowledged, setAcknowledged] = useState(false);
-  const [reasonCode, setReasonCode] = useState<ReasonCode>("other");
-  const [explanation, setExplanation] = useState("");
+  const [reasonCode, setReasonCode] = useState<ReasonCode>(recordedReason);
+  const [explanation, setExplanation] = useState(prior.explanation);
 
-  // RESET WHEN THE MESSAGE CHANGES. A director who ticks, cancels, and opens a
-  // DIFFERENT refused message would otherwise arrive with the acknowledgement
-  // already ticked and the previous reason still typed — one click from
-  // recording, against this message, a decision they made about another one.
-  //
-  // Keyed on the review rather than on `open`, because reopening the same
-  // message after a cancel is the one case where keeping what they typed is
-  // the kindness rather than the hazard.
-  const [seen, setSeen] = useState(review.id);
-  if (seen !== review.id) {
-    setSeen(review.id);
+  // A different review or warning needs a fresh acknowledgement.
+  const acknowledgementKey = `${review.id}:${review.warning?.version ?? ""}:${prior.version}`;
+  const [seen, setSeen] = useState(acknowledgementKey);
+  if (seen !== acknowledgementKey) {
+    setSeen(acknowledgementKey);
     setAcknowledged(false);
-    setReasonCode("other");
-    setExplanation("");
+    setEditingWording(undefined);
+    setReasonCode(recordedReason);
+    setExplanation(prior.explanation);
   }
 
   const send = useMutation({
@@ -138,6 +147,17 @@ export function DirectSendModal({
         ? t("directSend.needsReason")
         : undefined;
 
+  if (editingWording) {
+    return (
+      <WordingCorrectionModal
+        reviewId={review.id}
+        context={editingWording}
+        onClose={() => setEditingWording(undefined)}
+        onSaved={onClose}
+      />
+    );
+  }
+
   return (
     <ConfirmModal
       open={open}
@@ -163,11 +183,49 @@ export function DirectSendModal({
           director as having read the server's caution while showing them
           ours. */}
       {review.warning && <ErrorLine>{review.warning.text}</ErrorLine>}
+      {correction && (
+        <>
+          <p className="t-body">{t("directSend.existingApproval")}</p>
+          <Button variant="ghost" onClick={() => setEditingWording(correction)}>
+            {t("directSend.correctWording")}
+          </Button>
+        </>
+      )}
+      {review.refusals.map((refusal) => (
+        <div
+          key={`${refusal.address}-${refusal.subject_id ?? ""}-${refusal.category ?? ""}`}
+        >
+          <p>{refusal.address}</p>
+          <p className="t-caption">
+            {t(
+              sendPermissionReasonKey(
+                refusal.reason_code,
+                {},
+                refusal.category,
+              ),
+            )}
+          </p>
+          <p className="t-caption">
+            {communicationContextLabel(
+              refusal.requested_category ?? refusal.category,
+              t,
+            ) ?? t("consent.exceptionOtherPurpose")}
+          </p>
+          <p className="t-caption">
+            {sendingCompanyScope(
+              refusal.sending_entity_id,
+              refusal.sending_entity_name,
+              t,
+            )}
+          </p>
+        </div>
+      ))}
       <Field label={t("directSend.reasonCodeLabel")}>
         {(control) => (
           <Select
             {...control}
             value={reasonCode}
+            disabled={Boolean(correction)}
             onChange={(picked) => setReasonCode(picked as ReasonCode)}
             options={REASON_CODES.map((code) => ({
               value: code,
@@ -183,12 +241,12 @@ export function DirectSendModal({
           reason presses without meaning to confirm anything. */}
       <Field label={t("directSend.explanationLabel")}>
         {(control) => (
-          <textarea
+          <Textarea
             {...control}
-            className="input"
             rows={3}
             maxLength={1000}
             value={explanation}
+            disabled={Boolean(correction)}
             onChange={(e) => setExplanation(e.target.value)}
           />
         )}

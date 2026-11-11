@@ -14,6 +14,8 @@ import (
 
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
@@ -357,11 +359,11 @@ func VettedSentence(s string) bool {
 // They are NOT vocabulary entries: no sentinel maps to them, no class token names
 // them, and VettedFailure answers no class for them. That is the point. Each is
 // what the product says when it has nothing to say.
-const (
+var (
 	// unrecognised is what an unclassified cause becomes on the wire. It says
 	// where the diagnosis went, because an operator reading it in a job list
 	// otherwise has no next step.
-	unrecognised = "the job failed for a reason it could not classify; the diagnosis is in the process log"
+	unrecognised = systemtext.Literal("jobs.unclassified")
 
 	// UnvettedFailureReason is what an unrecognised STORED error becomes.
 	//
@@ -371,7 +373,7 @@ const (
 	// one of the most common to reach here, a log pointer would be an instruction
 	// to go read something that was never written. It says what is known and
 	// where to look, and no more.
-	UnvettedFailureReason = "the job failed for a reason this surface cannot vet; check the worker logs and the job row directly"
+	UnvettedFailureReason = systemtext.Literal("jobs.unvetted")
 
 	// NoRecordedCause is what a row with no stored error at all becomes.
 	//
@@ -380,7 +382,7 @@ const (
 	// this surface cannot vet" asserts a failure that did not happen and points
 	// at a log line nobody wrote. Nothing recorded is a different fact from
 	// something unreadable, and the two must not render alike.
-	NoRecordedCause = "this job recorded no cause; a job cancelled before it ran records none"
+	NoRecordedCause = systemtext.Literal("jobs.no_cause")
 )
 
 // substitutes is the set no declared class may claim, spelled once so a fourth
@@ -421,20 +423,34 @@ type sentinelFault struct {
 // gate rather than silently reporting as unclassifiable the first time a job
 // returns it.
 var vocabulary = []sentinelFault{
-	{apperrors.ErrNotFound, "record_gone", "the record this job names no longer exists", "Nothing to do: the work is moot. Re-queue only if the record was deleted in error and has been restored."},
-	{apperrors.ErrConflict, "write_conflict", "another writer changed the record while this job ran", "Re-queue it. The job re-reads the record and the second attempt normally settles."},
-	{apperrors.ErrVersionSkew, "version_skew", "the record changed under this job; it will re-read on retry", "Nothing to do: the retry re-reads. A job stuck here across many attempts means a writer is changing the record faster than the job can finish."},
-	{apperrors.ErrPermissionDenied, "principal_not_permitted", "this job's principal is not permitted the action it attempted", "Check the seat this job runs as still holds the role the action needs; a demoted or archived seat produces exactly this."},
-	{apperrors.ErrInvalidArgument, "invalid_argument", "the job's own input was invalid or malformed", "Nothing to re-queue as-is: the input that produced this job needs correcting at its source before another attempt can succeed."},
-	{apperrors.ErrConsentNotGranted, "consent_missing", "consent for this purpose is not granted, so the job stopped before acting", "Nothing to fix in the job. The record's owner grants consent, or the work is not meant to happen."},
-	{apperrors.ErrBudgetExceeded, "budget_spent", "the budget for this work is spent; the job will run once it refreshes", "Wait for the window to refresh, or raise the budget if the work matters more than the cap."},
-	{apperrors.ErrRequiresApproval, "staged_for_approval", "this action needs human approval and was staged rather than executed", "Somebody approves or rejects the staged action; the job itself needs no re-queue."},
-	{apperrors.ErrSeatTierInsufficient, "seat_tier_insufficient", "the granting seat's tier does not admit this action", "Raise the granting seat's tier, or stop asking this job for an action that tier is not meant to take."},
-	{apperrors.ErrSeatLimitReached, "seat_limit_reached", "the installation's licensed full seats are all in use, so no seat was created", "Free a seat or license another, then re-queue."},
-	{apperrors.ErrScopeExceeded, "scope_exceeded", "the passport's scope does not cover this action", "Re-issue the passport with the scope the action needs, or narrow what the job attempts."},
-	{apperrors.ErrApprovalTokenInvalid, "approval_token_spent", "the approval token was invalid or already spent", "Ask for the approval again. A token is single-use, so a replayed one lands here."},
-	{apperrors.ErrUnsupportedBySoR, "unsupported_by_sor", "the system of record does not support this operation", "Nothing to fix here; the operation has to happen in the system of record itself."},
-	{apperrors.ErrBaseCurrencyLocked, "base_currency_locked", "the base currency is locked by frozen conversion rates", "Nothing to do in the job: a base currency stops being changeable once rates are frozen against it."},
-	{apperrors.ErrProviderUnusable, "provider_unusable", "an outside service gave no usable answer, so nothing was learned", "Check the provider is reachable, is not rate-limiting this installation, and answers in the expected shape, then re-queue. A request with no answer says nothing about its subject."},
-	{apperrors.ErrRetentionHold, "retention_hold", "the record is held under a statutory retention obligation", "Nothing to do, and nothing to force: the hold outranks this job. The record becomes workable when the obligation lapses."},
+	{apperrors.ErrNotFound, "record_gone", systemtext.Literal("jobs.record_gone.sentence"), systemtext.Literal("jobs.record_gone.remedy")},
+	{apperrors.ErrConflict, "write_conflict", systemtext.Literal("jobs.write_conflict.sentence"), systemtext.Literal("jobs.write_conflict.remedy")},
+	{apperrors.ErrVersionSkew, "version_skew", systemtext.Literal("jobs.version_skew.sentence"), systemtext.Literal("jobs.version_skew.remedy")},
+	{apperrors.ErrPermissionDenied, "principal_not_permitted", systemtext.Literal("jobs.principal_not_permitted.sentence"), systemtext.Literal("jobs.principal_not_permitted.remedy")},
+	{apperrors.ErrInvalidArgument, "invalid_argument", systemtext.Literal("jobs.invalid_argument.sentence"), systemtext.Literal("jobs.invalid_argument.remedy")},
+	{apperrors.ErrConsentNotGranted, "consent_missing", systemtext.Literal("jobs.consent_missing.sentence"), systemtext.Literal("jobs.consent_missing.remedy")},
+	{apperrors.ErrBudgetExceeded, "budget_spent", systemtext.Literal("jobs.budget_spent.sentence"), systemtext.Literal("jobs.budget_spent.remedy")},
+	{apperrors.ErrRequiresApproval, "staged_for_approval", systemtext.Literal("jobs.staged_for_approval.sentence"), systemtext.Literal("jobs.staged_for_approval.remedy")},
+	{apperrors.ErrSeatTierInsufficient, "seat_tier_insufficient", systemtext.Literal("jobs.seat_tier_insufficient.sentence"), systemtext.Literal("jobs.seat_tier_insufficient.remedy")},
+	{apperrors.ErrSeatLimitReached, "seat_limit_reached", systemtext.Literal("jobs.seat_limit_reached.sentence"), systemtext.Literal("jobs.seat_limit_reached.remedy")},
+	{apperrors.ErrScopeExceeded, "scope_exceeded", systemtext.Literal("jobs.scope_exceeded.sentence"), systemtext.Literal("jobs.scope_exceeded.remedy")},
+	{apperrors.ErrApprovalTokenInvalid, "approval_token_spent", systemtext.Literal("jobs.approval_token_spent.sentence"), systemtext.Literal("jobs.approval_token_spent.remedy")},
+	{apperrors.ErrUnsupportedBySoR, "unsupported_by_sor", systemtext.Literal("jobs.unsupported_by_sor.sentence"), systemtext.Literal("jobs.unsupported_by_sor.remedy")},
+	{apperrors.ErrBaseCurrencyLocked, "base_currency_locked", systemtext.Literal("jobs.base_currency_locked.sentence"), systemtext.Literal("jobs.base_currency_locked.remedy")},
+	{apperrors.ErrProviderUnusable, "provider_unusable", systemtext.Literal("jobs.provider_unusable.sentence"), systemtext.Literal("jobs.provider_unusable.remedy")},
+	{apperrors.ErrRetentionHold, "retention_hold", systemtext.Literal("jobs.retention_hold.sentence"), systemtext.Literal("jobs.retention_hold.remedy")},
+}
+
+// SubstituteInLanguage translates vetted operational wording while withholding raw failures.
+func SubstituteInLanguage(original string, language textlang.Lang) string {
+	switch original {
+	case unrecognised:
+		return systemtext.Copy("jobs.unclassified", language)
+	case UnvettedFailureReason:
+		return systemtext.Copy("jobs.unvetted", language)
+	case NoRecordedCause:
+		return systemtext.Copy("jobs.no_cause", language)
+	default:
+		return original
+	}
 }

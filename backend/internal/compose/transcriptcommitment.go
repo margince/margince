@@ -17,6 +17,8 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 // transcriptProposalActor is who a commitment read out of a transcript is
@@ -57,6 +59,7 @@ func (p *TranscriptProposer) commitmentFrom(
 	}
 	c.NeedsConfirmation = !transcriptPromiserSpoke(step, reading.Lines, verified)
 	c.Body = transcriptCommitmentBody(c.Party, step.SourceLines)
+	c.SystemText = &systemtext.Message{Subject: systemtext.Prose(systemtext.Generated, ""), Body: transcriptCommitmentComponent(c.Party, step.SourceLines)}
 	// The first cited line is part of the span: the same words said twice in
 	// one meeting are two promises.
 	span := cited
@@ -83,15 +86,25 @@ func linkedContacts(links []activities.ActivityLinkInput) []ids.UUID {
 // can go and check: whose commitment it was, and which lines said so. The task
 // outlives any approval it came through, so the provenance is written into it.
 func transcriptCommitmentBody(owner string, sourceLines []int) string {
-	lines := make([]string, 0, len(sourceLines))
-	for _, line := range sourceLines {
-		lines = append(lines, strconv.Itoa(line))
+	code, lines := transcriptCommitmentLocation(sourceLines)
+	return fmt.Sprintf(systemtext.Copy(code, textlang.English), owner, lines)
+}
+
+func transcriptCommitmentLocation(sourceLines []int) (string, string) {
+	lines := make([]string, len(sourceLines))
+	for i, line := range sourceLines {
+		lines[i] = strconv.Itoa(line)
 	}
-	where := "line " + strings.Join(lines, ", ")
+	code := "commitment.transcript_line"
 	if len(lines) > 1 {
-		where = "lines " + strings.Join(lines, ", ")
+		code = "commitment.transcript_lines"
 	}
-	return fmt.Sprintf("Promiser: %s. Commitment in the meeting transcript (%s).", owner, where)
+	return code, strings.Join(lines, ", ")
+}
+
+func transcriptCommitmentComponent(owner string, sourceLines []int) *systemtext.Component {
+	code, lines := transcriptCommitmentLocation(sourceLines)
+	return systemtext.Sentence(code, systemtext.Text(owner), systemtext.Text(lines))
 }
 
 func (said transcriptCopy) transcriptWithheldReason(outcome CommitmentOutcome) string {

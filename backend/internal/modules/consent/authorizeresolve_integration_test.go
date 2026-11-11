@@ -355,7 +355,7 @@ func TestBeingCopiedOnAThreadIsNotWritingIntoIt(t *testing.T) {
 // this fails — the address arm alone never matches a row with no address.
 func TestAChannelParticipantAnswersTheThreadArm(t *testing.T) {
 	e := setupResolve(t)
-	ctx := context.Background()
+	ctx := e.ctx
 	anchor := ids.NewV7()
 	if _, err := e.owner.Exec(ctx, `
 		INSERT INTO activity (id, kind, channel_provider, direction, thread_key, occurred_at, source, captured_by)
@@ -388,7 +388,7 @@ func TestAChannelParticipantAnswersTheThreadArm(t *testing.T) {
 // answers for nobody's reply.
 func TestADifferentChannelAccountOnTheSameProviderIsNotTheSubject(t *testing.T) {
 	e := setupResolve(t)
-	ctx := context.Background()
+	ctx := e.ctx
 	anchor := ids.NewV7()
 	if _, err := e.owner.Exec(ctx, `
 		INSERT INTO activity (id, kind, channel_provider, direction, thread_key, occurred_at, source, captured_by)

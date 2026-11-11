@@ -27,6 +27,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/corefeatures"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 )
@@ -57,9 +58,10 @@ func NewRegistryFor(db *database.DB, send SendPath) *agents.Registry {
 // after the registry is built still reach draft_email. served is the Server
 // whose object store the document tools write to; without one they store nothing.
 type registryFeatures struct {
-	lists       bool
-	firstDrafts *firstMessageEngines
-	served      *Server
+	lists        bool
+	coreFeatures corefeatures.Availability
+	firstDrafts  *firstMessageEngines
+	served       *Server
 	// reclaim deletes a retired offer rendering where no Server holds the store.
 	reclaim deals.RetiredRendering
 }
@@ -92,7 +94,7 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 	pool, provider := db.Pool(), providerWithTranscripts(db, transcriptOnLanding)
 	provider = withServerSeams(provider, pool, features)
 	// Every mutating tool shares retry claims and replay authorization on every host role.
-	opts = append(opts, withContractTierFloor(), agents.WithToolGate(clientCheckGate(pool, log)),
+	opts = append(opts, agents.WithCallAvailability(coreCallAvailability(features.coreFeatures)), withContractTierFloor(), agents.WithToolGate(clientCheckGate(pool, log)),
 		agents.WithIdempotency(toolIdempotency(pool)), agents.WithReplayReader(provider),
 		agents.WithBaseLanguage(installationLanguage(pool)),
 		agents.WithSeatNamer(seatNamer(identity.NewServiceFor(db))), agents.WithActivityListCalendar(activityListCalendar(captureHealthRegistry(db))),
@@ -106,8 +108,9 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 		openDuplicatesFor(pool), tagOfferSeam(db))
 	agents.RegisterListTool(registry, provider, provider)
 	agents.RegisterRecordPartsTool(registry, recordParts{offers: provider, RecordParts: contacts.NewRecordParts(db)})
-	agents.RegisterReadViewTool(registry, readViews(agentPolicies), readViewThrough(viewDoorOf(features.served)))
-	agents.RegisterReadViewsTool(registry, agents.NewReadViewsResource(readViews(agentPolicies)))
+	views := coreReadViews(features.coreFeatures)
+	agents.RegisterReadViewTool(registry, views, readViewThrough(viewDoorOf(features.served)))
+	agents.RegisterReadViewsTool(registry, agents.NewReadViewsResource(views))
 	agents.RegisterRouteVerbs(registry, declaredRouteVerbs(agentPolicies), routeThrough(viewDoorOf(features.served)))
 	relinker, disqualifier, demoter, advancer := lifecycleSeams(pool)
 	agents.RegisterLifecycleTools(registry, provider, relinker, disqualifier, demoter, advancer, partnerSetUpAdapter{store: newContactsStore(db)})
@@ -115,8 +118,8 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 	agents.RegisterEnrichTool(registry, provider, enricher)
 	agents.RegisterPipelineTool(registry, pipelineLister(pool))
 	agents.RegisterApprovalTools(registry, approvalQueue(approvalsSvc))
-	agents.RegisterReportTool(registry, reportToolRunner(newReportEngine(pool)), reportToolCatalog(), reportPlanVocabulary())
-	agents.RegisterReportVocabularyTool(registry, agents.NewReportVocabularyResource(reportToolCatalog()))
+	agents.RegisterReportTool(registry, reportToolRunner(newReportEngine(pool)), reportToolCatalog(features.coreFeatures), reportPlanVocabulary())
+	agents.RegisterReportVocabularyTool(registry, agents.NewReportVocabularyResource(reportToolCatalog(features.coreFeatures)))
 	agents.RegisterReportingTool(registry, reportingReader(pool))
 	agents.RegisterReportDraftTool(registry, reportDrafter(pool))
 	agents.RegisterAnalyticsReportTool(registry, analyticsReportComposer(pool, analyticsquery.DefaultFloor))

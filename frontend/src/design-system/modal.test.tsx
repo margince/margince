@@ -9,6 +9,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import { useEffect, useRef, useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { stable } from "../format/collate";
 import { useUnsavedGuard } from "../lib/unsavedclaims";
 import { Button, Modal } from "./atoms";
 import { Heading } from "./heading";
@@ -645,8 +646,8 @@ describe("an intent decides the box on its own", () => {
   });
 
   it("names every intent it takes", () => {
-    expect([...MODAL_INTENTS].sort()).toEqual(
-      ["confirm", "drawer", "drawer-reading", "form", "full"].sort(),
+    expect([...MODAL_INTENTS].sort(stable)).toEqual(
+      ["confirm", "drawer", "drawer-reading", "form", "full"].sort(stable),
     );
   });
 });

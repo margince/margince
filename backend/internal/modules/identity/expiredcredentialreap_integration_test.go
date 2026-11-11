@@ -318,7 +318,7 @@ func TestAFailedReapRefusesTheCredential(t *testing.T) {
 		t.Fatalf("seeding the row the reap must remove: %v", err)
 	}
 
-	if err := insertSession(ctx, tx, ids.From[ids.UserKind](mustParseUUID(t, user)), "refused-live"); err == nil {
+	if err := insertSession(ctx, tx, ids.From[ids.UserKind](mustParseUUID(t, user)), "refused-live", false); err == nil {
 		t.Error("the session was minted though its reap could not run")
 	}
 }

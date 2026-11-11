@@ -363,9 +363,9 @@ func TestLeadEvidenceLabelHidesAMaskedCompanyName(t *testing.T) {
 func TestSdrSummaryCountsAtTheInstantItIsAskedFor(t *testing.T) {
 	f := newSdrFixture(t, crmcontracts.ReportingFrameworkInputTemplateSdr)
 	e := f.e
-	asked := f.at.Add(time.Hour)
+	asked := f.at.Add(time.Minute)
 	earlier := f.submit(t, "Earlier prospect", &f.ae)
-	f.at = f.at.Add(2 * time.Hour)
+	f.at = f.at.Add(2 * time.Minute)
 	f.submit(t, "Later prospect", &f.ae)
 	// Sent back after the asked instant: at that instant it was still waiting.
 	var reason ids.UUID
@@ -375,7 +375,7 @@ func TestSdrSummaryCountsAtTheInstantItIsAskedFor(t *testing.T) {
 	if err := f.handoffs.DecideHandoff(f.ctx, earlier, contacts.HandoffDecision{Status: contacts.HandoffRecycled, ReasonID: &reason}); err != nil {
 		t.Fatal(err)
 	}
-	f.at = f.at.Add(time.Hour)
+	f.at = f.at.Add(time.Minute)
 
 	kind := crmcontracts.GetSdrSummaryParamsScopeKindOwner
 	id := openapi_types.UUID(e.Rep1)
@@ -422,14 +422,14 @@ func TestAReturnedHandoffNamesTheReasonOfItsRoundAtAsOf(t *testing.T) {
 	handoff := f.submit(t, "Twice returned", &f.ae)
 	recycle := func(why ids.UUID) {
 		t.Helper()
-		f.at = f.at.Add(time.Hour)
+		f.at = f.at.Add(time.Minute)
 		if err := f.handoffs.DecideHandoff(f.ctx, handoff, contacts.HandoffDecision{Status: contacts.HandoffRecycled, ReasonID: &why}); err != nil {
 			t.Fatal(err)
 		}
 	}
 	recycle(reasons[0].ID)
 	firstRound := f.at
-	f.at = f.at.Add(time.Hour)
+	f.at = f.at.Add(time.Minute)
 	if err := f.handoffs.ResubmitHandoff(f.ctx, handoff, nil); err != nil {
 		t.Fatal(err)
 	}
@@ -448,4 +448,67 @@ func TestAReturnedHandoffNamesTheReasonOfItsRoundAtAsOf(t *testing.T) {
 	if len(page.Rows) != 1 || page.Rows[0].Reason == nil || *page.Rows[0].Reason != reasons[0].Label {
 		t.Fatalf("the first round's row = %+v, want the reason %q", page.Rows, reasons[0].Label)
 	}
+}
+
+// as_of pairs a read with an evaluation moments earlier. An instant more than
+// sdrAsOfWindow back is refused on both routes, and the window's edge is kept.
+func TestAnSdrAsOfOlderThanTheWindowIsRefused(t *testing.T) {
+	f := newSdrFixture(t, crmcontracts.ReportingFrameworkInputTemplateSdr)
+	f.submit(t, "Waiting prospect", &f.ae)
+	h := newSdrSummaryHandlers(InstallationDB(f.e.Pool), func() time.Time { return f.at })
+	kind := crmcontracts.GetSdrSummaryParamsScopeKindOwner
+	pageKind := crmcontracts.ListSdrWaitingHandoffsParamsScopeKindOwner
+	id := openapi_types.UUID(f.e.Rep1)
+	routes := map[string]func(asOf time.Time) *httptest.ResponseRecorder{
+		"summary": func(asOf time.Time) *httptest.ResponseRecorder {
+			w := httptest.NewRecorder()
+			h.GetSdrSummary(w, httptest.NewRequest(http.MethodGet, "/", nil).WithContext(f.ctx),
+				crmcontracts.GetSdrSummaryParams{ScopeKind: &kind, ScopeId: &id, AsOf: &asOf})
+			return w
+		},
+		"handoff page": func(asOf time.Time) *httptest.ResponseRecorder {
+			w := httptest.NewRecorder()
+			h.ListSdrWaitingHandoffs(w, httptest.NewRequest(http.MethodGet, "/", nil).WithContext(f.ctx),
+				crmcontracts.ListSdrWaitingHandoffsParams{ScopeKind: &pageKind, ScopeId: &id, AsOf: &asOf})
+			return w
+		},
+	}
+	for route, read := range routes {
+		for name, asOf := range map[string]time.Time{
+			"at the window's edge": f.at.Add(-sdrAsOfWindow),
+			"inside the window":    f.at.Add(-sdrAsOfWindow + time.Minute),
+		} {
+			if w := read(asOf); w.Code != http.StatusOK {
+				t.Errorf("%s, as_of %s: %d %s, want 200", route, name, w.Code, w.Body.String())
+			}
+		}
+		for code, asOf := range map[string]time.Time{
+			"too_old": f.at.Add(-sdrAsOfWindow - time.Second),
+			"future":  f.at.Add(time.Second),
+		} {
+			w := read(asOf)
+			if w.Code != http.StatusUnprocessableEntity || refusedAsOfCode(t, w.Body.Bytes()) != code {
+				t.Errorf("%s, as_of %v: %d %s, want 422 with code %q", route, asOf, w.Code, w.Body.String(), code)
+			}
+		}
+	}
+}
+
+// refusedAsOfCode is the code a validation problem gives the as_of field.
+func refusedAsOfCode(t *testing.T, body []byte) string {
+	t.Helper()
+	var problem struct {
+		Details struct {
+			Errors []struct{ Field, Code string } `json:"errors"`
+		} `json:"details"`
+	}
+	if err := json.Unmarshal(body, &problem); err != nil {
+		t.Fatalf("the refusal is not a problem body: %v\n%s", err, body)
+	}
+	for _, field := range problem.Details.Errors {
+		if field.Field == "as_of" {
+			return field.Code
+		}
+	}
+	return ""
 }

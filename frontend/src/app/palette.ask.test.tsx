@@ -178,7 +178,10 @@ afterEach(() => {
 describe("asking the handbook from the search box", () => {
   it("asks a question on Enter and shows the answer with a button to its setting", async () => {
     const user = steppedClock();
-    const asked = backend();
+    // The cited page is Meetings, which opens only to a seat that may book.
+    const asked = backend({
+      allow: { ...ASKER, activity: ["read", "create"] },
+    });
     renderPalette();
     await user.type(screen.getByRole("searchbox"), QUESTION);
     await screen.findByRole("button", {

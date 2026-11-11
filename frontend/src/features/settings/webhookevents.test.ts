@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { subscribableEventTypeValues } from "../../api/public-events";
+import { stable } from "../../format/collate";
 import { en } from "../../i18n/en";
 import {
   eventGroupLabelKey,
@@ -11,8 +12,8 @@ import {
 describe("the webhook event groups", () => {
   it("place every subscribable event type in exactly one group", () => {
     const grouped = WEBHOOK_EVENT_GROUPS.flatMap((group) => group.types);
-    expect([...grouped].sort()).toEqual(
-      [...subscribableEventTypeValues].sort(),
+    expect([...grouped].sort(stable)).toEqual(
+      [...subscribableEventTypeValues].sort(stable),
     );
   });
 

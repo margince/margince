@@ -16,10 +16,19 @@ const (
 // after the whole retry ladder: a model answered, and the caller got nothing.
 const sentinelOutputRejected = "output_rejected"
 
+// sentinelProviderError is the fallback: a provider failure naming none of the
+// other sentinels.
+const sentinelProviderError = "provider_error"
+
 // sentinelTimeout is an attempt its deadline stopped: the model was asked and
 // did not answer in time. A failure like provider_error, named apart so an
 // admin can tell a slow host from a broken one and set the deadline by it.
 const sentinelTimeout = "timeout"
+
+// sentinelCanceled is an attempt its caller stopped waiting for: a closed
+// page, a job shut down. Nothing is wrong with the provider, so no failure
+// count or health read includes it.
+const sentinelCanceled = "canceled"
 
 // answeredSentinels are the sentinels the health read does not count as a
 // failure. metering_failed is an answer whose usage write failed, and
@@ -28,6 +37,10 @@ const sentinelTimeout = "timeout"
 var answeredSentinels = []string{
 	sentinelMeteringFailed, sentinelOutputWithheld, sentinelRequestRejected, sentinelOutputRejected,
 }
+
+// nonFailureSentinels are what a provider's failure rate leaves out: its
+// answers, and the attempts a caller abandoned.
+var nonFailureSentinels = append([]string{sentinelCanceled}, answeredSentinels...)
 
 // servedSentinels are the sentinels of an attempt whose answer still reached the
 // caller. The task flow counts by these rather than answeredSentinels: a model

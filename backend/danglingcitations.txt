@@ -123,7 +123,6 @@ backend/internal/modules/contacts/company_computed.go core 0217
 backend/internal/modules/contacts/companyarchive.go migration 0083
 backend/internal/modules/contacts/companylinkedin_test.go migration 0191
 backend/internal/modules/contacts/displaynameorigin.go core 1792896243
-backend/internal/modules/contacts/emailsignature.go core 0235
 backend/internal/modules/contacts/geocode.go migration 0217
 backend/internal/modules/contacts/merge_company.go migration 1787320003
 backend/internal/modules/contacts/relationshiperrors.go migration 0007
@@ -172,6 +171,10 @@ backend/internal/platform/database/storekit/suppression.go core 0217
 backend/internal/platform/database/storekit/suppression.go core 0255
 backend/internal/platform/dbmigrate/dbmigrate_test.go core 0002
 backend/internal/platform/dbmigrate/dbmigrate_test.go core 0003
+backend/internal/platform/dbmigrate/extensionnamespaces_test.go core 0010
+backend/internal/platform/dbmigrate/extensionnamespaces_test.go core 0020
+backend/internal/platform/dbmigrate/extensionnamespaces_test.go migration 0010
+backend/internal/platform/dbmigrate/extensionnamespaces_test.go migration 0020
 backend/internal/platform/events/bus_integration_test.go core 0015
 backend/internal/platform/events/relay.go migration 0016
 backend/internal/platform/httperr/constraintfault.go migration 0289
@@ -213,4 +216,6 @@ scripts/test-migration-versions.sh core 0003
 scripts/test-migration-versions.sh core 1799999997
 scripts/test-migration-versions.sh core 1799999998
 scripts/test-migration-versions.sh core 1799999999
+scripts/test-migration-versions.sh migration 0010
+scripts/test-migration-versions.sh migration 0020
 scripts/test-migration-versions.sh migration 1799999999

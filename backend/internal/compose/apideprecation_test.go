@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"regexp"
 	"strings"
@@ -36,11 +37,21 @@ func TestEveryDeprecatedOperationAnnouncesThePolicyThroughTheGeneratedRouter(t *
 				t.Errorf("missing notice for %s", route)
 			}
 			requestPath := regexp.MustCompile(`\{[^}]+\}`).ReplaceAllString(httpserver.BaseURL+path, "00000000-0000-0000-0000-000000000001")
+			query := url.Values{}
+			for _, param := range op.Parameters {
+				// Every required query parameter on a deprecated operation takes a uuid.
+				if p := param.Value; p != nil && p.In == "query" && p.Required {
+					query.Set(p.Name, "00000000-0000-0000-0000-000000000001")
+				}
+			}
+			if len(query) > 0 {
+				requestPath += "?" + query.Encode()
+			}
 			request := httptest.NewRequest(method, requestPath, nil)
 			// A required header is a parameter too, and its refusal comes before the operation.
 			for _, param := range op.Parameters {
-				if param.Value != nil && param.Value.In == "header" && param.Value.Required {
-					request.Header.Set(param.Value.Name, `"1"`)
+				if p := param.Value; p != nil && p.In == "header" && p.Required {
+					request.Header.Set(p.Name, `"1"`)
 				}
 			}
 			response := httptest.NewRecorder()

@@ -77,6 +77,8 @@ corpus and the candidate's answer. So either preset may be certified with the de
 No record is committed for `gemma4_local_ollama.yaml`: certify it with
 `make e2e-ai ROUTING=config/presets/gemma4_local_ollama.yaml` on a machine that serves it. The Gemma weights are 12b on every tier,
 because that is what a 24GB machine serves wholly on the GPU. The header of the file has the numbers.
+No record is committed for `qwen3_local_vllm.yaml` either: certify it with
+`make e2e-ai ROUTING=config/presets/qwen3_local_vllm.yaml` with both vLLM servers up.
 
 On the `routing:` block of the OpenRouter preset, and the measurements behind its defaults:
 [docs/explanation/openrouter-upstream-choice.md](../../docs/explanation/openrouter-upstream-choice.md).

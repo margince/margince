@@ -15,6 +15,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/mailcopy"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
 )
@@ -60,10 +61,10 @@ type summaryCopy struct {
 // textlang.Shipped and ask this map directly.
 var summaryByLang = map[textlang.Lang]summaryCopy{
 	textlang.English: {
-		draftFollowUp:      "Draft a follow-up on %q — the %s on %s left no next step planned",
-		followUpSubject:    "Follow up on %s",
-		followUpBody:       "Follow up on the %s from %s. No next step is on the timeline yet.",
-		followUpBodyQuoted: "Follow up on the %s “%s” from %s. No next step is on the timeline yet.",
+		draftFollowUp:      systemtext.Copy("deals.draftFollowUp", textlang.English),
+		followUpSubject:    systemtext.Copy("deals.followUpSubject", textlang.English),
+		followUpBody:       systemtext.Copy("deals.followUpBody", textlang.English),
+		followUpBodyQuoted: systemtext.Copy("deals.followUpBodyQuoted", textlang.English),
 
 		stageAutoApply:        "every exit criterion is settled by the other side's own words, and this transition has been measured long enough to move itself",
 		stageAllSettled:       "every exit criterion for this stage is settled",
@@ -83,10 +84,10 @@ var summaryByLang = map[textlang.Lang]summaryCopy{
 		protectedRecently:     "this deal is protected from automatic moves right now",
 	},
 	textlang.German: {
-		draftFollowUp:      "Entwirf ein Follow-up zu %q: Nach dem Austausch (%s) am %s ist kein nächster Schritt geplant.",
-		followUpSubject:    "Follow-up zu %s",
-		followUpBody:       "Follow-up zum Austausch (%s) vom %s. Im Verlauf steht noch kein nächster Schritt.",
-		followUpBodyQuoted: "Follow-up zum Austausch (%s) „%s“ vom %s. Im Verlauf steht noch kein nächster Schritt.",
+		draftFollowUp:      systemtext.Copy("deals.draftFollowUp", textlang.German),
+		followUpSubject:    systemtext.Copy("deals.followUpSubject", textlang.German),
+		followUpBody:       systemtext.Copy("deals.followUpBody", textlang.German),
+		followUpBodyQuoted: systemtext.Copy("deals.followUpBodyQuoted", textlang.German),
 
 		stageAutoApply:        "jedes Austrittskriterium ist durch die eigenen Worte der Gegenseite erfüllt, und dieser Übergang wurde lange genug gemessen, um den Deal selbst zu verschieben",
 		stageAllSettled:       "jedes Austrittskriterium dieser Phase ist erfüllt",
@@ -106,10 +107,10 @@ var summaryByLang = map[textlang.Lang]summaryCopy{
 		protectedRecently:     "dieser Deal ist derzeit vor automatischen Phasenwechseln geschützt",
 	},
 	textlang.Vietnamese: {
-		draftFollowUp:      "Soạn một follow-up cho %q: sau tương tác (%s) vào ngày %s chưa có bước tiếp theo nào được lên kế hoạch.",
-		followUpSubject:    "Follow-up cho %s",
-		followUpBody:       "Follow-up cho tương tác (%s) vào ngày %s. Dòng thời gian chưa có bước tiếp theo nào.",
-		followUpBodyQuoted: "Follow-up cho tương tác (%s) “%s” vào ngày %s. Dòng thời gian chưa có bước tiếp theo nào.",
+		draftFollowUp:      systemtext.Copy("deals.draftFollowUp", textlang.Vietnamese),
+		followUpSubject:    systemtext.Copy("deals.followUpSubject", textlang.Vietnamese),
+		followUpBody:       systemtext.Copy("deals.followUpBody", textlang.Vietnamese),
+		followUpBodyQuoted: systemtext.Copy("deals.followUpBodyQuoted", textlang.Vietnamese),
 
 		stageAutoApply:        "mọi tiêu chí rời giai đoạn đều đã được xác nhận bằng chính lời của phía bên kia, và bước chuyển này đã được đo lường đủ lâu để tự thực hiện",
 		stageAllSettled:       "mọi tiêu chí rời giai đoạn này đều đã được đáp ứng",

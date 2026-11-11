@@ -6,16 +6,28 @@ import {
 } from "../features/settings/settingsnav";
 import { settingsPageKeywords } from "../features/settings/settingssearch";
 import { useLocale, useT } from "../i18n";
+import type { MessageKey } from "../i18n/en";
 import { useCompanyContextShown } from "../lib/companycontextreach";
+import { screenEnabled, useDisabledCoreFeatures } from "../lib/corefeatures";
+import { type EntityKind, SCREEN_ENTITY } from "../lib/entity";
 import { settingsHref } from "../lib/settingsrouting";
 import {
   CUSTOM_SCREEN,
   customPaletteScreens,
   resolveCustomLabel,
 } from "./custom";
-import { CREATE_ID, NAV } from "./nav";
+import { CREATE_ID, CREATE_SCREENS, NAV } from "./nav";
 import type { Command } from "./palette";
 import { settingsCommandId } from "./paletteconfiguration";
+
+// Each kind's "New …" label; the commands follow `CREATE_SCREENS`' order.
+const CREATE_LABEL: Readonly<Record<EntityKind, MessageKey>> = {
+  contact: "create.contact",
+  company: "create.company",
+  lead: "create.lead",
+  deal: "action.newDeal",
+  project: "project.new",
+};
 
 export function useBuiltinCommands(): Command[] {
   const t = useT();
@@ -23,6 +35,7 @@ export function useBuiltinCommands(): Command[] {
   const visible = useVisibleSettingsPages();
   const seesCompanyContext = useCompanyContextShown();
   const opensTab = useOpensSettingsTab();
+  const disabled = useDisabledCoreFeatures();
   return useMemo(() => {
     const screens: Command[] = NAV.map((item) => ({
       id: `screen:${item.screen}`,
@@ -39,12 +52,19 @@ export function useBuiltinCommands(): Command[] {
       route: { screen: CUSTOM_SCREEN, id: screen.key },
     }));
     const actions: Command[] = [
-      {
-        id: "action:new-deal",
-        label: t("action.newDeal"),
-        type: "action",
-        route: { screen: "deals", id: CREATE_ID },
-      },
+      ...[...CREATE_SCREENS].flatMap((screen) => {
+        const entity = SCREEN_ENTITY[screen];
+        return entity
+          ? [
+              {
+                id: `action:new-${entity}`,
+                label: t(CREATE_LABEL[entity]),
+                type: "action" as const,
+                route: { screen, id: CREATE_ID },
+              },
+            ]
+          : [];
+      }),
       {
         id: "action:booking",
         label: t("action.booking"),
@@ -80,6 +100,9 @@ export function useBuiltinCommands(): Command[] {
       ...actions,
       ...offRailScreens,
       ...settingsScreens,
-    ];
-  }, [t, visible, locale, seesCompanyContext, opensTab]);
+    ].filter(
+      (command) =>
+        !command.route || screenEnabled(command.route.screen, disabled),
+    );
+  }, [t, visible, locale, seesCompanyContext, opensTab, disabled]);
 }

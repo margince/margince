@@ -261,6 +261,11 @@ func (s *Store) CreateDSR(ctx context.Context, in CreateDSRInput) (dsrRow, error
 		if out, found, err = agentsOpenCase(ctx, tx, in); err != nil || found {
 			return err
 		}
+		if in.AssigneeID != nil {
+			if err := requireCaseAssignee(ctx, tx, in.AssigneeID.UUID, fieldAssigneeID); err != nil {
+				return err
+			}
+		}
 		computed, rule, err := s.requestDeadlineTx(ctx, tx, in.Kind, received)
 		if err != nil {
 			return err
@@ -278,7 +283,7 @@ func (s *Store) CreateDSR(ctx context.Context, in CreateDSRInput) (dsrRow, error
 			return err
 		}
 		_, err = storekit.Audit(ctx, tx, "create", "data_subject_request", out.ID, nil, map[string]any{
-			"kind": in.Kind, fieldSubjectRef: in.SubjectRef, fieldReceivedAt: received, fieldDueAt: due,
+			fieldKind: in.Kind, fieldSubjectRef: in.SubjectRef, fieldReceivedAt: received, fieldDueAt: due,
 			"due_rule": rule, "due_overridden": overridden,
 		})
 		return err

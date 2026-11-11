@@ -14,6 +14,40 @@ const ctx = (overrides: Partial<HistoryValueCtx> = {}): HistoryValueCtx => ({
 });
 
 describe("historyValue", () => {
+  it.each([
+    {
+      locale: "en",
+      request: "Asked to be contacted",
+      fallback: "Recorded exchange",
+      meeting: "Met face to face",
+    },
+    {
+      locale: "de",
+      request: "Um eine Nachricht gebeten",
+      fallback: "Erfasster Austausch",
+      meeting: "Persönlich getroffen",
+    },
+    {
+      locale: "vi",
+      request: "Đã yêu cầu liên hệ",
+      fallback: "Trao đổi đã ghi nhận",
+      meeting: "Đã gặp trực tiếp",
+    },
+  ] as const)(
+    "names recorded exchanges and corrections in $locale",
+    ({ locale, request, meeting, fallback }) => {
+      for (const field of ["qualifying_event", "qualifying_event_retracted"]) {
+        expect(
+          historyValue(field, "requested_by_subject", ctx({ locale })),
+        ).toBe(request);
+        expect(historyValue(field, "in_person", ctx({ locale }))).toBe(meeting);
+        expect(
+          historyValue(field, "future_exchange_kind", ctx({ locale })),
+        ).toBe(fallback);
+      }
+    },
+  );
+
   it("names a change of time precision in words, not wire spellings", () => {
     expect(historyValue("occurred_precision", "day", ctx())).toBe("Date only");
     expect(historyValue("occurred_precision", "instant", ctx())).toBe(

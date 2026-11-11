@@ -4,11 +4,22 @@
 /** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, within } from "@testing-library/react";
+import {
+  cleanup,
+  render,
+  renderHook,
+  screen,
+  within,
+} from "@testing-library/react";
 import userEvent, { type UserEvent } from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
+import { useShortcutDispatcher } from "../lib/shortcuts";
 import { meFixture } from "../testing/mefixture";
+
+// A seat that may book, so the menu carries its booking link.
+const BOOKER = { allow: { activity: ["read", "create"] } } as const;
+
 import { AccountMenu } from "./account";
 
 // The bundle's releases are compiled in, and every local build leaves them
@@ -46,7 +57,7 @@ function renderMenu() {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
-  client.setQueryData(["me"], meFixture());
+  client.setQueryData(["me"], meFixture(BOOKER));
   return render(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
@@ -223,6 +234,24 @@ describe("Help and feedback", () => {
       screen.queryByRole("dialog", { name: "Keyboard shortcuts" }),
     ).toBeNull();
     expect(document.activeElement).toBe(trigger());
+  });
+});
+
+describe("the shortcuts dialog on ?", () => {
+  // One dialog, whichever way it opens: Help and the key reach the same instance.
+  it("opens the dialog Help opens, and hands focus back where the key was pressed", async () => {
+    const user = userEvent.setup();
+    renderHook(() => useShortcutDispatcher());
+    renderMenu();
+    render(<button type="button">On the page</button>);
+    const page = screen.getByRole("button", { name: "On the page" });
+    page.focus();
+
+    await user.keyboard("?");
+    await screen.findByRole("dialog", { name: "Keyboard shortcuts" });
+    expect(screen.getAllByRole("dialog")).toHaveLength(1);
+    await user.keyboard("{Escape}");
+    expect(document.activeElement).toBe(page);
   });
 });
 

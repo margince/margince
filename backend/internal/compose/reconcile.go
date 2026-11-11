@@ -34,6 +34,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 // followUpStager adapts the approvals service onto the deals module's
@@ -148,6 +149,8 @@ func (s followUpStager) StageFollowUp(ctx context.Context, dealID ids.UUID, summ
 
 // followUpTaskStaging builds the task proposal's staging input.
 func followUpTaskStaging(dealID ids.UUID, summary string, proposal deals.FollowUpProposal) (approvals.StageInput, error) {
+	metadata := systemtext.ForWrite(context.Background(), proposal.SystemText, proposal.Subject, proposal.Body)
+
 	raw, err := json.Marshal(proposal)
 	if err != nil {
 		return approvals.StageInput{}, fmt.Errorf("compose: marshal follow-up proposal: %w", err)
@@ -193,14 +196,16 @@ func followUpTaskStaging(dealID ids.UUID, summary string, proposal deals.FollowU
 	// queue who held the grant, and a manager could answer a question the rep
 	// never saw.
 	return approvals.StageInput{
-		Kind:           deals.FollowUpReconcileKind,
-		ProposedChange: canonical,
-		DiffHash:       hash,
-		TargetType:     approvalTargetDeal,
-		TargetID:       dealID,
-		Summary:        summary,
-		Identity:       identity,
-		JoinPending:    true,
+		Kind:             deals.FollowUpReconcileKind,
+		SystemText:       &systemtext.Message{Subject: proposal.SummaryText},
+		EffectSystemText: metadata,
+		ProposedChange:   canonical,
+		DiffHash:         hash,
+		TargetType:       approvalTargetDeal,
+		TargetID:         dealID,
+		Summary:          summary,
+		Identity:         identity,
+		JoinPending:      true,
 	}, nil
 }
 
@@ -377,6 +382,12 @@ func followUpConfirmEffect(svc *approvals.Service, store *activities.Store) appr
 		if err != nil {
 			return err
 		}
+		staged, err := svc.Get(ctx, approvalID)
+		if err != nil {
+			return err
+		}
+		metadata := approvals.EffectSystemText(staged.SummaryParts)
+
 		due, err := time.Parse(time.DateOnly, proposal.DueDate)
 		if err != nil {
 			return fmt.Errorf("compose: follow-up due date: %w", err)
@@ -409,6 +420,7 @@ func followUpConfirmEffect(svc *approvals.Service, store *activities.Store) appr
 			func(tx pgx.Tx) error {
 				_, _, err := store.LogActivityTx(execCtx, tx, activities.LogActivityInput{
 					Kind:         "task",
+					SystemText:   metadata,
 					Subject:      &subject,
 					Body:         &body,
 					DueAt:        &due,

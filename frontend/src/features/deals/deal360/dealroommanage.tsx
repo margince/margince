@@ -142,6 +142,7 @@ export function ManageRoomDialog({
   const t = useT();
   const finished = FINISHED_STATES.has(room.state);
   const refusal = refusalFor(finished, true, t);
+  const [version] = useState(room.version);
   const [access, setAccess] = useState<RoomAccess | "">(accessOf(room.state));
   const [endDay, setEndDay] = useState<ISODate | "">(dayOf(room.expires_at));
   const [steward, setSteward] = useState(room.steward_user_id ?? "");
@@ -193,9 +194,10 @@ export function ManageRoomDialog({
         <button
           type="button"
           className="link-button"
-          onClick={() =>
-            navigate({ screen: "deals", id: room.deal_id, id2: "room" })
-          }
+          onClick={() => {
+            onClose();
+            navigate({ screen: "deals", id: room.deal_id, id2: "room" });
+          }}
         >
           {t("roomtab.manage.openPage")}
         </button>
@@ -204,7 +206,7 @@ export function ManageRoomDialog({
         save.mutate(
           {
             roomId: room.id,
-            version: requireVersion(room.version),
+            version: requireVersion(version),
             text: textChanged
               ? {
                   title: title.trim(),
@@ -258,14 +260,20 @@ export function ManageRoomDialog({
               <Select
                 id={control.id}
                 value={steward}
-                placeholder={t("roomtab.manage.contactOwner")}
+                placeholder={t(
+                  room.needs_steward
+                    ? "roomtab.manage.contactMissing"
+                    : "roomtab.manage.contactOwner",
+                )}
                 disabled={finished}
                 onChange={setSteward}
-                options={(roster.data ?? []).map((entry) => ({
-                  value: entry.id,
-                  label:
-                    "display_name" in entry ? entry.display_name : entry.id,
-                }))}
+                options={(roster.data ?? [])
+                  .filter((entry) => !("is_agent" in entry && entry.is_agent))
+                  .map((entry) => ({
+                    value: entry.id,
+                    label:
+                      "display_name" in entry ? entry.display_name : entry.id,
+                  }))}
               />
             )}
           </Field>

@@ -80,6 +80,13 @@ type Service struct {
 	// mandatory. Nil when unwired — no enforcement, and Authenticate then reads
 	// nothing extra per request. See mfachallenge.go.
 	requireMFA func(ctx context.Context) (bool, error)
+	// challengeEpochKey keys a member's credential epoch with the challenge
+	// signing key. Unset, no challenge can be completed.
+	challengeEpochKey func(material string) string
+	// challengeLocked runs once a second-factor attempt holds its row locks.
+	// Tests use it to show another writer cannot reach those rows. Nil in
+	// production.
+	challengeLocked func()
 	// groupRoleMap answers the admin's group→role grant map for federated
 	// sign-in, read inside the login's own transaction so the grant commits
 	// against the map as it stands then. Nil when unwired — no grants, the same
@@ -345,6 +352,7 @@ func (s *Service) Authenticate(ctx context.Context, rawToken string) (Identity, 
 		// note: a session is keyed by its opaque token, not exposed as a
 		// first-class entity id — its row id has no kind and stays ids.UUID.
 		var sessionID ids.UUID
+		var providerAuthenticated bool
 		var userID ids.UserID
 		// The locale and the zone ride the session read because /me carries
 		// both: the SPA needs to know which catalog to render before it draws
@@ -355,7 +363,7 @@ func (s *Service) Authenticate(ctx context.Context, rawToken string) (Identity, 
 		err := tx.QueryRow(ctx,
 			`SELECT s.id, u.id, u.email, u.display_name, u.seat_type, u.must_change_password,
 			        u.locale, u.timezone, u.timezone_chosen, u.timezone_set_by, u.greeting_name, u.avatar_object_key,
-			        coalesce((SELECT value #>> '{}' FROM setting WHERE key = $2), '')
+			        coalesce((SELECT value #>> '{}' FROM setting WHERE key = $2), ''), s.provider_authenticated
 			 FROM session s
 			 JOIN app_user u ON u.id = s.user_id
 			 WHERE s.token_hash = $1
@@ -363,7 +371,7 @@ func (s *Service) Authenticate(ctx context.Context, rawToken string) (Identity, 
 			   AND now() < s.idle_expires_at
 			   AND now() < s.expires_at
 			   AND `+LiveMemberSQL("u")+``,
-			tokenHash, Name.Key()).Scan(&sessionID, &userID, &id.Email, &id.DisplayName, &id.SeatType, &id.MustChangePassword, &locale, &timezone, &id.TimezoneChosen, &id.TimezoneSetBy, &id.GreetingName, &id.AvatarKey, &id.WorkspaceName)
+			tokenHash, Name.Key()).Scan(&sessionID, &userID, &id.Email, &id.DisplayName, &id.SeatType, &id.MustChangePassword, &locale, &timezone, &id.TimezoneChosen, &id.TimezoneSetBy, &id.GreetingName, &id.AvatarKey, &id.WorkspaceName, &providerAuthenticated)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return apperrors.ErrNotFound
 		}
@@ -403,10 +411,9 @@ func (s *Service) Authenticate(ctx context.Context, rawToken string) (Identity, 
 		if id.IndividualPerformance, err = IndividualPerformanceTx(ctx, tx); err != nil {
 			return err
 		}
-		// Confine a member with no confirmed factor while the installation
-		// requires one — the enrolment check runs only when the policy is on, so
-		// an installation that never required MFA pays nothing for it.
-		if requireMFA {
+		// Provider sessions rely on the provider’s MFA policy, even when the
+		// same member also has a password session requiring enrolment.
+		if requireMFA && !providerAuthenticated {
 			confirmed, err := hasConfirmedMFA(ctx, tx, userID)
 			if err != nil {
 				return err

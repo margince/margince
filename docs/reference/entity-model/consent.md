@@ -113,14 +113,16 @@ The 22 tables owned by `consent`, as the migrations build them. [Back to the ent
 
 ## communication_instruction
 
-19 columns · primary key `(id)` · referenced by 2 foreign keys
+21 columns · primary key `(id)` · referenced by 2 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `acknowledged_at` | `timestamp with time zone` | yes |  |
+| `acknowledged_scope` | `character varying(64)` |  |  |
 | `acknowledged_wording` | `bytea` |  |  |
 | `consumed_at` | `timestamp with time zone` |  |  |
+| `corrected_wording` | `bytea` |  |  |
 | `delivery_id` | `uuid` |  |  |
 | `directed_at` | `timestamp with time zone`, default `now()` | yes |  |
 | `directed_by` | `uuid` | yes | Points at `app_user.id`. |
@@ -167,10 +169,11 @@ The 22 tables owned by `consent`, as the migrations build them. [Back to the ent
 **Triggers**
 
 - `communication_instruction_refuse_rewrite`: `BEFORE DELETE OR UPDATE FOR EACH ROW EXECUTE FUNCTION communication_instruction_refuse_rewrite()`
+- `communication_instruction_wording_correction`: `BEFORE INSERT OR UPDATE FOR EACH ROW EXECUTE FUNCTION guard_instruction_wording_correction()`
 
 ## communication_override
 
-11 columns · primary key `(id)` · referenced by 1 foreign key
+12 columns · primary key `(id)` · referenced by 1 foreign key
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -183,6 +186,7 @@ The 22 tables owned by `consent`, as the migrations build them. [Back to the ent
 | `legal_entity_id` | `uuid` | yes | Points at `legal_entity.id`. |
 | `reason` | `text` | yes |  |
 | `recorded_at` | `timestamp with time zone`, default `now()` | yes |  |
+| `recorded_directly` | `boolean` |  |  |
 | `revoked_at` | `timestamp with time zone` |  |  |
 | `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
 
@@ -450,18 +454,20 @@ The 22 tables owned by `consent`, as the migrations build them. [Back to the ent
 
 ## consent_qualifying_event
 
-15 columns · primary key `(id)` · referenced by 0 foreign keys
+17 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Set on an exchange a colleague recorded by hand (`in_person` or `requested_by_subject`), the one kind POST /contacts/{id}/consent/qualifying-events/{event_id}/retract takes back. |
 | `about_deal_id` | `uuid` |  |  |
 | `asks_for_quote` | `boolean`, default `false` | yes |  |
-| `contact_id` | `uuid` | yes | Points at `contact.id`. |
+| `contact_id` | `uuid` |  | Points at `contact.id`. |
 | `kind` | `text` | yes | One of `inbound_message`, `inquiry`, `active_deal`, `in_person`, `meeting`, `requested_by_subject`. |
+| `lead_id` | `uuid` |  | Points at `lead.id`. |
 | `note` | `text` |  | The typed evidence for a hand-recorded exchange (`in_person` or `requested_by_subject`), where a named human's note is the record. |
 | `occurred_at` | `timestamp with time zone` | yes |  |
 | `recorded_for_addresses` | `text[]` |  |  |
+| `recorded_for_entities` | `uuid[]` |  |  |
 | `retracted_at` | `timestamp with time zone` |  |  |
 | `retracted_by` | `text` |  |  |
 | `source_entity_id` | `uuid` |  |  |
@@ -475,16 +481,19 @@ The 22 tables owned by `consent`, as the migrations build them. [Back to the ent
 | Columns | Table | When the parent goes |
 |---|---|---|
 | `contact_id` | `contact` | deleting the parent deletes this row |
+| `lead_id` | `lead` | deleting the parent deletes this row |
 
 **Rules**
 
 - `consent_qualifying_event_evidence`: `CHECK ((((kind = ANY (ARRAY['in_person', 'requested_by_subject'])) AND (note IS NOT NULL)) OR ((kind <> ALL (ARRAY['in_person', 'requested_by_subject'])) AND (source_entity_type IS NOT NULL) AND (source_entity_id IS NOT NULL))))`
 - `consent_qualifying_event_kind_check`: `CHECK ((kind = ANY (ARRAY['inbound_message', 'inquiry', 'active_deal', 'in_person', 'meeting', 'requested_by_subject'])))`
+- `consent_qualifying_event_one_subject`: `CHECK ((num_nonnulls(contact_id, lead_id) = 1))`
 - `consent_qualifying_event_source_entity_type_check`: `CHECK ((source_entity_type = ANY (ARRAY['activity', 'deal'])))`
 
 **Indexes**
 
 - `consent_qualifying_event_contact_ix`: `btree (contact_id, occurred_at DESC)`
+- `consent_qualifying_event_lead_idx`: `btree (lead_id, occurred_at DESC) WHERE (lead_id IS NOT NULL)`
 - `consent_qualifying_event_pkey`: `unique, btree (id)`
 - `consent_qualifying_event_source_unique`: `unique, btree (contact_id, source_entity_type, source_entity_id) WHERE (source_entity_id IS NOT NULL)`
 

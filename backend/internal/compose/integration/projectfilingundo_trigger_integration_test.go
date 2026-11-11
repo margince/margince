@@ -100,7 +100,7 @@ func refusedAtCommit(t *testing.T, owner *pgx.Conn, steps ...step) string {
 // class by a writer that never declared anything, when nothing else would stop it.
 func TestADeclarationAloneDoesNotStripTheProofOrTheClass(t *testing.T) {
 	e := Setup(t)
-	owner := OwnerConn(t)
+	owner := FreshOwnerConn(t)
 	f := filedUnderAProject(t, e)
 	id := f.email
 	declared := step{declareUndo, []any{id.String()}}
@@ -129,7 +129,7 @@ func TestADeclarationAloneDoesNotStripTheProofOrTheClass(t *testing.T) {
 
 func TestTheTriggersAdmitOnlyTheDeclaredUndoOfAProjectFiling(t *testing.T) {
 	e := Setup(t)
-	owner := OwnerConn(t)
+	owner := FreshOwnerConn(t)
 	f := filedUnderAProject(t, e)
 	id := f.email
 	declared := step{declareUndo, []any{id.String()}}

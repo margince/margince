@@ -52,7 +52,7 @@ func TestSendsAreRefusedAlikeOnEitherDoor(t *testing.T) {
 	})
 	link := []map[string]any{{"entity_type": "contact", "entity_id": contact}}
 	mail := createdID(t, d.e, "/v1/activities", AnyMap{
-		"kind": "email", "direction": "inbound", "subject": "Quote?", "body": "Can you send a quote", "source": "manual", "links": link,
+		"kind": "email", "direction": "outbound", "subject": "Quote?", "body": "Can you send a quote", "source": "manual", "links": link,
 	})
 
 	// The route words the refusal with a review id; the shared part is what it

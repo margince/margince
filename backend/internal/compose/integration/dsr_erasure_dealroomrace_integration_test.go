@@ -17,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/dealrooms"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -47,7 +48,7 @@ func TestABuyerThreadOpenedAcrossAnErasureIsRefused(t *testing.T) {
 
 	// The buyer's write locks the deal before its seat. The erasure never locks
 	// the deal, so the buyer waits here, past its reads.
-	release := holdRow(t, `SELECT id FROM deal WHERE id = $1 FOR UPDATE`, deal)
+	release, holder := pinRow(t, `SELECT id FROM deal WHERE id = $1 FOR UPDATE`, deal)
 	var buyerErr error
 	buyerDone := make(chan struct{})
 	go func() {
@@ -56,7 +57,7 @@ func TestABuyerThreadOpenedAcrossAnErasureIsRefused(t *testing.T) {
 			dealrooms.OpenThreadInput{Body: "Written while being erased", Source: "manual"})
 		close(buyerDone)
 	}()
-	waitForParkedWriters(t, 1)
+	testdb.AwaitQueuedBehind(t, OwnerConn(t), int32(holder), 1, buyerDone, "the buyer's thread")
 
 	if err := compose.ComposedEraser(e.Pool, nil, nil).EraseContact(
 		e.As(e.AdminUser, nil, roomErasureAdmin), buyer.contact.UUID, "subject request"); err != nil {
@@ -91,7 +92,7 @@ func TestAnErasureWaitsForABuyerReplyAndTakesItWithTheRest(t *testing.T) {
 
 	// The reply locks the thread after its seat. The erasure never locks the
 	// thread, so the reply waits here, holding the seat.
-	release := holdRow(t, `SELECT id FROM deal_room_thread WHERE id = $1 FOR UPDATE`, thread)
+	release, holder := pinRow(t, `SELECT id FROM deal_room_thread WHERE id = $1 FOR UPDATE`, thread)
 	var replyErr error
 	replyDone := make(chan struct{})
 	go func() {
@@ -99,7 +100,8 @@ func TestAnErasureWaitsForABuyerReplyAndTakesItWithTheRest(t *testing.T) {
 			e.As(e.AdminUser, nil, roomErasureAdmin), sess, thread, "A reply in flight", "manual", nil)
 		close(replyDone)
 	}()
-	waitForParkedWriters(t, 1)
+	observer := OwnerConn(t)
+	testdb.AwaitQueuedBehind(t, observer, int32(holder), 1, replyDone, "the buyer's reply")
 
 	var erasureErr error
 	erasureDone := make(chan struct{})
@@ -108,7 +110,7 @@ func TestAnErasureWaitsForABuyerReplyAndTakesItWithTheRest(t *testing.T) {
 			e.As(e.AdminUser, nil, roomErasureAdmin), buyer.contact.UUID, "subject request")
 		close(erasureDone)
 	}()
-	waitForParkedWriters(t, 2)
+	testdb.AwaitQueuedBehind(t, observer, int32(holder), 2, erasureDone, "the erasure behind the reply")
 
 	release()
 	<-replyDone

@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5"
 
@@ -24,6 +25,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
@@ -195,14 +197,27 @@ func (p dealVerdictPass) applyAsOwner(
 func (p dealVerdictPass) recordOnTimeline(
 	ctx context.Context, tx pgx.Tx, c verdictCandidate, read dealVerdictRead, applied []deals.VerdictChange,
 ) error {
-	subject := "Margince updated this deal"
+	subject := systemtext.Literal("deal.updated")
 	lines := make([]string, 0, len(applied))
+	var components []*systemtext.Component
+	offset := 0
 	for _, change := range applied {
-		lines = append(lines, verdictChangeLine(change, read.state.Seen)+": "+fmt.Sprint(change.Evidence["basis"]))
+		prefix := verdictChangeLine(change, read.state.Seen) + ": "
+		basis := fmt.Sprint(change.Evidence["basis"])
+		lines = append(lines, prefix+basis)
+		components = append(components, systemtext.Sentence("deal.verdict_basis", systemtext.Nested(verdictChangeComponent(change, read.state.Seen)), systemtext.Excerpt(offset+utf8.RuneCountInString(prefix), utf8.RuneCountInString(basis))))
+		offset += utf8.RuneCountInString(prefix+basis) + 1
 	}
-	body := strings.Join(lines, "\n") + "\nUndo any of these from Home."
+	body := strings.Join(lines, "\n") + "\n" + systemtext.Literal("deal.verdict_undo")
+	var metadata *systemtext.Component
+	if len(components) > 0 {
+		components = append(components, systemtext.Sentence("deal.verdict_undo"))
+		metadata = systemtext.Sequence(components[0], components[1:]...)
+		metadata.Layout = "lines"
+	}
 	_, _, err := p.notes.LogActivityTx(ctx, tx, activities.LogActivityInput{
-		Kind: string(crmcontracts.ActivityKindNote), Subject: &subject, Body: &body, Origin: activities.OriginSystemRemediation,
+		SystemText: &systemtext.Message{Subject: systemtext.Sentence("deal.updated"), Body: metadata},
+		Kind:       string(crmcontracts.ActivityKindNote), Subject: &subject, Body: &body, Origin: activities.OriginSystemRemediation,
 		Links: []activities.ActivityLinkInput{{EntityType: entityTypeDeal, EntityID: c.deal}},
 	})
 	if err != nil {
@@ -213,19 +228,23 @@ func (p dealVerdictPass) recordOnTimeline(
 
 // verdictChangeLine names one change in plain words.
 func verdictChangeLine(change deals.VerdictChange, seen deals.VerdictValues) string {
+	return systemtext.Canonical(verdictChangeComponent(change, seen), "")
+}
+
+func verdictChangeComponent(change deals.VerdictChange, seen deals.VerdictValues) *systemtext.Component {
 	switch change.Correction {
 	case deals.VerdictCloseDateCorrection:
-		return "Close date set to " + change.CloseDate.Format(time.DateOnly)
+		return systemtext.Sentence("deal.verdict_date", systemtext.Date(change.CloseDate.Format(time.DateOnly)))
 	case deals.VerdictStageMoveCorrection:
-		return fmt.Sprintf("Moved to %v", change.Evidence["to_stage"])
+		return systemtext.Sentence("deal.verdict_stage", systemtext.Text(fmt.Sprint(change.Evidence["to_stage"])))
 	case deals.VerdictAmountCorrection:
 		currency := change.Currency
 		if seen.Currency != nil {
 			currency = *seen.Currency
 		}
-		return "Amount set to " + values.MajorUnits(change.AmountMinor, currency) + " " + currency
+		return systemtext.Sentence("deal.verdict_amount", systemtext.Text(values.MajorUnits(change.AmountMinor, currency)), systemtext.Text(currency))
 	default:
-		return fmt.Sprintf("Win probability set to %d%%", change.Probability)
+		return systemtext.Sentence("deal.verdict_probability", systemtext.Count(int64(change.Probability)))
 	}
 }
 

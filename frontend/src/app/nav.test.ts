@@ -147,11 +147,14 @@ describe("a row that leads to a record instead of being one", () => {
     expect(primary.ancestor).toBe(true);
   });
 
-  it("is the page on the deal list with its create form open", () => {
-    const [primary] = railTrail(parseHash("#/deals/new"));
-    expect(primary.activeId).toBe("deals");
-    expect(primary.ancestor).toBe(false);
-  });
+  it.each(["deals", "contacts", "companies", "leads", "projects"])(
+    "is the page on the %s list with its create form open",
+    (screen) => {
+      const [primary] = railTrail(parseHash(`#/${screen}/new`));
+      expect(primary.activeId).toBe(screen);
+      expect(primary.ancestor).toBe(false);
+    },
+  );
 });
 
 // A reserved segment read as an id is a fetch for a contact called "import"
@@ -161,12 +164,14 @@ describe("the segments a screen reserves", () => {
     ["#/contacts/import", undefined],
     ["#/contacts/import/overview", undefined],
     ["#/deals/new", undefined],
+    ["#/contacts/new", undefined],
+    ["#/companies/new", undefined],
+    ["#/leads/new", undefined],
+    ["#/projects/new", undefined],
     ["#/contacts/c-1", "contact"],
     ["#/deals/d-1", "deal"],
     // Each word is reserved on its own screen only.
     ["#/leads/import", "lead"],
-    ["#/leads/new", "lead"],
-    ["#/contacts/new", "contact"],
     ["#/deals/import", "deal"],
   ])("reads %s as record kind %s", (hash, kind) => {
     expect(recordKindOf(parseHash(hash))).toBe(kind);
@@ -175,6 +180,7 @@ describe("the segments a screen reserves", () => {
   it.each([
     ["#/contacts/import", "vcardImport.title"],
     ["#/deals/new", undefined],
+    ["#/contacts/new", undefined],
     ["#/contacts/c-1", undefined],
     ["#/leads/import", undefined],
   ])("names %s's own page as %s", (hash, key) => {

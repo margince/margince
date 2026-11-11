@@ -6,7 +6,7 @@ import { type ReactNode, useEffect, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { EntityRef } from "../../components/entityref";
-import { Badge, StatCard } from "../../design-system/atoms";
+import { Badge, Button, StatCard } from "../../design-system/atoms";
 import {
   Panel,
   PanelBody,
@@ -25,8 +25,13 @@ import { type Locale, useT } from "../../i18n";
 import { useCan } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
 import { REPORTING_EVALUATION_KEY } from "../../lib/reportingfigures";
-import { MoreRows, useHandoffPages } from "./analytics.outcomes.handoffpages";
+import {
+  MoreRows,
+  useHandoffPages,
+  useRepinWhenAsOfExpires,
+} from "./analytics.outcomes.handoffpages";
 import { DoNext } from "./analytics.overview.donext";
+import { HandoffAssigneeModal } from "./handoffassignee";
 import {
   type ReportingEvaluation,
   type ReportingSelection,
@@ -115,7 +120,7 @@ export function MySdrWork({
  * asOf counts them at an evaluation's instant; omitted, they are counted now.
  */
 export function useSdrSummary(self: string, enabled: boolean, asOf?: string) {
-  return useQuery({
+  const summary = useQuery({
     queryKey: ["sdr-summary", self, asOf ?? null],
     enabled,
     placeholderData: keepPreviousData,
@@ -129,6 +134,8 @@ export function useSdrSummary(self: string, enabled: boolean, asOf?: string) {
         }),
       ),
   });
+  useRepinWhenAsOfExpires(summary.error, asOf);
+  return summary;
 }
 
 /** Turns true once `waiting` has held for the evaluation wait. */
@@ -355,6 +362,8 @@ export function WaitingRow({
   locale,
 }: Readonly<{ row: WaitingHandoff; asOf: number; locale: Locale }>) {
   const t = useT();
+  const canUpdate = useCan("lead", "update");
+  const [reassigning, setReassigning] = useState(false);
   const age = formatDuration(asOf - Date.parse(row.waiting_since), locale);
   const waitingOn = row.recipient
     ? row.recipient.active
@@ -373,12 +382,25 @@ export function WaitingRow({
     waitingOn,
   ];
   return (
-    <HandoffRow row={row} facts={facts}>
-      {row.recipient && !row.recipient.active && (
-        <Badge tone="warning">{t("analytics.prospect.blocked")}</Badge>
+    <>
+      <HandoffRow row={row} facts={facts}>
+        {row.recipient && !row.recipient.active && (
+          <Badge tone="warning">{t("analytics.prospect.blocked")}</Badge>
+        )}
+        {!row.recipient && <Badge>{t("analytics.prospect.unassigned")}</Badge>}
+        {canUpdate && row.subject && (
+          <Button onClick={() => setReassigning(true)}>
+            {t("analytics.handoffReassign")}
+          </Button>
+        )}
+      </HandoffRow>
+      {reassigning && (
+        <HandoffAssigneeModal
+          id={row.id}
+          onClose={() => setReassigning(false)}
+        />
       )}
-      {!row.recipient && <Badge>{t("analytics.prospect.unassigned")}</Badge>}
-    </HandoffRow>
+    </>
   );
 }
 

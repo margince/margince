@@ -1,5 +1,11 @@
 import { stepsBackOutOf } from "./historydepth";
-import { parseHash, type Route, routeHash, type Screen } from "./router";
+import {
+  navigateReplacing,
+  parseHash,
+  type Route,
+  routeHash,
+  type Screen,
+} from "./router";
 import { GLOBAL_DIALS, hashWithParams, parseParams } from "./urlstate";
 
 // The address each list screen last stood at in this page load, filter
@@ -60,4 +66,15 @@ export function leaveRecord(record: Route): void {
     return;
   }
   globalThis.location.hash = listAddress(record.screen);
+}
+
+/** Close a list's create form onto the list, replacing the form's address so
+ *  Back from the list does not open the form again. */
+export function leaveCreateForm(screen: Screen): void {
+  const here = parseHash(globalThis.location.hash);
+  if (here.screen !== screen || here.id === undefined) {
+    return;
+  }
+  const list = listAddress(screen);
+  navigateReplacing(parseHash(list), parseParams(list));
 }

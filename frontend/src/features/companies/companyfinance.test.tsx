@@ -230,6 +230,23 @@ describe("the two readings the card draws as shapes", () => {
     ).toBeNull();
   });
 
+  it("draws overdue money in the danger tone, and a zero in the plain one", async () => {
+    withSummary({
+      open_balance: { amount_minor: 400_000, currency: "EUR" },
+      overdue: { amount_minor: 100_000, currency: "EUR" },
+    });
+    const late = await screen.findByText("€1,000.00");
+    expect(late.classList.contains("fin-amount-hero")).toBe(true);
+    cleanup();
+    withSummary({
+      open_balance: { amount_minor: 400_000, currency: "EUR" },
+      overdue: { amount_minor: 0, currency: "EUR" },
+    });
+    const none = await screen.findByText("€0.00");
+    expect(none.classList.contains("fin-amount")).toBe(true);
+    expect(none.classList.contains("fin-amount-hero")).toBe(false);
+  });
+
   it("draws no bar when nothing is open to be a share of", async () => {
     withSummary({
       open_balance: { amount_minor: 0, currency: "EUR" },

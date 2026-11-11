@@ -37,6 +37,8 @@ export const ReadOnly: Story = {
       ),
       "GET /contacts/p-1/consent/guard": () => jsonResponse({ entries: [] }),
       "GET /contacts/p-1/consent/stops": () => jsonResponse({ stops: [] }),
+      "GET /contacts/p-1/consent/allow": () =>
+        jsonResponse({ data: [], page: { has_more: false } }),
     });
     return <ContactConsentPanel {...args} />;
   },

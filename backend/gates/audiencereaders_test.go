@@ -59,7 +59,7 @@ import (
 // directly, and the Ensure* probes reach it through
 // EnsureActivityContentVisible.
 var audienceScopeMarkers = []string{
-	"ActivityContentClause", "ActivityAudienceArm", "AudienceWorkspaceOnly", "AutomaticMailContent",
+	"ActivityContentClause", "ActivityAudienceArm", "AudienceWorkspaceOnly", "WorkspaceAudienceSQL", "AutomaticMailContent",
 	// Gates a statement's activities once; TestEveryContentGateRendersItsMarkOnce
 	// in platform/auth holds that it renders the content gate.
 	"ContentReadableActivitiesSQL",
@@ -103,12 +103,18 @@ var audienceLiteralMarkers = []*regexp.Regexp{
 // covers one reader and not every reader added to that file afterwards.
 const heldMailMaintenanceReader = "system-only maintenance reads bounded original headers to restore provider arrival evidence on capture_import, including held rows. No content or row is returned to a reader, and no activity is changed. Filtering by a viewer would leave privacy-notice history dependent on that viewer; the cost is internal parsing of restricted mail headers inside the batch transaction."
 
+const credentialRepairReader = "the credential repair, which reads every mail because a password stored in a members-only thread is stored in clear just the same. An audience test here would leave the credential in the rows the repair exists to reach, and no principal is served: the task runs as the system and returns no row to a caller. Statutory holds ARE refused, by the restricted_at predicate in the same statement"
+
 var audienceReadersAdmitted = gatekit.Waive(map[string]string{
+	"internal/compose/credentialrepair/credentialrepair.go:estimateMaskableMailText": credentialRepairReader,
+	"internal/compose/credentialrepair/credentialrepair.go:maskMailTextBatch":        credentialRepairReader,
+	"internal/modules/activities/credentialrepair.go:MaskStoredMailTextTx":           credentialRepairReader,
+
+	"internal/modules/activities/messageidentity.go:absorbEcho":      "Reconciles a transport-authorized sent row with its exact provider-proven capture, including a held copy from another mailbox. The query returns only the duplicate id inside the send transaction. Requiring the audience being reconciled would leave the proved duplicate; content is not returned. Provider account identity or a complete, unmasked identical filed copy is required, and partial copies are refused.",
 	"internal/modules/activities/mailcopies.go:CountMailCopies":      "System-only repair compares proven message identities across audiences. It preserves holds and attachment authority, skips unsafe references and discloses no content to users.",
 	"internal/modules/activities/mailcopies.go:MailCopiesTx":         "System-only repair compares proven message identities across audiences. It preserves holds and attachment authority, skips unsafe references and discloses no content to users.",
 	"internal/modules/activities/mailcopies.go:Store.FoldMailCopyTx": "System-only repair compares proven message identities across audiences. It preserves holds and attachment authority, skips unsafe references and discloses no content to users.",
 	"internal/modules/privacy/retentionselectors.go:floorShields":    "reads no row: it asks whether the retention selector STRING for a scope composes the correspondence floor predicate, so the privacy page can say the floor keeps that mail. The SQL in the map is the evaluator's, matched as text and never run here",
-	"internal/compose/dealverdictinput.go:readVerdictActivities":     "the nightly deal verdict reads only activities every member may read: visibleToAllSQL composes relstrength.WorkspaceAudienceSQL and restricted_at IS NULL, because the reason and its citations reach Home and the deal page. The static string census cannot expand the function call",
 	"internal/modules/search/embedgen.go:EmbedGen.HandleEvent":       "the activity entry in embedText appends activityIndexable, the same workspace-audience, restriction and erased-evidence predicate used by rebuild and the locked embedding writer. The static string census cannot expand this function call in the map value",
 	"internal/modules/search/embedgen.go:Store.healEntity":           "the repair reader uses the same embedText activity query and activityIndexable predicate as event indexing. It admits only workspace-audience, unrestricted content with retained evidence; the static string census cannot expand the query's function call",
 

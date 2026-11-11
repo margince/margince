@@ -34,6 +34,8 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/extraction"
@@ -223,14 +225,15 @@ func (a *ExtractionAccept) auditAcceptedFieldsTx(ctx context.Context, tx pgx.Tx,
 		if f.Edited {
 			noteCtx = ctx
 		}
-		subject := "Extraction accepted: " + f.Field
+		subject := fmt.Sprintf(systemtext.Copy("extraction.accepted", textlang.English), f.Field)
 		body := f.SourceQuote
 		_, _, err := a.attachments.LogActivityTx(noteCtx, tx, activities.LogActivityInput{
-			Kind:    string(crmcontracts.ActivityKindNote),
-			Subject: &subject,
-			Body:    &body,
-			Links:   []activities.ActivityLinkInput{{EntityType: acceptDealEntity, EntityID: dealID}},
-			Source:  extractionAcceptSource,
+			SystemText: &systemtext.Message{Subject: systemtext.Sentence("extraction.accepted", systemtext.Text(f.Field)), Body: systemtext.Prose(systemtext.Quote, "")},
+			Kind:       string(crmcontracts.ActivityKindNote),
+			Subject:    &subject,
+			Body:       &body,
+			Links:      []activities.ActivityLinkInput{{EntityType: acceptDealEntity, EntityID: dealID}},
+			Source:     extractionAcceptSource,
 		})
 		if err != nil {
 			return fmt.Errorf("audit note for accepted field %s: %w", f.Field, err)
@@ -463,37 +466,4 @@ func anyAcceptedFieldEdited(req crmcontracts.AcceptExtractionRequest) bool {
 		}
 	}
 	return false
-}
-
-// UnsupportedEntityTypeError maps to 422 unsupported_entity_type:
-// accepting extraction fields writes a DEAL, and an attachment scoped to
-// any other parent has no deal to write.
-type UnsupportedEntityTypeError struct{ EntityType string }
-
-func (e *UnsupportedEntityTypeError) Error() string {
-	return "extraction accept is only valid on a deal-scoped attachment, not " + e.EntityType
-}
-
-// MessageFault carries the 422 on the error, so the one taxonomy answers it
-// wherever it travels rather than only where writeExtractionAcceptError runs.
-//
-// MessageFault, not FieldFault: what is wrong is the attachment's OWN scope, and
-// no argument of this request can change it. Pointing at a field would hand the
-// caller an edit it cannot make.
-func (e *UnsupportedEntityTypeError) MessageFault() (code, message string) {
-	return "unsupported_entity_type", e.Error()
-}
-
-// ExtractionAcceptError is one refused accept input: the whole request
-// refuses (no partial acceptance), naming the offending field and the
-// machine code.
-type ExtractionAcceptError struct{ Field, Code, Message string }
-
-func (e *ExtractionAcceptError) Error() string { return e.Field + ": " + e.Message }
-
-// FieldFault carries the verdict the type already holds. It names a real
-// argument of the request, which is what separates it from
-// UnsupportedEntityTypeError next door.
-func (e *ExtractionAcceptError) FieldFault() (field, code, message string) {
-	return e.Field, e.Code, e.Message
 }

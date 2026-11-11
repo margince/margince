@@ -79,7 +79,6 @@ func assertCurrentLeadAdvice(t *testing.T, l *leadMailEnv, lead ids.LeadID, now 
 	if len(rows) != want || count != want {
 		t.Fatalf("current advice: rows=%d count=%d want=%d", len(rows), count, want)
 	}
-
 }
 
 func TestLeadReplyAdviceRejectsFutureMailAndSharesLegacyAdmission(t *testing.T) {

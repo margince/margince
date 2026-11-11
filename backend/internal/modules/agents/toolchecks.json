@@ -1431,6 +1431,11 @@
         "pipeline.read"
       ]
     },
+    "get_handoff_assignee": {
+      "checks": [
+        "lead.read"
+      ]
+    },
     "get_hidden_backlog": {
       "checks": [
         "activity.read",
@@ -1974,6 +1979,11 @@
     "list_consumer_mail_domains": {
       "checks": [
         "capture_settings.read"
+      ]
+    },
+    "list_contact_overrides": {
+      "checks": [
+        "contact.read"
       ]
     },
     "list_contact_stops": {
@@ -2835,6 +2845,12 @@
         "deal.read"
       ]
     },
+    "reassign_handoff": {
+      "checks": [
+        "lead.read",
+        "lead.update"
+      ]
+    },
     "record_communication_context": {
       "checks": [
         "contact.update"
@@ -2862,6 +2878,11 @@
         "contact.read",
         "introduction.create",
         "introduction.read"
+      ]
+    },
+    "record_lead_qualifying_event": {
+      "checks": [
+        "lead.update"
       ]
     },
     "record_qualifying_event": {
@@ -3067,6 +3088,14 @@
         "product.read"
       ]
     },
+    "replace_intro_request": {
+      "checks": [
+        "contact.read",
+        "introduction.create",
+        "introduction.read",
+        "introduction.update"
+      ]
+    },
     "replace_sales_initiative_members": {
       "checks": [
         "sales_initiative.read",
@@ -3225,6 +3254,11 @@
     "retract_acquisition_request": {
       "checks": [
         "contact.update"
+      ]
+    },
+    "retract_lead_qualifying_event": {
+      "checks": [
+        "lead.update"
       ]
     },
     "retract_qualifying_event": {

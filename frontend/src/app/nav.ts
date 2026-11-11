@@ -10,6 +10,7 @@ import {
   Users,
 } from "lucide-react";
 import type { MessageKey } from "../i18n/en";
+import { type CoreFeature, screenEnabled } from "../lib/corefeatures";
 import { type EntityKind, SCREEN_ENTITY } from "../lib/entity";
 import { EXTENSION_SCREEN } from "../lib/extensions";
 import { opensAFocusedFiltersPage } from "../lib/filtersaddress";
@@ -19,6 +20,7 @@ import {
   type NavLevelEntry,
   type NavSection,
   type NavTrailLevel,
+  navLevelRoute,
   navTrail,
 } from "./subnav";
 
@@ -216,29 +218,43 @@ export const GRIDDED_RECORD_SCREENS: ReadonlySet<Screen> = new Set([
 ]);
 
 // Id segments that name a page rather than a record, each on its own screen
-// only: `#/leads/new` is the lead whose id is "new".
+// only: `#/leads/import` is the lead whose id is "import".
 export const CREATE_ID = "new";
 export const IMPORT_ID = "import";
 
-// A `titleKey` marks a page of its own below the list; without one the segment
-// is a state of the list itself (`#/deals/new` is the list with its form open).
-const RESERVED_SEGMENTS: Readonly<
-  Partial<Record<Screen, { id: string; titleKey?: MessageKey }>>
+/** The screens whose list opens a create form at `CREATE_ID`, which `C` opens. */
+export const CREATE_SCREENS: ReadonlySet<Screen> = new Set([
+  "contacts",
+  "companies",
+  "leads",
+  "deals",
+  "projects",
+]);
+
+/** `#/deals/new`: the list itself, with its create form open. */
+export function opensCreateForm(route: Route): boolean {
+  return route.id === CREATE_ID && CREATE_SCREENS.has(route.screen);
+}
+
+// A page of its own below the list, which the trail names.
+const RESERVED_PAGES: Readonly<
+  Partial<Record<Screen, { id: string; titleKey: MessageKey }>>
 > = {
-  deals: { id: CREATE_ID },
   contacts: { id: IMPORT_ID, titleKey: "vcardImport.title" },
 };
 
 export function opensReservedPage(route: Route): boolean {
   return (
-    route.id !== undefined && RESERVED_SEGMENTS[route.screen]?.id === route.id
+    opensCreateForm(route) ||
+    (route.id !== undefined && RESERVED_PAGES[route.screen]?.id === route.id)
   );
 }
 
 // The trail, the agent's subject and the rail read a reserved page's name here.
 export function reservedPageTitle(route: Route): MessageKey | undefined {
-  return opensReservedPage(route)
-    ? RESERVED_SEGMENTS[route.screen]?.titleKey
+  const page = RESERVED_PAGES[route.screen];
+  return route.id !== undefined && page?.id === route.id
+    ? page.titleKey
     : undefined;
 }
 
@@ -352,19 +368,24 @@ function forkItems(
   }));
 }
 
-function primaryLevel(route: Route): NavTrailLevel {
+function primaryLevel(
+  route: Route,
+  disabled: readonly CoreFeature[],
+): NavTrailLevel {
   return {
     groups: NAV_GROUPS.map((group) => ({
       headingKey: group.headingKey,
       items: [
-        ...group.items.map((item) => ({
-          id: item.screen,
-          labelKey: item.labelKey,
-          icon: item.icon,
-        })),
+        ...group.items
+          .filter((item) => screenEnabled(item.screen, disabled))
+          .map((item) => ({
+            id: item.screen,
+            labelKey: item.labelKey,
+            icon: item.icon,
+          })),
         ...forkItems(group.headingKey),
       ],
-    })),
+    })).filter((group) => group.items.length > 0),
     ancestor: opensAPageBelow(route),
     path: [],
     badgeIds: BADGE_SCREENS,
@@ -421,6 +442,33 @@ function activeRowFor(route: Route): string {
 export function railTrail(
   route: Route,
   section?: NavSection,
+  disabled: readonly CoreFeature[] = [],
 ): readonly NavTrailLevel[] {
-  return navTrail(primaryLevel(route), route, activeRowFor(route), section);
+  return navTrail(
+    primaryLevel(route, disabled),
+    route,
+    activeRowFor(route),
+    section,
+  );
+}
+
+export function firstAvailableRoute(disabled: readonly CoreFeature[]): Route {
+  return {
+    screen:
+      NAV.find((item) => screenEnabled(item.screen, disabled))?.screen ??
+      "settings",
+  };
+}
+
+export function walkUpTarget(
+  parent: NavTrailLevel | undefined,
+  origin: Route,
+  disabled: readonly CoreFeature[],
+): Route {
+  if (!parent || parent.path.length === 0 || !parent.activeId) {
+    return screenEnabled(origin.screen, disabled)
+      ? origin
+      : firstAvailableRoute(disabled);
+  }
+  return navLevelRoute(parent.path, parent.activeId);
 }

@@ -81,49 +81,32 @@ func releaseCapLock(t *testing.T, holder *pgx.Conn, address string) {
 // window from reading as a variable any of these cases depends on.
 const capWindow = 24 * time.Hour
 
-// testJurisdiction hands out a code no other test is using.
-//
-// Handed out rather than chosen because the registry is process-wide and panics
-// on a second rule set for a country it already knows — deliberately, since two
-// would be two answers about one country's law, and there is no deregister. A
-// hand-picked code meant every new cap test had to find a letter pair nobody
-// had taken, across files, and a wrong guess panicked the whole package rather
-// than failing one test.
-//
-// Codes are drawn IN ORDER from the QM-QZ range and each is taken at most once,
-// so a collision is impossible rather than unlikely — hashing the test name
-// into fourteen slots would have been four tests inside a space where a fifth
-// has a fair chance of landing on one already used. ISO 3166 never assigns a
-// QM-QZ code, so no jurisdiction this product serves can arrive under one, and
-// the sibling file's "z" codes are a separate range again.
+// The ISO user-assigned QM–QZ and XA–XZ ranges keep these tests separate from sibling Z codes.
 var capJurisdictions = struct {
 	mu   sync.Mutex
 	next int
 }{}
 
-// testJurisdictionSlots is how many codes the minter can hand out: q…a through
-// q…z, minus the letters before "a" — the whole "q" prefix.
-//
-// WIDENED from the QM-QZ fourteen when the requirement tests began drawing from
-// the same counter and the two together came within two of exhausting it. ISO
-// 3166 reserves every QM-QZ code and assigns no other "q" code except QA
-// (Qatar), which this skips: a test jurisdiction that collided with a real one
-// would read as a pack for a country the product actually serves.
-const testJurisdictionSlots = 25
+const (
+	reservedQSlots        = int('z' - 'm' + 1)
+	testJurisdictionSlots = reservedQSlots + int('z'-'a'+1)
+)
 
+// Jurisdictions are process-wide and cannot be registered twice.
 func testJurisdiction(t *testing.T) jurisdiction.Code {
 	t.Helper()
 	capJurisdictions.mu.Lock()
 	defer capJurisdictions.mu.Unlock()
-	if capJurisdictions.next >= testJurisdictionSlots {
-		t.Fatalf("this package has taken all %d test jurisdictions in the q… range — widen the "+
-			"range rather than reusing one, which panics the registry for every test after it",
-			testJurisdictionSlots)
+	index := capJurisdictions.next
+	if index >= testJurisdictionSlots {
+		t.Fatalf("this package exhausted its %d distinct test jurisdictions", testJurisdictionSlots)
 	}
-	// 'b' onward, skipping QA: Qatar is the one assigned "q" code.
-	code := jurisdiction.Code("q" + string(rune('b'+capJurisdictions.next)))
+	prefix, suffix := 'q', rune('m'+index)
+	if index >= reservedQSlots {
+		prefix, suffix = 'x', rune('a'+index-reservedQSlots)
+	}
 	capJurisdictions.next++
-	return code
+	return jurisdiction.Code(string([]rune{prefix, suffix}))
 }
 
 // cappedGate registers a ceiling under a freshly minted jurisdiction, puts the

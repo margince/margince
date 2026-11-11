@@ -1231,13 +1231,15 @@ jobs:
 
   # Home's per-PR budget (scripts/home-budget.sh): the API p95 of Home's reads,
   # cold and warm, on a small corpus of its own, then the day paint and CLS of a
-  # production bundle against an api booted the way live-boot boots it.
+  # production bundle against an api booted the way live-boot boots it. While
+  # advisory, it measures the base commit on the same runner too and fails only
+  # when the change is slower past a margin, so runner speed cannot redden it.
   # ADVISORY: it is not in the `ci` fan-in, and a red run stops no merge. The
   # scope step skips the rest when the diff cannot reach Home
   # (scripts/home-budget-scope.sh); a push or a merge group always runs.
   home-budget:
     name: home-budget (advisory)
-    timeout-minutes: 30
+    timeout-minutes: 60
     needs: [changes]
     if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     runs-on: ubuntu-latest
@@ -1332,8 +1334,33 @@ jobs:
         uses: ./.github/actions/install-playwright-chromium
       # Writes the wall time of each half, the API rows and the vitals line to
       # the job summary, pass or fail.
+      # The commit this change is judged against: a pull request's merge base,
+      # a push's previous tip, a merge group's base. A new branch has none, and
+      # then the fixed budgets judge it.
+      - name: Choose the base to compare with
+        id: base
+        if: steps.scope.outputs.run == 'true'
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref }}
+          BEFORE: ${{ github.event.before }}
+          GROUP_BASE: ${{ github.event.merge_group.base_sha }}
+        run: |
+          case "$EVENT" in
+            pull_request) base="$(git merge-base "origin/$BASE_REF" HEAD)" ;;
+            merge_group) base="$GROUP_BASE" ;;
+            push) base="$BEFORE" ;;
+            *) base="" ;;
+          esac
+          if [ -n "$base" ] && ! git cat-file -e "$base^{commit}" 2>/dev/null; then
+            echo "home-budget: base $base is not in this clone, so the fixed budgets judge"
+            base=""
+          fi
+          echo "sha=$base" >> "$GITHUB_OUTPUT"
       - name: Home budget
         if: steps.scope.outputs.run == 'true'
+        env:
+          HOME_BUDGET_BASE: ${{ steps.base.outputs.sha }}
         run: make home-budget BENCH_API_PORT=8080
       - name: API log (on failure)
         if: failure()
@@ -1444,8 +1471,9 @@ jobs:
   #
   # WHAT THE REPOSITORY ACTUALLY REQUIRES, said once and only here so the file
   # cannot answer it twice with different answers: `ci` — this job — is the ONE
-  # required context, from the `main-required-status-checks` ruleset. There is no
-  # classic branch protection at all. `main-required-ai-reviewers` names
+  # required context this workflow reports, from the `main-required-status-checks`
+  # ruleset; the other is `cla`, from cla.yml. There is no classic branch
+  # protection at all. `main-required-ai-reviewers` names
   # CodeRabbit and is DISABLED. Nothing else is required, SonarCloud included,
   # and three comments in this file used to say otherwise (margince/margince#2544).
   #
@@ -1535,10 +1563,11 @@ jobs:
       - frontend
       # The screen-acceptance lane gates the merge. It was advisory on the
       # argument that a flaky job under a merge queue re-queues every entry in
-      # its group; the queue is not in use, and an advisory lane is one a red
-      # verdict never stops anybody on. Its classifier skip is admissible here
-      # for the same reason `frontend`'s is: on a pull request a skip means out
-      # of scope, and on the merge queue every scope is true so it cannot skip.
+      # its group; an advisory lane is one a red verdict never stops anybody
+      # on, and a flake it shows is a test to fix. Its classifier skip is
+      # admissible here for the same reason `frontend`'s is: on a pull request
+      # a skip means out of scope, and on the merge queue every scope is true
+      # so it cannot skip.
       - uat
       - license-gate
       - images

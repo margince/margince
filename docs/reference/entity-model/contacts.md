@@ -665,7 +665,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## contact_acquisition_evidence
 
-13 columns · primary key `(id)` · referenced by 1 foreign key
+14 columns · primary key `(id)` · referenced by 1 foreign key
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -673,6 +673,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `captured_at` | `timestamp with time zone`, default `now()` | yes |  |
 | `contact_id` | `uuid` | yes | Points at `contact.id`. |
 | `kind` | `text` | yes | One of `subject_initiated`, `customer_contract`, `requested_quote_or_meeting`, `in_person_permission`, `referral`, `event_or_form` and 5 more. |
+| `legal_entity_id` | `uuid` |  | Points at `legal_entity.id`. |
 | `note` | `text` |  |  |
 | `occurred_at` | `timestamp with time zone` |  |  |
 | `purpose_claimed` | `text` |  |  |
@@ -688,6 +689,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 | Columns | Table | When the parent goes |
 |---|---|---|
 | `contact_id` | `contact` | deleting the parent deletes this row |
+| `legal_entity_id` | `legal_entity` | the parent cannot be deleted while this row points at it |
 
 **Rules**
 
@@ -1231,7 +1233,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## lead
 
-48 columns · primary key `(id)` · referenced by 18 foreign keys
+48 columns · primary key `(id)` · referenced by 19 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -1530,7 +1532,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## legal_entity
 
-29 columns · primary key `(id)` · referenced by 5 foreign keys
+29 columns · primary key `(id)` · referenced by 9 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -2038,7 +2040,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 **Triggers**
 
-- `sdr_handoff_assigned_to_retirement_guard`: `BEFORE INSERT OR UPDATE FOR EACH ROW WHEN (((new.assigned_to IS NOT NULL) AND (new.status = ANY (ARRAY['submitted', 'accepted'])))) EXECUTE FUNCTION refuse_retired_member_work('assigned_to')`
+- `sdr_handoff_assigned_to_retirement_guard`: `BEFORE INSERT OR UPDATE FOR EACH ROW WHEN (((new.assigned_to IS NOT NULL) AND (new.status = 'submitted'))) EXECUTE FUNCTION refuse_retired_member_work('assigned_to')`
 
 ## sdr_handoff_event
 

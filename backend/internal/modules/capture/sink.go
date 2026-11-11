@@ -18,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
@@ -93,6 +94,9 @@ type Sink struct {
 	// claimOwnSentMail corrects a colleague's earlier reading of this seat's
 	// sent mail; nil leaves the first reading standing.
 	claimOwnSentMail OwnSentMailClaim
+	// adoptSentEcho re-keys the seat's send onto its echo's identity
+	// (sentecho.go). Nil lands such an echo as a second row.
+	adoptSentEcho SentEchoAdoption
 	// mailIdentityKind is activities.IdentityKindMail, and the two identity
 	// seams below are that module's own resolve and claim. All three are set
 	// together by WithMessageIdentity or none is: an empty kind is what
@@ -135,6 +139,7 @@ type MergeStager interface {
 // MergeProposal names the collision: the surviving record and the
 // captured fields that would fold into it.
 type MergeProposal struct {
+	SystemText *systemtext.Message
 	// note: TargetType + TargetID are the polymorphic pair the approvals
 	// merge target carries — this is a discriminated ref, not a single
 	// entity's id, so it stays untyped (kernel Ref semantics).
@@ -233,6 +238,9 @@ func (s *Sink) captureRecord(ctx context.Context, rec connector.NormalizedRecord
 	}
 
 	s = s.withRetryFileStage()
+	// The counterparty ensure acts as the connector, not under the member
+	// authority the admission below binds into the transaction's context.
+	ensureCtx := ctx
 	var attempt captureAttempt
 	txStart := time.Now()
 	original := rec
@@ -261,7 +269,10 @@ func (s *Sink) captureRecord(ctx context.Context, rec connector.NormalizedRecord
 
 			switch fields := rec.Fields.(type) {
 			case ActivityFields:
-				attempt.activityLanding, err = s.landActivityTx(ctx, tx, rec, fields, actor.UserID)
+				if attempt.activityLanding, err = s.landActivityTx(ctx, tx, rec, fields, actor.UserID); err != nil {
+					return err
+				}
+				attempt.ensured, err = s.ensureCounterpartyTx(ensureCtx, tx, rec, attempt.activityLanding)
 				return err
 			case LeadFields:
 				if rec, err = storeOriginalTx(ctx, tx, rec); err != nil {
@@ -299,17 +310,11 @@ func (s *Sink) finishCapture(ctx context.Context, rec connector.NormalizedRecord
 	ensureStart := time.Now()
 	defer func() { capturemetrics.ObserveStage(ctx, capturemetrics.StageEnsure, time.Since(ensureStart)) }()
 	if attempt.created {
-		// The tier ladder already decided, and recorded its decision, inside
-		// the transaction above. Creation runs AFTER that commit, in its own
-		// transaction: the timeline row is never lost to a resolver fault, and
-		// a fault here is logged for the link_reconcile sweep rather than
-		// surfaced as a capture failure (the 60s p95 already delivered).
-		s.ensureCounterparty(ctx, rec, ref, attempt.decision)
+		s.settleCounterparty(ctx, rec, ref, attempt.decision, attempt.ensured)
 	}
 	s.admitCapturedParties(ctx, rec, ref, attempt.created && !attempt.admission.pending)
-	// The project ladder runs on the same terms as the counterparty step —
-	// after the commit, in its own transaction, never failing the capture —
-	// and on EVERY capture of the activity rather than only the first.
+	// The project ladder runs after the commit, in its own transaction. It
+	// never fails the capture, and it runs on every capture of the activity.
 	//
 	// A transient fault used to leave the message unfiled forever: the ladder
 	// ran only on creation, so every later replay found the activity present
@@ -342,7 +347,8 @@ func (s *Sink) stageDuplicateLead(ctx context.Context, rec connector.NormalizedR
 	}
 	_, err := s.stager.StageMerge(ctx, MergeProposal{
 		TargetType: "lead", TargetID: hit.UUID, ProposedChange: fields,
-		Summary: s.duplicateLeadSummary(ctx, rec.NaturalKey),
+		Summary:    s.duplicateLeadSummary(ctx, rec.NaturalKey),
+		SystemText: &systemtext.Message{Subject: systemtext.Sentence("capture.duplicateLead", systemtext.Text(rec.NaturalKey.SourceSystem), systemtext.Text(rec.NaturalKey.SourceID))},
 	})
 	if err != nil {
 		return fmt.Errorf("capture: staging the dedupe merge: %w", err)
@@ -357,6 +363,14 @@ func (s *Sink) admitWriteTx(ctx context.Context, tx pgx.Tx, rec connector.Normal
 	ctx, err := s.mailboxRunAllowedTx(ctx, tx)
 	if err != nil {
 		return ctx, err
+	}
+	// The counterparty ensure in this transaction holds the member's authority,
+	// which must come before any row lock. A mailbox run holds it already.
+	if !isMailboxRun(ctx) && s.ensurer != nil {
+		_, owner := capturePrincipal(ctx)
+		if err := s.holdPartyAuthorityTx(ctx, tx, owner); err != nil {
+			return ctx, err
+		}
 	}
 	// A channel record's account id is personal data, and this transaction
 	// makes it durable. So the erasure is excluded here, under the account's own

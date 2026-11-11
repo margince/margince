@@ -16,10 +16,7 @@ import (
 // waivedRecords are certified records the gate does not read, each with the
 // reason it cannot be re-measured. A waiver names a provider and a model, never
 // a task, so a new record for the same model is read again.
-var waivedRecords = gatekit.Waive(map[string]string{
-	"vllm/mlx-community/Qwen3-14B-4bit": "needs a local vLLM server on a 24GB Apple-silicon machine, so its record keeps the" +
-		" verdict it had before this gate existed and says nothing about how it reads a soft promise",
-})
+var waivedRecords = gatekit.Waive(map[string]string{})
 
 const rerunCertLane = "re-run the cert lane: make -C backend e2e-ai TASK=<task> MODEL=<provider>:<model>"
 

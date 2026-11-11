@@ -16,6 +16,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -110,7 +111,7 @@ func setCaptureLabelTx(ctx context.Context, tx pgx.Tx, id ids.UUID, label string
 	tag, err := tx.Exec(ctx, `
 		UPDATE activity SET capture_label = $2, capture_labeled_at = now()
 		WHERE id = $1 AND capture_label IS NULL AND archived_at IS NULL
-		  AND audience = 'workspace' AND restricted_at IS NULL AND version = $3`, id, label, readVersion)
+		  AND `+auth.WorkspaceAudienceSQL("activity")+` AND restricted_at IS NULL AND version = $3`, id, label, readVersion)
 	if err != nil {
 		return false, fmt.Errorf("activities: setting capture label: %w", err)
 	}

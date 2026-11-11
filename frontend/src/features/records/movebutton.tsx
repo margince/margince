@@ -33,6 +33,8 @@ export type PerformableMove = {
   action: string;
   recommendation?: components["schemas"]["RecommendationReceipt"];
   arguments?: Record<string, unknown>;
+  // Set by the server when this reader may not take the verb; drawn as refused.
+  blocked_reason?: string;
 };
 
 // activityIdOf reads the one operand the meeting-brief verb takes. The
@@ -197,6 +199,7 @@ export function MoveButton({
       return (
         <CreateTaskVerb
           body={taskBody}
+          refused={move.blocked_reason}
           pending={createTask.isPending}
           error={createTask.error}
           onCreate={createTask.mutate}
@@ -215,6 +218,7 @@ export function MoveButton({
           meetingId={activityId}
           recipients={recipientsOf(move)}
           recommendation={move.recommendation}
+          refused={move.blocked_reason}
         />
       );
     case "open_meeting_brief":
@@ -261,8 +265,10 @@ function FollowUpDraft({
   meetingId,
   recipients,
   recommendation,
+  refused,
 }: Readonly<{
   recommendation?: components["schemas"]["RecommendationReceipt"];
+  refused?: string;
   dealId?: string;
   meetingId: string;
   recipients: readonly string[];
@@ -278,11 +284,15 @@ function FollowUpDraft({
   const check = useCurrentMove<NonNullable<typeof target>>(setTarget);
   const selected = target ?? { dealId, meetingId, recipients };
   const [contact, ...alsoTo] = selected.recipients;
-  if (contact === undefined || !writable) return null;
+  if (contact === undefined) return null;
+  // The server's refusal is drawn with its reason; without one, a seat that
+  // may not write is offered nothing.
+  if (!writable && refused === undefined) return null;
   return (
     <>
       <Button
         variant="ai"
+        reason={refused}
         pending={check.isPending}
         onClick={() =>
           check.mutate({
@@ -323,11 +333,13 @@ function FollowUpDraft({
 // press, so it is the plain primary, not indigo.
 function CreateTaskVerb({
   body,
+  refused,
   pending,
   error,
   onCreate,
 }: Readonly<{
   body: Record<string, unknown> | undefined;
+  refused?: string;
   pending: boolean;
   error: unknown;
   onCreate: (body: Record<string, unknown>) => void;
@@ -336,13 +348,14 @@ function CreateTaskVerb({
   const writable = useActivityWritable();
   // No body, no button: a click that sent {} would only be refused, and so
   // would any press from a seat that may not write activities.
-  if (!body || !writable) {
+  if (!body || (!writable && refused === undefined)) {
     return null;
   }
   return (
     <>
       <Button
         variant="primary"
+        reason={refused}
         pending={pending}
         onClick={() => onCreate(body)}
       >

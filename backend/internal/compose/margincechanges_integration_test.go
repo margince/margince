@@ -391,7 +391,7 @@ func TestAMorningIsReadAgainWhenAnyChangeItCountsIsAcceptedOrUndone(t *testing.T
 			t.Fatal(err)
 		}
 		v.deal = ids.UUID(created.Id)
-		v.note = v.logNote(t, "We sign on "+v.lane.date+" for 45,000 EUR a year.")
+		v.note = v.logBuyerMessage(t, "We sign on "+v.lane.date+" for 45,000 EUR a year.")
 		v.run(t)
 	}
 	now := v.now.Add(time.Hour)
@@ -435,7 +435,7 @@ func (l bundleLane) Complete(ctx context.Context, req model.Request) (model.Resp
 	}
 	answer.Actions = append(answer.Actions,
 		map[string]any{
-			"kind": "set_probability", "date": "", "amount": 0, "currency": "", "quoted_words": "", "probability": 5,
+			"kind": "set_probability", "date": "", "amount": 0, "currency": "", "quoted_words": l.move.quote, "probability": 5,
 			"cited_activity_ids": []string{l.move.note}, "reason": "They hesitate", "confidence": 0.9,
 		},
 		map[string]any{

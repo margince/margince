@@ -36,6 +36,9 @@ function renderSummary() {
           project: 0,
           task: 3,
           webhook: 2,
+          list: 0,
+          sdr_handoff: 3,
+          record_assignment: 2,
         },
       }),
   });

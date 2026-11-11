@@ -13,19 +13,9 @@ package privacy
 
 import (
 	"context"
-	"strings"
 
 	"github.com/jackc/pgx/v5"
 )
-
-// lowercased normalizes identifiers for SQL ANY matching.
-func lowercased(values []string) []string {
-	out := make([]string, len(values))
-	for i, v := range values {
-		out[i] = strings.ToLower(strings.TrimSpace(v))
-	}
-	return out
-}
 
 func collectStrings(ctx context.Context, tx pgx.Tx, query string, args ...any) ([]string, error) {
 	rows, err := tx.Query(ctx, query, args...)

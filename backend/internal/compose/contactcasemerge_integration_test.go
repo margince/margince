@@ -99,7 +99,7 @@ func TestOfTwoRacingCaseMergesExactlyOneCommits(t *testing.T) {
 
 	// The barrier: hold every member's row, so both merges are waiting before
 	// either can read the case.
-	owner := integration.OwnerConn(t)
+	owner := integration.FreshOwnerConn(t)
 	barrier, err := owner.Begin(context.Background())
 	if err != nil {
 		t.Fatal(err)

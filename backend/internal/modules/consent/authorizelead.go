@@ -186,11 +186,12 @@ func (g *Gate) decideLeadOnItsRecord(ctx context.Context, tx pgx.Tx, r connector
 	address, channelProvider, channelUserID := recipientSubjectAddress(r)
 	res, err := g.resolveAndRecord(ctx, tx, req, subjectRef{
 		Kind: entityLead, ID: leadID, Address: address,
-		ChannelProvider: channelProvider, ChannelUserID: channelUserID, Country: country,
+		ChannelProvider: channelProvider, ChannelUserID: channelUserID, Country: country, SendingEntity: req.SendingEntity,
 	}, phase, stops)
 	if err != nil {
 		return commsauthz.Decision{}, nil, err
 	}
+	d = withCheckedEvidence(d, req, res)
 	if res.Supported {
 		var denied bool
 		d, denied = putClaimToEvidence(d, req.Context, res.Category)
@@ -206,7 +207,7 @@ func (g *Gate) decideLeadOnItsRecord(ctx context.Context, tx pgx.Tx, r connector
 		stopped, err := withdrawalCovers(ctx, tx,
 			subjectRef{
 				Kind: entityLead, ID: leadID, Address: address,
-				ChannelProvider: channelProvider, ChannelUserID: channelUserID, Country: country,
+				ChannelProvider: channelProvider, ChannelUserID: channelUserID, Country: country, SendingEntity: req.SendingEntity,
 			}, res.Category)
 		if err != nil {
 			return commsauthz.Decision{}, nil, err
@@ -330,32 +331,25 @@ func resolveLead(ctx context.Context, tx pgx.Tx, r connector.Recipient) (string,
 // of its stops was made from. Anything else is refused, so the pin can only
 // narrow who a message is about, never reach somebody new.
 func (g *Gate) decidePinnedLead(ctx context.Context, tx pgx.Tx, r connector.Recipient, req commsauthz.Request, d commsauthz.Decision, phase commsauthz.Phase, country RecipientCountry) (commsauthz.Decision, error) {
-	lead := req.Evidence.LeadID
-	var holds bool
-	if r.Channel == nil {
-		if err := tx.QueryRow(ctx, `
-			SELECT EXISTS (
-			    SELECT 1 FROM lead l
-			     WHERE l.id = $1 AND l.archived_at IS NULL AND lower(l.email) = lower($2)
-			) OR EXISTS (
-			    SELECT 1 FROM communication_suppression s
-			      JOIN lead l ON l.id = s.lead_id AND l.archived_at IS NULL
-			     WHERE s.lead_id = $1 AND lower(s.address) = lower($2)
-			)`, lead, r.Email).Scan(&holds); err != nil {
-			return commsauthz.Decision{}, fmt.Errorf("consent: reading whether the lead holds this address: %w", err)
-		}
-	}
-	if !holds {
-		d.Verdict = commsauthz.VerdictDeny
-		d.ReasonCode = commsauthz.ReasonNoSubject
-		return d, nil
-	}
-	decided, err := g.decideLeadAt(ctx, tx, r, req, d, phase, country, lead.String())
+	subject, found, err := pinnedSubjectTx(ctx, tx, req.Evidence.LeadID, r)
 	if err != nil {
 		return commsauthz.Decision{}, err
 	}
-	// The pin travels to transmit on the staged evidence, so both phases decide
-	// about the same lead.
-	decided.Evidence.LeadID = lead
-	return decided, nil
+	if !found {
+		d.Verdict, d.ReasonCode = commsauthz.VerdictDeny, commsauthz.ReasonNoSubject
+		return d, nil
+	}
+	pin := req.Evidence.LeadID
+	var decided commsauthz.Decision
+	if subject.Kind == entityContact {
+		req.Evidence.LeadID = ids.Nil
+		decided, err = g.decideContactAt(ctx, tx, r, req, d, phase, country, subject.ID)
+	} else {
+		decided, err = g.decideLeadAt(ctx, tx, r, req, d, phase, country, subject.ID)
+	}
+	if err != nil {
+		return commsauthz.Decision{}, err
+	}
+	decided.Evidence.LeadID = pin
+	return requireConsentWhereNothingStandsIn(decided, country), nil
 }

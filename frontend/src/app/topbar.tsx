@@ -10,6 +10,12 @@ import { useLocale, useT } from "../i18n";
 import { lazy } from "../i18n/lazy";
 import { EXTENSION_SCREEN, findExtension } from "../lib/extensions";
 import {
+  ariaKeyShortcuts,
+  binding,
+  shortcutCaps,
+  shortcutTip,
+} from "../lib/keymap";
+import {
   leaveRecord,
   listAddress,
   rememberListAddress,
@@ -18,7 +24,6 @@ import { type Route, routeHash, useHash } from "../lib/router";
 import { usePhoneViewport } from "../lib/viewport";
 import { AccountMenu } from "./account";
 import { useFiltersCrumbs } from "./filterstrail";
-import { sidebarHotkeyCaps } from "./hotkeys";
 import {
   entryLabel,
   NAV,
@@ -29,7 +34,6 @@ import {
 import { NotificationBell } from "./notificationbell";
 import { OutboxButton } from "./outboxbutton";
 import { resolveTitle, sectionHead, useRouteSubject } from "./pagemeta";
-import { paletteHotkeyCaps, paletteKeyShortcuts } from "./palettehotkey";
 import { useHomeLinkLabel, WorkspaceChip } from "./shellrail";
 import "./topbar.css";
 
@@ -145,17 +149,16 @@ export function TopBarSearch({
         className="topbar-search"
         // Named by its printed words alone; the caps reach a screen reader as
         // the shortcut they are, never as part of the name.
-        aria-keyshortcuts={paletteKeyShortcuts(navigator.platform)}
+        aria-keyshortcuts={ariaKeyShortcuts(binding("search").keys)}
         onClick={onOpenSearch}
       >
         <Search size={16} strokeWidth={1.8} aria-hidden />
         <span className="topbar-searchlabel">{label}</span>
         {/* One cap per KEY, which is how a keyboard shortcut is read: "⌘ then K",
             not the four-character string "⌘K" in one box. The caps come from the
-            palette's own helper, so the two spellings ("⌘ K" and "Ctrl K") stay
-            one source. */}
+            keymap the dispatcher reads, so the cap cannot name another key. */}
         <span className="topbar-keys" aria-hidden>
-          {paletteHotkeyCaps(navigator.platform).map((cap) => (
+          {shortcutCaps("search").map((cap) => (
             <Kbd key={cap}>{cap}</Kbd>
           ))}
         </span>
@@ -228,7 +231,11 @@ export function TopBar({
             // The shortcut belongs in the tooltip, not in the accessible name:
             // a speech-input user says the words they can read, and "Collapse
             // sidebar ⌘B" is not one of them.
-            title={`${toggleLabel} · ${sidebarHotkeyCaps(navigator.platform).join(" ")}`}
+            title={shortcutTip(
+              toggleLabel,
+              binding("sidebar").keys,
+              t("shell.shortcuts.then"),
+            )}
             aria-expanded={!collapsed}
             onClick={onToggle}
           >

@@ -47,6 +47,18 @@ func wireReview(review Review) crmcontracts.CommunicationReview {
 			Address:    refusal.Address,
 			ReasonCode: refusal.ReasonCode,
 		}
+		if refusal.SendingEntity != nil {
+			id := openapi_types.UUID(*refusal.SendingEntity)
+			wire.SendingEntityId = &id
+		}
+		if refusal.SendingEntityName != "" {
+			name := refusal.SendingEntityName
+			wire.SendingEntityName = &name
+		}
+		if refusal.Requested != "" {
+			requested := refusal.Requested
+			wire.RequestedCategory = &requested
+		}
 		if refusal.Category != "" {
 			category := refusal.Category
 			wire.Category = &category
@@ -82,6 +94,14 @@ func wireReview(review Review) crmcontracts.CommunicationReview {
 	warning := TheOverrideWarning()
 	out.Warning = &crmcontracts.OverrideWarning{
 		Version: warning.Version, Text: warning.Text,
+	}
+	if correction := review.Correction; correction != nil {
+		out.WordingCorrection = &crmcontracts.WordingCorrectionContext{
+			InstructionId: openapi_types.UUID(correction.InstructionID), Version: correction.Version,
+			Subject: correction.Subject, Body: correction.Body, HtmlBody: correction.HTMLBody,
+			WordingDigest: correction.WordingDigest, ReasonCode: correction.ReasonCode,
+			Explanation: correction.Explanation, WarningVersion: correction.WarningVersion,
+		}
 	}
 	return out
 }

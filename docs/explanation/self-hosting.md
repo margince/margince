@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/compose/dbrole.go backend/internal/compose/schemareadiness.go backend/internal/compose/releaseversion.go backend/internal/compose/releasewatch.go backend/cmd/api/mcpapps.go backend/internal/compose/installationcountry.go docker-bake.hcl -->
+<!-- describes: backend/internal/compose/dbrole.go backend/internal/compose/schemareadiness.go backend/internal/compose/releaseversion.go backend/internal/compose/releasewatch.go backend/cmd/api/mcpapps.go backend/internal/compose/installationcountry.go docker-bake.hcl frontend/src/api/client.ts -->
 # Self-hosting: why a deployment is shaped this way
 
 The steps to run Margince on your own servers are in
@@ -34,6 +34,11 @@ cross the split:
   else than `/oauth/authorize`, or routes `/oauth` to the web service. Then it gives a 404
   to the human in the middle of approving a connection. It fails only there, since
   the client's own handshake never touches the SPA.
+- A human who signs in with a provider on that screen comes back to it, also when the
+  sign-in fails. Its buttons start the sign-in with `?return=consent`, and the callback
+  (api) then lands on `/consent#/oauth-consent` (web) instead of `/`. A failure adds
+  `?oidc=failed`. So an MCP client that opened the screen in its own window can still
+  read the answer from it.
 
 ## Readiness waits for the schema
 
@@ -168,6 +173,26 @@ The lever, when the api cannot reliably reach the web tier at boot, is `--mcp-ap
 The scheme must be `https` unless the host is a loopback or private address. A cleartext hostname is
 refused at boot with a message naming the setting, so it never reaches the fetches. Full flag
 reference: [configuration.md](../reference/configuration.md).
+
+## A WAF challenge stays at the edge
+
+A WAF in front of the app can answer a request with a challenge in the app's place. A challenge
+works only on a page load, where the browser can run it. The app reads its data through `fetch`
+calls under `/v1/`, and a `fetch` call cannot run one.
+
+So the app treats such an answer as a failed read, and leaves the challenge to the edge:
+
+- A `GET` answered `202` or `205` fails as a read. No read in `backend/api/crm.yaml` answers with
+  either status, so the client knows something in between answered (`frontend/src/api/client.ts`).
+- The read is not tried again on its own, because another try would meet the same challenge
+  (`retryQuery` in `frontend/src/app/queryclient.ts`).
+- A screen that already shows data keeps it. A first read that fails shows an error with Retry,
+  and Retry asks once more.
+- A write keeps its own `202`. Sign-in answers one when it asks for a second step, and so do the
+  writes that start work in the background.
+
+The rules that challenge belong to your edge, not to the app. Keep them off `/v1/`, or set them for
+page loads only, where a reader can pass one before Retry reads again.
 
 ## What an operator meets at run time
 

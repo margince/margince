@@ -43,11 +43,12 @@ import {
   WorklistRedirect,
 } from "./App.screens";
 import { CUSTOM_SCREEN } from "./app/custom";
-import { opensReservedPage } from "./app/nav";
+import { CREATE_ID, IMPORT_ID, opensReservedPage } from "./app/nav";
 import { UnsavedGuard } from "./components/unsaved";
 import { RESET_ROUTE } from "./features/sign-in/auth.route";
 import { CompleteLocale } from "./i18n";
 import { isContactTab } from "./lib/contacttab";
+import { screenEnabled, useDisabledCoreFeatures } from "./lib/corefeatures";
 import { EXTENSION_SCREEN } from "./lib/extensions";
 import { routeIdentity } from "./lib/routeidentity";
 import { navigate, parseHash, routeHash, type Screen } from "./lib/router";
@@ -69,16 +70,33 @@ const SCREEN_VIEWS: Readonly<Record<Screen, (args: ScreenArgs) => ReactNode>> =
     // empty page: a mistyped link should land somewhere, not nowhere.
     contacts: ({ id, id2 }) =>
       !id || opensReservedPage({ screen: "contacts", id }) ? (
-        <ContactsScreen importing={id !== undefined} />
+        <ContactsScreen
+          importing={id === IMPORT_ID}
+          startCreating={id === CREATE_ID}
+        />
       ) : (
         <ContactPageV2 id={id} tab={isContactTab(id2) ? id2 : "overview"} />
       ),
     companies: ({ id }) =>
-      id ? <CompanyScreen id={id} /> : <CompaniesScreen />,
+      !id || opensReservedPage({ screen: "companies", id }) ? (
+        <CompaniesScreen startCreating={id !== undefined} />
+      ) : (
+        <CompanyScreen id={id} />
+      ),
     partners: () => <PartnersScreen />,
-    leads: ({ id }) => (id ? <LeadScreen id={id} /> : <LeadsScreen />),
+    leads: ({ id }) =>
+      !id || opensReservedPage({ screen: "leads", id }) ? (
+        <LeadsScreen startCreating={id !== undefined} />
+      ) : (
+        <LeadScreen id={id} />
+      ),
     deals: ({ id, id2 }) => <DealsRoute id={id} id2={id2} />,
-    projects: ({ id }) => (id ? <ProjectScreen id={id} /> : <ProjectsScreen />),
+    projects: ({ id }) =>
+      !id || opensReservedPage({ screen: "projects", id }) ? (
+        <ProjectsScreen startCreating={id !== undefined} />
+      ) : (
+        <ProjectScreen id={id} />
+      ),
     // One segment, and it names whose day it is. A team board row needs that
     // door. The other three dials stay state: one of four in the address would
     // make it describe a fraction of what the reader is looking at.
@@ -188,6 +206,7 @@ export function ScreenView({
 }: Readonly<{ screen: Screen; id?: string; id2?: string }>) {
   // Deferring the first route keeps the ordinary loading body on screen while
   // its code resolves, without committing Suspense's delayed fallback.
+  const disabled = useDisabledCoreFeatures();
   const asked = useMemo(() => ({ screen, id, id2 }), [screen, id, id2]);
   const shown = useDeferredValue<typeof asked | null>(asked, null);
   const shownAddress = shown ? routeHash(shown) : null;
@@ -200,7 +219,11 @@ export function ScreenView({
         <UnsavedGuard address={shownAddress} onKeep={navigateToAddress}>
           {(held) => (
             <Fragment key={identityOfAddress(held)}>
-              {screenWithLocale(held)}
+              {screenEnabled(parseHash(held).screen, disabled) ? (
+                screenWithLocale(held)
+              ) : (
+                <ScreenNotice messageKey="shell.unknownPage" />
+              )}
             </Fragment>
           )}
         </UnsavedGuard>

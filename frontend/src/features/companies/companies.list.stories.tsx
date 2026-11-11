@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, screen } from "storybook/test";
 import {
   installFetchStub,
   jsonResponse,
@@ -31,8 +32,11 @@ const company = {
   updated_at: "2026-06-01T08:00:00Z",
 };
 
-function renderCompanies(rows: readonly (typeof company)[]) {
-  globalThis.location.hash = "#/companies";
+function renderCompanies(
+  rows: readonly (typeof company)[],
+  startCreating = false,
+) {
+  globalThis.location.hash = startCreating ? "#/companies/new" : "#/companies";
   installFetchStub({
     "GET /me": meRoute({ company: ["read", "update"] }),
     "GET /companies": () =>
@@ -43,13 +47,23 @@ function renderCompanies(rows: readonly (typeof company)[]) {
   });
   return (
     <StoryProviders>
-      <CompaniesScreen />
+      <CompaniesScreen startCreating={startCreating} />
     </StoryProviders>
   );
 }
 
 export const CompaniesList: Story = {
   render: () => renderCompanies([company]),
+};
+
+/** `#/companies/new`: the list with its create form open, as `C` opens it. */
+export const CreateFormOpen: Story = {
+  render: () => renderCompanies([company], true),
+  play: async () => {
+    await expect(
+      await screen.findByRole("dialog", { name: "New company" }),
+    ).toBeInTheDocument();
+  },
 };
 
 const longNames = [

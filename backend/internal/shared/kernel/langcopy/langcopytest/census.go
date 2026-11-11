@@ -27,7 +27,7 @@ import (
 // one does not fail to compile; it renders "%!s(MISSING)" into a card. And a
 // translation that adds one consumes an argument nobody passed. Flags, width
 // and precision are read past so %02d counts as a %d.
-var verbs = regexp.MustCompile(`%(?:%|[-+# 0]*[0-9]*(?:\.[0-9]*)?([a-zA-Z]))`)
+var verbs = regexp.MustCompile(`%(?:%|(\[[0-9]+\])?[-+# 0]*[0-9]*(?:\.[0-9]*)?([a-zA-Z]))`)
 
 // Placeholders lists a template's conversion verbs in order, without the
 // modifiers: a translation may pad a number differently and still take it.
@@ -35,8 +35,8 @@ func Placeholders(template string) []string {
 	matches := verbs.FindAllStringSubmatch(template, -1)
 	found := make([]string, len(matches))
 	for i, match := range matches {
-		found[i] = "%" + match[1]
-		if match[1] == "" {
+		found[i] = "%" + match[1] + match[2]
+		if match[2] == "" {
 			found[i] = "%%"
 		}
 	}

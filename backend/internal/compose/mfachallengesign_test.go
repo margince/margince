@@ -9,63 +9,66 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/margince/margince/backend/internal/modules/identity"
 )
 
 func TestMFAChallengeRoundTripCarriesSubjectAndFreshNonce(t *testing.T) {
 	signer := newMFAChallengeSigner([]byte(testStateKey))
 
-	token, err := signer.Sign("user-123", 5*time.Minute)
+	token, err := signer.Sign(identity.MFAChallenge{UserID: "user-123", Epoch: "keyed"}, 5*time.Minute)
 	if err != nil {
 		t.Fatalf("Sign: %v", err)
 	}
-	sub, jti, err := signer.Verify(token)
+	verified, err := signer.Verify(token)
 	if err != nil {
 		t.Fatalf("Verify: %v", err)
 	}
-	if sub != "user-123" {
-		t.Errorf("subject = %q, want the member the challenge was minted for", sub)
+	if verified.UserID != "user-123" || verified.Epoch != "keyed" {
+		t.Errorf("verified = %+v, want the member and the epoch the challenge was minted for", verified)
 	}
-	if jti == "" {
+	if e := signer.KeyEpoch("pw\x00t"); e == newMFAChallengeSigner([]byte(strings.Repeat("k", 32))).KeyEpoch("pw\x00t") ||
+		e == signer.KeyEpoch("pw\x00u") || strings.Contains(e, "pw") {
+		t.Error("the epoch rides readable in the challenge, yet is not a keyed digest of its material")
+	}
+	if verified.Jti == "" {
 		t.Fatal("the challenge carries no nonce; it could never be made single-use")
 	}
 
 	// A second challenge for the same member gets its own nonce — the nonce is
 	// what makes each challenge one login, so two must never share one.
-	again, err := signer.Sign("user-123", 5*time.Minute)
+	again, err := signer.Sign(identity.MFAChallenge{UserID: "user-123"}, 5*time.Minute)
 	if err != nil {
 		t.Fatalf("second Sign: %v", err)
 	}
-	_, jti2, err := signer.Verify(again)
+	second, err := signer.Verify(again)
 	if err != nil {
 		t.Fatalf("second Verify: %v", err)
 	}
-	if jti2 == jti {
+	if second.Jti == verified.Jti {
 		t.Error("two challenges share one nonce; spending either spends both")
 	}
 }
 
 func TestMFAChallengeRefusesTamperAndExpiry(t *testing.T) {
 	signer := newMFAChallengeSigner([]byte(testStateKey))
-	token, err := signer.Sign("user-123", 5*time.Minute)
+	token, err := signer.Sign(identity.MFAChallenge{UserID: "user-123"}, 5*time.Minute)
 	if err != nil {
 		t.Fatalf("Sign: %v", err)
 	}
 
-	if _, _, err := signer.Verify(token + "x"); err == nil {
+	if _, err := signer.Verify(token + "x"); err == nil {
 		t.Error("a tampered signature verified")
 	}
-	payload, _, ok := strings.Cut(token, ".")
-	if !ok {
-		t.Fatal("the token has no signature part")
-	}
-	if _, _, err := signer.Verify(payload + "x." + "forged"); err == nil {
+	payload, _, _ := strings.Cut(token, ".")
+	if _, err := signer.Verify(payload + "x." + "forged"); err == nil {
 		t.Error("a forged token verified")
 	}
 
 	// The clock is a field precisely so expiry is asserted, not slept for.
 	stale := signer
 	stale.now = func() time.Time { return time.Now().Add(6 * time.Minute) }
-	if _, _, err := stale.Verify(token); err == nil {
+	if _, err := stale.Verify(token); err == nil {
 		t.Error("an expired challenge verified")
 	}
 }

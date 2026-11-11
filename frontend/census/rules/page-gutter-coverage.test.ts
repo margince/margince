@@ -4,6 +4,7 @@
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { parseSource } from "../../scripts/lib/source-tree";
+import { stable } from "../../src/format/collate";
 import { plantedFindings, srcDir, treeOf } from "../tree";
 import {
   APP,
@@ -78,7 +79,7 @@ describe("the page-gutter-coverage census", () => {
       </CompleteLocale></RaillessFrame>;
     `,
     );
-    expect([...raillessComponents(source)].sort()).toEqual([
+    expect([...raillessComponents(source)].sort(stable)).toEqual([
       "AuthScreen",
       "CompleteLocale",
       "ResetRoute",

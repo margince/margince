@@ -28,8 +28,8 @@ type pausedMemberInspection struct {
 	release   chan struct{}
 }
 
-func (p pausedMemberInspection) Inspect(ctx context.Context, tx pgx.Tx, source ids.UUID, lock bool) (identity.MemberWorkInspection, error) {
-	result, err := p.MemberWork.Inspect(ctx, tx, source, lock)
+func (p pausedMemberInspection) Inspect(ctx context.Context, tx pgx.Tx, source ids.UUID, target *ids.UUID, lock bool) (identity.MemberWorkInspection, error) {
+	result, err := p.MemberWork.Inspect(ctx, tx, source, target, lock)
 	close(p.inspected)
 	select {
 	case <-p.release:

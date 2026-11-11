@@ -19,9 +19,13 @@ import (
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/notices"
+	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/noticekeys"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 const (
@@ -60,7 +64,8 @@ func (a receiptAlarm) RaiseMissedReceiptTx(ctx context.Context, tx pgx.Tx, misse
 	for _, recipient := range recipients {
 		if _, err := store.CreateTx(system, tx, notices.NewNotice{
 			Recipient: recipient, Kind: notices.KindOptOutReceiptMissed,
-			Subject: "A required opt-out receipt was not sent", Body: missedReceiptText(missed),
+			SystemText: &systemtext.Message{Subject: systemtext.Sentence("receipt.missed.subject"), Body: missedReceiptComponent(missed)},
+			Subject:    systemtext.Literal("receipt.missed.subject"), Body: missedReceiptText(missed),
 			Target: target, DedupeKey: noticekeys.OptOutReceipt(missed.MessageID),
 		}); err != nil {
 			return fmt.Errorf("compose: raising a missed opt-out receipt: %w", err)
@@ -71,17 +76,22 @@ func (a receiptAlarm) RaiseMissedReceiptTx(ctx context.Context, tx pgx.Tx, misse
 
 // missedReceiptText says why the receipt is missing and that the refusal stands.
 func missedReceiptText(missed consent.MissedReceipt) string {
-	const stands = " The refusal itself is recorded and stays in force."
+	if missed.Reason == consent.MissedReceiptOverdue {
+		return fmt.Sprintf(systemtext.Copy("receipt.overdue", textlang.English), missed.DueAt.UTC().Format(time.RFC3339), missed.DeliveryStatus)
+	}
+	return systemtext.Literal(missedReceiptComponent(missed).Code)
+}
+
+func missedReceiptComponent(missed consent.MissedReceipt) *systemtext.Component {
 	switch missed.Reason {
 	case consent.MissedReceiptNoAddress:
-		return "This refusal requires a receipt, and the subject has no email address on record, so none was sent." + stands
+		return systemtext.Sentence("receipt.no_address")
 	case consent.MissedReceiptNoMailLane:
-		return "This refusal requires a receipt, and this installation has no mail lane to send it on, so none was sent." + stands
+		return systemtext.Sentence("receipt.no_mail_lane")
 	case consent.MissedReceiptOverdue:
-		return fmt.Sprintf("This refusal's receipt was due by %s and has not been delivered. Delivery status: %s.",
-			missed.DueAt.UTC().Format(time.RFC3339), missed.DeliveryStatus) + stands
+		return systemtext.Sentence("receipt.overdue", systemtext.Date(missed.DueAt.UTC().Format(time.RFC3339)), systemtext.Text(missed.DeliveryStatus))
 	default:
-		return "This refusal requires a receipt, and preparing it failed, so none was sent. The cause is in the log." + stands
+		return systemtext.Sentence("receipt.failed")
 	}
 }
 
@@ -105,6 +115,62 @@ func (a receiptAlarm) raiseOverdue(ctx context.Context, store *comms.Store, now 
 		}
 	}
 	return failed
+}
+
+// owedReceiptWindow is how far back a missed receipt whose alarm failed is
+// raised again.
+const owedReceiptWindow = 30 * 24 * time.Hour
+
+// raiseOwed raises each missed receipt whose alarm failed when it was missed.
+// It pages past every row it read, so a receipt that will not raise never holds
+// back the ones after it, and stops after maxRows. Each raise is a transaction of
+// its own. It answers how many it could not raise.
+func (a receiptAlarm) raiseOwed(ctx context.Context, now time.Time, page, maxRows int) (failed int, err error) {
+	var after ids.UUID
+	for read := 0; read < maxRows; {
+		var owed []consent.OwedMissedReceipt
+		err = a.db.Tx(ctx, func(tx pgx.Tx) error {
+			owed, err = consent.OwedMissedReceiptsTx(ctx, tx, now.Add(-owedReceiptWindow), after, page, privacy.NamedSubjectSQL)
+			return err
+		})
+		if err != nil {
+			return failed, err
+		}
+		for _, missed := range owed {
+			if a.raiseOwedOne(ctx, missed.MissedReceipt) != nil {
+				failed++
+			}
+		}
+		if len(owed) < page {
+			break
+		}
+		read += len(owed)
+		after = owed[len(owed)-1].ID
+	}
+	return failed, nil
+}
+
+// raiseOwedOne holds the subject's row while it raises, so an erasure either
+// takes the new notice back or is seen before the notice is written.
+func (a receiptAlarm) raiseOwedOne(ctx context.Context, missed consent.MissedReceipt) error {
+	return a.db.Tx(ctx, func(tx pgx.Tx) error {
+		gone, err := privacy.SubjectAnonymizedTx(ctx, tx, missed.SubjectType, missed.SubjectID)
+		if err != nil || gone {
+			return err
+		}
+		return a.RaiseMissedReceiptTx(ctx, tx, missed)
+	})
+}
+
+// agedOut counts the owed receipts that left the window in the day before now
+// without ever being raised.
+func (a receiptAlarm) agedOut(ctx context.Context, now time.Time) (n int, err error) {
+	edge := now.Add(-owedReceiptWindow)
+	err = a.db.Tx(ctx, func(tx pgx.Tx) error {
+		n, err = consent.AgedOutMissedReceiptsTx(ctx, tx, edge.Add(-24*time.Hour), edge, privacy.NamedSubjectSQL)
+		return err
+	})
+	return n, err
 }
 
 // settleSent takes back the notices whose receipt has since been sent.

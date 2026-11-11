@@ -116,6 +116,7 @@ export function CompactRowLine({
       <p className="t-body worklist-row-title">
         {named && (
           <RowName
+            item={item}
             title={title}
             href={href}
             open={readings.open}

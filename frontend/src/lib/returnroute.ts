@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { CONSENT_PATH, isConsentAddress } from "./recordaddress";
 import { parseHash, type Screen } from "./router";
 import {
   readStoredJson,
@@ -9,11 +10,23 @@ import {
   writeStored,
 } from "./storage";
 
-// A provider sign-in is a full-page trip that lands on the bare post-login URL.
-// The route a reader followed survives it only in this tab's storage.
+// A provider sign-in is a full-page trip that lands on the bare post-login URL,
+// or on the bare consent screen when it began there. The route a reader
+// followed survives it only in this tab's storage.
 
 /** Where the callback sends a sign-in that did not complete. */
 export const OIDC_FAILURE_HASH = "#/login?oidc=failed";
+
+/** The same failure for a sign-in begun on the consent screen, at CONSENT_PATH. */
+export const OIDC_CONSENT_FAILURE_HASH = "#/oauth-consent?oidc=failed";
+
+/** True on either failed sign-in landing, which the sign-in screen reads. */
+export function isOidcFailureLanding(pathname: string, hash: string): boolean {
+  return (
+    hash === OIDC_FAILURE_HASH ||
+    (pathname === CONSENT_PATH && hash === OIDC_CONSENT_FAILURE_HASH)
+  );
+}
 
 // Long enough for a provider's consent and second factor. A route kept for an
 // attempt the reader gave up on must not open on a later, unrelated visit.
@@ -24,6 +37,12 @@ const KEPT_FOR_MS = 15 * 60 * 1000;
 const RESET_SCREEN: Screen = "reset-password";
 
 type Kept = Readonly<{ route: string; keptAt: number }>;
+
+/**
+ * Where the callback sends a sign-in begun on the consent screen
+ * (identity.ConsentScreenPath). The request itself is the kept route.
+ */
+export const CONSENT_LANDING = `${CONSENT_PATH}#/oauth-consent`;
 
 /** True when the address names no route, so sign-in may choose one. */
 export function isBareEntry(hash: string): boolean {
@@ -83,11 +102,20 @@ export function takeReturnRoute(): string | null {
  */
 export function restoreReturnRoute(): void {
   const { hash, pathname, search } = globalThis.location;
-  if (hash === OIDC_FAILURE_HASH) {
+  if (isOidcFailureLanding(pathname, hash)) {
     return;
   }
   const route = takeReturnRoute();
-  if (route !== null && isBareEntry(hash)) {
+  if (route === null) {
+    return;
+  }
+  // The consent landing names the screen without its request, so only a kept
+  // consent request may complete it.
+  const landing =
+    isBareEntry(hash) ||
+    (`${pathname}${hash}` === CONSENT_LANDING &&
+      isConsentAddress(pathname, route));
+  if (landing) {
     globalThis.history.replaceState(null, "", `${pathname}${search}${route}`);
   }
 }

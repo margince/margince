@@ -37,26 +37,44 @@ def records(manifest):
     return found
 
 
+def grant_list(grant, key):
+    entries = []
+    inside = False
+    for line in grant.read_text().splitlines():
+        if line == key + ":":
+            inside = True
+        elif inside and line and not line[0].isspace() and not line.startswith("#"):
+            break
+        elif inside and (match := re.match(r"\s+-\s+([^\s#]+)", line)):
+            entries.append(match[1])
+    return entries
+
+
+# A copied file answers to copied-file-licenses, never to the shipped `allow`.
+# A licence only the copied list holds is accepted for no package, so grant
+# must skip that file through ignore-packages.
+def check_licences(grant, copied):
+    shipped = set(grant_list(grant, "allow"))
+    accepted = set(grant_list(grant, "copied-file-licenses"))
+    skipped = set(grant_list(grant, "ignore-packages"))
+    for record in copied:
+        if record.license not in accepted:
+            raise ValueError(f"third-party files: {record.path} has disallowed licence {record.license}")
+        if record.license not in shipped and record.path not in skipped:
+            raise ValueError(f"third-party files: {record.path} is under {record.license}, "
+                             "which no shipped package may carry; name it in ignore-packages")
+
+
 def check(root, manifest):
     root = Path(root)
     copied = records(manifest)
-    allowed = set()
-    in_allow = False
-    for line in (root / ".grant.yaml").read_text().splitlines():
-        if line == "allow:":
-            in_allow = True
-        elif in_allow and line and not line[0].isspace() and not line.startswith("#"):
-            break
-        elif in_allow and (match := re.match(r"\s+-\s+([^\s#]+)", line)):
-            allowed.add(match[1])
+    check_licences(root / ".grant.yaml", copied)
     paths = {record.path for record in copied}
     texts = {record.text for record in copied}
     for record in copied:
         for path in (record.path, record.text):
             if not (root / path).is_file():
                 raise ValueError(f"third-party files: missing {path}")
-        if record.license not in allowed:
-            raise ValueError(f"third-party files: {record.path} has disallowed licence {record.license}")
     tracked = subprocess.check_output(["git", "ls-files", "-z"], cwd=root).decode().split("\0")
     legal = [path for path in tracked if path and path != "LICENSE" and
              (re.match(r"^(?:LICEN[CS]E|NOTICE|COPYING)", Path(path).name) or
@@ -99,6 +117,19 @@ def license_relationship(graph, file, license_id, kind):
     graph.append(relation)
 
 
+# syft writes a licence element only for licences it found on a package. A
+# copied-file licence no package carries gets one shared element, in syft's
+# shape, so the file's relationships have something to point at.
+def listed_license(graph, license_id, file):
+    element = {"type": "expandedlicensing_ListedLicense", "name": license_id,
+               "spdxId": "SPDXRef:ListedLicense-" + license_id,
+               "simplelicensing_licenseText": "NOASSERTION"}
+    if "creationInfo" in file:
+        element["creationInfo"] = file["creationInfo"]
+    graph.append(element)
+    return element["spdxId"]
+
+
 # File conclusions are path-based; package declarations remain purl-based in Makefile.
 # Existing in-file scanner evidence must survive supplementation.
 def supplement(directory, manifest):
@@ -112,7 +143,7 @@ def supplement(directory, manifest):
             if record.path not in entries:
                 raise ValueError(f"SBOM omitted copied file {record.path}")
         if record.license not in licenses:
-            raise ValueError(f"SPDX 3.0 has no listed licence element for {record.license}")
+            licenses[record.license] = listed_license(graph, record.license, components[2][record.path])
         components[0][record.path]["licenses"] = [{"license": {"id": record.license}}]
         components[1][record.path]["licenseConcluded"] = record.license
         components[1][record.path]["licenseComments"] = "Concluded from " + record.text + "; source: " + record.source
