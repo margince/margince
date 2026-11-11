@@ -129,6 +129,9 @@ func TestRelatedToAContactTheReaderCannotOpenIsEmpty(t *testing.T) {
 	if got := relatedNames(e.relatedReader(t, e.admin, readerGrants{edges: true, deals: true}), t, e, hidden); len(got) != 0 {
 		t.Errorf("an admin listed %v around a contact they cannot open, want nobody", got)
 	}
+	if got := relatedNames(e.relatedReader(t, e.admin, readerGrants{deals: true}), t, e, hidden); len(got) != 0 {
+		t.Errorf("an admin without relationship read listed %v around a contact they cannot open, want nobody", got)
+	}
 	if got := relatedNames(e.relatedReader(t, e.owner, readerGrants{edges: true, deals: true}), t, e, hidden); len(got) != 2 {
 		t.Errorf("the owner listed %v around their own contact, want the colleague and the deal peer", got)
 	}
