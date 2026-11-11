@@ -1,13 +1,15 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { useQuery } from "@tanstack/react-query";
 import type { components } from "../../api/schema";
+import { fetchGrants } from "../../components/share.parts";
 import { Popover } from "../../design-system/popover";
 import { provenanceLabel } from "../../design-system/provenance";
 import { provenanceOf, withCreator } from "../../design-system/provenanceof";
 import type { DetailRow } from "../../design-system/recorddetails";
-import { formatDateAbbrev } from "../../format/format";
-import { useLocale, useT } from "../../i18n";
+import { formatDateAbbrev, formatNumber } from "../../format/format";
+import { useLocale, usePlural, useT } from "../../i18n";
 import { useMemberName } from "../../lib/membernames";
 import { useViewerId } from "../../lib/session";
 import { useViewerZone } from "../../lib/viewerzone";
@@ -38,16 +40,42 @@ export function useOwnershipRows(company: Company): DetailRow[] {
 
 // The audience the head's Shared pill switches, as the row's one word. Not
 // RecordAccess's sentence: that one explains the setting in a popover, this
-// row names who, so the two read the same `visibility` and `owner_id` apart.
+// row names who. On a closed record the shares widen that audience, so they
+// count here too. A refused grants read leaves the owner alone, not a guess.
 function VisibleTo({ company }: Readonly<{ company: Company }>) {
   const t = useT();
+  const plural = usePlural();
+  const { locale } = useLocale();
   const viewerId = useViewerId();
   const owner = company.owner_id ?? undefined;
   const yours = viewerId !== undefined && owner === viewerId;
   const closed = company.visibility === "owner";
   const name = useMemberName(closed && !yours ? owner : null);
+  const grants = useQuery({
+    queryKey: ["record-grants", "company", company.id],
+    queryFn: () => fetchGrants("company", company.id),
+    enabled: closed,
+    retry: false,
+  });
   if (!closed) {
     return <>{t("co.aside.visibleEveryone")}</>;
+  }
+  const shared = grants.data?.length ?? 0;
+  if (shared > 0) {
+    const count = formatNumber(shared, locale);
+    if (yours) {
+      return <>{plural("co.aside.visibleYouAndShared", shared, { count })}</>;
+    }
+    return (
+      <>
+        {name.data
+          ? plural("co.aside.visibleOwnerAndShared", shared, {
+              owner: name.data,
+              count,
+            })
+          : plural("co.aside.visibleTheOwnerAndShared", shared, { count })}
+      </>
+    );
   }
   if (yours) {
     return <>{t("co.aside.visibleOnlyYou")}</>;

@@ -167,3 +167,67 @@ describe("a record an agent created", () => {
     await waitFor(() => expect(sourceText()).toBe("Automated by an agent"));
   });
 });
+
+// A share widens a closed record's audience, so the Visible to row counts it.
+// Without that the row says "Only Mira Voss" to a colleague who just opened it.
+describe("who may read a closed company", () => {
+  function stubShares(grants: number, grantsStatus = 200) {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (request: Request) => {
+        const { pathname } = new URL(request.url);
+        let status = 200;
+        let body: unknown = {
+          data: [{ id: "u-owner", display_name: "Mira Voss" }],
+          page: { has_more: false, next_cursor: null },
+        };
+        if (pathname.endsWith("/me")) {
+          body = { user: { id: "u-reader", display_name: "The Reader" } };
+        } else if (pathname.endsWith("/record-grants")) {
+          status = grantsStatus;
+          body = {
+            data: Array.from({ length: grants }, (_, i) => ({ id: `g-${i}` })),
+            page: { has_more: false, next_cursor: null },
+          };
+        } else if (
+          pathname.endsWith("/profile-fields") ||
+          pathname.endsWith("/tags")
+        ) {
+          body = { data: [] };
+        }
+        return new Response(JSON.stringify(body), {
+          status,
+          headers: { "content-type": "application/json" },
+        });
+      }),
+    );
+  }
+
+  function visibleText(): string {
+    const term = screen.getByText("Visible to");
+    return (
+      term.nextElementSibling?.textContent?.replace(/\s+/g, " ").trim() ?? ""
+    );
+  }
+
+  it("counts the colleagues it is shared with beside the owner", async () => {
+    stubShares(2);
+    renderRail({ ...COMPANY, visibility: "owner" });
+
+    await waitFor(() => expect(visibleText()).toBe("Mira Voss and 2 more"));
+  });
+
+  it("names the owner alone while nobody holds a share", async () => {
+    stubShares(0);
+    renderRail({ ...COMPANY, visibility: "owner" });
+
+    await waitFor(() => expect(visibleText()).toBe("Only Mira Voss"));
+  });
+
+  it("names the owner alone when the shares cannot be read", async () => {
+    stubShares(0, 403);
+    renderRail({ ...COMPANY, visibility: "owner" });
+
+    await waitFor(() => expect(visibleText()).toBe("Only Mira Voss"));
+  });
+});
