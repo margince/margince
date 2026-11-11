@@ -17,6 +17,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -142,20 +143,36 @@ func scanTagSuggestion(row pgx.Row) (TagSuggestion, error) {
 // OpenTagSuggestions reads up to limit open suggestions this reader may see,
 // newest first.
 func (s *Store) OpenTagSuggestions(ctx context.Context, limit int) ([]TagSuggestion, error) {
+	out, _, err := s.OpenTagSuggestionsAfter(ctx, "", limit)
+	return out, err
+}
+
+// OpenTagSuggestionsAfter is OpenTagSuggestions resumed after a position from
+// TagSuggestionPositionAfter; an empty one starts at the newest. more says
+// suggestions lie past the batch.
+func (s *Store) OpenTagSuggestionsAfter(ctx context.Context, after string, limit int) (out []TagSuggestion, more bool, err error) {
 	if limit <= 0 || limit > tagSuggestionMaxLimit {
 		limit = tagSuggestionMaxLimit
 	}
-	var out []TagSuggestion
-	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+	var keyset *storekit.Cursor
+	if after != "" {
+		position, err := storekit.DecodeCursor(after)
+		if err != nil {
+			return nil, false, err
+		}
+		keyset = &position
+	}
+	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		var args []any
 		arg := func(v any) int { args = append(args, v); return len(args) }
-		visible, err := visibleTagSuggestionsQuery(ctx, arg, tagSuggestionRead{openOnly: true})
+		query, err := visibleTagSuggestionsQuery(ctx, arg, tagSuggestionRead{openOnly: true})
 		if err != nil {
 			return err
 		}
-		query := visible + `
-			 ORDER BY s.created_at DESC, s.id DESC
-			 LIMIT $` + fmt.Sprint(arg(limit))
+		if keyset != nil {
+			query += fmt.Sprintf(" AND (s.created_at, s.id) < ($%d, $%d)", arg(keyset.CreatedAt), arg(keyset.ID))
+		}
+		query += fmt.Sprintf(" ORDER BY s.created_at DESC, s.id DESC LIMIT $%d", arg(limit+1))
 		rows, err := tx.Query(ctx, query, args...)
 		if err != nil {
 			return fmt.Errorf("collections: reading open tag suggestions: %w", err)
@@ -165,7 +182,19 @@ func (s *Store) OpenTagSuggestions(ctx context.Context, limit int) ([]TagSuggest
 		})
 		return err
 	})
-	return out, err
+	if err != nil {
+		return nil, false, err
+	}
+	if len(out) > limit {
+		return out[:limit], true, nil
+	}
+	return out, false, nil
+}
+
+// TagSuggestionPositionAfter is the position just past the suggestion with
+// this creation time and id, for OpenTagSuggestionsAfter.
+func TagSuggestionPositionAfter(createdAt time.Time, id ids.UUID) (string, error) {
+	return storekit.EncodeCursor(createdAt, id)
 }
 
 // CountOpenTagSuggestions counts what OpenTagSuggestions would show without a

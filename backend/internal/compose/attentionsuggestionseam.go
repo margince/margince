@@ -6,6 +6,7 @@ package compose
 import (
 	"context"
 
+	"github.com/margince/margince/backend/internal/compose/attention"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/collections"
 	"github.com/margince/margince/backend/internal/modules/deals"
@@ -41,6 +42,32 @@ func (a attentionDealSuggestions) OpenSuggestions(
 	return out, nil
 }
 
+// SuggestionsAfter continues the lane's read past its depth through the list's
+// own keyset, under the same owners and visibility rule.
+func (a attentionDealSuggestions) SuggestionsAfter(
+	ctx context.Context, owners *storekit.OwnerSet, after string, limit int,
+) ([]attention.Positioned[crmcontracts.DealSuggestion], bool, error) {
+	var list []deals.Suggestion
+	var next string
+	err := database.ReuseGenericPlans(ctx, func(ctx context.Context) error {
+		var err error
+		list, next, err = a.store.ListSuggestions(ctx, deals.SuggestionQuery{ScopeOwners: owners, Cursor: after, Limit: limit})
+		return err
+	})
+	if err != nil {
+		return nil, false, err
+	}
+	out := make([]attention.Positioned[crmcontracts.DealSuggestion], len(list))
+	for i, suggestion := range list {
+		position, err := deals.SuggestionPositionAfter(suggestion.CreatedAt, suggestion.ID)
+		if err != nil {
+			return nil, false, err
+		}
+		out[i] = attention.Positioned[crmcontracts.DealSuggestion]{Row: deals.SuggestionWire(suggestion), After: position}
+	}
+	return out, next != "", nil
+}
+
 func (a attentionDealSuggestions) CountOpen(ctx context.Context, owners *storekit.OwnerSet) (int, error) {
 	var open int
 	err := database.ReuseGenericPlans(ctx, func(ctx context.Context) error {
@@ -70,6 +97,32 @@ func (a attentionTagSuggestions) OpenTagSuggestions(ctx context.Context, limit i
 		out = append(out, collections.WireTagSuggestion(suggestion))
 	}
 	return out, nil
+}
+
+// TagSuggestionsAfter continues the lane's read past its depth through the
+// store's keyset, under the same visibility rule.
+func (a attentionTagSuggestions) TagSuggestionsAfter(
+	ctx context.Context, after string, limit int,
+) ([]attention.Positioned[crmcontracts.TagSuggestion], bool, error) {
+	var list []collections.TagSuggestion
+	var more bool
+	err := database.ReuseGenericPlans(ctx, func(ctx context.Context) error {
+		var err error
+		list, more, err = a.store.OpenTagSuggestionsAfter(ctx, after, limit)
+		return err
+	})
+	if err != nil {
+		return nil, false, err
+	}
+	out := make([]attention.Positioned[crmcontracts.TagSuggestion], len(list))
+	for i, suggestion := range list {
+		position, err := collections.TagSuggestionPositionAfter(suggestion.CreatedAt, suggestion.ID)
+		if err != nil {
+			return nil, false, err
+		}
+		out[i] = attention.Positioned[crmcontracts.TagSuggestion]{Row: collections.WireTagSuggestion(suggestion), After: position}
+	}
+	return out, more, nil
 }
 
 func (a attentionTagSuggestions) CountOpenTagSuggestions(ctx context.Context) (int, error) {

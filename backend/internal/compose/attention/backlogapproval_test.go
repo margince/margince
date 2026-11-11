@@ -47,8 +47,8 @@ func TestTheApprovalTailStartsAfterTheLastApprovalTheLaneKept(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if count.approvalsFrom != want {
-		t.Errorf("the approval tail starts at %q, want the position after the second approval", count.approvalsFrom)
+	if got := count.resumeAt[crmcontracts.WorklistItemSourceApproval]; got != want {
+		t.Errorf("the approval tail starts at %q, want the position after the second approval", got)
 	}
 }
 
@@ -80,7 +80,8 @@ func TestACutApprovalSourceContinuesFromTheLanesResumePoint(t *testing.T) {
 	backlog := &recordedApprovals{}
 	svc := (&Service{view: viewDecisions}).WithApprovalBacklog(backlog)
 	reading := svc.readingBacklog(t.Context(), crmcontracts.Attention{AsOf: rankInstant},
-		besideDay{until: rankInstant.Add(time.Hour), zone: time.UTC, approvalsFrom: from}, false)
+		besideDay{until: rankInstant.Add(time.Hour), zone: time.UTC,
+			resumeAt: map[crmcontracts.WorklistItemSource]string{crmcontracts.WorklistItemSourceApproval: from}}, false)
 	bounded := map[crmcontracts.WorklistItemSource]bool{crmcontracts.WorklistItemSourceApproval: true}
 
 	rest := reading.startTail(tailPage{scope: scopeMine, day: crmcontracts.Attention{AsOf: rankInstant}, bounded: bounded, first: true})

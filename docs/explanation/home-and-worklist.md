@@ -149,8 +149,8 @@ every source in the tail is read to its end. A source that fails while the tail 
 The tail merges its sources by one order every store can sort by in SQL (`attention/backlogmerge.go`). Each row has
 a time: a task's due date, when a waiting customer's message came in, or a deal's expected close date. Rows go
 from the earliest time to the latest, and an undated task or deal goes last. A tie goes to the source's name, then to the store's own order. So the
-longest-standing work comes first, whichever source holds it. An approval has no time in this order, so approvals
-come after the dated rows.
+longest-standing work comes first, whichever source holds it. Approvals and suggestions have no time in this order,
+so they come after the dated rows.
 
 Each source reads a batch after where it stopped. A row is shown only once no source with more rows could still
 hold an earlier one. Each source then moves to the row after the last one it gave, and reads the rest again on the
@@ -161,7 +161,7 @@ when its own read finds nothing more, so completing tasks above never ends it. T
 time, day end and time zone. Every later page reads that same window, even once the day has changed. Its fingerprint
 names the tail's version, so a binary without the tail refuses the cursor instead of ending the walk early.
 
-Four sources are read on in the tail today:
+These sources are read on in the tail today:
 
 - Tasks (`WithTaskBacklog`, `compose/attentiontaskseam.go`). Its today window and its later window each have a
   count, taken on the first page only. A team page reads and counts the roster's tasks and nobody's in SQL, as its
@@ -175,6 +175,10 @@ Four sources are read on in the tail today:
   approval engine's inbox read, under the lane's own query and its check of who may decide, newest staged first. It starts
   just after the last approval the ranked rows hold (`approvalTailStart` in `attention/backlogapproval.go`), so no
   approval is skipped or served twice.
+- Deal and tag suggestions (`WithDealSuggestionBacklog` and `WithTagSuggestionBacklog`,
+  `compose/attentionsuggestionseam.go`). Each goes on with its store's own list, newest first, under the lane's
+  owners and visibility rule. Each starts just after the last suggestion of its kind the ranked rows hold
+  (`decisionTailStarts` in `attention/backlogsuggestion.go`).
 
 - Deals at risk (`WithRiskBacklog`, `compose/attentionriskseam.go`). The lane reads two sweeps of 50: quiet deals and
   deals past their close. The tail reads both as one predicate (`AtRiskWindow` in `modules/deals/atrisklist.go`),
@@ -195,7 +199,8 @@ because the follow-up rule reads `relstrength.WrittenByHumanSQL`.
 
 The approval engine counts approvals under the lane's own query, so a cut lane still states their exact total. The
 tail reaches every row it counts. A team page states no approval total, because the count does not judge by the
-team's roster (`exactSources` in `attention/totals.go`). Deal and tag suggestions stay a floor until they join the tail.
+team's roster (`exactSources` in `attention/totals.go`). Deal and tag suggestions state their stores' counts the
+same way, in every scope.
 
 The changed-since-brief link ends at the ranked snapshot its badge counts. It counts the rows
 left after grouping and Done, and each page keeps their changed flags. Without that filter, the

@@ -208,6 +208,8 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attenti
 		tail:   quietDealTail(pool, deals.QuietThresholdDays),
 		among:  quietDealsAmong(pool, deals.QuietThresholdDays), pool: pool, now: now,
 	}
+	// Each suggestion lane and its scroll tail read one store.
+	dealSuggestions, tagSuggestions := attentionDealSuggestions{store: deals.NewStore(db, DealsInstallation())}, attentionTagSuggestions{store: collections.NewStore(db)}
 	return attention.NewService(
 		attentionApprovals{svc: svc},
 		attentionDuplicates{store: newContactsStore(db)},
@@ -324,8 +326,8 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attenti
 		// The reader's own booking page, once it was used and while it takes
 		// no bookings.
 		WithBookingHealth(newAttentionBookingHealth(pool, db)).
-		WithDealSuggestions(attentionDealSuggestions{store: deals.NewStore(db, DealsInstallation())}).
-		WithTagSuggestions(attentionTagSuggestions{store: collections.NewStore(db)}).
+		WithDealSuggestions(dealSuggestions).WithDealSuggestionBacklog(dealSuggestions).
+		WithTagSuggestions(tagSuggestions).WithTagSuggestionBacklog(tagSuggestions).
 		// The figures behind a deal a row names but does not carry — the
 		// overnight brief's rows, which rank ids and keep their evidence
 		// behind the brief's own endpoint.
