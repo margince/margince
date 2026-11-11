@@ -13302,7 +13302,8 @@ export interface paths {
          *     `as_of` stamps this request's RepeatableRead snapshot. It does not span separate
          *     `/digest`, `/brief` or `/magic` requests, or a multi-page Worklist walk.
          *     Frozen walk membership and freshness metadata do not share a database snapshot
-         *     across pages. Brief opening and snooze resurfacing use their own write transaction.
+         *     across pages. The read writes nothing: a snoozed brief item whose time has come is
+         *     judged at `as_of`, and only `GET /v1/brief` records the brief as opened.
          *     A lane the caller may not read is OMITTED and named in `lanes_omitted` rather
          *     than returned empty — "you may not see this" and "there is none" are different
          *     answers, and a queue that conflated them would tell a rep their day is clear.
@@ -14372,6 +14373,47 @@ export interface paths {
         get: operations["getLicenseEntitlement"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/installation/license/check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Re-read the installation's license token now (admin/ops).
+         * @description Runs the api's license re-check at once, instead of waiting for the daily one.
+         *     It re-reads the token where the deployment declares it and checks it OFFLINE
+         *     against the bundled validation module, the same path the daily re-check takes.
+         *     An operator who has swapped the token on the server presses this to see the new
+         *     license without waiting up to a day. A token file is read again; a token from the
+         *     environment (`MARGINCE_LICENSE`) is fixed when the process starts and changes
+         *     only with a restart.
+         *
+         *     It writes nothing and takes no token. Entering or replacing the token stays the
+         *     operator's job on the server. Only the api process that serves
+         *     this request re-checks; the worker and any other api replica keep their own
+         *     daily re-check.
+         *
+         *     The answer is the same body as `GET /installation/license`, read after the
+         *     re-check. A re-check that reached a verdict answers `200`, a refused license
+         *     included: `state` then says `rejected`. A token that could not be read, or a
+         *     module that could not run, is no verdict. The posture the process last resolved
+         *     stands, the fault goes to the server log, and the answer is `503`.
+         *
+         *     Gated on `installation_settings` update (admin and ops), the grant that guards
+         *     installation settings, and on `license` read, which the entitlement in the
+         *     answer needs. Human-only, like the entitlement read.
+         */
+        post: operations["checkLicenseNow"];
         delete?: never;
         options?: never;
         head?: never;
@@ -19823,8 +19865,9 @@ export interface paths {
          * @description Starts LIVE, and reaches nobody: the invitation is what decides who may read
          *     a room, so a room nobody has been invited to is private without a second gate.
          *     At most one active room per deal: a second create while the first is still
-         *     building, ready, publishing, live or paused is rejected
-         *     (409 `deal_room_already_open`). Archiving the first frees the deal for another.
+         *     building, ready, publishing, live or paused, and has not passed its access end,
+         *     is rejected (409 `deal_room_already_open`). Archiving the first, or its access
+         *     end passing, frees the deal for another.
          *
          *     The steward defaults to the deal's owner and is the named human a buyer is
          *     pointed at for help; a room whose steward left the company points its buyers
@@ -19887,7 +19930,8 @@ export interface paths {
          * Pause buyer access without ending it.
          * @description A paused room refuses buyer reads while every credential stays valid, so
          *     resuming restores access without re-inviting anyone. Only a `live` room
-         *     pauses (409 `deal_room_not_pausable` otherwise).
+         *     pauses (409 `deal_room_not_pausable` otherwise), so an `expired` room is
+         *     refused.
          */
         post: operations["pauseDealRoom"];
         delete?: never;
@@ -19941,7 +19985,8 @@ export interface paths {
          *     Access management deliberately keeps working on a closed room — a steward can
          *     still revoke a participant — because being unable to remove someone from a
          *     room holding your signed contract is a real hazard months after the deal
-         *     closed. 409 `deal_room_not_closable` unless the room is live or paused.
+         *     closed. 409 `deal_room_not_closable` unless the room is live or paused, so
+         *     an `expired` room is refused: closing would serve its content again.
          */
         post: operations["closeDealRoom"];
         delete?: never;
@@ -19969,6 +20014,11 @@ export interface paths {
          *     creation is stored as the time of the call, unless a standing expiry has
          *     already passed, which is kept. It decides how long a buyer can
          *     read the room, so an agent spends `send` on it.
+         *
+         *     An `expired` room accepts a later end, which makes it read its stored state
+         *     again. Once a newer room is open on the deal, that later end is refused
+         *     with 409 `deal_room_already_open`. If the room's steward has left the
+         *     workspace since, the same write clears the steward.
          */
         put: operations["setDealRoomExpiry"];
         post?: never;
@@ -20950,7 +21000,11 @@ export interface paths {
         };
         /**
          * A team's week, frozen — what each member's week came to, and the one thing to raise.
-         * @description The team half of the weekly. `/worklist/team` answers what the team is carrying NOW,
+         * @deprecated
+         * @description Deprecated: no screen reads the team week. The operation stays callable through
+         *     the notice window in the API compatibility policy.
+         *
+         *     The team half of the weekly. `/worklist/team` answers what the team is carrying NOW,
          *     live and recomputed on every open; this answers what last week WAS, written once when
          *     the week closed, so two weeks can be compared and neither moves under the comparison.
          *
@@ -22913,8 +22967,10 @@ export interface paths {
          *     exist to give: for each company on file, how many of your connections work
          *     there, and how many of those are already contacts.
          *
-         *     Ranked by connection count, then by name, so two reads of an unchanged network
-         *     return the same order.
+         *     Ranked by connection count, then by name, then by company id, so two reads of an
+         *     unchanged network return the same order. The ranking pages: `next_cursor`
+         *     resumes after the last account returned, and a cursor that names no position in
+         *     this ranking is refused with 422.
          *
          *     Only companies the caller can READ appear, under the ordinary company
          *     row scope. A connection whose employer resolved to no account is not reported
@@ -26640,8 +26696,10 @@ export interface components {
              */
             state: "valid" | "absent" | "rejected";
             /**
-             * @description Full seats the license admits. ABSENT when nothing caps them — no license, or a
-             *     grant carrying no seat count — which is not a grant of zero.
+             * @description Full seats a new seat is held to. A valid license answers its own grant; a refused
+             *     one keeps the last valid grant this process resolved. ABSENT when nothing caps them
+             *     — no license, no valid one before a refusal, or a grant carrying no seat count —
+             *     which is not a grant of zero.
              */
             seats_granted?: number;
             /**
@@ -37318,6 +37376,11 @@ export interface components {
         };
         LinkedInReachResponse: {
             accounts: components["schemas"]["LinkedInReachAccount"][];
+            /**
+             * @description Send this back as `cursor` to continue past the last account of this page.
+             *     Absent on the last page, so a client walking until it disappears stops.
+             */
+            next_cursor?: string;
             /** @description Every account reached, not just the page returned — a truncated list read as the whole network would understate reach. */
             accounts_total: number;
             /**
@@ -53434,8 +53497,11 @@ export interface components {
          *     `closed` stops the room taking new work while KEEPING access — the buyer goes
          *     on reading it, and neither side adds a document or a comment. It is not a
          *     frozen copy: what the buyer reads is the live room, so a file later removed
-         *     from the deal stops being served here too. `expired` is access lapsing on its
-         *     own. `archived` ends the room outright and frees the deal for another.
+         *     from the deal stops being served here too. `expired` is read, never stored:
+         *     a room whose access end has passed reads `expired` to staff and buyers alike,
+         *     unless it is archived. A later end date makes it read its stored state again.
+         *     `archived` ends the room outright. Archiving it or its access end passing
+         *     frees the deal for another room.
          * @enum {string}
          */
         DealRoomState: "draft" | "building" | "ready" | "publishing" | "live" | "paused" | "closed" | "expired" | "archived";
@@ -56805,6 +56871,11 @@ export interface components {
              *     rep who can only see their own work is never offered a switch that would 403.
              */
             scope_options: ("mine" | "unassigned" | "team" | "all")[];
+            /**
+             * @deprecated
+             * @description Deprecated: no screen opens the team week, and the operation it describes,
+             *     `GET /weekly-reviews/team`, is deprecated too. `GET /me` carries the same answer.
+             */
             team_week?: components["schemas"]["TeamWeekReach"];
             /**
              * @description The narrowing this read applied. The same vocabulary the query parameter takes.
@@ -82614,6 +82685,37 @@ export interface operations {
             403: components["responses"]["Forbidden"];
         };
     };
+    checkLicenseNow: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The entitlement as the re-check resolved it. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LicenseEntitlement"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            /** @description The token could not be re-read, or the module could not run; the last posture stands. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     getSeatUsage: {
         parameters: {
             query?: never;
@@ -94779,6 +94881,14 @@ export interface operations {
             query?: {
                 /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
+                /**
+                 * @description Opaque position from a prior answer's `next_cursor`, which resumes the ranking after
+                 *     the last account returned. A cursor that names no position in this ranking, such
+                 *     as one from another route, is refused with 422.
+                 *     The ranking is by live connection counts, so an import between two pages can move
+                 *     an account across the cut: re-read from the top to see the network as it is now.
+                 */
+                cursor?: string;
             };
             header?: never;
             path?: never;

@@ -24,6 +24,7 @@ import {
   tally,
   type Vitals,
   vitalsP95,
+  vitalsQuantile,
   vitalsReasons,
   withheldSources,
 } from "./homejourney.judge";
@@ -368,6 +369,20 @@ describe("Home's browser vitals", () => {
     expect(vitalsReasons(loads)).toEqual([
       "day paint p95 1500 ms is over 1000 ms",
     ]);
+  });
+
+  it("in relative mode leaves speed to the comparison but still fails an unmeasured load", () => {
+    const slow = [load([paint(5_000)], [shift(0, 0.5)])];
+    expect(vitalsReasons(slow, "relative")).toEqual([]);
+    expect(vitalsReasons([load([])], "relative")).toEqual([
+      "load 1: Home's day content never painted",
+    ]);
+    expect(vitalsReasons([], "relative")).toEqual(["no load was measured"]);
+  });
+
+  it("takes the median day paint for the comparison", () => {
+    const loads = [400, 500, 900, 1_200, 3_000].map((at) => load([paint(at)]));
+    expect(vitalsQuantile(loads, 0.5).dayPaintMs).toBe(900);
   });
 
   it("sums shifts within one session window and keeps the worst window", () => {

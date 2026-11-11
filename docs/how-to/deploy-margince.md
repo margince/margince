@@ -3,6 +3,7 @@
 
 Keep deployment domains, secrets and platform manifests in the repository that holds your deployment.
 For a Linux server without containers, use [install-on-a-server.md](install-on-a-server.md).
+For what each container image expects, use [run-from-container-images.md](run-from-container-images.md); to watch it once it runs, use [watch-an-installation](../operations/observability.md).
 See [self-hosting](../explanation/self-hosting.md) for the role layout and
 [configuration](../reference/configuration.md) for settings.
 

@@ -101,10 +101,7 @@ func requireReplacement(ctx context.Context) error {
 		return err
 	}
 
-	if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
-		return err
-	}
-	return nil
+	return auth.Require(ctx, "contact", principal.ActionRead)
 }
 
 func sameAskRoute(current *Request, req NewRequest) bool {

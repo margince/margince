@@ -43,13 +43,9 @@ import (
 // read-model and the home route never blocks on assembly (B-E05.3b), and an
 // agent asking what the queue says must not be the thing that changes it.
 //
-// ONE thing behind this read does write, and it is worth stating rather than
-// discovering: the engine resolves snoozes as it reads, so an item whose snooze
-// has expired flips back to actionable in the read's own transaction (A77). It
-// is the same entry point the human's own home route calls, the flip is decided
-// by the clock rather than by the caller, and reading twice changes nothing the
-// first read did not — but it does mean an agent's read can be what materializes
-// a state the contact then sees.
+// The read judges snoozes at its own instant and changes no row (A77). Once the
+// result is built, the brief's open is recorded in a transaction of its own,
+// as GET /v1/brief records it.
 type BriefReader func(ctx context.Context) (ReadBriefResult, error)
 
 // RegisterBriefTool joins read_brief to the surface once a reader exists — the

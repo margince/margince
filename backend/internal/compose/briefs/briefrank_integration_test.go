@@ -25,6 +25,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // briefClock is the fixed generation instant of the first run; marks and
@@ -690,6 +691,59 @@ func TestALaterActRetiresTheDismissalLineage(t *testing.T) {
 				"the card reopens an argument they already closed", item.Lineage)
 		}
 	}
+}
+
+// A deal dismissed, returned and then snoozed keeps its dismissal line once the
+// snooze runs out. An expired snooze is not a mark, so the item comes back with
+// the reason it returned.
+func TestAnExpiredSnoozeDoesNotRetireTheDismissalLineage(t *testing.T) {
+	b := setupBrief(t)
+	owner := integration.OwnerConn(t)
+
+	run, err := b.engine.SnapshotRun(b.repCtx, briefClock)
+	if err != nil {
+		t.Fatal(err)
+	}
+	deal := run.Items[1]
+	if _, err := b.engine.MarkDismissed(b.repCtx, deal.ID, briefClock.Add(2*time.Hour)); err != nil {
+		t.Fatal(err)
+	}
+	back := integration.SeedIDRow(t, owner, `INSERT INTO activity (id, kind, subject, occurred_at, source, captured_by)
+		VALUES ($1, 'email', 'they came back', '2026-06-04T10:00:00Z', 'manual', 'human:x')`)
+	integration.LinkActivity(t, owner, back, "deal", deal.DealID)
+
+	dayTwo := briefClock.Add(24 * time.Hour)
+	second, err := b.engine.SnapshotRun(b.repCtx, dayTwo)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var returned ids.UUID
+	for _, item := range second.Items {
+		if item.DealID == deal.DealID {
+			returned = item.ID
+		}
+	}
+	if returned.IsZero() {
+		t.Fatalf("the deal did not return on day two: %v", second.Items)
+	}
+	until := dayTwo.Add(2 * time.Hour)
+	if _, err := b.engine.MarkSnoozed(b.repCtx, returned, values.ReopenOnTime, &until, nil, dayTwo.Add(time.Hour)); err != nil {
+		t.Fatal(err)
+	}
+
+	later, err := b.engine.Rank(b.repCtx, until.Add(time.Hour))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, item := range later.Queue {
+		if item.DealID == deal.DealID {
+			if item.Lineage == nil {
+				t.Fatal("the expired snooze hid the dismissal line; a snooze that ran out is not the rep's last word")
+			}
+			return
+		}
+	}
+	t.Fatalf("the deal is not back after its snooze ran out: %v", queueDeals(later.Queue))
 }
 
 // A future-dated activity is not overnight momentum.

@@ -3943,7 +3943,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "roompage.banner.closed":
     "Đã đóng. Người mua vẫn đọc được Deal Room này; không nhận thêm gì nữa.",
   "roompage.banner.expired":
-    "Đã hết hạn. Liên kết của người mua không còn hoạt động.",
+    "Đã hết hạn. Liên kết của người mua hoạt động lại khi bạn đặt ngày kết thúc muộn hơn.",
   "roompage.banner.archived":
     "Đã chuyển vào kho lưu trữ. Không ai có thể vào Deal Room này.",
   "roompage.banner.liveUntil": "Đang mở. Quyền truy cập kết thúc vào {when}.",
@@ -12660,6 +12660,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "roomtab.manage.textHeading": "Tiêu đề và lời chào",
   "roomtab.manage.welcomeHint": "Đoạn đầu tiên người mua đọc.",
   "roomtab.manage.foot": "Người mua thấy thay đổi ở lần mở phòng tiếp theo.",
+  "roomtab.manage.expiredHint":
+    "Quyền truy cập đã kết thúc. Đặt ngày kết thúc muộn hơn để người mua vào lại.",
   "threads.conversationTitle": "Trao đổi",
   "threads.about": "Về {title}",
   "threads.aboutRemoved": "Về một tài liệu không còn trong phòng",
@@ -13697,6 +13699,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Mọi thứ vẫn hoạt động và không bị giới hạn. Cấu hình token giấy phép cho bản cài đặt này để tính số tài khoản theo mức được cấp.",
   "license.refused.title": "Giấy phép của bản cài đặt này bị từ chối",
   "license.refused.body":
+    "Token giấy phép cấu hình cho bản cài đặt này đã được xuất trình và bị từ chối. Các tài khoản đầy đủ quyền đang dùng vẫn hoạt động, và cho đến khi token được thay, không thêm tài khoản đầy đủ quyền nào vượt quá số tài khoản đầy đủ quyền mà giấy phép hợp lệ gần nhất đã cấp. Kiểm tra token và đồng hồ của bản cài đặt.",
+  "license.refused.bodyUncapped":
     "Token giấy phép cấu hình cho bản cài đặt này đã được xuất trình và bị từ chối. Mọi thứ vẫn hoạt động, không giới hạn, cho đến khi token được thay. Kiểm tra token và đồng hồ của bản cài đặt.",
   "license.seats.capacityOnly":
     "Vai trò hiện tại không có quyền xem số tài khoản được cấp phép.",
@@ -13722,6 +13726,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "license.renewal.title": "Giấy phép cần gia hạn",
   "license.renewal.body":
     "Giấy phép hết hạn vào {expiry}. Không có gì thay đổi trước ngày đó.",
+  "license.check.button": "Kiểm tra ngay",
+  "license.check.hint":
+    "Đọc lại tệp token giấy phép trên máy chủ ngay bây giờ, thay vì chờ lần kiểm tra hằng ngày tiếp theo. Hãy thay tệp trước. Token đặt trong biến môi trường chỉ có hiệu lực sau khi khởi động lại.",
+  "license.check.done": "Đã đọc lại token giấy phép. Thẻ này hiển thị kết quả.",
+  "license.check.failed":
+    "Không thể đọc lại token giấy phép. Kết quả trước vẫn giữ nguyên, và nhật ký máy chủ ghi lý do.",
   "license.counting":
     "Tài khoản đầy đủ quyền không bị vô hiệu hóa hay tạm khóa, kể cả trợ lý AI. Tài khoản chỉ xem không giới hạn và không được tính.",
   "settings.rates.fxTitle": "Tỷ giá",

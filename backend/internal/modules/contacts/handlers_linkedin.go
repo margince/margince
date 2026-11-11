@@ -180,7 +180,11 @@ func (h Handlers) SaveMyLinkedInAccount(w http.ResponseWriter, r *http.Request) 
 
 // GetMyLinkedInReach implements GET /me/linkedin-reach.
 func (h Handlers) GetMyLinkedInReach(w http.ResponseWriter, r *http.Request, params crmcontracts.GetMyLinkedInReachParams) {
-	reach, err := h.store.MyLinkedInReach(r.Context(), params.Limit)
+	cursor := ""
+	if params.Cursor != nil {
+		cursor = *params.Cursor
+	}
+	reach, err := h.store.MyLinkedInReach(r.Context(), params.Limit, cursor)
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return
@@ -194,11 +198,15 @@ func (h Handlers) GetMyLinkedInReach(w http.ResponseWriter, r *http.Request, par
 			ContactsOnFile: a.ContactsOnFile,
 		})
 	}
-	httperr.WriteJSON(w, http.StatusOK, crmcontracts.LinkedInReachResponse{
+	body := crmcontracts.LinkedInReachResponse{
 		Accounts:              accounts,
 		AccountsTotal:         reach.AccountsTotal,
 		UnresolvedConnections: reach.UnresolvedConnections,
-	})
+	}
+	if reach.Page.NextCursor != "" {
+		body.NextCursor = &reach.Page.NextCursor
+	}
+	httperr.WriteJSON(w, http.StatusOK, body)
 }
 
 // saveLinkedInAccountInput reads one save request.

@@ -885,10 +885,8 @@
 .fin-amount {
   font-variant-numeric: tabular-nums;
 }
-/* The one figure on the panel that asks for a decision. Overdue money is drawn
-   in the danger tone whatever its value: unlike a badge, the figure is the
-   reading itself, and a reader who has to check whether it is coloured has
-   already read it. */
+/* The one figure on the panel that asks for a decision, in the danger tone
+   only while money is overdue: a red zero reads as a warning with nothing to do. */
 .fin-amount-hero {
   color: var(--dangerText);
 }

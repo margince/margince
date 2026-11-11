@@ -237,19 +237,8 @@ func InWorkspaceTransaction(ctx context.Context) bool {
 // not the other, and nothing on the response said so. REPEATABLE READ is what
 // makes one assembled day one instant.
 //
-// NOT READ-ONLY, deliberately, and the reason is connection count rather than
-// permissiveness. These reads are not pure: the brief lane resurfaces expired
-// snoozes and records the open as it reads. Under a READ ONLY snapshot each
-// such write has to open a transaction of its own, which it can only do while
-// the snapshot is still held — so every request would hold TWO pooled
-// connections at once, and at MaxConns 16 that many concurrent readers all wait
-// on each other for a seventeenth. One transaction per request is the whole
-// point; a guard that forces a second connection defeats it.
-//
-// What the writes get instead is the page's own fate: they commit with the
-// assembled day or not at all. That is the better reading of all three of them
-// — a brief whose page never rendered was not opened, and a walk nobody was
-// shown does not need freezing.
+// Not opened read-only. A lane that still takes a row lock inside the read
+// would fail there.
 //
 // A write whose failure must NOT take the page down with it still takes
 // Detached below, because a joined statement that errors aborts the whole

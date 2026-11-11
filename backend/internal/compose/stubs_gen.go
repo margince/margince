@@ -2411,6 +2411,10 @@ func (stubs) GetLicenseEntitlement(w nethttp.ResponseWriter, r *nethttp.Request)
 	httperr.NotImplemented(w, r, "GetLicenseEntitlement")
 }
 
+func (stubs) CheckLicenseNow(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "CheckLicenseNow")
+}
+
 func (stubs) ListOauthApps(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "ListOauthApps")
 }

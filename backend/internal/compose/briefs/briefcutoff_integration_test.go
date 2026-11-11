@@ -63,19 +63,24 @@ func TestTheCutoffReadDatesTheWindowWithoutOpeningTheBrief(t *testing.T) {
 	if opens := briefOpens(t, owner); opens != opensBefore {
 		t.Fatalf("the cutoff read recorded %d brief opens; dating a window is not opening the brief", opens-opensBefore)
 	}
-	if state := briefItemState(t, owner, snoozed.ID); state != "snoozed" {
-		t.Fatalf("the cutoff read moved an expired snooze to %q; only a read that shows the items resurfaces one", state)
+	if state := briefItemState(t, owner, snoozed.ID); state != briefStateSnoozed {
+		t.Fatalf("the cutoff read moved an expired snooze to %q", state)
 	}
 
-	// The full read at the same instant does both, so the two checks above can see them.
-	if _, err := b.engine.LatestRun(b.repCtx, afterExpiry); err != nil {
+	// The full read writes nothing either. The open is the shower's own write.
+	shown, err := b.engine.LatestRun(b.repCtx, afterExpiry)
+	if err != nil {
 		t.Fatal(err)
 	}
-	if opens := briefOpens(t, owner); opens != opensBefore+1 {
-		t.Fatalf("the full read recorded %d opens, want 1", opens-opensBefore)
+	if opens := briefOpens(t, owner); opens != opensBefore {
+		t.Fatalf("the full read recorded %d opens; only RecordShown records one", opens-opensBefore)
 	}
-	if state := briefItemState(t, owner, snoozed.ID); state != briefStateNew {
-		t.Fatalf("the full read left the expired snooze %q, want %q", state, briefStateNew)
+	if state := briefItemState(t, owner, snoozed.ID); state != briefStateSnoozed {
+		t.Fatalf("the full read rewrote the expired snooze to %q; it is judged at read", state)
+	}
+	b.engine.RecordShown(b.repCtx, shown)
+	if opens := briefOpens(t, owner); opens != opensBefore+1 {
+		t.Fatalf("RecordShown recorded %d opens, want 1", opens-opensBefore)
 	}
 }
 

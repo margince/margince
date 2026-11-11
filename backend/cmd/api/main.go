@@ -298,6 +298,8 @@ func baseComposeOptions(ctx context.Context, cfg apiConfig, capCfg compose.Captu
 	// copied in: a license lapses on a calendar, and the watcher behind this
 	// function is still re-checking while the process serves.
 	opts = append(opts, compose.WithLicensePosture(license.Posture))
+	// "Check now" in Settings runs the same re-check the daily loop does.
+	opts = append(opts, compose.WithLicenseRecheck(license.Recheck))
 	// Record the deployment's capture suppression-list config first, so the
 	// registry rebuilds in WithKeyvault/WithGraphCapture apply it too — not just
 	// the Gmail path WithGmailCapture threads it into (ADR-0072).

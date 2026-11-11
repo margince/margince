@@ -46367,8 +46367,11 @@ type DealRoom struct {
 	// `closed` stops the room taking new work while KEEPING access — the buyer goes
 	// on reading it, and neither side adds a document or a comment. It is not a
 	// frozen copy: what the buyer reads is the live room, so a file later removed
-	// from the deal stops being served here too. `expired` is access lapsing on its
-	// own. `archived` ends the room outright and frees the deal for another.
+	// from the deal stops being served here too. `expired` is read, never stored:
+	// a room whose access end has passed reads `expired` to staff and buyers alike,
+	// unless it is archived. A later end date makes it read its stored state again.
+	// `archived` ends the room outright. Archiving it or its access end passing
+	// frees the deal for another room.
 	State DealRoomState `json:"state"`
 
 	// StewardUserId The named human a buyer is pointed at for help. Defaults to the deal's owner
@@ -46684,8 +46687,11 @@ type DealRoomSessionIssued struct {
 // `closed` stops the room taking new work while KEEPING access — the buyer goes
 // on reading it, and neither side adds a document or a comment. It is not a
 // frozen copy: what the buyer reads is the live room, so a file later removed
-// from the deal stops being served here too. `expired` is access lapsing on its
-// own. `archived` ends the room outright and frees the deal for another.
+// from the deal stops being served here too. `expired` is read, never stored:
+// a room whose access end has passed reads `expired` to staff and buyers alike,
+// unless it is archived. A later end date makes it read its stored state again.
+// `archived` ends the room outright. Archiving it or its access end passing
+// frees the deal for another room.
 type DealRoomState string
 
 // DealRoomThread One thread of the room's conversation, with its comments. Served to both
@@ -52930,8 +52936,10 @@ type LicenseEntitlement struct {
 	// an unlicensed installation is never reported as over a limit it does not have.
 	OverLimit bool `json:"over_limit"`
 
-	// SeatsGranted Full seats the license admits. ABSENT when nothing caps them — no license, or a
-	// grant carrying no seat count — which is not a grant of zero.
+	// SeatsGranted Full seats a new seat is held to. A valid license answers its own grant; a refused
+	// one keeps the last valid grant this process resolved. ABSENT when nothing caps them
+	// — no license, no valid one before a refusal, or a grant carrying no seat count —
+	// which is not a grant of zero.
 	SeatsGranted *int `json:"seats_granted,omitempty" minimum:"0"`
 
 	// SeatsUsed Full seats in use: every one the installation has not withdrawn — neither
@@ -53137,6 +53145,10 @@ type LinkedInReachResponse struct {
 
 	// AccountsTotal Every account reached, not just the page returned — a truncated list read as the whole network would understate reach.
 	AccountsTotal int `json:"accounts_total" minimum:"0"`
+
+	// NextCursor Send this back as `cursor` to continue past the last account of this page.
+	// Absent on the last page, so a client walking until it disappears stops.
+	NextCursor *string `json:"next_cursor,omitempty"`
 
 	// UnresolvedConnections Connections whose employer matched no account on file. Reported because it is
 	// the honest size of what this view cannot show, and because it is the number
@@ -75036,6 +75048,13 @@ type ImportLinkedInConnectionsMultipartBody struct {
 type GetMyLinkedInReachParams struct {
 	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty" maximum:"200" minimum:"1"`
+
+	// Cursor Opaque position from a prior answer's `next_cursor`, which resumes the ranking after
+	// the last account returned. A cursor that names no position in this ranking, such
+	// as one from another route, is refused with 422.
+	// The ranking is by live connection counts, so an import between two pages can move
+	// an account across the cut: re-read from the top to see the network as it is now.
+	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
 }
 
 // SaveNotificationPreferenceJSONBody defines parameters for SaveNotificationPreference.
@@ -93881,6 +93900,9 @@ type ServerInterface interface {
 	// The installation's entitlement and seat usage (admin/ops).
 	// (GET /installation/license)
 	GetLicenseEntitlement(w http.ResponseWriter, r *http.Request)
+	// Re-read the installation's license token now (admin/ops).
+	// (POST /installation/license/check)
+	CheckLicenseNow(w http.ResponseWriter, r *http.Request)
 	// Every vendor whose OAuth app this installation can hold, and whether it holds one.
 	// (GET /installation/oauth-apps)
 	ListOauthApps(w http.ResponseWriter, r *http.Request)
@@ -98849,6 +98871,12 @@ func (_ Unimplemented) DownloadJurisdictionDocument(w http.ResponseWriter, r *ht
 // The installation's entitlement and seat usage (admin/ops).
 // (GET /installation/license)
 func (_ Unimplemented) GetLicenseEntitlement(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Re-read the installation's license token now (admin/ops).
+// (POST /installation/license/check)
+func (_ Unimplemented) CheckLicenseNow(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -128327,6 +128355,26 @@ func (siw *ServerInterfaceWrapper) GetLicenseEntitlement(w http.ResponseWriter, 
 	handler.ServeHTTP(w, r)
 }
 
+// CheckLicenseNow operation middleware
+func (siw *ServerInterfaceWrapper) CheckLicenseNow(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CheckLicenseNow(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListOauthApps operation middleware
 func (siw *ServerInterfaceWrapper) ListOauthApps(w http.ResponseWriter, r *http.Request) {
 
@@ -133177,6 +133225,19 @@ func (siw *ServerInterfaceWrapper) GetMyLinkedInReach(w http.ResponseWriter, r *
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
 		}
 		return
 	}
@@ -150002,6 +150063,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/installation/license", wrapper.GetLicenseEntitlement)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/installation/license/check", wrapper.CheckLicenseNow)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/installation/oauth-apps", wrapper.ListOauthApps)

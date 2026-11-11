@@ -107,6 +107,10 @@ type AssembleOptions struct {
 	// (relstrength.WrittenByHumanSQL) before its cap, for the briefs and
 	// drafts. The page itself keeps every record.
 	WrittenByHumanOnly bool
+	// PartyContactID narrows the timeline and the last-touch dates to rows
+	// this contact is a party to, and the open tasks to theirs. An account
+	// draft to one contact sets it. The page keeps every record.
+	PartyContactID *ids.ContactID
 }
 
 // AssembleScoped is Assemble narrowed by opts.

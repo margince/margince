@@ -3,11 +3,6 @@
 
 package compose
 
-// The clock-trigger cross-module edge (Task 14a): automation.TimeScanner
-// over the ActivityScan seam, sourced from the activities module's own
-// tables — injected here like every other cross-module edge (workflows.go,
-// closedate.go, reconcile.go), never inside either module.
-
 import (
 	"context"
 	"errors"
@@ -23,15 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
-// dateFieldScanAdapter maps automation.DateFieldScan onto
-// customfields.Service.DateFieldCandidates — the one place this module's
-// (EntityID, StoredValue, OccurrenceDate) row shape becomes the generic
-// (EntityRef, Anchor) shape automation.DateFieldScan declares
-// (ids/datasource/stdlib only, seams.go). Anchor rides OccurrenceDate,
-// never StoredValue: for a recurring field OccurrenceDate is already
-// projected onto the current scan window's year, which is the value
-// renewal_reminder's occurrence-key (handlers_clock.go's
-// anchorIdempotencyKey) must re-arm on.
+// Recurring dates use projected occurrence dates so each year has a new key.
 type dateFieldScanAdapter struct {
 	svc *customfields.Service
 }
@@ -41,15 +28,7 @@ var _ automation.DateFieldScan = dateFieldScanAdapter{}
 func (a dateFieldScanAdapter) Candidates(ctx context.Context, object, column string, from, to time.Time, recurring bool, limit int) ([]automation.DateFieldAnchor, error) {
 	candidates, err := a.svc.DateFieldCandidates(ctx, object, column, from, to, recurring, limit)
 	if err != nil {
-		// A workspace admin can retire a custom field out from under an
-		// automation instance that already named it (customfields.Retire):
-		// save-time validation only checked non-emptiness, not live
-		// existence. This is the one place both customfields'
-		// ErrUnknownDateColumn and automation's own ErrDateFieldUnavailable
-		// are in scope, so it is where the translation belongs — TimeScanner
-		// (timescan.go's scanDateFieldInstanceCandidates) treats the
-		// automation-side sentinel as this ONE instance's honest no-op
-		// rather than failing the whole workspace's clock-scan pass.
+		// The scanner can skip a retired field without aborting other rules.
 		if errors.Is(err, customfields.ErrUnknownDateColumn) {
 			return nil, fmt.Errorf("%w: %w", automation.ErrDateFieldUnavailable, err)
 		}
@@ -65,10 +44,7 @@ func (a dateFieldScanAdapter) Candidates(ctx context.Context, object, column str
 	return out, nil
 }
 
-// quietScanStore is the activities store the quiet-record scan reads through,
-// told how to ask capture whether a record owner's mail is visible. Without it
-// the scan calls a record silent when Margince simply cannot see the owner's
-// mailbox.
+// Missing mailbox access must not be counted as customer silence.
 func quietScanStore(db *database.DB) *activities.Store {
 	return activities.NewStore(db).WithOwnerMailbox(activities.OwnerMailbox{
 		CaughtUp:  capture.MailboxCaughtUpSQL,
@@ -76,20 +52,12 @@ func quietScanStore(db *database.DB) *activities.Store {
 	})
 }
 
-// NewTimeScanner assembles the clock-trigger scanner for the worker
-// process role: the SAME workflow engine and starter registration
-// NewWorkflowEngine builds (so no_activity_reminder's Apply drives
-// through the identical Executors every other starter uses), over the
-// activities-sourced ActivityScan seam and the customfields-sourced
-// DateFieldScan seam.
+// NewTimeScanner uses the worker's shared engine and candidate readers.
 func NewTimeScanner(db *database.DB, log *slog.Logger) *automation.TimeScanner {
 	return NewTimeScannerWithClock(db, time.Now, log)
 }
 
-// NewTimeScannerWithClock is NewTimeScanner with an explicit clock — the
-// integration proof pins it so a scan pass evaluates "no activity for N
-// days" (and a renewal date's own window) against seeded timestamps,
-// never the wall clock.
+// NewTimeScannerWithClock uses one clock for candidate windows and event anchors.
 func NewTimeScannerWithClock(db *database.DB, now func() time.Time, log *slog.Logger) *automation.TimeScanner {
 	engine := NewWorkflowEngine(db)
 	pool := db.Pool()

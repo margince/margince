@@ -102,7 +102,7 @@ var memberReferences = map[string]memberReference{
 	"deal.owner_id":                            {disposition: referenceHandover, live: memberLiveRows},
 	"deal.source_author_id":                    {disposition: referenceRetain},
 	"deal_move_dismissal.user_id":              {disposition: referenceRetain},
-	"deal_room.steward_user_id":                {disposition: referenceResolve, live: `archived_at IS NULL AND state NOT IN ('closed','expired')`, remedy: "deal_rooms"},
+	"deal_room.steward_user_id":                {disposition: referenceResolve, live: `archived_at IS NULL AND state NOT IN ('closed','expired') AND (expires_at IS NULL OR expires_at > now())`, remedy: "deal_rooms"},
 	"deal_room_comment.author_user_id":         {disposition: referenceRetain},
 	"deal_room_participant.invited_by":         {disposition: referenceRetain},
 	"deal_room_thread.author_user_id":          {disposition: referenceRetain},

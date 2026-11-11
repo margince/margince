@@ -45,7 +45,7 @@ func (s *Service) readingDealMoves(
 	if len(wanted) == 0 {
 		return &scoped, nil
 	}
-	err := s.degradable(ctx, laneBudget, func(ctx context.Context) error {
+	err := s.degradable(ctx, sourceDealAdvice, laneBudget, func(ctx context.Context) error {
 		var err error
 		scoped.currentDealMoves.moves, err = s.dealMoves.CurrentMoves(ctx, wanted)
 		return err

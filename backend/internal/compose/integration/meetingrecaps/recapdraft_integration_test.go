@@ -3,7 +3,7 @@
 
 //go:build integration
 
-package compose
+package meetingrecaps_test
 
 import (
 	"context"
@@ -14,6 +14,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
@@ -23,6 +24,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	kevents "github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
 func TestTwoMeetingRecapRulesStageOneDraftAfterNotesAndHeld(t *testing.T) {
@@ -69,7 +71,8 @@ func TestTwoMeetingRecapRulesStageOneDraftAfterNotesAndHeld(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	engine := workflowEngineWithDrafter(db, &changingMeetingDraft{})
+	brain := &changingMeetingModel{}
+	engine := compose.NewWorkflowEngineWithReplyDraft(db, brain)
 	dispatch := func(kind string, source crmcontracts.Id, becameReady bool) {
 		t.Helper()
 		var raw json.RawMessage
@@ -136,9 +139,9 @@ func TestTwoMeetingRecapRulesStageOneDraftAfterNotesAndHeld(t *testing.T) {
 	}
 }
 
-type changingMeetingDraft struct{ calls int }
+type changingMeetingModel struct{ calls int }
 
-func (d *changingMeetingDraft) DraftEmail(context.Context, ids.UUID, string) (string, string, error) {
+func (d *changingMeetingModel) Complete(context.Context, model.Request) (model.Response, error) {
 	d.calls++
-	return "Meeting recap", fmt.Sprintf("Draft version %d", d.calls), nil
+	return model.Response{Text: fmt.Sprintf(`{"subject":"Meeting recap","body":"Hi Zora,\n\nThe next steps from the meeting are noted. Follow-up version %d.\n\nRegards,\nDana"}`, d.calls)}, nil
 }

@@ -365,6 +365,58 @@ func TestCostReportGroupsByCalendarDay(t *testing.T) {
 	}
 }
 
+// Each line mixes calls priced at different rates, so a call matched to another
+// call's rate shows as a wrong total. The figures are worked out by hand.
+func TestCostReportPricesEachCallAtItsOwnModelAndDay(t *testing.T) {
+	e := setupRateStore(t)
+	ctx := context.Background()
+	ws, wsCtx := e.seedWorkspace(ctx, t)
+	store := e.storeFor(ws)
+
+	jan1 := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	feb15 := time.Date(2026, 2, 15, 0, 0, 0, 0, time.UTC)
+	for _, r := range []ModelRate{
+		{Provider: providerAnthropic, ModelID: "model-a", InputPerMTokMicroUSD: 1_000_000, OutputPerMTokMicroUSD: 2_000_000, EffectiveDate: jan1},
+		{Provider: providerAnthropic, ModelID: "model-a", InputPerMTokMicroUSD: 3_000_000, OutputPerMTokMicroUSD: 4_000_000, EffectiveDate: feb15},
+		{Provider: providerOpenAI, ModelID: "model-b", InputPerMTokMicroUSD: 10_000_000, OutputPerMTokMicroUSD: 20_000_000, EffectiveDate: jan1},
+	} {
+		e.insertRate(ctx, t, r)
+	}
+	for _, c := range []callFixture{
+		{provider: providerAnthropic, model: "model-a", tokensIn: 1000, tokensOut: 500, occurredAt: feb15.Add(-time.Hour)},
+		{provider: providerOpenAI, model: "model-b", tokensIn: 100, tokensOut: 10, occurredAt: feb15.Add(-2 * time.Hour)},
+		{provider: providerAnthropic, model: "model-a", tokensIn: 1000, tokensOut: 500, occurredAt: feb15.Add(30 * time.Minute)},
+		{provider: providerOpenAI, model: "model-b", tokensIn: 100, tokensOut: 10, occurredAt: feb15.Add(time.Hour)},
+		{provider: providerOpenAI, model: "model-c", tokensIn: 100, tokensOut: 10, occurredAt: feb15.Add(2 * time.Hour)},
+	} {
+		c.task, c.tier = TaskSummarize, TierPremium
+		e.insertCall(ctx, t, c)
+	}
+
+	report, err := store.CostReport(wsCtx, time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC), time.Date(2026, 3, 1, 0, 0, 0, 0, time.UTC))
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := map[string]DayCost{}
+	for _, dc := range report {
+		got[dc.Day.Format(time.DateOnly)] = dc
+	}
+	// 14 Feb: model-a at the old rate (1000 + 1000) and model-b (1000 + 200).
+	// 15 Feb: model-a at the new rate (3000 + 2000), model-b again, model-c unpriced.
+	want := map[string]DayCost{
+		"2026-02-14": {CostMicroUSD: 3200},
+		"2026-02-15": {CostMicroUSD: 6200, UnpricedCalls: 1},
+	}
+	if len(got) != len(want) {
+		t.Fatalf("report = %+v, want one line for each of %d days", report, len(want))
+	}
+	for day, w := range want {
+		if g := got[day]; g.CostMicroUSD != w.CostMicroUSD || g.UnpricedCalls != w.UnpricedCalls {
+			t.Errorf("%s: cost %d unpriced %d, want cost %d unpriced %d", day, g.CostMicroUSD, g.UnpricedCalls, w.CostMicroUSD, w.UnpricedCalls)
+		}
+	}
+}
+
 // TestCostReportGroupsByTierNotJustTask proves the double-counting fix
 // (AIRT-WIRE-1's wire rows are per day × task × TIER, and a client sums
 // cost_est_minor across rows): when the same task runs on two tiers the

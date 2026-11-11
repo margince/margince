@@ -3,10 +3,6 @@
 
 package compose
 
-// The deterministic automation path, assembled: the workflow engine
-// over the composite provider with the starter library registered —
-// the worker consumes cg:workflows through it.
-
 import (
 	"context"
 	"time"
@@ -21,16 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// NewWorkflowEngine builds the engine with the shipped starter set and
-// the system invariants: the starters are catalog automations (instance-
-// gated, pausable) — the automation module's own seven handlers
-// (StarterWorkflows, incl. route_lead's create_task reading) plus
-// assign_lead_owner from contacts (the routing decision is transactional
-// lead-store SQL — AUTO-NOTE-2, §3.5: assign_lead_owner ASSIGNS AN
-// OWNER, a different act from automation's own route_lead, which
-// creates a task) — while the lead-score recompute is a formula
-// obligation (formulas-and-rules §3 — "recomputed on each captured
-// signal") and fires always.
+// NewWorkflowEngine shares the catalog executors with the worker.
 func NewWorkflowEngine(db *database.DB) *automation.WorkflowEngine {
 	return workflowEngineWithDrafter(db, nil)
 }
@@ -46,14 +33,8 @@ func NewWorkflowEngineWithReplyDraft(db *database.DB, brain completer) *automati
 }
 
 func workflowEngineWithDrafter(db *database.DB, drafter activities.EmailDrafter) *automation.WorkflowEngine {
-	// identity.Service implements shared/ports/authz.Resolver — the
-	// match-time owner-permission gate's (gate.go) authority source. The
-	// engine depends only on the port; this is the one place a concrete
-	// identity is injected (ADR-0054 §8), same as platform/auth.NewGate.
 	engine := automation.NewWorkflowEngine(db, identity.NewService(db.Pool()))
 	contactsStore := contacts.NewStore(db)
-	// Executors ride the same record provider as every other datasource
-	// consumer.
 	claims := automation.NewEffectClaims(db)
 	ex := automation.Executors{
 		RecapDraftClaims: claims,
@@ -61,15 +42,8 @@ func workflowEngineWithDrafter(db *database.DB, drafter activities.EmailDrafter)
 		Inquiries:        automation.NewInquiryService(db, newInquiryRouting(db)),
 		Provider:         NewProvider(db.Pool()),
 		Approvals:        automationApprovalsAdapter{svc: NewApprovalsService(db)},
-		// The zero SendPath is the honest one here: automation.Comms declares
-		// DraftEmail alone, so no send is reachable from this surface to
-		// configure. What an automation composes waits as a held draft, and
-		// THAT release sends through the fully-wired store the send path builds
-		// (lateApprovalEffects) rather than anything configured here.
-		Comms: newCommsAdapter(db.Pool(), drafter, SendPath{}),
-		// The notify transport is the durable notice row (noticesseam.go):
-		// recording one is delivering one, so the engine's success record
-		// is finally a true sentence rather than a skipped run.
+		// Drafts remain held until the approval send path checks delivery.
+		Comms:     newCommsAdapter(db.Pool(), drafter, SendPath{}),
 		Notifier:  noticesNotifier{store: notices.NewStore(db)},
 		Claims:    claims,
 		Language:  installationLanguage(db.Pool()),
@@ -105,12 +79,7 @@ func workflowEngineWithDrafter(db *database.DB, drafter activities.EmailDrafter)
 	return engine
 }
 
-// automationApprovalsAdapter maps the automation module's staging seam
-// (automation.Approvals) onto the approvals module — the same cross-
-// module edge approvalsAdapter (registry.go) wires for the MCP tool
-// surface, but automation.StageRequest is its own type (a module cannot
-// import a sibling's request shape, ADR-0054 §9), so it needs its own
-// adapter rather than reusing that one.
+// Automation requests use the approvals module's canonical staging service.
 type automationApprovalsAdapter struct{ svc *approvals.Service }
 
 func (a automationApprovalsAdapter) Stage(ctx context.Context, in automation.StageRequest) (ids.ApprovalID, error) {

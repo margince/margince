@@ -12,6 +12,9 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/credentialrepair"
+	"github.com/margince/margince/backend/internal/compose/erasedseattraces"
+	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/notices"
 	"github.com/margince/margince/backend/internal/platform/datatask"
@@ -117,5 +120,7 @@ func dataTaskCatalog(pool *pgxpool.Pool, now func() time.Time) []datatask.Task {
 		keyedIdentifiersDataTask(),
 		mailCopiesDataTask(pool),
 		falseMeetingCancelsDataTask(now),
+		credentialrepair.DataTask(capture.NewPendingStore(InstallationDB(pool)).PurgeRawCaptureTx),
+		erasedseattraces.DataTask(),
 	}
 }

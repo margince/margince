@@ -4017,7 +4017,8 @@ export const en = {
     "Paused. Buyers see a paused page until you resume.",
   "roompage.banner.closed":
     "Closed. Buyers can still read the room; nothing more is accepted.",
-  "roompage.banner.expired": "Expired. Buyer links no longer work.",
+  "roompage.banner.expired":
+    "Expired. Buyer links work again once you set a later end date.",
   "roompage.banner.archived": "Archived. No one can enter this room.",
   "roompage.banner.liveUntil": "Live. Access ends on {when}.",
   "roompage.text.title": "Room text",
@@ -12981,6 +12982,8 @@ export const en = {
   "roomtab.manage.welcomeHint": "The first paragraph a buyer reads.",
   "roomtab.manage.foot":
     "Changes reach buyers the next time they open the room.",
+  "roomtab.manage.expiredHint":
+    "Access has ended. Set a later end date to let buyers in again.",
   "threads.conversationTitle": "Conversation",
   "threads.about": "About {title}",
   "threads.aboutRemoved": "About a document no longer in the room",
@@ -14019,6 +14022,8 @@ export const en = {
     "Everything keeps working and nothing is capped. Configure a license token for this installation to count seats against a grant.",
   "license.refused.title": "This installation’s license was refused",
   "license.refused.body":
+    "The license token configured for this installation was presented and rejected. Full seats in use keep working, and no full seat is added beyond what the last valid license granted, until it is replaced. Check the token and the installation’s clock.",
+  "license.refused.bodyUncapped":
     "The license token configured for this installation was presented and rejected. Everything keeps working, uncapped, until it is replaced. Check the token and the installation’s clock.",
   "license.seats.capacityOnly": "Your role cannot see the license entitlement.",
   "license.seats.title": "Seats",
@@ -14043,6 +14048,12 @@ export const en = {
   "license.renewal.title": "License needs renewal",
   "license.renewal.body":
     "The license expires on {expiry}. Nothing changes before that date.",
+  "license.check.button": "Check now",
+  "license.check.hint":
+    "Reads the license token file on the server again now, instead of at the next daily check. Replace the file first. A token set in an environment variable applies only after a restart.",
+  "license.check.done": "License token read again. This card shows the result.",
+  "license.check.failed":
+    "The license token could not be read again. The last result stands, and the server log says why.",
   "license.counting":
     "Full seats that are not deactivated or suspended, agents included. Read-only seats are unlimited and not counted.",
   "settings.rates.fxTitle": "Currency rates",

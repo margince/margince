@@ -87,8 +87,8 @@ func TestHistoryImportReportsItsDatabaseWork(t *testing.T) {
 // some; never raise it to make a change pass.
 // Thread membership and mailbox generation are checked before each message write.
 const (
-	historyExchangesPerMessage    = 188
-	historyTransactionsPerMessage = 7.15
+	historyExchangesPerMessage    = 186
+	historyTransactionsPerMessage = 6.15
 )
 
 func TestHistoryImportStaysWithinItsRoundTripBudget(t *testing.T) {

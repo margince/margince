@@ -4061,7 +4061,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "roompage.banner.closed":
     "Geschlossen. Die Käuferseite kann den Raum weiter lesen. Neues wird nicht mehr angenommen.",
   "roompage.banner.expired":
-    "Abgelaufen. Die Links der Käuferseite funktionieren nicht mehr.",
+    "Abgelaufen. Die Links der Käuferseite funktionieren wieder, sobald Sie ein späteres Enddatum setzen.",
   "roompage.banner.archived": "Archiviert. Niemand kann diesen Raum betreten.",
   "roompage.banner.liveUntil": "Live. Der Zugang endet am {when}.",
   "roompage.text.title": "Raumtext",
@@ -13007,6 +13007,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "roomtab.manage.welcomeHint": "Der erste Absatz, den die Käuferseite liest.",
   "roomtab.manage.foot":
     "Die Käuferseite sieht Änderungen beim nächsten Öffnen des Raums.",
+  "roomtab.manage.expiredHint":
+    "Der Zugang ist abgelaufen. Setzen Sie ein späteres Enddatum, um die Käuferseite wieder einzulassen.",
   "threads.conversationTitle": "Unterhaltung",
   "threads.about": "Zu {title}",
   "threads.aboutRemoved": "Zu einem Dokument, das nicht mehr im Raum ist",
@@ -14077,6 +14079,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Alles funktioniert weiter, und nichts ist begrenzt. Konfiguriere ein Lizenz-Token für diese Installation, damit die Plätze mit dem Lizenzumfang abgeglichen werden.",
   "license.refused.title": "Die Lizenz dieser Installation wurde abgelehnt",
   "license.refused.body":
+    "Das für diese Installation konfigurierte Lizenz-Token wurde vorgelegt und abgelehnt. Belegte volle Plätze funktionieren weiter, und bis das Token ersetzt wird, kommt kein voller Platz über das hinzu, was die letzte gültige Lizenz gewährt hat. Prüfe das Token und die Uhr der Installation.",
+  "license.refused.bodyUncapped":
     "Das für diese Installation konfigurierte Lizenz-Token wurde vorgelegt und abgelehnt. Alles funktioniert ohne Begrenzung weiter, bis das Token ersetzt wird. Prüfe das Token und die Uhr der Installation.",
   "license.seats.capacityOnly":
     "Deine Rolle darf den Lizenzumfang nicht sehen.",
@@ -14102,6 +14106,13 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "license.renewal.title": "Lizenz muss erneuert werden",
   "license.renewal.body":
     "Die Lizenz läuft am {expiry} ab. Vor diesem Datum ändert sich nichts.",
+  "license.check.button": "Jetzt prüfen",
+  "license.check.hint":
+    "Liest die Lizenz-Token-Datei auf dem Server sofort neu ein, statt bei der nächsten täglichen Prüfung. Tausche die Datei vorher aus. Ein Token aus einer Umgebungsvariable gilt erst nach einem Neustart.",
+  "license.check.done":
+    "Lizenz-Token neu eingelesen. Diese Karte zeigt das Ergebnis.",
+  "license.check.failed":
+    "Das Lizenz-Token ließ sich nicht neu einlesen. Das letzte Ergebnis gilt weiter, und das Server-Log nennt den Grund.",
   "license.counting":
     "Volle Plätze, die nicht deaktiviert oder gesperrt sind, Agenten eingeschlossen. Leseplätze sind unbegrenzt und zählen nicht mit.",
   "settings.rates.fxTitle": "Wechselkurse",

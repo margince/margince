@@ -99,7 +99,9 @@ func briefCandidates(ctx context.Context, tx pgx.Tx, userID ids.UUID, now time.T
 ) error {
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	asOfPos := arg(now.UTC())
+	// Typed once here. The base value casts it to a date, and an untyped
+	// parameter takes that type for the snooze and activity checks too.
+	asOf := fmt.Sprintf("$%d::timestamptz", arg(now.UTC()))
 	userPos := arg(userID)
 	basePos := arg(base)
 
@@ -125,7 +127,7 @@ func briefCandidates(ctx context.Context, tx pgx.Tx, userID ids.UUID, now time.T
 	// this fold already has, and scores its floor for the same reason a missing
 	// FX rate does: the factor floors rather than guessing.
 	baseValue, err := auth.MaskedExpressionSQL(ctx, "deal", "amount_minor", "d",
-		deals.BaseValueSQL(fmt.Sprintf("$%d", asOfPos), fmt.Sprintf("$%d", basePos), "d"), arg)
+		deals.BaseValueSQL(asOf, fmt.Sprintf("$%d", basePos), "d"), arg)
 	if err != nil {
 		return err
 	}
@@ -151,8 +153,8 @@ func briefCandidates(ctx context.Context, tx pgx.Tx, userID ids.UUID, now time.T
 				  AND %s
 				  AND %s) END)`,
 		deals.WinProbabilitySQL("d"), baseValue, userPos,
-		briefSnoozeHoldsSQL("bi", fmt.Sprintf("$%d", asOfPos)),
-		occurredday.HappenedSQL("a", fmt.Sprintf("$%d", asOfPos)), readable)
+		briefSnoozeHoldsSQL("bi", asOf),
+		occurredday.HappenedSQL("a", asOf), readable)
 	if scope != "" {
 		q += " AND " + scope
 	}
@@ -174,11 +176,15 @@ func briefCandidates(ctx context.Context, tx pgx.Tx, userID ids.UUID, now time.T
 	if err != nil {
 		return err
 	}
+	//
+	// The task deals are one uncorrelated set. A correlated `EXISTS` under the
+	// `OR` cannot become a join. It ran the whole task predicate once per open
+	// deal, and at the bench's scale that outlasted the statement timeout.
 	q += fmt.Sprintf(`
 		  AND (d.owner_id = $%d
-		       OR EXISTS (
-			SELECT 1 FROM activity a
-			JOIN activity_link l ON l.activity_id = a.id AND l.deal_id = d.id
+		       OR d.id IN (
+			SELECT l.deal_id FROM activity a
+			JOIN activity_link l ON l.activity_id = a.id AND l.deal_id IS NOT NULL
 			WHERE a.kind = 'task' AND NOT a.is_done
 			  AND a.archived_at IS NULL AND a.assignee_id = $%d AND %s))`, userPos, userPos, activities.CurrentTaskClause("a", now, identities, arg))
 	q += " ORDER BY d.id"
