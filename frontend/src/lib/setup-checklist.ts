@@ -9,9 +9,11 @@ import {
   VENDOR_SERVICES,
   vendorOf,
 } from "../format/connectorprovider";
+import { useCanWrite } from "./capability";
 import { useConnectorState } from "./connector-state";
 import { missingCalendarWriteGrant } from "./connector-status";
 import { type ConnectorsResult, useConnectors } from "./connectors";
+import { modelBound, useInstallationSetup } from "./installation-setup-query";
 import {
   liveConnection,
   passportName,
@@ -38,7 +40,13 @@ type VoiceProfile = components["schemas"]["VoiceProfile"];
 type SchedulingProfile = components["schemas"]["SchedulingProfile"];
 type PassportSummary = components["schemas"]["PassportSummary"];
 
-export type SetupStepId = "mail" | "calendar" | "ai" | "voice" | "booking";
+export type SetupStepId =
+  | "model"
+  | "mail"
+  | "calendar"
+  | "ai"
+  | "voice"
+  | "booking";
 
 /** Why an unfinished step reads differently from its plain reason. */
 export type SetupStepReason =
@@ -88,6 +96,9 @@ export type SetupReads = Readonly<{
   passports: readonly PassportSummary[] | null;
   /** When the passports were read, so a connection expired by then has ended. */
   now: number;
+  /** Whether the installation can call a model, or null where this reader
+   *  cannot bind one or the read has not answered. */
+  modelReady: boolean | null;
 }>;
 
 type Draft = Omit<SetupStep, "state"> & Readonly<{ done: boolean }>;
@@ -249,7 +260,8 @@ function bookingStep(
 
 /** The steps this reader is asked to finish, in the order they are shown. */
 export function deriveSetupSteps(reads: SetupReads): readonly SetupStep[] {
-  const { acts, connectors, voice, scheduling, passports, now } = reads;
+  const { acts, connectors, voice, scheduling, passports, now, modelReady } =
+    reads;
   // A role or seat that cannot capture is never asked to connect anything.
   const connections =
     acts.has("connections") &&
@@ -260,6 +272,10 @@ export function deriveSetupSteps(reads: SetupReads): readonly SetupStep[] {
       : null;
   const calendar = connections && calendarStep(connections);
   const drafts = [
+    // First, because reading, drafting and research all wait on it.
+    acts.has("models") && modelReady !== null
+      ? draft("model", "models", { done: modelReady })
+      : null,
     connections && mailStep(connections),
     calendar,
     acts.has("agents") && passports ? aiStep(passports, now) : null,
@@ -304,6 +320,18 @@ const storedHidden = () => readStored(STORAGE_KEYS.setupReminderHidden) === "1";
 const watchHidden = (changed: () => void) =>
   watchStored(STORAGE_KEYS.setupReminderHidden, changed);
 
+// Asked only of a reader who may bind a model: a price editor also acts on the
+// models page, and the form there would not draw for them.
+function useModelRead(acts: ReadonlySet<SettingsPageId>) {
+  const canBind = useCanWrite("ai_routing", "update");
+  const binds = acts.has("models") && canBind;
+  const setup = useInstallationSetup(binds);
+  return {
+    asked: binds && setup,
+    ready: binds && setup.data ? modelBound(setup.data) : null,
+  };
+}
+
 export function useSetupChecklist(reach: SettingsReach): SetupChecklist {
   const acts = new Set(reach.acts.map((page) => page.id));
   // Each read waits for a page that could show its step.
@@ -311,6 +339,7 @@ export function useSetupChecklist(reach: SettingsReach): SetupChecklist {
   const voice = useVoiceProfile(acts.has("voice"));
   const scheduling = useSchedulingProfile({ enabled: acts.has("meetings") });
   const connector = useConnectorState({ enabled: acts.has("agents") });
+  const model = useModelRead(acts);
   const aiConnects = acts.has("agents") && connector.data?.enabled === true;
   const passports = usePassports({
     enabled: aiConnects,
@@ -327,6 +356,7 @@ export function useSetupChecklist(reach: SettingsReach): SetupChecklist {
     acts.has("meetings") && scheduling,
     acts.has("agents") && connector,
     aiConnects && passports,
+    model.asked,
   ];
   // A refused or failed read drops the steps it feeds rather than claiming
   // them open. The voice step stays as unknown instead: dropping it could
@@ -339,6 +369,7 @@ export function useSetupChecklist(reach: SettingsReach): SetupChecklist {
     // No step where the installation turned AI connections off.
     passports: aiConnects ? (passports.data?.data ?? null) : null,
     now: passports.dataUpdatedAt,
+    modelReady: model.ready,
   });
   const done = steps.filter((step) => step.state === "done").length;
   return {

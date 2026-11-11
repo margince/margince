@@ -4,7 +4,7 @@ import { DEFAULT_VERTEX_LOCATION } from "../../components/vertex-location";
 import { Button, Field } from "../../design-system/atoms";
 import { ComboBox } from "../../design-system/combobox";
 import { StageActions } from "../../design-system/onboarding-stage";
-import { Panel, PanelBody } from "../../design-system/panel";
+import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { Select } from "../../design-system/select";
 import { serviceAccountProblem } from "../../design-system/serviceaccountkeyfield";
 import { useLocale, useT } from "../../i18n";
@@ -82,14 +82,28 @@ function chatListNote(
   return t("firstRun.ai.rankedHint", { rankedBy: vendor.rankedBy });
 }
 
-/** The AI step: one vendor, one key, the two models it will serve. */
+/**
+ * The AI step: one vendor, one key, the two models it will serve. First run
+ * asks it on the stage; Settings asks the same form while nothing is bound, so
+ * a reader who skipped it has one form to come back to, not two pages.
+ */
 export function AiStep({
   onBusy,
   onIgnite,
+  onDecline,
+  verb = "firstRun.continue",
+  panel,
 }: Readonly<{
   onBusy: (busy: boolean) => void;
-  /** Both writes landed, for the vendor named. The stage takes it from here. */
+  /** Both writes landed, for the vendor named. The caller takes it from here. */
   onIgnite: (vendor: string) => void;
+  /** The way past for a reader with no key at hand; absent where there is
+   *  nothing to skip to. */
+  onDecline?: () => void;
+  verb?: MessageKey;
+  /** Set off the stage: the form is a titled settings panel that carries its
+   *  own actions, since there is no rail to put them on. */
+  panel?: Readonly<{ title: string; intro: string }>;
 }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -211,20 +225,27 @@ export function AiStep({
     );
   };
 
+  // On the stage the verb goes on its rail, which stays in view while a long
+  // board scrolls. In Settings it is the panel's own action band.
+  const actions = (
+    <>
+      <StepNeeds attempted={attempted} missing={missing} />
+      {onDecline && (
+        <Button variant="ghost" onClick={onDecline} disabled={busy}>
+          {t("firstRun.ai.skip")}
+        </Button>
+      )}
+      <Button variant="primary" pending={busy} onClick={submit}>
+        {t(verb)}
+      </Button>
+    </>
+  );
+
   return (
     <StepForm busy={busy} onBusy={onBusy}>
-      {/* The verb goes on the stage's rail rather than as the last thing in
-          the stack of questions: a button that shares the fields' spacing reads
-          as one more field, and one at the end of a long board is one the
-          reader has scrolled away from. */}
-      <StageActions>
-        <StepNeeds attempted={attempted} missing={missing} />
-        <Button variant="primary" pending={busy} onClick={submit}>
-          {t("firstRun.continue")}
-        </Button>
-      </StageActions>
-      <Panel>
-        <PanelBody>
+      <Panel title={panel?.title} actions={panel && actions}>
+        <PanelBody className="form-stack">
+          {panel && <PanelIntro>{panel.intro}</PanelIntro>}
           <AiBindRefused keyError={saveKey.error} bindError={bind.error} />
           <Field label={t("firstRun.ai.provider")}>
             {(control) => (
@@ -326,6 +347,7 @@ export function AiStep({
           />
         </PanelBody>
       </Panel>
+      {panel === undefined && <StageActions>{actions}</StageActions>}
     </StepForm>
   );
 }

@@ -9625,6 +9625,21 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "setup.action.ai": "Verbinden",
   "setup.step.aiDone": "{name} ist verbunden.",
   "setup.step.aiDoneUnnamed": "Ein KI-Tool ist verbunden.",
+  "firstRun.ai.skip": "Nicht jetzt",
+  "ob.gate.noModelSub":
+    "Noch ist kein KI-Anbieter eingerichtet, daher kann Margince deine Website nicht lesen. Gib die Angaben zu deinem Unternehmen selbst ein oder füge jetzt einen Schlüssel hinzu.",
+  "ob.gate.addModel": "KI-Schlüssel hinzufügen",
+  "aiSetup.title": "KI einrichten",
+  "aiSetup.intro":
+    "Margince braucht einen KI-Anbieter, um Websites zu lesen, Antworten zu entwerfen und zu recherchieren. Füge einen Schlüssel hinzu und wähle die Modelle.",
+  "aiSetup.connect": "Anbieter verbinden",
+  "aiSetup.connected":
+    "{vendor} ist verbunden. Margince kann jetzt lesen, entwerfen und recherchieren.",
+  "setup.step.model": "KI einrichten",
+  "setup.caption.model":
+    "Füge einen Schlüssel deines KI-Anbieters hinzu, damit Margince Websites liest, Antworten entwirft und recherchiert.",
+  "setup.action.model": "Schlüssel hinzufügen",
+  "setup.step.modelDone": "Ein KI-Anbieter ist verbunden.",
   "ob.conv.connect.aiRow": "Dein KI-Tool",
   "ob.conv.connect.aiBody":
     "Frag Claude, ChatGPT, Copilot oder deinen Editor nach deinen Deals und lass ihn Margince für dich aktualisieren.",
@@ -15890,7 +15905,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "firstRun.continue": "Weiter",
   "firstRun.ai.title": "Modellanbieter auswählen",
   "firstRun.ai.sub":
-    "Margince nutzt deinen Zugang beim KI-Anbieter. All das lässt sich später in den Einstellungen unter KI ändern.",
+    "Margince nutzt deinen Zugang beim KI-Anbieter. Kein Schlüssel zur Hand? Du kannst ihn später in den Einstellungen unter KI hinzufügen.",
   "firstRun.ai.provider": "Anbieter",
   "firstRun.ai.key": "API-Schlüssel",
   "firstRun.ai.keyHint":

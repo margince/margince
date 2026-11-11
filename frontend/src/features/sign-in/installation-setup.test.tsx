@@ -14,7 +14,7 @@ import type { components } from "../../api/schema";
 import { pickOption, pickSuggestion } from "../../design-system/select-testing";
 import { stable } from "../../format/collate";
 import { LocaleProvider } from "../../i18n";
-import { forgetPlatformDeclines } from "../../lib/installation-setup.decline";
+import { forgetSetupDeclines } from "../../lib/installation-setup.decline";
 import { jsonResponse } from "../../testing/company.fixtures";
 import { meFixture } from "../../testing/mefixture";
 import { InstallationSetup, outstandingStep } from "./installation-setup";
@@ -25,7 +25,7 @@ afterEach(() => {
   // in storage, so clearing only storage would carry one case's decline into
   // the next.
   window.localStorage.clear();
-  forgetPlatformDeclines();
+  forgetSetupDeclines();
   cleanup();
   vi.unstubAllGlobals();
 });
@@ -325,7 +325,9 @@ describe("the first-run setup gate", () => {
     await user.click(screen.getByRole("button", { name: "Not now" }));
     await waitFor(() => expect(container.innerHTML).toBe(""));
     expect(writes.length).toBe(0);
-    expect(outstandingStep(setupReport(true, false), true)).toBeUndefined();
+    expect(
+      outstandingStep(setupReport(true, false), new Set(["oauth_app"])),
+    ).toBeUndefined();
   });
 
   // The decline is the ACCOUNT's answer, not the browser's. Keyed on the
@@ -390,6 +392,32 @@ describe("the first-run setup gate", () => {
     expect(writes.length).toBe(0);
   });
 
+  // The model step blocks the website read, not the reader: with no key at
+  // hand they go on to the manual company interview, and Settings asks later.
+  it("lets a reader past the model step with Not now, and remembers it", async () => {
+    const { container, writes } = mount(setupReport(false, true));
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("button", { name: "Not now" }));
+    await waitFor(() => expect(container.innerHTML).toBe(""));
+    expect(writes.length).toBe(0);
+    expect(
+      window.localStorage.getItem(
+        "margince.first-run.ai-declined:00000000-0000-4000-8000-000000000001",
+      ),
+    ).toBe("1");
+  });
+
+  it("asks for the app next when the model is skipped and no app is stored", async () => {
+    mount(setupReport(false, false));
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("button", { name: "Not now" }));
+    expect(
+      await screen.findByRole("heading", {
+        name: "What does your company run on?",
+      }),
+    ).toBeTruthy();
+  });
+
   // Nothing at all when there is nothing outstanding, so a caller can put this
   // in front of the next screen without asking the same question twice.
   it("draws nothing once every blocking step is done", async () => {
@@ -409,7 +437,9 @@ describe("the first-run setup gate", () => {
         { step: "oauth_app", configured: false, blocking: true },
       ],
     };
-    expect(outstandingStep(report, true)?.step).toBe("oauth_app");
+    expect(outstandingStep(report, new Set(["oauth_app"]))?.step).toBe(
+      "oauth_app",
+    );
   });
 
   // The key BEFORE the binding: a binding whose vendor has no key reads as

@@ -19,6 +19,7 @@ import {
 } from "../lib/voice-setup";
 
 const TITLE: Readonly<Record<SetupStepId, MessageKey>> = {
+  model: "setup.step.model",
   mail: "setup.step.mail",
   calendar: "setup.step.calendar",
   ai: "setup.step.ai",
@@ -27,6 +28,7 @@ const TITLE: Readonly<Record<SetupStepId, MessageKey>> = {
 };
 
 const ACTION: Readonly<Record<SetupStepId, MessageKey>> = {
+  model: "setup.action.model",
   mail: "setup.action.mail",
   calendar: "setup.action.calendar",
   ai: "setup.action.ai",
@@ -34,8 +36,15 @@ const ACTION: Readonly<Record<SetupStepId, MessageKey>> = {
   booking: "setup.action.booking",
 };
 
+// What a finished step says when no connection names it.
+const DONE: Partial<Record<SetupStepId, MessageKey>> = {
+  model: "setup.step.modelDone",
+  voice: "setup.step.voiceDone",
+};
+
 // What a step says while it is still to do, when no reason overrides it.
 const WHY: Readonly<Record<SetupStepId, MessageKey>> = {
+  model: "setup.caption.model",
   mail: "setup.caption.mail",
   calendar: "setup.caption.calendar",
   ai: "setup.caption.ai",
@@ -136,9 +145,7 @@ function doneCaption(t: Translator, step: SetupStep): string {
       ? t("setup.step.aiDone", { name })
       : t("setup.step.aiDoneUnnamed");
   }
-  return t(
-    step.id === "voice" ? "setup.step.voiceDone" : "setup.step.bookingDone",
-  );
+  return t(DONE[step.id] ?? "setup.step.bookingDone");
 }
 
 function useCaption(): (step: SetupStep) => string {
