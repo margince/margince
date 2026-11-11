@@ -44,7 +44,9 @@ func (m AttentionBaseMoney) ToBase(
 	var base string
 	err := database.WithWorkspaceTx(ctx, m.Pool, func(tx pgx.Tx) error {
 		var err error
-		base, err = identity.BaseCurrencyOf(ctx, tx)
+		// Unlocked and ungated: the queue only orders by the base. A re-base
+		// need not wait for it, and a seat that may read deals may rank them.
+		base, err = identity.BaseCurrencyAppliedTx(ctx, tx)
 		if err != nil {
 			return err
 		}

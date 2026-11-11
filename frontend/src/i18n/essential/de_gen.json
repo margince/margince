@@ -2206,5 +2206,7 @@
   "analytics.team.qualificationUnattributed_one": "Für {count} erste Qualifizierung ist keine Verantwortung gespeichert. Die Mitgliederzahlen enthalten nur zugeordnete Ereignisse.",
   "analytics.team.qualificationUnattributed_other": "Für {count} erste Qualifizierungen ist keine Verantwortung gespeichert. Die Mitgliederzahlen enthalten nur zugeordnete Ereignisse.",
   "nav.progress": "Fortschritt",
-  "nav.salesGoals": "Umsatzziele"
+  "nav.myProgress": "Mein Fortschritt",
+  "nav.salesGoals": "Umsatzziele",
+  "progress.teamTitle": "Team-Fortschritt"
 }

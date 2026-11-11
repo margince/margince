@@ -227,8 +227,8 @@ describe("a done line's opener", () => {
   });
 });
 
-describe("a grouped record with a reviewed change", () => {
-  it("keeps the review verbs its receipt offers on its own", async () => {
+describe("a grouped record with a deal change", () => {
+  it("keeps the Undo its receipt offers on its own, and asks for no review", async () => {
     stubOpenedLine(reviewedRecords(), () =>
       jsonResponse({
         as_of: "2026-09-13T08:00:00Z",
@@ -239,23 +239,9 @@ describe("a grouped record with a reviewed change", () => {
     const dialog = await openTheLine();
 
     expect(
-      await within(dialog).findAllByRole("button", { name: "Mark reviewed" }),
+      await within(dialog).findAllByRole("button", { name: "Undo" }),
     ).toHaveLength(2);
-    expect(
-      within(dialog).getAllByRole("button", { name: "Undo" }),
-    ).toHaveLength(2);
-  });
-
-  it("offers no review verb off a receipts read that failed", async () => {
-    stubOpenedLine(reviewedRecords(), () =>
-      jsonResponse({ title: "Unavailable" }, 503),
-    );
-    const dialog = await openTheLine();
-
-    expect(await within(dialog).findByText("Deal 1")).toBeTruthy();
-    expect(
-      within(dialog).queryByRole("button", { name: "Mark reviewed" }),
-    ).toBeNull();
+    expect(within(dialog).queryByText(/review/i)).toBeNull();
   });
 });
 

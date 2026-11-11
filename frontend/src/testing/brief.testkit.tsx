@@ -6,7 +6,7 @@ import type { components } from "../api/schema";
 import type { Deal, MorningBrief } from "../features/brief/brief.queries";
 import { LocaleProvider } from "../i18n";
 import type { Receipt } from "../lib/handled";
-import { receiptAuditId } from "../lib/receiptreview";
+import { receiptAuditId } from "../lib/receiptstate";
 import { readingsDay } from "./brief.fixtures";
 import { meFixture } from "./mefixture";
 

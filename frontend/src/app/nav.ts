@@ -387,7 +387,7 @@ export function navLabelKey(
   readsTeam: boolean,
 ): MessageKey | undefined {
   if (item?.screen !== "progress") return item?.labelKey;
-  return readsTeam ? "progress.teamTitle" : "progress.myTitle";
+  return readsTeam ? "progress.teamTitle" : "nav.myProgress";
 }
 
 function primaryLevel(
