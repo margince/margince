@@ -81,3 +81,49 @@ func (e *dedupeEnv) beginPrimaryEdit(ctx context.Context, t *testing.T, edge ids
 	}
 	return tx, pid
 }
+
+// Employer attach, the company roster and the seat repair take a contact's
+// employment lock before its row. A merge keeps that order, so the two queue.
+func TestAContactMergeQueuesBehindAWriterHoldingTheEmploymentLockFirst(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.editorCtx()
+	fx := e.seedFlipFixture(ctx, t, "Petra Holm", "Holm Shared", "Holm Own")
+	survivor := mustContact(t, e, "Petra Holm")
+	e.employAt(ctx, t, fx.contact, fx.first, true)
+
+	holder, err := e.store.db.Pool().Begin(ctx)
+	if err != nil {
+		t.Fatalf("opening the writer's transaction: %v", err)
+	}
+	t.Cleanup(func() {
+		err := holder.Rollback(context.Background())
+		if err != nil && !errors.Is(err, pgx.ErrTxClosed) {
+			t.Errorf("releasing the writer's transaction: %v", err)
+		}
+	})
+	var holderPID int
+	if err := holder.QueryRow(ctx, `SELECT pg_backend_pid()`).Scan(&holderPID); err != nil {
+		t.Fatalf("reading the writer's backend pid: %v", err)
+	}
+	if err := storekit.LockWriteIdentity(ctx, holder, employmentKind, survivor.UUID.String()); err != nil {
+		t.Fatalf("taking the survivor's employment lock: %v", err)
+	}
+
+	merged := make(chan error, 1)
+	returned := make(chan struct{})
+	go func() {
+		_, err := e.store.MergeContact(ctx, fx.contact, survivor, nil)
+		merged <- err
+		close(returned)
+	}()
+	testdb.AwaitQueuedBehind(t, e.store.db.Pool(), int32(holderPID), 1, returned, "the merge") //nolint:gosec // a backend pid fits in int32
+	if _, err := holder.Exec(ctx, `SELECT 1 FROM contact WHERE id = $1 FOR UPDATE`, survivor.UUID); err != nil {
+		t.Fatalf("the writer could not take the contact row after its employment lock: %v", err)
+	}
+	if err := holder.Commit(ctx); err != nil {
+		t.Fatalf("committing the writer: %v", err)
+	}
+	if err := <-merged; err != nil {
+		t.Fatalf("the merge failed instead of queuing behind the writer: %v", err)
+	}
+}

@@ -48,8 +48,8 @@ func archiveDuplicatesKeepingPrimarySlot(ctx context.Context, tx pgx.Tx, merging
 }
 
 // lockMergedEmployments takes the employment lock of each contact whose primary
-// slot the merge can move. It runs before the merge writes any edge row, the
-// order every employment writer keeps (updateRelationshipInTx).
+// slot the merge can move. It runs before the merge locks the contact rows,
+// the order every employment writer keeps.
 func lockMergedEmployments(ctx context.Context, tx pgx.Tx, contacts []ids.UUID) error {
 	for _, contact := range slices.Compact(sortedUUIDs(contacts...)) {
 		if err := storekit.LockWriteIdentity(ctx, tx, employmentKind, contact.String()); err != nil {

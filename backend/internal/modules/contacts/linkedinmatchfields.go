@@ -113,7 +113,7 @@ func linkedInOfferColumns(ctx context.Context, arg func(any) int) (string, error
 // as `cur`. uq_rel_current_primary_employer keeps it to one row.
 var linkedInCurrentEmploymentJoin = `
 	LEFT JOIN LATERAL (SELECT r.id, r.company_id FROM relationship r
-	                    WHERE r.contact_id = p.id AND ` + employment.CurrentPrimarySlotSQL("r") + `) cur ON true`
+	                    WHERE r.contact_id = p.id AND ` + employment.LiveCurrentPrimarySQL("r") + `) cur ON true`
 
 // scanLinkedInOffer reads what linkedInOfferColumns selected into the card's
 // fields, with each box at its staged default.
@@ -223,7 +223,7 @@ func checkStagedEmployer(ctx context.Context, tx pgx.Tx, contactID ids.UUID, f L
 	}
 	var current *ids.UUID
 	err = tx.QueryRow(ctx, `SELECT r.id FROM relationship r WHERE r.contact_id = $1 AND `+
-		employment.CurrentPrimarySlotSQL("r"), contactID).Scan(&current)
+		employment.LiveCurrentPrimarySQL("r"), contactID).Scan(&current)
 	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 		return fmt.Errorf("contacts: reading the employment an accepted match would replace: %w", err)
 	}

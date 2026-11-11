@@ -97,6 +97,16 @@ func CurrentPrimarySQL(alias string) string {
 	return sqlf("%sis_current_primary AND %s", prefix, IsCurrentSQL(prefix+"ended_at"))
 }
 
+// LiveCurrentPrimarySQL is the contact's current employer: the edge holding the
+// primary slot, read only while it has not ended.
+func LiveCurrentPrimarySQL(alias string) string {
+	prefix := ""
+	if alias != "" {
+		prefix = alias + "."
+	}
+	return CurrentPrimarySlotSQL(alias) + " AND " + IsCurrentSQL(prefix+"ended_at")
+}
+
 // LiveSlotSQL is the THIRD question, and the one uq_rel_employment
 // answers: does this contact already hold a live employment edge to this company
 // at all, primary or not.
