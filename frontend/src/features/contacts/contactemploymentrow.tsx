@@ -57,6 +57,7 @@ export function EmploymentRow({
     actions.end.variables?.relationship_id === employment.relationship_id;
   return (
     <CompanyCard
+      layout="track"
       // Only the first row naming a company carries its mark; the slot stays
       // so every row's name and role line up under one another.
       logo={

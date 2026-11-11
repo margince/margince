@@ -57,6 +57,21 @@ export async function searchCompanyCandidates(
 // Refresh the record, paginated roles and brief together after any employment
 // edit so the saved value and employer summary agree. The companies list
 // counts each company's contacts, and a create and link adds a company to it.
+// The track reads as a career, so each employer sits where its latest role
+// ended. A role still held sorts above every ended one.
+function lastHeldByCompany(roles: readonly Employment[]): Map<string, string> {
+  const lastHeld = new Map<string, string>();
+  for (const role of roles) {
+    const held = stillHeld(role)
+      ? "\uffff"
+      : (role.ended_at ?? role.started_at ?? "");
+    const known = lastHeld.get(role.company_id);
+    if (known === undefined || known < held)
+      lastHeld.set(role.company_id, held);
+  }
+  return lastHeld;
+}
+
 export function useEmploymentActions(contactId: string) {
   const t = useT();
   const queryClient = useQueryClient();
@@ -160,10 +175,15 @@ export function Employers({ view }: Readonly<{ view: Contact360 }>) {
   // nothing is wrong. A prompt, and the hook the row's own edit offers.
   const noPrimaryEmployer =
     primaryCompany === undefined && allEmployments.some(stillHeld);
+  const lastHeld = lastHeldByCompany(allEmployments);
   const employments = [...allEmployments].sort(
     (a, b) =>
       Number(b.company_id === primaryCompany) -
         Number(a.company_id === primaryCompany) ||
+      stable(
+        lastHeld.get(b.company_id) ?? "",
+        lastHeld.get(a.company_id) ?? "",
+      ) ||
       stable(a.company_id, b.company_id) ||
       stable(b.started_at ?? "", a.started_at ?? ""),
   );
