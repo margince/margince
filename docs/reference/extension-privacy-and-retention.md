@@ -74,14 +74,15 @@ A row has no legal hold of its own. It is kept while a contact, lead or company 
 to an activity is kept while that activity is held through any record it is linked to. Both the sweep and erasure
 ask again in the statement that acts on the row.
 
-The sweep first takes a shared lock on the records whose hold keeps the row. Placing a hold updates the held record, so the two wait for each other and the first one goes
-first. A hold placed first makes the sweep wait, and then it counts. A hold placed while a pass holds the lock waits
-for that pass, so it keeps rows from the next pass on.
+Each row is acted on in a transaction of its own. That transaction first takes a shared lock on the records whose
+hold keeps the row. Placing a hold updates the held record, so the two wait for each other. A hold placed first
+makes the row's action wait, and then it counts. A hold placed while a row's action holds the lock waits for that
+one row, and it keeps every later row of the same pass.
 
 At start-up core refuses a table with personal columns and no `AgeColumn`. The `AgeColumn` must be a `NOT NULL`
 `timestamptz` or `date` column: a row with no age would never be due. A foreign key may name a swept table only
-with `ON DELETE CASCADE`. With any other action an `erase` policy could fail to delete its rows, so core
-refuses it and names the table that holds the key.
+with `ON DELETE CASCADE`, and so may a key that names a table such a delete reaches. With any other action an
+`erase` policy could fail to delete its rows. Core refuses it and names the path to the table that holds the key.
 
 `openchannel` counts a message's age from `updated_at`, when it was last decided about, as its own sweep does. Its
 own sweep deletes a decided message after 30 days, and never one that still waits to land. The core sweep reaches

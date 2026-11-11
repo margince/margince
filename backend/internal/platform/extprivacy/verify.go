@@ -73,30 +73,40 @@ func VerifySchema(ctx context.Context, q Querier, namespace string, others []str
 }
 
 // readPinningReferences names, per ext table under the prefix, a foreign key
-// that does not cascade the delete of one of its rows. SET NULL and SET DEFAULT
-// can each still fail on the referencing row's own constraints, so only CASCADE
-// lets a sweep delete without reading them.
+// that would stop the delete of one of its rows. The walk follows every
+// cascading reference down, because a cascaded row's delete fails on a reference
+// to it that does not cascade. SET NULL and SET DEFAULT can each still fail on
+// the referencing row's own constraints, so only CASCADE passes.
 func readPinningReferences(ctx context.Context, q Querier, prefix string) (map[string]string, error) {
 	rows, err := q.Query(ctx, `
-		SELECT DISTINCT ON (target.relname) target.relname, source.relname, k.conname
-		  FROM pg_constraint k
-		  JOIN pg_class target ON target.oid = k.confrelid
+		WITH RECURSIVE chain (root, rel, path) AS (
+		    SELECT c.oid, c.oid, ARRAY[c.oid]
+		      FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+		     WHERE n.nspname = $1 AND c.relkind IN ('r', 'p') AND left(c.relname, length($2::text)) = $2::text
+		    UNION ALL
+		    SELECT chain.root, k.conrelid, chain.path || k.conrelid
+		      FROM chain JOIN pg_constraint k ON k.contype = 'f' AND k.confrelid = chain.rel AND k.confdeltype = 'c'
+		     WHERE NOT k.conrelid = ANY(chain.path))
+		SELECT DISTINCT ON (root.relname) root.relname,
+		       (SELECT string_agg(p.relname, ' -> ' ORDER BY u.ord)
+		          FROM unnest(chain.path) WITH ORDINALITY u(oid, ord) JOIN pg_class p ON p.oid = u.oid),
+		       source.relname, k.conname
+		  FROM chain
+		  JOIN pg_class root ON root.oid = chain.root
+		  JOIN pg_constraint k ON k.contype = 'f' AND k.confrelid = chain.rel AND k.confdeltype <> 'c'
 		  JOIN pg_class source ON source.oid = k.conrelid
-		  JOIN pg_namespace n ON n.oid = target.relnamespace
-		 WHERE k.contype = 'f' AND k.confdeltype <> 'c'
-		   AND n.nspname = $1 AND left(target.relname, length($2::text)) = $2::text
-		 ORDER BY target.relname, k.conname`, Schema, prefix)
+		 ORDER BY root.relname, cardinality(chain.path), k.conname`, Schema, prefix)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 	pinned := map[string]string{}
 	for rows.Next() {
-		var table, source, constraint string
-		if err := rows.Scan(&table, &source, &constraint); err != nil {
+		var table, path, source, constraint string
+		if err := rows.Scan(&table, &path, &source, &constraint); err != nil {
 			return nil, err
 		}
-		pinned[table] = fmt.Sprintf("%s references it through %s without ON DELETE CASCADE", source, constraint)
+		pinned[table] = fmt.Sprintf("%s references %s through %s without ON DELETE CASCADE", source, path, constraint)
 	}
 	return pinned, rows.Err()
 }

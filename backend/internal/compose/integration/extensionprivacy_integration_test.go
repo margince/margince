@@ -348,6 +348,36 @@ func TestBootAcceptsADeclaredAgeColumn(t *testing.T) {
 	}
 }
 
+func TestBootFollowsACascadeToTheReferenceThatWouldStopIt(t *testing.T) {
+	for clause, refused := range map[string]bool{"ON DELETE RESTRICT": true, "ON DELETE CASCADE": false} {
+		t.Run(clause, func(t *testing.T) {
+			env := Setup(t)
+			unit := probeUnit(t, "1.0.0", "body")
+			unit.Privacy[0].AgeColumn = "noted_at"
+			t.Cleanup(func() {
+				if _, err := OwnerConn(t).Exec(context.Background(), `DROP TABLE IF EXISTS ext.ext_probe_quote, ext.ext_probe_reply`); err != nil {
+					t.Errorf("removing the referencing tables: %v", err)
+				}
+			})
+			probeExec(t,
+				`CREATE TABLE ext.ext_probe_reply (id uuid PRIMARY KEY, note_id uuid REFERENCES ext.ext_probe_note (id) ON DELETE CASCADE)`,
+				`CREATE TABLE ext.ext_probe_quote (id uuid PRIMARY KEY, reply_id uuid REFERENCES ext.ext_probe_reply (id) `+clause+`)`,
+				`GRANT SELECT, INSERT, UPDATE, DELETE ON ext.ext_probe_reply, ext.ext_probe_quote TO margince_app`)
+			unit.Privacy = append(unit.Privacy,
+				privacy.Table{Name: "ext_probe_reply", Retention: jurisdiction.CommercialCorrespondence},
+				privacy.Table{Name: "ext_probe_quote", Retention: jurisdiction.CommercialCorrespondence})
+
+			err := compose.VerifyExtensionPrivacy(t.Context(), env.Pool, []extension.Extension{unit})
+			if refused && (err == nil || !strings.Contains(err.Error(), "ext_probe_quote") || !strings.Contains(err.Error(), "ext_probe_reply")) {
+				t.Errorf("boot answered %v; want a refusal that names the cascade path to the blocking reference", err)
+			}
+			if !refused && err != nil {
+				t.Errorf("boot refused an all-cascade chain: %v", err)
+			}
+		})
+	}
+}
+
 func TestBootLetsOnlyACascadeReferenceASweptTable(t *testing.T) {
 	for clause, refused := range map[string]bool{
 		"": true, "ON DELETE RESTRICT": true, "ON DELETE SET NULL": true, "ON DELETE SET DEFAULT": true,
