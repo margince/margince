@@ -55,9 +55,9 @@ func IsMailProvider(provider string) bool {
 
 // calendarProviders are the providers that connect a CALENDAR. Derived as the
 // complement of the mail and meeting-notes sets inside the OAuth set rather
-// than written out a third time: a vendor is brought here by ONE change to oauthProviders, and a
-// calendar this deployment can connect but nothing recognises as one is exactly
-// the failure MailProviders' own comment records from the other direction.
+// than written out a third time. A vendor arrives by one change to oauthProviders.
+// A calendar that nothing recognises as one is the failure MailProviders'
+// comment records from the other direction.
 //
 // What reads it is the scheduling seam: free/busy computed for a host with none
 // of these connected is not a reading of their diary, and the answer has to say
