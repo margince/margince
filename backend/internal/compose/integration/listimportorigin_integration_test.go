@@ -75,7 +75,7 @@ func TestReviewedEventRulesLeaveQueuedHistoryAlone(t *testing.T) {
 	f.check(t)
 	f.rules.SetClock(func() time.Time { return f.clock.Add(time.Second) })
 	f.rule(t, "list_membership_notify", map[string]any{})
-	if !f.deliver(t, "list.evaluated") {
+	if !f.deliver(t, "list.evaluated", f.clock) {
 		t.Fatal("the old committed check is missing")
 	}
 	if count := f.runs(t, "list_membership_notify"); count != 0 {
@@ -83,7 +83,7 @@ func TestReviewedEventRulesLeaveQueuedHistoryAlone(t *testing.T) {
 	}
 	f.contactTitled(t, "After activation", "Buyer")
 	f.check(t)
-	if !f.deliver(t, "list.evaluated") {
+	if !f.deliver(t, "list.evaluated", f.clock) {
 		t.Fatal("the new committed check is missing")
 	}
 	if count := f.runs(t, "list_membership_notify"); count != 1 {

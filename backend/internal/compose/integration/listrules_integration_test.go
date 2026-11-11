@@ -16,6 +16,7 @@ import (
 	"errors"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/margince/margince/backend/internal/compose"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -84,7 +85,7 @@ func (f *listRuleFixture) rule(t *testing.T, key string, params map[string]any) 
 
 // deliver hands the newest event of eventType about the list to the engine,
 // and answers false when there is none.
-func (f *listRuleFixture) deliver(t *testing.T, eventType string) bool {
+func (f *listRuleFixture) deliver(t *testing.T, eventType string, clock ...time.Time) bool {
 	t.Helper()
 	var raw []byte
 	err := f.e.Pool.QueryRow(context.Background(), `SELECT coalesce((SELECT envelope::text FROM event_outbox
@@ -99,6 +100,9 @@ func (f *listRuleFixture) deliver(t *testing.T, eventType string) bool {
 	var env kevents.Envelope
 	if err := json.Unmarshal(raw, &env); err != nil {
 		t.Fatal(err)
+	}
+	if len(clock) > 0 {
+		env.OccurredAt = clock[0]
 	}
 	if err := f.engine.HandleEvent(context.Background(), env); err != nil {
 		t.Fatalf("the engine refused %s: %v", eventType, err)
