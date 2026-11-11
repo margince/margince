@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { ReceiptReview } from "../../../components/receiptreview";
+import { ReceiptVerbs } from "../../../components/receiptverbs";
 import { Button } from "../../../design-system/atoms";
 import {
   OverviewCard,
@@ -69,7 +69,7 @@ export function DealMarginceChangesCard({
             ]
               .filter(Boolean)
               .join(" · ")}
-            right={<ReceiptReview receipt={change} />}
+            right={<ReceiptVerbs receipt={change} />}
           />
         ))}
       </OverviewList>
