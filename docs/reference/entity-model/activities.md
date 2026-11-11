@@ -6,7 +6,7 @@ The 33 tables owned by `activities`, as the migrations build them. [Back to the 
 
 ## activity
 
-78 columns · primary key `(id)` · referenced by 45 foreign keys
+79 columns · primary key `(id)` · referenced by 45 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -78,6 +78,7 @@ The 33 tables owned by `activities`, as the migrations build them. [Back to the 
 | `source_id` | `text` |  | Provider message/event id; part of the idempotency key. |
 | `subject` | `text` |  |  |
 | `system_text` | `jsonb` |  |  |
+| `task_type` | `text` |  | Task only, absent on every other kind. |
 | `thread_key` | `text` |  | The provider's own conversation id (Gmail threadId, Graph conversationId, the RFC822 References root), stamped by capture. |
 | `archived_at` | `timestamp with time zone` |  | Soft-delete marker. `NULL` means live, and nearly every read filters on it. |
 | `captured_by` | `text` | yes | Server-stamped from the authenticated principal (human:<uuid> \| agent:<id> \| connector:<name>); never client-supplied. |
@@ -143,6 +144,7 @@ The 33 tables owned by `activities`, as the migrations build them. [Back to the 
 - `activity_source_author_needs_a_source`: `CHECK ((((source_author_id IS NULL) AND (source_author_name IS NULL)) OR (source_system IS NOT NULL)))`
 - `activity_system_text_shape`: `CHECK (((system_text IS NULL) OR ((jsonb_typeof(system_text) = 'object') AND (((system_text ->> 'schema_version') = '1') IS TRUE) AND (octet_length((system_text)) <= 8192))))`
 - `activity_task_fields`: `CHECK (((kind = 'task') OR ((due_at IS NULL) AND (assignee_id IS NULL) AND (is_done = false) AND (remind_at IS NULL))))`
+- `activity_task_type_check`: `CHECK (((task_type IS NULL) OR ((kind = 'task') AND (task_type = ANY (ARRAY['reply', 'write', 'call', 'meet', 'review', 'decide', 'do'])))))`
 - `activity_version_js_safe`: `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
 **Indexes**

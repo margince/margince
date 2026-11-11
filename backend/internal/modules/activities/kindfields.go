@@ -78,6 +78,33 @@ func (e *callOutcomeValueError) FieldFault() (string, string, string) {
 	return fieldCallOutcome, faultInvalid, e.Error()
 }
 
+// checkTaskTypeKind refuses a task type the fixed list does not hold, and a
+// type on anything but a task.
+func checkTaskTypeKind(kind string, taskType *crmcontracts.TaskType) error {
+	if taskType == nil {
+		return nil
+	}
+	if !taskType.Valid() {
+		return &taskTypeValueError{}
+	}
+	if kind != string(crmcontracts.ActivityKindTask) {
+		return &KindFieldError{Field: fieldTaskType, Only: "a task"}
+	}
+	return nil
+}
+
+// taskTypeValueError is a task type the fixed list does not hold.
+type taskTypeValueError struct{}
+
+func (e *taskTypeValueError) Error() string {
+	return "task_type takes one of reply, write, call, meet, review, decide, do"
+}
+
+// FieldFault names task_type on every surface.
+func (e *taskTypeValueError) FieldFault() (string, string, string) {
+	return fieldTaskType, faultInvalid, e.Error()
+}
+
 func checkMeetingStatusKind(kind string, meetingStatus *string) error {
 	if meetingStatus != nil && kind != KindMeeting {
 		return &MeetingStatusKindError{Kind: kind}
@@ -88,6 +115,7 @@ func checkMeetingStatusKind(kind string, meetingStatus *string) error {
 const (
 	fieldDueAt    = "due_at"
 	fieldRemindAt = "remind_at"
+	fieldTaskType = "task_type"
 )
 
 // taskFields are the update's members that only a task carries. The

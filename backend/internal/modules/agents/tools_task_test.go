@@ -35,3 +35,19 @@ func TestCreateTaskCarriesTheTimeOfDay(t *testing.T) {
 		t.Fatalf("a task given a day alone carries a time flag: %v", dayBody)
 	}
 }
+
+// The type an agent picks reaches the activity writer, which decides the
+// task's one button from it.
+func TestCreateTaskCarriesItsType(t *testing.T) {
+	out, err := TaskAsActivity(json.RawMessage(`{"subject":"Call Carol back","task_type":"call"}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var body map[string]any
+	if err := json.Unmarshal(out, &body); err != nil {
+		t.Fatal(err)
+	}
+	if body["task_type"] != "call" {
+		t.Fatalf("folded body %v, want task_type call", body)
+	}
+}

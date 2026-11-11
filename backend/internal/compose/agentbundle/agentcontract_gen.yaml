@@ -39128,6 +39128,11 @@ components:
           type: boolean
           description: >-
             Whether Write email on this row opens with a recipient filled in: true exactly when `GET /activities/{id}/reply-recipient` answers a non-empty `address` for a call, meeting, note or task. Both are computed by one rule, the one `email_target` states. Always false for an email or a message, which are answered with Reply instead, for an archived row, for a task the product filed itself (`automatic_kind` product), and for a row whose content is withheld from the caller. False for a company target too, which has no single address: the composer asks which of the company's contacts the mail is for.
+        task_type:
+          allOf: [{$ref: '#/components/schemas/TaskType'}]
+          readOnly: true
+          description: >-
+            Task only, absent on every other kind. The type a human, an agent or the AI gave the task when it was made. A task made before types existed, or by a product rule that sets none, reads the type of its rule: an answer owed to a request is `reply`, a lead to qualify is `review`, a mail to file is `decide`. A task with neither reads `write` when a human or an agent made it, else `do`. `offers_email` is false for every type but `reply` and `write`.
         email_target:
           $ref: '#/components/schemas/ActivityEmailTarget'
         source:
@@ -39304,6 +39309,9 @@ components:
         due_at: {type: [string, 'null'], format: date-time, description: 'When it is due. Optional — a task without a date is still a task.'}
         due_has_time: {type: boolean, description: 'True when `due_at` names an agreed time of day, such as a callback hour. Left out or false, the task is due by the end of the day `due_at` falls on, and only the date is shown. Sent only together with `due_at`. True sets the reminder to `due_at` when the request names no `remind_at`.'}
         assignee_id: {type: [string, 'null'], format: uuid, description: 'Who owes it. Defaults to the caller.'}
+        task_type:
+          allOf: [{$ref: '#/components/schemas/TaskType'}]
+          description: 'The kind of work, which decides its one button.'
         links:
           type: array
           description: The records the task is about. With a source activity, omitted or empty links inherit its visible links. Otherwise the task appears on no timeline.
@@ -39345,6 +39353,9 @@ components:
       type: object
       required: [kind, source]
       properties:
+        task_type:
+          allOf: [{$ref: '#/components/schemas/TaskType'}]
+          description: 'Task only: the kind of work, which decides its one button.'
         deal_filing:
           $ref: '#/components/schemas/ActivityDealFiling'
           description: |-
@@ -39472,6 +39483,11 @@ components:
       type: string
       enum: [workspace, participants, selected]
       description: Who may read an activity's content — see Activity.audience.
+    TaskType:
+      type: string
+      enum: [reply, write, call, meet, review, decide, do]
+      description: >-
+        What kind of work a task asks for, which decides the one step a screen offers for it. `reply` answers a message someone sent; `write` starts a mail the owner owes; `call` phones a contact; `meet` books a meeting; `review` checks a record; `decide` picks between options the task names; `do` is work outside Margince that is finished by ticking it off. A client that meets a value it does not know treats it as `do`.
     OccurredPrecision:
       type: string
       enum: [instant, day]
@@ -39683,6 +39699,9 @@ components:
     UpdateActivityRequest:
       type: object
       properties:
+        task_type:
+          allOf: [{$ref: '#/components/schemas/TaskType'}]
+          description: 'Task only: the kind of work, which decides its one button.'
         deal_filing:
           $ref: '#/components/schemas/ActivityDealFiling'
           description: Optional filing choice when recording a call or meeting outcome. Existing deal links remain.

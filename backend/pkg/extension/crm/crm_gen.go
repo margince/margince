@@ -395,28 +395,28 @@ func (e ActivityReferenceContentState) Valid() bool {
 
 // Defines values for ActivityReferenceKind.
 const (
-	Call    ActivityReferenceKind = "call"
-	Email   ActivityReferenceKind = "email"
-	Meeting ActivityReferenceKind = "meeting"
-	Message ActivityReferenceKind = "message"
-	Note    ActivityReferenceKind = "note"
-	Task    ActivityReferenceKind = "task"
+	ActivityReferenceKindCall    ActivityReferenceKind = "call"
+	ActivityReferenceKindEmail   ActivityReferenceKind = "email"
+	ActivityReferenceKindMeeting ActivityReferenceKind = "meeting"
+	ActivityReferenceKindMessage ActivityReferenceKind = "message"
+	ActivityReferenceKindNote    ActivityReferenceKind = "note"
+	ActivityReferenceKindTask    ActivityReferenceKind = "task"
 )
 
 // Valid indicates whether the value is a known member of the ActivityReferenceKind enum.
 func (e ActivityReferenceKind) Valid() bool {
 	switch e {
-	case Call:
+	case ActivityReferenceKindCall:
 		return true
-	case Email:
+	case ActivityReferenceKindEmail:
 		return true
-	case Meeting:
+	case ActivityReferenceKindMeeting:
 		return true
-	case Message:
+	case ActivityReferenceKindMessage:
 		return true
-	case Note:
+	case ActivityReferenceKindNote:
 		return true
-	case Task:
+	case ActivityReferenceKindTask:
 		return true
 	default:
 		return false
@@ -1716,6 +1716,39 @@ func (e SystemDisplayLocale) Valid() bool {
 	}
 }
 
+// Defines values for TaskType.
+const (
+	TaskTypeCall   TaskType = "call"
+	TaskTypeDecide TaskType = "decide"
+	TaskTypeDo     TaskType = "do"
+	TaskTypeMeet   TaskType = "meet"
+	TaskTypeReply  TaskType = "reply"
+	TaskTypeReview TaskType = "review"
+	TaskTypeWrite  TaskType = "write"
+)
+
+// Valid indicates whether the value is a known member of the TaskType enum.
+func (e TaskType) Valid() bool {
+	switch e {
+	case TaskTypeCall:
+		return true
+	case TaskTypeDecide:
+		return true
+	case TaskTypeDo:
+		return true
+	case TaskTypeMeet:
+		return true
+	case TaskTypeReply:
+		return true
+	case TaskTypeReview:
+		return true
+	case TaskTypeWrite:
+		return true
+	default:
+		return false
+	}
+}
+
 // Activity A polymorphic timeline item. Mirrors the `activity` table + `activity_link`.
 // **Per-kind field constraints** (enforced server-side to match the DB `activity_task_fields`
 // CHECK; the OpenAPI cannot express these conditionally): `due_at`/`assignee_id`/`is_done`/
@@ -1888,6 +1921,9 @@ type Activity struct {
 	SourceSystem  *string        `json:"source_system,omitempty"`
 	Subject       *string        `json:"subject,omitempty"`
 	SystemDisplay *SystemDisplay `json:"system_display,omitempty"`
+
+	// TaskType Task only, absent on every other kind. The type a human, an agent or the AI gave the task when it was made. A task made before types existed, or by a product rule that sets none, reads the type of its rule: an answer owed to a request is `reply`, a lead to qualify is `review`, a mail to file is `decide`. A task with neither reads `write` when a human or an agent made it, else `do`. `offers_email` is false for every type but `reply` and `write`.
+	TaskType *TaskType `json:"task_type,omitempty"`
 
 	// ThreadKey The provider's own conversation id (Gmail threadId, Graph conversationId, the RFC822 References root), stamped by capture. It is what makes a thread a thread: grouping by subject would merge two unrelated "Re: Update" exchanges and split one that was renamed mid-conversation. Null on anything capture did not thread — a note, a task, a message whose provider offered none.
 	ThreadKey *string   `json:"thread_key,omitempty"`
@@ -2421,6 +2457,9 @@ type CreateActivityRequest struct {
 	SourceId         *string `json:"source_id,omitempty"`
 	SourceSystem     *string `json:"source_system,omitempty"`
 	Subject          *string `json:"subject,omitempty"`
+
+	// TaskType Task only: the kind of work, which decides its one button.
+	TaskType *TaskType `json:"task_type,omitempty"`
 
 	// ThreadKey The conversation this message belongs to. Email only. Defaults to `rfc_message_id` when absent, which files a message under itself — the same root a captured message takes when it starts a thread. A mail logged by hand with neither starts a conversation of its own.
 	ThreadKey            *string                `json:"thread_key,omitempty"`
@@ -3257,6 +3296,9 @@ type SystemDisplayGeneratedParts string
 // SystemDisplayLocale defines model for SystemDisplay.Locale.
 type SystemDisplayLocale string
 
+// TaskType What kind of work a task asks for, which decides the one step a screen offers for it. `reply` answers a message someone sent; `write` starts a mail the owner owes; `call` phones a contact; `meet` books a meeting; `review` checks a record; `decide` picks between options the task names; `do` is work outside Margince that is finished by ticking it off. A client that meets a value it does not know treats it as `do`.
+type TaskType string
+
 // WebFormConsent The consent box the form showed. Absent when the form shows none.
 type WebFormConsent struct {
 	// FormId The form the box was on, so the consent can be proved without the note around it. Absent on an older record.
@@ -3777,6 +3819,14 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 		delete(object, "system_display")
 	}
 
+	if raw, found := object["task_type"]; found {
+		err = json.Unmarshal(raw, &a.TaskType)
+		if err != nil {
+			return fmt.Errorf("error reading 'task_type': %w", err)
+		}
+		delete(object, "task_type")
+	}
+
 	if raw, found := object["thread_key"]; found {
 		err = json.Unmarshal(raw, &a.ThreadKey)
 		if err != nil {
@@ -4210,6 +4260,13 @@ func (a Activity) MarshalJSON() ([]byte, error) {
 		object["system_display"], err = json.Marshal(a.SystemDisplay)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'system_display': %w", err)
+		}
+	}
+
+	if a.TaskType != nil {
+		object["task_type"], err = json.Marshal(a.TaskType)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'task_type': %w", err)
 		}
 	}
 
@@ -5373,6 +5430,14 @@ func (a *CreateActivityRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "subject")
 	}
 
+	if raw, found := object["task_type"]; found {
+		err = json.Unmarshal(raw, &a.TaskType)
+		if err != nil {
+			return fmt.Errorf("error reading 'task_type': %w", err)
+		}
+		delete(object, "task_type")
+	}
+
 	if raw, found := object["thread_key"]; found {
 		err = json.Unmarshal(raw, &a.ThreadKey)
 		if err != nil {
@@ -5631,6 +5696,13 @@ func (a CreateActivityRequest) MarshalJSON() ([]byte, error) {
 		object["subject"], err = json.Marshal(a.Subject)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'subject': %w", err)
+		}
+	}
+
+	if a.TaskType != nil {
+		object["task_type"], err = json.Marshal(a.TaskType)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'task_type': %w", err)
 		}
 	}
 
