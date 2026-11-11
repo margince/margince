@@ -139,8 +139,9 @@ func (e *BriefEngine) gather(ctx context.Context, now time.Time, userID ids.UUID
 		// Resolved ONCE for the whole rank: the revenue norm and every
 		// candidate's base value must be measured against the same basis, and
 		// two reads of one installation-wide value is two chances to disagree.
-		// Unlocked and ungated, as the Worklist reads it: the rank persists nothing.
-		base, err := identity.BaseCurrencyAppliedTx(ctx, tx)
+		// Locked although the rank writes nothing: the norm reads deals' frozen
+		// base amounts, so the base may not move between this read and that one.
+		base, err := identity.BaseCurrencyOf(ctx, tx)
 		if err != nil {
 			return err
 		}

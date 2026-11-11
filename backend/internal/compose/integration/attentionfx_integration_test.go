@@ -26,8 +26,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/attention"
-	"github.com/margince/margince/backend/internal/compose/briefs"
-	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -65,11 +63,11 @@ func TestTheWorklistPricesAmountsThroughTheStoredRates(t *testing.T) {
 	}
 }
 
-// The Worklist and the brief rank only ORDER by the base currency, so neither
-// waits for a re-base in flight nor needs the installation_settings grant.
+// The Worklist only ORDERS by the base currency, so it neither waits for a
+// re-base in flight nor needs the installation_settings grant.
 // The re-base holds the row as a settings write does. A read that took it FOR
 // SHARE would park behind it until the bound below gives up.
-func TestRankingByMoneyNeitherWaitsForAReBaseNorNeedsTheSettingsGrant(t *testing.T) {
+func TestTheWorklistPricingNeitherWaitsForAReBaseNorNeedsTheSettingsGrant(t *testing.T) {
 	e := Setup(t)
 	// The admin holds the settings grant, so its case reaches the row and
 	// proves the lock half; the rep proves the grant half.
@@ -92,30 +90,21 @@ func TestRankingByMoneyNeitherWaitsForAReBaseNorNeedsTheSettingsGrant(t *testing
 	}
 
 	now := clocktest.Now(t)
-	reads := map[string]func(context.Context) error{
-		"the Worklist's pricing": func(ctx context.Context) error {
-			_, _, err := compose.AttentionBaseMoney{Pool: e.Pool}.ToBase(ctx, now,
+	for seatName, seat := range seats {
+		done := make(chan error, 1)
+		go func() {
+			_, _, err := compose.AttentionBaseMoney{Pool: e.Pool}.ToBase(seat, now,
 				[]attention.CurrencyAmount{{Minor: 40_000, Currency: "EUR"}})
-			return err
-		},
-		"the brief rank": func(ctx context.Context) error {
-			_, err := briefs.NewBriefEngine(e.Pool, contacts.NewStore(e.DB())).Rank(ctx, now)
-			return err
-		},
-	}
-	for readName, read := range reads {
-		for seatName, seat := range seats {
-			done := make(chan error, 1)
-			go func() { done <- read(seat) }()
-			select {
-			case err := <-done:
-				if err != nil {
-					t.Errorf("%s, by %s: %v", readName, seatName, err)
-				}
-			case <-time.After(10 * time.Second):
-				t.Fatalf("%s, by %s, waited on the re-base's row lock: a read that only ranks took FOR SHARE",
-					readName, seatName)
+			done <- err
+		}()
+		select {
+		case err := <-done:
+			if err != nil {
+				t.Errorf("the Worklist's pricing, by %s: %v", seatName, err)
 			}
+		case <-time.After(10 * time.Second):
+			t.Fatalf("the Worklist's pricing, by %s, waited on the re-base's row lock: a read that only ranks took FOR SHARE",
+				seatName)
 		}
 	}
 }
