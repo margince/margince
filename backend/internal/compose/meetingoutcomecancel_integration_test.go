@@ -206,7 +206,7 @@ func newInvitingStore(ctx context.Context, t *testing.T, e *integration.Env, sen
 	if _, err := store.SaveSchedulingProfile(ctx, crmcontracts.SchedulingProfile{Provider: "gcal", CalendarId: "primary", DurationMinutes: 30, NoticeMinutes: 120, HorizonDays: 30, Title: "Discovery"}); err != nil {
 		t.Fatalf("saving the scheduling profile: %v", err)
 	}
-	return invitingStore{ctx: ctx, store: store, eraser: privacy.NewEraser(e.DB()).WithPayloadVault(controllerPayloads{v: vault})}
+	return invitingStore{ctx: ctx, store: store, eraser: eraserWithGraph(e.DB()).WithPayloadVault(controllerPayloads{v: vault})}
 }
 
 // invite books guest at start through the invitation engine and delivers it.

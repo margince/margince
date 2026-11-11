@@ -30,6 +30,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/privacy"
+	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/provider"
@@ -153,7 +154,7 @@ func TestErasureRemovesProviderClaimsAndDetachesTheRunsThatBoughtThem(t *testing
 	if claims, _, _ := claimAndRunState(t, e, contactID, runID); claims != 1 {
 		t.Fatalf("seeded %d claims, want 1 — the test proves nothing about erasure without one", claims)
 	}
-	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), contactID, "test"); err != nil {
+	if err := privacy.NewEraser(e.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities).EraseContact(e.Admin(), contactID, "test"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -211,7 +212,7 @@ func TestErasureReachesAnArchivedDuplicatesPurchasedClaims(t *testing.T) {
 	}
 	archivedRun := seedPurchase(t, e, archived)
 
-	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), live, "test"); err != nil {
+	if err := privacy.NewEraser(e.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities).EraseContact(e.Admin(), live, "test"); err != nil {
 		t.Fatal(err)
 	}
 

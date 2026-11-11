@@ -27,7 +27,6 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
-	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -103,7 +102,7 @@ func TestErasureRemovesTheSubjectFromTheRelationshipGraph(t *testing.T) {
 		t.Fatalf("the edge was not created in the first place (%d rows)", n)
 	}
 
-	if err := privacy.NewEraser(InstallationDB(e.Pool)).EraseContact(e.Admin(), contact, "subject request"); err != nil {
+	if err := eraserWithGraph(InstallationDB(e.Pool)).EraseContact(e.Admin(), contact, "subject request"); err != nil {
 		t.Fatalf("erasing: %v", err)
 	}
 

@@ -525,6 +525,7 @@ var piiTables = map[string]piiHandling{
 // privacy's own TestEveryPromisedTableIsActuallyAssembled asks that half, from
 // the only package that can call sarSections.
 var sarAssemblyFiles = []string{
+	"internal/modules/privacy/saraudithistory.go",
 	"internal/modules/privacy/raworiginalsubjects.go",
 	"internal/modules/privacy/sarretainedcopies.go",
 	"internal/modules/privacy/sarreporting.go",

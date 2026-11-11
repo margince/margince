@@ -26,6 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/privacy"
+	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -338,7 +339,7 @@ func TestFieldHistoryStopsAtErasureBoundary(t *testing.T) {
 		map[string]any{"email": "selma@example.com", "full_name": "Selma Subject"},
 		map[string]any{"email": "selma.subject@example.com", "full_name": "Selma S."}, past)
 
-	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), contactID, "dsr"); err != nil {
+	if err := privacy.NewEraser(e.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities).EraseContact(e.Admin(), contactID, "dsr"); err != nil {
 		t.Fatalf("erase: %v", err)
 	}
 
@@ -394,7 +395,7 @@ func TestFieldHistoryErasureBoundsCollateralScrubs(t *testing.T) {
 		t.Fatalf("log activity: %v", err)
 	}
 
-	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), contactID, "dsr"); err != nil {
+	if err := privacy.NewEraser(e.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities).EraseContact(e.Admin(), contactID, "dsr"); err != nil {
 		t.Fatalf("erase: %v", err)
 	}
 

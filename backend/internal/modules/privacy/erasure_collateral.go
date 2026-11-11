@@ -81,6 +81,10 @@ func (e *Eraser) redactSubjectActivities(ctx context.Context, tx pgx.Tx, subject
 	if err := lockSubjectTimeline(ctx, tx, subject, keys.emails, channelActivityKeys(keys.identities)); err != nil {
 		return nil, nil, err
 	}
+	pending, err := e.pendingTimelineUpdates(ctx, tx, subject, keys)
+	if err != nil {
+		return nil, nil, err
+	}
 	activitiesRedacted, err := e.redactSubjectTimeline(ctx, tx, subject, keys.emails, channelActivityKeys(keys.identities), floor, reason)
 	if err != nil {
 		return nil, nil, err
@@ -104,6 +108,11 @@ func (e *Eraser) redactSubjectActivities(ctx context.Context, tx pgx.Tx, subject
 		return nil, nil, err
 	}
 	activitiesRedacted = append(activitiesRedacted, notesRedacted...)
+	if len(pending) > 0 {
+		if err := e.invalidateEdges(ctx, tx, pending); err != nil {
+			return nil, nil, err
+		}
+	}
 
 	return activitiesRedacted, activitiesHeld, nil
 }
