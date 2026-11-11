@@ -135,10 +135,9 @@ export function RecordTabs<Option extends string>({
           {options
             .filter((option) => !folded.includes(option))
             .map((option) =>
-              // No handler is the lone-body shape above, and there the tab is
-              // where the reader already stands: `aria-current` says so on
-              // something that cannot be pressed, rather than `aria-pressed`
-              // on a button that would answer nothing.
+              // No handler is the lone-body shape above. There the tab is
+              // where the reader stands, so `aria-current` marks it. A button
+              // with `aria-pressed` would answer nothing.
               onChange === undefined ? (
                 <span
                   key={option}

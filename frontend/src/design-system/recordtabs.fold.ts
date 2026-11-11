@@ -1,18 +1,15 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// Which tabs of a strip fold behind its "More" control when the row is too
-// narrow for all of them.
-//
-// Its own file so the arithmetic is a plain function a test can hold to, apart
-// from the strip that reads the widths off the page.
+// Which tabs fold behind the strip's "More" control when the row is too narrow.
+// The arithmetic is a plain function here, so a test can hold to it.
 
 import { type RefObject, useMemo, useSyncExternalStore } from "react";
 
 /**
  * The tabs that do not fit, in their own order. The open tab always stays on
- * the row, and the row keeps a run from the start: folding a middle tab and
- * keeping a later one would read as a reordered strip.
+ * the row. The rest keep a run from the start, because a gap in the middle
+ * would read as a reordered strip.
  */
 export function foldToFit<Option extends string>(
   options: readonly Option[],

@@ -6,8 +6,8 @@ import { createPortal } from "react-dom";
 import { Disclosure } from "./atoms";
 
 // Where a chart's table door is drawn. A card that holds one chart offers its
-// foot, so the door shares a line with what the figure covers and the door to
-// its records; with no card around it, the door stays under the chart.
+// foot, so the door shares a line with the coverage and the records link.
+// With no card around it, the door stays under the chart.
 const ChartTableSlot = createContext<HTMLElement | null>(null);
 export const ChartTableSlotProvider = ChartTableSlot.Provider;
 
