@@ -727,6 +727,7 @@
   "systemJob.erasure_replay": "Erasure replay after a restore",
   "systemJob.privacy_review": "Privacy review after an erasure",
   "systemJob.extension_inventory": "Extension inventory",
+  "systemJob.extension_privacy": "Extension privacy check",
   "systemJob.extraction_activity_reannounce": "Extracted activity repair",
   "systemJob.forecast_snapshot": "Daily forecast snapshot",
   "systemJob.forecast_evaluation": "Forecast evaluation",
