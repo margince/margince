@@ -1316,7 +1316,8 @@ test-shardqueue:
 ## test-lane-binaries — prove the integration build empties only a directory it
 ## made, and that a shard refuses binaries compiled from other source than its
 ## checkout. Neither fails on its own: one deletes files, the other tests old
-## code and reports green.
+## code and reports green. Also that a shard waits for its own attempt's
+## binaries and stops when the build failed.
 test-lane-binaries:
 	@./scripts/test-lane-binaries.sh
 
