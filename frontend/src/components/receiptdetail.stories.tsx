@@ -63,3 +63,27 @@ export const WithLongSourcePhone: Story = {
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
 };
+
+/** The date of the call Margince read, apart from when it acted, and that its
+ *  reason is Margince's reading. */
+export const WithSourceDateAndInference: Story = {
+  render: () => (
+    <StoryProviders>
+      <OpenSourceProvider openSource={() => undefined}>
+        <ReceiptDetail
+          receipt={{
+            ...receipt,
+            source_occurred_at: "2026-09-10T15:30:00Z",
+            reason_kind: "inference",
+          }}
+        />
+      </OpenSourceProvider>
+    </StoryProviders>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(await canvas.findByText("Details"));
+    await expect(canvas.getByText("Source date")).toBeVisible();
+    await expect(canvas.getByText(/An inference/)).toBeVisible();
+  },
+};

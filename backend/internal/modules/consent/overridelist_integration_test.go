@@ -21,13 +21,7 @@ func TestStandingExceptionsArePagedAndCanBeRevoked(t *testing.T) {
 	e := setupChannelConsent(t)
 	wanted := make(map[ids.UUID]bool)
 	for range 3 {
-		id, err := e.store.Allow(e.ctx, AllowInput{
-			ContactID: e.contact, Category: "requested_followup", Reason: "The contact asked for the follow-up.",
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
-		wanted[id] = true
+		wanted[recordedOverrideAs(e.ctx, t, e.store, e.contact, "requested_followup")] = true
 	}
 	first, page, err := e.store.ListContactOverrides(e.ctx, e.contact, 2, "")
 	if err != nil || len(first) != 2 || !page.HasMore || page.NextCursor == "" {
@@ -66,12 +60,7 @@ func TestStandingExceptionsArePagedAndCanBeRevoked(t *testing.T) {
 
 func TestStandingExceptionReadUsesContactAccessAndRevocationAuthority(t *testing.T) {
 	e := setupChannelConsent(t)
-	id, err := e.store.Allow(e.ctx, AllowInput{
-		ContactID: e.contact, Category: "requested_followup", Reason: "They asked for the next steps.",
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	id := recordedOverrideAs(e.ctx, t, e.store, e.contact, "requested_followup")
 	actor, ok := principal.Actor(e.ctx)
 	if !ok {
 		t.Fatal("the fixture has no actor")
@@ -117,11 +106,7 @@ func TestCarriedStandingExceptionKeepsItsOriginalAuthorAndCompany(t *testing.T) 
 		t.Fatal(err)
 	}
 	company := overrideTestCompany(t, e, recorder, "Original Company")
-	if _, err := e.store.Allow(boundedRepCtx(e.ws, recorder), AllowInput{
-		ContactID: source, Category: "requested_followup", Reason: "Asked for a follow-up.",
-	}); err != nil {
-		t.Fatal(err)
-	}
+	recordedOverrideAs(boundedRepCtx(e.ws, recorder), t, e.store, source, "requested_followup")
 	before, _, err := e.store.ListContactOverrides(e.ctx, source, 50, "")
 	if err != nil || len(before) != 1 {
 		t.Fatalf("original exception = %v, %v", before, err)
@@ -154,9 +139,7 @@ func TestCarriedStandingExceptionKeepsItsOriginalAuthorAndCompany(t *testing.T) 
 
 func TestAStandingExceptionDoesNotAcquireTheReadersNewCompany(t *testing.T) {
 	e := setupChannelConsent(t)
-	if _, err := e.store.Allow(e.ctx, AllowInput{ContactID: e.contact, Category: "requested_followup", Reason: "Requested next steps."}); err != nil {
-		t.Fatal(err)
-	}
+	recordedOverrideAs(e.ctx, t, e.store, e.contact, "requested_followup")
 	before, _, err := e.store.ListContactOverrides(e.ctx, e.contact, 50, "")
 	if err != nil || len(before) != 1 || before[0].SendingEntityId == nil {
 		t.Fatalf("original exception = %v, %v", before, err)
@@ -199,10 +182,7 @@ func overrideTestCompany(t *testing.T, e *channelConsentEnv, user ids.UUID, name
 
 func TestAnUnmarkedStandingExceptionDoesNotInventItsOrigin(t *testing.T) {
 	e := setupChannelConsent(t)
-	id, err := e.store.Allow(e.ctx, AllowInput{ContactID: e.contact, Category: "requested_followup", Reason: "Asked for next steps."})
-	if err != nil {
-		t.Fatal(err)
-	}
+	id := recordedOverrideAs(e.ctx, t, e.store, e.contact, "requested_followup")
 	if _, err := e.owner.Exec(context.Background(), `UPDATE communication_override SET recorded_directly = NULL WHERE id = $1`, id); err != nil {
 		t.Fatal(err)
 	}

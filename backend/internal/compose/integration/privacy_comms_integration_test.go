@@ -36,6 +36,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/modules/privacy"
+	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -261,7 +262,7 @@ func TestErasureRedactsTheDeliveryBehindARedactedActivity(t *testing.T) {
 	// the timeline selector miss it unless erasure reaches mail by address.
 	unlinked := seedDelivery(t, e, "9 years", "Sent with no timeline link", "the unlinked quote", "sent", mailRecipientEmail, ids.UUID{})
 
-	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), contact, "test"); err != nil {
+	if err := privacy.NewEraser(e.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities).EraseContact(e.Admin(), contact, "test"); err != nil {
 		t.Fatalf("EraseContact: %v", err)
 	}
 
@@ -316,7 +317,7 @@ func TestErasureReachesAMessageWhereTheSubjectIsOnlyACcRecipient(t *testing.T) {
 	// nothing commercial is erasable, which is the narrowing, not a regression.
 	e.SeedWonDealLinkedTo(t, fresh.activity)
 
-	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), contact, "test"); err != nil {
+	if err := privacy.NewEraser(e.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities).EraseContact(e.Admin(), contact, "test"); err != nil {
 		t.Fatalf("EraseContact: %v", err)
 	}
 
@@ -342,7 +343,7 @@ func TestErasureParksAPendingDeliveryInsteadOfLeavingItToTransmit(t *testing.T) 
 		"the words still waiting to go out", "pending", mailRecipientEmail, contact)
 	sent := seedDelivery(t, e, "9 years", "Already gone", "the words that left", "sent", mailRecipientEmail, contact)
 
-	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), contact, "test"); err != nil {
+	if err := privacy.NewEraser(e.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities).EraseContact(e.Admin(), contact, "test"); err != nil {
 		t.Fatalf("EraseContact: %v", err)
 	}
 
@@ -412,7 +413,7 @@ func TestErasurePreservesUnlinkedMailUnderATransitiveLegalHold(t *testing.T) {
 	free := seedDelivery(t, e, "9 years", "Ordinary quote",
 		"the quote nobody disputed", "sent", mailRecipientEmail, ids.UUID{})
 
-	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), contact, "test"); err != nil {
+	if err := privacy.NewEraser(e.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities).EraseContact(e.Admin(), contact, "test"); err != nil {
 		t.Fatalf("EraseContact: %v", err)
 	}
 

@@ -368,8 +368,7 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "homeRepair.explain",
     // These name users, recipients and participants, not contact records.
     "approval.scheduled.rearm",
-    "sendPermission.appliesToAndMore_one",
-    "sendPermission.appliesToAndMore_other",
+    "compose.holdRefused",
     "sendPermission.appliesToSome_one",
     "sendPermission.appliesToSome_other",
     "sendPermission.ready",
@@ -589,6 +588,7 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "roomtab.manage.contactHint",
     "roomtab.manage.contactLabel",
     "roomtab.manage.contactOwner",
+    "roomtab.manage.expiredHint",
     "roomtab.manage.foot",
     "roomtab.manage.liveHint",
     "roomtab.manage.welcomeHint",

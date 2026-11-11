@@ -316,6 +316,12 @@ var retired = gatekit.Waive(map[string]string{
 	"backend/internal/modules/integrations/surfe/surfe_test.go":      "the same vendor names, asserted",
 	"backend/internal/modules/integrations/surfe/vendorwire_test.go": "the same, plus the reason",
 	"backend/internal/modules/integrations/surfe/testdata":           "the recording itself: the vendor's bytes",
+
+	// The Google Docs API names a mention of somebody in a Doc a `person`
+	// element with `personProperties`. Decoding it needs those exact keys.
+	"backend/internal/modules/capture/gdocs/document.go": "the Google Docs API's own element " +
+		"and property names, which decoding a Doc must spell as Google does",
+	"backend/internal/modules/capture/gdocs/document_test.go": "the same Google element names, in the Docs the tests decode",
 })
 
 // beyondTheExemptions is the part of a line this census still judges: what is

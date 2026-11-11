@@ -69,6 +69,13 @@ describe("accountsOf", () => {
     ]);
   });
 
+  it("keeps Google's meeting notes on the Google account, even alone", () => {
+    const [google] = accountsOf([connection("gmail"), connection("gdocs")]);
+    expect(google.key).toBe("google");
+    expect(google.notes?.provider).toBe("gdocs");
+    expect(shape([connection("gdocs")])).toEqual(["google: -+-"]);
+  });
+
   it("returns no accounts for an empty roster", () => {
     expect(accountsOf([])).toEqual([]);
   });
@@ -76,17 +83,19 @@ describe("accountsOf", () => {
 
 describe("accountNameOf", () => {
   // A caption that names where a service came from names its account, so the
-  // mailbox and the calendar of one vendor read the same.
+  // mailbox, the calendar and Google's meeting notes read the same.
   it("names both services of a vendor by the vendor, and the rest by kind", () => {
     const providers: CaptureConnection["provider"][] = [
       "gmail",
       "gcal",
+      "gdocs",
       "graph",
       "graphcal",
       "imap",
       "test_mailbox",
     ];
     expect(providers.map(accountNameOf)).toEqual([
+      "connectors.vendorGoogle",
       "connectors.vendorGoogle",
       "connectors.vendorGoogle",
       "connectors.vendorMicrosoft",

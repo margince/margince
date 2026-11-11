@@ -79,6 +79,15 @@ var equivalentContent = map[string]map[string][]equivalence{
 			applied: "d5ec53c23e2347fadc65f9bdd9d63e9dfae40c6897c1e1b8c59f046c8e99eb0e",
 			source:  "76336c558410fc1ee67862f22fb4689b5f9655917af35617f55c11b31f154669",
 		}},
+		// a_unit_sql_runs_as_the_ext_runtime_role first shipped as 1794364497 and
+		// resetting the ext_runtime role always. The source resets it only when an
+		// attribute is wrong. Both leave the same role and grants, and the down
+		// half is unchanged. The applied half is that first text under 1794364497:
+		// a database holding it reaches this version through renumbered.txt.
+		"1794412052": {{
+			applied: "8e277071e58fc236abf58acb178be1c8efbeb0014ef3440f49db0809546e401c",
+			source:  "1822dfeae5b85103a5fb20e819c4f4258c0d3aa4c5b4ef5ea71130c057a53024",
+		}},
 	},
 }
 
@@ -95,10 +104,13 @@ var equivalentContent = map[string]map[string][]equivalence{
 // (backend/internal/platform/dbmigrate/dbmigrate_test.go), which puts the same
 // three cases to this and to assertContentMatches and compares their verdicts.
 func ContentAdmitted(namespace string, m Migration, applied string) bool {
+	return applied == Digest(m) || equivalentTo(namespace, m, applied)
+}
+
+// equivalentTo answers whether a checked entry for m's version names applied
+// as building the schema m's source builds today.
+func equivalentTo(namespace string, m Migration, applied string) bool {
 	current := Digest(m)
-	if applied == current {
-		return true
-	}
 	for _, eq := range equivalentContent[namespace][m.Version] {
 		if applied == eq.applied && current == eq.source {
 			return true

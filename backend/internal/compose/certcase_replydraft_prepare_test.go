@@ -80,7 +80,7 @@ func TestReplyDraftCaseRefusesWhatThisSiteCannotServe(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			_, err := replyDraftCases{}.Prepare(replyDraftFixtureJSON(t, tc.fixture), tc.expected)
+			_, err := replyDraftCases{}.Prepare(fixtureJSON(t, tc.fixture), tc.expected)
 			if err == nil {
 				t.Fatal("Prepare accepted a scenario this site cannot measure")
 			}
@@ -97,7 +97,7 @@ func TestReplyDraftCaseRefusesWhatThisSiteCannotServe(t *testing.T) {
 // assertion.
 func TestReplyDraftFixtureCarriesOnlyWhatProductionIsGiven(t *testing.T) {
 	var fields map[string]json.RawMessage
-	if err := json.Unmarshal(replyDraftFixtureJSON(t, replyDraftVoicedFixture()), &fields); err != nil {
+	if err := json.Unmarshal(fixtureJSON(t, replyDraftVoicedFixture()), &fields); err != nil {
 		t.Fatalf("decoding the fixture: %v", err)
 	}
 	given := map[string]bool{"activity": true, "voice": true}

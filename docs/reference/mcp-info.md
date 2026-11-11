@@ -17,7 +17,7 @@ input and output schema in folds below it. What a tool may do and whether a huma
 | Resources | 14 |
 | Tool catalog | 230.2 KB |
 | Resource catalog | 5.5 KB |
-| Approx. wire tokens | 60345 |
+| Approx. wire tokens | 60328 |
 | Largest tool | `read_context` (11.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -34,9 +34,9 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 |---|---:|---:|---|
 | Output schemas | 50.6 KB | 21% | **No**: a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 54.0 KB | 23% | Yes, every step |
-| Input schemas | 113.8 KB | 49% | Yes, every step |
+| Input schemas | 113.7 KB | 49% | Yes, every step |
 | _Names, annotations, punctuation_ | 11.8 KB | 5% | Partly |
-| **Description + input schema** | **167.8 KB** | **72%** | **the recurring cost** |
+| **Description + input schema** | **167.7 KB** | **72%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -71,7 +71,7 @@ descriptions and input schemas are what each step pays for.
 | [`change_activities`](#change_activities) | Log, plan and file activities |  |  | 1968 |
 | [`change_attention`](#change_attention) | Act on proposals, notices and the weekly plan |  |  | 899 |
 | [`change_capture`](#change_capture) | Decide what comes into the CRM |  |  | 1080 |
-| [`change_compliance`](#change_compliance) | Record consent, stops, holds and privacy work |  |  | 893 |
+| [`change_compliance`](#change_compliance) | Record consent, stops, holds and privacy work |  |  | 879 |
 | [`change_lists`](#change_lists) | Make and change lists |  |  | 620 |
 | [`change_my_settings`](#change_my_settings) | Change the user's own preferences and voice |  |  | 601 |
 | [`change_offers`](#change_offers) | Work offers, contracts and deal rooms |  |  | 678 |
@@ -1870,10 +1870,10 @@ themselves; requires passport scope "write".)
 
 ```text
 Do the user's privacy work on a contact or record: record consent, record that a contact asked to
-stop, allow a refused category, record an exchange with a lead or contact, answer a refused send,
-open or update a data subject request, assign a disclosure duty, confirm a source, accept or decline
-what a subject proposed, place a legal hold and pin an activity to the retention floor.
-record_consent, allow_contact, revoke_override, lift_suppression, record_qualifying_event,
+stop, take back a standing exception, record an exchange with a lead or contact, answer a refused
+send, open or update a data subject request, assign a disclosure duty, confirm a source, accept or
+decline what a subject proposed, place a legal hold and pin an activity to the retention floor.
+record_consent, revoke_override, lift_suppression, record_qualifying_event,
 retract_qualifying_event, record_lead_qualifying_event, retract_lead_qualifying_event,
 retract_acquisition_request and record_communication_context have legal weight: tell the user what
 you will record and call only after they say yes. The proof names you as its author. Record only
@@ -1883,14 +1883,13 @@ done in the app. Use send_outbound double_opt_in, privacy_notice or details_conf
 contact, read_details contact_consent, contact_consent_guard or contact_stops to check a contact
 before you record, read_workspace topics data_subject_requests, notice_cases, audit_log, legal_holds
 and restricted_records to read the queues, and read_workspace topic record_history for one record's
-trail. (Runs immediately; the user's yes is needed for the actions allow_contact,
-confirm_notice_source, lift_lead_suppression, lift_suppression, open_data_subject_request,
-pin_activity_to_floor, place_legal_hold, record_communication_context, record_consent,
-record_lead_qualifying_event, record_qualifying_event, resolve_confirm_submission,
-retract_acquisition_request, retract_lead_qualifying_event, retract_qualifying_event,
-revoke_override, suppress_contact, update_data_subject_request, so tell them what the call will
-change and get it before calling, unless they asked for this call themselves; requires passport
-scope "write".)
+trail. (Runs immediately; the user's yes is needed for the actions confirm_notice_source,
+lift_lead_suppression, lift_suppression, open_data_subject_request, pin_activity_to_floor,
+place_legal_hold, record_communication_context, record_consent, record_lead_qualifying_event,
+record_qualifying_event, resolve_confirm_submission, retract_acquisition_request,
+retract_lead_qualifying_event, retract_qualifying_event, revoke_override, suppress_contact,
+update_data_subject_request, so tell them what the call will change and get it before calling,
+unless they asked for this call themselves; requires passport scope "write".)
 ```
 
 <details><summary>Input schema</summary>
@@ -1901,7 +1900,6 @@ scope "write".)
     "action": {
       "description": "Which act to run; read_workspace topic actions lists each action's body",
       "enum": [
-        "allow_contact",
         "assign_notice_case",
         "assign_notice_case_review",
         "confirm_notice_source",
@@ -1937,7 +1935,7 @@ scope "write".)
       "type": "string"
     },
     "id": {
-      "description": "allow_contact, assign_notice_case, assign_notice_case_review, confirm_notice_source, lift_lead_suppression, lift_suppression, record_communication_context, record_consent, record_lead_qualifying_event, record_qualifying_event, resolve_confirm_submission, retract_acquisition_request, retract_lead_qualifying_event, retract_qualifying_event, revoke_override, suppress_contact, update_data_subject_request only",
+      "description": "assign_notice_case, assign_notice_case_review, confirm_notice_source, lift_lead_suppression, lift_suppression, record_communication_context, record_consent, record_lead_qualifying_event, record_qualifying_event, resolve_confirm_submission, retract_acquisition_request, retract_lead_qualifying_event, retract_qualifying_event, revoke_override, suppress_contact, update_data_subject_request only",
       "type": "string"
     },
     "idempotency_key": {
@@ -1954,7 +1952,7 @@ scope "write".)
       "type": "string"
     },
     "request_body": {
-      "description": "allow_contact, assign_notice_case, assign_notice_case_review, confirm_notice_source, lift_lead_suppression, lift_suppression, open_data_subject_request, pin_activity_to_floor, place_legal_hold, record_communication_context, record_consent, record_lead_qualifying_event, record_qualifying_event, resolve_confirm_submission, revoke_override, suppress_contact, update_data_subject_request only: The chosen action's request body; read_workspace topic actions lists its shape",
+      "description": "assign_notice_case, assign_notice_case_review, confirm_notice_source, lift_lead_suppression, lift_suppression, open_data_subject_request, pin_activity_to_floor, place_legal_hold, record_communication_context, record_consent, record_lead_qualifying_event, record_qualifying_event, resolve_confirm_submission, revoke_override, suppress_contact, update_data_subject_request only: The chosen action's request body; read_workspace topic actions lists its shape",
       "type": "object"
     },
     "suppressionId": {

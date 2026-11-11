@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/compose/strength_handlers.go backend/internal/modules/contacts/strength.go backend/internal/modules/contacts/strengthaccount.go backend/api/crm.yaml backend/internal/modules/capture/participant.go backend/internal/modules/activities/participantlog.go backend/internal/modules/contacts/participant.go backend/internal/modules/search/graphedge.go backend/internal/modules/search/graphedgegen.go backend/internal/shared/kernel/relstrength backend/internal/compose/network backend/internal/modules/privacy/erasure_graph.go backend/internal/modules/search/graphnewpairs.go backend/internal/modules/search/graphworklocks.go backend/internal/modules/search/graphworkqueue.go backend/internal/modules/search/graphedgetargets.go -->
+<!-- describes: backend/internal/compose/strength_handlers.go backend/internal/modules/contacts/strength.go backend/internal/modules/contacts/strengthaccount.go backend/api/crm.yaml backend/internal/modules/capture/participant.go backend/internal/modules/activities/participantlog.go backend/internal/modules/activities/provensender.go backend/internal/modules/consent/qualifyingground.go backend/internal/compose/provensenders backend/internal/modules/activities/relinkparticipants.go backend/internal/modules/contacts/participant.go backend/internal/modules/search/graphedge.go backend/internal/modules/search/graphedgegen.go backend/internal/shared/kernel/relstrength backend/internal/compose/network backend/internal/modules/privacy/erasure_graph.go backend/internal/modules/search/graphnewpairs.go backend/internal/modules/search/graphworklocks.go backend/internal/modules/search/graphworkqueue.go backend/internal/modules/search/graphedgetargets.go -->
 # The relationship graph: participants, the interaction edge & deal coverage
 
 Margince answers the question *is this account cold* from the real parties to each conversation. It
@@ -107,7 +107,7 @@ Four modules touch the table, and each agreement in the table-owner gate states 
 
 | Module | What it writes | Why it, and not the owner |
 |---|---|---|
-| `activities` | **Owner.** The path for calls logged by hand: the human who logged it plus the contacts they linked, with the same roles from direction that capture stamps. | — |
+| `activities` | **Owner.** The path for calls logged by hand: the human who logged it plus the contacts they linked, with the same roles from direction that capture stamps. A received one names its sender as [below](#who-sent-a-received-message). | — |
 | `capture` | Both arms of a captured message, in the ingest transaction. | The connector principal is the only place the mailbox owner is known. |
 | `contacts` | Turns the address arm into a `contact_id` at `linkActivityToContact`. | That is the one chokepoint every `ensure` path reaches, **and** the one that has already checked the contact against a merge. Naming the party is the same write, on the same row, in the same transaction as the link. |
 | `privacy` | Erasure deletes rows whose only identity is the subject. It sets the subject's arms to NULL on rows that also name one of our users. | The address arm exists for a party who is not a record. So it lives through the `contact_email` delete and would keep an erased address open to read and to a new match. |
@@ -115,6 +115,33 @@ Four modules touch the table, and each agreement in the table-owner gate states 
 One party gets one row. `nameContactAmongParticipants` **updates** the address row and does not add a
 second. It leaves the row alone if a contact row for the same `(activity, role)` already exists. In
 that case it is a second address for a party already recorded, not a second party.
+
+### Who sent a received message
+
+A follow-up the contact asked for needs a message they wrote. `inboundQualifyingEvent` counts a
+received message filed under the contact only when its `from` participant names them. It asks
+through `authorIsTheSubject`, the same rule a reply uses. That rule matches the contact record.
+On a row that names no record, it matches the recipient's address or channel account.
+
+A message logged by hand names its sender like this:
+
+- With `sender_contact_id`, that linked contact is `from`, and every other linked contact is `cc`.
+- Without it, a message linked to one contact names that contact. One linked to two or more
+  contacts names none and keeps each as `cc`, so a group chat is no member's request.
+- The stated headers of a logged email win over both.
+
+A contact linked to a received message later becomes its sender only on proof
+(`stampProvenSender`). The message names no sender by record, seat or account, and its stated
+sender address is that contact's. No other contact holds that address now or held it before. The
+data task in `compose/provensenders` applies the same rule to older messages.
+
+When a message's contact link is replaced, the old contact's `from` row never moves to the new
+contact. A row that states an address or account stays as a bare sender row. A row that states
+neither becomes a `cc` row of the new contact. The new contact is then the sender only on the same
+proof.
+
+A sender row that names a contact keeps naming them after the address moves to someone else
+(`relstrength.ParticipantNamesSQL`). This holds while that contact holds the address, or once held it.
 
 ### Getting history back
 

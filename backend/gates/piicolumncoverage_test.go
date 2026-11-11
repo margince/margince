@@ -577,7 +577,7 @@ func cascadeStatements(t *testing.T, consts map[string]string) []string {
 			})
 		}
 	}
-	return out
+	return append(out, declaredErasureStatements(t)...)
 }
 
 // executedSQL answers the argument a pgx call EXECUTES, if the node is one.

@@ -1,0 +1,476 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+// Package oidctoken verifies the RS256 OIDC ID tokens that Google Pub/Sub and
+// the Google and Microsoft sign-in flows present.
+package oidctoken
+
+// A hand-rolled verifier for an RS256 OIDC ID token — the one Google Pub/Sub
+// attaches to a push request (Authorization: Bearer <jwt>), and the ones the
+// Google and Microsoft sign-in flows exchange a code for. Keys are fetched from
+// the issuer's JWKS endpoint and cached per its Cache-Control max-age. It checks
+// the signature, the exp/iat window, and hands the claims to two injected
+// predicates: WHOSE token this is (checkIssuer) and WHICH identity it may speak
+// for (matchIdentity). No new module dependency — crypto/rsa + net/http,
+// mirroring gmail/client.go's hand-rolled provider I/O. Every rejection
+// collapses to one opaque error; the caller answers 401 and logs the detail
+// server-side (never echoed to the client).
+
+import (
+	"context"
+	"crypto"
+	"crypto/rsa"
+	"crypto/sha256"
+	"encoding/base64"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
+	"math/big"
+	"net/http"
+	"strconv"
+	"strings"
+	"sync"
+	"time"
+
+	"github.com/margince/margince/backend/internal/platform/outbound"
+)
+
+// GoogleJWKSURL serves the keys Google signs its ID tokens with.
+const GoogleJWKSURL = "https://www.googleapis.com/oauth2/v3/certs"
+
+// oidcSkew tolerates small clock differences on exp/iat.
+const oidcSkew = 2 * time.Minute
+
+// jwksRefreshCooldown bounds JWKS refreshes across calls, not just within
+// one: the header's alg/kid are read before any signature check, so an
+// unauthenticated caller can force a cache miss on every request just by
+// sending a never-seen kid. Without this cooldown, a burst of such tokens
+// would drive one outbound HTTPS fetch (and one hold of v.mu) per request.
+const jwksRefreshCooldown = time.Minute
+
+// ErrRejected is the single opaque failure the verifier returns; the
+// wrapped cause is for server-side logs only.
+var ErrRejected = errors.New("oidc: token rejected")
+
+// Verifier checks an RS256 ID token against one issuer's published keys.
+type Verifier struct {
+	jwksURL string
+	// checkIssuer settles WHOSE token this is, and is separate from
+	// matchIdentity because the two answer different questions and only one of
+	// them may ever be omitted. Every constructor supplies an issuer check as a
+	// positional argument, so a new provider cannot reach the signature check
+	// having forgotten it — the failure that would otherwise let any IdP with a
+	// reachable JWKS mint a token this verifier accepts.
+	checkIssuer   func(Claims) error
+	matchIdentity func(Claims) error
+	client        *http.Client
+	now           func() time.Time
+	// coalesced reports a caller JOINING an in-flight refresh rather than
+	// starting one. A seam for the reason `now` is one: the decision is made
+	// under the mutex and is gone before anything outside can look, so a test
+	// holding the first fetch open until the second arrives has nothing else to
+	// wait on — and starting a goroutine says only that it was created.
+	coalesced func()
+
+	mu          sync.Mutex
+	keys        map[string]*rsa.PublicKey
+	expires     time.Time
+	nextRefresh time.Time
+	inflight    *jwksRefreshFlight
+}
+
+// jwksRefreshFlight coalesces concurrent JWKS refreshes: the first caller
+// fetches, everyone arriving while the fetch is in flight waits on done and
+// shares its outcome instead of being rejected by the cooldown.
+type jwksRefreshFlight struct {
+	done chan struct{}
+	err  error
+}
+
+// jwksFetchTimeout bounds the key fetch. A refusal, not a preference.
+//
+// Five seconds, the same bound the consent-metadata fetch takes, and for a
+// sharper version of the same reason: a sign-in is in flight while this runs,
+// and a provider that cannot serve a few kilobytes of JSON in five seconds is
+// not one to hold an authentication open for.
+//
+// The caching inverts the risk that would otherwise argue for a longer bound.
+// Keys are held under `expires` and refreshes COALESCE — the first caller
+// fetches and everyone arriving during it waits on that outcome. So:
+//
+//   - Too tight costs one retry on a cold cache. The fetch is rare (a first
+//     sign-in after a deploy, a key rotation), and a failed refresh does not
+//     invalidate keys still within `expires`.
+//   - Too loose blocks EVERY concurrent waiter for the full timeout, because
+//     they are all sharing one in-flight fetch. Thirty seconds of that is a
+//     provider hiccup becoming a sign-in outage.
+//
+// The cheap failure is one retry; the expensive one is every sign-in arriving
+// during a slow response. The bound is set for the expensive one.
+const jwksFetchTimeout = 5 * time.Second
+
+// New builds a verifier for one issuer. checkIssuer and matchIdentity are
+// callbacks, so a shared verifier does not hardcode its provider or its caller.
+// Google Pub/Sub and Google sign-in read one issuer and different identities.
+// Microsoft reads a different issuer entirely.
+func New(jwksURL string, checkIssuer, matchIdentity func(Claims) error) *Verifier {
+	return &Verifier{
+		jwksURL:       jwksURL,
+		checkIssuer:   checkIssuer,
+		matchIdentity: matchIdentity,
+		client:        &http.Client{Timeout: jwksFetchTimeout},
+		now:           time.Now,
+	}
+}
+
+// NewGoogle is the Google-issuer verifier. An empty jwksURL falls back to
+// Google's own endpoint. The issuer check is supplied here, not by each caller,
+// so no Google caller can be composed without one.
+func NewGoogle(jwksURL string, matchIdentity func(Claims) error) *Verifier {
+	if jwksURL == "" {
+		jwksURL = GoogleJWKSURL
+	}
+	return New(jwksURL, googleIssuer, matchIdentity)
+}
+
+// IdentityResolvedPerRequest marks a verifier whose identity check arrives with
+// each call, through VerifyAs. A sign-in's OAuth client is resolved when the
+// flow runs, so no audience is known when the verifier is built. Verify fails
+// closed on it: the caller never said whose token it expects.
+func IdentityResolvedPerRequest(Claims) error {
+	return fmt.Errorf("%w: the identity check belongs to the request", ErrRejected)
+}
+
+// googleIssuer accepts the two spellings Google issues ID tokens under.
+func googleIssuer(c Claims) error {
+	if c.Iss != "accounts.google.com" && c.Iss != "https://accounts.google.com" {
+		return fmt.Errorf("%w: iss %q", ErrRejected, c.Iss)
+	}
+	return nil
+}
+
+// WithHTTPClient replaces the client that fetches the keys.
+func (v *Verifier) WithHTTPClient(c *http.Client) *Verifier {
+	v.client = c
+	return v
+}
+
+// SetClock replaces the clock that judges exp and iat.
+func (v *Verifier) SetClock(now func() time.Time) *Verifier {
+	v.now = now
+	return v
+}
+
+type oidcHeader struct {
+	Alg string `json:"alg"`
+	Kid string `json:"kid"`
+}
+
+// Claims are the ID token fields a sign-in or push check reads.
+type Claims struct {
+	Iss           string `json:"iss"`
+	Aud           string `json:"aud"`
+	Sub           string `json:"sub"`
+	Email         string `json:"email"`
+	EmailVerified bool   `json:"email_verified"`
+	Exp           int64  `json:"exp"`
+	Iat           int64  `json:"iat"`
+	// Tid is the Microsoft directory the account belongs to. Google issues no
+	// such claim; for Microsoft it is what says WHICH tenant vouched for the
+	// email, and the issuer is derived from it, so the two are read together.
+	Tid string `json:"tid"`
+	// PreferredUsername is Microsoft's sign-in name for the account. Read only
+	// as a fallback where a work/school account carries no `email` claim, and
+	// only under a tenant this installation trusts.
+	PreferredUsername string `json:"preferred_username"`
+	// Groups is the token's standard `groups` claim, feeding identity's
+	// additive group→role grants. Absent decodes as nil — the empty list the
+	// sign-in adapters hand on, never an error, because most Google tokens
+	// carry no such claim and a token naming no groups simply grants nothing.
+	Groups []string `json:"groups"`
+	// GivenName is the standard `given_name` claim; absent decodes as "".
+	GivenName string `json:"given_name"`
+	// Picture is the standard `picture` claim. Only the Google adapter hands it
+	// on: Microsoft sends no picture URL, and a URL from anywhere else is not fetched.
+	Picture string `json:"picture"`
+}
+
+// Verify returns the decoded claims only for a well-formed, correctly-signed
+// token whose issuer and identity both pass the injected checks.
+func (v *Verifier) Verify(ctx context.Context, bearer string) (Claims, error) {
+	return v.VerifyAs(ctx, bearer, v.matchIdentity)
+}
+
+// VerifyAs is Verify against an identity the CALLER names, for a flow whose
+// OAuth client is resolved per request. The JWKS cache, the signature and the
+// issuer check are the same either way; only the last question — whose token
+// this must be — moves from construction to the call.
+func (v *Verifier) VerifyAs(ctx context.Context, bearer string, matchIdentity func(Claims) error) (Claims, error) {
+	if bearer == "" {
+		return Claims{}, fmt.Errorf("%w: empty bearer", ErrRejected)
+	}
+	parts := strings.Split(bearer, ".")
+	if len(parts) != 3 {
+		return Claims{}, fmt.Errorf("%w: not a JWT", ErrRejected)
+	}
+	hdr, err := decodeHeaderSegment(parts[0])
+	if err != nil {
+		return Claims{}, fmt.Errorf("%w: header: %v", ErrRejected, err)
+	}
+	if hdr.Alg != "RS256" {
+		return Claims{}, fmt.Errorf("%w: alg %q not RS256", ErrRejected, hdr.Alg)
+	}
+	key, err := v.key(ctx, hdr.Kid)
+	if err != nil {
+		return Claims{}, fmt.Errorf("%w: key: %v", ErrRejected, err)
+	}
+	if err := verifyRS256(key, parts[0]+"."+parts[1], parts[2]); err != nil {
+		return Claims{}, fmt.Errorf("%w: signature: %v", ErrRejected, err)
+	}
+	claims, err := decodeClaimsSegment(parts[1])
+	if err != nil {
+		return Claims{}, fmt.Errorf("%w: claims: %v", ErrRejected, err)
+	}
+	// A rejected token returns the zero value, never the claims it decoded
+	// but refused: a caller that checks err after claims — one careless
+	// read away given every caller here checks err first today — must not
+	// be handed an attacker-controlled email/sub on the rejection path.
+	if err := v.checkClaims(claims, matchIdentity); err != nil {
+		return Claims{}, err
+	}
+	return claims, nil
+}
+
+func (v *Verifier) checkClaims(c Claims, matchIdentity func(Claims) error) error {
+	// Fail CLOSED on a missing issuer check rather than calling through a nil
+	// and panicking. Both constructors supply one, so this cannot happen today
+	// — but the consequence of it happening is a token nobody has established
+	// the issuer of, and the safe reading of "I was not told whose tokens to
+	// accept" is none.
+	if v.checkIssuer == nil {
+		return fmt.Errorf("%w: no issuer check wired", ErrRejected)
+	}
+	// The same fail-closed reading for the identity: an adapter built without
+	// one is a caller that never said whose token it expects.
+	if matchIdentity == nil {
+		return fmt.Errorf("%w: no identity check wired", ErrRejected)
+	}
+	if err := v.checkIssuer(c); err != nil {
+		return err
+	}
+	now := v.now()
+	if c.Exp == 0 || now.After(time.Unix(c.Exp, 0).Add(oidcSkew)) {
+		return fmt.Errorf("%w: expired", ErrRejected)
+	}
+	if c.Iat == 0 {
+		return fmt.Errorf("%w: missing iat", ErrRejected)
+	}
+	if now.Add(oidcSkew).Before(time.Unix(c.Iat, 0)) {
+		return fmt.Errorf("%w: issued in the future", ErrRejected)
+	}
+	return matchIdentity(c)
+}
+
+// key returns the cached public key for kid, refreshing the JWKS if the
+// cache is empty, expired, or missing the kid (a rotation) — subject to
+// jwksRefreshCooldown throttling refreshes across calls.
+func (v *Verifier) key(ctx context.Context, kid string) (*rsa.PublicKey, error) {
+	if kid == "" {
+		return nil, errors.New("no kid")
+	}
+	if k, ok := v.lookupKey(kid); ok {
+		return k, nil
+	}
+	if err := v.refresh(ctx); err != nil {
+		return nil, err
+	}
+	k, ok := v.lookupKey(kid)
+	if !ok {
+		return nil, fmt.Errorf("unknown kid %q", kid)
+	}
+	return k, nil
+}
+
+// lookupKey reports the cached key for kid, if any, and whether the cache
+// (as a whole) is still within its TTL.
+func (v *Verifier) lookupKey(kid string) (*rsa.PublicKey, bool) {
+	v.mu.Lock()
+	defer v.mu.Unlock()
+	if k, ok := v.keys[kid]; ok && v.now().Before(v.expires) {
+		return k, true
+	}
+	return nil, false
+}
+
+type jwk struct {
+	Kid string `json:"kid"`
+	Kty string `json:"kty"`
+	N   string `json:"n"`
+	E   string `json:"e"`
+}
+
+// refresh bounds JWKS fetches: concurrent callers coalesce onto one in-flight
+// fetch (waiting for its result rather than being rejected), and once a fetch
+// completes, further refreshes are throttled for jwksRefreshCooldown. The
+// network fetch runs without holding v.mu — only the flight bookkeeping and
+// the cache swap are locked.
+func (v *Verifier) refresh(ctx context.Context) error {
+	v.mu.Lock()
+	if fl := v.inflight; fl != nil {
+		v.mu.Unlock()
+		if v.coalesced != nil {
+			v.coalesced()
+		}
+		select {
+		case <-fl.done:
+			return fl.err
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+	}
+	if v.now().Before(v.nextRefresh) {
+		v.mu.Unlock()
+		return errors.New("jwks: refresh throttled")
+	}
+	fl := &jwksRefreshFlight{done: make(chan struct{})}
+	v.inflight = fl
+	v.mu.Unlock()
+
+	keys, expires, err := v.fetchJWKS(ctx)
+
+	v.mu.Lock()
+	if err == nil {
+		v.keys = keys
+		v.expires = expires
+	}
+	v.nextRefresh = v.now().Add(jwksRefreshCooldown)
+	v.inflight = nil
+	fl.err = err
+	close(fl.done)
+	v.mu.Unlock()
+	return err
+}
+
+// fetchJWKS performs the outbound HTTPS GET and parses the key set. It takes
+// no lock: it is called from refresh with v.mu already released.
+func (v *Verifier) fetchJWKS(ctx context.Context) (map[string]*rsa.PublicKey, time.Time, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, v.jwksURL, nil)
+	if err != nil {
+		return nil, time.Time{}, err
+	}
+	// No credential rides on this request — a key set is published for anyone —
+	// so the agent is the only thing the provider's operator can attribute it
+	// by, and it is read on a schedule rather than once.
+	req.Header.Set("User-Agent", outbound.KeySetHeader)
+	resp, err := v.client.Do(req)
+	if err != nil {
+		return nil, time.Time{}, err
+	}
+	body, readErr := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+	if closeErr := resp.Body.Close(); closeErr != nil {
+		return nil, time.Time{}, fmt.Errorf("jwks: close response body: %w", closeErr)
+	}
+	if resp.StatusCode != http.StatusOK {
+		return nil, time.Time{}, fmt.Errorf("jwks: status %d", resp.StatusCode)
+	}
+	if readErr != nil {
+		return nil, time.Time{}, readErr
+	}
+	var set struct {
+		Keys []jwk `json:"keys"`
+	}
+	if err := json.Unmarshal(body, &set); err != nil {
+		return nil, time.Time{}, err
+	}
+	keys := make(map[string]*rsa.PublicKey, len(set.Keys))
+	for _, k := range set.Keys {
+		if k.Kty != "RSA" || k.Kid == "" {
+			continue
+		}
+		pub, err := rsaPublicKey(k.N, k.E)
+		if err != nil {
+			continue
+		}
+		keys[k.Kid] = pub
+	}
+	if len(keys) == 0 {
+		return nil, time.Time{}, errors.New("jwks: no usable RSA keys")
+	}
+	return keys, v.now().Add(cacheTTL(resp.Header.Get("Cache-Control"))), nil
+}
+
+// cacheTTL reads max-age from a Cache-Control header, clamped to [1m, 24h]
+// with a 1h default when absent — the JWKS is safe to reuse between rotations.
+func cacheTTL(cacheControl string) time.Duration {
+	ttl := time.Hour
+	for part := range strings.SplitSeq(cacheControl, ",") {
+		part = strings.TrimSpace(part)
+		if v, ok := strings.CutPrefix(part, "max-age="); ok {
+			if secs, err := strconv.Atoi(v); err == nil {
+				ttl = time.Duration(secs) * time.Second
+			}
+		}
+	}
+	if ttl < time.Minute {
+		ttl = time.Minute
+	}
+	if ttl > 24*time.Hour {
+		ttl = 24 * time.Hour
+	}
+	return ttl
+}
+
+func rsaPublicKey(nB64, eB64 string) (*rsa.PublicKey, error) {
+	nBytes, err := base64.RawURLEncoding.DecodeString(nB64)
+	if err != nil {
+		return nil, err
+	}
+	eBytes, err := base64.RawURLEncoding.DecodeString(eB64)
+	if err != nil {
+		return nil, err
+	}
+	e := 0
+	for _, b := range eBytes {
+		e = e<<8 | int(b)
+	}
+	if e == 0 {
+		return nil, errors.New("jwk: zero exponent")
+	}
+	return &rsa.PublicKey{N: new(big.Int).SetBytes(nBytes), E: e}, nil
+}
+
+func verifyRS256(key *rsa.PublicKey, signingInput, sigB64 string) error {
+	sig, err := base64.RawURLEncoding.DecodeString(sigB64)
+	if err != nil {
+		return err
+	}
+	h := sha256.Sum256([]byte(signingInput))
+	// RS256 signature VERIFICATION per RFC 7518 §3.3 — PKCS#1 v1.5 is the
+	// algorithm Google signs these tokens with; nothing is encrypted here.
+	return rsa.VerifyPKCS1v15(key, crypto.SHA256, h[:], sig) // NOSONAR(go:S5542) verification, not encryption
+}
+
+func decodeHeaderSegment(seg string) (oidcHeader, error) {
+	var hdr oidcHeader
+	b, err := base64.RawURLEncoding.DecodeString(seg)
+	if err != nil {
+		return oidcHeader{}, err
+	}
+	if err := json.Unmarshal(b, &hdr); err != nil {
+		return oidcHeader{}, err
+	}
+	return hdr, nil
+}
+
+func decodeClaimsSegment(seg string) (Claims, error) {
+	var claims Claims
+	b, err := base64.RawURLEncoding.DecodeString(seg)
+	if err != nil {
+		return Claims{}, err
+	}
+	if err := json.Unmarshal(b, &claims); err != nil {
+		return Claims{}, err
+	}
+	return claims, nil
+}

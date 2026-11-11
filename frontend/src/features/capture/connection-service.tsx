@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { ArrowRight, History } from "lucide-react";
+import { ArrowRight, FileText, History, type LucideIcon } from "lucide-react";
+import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
 import { Button } from "../../design-system/atoms";
 import { ServiceList, ServiceRow } from "../../design-system/servicerow";
@@ -9,10 +10,12 @@ import { statusTone } from "../../design-system/statusbadge";
 import {
   type AccountVendor,
   type ConnectionAccount,
+  MEETING_NOTES_PROVIDER,
   VENDOR_SERVICES,
 } from "../../format/connectorprovider";
 import { formatDateTime } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
+import type { MessageKey } from "../../i18n/en";
 import type { ImportWindow } from "../../lib/connect-account";
 import { SERVICE_ICON, SERVICE_WORDS } from "../../lib/connect-services";
 import {
@@ -34,8 +37,9 @@ type Provider = CaptureConnection["provider"];
 
 /**
  * The services an account brings in, one line each. A Google or Microsoft 365
- * account has new mail, past email and the calendar. Any other has new mail
- * alone. A vendor account names the service it is missing, with its connect.
+ * account has new mail, past email and the calendar, and Google adds meeting
+ * notes. Any other has new mail alone. A vendor account names the service it
+ * is missing, with its connect.
  */
 export function AccountServices({
   account,
@@ -45,6 +49,7 @@ export function AccountServices({
   connectPendingFor,
   onConnect,
   onImport,
+  onStopNotes,
 }: Readonly<{
   account: ConnectionAccount;
   vendor: AccountVendor | null;
@@ -58,9 +63,11 @@ export function AccountServices({
    *  past-email import out. */
   onConnect: ((provider: Provider) => void) | null;
   onImport: () => void;
+  /** Opens the confirm that stops the meeting notes alone. */
+  onStopNotes: () => void;
 }>) {
   const t = useT();
-  const { mail, calendar } = account;
+  const { mail, calendar, notes } = account;
   const mailProvider = vendor ? VENDOR_SERVICES[vendor].mail : null;
   const calendarProvider = vendor ? VENDOR_SERVICES[vendor].calendar : null;
   return (
@@ -92,18 +99,78 @@ export function AccountServices({
           onConnect={() => onConnect(calendarProvider)}
         />
       )}
+      {notes && vendor === "google" && (
+        <ConnectedService conn={notes} kind="notes">
+          <NotesAccountMismatch notes={notes} calendar={calendar} />
+          {onConnect && (
+            <Button variant="link" onClick={onStopNotes}>
+              {t("connectors.notes.stop")}
+            </Button>
+          )}
+        </ConnectedService>
+      )}
+      {!notes && vendor === "google" && onConnect && (
+        <MissingService
+          kind="notes"
+          connectLabel={t("connectors.notes.connect")}
+          pending={connectPendingFor === MEETING_NOTES_PROVIDER}
+          onConnect={() => onConnect(MEETING_NOTES_PROVIDER)}
+        />
+      )}
     </ServiceList>
   );
 }
 
-type ServiceKind = "mail" | "calendar";
+type ServiceKind = "mail" | "calendar" | "notes";
+
+// Meeting notes is a row on Connections only. The connect flow and onboarding
+// offer mail and calendar, so its words sit beside theirs.
+const ROW_WORDS: Record<ServiceKind, { name: MessageKey; desc: MessageKey }> = {
+  ...SERVICE_WORDS,
+  notes: { name: "connectors.notes.name", desc: "connectors.notes.desc" },
+};
+
+const ROW_ICON: Record<ServiceKind, LucideIcon> = {
+  ...SERVICE_ICON,
+  notes: FileText,
+};
 
 function useServiceWords(kind: ServiceKind) {
   const t = useT();
   return {
-    name: t(SERVICE_WORDS[kind].name),
-    desc: t(SERVICE_WORDS[kind].desc),
+    name: t(ROW_WORDS[kind].name),
+    desc: t(ROW_WORDS[kind].desc),
   };
+}
+
+/** The notes are read only for meetings in the calendar of the same Google
+ *  account, so notes connected with another account say they will read none. */
+export function notesAccountDiffers(
+  notes: CaptureConnection,
+  calendar: CaptureConnection | null,
+): boolean {
+  const own = notes.account_label?.trim().toLowerCase();
+  const cal = calendar?.account_label?.trim().toLowerCase();
+  return Boolean(own && cal && own !== cal);
+}
+
+function NotesAccountMismatch({
+  notes,
+  calendar,
+}: Readonly<{
+  notes: CaptureConnection;
+  calendar: CaptureConnection | null;
+}>) {
+  const t = useT();
+  if (!calendar || !notesAccountDiffers(notes, calendar)) return null;
+  return (
+    <p className="t-caption" data-testid="connector-notes-other-account">
+      {t("connectors.notes.otherAccount", {
+        notes: notes.account_label ?? "",
+        calendar: calendar.account_label ?? "",
+      })}
+    </p>
+  );
 }
 
 function PastEmailService({
@@ -165,7 +232,7 @@ function MissingService({
   return (
     <ServiceRow
       testId={`connector-${kind}-missing`}
-      icon={SERVICE_ICON[kind]}
+      icon={ROW_ICON[kind]}
       name={words.name}
       caption={words.desc}
       status={{
@@ -182,11 +249,17 @@ function MissingService({
 }
 
 // A connected service and its one badge. A calendar that can book links
-// onward to Meetings.
+// onward to Meetings. Meeting notes read a Doc when a meeting carries one, so
+// that row names no sync time.
 function ConnectedService({
   conn,
   kind,
-}: Readonly<{ conn: CaptureConnection; kind: ServiceKind }>) {
+  children,
+}: Readonly<{
+  conn: CaptureConnection;
+  kind: ServiceKind;
+  children?: ReactNode;
+}>) {
   const t = useT();
   const words = useServiceWords(kind);
   const badge = serviceBadge(conn);
@@ -197,12 +270,16 @@ function ConnectedService({
   return (
     <ServiceRow
       testId={`connector-${conn.provider}`}
-      icon={SERVICE_ICON[kind]}
+      icon={ROW_ICON[kind]}
       name={words.name}
       caption={
-        <>
-          {words.desc} <LastSynced conn={conn} />
-        </>
+        kind === "notes" ? (
+          words.desc
+        ) : (
+          <>
+            {words.desc} <LastSynced conn={conn} />
+          </>
+        )
       }
       status={{ tone: badge.tone, label: t(badge.label), live: badge.live }}
     >
@@ -215,6 +292,7 @@ function ConnectedService({
           <ArrowRight aria-hidden="true" />
         </Button>
       )}
+      {children}
     </ServiceRow>
   );
 }

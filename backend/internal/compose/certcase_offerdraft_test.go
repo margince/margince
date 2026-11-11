@@ -57,15 +57,6 @@ func offerDraftDealFixture() offerDraftFixture {
 	}
 }
 
-func offerDraftFixtureJSON(t *testing.T, f offerDraftFixture) json.RawMessage {
-	t.Helper()
-	raw, err := json.Marshal(f)
-	if err != nil {
-		t.Fatalf("encoding the fixture: %v", err)
-	}
-	return raw
-}
-
 // offerDraftExpectation is what the corpus asserts, encoded as the corpus will
 // carry it — beside the fixture, never inside it.
 func offerDraftExpectation(t *testing.T, lines map[string]offerDraftExpectedLine) json.RawMessage {
@@ -162,7 +153,7 @@ func catalogIDFor(t *testing.T, req model.Request, name string) string {
 
 func prepareOfferDraftCase(t *testing.T, f offerDraftFixture, expected json.RawMessage) *offerDraftCase {
 	t.Helper()
-	prepared, err := offerDraftCases{}.Prepare(offerDraftFixtureJSON(t, f), expected)
+	prepared, err := offerDraftCases{}.Prepare(fixtureJSON(t, f), expected)
 	if err != nil {
 		t.Fatalf("preparing the case: %v", err)
 	}
@@ -417,7 +408,7 @@ func TestOfferDraftCaseFailsALineFromAnItemExpectedToGroundNone(t *testing.T) {
 // text — the canary sweep does exactly that — without rewriting an assertion.
 func TestOfferDraftFixtureCarriesOnlyWhatProductionIsGiven(t *testing.T) {
 	var fields map[string]json.RawMessage
-	if err := json.Unmarshal(offerDraftFixtureJSON(t, offerDraftDealFixture()), &fields); err != nil {
+	if err := json.Unmarshal(fixtureJSON(t, offerDraftDealFixture()), &fields); err != nil {
 		t.Fatalf("decoding the fixture: %v", err)
 	}
 	given := map[string]bool{"currency": true, "context_items": true, "rate_card": true}

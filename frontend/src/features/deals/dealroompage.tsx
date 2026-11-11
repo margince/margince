@@ -7,6 +7,7 @@ import {
   FINISHED_STATES,
   RoomStateBadge,
   refusalFor,
+  takesEndDate,
   useDealRoom,
 } from "../../components/dealroom";
 import {
@@ -194,7 +195,7 @@ function LifecycleMenu({ room }: Readonly<{ room: DealRoom }>) {
             </span>
           </Button>
         ) : null}
-        {!FINISHED_STATES.has(room.state) ? (
+        {takesEndDate(room.state) ? (
           <Button variant="ghost" onClick={() => setExpiring(true)}>
             {t("roompage.setExpiry")}
             <span className="roompage-menu-hint">

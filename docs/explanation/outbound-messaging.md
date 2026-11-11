@@ -239,11 +239,11 @@ whose data use is limited (`security_notice`, `privacy_notice`, `optout_confirma
 the modes for turning it on step by step (`consent.authorization_modes`, `observe`, `warn`). A fixed
 set of reason codes (`absoluteDenials` in `commsauthz`) refuses in every mode.
 
-A rep can also record the counter to a stop. `communication_override` is a standing exception, per
-kind, that says a machine "no", made for missing evidence, may be turned off for one contact. It reaches only a
-machine answer outside the fixed set, so a "no" the subject decided still wins. An exception names one
-kind, so it reaches only an answer that resolved one. An `unknown_purpose` "no" is outside the fixed
-set and still out of reach.
+A standing exception on file, one per kind in `communication_override`, turns off a machine "no" made
+for missing evidence for one contact. No route records a new one. It reaches only a machine answer
+outside the fixed set, so a "no" the subject decided still wins. An exception names one kind, so it
+reaches only an answer that resolved one. An `unknown_purpose` "no" is outside the fixed set and still
+out of reach.
 
 The request named a key the engine does not know, so no kind resolved for
 an exception to name. Sending again with a known purpose fixes that case.

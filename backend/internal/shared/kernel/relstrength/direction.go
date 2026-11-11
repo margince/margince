@@ -50,16 +50,16 @@ func (s Sides) Direction() Direction {
 
 // TheyWroteSQL admits a message the contact sent us; a colleague's reply on
 // their thread is not theirs. Older mail that lost its `from` row keeps the
-// sender as its counterparty. contact is a SQL expression.
+// sender as its counterparty when that address proves the contact. contact is
+// a SQL expression.
 func TheyWroteSQL(contact, activity string) string {
 	return "(" + activity + ".direction = 'inbound' AND (" + SenderSQL(contact, activity) + " OR " +
-		fmt.Sprintf(senderlessCounterpartySQL, contact, activity) + "))"
+		fmt.Sprintf(senderlessCounterpartySQL, activity, AddressProvesSQL(contact, activity+".counterparty_email")) + "))"
 }
 
 const senderlessCounterpartySQL = `(NOT EXISTS (SELECT 1 FROM activity_participant af
-		 WHERE af.activity_id = %[2]s.id AND af.role = 'from')
-		AND EXISTS (SELECT 1 FROM contact_email ce
-		 WHERE ce.contact_id = %[1]s AND ce.archived_at IS NULL AND ce.email = %[2]s.counterparty_email))`
+		 WHERE af.activity_id = %[1]s.id AND af.role = 'from')
+		AND %[2]s)`
 
 // ContactTookPartSQL admits an interaction the contact took part in: a message
 // they sent, or a meeting or call they were in. Callers already admit only

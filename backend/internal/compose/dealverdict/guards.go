@@ -77,7 +77,7 @@ func decideOne(in Input, state State, action Action, rates Rates) (Decision, err
 	newest := newestCited(in, action.Cited)
 	change := deals.VerdictChange{
 		Correction: correction, NewestCitedAt: newest,
-		Evidence: map[string]any{"basis": action.Reason, "cited_activity_ids": action.Cited},
+		Evidence: map[string]any{"basis": action.Reason, deals.CitedActivitiesEvidenceKey: action.Cited},
 	}
 	drop := func(why string) (Decision, error) { return Decision{Action: action, Outcome: why}, nil }
 	switch {

@@ -203,8 +203,8 @@ func NewRetentionService(db *database.DB, blob blobstore.Store, log *slog.Logger
 // success. capture.PendingStore.PurgeRawCaptureTx is the implementation.
 //
 // An unwired seam means something else here than for EdgeInvalidator beside it.
-// A missing edge invalidator leaves an aggregate for the bus consumer of
-// retention.applied to correct later. Nothing else ages raw_capture out, as
+// Retention events can repair a graph later. Erasure requires its invalidator
+// when it cancels a pending activity update. Nothing else ages raw_capture out, as
 // PurgeRawCaptureTx's comment explains. The Art. 17 purge cannot stand in: it is
 // scoped to a contact, and a retention window is scoped to time. So the purger
 // is a constructor argument, and EvaluateInstallation refuses the whole pass,

@@ -7,6 +7,11 @@ import {
   reportingStoryEvaluation,
   reportingStoryFramework,
 } from "../../src/testing/reporting.fixtures";
+import {
+  allowedPreview,
+  isPreviewDoor,
+  previewedAddresses,
+} from "../../src/testing/sendpermission.testkit";
 import * as ai from "./ai";
 import * as booking from "./booking";
 import * as calls from "./calls";
@@ -53,6 +58,13 @@ const empty = reply(page([]));
 // above any prefix row that would also match it.
 export const routes: readonly MockRoute[] = [
   { path: "/me", handle: session.me },
+  // The list envelope is no answer to the send check, and Send waits for one.
+  {
+    method: "POST",
+    path: isPreviewDoor,
+    handle: ({ route, json }) =>
+      json(allowedPreview(previewedAddresses(route.request().postDataJSON()))),
+  },
   ...importRoutes,
   { path: "/me/working-hours", handle: session.myWorkingHours },
   {

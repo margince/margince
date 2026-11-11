@@ -11,7 +11,30 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/margince/margince/backend/internal/platform/database"
 )
+
+func TestHomeSQLSizeBudgetRequiresAProductStatement(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		largest int64
+		fails   bool
+	}{
+		{"missing", 0, true},
+		{"harness-only", int64(database.CensusMinBytes) - 1, true},
+		{"product-sized", int64(database.CensusMinBytes), false},
+		{"at-limit", homeStatementBudget, false},
+		{"above-limit", homeStatementBudget + 1, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			failed := homeSQLSizeFailure(tc.largest) != ""
+			if failed != tc.fails {
+				t.Fatalf("SQL size %d failure = %t, want %t", tc.largest, failed, tc.fails)
+			}
+		})
+	}
+}
 
 func homeRow(row string, p95, budget time.Duration, samples int) DailyResult {
 	flow := homeWarmFlow.Name
@@ -35,10 +58,10 @@ func TestAHomeReadAtExactlyItsBudgetFails(t *testing.T) {
 	}
 }
 
-func TestAColdHomeReadOverFiveHundredMillisecondsFails(t *testing.T) {
-	results := []DailyResult{homeRow("home_cold_magic", 501*time.Millisecond, homeColdBudget, homeColdRounds)}
+func TestAColdHomeReadOverItsBudgetFails(t *testing.T) {
+	results := []DailyResult{homeRow("home_cold_magic", homeColdBudget+time.Millisecond, homeColdBudget, homeColdRounds)}
 	if failures := HomeBudgetFailures(results, homeBudgetAbsolute); len(failures) != 1 || !strings.Contains(failures[0], "home_cold_magic") {
-		t.Fatalf("a cold read over 500 ms must fail naming its row, got %v", failures)
+		t.Fatalf("a cold read over budget must fail naming its row, got %v", failures)
 	}
 }
 

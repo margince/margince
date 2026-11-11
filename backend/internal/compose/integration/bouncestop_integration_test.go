@@ -26,6 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/privacy"
+	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -425,7 +426,7 @@ func TestErasingTheSubjectDestroysTheirBounceStop(t *testing.T) {
 		t.Fatalf("the address carries %d stops before the erase, want 1", len(stops))
 	}
 
-	if err := privacy.NewEraser(b.e.DB()).EraseContact(b.e.Admin(),
+	if err := privacy.NewEraser(b.e.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities).EraseContact(b.e.Admin(),
 		b.contactID, "test"); err != nil {
 		t.Fatalf("erasing the subject: %v", err)
 	}

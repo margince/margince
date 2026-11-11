@@ -26,7 +26,7 @@ No. Margince does not check that you signed any compliance paper, does not bring
 Also called: compliance check, legal sign-off, is Margince compliant.
 
 ### Can we stop Margince from showing each colleague's performance?
-Yes. Admin and Ops switch off **Show individual performance** on the **Installation** card under **Settings → Company**. The audit log records each change. While it is off:
+Yes. Admin and Ops switch off **Show individual performance** on the **Forecast** tab of **Settings → Deals**. The audit log records each change. While it is off:
 - Reports, analytics questions, forecasts, forecast shares, targets and editions show no colleague's figures. That holds for their exports and for agent answers about them too.
 - Splitting or filtering figures by owner or meeting host is refused, and so is a view of one colleague.
 - A figure that holds a colleague's work shows only if it holds the work of at least two colleagues besides you who still work here.

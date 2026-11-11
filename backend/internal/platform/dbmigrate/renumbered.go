@@ -24,12 +24,14 @@ type Renumber struct {
 	OldDigest string
 }
 
-// renumberStep is one ledger row Up moves. dropOld is set when the ledger
-// already holds the new version, so only the old row goes.
+// renumberStep is one ledger row Up moves. recorded is the digest the old row
+// holds. dropOld is set when the ledger already holds the new version, so only
+// the old row goes.
 type renumberStep struct {
-	pair    Renumber
-	digest  string
-	dropOld bool
+	pair     Renumber
+	digest   string
+	recorded string
+	dropOld  bool
 }
 
 // renumberPlan holds the moves one namespace needs, and the ledger as it reads
@@ -77,7 +79,7 @@ func planRenumbers(ns Namespace, recorded map[string]LedgerRow) (renumberPlan, e
 		if err != nil {
 			return renumberPlan{}, err
 		}
-		step := renumberStep{pair: pair, digest: Digest(current)}
+		step := renumberStep{pair: pair, digest: Digest(current), recorded: *old.Digest}
 		if row, ok := plan.ledger[pair.New]; ok {
 			if row.Name != pair.Name || row.Digest == nil || *row.Digest != step.digest {
 				return renumberPlan{}, renumberRefusal(ns.Name, pair,
@@ -94,9 +96,10 @@ func planRenumbers(ns Namespace, recorded map[string]LedgerRow) (renumberPlan, e
 }
 
 // provenRenumber returns the migration shipping at pair.New once the old
-// ledger row is proved to be its exact content, and refuses otherwise. A NULL
-// digest is refused too: here it would vouch for a move, and nothing it
-// recorded can prove one.
+// ledger row is proved, and refuses otherwise. The row's digest must be that
+// migration's exact content, or content an equivalentContent entry names for
+// pair.New. A NULL digest is refused too: here it would vouch for a move, and
+// nothing it recorded can prove one.
 func provenRenumber(namespace string, pair Renumber, old LedgerRow, source map[string]Migration) (Migration, error) {
 	current, err := renumberSource(namespace, pair, source)
 	if err != nil {
@@ -108,7 +111,7 @@ func provenRenumber(namespace string, pair Renumber, old LedgerRow, source map[s
 	if old.Digest == nil {
 		return Migration{}, renumberRefusal(namespace, pair, "the ledger row records no content digest")
 	}
-	if *old.Digest != pair.OldDigest {
+	if *old.Digest != pair.OldDigest && !equivalentTo(namespace, current, *old.Digest) {
 		return Migration{}, renumberRefusal(namespace, pair, "the ledger row records different content from the migration that ships")
 	}
 	return current, nil
@@ -151,10 +154,10 @@ func reconcileRenumbered(ctx context.Context, conn *pgx.Conn, table string, plan
 		for _, step := range plan.steps {
 			statement := fmt.Sprintf(`UPDATE %s SET version = $2, content_digest = $3
 				WHERE version = $1 AND name = $4 AND content_digest = $5`, table)
-			args := []any{step.pair.Old, step.pair.New, step.digest, step.pair.Name, step.pair.OldDigest}
+			args := []any{step.pair.Old, step.pair.New, step.digest, step.pair.Name, step.recorded}
 			if step.dropOld {
 				statement = fmt.Sprintf(`DELETE FROM %s WHERE version = $1 AND name = $2 AND content_digest = $3`, table)
-				args = []any{step.pair.Old, step.pair.Name, step.pair.OldDigest}
+				args = []any{step.pair.Old, step.pair.Name, step.recorded}
 			}
 			tag, err := tx.Exec(ctx, statement, args...)
 			if err != nil {

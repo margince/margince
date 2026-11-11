@@ -95,6 +95,10 @@ The undo reaches as far as the choice did. Undoing your own snooze never brings 
 
 Undoing **Done** clears only your own choice, and the row then follows the usual rules. A deal a colleague closed, or a task they completed, stays off your list. Home and the Worklist show the same rows. Also called: restore, bring back, unsnooze.
 
+### How do I set a reminder to follow up with a customer?
+To set a follow-up reminder in Margince, add a task with a due date on the customer's contact. Open the contact, choose **More actions**, then **Add task**, enter a **Subject** and a **Due date**, and choose **Add task**. On a contact with no open task, **Add follow-up** opens the same form. The task joins your Worklist on its due date.
+Also called: follow-up reminder, remind me to call back, schedule a follow-up, chase a customer.
+
 ### How do I see all my tasks?
 To see all your open tasks in Margince, open **Home**, press **Show Worklist**, and choose the **Tasks** button under **Work type**.
 Tasks are in groups by when they are due. Late ones and today's come first, then **Due tomorrow**, **Due this week** and **Later**. There is no separate "Due today" heading.
@@ -153,7 +157,7 @@ Each item names its record and shows the facts that call for action. A badge say
   is not due yet. Stage change notices stay in the notification center.
 - **Since your last brief**: what Margince did since your last brief, what waits on you, what it
   could not finish and what needs restoring.
-- **Done for you**, the deals Margince changed, to review or undo, and the other work it finished; beside them **Upcoming meetings** and **Numbers**.
+- **Done for you**, the deals Margince changed, to keep or undo, and the other work it finished; beside them **Upcoming meetings** and **Numbers**.
 A greeting covers the page on the day's first visit, once per browser, unless your settings turn motion off. It shows the date and the emails synced overnight. It also counts the items waiting on you
 in Today, how many of them are urgent and how many meetings you have. It stands at least 1.5 seconds and lifts once your page is ready, or after 4.5 seconds; any key or click ends it sooner.
 Also called: morning brief, daily brief, today, priorities, top cards, welcome screen.
@@ -186,17 +190,21 @@ The work counts come from the current Worklist read. The greeting's email count 
 **Since your last brief** says when some activity could not be counted. Its count then says how much it could count, and an empty list does not mean nothing happened. A change that covers several records lists each record with its time and its full values, before and after. Each record keeps the **Undo** its change allows.
 
 ### Done for you
-**Done for you**, on **Today**, shows what Margince finished for you. Its band counts the deals Margince changed in the last 7 days and holds **Change history**, which opens **Change history** on the Worklist. Each deal it changed is a card, then **Other updates** follows. One card is open at a time; a closed card shows the deal's newest change, and a press opens it.
+**Done for you**, on **Today**, shows what Margince finished for you. Its band counts the deals Margince changed in the last 7 days and holds **Change history**, which opens the Worklist at its **Change history** panel. Each deal it changed is a card, then **Other updates** follows. One card is open at a time; a closed card shows the deal's newest change, and a press opens it.
 
 An open card lists every change on the deal, newest first: what moved and when, and why Margince did it. When a change rests on the customer's own words, they show under "The customer wrote:". A deal Margince closed reads **Marked lost**, and "Reason unavailable" when you may not read why. Only the deal's owner reads why. A change a later one replaced is grey and reads "Replaced by a later change".
 
-**Details** under a change shows who made it and each value before and after. It also names the email, call or meeting it came from, unless you cannot open it. **Undo** under a change puts that change back. Margince does not ask you to approve a change it already made: keep it, or undo it. A deal with two or more changes also offers **Undo 2 changes**, which takes back the changes listed and none that arrived since.
+**Details** under a change shows who made it and each value before and after. It also names the email, call or meeting it came from, unless you cannot open it. **Source date** says when that email, call or meeting happened, apart from when Margince acted. **Reason** says whether Margince counted days or dates, or read what the customer wrote or said.
 
-Home shows the first five deals. **See all 6 deals** opens a list of every changed deal, in the same cards. A change leaves **Done for you** after 7 days and stays in the deal's history with its **Undo**.
+**Undo** under a change puts that change back. Margince does not ask you to approve a change it already made: keep it, or undo it. A deal with two or more changes also offers **Undo 2 changes**, which takes back the changes listed and none that arrived since.
 
-At the foot of that list, **Undo changes on 6 deals** takes back the deals listed when you opened it. When some deals cannot be sent, the answer counts them and offers **Send again**, which reads them again and sends only those that still wait. See [Approvals](approvals.md#can-i-undo-what-the-ai-changed). When some activity could not be counted, **Other updates** says so under its list.
+Home shows the first five deals. **See all 6 deals** opens a list of every changed deal, in the same cards, each with a tick. Every deal starts ticked, and **Select all** ticks or clears them all. Open a deal from the list and press Back, and the list is open again. A change leaves **Done for you** after 7 days and stays in the deal's history with its **Undo**.
 
-A deal that changed again reads "This deal changed again. Open the deal to review its current state." To make Margince ask first, see [Approvals](approvals.md). Also called: automatic changes, review changes, accept a change, check applied changes.
+At the foot of that list, **Undo changes on 6 deals** takes back the ticked deals, from those listed when you opened it. When some deals cannot be sent, the answer counts them and offers **Send again**. It reads them again and sends only those that still have a change to undo.
+
+A deal Margince took back while the answer failed counts as undone, and one with no change left to undo is counted apart. The answer stays when you refresh the page, until you press **Clear this result**. Only this browser keeps it. See [Approvals](approvals.md#can-i-undo-what-the-ai-changed). When some activity could not be counted, **Other updates** says so under its list.
+
+A deal that changed again reads "Replaced by a later change". To make Margince ask first, see [Approvals](approvals.md). Also called: automatic changes, review changes, accept a change, check applied changes.
 
 ### What happens to a promise from a call or an email?
 A promise Margince reads in a call or meeting transcript or an email becomes something to watch or a task,
@@ -351,6 +359,8 @@ A task that is late, or whose reminder is due, stays in Today. Also called: late
 When there is nothing: "No actions taken on your behalf today."
 
 **Undo** puts the record back the way it was before a deal change. A change already undone stays in history with its status and has no action to take. **Undo changes on 3 deals** takes back every change Margince made to your deals in the last 7 days that you have not undone. A change to a field somebody edited since stays, and the deal's other changes go back. If somebody moved the deal after Margince moved it, none of that deal's changes go back, and other deals still do.
+
+The answer stays when you refresh the page, as under **Done for you**.
 
 ## For a team lead
 

@@ -448,7 +448,11 @@ func (s *Store) linkActivityToContact(ctx context.Context, tx pgx.Tx, activityID
 		activityID, contactID); err != nil {
 		return fmt.Errorf("contacts: linking activity to contact: %w", err)
 	}
-	return nameContactAmongParticipants(ctx, tx, activityID, contactID)
+	if err := nameContactAmongParticipants(ctx, tx, activityID, contactID); err != nil {
+		return err
+	}
+	_, err := s.stampProvenSenders(ctx, tx, []ids.UUID{activityID.UUID}, contactID)
+	return err
 }
 
 func resolveCapturedContact(ctx context.Context, tx pgx.Tx, candidate ContactCandidate, email string) (ContactResolution, ids.LeadID, error) {

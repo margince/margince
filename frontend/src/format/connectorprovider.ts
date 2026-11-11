@@ -12,6 +12,7 @@ type Provider = components["schemas"]["CaptureConnection"]["provider"];
 const PROVIDER_NAME: Readonly<Record<Provider, MessageKey>> = {
   gmail: "connectors.provGmail",
   gcal: "connectors.provGcal",
+  gdocs: "connectors.provGdocs",
   graph: "connectors.provGraph",
   graphcal: "connectors.provGraphCal",
   imap: "connectors.provImap",
@@ -71,9 +72,14 @@ export const VENDOR_SERVICES: Readonly<
   microsoft: { mail: "graph", calendar: "graphcal", oneConsent: false },
 };
 
+/** Google's meeting-notes connection: its own consent to read the Docs Meet
+ *  writes, a third service of the Google account beside mail and calendar. */
+export const MEETING_NOTES_PROVIDER = "gdocs";
+
 /** The vendor a provider belongs to, or null for IMAP, the test mailbox and
  *  any string that is not a provider (a route segment, say). */
 export function vendorOf(provider: string | undefined): AccountVendor | null {
+  if (provider === MEETING_NOTES_PROVIDER) return "google";
   const vendors: readonly AccountVendor[] = ["google", "microsoft"];
   return (
     vendors.find(
@@ -85,16 +91,18 @@ export function vendorOf(provider: string | undefined): AccountVendor | null {
 }
 
 /** The providers that connect by a consent redirect: every vendor's mail and
- *  calendar. IMAP posts credentials and gets a connection back, never a URL. */
-export type OAuthConnectProvider = (typeof VENDOR_SERVICES)[AccountVendor][
-  | "mail"
-  | "calendar"];
+ *  calendar, and Google's meeting notes. IMAP posts credentials and gets a
+ *  connection back, never a URL. */
+export type OAuthConnectProvider =
+  | (typeof VENDOR_SERVICES)[AccountVendor]["mail" | "calendar"]
+  | typeof MEETING_NOTES_PROVIDER;
 
 /** Narrows any string (a route segment, a stored value) to an OAuth provider
  *  by membership, never by assertion. */
 export function asOAuthConnectProvider(
   value: string | undefined,
 ): OAuthConnectProvider | null {
+  if (value === MEETING_NOTES_PROVIDER) return MEETING_NOTES_PROVIDER;
   const vendor = vendorOf(value);
   if (vendor === null) return null;
   const { mail, calendar } = VENDOR_SERVICES[vendor];
@@ -107,11 +115,13 @@ type CaptureConnection = components["schemas"]["CaptureConnection"];
  *  calendar, so each is an account of its own. */
 type LoneProvider = Exclude<Provider, OAuthConnectProvider>;
 
-/** One account as the member thinks of it: a mailbox, a calendar, or both. */
+/** One account as the member thinks of it: a mailbox, a calendar, or both,
+ *  and for Google the meeting notes. */
 export type ConnectionAccount = Readonly<{
   key: AccountVendor | LoneProvider;
   mail: CaptureConnection | null;
   calendar: CaptureConnection | null;
+  notes: CaptureConnection | null;
 }>;
 
 /** The roster folded into accounts, Google first, then Microsoft 365, then the
@@ -127,15 +137,20 @@ export function accountsOf(
     key: vendor,
     mail: rowFor(connections, VENDOR_SERVICES[vendor].mail),
     calendar: rowFor(connections, VENDOR_SERVICES[vendor].calendar),
+    notes:
+      vendor === "google" ? rowFor(connections, MEETING_NOTES_PROVIDER) : null,
   }));
   const lone = connections.flatMap((connection) => {
     const provider = connection.provider;
     return isLoneProvider(provider)
-      ? [{ key: provider, mail: connection, calendar: null }]
+      ? [{ key: provider, mail: connection, calendar: null, notes: null }]
       : [];
   });
   return [...paired, ...lone].filter(
-    (account) => account.mail !== null || account.calendar !== null,
+    (account) =>
+      account.mail !== null ||
+      account.calendar !== null ||
+      account.notes !== null,
   );
 }
 
@@ -167,7 +182,5 @@ export function accountNameOf(provider: Provider): MessageKey {
   if (isLoneProvider(provider)) {
     return labelFor(ACCOUNT_NAME, provider);
   }
-  const { mail, calendar } = VENDOR_SERVICES.google;
-  const isGoogle = provider === mail || provider === calendar;
-  return ACCOUNT_NAME[isGoogle ? "google" : "microsoft"];
+  return ACCOUNT_NAME[vendorOf(provider) === "google" ? "google" : "microsoft"];
 }
