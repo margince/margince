@@ -81,6 +81,8 @@ func (s *Store) SummaryFor(
 			return nil
 		}
 		out.Provider = &conn.provider
+		documents := s.servesDocuments(conn.provider)
+		out.InvoiceDocuments = &documents
 		out.LastSyncedAt = conn.lastSuccessAt
 		linked, err := companyIsLinked(ctx, tx, companyID, conn.id)
 		if err != nil {

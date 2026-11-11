@@ -2219,6 +2219,10 @@ func (stubs) GetFilterVocabulary(w nethttp.ResponseWriter, r *nethttp.Request, p
 	httperr.NotImplemented(w, r, "GetFilterVocabulary")
 }
 
+func (stubs) DownloadFinanceInvoicePdf(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "DownloadFinanceInvoicePdf")
+}
+
 func (stubs) DisconnectFinanceSource(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "DisconnectFinanceSource")
 }

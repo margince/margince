@@ -156,6 +156,41 @@ describe("how late an invoice was, counted in whole days", () => {
   });
 });
 
+describe("an invoice opens as the source's own PDF", () => {
+  const invoice: FinanceInvoice = {
+    id: "01a1c3c9-d637-773d-b73d-6a84193bb1ea",
+    number: "INV-9",
+    issued_at: "2026-07-01",
+    status: "open",
+    currency: "EUR",
+    gross_minor: 100_000,
+    open_minor: 100_000,
+  };
+
+  it("links the number to the PDF when the source serves documents", async () => {
+    stub({ ...CONNECTED, recent_invoices: [invoice], invoice_documents: true });
+    render(<CompanyFinanceCard companyId="o-1" lifecycle="customer" />);
+    const link = await screen.findByRole("link", {
+      name: "Open invoice INV-9 as PDF",
+    });
+    expect(link.getAttribute("href")).toBe(
+      `${globalThis.location.origin}/v1/finance/invoices/${invoice.id}/pdf`,
+    );
+    expect(link.getAttribute("target")).toBe("_blank");
+  });
+
+  it("shows the number alone when the source serves none", async () => {
+    stub({
+      ...CONNECTED,
+      recent_invoices: [invoice],
+      invoice_documents: false,
+    });
+    render(<CompanyFinanceCard companyId="o-1" lifecycle="customer" />);
+    expect(await screen.findByText("INV-9")).toBeTruthy();
+    expect(screen.queryByRole("link", { name: /INV-9/ })).toBeNull();
+  });
+});
+
 describe("the two readings the card draws as shapes", () => {
   function withSummary(patch: Partial<FinanceSummary>) {
     stub({ ...CONNECTED, ...patch });

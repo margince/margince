@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/pkg/extension"
 	"github.com/margince/margince/backend/pkg/extension/accounting"
 )
@@ -158,5 +159,32 @@ func TestAnOpenedSourceAnswersItsCheckAndDirectory(t *testing.T) {
 	}
 	if source.conn.ID != "conn-2" {
 		t.Errorf("the unit was handed connection %q, want conn-2", source.conn.ID)
+	}
+}
+
+// A source declaring documents is offered as one and hands its document to the
+// core; a source without them answers the declared capability gap.
+func TestOnlyASourceDeclaringDocumentsServesThem(t *testing.T) {
+	source := &recordingSource{}
+	withDocuments := source.declare("paper_books")
+	withDocuments.InvoiceDocument = func(_ context.Context, _ extension.Runtime, _ accounting.Connection, invoice string) (accounting.Document, error) {
+		return accounting.Document{ContentType: "application/pdf", Body: []byte(invoice)}, nil
+	}
+	composeUnit(t, extension.Extension{
+		Name: "books", Version: "1.0.0", Description: "Reads the books.",
+		FinanceSources: []extension.FinanceSource{source.declare("bare_books"), withDocuments},
+	})
+
+	offered := composedFinanceSources{}.Providers()
+	if len(offered) != 2 || offered[0].Documents || !offered[1].Documents {
+		t.Fatalf("offered %+v, want documents on paper_books alone", offered)
+	}
+	paper, _ := composedFinanceSources{}.Open("paper_books", accounting.Connection{})
+	if document, err := paper.InvoiceDocument(context.Background(), "INV-7"); err != nil || string(document.Body) != "INV-7" {
+		t.Errorf("InvoiceDocument() = %q, %v; want the unit's document for INV-7", document.Body, err)
+	}
+	bare, _ := composedFinanceSources{}.Open("bare_books", accounting.Connection{})
+	if _, err := bare.InvoiceDocument(context.Background(), "INV-7"); !errors.Is(err, apperrors.ErrUnsupportedBySoR) {
+		t.Errorf("a source without documents answered %v, want ErrUnsupportedBySoR", err)
 	}
 }
