@@ -37,6 +37,7 @@ export function RowText({
   readings,
   emailOpener,
   badged,
+  titleEnd,
 }: Readonly<{
   readings: RowReadings;
   /** Opens a waiting message. Its presence is what names the row. */
@@ -44,6 +45,8 @@ export function RowText({
   /** Whether the title line has a mark to show: overdue, not confirmed ready,
    *  or pinned. */
   badged: boolean;
+  /** Drawn at the end of the title line, such as the card's way on. */
+  titleEnd?: ReactNode;
 }>) {
   const {
     item,
@@ -93,11 +96,13 @@ export function RowText({
               {name}
             </Heading>
             {badges}
+            {titleEnd}
           </div>
         ) : (
           <p className="t-body worklist-row-title">
             {name}
             {badges}
+            {titleEnd}
           </p>
         ))}
       {readings.supportingTitle && (

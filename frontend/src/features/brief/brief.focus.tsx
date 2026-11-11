@@ -7,8 +7,8 @@
 import { ArrowRight } from "lucide-react";
 import { useRef } from "react";
 import {
-  TaskNextSteps,
   TaskNextStepsPending,
+  useTaskNextSteps,
 } from "../../components/tasknextsteps";
 import { Button, Card } from "../../design-system/atoms";
 import { Heading } from "../../design-system/heading";
@@ -16,8 +16,8 @@ import { useLocale, useT } from "../../i18n";
 import { useActivity } from "../../lib/activityread";
 import { navigate } from "../../lib/router";
 import { useMe } from "../../lib/session";
+import { taskTypeOf } from "../../lib/tasktype";
 import { briefContextTitle } from "../../lib/worklistcopy";
-import { useWriteTo } from "../../lib/writeto";
 import type { WorklistItem } from "../worklist/worklist.queries";
 import { OneRowWrite, useRowDone, WorklistRow } from "../worklist/worklist.row";
 import { useListed } from "../worklist/worklist.row.captions";
@@ -45,7 +45,6 @@ export function Triage({
   const { locale } = useLocale();
   const viewer = useMe(false).data?.user;
   const listed = useListed();
-  const writeTo = useWriteTo();
   // A press removes the pressed button, and a finished task takes its card
   // away. Either way focus moves onto the card now in hand. A first render
   // takes no focus.
@@ -69,19 +68,31 @@ export function Triage({
   const taskRead = useActivity(lead.id, isTask);
   const task = taskRead.data;
   const taskPending = isTask && taskRead.isPending;
-  // The drafted mail is the card's one filled verb, so Done steps back. A
-  // refused draft still draws its AI button, with the reason under it.
-  const target = task?.email_target;
-  const drafts = Boolean(target && (writeTo || target.refusal));
+  // The type's own step is the card's one filled verb, so Done steps back.
+  // A refused draft still draws its AI button, with the reason under it.
+  const step = useTaskNextSteps(task, false);
   // Next steps past a task without answering it; past the last it wraps.
+  // It sits at the title's end, apart from the verbs that answer the task.
   const next = rows.length > 1 ? rows[(at + 1) % rows.length] : undefined;
+  const nextLink = next && (
+    <Button
+      variant="link"
+      className="brief-triage-next"
+      onClick={() => {
+        pressed.current = true;
+        onChoose(next);
+      }}
+    >
+      {t("brief.focus.next")} <ArrowRight aria-hidden />
+    </Button>
+  );
   const cardVerbs =
-    onContext || task || taskPending || next ? (
+    onContext || task || taskPending ? (
       <>
-        {/* The drafted mail stands beside Done, ahead of the way to read
+        {/* The type's step stands beside Done, ahead of the way to read
             more: it is the task's next step, the details are about it. */}
         {taskPending && <TaskNextStepsPending />}
-        {task && <TaskNextSteps task={task} offerOpen={false} />}
+        {step.steps}
         {/* Every row opens on what it asks and why it is here. */}
         {onContext && (
           <Button
@@ -90,18 +101,6 @@ export function Triage({
             onClick={() => onContext(lead)}
           >
             {t("brief.focus.context")}
-          </Button>
-        )}
-        {next && (
-          <Button
-            variant="ghost"
-            className="brief-triage-next"
-            onClick={() => {
-              pressed.current = true;
-              onChoose(next);
-            }}
-          >
-            {t("brief.focus.next")} <ArrowRight aria-hidden />
           </Button>
         )}
       </>
@@ -134,11 +133,18 @@ export function Triage({
                   <div className="brief-triage-body">
                     <div className="brief-triage-lead-head">
                       {lead.email_summary && (
-                        <Heading size="small" as="h3">
-                          {taskName(lead, viewer, t, locale)}
-                        </Heading>
+                        <div className="brief-triage-title">
+                          <Heading size="small" as="h3">
+                            {taskName(lead, viewer, t, locale)}
+                          </Heading>
+                          {nextLink}
+                        </div>
                       )}
-                      <TaskMeta item={lead} link={listed} />
+                      <TaskMeta
+                        item={lead}
+                        link={listed}
+                        taskType={task && taskTypeOf(task)}
+                      />
                       {inbox && (
                         <p className="t-caption brief-triage-facts">
                           {t(`visibility.${inbox}`)}
@@ -159,7 +165,8 @@ export function Triage({
                         )
                       }
                       context={cardVerbs}
-                      quiet={drafts}
+                      titleEnd={lead.email_summary ? undefined : nextLink}
+                      quiet={step.fills}
                       // The card around this row says whose it is, why it is
                       // here and where it stands in the day, each once.
                       framed

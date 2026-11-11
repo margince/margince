@@ -501,6 +501,7 @@ const ALICE = {
 };
 
 type NextStepsCase = Readonly<{
+  taskType?: "write" | "call";
   source?: Record<string, unknown> | null;
   contact?: Record<string, unknown>;
   links?: { entity_type: string; entity_id: string }[];
@@ -526,6 +527,7 @@ function serverTarget(
 }
 
 function stubNextSteps({
+  taskType = "write",
   source = { kind: "call", content_state: "available" },
   contact = ALICE,
   links = [{ entity_type: "contact", entity_id: "c-1" }],
@@ -544,8 +546,11 @@ function stubNextSteps({
         occurred_at: "2026-09-08T09:00:00Z",
         is_done: isDone,
         source_activity_id: source ? "src-1" : null,
+        task_type: taskType,
         links,
-        email_target: serverTarget(links, contact),
+        // The server names a mail target for a mail task only.
+        email_target:
+          taskType === "write" ? serverTarget(links, contact) : undefined,
       }),
     "GET /activities/src-1": () =>
       jsonResponse({
@@ -603,20 +608,18 @@ const describedBy = (control: HTMLElement) =>
 const openContact = () =>
   screen.queryByRole("link", { name: en["task.next.openContact"] });
 
-test("a task from a call offers Call, Draft email and Open contact", async () => {
+test("a write task offers Draft email and Open contact, and no Call", async () => {
   const user = userEvent.setup();
   const writeTo = vi.fn();
   stubNextSteps();
   openTaskWith({ writeTo });
 
-  const dial = await screen.findByRole("link", {
-    name: en["record.verb.call"],
+  const draft = await screen.findByRole("button", {
+    name: en["task.next.draftEmail"],
   });
-  expect(dial.getAttribute("href")).toBe("tel:+49301234567");
   expect(openContact()?.getAttribute("href")).toBe("/#/contacts/c-1");
-  await user.click(
-    screen.getByRole("button", { name: en["task.next.draftEmail"] }),
-  );
+  expect(call()).toBeNull();
+  await user.click(draft);
   // The task steers the draft, so the mail is about what was owed.
   expect(writeTo).toHaveBeenCalledWith({
     entityType: "contact",
@@ -636,8 +639,9 @@ test("with no composer to open, Email hands the address to the mail client", asy
   expect(email.getAttribute("href")).toBe("mailto:alice@example.com");
 });
 
-test("Call dials the primary number, not the first one listed", async () => {
+test("a call task dials the primary number, not the first one listed", async () => {
   stubNextSteps({
+    taskType: "call",
     contact: {
       ...ALICE,
       phones: [
@@ -652,35 +656,35 @@ test("Call dials the primary number, not the first one listed", async () => {
     name: en["record.verb.call"],
   });
   expect(dial.getAttribute("href")).toBe("tel:+491517654321");
+  expect(
+    screen.queryByRole("link", { name: en["record.verb.email"] }),
+  ).toBeNull();
 });
 
 test.each([
   ["typed by hand", null],
   ["read out of a note", { kind: "note", content_state: "available" }],
   ["read out of a withheld call", { kind: "call", content_state: "withheld" }],
-])("a task %s offers Call, Email and Open contact", async (_, source) => {
-  stubNextSteps({ source });
+])("a call task %s offers Call", async (_, source) => {
+  stubNextSteps({ taskType: "call", source });
   openTaskWith();
 
-  await waitFor(() => expect(openContact()).not.toBeNull());
   // Source visibility does not change the contact's callable number.
+  await waitFor(() => expect(call()).not.toBeNull());
   if (source?.content_state === "withheld") {
     await screen.findByText(en["email.detail.withheldReason"]);
   } else if (source) {
     await screen.findByRole("button", { name: "Open original" });
   }
-  expect(
-    screen.getByRole("link", { name: en["record.verb.email"] }),
-  ).toBeTruthy();
   expect(call()?.getAttribute("href")).toBe("tel:+49301234567");
 });
 
-test("a contact with no phone gets no Call", async () => {
-  stubNextSteps({ contact: { ...ALICE, phones: [] } });
+test("a call task whose contact has no phone gets no Call", async () => {
+  stubNextSteps({ taskType: "call", contact: { ...ALICE, phones: [] } });
   openTaskWith();
 
-  await waitFor(() => expect(openContact()).not.toBeNull());
-  expect(call()).toBeNull();
+  await screen.findByRole("button", { name: "Open original" });
+  await waitFor(() => expect(call()).toBeNull());
 });
 
 test("a contact with no address gets Draft email refused with the reason", async () => {
@@ -692,10 +696,9 @@ test("a contact with no address gets Draft email refused with the reason", async
   });
   expect(email.hasAttribute("disabled")).toBe(true);
   expect(describedBy(email)).toBe(en["task.next.noAddress"]);
-  expect(call()).not.toBeNull();
 });
 
-test("an archived contact gets no Call and a refused Draft email, and can still be opened", async () => {
+test("an archived contact gets a refused Draft email, and can still be opened", async () => {
   stubNextSteps({
     contact: { ...ALICE, archived_at: "2026-09-01T00:00:00Z" },
   });
@@ -707,7 +710,17 @@ test("an archived contact gets no Call and a refused Draft email, and can still 
   expect(email.hasAttribute("disabled")).toBe(true);
   expect(describedBy(email)).toBe(en["contact.rail.archivedReadOnly"]);
   expect(openContact()).not.toBeNull();
-  expect(call()).toBeNull();
+});
+
+test("an archived contact gets no Call on a call task", async () => {
+  stubNextSteps({
+    taskType: "call",
+    contact: { ...ALICE, archived_at: "2026-09-01T00:00:00Z" },
+  });
+  openTaskWith();
+
+  await screen.findByRole("button", { name: "Open original" });
+  await waitFor(() => expect(call()).toBeNull());
 });
 
 test("a refused Draft email is said once, after every verb in the row", async () => {
@@ -748,7 +761,7 @@ test.each([
 
 test("a contact that stops being readable takes its verbs with it", async () => {
   let refused = false;
-  stubNextSteps({ contactRefused: () => refused });
+  stubNextSteps({ taskType: "call", contactRefused: () => refused });
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
@@ -774,27 +787,25 @@ test("a contact that stops being readable takes its verbs with it", async () => 
   refused = true;
   await client.refetchQueries({ queryKey: ["contact", "c-1"] });
 
-  await waitFor(() => expect(openContact()).toBeNull());
-  expect(call()).toBeNull();
+  await waitFor(() => expect(call()).toBeNull());
 });
 
 test.each([
   ["a done task", { isDone: true }, {}],
   ["a read-only dialog", {}, { readOnly: true }],
 ])("%s still offers the next steps", async (_, task, dialog) => {
-  stubNextSteps(task);
+  stubNextSteps({ ...task, taskType: "call" });
   openTaskWith(dialog);
 
   expect(
     await screen.findByRole("link", { name: en["record.verb.call"] }),
   ).toBeTruthy();
-  expect(openContact()).not.toBeNull();
   expect(screen.queryByRole("button", { name: en["tasks.snooze"] })).toBeNull();
 });
 
 // The task, its call source and its contact already cached when the dialog opens.
 function openWarm({ isDone = false, readOnly = false } = {}) {
-  stubNextSteps({ isDone });
+  stubNextSteps({ isDone, taskType: "call" });
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
@@ -807,8 +818,8 @@ function openWarm({ isDone = false, readOnly = false } = {}) {
     is_done: isDone,
     source_activity_id: "src-1",
     writable: true,
+    task_type: "call",
     links: [{ entity_type: "contact", entity_id: "c-1" }],
-    email_target: { entity_type: "contact", entity_id: "c-1" },
   });
   client.setQueryData(
     ["me"],
@@ -900,6 +911,7 @@ test("Call logs the call inside the dialog, on the task's contact, and leaves th
   const posted: unknown[] = [];
   const patched: unknown[] = [];
   stubNextSteps({
+    taskType: "call",
     routes: {
       "GET /me": meRoute({ activity: ["read", "create"] }, { seat: "full" }),
       "POST /activities": (body) => {

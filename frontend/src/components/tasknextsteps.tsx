@@ -1,22 +1,29 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { CalendarPlus, ClipboardCheck } from "lucide-react";
 import { type ReactNode, useId } from "react";
 import type { components } from "../api/schema";
 import { Button, Skeleton } from "../design-system/atoms";
 import { CallAction, linkVerb } from "../design-system/callaction";
+import { CopyAction } from "../design-system/clipboardcopy";
 import { ContactLink } from "../design-system/contactlink";
 import { primaryPhone } from "../format/contacturi";
 import { type Translator, useT } from "../i18n";
+import type { MessageKey } from "../i18n/en";
 import { intentAbout } from "../lib/compose.intent";
 import { ENTITY } from "../lib/entity";
-import { routeHash } from "../lib/router";
+import { valueFor } from "../lib/labelfor";
+import { navigate, type Route, routeHash } from "../lib/router";
 import { useTaskContact } from "../lib/taskcontact";
+import { taskTypeOf } from "../lib/tasktype";
 import { useWriteTo } from "../lib/writeto";
+import { mostSpecificFirst } from "./recordlinks";
 import "./tasknextsteps.css";
+import { asksWhichDeal, WhichDealChoice } from "./whichdealchoice";
 
-// What a rep does next about the contact a task is owed to. Nothing here
-// writes the task, so a done or read-only task still offers it.
+// The one step a task's type asks for. Nothing here writes the task, so a
+// done or read-only task still offers it.
 
 type Activity = components["schemas"]["Activity"];
 type Contact = components["schemas"]["Contact"];
@@ -42,29 +49,88 @@ export function TaskCallAction({
 }
 
 /**
- * Call, Draft email and Open contact. A task owed to a contact is work for that
- * contact, so mail to them is drafted from the task rather than offered blank.
- * Who the mail goes to is the server's answer (`email_target`): a contact, a
- * live lead or a company. `className` wraps the verbs in a row
- * of their own, which is left out when there is nothing to act on.
+ * The step the task's type asks for: a mail drafted for a reply or a mail to
+ * write, the number and Call for a call, Book a meeting for a meeting, the
+ * record to review, the choice to decide. A task to do has none: Done is it.
+ * `className` wraps the step in a row of its own, which is left out when
+ * there is nothing to act on.
  */
 export function TaskNextSteps({
   task,
   offerOpen = true,
   className,
 }: Readonly<{ task: Activity; offerOpen?: boolean; className?: string }>) {
+  const { steps } = useTaskNextSteps(task, offerOpen);
+  if (steps === null) return null;
+  return className ? <div className={className}>{steps}</div> : steps;
+}
+
+/** The type's step, and whether it is a filled button, so Done can step back
+ *  and the card keeps one filled verb. */
+export function useTaskNextSteps(
+  task: Activity | undefined,
+  offerOpen: boolean,
+): Readonly<{ steps: ReactNode; fills: boolean }> {
+  const { contact, pending } = useTaskContact(task);
+  const writeTo = useWriteTo();
+  if (!task) return { steps: null, fills: false };
+  const reachable = contact && !contact.archived_at ? contact : undefined;
+  switch (taskTypeOf(task)) {
+    case "reply":
+    case "write": {
+      const target = task.email_target;
+      return {
+        steps: <MailSteps task={task} offerOpen={offerOpen} />,
+        fills: Boolean(target && (writeTo || target.refusal)),
+      };
+    }
+    case "call":
+      if (pending) return { steps: <TaskNextStepsPending />, fills: true };
+      return reachable && primaryPhone(reachable.phones)
+        ? { steps: <CallSteps contact={reachable} />, fills: true }
+        : { steps: null, fills: false };
+    case "meet":
+      return reachable
+        ? { steps: <MeetStep contactId={reachable.id} />, fills: true }
+        : { steps: null, fills: false };
+    case "review": {
+      const record = reviewRecord(task);
+      return record
+        ? { steps: <ReviewStep record={record} />, fills: true }
+        : { steps: null, fills: false };
+    }
+    case "decide":
+      return {
+        steps: <WhichDealChoice task={task} />,
+        fills: asksWhichDeal(task),
+      };
+    default:
+      return { steps: null, fills: false };
+  }
+}
+
+/**
+ * Draft email. A task owed to a contact is work for that contact, so mail to
+ * them is drafted from the task rather than offered blank. Who the mail goes
+ * to is the server's answer (`email_target`): a contact, a live lead or a
+ * company.
+ */
+function MailSteps({
+  task,
+  offerOpen,
+}: Readonly<{ task: Activity; offerOpen: boolean }>) {
   const t = useT();
   const { contact, pending } = useTaskContact(task);
   const target = task.email_target;
   const intent = intentAbout(t("task.next.draftIntent"), task.subject);
-  let steps: ReactNode;
   if (pending) {
     // In the row the verbs will stand in, so they land where it stood.
-    steps = <TaskNextStepsPending />;
-  } else if (target?.entity_type === "contact") {
+    return <TaskNextStepsPending />;
+  }
+  if (target?.entity_type === "contact") {
     // A contact the reader can no longer read takes its verbs with it.
     if (!contact) return null;
-    steps = (
+    return (
       <ContactSteps
         contact={contact}
         intent={intent}
@@ -72,12 +138,85 @@ export function TaskNextSteps({
         refusal={refusalOf(target, t)}
       />
     );
-  } else if (target) {
-    steps = <RecordDraftStep target={target} intent={intent} />;
-  } else {
-    return null;
   }
-  return className ? <div className={className}>{steps}</div> : steps;
+  return target ? <RecordDraftStep target={target} intent={intent} /> : null;
+}
+
+/** The number to read or copy, for a reader at a desk, and Call to dial it. */
+function CallSteps({ contact }: Readonly<{ contact: Contact }>) {
+  const t = useT();
+  const number = primaryPhone(contact.phones)?.phone;
+  if (!number || contact.archived_at) return null;
+  const record = { entityType: "contact", entityId: contact.id } as const;
+  return (
+    <>
+      <span className="task-next-number">
+        <CallAction appearance="value" number={number} record={record} />
+        <CopyAction
+          text={number}
+          labels={{
+            copy: t("task.next.copyNumber"),
+            copied: t("task.next.numberCopied"),
+            remedy: t("task.next.copyNumberRemedy"),
+          }}
+        />
+      </span>
+      <CallAction
+        appearance="button"
+        filled
+        label={t("record.verb.call")}
+        number={number}
+        record={record}
+      />
+    </>
+  );
+}
+
+/** The booking flow, opened on the contact the task is owed to. */
+function MeetStep({ contactId }: Readonly<{ contactId: string }>) {
+  const t = useT();
+  return (
+    <Button
+      variant="primary"
+      onClick={() => navigate({ screen: "book", id: `contact-${contactId}` })}
+    >
+      <CalendarPlus aria-hidden="true" />
+      {t("scheduling.bookContact")}
+    </Button>
+  );
+}
+
+const REVIEW_VERBS: Readonly<
+  Record<components["schemas"]["ActivityLink"]["entity_type"], MessageKey>
+> = {
+  lead: "task.next.reviewLead",
+  deal: "task.next.reviewDeal",
+  project: "task.next.reviewProject",
+  contact: "task.next.reviewContact",
+  company: "task.next.reviewCompany",
+};
+
+type ReviewRecord = Readonly<{ verb: MessageKey; route: Route }>;
+
+/** The most specific record the task is filed on, the one to check. */
+function reviewRecord(task: Activity): ReviewRecord | undefined {
+  const record = mostSpecificFirst(task.links ?? [])[0];
+  if (!record) return undefined;
+  const verb = valueFor(REVIEW_VERBS, record.entity_type, undefined);
+  const entity = valueFor(ENTITY, record.entity_type, undefined);
+  return verb && entity
+    ? { verb, route: entity.route(record.entity_id) }
+    : undefined;
+}
+
+function ReviewStep({ record }: Readonly<{ record: ReviewRecord }>) {
+  const t = useT();
+  return (
+    <Button variant="primary" onClick={() => navigate(record.route)}>
+      <ClipboardCheck aria-hidden="true" />
+      {t(record.verb)}
+    </Button>
+  );
 }
 
 function ContactSteps({
@@ -95,7 +234,6 @@ function ContactSteps({
   const reasonId = useId();
   return (
     <>
-      <CallVerb contact={contact} />
       <EmailVerb
         contact={contact}
         intent={intent}

@@ -7,6 +7,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { en } from "../../i18n/en";
+import type { TaskType } from "../../lib/tasktype";
 import { type WriteTo, WriteToProvider } from "../../lib/writeto";
 import { taskRow } from "../../testing/brief.fixtures";
 import {
@@ -26,7 +27,11 @@ const LEAD: WorklistItem = {
   contact: { id: "c-1", label: "Alice Brandt" },
 };
 
-function showLead(lead: WorklistItem, writeTo: WriteTo | null = null) {
+function showLead(
+  lead: WorklistItem,
+  taskType: TaskType,
+  writeTo: WriteTo | null = null,
+) {
   installFetchStub({
     "GET /me": meRoute({ activity: ["read"] }, { roles: ["rep"] }),
     "GET /activities/task-1": () =>
@@ -36,9 +41,13 @@ function showLead(lead: WorklistItem, writeTo: WriteTo | null = null) {
         subject: LEAD.title,
         occurred_at: "2026-09-08T09:00:00Z",
         is_done: false,
+        task_type: taskType,
         source_activity_id: "call-1",
         links: [{ entity_type: "contact", entity_id: "c-1" }],
-        email_target: { entity_type: "contact", entity_id: "c-1" },
+        // Only a mail task names a target; a call finds its contact by link.
+        ...(taskType === "write"
+          ? { email_target: { entity_type: "contact", entity_id: "c-1" } }
+          : {}),
       }),
     "GET /activities/call-1": () =>
       jsonResponse({
@@ -71,23 +80,42 @@ function showLead(lead: WorklistItem, writeTo: WriteTo | null = null) {
   );
 }
 
-it("a task lead from a call offers Call and Email, and links the contact once", async () => {
-  showLead(LEAD);
+it("a call task shows the number to copy and a filled Call, with Done outlined", async () => {
+  showLead(LEAD, "call");
 
   const card = within(await screen.findByRole("article"));
   const dial = await card.findByRole("link", { name: en["record.verb.call"] });
   expect(dial.getAttribute("href")).toBe("tel:+491517654321");
+  expect(dial.classList.contains("btn-primary")).toBe(true);
   expect(
-    card.getByRole("link", { name: en["record.verb.email"] }),
+    card.getByRole("button", { name: en["task.next.copyNumber"] }),
   ).toBeTruthy();
+  const done = card.getByRole("button", { name: en["tasks.complete"] });
+  expect(done.classList.contains("btn-primary")).toBe(false);
+  expect(
+    card.queryByRole("link", { name: en["record.verb.email"] }),
+  ).toBeNull();
   const toContact = card
     .getAllByRole("link")
     .filter((link) => link.getAttribute("href") === "/#/contacts/c-1");
   expect(toContact).toHaveLength(1);
 });
 
-it("a task lead with no draft to offer keeps Done filled", async () => {
-  showLead(LEAD);
+it("a task to do has no step of its own, so Done is the filled button", async () => {
+  showLead(LEAD, "do");
+
+  const card = within(await screen.findByRole("article"));
+  await card.findByRole("button", { name: en["brief.focus.context"] });
+  expect(
+    card
+      .getByRole("button", { name: en["tasks.complete"] })
+      .classList.contains("btn-primary"),
+  ).toBe(true);
+  expect(card.queryByRole("link", { name: en["record.verb.call"] })).toBeNull();
+});
+
+it("a write task with no draft to offer keeps Done filled", async () => {
+  showLead(LEAD, "write");
 
   const card = within(await screen.findByRole("article"));
   await card.findByRole("link", { name: en["record.verb.email"] });
@@ -98,20 +126,17 @@ it("a task lead with no draft to offer keeps Done filled", async () => {
   ).toBe(true);
 });
 
-it("a task lead whose row names no contact still offers the task's contact verbs", async () => {
-  showLead({ ...LEAD, contact: undefined });
+it("a write task whose row names no contact still offers the task's contact verbs", async () => {
+  showLead({ ...LEAD, contact: undefined }, "write");
 
   const card = within(await screen.findByRole("article"));
   expect(
-    await card.findByRole("link", { name: en["record.verb.call"] }),
-  ).toBeTruthy();
-  expect(
-    card.getByRole("link", { name: en["record.verb.email"] }),
+    await card.findByRole("link", { name: en["record.verb.email"] }),
   ).toBeTruthy();
 });
 
-it("a task owed to a contact keeps Done and offers the drafted mail before the details", async () => {
-  showLead(LEAD, vi.fn());
+it("a write task keeps Done and offers the drafted mail before the details", async () => {
+  showLead(LEAD, "write", vi.fn());
 
   const card = within(await screen.findByRole("article"));
   const draft = await card.findByRole("button", {
@@ -168,6 +193,7 @@ it("a task lead holds its verbs' room until the task and its contact are read", 
       subject: LEAD.title,
       occurred_at: "2026-09-08T09:00:00Z",
       is_done: false,
+      task_type: "write",
       links: [{ entity_type: "contact", entity_id: "c-1" }],
       email_target: { entity_type: "contact", entity_id: "c-1" },
     }),
@@ -211,6 +237,8 @@ it("Next task opens the following card, wraps past the last, and is absent alone
   const next = () =>
     screen.getByRole("button", { name: en["brief.focus.next"] });
 
+  // It ends the title line, apart from the verbs that answer the task.
+  expect(next().closest(".worklist-row-title")).not.toBeNull();
   await user.click(next());
   expect(chosen).toHaveBeenLastCalledWith(second);
 

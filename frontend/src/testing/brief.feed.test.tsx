@@ -63,7 +63,7 @@ it("renders the server focus even when the queue page contains different rows", 
   // card under it, in the server's order, and the band counts them all.
   expect(
     [...container.querySelectorAll(".worklist-row-title")].map(
-      (row) => row.textContent,
+      (row) => row.firstChild?.textContent,
     ),
   ).toEqual([rows[0].title]);
   expect(
@@ -87,7 +87,7 @@ it("opens a waiting card where it stands when it is pressed", async () => {
   await user.click(queuedCard(container, /Call buyer 2/));
   expect(
     [...container.querySelectorAll(".worklist-row-title")].map(
-      (row) => row.textContent,
+      (row) => row.firstChild?.textContent,
     ),
   ).toEqual([rows[2].title]);
   // The pressed card is gone, so focus lands on the card it opened.

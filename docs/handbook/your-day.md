@@ -6,11 +6,9 @@
 
 The Worklist is the ranked to-do list in Margince: one list of everything waiting on you, in the order Margince ranks them. That is buyers to answer, tasks due, promises made, deals at risk and items to check. It lives on **Home**. Press **Show Worklist** to open it as a panel over the page; **Hide Worklist** closes it. It has no sidebar row of its own.
 
-Under **Needs you**, every task is its own card, and the first one is open. Press another card to open it in its place. **Next task** on the open card opens the one after it, and after the last card it goes back to the first. Opening a card changes only which task you see.
+Under **Needs you**, every task is its own card, and the first one is open. Press another card to open it in its place. **Next task**, at the top right of the open card, opens the one after it. After the last card it goes back to the first. Opening a card changes only which task you see.
 
-When you email a task's contact after the task was created, Margince marks the task done and shows a receipt in **Done for you**. Bulk mail and a contact named only in Bcc do not count. **Undo** reopens the task; the same email will not close it again. This includes tasks from website requests.
-
-Open a task's details and choose **Log what happened** to record the outcome and attach files. **Mark task done** starts selected. Clear it to keep the task open after logging the outcome.
+When you email a task's contact after the task was created, Margince marks the task done and shows a receipt in **Done for you**. Bulk mail and a contact named only in Bcc do not count. **Undo** reopens the task; the same email will not close it again. This includes tasks from website requests. Open a task's details and choose **Log what happened** to record the outcome and attach files. **Mark task done** starts selected. Clear it to keep the task open after logging the outcome.
 
 ## Daily tasks
 
@@ -49,14 +47,10 @@ To pin a Worklist item in Margince, press **More actions** on its row and choose
 A pin changes the order of your own list only, and changes nothing for colleagues; how urgent it is stays the same. You hold at most 50 pins: a newer one takes the place of your oldest. If it fails: "Item was not pinned. Retry." Quiet contacts under **Optional reconnections** stay outside work counts, even with an open deal, until you pin them or add a task. Also called: star, flag, keep on top.
 
 ### Why is a task at the top of my worklist?
-A task leads your Worklist and **Needs you** on **Home** when you hold it and its reminder time has come. The row says "your reminder is due". With notifications allowed, Margince shows the task once across all your browsers, in the first one open. Press the notification to open the task on **Home**. Press **Done** when the work is finished, or move the task with **Snooze 1 day** or **Move to**. Moving the date ends a reminder whose time has passed.
-
-Only the colleague who holds the task is reminded. A colleague who opens your queue sees the task in its usual place, and a task nobody holds reminds nobody. A reminder stays at the top for 30 days after its time. Also called: reminder, remind me, notify me.
+A task leads your Worklist and **Needs you** on **Home** when you hold it and its reminder time has come. The row says "your reminder is due". With notifications allowed, Margince shows the task once across all your browsers, in the first one open. Press the notification to open the task on **Home**. Press **Done** when the work is finished, or move the task with **Snooze 1 day** or **Move to**. Moving the date ends a reminder whose time has passed. Only the colleague who holds the task is reminded. A colleague who opens your queue sees the task in its usual place, and a task nobody holds reminds nobody. A reminder stays at the top for 30 days after its time. Also called: reminder, remind me, notify me.
 
 ### Why is this on my list?
-The open card under **Needs you** on **Home** says what happened, what to do next and its one current reason. **View details** adds the messages, contact, deal and every fact behind the row. An approval card shows what the agent proposes, such as the task it would add with its due day and note. Its **View details** holds the decision, so you can approve, edit or reject it there.
-
-A meeting with no outcome asks **How did it go?** with **It happened**, **Add notes** and **Did not happen**. A task Margince made for you says what made it. A reminder about a quiet contact, company, deal or lead says so, and asks you to get in touch and then press **Done**. Also called: what is this task, where did this task come from.
+The open card under **Needs you** on **Home** says what happened, what to do next and its one current reason. **View details** adds the messages, contact, deal and every fact behind the row. An approval card shows what the agent proposes, such as the task it would add with its due day and note. Its **View details** holds the decision, so you can approve, edit or reject it there. A meeting with no outcome asks **How did it go?** with **It happened**, **Add notes** and **Did not happen**. A task Margince made for you says what made it. A reminder about a quiet contact, company, deal or lead says so, and asks you to get in touch and then press **Done**. Also called: what is this task, where did this task come from.
 
 The **Why this is on your list** panel in **View details** answers in four parts. **What happened** says the event, its day and who it is with. For a contact it also gives the last contact each way. **Why now** lists the facts that put the row on your list.
 
@@ -108,8 +102,7 @@ A task more than 30 days late leaves the Worklist and its counts. A pin keeps it
 To complete a task in Margince, press **Done** on its Worklist row, or on the task in the record's list of next steps.
 1. Open **Home** → **Show Worklist**, or open the contact, company or deal the task is on.
 2. Press **Done**. The task is marked "Task completed".
-3. Not ready yet? Press **Snooze 1 day** to move its due date a day later. Or open the task and pick
-   a day under **Move to**.
+3. Not ready yet? Press **Snooze 1 day** to move its due date a day later. Or open the task and pick a day under **Move to**.
 
 **Snooze 1 day** moves the due date one day later, or to tomorrow if that is later, keeping its time. A task with no date does not show it. If it fails: "Task was not completed. Retry." Also called: tick off, mark done, close a task.
 
@@ -121,19 +114,30 @@ A meeting that starts within 2 hours is urgent until you are ready. Then it stay
 When the start time, the guests or the invite's agenda change, the row asks again. It names what changed, for example "Changed since you were ready: start time". A note you type into the meeting does not ask again. If it fails: "You were not marked ready. Retry." Also called: prepared, meeting prep, ready for the call.
 
 ### What can I do from a task?
-A task linked to one contact offers **Draft email** and **Open contact**. **Draft email** opens the composer already drafting a message about the task; with no connected mailbox it is **Email** and opens your own mail app. A task with no single contact drafts to its one open lead, or with none, to its one linked company. For a company the composer asks which contact it is for; a task on two open leads offers none. A closed lead with no linked company, or a lead with no email address, gets **Draft email** refused with the reason. The task's row on a timeline offers **Write email** to the same contact, lead or company.
+Every task has a type, and the type decides its one step. The type shows as a chip on the card. Pick it under **Task type** when you add a task; **Write** is chosen until you change it.
 
-Where a task offers **Draft email**, one filed on a deal alone drafts to the deal's one contact, else to the deal's company. One on several contacts and no open lead drafts to the company they all work at now. Of the tasks Margince files, only those that ask you to write offer it. Examples are answering an email request or following up a new lead. A task filed on no record has no one to write to and offers none.
+| Type | The step |
+| --- | --- |
+| **Reply** | **Draft email** to the contact, to answer their message |
+| **Write** | **Draft email** to the task's contact, lead or company |
+| **Call** | The contact's number with **Copy number**, and **Call** |
+| **Meet** | **Book a meeting** with the task's contact |
+| **Review** | Opens the record to check, such as **Review lead** |
+| **Decide** | The deals the email may be about, as cards, and **Link email to deal** |
+| **Do** | No step of its own: **Done** is the step |
 
-It offers **Call** whenever the contact has a phone number, including on a task typed by hand. A done or read-only task offers the same steps. **Draft email** is refused with a reason when the contact has no email address or is archived. **Call** dials and opens **Log activity** on **Call** under the task, which does not complete the task; an archived contact gets no **Call**. The open card under **Needs you** on **Home** offers **Call** and **Draft email** the same way, beside **Done**, with no **Open contact**. With **Draft email** on the card, **Done** is a plain button, so the card has one colour button.
+Tasks Margince makes get the type of the work that made them. An email request is a **Reply**; a new lead to check is a **Review**. A task made before types existed gets one the same way, and a task you typed by hand is a **Write**.
+
+**Draft email** opens the composer already drafting a message about the task. With no connected mailbox it is **Email** and opens your own mail app. A task with no single contact drafts to its one open lead, or with none, to its one linked company. For a company the composer asks which contact it is for; a task on two open leads offers none. A closed lead with no linked company, or a lead with no email address, gets **Draft email** refused with the reason, as does a contact with no email address or one that is archived. A task linked to one contact also offers **Open contact**. The task's row on a timeline offers **Write email** to the same contact, lead or company. A task filed on a deal alone drafts to the deal's one contact, else to the deal's company. One on several contacts and no open lead drafts to the company they all work at now. A task filed on no record has no one to write to and offers none.
+
+**Call** and **Book a meeting** go to the first contact the task is filed on, and an archived contact gets neither. **Call** dials and opens **Log activity** on **Call** under the task, which does not complete the task. A done or read-only task offers the same steps. On the open card under **Needs you** on **Home**, the step is the colour button and **Done** is a plain one. A **Do** task, or one whose step has nothing to act on, keeps **Done** as the colour button.
 
 ### How do I plan my week?
 To plan your week in Margince, open **Home**, switch the view to **Weekly** and add items under
 **This week’s commitments**.
 1. Click **Home**, then **Weekly**.
 2. Under **This week’s commitments**, press **Add commitment** and fill in **Commitment**.
-3. If you like, add a **Due date** and a linked deal, lead, contact, company or project, then press
-   **Add**.
+3. If you like, add a **Due date** and a linked deal, lead, contact, company or project, then press **Add**.
 4. Tick commitments to mark them, then press **Save {count} changes**.
 5. Fill in **Constraints this week**: **Risks** and **Available capacity**.
 
@@ -159,19 +163,16 @@ Each item names its record and shows the facts that call for action. A badge say
 - **Since your last brief**: what Margince did since your last brief, what waits on you, what it
   could not finish and what needs restoring.
 - **Done for you**, the deals Margince changed, to keep or undo, and the other work it finished; beside them **Upcoming meetings** and **Numbers**.
-A greeting covers the page on the day's first visit, once per browser, unless your settings turn motion off. It shows the date and the emails synced overnight. It also counts the items waiting on you
-in Today, how many of them are urgent and how many meetings you have. It stands at least 1.5 seconds and lifts once your page is ready, or after 4.5 seconds; any key or click ends it sooner.
+A greeting covers the page on the day's first visit, once per browser, unless your settings turn motion off. It shows the date and the emails synced overnight. It also counts the items waiting on you in Today, how many of them are urgent and how many meetings you have. It stands at least 1.5 seconds and lifts once your page is ready, or after 4.5 seconds; any key or click ends it sooner.
 Also called: morning brief, daily brief, today, priorities, top cards, welcome screen.
 
 ### What comes first on Today?
-A customer who waits for your reply, and a reply deadline that comes close, come first on Today
-and in the Worklist.
+A customer who waits for your reply, and a reply deadline that comes close, come first on Today and in the Worklist.
 - A message that waited more than 14 days is old work to recover, not today's. On an open deal, it
   keeps the rank of a deal at real risk.
 - A privacy duty joins the day 7 days before its deadline; the legal deadline does not move.
 - A privacy duty recorded more than a day after its deadline came from imported history. It reads
-  "recorded after its deadline, from imported history", ranks as normal work and never sits under
-  **Needs you**.
+  "recorded after its deadline, from imported history", ranks as normal work and never sits under **Needs you**.
 - A task due today or late is urgent, unless it is prospecting work.
 - A deal at risk is urgent when its value is high next to the risk on all deals. It is also urgent
   when its expected close is past or within 14 days.
