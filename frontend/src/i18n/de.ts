@@ -19387,8 +19387,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.consequence.promise_breaks": "Eine Zusage von dir wird gebrochen.",
   "worklist.consequence.promise_breaks.named":
     "Eine Zusage von dir an {name} wird gebrochen.",
-  "worklist.consequence.deal_drifts": "Der Deal treibt weiter.",
-  "worklist.consequence.deal_drifts.named": "{name} treibt weiter.",
+  "worklist.consequence.deal_drifts": "Der Deal stagniert weiter.",
+  "worklist.consequence.deal_drifts.named": "{name} stagniert weiter.",
   "worklist.consequence.deal_slips_past_close":
     "Der Deal rutscht über sein erwartetes Abschlussdatum.",
   "worklist.consequence.deal_slips_past_close.named":
@@ -19419,7 +19419,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Melde dich jetzt, ein neuer Lead kühlt schnell ab.",
   "worklist.todo.meeting": "Öffne den Termin, um dich vorzubereiten.",
   "worklist.todo.meeting_outcome":
-    "Halte fest, was dabei herauskam, oder wähle „Hat nicht stattgefunden“, wenn er nicht stattfand.",
+    "Halte fest, was dabei herauskam. Fand er nicht statt, wähle „Hat nicht stattgefunden“ oder sag ihn über die Kalendereinladung ab.",
   "worklist.todo.meeting_follow_up": "Sende den Teilnehmenden ein Follow-up.",
   "worklist.todo.relationship_decay":
     "Melde dich, oder leg es für einen Monat beiseite.",
@@ -19495,7 +19495,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.ask.introduction_request":
     "Ein Teammitglied bittet dich, es einem Kontakt vorzustellen. Nimm die Anfrage an oder lehne sie ab.",
   "worklist.ask.meeting_outcome":
-    "Dieser Termin ist vorbei, und nichts hält fest, wie er gelaufen ist. Halte das Ergebnis fest oder wähle „Hat nicht stattgefunden“, wenn er nicht stattfand.",
+    "Dieser Termin ist vorbei, und nichts hält fest, wie er gelaufen ist. Halte das Ergebnis fest. Fand er nicht statt, wähle „Hat nicht stattgefunden“ oder sag ihn über die Kalendereinladung ab.",
   "worklist.ask.weekly_commitment":
     "Du hast das für diese Woche geplant. Erledige es oder verschiebe es in deinem Wochenplan.",
   "worklist.ask.awaiting_reply":

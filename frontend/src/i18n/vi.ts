@@ -18892,8 +18892,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.consequence.promise_breaks": "Một cam kết của bạn bị lỡ.",
   "worklist.consequence.promise_breaks.named":
     "Một cam kết của bạn với {name} bị lỡ.",
-  "worklist.consequence.deal_drifts": "Deal tiếp tục trôi.",
-  "worklist.consequence.deal_drifts.named": "{name} tiếp tục trôi.",
+  "worklist.consequence.deal_drifts": "Deal tiếp tục chững lại.",
+  "worklist.consequence.deal_drifts.named": "{name} tiếp tục chững lại.",
   "worklist.consequence.deal_slips_past_close":
     "Deal trễ qua ngày chốt dự kiến.",
   "worklist.consequence.deal_slips_past_close.named":
@@ -18922,7 +18922,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.todo.lead_response": "Liên hệ ngay; lead mới nguội đi rất nhanh.",
   "worklist.todo.meeting": "Mở cuộc họp để chuẩn bị.",
   "worklist.todo.meeting_outcome":
-    "Ghi lại kết quả, hoặc chọn “Không diễn ra” nếu cuộc họp không diễn ra.",
+    "Ghi lại kết quả. Nếu cuộc họp không diễn ra, chọn “Không diễn ra”, hoặc hủy qua lời mời trên lịch.",
   "worklist.todo.meeting_follow_up": "Gửi thư tiếp nối cho các bên đã tham dự.",
   "worklist.todo.relationship_decay": "Liên hệ, hoặc tạm gác lại một tháng.",
   "worklist.todo.conversation_claim": "Làm việc đó, rồi đánh dấu là xong.",
@@ -18990,7 +18990,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.ask.introduction_request":
     "Một đồng nghiệp nhờ bạn giới thiệu với một liên hệ. Chấp nhận hoặc từ chối yêu cầu.",
   "worklist.ask.meeting_outcome":
-    "Cuộc họp này đã kết thúc và chưa có ghi nhận nào về kết quả. Ghi lại kết quả, hoặc chọn “Không diễn ra” nếu cuộc họp không diễn ra.",
+    "Cuộc họp này đã kết thúc và chưa có ghi nhận nào về kết quả. Ghi lại kết quả. Nếu cuộc họp không diễn ra, chọn “Không diễn ra”, hoặc hủy qua lời mời trên lịch.",
   "worklist.ask.weekly_commitment":
     "Bạn đã lên kế hoạch việc này cho tuần. Làm xong, hoặc dời trong kế hoạch tuần.",
   "worklist.ask.awaiting_reply":

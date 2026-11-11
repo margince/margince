@@ -19203,7 +19203,7 @@ export const en = {
   "worklist.todo.lead_response": "Get in touch now; a new lead cools fast.",
   "worklist.todo.meeting": "Open the meeting to prepare.",
   "worklist.todo.meeting_outcome":
-    "Record what came of it, or choose “Did not happen” if it did not take place.",
+    "Record what came of it. If it did not take place, choose “Did not happen”, or cancel it through its calendar invitation.",
   "worklist.todo.meeting_follow_up": "Send the attendees a follow-up.",
   "worklist.todo.relationship_decay":
     "Get in touch, or set it aside for a month.",
@@ -19273,7 +19273,7 @@ export const en = {
   "worklist.ask.introduction_request":
     "A colleague asks you to introduce them to a contact. Accept or decline the request.",
   "worklist.ask.meeting_outcome":
-    "This meeting is over and nothing records how it went. Record what came of it, or choose “Did not happen” if it did not take place.",
+    "This meeting is over and nothing records how it went. Record what came of it. If it did not take place, choose “Did not happen”, or cancel it through its calendar invitation.",
   "worklist.ask.weekly_commitment":
     "You planned this for the week. Do the work, or move it in your weekly plan.",
   "worklist.ask.awaiting_reply":
