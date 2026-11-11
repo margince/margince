@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log/slog"
 	"runtime/debug"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -43,6 +44,18 @@ type Watcher struct {
 	log     *slog.Logger
 	env     runtimeenv.Environment
 	posture atomic.Pointer[Posture]
+
+	// running is the re-check in flight, guarded by mu. One runs at a time, so
+	// an older read can never store over a newer one.
+	mu      sync.Mutex
+	running *recheckRun
+}
+
+// recheckRun is one re-check that later callers join instead of starting
+// their own. done closes once err is set.
+type recheckRun struct {
+	done chan struct{}
+	err  error
 }
 
 // NewWatcher resolves the posture once and refuses a rejected one, so the
@@ -93,7 +106,36 @@ func (w *Watcher) Posture() Posture { return *w.posture.Load() }
 // what actually broke was the machinery for asking.
 //
 // The returned error is that fault, already logged, for a caller that waits.
-func (w *Watcher) Recheck(ctx context.Context) (err error) {
+// A caller arriving while a re-check runs joins it and gets its answer. So
+// the daily loop and "Check now" never run the module twice at once.
+func (w *Watcher) Recheck(ctx context.Context) error {
+	w.mu.Lock()
+	if run := w.running; run != nil {
+		w.mu.Unlock()
+		w.log.DebugContext(ctx, "joining the license re-check already running")
+		select {
+		case <-run.done:
+			return run.err
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+	}
+	run := &recheckRun{done: make(chan struct{})}
+	w.running = run
+	w.mu.Unlock()
+
+	// Not the caller's cancellation: callers who joined are waiting on this run.
+	run.err = w.recheck(context.WithoutCancel(ctx))
+	w.mu.Lock()
+	w.running = nil
+	w.mu.Unlock()
+	close(run.done)
+	return run.err
+}
+
+// recheck reads the token and resolves it once; Recheck makes sure only one
+// runs at a time.
+func (w *Watcher) recheck(ctx context.Context) (err error) {
 	defer w.surviveFault(ctx, &err)
 	before := w.Posture()
 	token, err := w.source()

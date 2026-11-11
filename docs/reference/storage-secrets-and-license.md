@@ -247,7 +247,8 @@ error. To read it as no license would lower the installation without a word.
 
 A `token_file` that is
 set but cannot be read, or is empty, is also a boot error. So a wrong path does not count as a wish
-to run with no license.
+to run with no license. Margince reads a `token_file` with the same rules as a `${file:…}`
+reference.
 
 **An ended license never stops a running process.** A license that ends while the process
 runs leaves it serving. The api checks again daily, and its `/metrics` posture gets worse; nothing
@@ -266,7 +267,7 @@ replaced in the token file, and not a changed environment variable. It writes no
 can type a token into the app.
 
 Check now checks only the api process that answers the request. The worker and any other api
-process keep their daily check. A token that cannot be read, or a module that cannot run, answers
+process keep their daily check. A request that comes while a check runs waits for that check and shows its result. A token that cannot be read, or a module that cannot run, answers
 `503`. The process then keeps its last result, and the server log says why.
 
 Some results are not a result about the license: a token it cannot read, or a module that failed to

@@ -5,7 +5,6 @@ package compose
 
 import (
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/margince/margince/backend/internal/platform/config"
@@ -57,6 +56,8 @@ func declaredLicenseToken(c *config.Config) func() (string, error) {
 		if err != nil {
 			return "", err
 		}
+		// Trimmed as license.token is above: a token has no meaningful whitespace.
+		raw = strings.TrimSpace(raw)
 		if raw == "" {
 			return "", fmt.Errorf("compose: %s %s is empty — remove the setting to run unlicensed, "+
 				"or write the license token into the file", pathOrigin.Name, path)
@@ -77,20 +78,12 @@ func licenseTokenDeclaredAt(c *config.Config) string {
 	return licenseTokenOriginNone
 }
 
-// readDeclaredFile reads a credential a setting names by path, trimmed, and
-// refuses a file too large to be one before reading it.
+// readDeclaredFile reads a credential a setting names by path, with the rules
+// of a ${file:} reference, so both spellings of one credential read alike.
 func readDeclaredFile(setting, path string) (string, error) {
-	info, err := os.Stat(path)
+	value, err := config.ReadSecretFile(path)
 	if err != nil {
-		return "", fmt.Errorf("compose: reading %s: %w", setting, err)
+		return "", fmt.Errorf("compose: %s: %w", setting, err)
 	}
-	if info.Size() > config.SecretFileLimit {
-		return "", fmt.Errorf("compose: %s %s is %d bytes, more than the credential it names (limit %d) — "+
-			"check the path points at the credential and not at something else", setting, path, info.Size(), config.SecretFileLimit)
-	}
-	raw, err := os.ReadFile(path) // #nosec G304 -- the operator's own credential path; reading it is the function's purpose
-	if err != nil {
-		return "", fmt.Errorf("compose: reading %s: %w", setting, err)
-	}
-	return strings.TrimSpace(string(raw)), nil
+	return value, nil
 }
