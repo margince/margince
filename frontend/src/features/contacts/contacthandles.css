@@ -11,7 +11,6 @@
   display: flex;
   flex-wrap: nowrap;
   align-items: center;
-  column-gap: var(--space-2);
   min-inline-size: 0;
 }
 .contacthandles > .fieldgrid-handle > :first-child {
