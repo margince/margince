@@ -184,27 +184,20 @@ describe("a row", () => {
       ],
     });
     render(<FiltersScreen />, { wrapper });
-    await vi.waitFor(async () =>
-      expect((await rowOf("Named")).textContent).toContain("Team Germany"),
-    );
-    expect((await rowOf("Kept to myself")).textContent).toContain(
-      en["lists.sharing.private"],
-    );
-    const stewarded = (await rowOf("Board introductions")).textContent;
+    // One read draws every row, so once the team is named all rows are there.
+    const said = (name: string) =>
+      screen.getByText(name).closest("tr")?.textContent ?? "";
+    await vi.waitFor(() => expect(said("Named")).toContain("Team Germany"));
+    expect(said("Kept to myself")).toContain(en["lists.sharing.private"]);
+    const stewarded = said("Board introductions");
     expect(stewarded).toContain(en["lists.audience.ownerOnly"]);
     expect(stewarded).not.toContain(en["lists.sharing.private"]);
-    const ownerless = (await rowOf("Left behind")).textContent;
+    const ownerless = said("Left behind");
     expect(ownerless).toContain(en["lists.audience.stewardOnly"]);
     expect(ownerless).not.toContain(en["lists.audience.ownerOnly"]);
-    expect((await rowOf("Our accounts")).textContent).toContain(
-      en["lists.audience.yourTeams"],
-    );
-    expect((await rowOf("Theirs")).textContent).toContain(
-      en["lists.audience.ownerTeams"],
-    );
-    expect((await rowOf("Launch deck")).textContent).toContain(
-      en["lists.sharing.workspace"],
-    );
+    expect(said("Our accounts")).toContain(en["lists.audience.yourTeams"]);
+    expect(said("Theirs")).toContain(en["lists.audience.ownerTeams"]);
+    expect(said("Launch deck")).toContain(en["lists.sharing.workspace"]);
   });
 
   it("says, folded, who can find a list the reader shares from their own group", async () => {
