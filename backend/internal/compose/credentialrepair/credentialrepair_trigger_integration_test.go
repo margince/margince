@@ -192,21 +192,33 @@ func TestTheAuditExceptionRefusesAnImageThatIsNotMasked(t *testing.T) {
 		{"text inserted before the marker", `{"body":"Passwort: zz[masked]"}`, "local", certifyTheRecordOf, auditRow, true},
 		{"a leaf shortened with no marker", `{"body":"ok"}`, "local", certifyTheRecordOf, repeated, true},
 		{"text appended after the marker", `{"body":"Passwort: [masked]!!"}`, "local", certifyTheRecordOf, auditRow, true},
-		{"old text repeated after the marker", `{"body":"Passwort: Hunter2-Example![masked]Example!"}`,
-			"local", certifyTheRecordOf, auditRow, true},
-		{"text between two markers changed", `{"body":"Passwort: [masked] oder Kennwort: [masked] danke"}`,
-			"local", certifyTheRecordOf, twoCredentials, true},
-		{"pieces out of order", `{"body":"[masked]Kennwort: [masked]Passwort: [masked] danke"}`,
-			"local", certifyTheRecordOf, twoCredentials, true},
+		{
+			"old text repeated after the marker", `{"body":"Passwort: Hunter2-Example![masked]Example!"}`,
+			"local", certifyTheRecordOf, auditRow, true,
+		},
+		{
+			"text between two markers changed", `{"body":"Passwort: [masked] oder Kennwort: [masked] danke"}`,
+			"local", certifyTheRecordOf, twoCredentials, true,
+		},
+		{
+			"pieces out of order", `{"body":"[masked]Kennwort: [masked]Passwort: [masked] danke"}`,
+			"local", certifyTheRecordOf, twoCredentials, true,
+		},
 		{"a mail under a statutory hold", masked, "local", certifyTheRecordOf, heldImage, true},
 		{"a masked image", masked, "local", certifyTheRecordOf, auditRow, false},
 		{"another record type sharing a held mail's id", masked, "local", certifyTheRecordOf, sameIDSend, false},
-		{"two credentials masked in one leaf", `{"body":"Passwort: [masked] und Kennwort: [masked] danke"}`,
-			"local", certifyTheRecordOf, twoCredentials, false},
-		{"a credential at the start of the leaf", `{"body":"[masked] war das Passwort"}`,
-			"local", certifyTheRecordOf, atStart, false},
-		{"a credential at the end of the leaf", `{"body":"Passwort: [masked]"}`,
-			"local", certifyTheRecordOf, auditRow, false},
+		{
+			"two credentials masked in one leaf", `{"body":"Passwort: [masked] und Kennwort: [masked] danke"}`,
+			"local", certifyTheRecordOf, twoCredentials, false,
+		},
+		{
+			"a credential at the start of the leaf", `{"body":"[masked] war das Passwort"}`,
+			"local", certifyTheRecordOf, atStart, false,
+		},
+		{
+			"a credential at the end of the leaf", `{"body":"Passwort: [masked]"}`,
+			"local", certifyTheRecordOf, auditRow, false,
+		},
 	}
 	for _, variant := range certificateVariants {
 		if variant.statement == certifyTheRecordOf {

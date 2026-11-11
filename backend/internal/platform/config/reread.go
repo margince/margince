@@ -28,7 +28,7 @@ func RereadSecret[T any](c *Config, s *Setting[T]) (T, Origin, error) {
 		return value, origin, nil
 	}
 	var zero T
-	text, err := readSecretFile(path, c.readFile)
+	text, err := readSecretFrom(path, c.readFile)
 	if err != nil {
 		return zero, origin, fmt.Errorf("%s: %w", origin.Name, err)
 	}

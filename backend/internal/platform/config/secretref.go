@@ -38,7 +38,7 @@ func resolveRef(text string, readFile func(string) ([]byte, error), getenv func(
 	}
 	switch kind {
 	case refFile:
-		value, err := readSecretFile(arg, readFile)
+		value, err := readSecretFrom(arg, readFile)
 		return value, arg, true, err
 	case refEnv:
 		v, set := getenv(arg)
@@ -54,13 +54,13 @@ func resolveRef(text string, readFile func(string) ([]byte, error), getenv func(
 // ${file:path} reference follows. It is for a setting that names its secret by
 // path, so both spellings of one secret read the same bytes the same way.
 func ReadSecretFile(path string) (string, error) {
-	return readSecretFile(path, os.ReadFile)
+	return readSecretFrom(path, os.ReadFile)
 }
 
-// readSecretFile drops one trailing newline, refuses a file over
+// readSecretFrom drops one trailing newline, refuses a file over
 // SecretFileLimit and refuses the absence marker. The size is checked on the
 // bytes read, so a file growing between a check and the read cannot pass.
-func readSecretFile(path string, readFile func(string) ([]byte, error)) (string, error) {
+func readSecretFrom(path string, readFile func(string) ([]byte, error)) (string, error) {
 	raw, err := readFile(path)
 	if err != nil {
 		return "", fmt.Errorf("cannot read secret file %s", path)
