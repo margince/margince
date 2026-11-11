@@ -2,11 +2,14 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 /** @vitest-environment happy-dom */
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import type { components } from "../../api/schema";
+import { en } from "../../i18n/en";
+import { meFixture } from "../../testing/mefixture";
 import {
   installFetchStub,
+  jsonResponse,
   meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
@@ -67,5 +70,70 @@ describe("the left column's Recorded by row on a deal an agent created", () => {
     mount(deal);
 
     expect(await screen.findByText("Automated by an agent")).toBeTruthy();
+  });
+});
+
+describe("the left column's Lists group", () => {
+  function serve(
+    list: readonly ("read" | "update")[],
+    onLists: unknown[] = [],
+  ) {
+    installFetchStub({
+      "GET /me": () =>
+        jsonResponse({
+          ...meFixture({
+            allow: { deal: ["read"], list },
+            settingsAvailability: { lists: true },
+          }),
+          teams: [],
+        }),
+      [`GET /records/deal/${deal.id}/lists`]: () =>
+        jsonResponse({ data: onLists }),
+    });
+    render(
+      <StoryProviders>
+        <DealAside deal={deal} stages={[]} />
+      </StoryProviders>,
+    );
+  }
+
+  const group = async () =>
+    within(
+      await screen.findByRole("region", { name: en["lists.record.title"] }),
+    );
+
+  it("offers Add to Shortlist and every list while the deal is on none", async () => {
+    serve(["read", "update"]);
+    const lists = await group();
+    expect(
+      await lists.findByRole("button", { name: en["lists.addToShortlist"] }),
+    ).toBeTruthy();
+    expect(
+      lists
+        .getByRole("link", { name: en["lists.record.allLists"] })
+        .getAttribute("href"),
+    ).toBe("/#/filters/lists");
+  });
+
+  it("keeps the lists it is on beside the verbs", async () => {
+    serve(["read", "update"], [{ id: "s-1", name: "Launch references" }]);
+    const lists = await group();
+    expect(
+      await lists.findByRole("link", { name: "Launch references" }),
+    ).toBeTruthy();
+    expect(
+      lists.getByRole("button", { name: en["lists.addToShortlist"] }),
+    ).toBeTruthy();
+  });
+
+  it("offers no Add to Shortlist to a seat that may not change lists", async () => {
+    serve(["read"]);
+    const lists = await group();
+    expect(
+      lists.getByRole("link", { name: en["lists.record.allLists"] }),
+    ).toBeTruthy();
+    expect(
+      lists.queryByRole("button", { name: en["lists.addToShortlist"] }),
+    ).toBeNull();
   });
 });

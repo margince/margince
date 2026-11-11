@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/components/listquery.tsx frontend/src/design-system/listviewmenu.tsx frontend/src/design-system/listtoolbar.tsx frontend/src/design-system/listsearch.tsx frontend/src/components/listqueryviews.ts frontend/src/components/bulkverbs.tsx frontend/src/features/lists backend/internal/modules/collections backend/internal/modules/search/queryvocab.go backend/internal/compose/datatask_machineaddress.go frontend/src/features/contacts/contacts.tsx backend/internal/platform/auth/sharedwith.go frontend/src/features/records/recordlists.tsx frontend/src/components/addtoshortlist.tsx -->
+<!-- describes: frontend/src/components/listquery.tsx frontend/src/design-system/listviewmenu.tsx frontend/src/design-system/listtoolbar.tsx frontend/src/design-system/listsearch.tsx frontend/src/components/listqueryviews.ts frontend/src/components/bulkverbs.tsx frontend/src/features/lists backend/internal/modules/collections backend/internal/modules/search/queryvocab.go backend/internal/compose/datatask_machineaddress.go frontend/src/features/contacts/contacts.tsx backend/internal/platform/auth/sharedwith.go frontend/src/features/records/recordlists.tsx frontend/src/components/addtoshortlist.tsx frontend/src/features/companies/companyrail.tsx frontend/src/features/contacts/contactrail.tsx frontend/src/features/deals/dealaside.tsx frontend/src/features/leads/leaddetails.tsx -->
 # Lists, filters and views
 
 The list screens in Margince are **Contacts**, **Companies**, **Leads**, **Deals** and **Projects** in the sidebar. How to create and edit a single record is in [Contacts, companies, leads, deals and projects](records.md) and [Leads, deals and projects](leads-deals-and-projects.md).
@@ -303,7 +303,7 @@ To start a Shortlist in Margince, open **Filters and views** and press **New Sho
 1. Type a **Name**, pick the **Record type**, and if you like say **What it is for**. **Who can find it** starts on **A team**; pick **Only me** to keep it to yourself.
 2. Press **Create list**.
 3. Add records from a record's page: press **Add to Shortlist** and pick the Shortlist (or **A new Shortlist…**).
-Add a note under **Why (optional)** and press **Add**. To add many records at once, tick them on the list screen. Pick the Shortlist under **Add to Shortlist** in the bar for many rows. On a contact, company or deal page, **Lists** also holds **Add to Shortlist** and **All lists**.
+Add a note under **Why (optional)** and press **Add**. To add many records at once, tick them on the list screen. Pick the Shortlist under **Add to Shortlist** in the bar for many rows. On a contact, company, deal or lead page, **Lists** also holds **Add to Shortlist** and **All lists**.
 Also called: static list, hand-picked list, target list, account list.
 
 ### Who can find a list?

@@ -48,9 +48,23 @@ const stages: Stage[] = [
   },
 ];
 
-function Column({ locale }: Readonly<{ locale: Locale }>) {
+function Column({
+  locale,
+  listsOn = false,
+}: Readonly<{ locale: Locale; listsOn?: boolean }>) {
   installFetchStub({
-    "GET /me": () => jsonResponse(meFixture({ allow: { deal: ["read"] } })),
+    "GET /me": () =>
+      jsonResponse({
+        ...meFixture({
+          allow: listsOn
+            ? { deal: ["read"], list: ["read", "create", "update"] }
+            : { deal: ["read"] },
+          settingsAvailability: { lists: listsOn },
+        }),
+        teams: [],
+      }),
+    "GET /records/deal/d1/lists": () =>
+      jsonResponse({ data: [{ id: "s-1", name: "Launch references" }] }),
   });
   return (
     <StoryProviders locale={locale}>
@@ -98,5 +112,20 @@ export const RecordedByGerman: Story = {
       "Erfasst von",
       "Quelle",
     );
+  },
+};
+
+// On one Shortlist, for a seat that may change lists: the chip, Add to
+// Shortlist and the way to every list.
+export const Lists: Story = {
+  name: "Lists, with Add to Shortlist",
+  render: () => <Column locale="en" listsOn />,
+  play: async ({ canvasElement }) => {
+    const lists = within(
+      await within(canvasElement).findByRole("region", { name: "Lists" }),
+    );
+    await expect(
+      await lists.findByRole("button", { name: "Add to Shortlist" }),
+    ).toBeVisible();
   },
 };

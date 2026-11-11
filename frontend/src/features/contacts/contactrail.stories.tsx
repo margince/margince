@@ -6,9 +6,12 @@ import { expect, within } from "storybook/test";
 import type { components } from "../../api/schema";
 import { ContactRail } from "./contactrail";
 import "./contact360.css";
+import { shortlist } from "../../testing/lists.fixtures";
+import { meFixture } from "../../testing/mefixture";
 import {
   callMessengersRoute,
   installFetchStub,
+  jsonResponse,
   meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
@@ -253,12 +256,18 @@ const signalsPartlyDerivable: View = {
 // The rail sits in a 320px column in the record page's grid, and its readings
 // are laid out for that width: shown any wider, the label and its verdict drift
 // apart and the section stops reading as a glance.
-function rail(view: View, entries = guard.entries) {
+function rail(
+  view: View,
+  entries = guard.entries,
+  me = meRoute({ contact: ["read", "update"] }),
+) {
   installFetchStub({
     // The rail draws capability-gated verbs, so the session has to be routed.
     // An unrouted probe denies every grant and every story shows the read-only rail.
-    "GET /me": meRoute({ contact: ["read", "update"] }),
+    "GET /me": me,
     "GET /installation/settings": callMessengersRoute(),
+    [`GET /records/contact/${view.contact.id}/lists`]: () =>
+      jsonResponse({ data: [shortlist] }),
   });
   return (
     <StoryProviders>
@@ -281,6 +290,33 @@ function rail(view: View, entries = guard.entries) {
 export const EverySectionGranted: Story = {
   name: "Granted, with a live relationship",
   render: () => rail(granted),
+};
+
+// On one Shortlist, for a seat that may change lists: the chip, Add to
+// Shortlist and the way to every list.
+export const Lists: Story = {
+  name: "Lists, with Add to Shortlist",
+  render: () =>
+    rail(granted, guard.entries, () =>
+      jsonResponse({
+        ...meFixture({
+          allow: {
+            contact: ["read", "update"],
+            list: ["read", "create", "update"],
+          },
+          settingsAvailability: { lists: true },
+        }),
+        teams: [],
+      }),
+    ),
+  play: async ({ canvasElement }) => {
+    const lists = within(
+      await within(canvasElement).findByRole("region", { name: "Lists" }),
+    );
+    await expect(
+      await lists.findByRole("button", { name: "Add to Shortlist" }),
+    ).toBeVisible();
+  },
 };
 
 export const GrantedAndEmpty: Story = {

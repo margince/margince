@@ -3,9 +3,14 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent, { type UserEvent } from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { en } from "../../i18n/en";
 import { changeChoice } from "../../testing/choicedialog.testkit";
 import { companyNamesAnswer } from "../../testing/companynames.testkit";
+import { meFixture } from "../../testing/mefixture";
+import { installFetchStub } from "../../testing/story-utils";
+import { LeadDetails } from "./leaddetails";
 import { LeadScreen } from "./leads";
+import { useLeadPatch } from "./leads.patch";
 import { jsonResponse, lead, render, stubFetch } from "./leads.testkit";
 
 beforeEach(() => {
@@ -167,5 +172,68 @@ describe("the About company row", () => {
     await user.click(change);
     expect(await screen.findByDisplayValue("Nordwind Logistik")).toBeVisible();
     expect(patches).toEqual([]);
+  });
+});
+
+describe("a lead's Lists group", () => {
+  function Details() {
+    const writer = useLeadPatch(lead, lead.id, () => undefined);
+    return (
+      <LeadDetails lead={lead} writer={writer} terminalReasonId="refused" />
+    );
+  }
+
+  function show(list: readonly ("read" | "update")[], onLists: unknown[] = []) {
+    installFetchStub({
+      "GET /me": () =>
+        jsonResponse({
+          ...meFixture({
+            allow: { lead: ["read", "update"], list },
+            settingsAvailability: { lists: true },
+          }),
+          teams: [],
+        }),
+      [`GET /records/lead/${lead.id}/lists`]: () =>
+        jsonResponse({ data: onLists }),
+    });
+    render(<Details />);
+  }
+
+  const group = async () =>
+    within(
+      await screen.findByRole("region", { name: en["lists.record.title"] }),
+    );
+
+  it("offers Add to Shortlist and every list while the lead is on none", async () => {
+    show(["read", "update"]);
+    const lists = await group();
+    expect(
+      await lists.findByRole("button", { name: en["lists.addToShortlist"] }),
+    ).toBeTruthy();
+    expect(
+      lists
+        .getByRole("link", { name: en["lists.record.allLists"] })
+        .getAttribute("href"),
+    ).toBe("/#/filters/lists");
+  });
+
+  it("keeps the lists it is on beside the verbs", async () => {
+    show(["read", "update"], [{ id: "s-1", name: "Launch references" }]);
+    const lists = await group();
+    expect(await lists.findByText("Launch references")).toBeTruthy();
+    expect(
+      lists.getByRole("button", { name: en["lists.addToShortlist"] }),
+    ).toBeTruthy();
+  });
+
+  it("offers no Add to Shortlist to a seat that may not change lists", async () => {
+    show(["read"]);
+    const lists = await group();
+    expect(
+      lists.getByRole("link", { name: en["lists.record.allLists"] }),
+    ).toBeTruthy();
+    expect(
+      lists.queryByRole("button", { name: en["lists.addToShortlist"] }),
+    ).toBeNull();
   });
 });

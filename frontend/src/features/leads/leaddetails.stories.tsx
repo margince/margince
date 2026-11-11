@@ -2,9 +2,10 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { screen, userEvent } from "storybook/test";
+import { expect, screen, userEvent, within } from "storybook/test";
 import type { components } from "../../api/schema";
 import type { Locale } from "../../i18n";
+import { meFixture } from "../../testing/mefixture";
 import {
   installFetchStub,
   jsonResponse,
@@ -52,9 +53,16 @@ const linked: Lead = {
   },
 };
 
-function page(lead: Lead, locale: Locale = "en", companyName?: string) {
+function page(
+  lead: Lead,
+  locale: Locale = "en",
+  companyName?: string,
+  listsOn = false,
+) {
   return () => {
     installFetchStub({
+      "GET /records/lead/l-1/lists": () =>
+        jsonResponse({ data: [{ id: "s-1", name: "Launch references" }] }),
       "GET /users": () =>
         jsonResponse({
           data: [
@@ -70,10 +78,24 @@ function page(lead: Lead, locale: Locale = "en", companyName?: string) {
           id: "c-7",
           display_name: companyName ?? "Nordwind Holding SE",
         }),
-      "GET /me": meRoute(
-        { lead: ["read", "update"], company: ["read"] },
-        { roles: ["rep"] },
-      ),
+      "GET /me": listsOn
+        ? () =>
+            jsonResponse({
+              ...meFixture({
+                roles: ["rep"],
+                allow: {
+                  lead: ["read", "update"],
+                  company: ["read"],
+                  list: ["read", "create", "update"],
+                },
+                settingsAvailability: { lists: true },
+              }),
+              teams: [],
+            })
+        : meRoute(
+            { lead: ["read", "update"], company: ["read"] },
+            { roles: ["rep"] },
+          ),
     });
     return (
       <StoryProviders locale={locale}>
@@ -131,6 +153,17 @@ export const CompanyFactsDark: Story = {
 export const CompanyFactsPhone: Story = {
   tags: ["uat-phone"],
   render: page(linked),
+};
+
+/** On one Shortlist, for a seat that may change lists: the chip, Add to Shortlist and the way to every list. */
+export const Lists: Story = {
+  render: page(base, "en", undefined, true),
+  play: async () => {
+    const lists = within(await screen.findByRole("region", { name: "Lists" }));
+    await expect(
+      await lists.findByRole("button", { name: "Add to Shortlist" }),
+    ).toBeVisible();
+  },
 };
 
 /** The owner is handed on in a dialog opened from the Owner row's value. */
