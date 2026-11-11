@@ -26535,7 +26535,7 @@ components:
         record_type: {type: string, enum: [lead, contact], description: Required when applying; use the record type from the preview.}
         record_id: {type: string, format: uuid, description: Required when applying; use the record ID from the preview.}
         record_version:
-          allOf: [{$ref: '#/components/schemas/RowVersion'}]
+          $ref: '#/components/schemas/RowVersion'
           description: Required when applying the assignment. Use the version returned by its preview.
     WebsiteInquiryAssignment:
       type: object
