@@ -87,7 +87,7 @@ func (s *Store) CreateAssignment(
 		if err != nil {
 			return fmt.Errorf("insert record assignment: %w", err)
 		}
-		_, err = storekit.Audit(ctx, tx, "create", "record_assignment", id, nil,
+		auditID, err := storekit.Audit(ctx, tx, "create", "record_assignment", id, nil,
 			map[string]any{
 				"record_type":    string(in.RecordType),
 				"record_id":      in.RecordID.String(),
@@ -99,68 +99,78 @@ func (s *Store) CreateAssignment(
 			return err
 		}
 		out, err = readAssignment(ctx, tx, id)
-		return err
+		if err != nil {
+			return err
+		}
+		return storekit.EmitEvent(ctx, tx, auditID, id, crmcontracts.InternalEventRecordAssignmentCreated{})
 	})
 	return out, err
 }
 
 // UpdateAssignment hands a responsibility to someone else, or changes its role.
-func (s *Store) UpdateAssignment(
-	ctx context.Context, id ids.UUID, in UpdateAssignmentInput,
-) (crmcontracts.RecordAssignment, error) {
+func (s *Store) UpdateAssignment(ctx context.Context, id ids.UUID, in UpdateAssignmentInput) (crmcontracts.RecordAssignment, error) {
 	var out crmcontracts.RecordAssignment
 	err := s.tx(ctx, func(tx pgx.Tx) error {
 		before, err := lockAssignment(ctx, tx, id)
 		if err != nil {
 			return err
 		}
-		// lockAssignment already checked write authority against the STORED
-		// parent, which is what stops a caller naming a record they may write to
-		// reach an assignment on one they may not.
-		kind, subject := before.SubjectKind, before.SubjectID
-		if in.SubjectKind != nil {
-			kind = *in.SubjectKind
-		}
-		if in.SubjectID != nil {
-			subject = *in.SubjectID
-		}
-		role := before.RoleID
-		if in.RoleID != nil {
-			role = *in.RoleID
-		}
-		if err := ensureAssignableRole(ctx, tx, role, before.RecordType, kind); err != nil {
-			return err
-		}
-		if err := ensureSubjectAssignable(ctx, tx, kind, subject); err != nil {
-			return err
-		}
-		user, team := subjectArms(kind, subject)
-		patch := storekit.NewPatch()
-		beforeUser, beforeTeam := subjectArms(before.SubjectKind, before.SubjectID)
-		patch.Set("user_id", beforeUser, user)
-		patch.Set("team_id", beforeTeam, team)
-		patch.Set("role_id", before.RoleID, role)
-		if patch.Empty() {
-			out, err = readAssignment(ctx, tx, id)
-			return err
-		}
-		if err := patch.ApplyWithVersion(ctx, tx, assignmentTable, id, before.Version); err != nil {
-			// The live-uniqueness index fires when the reassignment would put a
-			// subject where that subject already holds this role. "Already
-			// there" is a conflict the caller can act on, not a server fault.
-			if storekit.IsUniqueViolation(err) {
-				return apperrors.ErrConflict
-			}
-			return err
-		}
-		if _, err := storekit.Audit(ctx, tx, "update", "record_assignment", id,
-			patch.Before(), patch.After()); err != nil {
-			return err
-		}
-		out, err = readAssignment(ctx, tx, id)
+		out, err = updateAssignmentTx(ctx, tx, before, in)
 		return err
 	})
 	return out, err
+}
+
+func updateAssignmentTx(ctx context.Context, tx pgx.Tx, before assignmentRow, in UpdateAssignmentInput) (crmcontracts.RecordAssignment, error) {
+	var out crmcontracts.RecordAssignment
+	var err error
+	// Authority follows the stored parent, so a supplied record cannot admit a different assignment.
+	kind, subject := before.SubjectKind, before.SubjectID
+	if in.SubjectKind != nil {
+		kind = *in.SubjectKind
+	}
+	if in.SubjectID != nil {
+		subject = *in.SubjectID
+	}
+	role := before.RoleID
+	if in.RoleID != nil {
+		role = *in.RoleID
+	}
+	if err := ensureAssignableRole(ctx, tx, role, before.RecordType, kind); err != nil {
+		return out, err
+	}
+	if err := ensureSubjectAssignable(ctx, tx, kind, subject); err != nil {
+		return out, err
+	}
+	user, team := subjectArms(kind, subject)
+	patch := storekit.NewPatch()
+	beforeUser, beforeTeam := subjectArms(before.SubjectKind, before.SubjectID)
+	patch.Set("user_id", beforeUser, user)
+	patch.Set("team_id", beforeTeam, team)
+	patch.Set("role_id", before.RoleID, role)
+	if patch.Empty() {
+		out, err = readAssignment(ctx, tx, before.ID)
+		return out, err
+	}
+	if err := patch.ApplyWithVersion(ctx, tx, assignmentTable, before.ID, before.Version); err != nil {
+		// The live-uniqueness index fires when the reassignment would put a
+		// subject where that subject already holds this role. "Already
+		// there" is a conflict the caller can act on, not a server fault.
+		if storekit.IsUniqueViolation(err) {
+			return out, apperrors.ErrConflict
+		}
+		return out, err
+	}
+	auditID, err := storekit.Audit(ctx, tx, "update", "record_assignment", before.ID,
+		patch.Before(), patch.After())
+	if err != nil {
+		return out, err
+	}
+	out, err = readAssignment(ctx, tx, before.ID)
+	if err != nil {
+		return out, err
+	}
+	return out, storekit.EmitEvent(ctx, tx, auditID, before.ID, crmcontracts.InternalEventRecordAssignmentUpdated{})
 }
 
 // ArchiveAssignment ends a responsibility, keeping it in history. There is no
@@ -172,21 +182,26 @@ func (s *Store) ArchiveAssignment(ctx context.Context, id ids.UUID) error {
 		if err != nil {
 			return err
 		}
-		// Already archived is a conflict, not a second archive: the row is
-		// history by then, and re-stamping it would move the moment
-		// responsibility ended to whenever somebody pressed the button twice.
-		if before.ArchivedAt != nil {
-			return apperrors.ErrConflict
-		}
-		patch := storekit.NewPatch()
-		patch.Set("archived_at", nil, time.Now())
-		if err := patch.ApplyWithVersion(ctx, tx, assignmentTable, id, before.Version); err != nil {
-			return err
-		}
-		_, err = storekit.Audit(ctx, tx, "archive", "record_assignment", id,
-			patch.Before(), patch.After())
-		return err
+		return archiveAssignmentTx(ctx, tx, before, nil)
 	})
+}
+
+func archiveAssignmentTx(ctx context.Context, tx pgx.Tx, before assignmentRow, evidence map[string]any) error {
+	// Repeated archives must preserve the moment responsibility ended.
+	if before.ArchivedAt != nil {
+		return apperrors.ErrConflict
+	}
+	patch := storekit.NewPatch()
+	patch.Set("archived_at", nil, time.Now())
+	if err := patch.ApplyWithVersion(ctx, tx, assignmentTable, before.ID, before.Version); err != nil {
+		return err
+	}
+	auditID, err := storekit.AuditWithEvidence(ctx, tx, "archive", "record_assignment", before.ID,
+		patch.Before(), patch.After(), evidence)
+	if err != nil {
+		return err
+	}
+	return storekit.EmitEvent(ctx, tx, auditID, before.ID, crmcontracts.InternalEventRecordAssignmentArchived{})
 }
 
 // parentArms turns the logical parent into the three typed FK columns, exactly
@@ -220,14 +235,23 @@ func ensureAssignableRole(
 	ctx context.Context, tx pgx.Tx,
 	roleID ids.UUID, rt crmcontracts.AssignmentRecordType, kind crmcontracts.AssignmentSubjectKind,
 ) error {
+	return readAssignableRole(ctx, tx, roleID, rt, kind, true)
+}
+
+func readAssignableRole(
+	ctx context.Context, tx pgx.Tx,
+	roleID ids.UUID, rt crmcontracts.AssignmentRecordType, kind crmcontracts.AssignmentSubjectKind, lock bool,
+) error {
 	if err := admitSubjectKind(kind); err != nil {
 		return err
 	}
 	var active bool
 	var recordTypes, assigneeKinds []string
-	err := tx.QueryRow(ctx,
-		`SELECT active, record_types, assignee_kinds FROM record_role WHERE id = $1 FOR UPDATE`,
-		roleID).Scan(&active, &recordTypes, &assigneeKinds)
+	query := `SELECT active, record_types, assignee_kinds FROM record_role WHERE id = $1`
+	if lock {
+		query += " FOR UPDATE"
+	}
+	err := tx.QueryRow(ctx, query, roleID).Scan(&active, &recordTypes, &assigneeKinds)
 	if err != nil {
 		return roleLookupError(err)
 	}

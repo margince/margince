@@ -1123,6 +1123,10 @@ func (stubs) RecordCommunicationContext(w nethttp.ResponseWriter, r *nethttp.Req
 	httperr.NotImplemented(w, r, "RecordCommunicationContext")
 }
 
+func (stubs) CorrectCommunicationWording(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID) {
+	httperr.NotImplemented(w, r, "CorrectCommunicationWording")
+}
+
 func (stubs) DirectCommunicationSend(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID) {
 	httperr.NotImplemented(w, r, "DirectCommunicationSend")
 }
@@ -2431,6 +2435,10 @@ func (stubs) GetLicenseEntitlement(w nethttp.ResponseWriter, r *nethttp.Request)
 	httperr.NotImplemented(w, r, "GetLicenseEntitlement")
 }
 
+func (stubs) CheckLicenseNow(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "CheckLicenseNow")
+}
+
 func (stubs) ListOauthApps(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "ListOauthApps")
 }
@@ -2485,6 +2493,10 @@ func (stubs) CompleteIntroRequest(w nethttp.ResponseWriter, r *nethttp.Request, 
 
 func (stubs) DecideIntroRequest(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "DecideIntroRequest")
+}
+
+func (stubs) ReplaceIntroRequest(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "ReplaceIntroRequest")
 }
 
 func (stubs) ListCorpora(w nethttp.ResponseWriter, r *nethttp.Request) {
@@ -3697,6 +3709,14 @@ func (stubs) ListMeetingProposals(w nethttp.ResponseWriter, r *nethttp.Request, 
 
 func (stubs) CreateMeetingProposal(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.CreateMeetingProposalParams) {
 	httperr.NotImplemented(w, r, "CreateMeetingProposal")
+}
+
+func (stubs) GetHandoffAssignee(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "GetHandoffAssignee")
+}
+
+func (stubs) ReassignHandoff(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "ReassignHandoff")
 }
 
 func (stubs) Search(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.SearchParams) {

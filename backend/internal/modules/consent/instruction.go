@@ -32,11 +32,14 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
+
+const instructionAuthorityEvidenceKey = "authorized_by"
 
 // entityCommunicationException is the RBAC object directing a send answers to.
 //
@@ -167,21 +170,21 @@ func (s *Store) DirectSend(ctx context.Context, reviewID ids.UUID, in DirectInpu
 			DirectedBy: director,
 			ReasonCode: in.ReasonCode,
 			Status:     InstructionDirected,
-			ValidUntil: time.Now().Add(InstructionValidity),
 		}
 		// THE MESSAGE THEY READ, fingerprinted now. The held row this review
 		// names can be edited afterwards, so a check made later against that
 		// row would compare the message with itself.
-		wording, known, err := acknowledgedWordingTx(ctx, tx, review.IntentID)
+		message, err := instructionMessageTx(ctx, tx, review.IntentID)
 		if err != nil {
 			return err
 		}
+		out.ValidUntil = message.RecordedAt.Add(InstructionValidity)
 		// A review with no readable held message records no fingerprint rather
 		// than a zero one: an all-zero digest would later compare unequal to
 		// every real message and refuse a send nobody can fix.
 		var acknowledged []byte
-		if known {
-			acknowledged = wording[:]
+		if message.Known {
+			acknowledged = message.Wording[:]
 		}
 		// ASKED BEFORE THE INSERT, not after it. A unique violation aborts the
 		// transaction, so a query that ran once the key had fired would be
@@ -196,14 +199,18 @@ func (s *Store) DirectSend(ctx context.Context, reviewID ids.UUID, in DirectInpu
 		} else if standing {
 			return ErrDecisionAlreadyRecorded
 		}
+		arguments := []any{
+			reviewID, director, in.ReasonCode, in.Explanation,
+			in.WarningVersion, message.RecordedAt, review.OpenedAt, out.ValidUntil,
+			acknowledged, givenByAdmin, actingAgent(ctx), nullableText(message.Scope),
+		}
 		if err := tx.QueryRow(ctx, `
 			INSERT INTO communication_instruction
 			  (review_id, directed_by, reason_code, explanation, warning_version,
-			   acknowledged_at, facts_as_of, valid_until, acknowledged_wording, given_by_admin, directed_by_agent)
-			VALUES ($1, $2, $3, $4, $5, now(), $6, $7, $8, $9, $10)
-			RETURNING id`,
-			reviewID, director, in.ReasonCode, in.Explanation,
-			in.WarningVersion, review.OpenedAt, out.ValidUntil, acknowledged, givenByAdmin, actingAgent(ctx)).Scan(&out.ID); err != nil {
+			   acknowledged_at, facts_as_of, valid_until, acknowledged_wording, given_by_admin,
+			   directed_by_agent, acknowledged_scope)
+			VALUES (`+database.Placeholders(arguments)+`)
+			RETURNING id`, arguments...).Scan(&out.ID); err != nil {
 			// A DECISION ALREADY STANDS ON THIS REVIEW, which is what the
 			// unique key on review_id says. Named rather than reported as a
 			// storage fault: the caller retrying a send whose decision already
@@ -233,8 +240,8 @@ func (s *Store) DirectSend(ctx context.Context, reviewID ids.UUID, in DirectInpu
 				// read `communication_instruction.create` — a permission
 				// nothing checks. The entity stays the table, which is how a
 				// reader finds the row; the authority is recorded here.
-				"authorized_by":  entityCommunicationException,
-				"given_by_admin": givenByAdmin,
+				instructionAuthorityEvidenceKey: entityCommunicationException,
+				"given_by_admin":                givenByAdmin,
 			}); err != nil {
 			return err
 		}
@@ -289,8 +296,8 @@ func (s *Store) RevokeInstruction(ctx context.Context, id ids.UUID, reason strin
 		_, err = storekit.Audit(ctx, tx, "update", "communication_instruction", id,
 			map[string]any{"status": InstructionDirected},
 			map[string]any{
-				"status":        InstructionRevoked,
-				"authorized_by": entityCommunicationException,
+				"status":                        InstructionRevoked,
+				instructionAuthorityEvidenceKey: entityCommunicationException,
 			})
 		return err
 	})

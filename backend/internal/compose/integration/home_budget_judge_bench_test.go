@@ -23,31 +23,31 @@ func homeRow(row string, p95, budget time.Duration, samples int) DailyResult {
 
 func TestAHomeReadUnderItsBudgetPasses(t *testing.T) {
 	results := []DailyResult{homeRow("home_warm_brief", 249*time.Millisecond, homeWarmBudget, dailySamples)}
-	if failures := HomeBudgetFailures(results); len(failures) != 0 {
+	if failures := HomeBudgetFailures(results, homeBudgetAbsolute); len(failures) != 0 {
 		t.Fatalf("a read under budget failed: %v", failures)
 	}
 }
 
 func TestAHomeReadAtExactlyItsBudgetFails(t *testing.T) {
 	results := []DailyResult{homeRow("home_warm_brief", homeWarmBudget, homeWarmBudget, dailySamples)}
-	if failures := HomeBudgetFailures(results); len(failures) != 1 || !strings.Contains(failures[0], "at or over") {
+	if failures := HomeBudgetFailures(results, homeBudgetAbsolute); len(failures) != 1 || !strings.Contains(failures[0], "at or over") {
 		t.Fatalf("a p95 equal to the budget must fail, got %v", failures)
 	}
 }
 
 func TestAColdHomeReadOverFiveHundredMillisecondsFails(t *testing.T) {
 	results := []DailyResult{homeRow("home_cold_magic", 501*time.Millisecond, homeColdBudget, homeColdRounds)}
-	if failures := HomeBudgetFailures(results); len(failures) != 1 || !strings.Contains(failures[0], "home_cold_magic") {
+	if failures := HomeBudgetFailures(results, homeBudgetAbsolute); len(failures) != 1 || !strings.Contains(failures[0], "home_cold_magic") {
 		t.Fatalf("a cold read over 500 ms must fail naming its row, got %v", failures)
 	}
 }
 
 func TestAHomeReadWithNoSamplesFailsRatherThanPasses(t *testing.T) {
 	results := []DailyResult{homeRow("home_warm_handled", 0, homeWarmBudget, 0)}
-	if failures := HomeBudgetFailures(results); len(failures) != 1 || !strings.Contains(failures[0], "no samples") {
+	if failures := HomeBudgetFailures(results, homeBudgetAbsolute); len(failures) != 1 || !strings.Contains(failures[0], "no samples") {
 		t.Fatalf("a read with no samples must fail, got %v", failures)
 	}
-	if failures := HomeBudgetFailures(nil); len(failures) != 1 {
+	if failures := HomeBudgetFailures(nil, homeBudgetAbsolute); len(failures) != 1 {
 		t.Fatalf("a run that measured nothing must fail, got %v", failures)
 	}
 }
@@ -55,8 +55,26 @@ func TestAHomeReadWithNoSamplesFailsRatherThanPasses(t *testing.T) {
 func TestAKnownIssueNeverExcusesASlowHomeRead(t *testing.T) {
 	// The daily bench's own row for the Home worklist, which DailyKnownIssues may list.
 	slow := DailyResult{Flow: homeWarmFlow.Name, Row: "home_worklist", P95: 2 * time.Second, Budget: homeWarmBudget, Samples: dailySamples}
-	if failures := HomeBudgetFailures([]DailyResult{slow}); len(failures) != 1 {
+	if failures := HomeBudgetFailures([]DailyResult{slow}, homeBudgetAbsolute); len(failures) != 1 {
 		t.Fatalf("a row DailyKnownIssues lists must still fail the Home check, got %v", failures)
+	}
+}
+
+func TestRelativeModeLeavesSpeedToTheComparisonButStillFailsAnUncleanRead(t *testing.T) {
+	slow := homeRow("home_cold_worklist", 2*time.Second, homeColdBudget, homeColdRounds)
+	if failures := HomeBudgetFailures([]DailyResult{slow}, homeBudgetRelative); len(failures) != 0 {
+		t.Fatalf("relative mode failed a read only for its speed: %v", failures)
+	}
+	errored := homeRow("home_warm_worklist", time.Millisecond, homeWarmBudget, dailySamples)
+	errored.Status5xx = 1
+	unsampled := homeRow("home_warm_magic", 0, homeWarmBudget, 0)
+	short := homeRow("home_cold_magic", time.Millisecond, homeColdBudget, homeColdRounds-1)
+	failures := HomeBudgetFailures([]DailyResult{errored, unsampled, short}, homeBudgetRelative)
+	if len(failures) != 3 {
+		t.Fatalf("relative mode must still fail a 5xx, an unsampled read and a short row, got %v", failures)
+	}
+	if failures := HomeBudgetFailures(nil, homeBudgetRelative); len(failures) != 1 {
+		t.Fatalf("relative mode must still fail a run that measured nothing, got %v", failures)
 	}
 }
 
@@ -65,7 +83,7 @@ func TestAServerErrorOrARefusalFailsAHomeReadWithinBudget(t *testing.T) {
 	errored.Status5xx = 1
 	refused := homeRow("home_warm_magic", time.Millisecond, homeWarmBudget, dailySamples)
 	refused.Status422 = 2
-	failures := HomeBudgetFailures([]DailyResult{errored, refused})
+	failures := HomeBudgetFailures([]DailyResult{errored, refused}, homeBudgetAbsolute)
 	if len(failures) != 2 || !strings.Contains(failures[0], "server errors") || !strings.Contains(failures[1], "422") {
 		t.Fatalf("a 5xx and a 422 must each fail, got %v", failures)
 	}
@@ -91,7 +109,7 @@ func TestEveryRequiredHomeReadIsJudgedInBothPasses(t *testing.T) {
 	if want := 2 * (len(calls) - 1); len(required) != want {
 		t.Fatalf("judged %d rows, want %d: every required read in both passes", len(required), want)
 	}
-	failures := HomeBudgetFailures(required)
+	failures := HomeBudgetFailures(required, homeBudgetAbsolute)
 	if len(failures) != 1 || !strings.Contains(failures[0], "home_cold_brief: no samples") {
 		t.Fatalf("a required read with no row must fail as unsampled, got %v", failures)
 	}
@@ -102,7 +120,7 @@ func TestAHomeRowShortOfItsPlannedSamplesFails(t *testing.T) {
 		homeRow("home_cold_magic", time.Millisecond, homeColdBudget, homeColdRounds-1),
 		homeRow("home_warm_magic", time.Millisecond, homeWarmBudget, dailySamples-1),
 	}
-	failures := HomeBudgetFailures(short)
+	failures := HomeBudgetFailures(short, homeBudgetAbsolute)
 	if len(failures) != 2 || !strings.Contains(failures[0], fmt.Sprintf("want %d", homeColdRounds)) ||
 		!strings.Contains(failures[1], fmt.Sprintf("want %d", dailySamples)) {
 		t.Fatalf("a row short of its pass's samples must fail, got %v", failures)
@@ -111,7 +129,7 @@ func TestAHomeRowShortOfItsPlannedSamplesFails(t *testing.T) {
 
 func TestARowFromNeitherHomePassFails(t *testing.T) {
 	stray := DailyResult{Flow: "home", Row: "home_brief", P95: time.Millisecond, Budget: homeWarmBudget, Samples: dailySamples}
-	if failures := HomeBudgetFailures([]DailyResult{stray}); len(failures) != 1 {
+	if failures := HomeBudgetFailures([]DailyResult{stray}, homeBudgetAbsolute); len(failures) != 1 {
 		t.Fatalf("a row neither pass measured must fail, got %v", failures)
 	}
 }

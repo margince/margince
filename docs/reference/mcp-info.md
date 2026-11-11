@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 48 |
 | Resources | 14 |
-| Tool catalog | 230.0 KB |
+| Tool catalog | 230.2 KB |
 | Resource catalog | 5.5 KB |
-| Approx. wire tokens | 60296 |
+| Approx. wire tokens | 60342 |
 | Largest tool | `read_context` (11.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -32,11 +32,11 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 50.6 KB | 22% | **No**: a result's shape, never listed to a model |
+| Output schemas | 50.6 KB | 21% | **No**: a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 54.0 KB | 23% | Yes, every step |
-| Input schemas | 113.6 KB | 49% | Yes, every step |
+| Input schemas | 113.8 KB | 49% | Yes, every step |
 | _Names, annotations, punctuation_ | 11.8 KB | 5% | Partly |
-| **Description + input schema** | **167.6 KB** | **72%** | **the recurring cost** |
+| **Description + input schema** | **167.8 KB** | **72%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -76,7 +76,7 @@ descriptions and input schemas are what each step pays for.
 | [`change_my_settings`](#change_my_settings) | Change the user's own preferences and voice |  |  | 601 |
 | [`change_offers`](#change_offers) | Work offers, contracts and deal rooms |  |  | 678 |
 | [`change_record_parts`](#change_record_parts) | Change the parts of a record |  |  | 621 |
-| [`change_relationships`](#change_relationships) | Work a company's relationships and briefs |  |  | 472 |
+| [`change_relationships`](#change_relationships) | Work a company's relationships and briefs |  |  | 503 |
 | [`change_reports`](#change_reports) | Work saved reports and the forecast |  |  | 1357 |
 | [`change_settings`](#change_settings) | Change how the workspace is set up |  |  | 1710 |
 | [`change_state`](#change_state) | Move a lead, deal, project or partner |  |  | 1930 |
@@ -95,7 +95,7 @@ descriptions and input schemas are what each step pays for.
 | [`read_approval`](#read_approval) | Read one staged action in full | yes | [`ui://margince/approval.html`](#approval_view) | 154 |
 | [`read_attention`](#read_attention) | See what needs attention | yes | [`ui://margince/attention.html`](#attention_view) | 365 |
 | [`read_context`](#read_context) | Get the story so far | yes | [`ui://margince/context.html`](#context_view) | 413 |
-| [`read_details`](#read_details) | Read a record's panels and the day's lists | yes |  | 2186 |
+| [`read_details`](#read_details) | Read a record's panels and the day's lists | yes |  | 2200 |
 | [`read_forecast`](#read_forecast) | Read the forecast and how it moved | yes | [`ui://margince/forecast.html`](#forecast_view) | 978 |
 | [`read_import`](#read_import) | Read an import run or the import format | yes |  | 235 |
 | [`read_lists`](#read_lists) | Find and read lists | yes |  | 788 |
@@ -2703,8 +2703,10 @@ update_record to change a company's or contact's fields. (Runs immediately; requ
         "complete_intro_request",
         "decide_intro_request",
         "link_contacts",
+        "reassign_handoff",
         "record_introduction",
         "record_promise",
+        "replace_intro_request",
         "request_intro",
         "restore_profile_field",
         "save_research",
@@ -2718,7 +2720,7 @@ update_record to change a company's or contact's fields. (Runs immediately; requ
       "type": "string"
     },
     "id": {
-      "description": "apply_employment_import, cancel_intro_request, check_vat, complete_intro_request, decide_intro_request, link_contacts, record_introduction, record_promise, request_intro, restore_profile_field, save_research, settle_promise, take_over_promise only",
+      "description": "apply_employment_import, cancel_intro_request, check_vat, complete_intro_request, decide_intro_request, link_contacts, reassign_handoff, record_introduction, record_promise, replace_intro_request, request_intro, restore_profile_field, save_research, settle_promise, take_over_promise only",
       "type": "string"
     },
     "idempotency_key": {
@@ -2727,7 +2729,7 @@ update_record to change a company's or contact's fields. (Runs immediately; requ
       "type": "string"
     },
     "request_body": {
-      "description": "apply_employment_import, backfill_employment_import, cancel_intro_request, complete_intro_request, decide_intro_request, link_contacts, record_introduction, record_promise, request_intro, save_research, settle_promise only: The chosen action's request body; read_workspace topic actions lists its shape",
+      "description": "apply_employment_import, backfill_employment_import, cancel_intro_request, complete_intro_request, decide_intro_request, link_contacts, reassign_handoff, record_introduction, record_promise, replace_intro_request, request_intro, save_research, settle_promise only: The chosen action's request body; read_workspace topic actions lists its shape",
       "type": "object"
     },
     "value_key": {
@@ -8966,6 +8968,7 @@ needs the user now, and read_record for a record's own fields.
         "forecast_stage_chances",
         "growth_fit",
         "handled_for_you",
+        "handoff_assignee",
         "hidden_backlog",
         "hidden_backlog_rows",
         "import_problems",
@@ -9064,7 +9067,7 @@ needs the user now, and read_record for a record's own fields.
       "type": "boolean"
     },
     "cursor": {
-      "description": "company_contracts, contact_overrides, deal_margince_changes, deal_suggestions, field_history, handled_for_you, job_health_history, lead_score, legal_reviews, magic_line_records, notice_source_evidence, notices only",
+      "description": "company_contracts, contact_overrides, deal_margince_changes, deal_suggestions, field_history, handled_for_you, job_health_history, lead_score, legal_reviews, magic_line_records, my_linkedin_reach, notice_source_evidence, notices only",
       "type": "string"
     },
     "days": {
@@ -9122,7 +9125,7 @@ needs the user now, and read_record for a record's own fields.
       "type": "boolean"
     },
     "id": {
-      "description": "activity_pipeline, automation_preview, capture_triage, communication_review, company_brief, company_contracts, company_linkedin_reach, company_logo, company_logo_icon, company_scan, contact_brief, contact_consent, contact_consent_guard, contact_overrides, contact_profile_fields, contact_stops, contract, controller_mail_preview, deal_legal_reviews, deal_lines, deal_margince_changes, deal_products, deal_room_brief, deal_suggestion, document_extraction, dossier, enrichment_run, evidence, growth_fit, import_problems, intro_requests, knowledge_document, lead_promotion_preview, lead_score, lead_signals, lead_stops, legal_entity_logo, legal_review, link_candidates, magic_line_records, meeting_availability, notice_case, notice_case_review, notice_source_evidence, notice_source_preview, offer_pdf, offered_values, ownership_offer, ownership_offer_candidates, ownership_request, product_translations, project_filing, relationship_nudge, scheduled_send, tag_suggestion, voice_source_preview, win_evidence only",
+      "description": "activity_pipeline, automation_preview, capture_triage, communication_review, company_brief, company_contracts, company_linkedin_reach, company_logo, company_logo_icon, company_scan, contact_brief, contact_consent, contact_consent_guard, contact_overrides, contact_profile_fields, contact_stops, contract, controller_mail_preview, deal_legal_reviews, deal_lines, deal_margince_changes, deal_products, deal_room_brief, deal_suggestion, document_extraction, dossier, enrichment_run, evidence, growth_fit, handoff_assignee, import_problems, intro_requests, knowledge_document, lead_promotion_preview, lead_score, lead_signals, lead_stops, legal_entity_logo, legal_review, link_candidates, magic_line_records, meeting_availability, notice_case, notice_case_review, notice_source_evidence, notice_source_preview, offer_pdf, offered_values, ownership_offer, ownership_offer_candidates, ownership_request, product_translations, project_filing, relationship_nudge, scheduled_send, tag_suggestion, voice_source_preview, win_evidence only",
       "type": "string"
     },
     "kind": {

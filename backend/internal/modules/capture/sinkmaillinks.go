@@ -45,11 +45,24 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// postCommitLinkReservation is how many link seats this arm leaves for the
-// writers after the capture transaction (sink.go). They are the counterparty
-// ensure, the project ladder and the deal rule, one each. None reads this budget. So
-// the room is kept here, or the 25-link ceiling refuses their links.
-const postCommitLinkReservation = 3
+// laterLinkReservation is how many link seats this arm leaves for the writers
+// that run after it (sink.go), one each. They are the counterparty ensure later
+// in the capture transaction, then the project ladder and the deal rule. None
+// reads this budget, so the room is kept here, or the 25-link ceiling refuses
+// their links.
+const laterLinkReservation = 3
+
+// fileMailUnderParticipants locks the mail's whole reach, then files it under
+// the contacts and leads on it. A suppressed mail is filed under nobody.
+func (s *Sink) fileMailUnderParticipants(
+	ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, existing int, decision counterpartyDecision, private bool,
+) error {
+	named, err := lockMailReachTx(ctx, tx, activityID, decision)
+	if err != nil || decision.traceOutcome == TraceSuppressed {
+		return err
+	}
+	return s.linkResolvedMailParticipants(ctx, tx, activityID, named, existing, private)
+}
 
 // linkResolvedMailParticipants files a captured message under every participant
 // who is a live contact or a live lead (participantfiling.go).
@@ -62,13 +75,13 @@ const postCommitLinkReservation = 3
 // TestFilingAConfidentialMessageDoesNotWidenWhoMayReadIt
 // (backend/internal/compose/integration/capture/capture_participantlink_integration_test.go)
 func (s *Sink) linkResolvedMailParticipants(
-	ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, existing int, private bool,
+	ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, named []participantRecord, existing int, private bool,
 ) error {
-	// The ceiling is on the activity, so the budget is what the row can still
-	// take, less the seats kept for the writers after commit.
-	_, err := fileUnderParticipants(tx, activityID, participantFiling{
+	// The ceiling is on the activity. The budget is what the row can still
+	// take, less the seats kept for the writers after this arm.
+	_, err := fileUnderRecords(tx, named, participantFiling{
 		decider: ctx,
-		budget:  max(maxDerivedMeetingLinks-existing-postCommitLinkReservation, 0),
+		budget:  max(maxDerivedMeetingLinks-existing-laterLinkReservation, 0),
 		private: private,
 		write:   insertParticipantLink(ctx, tx, activityID),
 	})

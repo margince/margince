@@ -235,7 +235,7 @@ func readNextSteps(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, now 
 		ORDER BY (`+storekit.TaskDueSQL("a")+` IS NULL), `+storekit.TaskDueSQL("a")+`, a.occurred_at, a.id
 		LIMIT %[5]d`,
 		activityScope, activities.CompanyLinkedActivityExists(companyPos), linkVisible, contactVisible, limit+1,
-		opts.projectScope(arg), extra, identity.LiveMemberSQL("u"))
+		opts.projectScope(arg)+opts.recipientTaskScope(arg), extra, identity.LiveMemberSQL("u"))
 	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return nil, crmcontracts.PageInfo{}, nil, nil, err

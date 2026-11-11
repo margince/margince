@@ -43,6 +43,7 @@ type settleFixtureThread struct {
 }
 
 type settleFixtureMessage struct {
+	Attachments []string `json:"attachments,omitempty"`
 	// Direction is the corpus author's own vocabulary — inbound or outbound —
 	// which the fold turns into the "from them" / "from us" the prompt reads,
 	// through the engine's own directionWord rather than a second mapping that
@@ -124,7 +125,7 @@ func (requestSettleCases) Prepare(fixture, expected json.RawMessage) (aitasks.Pr
 		for j, m := range thread.Messages {
 			messages[j] = threadMessage{
 				ID: ids.NewV7(), Direction: m.Direction,
-				Subject: m.Subject, Body: m.Body, OffThread: m.OffThread,
+				Subject: m.Subject, Body: m.Body, OffThread: m.OffThread, Attachments: m.Attachments,
 			}
 		}
 		// The first message is the request, as in the candidate read, so the

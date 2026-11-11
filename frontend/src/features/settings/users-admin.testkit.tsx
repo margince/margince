@@ -118,6 +118,9 @@ export const ROSTER: {
 // What every member owns in this fixture, and the empty count a finished
 // handover leaves.
 export const HANDOVER_OWNED = {
+  list: 0,
+  sdr_handoff: 3,
+  record_assignment: 2,
   lead: 4,
   contact: 0,
   company: 0,
@@ -127,6 +130,9 @@ export const HANDOVER_OWNED = {
   webhook: 2,
 };
 const NOTHING_OWNED = {
+  list: 0,
+  sdr_handoff: 0,
+  record_assignment: 0,
   lead: 0,
   contact: 0,
   company: 0,

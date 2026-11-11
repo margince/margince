@@ -363,6 +363,7 @@
     "getForecastMovement": "business",
     "getForecastStageChances": "business",
     "getHandledForYou": "business",
+    "getHandoffAssignee": "business",
     "getHiddenBacklog": "business",
     "getHiddenBacklogRows": "business",
     "getImportFormat": "business",
@@ -692,6 +693,7 @@
     "readCaptureTracePipeline": "capture",
     "readCorpus": "business",
     "readTranscriptForNextSteps": "business",
+    "reassignHandoff": "business",
     "recordCommunicationContext": "compliance",
     "recordConsent": "compliance",
     "recordConversationClaim": "business",
@@ -737,6 +739,7 @@
     "reorderStages": "admin_settings",
     "replaceAiPriceSync": "admin_settings",
     "replaceDealProducts": "business",
+    "replaceIntroRequest": "business",
     "replaceSalesInitiativeMembers": "business",
     "replyDealRoomThread": "business",
     "requestAttachmentAccess": "business",
@@ -988,6 +991,7 @@
     "changePassword": "own_security",
     "changePublicMeetingInvitation": "booking_pages",
     "changeUserRole": "members",
+    "checkLicenseNow": "system_facts",
     "claimRecord": "sharing",
     "claimTaskReminderDelivery": "activities",
     "clearActivityDisposition": "activities",
@@ -1012,6 +1016,7 @@
     "connectProvider": "connectors",
     "connectorOAuthCallback": "oauth_callbacks",
     "controlDataTask": "system_health",
+    "correctCommunicationWording": "consent",
     "correctDealCloseDay": "deals",
     "correctProjectHealthAssessment": "projects",
     "countPendingApprovals": "agent_limits",
@@ -1288,6 +1293,7 @@
     "getForecastMovement": "forecast",
     "getForecastStageChances": "forecast",
     "getHandledForYou": "worklist",
+    "getHandoffAssignee": "leads",
     "getHiddenBacklog": "worklist",
     "getHiddenBacklogRows": "worklist",
     "getImportFormat": "imports",
@@ -1681,6 +1687,7 @@
     "readCaptureTracePipeline": "capture_triage",
     "readCorpus": "knowledge",
     "readTranscriptForNextSteps": "activities",
+    "reassignHandoff": "leads",
     "recordAIFeedback": "ai_help",
     "recordCommunicationContext": "consent",
     "recordConsent": "consent",
@@ -1737,6 +1744,7 @@
     "replaceAiTaskOverrides": "ai_models",
     "replaceChannelToken": "connectors",
     "replaceDealProducts": "deals",
+    "replaceIntroRequest": "contacts",
     "replaceSalesInitiativeMembers": "reports",
     "replayWebhookDelivery": "webhooks",
     "replyBuyerRoomThread": "buyer_rooms",
@@ -2700,6 +2708,9 @@
     "get_handled_for_you": [
       "worklist"
     ],
+    "get_handoff_assignee": [
+      "leads"
+    ],
     "get_hidden_backlog": [
       "worklist"
     ],
@@ -3465,6 +3476,9 @@
       "signals",
       "system_facts"
     ],
+    "reassign_handoff": [
+      "leads"
+    ],
     "record_communication_context": [
       "consent"
     ],
@@ -3578,6 +3592,9 @@
     ],
     "replace_deal_products": [
       "deals"
+    ],
+    "replace_intro_request": [
+      "contacts"
     ],
     "replace_sales_initiative_members": [
       "reports"
@@ -4769,6 +4786,9 @@
     "get_handled_for_you": [
       "business"
     ],
+    "get_handoff_assignee": [
+      "business"
+    ],
     "get_hidden_backlog": [
       "business"
     ],
@@ -5496,6 +5516,9 @@
       "operator",
       "workspace_settings"
     ],
+    "reassign_handoff": [
+      "business"
+    ],
     "record_communication_context": [
       "compliance"
     ],
@@ -5608,6 +5631,9 @@
       "admin_settings"
     ],
     "replace_deal_products": [
+      "business"
+    ],
+    "replace_intro_request": [
       "business"
     ],
     "replace_sales_initiative_members": [

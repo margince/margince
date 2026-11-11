@@ -49,6 +49,8 @@ func (p *preflightEnv) theyWrite(t *testing.T, mail inbound) ids.UUID {
 		"From: Consented Buyer <buyer@preflight.test>",
 		"To: " + mailbox,
 		"Subject: Re: Next steps",
+		"In-Reply-To: <inquiry@preflight.test>",
+		"References: <inquiry@preflight.test>",
 		"Date: " + mail.dated.UTC().Format(time.RFC1123Z),
 		"Message-ID: <reply-" + mail.dated.Format("20060102150405") + "@preflight.test>",
 		"Content-Type: text/plain; charset=utf-8",

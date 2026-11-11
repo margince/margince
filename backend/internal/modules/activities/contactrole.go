@@ -49,7 +49,7 @@ func WithContactRole(ctx context.Context, tx pgx.Tx, page []crmcontracts.Activit
 		           WHERE `+relstrength.ParticipantNamesSQL("$2", "ap")+`), '{}'::text[])
 		  FROM activity_participant ap
 		 WHERE ap.activity_id = ANY($1)
-		   AND ap.role IN ('from', 'to', 'cc', 'organizer', 'attendee')
+		   AND ap.role IN `+visiblePartyRolesSQL+`
 		   AND NOT `+unstatedContactSQL("ap")+`
 		 GROUP BY ap.activity_id`, voiced, contact)
 	if err != nil {

@@ -109,7 +109,7 @@ func LastTouchFor(
 	if scope != "" {
 		touched += " AND " + scope
 	}
-	touched += opts.projectScope(arg)
+	touched += opts.projectScope(arg) + opts.partyScope(arg)
 	nowAt := fmt.Sprintf("$%d", arg(now))
 	touched += " AND " + occurredday.HappenedSQL("a", nowAt)
 	roster, err := employeeRoster(ctx, arg)

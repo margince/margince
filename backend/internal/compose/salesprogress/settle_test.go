@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package compose
+package salesprogress
 
 import (
 	"slices"
 	"testing"
 
-	"github.com/margince/margince/backend/internal/compose/salesprogress"
 	"github.com/margince/margince/backend/internal/modules/reporting"
 )
 
@@ -78,11 +77,11 @@ func TestSettleDealShowsAnOverAllocatedDealWhole(t *testing.T) {
 	if len(got) != 1 {
 		t.Fatalf("an over-allocated deal settles to %d parts, want one", len(got))
 	}
-	if got[0].GroupKey != "kind:"+salesprogress.InvalidKind || *got[0].Money != total {
-		t.Fatalf("invalid part = %s %d, want kind:%s %d", got[0].GroupKey, *got[0].Money, salesprogress.InvalidKind, total)
+	if got[0].GroupKey != "kind:"+InvalidKind || *got[0].Money != total {
+		t.Fatalf("invalid part = %s %d, want kind:%s %d", got[0].GroupKey, *got[0].Money, InvalidKind, total)
 	}
-	if salesprogress.Category(got[0].GroupKey) != salesprogress.Unresolved {
-		t.Fatalf("an invalid deal counts as %s, want unresolved", salesprogress.Category(got[0].GroupKey))
+	if Category(got[0].GroupKey) != Unresolved {
+		t.Fatalf("an invalid deal counts as %s, want unresolved", Category(got[0].GroupKey))
 	}
 }
 

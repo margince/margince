@@ -60,6 +60,7 @@ type Server struct {
 	bulkHandlers
 	companyContactShareHandlers
 	handoverHandlers
+	handoffHandlers
 	searchHandlers
 	consentHandlers
 	directedSendHandlers
@@ -211,8 +212,7 @@ type Server struct {
 	// itself. In compose because a pass is assembled from the deals and
 	// coverage seams, which assurance owns nothing of.
 	assuranceRunHandlers
-	// The introductions transport: one rep asking a colleague to open a door,
-	// the colleague's bounded answer, and what came of it.
+	// Introductions: one rep asks a colleague to open a door, and what came of it.
 	introductionHandlers
 	initiativeHandlers
 

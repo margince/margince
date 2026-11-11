@@ -304,10 +304,8 @@ stores nothing.
 
 ## 4. The delivery state machine
 
-One `webhook_delivery` row is created per `(workspace, subscription, event)`. That key can hold only
-one row. The bus may deliver an event more than once. A second copy meets a conflict and adds no new
-row: **it never sends the POST twice**. The signed body is kept as it is on the row (`payload`). So
-a parked delivery can be replayed after the bus stream has cut the source event.
+One row in `webhook_delivery` is made for each `(workspace, subscription, event)`. A second copy from the bus adds no row and sends no new `POST`.
+The row keeps its signed body (`payload`), so it can be replayed after the bus stream drops the source event.
 
 ```text
  pending ──attempt──▶ delivered           (2xx)
@@ -329,8 +327,8 @@ a parked delivery can be replayed after the bus stream has cut the source event.
   from an **injected clock**, so the schedule is the same on every test run (no sleeps).
 - **The sweep** (`SweepOnce`): one pass over one workspace. It binds that workspace into the
   context itself, from its own database handle, because the job worker calls it with the bare queue
-  context. It claims at most 128 `retrying` rows at a time, whose `next_retry_at` has passed
-  **and whose subscription is still `active`**. The retries of a paused subscription wait until it
+  context. It claims at most 128 due retries or pending rows whose lease has ended at a time,
+  **whose subscription is still `active`**. The retries of a paused subscription wait until it
   resumes.
 
   All workspaces are covered by fanning the pass out, one job row per live workspace (§6). If a
@@ -339,13 +337,15 @@ a parked delivery can be replayed after the bus stream has cut the source event.
   on the delivery row, and never fails the pass of the tenant. A sweep claims each row before it
   sends it (`claimed_until`, a lease of twice the attempt time limit). A second sweep skips a
   claimed row, so one retry is sent once; storing the result clears the claim.
+- **First attempts** take their lease when queued. A send starts only while the lease has time for the whole request.
+  The sweep tries pending rows again when the lease ends. A receiver may get the same event twice and must ignore repeats.
 - **The send check** (`deliverysendguard.go`, `deliverytransport.go`): each attempt opens its own
   HTTP/1.1 connection. Once TCP and TLS are up, the row must still be `pending` or `retrying`, with
   the same body and claim. If not, no request byte is sent. An erasure that commits
   first stops the send. One that starts later waits until the request is written, at most 5 seconds.
 - **`deliverOnce` never returns an error**: the result is the record. A failed *store* of it is
-  logged. A first attempt whose result write fails stays `pending`: no sweep scans it and a replay
-  refuses it (422), but it may have reached the endpoint. A `retrying` row is scanned again.
+  logged. The sweep recovers a `pending` row after the claim lease ends.
+  A row that reached `retrying` is scanned when its retry is due.
 - **Replay** (`POST …/replay`): a human action, gated by RBAC. It does not show whether the row
   exists, and it is audited to the acting human *before* the new attempt. It sets the attempts back
   to a new budget: the operator is stating that the endpoint is fixed, so the doubling clock starts
@@ -575,8 +575,8 @@ but no buttons that change data.
   cannot own a subscription.
 - `deliverOnce` **records the result**; the sweep takes up `retrying` rows again. A fail to store is
   safe for a row already in `retrying`, since the next scan tries it again. A first attempt whose
-  result write fails leaves the row in `pending`. The sweep does not scan it and a replay refuses
-  it (422), so nothing sends it again.
+  result write fails leaves the row in `pending`. The sweep recovers it after the claim lease
+  has ended. A receiver may see that event again.
 - **Delivery is a capability that needs a key.** No key → a read-only surface, 503 on the secret
   paths, no worker lane.
 

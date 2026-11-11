@@ -9,12 +9,16 @@ package integration
 
 import (
 	"context"
+	"strconv"
+	"strings"
 	"testing"
 	"time"
 
+	"github.com/margince/margince/backend/internal/compose/briefs"
 	"github.com/margince/margince/backend/internal/compose/homecache"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // keep stores answer as reader's, stamped now.
@@ -104,6 +108,42 @@ func TestAnAnswerLivesNoLongerThanTheNextGrantToExpire(t *testing.T) {
 		WHERE reader_id = $1 AND valid_until <= computed_at + make_interval(secs => $2)`,
 		e.Rep1, homecache.Life.Seconds()); n != 1 {
 		t.Errorf("the kept answer outlives homecache.Life (%d rows bounded)", n)
+	}
+}
+
+// A snooze runs out without a write, so an answer that hid the snoozed item is
+// not served past the moment it comes back.
+func TestAnAnswerLivesNoLongerThanTheNextSnoozeToEnd(t *testing.T) {
+	e := Setup(t)
+	c := homecache.New(e.Pool)
+	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, AdminPerms)
+	pipeline, open, _ := DealFixture(t, e)
+	owner := OwnerConn(t)
+	if _, err := owner.Exec(context.Background(), `
+		INSERT INTO deal (pipeline_id, stage_id, name, owner_id, status, source, captured_by, amount_minor, currency, expected_close_date)
+		VALUES ($1, $2, 'Snoozed deal', $3, 'open', 'manual', 'test', 6000000, 'EUR', now() + interval '5 days')`,
+		pipeline, open, e.Rep1); err != nil {
+		t.Fatal(err)
+	}
+	engine := briefs.NewBriefEngine(e.Pool, e.Contacts)
+	// The cache judges validity by the database clock, so the snooze is dated by it.
+	var now time.Time
+	if err := owner.QueryRow(context.Background(), `SELECT now()`).Scan(&now); err != nil {
+		t.Fatal(err)
+	}
+	run, err := engine.SnapshotRun(ctx, now)
+	if err != nil || len(run.Items) == 0 {
+		t.Fatalf("a run to snooze from: items=%d err=%v", len(run.Items), err)
+	}
+	until := now.Add(90 * time.Second)
+	if _, err := engine.MarkSnoozed(ctx, run.Items[0].ID, values.ReopenOnTime, &until, nil, now); err != nil {
+		t.Fatal(err)
+	}
+
+	keep(ctx, t, c, e.Rep1, homecache.Worklist, nil, "today")
+	if n := e.WsCount(t, `SELECT count(*) FROM home_read_cache c, brief_item bi
+		WHERE c.reader_id = $1 AND bi.id = $2 AND c.valid_until <= bi.snoozed_until`, e.Rep1, run.Items[0].ID); n != 1 {
+		t.Errorf("the kept answer outlives the snooze it hid (%d rows bounded)", n)
 	}
 }
 
@@ -213,4 +253,44 @@ func TestAnUnreadableKeptAnswerIsServedFreshAndReplaced(t *testing.T) {
 	if !served(ctx, t, c, e.Rep1, homecache.Worklist) {
 		t.Error("the fresh answer was not kept in place of the unreadable one")
 	}
+}
+
+// /metrics counts each Home read Serve answered, so the hit rate is measured.
+func TestServeCountsItsHitsAndMissesOnMetrics(t *testing.T) {
+	e := Setup(t)
+	c := homecache.New(e.Pool)
+	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
+	fresh := func(context.Context) (crmcontracts.MagicReceipt, error) { return crmcontracts.MagicReceipt{}, nil }
+	noWalk := func(crmcontracts.MagicReceipt) (*ids.UUID, error) { return nil, nil } //nolint:nilnil // the receipt starts no walk, which Serve reads as nil
+	hits, misses := magicCacheReads(t, "hit"), magicCacheReads(t, "miss")
+
+	for range 2 {
+		if _, err := homecache.Serve(ctx, c, e.Rep1, homecache.Magic, "home", fresh, noWalk); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if got := magicCacheReads(t, "miss") - misses; got != 1 {
+		t.Errorf("misses grew by %d, want 1: the first read found nothing kept", got)
+	}
+	if got := magicCacheReads(t, "hit") - hits; got != 1 {
+		t.Errorf("hits grew by %d, want 1: the second read was served the kept answer", got)
+	}
+}
+
+func magicCacheReads(t *testing.T, outcome string) int {
+	t.Helper()
+	var out strings.Builder
+	homecache.WriteMetrics(&out)
+	prefix := `margince_home_cache_reads_total{read="magic",outcome="` + outcome + `"} `
+	for line := range strings.Lines(out.String()) {
+		if value, ok := strings.CutPrefix(strings.TrimSpace(line), prefix); ok {
+			n, err := strconv.Atoi(value)
+			if err != nil {
+				t.Fatalf("reading %q: %v", line, err)
+			}
+			return n
+		}
+	}
+	t.Fatalf("no %s series in:\n%s", prefix, out.String())
+	return 0
 }

@@ -15,8 +15,6 @@ package finance
 import (
 	"sort"
 	"time"
-
-	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
 )
 
 // Window parameters (FIN-PARAM-1..3). Named rather than inlined because each
@@ -174,7 +172,7 @@ func OpenBalanceAt(invoices []Invoice, asOf time.Time) OpenBalance {
 			return OpenBalance{RateUnavailable: true}
 		}
 		out.OpenMinorBase += inv.OpenMinorBase
-		if !deadline.Passed(inv.DueOn, asOf) {
+		if !pastDue(inv.DueOn, asOf) {
 			continue
 		}
 		out.OverdueMinorBase += inv.OpenMinorBase
@@ -200,6 +198,12 @@ func DaysLate(inv Invoice) (int, bool) {
 		return 0, false
 	}
 	return daysBetween(*inv.DueOn, *inv.FullyPaidAt), true
+}
+
+// pastDue reports whether an invoice is late. A due date names a whole day, so
+// the invoice is late only once that day is over, as the accounting source counts it.
+func pastDue(due *time.Time, now time.Time) bool {
+	return due != nil && daysBetween(*due, now) > 0
 }
 
 // daysBetween is `date(to) − date(from)`, counted in whole calendar days in

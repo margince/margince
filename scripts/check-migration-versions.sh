@@ -57,6 +57,17 @@ cd "$ROOT"
 BASE_REF="${1:-origin/main}"
 MIGRATIONS_DIR="backend/migrations"
 
+migration_dir() {
+ case "$1" in
+ extension/*) printf 'extensions/%s/migrations' "${1#extension/}" ;;
+ *) printf '%s/%s' "$MIGRATIONS_DIR" "$1" ;;
+ esac
+}
+
+extension_namespaces_at() {
+ git ls-tree -r --name-only "$1" -- extensions/ | awk -F/ 'NF==4 && $3=="migrations" && $4 ~ /\.up\.sql$/ {print "extension/" $2}' | sort -u
+}
+
 # A migration is identified by its VERSION and named by its file, and the gate
 # needs both: the outage was two DIFFERENT migrations claiming one version, which
 # a list of versions alone cannot show. Each helper below emits
@@ -70,7 +81,7 @@ MIGRATIONS_DIR="backend/migrations"
 # printed — the "|| true" reads that as zero migrations, which is what it is.
 migrations_in_tree() {
   local ns="$1"
-  { find "$MIGRATIONS_DIR/$ns" -maxdepth 1 -name '*.up.sql' -exec basename {} .up.sql \; 2>/dev/null || true; } |
+  { find "$(migration_dir "$ns")" -maxdepth 1 -name '*.up.sql' -exec basename {} .up.sql \; 2>/dev/null || true; } |
     sed 's/^\([^_]*\)_\(.*\)$/\1 \2/' | sort
 }
 
@@ -89,7 +100,7 @@ migrations_in_tree() {
 # input just produces no output.
 migrations_at() {
   local ref="$1" ns="$2"
-  git ls-tree --name-only "$ref" "$MIGRATIONS_DIR/$ns/" 2>/dev/null |
+  git ls-tree --name-only "$ref" "$(migration_dir "$ns")/" 2>/dev/null |
     { grep '\.up\.sql$' || true; } | sed 's#.*/##; s/\.up\.sql$//' |
     sed 's/^\([^_]*\)_\(.*\)$/\1 \2/' | sort
 }
@@ -100,7 +111,12 @@ migrations_at() {
 # runs its DDL a second time on every database that applied the old version.
 # The fifth column, the old digest, is held by a Go test in backend/migrations.
 renumbers_declared() {
-  awk -v ns="$1" '$1==ns && NF==5 {print $2, $3, $4}' "$MIGRATIONS_DIR/renumbered.txt" 2>/dev/null || true
+  local name="$1" declarations="$MIGRATIONS_DIR/renumbered.txt"
+  if [[ "$name" = extension/* ]]; then
+    declarations="$(migration_dir "$name")/renumbered.txt"
+    name="ext_$(printf '%s' "${name#extension/}" | tr '-' '_')"
+  fi
+  awk -v ns="$name" '$1==ns && NF==5 {print $2, $3, $4}' "$declarations" 2>/dev/null || true
 }
 
 # same_sql REF NAMESPACE OLD NEW NAME — both halves of OLD_NAME at REF are the
@@ -109,8 +125,8 @@ renumbers_declared() {
 same_sql() {
   local ref="$1" ns="$2" old="$3" new="$4" name="$5" half was now
   for half in up down; do
-    was="$(git rev-parse -q --verify "$ref:$MIGRATIONS_DIR/$ns/${old}_$name.$half.sql")" || return 1
-    now="$(git hash-object "$MIGRATIONS_DIR/$ns/${new}_$name.$half.sql" 2>/dev/null)" || return 1
+    was="$(git rev-parse -q --verify "$ref:$(migration_dir "$ns")/${old}_$name.$half.sql")" || return 1
+    now="$(git hash-object "$(migration_dir "$ns")/${new}_$name.$half.sql" 2>/dev/null)" || return 1
     [[ "$was" = "$now" ]] || return 1
   done
 }
@@ -266,7 +282,8 @@ fail() {
 # check_renumbers REF RENAMED — fail each "<old> <new> <name>" in RENAMED that
 # renumbered.txt does not declare, or whose SQL changed since REF.
 check_renumbers() {
-  local ref="$1" renamed="$2" old new name
+  local ref="$1" renamed="$2" old new name declarations="backend/migrations/renumbered.txt"
+  [[ "$ns" != extension/* ]] || declarations="$(migration_dir "$ns")/renumbered.txt"
   while read -r old new name; do
     [[ -n "$old" ]] || continue
     # The base claims the old version twice, so it could not load and no
@@ -275,7 +292,7 @@ check_renumbers() {
       continue
     fi
     if ! grep -qxF "$old $new $name" <<<"$declared_renumbers"; then
-      fail "$ns migration '$name' moved from $old to $new, but backend/migrations/renumbered.txt does not declare it. A database that applied $old would run it again. Keep the old version, or declare the move there once the SQL is byte-identical: '$ns $old $new $name <old digest>'"
+      fail "$ns migration '$name' moved from $old to $new, but $declarations does not declare it. A database that applied $old would run it again. Keep the old version, or declare the move there once the SQL is byte-identical: '$ns $old $new $name <old digest>'"
     elif ! same_sql "$ref" "$ns" "$old" "$new" "$name"; then
       fail "$ns migration '$name' is declared moved from $old to $new, but its SQL changed since $ref. The migrator would record SQL as run that this database never ran. Keep the old bytes, or ship the change as a new migration"
     fi
@@ -299,6 +316,14 @@ base_namespaces="$(git ls-tree --name-only -d "$BASE_REF" "$MIGRATIONS_DIR/" 2>/
 if [[ -n "$SYNC_BASE" ]]; then
   base_namespaces="$base_namespaces
 $(git ls-tree --name-only -d "$SYNC_BASE" "$MIGRATIONS_DIR/" 2>/dev/null | sed 's#.*/##')"
+fi
+tree_namespaces="$tree_namespaces
+$( { find extensions -path '*/migrations/*.up.sql' -type f 2>/dev/null || true; } | awk -F/ 'NF==4 {print "extension/" $2}' | sort -u)"
+base_namespaces="$base_namespaces
+$(extension_namespaces_at "$BASE_REF")"
+if [[ -n "$SYNC_BASE" ]]; then
+ base_namespaces="$base_namespaces
+$(extension_namespaces_at "$SYNC_BASE")"
 fi
 all_namespaces="$(printf '%s\n%s\n' "$tree_namespaces" "$base_namespaces" | sort -u)"
 

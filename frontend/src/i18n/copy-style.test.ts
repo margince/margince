@@ -42,6 +42,7 @@ const AGENT_SPEAKS_PREFIX = "ob.conv.";
 const SPOKEN_BY_THE_READER = new Set<string>([
   "commitment.takeOver",
   "directSend.acknowledge",
+  "directSend.correctionAcknowledge",
   "book.consentWording",
   "worklist.ready.confirm",
   "prefs.wordingGeneric",

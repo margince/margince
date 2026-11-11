@@ -311,7 +311,10 @@ type Briefing interface {
 	// reply, and judging freshness by generated_at would hide exactly the replies
 	// a rep most wants to see. Zero when no run exists, which is why `ran` is a
 	// separate answer: absent is not the same as false.
-	Queue(ctx context.Context) (entries []BriefEntry, ran bool, asOf time.Time, err error)
+	//
+	// now is the read's own instant, so snoozes are judged at the as_of the
+	// rest of the page carries.
+	Queue(ctx context.Context, now time.Time) (entries []BriefEntry, ran bool, asOf time.Time, err error)
 }
 
 // BriefEntry is one UNANSWERED queue entry: what it is about, and where it
@@ -326,9 +329,10 @@ type Briefing interface {
 // entries. The brief owns what its states mean and what each spells; a copy of
 // that vocabulary here would be a second place to keep it right.
 type BriefEntry struct {
-	ID     ids.UUID
-	DealID ids.UUID
-	Rank   int
+	Snoozed bool
+	ID      ids.UUID
+	DealID  ids.UUID
+	Rank    int
 	// Composite is the night's own score for this deal, between 0 and 1, and
 	// what ranksteps.go's `opportunity` step breaks a tie by.
 	Composite float64

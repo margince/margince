@@ -19,18 +19,21 @@ import (
 // login that would challenge treats as fail-closed.
 func (h Handlers) WithMFAChallengeSigner(signer MFAChallengeSigner) Handlers {
 	h.mfaSigner = signer
+	if h.svc != nil {
+		h.svc.challengeEpochKey = signer.KeyEpoch
+	}
 	return h
 }
 
 // writeMFAChallenge mints a signed, short-lived challenge for the member and
 // answers 202. Fails closed with no signer wired — an unsigned challenge is no
 // challenge at all.
-func (h Handlers) writeMFAChallenge(w http.ResponseWriter, r *http.Request, userID ids.UserID) {
+func (h Handlers) writeMFAChallenge(w http.ResponseWriter, r *http.Request, owed MFAChallenge) {
 	if h.mfaSigner == nil {
 		httperr.Write(w, r, errors.New("identity: no signer is configured for the second-factor challenge"))
 		return
 	}
-	challenge, err := h.mfaSigner.Sign(userID.String(), mfaChallengeTTL)
+	challenge, err := h.mfaSigner.Sign(owed, mfaChallengeTTL)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -68,12 +71,12 @@ func (h Handlers) CompleteMfaChallenge(w http.ResponseWriter, r *http.Request) {
 		httperr.Unauthorized(w, r, "the code, or the challenge, is not valid")
 		return
 	}
-	subject, jti, err := h.mfaSigner.Verify(req.MfaChallenge)
+	challenge, err := h.mfaSigner.Verify(req.MfaChallenge)
 	if err != nil {
 		httperr.Unauthorized(w, r, "the code, or the challenge, is not valid")
 		return
 	}
-	userID, err := ids.ParseAs[ids.UserKind](subject)
+	userID, err := ids.ParseAs[ids.UserKind](challenge.UserID)
 	if err != nil {
 		httperr.Unauthorized(w, r, "the code, or the challenge, is not valid")
 		return
@@ -84,7 +87,7 @@ func (h Handlers) CompleteMfaChallenge(w http.ResponseWriter, r *http.Request) {
 		httperr.Write(w, r, apperrors.ErrBudgetExceeded)
 		return
 	}
-	id, token, err := h.svc.CompleteMFAChallenge(withUserAgent(r.Context(), r.UserAgent()), userID, jti, req.Code)
+	id, token, err := h.svc.CompleteMFAChallenge(withUserAgent(r.Context(), r.UserAgent()), userID, challenge, req.Code)
 	if err != nil {
 		if errors.Is(err, errBadMFACode) || errors.Is(err, errMFANotEnrolled) || errors.Is(err, errAccountLocked) {
 			httperr.Unauthorized(w, r, "the code, or the challenge, is not valid")

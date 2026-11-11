@@ -35,6 +35,8 @@ func TestIdentityHolderPlansReadOnlyTheRequestedMailboxes(t *testing.T) {
 			wantedLead = ids.From[ids.LeadKind](ids.UUID(lead.Id))
 		}
 	}
+	// Planner statistics survive resets; measure the population this fixture seeded.
+	analyzeAsOwner(t, "contact_email", "contact", "lead")
 	config := e.store.db.Pool().Config()
 	config.ConnConfig.DefaultQueryExecMode = pgx.QueryExecModeCacheStatement
 	config.MaxConns = 1

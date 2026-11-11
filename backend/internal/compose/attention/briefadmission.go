@@ -4,9 +4,11 @@
 package attention
 
 import (
+	"slices"
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // Ranking and cached prose do not establish a current intervention. Only facts
@@ -55,4 +57,13 @@ func hasDealIntervention(item crmcontracts.AttentionItem, asOf time.Time) bool {
 	}
 	return item.Deal != nil && ((item.Deal.NoNextStep != nil && *item.Deal.NoNextStep) ||
 		(item.Deal.NoChampion != nil && *item.Deal.NoChampion))
+}
+
+func (s *Service) withoutSnoozedRisk(rows []ranked) []ranked {
+	if !s.taskOwner.IsZero() {
+		return rows
+	}
+	return slices.DeleteFunc(rows, func(row ranked) bool {
+		return row.item.Source == sourceAtRisk && row.item.Subject != nil && s.briefSnoozed[ids.UUID(row.item.Subject.Id)]
+	})
 }

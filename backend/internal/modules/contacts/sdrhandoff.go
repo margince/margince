@@ -36,6 +36,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -137,6 +138,9 @@ func (s *Store) SubmitHandoff(ctx context.Context, in NewSDRHandoff) (ids.UUID, 
 		if err := ensureHandoffTargetsVisible(ctx, tx, in); err != nil {
 			return err
 		}
+		if err := requireHandoffAssignee(ctx, tx, in.AssignedTo); err != nil {
+			return err
+		}
 		// captured_by comes from the authenticated principal and never from the
 		// request body — the write shape's rule, and the reason a handoff can be
 		// attributed at all.
@@ -151,12 +155,13 @@ func (s *Store) SubmitHandoff(ctx context.Context, in NewSDRHandoff) (ids.UUID, 
 		if err := appendHandoffEvent(ctx, tx, id, HandoffSubmitted, nil, nil, in.Note, actor.ID, s.clock().UTC()); err != nil {
 			return err
 		}
-		if _, err := storekit.AuditEvent(ctx, tx, "create", "sdr_handoff", id, map[string]any{
-			handoffStatusKey: HandoffSubmitted, "assigned_to": in.AssignedTo,
-		}); err != nil {
+		auditID, err := storekit.AuditEvent(ctx, tx, "create", tableSDRHandoff, id, map[string]any{
+			handoffStatusKey: HandoffSubmitted, fieldHandoffAssignee: in.AssignedTo,
+		})
+		if err != nil {
 			return err
 		}
-		return nil
+		return storekit.EmitEvent(ctx, tx, auditID, id, crmcontracts.InternalEventSdrHandoffCreated{})
 	})
 	return id, err
 }
@@ -244,12 +249,13 @@ func (s *Store) DecideHandoff(ctx context.Context, id ids.UUID, in HandoffDecisi
 		if err := appendHandoffEvent(ctx, tx, id, in.Status, in.ReasonID, kind, in.Note, actor.ID, s.clock().UTC()); err != nil {
 			return err
 		}
-		if _, err := storekit.AuditEvent(ctx, tx, "update", "sdr_handoff", id, map[string]any{
+		auditID, err := storekit.AuditEvent(ctx, tx, "update", tableSDRHandoff, id, map[string]any{
 			handoffStatusKey: in.Status, "reason_id": in.ReasonID, "deal_id": in.DealID,
-		}); err != nil {
+		})
+		if err != nil {
 			return err
 		}
-		return nil
+		return storekit.EmitEvent(ctx, tx, auditID, id, crmcontracts.InternalEventSdrHandoffUpdated{})
 	})
 }
 
@@ -355,36 +361,6 @@ func ensureHandoffTargetsVisible(ctx context.Context, tx pgx.Tx, in NewSDRHandof
 	return nil
 }
 
-// ensureHandoffSubjectWritable applies the SUBJECT's row scope to a handoff
-// decision.
-//
-// The handoff has no owner column of its own to scope by, and inventing one
-// would be a second answer to a question the lead and the contact already
-// answer. So the gate is the subject's: a seat that may write this prospect may
-// decide what happens to it, and one that may not gets the 404 every other
-// out-of-scope write gets, so the refusal does not disclose that the handoff is
-// there.
-func ensureHandoffSubjectWritable(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
-	var leadID, contactID *ids.UUID
-	err := tx.QueryRow(ctx,
-		`SELECT lead_id, contact_id FROM sdr_handoff WHERE id = $1`, id).Scan(&leadID, &contactID)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return apperrors.ErrNotFound
-	}
-	if err != nil {
-		return fmt.Errorf("contacts: reading the handoff's subject: %w", err)
-	}
-	// Exactly one is set — the sdr_handoff_one_subject constraint holds it — so
-	// this reaches the table that actually carries the row scope.
-	if leadID != nil {
-		return auth.EnsureWritable(ctx, tx, "lead", *leadID)
-	}
-	if contactID != nil {
-		return auth.EnsureWritable(ctx, tx, "contact", *contactID)
-	}
-	return errHandoffNeedsOneSubject
-}
-
 // reasonKindFor is the reason's own category, carried beside its id so the
 // database can check the pair.
 //
@@ -423,28 +399,51 @@ func (s *Store) ResubmitHandoff(ctx context.Context, id ids.UUID, assignTo *ids.
 		if err := ensureHandoffSubjectWritable(ctx, tx, id); err != nil {
 			return err
 		}
+		var version int64
+		var status string
+		var previous *ids.UUID
+		err := tx.QueryRow(ctx, `SELECT version, status, assigned_to FROM sdr_handoff WHERE id=@id`,
+			pgx.StrictNamedArgs{"id": id}).Scan(&version, &status, &previous)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return apperrors.ErrNotFound
+		}
+		if err != nil {
+			return fmt.Errorf("contacts: reading the handoff receiver: %w", err)
+		}
+		if status != HandoffRecycled {
+			return errHandoffNotRecycled
+		}
+		if assignTo == nil {
+			assignTo = previous
+		}
+		if err := requireHandoffAssignee(ctx, tx, assignTo); err != nil {
+			return err
+		}
 		tag, err := tx.Exec(ctx, `
 			UPDATE sdr_handoff
-			   SET status = $2, reason_id = NULL, reason_applies_to = NULL, decided_at = NULL,
-			       assigned_to = coalesce($3::uuid, assigned_to),
+			   SET status = @status, reason_id = NULL, reason_applies_to = NULL, decided_at = NULL,
+			       assigned_to = coalesce(@receiver::uuid, assigned_to),
 			       submitted_at = now(), updated_at = now(), version = version + 1
-			 WHERE id = $1 AND status = $4`,
-			id, HandoffSubmitted, assignTo, HandoffRecycled)
+			 WHERE id = @id AND status = @recycled AND version = @version`, pgx.StrictNamedArgs{
+			"id": id, handoffStatusKey: HandoffSubmitted, "receiver": assignTo,
+			"recycled": HandoffRecycled, handoffVersionArgument: version,
+		})
 		if err != nil {
 			return fmt.Errorf("contacts: resubmitting the handoff: %w", err)
 		}
 		if tag.RowsAffected() == 0 {
-			return errHandoffNotRecycled
+			return apperrors.ErrVersionSkew
 		}
 		if err := appendHandoffEvent(ctx, tx, id, HandoffSubmitted, nil, nil, "", actor.ID, s.clock().UTC()); err != nil {
 			return err
 		}
-		if _, err := storekit.AuditEvent(ctx, tx, "update", "sdr_handoff", id, map[string]any{
+		auditID, err := storekit.AuditEvent(ctx, tx, "update", tableSDRHandoff, id, map[string]any{
 			handoffStatusKey: HandoffSubmitted, "resubmitted": true,
-		}); err != nil {
+		})
+		if err != nil {
 			return err
 		}
-		return nil
+		return storekit.EmitEvent(ctx, tx, auditID, id, crmcontracts.InternalEventSdrHandoffUpdated{})
 	})
 }
 

@@ -4,6 +4,7 @@
 package ai
 
 import (
+	"regexp"
 	"slices"
 	"testing"
 )
@@ -20,5 +21,20 @@ func TestOnlyVertexIsPricedByAnotherProvider(t *testing.T) {
 	}
 	if got := pricedByFor(providerOpenAI); got != "" {
 		t.Errorf("pricedByFor(openai) = %q, want none", got)
+	}
+}
+
+// CostReport prices calls alike in rateKeyColumns and the day at one rate. A
+// column pricedRate reads outside that key would price two unlike calls alike.
+func TestTheRateKeyHoldsEveryCallColumnPricedRateReads(t *testing.T) {
+	key := append(slices.Clone(rateKeyColumns), "occurred_at")
+	reads := regexp.MustCompile(`\bk\.(\w+)`).FindAllStringSubmatch(pricedRate("k", 1, 2), -1)
+	if len(reads) == 0 {
+		t.Fatal("pricedRate(\"k\") reads no k column; the pattern no longer matches its SQL")
+	}
+	for _, read := range reads {
+		if !slices.Contains(key, read[1]) {
+			t.Errorf("pricedRate reads k.%s, which the rate key %v leaves out", read[1], key)
+		}
 	}
 }
