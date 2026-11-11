@@ -1,0 +1,26 @@
+/* InfoTip: a bare glyph in the secondary ink, sized to the 14px dial of a
+   ProbabilityRing so the two read as one line beside a value. */
+.info-tip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-full);
+  corner-shape: round;
+  background: none;
+  color: var(--textSecondary);
+  vertical-align: middle;
+  cursor: help;
+}
+.info-tip:hover {
+  color: var(--textPrimary);
+}
+.info-tip:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+}
+.info-tip > svg {
+  inline-size: 14px;
+  block-size: 14px;
+}
