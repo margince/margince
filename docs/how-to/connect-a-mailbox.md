@@ -22,6 +22,7 @@ It is never written to the connection row, and it is **deleted on disconnect**. 
 | **Outlook / Microsoft 365** | Graph OAuth (`graph`) | Sync and backfill (and push) | a Microsoft Entra app |
 | **Outlook calendar** | Graph OAuth (`graphcal`) | A window from 90 days back to 1 year ahead | the same Entra app, with `Calendars.ReadWrite` |
 | **Google Calendar** | OAuth (`gcal`) | The same window | the same Google app as Gmail, with the Calendar API |
+| **Google meeting notes** | OAuth (`gdocs`) | No sync; it reads a Meet notes Doc | the same Google app as Gmail, with the Google Docs API |
 
 Start with **IMAP** to see capture work against a real mailbox: it needs no OAuth app. Use **Gmail OAuth** to test
 push and backfill. Connecting is `x-agent-access: human-only` on every path: Margince refuses an agent Passport.
@@ -110,6 +111,17 @@ It asks for `calendar.readonly`, `calendar.events.owned` and `userinfo.profile` 
 of its own. Connecting Gmail and the calendar in one step asks once, on one screen, and stores that one grant
 in both connections. The first sync reaches back 90 days, and the window reaches a year ahead.
 
+## Google meeting notes over OAuth
+
+The meeting-notes connection (`gdocs`) reads the notes and transcripts Google Meet writes into Google Docs. It uses
+the same Google OAuth app and environment values as Gmail. On that app's project, turn on the **Google Docs API**,
+and allow `<api-base>/v1/connectors/gdocs/callback` (in dev: `http://localhost:8080/v1/connectors/gdocs/callback`).
+
+It asks for `documents.readonly` and `userinfo.email` as its own grant, and never sets `include_granted_scopes`. Put
+both on the consent screen. `documents.readonly` opens one Doc by its id; it cannot list or search Drive. Google
+reviews an app that asks for it before it leaves test mode. `userinfo.email` names the account that connected. The calendar connection keeps
+its own grant.
+
 ## The same steps from a script
 
 The browser is the shorter way to connect: it carries the CSRF cookie that the OAuth callback checks. For a script,
@@ -118,7 +130,7 @@ get the consent URL and open it in a browser:
 ```sh
 curl -X POST http://localhost:8080/v1/connectors/gmail/connect \
   --cookie 'crm_session=<session>' -H 'Content-Type: application/json' -d '{}' | jq -r '.authorize_url'
-# the same for graph, gcal and graphcal
+# the same for graph, gcal, gdocs and graphcal
 ```
 
 IMAP takes its credentials **under `imap`** (the `ConnectConnectorRequest` of the contract), as `username` and

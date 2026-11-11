@@ -18,18 +18,9 @@ import { ProblemError } from "../../lib/problem";
 import { problemDetails } from "../../lib/problembody";
 import type { RefusedRecipient } from "../../lib/sendstatus";
 
-// OverrulableRecipient is one refused contact the rep may vouch for, and the
-// send category the vouch covers.
-export type OverrulableRecipient = Readonly<{
-  contactId: string;
-  category: string;
-}>;
-
 // SendReview is the work a refusal left behind, as a surface needs it.
 export type SendReview = Readonly<{
   reviewId: string;
-  // What the overrule must vouch for: every refused contact, or nothing.
-  overrulable: readonly OverrulableRecipient[];
   // What this caller may do about it. Empty is a real answer: an agent, or a
   // refusal with no message to decide about. The reference still travels so a
   // human can pick the review up.
@@ -43,14 +34,13 @@ export type SendReview = Readonly<{
 // never heard of is dropped rather than rendered raw. An enum value such as
 // `direct_send` tells a reader nothing as a button label.
 //
-// TWO, and a caller sees one of them. A holder of the communication exception
-// grant directs the send; anyone else overrules a machine refusal with a reason.
-// The server decides, because it is the side that knows.
+// One: directing this one message, with a reason. It covers this message and
+// never the next one to the same contact.
 //
 // Dropping is safe because the reference survives. A rep still sees that a
 // review exists and can open it; what they lose is one shortcut, which is the
 // cost of a client older than its server.
-export const SEND_REVIEW_ACTIONS = ["overrule", "direct_send"] as const;
+export const SEND_REVIEW_ACTIONS = ["direct_send"] as const;
 export type SendReviewAction = (typeof SEND_REVIEW_ACTIONS)[number];
 
 // sendReviewOf reads the review a refusal named, or null when it named none.
@@ -73,7 +63,6 @@ export function sendReviewOf(error: unknown): SendReview | null {
   return {
     reviewId,
     actions: actionsIn(details.available_actions),
-    overrulable: overrulableIn(details.overrulable),
     refusals: refusalsIn(details.refusals),
   };
 }
@@ -104,34 +93,6 @@ function refusalsIn(raw: unknown): readonly RefusedRecipient[] {
       // Only a stated yes counts. Absent is not permission to guess one.
       canBeOverruled: Reflect.get(entry, "can_be_overruled") === true,
     });
-  }
-  return out;
-}
-
-// overrulableIn keeps each well-formed entry. One malformed entry drops the
-// whole list: an overrule that skipped a contact would leave the send refused.
-function overrulableIn(raw: unknown): readonly OverrulableRecipient[] {
-  if (!Array.isArray(raw)) {
-    return [];
-  }
-  const out: OverrulableRecipient[] = [];
-  for (const entry of raw) {
-    if (typeof entry !== "object" || entry === null) {
-      return [];
-    }
-    const { contact_id: contactId, category } = entry as Record<
-      string,
-      unknown
-    >;
-    if (
-      typeof contactId !== "string" ||
-      contactId === "" ||
-      typeof category !== "string" ||
-      category === ""
-    ) {
-      return [];
-    }
-    out.push({ contactId, category });
   }
   return out;
 }

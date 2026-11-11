@@ -225,9 +225,10 @@ func waitingCardsStatement(slots waitingSlots, arg func(any) int, judged []ids.U
 	newer := slices.Clone(slots.values)
 	newer[waitingResponsibilitySlot] = fmt.Sprintf("(%s) AND %s", newer[waitingResponsibilitySlot], waitingSameFoldNewerSQL)
 	newer[waitingKeysetSlot] = waitingNotMachineSQL
+	judgedSlot := arg(judged)
 	slots.values[waitingResponsibilitySlot] = fmt.Sprintf("(%s) AND a.id = ANY ($%d::uuid[])",
-		slots.values[waitingResponsibilitySlot], arg(judged))
-	slots.values[waitingCapSlot] = len(judged)
+		slots.values[waitingResponsibilitySlot], judgedSlot)
+	slots.values[waitingCapSlot] = fmt.Sprintf("cardinality($%d::uuid[])", judgedSlot)
 	slots.values[waitingKeysetSlot] = waitingNotMachineSQL +
 		" AND NOT EXISTS (SELECT 1 FROM " + waitingCardOfSQL + " CROSS JOIN LATERAL (" +
 		fmt.Sprintf(waitingEligibleSQL, newer...) + " LIMIT 1) newer)"
@@ -254,9 +255,9 @@ const waitingSameFoldNewerSQL = `CASE card.card_fold[1]
 // slot 4.
 var waitingCardsAfterSQL = waitingSelectSQL + `
 	 WHERE a.id = ANY (ARRAY(` + waitingEligibleSQL + `
-	   ORDER BY a.occurred_at, a.id LIMIT %[4]d))` + waitingGroupSQL
+	   ORDER BY a.occurred_at, a.id LIMIT %[4]s))` + waitingGroupSQL
 
-// Slot indexes in the values waitingQueueSlots answers: the cap %[4]d and the
+// Slot indexes in the values waitingQueueSlots answers: the cap %[4]s and the
 // responsibility clause %[10]s.
 const (
 	waitingCapSlot            = 3

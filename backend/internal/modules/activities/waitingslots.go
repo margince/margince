@@ -96,7 +96,7 @@ func (s *Store) waitingQueueSlots(
 		readerAddresses = storekit.MailSeatAddressesSQL(identities, fmt.Sprintf("$%d::uuid", reader))
 	}
 	values := []any{
-		instant, content, linkVisible, WaitingScanCap,
+		instant, content, linkVisible, "",
 		horizon,
 		liveRecord(openDealPredicate, "d"),
 		liveRecord(workingLeadPredicate, "ld"),

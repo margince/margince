@@ -123,6 +123,7 @@ describe("a stored value", () => {
       "margince.room.session",
       "margince.staleBuildReloadedAt",
       "margince.setup.reminderHidden",
+      "margince.changes.lastBulkUndo",
       "margince.taskReminders.shown",
       "margince.aiReveal.seen",
       "margince.analytics.overviewView",

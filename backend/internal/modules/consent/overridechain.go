@@ -58,9 +58,7 @@ import (
 // ship its own event and its own audit row. The contact is the ROW's subject
 // and not the caller's: a carried copy belongs to the survivor's stream, which
 // is where it was announced. Scanned as a pointer because the schema admits a
-// lead-held row (contact_id NULL); no writer produces one today, which
-// overridesubject_test.go holds, and a reader that assumed NOT NULL would be
-// the first thing to break the day that changes.
+// lead-held row with a null contact_id, even though no door records one.
 type revokedOverride struct {
 	id      ids.UUID
 	contact *ids.UUID
@@ -149,11 +147,12 @@ func lockOverrideFamilyOf(ctx context.Context, tx pgx.Tx, id ids.UUID) (ids.UUID
 // lockCarriedFamilies is the carry side: every chain the copy about to run
 // would extend.
 //
-// Read under the subject locks the carry already holds, which is what makes one
-// pass enough — no new source row can appear between this read and the copy,
-// because both doors that could write one (Allow, and a carry INTO this
-// subject) queue behind those same keys. A row can only be REVOKED meanwhile,
-// and the copy re-reads revoked_at at its own snapshot and skips it.
+// Read under the subject locks the carry already holds, so one pass is enough.
+// The only writer of a new source row is a carry into this subject, and it
+// queues behind the same keys. A row can only be revoked meanwhile, and the
+// copy re-reads revoked_at at its own snapshot and skips it.
+//
+// Held by: TestOnlyTheMergeCarryWritesStandingExceptions (backend/gates/standingexceptionwriter_test.go)
 func lockCarriedFamilies(ctx context.Context, tx pgx.Tx, from commsauthz.StopSubject) error {
 	rows, err := tx.Query(ctx, `
 		WITH RECURSIVE ancestry AS (
@@ -261,8 +260,8 @@ type revokeNote struct {
 //
 // CONTACT ROWS ONLY: public-events.yaml declares consent.override_lifted with a
 // static x-entity-type: contact, and the audit's entity is the same contact.
-// No writer produces a lead-held row today (overridesubject_test.go); the nil
-// skip is the schema's shape, not a path.
+// No door records a vouch, so no lead-held row is written; the nil skip is the
+// schema's shape, not a path.
 func auditAndEmitRevokedOverrides(
 	ctx context.Context, tx pgx.Tx, revoked []revokedOverride, note revokeNote,
 ) error {

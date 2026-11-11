@@ -283,15 +283,12 @@ func purgeAnonymizedContactJudgments(ctx context.Context, tx pgx.Tx, id ids.UUID
 		err = purgeSubjectPurchases(ctx, tx, id)
 	}
 	if err == nil {
-		// What a colleague wrote down to DO about them, on their own weekly
-		// plan. The SAME statement the Art. 17 cascade runs, called rather than
-		// copied: the two acts differ only by the suppression list, and a
-		// second spelling here would be the drift contactscrub_test.go exists to
-		// catch. Nothing cascades to it — the table holds no contact FK and is
-		// keyed to the rep who wrote it — so an anonymize that skipped it would
-		// leave the subject's name in a commitment beside an "Erased Subject"
-		// record.
-		err = redactCommitmentsNaming(ctx, tx, ids.From[ids.ContactKind](id))
+		// What the declared tables say about them, such as a commitment on a
+		// colleague's weekly plan. The Art. 17 cascade makes the same call, and
+		// the two acts differ only by the suppression list. Nothing cascades to
+		// these rows. An anonymize that skipped them would leave the subject's
+		// name beside an "Erased Subject" record.
+		err = redactDeclaredTables(ctx, tx, ids.From[ids.ContactKind](id))
 	}
 	if err == nil {
 		_, err = tx.Exec(ctx,

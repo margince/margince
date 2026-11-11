@@ -380,8 +380,15 @@ const linkReconcileActor = "link-reconcile"
 // and that is exactly where a defect hid: a missing correlation id made every
 // publish refuse, so the sweep repaired nothing while looking like a job that
 // had simply not run yet.
-func NewLinkReconcileWorkspaceWorkerForTest(pool *pgxpool.Pool, store *contacts.Store) *linkReconcileWorker {
-	return newLinkReconcileWorker(pool, store, CaptureConfig{}, slog.Default())
+func NewLinkReconcileWorkspaceWorkerForTest(pool *pgxpool.Pool) *linkReconcileWorker {
+	return newLinkReconcileWorker(pool, linkReconcileStore(pool), CaptureConfig{}, slog.Default())
+}
+
+// linkReconcileStore is the contacts store the sweep runs on. It runs the same
+// cohort repair the capture paths do, so it carries the same audience
+// derivation and proven-sender rule.
+func linkReconcileStore(pool *pgxpool.Pool) *contacts.Store {
+	return newContactsStore(InstallationDB(pool)).WithAudienceRecompute(activities.RecomputeAudienceTx)
 }
 
 // ReconcileWorkspaceForTest drives ONE workspace's turn from another package.

@@ -175,31 +175,35 @@ The consent check reads the reason, and it runs *before* you send. Beside
 **Send** the composer shows **Recipients checked** once the check allows it and
 nothing on the form is missing. The mailbox is still checked when you send.
 
-When the check does not allow it, the warning bar above **Send** shows one
-answer for the message, with its fix: see the list below. With several recipients, the bar names the address
-the answer applies to. A check with no answer never counts as permission: "The
-send check did not complete. Sending runs the check again."
+When the check does not allow it, the warning bar above **Send** shows one answer for the message, with its fix: see the list below. With one refused recipient among several, the bar names that address. With two or more, it gives each refused address its own line and reason, so you can fix them together. A check with no answer never counts as permission: "The send check did not complete. Send waits until it does." Press **Check again** to ask once more.
 
-When **Send** is refused, the refusal takes the place of the earlier answer in
-the same bar. It goes away when you change anything in the message, or when
-a new check allows the message.
+**Send** follows the check for the message as it is now:
+- While the check runs, or when it did not complete, **Send** is off. The line under it says "Send waits for the send check."
+- When a refusal cannot be lifted, **Send** is off. Examples are a recipient who asked for no more mail, or an address that does not take mail. The line under it says to fix what the bar names, or to remove that recipient.
+- When a reason can lift every refusal, the button reads **Send with a reason…**. Pressing it opens the form for **Send with a recorded exception** (below).
+- When the check allows every recipient, **Send** is the plain **Send**.
+- Changing a recipient, the reason or the deal asks the check again, and **Send** waits for the new answer. Cmd+Enter or Ctrl+Enter and the **Other ways to send** menu wait with it.
 
-Some purposes that Margince knows, such as a security notice, are not offered
-here. A sender who could pick one could send marketing that looks like a
-security notice.
+When **Send** is refused, the refusal takes the place of the earlier answer in the same bar. It goes away when you change anything in the message, or when a new check allows the message.
+
+Some purposes that Margince knows, such as a security notice, are not offered here. A sender who could pick one could send marketing that looks like a security notice.
 
 ### Why can't I send an email to this contact?
 When Margince will not send an email to a contact, the warning bar above **Send** names the reason. Where there is a fix, it names that too.
 - **This message needs one more detail**: for "Choose the deal for this follow-up.", pick it in **Deal this follow-up is about**. You can also write from the deal's page. When the record already shows another reason, the bar offers **Use "…" instead**. It switches the reason and checks again; it does not send.
 - **Permission needed for this message**: the required permission is not on record. Record the recipient's consent or the facts that support an allowed customer route. A staff exception cannot replace them.
 - **No recorded reason to contact this recipient**: Margince first uses a request or meeting it already holds. Where a fact is missing, press **Record what happened**. Say what was agreed and when. This records the exchange for that recipient and sending company, and for a deal when one is picked. It does not send the email, record marketing consent or make a standing exception. Margince checks again; any stop that remains still blocks the message.
-- **Send with a recorded exception**: where the check allows it and you hold the exception right, this queues only this message. Your name and original reason stay on record. It grants no consent or permission for later mail. The composer closes once the email is queued. A retry checks current support and stops, without asking again for facts that still hold.
+- **Send with a recorded exception**: where the check allows it and you hold the exception right, this queues only this message. Press **Send with a reason…**, or this button in the bar after a refused send. Pick why the message may go, say why in your own words and confirm that you take responsibility. Your name and reason stay on record.
+
+  The exception covers this one message, and grants no consent for later mail. The composer closes once the email is queued. A retry checks current support and stops, without asking again for facts that still hold.
 
   If that approved send fails, open its review and choose **Correct spelling or punctuation**. You must own the message, have approved it yourself and still hold permission to edit and approve mail. Confirm that its meaning and facts stay the same, then choose **Save correction**. The original approval stays on record; the message stays held until you retry. A change in meaning, recipients, sender, purpose or attachments needs a new message and approval. Later stops still block it.
-- **Message cannot be sent**: a reason nobody can lift, such as "The recipient objected to marketing", or an address that does not take mail.
+- **Message cannot be sent**: a reason nobody can lift, such as "The recipient objected to marketing", or an address that does not take mail. No exception is offered, and **Send** stays off until you remove that recipient.
 - A mailbox connected only to read mail: press **Reconnect your mailbox** and allow sending.
 
-The lead stays a lead when you record an exchange. When you make it a contact later, that exchange keeps its original addresses and sending company. A standing exception covers its named sending company and purpose until it is taken back. It records a staff decision and grants no consent. A recorded request is a fact that Margince checks for the message you are writing. A one-message exception covers only the message you read and approved.
+The lead stays a lead when you record an exchange. When you make it a contact later, that exchange keeps its original addresses and sending company.
+
+Margince no longer makes a standing exception. One that already exists covers its named sending company and purpose until someone takes it back on the contact's page. It records a staff decision and grants no consent. A recorded request is a fact that Margince checks for the message you are writing. A one-message exception covers only the message you read and approved.
 
 ## What a send refuses, and what it only warns about
 

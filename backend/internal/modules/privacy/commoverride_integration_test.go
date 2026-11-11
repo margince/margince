@@ -28,8 +28,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// seedOverride writes one live standing override the way the door
-// (consent.Store.Allow) does, naming the subject by contact or lead id.
+// seedOverride writes one live standing override, naming the subject by
+// contact or lead id.
 func seedOverride(ctx context.Context, t *testing.T, conn execer, contact, lead *ids.UUID) {
 	t.Helper()
 	mustExec(ctx, t, conn, `

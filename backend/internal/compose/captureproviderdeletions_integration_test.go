@@ -6,6 +6,7 @@
 package compose
 
 import (
+	"bytes"
 	"context"
 	"encoding/base64"
 	"encoding/json"
@@ -20,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture/gmail"
 	"github.com/margince/margince/backend/internal/modules/capture/graph"
 	"github.com/margince/margince/backend/internal/modules/capture/oauthflow"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
@@ -48,9 +50,14 @@ func mailboxJSON(t *testing.T, w http.ResponseWriter, value map[string]any) {
 
 func TestProviderSyncCapturesAndRemovesTheRealStoredEmailKey(t *testing.T) {
 	for _, tc := range []struct {
-		name, provider string
+		name, provider, outlookCase string
+		kept                        bool
 	}{
-		{"Gmail deletion", "gmail"}, {"Outlook ambiguous folder removal", "graph"},
+		{"Gmail deletion", "gmail", "", false},
+		{"Outlook ambiguous folder removal", "graph", "", true},
+		{"Outlook hard delete after the hold", "graph", "hard delete", false},
+		{"Outlook hard delete of a colleague's copy", "graph", "colleague", true},
+		{"Outlook hard delete under a statutory hold", "graph", "hold", true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			e := integration.Setup(t)
@@ -66,7 +73,7 @@ func TestProviderSyncCapturesAndRemovesTheRealStoredEmailKey(t *testing.T) {
 					gmailDeletionResponse(t, w, r, mailbox, raw)
 					return
 				}
-				graphDeletionResponse(t, w, r, server.URL, raw, deleting.Load())
+				graphDeletionResponse(t, w, r, server.URL, raw, outlookMail{removed: deleting.Load(), hardDeleted: tc.outlookCase != ""})
 			}
 			server = httptest.NewServer(http.HandlerFunc(handler))
 			defer server.Close()
@@ -83,11 +90,12 @@ func TestProviderSyncCapturesAndRemovesTheRealStoredEmailKey(t *testing.T) {
 			ctx = principal.WithActor(ctx, actor)
 			sink := newCaptureSink(e.Pool, CaptureConfig{}).WithMessagePurger(purgerFor(t, e).PurgeRemovedAdmitted)
 			var pull func(connector.Cursor) (connector.Cursor, error)
+			clock := time.Date(2026, 6, 3, 0, 0, 0, 0, time.UTC)
 			if tc.provider == "gmail" {
 				provider := gmail.New(mailboxDeletionOAuth{}, gmail.NewAPI(server.Client(), server.URL))
 				pull = func(cursor connector.Cursor) (connector.Cursor, error) { return provider.Sync(ctx, auth, cursor, sink) }
 			} else {
-				provider := graph.New(mailboxDeletionOAuth{}, graph.NewAPI(server.Client(), server.URL))
+				provider := graph.New(mailboxDeletionOAuth{}, graph.NewAPI(server.Client(), server.URL)).WithClock(func() time.Time { return clock })
 				pull = func(cursor connector.Cursor) (connector.Cursor, error) {
 					return provider.SyncFrom(ctx, auth, cursor, time.Date(2026, 6, 1, 0, 0, 0, 0, time.UTC), sink)
 				}
@@ -96,20 +104,35 @@ func TestProviderSyncCapturesAndRemovesTheRealStoredEmailKey(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			activity := e.WsScalar(t, `SELECT id::text FROM activity WHERE source_system='email' AND source_id='stored-rfc@example.test'`)
-			if activity == "" {
+			activityID, err := ids.Parse(e.WsScalar(t, `SELECT id::text FROM activity WHERE source_system='email' AND source_id='stored-rfc@example.test'`))
+			if err != nil {
 				t.Fatal("connector did not write the normalized email key")
 			}
 			if count := e.WsCount(t, `SELECT count(*) FROM capture_import i JOIN capture_connection c ON c.user_id=i.user_id WHERE c.provider=$1 AND i.provider_message_ids @> ARRAY[c.provider || ':' || c.generation || ':provider-opaque-id']`, tc.provider); count != 1 {
 				t.Fatal("connector did not persist its mailbox-specific provider id")
 			}
+			switch tc.outlookCase {
+			case "colleague":
+				addImporter(t, e, activityID, e.Rep2)
+			case "hold":
+				restrict(t, e, activityID)
+			}
 			deleting.Store(true)
-			if _, err := pull(cursor); err != nil {
+			if cursor, err = pull(cursor); err != nil {
 				t.Fatal(err)
 			}
+			if tc.outlookCase != "" {
+				if e.WsCount(t, `SELECT count(*) FROM activity WHERE id=$1 AND body IS NULL`, activityID) != 0 {
+					t.Fatal("an Outlook hard delete was purged before its hold ran out")
+				}
+				clock = clock.Add(11 * 24 * time.Hour)
+				if _, err := pull(cursor); err != nil || !bytes.Contains(cursor, []byte(`"internet_message_id":"\u003cstored-rfc@example.test\u003e"`)) {
+					t.Fatalf("the sync after the hold failed (%v), or the hold kept no identity: %s", err, cursor)
+				}
+			}
 			kept := e.WsCount(t, `SELECT count(*) FROM activity WHERE source_id='stored-rfc@example.test' AND body IS NOT NULL`) > 0
-			if kept != (tc.provider == "graph") {
-				t.Errorf("kept message=%v for %s", kept, tc.provider)
+			if kept != tc.kept {
+				t.Errorf("kept message=%v for %s", kept, tc.name)
 			}
 		})
 	}
@@ -131,7 +154,10 @@ func gmailDeletionResponse(t *testing.T, w http.ResponseWriter, r *http.Request,
 	}
 }
 
-func graphDeletionResponse(t *testing.T, w http.ResponseWriter, r *http.Request, base, raw string, deleting bool) {
+// outlookMail is what the fake Outlook mailbox shows for the one test message.
+type outlookMail struct{ removed, hardDeleted bool }
+
+func graphDeletionResponse(t *testing.T, w http.ResponseWriter, r *http.Request, base, raw string, mail outlookMail) {
 	if r.Header.Get("Prefer") != `IdType="ImmutableId"` {
 		t.Error("Outlook request omitted immutable ids")
 	}
@@ -140,10 +166,20 @@ func graphDeletionResponse(t *testing.T, w http.ResponseWriter, r *http.Request,
 		mailboxJSON(t, w, map[string]any{"value": []string{}, "@odata.deltaLink": base + r.URL.Path + "?next=1"})
 	case "/me/mailFolders/inbox/messages/delta":
 		value := []map[string]any{{"id": "provider-opaque-id", "receivedDateTime": "2026-06-02T00:00:00Z"}}
-		if deleting {
+		if mail.removed {
 			value = []map[string]any{{"id": "provider-opaque-id", "@removed": map[string]string{"reason": "deleted"}}}
 		}
 		mailboxJSON(t, w, map[string]any{"value": value, "@odata.deltaLink": base + r.URL.Path + "?next=1"})
+	case "/me/mailFolders/recoverableitemsdeletions/messages/delta":
+		value := []map[string]any{}
+		if mail.removed && mail.hardDeleted && r.URL.Query().Get("next") != "" {
+			value = append(value, map[string]any{"id": "provider-opaque-id", "internetMessageId": "<stored-rfc@example.test>"})
+		}
+		mailboxJSON(t, w, map[string]any{"value": value, "@odata.deltaLink": base + r.URL.Path + "?next=1"})
+	case "/me/mailFolders/recoverableitemsdeletions":
+		mailboxJSON(t, w, map[string]any{"id": "deletions-folder"})
+	case "/me/messages/provider-opaque-id":
+		mailboxJSON(t, w, map[string]any{"parentFolderId": "deletions-folder"})
 	case "/me/mailFolders/inbox/messages":
 		mailboxJSON(t, w, map[string]any{"@odata.count": 1})
 	case "/me/mailFolders/sentitems/messages":

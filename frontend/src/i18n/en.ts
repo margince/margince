@@ -2598,7 +2598,6 @@ export const en = {
   "history.field.body": "Notes",
   "history.field.emails": "Email addresses",
   "history.field.nudge_dismissal": "Nudge dismissed",
-  "history.field.override_category": "Override category",
   "history.field.overrides_carried": "Overrides carried",
   "history.field.phone": "Phone",
   "history.field.phones": "Phone numbers",
@@ -7792,10 +7791,17 @@ export const en = {
   "sendPermission.missingPermission": "Permission needed for this message",
   "sendPermission.reason.chooseDeal": "Choose the deal for this follow-up.",
   "sendPermission.appliesTo": "This applies to {address}.",
-  "sendPermission.appliesToAndMore_one":
-    "This applies to {address} and {count} other recipient.",
-  "sendPermission.appliesToAndMore_other":
-    "This applies to {address} and {count} other recipients.",
+  "sendPermission.recipientLine": "{address}: {reason}",
+  "sendPermission.unansweredHeld":
+    "The send check did not complete. Send waits until it does.",
+  "sendPermission.recheck": "Check again",
+  "compose.sendWithReason": "Send with a reason…",
+  "compose.scheduleWithReason": "Schedule with a reason…",
+  "compose.holdForCheck": "Send waits for the send check.",
+  "compose.holdRefused":
+    "Send is off. Fix what the check above names, or remove that recipient.",
+  "compose.holdWithReason":
+    "The check refused this message. Send asks for your reason, and the reason covers this one message only.",
   "sendPermission.appliesToSome_one":
     "This applies to {count} of {total} recipients.",
   "sendPermission.appliesToSome_other":
@@ -7919,15 +7925,6 @@ export const en = {
   "directSend.reason.legal_obligation": "Legal obligation",
   "directSend.reason.other": "Other",
   "compose.reviewReference": "Review",
-  "compose.overrule.open": "Overrule with a reason",
-  "compose.overrule.reasonLabel": "Why may this message go?",
-  "compose.overrule.hint":
-    "Your reason is recorded on each contact. It covers this kind of message to them until someone revokes it.",
-  "compose.overrule.confirm": "Record the overrule",
-  "compose.overrule.recording": "Recording…",
-  "compose.overrule.recorded": "Overrule recorded. Press Send again.",
-  "compose.overrule.failed":
-    "The overrule was not recorded. Retry, or open the review from the refusal above.",
   "compose.draftUnavailable":
     "AI drafting is unavailable because no model is configured. The email can still be written manually.",
   "compose.draftUnsupportedHere":
@@ -11706,6 +11703,21 @@ export const en = {
     "Connect the account you work in. Your email files itself to the right contacts and deals, and your calendar puts meetings on records and gives your booking link your free times.",
   "connectors.provGmail": "Gmail",
   "connectors.provGcal": "Google Calendar",
+  "connectors.provGdocs": "Google Docs",
+  "connectors.cannotReadNotes": "Cannot read meeting notes",
+  "connectors.reconnectToReadNotes":
+    "Reconnect to read meeting notes. Google was not given access to the notes documents.",
+  "connectors.bringsNotes": "Meeting notes",
+  "connectors.notes.name": "Meeting notes",
+  "connectors.notes.desc":
+    "The notes and transcripts Google Meet writes are read from Google Docs and kept on the meeting.",
+  "connectors.notes.connect": "Connect meeting notes",
+  "connectors.notes.stop": "Stop reading meeting notes",
+  "connectors.notes.stopTitle": "Stop reading meeting notes?",
+  "connectors.notes.stopBody":
+    "Margince stops reading the notes Google Meet writes. Mail and calendar keep running, and notes already on meetings stay.",
+  "connectors.notes.otherAccount":
+    "Meeting notes are connected with {notes}, and the calendar with {calendar}. Notes are read only for meetings in the calendar of the account that connected them, so connect meeting notes with {calendar}.",
   "connectors.provGraph": "Outlook",
   "connectors.provGraphCal": "Outlook Calendar",
   "connectors.provImap": "IMAP mailbox",
@@ -15313,6 +15325,7 @@ export const en = {
   "oauthApp.redirectCopiedFor": "Copied {purpose} URI",
   "oauthApp.redirect.mailbox_connect": "Mailbox",
   "oauthApp.redirect.calendar_connect": "Calendar",
+  "oauthApp.redirect.documents_connect": "Meeting notes",
   "oauthApp.redirect.sign_in": "Sign-in",
   "oauthApp.redirect.extension_connect": "Connect",
   "oauthApp.redirectTitle": "Authorized redirect URIs",
@@ -17057,7 +17070,7 @@ export const en = {
     "Someone with the authority takes back one stop.",
   "webhooks.event.consent.override_recorded.label": "Override recorded",
   "webhooks.event.consent.override_recorded.when":
-    "A rep vouches that a machine-level refusal may be overruled for one category.",
+    "Merging contacts copies a standing exception to the contact that remains.",
   "webhooks.event.consent.override_lifted.label": "Override lifted",
   "webhooks.event.consent.override_lifted.when":
     "Someone with the authority takes back one override.",
@@ -19240,6 +19253,12 @@ export const en = {
   "receipt.detail.by": "Done by",
   "receipt.detail.when": "When",
   "receipt.detail.source": "Source",
+  "receipt.detail.sourceAt": "Source date",
+  "receipt.detail.reasonKind": "Reason",
+  "receipt.detail.reasonKind.rule":
+    "A rule: Margince counted what the data shows",
+  "receipt.detail.reasonKind.inference":
+    "An inference: Margince read what the customer wrote or said",
   "worklist.handled.showMore": "Show more",
   "worklist.exceptions.empty": "No team exceptions.",
   "worklist.exceptions.loading": "Loading team…",
@@ -21516,6 +21535,7 @@ export const en = {
   "brief.done.showNew": "Show new changes",
   "brief.done.history": "Change history",
   "brief.done.dealsLabel": "Deals Margince changed",
+  "brief.done.pick": "Undo changes on {name}",
   "brief.done.noReason": "Reason unavailable",
   "brief.done.markedLost": "Marked lost",
   "brief.done.customerWrote": "The customer wrote:",
@@ -21533,10 +21553,13 @@ export const en = {
   "changes.bulk.confirm_other":
     "{count} deals need your confirmation. Undo each on its own row.",
   "changes.bulk.unsent_one": "{count} deal was not sent.",
+  "changes.bulk.settled_one": "{count} deal no longer waits for review.",
+  "changes.bulk.settled_other": "{count} deals no longer wait for review.",
   "changes.bulk.unsent_other": "{count} deals were not sent.",
   "changes.bulk.confirmOnDeal": "Open the deal to confirm its Undo.",
   "changes.bulk.retry": "Send again",
   "changes.bulk.unfinished": "Deals not fully undone",
+  "changes.bulk.clear": "Clear this result",
 } as const;
 
 export type MessageKey = keyof typeof en;

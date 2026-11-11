@@ -103,7 +103,7 @@ func (a *httpAPI) FindSentByMessageID(ctx context.Context, accessToken, unbracke
 		// doubled) before url.Values escapes it for the query. Without the
 		// first step an identity carrying a quote would end the literal and the
 		// rest of it would be read as filter syntax.
-		paramFilter: {"internetMessageId eq '" + odataQuote("<"+unbracketedMessageID+">") + "'"},
+		paramFilter: {internetMessageIDFilter("<" + unbracketedMessageID + ">")},
 		paramSelect: {"id"},
 		paramTop:    {"1"},
 	}
@@ -125,3 +125,8 @@ func (a *httpAPI) FindSentByMessageID(ctx context.Context, accessToken, unbracke
 // a literal quote is written twice. It is the ONE place this escaping happens,
 // so a second filter cannot be written without it.
 func odataQuote(v string) string { return strings.ReplaceAll(v, "'", "''") }
+
+// internetMessageIDFilter matches a message by its bracketed RFC822 identity.
+func internetMessageIDFilter(bracketed string) string {
+	return "internetMessageId eq '" + odataQuote(bracketed) + "'"
+}

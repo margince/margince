@@ -16,6 +16,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/platform/clocktest"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -134,6 +135,30 @@ func TestTheWaitingHorizonReadsAHeldRequestByItsID(t *testing.T) {
 	}
 	if youngByDate == 0 {
 		t.Errorf("no arm of the horizon reads a date range from an index: the scan reads every inbound message, not the ones inside the horizon")
+	}
+}
+
+func TestASeatsMailCandidatesUseTimeAndHeldIDIndexes(t *testing.T) {
+	seat := ids.NewV7()
+	statement := `SELECT ` + storekit.DirectMailActivitiesSQL(
+		"jsonb_build_object($1::text, jsonb_build_array($2::text))", "$1::uuid", "$3::timestamptz", heldRequestIDsSQL())
+	plan := explainOnMailbox(t, "", "SET LOCAL enable_seqscan = off; SET LOCAL plan_cache_mode = force_generic_plan",
+		"EXPLAIN (FORMAT JSON) ", statement, seat.String(), "seat@work.test", clocktest.Now(t))
+	var recentByTime, heldByID int
+	var reads []string
+	plan.walk(func(n planNode) {
+		if n.IndexName == "idx_aparticipant_waiting_address_time" && strings.Contains(n.IndexCond, "domain_evidence_at >=") {
+			recentByTime++
+		}
+		if strings.Contains(n.IndexName, "participant") && strings.Contains(n.IndexCond, "activity_id =") {
+			heldByID++
+		}
+		if n.IndexName != "" {
+			reads = append(reads, n.IndexName+" "+n.IndexCond)
+		}
+	})
+	if recentByTime == 0 || heldByID == 0 {
+		t.Errorf("seat mail plan misses a time-bound or held-id participant lookup (recent=%d held=%d): %v", recentByTime, heldByID, reads)
 	}
 }
 

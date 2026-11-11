@@ -48,6 +48,52 @@ func TestReusedPlansLastForTheCallAndTheSnapshotPlansAsBeforeAfterIt(t *testing.
 	})
 }
 
+func TestCustomPlanExceptionRestoresTheWholeReadMode(t *testing.T) {
+	ctx, pool := laneEnv(t)
+	onSnapshot(ctx, t, pool, func(ctx context.Context, tx pgx.Tx) {
+		err := database.ReuseGenericPlans(ctx, func(ctx context.Context) error {
+			if err := database.UseCustomPlansTx(ctx, tx, func() error {
+				if mode := planCacheMode(ctx, t, tx); mode != "force_custom_plan" {
+					t.Errorf("exception mode = %q, want force_custom_plan", mode)
+				}
+				return nil
+			}); err != nil {
+				return err
+			}
+			if mode := planCacheMode(ctx, t, tx); mode != "force_generic_plan" {
+				t.Errorf("mode after exception = %q, want force_generic_plan", mode)
+			}
+			return nil
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if mode := planCacheMode(ctx, t, tx); mode != "auto" {
+			t.Errorf("mode after read = %q, want auto", mode)
+		}
+	})
+}
+
+func TestDetachedReadDoesNotInheritTheOuterGenericPlanScope(t *testing.T) {
+	ctx, pool := laneEnv(t)
+	onSnapshot(ctx, t, pool, func(ctx context.Context, tx pgx.Tx) {
+		err := database.ReuseGenericPlans(ctx, func(ctx context.Context) error {
+			if !database.GenericPlansEnabled(ctx) {
+				t.Fatal("outer snapshot did not enable generic plans")
+			}
+			return database.WithWorkspaceSnapshot(database.Detached(ctx), pool, func(detached context.Context) error {
+				if database.GenericPlansEnabled(detached) {
+					t.Error("detached snapshot inherited the outer transaction's plan scope")
+				}
+				return nil
+			})
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+	})
+}
+
 // The restore puts back what the snapshot had, not a default.
 func TestReusedPlansRestoreTheModeTheSnapshotHad(t *testing.T) {
 	ctx, pool := laneEnv(t)

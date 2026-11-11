@@ -464,7 +464,7 @@ func (s *Store) CountActivities(ctx context.Context, in ListActivitiesInput) (in
 		// planner reads the wrapper for what it is.
 		return tx.QueryRow(ctx,
 			`SELECT count(*) FROM (SELECT `+columns+
-				` FROM activity a WHERE `+strings.Join(where, " AND ")+`) counted`, waitingListArgs(in, args)...).Scan(&total)
+				` FROM activity a WHERE `+strings.Join(where, " AND ")+`) counted`, waitingListArgs(ctx, in, args)...).Scan(&total)
 	})
 	return total, err
 }

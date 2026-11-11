@@ -78,7 +78,13 @@ func CalendarProviders() []string { return calendarProviderNames() }
 // CalendarWriteGranted says whether a connection's granted scopes let it write
 // events on provider's calendar. It is the one read-only detector.
 func CalendarWriteGranted(provider string, scopes []string) bool {
-	for _, grant := range calendarWriteScopes[provider] {
+	return scopeGranted(calendarWriteScopes, provider, scopes)
+}
+
+// scopeGranted says whether scopes hold any grant the table lists for
+// provider. Every capability decided by an OAuth grant reads it.
+func scopeGranted(grants map[string][]string, provider string, scopes []string) bool {
+	for _, grant := range grants[provider] {
 		if slices.Contains(scopes, grant) {
 			return true
 		}

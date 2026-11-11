@@ -18,7 +18,7 @@ import (
 // imports a sibling. Compose injects the real one. A second copy of the fold
 // here would drift: one such copy deleted the pairs that lost all evidence. It
 // left every surviving pair counting the removed interaction.
-type EdgeInvalidator func(ctx context.Context, tx pgx.Tx, activityID ids.UUID) error
+type EdgeInvalidator func(ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID) error
 
 // WithEdgeInvalidator returns a service that keeps the relationship graph true
 // as retention removes the interactions under it, in the same transaction.
@@ -29,6 +29,7 @@ type EdgeInvalidator func(ctx context.Context, tx pgx.Tx, activityID ids.UUID) e
 func (s *RetentionService) WithEdgeInvalidator(fn EdgeInvalidator) *RetentionService {
 	out := *s
 	out.invalidateEdges = fn
+	out.eraser = out.eraser.WithEdgeInvalidator(fn)
 	return &out
 }
 
@@ -39,5 +40,12 @@ func (s *RetentionService) invalidateGraph(ctx context.Context, tx pgx.Tx, id id
 	if s.invalidateEdges == nil {
 		return nil
 	}
-	return s.invalidateEdges(ctx, tx, id)
+	return s.invalidateEdges(ctx, tx, []ids.UUID{id})
+}
+
+// WithEdgeInvalidator keeps activity certificates and their graph corrections atomic.
+func (e *Eraser) WithEdgeInvalidator(fn EdgeInvalidator) *Eraser {
+	clone := *e
+	clone.invalidateEdges = fn
+	return &clone
 }

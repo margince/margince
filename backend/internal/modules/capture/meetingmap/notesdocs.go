@@ -8,7 +8,6 @@ package meetingmap
 // decoder states what was attached, and this decides what counts.
 
 import (
-	"regexp"
 	"strings"
 
 	"github.com/margince/margince/backend/internal/modules/capture"
@@ -42,10 +41,6 @@ var notesTitleSuffixes = []struct {
 	{"transkript", capture.MeetingDocumentTranscript}, //nolint:misspell // German: Google's title for a transcript
 }
 
-// driveFileID is the shape of a Drive file id. Anything else is refused, so
-// the document address built from it cannot point anywhere but at that file.
-var driveFileID = regexp.MustCompile(`^[A-Za-z0-9_-]{10,200}$`)
-
 // maxMeetingDocuments bounds the notes rows one meeting writes. Google writes
 // one notes document and one transcript per meeting; a longer list is not theirs.
 const maxMeetingDocuments = 4
@@ -70,7 +65,7 @@ func NotesDocuments(ev Event, owner string) []capture.MeetingDocument {
 	seen := map[string]bool{}
 	for _, doc := range ev.Documents {
 		id := strings.TrimSpace(doc.FileID)
-		if doc.MimeType != googleDocMimeType || !driveFileID.MatchString(id) || seen[id] {
+		if doc.MimeType != googleDocMimeType || !capture.IsDriveFileID(id) || seen[id] {
 			continue
 		}
 		kind := notesKindOf(doc.Title)

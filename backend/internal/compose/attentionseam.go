@@ -200,7 +200,6 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attenti
 			ownDomainReader{store: capture.NewOwnDomainStore(db)}),
 		deals:    deals.NewStore(db, DealsInstallation()),
 		contacts: newContactsStore(db),
-		now:      now,
 	}
 	// The lane's sweeps and the scroll tail read one candidate set.
 	atRisk := attentionAtRisk{
@@ -470,8 +469,13 @@ func (a attentionDealStandings) CachedStandings(
 // every other seam in this file has.
 type attentionSnapshots struct{ pool *pgxpool.Pool }
 
-func (a attentionSnapshots) InSnapshot(ctx context.Context, fn func(context.Context) error) error {
-	return database.WithWorkspaceSnapshot(ctx, a.pool, fn)
+func (a attentionSnapshots) InSnapshot(ctx context.Context, read string, fn func(context.Context) error) error {
+	return database.WithWorkspaceSnapshot(ctx, a.pool, func(ctx context.Context) error {
+		if read == attention.ReadWorklist {
+			return database.ReuseGenericPlans(ctx, fn)
+		}
+		return fn(ctx)
+	})
 }
 
 func (a attentionSnapshots) Degradable(

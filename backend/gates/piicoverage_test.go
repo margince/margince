@@ -525,6 +525,7 @@ var piiTables = map[string]piiHandling{
 // privacy's own TestEveryPromisedTableIsActuallyAssembled asks that half, from
 // the only package that can call sarSections.
 var sarAssemblyFiles = []string{
+	"internal/modules/privacy/saraudithistory.go",
 	"internal/modules/privacy/raworiginalsubjects.go",
 	"internal/modules/privacy/sarretainedcopies.go",
 	"internal/modules/privacy/sarreporting.go",
@@ -631,6 +632,11 @@ func TestErasureAndSARReachEveryPIITable(t *testing.T) {
 			for _, table := range sqlWriteTargets(lit) {
 				writes[table] = true
 			}
+		}
+	}
+	for _, stmt := range declaredErasureStatements(t) {
+		for _, table := range sqlWriteTargets(stmt) {
+			writes[table] = true
 		}
 	}
 	// Each swept table keeps the text of the sweep statements that write it, so

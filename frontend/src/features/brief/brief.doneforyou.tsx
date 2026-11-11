@@ -8,12 +8,12 @@
 // The first five deals show here and every one shows in the review drawer.
 // Both draw the same rows, so a sixth deal loses nothing a third one had.
 
-import { type ReactNode, useId, useState } from "react";
+import { type ComponentProps, type ReactNode, useId, useState } from "react";
 import { rowsOf } from "../../api/rows";
 import { BundleUndo } from "../../components/marginchanges";
 import { ReceiptsMore } from "../../components/receiptsmore";
 import { AppLink } from "../../design-system/applink";
-import { Button, Modal } from "../../design-system/atoms";
+import { Button, Checkbox, Modal } from "../../design-system/atoms";
 import {
   DrawerBody,
   DrawerFoot,
@@ -32,7 +32,10 @@ import {
   type MarginceChangeSummary,
   usePendingMarginceChanges,
 } from "../../lib/marginchanges";
+import { useRememberedUndoRun } from "../../lib/undorun";
+import { replaceDial, useUrlParams } from "../../lib/urlstate";
 import { listReadState } from "../../lib/worklist.listread";
+import { worklistHistoryHref } from "../../lib/worklistrouting";
 import { DealCard } from "./brief.doneforyou.deal";
 import "./brief.feed.css";
 import {
@@ -61,9 +64,11 @@ export function DoneForYou({ completed }: Readonly<{ completed: ReactNode }>) {
   // state: a failed summary is a failed panel, never a quieter list.
   const state = listReadState(summary, pending ? groups : undefined);
   const doneLines = rowsOf(magic.data?.done).length > 0;
+  // The last Undo of many keeps the section up after it emptied the list.
+  const lastRun = useRememberedUndoRun() !== null;
   if (
     state === "loading" ||
-    (state === "empty" && !doneLines && !magic.isError)
+    (state === "empty" && !doneLines && !lastRun && !magic.isError)
   ) {
     return null;
   }
@@ -85,7 +90,10 @@ export function DoneForYou({ completed }: Readonly<{ completed: ReactNode }>) {
             </span>
           </span>
         )}
-        <AppLink className="btn btn-ghost brief-first-queue" href="#/worklist">
+        <AppLink
+          className="btn btn-ghost brief-first-queue"
+          href={worklistHistoryHref()}
+        >
           {t("brief.done.history")}
         </AppLink>
       </div>
@@ -119,12 +127,20 @@ export function DoneForYou({ completed }: Readonly<{ completed: ReactNode }>) {
           </div>
         </SurfaceState>
       )}
+      {state === "empty" && lastRun && (
+        <div className="brief-done-foot">
+          <BundleUndo bundles={[]} remember label="" />
+        </div>
+      )}
       {completed}
     </section>
   );
 }
 
-/** The drawer with every waiting deal, and the Undo of all of them. */
+/** The address dial that holds the review list open, so Back reopens it. */
+export const DONE_REVIEW_PARAM = "done_review";
+
+/** The way into the review list of every waiting deal. */
 function ReviewAll({
   count,
   groups,
@@ -140,88 +156,154 @@ function ReviewAll({
   handled: ReturnType<typeof useHandledForYou>;
   onSettled: (id: string) => void;
 }>) {
+  const plural = usePlural();
+  const { locale } = useLocale();
+  const triggerId = useId();
+  const [params] = useUrlParams();
+  if (count === 0) return null;
+  return (
+    <>
+      <Button
+        id={triggerId}
+        variant="link"
+        onClick={() => replaceDial(DONE_REVIEW_PARAM, "1")}
+      >
+        {plural("brief.done.reviewAll", count, {
+          count: formatNumber(count, locale),
+        })}
+      </Button>
+      {params.get(DONE_REVIEW_PARAM) === "1" && (
+        <ReviewDrawer
+          count={count}
+          groups={groups}
+          pending={pending}
+          asOf={asOf}
+          handled={handled}
+          onSettled={onSettled}
+          triggerId={triggerId}
+        />
+      )}
+    </>
+  );
+}
+
+/**
+ * The drawer with every waiting deal, each ticked for the Undo at its foot.
+ * The deals and the Undo freeze when it opens, so the list drawn is the list
+ * the Undo sends. New changes wait for the reader's own refresh.
+ */
+function ReviewDrawer({
+  count,
+  groups,
+  pending,
+  asOf,
+  handled,
+  onSettled,
+  triggerId,
+}: Readonly<{
+  count: number;
+  groups: readonly DealChanges[];
+  pending: MarginceChangeSummary | undefined;
+  asOf: string | undefined;
+  handled: ReturnType<typeof useHandledForYou>;
+  onSettled: (id: string) => void;
+  triggerId: string;
+}>) {
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
   const titleId = useId();
-  const triggerId = useId();
-  const [open, setOpen] = useState(false);
-  // The deals and the Undo frozen together when the drawer opened, so the
-  // list drawn is the list the Undo sends. New changes wait for the reader's
-  // own refresh.
-  const [chosen, setChosen] = useState<readonly MarginceChangeBundle[]>([]);
-  const [shown, setShown] = useState<readonly DealChanges[]>([]);
-  // Each deal's Undo names only the changes this list shows and the server
-  // still allows, frozen when the drawer opens.
-  const bundles = groups.flatMap((group) => {
+  const [shown, setShown] = useState(groups);
+  const [chosen, setChosen] = useState(() => undoableBundles(groups, pending));
+  // The deals the reader unticked. A deal shown later starts ticked.
+  const [left, setLeft] = useState<ReadonlySet<string>>(new Set());
+  const remembered = useRememberedUndoRun() !== null;
+  const ticked = chosen.filter((bundle) => !left.has(bundle.deal_id));
+  const offered = new Set(chosen.map((bundle) => bundle.deal_id));
+  const tick = (dealId: string, on: boolean) =>
+    setLeft((last) => {
+      const next = new Set(last);
+      if (on) next.delete(dealId);
+      else next.add(dealId);
+      return next;
+    });
+  const n = formatNumber(count, locale);
+  return (
+    <Modal
+      open
+      intent="drawer"
+      labelledBy={titleId}
+      returnFocusTo={() => document.getElementById(triggerId)}
+      onClose={() => replaceDial(DONE_REVIEW_PARAM, undefined)}
+    >
+      <DrawerHead>
+        <Heading id={titleId} size="medium" as="h2" className="modal-title">
+          {plural("brief.done.drawerTitle", count, { count: n })}
+        </Heading>
+      </DrawerHead>
+      <DrawerBody>
+        {changedSince(shown, groups) && (
+          <Button
+            variant="link"
+            onClick={() => {
+              setChosen(undoableBundles(groups, pending));
+              setShown(groups);
+            }}
+          >
+            {t("brief.done.showNew")}
+          </Button>
+        )}
+        <DealChangeList
+          groups={shown}
+          pending={pending}
+          asOf={asOf}
+          onSettled={onSettled}
+          pick={(dealId) =>
+            offered.has(dealId)
+              ? { on: !left.has(dealId), onChange: (on) => tick(dealId, on) }
+              : undefined
+          }
+        />
+        <ReceiptsMore handled={handled} />
+      </DrawerBody>
+      {(chosen.length > 0 || remembered) && (
+        <DrawerFoot className="brief-done-foot">
+          {chosen.length > 1 && (
+            <Checkbox
+              label={t("bulk.selectAll")}
+              checked={ticked.length === chosen.length}
+              indeterminate={ticked.length > 0 && ticked.length < chosen.length}
+              onChange={(event) =>
+                setLeft(event.target.checked ? new Set() : offered)
+              }
+            />
+          )}
+          <BundleUndo
+            bundles={ticked}
+            remember
+            label={plural("changes.undoDeals", ticked.length, {
+              count: formatNumber(ticked.length, locale),
+            })}
+          />
+        </DrawerFoot>
+      )}
+    </Modal>
+  );
+}
+
+// Each deal's Undo names only the changes the list shows and the server still
+// allows.
+function undoableBundles(
+  groups: readonly DealChanges[],
+  pending: MarginceChangeSummary | undefined,
+): MarginceChangeBundle[] {
+  return groups.flatMap((group) => {
     const bundle = pending?.bundles.find((b) => b.deal_id === group.dealId);
     const audits = undoableShown(group, bundle);
     return bundle && audits.length > 0
       ? [{ ...bundle, audit_log_ids: audits }]
       : [];
   });
-  if (count === 0) return null;
-  const n = formatNumber(count, locale);
-  return (
-    <>
-      <Button
-        id={triggerId}
-        variant="link"
-        onClick={() => {
-          setChosen(bundles);
-          setShown(groups);
-          setOpen(true);
-        }}
-      >
-        {plural("brief.done.reviewAll", count, { count: n })}
-      </Button>
-      {open && (
-        <Modal
-          open
-          intent="drawer"
-          labelledBy={titleId}
-          returnFocusTo={() => document.getElementById(triggerId)}
-          onClose={() => setOpen(false)}
-        >
-          <DrawerHead>
-            <Heading id={titleId} size="medium" as="h2" className="modal-title">
-              {plural("brief.done.drawerTitle", count, { count: n })}
-            </Heading>
-          </DrawerHead>
-          <DrawerBody>
-            {changedSince(shown, groups) && (
-              <Button
-                variant="link"
-                onClick={() => {
-                  setChosen(bundles);
-                  setShown(groups);
-                }}
-              >
-                {t("brief.done.showNew")}
-              </Button>
-            )}
-            <DealChangeList
-              groups={shown}
-              pending={pending}
-              asOf={asOf}
-              onSettled={onSettled}
-            />
-            <ReceiptsMore handled={handled} />
-          </DrawerBody>
-          {chosen.length > 0 && (
-            <DrawerFoot>
-              <BundleUndo
-                bundles={chosen}
-                label={plural("changes.undoDeals", chosen.length, {
-                  count: formatNumber(chosen.length, locale),
-                })}
-              />
-            </DrawerFoot>
-          )}
-        </Modal>
-      )}
-    </>
-  );
 }
 
 /**
@@ -233,11 +315,13 @@ function DealChangeList({
   pending,
   asOf,
   onSettled,
+  pick,
 }: Readonly<{
   groups: readonly DealChanges[];
   pending: MarginceChangeSummary | undefined;
   asOf: string | undefined;
   onSettled: (id: string) => void;
+  pick?: (dealId: string) => ComponentProps<typeof DealCard>["pick"];
 }>) {
   const t = useT();
   const [chosen, choose] = useState<string | null | undefined>(undefined);
@@ -254,6 +338,7 @@ function DealChangeList({
           onOpen={(open) => choose(open ? group.dealId : null)}
           asOf={asOf}
           onSettled={onSettled}
+          pick={pick?.(group.dealId)}
         />
       ))}
     </ul>

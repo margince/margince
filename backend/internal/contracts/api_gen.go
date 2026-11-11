@@ -4504,6 +4504,7 @@ func (e CaptureConnectionMailPosture) Valid() bool {
 // Defines values for CaptureConnectionProvider.
 const (
 	CaptureConnectionProviderGcal        CaptureConnectionProvider = "gcal"
+	CaptureConnectionProviderGdocs       CaptureConnectionProvider = "gdocs"
 	CaptureConnectionProviderGmail       CaptureConnectionProvider = "gmail"
 	CaptureConnectionProviderGraph       CaptureConnectionProvider = "graph"
 	CaptureConnectionProviderGraphcal    CaptureConnectionProvider = "graphcal"
@@ -4515,6 +4516,8 @@ const (
 func (e CaptureConnectionProvider) Valid() bool {
 	switch e {
 	case CaptureConnectionProviderGcal:
+		return true
+	case CaptureConnectionProviderGdocs:
 		return true
 	case CaptureConnectionProviderGmail:
 		return true
@@ -7372,6 +7375,7 @@ func (e ConnectorAppSource) Valid() bool {
 // Defines values for ConnectorAppRedirectUriPurpose.
 const (
 	ConnectorAppRedirectUriPurposeCalendarConnect  ConnectorAppRedirectUriPurpose = "calendar_connect"
+	ConnectorAppRedirectUriPurposeDocumentsConnect ConnectorAppRedirectUriPurpose = "documents_connect"
 	ConnectorAppRedirectUriPurposeExtensionConnect ConnectorAppRedirectUriPurpose = "extension_connect"
 	ConnectorAppRedirectUriPurposeMailboxConnect   ConnectorAppRedirectUriPurpose = "mailbox_connect"
 	ConnectorAppRedirectUriPurposeSignIn           ConnectorAppRedirectUriPurpose = "sign_in"
@@ -7381,6 +7385,8 @@ const (
 func (e ConnectorAppRedirectUriPurpose) Valid() bool {
 	switch e {
 	case ConnectorAppRedirectUriPurposeCalendarConnect:
+		return true
+	case ConnectorAppRedirectUriPurposeDocumentsConnect:
 		return true
 	case ConnectorAppRedirectUriPurposeExtensionConnect:
 		return true
@@ -17260,6 +17266,7 @@ func (e MorningBriefItemState) Valid() bool {
 // Defines values for MorningDigestConnectorsProvider.
 const (
 	MorningDigestConnectorsProviderGcal        MorningDigestConnectorsProvider = "gcal"
+	MorningDigestConnectorsProviderGdocs       MorningDigestConnectorsProvider = "gdocs"
 	MorningDigestConnectorsProviderGmail       MorningDigestConnectorsProvider = "gmail"
 	MorningDigestConnectorsProviderGraph       MorningDigestConnectorsProvider = "graph"
 	MorningDigestConnectorsProviderGraphcal    MorningDigestConnectorsProvider = "graphcal"
@@ -17271,6 +17278,8 @@ const (
 func (e MorningDigestConnectorsProvider) Valid() bool {
 	switch e {
 	case MorningDigestConnectorsProviderGcal:
+		return true
+	case MorningDigestConnectorsProviderGdocs:
 		return true
 	case MorningDigestConnectorsProviderGmail:
 		return true
@@ -19258,6 +19267,24 @@ func (e ReaderCalendar) Valid() bool {
 	case ReaderCalendarNotConnected:
 		return true
 	case ReaderCalendarUnreadable:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ReceiptReasonKind.
+const (
+	ReceiptReasonKindInference ReceiptReasonKind = "inference"
+	ReceiptReasonKindRule      ReceiptReasonKind = "rule"
+)
+
+// Valid indicates whether the value is a known member of the ReceiptReasonKind enum.
+func (e ReceiptReasonKind) Valid() bool {
+	switch e {
+	case ReceiptReasonKindInference:
+		return true
+	case ReceiptReasonKindRule:
 		return true
 	default:
 		return false
@@ -27241,6 +27268,7 @@ func (e AnchorRecordType) Valid() bool {
 // Defines values for CaptureProvider.
 const (
 	CaptureProviderGcal        CaptureProvider = "gcal"
+	CaptureProviderGdocs       CaptureProvider = "gdocs"
 	CaptureProviderGmail       CaptureProvider = "gmail"
 	CaptureProviderGraph       CaptureProvider = "graph"
 	CaptureProviderGraphcal    CaptureProvider = "graphcal"
@@ -27252,6 +27280,8 @@ const (
 func (e CaptureProvider) Valid() bool {
 	switch e {
 	case CaptureProviderGcal:
+		return true
+	case CaptureProviderGdocs:
 		return true
 	case CaptureProviderGmail:
 		return true
@@ -28951,45 +28981,6 @@ func (e ListContactsParamsTagMode) Valid() bool {
 	case ListContactsParamsTagModeAny:
 		return true
 	case ListContactsParamsTagModeNone:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for AllowContactJSONBodyCategory.
-const (
-	AllowContactJSONBodyCategoryAccountNotice      AllowContactJSONBodyCategory = "account_notice"
-	AllowContactJSONBodyCategoryActiveDealFollowup AllowContactJSONBodyCategory = "active_deal_followup"
-	AllowContactJSONBodyCategoryContractNotice     AllowContactJSONBodyCategory = "contract_notice"
-	AllowContactJSONBodyCategoryCustomerService    AllowContactJSONBodyCategory = "customer_service"
-	AllowContactJSONBodyCategoryInvoiceOrPayment   AllowContactJSONBodyCategory = "invoice_or_payment"
-	AllowContactJSONBodyCategoryMarketing          AllowContactJSONBodyCategory = "marketing"
-	AllowContactJSONBodyCategoryPrecontractQuote   AllowContactJSONBodyCategory = "precontract_quote"
-	AllowContactJSONBodyCategoryReplyToInbound     AllowContactJSONBodyCategory = "reply_to_inbound"
-	AllowContactJSONBodyCategoryRequestedFollowup  AllowContactJSONBodyCategory = "requested_followup"
-)
-
-// Valid indicates whether the value is a known member of the AllowContactJSONBodyCategory enum.
-func (e AllowContactJSONBodyCategory) Valid() bool {
-	switch e {
-	case AllowContactJSONBodyCategoryAccountNotice:
-		return true
-	case AllowContactJSONBodyCategoryActiveDealFollowup:
-		return true
-	case AllowContactJSONBodyCategoryContractNotice:
-		return true
-	case AllowContactJSONBodyCategoryCustomerService:
-		return true
-	case AllowContactJSONBodyCategoryInvoiceOrPayment:
-		return true
-	case AllowContactJSONBodyCategoryMarketing:
-		return true
-	case AllowContactJSONBodyCategoryPrecontractQuote:
-		return true
-	case AllowContactJSONBodyCategoryReplyToInbound:
-		return true
-	case AllowContactJSONBodyCategoryRequestedFollowup:
 		return true
 	default:
 		return false
@@ -37311,7 +37302,7 @@ type CaptureConnection struct {
 	// NextSyncDueAt When the sweep will next pick this connection up (backoff-aware).
 	NextSyncDueAt *time.Time `json:"next_sync_due_at,omitempty"`
 
-	// Provider The mail/calendar provider (A51 email+calendar parity).
+	// Provider The mail/calendar/meeting-notes provider (A51 email+calendar parity).
 	Provider CaptureConnectionProvider `json:"provider"`
 
 	// Scopes The granted provider scopes.
@@ -37357,7 +37348,7 @@ type CaptureConnection struct {
 // for `apply_to_history`.
 type CaptureConnectionMailPosture string
 
-// CaptureConnectionProvider The mail/calendar provider (A51 email+calendar parity).
+// CaptureConnectionProvider The mail/calendar/meeting-notes provider (A51 email+calendar parity).
 type CaptureConnectionProvider string
 
 // CaptureConnectionStatus Connection state; `reauth_required` when the stored token expired/was revoked upstream.
@@ -41621,7 +41612,7 @@ type ConnectorAppList struct {
 
 // ConnectorAppRedirectUri One callback URL that must be registered as a redirect URI on the vendor's OAuth client. The `url` is the exact value this deployment sends the vendor, byte for byte — paste it as given rather than reconstructing it.
 type ConnectorAppRedirectUri struct {
-	// Purpose Which flow uses this URL. `sign_in` is the login callback. `mailbox_connect` and `calendar_connect` are the per-user mail and calendar consent callbacks, which are SEPARATE connectors served on different paths. `extension_connect` is the consent callback of an extension unit's OAuth app, and the only purpose such an app lists. ONE app backs all three on either vendor, and registering only some of them fails the others at the consent screen — Google says `redirect_uri_mismatch`, Microsoft says `AADSTS50011`, and neither names the URL that was missing.
+	// Purpose Which flow uses this URL. `sign_in` is the login callback. `mailbox_connect` and `calendar_connect` are the per-user mail and calendar consent callbacks, which are SEPARATE connectors served on different paths. `documents_connect` is Google's meeting-notes consent callback, a third connector on its own path. `extension_connect` is the consent callback of an extension unit's OAuth app, and the only purpose such an app lists. ONE app backs all three on either vendor, and registering only some of them fails the others at the consent screen — Google says `redirect_uri_mismatch`, Microsoft says `AADSTS50011`, and neither names the URL that was missing.
 	// None is derivable from another: the sign-in callback rides a base that already carries `/v1`, while the connector callbacks prefer the API's own origin over the SPA's, and on a split deployment those are different hosts. Only the purposes this deployment actually serves are listed.
 	Purpose ConnectorAppRedirectUriPurpose `json:"purpose"`
 
@@ -41629,7 +41620,7 @@ type ConnectorAppRedirectUri struct {
 	Url string `json:"url"`
 }
 
-// ConnectorAppRedirectUriPurpose Which flow uses this URL. `sign_in` is the login callback. `mailbox_connect` and `calendar_connect` are the per-user mail and calendar consent callbacks, which are SEPARATE connectors served on different paths. `extension_connect` is the consent callback of an extension unit's OAuth app, and the only purpose such an app lists. ONE app backs all three on either vendor, and registering only some of them fails the others at the consent screen — Google says `redirect_uri_mismatch`, Microsoft says `AADSTS50011`, and neither names the URL that was missing.
+// ConnectorAppRedirectUriPurpose Which flow uses this URL. `sign_in` is the login callback. `mailbox_connect` and `calendar_connect` are the per-user mail and calendar consent callbacks, which are SEPARATE connectors served on different paths. `documents_connect` is Google's meeting-notes consent callback, a third connector on its own path. `extension_connect` is the consent callback of an extension unit's OAuth app, and the only purpose such an app lists. ONE app backs all three on either vendor, and registering only some of them fails the others at the consent screen — Google says `redirect_uri_mismatch`, Microsoft says `AADSTS50011`, and neither names the URL that was missing.
 // None is derivable from another: the sign-in callback rides a base that already carries `/v1`, while the connector callbacks prefer the API's own origin over the SPA's, and on a split deployment those are different hosts. Only the purposes this deployment actually serves are listed.
 type ConnectorAppRedirectUriPurpose string
 
@@ -43825,7 +43816,10 @@ type CreateActivityRequest struct {
 
 	// RfcMessageId This message's RFC 5322 Message-ID, angle brackets optional. Email only. It is the identity a later capture of the same message resolves against, so an import that supplies it is recognised rather than duplicated.
 	RfcMessageId *string `json:"rfc_message_id,omitempty"`
-	Source       string  `json:"source"`
+
+	// SenderContactId Inbound message, call, meeting or email only: the linked contact who wrote or said it. Set it whenever one contact sent the message, for example the one member of a group chat who asked for a follow-up. Only that contact counts as its author, so only they asked to hear from us. Without it, an inbound activity linked to one contact names that contact as the sender. One linked to two or more contacts names no sender, and each contact is kept as copied. The stated `participants` of an email win over this field. A contact that is not in `links` returns `422 code: sender_not_linked`. Any other kind, or a direction other than `inbound`, returns `422 code: field_not_valid_for_kind`.
+	SenderContactId *openapi_types.UUID `json:"sender_contact_id,omitempty"`
+	Source          string              `json:"source"`
 
 	// SourceActivityId For a task, the conversation or note it follows from. The caller and assignee need access to that source. The task preserves its audience and inherits its visible links when no links are supplied. For a logged note, call or meeting, the task whose outcome is being recorded. This reference alone does not complete that task or accept a request.
 	SourceActivityId *openapi_types.UUID `json:"source_activity_id,omitempty"`
@@ -57835,13 +57829,22 @@ type Receipt struct {
 	// Reason Why Margince did it, in the words recorded when it acted. Never composed when the receipt is read. Absent when no reason was recorded, and when this reader may not read why: only the owner the change was made for reads it.
 	Reason *string `json:"reason,omitempty"`
 
+	// ReasonKind What kind of reason the change rests on: `rule` when Margince counted what the data shows (days of silence, the pace of won deals), `inference` when it read what the customer wrote or said. Derived from the kind of change and the loss reason a close wrote. Absent when the row cannot say, on an approval, and on older responses.
+	ReasonKind *ReceiptReasonKind `json:"reason_kind,omitempty"`
+
 	// Review The recorded automatic change and its current review state.
 	Review *AppliedDealChangeReview `json:"review,omitempty"`
 
 	// Source What kind of act `id` names: a change Margince applied itself (`correction`, where `id` is its audit entry) or an approval the system decided (`approval`, where `id` is the approval). Absent on older responses.
 	Source *ReceiptSource `json:"source,omitempty"`
 
-	// SourceRecord The email, thread or meeting the act was read from, where it names one. Checked against the reader's access on every read: a source the reader may not open is left out, not named. Absent also when the act cites no message.
+	// SourceOccurredAt When the email, call or meeting in `source_record` happened, apart from `occurred_at`, when Margince acted. Present only with `source_record`.
+	SourceOccurredAt *time.Time `json:"source_occurred_at,omitempty"`
+
+	// SourceOccurredPrecision How much of `source_occurred_at` is known. Present with it.
+	SourceOccurredPrecision *OccurredPrecision `json:"source_occurred_precision,omitempty"`
+
+	// SourceRecord The email, thread or meeting the act was read from, where it names one. Checked against the reader's access on every read: a source the reader may not open is left out, not named. Absent also when the act cites no message. A change that cites several names the newest the reader may open.
 	SourceRecord *AttentionSubject `json:"source_record,omitempty"`
 
 	// Subject The record this item is about, named so a reader knows who it concerns before opening anything.
@@ -57858,6 +57861,9 @@ type Receipt struct {
 	// A receipt for an approval the system decided carries none: that decision is revisitable through the record it named. A change made without asking — the close-date sweep's corrections — has this receipt as its only telling, so the way back travels with it.
 	Undo *AppliedUndo `json:"undo,omitempty"`
 }
+
+// ReceiptReasonKind What kind of reason the change rests on: `rule` when Margince counted what the data shows (days of silence, the pace of won deals), `inference` when it read what the customer wrote or said. Derived from the kind of change and the loss reason a close wrote. Absent when the row cannot say, on an approval, and on older responses.
+type ReceiptReasonKind string
 
 // ReceiptSource What kind of act `id` names: a change Margince applied itself (`correction`, where `id` is its audit entry) or an approval the system decided (`approval`, where `id` is the approval). Absent on older responses.
 type ReceiptSource string
@@ -58350,12 +58356,6 @@ type RecordViewAck struct {
 
 // RecordViewAckEntityType defines model for RecordViewAck.EntityType.
 type RecordViewAckEntityType string
-
-// RecordedOverride The standing override just recorded, by id. The category and reason are what the caller sent and the authority is their own session's, so the id is the one fact the caller could not have known — and the handle a later revoke takes.
-type RecordedOverride struct {
-	// OverrideId The standing override that now stands. A contact can hold several at once — one per category, and more than one for a single category after a merge — so this names which of them this call created.
-	OverrideId openapi_types.UUID `json:"override_id"`
-}
 
 // RecoveryCodes One-time recovery codes, shown exactly once at confirmation.
 type RecoveryCodes struct {
@@ -72182,24 +72182,6 @@ type ListContactOverridesParams struct {
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 }
 
-// AllowContactJSONBody defines parameters for AllowContact.
-type AllowContactJSONBody struct {
-	// Category Which category of send this vouch covers. The engine resolves every send to
-	// exactly one category, and the override applies to that one only — a vouch for
-	// `marketing` says nothing about `customer_service`. The five categories that
-	// serve the subject are absent on purpose: they are never refused for lack of
-	// evidence, so a vouch for one would be a row nothing could ever read.
-	Category AllowContactJSONBodyCategory `json:"category"`
-
-	// Reason Why the rep is vouching for this send, in their own words. Required: unlike a
-	// suppression, which may only relay what the subject said, this write is the
-	// rep's own judgement call and the record must say why it was made.
-	Reason string `json:"reason"`
-}
-
-// AllowContactJSONBodyCategory defines parameters for AllowContact.
-type AllowContactJSONBodyCategory string
-
 // RevokeOverrideJSONBody defines parameters for RevokeOverride.
 type RevokeOverrideJSONBody struct {
 	// Reason Why the override is being revoked. Required, the same asymmetry
@@ -77858,9 +77840,6 @@ type RecordConversationClaimJSONRequestBody = RecordConversationClaimRequest
 // RecordConsentJSONRequestBody defines body for RecordConsent for application/json ContentType.
 type RecordConsentJSONRequestBody = RecordConsentRequest
 
-// AllowContactJSONRequestBody defines body for AllowContact for application/json ContentType.
-type AllowContactJSONRequestBody AllowContactJSONBody
-
 // RevokeOverrideJSONRequestBody defines body for RevokeOverride for application/json ContentType.
 type RevokeOverrideJSONRequestBody RevokeOverrideJSONBody
 
@@ -81820,6 +81799,14 @@ func (a *CreateActivityRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "rfc_message_id")
 	}
 
+	if raw, found := object["sender_contact_id"]; found {
+		err = json.Unmarshal(raw, &a.SenderContactId)
+		if err != nil {
+			return fmt.Errorf("error reading 'sender_contact_id': %w", err)
+		}
+		delete(object, "sender_contact_id")
+	}
+
 	if raw, found := object["source"]; found {
 		err = json.Unmarshal(raw, &a.Source)
 		if err != nil {
@@ -82080,6 +82067,13 @@ func (a CreateActivityRequest) MarshalJSON() ([]byte, error) {
 		object["rfc_message_id"], err = json.Marshal(a.RfcMessageId)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'rfc_message_id': %w", err)
+		}
+	}
+
+	if a.SenderContactId != nil {
+		object["sender_contact_id"], err = json.Marshal(a.SenderContactId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'sender_contact_id': %w", err)
 		}
 	}
 
@@ -92645,9 +92639,6 @@ type ServerInterface interface {
 	// List the contact's standing exceptions and their exact scope.
 	// (GET /contacts/{id}/consent/allow)
 	ListContactOverrides(w http.ResponseWriter, r *http.Request, id Id, params ListContactOverridesParams)
-	// Record a standing vouch that a machine-level refusal for one category may be overruled.
-	// (POST /contacts/{id}/consent/allow)
-	AllowContact(w http.ResponseWriter, r *http.Request, id Id)
 	// Take back a standing override, if your level may revoke the one that recorded it.
 	// (POST /contacts/{id}/consent/allow/{overrideId}/revoke)
 	RevokeOverride(w http.ResponseWriter, r *http.Request, id Id, overrideId openapi_types.UUID)
@@ -96947,12 +96938,6 @@ func (_ Unimplemented) RecordConsent(w http.ResponseWriter, r *http.Request, id 
 // List the contact's standing exceptions and their exact scope.
 // (GET /contacts/{id}/consent/allow)
 func (_ Unimplemented) ListContactOverrides(w http.ResponseWriter, r *http.Request, id Id, params ListContactOverridesParams) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// Record a standing vouch that a machine-level refusal for one category may be overruled.
-// (POST /contacts/{id}/consent/allow)
-func (_ Unimplemented) AllowContact(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -118254,40 +118239,6 @@ func (siw *ServerInterfaceWrapper) ListContactOverrides(w http.ResponseWriter, r
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListContactOverrides(w, r, id, params)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// AllowContact operation middleware
-func (siw *ServerInterfaceWrapper) AllowContact(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	// ------------- Path parameter "id" -------------
-	var id Id
-
-	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
-		return
-	}
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.AllowContact(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -148532,9 +148483,6 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/contacts/{id}/consent/allow", wrapper.ListContactOverrides)
-	})
-	r.Group(func(r chi.Router) {
-		r.Post(options.BaseURL+"/contacts/{id}/consent/allow", wrapper.AllowContact)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/contacts/{id}/consent/allow/{overrideId}/revoke", wrapper.RevokeOverride)

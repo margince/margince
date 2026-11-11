@@ -12,17 +12,31 @@ package crmhello
 
 import (
 	"context"
+	"embed"
 	"errors"
 	"log/slog"
 
 	"github.com/margince/margince/backend/pkg/extension"
 	"github.com/margince/margince/backend/pkg/extension/jurisdiction"
+	"github.com/margince/margince/backend/pkg/extension/reach"
 )
+
+//go:embed migrations
+var migrations embed.FS
+
+// note is the unit's one table. It names a company and a contact, so the
+// core's merge and erasure must reach it.
+var note = reach.Table{
+	Name:  "ext_crm_hello_note",
+	Links: []reach.Link{{Column: "company_id", Record: reach.Company}, {Column: "contact_id", Record: reach.Contact}},
+	Erase: []reach.Clear{{Column: "body", To: reach.Tombstone}, {Column: "contact_id", To: reach.Null}},
+}
 
 // New returns the unit's declaration. hello_ping in api/crm.yaml has no Tools
 // entry: a contract-only request reaches the manifest and serves
 // nothing. The subscription puts a declared system read in the extension lane,
-// and the panel puts the frontend layer and a panel slot there.
+// and the panel puts the frontend layer and a panel slot there. The note
+// table puts a migrations layer and a Reach declaration there.
 func New() extension.Extension {
 	return extension.Extension{
 		Name:          "crm-hello",
@@ -40,6 +54,8 @@ func New() extension.Extension {
 			{Slot: extension.SlotDealPanel, Export: "DealHello", Object: "ext_crm_hello_ping"},
 		},
 		Instrumentation: &extension.Instrumentation{Start: startInstrumentation, Browser: "instrument", Edge: instrumentationEdge()},
+		Migrations:      migrations,
+		Reach:           []reach.Table{note},
 	}
 }
 

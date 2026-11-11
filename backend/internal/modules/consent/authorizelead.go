@@ -159,9 +159,8 @@ func (g *Gate) decideLeadAt(ctx context.Context, tx pgx.Tx, r connector.Recipien
 	// reviewcontext.go).
 	decided.PurposeID = sendPurpose
 	decided = applySuppression(decided, stops, sendPurpose)
-	// NO OVERRIDE ARM, unlike decideOne: nothing writes a lead vouch, so there is
-	// none to read. What keeps that true, and what owes a change beside this one
-	// the day it stops being, is overridesubject_test.go.
+	// No override arm, unlike decideOne: no door records a vouch, so no lead
+	// vouch exists to read.
 	return decided, nil
 }
 

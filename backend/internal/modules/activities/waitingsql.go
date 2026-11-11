@@ -16,11 +16,13 @@ package activities
 // waiting.go holds what READS it; this holds what it says.
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
@@ -374,24 +376,29 @@ var waitingRepliesSQL = waitingSelectSQL + `
 	 -- it asks for another page when too much of one went. The cap bounds ONE
 	 -- page; the caller bounds how many it will ask for.
 		 ORDER BY a.occurred_at DESC, a.id DESC
-	 LIMIT %[4]d))` + waitingGroupSQL + `
+	 LIMIT %[4]s))` + waitingGroupSQL + `
 	 ORDER BY a.occurred_at DESC, a.id DESC`
 
-// planEachBind runs a statement carrying waitingRepliesSQL unnamed, so Postgres
-// plans it at each Bind with the values. A reused named statement turns generic
-// after five runs, and the generic plan walks the whole horizon instead of
-// stopping at the cap.
-func planEachBind(args []any) []any {
+func waitingLimitSQL(arg func(any) int, limit int) string {
+	return fmt.Sprintf("$%d", arg(limit))
+}
+
+// Outside a generic-plan snapshot, the waiting walk needs its bound values to
+// stop at the cap. Within one, the stable named statement keeps its plan.
+func planEachBind(ctx context.Context, args []any) []any {
+	if database.GenericPlansEnabled(ctx) {
+		return args
+	}
 	return append([]any{pgx.QueryExecModeDescribeExec}, args...)
 }
 
 // waitingListArgs is planEachBind for the activity list, which carries the walk
 // only when it is filtered to messages waiting for a reply.
-func waitingListArgs(in ListActivitiesInput, args []any) []any {
+func waitingListArgs(ctx context.Context, in ListActivitiesInput, args []any) []any {
 	if in.WaitingReplyAsOf == nil {
 		return args
 	}
-	return planEachBind(args)
+	return planEachBind(ctx, args)
 }
 
 // readerSetAsideSQL is whether one reader has set message `a` aside: marked it

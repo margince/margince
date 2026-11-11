@@ -12,12 +12,21 @@ import (
 
 	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
 // subjectWroteNote is the ground a case closed by SettleWhenSubjectWroteTx
 // carries. It names the evidence rather than the contact, so the row says why
 // the duty ended without copying anything about them into it.
 const subjectWroteNote = "They wrote to us: a captured mail from their own address shows the data came from them (Art. 13, not Art. 14), so no separate notice is owed."
+
+// SubjectMailFromSQL is the `FROM` clause of the subject mail contact (a SQL
+// expression) wrote, as activity a and its sender row p. The sender is read by
+// relstrength.ParticipantNamesSQL, so a moved address keeps its older mail.
+func SubjectMailFromSQL(contact string) string {
+	return relstrength.ParticipantRowsOfContactSQL(contact) + ` p JOIN activity a ON a.id = p.activity_id
+ WHERE p.role = 'from' AND ` + correspondence.SubjectMailSQL("a")
+}
 
 // SettleableNoticeStates leaves deliveries in flight and completed outcomes intact.
 func SettleableNoticeStates() []string {
@@ -112,10 +121,7 @@ func settleFailedSenderDutiesTx(ctx context.Context, tx pgx.Tx, cases []ids.UUID
  FROM privacy_notice_case n JOIN contact_acquisition_evidence e ON e.id = n.acquisition_id
  WHERE n.id = ANY(@cases) AND n.state = ANY(@states) AND e.kind = 'unknown_legacy'
  AND `+correspondence.CapturedAcquisitionSQL("e")+`
- AND EXISTS (SELECT 1 FROM contact_email ce
- JOIN activity_participant p ON lower(p.address) = ce.email AND p.role = 'from'
- JOIN activity a ON a.id = p.activity_id
- WHERE ce.contact_id = n.contact_id AND ce.archived_at IS NULL AND `+correspondence.SubjectMailSQL("a")+`)`,
+ AND EXISTS (SELECT 1 FROM `+SubjectMailFromSQL("n.contact_id")+`)`,
 		pgx.NamedArgs{"cases": cases, "states": SettleableNoticeStates()})
 	if err != nil {
 		return fmt.Errorf("read direct-source duties after delivery failed: %w", err)

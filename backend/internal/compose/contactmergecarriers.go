@@ -33,6 +33,7 @@ type contactMergeDoor[T any] interface {
 	WithMergeContentReader(read contacts.MergeContentReader) T
 	WithProfileVerdictReader(read contacts.ProfileVerdictReader) T
 	WithFeedbackCarryReader(reader contacts.FeedbackCarryReader) T
+	WithSenderStamp(stamp contacts.SenderStamp) T
 }
 
 // withContactMergeCarriers wires every edge a contact merge carries or
@@ -51,5 +52,6 @@ func withContactMergeCarriers[T contactMergeDoor[T]](db *database.DB, door T) T 
 		WithMergeNoticeReader(notices.PreviewNoticeCarryTx).
 		WithMergeContentReader(activities.NewStore(db)).
 		WithProfileVerdictReader(profileverdicts.MergeReader(db)).
-		WithFeedbackCarryReader(ai.NewFeedbackStore(db))
+		WithFeedbackCarryReader(ai.NewFeedbackStore(db)).
+		WithSenderStamp(activities.StampProvenSendersTx)
 }

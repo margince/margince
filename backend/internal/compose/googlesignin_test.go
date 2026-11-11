@@ -14,6 +14,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/margince/margince/backend/internal/compose/oidctoken"
+	"github.com/margince/margince/backend/internal/compose/oidctoken/oidctokentest"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/identity"
@@ -131,28 +133,28 @@ func TestStartSignsTheConsentMarkerOnlyWhenAsked(t *testing.T) {
 // app's client id says nothing about who may sign in here, whoever issued it.
 func TestTheAudienceCheckRefusesAnotherAppsToken(t *testing.T) {
 	match := audienceIs("cid")
-	if err := match(oidcClaims{Aud: "cid"}); err != nil {
+	if err := match(oidctoken.Claims{Aud: "cid"}); err != nil {
 		t.Fatalf("match(correct aud) = %v, want nil", err)
 	}
-	if err := match(oidcClaims{Aud: "someone-elses-client"}); err == nil {
+	if err := match(oidctoken.Claims{Aud: "someone-elses-client"}); err == nil {
 		t.Fatal("expected a mismatch to be rejected")
 	}
-	if err := match(oidcClaims{}); err == nil {
+	if err := match(oidctoken.Claims{}); err == nil {
 		t.Fatal("a token naming no audience at all was accepted")
 	}
 }
 
 func TestGoogleOIDCVerifierAdapterTranslatesClaims(t *testing.T) {
-	rig := newOIDCTestRig(t)
-	v := newGoogleOIDCVerifier(rig.jwksURL(), identityResolvedPerRequest).
-		withHTTPClient(rig.srv.Client()).
-		setClock(func() time.Time { return rig.base })
-	adapter := googleOIDCVerifierAdapter{v: v, matchIdentity: func(oidcClaims) error { return nil }}
+	rig := oidctokentest.NewRig(t)
+	v := oidctoken.NewGoogle(rig.JWKSURL(), oidctoken.IdentityResolvedPerRequest).
+		WithHTTPClient(rig.Srv.Client()).
+		SetClock(func() time.Time { return rig.Base })
+	adapter := googleOIDCVerifierAdapter{v: v, matchIdentity: func(oidctoken.Claims) error { return nil }}
 
 	// A Google token typically carries NO groups claim: the adapter must
 	// surface the empty list, never an error — a groupless token simply
 	// grants nothing.
-	tok := rig.mint(t, testKID, "RS256", map[string]any{
+	tok := rig.Mint(t, oidctokentest.KID, "RS256", map[string]any{
 		"sub": "sub-1", "email": "carol@example.com", "given_name": "Carol",
 		"picture": "https://lh3.googleusercontent.com/a/carol",
 	})
@@ -175,7 +177,7 @@ func TestGoogleOIDCVerifierAdapterTranslatesClaims(t *testing.T) {
 
 	// And a token that DOES carry one surfaces it verbatim, for the
 	// group→role grants downstream.
-	grouped := rig.mint(t, testKID, "RS256", map[string]any{
+	grouped := rig.Mint(t, oidctokentest.KID, "RS256", map[string]any{
 		"sub": "sub-1", "email": "carol@example.com", "groups": []string{"sales", "leads"},
 	})
 	claims, err = adapter.Verify(context.Background(), grouped)
@@ -293,7 +295,7 @@ func TestOfferedProvidersOnlyEverNarrowsWhatTheDeploymentComposed(t *testing.T) 
 func TestGoogleSignInRunsOnTheEnvironmentsPairBeforeTheStoredApp(t *testing.T) {
 	ctx := context.Background()
 	env := signInClient{ClientID: "env-cid", ClientSecret: "env-secret"}
-	verifier := newGoogleOIDCVerifier(googleJWKSURL, identityResolvedPerRequest)
+	verifier := oidctoken.NewGoogle(oidctoken.GoogleJWKSURL, oidctoken.IdentityResolvedPerRequest)
 	stored := func(context.Context) (capture.ConnectorApp, bool, error) {
 		return capture.ConnectorApp{ClientID: "stored-cid", ClientSecretRef: "stored-secret"}, true, nil
 	}

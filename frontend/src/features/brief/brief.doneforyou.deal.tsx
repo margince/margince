@@ -9,7 +9,7 @@ import { EntityRef } from "../../components/entityref";
 import { BundleUndo } from "../../components/marginchanges";
 import { acceptable, useAcceptChanges } from "../../components/receiptreview";
 import { AppLink } from "../../design-system/applink";
-import { Badge, Button, Card } from "../../design-system/atoms";
+import { Badge, Button, Card, Checkbox } from "../../design-system/atoms";
 import { Disclosure } from "../../design-system/disclosure";
 import { ErrorLine } from "../../design-system/errorline";
 import {
@@ -34,6 +34,7 @@ export function DealCard({
   onOpen,
   asOf,
   onSettled,
+  pick,
 }: Readonly<{
   group: DealChanges;
   bundle: MarginceChangeBundle | undefined;
@@ -43,6 +44,8 @@ export function DealCard({
   onOpen: (open: boolean) => void;
   asOf: string | undefined;
   onSettled: (id: string) => void;
+  /** The tick that puts the deal in the Undo of many, where one is offered. */
+  pick?: Readonly<{ on: boolean; onChange: (on: boolean) => void }>;
 }>) {
   const t = useT();
   const plural = usePlural();
@@ -64,6 +67,20 @@ export function DealCard({
           summary={
             <span className="brief-done-head">
               <span className="brief-done-name">
+                {pick && (
+                  <Checkbox
+                    className="brief-done-pick"
+                    checked={pick.on}
+                    onChange={(event) => pick.onChange(event.target.checked)}
+                    label={
+                      <span className="sr-only">
+                        {t("brief.done.pick", {
+                          name: group.name ?? bundle?.deal_name ?? "",
+                        })}
+                      </span>
+                    }
+                  />
+                )}
                 <EntityRef kind="deal" id={group.dealId} name={group.name} />
               </span>
               {!open && newest && (

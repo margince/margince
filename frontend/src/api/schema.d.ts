@@ -5984,6 +5984,9 @@ export interface paths {
          *     the installation's timezone): `422 code: in_future` on `meeting_status`. A meeting with no
          *     `occurred_at` starts now, so it has taken place. A re-run with the same `source_system` and
          *     `source_id` that moves the meeting's status is judged the same way, at its stored start.
+         *     When you log an inbound message that one contact wrote, set `sender_contact_id` to that
+         *     contact, above all for a group chat linked to several contacts: only the sender counts as
+         *     having asked us to follow up.
          */
         post: operations["logActivity"];
         delete?: never;
@@ -12615,7 +12618,7 @@ export interface paths {
             path: {
                 /**
                  * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
-                 *     the same operation; gmail/gcal/graph/graphcal authorize by OAuth redirect, imap by
+                 *     the same operation; gmail/gcal/gdocs/graph/graphcal authorize by OAuth redirect, imap by
                  *     credential submission, and test_mailbox connects immediately with neither (a QC-only
                  *     connector, reachable only when the deployment armed operations.allow_test_mailbox — a
                  *     real deployment answers connector_unsupported for it, the same as for an unrecognized
@@ -12623,6 +12626,8 @@ export interface paths {
                  *     Microsoft 365 mail+calendar (Outlook via Graph), `imap` = the self-hostable IMAP
                  *     engine. Mail and calendar are always SEPARATE connections on either vendor: one
                  *     consent each, so a contact can bring one without the other and disconnect either.
+                 *     `gdocs` is a Google account's grant to read the Google Docs Meet writes its notes and
+                 *     transcripts into (`documents.readonly`); it is its own connection beside the calendar.
                  *     WhatsApp/Telegram connect is the messaging-channels surface, not this one.
                  */
                 provider: components["parameters"]["CaptureProvider"];
@@ -12654,7 +12659,7 @@ export interface paths {
             path: {
                 /**
                  * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
-                 *     the same operation; gmail/gcal/graph/graphcal authorize by OAuth redirect, imap by
+                 *     the same operation; gmail/gcal/gdocs/graph/graphcal authorize by OAuth redirect, imap by
                  *     credential submission, and test_mailbox connects immediately with neither (a QC-only
                  *     connector, reachable only when the deployment armed operations.allow_test_mailbox — a
                  *     real deployment answers connector_unsupported for it, the same as for an unrecognized
@@ -12662,6 +12667,8 @@ export interface paths {
                  *     Microsoft 365 mail+calendar (Outlook via Graph), `imap` = the self-hostable IMAP
                  *     engine. Mail and calendar are always SEPARATE connections on either vendor: one
                  *     consent each, so a contact can bring one without the other and disconnect either.
+                 *     `gdocs` is a Google account's grant to read the Google Docs Meet writes its notes and
+                 *     transcripts into (`documents.readonly`); it is its own connection beside the calendar.
                  *     WhatsApp/Telegram connect is the messaging-channels surface, not this one.
                  */
                 provider: components["parameters"]["CaptureProvider"];
@@ -12754,7 +12761,7 @@ export interface paths {
             path: {
                 /**
                  * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
-                 *     the same operation; gmail/gcal/graph/graphcal authorize by OAuth redirect, imap by
+                 *     the same operation; gmail/gcal/gdocs/graph/graphcal authorize by OAuth redirect, imap by
                  *     credential submission, and test_mailbox connects immediately with neither (a QC-only
                  *     connector, reachable only when the deployment armed operations.allow_test_mailbox — a
                  *     real deployment answers connector_unsupported for it, the same as for an unrecognized
@@ -12762,6 +12769,8 @@ export interface paths {
                  *     Microsoft 365 mail+calendar (Outlook via Graph), `imap` = the self-hostable IMAP
                  *     engine. Mail and calendar are always SEPARATE connections on either vendor: one
                  *     consent each, so a contact can bring one without the other and disconnect either.
+                 *     `gdocs` is a Google account's grant to read the Google Docs Meet writes its notes and
+                 *     transcripts into (`documents.readonly`); it is its own connection beside the calendar.
                  *     WhatsApp/Telegram connect is the messaging-channels surface, not this one.
                  */
                 provider: components["parameters"]["CaptureProvider"];
@@ -12794,7 +12803,7 @@ export interface paths {
             path: {
                 /**
                  * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
-                 *     the same operation; gmail/gcal/graph/graphcal authorize by OAuth redirect, imap by
+                 *     the same operation; gmail/gcal/gdocs/graph/graphcal authorize by OAuth redirect, imap by
                  *     credential submission, and test_mailbox connects immediately with neither (a QC-only
                  *     connector, reachable only when the deployment armed operations.allow_test_mailbox — a
                  *     real deployment answers connector_unsupported for it, the same as for an unrecognized
@@ -12802,6 +12811,8 @@ export interface paths {
                  *     Microsoft 365 mail+calendar (Outlook via Graph), `imap` = the self-hostable IMAP
                  *     engine. Mail and calendar are always SEPARATE connections on either vendor: one
                  *     consent each, so a contact can bring one without the other and disconnect either.
+                 *     `gdocs` is a Google account's grant to read the Google Docs Meet writes its notes and
+                 *     transcripts into (`documents.readonly`); it is its own connection beside the calendar.
                  *     WhatsApp/Telegram connect is the messaging-channels surface, not this one.
                  */
                 provider: components["parameters"]["CaptureProvider"];
@@ -12834,7 +12845,7 @@ export interface paths {
             path: {
                 /**
                  * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
-                 *     the same operation; gmail/gcal/graph/graphcal authorize by OAuth redirect, imap by
+                 *     the same operation; gmail/gcal/gdocs/graph/graphcal authorize by OAuth redirect, imap by
                  *     credential submission, and test_mailbox connects immediately with neither (a QC-only
                  *     connector, reachable only when the deployment armed operations.allow_test_mailbox — a
                  *     real deployment answers connector_unsupported for it, the same as for an unrecognized
@@ -12842,6 +12853,8 @@ export interface paths {
                  *     Microsoft 365 mail+calendar (Outlook via Graph), `imap` = the self-hostable IMAP
                  *     engine. Mail and calendar are always SEPARATE connections on either vendor: one
                  *     consent each, so a contact can bring one without the other and disconnect either.
+                 *     `gdocs` is a Google account's grant to read the Google Docs Meet writes its notes and
+                 *     transcripts into (`documents.readonly`); it is its own connection beside the calendar.
                  *     WhatsApp/Telegram connect is the messaging-channels surface, not this one.
                  */
                 provider: components["parameters"]["CaptureProvider"];
@@ -12886,7 +12899,7 @@ export interface paths {
             path: {
                 /**
                  * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
-                 *     the same operation; gmail/gcal/graph/graphcal authorize by OAuth redirect, imap by
+                 *     the same operation; gmail/gcal/gdocs/graph/graphcal authorize by OAuth redirect, imap by
                  *     credential submission, and test_mailbox connects immediately with neither (a QC-only
                  *     connector, reachable only when the deployment armed operations.allow_test_mailbox — a
                  *     real deployment answers connector_unsupported for it, the same as for an unrecognized
@@ -12894,6 +12907,8 @@ export interface paths {
                  *     Microsoft 365 mail+calendar (Outlook via Graph), `imap` = the self-hostable IMAP
                  *     engine. Mail and calendar are always SEPARATE connections on either vendor: one
                  *     consent each, so a contact can bring one without the other and disconnect either.
+                 *     `gdocs` is a Google account's grant to read the Google Docs Meet writes its notes and
+                 *     transcripts into (`documents.readonly`); it is its own connection beside the calendar.
                  *     WhatsApp/Telegram connect is the messaging-channels surface, not this one.
                  */
                 provider: components["parameters"]["CaptureProvider"];
@@ -12923,7 +12938,7 @@ export interface paths {
             path: {
                 /**
                  * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
-                 *     the same operation; gmail/gcal/graph/graphcal authorize by OAuth redirect, imap by
+                 *     the same operation; gmail/gcal/gdocs/graph/graphcal authorize by OAuth redirect, imap by
                  *     credential submission, and test_mailbox connects immediately with neither (a QC-only
                  *     connector, reachable only when the deployment armed operations.allow_test_mailbox — a
                  *     real deployment answers connector_unsupported for it, the same as for an unrecognized
@@ -12931,6 +12946,8 @@ export interface paths {
                  *     Microsoft 365 mail+calendar (Outlook via Graph), `imap` = the self-hostable IMAP
                  *     engine. Mail and calendar are always SEPARATE connections on either vendor: one
                  *     consent each, so a contact can bring one without the other and disconnect either.
+                 *     `gdocs` is a Google account's grant to read the Google Docs Meet writes its notes and
+                 *     transcripts into (`documents.readonly`); it is its own connection beside the calendar.
                  *     WhatsApp/Telegram connect is the messaging-channels surface, not this one.
                  */
                 provider: components["parameters"]["CaptureProvider"];
@@ -12970,7 +12987,7 @@ export interface paths {
             path: {
                 /**
                  * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
-                 *     the same operation; gmail/gcal/graph/graphcal authorize by OAuth redirect, imap by
+                 *     the same operation; gmail/gcal/gdocs/graph/graphcal authorize by OAuth redirect, imap by
                  *     credential submission, and test_mailbox connects immediately with neither (a QC-only
                  *     connector, reachable only when the deployment armed operations.allow_test_mailbox — a
                  *     real deployment answers connector_unsupported for it, the same as for an unrecognized
@@ -12978,6 +12995,8 @@ export interface paths {
                  *     Microsoft 365 mail+calendar (Outlook via Graph), `imap` = the self-hostable IMAP
                  *     engine. Mail and calendar are always SEPARATE connections on either vendor: one
                  *     consent each, so a contact can bring one without the other and disconnect either.
+                 *     `gdocs` is a Google account's grant to read the Google Docs Meet writes its notes and
+                 *     transcripts into (`documents.readonly`); it is its own connection beside the calendar.
                  *     WhatsApp/Telegram connect is the messaging-channels surface, not this one.
                  */
                 provider: components["parameters"]["CaptureProvider"];
@@ -13019,7 +13038,7 @@ export interface paths {
             path: {
                 /**
                  * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
-                 *     the same operation; gmail/gcal/graph/graphcal authorize by OAuth redirect, imap by
+                 *     the same operation; gmail/gcal/gdocs/graph/graphcal authorize by OAuth redirect, imap by
                  *     credential submission, and test_mailbox connects immediately with neither (a QC-only
                  *     connector, reachable only when the deployment armed operations.allow_test_mailbox — a
                  *     real deployment answers connector_unsupported for it, the same as for an unrecognized
@@ -13027,6 +13046,8 @@ export interface paths {
                  *     Microsoft 365 mail+calendar (Outlook via Graph), `imap` = the self-hostable IMAP
                  *     engine. Mail and calendar are always SEPARATE connections on either vendor: one
                  *     consent each, so a contact can bring one without the other and disconnect either.
+                 *     `gdocs` is a Google account's grant to read the Google Docs Meet writes its notes and
+                 *     transcripts into (`documents.readonly`); it is its own connection beside the calendar.
                  *     WhatsApp/Telegram connect is the messaging-channels surface, not this one.
                  */
                 provider: components["parameters"]["CaptureProvider"];
@@ -13068,7 +13089,7 @@ export interface paths {
             path: {
                 /**
                  * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
-                 *     the same operation; gmail/gcal/graph/graphcal authorize by OAuth redirect, imap by
+                 *     the same operation; gmail/gcal/gdocs/graph/graphcal authorize by OAuth redirect, imap by
                  *     credential submission, and test_mailbox connects immediately with neither (a QC-only
                  *     connector, reachable only when the deployment armed operations.allow_test_mailbox — a
                  *     real deployment answers connector_unsupported for it, the same as for an unrecognized
@@ -13076,6 +13097,8 @@ export interface paths {
                  *     Microsoft 365 mail+calendar (Outlook via Graph), `imap` = the self-hostable IMAP
                  *     engine. Mail and calendar are always SEPARATE connections on either vendor: one
                  *     consent each, so a contact can bring one without the other and disconnect either.
+                 *     `gdocs` is a Google account's grant to read the Google Docs Meet writes its notes and
+                 *     transcripts into (`documents.readonly`); it is its own connection beside the calendar.
                  *     WhatsApp/Telegram connect is the messaging-channels surface, not this one.
                  */
                 provider: components["parameters"]["CaptureProvider"];
@@ -13109,7 +13132,7 @@ export interface paths {
             path: {
                 /**
                  * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
-                 *     the same operation; gmail/gcal/graph/graphcal authorize by OAuth redirect, imap by
+                 *     the same operation; gmail/gcal/gdocs/graph/graphcal authorize by OAuth redirect, imap by
                  *     credential submission, and test_mailbox connects immediately with neither (a QC-only
                  *     connector, reachable only when the deployment armed operations.allow_test_mailbox — a
                  *     real deployment answers connector_unsupported for it, the same as for an unrecognized
@@ -13117,6 +13140,8 @@ export interface paths {
                  *     Microsoft 365 mail+calendar (Outlook via Graph), `imap` = the self-hostable IMAP
                  *     engine. Mail and calendar are always SEPARATE connections on either vendor: one
                  *     consent each, so a contact can bring one without the other and disconnect either.
+                 *     `gdocs` is a Google account's grant to read the Google Docs Meet writes its notes and
+                 *     transcripts into (`documents.readonly`); it is its own connection beside the calendar.
                  *     WhatsApp/Telegram connect is the messaging-channels surface, not this one.
                  */
                 provider: components["parameters"]["CaptureProvider"];
@@ -17620,32 +17645,16 @@ export interface paths {
          *     company. These records grant no marketing consent. Every message is checked separately.
          *     An older record with no sending company is shown without inferring one.
          *
+         *     No route records a new standing exception. A rep lets one refused message go with
+         *     `directCommunicationSend`. An exception already on file still lets matching sends through
+         *     until it is revoked, and a merge carries it to the surviving contact.
+         *
          *     `may_revoke` uses the same authority and record-access checks as `revokeOverride`.
          *     Revocation takes back that recorded exception and its carried copies, with a reason.
          */
         get: operations["listContactOverrides"];
         put?: never;
-        /**
-         * Record a standing vouch that a machine-level refusal for one category may be overruled.
-         * @description Writes a `communication_override`: a rep's standing statement that a future send in the
-         *     named category may go out even though the engine, on its own, would refuse it for lack of
-         *     evidence. **It is not consent and not a lawful basis** — it sits beside the refusal and
-         *     outranks only a MACHINE-level, non-absolute one. A subject-level stop (a suppression, an
-         *     Art. 21 objection) still wins at the gate; this door cannot touch one.
-         *
-         *     **The authority is the seat's own, always.** There is no field for it: the level recorded
-         *     is read from the authenticated session (`user` for a rep, `admin` for an admin), never
-         *     from the body — a caller naming its own level would let any seat write a row that outranks
-         *     every future refusal in that category.
-         *
-         *     **The reason is required**, unlike `suppress`: a vouch that flips a refusal is the write
-         *     most worth being able to explain later, and there is no phone call it merely relays.
-         *
-         *     The override is a standing fact for the contact and category named, not a one-time
-         *     instruction for a single message: it remains live, and is read by every future send
-         *     evaluation for that pair, until it is revoked.
-         */
-        post: operations["allowContact"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -26884,11 +26893,11 @@ export interface components {
         /** @description One callback URL that must be registered as a redirect URI on the vendor's OAuth client. The `url` is the exact value this deployment sends the vendor, byte for byte — paste it as given rather than reconstructing it. */
         ConnectorAppRedirectUri: {
             /**
-             * @description Which flow uses this URL. `sign_in` is the login callback. `mailbox_connect` and `calendar_connect` are the per-user mail and calendar consent callbacks, which are SEPARATE connectors served on different paths. `extension_connect` is the consent callback of an extension unit's OAuth app, and the only purpose such an app lists. ONE app backs all three on either vendor, and registering only some of them fails the others at the consent screen — Google says `redirect_uri_mismatch`, Microsoft says `AADSTS50011`, and neither names the URL that was missing.
+             * @description Which flow uses this URL. `sign_in` is the login callback. `mailbox_connect` and `calendar_connect` are the per-user mail and calendar consent callbacks, which are SEPARATE connectors served on different paths. `documents_connect` is Google's meeting-notes consent callback, a third connector on its own path. `extension_connect` is the consent callback of an extension unit's OAuth app, and the only purpose such an app lists. ONE app backs all three on either vendor, and registering only some of them fails the others at the consent screen — Google says `redirect_uri_mismatch`, Microsoft says `AADSTS50011`, and neither names the URL that was missing.
              *     None is derivable from another: the sign-in callback rides a base that already carries `/v1`, while the connector callbacks prefer the API's own origin over the SPA's, and on a split deployment those are different hosts. Only the purposes this deployment actually serves are listed.
              * @enum {string}
              */
-            purpose: "sign_in" | "mailbox_connect" | "calendar_connect" | "extension_connect";
+            purpose: "sign_in" | "mailbox_connect" | "calendar_connect" | "documents_connect" | "extension_connect";
             /**
              * Format: uri
              * @description The absolute URL to register, exactly as it must be pasted.
@@ -27768,10 +27777,10 @@ export interface components {
             /** Format: uuid */
             id: string;
             /**
-             * @description The mail/calendar provider (A51 email+calendar parity).
+             * @description The mail/calendar/meeting-notes provider (A51 email+calendar parity).
              * @enum {string}
              */
-            provider: "gmail" | "gcal" | "graph" | "graphcal" | "imap" | "test_mailbox";
+            provider: "gmail" | "gcal" | "gdocs" | "graph" | "graphcal" | "imap" | "test_mailbox";
             /**
              * @description Whether this provider's connector can import older mail at all. False means
              *     `POST /connectors/{provider}/backfill` and its estimate refuse with `422
@@ -29207,7 +29216,7 @@ export interface components {
             };
             connectors: {
                 /** @enum {string} */
-                provider?: "gmail" | "gcal" | "graph" | "graphcal" | "imap" | "test_mailbox";
+                provider?: "gmail" | "gcal" | "gdocs" | "graph" | "graphcal" | "imap" | "test_mailbox";
                 /** @enum {string} */
                 status?: "connected" | "disconnected" | "error" | "reauth_required";
                 /** Format: date-time */
@@ -40749,6 +40758,11 @@ export interface components {
             host_user_id?: string;
             /** @description Meeting or call only: the colleagues who attended besides the caller. Each one is recorded as a participant, so the meeting counts toward their relationship with every linked contact, the same as a meeting captured from a calendar. Any other kind returns `422 code: field_not_valid_for_kind`. An id that is not an active member of this workspace returns `422 code: not_a_colleague`, and more than 25 ids return `422 code: too_many_attendees`. */
             attendee_user_ids?: string[];
+            /**
+             * Format: uuid
+             * @description Inbound message, call, meeting or email only: the linked contact who wrote or said it. Set it whenever one contact sent the message, for example the one member of a group chat who asked for a follow-up. Only that contact counts as its author, so only they asked to hear from us. Without it, an inbound activity linked to one contact names that contact as the sender. One linked to two or more contacts names no sender, and each contact is kept as copied. The stated `participants` of an email win over this field. A contact that is not in `links` returns `422 code: sender_not_linked`. Any other kind, or a direction other than `inbound`, returns `422 code: field_not_valid_for_kind`.
+             */
+            sender_contact_id?: string;
             duration_seconds?: number | null;
             /** @enum {string|null} */
             direction?: null | "inbound" | "outbound";
@@ -54222,14 +54236,6 @@ export interface components {
             data: components["schemas"]["StandingOverride"][];
             page: components["schemas"]["PageInfo"];
         };
-        /** @description The standing override just recorded, by id. The category and reason are what the caller sent and the authority is their own session's, so the id is the one fact the caller could not have known — and the handle a later revoke takes. */
-        RecordedOverride: {
-            /**
-             * Format: uuid
-             * @description The standing override that now stands. A contact can hold several at once — one per category, and more than one for a single category after a merge — so this names which of them this call created.
-             */
-            override_id: string;
-        };
         /**
          * @description What the consent screen renders. The client name is resolved from the database, never
          *     from the request URL, so no caller can put words on a consent screen. `scopes` is the
@@ -56896,6 +56902,11 @@ export interface components {
             reason?: string;
             /** @description The customer's own words the change rests on, where the act recorded them, masked with the amount they state. Kept apart from `reason`, which is Margince's reading and never a quote. */
             customer_quote?: string;
+            /**
+             * @description What kind of reason the change rests on: `rule` when Margince counted what the data shows (days of silence, the pace of won deals), `inference` when it read what the customer wrote or said. Derived from the kind of change and the loss reason a close wrote. Absent when the row cannot say, on an approval, and on older responses.
+             * @enum {string}
+             */
+            reason_kind?: "rule" | "inference";
             /** @description The summary taken apart, as on the approval it reports. Absent when the summary is a sentence alone. */
             summary_parts?: components["schemas"]["ApprovalSummaryParts"];
             /**
@@ -56907,8 +56918,15 @@ export interface components {
             review?: components["schemas"]["AppliedDealChangeReview"];
             /** @description Who did it: the member or agent that proposed an applied decision, or the job that made a correction. Absent on older responses. */
             actor?: components["schemas"]["ReceiptActor"];
-            /** @description The email, thread or meeting the act was read from, where it names one. Checked against the reader's access on every read: a source the reader may not open is left out, not named. Absent also when the act cites no message. */
+            /** @description The email, thread or meeting the act was read from, where it names one. Checked against the reader's access on every read: a source the reader may not open is left out, not named. Absent also when the act cites no message. A change that cites several names the newest the reader may open. */
             source_record?: components["schemas"]["AttentionSubject"];
+            /**
+             * Format: date-time
+             * @description When the email, call or meeting in `source_record` happened, apart from `occurred_at`, when Margince acted. Present only with `source_record`.
+             */
+            source_occurred_at?: string;
+            /** @description How much of `source_occurred_at` is known. Present with it. */
+            source_occurred_precision?: components["schemas"]["OccurredPrecision"];
             /** @description Every field the act moved, old value to new, read from the audit rows it wrote and masked to what the reader may see on the record. Values travel whole, never cut short. Absent when no audit row of the act can be read, which is not the same as an act that moved nothing (an empty list). */
             changes?: components["schemas"]["MagicFieldChange"][];
             /**
@@ -59258,7 +59276,7 @@ export interface components {
         ExtOAuthProvider: string;
         /**
          * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
-         *     the same operation; gmail/gcal/graph/graphcal authorize by OAuth redirect, imap by
+         *     the same operation; gmail/gcal/gdocs/graph/graphcal authorize by OAuth redirect, imap by
          *     credential submission, and test_mailbox connects immediately with neither (a QC-only
          *     connector, reachable only when the deployment armed operations.allow_test_mailbox — a
          *     real deployment answers connector_unsupported for it, the same as for an unrecognized
@@ -59266,9 +59284,11 @@ export interface components {
          *     Microsoft 365 mail+calendar (Outlook via Graph), `imap` = the self-hostable IMAP
          *     engine. Mail and calendar are always SEPARATE connections on either vendor: one
          *     consent each, so a contact can bring one without the other and disconnect either.
+         *     `gdocs` is a Google account's grant to read the Google Docs Meet writes its notes and
+         *     transcripts into (`documents.readonly`); it is its own connection beside the calendar.
          *     WhatsApp/Telegram connect is the messaging-channels surface, not this one.
          */
-        CaptureProvider: "gmail" | "gcal" | "graph" | "graphcal" | "imap" | "test_mailbox";
+        CaptureProvider: "gmail" | "gcal" | "gdocs" | "graph" | "graphcal" | "imap" | "test_mailbox";
         /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
         Id: string;
         /**
@@ -80292,7 +80312,7 @@ export interface operations {
             path: {
                 /**
                  * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
-                 *     the same operation; gmail/gcal/graph/graphcal authorize by OAuth redirect, imap by
+                 *     the same operation; gmail/gcal/gdocs/graph/graphcal authorize by OAuth redirect, imap by
                  *     credential submission, and test_mailbox connects immediately with neither (a QC-only
                  *     connector, reachable only when the deployment armed operations.allow_test_mailbox — a
                  *     real deployment answers connector_unsupported for it, the same as for an unrecognized
@@ -80300,6 +80320,8 @@ export interface operations {
                  *     Microsoft 365 mail+calendar (Outlook via Graph), `imap` = the self-hostable IMAP
                  *     engine. Mail and calendar are always SEPARATE connections on either vendor: one
                  *     consent each, so a contact can bring one without the other and disconnect either.
+                 *     `gdocs` is a Google account's grant to read the Google Docs Meet writes its notes and
+                 *     transcripts into (`documents.readonly`); it is its own connection beside the calendar.
                  *     WhatsApp/Telegram connect is the messaging-channels surface, not this one.
                  */
                 provider: components["parameters"]["CaptureProvider"];
@@ -80340,7 +80362,7 @@ export interface operations {
             path: {
                 /**
                  * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
-                 *     the same operation; gmail/gcal/graph/graphcal authorize by OAuth redirect, imap by
+                 *     the same operation; gmail/gcal/gdocs/graph/graphcal authorize by OAuth redirect, imap by
                  *     credential submission, and test_mailbox connects immediately with neither (a QC-only
                  *     connector, reachable only when the deployment armed operations.allow_test_mailbox — a
                  *     real deployment answers connector_unsupported for it, the same as for an unrecognized
@@ -80348,6 +80370,8 @@ export interface operations {
                  *     Microsoft 365 mail+calendar (Outlook via Graph), `imap` = the self-hostable IMAP
                  *     engine. Mail and calendar are always SEPARATE connections on either vendor: one
                  *     consent each, so a contact can bring one without the other and disconnect either.
+                 *     `gdocs` is a Google account's grant to read the Google Docs Meet writes its notes and
+                 *     transcripts into (`documents.readonly`); it is its own connection beside the calendar.
                  *     WhatsApp/Telegram connect is the messaging-channels surface, not this one.
                  */
                 provider: components["parameters"]["CaptureProvider"];
@@ -80472,7 +80496,7 @@ export interface operations {
             path: {
                 /**
                  * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
-                 *     the same operation; gmail/gcal/graph/graphcal authorize by OAuth redirect, imap by
+                 *     the same operation; gmail/gcal/gdocs/graph/graphcal authorize by OAuth redirect, imap by
                  *     credential submission, and test_mailbox connects immediately with neither (a QC-only
                  *     connector, reachable only when the deployment armed operations.allow_test_mailbox — a
                  *     real deployment answers connector_unsupported for it, the same as for an unrecognized
@@ -80480,6 +80504,8 @@ export interface operations {
                  *     Microsoft 365 mail+calendar (Outlook via Graph), `imap` = the self-hostable IMAP
                  *     engine. Mail and calendar are always SEPARATE connections on either vendor: one
                  *     consent each, so a contact can bring one without the other and disconnect either.
+                 *     `gdocs` is a Google account's grant to read the Google Docs Meet writes its notes and
+                 *     transcripts into (`documents.readonly`); it is its own connection beside the calendar.
                  *     WhatsApp/Telegram connect is the messaging-channels surface, not this one.
                  */
                 provider: components["parameters"]["CaptureProvider"];
@@ -80506,7 +80532,7 @@ export interface operations {
             path: {
                 /**
                  * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
-                 *     the same operation; gmail/gcal/graph/graphcal authorize by OAuth redirect, imap by
+                 *     the same operation; gmail/gcal/gdocs/graph/graphcal authorize by OAuth redirect, imap by
                  *     credential submission, and test_mailbox connects immediately with neither (a QC-only
                  *     connector, reachable only when the deployment armed operations.allow_test_mailbox — a
                  *     real deployment answers connector_unsupported for it, the same as for an unrecognized
@@ -80514,6 +80540,8 @@ export interface operations {
                  *     Microsoft 365 mail+calendar (Outlook via Graph), `imap` = the self-hostable IMAP
                  *     engine. Mail and calendar are always SEPARATE connections on either vendor: one
                  *     consent each, so a contact can bring one without the other and disconnect either.
+                 *     `gdocs` is a Google account's grant to read the Google Docs Meet writes its notes and
+                 *     transcripts into (`documents.readonly`); it is its own connection beside the calendar.
                  *     WhatsApp/Telegram connect is the messaging-channels surface, not this one.
                  */
                 provider: components["parameters"]["CaptureProvider"];
@@ -80550,7 +80578,7 @@ export interface operations {
             path: {
                 /**
                  * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
-                 *     the same operation; gmail/gcal/graph/graphcal authorize by OAuth redirect, imap by
+                 *     the same operation; gmail/gcal/gdocs/graph/graphcal authorize by OAuth redirect, imap by
                  *     credential submission, and test_mailbox connects immediately with neither (a QC-only
                  *     connector, reachable only when the deployment armed operations.allow_test_mailbox — a
                  *     real deployment answers connector_unsupported for it, the same as for an unrecognized
@@ -80558,6 +80586,8 @@ export interface operations {
                  *     Microsoft 365 mail+calendar (Outlook via Graph), `imap` = the self-hostable IMAP
                  *     engine. Mail and calendar are always SEPARATE connections on either vendor: one
                  *     consent each, so a contact can bring one without the other and disconnect either.
+                 *     `gdocs` is a Google account's grant to read the Google Docs Meet writes its notes and
+                 *     transcripts into (`documents.readonly`); it is its own connection beside the calendar.
                  *     WhatsApp/Telegram connect is the messaging-channels surface, not this one.
                  */
                 provider: components["parameters"]["CaptureProvider"];
@@ -80606,7 +80636,7 @@ export interface operations {
             path: {
                 /**
                  * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
-                 *     the same operation; gmail/gcal/graph/graphcal authorize by OAuth redirect, imap by
+                 *     the same operation; gmail/gcal/gdocs/graph/graphcal authorize by OAuth redirect, imap by
                  *     credential submission, and test_mailbox connects immediately with neither (a QC-only
                  *     connector, reachable only when the deployment armed operations.allow_test_mailbox — a
                  *     real deployment answers connector_unsupported for it, the same as for an unrecognized
@@ -80614,6 +80644,8 @@ export interface operations {
                  *     Microsoft 365 mail+calendar (Outlook via Graph), `imap` = the self-hostable IMAP
                  *     engine. Mail and calendar are always SEPARATE connections on either vendor: one
                  *     consent each, so a contact can bring one without the other and disconnect either.
+                 *     `gdocs` is a Google account's grant to read the Google Docs Meet writes its notes and
+                 *     transcripts into (`documents.readonly`); it is its own connection beside the calendar.
                  *     WhatsApp/Telegram connect is the messaging-channels surface, not this one.
                  */
                 provider: components["parameters"]["CaptureProvider"];
@@ -80649,7 +80681,7 @@ export interface operations {
             path: {
                 /**
                  * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
-                 *     the same operation; gmail/gcal/graph/graphcal authorize by OAuth redirect, imap by
+                 *     the same operation; gmail/gcal/gdocs/graph/graphcal authorize by OAuth redirect, imap by
                  *     credential submission, and test_mailbox connects immediately with neither (a QC-only
                  *     connector, reachable only when the deployment armed operations.allow_test_mailbox — a
                  *     real deployment answers connector_unsupported for it, the same as for an unrecognized
@@ -80657,6 +80689,8 @@ export interface operations {
                  *     Microsoft 365 mail+calendar (Outlook via Graph), `imap` = the self-hostable IMAP
                  *     engine. Mail and calendar are always SEPARATE connections on either vendor: one
                  *     consent each, so a contact can bring one without the other and disconnect either.
+                 *     `gdocs` is a Google account's grant to read the Google Docs Meet writes its notes and
+                 *     transcripts into (`documents.readonly`); it is its own connection beside the calendar.
                  *     WhatsApp/Telegram connect is the messaging-channels surface, not this one.
                  */
                 provider: components["parameters"]["CaptureProvider"];
@@ -80691,7 +80725,7 @@ export interface operations {
             path: {
                 /**
                  * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
-                 *     the same operation; gmail/gcal/graph/graphcal authorize by OAuth redirect, imap by
+                 *     the same operation; gmail/gcal/gdocs/graph/graphcal authorize by OAuth redirect, imap by
                  *     credential submission, and test_mailbox connects immediately with neither (a QC-only
                  *     connector, reachable only when the deployment armed operations.allow_test_mailbox — a
                  *     real deployment answers connector_unsupported for it, the same as for an unrecognized
@@ -80699,6 +80733,8 @@ export interface operations {
                  *     Microsoft 365 mail+calendar (Outlook via Graph), `imap` = the self-hostable IMAP
                  *     engine. Mail and calendar are always SEPARATE connections on either vendor: one
                  *     consent each, so a contact can bring one without the other and disconnect either.
+                 *     `gdocs` is a Google account's grant to read the Google Docs Meet writes its notes and
+                 *     transcripts into (`documents.readonly`); it is its own connection beside the calendar.
                  *     WhatsApp/Telegram connect is the messaging-channels surface, not this one.
                  */
                 provider: components["parameters"]["CaptureProvider"];
@@ -80733,7 +80769,7 @@ export interface operations {
             path: {
                 /**
                  * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
-                 *     the same operation; gmail/gcal/graph/graphcal authorize by OAuth redirect, imap by
+                 *     the same operation; gmail/gcal/gdocs/graph/graphcal authorize by OAuth redirect, imap by
                  *     credential submission, and test_mailbox connects immediately with neither (a QC-only
                  *     connector, reachable only when the deployment armed operations.allow_test_mailbox — a
                  *     real deployment answers connector_unsupported for it, the same as for an unrecognized
@@ -80741,6 +80777,8 @@ export interface operations {
                  *     Microsoft 365 mail+calendar (Outlook via Graph), `imap` = the self-hostable IMAP
                  *     engine. Mail and calendar are always SEPARATE connections on either vendor: one
                  *     consent each, so a contact can bring one without the other and disconnect either.
+                 *     `gdocs` is a Google account's grant to read the Google Docs Meet writes its notes and
+                 *     transcripts into (`documents.readonly`); it is its own connection beside the calendar.
                  *     WhatsApp/Telegram connect is the messaging-channels surface, not this one.
                  */
                 provider: components["parameters"]["CaptureProvider"];
@@ -80775,7 +80813,7 @@ export interface operations {
             path: {
                 /**
                  * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
-                 *     the same operation; gmail/gcal/graph/graphcal authorize by OAuth redirect, imap by
+                 *     the same operation; gmail/gcal/gdocs/graph/graphcal authorize by OAuth redirect, imap by
                  *     credential submission, and test_mailbox connects immediately with neither (a QC-only
                  *     connector, reachable only when the deployment armed operations.allow_test_mailbox — a
                  *     real deployment answers connector_unsupported for it, the same as for an unrecognized
@@ -80783,6 +80821,8 @@ export interface operations {
                  *     Microsoft 365 mail+calendar (Outlook via Graph), `imap` = the self-hostable IMAP
                  *     engine. Mail and calendar are always SEPARATE connections on either vendor: one
                  *     consent each, so a contact can bring one without the other and disconnect either.
+                 *     `gdocs` is a Google account's grant to read the Google Docs Meet writes its notes and
+                 *     transcripts into (`documents.readonly`); it is its own connection beside the calendar.
                  *     WhatsApp/Telegram connect is the messaging-channels surface, not this one.
                  */
                 provider: components["parameters"]["CaptureProvider"];
@@ -80826,7 +80866,7 @@ export interface operations {
             path: {
                 /**
                  * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
-                 *     the same operation; gmail/gcal/graph/graphcal authorize by OAuth redirect, imap by
+                 *     the same operation; gmail/gcal/gdocs/graph/graphcal authorize by OAuth redirect, imap by
                  *     credential submission, and test_mailbox connects immediately with neither (a QC-only
                  *     connector, reachable only when the deployment armed operations.allow_test_mailbox — a
                  *     real deployment answers connector_unsupported for it, the same as for an unrecognized
@@ -80834,6 +80874,8 @@ export interface operations {
                  *     Microsoft 365 mail+calendar (Outlook via Graph), `imap` = the self-hostable IMAP
                  *     engine. Mail and calendar are always SEPARATE connections on either vendor: one
                  *     consent each, so a contact can bring one without the other and disconnect either.
+                 *     `gdocs` is a Google account's grant to read the Google Docs Meet writes its notes and
+                 *     transcripts into (`documents.readonly`); it is its own connection beside the calendar.
                  *     WhatsApp/Telegram connect is the messaging-channels surface, not this one.
                  */
                 provider: components["parameters"]["CaptureProvider"];
@@ -80862,7 +80904,7 @@ export interface operations {
             path: {
                 /**
                  * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
-                 *     the same operation; gmail/gcal/graph/graphcal authorize by OAuth redirect, imap by
+                 *     the same operation; gmail/gcal/gdocs/graph/graphcal authorize by OAuth redirect, imap by
                  *     credential submission, and test_mailbox connects immediately with neither (a QC-only
                  *     connector, reachable only when the deployment armed operations.allow_test_mailbox — a
                  *     real deployment answers connector_unsupported for it, the same as for an unrecognized
@@ -80870,6 +80912,8 @@ export interface operations {
                  *     Microsoft 365 mail+calendar (Outlook via Graph), `imap` = the self-hostable IMAP
                  *     engine. Mail and calendar are always SEPARATE connections on either vendor: one
                  *     consent each, so a contact can bring one without the other and disconnect either.
+                 *     `gdocs` is a Google account's grant to read the Google Docs Meet writes its notes and
+                 *     transcripts into (`documents.readonly`); it is its own connection beside the calendar.
                  *     WhatsApp/Telegram connect is the messaging-channels surface, not this one.
                  */
                 provider: components["parameters"]["CaptureProvider"];
@@ -80904,7 +80948,7 @@ export interface operations {
             path: {
                 /**
                  * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
-                 *     the same operation; gmail/gcal/graph/graphcal authorize by OAuth redirect, imap by
+                 *     the same operation; gmail/gcal/gdocs/graph/graphcal authorize by OAuth redirect, imap by
                  *     credential submission, and test_mailbox connects immediately with neither (a QC-only
                  *     connector, reachable only when the deployment armed operations.allow_test_mailbox — a
                  *     real deployment answers connector_unsupported for it, the same as for an unrecognized
@@ -80912,6 +80956,8 @@ export interface operations {
                  *     Microsoft 365 mail+calendar (Outlook via Graph), `imap` = the self-hostable IMAP
                  *     engine. Mail and calendar are always SEPARATE connections on either vendor: one
                  *     consent each, so a contact can bring one without the other and disconnect either.
+                 *     `gdocs` is a Google account's grant to read the Google Docs Meet writes its notes and
+                 *     transcripts into (`documents.readonly`); it is its own connection beside the calendar.
                  *     WhatsApp/Telegram connect is the messaging-channels surface, not this one.
                  */
                 provider: components["parameters"]["CaptureProvider"];
@@ -86484,53 +86530,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["StandingOverridesPage"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            422: components["responses"]["ValidationError"];
-        };
-    };
-    allowContact: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
-                id: components["parameters"]["Id"];
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    /**
-                     * @description Which category of send this vouch covers. The engine resolves every send to
-                     *     exactly one category, and the override applies to that one only — a vouch for
-                     *     `marketing` says nothing about `customer_service`. The five categories that
-                     *     serve the subject are absent on purpose: they are never refused for lack of
-                     *     evidence, so a vouch for one would be a row nothing could ever read.
-                     * @enum {string}
-                     */
-                    category: "reply_to_inbound" | "requested_followup" | "precontract_quote" | "active_deal_followup" | "customer_service" | "account_notice" | "contract_notice" | "invoice_or_payment" | "marketing";
-                    /**
-                     * @description Why the rep is vouching for this send, in their own words. Required: unlike a
-                     *     suppression, which may only relay what the subject said, this write is the
-                     *     rep's own judgement call and the record must say why it was made.
-                     */
-                    reason: string;
-                };
-            };
-        };
-        responses: {
-            /** @description Recorded. The body names the row, which is what the revoke door takes. */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["RecordedOverride"];
                 };
             };
             401: components["responses"]["Unauthorized"];
