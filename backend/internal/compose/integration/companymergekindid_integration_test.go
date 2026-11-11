@@ -3,7 +3,7 @@
 
 //go:build integration
 
-package migrations_test
+package integration
 
 // The companion of the foreign-key census for the other way a row names a
 // company: by an entity_type and entity_id pair, with no foreign key.
@@ -14,6 +14,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
@@ -54,9 +55,10 @@ func TestEveryCompanyKindIDReferenceJoinsTheMerge(t *testing.T) {
 		t.Fatal("the merge path's source yielded no written tables — the scan is broken, not the merge")
 	}
 
-	ownerDSN, _ := dsns(t)
-	owner := connect(t, ownerDSN)
-	headSchema(t, owner)
+	owner := OwnerConn(t)
+	if err := testdb.EnsureSchema(context.Background(), owner); err != nil {
+		t.Fatal(err)
+	}
 
 	rows, err := owner.Query(context.Background(), `
 		SELECT c.relname, a.attname
