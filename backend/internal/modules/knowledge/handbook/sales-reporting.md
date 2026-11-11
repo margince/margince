@@ -92,7 +92,7 @@ This comparison is not **Deal value needed** on the **Forecast** page. That figu
   shows only for given targets; an SDR without a target sees totals without a
   target column. Exact amounts, time zones and who gets credit stay in the
   reporting details.
-- **Forecast:** won value, Commit value whose close date someone confirmed, and extra value that may close, each shown on its own.
+- **Forecast:** **Forecast by probability** groups open deals by their win probability, from **90% or more** down to **0%**, beside won value. **Likely** and **Weighted** are its main amounts.
   The manager's forecast is a mark of its own. Movement uses stored captures with their
   real dates; a new view needs two captures before it can show movement.
 
@@ -106,7 +106,7 @@ Ask a question about won and lost deals, and group it by **Loss reason from the 
 - **Mapped from a note**: an administrator matched the deal's older note to a reason.
 - **Note not mapped**: the deal has only a note, and nobody has matched it yet.
 
-Deals lost before the list existed have only a note. Under **Settings → Loss reasons**, **Older loss notes** lists each note once, with how many deals carry it. An administrator picks the reason each note counts as and presses **Apply to deals**. Margince updates those deals in the background, for the decisions on the page. Each note stays as it was written, and a reason picked at close is never replaced. A decided note stays on the list, so you can change its reason and apply it again.
+Deals lost before the list existed have only a note. Under **Settings → Deals → Loss reasons**, **Older loss notes** lists each note once, with how many deals carry it. An administrator picks the reason each note counts as and presses **Apply to deals**. Margince updates those deals in the background, for the decisions on the page. Each note stays as it was written, and a reason picked at close is never replaced. A decided note stays on the list, so you can change its reason and apply it again.
 
 ## Where do deals and leads stop moving?
 
@@ -121,6 +121,10 @@ Moves that an import brought in are left out, and so are moves that an extension
 Each deal counts for the team member who owned it when it entered the stage, also after it gets a new owner. The days next to an outcome are the middle time a deal spent in the stage before it. The days next to **Still open** are the middle time in the stage so far.
 
 On **Analytics → Leads**, **What became of new leads** does the same for the leads that came in during your time span. It counts how many had a handoff accepted, were qualified or disqualified, or are still open. Each lead counts for the team member who owned it when it came in. Leads that came in before Margince kept that owner count for the whole workspace, but for no team member or team.
+
+## How do I create a custom report?
+To create a custom report in Margince, open **Reports** and choose **New custom report**. Set the **Reporting selection** and the **Charts and order**, check it with **Preview report**, then choose **Save report**. **Customize report** on a sales review opens the same window with what you are reading.
+Also called: build a report, report builder, new report, make my own report.
 
 ## How do I save or share a report?
 
@@ -153,6 +157,10 @@ A forecast link can share a live view or a stored capture. The user who gets it 
 Amounts in Analytics use grouped whole currency units. The ≈ mark means the value was rounded. An amount below one unit keeps its sign and shows <1. Exports keep the exact amount.
 
 The figures and actions remain available without AI text. Actions for quarter deals without amounts or exchange rates open those deals. **My prospecting** puts work and booked meetings before the text. **Team prospecting** puts team results and work before the text. See [Analytics](analytics.md) for qualification credit and the team readings.
+
+## How do I set up a sales initiative or campaign?
+To set up a sales initiative, which tracks a campaign or a group of deals, open **Reports** and choose **New sales initiative** under **Sales initiatives**. Fill in the **Goal**: **Initiative name**, **Primary objective**, **Target**, **Owner** and **Deadline**; an empty **Target** means **Tracking only**. Then **Choose included records**, by conditions or with **Pick deals** and **Pick leads**, and choose **Launch sales initiative**. Pick it under **Sales initiative** in **Filters** to narrow Analytics to its records.
+Also called: campaign, sales push, sales effort, target account program, track a group of deals.
 
 ## Can I describe a report or an initiative in words?
 

@@ -147,7 +147,7 @@ If the deal has open tasks, the dialog lists them under the question, each with 
 
 ### Losing
 
-**A lost deal needs a reason** from **Why was it lost?**, which an administrator keeps under **Settings → Loss reasons**. The **Note** is optional.
+**A lost deal needs a reason** from **Why was it lost?**, which an administrator keeps under **Settings → Deals → Loss reasons**. The **Note** is optional.
 **How it stands** shows the reason beside the day the deal closed, with the note under it. A long note shows its first two lines, and **Show more** opens the rest.
 Reopening clears the reason, and the deal's history keeps every time it was lost.
 
@@ -197,7 +197,7 @@ Margince also offers you the review the moment you close, in a dialog that opens
 with the close dialog's own reason already filled in. If you say no there, the
 panel keeps waiting on the deal.
 
-An administrator writes the questions at **Settings → Outcome reviews**: one
+An administrator writes the questions at **Settings → Deals → Outcome reviews**: one
 set for won, one for lost. Each question has its answer type, whether an answer
 must be given, and its choices if it offers any. Writing a review is logging an
 activity, so it needs the same permission as logging one.

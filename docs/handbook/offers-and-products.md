@@ -20,6 +20,10 @@ While a line has no quantity or price, the card says "Pricing incomplete", with 
 A deal priced from its products refuses a typed value and a hand-set product list. Change its lines instead.
 Also called: line items on a deal, deal products, quote lines before the quote.
 
+### How do I set which products a deal sells?
+To set a deal's products by hand in Margince, open the deal and choose **Set products** on the **Products** card of its **Overview** tab. Pick each one under **Add a product**, give its amount, and choose **Save products**. Product reports count the deal under the products listed there. When an accepted offer set them, saving replaces the offer's list. Saving an empty list takes the offer's products again.
+Also called: deal products for reporting, product split, which product a deal is for.
+
 ### How do I create an offer for a customer?
 To create an offer in Margince, open the deal and click **New offer** in the **Offers** panel on its **Overview** tab.
 1. Open **Deals** in the sidebar and open the deal.

@@ -54,7 +54,7 @@ When you try, the deal stays where it is and Margince says what is missing.
 
 ### Who answers legal reviews?
 A colleague holding the `legal_review` permission answers them. An administrator gives it in a
-role, under account menu → **Settings** → **Roles**. The admin role has it from the start; no other role does.
+role, under account menu → **Settings** → **Roles and permissions**. The admin role has it from the start; no other role does.
 A reviewer sees the deal's facts, money and offer only as far as their own role reads deals and offers.
 A reviewer opens the queue from **Deals**, with the **Legal reviews** button. The largest deal value
 comes first, then the earliest close date.

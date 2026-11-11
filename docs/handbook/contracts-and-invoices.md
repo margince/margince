@@ -194,7 +194,7 @@ the whole total is left blank instead of leaving that invoice out.
 
 An invoice in another currency changes into the base currency at the rate on the
 day it was issued. If that day has no rate yet, an admin can add older history in
-**Settings → Company profile → Currency rates**. The next sync then uses it.
+**Settings → Company profile → Money → Currency rates**. The next sync then uses it.
 
 ### Connection states
 

@@ -76,6 +76,10 @@ Also called: limit what my AI tool may do, read-only assistant, restrict Claude,
 Your AI tool lists ready-made requests from Margince, as commands or a menu. They include **Brief me for today**, **What is slipping this week**, **Explain my forecast** and **Log a call**. The tool offers only those your permissions allow. A connection that cannot change records does not offer **Log a call**, so the tool does not list it.
 Also called: starter requests, commands, quick actions, suggested questions, shortcuts, what can I ask Claude to do, log a call missing.
 
+### What can I ask my AI tool to do with my deals?
+Once connected, you can ask your AI tool to find your deals, say how one stands, or log a call or a note. It can also change a deal's stage, amount or close date, or close it as won or lost. It does only what you may do yourself and what you allowed when you connected it.
+Also called: what can I ask Claude to do with my deals, AI tool and deals, use Claude for the pipeline.
+
 ### Does my AI tool give me links to records?
 Yes, your AI tool or assistant can give you a link that opens a deal, contact, company, lead or project in Margince. The link opens on your Margince address, so an administrator must have set that address. Without it the tool gives no links. Amounts come in the deal's currency, such as 72000.00 EUR, never in cents.
 Also called: open a deal from Claude, record link, amounts in euros or cents, how deal values show.
@@ -85,8 +89,13 @@ Yes. Before a change to many records, or an undo of one, your AI tool asks you t
 Also called: confirm a bulk change, undo a bulk update, can I undo what the assistant did, which requests cannot be undone.
 
 ### What happens when I name a record and several match?
-When you name a record to your AI tool and more than one record matches that name, the tool asks which one you want. It shows a form to pick from when it can. When it cannot, it lists the matches and asks you to name one. An admin can test whether their own AI tool shows forms: turn on **Tool support check** on **Settings → MCP**.
+When you name a record to your AI tool and more than one record matches that name, the tool asks which one you want. It shows a form to pick from when it can. When it cannot, it lists the matches and asks you to name one. An admin can test whether their own AI tool shows forms: turn on **Tool support check** on **Settings → AI tool access**, under **Experiments**.
 Also called: two contacts with the same name, name that matches twice, pick the right record, client check.
+
+### How do I turn on the tool support check for my AI tool?
+<!-- opens: settings/mcp -->
+To check whether your AI tool can show forms, an admin turns on **Tool support check** in **Settings → AI tool access**, under **Experiments**. The check then tests the admin's own AI tool.
+Also called: tool support check, check my AI app, can my AI tool show forms.
 
 ### How do I choose where an agent may work?
 A passport or connection also says where an agent may work, such as **Sales work** or **Admin settings**. You choose it under **Where it may work** on **Authorize access** or in **New passport**. **All areas**, the default, covers each area your role reaches and areas added later. **Choose areas** covers only the areas you tick, and an area added later starts off. You see only the areas your role reaches: a sales rep sees all but **Admin settings**, and a role with one area sees no choice. Running the installation counts as **Admin settings**, and approvals are in no area, so every passport keeps them.
