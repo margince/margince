@@ -107,6 +107,13 @@ func DescribeForClient(spec mcp.ToolSpec) string {
 	switch spec.Tier {
 	case mcp.TierAutoExecute:
 		if spec.RequiredScope == principal.ScopeRead {
+			// A read tool runs at once and says nothing more. The exception is a
+			// tool that asks for the user's yes first. That sentence is surfaced
+			// even under read scope, so a read of sensitive diagnostics is not
+			// called unasked.
+			if ask := askUserFirst(spec); ask != "" {
+				return fmt.Sprintf("%s (Runs immediately%s.)", spec.Description, ask)
+			}
 			return spec.Description
 		}
 		return fmt.Sprintf("%s (Runs immediately%s; %s.)", spec.Description, askUserFirst(spec), scope)

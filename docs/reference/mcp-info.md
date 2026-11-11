@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 48 |
 | Resources | 14 |
-| Tool catalog | 230.2 KB |
+| Tool catalog | 230.4 KB |
 | Resource catalog | 5.5 KB |
-| Approx. wire tokens | 60328 |
+| Approx. wire tokens | 60381 |
 | Largest tool | `read_context` (11.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -33,10 +33,10 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
 | Output schemas | 50.6 KB | 21% | **No**: a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 54.0 KB | 23% | Yes, every step |
+| Descriptions (incl. governance clause) | 54.2 KB | 23% | Yes, every step |
 | Input schemas | 113.7 KB | 49% | Yes, every step |
 | _Names, annotations, punctuation_ | 11.8 KB | 5% | Partly |
-| **Description + input schema** | **167.7 KB** | **72%** | **the recurring cost** |
+| **Description + input schema** | **167.9 KB** | **72%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -108,7 +108,7 @@ descriptions and input schemas are what each step pays for.
 | [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 2767 |
 | [`resolve_duplicates`](#resolve_duplicates) | Merge two records or dismiss a flagged pair |  |  | 618 |
 | [`run_research`](#run_research) | Run AI work for your user |  |  | 776 |
-| [`schedule_meeting`](#schedule_meeting) | Invite to a meeting |  |  | 420 |
+| [`schedule_meeting`](#schedule_meeting) | Invite to a meeting |  |  | 421 |
 | [`send_outbound`](#send_outbound) | Send a message |  |  | 1695 |
 | [`update_record`](#update_record) | Update a record |  | [`ui://margince/update.html`](#update_view) | 626 |
 | [`whoami`](#whoami) | Who this passport acts for | yes |  | 129 |
@@ -11577,7 +11577,9 @@ is a prerequisite: each tool refuses an unknown name with the accepted list. Use
 find a customer contact; colleagues are seats here. Use read_forecast with view=input_sources to
 learn whether a number can be trusted: how complete and current the data is. user_id is what
 assignee_id and owner_id take; never assign to an is_agent seat. Keep pipeline_id and stage_id for a
-deal. Take every name verbatim; a custom field is spelled cf_<slug>.
+deal. Take every name verbatim; a custom field is spelled cf_<slug>. (Runs immediately; the user's
+yes is needed for the actions ai_call, ai_calls, member_retirement, so tell them what the call will
+change and get it before calling, unless they asked for this call themselves.)
 ```
 
 <details><summary>Input schema</summary>
@@ -12280,9 +12282,9 @@ scope "enrich".)
 ```text
 Put a meeting on the host's calendar. invite creates the calendar event and the provider sends the
 invitation to every attendee: the contact, and any further addresses. invite reaches attendees
-outside the workspace, so name them and the time and get the user's yes first; the call stages for
-approval. Read check_availability before choosing a time. Use change_activities with log to record a
-meeting without inviting anyone, or one that already happened. Keep the invitation id and inspect
+outside the workspace and goes out when this call runs, so name them and the time and get the user's
+yes first. Read check_availability before choosing a time. Use change_activities with log to record
+a meeting without inviting anyone, or one that already happened. Keep the invitation id and inspect
 its status before claiming it was delivered. A refused or failed invite invited nobody. (Governance:
 a human approves every call before it runs; requires passport scope "send".)
 ```
