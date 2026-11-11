@@ -21,6 +21,11 @@ import (
 // short-lived wazero instantiation.
 const recheckInterval = 24 * time.Hour
 
+// recheckBudget bounds the context of a re-check that no longer follows its
+// caller. One token read and one module run take seconds; a minute leaves room
+// for a loaded host.
+const recheckBudget = time.Minute
+
 // TokenSource answers the installation's license token, freshly. A source rather
 // than a string because a re-check has to see a token the operator REPLACED: a
 // watcher holding the boot-time value could only ever watch a license lapse,
@@ -125,7 +130,9 @@ func (w *Watcher) Recheck(ctx context.Context) error {
 	w.mu.Unlock()
 
 	// Not the caller's cancellation: callers who joined are waiting on this run.
-	run.err = w.recheck(context.WithoutCancel(ctx))
+	detached, cancel := context.WithTimeout(context.WithoutCancel(ctx), recheckBudget)
+	run.err = w.recheckOnce(detached)
+	cancel()
 	w.mu.Lock()
 	w.running = nil
 	w.mu.Unlock()
@@ -133,9 +140,9 @@ func (w *Watcher) Recheck(ctx context.Context) error {
 	return run.err
 }
 
-// recheck reads the token and resolves it once; Recheck makes sure only one
+// recheckOnce reads the token and resolves it once; Recheck makes sure only one
 // runs at a time.
-func (w *Watcher) recheck(ctx context.Context) (err error) {
+func (w *Watcher) recheckOnce(ctx context.Context) (err error) {
 	defer w.surviveFault(ctx, &err)
 	before := w.Posture()
 	token, err := w.source()

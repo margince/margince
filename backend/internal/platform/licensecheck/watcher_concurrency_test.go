@@ -97,12 +97,14 @@ func recheckAsync(w *Watcher) <-chan error {
 // waitForJoin waits until a second caller has joined the re-check in flight.
 func waitForJoin(t *testing.T, log *lockedLog) {
 	t.Helper()
-	deadline := time.Now().Add(5 * time.Second)
+	giveUp := time.After(5 * time.Second)
 	for !log.contains("joining the license re-check already running") {
-		if time.Now().After(deadline) {
+		select {
+		case <-giveUp:
 			t.Fatal("the second caller never joined the re-check in flight")
+		default:
+			runtime.Gosched()
 		}
-		runtime.Gosched()
 	}
 }
 

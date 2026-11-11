@@ -22,7 +22,9 @@ func refusedAfter(t *testing.T, held Posture) Posture {
 	}
 	w.posture.Store(&held)
 	source.token = "no-longer-honored"
-	w.Recheck(context.Background())
+	if err := w.Recheck(context.Background()); err != nil {
+		t.Fatalf("Recheck: %v", err)
+	}
 	got := w.Posture()
 	if got.State != StateRejected {
 		t.Fatalf("posture = %q, want %q, so this test reads no refusal", got.State, StateRejected)
