@@ -167,6 +167,9 @@ func (h Handlers) UpdateAutomation(w http.ResponseWriter, r *http.Request, id cr
 		return
 	}
 	in := UpdateAutomationInput{Name: req.Name, IfVersion: ifVersion}
+	if req.InitialRunConfirmed != nil {
+		in.InitialRunConfirmed = *req.InitialRunConfirmed
+	}
 	if req.OwnerId != nil {
 		owner := ids.From[ids.UserKind](ids.UUID(*req.OwnerId))
 		in.OwnerID = &owner
@@ -401,17 +404,18 @@ func WireAutomation(a Automation) (crmcontracts.Automation, error) {
 		paused = &reason
 	}
 	wire := crmcontracts.Automation{
-		PausedReason:     paused,
-		SetterPassportId: wireSetter(a.SetterPassportID),
-		Id:               openapi_types.UUID(a.ID.UUID),
-		Key:              a.Key,
-		Name:             a.Name,
-		Status:           status,
-		Params:           params,
-		OwnerId:          wireOwner(a.OwnerID),
-		Version:          &version,
-		CreatedAt:        a.CreatedAt,
-		UpdatedAt:        a.UpdatedAt,
+		InitialRunPreviewRequired: new(scheduledPopulationRule(a.Key)),
+		PausedReason:              paused,
+		SetterPassportId:          wireSetter(a.SetterPassportID),
+		Id:                        openapi_types.UUID(a.ID.UUID),
+		Key:                       a.Key,
+		Name:                      a.Name,
+		Status:                    status,
+		Params:                    params,
+		OwnerId:                   wireOwner(a.OwnerID),
+		Version:                   &version,
+		CreatedAt:                 a.CreatedAt,
+		UpdatedAt:                 a.UpdatedAt,
 	}
 	if a.Configuration != nil {
 		wire.SetupState = new(crmcontracts.AutomationSetupState(a.Configuration.State))

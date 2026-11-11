@@ -114,7 +114,8 @@ func TestQuietCustomerListNeedsNoOpenDealAndSharesReminderSuppression(t *testing
 func quietTestTouch(t *testing.T, e *integration.Env, kind string, id ids.UUID, at time.Time) {
 	t.Helper()
 	host := ids.From[ids.UserKind](e.AdminUser)
-	if _, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{Kind: "call", Source: "manual",
+	if _, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
+		Kind: "call", Source: "manual",
 		Subject: new("Customer conversation"), OccurredAt: &at, CallOutcome: new("reached"), HostUserID: &host,
 		Links: []activities.ActivityLinkInput{{EntityType: kind, EntityID: id}},
 	}); err != nil {

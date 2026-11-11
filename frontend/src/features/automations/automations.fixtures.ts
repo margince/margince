@@ -159,3 +159,11 @@ export function configuredAutomations(now: number): Automation[] {
     },
   ];
 }
+
+export function configuredAutomation(id: string, now: number): Automation {
+  const rule = configuredAutomations(now).find(
+    (candidate) => candidate.id === id,
+  );
+  if (!rule) throw new Error(`No automation fixture named ${id}`);
+  return rule;
+}

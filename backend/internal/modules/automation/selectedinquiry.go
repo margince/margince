@@ -17,8 +17,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
 )
 
-type selectedInquiryScope struct{ automation, source ids.UUID }
-type selectedInquiryContextKey struct{}
+type (
+	selectedInquiryScope      struct{ automation, source ids.UUID }
+	selectedInquiryContextKey struct{}
+)
 
 func selectedInquiryAllowed(ctx context.Context, ev workflow.Event) bool {
 	scope, ok := ctx.Value(selectedInquiryContextKey{}).(selectedInquiryScope)

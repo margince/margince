@@ -14,8 +14,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"math"
+
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
 
 // CatalogEntry describes one instantiable automation type. Key equals

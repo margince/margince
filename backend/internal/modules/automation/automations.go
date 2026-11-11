@@ -32,14 +32,8 @@ import (
 // module) and the catalog lookups the transport needs.
 type AutomationStore struct {
 	// db binds the workspace this pass runs for (ADR-0091 §9 step 3).
-	db  *database.DB
-	now func() time.Time
-	// catalog is the fieldcatalog.Reader seam renewal_reminder's preview
-	// (automations_preview_renewal.go) validates a draft/stored
-	// object+date_field pair against before ever building a previewDef
-	// around it — nil is the zero-cost pass-through every other
-	// WithFieldCatalog consumer (deals.Store, contacts.Store) falls back to
-	// when the seam is unwired (tests, or a role that never mounted it).
+	db      *database.DB
+	now     func() time.Time
 	catalog fieldcatalog.Reader
 	// lists answers whether the lists a list rule names exist for its author.
 	lists     Lists
@@ -61,12 +55,7 @@ func (s *AutomationStore) SetClock(now func() time.Time) *AutomationStore {
 	return s
 }
 
-// WithFieldCatalog wires the workspace custom-field catalog in (compose
-// injects modules/customfields' Service here — ADR-0054: a module never
-// imports a sibling), so renewal_reminder's preview can validate a
-// workspace-controlled (object, date_field) pair before building SQL
-// around it, exactly like deals.Store/contacts.Store already do for their
-// own custom-column reads. Returns the store for chaining.
+// WithFieldCatalog supplies the current custom fields for setup and preview.
 func (s *AutomationStore) WithFieldCatalog(catalog fieldcatalog.Reader) *AutomationStore {
 	s.catalog = catalog
 	return s
@@ -110,11 +99,12 @@ type CreateAutomationInput struct {
 
 // UpdateAutomationInput carries the PATCH subset; nil means unchanged.
 type UpdateAutomationInput struct {
-	Name      *string
-	Params    map[string]any
-	Enabled   *bool
-	OwnerID   *ids.UserID
-	IfVersion *int64
+	InitialRunConfirmed bool
+	Name                *string
+	Params              map[string]any
+	Enabled             *bool
+	OwnerID             *ids.UserID
+	IfVersion           *int64
 }
 
 // AutomationPage is one keyset page, newest first.

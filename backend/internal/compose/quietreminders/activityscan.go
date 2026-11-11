@@ -5,10 +5,11 @@ package quietreminders
 
 import (
 	"context"
+	"time"
+
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/automation"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
-	"time"
 )
 
 // activityScanAdapter maps automation.ActivityScan onto

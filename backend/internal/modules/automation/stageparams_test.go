@@ -6,10 +6,11 @@ package automation
 import (
 	"context"
 	"encoding/json"
+	"testing"
+
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
-	"testing"
 )
 
 type scopedStageProvider struct {
@@ -28,7 +29,9 @@ func TestStageRulesRequireAnExplicitPopulationWhenConfigured(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, params := range []map[string]any{
-		{}, {"pipeline_id": pipeline.String()}, {"pipeline_id": pipeline.String(), "stage_ids": []string{}},
+		{},
+		{"pipeline_id": pipeline.String()},
+		{"pipeline_id": pipeline.String(), "stage_ids": []string{}},
 		{"pipeline_id": pipeline.String(), "stage_ids": []string{stage.String()}, "rogue": true},
 	} {
 		if err := validateStageChangeParams(false)(params); err == nil {

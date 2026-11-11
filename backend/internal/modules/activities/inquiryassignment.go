@@ -25,6 +25,7 @@ func (s *Store) WithInquiryAssignment(assignment InquiryAssignment) *Store {
 	s.inquiryAssignment = assignment
 	return s
 }
+
 func (h Handlers) WithInquiryAssignment(assignment InquiryAssignment) Handlers {
 	h.store.WithInquiryAssignment(assignment)
 	return h

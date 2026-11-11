@@ -3,9 +3,7 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useEffect, useState } from "react";
-import { api } from "../../api/client";
 import type { components } from "../../api/schema";
-import { ifMatch, requireVersion } from "../../api/version";
 import { useRunAsOwnerOptions } from "../../components/assigneepicker";
 import { EntityRef, RosterFailedLine } from "../../components/entityref";
 import { WebsiteInquiryDialog } from "../../components/websiteinquirydialog";
@@ -14,20 +12,20 @@ import { CellStack } from "../../design-system/cellstack";
 import { DataTable, type DataTableColumn } from "../../design-system/datatable";
 import { ErrorLine } from "../../design-system/errorline";
 import { Select } from "../../design-system/select";
-import { Switch } from "../../design-system/switch";
 import { formatDateTime, formatNumber } from "../../format/format";
 import { useNow } from "../../format/now";
 import { formatRelativeTime } from "../../format/relativetime";
 import { type Translator, useLocale, usePlural, useT } from "../../i18n";
-import { problemMessageOf, unwrap } from "../../lib/problem";
+import { problemMessageOf } from "../../lib/problem";
 import { useViewerZone } from "../../lib/viewerzone";
 import { WEBSITE_INQUIRY_RECIPE } from "../../lib/websiteinquiries";
 import { AutomationInspectors, OUTCOME_LOOK } from "./automationdetail";
 import { DeleteAutomationAction } from "./automations.delete";
 import { AutomationDialog } from "./automations.form";
-import { RulePausedReason, RuleSetByAgent } from "./automations.lists";
-import { AutomationSetup } from "./automations.setup";
+import { type AutomationPatch, patchAutomation } from "./automations.patch";
+import { ScheduledPopulationReview } from "./automations.populationreview";
 import { recipeSentence } from "./automations.recipe";
+import { AutomationStatus } from "./automations.status";
 import "./automations.css";
 
 // Configured automations as one table, rendered from the Automation wire schema
@@ -49,28 +47,6 @@ const RELATIVE_TICK_MS = 60_000;
 /** Puts a dialog away while keeping what it showed, so it can animate out. */
 export function shut<T extends { open: boolean }>(prior: T | null): T | null {
   return prior === null ? null : { ...prior, open: false };
-}
-
-// The row identity travels as a variable: a closed-over `version` can be older
-// than the control pressed, and its If-Match then refuses a write nobody raced.
-type AutomationPatch = {
-  id: string;
-  version: number | undefined;
-  body: {
-    name?: string;
-    params?: Record<string, unknown>;
-    status?: "enabled" | "paused";
-    owner_id?: string;
-  };
-};
-
-async function patchAutomation({ id, version, body }: AutomationPatch) {
-  return unwrap(
-    await api.PATCH("/automations/{id}", {
-      params: { path: { id }, ...ifMatch(requireVersion(version)) },
-      body,
-    }),
-  );
 }
 
 type Editing = { automation: Automation; seq: number; open: boolean };
@@ -97,17 +73,25 @@ export function ConfiguredAutomations({
     Readonly<Record<string, Inspecting>>
   >({});
   const [editing, setEditing] = useState<Editing | null>(null);
+  const [populationReview, setPopulationReview] = useState<{
+    automation: Automation;
+    patch: AutomationPatch;
+  } | null>(null);
   // An edit form whose grant was revoked could only end in a 403.
   useEffect(() => {
     if (!canEdit) {
       setEditing(shut);
+      setPopulationReview(null);
     }
   }, [canEdit]);
   // Settled, not only succeeded: a refusal such as version_skew means the list
   // is stale. Only a fresh read gives the next write the right version.
   const edit = useMutation({
     mutationFn: patchAutomation,
-    onSuccess: () => setEditing(shut),
+    onSuccess: () => {
+      setEditing(shut);
+      setPopulationReview(null);
+    },
     onSettled: () =>
       queryClient.invalidateQueries({ queryKey: ["automations"] }),
   });
@@ -212,16 +196,54 @@ export function ConfiguredAutomations({
               const current =
                 automations.find((one) => one.id === editing.automation.id) ??
                 editing.automation;
-              edit.mutate({
+              const patch = {
                 id: current.id,
                 version: current.version,
                 body: { name, params },
-              });
+              };
+              if (
+                current.status === "enabled" &&
+                current.initial_run_preview_required &&
+                !samePopulationParams(current.params, params)
+              ) {
+                setPopulationReview({ automation: current, patch });
+              } else {
+                edit.mutate(patch);
+              }
             }}
             onClose={() => setEditing(shut)}
           />
         )}
+      {populationReview && (
+        <ScheduledPopulationReview
+          automation={populationReview.automation}
+          params={populationReview.patch.body.params}
+          pending={edit.isPending}
+          error={edit.isError ? problemMessageOf(edit.error, t) : null}
+          onClose={() => setPopulationReview(null)}
+          onConfirm={() =>
+            edit.mutate({
+              ...populationReview.patch,
+              body: {
+                ...populationReview.patch.body,
+                initial_run_confirmed: true,
+              },
+            })
+          }
+        />
+      )}
     </>
+  );
+}
+
+function samePopulationParams(
+  before: Record<string, unknown>,
+  after: Record<string, unknown>,
+): boolean {
+  const keys = Object.keys(before);
+  return (
+    keys.length === Object.keys(after).length &&
+    keys.every((key) => before[key] === after[key])
   );
 }
 
@@ -396,49 +418,6 @@ function AutomationOwner({
       />
       <RosterFailedLine kind="user" roster={roster} />
       {hand.isError && <ErrorLine>{problemMessageOf(hand.error, t)}</ErrorLine>}
-    </CellStack>
-  );
-}
-
-// Flipping the switch is the write; a seat without update reads a badge.
-function AutomationStatus({
-  automation,
-  canEdit,
-}: Readonly<{ automation: Automation; canEdit: boolean }>) {
-  const t = useT();
-  const queryClient = useQueryClient();
-  const flip = useMutation({
-    mutationFn: patchAutomation,
-    onSettled: () =>
-      queryClient.invalidateQueries({ queryKey: ["automations"] }),
-  });
-  const enabled = automation.status === "enabled";
-  return (
-    <CellStack>
-      {canEdit ? (
-        <Switch
-          label={t("auto.enabledFor", { name: automation.name })}
-          labelHidden
-          checked={enabled}
-          pending={flip.isPending}
-          onChange={(next) =>
-            flip.mutate({
-              id: automation.id,
-              version: automation.version,
-              body: { status: next ? "enabled" : "paused" },
-            })
-          }
-        />
-      ) : !automation.setup_state ? (
-        <Badge tone={enabled ? "success" : "warning"}>
-          {enabled ? t("auto.statusEnabled") : t("auto.statusPaused")}
-        </Badge>
-      ) : null}
-      <AutomationSetup automation={automation} />
-      <RuleSetByAgent automation={automation} />
-      <RulePausedReason automation={automation} />
-      {/* A refused flip moves nothing on screen, so this line is its only report. */}
-      {flip.isError && <ErrorLine>{problemMessageOf(flip.error, t)}</ErrorLine>}
     </CellStack>
   );
 }

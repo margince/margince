@@ -4,8 +4,9 @@
 package automation
 
 import (
-	"github.com/margince/margince/backend/internal/shared/kernel/values"
 	"unicode/utf8"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 const maxTaskTitleCharacters = 200

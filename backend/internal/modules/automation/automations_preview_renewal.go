@@ -40,34 +40,8 @@ import (
 // doc gives.
 const recurringPreviewUnsupportedReason = "preview is not yet supported for a recurring (recurs_yearly) renewal_reminder instance: the literal snapshot preview cannot project what a yearly-recurring window would match"
 
-// renewalPreviewParams decodes and validates the params in effect for a
-// renewal_reminder preview — the draft override's if given, else the
-// stored instance's own — reusing renewalDateFieldScanParams
-// (timescan.go) rather than writing a third decoder for the same
-// object/date_field/days_before/recurs_yearly shape (timescan.go's own
-// reader, handlers_clock.go's runtime Match re-check).
-//
-// This validates MORE strictly than a save does:
-// validateRenewalReminderParams (automations_catalog.go) only checks
-// whichever keys are actually PRESENT in a save, so a stored instance can
-// exist with object/date_field entirely unset — the scan's own honest
-// no-op for exactly that case (scanDateFieldInstanceCandidates's doc). A
-// preview must never guess a table, so here the identical condition is a
-// hard refusal instead of a silent skip, and object is re-checked against
-// the closed renewalReminderObjectSet even though renewalDateFieldScanParams
-// itself only checks non-emptiness (a save-time Validate call may not
-// have covered this exact value, e.g. a value from before the vocabulary
-// was extended).
-//
-// It also checks date_field against the workspace's own LIVE catalog via
-// catalog (AutomationStore.WithFieldCatalog, fieldcatalog.Reader — the
-// same seam deals.Store/contacts.Store already consume, so this is not new
-// cross-module plumbing): an unknown, retired, or wrong-typed column
-// answers a 422 ParamError here, before renewalPreviewDef ever builds SQL
-// around it, rather than reaching Postgres and surfacing as a raw 500. A
-// nil catalog (the seam not wired — a test, or a role that never mounted
-// it) skips this one check, the same graceful-degradation posture every
-// other WithFieldCatalog consumer takes for a nil Reader.
+// Save and preview share the live field check so retired or retyped fields
+// cannot leave a newly configured reminder with no usable date source.
 func renewalPreviewParams(ctx context.Context, catalog fieldcatalog.Reader, stored Automation, in AutomationPreviewInput) (dateFieldScanParams, error) {
 	raw := stored.Params
 	if in.Params != nil {

@@ -21,8 +21,10 @@ import (
 
 type postMeetingRecap struct{ ex Executors }
 
-const postMeetingRecapName = "post_meeting_recap"
-const recapIntent = "post-meeting recap"
+const (
+	postMeetingRecapName = "post_meeting_recap"
+	recapIntent          = "post-meeting recap"
+)
 
 // purposeBusinessCorrespondence is the seeded consent purpose whose class is
 // never consent-gated (ADR-0098 D1): answering somebody individually rests on

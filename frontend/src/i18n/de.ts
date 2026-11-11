@@ -13284,6 +13284,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "eine Berechtigungsprüfung oder eine abgelehnte Freigabe hat sie gestoppt",
   "auto.runs.outcome": "Ergebnis",
 
+  "auto.initialRun.title": "Aufgaben für bestehende Datensätze zulassen?",
+  "auto.initialRun.confirm": "Speichern und Aufgaben zulassen",
+  "auto.initialRun.body":
+    "Der nächste geplante Lauf von {name} kann Aufgaben für bereits passende Datensätze anlegen. Spätere Läufe berücksichtigen auch neue Treffer.",
   "auto.preview.open": "Vorschau",
   "auto.preview.title": "Auswirkung des Probelaufs",
   "auto.preview.window": "Zeitfenster",

@@ -10,9 +10,11 @@ func quietReminderSchema(daysKey string, defaultDays int, populationKey, format 
 	if format == "record_list" {
 		population["x-entity-types"] = QuietCustomerTypes()
 	}
-	return map[string]any{schemaKeyType: schemaTypeObject, schemaKeyAdditionalProps: false,
+	return map[string]any{
+		schemaKeyType: schemaTypeObject, schemaKeyAdditionalProps: false,
 		schemaKeyProperties: map[string]any{daysKey: intParamProperty(defaultDays, 365, "Days since the last genuine contact."), populationKey: population},
-		schemaKeyRequired:   []string{daysKey, populationKey}}
+		schemaKeyRequired:   []string{daysKey, populationKey},
+	}
 }
 
 func QuietCustomerTypes() []string { return []string{"contact", "company"} }

@@ -72187,6 +72187,10 @@ components:
       description: A configured automation instance (feedback/14).
       required: [id, key, name, status, params, created_at]
       properties:
+        initial_run_preview_required:
+          type: boolean
+          readOnly: true
+          description: Enabling this scheduled rule or changing its active population requires an initial-run preview and explicit confirmation.
         inquiry_policy: { $ref: '#/components/schemas/WebsiteInquiryPolicy', readOnly: true, description: 'Typed view of params for the combined website inquiry recipe.' }
         id: { type: string, format: uuid }
         key: { type: string, description: The catalog type this instance is built from. }
@@ -72267,6 +72271,9 @@ components:
       type: object
       description: Any subset; omit a field to leave it unchanged. `status` flips enable/pause.
       properties:
+        initial_run_confirmed:
+          type: boolean
+          description: Confirm the initial-run preview when enabling a scheduled rule or changing its active population. Existing matching records may receive work on the next scan.
         name: { type: [string, 'null'] }
         params: { type: [object, 'null'], additionalProperties: true }
         status: { type: [string, 'null'], enum: [enabled, paused, null] }

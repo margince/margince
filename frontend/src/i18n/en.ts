@@ -13248,6 +13248,10 @@ export const en = {
     "a permission check or a declined approval stopped it",
   "auto.runs.outcome": "Outcome",
 
+  "auto.initialRun.title": "Allow work for existing records?",
+  "auto.initialRun.confirm": "Save and allow work",
+  "auto.initialRun.body":
+    "The next scheduled run of {name} can create work for records that already match. Later runs also handle new matches.",
   "auto.preview.open": "Preview",
   "auto.preview.title": "Dry-run impact",
   "auto.preview.window": "Window",

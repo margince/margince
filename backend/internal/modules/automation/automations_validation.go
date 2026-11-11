@@ -51,11 +51,39 @@ func (s *AutomationStore) revalidate(ctx context.Context, before Automation, in 
 	if err := entry.Validate(params); err != nil {
 		return err
 	}
+	if err := confirmScheduledPopulation(before, in); err != nil {
+		return err
+	}
 	return s.validateRefs(ctx, entry, params)
+}
+
+func scheduledPopulationRule(key string) bool {
+	_, quiet := activityScanHandlers[key]
+	_, dated := dateFieldScanHandlers[key]
+	return quiet || dated
+}
+
+func confirmScheduledPopulation(before Automation, in UpdateAutomationInput) error {
+	if !scheduledPopulationRule(before.Key) {
+		return nil
+	}
+	enabled := before.Enabled
+	if in.Enabled != nil {
+		enabled = *in.Enabled
+	}
+	changesPopulation := in.Params != nil && !sameParams(before.Params, in.Params)
+	if enabled && (!before.Enabled || changesPopulation) && !in.InitialRunConfirmed {
+		return &ParamError{Field: "initial_run_confirmed", Reason: "preview the initial run and confirm that existing matching records may receive work"}
+	}
+	return nil
 }
 
 // validateRefs asks the entry's reference check, when it has one.
 func (s *AutomationStore) validateRefs(ctx context.Context, entry CatalogEntry, params map[string]any) error {
+	if entry.Key == renewalReminderName {
+		_, err := renewalPreviewParams(ctx, s.catalog, Automation{Key: entry.Key}, AutomationPreviewInput{Params: params})
+		return err
+	}
 	if _, quiet := activityScanHandlers[entry.Key]; quiet {
 		if s.quiet == nil {
 			return &ParamError{Field: "key", Reason: "quiet reminders are not available"}

@@ -36423,9 +36423,12 @@ type AutomaticWorkTally struct {
 
 // Automation A configured automation instance (feedback/14).
 type Automation struct {
-	CreatedAt     time.Time             `json:"created_at"`
-	Id            openapi_types.UUID    `json:"id"`
-	InquiryPolicy *WebsiteInquiryPolicy `json:"inquiry_policy,omitempty"`
+	CreatedAt time.Time          `json:"created_at"`
+	Id        openapi_types.UUID `json:"id"`
+
+	// InitialRunPreviewRequired Enabling this scheduled rule or changing its active population requires an initial-run preview and explicit confirmation.
+	InitialRunPreviewRequired *bool                 `json:"initial_run_preview_required,omitempty"`
+	InquiryPolicy             *WebsiteInquiryPolicy `json:"inquiry_policy,omitempty"`
 
 	// Key The catalog type this instance is built from.
 	Key string `json:"key"`
@@ -64735,7 +64738,9 @@ type UpdateAttachmentMetadataRequestDocState string
 
 // UpdateAutomationRequest Any subset; omit a field to leave it unchanged. `status` flips enable/pause.
 type UpdateAutomationRequest struct {
-	Name *string `json:"name,omitempty"`
+	// InitialRunConfirmed Confirm the initial-run preview when enabling a scheduled rule or changing its active population. Existing matching records may receive work on the next scan.
+	InitialRunConfirmed *bool   `json:"initial_run_confirmed,omitempty"`
+	Name                *string `json:"name,omitempty"`
 
 	// OwnerId Hand the rule to another member, who must be a seat the caller may make an owner (an active human seat that can write, inside the caller's write scope), else `422` with `code: owner_not_assignable`. Cannot be cleared.
 	OwnerId *openapi_types.UUID            `json:"owner_id,omitempty"`

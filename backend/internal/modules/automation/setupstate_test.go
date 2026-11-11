@@ -5,8 +5,9 @@ package automation
 
 import (
 	"encoding/json"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 func TestConfigurationStateDoesNotConfuseSetupWithRunOutcomes(t *testing.T) {

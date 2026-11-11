@@ -12926,6 +12926,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "một bước kiểm tra quyền hoặc một phê duyệt bị từ chối đã dừng nó",
   "auto.runs.outcome": "Kết quả",
 
+  "auto.initialRun.title": "Cho phép tạo việc cho bản ghi hiện có?",
+  "auto.initialRun.confirm": "Lưu và cho phép tạo việc",
+  "auto.initialRun.body":
+    "Lần chạy theo lịch tiếp theo của {name} có thể tạo việc cho các bản ghi đã khớp. Các lần chạy sau cũng xử lý bản ghi mới khớp.",
   "auto.preview.open": "Xem trước",
   "auto.preview.title": "Tác động khi chạy thử",
   "auto.preview.window": "Khoảng thời gian",

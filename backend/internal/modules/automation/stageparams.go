@@ -28,8 +28,10 @@ type stageChangeParams struct {
 func stageChangeSchema(task bool) map[string]any {
 	properties := map[string]any{
 		"pipeline_id": map[string]any{schemaKeyType: schemaTypeString, schemaKeyFormat: "pipeline"},
-		"stage_ids": map[string]any{schemaKeyType: "array", schemaKeyFormat: "stages",
-			"items": map[string]any{schemaKeyType: schemaTypeString, schemaKeyFormat: "uuid"}, "minItems": 1},
+		"stage_ids": map[string]any{
+			schemaKeyType: "array", schemaKeyFormat: "stages",
+			"items": map[string]any{schemaKeyType: schemaTypeString, schemaKeyFormat: "uuid"}, "minItems": 1,
+		},
 	}
 	required := []string{"pipeline_id", "stage_ids"}
 	if task {
@@ -38,8 +40,10 @@ func stageChangeSchema(task bool) map[string]any {
 		properties[paramTaskTimezone] = taskTimezoneSchema()
 		required = append(required, "task_title", paramDueInDays)
 	}
-	return map[string]any{schemaKeyType: schemaTypeObject, schemaKeyAdditionalProps: false,
-		schemaKeyProperties: properties, schemaKeyRequired: required}
+	return map[string]any{
+		schemaKeyType: schemaTypeObject, schemaKeyAdditionalProps: false,
+		schemaKeyProperties: properties, schemaKeyRequired: required,
+	}
 }
 
 func decodeStageParams(params map[string]any) (stageChangeParams, error) {

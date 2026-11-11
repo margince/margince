@@ -98,8 +98,10 @@ func (s *AutomationStore) quietPreview(ctx context.Context, stored Automation, i
 	if err != nil {
 		return AutomationPreviewResult{}, true, err
 	}
-	result := AutomationPreviewResult{Kind: crmcontracts.AutomationPreviewKindPopulation, MatchesNowAvailable: true,
-		MatchesNow: candidates.Total, WindowDays: window}
+	result := AutomationPreviewResult{
+		Kind: crmcontracts.AutomationPreviewKindPopulation, MatchesNowAvailable: true,
+		MatchesNow: candidates.Total, WindowDays: window,
+	}
 	for _, record := range candidates.Records {
 		result.Sample = append(result.Sample, record.Ref.ID)
 	}

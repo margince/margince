@@ -230,7 +230,8 @@ func scanInstanceCandidates(
 }
 
 func runActivityCandidates(ctx context.Context, h workflow.Handler, inst automationInstance, wsID ids.UUID, now time.Time,
-	run func(context.Context, workflow.Handler, workflow.Event) error, candidates []EntityAnchor) error {
+	run func(context.Context, workflow.Handler, workflow.Event) error, candidates []EntityAnchor,
+) error {
 	for _, cand := range candidates {
 		ev, err := buildActivityAnchorEvent(wsID, now, inst, cand)
 		if err != nil {

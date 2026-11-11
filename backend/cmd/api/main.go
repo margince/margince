@@ -28,7 +28,6 @@ import (
 	// build/composition/ in a composed build, the committed vanilla stub
 	// in a bare one — same import path either way.
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/margince/margince/composition"
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/programsettings"
@@ -40,6 +39,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/platform/licensecheck"
 	"github.com/margince/margince/backend/internal/shared/buildinfo"
+	"github.com/margince/margince/composition"
 )
 
 func main() {

@@ -12,6 +12,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
+	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
 )
 
@@ -125,5 +126,53 @@ func TestReviewedCustomerRuleKeepsAnExistingQuietTaskIdentity(t *testing.T) {
 			t.Fatalf("quiet handlers planned separate tasks: %+v and %+v", previous, key)
 		}
 		previous = key
+	}
+}
+
+func TestRenewalSetupChecksTheCurrentDateFieldBeforeSaving(t *testing.T) {
+	store := NewAutomationStore(nil).WithFieldCatalog(fakeFieldCatalog{columns: map[string][]fieldcatalog.Column{
+		"contact": {{Name: "cf_renewal", Type: fieldcatalog.TypeDate}, {Name: "cf_words", Type: fieldcatalog.TypeText}},
+	}})
+	entry, ok := CatalogEntryByKey(renewalReminderName)
+	if !ok {
+		t.Fatal("missing renewal reminder")
+	}
+	for _, field := range []string{"cf_renewal", "cf_words", "cf_retired", ""} {
+		err := store.validateRefs(context.Background(), entry, map[string]any{"object": "contact", "date_field": field})
+		if (err == nil) != (field == "cf_renewal") {
+			t.Fatalf("field %q: %v", field, err)
+		}
+	}
+}
+
+func TestScheduledPopulationChangesNeedAnInitialRunConfirmation(t *testing.T) {
+	on, off := true, false
+	for _, key := range []string{noActivityReminderName, checkInCadenceName, renewalReminderName, stageChangeCreateTaskName} {
+		for _, tc := range []struct {
+			name              string
+			wasEnabled        bool
+			in                UpdateAutomationInput
+			needsConfirmation bool
+		}{
+			{"enable", false, UpdateAutomationInput{Enabled: &on}, true},
+			{"change active population", true, UpdateAutomationInput{Params: map[string]any{"days": 9}}, true},
+			{"save paused population", false, UpdateAutomationInput{Params: map[string]any{"days": 9}}, false},
+			{"pause and edit", true, UpdateAutomationInput{Enabled: &off, Params: map[string]any{"days": 9}}, false},
+			{"rename", true, UpdateAutomationInput{Name: new("Renamed")}, false},
+			{"unchanged params", true, UpdateAutomationInput{Params: map[string]any{"days": float64(7)}}, false},
+		} {
+			t.Run(key+"/"+tc.name, func(t *testing.T) {
+				before := Automation{Key: key, Enabled: tc.wasEnabled, Params: json.RawMessage(`{"days":7}`)}
+				err := confirmScheduledPopulation(before, tc.in)
+				wantRefusal := tc.needsConfirmation && key != stageChangeCreateTaskName
+				if (err != nil) != wantRefusal {
+					t.Fatalf("confirmation refusal=%v, want %v", err, wantRefusal)
+				}
+				tc.in.InitialRunConfirmed = true
+				if err := confirmScheduledPopulation(before, tc.in); err != nil {
+					t.Fatal(err)
+				}
+			})
+		}
 	}
 }

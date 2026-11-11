@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import { Ban, Check, Clock, type LucideIcon, Minus, X } from "lucide-react";
 import { type ReactNode, useId, useState } from "react";
 import { api, FIRST_PAGE } from "../../api/client";
@@ -22,6 +22,7 @@ import "./automationdetail.css";
 import { RUN_OUTCOME_WORD, runReasonWords } from "../../lib/automationrun";
 import { labelFor } from "../../lib/labelfor";
 import { useViewerZone } from "../../lib/viewerzone";
+import { useAutomationPreview } from "./automations.previewquery";
 
 // The human surface for the two human-only automation ops
 // (listAutomationRuns / previewAutomation), in its own file so automations.tsx
@@ -262,8 +263,6 @@ function Inspector({
   );
 }
 
-type AutomationPreviewResult = components["schemas"]["AutomationPreview"];
-
 // The three offered windows, as the SegmentedControl's string options (the atom
 // is keyed on strings). Kept as a typed tuple so the control and its labels can
 // never drift apart; each parses to a valid 1..90 the server accepts (the 422
@@ -277,9 +276,6 @@ const WINDOW_LABELS: Record<WindowOption, MessageKey> = {
   "90": "auto.preview.window90",
 };
 
-// AU-1: the dry-run blast-radius panel over POST /automations/{id}/preview.
-// A pure 🟢 read (no writes) — it uses POST only to carry the window in a body;
-// see the useQuery note below for why it is modelled as a query, not a mutation.
 export function AutomationPreview({
   automationId,
   titled,
@@ -288,21 +284,9 @@ export function AutomationPreview({
   const { locale } = useLocale();
   const [windowDays, setWindowDays] = useState<WindowOption>("30");
 
-  // A preview is a pure read keyed on the selected window — so it is a query,
-  // not a mutation. useQuery refetches when the window changes, dedupes React
-  // StrictMode's double-mount (one in-flight request per key), starts in the
-  // pending state (no empty first frame), and routes loading/error/retry
-  // through the shared QueryStates — the same recovery the runs panel gets.
-  const query = useQuery({
-    queryKey: ["automation-preview", automationId, windowDays],
-    queryFn: async (): Promise<AutomationPreviewResult> => {
-      return unwrap(
-        await api.POST("/automations/{id}/preview", {
-          params: { path: { id: automationId } },
-          body: { window_days: Number(windowDays) },
-        }),
-      );
-    },
+  const query = useAutomationPreview({
+    id: automationId,
+    windowDays: Number(windowDays),
   });
 
   const result = query.data;

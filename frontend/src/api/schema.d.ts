@@ -52751,6 +52751,8 @@ export interface components {
         };
         /** @description A configured automation instance (feedback/14). */
         Automation: {
+            /** @description Enabling this scheduled rule or changing its active population requires an initial-run preview and explicit confirmation. */
+            readonly initial_run_preview_required?: boolean;
             /** @description Typed view of params for the combined website inquiry recipe. */
             readonly inquiry_policy?: components["schemas"]["WebsiteInquiryPolicy"];
             /** Format: uuid */
@@ -52815,6 +52817,8 @@ export interface components {
         };
         /** @description Any subset; omit a field to leave it unchanged. `status` flips enable/pause. */
         UpdateAutomationRequest: {
+            /** @description Confirm the initial-run preview when enabling a scheduled rule or changing its active population. Existing matching records may receive work on the next scan. */
+            initial_run_confirmed?: boolean;
             name?: string | null;
             params?: {
                 [key: string]: unknown;
