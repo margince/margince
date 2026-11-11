@@ -18,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/extprivacy"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -47,6 +48,18 @@ type Eraser struct {
 	purgeRawCaptures RawCapturePurger
 	// country selects the jurisdiction whose correspondence floor binds.
 	country CountryReader
+	// extensions holds the personal-data declarations of the extension tables
+	// this eraser clears. The zero value declares none.
+	extensions extprivacy.Registry
+}
+
+// WithExtensions returns an eraser that also clears the extension tables the
+// registry declares. Every eraser built outside a test carries it;
+// TestEveryProductionEraserCarriesTheExtensionRegistry holds that.
+func (e *Eraser) WithExtensions(r extprivacy.Registry) *Eraser {
+	clone := *e
+	clone.extensions = r
+	return &clone
 }
 
 // NewEraser binds the erasure pass to the installation's pool.
