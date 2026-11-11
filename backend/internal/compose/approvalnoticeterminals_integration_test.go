@@ -14,7 +14,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/notices"
-	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -87,7 +86,7 @@ func TestNoticeReconciliationDoesNotRestoreErasedProposalEvidence(t *testing.T) 
 	a.deliver(t, staged)
 	assertReconciledHomeNotices(t, a, 0)
 	ctx := principal.SystemActing(a.e.Admin(), approvalNoticeRetractActor)
-	if err := privacy.NewEraser(a.db).EraseContact(a.e.Admin(), subject.UUID, "Subject requested erasure"); err != nil {
+	if err := eraserWithGraph(a.db).EraseContact(a.e.Admin(), subject.UUID, "Subject requested erasure"); err != nil {
 		t.Fatal(err)
 	}
 	_, changed, err := newApprovalNoticeReconcileWorker(a.e.Pool).reconcilePage(ctx, ids.Nil)
@@ -132,7 +131,7 @@ func TestRepeatedSubjectErasureRecordsEachNoticeOnce(t *testing.T) {
 	a.deliver(t, staged)
 	assertReconciledHomeNotices(t, a, 0)
 	for range 2 {
-		if err := privacy.NewEraser(a.db).EraseContact(a.e.Admin(), subject, "Subject requested erasure"); err != nil {
+		if err := eraserWithGraph(a.db).EraseContact(a.e.Admin(), subject, "Subject requested erasure"); err != nil {
 			t.Fatal(err)
 		}
 	}

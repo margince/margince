@@ -33,6 +33,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/privacy"
+	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -408,7 +409,7 @@ func TestErasedSubjectsNextMessageIsAcceptedAndPersistsNothing(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := privacy.NewEraser(c.DB()).EraseContact(c.adminStoreCtx(t), contact, "acceptance-suite"); err != nil {
+	if err := privacy.NewEraser(c.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities).EraseContact(c.adminStoreCtx(t), contact, "acceptance-suite"); err != nil {
 		t.Fatalf("EraseContact: %v", err)
 	}
 	if n := c.channelIdentities(t, before); n != 0 {

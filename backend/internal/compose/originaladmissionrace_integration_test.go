@@ -16,7 +16,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/capture"
-	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/originalstore"
@@ -74,7 +73,7 @@ func TestErasureSeesTheDeliveryWhoseSubjectLockItWaitedFor(t *testing.T) {
 			}
 			erased := make(chan error, 1)
 			go func() {
-				erased <- privacy.NewEraser(e.DB()).WithBlobstore(blob).EraseContact(ctx, contact, "subject request")
+				erased <- eraserWithGraph(e.DB()).WithBlobstore(blob).EraseContact(ctx, contact, "subject request")
 			}()
 			if err := e.DB().Tx(ctx, func(tx pgx.Tx) error { waitForBackendBlockedBy(t, tx, incoming.pid, erased); return nil }); err != nil {
 				t.Fatal(err)

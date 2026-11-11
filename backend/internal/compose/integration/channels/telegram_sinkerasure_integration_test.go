@@ -39,6 +39,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/privacy"
+	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -122,7 +123,7 @@ func TestTheSinkRefusesARecordNamingAnErasedChannelAccount(t *testing.T) {
 	seedChannelIdentity(t, e, contact, "20301", "erased")
 
 	// A real erasure, so the suppression row is armed the way production arms it.
-	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), contact, "test"); err != nil {
+	if err := privacy.NewEraser(e.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities).EraseContact(e.Admin(), contact, "test"); err != nil {
 		t.Fatalf("EraseContact: %v", err)
 	}
 
@@ -249,7 +250,7 @@ func TestAnErasureReachesAChannelActivityWithNoContactLink(t *testing.T) {
 		t.Fatalf("the fixture linked the activity to the contact (%d links); this test needs the UNLINKED state", n)
 	}
 
-	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), contact, "test"); err != nil {
+	if err := privacy.NewEraser(e.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities).EraseContact(e.Admin(), contact, "test"); err != nil {
 		t.Fatalf("EraseContact: %v", err)
 	}
 
@@ -287,7 +288,7 @@ func TestAnErasureLeavesAnotherAccountsChannelActivityUntouched(t *testing.T) {
 		t.Fatalf("Upsert (bystander): %v", err)
 	}
 
-	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), erased, "test"); err != nil {
+	if err := privacy.NewEraser(e.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities).EraseContact(e.Admin(), erased, "test"); err != nil {
 		t.Fatalf("EraseContact: %v", err)
 	}
 
@@ -327,7 +328,7 @@ func TestARecentChannelMessageIsShieldedFromErasureByTheStatutoryFloor(t *testin
 	// The floor covers correspondence about an actual transaction, so the
 	// message needs one behind it to be shielded at all.
 	e.SeedWonDealLinkedTo(t, ref.ID)
-	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), contact, "test"); err != nil {
+	if err := privacy.NewEraser(e.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities).EraseContact(e.Admin(), contact, "test"); err != nil {
 		t.Fatalf("EraseContact: %v", err)
 	}
 	if n := activityBodyCount(t, e, body); n != 1 {

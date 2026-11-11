@@ -28,7 +28,7 @@ func TestErasureExplainsMissingReviewerAndRollsBack(t *testing.T) {
 	subject := e.SeedContact(t, "Anna Berg", nil)
 	company := e.SeedCompany(t, "Review company", nil)
 	e.WsExec(t, `UPDATE company SET description='Anna Berg is mentioned here' WHERE id=$1`, company)
-	err := privacy.NewEraser(e.DB()).WithRawCapturePurger(RawCapturePurgerFor(e.DB())).EraseContact(e.Admin(), subject, "Subject requested erasure")
+	err := eraserWithGraph(e.DB()).WithRawCapturePurger(RawCapturePurgerFor(e.DB())).EraseContact(e.Admin(), subject, "Subject requested erasure")
 	var refusal *privacyreview.UnavailableError
 	if !errors.As(err, &refusal) || !errors.Is(err, apperrors.ErrConflict) {
 		t.Fatalf("missing reviewer must explain a conflict: %v", err)
@@ -54,7 +54,7 @@ func TestErasureFlagsCompanyTemplatesWithoutChangingThem(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := privacy.NewEraser(e.DB()).WithRawCapturePurger(RawCapturePurgerFor(e.DB())).EraseContact(e.Admin(), subject, "Subject requested erasure"); err != nil {
+	if err := eraserWithGraph(e.DB()).WithRawCapturePurger(RawCapturePurgerFor(e.DB())).EraseContact(e.Admin(), subject, "Subject requested erasure"); err != nil {
 		t.Fatal(err)
 	}
 	if got := e.WsScalar(t, `SELECT signature_template FROM legal_entity WHERE id=$1`, entity.ID); got != "<p>Anna Berg</p>" {
@@ -85,7 +85,7 @@ func TestErasureFlagsAnInactiveMembersSignatureWithoutOpeningTheControllersOwn(t
 		t.Fatal(err)
 	}
 	deactivateSignatureOwner(t, e)
-	if err := privacy.NewEraser(e.DB()).WithRawCapturePurger(RawCapturePurgerFor(e.DB())).EraseContact(e.Admin(), subject, "Subject requested erasure"); err != nil {
+	if err := eraserWithGraph(e.DB()).WithRawCapturePurger(RawCapturePurgerFor(e.DB())).EraseContact(e.Admin(), subject, "Subject requested erasure"); err != nil {
 		t.Fatal(err)
 	}
 	if n := e.WsCount(t, `SELECT count(*) FROM notice WHERE kind='privacy_review_required' AND recipient_user_id=$1 AND target_type='retained_email_signature' AND target_id=$2`, e.AdminUser, signature); n != 1 {
@@ -177,7 +177,7 @@ func TestAReadSeatCannotBeTheControllerForErasureOrMissedReceipts(t *testing.T) 
 	subject := e.SeedContact(t, "Anna Berg", nil)
 	company := e.SeedCompany(t, "Review company", nil)
 	e.WsExec(t, `UPDATE company SET description='Anna Berg is mentioned here' WHERE id=$1`, company)
-	err := privacy.NewEraser(e.DB()).WithRawCapturePurger(RawCapturePurgerFor(e.DB())).EraseContact(e.Admin(), subject, "Subject requested erasure")
+	err := eraserWithGraph(e.DB()).WithRawCapturePurger(RawCapturePurgerFor(e.DB())).EraseContact(e.Admin(), subject, "Subject requested erasure")
 	if !errors.Is(err, apperrors.ErrConflict) {
 		t.Fatalf("read-only controller accepted erasure: %v", err)
 	}

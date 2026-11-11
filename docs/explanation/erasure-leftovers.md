@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/modules/privacy/retentioncopies.go backend/internal/modules/webhooks/deliveryretention.go backend/internal/platform/database/storekit/outboxretention.go backend/internal/modules/privacy/erasure_manualreview.go backend/internal/modules/privacy/dedupeevidencescrub.go backend/internal/platform/database/storekit/auditredaction.go backend/internal/modules/privacy/linkedhistoricalaudit.go -->
+<!-- describes: backend/internal/modules/privacy/retentioncopies.go backend/internal/modules/webhooks/deliveryretention.go backend/internal/platform/database/storekit/outboxretention.go backend/internal/modules/privacy/erasure_manualreview.go backend/internal/modules/privacy/dedupeevidencescrub.go backend/internal/platform/database/storekit/auditredaction.go backend/internal/modules/privacy/linkedhistoricalaudit.go backend/internal/modules/privacy/pendingauditcopies.go -->
 # What an erasure leaves behind
 
 An Article 17 erasure ([privacy engines](privacy-and-consent.md#the-privacy-engines-privacy))
@@ -36,6 +36,11 @@ Duplicate-match snapshots are cleared with the subject. This includes the `evide
 inside old audit images. Audit IDs stay, and pending event copies linked to the cleared audit
 rows are removed. Data tasks correct copies that older erasures left behind. Those
 passes keep work written after the erasure and records that still need to be held.
+
+The daily check returns to old erasure proofs whose audit copies still hold personal values.
+It checks the hold again, so a hold that ends lets the next pass clear those copies.
+Graph counts are set right in the erasure's own write, even when an earlier link change has
+not yet sent its event.
 
 The 30 and 7 days are defaults chosen for running Margince, not legal retention times. With
 `privacy.retain_only` set, the nightly pass keeps both copies.
