@@ -27,7 +27,19 @@ const (
 	statePaused   = "paused"
 	stateClosed   = "closed"
 	stateArchived = "archived"
+	stateExpired  = "expired"
 )
+
+// roomStateSQL is the room's state as everybody reads it: staff, agents and
+// the buyer edge. Nothing stores "expired". A room whose access end has passed
+// reads expired from that moment, unless it is archived. Setting a later end
+// makes it read its stored state again.
+//
+// The two database rules that care about expiry spell the same test in SQL:
+// the deal_room_one_open_room_per_deal exclusion and the steward retirement
+// guard. A change here changes them too.
+const roomStateSQL = `CASE WHEN r.state <> 'archived' AND r.expires_at <= now()
+	THEN 'expired' ELSE r.state END`
 
 // PauseRoom refuses buyer reads while every credential stays valid.
 func (s *Store) PauseRoom(ctx context.Context, id ids.DealRoomID) (crmcontracts.DealRoom, error) {

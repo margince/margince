@@ -3943,7 +3943,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "roompage.banner.closed":
     "Đã đóng. Người mua vẫn đọc được Deal Room này; không nhận thêm gì nữa.",
   "roompage.banner.expired":
-    "Đã hết hạn. Liên kết của người mua không còn hoạt động.",
+    "Đã hết hạn. Liên kết của người mua hoạt động lại khi bạn đặt ngày kết thúc muộn hơn.",
   "roompage.banner.archived":
     "Đã chuyển vào kho lưu trữ. Không ai có thể vào Deal Room này.",
   "roompage.banner.liveUntil": "Đang mở. Quyền truy cập kết thúc vào {when}.",
@@ -12658,6 +12658,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "roomtab.manage.textHeading": "Tiêu đề và lời chào",
   "roomtab.manage.welcomeHint": "Đoạn đầu tiên người mua đọc.",
   "roomtab.manage.foot": "Người mua thấy thay đổi ở lần mở phòng tiếp theo.",
+  "roomtab.manage.expiredHint":
+    "Quyền truy cập đã kết thúc. Đặt ngày kết thúc muộn hơn để người mua vào lại.",
   "threads.conversationTitle": "Trao đổi",
   "threads.about": "Về {title}",
   "threads.aboutRemoved": "Về một tài liệu không còn trong phòng",
