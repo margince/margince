@@ -9,6 +9,7 @@ package integration
 // that compares won and open deals against the goals it publishes.
 
 import (
+	"crypto/sha256"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -47,9 +48,10 @@ func evenMonths() crmcontracts.SalesGoalMonths {
 func planWrite(t *testing.T, e *apptest.AppEnv, method, path string, version int64, body any) (int, crmcontracts.SalesGoalPlan) {
 	t.Helper()
 	var plan crmcontracts.SalesGoalPlan
+	// One key per body, so a refused body is never replayed for the next one.
 	headers := map[string]string{
 		"If-Match":        strconv.FormatInt(version, 10),
-		"Idempotency-Key": fmt.Sprintf("%s-%s-%d", method, path, version),
+		"Idempotency-Key": fmt.Sprintf("%x", sha256.Sum256(fmt.Appendf(nil, "%s %s %d %v", method, path, version, body))),
 	}
 	return e.Call(t, method, path, body, headers, &plan), plan
 }

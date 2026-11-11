@@ -79,6 +79,30 @@ describe("ProgressReadings", () => {
     ).toBeTruthy();
     expect(screen.getByText("Unclassified")).toBeTruthy();
   });
+
+  it("opens the sales behind a category, and shows no split while it is hidden", async () => {
+    const onEvidence = vi.fn();
+    const user = userEvent.setup();
+    render(<ProgressReadings progress={sellerMarch} onEvidence={onEvidence} />);
+    // The product card is the first of the readings.
+    await user.click(screen.getAllByRole("button")[0] as HTMLElement);
+    expect(onEvidence).toHaveBeenCalledWith(
+      expect.objectContaining({ group_key: "kind:software" }),
+    );
+    cleanup();
+    render(
+      <ProgressReadings
+        progress={{
+          ...sellerMarch,
+          categories: { ...sellerMarch.categories, status: "withheld" },
+          planned: { status: "ok" },
+        }}
+        onEvidence={onEvidence}
+      />,
+    );
+    expect(screen.queryByText("Unclassified")).toBeNull();
+    expect(screen.getAllByText("Hidden").length).toBeGreaterThan(0);
+  });
 });
 
 describe("GoalEditor", () => {
@@ -206,6 +230,51 @@ describe("ProgressWork", () => {
     expect(screen.getByText("Outside the period")).toBeTruthy();
     expect(screen.getByText("No date")).toBeTruthy();
     expect(screen.getAllByText("No next task")).toHaveLength(2);
+  });
+
+  it("names each deal's owner on a team and hides an amount the reader may not see", async () => {
+    const owner = "00000000-0000-4000-8000-0000000000a1";
+    stubWork((url) => {
+      if (url.pathname.endsWith("/analytics/progress/deals"))
+        return {
+          data: [
+            {
+              deal: {
+                ...openDeal("d1", "Fleet rollout", "2026-03-20"),
+                amount_minor: null,
+                masked_fields: ["amount_minor"],
+              },
+              next_task: {
+                subject: "Send the offer",
+                due_at: "2026-03-24T09:00:00Z",
+                assignee_id: "00000000-0000-4000-8000-0000000000a2",
+              },
+            },
+            {
+              deal: {
+                ...openDeal("d2", "Depot pilot", "2026-03-25"),
+                amount_minor: null,
+              },
+            },
+          ],
+          page: { has_more: false },
+        };
+      return { data: [], page: { has_more: false } };
+    });
+    const user = userEvent.setup();
+    render(
+      <ProgressWork
+        progress={{ ...teamMarch, scope: { ...teamMarch.scope, id: owner } }}
+      />,
+    );
+    await user.click(
+      await screen.findByRole("button", { name: /^Deals\W*2$/ }),
+    );
+    expect(await screen.findByText("Fleet rollout")).toBeTruthy();
+    expect(screen.getByRole("columnheader", { name: "Owner" })).toBeTruthy();
+    expect(screen.getByText("Hidden")).toBeTruthy();
+    expect(screen.getByText("No amount")).toBeTruthy();
+    expect(screen.getByText("Send the offer")).toBeTruthy();
   });
 });
 
