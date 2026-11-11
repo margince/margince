@@ -19332,9 +19332,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.happened.ai_work_health.bare":
     "Eine KI-Aufgabe ist am {when} fehlgeschlagen.",
   "worklist.happened.ai_work_health.stalled":
-    "Die KI-Aufgabe {name} hat am {when} begonnen und ist nicht fertig geworden.",
+    "Die KI-Aufgabe {name} ist seit dem {when} nicht fertig geworden.",
   "worklist.happened.ai_work_health.stalled.bare":
-    "Eine KI-Aufgabe hat am {when} begonnen und ist nicht fertig geworden.",
+    "Eine KI-Aufgabe ist seit dem {when} nicht fertig geworden.",
   "worklist.happened.failed_approval":
     "Eine Aktion, die du für {name} freigegeben hast, lief am {when} nicht.",
   "worklist.happened.failed_approval.bare":

@@ -18838,9 +18838,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.happened.ai_work_health": "Tác vụ AI {name} bị lỗi vào {when}.",
   "worklist.happened.ai_work_health.bare": "Một tác vụ AI bị lỗi vào {when}.",
   "worklist.happened.ai_work_health.stalled":
-    "Tác vụ AI {name} bắt đầu vào {when} nhưng chưa xong.",
+    "Tác vụ AI {name} chưa xong kể từ {when}.",
   "worklist.happened.ai_work_health.stalled.bare":
-    "Một tác vụ AI bắt đầu vào {when} nhưng chưa xong.",
+    "Một tác vụ AI chưa xong kể từ {when}.",
   "worklist.happened.failed_approval":
     "Một hành động bạn đã duyệt cho {name} không chạy vào {when}.",
   "worklist.happened.failed_approval.bare":

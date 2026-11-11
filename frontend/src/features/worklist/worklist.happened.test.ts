@@ -88,7 +88,7 @@ describe("what happened behind a row", () => {
     ).toEqual(["The automation Welcome sequence stopped on 9 Nov."]);
   });
 
-  it("tells a stalled AI task from a failed one, dated by its start", () => {
+  it("tells a stalled AI task from a failed one, dated by when it was queued or started", () => {
     const run = (kind: string) =>
       happenedLines(
         row({
@@ -104,7 +104,7 @@ describe("what happened behind a row", () => {
       "The AI task Website triage failed on 9 Nov.",
     ]);
     expect(run("stalled")).toEqual([
-      "The AI task Website triage started on 9 Nov and has not finished.",
+      "The AI task Website triage has not finished since 9 Nov.",
     ]);
   });
 

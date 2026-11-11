@@ -19120,9 +19120,9 @@ export const en = {
   "worklist.happened.ai_work_health": "The AI task {name} failed on {when}.",
   "worklist.happened.ai_work_health.bare": "An AI task failed on {when}.",
   "worklist.happened.ai_work_health.stalled":
-    "The AI task {name} started on {when} and has not finished.",
+    "The AI task {name} has not finished since {when}.",
   "worklist.happened.ai_work_health.stalled.bare":
-    "An AI task started on {when} and has not finished.",
+    "An AI task has not finished since {when}.",
   "worklist.happened.failed_approval":
     "An action you approved on {name} did not run on {when}.",
   "worklist.happened.failed_approval.bare":

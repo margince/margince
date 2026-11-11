@@ -274,7 +274,7 @@ export function eventLine(
 
 // A capture row's sentence follows what the connection carries. A silent one
 // still syncs and only brings nothing in, so it is not called broken. A
-// stalled AI run has not failed; its date is when it started.
+// stalled AI run has not failed; its date is when it was queued or started.
 function stateEventKeys(item: WorklistItem) {
   if (item.source === "ai_work_health" && item.kind === "stalled")
     return STATE_EVENT.aiStalled;
