@@ -12,6 +12,7 @@ import { leadIdentityName } from "../../format/leadname";
 import { useLocale, useT } from "../../i18n";
 import { addedViaFor } from "../../lib/leadorigins";
 import { navigate } from "../../lib/router";
+import { latestWord } from "../../lib/standinglatest";
 import { activityMarks } from "../../lib/standingmarks";
 import { useViewerZone } from "../../lib/viewerzone";
 import { LeadCompany, useLeadCompanyName } from "./leadcompany";
@@ -100,6 +101,11 @@ export function LeadHowItStands({
         ),
         tone: verdict.tone,
       }}
+      latest={latestWord(thread.activities, {
+        ...ctx,
+        onOpen: () =>
+          navigate({ screen: "leads", id: lead.id, id2: "history" }),
+      })}
       heroLayout="below"
       hero={
         <LeadStepper
