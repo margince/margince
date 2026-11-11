@@ -146,9 +146,7 @@ function LatestWord({ latest }: Readonly<{ latest: StandingLatest }>) {
     <div className="standing-sheet-latest">
       <p className="standing-sheet-latest-head">
         <strong>{t("standing.latest.title")}</strong>
-        {latest.byMargince && (
-          <Badge tone="ai">{t("agentJob.margince")}</Badge>
-        )}
+        {latest.byMargince && <Badge tone="ai">{t("agentJob.margince")}</Badge>}
         <span>{head}</span>
       </p>
       <ClampedText
