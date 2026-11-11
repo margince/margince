@@ -225,6 +225,55 @@ export const Drifting: Story = {
 export const DriftingDark: Story = { ...Drifting, globals: { theme: "dark" } };
 
 /**
+ * A deal the records call on track, whose newest word is Margince's note on
+ * why it cut the win probability. The call carries no sentence of its own,
+ * since Momentum already dates the last activity; the note says what stands.
+ */
+export const OnTrackWithMarginceChange: Story = {
+  render: () => {
+    installFetchStub({
+      "GET /me": meRoute({ deal: ["read"] }),
+      "GET /field-history": stageHistory,
+    });
+    return (
+      <StoryProviders>
+        <DealHowItStands
+          head={{
+            verdict: { word: "On track", tone: "success" },
+            standing: "live",
+            sources: { by: "records" },
+            readAt: AS_OF,
+          }}
+          inputs={{
+            ...drifting,
+            card: { ...drifting.card, generated_by: "deterministic" },
+            activities: [
+              ...ACTIVITIES,
+              activity({
+                id: "margince-note",
+                kind: "note",
+                automatic_kind: "product",
+                subject: "Margince updated this deal",
+                body: "Win probability set to 40%: The customer stated an intention to proceed with different, smaller components (#1 and #2a) rather than the deal as currently scoped.\nUndo any of these from Home.",
+                occurred_at: "2026-08-11T11:32:00Z",
+              }),
+            ],
+          }}
+          onOpenHistory={() => {}}
+        />
+      </StoryProviders>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    const card = within(canvasElement);
+    await expect(
+      await card.findByText(/Win probability set to 40%/),
+    ).toBeVisible();
+    await expect(card.getByText("Open in History")).toBeVisible();
+  },
+};
+
+/**
  * A deal won while the last reading still had it drifting. The outcome heads
  * the card, and only who sat on the deal stays beside it.
  */

@@ -11,6 +11,7 @@ import { formatDayMonth } from "../../format/format.dates";
 import { PROJECT_PHASES } from "../../format/projectphase";
 import { type Locale, useLocale, usePlural, useT } from "../../i18n";
 import { reveal } from "../../lib/reveal";
+import { latestWord } from "../../lib/standinglatest";
 import { activityMarks } from "../../lib/standingmarks";
 import { useViewerZone } from "../../lib/viewerzone";
 import { useUndoProjectHealth } from "./projecthealth.queries";
@@ -140,6 +141,12 @@ export function ProjectStanding({
             }
           : verdict
       }
+      latest={latestWord(history.activities, {
+        ...ctx,
+        record: zone,
+        asOf: view.as_of,
+        onOpen: onOpenHistory,
+      })}
       heroLayout="below"
       hero={
         <PhaseStepper
