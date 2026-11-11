@@ -6,6 +6,7 @@
 package compose
 
 import (
+	"context"
 	"errors"
 	"testing"
 
@@ -104,7 +105,19 @@ func TestMemberHandoverMovesPendingStaffingAndRetainsAcceptedCredit(t *testing.T
 	if err != nil {
 		t.Fatal(err)
 	}
+	custom, err := migrations.Custom()
+	if err != nil {
+		t.Fatal(err)
+	}
 	owner := integration.FreshOwnerConn(t)
+	// The downgrade reverts every newer migration before it reaches the one
+	// that refuses, and the schema is shared by the rest of this test process.
+	// Bring the reverted ones back so a later test finds its tables.
+	t.Cleanup(func() {
+		if _, err := dbmigrate.Up(context.Background(), owner, core, custom); err != nil {
+			t.Errorf("restoring the schema after the refused downgrade: %v", err)
+		}
+	})
 	_, err = dbmigrate.Down(t.Context(), owner, core, stepsDownTo(t, core, "accepted_handoffs_retain_their_receiver"))
 	fault, ok := errors.AsType[*pgconn.PgError](err)
 	if !ok || fault.Code != "23514" {
