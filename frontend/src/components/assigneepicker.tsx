@@ -48,17 +48,15 @@ function ownerOptions(
   roster: ReturnType<typeof useRoster>,
   admits: (entry: RosterEntry) => boolean,
 ): UserOptions {
-  const options = (roster.data ?? [])
-    .filter(admits)
-    .map((entry) =>
-      "display_name" in entry
-        ? {
-            value: entry.id,
-            label: entry.display_name,
-            keywords: [entry.email],
-          }
-        : { value: entry.id, label: entry.id },
-    );
+  const options = (roster.data ?? []).filter(admits).map((entry) =>
+    "display_name" in entry
+      ? {
+          value: entry.id,
+          label: entry.display_name,
+          keywords: [entry.email],
+        }
+      : { value: entry.id, label: entry.id },
+  );
   return { options, roster };
 }
 
