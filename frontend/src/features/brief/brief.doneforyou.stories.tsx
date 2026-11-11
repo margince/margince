@@ -185,35 +185,16 @@ function pending(receipts: readonly Receipt[]) {
   };
 }
 
-// Accepting a change answers as the server does: the receipt reads as
-// reviewed, and the deal's pending list no longer names it.
-function stub(initial: readonly Receipt[]) {
-  const accepted = new Set<string>();
-  const current = () =>
-    initial.map((r) =>
-      accepted.has(r.id) && r.review
-        ? { ...r, review: { ...r.review, accepted: true } }
-        : r,
-    );
-  const accepts = Object.fromEntries(
-    initial.map((r) => [
-      `POST /deals/${r.subject?.id}/applied-changes/${r.id}/accept`,
-      () => {
-        accepted.add(r.id);
-        return new Response(null, { status: 204 });
-      },
-    ]),
-  );
+function stub(receipts: readonly Receipt[]) {
   stubWithSession(
     {
-      ...accepts,
       "GET /worklist/handled": () =>
         jsonResponse({
           as_of: "2026-09-13T08:00:00Z",
-          receipts: current(),
+          receipts,
           truncated: false,
         }),
-      "GET /deal-corrections/pending": () => jsonResponse(pending(current())),
+      "GET /deal-corrections/pending": () => jsonResponse(pending(receipts)),
       "GET /magic": () =>
         jsonResponse({
           since: "2026-09-12T18:00:00Z",
@@ -231,7 +212,8 @@ function stub(initial: readonly Receipt[]) {
 
 /**
  * Four deals. One probability moved back and forth, with one change
- * replaced. Then a quote, a long name, and a deal already partly reviewed. The first card is open; one Mark reviewed answers for its deal.
+ * replaced. Then a quote, a long name, and a deal with one change accepted
+ * before Margince stopped asking. The first card is open, with its Undo.
  */
 export const ChangedDeals: Story = {
   render: () => {
@@ -253,10 +235,10 @@ export const ChangedDeals: Story = {
       await canvas.findByRole("link", { name: "Straight X platform rollout" })
     ).closest("li");
     if (!(card instanceof HTMLElement)) throw new Error("no card");
-    await userEvent.click(
-      within(card).getByRole("button", { name: "Mark reviewed" }),
-    );
-    await expect((await within(card).findAllByText("Reviewed")).length).toBe(2);
+    await expect(
+      within(card).getAllByRole("button", { name: /Undo/ }).length,
+    ).toBeGreaterThan(0);
+    await expect(canvas.queryByText(/review/i)).toBeNull();
   },
 };
 
@@ -275,7 +257,7 @@ export const ChangedDealsPhone: Story = {
 };
 
 /** More than five deals: the preview stops at five and the drawer holds all. */
-export const ReviewAllDrawer: Story = {
+export const AllChangesDrawer: Story = {
   render: () => {
     stub(
       Array.from({ length: 7 }, (_, i) =>
@@ -293,7 +275,7 @@ export const ReviewAllDrawer: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(
-      await canvas.findByRole("button", { name: "Review all 7 deals" }),
+      await canvas.findByRole("button", { name: "See all 7 deals" }),
     );
   },
 };
