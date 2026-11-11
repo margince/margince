@@ -95,6 +95,10 @@ The undo reaches as far as the choice did. Undoing your own snooze never brings 
 
 Undoing **Done** clears only your own choice, and the row then follows the usual rules. A deal a colleague closed, or a task they completed, stays off your list. Home and the Worklist show the same rows. Also called: restore, bring back, unsnooze.
 
+### How do I set a reminder to follow up with a customer?
+To set a follow-up reminder in Margince, add a task with a due date on the customer's contact. Open the contact, choose **More actions**, then **Add task**, enter a **Subject** and a **Due date**, and choose **Add task**. On a contact with no open task, **Add follow-up** opens the same form. The task joins your Worklist on its due date.
+Also called: follow-up reminder, remind me to call back, schedule a follow-up, chase a customer.
+
 ### How do I see all my tasks?
 To see all your open tasks in Margince, open **Home**, press **Show Worklist**, and choose the **Tasks** button under **Work type**.
 Tasks are in groups by when they are due. Late ones and today's come first, then **Due tomorrow**, **Due this week** and **Later**. There is no separate "Due today" heading.
