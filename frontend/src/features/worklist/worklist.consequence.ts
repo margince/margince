@@ -3,10 +3,10 @@
 
 // What waiting costs on a row, in one sentence.
 
-import type { MessageKey } from "../i18n/en";
-import { valueFor } from "./labelfor";
-import { partyName, type T } from "./worklistcopy";
-import type { WorklistItem } from "./worklisttypes";
+import type { MessageKey } from "../../i18n/en";
+import { valueFor } from "../../lib/labelfor";
+import { partyName, type T } from "../../lib/worklistcopy";
+import type { WorklistItem } from "../../lib/worklisttypes";
 
 const CONSEQUENCE: Readonly<
   Record<

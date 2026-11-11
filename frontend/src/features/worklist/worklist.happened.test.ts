@@ -4,8 +4,8 @@
 import { describe, expect, it } from "vitest";
 import type { Locale, Translator } from "../../i18n";
 import { translate } from "../../i18n";
-import { consequenceLine } from "../../lib/worklistconsequence";
 import { cardLine, happenedLines, todoLine } from "../../lib/worklisthappened";
+import { consequenceLine } from "./worklist.consequence";
 import { row } from "./worklist.fixtures";
 
 const t: Translator = (key, params) => translate("en", key, params);

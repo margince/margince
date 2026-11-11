@@ -16,7 +16,6 @@ import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 import { useSourceOpener } from "../../lib/opensource";
 import { useViewerZone } from "../../lib/viewerzone";
 import { saysOpen } from "../../lib/worklistask";
-import { consequenceLine } from "../../lib/worklistconsequence";
 import {
   factReasons,
   partyName,
@@ -29,6 +28,7 @@ import {
   useHappenedClock,
 } from "../../lib/worklisthappened";
 import { useBriefAnswer, withFoldedBrief } from "./worklist.briefverbs";
+import { consequenceLine } from "./worklist.consequence";
 import type { WorklistItem } from "./worklist.queries";
 import { codedDetail } from "./worklist.reader";
 import { inlineDecision, rowAnswer } from "./worklist.row.answer";
