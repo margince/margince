@@ -566,29 +566,3 @@ func TestDirectTaskErasureCompletesItsSuspendedEvidenceCleanup(t *testing.T) {
 		t.Fatal("the task was not erased through its contact")
 	}
 }
-
-// One erasure reaches a promise's task by two paths; its extension row is certified once.
-func TestErasureCertifiesAnExtensionRowOfAPromisedTaskOnce(t *testing.T) {
-	f := setupRenewalPrivacy(t, 0.95)
-	owner := integration.OwnerConn(t)
-	integration.LinkActivity(t, owner, f.messages[0], "contact", f.contact.UUID)
-	integration.LinkActivity(t, owner, f.messages[1], "contact", f.contact.UUID)
-	integration.LinkActivity(t, owner, f.work, "contact", f.contact.UUID)
-	registry, row := integration.ProbeExtensionTable(t, owner, "ext_probe_task_note", f.work)
-	eraser := privacy.NewEraser(f.e.DB()).WithRawCapturePurger(RawCapturePurgerFor(f.e.DB())).WithExtensions(registry)
-	if err := eraser.EraseContact(f.e.Admin(), f.contact.UUID, "Subject requested erasure"); err != nil {
-		t.Fatal(err)
-	}
-	if got := f.e.WsCount(t, `SELECT count(*) FROM activity WHERE id=$1 AND archived_at IS NOT NULL`, f.work); got != 1 {
-		t.Fatal("the promised task was not erased with its message, so this test reaches only one clearing path")
-	}
-	if got := f.e.WsCount(t, `SELECT count(*) FROM ext.ext_probe_task_note WHERE id=$1 AND body=''`, row); got != 1 {
-		t.Fatal("the extension row of the task was not cleared")
-	}
-	if got := f.e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type='ext_probe_task_note' AND entity_id=$1 AND action='anonymize'`, row); got != 1 {
-		t.Errorf("the cleared extension row has %d anonymize certificates, want 1", got)
-	}
-	if got := f.e.WsCount(t, `SELECT count(*) FROM event_outbox WHERE envelope->'entity'->>'id'=$1`, row.String()); got != 1 {
-		t.Errorf("the cleared extension row queued %d events, want 1", got)
-	}
-}

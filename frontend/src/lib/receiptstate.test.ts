@@ -3,7 +3,7 @@
 
 import { describe, expect, it } from "vitest";
 import type { Receipt } from "./handled";
-import { receiptAuditId } from "./receiptreview";
+import { receiptAuditId } from "./receiptstate";
 
 const base: Receipt = {
   id: "11111111-1111-4111-8111-111111111111",
