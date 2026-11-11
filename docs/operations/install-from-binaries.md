@@ -22,13 +22,19 @@ more of you and leaves you holding each part.
 ## Build the three programs
 
 Margince is three programs out of one module. Run these from the repository
-root, which is where the later commands expect to be:
+root, which is where the later commands expect to be.
+
+Stamp all three with one release identifier, or the
+[release guard](../explanation/self-hosting.md#every-role-runs-at-one-release)
+is off. Any stable per-build identifier will do, such as a commit sha, but it
+must not be empty or `dev`. Set `MY_BUILD_ID` to it first:
 
 ```sh
 mkdir -p bin
-go build -C backend -o ../bin/margince-migrate ./cmd/migrate
-go build -C backend -o ../bin/margince-api     ./cmd/api
-go build -C backend -o ../bin/margince-worker  ./cmd/worker
+stamp="-X github.com/margince/margince/backend/internal/shared/buildinfo.ReleaseVersion=$MY_BUILD_ID"
+go build -C backend -ldflags "$stamp" -o ../bin/margince-migrate ./cmd/migrate
+go build -C backend -ldflags "$stamp" -o ../bin/margince-api     ./cmd/api
+go build -C backend -ldflags "$stamp" -o ../bin/margince-worker  ./cmd/worker
 ```
 
 `bin/` is not in the repository, so a clean checkout has to be told to make it.
@@ -36,7 +42,8 @@ go build -C backend -o ../bin/margince-worker  ./cmd/worker
 
 Those three are the server. They do not carry the web app: that is a
 Vite build served as static files, which
-[how-to/deploy-margince.md](../how-to/deploy-margince.md) covers.
+[how-to/deploy-margince.md](../how-to/deploy-margince.md) covers. Give it the
+same identifier.
 
 With anything under `extensions/`, build through the composed workspace
 instead, or the binaries resolve the committed stub and leave every enabled
@@ -45,9 +52,9 @@ built against it:
 
 ```sh
 GOWORK="$PWD/go.work" go run -C backend ./tools/gen-composition
-GOWORK="$PWD/build/composition/go.work" go build -C backend -o ../bin/margince-migrate ./cmd/migrate
-GOWORK="$PWD/build/composition/go.work" go build -C backend -o ../bin/margince-api     ./cmd/api
-GOWORK="$PWD/build/composition/go.work" go build -C backend -o ../bin/margince-worker  ./cmd/worker
+GOWORK="$PWD/build/composition/go.work" go build -C backend -ldflags "$stamp" -o ../bin/margince-migrate ./cmd/migrate
+GOWORK="$PWD/build/composition/go.work" go build -C backend -ldflags "$stamp" -o ../bin/margince-api     ./cmd/api
+GOWORK="$PWD/build/composition/go.work" go build -C backend -ldflags "$stamp" -o ../bin/margince-worker  ./cmd/worker
 ```
 
 An installation with no extensions composes the empty set, and its output is
