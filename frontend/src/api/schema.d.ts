@@ -5673,10 +5673,13 @@ export interface paths {
         put?: never;
         /**
          * Accept a recorded automatic deal change.
+         * @deprecated
          * @description Records the human's acceptance of a change Margince made to a deal (its
          *     audit id). It keeps the applied values;
          *     acceptance is an audited review decision, not another application of the change.
          *     Requires the displayed deal version. A reversed or superseded change is refused.
+         *     An accepted change leaves the pending list and keeps its Undo. Margince itself no
+         *     longer asks for this; undo a change instead of accepting the ones you keep.
          */
         post: operations["acceptAppliedDealChange"];
         delete?: never;
@@ -5720,9 +5723,11 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * The changes Margince made to your deals that you have not accepted or undone.
-         * @description One bundle per deal: every open change Margince made to one of the caller's own deals,
-         *     newest first inside the bundle. The counts are deals, counted in SQL over every open
+         * The changes Margince made to your deals in the last 7 days that you have not undone.
+         * @description One bundle per deal: every open change Margince made to one of the caller's own deals
+         *     in the last 7 days, newest first inside the bundle. An older change stays in the
+         *     deal's own list with its Undo. A change accepted through the deprecated accept
+         *     route is left out. The counts are deals, counted in SQL over every open
          *     change, so a deal changed twice counts once and a cut list never shrinks a count.
          *     Bundles are ordered by the deal's value in the base currency, the largest first. At
          *     most 500 bundles; `truncated` says when more exist.
@@ -56824,11 +56829,19 @@ export interface components {
         AppliedDealChangeReview: {
             /** @enum {string} */
             kind: "close_date" | "close_lost" | "amount" | "probability" | "stage" | "deal_open" | "deal_revive";
+            /**
+             * @deprecated
+             * @description Whether the change was accepted through the deprecated accept route.
+             */
             accepted: boolean;
             reversed: boolean;
             /** Format: int64 */
             version: number;
             can_undo: boolean;
+            /**
+             * @deprecated
+             * @description Whether the deprecated accept route would take this change.
+             */
             can_accept: boolean;
             /** @description Whether this reader may write this deal. */
             writable: boolean;
