@@ -94,6 +94,12 @@ Secrets belong in the environment or an env file, not in that YAML.
 [configuration.md](../reference/configuration.md) says in which order the
 sources are read.
 
+The api and the worker each need a license token to start. The example names
+none, and a host that does not set `MARGINCE_ENV` runs in production mode,
+which refuses to start without one. Set `MARGINCE_LICENSE` for both. How to get a
+token is in
+[how-to/deploy-margince.md](../how-to/deploy-margince.md#get-a-license-token).
+
 ## Write the schema
 
 `migrate` needs a Postgres role that may create objects. It reads
@@ -121,13 +127,18 @@ flags each takes, are in
 Both read the same configuration, and each runs until it is stopped. They need
 a terminal each. Both connect as the serving role, `margince_app`, which they
 read from `MARGINCE_DSN`. The owner DSN the migration used does not carry over.
+
 Both reach Redis at `MARGINCE_REDIS`, which is `localhost:16379` unless you set
-it. The API takes the address it listens on, and the worker the address of its
-probes:
+it. Give the installation a Redis of its own, or a logical database no other
+installation uses, such as `redis-host:6379/1`. Two installations on one
+database read each other's events, and each loses some of its own.
+
+The API takes the address it listens on, and the worker the address of its
+probes. `--inline-relay=false` leaves the event relay to the worker:
 
 ```sh
 export MARGINCE_DSN=postgres://margince_app:...@db/margince MARGINCE_REDIS=redis-host:6379
-./bin/margince-api --config margince.yaml --addr 127.0.0.1:8080
+./bin/margince-api --config margince.yaml --addr 127.0.0.1:8080 --inline-relay=false
 ```
 
 ```sh
@@ -156,13 +167,17 @@ Ask the address the API printed:
 curl -i http://127.0.0.1:8080/readyz
 ```
 
-A ready installation answers `200` and one word:
+A ready installation answers `200` and `ready`, then a line on the search
+index. The API can add a line on the AI features:
 
 ```
 HTTP/1.1 200 OK
 
 ready
+embed: active
 ```
+
+That last line reports and never decides: `unknown` there is still ready.
 
 It answers `503` and `unready: <name>` while a dependency it needs is not
 answering, and the name says which one. The API checks Redis only when it runs
