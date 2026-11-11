@@ -34011,7 +34011,12 @@ type AnswerCalendarInvitationRequestResponse string
 
 // AppliedDealChangeReview The recorded automatic change and its current review state.
 type AppliedDealChangeReview struct {
-	Accepted  bool                        `json:"accepted"`
+	// Accepted Whether the change was accepted through the deprecated accept route.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	Accepted bool `json:"accepted"`
+
+	// CanAccept Whether the deprecated accept route would take this change.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	CanAccept bool                        `json:"can_accept"`
 	CanUndo   bool                        `json:"can_undo"`
 	Kind      AppliedDealChangeReviewKind `json:"kind"`
@@ -92809,7 +92814,7 @@ type ServerInterface interface {
 	// Download the Art. 15 package an access request asks for.
 	// (GET /data-subject-requests/{id}/package)
 	DownloadDataSubjectPackage(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
-	// The changes Margince made to your deals that you have not accepted or undone.
+	// The changes Margince made to your deals in the last 7 days that you have not undone.
 	// (GET /deal-corrections/pending)
 	GetPendingMarginceChanges(w http.ResponseWriter, r *http.Request)
 	// Undo several changes Margince made, one deal at a time.
@@ -97285,7 +97290,7 @@ func (_ Unimplemented) DownloadDataSubjectPackage(w http.ResponseWriter, r *http
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// The changes Margince made to your deals that you have not accepted or undone.
+// The changes Margince made to your deals in the last 7 days that you have not undone.
 // (GET /deal-corrections/pending)
 func (_ Unimplemented) GetPendingMarginceChanges(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
