@@ -8,7 +8,21 @@ import { UTC_ZONE } from "../../format/timezone";
 import { view } from "../../testing/contactpage.testkit";
 import { recipientSuggestions } from "./composehead";
 
+type Contact = components["schemas"]["Contact"];
 type User = components["schemas"]["User"];
+
+function aroundContact(
+  overrides: Partial<Contact> & Pick<Contact, "id">,
+): Contact {
+  return {
+    full_name: "Cole League",
+    source: "manual",
+    captured_by: "human:u-1",
+    created_at: "2026-08-15T09:00:00Z",
+    updated_at: "2026-08-15T09:00:00Z",
+    ...overrides,
+  };
+}
 
 function member(overrides: Partial<User>): User {
   return {
@@ -24,7 +38,10 @@ function member(overrides: Partial<User>): User {
 
 describe("recipientSuggestions", () => {
   it("offers workspace members after the record's own contacts", () => {
-    const offered = recipientSuggestions(view, undefined, [member({})]);
+    const offered = recipientSuggestions({
+      contact: view,
+      colleagues: [member({})],
+    });
     expect(offered.map((row) => row.value)).toEqual([
       "dana@brandt.example",
       "sofia@gradion.test",
@@ -32,29 +49,55 @@ describe("recipientSuggestions", () => {
     expect(offered[1]?.label).toBe("Sofia Keller");
   });
 
-  it("leaves out agents and members who cannot read mail", () => {
-    const offered = recipientSuggestions(undefined, undefined, [
-      member({ id: "a", email: "bot@gradion.test", is_agent: true }),
-      member({ id: "s", email: "gone@gradion.test", status: "suspended" }),
-      member({ id: "d", email: "left@gradion.test", status: "deactivated" }),
-      member({ id: "i", email: "new@gradion.test", status: "invited" }),
+  it("offers the contacts around the contact between it and the members", () => {
+    const offered = recipientSuggestions({
+      contact: view,
+      related: [
+        aroundContact({
+          id: "p-2",
+          title: "Head of IT",
+          primary_email: "cole@nordwand.example",
+          employer: { company_id: "co-1", company_name: "Nordwand" },
+        }),
+        aroundContact({
+          id: "p-3",
+          full_name: "No Address",
+          primary_email: null,
+        }),
+      ],
+      colleagues: [member({})],
+    });
+    expect(offered.map((row) => row.value)).toEqual([
+      "dana@brandt.example",
+      "cole@nordwand.example",
+      "sofia@gradion.test",
     ]);
+    expect(offered[1]?.card?.about).toBe("Head of IT · Nordwand");
+  });
+
+  it("leaves out agents and members who cannot read mail", () => {
+    const offered = recipientSuggestions({
+      colleagues: [
+        member({ id: "a", email: "bot@gradion.test", is_agent: true }),
+        member({ id: "s", email: "gone@gradion.test", status: "suspended" }),
+        member({ id: "d", email: "left@gradion.test", status: "deactivated" }),
+        member({ id: "i", email: "new@gradion.test", status: "invited" }),
+      ],
+    });
     expect(offered.map((row) => row.value)).toEqual(["new@gradion.test"]);
   });
 
   it("skips teams, which have no address", () => {
-    const offered = recipientSuggestions(undefined, undefined, [
-      { id: "t-1", name: "Sales" },
-      member({}),
-    ]);
+    const offered = recipientSuggestions({
+      colleagues: [{ id: "t-1", name: "Sales" }, member({})],
+    });
     expect(offered.map((row) => row.value)).toEqual(["sofia@gradion.test"]);
   });
 
   it("offers an address once when a contact and a member share it", () => {
-    const offered = recipientSuggestions(undefined, undefined, [
-      member({}),
-      member({ id: "u-2", display_name: "Sofia K." }),
-    ]);
+    const offered = recipientSuggestions({
+      colleagues: [member({}), member({ id: "u-2", display_name: "Sofia K." })],
+    });
     expect(offered).toHaveLength(1);
   });
 });
