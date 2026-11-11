@@ -138,7 +138,7 @@ func seedTwoEngagementAccount(t *testing.T, e *Env) scopeFixture {
 	}
 
 	mail := func(subject string, within *ids.ProjectID, occurredAt time.Time, others ...ids.UUID) string {
-		return log(activities.LogActivityInput{Kind: "email", Direction: new("inbound")}, subject, within, occurredAt, others...)
+		return log(activities.LogActivityInput{Kind: "email", Direction: new("inbound"), SenderContactID: &contact}, subject, within, occurredAt, others...)
 	}
 	task := func(subject string, within *ids.ProjectID) string {
 		return log(activities.LogActivityInput{Kind: "task"}, subject, within, roomFixedNow.AddDate(0, 0, -1))
