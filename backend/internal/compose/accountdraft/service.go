@@ -165,6 +165,24 @@ func NewService(view Assembler, lane Completer) *Service {
 	return &Service{view: view, lane: lane, envelope: draftfloor.NewResolver()}
 }
 
+// ViewOptions is the 360 read one draft is folded from. The timeline keeps
+// only the rows a human wrote and the rows the recipient is a party to, both
+// before its cap.
+//
+// The recipient narrowing is a privacy rule. A colleague's mail to us
+// from the same company is not the recipient's conversation. A folded item does
+// not say who wrote it, so the model cannot keep it out by itself.
+func ViewOptions(req Request) (company360.AssembleOptions, error) {
+	recipient, err := ids.ParseAs[ids.ContactKind](req.ContactID)
+	if err != nil {
+		return company360.AssembleOptions{}, fieldError("contact_id",
+			"that contact is not a contact you can see on this account")
+	}
+	return company360.AssembleOptions{
+		ProjectID: req.ProjectID, WrittenByHumanOnly: true, PartyContactID: &recipient,
+	}, nil
+}
+
 // Draft writes one email, and names the records it was written from so a
 // caller that keeps it can re-prove them. It performs no write of any kind.
 func (s *Service) Draft(
@@ -179,7 +197,11 @@ func (s *Service) Draft(
 	// account they cannot read refuses before a word is written, a contact
 	// or deal they cannot see is not in the view to be found, and a project
 	// they cannot see refuses the scoped read itself (activities.RequireProjectScope).
-	view, err := s.view.AssembleScoped(ctx, companyID, company360.AssembleOptions{ProjectID: req.ProjectID, WrittenByHumanOnly: true})
+	opts, err := ViewOptions(req)
+	if err != nil {
+		return crmcontracts.CompanyEmailDraft{}, nil, err
+	}
+	view, err := s.view.AssembleScoped(ctx, companyID, opts)
 	if err != nil {
 		return crmcontracts.CompanyEmailDraft{}, nil, err
 	}

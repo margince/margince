@@ -158,6 +158,10 @@ type ListActivitiesInput struct {
 	// WrittenByHuman keeps only rows a human wrote (relstrength.WrittenByHumanSQL),
 	// before the limit, for a reader of correspondence such as a brief.
 	WrittenByHuman bool
+	// PartyContactID keeps only the rows this contact is a party to
+	// (contactIsPartySQL), before the limit, for a draft written to them.
+	// Nil leaves the read unnarrowed.
+	PartyContactID *ids.ContactID
 	// OccurredAfter / OccurredBefore bound the timeline to a range: the
 	// lower end inclusive, the upper end exclusive, so a calendar day is
 	// [day 00:00, next day 00:00) with no double-counting at midnight.
