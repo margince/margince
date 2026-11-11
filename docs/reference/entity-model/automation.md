@@ -6,13 +6,14 @@ The 3 tables owned by `automation`, as the migrations build them. [Back to the e
 
 ## automation
 
-16 columns · primary key `(id)` · referenced by 0 foreign keys
+17 columns · primary key `(id)` · referenced by 1 foreign key
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `action` | `jsonb` | yes |  |
 | `enabled` | `boolean`, default `false` | yes |  |
+| `enabled_from` | `timestamp with time zone` |  |  |
 | `key` | `text` | yes | The catalog type this instance is built from. |
 | `name` | `text` | yes |  |
 | `origin` | `text`, default `'catalog'::text` | yes | One of `catalog`, `agent_authored`. |
@@ -52,7 +53,7 @@ The 3 tables owned by `automation`, as the migrations build them. [Back to the e
 
 ## automation_effect_claim
 
-6 columns · primary key `(id)` · referenced by 0 foreign keys
+7 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -61,6 +62,7 @@ The 3 tables owned by `automation`, as the migrations build them. [Back to the e
 | `effect_fingerprint` | `text` | yes |  |
 | `handler` | `text` | yes |  |
 | `occurrence_key` | `text` | yes |  |
+| `planned` | `jsonb` |  |  |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 
 **Rules**

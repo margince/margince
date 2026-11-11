@@ -77,6 +77,11 @@ func TestCalendarAgendaNeedsAuthoredNotesBeforeARecap(t *testing.T) {
 			if ready, err := store.ReadyForRecap(e.Admin(), id, now); !ready || err != nil {
 				t.Fatalf("authored-note recap readiness = %v, %v", ready, err)
 			}
+			bounded := e.As(e.AdminUser, nil, principal.Permissions{Objects: integration.AdminPerms.Objects, RowScope: principal.RowScopeOwn})
+			if ready, err := store.ReadyForRecap(bounded, id, now); !ready || err != nil {
+				t.Fatalf("owned meeting recap readiness = %v, %v", ready, err)
+			}
+
 		})
 	}
 }

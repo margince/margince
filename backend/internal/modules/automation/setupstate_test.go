@@ -22,7 +22,7 @@ func TestConfigurationStateDoesNotConfuseSetupWithRunOutcomes(t *testing.T) {
 		{"draft has no authorizer", Automation{Key: postMeetingRecapName, Params: json.RawMessage(`{}`)}, true, "needs_setup", "authorizer_missing"},
 		{"authorizer deactivated", Automation{Key: routeLeadName, OwnerID: &owner, Enabled: true, Params: json.RawMessage(`{}`)}, false, "needs_attention", "authorizer_inactive"},
 		{"healthy rule with a failed run", Automation{Key: routeLeadName, OwnerID: &owner, Enabled: true, Params: json.RawMessage(`{}`), Runs: &RunSummary{LastRunStatus: new("failed")}}, true, "on", ""},
-		{"paused by a person", Automation{Key: routeLeadName, Params: json.RawMessage(`{}`)}, true, "paused", ""},
+		{"paused by a colleague", Automation{Key: routeLeadName, Params: json.RawMessage(`{}`)}, true, "paused", ""},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

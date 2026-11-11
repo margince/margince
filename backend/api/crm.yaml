@@ -16425,7 +16425,7 @@ paths:
     put:
       tags: [WebForms]
       operationId: saveWebFormHandling
-      security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
+      security: [ { cookieAuth: [] } ]
       x-agent-access: human-only
       x-human-only-reason: covered
       summary: Save the reviewed inquiry policy and form link together.
@@ -16460,6 +16460,7 @@ paths:
     post:
       tags: [WebForms]
       operationId: previewWebFormHandling
+      x-settings-audience: member
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       x-mcp-tool: { verb: preview_website_inquiries, router: read_details, action: website_inquiry_preview, tier: auto_execute, scope: read, served_by: route }
       summary: Preview inquiry deadlines and explicitly selected accepted submissions without writing.
@@ -38216,7 +38217,7 @@ components:
       additionalProperties: false
       required: [field, equals, owner_id]
       properties:
-        field: { type: string, enum: [origin, company_name, candidate_company_key] }
+        field: { type: string, enum: [origin, company_name, candidate_company_key], x-extensible-enum: true }
         equals: { type: string }
         owner_id: { type: string, format: uuid }
 
@@ -38237,6 +38238,7 @@ components:
     WebsiteInquiryMode:
       type: string
       enum: [one_colleague, rotate, coordinator]
+      x-extensible-enum: true
       description: Keep an eligible existing owner; otherwise route through selected colleagues or coordinator review.
 
     WebsiteInquiryExistingRequest:
@@ -38330,12 +38332,12 @@ components:
       additionalProperties: false
       required: [mode, recipient_id]
       properties:
-        mode: { type: string, enum: [take, assign_and_follow_up], x-extensible-enum: true }
+        mode: { type: string, enum: [take, assign_and_follow_up] }
         recipient_id: { type: string, format: uuid }
-        record_type: { type: string, enum: [lead, contact], x-extensible-enum: true, description: Required when applying; use the record type from the preview. }
+        record_type: { type: string, enum: [lead, contact], description: Required when applying; use the record type from the preview. }
         record_id: { type: string, format: uuid, description: Required when applying; use the record ID from the preview. }
         record_version:
-          allOf: [{ $ref: '#/components/schemas/RowVersion' }]
+          $ref: '#/components/schemas/RowVersion'
           description: Required when applying the assignment. Use the version returned by its preview.
     WebsiteInquiryAssignment:
       type: object

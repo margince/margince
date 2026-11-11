@@ -150,7 +150,6 @@ var writesWithoutARowProbe = gatekit.Waive(map[string]string{
 
 	"internal/modules/contacts:recomputeUnderOverrideTx": "the sticky-override branch of recomputeLeadScoreTx, reached from nowhere else. Its four callers each take the row probe before they get here — RecomputeLeadScore, both manual-signal paths and UpdateLead — and the probe belongs at those entry points rather than in a branch, because an archived lead is a silent no-op to the workflow lane and a 404 to a human",
 
-	"internal/modules/contacts:RouteLead":             "routing assigns an ownerless lead to a chosen rep, and an ownerless row is nobody's to write by construction (the write arm renders no owner_id IS NULL branch) — auth.EnsureWritable here could only ever refuse. It self-guards instead: a lead that already has an owner returns already_owned before anything is written, so routing can never overwrite a human's assignment. The claim-then-write primitive this shape wants is storekit.ClaimOwnership, which takes the claimant as `me` and so does not fit an assignment to a third party",
 	"internal/modules/deals:sweepWorkspace":           "the close-date sweep's inner pass, reached only from SweepWorkspace",
 	"internal/modules/deals:correct":                  "one close-date correction inside that sweep",
 	"internal/modules/deals:apply":                    "the correction's write, reached only from correct",

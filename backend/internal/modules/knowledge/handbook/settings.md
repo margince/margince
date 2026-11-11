@@ -11,8 +11,6 @@ Settings opens on **Overview**, which lists every page you can open. The page li
 A long page splits into tabs at its top, such as **Booking links**, **Availability** and **Guest page** on **Meetings**. Each tab has its own address, so a link can open one tab.
 To go right to one page, press ⌘K (Ctrl+K) and type its name, or the name of a setting on it. Or type into **Search settings** at the top of the settings list. When the page was found by one of its settings, **Search settings** shows that setting under the page name.
 
-Also called: preferences, admin settings, configuration, options.
-
 ### What settings pages are there?
 Margince Settings puts its pages in these groups:
 - **You**: Account, Notifications, Meetings, Writing voice, AI assistants, Connections.
@@ -242,26 +240,15 @@ Changes start to work in about 60 seconds; a call already running keeps its old 
 
 ## Automations
 
-**Automations** is in the **Data** group. Its tabs are **Your automations** and **Starter library**.
-The person under **Authorized by** sets which actions a rule may take. Each run checks their current access.
+**Automations** is in the **Data** group. Its tabs are **Your automations** and **Starter library**. The person under **Authorized by** sets which actions a rule may take. Each run checks their current access.
 
-The library groups rules under **New inquiries**, **Deals**, **Customers**, **Meetings** and **Lists**.
-**Needs setup** means required choices are missing. **Needs attention** gives the reason to check a rule,
-such as an inactive account. **On** and **Paused** show the rule's setting. The result of each run
-stays in its history.
+Rules show **Needs setup**, **Needs attention**, **On** or **Paused**. Their run history keeps each result. For website questions, use [questions from your site](connect-your-website.md#who-handles-questions-from-a-form). List rules are in [Lists and filters](lists-filters-and-views.md#can-an-automation-act-on-a-live-list).
 
-For a stage rule, choose a pipeline and the stages that should cause work. A task rule also needs
-a title and a deadline. A stage notice that has no stages chosen starts paused.
+Choose the group, recipient and task title before turning on a rule. **Prepare for a renewal** also needs a date field and reminder days. **Repeat each year** is optional. Its preview shows dates and records missing a date.
 
-For **Prepare for a renewal**, choose the record type, date field, who gets the task and how many days before the date to remind them. **Repeat each year** is a choice, not the default. Preview shows the next date and when to remind, plus how many records have no date.
+Review the first run of a date or quiet-record rule: records already in its group can get work. Preview reads only what both you and **Authorized by** may read. Event rules start **From now on**; **Historical preview unavailable** means they cannot count past events.
 
-Before you turn on a rule that checks dates or quiet records, review its first run. Records already in the chosen group can get work at the next check. The preview shows only records that both you and the person under **Authorized by** may read.
-
-Event rules show **From now on** and **Historical preview unavailable**. Turning one on does not process old records. A count of current records would not tell you which past events the rule could have handled.
-
-With a saved time zone, a follow-up task is due at the end of the chosen day in that zone. Without one, an existing rule keeps its old deadline.
-
-**Automations** is the list of rules that do an action when something happens. Three rules look at a Live List. When a record comes into it or leaves it, they add a task, tell the rule's owner, or add the record to a Shortlist. They run from the check every 15 minutes, once per record the owner can see. More than 100 changes in one check, an archived list or a filter that no longer works stop the rule until its owner starts it again.
+A stage rule needs its pipeline and stages. With a saved time zone, task deadlines end on the chosen local day. Existing rules without one keep their old deadline.
 
 **Monthly AI allowance**: Admin and Ops set it; Management can read it but not change it. The default is 12 million tokens each month for each full user who is active, shared by the whole company. It is one company total measured in tokens, with no limit per user and no money limit. You can set a fixed company total instead of the sum, which does not delete the number per user under it. With no users that count, the sum counts one.
 
@@ -410,11 +397,3 @@ On that page a sales seat may only add entries, such as a consumer mail domain m
 A few things ask for the Admin role itself. Two are for most readers to know. Only an Admin may act on another Admin's account or give out the Admin role. And only an Admin reads or changes the company context.
 
 Changing who is on a team, and giving a role more, are for the Admin too. The rules are in [Seats, roles and who can see what](seats-roles-and-access.md). Some actions that fix things ask for the role too. Apart from that, nobody can move the last Admin to a lower role or turn them off, so an installation always keeps one.
-
-## Two things administrators should decide early
-
-Two Margince settings are worth deciding before anything else.
-
-**Your own email domains.** Get these right before you connect mailboxes. They decide what counts as internal, and you cannot undo all of that decision.
-
-**Your retention rules.** Your company starts with retention rules already running. Read them in **Privacy and retention** before Margince first deletes anything.

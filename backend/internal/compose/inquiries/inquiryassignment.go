@@ -14,6 +14,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -54,8 +55,7 @@ func (s Assignment) Apply(ctx context.Context, id ids.ActivityID, version int64,
 				return apperrors.ErrVersionSkew
 			}
 			if err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-				_, err := storekit.LockRow(ctx, tx, string(planned.RecordType), ids.UUID(planned.RecordId), storekit.LiveOnly)
-				return err
+				return s.contacts.LockInquiryTargetTx(ctx, tx, datasource.EntityRef{Type: datasource.EntityType(planned.RecordType), ID: ids.UUID(planned.RecordId)})
 			}); err != nil {
 				return err
 			}
@@ -69,6 +69,9 @@ func (s Assignment) Apply(ctx context.Context, id ids.ActivityID, version int64,
 
 func (s Assignment) plan(ctx context.Context, id ids.ActivityID, in crmcontracts.WebsiteInquiryAssignmentRequest) (crmcontracts.WebsiteInquiryAssignment, error) {
 	var out crmcontracts.WebsiteInquiryAssignment
+	if err := httperr.RequireBodyID("recipient_id", ids.UUID(in.RecipientId)); err != nil {
+		return out, err
+	}
 	task, source, err := s.acceptedTask(ctx, id)
 	if err != nil {
 		return out, err

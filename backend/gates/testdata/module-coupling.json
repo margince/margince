@@ -31,10 +31,6 @@
     "assurance_task_item.assurance_task_item_subject_signal_id_fkey": "FOREIGN KEY (subject_signal_id) REFERENCES signal(id) ON DELETE CASCADE",
     "assurance_task_item.assurance_task_item_task_activity_id_fkey": "FOREIGN KEY (task_activity_id) REFERENCES activity(id) ON DELETE CASCADE"
   },
-  "automation": {
-    "automation.automation_owner_fkey": "FOREIGN KEY (owner_id) REFERENCES app_user(id) ON DELETE SET NULL (owner_id)",
-    "automation.automation_setter_passport_id_fkey": "FOREIGN KEY (setter_passport_id) REFERENCES passport(id) ON DELETE SET NULL"
-  },
   "commissions": {
     "commission_entry.commission_entry_deal_id_fkey": "FOREIGN KEY (deal_id) REFERENCES deal(id) ON DELETE CASCADE",
     "commission_entry.commission_entry_partner_company_id_fkey": "FOREIGN KEY (partner_company_id) REFERENCES company(id) ON DELETE CASCADE"
@@ -95,6 +91,7 @@
     "graph_interaction_edge.graph_interaction_edge_workspace_id_user_id_fkey": "FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE"
   },
   "webforms": {
+    "web_form.web_form_handling_automation_id_fkey": "FOREIGN KEY (handling_automation_id) REFERENCES automation(id) ON DELETE RESTRICT",
     "web_form.web_form_lead_origin_fkey": "FOREIGN KEY (lead_origin) REFERENCES lead_origin(key) ON UPDATE RESTRICT ON DELETE SET NULL",
     "web_form.web_form_owner_id_fkey": "FOREIGN KEY (owner_id) REFERENCES app_user(id) ON DELETE SET NULL",
     "web_form.web_form_product_id_fkey": "FOREIGN KEY (product_id) REFERENCES product(id) ON DELETE RESTRICT"

@@ -372,17 +372,15 @@ Also called: delete a list, rename a list, change who can see a list.
 
 ### Can an automation act on a Live List?
 Yes. **Settings** → **Automations** has three rules that watch a Live List:
-<!-- prose:allow bold quotes the rule names as Settings → Automations shows them -->
-- **Create a task when someone joins this list**: a task with your title for the person you choose.
-<!-- prose:allow bold quotes the rule names as Settings → Automations shows them -->
-- **Tell me when this list changes**: a notice to the person named under **Authorized by**.
-<!-- prose:allow bold quotes the rule names as Settings → Automations shows them -->
+- **Create a task when someone joins this list**: a task with your title for the colleague you choose.
+- **Tell me when this list changes**: a notice to the colleague named under **Authorized by**.
 - **Save matching records to a list**.
 1. Pick the Live List to watch, and choose whether the rule acts when a record joins, leaves, or either. For the Shortlist rule, pick a Shortlist of the same record type. A record already on it stays as it is. The follow-up task is due in 2 days unless you change it.
 2. The rule acts after the 15-minute check, once for each record you can see that joined or left.
 3. When one check moves more than 100 records, the rule acts on none of them and pauses itself.
 
 It also pauses when the list is archived, when its filter stops working, or when you can no longer find the list. A paused rule says why and stays paused until its owner starts it again. Restoring or fixing the list does not start it again. A rule cannot start again while its list is archived or its filter is broken. A follow-up task never names the list, because the list may be private.
+
 The first check of a Live List sets its starting members and makes no work. The first check after a filter change also makes no work. New rules skip records changed by an import. To include them, choose **Also act on records changed by imports**. A rule set up before this choice was added keeps its old setting until you review it.
 
 Also called: list trigger, when someone joins a list, list workflow.

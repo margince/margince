@@ -141,7 +141,7 @@ var unguardedByIDUpdates = gatekit.Waive(map[string]string{
 	"internal/modules/deals:movePipeline":                  "runs only inside ReorderPipelines, under lockCatalog's FOR UPDATE on every live pipeline, taken in id order before any move",
 	"internal/modules/deals:recomputeOfferTotals":          "every caller holds the offer row lock via visibleOfferLocked, except createOfferTx where the offer row was inserted in the same transaction",
 	"internal/modules/privacy:archiveLead":                 "terminal absolute write: the retention sweep archives an over-age unconverted lead regardless of concurrent state, by design; archived_at IS NULL keeps a second pass from restamping it",
-	"internal/modules/webforms:ArchiveForm":                "absolute idempotent archive transition; the RETURNING + archived_at IS NULL predicate makes a lost race read as already archived (intake stops at archive)",
+	"internal/modules/webforms:archiveForm":                "absolute idempotent archive transition; the RETURNING + archived_at IS NULL predicate makes a lost race read as already archived (intake stops at archive)",
 	"internal/modules/webhooks:ArchiveSubscription":        "absolute idempotent archive transition; the RETURNING + archived_at IS NULL predicate makes a lost race read as already archived (delivery stops at archive)",
 	"internal/compose/briefs:writeRunNarrative":            "the run's narrative, written under the FOR UPDATE briefannotate.go takes on that day's run before it composes one, so two passes reaching one rep's morning are ordered by it",
 	"internal/compose/briefs:markItem":                     "lockItemForMark reads the queue item FOR UPDATE and this fills it in, so the state the mark validated is the state it writes over",
@@ -242,7 +242,7 @@ var unguardedByIDUpdates = gatekit.Waive(map[string]string{
 	// now carry the version the approval was granted against and are no longer
 	// waived here. The entries that remain are types no approval ever pins.
 
-	"internal/modules/automation:Archive":        "absolute idempotent archive transition; concurrent archives converge, the visibility pre-read only feeds the audit before-image",
+	"internal/modules/automation:archive":        "absolute idempotent archive transition; concurrent archives converge, the visibility pre-read only feeds the audit before-image",
 	"internal/modules/approvals:recordEffectRan": "absolute transition after the work ran: the single-use redemption already admitted exactly one run, and the mark must land whatever the row looks like now",
 
 	// Writes that run UNDER a lock taken by their caller (or a lock the

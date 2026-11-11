@@ -307,7 +307,7 @@ func seededCatalogEntries() []CatalogEntry {
 			Key:          postMeetingRecapName,
 			Group:        crmcontracts.AutomationCatalogEntryGroupMeetings,
 			Name:         "Draft a follow-up after a meeting",
-			Description:  "Drafts a follow-up once a customer meeting is held and has usable notes. The draft waits for a person and is never sent by the rule.",
+			Description:  "Drafts a follow-up once a customer meeting is held and has usable notes. The draft waits for a colleague and is never sent by the rule.",
 			Trigger:      eventActivityCaptured,
 			Action:       string(ActionTypeDraftEmail),
 			Tier:         tierAutoExecute,

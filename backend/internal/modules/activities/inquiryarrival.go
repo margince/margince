@@ -80,7 +80,7 @@ func (s *Store) ReuseWebsiteArrivalTask(ctx, admit context.Context, key string, 
 
 func (s *Store) inquiryArrivalPatch(ctx context.Context, tx pgx.Tx, id ids.ActivityID, source, recipient ids.UUID, due time.Time) (UpdateActivityInput, error) {
 	var holderEdited, deadlineEdited bool
-	// A delayed rule fills in handling details without undoing a person's choices.
+	// A delayed rule fills in handling details without undoing the colleague's choices.
 	err := tx.QueryRow(ctx, `SELECT COALESCE(bool_or("after" ? 'assignee_id'),FALSE),COALESCE(bool_or("after" ?| @deadline_fields),FALSE)
  FROM audit_log WHERE entity_type='activity' AND entity_id=@id AND actor_type=ANY(@actors)`, pgx.NamedArgs{
 		"id": id.UUID, "deadline_fields": []string{"due_at", fieldDueHasTime}, "actors": []string{string(principal.PrincipalHuman), string(principal.PrincipalAgent)},

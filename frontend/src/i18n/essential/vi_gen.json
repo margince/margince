@@ -1850,6 +1850,7 @@
   "elapsed.days": "{days} ngày trước",
   "aiRouting.lane.embeddings": "Tìm kiếm và truy xuất trên các hồ sơ",
   "aiTasks.whatItDoes": "{task}: tác vụ này làm gì",
+  "webForms.handlingBusy": "Biểu mẫu đang được xử lý. Vui lòng thử lại.",
   "reindexbanner.needed": "Cần lập chỉ mục lại",
   "reindexbanner.link": "Xem lại trong Cài đặt",
   "contact.strip.never": "Chưa có",

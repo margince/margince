@@ -74,7 +74,7 @@ describe("the configured automations table", () => {
     const rules = configuredAutomations(RECORDED_AT).map((rule, index) =>
       index === 0 ? { ...rule, owner_id: "u-2" } : rule,
     );
-    const people = () =>
+    const members = () =>
       jsonResponse({
         data: [
           {
@@ -91,8 +91,8 @@ describe("the configured automations table", () => {
       {
         "GET /automations": () =>
           jsonResponse({ data: rules, page: { next_cursor: null } }),
-        "GET /users": people,
-        "GET /users/names": people,
+        "GET /users": members,
+        "GET /users/names": members,
       },
     );
     const configured = within(await row("au-1"));

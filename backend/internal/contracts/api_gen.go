@@ -67040,8 +67040,11 @@ type WebsiteInquiryAssignmentRequest struct {
 	// RecordType Required when applying; use the record type from the preview.
 	RecordType *WebsiteInquiryAssignmentRequestRecordType `json:"record_type,omitempty"`
 
-	// RecordVersion Required when applying the assignment. Use the version returned by its preview.
-	RecordVersion *RowVersion `json:"record_version,omitempty"`
+	// RecordVersion Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
+	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
+	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
+	// (ErrVersionSkew) so the client re-reads before retrying.
+	RecordVersion *RowVersion `json:"record_version,omitempty" minimum:"1"`
 }
 
 // WebsiteInquiryAssignmentRequestMode defines model for WebsiteInquiryAssignmentRequest.Mode.
@@ -146685,8 +146688,6 @@ func (siw *ServerInterfaceWrapper) SaveWebFormHandling(w http.ResponseWriter, r 
 	}
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 

@@ -48,11 +48,13 @@ The prospect then sees the form's **Success message**, or goes to the **Thank-yo
 Also called: where do my website leads go, new lead from website, duplicate lead.
 
 ### Who handles questions from a form?
-Choose **Inquiry handling** beside the form. Choose one colleague, share work between selected colleagues, or ask someone to check each question first. Pick a person to check questions that need review, a task title, a deadline and its time zone.
+Choose **Inquiry handling** beside the form. Choose one colleague, share work between selected colleagues, or ask someone to check each question first. Pick a colleague to check questions that need review, a task title, a deadline and its time zone.
 
-Choose **Review handling** to check the plan. **Authorized by** names the person whose rights let the rule act. The person who checks questions and the selected colleagues get the work. Saving this plan replaces the old lead handling for this form. **Save paused** keeps the plan off and stops automatic tasks for new posts. Choose **Turn on this handling** to create tasks for future accepted posts. Turning it on leaves past questions as they are.
+Choose **Review handling** to check the plan. **Authorized by** names the colleague whose rights let the rule act. The colleague who checks questions and the selected colleagues get the work. Saving this plan replaces the old lead handling for this form.
 
-An existing owner keeps the lead or contact. A new or unowned lead follows the plan. The person who checks questions gets a task when the plan leaves the lead unassigned. A new post gets its own task. A retry with the same key keeps the old task. The deadline ends on the chosen local day, in the chosen time zone.
+**Save paused** keeps the plan off and stops automatic tasks for new posts. Choose **Turn on this handling** to create tasks for future accepted posts. Turning it on leaves past questions as they are.
+
+An existing owner keeps the lead or contact. A new or unowned lead follows the plan. The colleague who checks questions gets a task when the plan leaves the lead unassigned. A new post gets its own task. A retry with the same key keeps the old task. The deadline ends on the chosen local day, in the chosen time zone.
 
 **Request type field (optional)** can name a lead picklist sent by your website form. A value outside that list stays in the note. Leave this choice as **Not specified** if the form has no request type.
 

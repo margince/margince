@@ -17,6 +17,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/modules/automation"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -35,9 +36,7 @@ func TestInquiryAssignmentAndItsDurableChoiceCommitTogether(t *testing.T) {
 	ctx := t.Context()
 	var colleague, lead, note ids.UUID
 	var key string
-	if err := e.Owner.QueryRow(ctx, `SELECT id FROM app_user WHERE status='active' AND NOT is_agent AND archived_at IS NULL ORDER BY created_at LIMIT 1`).Scan(&colleague); err != nil {
-		t.Fatal(err)
-	}
+	colleague = apptest.SessionUserID(t, e)
 	if err := e.Owner.QueryRow(ctx, `SELECT id FROM lead WHERE email='inquiry@visitor.example'`).Scan(&lead); err != nil {
 		t.Fatal(err)
 	}

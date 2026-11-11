@@ -44,7 +44,7 @@ function setup(policy: Automation | null, failure?: number) {
         failure
           ? jsonResponse(
               {
-                code: failure === 403 ? "permission_denied" : "internal_error",
+                code: failure === 403 ? "permission_denied" : "internal",
                 detail:
                   failure === 403
                     ? "You cannot read this handling policy."

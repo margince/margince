@@ -41,6 +41,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/diffhash"
@@ -128,6 +129,9 @@ func (s *EffectClaimStore) Confirm(ctx context.Context, handler, occurrenceKey, 
 
 // StageOnce commits the approval and its occurrence claim together.
 func (s *EffectClaimStore) StageOnce(ctx context.Context, handler, occurrence, fingerprint string, stage func(context.Context) (ids.ApprovalID, error)) (ids.ApprovalID, error) {
+	if err := auth.RequireSystem(ctx); err != nil {
+		return ids.ApprovalID{}, err
+	}
 	var id ids.ApprovalID
 	err := storekit.RetryLockCycles(ctx, func() error {
 		return database.WithWorkspaceSnapshot(ctx, s.db.Pool(), func(bound context.Context) error {

@@ -38,6 +38,9 @@ func validateInquirySelections(selected []crmcontracts.WebsiteInquirySelection, 
 }
 
 func (s Settings) existingPolicy(ctx context.Context, formID ids.UUID, in crmcontracts.WebsiteInquiryExistingRequest) (automation.Automation, crmcontracts.WebsiteInquiryPolicy, error) {
+	if err := httperr.RequireBodyID("automation_id", ids.UUID(in.AutomationId)); err != nil {
+		return automation.Automation{}, crmcontracts.WebsiteInquiryPolicy{}, err
+	}
 	form, err := s.forms.GetForm(ctx, formID)
 	if err != nil {
 		return automation.Automation{}, crmcontracts.WebsiteInquiryPolicy{}, err
