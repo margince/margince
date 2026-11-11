@@ -525,6 +525,41 @@ describe("the settings dialog's access changes", () => {
   });
 });
 
+describe("an expired room takes a later end date", () => {
+  it("leaves only the end date open, and saves it", async () => {
+    const calls: string[] = [];
+    stubWithSession(
+      {
+        ...roomRoutes("expired"),
+        "PUT /deal-rooms/room-1/expiry": (body) => {
+          calls.push(`PUT ${JSON.stringify(body)}`);
+          return jsonResponse(room({ version: 2 }));
+        },
+      },
+      { deal_room: ["read", "update"] },
+    );
+    const user = userEvent.setup();
+    withProviders(<DealRoomTab dealId="deal-1" dealName="Acme Expansion" />);
+
+    await user.click(
+      (await screen.findAllByRole("button", { name: "Manage room" }))[0],
+    );
+    expect(
+      await screen.findByText(translate("en", "roomtab.manage.expiredHint")),
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText(/Room title/)).toBeDisabled();
+    await user.type(
+      screen.getByRole("textbox", { name: /Access ends on/ }),
+      "31/12/2026{Enter}",
+    );
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+
+    await waitFor(() =>
+      expect(calls).toEqual(['PUT {"expires_at":"2026-12-31T23:59:59.000Z"}']),
+    );
+  });
+});
+
 describe("the brief follows the room", () => {
   it("is written again after a thread is posted", async () => {
     const briefReads = vi.fn(() =>

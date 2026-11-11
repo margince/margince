@@ -20222,8 +20222,9 @@ paths:
         Starts LIVE, and reaches nobody: the invitation is what decides who may read
         a room, so a room nobody has been invited to is private without a second gate.
         At most one active room per deal: a second create while the first is still
-        building, ready, publishing, live or paused is rejected
-        (409 `deal_room_already_open`). Archiving the first frees the deal for another.
+        building, ready, publishing, live or paused, and has not passed its access end,
+        is rejected (409 `deal_room_already_open`). Archiving the first, or its access
+        end passing, frees the deal for another.
 
         Needs the passport permission Change records.
 
@@ -20333,7 +20334,8 @@ paths:
       description: |-
         A paused room refuses buyer reads while every credential stays valid, so
         resuming restores access without re-inviting anyone. Only a `live` room
-        pauses (409 `deal_room_not_pausable` otherwise).
+        pauses (409 `deal_room_not_pausable` otherwise), so an `expired` room is
+        refused.
 
         Needs the passport permission Change records.
 

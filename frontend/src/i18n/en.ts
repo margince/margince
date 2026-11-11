@@ -4017,7 +4017,8 @@ export const en = {
     "Paused. Buyers see a paused page until you resume.",
   "roompage.banner.closed":
     "Closed. Buyers can still read the room; nothing more is accepted.",
-  "roompage.banner.expired": "Expired. Buyer links no longer work.",
+  "roompage.banner.expired":
+    "Expired. Buyer links work again once you set a later end date.",
   "roompage.banner.archived": "Archived. No one can enter this room.",
   "roompage.banner.liveUntil": "Live. Access ends on {when}.",
   "roompage.text.title": "Room text",
@@ -12980,6 +12981,8 @@ export const en = {
   "roomtab.manage.welcomeHint": "The first paragraph a buyer reads.",
   "roomtab.manage.foot":
     "Changes reach buyers the next time they open the room.",
+  "roomtab.manage.expiredHint":
+    "Access has ended. Set a later end date to let buyers in again.",
   "threads.conversationTitle": "Conversation",
   "threads.about": "About {title}",
   "threads.aboutRemoved": "About a document no longer in the room",

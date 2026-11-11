@@ -587,6 +587,7 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "roomtab.manage.contactHint",
     "roomtab.manage.contactLabel",
     "roomtab.manage.contactOwner",
+    "roomtab.manage.expiredHint",
     "roomtab.manage.foot",
     "roomtab.manage.liveHint",
     "roomtab.manage.welcomeHint",
