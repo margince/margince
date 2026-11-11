@@ -15342,7 +15342,7 @@ export const en = {
     "One app for the whole company. Once it is saved, everyone at {company} can connect Gmail and Google Calendar, and Continue with Google can appear on the sign-in screen.",
   "oauthApp.drawer.google.step1Title": "Create an OAuth client in Google Cloud",
   "oauthApp.drawer.google.step1Body":
-    "Choose or create a project for Margince, open APIs and services, then Credentials, and create an OAuth client ID of the type Web application. If Google asks you to set up the consent screen first, choose Internal as its audience: only your company’s Google accounts can then use the app, and Google needs no app review.",
+    "Choose or create a project for Margince, open APIs and services, then Credentials, and create an OAuth client ID of the type Web application. On the consent screen, under Audience, choose Internal when all sign-ins use your company’s Google accounts: only those accounts can use the app, and Google needs no app review. Choose External only if personal Gmail accounts connect too.",
   "oauthApp.drawer.google.step1Link": "Open Google Cloud console",
   "oauthApp.drawer.google.step2Body":
     "In the client, under Authorized redirect URIs. Margince lists one for each thing this installation uses Google for. Paste them exactly; if one is missing, Google stops the connection with “redirect_uri_mismatch” and does not say which address.",
@@ -15353,7 +15353,7 @@ export const en = {
     "One app for the whole company. Once it is saved, everyone at {company} can connect Outlook mail and calendar, and Continue with Microsoft can appear on the sign-in screen.",
   "oauthApp.drawer.microsoft.step1Title": "Register an app in Microsoft Entra",
   "oauthApp.drawer.microsoft.step1Body":
-    "Open App registrations and select New registration. Name it Margince and, under Supported account types, choose Accounts in this organizational directory only.",
+    "Open App registrations and select New registration. Name it Margince and, under Supported account types, choose Accounts in this organizational directory only; its Directory (tenant) ID goes in the last step. Only if mailboxes of other companies connect too, choose Accounts in any organizational directory and leave the directory empty in Settings.",
   "oauthApp.drawer.microsoft.step1Link": "Open Microsoft Entra admin center",
   "oauthApp.drawer.microsoft.step2Body":
     "In the app registration, open Authentication, select Add a platform, choose Web, and paste each address below. Margince lists one for each thing this installation uses Microsoft for. Paste them exactly; if one is missing, Microsoft stops the connection with “AADSTS50011” and does not say which address.",
@@ -19803,10 +19803,10 @@ export const en = {
     "The app’s Overview page shows the Application (client) ID and the Directory (tenant) ID.",
   "firstRun.imap.passwordTitle": "Create an app password",
   "firstRun.imap.passwordBody":
-    "The mail service makes it once two-step sign-in is on; the normal password is refused. Gmail: Google Account, Security, App passwords. Outlook.com: Microsoft account, Security, Advanced security options, App passwords. iCloud: Apple Account, Sign-In and Security, App-Specific Passwords. A Microsoft 365 work mailbox has no app password for IMAP: choose Microsoft 365 above.",
+    "Gmail and iCloud make one once two-step sign-in is on; the normal password is refused. Gmail: Google Account, Security, App passwords. iCloud: Apple Account, Sign-In and Security, App-Specific Passwords. Any other mail service says on its help page which password IMAP takes. Outlook.com and Microsoft 365 mailboxes no longer accept a password over IMAP: choose Microsoft 365 above.",
   "firstRun.imap.serverTitle": "Look up the IMAP server",
   "firstRun.imap.serverBody":
-    "Gmail uses imap.gmail.com, Outlook.com uses outlook.office365.com and iCloud uses imap.mail.me.com, each on port 993. Any other mail service lists its server on its help page about IMAP settings.",
+    "Gmail uses imap.gmail.com and iCloud uses imap.mail.me.com, each on port 993. Any other mail service lists its server on its help page about IMAP settings.",
   "firstRun.imap.connectTitle": "Connect your mailbox",
   "firstRun.platform.imapNote":
     "Nothing is configured for the whole installation. Connect your own mailbox now or later; other mailboxes connect in Settings under Connections, each with its own app password.",

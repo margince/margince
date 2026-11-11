@@ -15438,7 +15438,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Eine App für das ganze Unternehmen. Sobald sie gespeichert ist, können alle bei {company} Gmail und Google Kalender verbinden, und „Weiter mit Google“ kann auf der Anmeldeseite erscheinen.",
   "oauthApp.drawer.google.step1Title": "OAuth-Client in Google Cloud anlegen",
   "oauthApp.drawer.google.step1Body":
-    "Wähle ein Projekt für Margince oder lege eines an, öffne „APIs und Dienste“, dann „Anmeldedaten“, und lege eine OAuth-Client-ID vom Typ „Webanwendung“ an. Fragt Google zuerst nach dem Zustimmungsbildschirm, wähle als Zielgruppe „Intern“: Dann können nur die Google-Konten deines Unternehmens die App nutzen, und Google muss die App nicht prüfen.",
+    "Wähle ein Projekt für Margince oder lege eines an, öffne „APIs und Dienste“, dann „Anmeldedaten“, und lege eine OAuth-Client-ID vom Typ „Webanwendung“ an. Wähle auf dem Zustimmungsbildschirm unter „Zielgruppe“ die Option „Intern“, wenn alle Anmeldungen über Google-Konten deines Unternehmens laufen: Dann können nur diese Konten die App nutzen, und Google muss die App nicht prüfen. Wähle „Extern“ nur, wenn auch private Gmail-Konten verbunden werden.",
   "oauthApp.drawer.google.step1Link": "Google Cloud Console öffnen",
   "oauthApp.drawer.google.step2Body":
     "Im Client unter „Autorisierte Weiterleitungs-URIs“. Margince listet eine Adresse für alles, wofür diese Installation Google nutzt. Füge sie genau so ein; fehlt eine, bricht Google die Verbindung mit „redirect_uri_mismatch“ ab und nennt die Adresse nicht.",
@@ -15449,7 +15449,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Eine App für das ganze Unternehmen. Sobald sie gespeichert ist, können alle bei {company} Outlook-E-Mail und -Kalender verbinden, und „Weiter mit Microsoft“ kann auf der Anmeldeseite erscheinen.",
   "oauthApp.drawer.microsoft.step1Title": "App in Microsoft Entra registrieren",
   "oauthApp.drawer.microsoft.step1Body":
-    "Öffne „App-Registrierungen“ und wähle „Neue Registrierung“. Nenne sie Margince und wähle unter „Unterstützte Kontotypen“ die Option „Nur Konten in diesem Organisationsverzeichnis“.",
+    "Öffne „App-Registrierungen“ und wähle „Neue Registrierung“. Nenne sie Margince und wähle unter „Unterstützte Kontotypen“ die Option „Nur Konten in diesem Organisationsverzeichnis“; die Verzeichnis-ID trägst du im letzten Schritt ein. Nur wenn auch Postfächer anderer Unternehmen verbunden werden, wähle „Konten in einem beliebigen Organisationsverzeichnis“ und lass das Verzeichnis in den Einstellungen leer.",
   "oauthApp.drawer.microsoft.step1Link": "Microsoft Entra Admin Center öffnen",
   "oauthApp.drawer.microsoft.step2Body":
     "Öffne in der App-Registrierung „Authentifizierung“, wähle „Plattform hinzufügen“, dann „Web“, und füge jede Adresse unten ein. Margince listet eine Adresse für alles, wofür diese Installation Microsoft nutzt. Füge sie genau so ein; fehlt eine, bricht Microsoft die Verbindung mit „AADSTS50011“ ab und nennt die Adresse nicht.",
@@ -20018,10 +20018,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Die Übersicht der App zeigt die Anwendungs-ID und die Verzeichnis-ID.",
   "firstRun.imap.passwordTitle": "App-Passwort erstellen",
   "firstRun.imap.passwordBody":
-    "Der Maildienst erstellt es, sobald die Bestätigung in zwei Schritten aktiv ist; das normale Passwort wird abgelehnt. Gmail: Google-Konto, Sicherheit, App-Passwörter. Outlook.com: Microsoft-Konto, Sicherheit, Erweiterte Sicherheitsoptionen, App-Kennwörter. iCloud: Apple-Konto, Anmeldung und Sicherheit, App-spezifische Passwörter. Ein Microsoft-365-Arbeitspostfach hat kein App-Passwort für IMAP: Wähle oben Microsoft 365.",
+    "Gmail und iCloud erstellen es, sobald die Bestätigung in zwei Schritten aktiv ist; das normale Passwort wird abgelehnt. Gmail: Google-Konto, Sicherheit, App-Passwörter. iCloud: Apple-Konto, Anmeldung und Sicherheit, App-spezifische Passwörter. Jeder andere Maildienst sagt auf seiner Hilfeseite, welches Passwort IMAP braucht. Postfächer von Outlook.com und Microsoft 365 nehmen über IMAP kein Passwort mehr an: Wähle oben Microsoft 365.",
   "firstRun.imap.serverTitle": "IMAP-Server nachschlagen",
   "firstRun.imap.serverBody":
-    "Gmail nutzt imap.gmail.com, Outlook.com nutzt outlook.office365.com und iCloud nutzt imap.mail.me.com, jeweils auf Port 993. Jeder andere Maildienst nennt seinen Server auf seiner Hilfeseite zu den IMAP-Einstellungen.",
+    "Gmail nutzt imap.gmail.com und iCloud nutzt imap.mail.me.com, jeweils auf Port 993. Jeder andere Maildienst nennt seinen Server auf seiner Hilfeseite zu den IMAP-Einstellungen.",
   "firstRun.imap.connectTitle": "Dein Postfach verbinden",
   "firstRun.platform.imapNote":
     "Für die ganze Installation wird nichts konfiguriert. Verbinde dein eigenes Postfach jetzt oder später. Weitere Postfächer werden in den Einstellungen unter Verbindungen verbunden, jedes mit eigenem App-Passwort.",

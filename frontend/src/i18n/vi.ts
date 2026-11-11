@@ -15033,7 +15033,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Một ứng dụng cho cả công ty. Khi đã lưu, mọi thành viên ở {company} đều kết nối được Gmail và Google Calendar, và nút Tiếp tục với Google có thể xuất hiện trên màn hình đăng nhập.",
   "oauthApp.drawer.google.step1Title": "Tạo OAuth client trong Google Cloud",
   "oauthApp.drawer.google.step1Body":
-    "Chọn hoặc tạo một dự án cho Margince, mở APIs and services, rồi Credentials, và tạo một OAuth client ID loại Web application. Nếu Google yêu cầu thiết lập màn hình đồng ý trước, chọn Internal làm đối tượng: khi đó chỉ tài khoản Google của công ty dùng được ứng dụng, và Google không cần xét duyệt ứng dụng.",
+    "Chọn hoặc tạo một dự án cho Margince, mở APIs and services, rồi Credentials, và tạo một OAuth client ID loại Web application. Trên màn hình đồng ý, ở mục Audience, chọn Internal khi mọi lần đăng nhập đều dùng tài khoản Google của công ty: chỉ các tài khoản đó dùng được ứng dụng, và Google không cần xét duyệt ứng dụng. Chỉ chọn External nếu cả tài khoản Gmail cá nhân cũng kết nối.",
   "oauthApp.drawer.google.step1Link": "Mở Google Cloud console",
   "oauthApp.drawer.google.step2Body":
     "Trong client, ở mục Authorized redirect URIs. Margince liệt kê một địa chỉ cho mỗi việc mà bản cài đặt này dùng Google. Dán chính xác; nếu thiếu một địa chỉ, Google sẽ dừng kết nối với lỗi “redirect_uri_mismatch” mà không nói địa chỉ nào.",
@@ -15045,7 +15045,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "oauthApp.drawer.microsoft.step1Title":
     "Đăng ký ứng dụng trong Microsoft Entra",
   "oauthApp.drawer.microsoft.step1Body":
-    "Mở App registrations và chọn New registration. Đặt tên là Margince và, ở Supported account types, chọn Accounts in this organizational directory only.",
+    "Mở App registrations và chọn New registration. Đặt tên là Margince và, ở Supported account types, chọn Accounts in this organizational directory only; Directory (tenant) ID của thư mục này điền ở bước cuối. Chỉ khi hộp thư của công ty khác cũng kết nối, chọn Accounts in any organizational directory và để trống thư mục trong Cài đặt.",
   "oauthApp.drawer.microsoft.step1Link": "Mở Microsoft Entra admin center",
   "oauthApp.drawer.microsoft.step2Body":
     "Trong đăng ký ứng dụng, mở Authentication, chọn Add a platform, chọn Web, rồi dán từng địa chỉ bên dưới. Margince liệt kê một địa chỉ cho mỗi việc mà bản cài đặt này dùng Microsoft. Dán chính xác; nếu thiếu một địa chỉ, Microsoft sẽ dừng kết nối với lỗi “AADSTS50011” mà không nói địa chỉ nào.",
@@ -19506,10 +19506,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Trang Overview của ứng dụng hiển thị Application (client) ID và Directory (tenant) ID.",
   "firstRun.imap.passwordTitle": "Tạo mật khẩu ứng dụng",
   "firstRun.imap.passwordBody":
-    "Dịch vụ thư tạo mật khẩu này khi đã bật xác minh hai bước; mật khẩu thường bị từ chối. Gmail: Google Account, Security, App passwords. Outlook.com: tài khoản Microsoft, Security, Advanced security options, App passwords. iCloud: Apple Account, Sign-In and Security, App-Specific Passwords. Hộp thư công việc Microsoft 365 không có mật khẩu ứng dụng cho IMAP: chọn Microsoft 365 ở trên.",
+    "Gmail và iCloud tạo mật khẩu này khi đã bật xác minh hai bước; mật khẩu thường bị từ chối. Gmail: Google Account, Security, App passwords. iCloud: Apple Account, Sign-In and Security, App-Specific Passwords. Dịch vụ thư khác ghi trên trang trợ giúp loại mật khẩu IMAP cần. Hộp thư Outlook.com và Microsoft 365 không còn nhận mật khẩu qua IMAP: chọn Microsoft 365 ở trên.",
   "firstRun.imap.serverTitle": "Tra máy chủ IMAP",
   "firstRun.imap.serverBody":
-    "Gmail dùng imap.gmail.com, Outlook.com dùng outlook.office365.com và iCloud dùng imap.mail.me.com, đều ở cổng 993. Dịch vụ thư khác ghi máy chủ trên trang trợ giúp về cài đặt IMAP.",
+    "Gmail dùng imap.gmail.com và iCloud dùng imap.mail.me.com, đều ở cổng 993. Dịch vụ thư khác ghi máy chủ trên trang trợ giúp về cài đặt IMAP.",
   "firstRun.imap.connectTitle": "Kết nối hộp thư của bạn",
   "firstRun.platform.imapNote":
     "Bản cài đặt không có cấu hình chung nào. Kết nối hộp thư của bạn ngay hoặc để sau; các hộp thư khác kết nối trong Cài đặt, mục Kết nối, mỗi hộp thư có mật khẩu ứng dụng riêng.",
