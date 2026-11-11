@@ -491,7 +491,7 @@ Privacy: []privacy.Table{{
 | `Links` | The columns that hold the id of a core record: `contact`, `lead`, `company` or `activity`. |
 | `Personal` | The columns the core clears on erasure and serves in a subject export. See [what clearing does](#what-clearing-does). |
 | `Retention` | One of the core's own classes. A unit cannot add one. A retention sweep keeps a row as long as the class requires. |
-| `AgeColumn` | The `timestamptz NOT NULL` or `date NOT NULL` column a retention sweep counts from, to tell how old a row is. A table with personal columns must name one. |
+| `AgeColumn` | The `timestamptz NOT NULL` or `date NOT NULL` column a retention sweep counts from, to tell how old a row is. A table with personal columns must name one. A foreign key that names such a table must be `ON DELETE CASCADE`. |
 
 A row belongs to a subject when one of its links names the subject. Erasure and export find rows by
 `contact`, `lead` or `activity`. A `company` link only feeds the merge check, so a table with personal columns

@@ -348,17 +348,13 @@ func TestBootAcceptsADeclaredAgeColumn(t *testing.T) {
 	}
 }
 
-func TestBootHoldsASweptTableToReferencesThatLetItsRowsBeDeleted(t *testing.T) {
+func TestBootLetsOnlyACascadeReferenceASweptTable(t *testing.T) {
 	for clause, refused := range map[string]bool{
-		"": true, "ON DELETE RESTRICT": true,
-		"ON DELETE CASCADE": false, "ON DELETE SET NULL": false, "ON DELETE SET DEFAULT": false,
-		"NOT NULL ON DELETE SET NULL": true, "NOT NULL ON DELETE SET DEFAULT": true,
+		"": true, "ON DELETE RESTRICT": true, "ON DELETE SET NULL": true, "ON DELETE SET DEFAULT": true,
+		"ON DELETE CASCADE": false,
 	} {
 		t.Run(clause, func(t *testing.T) {
 			column := "note_id uuid REFERENCES ext.ext_probe_note (id) " + clause
-			if rest, ok := strings.CutPrefix(clause, "NOT NULL "); ok {
-				column = "note_id uuid NOT NULL REFERENCES ext.ext_probe_note (id) " + rest
-			}
 			env := Setup(t)
 			unit := probeUnit(t, "1.0.0", "body")
 			unit.Privacy[0].AgeColumn = "noted_at"
@@ -372,11 +368,11 @@ func TestBootHoldsASweptTableToReferencesThatLetItsRowsBeDeleted(t *testing.T) {
 			unit.Privacy = append(unit.Privacy, privacy.Table{Name: "ext_probe_reply", Retention: jurisdiction.CommercialCorrespondence})
 
 			err := compose.VerifyExtensionPrivacy(t.Context(), env.Pool, []extension.Extension{unit})
-			if refused && (err == nil || !strings.Contains(err.Error(), "ON DELETE")) {
-				t.Errorf("boot answered %v; an erase policy would fail on a note a reply still names", err)
+			if refused && (err == nil || !strings.Contains(err.Error(), "ext_probe_reply") || !strings.Contains(err.Error(), "ON DELETE CASCADE")) {
+				t.Errorf("boot answered %v; want a refusal that names the referencing table and asks for ON DELETE CASCADE", err)
 			}
 			if !refused && err != nil {
-				t.Errorf("boot refused a reference that lets the note be deleted: %v", err)
+				t.Errorf("boot refused a cascading reference: %v", err)
 			}
 		})
 	}

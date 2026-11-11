@@ -156,7 +156,9 @@ Most records have two clocks, and a rule acts only once both are past its window
 
 **Stored message originals** have one clock: when capture imported the message. **AI call payloads** count from the call, and the **daily deal-risk record** from the day it describes.
 
-**Records kept by extensions** have one clock too, the date the extension names for each kind of record. Anonymize clears every column the extension marks as personal, which can be the whole text of a message. Erase deletes the record. A record is kept while the law still says it must be kept. It is also kept while a contact, lead or company it belongs to is on legal hold.
+**Records kept by extensions** have one clock too, the date the extension names for each kind of record that holds personal data. The rule does not touch the other kinds. Anonymize clears every column the extension marks as personal, which can be the whole text of a message. Erase deletes the record.
+
+The rule keeps a record while the law still says it must be kept. It also keeps a record while a contact, lead or company it belongs to is on legal hold. An extension can also delete its own records sooner, on its own clock, and that does not wait for the law or a legal hold.
 
 ### The three retention actions
 
