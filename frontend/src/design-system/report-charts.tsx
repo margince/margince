@@ -1,18 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import {
-  type CSSProperties,
-  createContext,
-  type ReactNode,
-  useContext,
-  useEffect,
-  useId,
-  useRef,
-  useState,
-} from "react";
-import { createPortal } from "react-dom";
-import { Button, Disclosure, TableScroll } from "./atoms";
+import { type CSSProperties, useEffect, useId, useRef, useState } from "react";
+import { Button, TableScroll } from "./atoms";
 import "./report-charts.css";
 
 import type { ChartProps, GroupedBarsProps } from "./report-charts.model";
@@ -23,27 +13,9 @@ import {
   niceTop,
   readingScale,
 } from "./report-charts.model";
+import { ChartTableDoor } from "./report-charts.tabledoor";
 
 export type { ChartReading } from "./report-charts.model";
-
-// Where a chart's table door is drawn. A card that holds one chart offers its
-// foot, so the door shares a line with what the figure covers and the door to
-// its records; with no card around it, the door stays under the chart.
-const ChartTableSlot = createContext<HTMLElement | null>(null);
-export const ChartTableSlotProvider = ChartTableSlot.Provider;
-
-export function ChartTableDoor({
-  summary,
-  children,
-}: Readonly<{ summary: ReactNode; children: ReactNode }>) {
-  const slot = useContext(ChartTableSlot);
-  const door = (
-    <Disclosure className="report-chart-data" summary={summary}>
-      {children}
-    </Disclosure>
-  );
-  return slot ? createPortal(door, slot) : door;
-}
 
 export function ReadingTable({
   readings,

@@ -3,10 +3,10 @@ import { DataTable } from "../../design-system/datatable";
 import { BarList, SegmentBar } from "../../design-system/readings";
 import {
   BulletChart,
-  ChartTableDoor,
   CumulativeChart,
   RangeChart,
 } from "../../design-system/report-charts";
+import { ChartTableDoor } from "../../design-system/report-charts.tabledoor";
 import { Waterfall } from "../../design-system/waterfall";
 import {
   formatAnalyticsMoney,

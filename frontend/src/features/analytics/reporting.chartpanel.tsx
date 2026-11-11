@@ -2,7 +2,7 @@ import { type ReactNode, Suspense, useState } from "react";
 import { Button, EmptyState, PendingBody } from "../../design-system/atoms";
 import { CardBoundary } from "../../design-system/cardboundary";
 import { Panel, PanelBody } from "../../design-system/panel";
-import { ChartTableSlotProvider } from "../../design-system/report-charts";
+import { ChartTableSlotProvider } from "../../design-system/report-charts.tabledoor";
 import { useT } from "../../i18n";
 import { lazy } from "../../i18n/lazy";
 import { ChartContext, ChartDetails } from "./reporting.chartcontext";
