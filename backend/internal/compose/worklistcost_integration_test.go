@@ -34,7 +34,7 @@ const worklistOutsideStatements = 8
 
 // The seeded read includes every bound lane and an open task. Lower this
 // pgx-call ceiling when a batch or empty-set shortcut removes calls.
-const worklistExchangeBudget = 107
+const worklistExchangeBudget = 106
 
 // stageDelta is what one composed read added to the stage collector.
 type stageDelta struct {
