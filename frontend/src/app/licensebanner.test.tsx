@@ -40,11 +40,7 @@ function ReadProbe() {
   );
 }
 
-function mount(
-  allow: GrantSpec,
-  state: LicenseState,
-  license?: LicenseHolder,
-) {
+function mount(allow: GrantSpec, state: LicenseState, license?: LicenseHolder) {
   const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
     const path = new URL(
       input instanceof Request ? input.url : String(input),

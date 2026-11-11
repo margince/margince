@@ -151,7 +151,7 @@ When more seats are in use than the licence allows, Margince says:
 
 > No one loses access and no seat is removed, but no new member can be invited until the count is within the entitlement. Deactivate a member or raise the entitlement.
 
-When the licence has expired but is still in its grace period, Admin and Ops members see a warning at the top of every page, with **Open Seats and license** to come to this page. You cannot close it, and it stays until a renewed licence is in place. Margince keeps running, but it does not start again after the grace period ends, so renew before the next restart after that date. Margince does not show the date the grace period ends. Also called: licence expired, grace period.
+While the licence is expired but still in its grace period, Admin and Ops members see a warning on every page. **Open Seats and license** in the warning comes to this page. You cannot close the warning, and it stays until a renewed licence is in place. Margince keeps running, but it does not start again after the grace period ends, so renew before Margince next starts after that date. Margince does not show the date the grace period ends. Also called: licence expired, grace period.
 
 Margince checks the licence itself when it starts, and again once a day. The licence check never calls out or reports back to anyone. When your server admin replaces the licence file, an admin or ops member can press **Check now** on this page to check it at once. You cannot type a licence into Margince.
 
