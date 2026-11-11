@@ -38,11 +38,9 @@ type licenseHandlers struct {
 // withPosture adds the license half to a handler that already carries the seat
 // count, and is the ONLY way the entitlement surface is completed.
 //
-// It takes the receiver's store rather than building a second one. The two
-// halves genuinely come from different places — the count from the assembly,
-// because app_user rows exist whether or not a license was configured; the
-// posture from the option, because only that caller has one — and a struct
-// literal restating both would let an edit to either drop the other silently.
+// It adds to the receiver rather than rebuilding it: the count comes from the
+// assembly and the posture from the option, and a literal restating both could
+// drop either silently.
 //
 // Held by: TestWithLicensePostureKeepsTheSeatCountItWasGiven, which fails when
 // this rebuilds the struct instead of adding to it.

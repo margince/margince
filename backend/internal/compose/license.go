@@ -99,11 +99,8 @@ func licenseTokenOrigin(cfg *config.Config, posture licensecheck.Posture) string
 
 // refuseUnlicensedProduction stops a production boot that configured no license.
 //
-// The error says both halves, because the operator reading it is in one of two
-// situations that look identical from here: the installation is licensed and
-// lost its token reference in a redeploy, or it is a development installation
-// that never named itself one. Naming only the license would send the second
-// operator looking for a token they were never issued.
+// The error names both ways out: a licensed installation that lost its token
+// reference, and a development one that never named itself non-production.
 func refuseUnlicensedProduction(posture licensecheck.Posture, env runtimeenv.Environment) error {
 	if posture.State != licensecheck.StateAbsent || env.IsNonProduction() {
 		return nil
