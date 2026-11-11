@@ -41,10 +41,7 @@ function panel(node: React.ReactNode) {
     installFetchStub({ "GET /me": meRoute({}) });
     return (
       <StoryProviders>
-        <div
-          className="brief-morning page-pane brief-rail"
-          style={{ maxWidth: 360 }}
-        >
+        <div className="brief-rail" style={{ maxWidth: 360 }}>
           {node}
         </div>
       </StoryProviders>

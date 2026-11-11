@@ -12,9 +12,9 @@ import { PageAsideToggle } from "../../components/pageaside";
 import { useTaskUpdate } from "../../components/taskactions";
 import { Modal } from "../../design-system/atoms";
 import { DrawerBody, DrawerHead } from "../../design-system/drawerbands";
-import { Eyebrow } from "../../design-system/eyebrow";
 import { Heading } from "../../design-system/heading";
 import { PageZones } from "../../design-system/pagezones";
+import { Panel, PanelBody } from "../../design-system/panel";
 import { greetingNameOf } from "../../format/greetingname";
 import { useNow } from "../../format/now";
 import { useT } from "../../i18n";
@@ -318,26 +318,34 @@ function PersonalMorning({
             {/* The day's meetings first: the work is read against them. */}
             <ScheduleWithMeetings day={day} state={state} />
             {day && (
-              <div className="brief-overview">
-                <Eyebrow as="h2" className="brief-section-label">
-                  {t("brief.rail.numbers")}
-                </Eyebrow>
-                <BriefReadingsStrip day={day} />
-                <BriefCoverage
-                  day={day}
-                  run={brief.data}
-                  onRetry={() => void query.refetch()}
-                />
-              </div>
+              <Panel
+                title={t("brief.rail.numbers")}
+                flatHead
+                className="brief-overview"
+              >
+                <PanelBody>
+                  <BriefReadingsStrip day={day} />
+                  <BriefCoverage
+                    day={day}
+                    run={brief.data}
+                    onRetry={() => void query.refetch()}
+                  />
+                </PanelBody>
+              </Panel>
             )}
             {/* Hidden from a screen reader: the meetings above already
                 announce the wait. */}
             {state === "loading" && (
-              <div className="brief-overview" aria-hidden="true">
-                <Eyebrow as="h2" className="brief-section-label">
-                  {t("brief.rail.numbers")}
-                </Eyebrow>
-                <BriefReadingsPending />
+              <div aria-hidden="true">
+                <Panel
+                  title={t("brief.rail.numbers")}
+                  flatHead
+                  className="brief-overview"
+                >
+                  <PanelBody>
+                    <BriefReadingsPending />
+                  </PanelBody>
+                </Panel>
               </div>
             )}
           </>

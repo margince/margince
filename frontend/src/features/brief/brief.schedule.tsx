@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { Fragment, useId } from "react";
+import { Fragment } from "react";
 import { EntityRef } from "../../components/entityref";
 import { MeetingOthers } from "../../components/meetingothers";
 import { AppLink } from "../../design-system/applink";
 import { Badge, Button } from "../../design-system/atoms";
-import { Eyebrow } from "../../design-system/eyebrow";
-import { PanelRow } from "../../design-system/panel";
+import { Panel, PanelRow } from "../../design-system/panel";
 import {
   type SectionState,
   SurfaceState,
@@ -87,20 +86,12 @@ export function SchedulePanel({
   now?: number;
 }>) {
   const t = useT();
-  const titleId = useId();
   const liveNow = useNow(now === undefined ? 60_000 : 0);
   const at = now ?? liveNow;
   const { started, ahead } = splitAtNow(rowsFrom(day, MEETING), at);
   const next = ahead.find((item) => item.occurred_precision !== "day");
   return (
-    <section
-      id="brief-schedule"
-      className="brief-section rail-schedule"
-      aria-labelledby={titleId}
-    >
-      <Eyebrow as="h2" id={titleId} className="brief-section-label">
-        {t("brief.panel.schedule")}
-      </Eyebrow>
+    <Panel title={t("brief.panel.schedule")} flatHead className="rail-schedule">
       <SurfaceState
         loadingLabel={t("brief.panel.schedule")}
         state={state}
@@ -138,7 +129,7 @@ export function SchedulePanel({
           </>
         )}
       </SurfaceState>
-    </section>
+    </Panel>
   );
 }
 
@@ -182,7 +173,6 @@ function NowRow({
       <time className="t-caption rail-schedule-when" dateTime={nowIso}>
         {formatTimeOfDay(nowIso, locale, zone)}
       </time>
-      <span className="rail-schedule-dot" aria-hidden="true" />
       <span className="rail-schedule-what">
         <span className="t-body rail-schedule-title">
           {t("brief.schedule.now")}
@@ -229,14 +219,15 @@ function MeetingRow({
       <span className="t-caption rail-schedule-when">
         {whenOf(item, locale, zone)}
       </span>
-      {/* The stop on the day's line. Decorative: the time beside it is the
-          fact, and the line is what makes the rows read as one day. */}
-      <span className="rail-schedule-dot" aria-hidden="true" />
       <span className="rail-schedule-what">
         <Title item={item} onOpenMeeting={onOpenMeeting} />
-        {startsIn && <span className="t-caption">{startsIn}</span>}
-        {isUnprepared(item) && (
-          <Badge tone="warning">{t("worklist.needsPrep")}</Badge>
+        {(startsIn || isUnprepared(item)) && (
+          <span className="rail-schedule-meta">
+            {startsIn && <span className="t-caption">{startsIn}</span>}
+            {isUnprepared(item) && (
+              <Badge tone="warning">{t("worklist.needsPrep")}</Badge>
+            )}
+          </span>
         )}
         {brief && (
           <AppLink className="btn btn-ghost rail-schedule-prep" href={brief}>
@@ -343,7 +334,6 @@ function NextMeetingRow({
       <span className="t-caption rail-schedule-when">
         {nextMeetingDay(next, locale, zone)}
       </span>
-      <span className="rail-schedule-dot" aria-hidden="true" />
       <span className="rail-schedule-what">
         {/* The title opens the meeting itself; its deal is one click on. */}
         {onOpenMeeting ? (
