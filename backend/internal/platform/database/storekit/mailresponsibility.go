@@ -176,19 +176,34 @@ func DirectMailRecipientSQL(activity, addresses string) string {
 	return strings.ReplaceAll(strings.ReplaceAll(clause, "a.", activity+"."), "ADDRESS_LIST", addresses)
 }
 
-// DirectMailActivitiesSQL lists the live inbound mail whose parsed To line
-// names one seat, built once as an array. A seat's own reads start from it,
-// over the address index, rather than testing each mail in the workspace.
-// keep narrows the mail, aliased `mail`, to what the caller can still use;
-// empty keeps it all.
-func DirectMailActivitiesSQL(identities, seat, keep string) string {
-	kept := ""
-	if keep != "" {
-		kept = " AND (" + keep + ")"
-	}
-	return `ARRAY(SELECT recipient.activity_id FROM activity_participant recipient
- JOIN activity mail ON mail.id = recipient.activity_id AND mail.direction = 'inbound' AND mail.archived_at IS NULL` + kept + `
- WHERE ` + strings.ReplaceAll(directRecipientMatch, "ADDRESS_LIST", MailSeatAddressesSQL(identities, seat)) + ")"
+// DirectMailActivitiesSQL builds a seat's waiting-mail candidates from recent
+// recipients and human-held requests. Null evidence uses an index probe so
+// backfill state never changes which mail a seat can read.
+func DirectMailActivitiesSQL(identities, seat, cutoff, heldIDs string) string {
+	match := strings.ReplaceAll(directRecipientMatch, "ADDRESS_LIST", MailSeatAddressesSQL(identities, seat))
+	live := `mail.direction = 'inbound' AND mail.archived_at IS NULL`
+	return `ARRAY(WITH held_mail AS MATERIALIZED (SELECT unnest(` + heldIDs + `) AS activity_id)
+ SELECT activity_id FROM (
+ SELECT recipient.activity_id FROM activity_participant recipient
+ JOIN activity mail ON mail.id = recipient.activity_id
+ WHERE ` + match + ` AND ` + live + `
+ AND recipient.domain_evidence_at >= -- domain evidence raw: waiting age superset bound
+ ` + cutoff + ` AND mail.occurred_at >= -- occurred_at raw: waiting age superset bound
+ ` + cutoff + `
+ UNION
+ SELECT recipient.activity_id FROM activity_participant recipient
+ JOIN activity mail ON mail.id = recipient.activity_id
+ WHERE ` + match + ` AND ` + live + `
+ AND recipient.domain_evidence_at IS NULL
+ AND mail.occurred_at >= -- occurred_at raw: waiting age superset bound
+ ` + cutoff + `
+ UNION
+ SELECT recipient.activity_id FROM held_mail held
+ CROSS JOIN LATERAL (SELECT activity_id, role, address FROM activity_participant
+  WHERE activity_id = held.activity_id OFFSET 0) recipient
+ JOIN activity mail ON mail.id = recipient.activity_id
+ WHERE ` + match + ` AND ` + live + `
+ ) candidate)`
 }
 
 // DirectMailSeatsSQL lists every seat the mail's parsed To line names. It is
