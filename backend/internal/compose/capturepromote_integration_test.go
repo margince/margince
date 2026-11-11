@@ -591,8 +591,7 @@ func TestAContactTheCeilingRefusedIsAskedAboutByTheSweep(t *testing.T) {
 	// notices the contact nobody was ever asked about.
 	runVerdict(t, e, &scriptedVerdictBrain{})
 
-	store := contacts.NewStore(InstallationDB(e.Pool)).WithSenderStamp(activities.StampProvenSendersTx)
-	worker := NewLinkReconcileWorkspaceWorkerForTest(e.Pool, store)
+	worker := NewLinkReconcileWorkspaceWorkerForTest(e.Pool)
 	if err := worker.reconcileLinksForWorkspace(context.Background(), e.WS); err != nil {
 		t.Fatalf("the sweep failed: %v", err)
 	}
@@ -633,8 +632,7 @@ func TestTheSweepDoesNotReaskASettledSender(t *testing.T) {
 	}
 
 	before := countDispositions(t, e, advisor)
-	store := contacts.NewStore(InstallationDB(e.Pool)).WithSenderStamp(activities.StampProvenSendersTx)
-	worker := NewLinkReconcileWorkspaceWorkerForTest(e.Pool, store)
+	worker := NewLinkReconcileWorkspaceWorkerForTest(e.Pool)
 	if err := worker.reconcileLinksForWorkspace(context.Background(), e.WS); err != nil {
 		t.Fatalf("the sweep failed: %v", err)
 	}
@@ -687,8 +685,7 @@ func TestTheSweepLeavesAContactAHumanKeptPrivate(t *testing.T) {
 	seedHumanEdit(t, e, contactID)
 
 	runVerdict(t, e, &scriptedVerdictBrain{})
-	store := contacts.NewStore(InstallationDB(e.Pool)).WithSenderStamp(activities.StampProvenSendersTx)
-	worker := NewLinkReconcileWorkspaceWorkerForTest(e.Pool, store)
+	worker := NewLinkReconcileWorkspaceWorkerForTest(e.Pool)
 	if err := worker.reconcileLinksForWorkspace(context.Background(), e.WS); err != nil {
 		t.Fatalf("the sweep failed: %v", err)
 	}
