@@ -206,6 +206,16 @@ jobs:
               printf '%s' "$body" | jq -r \
                 '.projectStatus.conditions[]? | select(.status != "OK")
                  | "  failing: \(.metricKey) \(.comparator) \(.errorThreshold) (actual \(.actualValue))"'
+              # A rating names no finding, and whoever triages the issue may have
+              # no dashboard access, so the log names each finding behind it.
+              # A failed listing still leaves the gate red.
+              echo "open security and reliability findings in new code on main:"
+              curl -fsS --connect-timeout 10 --max-time 60 \
+                -H "Authorization: Bearer $SONAR_TOKEN" \
+                "https://sonarcloud.io/api/issues/search?componentKeys=$PROJECT_KEY&branch=main&inNewCodePeriod=true&issueStatuses=OPEN,CONFIRMED&impactSoftwareQualities=SECURITY,RELIABILITY&ps=100" \
+                | jq -r '.issues[]
+                  | "  \([.impacts[]? | "\(.softwareQuality)/\(.severity)"] | join(",")) \(.rule) \(.component | sub("^[^:]*:"; "")):\(.line // "-") \(.message)"' \
+                || echo "  could not list the findings; open the project's issues on SonarCloud" >&2
               exit 1
               ;;
             *)
