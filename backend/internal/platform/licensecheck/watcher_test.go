@@ -92,7 +92,11 @@ func TestRecheckRecordsADegradedPostureAndLogsTheTransition(t *testing.T) {
 	later := checkedAt.Add(48 * time.Hour)
 	source.token = "no-longer-honored"
 	w.now = fixedClock(later)
-	w.Recheck(context.Background())
+	// A refusal is a verdict, not a fault: the re-check worked and found the
+	// license no longer honored, so it reports no error.
+	if err := w.Recheck(context.Background()); err != nil {
+		t.Fatalf("Recheck reported %v for a verdict it reached", err)
+	}
 
 	got := w.Posture()
 	if got.State != StateRejected {
@@ -122,7 +126,9 @@ func TestRecheckReadsTheTokenAgainRatherThanTheOneItBootedWith(t *testing.T) {
 	if source.reads != 1 {
 		t.Fatalf("the boot read the token source %d times, want once", source.reads)
 	}
-	w.Recheck(context.Background())
+	if err := w.Recheck(context.Background()); err != nil {
+		t.Fatalf("Recheck: %v", err)
+	}
 	if source.reads != 2 {
 		t.Errorf("the re-check read the token source %d times in total, want 2 — a replaced token would never be seen",
 			source.reads)
@@ -142,7 +148,11 @@ func TestRecheckKeepsThePostureWhenTheTokenCannotBeRead(t *testing.T) {
 		t.Fatalf("NewWatcher: %v", err)
 	}
 	source.err = errors.New("token file vanished")
-	w.Recheck(context.Background())
+	// The caller hears the fault too. "Check now" in Settings must not report a
+	// fresh check when nothing was re-read.
+	if err := w.Recheck(context.Background()); err == nil || !strings.Contains(err.Error(), "token file vanished") {
+		t.Errorf("Recheck error = %v, want the source's fault", err)
+	}
 
 	if got := w.Posture(); got.State != StateAbsent {
 		t.Errorf("posture = %q, want it to stand at %q", got.State, StateAbsent)
@@ -162,7 +172,9 @@ func TestRecheckSaysNothingWhenTheStateIsUnchanged(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewWatcher: %v", err)
 	}
-	w.Recheck(context.Background())
+	if err := w.Recheck(context.Background()); err != nil {
+		t.Fatalf("Recheck: %v", err)
+	}
 	if log.Len() != 0 {
 		t.Errorf("an unchanged posture logged %q", log.String())
 	}
@@ -187,7 +199,9 @@ func TestRecheckSurvivesAPanicOnTheWayToAVerdict(t *testing.T) {
 	}
 	w.now = func() time.Time { panic("the runtime came apart") }
 
-	w.Recheck(context.Background())
+	if err := w.Recheck(context.Background()); err == nil || !strings.Contains(err.Error(), "the runtime came apart") {
+		t.Errorf("Recheck error = %v, want the panic reported as a fault", err)
+	}
 
 	if got := w.Posture(); got.State != StateAbsent {
 		t.Errorf("posture = %q, want the last resolved %q", got.State, StateAbsent)

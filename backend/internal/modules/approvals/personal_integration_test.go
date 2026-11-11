@@ -45,7 +45,7 @@ func TestPersonalDecisionsRemainReachableBehindATeamBacklog(t *testing.T) {
 	for i := range inboxBatch + 1 {
 		team = stage("advance_deal", i+2)
 	}
-	reader := seatFor(e.ws, e.rep, tableDeal, objectActivity)
+	reader := seatFor(e.ws, e.rep, tableDeal, objectActivity, tableContact)
 	named := []ids.ApprovalID{ids.From[ids.ApprovalKind](team), ids.From[ids.ApprovalKind](ids.NewV7())}
 	for id := range personal {
 		named = append(named, ids.From[ids.ApprovalKind](id))
@@ -118,7 +118,7 @@ func TestADelegatedAgentDecisionReachesItsRequestingSeat(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	rows, _, err := e.svc.ListWire(seatFor(e.ws, e.rep, tableDeal, objectActivity), ListInput{RequestedForReader: true, Limit: 10})
+	rows, _, err := e.svc.ListWire(seatFor(e.ws, e.rep, tableDeal, objectActivity, tableContact), ListInput{RequestedForReader: true, Limit: 10})
 	if err != nil {
 		t.Fatal(err)
 	}

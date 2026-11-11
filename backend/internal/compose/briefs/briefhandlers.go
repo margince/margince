@@ -11,6 +11,7 @@ package briefs
 // not-found (existence-hiding), never forbidden.
 
 import (
+	"errors"
 	"log/slog"
 	"net/http"
 	"time"
@@ -43,7 +44,8 @@ func (h Handlers) WithL2Ranker(brain briefBrain, log *slog.Logger) {
 // on-open path that never re-ranks (B-E05.3b). No run yet is a 404, the
 // same existence-hiding shape as any absent personal resource. The read
 // resolves snoozes against the current instant: expired ones re-surface,
-// running ones stay hidden (A77/AC-home-6).
+// running ones stay hidden (A77/AC-home-6). The brief is sent first and the
+// open recorded after it, so the open's write never fails or holds the read.
 func (h Handlers) GetMorningBrief(w http.ResponseWriter, r *http.Request) {
 	run, err := h.engine.LatestRun(r.Context(), time.Now().UTC())
 	if err != nil {
@@ -51,6 +53,10 @@ func (h Handlers) GetMorningBrief(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, briefRunToWire(run))
+	if err := http.NewResponseController(w).Flush(); err != nil && !errors.Is(err, http.ErrNotSupported) {
+		slog.DebugContext(r.Context(), "the brief could not be flushed before its open", "error", err)
+	}
+	h.engine.RecordShown(r.Context(), run)
 }
 
 // GenerateMorningBrief assembles today's run if the overnight pass has not.

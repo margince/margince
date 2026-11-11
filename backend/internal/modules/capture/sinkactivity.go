@@ -340,8 +340,8 @@ func (s *Sink) finishNewActivity(
 	// copied on it, leaving mail workspace-readable that the limiter exists to
 	// hold. The meeting arm feeds the count because an attendee link means a
 	// record stands behind the meeting; a cc'd contact is not that claim.
-	if fields.Kind != meetingKind && decision.traceOutcome != TraceSuppressed {
-		if err := s.linkResolvedMailParticipants(ctx, tx, id, len(rec.Links), private); err != nil {
+	if fields.Kind != meetingKind {
+		if err := s.fileMailUnderParticipants(ctx, tx, id, len(rec.Links), decision, private); err != nil {
 			return counterpartyDecision{}, err
 		}
 	}

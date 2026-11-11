@@ -13692,6 +13692,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "license.renewal.title": "Giấy phép cần gia hạn",
   "license.renewal.body":
     "Giấy phép hết hạn vào {expiry}. Không có gì thay đổi trước ngày đó.",
+  "license.check.button": "Kiểm tra ngay",
+  "license.check.hint":
+    "Đọc lại tệp token giấy phép trên máy chủ ngay bây giờ, thay vì chờ lần kiểm tra hằng ngày tiếp theo. Hãy thay tệp trước. Token đặt trong biến môi trường chỉ có hiệu lực sau khi khởi động lại.",
+  "license.check.done": "Đã đọc lại token giấy phép. Thẻ này hiển thị kết quả.",
+  "license.check.failed":
+    "Không thể đọc lại token giấy phép. Kết quả trước vẫn giữ nguyên, và nhật ký máy chủ ghi lý do.",
   "license.counting":
     "Tài khoản đầy đủ quyền không bị vô hiệu hóa hay tạm khóa, kể cả trợ lý AI. Tài khoản chỉ xem không giới hạn và không được tính.",
   "settings.rates.fxTitle": "Tỷ giá",
