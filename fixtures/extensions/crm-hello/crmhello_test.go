@@ -189,3 +189,28 @@ func TestTheFixtureReachesATableItsMigrationCreates(t *testing.T) {
 		}
 	}
 }
+
+// The boot refuses a unit table with no privacy declaration, so the note table
+// carries one, and its links are the ones the reach moves.
+func TestTheFixtureDeclaresPrivacyForTheTableItReaches(t *testing.T) {
+	e := New()
+	namespace, err := e.Name.Namespace()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(e.Privacy) != 1 || e.Privacy[0].Name != e.Reach[0].Name {
+		t.Fatalf("privacy declares %v, want the one note table %s", e.Privacy, e.Reach[0].Name)
+	}
+	if err := e.Privacy[0].Validate(namespace); err != nil {
+		t.Fatalf("privacy: %v", err)
+	}
+	reached := map[string]bool{}
+	for _, l := range e.Reach[0].Links {
+		reached[l.Column] = true
+	}
+	for _, l := range e.Privacy[0].Links {
+		if !reached[l.Column] {
+			t.Errorf("privacy links %s, which the reach does not move, so a merge of a record it names is refused", l.Column)
+		}
+	}
+}

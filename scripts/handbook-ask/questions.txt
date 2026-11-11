@@ -246,3 +246,14 @@ where do I see which leads a partner sent me
 why does a file in my deal room say buyers do not see it
 what does it mean when a mail says its text can no longer be checked
 how do I turn off the forecast correcting itself
+
+# handbook update 2026-11-11: product changes since the 2026-11-01 run
+a contact was blocked by mistake, how do I unblock them
+how can I ask for a new feature
+how do I build my own report
+how do I record which product a lead wants
+how do I start a campaign to track a group of deals
+where are the transcripts from my google meet calls
+where do I turn on the tool support check for AI apps
+where is the leads page, it disappeared
+why can't I move a deal to another company

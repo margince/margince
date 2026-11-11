@@ -9,7 +9,7 @@ import {
   type MarginceChangeBundle,
   shownUndoable,
 } from "../../lib/marginchanges";
-import { isReviewableReceipt, receiptAuditId } from "../../lib/receiptreview";
+import { isOpenReceipt, receiptAuditId } from "../../lib/receiptstate";
 
 /** One deal and the changes on it that wait for the reader, newest first. */
 export type DealChanges = Readonly<{
@@ -46,7 +46,7 @@ export function dealChanges(
         dealId,
         name: group[0]?.subject?.label ?? undefined,
         receipts: group.filter(
-          (receipt) => isReviewableReceipt(receipt) || settled.has(receipt.id),
+          (receipt) => isOpenReceipt(receipt) || settled.has(receipt.id),
         ),
         unloaded: 0,
       }))
@@ -114,7 +114,7 @@ export function undoableShown(
     bundle,
     new Set(
       group.receipts
-        .filter(isReviewableReceipt)
+        .filter(isOpenReceipt)
         .map(receiptAuditId)
         .filter((id): id is string => id !== undefined),
     ),

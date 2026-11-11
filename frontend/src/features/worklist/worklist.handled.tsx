@@ -24,8 +24,8 @@
 import { useEffect, useState } from "react";
 import { BundleUndo } from "../../components/marginchanges";
 import { ReceiptDetail } from "../../components/receiptdetail";
-import { ReceiptReview } from "../../components/receiptreview";
 import { ReceiptsMore } from "../../components/receiptsmore";
+import { ReceiptVerbs } from "../../components/receiptverbs";
 import { AppLink } from "../../design-system/applink";
 import { Disclosure } from "../../design-system/atoms";
 import { DataTable } from "../../design-system/datatable";
@@ -39,7 +39,7 @@ import {
   usePendingMarginceChanges,
 } from "../../lib/marginchanges";
 import { receiptBasis, receiptSummary } from "../../lib/receiptcopy";
-import { isReviewableReceipt, receiptAuditId } from "../../lib/receiptreview";
+import { isOpenReceipt, receiptAuditId } from "../../lib/receiptstate";
 import { useRememberedUndoRun } from "../../lib/undorun";
 import { replaceDial, useUrlParams } from "../../lib/urlstate";
 import { useViewerZone } from "../../lib/viewerzone";
@@ -78,7 +78,7 @@ export function HandledForYouPanel() {
   // Undo sends only the changes this list shows that the server still allows.
   const shown = new Set(
     (receipts ?? [])
-      .filter(isReviewableReceipt)
+      .filter(isOpenReceipt)
       .map(receiptAuditId)
       .filter((id): id is string => id !== undefined),
   );
@@ -177,7 +177,7 @@ export function HandledForYouPanel() {
                     // is nothing here to take back.
                     key: "undo",
                     header: t("worklist.handled.wayBack"),
-                    render: (row: Receipt) => <ReceiptReview receipt={row} />,
+                    render: (row: Receipt) => <ReceiptVerbs receipt={row} />,
                   },
                 ]}
               />

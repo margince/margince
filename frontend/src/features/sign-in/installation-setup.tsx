@@ -1,6 +1,5 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import {
   OnboardingStage,
@@ -9,11 +8,16 @@ import {
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import {
-  usePlatformDeclined,
-  useRememberPlatformDeclined,
+  DECLINABLE_STEPS,
+  type DeclinableStep,
+  useSetupDecline,
+  useSetupDeclines,
 } from "../../lib/installation-setup.decline";
+import {
+  modelBound,
+  useInstallationSetup,
+} from "../../lib/installation-setup-query";
 import { CORE_LABELS } from "../../lib/onboarding-core-label";
-import { throwProblem } from "../../lib/problem";
 import { Ignition, useIgnitionCore } from "../onboarding/onboarding-ignition";
 // The stylesheet carries the `onboarding-` prefix rather than this file's name
 // on purpose: both onboarding CSS gates derive their corpus from that prefix,
@@ -48,19 +52,6 @@ type Setup = components["schemas"]["InstallationSetup"];
 
 type Step = components["schemas"]["InstallationSetupStep"];
 
-export function useInstallationSetup() {
-  return useQuery({
-    queryKey: ["installation-setup"],
-    queryFn: async (): Promise<Setup> => {
-      const { data, error, response } = await api.GET("/installation/setup");
-      if (error || !response.ok || !data) {
-        throwProblem(error);
-      }
-      return data;
-    },
-  });
-}
-
 /**
  * The steps this screen has a panel for, in the order the server reports
  * them: the model binding, which blocks, and the company's OAuth app,
@@ -72,29 +63,38 @@ export function useInstallationSetup() {
  * function — would keep drawing a component that renders nothing: a reader
  * held behind an empty screen, with nothing on it to say what it wants.
  */
-const ASKABLE_STEPS: readonly Step["step"][] = ["ai_models", "oauth_app"];
+const ASKABLE_STEPS = DECLINABLE_STEPS;
 
 /**
- * The first step that is not done yet AND that this screen can ask for, in the
- * server's order. A blocking step is always outstanding; the app step, which
- * does not block, is outstanding until it is configured or declined.
- *
- * `steps` is optional-chained as well as `setup`: an answer that arrives
- * without it is not an answer, and the alternative is this throwing inside a
- * render — which takes down the screen it was meant to stand in front of.
- * Undefined here reads as "nothing outstanding", which lets the reader past
- * rather than trapping them behind a gate that cannot say what it wants.
+ * The first open step this screen can ask for, in the server's order.
+ * A declined step is passed over when it does not block, or when it is the
+ * model step. The model blocks the website read, and the manual interview
+ * stands in for it. A decline never opens any other blocking step.
+ * A report without `steps` reads as nothing outstanding, never as a throw.
  */
 export function outstandingStep(
   setup: Setup | undefined,
-  platformDeclined: boolean,
+  declined: ReadonlySet<DeclinableStep>,
 ): Step | undefined {
   return setup?.steps?.find(
     (s) =>
       !s.configured &&
-      ASKABLE_STEPS.includes(s.step) &&
-      (s.blocking || !platformDeclined),
+      isAskable(s.step) &&
+      !(declined.has(s.step) && (!s.blocking || s.step === "ai_models")),
   );
+}
+
+function isAskable(step: Step["step"]): step is DeclinableStep {
+  return ASKABLE_STEPS.some((askable) => askable === step);
+}
+
+/** The reader skipped the model step and no model is bound since: the company
+ *  step cannot read a website, and says so instead of failing the read. */
+export function modelSkipped(
+  setup: Setup | undefined,
+  declined: ReadonlySet<DeclinableStep>,
+): boolean {
+  return declined.has("ai_models") && setup !== undefined && !modelBound(setup);
 }
 
 // What the room says while a step is answered, and for the four seconds after
@@ -134,12 +134,6 @@ function boardOf(
   return ignited === null ? "model" : "ignition";
 }
 
-function modelBound(setup: Setup | undefined): boolean {
-  return (
-    setup?.steps?.some((s) => s.step === "ai_models" && s.configured) ?? false
-  );
-}
-
 /**
  * The setup gate. Renders nothing once the server says the installation is
  * complete, so the caller can put it in front of whatever comes next without
@@ -156,8 +150,8 @@ export function InstallationSetup() {
   const t = useT();
   const queryClient = useQueryClient();
   const setup = useInstallationSetup();
-  const declined = usePlatformDeclined();
-  const decline = useRememberPlatformDeclined();
+  const declined = useSetupDeclines();
+  const { decline } = useSetupDecline();
   const step = outstandingStep(setup.data, declined);
   // Owned here because the Core belongs to the stage and the write belongs to
   // the step. The step says when it is writing; nothing reads this but the orb.
@@ -221,10 +215,11 @@ export function InstallationSetup() {
       sub={t(heading.sub)}
     >
       {board === "platform" ? (
-        <PlatformStep onBusy={setBusy} onDecline={decline} />
+        <PlatformStep onBusy={setBusy} onDecline={() => decline("oauth_app")} />
       ) : ignited === null ? (
         <AiStep
           onBusy={setBusy}
+          onDecline={() => decline("ai_models")}
           onIgnite={(vendor) => {
             setBusy(false);
             setIgnited(vendor);

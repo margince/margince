@@ -214,7 +214,7 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `POST /deals/{id}/lines/estimate` | useDealEstimate | Return a deal with no lines to a typed estimate. | Change records | at once |
 | `POST /deals/{id}/applied-changes/{changeId}/accept` | acceptAppliedDealChange | Accept a recorded automatic deal change. | Change records | at once |
 | `GET /deals/{id}/margince-changes` | listDealMarginceChanges | Every change Margince made to this deal, newest first. | Read records | at once |
-| `GET /deal-corrections/pending` | getPendingMarginceChanges | The changes Margince made to your deals that you have not accepted or undone. | Read records | at once |
+| `GET /deal-corrections/pending` | getPendingMarginceChanges | The changes Margince made to your deals in the last 7 days that you have not undone. | Read records | at once |
 | `GET /deals/{id}/stage-evidence` | listStageEvidence | What has been observed about this deal against its stage's criteria. | Read records | at once |
 | `GET /deals/{id}/win-evidence` | getDealWinEvidence | Whether the deal has the signed agreement a win rests on. | Read records | at once |
 | `GET /acquisition-sources` | listAcquisitionSources | List deal acquisition sources, active and retired, in display order. | Read records | at once |
@@ -514,6 +514,10 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `POST /analytics/targets` | createReportingTarget | Create reporting target | Change records | at once |
 | `GET /analytics/targets/{id}` | getReportingTarget | Get reporting target | Read records | at once |
 | `PATCH /analytics/targets/{id}` | updateReportingTarget | Update reporting target | Change records | at once |
+| `GET /analytics/progress` | getSalesProgress | Closed revenue against the sales goal for one seller or team, by month or calendar year. | Read records | at once |
+| `GET /analytics/progress/deals` | listSalesProgressDeals | The open deals of one seller or team as Progress lists them, each with its sale type and next task. | Read records | at once |
+| `GET /analytics/sales-goals` | listSalesGoalSellers | The sellers whose sales goals the caller may read for one calendar year. | Read records | at once |
+| `GET /analytics/sales-goals/{owner_id}/{year}` | getSalesGoalPlan | One seller's sales goal plan for a calendar year. | Read records | at once |
 | `GET /analytics/framework` | getReportingFramework | Get reporting framework | Read records | at once |
 | `PUT /analytics/framework` | publishReportingFramework | Publish reporting framework | Change records | at once |
 | `GET /analytics/reports/{id}/schedules` | listReportingSchedules | List reporting schedules | Read records | at once |

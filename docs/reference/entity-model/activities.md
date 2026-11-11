@@ -84,7 +84,7 @@ The 33 tables owned by `activities`, as the migrations build them. [Back to the 
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 | `raw` | `jsonb` |  | The unparsed upstream payload the row was built from, kept for replay and debugging. |
 | `search_tsv` | `tsvector`, generated as `(((setweight(to_tsvector('simple'::regconfig, f_unaccent(COALESCE(subject, ''::text))), 'A'::"char") \|\| setweight(to_tsvector('simple'::regconfig, f_fold_apostrophes(COALESCE(subject, ''::text))), 'A'::"char")) \|\| setweight(to_tsvector(activity_ts_config(language), f_unaccent(((COALESCE(subject, ''::text) \|\| ' '::text) \|\| COALESCE(body, ''::text)))), 'B'::"char")) \|\| setweight(to_tsvector('simple'::regconfig, f_unaccent(COALESCE(body, ''::text))), 'C'::"char"))` |  | Computed by the database. It cannot be written directly. |
-| `source` | `text` | yes | Which internal channel the record arrived by. |
+| `source` | `text` | yes | Where the row came from. |
 | `source_system` | `text` |  | Which system this record came from: `email` for any captured or sent mail (one identity across gmail/outlook/imap), else gcal/outlook/transcript or a caller's own. |
 | `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |
 | `version` | `bigint`, default `1` | yes | Optimistic-concurrency counter. Every write bumps it, so an update built on a stale read is refused instead of overwriting. |

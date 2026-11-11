@@ -196,7 +196,7 @@ func (e *Eraser) EraseContactCounted(ctx context.Context, contactID ids.UUID, re
 		if err != nil {
 			return err
 		}
-		if err := e.scrubDeliveryCopies(ctx, tx, subject, leadsWiped); err != nil {
+		if err := e.scrubCopiesOutsideCore(ctx, tx, subject, reason, leadsWiped, activitiesRedacted); err != nil {
 			return err
 		}
 		erased, err = certifyErasure(ctx, tx, subject, reason, identities, tx.uncounted(), contactErasureCounts{

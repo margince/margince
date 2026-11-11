@@ -99,7 +99,7 @@ const UNDO_BATCH = 200;
  * batch answered for. `unsent` holds the deals of the failed batch and of every
  * batch after it. The server may have committed the failed one, so a retry
  * reads the deals again before it sends them. `settled` holds the unsent deals
- * that no longer wait for review, with no answer of their own.
+ * that the pending read no longer lists, with no answer of their own.
  */
 export type BundleUndoRun = {
   results: UndoMarginceChangeResult[];

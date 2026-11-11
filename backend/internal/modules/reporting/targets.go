@@ -272,31 +272,42 @@ func (s *Service) CreateTarget(ctx context.Context, in crmcontracts.ReportingTar
 	if err := requireReadWrite(ctx, "sales_target", principal.ActionCreate); err != nil {
 		return crmcontracts.ReportingTarget{}, err
 	}
-	out := crmcontracts.ReportingTarget{Id: openapi_types.UUID(ids.NewV7()), Definition: in, Revision: 1, Version: 1, CreatedAt: s.now()}
+	var out crmcontracts.ReportingTarget
 	err := s.store.db.Tx(ctx, func(tx pgx.Tx) error {
-		checked, err := s.validateTarget(ctx, tx, &in)
-		if err != nil {
+		if err := s.refusePlanOwned(ctx, tx, in); err != nil {
 			return err
 		}
-		if err := refuseUnfilteredPipeline(checked.metric, in); err != nil {
-			return err
-		}
-		interval, unit := checked.interval, checked.unit
-		out.Definition = in
-		out.Interval = interval
-		out.Unit = unit
-		var b bindings
-		values := []string{b.add(out.Id), b.add(in.Metric), b.add(in.Scope.Kind), b.add(in.Scope.Id), b.add(in.PipelineId), b.add(in.PeriodKind), b.add(interval.StartAt), b.add(interval.EndAt), b.add(unit), b.add(1), b.add(1), b.add(out.CreatedAt)}
-		_, err = tx.Exec(ctx, "INSERT INTO sales_target(id,metric,scope_kind,scope_id,pipeline_id,period_kind,period_start,period_end,unit,revision,version,created_at) VALUES ("+strings.Join(values, ",")+")", b.values...)
-		if err != nil {
-			return err
-		}
-		if err := s.saveTargetRevision(ctx, tx, out); err != nil {
-			return err
-		}
-		return recordChange(ctx, tx, "sales_target", ids.UUID(out.Id), "create", nil, out)
+		var err error
+		out, err = s.createTargetTx(ctx, tx, in)
+		return err
 	})
 	return out, storedError(err)
+}
+
+// createTargetTx writes a new target, for this route and for a sales goal
+// plan's publication alike.
+func (s *Service) createTargetTx(ctx context.Context, tx pgx.Tx, in crmcontracts.ReportingTargetInput) (crmcontracts.ReportingTarget, error) {
+	out := crmcontracts.ReportingTarget{Id: openapi_types.UUID(ids.NewV7()), Definition: in, Revision: 1, Version: 1, CreatedAt: s.now()}
+	checked, err := s.validateTarget(ctx, tx, &in)
+	if err != nil {
+		return out, err
+	}
+	if err := refuseUnfilteredPipeline(checked.metric, in); err != nil {
+		return out, err
+	}
+	out.Definition = in
+	out.Interval = checked.interval
+	out.Unit = checked.unit
+	var b bindings
+	values := []string{b.add(out.Id), b.add(in.Metric), b.add(in.Scope.Kind), b.add(in.Scope.Id), b.add(in.PipelineId), b.add(in.PeriodKind), b.add(out.Interval.StartAt), b.add(out.Interval.EndAt), b.add(out.Unit), b.add(1), b.add(1), b.add(out.CreatedAt)}
+	_, err = tx.Exec(ctx, "INSERT INTO sales_target(id,metric,scope_kind,scope_id,pipeline_id,period_kind,period_start,period_end,unit,revision,version,created_at) VALUES ("+strings.Join(values, ",")+")", b.values...)
+	if err != nil {
+		return out, err
+	}
+	if err := s.saveTargetRevision(ctx, tx, out); err != nil {
+		return out, err
+	}
+	return out, recordChange(ctx, tx, "sales_target", ids.UUID(out.Id), "create", nil, out)
 }
 
 // refuseUnfilteredPipeline refuses a new target on a pipeline its figure ignores.
@@ -357,6 +368,9 @@ func (s *Service) UpdateTarget(ctx context.Context, id ids.UUID, version int64, 
 	}
 	var out crmcontracts.ReportingTarget
 	err := s.store.db.Tx(ctx, func(tx pgx.Tx) error {
+		if err := s.refusePlanOwned(ctx, tx, in); err != nil {
+			return err
+		}
 		before, err := s.target(ctx, tx, id, true)
 		if err != nil {
 			return err
@@ -364,27 +378,33 @@ func (s *Service) UpdateTarget(ctx context.Context, id ids.UUID, version int64, 
 		if before.Version != version {
 			return apperrors.ErrVersionSkew
 		}
-		checked, err := s.validateTarget(ctx, tx, &in)
-		if err != nil {
-			return err
-		}
-		interval, unit := checked.interval, checked.unit
-		if err := refuseIdentityChange(before, in, interval, unit); err != nil {
-			return err
-		}
-		out = before
-		out.Definition = in
-		out.Revision++
-		out.Version++
-		var b bindings
-		query := "UPDATE sales_target SET revision=" + b.add(out.Revision) + ",version=" + b.add(out.Version) + " WHERE id=" + b.add(id)
-		if _, err := tx.Exec(ctx, query, b.values...); err != nil {
-			return err
-		}
-		if err := s.saveTargetRevision(ctx, tx, out); err != nil {
-			return err
-		}
-		return recordChange(ctx, tx, "sales_target", id, "update", &before, out)
+		out, err = s.updateTargetTx(ctx, tx, before, in)
+		return err
 	})
 	return out, err
+}
+
+// updateTargetTx writes a target revision. before is the locked
+// current target.
+func (s *Service) updateTargetTx(ctx context.Context, tx pgx.Tx, before crmcontracts.ReportingTarget, in crmcontracts.ReportingTargetInput) (crmcontracts.ReportingTarget, error) {
+	checked, err := s.validateTarget(ctx, tx, &in)
+	if err != nil {
+		return before, err
+	}
+	if err := refuseIdentityChange(before, in, checked.interval, checked.unit); err != nil {
+		return before, err
+	}
+	out := before
+	out.Definition = in
+	out.Revision++
+	out.Version++
+	var b bindings
+	query := "UPDATE sales_target SET revision=" + b.add(out.Revision) + ",version=" + b.add(out.Version) + " WHERE id=" + b.add(out.Id)
+	if _, err := tx.Exec(ctx, query, b.values...); err != nil {
+		return before, err
+	}
+	if err := s.saveTargetRevision(ctx, tx, out); err != nil {
+		return before, err
+	}
+	return out, recordChange(ctx, tx, "sales_target", ids.UUID(out.Id), "update", &before, out)
 }

@@ -12,6 +12,11 @@
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
+/* A details row's value: the figure reads like the values above and below it. */
+.probability-ring-value {
+  font: inherit;
+  color: var(--textPrimary);
+}
 /* Drawn from twelve o'clock, clockwise. */
 .probability-ring > svg {
   flex: none;

@@ -727,6 +727,7 @@
   "systemJob.erasure_replay": "Erasure replay after a restore",
   "systemJob.privacy_review": "Privacy review after an erasure",
   "systemJob.extension_inventory": "Extension inventory",
+  "systemJob.extension_privacy": "Extension privacy check",
   "systemJob.extraction_activity_reannounce": "Extracted activity repair",
   "systemJob.forecast_snapshot": "Daily forecast snapshot",
   "systemJob.forecast_evaluation": "Forecast evaluation",
@@ -1482,6 +1483,10 @@
   "setup.action.ai": "Connect",
   "setup.step.aiDone": "{name} is connected.",
   "setup.step.aiDoneUnnamed": "An AI tool is connected.",
+  "setup.step.model": "Set up AI",
+  "setup.caption.model": "Add an AI provider key so Margince can read websites, draft replies and research.",
+  "setup.action.model": "Add key",
+  "setup.step.modelDone": "An AI provider is connected.",
   "import.sourceBusy": "Another import of this source name is still writing. Wait for it to finish, then try again.",
   "import.reason.run_in_flight": "This import is already running. It finishes on its own and this page updates.",
   "companies.contractMergeBlocked": "A deal has contracts belonging to another company. Archived contracts also count. Ask an administrator to correct the contract links before merging.",
@@ -2207,5 +2212,9 @@
   "analytics.outlook.dealCount_one": "{count} deal",
   "analytics.outlook.dealCount_other": "{count} deals",
   "analytics.team.qualificationUnattributed_one": "{count} first qualification has no recorded owner. Member counts cover attributed events only.",
-  "analytics.team.qualificationUnattributed_other": "{count} first qualifications have no recorded owner. Member counts cover attributed events only."
+  "analytics.team.qualificationUnattributed_other": "{count} first qualifications have no recorded owner. Member counts cover attributed events only.",
+  "nav.progress": "Progress",
+  "nav.myProgress": "My progress",
+  "nav.salesGoals": "Sales goals",
+  "progress.teamTitle": "Team progress"
 }

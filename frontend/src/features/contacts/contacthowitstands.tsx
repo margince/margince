@@ -11,6 +11,7 @@ import { formatDayMonth } from "../../format/format.dates";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { contactTabRoute } from "../../lib/contacttab";
 import { navigate } from "../../lib/router";
+import { latestWord } from "../../lib/standinglatest";
 import { activityMarks } from "../../lib/standingmarks";
 import { useViewerZone } from "../../lib/viewerzone";
 import { contactDims, contactVerdict } from "./contactstanding";
@@ -56,6 +57,12 @@ export function ContactHowItStands({ view }: Readonly<{ view: Contact360 }>) {
     <HowItStands
       date={formatDayMonth(view.as_of, locale, zone)}
       verdict={verdict}
+      latest={latestWord(history.activities, {
+        ...words,
+        record: zone,
+        asOf: view.as_of,
+        onOpen: openHistory,
+      })}
       hero={
         <StrengthHero
           view={view}

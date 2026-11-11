@@ -30,13 +30,15 @@ import (
 	"strings"
 )
 
-// minimumPackages is the census's floor: fewer logs than this means the run
-// that produced them lost most of the tree, and a small corpus reports clean.
+// minimumPackages is the census's floor for a leg that tests the tree. Fewer
+// logs than this means the run that produced them lost most of it. A small
+// corpus reports clean. A leg that tests a named few passes their count.
 const minimumPackages = 100
 
 func main() {
 	logs := flag.String("logs", "", "the directory scripts/testlog-exec.sh wrote to")
 	namesFile := flag.String("names", "", "the output of scripts/ci-stable-mtimes.sh --names")
+	minimum := flag.Int("minimum", minimumPackages, "the fewest package logs the run that wrote them can have left")
 	flag.Parse()
 	names, err := readNames(*namesFile)
 	if err != nil {
@@ -48,9 +50,9 @@ func main() {
 		fmt.Fprintf(os.Stderr, "check-test-inputs: %v\n", err)
 		os.Exit(2)
 	}
-	if read < minimumPackages {
-		fmt.Fprintf(os.Stderr, "check-test-inputs: read %d package logs from %s, too few to be the tree — "+
-			"the run that wrote them lost most of it\n", read, *logs)
+	if read < *minimum {
+		fmt.Fprintf(os.Stderr, "check-test-inputs: read %d package logs from %s, fewer than the %d its run "+
+			"tests — the run that wrote them lost some\n", read, *logs, *minimum)
 		os.Exit(2)
 	}
 	for _, finding := range findings {

@@ -5673,10 +5673,13 @@ export interface paths {
         put?: never;
         /**
          * Accept a recorded automatic deal change.
+         * @deprecated
          * @description Records the human's acceptance of a change Margince made to a deal (its
          *     audit id). It keeps the applied values;
          *     acceptance is an audited review decision, not another application of the change.
          *     Requires the displayed deal version. A reversed or superseded change is refused.
+         *     An accepted change leaves the pending list and keeps its Undo. Margince itself no
+         *     longer asks for this; undo a change instead of accepting the ones you keep.
          */
         post: operations["acceptAppliedDealChange"];
         delete?: never;
@@ -5720,9 +5723,11 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * The changes Margince made to your deals that you have not accepted or undone.
-         * @description One bundle per deal: every open change Margince made to one of the caller's own deals,
-         *     newest first inside the bundle. The counts are deals, counted in SQL over every open
+         * The changes Margince made to your deals in the last 7 days that you have not undone.
+         * @description One bundle per deal: every open change Margince made to one of the caller's own deals
+         *     in the last 7 days, newest first inside the bundle. An older change stays in the
+         *     deal's own list with its Undo. A change accepted through the deprecated accept
+         *     route is left out. The counts are deals, counted in SQL over every open
          *     change, so a deal changed twice counts once and a cut list never shrinks a count.
          *     Bundles are ordered by the deal's value in the base currency, the largest first. At
          *     most 500 bundles; `truncated` says when more exist.
@@ -10010,6 +10015,177 @@ export interface paths {
         head?: never;
         /** Update reporting target */
         patch: operations["updateReportingTarget"];
+        trace?: never;
+    };
+    "/analytics/progress": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Closed revenue against the sales goal for one seller or team, by month or calendar year.
+         * @description Closed revenue is the `bookings_won` figure Analytics shows for the same scope and window:
+         *     won deals by actual close date and current owner, in the reporting currency. The goal is
+         *     the sum of each owner's active monthly `bookings_won` target with no pipeline. A yearly
+         *     reading runs January to December whatever the fiscal year, and needs all twelve months'
+         *     goals; with any missing, `goal.status` is `incomplete` and no completion or delta is given.
+         *
+         *     Actuals stop at `cutoff`, while the goal and planned revenue use the whole period. A period
+         *     that has not started has no `actual_window`. `evaluation` is the reading the figures came
+         *     from, so evidence is read with `/analytics/evidence` under its own receipt.
+         */
+        get: operations["getSalesProgress"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/analytics/progress/deals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The open deals of one seller or team as Progress lists them, each with its sale type and next task.
+         * @description The deals are the ones `GET /deals?status=open` lists for the same owner or team, under the
+         *     same row scope and field masks, so a page holds no deal the caller could not open. Each adds
+         *     the sale type its priced lines show and the next open task a workspace reader may see.
+         *     The list is the work as it stands now, whatever period Progress reads.
+         */
+        get: operations["listSalesProgressDeals"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/analytics/sales-goals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The sellers whose sales goals the caller may read for one calendar year.
+         * @description The caller comes first. A colleague is listed only when the caller may measure them one by
+         *     one, so with individual performance turned off the list holds the caller alone.
+         */
+        get: operations["listSalesGoalSellers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/analytics/sales-goals/{owner_id}/{year}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                owner_id: string;
+                year: number;
+            };
+            cookie?: never;
+        };
+        /**
+         * One seller's sales goal plan for a calendar year.
+         * @description The published goals, the shared draft and the plan's history. A draft is shared with the
+         *     seller and with readers who may set their goals, never with peers. Outside the caller's
+         *     reach the answer is 404 whether or not a plan exists.
+         */
+        get: operations["getSalesGoalPlan"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/analytics/sales-goals/{owner_id}/{year}/draft": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                owner_id: string;
+                year: number;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Save the shared draft of a sales goal plan.
+         * @description Twelve month entries, each an amount in minor units of the plan currency or null for Not
+         *     set. A draft may be incomplete and its declared yearly total may differ from the months;
+         *     it changes no reported figure. `If-Match` is the plan version, `0` when no plan exists.
+         */
+        put: operations["saveSalesGoalDraft"];
+        post?: never;
+        /** Discard the shared draft and keep the published goals. */
+        delete: operations["discardSalesGoalDraft"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/analytics/sales-goals/{owner_id}/{year}/publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                owner_id: string;
+                year: number;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Publish the draft as the agreed goals for the year.
+         * @description Writes the twelve monthly targets, the publication and its audit in one transaction. Every
+         *     month must be set, the months must add up to the declared yearly total, and the total must
+         *     be above zero. The previous publication stays in force when anything fails.
+         */
+        post: operations["publishSalesGoalPlan"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/analytics/sales-goals/{owner_id}/{year}/withdraw": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                owner_id: string;
+                year: number;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Withdraw a mistaken publication.
+         * @description Retires the twelve published targets together, so Progress shows no goal until a new publication.
+         */
+        post: operations["withdrawSalesGoalPlan"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/analytics/framework": {
@@ -40477,9 +40653,12 @@ export interface components {
             /** @description Whether Write email on this row opens with a recipient filled in: true exactly when `GET /activities/{id}/reply-recipient` answers a non-empty `address` for a call, meeting, note or task. Both are computed by one rule, the one `email_target` states. Always false for an email or a message, which are answered with Reply instead, for an archived row, for a task the product filed itself (`automatic_kind` product), and for a row whose content is withheld from the caller. False for a company target too, which has no single address: the composer asks which of the company's contacts the mail is for. */
             offers_email: boolean;
             email_target?: components["schemas"]["ActivityEmailTarget"];
+            /** @description Where the row came from. `manual` is anything typed, by a member or by an assistant working for one, so it never says who typed it: `captured_by` and `recorded_by_agent` do. */
             source: string;
             /** @description Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied. */
             readonly captured_by: string;
+            /** @description True when an assistant or an agent run wrote this activity: `captured_by` names an agent, or a scheduled agent run filed it. A reader labels such a row as the assistant's whatever `source` says. */
+            readonly recorded_by_agent?: boolean;
             /** @description Which import wrote this record, so a screen can say "Imported from <name>" instead of "Typed by you". Null when no import wrote it. The name is the source the import was run for (`bundle`); an empty string is an import that was given none. Derived from `source_system`, whose reserved `mirror:` prefix is never shown. */
             readonly imported_from?: string | null;
             /**
@@ -41380,7 +41559,7 @@ export interface components {
         };
         /** @description What every draft-email route takes to steer a draft: the caller's ask and, for a rewrite, the words on the composer's screen. Each route extends it with the fields its own record needs. */
         DraftSteering: {
-            /** @description The subject the caller has already written on a new-message route, supplied as context for the body. A reply uses the selected message's subject instead. */
+            /** @description The subject the caller has written for the draft. A supported language detected in it outranks every language but `language`: the correspondence, the addressee, the stored label and the draft being rewritten. When no language is detected in it (empty, a project tag, a name), that order stays as it was. On a reply, the answered message's own subject (with or without `Re:`) is history and not read as a choice. */
             subject?: string | null;
             /** @description Optional steering in the caller's own words ("shorter", "warmer", "ask for Tuesday"). The one input that is NOT untrusted — the caller typed it — and so the only one outside the fence. */
             intent?: string | null;
@@ -45060,8 +45239,15 @@ export interface components {
             interval?: components["schemas"]["ReportingWindow"];
             /** @enum {string} */
             target_basis: "month" | "fiscal_quarter";
-            /** @enum {string} */
-            close_window: "fiscal_quarter" | "all_open";
+            /**
+             * @description Which open deals the open-pipeline figures count, by expected close. `fiscal_quarter`
+             *     is the current fiscal quarter, `all_open` is every open deal, and `custom` is
+             *     `close_interval`, which it requires.
+             * @enum {string}
+             */
+            close_window: "fiscal_quarter" | "all_open" | "custom";
+            /** @description The expected-close window `close_window=custom` names, at most twelve months long. */
+            close_interval?: components["schemas"]["ReportingWindow"];
             product_id?: components["schemas"]["ReportingProductId"];
             initiative_id?: components["schemas"]["ReportingInitiativeId"];
             country?: components["schemas"]["ReportingCountry"];
@@ -45627,6 +45813,247 @@ export interface components {
             version: number;
             /** Format: date-time */
             created_at: string;
+        };
+        /**
+         * @description `set` is a complete, positive goal. `zero` is a complete goal of zero: a delta but no
+         *     completion. `incomplete` gives the known subtotal of the months that have a goal and no
+         *     completion or delta. `missing` means no month has one. `withheld` means the caller may not
+         *     read these goals. `other_currency` is a goal kept in a currency other than the reporting
+         *     currency, which is never converted. `changed_outside_plan` is a published plan whose
+         *     targets were changed by another route: monthly figures still compare, yearly ones wait
+         *     for a manager to review the plan.
+         */
+        SalesProgressGoal: {
+            /** @enum {string} */
+            status: "set" | "zero" | "incomplete" | "missing" | "withheld" | "other_currency" | "changed_outside_plan";
+            /**
+             * Format: int64
+             * @description The goal, or the known subtotal when incomplete.
+             */
+            amount_minor?: number;
+            months_set: number;
+            months_needed: number;
+        };
+        /**
+         * @description `ok` is a complete amount. `partial` is a known amount that leaves out records whose value
+         *     the caller may not see or that has none. `withheld` gives no amount. `not_started` is a
+         *     period that has not begun.
+         */
+        SalesProgressAmount: {
+            /** @enum {string} */
+            status: "ok" | "partial" | "withheld" | "not_started";
+            /** Format: int64 */
+            amount_minor?: number;
+        };
+        /**
+         * @description Closed revenue split by what each deal sold, from the category captured on its priced lines:
+         *     software is a product sale and implementation a service. Other kinds, products nobody
+         *     classified and the part no line carries are unresolved. The three parts add up to the
+         *     closed amount exactly. A deal whose lines add up to more than its value counts as
+         *     unresolved in full, in `invalid_deals`.
+         */
+        SalesProgressCategories: {
+            /** @enum {string} */
+            status: "ok" | "partial" | "withheld" | "not_started";
+            /** Format: int64 */
+            product_minor: number;
+            /** Format: int64 */
+            service_minor: number;
+            /** Format: int64 */
+            unresolved_minor: number;
+            /** @description Names of the products sold, most revenue first. */
+            product_items: string[];
+            /** @description Names of the services sold, most revenue first. */
+            service_items: string[];
+            invalid_deals: number;
+        };
+        SalesProgressMonth: {
+            month: number;
+            window: components["schemas"]["ReportingWindow"];
+            /** @enum {string} */
+            state: "not_started" | "current" | "ended";
+            goal: components["schemas"]["SalesProgressGoal"];
+            closed: components["schemas"]["SalesProgressAmount"];
+            /**
+             * Format: int64
+             * @description Closed revenue minus the goal; absent before the month starts and without a complete goal.
+             */
+            delta_minor?: number;
+        };
+        SalesProgressMember: {
+            /** Format: uuid */
+            owner_id: string;
+            name: string;
+            goal: components["schemas"]["SalesProgressGoal"];
+            closed: components["schemas"]["SalesProgressAmount"];
+            planned: components["schemas"]["SalesProgressAmount"];
+            /** Format: int64 */
+            delta_minor?: number;
+        };
+        SalesProgressDealPage: {
+            data: components["schemas"]["SalesProgressDeal"][];
+            page: components["schemas"]["PageInfo"];
+        };
+        SalesProgressDeal: {
+            deal: components["schemas"]["Deal"];
+            /**
+             * @description What the deal's priced lines sell. `partly_classified` when lines of another kind or an unpriced remainder sit beside the classified ones, `unclassified` when no line is a product or a service, or the lines add up to more than the deal. Absent when the deal's amount is masked from the caller.
+             * @enum {string}
+             */
+            sale_type?: "product" | "service" | "product_and_service" | "partly_classified" | "unclassified";
+            /** @description The earliest-due open task on the deal that every workspace reader may see. Absent when there is none. */
+            next_task?: components["schemas"]["SalesProgressNextTask"];
+        };
+        SalesProgressNextTask: {
+            subject: string;
+            /** Format: date-time */
+            due_at?: string | null;
+            /**
+             * Format: uuid
+             * @description Who the task is for. It may differ from the deal's owner.
+             */
+            assignee_id?: string | null;
+        };
+        SalesProgress: {
+            scope: components["schemas"]["ReportingScope"];
+            period: {
+                /** @enum {string} */
+                kind: "month" | "year";
+                year: number;
+                month?: number;
+            };
+            horizon: components["schemas"]["ReportingWindow"];
+            /** @description From the period start to the cutoff. Absent before the period starts. */
+            actual_window?: components["schemas"]["ReportingWindow"];
+            /** Format: date-time */
+            cutoff: string;
+            timezone: string;
+            currency: string;
+            /** @enum {string} */
+            state: "not_started" | "current" | "ended";
+            closed: components["schemas"]["SalesProgressAmount"];
+            goal: components["schemas"]["SalesProgressGoal"];
+            /**
+             * Format: double
+             * @description Closed revenue divided by the goal, given only for a complete positive goal over complete revenue. It is not capped at 1.
+             */
+            completion?: number;
+            /**
+             * Format: int64
+             * @description Closed revenue minus the goal, given only with a complete goal over complete revenue.
+             */
+            delta_minor?: number;
+            categories: components["schemas"]["SalesProgressCategories"];
+            /** @description The face value of open deals expected to close in the whole period. It never counts toward the goal and is not weighted by probability. */
+            planned: components["schemas"]["SalesProgressAmount"];
+            /**
+             * Format: date-time
+             * @description When the open deals were valued and converted.
+             */
+            planned_valued_at: string;
+            /** @description The twelve months of the selected year. */
+            months: components["schemas"]["SalesProgressMonth"][];
+            /** @description A team reading's members in name order, each the caller may measure one by one. */
+            members: components["schemas"]["SalesProgressMember"][];
+            /** @description True when a team's members are not shown one by one. */
+            members_withheld: boolean;
+            /** @description The Analytics reading behind closed and planned revenue, the receipt `/analytics/evidence` takes. */
+            evaluation?: components["schemas"]["ReportingEvaluation"];
+            capabilities: {
+                /** @description Whether the caller may set this scope's goals. */
+                write_goals: boolean;
+            };
+        };
+        SalesGoalSeller: {
+            /** Format: uuid */
+            owner_id: string;
+            name: string;
+            state: components["schemas"]["SalesGoalPlanState"];
+            /**
+             * Format: int64
+             * @description The published yearly goal.
+             */
+            total_minor?: number;
+            can_edit: boolean;
+        };
+        SalesGoalRoster: {
+            year: number;
+            currency: string;
+            data: components["schemas"]["SalesGoalSeller"][];
+        };
+        /** @enum {string} */
+        SalesGoalPlanState: "no_goal" | "draft" | "published" | "published_with_draft" | "withdrawn" | "changed_outside_plan";
+        /** @description January to December, each an amount in minor units or null for Not set. */
+        SalesGoalMonths: (number | null)[];
+        SalesGoalRevision: {
+            /** Format: int64 */
+            revision: number;
+            months: components["schemas"]["SalesGoalMonths"];
+            /** Format: int64 */
+            declared_total_minor?: number | null;
+            reason: string;
+            author_name: string;
+            /** Format: date-time */
+            created_at: string;
+            /** @enum {string} */
+            origin: "manual" | "ai" | "adopted";
+        };
+        SalesGoalEvent: {
+            /** Format: int64 */
+            revision: number;
+            /** @enum {string} */
+            kind: "draft" | "published" | "discarded" | "withdrawn";
+            reason: string;
+            author_name: string;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: int64 */
+            total_minor?: number;
+        };
+        SalesGoalPlan: {
+            /** Format: uuid */
+            owner_id: string;
+            owner_name: string;
+            year: number;
+            /** @description The reporting currency the goals are kept in. */
+            currency: string;
+            state: components["schemas"]["SalesGoalPlanState"];
+            /**
+             * Format: int64
+             * @description The plan version a write sends in If-Match; 0 before the first draft.
+             */
+            version: number;
+            /** @description The monthly goals Progress reads today, whether a plan published them or not. */
+            live_months: components["schemas"]["SalesGoalMonths"];
+            published?: components["schemas"]["SalesGoalRevision"];
+            draft?: components["schemas"]["SalesGoalRevision"];
+            history: components["schemas"]["SalesGoalEvent"][];
+            capabilities: {
+                /** @description Whether the caller may draft, publish, discard and withdraw this plan. */
+                edit: boolean;
+            };
+        };
+        SalesGoalDraftInput: {
+            months: components["schemas"]["SalesGoalMonths"];
+            /** Format: int64 */
+            declared_total_minor?: number;
+            reason: string;
+            /**
+             * @default manual
+             * @enum {string}
+             */
+            origin: "manual" | "ai" | "adopted";
+        };
+        SalesGoalPublishInput: {
+            reason: string;
+            /**
+             * @description The manager confirms these are the goals agreed with the seller.
+             * @enum {boolean}
+             */
+            confirm_agreed: true;
+        };
+        SalesGoalReasonInput: {
+            reason: string;
         };
         ReportingQualification: {
             /** Format: uuid */
@@ -50944,11 +51371,14 @@ export interface components {
          *     evaluator has a selector for. The enum IS the authorable set, so a client cannot offer a
          *     scope that would be stored and then skipped every pass. `activity` is the bare object type
          *     (the row whose `category` is null); every other value carries its category after the slash.
+         *     `extension` is the rows of every extension table that declares an age column: `anonymize`
+         *     clears their declared personal columns, `erase` deletes them, and the table's retention
+         *     class is the floor.
          *
          *     Extending this enum means adding a selector in the same change.
          * @enum {string}
          */
-        RetentionScope: "report_edition" | "lead/unconverted" | "activity" | "activity/transcript" | "contact/no_consent_no_deal" | "deal/lost" | "deal/won" | "ai_call_payload/content" | "raw_capture" | "deal_risk_day";
+        RetentionScope: "report_edition" | "lead/unconverted" | "activity" | "activity/transcript" | "contact/no_consent_no_deal" | "deal/lost" | "deal/won" | "ai_call_payload/content" | "raw_capture" | "deal_risk_day" | "extension";
         /**
          * @description What happens to a record past its window. One action per policy row — a ladder is separate
          *     rows at increasing `retain_days`, never a multi-action row. `archive` retains the record;
@@ -56842,11 +57272,19 @@ export interface components {
         AppliedDealChangeReview: {
             /** @enum {string} */
             kind: "close_date" | "close_lost" | "amount" | "probability" | "stage" | "deal_open" | "deal_revive";
+            /**
+             * @deprecated
+             * @description Whether the change was accepted through the deprecated accept route.
+             */
             accepted: boolean;
             reversed: boolean;
             /** Format: int64 */
             version: number;
             can_undo: boolean;
+            /**
+             * @deprecated
+             * @description Whether the deprecated accept route would take this change.
+             */
             can_accept: boolean;
             /** @description Whether this reader may write this deal. */
             writable: boolean;
@@ -60749,6 +61187,15 @@ export interface operations {
                  *     list answers the first.
                  */
                 company_id?: string;
+                /**
+                 * @description The contacts around this one: those who work at one of its current employers, and
+                 *     those who hold a seat on a deal it holds a seat on. The named contact itself is not
+                 *     in the list. The composer offers this list as recipients. Each link counts only when
+                 *     the caller may read it: the employment edge, the deal and the named contact itself.
+                 *     A contact the caller may not read relates to nobody, so the answer is an empty page
+                 *     and does not say whether the contact exists.
+                 */
+                related_to?: string;
             };
             header?: never;
             path?: never;
@@ -75661,7 +76108,11 @@ export interface operations {
                 start_at?: string;
                 end_at?: string;
                 target_basis?: "month" | "fiscal_quarter";
-                close_window?: "fiscal_quarter" | "all_open";
+                close_window?: "fiscal_quarter" | "all_open" | "custom";
+                /** @description Start of the expected-close window when close_window is custom. Send it with close_end_at; the window spans at most twelve months. */
+                close_start_at?: string;
+                /** @description End of the expected-close window when close_window is custom, exclusive. Send it with close_start_at. */
+                close_end_at?: string;
                 metrics?: components["schemas"]["ReportingMetricID"][];
                 blocks?: components["schemas"]["ReportingBlockKind"][];
                 product_id?: components["schemas"]["ReportingProductId"];
@@ -75729,7 +76180,11 @@ export interface operations {
                 start_at?: string;
                 end_at?: string;
                 target_basis?: "month" | "fiscal_quarter";
-                close_window?: "fiscal_quarter" | "all_open";
+                close_window?: "fiscal_quarter" | "all_open" | "custom";
+                /** @description Start of the expected-close window when close_window is custom. Send it with close_end_at; the window spans at most twelve months. */
+                close_start_at?: string;
+                /** @description End of the expected-close window when close_window is custom, exclusive. Send it with close_start_at. */
+                close_end_at?: string;
                 metrics?: components["schemas"]["ReportingMetricID"][];
                 blocks?: components["schemas"]["ReportingBlockKind"][];
                 product_id?: string;
@@ -75773,7 +76228,11 @@ export interface operations {
                 start_at?: string;
                 end_at?: string;
                 target_basis?: "month" | "fiscal_quarter";
-                close_window?: "fiscal_quarter" | "all_open";
+                close_window?: "fiscal_quarter" | "all_open" | "custom";
+                /** @description Start of the expected-close window when close_window is custom. Send it with close_end_at; the window spans at most twelve months. */
+                close_start_at?: string;
+                /** @description End of the expected-close window when close_window is custom, exclusive. Send it with close_start_at. */
+                close_end_at?: string;
                 metrics?: components["schemas"]["ReportingMetricID"][];
                 blocks?: components["schemas"]["ReportingBlockKind"][];
                 product_id?: string;
@@ -76360,6 +76819,306 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ReportingTarget"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["VersionConflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    getSalesProgress: {
+        parameters: {
+            query: {
+                period: "month" | "year";
+                year: number;
+                /** @description Required with `period=month`. */
+                month?: number;
+                /** @description Absent reads the caller's own figures. */
+                scope_kind?: "owner" | "team";
+                scope_id?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The progress reading. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesProgress"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    listSalesProgressDeals: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
+                 *     effective `sort` of the originating request (field + direction) plus the last row's keyset
+                 *     (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
+                 *     under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+                 *     together with a `sort` that differs from the one the cursor was minted under returns
+                 *     `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
+                 *     **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
+                 *     remaining pages see, so re-issue the query without the cursor when changing filters.
+                 */
+                cursor?: components["parameters"]["Cursor"];
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
+                limit?: components["parameters"]["Limit"];
+                /** @description Absent reads the caller's own deals. */
+                scope_kind?: "owner" | "team";
+                scope_id?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A page of open deals. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesProgressDealPage"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    listSalesGoalSellers: {
+        parameters: {
+            query: {
+                year: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The sellers and the state of each one's plan. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesGoalRoster"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    getSalesGoalPlan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                owner_id: string;
+                year: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The plan. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesGoalPlan"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    saveSalesGoalDraft: {
+        parameters: {
+            query?: never;
+            header: {
+                "If-Match": string;
+                /**
+                 * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
+                 *     create (API-CC-6). **Scope:** the key is unique within
+                 *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
+                 *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+                 *     answer lost": without it the blind retry answers `409 version_skew`, because the first
+                 *     attempt already bumped the version.
+                 *     **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+                 *     retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+                 *     (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+                 *     what makes an operation replay-safe** — an operation that omits it ignores the header rather
+                 *     than half-honouring it, so read this contract, not the client, to know which calls are safe
+                 *     to retry blind.
+                 */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                owner_id: string;
+                year: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SalesGoalDraftInput"];
+            };
+        };
+        responses: {
+            /** @description The plan with its saved draft. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesGoalPlan"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["VersionConflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    discardSalesGoalDraft: {
+        parameters: {
+            query?: never;
+            header: {
+                "If-Match": string;
+            };
+            path: {
+                owner_id: string;
+                year: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The plan without a draft. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesGoalPlan"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["VersionConflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    publishSalesGoalPlan: {
+        parameters: {
+            query?: never;
+            header: {
+                "If-Match": string;
+                /**
+                 * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
+                 *     create (API-CC-6). **Scope:** the key is unique within
+                 *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
+                 *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+                 *     answer lost": without it the blind retry answers `409 version_skew`, because the first
+                 *     attempt already bumped the version.
+                 *     **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+                 *     retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+                 *     (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+                 *     what makes an operation replay-safe** — an operation that omits it ignores the header rather
+                 *     than half-honouring it, so read this contract, not the client, to know which calls are safe
+                 *     to retry blind.
+                 */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                owner_id: string;
+                year: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SalesGoalPublishInput"];
+            };
+        };
+        responses: {
+            /** @description The published plan. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesGoalPlan"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["VersionConflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    withdrawSalesGoalPlan: {
+        parameters: {
+            query?: never;
+            header: {
+                "If-Match": string;
+            };
+            path: {
+                owner_id: string;
+                year: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SalesGoalReasonInput"];
+            };
+        };
+        responses: {
+            /** @description The withdrawn plan. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesGoalPlan"];
                 };
             };
             401: components["responses"]["Unauthorized"];

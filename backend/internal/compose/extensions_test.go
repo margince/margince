@@ -11,6 +11,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/jurisdiction"
 	"github.com/margince/margince/backend/internal/shared/ports/messagingrules"
 	"github.com/margince/margince/backend/pkg/extension"
+	"github.com/margince/margince/backend/pkg/extension/privacy"
 )
 
 // Pack codes in this file use ISO user-assigned codes (z*) unique per
@@ -160,6 +161,13 @@ func TestRegisterExtensionsRejectsAnInvalidUnitName(t *testing.T) {
 	err := RegisterExtensions(composableAll([]extension.Extension{{Name: "Bad_Name"}}), nil, nil)
 	if err == nil || !strings.Contains(err.Error(), "not a valid unit name") {
 		t.Fatalf("err = %v, want the unit-name rejection", err)
+	}
+}
+
+func TestRegisterExtensionsRejectsAPrivacyTableOutsideTheUnitsNamespace(t *testing.T) {
+	err := RegisterExtensions(composableAll([]extension.Extension{{Name: "demo", Version: "0.0.1", Privacy: []privacy.Table{{Name: "ext_other_note"}}}}), nil, nil)
+	if err == nil || !strings.Contains(err.Error(), "ext_other_note") {
+		t.Fatalf("err = %v, want the namespace refusal", err)
 	}
 }
 

@@ -46,6 +46,8 @@ const GO_TO = [
   ["projects", "p", "nav.projects"],
   ["filters", "f", "filters.title"],
   ["analytics", "a", "nav.analytics"],
+  ["progress", "r", "nav.progress"],
+  ["goals", "g", "nav.salesGoals"],
 ] as const satisfies readonly (readonly [Screen, string, MessageKey])[];
 
 function goToRow<S extends Screen>(

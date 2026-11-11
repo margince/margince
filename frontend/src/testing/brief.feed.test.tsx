@@ -151,8 +151,24 @@ it("does not claim an empty agenda when a source failed", () => {
   ).not.toBeNull();
 });
 
-it("keeps approvals in the agenda and offers their review action", () => {
-  stubApi({});
+it("keeps approvals in the agenda and offers their review action", async () => {
+  stubApi({
+    "GET /approvals/a": () =>
+      new Response(
+        JSON.stringify({
+          id: "a",
+          kind: "deal_follow_up",
+          status: "pending",
+          proposed_by: "agent:overnight",
+          created_at: "2026-11-09T10:06:30Z",
+          proposed_change: {
+            subject: "Follow up on Acme",
+            due_date: "2026-11-12",
+          },
+        }),
+        { headers: { "content-type": "application/json" } },
+      ),
+  });
   const row = {
     ...taskRow("a", "Approve the buyer email"),
     source: "approval" as const,
@@ -166,6 +182,8 @@ it("keeps approvals in the agenda and offers their review action", () => {
   expect(
     inHand(container).getByRole("button", { name: en["worklist.verb.decide"] }),
   ).toBeTruthy();
+  // The card in hand shows what the decision would do.
+  expect(await inHand(container).findByText("Follow up on Acme")).toBeTruthy();
 });
 
 it.each([false, true])(

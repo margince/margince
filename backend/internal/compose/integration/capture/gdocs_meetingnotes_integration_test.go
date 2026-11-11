@@ -148,7 +148,7 @@ func notesURL(fileID string) string {
 	return "https://docs.google.com/document/d/" + fileID + "/edit"
 }
 
-// transcriptsOf counts the transcripts landed from one Doc.
+// notesTranscripts counts the transcripts landed from the meeting's notes Doc.
 func notesTranscripts(t *testing.T, e *integration.SearchEnv) int {
 	t.Helper()
 	return countRows(t, e, `SELECT count(*) FROM activity WHERE source_system = 'transcript' AND source_id = '`+notesURL(notesFileID)+`'`)

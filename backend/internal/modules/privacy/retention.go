@@ -131,9 +131,10 @@ const maxRecordDuration = 10 * time.Second
 // A ladder is unaffected: its rungs are different scopes (`activity` and
 // `activity/transcript`), never repeated ones.
 //
-// aiRetentionStages adds the engine-owned AI stores, which batch the same way,
-// and restrictionExpiryStages the erasure of held records whose window closed.
-var MaxPassDuration = time.Duration(len(retentionSelectors)+aiRetentionStages+restrictionExpiryStages+heldCommitmentStages) *
+// extensionRetentionStages adds the one extension policy. aiRetentionStages adds
+// the engine-owned AI stores, which batch the same way, and
+// restrictionExpiryStages the erasure of held records whose window closed.
+var MaxPassDuration = time.Duration(len(retentionSelectors)+extensionRetentionStages+aiRetentionStages+restrictionExpiryStages+heldCommitmentStages) *
 	(retentionBatch * maxRecordDuration)
 
 // embedCallRetention bounds how long an embedding-kind ai_call trace row
@@ -341,7 +342,7 @@ func (s *RetentionService) evaluatePolicy(ctx context.Context, pol retentionPoli
 		scope += *pol.Category
 	}
 	selector, known := retentionSelectors[scope]
-	if !known {
+	if !known && scope != extensionScopeKey {
 		s.log.Warn("retention: policy scope has no selector — skipped, not half-applied",
 			"scope", scope, "policy", pol.ID)
 		return nil
@@ -365,34 +366,39 @@ func (s *RetentionService) evaluatePolicy(ctx context.Context, pol retentionPoli
 			"scope", scope, "policy", pol.ID, "action", pol.Action)
 		return nil
 	}
+	if scope == extensionScopeKey {
+		return s.evaluateExtensionPolicy(ctx, pol, ref)
+	}
 	due, err := s.dueRecords(ctx, pol, selector, ref)
 	if err != nil {
 		return fmt.Errorf("retention %s: select: %w", scope, err)
 	}
 	for _, id := range due {
-		// The posture is re-read per RECORD for a destructive policy, not per
-		// stage. A stage is up to retentionBatch records, each in its own
-		// transaction, so a stage-level read alone let an admin who turned the
-		// posture on mid-stage watch as many as 200 irreversible actions complete
-		// after the promise was made. The cost of checking is one indexed read
-		// against a tiny table; the cost of not checking is measured in destroyed
-		// records, so the asymmetry decides it.
-		if isDestructive(pol.Action) {
-			held, err := s.retainOnly(ctx)
-			if err != nil {
-				return err
-			}
-			if held {
-				s.log.Info("retention: retain-only posture turned on mid-pass — stopping this policy",
-					"scope", scope, "policy", pol.ID, "action", pol.Action)
-				return nil
-			}
+		if stop, err := s.postureStops(ctx, pol, scope); err != nil || stop {
+			return err
 		}
 		if err := s.apply(ctx, pol, id); err != nil {
 			return fmt.Errorf("retention %s on %s: %w", scope, id, err)
 		}
 	}
 	return nil
+}
+
+// postureStops re-reads the retain-only posture before each record of a
+// destructive policy, not once per stage. A stage is up to retentionBatch
+// records, each in its own transaction. A stage-level read alone would let up
+// to 200 irreversible actions run after an admin turned the posture on.
+func (s *RetentionService) postureStops(ctx context.Context, pol retentionPolicy, scope string) (bool, error) {
+	if !isDestructive(pol.Action) {
+		return false, nil
+	}
+	held, err := s.retainOnly(ctx)
+	if err != nil || !held {
+		return false, err
+	}
+	s.log.Info("retention: retain-only posture turned on mid-pass — stopping this policy",
+		"scope", scope, "policy", pol.ID, "action", pol.Action)
+	return true, nil
 }
 
 // dueRecords reads one batch of records this policy is over-age for.

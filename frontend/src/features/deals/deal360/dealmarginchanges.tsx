@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { ReceiptDetail } from "../../../components/receiptdetail";
-import { ReceiptReview } from "../../../components/receiptreview";
+import { ReceiptVerbs } from "../../../components/receiptverbs";
 import { Button } from "../../../design-system/atoms";
 import {
   OverviewCard,
@@ -76,7 +76,7 @@ export function DealMarginceChangesCard({
                 <ReceiptDetail receipt={change} />
               </>
             }
-            right={<ReceiptReview receipt={change} />}
+            right={<ReceiptVerbs receipt={change} />}
           />
         ))}
       </OverviewList>

@@ -26,6 +26,7 @@ import {
   useT,
 } from "../../i18n";
 import type { CompanyTab } from "../../lib/companytab";
+import { latestWord } from "../../lib/standinglatest";
 import { activityMarks } from "../../lib/standingmarks";
 import { useViewerZone } from "../../lib/viewerzone";
 import { companyActivityVerdict } from "./companyactivity";
@@ -127,6 +128,12 @@ export function CompanyHowItStands({
           : formatDayMonth(view.as_of, locale, zone)
       }
       verdict={{ word, sentence: verdict.sentence, tone: verdict.tone }}
+      latest={latestWord(history.activities, {
+        ...words,
+        record: zone,
+        asOf: view.as_of,
+        onOpen: onOpenTab && (() => onOpenTab("timeline")),
+      })}
       hero={
         <HealthRing
           arcs={dimensions.map((dimension) => ({

@@ -17,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/notices"
 	"github.com/margince/margince/backend/internal/modules/signals"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/extprivacy"
 )
 
 // contactMergeDoor is a contacts door that merges: the HTTP handlers, the
@@ -33,6 +34,7 @@ type contactMergeDoor[T any] interface {
 	WithMergeContentReader(read contacts.MergeContentReader) T
 	WithProfileVerdictReader(read contacts.ProfileVerdictReader) T
 	WithFeedbackCarryReader(reader contacts.FeedbackCarryReader) T
+	WithExtensions(r extprivacy.Registry) T
 	WithSenderStamp(stamp contacts.SenderStamp) T
 }
 
@@ -53,5 +55,6 @@ func withContactMergeCarriers[T contactMergeDoor[T]](db *database.DB, door T) T 
 		WithMergeContentReader(activities.NewStore(db)).
 		WithProfileVerdictReader(profileverdicts.MergeReader(db)).
 		WithFeedbackCarryReader(ai.NewFeedbackStore(db)).
+		WithExtensions(ExtensionData()).
 		WithSenderStamp(activities.StampProvenSendersTx)
 }

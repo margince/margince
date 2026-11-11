@@ -113,15 +113,6 @@ func companyMessageChangeRequestFixture() onboardingCompanyMessageFixture {
 	return fixture
 }
 
-func companyMessageFixtureJSON(t *testing.T, f onboardingCompanyMessageFixture) json.RawMessage {
-	t.Helper()
-	raw, err := json.Marshal(f)
-	if err != nil {
-		t.Fatalf("encoding the fixture: %v", err)
-	}
-	return raw
-}
-
 // companyMessageExpectationJSON is what the corpus asserts, encoded as the
 // corpus will carry it — beside the fixture, never inside it.
 func companyMessageExpectationJSON(t *testing.T, kind string, changes map[string]string) json.RawMessage {
@@ -142,7 +133,7 @@ func runCompanyMessageCase(
 	t *testing.T, fixture onboardingCompanyMessageFixture, expected json.RawMessage, reply string,
 ) (aitasks.Outcome, aitasks.Trace) {
 	t.Helper()
-	prepared, err := onboardingCompanyMessageCases{}.Prepare(companyMessageFixtureJSON(t, fixture), expected)
+	prepared, err := onboardingCompanyMessageCases{}.Prepare(fixtureJSON(t, fixture), expected)
 	if err != nil {
 		t.Fatalf("preparing the case: %v", err)
 	}
@@ -323,7 +314,7 @@ func TestCompanyMessageCaseSeparatesTheRightAnswerFromAWellFormedWrongOne(t *tes
 func TestCompanyMessageFixtureCarriesOnlyWhatProductionIsGiven(t *testing.T) {
 	always := map[string]bool{"message": true, "history": true, "conversation": true, "locale": true}
 	var fields map[string]json.RawMessage
-	if err := json.Unmarshal(companyMessageFixtureJSON(t, companyMessageFixture()), &fields); err != nil {
+	if err := json.Unmarshal(fixtureJSON(t, companyMessageFixture()), &fields); err != nil {
 		t.Fatalf("decoding the fixture: %v", err)
 	}
 	for name := range fields {
@@ -339,7 +330,7 @@ func TestCompanyMessageFixtureCarriesOnlyWhatProductionIsGiven(t *testing.T) {
 	// The click is the one thing the path is given only sometimes, so it is the
 	// one key a fixture may add — and it may add nothing else.
 	var clicked map[string]json.RawMessage
-	if err := json.Unmarshal(companyMessageFixtureJSON(t, companyMessageClickFixture()), &clicked); err != nil {
+	if err := json.Unmarshal(fixtureJSON(t, companyMessageClickFixture()), &clicked); err != nil {
 		t.Fatalf("decoding the click fixture: %v", err)
 	}
 	for name := range clicked {

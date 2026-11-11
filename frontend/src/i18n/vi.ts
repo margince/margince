@@ -2338,6 +2338,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "systemJob.erasure_replay": "Xóa lại dữ liệu sau khi khôi phục",
   "systemJob.privacy_review": "Kiểm tra quyền riêng tư sau khi xóa",
   "systemJob.extension_inventory": "Kiểm kê tiện ích mở rộng",
+  "systemJob.extension_privacy": "Kiểm tra quyền riêng tư của tiện ích mở rộng",
   "systemJob.extraction_activity_reannounce": "Sửa hoạt động đã trích xuất",
   "systemJob.forecast_snapshot": "Ảnh chụp dự báo hằng ngày",
   "systemJob.forecast_evaluation": "Đánh giá dự báo",
@@ -3703,7 +3704,15 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "co.aside.visibleEveryone": "Mọi người",
   "co.aside.visibleOnlyYou": "Chỉ bạn",
   "co.aside.visibleOnly": "Chỉ {owner}",
-  "co.aside.visibleOnlyOwner": "Chỉ người phụ trách",
+  "co.aside.visibleOnlyOwner": "Chỉ người chịu trách nhiệm",
+  "co.aside.visibleYouAndShared_one": "Bạn · {count} lượt chia sẻ",
+  "co.aside.visibleYouAndShared_other": "Bạn · {count} lượt chia sẻ",
+  "co.aside.visibleOwnerAndShared_one": "{owner} · {count} lượt chia sẻ",
+  "co.aside.visibleOwnerAndShared_other": "{owner} · {count} lượt chia sẻ",
+  "co.aside.visibleTheOwnerAndShared_one":
+    "Người chịu trách nhiệm · {count} lượt chia sẻ",
+  "co.aside.visibleTheOwnerAndShared_other":
+    "Người chịu trách nhiệm · {count} lượt chia sẻ",
   "co.aside.vatId": "Mã số thuế",
   "co.aside.add": "Thêm…",
   "co.strip.unanswered": "Chưa trả lời",
@@ -3758,13 +3767,14 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "timeline.filters.searchOmitsLimited":
     "Kết quả tìm kiếm bỏ qua các chuỗi thư có nội dung bạn không thể mở.",
   "tab.contacts": "Liên hệ",
+  "tab.companies": "Công ty",
   "tab.deals": "Deal",
   "tab.dealRoom": "Deal Room",
   "tab.dealsProjects": "Deal và dự án",
   "tab.tasks": "Việc cần làm",
   "tab.timeline": "Lịch sử",
   "tab.finance": "Tài chính",
-  "tab.network": "Mạng lưới",
+  "tab.network": "Quan hệ",
   "tab.documents": "Tài liệu",
   "tab.profile": "Thông tin",
   "tab.meetings": "Cuộc họp",
@@ -3849,6 +3859,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "standing.title": "Tình hình · {date}",
   "standing.noteMore": "Xem thêm",
   "standing.noteLess": "Thu gọn",
+  "standing.latest.title": "Mới nhất",
+  "standing.latest.open": "Mở trong Lịch sử",
   "standing.sources.records": "Từ dữ liệu CRM",
   "standing.sources.model_one": "Margince · {count} nguồn",
   "standing.sources.model_other": "Margince · {count} nguồn",
@@ -4480,6 +4492,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "approval.field.because": "Lý do",
   "approval.field.lost_reason": "Lý do thua",
   "approval.field.note": "Ghi chú",
+  "approval.field.task": "Việc",
   "approval.kind.transcript_proposal": "Thêm bước tiếp theo từ bản chép lời",
   "approval.kind.stage_progression": "Chuyển giai đoạn deal",
   "approval.kind.commitment_task": "Cam kết công việc",
@@ -5846,6 +5859,23 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deal.winProbability.source.colleague": "do {name} đặt",
   "deal.winProbability.source.margince": "do Margince hạ xuống",
   "deal.winProbability.stageValue": "giai đoạn {percent}",
+  "deal.winProbability.why": "Vì sao có xác suất này",
+  "deal.winProbability.reason.stage": "Đây là con số {stage} đưa ra.",
+  "deal.winProbability.reason.closed":
+    "Deal đã đóng, nên {stage} cố định con số này.",
+  "deal.winProbability.reason.you": "Bạn đã đặt con số này thủ công.",
+  "deal.winProbability.reason.colleague": "{name} đã đặt con số này thủ công.",
+  "deal.winProbability.reason.human":
+    "Một đồng nghiệp đã đặt con số này thủ công.",
+  "deal.winProbability.reason.stageGives":
+    "Nếu không, {stage} đưa ra {percent}.",
+  "deal.winProbability.reason.margince": "Margince đã đặt con số này.",
+  "deal.winProbability.reason.marginceRule":
+    "Margince có thể hạ xác suất không ai đặt thủ công khi deal im lặng hoặc email cho thấy khả năng thấp hơn.",
+  "deal.winProbability.reason.override": "Nhập con số của riêng bạn để ghi đè.",
+  "deal.winProbability.reason.clear": "Xóa con số để theo lại giai đoạn.",
+  "deal.winProbability.reason.stageNamed": "giai đoạn {name}",
+  "deal.winProbability.reason.stageUnnamed": "giai đoạn của deal",
   "deal.winProbability.setByStage":
     "Giai đoạn {stage} đã đặt xác suất thành {percent}",
   "deal.winProbability.band.90_plus": "Từ 90% trở lên",
@@ -9349,6 +9379,21 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "setup.action.ai": "Kết nối",
   "setup.step.aiDone": "{name} đã được kết nối.",
   "setup.step.aiDoneUnnamed": "Một công cụ AI đã được kết nối.",
+  "firstRun.ai.skip": "Để sau",
+  "ob.gate.noModelSub":
+    "Chưa thiết lập nhà cung cấp AI nên Margince chưa đọc được trang web của bạn. Hãy tự nhập thông tin công ty, hoặc thêm khóa ngay.",
+  "ob.gate.addModel": "Thêm khóa AI",
+  "aiSetup.title": "Thiết lập AI",
+  "aiSetup.intro":
+    "Margince cần một nhà cung cấp AI để đọc trang web, soạn thư trả lời và tìm hiểu. Hãy thêm khóa và chọn mô hình sẽ dùng.",
+  "aiSetup.connect": "Kết nối nhà cung cấp",
+  "aiSetup.connected":
+    "Đã kết nối {vendor}. Giờ Margince có thể đọc, soạn thảo và tìm hiểu.",
+  "setup.step.model": "Thiết lập AI",
+  "setup.caption.model":
+    "Thêm khóa của nhà cung cấp AI để Margince đọc trang web, soạn thư trả lời và tìm hiểu.",
+  "setup.action.model": "Thêm khóa",
+  "setup.step.modelDone": "Đã kết nối một nhà cung cấp AI.",
   "ob.conv.connect.aiRow": "Công cụ AI của bạn",
   "ob.conv.connect.aiBody":
     "Hỏi Claude, ChatGPT, Copilot hoặc trình soạn thảo về các deal của bạn, và để nó cập nhật Margince giúp bạn.",
@@ -10821,6 +10866,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
 
   "retention.scopeRawCapture": "Bản gốc tin nhắn đã lưu",
   "retention.scopeDealRiskDay": "Ghi nhận hằng ngày deal trọng yếu có rủi ro",
+  "retention.scopeExtension": "Hồ sơ do tiện ích mở rộng lưu",
   "pipeline.new": "Pipeline mới",
   "pipeline.createRefused":
     "Vai trò của bạn không thể tạo pipeline. Liên hệ quản trị viên.",
@@ -13042,7 +13088,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "cf.retire.body":
     "Trường sẽ bị ẩn khỏi hồ sơ mới và bộ lọc. Giá trị đã lưu vẫn được giữ. Không thể hoàn tác việc lưu trữ.",
   "cf.retire.lists":
-    "Các danh sách tự cập nhật này lọc theo trường này. Các danh sách này vẫn hoạt động với giá trị đã lưu, và mỗi danh sách sẽ nhắc người chịu trách nhiệm thay điều kiện lọc:",
+    "Các danh sách tự cập nhật này lọc theo trường này. Các danh sách này vẫn hoạt động với giá trị đã lưu, và mỗi danh sách sẽ nhắc người phụ trách thay điều kiện lọc:",
   "cf.retire.unseen_one":
     "{count} danh sách tự cập nhật khác mà bạn không có quyền mở cũng lọc theo trường này.",
   "cf.retire.unseen_other":
@@ -15031,31 +15077,29 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "oauthApp.microsoft.save": "Lưu ứng dụng Microsoft",
   "oauthApp.drawer.google.title": "Thiết lập ứng dụng Google",
   "oauthApp.drawer.google.intro":
-    "Hai bước trong Google Cloud console, rồi dán kết quả vào đây. Bạn cần quyền truy cập dự án Google Cloud của công ty.",
+    "Vài bước trong Google Cloud console, rồi dán kết quả vào đây. Bạn cần quyền truy cập dự án Google Cloud của công ty.",
   "oauthApp.drawer.google.value":
     "Một ứng dụng cho cả công ty. Khi đã lưu, mọi thành viên ở {company} đều kết nối được Gmail và Google Calendar, và nút Tiếp tục với Google có thể xuất hiện trên màn hình đăng nhập.",
   "oauthApp.drawer.google.step1Title": "Tạo OAuth client trong Google Cloud",
   "oauthApp.drawer.google.step1Body":
-    "Mở APIs and services, rồi Credentials, và tạo một OAuth client ID loại Web application.",
+    "Chọn hoặc tạo một dự án cho Margince, mở APIs and services, rồi Credentials, và tạo một OAuth client ID loại Web application. Trên màn hình đồng ý, ở mục Audience, chọn Internal khi mọi lần đăng nhập đều dùng tài khoản Google của công ty: chỉ các tài khoản đó dùng được ứng dụng, và Google không cần xét duyệt ứng dụng. Chỉ chọn External nếu cả tài khoản Gmail cá nhân cũng kết nối.",
   "oauthApp.drawer.google.step1Link": "Mở Google Cloud console",
   "oauthApp.drawer.google.step2Body":
     "Trong client, ở mục Authorized redirect URIs. Margince liệt kê một địa chỉ cho mỗi việc mà bản cài đặt này dùng Google. Dán chính xác; nếu thiếu một địa chỉ, Google sẽ dừng kết nối với lỗi “redirect_uri_mismatch” mà không nói địa chỉ nào.",
   "oauthApp.drawer.microsoft.title": "Thiết lập ứng dụng Microsoft",
   "oauthApp.drawer.microsoft.intro":
-    "Hai bước trong Microsoft Entra admin center, rồi dán kết quả vào đây. Bạn cần quyền truy cập thư mục Entra của công ty.",
+    "Vài bước trong Microsoft Entra admin center, rồi dán kết quả vào đây. Bạn cần quyền truy cập thư mục Entra của công ty.",
   "oauthApp.drawer.microsoft.value":
     "Một ứng dụng cho cả công ty. Khi đã lưu, mọi thành viên ở {company} đều kết nối được thư và lịch Outlook, và nút Tiếp tục với Microsoft có thể xuất hiện trên màn hình đăng nhập.",
   "oauthApp.drawer.microsoft.step1Title":
     "Đăng ký ứng dụng trong Microsoft Entra",
   "oauthApp.drawer.microsoft.step1Body":
-    "Mở App registrations, đăng ký một ứng dụng mới, rồi thêm client secret ở mục Certificates and secrets.",
+    "Mở App registrations và chọn New registration. Đặt tên là Margince và, ở Supported account types, chọn Accounts in this organizational directory only; Directory (tenant) ID của thư mục này điền ở bước cuối. Chỉ khi hộp thư của công ty khác cũng kết nối, chọn Accounts in any organizational directory và để trống thư mục trong Cài đặt.",
   "oauthApp.drawer.microsoft.step1Link": "Mở Microsoft Entra admin center",
   "oauthApp.drawer.microsoft.step2Body":
-    "Trong đăng ký ứng dụng, ở mục Authentication, dưới dạng redirect URI của nền tảng Web. Margince liệt kê một địa chỉ cho mỗi việc mà bản cài đặt này dùng Microsoft. Dán chính xác; nếu thiếu một địa chỉ, Microsoft sẽ dừng kết nối với lỗi “AADSTS50011” mà không nói địa chỉ nào.",
+    "Trong đăng ký ứng dụng, mở Authentication, chọn Add a platform, chọn Web, rồi dán từng địa chỉ bên dưới. Margince liệt kê một địa chỉ cho mỗi việc mà bản cài đặt này dùng Microsoft. Dán chính xác; nếu thiếu một địa chỉ, Microsoft sẽ dừng kết nối với lỗi “AADSTS50011” mà không nói địa chỉ nào.",
   "oauthApp.drawer.step2Title": "Thêm các địa chỉ chuyển hướng này",
   "oauthApp.drawer.step3Title": "Dán client ID và secret",
-  "oauthApp.drawer.step3Body":
-    "{vendor} hiển thị cả hai khi client đã được tạo.",
   "oauthApp.drawer.secretHint":
     "Được lưu mã hóa và không bao giờ hiển thị lại. Muốn đổi sau này, hãy thay ứng dụng.",
   "oauthApp.drawer.foot": "Có hiệu lực cho tất cả ngay khi lưu.",
@@ -15484,7 +15528,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "firstRun.continue": "Tiếp tục",
   "firstRun.ai.title": "Chọn nhà cung cấp mô hình",
   "firstRun.ai.sub":
-    "Margince dùng tài khoản riêng của công ty tại nhà cung cấp AI. Có thể đổi mọi thứ ở đây sau, trong Cài đặt, mục AI.",
+    "Margince dùng tài khoản riêng của công ty tại nhà cung cấp AI. Chưa có khóa? Bạn có thể thêm sau trong Cài đặt, mục AI.",
   "firstRun.ai.provider": "Nhà cung cấp",
   "firstRun.ai.key": "Khóa API",
   "firstRun.ai.keyHint": "Lưu trong kho khóa và không bao giờ hiện lại.",
@@ -16692,7 +16736,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Có ai đó tạo danh sách tự cập nhật hoặc danh sách chọn tay.",
   "webhooks.event.list.updated.label": "Đã đổi cài đặt danh sách",
   "webhooks.event.list.updated.when":
-    "Tên, mục đích, bộ lọc, chia sẻ, nhóm hoặc người chịu trách nhiệm của danh sách thay đổi.",
+    "Tên, mục đích, bộ lọc, chia sẻ, nhóm hoặc người phụ trách của danh sách thay đổi.",
   "webhooks.event.list.archived.label": "Đã chuyển danh sách vào kho lưu trữ",
   "webhooks.event.list.archived.when":
     "Một danh sách được chuyển vào kho lưu trữ.",
@@ -17347,8 +17391,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Bạn không có quyền sửa liên hệ này. Đề nghị người chịu trách nhiệm chuyển giao hoặc chia sẻ, hoặc liên hệ quản trị viên.",
   "contact.rail.employmentVersionUnresolved":
     "Không thể tải phiên bản hiện tại của dòng này. Tải lại trang rồi thử lại.",
-  "contact.rail.employmentTitle": "Công ty",
-  "contact.rail.noEmployment": "Chưa ghi nhận nơi làm việc.",
+  "contact.rail.employmentTitle": "Quá trình làm việc",
+  "contact.rail.noEmployment": "Chưa ghi nhận quá trình làm việc.",
   "contact.rail.noPrimaryEmployer":
     "Chưa có nơi làm việc chính. Chọn nơi làm việc chính.",
   "contact.rail.addEmployment": "Thêm công ty",
@@ -18035,9 +18079,13 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "lists.team.allOwners": "Mọi nhóm của người chịu trách nhiệm",
   "lists.audience.yourTeams": "Nhóm của bạn",
   "lists.audience.ownerTeams": "Nhóm của người chịu trách nhiệm",
+  "lists.audience.ownerOnly": "Người chịu trách nhiệm",
+  "lists.audience.stewardOnly": "Người phụ trách",
+  "lists.audience.youAndSteward": "Bạn và người phụ trách",
+  "lists.audience.ownerAndSteward": "Người chịu trách nhiệm và người phụ trách",
   "lists.audience.unknownTeam":
     "M\u1ed9t nh\u00f3m b\u1ea1n kh\u00f4ng xem \u0111\u01b0\u1ee3c",
-  "lists.health.ownerless": "Chưa ai chịu trách nhiệm",
+  "lists.health.ownerless": "Chưa ai phụ trách",
   "lists.health.invalid":
     "B\u1ed9 l\u1ecdc kh\u00f4ng c\u00f2n d\u00f9ng \u0111\u01b0\u1ee3c",
   "lists.health.retiredField":
@@ -18064,7 +18112,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "lists.filterLine": "Bộ lọc: {sentence}",
   "lists.head.exported_one": "{count} lần, lần gần nhất vào {when}",
   "lists.head.exported_other": "{count} lần, lần gần nhất vào {when}",
-  "lists.fact.steward": "Người chịu trách nhiệm",
+  "lists.fact.steward": "Người phụ trách",
   "lists.fact.exported": "Đã xuất",
   "lists.archived.title": "Danh sách này đang trong kho lưu trữ",
   "lists.archived.body":
@@ -18072,18 +18120,18 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "lists.invalid.title":
     "B\u1ed9 l\u1ecdc n\u00e0y kh\u00f4ng c\u00f2n d\u00f9ng \u0111\u01b0\u1ee3c",
   "lists.invalid.body":
-    "Một trường trong bộ lọc đã thay đổi. Người chịu trách nhiệm danh sách có thể sửa bộ lọc trong trình tạo bộ lọc.",
+    "Một trường trong bộ lọc đã thay đổi. Người phụ trách danh sách có thể sửa bộ lọc trong trình tạo bộ lọc.",
   "lists.ownerless.title":
     "Kh\u00f4ng ai ph\u1ee5 tr\u00e1ch danh s\u00e1ch n\u00e0y",
   "lists.ownerless.body":
-    "Người chịu trách nhiệm danh sách đã rời đi hoặc chưa từng được chỉ định. Thành viên có quyền sửa danh sách nên nhận trách nhiệm danh sách này.",
+    "Người phụ trách danh sách đã rời đi hoặc chưa từng được chỉ định. Thành viên có quyền sửa danh sách nên nhận phụ trách danh sách này.",
   "lists.ownerless.takeOver": "Nh\u1eadn ph\u1ee5 tr\u00e1ch",
   "lists.retiredField.title":
     "B\u1ed9 l\u1ecdc n\u00e0y d\u00f9ng m\u1ed9t tr\u01b0\u1eddng \u0111\u00e3 ng\u1eebng s\u1eed d\u1ee5ng",
   "lists.retiredField.body_one":
-    "{fields} đã ngừng sử dụng. Danh sách vẫn hoạt động với các giá trị đã lưu, và trường đó không còn ghi nhận giá trị mới. Người chịu trách nhiệm danh sách nên thay điều kiện đó trong trình tạo bộ lọc.",
+    "{fields} đã ngừng sử dụng. Danh sách vẫn hoạt động với các giá trị đã lưu, và trường đó không còn ghi nhận giá trị mới. Người phụ trách danh sách nên thay điều kiện đó trong trình tạo bộ lọc.",
   "lists.retiredField.body_other":
-    "{fields} đã ngừng sử dụng. Danh sách vẫn hoạt động với các giá trị đã lưu, và trường đó không còn ghi nhận giá trị mới. Người chịu trách nhiệm danh sách nên thay điều kiện đó trong trình tạo bộ lọc.",
+    "{fields} đã ngừng sử dụng. Danh sách vẫn hoạt động với các giá trị đã lưu, và trường đó không còn ghi nhận giá trị mới. Người phụ trách danh sách nên thay điều kiện đó trong trình tạo bộ lọc.",
   "lists.members.title": "Th\u00e0nh vi\u00ean",
   "lists.members.loading": "\u0110ang t\u1ea3i th\u00e0nh vi\u00ean",
   "lists.members.emptyLive":
@@ -18137,9 +18185,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "lists.record.empty": "Hồ sơ này chưa nằm trong danh sách nào bạn xem được.",
   "lists.record.check": "Kiểm tra với danh sách tự cập nhật",
   "lists.record.checkHint":
-    "Danh sách tự cập nhật thay đổi theo bộ lọc của nó. Chọn một danh sách để xem hồ sơ này có khớp không và vì sao.",
+    "Chỉ kiểm tra được danh sách tự cập nhật. Chọn một danh sách để xem hồ sơ này có khớp không và vì sao.",
+  "lists.record.checkHintAdd":
+    "Chỉ kiểm tra được danh sách tự cập nhật. Dùng “Thêm vào danh sách chọn tay” cho danh sách chọn tay.",
   "lists.record.checkPick": "Chọn danh sách tự cập nhật",
   "lists.record.truncated": "Còn các danh sách khác không hiển thị ở đây.",
+  "lists.record.allLists": "Tất cả danh sách",
   "lists.record.takenOff": "Đã gỡ khỏi {name}",
   "lists.record.putBack": "Đã thêm lại vào {name}",
   "lists.addToShortlist": "Thêm vào danh sách chọn tay",
@@ -18217,7 +18268,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "filters.new.leads": "Bộ lọc lead mới",
   "filters.library.whichRecords": "Lọc loại hồ sơ nào?",
   "filters.library.mine": "Của riêng tôi",
-  "filters.library.shared": "Được chia sẻ",
+  "filters.library.shared": "Được chia sẻ với tôi",
   "filters.library.views": "Chế độ xem đã lưu",
   "filters.library.kindView": "Chế độ xem đã lưu",
   "filters.library.rowMore": "Thao tác khác cho {name}",
@@ -18232,9 +18283,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "filters.library.records.project_one": "{count} dự án",
   "filters.library.records.project_other": "{count} dự án",
   "filters.library.recordsSeen": "{records} bạn xem được",
-  "filters.library.mineEmpty": "Các chế độ xem đã lưu sẽ hiển thị ở đây.",
-  "filters.library.sharedEmpty":
-    "Chưa có danh sách được chia sẻ. Danh sách chia sẻ với một nhóm hoặc cả công ty sẽ hiển thị ở đây.",
+  "filters.library.mineEmpty":
+    "Các chế độ xem bạn lưu và danh sách của bạn sẽ hiển thị ở đây.",
+  "filters.library.sharedEmpty": "Chưa có ai chia sẻ danh sách với bạn.",
   "filters.library.noHits":
     "Không có chế độ xem hay danh sách nào khớp với “{q}”.",
   "filters.library.clearSearch": "Xóa tìm kiếm",
@@ -19499,32 +19550,36 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Thư, lịch và đăng nhập qua một ứng dụng Entra do bạn sở hữu.",
   "firstRun.platform.imap": "IMAP",
   "firstRun.platform.imapWhat":
-    "Mỗi hộp thư kết nối bằng mật khẩu ứng dụng IMAP riêng. Đăng nhập bằng email và mật khẩu.",
-  "firstRun.platform.redirectTitle":
-    "Đăng ký các redirect URI này trong ứng dụng",
-  "firstRun.platform.redirectHint":
-    "Sao chép từng cái vào app trước khi lưu ở đây. Đăng nhập là thứ đưa nút đăng nhập lên trang đăng nhập cho mọi người bạn mời; trình kết nối thư và trình kết nối lịch là thứ cho phép mọi người kết nối của họ. Thiếu một cái thì lỗi xảy ra ở màn hình đồng ý của nhà cung cấp, không phải ở đây.",
-  "firstRun.google.helpToggle": "Lấy các giá trị này ở đâu",
-  "firstRun.google.helpStep1":
-    "Trong Google Cloud console, mở một project rồi vào “APIs & Services”, sau đó “Credentials”. Chọn “Create credentials”, rồi “OAuth client ID”, và chọn “Web application”.",
-  "firstRun.google.helpStep2":
-    "Bật Gmail API và thêm các scope gmail.readonly, gmail.send và userinfo.profile vào màn hình đồng ý (userinfo.profile cung cấp ảnh của tài khoản Google). Các scope dùng chung một lần đồng ý vì Google không thêm scope vào refresh token đã cấp; muốn xin thêm scope sau này thì phải kết nối lại hộp thư.",
-  "firstRun.google.helpStep3":
-    "Trong Authorized redirect URIs, thêm các URI liệt kê ở trên. Hộp thư là bắt buộc để nhận thư; Lịch và Đăng nhập bật các tính năng tương ứng.",
-  "firstRun.google.helpStep4":
-    "Sao chép client ID và khóa bí mật (client secret) vào 2 ô bên dưới. Khóa bí mật chỉ gửi một lần, được lưu trong kho khóa và không bao giờ đọc lại được.",
-  "firstRun.google.helpConsole": "Google Cloud credentials console",
-  "firstRun.google.helpDocs":
-    "Toàn bộ điều kiện tiên quyết, gồm cả Microsoft và IMAP: docs/how-to/connect-a-mailbox.md",
+    "Mỗi hộp thư kết nối qua IMAP bằng mật khẩu do dịch vụ thư cấp, thường là mật khẩu ứng dụng. Đăng nhập bằng email và mật khẩu.",
+  "oauthApp.steps.google.apisTitle": "Bật Gmail và Google Calendar",
+  "oauthApp.steps.google.apisBody":
+    "Trong API library, bật Gmail API và Google Calendar API. Sau đó, trên màn hình đồng ý ở mục Data access, thêm các scope gmail.readonly, gmail.send, calendar.readonly, calendar.events.owned và userinfo.profile; các scope này được duyệt khi kết nối hộp thư và lịch.",
+  "oauthApp.steps.google.apisLink": "Mở API library",
+  "oauthApp.steps.google.pasteBody":
+    "Google hiển thị cả hai trong một hộp thoại sau khi bạn chọn Create. Nếu đã đóng hộp thoại, mở client trong Credentials: client ID nằm ở trên cùng, và Add secret tạo một secret mới.",
+  "oauthApp.steps.microsoft.permissionsTitle": "Cho phép truy cập thư và lịch",
+  "oauthApp.steps.microsoft.permissionsBody":
+    "Mở API permissions, chọn Add a permission, rồi Microsoft Graph, rồi Delegated permissions. Thêm openid, email, profile, offline_access, User.Read, Mail.Read, Mail.Send và Calendars.ReadWrite. Sau đó chọn Grant admin consent, để không ai trong công ty phải duyệt từng quyền.",
+  "oauthApp.steps.microsoft.secretTitle": "Tạo client secret",
+  "oauthApp.steps.microsoft.secretBody":
+    "Mở Certificates and secrets và chọn New client secret. Sao chép Value ngay, không phải Secret ID: Entra chỉ hiển thị giá trị này một lần. Ghi lại ngày hết hạn; khi secret hết hạn, hộp thư ngừng đồng bộ cho đến khi lưu một secret mới ở đây.",
+  "oauthApp.steps.microsoft.pasteTitle": "Dán các ID và secret",
+  "oauthApp.steps.microsoft.pasteBody":
+    "Trang Overview của ứng dụng hiển thị Application (client) ID và Directory (tenant) ID.",
+  "firstRun.imap.passwordTitle": "Lấy mật khẩu IMAP",
+  "firstRun.imap.passwordBody":
+    "Gmail và iCloud cần mật khẩu ứng dụng, tạo được khi đã bật xác minh hai bước; mật khẩu thường bị từ chối. Gmail: Google Account, Security, App passwords. iCloud: Apple Account, Sign-In and Security, App-Specific Passwords. Dịch vụ thư khác ghi trên trang trợ giúp loại mật khẩu IMAP cần. Hộp thư Microsoft 365 không còn nhận mật khẩu qua IMAP: chọn Microsoft 365 ở trên. Hộp thư Outlook.com cá nhân không kết nối được ở đây.",
+  "firstRun.imap.serverTitle": "Tra máy chủ IMAP",
+  "firstRun.imap.serverBody":
+    "Gmail dùng imap.gmail.com và iCloud dùng imap.mail.me.com, đều ở cổng 993. Dịch vụ thư khác ghi máy chủ trên trang trợ giúp về cài đặt IMAP.",
+  "firstRun.imap.connectTitle": "Kết nối hộp thư của bạn",
   "firstRun.platform.imapNote":
-    "Bản cài đặt không có cấu hình chung nào. Kết nối hộp thư của bạn ngay hoặc để sau; các hộp thư khác kết nối trong Cài đặt, mục Kết nối, mỗi hộp thư có mật khẩu ứng dụng riêng.",
+    "Bản cài đặt không có cấu hình chung nào. Kết nối hộp thư của bạn ngay hoặc để sau; các hộp thư khác kết nối trong Cài đặt, mục Kết nối, mỗi hộp thư có mật khẩu IMAP riêng.",
   "firstRun.platform.skip": "Để sau",
   "firstRun.needed": "Cần có để tiếp tục",
   "firstRun.stillNeeded": "Còn thiếu: {fields}",
   "firstRun.platform.foot":
     "Mọi câu trả lời ở đây có thể đổi sau trong Cài đặt.",
-  "firstRun.microsoft.note":
-    "Đăng ký một ứng dụng trong Microsoft Entra với các redirect URI ở trên, rồi dán client ID và secret của ứng dụng vào đây. Ghim ứng dụng vào thư mục của công ty: các hộp thư trong thư mục đó kết nối qua ứng dụng, và người trong thư mục đăng nhập bằng ứng dụng.",
   "firstRun.microsoft.helpSignIn":
     "Thư mục đưa Microsoft lên trang đăng nhập, nên ở đây bắt buộc phải có thư mục. Để đăng ký ứng dụng không gắn thư mục (tổ chức nào cũng kết nối được hộp thư, không ai đăng nhập bằng Microsoft), hãy dùng Cài đặt.",
   "firstRun.microsoft.tenantHint":
@@ -20599,6 +20654,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "scheduling.pause": "Tạm dừng đặt lịch",
   "record.details.showEmpty_one": "Hiện {count} trường trống",
   "record.details.showEmpty_other": "Hiện {count} trường trống",
+  "contact.handles.more_one": "+{count} mục khác",
+  "contact.handles.more_other": "+{count} mục khác",
+  "contact.handles.fewer": "Thu gọn",
   "record.details.hideEmpty": "Ẩn trường trống",
   "record.verb.email": "Thư",
   "record.verb.call": "Gọi",
@@ -21210,10 +21268,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "brief.done.changeCount_other": "{count} thay đổi",
   "brief.done.steps": "Các thay đổi trên giao dịch này, mới nhất trước",
   "brief.done.title": "Margince đã làm giúp bạn",
-  "brief.done.waiting_one": "{count} giao dịch chờ bạn xem xét",
-  "brief.done.waiting_other": "{count} giao dịch chờ bạn xem xét",
-  "brief.done.reviewAll_one": "Xem xét tất cả {count} giao dịch",
-  "brief.done.reviewAll_other": "Xem xét tất cả {count} giao dịch",
+  "brief.done.seeAll_one": "Xem tất cả {count} giao dịch",
+  "brief.done.seeAll_other": "Xem tất cả {count} giao dịch",
   "brief.done.drawerTitle_one": "{count} giao dịch Margince đã thay đổi",
   "brief.done.drawerTitle_other": "{count} giao dịch Margince đã thay đổi",
   "changes.undoDeals_one": "Hoàn tác thay đổi trên {count} giao dịch",
@@ -21229,8 +21285,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "brief.done.noReason": "Không có lý do",
   "brief.done.markedLost": "Đã đánh dấu là mất",
   "brief.done.customerWrote": "Khách hàng đã viết:",
-  "brief.changes.markReviewed": "Đánh dấu đã xem xét",
-  "brief.changes.reviewed": "Đã xem xét",
   "magic.lane.doneOther": "Cập nhật khác",
   "changes.bulk.undone_one": "Đã hoàn tác trên {count} giao dịch.",
   "changes.bulk.undone_other": "Đã hoàn tác trên {count} giao dịch.",
@@ -21243,11 +21297,162 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "changes.bulk.confirm_other":
     "{count} giao dịch cần bạn xác nhận. Hãy hoàn tác từng giao dịch trên dòng của nó.",
   "changes.bulk.unsent_one": "{count} giao dịch chưa được gửi.",
-  "changes.bulk.settled_one": "{count} giao dịch không còn chờ xem xét.",
-  "changes.bulk.settled_other": "{count} giao dịch không còn chờ xem xét.",
+  "changes.bulk.settled_one":
+    "{count} giao dịch không còn thay đổi để hoàn tác.",
+  "changes.bulk.settled_other":
+    "{count} giao dịch không còn thay đổi để hoàn tác.",
   "changes.bulk.unsent_other": "{count} giao dịch chưa được gửi.",
   "changes.bulk.confirmOnDeal": "Mở giao dịch để xác nhận hoàn tác.",
   "changes.bulk.retry": "Gửi lại",
   "changes.bulk.unfinished": "Giao dịch chưa hoàn tác hết",
   "changes.bulk.clear": "Ẩn kết quả này",
+  "nav.progress": "Tiến độ",
+  "nav.myProgress": "Tiến độ của tôi",
+  "nav.salesGoals": "Mục tiêu doanh số",
+  "progress.controls": "Kỳ và phạm vi tiến độ",
+  "progress.viewGoals": "Xem mục tiêu doanh số",
+  "progress.period": "Kỳ",
+  "progress.monthly": "Theo tháng",
+  "progress.yearly": "Theo năm",
+  "progress.month": "Tháng",
+  "progress.year": "Năm",
+  "progress.scope": "Nhân viên kinh doanh hoặc nhóm",
+  "progress.reading": "Đang đọc tiến độ",
+  "progress.myTitle": "Tiến độ",
+  "progress.teamTitle": "Tiến độ nhóm",
+  "progress.heading": "{whose} · {scope} · {period} · Số liệu đến {cutoff}",
+  "progress.closedRevenue": "Doanh thu đã chốt",
+  "progress.goal": "Mục tiêu",
+  "progress.goalLine": "Mục tiêu của kỳ: {goal}",
+  "progress.goalIncompleteTeamLine":
+    "Mục tiêu chưa đủ: ít nhất một nhân viên kinh doanh chưa có mục tiêu tháng, hiện là {subtotal}",
+  "progress.goalIncompleteLine":
+    "Mục tiêu chưa đủ: đã đặt {set}/{needed} tháng, hiện là {subtotal}",
+  "progress.goal.set": "Đã đặt",
+  "progress.goal.zero": "Bằng không",
+  "progress.goal.missing": "Chưa đặt mục tiêu",
+  "progress.goal.incomplete": "Mục tiêu chưa đủ",
+  "progress.goal.withheld": "Bị ẩn",
+  "progress.goal.other_currency": "Bằng tiền tệ khác",
+  "progress.goal.changed_outside_plan": "Đã đổi ngoài kế hoạch",
+  "progress.goalChanged":
+    "Một tháng của mục tiêu này đã được đổi ngoài kế hoạch. Quản lý nên xem lại kế hoạch.",
+  "progress.completion": "{percent}% mục tiêu",
+  "progress.partial":
+    "Một số deal trong số liệu này chưa có giá trị quy đổi, nên không tính mức hoàn thành.",
+  "progress.notStarted": "Chưa bắt đầu",
+  "progress.withheld": "Bị ẩn",
+  "progress.goalMet": "Đạt mục tiêu",
+  "progress.aboveGoal": "Vượt mục tiêu {amount}",
+  "progress.belowGoal": "Dưới mục tiêu {amount}",
+  "progress.viewClosedDeals": "Xem deal đã chốt",
+  "progress.readings": "Chỉ số doanh thu",
+  "progress.productSales": "Doanh số sản phẩm",
+  "progress.serviceSales": "Dịch vụ và dự án",
+  "progress.planned": "Doanh thu dự kiến",
+  "progress.plannedAt": "Deal đang mở tính đến {at}",
+  "progress.unclassified": "Chưa phân loại",
+  "progress.unclassifiedDetail":
+    "Doanh thu này chưa được phân loại theo sản phẩm hay dịch vụ.",
+  "progress.invalidDeals_one": "{count} deal có các dòng lớn hơn giá trị deal.",
+  "progress.invalidDeals_other":
+    "{count} deal có các dòng lớn hơn giá trị deal.",
+  "progress.itemsMore_one": "{items} và {count} mục khác",
+  "progress.itemsMore_other": "{items} và {count} mục khác",
+  "progress.team": "Nhóm",
+  "progress.member": "Thành viên nhóm",
+  "progress.delta": "Chênh lệch",
+  "progress.membersWithheld":
+    "Một số thành viên bị ẩn, nên mục tiêu nhóm cũng bị ẩn.",
+  "progress.months": "Các tháng năm {year}",
+  "progress.definition":
+    "Doanh thu đã chốt là giá trị các deal thắng trong kỳ, cùng số liệu với Analytics. Mục tiêu là tổng các mục tiêu doanh số tháng trong kỳ. Mục tiêu năm cần đủ mười hai tháng.",
+  "progress.work": "Công việc đang làm",
+  "progress.work.leads": "Lead",
+  "progress.work.deals": "Deal",
+  "progress.work.lead": "Tên lead",
+  "progress.work.deal": "Tên deal",
+  "progress.work.status": "Trạng thái",
+  "progress.work.nextTask": "Việc tiếp theo",
+  "progress.work.noNextTask": "Chưa có việc tiếp theo",
+  "progress.work.owner": "Phụ trách",
+  "progress.work.amount": "Số tiền dự kiến",
+  "progress.work.noAmount": "Chưa có số tiền",
+  "progress.work.expectedClose": "Dự kiến chốt",
+  "progress.work.noClose": "Chưa có ngày",
+  "progress.work.unnamed": "Lead chưa có tên",
+  "progress.work.empty": "Danh sách này không có mục nào đang mở.",
+  "progress.work.more": "Xem thêm",
+  "progress.plannedAhead": "Dự kiến, chưa chốt",
+  "progress.rail": "Mục tiêu và định nghĩa",
+  "progress.definitionTitle": "Những gì được tính",
+  "progress.goalBasis": "Mục tiêu lấy từ đâu",
+  "progress.goalFor": "Mục tiêu cho {period}",
+  "progress.goalMonths": "Số tháng có mục tiêu",
+  "progress.goalMonthsSet": "{set}/{needed}",
+  "progress.goalBasisNote": "Mục tiêu là tổng các mục tiêu tháng đã công bố.",
+  "progress.ofGoal": "Doanh thu đã chốt của {name} so với mục tiêu",
+  "progress.yearLine": "{year} đến nay: {closed}/{goal} ({percent}%)",
+  "progress.work.note": "Đang mở hiện tại, không phụ thuộc kỳ.",
+  "progress.work.saleProduct": "Sản phẩm",
+  "progress.work.saleService": "Dịch vụ",
+  "progress.work.saleBoth": "Sản phẩm và dịch vụ",
+  "progress.work.salePartly": "Phân loại một phần",
+  "progress.work.saleNone": "Chưa phân loại",
+  "progress.work.overdue": "Quá hạn",
+  "progress.work.outside": "Ngoài kỳ",
+  "goals.controls": "Năm và nhân viên kinh doanh",
+  "goals.viewProgress": "Xem tiến độ",
+  "goals.seller": "Nhân viên kinh doanh",
+  "goals.reading": "Đang đọc mục tiêu doanh số",
+  "goals.planTitle": "Mục tiêu doanh số của {name} năm {year}",
+  "goals.state.no_goal": "Chưa có kế hoạch",
+  "goals.state.draft": "Bản nháp",
+  "goals.state.published": "Đã công bố",
+  "goals.state.published_with_draft": "Đã công bố, có bản nháp",
+  "goals.state.withdrawn": "Đã rút lại",
+  "goals.state.changed_outside_plan": "Đã đổi ngoài kế hoạch",
+  "goals.readOnly":
+    "Chỉ xem. Mục tiêu được thống nhất cùng nhau. Chỉ đồng nghiệp quản lý mục tiêu doanh số mới có thể tạo, sửa hoặc công bố chúng.",
+  "goals.months": "Mục tiêu theo tháng",
+  "goals.yearTotal": "Cả năm",
+  "goals.notSet": "Chưa đặt",
+  "goals.history": "Lịch sử",
+  "goals.history.what": "Thay đổi",
+  "goals.history.reason": "Lý do",
+  "goals.history.when": "Thời điểm",
+  "goals.event.draft": "{name} đã lưu bản nháp",
+  "goals.event.published": "{name} đã công bố mục tiêu",
+  "goals.event.discarded": "{name} đã bỏ bản nháp",
+  "goals.event.withdrawn": "{name} đã rút lại mục tiêu",
+  "goals.roster": "Nhân viên kinh doanh",
+  "goals.status": "Trạng thái",
+  "goals.yearly": "Mục tiêu năm ({currency})",
+  "goals.spread": "Chia đều",
+  "goals.monthsSum": "Các tháng cộng lại là {total}.",
+  "goals.monthsMissing_one": "{count} tháng chưa đặt.",
+  "goals.monthsMissing_other": "{count} tháng chưa đặt.",
+  "goals.sumDiffers":
+    "Các tháng cộng lại là {total}, không bằng mục tiêu năm {yearly}.",
+  "goals.reason": "Lý do",
+  "goals.reasonHint": "Được lưu cùng thay đổi và hiện trong lịch sử.",
+  "goals.reasonNeeded": "Hãy viết lý do trước.",
+  "goals.sellerReads":
+    "{name} có thể xem kế hoạch này, các bản nháp và lý do của mỗi thay đổi.",
+  "goals.saveDraft": "Lưu bản nháp",
+  "goals.discard": "Bỏ bản nháp",
+  "goals.publish": "Công bố",
+  "goals.withdraw": "Rút lại",
+  "goals.saveFirst": "Hãy lưu bản nháp trước.",
+  "goals.completeFirst": "Hãy đặt đủ mười hai tháng trước.",
+  "goals.positiveFirst": "Mục tiêu năm phải lớn hơn không.",
+  "goals.matchFirst": "Hãy để các tháng cộng lại bằng mục tiêu năm trước.",
+  "goals.publishTitle": "Công bố mục tiêu của {name} năm {year}?",
+  "goals.publishBody":
+    "Mười hai tháng, tổng {total}, trở thành mục tiêu mà mọi báo cáo dùng.",
+  "goals.agreed": "Các mục tiêu này đã được cùng thống nhất.",
+  "goals.agreeFirst": "Hãy xác nhận mục tiêu đã được cùng thống nhất.",
+  "goals.withdrawTitle": "Rút lại mục tiêu của {name} năm {year}?",
+  "goals.withdrawBody":
+    "Cả mười hai tháng không còn được tính là mục tiêu. Lịch sử vẫn giữ chúng.",
 };

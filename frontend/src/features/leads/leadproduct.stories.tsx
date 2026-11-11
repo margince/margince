@@ -6,6 +6,7 @@ import type { components } from "../../api/schema";
 import {
   installFetchStub,
   jsonResponse,
+  meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
 import { LeadProductLine } from "./leadproduct";
@@ -42,6 +43,7 @@ function Line({ lead }: Readonly<{ lead: Lead }>) {
 
 function line(productId: string | null) {
   installFetchStub({
+    "GET /me": meRoute({ lead: ["read", "update"], product: ["read"] }),
     "GET /products/p-suite": () =>
       jsonResponse({ id: "p-suite", name: "Suite" }),
     "GET /products": () =>

@@ -32,6 +32,20 @@ export type StandingVerdict = Readonly<{
   tone: ReadingTone;
 }>;
 
+/** The newest thing said on the record, set under the verdict: what the
+ *  call rests on today, in the words of the record that said it. */
+export type StandingLatest = Readonly<{
+  // Margince wrote it, so the line wears the indigo source badge.
+  byMargince: boolean;
+  kind: string;
+  // Who it was from or to, when the row names them.
+  detail?: string;
+  when: string;
+  text: string;
+  // Opens the record's History, where the whole row is.
+  onOpen?: () => void;
+}>;
+
 /**
  * How it stands: the record's verdict over its readings. A ring sits beside
  * the dimension rows (`heroLayout="beside"`); a stage ladder runs the full
@@ -43,6 +57,7 @@ export function HowItStands({
   date,
   sources = { by: "records" },
   verdict,
+  latest,
   hero,
   heroLayout = "beside",
   ring,
@@ -55,6 +70,7 @@ export function HowItStands({
   date: string;
   sources?: StandingSources;
   verdict: StandingVerdict;
+  latest?: StandingLatest;
   hero?: ReactNode;
   heroLayout?: "beside" | "below";
   // A ring beside the rows while the hero is a ladder below them.
@@ -103,7 +119,8 @@ export function HowItStands({
             {verdict.sentence ? (
               <p className="standing-sheet-sentence">{verdict.sentence}</p>
             ) : null}
-            {verdict.note ? <StandingNote note={verdict.note} /> : null}
+            {verdict.note ? <ClampedText text={verdict.note} /> : null}
+            {latest ? <LatestWord latest={latest} /> : null}
           </div>
           {(dims || besideRing) && (
             <div className="standing-sheet-readings">
@@ -120,33 +137,74 @@ export function HowItStands({
   );
 }
 
-// The whole note stays in the card: the clamp only shortens it, and the
+function LatestWord({ latest }: Readonly<{ latest: StandingLatest }>) {
+  const t = useT();
+  const head = [latest.kind, latest.detail, latest.when]
+    .filter(Boolean)
+    .join(" · ");
+  return (
+    <div className="standing-sheet-latest">
+      <p className="standing-sheet-latest-head">
+        <strong>{t("standing.latest.title")}</strong>
+        {latest.byMargince && <Badge tone="ai">{t("agentJob.margince")}</Badge>}
+        <span>{head}</span>
+      </p>
+      <ClampedText
+        text={latest.text}
+        tail={
+          latest.onOpen && (
+            <button
+              type="button"
+              className="link-button standing-sheet-note-toggle"
+              onClick={latest.onOpen}
+            >
+              {t("standing.latest.open")}
+            </button>
+          )
+        }
+      />
+    </div>
+  );
+}
+
+// The whole text stays in the card: the clamp only shortens it, and the
 // control shows only when the clamp hides something.
-function StandingNote({ note }: Readonly<{ note: string }>) {
+function ClampedText({
+  text,
+  tail,
+}: Readonly<{ text: string; tail?: ReactNode }>) {
   const t = useT();
   const [open, setOpen] = useState(false);
-  const [setBox, clipped] = useLineClamped(open, note);
-  const noteId = useId();
+  const [setBox, clipped] = useLineClamped(open, text);
+  const textId = useId();
+  const toggle = (clipped || open) && (
+    <button
+      type="button"
+      className="link-button standing-sheet-note-toggle"
+      aria-expanded={open}
+      aria-controls={textId}
+      onClick={() => setOpen(!open)}
+    >
+      {t(open ? "standing.noteLess" : "standing.noteMore")}
+    </button>
+  );
   return (
     <>
       <p
         ref={setBox}
-        id={noteId}
+        id={textId}
         className="standing-sheet-note"
         data-clamped={open ? undefined : ""}
       >
-        {note}
+        {text}
       </p>
-      {(clipped || open) && (
-        <button
-          type="button"
-          className="link-button standing-sheet-note-toggle"
-          aria-expanded={open}
-          aria-controls={noteId}
-          onClick={() => setOpen(!open)}
-        >
-          {t(open ? "standing.noteLess" : "standing.noteMore")}
-        </button>
+      {tail ? (
+        <span className="standing-sheet-note-links">
+          {toggle}
+          {tail}
+        </span>
+      ) : (
+        toggle
       )}
     </>
   );

@@ -727,6 +727,7 @@
   "systemJob.erasure_replay": "Xóa lại dữ liệu sau khi khôi phục",
   "systemJob.privacy_review": "Kiểm tra quyền riêng tư sau khi xóa",
   "systemJob.extension_inventory": "Kiểm kê tiện ích mở rộng",
+  "systemJob.extension_privacy": "Kiểm tra quyền riêng tư của tiện ích mở rộng",
   "systemJob.extraction_activity_reannounce": "Sửa hoạt động đã trích xuất",
   "systemJob.forecast_snapshot": "Ảnh chụp dự báo hằng ngày",
   "systemJob.forecast_evaluation": "Đánh giá dự báo",
@@ -1482,6 +1483,10 @@
   "setup.action.ai": "Kết nối",
   "setup.step.aiDone": "{name} đã được kết nối.",
   "setup.step.aiDoneUnnamed": "Một công cụ AI đã được kết nối.",
+  "setup.step.model": "Thiết lập AI",
+  "setup.caption.model": "Thêm khóa của nhà cung cấp AI để Margince đọc trang web, soạn thư trả lời và tìm hiểu.",
+  "setup.action.model": "Thêm khóa",
+  "setup.step.modelDone": "Đã kết nối một nhà cung cấp AI.",
   "import.sourceBusy": "Một lần nhập khác cùng tên nguồn vẫn đang ghi. Hãy đợi nó xong, rồi thử lại.",
   "import.reason.run_in_flight": "Lần nhập này đang chạy. Nó tự hoàn tất và trang này tự cập nhật.",
   "companies.contractMergeBlocked": "Một deal có hợp đồng thuộc công ty khác. Hợp đồng trong kho lưu trữ cũng được tính. Liên hệ quản trị viên để sửa liên kết hợp đồng trước khi hợp nhất.",
@@ -2207,5 +2212,9 @@
   "analytics.outlook.dealCount_one": "Số deal: {count}",
   "analytics.outlook.dealCount_other": "Số deal: {count}",
   "analytics.team.qualificationUnattributed_one": "{count} lần đủ điều kiện đầu tiên chưa ghi nhận người phụ trách. Số của thành viên chỉ tính sự kiện đã phân bổ.",
-  "analytics.team.qualificationUnattributed_other": "{count} lần đủ điều kiện đầu tiên chưa ghi nhận người phụ trách. Số của thành viên chỉ tính sự kiện đã phân bổ."
+  "analytics.team.qualificationUnattributed_other": "{count} lần đủ điều kiện đầu tiên chưa ghi nhận người phụ trách. Số của thành viên chỉ tính sự kiện đã phân bổ.",
+  "nav.progress": "Tiến độ",
+  "nav.myProgress": "Tiến độ của tôi",
+  "nav.salesGoals": "Mục tiêu doanh số",
+  "progress.teamTitle": "Tiến độ nhóm"
 }

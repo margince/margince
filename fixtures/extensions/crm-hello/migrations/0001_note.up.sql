@@ -7,7 +7,8 @@ CREATE TABLE ext.ext_crm_hello_note (
     id          uuid NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
     company_id  uuid,
     contact_id  uuid,
-    body        text NOT NULL
+    body        text NOT NULL,
+    noted_at    timestamptz NOT NULL DEFAULT now()
 );
 
 -- Conditional because a throwaway database applying this under its owning role

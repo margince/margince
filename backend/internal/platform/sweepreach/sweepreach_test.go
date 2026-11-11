@@ -6,6 +6,7 @@ package sweepreach
 import (
 	"context"
 	"errors"
+	"maps"
 	"strings"
 	"testing"
 
@@ -91,5 +92,44 @@ func TestAnUnsealedSetRefusesTheMergeAndTheErasure(t *testing.T) {
 	}
 	if _, err := Erase(context.Background(), nil, ids.NewV7(), "erased"); !errors.Is(err, ErrNotSealed) {
 		t.Errorf("Erase() = %v, want ErrNotSealed", err)
+	}
+}
+
+// The dependents check of a merge skips the columns Relink moves, so the two
+// must agree per record kind.
+func TestTheMovedColumnsAreTheOnesRelinkMovesForThatKind(t *testing.T) {
+	installed.mu.Lock()
+	tables, sealed := installed.tables, installed.sealed
+	installed.mu.Unlock()
+	t.Cleanup(func() {
+		installed.mu.Lock()
+		installed.tables, installed.sealed = tables, sealed
+		installed.mu.Unlock()
+	})
+	if err := Install([]Owned{{Owner: "a", Schema: "ext", Table: reach.Table{Name: "ext_a_note", Links: []reach.Link{
+		{Column: "company_id", Record: reach.Company},
+		{Column: "contact_id", Record: reach.Contact},
+		{Column: "record_id", KindColumn: "record_type"},
+	}}}}); err != nil {
+		t.Fatal(err)
+	}
+	column := func(name string) Column { return Column{Schema: "ext", Table: "ext_a_note", Name: name} }
+
+	pair := Moved{KindColumn: "record_type"}
+	for record, want := range map[reach.Record]map[Column]Moved{
+		reach.Company: {column("company_id"): {}, column("record_id"): pair},
+		reach.Contact: {column("contact_id"): {}, column("record_id"): pair},
+		reach.Lead:    {column("record_id"): pair},
+	} {
+		moved, err := MovedColumns(record)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !maps.Equal(moved, want) {
+			t.Errorf("a %s merge moves %v, want %v", record, moved, want)
+		}
+	}
+	if _, err := MovedColumns("activity"); err == nil {
+		t.Error("MovedColumns accepted a record kind no merge moves")
 	}
 }

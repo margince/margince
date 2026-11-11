@@ -467,13 +467,13 @@ it("gives every deal of a first batch the server committed but never answered a 
   // lists them, so none is called unsent.
   expect(
     await screen.findByText(
-      "200 deals no longer wait for review. 1 deal was not sent.",
+      "200 deals have no change left to undo. 1 deal was not sent.",
     ),
   ).toBeTruthy();
   await user.click(screen.getByRole("button", { name: "Send again" }));
   expect(
     await screen.findByText(
-      "Undone on 1 deal. 200 deals no longer wait for review.",
+      "Undone on 1 deal. 200 deals have no change left to undo.",
     ),
   ).toBeTruthy();
   const sent = writes(calls)

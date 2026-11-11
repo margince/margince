@@ -20,8 +20,7 @@ To send an email to a contact in Margince, open the contact's page and choose **
 - **Reply** on any message in a timeline
 - **Write email** on a call, note, meeting or task in a timeline, when it names one contact with an email address. A task Margince filed itself offers none.
 
-From a call, note, meeting or task, it opens a new email that names the entry as "About: {subject}", not a reply.
-A company page opens the composer with the company's contacts to choose from. With none on file it says "No contacts at this company yet. Write the message manually, or add a contact first." Also called: compose, new message, reply to an email.
+From a call, note, meeting or task, it opens a new email that names the entry as "About: {subject}", not a reply. A company page opens the composer with the company's contacts to choose from. With none on file it says "No contacts at this company yet. Write the message manually, or add a contact first." Also called: compose, new message, reply to an email.
 
 ### How do I send a follow-up email?
 To send a follow-up email in Margince, open the contact's **History** tab and press **Reply** on the message. Or press the button on its Worklist row.
@@ -85,6 +84,8 @@ To is on the form. **Cc and Bcc** is a link until you press it. Then Bcc says
 what it means: other recipients cannot see these addresses, or that anyone else
 has a copy. A recipient Margince knows shows as the contact's name. Point at the name, or reach it with Tab, to see the address and the company.
 
+Type a name or an address in **To**, **Cc** or **Bcc** to pick a recipient. When you write to a contact, the list offers that contact first. The contacts around them come next: colleagues at the company they work at now, and the contacts on the same deals. From a company, deal or project, the company's contacts are offered. Your own colleagues in Margince come last. You only see contacts you can open in Margince.
+
 A channel reply, such as Telegram, drops the subject and Cc, because the channel
 has neither.
 
@@ -147,7 +148,7 @@ To change the language of an AI draft, pick another language in the list on the 
 
 If you edited the words, only an AI model writes your edited words again. With no model set up, or with a link or format you added, your words and the language stay as they are. The composer then says "Your edits were kept. Draft again when ready."
 
-Once you pick a language, **Draft email**, **Change the ask**, the four rewrites and a saved draft keep it. Until then, Margince takes the language from the mail on the thread. If the new draft fails, your words and the language stay. When Margince cannot tell the language of a draft, it shows no list.
+Once you pick a language, **Draft email**, **Change the ask**, the four rewrites and a saved draft keep it. Until then, the language of a subject you wrote yourself decides it, when Margince can tell that language. If it cannot, Margince takes it from the mail on the thread, then from your settings. If the new draft fails, your words and the language stay. When Margince cannot tell the language of a draft, it shows no list.
 Also called: draft in another language, write the email in German, change the email language.
 
 ### Why are you writing?
@@ -354,7 +355,7 @@ Also called: GDPR Art. 14 notice, disclosure duty, information obligation.
 
 ### Why does a contact say “Review source”?
 The record does not say where the contact's details come from, so no notice deadline is set.
-A user with privacy access answers how the details came in, under **Source** on the contact or in **Settings → Privacy**.
+A user with privacy access answers how the details came in, under **Source** on the contact or in **Settings → Privacy and retention**.
 If the details come from the contact, the review ends. Data from someone else may still need a notice.
 **Due no later than** is the last possible date. The duty may already be due.
 

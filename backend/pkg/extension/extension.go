@@ -88,6 +88,7 @@ import (
 	"github.com/margince/margince/backend/pkg/extension/compliancedocs"
 	"github.com/margince/margince/backend/pkg/extension/jurisdiction"
 	"github.com/margince/margince/backend/pkg/extension/messaging"
+	"github.com/margince/margince/backend/pkg/extension/privacy"
 	"github.com/margince/margince/backend/pkg/extension/reach"
 	"github.com/margince/margince/backend/pkg/extension/subjectrights"
 )
@@ -260,6 +261,12 @@ type Extension struct {
 	// 17 erasure clears the columns a table lists. Every name is the unit's own
 	// `ext_<namespace>_` table; the boot refuses any other.
 	Reach []reach.Table
+
+	// Privacy declares, for every table the unit owns, which core record its
+	// rows belong to, which columns are personal data and the retention class.
+	// The boot refuses a unit whose schema holds a table this leaves out. It
+	// refuses a changed declaration that kept its Version.
+	Privacy []privacy.Table
 
 	// Documents are the compliance documents the unit ships for its
 	// jurisdictions. The admin page serves the selected jurisdiction's set.
