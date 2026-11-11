@@ -209,6 +209,15 @@ function WeeklyPage() {
   );
 }
 
+// The reports wait for the day's own reads, so their request never competes
+// with the paint Home is measured on. A read that failed has answered too.
+function dayAnswered(
+  state: string,
+  reads: readonly Readonly<{ isPending: boolean }>[],
+): boolean {
+  return state !== "loading" && reads.every((read) => !read.isPending);
+}
+
 function PersonalMorning({
   query,
   queueToggle,
@@ -340,7 +349,9 @@ function PersonalMorning({
                 <BriefReadingsPending />
               </div>
             )}
-            <ExtensionReports />
+            <ExtensionReports
+              enabled={dayAnswered(state, [brief, handled, magic])}
+            />
           </>
         }
       />
