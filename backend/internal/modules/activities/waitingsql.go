@@ -143,7 +143,10 @@ var waitingSelectSQL = `
 	       -- engaged for one colleague and cold for another.
 	       -- The classifier's answer, or empty when nobody has judged this
 	       -- message. Uncertain intent remains reviewable without claiming priority.
-	       coalesce(a.owed_verdict, ''), coalesce(a.capture_label, ''),
+	       -- An asks_us that does not stand reads as unjudged.
+	       CASE WHEN coalesce(` + storekit.AsksUsClause("a") + `, false) THEN '` + OwedVerdictAsksUs + `'
+	            WHEN a.owed_verdict = '` + OwedVerdictInformsUs + `' THEN '` + OwedVerdictInformsUs + `'
+	            ELSE '' END, coalesce(a.capture_label, ''),
 	       -- Whether every header recipient names somebody OTHER than the
 	       -- reader — a thread they can see because it reached their mailbox,
 	       -- addressed to a colleague.

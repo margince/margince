@@ -23692,6 +23692,21 @@ func (e TaggableEntityType) Valid() bool {
 	}
 }
 
+// Defines values for TaskRequestCheckState.
+const (
+	TaskRequestCheckStateTextNotChecked TaskRequestCheckState = "text_not_checked"
+)
+
+// Valid indicates whether the value is a known member of the TaskRequestCheckState enum.
+func (e TaskRequestCheckState) Valid() bool {
+	switch e {
+	case TaskRequestCheckStateTextNotChecked:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for TaxRateCategory.
 const (
 	TaxRateCategoryReduced  TaxRateCategory = "reduced"
@@ -35817,7 +35832,7 @@ type AttentionItem struct {
 	// Kind The producer's own sub-type (an approval kind, a dedupe entity type) — for the icon and the label, never for authority.
 	Kind *string `json:"kind,omitempty"`
 
-	// MayBeDone Our later mail on the promise's thread to one of its recipients, which may have kept it. The row then asks whether it is done instead of listing it as open. Absent when there is no such mail or the reader answered Not yet to this mail.
+	// MayBeDone Our later mail on the promise's thread to one of its recipients, which may have kept it. The row then asks whether it is done instead of listing it as open, and `overdue` is false while it asks. Its `claim_key` is the one the contact page and the company page use, so one Not yet holds on all three. Absent when there is no such mail, when the task is closed, or when the reader answered Not yet to this mail; the row is then overdue again if its date has passed.
 	MayBeDone *WorklistMayBeDone `json:"may_be_done,omitempty"`
 
 	// NoticeOrigin The original change behind a notification, distinct from the automation delivering it. Historical origins are recovered only through an exact event causation link.
@@ -35876,6 +35891,9 @@ type AttentionItem struct {
 
 	// ReminderDue Sent as true on a task whose reminder is due for the reader, who is its assignee and reads their own work. Absent otherwise.
 	ReminderDue *bool `json:"reminder_due,omitempty"`
+
+	// RequestCheck On a reminder taken from a customer's request, why Margince cannot tell whether the request was answered. Absent on every other row.
+	RequestCheck *TaskRequestCheck `json:"request_check,omitempty"`
 
 	// RequestedDeciderId The member explicitly asked to decide, independent of who has permission to approve. For a `deal_suggestion` it is the company's current owner, read at request time; absent when the company has no owner.
 	RequestedDeciderId *openapi_types.UUID `json:"requested_decider_id,omitempty"`
@@ -64105,6 +64123,30 @@ type TaskReminderClaimRequest struct {
 	RemindAt time.Time `json:"remind_at"`
 }
 
+// TaskRequestCheck Why a reminder taken from a customer's request will not close by itself. Margince judges
+// whether a request was answered only from mail it read in full. When the request or the
+// mail that would answer it can no longer be read, no pass judges it, and the reminder stays
+// open until somebody marks it done.
+type TaskRequestCheck struct {
+	// OurLastReply The newest reply from our side that the request check would have read. Absent when there is none, or when the reader may not read it.
+	OurLastReply *TaskRequestCheckReply `json:"our_last_reply,omitempty"`
+
+	// State `text_not_checked`: the text of the request or of a mail that may answer it can no longer be checked.
+	State TaskRequestCheckState `json:"state"`
+}
+
+// TaskRequestCheckState `text_not_checked`: the text of the request or of a mail that may answer it can no longer be checked.
+type TaskRequestCheckState string
+
+// TaskRequestCheckReply One reply from our side to a customer's request, named so the reader can open it.
+type TaskRequestCheckReply struct {
+	ActivityId openapi_types.UUID `json:"activity_id"`
+	OccurredAt time.Time          `json:"occurred_at"`
+
+	// OccurredPrecision How much of an activity's time is known. `instant` is a real moment. `day` is a date with no time of day: the stored instant is noon UTC of that date, so its date is the UTC date, whatever the installation's zone. A meeting of this precision never holds its host's calendar slot.
+	OccurredPrecision OccurredPrecision `json:"occurred_precision"`
+}
+
 // TaxRate defines model for TaxRate.
 type TaxRate struct {
 	Category TaxRateCategory `json:"category"`
@@ -69017,7 +69059,7 @@ type WorklistItem struct {
 	// hygiene. Levels are never mixed by a score.
 	Level int `json:"level" maximum:"6" minimum:"0"`
 
-	// MayBeDone Our later mail on the promise's thread to one of its recipients, which may have kept it. The row then asks whether it is done instead of listing it as open. Absent when there is no such mail or the reader answered Not yet to this mail.
+	// MayBeDone Our later mail on the promise's thread to one of its recipients, which may have kept it. The row then asks whether it is done instead of listing it as open, and `overdue` is false while it asks. Its `claim_key` is the one the contact page and the company page use, so one Not yet holds on all three. Absent when there is no such mail, when the task is closed, or when the reader answered Not yet to this mail; the row is then overdue again if its date has passed.
 	MayBeDone *WorklistMayBeDone `json:"may_be_done,omitempty"`
 
 	// Move The next step this row suggests, and what it would act on.
@@ -69108,6 +69150,9 @@ type WorklistItem struct {
 	// caller may read. Best first, each once; `contact` is the first of them. Sent on
 	// `meeting_follow_up` rows only, and absent where no attendee is on file.
 	Recipients *[]WorklistContactFacts `json:"recipients,omitempty"`
+
+	// RequestCheck On a reminder taken from a customer's request, why Margince cannot tell whether the request was answered. Absent on every other row.
+	RequestCheck *TaskRequestCheck `json:"request_check,omitempty"`
 
 	// RunReasonCode On an `automation_run` item: why the firing stopped, in the code set of
 	// AutomationRun.reason_code, rendered in the reader's language. `detail` keeps the

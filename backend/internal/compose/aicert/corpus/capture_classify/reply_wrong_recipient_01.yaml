@@ -1,0 +1,30 @@
+name: the_wrong_recipient_is_neutral_not_a_refusal
+task: capture_classify
+site: classify
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5-5
+fixture:
+  - subject: 'Re: introduction'
+    inbound: true
+    body: |
+      Hello, I am not the right one to ask about this. I moved to the finance team
+      last spring.
+
+      Kind regards,
+      Petra
+expect:
+  outcome: accepted
+  answer:
+    - label: noise
+      reply: neutral
+  rubric: >
+    The recipient says they are the wrong recipient and gives no view on the
+    offer itself. They do not decline to go ahead and do not ask us to stop
+    writing, so the reply verdict is "neutral", and the label is "noise".
+    "negative" is the failure this scenario exists to catch: a negative
+    verdict can close the customer's deal as lost, and nobody at the customer
+    said no.
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40

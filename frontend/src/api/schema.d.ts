@@ -33955,8 +33955,8 @@ export interface components {
             /**
              * @description Present on a promise task when we wrote to one of its recipients on its thread after the
              *     promise. The task then asks whether that mail kept it, as the Worklist does, with the
-             *     same key and fingerprint. Absent when the reader answered Not yet to that mail, and for an
-             *     agent, which answers no such question.
+             *     same key and fingerprint, and `overdue` is false while it asks. Absent when the reader
+             *     answered Not yet to that mail, and for an agent, which answers no such question.
              */
             may_be_done?: components["schemas"]["WorklistMayBeDone"];
             /**
@@ -56416,6 +56416,29 @@ export interface components {
             claim_key: string;
             evidence_fingerprint: string;
         };
+        /**
+         * @description Why a reminder taken from a customer's request will not close by itself. Margince judges
+         *     whether a request was answered only from mail it read in full. When the request or the
+         *     mail that would answer it can no longer be read, no pass judges it, and the reminder stays
+         *     open until somebody marks it done.
+         */
+        TaskRequestCheck: {
+            /**
+             * @description `text_not_checked`: the text of the request or of a mail that may answer it can no longer be checked.
+             * @enum {string}
+             */
+            state: "text_not_checked";
+            /** @description The newest reply from our side that the request check would have read. Absent when there is none, or when the reader may not read it. */
+            our_last_reply?: components["schemas"]["TaskRequestCheckReply"];
+        };
+        /** @description One reply from our side to a customer's request, named so the reader can open it. */
+        TaskRequestCheckReply: {
+            /** Format: uuid */
+            activity_id: string;
+            /** Format: date-time */
+            occurred_at: string;
+            occurred_precision: components["schemas"]["OccurredPrecision"];
+        };
         /** @description A visible recipient's own claim on a shared deliverable. Other recipients may be outside the reader's scope. */
         WorklistPromiseRecipient: {
             /** Format: uuid */
@@ -56436,8 +56459,10 @@ export interface components {
             system_display?: components["schemas"]["SystemDisplay"];
             /** @description Sent as true on a task whose reminder is due for the reader, who is its assignee and reads their own work. Absent otherwise. */
             reminder_due?: boolean;
-            /** @description Our later mail on the promise's thread to one of its recipients, which may have kept it. The row then asks whether it is done instead of listing it as open. Absent when there is no such mail or the reader answered Not yet to this mail. */
+            /** @description Our later mail on the promise's thread to one of its recipients, which may have kept it. The row then asks whether it is done instead of listing it as open, and `overdue` is false while it asks. Its `claim_key` is the one the contact page and the company page use, so one Not yet holds on all three. Absent when there is no such mail, when the task is closed, or when the reader answered Not yet to this mail; the row is then overdue again if its date has passed. */
             may_be_done?: components["schemas"]["WorklistMayBeDone"];
+            /** @description On a reminder taken from a customer's request, why Margince cannot tell whether the request was answered. Absent on every other row. */
+            request_check?: components["schemas"]["TaskRequestCheck"];
             /** @description Visible recipient claims represented by this task; each keeps its own settlement state. Absent when unavailable. */
             promise_recipients?: components["schemas"]["WorklistPromiseRecipient"][];
             /** @description The evidence record behind this work, distinct from its account or counterparty. Its label is resolved under current read permissions; the reference grants no access. */
@@ -58106,8 +58131,10 @@ export interface components {
             system_display?: components["schemas"]["SystemDisplay"];
             /** @description On an approval, its title taken apart, so the row shows the sentence as its title and the proposed values as its supporting line. Absent when the title is a sentence alone. */
             summary_parts?: components["schemas"]["ApprovalSummaryParts"];
-            /** @description Our later mail on the promise's thread to one of its recipients, which may have kept it. The row then asks whether it is done instead of listing it as open. Absent when there is no such mail or the reader answered Not yet to this mail. */
+            /** @description Our later mail on the promise's thread to one of its recipients, which may have kept it. The row then asks whether it is done instead of listing it as open, and `overdue` is false while it asks. Its `claim_key` is the one the contact page and the company page use, so one Not yet holds on all three. Absent when there is no such mail, when the task is closed, or when the reader answered Not yet to this mail; the row is then overdue again if its date has passed. */
             may_be_done?: components["schemas"]["WorklistMayBeDone"];
+            /** @description On a reminder taken from a customer's request, why Margince cannot tell whether the request was answered. Absent on every other row. */
+            request_check?: components["schemas"]["TaskRequestCheck"];
             /** @description Visible recipient claims represented by this task; each keeps its own settlement state. Absent when unavailable. */
             promise_recipients?: components["schemas"]["WorklistPromiseRecipient"][];
             /** @description The evidence record behind this work, distinct from its account or counterparty. Its label is resolved under current read permissions; the reference grants no access. */

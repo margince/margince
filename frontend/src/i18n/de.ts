@@ -19245,6 +19245,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Für diesen Datensatz wurde ein Tag vorgeschlagen. Übernimm ihn oder verwirf den Vorschlag.",
   "worklist.ask.task":
     "Diese Aufgabe ist offen. Erledige sie und markiere sie als erledigt, oder verschiebe sie auf einen anderen Tag.",
+  "worklist.ask.task_unchecked":
+    "Margince kann nicht prüfen, ob dies beantwortet wurde: Der Text der Mail lässt sich nicht mehr lesen. Markiere die Aufgabe als erledigt, sobald sie es ist.",
+  "worklist.ask.task_unchecked_reply": "Zuletzt gesendete Antwort: {date}",
   "worklist.ask.brief_item":
     "Die nächtliche Prüfung hat diesen Deal markiert. Reagiere darauf, stelle ihn zurück oder verwirf ihn.",
   "worklist.ask.conversation_claim":
@@ -19747,7 +19750,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.untitled.task": "Aufgabe ohne Titel",
   "worklist.untitled.brief_item": "Zu prüfender Deal",
   "worklist.mayBeDone.asked":
-    "Vielleicht schon erledigt: Du hast am {date} geschrieben.",
+    "Vielleicht schon erledigt: Am {date} ging eine E-Mail an sie.",
   "worklist.mayBeDone.done": "Erledigt",
   "worklist.mayBeDone.notYet": "Noch nicht",
   "worklist.recipients.label": "Empfangende",

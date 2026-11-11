@@ -36,45 +36,81 @@ func (s *Store) CompleteContactTasksAnsweredByTx(ctx context.Context, tx pgx.Tx,
 	if err := auth.RequireSystem(ctx); err != nil {
 		return 0, err
 	}
-	completed := 0
 	var stamp string
 	var sender *ids.UUID
 	args := schedulingArgs{}
-	query := `SELECT captured_by,coalesce((SELECT d.user_id FROM comms_outbound d WHERE d.activity_id=sent.id AND d.status='sent' ORDER BY d.id LIMIT 1),(SELECT p.user_id FROM activity_participant p WHERE p.activity_id=sent.id AND p.role='from' AND p.user_id IS NOT NULL ORDER BY p.id LIMIT 1),sent.sent_by_colleague) FROM activity sent WHERE id=` + args.add(email) + ` AND kind='email' AND direction='outbound'
-    AND archived_at IS NULL AND counterparty_outbound_attested AND NOT bulk_mail_attested
- AND NOT EXISTS (SELECT 1 FROM comms_outbound delivery WHERE delivery.activity_id=sent.id AND delivery.status<>'sent')`
+	query := `SELECT sent.captured_by,` + answeringSenderSQL("sent") + ` FROM activity sent WHERE sent.id=` + args.add(email) + ` AND ` + answeringMailSQL("sent")
 	if err := tx.QueryRow(ctx, query, args...).Scan(&stamp, &sender); errors.Is(err, pgx.ErrNoRows) {
 		return 0, nil
 	} else if err != nil {
 		return 0, err
 	}
-	human := actingHumanOf(stamp)
-	if sender != nil {
-		human = sender.String()
-	}
+	human := answeringHuman(stamp, sender)
 	if human == "" {
 		return 0, nil
 	}
-	args = schedulingArgs{}
-	query = `SELECT task.id FROM activity task JOIN activity sent ON sent.id=` + args.add(email) + `
-    WHERE task.kind='task' AND NOT task.is_done AND task.archived_at IS NULL
-    AND task.assignee_id::text=` + args.add(human) + ` AND ` + occurredday.FromSQL("sent", "task.created_at + interval '1 microsecond'") + `
-    AND EXISTS (SELECT 1 FROM activity_link target WHERE target.activity_id=task.id AND target.contact_id IS NOT NULL
-      AND ` + promiseRecipientAddressedSQL("sent", "target.contact_id") + `)
-    AND NOT EXISTS (SELECT 1 FROM audit_log prior WHERE prior.entity_type='activity' AND prior.entity_id=task.id
-      AND prior.evidence->>` + args.add(taskAnsweredBy) + ` IN (
- WITH RECURSIVE answered_mail(id) AS (
- SELECT sent.id UNION SELECT folded.entity_id FROM audit_log folded JOIN answered_mail kept ON folded.evidence->>'` + meetingCopySurvivorKey + `'=kept.id::text
- WHERE folded.entity_type='activity' AND folded.action='archive' AND folded.evidence->>'` + evidenceReasonKey + `'='` + mailCopyReason + `') SELECT id::text FROM answered_mail))
-    ORDER BY task.id FOR UPDATE OF task`
-	rows, err := tx.Query(ctx, query, args...)
+	tasks, err := tasksAnsweredByTx(ctx, tx, email, human, nil)
 	if err != nil {
 		return 0, err
 	}
-	tasks, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
-	if err != nil {
-		return 0, err
+	return s.closeAnsweredTasksTx(ctx, tx, email, tasks)
+}
+
+// answeringMailSQL is the mail side of the rule: our own attested, delivered,
+// one-to-one mail.
+func answeringMailSQL(sent string) string {
+	return sent + `.kind='email' AND ` + sent + `.direction='outbound' AND ` + sent + `.archived_at IS NULL
+ AND ` + sent + `.counterparty_outbound_attested AND NOT ` + sent + `.bulk_mail_attested
+ AND NOT EXISTS (SELECT 1 FROM comms_outbound delivery WHERE delivery.activity_id=` + sent + `.id AND delivery.status<>'sent')`
+}
+
+// answeringSenderSQL names the seat that sent the mail. A guessed mailbox
+// owner names nobody, and answeringHuman then falls back to the capture stamp.
+func answeringSenderSQL(sent string) string {
+	return `coalesce((SELECT d.user_id FROM comms_outbound d WHERE d.activity_id=` + sent + `.id AND d.status='sent' ORDER BY d.id LIMIT 1),(SELECT p.user_id FROM activity_participant p WHERE p.activity_id=` + sent + `.id AND p.role='from' AND p.user_id IS NOT NULL AND ` + auth.ParticipantStandsSQL("p", sent) + ` ORDER BY p.id LIMIT 1),` + sent + `.sent_by_colleague)`
+}
+
+func answeringHuman(stamp string, sender *ids.UUID) string {
+	if sender != nil {
+		return sender.String()
 	}
+	return actingHumanOf(stamp)
+}
+
+// answeredTaskSQL is the task side of the rule. The task is open, assigned to
+// the sender, created before the mail's day and linked to a contact the mail
+// was sent to. A task a user reopened after the rule closed it stays theirs.
+func answeredTaskSQL(task, sent, human string) string {
+	return task + `.kind='task' AND NOT ` + task + `.is_done AND ` + task + `.archived_at IS NULL
+ AND ` + task + `.assignee_id::text=` + human + ` AND ` + occurredday.FromSQL(sent, task+".created_at + interval '1 microsecond'") + `
+ AND EXISTS (SELECT 1 FROM activity_link target WHERE target.activity_id=` + task + `.id AND target.contact_id IS NOT NULL
+   AND ` + recipientAddressedSQL(sent, "target.contact_id", "'to'") + `)
+ AND NOT ` + reopenedAfterAnswerSQL(task)
+}
+
+// reopenedAfterAnswerSQL holds whichever mail closed the task: once a user
+// reopened it after an automatic completion, no mail closes it again.
+func reopenedAfterAnswerSQL(task string) string {
+	return `EXISTS (SELECT 1 FROM audit_log answered JOIN audit_log reopened ON reopened.entity_type='activity' AND reopened.entity_id=answered.entity_id
+ AND (reopened.occurred_at,reopened.id)>(answered.occurred_at,answered.id) AND reopened.after->>'is_done'='false'
+ WHERE answered.entity_type='activity' AND answered.entity_id=` + task + `.id AND answered.evidence ? '` + taskAnsweredBy + `')`
+}
+
+func tasksAnsweredByTx(ctx context.Context, tx pgx.Tx, email ids.ActivityID, human string, only *ids.UUID) ([]ids.UUID, error) {
+	args := schedulingArgs{}
+	query := `SELECT task.id FROM activity task JOIN activity sent ON sent.id=` + args.add(email) + `
+ WHERE ` + answeredTaskSQL("task", "sent", args.add(human))
+	if only != nil {
+		query += ` AND task.id=` + args.add(*only)
+	}
+	rows, err := tx.Query(ctx, query+` ORDER BY task.id FOR UPDATE OF task`, args...)
+	if err != nil {
+		return nil, err
+	}
+	return pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+}
+
+func (s *Store) closeAnsweredTasksTx(ctx context.Context, tx pgx.Tx, email ids.ActivityID, tasks []ids.UUID) (int, error) {
 	at := s.now()
 	for _, id := range tasks {
 		_, err := updateActivityInTx(ctx, tx, ids.From[ids.ActivityKind](id), UpdateActivityInput{
@@ -84,9 +120,8 @@ func (s *Store) CompleteContactTasksAnsweredByTx(ctx context.Context, tx pgx.Tx,
 		if err != nil {
 			return 0, err
 		}
-		completed++
 	}
-	return completed, nil
+	return len(tasks), nil
 }
 
 // TaskCompletion ties a completed task to the sent mail and reversible audit entry.

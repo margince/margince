@@ -6,11 +6,14 @@
 // A row says one current reason. Its details list every concrete fact behind
 // it, and leave out how the row ranks against the rest of the queue.
 
+import { Button } from "../../design-system/atoms";
 import { Panel, PanelBody } from "../../design-system/panel";
+import { formatActivityWhen } from "../../format/activitywhen";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
+import { useSourceOpener } from "../../lib/opensource";
 import { useViewerZone } from "../../lib/viewerzone";
 import { factReasons, partyName, reasonText } from "../../lib/worklistcopy";
-import { askKey } from "./worklist.ask";
+import { askKey, saysOpen } from "./worklist.ask";
 import { useBriefAnswer, withFoldedBrief } from "./worklist.briefverbs";
 import type { WorklistItem } from "./worklist.queries";
 import { codedDetail } from "./worklist.reader";
@@ -37,7 +40,8 @@ export function WorklistWhy({
     <Panel title={t("worklist.why.title")} tone="accent">
       <PanelBody>
         <div className="form-stack">
-          <p>{t(askKey(item))}</p>
+          {saysOpen(item) && <p>{t(askKey(item))}</p>}
+          <OurLastReply item={item} />
           {reasons.length > 0 && (
             <ol
               className="worklist-why-reasons"
@@ -65,6 +69,37 @@ export function WorklistWhy({
         </div>
       </PanelBody>
     </Panel>
+  );
+}
+
+// The reply a reader can open to judge for themselves a request Margince
+// cannot check.
+function OurLastReply({ item }: Readonly<{ item: WorklistItem }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const zone = useViewerZone();
+  const openerFor = useSourceOpener();
+  const reply = item.request_check?.our_last_reply;
+  if (!reply) return null;
+  const label = t("worklist.ask.task_unchecked_reply", {
+    date: formatActivityWhen(
+      reply.occurred_at,
+      reply.occurred_precision,
+      locale,
+      zone,
+    ),
+  });
+  const open = openerFor({ id: reply.activity_id, kind: "email" });
+  return (
+    <p>
+      {open ? (
+        <Button variant="link" onClick={open}>
+          {label}
+        </Button>
+      ) : (
+        label
+      )}
+    </p>
   );
 }
 

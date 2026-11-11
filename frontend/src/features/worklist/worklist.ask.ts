@@ -47,5 +47,15 @@ const ASK_BY_SOURCE: Readonly<Record<WorklistItem["source"], MessageKey>> = {
 export function askKey(item: WorklistItem): MessageKey {
   // An invitation waits on an RSVP, not on a written answer.
   if (item.email_summary?.calendar_invitation) return "worklist.ask.invitation";
+  // A reminder whose request cannot be checked will not close by itself.
+  if (item.request_check) return "worklist.ask.task_unchecked";
   return labelFor(ASK_BY_SOURCE, item.source);
+}
+
+/**
+ * A row that asks whether our later mail kept its promise drops the open line.
+ * The question takes its place.
+ */
+export function saysOpen(item: WorklistItem): boolean {
+  return !item.may_be_done;
 }

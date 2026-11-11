@@ -18,6 +18,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -48,10 +49,10 @@ func (s *Store) WaitingRepliesNarrowedBefore(
 // conversation folds by the conversation; any other message with a subject
 // folds by its sender and subject; the rest stand alone. The sender is the
 // least `from` address, as waitingSelectSQL picks it.
-const waitingFoldSQL = `CASE
-	WHEN coalesce(a.owed_verdict, '') = '` + OwedVerdictAsksUs + `' AND coalesce(a.thread_key, '') <> ''
+var waitingFoldSQL = `CASE
+	WHEN coalesce(` + storekit.AsksUsClause("a") + `, false) AND coalesce(a.thread_key, '') <> ''
 	  THEN ARRAY['conversation', a.kind::text, coalesce(a.channel_provider, '')::text, a.thread_key::text]
-	WHEN coalesce(a.owed_verdict, '') <> '` + OwedVerdictAsksUs + `' AND coalesce(a.subject, '') <> ''
+	WHEN NOT coalesce(` + storekit.AsksUsClause("a") + `, false) AND coalesce(a.subject, '') <> ''
 	  THEN ARRAY['subject', coalesce((SELECT min(card_from.address) FROM activity_participant card_from
 	                                   WHERE card_from.activity_id = a.id AND card_from.role = 'from'), '')::text,
 	             a.subject::text]
@@ -59,7 +60,7 @@ const waitingFoldSQL = `CASE
 
 // waitingNotMachineSQL leaves out a message a sending system wrote, unless it
 // asks us something. It reads the stamp the one Go rule wrote.
-const waitingNotMachineSQL = ` AND NOT (a.sender_is_machine AND coalesce(a.owed_verdict, '') <> '` + OwedVerdictAsksUs + `')`
+var waitingNotMachineSQL = ` AND NOT (a.sender_is_machine AND NOT coalesce(` + storekit.AsksUsClause("a") + `, false))`
 
 // WaitingTail is one read of the queue past the page. It holds the cards among
 // the messages it judged, oldest first, and the last message it judged. More
@@ -239,12 +240,12 @@ func waitingCardsStatement(slots waitingSlots, arg func(any) int, judged []ids.U
 
 // waitingCardOfSQL holds the message under judgement as `card`, for the
 // newer-member read whose own rows take the alias `a`.
-const waitingCardOfSQL = `(SELECT a.id AS card_id, a.occurred_at AS card_at, a.thread_key AS card_thread,
+var waitingCardOfSQL = `(SELECT a.id AS card_id, a.occurred_at AS card_at, a.thread_key AS card_thread,
 	        a.subject AS card_subject, ` + waitingFoldSQL + ` AS card_fold) card`
 
 // waitingSameFoldNewerSQL is a newer message of the card's fold. The thread
 // or subject test comes first, so a row of another fold costs one compare.
-const waitingSameFoldNewerSQL = `CASE card.card_fold[1]
+var waitingSameFoldNewerSQL = `CASE card.card_fold[1]
 	  WHEN 'conversation' THEN a.thread_key = card.card_thread
 	  WHEN 'subject' THEN a.subject = card.card_subject
 	  ELSE FALSE END

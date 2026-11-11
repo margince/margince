@@ -61,7 +61,8 @@ type WaitingReply struct {
 	HasOpenDeal bool
 	// OwedVerdict is the classifier's judgement of whether this message asks
 	// its recipient side for something: OwedVerdictAsksUs, OwedVerdictInformsUs
-	// or empty for unjudged.
+	// or empty for unjudged. An asks_us that does not stand
+	// (storekit.AsksUsClause) is empty.
 	//
 	// Empty is not a third verdict. An unjudged message ranks exactly as it did
 	// before the column existed, because a classifier that has not run, has run

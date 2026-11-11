@@ -8,7 +8,7 @@ The Worklist is the ranked to-do list in Margince: one list of everything waitin
 
 Under **Needs you**, every task is its own card, and the first one is open. Press another card to open it in its place. **Next task** on the open card opens the one after it, and after the last card it goes back to the first. Opening a card changes only which task you see.
 
-When you email a task's contact after the task was created, Margince marks the task done and shows a receipt in **Done for you**. Bulk mail and a contact named only in Bcc do not count. **Undo** reopens the task; the same email will not close it again. This includes tasks from website requests.
+When you email a task's contact after the task was created, Margince marks the task done and shows a receipt in **Done for you**. Bulk mail and a contact named only in Bcc do not count. **Undo** reopens the task; the same email will not close it again. This includes tasks from website requests. After an upgrade, Margince applies this rule once to the email it already holds, and those tasks show in **Done for you** with **Undo** too.
 
 Open a task's details and choose **Log what happened** to record the outcome and attach files. **Mark task done** starts selected. Clear it to keep the task open after logging the outcome.
 
@@ -230,7 +230,9 @@ When Margince reads old mail, it checks newer messages before it creates work. W
 
 A future deadline can keep an old promise current. If later context has not been read, Margince does not create the task.
 
-Check the quoted words and any later replies before adding a follow-up from the linked record. A conversation promise can ask **You may have done this** after a later reply. Choose **Done** or **Not yet**. A task linked to the contact follows the automatic rule above, with **Undo**.
+Check the quoted words and any later replies before adding a follow-up from the linked record. A task linked to the contact follows the automatic rule above, with **Undo**.
+
+A later reply on the promise's thread may keep a promise that rule did not close, such as a colleague's reply. Margince then asks **This may be done**, naming the day the email went out. Home, the Worklist, the contact page and the company page ask the same question. While they ask, the task is not shown as overdue. Choose **Done** or **Not yet**. **Not yet** shows the task as before on every page, until someone writes on the thread again.
 
 Also called: action items, follow-ups from a meeting, commitments in an email.
 

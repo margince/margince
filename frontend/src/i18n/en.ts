@@ -19044,6 +19044,9 @@ export const en = {
     "A tag was suggested for this record. Apply it, or dismiss the suggestion.",
   "worklist.ask.task":
     "This task is open. Do the work and mark it done, or move it to another day.",
+  "worklist.ask.task_unchecked":
+    "Margince cannot check whether this was answered: the mail’s text can no longer be read. Mark it done once it is handled.",
+  "worklist.ask.task_unchecked_reply": "Latest reply sent: {date}",
   "worklist.ask.brief_item":
     "The overnight review flagged this deal. Act on it, set it aside, or dismiss it.",
   "worklist.ask.conversation_claim":
@@ -19531,7 +19534,7 @@ export const en = {
   "worklist.untitled.task": "Untitled task",
   "worklist.untitled.brief_item": "Deal to review",
   "worklist.mayBeDone.asked":
-    "You may have done this: you wrote to them on {date}.",
+    "This may be done: an email went to them on {date}.",
   "worklist.mayBeDone.done": "Done",
   "worklist.mayBeDone.notYet": "Not yet",
   "worklist.recipients.label": "Recipients",

@@ -13,12 +13,15 @@ import (
 	"errors"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	"github.com/margince/margince/backend/internal/compose/attention"
+	"github.com/margince/margince/backend/internal/compose/momentaction"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -31,6 +34,8 @@ import (
 type attentionTasks struct {
 	store  *activities.Store
 	claims *contacts.Store
+	// db reads the may-be-done question. Nil asks none.
+	db *database.DB
 }
 
 // openTasksDueBy is the ONE narrowing the lane's page and its count share.
@@ -285,9 +290,10 @@ func reminderReaderFor(ctx context.Context, scope attention.TaskScope) ids.UUID 
 	return activities.ReminderReader(ctx)
 }
 
-// markReadOnly flags the tasks the reader may see and not change, asked of the
-// whole page in one read. Both reads key on the page's ids, so their generic
-// plans are reused (database.ReuseGenericPlans).
+// markReadOnly flags the tasks the reader may see and not change. It also marks
+// the request reminders Margince cannot check. Each fact is one read for the
+// whole page, keyed on its ids, so the generic plans are reused
+// (database.ReuseGenericPlans).
 func (t attentionTasks) markReadOnly(ctx context.Context, tasks []attention.Task, asOf time.Time) ([]attention.Task, error) {
 	if len(tasks) == 0 {
 		return tasks, nil
@@ -301,8 +307,15 @@ func (t attentionTasks) markReadOnly(ctx context.Context, tasks []attention.Task
 		if err != nil {
 			return err
 		}
+		unchecked, err := t.store.UncheckableRequestReminders(ctx, sourced(tasks), asOf)
+		if err != nil {
+			return err
+		}
 		for i := range tasks {
 			tasks[i].ReadOnly = !writable[tasks[i].ID]
+			if check, ok := unchecked[tasks[i].ID]; ok {
+				tasks[i].RequestCheck = &check
+			}
 		}
 		tasks, err = t.withRecipients(ctx, tasks, named)
 		return err
@@ -310,7 +323,19 @@ func (t attentionTasks) markReadOnly(ctx context.Context, tasks []attention.Task
 	if err != nil {
 		return nil, err
 	}
-	return tasks, nil
+	return t.withMayBeDone(ctx, tasks, asOf)
+}
+
+// sourced names the tasks read out of a message, the only ones a request
+// reminder can be.
+func sourced(tasks []attention.Task) []ids.UUID {
+	var named []ids.UUID
+	for _, task := range tasks {
+		if task.SourceActivityID != nil {
+			named = append(named, task.ID)
+		}
+	}
+	return named
 }
 
 func (t attentionTasks) withRecipients(ctx context.Context, tasks []attention.Task, named []ids.UUID) ([]attention.Task, error) {
@@ -338,4 +363,56 @@ func (t attentionTasks) withRecipients(ctx context.Context, tasks []attention.Ta
 		tasks[i].Recipients = recipients[tasks[i].ID]
 	}
 	return tasks, nil
+}
+
+// withMayBeDone asks of each promise task whether our later mail on its thread
+// to a recipient kept it. The company page asks through the same seam
+// (momentaction.AskTasksDone).
+func (t attentionTasks) withMayBeDone(ctx context.Context, tasks []attention.Task, asOf time.Time) ([]attention.Task, error) {
+	// A user or their agent answers the question, so automatic work reading the
+	// queue sees the plain row.
+	if answers := auth.Allows(ctx, "activity", principal.ActionRead) && auth.RequireHumanOrItsAgent(ctx) == nil; t.db == nil || !answers {
+		return tasks, nil
+	}
+	candidates := doneCandidates(tasks)
+	if len(candidates) == 0 {
+		return tasks, nil
+	}
+	var asked map[ids.UUID]crmcontracts.WorklistMayBeDone
+	err := t.db.Tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		asked, err = momentaction.AskTasksDone(ctx, tx, candidates, asOf)
+		return err
+	})
+	if errors.Is(err, apperrors.ErrPermissionDenied) {
+		return tasks, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	for i := range tasks {
+		if question, ok := asked[tasks[i].ID]; ok {
+			tasks[i].MayBeDone = &question
+		}
+	}
+	return tasks, nil
+}
+
+// doneCandidates are the promise tasks with a source message, each with its
+// open recipients.
+func doneCandidates(tasks []attention.Task) []momentaction.DoneCandidate {
+	var out []momentaction.DoneCandidate
+	for _, task := range tasks {
+		if !task.Commitment || task.SourceActivityID == nil {
+			continue
+		}
+		candidate := momentaction.DoneCandidate{TaskID: task.ID, SourceActivityID: *task.SourceActivityID, Assignee: task.AssigneeID}
+		for _, recipient := range task.Recipients {
+			if momentaction.OpenRecipient(string(recipient.Status)) {
+				candidate.Recipients = append(candidate.Recipients, ids.UUID(recipient.ContactId))
+			}
+		}
+		out = append(out, candidate)
+	}
+	return out
 }

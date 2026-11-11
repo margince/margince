@@ -20,6 +20,7 @@ import {
   TrendingDown,
   UserPlus,
 } from "lucide-react";
+import { MayBeDone } from "../../components/maybedone";
 import { useTaskDone } from "../../components/taskactions";
 import { Badge, Card } from "../../design-system/atoms";
 import { Avatar } from "../../design-system/avatar";
@@ -59,6 +60,7 @@ import {
 } from "../../lib/worklistcopy";
 import { eyebrowKeyFor } from "../../lib/worklisteyebrow";
 import type { WorklistItem } from "../../lib/worklisttypes";
+import { worklistKey } from "../../lib/workkeys";
 
 /** The name a card goes by, the way the row in hand names it. */
 export function taskName(
@@ -188,6 +190,19 @@ export function TaskCard({
         {line && <span className="brief-task-line">{line}</span>}
         <TaskMeta item={item} />
       </button>
+      {item.may_be_done && (
+        <div className="brief-task-ask">
+          <MayBeDone
+            question={item.may_be_done}
+            task={{
+              id: item.id,
+              version: item.version,
+              canComplete: item.actions.includes("complete"),
+            }}
+            refresh={[worklistKey]}
+          />
+        </div>
+      )}
     </Card>
   );
 }

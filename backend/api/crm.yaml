@@ -48241,8 +48241,8 @@ components:
           description: |
             Present on a promise task when we wrote to one of its recipients on its thread after the
             promise. The task then asks whether that mail kept it, as the Worklist does, with the
-            same key and fingerprint. Absent when the reader answered Not yet to that mail, and for an
-            agent, which answers no such question.
+            same key and fingerprint, and `overdue` is false while it asks. Absent when the reader
+            answered Not yet to that mail, and for an agent, which answers no such question.
         version:
           allOf: [{ $ref: '#/components/schemas/RowVersion' }]
           description: |
@@ -76183,6 +76183,33 @@ components:
         claim_key: { type: string }
         evidence_fingerprint: { type: string }
 
+    TaskRequestCheck:
+      type: object
+      description: |
+        Why a reminder taken from a customer's request will not close by itself. Margince judges
+        whether a request was answered only from mail it read in full. When the request or the
+        mail that would answer it can no longer be read, no pass judges it, and the reminder stays
+        open until somebody marks it done.
+      required: [state]
+      properties:
+        state:
+          type: string
+          enum: [text_not_checked]
+          x-extensible-enum: true
+          description: '`text_not_checked`: the text of the request or of a mail that may answer it can no longer be checked.'
+        our_last_reply:
+          allOf: [{ $ref: '#/components/schemas/TaskRequestCheckReply' }]
+          description: The newest reply from our side that the request check would have read. Absent when there is none, or when the reader may not read it.
+
+    TaskRequestCheckReply:
+      type: object
+      description: One reply from our side to a customer's request, named so the reader can open it.
+      required: [activity_id, occurred_at, occurred_precision]
+      properties:
+        activity_id: { type: string, format: uuid }
+        occurred_at: { type: string, format: date-time }
+        occurred_precision: { $ref: '#/components/schemas/OccurredPrecision' }
+
     WorklistPromiseRecipient:
       type: object
       description: A visible recipient's own claim on a shared deliverable. Other recipients may be outside the reader's scope.
@@ -76211,7 +76238,10 @@ components:
             reads their own work. Absent otherwise.
         may_be_done:
           allOf: [{ $ref: '#/components/schemas/WorklistMayBeDone' }]
-          description: Our later mail on the promise's thread to one of its recipients, which may have kept it. The row then asks whether it is done instead of listing it as open. Absent when there is no such mail or the reader answered Not yet to this mail.
+          description: Our later mail on the promise's thread to one of its recipients, which may have kept it. The row then asks whether it is done instead of listing it as open, and `overdue` is false while it asks. Its `claim_key` is the one the contact page and the company page use, so one Not yet holds on all three. Absent when there is no such mail, when the task is closed, or when the reader answered Not yet to this mail; the row is then overdue again if its date has passed.
+        request_check:
+          allOf: [{ $ref: '#/components/schemas/TaskRequestCheck' }]
+          description: On a reminder taken from a customer's request, why Margince cannot tell whether the request was answered. Absent on every other row.
         promise_recipients:
           type: array
           description: Visible recipient claims represented by this task; each keeps its own settlement state. Absent when unavailable.
@@ -78030,7 +78060,10 @@ components:
             proposed values as its supporting line. Absent when the title is a sentence alone.
         may_be_done:
           allOf: [{ $ref: '#/components/schemas/WorklistMayBeDone' }]
-          description: Our later mail on the promise's thread to one of its recipients, which may have kept it. The row then asks whether it is done instead of listing it as open. Absent when there is no such mail or the reader answered Not yet to this mail.
+          description: Our later mail on the promise's thread to one of its recipients, which may have kept it. The row then asks whether it is done instead of listing it as open, and `overdue` is false while it asks. Its `claim_key` is the one the contact page and the company page use, so one Not yet holds on all three. Absent when there is no such mail, when the task is closed, or when the reader answered Not yet to this mail; the row is then overdue again if its date has passed.
+        request_check:
+          allOf: [{ $ref: '#/components/schemas/TaskRequestCheck' }]
+          description: On a reminder taken from a customer's request, why Margince cannot tell whether the request was answered. Absent on every other row.
         promise_recipients:
           type: array
           description: Visible recipient claims represented by this task; each keeps its own settlement state. Absent when unavailable.

@@ -18759,6 +18759,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Một thẻ được gợi ý cho hồ sơ này. Áp dụng thẻ, hoặc bỏ qua gợi ý.",
   "worklist.ask.task":
     "Việc này đang mở. Làm xong và đánh dấu là xong, hoặc chuyển sang ngày khác.",
+  "worklist.ask.task_unchecked":
+    "Margince không thể kiểm tra việc này đã được trả lời chưa: nội dung thư không còn đọc được. Hãy đánh dấu là xong khi đã xong.",
+  "worklist.ask.task_unchecked_reply": "Trả lời đã gửi gần nhất: {date}",
   "worklist.ask.brief_item":
     "Lượt rà soát ban đêm đã đánh dấu deal này. Xử lý, tạm gác, hoặc bỏ qua.",
   "worklist.ask.conversation_claim":
@@ -19254,7 +19257,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.untitled.task": "Việc cần làm chưa có tiêu đề",
   "worklist.untitled.brief_item": "Deal cần xem lại",
   "worklist.mayBeDone.asked":
-    "Có thể bạn đã làm việc này: bạn đã viết cho họ vào ngày {date}.",
+    "Việc này có thể đã xong: một email đã được gửi cho họ vào ngày {date}.",
   "worklist.mayBeDone.done": "Hoàn thành",
   "worklist.mayBeDone.notYet": "Chưa",
   "worklist.recipients.label": "Liên hệ nhận",

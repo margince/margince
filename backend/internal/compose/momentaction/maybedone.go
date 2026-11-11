@@ -16,8 +16,8 @@ import (
 )
 
 var doneWords = struct{ YourEmail, MaybeDone, Done langcopy.Phrase }{
-	YourEmail: langcopy.Phrase{En: "Your email", De: "Ihre E-Mail", Vi: "Email của bạn"},
-	MaybeDone: langcopy.Phrase{En: "You may have done this — you wrote to them on %s", De: "Möglicherweise schon erledigt: Sie haben am %s geschrieben", Vi: "Bạn có thể đã hoàn thành việc này: bạn đã viết cho họ vào ngày %s"},
+	YourEmail: langcopy.Phrase{En: "The email", De: "Die E-Mail", Vi: "Email"},
+	MaybeDone: langcopy.Phrase{En: "This may be done: an email went to them on %s", De: "Möglicherweise schon erledigt: Am %s ging eine E-Mail an sie", Vi: "Việc này có thể đã xong: một email đã được gửi cho họ vào ngày %s"},
 	Done:      langcopy.Phrase{En: "Done", De: "Erledigt", Vi: "Hoàn thành"},
 }
 
