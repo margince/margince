@@ -17,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/dealrooms"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/datatask"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -33,85 +34,101 @@ var roomSeller = principal.Permissions{
 	RowScope: principal.RowScopeAll,
 }
 
-// room is one deal room with two buyer seats and the threads they wrote in.
-type room struct {
-	id                        ids.DealRoomID
-	erased, kept              ids.UUID
-	erasedThread, keptThread  ids.UUID
-	sellerThread, sellerReply ids.UUID
-	erasedReplyInSellerThread ids.UUID
+// dealRoom is one room on its own deal, written through the dealrooms store.
+type dealRoom struct {
+	e    *integration.Env
+	deal ids.UUID
+	id   ids.DealRoomID
 }
 
-// seedRoom writes every row through the dealrooms store. It then anonymizes
-// one seat as an erasure did before it purged threads: name, address and
-// revocation only.
-func seedRoom(t *testing.T, e *integration.Env) room {
+// buyer is one invited seat, signed in as the public door signs a buyer in.
+type buyer struct {
+	seat ids.UUID
+	sess dealrooms.Session
+}
+
+func newRoom(t *testing.T, e *integration.Env) dealRoom {
 	t.Helper()
-	seller := e.As(e.AdminUser, nil, roomSeller)
-	rooms := dealrooms.NewStore(e.DB())
-	created, err := rooms.CreateRoom(seller, dealrooms.CreateRoomInput{
-		DealID: ids.From[ids.DealKind](e.SeedWonDealLinkedTo(t)), Title: "Acme Expansion", Source: "manual",
+	deal := e.SeedWonDealLinkedTo(t)
+	created, err := dealrooms.NewStore(e.DB()).CreateRoom(e.As(e.AdminUser, nil, roomSeller), dealrooms.CreateRoomInput{
+		DealID: ids.From[ids.DealKind](deal), Title: "Acme Expansion", Source: "manual",
 	})
 	if err != nil {
 		t.Fatalf("creating the room: %v", err)
 	}
-	r := room{id: ids.From[ids.DealRoomKind](ids.UUID(created.Id))}
-	erasedSess, erased := signedInSeat(t, e, r.id, "erased.buyer@acme.test")
-	keptSess, kept := signedInSeat(t, e, r.id, "kept.buyer@acme.test")
-	r.erased, r.kept = erased, kept
-
-	theirs, err := rooms.OpenBuyerThread(seller, erasedSess, dealrooms.OpenThreadInput{
-		Body: "Clause 4 must change before we sign", Source: "manual"})
-	if err != nil {
-		t.Fatalf("the erased buyer opening a thread: %v", err)
-	}
-	r.erasedThread = ids.UUID(theirs.Id)
-	answered, err := rooms.Reply(seller, r.id, r.erasedThread, "We can look at clause 4", "manual", nil)
-	if err != nil {
-		t.Fatalf("the seller answering: %v", err)
-	}
-	r.sellerReply = ids.UUID(answered.Comments[len(answered.Comments)-1].Id)
-	ours, err := rooms.OpenThread(seller, r.id, dealrooms.OpenThreadInput{Body: "Welcome to the room", Source: "manual"})
-	if err != nil {
-		t.Fatalf("the seller opening a thread: %v", err)
-	}
-	r.sellerThread = ids.UUID(ours.Id)
-	replied, err := rooms.ReplyAsBuyer(seller, erasedSess, r.sellerThread, "Thanks", "manual", nil)
-	if err != nil {
-		t.Fatalf("the erased buyer replying in the seller's thread: %v", err)
-	}
-	r.erasedReplyInSellerThread = ids.UUID(replied.Comments[len(replied.Comments)-1].Id)
-	keeps, err := rooms.OpenBuyerThread(seller, keptSess, dealrooms.OpenThreadInput{Body: "Who signs on your side?", Source: "manual"})
-	if err != nil {
-		t.Fatalf("the kept buyer opening a thread: %v", err)
-	}
-	r.keptThread = ids.UUID(keeps.Id)
-
-	e.WsExec(t, `UPDATE deal_room_participant SET full_name = 'Erased Subject', email = $2,
-		revoked_at = now() WHERE id = $1`, r.erased, values.ErasedEmail)
-	return r
+	return dealRoom{e: e, deal: deal, id: ids.From[ids.DealRoomKind](ids.UUID(created.Id))}
 }
 
-// signedInSeat invites a buyer and signs them in as the public door does.
-func signedInSeat(t *testing.T, e *integration.Env, roomID ids.DealRoomID, email string) (dealrooms.Session, ids.UUID) {
+func (r dealRoom) seller() context.Context { return r.e.As(r.e.AdminUser, nil, roomSeller) }
+
+// invite seats a buyer. A signed-in buyer also holds a session.
+func (r dealRoom) invite(t *testing.T, email string, signIn bool) buyer {
 	t.Helper()
-	seller := e.As(e.AdminUser, nil, roomSeller)
-	rooms := dealrooms.NewStore(e.DB())
-	invited, err := rooms.InviteParticipant(seller, roomID, dealrooms.InviteInput{
+	rooms := dealrooms.NewStore(r.e.DB())
+	invited, err := rooms.InviteParticipant(r.seller(), r.id, dealrooms.InviteInput{
 		FullName: "Rita Reviewer", Email: email, Capability: "comment", Source: "manual",
 	})
 	if err != nil {
 		t.Fatalf("inviting %s: %v", email, err)
 	}
-	issued, err := rooms.ExchangeCredential(seller, invited.Credential)
+	b := buyer{seat: ids.UUID(invited.Participant.Id)}
+	if !signIn {
+		return b
+	}
+	issued, err := rooms.ExchangeCredential(r.seller(), invited.Credential)
 	if err != nil {
 		t.Fatalf("exchanging the credential of %s: %v", email, err)
 	}
-	sess, err := rooms.ResolveSession(seller, issued.Token)
-	if err != nil {
+	if b.sess, err = rooms.ResolveSession(r.seller(), issued.Token); err != nil {
 		t.Fatalf("resolving the session of %s: %v", email, err)
 	}
-	return sess, ids.UUID(invited.Participant.Id)
+	return b
+}
+
+func (r dealRoom) opens(t *testing.T, b buyer, body string) ids.UUID {
+	t.Helper()
+	opened, err := dealrooms.NewStore(r.e.DB()).OpenBuyerThread(r.seller(), b.sess, dealrooms.OpenThreadInput{Body: body, Source: "manual"})
+	if err != nil {
+		t.Fatalf("a buyer opening a thread: %v", err)
+	}
+	return ids.UUID(opened.Id)
+}
+
+func (r dealRoom) buyerReplies(t *testing.T, b buyer, thread ids.UUID, body string) ids.UUID {
+	t.Helper()
+	replied, err := dealrooms.NewStore(r.e.DB()).ReplyAsBuyer(r.seller(), b.sess, thread, body, "manual", nil)
+	if err != nil {
+		t.Fatalf("a buyer replying: %v", err)
+	}
+	return ids.UUID(replied.Comments[len(replied.Comments)-1].Id)
+}
+
+func (r dealRoom) sellerReplies(t *testing.T, thread ids.UUID, body string) ids.UUID {
+	t.Helper()
+	answered, err := dealrooms.NewStore(r.e.DB()).Reply(r.seller(), r.id, thread, body, "manual", nil)
+	if err != nil {
+		t.Fatalf("the seller replying: %v", err)
+	}
+	return ids.UUID(answered.Comments[len(answered.Comments)-1].Id)
+}
+
+// wipe anonymizes a seat as an erasure did before it purged threads: name,
+// address and revocation. With tombstone it also writes the seat's erase row.
+func wipe(t *testing.T, e *integration.Env, seat ids.UUID, tombstone bool) {
+	t.Helper()
+	e.WsExec(t, `UPDATE deal_room_participant SET full_name = 'Erased Subject', email = $2,
+		revoked_at = coalesce(revoked_at, now()) WHERE id = $1`, seat, values.ErasedEmail)
+	if !tombstone {
+		return
+	}
+	ctx := principal.SystemActing(e.Admin(), "system:erasure-test")
+	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		_, err := storekit.AuditWithEvidence(ctx, tx, "erase", "deal_room_participant", seat, nil, nil,
+			map[string]any{"reason": "subject request", "cause": "contact_erasure"})
+		return err
+	}); err != nil {
+		t.Fatalf("tombstoning the erased seat: %v", err)
+	}
 }
 
 func runTask(ctx context.Context, t *testing.T, e *integration.Env, task datatask.Task) {
@@ -125,11 +142,29 @@ func runTask(ctx context.Context, t *testing.T, e *integration.Env, task datatas
 	if err := engine.Seed(ctx); err != nil {
 		t.Fatal(err)
 	}
-	for range 10 {
+	for range 40 {
 		if _, err := engine.Execute(ctx); err != nil {
 			t.Fatal(err)
 		}
 	}
+}
+
+// ledger reads the task's run id and counters from the executor's own row.
+func ledger(t *testing.T, e *integration.Env) (run ids.UUID, scanned, changed, batches int64, status string) {
+	t.Helper()
+	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
+	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx, `SELECT run_id, scanned, changed, batches, status FROM data_task_run
+			WHERE task_id = $1`, DataTask().ID).Scan(&run, &scanned, &changed, &batches, &status)
+	}); err != nil {
+		t.Fatalf("reading the task's ledger: %v", err)
+	}
+	return run, scanned, changed, batches, status
+}
+
+func threadsBy(t *testing.T, e *integration.Env, seat ids.UUID) int {
+	t.Helper()
+	return e.WsCount(t, `SELECT count(*) FROM deal_room_thread WHERE author_participant_id = $1`, seat)
 }
 
 func erasures(t *testing.T, e *integration.Env, entity string, id ids.UUID) int {
@@ -138,70 +173,83 @@ func erasures(t *testing.T, e *integration.Env, entity string, id ids.UUID) int 
 		AND action = 'erase'`, entity, id)
 }
 
-func estimateLeft(ctx context.Context, t *testing.T, e *integration.Env) int64 {
-	t.Helper()
-	count, _, err := DataTask().Steps[0].Estimate(ctx, e.Pool, 100)
-	if err != nil {
-		t.Fatalf("estimating the task: %v", err)
-	}
-	return count
+func systemCtx(e *integration.Env) context.Context {
+	return principal.SystemActing(e.Admin(), "system:datatask-test")
 }
 
-// The task deletes what an anonymized seat wrote and tombstones it as the
-// live erasure does. A seat that was never erased keeps its thread.
+// The task deletes what an erased seat wrote, with its audit tombstones.
+// A seat that was never erased, or only carries the address, keeps its thread.
 func TestTheTaskDeletesWhatAnErasedSeatWroteAndReplaysAsANoOp(t *testing.T) {
 	e := integration.Setup(t)
-	r := seedRoom(t, e)
-	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
-	if n := estimateLeft(ctx, t, e); n != 1 {
-		t.Fatalf("the estimate counts %d seat(s) with traces, want the one erased seat", n)
-	}
+	r := newRoom(t, e)
+	erased := r.invite(t, "erased.buyer@acme.test", true)
+	kept := r.invite(t, "kept.buyer@acme.test", true)
+	lookalike := r.invite(t, "lookalike.buyer@acme.test", true)
 
+	theirs := r.opens(t, erased, "Clause 4 must change before we sign")
+	sellerReply := r.sellerReplies(t, theirs, "We can look at clause 4")
+	keptReply := r.buyerReplies(t, kept, theirs, "We agree on clause 4")
+	sellerThread, err := dealrooms.NewStore(e.DB()).OpenThread(r.seller(), r.id, dealrooms.OpenThreadInput{Body: "Welcome", Source: "manual"})
+	if err != nil {
+		t.Fatalf("the seller opening a thread: %v", err)
+	}
+	erasedReply := r.buyerReplies(t, erased, ids.UUID(sellerThread.Id), "Thanks")
+	keptThread := r.opens(t, kept, "Who signs on your side?")
+	lookalikeThread := r.opens(t, lookalike, "A question from a real address")
+	wipe(t, e, erased.seat, true)
+	wipe(t, e, lookalike.seat, false)
+
+	ctx := systemCtx(e)
+	if n, _, err := DataTask().Steps[0].Estimate(ctx, e.Pool, 100); err != nil || n != 1 {
+		t.Fatalf("the estimate counts %d seat(s) (%v), want the one tombstoned seat", n, err)
+	}
 	runTask(ctx, t, e, DataTask())
 
-	if n := e.WsCount(t, `SELECT count(*) FROM deal_room_thread WHERE author_participant_id = $1`, r.erased); n != 0 {
+	if n := threadsBy(t, e, erased.seat); n != 0 {
 		t.Errorf("%d thread(s) still name the erased seat", n)
 	}
-	if n := e.WsCount(t, `SELECT count(*) FROM deal_room_comment WHERE author_participant_id = $1
-		OR thread_id = $2`, r.erased, r.erasedThread); n != 0 {
+	if n := e.WsCount(t, `SELECT count(*) FROM deal_room_comment WHERE author_participant_id = $1 OR thread_id = $2`,
+		erased.seat, theirs); n != 0 {
 		t.Errorf("%d comment(s) by the erased seat or in its thread survived", n)
 	}
-	if n := e.WsCount(t, `SELECT count(*) FROM deal_room_session WHERE participant_id = $1`, r.erased); n != 0 {
+	if n := e.WsCount(t, `SELECT count(*) FROM deal_room_session WHERE participant_id = $1`, erased.seat); n != 0 {
 		t.Errorf("%d session(s) of the erased seat survived", n)
 	}
-	if n := e.WsCount(t, `SELECT count(*) FROM deal_room_thread WHERE id = ANY($1)`,
-		[]ids.UUID{r.keptThread, r.sellerThread}); n != 2 {
-		t.Errorf("%d of the kept buyer's and the seller's threads survived, want 2", n)
-	}
-	if n := e.WsCount(t, `SELECT count(*) FROM deal_room_comment WHERE thread_id = $1`, r.sellerThread); n != 1 {
-		t.Errorf("the seller's thread holds %d comment(s), want only the seller's opening one", n)
-	}
-	for entity, id := range map[string]ids.UUID{
-		"deal_room_thread": r.erasedThread, "deal_room_comment": r.sellerReply,
-	} {
-		if n := erasures(t, e, entity, id); n != 1 {
-			t.Errorf("%s %s has %d erase tombstone(s), want 1", entity, id, n)
+	for _, survivor := range []ids.UUID{keptThread, lookalikeThread, ids.UUID(sellerThread.Id)} {
+		if n := e.WsCount(t, `SELECT count(*) FROM deal_room_thread WHERE id = $1`, survivor); n != 1 {
+			t.Errorf("thread %s was deleted, and its author was never erased", survivor)
 		}
 	}
-	if n := erasures(t, e, "deal_room_comment", r.erasedReplyInSellerThread); n != 1 {
-		t.Errorf("the erased buyer's reply has %d erase tombstone(s), want 1", n)
+	run, _, _, _, _ := ledger(t, e)
+	for _, deleted := range []struct {
+		what, kind string
+		id         ids.UUID
+	}{
+		{"erased buyer's thread", "deal_room_thread", theirs},
+		{"seller's reply in it", "deal_room_comment", sellerReply},
+		{"kept buyer's reply in it", "deal_room_comment", keptReply},
+		{"erased buyer's reply in the seller's thread", "deal_room_comment", erasedReply},
+	} {
+		if n := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type = $1 AND entity_id = $2 AND action = 'erase'
+			AND actor_type = 'system' AND actor_id = $3 AND batch_id = $4
+			AND evidence->>'reason' = 'subject_data_removed' AND evidence->>'cause' = 'subject_redaction'`,
+			deleted.kind, deleted.id, datatask.ActorID(DataTask().ID), run); n != 1 {
+			t.Errorf("the %s has %d erase tombstone(s) naming this task and its run, want 1", deleted.what, n)
+		}
 	}
 	if n := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type = 'deal_room_thread' AND entity_id = $1
-		AND (before IS NOT NULL OR after IS NOT NULL)`, r.erasedThread); n != 0 {
+		AND (before IS NOT NULL OR after IS NOT NULL)`, theirs); n != 0 {
 		t.Errorf("%d audit row(s) still carry the erased seat's thread", n)
 	}
-	if n := erasures(t, e, "deal_room_thread", r.keptThread); n != 0 {
-		t.Errorf("the kept buyer's thread was tombstoned %d time(s)", n)
-	}
-	if n := estimateLeft(ctx, t, e); n != 0 {
-		t.Errorf("the estimate still counts %d seat(s) after the run", n)
+	if n := erasures(t, e, "deal_room_thread", keptThread) + erasures(t, e, "deal_room_thread", lookalikeThread); n != 0 {
+		t.Errorf("threads of seats never erased got %d tombstone(s)", n)
 	}
 
 	before := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE action = 'erase'`)
 	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		out, err := DataTask().Steps[0].Batch(ctx, tx, datatask.BatchIn{Limit: 100})
-		if err == nil && (out.Scanned != 1 || out.Changed != 0) {
-			t.Errorf("a replay scanned %d and changed %d seat(s), want 1 and 0", out.Scanned, out.Changed)
+		if err == nil && (out.Scanned != 1 || out.Changed != 0 || !out.Done) {
+			t.Errorf("a replay scanned %d and changed %d seat(s), want 1 and 0, done", out.Scanned, out.Changed)
 		}
 		return err
 	}); err != nil {
@@ -212,12 +260,95 @@ func TestTheTaskDeletesWhatAnErasedSeatWroteAndReplaysAsANoOp(t *testing.T) {
 	}
 }
 
+// Pages of two seats cross clean seats between dirty ones, and every dirty
+// seat is purged.
+func TestTheTaskPagesPastCleanSeatsToEveryDirtyOne(t *testing.T) {
+	e := integration.Setup(t)
+	r := newRoom(t, e)
+	var dirty []ids.UUID
+	for i, email := range []string{"a@acme.test", "b@acme.test", "c@acme.test", "d@acme.test", "e@acme.test"} {
+		isDirty := i%2 == 0
+		b := r.invite(t, email, isDirty)
+		if isDirty {
+			r.opens(t, b, "A question")
+			dirty = append(dirty, b.seat)
+		}
+		wipe(t, e, b.seat, true)
+	}
+	task := DataTask()
+	task.Steps[0].Limit = 2
+	runTask(systemCtx(e), t, e, task)
+
+	for _, seat := range dirty {
+		if n := threadsBy(t, e, seat); n != 0 {
+			t.Errorf("seat %s still opened %d thread(s)", seat, n)
+		}
+	}
+	if _, scanned, changed, batches, status := ledger(t, e); scanned != 5 || changed != 3 || batches != 3 || status != "done" {
+		t.Errorf("the run scanned %d, changed %d in %d batches, status %s; want 5, 3, 3, done",
+			scanned, changed, batches, status)
+	}
+}
+
+// A seat holding more rows than one batch may delete is purged over several
+// batches, each within the bound.
+func TestASeatLargerThanTheBatchBoundIsPurgedOverSeveralBatches(t *testing.T) {
+	e := integration.Setup(t)
+	r := newRoom(t, e)
+	erased := r.invite(t, "busy.buyer@acme.test", true)
+	thread := r.opens(t, erased, "First")
+	for _, body := range []string{"Second", "Third", "Fourth", "Fifth"} {
+		r.sellerReplies(t, thread, body)
+	}
+	wipe(t, e, erased.seat, true)
+	const bound = 2
+	task := taskWithBudget(bound)
+	traces := e.WsCount(t, `SELECT (SELECT count(*) FROM deal_room_session WHERE participant_id = $1)
+		+ (SELECT count(*) FROM deal_room_engagement WHERE participant_id = $1)
+		+ (SELECT count(*) FROM deal_room_comment WHERE thread_id = $2) + 1`, erased.seat, thread)
+
+	runTask(systemCtx(e), t, e, task)
+
+	if n := threadsBy(t, e, erased.seat); n != 0 {
+		t.Errorf("%d thread(s) of the erased seat survived", n)
+	}
+	if _, scanned, changed, batches, status := ledger(t, e); status != "done" || batches < int64(traces/bound) {
+		t.Errorf("%d traces took %d batch(es), status %s, scanned %d, changed %d; want at least %d batches",
+			traces, batches, status, scanned, changed, traces/bound)
+	}
+}
+
+// A seat whose deal is under a legal hold is left as it is.
+func TestASeatOnAHeldDealIsLeftForALaterRun(t *testing.T) {
+	e := integration.Setup(t)
+	r := newRoom(t, e)
+	erased := r.invite(t, "held.buyer@acme.test", true)
+	thread := r.opens(t, erased, "Kept by counsel")
+	wipe(t, e, erased.seat, true)
+	e.WsExec(t, `UPDATE deal SET legal_hold = true WHERE id = $1`, r.deal)
+
+	runTask(systemCtx(e), t, e, DataTask())
+
+	if n := threadsBy(t, e, erased.seat); n != 1 {
+		t.Errorf("the held seat has %d thread(s), want its 1", n)
+	}
+	if n := erasures(t, e, "deal_room_thread", thread); n != 0 {
+		t.Errorf("the held thread got %d erase tombstone(s)", n)
+	}
+	if _, scanned, changed, _, status := ledger(t, e); scanned != 1 || changed != 0 || status != "done" {
+		t.Errorf("the run scanned %d and changed %d, status %s; want 1, 0, done", scanned, changed, status)
+	}
+}
+
 // A batch that fails after its purge leaves every row in place, and a cursor
-// that is not an id is refused.
+// that is not one the task wrote is refused.
 func TestTheTaskRollsBackWithItsBatchAndRefusesAMalformedCursor(t *testing.T) {
 	e := integration.Setup(t)
-	r := seedRoom(t, e)
-	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
+	r := newRoom(t, e)
+	erased := r.invite(t, "rollback.buyer@acme.test", true)
+	thread := r.opens(t, erased, "Rolled back")
+	wipe(t, e, erased.seat, true)
+	ctx := systemCtx(e)
 	task := DataTask()
 	purge := task.Steps[0].Batch
 	interrupted := false
@@ -233,10 +364,10 @@ func TestTheTaskRollsBackWithItsBatchAndRefusesAMalformedCursor(t *testing.T) {
 	if !interrupted {
 		t.Fatal("the batch failed before its purge, so no rollback was tested")
 	}
-	if n := e.WsCount(t, `SELECT count(*) FROM deal_room_thread WHERE author_participant_id = $1`, r.erased); n != 1 {
+	if n := threadsBy(t, e, erased.seat); n != 1 {
 		t.Errorf("the rolled-back batch left %d thread(s) of the erased seat, want 1", n)
 	}
-	if n := erasures(t, e, "deal_room_thread", r.erasedThread); n != 0 {
+	if n := erasures(t, e, "deal_room_thread", thread); n != 0 {
 		t.Errorf("the rolled-back batch left %d erase tombstone(s)", n)
 	}
 	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {

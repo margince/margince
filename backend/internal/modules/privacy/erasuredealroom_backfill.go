@@ -3,12 +3,13 @@
 
 package privacy
 
-// An anonymized seat must hold no thread, comment, session or engagement row.
+// An erased seat must hold no thread, comment, session or engagement row.
 // The data task that pages through this file runs the live erasure's own purge.
 // So an earlier erasure and a live one delete and tombstone the same rows.
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
@@ -18,67 +19,113 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// ErasedSeatPage lists the anonymized seats one batch read, in id order, and
-// how many of them still held a trace the purge removed.
-type ErasedSeatPage struct {
-	Scanned []ids.UUID
-	Changed int
+// erasedSeatSQL picks the seats an erasure wiped. The address alone is not
+// proof: it was ordinary input before values reserved it. The seat's erase
+// tombstone, written by eraseDealRoomSeats, is.
+const erasedSeatSQL = `p.email = @erased AND EXISTS (SELECT 1 FROM audit_log erasure
+	WHERE erasure.entity_type = 'deal_room_participant' AND erasure.entity_id = p.id
+	AND erasure.action = @erase)`
+
+// ErasedSeatCursor is where a purge stopped. After is the last seat left clean
+// or held. Removed counts the traces already deleted from the seat after it,
+// so a seat larger than one batch still moves the cursor.
+type ErasedSeatCursor struct {
+	After   ids.UUID `json:"after"`
+	Removed int64    `json:"removed"`
 }
 
-// erasedSeatTraceSQL is true for a seat that still holds a thread, a comment,
-// a session or an engagement row. The purge removes all four.
-const erasedSeatTraceSQL = `(EXISTS (SELECT 1 FROM deal_room_thread t WHERE t.author_participant_id = p.id)
-	 OR EXISTS (SELECT 1 FROM deal_room_comment c WHERE c.author_participant_id = p.id)
-	 OR EXISTS (SELECT 1 FROM deal_room_session s WHERE s.participant_id = p.id)
-	 OR EXISTS (SELECT 1 FROM deal_room_engagement g WHERE g.participant_id = p.id))`
+// ErasedSeatPage is one batch and the cursor to resume from. It counts the seats
+// it read, those it deleted traces from, and those a legal hold kept.
+type ErasedSeatPage struct {
+	Next    ErasedSeatCursor
+	Scanned int
+	Changed int
+	Held    int
+	Done    bool
+}
 
-// PurgeErasedSeatTracesPageTx reads the next anonymized seats after the cursor
-// and purges what they still hold with purgeDealRoomSeatTraces. A seat with
-// nothing left is scanned and left alone, so a second run changes nothing.
-func PurgeErasedSeatTracesPageTx(ctx context.Context, tx pgx.Tx, after ids.UUID, limit int) (ErasedSeatPage, error) {
+type erasedSeat struct {
+	id   ids.UUID
+	held bool
+}
+
+// PurgeErasedSeatTracesPageTx purges what erased seats still hold, reading at
+// most seats seats and deleting at most traces rows. A seat whose deal is under
+// a legal hold is skipped and left for a later run. A seat with nothing left is
+// read and left alone, so a second run changes nothing.
+func PurgeErasedSeatTracesPageTx(ctx context.Context, tx pgx.Tx, from ErasedSeatCursor, seats int, traces int64) (ErasedSeatPage, error) {
 	if err := auth.RequireSystem(ctx); err != nil {
 		return ErasedSeatPage{}, err
 	}
-	rows, err := tx.Query(ctx, `SELECT p.id, `+erasedSeatTraceSQL+`
-		FROM deal_room_participant p
-		WHERE p.email = @erased AND p.id > @after
-		ORDER BY p.id LIMIT @limit
-		FOR UPDATE OF p`,
-		pgx.StrictNamedArgs{"erased": erasedEmail, "after": after, "limit": limit})
+	found, err := lockErasedSeats(ctx, tx, from.After, seats)
 	if err != nil {
-		return ErasedSeatPage{}, fmt.Errorf("read anonymized deal room seats: %w", err)
-	}
-	var page ErasedSeatPage
-	var traced []ids.UUID
-	for rows.Next() {
-		var id ids.UUID
-		var hasTrace bool
-		if err := rows.Scan(&id, &hasTrace); err != nil {
-			rows.Close()
-			return ErasedSeatPage{}, fmt.Errorf("scan anonymized deal room seat: %w", err)
-		}
-		page.Scanned = append(page.Scanned, id)
-		if hasTrace {
-			traced = append(traced, id)
-		}
-	}
-	rows.Close()
-	if err := rows.Err(); err != nil {
-		return ErasedSeatPage{}, fmt.Errorf("read anonymized deal room seats: %w", err)
-	}
-	if err := purgeDealRoomSeatTraces(ctx, tx, traced); err != nil {
 		return ErasedSeatPage{}, err
 	}
-	page.Changed = len(traced)
+	page := ErasedSeatPage{Next: from, Done: len(found) < seats}
+	budget := traces
+	for _, seat := range found {
+		page.Scanned++
+		if seat.held {
+			page.Held++
+			page.Next = ErasedSeatCursor{After: seat.id}
+			continue
+		}
+		removed, err := purgeDealRoomSeatTracesUpTo(ctx, tx, []ids.UUID{seat.id}, budget)
+		if err != nil {
+			return ErasedSeatPage{}, err
+		}
+		if removed > 0 {
+			page.Changed++
+		}
+		if removed == budget {
+			// The budget ran out before the seat was proven clean, so the
+			// next batch starts on it again.
+			page.Next.Removed += removed
+			page.Done = false
+			return page, nil
+		}
+		budget -= removed
+		page.Next = ErasedSeatCursor{After: seat.id}
+	}
 	return page, nil
 }
 
-// CountErasedSeatsWithTraces counts anonymized seats that still hold a trace,
-// stopping one row past the maximum so the estimate stays bounded.
-func CountErasedSeatsWithTraces(ctx context.Context, q datatask.Querier, maximum int64) (int64, error) {
+// lockErasedSeats reads the next erased seats in id order with their deal's
+// legal hold. It locks each seat and shares a lock on its deal, so no hold can
+// land while the batch purges.
+func lockErasedSeats(ctx context.Context, tx pgx.Tx, after ids.UUID, limit int) ([]erasedSeat, error) {
+	hold, ok := heldRecordRule(reportingDeal)
+	if !ok {
+		return nil, errors.New("no legal hold rule for a deal")
+	}
+	rows, err := tx.Query(ctx, `SELECT p.id, `+hold.predicate+`
+		FROM deal_room_participant p
+		JOIN deal_room room ON room.id = p.room_id
+		JOIN deal a ON a.id = room.deal_id
+		WHERE `+erasedSeatSQL+` AND p.id > @after
+		ORDER BY p.id LIMIT @limit
+		FOR UPDATE OF p FOR SHARE OF a`,
+		pgx.StrictNamedArgs{"erased": erasedEmail, "erase": actionErase, "after": after, "limit": limit})
+	if err != nil {
+		return nil, fmt.Errorf("read erased deal room seats: %w", err)
+	}
+	found, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (erasedSeat, error) {
+		var seat erasedSeat
+		err := row.Scan(&seat.id, &seat.held)
+		return seat, err
+	})
+	if err != nil {
+		return nil, fmt.Errorf("read erased deal room seats: %w", err)
+	}
+	return found, nil
+}
+
+// CountErasedSeats counts the seats the task reads, stopping one row past the
+// maximum so the estimate stays bounded.
+func CountErasedSeats(ctx context.Context, q datatask.Querier, maximum int64) (int64, error) {
 	var count int64
 	err := q.QueryRow(ctx, `SELECT count(*) FROM (SELECT 1 FROM deal_room_participant p
-		WHERE p.email = @erased AND `+erasedSeatTraceSQL+` LIMIT @maximum) bounded`,
-		pgx.StrictNamedArgs{"erased": erasedEmail, "maximum": maximum + 1}).Scan(&count)
+		WHERE `+erasedSeatSQL+` LIMIT @maximum) bounded`,
+		pgx.StrictNamedArgs{"erased": erasedEmail, "erase": actionErase, "maximum": maximum + 1}).Scan(&count)
 	return count, err
 }
