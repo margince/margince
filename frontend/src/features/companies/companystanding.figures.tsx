@@ -49,7 +49,7 @@ export function StandingFigures({
         view={view}
         locale={locale}
         recordZone={readerZone}
-        onOpen={door("timeline")}
+        onOpen={door("meetings")}
         t={t}
       />
       <LastTouchStat

@@ -3,14 +3,14 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, within } from "storybook/test";
-import type { components } from "../../api/schema";
-import { Panel } from "../../design-system/panel";
+import type { components } from "../api/schema";
+import { Panel } from "../design-system/panel";
 import {
   installFetchStub,
   meRoute,
   StoryProviders,
-} from "../../testing/story-utils";
-import { MeetingRow } from "./contactmeetings.rows";
+} from "../testing/story-utils";
+import { MeetingRow } from "./meetingrows";
 
 type Activity = components["schemas"]["Activity"];
 
