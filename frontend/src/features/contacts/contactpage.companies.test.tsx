@@ -8,9 +8,9 @@ import { jsonResponse } from "../../testing/story-utils";
 afterEach(cleanup);
 
 // Where a contact works and worked has its own tab. A reader looking for a
-// past employer finds a tab named for companies, not one named for people.
+// past employer finds a tab named for companies, not for relationships.
 
-const peopleRoutes = {
+const relationshipRoutes = {
   "GET /contacts/p-1/graph": () =>
     jsonResponse({
       contact_id: "p-1",
@@ -91,7 +91,7 @@ describe("the contact's Companies tab", () => {
   });
 
   it("leaves the work history off the Relationships tab", async () => {
-    mount("network", employed, [], peopleRoutes);
+    mount("network", employed, [], relationshipRoutes);
 
     const tab = await screen.findByRole("button", { name: en["tab.network"] });
     expect(tab.getAttribute("aria-pressed")).toBe("true");
