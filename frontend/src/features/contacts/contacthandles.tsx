@@ -9,6 +9,7 @@ import {
   EMAIL_TYPE_LABEL,
   PHONE_TYPE_LABEL,
 } from "../../format/contactchannels";
+import { primaryPhone } from "../../format/contacturi";
 import { formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { labelFor } from "../../lib/labelfor";
@@ -24,17 +25,14 @@ type Bought = ReturnType<typeof boughtFields>;
 const FOLD_AFTER = 3;
 const SHOWN_FOLDED = 2;
 
-// The primary first, then the order the writer gave. An archived one is out
-// of service, so the column never offers it.
+// The one the server reaches them at leads, the rest keep the order they are
+// sent in. An archived one is out of service, so the column never offers it.
 function liveHandles<T extends Email | Phone>(
   rows: readonly T[] | undefined,
+  isLead: (row: T) => boolean,
 ): T[] {
-  return (rows ?? [])
-    .filter((row) => !row.archived_at)
-    .sort(
-      (a, b) =>
-        Number(b.is_primary) - Number(a.is_primary) || a.position - b.position,
-    );
+  const live = (rows ?? []).filter((row) => !row.archived_at);
+  return [...live.filter(isLead), ...live.filter((row) => !isLead(row))];
 }
 
 /** Every live address of the contact, a line each with its kind. */
@@ -43,7 +41,10 @@ export function EmailHandles({
   bought,
 }: Readonly<{ contact: Contact; bought: Bought }>) {
   const t = useT();
-  const rows = liveHandles(contact.emails);
+  const rows = liveHandles(
+    contact.emails,
+    (row) => row.email === contact.primary_email,
+  );
   const record = { entityType: "contact", entityId: contact.id } as const;
   return (
     <HandleStack
@@ -74,7 +75,8 @@ export function PhoneHandles({
   bought,
 }: Readonly<{ contact: Contact; bought: Bought }>) {
   const t = useT();
-  const rows = liveHandles(contact.phones);
+  const lead = primaryPhone(contact.phones);
+  const rows = liveHandles(contact.phones, (row) => row.id === lead?.id);
   const record = { entityType: "contact", entityId: contact.id } as const;
   return (
     <HandleStack
