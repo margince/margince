@@ -95,3 +95,24 @@ func TestAProcessThatAssembledNoWorklistWritesNoStageFamily(t *testing.T) {
 		t.Fatalf("an empty collector rendered %q; no family claims a stage ran", out.String())
 	}
 }
+
+func TestADroppedLaneIsCountedByLaneAndReason(t *testing.T) {
+	t.Parallel()
+
+	var out strings.Builder
+	writeWorklistStageMetrics(&out, worklistStageReadings{dropped: map[attention.LaneKey]int64{
+		{Lane: "customer_waiting", Reason: attention.LaneTimedOut}: 3,
+		{Lane: "tail_task", Reason: attention.LaneFailed}:          1,
+	}})
+	rendered := out.String()
+
+	for _, want := range []string{
+		"# TYPE margince_worklist_lane_dropped_total counter",
+		`margince_worklist_lane_dropped_total{lane="customer_waiting",reason="timeout"} 3`,
+		`margince_worklist_lane_dropped_total{lane="tail_task",reason="failed"} 1`,
+	} {
+		if !strings.Contains(rendered, want) {
+			t.Errorf("the scrape does not carry %q:\n%s", want, rendered)
+		}
+	}
+}

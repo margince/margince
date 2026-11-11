@@ -202,8 +202,8 @@ func readPlannedOnceLanes(ctx context.Context, lanes plannedOnceLanes, deal, tas
 	if _, err := (attentionAtRisk{pool: lanes.pool}).championCover(ctx, []agents.SlippingDeal{{DealID: deal}}, at); err != nil {
 		return err
 	}
-	briefing := attentionBriefing{engine: lanes.engine, figures: attentionDealFacts{store: deals.NewStore(lanes.db, DealsInstallation())}, now: func() time.Time { return at }}
-	_, _, _, err := briefing.Queue(ctx)
+	briefing := attentionBriefing{engine: lanes.engine, figures: attentionDealFacts{store: deals.NewStore(lanes.db, DealsInstallation())}}
+	_, _, _, err := briefing.Queue(ctx, at)
 	return err
 }
 

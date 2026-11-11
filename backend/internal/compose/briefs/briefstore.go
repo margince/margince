@@ -262,10 +262,9 @@ func insertRunItems(ctx context.Context, tx pgx.Tx, runID ids.UUID, queue []Brie
 // open Home to last Monday's ranking presented as this morning's, with an
 // as-of line she has no reason to disbelieve. A brief that is stale is worse
 // than one that is absent, because absence is visible and staleness is not.
-// This read is where a snooze resolves (A77/AC-home-6): an expired
-// snooze flips back to actionable inside the read's own transaction,
-// and a still-running one keeps its item hidden — so the returned run
-// is always what the rep should see NOW, without a refresh.
+// A snooze resolves against now (A77/AC-home-6). One that no longer holds
+// reads as actionable, and one still running keeps its item hidden. The read
+// writes nothing; a caller that shows the run calls RecordOpened.
 //
 // The queue may therefore be shorter than the run it re-reads, and the
 // answer says nothing about that on purpose: a count of what the row
@@ -293,12 +292,7 @@ func (e *BriefEngine) LatestRun(ctx context.Context, now time.Time) (BriefRun, e
 		if err != nil {
 			return err
 		}
-
-		if err := resurfaceExpiredSnoozes(ctx, tx, run.ID, now); err != nil {
-			return err
-		}
-
-		run.Items, err = readRunItems(ctx, tx, run.ID)
+		run.Items, err = readRunItems(ctx, tx, run.ID, now)
 		if err != nil {
 			return err
 		}
@@ -312,10 +306,7 @@ func (e *BriefEngine) LatestRun(ctx context.Context, now time.Time) (BriefRun, e
 		}
 		run.PreviousDay = previousDay
 		carryPreviousRanks(run.Items, previousRanks)
-		// The open is recorded here and not in the handler, so it rides the
-		// same transaction as the read and counts what the rep is actually
-		// about to see (briefopened.go).
-		return emitBriefOpened(ctx, tx, run)
+		return nil
 	})
 	if err != nil {
 		return BriefRun{}, err
@@ -324,9 +315,7 @@ func (e *BriefEngine) LatestRun(ctx context.Context, now time.Time) (BriefRun, e
 }
 
 // LatestCutoff answers the as_of of the reader's run for today, under the
-// same gate, reader and local day as LatestRun. It reads no items and writes
-// nothing. A surface that only dates a window from the brief has not opened
-// it, so it must not record an open or resurface a snooze.
+// same gate, reader and local day as LatestRun. It reads no items.
 func (e *BriefEngine) LatestCutoff(ctx context.Context, now time.Time) (time.Time, error) {
 	if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
 		return time.Time{}, err
@@ -389,12 +378,13 @@ func scanRun(row pgx.Row) (BriefRun, error) {
 // deal's own read gives on that id (deals.Store.GetDeal: the object gate,
 // then auth.EnsureVisible).
 //
-// Unexpired snoozes stay hidden; everything else, including the rows the
-// caller just re-surfaced, reads back.
-func readRunItems(ctx context.Context, tx pgx.Tx, runID ids.UUID) ([]BriefRunItem, error) {
+// A snooze that holds at now stays hidden. One that no longer holds reads
+// back as the fresh item it was before the snooze, with no row rewritten.
+func readRunItems(ctx context.Context, tx pgx.Tx, runID ids.UUID, now time.Time) ([]BriefRunItem, error) {
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	runPos := arg(runID)
+	snoozed := briefSnoozedSQL(fmt.Sprintf("$%d", arg(now.UTC())))
 
 	scope, err := auth.ScopeClauseFor(ctx, "deal", "d", arg)
 	if err != nil {
@@ -406,12 +396,16 @@ func readRunItems(ctx context.Context, tx pgx.Tx, runID ids.UUID) ([]BriefRunIte
 	if err != nil {
 		return nil, err
 	}
+	// Every snoozed row left after the filter is one that no longer holds.
 	q := fmt.Sprintf(`%s
-		SELECT bi.id, bi.deal_id, bi.rank, bi.composite, bi.feature_vector, %s, bi.state, bi.state_at, bi.snoozed_until, %s,
+		SELECT bi.id, bi.deal_id, bi.rank, bi.composite, bi.feature_vector, %s,
+		       CASE WHEN bi.state = 'snoozed' THEN 'new' ELSE bi.state END,
+		       CASE WHEN bi.state = 'snoozed' THEN NULL ELSE bi.state_at END,
+		       CASE WHEN bi.state = 'snoozed' THEN NULL ELSE bi.snoozed_until END, %s,
 		       bi.returned_after_dismissal_on, %s
 		FROM brief_item bi
 		JOIN deal d ON d.id = bi.deal_id
-		WHERE bi.brief_run_id = $%d AND bi.state <> 'snoozed' AND d.archived_at IS NULL`, with, evidence, servedFindingSQL(evidence), returnedWith, runPos)
+		WHERE bi.brief_run_id = $%d AND NOT %s AND d.archived_at IS NULL`, with, evidence, servedFindingSQL(evidence), returnedWith, runPos, snoozed)
 	if scope != "" {
 		q += " AND " + scope
 	}
@@ -436,40 +430,6 @@ func readRunItems(ctx context.Context, tx pgx.Tx, runID ids.UUID) ([]BriefRunIte
 		return rows.Err()
 	})
 	return items, err
-}
-
-// resurfaceExpiredSnoozes flips a run's finished snoozes back to actionable —
-// the re-surface half of the snooze contract. Each flip is a state change on
-// per-rep queue data, so it is audited like the rep's own marks (brief rows are
-// audit-only; no brief.* event exists in the events.md catalog).
-//
-// "Finished" is whatever the item was waiting for: a moment that has passed, a
-// reply that arrived, a meeting that is over. The last two come from
-// briefSnoozeLiftedSQL, the same predicate the candidate filter and the mark
-// guard ask — three readers of one question, and a fourth spelling here would
-// be the one that disagrees.
-func resurfaceExpiredSnoozes(ctx context.Context, tx pgx.Tx, runID ids.UUID, now time.Time) error {
-	holding := briefSnoozeHoldsSQL("bi", "@now")
-	resurfaced, err := collectIDList(tx.Query(ctx, fmt.Sprintf(`
-		UPDATE brief_item bi
-		SET state = 'new', state_at = NULL, snoozed_until = NULL, reopen_on = NULL, reopen_ref = NULL
-		WHERE bi.brief_run_id = @run AND bi.state = 'snoozed'
-		  AND NOT %s
-		RETURNING bi.id`, holding), pgx.StrictNamedArgs{"run": runID, "now": now.UTC()}))
-	if err != nil {
-		return err
-	}
-	for _, itemID := range resurfaced {
-		before := map[string]any{auditFieldState: briefStateSnoozed}
-		after := map[string]any{
-			auditFieldState: briefStateNew, auditFieldStateAt: nil,
-			auditFieldSnoozedUntil: nil, auditFieldReopenOn: nil, auditFieldReopenRef: nil,
-		}
-		if _, err := storekit.Audit(ctx, tx, "update", "brief_item", itemID, before, after); err != nil {
-			return err
-		}
-	}
-	return nil
 }
 
 // scanBriefItem reads one brief_item row in the LatestRun column order.

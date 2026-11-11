@@ -425,26 +425,41 @@ export function sessionWindowCls(shifts: readonly Shift[]): number {
   return worst;
 }
 
+/** The quantile `q` of the day paint and of CLS over a run of loads. */
+export function vitalsQuantile(
+  loads: readonly Vitals[],
+  q: number,
+): { dayPaintMs: number; cls: number } {
+  const paints = loads.map(
+    (load) => dayPaint(load.dayPaints)?.at ?? Number.POSITIVE_INFINITY,
+  );
+  const shifts = loads.map((load) => sessionWindowCls(load.shifts));
+  return { dayPaintMs: nearestRank(paints, q), cls: nearestRank(shifts, q) };
+}
+
 /** The p95 of the day paint and of CLS over a run of loads. */
 export function vitalsP95(loads: readonly Vitals[]): {
   dayPaintMs: number;
   cls: number;
 } {
-  const paints = loads.map(
-    (load) => dayPaint(load.dayPaints)?.at ?? Number.POSITIVE_INFINITY,
-  );
-  const shifts = loads.map((load) => sessionWindowCls(load.shifts));
-  return {
-    dayPaintMs: nearestRank(paints, 0.95),
-    cls: nearestRank(shifts, 0.95),
-  };
+  return vitalsQuantile(loads, 0.95);
 }
+
+/**
+ * How the vitals check judges speed. "absolute" holds it to `VITALS_BUDGET`.
+ * "relative" judges only whether every load was measured, and leaves speed to
+ * the comparison with the merge base in scripts/home-budget-compare.sh.
+ */
+export type VitalsMode = "absolute" | "relative";
 
 /**
  * Why a run of loads breaks the vitals budget; empty when it keeps it. A load
  * whose day content never painted fails by itself, whatever the p95.
  */
-export function vitalsReasons(loads: readonly Vitals[]): string[] {
+export function vitalsReasons(
+  loads: readonly Vitals[],
+  mode: VitalsMode = "absolute",
+): string[] {
   if (loads.length === 0) return ["no load was measured"];
   const reasons: string[] = [];
   for (const [i, load] of loads.entries()) {
@@ -453,6 +468,7 @@ export function vitalsReasons(loads: readonly Vitals[]): string[] {
     if (dayPaint(load.dayPaints) === null)
       reasons.push(`load ${i + 1}: Home's day content never painted`);
   }
+  if (mode === "relative") return reasons;
   const p95 = vitalsP95(loads);
   if (
     Number.isFinite(p95.dayPaintMs) &&

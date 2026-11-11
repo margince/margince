@@ -15,6 +15,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/briefs"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -123,6 +124,7 @@ func Serve[A Answer](
 	if err != nil {
 		slog.ErrorContext(ctx, "a kept Home answer could not be read; reading it fresh", "read", read, "error", err)
 	}
+	countServed(read, hit)
 	if !hit {
 		return keepFresh(ctx, c, reader, read, key, fresh, walkOf)
 	}
@@ -182,7 +184,8 @@ func (c *Cache) Settle() { c.background.Wait() }
 // Stamp reads the fence before the answer is assembled. A revocation that
 // commits after this read moves the fence past the stamp, so the answer is
 // never served beside it. Expiry writes nothing, so the next of the reader's
-// own grants to expire bounds the life.
+// own grants to expire, and the next of their brief snoozes to end, bound the
+// life.
 func (c *Cache) Stamp(ctx context.Context) (Stamp, error) {
 	actor, _ := principal.Actor(ctx)
 	var s Stamp
@@ -195,7 +198,8 @@ func (c *Cache) Stamp(ctx context.Context) (Stamp, error) {
 			                          AND ((g.subject_type = 'user'
 			                                AND g.subject_id IN (SELECT unnest(member_identity_family($2::uuid))))
 			                            OR (g.subject_type = 'team' AND g.subject_id = ANY($3)))),
-			                      'infinity'::timestamptz))
+			                      'infinity'::timestamptz),
+			             coalesce(`+briefs.NextSnoozeEndSQL("$2::uuid", "now()")+`, 'infinity'::timestamptz))
 			  FROM home_read_fence f`,
 			Life.Seconds(), actor.UserID, actor.TeamIDs).Scan(&s.fence, &s.at, &s.validUntil)
 	})

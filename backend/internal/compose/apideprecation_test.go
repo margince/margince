@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"regexp"
 	"strings"
@@ -36,6 +37,16 @@ func TestEveryDeprecatedOperationAnnouncesThePolicyThroughTheGeneratedRouter(t *
 				t.Errorf("missing notice for %s", route)
 			}
 			requestPath := regexp.MustCompile(`\{[^}]+\}`).ReplaceAllString(httpserver.BaseURL+path, "00000000-0000-0000-0000-000000000001")
+			query := url.Values{}
+			for _, param := range op.Parameters {
+				// Every required query parameter on a deprecated operation takes a uuid.
+				if p := param.Value; p != nil && p.In == "query" && p.Required {
+					query.Set(p.Name, "00000000-0000-0000-0000-000000000001")
+				}
+			}
+			if len(query) > 0 {
+				requestPath += "?" + query.Encode()
+			}
 			response := httptest.NewRecorder()
 			router.ServeHTTP(response, httptest.NewRequest(method, requestPath, nil))
 			if response.Code != http.StatusNoContent {

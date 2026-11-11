@@ -66,7 +66,7 @@ func TestATokenFileThatCannotBeALicenseIsRefusedByName(t *testing.T) {
 	}{
 		"missing":   {filepath.Join(t.TempDir(), "typo"), "license.token_file"},
 		"empty":     {writeLicenseFile(t, []byte("\n")), "remove the setting to run unlicensed"},
-		"too large": {writeLicenseFile(t, bytes.Repeat([]byte("x"), config.SecretFileLimit+1)), "check the path points at the credential"},
+		"too large": {writeLicenseFile(t, bytes.Repeat([]byte("x"), config.SecretFileLimit+1)), "check the path"},
 	} {
 		if _, err := declaredLicenseToken(licenseSettings(t, tokenFileYAML(tc.path)))(); err == nil || !strings.Contains(err.Error(), tc.want) {
 			t.Errorf("%s: err %v; want it to say %q", name, err, tc.want)

@@ -35,6 +35,9 @@ type resolved struct {
 	value  any //craft:ignore naked-any one map holds the values of settings of many types
 	origin Origin
 	set    bool
+	// secretFile is the path of the ${file:} reference the value was read
+	// from, so RereadSecret can read the same file again.
+	secretFile string
 }
 
 // Config holds the values Load resolved from the boot sources.
@@ -48,6 +51,7 @@ type Config struct {
 	files     Files
 	db        *settings.Store
 	sealer    *Sealer
+	readFile  func(string) ([]byte, error)
 }
 
 // Load resolves every setting and returns all faults joined, so an operator
@@ -79,7 +83,7 @@ func loadSources(reg *Registry, src Sources) (*Config, error) {
 	}
 	layers, layerFaults, trace := readLayers(reg, src, names, flags, env, files)
 	faults = append(faults, layerFaults...)
-	cfg := &Config{reg: reg, values: map[string]resolved{}, files: files, trace: trace, tracing: tracing}
+	cfg := &Config{reg: reg, values: map[string]resolved{}, files: files, trace: trace, tracing: tracing, readFile: src.ReadFile}
 	getenv := func(name string) (string, bool) {
 		v, ok := env[name]
 		return v, ok
