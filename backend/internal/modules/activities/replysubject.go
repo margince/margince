@@ -29,5 +29,13 @@ func ReplySubject(kind crmcontracts.ActivityKind, topic, fallback string) string
 	return "Re: " + topic
 }
 
+// IsReplySubjectOf reports whether subject is topic as a reply carries it, with
+// or without Re:. The composer prefills that subject, so it is the thread's
+// history and not words the rep wrote.
+func IsReplySubjectOf(subject, topic string) bool {
+	email := crmcontracts.ActivityKindEmail
+	return strings.EqualFold(ReplySubject(email, subject, ""), ReplySubject(email, topic, ""))
+}
+
 // ECMAScript also treats the byte-order mark as whitespace.
 func subjectSpace(r rune) bool { return unicode.IsSpace(r) || r == '\uFEFF' }

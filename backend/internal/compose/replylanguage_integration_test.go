@@ -267,3 +267,18 @@ func TestAnAddresseeMessageDatedAfterTheDraftingInstantDoesNotDecideTheLanguage(
 		t.Fatalf("output language = %q, want English: the German mail is dated after the draft is written", got)
 	}
 }
+
+// A subject the rep wrote on a reply decides its language in both directions.
+// The prefilled reply subject is the thread's and decides nothing.
+func TestTheSubjectTheRepWroteDecidesTheLanguageOfAReply(t *testing.T) {
+	o := setupOwed(t)
+	replyLangContact(t, o.e, "Dietmar Kunde", "dietmar@kunde.test")
+	english := replyLangMail(t, o, "inbound", "dietmar@kunde.test", replyLangEnglish, 0)
+	german := replyLangMail(t, o, "inbound", "dietmar@kunde.test", replyLangGerman, time.Hour)
+	toGerman, _ := replyLangSteeredPrompt(t, o.e, english, draftfloor.Steering{Subject: "Unsere nächsten Schritte für das gemeinsame Projekt"})
+	toEnglish, _ := replyLangSteeredPrompt(t, o.e, german, draftfloor.Steering{Subject: "Your proposal and our next steps", RewriteOf: replyLangGerman})
+	prefilled, _ := replyLangSteeredPrompt(t, o.e, german, draftfloor.Steering{Subject: "Re: Angebot"})
+	if toGerman != "de" || toEnglish != "en" || prefilled != "de" {
+		t.Fatalf("output language = %q/%q/%q under a German, English and prefilled subject, want de/en/de", toGerman, toEnglish, prefilled)
+	}
+}

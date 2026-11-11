@@ -342,13 +342,23 @@ func (d replyDrafter) languageInputs(ctx context.Context, anchor ids.UUID, steer
 		return activity, written, err
 	}
 	return activity, draftfloor.Written{
-		Chosen:    steering.Language,
-		Addressee: thread.addresseeEvidence(delivery.ContactID),
-		Stored:    activityLanguage(activity),
-		Body:      textlang.MessageOpening(stringValue(activity.Body), draftcore.LanguageEvidenceRunes),
-		Subject:   stringValue(activity.Subject),
-		Thread:    draftcore.LanguageEvidence(thread.evidence, delivery.ContactID),
-		Rewrite:   steering.RewriteOf,
-		Purpose:   steering.Intent,
+		Chosen:       steering.Language,
+		Addressee:    thread.addresseeEvidence(delivery.ContactID),
+		Stored:       activityLanguage(activity),
+		Body:         textlang.MessageOpening(stringValue(activity.Body), draftcore.LanguageEvidenceRunes),
+		Subject:      stringValue(activity.Subject),
+		Thread:       draftcore.LanguageEvidence(thread.evidence, delivery.ContactID),
+		Rewrite:      steering.RewriteOf,
+		Purpose:      steering.Intent,
+		DraftSubject: repliedSubject(activity, steering.Subject),
 	}, nil
+}
+
+// repliedSubject is the subject the rep wrote for the reply, or "" when it is
+// the answered message's own: that one's language is the thread's.
+func repliedSubject(activity crmcontracts.Activity, steered string) string {
+	if activities.IsReplySubjectOf(steered, stringValue(activity.Subject)) {
+		return ""
+	}
+	return steered
 }

@@ -149,8 +149,12 @@ type Written struct {
 	Stored string
 	// Body is the correspondence itself, quoted history included.
 	Body string
-	// Subject is the fallback text, read only when the body says nothing.
-	Subject      string
+	// Subject is the answered message's own subject, read only when its body
+	// says nothing.
+	Subject string
+	// DraftSubject is the subject the caller wrote for this draft. A language
+	// it names outranks every tier but Chosen: a rep who writes a German
+	// subject to an English contact has decided to write German.
 	DraftSubject string
 	// Thread is the other messages of the conversation, in the order
 	// draftcore.LanguageEvidence gives them: the recipient's own mail first.
@@ -175,9 +179,9 @@ type Written struct {
 // draft unsigned (DRAFT-AC-E-6) — a drafting screen that errors because it
 // could not work out a greeting is worse than a draft the rep edits.
 //
-// The ladder is the rep's chosen language, then the addressee's own mail, then
-// stored. Then the correspondence (the answered message, then the rest of the
-// thread). Then the draft being rewritten, then the rep's typed purpose, then
+// The ladder is the rep's chosen language, then the subject they wrote for the
+// draft, then the addressee's own mail, then stored. Then the correspondence
+// (the answered message, then the rest of the thread). Then the draft being rewritten, then the rep's typed purpose, then
 // the rep's own app language, then the installation's language, then English.
 // A purpose too short to clear the detector's bar falls to the rep's app
 // language, which is why that tier sits above the installation's.
@@ -227,6 +231,9 @@ func register(written Written) textlang.Register {
 func (r *Resolver) language(ctx context.Context, written Written) textlang.Lang {
 	if textlang.Known(string(written.Chosen)) {
 		return written.Chosen
+	}
+	if lang := textlang.Detect(written.DraftSubject); lang != textlang.Unknown {
+		return lang
 	}
 	// The stored label sits under the addressee's own text and above the rest:
 	// it was read at capture, possibly under an older quote rule.

@@ -47084,7 +47084,7 @@ type DraftSteering struct {
 	// Absent or empty is a first draft.
 	RewriteOf *string `json:"rewrite_of,omitempty"`
 
-	// Subject The subject the caller has already written on a new-message route, supplied as context for the body. A reply uses the selected message's subject instead.
+	// Subject The subject the caller has written for the draft. A supported language it names outranks every language but `language`: the correspondence, the addressee, the stored label and the draft being rewritten. A subject that names none (empty, a project tag, a name) leaves that order as it was. On a reply, the answered message's own subject (with or without `Re:`) is history and not read as a choice.
 	Subject *string `json:"subject,omitempty"`
 }
 
@@ -71314,7 +71314,7 @@ type DraftCompanyEmailJSONBody struct {
 	// Absent or empty is a first draft.
 	RewriteOf *string `json:"rewrite_of,omitempty"`
 
-	// Subject The subject the caller has already written on a new-message route, supplied as context for the body. A reply uses the selected message's subject instead.
+	// Subject The subject the caller has written for the draft. A supported language it names outranks every language but `language`: the correspondence, the addressee, the stored label and the draft being rewritten. A subject that names none (empty, a project tag, a name) leaves that order as it was. On a reply, the answered message's own subject (with or without `Re:`) is history and not read as a choice.
 	Subject *string `json:"subject,omitempty"`
 }
 
@@ -72274,7 +72274,7 @@ type DraftContactEmailJSONBody struct {
 	// Absent or empty is a first draft.
 	RewriteOf *string `json:"rewrite_of,omitempty"`
 
-	// Subject The subject the caller has already written on a new-message route, supplied as context for the body. A reply uses the selected message's subject instead.
+	// Subject The subject the caller has written for the draft. A supported language it names outranks every language but `language`: the correspondence, the addressee, the stored label and the draft being rewritten. A subject that names none (empty, a project tag, a name) leaves that order as it was. On a reply, the answered message's own subject (with or without `Re:`) is history and not read as a choice.
 	Subject *string `json:"subject,omitempty"`
 }
 

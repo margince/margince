@@ -32,3 +32,20 @@ func TestReplySubjectsMatchTheComposer(t *testing.T) {
 		t.Errorf("subjectless email = %q", got)
 	}
 }
+
+// The subject a reply is prefilled with is the answered message's own; any
+// other subject is one the rep wrote.
+func TestOnlyTheAnsweredSubjectIsAReplySubjectOfIt(t *testing.T) {
+	const topic = "Your proposal and our next steps"
+	for subject, want := range map[string]bool{
+		"Re: Your proposal and our next steps": true,
+		"RE: your proposal and our next steps": true,
+		"Your proposal and our next steps":     true,
+		"Unsere nächsten Schritte":             false,
+		"Re: Unsere nächsten Schritte":         false,
+	} {
+		if got := IsReplySubjectOf(subject, topic); got != want {
+			t.Errorf("IsReplySubjectOf(%q) = %v, want %v", subject, got, want)
+		}
+	}
+}
