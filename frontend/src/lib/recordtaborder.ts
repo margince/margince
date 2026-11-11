@@ -12,6 +12,7 @@
 export const RECORD_TAB_ORDER = [
   ["overview"],
   ["timeline", "history"],
+  ["companies"],
   ["network"],
   ["contacts"],
   ["deals"],
