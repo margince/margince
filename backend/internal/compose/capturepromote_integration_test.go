@@ -26,6 +26,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -590,7 +591,7 @@ func TestAContactTheCeilingRefusedIsAskedAboutByTheSweep(t *testing.T) {
 	// notices the contact nobody was ever asked about.
 	runVerdict(t, e, &scriptedVerdictBrain{})
 
-	store := contacts.NewStore(InstallationDB(e.Pool))
+	store := contacts.NewStore(InstallationDB(e.Pool)).WithSenderStamp(activities.StampProvenSendersTx)
 	worker := NewLinkReconcileWorkspaceWorkerForTest(e.Pool, store)
 	if err := worker.reconcileLinksForWorkspace(context.Background(), e.WS); err != nil {
 		t.Fatalf("the sweep failed: %v", err)
@@ -632,7 +633,7 @@ func TestTheSweepDoesNotReaskASettledSender(t *testing.T) {
 	}
 
 	before := countDispositions(t, e, advisor)
-	store := contacts.NewStore(InstallationDB(e.Pool))
+	store := contacts.NewStore(InstallationDB(e.Pool)).WithSenderStamp(activities.StampProvenSendersTx)
 	worker := NewLinkReconcileWorkspaceWorkerForTest(e.Pool, store)
 	if err := worker.reconcileLinksForWorkspace(context.Background(), e.WS); err != nil {
 		t.Fatalf("the sweep failed: %v", err)
@@ -686,7 +687,7 @@ func TestTheSweepLeavesAContactAHumanKeptPrivate(t *testing.T) {
 	seedHumanEdit(t, e, contactID)
 
 	runVerdict(t, e, &scriptedVerdictBrain{})
-	store := contacts.NewStore(InstallationDB(e.Pool))
+	store := contacts.NewStore(InstallationDB(e.Pool)).WithSenderStamp(activities.StampProvenSendersTx)
 	worker := NewLinkReconcileWorkspaceWorkerForTest(e.Pool, store)
 	if err := worker.reconcileLinksForWorkspace(context.Background(), e.WS); err != nil {
 		t.Fatalf("the sweep failed: %v", err)
@@ -803,7 +804,7 @@ func TestAnOwnerPublishesTheirOwnCapturedContact(t *testing.T) {
 		t.Fatalf("a fresh capture is %q, want owner", got)
 	}
 
-	store := contacts.NewStore(InstallationDB(e.Pool))
+	store := contacts.NewStore(InstallationDB(e.Pool)).WithSenderStamp(activities.StampProvenSendersTx)
 	if err := store.PromoteOwnCapturedContact(seatCtx(e, e.Rep1), contactID); err != nil {
 		t.Fatalf("the owner publishing their own contact: %v", err)
 	}
@@ -831,7 +832,7 @@ func TestOnlyTheOwnerPublishesACapturedContact(t *testing.T) {
 	captureInboundThroughRealSink(t, e, e.Rep1, "other-in-1", sender, "other-t1")
 	contactID := contactIDFor(t, e, sender)
 
-	store := contacts.NewStore(InstallationDB(e.Pool))
+	store := contacts.NewStore(InstallationDB(e.Pool)).WithSenderStamp(activities.StampProvenSendersTx)
 	for _, seat := range []struct {
 		name string
 		user ids.UUID
@@ -878,7 +879,7 @@ func TestARecordSaysWhoItIsFor(t *testing.T) {
 	captureInboundThroughRealSink(t, e, e.Rep1, "vis-in-1", sender, "vis-t1")
 	contactID := contactIDFor(t, e, sender)
 
-	store := contacts.NewStore(InstallationDB(e.Pool))
+	store := contacts.NewStore(InstallationDB(e.Pool)).WithSenderStamp(activities.StampProvenSendersTx)
 	owner := seatCtx(e, e.Rep1)
 
 	got, err := store.GetContact(owner, contactID, storekit.LiveOnly)

@@ -30,6 +30,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/privacy"
@@ -108,7 +109,7 @@ func TestAC_TG_6_IdentityPhoneDisagreementIsAConflictNotAMerge(t *testing.T) {
 		t.Fatal("two exact lanes named different contacts and no conflict was reported — the disagreement would be resolved silently")
 	}
 
-	recorded, err := contacts.NewStore(c.DB()).EnqueueIdentityConflict(admin, *conflict,
+	recorded, err := contacts.NewStore(c.DB()).WithSenderStamp(activities.StampProvenSendersTx).EnqueueIdentityConflict(admin, *conflict,
 		"telegram:"+fmt.Sprintf("%d", telegramBotID)+":"+account+":1", "connector:telegram")
 	if err != nil {
 		t.Fatalf("EnqueueIdentityConflict: %v", err)
@@ -316,7 +317,7 @@ func TestTwoConcurrentFirstMessagesYieldOneContactAndTwoActivities(t *testing.T)
 	second := telegramUpdate{updateID: 5702, messageID: 72, senderID: 770701, username: "racer", firstName: "Nadia", text: "second"}
 
 	sink := capture.NewSink(c.DB()).
-		WithChannelEnsurer(channelEnsureForwarder{store: contacts.NewStore(c.DB())})
+		WithChannelEnsurer(channelEnsureForwarder{store: contacts.NewStore(c.DB()).WithSenderStamp(activities.StampProvenSendersTx)})
 	ctx := c.channelConnectorCtx(t)
 
 	start := make(chan struct{})

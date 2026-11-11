@@ -121,7 +121,7 @@ func seatFor(t *testing.T, e *integration.SearchEnv, address string) ids.UUID {
 
 func ensureGuestContact(t *testing.T, e *integration.SearchEnv, address string) ids.ContactID {
 	t.Helper()
-	contact, err := contacts.NewStore(e.DB()).EnsureContactByEmail(contactCreator(e), "", address, "manual", storekit.RefuseErased)
+	contact, err := contacts.NewStore(e.DB()).WithSenderStamp(activities.StampProvenSendersTx).EnsureContactByEmail(contactCreator(e), "", address, "manual", storekit.RefuseErased)
 	if err != nil {
 		t.Fatalf("creating the contact %s: %v", address, err)
 	}
@@ -253,7 +253,7 @@ func TestEveryGuestOnAnInvitationIsOnTheMeeting(t *testing.T) {
 	}
 
 	later := ensureGuestContact(t, e, guestLater)
-	store := contacts.NewStore(e.DB())
+	store := contacts.NewStore(e.DB()).WithSenderStamp(activities.StampProvenSendersTx)
 	if _, err := store.RepairContactCohort(contactCreator(e), later); err != nil {
 		t.Fatal(err)
 	}
