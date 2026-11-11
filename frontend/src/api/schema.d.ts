@@ -14255,6 +14255,47 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/installation/license/check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Re-read the installation's license token now (admin/ops).
+         * @description Runs the api's license re-check at once, instead of waiting for the daily one.
+         *     It re-reads the token where the deployment declares it and checks it OFFLINE
+         *     against the bundled validation module, the same path the daily re-check takes.
+         *     An operator who has swapped the token on the server presses this to see the new
+         *     license without waiting up to a day. A token file is read again; a token from the
+         *     environment (`MARGINCE_LICENSE`) is fixed when the process starts and changes
+         *     only with a restart.
+         *
+         *     It writes nothing and takes no token. Entering or replacing the token stays the
+         *     operator's job on the server. Only the api process that serves
+         *     this request re-checks; the worker and any other api replica keep their own
+         *     daily re-check.
+         *
+         *     The answer is the same body as `GET /installation/license`, read after the
+         *     re-check. A re-check that reached a verdict answers `200`, a refused license
+         *     included: `state` then says `rejected`. A token that could not be read, or a
+         *     module that could not run, is no verdict. The posture the process last resolved
+         *     stands, the fault goes to the server log, and the answer is `503`.
+         *
+         *     Gated on `installation_settings` update (admin and ops), the grant that guards
+         *     installation settings, and on `license` read, which the entitlement in the
+         *     answer needs. Human-only, like the entitlement read.
+         */
+        post: operations["checkLicenseNow"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/installation/seat-usage": {
         parameters: {
             query?: never;
@@ -82090,6 +82131,37 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+        };
+    };
+    checkLicenseNow: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The entitlement as the re-check resolved it. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LicenseEntitlement"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            /** @description The token could not be re-read, or the module could not run; the last posture stands. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
         };
     };
     getSeatUsage: {
