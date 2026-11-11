@@ -20,7 +20,6 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
@@ -39,8 +38,9 @@ const actionMeetingNotesRefused = "capture_meeting_notes_refused"
 // MeetingNotesQuery asks for the notes Docs one owner's meetings carry.
 type MeetingNotesQuery struct {
 	Owner ids.UserID
-	// Domain is the owner's own domain; only a meeting organized on it counts.
-	Domain       string
+	// Domains are the workspace's trusted own domains. Only a meeting organized
+	// on one of them, or a subdomain, counts.
+	Domains      []string
 	Since, Until time.Time
 	Limit        int
 }
@@ -56,7 +56,7 @@ type MeetingNotesLanding struct {
 	Meeting ids.ActivityID
 	URL     string
 	Owner   ids.UserID
-	Domain  string
+	Domains []string
 	Title   string
 	// Revision is the Doc revision the text was read from.
 	Revision string
@@ -97,8 +97,8 @@ var _ connector.MeetingNotesKeeper = (*Sink)(nil)
 
 // notesReader is the connection a sync runs for, when it may read notes.
 type notesReader struct {
-	owner  ids.UserID
-	domain string
+	owner   ids.UserID
+	domains []string
 }
 
 // meetingNotesReaderTx answers the connection the sync runs for, if it may read
@@ -146,11 +146,13 @@ func meetingNotesReaderTx(ctx context.Context, tx pgx.Tx) (notesReader, bool, er
 	if calendarLabel == nil || account == "" || account != strings.ToLower(bareAddress(*calendarLabel)) {
 		return notesReader{}, false, nil
 	}
-	domain := owndomain.OfAddress(account)
-	if domain == "" {
-		return notesReader{}, false, nil
+	// The organizer must be on a domain the company vouched for. The seat's own
+	// domain is not enough: a shared webmail domain is everybody's.
+	trusted, err := TrustedOwnDomainsTx(ctx, tx)
+	if err != nil || trusted.Empty() {
+		return notesReader{}, false, err
 	}
-	return notesReader{owner: owner, domain: domain}, true, nil
+	return notesReader{owner: owner, domains: trusted.Domains()}, true, nil
 }
 
 // MeetingNotesDue answers the notes Docs on the reader's own meetings of the
@@ -167,7 +169,7 @@ func (s *Sink) MeetingNotesDue(ctx context.Context) ([]connector.MeetingNotesDoc
 		}
 		now := s.clock()
 		links, err := s.meetingNotes.DueTx(ctx, tx, MeetingNotesQuery{
-			Owner: reader.owner, Domain: reader.domain,
+			Owner: reader.owner, Domains: reader.domains,
 			Since: now.Add(-meetingNotesWindow), Until: now, Limit: maxMeetingNotesPerSync,
 		})
 		if err != nil {
@@ -201,7 +203,7 @@ func (s *Sink) KeepMeetingNotes(ctx context.Context, doc connector.MeetingNotesD
 		}
 		landed, err := s.meetingNotes.LandTx(ctx, tx, MeetingNotesLanding{
 			Meeting: ids.From[ids.ActivityKind](doc.Meeting), URL: meetingDocumentURL(doc.FileID),
-			Owner: reader.owner, Domain: reader.domain,
+			Owner: reader.owner, Domains: reader.domains,
 			Title: notes.Title, Revision: notes.Revision, Text: notes.Text,
 		})
 		if err == nil && !landed {

@@ -79,6 +79,10 @@ type FileKeeper interface {
 	// one of the kept addresses, and answers how many it archived.
 	RetireLinks(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID,
 		from FileSource, kept []string) (int, error)
+	// RestoreLinks brings back the link rows from source at a listed address
+	// that RetireLinks archived, and answers how many it brought back.
+	RestoreLinks(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID,
+		from FileSource, listed []string) (int, error)
 	// Stored names where each staged file's bytes now live, so the stored
 	// original can point at the objects instead of carrying the bytes.
 	Stored(staged []StagedFile) ([]StoredFile, error)

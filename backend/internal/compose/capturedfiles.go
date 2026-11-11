@@ -183,6 +183,18 @@ func (k capturedFileKeeper) RetireLinks(
 	}, kept)
 }
 
+func (k capturedFileKeeper) RestoreLinks(
+	ctx context.Context, tx pgx.Tx, activityID ids.ActivityID,
+	from capture.FileSource, listed []string,
+) (int, error) {
+	return k.store.RestoreCapturedLinks(ctx, tx, activityID, activities.CapturedFileSource{
+		System:     from.System,
+		MessageID:  from.MessageID,
+		CapturedBy: from.CapturedBy,
+		Category:   from.Category,
+	}, listed)
+}
+
 func (k capturedFileKeeper) RecordLinks(
 	ctx context.Context, tx pgx.Tx, activityID ids.ActivityID,
 	from capture.FileSource, links []capture.MailLink,

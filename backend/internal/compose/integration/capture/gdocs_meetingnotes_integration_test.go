@@ -7,6 +7,7 @@ package capture
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"slices"
@@ -22,6 +23,8 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture/gdocs"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -290,8 +293,8 @@ func TestARefusedNotesGrantAsksTheOwnerToReconnect(t *testing.T) {
 }
 
 // The landing asks the meeting's evidence again under its own lock. Text read
-// before a Doc was taken off the event does not land. Neither does text for an
-// owner on another domain.
+// before a Doc was taken off the event does not land. Neither does text when
+// the organizer's domain is not among the trusted domains handed in.
 func TestNotesLandOnlyOnEvidenceStillTrueAtTheWrite(t *testing.T) {
 	env := newCaptureEnv(t)
 	e := env.e
@@ -299,21 +302,12 @@ func TestNotesLandOnlyOnEvidenceStillTrueAtTheWrite(t *testing.T) {
 	store := activities.NewStore(e.DB())
 	land := func(domain string) bool {
 		t.Helper()
-		var landed bool
-		ctx := humanWithScopes(e, e.Rep1, []principal.Scope{principal.ScopeRead})
-		if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
-			var err error
-			landed, err = store.LandMeetingNotesTx(ctx, tx, activities.MeetingNotesInput{
-				Meeting: ids.From[ids.ActivityKind](meeting), URL: notesURL(notesFileID),
-				Owner: ids.From[ids.UserKind](e.Rep1), Domain: domain, Text: notesText,
-			})
-			return err
-		}); err != nil {
+		landed, err := landAs(e, store, e.Rep1, meeting, domain)
+		if err != nil {
 			t.Fatalf("LandMeetingNotesTx: %v", err)
 		}
 		return landed
 	}
-
 	if land("client-co.example") {
 		t.Error("notes landed for an owner whose domain did not organize the meeting")
 	}
@@ -324,5 +318,228 @@ func TestNotesLandOnlyOnEvidenceStillTrueAtTheWrite(t *testing.T) {
 	}
 	if got := transcriptsOf(t, e, notesFileID); got != 0 {
 		t.Errorf("%d transcripts, want 0", got)
+	}
+}
+
+// landAs lands the notes Doc of meeting for user, through the store, in its
+// own transaction.
+func landAs(e *integration.SearchEnv, store *activities.Store, user ids.UUID, meeting ids.UUID, domain string) (bool, error) {
+	var landed bool
+	ctx := humanWithScopes(e, user, []principal.Scope{principal.ScopeRead})
+	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		var err error
+		landed, err = store.LandMeetingNotesTx(ctx, tx, landing(user, meeting, domain))
+		return err
+	})
+	return landed, err
+}
+
+func landing(user, meeting ids.UUID, domain string) activities.MeetingNotesInput {
+	return activities.MeetingNotesInput{
+		Meeting: ids.From[ids.ActivityKind](meeting), URL: notesURL(notesFileID),
+		Owner: ids.From[ids.UserKind](user), Domains: []string{domain}, Text: notesText,
+	}
+}
+
+// An outsider on a shared webmail domain organizes a Meet call with a seat
+// whose calendar is on that same domain. Webmail is nobody's own domain, so
+// the Doc is not recorded on the meeting and nothing is read.
+func TestAnOutsiderOnTheSeatsWebmailDomainCannotPlantNotes(t *testing.T) {
+	env := newCaptureEnv(t)
+	e := env.e
+	const seat, outsider = "ada.rep@gmail.com", "mallory@gmail.com"
+	feed := &calendarFeed{}
+	feed.set(withNotes(lateGuestEvent("review", "confirmed", captureNow.AddDate(0, 0, -3), outsider,
+		selfEntry(seat, "accepted"), guestEntry(outsider, "accepted")),
+		driveFile(notesFileID, "Our call - Notes by Gemini")))
+	connectFeedAs(t, env, feed, seat)()
+	docs := &docsFeed{}
+	_, syncNotes := connectNotes(t, env, docs, seat, &queuedReadings{})
+	syncNotes()
+
+	if got := notesRows(t, e, gcalMeeting(t, e).String()); got != 0 {
+		t.Errorf("%d notes links from an outsider on webmail, want 0", got)
+	}
+	if got := docs.readCount(); got != 0 || transcriptsOf(t, e, notesFileID) != 0 {
+		t.Errorf("an outsider's Doc was opened %d times, want never and no transcript", got)
+	}
+}
+
+// The company stops claiming the organizer's domain after the Doc was
+// recorded. The reader asks the trusted domains again and opens nothing.
+func TestNotesAreNotReadOnceTheOrganizersDomainIsNoLongerOurs(t *testing.T) {
+	env := newCaptureEnv(t)
+	e := env.e
+	meetingWithNotes(t, env)
+	if _, err := e.Owner.Exec(context.Background(), `DELETE FROM company_domain WHERE domain = 'myco.example'`); err != nil {
+		t.Fatal(err)
+	}
+	docs := &docsFeed{}
+	_, syncNotes := connectNotes(t, env, docs, captureOwner, &queuedReadings{})
+	syncNotes()
+
+	if got := docs.readCount(); got != 0 || transcriptsOf(t, e, notesFileID) != 0 {
+		t.Errorf("a Doc of a no-longer-trusted organizer was opened %d times, want never", got)
+	}
+}
+
+// readsActivity reports whether user may read the activity's content.
+func readsActivity(t *testing.T, e *integration.SearchEnv, user, activity ids.UUID) bool {
+	t.Helper()
+	ctx := principal.WithActor(principal.WithWorkspaceID(context.Background(), e.WS), principal.Principal{
+		Type: principal.PrincipalHuman, ID: "human:" + user.String(), UserID: user, SeatType: principal.SeatFull,
+		Permissions: principal.Permissions{
+			Objects:  map[string]principal.ObjectGrant{"activity": {Read: true}, "contact": {Read: true}},
+			RowScope: principal.RowScopeAll,
+		},
+	})
+	_, err := activities.NewStore(e.DB()).GetActivityContent(ctx, ids.From[ids.ActivityKind](activity), storekit.LiveOnly)
+	if err != nil && !errors.Is(err, apperrors.ErrNotFound) {
+		t.Fatalf("reading %s as %s: %v", activity, user, err)
+	}
+	return err == nil
+}
+
+// On a meeting limited to its participants the transcript takes the same
+// audience, whichever seat read the Doc. A colleague on the invitation reads
+// it; a colleague who was not invited does not.
+func TestATranscriptIsReadByWhoeverReadsItsMeeting(t *testing.T) {
+	env := newCaptureEnv(t)
+	e := env.e
+	meeting, _, _ := meetingWithNotes(t, env)
+	attendee := seatOf(t, e, guestColleagueA)
+	stranger := seatFor(t, e, "not.invited@myco.example")
+	if _, err := e.Owner.Exec(context.Background(),
+		`UPDATE activity SET audience = 'participants' WHERE id = $1`, meeting); err != nil {
+		t.Fatal(err)
+	}
+	if !readsActivity(t, e, attendee, meeting) || readsActivity(t, e, stranger, meeting) {
+		t.Fatal("the fixture meeting is not limited to its participants")
+	}
+	_, syncNotes := connectNotes(t, env, &docsFeed{}, captureOwner, &queuedReadings{})
+	syncNotes()
+
+	transcript := transcriptID(t, e, notesFileID)
+	if !readsActivity(t, e, e.Rep1, transcript) {
+		t.Error("the seat that read the Doc cannot read its transcript")
+	}
+	if !readsActivity(t, e, attendee, transcript) {
+		t.Error("a colleague on the meeting cannot read its transcript")
+	}
+	if readsActivity(t, e, stranger, transcript) {
+		t.Error("a colleague not on the meeting reads its transcript")
+	}
+}
+
+func seatOf(t *testing.T, e *integration.SearchEnv, address string) ids.UUID {
+	t.Helper()
+	var id ids.UUID
+	if err := e.Owner.QueryRow(context.Background(), `SELECT id FROM app_user WHERE email = $1`, address).Scan(&id); err != nil {
+		t.Fatal(err)
+	}
+	return id
+}
+
+func transcriptID(t *testing.T, e *integration.SearchEnv, fileID string) ids.UUID {
+	t.Helper()
+	var id ids.UUID
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(),
+			`SELECT id FROM activity WHERE source_system = 'transcript' AND source_id = $1`, notesURL(fileID)).Scan(&id)
+	}); err != nil {
+		t.Fatalf("no transcript of %s: %v", fileID, err)
+	}
+	return id
+}
+
+// A Doc taken off the event and attached again is live on the meeting again,
+// and the notes reader opens it.
+func TestANotesDocAttachedAgainIsReadAgain(t *testing.T) {
+	env := newCaptureEnv(t)
+	e := env.e
+	meeting, feed, syncCalendar := meetingWithNotes(t, env)
+	feed.set(withNotes(lateGuestEvent("review", "confirmed", captureNow.AddDate(0, 0, -3), guestColleagueA, guestList()...)))
+	syncCalendar()
+	feed.set(withNotes(lateGuestEvent("review", "confirmed", captureNow.AddDate(0, 0, -3), guestColleagueA, guestList()...),
+		driveFile(notesFileID, "Kick-off review - Notes by Gemini")))
+	syncCalendar()
+
+	if got := countRows(t, e, `SELECT count(*) FROM attachment WHERE entity_id = '`+meeting.String()+
+		`' AND category = 'link' AND archived_at IS NULL`); got != 1 {
+		t.Fatalf("%d live notes links after the Doc came back, want 1", got)
+	}
+	if got := countRows(t, e, `SELECT count(*) FROM audit_log WHERE entity_type = 'attachment' AND action = 'restore'`); got != 1 {
+		t.Errorf("%d restore audits, want 1", got)
+	}
+	_, syncNotes := connectNotes(t, env, &docsFeed{}, captureOwner, &queuedReadings{})
+	syncNotes()
+	if got := transcriptsOf(t, e, notesFileID); got != 1 {
+		t.Errorf("%d transcripts from the Doc attached again, want 1", got)
+	}
+}
+
+// Two colleagues' syncs land one Doc at once. The second waits for the first
+// and finds its transcript, rather than failing on the transcript's key.
+func TestTwoSyncsLandingOneDocAtOnceLandItOnce(t *testing.T) {
+	env := newCaptureEnv(t)
+	e := env.e
+	meeting, _, _ := meetingWithNotes(t, env)
+	store := activities.NewStore(e.DB())
+	ctx := humanWithScopes(e, e.Rep1, []principal.Scope{principal.ScopeRead})
+	firstLanded, release, firstDone := make(chan struct{}), make(chan struct{}), make(chan error, 1)
+	go func() {
+		firstDone <- database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+			landed, err := store.LandMeetingNotesTx(ctx, tx, landing(e.Rep1, meeting, "myco.example"))
+			if err != nil || !landed {
+				return errors.Join(err, errors.New("the first sync did not land the notes"))
+			}
+			close(firstLanded)
+			<-release
+			return nil
+		})
+	}()
+	select {
+	case <-firstLanded:
+	case err := <-firstDone:
+		t.Fatalf("first landing: %v", err)
+	}
+	type outcome struct {
+		landed bool
+		err    error
+	}
+	secondDone := make(chan outcome, 1)
+	go func() {
+		landed, err := landAs(e, store, e.Rep1, meeting, "myco.example")
+		secondDone <- outcome{landed, err}
+	}()
+	waitForALockWait(t, e)
+	close(release)
+	if err := <-firstDone; err != nil {
+		t.Fatalf("first landing: %v", err)
+	}
+	second := <-secondDone
+	if second.err != nil || second.landed {
+		t.Errorf("second landing: landed %v, err %v; want it to find the first one's transcript", second.landed, second.err)
+	}
+	if got := transcriptsOf(t, e, notesFileID); got != 1 {
+		t.Errorf("%d transcripts, want 1", got)
+	}
+}
+
+// waitForALockWait returns once some session of this database waits on a
+// lock, which is the second landing blocked behind the first.
+func waitForALockWait(t *testing.T, e *integration.SearchEnv) {
+	t.Helper()
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	for {
+		var waiting int
+		if err := e.Owner.QueryRow(ctx, `SELECT count(*) FROM pg_stat_activity
+			WHERE datname = current_database() AND wait_event_type = 'Lock'`).Scan(&waiting); err != nil {
+			t.Fatalf("no session ever waited on a lock: %v", err)
+		}
+		if waiting > 0 {
+			return
+		}
 	}
 }

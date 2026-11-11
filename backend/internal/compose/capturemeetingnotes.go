@@ -38,7 +38,7 @@ var _ capture.MeetingNotesWriter = meetingNotesWriter{}
 
 func (w meetingNotesWriter) DueTx(ctx context.Context, tx pgx.Tx, q capture.MeetingNotesQuery) ([]capture.MeetingNotesLink, error) {
 	due, err := w.store.DueMeetingNotesTx(ctx, tx, activities.MeetingNotesQuery{
-		Owner: q.Owner, Domain: q.Domain, Since: q.Since, Until: q.Until, Limit: q.Limit,
+		Owner: q.Owner, Domains: q.Domains, Since: q.Since, Until: q.Until, Limit: q.Limit,
 	})
 	if err != nil {
 		return nil, err
@@ -52,7 +52,7 @@ func (w meetingNotesWriter) DueTx(ctx context.Context, tx pgx.Tx, q capture.Meet
 
 func (w meetingNotesWriter) LandTx(ctx context.Context, tx pgx.Tx, in capture.MeetingNotesLanding) (bool, error) {
 	return w.store.LandMeetingNotesTx(ctx, tx, activities.MeetingNotesInput{
-		Meeting: in.Meeting, URL: in.URL, Owner: in.Owner, Domain: in.Domain,
+		Meeting: in.Meeting, URL: in.URL, Owner: in.Owner, Domains: in.Domains,
 		Title: in.Title, Revision: in.Revision, Text: in.Text,
 	})
 }

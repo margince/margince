@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"net/url"
 	"strings"
+	"time"
 	"unicode"
 
 	"github.com/jackc/pgx/v5"
@@ -106,9 +107,8 @@ func (s *Store) RetireCapturedLinks(
 		return 0, fmt.Errorf("activities: archiving the links a source no longer lists: %w", err)
 	}
 	for _, id := range retired {
-		auditID, err := storekit.Audit(ctx, tx, "archive", "attachment", id, nil, map[string]any{
-			fieldEntityType: linkEntityActivity, evidenceReasonKey: linkNoLongerListed,
-		})
+		auditID, err := storekit.AuditWithEvidence(ctx, tx, "archive", "attachment", id, nil,
+			map[string]any{fieldEntityType: linkEntityActivity}, map[string]any{evidenceReasonKey: linkNoLongerListed})
 		if err != nil {
 			return 0, fmt.Errorf("activities: auditing an archived link: %w", err)
 		}
@@ -119,6 +119,60 @@ func (s *Store) RetireCapturedLinks(
 		}
 	}
 	return len(retired), nil
+}
+
+// RestoreCapturedLinks brings back the link rows one source recorded on an
+// activity, at a listed address, that RetireCapturedLinks archived. A row a
+// person archived stays archived: only an archive whose reason is that the
+// source stopped listing it is undone. Each is audited as a restore.
+func (s *Store) RestoreCapturedLinks(
+	ctx context.Context, tx pgx.Tx, activityID ids.ActivityID,
+	from CapturedFileSource, listed []string,
+) (int, error) {
+	if err := auth.Require(ctx, "activity", principal.ActionUpdate); err != nil {
+		return 0, err
+	}
+	rows, err := tx.Query(ctx, `
+		WITH prior AS (
+		  SELECT l.id, l.archived_at FROM attachment l
+		   WHERE l.entity_type = 'activity' AND l.entity_id = $1 AND l.category = '`+categoryLink+`'
+		     AND l.external_source_id = $2 AND l.archived_at IS NOT NULL AND l.url = ANY($3::text[])
+		     AND (SELECT a.evidence ->> '`+evidenceReasonKey+`' FROM audit_log a
+		           WHERE a.entity_type = 'attachment' AND a.entity_id = l.id AND a.action = 'archive'
+		           ORDER BY a.occurred_at DESC, a.id DESC LIMIT 1) = $4
+		     FOR UPDATE)
+		UPDATE attachment l SET archived_at = NULL FROM prior WHERE l.id = prior.id
+		RETURNING l.id, prior.archived_at`, activityID, providerMessageKey(from), listed, linkNoLongerListed)
+	if err != nil {
+		return 0, fmt.Errorf("activities: restoring the links a source lists again: %w", err)
+	}
+	type restoredLink struct {
+		id         ids.UUID
+		archivedAt time.Time
+	}
+	restored, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (restoredLink, error) {
+		var link restoredLink
+		return link, row.Scan(&link.id, &link.archivedAt)
+	})
+	if err != nil {
+		return 0, fmt.Errorf("activities: restoring the links a source lists again: %w", err)
+	}
+	for _, link := range restored {
+		id := link.id
+		auditID, err := storekit.Audit(ctx, tx, "restore", "attachment", id,
+			map[string]any{"archived_at": link.archivedAt}, map[string]any{"archived_at": nil})
+		if err != nil {
+			return 0, fmt.Errorf("activities: auditing a restored link: %w", err)
+		}
+		// The row is back in the activity's listings, which is what created
+		// tells a subscriber that keeps its own index of a record's files.
+		if err := storekit.EmitEvent(ctx, tx, auditID, id, crmcontracts.PublicEventAttachmentCreated{
+			ParentType: linkEntityActivity, ParentId: openapi_types.UUID(activityID.UUID),
+		}); err != nil {
+			return 0, fmt.Errorf("activities: announcing a restored link: %w", err)
+		}
+	}
+	return len(restored), nil
 }
 
 // linkFilename is the name a link row shows: the sender's anchor text cleaned of

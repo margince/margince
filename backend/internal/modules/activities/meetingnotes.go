@@ -37,7 +37,7 @@ const meetingNotesRawKey = "google_doc"
 // MeetingNotesQuery asks for the notes links on one owner's meetings.
 type MeetingNotesQuery struct {
 	Owner        ids.UserID
-	Domain       string
+	Domains      []string
 	Since, Until time.Time
 	Limit        int
 }
@@ -53,7 +53,7 @@ type MeetingNotesInput struct {
 	Meeting  ids.ActivityID
 	URL      string
 	Owner    ids.UserID
-	Domain   string
+	Domains  []string
 	Title    string
 	Revision string
 	Text     string
@@ -61,15 +61,18 @@ type MeetingNotesInput struct {
 
 // meetingNotesReadable is the evidence a notes link must still have when it is
 // listed and again when its text lands. The link is live on a live meeting.
-// The owner is on that meeting, and its organizer is on the owner's own domain,
-// because Google writes the notes into the organizer's Drive.
+// The owner is on that meeting, and its organizer is on one of the trusted own
+// domains or a subdomain, because Google writes the notes into the organizer's Drive.
 const meetingNotesReadable = `
 	    l.entity_type = 'activity' AND l.entity_id = a.id AND l.category = '` + categoryLink + `'
 	AND l.archived_at IS NULL AND l.external_source_id = '` + meetingDocumentSource + `' || a.id::text
 	AND a.kind = 'meeting' AND a.archived_at IS NULL AND a.restricted_at IS NULL
 	AND EXISTS (SELECT 1 FROM activity_participant o WHERE o.activity_id = a.id AND o.user_id = @owner)
 	AND EXISTS (SELECT 1 FROM activity_participant g
-	             WHERE g.activity_id = a.id AND g.role = 'organizer' AND g.address_domain_folded = @domain)`
+	             WHERE g.activity_id = a.id AND g.role = 'organizer'
+	               AND EXISTS (SELECT 1 FROM unnest(@domains::text[]) own
+	                            WHERE g.address_domain_folded = own
+	                               OR right(g.address_domain_folded, length(own) + 1) = '.' || own))`
 
 // DueMeetingNotesTx answers the notes links on the owner's meetings that took
 // place in the window and that no transcript holds yet, newest meeting first.
@@ -86,7 +89,7 @@ func (s *Store) DueMeetingNotesTx(ctx context.Context, tx pgx.Tx, q MeetingNotes
 		                    WHERE t.source_system = @transcript AND t.source_id = l.url)
 		 ORDER BY a.occurred_at DESC, l.id
 		 LIMIT @limit`, pgx.NamedArgs{
-		"owner": q.Owner, "domain": strings.ToLower(q.Domain), "since": q.Since, "until": q.Until,
+		"owner": q.Owner, "domains": q.Domains, "since": q.Since, "until": q.Until,
 		"transcript": transcriptSourceSystem, "limit": q.Limit,
 	})
 	if err != nil {
@@ -101,13 +104,19 @@ func (s *Store) DueMeetingNotesTx(ctx context.Context, tx pgx.Tx, q MeetingNotes
 // LandMeetingNotesTx lands one notes Doc's text as a transcript of its
 // meeting, and answers whether it landed. The link's evidence is asked again
 // under a lock on the meeting, which a later calendar sync takes to archive a
-// removed Doc. The transcript is keyed by the Doc's address, so a Doc lands
-// once whichever colleague's connection read it.
+// removed Doc.
 //
-// A meeting not open to the whole workspace gives its transcript to the reader
-// alone, so the text is never wider than the meeting.
+// The transcript is keyed by the Doc's address, and the key is locked first.
+// Two colleagues' syncs reading one Doc at once then land it once: the second
+// waits, and finds the first one's transcript instead of failing on the key.
+//
+// The transcript takes the meeting's audience, members and parties, so who may
+// read it does not depend on whose sync read it first.
 func (s *Store) LandMeetingNotesTx(ctx context.Context, tx pgx.Tx, in MeetingNotesInput) (bool, error) {
 	if err := auth.Require(ctx, "activity", principal.ActionCreate); err != nil {
+		return false, err
+	}
+	if err := storekit.LockWriteIdentity(ctx, tx, "activity_source", transcriptSourceSystem+":"+in.URL); err != nil {
 		return false, err
 	}
 	var linkName string
@@ -115,7 +124,7 @@ func (s *Store) LandMeetingNotesTx(ctx context.Context, tx pgx.Tx, in MeetingNot
 		SELECT l.filename FROM attachment l JOIN activity a ON a.id = l.entity_id
 		 WHERE a.id = @meeting AND l.url = @url AND `+meetingNotesReadable+`
 		   FOR SHARE OF a`, pgx.NamedArgs{
-		"meeting": in.Meeting, "url": in.URL, "owner": in.Owner, "domain": strings.ToLower(in.Domain),
+		"meeting": in.Meeting, "url": in.URL, "owner": in.Owner, "domains": in.Domains,
 	}).Scan(&linkName)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return false, nil
@@ -152,9 +161,7 @@ func (s *Store) LandMeetingNotesTx(ctx context.Context, tx pgx.Tx, in MeetingNot
 		SystemText: &systemtext.Message{
 			Subject: systemtext.Prose(systemtext.Quote, ""), Body: systemtext.Prose(systemtext.Quote, ""),
 		},
-	}
-	if meeting.Audience == nil || *meeting.Audience != crmcontracts.ActivityAudienceWorkspace {
-		transcript.VisibleOnlyTo(in.Owner.UUID)
+		audienceOf: &in.Meeting,
 	}
 	_, created, err := s.LogActivityTx(ctx, tx, transcript)
 	return created, err
