@@ -227,6 +227,9 @@ func (s *Store) txSnapshot(ctx context.Context, fn func(pgx.Tx) error) error {
 // substitute. The site read's system worker is one such actor.
 const scopeAllRows = "TRUE"
 
+// scopeNoRows is the predicate for a read the caller may make of no row at all.
+const scopeNoRows = "FALSE"
+
 // scopeOrAllRows renders one table's row-scope clause as a predicate that
 // always composes into a larger WHERE.
 func scopeOrAllRows(ctx context.Context, table, alias string, arg func(any) int) (string, error) {
