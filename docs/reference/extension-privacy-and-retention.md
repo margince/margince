@@ -35,7 +35,10 @@ A row whose link is still empty names no record, so no erasure or export can fin
 `openchannel` and has not yet landed as an activity is such a row. The retention sweep is what removes it.
 
 At start-up core refuses a declaration it could not carry out. A link column must be a `uuid`. A required
-personal column must have no `CHECK` or `UNIQUE` rule, because the empty value core writes could break it.
+personal column must have no `CHECK`, `UNIQUE`, `FOREIGN KEY` or `EXCLUDE` rule. It must also not be read by a
+`UNIQUE INDEX`. The empty value core writes could break any of them.
+
+A row that is already empty is not cleared again. So two erase paths that reach one row write one audit entry for it.
 
 ## How to read this page
 

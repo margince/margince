@@ -93,13 +93,13 @@ func (r Registry) forEachLink(subjects map[privacy.RecordKind][]ids.UUID, visit 
 
 // Clear overwrites the personal columns of every row that names one of the
 // records, and returns the rows it cleared. A nullable column becomes NULL; a
-// required one takes the empty value of its type. A row that two links name is
-// cleared twice and returned once.
+// required one takes the empty value of its type. A row already blank is left
+// alone, so paths that reach one row twice certify it once.
 func (r Registry) Clear(ctx context.Context, tx pgx.Tx, subjects map[privacy.RecordKind][]ids.UUID) ([]Cleared, error) {
 	var cleared []Cleared
 	seen := map[Cleared]bool{}
 	// One lookup of a table's column types per call, however many links name it.
-	assignments := map[string]string{}
+	assignments := map[string]clearing{}
 	err := r.forEachLink(subjects, func(lc linkedColumn, records []ids.UUID) error {
 		if len(lc.table.Personal) == 0 {
 			return nil
@@ -129,9 +129,9 @@ func (r Registry) Clear(ctx context.Context, tx pgx.Tx, subjects map[privacy.Rec
 
 // clearLinked runs the clearing UPDATE for one link column and returns the rows
 // it touched.
-func clearLinked(ctx context.Context, tx pgx.Tx, lc linkedColumn, set string, records []ids.UUID) ([]Cleared, error) {
-	rows, err := tx.Query(ctx, "UPDATE "+qualified(lc.table.Name)+" SET "+set+
-		" WHERE "+pgx.Identifier{lc.column}.Sanitize()+" = ANY($1) RETURNING id", records)
+func clearLinked(ctx context.Context, tx pgx.Tx, lc linkedColumn, set clearing, records []ids.UUID) ([]Cleared, error) {
+	rows, err := tx.Query(ctx, "UPDATE "+qualified(lc.table.Name)+" SET "+set.assignments+
+		" WHERE "+pgx.Identifier{lc.column}.Sanitize()+" = ANY($1) AND ("+set.notBlank+") RETURNING id", records)
 	if err != nil {
 		return nil, fmt.Errorf("extprivacy: clearing %s: %w", lc.table.Name, err)
 	}
@@ -150,39 +150,48 @@ func clearLinked(ctx context.Context, tx pgx.Tx, lc linkedColumn, set string, re
 	return out, nil
 }
 
-// clearAssignments renders the SET list for a table's personal columns from the
+// clearing is the SET list that blanks a table's personal columns and the
+// predicate that holds while any of them is not blank yet. Both come from one
+// empty value per column.
+type clearing struct {
+	assignments, notBlank string
+}
+
+// clearAssignments renders the clearing of a table's personal columns from the
 // live column types. The unit declares which columns are personal. The core
 // decides what "cleared" means for each.
-func clearAssignments(ctx context.Context, tx pgx.Tx, t privacy.Table) (string, error) {
+func clearAssignments(ctx context.Context, tx pgx.Tx, t privacy.Table) (clearing, error) {
 	rows, err := tx.Query(ctx, `
 		SELECT column_name, data_type, is_nullable = 'YES'
 		  FROM information_schema.columns
 		 WHERE table_schema = $1 AND table_name = $2 AND column_name = ANY($3)`,
 		Schema, t.Name, t.Personal)
 	if err != nil {
-		return "", fmt.Errorf("extprivacy: reading the columns of %s: %w", t.Name, err)
+		return clearing{}, fmt.Errorf("extprivacy: reading the columns of %s: %w", t.Name, err)
 	}
 	defer rows.Close()
-	var parts []string
+	var parts, pending []string
 	for rows.Next() {
 		var name, dataType string
 		var nullable bool
 		if err := rows.Scan(&name, &dataType, &nullable); err != nil {
-			return "", fmt.Errorf("extprivacy: reading a column of %s: %w", t.Name, err)
+			return clearing{}, fmt.Errorf("extprivacy: reading a column of %s: %w", t.Name, err)
 		}
 		empty, err := emptyValue(dataType, nullable)
 		if err != nil {
-			return "", fmt.Errorf("extprivacy: %s.%s: %w", t.Name, name, err)
+			return clearing{}, fmt.Errorf("extprivacy: %s.%s: %w", t.Name, name, err)
 		}
-		parts = append(parts, pgx.Identifier{name}.Sanitize()+" = "+empty)
+		column := pgx.Identifier{name}.Sanitize()
+		parts = append(parts, column+" = "+empty)
+		pending = append(pending, column+" IS DISTINCT FROM "+empty)
 	}
 	if err := rows.Err(); err != nil {
-		return "", fmt.Errorf("extprivacy: reading the columns of %s: %w", t.Name, err)
+		return clearing{}, fmt.Errorf("extprivacy: reading the columns of %s: %w", t.Name, err)
 	}
 	if len(parts) != len(t.Personal) {
-		return "", fmt.Errorf("extprivacy: %s declares %d personal columns and the table has %d of them", t.Name, len(t.Personal), len(parts))
+		return clearing{}, fmt.Errorf("extprivacy: %s declares %d personal columns and the table has %d of them", t.Name, len(t.Personal), len(parts))
 	}
-	return strings.Join(parts, ", "), nil
+	return clearing{assignments: strings.Join(parts, ", "), notBlank: strings.Join(pending, " OR ")}, nil
 }
 
 func emptyValue(dataType string, nullable bool) (string, error) {

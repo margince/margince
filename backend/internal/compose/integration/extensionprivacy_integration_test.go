@@ -213,14 +213,26 @@ func TestBootRefusesALinkColumnThatIsNotAUUID(t *testing.T) {
 }
 
 func TestBootRefusesARequiredPersonalColumnABlankValueWouldBreak(t *testing.T) {
-	for name, column := range map[string]string{
-		"check":  `nick text NOT NULL DEFAULT 'x' CHECK (length(nick) > 0)`,
-		"unique": `nick text NOT NULL DEFAULT 'x' UNIQUE`,
+	const nick = `ALTER TABLE ext.ext_probe_note ADD COLUMN nick text NOT NULL DEFAULT 'x'`
+	for name, statements := range map[string][]string{
+		"check":             {nick + ` CHECK (length(nick) > 0)`},
+		"unique":            {nick + ` UNIQUE`},
+		"expression unique": {nick, `CREATE UNIQUE INDEX ext_probe_note_nick_idx ON ext.ext_probe_note (lower(nick))`},
+		"foreign key": {
+			`CREATE TABLE ext.ext_probe_nick (nick text PRIMARY KEY)`,
+			`INSERT INTO ext.ext_probe_nick VALUES ('x')`,
+			nick + ` REFERENCES ext.ext_probe_nick (nick)`,
+		},
 	} {
 		t.Run(name, func(t *testing.T) {
 			env := Setup(t)
 			unit := probeUnit(t, "1.0.0")
-			probeExec(t, `ALTER TABLE ext.ext_probe_note ADD COLUMN `+column)
+			t.Cleanup(func() {
+				if _, err := OwnerConn(t).Exec(context.Background(), `DROP TABLE IF EXISTS ext.ext_probe_nick CASCADE`); err != nil {
+					t.Errorf("removing the referenced table: %v", err)
+				}
+			})
+			probeExec(t, statements...)
 			unit.Privacy[0].Personal = []string{"nick"}
 
 			if err := compose.VerifyExtensionPrivacy(t.Context(), env.Pool, []extension.Extension{unit}); err == nil {

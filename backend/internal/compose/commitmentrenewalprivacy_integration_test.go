@@ -25,9 +25,12 @@ import (
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/extprivacy"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/pkg/extension/jurisdiction"
+	extdecl "github.com/margince/margince/backend/pkg/extension/privacy"
 )
 
 type renewalPrivacyFixture struct {
@@ -564,5 +567,56 @@ func TestDirectTaskErasureCompletesItsSuspendedEvidenceCleanup(t *testing.T) {
 	}
 	if got := f.e.WsCount(t, `SELECT count(*) FROM activity WHERE id=$1 AND body IS NULL AND archived_at IS NOT NULL`, f.work); got != 1 {
 		t.Fatal("the task was not erased through its contact")
+	}
+}
+
+// One erasure reaches a promise's task twice. It is work derived from the erased
+// message, and an activity only the subject is on. Its extension row is still
+// certified once.
+func TestErasureCertifiesAnExtensionRowOfAPromisedTaskOnce(t *testing.T) {
+	f := setupRenewalPrivacy(t, 0.95)
+	owner := integration.OwnerConn(t)
+	integration.LinkActivity(t, owner, f.messages[0], "contact", f.contact.UUID)
+	integration.LinkActivity(t, owner, f.messages[1], "contact", f.contact.UUID)
+	integration.LinkActivity(t, owner, f.work, "contact", f.contact.UUID)
+	for _, stmt := range []string{
+		`CREATE SCHEMA IF NOT EXISTS ext`,
+		`GRANT USAGE ON SCHEMA ext TO margince_app`,
+		`CREATE TABLE ext.ext_probe_task_note (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), activity_id uuid, body text NOT NULL)`,
+		`GRANT SELECT, INSERT, UPDATE, DELETE ON ext.ext_probe_task_note TO margince_app`,
+	} {
+		if _, err := owner.Exec(t.Context(), stmt); err != nil {
+			t.Fatalf("preparing the probe table (%s): %v", stmt, err)
+		}
+	}
+	t.Cleanup(func() {
+		if _, err := owner.Exec(context.Background(), `DROP TABLE IF EXISTS ext.ext_probe_task_note`); err != nil {
+			t.Errorf("removing the probe table: %v", err)
+		}
+	})
+	row := ids.NewV7()
+	if _, err := owner.Exec(t.Context(), `INSERT INTO ext.ext_probe_task_note (id, activity_id, body) VALUES ($1, $2, 'the promise')`, row, f.work); err != nil {
+		t.Fatal(err)
+	}
+	registry := extprivacy.Declared([]extdecl.Table{{
+		Name: "ext_probe_task_note", Links: []extdecl.Link{{Column: "activity_id", Record: extdecl.Activity}},
+		Personal: []string{"body"}, Retention: jurisdiction.CommercialCorrespondence,
+	}})
+
+	eraser := privacy.NewEraser(f.e.DB()).WithRawCapturePurger(RawCapturePurgerFor(f.e.DB())).WithExtensions(registry)
+	if err := eraser.EraseContact(f.e.Admin(), f.contact.UUID, "Subject requested erasure"); err != nil {
+		t.Fatal(err)
+	}
+	if got := f.e.WsCount(t, `SELECT count(*) FROM activity WHERE id=$1 AND archived_at IS NOT NULL`, f.work); got != 1 {
+		t.Fatal("the promised task was not erased with its message, so this test reaches only one clearing path")
+	}
+	if got := f.e.WsCount(t, `SELECT count(*) FROM ext.ext_probe_task_note WHERE id=$1 AND body=''`, row); got != 1 {
+		t.Fatal("the extension row of the task was not cleared")
+	}
+	if got := f.e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type='ext_probe_task_note' AND entity_id=$1 AND action='anonymize'`, row); got != 1 {
+		t.Errorf("the cleared extension row has %d anonymize certificates, want 1", got)
+	}
+	if got := f.e.WsCount(t, `SELECT count(*) FROM event_outbox WHERE envelope->'entity'->>'id'=$1`, row.String()); got != 1 {
+		t.Errorf("the cleared extension row queued %d events, want 1", got)
 	}
 }

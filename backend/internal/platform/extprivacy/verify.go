@@ -72,17 +72,22 @@ func ownedByLonger(table, namespace string, others []string) bool {
 	return false
 }
 
-// readTables reads every column of the ext tables under the prefix, marking
-// those a CHECK, UNIQUE or primary key constraint names.
+// readTables reads every column of the ext tables under the prefix. It marks a
+// column a CHECK, foreign key or exclusion constraint names. It also marks one a
+// unique index reads, as a key or inside an expression.
 func readTables(ctx context.Context, q Querier, prefix string) (map[string]map[string]column, error) {
 	rows, err := q.Query(ctx, `
 		SELECT c.table_name, c.column_name, c.data_type, c.is_nullable = 'YES',
 		       EXISTS (SELECT 1 FROM pg_constraint k
 		                WHERE k.conrelid = format('%I.%I', c.table_schema, c.table_name)::regclass
-		                  AND k.contype = 'c' AND a.attnum = ANY(k.conkey))
+		                  AND k.contype IN ('c', 'f', 'x') AND a.attnum = ANY(k.conkey))
 		    OR EXISTS (SELECT 1 FROM pg_index i
 		                WHERE i.indrelid = format('%I.%I', c.table_schema, c.table_name)::regclass
-		                  AND i.indisunique AND a.attnum = ANY(i.indkey))
+		                  AND i.indisunique
+		                  AND (a.attnum = ANY(i.indkey)
+		                       OR EXISTS (SELECT 1 FROM pg_depend d
+		                                   WHERE d.classid = 'pg_class'::regclass AND d.objid = i.indexrelid
+		                                     AND d.refobjid = i.indrelid AND d.refobjsubid = a.attnum)))
 		  FROM information_schema.columns c
 		  JOIN pg_attribute a ON a.attrelid = format('%I.%I', c.table_schema, c.table_name)::regclass
 		                     AND a.attname = c.column_name
@@ -147,7 +152,7 @@ func clearable(c column) error {
 		return err
 	}
 	if !c.nullable && c.constrained {
-		return errors.New("a required personal column under a CHECK or UNIQUE constraint may refuse the blank value; make it nullable")
+		return errors.New("a required personal column under a CHECK, UNIQUE, foreign key or exclusion constraint may refuse the blank value; make it nullable")
 	}
 	return nil
 }
