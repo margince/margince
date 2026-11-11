@@ -108,7 +108,7 @@ func waitingReplyExistsClause(ctx context.Context, arg func(any) int, asOf time.
 	}
 	reader := arg(readerOrNobody(ctx))
 	return "a.id IN (SELECT id FROM (" +
-		fmt.Sprintf(waitingRepliesSQL, instant, content, linkVisible, WaitingScanCap,
+		fmt.Sprintf(waitingRepliesSQL, instant, content, linkVisible, waitingLimitSQL(arg, WaitingScanCap),
 			horizonOrDefault(horizonDays),
 			liveRecord(openDealPredicate, "d"),
 			liveRecord(workingLeadPredicate, "ld"),

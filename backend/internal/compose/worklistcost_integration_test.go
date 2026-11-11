@@ -28,9 +28,9 @@ var worklistStages = []string{
 	"meeting_horizon", "rank", "row_names",
 }
 
-// worklistOutsideStatements are the statements a worklist read sends outside
-// every stage: BEGIN, COMMIT and the reads before the day is assembled.
-const worklistOutsideStatements = 5
+// worklistOutsideStatements counts BEGIN, COMMIT, the reads before the day is
+// assembled, and the snapshot's plan-mode setup and restore.
+const worklistOutsideStatements = 7
 
 // stageDelta is what one composed read added to the stage collector.
 type stageDelta struct {

@@ -255,6 +255,7 @@ func (s *Store) scanWaitingReplies(ctx context.Context, asOf time.Time, before W
 	err := s.readWaitingQueue(ctx, asOf, seats, waitingShape{drawsRows: true},
 		func(slots waitingSlots, arg func(any) int) string {
 			slots.values[waitingKeysetSlot] = olderThan(before, arg)
+			slots.values[waitingCapSlot] = waitingLimitSQL(arg, WaitingScanCap)
 			return "SELECT waiting.*, " + directMailSeatsSQL(slots.identities) + " FROM (" + fmt.Sprintf(waitingRepliesSQL, slots.values...) +
 				") waiting JOIN activity a ON a.id = waiting.id ORDER BY waiting.occurred_at DESC, waiting.id DESC"
 		},
@@ -295,7 +296,7 @@ func (s *Store) queryWaitingQueue(
 	if err != nil {
 		return err
 	}
-	rows, err := tx.Query(ctx, statement(slots, arg), planEachBind(args)...)
+	rows, err := tx.Query(ctx, statement(slots, arg), planEachBind(ctx, args)...)
 	if err != nil {
 		return err
 	}

@@ -469,8 +469,13 @@ func (a attentionDealStandings) CachedStandings(
 // every other seam in this file has.
 type attentionSnapshots struct{ pool *pgxpool.Pool }
 
-func (a attentionSnapshots) InSnapshot(ctx context.Context, fn func(context.Context) error) error {
-	return database.WithWorkspaceSnapshot(ctx, a.pool, fn)
+func (a attentionSnapshots) InSnapshot(ctx context.Context, read string, fn func(context.Context) error) error {
+	return database.WithWorkspaceSnapshot(ctx, a.pool, func(ctx context.Context) error {
+		if read == attention.ReadWorklist {
+			return database.ReuseGenericPlans(ctx, fn)
+		}
+		return fn(ctx)
+	})
 }
 
 func (a attentionSnapshots) Degradable(
