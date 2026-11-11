@@ -124,9 +124,9 @@ func Relink(ctx context.Context, tx pgx.Tx, record reach.Record, source, target 
 	return nil
 }
 
-// movesFor reports whether Relink moves the link when a record of this kind is
-// merged away. A kind-column link moves the rows of the merged kind; its other
-// rows name a different record and so do not depend on the merged one.
+// movesFor reports whether Relink moves any row of the link when a record of
+// this kind is merged away. A kind-column link moves only the rows whose kind
+// column names that kind.
 func movesFor(l reach.Link, record reach.Record) bool {
 	return l.KindColumn != "" || l.Record == record
 }
@@ -136,10 +136,18 @@ type Column struct {
 	Schema, Table, Name string
 }
 
-// MovedColumns is every declared column Relink moves when a record of this
-// kind is merged away. The merge's dependents check reads it, so a row the
-// merge carries onto the survivor never blocks that merge.
-func MovedColumns(record reach.Record) (map[Column]bool, error) {
+// Moved says which rows of one column Relink moves. With KindColumn empty, it
+// moves every row naming the retired record. Otherwise it moves only the rows
+// whose KindColumn holds the merged kind.
+type Moved struct {
+	KindColumn string
+}
+
+// MovedColumns returns the declared columns Relink moves when a record of this
+// kind is merged away, and which of its rows. The merge's dependents check
+// reads it. A row the merge carries onto the survivor never blocks that merge,
+// and a row it leaves behind still does.
+func MovedColumns(record reach.Record) (map[Column]Moved, error) {
 	if err := record.Validate(); err != nil {
 		return nil, err
 	}
@@ -147,11 +155,11 @@ func MovedColumns(record reach.Record) (map[Column]bool, error) {
 	if err != nil {
 		return nil, err
 	}
-	moved := map[Column]bool{}
+	moved := map[Column]Moved{}
 	for _, o := range tables {
 		for _, l := range o.Table.Links {
 			if movesFor(l, record) {
-				moved[Column{Schema: o.Schema, Table: o.Table.Name, Name: l.Column}] = true
+				moved[Column{Schema: o.Schema, Table: o.Table.Name, Name: l.Column}] = Moved{KindColumn: l.KindColumn}
 			}
 		}
 	}

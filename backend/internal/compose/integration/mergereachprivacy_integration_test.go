@@ -68,8 +68,8 @@ func TestEveryMergeMovesALinkTheUnitDeclaresForPrivacyAndReach(t *testing.T) {
 	}
 }
 
-// The refusal counts only the rows the merge would leave behind: the probe
-// note, which no reach declaration moves, and not the unit note, which one does.
+// The refusal counts only the rows the merge would leave behind. The probe
+// note counts, because no reach declaration moves it. The unit note does not.
 func TestAMergeRefusalCountsOnlyTheRowsTheMergeWouldNotMove(t *testing.T) {
 	e := Setup(t)
 	withUnitNoteTable(t)
@@ -90,5 +90,25 @@ func TestAMergeRefusalCountsOnlyTheRowsTheMergeWouldNotMove(t *testing.T) {
 	}
 	if refusal.Count != 1 {
 		t.Errorf("the refusal counts %d dependents, want only the probe note", refusal.Count)
+	}
+}
+
+// The reach moves a kind-column row only when its kind is the merged kind. A
+// row of another kind that privacy links to the lead stays behind. So it still
+// refuses the lead merge, and the lead-kind row does not.
+func TestAKindColumnRowTheMergeLeavesBehindStillRefusesIt(t *testing.T) {
+	e := Setup(t)
+	withUnitNoteTable(t)
+	e.Contacts.WithExtensions(extprivacy.Declared([]privacy.Table{unitNotePrivacy}))
+	loser, live := seedLead(t, e, "Ola Berg", "ola@berg.test", nil), seedLead(t, e, "Ola Bergh", "", nil)
+	e.WsExec(t, `INSERT INTO ext.ext_reachtest_note (record_type, record_id, body) VALUES ('lead', $1, 'a'), ('company', $1, 'b')`, loser)
+
+	_, err := e.Contacts.MergeLead(e.Admin(), loser, live)
+	var refusal *contacts.DependentRecordsError
+	if !errors.As(err, &refusal) {
+		t.Fatalf("merge of a lead a company-kind note names = %v, want the dependents refusal", err)
+	}
+	if refusal.Count != 1 {
+		t.Errorf("the refusal counts %d dependents, want only the company-kind note", refusal.Count)
 	}
 }
