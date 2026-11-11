@@ -7,12 +7,9 @@ package identity
 // client redeems, and the audit row naming the code — one transaction, so a
 // code the audit trail cannot explain is a state this flow cannot reach.
 //
-// There is no re-check and no row lock here, and that is the whole difference
-// from what this file replaced. A consent used to borrow its authority from a
-// second row (a passport the human "lent"), which could be revoked in another
-// tab while the screen sat open — so the commit had to re-resolve that row
-// under a lock. The human's own ticks are not a row, cannot go stale, and race
-// nothing.
+// The ticks race nothing. The session that ticked them can end mid-consent, so
+// the commit holds the member's row and re-reads that session first
+// (holdConsentAgainstRevocation).
 //
 // The grant and passport are written at TOKEN EXCHANGE (oauth_token.go), not
 // here. This function writes ONLY the authorization code row and its audit
@@ -21,6 +18,7 @@ package identity
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -87,7 +85,7 @@ type consentChoice struct {
 // (oauth_token.go), so writing them here would be duplicate. This function
 // answers with the plaintext courier; only the courier's hash is stored.
 func (s *Service) mintConsentedAuthorizationCode(
-	ctx context.Context, id Identity, choice consentChoice, req authorizeRequest,
+	ctx context.Context, id Identity, sessionHash string, choice consentChoice, req authorizeRequest,
 ) (code string, err error) {
 	if err := auth.RequireHuman(ctx); err != nil {
 		return "", err
@@ -111,6 +109,9 @@ func (s *Service) mintConsentedAuthorizationCode(
 		// the scopes, client, and user, the redemption has no authority to mint
 		// from (oauth_token.go deletes the code on a successful redeem).
 		codeHash := hashOAuthCode(code)
+		if err := holdConsentAgainstRevocation(ctx, tx, req.ClientID, id.UserID, sessionHash); err != nil {
+			return err
+		}
 		if err := reapDeadCredentials(ctx, tx, "oauth_authorization_code"); err != nil {
 			return err
 		}
@@ -141,4 +142,42 @@ func (s *Service) mintConsentedAuthorizationCode(
 		return "", err
 	}
 	return code, nil
+}
+
+// errConsentingSessionEnded refuses a consent whose session ended before its
+// code could commit, so no code outlives the credentials a revocation ended.
+var errConsentingSessionEnded = errors.New("oauth: the consenting session has ended")
+
+// holdConsentAgainstRevocation orders this consent against endCredentialAuthority,
+// which holds the member's row while it ends their credentials. A revocation
+// that went first has already revoked the session read below. One that waits
+// here sees the code after it commits. The session read is its own statement:
+// under `READ COMMITTED` only a fresh snapshot sees the revocation waited on.
+// The client row goes first, in issueGrant's client → app_user order.
+func holdConsentAgainstRevocation(ctx context.Context, tx pgx.Tx, clientID string, userID ids.UserID, sessionHash string) error {
+	if _, err := tx.Exec(ctx,
+		`SELECT 1 FROM oauth_client WHERE client_id = $1 FOR KEY SHARE`, clientID); err != nil {
+		return err
+	}
+	var held ids.UserID
+	err := tx.QueryRow(ctx,
+		`SELECT id FROM app_user WHERE id = $1 AND `+LiveMemberSQL("")+` FOR SHARE`, userID).Scan(&held)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return errConsentingSessionEnded
+	}
+	if err != nil {
+		return err
+	}
+	var live bool
+	if err := tx.QueryRow(ctx, `
+		SELECT EXISTS (SELECT 1 FROM session
+		 WHERE user_id = $1 AND token_hash = $2 AND revoked_at IS NULL
+		   AND now() < idle_expires_at AND now() < expires_at)`,
+		userID, sessionHash).Scan(&live); err != nil {
+		return err
+	}
+	if !live {
+		return errConsentingSessionEnded
+	}
+	return nil
 }
