@@ -19742,8 +19742,9 @@ export interface paths {
          * @description Starts LIVE, and reaches nobody: the invitation is what decides who may read
          *     a room, so a room nobody has been invited to is private without a second gate.
          *     At most one active room per deal: a second create while the first is still
-         *     building, ready, publishing, live or paused is rejected
-         *     (409 `deal_room_already_open`). Archiving the first frees the deal for another.
+         *     building, ready, publishing, live or paused, and has not passed its access end,
+         *     is rejected (409 `deal_room_already_open`). Archiving the first, or its access
+         *     end passing, frees the deal for another.
          *
          *     The steward defaults to the deal's owner and is the named human a buyer is
          *     pointed at for help; a room whose steward left the company points its buyers
@@ -19806,7 +19807,8 @@ export interface paths {
          * Pause buyer access without ending it.
          * @description A paused room refuses buyer reads while every credential stays valid, so
          *     resuming restores access without re-inviting anyone. Only a `live` room
-         *     pauses (409 `deal_room_not_pausable` otherwise).
+         *     pauses (409 `deal_room_not_pausable` otherwise), so an `expired` room is
+         *     refused.
          */
         post: operations["pauseDealRoom"];
         delete?: never;
@@ -19860,7 +19862,8 @@ export interface paths {
          *     Access management deliberately keeps working on a closed room — a steward can
          *     still revoke a participant — because being unable to remove someone from a
          *     room holding your signed contract is a real hazard months after the deal
-         *     closed. 409 `deal_room_not_closable` unless the room is live or paused.
+         *     closed. 409 `deal_room_not_closable` unless the room is live or paused, so
+         *     an `expired` room is refused: closing would serve its content again.
          */
         post: operations["closeDealRoom"];
         delete?: never;
@@ -19888,6 +19891,11 @@ export interface paths {
          *     creation is stored as the time of the call, unless a standing expiry has
          *     already passed, which is kept. It decides how long a buyer can
          *     read the room, so an agent spends `send` on it.
+         *
+         *     An `expired` room accepts a later end, which makes it read its stored state
+         *     again. Once a newer room is open on the deal, that later end is refused
+         *     with 409 `deal_room_already_open`. If the room's steward has left the
+         *     workspace since, the same write clears the steward.
          */
         put: operations["setDealRoomExpiry"];
         post?: never;
@@ -31212,8 +31220,9 @@ export interface components {
                  *     `knowledge_document` (download the retained file), `email_signature` (the
                  *     recipient's own account settings), `retained_email_signature` (the departed member's
                  *     signature in the controller review), `activity` (open the retained note in its
-                 *     drawer), `legal_entity` (Company settings), or `signature_template` (Company
-                 *     settings; `id` identifies the erasure whose review flagged the workspace template).
+                 *     drawer), `legal_entity` (Company settings), `signature_template` (Company
+                 *     settings; `id` identifies the erasure whose review flagged the workspace template),
+                 *     or `approval_history` (the audit log narrowed to the approval `id`).
                  */
                 type: string;
                 /** Format: uuid */
@@ -53154,8 +53163,11 @@ export interface components {
          *     `closed` stops the room taking new work while KEEPING access — the buyer goes
          *     on reading it, and neither side adds a document or a comment. It is not a
          *     frozen copy: what the buyer reads is the live room, so a file later removed
-         *     from the deal stops being served here too. `expired` is access lapsing on its
-         *     own. `archived` ends the room outright and frees the deal for another.
+         *     from the deal stops being served here too. `expired` is read, never stored:
+         *     a room whose access end has passed reads `expired` to staff and buyers alike,
+         *     unless it is archived. A later end date makes it read its stored state again.
+         *     `archived` ends the room outright. Archiving it or its access end passing
+         *     frees the deal for another room.
          * @enum {string}
          */
         DealRoomState: "draft" | "building" | "ready" | "publishing" | "live" | "paused" | "closed" | "expired" | "archived";

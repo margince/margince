@@ -18,6 +18,7 @@ An extension is a separate unit under `extensions/` that adds to Margince. This 
 | 9. `Bulk load that can resume` | Hand over up to 200 records of one source in a batch, with a place the core saves once every record is answered. A restarted job reads the place and carries on. A record that the core refuses with an error ends the batch and leaves the place where it was, so a record that always fails stops the load until the unit drops it. A record the core skips or cannot store as given does not end the batch. Only an unattended run may load a batch. | [land-companies-and-deals-from-an-extension.md](../how-to/land-companies-and-deals-from-an-extension.md#load-a-large-source-in-batches) | done |
 | 10. `Extra display marks on core records` | Add a small fixed note to a contact, company or deal page. It shows only to a reader who may read the extension's data, and it carries no record data. | [add-an-extension.md](../how-to/add-an-extension.md#offer-an-entry-on-a-core-screen) | done |
 | 11. Per-extension settings page | Declare settings as data, a switch or one line of text. The core shows them on the unit's card under Settings, Extensions, to admins only, lets only an admin change them and audits each change. The unit's own code cannot read them yet. | [add-an-extension.md](../how-to/add-an-extension.md#declare-settings-an-admin-can-change) | done |
+| 12. SQL on the unit's own tables only | An extension's `Tx` runs each statement as the `ext_runtime` database role, which holds only schema `ext`. The database refuses a core table, `extension_secret` included, with `ErrCoreTableRefused`, even when the table name is built at run time. The role guards against errors by trusted first-party units, not against unit code that means harm: one statement can switch back to the login role. Another unit's `ext` tables are not refused by the database. The static check `extensionsqlscope_test.go` refuses both in the source. A separate login for each unit ([issue 628](https://github.com/margince/margince/issues/628)) would make the limit hold against such code. | [add-an-extension.md](../how-to/add-an-extension.md) | done |
 
 ## How the features connect
 
@@ -34,6 +35,8 @@ flowchart LR
     F5 --> F6[6. Notices]
     F7 --> F11[11. Settings page]
     F10[10. Display marks]
+    F3 --> F12[12. Own tables only]
+    F4 --> F12
 ```
 
 ## How to read this page

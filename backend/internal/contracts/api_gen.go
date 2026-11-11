@@ -46057,8 +46057,11 @@ type DealRoom struct {
 	// `closed` stops the room taking new work while KEEPING access — the buyer goes
 	// on reading it, and neither side adds a document or a comment. It is not a
 	// frozen copy: what the buyer reads is the live room, so a file later removed
-	// from the deal stops being served here too. `expired` is access lapsing on its
-	// own. `archived` ends the room outright and frees the deal for another.
+	// from the deal stops being served here too. `expired` is read, never stored:
+	// a room whose access end has passed reads `expired` to staff and buyers alike,
+	// unless it is archived. A later end date makes it read its stored state again.
+	// `archived` ends the room outright. Archiving it or its access end passing
+	// frees the deal for another room.
 	State DealRoomState `json:"state"`
 
 	// StewardUserId The named human a buyer is pointed at for help. Defaults to the deal's owner
@@ -46374,8 +46377,11 @@ type DealRoomSessionIssued struct {
 // `closed` stops the room taking new work while KEEPING access — the buyer goes
 // on reading it, and neither side adds a document or a comment. It is not a
 // frozen copy: what the buyer reads is the live room, so a file later removed
-// from the deal stops being served here too. `expired` is access lapsing on its
-// own. `archived` ends the room outright and frees the deal for another.
+// from the deal stops being served here too. `expired` is read, never stored:
+// a room whose access end has passed reads `expired` to staff and buyers alike,
+// unless it is archived. A later end date makes it read its stored state again.
+// `archived` ends the room outright. Archiving it or its access end passing
+// frees the deal for another room.
 type DealRoomState string
 
 // DealRoomThread One thread of the room's conversation, with its comments. Served to both
@@ -55205,8 +55211,9 @@ type NotificationItem struct {
 		// `knowledge_document` (download the retained file), `email_signature` (the
 		// recipient's own account settings), `retained_email_signature` (the departed member's
 		// signature in the controller review), `activity` (open the retained note in its
-		// drawer), `legal_entity` (Company settings), or `signature_template` (Company
-		// settings; `id` identifies the erasure whose review flagged the workspace template).
+		// drawer), `legal_entity` (Company settings), `signature_template` (Company
+		// settings; `id` identifies the erasure whose review flagged the workspace template),
+		// or `approval_history` (the audit log narrowed to the approval `id`).
 		Type string `json:"type"`
 	} `json:"target,omitempty"`
 }

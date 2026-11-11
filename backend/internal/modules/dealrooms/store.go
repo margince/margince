@@ -49,7 +49,7 @@ func (s *Store) tx(ctx context.Context, fn func(pgx.Tx) error) error {
 
 // roomColumns is the projection every room read returns, in the order
 // scanRoom consumes it.
-var roomColumns = `r.id, r.deal_id, r.title, r.welcome_message, r.state,
+var roomColumns = `r.id, r.deal_id, r.title, r.welcome_message, ` + roomStateSQL + `,
 	r.steward_user_id, r.expires_at, r.closed_at,
 	r.source, r.captured_by, r.version, r.created_at, r.updated_at, r.archived_at,
  NOT EXISTS (SELECT 1 FROM app_user steward WHERE steward.id = r.steward_user_id
