@@ -80,22 +80,22 @@ type consentChoice struct {
 }
 
 // errConsentAuthorityEnded is a consent whose authority died between admission
-// and this mint: the member was deactivated, or the session that authorized it
-// was revoked by a password change, a reset or an email change committing in the
-// gap. The consent mints nothing — minting would hand a stolen session an OAuth
-// code the owner's password change was meant to have already cut off.
+// and this mint. The member was deactivated, or the session that authorized the
+// consent was revoked by a password change, a reset or an email change. The
+// consent mints nothing. A code here would hand a stolen session an OAuth grant
+// the owner's password change was meant to have already cut off.
 var errConsentAuthorityEnded = errors.New("identity: the consent's authority ended before the code was minted")
 
 // reconfirmConsentAuthority refuses a consent whose authority ended after the
-// request was admitted but before the code is written here. The revocation
-// cascade (endCredentialAuthority) takes the member's app_user row FOR UPDATE
-// for the whole of the revoke, so taking it FOR SHARE here makes this mint and
-// that revoke SERIALIZE rather than interleave: a revoke in flight blocks this
-// read until it commits, and a mint that writes first blocks the revoke until
-// its code exists for the revoke's own sweep to end. With the two ordered,
-// re-reading the session under a fresh snapshot sees the revocation a password
-// change made to it. Run inside the mint's transaction, before the code is
-// written.
+// request was admitted but before the code is written. Every path that ends an
+// account's credentials locks the member's app_user row exclusively first. A
+// password change does it, a reset, an email change, a deactivation. Taking that
+// row FOR SHARE here makes this mint and that revoke serialize instead of
+// interleave. A revoke in flight blocks this read until it commits. A mint that
+// writes first blocks the revoke until its code exists for the revoke's sweep
+// to end. Ordered against the revoke, re-reading the session under a fresh
+// snapshot sees a revocation a password change made to it. Run inside the
+// mint's transaction, before the code is written.
 func reconfirmConsentAuthority(ctx context.Context, tx pgx.Tx, id Identity) error {
 	var ok bool
 	switch err := tx.QueryRow(ctx,

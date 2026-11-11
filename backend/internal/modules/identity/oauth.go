@@ -378,10 +378,10 @@ func (h Handlers) oauthAuthorize(w http.ResponseWriter, r *http.Request) {
 		)
 	}
 	if errors.Is(err, errConsentAuthorityEnded) {
-		// The authority behind the consent ended while the screen was open — a
-		// password change or reset revoked this session in the gap before the
-		// code was minted. RFC 6749 §4.1.2.1: the client learns access_denied at
-		// its own redirect_uri, the same answer a deny gives, rather than a code.
+		// The authority behind the consent ended while the screen was open. A
+		// password change or reset revoked this session before the code was minted.
+		// RFC 6749 §4.1.2.1: the client learns access_denied at its own
+		// redirect_uri, the same answer a deny gives, rather than a code.
 		clearConsentCookie(w)
 		h.redirectToClient(w, r, req, url.Values{oauthParamError: {"access_denied"}})
 		return

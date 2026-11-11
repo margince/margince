@@ -129,13 +129,13 @@ type Identity struct {
 	UserID        ids.UserID
 	WorkspaceID   ids.WorkspaceID
 	WorkspaceName string
-	// SessionID is the browser session this request authenticated with, kept so
-	// a flow whose effect outlives its own admission check can re-confirm the
-	// session was not revoked in the gap. The OAuth consent is the one such flow:
-	// its code is minted in a later transaction, and a password change committing
-	// in between revokes the session without this value being re-read anywhere
-	// else. Zero for an Identity built without a session (never a real consent,
-	// which admission admits only with one).
+	// SessionID is the browser session this request authenticated with. It is
+	// kept so a flow whose effect outlives its own admission check can confirm
+	// the session was not revoked in the gap. The OAuth consent is the one such
+	// flow. Its code is minted in a later transaction, and a password change in
+	// between revokes the session, which nothing else here re-reads. Zero for an
+	// Identity built without a session (never a real consent, which admission
+	// admits only with one).
 	SessionID   ids.UUID
 	Email       string
 	DisplayName string

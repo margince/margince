@@ -6,12 +6,13 @@
 package identity
 
 // A consent mints its code in a transaction of its own, later than the request
-// that was admitted on a live session. A password change (or reset, or email
-// change) that revokes that session in the gap must stop the code: otherwise a
+// admission validated on a live session. A password change, reset or email
+// change that revokes that session in the gap must stop the code. Otherwise a
 // stolen session the owner just locked out keeps a route to an OAuth grant. The
-// mint takes the member's app_user row FOR SHARE, the lock the revocation
-// cascade holds FOR UPDATE, so the two serialize over a real Postgres — the one
-// place a lock order is ever a fact — and the mint re-reads the revoked session.
+// mint takes the member's app_user row FOR SHARE. Every revoke caller holds that
+// row exclusively, so the two serialize over a real Postgres. The mint then
+// re-reads the revoked session. A lock order is only ever a property of real
+// transactions, so this runs in the integration lane.
 
 import (
 	"context"
@@ -76,20 +77,23 @@ func TestAConsentWithALiveSessionMintsACode(t *testing.T) {
 	}
 }
 
-// The race the advisory names: a revocation holds the member's app_user row the
-// way every caller of the cascade does and revokes the session, while a consent
-// mints behind it. The mint must queue on the row, then find the session gone
-// and refuse — leaving no live code for a stolen session to redeem.
+// A revocation holds the member's app_user row the way every caller does, and
+// revokes the session, while a consent mints behind it. The mint must queue on
+// the row, then find the session gone and refuse. No live code is left for a
+// stolen session to redeem.
 func TestAConsentMintingWhileARevocationHoldsTheMemberIsRefused(t *testing.T) {
 	e := setupRevocationEnv(t, "consent-revoke-race")
 	clientID := e.registerOAuthClient(t, "consent race")
 	consenter := e.member
 	consenter.SessionID = e.seedLiveSession(t, e.member.UserID)
 
-	// The real cascade, held open: it takes the member's app_user row FOR UPDATE
-	// itself, so the mint queued behind it serializes against production locking,
-	// not a lock the test reproduced.
+	// A revocation holds the member's app_user row FOR UPDATE, the exclusive lock
+	// every caller takes before the cascade. It then runs the real cascade, held
+	// open so the mint must queue behind the row.
 	revoke := e.holdOpen(t, func(ctx context.Context, tx pgx.Tx) error {
+		if _, err := tx.Exec(ctx, `SELECT 1 FROM app_user WHERE id = $1 FOR UPDATE`, e.member.UserID); err != nil {
+			return err
+		}
 		return endCredentialAuthority(selfActorCtx(ctx, e.member.UserID), tx, e.member.UserID, passwordChangeRevokeReason)
 	})
 
@@ -105,7 +109,7 @@ func TestAConsentMintingWhileARevocationHoldsTheMemberIsRefused(t *testing.T) {
 	revoke.release()
 
 	if err := <-minted; !errors.Is(err, errConsentAuthorityEnded) {
-		t.Fatalf("a consent minting as the session was revoked → %v, want errConsentAuthorityEnded", err)
+		t.Fatalf("a consent minting as the session was revoked: got %v, want errConsentAuthorityEnded", err)
 	}
 	var live int
 	if err := e.owner.QueryRow(context.Background(),
@@ -119,10 +123,10 @@ func TestAConsentMintingWhileARevocationHoldsTheMemberIsRefused(t *testing.T) {
 	}
 }
 
-// The other order: the mint commits its code first, with the revocation queued
-// behind it. The revocation's own sweep then ends the code it now sees, so the
-// stolen session still redeems nothing. This is the serialization's other half —
-// the mint is not refused here, the code is ended instead.
+// The other order: the mint commits its code first, with the revocation behind
+// it. The revocation's own sweep then ends the code it now sees. The mint is not
+// refused here. The code is ended instead, so a stolen session still redeems
+// nothing.
 func TestACodeMintedBeforeTheRevocationIsEndedByIt(t *testing.T) {
 	e := setupRevocationEnv(t, "consent-mint-first")
 	clientID := e.registerOAuthClient(t, "mint first")
@@ -134,8 +138,12 @@ func TestACodeMintedBeforeTheRevocationIsEndedByIt(t *testing.T) {
 	if err != nil {
 		t.Fatalf("minting the code before the revocation: %v", err)
 	}
+	// The same exclusive app_user lock a real caller holds, then the real cascade.
 	revokeCtx := e.wsCtx(e.admin)
 	if err := e.svc.db.Tx(revokeCtx, func(tx pgx.Tx) error {
+		if _, err := tx.Exec(revokeCtx, `SELECT 1 FROM app_user WHERE id = $1 FOR UPDATE`, e.member.UserID); err != nil {
+			return err
+		}
 		return endCredentialAuthority(selfActorCtx(revokeCtx, e.member.UserID), tx, e.member.UserID, passwordChangeRevokeReason)
 	}); err != nil {
 		t.Fatalf("the revocation after the mint: %v", err)
