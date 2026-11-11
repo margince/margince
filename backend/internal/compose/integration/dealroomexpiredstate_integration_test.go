@@ -13,7 +13,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 )
 
@@ -49,7 +51,8 @@ func putRoomEnd(t *testing.T, e *apptest.AppEnv, roomID string, at time.Time) (i
 	return status, readRoomAnswer(t, e, roomID), raw
 }
 
-// expireRoom ends access now, the way Manage room does for a past day.
+// expireRoom ends access now, the way Manage room does for a past day. The day
+// is before the room was created, which the store saves as the time of the call.
 func expireRoom(t *testing.T, e *apptest.AppEnv, roomID string) {
 	t.Helper()
 	status, room, raw := putRoomEnd(t, e, roomID, clocktest.Now(t).Add(-48*time.Hour))
@@ -146,6 +149,66 @@ func TestAPausedRoomPastItsEndReadsExpired(t *testing.T) {
 		t.Fatalf("a later end = %d %v, room reads %q, want 200 and paused", status, raw, again.State)
 	}
 	assertBuyerAccess(t, e, token, "paused")
+}
+
+// A closed room past its end is expired too: the buyer stops reading the
+// record, and a later end makes it read closed again.
+func TestAClosedRoomPastItsEndReadsExpired(t *testing.T) {
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+	room := openRoomWithABuyer(t, e)
+	token := buyerSession(t, e, room)
+	path := "/v1/deal-rooms/" + room.roomID
+	if status := e.Call(t, "POST", path+"/close", AnyMap{}, nil, nil); status != http.StatusOK {
+		t.Fatalf("close = %d", status)
+	}
+	assertBuyerAccess(t, e, token, "closed")
+	expireRoom(t, e, room.roomID)
+
+	assertBuyerAccess(t, e, token, "expired")
+	assertRefused(t, e, "POST", path+"/pause", AnyMap{}, "deal_room_not_pausable")
+	assertRefused(t, e, "POST", path+"/close", AnyMap{}, "deal_room_not_closable")
+
+	status, again, raw := putRoomEnd(t, e, room.roomID, clocktest.Now(t).Add(72*time.Hour))
+	if status != http.StatusOK || again.State != "closed" {
+		t.Fatalf("a later end = %d %v, room reads %q, want 200 and closed", status, raw, again.State)
+	}
+	assertBuyerAccess(t, e, token, "closed")
+}
+
+// Every buyer route reads the same standing: an expired room hands out no
+// document, no file and no thread, and takes no new thread.
+func TestAnExpiredRoomServesNoDocumentFileOrThread(t *testing.T) {
+	e := apptest.SetupAppWithOptions(t, compose.WithBlobstore(blobstore.NewMemory()))
+	e.BootstrapWorkspace(t)
+	room := openRoomWithABuyer(t, e)
+	attachmentID := uploadDealFile(t, e, room.dealID, "Terms.pdf", []byte("%PDF-TERMS"))
+	var doc AnyMap
+	if status := e.Call(t, "POST", "/v1/deal-rooms/"+room.roomID+"/documents", AnyMap{
+		"attachment_id": attachmentID, "group_key": "legal", "title": "Terms", "source": "manual",
+	}, nil, &doc); status != http.StatusCreated {
+		t.Fatalf("add document = %d %v", status, doc)
+	}
+	docID, _ := doc["id"].(string)
+	token := buyerSession(t, e, room)
+	thread := AnyMap{"body": "When does rollout start?", "source": "manual"}
+	if status := publicCall(t, e, "POST", "/v1/public/rooms/threads", thread, bearer(token), nil); status != http.StatusCreated {
+		t.Fatalf("open a thread while live = %d", status)
+	}
+	file := "/v1/public/rooms/documents/" + docID + "/file"
+	if status := publicCall(t, e, "GET", file, nil, bearer(token), nil); status != http.StatusOK {
+		t.Fatalf("download while live = %d", status)
+	}
+
+	expireRoom(t, e, room.roomID)
+
+	assertBuyerAccess(t, e, token, "expired")
+	if status := publicCall(t, e, "GET", file, nil, bearer(token), nil); status == http.StatusOK {
+		t.Error("an expired room still hands out its file")
+	}
+	if status := publicCall(t, e, "POST", "/v1/public/rooms/threads", thread, bearer(token), nil); status != http.StatusConflict {
+		t.Errorf("a thread in an expired room = %d, want 409", status)
+	}
 }
 
 func TestALaterEndMakesAnExpiredRoomLiveAgain(t *testing.T) {

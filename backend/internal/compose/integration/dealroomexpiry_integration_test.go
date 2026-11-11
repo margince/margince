@@ -44,6 +44,18 @@ func assertBuyerAccess(t *testing.T, e *apptest.AppEnv, token, want string) {
 	if status := publicCall(t, e, "GET", "/v1/public/rooms/me", nil, bearer(token), &me); status != http.StatusOK || me["access"] != want {
 		t.Fatalf("me = %d %v, want access %s", status, me, want)
 	}
+	if want != "expired" && want != "paused" {
+		return
+	}
+	// The access answer and the content routes read one standing: a room that
+	// serves nothing lists no document and no thread either.
+	for _, route := range []string{"/v1/public/rooms/documents", "/v1/public/rooms/threads"} {
+		var page AnyMap
+		status := publicCall(t, e, "GET", route, nil, bearer(token), &page)
+		if list, _ := page["data"].([]any); status != http.StatusOK || len(list) != 0 {
+			t.Fatalf("%s in a %s room = %d %v, want 200 and nothing listed", route, want, status, page)
+		}
+	}
 }
 
 func readRoomTimes(t *testing.T, e *apptest.AppEnv, roomID string) roomTimes {
