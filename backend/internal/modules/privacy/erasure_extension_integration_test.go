@@ -11,6 +11,7 @@ package privacy
 
 import (
 	"context"
+	"encoding/json"
 	"strings"
 	"testing"
 
@@ -99,6 +100,23 @@ func TestSubjectExportServesDeclaredExtensionColumns(t *testing.T) {
 	}
 	if _, leaked := data["kind"]; leaked {
 		t.Error("export served a column the unit did not declare personal")
+	}
+}
+
+func TestSubjectExportServesAnEmptyExtensionListForASubjectNoUnitNames(t *testing.T) {
+	env := setupSARIdentifiers(t)
+	registry := declareProbeTable(t, env)
+
+	pkg, err := AssembleSARWithExtensions(env.ctx, env.db, env.contact, registry)
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, err := json.Marshal(pkg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(body), `"extension_data":[]`) {
+		t.Errorf("export without extension rows must serve an empty list like every other section, got %s", body)
 	}
 }
 
