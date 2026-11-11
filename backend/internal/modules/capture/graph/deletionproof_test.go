@@ -60,7 +60,7 @@ func (m *deletionMailbox) purged() []string {
 	return ids
 }
 
-func (m *deletionMailbox) pending() map[string]time.Time {
+func (m *deletionMailbox) pending() map[string]pendingPurge {
 	m.t.Helper()
 	state, err := parseCursor(m.cursor)
 	if err != nil {
@@ -151,6 +151,96 @@ func TestARestoreWithinTheHoldKeepsTheMessage(t *testing.T) {
 			t.Errorf("pending %v after the lookup found it restored", m.pending())
 		}
 	})
+}
+
+func TestAPendingMessageWhoseIDStopsResolvingIsPurgedOnlyIfGoneEverywhere(t *testing.T) {
+	for _, tc := range []struct {
+		name     string
+		copiesIn []string
+		findErr  error
+		purged   bool
+		pending  bool
+	}{
+		{"restored, then moved to the Online Archive under a new id", []string{"folder-archive"}, nil, false, false},
+		{"one copy in Deletions and one kept in Inbox", []string{deletionsFolderID, inboxFolderID}, nil, false, false},
+		{"found only in Deletions under a new id", []string{deletionsFolderID}, nil, true, false},
+		{"gone from the whole mailbox", nil, nil, true, false},
+		{"the search fails", nil, ErrUnreachable, false, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			m := newDeletionMailbox(t)
+			m.api.deletionsIDs = []string{"m1"}
+			m.day(0)
+			if _, held := m.pending()["m1"]; !held {
+				t.Fatalf("pending %v, want m1 held from its arrival", m.pending())
+			}
+			m.api.copiesOf = map[string][]string{internetIDOf("m1"): tc.copiesIn}
+			m.api.findMessageErr = tc.findErr
+			m.day(14)
+			if got := m.purged(); (len(got) == 1) != tc.purged {
+				t.Fatalf("purged %v, want purged=%v", got, tc.purged)
+			}
+			if _, held := m.pending()["m1"]; held != tc.pending {
+				t.Fatalf("pending %v, want m1 pending=%v", m.pending(), tc.pending)
+			}
+			if len(m.api.searchedFor) != 1 || m.api.searchedFor[0] != internetIDOf("m1") {
+				t.Errorf("searched for %v, want the identity seen on arrival", m.api.searchedFor)
+			}
+		})
+	}
+}
+
+func TestAPendingMessageWithNoInternetIDIsKeptOnA404(t *testing.T) {
+	m := newDeletionMailbox(t)
+	m.cursor = testCursor(t, cursorState{
+		DeltaLink: "d", SentDeltaLink: "s", DeletionsDeltaLink: "x", Email: owner,
+		PendingPurges: map[string]pendingPurge{"m1": {Seen: pinned}},
+	})
+	m.day(14)
+	if got := m.purged(); len(got) != 0 || len(m.pending()) != 0 {
+		t.Fatalf("purged %v with %v pending, want m1 kept and its hold dropped", got, m.pending())
+	}
+}
+
+func TestPendingPurgesReadFromTheCursorAreBounded(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		pending map[string]pendingPurge
+		kept    map[string]bool
+	}{
+		{
+			"an entry with no time or a time after now is dropped",
+			map[string]pendingPurge{"future": {Seen: pinned.Add(time.Hour)}, "zero": {}, "m1": {Seen: pinned}},
+			map[string]bool{"future": false, "zero": false, "m1": true},
+		},
+		{"past the cap the oldest are kept", pendingAtSeconds(pendingPurgeCap + 1), map[string]bool{"id-0": false, "id-1": true}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			m := newDeletionMailbox(t)
+			m.cursor = testCursor(t, cursorState{DeltaLink: "d", SentDeltaLink: "s", DeletionsDeltaLink: "x", Email: owner, PendingPurges: tc.pending})
+			m.day(0)
+			if got := len(m.pending()); got > pendingPurgeCap {
+				t.Fatalf("kept %d purges, past the cap %d", got, pendingPurgeCap)
+			}
+			for id, want := range tc.kept {
+				if _, held := m.pending()[id]; held != want {
+					t.Errorf("%s held=%v, want %v", id, held, want)
+				}
+			}
+			if len(m.api.lookedUp) != 0 {
+				t.Errorf("looked up %v; no entry was due", m.api.lookedUp)
+			}
+		})
+	}
+}
+
+// pendingAtSeconds holds n entries; id-i arrived i seconds before pinned.
+func pendingAtSeconds(n int) map[string]pendingPurge {
+	pending := map[string]pendingPurge{}
+	for i := range n {
+		pending[fmt.Sprintf("id-%d", i)] = pendingPurge{Seen: pinned.Add(-time.Duration(i) * time.Second)}
+	}
+	return pending
 }
 
 func TestAMessageStillInDeletionsWhenTheHoldEndsIsPurged(t *testing.T) {
@@ -244,13 +334,13 @@ func TestAnUnreadableDeletionsFolderDoesNotStopMailCapture(t *testing.T) {
 func TestPendingPurgesStopAtTheirCap(t *testing.T) {
 	var state cursorState
 	for i := range pendingPurgeCap + 1 {
-		state.holdPurge(fmt.Sprintf("id-%d", i), pinned)
+		state.holdPurge(MessageRef{ID: fmt.Sprintf("id-%d", i)}, pinned)
 	}
 	if len(state.PendingPurges) != pendingPurgeCap {
 		t.Fatalf("held %d purges, want the cap %d", len(state.PendingPurges), pendingPurgeCap)
 	}
-	state.holdPurge("id-0", pinned.Add(time.Hour))
-	if !state.PendingPurges["id-0"].Equal(pinned) {
+	state.holdPurge(MessageRef{ID: "id-0"}, pinned.Add(time.Hour))
+	if !state.PendingPurges["id-0"].Seen.Equal(pinned) {
 		t.Fatal("a second arrival restarted the hold")
 	}
 }

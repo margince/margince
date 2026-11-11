@@ -76,6 +76,9 @@ type fakeAPI struct {
 	whereIs            map[string]string // message id to the folder it is filed in
 	lookupErrIDs       map[string]error
 	lookedUp           []string
+	copiesOf           map[string][]string // internetMessageId to the folders holding it
+	findMessageErr     error
+	searchedFor        []string
 	// Delta's canned round (the incremental resume).
 	deltaRemoved []string // ids Graph tombstoned in the round
 	folders      []connector.NamedContainer
@@ -248,12 +251,33 @@ func (f *fakeAPI) DeletionsDelta(ctx context.Context, _, deltaLink string, visit
 	if next == "" {
 		next = "https://graph/deletions?token=1"
 	}
-	return next, visit(ctx, DeltaPage{Messages: f.messageRefs(f.deletionsIDs)})
+	return next, visit(ctx, DeltaPage{Messages: deletionRefs(f.deletionsIDs)})
 }
 
-func (f *fakeAPI) ListDeletions(context.Context, string) ([]string, error) {
+func (f *fakeAPI) ListDeletions(context.Context, string) ([]MessageRef, error) {
 	f.listDeletionsCalls++
-	return f.listedDeletions, f.listDeletionsErr
+	return deletionRefs(f.listedDeletions), f.listDeletionsErr
+}
+
+// deletionRefs gives each id the internetMessageId internetIDOf names.
+func deletionRefs(ids []string) []MessageRef {
+	messages := make([]MessageRef, len(ids))
+	for i, id := range ids {
+		messages[i] = MessageRef{ID: id, InternetMessageID: internetIDOf(id)}
+	}
+	return messages
+}
+
+func internetIDOf(id string) string { return "<" + id + "@mail.example>" }
+
+// FindMessage answers from copiesOf: an identity it does not name is in no
+// folder.
+func (f *fakeAPI) FindMessage(_ context.Context, _, internetMessageID string) ([]string, error) {
+	f.searchedFor = append(f.searchedFor, internetMessageID)
+	if f.findMessageErr != nil {
+		return nil, f.findMessageErr
+	}
+	return f.copiesOf[internetMessageID], nil
 }
 
 // MessageFolder answers from whereIs: an id it does not name is a 404.

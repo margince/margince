@@ -12,7 +12,6 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
-	"regexp"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -90,11 +89,12 @@ func TestProviderSyncCapturesAndRemovesTheRealStoredEmailKey(t *testing.T) {
 			ctx = principal.WithActor(ctx, actor)
 			sink := newCaptureSink(e.Pool, CaptureConfig{}).WithMessagePurger(purgerFor(t, e).PurgeRemovedAdmitted)
 			var pull func(connector.Cursor) (connector.Cursor, error)
+			clock := time.Date(2026, 6, 3, 0, 0, 0, 0, time.UTC)
 			if tc.provider == "gmail" {
 				provider := gmail.New(mailboxDeletionOAuth{}, gmail.NewAPI(server.Client(), server.URL))
 				pull = func(cursor connector.Cursor) (connector.Cursor, error) { return provider.Sync(ctx, auth, cursor, sink) }
 			} else {
-				provider := graph.New(mailboxDeletionOAuth{}, graph.NewAPI(server.Client(), server.URL))
+				provider := graph.New(mailboxDeletionOAuth{}, graph.NewAPI(server.Client(), server.URL)).WithClock(func() time.Time { return clock })
 				pull = func(cursor connector.Cursor) (connector.Cursor, error) {
 					return provider.SyncFrom(ctx, auth, cursor, time.Date(2026, 6, 1, 0, 0, 0, 0, time.UTC), sink)
 				}
@@ -124,9 +124,9 @@ func TestProviderSyncCapturesAndRemovesTheRealStoredEmailKey(t *testing.T) {
 				if e.WsCount(t, `SELECT count(*) FROM activity WHERE id=$1 AND body IS NULL`, activityID) != 0 {
 					t.Fatal("an Outlook hard delete was purged before its hold ran out")
 				}
-				aged := regexp.MustCompile(`"pending_purges":\{"([^"]+)":"[^"]+"\}`).ReplaceAll(cursor, []byte(`"pending_purges":{"$1":"2026-01-01T00:00:00Z"}`))
-				if _, err := pull(aged); bytes.Equal(aged, cursor) || err != nil {
-					t.Fatalf("the hold could not be aged past 14 days: %v", err)
+				clock = clock.Add(15 * 24 * time.Hour)
+				if _, err := pull(cursor); err != nil || !bytes.Contains(cursor, []byte(`"internet_message_id":"\u003cstored-rfc@example.test\u003e"`)) {
+					t.Fatalf("the sync after the hold failed (%v), or the hold kept no identity: %s", err, cursor)
 				}
 			}
 			kept := e.WsCount(t, `SELECT count(*) FROM activity WHERE source_id='stored-rfc@example.test' AND body IS NOT NULL`) > 0
@@ -172,13 +172,13 @@ func graphDeletionResponse(t *testing.T, w http.ResponseWriter, r *http.Request,
 	case "/me/mailFolders/recoverableitemsdeletions/messages/delta":
 		value := []map[string]any{}
 		if mail.removed && mail.hardDeleted && r.URL.Query().Get("next") != "" {
-			value = append(value, map[string]any{"id": "provider-opaque-id"})
+			value = append(value, map[string]any{"id": "provider-opaque-id", "internetMessageId": "<stored-rfc@example.test>"})
 		}
 		mailboxJSON(t, w, map[string]any{"value": value, "@odata.deltaLink": base + r.URL.Path + "?next=1"})
 	case "/me/mailFolders/recoverableitemsdeletions":
 		mailboxJSON(t, w, map[string]any{"id": "deletions-folder"})
 	case "/me/messages/provider-opaque-id":
-		w.WriteHeader(http.StatusNotFound)
+		mailboxJSON(t, w, map[string]any{"parentFolderId": "deletions-folder"})
 	case "/me/mailFolders/inbox/messages":
 		mailboxJSON(t, w, map[string]any{"@odata.count": 1})
 	case "/me/mailFolders/sentitems/messages":

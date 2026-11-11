@@ -161,7 +161,7 @@ Only the syncing seat's own ids count.
 Older mail with no id stays until a normal sync sees it again.
 
 A colleague's copy, mail sent from Margince and the law can keep a message.
-A hold or an open request to erase data can keep it too.
+A hold or an open privacy request about a sender or recipient can keep it too.
 Changes to a folder in Outlook do not delete the copy in Margince.
 
 A move to an archive can look like mail gone for good, and a 404 proves nothing.
@@ -169,7 +169,10 @@ Outlook proof is arrival in the `recoverableitemsdeletions` folder.
 Only Shift+Delete or emptying Deleted Items puts mail there, and `Mail.Read` reads it.
 The sync records each arrival in its cursor and reports the delete 14 days later.
 
-A message found again outside that folder is kept, because the owner brought it back.
+When the 14 days end, the sync looks the message up by its id.
+A restore can change that id, so a 404 leads to a search on its `internetMessageId`.
+A copy found outside that folder is kept, because the owner brought it back.
+A failed lookup waits for the next sync.
 If the delta of that folder fails, a listing of at most 500 ids takes its place.
 
 ## Credentials & the vault

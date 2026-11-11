@@ -71,6 +71,14 @@ func (c *Connector) WithBounceSink(sink connector.BounceSink) *Connector {
 	return &copied
 }
 
+// WithClock returns a copy that reads the time from now, the clock the
+// deletion hold runs on.
+func (c *Connector) WithClock(now func() time.Time) *Connector {
+	copied := *c
+	copied.now = now
+	return &copied
+}
+
 // WithCredentialSink returns a COPY that reports the refresh token Microsoft
 // replaces on every redemption (connector.CredentialRotator).
 //
@@ -127,7 +135,7 @@ type cursorState struct {
 	DeletionsListing *deletionsListing `json:"deletions_listing,omitempty"`
 	// PendingPurges maps a message seen arriving in Deletions to when it was
 	// seen; deletions.go purges it once deletionHold has passed.
-	PendingPurges map[string]time.Time `json:"pending_purges,omitempty"`
+	PendingPurges map[string]pendingPurge `json:"pending_purges,omitempty"`
 }
 
 // link is the stored watermark of one folder.
@@ -262,6 +270,7 @@ func (c *Connector) SyncFrom(
 		// overwriting the watermark (which would drop everything in between).
 		return nil, err
 	}
+	start.boundPendingPurges(c.now().UTC())
 	// TWO folders, each with its own watermark. What arrived is half the
 	// correspondence; what the owner SENT is the other half, and it is the half
 	// that attests the counterparty — ADR-0072 §1: an outbound activity to an

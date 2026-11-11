@@ -132,10 +132,13 @@ type API interface {
 	// DeletionsDelta walks the Recoverable Items Deletions delta from a stored
 	// link, or opens a fresh round for "". ErrDeltaGone on a 410.
 	DeletionsDelta(ctx context.Context, accessToken, deltaLink string, visit PageVisitor) (newDeltaLink string, err error)
-	// ListDeletions lists a bounded set of the ids Deletions holds.
-	ListDeletions(ctx context.Context, accessToken string) ([]string, error)
+	// ListDeletions lists a bounded set of the messages Deletions holds.
+	ListDeletions(ctx context.Context, accessToken string) ([]MessageRef, error)
 	// MessageFolder reports where one message is filed; found is false on 404.
 	MessageFolder(ctx context.Context, accessToken, msgID string) (folderID string, found bool, err error)
+	// FindMessage lists the folders holding a message with this
+	// internetMessageId; none when the mailbox has no such message.
+	FindMessage(ctx context.Context, accessToken, internetMessageID string) (folderIDs []string, err error)
 	// EnsureSubscription registers or renews the Graph change-notification
 	// subscription pointing at notificationURL, carrying clientState, and
 	// reports the subscription that now covers this mailbox.
@@ -203,6 +206,9 @@ type MessageRef struct {
 	// ReceivedAt is Graph's receivedDateTime: when Exchange says the message
 	// reached this mailbox. Zero when the listing carried none.
 	ReceivedAt time.Time
+	// InternetMessageID is Graph's internetMessageId, brackets included. Set
+	// only by the Deletions reads, which select it.
+	InternetMessageID string
 }
 
 // OAuthConfig wires the OAuth client. Tenant defaults to "common";

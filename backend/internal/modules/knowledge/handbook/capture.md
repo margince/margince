@@ -281,7 +281,7 @@ In Gmail, the message must be deleted for good. In Outlook, it must be hard-dele
 |---|---|
 | Nobody else imported it | Deleted here too: text, the provider's original, attachments, and everything worked out from it |
 | A colleague also imported it | Kept. Their copy is theirs, and what you delete does not reach their timeline |
-| It is commercial correspondence inside its retention window, or an erasure request is still open about it | Kept, and the reason is recorded |
+| It is restricted or on legal hold, it is commercial correspondence inside its retention window, or an open privacy request names a sender or recipient | Kept, and the reason is recorded |
 
 The last row matters most. A business letter (Handelsbrief) cannot be deleted
 this way while the law requires keeping it, no matter how you delete it at the
