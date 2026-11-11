@@ -353,12 +353,12 @@ func (r *unitReader) readExtensionField(elt ast.Expr, file *ast.File, m *unitMan
 		if err == nil {
 			err = r.joinJobsToContract(served(declared), r.jobs)
 		}
-	case "Jurisdictions", "Messaging", "SubjectRights", "Documents", "Reach":
-		// Recognized and skipped. All five are policy or content the core
-		// consults: retention floors, messaging rules, request deadlines,
-		// compliance documents and the tables the merge and erasure reach. None
-		// is an operation an operator resolves, so none contributes a manifest
-		// entry. The boot's corereach.Install refuses a malformed Reach table.
+	case "Jurisdictions", "Messaging", "SubjectRights", "Documents", "Reach", "Privacy":
+		// Recognized and skipped. All six are policy or content the core
+		// consults. None is an operation an operator resolves, so none
+		// contributes a manifest entry. The boot's corereach.Install refuses a
+		// malformed Reach table, and extensionprivacy.Preflight a malformed
+		// Privacy table.
 		//
 		// SKIPPED HERE IS NOT UNCHECKED. Messaging rules decide whether a
 		// message may go out, so what holds them is nearer the use and sees

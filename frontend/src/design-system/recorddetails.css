@@ -40,16 +40,10 @@
   max-inline-size: 100%;
   vertical-align: top;
 }
-/* A value's copy glyph is quiet like the chat glyph (callaction.css), and
-   takes no room until the pointer or focus is on its row, so at rest the
-   value has the whole column. */
+/* A value's copy glyph (quiet in clipboardcopy.css) takes no room until the
+   pointer or focus is on its row, so at rest the value has the whole column. */
 .recorddetails .copy-action {
   display: inline-flex;
-}
-.recorddetails .copy-action .btn-icon:not(:hover, :focus-visible) {
-  border-color: transparent;
-  background: transparent;
-  color: var(--textSecondary);
 }
 @media (hover: hover) {
   .recorddetails .factlist-row:not(:hover, :focus-within) .copy-action {

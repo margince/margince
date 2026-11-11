@@ -36,10 +36,13 @@ const (
 // a commitment or correcting one, and a reader of either path should land on
 // the same constant.
 const (
-	codeRequired   = "required"
-	codeWeekClosed = "week_closed"
-	fieldLabel     = "label"
-	fieldWeek      = "week"
+	codeRequired          = "required"
+	codeWeekClosed        = "week_closed"
+	fieldLabel            = "label"
+	fieldLinkedRecordID   = "linked_record_id"
+	fieldLinkedRecordType = "linked_record_type"
+	fieldManagerResponse  = "manager_response"
+	fieldWeek             = "week"
 
 	// changedCommitments is the field name every write to a plan's commitments
 	// reports, so a consumer filtering on it sees all of them.

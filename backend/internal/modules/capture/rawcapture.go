@@ -16,13 +16,14 @@ import (
 )
 
 const (
-	sqlArgIDs      = "ids"
-	sqlArgKeys     = "keys"
-	sqlArgObject   = "object"
-	sqlArgPayload  = "payload"
-	sqlArgProvider = "provider"
-	sqlArgSource   = "source"
-	sqlArgSystem   = "system"
+	sqlArgGeneration = "generation"
+	sqlArgIDs        = "ids"
+	sqlArgKeys       = "keys"
+	sqlArgObject     = "object"
+	sqlArgPayload    = "payload"
+	sqlArgProvider   = "provider"
+	sqlArgSource     = "source"
+	sqlArgSystem     = "system"
 )
 
 // RawRecord is one provider original waiting to be stored verbatim.

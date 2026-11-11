@@ -298,6 +298,8 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "sendPermission.reason.withdrawn",
     // A human being on the committee, or who owns or sets something, not the record type.
     "co.aside.visibleOnlyOwner",
+    "co.aside.visibleTheOwnerAndShared_one",
+    "co.aside.visibleTheOwnerAndShared_other",
     "contact.card.committee_one",
     "contact.card.committee_other",
     // The person who runs the server restores the backup.
@@ -768,6 +770,8 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "co.overview.noEconomicBuyer",
     "co.aside.visibleEveryone",
     "co.aside.visibleOnlyOwner",
+    "co.aside.visibleTheOwnerAndShared_one",
+    "co.aside.visibleTheOwnerAndShared_other",
     "deal.committee.missing.champion",
     "deal.committee.foot",
     "contact.card.noEconomicBuyer",

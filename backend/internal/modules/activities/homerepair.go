@@ -30,7 +30,10 @@ type HomeRepairTask struct {
 	Pristine     bool
 }
 
-const paramRepairSource = "source"
+const (
+	paramRepairSource = "source"
+	paramLimit        = "limit"
+)
 
 // HomeRepairTasksTx keeps preview and repair on the same bounded, stable task order.
 func HomeRepairTasksTx(ctx context.Context, tx pgx.Tx, after ids.UUID, limit int) ([]HomeRepairTask, error) {

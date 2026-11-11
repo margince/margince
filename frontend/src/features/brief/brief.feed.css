@@ -258,6 +258,11 @@
   order: 2;
   font: var(--fontBodyLarge);
 }
+/* What a decision proposes, under the line that asks for it. */
+.brief-triage-lead .worklist-row-proposal {
+  order: 2;
+  align-self: stretch;
+}
 .brief-triage-lead .emailentry {
   order: 5;
 }

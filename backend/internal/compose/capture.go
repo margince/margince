@@ -15,6 +15,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/capturetimeline"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/capture/gmail"
@@ -287,11 +288,11 @@ func newCaptureSink(pool *pgxpool.Pool, cfg CaptureConfig) *capture.Sink {
 		// the attachment table. Built here, from the store, so every role that
 		// composes a sink gets the same one — the worker runs mail capture and
 		// never sees the api's options.
-		WithFileKeeper(capturedFileKeeper{store: activities.NewStore(InstallationDB(pool)).WithBlobstore(cfg.Blob)}).
+		WithFileKeeper(capturetimeline.FileKeeper{Store: activities.NewStore(InstallationDB(pool)).WithBlobstore(cfg.Blob)}).
 		// The meeting-notes reader lands a Doc as a transcript, which starts
 		// its reading only where the role wired an enqueue.
-		WithNotesLanding(meetingNotesWriter{
-			store: activities.NewStore(InstallationDB(pool)).WithTranscriptEnqueue(cfg.TranscriptEnqueue),
+		WithNotesLanding(capturetimeline.NotesWriter{
+			Store: activities.NewStore(InstallationDB(pool)).WithTranscriptEnqueue(cfg.TranscriptEnqueue),
 		}).
 		WithClock(cfg.clock()).
 		WithStager(mergeStager{svc: NewApprovalsService(InstallationDB(pool))}).

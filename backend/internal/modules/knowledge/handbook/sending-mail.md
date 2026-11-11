@@ -20,8 +20,7 @@ To send an email to a contact in Margince, open the contact's page and choose **
 - **Reply** on any message in a timeline
 - **Write email** on a call, note, meeting or task in a timeline, when it names one contact with an email address. A task Margince filed itself offers none.
 
-From a call, note, meeting or task, it opens a new email that names the entry as "About: {subject}", not a reply.
-A company page opens the composer with the company's contacts to choose from. With none on file it says "No contacts at this company yet. Write the message manually, or add a contact first." Also called: compose, new message, reply to an email.
+From a call, note, meeting or task, it opens a new email that names the entry as "About: {subject}", not a reply. A company page opens the composer with the company's contacts to choose from. With none on file it says "No contacts at this company yet. Write the message manually, or add a contact first." Also called: compose, new message, reply to an email.
 
 ### How do I send a follow-up email?
 To send a follow-up email in Margince, open the contact's **History** tab and press **Reply** on the message. Or press the button on its Worklist row.
@@ -84,6 +83,8 @@ you can do about it there.
 To is on the form. **Cc and Bcc** is a link until you press it. Then Bcc says
 what it means: other recipients cannot see these addresses, or that anyone else
 has a copy. A recipient Margince knows shows as the contact's name. Point at the name, or reach it with Tab, to see the address and the company.
+
+Type a name or an address in **To**, **Cc** or **Bcc** to pick a recipient. When you write to a contact, the list offers that contact first. The contacts around them come next: colleagues at the company they work at now, and the contacts on the same deals. From a company, deal or project, the company's contacts are offered. Your own colleagues in Margince come last. You only see contacts you can open in Margince.
 
 A channel reply, such as Telegram, drops the subject and Cc, because the channel
 has neither.

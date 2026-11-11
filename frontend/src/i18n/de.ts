@@ -2403,6 +2403,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "systemJob.erasure_replay": "Erneute Löschung nach einer Wiederherstellung",
   "systemJob.privacy_review": "Datenschutzprüfung nach einer Löschung",
   "systemJob.extension_inventory": "Bestandsaufnahme der Erweiterungen",
+  "systemJob.extension_privacy": "Datenschutzprüfung der Erweiterungen",
   "systemJob.extraction_activity_reannounce":
     "Reparatur extrahierter Aktivitäten",
   "systemJob.forecast_snapshot": "Täglicher Prognose-Snapshot",
@@ -3820,7 +3821,15 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "co.aside.visibleEveryone": "Alle",
   "co.aside.visibleOnlyYou": "Nur dich",
   "co.aside.visibleOnly": "Nur {owner}",
-  "co.aside.visibleOnlyOwner": "Nur die zuständige Person",
+  "co.aside.visibleOnlyOwner": "Nur die verantwortliche Person",
+  "co.aside.visibleYouAndShared_one": "Dich · {count} Freigabe",
+  "co.aside.visibleYouAndShared_other": "Dich · {count} Freigaben",
+  "co.aside.visibleOwnerAndShared_one": "{owner} · {count} Freigabe",
+  "co.aside.visibleOwnerAndShared_other": "{owner} · {count} Freigaben",
+  "co.aside.visibleTheOwnerAndShared_one":
+    "Die verantwortliche Person · {count} Freigabe",
+  "co.aside.visibleTheOwnerAndShared_other":
+    "Die verantwortliche Person · {count} Freigaben",
   "co.aside.vatId": "USt-IdNr.",
   "co.aside.add": "Hinzufügen…",
   "co.strip.unanswered": "Unbeantwortet",
@@ -3964,6 +3973,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "standing.title": "Wie es steht · {date}",
   "standing.noteMore": "Mehr anzeigen",
   "standing.noteLess": "Weniger anzeigen",
+  "standing.latest.title": "Zuletzt",
+  "standing.latest.open": "Im Verlauf öffnen",
   "standing.sources.records": "Aus den CRM-Daten",
   "standing.sources.model_one": "Margince · {count} Quelle",
   "standing.sources.model_other": "Margince · {count} Quellen",
@@ -4596,6 +4607,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "approval.field.because": "Grund",
   "approval.field.lost_reason": "Warum er verloren ging",
   "approval.field.note": "Notiz",
+  "approval.field.task": "Aufgabe",
   "approval.kind.transcript_proposal":
     "Nächsten Schritt aus Transkript erstellen",
   "approval.kind.stage_progression": "Deal-Phase voranbringen",
@@ -9613,6 +9625,21 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "setup.action.ai": "Verbinden",
   "setup.step.aiDone": "{name} ist verbunden.",
   "setup.step.aiDoneUnnamed": "Ein KI-Tool ist verbunden.",
+  "firstRun.ai.skip": "Nicht jetzt",
+  "ob.gate.noModelSub":
+    "Noch ist kein KI-Anbieter eingerichtet, daher kann Margince deine Website nicht lesen. Gib die Angaben zu deinem Unternehmen selbst ein oder füge jetzt einen Schlüssel hinzu.",
+  "ob.gate.addModel": "KI-Schlüssel hinzufügen",
+  "aiSetup.title": "KI einrichten",
+  "aiSetup.intro":
+    "Margince braucht einen KI-Anbieter, um Websites zu lesen, Antworten zu entwerfen und zu recherchieren. Füge einen Schlüssel hinzu und wähle die Modelle.",
+  "aiSetup.connect": "Anbieter verbinden",
+  "aiSetup.connected":
+    "{vendor} ist verbunden. Margince kann jetzt lesen, entwerfen und recherchieren.",
+  "setup.step.model": "KI einrichten",
+  "setup.caption.model":
+    "Füge einen Schlüssel deines KI-Anbieters hinzu, damit Margince Websites liest, Antworten entwirft und recherchiert.",
+  "setup.action.model": "Schlüssel hinzufügen",
+  "setup.step.modelDone": "Ein KI-Anbieter ist verbunden.",
   "ob.conv.connect.aiRow": "Dein KI-Tool",
   "ob.conv.connect.aiBody":
     "Frag Claude, ChatGPT, Copilot oder deinen Editor nach deinen Deals und lass ihn Margince für dich aktualisieren.",
@@ -15896,7 +15923,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "firstRun.continue": "Weiter",
   "firstRun.ai.title": "Modellanbieter auswählen",
   "firstRun.ai.sub":
-    "Margince nutzt deinen Zugang beim KI-Anbieter. All das lässt sich später in den Einstellungen unter KI ändern.",
+    "Margince nutzt deinen Zugang beim KI-Anbieter. Kein Schlüssel zur Hand? Du kannst ihn später in den Einstellungen unter KI hinzufügen.",
   "firstRun.ai.provider": "Anbieter",
   "firstRun.ai.key": "API-Schlüssel",
   "firstRun.ai.keyHint":
@@ -21148,6 +21175,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "scheduling.pause": "Buchungen pausieren",
   "record.details.showEmpty_one": "{count} leeres Feld zeigen",
   "record.details.showEmpty_other": "{count} leere Felder zeigen",
+  "contact.handles.more_one": "+{count} weitere",
+  "contact.handles.more_other": "+{count} weitere",
+  "contact.handles.fewer": "Weniger anzeigen",
   "record.details.hideEmpty": "Leere Felder ausblenden",
   "record.verb.email": "E-Mail",
   "record.verb.call": "Anruf",
@@ -21779,10 +21809,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.done.changeCount_other": "{count} Änderungen",
   "brief.done.steps": "Änderungen an diesem Deal, neueste zuerst",
   "brief.done.title": "Für dich erledigt",
-  "brief.done.waiting_one": "{count} Deal wartet auf deine Prüfung",
-  "brief.done.waiting_other": "{count} Deals warten auf deine Prüfung",
-  "brief.done.reviewAll_one": "{count} Deal prüfen",
-  "brief.done.reviewAll_other": "Alle {count} Deals prüfen",
+  "brief.done.seeAll_one": "{count} Deal ansehen",
+  "brief.done.seeAll_other": "Alle {count} Deals ansehen",
   "brief.done.drawerTitle_one": "{count} Deal, den Margince geändert hat",
   "brief.done.drawerTitle_other": "{count} Deals, die Margince geändert hat",
   "changes.undoDeals_one": "Änderungen an {count} Deal rückgängig machen",
@@ -21798,8 +21826,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.done.noReason": "Grund nicht verfügbar",
   "brief.done.markedLost": "Als verloren markiert",
   "brief.done.customerWrote": "Der Kunde schrieb:",
-  "brief.changes.markReviewed": "Als geprüft markieren",
-  "brief.changes.reviewed": "Geprüft",
   "magic.lane.doneOther": "Weitere Änderungen",
   "changes.bulk.undone_one": "Auf {count} Deal rückgängig gemacht.",
   "changes.bulk.undone_other": "Auf {count} Deals rückgängig gemacht.",
@@ -21813,8 +21839,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "changes.bulk.confirm_other":
     "{count} Deals brauchen deine Bestätigung. Mach jeden in seiner eigenen Zeile rückgängig.",
   "changes.bulk.unsent_one": "{count} Deal wurde nicht gesendet.",
-  "changes.bulk.settled_one": "{count} Deal wartet nicht mehr auf Prüfung.",
-  "changes.bulk.settled_other": "{count} Deals warten nicht mehr auf Prüfung.",
+  "changes.bulk.settled_one":
+    "{count} Deal hat keine Änderung mehr zum Rückgängigmachen.",
+  "changes.bulk.settled_other":
+    "{count} Deals haben keine Änderung mehr zum Rückgängigmachen.",
   "changes.bulk.unsent_other": "{count} Deals wurden nicht gesendet.",
   "changes.bulk.confirmOnDeal":
     "Öffne den Deal, um das Rückgängigmachen zu bestätigen.",

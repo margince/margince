@@ -110,6 +110,10 @@ func (t Table) Validate() error {
 	if len(t.Erase) > 0 && !contact {
 		return fmt.Errorf("reach table %q clears columns on erasure but no link can hold a contact", t.Name)
 	}
+	return t.validateErase()
+}
+
+func (t Table) validateErase() error {
 	seen := map[string]bool{}
 	for _, c := range t.Erase {
 		if !identifier.MatchString(c.Column) || c.Column == "id" {

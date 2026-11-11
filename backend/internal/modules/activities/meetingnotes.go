@@ -90,7 +90,7 @@ func (s *Store) DueMeetingNotesTx(ctx context.Context, tx pgx.Tx, q MeetingNotes
 		 ORDER BY a.occurred_at DESC, l.id
 		 LIMIT @limit`, pgx.NamedArgs{
 		"owner": q.Owner, "domains": q.Domains, "since": q.Since, "until": q.Until,
-		"transcript": transcriptSourceSystem, "limit": q.Limit,
+		"transcript": transcriptSourceSystem, paramLimit: q.Limit,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("activities: listing the meeting notes due a reading: %w", err)

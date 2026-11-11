@@ -34,7 +34,7 @@ func runAgentLoopExpectation(
 	t *testing.T, fixture agentLoopFixture, expected json.RawMessage, reply string,
 ) aitasks.Outcome {
 	t.Helper()
-	prepared, err := agentLoopCases{agent: agentLoopAgent}.Prepare(agentLoopFixtureJSON(t, fixture), expected)
+	prepared, err := agentLoopCases{agent: agentLoopAgent}.Prepare(fixtureJSON(t, fixture), expected)
 	if err != nil {
 		t.Fatalf("preparing the case: %v", err)
 	}
@@ -186,7 +186,7 @@ func TestAgentLoopCaseRefusesAnArgumentNoCallCouldCarry(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			_, err := agentLoopCases{agent: agentLoopAgent}.Prepare(agentLoopFixtureJSON(t, agentLoopBaseFixture()), tc.expected)
+			_, err := agentLoopCases{agent: agentLoopAgent}.Prepare(fixtureJSON(t, agentLoopBaseFixture()), tc.expected)
 			if err == nil {
 				t.Fatal("Prepare accepted an argument assertion this site cannot measure")
 			}

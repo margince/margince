@@ -10,6 +10,6 @@ import "github.com/margince/margince/backend/pkg/extension/reach"
 func SweepReach() []reach.Table {
 	return []reach.Table{{
 		Name:  "commission_entry",
-		Links: []reach.Link{{Column: "partner_company_id", Record: reach.Company}},
+		Links: []reach.Link{{Column: filterPartnerCompanyID, Record: reach.Company}},
 	}}
 }

@@ -1,14 +1,13 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package compose
-
-// The edge between capture and the timeline's attachment store.
+// Package capturetimeline adapts the timeline store to capture's seams: the
+// attachment store a captured message files into, and the meeting-notes landing.
 //
 // Capture reads the mailbox and owns the transaction; activities owns the
-// attachment table. Neither imports the other, so the join is here — the same
-// arrangement the counterparty ensurer already uses, and the reason the
-// table-ownership fitness test passes with one writer per table.
+// attachment table. Neither imports the other, so the join is here, and each
+// table keeps one writer.
+package capturetimeline
 
 import (
 	"context"
@@ -24,19 +23,20 @@ import (
 )
 
 // errStagedFileNotOurs marks a staged file that did not come from this
-// adapter's own Stage call — a wiring mistake, never a runtime condition.
+// adapter's own Stage call: a wiring mistake, never a runtime condition.
 var errStagedFileNotOurs = errors.New(
-	"compose: a captured file was staged by something other than the timeline store",
+	"capturetimeline: a captured file was staged by something other than the timeline store",
 )
 
-// capturedFileKeeper adapts the timeline store to capture's seam.
-type capturedFileKeeper struct {
-	store *activities.Store
+// FileKeeper adapts the timeline store to capture's seam.
+type FileKeeper struct {
+	Store *activities.Store
 }
 
-var _ capture.FileKeeper = capturedFileKeeper{}
+var _ capture.FileKeeper = FileKeeper{}
 
-func (k capturedFileKeeper) Stage(
+// Stage hands the files to the timeline store to keep until Record.
+func (k FileKeeper) Stage(
 	ctx context.Context, files []capture.CapturedFile,
 ) ([]capture.StagedFile, error) {
 	owned := make([]activities.CapturedFile, 0, len(files))
@@ -49,7 +49,7 @@ func (k capturedFileKeeper) Stage(
 			Body:         file.Body,
 		})
 	}
-	staged, err := k.store.StageCapturedFiles(ctx, owned)
+	staged, err := k.Store.StageCapturedFiles(ctx, owned)
 	if err != nil {
 		return nil, err
 	}
@@ -62,7 +62,8 @@ func (k capturedFileKeeper) Stage(
 	return out, nil
 }
 
-func (k capturedFileKeeper) Record(
+// Record files the staged files on the activity, inside capture's transaction.
+func (k FileKeeper) Record(
 	ctx context.Context, tx pgx.Tx, activityID ids.ActivityID,
 	from capture.FileSource, staged []capture.StagedFile,
 ) error {
@@ -70,15 +71,14 @@ func (k capturedFileKeeper) Record(
 	for _, file := range staged {
 		typed, ok := file.(activities.StagedFile)
 		if !ok {
-			// The marker is satisfied by exactly one type today, so this cannot
-			// happen through this adapter — but a silently skipped file is the
-			// one outcome that must never be possible on a path whose promise
-			// is that what arrived is what is stored.
+			// Only activities.StagedFile meets the marker, so this adapter never
+			// gets here. A skipped file would break the promise that what
+			// arrived is what is stored, so it fails instead.
 			return errStagedFileNotOurs
 		}
 		owned = append(owned, typed)
 	}
-	return k.store.RecordCapturedFiles(ctx, tx, activityID, activities.CapturedFileSource{
+	return k.Store.RecordCapturedFiles(ctx, tx, activityID, activities.CapturedFileSource{
 		System:     from.System,
 		MessageID:  from.MessageID,
 		CapturedBy: from.CapturedBy,
@@ -86,7 +86,8 @@ func (k capturedFileKeeper) Record(
 	}, owned)
 }
 
-func (k capturedFileKeeper) RecordCopiedWithheld(
+// RecordCopiedWithheld files a copied message's files by size and fingerprint only.
+func (k FileKeeper) RecordCopiedWithheld(
 	ctx context.Context, tx pgx.Tx, activityID ids.ActivityID,
 	from capture.FileSource, files []capture.CapturedFile,
 ) error {
@@ -105,7 +106,7 @@ func (k capturedFileKeeper) RecordCopiedWithheld(
 			Checksum:     hex.EncodeToString(sum[:]),
 		})
 	}
-	return k.store.RecordWithheldFiles(ctx, tx, activityID, activities.CapturedFileSource{
+	return k.Store.RecordWithheldFiles(ctx, tx, activityID, activities.CapturedFileSource{
 		System:     from.System,
 		MessageID:  from.MessageID,
 		CapturedBy: from.CapturedBy,
@@ -113,7 +114,8 @@ func (k capturedFileKeeper) RecordCopiedWithheld(
 	}, withheld)
 }
 
-func (k capturedFileKeeper) AdoptWithheld(
+// AdoptWithheld gives withheld rows the bytes of the same files arriving addressed.
+func (k FileKeeper) AdoptWithheld(
 	ctx context.Context, tx pgx.Tx, activityID ids.ActivityID,
 	from capture.FileSource, files []capture.CapturedFile,
 ) (int, error) {
@@ -127,7 +129,7 @@ func (k capturedFileKeeper) AdoptWithheld(
 			Body:         file.Body,
 		})
 	}
-	return k.store.AdoptWithheldFiles(ctx, tx, activityID, activities.CapturedFileSource{
+	return k.Store.AdoptWithheldFiles(ctx, tx, activityID, activities.CapturedFileSource{
 		System:     from.System,
 		MessageID:  from.MessageID,
 		CapturedBy: from.CapturedBy,
@@ -135,7 +137,8 @@ func (k capturedFileKeeper) AdoptWithheld(
 	}, carried)
 }
 
-func (k capturedFileKeeper) Stored(staged []capture.StagedFile) ([]capture.StoredFile, error) {
+// Stored reports where each staged file landed in the object store.
+func (k FileKeeper) Stored(staged []capture.StagedFile) ([]capture.StoredFile, error) {
 	out := make([]capture.StoredFile, 0, len(staged))
 	for _, file := range staged {
 		typed, ok := file.(activities.StagedFile)
@@ -148,7 +151,8 @@ func (k capturedFileKeeper) Stored(staged []capture.StagedFile) ([]capture.Store
 	return out, nil
 }
 
-func (k capturedFileKeeper) RecordWithheld(
+// RecordWithheld files the size of each file whose body is not kept.
+func (k FileKeeper) RecordWithheld(
 	ctx context.Context, tx pgx.Tx, activityID ids.ActivityID,
 	from capture.FileSource, files []capture.CapturedFile,
 ) error {
@@ -163,7 +167,7 @@ func (k capturedFileKeeper) RecordWithheld(
 			ByteSize:     len(file.Body),
 		})
 	}
-	return k.store.RecordWithheldFiles(ctx, tx, activityID, activities.CapturedFileSource{
+	return k.Store.RecordWithheldFiles(ctx, tx, activityID, activities.CapturedFileSource{
 		System:     from.System,
 		MessageID:  from.MessageID,
 		CapturedBy: from.CapturedBy,
@@ -171,11 +175,12 @@ func (k capturedFileKeeper) RecordWithheld(
 	}, withheld)
 }
 
-func (k capturedFileKeeper) RetireLinks(
+// RetireLinks retires the message's links that are not in kept.
+func (k FileKeeper) RetireLinks(
 	ctx context.Context, tx pgx.Tx, activityID ids.ActivityID,
 	from capture.FileSource, kept []string,
 ) (int, error) {
-	return k.store.RetireCapturedLinks(ctx, tx, activityID, activities.CapturedFileSource{
+	return k.Store.RetireCapturedLinks(ctx, tx, activityID, activities.CapturedFileSource{
 		System:     from.System,
 		MessageID:  from.MessageID,
 		CapturedBy: from.CapturedBy,
@@ -183,11 +188,12 @@ func (k capturedFileKeeper) RetireLinks(
 	}, kept)
 }
 
-func (k capturedFileKeeper) RestoreLinks(
+// RestoreLinks brings back the message's links that are listed again.
+func (k FileKeeper) RestoreLinks(
 	ctx context.Context, tx pgx.Tx, activityID ids.ActivityID,
 	from capture.FileSource, listed []string,
 ) (int, error) {
-	return k.store.RestoreCapturedLinks(ctx, tx, activityID, activities.CapturedFileSource{
+	return k.Store.RestoreCapturedLinks(ctx, tx, activityID, activities.CapturedFileSource{
 		System:     from.System,
 		MessageID:  from.MessageID,
 		CapturedBy: from.CapturedBy,
@@ -195,7 +201,8 @@ func (k capturedFileKeeper) RestoreLinks(
 	}, listed)
 }
 
-func (k capturedFileKeeper) RecordLinks(
+// RecordLinks files the links a message carries.
+func (k FileKeeper) RecordLinks(
 	ctx context.Context, tx pgx.Tx, activityID ids.ActivityID,
 	from capture.FileSource, links []capture.MailLink,
 ) (int, error) {
@@ -203,7 +210,7 @@ func (k capturedFileKeeper) RecordLinks(
 	for _, link := range links {
 		owned = append(owned, activities.CapturedLink{URL: link.URL, Text: link.Text})
 	}
-	return k.store.RecordCapturedLinks(ctx, tx, activityID, activities.CapturedFileSource{
+	return k.Store.RecordCapturedLinks(ctx, tx, activityID, activities.CapturedFileSource{
 		System:     from.System,
 		MessageID:  from.MessageID,
 		CapturedBy: from.CapturedBy,

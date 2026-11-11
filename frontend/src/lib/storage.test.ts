@@ -117,6 +117,7 @@ describe("a stored value", () => {
       "margince.leads.segregationNoteDismissed",
       "margince.latestInbound.noticed:*",
       "margince.first-run.platform-declined:*",
+      "margince.first-run.ai-declined:*",
       "ob.connect.oauthAttempt",
       "ob.connect.overnightChoice",
       "margince.signin.returnRoute",

@@ -89,6 +89,11 @@ export const STORAGE_KEYS = {
     area: "local",
     lifetime: "account",
   },
+  aiDeclined: {
+    prefix: "margince.first-run.ai-declined:",
+    area: "local",
+    lifetime: "account",
+  },
   oauthAttempt: {
     name: "ob.connect.oauthAttempt",
     area: "session",

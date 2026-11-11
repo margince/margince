@@ -2,7 +2,7 @@
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
-import { ReceiptReview } from "../../components/receiptreview";
+import { ReceiptVerbs } from "../../components/receiptverbs";
 import { formatDayMonth, formatTimeOfDay } from "../../format/format";
 import { browserZone } from "../../format/timezone";
 import { en } from "../../i18n/en";
@@ -25,10 +25,8 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-it("marks the exact recorded stage change reviewed and keeps its Undo", async () => {
-  let accepted = false;
+it("offers a change's Undo and asks for no review of it", async () => {
   const change = automaticStageReceipt;
-  const path = `/deals/${change.subject?.id}/applied-changes/${change.id}/accept`;
   const calls = stubApi({
     "GET /me": () =>
       jsonResponse(meFixture({ allow: { deal: ["read", "update"] } })),
@@ -36,35 +34,44 @@ it("marks the exact recorded stage change reviewed and keeps its Undo", async ()
       jsonResponse({
         as_of: change.occurred_at,
         truncated: false,
-        receipts: [{ ...change, review: { ...change.review, accepted } }],
+        receipts: [change],
       }),
     "GET /deal-corrections/pending": () =>
-      jsonResponse(pendingSummaryFor(accepted ? [] : [change])),
+      jsonResponse(pendingSummaryFor([change])),
     [`GET /deals/${change.subject?.id}`]: () =>
       jsonResponse({ name: "PIM Rollout" }),
-    [`POST ${path}`]: () => {
-      accepted = true;
-      return new Response(null, { status: 204 });
-    },
   });
-  const user = userEvent.setup();
   render(<DoneForYou completed={null} />);
-  const press = await screen.findByRole("button", { name: "Mark reviewed" });
-  const magicReads = () =>
-    calls.filter((call) => call.method === "GET" && call.path === "/magic")
-      .length;
-  const readBefore = magicReads();
-  await user.click(press);
-  // The row stays with its answer, and a reviewed change still undoes.
-  expect(await screen.findByText(en["brief.changes.reviewed"])).toBeTruthy();
-  expect(screen.getByRole("button", { name: "Undo" })).toBeTruthy();
-  expect(screen.queryByRole("button", { name: "Mark reviewed" })).toBeNull();
-  // The done lane is read again, so the same act is not left showing there.
-  await waitFor(() => expect(magicReads()).toBeGreaterThan(readBefore));
-  expect(writes(calls).map((call) => call.path)).toEqual([path]);
+  expect(await screen.findByRole("button", { name: "Undo" })).toBeTruthy();
+  expect(screen.queryByText(/review/i)).toBeNull();
+  expect(writes(calls)).toEqual([]);
 });
 
-it("draws no group at all when no change waits for a word", async () => {
+it("keeps an accepted change's Undo", async () => {
+  stubApi({
+    "GET /me": () =>
+      jsonResponse(meFixture({ allow: { deal: ["read", "update"] } })),
+  });
+  render(
+    <ReceiptVerbs
+      receipt={{
+        ...automaticStageReceipt,
+        review: {
+          kind: "stage",
+          accepted: true,
+          reversed: false,
+          version: 7,
+          can_accept: true,
+          writable: true,
+          can_undo: true,
+        },
+      }}
+    />,
+  );
+  expect(await screen.findByRole("button", { name: "Undo" })).toBeTruthy();
+});
+
+it("draws no group at all when Margince changed nothing", async () => {
   stubApi({
     "GET /worklist/handled": () =>
       jsonResponse({
@@ -125,7 +132,7 @@ it("dates a change from today by its hour and an older one by its day", async ()
 it("says a superseded change changed since, and offers no write", () => {
   stubApi({});
   render(
-    <ReceiptReview
+    <ReceiptVerbs
       receipt={{
         ...automaticStageReceipt,
         review: {
@@ -162,7 +169,6 @@ it("keeps an undo-only applied change visible until it is reversed", async () =>
   });
   render(<DoneForYou completed={null} />);
   expect(await screen.findByRole("button", { name: "Undo" })).toBeTruthy();
-  expect(screen.queryByRole("button", { name: "Mark reviewed" })).toBeNull();
 });
 
 it("asks before an opened deal's receipt archives the team's work, as the change list does", async () => {
@@ -209,7 +215,7 @@ it("asks before an opened deal's receipt archives the team's work, as the change
     },
   });
   const user = userEvent.setup();
-  render(<ReceiptReview receipt={opened} />);
+  render(<ReceiptVerbs receipt={opened} />);
   await user.click(await screen.findByRole("button", { name: "Undo" }));
   expect(
     await screen.findByText(
@@ -289,7 +295,7 @@ it("asks before a reopened deal's receipt closes the team's work as lost, then s
     },
   });
   const user = userEvent.setup();
-  render(<ReceiptReview receipt={reopened} />);
+  render(<ReceiptVerbs receipt={reopened} />);
   await user.click(await screen.findByRole("button", { name: "Undo" }));
   expect(
     await screen.findByText(

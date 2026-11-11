@@ -96,6 +96,42 @@
   margin-inline-start: -4px;
   font: var(--fontBodySmall);
 }
+/* Two links on one line: Show more beside the way into History. */
+.standing-sheet-note-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+}
+.standing-sheet-note-links > .standing-sheet-note-toggle {
+  margin-inline-start: 0;
+}
+/* The newest thing said on the record, in a recess under the call so it reads
+   as the record's own words, not the card's. */
+.standing-sheet-latest {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  max-inline-size: 62ch;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--r-md);
+  background: var(--bgWell);
+}
+.standing-sheet-latest-head > strong {
+  font-weight: var(--fontWeightMedium);
+  color: var(--textPrimary);
+}
+.standing-sheet-latest .standing-sheet-note {
+  color: var(--textPrimary);
+}
+.standing-sheet-latest-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  font: var(--fontBodySmall);
+  color: var(--textSecondary);
+}
 /* The ring and the dimension rows, side by side. */
 .standing-sheet-readings {
   display: flex;

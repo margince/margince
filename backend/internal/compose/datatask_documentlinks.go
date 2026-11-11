@@ -10,6 +10,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/capturetimeline"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/capture/mailmap"
@@ -71,7 +72,7 @@ func recordDocumentLinksBatch(ctx context.Context, tx pgx.Tx, in datatask.BatchI
 	if err != nil {
 		return datatask.BatchOut{}, err
 	}
-	keeper := capturedFileKeeper{store: activities.NewStore(nil)}
+	keeper := capturetimeline.FileKeeper{Store: activities.NewStore(nil)}
 	for _, mail := range mails {
 		mail.Payload, err = originalstore.RepairPayload(ctx, mail.Payload)
 		if err != nil {

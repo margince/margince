@@ -102,6 +102,9 @@ signs; see [the workflows beside the merge gate](../reference/ci-workflows.md).
 cancelling, because nothing replaces a daily run. `cache-warm.yml` groups without cancelling, because a
 cancelled run saves no cache.
 
+A pull request workflow that also starts with no new commit groups without cancelling, because Renovate
+never merges a head with a `cancelled` check. `backend/gates/samecommitcancel_test.go` holds this.
+
 A skipped required check counts as *passing* on GitHub. That is why the build checks are put together
 in one `ci` job that refuses a skip on `merge_group`; see
 [The `ci` aggregate](#the-ci-aggregate-is-the-only-required-build-context).
@@ -472,7 +475,7 @@ The first kind is held by a census, not a scan, because such paths are mostly bu
 `backend/tools/check-test-inputs` fails on any package that read outside its module without reading the
 matching digest.
 
-On a ready PR into `main` that touches the backend, `deterministic-gates (unit)` runs its own tests through that wrapper. It then judges the logs (`make test-input-census-judge`), so the PR that adds such a read fails. `cache-warm`
+On a ready PR into `main` that touches the backend, `deterministic-gates (unit)` and `deterministic-gates (solo)` each run their own tests through that wrapper. It then judges the logs (`make test-input-census-judge`), so the PR that adds such a read fails. `cache-warm`
 runs it before it saves an entry, and a failing census holds back the entry, so readers stay on the last
 good one. The second kind is held by a gate: a cached test file that runs `git` or `go` must declare its inputs.
 
