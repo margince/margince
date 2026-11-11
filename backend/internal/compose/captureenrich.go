@@ -295,7 +295,7 @@ func (e *CaptureEnricher) enrichOne(ctx context.Context, cand contacts.Signature
 		}
 	}
 	version := contacts.SignatureWork{ContactID: cand.ContactID, Generation: cand.Generation, Snapshot: cand.Snapshot}
-	return read.Skip == "", e.store.MarkSignatureRead(ctx, cand.ContactID, cand.ActivityID, signatureHistoryDepth, read, version)
+	return !read.Retried(), e.store.MarkSignatureRead(ctx, cand.ContactID, cand.ActivityID, signatureHistoryDepth, read, version)
 }
 
 type signatureReadOptions struct {

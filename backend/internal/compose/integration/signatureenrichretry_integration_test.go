@@ -192,11 +192,11 @@ func TestAPassOfOnlyRejectedReadsQueuesNoContinuation(t *testing.T) {
 	e := Setup(t)
 	signers := make([]ids.UUID, 0, 100)
 	for i := range 100 {
-		// Somebody else's signature at the foot of each one's mail.
-		signers = append(signers, seedSigner(t, e, "Signer "+strconv.Itoa(i), fmt.Sprintf("signer%d@buyer.example", i),
-			"Forwarding this.\n\nBest,\nKim Vendor\nCEO, Vendor Ltd"))
+		name := "Signer " + strconv.Itoa(i)
+		signers = append(signers, seedSigner(t, e, name, fmt.Sprintf("signer%d@buyer.example", i),
+			"Sounds good.\n\nBest,\n"+name+"\nCTO"))
 	}
-	brain := &signatureFieldsBrain{}
+	brain := &signatureFieldsBrain{fields: []map[string]any{signatureClaim("title", "Chief Technology Officer")}}
 	if runSignaturePass(t, e, brain) {
 		t.Error("a full pass that moved nobody asked for a continuation")
 	}
@@ -204,7 +204,23 @@ func TestAPassOfOnlyRejectedReadsQueuesNoContinuation(t *testing.T) {
 	for _, signer := range signers {
 		reasons = append(reasons, readSignatureState(t, e, signer).reason)
 	}
-	if slices.ContainsFunc(reasons, func(reason string) bool { return reason != "name_gate" }) {
-		t.Errorf("skip reasons = %v, want every read refused by the name gate", reasons)
+	if slices.ContainsFunc(reasons, func(reason string) bool { return reason != "evidence_gate" }) {
+		t.Errorf("skip reasons = %v, want every read refused by the evidence gate", reasons)
+	}
+}
+
+func TestSomebodyElsesSignatureIsReadOnce(t *testing.T) {
+	e := Setup(t)
+	bob := seedSigner(t, e, "Bob Contact", "bob@acme.example", "Forwarding this.\n\nBest,\nKim Vendor\nCEO, Vendor Ltd")
+	mail := e.WsScalar(t, `SELECT activity_id::text FROM activity_link WHERE contact_id = $1`, bob)
+	brain := &signatureFieldsBrain{}
+
+	runSignaturePass(t, e, brain)
+	want := signatureReadState{watermark: mail, outcome: "skipped", reason: "name_gate"}
+	if state := readSignatureState(t, e, bob); state != want {
+		t.Fatalf("the state is %+v, want the mail consumed with the name gate's reason %+v", state, want)
+	}
+	if brain.calls != 0 {
+		t.Errorf("the model was asked %d times about a signature that is not the contact's", brain.calls)
 	}
 }

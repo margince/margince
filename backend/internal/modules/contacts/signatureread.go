@@ -14,8 +14,8 @@ import (
 )
 
 // SignatureSkipReason names why the pass rejected a read of a contact's newest
-// mail. Each can answer differently on a later pass. The contact's name and
-// address change, and a model that misquoted once may quote right next time.
+// mail. All but the name gate may answer differently on a later pass. A body
+// completes, and a model that misquoted once may quote right next time.
 type SignatureSkipReason string
 
 // The reasons a read is rejected. They mirror the last_skip_reason CHECK.
@@ -39,6 +39,12 @@ const (
 	signatureOutcomeNothing = "nothing_to_apply"
 	signatureOutcomeSkipped = "skipped"
 )
+
+// Retried reports a rejection a later pass may overturn. A mail whose signature
+// is not the contact's stays so, and most mail carries no signature at all.
+func (r SignatureRead) Retried() bool {
+	return r.Skip != "" && r.Skip != SignatureSkipNameGate
+}
 
 func (r SignatureRead) outcome() string {
 	switch {
@@ -65,7 +71,7 @@ func (s *Store) MarkSignatureRead(ctx context.Context, contactID ids.ContactID, 
 		if err != nil {
 			return err
 		}
-		consume := read.Skip == "" || retries >= SignatureReadAttempts
+		consume := !read.Retried() || retries >= SignatureReadAttempts
 		// occurred_at is read from the activity rather than taken from the
 		// caller: the watermark and the candidate query must compare one number.
 		args := []any{contactID, activityID, historyDepth, version.Generation, version.Snapshot,
@@ -108,10 +114,10 @@ func signatureReadPlaceholders(count int) []any {
 	return numbers
 }
 
-// signatureRetriesTx is how many rejected reads this mail has had, this one
-// included, or 0 for a clean read. The row lock holds the count while it is written.
+// signatureRetriesTx is how many retried reads this mail has had, this one
+// included, or 0 for a read that consumes it. The row lock holds the count while it is written.
 func signatureRetriesTx(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, activityID ids.UUID, read SignatureRead) (int, error) {
-	if read.Skip == "" {
+	if !read.Retried() {
 		return 0, nil
 	}
 	var prior int
