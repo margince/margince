@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 
@@ -224,13 +225,13 @@ func linkedCandidates(ctx context.Context, tx pgx.Tx, read candidateQuery, rows 
 		}
 		clauses = append(clauses, scope)
 	}
-	where := ""
+	var where strings.Builder
 	for _, clause := range clauses {
 		if clause != "" {
-			where += ` AND (` + clause + `)`
+			where.WriteString(` AND (` + clause + `)`)
 		}
 	}
-	found, err := tx.Query(ctx, fmt.Sprintf(read.query, where), args...)
+	found, err := tx.Query(ctx, fmt.Sprintf(read.query, where.String()), args...)
 	if err != nil {
 		return nil, fmt.Errorf("activities: reading the %s each row is filed on: %w", read.scopes[0].object, err)
 	}
