@@ -55,19 +55,23 @@ func Preflight(e extension.Extension) error {
 
 // verifySchema checks each unit's declaration against its migrated tables.
 func verifySchema(ctx context.Context, q extprivacy.Querier, exts []extension.Extension) error {
-	for _, e := range exts {
+	namespaces := make([]string, len(exts))
+	for i, e := range exts {
 		namespace, err := e.Name.Namespace()
 		if err != nil {
 			return err
 		}
-		if err := extprivacy.VerifySchema(ctx, q, namespace, e.Privacy); err != nil {
+		namespaces[i] = namespace
+	}
+	for i, e := range exts {
+		if err := extprivacy.VerifySchema(ctx, q, namespaces[i], namespaces, e.Privacy); err != nil {
 			return fmt.Errorf("extension %q: %w", e.Name, err)
 		}
 	}
 	return nil
 }
 
-// record compares each unit's declaration with what the same version declared
+// recordAll compares each unit's declaration with what the same version declared
 // on an earlier boot of this installation, and records a new version's digest.
 // A declaration changes only with the version, which is what an operator reads
 // to learn that a unit's data handling changed.
@@ -85,19 +89,19 @@ func record(ctx context.Context, tx pgx.Tx, installation string, e extension.Ext
 	if err != nil {
 		return err
 	}
-	var version, last string
+	var last string
 	err = tx.QueryRow(ctx, `
-		SELECT detail->>'version', detail->>'digest' FROM system_log
-		 WHERE action = $1 AND detail->>'installation' = $2 AND detail->>'name' = $3
+		SELECT detail->>'digest' FROM system_log
+		 WHERE action = $1 AND detail->>'installation' = $2 AND detail->>'name' = $3 AND detail->>'version' = $4
 		 ORDER BY occurred_at DESC, id DESC LIMIT 1`,
-		declaredAction, installation, string(e.Name)).Scan(&version, &last)
+		declaredAction, installation, string(e.Name), string(e.Version)).Scan(&last)
 	switch {
-	case err == nil && version == string(e.Version) && last == digest:
+	case err == nil && last == digest:
 		return nil
-	case err == nil && version == string(e.Version):
+	case err == nil:
 		return fmt.Errorf("extension %q changed its privacy declaration without a new version (still %s); bump the version so the change is visible to operators",
 			e.Name, e.Version)
-	case err != nil && !errors.Is(err, pgx.ErrNoRows):
+	case !errors.Is(err, pgx.ErrNoRows):
 		return err
 	}
 	_, err = storekit.LogSystem(ctx, tx, declaredAction, map[string]any{

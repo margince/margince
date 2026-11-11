@@ -16,6 +16,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/extprivacy"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -216,5 +217,141 @@ func TestAuditImagesOfAClearedExtensionRowAreWithheld(t *testing.T) {
 	}
 	if seen != 1 {
 		t.Fatalf("the update entry is missing from the log (%d seen); the row must stay, only its images go", seen)
+	}
+}
+
+// seedSubjectActivity gives the subject one linked activity and returns it.
+func seedSubjectActivity(t *testing.T, env *sarIdentifierEnv) ids.UUID {
+	t.Helper()
+	ctx := context.Background()
+	activity := ids.NewV7()
+	mustExec(ctx, t, env.owner, `INSERT INTO activity (id, kind, occurred_at, source, captured_by)
+		VALUES ($1, 'email', now(), 'manual', 'system:test')`, activity)
+	mustExec(ctx, t, env.owner, `INSERT INTO activity_link (activity_id, entity_type, contact_id)
+		VALUES ($1, 'contact', $2)`, activity, env.contact.UUID)
+	return activity
+}
+
+// declareMarkerTable adds a linked table with no row id and no personal column,
+// the shape a unit keeps for bookkeeping about an activity.
+func declareMarkerTable(t *testing.T, env *sarIdentifierEnv, registry extprivacy.Registry) extprivacy.Registry {
+	t.Helper()
+	ctx := context.Background()
+	mustExec(ctx, t, env.owner, `CREATE TABLE ext.ext_probe_marker (activity_id uuid PRIMARY KEY)`)
+	mustExec(ctx, t, env.owner, `GRANT SELECT, INSERT, UPDATE, DELETE ON ext.ext_probe_marker TO margince_app`)
+	t.Cleanup(func() {
+		if _, err := env.owner.Exec(context.Background(), `DROP TABLE ext.ext_probe_marker`); err != nil {
+			t.Errorf("removing ext_probe_marker: %v", err)
+		}
+	})
+	return extprivacy.Declared(append(registry.Tables(), extdecl.Table{
+		Name:      "ext_probe_marker",
+		Links:     []extdecl.Link{{Column: "activity_id", Record: extdecl.Activity}},
+		Retention: jurisdiction.CommercialCorrespondence,
+	}))
+}
+
+func TestSubjectExportReadsPastALinkedTableWithNoPersonalColumn(t *testing.T) {
+	env := setupSARIdentifiers(t)
+	registry := declareMarkerTable(t, env, declareProbeTable(t, env))
+	seedProbeRows(t, env)
+	activity := seedSubjectActivity(t, env)
+	mustExec(context.Background(), t, env.owner, `INSERT INTO ext.ext_probe_marker (activity_id) VALUES ($1)`, activity)
+
+	pkg, err := AssembleSARWithExtensions(env.ctx, env.db, env.contact, registry)
+	if err != nil {
+		t.Fatalf("export with a keyless linked table = %v", err)
+	}
+	if len(pkg.ExtensionData) != 1 || pkg.ExtensionData[0]["table"] != probeTable {
+		t.Errorf("export served %v, want only the probe row that holds personal data", pkg.ExtensionData)
+	}
+}
+
+func TestErasureRedactsTheStoredHistoryOfAClearedExtensionRow(t *testing.T) {
+	env := setupSARIdentifiers(t)
+	registry := declareProbeTable(t, env)
+	mine, _ := seedProbeRows(t, env)
+	var update ids.UUID
+	err := env.db.Tx(env.ctx, func(tx pgx.Tx) error {
+		var err error
+		update, err = storekit.Audit(env.ctx, tx, "update", probeTable, mine,
+			map[string]any{"body": "Sara's own words"}, map[string]any{"body": "Sara's later words"})
+		if err != nil {
+			return err
+		}
+		return storekit.EmitEventForEntity(env.ctx, tx, update, probeTable, mine,
+			retentionAppliedPayload(crmcontracts.RetentionAppliedAnonymize, nil, nil))
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := NewEraser(env.db).WithExtensions(registry).EraseContact(env.ctx, env.contact.UUID, "request"); err != nil {
+		t.Fatal(err)
+	}
+
+	var images string
+	if err := env.owner.QueryRow(context.Background(),
+		`SELECT coalesce(before::text, '') || coalesce(after::text, '') FROM audit_log WHERE id = $1`, update).Scan(&images); err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(images, "Sara") {
+		t.Errorf("the stored audit entry still holds the cleared value: %s", images)
+	}
+	var queued int
+	if err := env.owner.QueryRow(context.Background(),
+		`SELECT count(*) FROM event_outbox WHERE envelope->'trace'->>'audit_log_id' = $1`, update.String()).Scan(&queued); err != nil {
+		t.Fatal(err)
+	}
+	if queued != 0 {
+		t.Errorf("%d events of the redacted entry are still queued", queued)
+	}
+}
+
+func TestErasingAnActivityContentClearsTheExtensionRowsLinkedToIt(t *testing.T) {
+	env := setupSARIdentifiers(t)
+	declareProbeTable(t, env)
+	activity := seedSubjectActivity(t, env)
+	mustExec(context.Background(), t, env.owner, `ALTER TABLE ext.`+probeTable+` ADD COLUMN activity_id uuid`)
+	registry := extprivacy.Declared([]extdecl.Table{{
+		Name: probeTable, Links: []extdecl.Link{{Column: "activity_id", Record: extdecl.Activity}},
+		Personal: []string{"body", "raw"}, Retention: jurisdiction.CommercialCorrespondence,
+	}})
+	row := ids.NewV7()
+	mustExec(context.Background(), t, env.owner,
+		`INSERT INTO ext.`+probeTable+` (id, activity_id, body, raw, kind) VALUES ($1, $2, 'the message', 'x', 'note')`, row, activity)
+
+	eraser := NewEraser(env.db).WithRawCapturePurger(&nilRawPurger{}).WithExtensions(registry)
+	if err := env.db.Tx(env.ctx, func(tx pgx.Tx) error {
+		return eraser.purgeContentDerivedFrom(env.ctx, tx, activity, theClockRanOut)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	assertProbeRowCleared(t, env, row)
+}
+
+func TestAnonymizingALeadClearsTheExtensionRowsLinkedToIt(t *testing.T) {
+	env := setupSARIdentifiers(t)
+	registry := declareProbeTable(t, env)
+	lead, row := ids.NewV7(), ids.NewV7()
+	mustExec(context.Background(), t, env.owner,
+		`INSERT INTO lead (id, full_name, source, captured_by) VALUES ($1, 'Aged', 'manual', 'system:test')`, lead)
+	mustExec(context.Background(), t, env.owner,
+		`INSERT INTO ext.`+probeTable+` (id, lead_id, body, raw, kind) VALUES ($1, $2, 'what the lead wrote', 'x', 'note')`, row, lead)
+
+	retention := &RetentionService{eraser: NewEraser(env.db).WithExtensions(registry)}
+	if err := env.db.Tx(env.ctx, func(tx pgx.Tx) error { return retention.anonymizeLead(env.ctx, tx, lead) }); err != nil {
+		t.Fatal(err)
+	}
+	assertProbeRowCleared(t, env, row)
+}
+
+func assertProbeRowCleared(t *testing.T, env *sarIdentifierEnv, row ids.UUID) {
+	t.Helper()
+	var body string
+	if err := env.owner.QueryRow(context.Background(), `SELECT body FROM ext.`+probeTable+` WHERE id = $1`, row).Scan(&body); err != nil {
+		t.Fatal(err)
+	}
+	if body != "" {
+		t.Errorf("the extension row still holds %q", body)
 	}
 }

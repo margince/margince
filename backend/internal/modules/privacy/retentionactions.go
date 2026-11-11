@@ -235,7 +235,7 @@ func anonymizeContactRecord(ctx context.Context, tx pgx.Tx, id ids.UUID, eraser 
 		err = scrubContactGraphTraces(ctx, tx, id, subjectEmails, subjectAccounts, subjectName, linkedInHandles)
 	}
 	if err == nil {
-		err = clearExtensionRows(ctx, tx, eraser.extensions, "retention", map[extdecl.RecordKind][]ids.UUID{extdecl.Contact: {id}})
+		err = clearExtensionRows(ctx, tx, eraser.extensions, "retention", causeRetention, map[extdecl.RecordKind][]ids.UUID{extdecl.Contact: {id}})
 	}
 	return err
 }

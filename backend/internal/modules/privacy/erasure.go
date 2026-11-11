@@ -28,7 +28,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/erasureaccount"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
-	extdecl "github.com/margince/margince/backend/pkg/extension/privacy"
 )
 
 // erasedName replaces every naming field: recognizable as a tombstone,
@@ -197,12 +196,7 @@ func (e *Eraser) EraseContactCounted(ctx context.Context, contactID ids.UUID, re
 		if err != nil {
 			return err
 		}
-		if err := e.scrubDeliveryCopies(ctx, tx, subject, leadsWiped); err != nil {
-			return err
-		}
-		if err := clearExtensionRows(ctx, tx, e.extensions, reason, map[extdecl.RecordKind][]ids.UUID{
-			extdecl.Contact: {subject.UUID}, extdecl.Lead: leadsWiped, extdecl.Activity: activitiesRedacted,
-		}); err != nil {
+		if err := e.scrubCopiesOutsideCore(ctx, tx, subject, reason, leadsWiped, activitiesRedacted); err != nil {
 			return err
 		}
 		erased, err = certifyErasure(ctx, tx, subject, reason, identities, tx.uncounted(), contactErasureCounts{

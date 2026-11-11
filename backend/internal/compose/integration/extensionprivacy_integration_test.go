@@ -170,3 +170,84 @@ func TestMergeIsRefusedWhileExtensionRecordsDependOnTheSource(t *testing.T) {
 		t.Errorf("the refusal counts %d dependents, want 2", refusal.Count)
 	}
 }
+
+func TestBootRefusesAnEarlierVersionThatComesBackWithAnotherDeclaration(t *testing.T) {
+	env := Setup(t)
+	verify := func(e extension.Extension) error {
+		return compose.VerifyExtensionPrivacy(t.Context(), env.Pool, []extension.Extension{e})
+	}
+	for _, step := range []extension.Extension{probeUnit(t, "1.0.0", "body"), probeUnit(t, "2.0.0")} {
+		if err := verify(step); err != nil {
+			t.Fatalf("boot of %s refused: %v", step.Version, err)
+		}
+	}
+	changed := probeUnit(t, "1.0.0")
+	changed.Privacy[0].Links = changed.Privacy[0].Links[:1]
+	if err := verify(changed); err == nil {
+		t.Error("1.0.0 came back with a declaration 1.0.0 never made and booted")
+	}
+	if err := verify(probeUnit(t, "1.0.0", "body")); err != nil {
+		t.Errorf("a downgrade to 1.0.0 with the declaration 1.0.0 made was refused: %v", err)
+	}
+}
+
+// probeExec runs owner statements a test needs on the probe table.
+func probeExec(t *testing.T, stmts ...string) {
+	t.Helper()
+	for _, stmt := range stmts {
+		if _, err := OwnerConn(t).Exec(t.Context(), stmt); err != nil {
+			t.Fatalf("%s: %v", stmt, err)
+		}
+	}
+}
+
+func TestBootRefusesALinkColumnThatIsNotAUUID(t *testing.T) {
+	env := Setup(t)
+	unit := probeUnit(t, "1.0.0")
+	probeExec(t, `ALTER TABLE ext.ext_probe_note ADD COLUMN contact_ref text`)
+	unit.Privacy[0].Links = []privacy.Link{{Column: "contact_ref", Record: privacy.Contact}}
+
+	if err := compose.VerifyExtensionPrivacy(t.Context(), env.Pool, []extension.Extension{unit}); err == nil {
+		t.Error("a text link column booted; every lookup by record id would fail when it is due")
+	}
+}
+
+func TestBootRefusesARequiredPersonalColumnABlankValueWouldBreak(t *testing.T) {
+	for name, column := range map[string]string{
+		"check":  `nick text NOT NULL DEFAULT 'x' CHECK (length(nick) > 0)`,
+		"unique": `nick text NOT NULL DEFAULT 'x' UNIQUE`,
+	} {
+		t.Run(name, func(t *testing.T) {
+			env := Setup(t)
+			unit := probeUnit(t, "1.0.0")
+			probeExec(t, `ALTER TABLE ext.ext_probe_note ADD COLUMN `+column)
+			unit.Privacy[0].Personal = []string{"nick"}
+
+			if err := compose.VerifyExtensionPrivacy(t.Context(), env.Pool, []extension.Extension{unit}); err == nil {
+				t.Error("a required personal column with a constraint the blank value breaks booted")
+			}
+		})
+	}
+}
+
+func TestBootLeavesAUnitTheTablesOfALongerNamedUnit(t *testing.T) {
+	env := Setup(t)
+	probe := probeUnit(t, "1.0.0", "body")
+	probeExec(t,
+		`CREATE TABLE ext.ext_probe_extra_note (id uuid PRIMARY KEY, contact_id uuid)`,
+		`GRANT SELECT, INSERT, UPDATE, DELETE ON ext.ext_probe_extra_note TO margince_app`)
+	t.Cleanup(func() {
+		if _, err := OwnerConn(t).Exec(context.Background(), `DROP TABLE IF EXISTS ext.ext_probe_extra_note`); err != nil {
+			t.Errorf("removing the second unit's table: %v", err)
+		}
+	})
+	extra := extension.Extension{Name: "probe-extra", Version: "1.0.0", Privacy: []privacy.Table{{
+		Name:      "ext_probe_extra_note",
+		Links:     []privacy.Link{{Column: "contact_id", Record: privacy.Contact}},
+		Retention: jurisdiction.CommercialCorrespondence,
+	}}}
+
+	if err := compose.VerifyExtensionPrivacy(t.Context(), env.Pool, []extension.Extension{probe, extra}); err != nil {
+		t.Errorf("unit probe was held to the tables of unit probe-extra: %v", err)
+	}
+}

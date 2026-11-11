@@ -84,7 +84,7 @@ func EraseUntoldLeadTx(ctx context.Context, tx pgx.Tx, in UntoldLead) error {
 	}
 	// Before the lead row goes. Extension rows link to it by id, and would keep
 	// their personal columns against a record that no longer exists.
-	if err := clearExtensionRows(ctx, tx, in.Extensions, untoldLeadReason, map[extdecl.RecordKind][]ids.UUID{
+	if err := clearExtensionRows(ctx, tx, in.Extensions, untoldLeadReason, causeUntoldLead, map[extdecl.RecordKind][]ids.UUID{
 		extdecl.Lead: {in.LeadID.UUID}, extdecl.Activity: notices,
 	}); err != nil {
 		return err

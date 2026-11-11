@@ -23,12 +23,19 @@ does the work itself:
 | Action | What core does to extension rows |
 |---|---|
 | Erasure | Clears the personal columns of rows linked to the subject, to the subject's earlier lead records and to the activities it cleared. An activity held under a floor keeps its rows. |
-| Retention rule that strips a contact of its name | Clears the rows linked to the contact. |
-| Audit | Writes an `anonymize` audit entry and a `retention.applied` event for each cleared row. The audit log then hides the before and after images of the row's earlier entries. |
-| Subject export | Lists the declared columns of the same rows under `extension_data`. |
+| Retention rule that strips a contact or a lead of its name | Clears the rows linked to that contact or lead. |
+| Erasure of an activity's content, by retention, by an owner, at the release of a stop on it, or by the noise sweep | Clears the rows linked to the activity. |
+| Audit | Writes an `anonymize` audit entry and a `retention.applied` event for each cleared row. It then strips the before and after images from the row's earlier audit entries, and drops their events that have not been sent. |
+| Subject export | Lists the declared columns of the same rows under `extension_data`. A table with no personal column is not read. |
 | Delete of a contact, lead, company or activity | Nothing. Delete archives the record, and the row stays, so extension rows still name a record that answers. |
 | Merge of a contact, lead or company | Refuses with a conflict that counts the rows linking to it. Archive the record instead. Core deletes no contact or company. |
 | A lead from a web form is erased because its notice failed. This is the one lead core deletes | Clears the rows linked to the lead, and to the notice mail it deletes, before the lead goes. |
+
+A row whose link is still empty names no record, so no erasure or export can find it. A message that reached
+`openchannel` and has not yet landed as an activity is such a row. The retention sweep is what removes it.
+
+At start-up core refuses a declaration it could not carry out. A link column must be a `uuid`. A required
+personal column must have no `CHECK` or `UNIQUE` rule, because the empty value core writes could break it.
 
 ## How to read this page
 

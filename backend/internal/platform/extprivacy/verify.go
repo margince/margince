@@ -7,7 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"slices"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 
@@ -19,84 +19,135 @@ type Querier interface {
 	Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error)
 }
 
+// column is what the schema check needs to know of one migrated column.
+type column struct {
+	dataType    string
+	nullable    bool
+	constrained bool
+}
+
 // VerifySchema compares a unit's declaration with the tables its migrations
 // created in the ext schema. Both directions fail. A table the declaration
 // leaves out holds personal data nothing would clear. A declared column the
-// table lacks would fail the clear when an erasure is due.
-func VerifySchema(ctx context.Context, q Querier, namespace string, declared []privacy.Table) error {
-	prefix := namespace + "_"
-	rows, err := q.Query(ctx, `
-		SELECT table_name, column_name, data_type, is_nullable = 'YES' FROM information_schema.columns
-		 WHERE table_schema = $1 AND left(table_name, length($2::text)) = $2::text`, Schema, prefix)
+// table lacks would fail the clear when an erasure is due. others are the
+// namespaces of the other composed units: a longer one that starts with this
+// unit's prefix owns the tables under it.
+func VerifySchema(ctx context.Context, q Querier, namespace string, others []string, declared []privacy.Table) error {
+	tables, err := readTables(ctx, q, namespace+"_")
 	if err != nil {
 		return fmt.Errorf("extprivacy: reading the %s tables: %w", namespace, err)
 	}
-	defer rows.Close()
-	columns := map[string][]string{}
-	unclearable := map[string]error{}
-	for rows.Next() {
-		var table, column, dataType string
-		var nullable bool
-		if err := rows.Scan(&table, &column, &dataType, &nullable); err != nil {
-			return err
-		}
-		columns[table] = append(columns[table], column)
-		if column == "id" {
-			if dataType != "uuid" {
-				unclearable[table+".id"] = errors.New("the row id must be a uuid, because the core audits each cleared row by it")
-			}
-			continue
-		}
-		if _, err := emptyValue(dataType, nullable); err != nil {
-			unclearable[table+"."+column] = err
+	for table := range tables {
+		if ownedByLonger(table, namespace, others) {
+			delete(tables, table)
 		}
 	}
-	if err := rows.Err(); err != nil {
-		return err
-	}
-
-	byName := make(map[string]privacy.Table, len(declared))
+	byName := make(map[string]bool, len(declared))
 	for _, t := range declared {
-		byName[t.Name] = t
+		byName[t.Name] = true
 	}
-	for table := range columns {
-		if _, ok := byName[table]; !ok {
+	for table := range tables {
+		if !byName[table] {
 			return fmt.Errorf("extprivacy: table %s.%s has no privacy declaration; declare its links, personal columns and retention class", Schema, table)
 		}
 	}
 	for _, t := range declared {
-		have, ok := columns[t.Name]
+		have, ok := tables[t.Name]
 		if !ok {
 			return fmt.Errorf("extprivacy: privacy declares table %s, which the unit's migrations have not created", t.Name)
 		}
-		if err := checkColumns(t, have, unclearable); err != nil {
+		if err := checkColumns(t, have); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
+func ownedByLonger(table, namespace string, others []string) bool {
+	for _, other := range others {
+		if len(other) > len(namespace) && strings.HasPrefix(table, other+"_") {
+			return true
+		}
+	}
+	return false
+}
+
+// readTables reads every column of the ext tables under the prefix, marking
+// those a CHECK, UNIQUE or primary key constraint names.
+func readTables(ctx context.Context, q Querier, prefix string) (map[string]map[string]column, error) {
+	rows, err := q.Query(ctx, `
+		SELECT c.table_name, c.column_name, c.data_type, c.is_nullable = 'YES',
+		       EXISTS (SELECT 1 FROM pg_constraint k
+		                WHERE k.conrelid = format('%I.%I', c.table_schema, c.table_name)::regclass
+		                  AND k.contype = 'c' AND a.attnum = ANY(k.conkey))
+		    OR EXISTS (SELECT 1 FROM pg_index i
+		                WHERE i.indrelid = format('%I.%I', c.table_schema, c.table_name)::regclass
+		                  AND i.indisunique AND a.attnum = ANY(i.indkey))
+		  FROM information_schema.columns c
+		  JOIN pg_attribute a ON a.attrelid = format('%I.%I', c.table_schema, c.table_name)::regclass
+		                     AND a.attname = c.column_name
+		 WHERE c.table_schema = $1 AND left(c.table_name, length($2::text)) = $2::text`, Schema, prefix)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	tables := map[string]map[string]column{}
+	for rows.Next() {
+		var table, name string
+		var c column
+		if err := rows.Scan(&table, &name, &c.dataType, &c.nullable, &c.constrained); err != nil {
+			return nil, err
+		}
+		if tables[table] == nil {
+			tables[table] = map[string]column{}
+		}
+		tables[table][name] = c
+	}
+	return tables, rows.Err()
+}
+
 // checkColumns holds one declared table to the columns the migrated table has,
 // and to the clear the core can run on each personal one.
-func checkColumns(t privacy.Table, have []string, unclearable map[string]error) error {
+func checkColumns(t privacy.Table, have map[string]column) error {
 	// Only a table the core clears needs a row id: it audits each cleared row by it.
-	var need []string
 	if len(t.Personal) > 0 {
-		need = append(need, "id")
-	}
-	for _, c := range append(slices.Clone(need), t.Personal...) {
-		if err := unclearable[t.Name+"."+c]; err != nil {
-			return fmt.Errorf("extprivacy: personal column %s.%s: %w", t.Name, c, err)
+		id, ok := have["id"]
+		if !ok {
+			return fmt.Errorf("extprivacy: privacy declares column %s.id, which the table does not have", t.Name)
+		}
+		if id.dataType != "uuid" {
+			return fmt.Errorf("extprivacy: %s.id must be a uuid, because the core audits each cleared row by it", t.Name)
 		}
 	}
-	need = append(need, t.Personal...)
+	for _, name := range t.Personal {
+		c, ok := have[name]
+		if !ok {
+			return fmt.Errorf("extprivacy: privacy declares column %s.%s, which the table does not have", t.Name, name)
+		}
+		if err := clearable(c); err != nil {
+			return fmt.Errorf("extprivacy: personal column %s.%s: %w", t.Name, name, err)
+		}
+	}
 	for _, l := range t.Links {
-		need = append(need, l.Column)
-	}
-	for _, c := range need {
-		if !slices.Contains(have, c) {
-			return fmt.Errorf("extprivacy: privacy declares column %s.%s, which the table does not have", t.Name, c)
+		c, ok := have[l.Column]
+		if !ok {
+			return fmt.Errorf("extprivacy: privacy declares column %s.%s, which the table does not have", t.Name, l.Column)
 		}
+		if c.dataType != "uuid" {
+			return fmt.Errorf("extprivacy: link column %s.%s is %s; it must be a uuid, the type of a core record id", t.Name, l.Column, c.dataType)
+		}
+	}
+	return nil
+}
+
+// clearable reports whether the core can blank a personal column. A required
+// one takes its type's empty value, which a constraint on it may refuse.
+func clearable(c column) error {
+	if _, err := emptyValue(c.dataType, c.nullable); err != nil {
+		return err
+	}
+	if !c.nullable && c.constrained {
+		return errors.New("a required personal column under a CHECK or UNIQUE constraint may refuse the blank value; make it nullable")
 	}
 	return nil
 }

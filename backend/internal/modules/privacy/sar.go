@@ -225,9 +225,8 @@ type SARPackage struct {
 	StagedMessages []map[string]any `json:"staged_messages"`
 }
 
-// AssembleSAR builds the package. It is a privileged read: the caller must be
-// a human holding the contact.delete grant (the same trust level erasure needs)
-// over an unbounded row scope — see the checks below.
+// AssembleSAR builds the package. It is a privileged read, admitted by
+// requireSARAssembler at the trust level erasure needs.
 //
 // It serves no extension table. Production callers use AssembleSARWithExtensions.
 func AssembleSAR(ctx context.Context, db *database.DB, contactID ids.ContactID) (SARPackage, error) {
@@ -240,34 +239,8 @@ func AssembleSARWithExtensions(
 	ctx context.Context, db *database.DB, contactID ids.ContactID, registry extprivacy.Registry,
 ) (SARPackage, error) {
 	ctx = corefeatures.RetainedDataContext(ctx)
-	if err := auth.Require(ctx, "contact", principal.ActionDelete); err != nil {
+	if err := requireSARAssembler(ctx); err != nil {
 		return SARPackage{}, err
-	}
-	// Human-only, for the reason the grant above cannot express: an agent
-	// acting under a passport carries the granting human's live grants, so an
-	// admin's read-scoped passport would otherwise assemble a subject's entire
-	// Art. 15 package — every activity, capture row, correction and outbound
-	// message.
-	actor, ok := principal.Actor(ctx)
-	if !ok || actor.Type != principal.PrincipalHuman {
-		return SARPackage{}, fmt.Errorf("human-only subject-access assembly: %w", apperrors.ErrPermissionDenied)
-	}
-	// The assembly deliberately crosses the caller's row scope — Art. 15 owes
-	// the subject everything held, not the slice one rep may see — so a bounded
-	// caller cannot run it. Scope is the second condition, not a stand-in for
-	// authority: the contact.delete grant above is what limits this to the roles
-	// trusted with erasure, and it is what keeps read_only out.
-	//
-	// Together those two admit MORE than admin: the seeded defaults give
-	// contact.delete and row scope `all` to ops and management as well. That is
-	// this function's contract — the erasure trust level — and callers that owe
-	// a narrower one gate before they get here. The subject-request route does:
-	// it reads the request through the queue's own admin-only gate first, which
-	// TestTheQueueGateIsWhatKeepsTheExportAdminOnly pins from both sides. A
-	// future caller assembling from a contact id alone would be reachable by two
-	// more roles, and would need its own gate.
-	if !auth.Unbounded(actor) {
-		return SARPackage{}, apperrors.ErrPermissionDenied
 	}
 	var pkg SARPackage
 	err := db.Tx(ctx, func(tx pgx.Tx) error {
@@ -334,6 +307,28 @@ func AssembleSARWithExtensions(
 		return errors.Join(extensionErr, err)
 	})
 	return pkg, err
+}
+
+// requireSARAssembler admits the callers trusted to assemble a subject's whole
+// package: a human with the contact.delete grant over an unbounded row scope.
+func requireSARAssembler(ctx context.Context) error {
+	if err := auth.Require(ctx, "contact", principal.ActionDelete); err != nil {
+		return err
+	}
+	// An agent under a passport carries the granting human's grants, so the
+	// grant alone would let an admin's read-scoped passport export a subject.
+	actor, ok := principal.Actor(ctx)
+	if !ok || actor.Type != principal.PrincipalHuman {
+		return fmt.Errorf("human-only subject-access assembly: %w", apperrors.ErrPermissionDenied)
+	}
+	// Art. 15 owes the subject everything held, so the read crosses row scope.
+	// This admits ops and management as well as admin (the erasure trust level).
+	// The subject-request route narrows it to admin through the queue's own gate,
+	// which TestTheQueueGateIsWhatKeepsTheExportAdminOnly pins.
+	if !auth.Unbounded(actor) {
+		return apperrors.ErrPermissionDenied
+	}
+	return nil
 }
 
 // sarSubjectQuery is the subject's own row as the export hands it over. The
