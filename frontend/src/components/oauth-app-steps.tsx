@@ -106,8 +106,8 @@ function ConsoleSteps({ steps }: Readonly<{ steps: readonly ConsoleStep[] }>) {
 }
 
 /**
- * What an admin does in the vendor's console to make the company's app, step
- * by step, ending in the step that takes the client ID and secret. Settings
+ * What an admin does in the vendor's console to make the company's app. The
+ * last step takes the client ID and secret. Settings
  * and first run both show it, so the two cannot tell an admin different steps.
  * Every step stays open: the product cannot see the vendor's console.
  */

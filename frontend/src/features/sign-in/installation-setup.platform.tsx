@@ -215,7 +215,7 @@ export function StepNeeds({
 }
 
 /**
- * IMAP has no company app, so its steps are what each mailbox owner does in
+ * IMAP has no company app. Its steps are what each mailbox owner does in
  * their own mail service before the mailbox form can sign in.
  */
 function ImapSteps({
