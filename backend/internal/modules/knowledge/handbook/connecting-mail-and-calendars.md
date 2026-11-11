@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/modules/capture/health.go frontend/src/app/capturehealthbanner.tsx frontend/src/features/capture/connectors.tsx frontend/src/features/capture/imap-connect-form.tsx frontend/src/features/capture/connectors.telegram.tsx frontend/src/features/capture/backfill.tsx backend/internal/modules/capture/registry_connections.go backend/internal/modules/capture/oauthflow backend/internal/modules/capture/backfill.go backend/internal/modules/capture/historybaseline.go frontend/src/features/capture/connection-service.tsx backend/internal/compose/connectors_sharedconsent.go backend/internal/compose/connectors_picture.go -->
+<!-- describes: backend/internal/modules/capture/health.go frontend/src/app/capturehealthbanner.tsx frontend/src/features/capture/connectors.tsx frontend/src/features/capture/imap-connect-form.tsx frontend/src/features/capture/connectors.telegram.tsx frontend/src/features/capture/backfill.tsx backend/internal/modules/capture/registry_connections.go backend/internal/modules/capture/oauthflow backend/internal/modules/capture/backfill.go backend/internal/modules/capture/historybaseline.go frontend/src/features/capture/connection-service.tsx frontend/src/features/capture/connection-stop.tsx backend/internal/modules/capture/gdocs backend/internal/modules/capture/meetingnotes.go backend/internal/modules/capture/meetingnotesread.go backend/internal/modules/activities/meetingnotes.go backend/internal/compose/connectors_sharedconsent.go backend/internal/compose/connectors_picture.go -->
 # Connecting your mailbox and calendar
 
 Capture reads mail and meetings only from an account you connect. This page
@@ -56,6 +56,22 @@ If the calendar is refused, mail still connects and the note says so, with **Con
 A calendar brings meetings from 90 days back to one year from now, and the window moves forward on its own. There is no history import for a calendar.
 Also called: calendar sync, sync meetings, link my agenda.
 
+### How do I let Margince read my Google Meet notes?
+Margince can read the notes and transcripts Google Meet writes. You connect this in **Settings → Connections**.
+1. Open **Settings**, then **Connections**.
+2. In your Google account, find the **Meeting notes** row and choose **Connect meeting notes**.
+3. Approve access on the Google screen. Google asks for this apart from mail and calendar.
+
+Margince may then open a Google Doc by its address, and nothing else in your Drive. It cannot list or search your files. It reads only the notes and transcripts Google Meet adds to a meeting in your calendar.
+
+Once Google adds the notes to a meeting, Margince puts their text on the meeting as a transcript. It then suggests the tasks it finds in it. Each document is read once. Margince reads notes only for meetings of the last 14 days that someone at your company set up. Everyone who can see the meeting can see its transcript. A document taken off the meeting is not read.
+
+Connect meeting notes with the same Google account as your calendar. Notes are read only for meetings in that account's calendar, and the row says so when the two accounts differ.
+
+If you untick the permission on the Google screen, the row says **Cannot read meeting notes** and the account offers **Reconnect**. The same happens when Google later refuses it.
+To stop it, choose **Stop reading meeting notes** in the row. Mail and calendar keep running, and notes already on a meeting stay. Disconnecting the whole account stops it too.
+Also called: Google Docs, Meet transcripts, Gemini notes, meeting minutes.
+
 ### Who a meeting from your calendar shows
 
 A meeting from your calendar names every guest on the invitation under **Attendees**, whether they accepted, declined or did not answer yet. A guest who is a contact links to their record. A guest who is not a contact yet shows by the name or address on the invitation. Colleagues show under **Colleagues**. A booked room is not a guest.
@@ -82,7 +98,7 @@ calendar**. One account is one row, with what it brings in listed under it.
 
 | Account | What it brings | Can send? |
 |---|---|---|
-| **Google** | Mail from Gmail and meetings from Google Calendar, either or both. | Yes |
+| **Google** | Mail from Gmail and meetings from Google Calendar, either or both. Meeting notes from Google Meet, if you connect them. | Yes |
 | **Microsoft 365** | Mail and calendar from Outlook on a Microsoft work account, either or both. | Yes |
 | **Another mail host** | "IMAP with an app password. Mail only, no calendar, no sending." | No |
 
@@ -101,8 +117,8 @@ Each account carries one badge:
 - **Needs attention**: one of its parts needs you. The row under it says which.
 - **Not connected**
 
-Under the account, each part (**New mail**, **Past email**, **Calendar**) has
-its own word:
+Under the account, each part (**New mail**, **Past email**, **Calendar**,
+**Meeting notes**) has its own word:
 
 - **Up to date**
 - **Needs reconnect**: "The provider rejected the stored credentials. Reconnect

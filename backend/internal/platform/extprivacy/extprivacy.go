@@ -14,12 +14,15 @@ import (
 	"fmt"
 	"maps"
 	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/sweepreach"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/pkg/extension/privacy"
+	"github.com/margince/margince/backend/pkg/extension/reach"
 )
 
 // Schema is where every extension table lives.
@@ -60,13 +63,30 @@ type linkedColumn struct {
 	column string
 }
 
-// CountDependents counts the rows of every declared table that name the record.
+// CountDependents counts the rows of every declared table that name the record
+// and that a merge of it would leave behind. A link column the unit also
+// declares in its Reach is one the merge moves onto the survivor
+// (sweepreach.Relink). Its moved rows are left out of the count, so they do not
+// refuse the merge. For a kind-column link, the rows of another kind still count.
 func (r Registry) CountDependents(ctx context.Context, tx pgx.Tx, kind privacy.RecordKind, id ids.UUID) (int64, error) {
+	merged := reach.Record(kind)
+	moved, err := sweepreach.MovedColumns(merged)
+	if err != nil {
+		return 0, fmt.Errorf("extprivacy: reading which columns the merge moves: %w", err)
+	}
 	var total int64
 	for _, lc := range r.linked(kind) {
-		var n int64
 		q := "SELECT count(*) FROM " + qualified(lc.table.Name) + " WHERE " + pgx.Identifier{lc.column}.Sanitize() + " = $1"
-		if err := tx.QueryRow(ctx, q, id).Scan(&n); err != nil {
+		args := []any{id}
+		if m, ok := moved[sweepreach.Column{Schema: Schema, Table: lc.table.Name, Name: lc.column}]; ok {
+			if m.KindColumn == "" {
+				continue
+			}
+			args = append(args, string(merged))
+			q += " AND " + pgx.Identifier{m.KindColumn}.Sanitize() + " IS DISTINCT FROM $" + strconv.Itoa(len(args))
+		}
+		var n int64
+		if err := tx.QueryRow(ctx, q, args...).Scan(&n); err != nil {
 			return 0, fmt.Errorf("extprivacy: counting rows of %s that name the record: %w", lc.table.Name, err)
 		}
 		total += n

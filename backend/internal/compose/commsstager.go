@@ -17,7 +17,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"slices"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -217,22 +216,10 @@ func (s commsStager) RecordPendingReview(ctx context.Context, err error, intentI
 	if recordErr != nil || review.ID.IsZero() {
 		return pending.cause
 	}
-	actions := actionsForRefusal(ctx, review)
-	var overrulable []consent.OverrulableRecipient
-	if slices.Contains(actions, "overrule") {
-		// A failed check offers nothing rather than failing the refusal the
-		// rep needs to read, as a failed review record does above.
-		found, err := s.authority.OverrulableBy(ctx, review)
-		if err != nil || len(found) == 0 {
-			actions = nil
-		} else {
-			overrulable = found
-		}
-	}
 	return &consent.SendRefusedError{
 		ReviewID: review.ID, Cause: pending.cause,
 		// Decided here, because this is where the principal is known.
-		Actions: actions, Overrulable: overrulable, Refusals: consent.BlockingRefusals(pending.set),
+		Actions: actionsForRefusal(ctx, review), Refusals: consent.BlockingRefusals(pending.set),
 	}
 }
 
@@ -328,8 +315,8 @@ func anyEnforcedDenial(denied []commsauthz.Decision) bool {
 // list is a real answer: the caller may only stop and report, and the review
 // reference still travels.
 func actionsForRefusal(ctx context.Context, review consent.Review) []string {
-	// Both moves resume the held message, so a refusal with none (a channel
-	// reply) offers neither.
+	// The directed send resumes the held message, so a refusal with none (a
+	// channel reply) offers nothing.
 	if review.IntentID.IsZero() {
 		return nil
 	}
@@ -337,14 +324,10 @@ func actionsForRefusal(ctx context.Context, review consent.Review) []string {
 	if !ok || !actor.HumanOrItsAgent() {
 		return nil
 	}
-	// Whoever may direct past every refusal directs the send. A human who may
-	// not can overrule what the engine lets a rep overrule, with their own reason.
-	// An agent has no overrule action.
+	// The one move is directing this one message past every refusal. A caller
+	// who may not gets the review reference alone.
 	if review.DirectableBy(ctx) {
 		return []string{"direct_send"}
 	}
-	if actor.Type != principal.PrincipalHuman || len(review.Overrulable()) == 0 {
-		return nil
-	}
-	return []string{"overrule"}
+	return nil
 }

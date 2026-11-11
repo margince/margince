@@ -36,18 +36,19 @@ The 8 tables owned by `dealrooms`, as the migrations build them. [Back to the en
 
 - `deal_room_archived_agrees`: `CHECK (((state = 'archived') = (archived_at IS NOT NULL)))`
 - `deal_room_expires_after_creation`: `CHECK ((expires_at > created_at))`
+- `deal_room_one_open_room_per_deal`: `EXCLUDE USING gist (deal_id WITH =, tstzrange(created_at, expires_at) WITH &&) WHERE (((state = ANY (ARRAY['draft', 'building', 'ready', 'publishing', 'live', 'paused'])) AND (archived_at IS NULL)))`
 - `deal_room_state_check`: `CHECK ((state = ANY (ARRAY['draft', 'building', 'ready', 'publishing', 'live', 'paused', 'closed', 'expired', 'archived'])))`
 - `deal_room_version_js_safe`: `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
 **Indexes**
 
+- `deal_room_one_open_room_per_deal`: `gist (deal_id, tstzrange(created_at, expires_at)) WHERE ((state = ANY (ARRAY['draft', 'building', 'ready', 'publishing', 'live', 'paused'])) AND (archived_at IS NULL))`
 - `deal_room_pkey`: `unique, btree (id)`
 - `idx_deal_room_deal`: `btree (deal_id)`
-- `uq_deal_room_active`: `unique, btree (deal_id) WHERE ((state = ANY (ARRAY['draft', 'building', 'ready', 'publishing', 'live', 'paused'])) AND (archived_at IS NULL))`
 
 **Triggers**
 
-- `deal_room_steward_user_id_retirement_guard`: `BEFORE INSERT OR UPDATE FOR EACH ROW WHEN (((new.steward_user_id IS NOT NULL) AND ((new.archived_at IS NULL) AND (new.state <> ALL (ARRAY['closed', 'expired']))))) EXECUTE FUNCTION refuse_retired_member_work('steward_user_id')`
+- `deal_room_steward_user_id_retirement_guard`: `BEFORE INSERT OR UPDATE FOR EACH ROW WHEN (((new.steward_user_id IS NOT NULL) AND ((new.archived_at IS NULL) AND (new.state <> ALL (ARRAY['closed', 'expired'])) AND ((new.expires_at IS NULL) OR (new.expires_at > now()))))) EXECUTE FUNCTION refuse_retired_member_work('steward_user_id')`
 - `deal_room_touch`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
 
 ## deal_room_comment

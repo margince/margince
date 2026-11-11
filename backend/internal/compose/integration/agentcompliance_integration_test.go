@@ -101,9 +101,9 @@ func TestAUsersOwnConsentProofIsNotAnAgents(t *testing.T) {
 	}
 }
 
-// The stop and the vouch run on a real contact. Each row names the agent, and
-// each can be taken back through its own action.
-func TestAnAgentRecordsAndTakesBackAStopAndAVouch(t *testing.T) {
+// The stop and the standing exception run on a real contact. The stop names the
+// agent, and each can be taken back through its own action.
+func TestAnAgentTakesBackAStopItRecordedAndAStandingException(t *testing.T) {
 	c := newComplianceDoors(t, "agent-stops")
 	c.act(t, "suppress_contact", map[string]any{"id": c.contact, "request_body": AnyMap{
 		"kind": "subject_request", "reason": "Asked on the phone.",
@@ -126,22 +126,17 @@ func TestAnAgentRecordsAndTakesBackAStopAndAVouch(t *testing.T) {
 		"reason": "They wrote back and asked us to carry on.",
 	}})
 
-	var vouch struct {
-		ID string `json:"override_id"`
-	}
-	raw := c.act(t, "allow_contact", map[string]any{"id": c.contact, "request_body": AnyMap{
-		"category": "marketing", "reason": "They asked for the newsletter at the fair.",
-	}})
-	if err := json.Unmarshal(raw, &vouch); err != nil || vouch.ID == "" {
-		t.Fatalf("allow_contact answered %s (%v), want the override id", raw, err)
-	}
-	var vouchBy string
-	if err := c.e.Owner.QueryRow(t.Context(),
-		`SELECT captured_by FROM communication_override WHERE id = $1`, vouch.ID).Scan(&vouchBy); err != nil {
-		t.Fatalf("reading the vouch: %v", err)
-	}
-	if !isAgentStamp(vouchBy) {
-		t.Errorf("the vouch's captured_by = %q, want the agent", vouchBy)
+	// A standing exception already on file, recorded by the user who made the
+	// contact: no action records a new one.
+	var vouch struct{ ID string }
+	if err := c.e.Owner.QueryRow(t.Context(), `
+		INSERT INTO communication_override
+		    (contact_id, category, reason, decided_by_level, captured_by, legal_entity_id, recorded_directly)
+		SELECT id, 'marketing', 'They asked for the newsletter at the fair.', 'admin', captured_by,
+		       (SELECT id FROM legal_entity WHERE is_default), true
+		  FROM contact WHERE id = $1
+		RETURNING id::text`, c.contact).Scan(&vouch.ID); err != nil {
+		t.Fatalf("planting the standing exception: %v", err)
 	}
 	var listed struct {
 		Data []struct {

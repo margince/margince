@@ -89,15 +89,6 @@ func replyDraftScript(replies []string) *sequencedBrainStub {
 	return &sequencedBrainStub{responses: responses}
 }
 
-func replyDraftFixtureJSON(t *testing.T, f replyDraftFixture) json.RawMessage {
-	t.Helper()
-	raw, err := json.Marshal(f)
-	if err != nil {
-		t.Fatalf("encoding the fixture: %v", err)
-	}
-	return raw
-}
-
 func replyDraftExpectationJSON(t *testing.T, register string) json.RawMessage {
 	t.Helper()
 	raw, err := json.Marshal(register)
@@ -112,7 +103,7 @@ func runReplyDraftCase(
 ) (aitasks.Outcome, aitasks.Trace) {
 	t.Helper()
 	prepared, err := replyDraftCases{}.Prepare(
-		replyDraftFixtureJSON(t, fixture), replyDraftExpectationJSON(t, register))
+		fixtureJSON(t, fixture), replyDraftExpectationJSON(t, register))
 	if err != nil {
 		t.Fatalf("preparing the case: %v", err)
 	}

@@ -1,5 +1,5 @@
 import { Ellipsis, ShieldAlert, Trash2 } from "lucide-react";
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useId, useState } from "react";
 import { EntityRef } from "../../components/entityref";
 import { SendMark } from "../../components/sendpermission";
 import { Button, Field } from "../../design-system/atoms";
@@ -174,7 +174,7 @@ export function ComposeFrame({
 // The footer: files and the draft's state on the left. The send and its other
 // moments sit at the end, where the hand ends up.
 export function ComposeFoot({
-  confirmLabel,
+  scheduling,
   send,
   isChannelReply,
   held,
@@ -185,7 +185,8 @@ export function ComposeFoot({
   addressRefused,
   marksRef,
 }: Readonly<{
-  confirmLabel: string;
+  /** A moment is chosen, so the press schedules rather than sends. */
+  scheduling: boolean;
   send: ComposeSend;
   /** A channel reply goes now, and has no engine answer to mark. */
   isChannelReply: boolean;
@@ -205,6 +206,12 @@ export function ComposeFoot({
   const t = useT();
   const { locale } = useLocale();
   const scheduled = momentOf(sendAt);
+  const holdId = useId();
+  // The address sentence has its own place under the button; the hold line
+  // speaks only when no address is in the way.
+  const { hold } = send;
+  const holdLine = !addressRefused && hold.line ? hold.line : undefined;
+  const heldBy = holdLine && hold.blocks ? holdId : undefined;
   return (
     <div className="compose-foot">
       {send.sendError && <ErrorLine>{send.sendError}</ErrorLine>}
@@ -215,14 +222,18 @@ export function ComposeFoot({
             variant="primary"
             onClick={send.confirm}
             pending={send.send.isPending}
-            disabled={held}
+            disabled={held || hold.blocks}
             reason={
               addressRefused ? t("compose.sendWaitsForAddress") : undefined
             }
+            reasonId={heldBy}
+            aria-describedby={holdLine && !hold.blocks ? holdId : undefined}
           >
-            {confirmLabel}
+            {t(confirmKey(scheduling, hold.withReason))}
           </Button>
-          {!isChannelReply && <ScheduleMenu onOpen={onPickMoment} />}
+          {!isChannelReply && (
+            <ScheduleMenu onOpen={onPickMoment} reasonId={heldBy} />
+          )}
         </span>
         {!isChannelReply && (
           <SendMark {...send.permission} blocked={send.blocked} />
@@ -245,8 +256,21 @@ export function ComposeFoot({
           />
         )}
       </div>
+      {holdLine && (
+        <p id={holdId} className="t-caption">
+          {t(holdLine)}
+        </p>
+      )}
     </div>
   );
+}
+
+// The press says what it does: a refusal a reason may lift asks for one.
+function confirmKey(scheduling: boolean, withReason: boolean): MessageKey {
+  if (scheduling) {
+    return withReason ? "compose.scheduleWithReason" : "compose.schedule";
+  }
+  return withReason ? "compose.sendWithReason" : "compose.send";
 }
 
 // What became of the draft as the reader writes: being kept, or kept.

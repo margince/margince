@@ -80,6 +80,12 @@ func startJobRunner(ctx context.Context, pool *pgxpool.Pool, vault keyvault.Vaul
 	// The deal topic check rides the classify lane: capture asks it before it
 	// files a mail on a deal it only suggests.
 	cfg.captureConfig.DealTopicBrain = modelPath.CaptureClassify
+	// Meeting notes a sync lands queue their reading here, where syncs run.
+	notesReading, err := compose.MeetingNotesReading(logger)
+	if err != nil {
+		return nil, err
+	}
+	cfg.captureConfig.TranscriptEnqueue = notesReading
 	captureReg := compose.CaptureSyncRegistry(pool, vault, compose.GmailConfig{
 		ClientID:     cfg.gmailClientID,
 		ClientSecret: cfg.gmailClientSecret,

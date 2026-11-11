@@ -3,26 +3,10 @@
 
 package consent
 
-// A rep vouching that we may write to a contact the engine refused for lack of
-// evidence. It is not consent and not a basis; it flips only a machine-level,
-// non-absolute refusal for the one category it names, and a subject stop still
-// wins at the gate.
-//
-// The door mirrors Suppress (suppress.go) in almost every particular — same
-// subject reach, same authority source, same write shape — with three
-// deliberate differences:
-//
-//   - the reason is REQUIRED here. Suppress may relay a phone call with
-//     nothing more to add; this write is the rep's own judgement call, and a
-//     vouch that flips a refusal is the write most worth being able to
-//     explain later.
-//   - the field is a CATEGORY, validated against the engine's own send
-//     vocabulary (commsauthz.Category), not a suppression kind.
-//   - the level is the seat's OWN authority for every case. Suppress has an
-//     objection special-case that stamps LevelSubject because Art. 21 makes
-//     the objection the subject's act whoever types it; an override has no
-//     such act to defer to — every row here is a rep staking their own name
-//     on the send, so it always carries the seat's level.
+// Taking back a standing exception: a rep's earlier vouch that a machine-level,
+// non-absolute refusal for one category may be overruled for one contact. No
+// door records a new one; a rep lets one refused message go with DirectSend.
+// The rows already on file still count at the gate until they are revoked.
 import (
 	"context"
 	"errors"
@@ -39,197 +23,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
-
-// AllowInput is a rep vouching that a machine-level refusal in one category
-// may be overruled for this contact.
-type AllowInput struct {
-	// ContactID is the only subject this door takes, for the same reason
-	// SuppressInput is contact-only: a lead has no consent surface yet, and a
-	// field naming a subject the authorization check cannot name would be a
-	// door claiming a reach it does not have.
-	ContactID ids.ContactID
-	// Category is which send category this vouch covers. The engine resolves
-	// every send to exactly one category, and the override applies to that
-	// one only — a vouch for marketing says nothing about customer_service.
-	Category string
-	// Reason is why the rep is vouching, in their own words. Mandatory here,
-	// unlike Suppress: this write overrules the engine's own answer, and the
-	// record must say why a human decided to.
-	Reason string
-}
-
-// auditFieldOverrideCategory is a DIFFERENT key from the wire field's own
-// name "category", deliberately: "category" already names a field audited by
-// other writers (activities/documents.go among them), and the same bare key
-// from two writers would mislabel whichever ships second — the same
-// collision auditFieldSuppressionKind avoids for "kind".
-const auditFieldOverrideCategory = "override_category"
-
-// Allow records a standing vouch that a machine-level refusal for one
-// category may be overruled for this contact, and returns the row it wrote.
-//
-// The verb is deliberately narrow: it writes one row, at the caller's own
-// authority level, for the one category it names. It grants no consent and
-// creates no lawful basis — decideOne (authorizetransmit.go) reads it, and
-// reads it only when the decision it is weighing is already CanBeOverruled.
-//
-// The returned ID identifies the exception for a later revocation.
-func (s *Store) Allow(ctx context.Context, in AllowInput) (ids.UUID, error) {
-	sub, level, err := admitAllow(ctx, in)
-	if err != nil {
-		return ids.UUID{}, err
-	}
-	var overrideID ids.UUID
-	if err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		overrideID, err = s.allowAdmittedTx(ctx, tx, in, sub, level)
-		return err
-	}); err != nil {
-		return ids.UUID{}, err
-	}
-	return overrideID, nil
-}
-
-// admitAllow settles everything decidable before a connection is taken: the
-// subject, the category, the reason, and that this caller may write about
-// that subject at all.
-func admitAllow(ctx context.Context, in AllowInput) (subject, commsauthz.AuthorityLevel, error) {
-	sub, err := consentSubject(RecordInput{ContactID: in.ContactID})
-	if err != nil {
-		return subject{}, "", err
-	}
-	if !commsauthz.Category(in.Category).KnownForOverride() {
-		return subject{}, "", &ValidationError{
-			Field:  "category",
-			Reason: "name a category the engine can resolve a send to",
-		}
-	}
-	// The FULL requirement, not the bound alone: unlike a suppression, a rep
-	// relaying a phone call has nothing to add on this door — every row here
-	// is a rep's own judgement call, and the record must say why.
-	if err := requireReason(in.Reason, "recording an override"); err != nil {
-		return subject{}, "", err
-	}
-	// "contact" as a literal for the same reason admitSuppress uses one: this
-	// door reaches a contact route only, and a computed object name is a door
-	// grantreachability_test.go cannot resolve — an authorization gate
-	// nothing can scan is exactly the one worth keeping scannable.
-	if err := auth.Require(ctx, "contact", principal.ActionUpdate); err != nil {
-		return subject{}, "", err
-	}
-	// ALWAYS the seat's own authority — no objection-shaped special case.
-	// Suppress stamps LevelSubject for an Art. 21 objection because that act
-	// belongs to the subject however it reaches the record; an override has
-	// no such act behind it, so it always carries the level of whoever is
-	// vouching.
-	return sub, authorityOf(ctx), nil
-}
-
-// allowAdmittedTx writes the row, its audit entry and its event together, and
-// names the row it wrote.
-func (s *Store) allowAdmittedTx(
-	ctx context.Context, tx pgx.Tx, in AllowInput, sub subject, level commsauthz.AuthorityLevel,
-) (ids.UUID, error) {
-	// SERIALISED WITH EVERY OTHER WRITER OF THIS SUBJECT'S STOPS AND
-	// OVERRIDES. lockSubjectSuppressions is reused rather than a dedicated
-	// lock: its key is hashtextextended over the SUBJECT's uuid alone, naming
-	// no table, so an override and a stop already queue behind the same key —
-	// which is what a merge carrying both onto a survivor needs, and what the
-	// suppress/lift pair already gets from sharing it.
-	//
-	// BEFORE EnsureWritable, for the reason suppressAdmittedTx gives: a merge
-	// holds the contact row locked while it reaches for this same advisory
-	// lock, and taking them the other way round inverts the order between the
-	// two transactions and deadlocks.
-	if err := lockSubjectSuppressions(ctx, tx, sub.id); err != nil {
-		return ids.UUID{}, err
-	}
-	// auth.EnsureWritable: row scope, capture privacy and write authority
-	// together, the same probe suppressAdmittedTx runs. Not EnsureWritableLive
-	// — an override stays recordable against an archived subject for the same
-	// reason a suppression does: it is a fact about a decision made, not a
-	// live-only convenience.
-	if err := auth.EnsureWritable(ctx, tx, sub.entityType, sub.id); err != nil {
-		return ids.UUID{}, err
-	}
-	// SETTLED AGAINST A MERGE, after EnsureWritable and for the reason
-	// suppressAdmittedTx settles it there: no reader of communication_override
-	// walks merged_into_id, so an override written onto a retired id sits on a
-	// record no send evaluates.
-	subjectID, err := survivingSubject(ctx, tx, sub.id)
-	if err != nil {
-		return ids.UUID{}, err
-	}
-	// AND THE SURVIVOR'S OWN SCOPE, when it differs: the row lands on a record
-	// the caller never named, so the writability check above has not read it.
-	if subjectID != sub.id {
-		if err := auth.EnsureWritable(ctx, tx, sub.entityType, subjectID); err != nil {
-			return ids.UUID{}, err
-		}
-	}
-	sub.id = subjectID
-	by, err := storekit.CapturedBy(ctx)
-	if err != nil {
-		return ids.UUID{}, err
-	}
-	// The vouch serves the reps of the recorder's own entity and no other, so
-	// a colleague of another legal entity never sends on it.
-	entity, err := sendingEntityOf(ctx, tx)
-	if err != nil {
-		return ids.UUID{}, err
-	}
-
-	// ON CONFLICT DO NOTHING would be wrong here too: a second vouch is a
-	// second occasion somebody decided to overrule the engine, possibly for a
-	// different reason, and liveOverride (override_read.go) answers with the
-	// strongest live row by AUTHORITY, so recording both is the honest answer.
-	var overrideID ids.UUID
-	if err = tx.QueryRow(ctx, `
-		INSERT INTO communication_override
-		    (`+sub.column+`, category, reason, decided_by_level, captured_by, legal_entity_id, recorded_directly)
-		VALUES ($1, $2, $3, $4, $5, $6, true)
-		RETURNING id`,
-		sub.id, in.Category, in.Reason, string(level), by, entity).Scan(&overrideID); err != nil {
-		return ids.UUID{}, fmt.Errorf("consent: recording the override: %w", err)
-	}
-
-	// "update" on the contact, matching suppressAdmittedTx: a human changing
-	// what may be sent to somebody, not a scrub — AuditEvent rather than
-	// Audit because this is a new fact with no before-image to diff against.
-	auditID, err := storekit.AuditEvent(ctx, tx, "update", sub.entityType, sub.id,
-		map[string]any{auditFieldOverrideCategory: in.Category, auditFieldDecidedByLevel: string(level)})
-	if err != nil {
-		return ids.UUID{}, err
-	}
-	// EmitEvent: the payload declares a STATIC entity, this door writes about
-	// a contact and only a contact, so the fan-out gate resolves delivery
-	// scope from the type rather than a runtime subject somebody ratifies by
-	// hand. The reason stays OFF the payload, as suppress.go keeps it off
-	// theirs: it is the rep's own explanation to whoever reviews this
-	// contact's history, not something every subscriber needs to receive.
-	if err := storekit.EmitEvent(ctx, tx, auditID, sub.id,
-		overrideRecordedPayload(overrideID, in.Category, level)); err != nil {
-		return ids.UUID{}, err
-	}
-	return overrideID, nil
-}
-
-// overrideRecordedPayload names WHICH row was written, what was vouched for and
-// at which authority.
-//
-// The id is on the payload for the subscriber's sake, as the 201 body carries
-// it for the caller's: a consumer mirroring this contact's record needs the
-// handle the revoke door takes, and a lifted event names the same id so the
-// two can be paired without a lookup. The reason stays off, as suppress.go
-// keeps it off theirs.
-func overrideRecordedPayload(
-	id ids.UUID, category string, level commsauthz.AuthorityLevel,
-) crmcontracts.PublicEventConsentOverrideRecorded {
-	return crmcontracts.PublicEventConsentOverrideRecorded{
-		OverrideId:     openapi_types.UUID(id),
-		Category:       category,
-		DecidedByLevel: string(level),
-	}
-}
 
 // RevokeOverrideInput names the override to take back and why.
 type RevokeOverrideInput struct {
@@ -313,10 +106,8 @@ func (s *Store) revokeOverrideAdmittedTx(
 	if err := auth.EnsureRetractable(ctx, tx, sub.entityType, sub.id); err != nil {
 		return err
 	}
-	// SETTLED AGAINST A MERGE, as Allow settles its write: the survivor is
-	// resolved so the chain-reach check below can accept the vouch through
-	// either home the caller may hold, and its scope is checked before any row
-	// is read.
+	// SETTLED AGAINST A MERGE: the survivor is resolved so the chain-reach
+	// check below accepts the vouch through either home the caller may hold.
 	surviving, err := survivingSubject(ctx, tx, sub.id)
 	if err != nil {
 		return err
@@ -338,10 +129,9 @@ func (s *Store) revokeOverrideAdmittedTx(
 	}
 
 	// The row must be live, and its chain must touch the contact named or that
-	// contact's survivor. The chain is one subject's vouch under successive ids,
-	// so the handle Allow returned keeps working through whichever id of that
-	// subject the caller holds, while a row whose chain never touches a record
-	// the caller may reach stays hidden.
+	// contact's survivor. The chain is one subject's vouch under successive ids.
+	// So the listed handle works through any id of that subject the caller holds.
+	// A row whose chain touches no record the caller may reach stays hidden.
 	var decided string
 	err = tx.QueryRow(ctx, `
 		WITH RECURSIVE chain AS (

@@ -27,7 +27,6 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
-	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -77,9 +76,7 @@ func latestReceipt(t *testing.T, e *integration.Env, sweep capture.Sweep) stored
 }
 
 func newTestLinkReconcileWorker(e *integration.Env) *linkReconcileWorker {
-	return newLinkReconcileWorker(e.Pool,
-		contacts.NewStore(InstallationDB(e.Pool)).WithAudienceRecompute(activities.RecomputeAudienceTx),
-		CaptureConfig{}, slog.Default())
+	return NewLinkReconcileWorkspaceWorkerForTest(e.Pool)
 }
 
 func newTestConfidentialityWorker(e *integration.Env) *confidentialityVerdictWorker {

@@ -6,8 +6,8 @@ package compose
 // What a refused caller is told they may do about it.
 //
 // The reference a refusal carries is only useful if the action beside it is one
-// this caller can actually take. Both moves are human-only, so an agent told it
-// may take one tries, is refused, and was sent there by us.
+// this caller can take. The one move is the directed send of this one message.
+// A caller offered a move it cannot take is refused when it tries.
 
 import (
 	"context"
@@ -53,9 +53,9 @@ func TestARefusalOffersOnlyWhatThisCallerCanDo(t *testing.T) {
 		want   []string
 	}{
 		{
-			// A rep overrules a machine refusal with their own reason.
+			// No standing per-contact override is offered in place of the send.
 			name: "a human who cannot direct a send", actor: principal.Principal{Type: principal.PrincipalHuman},
-			review: held, want: []string{"overrule"},
+			review: held,
 		},
 		{
 			// A bounce is a fact about the address that no reason changes.
@@ -63,8 +63,8 @@ func TestARefusalOffersOnlyWhatThisCallerCanDo(t *testing.T) {
 			review: bounced,
 		},
 		{
-			// One recipient the rep may not overrule keeps the whole send refused.
-			name: "a human refused for one overrulable and one absolute reason", actor: principal.Principal{Type: principal.PrincipalHuman},
+			// One recipient no grant directs past keeps the whole send refused.
+			name: "a grant holder refused for one directable and one absolute reason", actor: holdsTheGrant("rep"),
 			review: mixed,
 		},
 		{
@@ -122,7 +122,6 @@ func TestARefusalOffersOnlyWhatThisCallerCanDo(t *testing.T) {
 			review: held, want: []string{"direct_send"},
 		},
 		{
-			// A rep may overrule this refusal, but no tool lets an agent do it.
 			name:   "a user's agent without the grant",
 			actor:  principal.Principal{Type: principal.PrincipalAgent, PassportID: ids.NewV7(), OnBehalfOf: ids.NewV7()},
 			review: held,

@@ -86,8 +86,10 @@ func TestHistoryImportReportsItsDatabaseWork(t *testing.T) {
 // that adds round trips to every message. Lower it when a change removes
 // some; never raise it to make a change pass.
 // Thread membership and mailbox generation are checked before each message write.
+// It includes one statement per filed message that names the linked contact as
+// the sender when the stated address proves them (stampProvenSenders).
 const (
-	historyExchangesPerMessage    = 186
+	historyExchangesPerMessage    = 187
 	historyTransactionsPerMessage = 6.15
 )
 

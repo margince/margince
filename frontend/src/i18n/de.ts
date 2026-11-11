@@ -2705,7 +2705,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "history.field.body": "Notizen",
   "history.field.emails": "E-Mail-Adressen",
   "history.field.nudge_dismissal": "Hinweis ausgeblendet",
-  "history.field.override_category": "Kategorie der Freigabe",
   "history.field.overrides_carried": "Übernommene Freigaben",
   "history.field.phone": "Telefonnummer",
   "history.field.phones": "Telefonnummern",
@@ -4073,7 +4072,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "roompage.banner.closed":
     "Geschlossen. Die Käuferseite kann den Raum weiter lesen. Neues wird nicht mehr angenommen.",
   "roompage.banner.expired":
-    "Abgelaufen. Die Links der Käuferseite funktionieren nicht mehr.",
+    "Abgelaufen. Die Links der Käuferseite funktionieren wieder, sobald du ein späteres Enddatum setzt.",
   "roompage.banner.archived": "Archiviert. Niemand kann diesen Raum betreten.",
   "roompage.banner.liveUntil": "Live. Der Zugang endet am {when}.",
   "roompage.text.title": "Raumtext",
@@ -7821,10 +7820,17 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "sendPermission.missingPermission": "Für diese Nachricht fehlt die Erlaubnis",
   "sendPermission.reason.chooseDeal": "Wähle den Deal für dieses Follow-up.",
   "sendPermission.appliesTo": "Das betrifft {address}.",
-  "sendPermission.appliesToAndMore_one":
-    "Das betrifft {address} und {count} weitere Empfangsadresse.",
-  "sendPermission.appliesToAndMore_other":
-    "Das betrifft {address} und {count} weitere Empfangsadressen.",
+  "sendPermission.recipientLine": "{address}: {reason}",
+  "sendPermission.unansweredHeld":
+    "Die Versandprüfung ist nicht fertig geworden. Senden wartet, bis sie es ist.",
+  "sendPermission.recheck": "Erneut prüfen",
+  "compose.sendWithReason": "Mit Begründung senden…",
+  "compose.scheduleWithReason": "Mit Begründung planen…",
+  "compose.holdForCheck": "Senden wartet auf die Versandprüfung.",
+  "compose.holdRefused":
+    "Senden ist gesperrt. Behebe, was die Prüfung oben nennt, oder entferne diese Empfangsadresse.",
+  "compose.holdWithReason":
+    "Die Prüfung hat diese Nachricht abgelehnt. Senden fragt nach deiner Begründung, und sie gilt nur für diese eine Nachricht.",
   "sendPermission.appliesToSome_one":
     "Das betrifft {count} von {total} Empfangsadressen.",
   "sendPermission.appliesToSome_other":
@@ -7948,16 +7954,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "directSend.reason.legal_obligation": "Rechtliche Verpflichtung",
   "directSend.reason.other": "Sonstiges",
   "compose.reviewReference": "Prüfung",
-  "compose.overrule.open": "Mit Begründung freigeben",
-  "compose.overrule.reasonLabel": "Warum darf diese Nachricht raus?",
-  "compose.overrule.hint":
-    "Deine Begründung wird bei jedem Kontakt gespeichert und gilt für diese Art Nachricht, bis jemand sie widerruft.",
-  "compose.overrule.confirm": "Freigabe speichern",
-  "compose.overrule.recording": "Wird gespeichert…",
-  "compose.overrule.recorded":
-    "Freigabe gespeichert. Drücke erneut auf Senden.",
-  "compose.overrule.failed":
-    "Die Freigabe wurde nicht gespeichert. Versuche es erneut oder öffne die Prüfung über die Ablehnung oben.",
   "compose.draftUnavailable":
     "KI-Entwürfe sind nicht verfügbar, da kein Modell konfiguriert ist. Die E-Mail lässt sich weiterhin selbst schreiben.",
   "compose.draftUnsupportedHere":
@@ -11792,6 +11788,21 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Verbinde das Konto, mit dem du arbeitest. Deine E-Mails landen bei den richtigen Kontakten und Deals, und dein Kalender bringt Termine auf die Datensätze und gibt deinem Buchungslink deine freien Zeiten.",
   "connectors.provGmail": "Gmail",
   "connectors.provGcal": "Google Kalender",
+  "connectors.provGdocs": "Google Docs",
+  "connectors.cannotReadNotes": "Kann Besprechungsnotizen nicht lesen",
+  "connectors.reconnectToReadNotes":
+    "Neu verbinden, um Besprechungsnotizen zu lesen. Google hat keinen Zugriff auf die Notizdokumente erhalten.",
+  "connectors.bringsNotes": "Besprechungsnotizen",
+  "connectors.notes.name": "Besprechungsnotizen",
+  "connectors.notes.desc":
+    "Die Notizen und Transkripte, die Google Meet schreibt, werden aus Google Docs gelesen und am Termin abgelegt.",
+  "connectors.notes.connect": "Besprechungsnotizen verbinden",
+  "connectors.notes.stop": "Besprechungsnotizen nicht mehr lesen",
+  "connectors.notes.stopTitle": "Besprechungsnotizen nicht mehr lesen?",
+  "connectors.notes.stopBody":
+    "Margince liest die Notizen von Google Meet nicht mehr. E-Mail und Kalender laufen weiter, und Notizen an Terminen bleiben erhalten.",
+  "connectors.notes.otherAccount":
+    "Die Besprechungsnotizen sind mit {notes} verbunden, der Kalender mit {calendar}. Notizen werden nur für Termine im Kalender desselben Kontos gelesen. Verbinde die Besprechungsnotizen daher mit {calendar}.",
   "connectors.provGraph": "Outlook",
   "connectors.provGraphCal": "Outlook-Kalender",
   "connectors.provImap": "IMAP-Postfach",
@@ -13054,6 +13065,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "roomtab.manage.welcomeHint": "Der erste Absatz, den die Käuferseite liest.",
   "roomtab.manage.foot":
     "Die Käuferseite sieht Änderungen beim nächsten Öffnen des Raums.",
+  "roomtab.manage.expiredHint":
+    "Der Zugang ist abgelaufen. Setz ein späteres Enddatum, um die Käuferseite wieder einzulassen.",
   "threads.conversationTitle": "Unterhaltung",
   "threads.about": "Zu {title}",
   "threads.aboutRemoved": "Zu einem Dokument, das nicht mehr im Raum ist",
@@ -15453,6 +15466,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "oauthApp.redirectCopiedFor": "URI für {purpose} kopiert",
   "oauthApp.redirect.mailbox_connect": "Postfach",
   "oauthApp.redirect.calendar_connect": "Kalender",
+  "oauthApp.redirect.documents_connect": "Besprechungsnotizen",
   "oauthApp.redirect.sign_in": "Anmeldung",
   "oauthApp.redirect.extension_connect": "Verbinden",
   "oauthApp.redirectTitle": "Autorisierte Weiterleitungs-URIs",
@@ -17257,7 +17271,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Jemand mit der nötigen Berechtigung hebt eine Sperre auf.",
   "webhooks.event.consent.override_recorded.label": "Ausnahme erfasst",
   "webhooks.event.consent.override_recorded.when":
-    "Ein Teammitglied bestätigt, dass eine maschinelle Ablehnung für eine Kategorie übergangen werden darf.",
+    "Beim Zusammenführen von Kontakten wird eine bestehende Ausnahme auf den verbleibenden Kontakt kopiert.",
   "webhooks.event.consent.override_lifted.label": "Ausnahme aufgehoben",
   "webhooks.event.consent.override_lifted.when":
     "Jemand mit der nötigen Berechtigung hebt eine Ausnahme auf.",
@@ -19502,6 +19516,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "receipt.detail.by": "Ausgeführt von",
   "receipt.detail.when": "Zeitpunkt",
   "receipt.detail.source": "Quelle",
+  "receipt.detail.sourceAt": "Datum der Quelle",
+  "receipt.detail.reasonKind": "Grund",
+  "receipt.detail.reasonKind.rule":
+    "Eine Regel: Margince hat gezählt, was die Daten zeigen",
+  "receipt.detail.reasonKind.inference":
+    "Eine Schlussfolgerung: Margince hat gelesen, was der Kunde geschrieben oder gesagt hat",
   "worklist.handled.showMore": "Mehr anzeigen",
   "worklist.exceptions.empty": "Keine Team-Ausnahmen.",
   "worklist.exceptions.loading": "Team wird geladen…",
@@ -21834,6 +21854,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.done.showNew": "Neue Änderungen zeigen",
   "brief.done.history": "Änderungsverlauf",
   "brief.done.dealsLabel": "Deals, die Margince geändert hat",
+  "brief.done.pick": "Änderungen an {name} rückgängig machen",
   "brief.done.noReason": "Grund nicht verfügbar",
   "brief.done.markedLost": "Als verloren markiert",
   "brief.done.customerWrote": "Der Kunde schrieb:",
@@ -21850,11 +21871,16 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "changes.bulk.confirm_other":
     "{count} Deals brauchen deine Bestätigung. Mach jeden in seiner eigenen Zeile rückgängig.",
   "changes.bulk.unsent_one": "{count} Deal wurde nicht gesendet.",
+  "changes.bulk.settled_one":
+    "{count} Deal hat keine Änderung mehr zum Rückgängigmachen.",
+  "changes.bulk.settled_other":
+    "{count} Deals haben keine Änderung mehr zum Rückgängigmachen.",
   "changes.bulk.unsent_other": "{count} Deals wurden nicht gesendet.",
   "changes.bulk.confirmOnDeal":
     "Öffne den Deal, um das Rückgängigmachen zu bestätigen.",
   "changes.bulk.retry": "Erneut senden",
   "changes.bulk.unfinished": "Nicht ganz rückgängig gemachte Deals",
+  "changes.bulk.clear": "Ergebnis ausblenden",
   "nav.progress": "Fortschritt",
   "nav.myProgress": "Mein Fortschritt",
   "nav.salesGoals": "Umsatzziele",

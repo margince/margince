@@ -163,5 +163,5 @@ const (
 const cohortPromoteActor = "cohort-promote"
 
 func cohortRepairStore(store *contacts.Store) *contacts.Store {
-	return store.WithAudienceRecompute(activities.RecomputeAudienceTx)
+	return store.WithAudienceRecompute(activities.RecomputeAudienceTx).WithSenderStamp(activities.StampProvenSendersTx)
 }

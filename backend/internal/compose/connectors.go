@@ -31,6 +31,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/capture/gcal"
+	"github.com/margince/margince/backend/internal/modules/capture/gdocs"
 	"github.com/margince/margince/backend/internal/modules/capture/gmail"
 	"github.com/margince/margince/backend/internal/modules/capture/graph"
 	"github.com/margince/margince/backend/internal/modules/capture/graphcal"
@@ -71,6 +72,8 @@ type connectorHandlers struct {
 	gmailAPI         gmail.API
 	gcalOAuth        gcal.OAuth
 	gcalAPI          gcal.API
+	gdocsOAuth       gdocs.OAuth
+	gdocsOwner       gdocs.Owner
 	graphOAuth       graph.OAuth
 	graphAPI         graph.API
 	graphCalOAuth    graphcal.OAuth

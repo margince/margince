@@ -19,7 +19,7 @@ import (
 func TestARefusalNamesEachRefusedRecipientWithItsOwnReason(t *testing.T) {
 	refusal := &SendRefusedError{
 		ReviewID: ids.NewV7(),
-		Actions:  []string{"overrule"},
+		Actions:  []string{"direct_send"},
 		Refusals: []RefusedRecipient{
 			{Address: "ana@example.test", ReasonCode: commsauthz.ReasonObjection, Category: "marketing", SubjectID: ids.NewV7().String()},
 			{Address: "ben@example.test", ReasonCode: commsauthz.ReasonNoEvidence, Category: "requested_followup", RequestedCategory: "active_deal_followup", CanBeOverruled: true},

@@ -1,4 +1,10 @@
-import type { Page, Request, Response, Route } from "@playwright/test";
+import {
+  errors,
+  type Page,
+  type Request,
+  type Response,
+  type Route,
+} from "@playwright/test";
 import { HOME_DAY_TIMING } from "../src/features/brief/elementtiming";
 import {
   JOURNEY_START,
@@ -339,16 +345,16 @@ export const DAY_ROOT = `#brief-today[elementtiming="${HOME_DAY_TIMING}"]`;
 export async function recordVitals(page: Page): Promise<void> {
   await page.addInitScript(
     ({ key, activityKey, drainKey, mark, root }) => {
-      const vitals: Vitals = { dayPaints: [], shifts: [], roots: 0 };
+      const vitals: Vitals = {
+        dayPaints: [],
+        shifts: [],
+        roots: 0,
+        lcpMs: null,
+        settled: false,
+      };
       Object.assign(window, { [key]: vitals });
       const touched = () => Reflect.set(window, activityKey, performance.now());
-      // Chrome times a block that fades in only when its fade ends. So the day
-      // and every block around it are drawn without their entrance animation.
-      const still = document.createElement("style");
-      still.textContent = `:is(:has(${root}), ${root}, ${root} *) { animation: none !important; }`;
-      // The document has no root element yet when this script runs.
       new MutationObserver((records) => {
-        if (!still.isConnected) document.documentElement?.append(still);
         for (const record of records) {
           const target =
             record.target instanceof Element
@@ -393,7 +399,26 @@ export async function recordVitals(page: Page): Promise<void> {
       };
       const paints = new PerformanceObserver((list) => take(list.getEntries()));
       paints.observe({ type: "element", buffered: true });
-      Object.assign(window, { [drainKey]: () => take(paints.takeRecords()) });
+      const takeLcp = (entries: PerformanceEntryList) => {
+        for (const entry of entries) {
+          touched();
+          if (Number.isFinite(entry.startTime) && entry.startTime > 0)
+            vitals.lcpMs = entry.startTime;
+        }
+      };
+      const lcp = new PerformanceObserver((list) => takeLcp(list.getEntries()));
+      if (
+        PerformanceObserver.supportedEntryTypes.includes(
+          "largest-contentful-paint",
+        )
+      )
+        lcp.observe({ type: "largest-contentful-paint", buffered: true });
+      Object.assign(window, {
+        [drainKey]: () => {
+          take(paints.takeRecords());
+          takeLcp(lcp.takeRecords());
+        },
+      });
       new PerformanceObserver((list) => {
         for (const entry of list.getEntries()) {
           const value = "value" in entry ? entry.value : undefined;
@@ -458,23 +483,47 @@ export async function settledVitals(
 ): Promise<Vitals> {
   await page
     .waitForFunction(
-      ({ activityKey, finals, quiet }) => {
+      ({ activityKey, finals, quiet, key }) => {
         const done = finals.flatMap((name) =>
           performance.getEntriesByName(name, "mark").map((m) => m.startTime),
         );
         if (done.length === 0) return false;
+        if (
+          document
+            .getAnimations()
+            .some(
+              (animation) =>
+                animation.playState === "running" &&
+                animation.effect !== null &&
+                Number.isFinite(
+                  Number(animation.effect.getComputedTiming().endTime),
+                ),
+            )
+        )
+          return false;
         const changed = Number(Reflect.get(window, activityKey) ?? 0);
-        return performance.now() - Math.max(changed, ...done) >= quiet;
+        if (performance.now() - Math.max(changed, ...done) < quiet)
+          return false;
+        const stored: Vitals | undefined = Reflect.get(window, key);
+        if (stored) stored.settled = true;
+        return true;
       },
       {
         activityKey: ACTIVITY_KEY,
+        key: VITALS_KEY,
         finals: FINAL_MARKS.map(journeyMarkName),
         quiet: DAY_QUIET_MS,
       },
       { timeout },
     )
     // A load that never settles is the judge's to fail, not an error here.
-    .catch(() => undefined);
+    .catch((error: unknown) => {
+      if (!(error instanceof errors.TimeoutError)) throw error;
+    });
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve) => requestAnimationFrame(() => resolve())),
+  );
   return readVitals(page);
 }
 

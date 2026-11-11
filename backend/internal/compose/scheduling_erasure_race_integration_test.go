@@ -16,7 +16,6 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
-	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
@@ -51,7 +50,7 @@ func TestErasureDuringProviderDeliveryCancelsTheLateReceiptAndSuppressesItsEcho(
 	contact := e.SeedContact(t, "Booking guest", nil)
 	vault := keyvault.NewMemory()
 	now := time.Date(2026, 10, 5, 6, 0, 0, 0, time.UTC)
-	eraser := privacy.NewEraser(e.DB()).WithPayloadVault(controllerPayloads{v: vault})
+	eraser := eraserWithGraph(e.DB()).WithPayloadVault(controllerPayloads{v: vault})
 	calendar := &erasingCalendar{erase: func() error { return eraser.EraseContact(ctx, contact, "subject request") }}
 	store := e.Activities.WithClock(func() time.Time { return now }).WithPublicBaseURL("https://crm.example.test").WithMeetingVault(vault).WithSchedulingCalendar(calendar).WithWorkingHours(func(context.Context, ids.UserID) (activities.WorkingHours, error) {
 		return activities.WorkingHours{StartMinute: 540, EndMinute: 1020, Days: []int{1, 2, 3, 4, 5}, Location: time.UTC}, nil

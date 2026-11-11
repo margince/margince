@@ -26,13 +26,14 @@ function services(connection: Connection) {
   return () => (
     <StoryProviders>
       <AccountServices
-        account={{ key: "imap", mail: connection, calendar: null }}
+        account={{ key: "imap", mail: connection, calendar: null, notes: null }}
         vendor={null}
         label="Mailbox services"
         heldWindow={null}
         connectPendingFor={undefined}
         onConnect={() => undefined}
         onImport={() => undefined}
+        onStopNotes={() => undefined}
       />
     </StoryProviders>
   );

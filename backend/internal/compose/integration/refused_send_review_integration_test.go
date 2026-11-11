@@ -19,6 +19,7 @@ package integration
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"strings"
 	"testing"
@@ -806,75 +807,49 @@ func TestARefusedSendNamesItsReviewWhereAMachineCanReadIt(t *testing.T) {
 	}
 }
 
-// A rep who cannot direct a send is offered the overrule.
-//
-// A machine refusal is the rep's to overrule with a reason, so the refusal names
-// each contact and category the rep's vouch must cover.
-func TestARepWhoCannotDirectASendIsOfferedTheOverrule(t *testing.T) {
+// A refusal offers the one-message directed send to a seat holding the exception
+// grant, and nothing to a seat without it. No standing per-contact override is
+// offered to either.
+func TestARefusalOffersTheDirectedSendAndNeverAStandingOverride(t *testing.T) {
 	c := setupConsent(t)
 	c.useReviewableMarketingProfile(t)
+	send := func(t *testing.T) (actions []string, details map[string]json.RawMessage) {
+		t.Helper()
+		var problem struct {
+			Details map[string]json.RawMessage `json:"details"`
+		}
+		if status := c.Call(t, "POST", "/v1/activities/"+c.activityID+"/send-email", AnyMap{
+			"subject": "Re: Inbound question", "body": "answer",
+			"to": []string{"subject@consent.test"}, "consent_purpose": "marketing_email",
+		}, nil, &problem); status != http.StatusConflict {
+			t.Fatalf("correspondence with no supporting context → %d, want 409", status)
+		}
+		if err := json.Unmarshal(problem.Details["available_actions"], &actions); err != nil {
+			t.Fatalf("reading available_actions: %v", err)
+		}
+		return actions, problem.Details
+	}
 
-	// The seat loses the grant that makes somebody a director.
+	actions, details := send(t)
+	if len(actions) != 1 || actions[0] != "direct_send" {
+		t.Errorf("a seat holding the exception grant is offered %v, want exactly [direct_send]", actions)
+	}
+	if _, ok := details["overrulable"]; ok {
+		t.Errorf("the refusal still names contacts to overrule: %s", details["overrulable"])
+	}
+
 	if _, err := c.Owner.Exec(context.Background(), `
 		UPDATE role SET permissions = jsonb_set(
 			permissions, '{objects,communication_exception}',
 			'{"create":false,"read":false,"update":false,"delete":false}'::jsonb, true)`); err != nil {
 		t.Fatalf("removing the grant: %v", err)
 	}
-
-	var problem struct {
-		Details struct {
-			AvailableActions []string `json:"available_actions"`
-			Overrulable      []struct {
-				ContactID string `json:"contact_id"`
-				Category  string `json:"category"`
-			} `json:"overrulable"`
-		} `json:"details"`
+	actions, details = send(t)
+	if len(actions) != 0 {
+		t.Errorf("a seat without the exception grant is offered %v, want nothing", actions)
 	}
-	if status := c.Call(t, "POST", "/v1/activities/"+c.activityID+"/send-email", AnyMap{
-		"subject": "Re: Inbound question", "body": "answer",
-		"to": []string{"subject@consent.test"}, "consent_purpose": "marketing_email",
-	}, nil, &problem); status != http.StatusConflict {
-		t.Fatalf("correspondence with no supporting context → %d, want 409", status)
-	}
-	if len(problem.Details.AvailableActions) != 1 ||
-		problem.Details.AvailableActions[0] != "overrule" {
-		t.Errorf("the refusal offers %v, want exactly [overrule] — a rep who cannot direct a "+
-			"send overrules a machine refusal with a reason", problem.Details.AvailableActions)
-	}
-	if len(problem.Details.Overrulable) != 1 || problem.Details.Overrulable[0].ContactID != c.contactID ||
-		problem.Details.Overrulable[0].Category != "marketing" {
-		t.Errorf("the refusal names %+v to overrule, want the one refused contact %s under marketing",
-			problem.Details.Overrulable, c.contactID)
-	}
-}
-
-// A rep who may not edit the contact is offered no overrule. The vouch is a
-// write on the contact, and the door would refuse it.
-func TestARepWhoMayNotEditTheContactIsOfferedNoOverrule(t *testing.T) {
-	c := setupConsent(t)
-	if _, err := c.Owner.Exec(context.Background(), `
-		UPDATE role SET permissions = jsonb_set(jsonb_set(
-			permissions, '{objects,communication_exception}',
-			'{"create":false,"read":false,"update":false,"delete":false}'::jsonb, true),
-			'{objects,contact,update}', 'false'::jsonb, true)`); err != nil {
-		t.Fatalf("removing the grants: %v", err)
-	}
-	var problem struct {
-		Details struct {
-			AvailableActions []string `json:"available_actions"`
-			Overrulable      []any    `json:"overrulable"`
-		} `json:"details"`
-	}
-	if status := c.Call(t, "POST", "/v1/activities/"+c.activityID+"/send-email", AnyMap{
-		"subject": "Re: Inbound question", "body": "answer",
-		"to": []string{"subject@consent.test"}, "consent_purpose": "marketing_email",
-	}, nil, &problem); status != http.StatusConflict {
-		t.Fatalf("marketing send with no grant → %d, want 409", status)
-	}
-	if len(problem.Details.AvailableActions) != 0 || len(problem.Details.Overrulable) != 0 {
-		t.Errorf("the refusal offers %v over %v to a rep the allow door would refuse",
-			problem.Details.AvailableActions, problem.Details.Overrulable)
+	if _, ok := details["overrulable"]; ok {
+		t.Errorf("the refusal still names contacts to overrule: %s", details["overrulable"])
 	}
 }
 

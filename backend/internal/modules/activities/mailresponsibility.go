@@ -6,7 +6,6 @@ package activities
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/jackc/pgx/v5"
 
@@ -19,15 +18,15 @@ import (
 // seat named it keeps every mail somebody answers for, so mail nobody owns
 // never becomes shared or unassigned work. It runs before WaitingScanCap.
 //
-// A named seat's read starts from its mail that the waiting horizon can still
-// admit (waitingMailKeptSQL), never from its whole history.
+// A named seat's read starts from recent mail and human-held requests, never
+// from its whole address history.
 func personalMailResponsibilitySQL(owner *ids.UUID, identities string, arg func(any) int, asOf, days string) string {
 	if owner == nil {
 		return "(a.kind <> 'email' OR " + soleDirectSeatSQL(identities) + " IS NOT NULL)"
 	}
 	seat := fmt.Sprintf("$%d::uuid", arg(*owner))
 	return fmt.Sprintf("(a.kind = 'email' AND a.id = ANY (%s) AND %s = %s)",
-		storekit.DirectMailActivitiesSQL(identities, seat, waitingMailKeptSQL(asOf, days)), soleDirectSeatSQL(identities), seat)
+		storekit.DirectMailActivitiesSQL(identities, seat, waitingMailCutoffSQL(asOf, days), heldRequestIDsSQL()), soleDirectSeatSQL(identities), seat)
 }
 
 // mailSeats is whose mail one waiting scan reads before WaitingScanCap. It is
@@ -55,13 +54,9 @@ func (m mailSeats) responsibilitySQL(identities string, arg func(any) int, asOf,
 	return fmt.Sprintf("(a.kind <> 'email' OR %s = ANY($%d::uuid[]))", soleDirectSeatSQL(identities), arg(m.answeredBy))
 }
 
-// waitingMailKeptSQL is the mail, aliased `mail`, that the waiting horizon can
-// still admit: arrived inside it, or kept by a held request. It mirrors the
-// `young OR held` half of withinWaitingHorizonSQL; the raw instant bound is the
-// first conjunct of occurredday.FromSQL, so no young mail falls outside it.
-func waitingMailKeptSQL(asOf, days string) string {
-	young := fmt.Sprintf("mail.occurred_at >= %s - make_interval(days => %s) -- occurred_at raw: a superset bound, FromSQL's own first conjunct\n", asOf, days)
-	return "(" + young + " OR " + strings.Replace(heldRequestSQL(), "a.id = ANY", "mail.id = ANY", 1) + ")"
+// The raw instant bound is a superset of the waiting horizon's day comparison.
+func waitingMailCutoffSQL(asOf, days string) string {
+	return fmt.Sprintf("%s - make_interval(days => %s)", asOf, days)
 }
 
 // soleDirectSeatSQL decides who answers an inbound mail `a`

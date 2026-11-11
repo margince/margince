@@ -7,3 +7,15 @@ BEGIN
     CREATE ROLE margince_app LOGIN PASSWORD 'margince_app_dev';
   END IF;
 END $$;
+
+-- The role a unit's own SQL runs as (Runtime.Tx): DML on schema ext, nothing on
+-- public. NOLOGIN, because the runtime role reaches it by switching to it inside
+-- a transaction, never by connecting.
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'ext_runtime') THEN
+    CREATE ROLE ext_runtime NOLOGIN NOINHERIT;
+  END IF;
+END $$;
+ALTER ROLE ext_runtime NOLOGIN NOSUPERUSER NOINHERIT NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS;
+GRANT ext_runtime TO margince_app;

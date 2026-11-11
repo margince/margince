@@ -48,15 +48,23 @@ type marginceChangeHandlers struct {
 	}
 	seatNames *identity.Service
 	now       func() time.Time
+	// details and names describe a deal's changes as Done for you does.
+	details attention.ReceiptDetails
+	names   attention.Names
 }
 
 func newMarginceChangeHandlers(pool *pgxpool.Pool) marginceChangeHandlers {
+	now := func() time.Time { return time.Now().UTC() }
+	names := newAttentionNames(InstallationDB(pool))
 	return marginceChangeHandlers{
 		pool:      pool,
 		deals:     deals.NewStore(InstallationDB(pool), DealsInstallation()),
 		teammates: newTeammatesSeam(pool),
 		seatNames: identity.NewService(pool),
-		now:       func() time.Time { return time.Now().UTC() },
+		now:       now,
+		// A deal's changes cite no staged approval, so no approvals service.
+		details: attentionReceiptDetails{magic: newMagicService(pool, nil, now), names: names},
+		names:   names,
 	}
 }
 
@@ -230,15 +238,15 @@ func (h marginceChangeHandlers) changeReceipts(ctx context.Context, rows []deals
 	if err != nil {
 		return nil, err
 	}
-	out := make([]crmcontracts.Receipt, 0, len(rows))
+	receipts := make([]attention.Receipt, 0, len(rows))
 	for _, row := range rows {
-		receipt := correctionReceipt(row)
+		receipt := attention.CorrectionReceipt(row)
 		if review, ok := reviews[deals.AppliedChangeKey{DealID: row.DealID, ChangeID: row.AuditLogID}]; ok {
 			receipt.Review = &review
 		}
-		out = append(out, attention.WireReceipt(receipt))
+		receipts = append(receipts, receipt)
 	}
-	return out, nil
+	return attention.DescribeReceipts(ctx, h.details, h.names, receipts)
 }
 
 // UndoMarginceChanges takes back the named changes, deal by deal.

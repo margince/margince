@@ -239,7 +239,7 @@ func TestABoundFilterNamingASubjectIsHandedOverAndErased(t *testing.T) {
 		t.Fatalf("subject access handed over %+v, want the one kept filter that names the subject", pkg.ReportingQuestionBindings)
 	}
 
-	if err := privacy.NewEraser(InstallationDB(q.e.Pool)).EraseContact(controller, subject, "subject request"); err != nil {
+	if err := eraserWithGraph(InstallationDB(q.e.Pool)).EraseContact(controller, subject, "subject request"); err != nil {
 		t.Fatal(err)
 	}
 	var kept int

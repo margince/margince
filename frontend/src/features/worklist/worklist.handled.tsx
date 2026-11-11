@@ -21,6 +21,7 @@
 // checked. It wears the team board's chrome for the same reason every other
 // panel here does: one shape, so a reader learns it once.
 
+import { useEffect, useState } from "react";
 import { BundleUndo } from "../../components/marginchanges";
 import { ReceiptDetail } from "../../components/receiptdetail";
 import { ReceiptsMore } from "../../components/receiptsmore";
@@ -28,6 +29,7 @@ import { ReceiptVerbs } from "../../components/receiptverbs";
 import { AppLink } from "../../design-system/applink";
 import { Disclosure } from "../../design-system/atoms";
 import { DataTable } from "../../design-system/datatable";
+import { useJumpTo } from "../../design-system/jumpbar";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { SurfaceState } from "../../design-system/surfacestate";
 import { formatDateTime, formatNumber } from "../../format/format";
@@ -38,11 +40,20 @@ import {
 } from "../../lib/marginchanges";
 import { receiptBasis, receiptSummary } from "../../lib/receiptcopy";
 import { isOpenReceipt, receiptAuditId } from "../../lib/receiptstate";
+import { useRememberedUndoRun } from "../../lib/undorun";
+import { replaceDial, useUrlParams } from "../../lib/urlstate";
 import { useViewerZone } from "../../lib/viewerzone";
 import { listReadState } from "../../lib/worklist.listread";
 import { subjectHref } from "../../lib/worklistcopy";
+import {
+  CHANGE_HISTORY_SECTION,
+  WORKLIST_SECTION_PARAM,
+} from "../../lib/worklistrouting";
 import { AFTER_THE_DAY } from "./worklist.layout";
 import { type Receipt, useHandledForYou } from "./worklist.queries";
+
+/** The id a link to the Change history panel lands on. */
+export const CHANGE_HISTORY_ID = "worklist-change-history";
 
 export function HandledForYouPanel() {
   const t = useT();
@@ -51,6 +62,7 @@ export function HandledForYouPanel() {
   const readerZone = useViewerZone();
   const handled = useHandledForYou();
   const pendingChanges = usePendingMarginceChanges().data;
+  const lastRun = useRememberedUndoRun() !== null;
   const receipts = handled.data?.receipts;
   // Off the LIST, not off the query's flags alone. `receipts` is empty on most
   // days — the contract says so — and a state read from `isPending`/`isError`
@@ -58,9 +70,11 @@ export function HandledForYouPanel() {
   // column names and a silence, where the sentence saying nothing was done on
   // the reader's behalf is the whole answer.
   const state = listReadState(handled, receipts);
+  const arrived = useArrivalJump(state !== "loading");
   // A day with nothing done draws no panel: the empty sentence sat beside the
   // queue's own on every quiet day. A failed read still shows, with its retry.
-  if (state === "empty") return null;
+  // A link that named this panel lands on its empty sentence.
+  if (state === "empty" && !arrived && !lastRun) return null;
   // Undo sends only the changes this list shows that the server still allows.
   const shown = new Set(
     (receipts ?? [])
@@ -72,9 +86,8 @@ export function HandledForYouPanel() {
     const audits = shownUndoable(bundle, shown);
     return audits.length > 0 ? [{ ...bundle, audit_log_ids: audits }] : [];
   });
-  return (
+  const panel = (
     <Panel
-      className={AFTER_THE_DAY}
       title={t("worklist.handled.title")}
       // HOW MUCH was done, in the band that belongs to the whole panel.
       //
@@ -115,9 +128,10 @@ export function HandledForYouPanel() {
               would take the page down with a type error, and calling it a quiet
               day would report a clear receipt over an answer nobody could
               read. */}
-          {undoable.length > 0 && (
+          {(undoable.length > 0 || lastRun) && (
             <BundleUndo
               bundles={undoable}
+              remember
               label={plural("changes.undoDeals", undoable.length, {
                 count: formatNumber(undoable.length, locale),
               })}
@@ -176,6 +190,27 @@ export function HandledForYouPanel() {
       </PanelBody>
     </Panel>
   );
+  return (
+    <div id={CHANGE_HISTORY_ID} tabIndex={-1} className={AFTER_THE_DAY}>
+      {panel}
+    </div>
+  );
+}
+
+// A link that names the Change history lands here once the panel has read its
+// list. The dial is then cleared, so the same link moves the reader again.
+// Answers whether this panel was opened by such a link.
+function useArrivalJump(ready: boolean): boolean {
+  const [params] = useUrlParams();
+  const asked = params.get(WORKLIST_SECTION_PARAM) === CHANGE_HISTORY_SECTION;
+  const [arrived] = useState(asked);
+  const jump = useJumpTo();
+  useEffect(() => {
+    if (!asked || !ready) return;
+    jump(CHANGE_HISTORY_ID);
+    replaceDial(WORKLIST_SECTION_PARAM, undefined);
+  }, [asked, ready, jump]);
+  return arrived;
 }
 
 // The record an act changed, named and linked so the reader can judge Undo

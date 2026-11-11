@@ -64,9 +64,9 @@ import { refocusStaleHome } from "./homevisibility";
  * a gap counts as degraded, never as complete. A failed or timed-out
  * journey is counted as such, never as a latency.
  *
- * A fourth case, vitals, repeats the load on a fixed CPU and network profile
- * and judges when Home's day content paints (Element Timing) and CLS. `BENCH_HOME_PROFILE=ci` runs only that
- * case, on fewer samples, for the per-PR check (`make home-budget`).
+ * A fourth case repeats full loads under a fixed CPU and network profile.
+ * It judges native LCP, Home's day content paint (Element Timing), and CLS.
+ * `BENCH_HOME_PROFILE=ci` limits the per-PR run to fewer vitals samples.
  */
 
 const PROFILE = process.env.BENCH_HOME_PROFILE ?? "";
@@ -535,7 +535,7 @@ test("refresh: the day stays for its reader and the queue answers within 200 ms"
   ).toBeLessThanOrEqual(INTERACTION_BUDGET_MS);
 });
 
-test("vitals: the day paint and CLS stay in budget on a fixed profile", async ({
+test("vitals: native LCP, day paint and CLS stay in budget on a fixed profile", async ({
   page,
 }) => {
   await recordVitals(page);
@@ -558,7 +558,7 @@ test("vitals: the day paint and CLS stay in budget on a fixed profile", async ({
   const p50 = vitalsQuantile(vitals, 0.5);
   // One line the home-budget script copies into the job summary and compares.
   console.log(
-    `bench-home: vitals day_paint_p50_ms=${Math.round(p50.dayPaintMs)} day_paint_p95_ms=${Math.round(p95.dayPaintMs)} cls_p95=${p95.cls.toFixed(3)} samples=${vitals.length}`,
+    `bench-home: vitals lcp_p95_ms=${Math.round(p95.lcpMs)} day_paint_p50_ms=${Math.round(p50.dayPaintMs)} day_paint_p95_ms=${Math.round(p95.dayPaintMs)} cls_p95=${p95.cls.toFixed(3)} samples=${vitals.length}`,
   );
   expectAllComplete("vitals", loads);
   expect(vitalsReasons(vitals, vitalsMode()), "the vitals budget").toEqual([]);
@@ -603,6 +603,7 @@ test.describe("vitals: pages built to break or keep the budget", () => {
     );
     expect(reasons).toEqual([
       expect.stringMatching(/^day paint p95 \d+ ms is over 1000 ms$/),
+      expect.stringMatching(/^LCP p95 \d+ ms is over 1000 ms$/),
     ]);
   });
 
@@ -618,6 +619,7 @@ test.describe("vitals: pages built to break or keep the budget", () => {
     );
     expect(reasons).toEqual([
       expect.stringMatching(/^day paint p95 \d+ ms is over 1000 ms$/),
+      expect.stringMatching(/^LCP p95 \d+ ms is over 1000 ms$/),
     ]);
   });
 
@@ -634,8 +636,8 @@ test.describe("vitals: pages built to break or keep the budget", () => {
     expect(reasons).toEqual([]);
   });
 
-  // Chrome times a faded block when its fade ends, not when it is drawn.
-  test("day content inside a block that fades in is timed when drawn", async ({
+  // Instrumentation keeps the page's own motion and records its actual paint.
+  test("a finite entrance animation keeps its natural paint timing", async ({
     page,
   }) => {
     const reasons = await vitalsOf(
@@ -645,7 +647,50 @@ test.describe("vitals: pages built to break or keep the budget", () => {
         main > * { animation: arrive 1500ms ease-out 100ms backwards; }
       </style><main><div>${DAY}</div></main><script>complete();</script>`,
     );
+    expect(
+      await page
+        .locator("main > div")
+        .evaluate((element) => getComputedStyle(element).animationName),
+    ).toBe("arrive");
+    expect(reasons).toContainEqual(
+      expect.stringMatching(
+        /^(load 1: LCP was not measured|LCP p95 \d+ ms is over 1000 ms)$/,
+      ),
+    );
+    expect(reasons).toContainEqual(
+      expect.stringMatching(/^day paint p95 \d+ ms is over 1000 ms$/),
+    );
+  });
+
+  test("a visible rise keeps its motion and paints on time", async ({
+    page,
+  }) => {
+    const reasons = await vitalsOf(
+      page,
+      `${COMPLETE}<style>
+        @keyframes rise { from { transform: translateY(8px); } }
+        main > * { animation: rise 180ms ease-out 100ms both; }
+      </style><main><div>${DAY}</div></main><script>complete();</script>`,
+    );
+    expect(
+      await page
+        .locator("main > div")
+        .evaluate((element) => getComputedStyle(element).animationName),
+    ).toBe("rise");
     expect(reasons).toEqual([]);
+  });
+
+  test("a load with no final milestone cannot pass as a fast load", async ({
+    page,
+  }) => {
+    await recordVitals(page);
+    await page.route(PAGE, (route) =>
+      route.fulfill({ contentType: "text/html", body: `<main>${DAY}</main>` }),
+    );
+    await page.goto(PAGE);
+    const sample = await settledVitals(page, 1500);
+    expect(sample.settled).toBe(false);
+    expect(vitalsReasons([sample])).toContain("load 1: Home did not settle");
   });
 
   test("a layout shift of 0.2 or more fails CLS", async ({ page }) => {
@@ -692,7 +737,7 @@ test.describe("vitals: pages built to break or keep the budget", () => {
 
   // The shell's block lands late, larger than all of the day. The day's last
   // small paint comes after it, so the load settles only once both are drawn.
-  test("a larger, later paint outside the day content does not count", async ({
+  test("a larger, later shell paint counts for LCP while the day stays fast", async ({
     page,
   }) => {
     const reasons = await vitalsOf(
@@ -704,6 +749,8 @@ test.describe("vitals: pages built to break or keep the budget", () => {
         setTimeout(() => { day("<p>.</p>"); complete(); }, 1300);
       </script>`,
     );
-    expect(reasons).toEqual([]);
+    expect(reasons).toEqual([
+      expect.stringMatching(/^LCP p95 \d+ ms is over 1000 ms$/),
+    ]);
   });
 });

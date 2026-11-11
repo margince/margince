@@ -84,7 +84,8 @@ type deltaPage struct {
 		// Microsoft may emit an entry for a message outside the filter when
 		// something about it changed — a read/unread flip on an old message.
 		// Zero where the entry does not say.
-		ReceivedAt time.Time `json:"receivedDateTime"` //nolint:tagliatelle // Microsoft's wire format; must match to decode
+		ReceivedAt        time.Time `json:"receivedDateTime"`  //nolint:tagliatelle // Microsoft's wire format; must match to decode
+		InternetMessageID string    `json:"internetMessageId"` //nolint:tagliatelle // Microsoft's wire format; must match to decode
 	} `json:"value"`
 	NextLink  string `json:"@odata.nextLink"`  //nolint:tagliatelle // Microsoft's wire format; must match to decode
 	DeltaLink string `json:"@odata.deltaLink"` //nolint:tagliatelle // Microsoft's wire format; must match to decode
@@ -368,7 +369,7 @@ func pageMessages(page deltaPage, census *AnchorCensus) ([]MessageRef, error) {
 			}
 		}
 		if !removed {
-			messages = append(messages, MessageRef{ID: m.ID, ReceivedAt: receivedAt})
+			messages = append(messages, MessageRef{ID: m.ID, ReceivedAt: receivedAt, InternetMessageID: m.InternetMessageID})
 		}
 	}
 	return messages, nil

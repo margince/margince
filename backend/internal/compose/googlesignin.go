@@ -25,6 +25,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/oidctoken"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/identity"
@@ -107,8 +108,8 @@ func (cfg GoogleSignInConfig) envClient() signInClient {
 }
 
 // googleOIDCVerifierAdapter satisfies identity.OIDCVerifier over the shared
-// compose-level oidcTokenVerifier (generalized in oidcverify.go). Google's own
-// adapter because it reads Google's own `email_verified` claim; Microsoft
+// oidctoken.Verifier. Google's own adapter because it reads Google's own
+// `email_verified` claim; Microsoft
 // issues no such claim and carries its own adapter (microsoftsignin.go).
 //
 // The identity check rides the adapter rather than the verifier because it
@@ -116,12 +117,12 @@ func (cfg GoogleSignInConfig) envClient() signInClient {
 // beneath is one JWKS cache for every flow, and the audience is what changes
 // between them.
 type googleOIDCVerifierAdapter struct {
-	v             *oidcTokenVerifier
-	matchIdentity func(oidcClaims) error
+	v             *oidctoken.Verifier
+	matchIdentity func(oidctoken.Claims) error
 }
 
 func (a googleOIDCVerifierAdapter) Verify(ctx context.Context, idToken string) (identity.OIDCClaims, error) {
-	claims, err := a.v.verifyAs(ctx, idToken, a.matchIdentity)
+	claims, err := a.v.VerifyAs(ctx, idToken, a.matchIdentity)
 	if err != nil {
 		return identity.OIDCClaims{}, err
 	}
@@ -138,7 +139,7 @@ type googleSignInSource struct {
 	stored appResolver
 	// verifier is shared across flows for its JWKS cache; whose token it must
 	// be is said per call.
-	verifier *oidcTokenVerifier
+	verifier *oidctoken.Verifier
 }
 
 func (g googleSignInSource) provider(ctx context.Context) (identity.OIDCProvider, bool, error) {
@@ -199,7 +200,7 @@ func WithGoogleSignIn(cfg GoogleSignInConfig) Option {
 		source := googleSignInSource{
 			env:      cfg.envClient(),
 			stored:   installationSignInApp(pool, s.googleAppResolver),
-			verifier: newGoogleOIDCVerifier(googleJWKSURL, identityResolvedPerRequest),
+			verifier: oidctoken.NewGoogle(oidctoken.GoogleJWKSURL, oidctoken.IdentityResolvedPerRequest),
 		}
 		registerSignInProvider(s, pool, signInProvider{
 			config: identity.OIDCProviderConfig{Key: googleProviderKey, Label: googleProviderLabel},
