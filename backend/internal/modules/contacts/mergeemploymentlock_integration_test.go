@@ -105,7 +105,7 @@ func TestAContactMergeQueuesBehindAWriterHoldingTheEmploymentLockFirst(t *testin
 	if err := holder.QueryRow(ctx, `SELECT pg_backend_pid()`).Scan(&holderPID); err != nil {
 		t.Fatalf("reading the writer's backend pid: %v", err)
 	}
-	if err := storekit.LockWriteIdentity(ctx, holder, employmentKind, survivor.UUID.String()); err != nil {
+	if err := storekit.LockWriteIdentity(ctx, holder, employmentKind, survivor.String()); err != nil {
 		t.Fatalf("taking the survivor's employment lock: %v", err)
 	}
 
