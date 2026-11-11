@@ -850,6 +850,11 @@ jobs:
   integration:
     needs: [changes]
     if: needs.changes.outputs.backend_db == 'true' && needs.changes.outputs.full_lane == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
+    # The most a job of the lane may ask for: the shards read the run's jobs to
+    # learn whether a re-run builds the binaries again.
+    permissions:
+      contents: read
+      actions: read
     uses: ./.github/workflows/_lane-integration.yml
 
   vuln:

@@ -79,7 +79,7 @@ export function ImapMailboxForm({
   onDismiss,
   onConnected,
   onPendingChange,
-  renderActions = (actions) => actions,
+  renderActions = (actions) => <div className="actions">{actions}</div>,
 }: Readonly<{
   /** What backing out is called on this surface: Cancel in a dialog, Not
    * now on a step that does not block. */
@@ -342,7 +342,7 @@ export function ImapMailboxForm({
           )}
         </div>
       </form>
-      {renderActions(<div className="actions">{actions}</div>)}
+      {renderActions(actions)}
     </>
   );
 }

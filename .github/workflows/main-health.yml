@@ -124,6 +124,10 @@ jobs:
   # DELETE trigger, a foreign key with no visibility decision — so a health check
   # without a database would have missed every one of them.
   integration:
+    # The shards read the run's jobs to learn whether a re-run builds again.
+    permissions:
+      contents: read
+      actions: read
     uses: ./.github/workflows/_lane-integration.yml
 
   # The SPA lane, called rather than copied, for two reasons that arrived
