@@ -39,8 +39,9 @@ var extensionActions = []string{actionAnonymize, actionErase}
 
 // evaluateExtensionPolicy runs the extension stage: one batch, so the stage
 // costs what any other stage costs. Each table first gets an equal share of it.
-// What a table leaves unused goes to the others in a second round. So a table
-// with a long backlog never keeps the next one from its turn.
+// What a table leaves unused goes to the others in a second round, which skips a
+// table that ran dry. So a table with a long backlog never keeps the next one
+// from its turn.
 func (s *RetentionService) evaluateExtensionPolicy(ctx context.Context, pol retentionPolicy, ref time.Time) error {
 	var tables []extdecl.Table
 	for _, t := range s.eraser.extensions.SweptTables() {
@@ -51,13 +52,18 @@ func (s *RetentionService) evaluateExtensionPolicy(ctx context.Context, pol rete
 	if len(tables) == 0 {
 		return nil
 	}
-	budget := retentionBatch
+	budget, drained := retentionBatch, make([]bool, len(tables))
 	for _, share := range []int{max(1, retentionBatch/len(tables)), retentionBatch} {
-		for _, t := range tables {
-			taken, stop, err := s.sweepExtensionTable(ctx, pol, t, ref, min(share, budget))
+		for i, t := range tables {
+			if drained[i] {
+				continue
+			}
+			limit := min(share, budget)
+			taken, stop, err := s.sweepExtensionTable(ctx, pol, t, ref, limit)
 			if err != nil || stop {
 				return err
 			}
+			drained[i] = taken < limit
 			if budget -= taken; budget == 0 {
 				return nil
 			}
@@ -125,19 +131,30 @@ func (s *RetentionService) extensionWindow(
 	if err != nil {
 		return extprivacy.Window{}, err
 	}
+	return extensionWindowUnder(t, pol, policy, ref), nil
+}
+
+// extensionWindowUnder reads the floor as the core reads it for mail. The floor
+// in force binds every row. A carried floor binds only rows whose age column is
+// before the change that weakened it.
+func extensionWindowUnder(t extdecl.Table, pol retentionPolicy, policy FloorPolicy, ref time.Time) extprivacy.Window {
 	w := extprivacy.Window{OlderThan: ref.AddDate(0, 0, -pol.RetainDays)}
 	if protected := extensionFloor(t, policy, ref).ProtectedSince(ref); protected.Before(w.OlderThan) {
 		w.OlderThan = protected
 	}
-	return w, nil
+	if carried := policy.Carried; carried != nil && t.Retention == jurisdiction.CommercialCorrespondence {
+		before, since := carried.Before, carried.Class.ProtectedSince(ref)
+		w.CarriedBefore, w.CarriedSince = &before, &since
+	}
+	return w
 }
 
-// extensionFloor is the class that keeps a table's rows at ref. Correspondence
-// takes the strictest floor in force: the current one, a carried one and every
-// legal entity's. A unit row is not tied to one entity's mail or to one date.
+// extensionFloor is the class that keeps every row of a table at ref. For
+// correspondence it is the strictest floor in force, current or any entity's: a
+// unit row is not tied to one entity's mail.
 func extensionFloor(t extdecl.Table, policy FloorPolicy, ref time.Time) jurisdiction.RetentionClass {
 	if t.Retention == jurisdiction.CommercialCorrespondence {
-		return policy.StrictestClass(ref)
+		return policy.strictestInForce(ref)
 	}
 	if pack, ok := jurisdiction.For(policy.Selected); ok {
 		return classOf(pack, t.Retention)

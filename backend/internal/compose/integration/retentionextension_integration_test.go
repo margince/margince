@@ -314,3 +314,31 @@ func TestAnExtensionRowActedOnTwiceUnderOneIDRollsBack(t *testing.T) {
 		t.Errorf("%d of the two rows are untouched after the refused acts, want 2", got)
 	}
 }
+
+func TestACarriedFloorKeepsOnlyTheExtensionRowsFromBeforeItsChange(t *testing.T) {
+	f := setupKeptTable(t)
+	now := clocktest.Now(t)
+	year := 365 * 24 * time.Hour
+	beforeInWindow := f.seed(t, keptRow{age: 8 * year})
+	afterTheChange := f.seed(t, keptRow{age: 6*year + 180*24*time.Hour})
+	pastTheWindow := f.seed(t, keptRow{age: 12 * year})
+	changed, since := now.Add(-7*year), now.Add(-10*year)
+	window := extprivacy.Window{OlderThan: now.Add(-6 * year), CarriedBefore: &changed, CarriedSince: &since}
+
+	var due []ids.UUID
+	if err := database.WithWorkspaceTx(f.e.Admin(), f.e.Pool, func(tx pgx.Tx) error {
+		var err error
+		due, err = f.registry.Due(f.e.Admin(), tx, f.registry.SweptTables()[0], window, true, 10)
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	got := map[ids.UUID]bool{}
+	for _, id := range due {
+		got[id] = true
+	}
+	if got[beforeInWindow] || !got[afterTheChange] || !got[pastTheWindow] {
+		t.Errorf("due = %v; want the row after the change (%s) and the one past the carried window (%s), never the older row the carried floor keeps (%s)",
+			due, afterTheChange, pastTheWindow, beforeInWindow)
+	}
+}

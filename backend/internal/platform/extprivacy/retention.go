@@ -40,6 +40,9 @@ func (r Registry) SweptTables() []privacy.Table {
 type Window struct {
 	// OlderThan: only a row whose age column is before it is due.
 	OlderThan time.Time
+	// A floor carried from a stricter earlier rule also keeps the rows from
+	// before CarriedBefore and from CarriedSince on. Both are nil without one.
+	CarriedBefore, CarriedSince *time.Time
 }
 
 // statement collects the arguments of one query, so every placeholder is
@@ -75,7 +78,11 @@ func heldSQL(t privacy.Table) string {
 // dueSQL is what the window allows over the table aliased `t`, less the held
 // rows. A row whose link is still empty is due by age alone.
 func (s *statement) dueSQL(t privacy.Table, w Window) string {
-	return "t." + pgx.Identifier{t.AgeColumn}.Sanitize() + ` < ` + s.arg(w.OlderThan) + ` AND NOT ` + heldSQL(t)
+	age := "t." + pgx.Identifier{t.AgeColumn}.Sanitize()
+	since, before := s.arg(w.CarriedSince), s.arg(w.CarriedBefore)
+	return age + ` < ` + s.arg(w.OlderThan) +
+		` AND (` + before + `::timestamptz IS NULL OR NOT (` + age + ` < ` + before + ` AND ` + age + ` >= ` + since + `))` +
+		` AND NOT ` + heldSQL(t)
 }
 
 // Due returns up to limit rows of a table the window lets a sweep take, oldest

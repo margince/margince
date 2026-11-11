@@ -67,7 +67,7 @@ func VerifySchema(ctx context.Context, q Querier, namespace string, others []str
 		}
 		if constraint, ok := pinned[t.Name]; ok && Swept(t) {
 			return fmt.Errorf("extprivacy: %s is swept by age, but foreign key %s refuses the delete of a row it names; "+
-				"declare it ON DELETE CASCADE or ON DELETE SET NULL", t.Name, constraint)
+				"declare it ON DELETE CASCADE, SET NULL or SET DEFAULT", t.Name, constraint)
 		}
 	}
 	return nil
@@ -81,7 +81,7 @@ func readPinningReferences(ctx context.Context, q Querier, prefix string) (map[s
 		  FROM pg_constraint k
 		  JOIN pg_class target ON target.oid = k.confrelid
 		  JOIN pg_namespace n ON n.oid = target.relnamespace
-		 WHERE k.contype = 'f' AND k.confdeltype NOT IN ('c', 'n')
+		 WHERE k.contype = 'f' AND k.confdeltype IN ('a', 'r')
 		   AND n.nspname = $1 AND left(target.relname, length($2::text)) = $2::text
 		 ORDER BY target.relname, k.conname`, Schema, prefix)
 	if err != nil {
@@ -125,7 +125,7 @@ func readTables(ctx context.Context, q Querier, prefix string) (map[string]map[s
 		                                   WHERE d.classid = 'pg_class'::regclass AND d.objid = i.indexrelid
 		                                     AND d.refobjid = i.indrelid AND d.refobjsubid = a.attnum))),
 		       EXISTS (SELECT 1 FROM pg_index i
-		                WHERE i.indrelid = a.attrelid AND i.indisunique AND i.indnkeyatts = 1
+		                WHERE i.indrelid = a.attrelid AND i.indisunique AND i.indisvalid AND i.indnkeyatts = 1
 		                  AND i.indkey[0] = a.attnum AND i.indpred IS NULL AND i.indexprs IS NULL)
 		  FROM information_schema.columns c
 		  JOIN pg_attribute a ON a.attrelid = format('%I.%I', c.table_schema, c.table_name)::regclass

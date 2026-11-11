@@ -271,6 +271,9 @@ func TestBootRefusesAPersonalTableWhoseRowsTheCoreCannotAuditByID(t *testing.T) 
 		"id not uuid":   `CREATE TABLE ext.ext_probe_log (id bigint PRIMARY KEY, contact_id uuid, body text)`,
 		"id not unique": `CREATE TABLE ext.ext_probe_log (id uuid NOT NULL, contact_id uuid, body text)`,
 		"id nullable":   `CREATE TABLE ext.ext_probe_log (id uuid UNIQUE, contact_id uuid, body text)`,
+		"id under an invalid unique index": `CREATE TABLE ext.ext_probe_log (id uuid NOT NULL, contact_id uuid, body text);
+			CREATE UNIQUE INDEX ext_probe_log_id ON ext.ext_probe_log (id);
+			UPDATE pg_index SET indisvalid = false WHERE indexrelid = 'ext.ext_probe_log_id'::regclass`,
 	} {
 		t.Run(name, func(t *testing.T) {
 			env := Setup(t)
@@ -345,20 +348,31 @@ func TestBootAcceptsADeclaredAgeColumn(t *testing.T) {
 	}
 }
 
-func TestBootRefusesASweptTableARowElsewhereKeepsFromBeingDeleted(t *testing.T) {
-	env := Setup(t)
-	unit := probeUnit(t, "1.0.0", "body")
-	unit.Privacy[0].AgeColumn = "noted_at"
-	t.Cleanup(func() {
-		if _, err := OwnerConn(t).Exec(context.Background(), `DROP TABLE IF EXISTS ext.ext_probe_reply`); err != nil {
-			t.Errorf("removing the referencing table: %v", err)
-		}
-	})
-	probeExec(t, `CREATE TABLE ext.ext_probe_reply (id uuid PRIMARY KEY, note_id uuid REFERENCES ext.ext_probe_note (id))`)
-	unit.Privacy = append(unit.Privacy, privacy.Table{Name: "ext_probe_reply", Retention: jurisdiction.CommercialCorrespondence})
+func TestBootHoldsASweptTableToReferencesThatLetItsRowsBeDeleted(t *testing.T) {
+	for clause, refused := range map[string]bool{
+		"": true, "ON DELETE RESTRICT": true,
+		"ON DELETE CASCADE": false, "ON DELETE SET NULL": false, "ON DELETE SET DEFAULT": false,
+	} {
+		t.Run(clause, func(t *testing.T) {
+			env := Setup(t)
+			unit := probeUnit(t, "1.0.0", "body")
+			unit.Privacy[0].AgeColumn = "noted_at"
+			t.Cleanup(func() {
+				if _, err := OwnerConn(t).Exec(context.Background(), `DROP TABLE IF EXISTS ext.ext_probe_reply`); err != nil {
+					t.Errorf("removing the referencing table: %v", err)
+				}
+			})
+			probeExec(t, `CREATE TABLE ext.ext_probe_reply (id uuid PRIMARY KEY, note_id uuid REFERENCES ext.ext_probe_note (id) `+clause+`)`,
+				`GRANT SELECT, INSERT, UPDATE, DELETE ON ext.ext_probe_reply TO margince_app`)
+			unit.Privacy = append(unit.Privacy, privacy.Table{Name: "ext_probe_reply", Retention: jurisdiction.CommercialCorrespondence})
 
-	err := compose.VerifyExtensionPrivacy(t.Context(), env.Pool, []extension.Extension{unit})
-	if err == nil || !strings.Contains(err.Error(), "ON DELETE") {
-		t.Errorf("boot answered %v; an erase policy would fail on a note a reply still names", err)
+			err := compose.VerifyExtensionPrivacy(t.Context(), env.Pool, []extension.Extension{unit})
+			if refused && (err == nil || !strings.Contains(err.Error(), "ON DELETE")) {
+				t.Errorf("boot answered %v; an erase policy would fail on a note a reply still names", err)
+			}
+			if !refused && err != nil {
+				t.Errorf("boot refused a reference that lets the note be deleted: %v", err)
+			}
+		})
 	}
 }
