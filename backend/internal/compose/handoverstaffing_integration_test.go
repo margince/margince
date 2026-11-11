@@ -7,6 +7,7 @@ package compose
 
 import (
 	"errors"
+	"slices"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -110,7 +111,11 @@ func TestMemberHandoverMovesPendingStaffingAndRetainsAcceptedCredit(t *testing.T
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = tx.Exec(t.Context(), downSQL(t, core, "accepted_handoffs_retain_their_receiver"))
+	at := slices.IndexFunc(core.Migrations, func(m dbmigrate.Migration) bool { return m.Name == "accepted_handoffs_retain_their_receiver" })
+	if at < 0 {
+		t.Fatal("no core migration retains accepted handoffs")
+	}
+	_, err = tx.Exec(t.Context(), core.Migrations[at].DownSQL)
 	if rollbackErr := tx.Rollback(t.Context()); rollbackErr != nil {
 		t.Fatal(rollbackErr)
 	}
@@ -119,16 +124,4 @@ func TestMemberHandoverMovesPendingStaffingAndRetainsAcceptedCredit(t *testing.T
 		t.Fatalf("unsafe downgrade was not refused: %v", err)
 	}
 	e.WsExec(t, `UPDATE sdr_handoff SET note='Historical correction' WHERE id=$1`, accepted)
-}
-
-// downSQL is the downgrade of the core migration named name.
-func downSQL(t *testing.T, core dbmigrate.Namespace, name string) string {
-	t.Helper()
-	for _, m := range core.Migrations {
-		if m.Name == name {
-			return m.DownSQL
-		}
-	}
-	t.Fatalf("no core migration is named %q", name)
-	return ""
 }
