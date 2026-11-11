@@ -151,6 +151,7 @@ func lockOverrideFamilyOf(ctx context.Context, tx pgx.Tx, id ids.UUID) (ids.UUID
 // The only writer of a new source row is a carry into this subject, and it
 // queues behind the same keys. A row can only be revoked meanwhile, and the
 // copy re-reads revoked_at at its own snapshot and skips it.
+// Held by: TestOnlyTheMergeCarryWritesStandingExceptions (backend/gates/standingexceptionwriter_test.go)
 func lockCarriedFamilies(ctx context.Context, tx pgx.Tx, from commsauthz.StopSubject) error {
 	rows, err := tx.Query(ctx, `
 		WITH RECURSIVE ancestry AS (
