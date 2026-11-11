@@ -148,7 +148,7 @@ To change the language of an AI draft, pick another language in the list on the 
 
 If you edited the words, only an AI model writes your edited words again. With no model set up, or with a link or format you added, your words and the language stay as they are. The composer then says "Your edits were kept. Draft again when ready."
 
-Once you pick a language, **Draft email**, **Change the ask**, the four rewrites and a saved draft keep it. Until then, Margince takes the language from the mail on the thread. If the new draft fails, your words and the language stay. When Margince cannot tell the language of a draft, it shows no list.
+Once you pick a language, **Draft email**, **Change the ask**, the four rewrites and a saved draft keep it. Until then, the language of a subject you wrote yourself decides it, when Margince can tell that language. If it cannot, Margince takes it from the mail on the thread, then from your settings. If the new draft fails, your words and the language stay. When Margince cannot tell the language of a draft, it shows no list.
 Also called: draft in another language, write the email in German, change the email language.
 
 ### Why are you writing?

@@ -2,7 +2,8 @@
 # Deploy Margince on your own servers
 
 Keep deployment domains, secrets and platform manifests in the repository that holds your deployment.
-For a Linux server without containers, use [install-on-a-server.md](install-on-a-server.md).
+For a Linux server without containers, use [install-on-a-server.md](install-on-a-server.md); for every
+role on one host, use [run-with-docker-compose.md](run-with-docker-compose.md).
 For what each container image expects, use [run-from-container-images.md](run-from-container-images.md); to watch it once it runs, use [watch-an-installation](../operations/observability.md).
 See [self-hosting](../explanation/self-hosting.md) for the role layout and
 [configuration](../reference/configuration.md) for settings.
@@ -12,6 +13,9 @@ See [self-hosting](../explanation/self-hosting.md) for the role layout and
 - `MARGINCE_DSN` and `MARGINCE_OWNER_DSN`: the app role and the owner role of one database.
 - `MARGINCE_REDIS`, `MARGINCE_PUBLIC_BASE_URL`, and `MARGINCE_LICENSE` (the setting `license.token`) or
   `license.token_file`.
+- `MARGINCE_KEYVAULT_ROOT_KEY` on the api, the worker and `margince-migrate`, made once with `openssl rand -base64 32`.
+  The first setup screen stops without it, because it seals the AI provider key and every other
+  secret the app stores. Store it apart from the data: [back-up-an-installation.md](back-up-an-installation.md).
 - For the first boot, `MARGINCE_CONFIG` names a `margince.yaml` with `workspace` and
   `bootstrap_admin`, and `MARGINCE_ADMIN_PASSWORD` holds the first admin's password.
 
@@ -55,9 +59,8 @@ It does **not** have to be a published release version. Any stable per-build ide
 already has will do, such as a commit sha or a build number. Every role in one deployment must get the
 same one. What it must not be is empty or `dev`, which the roles read as "make no comparison".
 
-`docker-bake.hcl` does this for the release workflow, declaring the argument once on the shared `role`
-target. The release workflow refuses to publish a set stamped `dev` or nothing at all
-(`scripts/release-version-stamped.sh`).
+`docker-bake.hcl` does this for the release workflow, declaring the argument once on the shared `role` target.
+The release workflow refuses to publish a set stamped `dev` or nothing at all (`scripts/release-version-stamped.sh`).
 
 ## Bootstrap the database once
 
@@ -65,13 +68,14 @@ Margince needs two Postgres roles that serve and migrate, and a third that only 
 None may be a superuser or hold `BYPASSRLS`: the api refuses to serve on an exempt runtime role.
 
 - **`margince_owner`** owns the database + tables, runs migrations (DDL) and the custom-fields runtime-DDL pool.
-- **`margince_app`** is the runtime role the api + worker connect as. The `0001_baseline` migration grants
-  its tables only if the role exists, so create the role *before* the first migration runs.
+- **`margince_app`** is the runtime role the api + worker connect as. Its table grants are applied by the
+  `0001_baseline` migration, which skips them unless the role already exists. So create the role *before* the
+  first migration runs.
 - **`ext_runtime`** (`NOLOGIN`) runs an extension's SQL and holds only the `ext` schema. An older database
   needs it once: [Add `ext_runtime` to an older database](install-on-a-server.md#add-ext_runtime-to-an-older-database).
 
-Create the roles + database + extensions **once**, as a Postgres superuser. pgvector is not a
-"trusted" extension, so a non-superuser cannot install it from a migration:
+Create the roles + database + extensions **once**, as a Postgres superuser. pgvector is not a "trusted" extension,
+so a non-superuser cannot install it from a migration:
 
 ```bash
 # Pass the passwords RAW (not pre-quoted) — the script quotes/escapes them.
@@ -82,9 +86,8 @@ psql "postgres://postgres:…@<host>:5432/postgres" \
 
 It is idempotent. The app containers then hold only the two non-superuser DSNs.
 
-The worker does not schedule River's nightly index rebuild, which needs the index owner. If queue
-fetches slow down, rebuild the index as `margince_owner`, for example
-`REINDEX INDEX CONCURRENTLY river_job_prioritized_fetching_index`.
+The worker does not schedule River's nightly index rebuild, which needs the index owner. If queue fetches slow
+down, rebuild the index as `margince_owner`, for example `REINDEX INDEX CONCURRENTLY river_job_prioritized_fetching_index`.
 
 ## Get a license token
 
@@ -114,8 +117,7 @@ The images bake in **no** instance configuration. All settings come from the run
 and every setting has a variable, while only some have a flag. Most variables start with
 `MARGINCE_`, and the AI provider keys keep their vendor names, such as `ANTHROPIC_API_KEY`. Set at least the
 [least production needs](#the-least-production-needs). The entrypoint reads the two DSNs and the admin
-password itself; see
-[What the image entrypoint reads](../reference/programs.md#what-the-image-entrypoint-reads-api-and-worker).
+password itself; see [What the image entrypoint reads](../reference/programs.md#what-the-image-entrypoint-reads-api-and-worker).
 
 The annotated env template is [`.env.example`](../../.env.example). To check the configuration before a
 rollout, and to see which settings the app shows as locked, read

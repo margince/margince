@@ -401,6 +401,9 @@ export function useDraftMutation({
         // The body on screen goes with every ask, so words the rep wrote are
         // revised rather than ignored. A blank body asks for a first draft.
         rewriteOf: rewriteOfAsk(ask),
+        // Sent on a reply too: the server tells a subject the rep wrote from
+        // the one the composer prefilled.
+        subject: ask.subject,
         language: ask.language,
       };
       if (activityId) {
@@ -411,7 +414,7 @@ export function useDraftMutation({
         entityId: ask.entityId,
         followUp: ask.followUp,
         ...grounding,
-        steer: { ...steer, subject: ask.subject },
+        steer,
         t,
       });
     },
