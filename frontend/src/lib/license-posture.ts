@@ -29,7 +29,7 @@ type LicenseEntitlement = components["schemas"]["LicenseEntitlement"];
  * `grace` is a valid licence past its expiry. It works today, but a restart
  * after the module's grace period ends refuses to boot, so the chrome warns
  * until it is renewed. Over the seat cap and renewal due stay off this type:
- * nothing stops on either, and the settings card says WHICH and by how much.
+ * nothing stops on either, and the settings card gives the numbers.
  */
 export type LicensePosture = "ok" | "grace" | "refused" | "none";
 

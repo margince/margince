@@ -16,10 +16,9 @@ const COPY = {
   },
 } as const;
 
-// A refused or expired licence is a standing installation condition, not
-// something the agent is doing, so it stands in the shell's chrome rather than
-// on the rail's live line. Not `none`: every dev and demo stack has no licence
-// at all, and a notice drawn on all of them would stop being a signal.
+// A refused or expired licence is a standing condition, not agent work. So it
+// stands in the shell's chrome and not on the rail's live line. Not `none`:
+// every dev and demo stack has no licence, and a notice on all of them is noise.
 export function LicenseBanner() {
   const t = useT();
   const posture = useLicensePosture();
