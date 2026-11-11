@@ -11,7 +11,15 @@
 .task-detail-meta {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: var(--space-2) var(--space-3);
+}
+/* The records take the meta line's first row, chip by chip, as on a Home card. */
+.task-detail-records {
+  display: flex;
+  flex-wrap: wrap;
+  flex-basis: 100%;
+  gap: var(--space-2);
 }
 /* A drawer reads from its start edge, so its verbs start there too. */
 .task-detail-actions,

@@ -8,8 +8,6 @@ import {
   CalendarClock,
   CalendarDays,
   Circle,
-  FolderKanban,
-  Handshake,
   Hourglass,
   type LucideIcon,
   Mail,
@@ -20,6 +18,7 @@ import {
   TrendingDown,
   UserPlus,
 } from "lucide-react";
+import { RECORD_CHIP_ICONS } from "../../components/recordlinks";
 import { useTaskDone } from "../../components/taskactions";
 import { Badge, Card } from "../../design-system/atoms";
 import { Avatar } from "../../design-system/avatar";
@@ -330,11 +329,8 @@ type Named = Readonly<{
   mark: "avatar" | LucideIcon;
 }>;
 
-const SUBJECT_ICONS: Partial<Record<string, LucideIcon>> = {
-  deal: Handshake,
-  lead: UserPlus,
-  project: FolderKanban,
-};
+// The task details panel draws its records with the same marks.
+const SUBJECT_ICONS: Partial<Record<string, LucideIcon>> = RECORD_CHIP_ICONS;
 
 /**
  * Who the work is with and what it is about. That is the contact, then their

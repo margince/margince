@@ -23,7 +23,7 @@ import { useLocale, useT } from "../i18n";
 import { taskDueFields } from "../lib/activitybody";
 import { useCanWriteRecord } from "../lib/capability";
 import { TaskTimeField } from "./followuptaskfields";
-import { mostSpecificFirst, RecordLinks } from "./recordlinks";
+import { mostSpecificFirst, RecordLinkChips } from "./recordlinks";
 import { TaskAssignee } from "./taskassignee";
 import { TaskDetailReading, TaskDetailTitle } from "./taskdetailtext";
 import "./taskactions.css";
@@ -301,8 +301,8 @@ export function TaskDetailDialog({
                 {/* In the same tab: the reader opened the panel to learn what the
                   task is about, and following its record is leaving for it. */}
                 {task.links && task.links.length > 0 && (
-                  <span>
-                    <RecordLinks links={mostSpecificFirst(task.links)} />
+                  <span className="task-detail-records">
+                    <RecordLinkChips links={mostSpecificFirst(task.links)} />
                   </span>
                 )}
                 {task.due_at ? (
