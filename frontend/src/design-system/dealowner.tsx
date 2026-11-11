@@ -25,39 +25,46 @@ export function DealOwner({
   dealLink: RefObject<HTMLAnchorElement | null>;
 }>) {
   const { ref, trigger, tip } = useTooltip<HTMLSpanElement>(name);
-  // The mark sits above the card's link so its tip can open. It hands a press
-  // on to that link, with the button and keys held, so the card stays one door.
-  const handOn = (event: React.MouseEvent) =>
-    dealLink.current?.dispatchEvent(
-      new MouseEvent("click", {
-        bubbles: true,
-        cancelable: true,
-        button: event.button,
-        ctrlKey: event.ctrlKey,
-        metaKey: event.metaKey,
-        shiftKey: event.shiftKey,
-        altKey: event.altKey,
-      }),
-    );
+  const press = handOnTo(dealLink);
   return (
-    // biome-ignore lint/a11y/useKeyWithClickEvents: the keyboard path to the deal is the card's own link, which holds the card's one tab stop
     <span // NOSONAR: forwards a pointer press to the deal's link; the mark itself is not a control
       className="deal-owner"
       role="img"
       aria-label={name}
       ref={ref}
       {...trigger}
-      onClick={handOn}
-      // The middle button opens the deal in a new tab from this real press: a
-      // dispatched button-1 click can leave that tab blank under load.
-      onAuxClick={(event) => {
-        if (event.button === 1 && dealLink.current) {
-          window.open(dealLink.current.href, "_blank", "noopener");
-        }
-      }}
+      {...press}
     >
       <Avatar name={name} identity={id} photo={photo} />
       {tip}
     </span>
   );
+}
+
+/**
+ * A mark that sits above a card's stretched link, so its tip can open, hands a
+ * press on to that link with the button and keys held: the card stays one door.
+ */
+export function handOnTo(dealLink: RefObject<HTMLAnchorElement | null>) {
+  return {
+    onClick: (event: React.MouseEvent) =>
+      dealLink.current?.dispatchEvent(
+        new MouseEvent("click", {
+          bubbles: true,
+          cancelable: true,
+          button: event.button,
+          ctrlKey: event.ctrlKey,
+          metaKey: event.metaKey,
+          shiftKey: event.shiftKey,
+          altKey: event.altKey,
+        }),
+      ),
+    // The middle button opens the deal in a new tab from this real press: a
+    // dispatched button-1 click can leave that tab blank under load.
+    onAuxClick: (event: React.MouseEvent) => {
+      if (event.button === 1 && dealLink.current) {
+        window.open(dealLink.current.href, "_blank", "noopener");
+      }
+    },
+  };
 }
