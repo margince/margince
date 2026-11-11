@@ -405,8 +405,7 @@ export function SegmentBar({
 }: Readonly<{
   parts: SegmentBarParts;
   onSelect?: (key: string) => void;
-  // What may join the parts later but is not counted in them, such as open
-  // deals beside won ones. It sits after the parts as an outline.
+  // Not counted in the parts yet, such as open deals beside won: an outline after them.
   ahead?: SegmentBarPart;
   // A figure the parts are read against rather than one of them: a line across
   // the track, drawn in ink so it never reads as a fourth part.
@@ -415,12 +414,10 @@ export function SegmentBar({
   label: string;
 }>) {
   const total = parts.reduce((sum, part) => sum + Math.max(0, part.value), 0);
-  // The scale is the larger of the parts and the mark. A mark beyond the parts
-  // leaves recessed track between them, and that track is the gap.
-  const scale = Math.max(
-    total + Math.max(0, ahead?.value ?? 0),
-    marker?.value ?? 0,
-  );
+  const open = Math.max(0, ahead?.value ?? 0);
+  // The scale is the larger of the parts with what is ahead, and the mark. A
+  // mark beyond them leaves recessed track between, and that track is the gap.
+  const scale = Math.max(total + open, marker?.value ?? 0);
   return (
     <div className="segbar">
       <div className="segbar-track" aria-hidden={onSelect ? undefined : true}>
@@ -429,7 +426,7 @@ export function SegmentBar({
             <Button
               key={part.key}
               variant="link"
-              className={segmentActionClass(step)}
+              className={`segbar-part segbar-action segbar-step-${step}`}
               style={{ width: `${percentOf(part.value, scale)}%` }}
               aria-label={`${part.label}: ${part.amount}`}
               onClick={() => onSelect(part.key)}
@@ -442,7 +439,7 @@ export function SegmentBar({
             />
           ),
         )}
-        {ahead && ahead.value > 0 && (
+        {ahead && open > 0 && (
           <span
             className="segbar-part segbar-ahead"
             style={{ width: `${percentOf(ahead.value, scale)}%` }}
@@ -498,7 +495,3 @@ export type SegmentBarParts =
   | readonly [SegmentBarPart]
   | readonly [SegmentBarPart, SegmentBarPart]
   | readonly [SegmentBarPart, SegmentBarPart, SegmentBarPart];
-
-function segmentActionClass(step: number): string {
-  return `segbar-part segbar-action segbar-step-${step}`;
-}
