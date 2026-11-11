@@ -19462,6 +19462,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "receipt.detail.by": "Ausgeführt von",
   "receipt.detail.when": "Zeitpunkt",
   "receipt.detail.source": "Quelle",
+  "receipt.detail.sourceAt": "Datum der Quelle",
+  "receipt.detail.reasonKind": "Grund",
+  "receipt.detail.reasonKind.rule":
+    "Eine Regel: Margince hat gezählt, was die Daten zeigen",
+  "receipt.detail.reasonKind.inference":
+    "Eine Schlussfolgerung: Margince hat gelesen, was der Kunde geschrieben oder gesagt hat",
   "worklist.handled.showMore": "Mehr anzeigen",
   "worklist.exceptions.empty": "Keine Team-Ausnahmen.",
   "worklist.exceptions.loading": "Team wird geladen…",
@@ -21788,6 +21794,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.done.showNew": "Neue Änderungen zeigen",
   "brief.done.history": "Änderungsverlauf",
   "brief.done.dealsLabel": "Deals, die Margince geändert hat",
+  "brief.done.pick": "Änderungen an {name} rückgängig machen",
   "brief.done.noReason": "Grund nicht verfügbar",
   "brief.done.markedLost": "Als verloren markiert",
   "brief.done.customerWrote": "Der Kunde schrieb:",
@@ -21806,9 +21813,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "changes.bulk.confirm_other":
     "{count} Deals brauchen deine Bestätigung. Mach jeden in seiner eigenen Zeile rückgängig.",
   "changes.bulk.unsent_one": "{count} Deal wurde nicht gesendet.",
+  "changes.bulk.settled_one": "{count} Deal wartet nicht mehr auf Prüfung.",
+  "changes.bulk.settled_other": "{count} Deals warten nicht mehr auf Prüfung.",
   "changes.bulk.unsent_other": "{count} Deals wurden nicht gesendet.",
   "changes.bulk.confirmOnDeal":
     "Öffne den Deal, um das Rückgängigmachen zu bestätigen.",
   "changes.bulk.retry": "Erneut senden",
   "changes.bulk.unfinished": "Nicht ganz rückgängig gemachte Deals",
+  "changes.bulk.clear": "Ergebnis ausblenden",
 };

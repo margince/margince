@@ -56926,6 +56926,11 @@ export interface components {
             reason?: string;
             /** @description The customer's own words the change rests on, where the act recorded them, masked with the amount they state. Kept apart from `reason`, which is Margince's reading and never a quote. */
             customer_quote?: string;
+            /**
+             * @description What kind of reason the change rests on: `rule` when Margince counted what the data shows (days of silence, the pace of won deals), `inference` when it read what the customer wrote or said. Derived from the kind of change and the loss reason a close wrote. Absent when the row cannot say, on an approval, and on older responses.
+             * @enum {string}
+             */
+            reason_kind?: "rule" | "inference";
             /** @description The summary taken apart, as on the approval it reports. Absent when the summary is a sentence alone. */
             summary_parts?: components["schemas"]["ApprovalSummaryParts"];
             /**
@@ -56937,8 +56942,15 @@ export interface components {
             review?: components["schemas"]["AppliedDealChangeReview"];
             /** @description Who did it: the member or agent that proposed an applied decision, or the job that made a correction. Absent on older responses. */
             actor?: components["schemas"]["ReceiptActor"];
-            /** @description The email, thread or meeting the act was read from, where it names one. Checked against the reader's access on every read: a source the reader may not open is left out, not named. Absent also when the act cites no message. */
+            /** @description The email, thread or meeting the act was read from, where it names one. Checked against the reader's access on every read: a source the reader may not open is left out, not named. Absent also when the act cites no message. A change that cites several names the newest the reader may open. */
             source_record?: components["schemas"]["AttentionSubject"];
+            /**
+             * Format: date-time
+             * @description When the email, call or meeting in `source_record` happened, apart from `occurred_at`, when Margince acted. Present only with `source_record`.
+             */
+            source_occurred_at?: string;
+            /** @description How much of `source_occurred_at` is known. Present with it. */
+            source_occurred_precision?: components["schemas"]["OccurredPrecision"];
             /** @description Every field the act moved, old value to new, read from the audit rows it wrote and masked to what the reader may see on the record. Values travel whole, never cut short. Absent when no audit row of the act can be read, which is not the same as an act that moved nothing (an empty list). */
             changes?: components["schemas"]["MagicFieldChange"][];
             /**

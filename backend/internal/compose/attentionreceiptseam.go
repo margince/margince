@@ -142,7 +142,8 @@ func (r attentionReceipts) RecentWithMore(ctx context.Context, since time.Time, 
 func correctionReceipt(c deals.CorrectionReceipt) attention.Receipt {
 	receipt := correctionReceiptOfKind(c)
 	receipt.Source, receipt.AuditLogID = attention.ReceiptFromCorrection, c.AuditLogID
-	receipt.Reason = c.Basis
+	receipt.Reason, receipt.ReasonKind = c.Basis, c.ReasonKind
+	receipt.CitedActivities = c.CitedActivities
 	receipt.CustomerQuote = quotedFacts(c.Evidence).Quote
 	if receipt.Reason == "" && receipt.CustomerQuote == "" {
 		receipt.Headline = ""

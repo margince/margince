@@ -56,6 +56,12 @@ type Receipt struct {
 	// CustomerQuote is the customer's own words the act rests on. It is kept
 	// apart from Reason, which is Margince's reading and never a quote.
 	CustomerQuote string
+	// ReasonKind says whether Reason is a rule or an inference; empty when
+	// the act cannot say.
+	ReasonKind string
+	// CitedActivities are the messages a change rests on. The newest the
+	// reader may open becomes the receipt's source.
+	CitedActivities []ids.UUID
 }
 
 // ReceiptUndo is what a receipt needs to offer a way back.

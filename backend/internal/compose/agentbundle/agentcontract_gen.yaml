@@ -53421,6 +53421,11 @@ components:
           type: string
           description: >-
             The customer's own words the change rests on, where the act recorded them, masked with the amount they state. Kept apart from `reason`, which is Margince's reading and never a quote.
+        reason_kind:
+          type: string
+          enum: [rule, inference]
+          description: >-
+            What kind of reason the change rests on: `rule` when Margince counted what the data shows (days of silence, the pace of won deals), `inference` when it read what the customer wrote or said. Derived from the kind of change and the loss reason a close wrote. Absent when the row cannot say, on an approval, and on older responses.
         summary_parts:
           allOf: [{$ref: '#/components/schemas/ApprovalSummaryParts'}]
           description: The summary taken apart, as on the approval it reports. Absent when the summary is a sentence alone.
@@ -53436,7 +53441,15 @@ components:
         source_record:
           allOf: [{$ref: '#/components/schemas/AttentionSubject'}]
           description: >-
-            The email, thread or meeting the act was read from, where it names one. Checked against the reader's access on every read: a source the reader may not open is left out, not named. Absent also when the act cites no message.
+            The email, thread or meeting the act was read from, where it names one. Checked against the reader's access on every read: a source the reader may not open is left out, not named. Absent also when the act cites no message. A change that cites several names the newest the reader may open.
+        source_occurred_at:
+          type: string
+          format: date-time
+          description: >-
+            When the email, call or meeting in `source_record` happened, apart from `occurred_at`, when Margince acted. Present only with `source_record`.
+        source_occurred_precision:
+          allOf: [{$ref: '#/components/schemas/OccurredPrecision'}]
+          description: How much of `source_occurred_at` is known. Present with it.
         changes:
           type: array
           items: {$ref: '#/components/schemas/MagicFieldChange'}

@@ -19273,6 +19273,24 @@ func (e ReaderCalendar) Valid() bool {
 	}
 }
 
+// Defines values for ReceiptReasonKind.
+const (
+	ReceiptReasonKindInference ReceiptReasonKind = "inference"
+	ReceiptReasonKindRule      ReceiptReasonKind = "rule"
+)
+
+// Valid indicates whether the value is a known member of the ReceiptReasonKind enum.
+func (e ReceiptReasonKind) Valid() bool {
+	switch e {
+	case ReceiptReasonKindInference:
+		return true
+	case ReceiptReasonKindRule:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ReceiptSource.
 const (
 	ReceiptSourceApproval   ReceiptSource = "approval"
@@ -57850,13 +57868,22 @@ type Receipt struct {
 	// Reason Why Margince did it, in the words recorded when it acted. Never composed when the receipt is read. Absent when no reason was recorded, and when this reader may not read why: only the owner the change was made for reads it.
 	Reason *string `json:"reason,omitempty"`
 
+	// ReasonKind What kind of reason the change rests on: `rule` when Margince counted what the data shows (days of silence, the pace of won deals), `inference` when it read what the customer wrote or said. Derived from the kind of change and the loss reason a close wrote. Absent when the row cannot say, on an approval, and on older responses.
+	ReasonKind *ReceiptReasonKind `json:"reason_kind,omitempty"`
+
 	// Review The recorded automatic change and its current review state.
 	Review *AppliedDealChangeReview `json:"review,omitempty"`
 
 	// Source What kind of act `id` names: a change Margince applied itself (`correction`, where `id` is its audit entry) or an approval the system decided (`approval`, where `id` is the approval). Absent on older responses.
 	Source *ReceiptSource `json:"source,omitempty"`
 
-	// SourceRecord The email, thread or meeting the act was read from, where it names one. Checked against the reader's access on every read: a source the reader may not open is left out, not named. Absent also when the act cites no message.
+	// SourceOccurredAt When the email, call or meeting in `source_record` happened, apart from `occurred_at`, when Margince acted. Present only with `source_record`.
+	SourceOccurredAt *time.Time `json:"source_occurred_at,omitempty"`
+
+	// SourceOccurredPrecision How much of `source_occurred_at` is known. Present with it.
+	SourceOccurredPrecision *OccurredPrecision `json:"source_occurred_precision,omitempty"`
+
+	// SourceRecord The email, thread or meeting the act was read from, where it names one. Checked against the reader's access on every read: a source the reader may not open is left out, not named. Absent also when the act cites no message. A change that cites several names the newest the reader may open.
 	SourceRecord *AttentionSubject `json:"source_record,omitempty"`
 
 	// Subject The record this item is about, named so a reader knows who it concerns before opening anything.
@@ -57873,6 +57900,9 @@ type Receipt struct {
 	// A receipt for an approval the system decided carries none: that decision is revisitable through the record it named. A change made without asking — the close-date sweep's corrections — has this receipt as its only telling, so the way back travels with it.
 	Undo *AppliedUndo `json:"undo,omitempty"`
 }
+
+// ReceiptReasonKind What kind of reason the change rests on: `rule` when Margince counted what the data shows (days of silence, the pace of won deals), `inference` when it read what the customer wrote or said. Derived from the kind of change and the loss reason a close wrote. Absent when the row cannot say, on an approval, and on older responses.
+type ReceiptReasonKind string
 
 // ReceiptSource What kind of act `id` names: a change Margince applied itself (`correction`, where `id` is its audit entry) or an approval the system decided (`approval`, where `id` is the approval). Absent on older responses.
 type ReceiptSource string

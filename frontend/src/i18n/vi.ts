@@ -18971,6 +18971,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "receipt.detail.by": "Người làm",
   "receipt.detail.when": "Thời điểm",
   "receipt.detail.source": "Nguồn",
+  "receipt.detail.sourceAt": "Ngày của nguồn",
+  "receipt.detail.reasonKind": "Lý do",
+  "receipt.detail.reasonKind.rule":
+    "Một quy tắc: Margince đếm những gì dữ liệu cho thấy",
+  "receipt.detail.reasonKind.inference":
+    "Một suy luận: Margince đọc những gì khách hàng đã viết hoặc nói",
   "worklist.handled.showMore": "Xem thêm",
   "worklist.exceptions.empty": "Nhóm không có ngoại lệ nào.",
   "worklist.exceptions.loading": "Đang tải nhóm…",
@@ -21220,6 +21226,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "brief.done.showNew": "Hiện các thay đổi mới",
   "brief.done.history": "Lịch sử thay đổi",
   "brief.done.dealsLabel": "Các giao dịch Margince đã thay đổi",
+  "brief.done.pick": "Hoàn tác thay đổi trên {name}",
   "brief.done.noReason": "Không có lý do",
   "brief.done.markedLost": "Đã đánh dấu là mất",
   "brief.done.customerWrote": "Khách hàng đã viết:",
@@ -21237,8 +21244,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "changes.bulk.confirm_other":
     "{count} giao dịch cần bạn xác nhận. Hãy hoàn tác từng giao dịch trên dòng của nó.",
   "changes.bulk.unsent_one": "{count} giao dịch chưa được gửi.",
+  "changes.bulk.settled_one": "{count} giao dịch không còn chờ xem xét.",
+  "changes.bulk.settled_other": "{count} giao dịch không còn chờ xem xét.",
   "changes.bulk.unsent_other": "{count} giao dịch chưa được gửi.",
   "changes.bulk.confirmOnDeal": "Mở giao dịch để xác nhận hoàn tác.",
   "changes.bulk.retry": "Gửi lại",
   "changes.bulk.unfinished": "Giao dịch chưa hoàn tác hết",
+  "changes.bulk.clear": "Ẩn kết quả này",
 };

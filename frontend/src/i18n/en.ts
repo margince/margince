@@ -19254,6 +19254,12 @@ export const en = {
   "receipt.detail.by": "Done by",
   "receipt.detail.when": "When",
   "receipt.detail.source": "Source",
+  "receipt.detail.sourceAt": "Source date",
+  "receipt.detail.reasonKind": "Reason",
+  "receipt.detail.reasonKind.rule":
+    "A rule: Margince counted what the data shows",
+  "receipt.detail.reasonKind.inference":
+    "An inference: Margince read what the customer wrote or said",
   "worklist.handled.showMore": "Show more",
   "worklist.exceptions.empty": "No team exceptions.",
   "worklist.exceptions.loading": "Loading team…",
@@ -21530,6 +21536,7 @@ export const en = {
   "brief.done.showNew": "Show new changes",
   "brief.done.history": "Change history",
   "brief.done.dealsLabel": "Deals Margince changed",
+  "brief.done.pick": "Undo changes on {name}",
   "brief.done.noReason": "Reason unavailable",
   "brief.done.markedLost": "Marked lost",
   "brief.done.customerWrote": "The customer wrote:",
@@ -21547,10 +21554,13 @@ export const en = {
   "changes.bulk.confirm_other":
     "{count} deals need your confirmation. Undo each on its own row.",
   "changes.bulk.unsent_one": "{count} deal was not sent.",
+  "changes.bulk.settled_one": "{count} deal no longer waits for review.",
+  "changes.bulk.settled_other": "{count} deals no longer wait for review.",
   "changes.bulk.unsent_other": "{count} deals were not sent.",
   "changes.bulk.confirmOnDeal": "Open the deal to confirm its Undo.",
   "changes.bulk.retry": "Send again",
   "changes.bulk.unfinished": "Deals not fully undone",
+  "changes.bulk.clear": "Clear this result",
 } as const;
 
 export type MessageKey = keyof typeof en;

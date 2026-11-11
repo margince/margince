@@ -155,8 +155,11 @@ func TestAReceiptNamesWhoDidItAndWhatItMoved(t *testing.T) {
 	if change, leaked := changeOf(correction, "close_date_provisional"); leaked {
 		t.Errorf("the correction lists close_date_provisional: %+v", change)
 	}
-	if correction.SourceRecord != nil {
-		t.Errorf("a correction cites no message, and names %+v", correction.SourceRecord)
+	if correction.SourceRecord != nil || correction.SourceOccurredAt != nil {
+		t.Errorf("a correction cites no message, and names %+v at %v", correction.SourceRecord, correction.SourceOccurredAt)
+	}
+	if correction.ReasonKind == nil || *correction.ReasonKind != crmcontracts.ReceiptReasonKindRule {
+		t.Errorf("the sweep's correction says its reason is %v, want a rule", correction.ReasonKind)
 	}
 
 	decided := receiptByID(t, handled, card.UUID)
@@ -178,6 +181,45 @@ func TestAReceiptNamesWhoDidItAndWhatItMoved(t *testing.T) {
 	if decided.SourceRecord == nil || ids.UUID(decided.SourceRecord.Id) != ids.UUID(message.Id) ||
 		decided.SourceRecord.Label == nil || *decided.SourceRecord.Label != subject {
 		t.Errorf("the card's source reads %+v, want the call it was read from", decided.SourceRecord)
+	}
+	if decided.SourceOccurredAt == nil || !decided.SourceOccurredAt.Equal(message.OccurredAt) {
+		t.Errorf("the card's source happened at %v, want the call's own time %v", decided.SourceOccurredAt, message.OccurredAt)
+	}
+	if decided.ReasonKind != nil {
+		t.Errorf("an approval says its reason is %q, want no kind", *decided.ReasonKind)
+	}
+}
+
+// A verdict change names the message it read and when that came, apart from
+// when Margince acted. Home and the deal agree, and call the reason an inference.
+func TestAVerdictReceiptNamesTheMessageItReadAndWhenItCame(t *testing.T) {
+	v := setupDealVerdict(t)
+	v.run(t)
+	reader := v.As(v.Rep1, []ids.UUID{v.Team1}, integration.AdminPerms)
+	now, h := clocktest.Now(t), newMarginceChangeHandlers(v.Pool)
+	handled, err := newAttentionService(v.Pool, approvals.NewService(v.DB()), func() time.Time { return now }).HandledForYou(reader, nil)
+	rows, _, readErr := h.deals.DealChanges(reader, ids.From[ids.DealKind](v.deal), nil, 10)
+	onDeal, drawErr := h.changeReceipts(reader, rows)
+	if err != nil || readErr != nil || drawErr != nil {
+		t.Fatal(err, readErr, drawErr)
+	}
+	verdicts := 0
+	for _, receipt := range slices.Concat(handled.Receipts, onDeal) {
+		if receipt.Subject == nil || ids.UUID(receipt.Subject.Id) != v.deal {
+			continue
+		}
+		verdicts++
+		if at := receipt.SourceOccurredAt; receipt.SourceRecord == nil || receipt.SourceRecord.Id.String() != v.note ||
+			at == nil || !at.Equal(v.now) || at.Equal(receipt.OccurredAt) {
+			t.Errorf("%s names the source %+v at %v (acted %v), want the buyer's message at %v", receipt.Kind, receipt.SourceRecord, at, receipt.OccurredAt, v.now)
+		}
+		if precision, kind := receipt.SourceOccurredPrecision, receipt.ReasonKind; precision == nil || *precision != crmcontracts.OccurredPrecisionOccurredPrecisionInstant ||
+			kind == nil || *kind != crmcontracts.ReceiptReasonKindInference {
+			t.Errorf("%s gives its source precision %v and its reason kind %v, want an instant and an inference", receipt.Kind, precision, kind)
+		}
+	}
+	if verdicts != 6 {
+		t.Fatalf("Home and the deal carry %d changes on the deal, want the verdict's three on each", verdicts)
 	}
 }
 

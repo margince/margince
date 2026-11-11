@@ -98,11 +98,13 @@ const UNDO_BATCH = 200;
  * What a run of Undo batches came back with. `results` holds every deal a
  * batch answered for. `unsent` holds the deals of the failed batch and of every
  * batch after it. The server may have committed the failed one, so a retry
- * reads the deals again before it sends them.
+ * reads the deals again before it sends them. `settled` holds the unsent deals
+ * that no longer wait for review, with no answer of their own.
  */
 export type BundleUndoRun = {
   results: UndoMarginceChangeResult[];
   unsent: MarginceChangeBundle[];
+  settled?: MarginceChangeBundle[];
   error?: unknown;
 };
 

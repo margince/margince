@@ -67,6 +67,12 @@ type CorrectionReceipt struct {
 	// StageProbability is the probability the deal took with the stage it
 	// was moved to.
 	StageProbability *int
+	// ReasonKind is CorrectionReasonKind of the row: a rule, an inference,
+	// or "" when the row cannot say.
+	ReasonKind string
+	// CitedActivities are the activities the evidence names, none where the
+	// reader may not read the evidence.
+	CitedActivities []ids.UUID
 }
 
 // heldCorrections stay on Home until their owner accepts or undoes them.
@@ -144,9 +150,10 @@ func (s *Store) RecentCorrectionsOwnedBy(
 
 func scanCorrectionReceipt(rows pgx.CollectableRow) (CorrectionReceipt, error) {
 	var row CorrectionReceipt
+	var lostCode *string
 	if err := rows.Scan(&row.DealID, &row.DealName, &row.AuditLogID,
 		&row.Fields, &row.Basis, &row.AppliedAt, &row.Reversed,
-		&row.Version, &row.BeforeClose, &row.AfterClose, &row.Evidence,
+		&row.Version, &row.BeforeClose, &row.AfterClose, &lostCode, &row.Evidence,
 		&row.ActorType, &row.ActorID, &row.OnBehalfOf, &row.Correction,
 		&row.BeforeAmount, &row.AfterAmount, &row.BeforeProbability, &row.AfterProbability,
 		&row.Currency, &row.OwnerID, &row.FromStage, &row.ToStage,
@@ -154,6 +161,8 @@ func scanCorrectionReceipt(rows pgx.CollectableRow) (CorrectionReceipt, error) {
 		return row, err
 	}
 	row.EstimateBasis = correctionEstimateBasis(row.Evidence)
+	row.ReasonKind = CorrectionReasonKind(row.Correction, lostCode)
+	row.CitedActivities = citedActivities(row.Evidence)
 	return row, nil
 }
 
@@ -201,6 +210,7 @@ func correctionReceiptSelect(ctx context.Context, arg func(any) int) (string, er
 			            ELSE '' END,
 			       c.applied_at,
 			       c.reversed_at IS NOT NULL, d.version, a.before->>'expected_close_date', a.after->>'expected_close_date',
+			       a.after->>'lost_reason_code',
 			       -- A masked amount takes every key that states it out of the
 			       -- evidence: the customer's words, the figure and the rate.
 			       CASE WHEN NOT %[1]s THEN '{}'::jsonb
