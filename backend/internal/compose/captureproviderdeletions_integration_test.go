@@ -53,7 +53,8 @@ func TestProviderSyncCapturesAndRemovesTheRealStoredEmailKey(t *testing.T) {
 		name, provider, outlookCase string
 		kept                        bool
 	}{
-		{"Gmail deletion", "gmail", "", false}, {"Outlook ambiguous folder removal", "graph", "", true},
+		{"Gmail deletion", "gmail", "", false},
+		{"Outlook ambiguous folder removal", "graph", "", true},
 		{"Outlook hard delete after the hold", "graph", "hard delete", false},
 		{"Outlook hard delete of a colleague's copy", "graph", "colleague", true},
 		{"Outlook hard delete under a statutory hold", "graph", "hold", true},
