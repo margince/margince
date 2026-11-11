@@ -520,8 +520,7 @@ describe("putting a record on a Shortlist from its lists", () => {
     can_edit: false,
   };
 
-  // The route map keys by path alone, and the two pickers ask /lists for one
-  // kind each, so this answers each kind with its own lists.
+  // The route map keys by path alone; the two pickers each ask /lists for one kind.
   function answerListsByKind() {
     const routed = globalThis.fetch;
     globalThis.fetch = (async (

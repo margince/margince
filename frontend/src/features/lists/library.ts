@@ -1,9 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// The Filters and views library as data: every saved view and list the reader
-// can use, merged into one set of rows, grouped by who owns them and cut by
-// what the reader typed and pressed. Pure, so the rules the page draws by
+// The Filters and views library as data. Pure, so the rules the page draws by
 // are proved here without a page.
 
 import {

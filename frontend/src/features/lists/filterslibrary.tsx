@@ -452,9 +452,8 @@ function RetryButton({ onRetry }: Readonly<{ onRetry: () => void }>) {
 
 /**
  * An address lands on its `landing` group, or on the one drawn when a cut or
- * the first-run plate leaves that out. Focus moves one commit after the rows
- * have drawn, so the shell's scroll memory has already put the new page at
- * its top and the move is not undone under the reader.
+ * the first-run plate leaves that out. Focus waits one commit after the rows
+ * draw, so the shell's scroll memory cannot undo the move.
  */
 function useAnchorFocus(
   anchor: LibraryAnchor | undefined,

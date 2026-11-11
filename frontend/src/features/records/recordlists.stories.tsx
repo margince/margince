@@ -22,8 +22,7 @@ import {
 } from "../../testing/story-utils";
 import { RecordListsPanel } from "./recordlists";
 
-// The lists one record is on, on its own page, the verb that puts it on a
-// Shortlist, and the check that says why it is not on a Live List.
+// The lists one record is on, and why it is not on a Live List.
 const meta: Meta = {
   title: "Records/Record lists",
   parameters: { layout: "padded" },
@@ -93,8 +92,7 @@ export const WithoutListGrant: Story = {
   },
 };
 
-// Beside a rail that already holds Add to Shortlist and All lists, as on a
-// contact's Research tab: the panel keeps the rows and the Live List check.
+// On a contact's Research tab, where the rail beside it holds the verbs.
 export const BesideARail: Story = {
   render: () => {
     stub([{ ...shortlist, health: "ok" }, liveList]);

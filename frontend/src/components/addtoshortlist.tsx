@@ -76,10 +76,7 @@ export function AddToShortlistAction({
   );
 }
 
-/**
- * The verbs of a record page's Lists section, wherever the page draws it: the
- * header's Add to Shortlist, and the way to every list the reader can find.
- */
+/** One spelling of the Lists section's verbs for every record page that draws it. */
 export function RecordListsWays({
   entityType,
   entityId,

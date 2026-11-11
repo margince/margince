@@ -23,10 +23,6 @@ import {
 import { FiltersScreen } from "./filters";
 
 // `#/filters`: every saved view and list the reader can use, in one library.
-// The states are the ones a reader can be in: the populated library, a first
-// run, nothing shared with the reader, lists switched off, a cut, a read that
-// failed or stopped at its cap, a search past the cap still out, archived lists
-// shown, a row's ⋯ and the type question open, and the wait for the session.
 const meta: Meta<typeof FiltersScreen> = {
   title: "Patterns/Filters and views/Library",
   component: FiltersScreen,
@@ -185,8 +181,8 @@ function routes(
   });
 }
 
-// Both groups: saved views and every list the reader owns, team ones too, in
-// their own; lists someone else or nobody owns in the shared one.
+// Both groups: the reader's own lists, team ones too, and lists someone else or
+// nobody owns.
 export const Populated: Story = {
   render: () => {
     routes();
@@ -246,8 +242,8 @@ export const NoHits: Story = {
   },
 };
 
-// The lists did not load: the reader's own group keeps its saved views and says
-// what is missing; the shared one says the same with a retry.
+// The lists did not load: each group says so, and the reader's own keeps its
+// saved views.
 export const PartialFailureListsDown: Story = {
   render: () => {
     routes({ listsFail: true });

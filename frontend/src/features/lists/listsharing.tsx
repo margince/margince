@@ -128,8 +128,8 @@ export function ListAudienceFields({
 }
 
 /**
- * Who can find a list, named: a team by its name, and the owner's teams or a
- * private list's owner as the reader when they are the owner.
+ * Who can find a list, named from where the reader stands: their own list
+ * reads as theirs.
  *
  * Returned as a function so a table reads the roster and the session once for
  * all of its rows.
