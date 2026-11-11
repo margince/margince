@@ -35,7 +35,7 @@ func (c *collector) WritePrometheus(w io.Writer) {
 	writeCounters(w, counterHeader(w, "margince_capture_calendar_events_total",
 		"Calendar events a pull attempted since process start, by the one outcome each came to."), "outcome", snap.calendar)
 	writeHistograms(w, histogramHeader(w, "margince_capture_backfill_stage_seconds",
-		"Wall time one backfilled message spent in each stage, in seconds: fetch and parse are the provider's download and our parse, sink is the capture transaction, ensure the counterparty and project work after it."),
+		"Wall time one backfilled message spent in each stage, in seconds: fetch and parse are the provider's download and our parse, sink is the capture transaction with the counterparty it files, ensure the project and party work after it."),
 		"stage", snap.stages)
 	writeCounters(w, counterHeader(w, "margince_capture_backfill_pages_total",
 		"Backfill pages since process start, by result."), "result", snap.pages)

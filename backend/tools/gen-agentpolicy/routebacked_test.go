@@ -365,3 +365,26 @@ func TestAClosedAnswerAdmitsTheReadableFigureBesideAnAmount(t *testing.T) {
 		t.Errorf("answer schema %s (%v) does not admit total_display", got, err)
 	}
 }
+
+func TestADeprecatedOperationsVerbSaysSoInItsSummary(t *testing.T) {
+	var paths map[string]map[string]yaml.Node
+	if err := yaml.Unmarshal([]byte(`
+/weeks:
+  get: { summary: A team's week., deprecated: true }
+/days:
+  get: { summary: A rep's day. }
+`), &paths); err != nil {
+		t.Fatal(err)
+	}
+	policies := []policy{{Route: "GET /v1/weeks"}, {Route: "GET /v1/days"}}
+	shapes, err := routeShapes(paths, nil, nil, nil, policies, func(policy) bool { return true })
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := shapes["GET /v1/weeks"].summary; got != "Deprecated: A team's week." {
+		t.Errorf("deprecated verb summary = %q", got)
+	}
+	if got := shapes["GET /v1/days"].summary; got != "A rep's day." {
+		t.Errorf("supported verb summary = %q", got)
+	}
+}

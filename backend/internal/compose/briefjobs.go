@@ -138,7 +138,7 @@ func (w *briefGenerateWorker) mailTheMorning(
 	var awaiting []briefs.BriefRun
 	if err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
 		var err error
-		awaiting, err = briefs.RunsAwaitingMail(ctx, tx, pass.day)
+		awaiting, err = briefs.RunsAwaitingMail(ctx, tx, pass.day, now)
 		return err
 	}); err != nil {
 		return fmt.Errorf("listing the runs still owed a message: %w", err)

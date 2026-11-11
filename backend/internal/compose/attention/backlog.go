@@ -166,7 +166,7 @@ func (s *Service) countInto(ctx context.Context, key totalKey, window TaskWindow
 		return
 	}
 	var total int
-	err := s.degradable(ctx, laneBudget, func(ctx context.Context) error {
+	err := s.degradable(ctx, "task_count", laneBudget, func(ctx context.Context) error {
 		var err error
 		total, err = s.backlog.tasks.CountTasks(ctx, window)
 		return err

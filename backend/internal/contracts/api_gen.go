@@ -93286,6 +93286,9 @@ type ServerInterface interface {
 	// The installation's entitlement and seat usage (admin/ops).
 	// (GET /installation/license)
 	GetLicenseEntitlement(w http.ResponseWriter, r *http.Request)
+	// Re-read the installation's license token now (admin/ops).
+	// (POST /installation/license/check)
+	CheckLicenseNow(w http.ResponseWriter, r *http.Request)
 	// Every vendor whose OAuth app this installation can hold, and whether it holds one.
 	// (GET /installation/oauth-apps)
 	ListOauthApps(w http.ResponseWriter, r *http.Request)
@@ -98233,6 +98236,12 @@ func (_ Unimplemented) DownloadJurisdictionDocument(w http.ResponseWriter, r *ht
 // The installation's entitlement and seat usage (admin/ops).
 // (GET /installation/license)
 func (_ Unimplemented) GetLicenseEntitlement(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Re-read the installation's license token now (admin/ops).
+// (POST /installation/license/check)
+func (_ Unimplemented) CheckLicenseNow(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -127588,6 +127597,26 @@ func (siw *ServerInterfaceWrapper) GetLicenseEntitlement(w http.ResponseWriter, 
 	handler.ServeHTTP(w, r)
 }
 
+// CheckLicenseNow operation middleware
+func (siw *ServerInterfaceWrapper) CheckLicenseNow(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CheckLicenseNow(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListOauthApps operation middleware
 func (siw *ServerInterfaceWrapper) ListOauthApps(w http.ResponseWriter, r *http.Request) {
 
@@ -149144,6 +149173,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/installation/license", wrapper.GetLicenseEntitlement)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/installation/license/check", wrapper.CheckLicenseNow)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/installation/oauth-apps", wrapper.ListOauthApps)
