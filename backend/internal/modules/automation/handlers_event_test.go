@@ -264,8 +264,9 @@ func TestPostMeetingRecapObservesCaptureAndRelevantUpdates(t *testing.T) {
 	}{
 		{"meeting captured", eventActivityCaptured, `{"kind":"meeting"}`, true},
 		{"note captured", eventActivityCaptured, `{"kind":"note"}`, false},
-		{"notes added", eventActivityUpdated, `{"changed_fields":{"body":true}}`, true},
-		{"marked held", eventActivityUpdated, `{"changed_fields":{"meeting_status":"held"}}`, true},
+		{"notes added", eventActivityUpdated, `{"changed_fields":{"body":true,"meeting_recap_became_ready":true}}`, true},
+		{"marked held", eventActivityUpdated, `{"changed_fields":{"meeting_status":"held","meeting_recap_became_ready":true}}`, true},
+		{"existing notes edited", eventActivityUpdated, `{"changed_fields":{"body":true}}`, false},
 		{"subject edited", eventActivityUpdated, `{"changed_fields":{"subject":"Planning"}}`, false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

@@ -44,6 +44,7 @@ type AutomationStore struct {
 	// lists answers whether the lists a list rule names exist for its author.
 	lists     Lists
 	inquiries InquiryRouting
+	stages    StageLookup
 }
 
 // NewAutomationStore binds the automation tables to the pool it is given.
@@ -78,15 +79,16 @@ func (s *AutomationStore) WithLists(lists Lists) *AutomationStore {
 
 // Automation is one configured instance.
 type Automation struct {
-	ID        ids.AutomationID
-	OwnerID   *ids.UserID
-	Key       string
-	Name      string
-	Enabled   bool
-	Params    json.RawMessage
-	Version   int64
-	CreatedAt time.Time
-	UpdatedAt *time.Time
+	Configuration *configurationState
+	ID            ids.AutomationID
+	OwnerID       *ids.UserID
+	Key           string
+	Name          string
+	Enabled       bool
+	Params        json.RawMessage
+	Version       int64
+	CreatedAt     time.Time
+	UpdatedAt     *time.Time
 	// PausedReason says why a rule paused itself; nil for a rule paused by
 	// hand or running.
 	PausedReason *string
@@ -176,6 +178,9 @@ func (s *AutomationStore) List(ctx context.Context, cursor *string, limit *int) 
 	if err != nil {
 		return AutomationPage{}, err
 	}
+	if err := s.readConfigurationStates(ctx, page.Items); err != nil {
+		return AutomationPage{}, err
+	}
 	if len(page.Items) > n {
 		page.Items = page.Items[:n]
 		last := page.Items[len(page.Items)-1]
@@ -209,7 +214,11 @@ func (s *AutomationStore) Get(ctx context.Context, id ids.AutomationID) (Automat
 	if err != nil {
 		return Automation{}, err
 	}
-	return a, nil
+	records := []Automation{a}
+	if err := s.readConfigurationStates(ctx, records); err != nil {
+		return Automation{}, err
+	}
+	return records[0], nil
 }
 
 // Create instantiates a catalog key, always paused. The catalog entry —
@@ -395,9 +404,7 @@ func SeedStarterAutomationsTx(ctx context.Context, tx pgx.Tx) error {
 		if !entry.Seeded {
 			continue
 		}
-		if err := entry.Validate(nil); err != nil {
-			return fmt.Errorf("seed automation %s: default params fail catalog validation: %w", entry.Key, err)
-		}
+		ready := entry.Validate(nil) == nil
 		paramsJSON, err := json.Marshal(nonNilParams(nil))
 		if err != nil {
 			return fmt.Errorf("seed automation %s: %w", entry.Key, err)
@@ -412,7 +419,7 @@ func SeedStarterAutomationsTx(ctx context.Context, tx pgx.Tx) error {
 			pgx.NamedArgs{
 				"key": entry.Key, keyName: entry.Name, "trigger": triggerJSON,
 				"action": actionJSON, keyParams: paramsJSON, "tier": entry.Tier,
-				auditEnabled: entry.Action != string(ActionTypeDraftEmail),
+				auditEnabled: ready && entry.Action != string(ActionTypeDraftEmail),
 			}); err != nil {
 			return fmt.Errorf("seed automation %s: %w", entry.Key, err)
 		}

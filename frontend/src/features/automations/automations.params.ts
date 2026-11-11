@@ -15,7 +15,9 @@ export type ParamField = {
     | "enum"
     | "live_list"
     | "shortlist"
-    | "timezone";
+    | "timezone"
+    | "pipeline"
+    | "stages";
   min?: number;
   max?: number;
   initial: string;
@@ -29,6 +31,9 @@ export type ParamField = {
 // Catalog defaults and stored params are JSON scalars; anything non-scalar
 // has no honest single-line rendering, so it collapses to empty.
 export function scalarText(value: unknown): string {
+  if (Array.isArray(value) && value.every((item) => typeof item === "string")) {
+    return JSON.stringify(value);
+  }
   if (value === undefined || value === null || typeof value === "object") {
     return "";
   }
@@ -51,10 +56,12 @@ function paramKind(type: unknown): ParamField["kind"] | null {
 // The format selects a shared picker without tying it to a parameter name.
 function formattedKind(
   format: unknown,
-): "live_list" | "shortlist" | "timezone" | null {
+): "live_list" | "shortlist" | "timezone" | "pipeline" | "stages" | null {
   return format === "live_list" ||
     format === "shortlist" ||
-    format === "timezone"
+    format === "timezone" ||
+    format === "pipeline" ||
+    format === "stages"
     ? format
     : null;
 }
@@ -122,6 +129,9 @@ export function paramsFromValues(
       )
       .map((field) => {
         const value = values[field.key] ?? field.initial;
+        if (field.kind === "stages") {
+          return [field.key, value === "" ? [] : JSON.parse(value)];
+        }
         if (field.kind === "integer") {
           return [field.key, Number(value)];
         }

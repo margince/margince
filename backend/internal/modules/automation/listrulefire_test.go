@@ -259,8 +259,8 @@ func TestAListRuleNeedsListsTheInstallationOffers(t *testing.T) {
 	if err := (&AutomationStore{}).validateRefs(context.Background(), entry, map[string]any{}); !errors.As(err, &param) || param.Field != "key" {
 		t.Fatalf("a list rule with lists switched off answered %v, want a refusal on the key", err)
 	}
-	_, _, err := resolvePreviewRecipe(context.Background(), nil, Automation{Key: listNotifyName}, AutomationPreviewInput{}, time.Now())
-	if !errors.As(err, &param) || !strings.Contains(param.Reason, "check runs") {
-		t.Fatalf("previewing a list rule answered %v, want the documented gap", err)
+	preview, _, err := resolvePreviewRecipe(context.Background(), nil, Automation{Key: listNotifyName}, AutomationPreviewInput{}, time.Date(2026, 7, 15, 12, 0, 0, 0, time.UTC))
+	if err != nil || !preview.eventOnly {
+		t.Fatalf("list preview = %+v, %v; want future events without a historical count", preview, err)
 	}
 }

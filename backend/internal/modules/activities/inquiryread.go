@@ -45,5 +45,8 @@ func (s *Store) WebsiteInquiryTask(ctx context.Context, submission string) (crmc
 		task, err = readActivityContent(ctx, tx, matches[0], storekit.IncludeArchived)
 		return err
 	})
+	if err == nil && found {
+		err = s.attachCustomValues(ctx, &task)
+	}
 	return task, found, err
 }

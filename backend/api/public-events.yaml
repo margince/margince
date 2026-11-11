@@ -2290,6 +2290,10 @@ components:
         The bounded delta of activity.updated. Each field is carried only when this update touched
         it. The key set is fixed, so it is typed rather than an open map.
       properties:
+        meeting_recap_became_ready:
+          type: boolean
+          description: The stored meeting changed from lacking Held status or usable notes to having both. Consumers recheck current content and access before drafting.
+
         handling_automation_id:
           type: string
           format: uuid

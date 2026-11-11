@@ -54,11 +54,13 @@ func workflowEngineWithDrafter(db *database.DB, drafter activities.EmailDrafter)
 	contactsStore := contacts.NewStore(db)
 	// Executors ride the same record provider as every other datasource
 	// consumer.
+	claims := automation.NewEffectClaims(db)
 	ex := automation.Executors{
-		MeetingRecaps: activities.NewStore(db),
-		Inquiries:     automation.NewInquiryService(db, newInquiryRouting(db)),
-		Provider:      NewProvider(db.Pool()),
-		Approvals:     automationApprovalsAdapter{svc: NewApprovalsService(db)},
+		RecapDraftClaims: claims,
+		MeetingRecaps:    activities.NewStore(db),
+		Inquiries:        automation.NewInquiryService(db, newInquiryRouting(db)),
+		Provider:         NewProvider(db.Pool()),
+		Approvals:        automationApprovalsAdapter{svc: NewApprovalsService(db)},
 		// The zero SendPath is the honest one here: automation.Comms declares
 		// DraftEmail alone, so no send is reachable from this surface to
 		// configure. What an automation composes waits as a held draft, and
@@ -69,7 +71,7 @@ func workflowEngineWithDrafter(db *database.DB, drafter activities.EmailDrafter)
 		// recording one is delivering one, so the engine's success record
 		// is finally a true sentence rather than a skipped run.
 		Notifier:  noticesNotifier{store: notices.NewStore(db)},
-		Claims:    automation.NewEffectClaims(db),
+		Claims:    claims,
 		Language:  installationLanguage(db.Pool()),
 		Lists:     NewListRules(db.Pool()),
 		Authority: identity.NewService(db.Pool()),

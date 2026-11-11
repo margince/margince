@@ -137,7 +137,7 @@ func TestMeetingRecapWaitsForBothHeldAndNotes(t *testing.T) {
 				t.Fatal(err)
 			}
 			id := ids.From[ids.ActivityKind](ids.UUID(row.Id))
-			if ready, err := store.ReadyForRecap(ctx, id, now, now.Add(-time.Hour)); ready || err != nil {
+			if ready, err := store.ReadyForRecap(ctx, id, now); ready || err != nil {
 				t.Fatalf("initial recap readiness = %v, %v; want false", ready, err)
 			}
 			if tc.edit == nil {
@@ -146,14 +146,10 @@ func TestMeetingRecapWaitsForBothHeldAndNotes(t *testing.T) {
 			if _, err := store.UpdateActivity(ctx, id, *tc.edit); err != nil {
 				t.Fatal(err)
 			}
-			if ready, err := store.ReadyForRecap(ctx, id, now, now.Add(-time.Hour)); !ready || err != nil {
+			if ready, err := store.ReadyForRecap(ctx, id, now); !ready || err != nil {
 				t.Fatalf("recap readiness after update = %v, %v; want true", ready, err)
 			}
-			afterCapture := row.CreatedAt.Add(time.Microsecond)
-			if ready, err := store.ReadyForRecap(ctx, id, afterCapture, afterCapture); ready || err != nil {
-				t.Fatalf("historical meeting recap readiness = %v, %v; want false", ready, err)
-			}
-			if ready, err := store.ReadyForRecap(ctx, id, now.Add(-2*time.Hour), now.Add(-3*time.Hour)); ready || err != nil {
+			if ready, err := store.ReadyForRecap(ctx, id, now.Add(-2*time.Hour)); ready || err != nil {
 				t.Fatalf("future meeting recap readiness = %v, %v; want false", ready, err)
 			}
 		})

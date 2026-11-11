@@ -52761,6 +52761,16 @@ export interface components {
             /** @enum {string} */
             status: "enabled" | "paused";
             /**
+             * @description Current configuration state, separate from the result of any run.
+             * @enum {string}
+             */
+            readonly setup_state?: "needs_setup" | "on" | "paused" | "needs_attention";
+            /**
+             * @description A verified reason the configuration needs work. Record-specific refusals stay on runs.
+             * @enum {string}
+             */
+            readonly setup_reason?: "configuration_incomplete" | "authorizer_missing" | "authorizer_inactive" | "paused_by_system";
+            /**
              * Format: uuid
              * @description The member the rule runs as. Null until the rule is first enabled, and after its owner's seat is removed. Firings of a rule whose owner is no longer active are blocked until the owner is changed.
              */

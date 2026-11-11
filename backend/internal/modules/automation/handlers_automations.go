@@ -413,6 +413,12 @@ func WireAutomation(a Automation) (crmcontracts.Automation, error) {
 		CreatedAt:        a.CreatedAt,
 		UpdatedAt:        a.UpdatedAt,
 	}
+	if a.Configuration != nil {
+		wire.SetupState = new(crmcontracts.AutomationSetupState(a.Configuration.State))
+		if a.Configuration.Reason != "" {
+			wire.SetupReason = new(crmcontracts.AutomationSetupReason(a.Configuration.Reason))
+		}
+	}
 	if a.Key == inquiryRecipeName {
 		policy, err := ParseInquiryPolicy(a.Params)
 		if err != nil {

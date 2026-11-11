@@ -15,6 +15,7 @@ import {
   scalarText,
 } from "./automations.params";
 import { recipeSentence } from "./automations.recipe";
+import { StageParamSelect } from "./automations.stageparams";
 
 type CatalogEntry = components["schemas"]["AutomationCatalogEntry"];
 type Automation = components["schemas"]["Automation"];
@@ -28,6 +29,7 @@ function ParamFieldControl({
   value,
   object,
   watchedList,
+  pipelineId,
   onChange,
 }: Readonly<{
   field: ParamField;
@@ -35,9 +37,34 @@ function ParamFieldControl({
   object: string;
   /** The Live List a list rule watches, which narrows its Shortlist picker. */
   watchedList: string;
+  pipelineId: string;
   onChange: (value: string) => void;
 }>) {
   const t = useT();
+  const label =
+    field.key === "task_title" ? t("auto.stages.taskTitle") : field.key;
+  if (field.kind === "pipeline" || field.kind === "stages") {
+    const kind = field.kind;
+    return (
+      <Field
+        label={t(
+          field.kind === "pipeline"
+            ? "auto.stages.pipeline"
+            : "auto.stages.destinations",
+        )}
+      >
+        {(control) => (
+          <StageParamSelect
+            kind={kind}
+            pipelineId={pipelineId}
+            value={value}
+            onChange={onChange}
+            control={control}
+          />
+        )}
+      </Field>
+    );
+  }
   if (field.kind === "timezone") {
     return (
       <Field label={t("auto.deadlineTimezone")}>
@@ -63,7 +90,7 @@ function ParamFieldControl({
   if (field.kind === "live_list" || field.kind === "shortlist") {
     const kind = field.kind;
     return (
-      <Field label={field.key}>
+      <Field label={label}>
         {(control) => (
           <ListParamSelect
             kind={kind}
@@ -77,7 +104,7 @@ function ParamFieldControl({
     );
   }
   return (
-    <Field label={field.key}>
+    <Field label={label}>
       {(control) =>
         field.kind === "date_field" ? (
           <DateFieldSelect
@@ -234,8 +261,15 @@ export function AutomationForm({
           value={values[field.key] ?? field.initial}
           object={values.object ?? ""}
           watchedList={values.list_id ?? ""}
+          pipelineId={values.pipeline_id ?? ""}
           onChange={(next) =>
-            setValues((current) => ({ ...current, [field.key]: next }))
+            setValues((current) => ({
+              ...current,
+              ...(field.kind === "pipeline" && next !== current[field.key]
+                ? { stage_ids: "[]" }
+                : {}),
+              [field.key]: next,
+            }))
           }
         />
       ))}

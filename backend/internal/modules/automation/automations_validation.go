@@ -30,7 +30,7 @@ func (s *AutomationStore) revalidate(ctx context.Context, before Automation, in 
 		}
 	}
 
-	resuming := in.Enabled != nil && *in.Enabled
+	resuming := in.Enabled != nil && *in.Enabled && !before.Enabled
 	if in.Params == nil && !resuming {
 		return nil
 	}
@@ -47,15 +47,18 @@ func (s *AutomationStore) revalidate(ctx context.Context, before Automation, in 
 		if err := requireAuthorCeiling(ctx, entry); err != nil {
 			return err
 		}
-		if err := entry.Validate(params); err != nil {
-			return err
-		}
+	}
+	if err := entry.Validate(params); err != nil {
+		return err
 	}
 	return s.validateRefs(ctx, entry, params)
 }
 
 // validateRefs asks the entry's reference check, when it has one.
 func (s *AutomationStore) validateRefs(ctx context.Context, entry CatalogEntry, params map[string]any) error {
+	if entry.Key == stageChangeCreateTaskName || entry.Key == stageChangeNotifyName {
+		return validateStageScope(ctx, s.stages, params)
+	}
 	if entry.Key == inquiryRecipeName {
 		if s.inquiries == nil {
 			return &ParamError{Field: "key", Reason: "website inquiry handling is not available"}
@@ -77,4 +80,14 @@ func (s *AutomationStore) validateRefs(ctx context.Context, entry CatalogEntry, 
 		return &ParamError{Field: "key", Reason: "needs lists, which are not switched on in this installation"}
 	}
 	return entry.ValidateRefs(ctx, s.lists, params)
+}
+
+func (s *AutomationStore) WithStageLookup(stages StageLookup) *AutomationStore {
+	s.stages = stages
+	return s
+}
+
+func (h Handlers) WithStageLookup(stages StageLookup) Handlers {
+	h.automations.WithStageLookup(stages)
+	return h
 }

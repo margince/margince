@@ -83,7 +83,7 @@ func (stageChangeCreateTask) Spec() workflow.Spec {
 	}
 }
 
-func (stageChangeCreateTask) Match(_ context.Context, ev workflow.Event) (bool, error) {
+func (w stageChangeCreateTask) Match(ctx context.Context, ev workflow.Event) (bool, error) {
 	// A close (won/lost) ends the cadence; only open moves need a next
 	// step. An absent payload (defensive — every real deal.stage_changed
 	// carries one) is treated as an open move rather than silently dropped.
@@ -95,7 +95,10 @@ func (stageChangeCreateTask) Match(_ context.Context, ev workflow.Event) (bool, 
 		return false, err
 	}
 	status, _ := payload[dealStageStatusField].(string)
-	return status == "" || status == dealStatusOpen, nil
+	if status != "" && status != dealStatusOpen {
+		return false, nil
+	}
+	return stageScopeMatches(ctx, w.ex, ev)
 }
 
 // fieldKind is the "kind" json key shared by the action snapshot and the
@@ -112,6 +115,15 @@ func (w stageChangeCreateTask) Plan(ctx context.Context, ev workflow.Event) (wor
 	// resolves to "deal" — the same value this map hardcoded before the
 	// shared builder existed. The deal's owner is who the next step belongs
 	// to; without them the task reaches nobody's own queue.
+	var configured stageChangeParams
+	if len(ev.Params) > 0 {
+		if err := json.Unmarshal(ev.Params, &configured); err != nil {
+			return workflow.Effect{}, err
+		}
+	}
+	if configured.TaskTitle != "" {
+		return ownedTaskEffectNoKey(ctx, w.ex, ev, configured.TaskTitle, dueAt)
+	}
 	ctx = systemtext.WithMessage(ctx, &systemtext.Message{Version: 1, Subject: systemtext.Sentence("automation.stage_change")})
 	return ownedTaskEffectNoKey(ctx, w.ex, ev, systemtext.Literal("automation.stage_change"),
 		dueAt)
@@ -255,8 +267,8 @@ func (stageChangeNotify) Spec() workflow.Spec {
 
 // Both open and closed destinations can matter. Plan resolves the owner
 // before deciding whether the original actor has anything new to tell them.
-func (stageChangeNotify) Match(_ context.Context, _ workflow.Event) (bool, error) {
-	return true, nil
+func (w stageChangeNotify) Match(ctx context.Context, ev workflow.Event) (bool, error) {
+	return stageScopeMatches(ctx, w.ex, ev)
 }
 
 func (w stageChangeNotify) Plan(ctx context.Context, ev workflow.Event) (workflow.Effect, error) {

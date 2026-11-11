@@ -158,7 +158,6 @@ type ListActivitiesInput struct {
 	// (relstrength.HappenedByNowSQL). Rows cut after the fetch would
 	// spend the page and push real correspondence out of it.
 	ConversationAsOf *time.Time
-	meetingRecapFrom *time.Time
 	// WrittenByHuman keeps only rows a human wrote (relstrength.WrittenByHumanSQL),
 	// before the limit, for a reader of correspondence such as a brief.
 	WrittenByHuman bool

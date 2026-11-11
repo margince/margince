@@ -13142,6 +13142,21 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "auto.readOnly":
     "Nur Lesezugriff: Du hast keine Berechtigung, Automatisierungen zu ändern.",
   "auto.catalog": "Vorlagenbibliothek",
+  "auto.setup.needsSetup": "Einrichtung nötig",
+  "auto.setup.needsAttention": "Prüfung nötig",
+  "auto.setup.on": "An",
+  "auto.setup.incomplete":
+    "Wählen Sie die nötigen Einstellungen vor dem Einschalten.",
+  "auto.setup.noAuthorizer":
+    "Wählen Sie eine Person, die diese Automatisierung autorisiert.",
+  "auto.setup.inactive":
+    "Das Konto der autorisierenden Person ist inaktiv. Wählen Sie eine andere Person.",
+  "auto.stages.loadError": "Vertriebspipelines konnten nicht geladen werden.",
+  "auto.stages.choosePipeline": "Pipeline wählen",
+  "auto.stages.chooseStages": "Phasen wählen",
+  "auto.stages.taskTitle": "Aufgabentitel",
+  "auto.stages.pipeline": "Pipeline",
+  "auto.stages.destinations": "Zielphasen",
   "auto.group.inquiries": "Neue Anfragen",
   "auto.group.deals": "Verkaufschancen",
   "auto.group.customers": "Kunden",

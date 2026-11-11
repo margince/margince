@@ -350,7 +350,9 @@ describe("the starter library", () => {
     mount(OPERATOR, {}, "library");
     const template = await screen.findByTestId("template-post_meeting_recap");
     within(template)
-      .getByRole("button", { name: "Use template: Post-meeting recap draft" })
+      .getByRole("button", {
+        name: "Use template: Draft a follow-up after a meeting",
+      })
       .focus();
     await user.keyboard("{Enter}");
     expect(await screen.findByRole("dialog")).toBeInTheDocument();

@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/settings frontend/src/lib/settingscatalog.ts frontend/src/lib/settingscapability.ts frontend/src/App.settings.tsx backend/internal/platform/settings backend/internal/modules/identity/internal/policy/defaults.go backend/internal/modules/contacts/contactcasesettings.go -->
+<!-- describes: frontend/src/features/automations backend/internal/modules/automation frontend/src/features/settings frontend/src/lib/settingscatalog.ts frontend/src/lib/settingscapability.ts frontend/src/App.settings.tsx backend/internal/platform/settings backend/internal/modules/identity/internal/policy/defaults.go backend/internal/modules/contacts/contactcasesettings.go -->
 # Settings
 
 Margince settings open from the **account menu** at the top right. They are not in the sidebar. Which settings pages you see follows your permissions.
@@ -244,6 +244,14 @@ Changes start to work in about 60 seconds; a call already running keeps its old 
 
 **Automations** is in the **Data** group. Its tabs are **Your automations** and **Starter library**.
 The person under **Authorized by** sets which actions a rule may take. Each run checks their current access.
+
+The library groups rules under **New inquiries**, **Deals**, **Customers**, **Meetings** and **Lists**.
+**Needs setup** means required choices are missing. **Needs attention** gives the reason to check a rule,
+such as an inactive account. **On** and **Paused** show the rule's setting. The result of each run
+stays in its history.
+
+For a stage rule, choose a pipeline and the stages that should cause work. A task rule also needs
+a title and a deadline. A stage notice that has no stages chosen starts paused.
 
 Event rules show **From now on** and **Historical preview unavailable**. Turning one on does not process old records. A count of current records would not tell you which past events the rule could have handled.
 

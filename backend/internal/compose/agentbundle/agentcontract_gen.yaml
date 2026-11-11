@@ -50841,6 +50841,16 @@ components:
         key: {type: string, description: The catalog type this instance is built from.}
         name: {type: string}
         status: {type: string, enum: [enabled, paused]}
+        setup_state:
+          type: string
+          enum: [needs_setup, on, paused, needs_attention]
+          readOnly: true
+          description: Current configuration state, separate from the result of any run.
+        setup_reason:
+          type: string
+          enum: [configuration_incomplete, authorizer_missing, authorizer_inactive, paused_by_system]
+          readOnly: true
+          description: A verified reason the configuration needs work. Record-specific refusals stay on runs.
         owner_id:
           type: [string, 'null']
           format: uuid

@@ -1027,6 +1027,8 @@ export interface components {
         };
         /** @description The bounded delta of activity.updated. Each field is carried only when this update touched it. The key set is fixed, so it is typed rather than an open map. */
         PublicEventActivityChangedFields: {
+            /** @description The stored meeting changed from lacking Held status or usable notes to having both. Consumers recheck current content and access before drafting. */
+            meeting_recap_became_ready?: boolean;
             /**
              * Format: uuid
              * @description The reviewed inquiry policy attached to an accepted website note by its internal handler.

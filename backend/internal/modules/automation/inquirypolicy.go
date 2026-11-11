@@ -44,7 +44,7 @@ func checkInquiryPolicy(p crmcontracts.WebsiteInquiryPolicy) error {
 		return inquiryParamError("coordinator_id", "must name a colleague for review and fallback")
 	case !p.Mode.Valid():
 		return inquiryParamError("mode", "must be one_colleague, rotate or coordinator")
-	case strings.TrimSpace(p.TaskTitle) == "" || utf8.RuneCountInString(p.TaskTitle) > 200:
+	case !validTaskTitle(p.TaskTitle):
 		return inquiryParamError("task_title", "must contain between 1 and 200 characters")
 	case p.DueInDays < 1 || p.DueInDays > 30:
 		return inquiryParamError(paramDueInDays, "must be between 1 and 30 calendar days")

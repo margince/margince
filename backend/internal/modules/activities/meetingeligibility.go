@@ -105,14 +105,13 @@ func openCustomerMeeting(ctx context.Context, asOf time.Time, arg func(any) int)
 }
 
 // ReadyForRecap checks the meeting as the authorizer can see it.
-func (s *Store) ReadyForRecap(ctx context.Context, id ids.ActivityID, asOf, enabledFrom time.Time) (bool, error) {
+func (s *Store) ReadyForRecap(ctx context.Context, id ids.ActivityID, asOf time.Time) (bool, error) {
 	rows, _, err := s.ListActivities(ctx, ListActivitiesInput{
 		IDs:                  []ids.ActivityID{id},
 		CustomerMeetingsOnly: true,
 		ReadableOnly:         true,
 		WithOutsideParty:     true,
 		ConversationAsOf:     &asOf,
-		meetingRecapFrom:     &enabledFrom,
 	})
 	if err != nil || len(rows) == 0 {
 		return false, err
@@ -121,6 +120,10 @@ func (s *Store) ReadyForRecap(ctx context.Context, id ids.ActivityID, asOf, enab
 	if meeting.SourceSystem != nil && provenance.ImporterNamespace(*meeting.SourceSystem) {
 		return false, nil
 	}
-	return meeting.MeetingStatus != nil && *meeting.MeetingStatus == crmcontracts.ActivityMeetingStatusHeld &&
-		meeting.Body != nil && values.HasVisibleText(*meeting.Body), nil
+	return meetingReadyForRecap(meeting), nil
+}
+
+func meetingReadyForRecap(meeting crmcontracts.Activity) bool {
+	return meeting.Kind == crmcontracts.ActivityKindMeeting && meeting.MeetingStatus != nil &&
+		*meeting.MeetingStatus == crmcontracts.ActivityMeetingStatusHeld && meeting.Body != nil && values.HasVisibleText(*meeting.Body)
 }

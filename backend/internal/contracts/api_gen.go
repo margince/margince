@@ -3667,6 +3667,54 @@ func (e AutomationPausedReason) Valid() bool {
 	}
 }
 
+// Defines values for AutomationSetupReason.
+const (
+	AutomationSetupReasonAuthorizerInactive      AutomationSetupReason = "authorizer_inactive"
+	AutomationSetupReasonAuthorizerMissing       AutomationSetupReason = "authorizer_missing"
+	AutomationSetupReasonConfigurationIncomplete AutomationSetupReason = "configuration_incomplete"
+	AutomationSetupReasonPausedBySystem          AutomationSetupReason = "paused_by_system"
+)
+
+// Valid indicates whether the value is a known member of the AutomationSetupReason enum.
+func (e AutomationSetupReason) Valid() bool {
+	switch e {
+	case AutomationSetupReasonAuthorizerInactive:
+		return true
+	case AutomationSetupReasonAuthorizerMissing:
+		return true
+	case AutomationSetupReasonConfigurationIncomplete:
+		return true
+	case AutomationSetupReasonPausedBySystem:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AutomationSetupState.
+const (
+	AutomationSetupStateNeedsAttention AutomationSetupState = "needs_attention"
+	AutomationSetupStateNeedsSetup     AutomationSetupState = "needs_setup"
+	AutomationSetupStateOn             AutomationSetupState = "on"
+	AutomationSetupStatePaused         AutomationSetupState = "paused"
+)
+
+// Valid indicates whether the value is a known member of the AutomationSetupState enum.
+func (e AutomationSetupState) Valid() bool {
+	switch e {
+	case AutomationSetupStateNeedsAttention:
+		return true
+	case AutomationSetupStateNeedsSetup:
+		return true
+	case AutomationSetupStateOn:
+		return true
+	case AutomationSetupStatePaused:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AutomationStatus.
 const (
 	AutomationStatusEnabled AutomationStatus = "enabled"
@@ -36401,9 +36449,15 @@ type Automation struct {
 
 	// SetterPassportId The passport of the agent that turned this rule on, which the rule stops with. Null for a rule a user runs. It names the credential and grants nothing: `captured_by` shows the same id on what an agent writes.
 	SetterPassportId *openapi_types.UUID `json:"setter_passport_id,omitempty"`
-	Status           AutomationStatus    `json:"status"`
-	UpdatedAt        *time.Time          `json:"updated_at,omitempty"`
-	Version          *int                `json:"version,omitempty"`
+
+	// SetupReason A verified reason the configuration needs work. Record-specific refusals stay on runs.
+	SetupReason *AutomationSetupReason `json:"setup_reason,omitempty"`
+
+	// SetupState Current configuration state, separate from the result of any run.
+	SetupState *AutomationSetupState `json:"setup_state,omitempty"`
+	Status     AutomationStatus      `json:"status"`
+	UpdatedAt  *time.Time            `json:"updated_at,omitempty"`
+	Version    *int                  `json:"version,omitempty"`
 }
 
 // AutomationLastRunOutcome How the run last_run_at dates ended, in the run history's outcome vocabulary. Only GET /automations carries it, and only beside last_run_at.
@@ -36411,6 +36465,12 @@ type AutomationLastRunOutcome string
 
 // AutomationPausedReason Why a rule paused itself: the list it watches or adds to was archived, its filter stopped working, its owner can no longer find it, one check moved more than 100 records, or the agent that set the rule up no longer has a live passport or connection, whether revoked or expired. Null for a rule running or paused by hand. Resuming clears it, and a user resuming or editing a rule makes it their own.
 type AutomationPausedReason string
+
+// AutomationSetupReason A verified reason the configuration needs work. Record-specific refusals stay on runs.
+type AutomationSetupReason string
+
+// AutomationSetupState Current configuration state, separate from the result of any run.
+type AutomationSetupState string
 
 // AutomationStatus defines model for Automation.Status.
 type AutomationStatus string

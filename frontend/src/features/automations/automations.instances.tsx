@@ -26,6 +26,7 @@ import { AutomationInspectors, OUTCOME_LOOK } from "./automationdetail";
 import { DeleteAutomationAction } from "./automations.delete";
 import { AutomationDialog } from "./automations.form";
 import { RulePausedReason, RuleSetByAgent } from "./automations.lists";
+import { AutomationSetup } from "./automations.setup";
 import { recipeSentence } from "./automations.recipe";
 import "./automations.css";
 
@@ -428,11 +429,12 @@ function AutomationStatus({
             })
           }
         />
-      ) : (
+      ) : !automation.setup_state ? (
         <Badge tone={enabled ? "success" : "warning"}>
           {enabled ? t("auto.statusEnabled") : t("auto.statusPaused")}
         </Badge>
-      )}
+      ) : null}
+      <AutomationSetup automation={automation} />
       <RuleSetByAgent automation={automation} />
       <RulePausedReason automation={automation} />
       {/* A refused flip moves nothing on screen, so this line is its only report. */}

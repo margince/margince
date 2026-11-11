@@ -105,6 +105,9 @@ func updateActivityInTx(
 		return crmcontracts.Activity{}, err
 	}
 	updated := crmcontracts.PublicEventActivityUpdated{ChangedFields: activityUpdatedChangedFields(in, current)}
+	if !meetingReadyForRecap(current) && meetingReadyForRecap(out) {
+		updated.ChangedFields.MeetingRecapBecameReady = new(true)
+	}
 	updated.Imported, updated.ImportRunId = storekit.ImportMark(ctx)
 	if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, updated); err != nil {
 		return crmcontracts.Activity{}, err

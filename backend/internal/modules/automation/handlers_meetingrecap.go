@@ -73,7 +73,7 @@ func (w postMeetingRecap) Match(ctx context.Context, ev workflow.Event) (bool, e
 	if err != nil {
 		return false, err
 	}
-	ready, err := w.ex.MeetingRecaps.ReadyForRecap(owner, ids.From[ids.ActivityKind](ev.Entity.ID), ev.OccurredAt, ev.EnabledFrom)
+	ready, err := w.ex.MeetingRecaps.ReadyForRecap(owner, ids.From[ids.ActivityKind](ev.Entity.ID), ev.OccurredAt)
 	if errors.Is(err, apperrors.ErrNotFound) || errors.Is(err, apperrors.ErrPermissionDenied) {
 		return false, nil
 	}
@@ -93,7 +93,7 @@ func meetingRecapCandidate(ev workflow.Event) (bool, error) {
 		if err := json.Unmarshal(ev.Payload, &updated); err != nil {
 			return false, fmt.Errorf("automation: decoding meeting update: %w", err)
 		}
-		return updated.ChangedFields.Body != nil || updated.ChangedFields.MeetingStatus != nil, nil
+		return updated.ChangedFields.MeetingRecapBecameReady != nil && *updated.ChangedFields.MeetingRecapBecameReady, nil
 	default:
 		return false, nil
 	}
@@ -128,8 +128,18 @@ func (postMeetingRecap) Plan(_ context.Context, ev workflow.Event) (workflow.Eff
 	}}}, nil
 }
 
-func (w postMeetingRecap) Apply(ctx context.Context, _ workflow.Event, eff workflow.Effect, _ *workflow.ApprovalToken) (workflow.RunResult, error) {
-	applied, err := ApplyActions(ctx, w.ex, eff)
+func (w postMeetingRecap) Apply(ctx context.Context, ev workflow.Event, eff workflow.Effect, _ *workflow.ApprovalToken) (workflow.RunResult, error) {
+	ex := w.ex
+	if !ev.EnabledFrom.IsZero() {
+		if ex.RecapDraftClaims == nil {
+			return workflow.RunResult{}, ErrNoEffectClaims
+		}
+		if ex.Approvals == nil {
+			return workflow.RunResult{}, ErrNoApprovalStaging
+		}
+		ex.Approvals = meetingRecapApprovals{ex.Approvals, ex.RecapDraftClaims, w.IdempotencyKey(ev)}
+	}
+	applied, err := ApplyActions(ctx, ex, eff)
 	return workflow.RunResult{Applied: applied}, err
 }
 
@@ -138,4 +148,16 @@ func (postMeetingRecap) IdempotencyKey(ev workflow.Event) string {
 		return postMeetingRecapName + ":" + ev.ID.String()
 	}
 	return postMeetingRecapName + ":" + ev.Entity.ID.String()
+}
+
+type meetingRecapApprovals struct {
+	approvals  Approvals
+	claims     RecapDraftClaims
+	occurrence string
+}
+
+func (a meetingRecapApprovals) Stage(ctx context.Context, in StageRequest) (ids.ApprovalID, error) {
+	return a.claims.StageOnce(ctx, postMeetingRecapName, a.occurrence, HeldDraftKind, func(bound context.Context) (ids.ApprovalID, error) {
+		return a.approvals.Stage(bound, in)
+	})
 }

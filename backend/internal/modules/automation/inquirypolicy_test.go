@@ -45,6 +45,7 @@ func TestInquiryPoliciesRequireACompleteTypedConfiguration(t *testing.T) {
 		{"unknown knob", "params", func(p map[string]any) { p["send_email"] = true }},
 		{"host timezone", "params.timezone", func(p map[string]any) { p["timezone"] = "Local" }},
 		{"padded timezone", "params.timezone", func(p map[string]any) { p["timezone"] = " Europe/Berlin " }},
+		{"invisible title", "params.task_title", func(p map[string]any) { p["task_title"] = "\u200b" }},
 		{"empty title", "params.task_title", func(p map[string]any) { p["task_title"] = " " }},
 		{"long title", "params.task_title", func(p map[string]any) { p["task_title"] = strings.Repeat("界", 201) }},
 		{"unicode title", "", func(p map[string]any) { p["task_title"] = strings.Repeat("界", 200) }},

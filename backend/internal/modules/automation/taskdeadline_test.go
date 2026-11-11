@@ -55,6 +55,12 @@ func TestTaskDeadlineConfigurationRefusesHostDependentZones(t *testing.T) {
 				t.Fatal("task template missing")
 			}
 			params := map[string]any{paramTaskTimezone: "Europe/Berlin"}
+			if key == stageChangeCreateTaskName {
+				params["pipeline_id"] = ids.NewV7().String()
+				params["stage_ids"] = []string{ids.NewV7().String()}
+				params["task_title"] = "Follow up"
+				params[paramDueInDays] = float64(2)
+			}
 			if key == listTaskName {
 				params[paramListID] = ids.NewV7().String()
 			}

@@ -62,8 +62,9 @@ export const AUTOMATION_CATALOG: CatalogEntry[] = [
   {
     key: "post_meeting_recap",
     group: "meetings",
-    name: "Post-meeting recap draft",
-    description: "Drafts a follow-up recap whenever a meeting is logged.",
+    name: "Draft a follow-up after a meeting",
+    description:
+      "Drafts a follow-up once a customer meeting is held and has usable notes. The draft waits for a person and is never sent by the rule.",
     trigger: "activity.captured",
     action: "draft_email",
     tier: "auto_execute",

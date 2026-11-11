@@ -44,5 +44,8 @@ func (s *Store) ActivityBySource(ctx context.Context, system, sourceID string, a
 		out, err = readActivity(ctx, tx, found, archived)
 		return err
 	})
+	if err == nil {
+		err = s.attachCustomValues(ctx, &out)
+	}
 	return out, err
 }

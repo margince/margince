@@ -13114,6 +13114,20 @@ export const en = {
   "auto.readOnly":
     "Read-only: you do not have permission to change automations.",
   "auto.catalog": "Starter library",
+  "auto.setup.needsSetup": "Needs setup",
+  "auto.setup.needsAttention": "Needs attention",
+  "auto.setup.on": "On",
+  "auto.setup.incomplete":
+    "Choose the required settings before turning this on.",
+  "auto.setup.noAuthorizer": "Choose a person to authorize this automation.",
+  "auto.setup.inactive":
+    "The authorizer’s account is inactive. Choose another person.",
+  "auto.stages.loadError": "Could not load pipelines.",
+  "auto.stages.choosePipeline": "Choose a pipeline",
+  "auto.stages.chooseStages": "Choose stages",
+  "auto.stages.taskTitle": "Task title",
+  "auto.stages.pipeline": "Pipeline",
+  "auto.stages.destinations": "Destination stages",
   "auto.group.inquiries": "New inquiries",
   "auto.group.deals": "Deals",
   "auto.group.customers": "Customers",

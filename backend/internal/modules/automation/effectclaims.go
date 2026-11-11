@@ -42,7 +42,9 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/diffhash"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
@@ -122,6 +124,28 @@ func (s *EffectClaimStore) Confirm(ctx context.Context, handler, occurrenceKey, 
 			handler, occurrenceKey, fingerprint)
 		return err
 	})
+}
+
+// StageOnce commits the approval and its occurrence claim together.
+func (s *EffectClaimStore) StageOnce(ctx context.Context, handler, occurrence, fingerprint string, stage func(context.Context) (ids.ApprovalID, error)) (ids.ApprovalID, error) {
+	var id ids.ApprovalID
+	err := storekit.RetryLockCycles(ctx, func() error {
+		return database.WithWorkspaceSnapshot(ctx, s.db.Pool(), func(bound context.Context) error {
+			claimed, err := s.Claim(bound, handler, occurrence, fingerprint)
+			if err != nil {
+				return err
+			}
+			if !claimed {
+				return workflow.Declined("a draft already exists for this meeting")
+			}
+			id, err = stage(bound)
+			if err != nil {
+				return err
+			}
+			return s.Confirm(bound, handler, occurrence, fingerprint)
+		})
+	})
+	return id, err
 }
 
 // applyCreate writes one record, claim-first: an engine-stamped effect
