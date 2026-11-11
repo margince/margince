@@ -95,7 +95,7 @@ export function SchedulePanel({
   return (
     <section
       id="brief-schedule"
-      className="brief-section"
+      className="brief-section rail-schedule"
       aria-labelledby={titleId}
     >
       <Eyebrow as="h2" id={titleId} className="brief-section-label">
@@ -349,6 +349,8 @@ function NextMeetingRow({
         {onOpenMeeting ? (
           <Button
             variant="link"
+            align="start"
+            className="btn-valuelabel"
             onClick={() => onOpenMeeting(next.activity_id)}
           >
             {subject}
@@ -361,21 +363,24 @@ function NextMeetingRow({
             {t("brief.schedule.nextAt", { time })}
           </span>
         )}
-        {next.participants?.map((participant, index) => (
-          <Fragment key={participant.contact_id}>
-            {index > 0 && ", "}
-            <EntityRef
-              kind="contact"
-              id={participant.contact_id}
-              name={participant.full_name}
-            />
-          </Fragment>
-        ))}
-        <MeetingOthers
-          others={next.other_participants}
-          more={next.participants_more}
-          afterContacts={(next.participants?.length ?? 0) > 0}
-        />
+        {/* One run of text, so the commas wrap with the names they follow. */}
+        <span className="t-caption rail-schedule-people">
+          {next.participants?.map((participant, index) => (
+            <Fragment key={participant.contact_id}>
+              {index > 0 && ", "}
+              <EntityRef
+                kind="contact"
+                id={participant.contact_id}
+                name={participant.full_name}
+              />
+            </Fragment>
+          ))}
+          <MeetingOthers
+            others={next.other_participants}
+            more={next.participants_more}
+            afterContacts={(next.participants?.length ?? 0) > 0}
+          />
+        </span>
       </span>
     </PanelRow>
   );
@@ -392,7 +397,12 @@ function Title({
   // A meeting row's title opens the meeting itself; its record is a click on.
   if (item.source === MEETING && onOpenMeeting) {
     return (
-      <Button variant="link" onClick={() => onOpenMeeting(item.id)}>
+      <Button
+        variant="link"
+        align="start"
+        className="btn-valuelabel"
+        onClick={() => onOpenMeeting(item.id)}
+      >
         {title}
       </Button>
     );

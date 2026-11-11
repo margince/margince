@@ -378,11 +378,24 @@
  * down the times and the stops rather than hunting for each hour at the head
  * of a sentence of different length. The panel's own hairlines between rows
  * go: the line through the stops is the connector. */
+/* The box owns the columns and each stop takes them as a subgrid, so a date
+   in one gutter and a time in the next still put their stops on one line.
+   minmax(0, …) lets a long title wrap instead of widening its column. */
+.rail-schedule {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr);
+}
+.rail-schedule > * {
+  grid-column: 1 / -1;
+}
 .rail-schedule-row {
   display: grid;
-  grid-template-columns: auto auto 1fr;
+  grid-template-columns: auto auto minmax(0, 1fr);
   gap: var(--space-3);
   align-items: baseline;
+}
+.rail-schedule > .rail-schedule-row {
+  grid-template-columns: subgrid;
 }
 .rail-schedule-row::before {
   content: none;
@@ -454,6 +467,12 @@
   flex-wrap: wrap;
   align-items: baseline;
   gap: var(--space-2);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+/* The attendees take a line of their own and wrap as a sentence. */
+.rail-schedule-people {
+  flex-basis: 100%;
   min-width: 0;
 }
 

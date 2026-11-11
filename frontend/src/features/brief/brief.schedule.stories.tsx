@@ -151,6 +151,51 @@ export const QuietDayNextMeeting: Story = {
   ),
 };
 
+// A title longer than the rail and a crowded invite: the title wraps beside its
+// stop and the attendees wrap as one sentence, never over the date gutter.
+const LONG_TITLE =
+  "Gradion – | 2nd demo for Document Management with the procurement team";
+
+export const LongTitleAndAttendees: Story = {
+  render: panel(
+    <>
+      <SchedulePanel
+        day={readingsDay({}, [
+          {
+            ...withBrief(meetingRow("m1", false, "2026-08-21T07:30:00Z")),
+            title: LONG_TITLE,
+          },
+        ])}
+        state="ready"
+        now={NOW}
+        onOpenMeeting={() => undefined}
+      />
+      <SchedulePanel
+        day={{
+          ...CLEAR,
+          calendar: "connected",
+          next_meeting: {
+            ...NEXT_MEETING,
+            subject: LONG_TITLE,
+            participants: [
+              { contact_id: "c-1", full_name: "Anna Weber" },
+              { contact_id: "c-2", full_name: "Charlotte Nguyen" },
+              { contact_id: "c-3", full_name: "Lena Hartmann" },
+              { contact_id: "c-4", full_name: "Marcus Lindqvist" },
+            ],
+            other_participants: [
+              { kind: "address", name: "procurement@weber.example" },
+            ],
+            participants_more: 3,
+          },
+        }}
+        state="ready"
+        onOpenMeeting={() => undefined}
+      />
+    </>,
+  ),
+};
+
 // No calendar connected: the zero measured nothing, so the panel stays, leads
 // to where one connects, and still names the meeting booked by hand.
 export const CalendarNotConnected: Story = {

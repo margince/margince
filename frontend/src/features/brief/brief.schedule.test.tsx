@@ -298,7 +298,7 @@ describe("the schedule panel", () => {
   });
 });
 
-it("separates the next meeting's attendees with one comma each", () => {
+it("lists the next meeting's attendees as one sentence", () => {
   const day = {
     ...readingsDay({}, []),
     calendar: "connected" as const,
@@ -312,13 +312,11 @@ it("separates the next meeting's attendees with one comma each", () => {
     },
   };
   draw(<SchedulePanel day={day} state="ready" />);
-  const row = screen
+  // One element holds names and commas, so they wrap as text, not as items.
+  const people = screen
     .getByRole("region")
-    .querySelector(
-      ".rail-schedule-row:not(.rail-schedule-now) .rail-schedule-what",
-    );
-  expect(row?.textContent).toContain("Anna Weber, Ben Ortiz, Rita Rep");
-  expect(row?.textContent).not.toMatch(/,\s*,|,\s*$/);
+    .querySelector(".rail-schedule-people");
+  expect(people?.textContent).toBe("Anna Weber, Ben Ortiz, Rita Rep");
 });
 
 it("opens today's meeting from its title, not the record it is about", () => {
