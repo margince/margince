@@ -48,8 +48,8 @@ func TestTheRelatedFilterReachesDealSeatsOnlyWithDealRead(t *testing.T) {
 	}
 }
 
-// A caller with no actor bound is a wiring fault, so every part refuses rather
-// than handing back a clause that would read as "all rows".
+// A caller with no actor bound is a wiring fault. Every part refuses it, since
+// a clause handed back could read as "all rows".
 func TestTheRelatedFilterRefusesACallerWithNoActor(t *testing.T) {
 	anchor := ids.New[ids.ContactKind]()
 	arg := func(any) int { return 1 }
