@@ -105,10 +105,14 @@ func TestMemberHandoverMovesPendingStaffingAndRetainsAcceptedCredit(t *testing.T
 		t.Fatal(err)
 	}
 	owner := integration.FreshOwnerConn(t)
-	_, err = dbmigrate.Down(t.Context(), owner, core, stepsDownTo(t, core, "accepted_handoffs_retain_their_receiver"))
-	// The refusal comes after every newer migration was reverted; later tests need them back.
-	if _, upErr := dbmigrate.Up(t.Context(), owner, core); upErr != nil {
-		t.Fatal(upErr)
+	// The downgrade runs alone and rolls back, so no newer migration is reverted with it.
+	tx, err := owner.Begin(t.Context())
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = tx.Exec(t.Context(), downSQL(t, core, "accepted_handoffs_retain_their_receiver"))
+	if rollbackErr := tx.Rollback(t.Context()); rollbackErr != nil {
+		t.Fatal(rollbackErr)
 	}
 	fault, ok := errors.AsType[*pgconn.PgError](err)
 	if !ok || fault.Code != "23514" {
@@ -117,15 +121,14 @@ func TestMemberHandoverMovesPendingStaffingAndRetainsAcceptedCredit(t *testing.T
 	e.WsExec(t, `UPDATE sdr_handoff SET note='Historical correction' WHERE id=$1`, accepted)
 }
 
-// stepsDownTo counts the migrations a downgrade reverts to reach the named one,
-// itself included, so a migration shipped after it does not take its place.
-func stepsDownTo(t *testing.T, core dbmigrate.Namespace, name string) int {
+// downSQL is the downgrade of the core migration named name.
+func downSQL(t *testing.T, core dbmigrate.Namespace, name string) string {
 	t.Helper()
-	for i, m := range core.Migrations {
+	for _, m := range core.Migrations {
 		if m.Name == name {
-			return len(core.Migrations) - i
+			return m.DownSQL
 		}
 	}
 	t.Fatalf("no core migration is named %q", name)
-	return 0
+	return ""
 }
