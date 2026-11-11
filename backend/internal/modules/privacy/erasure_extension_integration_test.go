@@ -363,6 +363,41 @@ func TestAnonymizingALeadClearsTheExtensionRowsLinkedToIt(t *testing.T) {
 	assertProbeRowCleared(t, env, row)
 }
 
+// One erasure can reach a row by two paths, as a promise's task is reached
+// through its message and through its contact. The row is certified once.
+func TestAnExtensionRowTwoClearingPathsReachIsCertifiedOnce(t *testing.T) {
+	env := setupSARIdentifiers(t)
+	registry := declareProbeTable(t, env)
+	lead, row := ids.NewV7(), ids.NewV7()
+	mustExec(context.Background(), t, env.owner,
+		`INSERT INTO lead (id, full_name, source, captured_by) VALUES ($1, 'Twin', 'manual', 'system:test')`, lead)
+	mustExec(context.Background(), t, env.owner,
+		`INSERT INTO ext.`+probeTable+` (id, contact_id, lead_id, body, raw, kind) VALUES ($1, $2, $3, 'words', 'x', 'note')`,
+		row, env.contact.UUID, lead)
+
+	if err := env.db.Tx(env.ctx, func(tx pgx.Tx) error {
+		for _, subject := range []map[extdecl.RecordKind][]ids.UUID{{extdecl.Contact: {env.contact.UUID}}, {extdecl.Lead: {lead}}} {
+			if err := clearExtensionRows(env.ctx, tx, registry, "request", causeContactErasure, subject); err != nil {
+				return err
+			}
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	assertProbeRowCleared(t, env, row)
+	var certificates, events int
+	if err := env.owner.QueryRow(context.Background(), `
+		SELECT (SELECT count(*) FROM audit_log WHERE entity_type = $1 AND entity_id = $2 AND action = 'anonymize'),
+		       (SELECT count(*) FROM event_outbox WHERE envelope->'entity'->>'id' = $2::text)`,
+		probeTable, row).Scan(&certificates, &events); err != nil {
+		t.Fatal(err)
+	}
+	if certificates != 1 || events != 1 {
+		t.Errorf("a row two paths reach has %d anonymize certificates and %d events, want 1 and 1", certificates, events)
+	}
+}
+
 func assertProbeRowCleared(t *testing.T, env *sarIdentifierEnv, row ids.UUID) {
 	t.Helper()
 	var body string
