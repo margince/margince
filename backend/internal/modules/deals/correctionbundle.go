@@ -12,6 +12,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -51,33 +52,36 @@ func (s *Store) RevertBundle(
 	if err != nil {
 		return out, err
 	}
-	out.Abort = s.Tx(ctx, func(tx pgx.Tx) error {
-		if err := lockBundle(ctx, tx, dealID, undos); err != nil {
-			return err
-		}
-		if err := auth.EnsureWritable(ctx, tx, dealTable, dealID); err != nil {
-			return err
-		}
-		// The deal row is held from here to the commit, so the version is
-		// checked once for every reversal after it.
-		if err := storekit.EnsureIfMatch(ctx, tx, dealTable, dealID, &ifVersion); err != nil {
-			return err
-		}
-		movedByBundle := false
-		for i, undo := range undos {
-			var reverted DealCorrection
-			_, err := storekit.Savepoint(ctx, tx, func(nested pgx.Tx) (bool, error) {
-				var err error
-				reverted, err = s.revertCorrectionTx(ctx, nested, undo.CorrectionID, nil, undo.Evidence, active, archiveConfirmedFor)
-				return true, err
-			})
-			if err != nil && !keepsOneChange(err) && (!movedByBundle || !movedSince(err)) {
+	// A refused bundle must also roll back when its caller has a larger transaction.
+	out.Abort = database.WithSavepoint(ctx, func(ctx context.Context) error {
+		return s.Tx(ctx, func(tx pgx.Tx) error {
+			if err := lockBundle(ctx, tx, dealID, undos); err != nil {
 				return err
 			}
-			out.Refusals[i] = err
-			movedByBundle = movedByBundle || (err == nil && slices.Contains(stageCorrectionKinds, reverted.Correction))
-		}
-		return nil
+			if err := auth.EnsureWritable(ctx, tx, dealTable, dealID); err != nil {
+				return err
+			}
+			// The deal row is held from here to the commit, so the version is
+			// checked once for every reversal after it.
+			if err := storekit.EnsureIfMatch(ctx, tx, dealTable, dealID, &ifVersion); err != nil {
+				return err
+			}
+			movedByBundle := false
+			for i, undo := range undos {
+				var reverted DealCorrection
+				_, err := storekit.Savepoint(ctx, tx, func(nested pgx.Tx) (bool, error) {
+					var err error
+					reverted, err = s.revertCorrectionTx(ctx, nested, undo.CorrectionID, nil, undo.Evidence, active, archiveConfirmedFor)
+					return true, err
+				})
+				if err != nil && !keepsOneChange(err) && (!movedByBundle || !movedSince(err)) {
+					return err
+				}
+				out.Refusals[i] = err
+				movedByBundle = movedByBundle || (err == nil && slices.Contains(stageCorrectionKinds, reverted.Correction))
+			}
+			return nil
+		})
 	})
 	return out, nil
 }

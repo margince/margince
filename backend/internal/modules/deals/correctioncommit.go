@@ -23,6 +23,7 @@ type correctionWrite struct {
 	// auditEvidence goes on the audit row: the Home receipt reads its reason
 	// back from there long after the event was consumed.
 	auditEvidence map[string]any
+	reasonKind    crmcontracts.ReceiptReasonKind
 	changedFields map[string]any
 	evidence      CorrectionEvidence
 	runID         *ids.UUID
@@ -36,7 +37,7 @@ func commitCorrection(ctx context.Context, tx pgx.Tx, lock storekit.RowLock, w c
 		return fmt.Errorf("apply %s patch: %w", w.correction, err)
 	}
 	auditID, err := storekit.AuditWithEvidence(
-		ctx, tx, "update", "deal", w.deal.UUID, w.patch.Before(), w.patch.After(), w.auditEvidence)
+		ctx, tx, "update", "deal", w.deal.UUID, w.patch.Before(), w.patch.After(), correctionReasonEvidence(w.auditEvidence, w.reasonKind))
 	if err != nil {
 		return fmt.Errorf("audit %s: %w", w.correction, err)
 	}

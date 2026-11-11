@@ -142,6 +142,10 @@ func TestAReceiptNamesWhoDidItAndWhatItMoved(t *testing.T) {
 	}
 
 	correction := receiptByID(t, handled, e.correctionAuditIDFor(t, swept))
+	if correction.ReasonKind == nil || *correction.ReasonKind != crmcontracts.ReceiptReasonKindSystemRule {
+		t.Fatalf("sweep reason kind = %v", correction.ReasonKind)
+	}
+
 	if correction.Actor == nil || correction.Actor.Type != crmcontracts.ReceiptActorTypeReceiptActorAgent ||
 		correction.Actor.Id != marginceActorID || correction.Actor.Label.Key != "magic.by.agent" ||
 		correction.Actor.OnBehalfOf == nil || ids.UUID(*correction.Actor.OnBehalfOf) != e.Rep1 {
@@ -160,6 +164,9 @@ func TestAReceiptNamesWhoDidItAndWhatItMoved(t *testing.T) {
 	}
 
 	decided := receiptByID(t, handled, card.UUID)
+	if decided.SourceOccurredAt == nil || !decided.SourceOccurredAt.Equal(message.OccurredAt) {
+		t.Errorf("source date = %v, want %v", decided.SourceOccurredAt, message.OccurredAt)
+	}
 	name := e.WsScalar(t, `SELECT display_name FROM app_user WHERE id = $1`, e.Rep1)
 	if decided.Actor == nil || decided.Actor.Type != crmcontracts.ReceiptActorTypeReceiptActorHuman ||
 		decided.Actor.Label.Key != "magic.by.member" || decided.Actor.Label.Values == nil ||
@@ -207,6 +214,9 @@ func TestASourceTheReaderMayNotOpenIsWithheld(t *testing.T) {
 	after, err := feed.HandledForYou(reader, nil)
 	if err != nil {
 		t.Fatal(err)
+	}
+	if when := receiptByID(t, after, card.UUID).SourceOccurredAt; when != nil {
+		t.Errorf("an unavailable source still discloses its date: %v", when)
 	}
 	if source := receiptByID(t, after, card.UUID).SourceRecord; source != nil {
 		t.Errorf("a source the reader may not open is still named: %+v", source)

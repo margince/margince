@@ -7,6 +7,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Button } from "../design-system/atoms";
+import { Disclosure } from "../design-system/disclosure";
 import { ErrorLine } from "../design-system/errorline";
 import { formatNumber } from "../format/format";
 import { type Translator, useLocale, usePlural, useT } from "../i18n";
@@ -21,6 +22,7 @@ import {
   stillPending,
   useUndoMarginceChanges,
 } from "../lib/marginchanges";
+import { useSavedUndoRuns, useUndoManifest } from "../lib/marginchanges.runs";
 import { EntityRef } from "./entityref";
 
 const KIND_LABEL: Readonly<Record<string, MessageKey>> = {
@@ -66,6 +68,7 @@ export function BundleUndo({
   const client = useQueryClient();
   const writable = useCanWrite("deal", "update");
   const undo = useUndoMarginceChanges();
+  const manifest = useUndoManifest();
   const [run, setRun] = useState<BundleUndoRun | null>(null);
   const [asking, setAsking] = useState<ArchiveQuestion | null>(null);
   const [rereading, setRereading] = useState(false);
@@ -99,6 +102,10 @@ export function BundleUndo({
   // A batch that failed may still have landed, so the deals are read again and
   // only what still waits goes back.
   const retry = async (unsent: readonly MarginceChangeBundle[]) => {
+    if (bundles.length > 1 && manifest) {
+      undo.mutate({ bundles, resume: manifest }, { onSuccess: setRun });
+      return;
+    }
     setRereading(true);
     try {
       const fresh = await client.fetchQuery({
@@ -174,6 +181,89 @@ function mergeRuns(
     (result) => !answered.has(result.deal_id),
   );
   return { ...answer, results: [...kept, ...answer.results] };
+}
+
+export function LastBulkUndo() {
+  const t = useT();
+  const saved = useSavedUndoRuns();
+  const undo = useUndoMarginceChanges();
+  const [resultsOpen, setResultsOpen] = useState(false);
+  const [shown, setShown] = useState(50);
+  if (!saved.manifest) return null;
+  const completed = new Set(
+    saved.data?.filter((run) => run.complete).map((run) => run.run_id),
+  );
+  const answered = new Set(
+    saved.data?.flatMap((run) => run.results.map((result) => result.deal_id)),
+  );
+  const unsent: MarginceChangeBundle[] = saved.manifest.batches
+    .filter((batch) => !completed.has(batch.id))
+    .flatMap((batch) =>
+      batch.items.filter((item) => !answered.has(item.deal_id)),
+    )
+    .map((item) => ({ ...item, deal_name: "", kinds: [], latest_at: "" }));
+  const run: BundleUndoRun = {
+    results: saved.data?.flatMap((batch) => batch.results) ?? [],
+    unsent,
+  };
+  return (
+    <section aria-label={t("changes.bulk.last")}>
+      <p>{t("changes.bulk.last")}</p>
+      {saved.isPending ? (
+        <span role="status">{t("history.undo.busy")}</span>
+      ) : saved.isSuccess ? (
+        <BundleUndoAnswer
+          run={run}
+          bundles={[]}
+          single={false}
+          pending={undo.isPending}
+          onRetry={() => {
+            if (saved.manifest)
+              undo.mutate({ bundles: [], resume: saved.manifest });
+          }}
+        />
+      ) : (
+        <ErrorLine
+          error={saved.error}
+          actions={
+            <Button variant="ghost" onClick={() => void saved.refetch()}>
+              {t("common.retry")}
+            </Button>
+          }
+        />
+      )}
+      {undo.isError && <ErrorLine error={undo.error} />}
+      {saved.data && saved.data.some((batch) => batch.results.length > 0) && (
+        <Disclosure
+          summary={t("changes.bulk.results")}
+          open={resultsOpen}
+          onToggle={setResultsOpen}
+        >
+          {resultsOpen && (
+            <ul>
+              {saved.data
+                .flatMap((batch) => batch.results)
+                .slice(0, shown)
+                .map((result) => (
+                  <li key={result.deal_id}>
+                    <EntityRef kind="deal" id={result.deal_id} />{" "}
+                    {undoResultText(result, t)}
+                  </li>
+                ))}
+            </ul>
+          )}
+          {resultsOpen && run.results.length > shown && (
+            <Button
+              variant="ghost"
+              onClick={() => setShown((count) => count + 50)}
+            >
+              {t("list.loadMore")}
+            </Button>
+          )}
+        </Disclosure>
+      )}
+    </section>
+  );
 }
 
 function BundleUndoAnswer({

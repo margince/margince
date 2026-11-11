@@ -19445,6 +19445,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "receipt.detail.summary": "Details",
   "receipt.detail.by": "Ausgeführt von",
   "receipt.detail.when": "Zeitpunkt",
+  "receipt.detail.reasonKind": "Art der Begründung",
+  "receipt.detail.systemRule": "Systemregel",
+  "receipt.detail.inference": "Beurteilung durch KI",
+  "receipt.detail.reasonUnknown": "Nicht erfasst",
+  "receipt.detail.sourceWhen": "Datum der Quelle",
   "receipt.detail.source": "Quelle",
   "worklist.handled.showMore": "Mehr anzeigen",
   "worklist.exceptions.empty": "Keine Team-Ausnahmen.",
@@ -21771,6 +21776,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.done.viewChanges_other": "{count} Änderungen ansehen",
   "brief.done.showNew": "Neue Änderungen zeigen",
   "brief.done.history": "Änderungsverlauf",
+  "brief.done.selectDeal": "{deal} zum Rückgängigmachen auswählen",
   "brief.done.dealsLabel": "Deals, die Margince geändert hat",
   "brief.done.noReason": "Grund nicht verfügbar",
   "brief.done.markedLost": "Als verloren markiert",
@@ -21794,5 +21800,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "changes.bulk.confirmOnDeal":
     "Öffne den Deal, um das Rückgängigmachen zu bestätigen.",
   "changes.bulk.retry": "Erneut senden",
+  "changes.bulk.results": "Ergebnisse pro Deal anzeigen",
+  "changes.bulk.last": "Letztes Sammel-Rückgängigmachen",
   "changes.bulk.unfinished": "Nicht ganz rückgängig gemachte Deals",
 };

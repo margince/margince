@@ -1775,6 +1775,10 @@ func (stubs) UndoMarginceChanges(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "UndoMarginceChanges")
 }
 
+func (stubs) ReadMarginceUndoRuns(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ReadMarginceUndoRuns")
+}
+
 func (stubs) ListDealRooms(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListDealRoomsParams) {
 	httperr.NotImplemented(w, r, "ListDealRooms")
 }

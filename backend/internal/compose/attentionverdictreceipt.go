@@ -8,6 +8,7 @@ import (
 	"fmt"
 
 	"github.com/margince/margince/backend/internal/compose/attention"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
@@ -154,10 +155,11 @@ func amountSource(evidence []byte) string {
 // quotedEvidence is what a change's audit evidence records of the customer's
 // own words: the words, and the amount and rate they were read at.
 type quotedEvidence struct {
-	Quote    string `json:"quoted_words"`
-	Amount   string `json:"quoted_amount"`
-	Currency string `json:"quoted_currency"`
-	RateDate string `json:"rate_date"`
+	ReasonKind *crmcontracts.ReceiptReasonKind `json:"reason_kind"`
+	Quote      string                          `json:"quoted_words"`
+	Amount     string                          `json:"quoted_amount"`
+	Currency   string                          `json:"quoted_currency"`
+	RateDate   string                          `json:"rate_date"`
 }
 
 // quotedFacts reads the customer's words out of the evidence; zero when it

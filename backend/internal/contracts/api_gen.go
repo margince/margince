@@ -19306,6 +19306,24 @@ func (e ReceiptActorType) Valid() bool {
 	}
 }
 
+// Defines values for ReceiptReasonKind.
+const (
+	ReceiptReasonKindInference  ReceiptReasonKind = "inference"
+	ReceiptReasonKindSystemRule ReceiptReasonKind = "system_rule"
+)
+
+// Valid indicates whether the value is a known member of the ReceiptReasonKind enum.
+func (e ReceiptReasonKind) Valid() bool {
+	switch e {
+	case ReceiptReasonKindInference:
+		return true
+	case ReceiptReasonKindSystemRule:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for RecordAccessVisibility.
 const (
 	RecordAccessVisibilityOwner     RecordAccessVisibility = "owner"
@@ -53774,6 +53792,29 @@ type MarginceChangeSummary struct {
 	UndoableDeals *int `json:"undoable_deals,omitempty"`
 }
 
+// MarginceUndoRun defines model for MarginceUndoRun.
+type MarginceUndoRun struct {
+	Complete  bool      `json:"complete"`
+	CreatedAt time.Time `json:"created_at"`
+
+	// Items Original items that the current reader may still see.
+	Items []UndoMarginceChangeItem `json:"items"`
+
+	// Results Committed results that the current reader may still see.
+	Results []UndoMarginceChangeResult `json:"results"`
+	RunId   openapi_types.UUID         `json:"run_id"`
+}
+
+// MarginceUndoRuns defines model for MarginceUndoRuns.
+type MarginceUndoRuns struct {
+	Runs []MarginceUndoRun `json:"runs"`
+}
+
+// MarginceUndoRunsRequest defines model for MarginceUndoRunsRequest.
+type MarginceUndoRunsRequest struct {
+	RunIds []openapi_types.UUID `json:"run_ids"`
+}
+
 // MeResponse defines model for MeResponse.
 type MeResponse struct {
 	// AdminPasswordLink Whether THIS CALLER may issue member set-password links (`issueUserPasswordLink`) — true only when the caller holds `admin` AND the installation has no outbound-email channel AND a public base URL is configured. Deliberately a caller capability rather than a deployment-posture flag: `/me` answers every authenticated member, and a bare posture boolean would tell every rep whether the installation has email configured. Clients render the action on this, so an admin never sees a control that can only fail (ADR-0061 Amendment 1).
@@ -57838,11 +57879,20 @@ type Receipt struct {
 	// Reason Why Margince did it, in the words recorded when it acted. Never composed when the receipt is read. Absent when no reason was recorded, and when this reader may not read why: only the owner the change was made for reads it.
 	Reason *string `json:"reason,omitempty"`
 
+	// ReasonKind Whether a recorded reason came from a fixed rule or a model assessment. Older receipts can carry no classification.
+	ReasonKind *ReceiptReasonKind `json:"reason_kind,omitempty"`
+
 	// Review The recorded automatic change and its current review state.
 	Review *AppliedDealChangeReview `json:"review,omitempty"`
 
 	// Source What kind of act `id` names: a change Margince applied itself (`correction`, where `id` is its audit entry) or an approval the system decided (`approval`, where `id` is the approval). Absent on older responses.
 	Source *ReceiptSource `json:"source,omitempty"`
+
+	// SourceOccurredAt When the cited email, call or meeting took place. Absent when its source is unavailable to this reader.
+	SourceOccurredAt *time.Time `json:"source_occurred_at,omitempty"`
+
+	// SourceOccurredPrecision How much of an activity's time is known. `instant` is a real moment. `day` is a date with no time of day: the stored instant is noon UTC of that date, so its date is the UTC date, whatever the installation's zone. A meeting of this precision never holds its host's calendar slot.
+	SourceOccurredPrecision *OccurredPrecision `json:"source_occurred_precision,omitempty"`
 
 	// SourceRecord The email, thread or meeting the act was read from, where it names one. Checked against the reader's access on every read: a source the reader may not open is left out, not named. Absent also when the act cites no message.
 	SourceRecord *AttentionSubject `json:"source_record,omitempty"`
@@ -57888,6 +57938,9 @@ type ReceiptActor struct {
 
 // ReceiptActorType defines model for ReceiptActor.Type.
 type ReceiptActorType string
+
+// ReceiptReasonKind Whether a recorded reason came from a fixed rule or a model assessment. Older receipts can carry no classification.
+type ReceiptReasonKind string
 
 // RecommendationReceipt The rule and current facts behind a suggested action. The server checks these facts again when accepting the suggestion; the receipt grants no authority. Replaying the same accepted observation returns its original task.
 type RecommendationReceipt struct {
@@ -64292,11 +64345,19 @@ type UndoMarginceChangeResultOutcome string
 // UndoMarginceChangesRequest defines model for UndoMarginceChangesRequest.
 type UndoMarginceChangesRequest struct {
 	Items []UndoMarginceChangeItem `json:"items"`
+
+	// RunId Identifies a durable Undo attempt. Reusing it with the same items resumes or replays the saved result.
+	RunId *openapi_types.UUID `json:"run_id,omitempty"`
 }
 
 // UndoMarginceChangesResult defines model for UndoMarginceChangesResult.
 type UndoMarginceChangesResult struct {
-	Results []UndoMarginceChangeResult `json:"results"`
+	// Complete Present on a durable attempt when every original item has a committed result, including results withheld from the current reader.
+	Complete *bool                      `json:"complete,omitempty"`
+	Results  []UndoMarginceChangeResult `json:"results"`
+
+	// RunId Identifies a durable Undo attempt. Reusing it with the same items resumes or replays the saved result.
+	RunId *openapi_types.UUID `json:"run_id,omitempty"`
 }
 
 // Undoability Whether this history entry can be put back, and if not, why. COMPUTED per read,
@@ -77950,6 +78011,9 @@ type UpdateDataSubjectRequestJSONRequestBody = UpdateDataSubjectRequest
 
 // UndoMarginceChangesJSONRequestBody defines body for UndoMarginceChanges for application/json ContentType.
 type UndoMarginceChangesJSONRequestBody = UndoMarginceChangesRequest
+
+// ReadMarginceUndoRunsJSONRequestBody defines body for ReadMarginceUndoRuns for application/json ContentType.
+type ReadMarginceUndoRunsJSONRequestBody = MarginceUndoRunsRequest
 
 // CreateDealRoomJSONRequestBody defines body for CreateDealRoom for application/json ContentType.
 type CreateDealRoomJSONRequestBody = CreateDealRoomRequest
@@ -92840,6 +92904,9 @@ type ServerInterface interface {
 	// Undo several changes Margince made, one deal at a time.
 	// (POST /deal-corrections/undo)
 	UndoMarginceChanges(w http.ResponseWriter, r *http.Request)
+	// Read committed results of the caller's bulk Undo attempts.
+	// (POST /deal-corrections/undo/results)
+	ReadMarginceUndoRuns(w http.ResponseWriter, r *http.Request)
 	// List Deal Rooms (live by default; cursor-paginated).
 	// (GET /deal-rooms)
 	ListDealRooms(w http.ResponseWriter, r *http.Request, params ListDealRoomsParams)
@@ -97319,6 +97386,12 @@ func (_ Unimplemented) GetPendingMarginceChanges(w http.ResponseWriter, r *http.
 // Undo several changes Margince made, one deal at a time.
 // (POST /deal-corrections/undo)
 func (_ Unimplemented) UndoMarginceChanges(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Read committed results of the caller's bulk Undo attempts.
+// (POST /deal-corrections/undo/results)
+func (_ Unimplemented) ReadMarginceUndoRuns(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -120833,6 +120906,26 @@ func (siw *ServerInterfaceWrapper) UndoMarginceChanges(w http.ResponseWriter, r 
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UndoMarginceChanges(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ReadMarginceUndoRuns operation middleware
+func (siw *ServerInterfaceWrapper) ReadMarginceUndoRuns(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ReadMarginceUndoRuns(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -148727,6 +148820,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/deal-corrections/undo", wrapper.UndoMarginceChanges)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/deal-corrections/undo/results", wrapper.ReadMarginceUndoRuns)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/deal-rooms", wrapper.ListDealRooms)

@@ -9,13 +9,17 @@ package compose
 
 import (
 	"context"
+	"errors"
 	"strings"
+	"time"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	"github.com/margince/margince/backend/internal/compose/attention"
 	"github.com/margince/margince/backend/internal/compose/magic"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -44,9 +48,17 @@ func (d attentionReceiptDetails) Describe(ctx context.Context, receipts []attent
 	if err != nil {
 		return nil, err
 	}
+	sources, err := d.sourceTimes(ctx, receipts)
+	if err != nil {
+		return nil, err
+	}
 	out := make([]attention.ReceiptDetail, len(receipts))
 	for i, receipt := range receipts {
 		out[i].Actor = labelledActor(receipt.Actor, members)
+		if source, ok := sources[receipt.SourceActivityID]; ok {
+			out[i].SourceOccurredAt = &source.at
+			out[i].SourceOccurredPrecision = &source.precision
+		}
 		if moved, read := changes[receipt.ID]; read {
 			out[i].Changes = &moved
 		}
@@ -96,4 +108,40 @@ func memberOf(actor attention.ReceiptActor) (ids.UUID, bool) {
 		return ids.Nil, false
 	}
 	return seat, true
+}
+
+type receiptSourceTime struct {
+	at        time.Time
+	precision crmcontracts.OccurredPrecision
+}
+
+func (d attentionReceiptDetails) sourceTimes(ctx context.Context, receipts []attention.Receipt) (map[ids.UUID]receiptSourceTime, error) {
+	var sources []ids.UUID
+	seen := map[ids.UUID]bool{}
+	for _, receipt := range receipts {
+		if !receipt.SourceActivityID.IsZero() && !seen[receipt.SourceActivityID] {
+			seen[receipt.SourceActivityID] = true
+			sources = append(sources, receipt.SourceActivityID)
+		}
+	}
+	if len(sources) == 0 {
+		return nil, nil
+	}
+	out := make(map[ids.UUID]receiptSourceTime, len(sources))
+	for at := 0; at < len(sources); at += 50 {
+		page := sources[at:min(at+50, len(sources))]
+		rows, _, err := d.names.activities.ListActivities(ctx, activities.ListActivitiesInput{IDs: page, ReadableOnly: true, Limit: new(len(page))})
+		if errors.Is(err, apperrors.ErrPermissionDenied) || errors.Is(err, apperrors.ErrNotFound) {
+			return nil, nil
+		}
+		if err != nil {
+			return nil, err
+		}
+		for _, row := range rows {
+			if !row.OccurredAt.IsZero() {
+				out[ids.UUID(row.Id)] = receiptSourceTime{at: row.OccurredAt, precision: row.OccurredPrecision}
+			}
+		}
+	}
+	return out, nil
 }

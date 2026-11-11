@@ -16,6 +16,11 @@ type Declared = Readonly<{ area: StorageArea; lifetime: Lifetime }> &
 /** Every key the app keeps; a `prefix` declares a family of per-record keys.
  *  Names are what earlier builds wrote: renaming one strands stored values. */
 export const STORAGE_KEYS = {
+  lastBulkUndo: {
+    name: "margince.changes.lastBulkUndo",
+    area: "local",
+    lifetime: "seat",
+  },
   // Searches and record references belong to the current seat on this browser.
   paletteRecents: {
     name: "margince.palette.recents",

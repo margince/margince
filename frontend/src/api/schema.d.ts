@@ -5764,6 +5764,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/deal-corrections/undo/results": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Read committed results of the caller's bulk Undo attempts.
+         * @description Reads durable results under the current record permissions. It never starts or resumes an Undo.
+         */
+        post: operations["readMarginceUndoRuns"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/deals/{id}/stage-evidence": {
         parameters: {
             query?: never;
@@ -56870,6 +56890,11 @@ export interface components {
             basis?: string;
         };
         /**
+         * @description Whether a recorded reason came from a fixed rule or a model assessment. Older receipts can carry no classification.
+         * @enum {string}
+         */
+        ReceiptReasonKind: "system_rule" | "inference";
+        /**
          * @description One completed act, and the record it was about.
          *
          *     `subject` is present only where the act named a record. Not every approval is
@@ -56902,6 +56927,7 @@ export interface components {
             headline?: string;
             /** @description Why Margince did it, in the words recorded when it acted. Never composed when the receipt is read. Absent when no reason was recorded, and when this reader may not read why: only the owner the change was made for reads it. */
             reason?: string;
+            reason_kind?: components["schemas"]["ReceiptReasonKind"];
             /** @description The customer's own words the change rests on, where the act recorded them, masked with the amount they state. Kept apart from `reason`, which is Margince's reading and never a quote. */
             customer_quote?: string;
             /** @description The summary taken apart, as on the approval it reports. Absent when the summary is a sentence alone. */
@@ -56917,6 +56943,12 @@ export interface components {
             actor?: components["schemas"]["ReceiptActor"];
             /** @description The email, thread or meeting the act was read from, where it names one. Checked against the reader's access on every read: a source the reader may not open is left out, not named. Absent also when the act cites no message. */
             source_record?: components["schemas"]["AttentionSubject"];
+            /**
+             * Format: date-time
+             * @description When the cited email, call or meeting took place. Absent when its source is unavailable to this reader.
+             */
+            source_occurred_at?: string;
+            source_occurred_precision?: components["schemas"]["OccurredPrecision"];
             /** @description Every field the act moved, old value to new, read from the audit rows it wrote and masked to what the reader may see on the record. Values travel whole, never cut short. Absent when no audit row of the act can be read, which is not the same as an act that moved nothing (an empty list). */
             changes?: components["schemas"]["MagicFieldChange"][];
             /**
@@ -58273,10 +58305,39 @@ export interface components {
             /** Format: date-time */
             latest_at: string;
         };
+        MarginceUndoRunsRequest: {
+            run_ids: string[];
+        };
+        MarginceUndoRuns: {
+            runs: components["schemas"]["MarginceUndoRun"][];
+        };
+        MarginceUndoRun: {
+            /** Format: uuid */
+            run_id: string;
+            /** Format: date-time */
+            created_at: string;
+            complete: boolean;
+            /** @description Original items that the current reader may still see. */
+            items: components["schemas"]["UndoMarginceChangeItem"][];
+            /** @description Committed results that the current reader may still see. */
+            results: components["schemas"]["UndoMarginceChangeResult"][];
+        };
         UndoMarginceChangesRequest: {
+            /**
+             * Format: uuid
+             * @description Identifies a durable Undo attempt. Reusing it with the same items resumes or replays the saved result.
+             */
+            run_id?: string;
             items: components["schemas"]["UndoMarginceChangeItem"][];
         };
         UndoMarginceChangesResult: {
+            /** @description Present on a durable attempt when every original item has a committed result, including results withheld from the current reader. */
+            complete?: boolean;
+            /**
+             * Format: uuid
+             * @description Identifies a durable Undo attempt. Reusing it with the same items resumes or replays the saved result.
+             */
+            run_id?: string;
             results: components["schemas"]["UndoMarginceChangeResult"][];
         };
         /**
@@ -68590,6 +68651,33 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["UndoMarginceChangesResult"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    readMarginceUndoRuns: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MarginceUndoRunsRequest"];
+            };
+        };
+        responses: {
+            /** @description Readable saved runs. A missing or unreadable run is omitted. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MarginceUndoRuns"];
                 };
             };
             401: components["responses"]["Unauthorized"];

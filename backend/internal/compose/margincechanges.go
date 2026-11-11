@@ -252,6 +252,15 @@ func (h marginceChangeHandlers) UndoMarginceChanges(w http.ResponseWriter, r *ht
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
+	if req.RunId != nil {
+		out, err := h.undoRun(r.Context(), ids.UUID(*req.RunId), req.Items)
+		if err != nil {
+			httperr.Write(w, r, err)
+			return
+		}
+		httperr.WriteJSON(w, http.StatusOK, out)
+		return
+	}
 	out := crmcontracts.UndoMarginceChangesResult{Results: make([]crmcontracts.UndoMarginceChangeResult, 0, len(req.Items))}
 	for _, item := range req.Items {
 		result, err := h.undoBundle(r.Context(), item)

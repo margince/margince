@@ -94,9 +94,10 @@ func (s *Store) OpenSuggestedDeal(ctx context.Context, in OpenSuggestedDealInput
 		if err != nil {
 			return err
 		}
-		birth.auditEvidence = map[string]any{
+		birth.auditEvidence = correctionReasonEvidence(map[string]any{
 			basisKey: in.Basis, basisOwnerKey: in.Owner.String(), CorrectionKindEvidenceKey: DealOpenCorrection,
-		}
+		}, crmcontracts.ReceiptReasonKindInference)
+
 		deal, err := s.CreateDealTx(ctx, tx, birth, CustomColumns{})
 		if err != nil {
 			return err

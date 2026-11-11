@@ -3,13 +3,15 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
-import type { MarginceChangeBundle } from "../lib/marginchanges";
+import { bundleItem, type MarginceChangeBundle } from "../lib/marginchanges";
+import { keepUndoManifest } from "../lib/marginchanges.runs";
+import { forgetSeat } from "../lib/storage";
 import {
   jsonResponse,
   StoryProviders,
   stubWithSession,
 } from "../testing/story-utils";
-import { BundleUndo } from "./marginchanges";
+import { BundleUndo, LastBulkUndo } from "./marginchanges";
 
 // The Undo of several deals Margince changed, before the press and after a
 // press the server answered deal by deal.
@@ -93,7 +95,10 @@ const ANSWER = {
 
 function frame() {
   stubWithSession(
-    { "POST /deal-corrections/undo": () => jsonResponse(ANSWER) },
+    {
+      "POST /deal-corrections/undo": () => jsonResponse(ANSWER),
+      "POST /deal-corrections/undo/results": () => jsonResponse({ runs: [] }),
+    },
     { deal: ["read", "update"] },
   );
   return (
@@ -105,6 +110,51 @@ function frame() {
 
 /** Before the press: one Undo for every deal in the list. */
 export const Ready: Story = { render: frame };
+
+export const SavedAfterReload: Story = {
+  beforeEach: () => {
+    const items = BUNDLES.map((bundle) => bundleItem(bundle));
+    const manifest = keepUndoManifest(items);
+    stubWithSession(
+      {
+        "POST /deal-corrections/undo/results": () =>
+          jsonResponse({
+            runs: [
+              {
+                run_id: manifest.batches[0].id,
+                items,
+                created_at: "2026-09-13T02:00:00Z",
+                complete: true,
+                results: ANSWER.results,
+              },
+            ],
+          }),
+        ...Object.fromEntries(
+          BUNDLES.map((bundle) => [
+            `GET /deals/${bundle.deal_id}`,
+            () => jsonResponse({ id: bundle.deal_id, name: bundle.deal_name }),
+          ]),
+        ),
+      },
+      { deal: ["read", "update"] },
+    );
+    return forgetSeat;
+  },
+  render: () => (
+    <StoryProviders>
+      <LastBulkUndo />
+    </StoryProviders>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(
+      await canvas.findByRole("region", { name: "Last bulk Undo" }),
+    ).toBeVisible();
+    await expect(
+      canvas.queryByRole("button", { name: "Send again" }),
+    ).toBeNull();
+  },
+};
 
 /**
  * After the press: the counts, then each deal not fully undone, linked, with

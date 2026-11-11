@@ -60,7 +60,9 @@ type ReceiptDetails interface {
 
 // ReceiptDetail is one receipt's description, in the order it was asked for.
 type ReceiptDetail struct {
-	Actor *crmcontracts.ReceiptActor
+	SourceOccurredAt        *time.Time
+	SourceOccurredPrecision *crmcontracts.OccurredPrecision
+	Actor                   *crmcontracts.ReceiptActor
 	// Changes is nil when none of the act's audit rows could be read, which
 	// is not an act that moved nothing.
 	Changes *[]crmcontracts.MagicFieldChange
@@ -174,6 +176,8 @@ func (s *Service) drawReceipts(ctx context.Context, page []Receipt, out *crmcont
 		row := WireReceipt(receipt)
 		if i < len(details) {
 			row.Actor, row.Changes = details[i].Actor, details[i].Changes
+			row.SourceOccurredAt = details[i].SourceOccurredAt
+			row.SourceOccurredPrecision = details[i].SourceOccurredPrecision
 		}
 		out.Receipts = append(out.Receipts, row)
 		subjects = append(subjects, row.Subject, row.SourceRecord)
@@ -188,6 +192,8 @@ func (s *Service) drawReceipts(ctx context.Context, page []Receipt, out *crmcont
 	for i := range out.Receipts {
 		if source := out.Receipts[i].SourceRecord; source != nil && source.Label == nil {
 			out.Receipts[i].SourceRecord = nil
+			out.Receipts[i].SourceOccurredAt = nil
+			out.Receipts[i].SourceOccurredPrecision = nil
 		}
 	}
 	return nil
@@ -206,6 +212,7 @@ func WireReceipt(receipt Receipt) crmcontracts.Receipt {
 		OccurredAt:      receipt.OccurredAt,
 		Headline:        optionalText(receipt.Headline),
 		Reason:          optionalText(receipt.Reason),
+		ReasonKind:      receipt.ReasonKind,
 		CustomerQuote:   optionalText(receipt.CustomerQuote),
 	}
 	// The record it was about, where the act named one. Not every approval is

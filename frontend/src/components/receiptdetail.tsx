@@ -4,6 +4,7 @@
 import { Button } from "../design-system/button";
 import { Disclosure } from "../design-system/disclosure";
 import { type Fact, FactList } from "../design-system/factlist";
+import { formatActivityWhen } from "../format/activitywhen";
 import { formatDateTime } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { Receipt } from "../lib/handled";
@@ -27,7 +28,12 @@ export function ReceiptDetail({ receipt }: Readonly<{ receipt: Receipt }>) {
   // it off, and the check holds an older server to the same rule.
   const source = receipt.source_record?.label ? receipt.source_record : null;
   const changes = receipt.changes ?? [];
-  if (by === null && source === null && changes.length === 0) {
+  if (
+    by === null &&
+    source === null &&
+    changes.length === 0 &&
+    !receipt.reason
+  ) {
     return null;
   }
   const facts: Fact[] = [];
@@ -43,6 +49,30 @@ export function ReceiptDetail({ receipt }: Readonly<{ receipt: Receipt }>) {
     term: t("receipt.detail.when"),
     value: formatDateTime(receipt.occurred_at, locale, readerZone),
   });
+  if (receipt.reason) {
+    facts.push({
+      key: "reason-kind",
+      term: t("receipt.detail.reasonKind"),
+      value:
+        receipt.reason_kind === "system_rule"
+          ? t("receipt.detail.systemRule")
+          : receipt.reason_kind === "inference"
+            ? t("receipt.detail.inference")
+            : t("receipt.detail.reasonUnknown"),
+    });
+  }
+  if (source !== null && receipt.source_occurred_at) {
+    facts.push({
+      key: "source-when",
+      term: t("receipt.detail.sourceWhen"),
+      value: formatActivityWhen(
+        receipt.source_occurred_at,
+        receipt.source_occurred_precision ?? "instant",
+        locale,
+        readerZone,
+      ),
+    });
+  }
   if (source !== null) {
     facts.push({
       key: "source",

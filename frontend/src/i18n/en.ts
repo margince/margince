@@ -19237,6 +19237,11 @@ export const en = {
   "receipt.detail.summary": "Details",
   "receipt.detail.by": "Done by",
   "receipt.detail.when": "When",
+  "receipt.detail.reasonKind": "Reason type",
+  "receipt.detail.systemRule": "System rule",
+  "receipt.detail.inference": "AI assessment",
+  "receipt.detail.reasonUnknown": "Not recorded",
+  "receipt.detail.sourceWhen": "Source date",
   "receipt.detail.source": "Source",
   "worklist.handled.showMore": "Show more",
   "worklist.exceptions.empty": "No team exceptions.",
@@ -21513,6 +21518,7 @@ export const en = {
   "brief.done.viewChanges_other": "View {count} changes",
   "brief.done.showNew": "Show new changes",
   "brief.done.history": "Change history",
+  "brief.done.selectDeal": "Select {deal} for Undo",
   "brief.done.dealsLabel": "Deals Margince changed",
   "brief.done.noReason": "Reason unavailable",
   "brief.done.markedLost": "Marked lost",
@@ -21534,6 +21540,8 @@ export const en = {
   "changes.bulk.unsent_other": "{count} deals were not sent.",
   "changes.bulk.confirmOnDeal": "Open the deal to confirm its Undo.",
   "changes.bulk.retry": "Send again",
+  "changes.bulk.results": "Show per-deal results",
+  "changes.bulk.last": "Last bulk Undo",
   "changes.bulk.unfinished": "Deals not fully undone",
 } as const;
 

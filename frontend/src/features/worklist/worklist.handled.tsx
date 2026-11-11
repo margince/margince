@@ -21,7 +21,8 @@
 // checked. It wears the team board's chrome for the same reason every other
 // panel here does: one shape, so a reader learns it once.
 
-import { BundleUndo } from "../../components/marginchanges";
+import { useEffect, useRef } from "react";
+import { BundleUndo, LastBulkUndo } from "../../components/marginchanges";
 import { ReceiptDetail } from "../../components/receiptdetail";
 import { ReceiptReview } from "../../components/receiptreview";
 import { ReceiptsMore } from "../../components/receiptsmore";
@@ -32,12 +33,14 @@ import { Panel, PanelBody } from "../../design-system/panel";
 import { SurfaceState } from "../../design-system/surfacestate";
 import { formatDateTime, formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
+import { CHANGE_HISTORY_PARAM } from "../../lib/changehistory";
 import {
   shownUndoable,
   usePendingMarginceChanges,
 } from "../../lib/marginchanges";
 import { receiptBasis, receiptSummary } from "../../lib/receiptcopy";
 import { isReviewableReceipt, receiptAuditId } from "../../lib/receiptreview";
+import { useUrlParams } from "../../lib/urlstate";
 import { useViewerZone } from "../../lib/viewerzone";
 import { listReadState } from "../../lib/worklist.listread";
 import { subjectHref } from "../../lib/worklistcopy";
@@ -58,9 +61,18 @@ export function HandledForYouPanel() {
   // column names and a silence, where the sentence saying nothing was done on
   // the reader's behalf is the whole answer.
   const state = listReadState(handled, receipts);
+  const [params] = useUrlParams();
+  const showHistory = params.get(CHANGE_HISTORY_PARAM) === "1";
+  const historyTitle = useRef<HTMLSpanElement>(null);
+  useEffect(() => {
+    if (showHistory && state === "ready") {
+      historyTitle.current?.scrollIntoView({ block: "start" });
+      historyTitle.current?.focus();
+    }
+  }, [showHistory, state]);
   // A day with nothing done draws no panel: the empty sentence sat beside the
   // queue's own on every quiet day. A failed read still shows, with its retry.
-  if (state === "empty") return null;
+  if (state === "empty") return <LastBulkUndo />;
   // Undo sends only the changes this list shows that the server still allows.
   const shown = new Set(
     (receipts ?? [])
@@ -75,7 +87,11 @@ export function HandledForYouPanel() {
   return (
     <Panel
       className={AFTER_THE_DAY}
-      title={t("worklist.handled.title")}
+      title={
+        <span ref={historyTitle} tabIndex={-1}>
+          {t("worklist.handled.title")}
+        </span>
+      }
       // HOW MUCH was done, in the band that belongs to the whole panel.
       //
       // Only over a read that ANSWERED, and only over one that reached its own
@@ -102,6 +118,7 @@ export function HandledForYouPanel() {
           it sits in a `PanelBody` with the truncation caveat rather than
           full-bleed against the panel's own edges. */}
       <PanelBody>
+        <LastBulkUndo />
         <SurfaceState
           state={state}
           emptyLabel={t("worklist.handled.empty")}
@@ -124,7 +141,10 @@ export function HandledForYouPanel() {
             />
           )}
           {receipts && (
-            <Disclosure summary={t("worklist.handled.showHistory")}>
+            <Disclosure
+              summary={t("worklist.handled.showHistory")}
+              open={showHistory}
+            >
               <DataTable
                 label={t("worklist.handled.title")}
                 rows={receipts}

@@ -106,9 +106,9 @@ func (s *Store) ReviveLostDeal(ctx context.Context, in ReviveLostDealInput) (boo
 		}
 		moved, err := s.advanceOnTx(ctx, tx, in.DealID, AdvanceDealInput{
 			ToStageID: first, WonWithoutContractReason: nil,
-			auditEvidence: map[string]any{
+			auditEvidence: correctionReasonEvidence(map[string]any{
 				basisKey: in.Basis, basisOwnerKey: in.Owner.String(), CorrectionKindEvidenceKey: DealReviveCorrection,
-			},
+			}, crmcontracts.ReceiptReasonKindInference),
 		}, active)
 		if err != nil {
 			return err

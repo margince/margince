@@ -20,6 +20,7 @@ import (
 // ListActivitiesInput narrows a timeline read: the page, the kind, the
 // transport, and the record the activities hang off.
 type ListActivitiesInput struct {
+	IDs              []ids.UUID
 	InteractionsAsOf *time.Time
 	mailIdentities   map[string][]string
 	// onlyID narrows a read to one row, so a caller can ask whether this list

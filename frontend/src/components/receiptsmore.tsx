@@ -14,14 +14,22 @@ type HandledRead = Pick<
  * The end of a capped receipt list. It offers the next page while the server
  * has one, and otherwise says the list is not everything.
  */
-export function ReceiptsMore({ handled }: Readonly<{ handled: HandledRead }>) {
+export function ReceiptsMore({
+  handled,
+  onPageLoaded,
+}: Readonly<{ handled: HandledRead; onPageLoaded?: (count: number) => void }>) {
   const t = useT();
   if (handled.hasNextPage) {
     return (
       <Button
         variant="link"
         pending={handled.isFetchingNextPage}
-        onClick={() => void handled.fetchNextPage()}
+        onClick={() =>
+          void handled.fetchNextPage().then((answer) => {
+            if (answer.data?.receipts)
+              onPageLoaded?.(answer.data.receipts.length);
+          })
+        }
       >
         {t("worklist.handled.showMore")}
       </Button>

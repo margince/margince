@@ -16,6 +16,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -310,6 +311,7 @@ func applyVerdictChange(
 	}
 	if err := commitCorrection(ctx, tx, lock, correctionWrite{
 		deal: in.DealID, correction: change.Correction, patch: patch, auditEvidence: evidence,
+		reasonKind:    crmcontracts.ReceiptReasonKindInference,
 		changedFields: map[string]any{CorrectionKindEvidenceKey: change.Correction},
 	}); err != nil {
 		return "", err

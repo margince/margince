@@ -14,10 +14,38 @@ import { HandledForYouPanel } from "./worklist.handled";
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  history.replaceState(null, "", "#/worklist");
 });
 
 // What a reader is told about work already done, and the one thing this panel
 // must never do.
+
+it("opens and focuses Change history when its address requests it", async () => {
+  history.replaceState(null, "", "#/worklist?change_history=1");
+  stubHandled({
+    as_of: "2026-09-05T09:00:00Z",
+    truncated: false,
+    receipts: [
+      {
+        id: "01a05500-0000-7000-8000-00000000e001",
+        kind: "email_sent",
+        summary: "Sent the confirmation",
+        occurred_at: "2026-09-05T08:00:00Z",
+      },
+    ],
+  });
+  render(panel());
+  await screen.findByText("Sent the confirmation");
+  await waitFor(() =>
+    expect(document.activeElement).toBe(
+      screen.getByText(en["worklist.handled.title"]),
+    ),
+  );
+  expect(
+    screen.getByText(en["worklist.handled.showHistory"]).closest("details")
+      ?.open,
+  ).toBe(true);
+});
 
 describe("what was handled for the reader", () => {
   it("AC-WORKLIST-TRUST-01: offers nothing to do about work somebody agreed to", async () => {

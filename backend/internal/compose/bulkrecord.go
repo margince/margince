@@ -141,7 +141,7 @@ func readBulkOperation(ctx context.Context, tx pgx.Tx, id ids.UUID) (bulkOperati
 	err := tx.QueryRow(ctx,
 		`SELECT record_type, verb, params, requested_by, requested_for, changed_count, result,
 		        undo_of, undone_by, created_at
-		   FROM bulk_operation WHERE id = $1`, id).
+		   FROM bulk_operation WHERE id = @id AND verb <> @private_verb`, pgx.NamedArgs{"id": id, "private_verb": correctionUndoVerb}).
 		Scan(&op.recordType, &op.verb, &params, &op.requester.id, &op.requester.human,
 			&op.changedCount, &result, &op.undoOf, &op.undoneBy, &op.createdAt)
 	if errors.Is(err, pgx.ErrNoRows) {

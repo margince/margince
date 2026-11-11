@@ -52,7 +52,8 @@ type Receipt struct {
 	Headline string
 	// Reason is why the act was taken, as recorded when it was; empty when
 	// nothing was recorded or this reader may not read it.
-	Reason string
+	Reason     string
+	ReasonKind *crmcontracts.ReceiptReasonKind
 	// CustomerQuote is the customer's own words the act rests on. It is kept
 	// apart from Reason, which is Margince's reading and never a quote.
 	CustomerQuote string

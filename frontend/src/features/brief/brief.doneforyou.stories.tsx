@@ -295,6 +295,13 @@ export const ReviewAllDrawer: Story = {
     await userEvent.click(
       await canvas.findByRole("button", { name: "Review all 7 deals" }),
     );
+    const drawer = within(canvasElement.ownerDocument.body);
+    await userEvent.click(
+      await drawer.findByRole("checkbox", { name: "Select Deal 7 for Undo" }),
+    );
+    await expect(
+      drawer.getByRole("button", { name: "Undo changes on 6 deals" }),
+    ).toBeVisible();
   },
 };
 

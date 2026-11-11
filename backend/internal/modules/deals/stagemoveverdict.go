@@ -15,6 +15,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/employment"
@@ -86,7 +87,7 @@ func (s *Store) applyVerdictStageMove(
 	evidence := map[string]any{CorrectionKindEvidenceKey: VerdictStageMoveCorrection, basisOwnerKey: in.Owner.String()}
 	maps.Copy(evidence, change.Evidence)
 	moved, refused, err := s.advanceInSavepoint(ctx, tx, in.DealID, AdvanceDealInput{
-		ToStageID: change.ToStageID, auditEvidence: evidence,
+		ToStageID: change.ToStageID, auditEvidence: correctionReasonEvidence(evidence, crmcontracts.ReceiptReasonKindInference),
 		// The target is an open stage, so the move claims no win.
 		WonWithoutContractReason: nil,
 	}, active)

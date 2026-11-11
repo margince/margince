@@ -24,6 +24,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -385,6 +386,7 @@ func (c *CloseDateCorrector) apply(ctx context.Context, cand closeDateCandidate,
 		maps.Copy(changedFields, extra)
 		if err := commitCorrection(actor, tx, lock, correctionWrite{
 			deal: cand.id, correction: correction, patch: patch, auditEvidence: auditEvidence,
+			reasonKind:    crmcontracts.ReceiptReasonKindSystemRule,
 			changedFields: changedFields, evidence: evidence, runID: &runID,
 		}); err != nil {
 			return err

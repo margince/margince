@@ -96,9 +96,9 @@ func (s *Store) closeAsLostTx(ctx context.Context, tx pgx.Tx, in CloseLostInput,
 	// The target is a lost stage, so the move claims no win.
 	moved, err := s.advanceOnTx(ctx, tx, in.DealID, AdvanceDealInput{
 		ToStageID: lost, LostReason: &reason, LostReasonCode: code, WonWithoutContractReason: nil,
-		auditEvidence: map[string]any{
+		auditEvidence: correctionReasonEvidence(map[string]any{
 			basisKey: in.Reason, basisOwnerKey: in.Owner.String(), CorrectionKindEvidenceKey: CloseLostCorrection,
-		},
+		}, crmcontracts.ReceiptReasonKindSystemRule),
 	}, active)
 	if err != nil {
 		return false, err

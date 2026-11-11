@@ -1,10 +1,11 @@
 /** @vitest-environment happy-dom */
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { en } from "../../i18n/en";
-import type { Receipt } from "../../lib/handled";
+import { handledForYouOptions, type Receipt } from "../../lib/handled";
+import { pendingChangesQuery } from "../../lib/marginchanges";
 import {
   jsonResponse,
   render,
@@ -16,6 +17,10 @@ import { automaticStageReceipt } from "../../testing/worklist.receiptreview.fixt
 import { DONE_PREVIEW_DEALS, DoneForYou } from "./brief.doneforyou";
 
 type Bundle = components["schemas"]["MarginceChangeBundle"];
+
+beforeEach(() => {
+  history.replaceState(null, "", "#/home");
+});
 
 afterEach(() => {
   cleanup();
@@ -121,6 +126,113 @@ it("shows five deals with their reasons, and every one in the review drawer", as
   );
   expect(
     within(drawer).getByRole("button", { name: "Undo changes on 6 deals" }),
+  ).toBeTruthy();
+});
+
+it("undoes only the deals selected in the review drawer", async () => {
+  const calls = routes(
+    [change(1), change(2)],
+    [bundle(1, [auditId(1)]), bundle(2, [auditId(2)])],
+    () =>
+      jsonResponse({
+        results: [
+          {
+            deal_id: dealId(1),
+            outcome: "undone",
+            undone: ["close_lost"],
+            kept: [],
+          },
+        ],
+      }),
+  );
+  const user = userEvent.setup();
+  render(<DoneForYou completed={null} />);
+  await user.click(
+    await screen.findByRole("button", { name: "Review all 2 deals" }),
+  );
+  const drawer = await screen.findByRole("dialog");
+  await user.click(
+    within(drawer).getByRole("checkbox", { name: "Select Deal 2 for Undo" }),
+  );
+  await user.click(
+    within(drawer).getByRole("button", { name: "Undo changes on 1 deal" }),
+  );
+  await screen.findAllByRole("status");
+  const posted = writes(calls).find(
+    (call) => call.path === "/deal-corrections/undo",
+  );
+  expect(posted?.body).toEqual({
+    items: [{ deal_id: dealId(1), version: 7, audit_log_ids: [auditId(1)] }],
+  });
+});
+
+it("reopens the same review and selection after the drawer remounts", async () => {
+  routes(
+    [change(1), change(2)],
+    [bundle(1, [auditId(1)]), bundle(2, [auditId(2)])],
+  );
+  const user = userEvent.setup();
+  const view = render(<DoneForYou completed={null} />);
+  await user.click(
+    await screen.findByRole("button", { name: "Review all 2 deals" }),
+  );
+  const drawer = await screen.findByRole("dialog");
+  await user.click(
+    within(drawer).getByRole("checkbox", { name: "Select Deal 2 for Undo" }),
+  );
+  expect(location.hash).toContain("review_deals=1");
+  view.rerender(<p>Deal page</p>);
+  view.rerender(<DoneForYou completed={null} />);
+  const returned = await screen.findByRole("dialog");
+  expect(
+    within(returned)
+      .getByRole("checkbox", { name: "Select Deal 2 for Undo" })
+      .matches(":checked"),
+  ).toBe(false);
+  expect(
+    within(returned).getByRole("button", { name: "Undo changes on 1 deal" }),
+  ).toBeTruthy();
+  expect(within(returned).getByText("reason 1.0")).toBeTruthy();
+});
+
+it("opens a shared review address from current data without a saved snapshot", async () => {
+  history.replaceState(null, "", "#/home?review_deals=1");
+  routes([change(1)], [bundle(1, [auditId(1)])]);
+  const user = userEvent.setup();
+  render(<DoneForYou completed={null} />);
+  const drawer = await screen.findByRole("dialog");
+  expect(within(drawer).getByText("reason 1.0")).toBeTruthy();
+  await user.click(
+    within(drawer).getByRole("checkbox", { name: "Select Deal 1 for Undo" }),
+  );
+  expect(
+    within(drawer).queryByRole("button", { name: "Undo changes on 1 deal" }),
+  ).toBeNull();
+});
+
+it("leaves a deal out of restored selection after the current read withholds it", async () => {
+  routes(
+    [change(1), change(2)],
+    [bundle(1, [auditId(1)]), bundle(2, [auditId(2)])],
+  );
+  const user = userEvent.setup();
+  const view = render(<DoneForYou completed={null} />);
+  await user.click(
+    await screen.findByRole("button", { name: "Review all 2 deals" }),
+  );
+  await screen.findByRole("dialog");
+  view.rerender(<p>Deal page</p>);
+  view.client.removeQueries({ queryKey: handledForYouOptions.queryKey });
+  view.client.removeQueries({ queryKey: pendingChangesQuery().queryKey });
+  routes([change(1)], [bundle(1, [auditId(1)])]);
+  view.rerender(<DoneForYou completed={null} />);
+  const drawer = await screen.findByRole("dialog");
+  expect(within(drawer).queryByText("reason 2.0")).toBeNull();
+  expect(
+    within(drawer).queryByRole("checkbox", { name: "Select Deal 2 for Undo" }),
+  ).toBeNull();
+  expect(
+    within(drawer).getByRole("button", { name: "Undo changes on 1 deal" }),
   ).toBeTruthy();
 });
 

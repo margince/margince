@@ -4,6 +4,8 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { en } from "../i18n/en";
+import { isRecord } from "../lib/problembody";
+import { forgetSeat } from "../lib/storage";
 import {
   jsonResponse,
   render,
@@ -18,6 +20,7 @@ type Item = { deal_id: string; version: number; audit_log_ids: string[] };
 
 afterEach(() => {
   cleanup();
+  forgetSeat();
   vi.unstubAllGlobals();
 });
 
@@ -33,9 +36,11 @@ const bundle = (n: number, version = 7): Bundle => ({
 // One more deal than a batch holds, so the Undo takes two requests.
 const chosen = Array.from({ length: 201 }, (_, i) => bundle(i));
 
-it("keeps the first batch's answers when a later batch fails, and sends again only what still waits", async () => {
+it("keeps the first batch's saved answers and resumes the failed batch with its original items", async () => {
   let posts = 0;
+  const saved: components["schemas"]["MarginceUndoRun"][] = [];
   const calls = stubApi({
+    "POST /deal-corrections/undo/results": () => jsonResponse({ runs: saved }),
     "GET /me": () =>
       jsonResponse(meFixture({ allow: { deal: ["read", "update"] } })),
     "POST /deal-corrections/undo": (body) => {
@@ -43,14 +48,24 @@ it("keeps the first batch's answers when a later batch fails, and sends again on
       // The second batch fails on the wire.
       if (posts === 2) return jsonResponse({ title: "Unavailable" }, 503);
       const items = (body as { items: Item[] }).items;
-      return jsonResponse({
-        results: items.map((item) => ({
+      const results: components["schemas"]["UndoMarginceChangeResult"][] =
+        items.map((item) => ({
           deal_id: item.deal_id,
           outcome: "undone",
           undone: ["close_lost"],
           kept: [],
-        })),
+        }));
+      if (!isRecord(body) || typeof body.run_id !== "string")
+        throw new Error("missing run id");
+      const runId = body.run_id;
+      saved.push({
+        run_id: runId,
+        items,
+        results,
+        complete: true,
+        created_at: "2026-09-13T08:00:00Z",
       });
+      return jsonResponse({ results, run_id: runId, complete: true });
     },
     // Read again before the retry: the failed deal still waits, at a newer
     // version, and has a change the reader never chose.
@@ -88,12 +103,13 @@ it("keeps the first batch's answers when a later batch fails, and sends again on
     .map((call) => (call.body as { items: Item[] }).items);
   expect(sent.map((items) => items.length)).toEqual([200, 1, 1]);
   expect(sent[2]).toEqual([
-    { deal_id: "deal-200", version: 9, audit_log_ids: ["change-200"] },
+    { deal_id: "deal-200", version: 7, audit_log_ids: ["change-200"] },
   ]);
 });
 
 it("counts each outcome apart and never calls a partial result done", async () => {
   stubApi({
+    "POST /deal-corrections/undo/results": () => jsonResponse({ runs: [] }),
     "GET /me": () =>
       jsonResponse(meFixture({ allow: { deal: ["read", "update"] } })),
     "POST /deal-corrections/undo": () =>

@@ -143,7 +143,8 @@ func correctionReceipt(c deals.CorrectionReceipt) attention.Receipt {
 	receipt := correctionReceiptOfKind(c)
 	receipt.Source, receipt.AuditLogID = attention.ReceiptFromCorrection, c.AuditLogID
 	receipt.Reason = c.Basis
-	receipt.CustomerQuote = quotedFacts(c.Evidence).Quote
+	facts := quotedFacts(c.Evidence)
+	receipt.CustomerQuote, receipt.ReasonKind = facts.Quote, facts.ReasonKind
 	if receipt.Reason == "" && receipt.CustomerQuote == "" {
 		receipt.Headline = ""
 	}

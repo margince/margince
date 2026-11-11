@@ -12,6 +12,11 @@ import {
 } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import {
+  keepUndoManifest,
+  resumeUndoRuns,
+  type UndoManifest,
+} from "./marginchanges.runs";
 import { unwrap } from "./problem";
 import { invalidateHandledChange, worklistKey } from "./workkeys";
 
@@ -113,10 +118,35 @@ export function useUndoMarginceChanges() {
     mutationFn: async ({
       bundles,
       archiveConfirmedFor,
+      resume,
     }: {
       bundles: readonly MarginceChangeBundle[];
       archiveConfirmedFor?: string;
+      resume?: UndoManifest;
     }): Promise<BundleUndoRun> => {
+      if (resume || bundles.length > 1) {
+        const manifest =
+          resume ??
+          keepUndoManifest(
+            bundles.map((bundle) => bundleItem(bundle, archiveConfirmedFor)),
+          );
+        const answer = await resumeUndoRuns(manifest);
+        const names = new Map(
+          bundles.map((bundle) => [bundle.deal_id, bundle]),
+        );
+        return {
+          results: answer.results,
+          error: answer.error,
+          unsent: answer.unanswered.map((item) => ({
+            deal_id: item.deal_id,
+            version: item.version,
+            audit_log_ids: item.audit_log_ids,
+            deal_name: names.get(item.deal_id)?.deal_name ?? "",
+            kinds: [],
+            latest_at: "",
+          })),
+        };
+      }
       const results: UndoMarginceChangeResult[] = [];
       for (let at = 0; at < bundles.length; at += UNDO_BATCH) {
         try {

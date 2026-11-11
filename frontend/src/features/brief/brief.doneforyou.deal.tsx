@@ -12,6 +12,7 @@ import { AppLink } from "../../design-system/applink";
 import { Badge, Button, Card } from "../../design-system/atoms";
 import { Disclosure } from "../../design-system/disclosure";
 import { ErrorLine } from "../../design-system/errorline";
+import { Checkbox } from "../../design-system/field";
 import {
   formatDayMonth,
   formatMoneyWhole,
@@ -28,6 +29,7 @@ import { type DealChanges, undoableShown } from "./brief.doneforyou.groups";
 
 export function DealCard({
   group,
+  selection,
   bundle,
   currency,
   open,
@@ -36,6 +38,7 @@ export function DealCard({
   onSettled,
 }: Readonly<{
   group: DealChanges;
+  selection?: Readonly<{ selected: boolean; toggle: () => void }>;
   bundle: MarginceChangeBundle | undefined;
   /** The currency the summary counts deal values in. */
   currency: string | undefined;
@@ -57,6 +60,15 @@ export function DealCard({
   return (
     <li>
       <Card as="article" className="brief-done-deal">
+        {selection && (
+          <Checkbox
+            label={t("brief.done.selectDeal", {
+              deal: group.name ?? t("worklist.handled.hiddenRecord"),
+            })}
+            checked={selection.selected}
+            onChange={selection.toggle}
+          />
+        )}
         <Disclosure
           className="brief-done-fold"
           open={open}

@@ -6,6 +6,7 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
+import type { Receipt } from "../lib/handled";
 import { OpenSourceProvider } from "../lib/opensource";
 import { automaticDateReceipt } from "../testing/worklist.receiptreview.fixtures";
 import { ReceiptDetail } from "./receiptdetail";
@@ -40,3 +41,67 @@ describe("a receipt's source", () => {
     expect(source.dataset.align).toBe("start");
   });
 });
+
+it("shows a day-only source date apart from the time Margince acted", () => {
+  render(
+    <LocaleProvider initial="en">
+      <ReceiptDetail
+        receipt={{
+          ...automaticDateReceipt,
+          source_record: {
+            type: "activity",
+            id: "source",
+            label: "Renewal call",
+          },
+          source_occurred_at: "2026-07-15T12:00:00Z",
+          source_occurred_precision: "day",
+        }}
+      />
+    </LocaleProvider>,
+  );
+  const sourceDate =
+    screen.getByText("Source date").nextElementSibling?.textContent;
+  expect(sourceDate).toContain("2026");
+  expect(sourceDate).toContain("15");
+  expect(sourceDate).not.toContain("12:00");
+  expect(screen.getByText("When")).toBeTruthy();
+});
+
+it("withholds a source date when the source has no readable label", () => {
+  render(
+    <LocaleProvider initial="en">
+      <ReceiptDetail
+        receipt={{
+          ...automaticDateReceipt,
+          source_record: { type: "activity", id: "source" },
+          source_occurred_at: "2026-07-15T12:00:00Z",
+          source_occurred_precision: "day",
+        }}
+      />
+    </LocaleProvider>,
+  );
+  expect(screen.queryByText("Source date")).toBeNull();
+});
+
+it.each<{ kind?: Receipt["reason_kind"]; label: string }>([
+  { kind: "system_rule", label: "System rule" },
+  { kind: "inference", label: "AI assessment" },
+  { label: "Not recorded" },
+])(
+  "shows the recorded reason kind $kind without guessing from its words",
+  ({ kind, label }) => {
+    render(
+      <LocaleProvider initial="en">
+        <ReceiptDetail
+          receipt={{
+            ...automaticDateReceipt,
+            reason: "The next date follows the stage history.",
+            reason_kind: kind,
+          }}
+        />
+      </LocaleProvider>,
+    );
+    expect(screen.getByText("Reason type")).toBeTruthy();
+    expect(screen.getByText(label)).toBeTruthy();
+  },
+);
