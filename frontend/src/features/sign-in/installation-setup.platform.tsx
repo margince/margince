@@ -1,15 +1,10 @@
 import { useEffect, useState } from "react";
+import { OAuthAppSteps } from "../../components/oauth-app-steps";
 import { RedirectUris } from "../../components/oauth-redirects";
-import {
-  Button,
-  Disclosure,
-  Field,
-  TextInput,
-} from "../../design-system/atoms";
-import { Callout } from "../../design-system/callout";
+import { Button, Field, TextInput } from "../../design-system/atoms";
+import { Checklist, ChecklistStep } from "../../design-system/checklist";
 import { ChoiceList } from "../../design-system/choicelist";
 import { ErrorLine } from "../../design-system/errorline";
-import { OffsiteLink } from "../../design-system/offsitelink";
 import { StageActions } from "../../design-system/onboarding-stage";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { ProviderMark } from "../../design-system/provider-mark";
@@ -19,7 +14,6 @@ import type { MessageKey } from "../../i18n/en";
 import {
   useOAuthApp,
   useSetOAuthApp,
-  VENDOR_CONSOLE,
   type Vendor,
   vendorCopy,
 } from "../../lib/oauth-app";
@@ -55,55 +49,6 @@ const PLATFORM_COPY: Readonly<
     what: "firstRun.platform.imapWhat",
   },
 };
-
-/**
- * The redirect URIs the app must carry, in the open and each with its copy
- * button. This is the one thing on this step done in the vendor's console, and
- * the one a first run most often skips. The Sign-in row is what puts the button
- * on the login page, so the hint says so before the list.
- */
-function AppRedirectUris({
-  uris,
-}: Readonly<{
-  uris: readonly { purpose: string; url: string }[] | undefined;
-}>) {
-  const t = useT();
-  return (
-    <>
-      <Callout kind="standing" title={t("firstRun.platform.redirectTitle")}>
-        <p>{t("firstRun.platform.redirectHint")}</p>
-      </Callout>
-      <RedirectUris uris={uris} />
-    </>
-  );
-}
-
-/**
- * Where the client id and secret come from, folded away.
- *
- * A fold rather than four paragraphs above the fields. An operator who has done
- * this before wants the two boxes, and one who has not needs every step. Open by
- * default would push the form below the fold for everybody.
- */
-function GoogleAppHelp() {
-  const t = useT();
-  return (
-    <Disclosure summary={t("firstRun.google.helpToggle")}>
-      <ol className="ob-fr-help">
-        <li>{t("firstRun.google.helpStep1")}</li>
-        <li>{t("firstRun.google.helpStep2")}</li>
-        <li>{t("firstRun.google.helpStep3")}</li>
-        <li>{t("firstRun.google.helpStep4")}</li>
-      </ol>
-      <p className="ob-fr-help-note t-sub">
-        <OffsiteLink href={VENDOR_CONSOLE.google}>
-          {t("firstRun.google.helpConsole")}
-        </OffsiteLink>
-      </p>
-      <p className="ob-fr-help-note t-sub">{t("firstRun.google.helpDocs")}</p>
-    </Disclosure>
-  );
-}
 
 /**
  * The vendor's app: the two values every OAuth client has, and Microsoft's
@@ -151,72 +96,64 @@ function VendorAppFields({
   }, [save.isPending, onBusy]);
   return (
     <>
-      <AppRedirectUris uris={app.data?.redirect_uris} />
-      {vendor === "google" ? (
-        <GoogleAppHelp />
-      ) : (
-        <>
-          <p className="ob-fr-help-note t-sub">
-            {t("firstRun.microsoft.note")}
-          </p>
-          {/* The pin below is also the directory sign-in runs on, which the
-              Google form has no equivalent of: said here, because an admin
-              who leaves it empty gets working mailboxes and no sign-in, and
-              nothing else on this screen would say why. */}
-          <p className="ob-fr-help-note t-sub">
-            {t("firstRun.microsoft.helpSignIn")}
-          </p>
-        </>
-      )}
-      <WriteRefused titleKey="oauthApp.saveFailed" error={save.error} />
-      <Field
-        label={t("oauthApp.clientId")}
-        error={needed(clientId.trim() === "")}
+      <OAuthAppSteps
+        provider={vendor}
+        redirects={<RedirectUris uris={app.data?.redirect_uris} />}
       >
-        {(control) => (
-          <TextInput
-            {...control}
-            value={clientId}
-            disabled={save.isPending}
-            autoComplete="off"
-            placeholder={t(vendorCopy[vendor].clientIdPlaceholder)}
-            onChange={(e) => setClientId(e.target.value)}
-          />
-        )}
-      </Field>
-      <Field
-        label={t("oauthApp.clientSecret")}
-        error={needed(clientSecret.trim() === "")}
-      >
-        {(control) => (
-          <TextInput
-            {...control}
-            type="password"
-            autoComplete="off"
-            value={clientSecret}
-            disabled={save.isPending}
-            onChange={(e) => setClientSecret(e.target.value)}
-          />
-        )}
-      </Field>
-      {vendor === "microsoft" && (
-        <Field
-          label={t("oauthApp.tenant")}
-          hint={t("firstRun.microsoft.tenantHint")}
-          error={needed(tenant.trim() === "")}
-        >
-          {(control) => (
-            <TextInput
-              {...control}
-              value={tenant}
-              autoComplete="off"
-              disabled={save.isPending}
-              placeholder={t("oauthApp.tenantPlaceholder")}
-              onChange={(e) => setTenant(e.target.value)}
-            />
+        <div className="form-stack">
+          <Field
+            label={t("oauthApp.clientId")}
+            error={needed(clientId.trim() === "")}
+          >
+            {(control) => (
+              <TextInput
+                {...control}
+                value={clientId}
+                disabled={save.isPending}
+                autoComplete="off"
+                placeholder={t(vendorCopy[vendor].clientIdPlaceholder)}
+                onChange={(e) => setClientId(e.target.value)}
+              />
+            )}
+          </Field>
+          <Field
+            label={t("oauthApp.clientSecret")}
+            error={needed(clientSecret.trim() === "")}
+          >
+            {(control) => (
+              <TextInput
+                {...control}
+                type="password"
+                autoComplete="off"
+                value={clientSecret}
+                disabled={save.isPending}
+                onChange={(e) => setClientSecret(e.target.value)}
+              />
+            )}
+          </Field>
+          {vendor === "microsoft" && (
+            <Field
+              label={t("oauthApp.tenant")}
+              // Required here, unlike Settings, so the hint says why: without a
+              // pin there is no sign-in, and nothing else on screen says so.
+              hint={`${t("firstRun.microsoft.tenantHint")} ${t("firstRun.microsoft.helpSignIn")}`}
+              error={needed(tenant.trim() === "")}
+            >
+              {(control) => (
+                <TextInput
+                  {...control}
+                  value={tenant}
+                  autoComplete="off"
+                  disabled={save.isPending}
+                  placeholder={t("oauthApp.tenantPlaceholder")}
+                  onChange={(e) => setTenant(e.target.value)}
+                />
+              )}
+            </Field>
           )}
-        </Field>
-      )}
+        </div>
+      </OAuthAppSteps>
+      <WriteRefused titleKey="oauthApp.saveFailed" error={save.error} />
       <StageActions>
         <StepNeeds attempted={attempted} missing={missing} />
         <Button variant="ghost" onClick={onDecline} disabled={save.isPending}>
@@ -278,6 +215,47 @@ export function StepNeeds({
 }
 
 /**
+ * IMAP has no company app, so its steps are what each mailbox owner does in
+ * their own mail service before the mailbox form can sign in.
+ */
+function ImapSteps({
+  onBusy,
+  onDecline,
+}: Readonly<{ onBusy: (busy: boolean) => void; onDecline: () => void }>) {
+  const t = useT();
+  return (
+    <Checklist>
+      <ChecklistStep
+        state="open"
+        title={t("firstRun.imap.passwordTitle")}
+        caption={t("firstRun.imap.passwordBody")}
+      />
+      <ChecklistStep
+        state="open"
+        title={t("firstRun.imap.serverTitle")}
+        caption={t("firstRun.imap.serverBody")}
+      />
+      <ChecklistStep
+        state="open"
+        title={t("firstRun.imap.connectTitle")}
+        caption={t("firstRun.platform.imapNote")}
+      >
+        {/* The same standing connect Settings makes, for the admin on
+            screen. There is no installation-wide IMAP app to store, so a
+            confirmed mailbox and "not now" both answer the question. */}
+        <ImapMailboxForm
+          dismissLabel={t("firstRun.platform.skip")}
+          onDismiss={onDecline}
+          onConnected={onDecline}
+          onPendingChange={onBusy}
+          renderActions={(actions) => <StageActions>{actions}</StageActions>}
+        />
+      </ChecklistStep>
+    </Checklist>
+  );
+}
+
+/**
  * The platform step: which vendor's app mailboxes and calendars connect
  * through, asked once, of the admin running the cold start. IMAP is an answer
  * too, since each mailbox carries its own credentials. So is "not now": the step
@@ -316,23 +294,7 @@ export function PlatformStep({
             }))}
           />
           {platform === "imap" ? (
-            <>
-              <p className="ob-fr-help-note t-sub">
-                {t("firstRun.platform.imapNote")}
-              </p>
-              {/* The same standing connect Settings makes, for the admin on
-                  screen. There is no installation-wide IMAP app to store, so a
-                  confirmed mailbox and "not now" both answer the question. */}
-              <ImapMailboxForm
-                dismissLabel={t("firstRun.platform.skip")}
-                onDismiss={onDecline}
-                onConnected={onDecline}
-                onPendingChange={onBusy}
-                renderActions={(actions) => (
-                  <StageActions>{actions}</StageActions>
-                )}
-              />
-            </>
+            <ImapSteps onBusy={onBusy} onDecline={onDecline} />
           ) : (
             <VendorAppFields
               key={platform}

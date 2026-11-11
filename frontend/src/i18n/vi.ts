@@ -15027,31 +15027,29 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "oauthApp.microsoft.save": "Lưu ứng dụng Microsoft",
   "oauthApp.drawer.google.title": "Thiết lập ứng dụng Google",
   "oauthApp.drawer.google.intro":
-    "Hai bước trong Google Cloud console, rồi dán kết quả vào đây. Bạn cần quyền truy cập dự án Google Cloud của công ty.",
+    "Vài bước trong Google Cloud console, rồi dán kết quả vào đây. Bạn cần quyền truy cập dự án Google Cloud của công ty.",
   "oauthApp.drawer.google.value":
     "Một ứng dụng cho cả công ty. Khi đã lưu, mọi thành viên ở {company} đều kết nối được Gmail và Google Calendar, và nút Tiếp tục với Google có thể xuất hiện trên màn hình đăng nhập.",
   "oauthApp.drawer.google.step1Title": "Tạo OAuth client trong Google Cloud",
   "oauthApp.drawer.google.step1Body":
-    "Mở APIs and services, rồi Credentials, và tạo một OAuth client ID loại Web application.",
+    "Chọn hoặc tạo một dự án cho Margince, mở APIs and services, rồi Credentials, và tạo một OAuth client ID loại Web application. Nếu Google yêu cầu thiết lập màn hình đồng ý trước, chọn Internal làm đối tượng: khi đó chỉ tài khoản Google của công ty dùng được ứng dụng, và Google không cần xét duyệt ứng dụng.",
   "oauthApp.drawer.google.step1Link": "Mở Google Cloud console",
   "oauthApp.drawer.google.step2Body":
     "Trong client, ở mục Authorized redirect URIs. Margince liệt kê một địa chỉ cho mỗi việc mà bản cài đặt này dùng Google. Dán chính xác; nếu thiếu một địa chỉ, Google sẽ dừng kết nối với lỗi “redirect_uri_mismatch” mà không nói địa chỉ nào.",
   "oauthApp.drawer.microsoft.title": "Thiết lập ứng dụng Microsoft",
   "oauthApp.drawer.microsoft.intro":
-    "Hai bước trong Microsoft Entra admin center, rồi dán kết quả vào đây. Bạn cần quyền truy cập thư mục Entra của công ty.",
+    "Vài bước trong Microsoft Entra admin center, rồi dán kết quả vào đây. Bạn cần quyền truy cập thư mục Entra của công ty.",
   "oauthApp.drawer.microsoft.value":
     "Một ứng dụng cho cả công ty. Khi đã lưu, mọi thành viên ở {company} đều kết nối được thư và lịch Outlook, và nút Tiếp tục với Microsoft có thể xuất hiện trên màn hình đăng nhập.",
   "oauthApp.drawer.microsoft.step1Title":
     "Đăng ký ứng dụng trong Microsoft Entra",
   "oauthApp.drawer.microsoft.step1Body":
-    "Mở App registrations, đăng ký một ứng dụng mới, rồi thêm client secret ở mục Certificates and secrets.",
+    "Mở App registrations và chọn New registration. Đặt tên là Margince và, ở Supported account types, chọn Accounts in this organizational directory only.",
   "oauthApp.drawer.microsoft.step1Link": "Mở Microsoft Entra admin center",
   "oauthApp.drawer.microsoft.step2Body":
-    "Trong đăng ký ứng dụng, ở mục Authentication, dưới dạng redirect URI của nền tảng Web. Margince liệt kê một địa chỉ cho mỗi việc mà bản cài đặt này dùng Microsoft. Dán chính xác; nếu thiếu một địa chỉ, Microsoft sẽ dừng kết nối với lỗi “AADSTS50011” mà không nói địa chỉ nào.",
+    "Trong đăng ký ứng dụng, mở Authentication, chọn Add a platform, chọn Web, rồi dán từng địa chỉ bên dưới. Margince liệt kê một địa chỉ cho mỗi việc mà bản cài đặt này dùng Microsoft. Dán chính xác; nếu thiếu một địa chỉ, Microsoft sẽ dừng kết nối với lỗi “AADSTS50011” mà không nói địa chỉ nào.",
   "oauthApp.drawer.step2Title": "Thêm các địa chỉ chuyển hướng này",
   "oauthApp.drawer.step3Title": "Dán client ID và secret",
-  "oauthApp.drawer.step3Body":
-    "{vendor} hiển thị cả hai khi client đã được tạo.",
   "oauthApp.drawer.secretHint":
     "Được lưu mã hóa và không bao giờ hiển thị lại. Muốn đổi sau này, hãy thay ứng dụng.",
   "oauthApp.drawer.foot": "Có hiệu lực cho tất cả ngay khi lưu.",
@@ -19490,22 +19488,28 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "firstRun.platform.imap": "IMAP",
   "firstRun.platform.imapWhat":
     "Mỗi hộp thư kết nối bằng mật khẩu ứng dụng IMAP riêng. Đăng nhập bằng email và mật khẩu.",
-  "firstRun.platform.redirectTitle":
-    "Đăng ký các redirect URI này trong ứng dụng",
-  "firstRun.platform.redirectHint":
-    "Sao chép từng cái vào app trước khi lưu ở đây. Đăng nhập là thứ đưa nút đăng nhập lên trang đăng nhập cho mọi người bạn mời; trình kết nối thư và trình kết nối lịch là thứ cho phép mọi người kết nối của họ. Thiếu một cái thì lỗi xảy ra ở màn hình đồng ý của nhà cung cấp, không phải ở đây.",
-  "firstRun.google.helpToggle": "Lấy các giá trị này ở đâu",
-  "firstRun.google.helpStep1":
-    "Trong Google Cloud console, mở một project rồi vào “APIs & Services”, sau đó “Credentials”. Chọn “Create credentials”, rồi “OAuth client ID”, và chọn “Web application”.",
-  "firstRun.google.helpStep2":
-    "Bật Gmail API và thêm các scope gmail.readonly, gmail.send và userinfo.profile vào màn hình đồng ý (userinfo.profile cung cấp ảnh của tài khoản Google). Các scope dùng chung một lần đồng ý vì Google không thêm scope vào refresh token đã cấp; muốn xin thêm scope sau này thì phải kết nối lại hộp thư.",
-  "firstRun.google.helpStep3":
-    "Trong Authorized redirect URIs, thêm các URI liệt kê ở trên. Hộp thư là bắt buộc để nhận thư; Lịch và Đăng nhập bật các tính năng tương ứng.",
-  "firstRun.google.helpStep4":
-    "Sao chép client ID và khóa bí mật (client secret) vào 2 ô bên dưới. Khóa bí mật chỉ gửi một lần, được lưu trong kho khóa và không bao giờ đọc lại được.",
-  "firstRun.google.helpConsole": "Google Cloud credentials console",
-  "firstRun.google.helpDocs":
-    "Toàn bộ điều kiện tiên quyết, gồm cả Microsoft và IMAP: docs/how-to/connect-a-mailbox.md",
+  "oauthApp.steps.google.apisTitle": "Bật Gmail và Google Calendar",
+  "oauthApp.steps.google.apisBody":
+    "Trong API library, bật Gmail API và Google Calendar API. Sau đó, trên màn hình đồng ý ở mục Data access, thêm các scope gmail.readonly, gmail.send, calendar.readonly, calendar.events.owned và userinfo.profile; các scope này được duyệt khi kết nối hộp thư và lịch.",
+  "oauthApp.steps.google.apisLink": "Mở API library",
+  "oauthApp.steps.google.pasteBody":
+    "Google hiển thị cả hai trong một hộp thoại sau khi bạn chọn Create. Nếu đã đóng hộp thoại, mở client trong Credentials: client ID nằm ở trên cùng, và Add secret tạo một secret mới.",
+  "oauthApp.steps.microsoft.permissionsTitle": "Cho phép truy cập thư và lịch",
+  "oauthApp.steps.microsoft.permissionsBody":
+    "Mở API permissions, chọn Add a permission, rồi Microsoft Graph, rồi Delegated permissions. Thêm openid, email, profile, offline_access, User.Read, Mail.Read, Mail.Send và Calendars.ReadWrite. Sau đó chọn Grant admin consent, để không ai trong công ty phải duyệt từng quyền.",
+  "oauthApp.steps.microsoft.secretTitle": "Tạo client secret",
+  "oauthApp.steps.microsoft.secretBody":
+    "Mở Certificates and secrets và chọn New client secret. Sao chép Value ngay, không phải Secret ID: Entra chỉ hiển thị giá trị này một lần. Ghi lại ngày hết hạn; khi secret hết hạn, hộp thư ngừng đồng bộ cho đến khi lưu một secret mới ở đây.",
+  "oauthApp.steps.microsoft.pasteTitle": "Dán các ID và secret",
+  "oauthApp.steps.microsoft.pasteBody":
+    "Trang Overview của ứng dụng hiển thị Application (client) ID và Directory (tenant) ID.",
+  "firstRun.imap.passwordTitle": "Tạo mật khẩu ứng dụng",
+  "firstRun.imap.passwordBody":
+    "Dịch vụ thư tạo mật khẩu này khi đã bật xác minh hai bước; mật khẩu thường bị từ chối. Gmail: Google Account, Security, App passwords. Outlook.com: tài khoản Microsoft, Security, Advanced security options, App passwords. iCloud: Apple Account, Sign-In and Security, App-Specific Passwords. Hộp thư công việc Microsoft 365 không có mật khẩu ứng dụng cho IMAP: chọn Microsoft 365 ở trên.",
+  "firstRun.imap.serverTitle": "Tra máy chủ IMAP",
+  "firstRun.imap.serverBody":
+    "Gmail dùng imap.gmail.com, Outlook.com dùng outlook.office365.com và iCloud dùng imap.mail.me.com, đều ở cổng 993. Dịch vụ thư khác ghi máy chủ trên trang trợ giúp về cài đặt IMAP.",
+  "firstRun.imap.connectTitle": "Kết nối hộp thư của bạn",
   "firstRun.platform.imapNote":
     "Bản cài đặt không có cấu hình chung nào. Kết nối hộp thư của bạn ngay hoặc để sau; các hộp thư khác kết nối trong Cài đặt, mục Kết nối, mỗi hộp thư có mật khẩu ứng dụng riêng.",
   "firstRun.platform.skip": "Để sau",
@@ -19513,8 +19517,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "firstRun.stillNeeded": "Còn thiếu: {fields}",
   "firstRun.platform.foot":
     "Mọi câu trả lời ở đây có thể đổi sau trong Cài đặt.",
-  "firstRun.microsoft.note":
-    "Đăng ký một ứng dụng trong Microsoft Entra với các redirect URI ở trên, rồi dán client ID và secret của ứng dụng vào đây. Ghim ứng dụng vào thư mục của công ty: các hộp thư trong thư mục đó kết nối qua ứng dụng, và người trong thư mục đăng nhập bằng ứng dụng.",
   "firstRun.microsoft.helpSignIn":
     "Thư mục đưa Microsoft lên trang đăng nhập, nên ở đây bắt buộc phải có thư mục. Để đăng ký ứng dụng không gắn thư mục (tổ chức nào cũng kết nối được hộp thư, không ai đăng nhập bằng Microsoft), hãy dùng Cài đặt.",
   "firstRun.microsoft.tenantHint":

@@ -267,7 +267,7 @@ export const NoPricesOnFile: Story = {
 
 // One step later. The model is bound, so the room is lit for the rest of first
 // run and for everything after it. The platform question opens on Google, with
-// the console steps and the redirect URIs folded under the fields.
+// the numbered console steps in the open and the fields under the last one.
 export const ChoosingThePlatform: Story = {
   render: () => {
     installFetchStub(
@@ -325,8 +325,8 @@ export const TheIgnition: Story = {
   },
 };
 
-// Microsoft: the same two fields plus the optional directory pin, and the
-// Entra note in place of the Google fold.
+// Microsoft: the Entra steps, and the same two fields plus the directory pin
+// that first run requires.
 export const OnMicrosoft: Story = {
   ...ChoosingThePlatform,
   play: async ({ canvasElement }) => {
@@ -337,8 +337,8 @@ export const OnMicrosoft: Story = {
   },
 };
 
-// IMAP: mailboxes carrying their own credentials, entered on the mailbox
-// rather than here, so Continue is the only control left.
+// IMAP: no company app, so the steps are the app password and the server each
+// mailbox owner looks up, then the mailbox form itself.
 export const OnImap: Story = {
   ...ChoosingThePlatform,
   play: async ({ canvasElement }) => {

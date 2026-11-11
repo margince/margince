@@ -4,7 +4,6 @@
 import { CalendarDays, LogIn, Mail } from "lucide-react";
 import { useId, useRef, useState } from "react";
 import { Button, Field, TextInput } from "../design-system/atoms";
-import { Checklist, ChecklistStep } from "../design-system/checklist";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import {
   ConfirmPhraseBox,
@@ -18,8 +17,6 @@ import {
 } from "../design-system/drawerbands";
 import { Heading } from "../design-system/heading";
 import { Modal } from "../design-system/modal";
-import { OffsiteLink } from "../design-system/offsitelink";
-import { providerBrandName } from "../design-system/provider-mark";
 import { QueryGate, WriteRefused } from "../design-system/querystates";
 import { Chip } from "../design-system/readings";
 import { useT } from "../i18n";
@@ -29,13 +26,13 @@ import {
   useOAuthApp,
   useRemoveOAuthApp,
   useSetOAuthApp,
-  VENDOR_CONSOLE,
   type Vendor,
   vendorAppState,
   vendorCopy,
 } from "../lib/oauth-app";
 import { problemMessageOf } from "../lib/problem";
 import "./oauth-app.css";
+import { OAuthAppSteps, REDIRECTS_HOW_TO } from "./oauth-app-steps";
 import { RedirectUris } from "./oauth-redirects";
 
 // The drawer's per-vendor wording, as literal keys for the reason vendorCopy
@@ -45,10 +42,6 @@ const drawerCopy = {
     title: "oauthApp.drawer.google.title",
     intro: "oauthApp.drawer.google.intro",
     value: "oauthApp.drawer.google.value",
-    step1Title: "oauthApp.drawer.google.step1Title",
-    step1Body: "oauthApp.drawer.google.step1Body",
-    step1Link: "oauthApp.drawer.google.step1Link",
-    step2Body: "oauthApp.drawer.google.step2Body",
     unlockMail: "oauthApp.unlock.gmail",
     save: "oauthApp.google.save",
     removeTitle: "oauthApp.google.removeConfirmTitle",
@@ -61,10 +54,6 @@ const drawerCopy = {
     title: "oauthApp.drawer.microsoft.title",
     intro: "oauthApp.drawer.microsoft.intro",
     value: "oauthApp.drawer.microsoft.value",
-    step1Title: "oauthApp.drawer.microsoft.step1Title",
-    step1Body: "oauthApp.drawer.microsoft.step1Body",
-    step1Link: "oauthApp.drawer.microsoft.step1Link",
-    step2Body: "oauthApp.drawer.microsoft.step2Body",
     unlockMail: "oauthApp.unlock.outlook",
     save: "oauthApp.microsoft.save",
     removeTitle: "oauthApp.microsoft.removeConfirmTitle",
@@ -76,9 +65,8 @@ const drawerCopy = {
 } as const;
 
 /**
- * Setting up one vendor's app in three steps: create the client in the
- * vendor's console, register the redirect addresses, paste the pair. Every
- * step stays open, because the product cannot see the vendor's console.
+ * Setting up one vendor's app: the console steps of `OAuthAppSteps`, ending in
+ * the pair this form stores.
  *
  * One form and one mount serve first setup and replacement. Settings opens it
  * from the vendor's row; onboarding opens it for an admin whose company has
@@ -167,7 +155,6 @@ function SetupForm({
     lockReason === undefined &&
     id.trim() !== "" &&
     clientSecret.trim() !== "";
-  const vendor = providerBrandName(provider) ?? provider;
   const locked = !canManage || save.isPending || lockReason !== undefined;
 
   function submit() {
@@ -196,55 +183,61 @@ function SetupForm({
           <Chip icon={CalendarDays}>{t("oauthApp.unlock.calendar")}</Chip>
           <Chip icon={LogIn}>{t("oauthApp.unlock.signIn")}</Chip>
         </div>
-        <Checklist>
-          <ChecklistStep
-            state="open"
-            title={t(copy.step1Title)}
-            caption={t(copy.step1Body)}
-          >
-            <OffsiteLink href={VENDOR_CONSOLE[provider]}>
-              {t(copy.step1Link)}
-            </OffsiteLink>
-          </ChecklistStep>
-          <ChecklistStep
-            state="open"
-            title={t("oauthApp.drawer.step2Title")}
-            caption={t(copy.step2Body)}
-          >
+        <OAuthAppSteps
+          provider={provider}
+          redirects={
             <QueryGate query={app} pendingLabel={t("oauthApp.redirectTable")}>
               {(loaded) => <RedirectUris uris={loaded.redirect_uris} />}
             </QueryGate>
-          </ChecklistStep>
-          <ChecklistStep
-            state="open"
-            title={t("oauthApp.drawer.step3Title")}
-            caption={t("oauthApp.drawer.step3Body", { vendor })}
-          >
-            <div className="form-stack">
-              {lockReason !== undefined && (
-                <p id={lockId} className="t-caption">
-                  {lockReason}
-                </p>
+          }
+        >
+          <div className="form-stack">
+            {lockReason !== undefined && (
+              <p id={lockId} className="t-caption">
+                {lockReason}
+              </p>
+            )}
+            <Field label={t("oauthApp.clientId")}>
+              {(control) => (
+                <TextInput
+                  {...control}
+                  aria-describedby={describedByIds(
+                    control["aria-describedby"],
+                    lockReason === undefined ? undefined : lockId,
+                  )}
+                  value={id}
+                  autoComplete="off"
+                  disabled={locked}
+                  placeholder={t(vendorCopy[provider].clientIdPlaceholder)}
+                  onChange={(e) => setClientId(e.target.value)}
+                />
               )}
-              <Field label={t("oauthApp.clientId")}>
-                {(control) => (
-                  <TextInput
-                    {...control}
-                    aria-describedby={describedByIds(
-                      control["aria-describedby"],
-                      lockReason === undefined ? undefined : lockId,
-                    )}
-                    value={id}
-                    autoComplete="off"
-                    disabled={locked}
-                    placeholder={t(vendorCopy[provider].clientIdPlaceholder)}
-                    onChange={(e) => setClientId(e.target.value)}
-                  />
-                )}
-              </Field>
+            </Field>
+            <Field
+              label={t("oauthApp.clientSecret")}
+              hint={t("oauthApp.drawer.secretHint")}
+            >
+              {(control) => (
+                <TextInput
+                  {...control}
+                  aria-describedby={describedByIds(
+                    control["aria-describedby"],
+                    lockReason === undefined ? undefined : lockId,
+                  )}
+                  type="password"
+                  autoComplete="off"
+                  value={clientSecret}
+                  disabled={locked}
+                  onChange={(e) => setClientSecret(e.target.value)}
+                />
+              )}
+            </Field>
+            {/* Google has no directories, and a field that silently does
+                nothing is worse than none. */}
+            {provider === "microsoft" && (
               <Field
-                label={t("oauthApp.clientSecret")}
-                hint={t("oauthApp.drawer.secretHint")}
+                label={t("oauthApp.tenant")}
+                hint={t("oauthApp.tenantHint")}
               >
                 {(control) => (
                   <TextInput
@@ -253,40 +246,17 @@ function SetupForm({
                       control["aria-describedby"],
                       lockReason === undefined ? undefined : lockId,
                     )}
-                    type="password"
+                    value={directory}
                     autoComplete="off"
-                    value={clientSecret}
                     disabled={locked}
-                    onChange={(e) => setClientSecret(e.target.value)}
+                    placeholder={t("oauthApp.tenantPlaceholder")}
+                    onChange={(e) => setTenant(e.target.value)}
                   />
                 )}
               </Field>
-              {/* Google has no directories, and a field that silently does
-                  nothing is worse than none. */}
-              {provider === "microsoft" && (
-                <Field
-                  label={t("oauthApp.tenant")}
-                  hint={t("oauthApp.tenantHint")}
-                >
-                  {(control) => (
-                    <TextInput
-                      {...control}
-                      aria-describedby={describedByIds(
-                        control["aria-describedby"],
-                        lockReason === undefined ? undefined : lockId,
-                      )}
-                      value={directory}
-                      autoComplete="off"
-                      disabled={locked}
-                      placeholder={t("oauthApp.tenantPlaceholder")}
-                      onChange={(e) => setTenant(e.target.value)}
-                    />
-                  )}
-                </Field>
-              )}
-            </div>
-          </ChecklistStep>
-        </Checklist>
+            )}
+          </div>
+        </OAuthAppSteps>
         {/* Last in the body, so a refusal lands beside the Save that drew it. */}
         <WriteRefused titleKey="oauthApp.saveFailed" error={save.error} />
       </DrawerBody>
@@ -333,7 +303,7 @@ export function RedirectAddressesDialog({
       <Heading size="large" id={titleId} className="t-h2 modal-title">
         {t("oauthApp.redirectTable")}
       </Heading>
-      <p className="t-body">{t(drawerCopy[provider].step2Body)}</p>
+      <p className="t-body">{t(REDIRECTS_HOW_TO[provider])}</p>
       <QueryGate query={app} pendingLabel={t("oauthApp.redirectTable")}>
         {(loaded) => <RedirectUris uris={loaded.redirect_uris} />}
       </QueryGate>
