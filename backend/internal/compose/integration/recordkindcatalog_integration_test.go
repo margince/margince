@@ -77,12 +77,12 @@ func TestADeclaredKindMustHaveItsTableColumnsAndAUniqueNaturalKey(t *testing.T) 
 			}
 		}
 		if c.name == "no rights for the application role" {
-			if _, err := OwnerConn(t).Exec(ctx, `REVOKE ALL ON ext.ext_kindcat_nogrant FROM margince_app`); err != nil {
+			if _, err := OwnerConn(t).Exec(ctx, `REVOKE ALL ON ext.ext_kindcat_nogrant FROM margince_app, ext_runtime`); err != nil {
 				t.Fatal(err)
 			}
 		}
 		if c.name == "only one of the four rights" {
-			if _, err := OwnerConn(t).Exec(ctx, `REVOKE INSERT, UPDATE, DELETE ON ext.ext_kindcat_selectonly FROM margince_app`); err != nil {
+			if _, err := OwnerConn(t).Exec(ctx, `REVOKE INSERT, UPDATE, DELETE ON ext.ext_kindcat_selectonly FROM margince_app, ext_runtime`); err != nil {
 				t.Fatal(err)
 			}
 		}
