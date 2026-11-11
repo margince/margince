@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import type { components } from "../api/schema";
-import { Button } from "../design-system/atoms";
-import { formatDateTime } from "../format/format";
-import { useLocale, useT } from "../i18n";
-import { useOpenSource } from "../lib/opensource";
-import { useViewerZone } from "../lib/viewerzone";
-import { inquiryReasonKey } from "../lib/websiteinquiries";
-import { EntityRef } from "./entityref";
+import type { components } from "../../api/schema";
+import { EntityRef } from "../../components/entityref";
+import { Button } from "../../design-system/atoms";
+import { formatDateTime } from "../../format/format";
+import { useLocale, useT } from "../../i18n";
+import { useOpenSource } from "../../lib/opensource";
+import { useViewerZone } from "../../lib/viewerzone";
+import { inquiryReasonKey } from "../../lib/websiteinquiries";
 
 export function WebsiteInquiryFacts({
   facts,

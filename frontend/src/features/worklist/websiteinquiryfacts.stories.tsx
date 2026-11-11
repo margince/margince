@@ -3,21 +3,21 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, fn, within } from "storybook/test";
-import { OpenSourceProvider } from "../lib/opensource";
-import { ViewerZoneProvider } from "../lib/viewerzone";
+import {
+  INQUIRY_FIRST_SOURCE,
+  INQUIRY_GRANTS,
+} from "../../components/websiteinquiry.fixtures";
+import { OpenSourceProvider } from "../../lib/opensource";
+import { ViewerZoneProvider } from "../../lib/viewerzone";
 import {
   installFetchStub,
   meRoute,
   StoryProviders,
-} from "../testing/story-utils";
-import {
-  INQUIRY_FIRST_SOURCE,
-  INQUIRY_GRANTS,
-} from "./websiteinquiry.fixtures";
+} from "../../testing/story-utils";
 import { WebsiteInquiryFacts } from "./websiteinquiryfacts";
 
 const meta: Meta<typeof WebsiteInquiryFacts> = {
-  title: "Worklist/Website inquiry facts",
+  title: "Records/Worklist/Website inquiry facts",
   component: WebsiteInquiryFacts,
   decorators: [
     (Story) => {

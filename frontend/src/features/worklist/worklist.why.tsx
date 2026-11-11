@@ -6,11 +6,11 @@
 // A row says one current reason. Its details list every concrete fact behind
 // it, and leave out how the row ranks against the rest of the queue.
 
-import { WebsiteInquiryFacts } from "../../components/websiteinquiryfacts";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 import { useViewerZone } from "../../lib/viewerzone";
 import { factReasons, partyName, reasonText } from "../../lib/worklistcopy";
+import { WebsiteInquiryFacts } from "./websiteinquiryfacts";
 import { askKey } from "./worklist.ask";
 import { useBriefAnswer, withFoldedBrief } from "./worklist.briefverbs";
 import type { WorklistItem } from "./worklist.queries";

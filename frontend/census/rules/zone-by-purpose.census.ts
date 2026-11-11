@@ -68,6 +68,10 @@ export function code(path: string, source: string): string {
 // cannot stand in for.
 const pinnedZones: { file: string; why: string }[] = [
   {
+    file: "features/worklist/websiteinquiryfacts.stories.tsx",
+    why: "The receipt story pins the reader’s zone so the accepted submission time stays visible in a reproducible local clock.",
+  },
+  {
     file: "features/automations/automations.deadline-form.test.tsx",
     why: "The deadline editor test pins the saved policy's IANA zone to verify that reviewing and saving preserve its calendar-day meaning.",
   },

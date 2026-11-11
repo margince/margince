@@ -6,13 +6,13 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
-import { OpenSourceProvider } from "../lib/opensource";
-import { renderWithQueryClient } from "../testing/queryrender";
-import { installFetchStub, meRoute } from "../testing/story-utils";
 import {
   INQUIRY_FIRST_SOURCE,
   INQUIRY_GRANTS,
-} from "./websiteinquiry.fixtures";
+} from "../../components/websiteinquiry.fixtures";
+import { OpenSourceProvider } from "../../lib/opensource";
+import { renderWithQueryClient } from "../../testing/queryrender";
+import { installFetchStub, meRoute } from "../../testing/story-utils";
 import { WebsiteInquiryFacts } from "./websiteinquiryfacts";
 
 afterEach(() => {
