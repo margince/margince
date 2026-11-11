@@ -482,6 +482,7 @@ Privacy: []privacy.Table{{
 	Links:     []privacy.Link{{Column: "activity_id", Record: privacy.Activity}},
 	Personal:  []string{"body"},
 	Retention: jurisdiction.CommercialCorrespondence,
+	AgeColumn: "received_at",
 }},
 ```
 
@@ -489,14 +490,15 @@ Privacy: []privacy.Table{{
 |---|---|
 | `Links` | The columns that hold the id of a core record: `contact`, `lead`, `company` or `activity`. |
 | `Personal` | The columns the core clears on erasure and serves in a subject export. See [what clearing does](#what-clearing-does). |
-| `Retention` | One of the core's own classes. A unit cannot add one. |
+| `Retention` | One of the core's own classes. A unit cannot add one. A retention sweep keeps a row as long as the class requires. |
+| `AgeColumn` | The `timestamptz`, `timestamp` or `date` column a retention sweep counts from, to tell how old a row is. A table with personal columns must name one. |
 
 A row belongs to a subject when one of its links names the subject. Erasure and export find rows by
 `contact`, `lead` or `activity`. A `company` link only feeds the merge check, so a table with personal columns
 needs one of the other three.
 
 A table with no `Links` and no `Personal` columns declares that it holds no personal data. A table with
-personal columns needs a `uuid` column named `id`.
+personal columns or an `AgeColumn` needs a `uuid` column named `id`.
 
 ### What clearing does
 

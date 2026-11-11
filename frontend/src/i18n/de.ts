@@ -11121,6 +11121,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "retention.scopeRawCapture": "Gespeicherte Originalnachrichten",
   "retention.scopeDealRiskDay":
     "Tägliche Aufzeichnung wichtiger gefährdeter Deals",
+  "retention.scopeExtension": "Von Erweiterungen gespeicherte Datensätze",
   "pipeline.new": "Neue Pipeline",
   "pipeline.createRefused":
     "Deine Rolle darf keine Pipelines anlegen. Frage einen Admin.",

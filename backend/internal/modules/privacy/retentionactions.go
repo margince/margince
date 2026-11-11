@@ -113,34 +113,34 @@ func (s *RetentionService) apply(ctx context.Context, pol retentionPolicy, id id
 			}
 			return err
 		}
-		// Retention audits under the verb of the action it ran —
-		// archive, anonymize and erase are all in the closed audit
-		// vocabulary (0053) — so a governance read can tell a retention
-		// anonymize from a user edit, and the field-history projection
-		// can treat anonymize/erase as its scrub boundary instead of
-		// parsing payload shapes. The policy metadata rides the evidence
-		// column, and before/after stay nil: this row records that a
-		// policy acted, not a field diff, so a projectable verb like
-		// archive must carry no payload the field-history diff could
-		// mistake for record fields.
-		auditID, err := storekit.AuditWithEvidence(ctx, tx, pol.Action, pol.ObjectType, id, nil, nil, map[string]any{
-			evidenceKeyRetentionAction: pol.Action, "policy": pol.ID, "retain_days": pol.RetainDays,
-		})
-		if err != nil {
-			return err
-		}
-		if pol.Action != actionArchive {
-			if err := storekit.RedactAuditHistory(ctx, tx, auditID); err != nil {
-				return err
-			}
-		}
-		policyID := pol.ID
-		action, err := publishedRetentionAction(pol.Action, pol.ID)
-		if err != nil {
-			return err
-		}
-		return storekit.EmitEventForEntity(ctx, tx, auditID, pol.ObjectType, id, retentionAppliedPayload(action, &policyID, nil))
+		return auditRetentionAction(ctx, tx, pol, pol.ObjectType, id)
 	})
+}
+
+// auditRetentionAction records that a policy acted on one record. It audits
+// under the verb of the action it ran. So a governance read tells a retention
+// anonymize from a user edit, and field history treats anonymize/erase as its
+// scrub boundary. The policy rides the evidence, and before/after stay nil: the
+// row records that a policy acted, not a field diff. A destructive action's row
+// is the certificate that strips the record's earlier images.
+func auditRetentionAction(ctx context.Context, tx pgx.Tx, pol retentionPolicy, entityType string, id ids.UUID) error {
+	auditID, err := storekit.AuditWithEvidence(ctx, tx, pol.Action, entityType, id, nil, nil, map[string]any{
+		evidenceKeyRetentionAction: pol.Action, "policy": pol.ID, "retain_days": pol.RetainDays,
+	})
+	if err != nil {
+		return err
+	}
+	if pol.Action != actionArchive {
+		if err := storekit.RedactAuditHistory(ctx, tx, auditID); err != nil {
+			return err
+		}
+	}
+	policyID := pol.ID
+	action, err := publishedRetentionAction(pol.Action, pol.ID)
+	if err != nil {
+		return err
+	}
+	return storekit.EmitEventForEntity(ctx, tx, auditID, entityType, id, retentionAppliedPayload(action, &policyID, nil))
 }
 
 // Anonymization clears identifiers without suppressing a subject who may return.

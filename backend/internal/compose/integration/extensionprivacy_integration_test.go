@@ -34,7 +34,7 @@ func probeUnit(t *testing.T, version extension.Version, personal ...string) exte
 		`GRANT USAGE ON SCHEMA ext TO margince_app`,
 		`CREATE TABLE IF NOT EXISTS ext.ext_probe_note (
 			id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-			contact_id uuid, company_id uuid, lead_id uuid, body text)`,
+			contact_id uuid, company_id uuid, lead_id uuid, body text, noted_at timestamptz NOT NULL DEFAULT now())`,
 		`GRANT SELECT, INSERT, UPDATE, DELETE ON ext.ext_probe_note TO margince_app`,
 	} {
 		if _, err := owner.Exec(t.Context(), stmt); err != nil {
@@ -302,5 +302,30 @@ func TestBootRefusesALinkColumnTheTableLacks(t *testing.T) {
 	err := compose.VerifyExtensionPrivacy(t.Context(), env.Pool, []extension.Extension{unit})
 	if err == nil || !strings.Contains(err.Error(), "ext_probe_note.deal_ref") {
 		t.Errorf("boot answered %v; want a refusal naming the missing link column", err)
+	}
+}
+
+func TestBootRefusesAnAgeColumnARetentionWindowCannotCountFrom(t *testing.T) {
+	for name, column := range map[string]string{"missing": "kept_at", "not a point in time": "body"} {
+		t.Run(name, func(t *testing.T) {
+			env := Setup(t)
+			unit := probeUnit(t, "1.0.0")
+			unit.Privacy[0].AgeColumn = column
+
+			err := compose.VerifyExtensionPrivacy(t.Context(), env.Pool, []extension.Extension{unit})
+			if err == nil || !strings.Contains(err.Error(), "age column") {
+				t.Errorf("age column %q booted (err=%v); a retention sweep could not count a row's age from it", column, err)
+			}
+		})
+	}
+}
+
+func TestBootAcceptsADeclaredAgeColumn(t *testing.T) {
+	env := Setup(t)
+	unit := probeUnit(t, "1.0.0", "body")
+	unit.Privacy[0].AgeColumn = "noted_at"
+
+	if err := compose.VerifyExtensionPrivacy(t.Context(), env.Pool, []extension.Extension{unit}); err != nil {
+		t.Errorf("a timestamp age column was refused: %v", err)
 	}
 }

@@ -10,7 +10,7 @@ follow the same privacy and retention rules as core data. It is for those who bu
 |---|---|---|---|
 | 1. Privacy declaration for extension data | Declare each table's personal data. Core clears, exports and guards it. | [Add an extension](../how-to/add-an-extension.md#declare-the-personal-data-in-your-tables) and [what core does](#what-core-does-with-extension-rows) | Done |
 | 2. Limit raw database access | Nothing yet. | None yet | Planned |
-| 3. Retention sweep and legal hold | Nothing yet. | None yet | Planned |
+| 3. Retention sweep and legal hold | Clear or delete extension rows with a retention policy. A legal hold on a linked record keeps them. | [Retention and legal hold](#retention-and-legal-hold) | Done |
 | 4. Set-up from files | Nothing yet. | None yet | Planned |
 | 5. Extension activation step | Nothing yet. | None yet | Planned |
 
@@ -34,11 +34,37 @@ does the work itself:
 A row whose link is still empty names no record, so no erasure or export can find it. A message that reached
 `openchannel` and has not yet landed as an activity is such a row. The retention sweep is what removes it.
 
+An erasure leaves a row alone while another record it links to is under legal hold.
+
 At start-up core refuses a declaration it could not carry out. A link column must be a `uuid`. A required
 personal column must have no `CHECK`, `UNIQUE`, `FOREIGN KEY` or `EXCLUDE` rule. It must also not be read by a
 `UNIQUE INDEX`. The empty value core writes could break any of them.
 
 A row that is already empty is not cleared again. So two erase paths that reach one row write one audit entry for it.
+
+## Retention and legal hold
+
+One retention policy, scope `extension`, covers the rows of every table that declares an `AgeColumn`. An admin
+authors it on the retention settings page like any other policy.
+
+| Policy action | What core does to a row past its window |
+|---|---|
+| `anonymize` | Clears its personal columns. A table with none is skipped. |
+| `erase` | Deletes the row. |
+
+Each row gets one audit entry under the policy's action and one `retention.applied` event. The entry strips the
+images from the row's earlier audit entries, as for a cleared row.
+
+A row is past its window when its age column is older than the policy's `retain_days`. The retention class of
+its table must also no longer require it to be kept. For `commercial_correspondence` that is the floor in force, carried
+floor included. A row already cleared is not picked again.
+
+A row has no legal hold of its own. It is kept while a contact, lead or company it links to is held. A row linked
+to an activity is kept while that activity is held through any record it is linked to. Both the sweep and erasure
+ask again in the statement that acts on the row.
+
+At start-up core refuses a table with personal columns and no `AgeColumn`, and an `AgeColumn` that is not a
+`timestamptz`, `timestamp` or `date` column.
 
 ## How to read this page
 

@@ -228,12 +228,17 @@ func CorrespondenceFloorOf(code jurisdiction.Code) (jurisdiction.RetentionClass,
 // correspondenceClassOf is a pack's commercial-correspondence class, or the
 // zero class when it declares none.
 func correspondenceClassOf(pack jurisdiction.Pack) jurisdiction.RetentionClass {
+	return classOf(pack, jurisdiction.CommercialCorrespondence)
+}
+
+// classOf is a pack's class of that name, or the zero class when it declares none.
+func classOf(pack jurisdiction.Pack, name jurisdiction.RetentionClassName) jurisdiction.RetentionClass {
 	retention := pack.Retention()
 	if retention == nil {
 		return jurisdiction.RetentionClass{}
 	}
 	for _, class := range retention.Classes() {
-		if class.Name == jurisdiction.CommercialCorrespondence {
+		if class.Name == name {
 			return class
 		}
 	}

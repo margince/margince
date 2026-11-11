@@ -114,8 +114,8 @@ func readTables(ctx context.Context, q Querier, prefix string) (map[string]map[s
 // checkColumns holds one declared table to the columns the migrated table has,
 // and to the clear the core can run on each personal one.
 func checkColumns(t privacy.Table, have map[string]column) error {
-	// Only a table the core clears needs a row id: it audits each cleared row by it.
-	if len(t.Personal) > 0 {
+	// Only a table the core clears or sweeps needs a row id: it audits each row by it.
+	if len(t.Personal) > 0 || Swept(t) {
 		id, ok := have["id"]
 		if !ok {
 			return fmt.Errorf("extprivacy: privacy declares column %s.id, which the table does not have", t.Name)
@@ -123,6 +123,9 @@ func checkColumns(t privacy.Table, have map[string]column) error {
 		if id.dataType != "uuid" {
 			return fmt.Errorf("extprivacy: %s.id must be a uuid, because the core audits each cleared row by it", t.Name)
 		}
+	}
+	if err := checkAgeColumn(t, have); err != nil {
+		return err
 	}
 	for _, name := range t.Personal {
 		c, ok := have[name]
@@ -143,6 +146,23 @@ func checkColumns(t privacy.Table, have map[string]column) error {
 		}
 	}
 	return nil
+}
+
+// checkAgeColumn holds a declared age column to a point in time, the only thing
+// a retention window can be counted from.
+func checkAgeColumn(t privacy.Table, have map[string]column) error {
+	if t.AgeColumn == "" {
+		return nil
+	}
+	c, ok := have[t.AgeColumn]
+	if !ok {
+		return fmt.Errorf("extprivacy: privacy declares age column %s.%s, which the table does not have", t.Name, t.AgeColumn)
+	}
+	switch c.dataType {
+	case "timestamp with time zone", "timestamp without time zone", "date":
+		return nil
+	}
+	return fmt.Errorf("extprivacy: age column %s.%s is %s; a retention sweep needs a timestamp or a date", t.Name, t.AgeColumn, c.dataType)
 }
 
 // clearable reports whether the core can blank a personal column. A required
