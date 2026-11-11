@@ -3,10 +3,10 @@
 
 package capture
 
-// The ADR-0063 counterparty auto-create follow-up: after a captured mail
-// activity commits, the Sink ensures the human behind it exists — contact
-// always, company unless suppressed — through the resolver seam compose
-// injects. Capture itself never touches contact/company SQL.
+// The ADR-0063 counterparty auto-create. Inside the capture transaction, the
+// Sink ensures the human behind a mail exists and files the mail under them.
+// It goes through the resolver seam compose injects, so capture itself never
+// touches contact or company SQL.
 
 import (
 	"context"
@@ -19,16 +19,13 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
-	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
-// CounterpartyEnsurer is the auto-create seam (ADR-0063): after a captured
-// mail activity commits, the pipeline ensures the human behind it exists —
-// contact always, company unless suppressed — through the ONE dedupe
-// chokepoint. Compose injects the contacts module's implementation; capture
-// itself never touches contact/company SQL.
+// CounterpartyEnsurer is the auto-create seam (ADR-0063): it ensures the human
+// behind a captured mail exists, through the one dedupe chokepoint, on the
+// caller's transaction. Compose injects the contacts module's implementation.
 type CounterpartyEnsurer interface {
-	EnsureCounterparty(ctx context.Context, in EnsureRequest) (EnsureOutcome, error)
+	EnsureCounterpartyTx(ctx context.Context, tx pgx.Tx, in EnsureRequest) (EnsureOutcome, error)
 }
 
 // EnsureOutcome reports what an ensure actually MINTED, as opposed to resolved
@@ -52,6 +49,16 @@ type EnsureOutcome struct {
 	// id because there is no row: the verdict is what was opened. It keys the
 	// ledger for the same reason ContactID does.
 	QueuedDomain string
+	// AfterCommit is the resolver's work that must wait for the caller's
+	// commit and may fail on its own, such as queueing a domain read. Nil when
+	// there is none.
+	AfterCommit func(context.Context)
+}
+
+func (o EnsureOutcome) afterCommit(ctx context.Context) {
+	if o.AfterCommit != nil {
+		o.AfterCommit(ctx)
+	}
 }
 
 // EnsureRequest names one captured message's counterparty for the resolver.
@@ -87,52 +94,8 @@ func (s *Sink) WithEnsurer(ensurer CounterpartyEnsurer, transactional *Transacti
 	return &c
 }
 
-// ensureCounterparty is the auto-create follow-up for one freshly captured
-// mail activity: the deterministic gates first (internal domain → skip
-// everything; free-mail → contact only), then the resolver seam. Runs after
-// the capture transaction committed, and NEVER fails the capture — a fault
-// lands in system_log, and the link_reconcile sweep links the message if a
-// contact for that address turns up by any route (the link-less connector
-// activity is the retry marker).
-func (s *Sink) ensureCounterparty(ctx context.Context, rec connector.NormalizedRecord, ref datasource.EntityRef, decision counterpartyDecision) {
-	if !decision.create {
-		return
-	}
-	if decision.channel {
-		s.ensureChannelCounterparty(ctx, rec, ref, decision)
-		return
-	}
-	// The party the ladder judged — see counterpartyDecision.subject.
-	cp := decision.subject
-	outcome, err := s.ensurer.EnsureCounterparty(ctx, EnsureRequest{
-		HoldAuthority: func(ctx context.Context, tx pgx.Tx) error {
-			_, owner := capturePrincipal(ctx)
-			return s.holdEnsureLocksTx(ctx, tx, owner, ids.From[ids.ActivityKind](ref.ID))
-		},
-		Admission:       s.counterpartyAdmission(rec, ref, cp),
-		Email:           cp.Email,
-		DisplayName:     cp.DisplayName,
-		Domain:          cp.Domain,
-		OwnerID:         decision.owner,
-		ActivityID:      ref.ID,
-		Source:          captureSource(rec),
-		CapturedBy:      decision.capturedBy,
-		SuppressCompany: decision.suppressCompany,
-		Replied:         decision.replied,
-	})
-	if err != nil {
-		s.logEnsureFault(ctx, rec, err)
-		return
-	}
-	// Nil unless a backfill page is running: incremental sync creates
-	// counterparties too, and they belong to no run.
-	pageProgressFrom(ctx).counted(ctx, outcome)
-}
-
 // counterpartyDecision is what the tiered gate concluded inside the capture
-// transaction, for the post-commit step to act on. Creation is deliberately
-// NOT done in that transaction: the timeline row must never be lost to a
-// resolver fault, and the 60 s capture budget must not wait on record creation.
+// transaction, for the ensure that follows it to act on.
 type counterpartyDecision struct {
 	create bool
 	// replied says the counterparty wrote to US, rather than merely being
@@ -143,15 +106,14 @@ type counterpartyDecision struct {
 	suppressCompany bool
 	owner           ids.UUID
 	capturedBy      string
-	// channel routes the post-commit step to the channel ensure seam. The two
-	// seams take different contracts — one names its human by an address, the
-	// other by a provider identity — so which one a record belongs to is
-	// decided once, here, and not re-derived from the record downstream.
+	// channel routes the ensure to the channel seam. One seam names its human
+	// by an address, the other by a provider identity. So the seam a record
+	// belongs to is decided once, here, and not re-derived downstream.
 	channel bool
 	// subject is the party this decision is ABOUT, which is the message's
 	// counterparty except where a colleague's message named an external one
-	// (ladderSubjectTx). Carried rather than re-derived so the post-commit
-	// create acts on exactly what the ladder judged.
+	// (ladderSubjectTx). It is carried, not re-derived, so the create acts on
+	// the party the ladder judged.
 	subject connector.Counterparty
 
 	// traceOutcome and traceReason are what the member is told happened to this
@@ -178,8 +140,8 @@ func (d counterpartyDecision) traced(outcome TraceOutcome, reason string) counte
 // in which an activity exists with no disposition, and a T2 suppression or a T4
 // deferral is durable the moment the mail lands.
 //
-// It decides only. The classes that create do so after the commit; the classes
-// that do not create are finished here.
+// It decides only. The classes that create do so in ensureCounterpartyTx; the
+// classes that do not create are finished here.
 func (s *Sink) decideCounterparty(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord, activityID ids.UUID) (counterpartyDecision, error) {
 	cp := rec.Counterparty
 	// A channel record takes its own decision (sinkchannel.go) and does not

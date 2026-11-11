@@ -19,7 +19,9 @@ import {
   readOf,
   tally,
   type Vitals,
+  type VitalsMode,
   vitalsP95,
+  vitalsQuantile,
   vitalsReasons,
   withheldSources,
 } from "../src/testing/homejourney.judge";
@@ -449,6 +451,16 @@ function p95(journeys: readonly Journey[], metric: string): number {
   return nearestRank(budgetSamples(journeys, metric), 0.95);
 }
 
+/** The judging mode `make home-budget` passes in MARGINCE_HOME_BUDGET_MODE. */
+function vitalsMode(): VitalsMode {
+  const raw = process.env.MARGINCE_HOME_BUDGET_MODE ?? "absolute";
+  if (raw !== "absolute" && raw !== "relative")
+    throw new Error(
+      `MARGINCE_HOME_BUDGET_MODE=${raw} is neither absolute nor relative`,
+    );
+  return raw;
+}
+
 function expectAllComplete(kind: string, journeys: readonly Journey[]) {
   const unhealthy = journeys.filter((j) => j.outcome !== "complete");
   expect(
@@ -543,12 +555,13 @@ test("vitals: the day paint and CLS stay in budget on a fixed profile", async ({
   }
   report("vitals", loads);
   const p95 = vitalsP95(vitals);
-  // One line the home-budget script copies into the job summary.
+  const p50 = vitalsQuantile(vitals, 0.5);
+  // One line the home-budget script copies into the job summary and compares.
   console.log(
-    `bench-home: vitals day_paint_p95_ms=${Math.round(p95.dayPaintMs)} cls_p95=${p95.cls.toFixed(3)} samples=${vitals.length}`,
+    `bench-home: vitals day_paint_p50_ms=${Math.round(p50.dayPaintMs)} day_paint_p95_ms=${Math.round(p95.dayPaintMs)} cls_p95=${p95.cls.toFixed(3)} samples=${vitals.length}`,
   );
   expectAllComplete("vitals", loads);
-  expect(vitalsReasons(vitals), "the vitals budget").toEqual([]);
+  expect(vitalsReasons(vitals, vitalsMode()), "the vitals budget").toEqual([]);
 });
 
 /**

@@ -57,7 +57,7 @@ func (s *Service) collect(ctx context.Context, l optionalLane, named laneRoll) l
 	}
 	defer timeStage(ctx, l.name)()
 	var items []crmcontracts.AttentionItem
-	err := s.degradable(ctx, laneBudget, func(context.Context) error {
+	err := s.degradable(ctx, l.name, laneBudget, func(context.Context) error {
 		var err error
 		items, err = l.read()
 		return err
@@ -80,7 +80,7 @@ func (s *Service) collect(ctx context.Context, l optionalLane, named laneRoll) l
 		// and its badge's another would fail the whole feed over a lane the page
 		// would simply have withheld, and filing the items first would leave a
 		// lane both present and named as omitted.
-		err := s.degradable(ctx, laneBudget, func(context.Context) error {
+		err := s.degradable(ctx, l.name+"_count", laneBudget, func(context.Context) error {
 			var err error
 			count, err = l.total()
 			return err

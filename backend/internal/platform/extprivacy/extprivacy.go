@@ -214,7 +214,7 @@ func emptyValue(dataType string, nullable bool) (string, error) {
 // columns of every row that names one of the records. A row that two links name
 // is returned once.
 func (r Registry) Export(ctx context.Context, tx pgx.Tx, subjects map[privacy.RecordKind][]ids.UUID) ([]map[string]any, error) {
-	var out []map[string]any
+	out := []map[string]any{}
 	seen := map[Cleared]bool{}
 	err := r.forEachLink(subjects, func(lc linkedColumn, records []ids.UUID) error {
 		if len(lc.table.Personal) == 0 {

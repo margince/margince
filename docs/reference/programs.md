@@ -287,6 +287,7 @@ the environment the container gets:
 | `MARGINCE_OWNER_DSN` | api entrypoint | yes | owner-role DSN. The entrypoint runs `margince-migrate up` under it, and passes it on as `MARGINCE_SCHEMA_DSN` unless that is set |
 | `MARGINCE_DSN` | api and worker entrypoint | yes | app-role DSN the process serves under, through the `--dsn` fallback |
 | `MARGINCE_ADMIN_PASSWORD` | api entrypoint | first boot only | first-boot admin password. The entrypoint writes it to `/app/secrets/admin-password`, which the `password_file` in `margince.yaml` must name. Once a company exists it writes nothing, and warns if the value is still set |
+| `MARGINCE_BLOBSTORE_PATH` | `backup.sh` | yes, for a backup | object store folder `backup.sh` copies next to the database dump. The api and worker read it too, as [Every setting](configuration.md#every-setting) lists |
 
 ## Other environment variables
 
@@ -326,6 +327,7 @@ the environment the container gets:
 | `MARGINCE_BENCH_DAILY_SCALE` | `1` | `make bench-daily` | multiplies every count in the daily-use test data. It is a positive number; `0.05` suits a development run. A value other than `1` writes the record to the git-ignored `docs/reference/perfbench/dev/`, marked `development scale N`. `make perfdoc` never reads that folder, so the record never passes as the mid-market tier. A value that is not a positive number fails the bench. |
 | `MARGINCE_BENCH_BACKLOG_SIZES` | `100,1000,10000` | `make bench-worklist-backlog` | the backlog sizes the Worklist backlog bench seeds and measures, as positive counts separated by commas, each larger than the one before. Any other value fails the bench. |
 | `MARGINCE_BENCH_BACKLOG_COUNTS_ONLY` | — | `make bench-worklist-backlog` | `1` skips every timed sample and prints only what each lane bound cuts and what the walk reaches. Those counts do not depend on the machine's load. |
+| `MARGINCE_HOME_BUDGET_MODE` | `absolute` | `make home-budget-api`, `bench-home.spec.ts` | how the Home check judges speed. `absolute` holds each read, and the time until Home's day list shows, to the fixed budgets. `relative` fails only a read or load that was not measured cleanly, and leaves speed to the comparison with the merge base. `make home-budget` sets it to `relative` when `HOME_BUDGET_BASE` is set. Any other value fails the check. |
 | `MARGINCE_HOME_BUDGET_BRIEF_DELAY` | — | `make home-budget-api` | a wait, such as `600ms`, that the Home check's client holds every `/v1/brief` for before it sends it. It proves the check turns red; a run with it set fails. A value that is not a positive time in Go's spelling fails the check. |
 
 ### Broker upstream preferences
