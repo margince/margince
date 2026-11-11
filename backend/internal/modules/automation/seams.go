@@ -185,7 +185,7 @@ type Executors struct {
 	Provider         datasource.SystemOfRecordProvider
 	Approvals        Approvals
 	Comms            Comms
-	Notifier         Notifier // the durable notice transport — see Notifier's doc
+	Notifier         Notifier // the durable notice transport
 	Claims           EffectClaims
 	// Language is the installation's base language every staged summary is
 	// written in; nil writes English.

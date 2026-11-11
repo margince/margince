@@ -12,11 +12,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
-// activityScanAdapter maps automation.ActivityScan onto
-// activities.Store.LastTouchBefore — the one place this module's own
-// activity_link entity-type strings become the generic (EntityRef,
-// anchor) shape the automation module's seam declares (ids/datasource/
-// stdlib only, seams.go).
+// activityScanAdapter keeps activity-link storage names out of the automation contract.
 type activityScanAdapter struct {
 	store *activities.Store
 }

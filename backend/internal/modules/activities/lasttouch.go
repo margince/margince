@@ -64,7 +64,7 @@ func genuineEngagement(alias string, sourcePos, capturedByPos, patternPos int) s
 		alias, sourcePos, capturedByPos, patternPos)
 }
 
-// Genuine contact, account folding and mailbox protection stay shared between
+// Contact evidence, account folding and mailbox protection stay shared between
 // legacy eligibility and an explicitly selected population.
 func lastTouchCandidateQuery(mailbox *OwnerMailbox, providersPos int, scope *quietQueryScope) string {
 	eligibility, reminder, count := lastTouchEligibility(), openReminderHoldsEntity(), ""

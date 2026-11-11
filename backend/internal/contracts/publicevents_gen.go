@@ -1089,7 +1089,7 @@ type PublicEventActivityArchived struct {
 	Imported *bool `json:"imported,omitempty"`
 }
 
-// PublicEventActivityCaptured Payload for activity.captured — the first-class capture verb, emitted instead of (never alongside) a generic activity.created (events.md §1). Two emit sites: the direct-log path (activities/activity.go) that sets kind and trusted website receipt details when present, and the capture ingestion path (capture/sink.go) that names its originating source system.
+// PublicEventActivityCaptured Payload for activity.captured. This event replaces activity.created. Manual logging includes the activity kind and trusted website receipt details. Connector ingestion includes the source system.
 type PublicEventActivityCaptured struct {
 	// ChannelProvider Which transport carried the message. Present when kind is `message`, and absent otherwise. Without this field a consumer could not tell a Telegram message from any other. Before ADR-0107 the `kind` field told them that. The envelope is additionalProperties:false, so the field must be named here to be sent at all.
 	ChannelProvider *string `json:"channel_provider,omitempty"`

@@ -3,12 +3,6 @@
 
 package automation
 
-// Task 6's own fitness tests (UAT.md:72 — "exactly the six seeded
-// templates"): the catalog seeds EXACTLY six, each pinned key resolves
-// to a REGISTERED handler (the orphan-key trap — a seeded key with no
-// handler is a silent no-op: "Active", never fires, logs nothing), and
-// starters with missing setup begin paused.
-
 import (
 	"testing"
 )
