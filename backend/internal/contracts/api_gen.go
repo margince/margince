@@ -55216,8 +55216,9 @@ type NotificationItem struct {
 		// `knowledge_document` (download the retained file), `email_signature` (the
 		// recipient's own account settings), `retained_email_signature` (the departed member's
 		// signature in the controller review), `activity` (open the retained note in its
-		// drawer), `legal_entity` (Company settings), or `signature_template` (Company
-		// settings; `id` identifies the erasure whose review flagged the workspace template).
+		// drawer), `legal_entity` (Company settings), `signature_template` (Company
+		// settings; `id` identifies the erasure whose review flagged the workspace template),
+		// or `approval_history` (the audit log narrowed to the approval `id`).
 		Type string `json:"type"`
 	} `json:"target,omitempty"`
 }

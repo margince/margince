@@ -4061,7 +4061,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "roompage.banner.closed":
     "Geschlossen. Die Käuferseite kann den Raum weiter lesen. Neues wird nicht mehr angenommen.",
   "roompage.banner.expired":
-    "Abgelaufen. Die Links der Käuferseite funktionieren wieder, sobald Sie ein späteres Enddatum setzen.",
+    "Abgelaufen. Die Links der Käuferseite funktionieren wieder, sobald du ein späteres Enddatum setzt.",
   "roompage.banner.archived": "Archiviert. Niemand kann diesen Raum betreten.",
   "roompage.banner.liveUntil": "Live. Der Zugang endet am {when}.",
   "roompage.text.title": "Raumtext",
@@ -13007,7 +13007,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "roomtab.manage.foot":
     "Die Käuferseite sieht Änderungen beim nächsten Öffnen des Raums.",
   "roomtab.manage.expiredHint":
-    "Der Zugang ist abgelaufen. Setzen Sie ein späteres Enddatum, um die Käuferseite wieder einzulassen.",
+    "Der Zugang ist abgelaufen. Setz ein späteres Enddatum, um die Käuferseite wieder einzulassen.",
   "threads.conversationTitle": "Unterhaltung",
   "threads.about": "Zu {title}",
   "threads.aboutRemoved": "Zu einem Dokument, das nicht mehr im Raum ist",
