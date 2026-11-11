@@ -18,9 +18,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
-// newslettersDataTask takes back what a newsletter left behind before it
-// stopped counting as a touch: the stored last-activity clocks it moved, the
-// quiet reminders it closed and the ghosted-thread signals it raised.
+// newslettersDataTask takes back what a newsletter left before it stopped
+// counting as a touch. That is a stored clock it moved, a quiet reminder it
+// closed and a ghosted-thread signal it raised.
 func newslettersDataTask(pool *pgxpool.Pool) datatask.Task {
 	audit := datatask.AuditPolicy{Reason: "the last-activity triggers move the same derived clock without an audit"}
 	return datatask.Task{

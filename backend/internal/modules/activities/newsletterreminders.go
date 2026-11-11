@@ -39,14 +39,12 @@ func CountQuietReminders(ctx context.Context, q datatask.Querier, maximum int64)
 	return count, nil
 }
 
-// ReopenNewsletterClosedRemindersTx reads the next limit quiet reminders after
-// the cursor and reopens each one a newsletter closed. It answers every id it
-// inspected, for the cursor, and how many it reopened.
+// ReopenNewsletterClosedRemindersTx reopens each of the next limit quiet
+// reminders a newsletter closed, and answers the ids it inspected.
 //
-// The engine's own actor wrote the completion's audit row. A newsletter that
-// reached the record after the anchor was captured before that completion. No
-// genuine touch reached the record after the anchor, then or since. A reminder
-// any person or agent has worked on keeps its state.
+// The engine's actor wrote the completion's audit row, after a newsletter past
+// the anchor was captured. No touch genuineEngagement admits has reached the
+// record since the anchor. A reminder a person or agent worked on stays.
 func (s *Store) ReopenNewsletterClosedRemindersTx(ctx context.Context, tx pgx.Tx, after ids.UUID, limit int) ([]ids.UUID, int, error) {
 	if err := auth.RequireSystem(ctx); err != nil {
 		return nil, 0, err

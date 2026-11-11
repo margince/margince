@@ -5,8 +5,8 @@
 
 package compose
 
-// A newsletter moves no last-activity clock and raises no ghosted thread, and
-// the data task takes back the clocks and signals one left before that held.
+// A newsletter moves no last-activity clock and raises no ghosted thread. The
+// data task takes back the clocks and signals one left before that held.
 // The mail lands through capture, which stamps the List-Unsubscribe header.
 
 import (
