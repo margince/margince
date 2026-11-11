@@ -167,7 +167,10 @@ export function RecordTabs<Option extends string>({
               data-idle={folded.length === 0 || undefined}
               aria-hidden={folded.length === 0 || undefined}
             >
+              {/* A new menu once nothing folds, so one left open closes
+                  with its last entry instead of trapping focus. */}
               <OverflowMenu
+                key={folded.length === 0 ? "idle" : "folded"}
                 label={t("record.tabs.moreLabel")}
                 text={t("record.tabs.more")}
                 icon={<ChevronDown aria-hidden="true" />}

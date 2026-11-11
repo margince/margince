@@ -63,8 +63,13 @@ function foldKey<Option extends string>(
 ): string {
   const widths = lastWidths.get(element) ?? new Map<string, number>();
   lastWidths.set(element, widths);
+  // The first tab drops its start padding, so each width is stored as if the
+  // tab stood later in the row. Otherwise a fold changes the widths it reads.
   for (const tab of element.querySelectorAll<HTMLElement>("[data-tab]")) {
-    widths.set(tab.dataset.tab ?? "", tab.offsetWidth);
+    const { paddingInlineStart, paddingInlineEnd } = getComputedStyle(tab);
+    const missing =
+      parseFloat(paddingInlineEnd) - parseFloat(paddingInlineStart);
+    widths.set(tab.dataset.tab ?? "", tab.offsetWidth + Math.max(0, missing));
   }
   const more = element.querySelector<HTMLElement>(".recordtabs-more");
   return foldToFit(

@@ -213,10 +213,17 @@
 .analytics-body .stat-card-meter {
   margin-block: var(--space-2) 0;
 }
-.analytics-body .stat-card-meter-fill,
 .analytics-body .analytics-hero-aside .meterbar span,
 .analytics-body .meterbar-flat span {
   background: linear-gradient(90deg, var(--accentFade), var(--accent));
+}
+/* An untoned reading is a fine one, so its fill keeps the success ink. */
+.analytics-body .stat-card-meter-fill {
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--success) 55%, var(--ground)),
+    var(--success)
+  );
 }
 .analytics-body .meterbar-dense {
   height: 10px;
