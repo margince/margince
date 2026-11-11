@@ -23,6 +23,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -58,7 +60,7 @@ func (r *recordingChannelEnsurer) seen() []capture.EnsureChannelRequest {
 // a contact with no identity binding.
 type refusingMailEnsurer struct{ t *testing.T }
 
-func (m refusingMailEnsurer) EnsureCounterparty(_ context.Context, in capture.EnsureRequest) (capture.EnsureOutcome, error) {
+func (m refusingMailEnsurer) EnsureCounterpartyTx(_ context.Context, _ pgx.Tx, in capture.EnsureRequest) (capture.EnsureOutcome, error) {
 	m.t.Errorf("the mail resolver was asked to ensure %+v; a channel record has no address for it to resolve", in)
 	return capture.EnsureOutcome{}, nil
 }

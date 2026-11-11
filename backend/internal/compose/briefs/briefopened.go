@@ -14,11 +14,14 @@ package briefs
 import (
 	"context"
 	"fmt"
+	"log/slog"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 )
 
@@ -29,14 +32,31 @@ import (
 // draws.
 const briefOpenedAction = "brief.opened"
 
+// recordOpenTimeout bounds the open's own write once the reader has the brief.
+const recordOpenTimeout = 5 * time.Second
+
+// RecordShown records that the signed-in rep was shown run, after the caller
+// has handed it over. GET /v1/brief and the read_brief tool are the two
+// callers, because those are where a rep reads the brief. The reader already
+// has the brief, so a failed write is logged and never reaches them.
+func (e *BriefEngine) RecordShown(ctx context.Context, run BriefRun) {
+	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), recordOpenTimeout)
+	defer cancel()
+	if err := e.recordOpened(ctx, run); err != nil {
+		slog.ErrorContext(ctx, "the brief was shown but its open could not be recorded",
+			"brief_run_id", run.ID, "error", err)
+	}
+}
+
+// recordOpened writes the open in a transaction of its own, so the read that
+// showed the brief writes nothing.
+func (e *BriefEngine) recordOpened(ctx context.Context, run BriefRun) error {
+	return database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+		return emitBriefOpened(ctx, tx, run)
+	})
+}
+
 // emitBriefOpened records that this rep read this run.
-//
-// Inside the caller's transaction, which is the read's OWN transaction rather
-// than a second one opened to write telemetry: LatestRun already writes there
-// (expired snoozes resurface on read), so the counts below are the ones the rep
-// is about to be shown and the event cannot describe a page that failed to
-// render. A telemetry write that could commit while the read it reports rolled
-// back would report opens that never happened.
 //
 // Counts only. The run's contents are the rep's own queue and are recoverable
 // from brief_item under the reader's scope; copying any of it into an event

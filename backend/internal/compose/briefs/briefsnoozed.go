@@ -36,7 +36,7 @@ func (e *BriefEngine) SnoozedDeals(ctx context.Context, now time.Time) ([]ids.UU
 		}
 		query := `SELECT DISTINCT bi.deal_id FROM brief_item bi
  JOIN brief_run br ON br.id = bi.brief_run_id JOIN deal d ON d.id = bi.deal_id
- WHERE br.user_id = ` + userParam + ` AND bi.state = 'snoozed' AND ` + briefSnoozeHoldsSQL("bi", nowParam)
+ WHERE br.user_id = ` + userParam + ` AND ` + briefSnoozedSQL(nowParam)
 		if scope != "" {
 			query += " AND " + scope
 		}

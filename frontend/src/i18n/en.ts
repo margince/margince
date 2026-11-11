@@ -14013,6 +14013,12 @@ export const en = {
   "license.renewal.title": "License needs renewal",
   "license.renewal.body":
     "The license expires on {expiry}. Nothing changes before that date.",
+  "license.check.button": "Check now",
+  "license.check.hint":
+    "Reads the license token file on the server again now, instead of at the next daily check. Replace the file first. A token set in an environment variable applies only after a restart.",
+  "license.check.done": "License token read again. This card shows the result.",
+  "license.check.failed":
+    "The license token could not be read again. The last result stands, and the server log says why.",
   "license.counting":
     "Full seats that are not deactivated or suspended, agents included. Read-only seats are unlimited and not counted.",
   "settings.rates.fxTitle": "Currency rates",

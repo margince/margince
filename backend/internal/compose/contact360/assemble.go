@@ -126,6 +126,10 @@ type AssembleOptions struct {
 	// (relstrength.WrittenByHumanSQL) before its cap, for the briefs and
 	// drafts. The page itself keeps every record.
 	WrittenByHumanOnly bool
+	// PartyOnly narrows the recent timeline to rows the contact is a party to
+	// (activities.ContactIsPartySQL) before its cap, for a draft written to them.
+	// A link alone files a colleague's mail here too.
+	PartyOnly bool
 	// AsOf is the instant LastTouchFor measures from: an activity dated after
 	// it has not happened yet. Zero reads the database's own now(), which is
 	// what the page wants. A reader with its own clock, the quiet lane, passes

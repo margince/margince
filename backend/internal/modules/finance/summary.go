@@ -25,7 +25,6 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
-	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -398,7 +397,7 @@ func scanRecentInvoice(rows pgx.Rows, now time.Time) (crmcontracts.FinanceInvoic
 		OpenMinorBase: open,
 	}); ok {
 		out.DaysLate = &late
-	} else if open > 0 && deadline.Passed(due, now) {
+	} else if open > 0 && pastDue(due, now) {
 		// Still open and past due: lateness is measured against today rather
 		// than against a settlement that has not happened.
 		running := daysBetween(*due, now)

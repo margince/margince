@@ -117,7 +117,7 @@ func (s *Service) readFollowUps(
 ) ([]AwaitedReply, bool, *crmcontracts.WorklistSourceUnavailable) {
 	var rows []AwaitedReply
 	var cut bool
-	err := s.degradable(ctx, laneBudget, func(ctx context.Context) error {
+	err := s.degradable(ctx, source, laneBudget, func(ctx context.Context) error {
 		var err error
 		rows, cut, err = read(ctx, asOf)
 		return err

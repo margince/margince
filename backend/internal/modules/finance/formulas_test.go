@@ -202,6 +202,23 @@ func TestOpenBalanceSeparatesWhatIsOverdueFromWhatIsMerelyOwed(t *testing.T) {
 	}
 }
 
+// A due date is a whole day. An invoice is owed but not late at any hour of it,
+// and late from the next day.
+func TestAnInvoiceIsNotOverdueOnItsDueDate(t *testing.T) {
+	due := on(t, "2026-11-11")
+	owed := []Invoice{{Status: "open", OpenMinorBase: 61900, DueOn: &due}}
+
+	for _, asOf := range []time.Time{due.Add(time.Second), due.Add(23*time.Hour + 59*time.Minute)} {
+		if out := OpenBalanceAt(owed, asOf); out.OverdueMinorBase != 0 || out.OpenMinorBase != 61900 {
+			t.Errorf("at %s: open %d, overdue %d; want 61900 open and nothing overdue",
+				asOf.Format(time.TimeOnly), out.OpenMinorBase, out.OverdueMinorBase)
+		}
+	}
+	if out := OpenBalanceAt(owed, due.AddDate(0, 0, 1)); out.OverdueMinorBase != 61900 {
+		t.Errorf("the day after: overdue %d, want 61900", out.OverdueMinorBase)
+	}
+}
+
 // A disputed invoice is genuinely owed and genuinely contested. Counting it as
 // open is right; describing it only as overdue would call a disagreement a
 // payment failure.

@@ -38,6 +38,19 @@ const (
 	homeColdRounds = 10
 )
 
+// homeBudgetModeEnv picks how the check judges speed. "absolute" (the default)
+// holds each read to its fixed budget. "relative" leaves speed to
+// scripts/home-budget-compare.sh, which compares the run with one of the merge
+// base on the same runner. It still fails a read not measured cleanly.
+const homeBudgetModeEnv = "MARGINCE_HOME_BUDGET_MODE"
+
+type homeBudgetMode int
+
+const (
+	homeBudgetAbsolute homeBudgetMode = iota
+	homeBudgetRelative
+)
+
 // homeBriefDelayEnv plants a delay on every /v1/brief the owner's client sends,
 // so a run can prove the check turns red. Only this test binary reads it.
 const homeBriefDelayEnv = "MARGINCE_HOME_BUDGET_BRIEF_DELAY"
@@ -64,6 +77,7 @@ func TestHomeBudget(t *testing.T) {
 	profile := seedHomeProfile(t, e, createDailySeats(t, e))
 	t.Logf("home-budget: seed %s", time.Since(start).Round(time.Millisecond))
 
+	mode := homeBudgetModeFromEnv(t)
 	in := dailyInput{Seat: withPlantedBriefDelay(t, profile.Owner)}
 	start = time.Now()
 	rows := runHomeCold(t, e, in)
@@ -72,10 +86,10 @@ func TestHomeBudget(t *testing.T) {
 
 	results := homeRequired(rows, homeCalls(in))
 	for _, r := range results {
-		t.Logf("home-budget: row %s p95=%dms budget=%dms samples=%d 5xx=%d 422=%d",
-			r.Row, r.P95.Milliseconds(), r.Budget.Milliseconds(), r.Samples, r.Status5xx, r.Status422)
+		t.Logf("home-budget: row %s p50=%dms p95=%dms budget=%dms samples=%d 5xx=%d 422=%d",
+			r.Row, r.P50.Milliseconds(), r.P95.Milliseconds(), r.Budget.Milliseconds(), r.Samples, r.Status5xx, r.Status422)
 	}
-	if failures := HomeBudgetFailures(results); len(failures) > 0 {
+	if failures := HomeBudgetFailures(results, mode); len(failures) > 0 {
 		t.Fatalf("Home is over its budget:\n%s", strings.Join(failures, "\n"))
 	}
 }
@@ -85,8 +99,9 @@ func TestHomeBudget(t *testing.T) {
 var homePlannedSamples = map[string]int{homeColdFlow.Name: homeColdRounds, homeWarmFlow.Name: dailySamples}
 
 // HomeBudgetFailures names every reason the Home check fails. It judges each
-// row on its own p95 with the daily rule, and never asks DailyKnownIssues.
-func HomeBudgetFailures(results []DailyResult) []string {
+// row on its own p95 with the daily rule, and never asks DailyKnownIssues. In
+// relative mode a p95 over budget is no failure; every other reason still is.
+func HomeBudgetFailures(results []DailyResult, mode homeBudgetMode) []string {
 	if len(results) == 0 {
 		return []string{"no Home read was measured"}
 	}
@@ -100,7 +115,7 @@ func HomeBudgetFailures(results []DailyResult) []string {
 			failures = append(failures, fmt.Sprintf("%s: no samples, so no p95 to judge", r.Row))
 		case r.Samples != planned:
 			failures = append(failures, fmt.Sprintf("%s: %d samples, want %d", r.Row, r.Samples, planned))
-		case verdict == DailyOver:
+		case verdict == DailyOver && mode == homeBudgetAbsolute:
 			failures = append(failures, fmt.Sprintf("%s: p95 %d ms is at or over its %d ms budget",
 				r.Row, r.P95.Milliseconds(), r.Budget.Milliseconds()))
 		}
@@ -387,6 +402,20 @@ func homeReadsGaps(source []byte, timed []string) []string {
 		}
 	}
 	return gaps
+}
+
+func homeBudgetModeFromEnv(t *testing.T) homeBudgetMode {
+	t.Helper()
+	switch raw := os.Getenv(homeBudgetModeEnv); raw {
+	case "", "absolute":
+		return homeBudgetAbsolute
+	case "relative":
+		t.Logf("home-budget: relative mode, so speed is judged against the merge base")
+		return homeBudgetRelative
+	default:
+		t.Fatalf("%s=%q is neither absolute nor relative", homeBudgetModeEnv, raw)
+		return homeBudgetAbsolute
+	}
 }
 
 // withPlantedBriefDelay returns the seat unchanged unless homeBriefDelayEnv

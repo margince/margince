@@ -103,7 +103,13 @@ var audienceLiteralMarkers = []*regexp.Regexp{
 // covers one reader and not every reader added to that file afterwards.
 const heldMailMaintenanceReader = "system-only maintenance reads bounded original headers to restore provider arrival evidence on capture_import, including held rows. No content or row is returned to a reader, and no activity is changed. Filtering by a viewer would leave privacy-notice history dependent on that viewer; the cost is internal parsing of restricted mail headers inside the batch transaction."
 
+const credentialRepairReader = "the credential repair, which reads every mail because a password stored in a members-only thread is stored in clear just the same. An audience test here would leave the credential in the rows the repair exists to reach, and no principal is served: the task runs as the system and returns no row to a caller. Statutory holds ARE refused, by the restricted_at predicate in the same statement"
+
 var audienceReadersAdmitted = gatekit.Waive(map[string]string{
+	"internal/compose/credentialrepair/credentialrepair.go:estimateMaskableMailText": credentialRepairReader,
+	"internal/compose/credentialrepair/credentialrepair.go:maskMailTextBatch":        credentialRepairReader,
+	"internal/modules/activities/credentialrepair.go:MaskStoredMailTextTx":           credentialRepairReader,
+
 	"internal/modules/activities/messageidentity.go:absorbEcho":      "Reconciles a transport-authorized sent row with its exact provider-proven capture, including a held copy from another mailbox. The query returns only the duplicate id inside the send transaction. Requiring the audience being reconciled would leave the proved duplicate; content is not returned. Provider account identity or a complete, unmasked identical filed copy is required, and partial copies are refused.",
 	"internal/modules/activities/mailcopies.go:CountMailCopies":      "System-only repair compares proven message identities across audiences. It preserves holds and attachment authority, skips unsafe references and discloses no content to users.",
 	"internal/modules/activities/mailcopies.go:MailCopiesTx":         "System-only repair compares proven message identities across audiences. It preserves holds and attachment authority, skips unsafe references and discloses no content to users.",

@@ -465,8 +465,8 @@ capture asks how a record names its human:
 - **`shapeChannel`** → channel = the identity's own **provider** (`telegram`), and the contact resolved
   from `contact_channel_identity`. The provider *is* the channel kind there.
 
-A missing contact is not a fault. The step that creates contacts runs after the capture transaction
-commits. So a sender who writes for the first time has no contact yet, on either channel kind.
+A missing contact is not a fault. The step that creates contacts runs after this one, later in the
+capture. So a sender who writes for the first time has no contact yet, on either channel kind.
 
 The
 wrong shapes return their own error values instead of a silent miss. One is a record that names its
