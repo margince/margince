@@ -18,6 +18,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // linkOf reads the id of the fixture customer's live link.
@@ -201,5 +202,49 @@ func TestASyncNamesTheLinkOnARowMirroredBeforeRowsNamedOne(t *testing.T) {
 		if unnamed := e.ownerScalarCount(t, `SELECT count(*) FROM `+table+` WHERE connection_id = $1 AND customer_link_id IS NULL`, e.connection); unnamed != 0 {
 			t.Errorf("%d %s rows still name no link after a pass", unnamed, table)
 		}
+	}
+}
+
+// The backfill names the archived link on rows a sync no longer reads, and
+// leaves NULL on a row whose connection never mapped its company.
+func TestTheBackfillNamesTheArchivedLinkAndLeavesAnUnmappedRow(t *testing.T) {
+	e := setupFinance(t)
+	if _, err := e.store.SyncConnection(e.ctx, e.provider()); err != nil {
+		t.Fatal(err)
+	}
+	link := e.linkOf(t)
+	e.ownerExec(t, `UPDATE finance_invoice SET customer_link_id = NULL WHERE connection_id = $1`, e.connection)
+	e.ownerExec(t, `UPDATE finance_payment SET customer_link_id = NULL WHERE connection_id = $1`, e.connection)
+	e.ownerExec(t, `UPDATE finance_customer_link SET archived_at = now() WHERE id = $1`, link)
+	unmapped := ids.NewV7()
+	other := e.otherCompany(t)
+	e.ownerExec(t, `INSERT INTO finance_invoice (id, connection_id, company_id, external_id, issued_at, status,
+		currency, net_minor, gross_minor, sync_hash, source, captured_by)
+		VALUES ($1, $2, $3, 'NEVER-MAPPED', current_date, 'open', 'EUR', 1000, 1190, 'hash', 'test', 'system:test')`,
+		unmapped, e.connection, other)
+
+	ctx := principal.SystemActing(e.ctx, "system:datatask-test")
+	for _, table := range []MirrorTable{MirrorInvoices, MirrorPayments} {
+		if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+			_, _, err := BackfillCustomerLinksTx(ctx, tx, table, ids.Nil, 10000)
+			return err
+		}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, table := range []string{"finance_invoice", "finance_payment"} {
+		stray := e.ownerScalarCount(t, `SELECT count(*) FROM `+table+`
+			 WHERE connection_id = $1 AND company_id = $2 AND customer_link_id IS DISTINCT FROM $3`, e.connection, e.company, link)
+		if stray != 0 {
+			t.Errorf("%d %s rows of the unlinked customer name no link or another one", stray, table)
+		}
+	}
+	if left := e.ownerScalarCount(t, `SELECT count(*) FROM finance_invoice WHERE id = $1 AND customer_link_id IS NULL`, unmapped); left != 1 {
+		t.Error("the backfill named a link on a row whose company the connection never mapped")
+	}
+	audits := e.ownerScalarCount(t, `SELECT count(*) FROM audit_log WHERE action = 'update' AND actor_id = 'system:datatask-test'
+		AND after ? 'customer_link_id'`)
+	if audits == 0 {
+		t.Error("the backfill wrote no audit row for the links it named")
 	}
 }

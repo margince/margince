@@ -19,6 +19,12 @@
 --
 -- The link keys are DEFERRED, because a company merge moves the link, its
 -- invoices and its payments in three statements of one transaction.
+--
+-- The two UNIQUE keys build their index under this file's lock, since a
+-- migration cannot build one CONCURRENTLY. The tables mirror the invoices and
+-- payments of mapped customers only, one row per document: thousands on a
+-- typical installation and low hundreds of thousands at most. A uuid index of
+-- that size builds in about a second.
 SET LOCAL lock_timeout = '3s';
 
 ALTER TABLE finance_customer_link
