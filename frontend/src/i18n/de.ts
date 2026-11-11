@@ -3821,7 +3821,15 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "co.aside.visibleEveryone": "Alle",
   "co.aside.visibleOnlyYou": "Nur dich",
   "co.aside.visibleOnly": "Nur {owner}",
-  "co.aside.visibleOnlyOwner": "Nur die zuständige Person",
+  "co.aside.visibleOnlyOwner": "Nur die verantwortliche Person",
+  "co.aside.visibleYouAndShared_one": "Dich · {count} Freigabe",
+  "co.aside.visibleYouAndShared_other": "Dich · {count} Freigaben",
+  "co.aside.visibleOwnerAndShared_one": "{owner} · {count} Freigabe",
+  "co.aside.visibleOwnerAndShared_other": "{owner} · {count} Freigaben",
+  "co.aside.visibleTheOwnerAndShared_one":
+    "Die verantwortliche Person · {count} Freigabe",
+  "co.aside.visibleTheOwnerAndShared_other":
+    "Die verantwortliche Person · {count} Freigaben",
   "co.aside.vatId": "USt-IdNr.",
   "co.aside.add": "Hinzufügen…",
   "co.strip.unanswered": "Unbeantwortet",
