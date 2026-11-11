@@ -238,9 +238,10 @@ function MonthsChart({ progress }: Readonly<{ progress: SalesProgress }>) {
 function YearLine({ progress }: Readonly<{ progress: SalesProgress }>) {
   const t = useT();
   const { locale } = useLocale();
-  // A year is compared only when every month has a whole goal and a reading,
-  // and not while a plan changed elsewhere awaits review.
+  // Only a year reading's goal says whether a changed plan awaits review, and
+  // the year is compared only once every month has a whole goal and a reading.
   const whole =
+    progress.period.kind === "year" &&
     progress.goal.status !== "changed_outside_plan" &&
     progress.months.every(
       (row) =>

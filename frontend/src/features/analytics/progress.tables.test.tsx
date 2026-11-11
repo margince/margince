@@ -43,8 +43,13 @@ describe("ProgressMembers", () => {
 });
 
 describe("ProgressMonths", () => {
+  const sellerYear = {
+    ...sellerMarch,
+    period: { kind: "year" as const, year: 2026 },
+  };
+
   it("compares each month and sums the year so far against its goals", () => {
-    render(<ProgressMonths progress={sellerMarch} />);
+    render(<ProgressMonths progress={sellerYear} />);
     const table = screen.getByRole("table", { name: "Months of 2026" });
     expect(within(table).getByText("January")).toBeTruthy();
     // Nine months are still ahead: neither their revenue nor their difference is read.
@@ -52,6 +57,11 @@ describe("ProgressMonths", () => {
     expect(
       screen.getByText("2026 so far: €227,000 of €1,280,000 (18%)"),
     ).toBeTruthy();
+  });
+
+  it("leaves the year line to the year reading, which knows of a changed plan", () => {
+    render(<ProgressMonths progress={sellerMarch} />);
+    expect(screen.queryByText(/so far:/)).toBeNull();
   });
 
   it("drops the year line while a month has no goal", () => {
@@ -67,7 +77,7 @@ describe("ProgressMonths", () => {
           }
         : row,
     );
-    render(<ProgressMonths progress={{ ...sellerMarch, months }} />);
+    render(<ProgressMonths progress={{ ...sellerYear, months }} />);
     expect(screen.queryByText(/so far:/)).toBeNull();
   });
 
@@ -76,7 +86,7 @@ describe("ProgressMonths", () => {
       ...sellerMarch.goal,
       status: "changed_outside_plan" as const,
     };
-    render(<ProgressMonths progress={{ ...sellerMarch, goal }} />);
+    render(<ProgressMonths progress={{ ...sellerYear, goal }} />);
     expect(screen.queryByText(/so far:/)).toBeNull();
   });
 
@@ -84,7 +94,7 @@ describe("ProgressMonths", () => {
     const months = sellerMarch.months.map((row, at) =>
       at === 0 ? { ...row, closed: { status: "withheld" as const } } : row,
     );
-    render(<ProgressMonths progress={{ ...sellerMarch, months }} />);
+    render(<ProgressMonths progress={{ ...sellerYear, months }} />);
     expect(screen.queryByText(/so far:/)).toBeNull();
   });
 });
