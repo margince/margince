@@ -171,7 +171,6 @@ const SYNTHETIC_AUDIT_FIELD_LABELS = new Map<string, MessageKey>([
   ["lifted_suppression", "history.field.lifted_suppression"],
   ["note", "history.field.note"],
   ["nudge_dismissal", "history.field.nudge_dismissal"],
-  ["override_category", "history.field.override_category"],
   ["overrides_carried", "history.field.overrides_carried"],
   ["provider_claims_received", "history.field.provider_claims_received"],
   ["about_deal", "history.field.about_deal"],

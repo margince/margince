@@ -100,6 +100,7 @@ func sqlLiterals(t *testing.T, path string, constants ...map[string]string) []st
 // privacy package: retention.go also writes subject tables, and a retention sweep
 // must not satisfy "Art. 17 reaches this table".
 var erasureCascadeFiles = []string{
+	"internal/modules/privacy/erasurependingedges.go",
 	"internal/modules/privacy/originalobjects.go",
 	"internal/modules/privacy/raworiginalsubjects.go",
 	"internal/platform/database/storekit/auditredaction.go",
@@ -164,11 +165,9 @@ var erasureCascadeFiles = []string{
 	// the reason this list's own header gives: leaving it off would make
 	// preference_token look uncovered the moment its DELETE moved file.
 	"internal/modules/privacy/erasure_consent.go",
-	// What a colleague wrote down to DO about the subject, on their own weekly
-	// plan. Same Art. 17 transaction, its own file for the size reason the
-	// timeline has one — and named here so weekly_plan_commitment cannot look
-	// uncovered the moment its redaction moves.
-	"internal/modules/privacy/erasure_commitments.go",
+	// The working records naming the subject in passing, and the call into
+	// the tables other owners declared (sweepreach).
+	"internal/modules/privacy/erasure_declared.go",
 	"internal/modules/privacy/erasure_unlinkednotes.go",
 	"internal/modules/privacy/erasure_manualreview.go",
 	"internal/modules/privacy/notementionlocks.go",

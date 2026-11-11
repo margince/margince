@@ -22,11 +22,7 @@ type SendRefusedError struct {
 	Cause    error
 	// Actions is what this caller may do about the refusal. It is decided
 	// where the refusal is recorded, because the principal is known there.
-	// Empty for an agent: both moves are human-only.
 	Actions []string
-	// Overrulable names the contact and category of each vouch the overrule
-	// action needs. Empty unless Actions offers it.
-	Overrulable []OverrulableRecipient
 	// Refusals is each recipient that stopped the send, with the engine's
 	// reason. The sender learns which address stopped and why. The caller
 	// named every one of these addresses.
@@ -66,7 +62,7 @@ func BlockingRefusals(set commsauthz.DecisionSet) []RefusedRecipient {
 }
 
 // FaultReference implements apperrors.ReferencedFault: the review this refusal
-// opened, what this caller may do, and what an overrule must cover, as fields.
+// opened and what this caller may do, as fields.
 // It adds no FieldFault: the refusal stays the 409 every client recognises,
 // not a 422 about the caller's input.
 func (e *SendRefusedError) FaultReference() map[string]any {
@@ -75,16 +71,9 @@ func (e *SendRefusedError) FaultReference() map[string]any {
 	}
 	reference := map[string]any{
 		fieldReviewID: e.ReviewID.String(),
-		// Both moves are human-only; an agent gets an empty list and the
-		// reference, which a human reading its transcript can pick up.
+		// A caller with no move gets an empty list and the reference, which a
+		// human reading an agent's transcript can pick up.
 		"available_actions": e.Actions,
-	}
-	if len(e.Overrulable) > 0 {
-		overrulable := make([]map[string]string, 0, len(e.Overrulable))
-		for _, o := range e.Overrulable {
-			overrulable = append(overrulable, map[string]string{"contact_id": o.ContactID.String(), "category": o.Category})
-		}
-		reference["overrulable"] = overrulable
 	}
 	if len(e.Refusals) > 0 {
 		reference["refusals"] = refusalReference(e.Refusals)

@@ -19,7 +19,7 @@ func TestAVerdictCloseDateKeepsItsOwnReceiptKind(t *testing.T) {
 		deals.VerdictCloseDateCorrection: deals.VerdictCloseDateCorrection,
 		string(deals.CloseDateOverdue):   deals.CloseDateCorrectionKind,
 	} {
-		receipt := correctionReceipt(deals.CorrectionReceipt{Correction: correction, Fields: []string{"expected_close_date"}})
+		receipt := attention.CorrectionReceipt(deals.CorrectionReceipt{Correction: correction, Fields: []string{"expected_close_date"}})
 		if receipt.Kind != want || receipt.Undo == nil {
 			t.Errorf("receipt of a %s change = kind %q undo %v, want kind %q with an Undo", correction, receipt.Kind, receipt.Undo, want)
 		}
@@ -38,7 +38,7 @@ func TestEveryCorrectionReceiptCarriesItsReasonApartFromItsHeadline(t *testing.T
 		deals.VerdictAmountCorrection, deals.VerdictProbabilityCorrection, deals.VerdictCloseDateCorrection,
 		string(deals.CloseDateOverdue),
 	} {
-		receipt := correctionReceipt(deals.CorrectionReceipt{
+		receipt := attention.CorrectionReceipt(deals.CorrectionReceipt{
 			Correction: correction, DealName: "Acme", Basis: basis, ToStage: &to, Fields: []string{"expected_close_date"},
 		})
 		if receipt.Reason != basis {
@@ -55,7 +55,7 @@ func TestEveryCorrectionReceiptCarriesItsReasonApartFromItsHeadline(t *testing.T
 
 func TestACustomerQuoteTravelsApartFromMargincesReason(t *testing.T) {
 	t.Parallel()
-	receipt := correctionReceipt(deals.CorrectionReceipt{
+	receipt := attention.CorrectionReceipt(deals.CorrectionReceipt{
 		Correction: deals.VerdictAmountCorrection, DealName: "Acme", Basis: "the quote names a total",
 		Evidence: []byte(`{"quoted_words":"We can do 45,000 EUR"}`),
 	})
@@ -75,7 +75,7 @@ func TestAChangeWithNoRecordedReasonSendsNoHeadline(t *testing.T) {
 		deals.VerdictAmountCorrection, deals.VerdictProbabilityCorrection, deals.VerdictCloseDateCorrection,
 		string(deals.CloseDateOverdue),
 	} {
-		wire := attention.WireReceipt(correctionReceipt(deals.CorrectionReceipt{
+		wire := attention.WireReceipt(attention.CorrectionReceipt(deals.CorrectionReceipt{
 			Correction: correction, DealName: "Acme", ToStage: &to, Fields: []string{"expected_close_date"},
 		}))
 		if wire.Headline != nil || wire.Reason != nil || wire.CustomerQuote != nil {
@@ -92,7 +92,7 @@ func TestEveryCorrectionReceiptNamesItsAuditEntryEvenWithoutAnUndo(t *testing.T)
 		string(deals.CloseDateOverdue),
 	} {
 		audit := ids.NewV7()
-		receipt := correctionReceipt(deals.CorrectionReceipt{Correction: correction, AuditLogID: audit, Fields: []string{"expected_close_date"}})
+		receipt := attention.CorrectionReceipt(deals.CorrectionReceipt{Correction: correction, AuditLogID: audit, Fields: []string{"expected_close_date"}})
 		receipt.Undo = nil
 		wire := attention.WireReceipt(receipt)
 		if wire.Source == nil || *wire.Source != crmcontracts.ReceiptSourceCorrection {

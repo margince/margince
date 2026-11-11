@@ -1,3 +1,5 @@
+defacl ext objtype=S acl=ext_runtime=rU/margince_owner
+defacl ext objtype=r acl=ext_runtime=arwd/margince_owner
 defacl public objtype=r acl=margince_app=arwd/margince_owner
 public.activity acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.activity.activity_assignee_id_fkey FOREIGN KEY (assignee_id) REFERENCES app_user(id) ON DELETE SET NULL (assignee_id)
@@ -2213,7 +2215,7 @@ public.capture_connection.capture_connection_context_tag_id_fkey FOREIGN KEY (co
 public.capture_connection.capture_connection_history_baseline_check CHECK ((((history_baseline_date IS NULL) = (history_baseline_tz IS NULL)) AND ((history_baseline_date IS NULL) = (history_baseline_set_by IS NULL)) AND ((history_baseline_date IS NULL) = (history_baseline_set_at IS NULL))))
 public.capture_connection.capture_connection_legal_entity_id_fkey FOREIGN KEY (legal_entity_id) REFERENCES legal_entity(id) ON DELETE RESTRICT
 public.capture_connection.capture_connection_mail_posture_check CHECK ((mail_posture = ANY (ARRAY['shared'::text, 'classified'::text, 'held'::text])))
-public.capture_connection.capture_connection_provider_check CHECK ((provider = ANY (ARRAY['gmail'::text, 'gcal'::text, 'imap'::text, 'graph'::text, 'graphcal'::text, 'whatsapp'::text, 'telegram'::text, 'offline_demo'::text, 'test_mailbox'::text])))
+public.capture_connection.capture_connection_provider_check CHECK ((provider = ANY (ARRAY['gmail'::text, 'gcal'::text, 'gdocs'::text, 'imap'::text, 'graph'::text, 'graphcal'::text, 'whatsapp'::text, 'telegram'::text, 'offline_demo'::text, 'test_mailbox'::text])))
 public.capture_connection.capture_connection_status_check CHECK ((status = ANY (ARRAY['connected'::text, 'disconnected'::text, 'error'::text, 'reauth_required'::text])))
 public.capture_connection.capture_connection_unique UNIQUE (user_id, provider)
 public.capture_connection.capture_connection_unread_period_whole CHECK ((((unread_from IS NULL) AND (unread_to IS NULL)) OR ((unread_from IS NOT NULL) AND (unread_to IS NOT NULL) AND (unread_from < unread_to))))
@@ -4546,10 +4548,11 @@ public.deal_room.deal_id uuid NOT NULL gen=- def=-
 public.deal_room.deal_room_archived_agrees CHECK (((state = 'archived'::text) = (archived_at IS NOT NULL)))
 public.deal_room.deal_room_deal_id_fkey FOREIGN KEY (deal_id) REFERENCES deal(id) ON DELETE CASCADE
 public.deal_room.deal_room_expires_after_creation CHECK ((expires_at > created_at))
+public.deal_room.deal_room_one_open_room_per_deal EXCLUDE USING gist (deal_id WITH =, tstzrange(created_at, expires_at) WITH &&) WHERE (((state = ANY (ARRAY['draft'::text, 'building'::text, 'ready'::text, 'publishing'::text, 'live'::text, 'paused'::text])) AND (archived_at IS NULL)))
 public.deal_room.deal_room_pkey PRIMARY KEY (id)
 public.deal_room.deal_room_state_check CHECK ((state = ANY (ARRAY['draft'::text, 'building'::text, 'ready'::text, 'publishing'::text, 'live'::text, 'paused'::text, 'closed'::text, 'expired'::text, 'archived'::text])))
 public.deal_room.deal_room_steward_fkey FOREIGN KEY (steward_user_id) REFERENCES app_user(id) ON DELETE SET NULL
-public.deal_room.deal_room_steward_user_id_retirement_guard CREATE TRIGGER deal_room_steward_user_id_retirement_guard BEFORE INSERT OR UPDATE ON public.deal_room FOR EACH ROW WHEN (((new.steward_user_id IS NOT NULL) AND ((new.archived_at IS NULL) AND (new.state <> ALL (ARRAY['closed'::text, 'expired'::text]))))) EXECUTE FUNCTION refuse_retired_member_work('steward_user_id')
+public.deal_room.deal_room_steward_user_id_retirement_guard CREATE TRIGGER deal_room_steward_user_id_retirement_guard BEFORE INSERT OR UPDATE ON public.deal_room FOR EACH ROW WHEN (((new.steward_user_id IS NOT NULL) AND ((new.archived_at IS NULL) AND (new.state <> ALL (ARRAY['closed'::text, 'expired'::text])) AND ((new.expires_at IS NULL) OR (new.expires_at > now()))))) EXECUTE FUNCTION refuse_retired_member_work('steward_user_id')
 public.deal_room.deal_room_touch CREATE TRIGGER deal_room_touch BEFORE UPDATE ON public.deal_room FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
 public.deal_room.deal_room_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.deal_room.expires_at timestamp with time zone gen=- def=-
@@ -4638,6 +4641,7 @@ public.deal_room_invitation.token_hash bytea NOT NULL gen=- def=-
 public.deal_room_invitation.uq_deal_room_invitation_attempt UNIQUE (participant_id, attempt_no)
 public.deal_room_invitation.uq_deal_room_invitation_token UNIQUE (token_hash)
 public.deal_room_invitation_pkey CREATE UNIQUE INDEX deal_room_invitation_pkey ON public.deal_room_invitation USING btree (id)
+public.deal_room_one_open_room_per_deal CREATE INDEX deal_room_one_open_room_per_deal ON public.deal_room USING gist (deal_id, tstzrange(created_at, expires_at)) WHERE ((state = ANY (ARRAY['draft'::text, 'building'::text, 'ready'::text, 'publishing'::text, 'live'::text, 'paused'::text])) AND (archived_at IS NULL))
 public.deal_room_participant acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.deal_room_participant.capability text NOT NULL gen=- def='view'::text
 public.deal_room_participant.captured_by text NOT NULL gen=- def=-
@@ -5607,6 +5611,7 @@ public.idx_aparticipant_address CREATE INDEX idx_aparticipant_address ON public.
 public.idx_aparticipant_contact CREATE INDEX idx_aparticipant_contact ON public.activity_participant USING btree (contact_id, activity_id) WHERE (contact_id IS NOT NULL)
 public.idx_aparticipant_sender_domain_reversed CREATE INDEX idx_aparticipant_sender_domain_reversed ON public.activity_participant USING btree (reverse(address_domain_folded) COLLATE "C") WHERE ((role = 'from'::text) AND (address_domain_folded IS NOT NULL))
 public.idx_aparticipant_user CREATE INDEX idx_aparticipant_user ON public.activity_participant USING btree (user_id, activity_id) WHERE (user_id IS NOT NULL)
+public.idx_aparticipant_waiting_address_time CREATE INDEX idx_aparticipant_waiting_address_time ON public.activity_participant USING btree (lower(address), domain_evidence_at DESC) WHERE ((role = 'to'::text) AND (address IS NOT NULL))
 public.idx_app_user_live CREATE INDEX idx_app_user_live ON public.app_user USING btree (created_at, id) WHERE (archived_at IS NULL)
 public.idx_app_user_login_folded CREATE INDEX idx_app_user_login_folded ON public.app_user USING btree (email_domain_folded, lower(regexp_replace(email, '@[^@]*$'::text, ''::text)))
 public.idx_app_user_merge_target CREATE INDEX idx_app_user_merge_target ON public.app_user USING btree (merged_into_user_id) WHERE (merged_into_user_id IS NOT NULL)
@@ -5714,6 +5719,7 @@ public.idx_contact_email_contact CREATE INDEX idx_contact_email_contact ON publi
 public.idx_contact_email_correspondence CREATE INDEX idx_contact_email_correspondence ON public.contact_email USING btree (email) WHERE (from_correspondence AND (archived_at IS NULL))
 public.idx_contact_email_dedupe_scan CREATE INDEX idx_contact_email_dedupe_scan ON public.contact_email USING btree (updated_at, id)
 public.idx_contact_email_domain_reversed CREATE INDEX idx_contact_email_domain_reversed ON public.contact_email USING btree (reverse(email_domain_folded) COLLATE "C") WHERE (archived_at IS NULL)
+public.idx_contact_email_every_holder CREATE INDEX idx_contact_email_every_holder ON public.contact_email USING btree (email, contact_id)
 public.idx_contact_email_mailbox_base CREATE INDEX idx_contact_email_mailbox_base ON public.contact_email USING btree ((
 CASE
     WHEN (regexp_replace(btrim(lower(email)), '^([^+@]+)\+[^@]*@'::text, '\1@'::text) ~ '^[^@]*@(gmail|googlemail)\.com$'::text) THEN (replace(regexp_replace(regexp_replace(btrim(lower(email)), '^([^+@]+)\+[^@]*@'::text, '\1@'::text), '@(gmail|googlemail)\.com$'::text, ''::text), '.'::text, ''::text) || '@gmail.com'::text)
@@ -9612,7 +9618,6 @@ public.uq_contact_source CREATE UNIQUE INDEX uq_contact_source ON public.contact
 public.uq_custom_field_column CREATE UNIQUE INDEX uq_custom_field_column ON public.custom_field USING btree (object, column_name)
 public.uq_custom_field_slug CREATE UNIQUE INDEX uq_custom_field_slug ON public.custom_field USING btree (object, slug)
 public.uq_deal_risk_day CREATE UNIQUE INDEX uq_deal_risk_day ON public.deal_risk_day USING btree (local_day)
-public.uq_deal_room_active CREATE UNIQUE INDEX uq_deal_room_active ON public.deal_room USING btree (deal_id) WHERE ((state = ANY (ARRAY['draft'::text, 'building'::text, 'ready'::text, 'publishing'::text, 'live'::text, 'paused'::text])) AND (archived_at IS NULL))
 public.uq_deal_room_comment_request CREATE UNIQUE INDEX uq_deal_room_comment_request ON public.deal_room_comment USING btree (room_id, request_id) WHERE (request_id IS NOT NULL)
 public.uq_deal_room_document_in_room CREATE UNIQUE INDEX uq_deal_room_document_in_room ON public.deal_room_document USING btree (id, room_id)
 public.uq_deal_room_document_live CREATE UNIQUE INDEX uq_deal_room_document_live ON public.deal_room_document USING btree (room_id, attachment_id) WHERE (archived_at IS NULL)
@@ -10458,5 +10463,5 @@ public.workspace_email_domain.workspace_email_domain_pkey PRIMARY KEY (domain)
 public.workspace_email_domain.workspace_email_domain_source_check CHECK ((source = ANY (ARRAY['admin'::text, 'mailbox'::text])))
 public.workspace_email_domain_pkey CREATE UNIQUE INDEX workspace_email_domain_pkey ON public.workspace_email_domain USING btree (domain)
 public.workspace_pkey CREATE UNIQUE INDEX workspace_pkey ON public.workspace USING btree (id)
-schema ext acl=margince_owner=UC/margince_owner,margince_app=U/margince_owner
+schema ext acl=margince_owner=UC/margince_owner,margince_app=U/margince_owner,ext_runtime=U/margince_owner
 schema public acl=margince_owner=UC/margince_owner,margince_app=U/margince_owner

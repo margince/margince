@@ -8,6 +8,7 @@ import {
 } from "../features/settings/systemhealthnavigation";
 import type { MessageKey } from "../i18n/en";
 import { approvalHref } from "../lib/approvalhref";
+import { auditHistoryHref } from "../lib/auditloglink";
 import { type EntityKind, isEntityKind, recordRoute } from "../lib/entity";
 import { labelFor } from "../lib/labelfor";
 import { routeHash } from "../lib/router";
@@ -42,6 +43,12 @@ export function noticeAction(
   if (target.type === "approval") {
     return {
       href: approvalHref(target.id),
+      label: "notifications.action.review",
+    };
+  }
+  if (target.type === "approval_history") {
+    return {
+      href: auditHistoryHref("approval", target.id),
       label: "notifications.action.review",
     };
   }

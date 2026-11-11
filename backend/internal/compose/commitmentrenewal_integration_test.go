@@ -16,7 +16,6 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
-	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/testdb"
@@ -221,7 +220,7 @@ func TestErasingOldRenewalWaitsForTheTaskAndRechecksItsEvidence(t *testing.T) {
 		pid := tx.Conn().PgConn().PID()
 		go func() {
 			defer close(done)
-			erased <- privacy.NewEraser(f.e.DB()).WithRawCapturePurger(RawCapturePurgerFor(f.e.DB())).EraseContact(eraseCtx, subject, "Subject requested erasure")
+			erased <- eraserWithGraph(f.e.DB()).WithRawCapturePurger(RawCapturePurgerFor(f.e.DB())).EraseContact(eraseCtx, subject, "Subject requested erasure")
 		}()
 		testdb.WaitForContention(t, done, "erasure did not wait for task renewal", "erasure never reached the held task", func(probe context.Context) (bool, error) {
 			queued, err := testdb.QueuedBehind(probe, observer, int32(pid))

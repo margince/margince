@@ -273,15 +273,15 @@ Everything else in the folder capture reads does arrive: newsletters, personal
 mail, and the Gmail Promotions and Social categories. They are handled after
 capture, as *What happens to one message* describes.
 
-**Deleting in your own mailbox can reach Margince.** If you
-delete a captured message in Gmail or Outlook, Margince notices and acts on it.
-What happens then depends on who else has it:
+**Deleting in your own mailbox can reach Margince.** If you delete a captured message in Gmail or Outlook, Margince notices and acts on it.
+
+In Gmail, the message must be deleted for good. In Outlook, it must be hard-deleted: Shift+Delete, or Delete and then empty Deleted Items. Margince then waits 10 days, and a message you recover in that time stays. Outlook keeps it for 14 days, but if you recover it after day 10, the copy in Margince is already gone. Moving a message to another folder or to the archive never deletes it here. What happens then depends on who else has it:
 
 | Case | What happens |
 |---|---|
 | Nobody else imported it | Deleted here too: text, the provider's original, attachments, and everything worked out from it |
 | A colleague also imported it | Kept. Their copy is theirs, and what you delete does not reach their timeline |
-| It is commercial correspondence inside its retention window, or an erasure request is still open about it | Kept, and the reason is recorded |
+| It is restricted or on legal hold, it is commercial correspondence inside its retention window, or an open privacy request names a sender or recipient | Kept, and the reason is recorded |
 
 The last row matters most. A business letter (Handelsbrief) cannot be deleted
 this way while the law requires keeping it, no matter how you delete it at the

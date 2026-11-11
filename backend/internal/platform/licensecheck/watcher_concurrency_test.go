@@ -31,7 +31,7 @@ func newHeldTokens() *heldTokens {
 	return &heldTokens{entered: make(chan struct{}), release: make(chan struct{})}
 }
 
-func (h *heldTokens) source() (string, error) {
+func (h *heldTokens) source(context.Context) (string, error) {
 	h.mu.Lock()
 	h.reads++
 	token, hold := h.token, h.hold

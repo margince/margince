@@ -44,9 +44,12 @@
 //     SQL verbs stay for the unit's OWN tables, which is what they were always
 //     the right shape for.
 //
-//     What remains unstable is their REACH: a unit's SQL runs on the shared
-//     application role today, and narrowing it to a per-unit database role
-//     (issue #628) is a change every unit's SQL feels. And Record is OFFERED,
+//     A unit's SQL reaches its own tables only: it runs as a database role
+//     that holds nothing on the core's tables, and a statement naming one is
+//     refused with ErrCoreTableRefused. That is the direction for a unit from
+//     outside the first-party set as well: verbs only, no raw SQL on core
+//     tables, and no database role per unit. What remains unstable is the reach
+//     BETWEEN units, which one shared role still leaves open. And Record is OFFERED,
 //     not enforced — a unit may still write its tables and record nothing — so
 //     a later release that makes recording mandatory would be felt by any unit
 //     that had not adopted it.
@@ -86,6 +89,7 @@ import (
 	"github.com/margince/margince/backend/pkg/extension/jurisdiction"
 	"github.com/margince/margince/backend/pkg/extension/messaging"
 	"github.com/margince/margince/backend/pkg/extension/privacy"
+	"github.com/margince/margince/backend/pkg/extension/reach"
 	"github.com/margince/margince/backend/pkg/extension/subjectrights"
 )
 
@@ -251,6 +255,12 @@ type Extension struct {
 	// one-set-per-code rule as Messaging, and the code must be one of this
 	// unit's own Jurisdictions.
 	SubjectRights []subjectrights.Rules
+
+	// Reach declares the unit's tables holding a core company, contact or lead
+	// id. The core's merge moves those columns onto the survivor, and its Art.
+	// 17 erasure clears the columns a table lists. Every name is the unit's own
+	// `ext_<namespace>_` table; the boot refuses any other.
+	Reach []reach.Table
 
 	// Privacy declares, for every table the unit owns, which core record its
 	// rows belong to, which columns are personal data and the retention class.

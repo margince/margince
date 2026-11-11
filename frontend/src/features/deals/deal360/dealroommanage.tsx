@@ -11,7 +11,11 @@ import { useState } from "react";
 import { api } from "../../../api/client";
 import type { components } from "../../../api/schema";
 import { ifMatch, requireVersion } from "../../../api/version";
-import { FINISHED_STATES, refusalFor } from "../../../components/dealroom";
+import {
+  FINISHED_STATES,
+  refusalFor,
+  takesEndDate,
+} from "../../../components/dealroom";
 import { RosterFailedLine, useRoster } from "../../../components/roster";
 import { Field, Textarea, TextInput } from "../../../design-system/atoms";
 import { Callout } from "../../../design-system/callout";
@@ -141,7 +145,10 @@ export function ManageRoomDialog({
 }: Readonly<{ room: DealRoom; open: boolean; onClose: () => void }>) {
   const t = useT();
   const finished = FINISHED_STATES.has(room.state);
-  const refusal = refusalFor(finished, true, t);
+  // An expired room still takes a later end date, so the dialog stays open
+  // for that one field.
+  const endDateOpen = takesEndDate(room.state);
+  const refusal = refusalFor(finished && !endDateOpen, true, t);
   const [version] = useState(room.version);
   const [access, setAccess] = useState<RoomAccess | "">(accessOf(room.state));
   const [endDay, setEndDay] = useState<ISODate | "">(dayOf(room.expires_at));
@@ -233,6 +240,9 @@ export function ManageRoomDialog({
           disabled={finished}
           onChange={setAccess}
         />
+        {room.state === "expired" ? (
+          <Callout tone="warning" title={t("roomtab.manage.expiredHint")} />
+        ) : null}
         {verb === "close" ? (
           <Callout tone="warning" title={t("roompage.closeTitle")}>
             {t("roompage.closeBody")}
@@ -247,7 +257,7 @@ export function ManageRoomDialog({
               <DateInput
                 {...control}
                 value={endDay}
-                disabled={finished}
+                disabled={!endDateOpen}
                 onChange={(event) => setEndDay(event.target.value)}
               />
             )}

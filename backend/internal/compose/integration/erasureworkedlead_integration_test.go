@@ -14,6 +14,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/privacy"
+	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -51,7 +52,7 @@ func TestErasingAContactAnonymizesTheLeadWorkedFromIt(t *testing.T) {
 		Source: "manual", FullName: new("Dana Example"), Title: &title,
 	})
 
-	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), ids.UUID(contact.Id), "test"); err != nil {
+	if err := privacy.NewEraser(e.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities).EraseContact(e.Admin(), ids.UUID(contact.Id), "test"); err != nil {
 		t.Fatalf("erasing the contact: %v", err)
 	}
 
@@ -138,7 +139,7 @@ func TestErasingTheSurvivorReachesTheMergedAwayContactsLead(t *testing.T) {
 		t.Fatalf("merging the contacts: %v", err)
 	}
 
-	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), contactIDs[1].UUID, "test"); err != nil {
+	if err := privacy.NewEraser(e.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities).EraseContact(e.Admin(), contactIDs[1].UUID, "test"); err != nil {
 		t.Fatalf("erasing the survivor: %v", err)
 	}
 

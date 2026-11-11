@@ -19,7 +19,6 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/contacts"
-	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -62,7 +61,7 @@ func TestALeadCreatedDuringAnErasureNeverKeepsTheErasedAddress(t *testing.T) {
 	erasureErr := make(chan error, 1)
 	erasureDone := make(chan struct{})
 	go func() {
-		erasureErr <- privacy.NewEraser(e.DB()).EraseContact(e.Admin(), ids.UUID(subject.Id), "Art. 17 request")
+		erasureErr <- eraserWithGraph(e.DB()).EraseContact(e.Admin(), ids.UUID(subject.Id), "Art. 17 request")
 		close(erasureDone)
 	}()
 	waitForLockWaiter(t, erasureDone, `'tuple', 'transactionid'`,

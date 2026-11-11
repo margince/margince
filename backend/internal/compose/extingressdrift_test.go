@@ -147,6 +147,8 @@ var waivedActivityFields = gatekit.Waive(map[string]string{
 	"MeetingDocuments": "empty is the right answer for a unit. The sink reads these notes and transcripts " +
 		"from a calendar provider's event and links them on the meeting; a unit hands over no provider " +
 		"event, so it has no attachment to name",
+	"MeetingDocumentsListed": "false is the right answer for a unit. True says a calendar provider listed every " +
+		"attachment, which archives the notes links it left out; a unit lists none, so it may archive none",
 	"AgendaFingerprint": "empty is the right answer for a unit. The sink stores it from a calendar provider's " +
 		"own invite description, and a unit hands over no invite. Empty gives the meeting no agenda fact, " +
 		"as for a meeting booked by hand",

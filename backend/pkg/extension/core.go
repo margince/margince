@@ -13,12 +13,10 @@ import (
 // Core is the governed door onto the installation's own records, reached from
 // a transaction the unit already holds: `tx.Core().Activities().Create(…)`.
 //
-// It exists because the alternative is worse than a missing feature. A unit
-// that wants a core record has SQL and the shared application role, so it can
-// reach the table today — and a write made that way lands with no audit row, no
-// outbox event, no RBAC check and no attribution, which is every guarantee the
-// product's own write shape exists to keep. This is the same write the product
-// makes, minus nothing.
+// It is the only way a unit writes a core record: Tx's SQL is refused on core
+// tables (ErrCoreTableRefused). A raw write would land with no audit row, no
+// outbox event, no RBAC check and no attribution. This is the same write the
+// product makes, minus nothing.
 //
 // FOUR PROPERTIES, all of them the core's and none of them the unit's:
 //

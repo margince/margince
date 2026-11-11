@@ -147,7 +147,7 @@ func TestErasureEmptiesTheQuotationAProposalWasReadFrom(t *testing.T) {
 	if n := countQuoting(t, e, quotedTranscriptLine); n != 1 {
 		t.Fatalf("the seeded proposal does not quote the transcript (%d rows) — the test proves nothing", n)
 	}
-	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), subject.UUID, "subject request"); err != nil {
+	if err := eraserWithGraph(e.DB()).EraseContact(e.Admin(), subject.UUID, "subject request"); err != nil {
 		t.Fatalf("EraseContact → %v", err)
 	}
 
@@ -178,7 +178,7 @@ func TestErasureDropsTheReadingOfTheTranscriptItErased(t *testing.T) {
 	e := integration.Setup(t)
 	subject, activityID, _ := transcriptSubject(t, e)
 
-	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), subject.UUID, "subject request"); err != nil {
+	if err := eraserWithGraph(e.DB()).EraseContact(e.Admin(), subject.UUID, "subject request"); err != nil {
 		t.Fatalf("EraseContact → %v", err)
 	}
 
@@ -214,7 +214,7 @@ func TestErasureLeavesTheQuotationOfAMeetingItMayNotDestroy(t *testing.T) {
 	}
 	approvalID := stageQuotingProposal(t, e, shared, quote, "Loop in the renewal contact")
 
-	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), ids.From[ids.ContactKind](subject).UUID, "subject request"); err != nil {
+	if err := eraserWithGraph(e.DB()).EraseContact(e.Admin(), ids.From[ids.ContactKind](subject).UUID, "subject request"); err != nil {
 		t.Fatalf("EraseContact → %v", err)
 	}
 
@@ -335,7 +335,7 @@ func TestAControllerReleasingARestrictionSaysSoOnTheCardsItWithdrew(t *testing.T
 		held, quotedTranscriptLine, "supplier-"+ids.NewV7().String())
 	approvalID := stageProposalQuoting(t, e, held, quotedTranscriptLine)
 
-	eraser := privacy.NewEraser(e.DB()).WithRawCapturePurger(RawCapturePurgerFor(e.DB()))
+	eraser := eraserWithGraph(e.DB()).WithRawCapturePurger(RawCapturePurgerFor(e.DB()))
 	reason, err := privacy.ParseStatedReason("the supplier obligation ended: contract closed out")
 	if err != nil {
 		t.Fatal(err)

@@ -21,6 +21,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/unitsql"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/pkg/extension"
 )
@@ -89,12 +90,10 @@ func (r *callRuntime) endIngest() {
 // INVOCATION's tenant, not whatever tenant the handler's own ctx happens to
 // carry.
 //
-// What the transaction does NOT do is bound fn. Nothing in this database keys
-// on a tenant: an installation holds one workspace (ADR-0061), no table carries
-// workspace_id and no policy reads one, so SQL issued here reaches whatever the
-// application role can name. The boundary that holds is the published seam
-// itself — the grant surface extmigrategate polices and the `ext` schema a unit
-// owns.
+// Nothing in this database keys on a tenant: an installation holds one
+// workspace (ADR-0061), no table carries workspace_id and no policy reads one.
+// What bounds fn is the role each of the unit's statements runs as. It holds
+// the `ext` schema and nothing on the core's tables (see package unitsql).
 func (r *callRuntime) Tx(ctx context.Context, fn func(ctx context.Context, tx extension.Tx) error) (err error) {
 	ctx, err = r.scoped(ctx)
 	if err != nil {
@@ -129,12 +128,14 @@ func (r *callRuntime) Tx(ctx context.Context, fn func(ctx context.Context, tx ex
 		if err := r.usable(); err != nil {
 			return err
 		}
-		return fn(ctx, extensionTx{
-			tx: tx,
-			core: extensionCore{
-				tx: tx, unattended: r.unattended, notifies: r.deliversNotices, deps: r.deps, authority: r.scoped, unit: r.unit, audit: audit,
-			},
-			ledger: extensionLedger{tx: tx, namespace: namespace, authority: r.scoped},
+		return unitsql.Run(tx, func(sql unitsql.Tx) error {
+			return fn(ctx, extensionTx{
+				sql: sql,
+				core: extensionCore{
+					tx: tx, unattended: r.unattended, notifies: r.deliversNotices, deps: r.deps, authority: r.scoped, unit: r.unit, audit: audit,
+				},
+				ledger: extensionLedger{tx: tx, namespace: namespace, authority: r.scoped},
+			})
 		})
 	})
 }

@@ -2072,25 +2072,6 @@
     },
     {
       "tool": "change_compliance",
-      "action": "allow_contact",
-      "verb": "allow_contact",
-      "allowed_for": [
-        "admin",
-        "management",
-        "manager",
-        "ops",
-        "rep"
-      ],
-      "refused_for": [
-        "read_only"
-      ],
-      "colleague_record": {
-        "manager": "refused",
-        "rep": "refused"
-      }
-    },
-    {
-      "tool": "change_compliance",
       "action": "assign_notice_case",
       "verb": "assign_notice_case",
       "allowed_for": [

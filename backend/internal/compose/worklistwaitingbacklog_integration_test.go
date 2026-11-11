@@ -341,7 +341,7 @@ func assertTailOrder(t *testing.T, served []servedRow, frozen map[string]bool) {
 func (w *waitingBacklog) assertTailIsTheFold(t *testing.T) {
 	r := w.r
 	ctx := w.seat(r.e.Rep1)
-	seam := attentionWaiting{store: activities.NewStore(r.e.DB()), now: func() time.Time { return r.now }}
+	seam := attentionWaiting{store: activities.NewStore(r.e.DB())}
 	owner := r.e.Rep1
 	narrow := attention.WaitingFor{Owner: &owner}
 	var scanned []activities.WaitingReply
@@ -408,7 +408,7 @@ func TestNoTailPositionNamesAMessageTheReaderCannotRead(t *testing.T) {
 		t.Fatal(err)
 	}
 	ctx := r.e.As(r.e.Rep1, []ids.UUID{r.e.Team1}, integration.AdminPerms)
-	seam := attentionWaiting{store: activities.NewStore(r.e.DB()), now: func() time.Time { return r.now }}
+	seam := attentionWaiting{store: activities.NewStore(r.e.DB())}
 	narrow := attention.WaitingFor{Team: true, Seats: []ids.UUID{r.e.Rep1, r.e.Rep2}}
 	scanned, err := seam.store.WaitingRepliesNarrowedBefore(ctx, r.now, activities.WaitingPosition{}, waitingNarrow(narrow))
 	if err != nil {

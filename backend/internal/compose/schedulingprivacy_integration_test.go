@@ -116,7 +116,7 @@ func verifyMeetingPrivacy(t *testing.T, anonymize bool) {
 			t.Fatal(err)
 		}
 	} else {
-		eraser := privacy.NewEraser(e.DB()).WithPayloadVault(controllerPayloads{v: vault})
+		eraser := eraserWithGraph(e.DB()).WithPayloadVault(controllerPayloads{v: vault})
 		if err := eraser.EraseContact(ctx, contact, "subject request"); err != nil {
 			t.Fatal(err)
 		}

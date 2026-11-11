@@ -44,6 +44,16 @@ func recordInitialActivity(ctx context.Context, tx pgx.Tx, id ids.ActivityID, in
 		maps.Copy(after, audience)
 		after["source_system"], after["source_activity_id"], after["assignee_id"] = in.SourceSystem, in.SourceActivityID, in.AssigneeID
 	}
+	if in.audienceOf != nil {
+		if err := inheritAudienceTx(ctx, tx, id, *in.audienceOf); err != nil {
+			return err
+		}
+		audience, err := readAudienceImage(ctx, tx, id)
+		if err != nil {
+			return err
+		}
+		maps.Copy(after, audience)
+	}
 	evidence := map[string]any{}
 	if in.Kind == string(crmcontracts.ActivityKindEmail) && in.RFCMessageID != "" {
 		evidence[fieldRFCMessageID] = in.RFCMessageID
@@ -56,4 +66,34 @@ func recordInitialActivity(ctx context.Context, tx pgx.Tx, id ids.ActivityID, in
 		return err
 	}
 	return storekit.EmitEvent(ctx, tx, auditID, id.UUID, activityCapturedPayload(ctx, in.Kind, in.ChannelProvider))
+}
+
+// inheritAudienceTx gives id the audience of from: the same audience and
+// reason, the same selected members, and every party from lists. Each reader
+// of from then reads id under the same arms of the audience test.
+func inheritAudienceTx(ctx context.Context, tx pgx.Tx, id, from ids.ActivityID) error {
+	if _, err := tx.Exec(ctx, `
+		UPDATE activity t SET audience = f.audience, audience_reason = f.audience_reason
+		  FROM activity f WHERE t.id = $1 AND t.archived_at IS NULL AND f.id = $2`, id, from); err != nil {
+		return fmt.Errorf("activities: copying a meeting's audience: %w", err)
+	}
+	rows, err := tx.Query(ctx,
+		`SELECT subject_type, subject_id FROM activity_audience_member WHERE activity_id = $1`, from)
+	if err != nil {
+		return fmt.Errorf("activities: reading a meeting's audience members: %w", err)
+	}
+	members, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (AudienceMember, error) {
+		var member AudienceMember
+		return member, row.Scan(&member.SubjectType, &member.SubjectID)
+	})
+	if err != nil {
+		return fmt.Errorf("activities: reading a meeting's audience members: %w", err)
+	}
+	if len(members) > 0 {
+		if err := replaceAudienceMembers(ctx, tx, id, members); err != nil {
+			return err
+		}
+	}
+	_, err = carryMissingParticipantsTx(ctx, tx, from, id)
+	return err
 }

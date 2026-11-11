@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
 // domainQuestionContactLimit bounds how many senders a question names.
@@ -149,7 +150,7 @@ func readDomainQuestionSendersTx(ctx context.Context, tx pgx.Tx, domains []strin
     JOIN activity m ON ` + vendorMailSQL("m", "q.domain", asOf, bind) + ` AND ` + readable + `
     JOIN activity_participant s ON s.activity_id = m.id AND s.role = 'from'
      AND s.address_domain_folded IS NOT NULL AND ` + owndomain.CoversIndexedSQL("s.address_domain_folded", "q.domain") + `
-    LEFT JOIN contact_email ce ON ce.email = lower(s.address) AND ce.archived_at IS NULL)
+    LEFT JOIN LATERAL ` + relstrength.ParticipantContactsSQL("s") + ` ce(contact_id) ON true)
  SELECT origin.domain, origin.id, origin.address, c.id, ` + visible + `, c.full_name, sender.last_at
    FROM (SELECT DISTINCT ON (domain) domain, id, address FROM mail ORDER BY domain, occurred_at DESC, id DESC) origin
    LEFT JOIN (SELECT domain, contact_id, max(occurred_at) AS last_at FROM mail WHERE contact_id IS NOT NULL GROUP BY domain, contact_id) sender

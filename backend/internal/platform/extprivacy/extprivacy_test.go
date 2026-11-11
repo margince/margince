@@ -3,7 +3,24 @@
 
 package extprivacy
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/margince/margince/backend/pkg/extension/privacy"
+	"github.com/margince/margince/backend/pkg/extension/reach"
+)
+
+// CountDependents asks sweepreach which columns a merge moves by casting the
+// merged kind, so the two closed sets must spell every mergeable kind alike.
+func TestEveryMergeableKindIsSpelledAlikeInReach(t *testing.T) {
+	for kind, want := range map[privacy.RecordKind]reach.Record{
+		privacy.Contact: reach.Contact, privacy.Lead: reach.Lead, privacy.Company: reach.Company,
+	} {
+		if reach.Record(kind) != want {
+			t.Errorf("privacy kind %q casts to reach %q, want %q", kind, reach.Record(kind), want)
+		}
+	}
+}
 
 func TestEmptyValueBlanksWhatItCanAndRefusesTheRest(t *testing.T) {
 	cases := []struct {

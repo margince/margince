@@ -180,6 +180,8 @@ func decode(ev rawEvent, owner string) meetingmap.Event {
 		PartiesHidden: ev.partiesHidden(),
 		GoogleMeet:    ev.Conference.Solution.Key.Type == googleMeetType,
 		Documents:     documents,
+		// Google lists every attachment on every copy of an event.
+		ListsDocuments: true,
 	}
 }
 

@@ -223,7 +223,7 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 | `history_baseline_tz` | `text` |  |  |
 | `legal_entity_id` | `uuid` |  | Points at `legal_entity.id`. |
 | `mail_posture` | `text`, default `'classified'::text` | yes | What this mailbox asks of the mail it brings in. |
-| `provider` | `text` | yes | The mail/calendar provider (A51 email+calendar parity). |
+| `provider` | `text` | yes | The mail/calendar/meeting-notes provider (A51 email+calendar parity). |
 | `provider_scopes` | `text[]` |  |  |
 | `scopes` | `text[]`, default `'{}'::text[]` | yes | The granted provider scopes. |
 | `share_acknowledged_at` | `timestamp with time zone` |  |  |
@@ -253,7 +253,7 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 - `capture_connection_history_baseline_check`: `CHECK ((((history_baseline_date IS NULL) = (history_baseline_tz IS NULL)) AND ((history_baseline_date IS NULL) = (history_baseline_set_by IS NULL)) AND ((history_baseline_date IS NULL) = (history_baseline_set_at IS NULL))))`
 - `capture_connection_mail_posture_check`: `CHECK ((mail_posture = ANY (ARRAY['shared', 'classified', 'held'])))`
-- `capture_connection_provider_check`: `CHECK ((provider = ANY (ARRAY['gmail', 'gcal', 'imap', 'graph', 'graphcal', 'whatsapp', 'telegram', 'offline_demo', 'test_mailbox'])))`
+- `capture_connection_provider_check`: `CHECK ((provider = ANY (ARRAY['gmail', 'gcal', 'gdocs', 'imap', 'graph', 'graphcal', 'whatsapp', 'telegram', 'offline_demo', 'test_mailbox'])))`
 - `capture_connection_status_check`: `CHECK ((status = ANY (ARRAY['connected', 'disconnected', 'error', 'reauth_required'])))`
 - `capture_connection_unique`: `UNIQUE (user_id, provider)`
 - `capture_connection_unread_period_whole`: `CHECK ((((unread_from IS NULL) AND (unread_to IS NULL)) OR ((unread_from IS NOT NULL) AND (unread_to IS NOT NULL) AND (unread_from < unread_to))))`

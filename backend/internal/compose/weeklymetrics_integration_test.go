@@ -146,7 +146,7 @@ func testWeeklyReportingPrivacy(t *testing.T, anonymize bool) {
 		if anonymize {
 			privacyErr = anonymizeWeeklyReportingSubject(t, e, contact)
 		} else {
-			privacyErr = privacy.NewEraser(InstallationDB(e.Pool)).EraseContact(human, contact, "Subject request")
+			privacyErr = eraserWithGraph(InstallationDB(e.Pool)).EraseContact(human, contact, "Subject request")
 		}
 		if err := privacyErr; err != nil {
 			return err

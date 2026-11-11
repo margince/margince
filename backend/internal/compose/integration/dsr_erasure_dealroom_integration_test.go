@@ -25,6 +25,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/dealrooms"
 	"github.com/margince/margince/backend/internal/modules/privacy"
+	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -148,7 +149,7 @@ func TestErasingASubjectWipesTheDealRoomSeatCarryingTheirAddress(t *testing.T) {
 			before, beforeEmail, beforeRevoked)
 	}
 
-	if err := privacy.NewEraser(e.DB()).EraseContact(e.As(e.AdminUser, nil, roomErasureAdmin), seeded.contact.UUID, "an erasure request from the subject"); err != nil {
+	if err := privacy.NewEraser(e.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities).EraseContact(e.As(e.AdminUser, nil, roomErasureAdmin), seeded.contact.UUID, "an erasure request from the subject"); err != nil {
 		t.Fatalf("erasing the subject: %v", err)
 	}
 
@@ -185,7 +186,7 @@ func TestErasingASubjectLeavesNoRoomActivityTrailBehind(t *testing.T) {
 		t.Fatal("signing in recorded nothing, so this test would pass against a product that records nothing")
 	}
 
-	if err := privacy.NewEraser(e.DB()).EraseContact(e.As(e.AdminUser, nil, roomErasureAdmin), seeded.contact.UUID, "an erasure request from the subject"); err != nil {
+	if err := privacy.NewEraser(e.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities).EraseContact(e.As(e.AdminUser, nil, roomErasureAdmin), seeded.contact.UUID, "an erasure request from the subject"); err != nil {
 		t.Fatalf("erasing the subject: %v", err)
 	}
 
@@ -213,7 +214,7 @@ func TestErasingASubjectTombstonesTheSeatSoTheAuditLogStopsAtIt(t *testing.T) {
 		t.Fatalf("the seat carried %d erase row(s) before any erasure ran", n)
 	}
 
-	if err := privacy.NewEraser(e.DB()).EraseContact(
+	if err := privacy.NewEraser(e.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities).EraseContact(
 		e.As(e.AdminUser, nil, roomErasureAdmin), seeded.contact.UUID,
 		"an erasure request from the subject",
 	); err != nil {
@@ -249,7 +250,7 @@ func TestErasingASubjectTakesTheCommentsTheyWroteWithThem(t *testing.T) {
 		t.Fatalf("the buyer's comment was not seeded (%d rows), so this test proves nothing", n)
 	}
 
-	if err := privacy.NewEraser(e.DB()).EraseContact(
+	if err := privacy.NewEraser(e.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities).EraseContact(
 		e.As(e.AdminUser, nil, roomErasureAdmin), buyer.contact.UUID, "subject request",
 	); err != nil {
 		t.Fatalf("EraseContact → %v", err)
