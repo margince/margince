@@ -180,6 +180,7 @@ var lifecycleContactReads = gatekit.Waive(map[string]string{
 	"internal/modules/contacts/cohortpromote.go:ContactsOwedACohortRepair":          "which contacts the link-reconcile sweep still owes a cohort repair. It runs from that sweep under its system context and answers work to do",
 	"internal/modules/contacts/cohortpromote.go:DomainsOwedTheirContacts":           "the domain backlog behind the same sweep: accounts whose domain has contacts carrying no employment edge yet",
 	"internal/modules/contacts/cohortpromote.go:promoteCohortTx":                    "the repair itself, inside the sweep's transaction",
+	"internal/modules/contacts/cohorthold.go:cohortAttendanceSQL":                   "the merge-resolved contact ids the cohort hold seeks attendee rows by, inside the repair's transaction. No contact column leaves the query",
 	"internal/modules/contacts/cohorthold.go:holdCohortActivities":                  "resolves the contact's merge redirect to lock the activities its repair may write, before it locks the contact",
 	"internal/modules/contacts/companynamepromotion.go:CompanyNameCandidates":       "the candidate page the nightly name promoter walks, under the promoter's system actor",
 	"internal/modules/contacts/companynamepromotion.go:loadSignatureCompanyNames":   "the signature-derived names that pass corroborates against, on the same schedule and the same actor",
