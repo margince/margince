@@ -79,8 +79,7 @@ function ChangeLines({ change }: Readonly<{ change: CalendarChange }>) {
     <span className="meetingchange__changes">
       {shown.map((line) => (
         <span key={line.key}>
-          <span className="meetingchange__was-label">{line.text}</span>{" "}
-          <Was className="meetingchange__was">{line.was}</Was>
+          {line.text} <Was className="meetingchange__was">{line.was}</Was>
         </span>
       ))}
       {guests.map((line, index) => (

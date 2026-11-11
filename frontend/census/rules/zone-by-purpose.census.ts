@@ -68,6 +68,10 @@ export function code(path: string, source: string): string {
 // cannot stand in for.
 const pinnedZones: { file: string; why: string }[] = [
   {
+    file: "lib/calendarchange.test.ts",
+    why: "Pins the reader's zone so a meeting's times read the same on every runner: the lines under test print hours, and the runner's own zone would move them.",
+  },
+  {
     file: "app/agentrail.month.test.tsx",
     why: "Proves the rail asks for the reader's month, not UTC's: only a reader zone already past midnight while UTC is not tells the two apart, and UTC is named to show the boundary is real.",
   },

@@ -107,7 +107,7 @@ describe("the badge a meeting's later mail wears", () => {
       category: "customer_waiting",
       actions: [],
       email_summary: { calendar_change: change({ kind: "canceled" }) },
-    } as unknown as WorklistItem;
+    } as unknown as WorklistItem; // contract:cast only the mail field the word reads is filled
     expect(eyebrowKeyFor(row)).toBe("meetingChange.badge.canceled");
     const moved = {
       ...row,

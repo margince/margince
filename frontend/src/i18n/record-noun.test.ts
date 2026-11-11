@@ -306,6 +306,11 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "health.setup.recovery.todo",
   ],
   vi: [
+    // "Người tổ chức" is the meeting's organizer, a person.
+    "meetingChange.line.details",
+    "worklist.ask.changedInvitation",
+    "worklist.ask.meeting.updated",
+    "worklist.ask.meeting.canceled",
     "directSend.correctionScope",
     // These messages name actual readers and participants, not contact records.
     "internalMail.historyImportNote",
