@@ -288,7 +288,7 @@ const primaryDestinations = [
   "Projekte",
   "Filter und Ansichten",
   "Analytics",
-  "Fortschritt",
+  "Mein Fortschritt",
   "Umsatzziele",
 ];
 
