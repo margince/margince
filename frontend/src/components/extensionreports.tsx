@@ -43,11 +43,13 @@ function Figures({ report }: Readonly<{ report: Report }>) {
  * both draw it, so a registered number reads the same on both. Nothing draws
  * when no extension registers one.
  */
-export function ExtensionReports() {
+export function ExtensionReports({
+  enabled = true,
+}: Readonly<{ enabled?: boolean }>) {
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  const query = useExtensionReports();
+  const query = useExtensionReports(enabled);
   if (query.isError) {
     return <p className="sub">{t("extensionReports.failed")}</p>;
   }
