@@ -16,7 +16,12 @@ import {
   namesOf,
   withWhom,
 } from "./participants";
-import { provenanceOf, withControllerSend, withCreator } from "./provenanceof";
+import {
+  provenanceOf,
+  withAgentOrigin,
+  withControllerSend,
+  withCreator,
+} from "./provenanceof";
 import type { TimelineEntry } from "./timelineentry";
 import { isTranscriptActivity, TranscriptReadCard } from "./transcriptread";
 
@@ -189,12 +194,15 @@ export function activityTimeline(
       atPrecision: activity.occurred_precision,
       provenance: withControllerSend(
         withCreator(
-          provenanceOf(
-            activity.captured_by,
-            viewerUserId,
-            activity.author,
-            activity.source,
-            activity.imported_from,
+          withAgentOrigin(
+            provenanceOf(
+              activity.captured_by,
+              viewerUserId,
+              activity.author,
+              activity.source,
+              activity.imported_from,
+            ),
+            activity.recorded_by_agent,
           ),
           activity.created_by,
         ),

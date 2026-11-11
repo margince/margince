@@ -97,8 +97,9 @@ func Catalog() []AgentSpec {
 				"A deal the retrieved context mentions is one example, not the sweep, so do not " +
 				"read or log on it before that list. " +
 				"Then read each listed deal and log ONE note " +
-				"activity per at-risk deal summarizing the risk and the evidence (cite the records " +
-				"you read). Do not advance stages, send anything, or archive anything.",
+				"activity per at-risk deal. Its subject names the risk; its body states the finding and " +
+				"the evidence (cite the records you read). A note without a body is refused. " +
+				"Do not advance stages, send anything, or archive anything.",
 			SeedQuery:           "risk or stalled or blocked or overdue or quiet",
 			DueHourUTC:          2,
 			JudgesSlippingDeals: true,
