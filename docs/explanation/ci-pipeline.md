@@ -102,6 +102,12 @@ signs; see [the workflows beside the merge gate](../reference/ci-workflows.md).
 cancelling, because nothing replaces a daily run. `cache-warm.yml` groups without cancelling, because a
 cancelled run saves no cache.
 
+A pull request workflow that also starts on an unchanged head, from `edited` or a sent review, groups
+without cancelling. A cancelled run leaves a `cancelled` check on that head, and Renovate merges a
+branch only when every check reads success, neutral or skipped, so the branch would stay open for good.
+A run that still waits is replaced before it starts and leaves no check.
+`backend/gates/samecommitcancel_test.go` holds this.
+
 A skipped required check counts as *passing* on GitHub. That is why the build checks are put together
 in one `ci` job that refuses a skip on `merge_group`; see
 [The `ci` aggregate](#the-ci-aggregate-is-the-only-required-build-context).
