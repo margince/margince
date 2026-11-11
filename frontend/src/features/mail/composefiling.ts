@@ -12,6 +12,7 @@ import {
   useSoleProjectDefault,
 } from "../../design-system/projectpicker";
 import { useThreadProject } from "../../lib/activityfiling";
+import { relatedContactsQuery } from "../../lib/contact.queries";
 import { unwrap } from "../../lib/problem";
 import { useCompany360 } from "../companies/company360";
 import { useContact360 } from "../contacts/contact360";
@@ -407,6 +408,11 @@ export function useComposeRecords({
     recipientContact ?? "",
     open && recipientContact != null,
   );
+  // Suggestions only, like the roster: the To field still takes any address.
+  const related = useQuery({
+    ...relatedContactsQuery(recipientContact),
+    enabled: open && recipientContact != null,
+  });
   // roster-failure: suggestions only; the To field still takes any address.
   const colleagues = useRoster("user", open && !isChannelReply);
   const anchorProject = useAnchorProject(entityType, entityId);
@@ -449,14 +455,13 @@ export function useComposeRecords({
     projectFiling,
     // Addresses known not to arrive, warned under the fields.
     deadRecipients: deadRecipientsAmong(contact.data, [...addressed]),
-    // The contact first, then the account's roster, then the workspace's
-    // members. The reads already run (the members' cache entry is shared with
-    // the anchor lookup), so the offer costs no request of its own.
-    recipients: recipientSuggestions(
-      contact.data,
-      anchorCompany.data,
-      colleagues.data,
-    ),
+    // The contact, the contacts around it, the account's roster, the members.
+    recipients: recipientSuggestions({
+      contact: contact.data,
+      related: related.data,
+      company: anchorCompany.data,
+      colleagues: colleagues.data,
+    }),
   };
 }
 

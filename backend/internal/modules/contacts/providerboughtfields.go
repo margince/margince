@@ -92,7 +92,7 @@ func attachBoughtFields(ctx context.Context, tx pgx.Tx, c *crmcontracts.Contact)
 	}
 	if !visible {
 		// A refusal part-way through may have bound the gates it did ask.
-		employmentVisible, args = "FALSE", args[:contact]
+		employmentVisible, args = scopeNoRows, args[:contact]
 	}
 	rows, err := tx.Query(ctx, storekit.SQLf(boughtFieldsSQL, contact, employmentVisible), args...)
 	if err != nil {

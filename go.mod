@@ -3,4 +3,4 @@
 // every nested module (backend, composition, extensions) out of its zip.
 module github.com/margince/margince
 
-go 1.27.3
+go 1.27.4

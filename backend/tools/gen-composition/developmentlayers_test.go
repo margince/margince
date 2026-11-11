@@ -14,7 +14,7 @@ func TestDevelopmentSelectionCoversContractsScreensAndMigrations(t *testing.T) {
 	previous := *includeDevelopment
 	t.Cleanup(func() { *includeDevelopment = previous })
 	root, _ := committedBaseRoot(t)
-	writeTree(t, root, map[string]string{goWorkFile: "go 1.27.3\nuse ./backend\n"})
+	writeTree(t, root, map[string]string{goWorkFile: "go 1.27.4\nuse ./backend\n"})
 	writeUnit(t, root, "demo", map[string]string{
 		"go.mod": unitGoMod("demo"),
 		"demo.go": `package demo
