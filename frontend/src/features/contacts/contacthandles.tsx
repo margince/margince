@@ -11,7 +11,7 @@ import {
 } from "../../format/contactchannels";
 import { primaryPhone } from "../../format/contacturi";
 import { formatNumber } from "../../format/format";
-import { useLocale, useT } from "../../i18n";
+import { useLocale, usePlural, useT } from "../../i18n";
 import { labelFor } from "../../lib/labelfor";
 import { BoughtMark, type boughtFields } from "./boughtmarks";
 import "./contacthandles.css";
@@ -98,6 +98,7 @@ export function PhoneHandles({
 
 function HandleStack({ lines }: Readonly<{ lines: readonly ReactNode[] }>) {
   const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
   const [open, setOpen] = useState(false);
   const folds = lines.length > FOLD_AFTER;
@@ -114,7 +115,7 @@ function HandleStack({ lines }: Readonly<{ lines: readonly ReactNode[] }>) {
         >
           {open
             ? t("contact.handles.fewer")
-            : t("contact.handles.more", {
+            : plural("contact.handles.more", lines.length - SHOWN_FOLDED, {
                 count: formatNumber(lines.length - SHOWN_FOLDED, locale),
               })}
         </Button>
