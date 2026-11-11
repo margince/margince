@@ -163,21 +163,21 @@ var meetingFollowUpsSQL = `
 const meetingAttendeeSet = "follow_up_meeting_attendees"
 
 // Link and deal joins must not repeat a meeting's recipient resolution when
-// the planner changes its join order.
+// the planner changes its join order. The set keys on the candidate's id and
+// never joins activity, which stale statistics can turn into a scan per meeting.
 func meetingAttendeesSQL(addressable string) string {
 	return meetingAttendeeSet + " AS MATERIALIZED (" + `
- SELECT a.id AS activity_id, attendees.recipients
+ SELECT candidate.id AS activity_id, attendees.recipients
  FROM ` + followUpCandidates + ` candidate
- JOIN activity a ON a.id = candidate.id
 ` + fmt.Sprintf(`	  CROSS JOIN LATERAL (
 	       SELECT COALESCE(array_agg(met.contact_id ORDER BY met.rank, met.contact_id)
 	                         FILTER (WHERE met.addressable), '{}') AS recipients
 	         FROM (SELECT rc.id AS contact_id, min(src.rank) AS rank, bool_or(%s) AS addressable
 	                 FROM (SELECT l.contact_id, 0 AS rank FROM activity_link l
-	                        WHERE l.activity_id = a.id AND l.contact_id IS NOT NULL
+	                        WHERE l.activity_id = candidate.id AND l.contact_id IS NOT NULL
 	                       UNION ALL
 	                       SELECT p.contact_id, 1 FROM activity_participant p
-	                        WHERE p.activity_id = a.id AND p.contact_id IS NOT NULL AND p.user_id IS NULL
+	                        WHERE p.activity_id = candidate.id AND p.contact_id IS NOT NULL AND p.user_id IS NULL
 	                          AND p.role IN ('organizer', 'attendee', 'to', 'cc')) src
 	                 JOIN contact named ON named.id = src.contact_id
 	                 JOIN contact rc ON rc.id = COALESCE(named.merged_into_id, named.id)
