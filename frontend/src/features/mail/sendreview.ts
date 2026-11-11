@@ -34,9 +34,8 @@ export type SendReview = Readonly<{
 // never heard of is dropped rather than rendered raw. An enum value such as
 // `direct_send` tells a reader nothing as a button label.
 //
-// One: directing this one message, with a reason. The server's standing
-// per-contact `overrule` is not drawn, because an overrule here covers one
-// message and never the next one to the same contact.
+// One: directing this one message, with a reason. It covers this message and
+// never the next one to the same contact.
 //
 // Dropping is safe because the reference survives. A rep still sees that a
 // review exists and can open it; what they lose is one shortcut, which is the

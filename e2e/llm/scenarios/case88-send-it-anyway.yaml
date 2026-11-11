@@ -16,7 +16,6 @@ must_call_matching:
 must_not_call_with:
   - send_outbound~direct_send
   - change_compliance~record_consent
-  - change_compliance~allow_contact
   - update_record~consent
 
 may_call:

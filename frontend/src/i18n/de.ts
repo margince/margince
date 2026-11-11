@@ -2704,7 +2704,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "history.field.body": "Notizen",
   "history.field.emails": "E-Mail-Adressen",
   "history.field.nudge_dismissal": "Hinweis ausgeblendet",
-  "history.field.override_category": "Kategorie der Freigabe",
   "history.field.overrides_carried": "Übernommene Freigaben",
   "history.field.phone": "Telefonnummer",
   "history.field.phones": "Telefonnummern",
@@ -17225,7 +17224,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Jemand mit der nötigen Berechtigung hebt eine Sperre auf.",
   "webhooks.event.consent.override_recorded.label": "Ausnahme erfasst",
   "webhooks.event.consent.override_recorded.when":
-    "Ein Teammitglied bestätigt, dass eine maschinelle Ablehnung für eine Kategorie übergangen werden darf.",
+    "Beim Zusammenführen von Kontakten wird eine bestehende Ausnahme auf den verbleibenden Kontakt kopiert.",
   "webhooks.event.consent.override_lifted.label": "Ausnahme aufgehoben",
   "webhooks.event.consent.override_lifted.when":
     "Jemand mit der nötigen Berechtigung hebt eine Ausnahme auf.",

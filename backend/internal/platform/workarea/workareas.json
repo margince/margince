@@ -73,7 +73,6 @@
     "addWeeklyPlanCommitment": "business",
     "advanceDeal": "business",
     "advanceProjectPhase": "business",
-    "allowContact": "compliance",
     "annotateMorningBrief": "business",
     "answerCalendarInvitation": "business",
     "answerReportingQuestionCard": "business",
@@ -926,7 +925,6 @@
     "addWeeklyPlanCommitment": "worklist",
     "advanceDeal": "deals",
     "advanceProjectPhase": "projects",
-    "allowContact": "consent",
     "annotateMorningBrief": "worklist",
     "answerCalendarInvitation": "activities",
     "answerReportingQuestionCard": "reports",
@@ -2023,9 +2021,6 @@
     ],
     "advance_project_phase": [
       "projects"
-    ],
-    "allow_contact": [
-      "consent"
     ],
     "annotate_brief": [
       "worklist"
@@ -4114,9 +4109,6 @@
     ],
     "advance_project_phase": [
       "business"
-    ],
-    "allow_contact": [
-      "compliance"
     ],
     "annotate_brief": [
       "business"
