@@ -49,6 +49,10 @@ func (s *Store) ReopenNewsletterClosedRemindersTx(ctx context.Context, tx pgx.Tx
 	if err := auth.RequireSystem(ctx); err != nil {
 		return nil, 0, err
 	}
+	inspected, err := lockQuietReminderPage(ctx, tx, after, limit)
+	if err != nil || len(inspected) == 0 {
+		return inspected, 0, err
+	}
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	anchor := reminderAnchor("a", arg(provenance.ReminderAnchorSeparator))
@@ -66,32 +70,35 @@ func (s *Store) ReopenNewsletterClosedRemindersTx(ctx context.Context, tx pgx.Tx
 		reminderReachSet("a"), relstrength.BulkMailSQL("x"), anchor,
 		arg([]string{string(principal.PrincipalHuman), string(principal.PrincipalAgent)}),
 		genuineEngagement("x", arg(systemSource), arg(systemCapturedBy), arg(systemCapturedByPattern)))
-	query := storekit.SQLf(`SELECT a.id, a.is_done AND %s
-		 %s AND a.id > $%d ORDER BY a.id LIMIT $%d`,
-		closedByNewsletter, quietReminderScope(arg(provenance.EngineReminderSources())), arg(after), arg(limit))
+	// The page is locked, so this statement's fresh snapshot sees every edit a
+	// person committed before the lock, and none can land before the reopen.
+	query := storekit.SQLf(`SELECT a.id FROM activity a WHERE a.id = ANY($%d) AND a.is_done AND %s`,
+		arg(inspected), closedByNewsletter)
 	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return nil, 0, fmt.Errorf("activities: reading quiet reminders a newsletter closed: %w", err)
 	}
-	var inspected, closed []ids.UUID
-	for rows.Next() {
-		var id ids.UUID
-		var reopen bool
-		if err := rows.Scan(&id, &reopen); err != nil {
-			rows.Close()
-			return nil, 0, fmt.Errorf("activities: reading quiet reminders a newsletter closed: %w", err)
-		}
-		inspected = append(inspected, id)
-		if reopen {
-			closed = append(closed, id)
-		}
-	}
-	rows.Close()
-	if err := rows.Err(); err != nil {
+	closed, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+	if err != nil {
 		return nil, 0, fmt.Errorf("activities: reading quiet reminders a newsletter closed: %w", err)
 	}
 	reopened, err := s.flipNamedSystemTasksTx(ctx, tx, closed, true)
 	return inspected, reopened, err
+}
+
+// lockQuietReminderPage locks the next limit quiet reminders after after and
+// answers their ids.
+func lockQuietReminderPage(ctx context.Context, tx pgx.Tx, after ids.UUID, limit int) ([]ids.UUID, error) {
+	rows, err := tx.Query(ctx, `SELECT a.id `+quietReminderScope(1)+` AND a.id > $2 ORDER BY a.id LIMIT $3 FOR UPDATE OF a`,
+		provenance.EngineReminderSources(), after, limit)
+	if err != nil {
+		return nil, fmt.Errorf("activities: locking quiet reminders: %w", err)
+	}
+	page, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+	if err != nil {
+		return nil, fmt.Errorf("activities: locking quiet reminders: %w", err)
+	}
+	return page, nil
 }
 
 // reminderReachSet is the activities that reach a record the reminder aliased
