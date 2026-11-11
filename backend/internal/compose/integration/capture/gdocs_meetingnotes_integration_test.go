@@ -151,9 +151,9 @@ func transcriptsOf(t *testing.T, e *integration.SearchEnv, fileID string) int {
 	return countRows(t, e, `SELECT count(*) FROM activity WHERE source_system = 'transcript' AND source_id = '`+notesURL(fileID)+`'`)
 }
 
-// A meeting's notes Doc is read through the owner's Docs grant and lands once,
-// as a transcript of that meeting through the activity writer, which queues
-// its reading. A second sync opens no Doc again.
+// A meeting's notes Doc is read through the owner's Docs grant. It lands once,
+// as a transcript of that meeting, and the activity writer queues its reading.
+// A second sync opens no Doc again.
 func TestMeetingNotesLandOnceAsATranscriptAndQueueAReading(t *testing.T) {
 	env := newCaptureEnv(t)
 	e := env.e
@@ -286,5 +286,43 @@ func TestARefusedNotesGrantAsksTheOwnerToReconnect(t *testing.T) {
 	}
 	if got := transcriptsOf(t, e, notesFileID); got != 0 {
 		t.Errorf("%d transcripts after a refused grant, want 0", got)
+	}
+}
+
+// The landing asks the meeting's evidence again under its own lock. Text read
+// before a Doc was taken off the event does not land. Neither does text for an
+// owner on another domain.
+func TestNotesLandOnlyOnEvidenceStillTrueAtTheWrite(t *testing.T) {
+	env := newCaptureEnv(t)
+	e := env.e
+	meeting, feed, syncCalendar := meetingWithNotes(t, env)
+	store := activities.NewStore(e.DB())
+	land := func(domain string) bool {
+		t.Helper()
+		var landed bool
+		ctx := humanWithScopes(e, e.Rep1, []principal.Scope{principal.ScopeRead})
+		if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+			var err error
+			landed, err = store.LandMeetingNotesTx(ctx, tx, activities.MeetingNotesInput{
+				Meeting: ids.From[ids.ActivityKind](meeting), URL: notesURL(notesFileID),
+				Owner: ids.From[ids.UserKind](e.Rep1), Domain: domain, Text: notesText,
+			})
+			return err
+		}); err != nil {
+			t.Fatalf("LandMeetingNotesTx: %v", err)
+		}
+		return landed
+	}
+
+	if land("client-co.example") {
+		t.Error("notes landed for an owner whose domain did not organize the meeting")
+	}
+	feed.set(withNotes(lateGuestEvent("review", "confirmed", captureNow.AddDate(0, 0, -3), guestColleagueA, guestList()...)))
+	syncCalendar()
+	if land("myco.example") {
+		t.Error("notes landed after the Doc was taken off the event")
+	}
+	if got := transcriptsOf(t, e, notesFileID); got != 0 {
+		t.Errorf("%d transcripts, want 0", got)
 	}
 }

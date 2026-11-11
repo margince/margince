@@ -10,8 +10,8 @@
 // search Drive. The address scope names the account that connected.
 //
 // The connection writes no records of its own. Its Sync mints an access token,
-// so a revoked grant shows as "reconnect" on Connections, then reads the Docs
-// the Sink names and hands their text back to it.
+// so a revoked grant shows as "reconnect" on Connections. It then reads the
+// Docs the Sink names and hands their text back to it.
 package gdocs
 
 import (

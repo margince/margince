@@ -290,7 +290,7 @@ func newCaptureSink(pool *pgxpool.Pool, cfg CaptureConfig) *capture.Sink {
 		WithFileKeeper(capturedFileKeeper{store: activities.NewStore(InstallationDB(pool)).WithBlobstore(cfg.Blob)}).
 		// The meeting-notes reader lands a Doc as a transcript, which starts
 		// its reading only where the role wired an enqueue.
-		WithMeetingNotes(meetingNotesWriter{
+		WithNotesLanding(meetingNotesWriter{
 			store: activities.NewStore(InstallationDB(pool)).WithTranscriptEnqueue(cfg.TranscriptEnqueue),
 		}).
 		WithClock(cfg.clock()).

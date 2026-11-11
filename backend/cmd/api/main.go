@@ -122,13 +122,7 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 		return err
 	}
 
-	captureCfg := captureConfig(cfg, logger)
-	// A sync this role runs, such as the first one after a connect, may land
-	// meeting notes, so their reading is queued here too.
-	if captureCfg.TranscriptEnqueue, err = compose.MeetingNotesReading(logger); err != nil {
-		return err
-	}
-	opts, schemaPool, closeSchemaPool, err := baseComposeOptions(ctx, cfg, captureCfg, pool, vault, logger, stdout, license)
+	opts, schemaPool, closeSchemaPool, err := baseComposeOptions(ctx, cfg, captureConfig(cfg, logger), pool, vault, logger, stdout, license)
 	if err != nil {
 		return err
 	}
@@ -299,6 +293,13 @@ func validateBareOrigin(flagName, raw string) error {
 // nothing was opened.
 func baseComposeOptions(ctx context.Context, cfg apiConfig, capCfg compose.CaptureConfig, pool *pgxpool.Pool, vault keyvault.Vault, logger *slog.Logger, stdout io.Writer, license *licensecheck.Watcher) ([]compose.Option, *pgxpool.Pool, func(), error) {
 	var opts []compose.Option
+	// A sync this role runs, such as the first one after a connect, may land
+	// meeting notes, so their reading is queued here too.
+	notesReading, err := compose.MeetingNotesReading(logger)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	capCfg.TranscriptEnqueue = notesReading
 	// The posture bindInstallation resolved, read at scrape time rather than
 	// copied in: a license lapses on a calendar, and the watcher behind this
 	// function is still re-checking while the process serves.

@@ -128,7 +128,7 @@ type paragraphElement struct {
 	TextRun *struct {
 		Content string `json:"content"`
 	} `json:"textRun"` //nolint:tagliatelle // Google's wire format (camelCase); must match to decode
-	Person *struct {
+	Mention *struct {
 		Properties struct {
 			Name  string `json:"name"`
 			Email string `json:"email"`
@@ -188,23 +188,23 @@ func writeParagraph(b *strings.Builder, p paragraph) {
 		switch {
 		case el.TextRun != nil:
 			b.WriteString(el.TextRun.Content)
-		case el.Person != nil:
-			b.WriteString(personName(el.Person.Properties.Name, el.Person.Properties.Email))
+		case el.Mention != nil:
+			b.WriteString(mentionName(el.Mention.Properties.Name, el.Mention.Properties.Email))
 		case el.RichLink != nil:
 			b.WriteString(el.RichLink.Properties.Title)
 		}
 	}
 }
 
-func personName(name, email string) string {
+func mentionName(name, email string) string {
 	if strings.TrimSpace(name) != "" {
 		return name
 	}
 	return email
 }
 
-// writeTable writes one line per row with the cells side by side, so a row of
-// an action-item table stays one line the reading can cite.
+// writeTable writes one line per row with the cells side by side. A row of an
+// action-item table then stays one line the reading can cite.
 func writeTable(b *strings.Builder, t table) {
 	for _, row := range t.Rows {
 		cells := make([]string, 0, len(row.Cells))

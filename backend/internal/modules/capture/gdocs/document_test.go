@@ -72,9 +72,9 @@ func TestTheTextOfADocWithoutTabsIsItsBody(t *testing.T) {
 	}
 }
 
-// A table row stays one line, and a person chip reads as the person's name, so
-// an action item names who owns it.
-func TestATableRowIsOneLineAndAPersonChipIsAName(t *testing.T) {
+// A table row stays one line, and a mention of a colleague reads as their name,
+// so an action item names who owns it.
+func TestATableRowIsOneLineAndAMentionIsAName(t *testing.T) {
 	cell := func(elements ...map[string]any) map[string]any {
 		return map[string]any{"content": []any{para(elements...)}}
 	}
@@ -97,7 +97,7 @@ func TestATableRowIsOneLineAndAPersonChipIsAName(t *testing.T) {
 }
 
 // docsServer answers documents.get with one status and body for every Doc.
-func docsServer(t *testing.T, status int, body any) DocsAPI {
+func docsServer(t *testing.T, status int, body map[string]any) DocsAPI {
 	t.Helper()
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Query().Get("includeTabsContent") != "true" {
@@ -127,7 +127,7 @@ func TestAReadRefusalSaysWhoseFaultItIs(t *testing.T) {
 	cases := []struct {
 		name   string
 		status int
-		body   any
+		body   map[string]any
 		want   error
 	}{
 		{"scope refused", http.StatusForbidden, googleError("PERMISSION_DENIED", "ACCESS_TOKEN_SCOPE_INSUFFICIENT"), ErrScopeRefused},
@@ -237,8 +237,8 @@ func TestARefusedGrantIsRecordedAndStopsThePass(t *testing.T) {
 	}
 }
 
-// A failure that is not about one Doc fails the sync, so the registry backs
-// off or parks the connection as for any other Google sync.
+// A failure that is not about one Doc fails the sync. The registry then backs
+// off or parks the connection, as for any other Google sync.
 func TestAThrottledReadFailsTheSync(t *testing.T) {
 	keeper := &keeperFake{due: []connector.MeetingNotesDoc{{Meeting: ids.NewV7(), FileID: "doc"}}}
 	throttled := &connector.RateLimitedError{Status: http.StatusTooManyRequests}

@@ -19,8 +19,11 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 // meetingNotesSource is the source of a transcript landed from a notes Doc.
@@ -68,8 +71,8 @@ const meetingNotesReadable = `
 	AND EXISTS (SELECT 1 FROM activity_participant g
 	             WHERE g.activity_id = a.id AND g.role = 'organizer' AND g.address_domain_folded = @domain)`
 
-// DueMeetingNotesTx answers the notes links on the owner's meetings in the
-// window that no transcript holds yet, newest meeting first.
+// DueMeetingNotesTx answers the notes links on the owner's meetings that took
+// place in the window and that no transcript holds yet, newest meeting first.
 func (s *Store) DueMeetingNotesTx(ctx context.Context, tx pgx.Tx, q MeetingNotesQuery) ([]MeetingNotesLink, error) {
 	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
 		return nil, err
@@ -77,7 +80,8 @@ func (s *Store) DueMeetingNotesTx(ctx context.Context, tx pgx.Tx, q MeetingNotes
 	rows, err := tx.Query(ctx, `
 		SELECT a.id, l.url FROM attachment l JOIN activity a ON a.id = l.entity_id
 		 WHERE `+meetingNotesReadable+`
-		   AND a.occurred_at >= @since AND a.occurred_at <= @until
+		   AND `+occurredday.FromSQL("a", "@since::timestamptz")+`
+		   AND `+occurredday.MeetingTookPlaceSQL("a", "@until::timestamptz")+`
 		   AND NOT EXISTS (SELECT 1 FROM activity t
 		                    WHERE t.source_system = @transcript AND t.source_id = l.url)
 		 ORDER BY a.occurred_at DESC, l.id
@@ -106,22 +110,25 @@ func (s *Store) LandMeetingNotesTx(ctx context.Context, tx pgx.Tx, in MeetingNot
 	if err := auth.Require(ctx, "activity", principal.ActionCreate); err != nil {
 		return false, err
 	}
-	var (
-		occurredAt time.Time
-		audience   string
-		linkName   string
-	)
+	var linkName string
 	err := tx.QueryRow(ctx, `
-		SELECT a.occurred_at, a.audience, l.filename FROM attachment l JOIN activity a ON a.id = l.entity_id
+		SELECT l.filename FROM attachment l JOIN activity a ON a.id = l.entity_id
 		 WHERE a.id = @meeting AND l.url = @url AND `+meetingNotesReadable+`
 		   FOR SHARE OF a`, pgx.NamedArgs{
 		"meeting": in.Meeting, "url": in.URL, "owner": in.Owner, "domain": strings.ToLower(in.Domain),
-	}).Scan(&occurredAt, &audience, &linkName)
+	}).Scan(&linkName)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return false, nil
 	}
 	if err != nil {
 		return false, fmt.Errorf("activities: checking the meeting still carries its notes: %w", err)
+	}
+	if err := auth.EnsureActivityContentVisibleLive(ctx, tx, in.Meeting.UUID); err != nil {
+		return false, err
+	}
+	meeting, err := readActivityContent(ctx, tx, in.Meeting, storekit.LiveOnly)
+	if err != nil {
+		return false, err
 	}
 	body, err := normalizeTranscript(in.Text)
 	if errors.Is(err, ErrBlankTranscript) || errors.As(err, new(oversizedTranscriptError)) {
@@ -130,40 +137,38 @@ func (s *Store) LandMeetingNotesTx(ctx context.Context, tx pgx.Tx, in MeetingNot
 	if err != nil {
 		return false, err
 	}
-	links, err := meetingLinksTx(ctx, tx, in.Meeting)
-	if err != nil {
-		return false, err
-	}
 	title := strings.TrimSpace(in.Title)
 	if title == "" {
 		title = linkName
 	}
 	transcript := LogActivityInput{
-		Kind: KindMeeting, Subject: &title, Body: &body, OccurredAt: &occurredAt,
+		Kind: KindMeeting, Subject: &title, Body: &body, OccurredAt: &meeting.OccurredAt,
 		SourceSystem: new(transcriptSourceSystem), SourceID: &in.URL,
-		Source: meetingNotesSource, Links: links,
+		Source: meetingNotesSource, Links: filedUnder(meeting),
 		Raw: &map[string]any{meetingNotesRawKey: map[string]any{
 			"meeting_id": in.Meeting.String(), "revision_id": in.Revision,
 		}},
+		// Both are the Doc's own words, quoted rather than written by the product.
+		SystemText: &systemtext.Message{
+			Subject: systemtext.Prose(systemtext.Quote, ""), Body: systemtext.Prose(systemtext.Quote, ""),
+		},
 	}
-	if audience != string(crmcontracts.ActivityAudienceWorkspace) {
+	if meeting.Audience == nil || *meeting.Audience != crmcontracts.ActivityAudienceWorkspace {
 		transcript.VisibleOnlyTo(in.Owner.UUID)
 	}
 	_, created, err := s.LogActivityTx(ctx, tx, transcript)
 	return created, err
 }
 
-// meetingLinksTx is the records a meeting is filed under, so the tasks its
+// filedUnder is the records an activity is filed under, so the tasks its
 // transcript proposes are filed there too.
-func meetingLinksTx(ctx context.Context, tx pgx.Tx, meeting ids.ActivityID) ([]ActivityLinkInput, error) {
-	rows, err := tx.Query(ctx, `
-		SELECT entity_type, coalesce(contact_id, company_id, deal_id, lead_id, project_id)
-		  FROM activity_link WHERE activity_id = $1 ORDER BY id`, meeting)
-	if err != nil {
-		return nil, fmt.Errorf("activities: reading the records a meeting is filed under: %w", err)
+func filedUnder(activity crmcontracts.Activity) []ActivityLinkInput {
+	if activity.Links == nil {
+		return nil
 	}
-	return pgx.CollectRows(rows, func(row pgx.CollectableRow) (ActivityLinkInput, error) {
-		var link ActivityLinkInput
-		return link, row.Scan(&link.EntityType, &link.EntityID)
-	})
+	links := make([]ActivityLinkInput, 0, len(*activity.Links))
+	for _, link := range *activity.Links {
+		links = append(links, ActivityLinkInput{EntityType: string(link.EntityType), EntityID: ids.UUID(link.EntityId)})
+	}
+	return links
 }

@@ -74,16 +74,14 @@ func meetingDocumentFileID(address string) (string, bool) {
 }
 
 // recordMeetingDocuments writes a link row on the meeting for each notes or
-// transcript document the event lists. It runs when the meeting is first
-// captured and on every later sync of it, because Google attaches the notes
-// after the meeting ends. A later sync of an event that lists its documents in
-// full also archives the rows for documents taken off it, so the notes reader
-// only opens a Doc the meeting still carries.
+// transcript document the event lists. It runs on every sync of the meeting,
+// because Google attaches the notes after the meeting ends. A later sync of an
+// event that lists all its documents archives the rows of those taken off it.
+// The notes reader then opens only a Doc the meeting still carries.
 //
-// On a later sync a change is a change to a meeting already announced, so it
-// is audited on the meeting and announced as activity.updated. On the first
-// capture the meeting's own activity.captured covers it. No keeper wired means
-// no rows, as for mail.
+// A later change is audited on the meeting and announced as activity.updated.
+// On the first capture the meeting's own activity.captured covers it. No
+// keeper wired means no rows, as for mail.
 func (s *Sink) recordMeetingDocuments(
 	ctx context.Context, tx pgx.Tx, id ids.ActivityID, rec connector.NormalizedRecord, later bool,
 ) error {

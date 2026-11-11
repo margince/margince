@@ -72,8 +72,8 @@ type MeetingNotesWriter interface {
 	LandTx(ctx context.Context, tx pgx.Tx, in MeetingNotesLanding) (bool, error)
 }
 
-// WithMeetingNotes returns a copy that reads meeting notes through notes.
-func (s *Sink) WithMeetingNotes(notes MeetingNotesWriter) *Sink {
+// WithNotesLanding returns a copy that reads meeting notes through notes.
+func (s *Sink) WithNotesLanding(notes MeetingNotesWriter) *Sink {
 	c := *s
 	c.meetingNotes = notes
 	return &c
@@ -102,9 +102,9 @@ type notesReader struct {
 }
 
 // meetingNotesReaderTx answers the connection the sync runs for, if it may read
-// notes now: live, holding the read grant, and on the same account as a live
-// calendar connection of its owner. Notes are read only for that calendar's
-// meetings, so a Docs grant on another account reads nothing.
+// notes now. It must be live and hold the read grant. It must also be on the
+// account of its owner's live calendar connection, because notes are read only
+// for that calendar's meetings.
 func meetingNotesReaderTx(ctx context.Context, tx pgx.Tx) (notesReader, bool, error) {
 	run, bound := ctx.Value(mailboxConnectionKey{}).(mailboxConnection)
 	if !bound {
@@ -183,9 +183,9 @@ func (s *Sink) MeetingNotesDue(ctx context.Context) ([]connector.MeetingNotesDoc
 	return out, err
 }
 
-// KeepMeetingNotes lands one Doc's text on its meeting. The connection and the
-// member's right to capture are asked again under the write, and the meeting
-// is asked again whether it still carries the Doc.
+// KeepMeetingNotes lands one Doc's text on its meeting. Under the write it asks
+// again about the connection and the member's right to capture. The meeting is
+// asked again whether it still carries the Doc.
 func (s *Sink) KeepMeetingNotes(ctx context.Context, doc connector.MeetingNotesDoc, notes connector.MeetingNotesText) error {
 	if s.meetingNotes == nil {
 		return nil
