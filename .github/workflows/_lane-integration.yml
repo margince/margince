@@ -258,6 +258,7 @@ jobs:
       # pods the fan-in reconciles and merges — so the scan is NOT a second
       # Postgres/Redis/MinIO stack running the whole lane a second time.
       - name: Integration shard (slice + coverage)
+        id: shard
         env:
           INTEGRATION_SHARD: ${{ matrix.shard }}/${{ strategy.job-total }}
           INTEGRATION_SHARD_OUT: ${{ runner.temp }}/shard-out
@@ -322,8 +323,11 @@ jobs:
       # empty and `if-no-files-found: error` would turn a cancelled shard into a
       # failed one. That is why the probe on the step above writes to stdout
       # instead: those runs are read from the log, not from an artifact.
+      #
+      # A shard that stopped before its tests, as when the build failed, has no
+      # directory, and an upload would add a second error to the one it gave.
       - name: Upload the shard manifest + coverage pods
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && steps.shard.outcome != 'skipped' }}
         uses: ./.github/actions/upload-artifact-retried
         with:
           name: integration-shard-${{ matrix.shard }}
