@@ -164,10 +164,15 @@ function HandlingAction({
     readPolicies &&
     editPolicies &&
     (!!form.handling_automation_id || createPolicies);
-  const catalog = useQuery({ queryKey: ["automation-catalog"], enabled: canHandle, queryFn: async () => unwrap(await api.GET("/automations/catalog")) });
+  const catalog = useQuery({
+    queryKey: ["automation-catalog"],
+    enabled: canHandle,
+    queryFn: async () => unwrap(await api.GET("/automations/catalog")),
+  });
   if (!canHandle) return null;
   if (catalog.error) return <ErrorLine inline error={catalog.error} />;
-  if (!catalog.data?.data.some((entry) => entry.key === WEBSITE_INQUIRY_RECIPE)) return null;
+  if (!catalog.data?.data.some((entry) => entry.key === WEBSITE_INQUIRY_RECIPE))
+    return null;
   return (
     <>
       <Button onClick={() => setHandling(true)}>{t("inquiry.handling")}</Button>

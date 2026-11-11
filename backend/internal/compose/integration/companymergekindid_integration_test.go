@@ -3,7 +3,7 @@
 
 //go:build integration
 
-package migrations_test
+package integration
 
 // The companion of the foreign-key census for the other way a row names a
 // company: by an entity_type and entity_id pair, with no foreign key.
@@ -54,9 +54,8 @@ func TestEveryCompanyKindIDReferenceJoinsTheMerge(t *testing.T) {
 		t.Fatal("the merge path's source yielded no written tables — the scan is broken, not the merge")
 	}
 
-	ownerDSN, _ := dsns(t)
-	owner := connect(t, ownerDSN)
-	headSchema(t, owner)
+	e := Setup(t)
+	owner := e.Owner
 
 	rows, err := owner.Query(context.Background(), `
 		SELECT c.relname, a.attname

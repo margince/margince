@@ -7785,7 +7785,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "tasks.origin.lead_qualify":
     "Việc này được tạo vì lead này vẫn mở mà chưa có quyết định. Xác nhận lead đủ điều kiện hoặc đóng lead.",
   "tasks.origin.website_inquiry":
-    "Nhiệm vụ này theo dõi một yêu cầu từ website.",
+    "Việc cần làm này theo dõi một yêu cầu từ trang web.",
   "tasks.origin.lead_for_contact":
     "Việc này được tạo vì có một lead mới cho liên hệ này. Không lead nào được tạo; việc này ghi những gì đã đến và từ đâu.",
   "tasks.origin.lead_replied":
@@ -12821,7 +12821,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "auto.stages.pipeline": "Quy trình bán hàng",
   "auto.stages.destinations": "Giai đoạn đích",
   "auto.group.inquiries": "Yêu cầu mới",
-  "auto.group.deals": "Thương vụ",
+  "auto.group.deals": "Deal",
   "auto.group.customers": "Khách hàng",
   "auto.group.meetings": "Cuộc họp",
   "auto.group.lists": "Danh sách",
@@ -16331,11 +16331,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "webForms.field.owner": "Người chịu trách nhiệm cho lead mới",
   "inquiry.needsSetup": "Cần thiết lập",
   "inquiry.trigger":
-    "Khi tiếp nhận yêu cầu từ website, giao một công việc cho đồng nghiệp đã chọn.",
-  "inquiry.form": "Biểu mẫu website",
-  "inquiry.chooseForm": "Chọn biểu mẫu website",
+    "Khi tiếp nhận yêu cầu từ trang web, giao một việc cần làm cho đồng nghiệp đã chọn.",
+  "inquiry.form": "Biểu mẫu trang web",
+  "inquiry.chooseForm": "Chọn biểu mẫu trang web",
   "inquiry.formAccess":
-    "Bạn cần quyền xem biểu mẫu website để thiết lập cách xử lý yêu cầu.",
+    "Bạn cần quyền xem biểu mẫu trang web để thiết lập cách xử lý yêu cầu.",
   "inquiry.mode": "Ai xử lý yêu cầu mới?",
   "inquiry.mode.one": "Một đồng nghiệp",
   "inquiry.mode.rotate": "Luân phiên giữa các đồng nghiệp đã chọn",
@@ -16350,13 +16350,13 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "inquiry.coordinator": "Điều phối viên",
   "inquiry.coordinatorHint":
     "Xem xét lead chưa được phân công và yêu cầu cần chú ý. Đồng nghiệp này cần quyền xem các bản ghi đó.",
-  "inquiry.taskTitle": "Tên công việc",
-  "inquiry.taskTitleDefault": "Trả lời yêu cầu từ website",
+  "inquiry.taskTitle": "Tên việc cần làm",
+  "inquiry.taskTitleDefault": "Trả lời yêu cầu từ trang web",
   "inquiry.dueDays": "Số ngày theo lịch sau khi nhận",
   "inquiry.dueHint": "Đến hạn vào cuối ngày đó theo múi giờ đã lưu.",
   "inquiry.requestTypeField": "Trường loại yêu cầu (tùy chọn)",
   "inquiry.requestTypeHint":
-    "Chọn trường danh sách của khách hàng tiềm năng mà biểu mẫu gửi theo tên trường. Giá trị ngoài danh sách được giữ trong ghi chú.",
+    "Chọn trường danh sách của lead mà biểu mẫu gửi theo tên trường. Giá trị ngoài danh sách được giữ trong ghi chú.",
   "inquiry.notSpecified": "Chưa nêu",
   "inquiry.fieldUnavailable": "Trường không còn khả dụng",
   "inquiry.fieldsFailed":
@@ -16367,7 +16367,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "inquiry.record": "Bản ghi CRM",
   "inquiry.assignmentReason": "Lý do chọn người này",
   "inquiry.reason.legacyHandling":
-    "Quy trình xử lý khách hàng tiềm năng trước đó vẫn phụ trách yêu cầu này. Hãy xem kết quả trước khi tạo nhiệm vụ khác.",
+    "Quy trình xử lý lead trước đó vẫn phụ trách yêu cầu này. Hãy xem kết quả trước khi tạo việc khác.",
   "inquiry.reason.owner": "Giữ người phụ trách hiện tại",
   "inquiry.reason.ownerReview": "Cần xem lại người phụ trách",
   "inquiry.reason.recipientChanged": "Người nhận không còn phù hợp",
@@ -16404,7 +16404,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "inquiry.assignment.taskHolder": "Người đang phụ trách nhiệm vụ",
   "inquiry.assignment.newHolder": "Người phụ trách nhiệm vụ mới",
   "inquiry.assignment.movesLead":
-    "Khách hàng tiềm năng và nhiệm vụ xử lý yêu cầu này được giao cho đồng nghiệp này.",
+    "Khách hàng tiềm năng và việc xử lý yêu cầu này được giao cho đồng nghiệp này.",
   "inquiry.assignment.taskOnly":
     "Thao tác này đổi người phụ trách nhiệm vụ yêu cầu. Bản ghi giữ nguyên người phụ trách.",
   "inquiry.currentRecordOwner": "Người phụ trách bản ghi hiện tại",
@@ -16427,7 +16427,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "inquiry.handling": "Xử lý yêu cầu",
   "inquiry.review": "Xem lại cách xử lý",
   "inquiry.pausedConversionWarning":
-    "Lưu kế hoạch này sẽ thay thế cách xử lý khách hàng tiềm năng trước đây của biểu mẫu. Nếu lưu ở trạng thái tạm dừng, yêu cầu mới sẽ chưa có nhiệm vụ tự động cho đến khi bạn bật kế hoạch.",
+    "Lưu kế hoạch này sẽ thay thế cách xử lý lead trước đây của biểu mẫu. Nếu lưu ở trạng thái tạm dừng, yêu cầu mới sẽ chưa có việc tự động cho đến khi bạn bật kế hoạch.",
   "inquiry.savePaused": "Lưu và tạm dừng",
   "inquiry.enable": "Bật cách xử lý này",
   "inquiry.futureOnly":
@@ -16435,7 +16435,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "inquiry.conversion":
     "Xem lại thay đổi trước khi thay thế cách xử lý hiện tại của biểu mẫu.",
   "inquiry.back": "Quay lại thiết lập",
-  "webForms.handlingBusy": "Biểu mẫu đang được xử lý. Vui lòng thử lại.",
+  "webForms.handlingBusy": "Biểu mẫu đang được xử lý. Thử lại.",
   "webForms.field.ownerHint":
     "Mỗi lead mới từ biểu mẫu này được giao cho thành viên này. Để trống thì bất kỳ ai trong nhóm cũng có thể nhận.",
   "webForms.field.ownerNone": "Chưa giao",

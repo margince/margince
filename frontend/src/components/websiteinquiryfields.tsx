@@ -11,6 +11,7 @@ import {
 import { TimezoneSelect } from "../design-system/timezoneselect";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { labelFor } from "../lib/labelfor";
 import type {
   WebsiteInquiryMode,
   WebsiteInquiryPolicy,
@@ -39,7 +40,7 @@ export function inquiryModeLabel(
   mode: WebsiteInquiryMode,
   t: (key: MessageKey) => string,
 ): string {
-  return t(MODE_LABELS[mode]);
+  return t(labelFor(MODE_LABELS, mode));
 }
 
 function withSavedOptions(

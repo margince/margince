@@ -11,7 +11,7 @@ import { ErrorLine } from "../design-system/errorline";
 import { QueryStates } from "../design-system/querystates";
 import { RecordFormDialog } from "../design-system/recordformdialog";
 import { Select } from "../design-system/select";
-import { formatDateTime } from "../format/format";
+import { formatDateTime, formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import { useCan } from "../lib/capability";
 import { unwrap } from "../lib/problem";
@@ -360,6 +360,7 @@ function InquiryPolicyReview({
   authorizer?: string;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   return (
     <>
       <p>{t("inquiry.conversion")}</p>
@@ -399,7 +400,7 @@ function InquiryPolicyReview({
         <dt>{t("inquiry.taskTitle")}</dt>
         <dd>{policy.task_title}</dd>
         <dt>{t("inquiry.dueDays")}</dt>
-        <dd>{policy.due_in_days}</dd>
+        <dd>{formatNumber(policy.due_in_days, locale)}</dd>
         <dt>{t("auto.deadlineTimezone")}</dt>
         <dd>{policy.timezone}</dd>
       </dl>

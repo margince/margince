@@ -18266,7 +18266,7 @@
       "action": "handle_website_inquiries",
       "web_app": "direct",
       "rep_passes": false,
-      "decided_by": "grant_checks",
+      "decided_by": "measured",
       "refused_by": "automation:update"
     },
     {
@@ -18286,7 +18286,7 @@
       "action": "website_inquiry_preview",
       "web_app": "direct",
       "rep_passes": true,
-      "decided_by": "declared"
+      "decided_by": "measured"
     },
     {
       "method": "POST",

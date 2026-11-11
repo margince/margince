@@ -75,7 +75,7 @@ it("reviews the shared policy before saving it and keeps authority separate from
   );
   const title = await screen.findByRole("textbox", { name: "Task title" });
   expect(title).toHaveValue(INQUIRY_POLICY.task_title);
-  const requestType = await screen.findByRole("combobox", {
+  const requestType = screen.getByRole("combobox", {
     name: "Request type field (optional)",
   });
   await waitFor(() => expect(requestType).toBeEnabled());
@@ -97,10 +97,8 @@ it("reviews the shared policy before saving it and keeps authority separate from
       screen.getByText("Authorized by").nextElementSibling,
     ).toHaveTextContent("Test User"),
   );
-  await waitFor(() =>
-    expect(
-      screen.getByText("Coordinator").nextElementSibling,
-    ).toHaveTextContent("Mina Coordinator"),
+  expect(screen.getByText("Coordinator").nextElementSibling).toHaveTextContent(
+    "Mina Coordinator",
   );
   expect(write).not.toHaveBeenCalled();
   expect(await screen.findByText(/^A question received at /)).toBeVisible();
@@ -121,7 +119,7 @@ it("reviews the shared policy before saving it and keeps authority separate from
       task_title: "Review this new inquiry",
     },
   });
-  await waitFor(() => expect(closed).toHaveBeenCalledOnce());
+  expect(closed).toHaveBeenCalledOnce();
 });
 
 it("keeps the proposed policy visible when a stale review is refused", async () => {

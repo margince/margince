@@ -16460,7 +16460,6 @@ paths:
     post:
       tags: [WebForms]
       operationId: previewWebFormHandling
-      x-settings-audience: member
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       x-mcp-tool: { verb: preview_website_inquiries, router: read_details, action: website_inquiry_preview, tier: auto_execute, scope: read, served_by: route }
       summary: Preview inquiry deadlines and explicitly selected accepted submissions without writing.

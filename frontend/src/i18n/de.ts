@@ -13160,23 +13160,23 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "auto.setup.needsAttention": "Prüfung nötig",
   "auto.setup.on": "An",
   "auto.setup.incomplete":
-    "Wählen Sie die nötigen Einstellungen vor dem Einschalten.",
+    "Wähle die nötigen Einstellungen vor dem Einschalten.",
   "auto.setup.noAuthorizer":
-    "Wählen Sie eine Person, die diese Automatisierung autorisiert.",
+    "Wähle eine Person, die diese Automatisierung autorisiert.",
   "auto.setup.inactive":
-    "Das Konto der autorisierenden Person ist inaktiv. Wählen Sie eine andere Person.",
+    "Das Konto der autorisierenden Person ist inaktiv. Wähle eine andere Person.",
   "auto.stages.loadError": "Vertriebspipelines konnten nicht geladen werden.",
   "auto.stages.choosePipeline": "Pipeline wählen",
   "auto.stages.chooseStages": "Phasen wählen",
   "auto.quiet.customerList": "Kundenliste",
   "auto.quiet.days": "Tage ohne Kontakt",
   "auto.lists.noCustomers":
-    "Noch keine Kontakt- oder Firmenlisten. Speichern Sie zuerst eine Liste.",
+    "Noch keine Kontakt- oder Firmenlisten. Speichere zuerst eine Liste.",
   "auto.stages.taskTitle": "Aufgabentitel",
   "auto.stages.pipeline": "Pipeline",
   "auto.stages.destinations": "Zielphasen",
   "auto.group.inquiries": "Neue Anfragen",
-  "auto.group.deals": "Verkaufschancen",
+  "auto.group.deals": "Deals",
   "auto.group.customers": "Kunden",
   "auto.group.meetings": "Besprechungen",
   "auto.group.lists": "Listen",
@@ -16791,18 +16791,18 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Fällig am Ende dieses Tages in der gespeicherten Zeitzone.",
   "inquiry.requestTypeField": "Feld für die Anfrageart (optional)",
   "inquiry.requestTypeHint":
-    "Wählen Sie die Lead-Auswahlliste, deren Feldname Ihr Website-Formular sendet. Andere Werte bleiben in der Notiz.",
+    "Wähle die Lead-Auswahlliste, deren Feldname dein Website-Formular sendet. Andere Werte bleiben in der Notiz.",
   "inquiry.notSpecified": "Nicht angegeben",
   "inquiry.fieldUnavailable": "Feld nicht mehr verfügbar",
   "inquiry.fieldsFailed":
-    "Die Felder für die Anfrageart konnten nicht geladen werden. Sie können diese optionale Einstellung unverändert lassen.",
+    "Die Felder für die Anfrageart konnten nicht geladen werden. Du kannst diese optionale Einstellung unverändert lassen.",
   "inquiry.deadlinePreview": "Frist wird berechnet…",
   "inquiry.deadlineExample":
     "Für eine Anfrage vom {received} ist die Aufgabe am {due} fällig ({zone}).",
   "inquiry.record": "CRM-Eintrag",
   "inquiry.assignmentReason": "Grund für die Zuweisung",
   "inquiry.reason.legacyHandling":
-    "Die bisherige Lead-Bearbeitung ist für diese Anfrage zuständig. Prüfen Sie das Ergebnis, bevor Sie eine weitere Aufgabe erstellen.",
+    "Die bisherige Lead-Bearbeitung ist für diese Anfrage zuständig. Prüfe das Ergebnis, bevor du eine weitere Aufgabe erstellst.",
   "inquiry.reason.owner": "Bleibt bei der zuständigen Person",
   "inquiry.reason.ownerReview": "Zuständigkeit muss geprüft werden",
   "inquiry.reason.recipientChanged": "Ausgewählte Person nicht mehr geeignet",
@@ -16856,7 +16856,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "inquiry.result.alreadyHandled": "Bereits bearbeitet",
   "inquiry.result.taskCreated": "Aufgabe angelegt",
   "inquiry.result.waiting": "Wartet auf Freigabe",
-  "inquiry.result.changed": "Seit der Auswahl geändert. Bitte erneut lesen.",
+  "inquiry.result.changed": "Seit der Auswahl geändert. Erneut lesen.",
   "inquiry.result.unavailable": "Nicht verfügbar oder nicht mehr lesbar",
   "inquiry.result.skipped": "Keine Aufgabe angelegt. Lauf prüfen.",
   "inquiry.result.failed":
@@ -16864,7 +16864,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "inquiry.handling": "Anfragen bearbeiten",
   "inquiry.review": "Bearbeitung prüfen",
   "inquiry.pausedConversionWarning":
-    "Wenn Sie diesen Plan speichern, ersetzt er die bisherige Lead-Bearbeitung dieses Formulars. Mit „Pausiert speichern“ bleibt der Plan aus: Neue Anfragen erhalten erst nach dem Einschalten automatisch eine Aufgabe.",
+    "Wenn du diesen Plan speicherst, ersetzt er die bisherige Lead-Bearbeitung dieses Formulars. Mit „Pausiert speichern“ bleibt der Plan aus: Neue Anfragen erhalten erst nach dem Einschalten automatisch eine Aufgabe.",
   "inquiry.savePaused": "Pausiert speichern",
   "inquiry.enable": "Diese Bearbeitung einschalten",
   "inquiry.futureOnly":
