@@ -121,6 +121,13 @@ type cursorState struct {
 	// Rounds holds a folder's round still in progress, keyed by folder: where a
 	// checkpoint left it. Absent once the folder's round has closed.
 	Rounds map[string]*DeltaResume `json:"rounds,omitempty"`
+	// DeletionsDeltaLink is the Recoverable Items Deletions watermark.
+	DeletionsDeltaLink string `json:"deletions_delta_link,omitempty"`
+	// DeletionsListing is set only while that folder's delta fails.
+	DeletionsListing *deletionsListing `json:"deletions_listing,omitempty"`
+	// PendingPurges maps a message seen arriving in Deletions to when it was
+	// seen; deletions.go purges it once deletionHold has passed.
+	PendingPurges map[string]time.Time `json:"pending_purges,omitempty"`
 }
 
 // link is the stored watermark of one folder.
@@ -277,10 +284,19 @@ func (c *Connector) SyncFrom(
 		start.setLink(folder, next)
 		delete(start.Rounds, folder)
 	}
+	// After both folders, so a message restored to one of them this cycle has
+	// already cancelled its purge.
+	if err := c.trackDeletions(ctx, access, &start); err != nil {
+		return nil, err
+	}
+	if err := c.purgeDeleted(ctx, access, &start, sink); err != nil {
+		return nil, err
+	}
 	// The sync's own cursor carries no round in progress: both folders closed.
 	// A checkpoint may already have stored Sent Items' closed link while the
 	// inbox walked, which is safe because that folder's round was complete.
-	return marshalCursor(start.DeltaLink, start.SentDeltaLink, owner), nil
+	start.Rounds = nil
+	return marshalCursor(start)
 }
 
 // captureOne parses, drops, or upserts one raw message — the same discipline
@@ -373,12 +389,12 @@ func parseCursor(cur connector.Cursor) (cursorState, error) {
 	return cs, nil
 }
 
-func marshalCursor(deltaLink, sentDeltaLink, email string) connector.Cursor {
-	// No round is set, so only string fields are encoded and Marshal cannot fail.
-	b, _ := json.Marshal(cursorState{ //nolint:errchkjson // string fields only; a round is never set here
-		DeltaLink: deltaLink, SentDeltaLink: sentDeltaLink, Email: email,
-	})
-	return b
+func marshalCursor(state cursorState) (connector.Cursor, error) {
+	b, err := json.Marshal(state)
+	if err != nil {
+		return nil, fmt.Errorf("graph: encoding the sync cursor: %w", err)
+	}
+	return b, nil
 }
 
 func reportRemovals(ctx context.Context, sink connector.Sink, removed []string) error {

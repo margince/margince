@@ -65,6 +65,17 @@ type fakeAPI struct {
 	sentInitDelta string
 	sentInitCalls int
 	sentInitAfter time.Time
+	// The Recoverable Items Deletions half.
+	deletionsIDs       []string
+	deletionsLink      string
+	deletionsErr       error
+	deletionsCalls     []string // the link each round started from
+	listedDeletions    []string
+	listDeletionsErr   error
+	listDeletionsCalls int
+	whereIs            map[string]string // message id to the folder it is filed in
+	lookupErrIDs       map[string]error
+	lookedUp           []string
 	// Delta's canned round (the incremental resume).
 	deltaRemoved []string // ids Graph tombstoned in the round
 	folders      []connector.NamedContainer
@@ -225,6 +236,36 @@ func (f *fakeAPI) Delta(ctx context.Context, _, deltaLink string, _ *DeltaResume
 	return f.deltaLink, visit(ctx, DeltaPage{Messages: f.messageRefs(f.deltaIDs), Removed: f.deltaRemoved})
 }
 
+// DeletionsDelta answers the Recoverable Items Deletions round. With no
+// deletionsLink set the fake closes every round on a fixed link.
+func (f *fakeAPI) DeletionsDelta(ctx context.Context, _, deltaLink string, visit PageVisitor) (string, error) {
+	f.deletionsCalls = append(f.deletionsCalls, deltaLink)
+	// A 410 answers only a stored link, so the fresh round after it succeeds.
+	if f.deletionsErr != nil && (deltaLink != "" || !errors.Is(f.deletionsErr, ErrDeltaGone)) {
+		return "", f.deletionsErr
+	}
+	next := f.deletionsLink
+	if next == "" {
+		next = "https://graph/deletions?token=1"
+	}
+	return next, visit(ctx, DeltaPage{Messages: f.messageRefs(f.deletionsIDs)})
+}
+
+func (f *fakeAPI) ListDeletions(context.Context, string) ([]string, error) {
+	f.listDeletionsCalls++
+	return f.listedDeletions, f.listDeletionsErr
+}
+
+// MessageFolder answers from whereIs: an id it does not name is a 404.
+func (f *fakeAPI) MessageFolder(_ context.Context, _, id string) (string, bool, error) {
+	f.lookedUp = append(f.lookedUp, id)
+	if err := f.lookupErrIDs[id]; err != nil {
+		return "", false, err
+	}
+	folder, ok := f.whereIs[id]
+	return folder, ok, nil
+}
+
 func (f *fakeAPI) GetMIME(_ context.Context, _, folder, id string) ([]byte, error) {
 	f.mu.Lock()
 	f.fetched = append(f.fetched, id)
@@ -274,6 +315,8 @@ const (
 	sentFolderID  = "folder-sent"
 	inboxFolderID = "folder-inbox"
 	junkFolderID  = "folder-junk"
+	// deletionsFolderID is Recoverable Items Deletions.
+	deletionsFolderID = "folder-deletions"
 )
 
 func (f *fakeAPI) ListFolders(context.Context, string) ([]connector.NamedContainer, bool, error) {
@@ -281,8 +324,11 @@ func (f *fakeAPI) ListFolders(context.Context, string) ([]connector.NamedContain
 }
 
 func (f *fakeAPI) FolderID(_ context.Context, _, wellKnown string) (string, error) {
-	if wellKnown == folderInbox {
+	switch wellKnown {
+	case folderInbox:
 		return inboxFolderID, nil
+	case folderDeletions:
+		return deletionsFolderID, nil
 	}
 	if f.sentFolderErr != nil {
 		return "", f.sentFolderErr
@@ -328,6 +374,15 @@ func rawMsg(msgID, from string) []byte {
 }
 
 const owner = "rep@myco.com"
+
+func testCursor(t *testing.T, state cursorState) connector.Cursor {
+	t.Helper()
+	cursor, err := marshalCursor(state)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return cursor
+}
 
 func authBytes(t *testing.T) connector.Auth {
 	t.Helper()
@@ -683,7 +738,7 @@ func TestSyncAnchorsTheSentFolderOnAMailboxThatPredatesIt(t *testing.T) {
 	c := pinnedConn(api)
 	sink := &recordingSink{}
 
-	prior := marshalCursor("https://graph/delta?token=inbox-1", "", owner)
+	prior := testCursor(t, cursorState{DeltaLink: "https://graph/delta?token=inbox-1", Email: owner})
 	if _, err := c.Sync(context.Background(), authBytes(t), prior, sink); err != nil {
 		t.Fatalf("Sync: %v", err)
 	}

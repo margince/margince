@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/modules/capture/captureauthority.go backend/internal/modules/capture/health.go backend/internal/modules/capture/healthfleet.go backend/internal/modules/contacts/employerresolve.go backend/internal/shared/ports/connector backend/internal/modules/capture/sink.go backend/internal/modules/capture/registry.go backend/internal/modules/capture/syncstate.go backend/internal/modules/capture/mailmap/mailmap.go backend/internal/compose/connectors.go backend/internal/compose/connectors_picture.go backend/internal/compose/capture.go backend/internal/modules/capture/gcal/client.go backend/internal/modules/capture/googleconn/userinfo.go backend/internal/compose/avatarprovider.go backend/internal/modules/identity/providerpicture.go backend/internal/compose/jobs.go frontend/src/features/capture/connectors.tsx -->
+<!-- describes: backend/internal/modules/capture/captureauthority.go backend/internal/modules/capture/health.go backend/internal/modules/capture/healthfleet.go backend/internal/modules/contacts/employerresolve.go backend/internal/shared/ports/connector backend/internal/modules/capture/sink.go backend/internal/modules/capture/registry.go backend/internal/modules/capture/syncstate.go backend/internal/modules/capture/mailmap/mailmap.go backend/internal/compose/connectors.go backend/internal/compose/connectors_picture.go backend/internal/compose/capture.go backend/internal/modules/capture/gcal/client.go backend/internal/modules/capture/googleconn/userinfo.go backend/internal/compose/avatarprovider.go backend/internal/modules/identity/providerpicture.go backend/internal/compose/jobs.go frontend/src/features/capture/connectors.tsx backend/internal/modules/capture/graph/deletions.go -->
 # Capture connectors: the inbound integration seam and the mail pipeline
 
 `internal/modules/capture` is the **inbound** integration surface of Margince. A *connector* works with an
@@ -163,7 +163,12 @@ Older mail with no id stays until a normal sync sees it again.
 A colleague's copy, mail sent from Margince and the law can keep a message.
 A hold or an open request to erase data can keep it too.
 Changes to a folder in Outlook do not delete the copy in Margince.
-A move to an archive can look like mail gone for good, so Outlook mail stays.
+A move to an archive can look like mail gone for good, and a 404 proves nothing.
+Outlook proof is arrival in Recoverable Items Deletions (`recoverableitemsdeletions`).
+Only Shift+Delete or emptying Deleted Items puts mail there, and `Mail.Read` reads it.
+The sync records each arrival in its cursor and reports the removal 14 days later.
+A message found again outside that folder is kept: the owner recovered it.
+If the folder's delta fails, a listing of at most 500 ids takes its place.
 
 ## Credentials & the vault
 
