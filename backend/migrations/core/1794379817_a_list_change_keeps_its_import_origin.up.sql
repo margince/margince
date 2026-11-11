@@ -3,4 +3,4 @@
 
 SET LOCAL lock_timeout = '3s';
 
-ALTER TABLE automation DROP COLUMN meeting_recap_from;
+ALTER TABLE list_member_event ADD COLUMN imported boolean NOT NULL DEFAULT false;

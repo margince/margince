@@ -224,7 +224,7 @@ type Lists interface {
 	// ObservedChanges answers the entered or left events (actions) one check
 	// recorded at checkedAt under version, of records the caller can see now:
 	// at most limit of them, and how many there are in all.
-	ObservedChanges(ctx context.Context, id ids.UUID, version int64, checkedAt time.Time, actions []string, limit int) ([]ListChange, int, error)
+	ObservedChanges(ctx context.Context, id ids.UUID, version int64, checkedAt time.Time, actions []string, limit int, includeImported ...bool) ([]ListChange, int, error)
 	// CheckShortlist says whether the caller may change the Shortlist's
 	// membership for records of entityType.
 	CheckShortlist(ctx context.Context, id ids.UUID, entityType string) error

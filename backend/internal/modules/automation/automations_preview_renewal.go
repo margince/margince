@@ -25,21 +25,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
-// recurringPreviewUnsupportedReason is why a recurs_yearly renewal_reminder
-// instance's preview refuses rather than answering — the same
-// honest-gap posture previewNotYetSupported (automations_preview.go)
-// takes for the two clock handlers whose static shape can't fit either:
-// this dynamic previewDef's match is a LITERAL [now, now+days_before]
-// snapshot over the column's raw stored value, which for a recurring
-// field (a birthday stored as, say, 1990-08-01) almost never falls
-// inside any real-world window — silently answering "0 matches" would
-// read as "this automation is broken" when the real answer is "preview
-// cannot project a recurring occurrence yet" (DESIGN.md's own "what
-// stays out of scope"). Fabricating a number here is worse than an
-// honest refusal, for the identical reason previewNotYetSupported's own
-// doc gives.
-const recurringPreviewUnsupportedReason = "preview is not yet supported for a recurring (recurs_yearly) renewal_reminder instance: the literal snapshot preview cannot project what a yearly-recurring window would match"
-
 // Save and preview share the live field check so retired or retyped fields
 // cannot leave a newly configured reminder with no usable date source.
 func renewalPreviewParams(ctx context.Context, catalog fieldcatalog.Reader, stored Automation, in AutomationPreviewInput) (dateFieldScanParams, error) {
@@ -99,89 +84,28 @@ func validateRenewalPreviewDateField(ctx context.Context, catalog fieldcatalog.R
 	}
 }
 
-// renewalPreviewDef builds one renewal_reminder instance's previewDef at
-// request time: table is the instance's own validated object (one of
-// renewalReminderObjects, all five of which carry archived_at — verified
-// against migrations/core's own DDL for contact/company/deal/lead/
-// project, not assumed), and the one field is the instance's own
-// date_field column, quoted via pgx.Identifier — the SAME quoting
-// pgx.Identifier{}.Sanitize() customfields/engine.go's quoteIdentifier
-// wraps, reached directly here rather than through customfields (a
-// module never imports a sibling, ADR-0054 §9).
-//
-// match is a literal [now, now+days_before] snapshot — correct for a
-// one-time instance, which is the only kind that reaches this function:
-// the caller (resolvePreviewRecipe) refuses a recurs_yearly instance
-// before ever calling this with recurringPreviewUnsupportedReason, since
-// a literal snapshot would almost always answer a misleading "0 matches"
-// for a field whose stored value is a birth year, not a real-world date
-// (DESIGN.md's own "what stays out of scope").
-//
-// date_field's existence and DATE type are checked BEFORE this function
-// ever runs (renewalPreviewParams' catalog validation, above) — by the
-// time p reaches here it has already been confirmed against the
-// workspace's own live custom-field catalog, so the SQL below is built
-// around a column known to be real.
+type previewDateWindow struct {
+	daysBefore int
+	column     string
+	from, to   time.Time
+	recurring  bool
+}
+
+// Preview and the scheduled scan use the same date-window predicate.
 func renewalPreviewDef(now time.Time, p dateFieldScanParams) previewDef {
-	quotedCol := pgx.Identifier{p.Column}.Sanitize()
-	from := now.Format(time.DateOnly)
-	to := now.AddDate(0, 0, p.DaysBefore).Format(time.DateOnly)
+	column := "t." + pgx.Identifier{p.Column}.Sanitize()
+	to := now.AddDate(0, 0, p.DaysBefore)
 	return previewDef{
-		table:     p.Object,
-		baseWhere: previewBaseWhereNotArchived,
-		fields: map[string]storekit.Field{
-			paramKeyDateField: {Expr: "t." + quotedCol, Type: storekit.FieldDate},
-		},
-		match: storekit.Predicate{And: []storekit.Predicate{
-			{Field: paramKeyDateField, Op: storekit.OpGte, Value: from},
-			{Field: paramKeyDateField, Op: storekit.OpLte, Value: to},
-		}},
-		// firedCount answers "how many watched dates would have fired at
-		// SOME point in [since, now]" — not "whose value falls in
-		// [since, now]" (that undercounts: a value 5 days out from now
-		// would have started matching days_before days ago and stays a
-		// match through today, so its ACTIVE-match span is
-		// [value-days_before, value], and it counts here whenever that
-		// span overlaps [since, now] at all). Two spans [a,b] and [c,d]
-		// overlap iff a<=d AND c<=b — substituting
-		// [value-days_before, value] for [a,b] and [since, now] for
-		// [c,d] and rearranging gives value in [since, now+days_before],
-		// which is what this queries: shifting only the UPPER bound by
-		// days_before, not both (a symmetric shift of both bounds would
-		// undercount a value whose active-match span closed before
-		// since+days_before but still overlapped [since, now]). `to`
-		// (above) IS that upper bound, reused rather than recomputed, so
-		// the two can never drift onto two different horizons.
-		//
-		// This is the "fresh enablement" reading, not the "already
-		// running" one: a live instance's own occurrence key
-		// (anchorIdempotencyKey, handlers_clock.go) claims each value
-		// exactly once, at value-days_before, so an ALREADY-ENABLED
-		// instance's true firing count over [since, now] is narrower —
-		// value in [since+days_before, now+days_before] — because a
-		// value whose firing instant fell before `since` already claimed
-		// its row and would not fire again inside the window even though
-		// its active-match span still overlaps it. The wider
-		// span-overlap reading here answers the question a PREVIEW
-		// actually asks — "if I turn this on now, what would it have
-		// caught over the trailing window" — where there is no prior
-		// claimed anchor to exclude.
-		//
-		// Deliberately does NOT apply previewBaseWhereNotArchived,
-		// matching leadPreviewDefs' assignLeadOwnerName ("every lead
-		// created in the window was one firing — including leads since
-		// archived or routed"): a firing that already happened is a
-		// historical fact about that pass, independent of the row's
-		// CURRENT archived status, so an entity archived after its
-		// renewal date fired still counts here even though it is
-		// excluded from MatchesNow's right-now snapshot above.
+		table:                 p.Object,
+		baseWhere:             previewBaseWhereNotArchived,
+		dateWindow:            &previewDateWindow{column: column, from: now, to: to, recurring: p.RecursYearly, daysBefore: p.DaysBefore},
+		historicalUnavailable: p.RecursYearly,
 		firedCount: func(ctx context.Context, tx pgx.Tx, since time.Time) (int, error) {
-			var n int
-			err := tx.QueryRow(ctx, storekit.SQLf(
-				`SELECT count(*) FROM %s WHERE %s BETWEEN $1 AND $2`, p.Object, quotedCol,
-			),
-				since.Format(time.DateOnly), to).Scan(&n)
-			return n, err
+			var args []any
+			where := storekit.DateWindowSQL(column, since, to, false, registerArg(&args))
+			var count int
+			err := tx.QueryRow(ctx, storekit.SQLf(`SELECT count(*) FROM %s t WHERE %s`, p.Object, where), args...).Scan(&count)
+			return count, err
 		},
 	}
 }

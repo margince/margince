@@ -85,7 +85,9 @@ func renewalReminderSchema() map[string]any {
 	return map[string]any{
 		schemaKeyType:            schemaTypeObject,
 		schemaKeyAdditionalProps: false,
+		schemaKeyRequired:        []string{"object", paramKeyDateField, "days_before", "recipient"},
 		schemaKeyProperties: map[string]any{
+			"recipient": taskRecipientSchema(),
 			"days_before": intParamProperty(defaultRenewalDaysBefore, 365,
 				"How many days ahead of the renewal date to remind."),
 			"object": map[string]any{
@@ -176,12 +178,13 @@ func validateRenewalRecursYearlyParam(params map[string]any) error {
 func validateRenewalReminderParams(params map[string]any) error {
 	for k := range params {
 		switch k {
-		case "days_before", "object", paramKeyDateField, "recurs_yearly":
+		case "days_before", "object", paramKeyDateField, "recurs_yearly", "recipient":
 		default:
 			return &ParamError{Field: "params." + k, Reason: errNotAParameter}
 		}
 	}
 	for _, validate := range []func(map[string]any) error{
+		validateTaskRecipientParam,
 		validateRenewalDaysBeforeParam,
 		validateRenewalObjectParam,
 		validateRenewalDateFieldParam,

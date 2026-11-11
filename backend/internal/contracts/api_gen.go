@@ -36524,6 +36524,9 @@ type AutomationPreview struct {
 	// PreviewKind Whether the preview describes a current record population or a future event.
 	PreviewKind *AutomationPreviewKind `json:"preview_kind,omitempty"`
 
+	// Renewal Current visible renewal dates. Missing dates never count as due renewals.
+	Renewal *AutomationRenewalPreview `json:"renewal,omitempty"`
+
 	// Sample Up to a few matching record ids for the "affects these" preview (visibility-bounded).
 	Sample *[]openapi_types.UUID `json:"sample,omitempty"`
 
@@ -36549,6 +36552,20 @@ type AutomationPreviewRequest struct {
 
 	// WindowDays Trailing window for the would-have-fired estimate (default 30).
 	WindowDays *int `json:"window_days,omitempty" maximum:"90" minimum:"1"`
+}
+
+// AutomationRenewalPreview Current visible renewal dates. Missing dates never count as due renewals.
+type AutomationRenewalPreview struct {
+	MissingDates int                              `json:"missing_dates" minimum:"0"`
+	RecursYearly bool                             `json:"recurs_yearly"`
+	Samples      []AutomationRenewalPreviewSample `json:"samples"`
+}
+
+// AutomationRenewalPreviewSample defines model for AutomationRenewalPreviewSample.
+type AutomationRenewalPreviewSample struct {
+	EntityId       openapi_types.UUID `json:"entity_id"`
+	OccurrenceDate openapi_types.Date `json:"occurrence_date"`
+	ReminderDate   openapi_types.Date `json:"reminder_date"`
 }
 
 // AutomationRetryResult What a retry did, or why it did nothing. `refusal` is present exactly when `retried`

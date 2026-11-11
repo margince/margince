@@ -20,7 +20,7 @@ import (
 // expected data, not an exception granted to a template.
 var pinnedSeededNames = map[string]string{
 	noActivityReminderName: "Remind me when an active deal goes quiet",
-	renewalReminderName:    "Renewal reminder",
+	renewalReminderName:    "Prepare for a renewal",
 	stageChangeNotifyName:  "Tell the owner when someone moves their deal",
 	routeLeadName:          "Route new lead to a task",
 	checkInCadenceName:     "Keep in touch with selected customers",

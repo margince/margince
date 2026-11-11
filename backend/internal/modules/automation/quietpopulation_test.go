@@ -138,7 +138,7 @@ func TestRenewalSetupChecksTheCurrentDateFieldBeforeSaving(t *testing.T) {
 		t.Fatal("missing renewal reminder")
 	}
 	for _, field := range []string{"cf_renewal", "cf_words", "cf_retired", ""} {
-		err := store.validateRefs(context.Background(), entry, map[string]any{"object": "contact", "date_field": field})
+		err := store.validateRefs(context.Background(), entry, map[string]any{"object": "contact", "date_field": field, "recipient": "record_owner", "days_before": float64(30)})
 		if (err == nil) != (field == "cf_renewal") {
 			t.Fatalf("field %q: %v", field, err)
 		}

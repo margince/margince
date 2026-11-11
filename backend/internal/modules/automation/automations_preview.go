@@ -57,6 +57,7 @@ type AutomationPreviewInput struct {
 // dropped), a small visible sample, and the trailing-window firing
 // estimate (nil when the window count is not computable for the type).
 type AutomationPreviewResult struct {
+	Renewal                    *crmcontracts.AutomationRenewalPreview
 	Kind                       crmcontracts.AutomationPreviewKind
 	MatchesNowAvailable        bool
 	HistoricalPreviewAvailable bool
@@ -73,12 +74,14 @@ type AutomationPreviewResult struct {
 // a DOCUMENTED gap instead (see its own doc) — exactly one of
 // (table+fields+match+firedCount) or unsupported is set.
 type previewDef struct {
-	readers   []principal.Principal
-	eventOnly bool
-	table     string
-	baseWhere string
-	fields    map[string]storekit.Field
-	match     storekit.Predicate
+	dateWindow            *previewDateWindow
+	historicalUnavailable bool
+	readers               []principal.Principal
+	eventOnly             bool
+	table                 string
+	baseWhere             string
+	fields                map[string]storekit.Field
+	match                 storekit.Predicate
 	// firedCount counts trigger occurrences since the window start —
 	// workspace-level (workspace-bounded), an estimate of event volume rather
 	// than a per-row visibility question.
@@ -175,7 +178,10 @@ func (s *AutomationStore) Preview(ctx context.Context, id ids.AutomationID, in A
 
 	since := now.AddDate(0, 0, -window)
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
-		return def.measure(ctx, tx, since, &res)
+		if err := def.measure(ctx, tx, since, &res); err != nil {
+			return err
+		}
+		return def.renewalDetails(ctx, tx, &res)
 	})
 	if err != nil {
 		return AutomationPreviewResult{}, err
@@ -221,9 +227,6 @@ func resolvePreviewRecipe(ctx context.Context, catalog fieldcatalog.Reader, stor
 		if err != nil {
 			return previewDef{}, 0, err
 		}
-		if p.RecursYearly {
-			return previewDef{}, 0, &ParamError{Field: "key", Reason: recurringPreviewUnsupportedReason}
-		}
 		return renewalPreviewDef(now, p), window, nil
 	}
 	def, ok := previewDefs()[key]
@@ -252,6 +255,10 @@ func (def previewDef) scopeClause(ctx context.Context, alias string, arg func(an
 
 func (def previewDef) matchWhere() (string, []any, error) {
 	var args []any
+	if def.dateWindow != nil {
+		w := def.dateWindow
+		return def.baseWhere + " AND " + storekit.DateWindowSQL(w.column, w.from, w.to, w.recurring, registerArg(&args)), args, nil
+	}
 	match, err := storekit.CompilePredicate(def.match, def.fields, registerArg(&args))
 	return def.baseWhere + " AND " + match, args, err
 }
@@ -316,7 +323,7 @@ func (def previewDef) measure(ctx context.Context, tx pgx.Tx, since time.Time, r
 	if err := rows.Err(); err != nil {
 		return err
 	}
-	if len(def.readers) > 0 {
+	if len(def.readers) > 0 || def.historicalUnavailable {
 		res.HistoricalPreviewAvailable = false
 		return nil
 	}

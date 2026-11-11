@@ -191,7 +191,7 @@ func (s *TimeScanner) ScanWorkspace(ctx context.Context, wsID ids.UUID) error {
 		}
 		if paramsFor, ok := dateFieldScanHandlers[name]; ok {
 			for _, inst := range instances[name] {
-				if err := scanDateFieldInstanceCandidates(wsCtx, s.dateScan, h, inst, wsID, now, s.engine.runOne, paramsFor); err != nil {
+				if err := s.scanDateInstance(wsCtx, h, inst, wsID, now, paramsFor); err != nil {
 					return fmt.Errorf("%s instance %s: %w", name, inst.id, err)
 				}
 			}

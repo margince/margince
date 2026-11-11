@@ -15,6 +15,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -230,6 +231,12 @@ func (s *AutomationStore) Create(ctx context.Context, in CreateAutomationInput) 
 	if in.Name == "" {
 		return Automation{}, &ParamError{Field: keyName, Reason: "must not be empty"}
 	}
+	if entry.Trigger == eventListEvaluated {
+		in.Params = maps.Clone(nonNilParams(in.Params))
+		if _, set := in.Params[paramIncludeImportedChanges]; !set {
+			in.Params[paramIncludeImportedChanges] = false
+		}
+	}
 	if err := entry.Validate(in.Params); err != nil {
 		return Automation{}, err
 	}
@@ -334,8 +341,9 @@ func (s *AutomationStore) update(ctx context.Context, id ids.AutomationID, in Up
 			  name = coalesce(@name, name),
 			  params = coalesce(@params, params),
 			  enabled = coalesce(@enabled, enabled),
-			  meeting_recap_from = CASE WHEN key = @recap AND NOT enabled AND @enabled::boolean
-			    THEN @changed ELSE meeting_recap_from END,
+			  enabled_from = CASE WHEN (NOT enabled AND @enabled::boolean)
+			    OR (enabled AND @params::jsonb IS NOT NULL AND params IS DISTINCT FROM @params::jsonb)
+			    THEN @changed ELSE enabled_from END,
 			  owner_id = coalesce(@owner, owner_id),
 			  setter_passport_id = @setter,
 			  paused_reason = CASE WHEN @enabled::boolean IS NULL THEN paused_reason END,
@@ -344,7 +352,7 @@ func (s *AutomationStore) update(ctx context.Context, id ids.AutomationID, in Up
 			WHERE id = @id
 			RETURNING %s`, automationColumns), pgx.NamedArgs{
 			"id": id, "name": in.Name, "params": paramsJSON, "enabled": in.Enabled,
-			"changed": s.now().UTC(), "owner": in.OwnerID, "setter": setter, "recap": postMeetingRecapName,
+			"changed": s.now().UTC(), "owner": in.OwnerID, "setter": setter,
 		}))
 		if err != nil {
 			return err

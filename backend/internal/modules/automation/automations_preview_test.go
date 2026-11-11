@@ -100,18 +100,11 @@ func TestResolvePreviewRecipeRenewalReminder(t *testing.T) {
 		}
 	})
 
-	t.Run("a recurs_yearly instance refuses preview honestly instead of answering a misleading zero", func(t *testing.T) {
-		stored := Automation{
-			Key:    renewalReminderName,
-			Params: json.RawMessage(`{"object":"contact","date_field":"cf_renewal","days_before":15,"recurs_yearly":true}`),
-		}
-		_, _, err := resolvePreviewRecipe(context.Background(), catalog, stored, AutomationPreviewInput{}, now)
-		var paramErr *ParamError
-		if err == nil || !errors.As(err, &paramErr) {
-			t.Fatalf("resolvePreviewRecipe(recurs_yearly=true) = %v, want a *ParamError refusing the preview", err)
-		}
-		if paramErr.Reason != recurringPreviewUnsupportedReason {
-			t.Errorf("ParamError.Reason = %q, want %q", paramErr.Reason, recurringPreviewUnsupportedReason)
+	t.Run("an annual renewal previews its current occurrence without inventing history", func(t *testing.T) {
+		stored := Automation{Key: renewalReminderName, Params: json.RawMessage(`{"object":"contact","date_field":"cf_renewal","days_before":15,"recurs_yearly":true}`)}
+		def, _, err := resolvePreviewRecipe(context.Background(), catalog, stored, AutomationPreviewInput{}, now)
+		if err != nil || def.dateWindow == nil || !def.dateWindow.recurring || !def.historicalUnavailable {
+			t.Fatalf("annual recipe = %+v, %v", def, err)
 		}
 	})
 
@@ -130,15 +123,8 @@ func TestResolvePreviewRecipeRenewalReminder(t *testing.T) {
 		if window != previewDefaultWindowDays {
 			t.Errorf("window = %d, want the default %d", window, previewDefaultWindowDays)
 		}
-		field, ok := def.fields["date_field"]
-		if !ok {
-			t.Fatal("previewDef has no date_field field entry")
-		}
-		if want := `t."cf_renewal"`; field.Expr != want {
-			t.Errorf("field expr = %q, want %q", field.Expr, want)
-		}
-		if def.match.And == nil || len(def.match.And) != 2 {
-			t.Fatalf("match = %+v, want a two-leg AND (gte from, lte to)", def.match)
+		if def.dateWindow == nil || def.dateWindow.column != `t."cf_renewal"` || def.dateWindow.recurring {
+			t.Fatalf("date window = %+v", def.dateWindow)
 		}
 	})
 

@@ -201,6 +201,9 @@ func (e *WorkflowEngine) HandleEvent(ctx context.Context, env kevents.Envelope) 
 // dispatch runs one instance's firing. A list rule's event stands for every
 // record one check saw change, so it fans out first.
 func (e *WorkflowEngine) dispatch(ctx context.Context, h workflow.Handler, ev workflow.Event, version int64) error {
+	if !ev.EnabledFrom.IsZero() && ev.OccurredAt.Before(ev.EnabledFrom) {
+		return nil
+	}
 	if rule, ok := h.(listRule); ok {
 		// Before the fan-out, so a check that moved no records still stops the rule.
 		if stop, err := e.stopIfSetterLapsed(ctx, ev); stop || err != nil {
@@ -246,7 +249,7 @@ func (e *WorkflowEngine) liveInstances(ctx context.Context) (map[string][]automa
 	out := map[string][]automationInstance{}
 	err := e.db.Tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx,
-			`SELECT id, key, params, owner_id, version, meeting_recap_from
+			`SELECT id, key, params, owner_id, version, enabled_from
 			 FROM automation WHERE enabled AND archived_at IS NULL ORDER BY created_at, id`)
 		if err != nil {
 			return err

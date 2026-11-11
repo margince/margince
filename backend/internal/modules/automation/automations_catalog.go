@@ -258,8 +258,8 @@ func seededCatalogEntries() []CatalogEntry {
 		{
 			Key:          renewalReminderName,
 			Group:        crmcontracts.AutomationCatalogEntryGroupCustomers,
-			Name:         "Renewal reminder",
-			Description:  "Reminds an entity's owner as its configured renewal date approaches.",
+			Name:         "Prepare for a renewal",
+			Description:  "Creates a task for the chosen recipient before a saved renewal date. Annual repeats are optional.",
 			Trigger:      renewalScheduleMarker,
 			Action:       string(ActionTypeCreateTask),
 			Tier:         tierAutoExecute,

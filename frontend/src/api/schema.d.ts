@@ -52931,6 +52931,21 @@ export interface components {
             sample?: string[];
             /** @description Matches the caller cannot see (masked, not silently dropped) — honest count, never widens scope. */
             excluded_by_permission?: number;
+            renewal?: components["schemas"]["AutomationRenewalPreview"];
+        };
+        /** @description Current visible renewal dates. Missing dates never count as due renewals. */
+        AutomationRenewalPreview: {
+            missing_dates: number;
+            recurs_yearly: boolean;
+            samples: components["schemas"]["AutomationRenewalPreviewSample"][];
+        };
+        AutomationRenewalPreviewSample: {
+            /** Format: uuid */
+            entity_id: string;
+            /** Format: date */
+            occurrence_date: string;
+            /** Format: date */
+            reminder_date: string;
         };
         /**
          * @description One firing of an automation, reconstructed from audit_log/automation_run (data-model §12.5). Runs of

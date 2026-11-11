@@ -80,6 +80,12 @@ func confirmScheduledPopulation(before Automation, in UpdateAutomationInput) err
 
 // validateRefs asks the entry's reference check, when it has one.
 func (s *AutomationStore) validateRefs(ctx context.Context, entry CatalogEntry, params map[string]any) error {
+	if entry.ValidateRefs != nil && s.lists == nil {
+		return &ParamError{Field: "key", Reason: "needs lists, which are not switched on in this installation"}
+	}
+	if err := validateRequiredSetup(entry, params); err != nil {
+		return err
+	}
 	if entry.Key == renewalReminderName {
 		_, err := renewalPreviewParams(ctx, s.catalog, Automation{Key: entry.Key}, AutomationPreviewInput{Params: params})
 		return err
@@ -117,9 +123,6 @@ func (s *AutomationStore) validateRefs(ctx context.Context, entry CatalogEntry, 
 	}
 	if entry.ValidateRefs == nil {
 		return nil
-	}
-	if s.lists == nil {
-		return &ParamError{Field: "key", Reason: "needs lists, which are not switched on in this installation"}
 	}
 	return entry.ValidateRefs(ctx, s.lists, params)
 }

@@ -63,6 +63,14 @@ func (f *listRuleFixture) author() context.Context {
 func (f *listRuleFixture) rule(t *testing.T, key string, params map[string]any) ids.AutomationID {
 	t.Helper()
 	params["list_id"] = f.list.String()
+	if key == "list_membership_task" {
+		if _, set := params["task_title"]; !set {
+			params["task_title"] = "Follow up with this customer"
+		}
+		if _, set := params["recipient"]; !set {
+			params["recipient"] = "record_owner"
+		}
+	}
 	created, err := f.rules.Create(f.author(), automation.CreateAutomationInput{Key: key, Name: key, Params: params})
 	if err != nil {
 		t.Fatalf("author %s: %v", key, err)
@@ -164,7 +172,7 @@ func TestALeaveRuleFiresOnlyForRecordsThatLeft(t *testing.T) {
 		t.Fatalf("one record left and one joined, and a leave rule fired %d runs, want 1", n)
 	}
 	if n := f.e.WsCount(t, `SELECT count(*) FROM activity a JOIN activity_link l ON l.activity_id = a.id
-		WHERE a.subject = 'Left a Live List' AND l.contact_id = $1`, goes); n != 1 {
+		WHERE a.subject = 'Follow up with this customer' AND l.contact_id = $1`, goes); n != 1 {
 		t.Fatalf("the contact that left has %d follow-up tasks, want 1", n)
 	}
 	if n := f.e.WsCount(t, `SELECT count(*) FROM activity_link WHERE contact_id = $1`, stays); n != 0 {

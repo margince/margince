@@ -23,6 +23,7 @@ import { RUN_OUTCOME_WORD, runReasonWords } from "../../lib/automationrun";
 import { labelFor } from "../../lib/labelfor";
 import { useViewerZone } from "../../lib/viewerzone";
 import { useAutomationPreview } from "./automations.previewquery";
+import { RenewalPreviewDetails } from "./automations.renewalpreview";
 
 // The human surface for the two human-only automation ops
 // (listAutomationRuns / previewAutomation), in its own file so automations.tsx
@@ -343,6 +344,9 @@ export function AutomationPreview({
                         days: formatNumber(result.window_days, locale),
                       })}
                 </p>
+                {result.renewal && (
+                  <RenewalPreviewDetails renewal={result.renewal} />
+                )}
                 {hidden > 0 && (
                   <p className="t-caption">
                     {t("auto.preview.hidden", {

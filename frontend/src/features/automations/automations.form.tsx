@@ -22,6 +22,12 @@ type CatalogEntry = components["schemas"]["AutomationCatalogEntry"];
 type Automation = components["schemas"]["Automation"];
 
 const PARAM_LABELS: Record<string, MessageKey> = {
+  recipient: "auto.renewal.recipient",
+  include_imported_changes: "auto.lists.includeImports",
+  object: "auto.renewal.object",
+  date_field: "auto.renewal.dateField",
+  days_before: "auto.renewal.leadTime",
+  recurs_yearly: "auto.renewal.annual",
   task_title: "auto.stages.taskTitle",
   pipeline_id: "auto.stages.pipeline",
   stage_ids: "auto.stages.destinations",
@@ -89,7 +95,7 @@ function ParamFieldControl({
     return (
       <div className="field">
         <Checkbox
-          label={field.key}
+          label={label}
           checked={value === "true"}
           onChange={(event) =>
             onChange(event.target.checked ? "true" : "false")
@@ -132,7 +138,18 @@ function ParamFieldControl({
         ) : field.kind === "enum" ? (
           <Select
             {...control}
-            options={(field.options ?? []).map((v) => ({ value: v, label: v }))}
+            options={(field.options ?? []).map((v) => ({
+              value: v,
+              label:
+                field.key === "recipient" &&
+                (v === "record_owner" || v === "authorizer")
+                  ? t(
+                      v === "record_owner"
+                        ? "auto.renewal.recordOwner"
+                        : "auto.renewal.authorizer",
+                    )
+                  : v,
+            }))}
             value={value}
             onChange={onChange}
           />

@@ -253,6 +253,10 @@ stays in its history.
 For a stage rule, choose a pipeline and the stages that should cause work. A task rule also needs
 a title and a deadline. A stage notice that has no stages chosen starts paused.
 
+For **Prepare for a renewal**, choose the record type, date field, who gets the task and how many days before the date to remind them. **Repeat each year** is a choice, not the default. Preview shows the next date and when to remind, plus how many records have no date.
+
+Before you turn on a rule that checks dates or quiet records, review its first run. Records already in the chosen group can get work at the next check. The preview shows only records that both you and the person under **Authorized by** may read.
+
 Event rules show **From now on** and **Historical preview unavailable**. Turning one on does not process old records. A count of current records would not tell you which past events the rule could have handled.
 
 With a saved time zone, a follow-up task is due at the end of the chosen day in that zone. Without one, an existing rule keeps its old deadline.

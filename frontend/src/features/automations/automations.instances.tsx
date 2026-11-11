@@ -25,6 +25,7 @@ import { AutomationDialog } from "./automations.form";
 import { type AutomationPatch, patchAutomation } from "./automations.patch";
 import { ScheduledPopulationReview } from "./automations.populationreview";
 import { recipeSentence } from "./automations.recipe";
+import { AutomationRecipientSummary } from "./automations.recipient";
 import { AutomationStatus } from "./automations.status";
 import "./automations.css";
 
@@ -277,6 +278,12 @@ function instanceColumns({
             </span>
             {entry && (
               <span className="t-caption">{recipeSentence(entry, t)}</span>
+            )}
+            {entry && (
+              <AutomationRecipientSummary
+                automation={automation}
+                action={entry.action}
+              />
             )}
           </CellStack>
         );

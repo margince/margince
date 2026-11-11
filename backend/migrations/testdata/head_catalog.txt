@@ -1911,9 +1911,9 @@ public.automation.automation_tier_check CHECK ((tier = ANY (ARRAY['auto_execute'
 public.automation.automation_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.automation.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.automation.enabled boolean NOT NULL gen=- def=false
+public.automation.enabled_from timestamp with time zone gen=- def=-
 public.automation.id uuid NOT NULL gen=- def=uuidv7()
 public.automation.key text NOT NULL gen=- def=-
-public.automation.meeting_recap_from timestamp with time zone gen=- def=-
 public.automation.name text NOT NULL gen=- def=-
 public.automation.origin text NOT NULL gen=- def='catalog'::text
 public.automation.owner_id uuid gen=- def=-
@@ -6696,6 +6696,7 @@ public.list_member_event.definition_version bigint gen=- def=-
 public.list_member_event.entity_id uuid NOT NULL gen=- def=-
 public.list_member_event.entity_type text NOT NULL gen=- def=-
 public.list_member_event.id uuid NOT NULL gen=- def=uuidv7()
+public.list_member_event.imported boolean NOT NULL gen=- def=false
 public.list_member_event.list_id uuid NOT NULL gen=- def=-
 public.list_member_event.list_member_event_action_check CHECK ((action = ANY (ARRAY['added'::text, 'removed'::text, 'entered'::text, 'left'::text])))
 public.list_member_event.list_member_event_definition_version_js_safe CHECK (((definition_version >= '-9007199254740991'::bigint) AND (definition_version <= '9007199254740991'::bigint)))

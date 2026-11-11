@@ -72393,6 +72393,24 @@ components:
         window_days: { type: integer, description: 'The trailing window used for would_have_fired.' }
         sample: { type: array, items: { type: string, format: uuid }, description: 'Up to a few matching record ids for the "affects these" preview (visibility-bounded).' }
         excluded_by_permission: { type: integer, description: 'Matches the caller cannot see (masked, not silently dropped) — honest count, never widens scope.' }
+        renewal: { $ref: '#/components/schemas/AutomationRenewalPreview' }
+
+    AutomationRenewalPreview:
+      type: object
+      description: Current visible renewal dates. Missing dates never count as due renewals.
+      required: [missing_dates, recurs_yearly, samples]
+      properties:
+        missing_dates: { type: integer, minimum: 0 }
+        recurs_yearly: { type: boolean }
+        samples: { type: array, maxItems: 5, items: { $ref: '#/components/schemas/AutomationRenewalPreviewSample' } }
+
+    AutomationRenewalPreviewSample:
+      type: object
+      required: [entity_id, occurrence_date, reminder_date]
+      properties:
+        entity_id: { type: string, format: uuid }
+        occurrence_date: { type: string, format: date }
+        reminder_date: { type: string, format: date }
 
     AutomationRun:
       type: object

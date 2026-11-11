@@ -3,4 +3,4 @@
 
 SET LOCAL lock_timeout = '3s';
 
-ALTER TABLE automation ADD COLUMN meeting_recap_from timestamptz;
+ALTER TABLE automation DROP COLUMN enabled_from;

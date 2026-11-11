@@ -13292,6 +13292,22 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Der nächste geplante Lauf von {name} kann Aufgaben für bereits passende Datensätze anlegen. Spätere Läufe berücksichtigen auch neue Treffer.",
   "auto.preview.open": "Vorschau",
   "auto.preview.title": "Auswirkung des Probelaufs",
+  "auto.lists.includeImports":
+    "Auch auf durch Importe geänderte Datensätze reagieren",
+  "auto.recipient.tasks": "Aufgaben gehen an",
+  "auto.recipient.notices": "Hinweise gehen an",
+  "auto.renewal.recipient": "Erinnerungsaufgabe zuweisen an",
+  "auto.renewal.recordOwner": "Die für den Datensatz zuständige Person",
+  "auto.renewal.authorizer": "Die Person, die diese Automatisierung freigibt",
+  "auto.renewal.object": "Datensatztyp",
+  "auto.renewal.dateField": "Datumsfeld für die Verlängerung",
+  "auto.renewal.leadTime": "Tage vor der Verlängerung",
+  "auto.renewal.annual": "Jedes Jahr wiederholen",
+  "auto.renewal.once": "Eine Erinnerung für dieses Datum",
+  "auto.renewal.missingDates":
+    "{n} sichtbare Datensätze haben kein Verlängerungsdatum",
+  "auto.renewal.dates":
+    "Erinnerung am {reminder} für die Verlängerung am {renewal}",
   "auto.preview.window": "Zeitfenster",
   "auto.preview.window7": "7 Tage",
   "auto.preview.window30": "30 Tage",

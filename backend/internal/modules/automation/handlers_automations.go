@@ -234,6 +234,7 @@ func (h Handlers) PreviewAutomation(w http.ResponseWriter, r *http.Request, id c
 		return
 	}
 	wire := crmcontracts.AutomationPreview{
+		Renewal:                    res.Renewal,
 		PreviewKind:                &res.Kind,
 		MatchesNowAvailable:        &res.MatchesNowAvailable,
 		HistoricalPreviewAvailable: &res.HistoricalPreviewAvailable,
