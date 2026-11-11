@@ -244,7 +244,7 @@ func finalizeRelinkedActivity(ctx context.Context, tx pgx.Tx, id ids.ActivityID,
 			return err
 		}
 	}
-	after := map[string]any{"entity_type": in.EntityType, "entity_id": in.EntityID, "replaced": in.ReplaceExistingOfType}
+	after := map[string]any{"entity_type": in.EntityType, fieldEntityID: in.EntityID, "replaced": in.ReplaceExistingOfType}
 	// A contact linked later is the sender only when the message's stated
 	// address proves it.
 	if in.EntityType == linkEntityContact {
