@@ -238,13 +238,16 @@ function MonthsChart({ progress }: Readonly<{ progress: SalesProgress }>) {
 function YearLine({ progress }: Readonly<{ progress: SalesProgress }>) {
   const t = useT();
   const { locale } = useLocale();
-  // A year is compared only when every month has a whole goal and a reading.
-  const whole = progress.months.every(
-    (row) =>
-      row.goal.amount_minor != null &&
-      row.goal.status !== "incomplete" &&
-      (row.closed.status === "ok" || row.closed.status === "not_started"),
-  );
+  // A year is compared only when every month has a whole goal and a reading,
+  // and not while a plan changed elsewhere awaits review.
+  const whole =
+    progress.goal.status !== "changed_outside_plan" &&
+    progress.months.every(
+      (row) =>
+        row.goal.amount_minor != null &&
+        row.goal.status !== "incomplete" &&
+        (row.closed.status === "ok" || row.closed.status === "not_started"),
+    );
   if (!whole) return null;
   const goals = progress.months.map((row) => row.goal.amount_minor);
   const goal = goals.reduce<number>((sum, each) => sum + (each ?? 0), 0);

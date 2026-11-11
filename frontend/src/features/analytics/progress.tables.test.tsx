@@ -71,6 +71,15 @@ describe("ProgressMonths", () => {
     expect(screen.queryByText(/so far:/)).toBeNull();
   });
 
+  it("drops the year line while a plan changed elsewhere awaits review", () => {
+    const goal = {
+      ...sellerMarch.goal,
+      status: "changed_outside_plan" as const,
+    };
+    render(<ProgressMonths progress={{ ...sellerMarch, goal }} />);
+    expect(screen.queryByText(/so far:/)).toBeNull();
+  });
+
   it("drops the year line while a month's revenue is withheld", () => {
     const months = sellerMarch.months.map((row, at) =>
       at === 0 ? { ...row, closed: { status: "withheld" as const } } : row,
