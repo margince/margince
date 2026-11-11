@@ -28,7 +28,7 @@ import {
   SHORTLIST_ID,
   shortlist,
 } from "../../testing/lists.fixtures";
-import { meFixture } from "../../testing/mefixture";
+import { ME_ANSWERED, MeAnswered } from "../../testing/sessionprobe";
 import {
   installFetchStub,
   jsonResponse,
@@ -221,14 +221,9 @@ describe("a record page's lists", () => {
     const live = "01a0f000-0000-7000-8000-000000000050";
     const archived = "01a0f000-0000-7000-8000-000000000051";
     stub({
-      "GET /me": () =>
-        jsonResponse({
-          ...meFixture({
-            allow: { list: ["read"], company: ["read"], tag: ["read"] },
-            settingsAvailability: { lists: true },
-          }),
-          teams: [],
-        }),
+      "GET /me": listsMe(true, [], {
+        allow: { list: ["read"], company: ["read"], tag: ["read"] },
+      }),
       "GET /tags": () =>
         jsonResponse({
           data: [
@@ -507,5 +502,154 @@ describe("taking a record off a Shortlist", () => {
     expect(
       screen.getByRole("status").querySelector(".toast-dot-danger"),
     ).not.toBeNull();
+  });
+});
+
+describe("putting a record on a Shortlist from its lists", () => {
+  const ADD = `POST /lists/${SHORTLIST_ID}/members`;
+
+  // The route map keys by path alone; the two pickers each ask /lists for one kind.
+  function answerListsByKind() {
+    const routed = globalThis.fetch;
+    globalThis.fetch = (async (
+      input: RequestInfo | URL,
+      init?: RequestInit,
+    ) => {
+      const url = new URL(
+        input instanceof Request ? input.url : String(input),
+        "https://test.local",
+      );
+      if (url.pathname.replace(/^\/v1/, "") !== "/lists") {
+        return routed(input, init);
+      }
+      const shortlists = url.searchParams.get("list_type") === "static";
+      return jsonResponse({
+        data: shortlists ? [editableShortlist] : [liveList],
+        page: { has_more: false },
+      });
+    }) as typeof fetch;
+  }
+
+  function serve(
+    me: () => Response = listsMe(true),
+    panel: Partial<Parameters<typeof RecordListsPanel>[0]> = {},
+  ) {
+    let onList = false;
+    const added: unknown[] = [];
+    installFetchStub({
+      "GET /me": me,
+      [`GET /records/company/${MEMBER_ID}/lists`]: () =>
+        jsonResponse({ data: onList ? [editableShortlist] : [] }),
+      "GET /filters/vocabulary": () =>
+        jsonResponse({ resource: "company", fields: [] }),
+      [ADD]: (body) => {
+        added.push(body);
+        onList = true;
+        return jsonResponse(
+          { id: "m", list_id: SHORTLIST_ID, entity_type: "company" },
+          201,
+        );
+      },
+    });
+    answerListsByKind();
+    render(
+      <StoryProviders>
+        <MeAnswered />
+        <RecordListsPanel
+          entityType="company"
+          entityId={MEMBER_ID}
+          {...panel}
+        />
+      </StoryProviders>,
+    );
+    return added;
+  }
+
+  const addButton = () =>
+    screen.findByRole("button", { name: en["lists.addToShortlist"] });
+
+  it("shows the new membership in the section once it is added", async () => {
+    const added = serve();
+    const user = userEvent.setup();
+    expect(
+      await screen.findByText(en["lists.record.empty"]),
+    ).toBeInTheDocument();
+
+    await user.click(await addButton());
+    await user.click(
+      await screen.findByRole("combobox", { name: en["lists.shortlist"] }),
+    );
+    await user.click(
+      await screen.findByRole("option", { name: shortlist.name }),
+    );
+    await user.click(screen.getByRole("button", { name: en["lists.add"] }));
+
+    expect(
+      await screen.findByRole("button", { name: shortlist.name }),
+    ).toBeInTheDocument();
+    expect(added).toEqual([{ entity_type: "company", entity_id: MEMBER_ID }]);
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("points the Live List check at the button that adds to a Shortlist", async () => {
+    serve();
+    const check = await screen.findByRole("combobox", {
+      name: en["lists.record.check"],
+    });
+    expect(check).toHaveAccessibleDescription(en["lists.record.checkHintAdd"]);
+  });
+
+  it.each([
+    [
+      "holds no grant to change lists",
+      listsMe(true, [], { allow: { list: ["read"], company: ["read"] } }),
+    ],
+    [
+      "is a read seat",
+      listsMe(true, [], {
+        allow: { list: ["read", "update"], company: ["read"] },
+        seat: "read",
+      }),
+    ],
+  ])("offers no button to a reader who %s", async (_, me) => {
+    serve(me);
+    const check = await screen.findByRole("combobox", {
+      name: en["lists.record.check"],
+    });
+    expect(
+      screen.queryByRole("button", { name: en["lists.addToShortlist"] }),
+    ).toBeNull();
+    expect(check).toHaveAccessibleDescription(en["lists.record.checkHint"]);
+  });
+
+  it("leaves the verbs to the rail beside it and keeps the Live List check", async () => {
+    serve(listsMe(true), { actions: false });
+    expect(
+      await screen.findByRole("combobox", { name: en["lists.record.check"] }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: en["lists.addToShortlist"] }),
+    ).toBeNull();
+    expect(
+      screen.queryByRole("link", { name: en["lists.record.allLists"] }),
+    ).toBeNull();
+  });
+
+  it("links to every list the reader can find", async () => {
+    serve(listsMe(true, [], { allow: { list: ["read"], company: ["read"] } }));
+    const link = await screen.findByRole("link", {
+      name: en["lists.record.allLists"],
+    });
+    expect(link).toHaveAttribute("href", "/#/filters/lists");
+  });
+
+  it.each([
+    ["the record is archived", listsMe(true), { archived: true }],
+    ["lists are switched off", listsMe(false), {}],
+  ])("draws nothing when %s", async (_, me, panel) => {
+    serve(me, panel);
+    await screen.findByText(ME_ANSWERED);
+    expect(screen.queryByRole("heading")).toBeNull();
+    expect(screen.queryByRole("button")).toBeNull();
   });
 });

@@ -130,7 +130,11 @@ function ContactRecordKeepingStack({ view }: Readonly<{ view: Contact360 }>) {
         profiles={view.provider_profiles}
       />
       <ContactHoldSection view={view} />
-      <RecordListsPanel entityType="contact" entityId={view.contact.id} />
+      <RecordListsPanel
+        entityType="contact"
+        entityId={view.contact.id}
+        actions={false}
+      />
     </>
   );
 }
