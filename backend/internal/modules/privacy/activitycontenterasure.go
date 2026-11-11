@@ -22,6 +22,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	extdecl "github.com/margince/margince/backend/pkg/extension/privacy"
 )
 
 // purgeContentDerivedFrom destroys everything an activity's text left behind:
@@ -129,6 +130,10 @@ func (e *Eraser) purgeContentDerivedFrom(ctx context.Context, tx pgx.Tx, id ids.
 		return err
 	}
 	if err := e.eraseAttachments(ctx, tx, act.collateralReason, act.cause, `entity_type = 'activity' AND entity_id = $1`, id); err != nil {
+		return err
+	}
+	if err := clearExtensionRows(ctx, tx, e.extensions, act.collateralReason, act.cause,
+		map[extdecl.RecordKind][]ids.UUID{extdecl.Activity: {id}}); err != nil {
 		return err
 	}
 	return redactDeliveries(ctx, tx, []ids.UUID{id}, erasedActivitySubject, e.payloads)

@@ -186,6 +186,7 @@ export function CompanyAct({
         onSubmit={gate.onSubmit}
         onManual={() => dispatch({ type: "MANUAL_CHOSEN" })}
         onRetryRead={() => siteRead.refetch()}
+        onAddModel={gate.modelSkipped ? gate.askForModel : undefined}
       />
     );
   }

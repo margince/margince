@@ -226,6 +226,32 @@ describe("OnboardingGate", () => {
     expect(onManual).toHaveBeenCalledTimes(1);
   });
 
+  it("offers no website read without a model, only the manual path and the key", async () => {
+    const onManual = vi.fn();
+    const onAddModel = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <OnboardingGate
+        running={false}
+        onSubmit={vi.fn()}
+        onManual={onManual}
+        onAddModel={onAddModel}
+        configuredModel={MODEL}
+      />,
+    );
+
+    expect(screen.queryByRole("textbox")).toBeNull();
+    expect(screen.queryByText(MODEL)).toBeNull();
+    expect(screen.getByText(/cannot read your website/)).toBeInTheDocument();
+    await user.click(
+      screen.getByRole("button", { name: "Enter details manually" }),
+    );
+    await user.click(screen.getByRole("button", { name: "Add an AI key" }));
+
+    expect(onManual).toHaveBeenCalledTimes(1);
+    expect(onAddModel).toHaveBeenCalledTimes(1);
+  });
+
   it("reports a failed read with the server's own detail and stays usable", () => {
     render(
       <OnboardingGate

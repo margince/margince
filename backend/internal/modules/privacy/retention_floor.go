@@ -171,9 +171,15 @@ var handelsbriefArm = `a.retention_class IS NOT NULL
 // ref, because mixed-unit periods only order against an instant. The zero
 // class means no pack declares one.
 func statutoryCorrespondenceFloor(ref time.Time) jurisdiction.RetentionClass {
+	return strictestClass(jurisdiction.CommercialCorrespondence, ref)
+}
+
+// strictestClass is the strictest compiled-in pack's class of that name, with
+// the same ordering and the same zero value as the correspondence floor.
+func strictestClass(name jurisdiction.RetentionClassName, ref time.Time) jurisdiction.RetentionClass {
 	floor := jurisdiction.RetentionClass{}
 	for _, pack := range jurisdiction.Applicable() {
-		class := correspondenceClassOf(pack)
+		class := classOf(pack, name)
 		if class.Name != "" && class.ProtectedSince(ref).Before(floor.ProtectedSince(ref)) {
 			floor = class
 		}
@@ -192,17 +198,21 @@ func statutoryCorrespondenceFloor(ref time.Time) jurisdiction.RetentionClass {
 // A further entity's floor counts too, so the answer never names a shorter
 // floor than the one that kept the message.
 func (p FloorPolicy) StrictestClass(ref time.Time) jurisdiction.RetentionClass {
+	strictest := p.strictestInForce(ref)
+	if p.Carried != nil && p.Carried.Class.ProtectedSince(ref).Before(strictest.ProtectedSince(ref)) {
+		return p.Carried.Class
+	}
+	return strictest
+}
+
+// strictestInForce is the strictest floor that binds mail of any date: the
+// current one and every further entity's. A carried floor binds only older mail.
+func (p FloorPolicy) strictestInForce(ref time.Time) jurisdiction.RetentionClass {
 	strictest := p.Current
-	stricter := func(class jurisdiction.RetentionClass) {
+	for _, class := range p.ByEntity {
 		if class.ProtectedSince(ref).Before(strictest.ProtectedSince(ref)) {
 			strictest = class
 		}
-	}
-	if p.Carried != nil {
-		stricter(p.Carried.Class)
-	}
-	for _, class := range p.ByEntity {
-		stricter(class)
 	}
 	return strictest
 }

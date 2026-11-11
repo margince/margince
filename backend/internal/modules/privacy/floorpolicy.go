@@ -21,6 +21,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/extprivacy"
 	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -39,6 +40,14 @@ func (e *Eraser) WithCountry(country CountryReader) *Eraser {
 	clone := *e
 	clone.country = country
 	return &clone
+}
+
+// WithExtensions gives the retention service's eraser the extension tables to
+// clear.
+func (s *RetentionService) WithExtensions(r extprivacy.Registry) *RetentionService {
+	out := *s
+	out.eraser = s.eraser.WithExtensions(r)
+	return &out
 }
 
 // WithCountry is the retention service's spelling: its selectors, and the
@@ -219,12 +228,17 @@ func CorrespondenceFloorOf(code jurisdiction.Code) (jurisdiction.RetentionClass,
 // correspondenceClassOf is a pack's commercial-correspondence class, or the
 // zero class when it declares none.
 func correspondenceClassOf(pack jurisdiction.Pack) jurisdiction.RetentionClass {
+	return classOf(pack, jurisdiction.CommercialCorrespondence)
+}
+
+// classOf is a pack's class of that name, or the zero class when it declares none.
+func classOf(pack jurisdiction.Pack, name jurisdiction.RetentionClassName) jurisdiction.RetentionClass {
 	retention := pack.Retention()
 	if retention == nil {
 		return jurisdiction.RetentionClass{}
 	}
 	for _, class := range retention.Classes() {
-		if class.Name == jurisdiction.CommercialCorrespondence {
+		if class.Name == name {
 			return class
 		}
 	}

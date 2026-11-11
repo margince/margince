@@ -18,7 +18,9 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/extprivacy"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	extdecl "github.com/margince/margince/backend/pkg/extension/privacy"
 )
 
 // causeUntoldLead is the tombstone cause for a website lead deleted because its
@@ -38,6 +40,9 @@ type UntoldLead struct {
 	ApprovalID ids.ApprovalID
 	// DeliveryID is the notice mail, zero when none was staged.
 	DeliveryID ids.UUID
+	// Extensions declares the extension tables cleared with the lead. Every
+	// caller outside a test sets it.
+	Extensions extprivacy.Registry
 }
 
 // EraseUntoldLeadTx deletes the lead and the records that carry its details,
@@ -75,6 +80,13 @@ func EraseUntoldLeadTx(ctx context.Context, tx pgx.Tx, in UntoldLead) error {
 		return err
 	}
 	if err := redactQuestionSource(ctx, tx, "lead", []ids.UUID{in.LeadID.UUID}); err != nil {
+		return err
+	}
+	// Before the lead row goes. Extension rows link to it by id, and would keep
+	// their personal columns against a record that no longer exists.
+	if err := clearExtensionRows(ctx, tx, in.Extensions, untoldLeadReason, causeUntoldLead, map[extdecl.RecordKind][]ids.UUID{
+		extdecl.Lead: {in.LeadID.UUID}, extdecl.Activity: notices,
+	}); err != nil {
 		return err
 	}
 	if err := deleteLeadRecordsTx(ctx, tx, in.LeadID.UUID); err != nil {

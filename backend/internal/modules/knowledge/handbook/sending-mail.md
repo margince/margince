@@ -85,6 +85,8 @@ To is on the form. **Cc and Bcc** is a link until you press it. Then Bcc says
 what it means: other recipients cannot see these addresses, or that anyone else
 has a copy. A recipient Margince knows shows as the contact's name. Point at the name, or reach it with Tab, to see the address and the company.
 
+Type a name or an address in **To**, **Cc** or **Bcc** to pick a recipient. When you write to a contact, the list offers that contact first. The contacts around them come next: colleagues at the company they work at now, and the contacts on the same deals. From a company, deal or project, the company's contacts are offered. Your own colleagues in Margince come last. You only see contacts you can open in Margince.
+
 A channel reply, such as Telegram, drops the subject and Cc, because the channel
 has neither.
 
@@ -147,7 +149,7 @@ To change the language of an AI draft, pick another language in the list on the 
 
 If you edited the words, only an AI model writes your edited words again. With no model set up, or with a link or format you added, your words and the language stay as they are. The composer then says "Your edits were kept. Draft again when ready."
 
-Once you pick a language, **Draft email**, **Change the ask**, the four rewrites and a saved draft keep it. Until then, Margince takes the language from the mail on the thread. If the new draft fails, your words and the language stay. When Margince cannot tell the language of a draft, it shows no list.
+Once you pick a language, **Draft email**, **Change the ask**, the four rewrites and a saved draft keep it. Until then, the language of a subject you wrote yourself decides it, when Margince can tell that language. If it cannot, Margince takes it from the mail on the thread, then from your settings. If the new draft fails, your words and the language stay. When Margince cannot tell the language of a draft, it shows no list.
 Also called: draft in another language, write the email in German, change the email language.
 
 ### Why are you writing?

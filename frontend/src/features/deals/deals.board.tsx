@@ -36,12 +36,13 @@ import { useMemberAvatars, useMemberNames } from "../../lib/membernames";
 import type { usePipelines } from "../../lib/pipelines.queries";
 import { unwrap } from "../../lib/problem";
 import { routeHash } from "../../lib/router";
+import { useViewerId } from "../../lib/session";
 import { useViewerZone } from "../../lib/viewerzone";
 import type { AdvanceInput, PendingAdvance } from "./deal360/confirmadvance";
 import type { StageColumnRead, useStageColumns } from "./dealboard.queries";
 import { useCompanyMarks } from "./dealcompanymarks";
 import { DealPipelineBoard } from "./dealpipelineboard";
-import { probabilitySetNote } from "./dealprobability";
+import { probabilityReason, probabilitySetNote } from "./dealprobability";
 import type { Company, Deal, Pipeline, Stage } from "./deals";
 import { boardDealCount, buildColumns } from "./deals.columns";
 
@@ -251,8 +252,19 @@ export function DealBoardBody({
   >["columnDropHandlers"];
 }>) {
   const t = useT();
+  const { locale } = useLocale();
+  const viewerId = useViewerId();
   const readerZone = useViewerZone();
   const loadedDeals = stageColumns.deals;
+  // A card is not where the figure changes, so its reason says no verb.
+  const cardReason = (deal: Deal, stageName: string) =>
+    probabilityReason(deal, {
+      stageName,
+      t,
+      locale,
+      viewerId,
+      editable: false,
+    });
   // Named by id, batched into one request for every card's owner at once.
   // An unowned deal contributes no id, so a board of them asks nothing.
   const ownerIds = loadedDeals.flatMap((deal) =>
@@ -301,6 +313,7 @@ export function DealBoardBody({
               rosterOwnerNaming(ownerNames),
               uncountedStages(stageColumns.columns),
               ownerPhotos,
+              cardReason,
             )}
             onOpen={openDeal}
             cardDragHandlers={cardDragHandlers}

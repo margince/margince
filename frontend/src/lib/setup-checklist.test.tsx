@@ -172,6 +172,7 @@ function reads(overrides: Partial<SetupReads> = {}): SetupReads {
     scheduling: scheduling(false),
     passports: null,
     now: Date.parse("2026-11-05T12:00:00Z"),
+    modelReady: null,
     ...overrides,
   };
 }
@@ -483,6 +484,21 @@ describe("deriveSetupSteps", () => {
       state: "done",
       agent: { name: "Claude" },
     });
+  });
+
+  it("asks a reader who can bind models to set up AI first, until a model is bound", () => {
+    const binder = new Set<SettingsPageId>([...actsFor(), "models"]);
+    const first = (
+      modelReady: boolean | null,
+      acts: ReadonlySet<SettingsPageId> = binder,
+    ) => deriveSetupSteps(reads({ acts, modelReady }))[0];
+
+    expect(first(false)).toMatchObject({ id: "model", state: "current" });
+    expect(first(false)?.page).toBe("models");
+    expect(first(true)).toMatchObject({ id: "model", state: "done" });
+    // Unknown, or a reader who cannot act on the models page: no step.
+    expect(first(null)?.id).toBe("mail");
+    expect(first(false, actsFor())?.id).toBe("mail");
   });
 
   it("still counts a booking link that is on, whatever the roster says", () => {

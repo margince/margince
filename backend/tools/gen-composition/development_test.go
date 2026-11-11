@@ -61,7 +61,7 @@ func TestExcludedDevelopmentModulesAreNotFetched(t *testing.T) {
 	root := t.TempDir()
 	writeTree(t, root, map[string]string{"instance/go.mod": `module example.test/instance
 
-go 1.27.3
+go 1.27.4
 
 require example.test/unavailable-demo v1.0.0 // margince:development-only
 `})

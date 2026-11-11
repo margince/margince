@@ -21016,6 +21016,7 @@ const (
 	RetentionScopeDealRiskDay            RetentionScope = "deal_risk_day"
 	RetentionScopeDeallost               RetentionScope = "deal/lost"
 	RetentionScopeDealwon                RetentionScope = "deal/won"
+	RetentionScopeExtension              RetentionScope = "extension"
 	RetentionScopeLeadunconverted        RetentionScope = "lead/unconverted"
 	RetentionScopeRawCapture             RetentionScope = "raw_capture"
 	RetentionScopeReportEdition          RetentionScope = "report_edition"
@@ -21037,6 +21038,8 @@ func (e RetentionScope) Valid() bool {
 	case RetentionScopeDeallost:
 		return true
 	case RetentionScopeDealwon:
+		return true
+	case RetentionScopeExtension:
 		return true
 	case RetentionScopeLeadunconverted:
 		return true
@@ -44759,6 +44762,9 @@ type CreateRetentionPolicyRequest struct {
 	// evaluator has a selector for. The enum IS the authorable set, so a client cannot offer a
 	// scope that would be stored and then skipped every pass. `activity` is the bare object type
 	// (the row whose `category` is null); every other value carries its category after the slash.
+	// `extension` is the rows of every extension table that declares an age column: `anonymize`
+	// clears their declared personal columns, `erase` deletes them, and the table's retention
+	// class is the floor.
 	//
 	// Extending this enum means adding a selector in the same change.
 	Scope RetentionScope `json:"scope"`
@@ -47084,7 +47090,7 @@ type DraftSteering struct {
 	// Absent or empty is a first draft.
 	RewriteOf *string `json:"rewrite_of,omitempty"`
 
-	// Subject The subject the caller has already written on a new-message route, supplied as context for the body. A reply uses the selected message's subject instead.
+	// Subject The subject the caller has written for the draft. A supported language detected in it outranks every language but `language`: the correspondence, the addressee, the stored label and the draft being rewritten. When no language is detected in it (empty, a project tag, a name), that order stays as it was. On a reply, the answered message's own subject (with or without `Re:`) is history and not read as a choice.
 	Subject *string `json:"subject,omitempty"`
 }
 
@@ -56543,6 +56549,9 @@ type PrivacyInformationRetention struct {
 	// evaluator has a selector for. The enum IS the authorable set, so a client cannot offer a
 	// scope that would be stored and then skipped every pass. `activity` is the bare object type
 	// (the row whose `category` is null); every other value carries its category after the slash.
+	// `extension` is the rows of every extension table that declares an age column: `anonymize`
+	// clears their declared personal columns, `erase` deletes them, and the table's retention
+	// class is the floor.
 	//
 	// Extending this enum means adding a selector in the same change.
 	Scope RetentionScope `json:"scope"`
@@ -60303,6 +60312,9 @@ type RetentionPolicy struct {
 	// evaluator has a selector for. The enum IS the authorable set, so a client cannot offer a
 	// scope that would be stored and then skipped every pass. `activity` is the bare object type
 	// (the row whose `category` is null); every other value carries its category after the slash.
+	// `extension` is the rows of every extension table that declares an age column: `anonymize`
+	// clears their declared personal columns, `erase` deletes them, and the table's retention
+	// class is the floor.
 	//
 	// Extending this enum means adding a selector in the same change.
 	Scope RetentionScope `json:"scope"`
@@ -60320,6 +60332,9 @@ type RetentionPolicy struct {
 // evaluator has a selector for. The enum IS the authorable set, so a client cannot offer a
 // scope that would be stored and then skipped every pass. `activity` is the bare object type
 // (the row whose `category` is null); every other value carries its category after the slash.
+// `extension` is the rows of every extension table that declares an age column: `anonymize`
+// clears their declared personal columns, `erase` deletes them, and the table's retention
+// class is the floor.
 //
 // Extending this enum means adding a selector in the same change.
 type RetentionScope string
@@ -71314,7 +71329,7 @@ type DraftCompanyEmailJSONBody struct {
 	// Absent or empty is a first draft.
 	RewriteOf *string `json:"rewrite_of,omitempty"`
 
-	// Subject The subject the caller has already written on a new-message route, supplied as context for the body. A reply uses the selected message's subject instead.
+	// Subject The subject the caller has written for the draft. A supported language detected in it outranks every language but `language`: the correspondence, the addressee, the stored label and the draft being rewritten. When no language is detected in it (empty, a project tag, a name), that order stays as it was. On a reply, the answered message's own subject (with or without `Re:`) is history and not read as a choice.
 	Subject *string `json:"subject,omitempty"`
 }
 
@@ -72011,6 +72026,14 @@ type ListContactsParams struct {
 	// "who works there" and "who has ever worked there" are different questions, and the
 	// list answers the first.
 	CompanyId *openapi_types.UUID `form:"company_id,omitempty" json:"company_id,omitempty"`
+
+	// RelatedTo The contacts around this one: those who work at one of its current employers, and
+	// those who hold a seat on a deal it holds a seat on. The named contact itself is not
+	// in the list. The composer offers this list as recipients. Each link counts only when
+	// the caller may read it: the employment edge, the deal and the named contact itself.
+	// A contact the caller may not read relates to nobody, so the answer is an empty page
+	// and does not say whether the contact exists.
+	RelatedTo *openapi_types.UUID `form:"related_to,omitempty" json:"related_to,omitempty"`
 }
 
 // ListContactsParamsCapturedByKind defines parameters for ListContacts.
@@ -72274,7 +72297,7 @@ type DraftContactEmailJSONBody struct {
 	// Absent or empty is a first draft.
 	RewriteOf *string `json:"rewrite_of,omitempty"`
 
-	// Subject The subject the caller has already written on a new-message route, supplied as context for the body. A reply uses the selected message's subject instead.
+	// Subject The subject the caller has written for the draft. A supported language detected in it outranks every language but `language`: the correspondence, the addressee, the stored label and the draft being rewritten. When no language is detected in it (empty, a project tag, a name), that order stays as it was. On a reply, the answered message's own subject (with or without `Re:`) is history and not read as a choice.
 	Subject *string `json:"subject,omitempty"`
 }
 
@@ -117533,6 +117556,19 @@ func (siw *ServerInterfaceWrapper) ListContacts(w http.ResponseWriter, r *http.R
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "company_id"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "company_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "related_to" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "related_to", r.URL.Query(), &params.RelatedTo, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "related_to"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "related_to", Err: err})
 		}
 		return
 	}
