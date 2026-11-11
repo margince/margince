@@ -56063,8 +56063,19 @@ components:
             company's contacts the mail is for.
         email_target:
           $ref: '#/components/schemas/ActivityEmailTarget'
-        source: { type: string }
+        source:
+          type: string
+          description: >-
+            Where the row came from. `manual` is anything typed, by a member or by an assistant
+            working for one, so it never says who typed it: `captured_by` and `recorded_by_agent` do.
         captured_by: { type: string, readOnly: true, description: 'Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied.' }
+        recorded_by_agent:
+          type: boolean
+          readOnly: true
+          description: >-
+            True when an assistant or an agent run wrote this activity: `captured_by` names an
+            agent, or a scheduled agent run filed it. A reader labels such a row as the assistant's
+            whatever `source` says.
         imported_from:
           type: [string, 'null']
           readOnly: true
