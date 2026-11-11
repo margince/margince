@@ -26,7 +26,7 @@ func ProbeExtensionTable(t *testing.T, owner *pgx.Conn, name string, activity id
 	for _, stmt := range []string{
 		`CREATE SCHEMA IF NOT EXISTS ext`,
 		`GRANT USAGE ON SCHEMA ext TO margince_app`,
-		`CREATE TABLE ` + table + ` (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), activity_id uuid, body text NOT NULL)`,
+		`CREATE TABLE ` + table + ` (id uuid PRIMARY KEY DEFAULT uuidv7(), activity_id uuid, body text NOT NULL)`,
 		`GRANT SELECT, INSERT, UPDATE, DELETE ON ` + table + ` TO margince_app`,
 	} {
 		if _, err := owner.Exec(t.Context(), stmt); err != nil {

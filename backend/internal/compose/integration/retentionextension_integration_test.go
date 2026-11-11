@@ -35,16 +35,16 @@ type keptFixture struct {
 	registry extprivacy.Registry
 }
 
-// setupKeptTable creates a unit table whose rows link to a contact, a company
-// and an activity, and declares it with an age column.
+// setupKeptTable creates a unit table whose rows link to a contact, a company,
+// a lead and an activity, and declares it with an age column.
 func setupKeptTable(t *testing.T) keptFixture {
 	t.Helper()
 	f := keptFixture{e: Setup(t), owner: OwnerConn(t)}
 	for _, stmt := range []string{
 		`CREATE SCHEMA IF NOT EXISTS ext`,
 		`GRANT USAGE ON SCHEMA ext TO margince_app`,
-		`CREATE TABLE ext.` + keptTable + ` (id uuid PRIMARY KEY, contact_id uuid, company_id uuid, activity_id uuid,
-			body text, kept_at timestamptz NOT NULL)`,
+		`CREATE TABLE ext.` + keptTable + ` (id uuid PRIMARY KEY, contact_id uuid, company_id uuid, lead_id uuid,
+			activity_id uuid, body text, kept_at timestamptz NOT NULL)`,
 		`GRANT SELECT, INSERT, UPDATE, DELETE ON ext.` + keptTable + ` TO margince_app`,
 	} {
 		if _, err := f.owner.Exec(t.Context(), stmt); err != nil {
@@ -61,6 +61,7 @@ func setupKeptTable(t *testing.T) keptFixture {
 		Links: []extdecl.Link{
 			{Column: "contact_id", Record: extdecl.Contact},
 			{Column: "company_id", Record: extdecl.Company},
+			{Column: "lead_id", Record: extdecl.Lead},
 			{Column: "activity_id", Record: extdecl.Activity},
 		},
 		Personal: []string{"body"}, Retention: jurisdiction.CommercialCorrespondence, AgeColumn: "kept_at",
@@ -70,16 +71,17 @@ func setupKeptTable(t *testing.T) keptFixture {
 
 // keptRow is one row of the probe table, aged by years.
 type keptRow struct {
-	contact, company, activity *ids.UUID
-	age                        time.Duration
+	contact, company, lead, activity *ids.UUID
+	age                              time.Duration
 }
 
 func (f keptFixture) seed(t *testing.T, r keptRow) ids.UUID {
 	t.Helper()
 	id := ids.NewV7()
 	if _, err := f.owner.Exec(t.Context(),
-		`INSERT INTO ext.`+keptTable+` (id, contact_id, company_id, activity_id, body, kept_at) VALUES ($1, $2, $3, $4, 'what they said', $5)`,
-		id, r.contact, r.company, r.activity, clocktest.Now(t).Add(-r.age)); err != nil {
+		`INSERT INTO ext.`+keptTable+` (id, contact_id, company_id, lead_id, activity_id, body, kept_at)
+		 VALUES ($1, $2, $3, $4, $5, 'what they said', $6)`,
+		id, r.contact, r.company, r.lead, r.activity, clocktest.Now(t).Add(-r.age)); err != nil {
 		t.Fatal(err)
 	}
 	return id
@@ -178,20 +180,27 @@ func TestRetentionKeepsAnExtensionRowLinkedToAHeldRecord(t *testing.T) {
 	activity := SeedIDRow(t, f.owner, `INSERT INTO activity (id, kind, subject, occurred_at, source, captured_by)
 		VALUES ($1, 'email', 'held thread', now(), 'manual', 'human:x')`)
 	LinkActivity(t, f.owner, activity, "company", heldCompany)
+	heldLead := SeedIDRow(t, f.owner, `INSERT INTO lead (id, full_name, company_name, status, source, captured_by)
+		VALUES ($1, 'Held Lead', 'Held Lead GmbH', 'new', 'manual', 'human:x')`)
+	freeContact := f.e.SeedContact(t, "Free Contact", nil)
 	byContact := f.seed(t, keptRow{contact: &heldContact, age: twentyYears})
 	byActivity := f.seed(t, keptRow{activity: &activity, age: twentyYears})
+	byLead := f.seed(t, keptRow{lead: &heldLead, age: twentyYears})
+	byOneOfTwo := f.seed(t, keptRow{contact: &freeContact, company: &heldCompany, age: twentyYears})
 	seam := compose.NewLegalHoldSeam(f.e.Pool)
-	if err := seam.SetLegalHold(f.e.Admin(), "contact", heldContact, true, "Litigation"); err != nil {
-		t.Fatal(err)
-	}
-	if err := seam.SetLegalHold(f.e.Admin(), "company", heldCompany, true, "Litigation"); err != nil {
-		t.Fatal(err)
+	for kind, id := range map[string]ids.UUID{"contact": heldContact, "company": heldCompany, "lead": heldLead} {
+		if err := seam.SetLegalHold(f.e.Admin(), kind, id, true, "Litigation"); err != nil {
+			t.Fatal(err)
+		}
 	}
 	f.policy(t, "erase")
 
 	f.pass(t)
 
-	for name, id := range map[string]ids.UUID{"held contact": byContact, "activity of a held company": byActivity} {
+	for name, id := range map[string]ids.UUID{
+		"held contact": byContact, "activity of a held company": byActivity, "held lead": byLead,
+		"free contact and a held company": byOneOfTwo,
+	} {
 		if got := f.body(t, id); got != "what they said" {
 			t.Errorf("the row linked to a %s was expired to %q", name, got)
 		}
@@ -218,5 +227,90 @@ func TestErasureKeepsAnExtensionRowThatAlsoLinksAHeldRecord(t *testing.T) {
 	}
 	if got := f.body(t, only); got != "<cleared>" {
 		t.Errorf("erasure kept the subject's own row: %q", got)
+	}
+}
+
+// probeTables creates unit tables with a contact link, a body and an age, and
+// declares them in the order given.
+func probeTables(t *testing.T, owner *pgx.Conn, key string, names ...string) extprivacy.Registry {
+	t.Helper()
+	var declared []extdecl.Table
+	for _, name := range names {
+		table := pgx.Identifier{"ext", name}.Sanitize()
+		for _, stmt := range []string{
+			`CREATE SCHEMA IF NOT EXISTS ext`,
+			`GRANT USAGE ON SCHEMA ext TO margince_app`,
+			`CREATE TABLE ` + table + ` (id uuid ` + key + `, contact_id uuid, body text, kept_at timestamptz NOT NULL)`,
+			`GRANT SELECT, INSERT, UPDATE, DELETE ON ` + table + ` TO margince_app`,
+		} {
+			if _, err := owner.Exec(t.Context(), stmt); err != nil {
+				t.Fatalf("preparing %s (%s): %v", name, stmt, err)
+			}
+		}
+		t.Cleanup(func() {
+			if _, err := owner.Exec(context.Background(), `DROP TABLE IF EXISTS `+table); err != nil {
+				t.Errorf("removing %s: %v", name, err)
+			}
+		})
+		declared = append(declared, extdecl.Table{
+			Name: name, Links: []extdecl.Link{{Column: "contact_id", Record: extdecl.Contact}},
+			Personal: []string{"body"}, Retention: jurisdiction.CommercialCorrespondence, AgeColumn: "kept_at",
+		})
+	}
+	return extprivacy.Declared(declared)
+}
+
+func TestOneBusyExtensionTableLeavesTheNextItsShareOfAPass(t *testing.T) {
+	e := Setup(t)
+	owner := OwnerConn(t)
+	registry := probeTables(t, owner, "PRIMARY KEY", "ext_probe_busy", "ext_probe_quiet")
+	old := clocktest.Now(t).Add(-twentyYears)
+	if _, err := owner.Exec(t.Context(), `INSERT INTO ext.ext_probe_busy (id, body, kept_at)
+		SELECT uuidv7(), 'busy words', $1 FROM generate_series(1, 250)`, old); err != nil {
+		t.Fatal(err)
+	}
+	quiet := ids.NewV7()
+	if _, err := owner.Exec(t.Context(), `INSERT INTO ext.ext_probe_quiet (id, body, kept_at) VALUES ($1, 'quiet words', $2)`, quiet, old); err != nil {
+		t.Fatal(err)
+	}
+	e.WsExec(t, `INSERT INTO retention_policy (object_type, category, retain_days, action) VALUES ('extension', NULL, 30, 'anonymize')`)
+
+	service := compose.NewRetentionServiceFor(e.DB(), nil, slog.Default()).WithExtensions(registry)
+	if err := service.EvaluateInstallation(RetentionPassCtx(e.WS)); err != nil {
+		t.Fatal(err)
+	}
+
+	if got := e.WsCount(t, `SELECT count(*) FROM ext.ext_probe_quiet WHERE id = $1 AND body IS NULL`, quiet); got != 1 {
+		t.Error("a table with more due rows than one pass takes kept the next table from its turn")
+	}
+	if got := e.WsCount(t, `SELECT count(*) FROM ext.ext_probe_busy WHERE body IS NULL`); got == 0 {
+		t.Error("the busy table made no progress in the pass")
+	}
+}
+
+func TestAnExtensionRowActedOnTwiceUnderOneIDRollsBack(t *testing.T) {
+	e := Setup(t)
+	owner := OwnerConn(t)
+	registry := probeTables(t, owner, "NOT NULL", "ext_probe_twin")
+	twin := ids.NewV7()
+	if _, err := owner.Exec(t.Context(), `INSERT INTO ext.ext_probe_twin (id, body, kept_at)
+		SELECT $1, 'twin words', $2 FROM generate_series(1, 2)`, twin, clocktest.Now(t).Add(-twentyYears)); err != nil {
+		t.Fatal(err)
+	}
+	table := registry.SweptTables()[0]
+	window := extprivacy.Window{OlderThan: clocktest.Now(t)}
+	for name, act := range map[string]func(context.Context, pgx.Tx, extdecl.Table, extprivacy.Window, ids.UUID) (bool, error){
+		"clear": registry.ClearDue, "delete": registry.DeleteDue,
+	} {
+		err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+			_, err := act(e.Admin(), tx, table, window, twin)
+			return err
+		})
+		if err == nil {
+			t.Errorf("%s changed two rows under one id and committed with one certificate's worth of audit", name)
+		}
+	}
+	if got := e.WsCount(t, `SELECT count(*) FROM ext.ext_probe_twin WHERE body = 'twin words'`); got != 2 {
+		t.Errorf("%d of the two rows are untouched after the refused acts, want 2", got)
 	}
 }

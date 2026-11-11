@@ -267,8 +267,10 @@ func TestBootLeavesAUnitTheTablesOfALongerNamedUnit(t *testing.T) {
 
 func TestBootRefusesAPersonalTableWhoseRowsTheCoreCannotAuditByID(t *testing.T) {
 	for name, table := range map[string]string{
-		"no id column": `CREATE TABLE ext.ext_probe_log (contact_id uuid, body text)`,
-		"id not uuid":  `CREATE TABLE ext.ext_probe_log (id bigint PRIMARY KEY, contact_id uuid, body text)`,
+		"no id column":  `CREATE TABLE ext.ext_probe_log (contact_id uuid, body text)`,
+		"id not uuid":   `CREATE TABLE ext.ext_probe_log (id bigint PRIMARY KEY, contact_id uuid, body text)`,
+		"id not unique": `CREATE TABLE ext.ext_probe_log (id uuid NOT NULL, contact_id uuid, body text)`,
+		"id nullable":   `CREATE TABLE ext.ext_probe_log (id uuid UNIQUE, contact_id uuid, body text)`,
 	} {
 		t.Run(name, func(t *testing.T) {
 			env := Setup(t)
@@ -306,26 +308,57 @@ func TestBootRefusesALinkColumnTheTableLacks(t *testing.T) {
 }
 
 func TestBootRefusesAnAgeColumnARetentionWindowCannotCountFrom(t *testing.T) {
-	for name, column := range map[string]string{"missing": "kept_at", "not a point in time": "body"} {
+	for name, column := range map[string]struct{ name, add string }{
+		"missing":             {name: "kept_at"},
+		"not a point in time": {name: "body"},
+		"nullable":            {name: "aged_at", add: `aged_at timestamptz`},
+		"without a time zone": {name: "aged_at", add: `aged_at timestamp NOT NULL DEFAULT now()`},
+	} {
 		t.Run(name, func(t *testing.T) {
 			env := Setup(t)
 			unit := probeUnit(t, "1.0.0")
-			unit.Privacy[0].AgeColumn = column
+			if column.add != "" {
+				probeExec(t, `ALTER TABLE ext.ext_probe_note ADD COLUMN `+column.add)
+			}
+			unit.Privacy[0].AgeColumn = column.name
 
 			err := compose.VerifyExtensionPrivacy(t.Context(), env.Pool, []extension.Extension{unit})
 			if err == nil || !strings.Contains(err.Error(), "age column") {
-				t.Errorf("age column %q booted (err=%v); a retention sweep could not count a row's age from it", column, err)
+				t.Errorf("age column %q booted (err=%v); a retention sweep could not count every row's age from it", column.name, err)
 			}
 		})
 	}
 }
 
 func TestBootAcceptsADeclaredAgeColumn(t *testing.T) {
+	for name, column := range map[string]string{"timestamptz": "noted_at", "date": "noted_on"} {
+		t.Run(name, func(t *testing.T) {
+			env := Setup(t)
+			unit := probeUnit(t, "1.0.0", "body")
+			probeExec(t, `ALTER TABLE ext.ext_probe_note ADD COLUMN noted_on date NOT NULL DEFAULT current_date`)
+			unit.Privacy[0].AgeColumn = column
+
+			if err := compose.VerifyExtensionPrivacy(t.Context(), env.Pool, []extension.Extension{unit}); err != nil {
+				t.Errorf("a %s age column was refused: %v", name, err)
+			}
+		})
+	}
+}
+
+func TestBootRefusesASweptTableARowElsewhereKeepsFromBeingDeleted(t *testing.T) {
 	env := Setup(t)
 	unit := probeUnit(t, "1.0.0", "body")
 	unit.Privacy[0].AgeColumn = "noted_at"
+	t.Cleanup(func() {
+		if _, err := OwnerConn(t).Exec(context.Background(), `DROP TABLE IF EXISTS ext.ext_probe_reply`); err != nil {
+			t.Errorf("removing the referencing table: %v", err)
+		}
+	})
+	probeExec(t, `CREATE TABLE ext.ext_probe_reply (id uuid PRIMARY KEY, note_id uuid REFERENCES ext.ext_probe_note (id))`)
+	unit.Privacy = append(unit.Privacy, privacy.Table{Name: "ext_probe_reply", Retention: jurisdiction.CommercialCorrespondence})
 
-	if err := compose.VerifyExtensionPrivacy(t.Context(), env.Pool, []extension.Extension{unit}); err != nil {
-		t.Errorf("a timestamp age column was refused: %v", err)
+	err := compose.VerifyExtensionPrivacy(t.Context(), env.Pool, []extension.Extension{unit})
+	if err == nil || !strings.Contains(err.Error(), "ON DELETE") {
+		t.Errorf("boot answered %v; an erase policy would fail on a note a reply still names", err)
 	}
 }

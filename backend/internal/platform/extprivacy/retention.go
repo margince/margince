@@ -40,9 +40,6 @@ func (r Registry) SweptTables() []privacy.Table {
 type Window struct {
 	// OlderThan: only a row whose age column is before it is due.
 	OlderThan time.Time
-	// A floor carried from a stricter earlier rule also keeps the rows from
-	// before CarriedBefore and from CarriedSince on. Both are nil without one.
-	CarriedBefore, CarriedSince *time.Time
 }
 
 // statement collects the arguments of one query, so every placeholder is
@@ -78,11 +75,7 @@ func heldSQL(t privacy.Table) string {
 // dueSQL is what the window allows over the table aliased `t`, less the held
 // rows. A row whose link is still empty is due by age alone.
 func (s *statement) dueSQL(t privacy.Table, w Window) string {
-	age := "t." + pgx.Identifier{t.AgeColumn}.Sanitize()
-	since, before := s.arg(w.CarriedSince), s.arg(w.CarriedBefore)
-	return age + ` < ` + s.arg(w.OlderThan) +
-		` AND (` + before + `::timestamptz IS NULL OR NOT (` + age + ` < ` + before + ` AND ` + age + ` >= ` + since + `))` +
-		` AND NOT ` + heldSQL(t)
+	return "t." + pgx.Identifier{t.AgeColumn}.Sanitize() + ` < ` + s.arg(w.OlderThan) + ` AND NOT ` + heldSQL(t)
 }
 
 // Due returns up to limit rows of a table the window lets a sweep take, oldest
@@ -122,7 +115,7 @@ func (r Registry) ClearDue(ctx context.Context, tx pgx.Tx, t privacy.Table, w Wi
 	if err != nil {
 		return false, fmt.Errorf("extprivacy: clearing a row of %s: %w", t.Name, err)
 	}
-	return tag.RowsAffected() == 1, nil
+	return oneRow(t, id, tag.RowsAffected())
 }
 
 // DeleteDue deletes one row on the same terms as ClearDue.
@@ -133,5 +126,14 @@ func (r Registry) DeleteDue(ctx context.Context, tx pgx.Tx, t privacy.Table, w W
 	if err != nil {
 		return false, fmt.Errorf("extprivacy: deleting a row of %s: %w", t.Name, err)
 	}
-	return tag.RowsAffected() == 1, nil
+	return oneRow(t, id, tag.RowsAffected())
+}
+
+// oneRow reads what an act on one id changed. More than one row is an error, so
+// the caller's transaction rolls back: one certificate cannot stand for two rows.
+func oneRow(t privacy.Table, id ids.UUID, affected int64) (bool, error) {
+	if affected > 1 {
+		return false, fmt.Errorf("extprivacy: %d rows of %s carry id %s; an id must name one row", affected, t.Name, id)
+	}
+	return affected == 1, nil
 }

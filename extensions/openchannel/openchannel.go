@@ -32,7 +32,7 @@ const migrationsLayer = "migrations"
 func New() extension.Extension {
 	return extension.Extension{
 		Name:        "openchannel",
-		Version:     "1.2.0",
+		Version:     "1.3.0",
 		Description: "An anonymous, signed endpoint an outside party can post to, with its own records and a job that drains arrivals into the CRM.",
 		Privacy: []privacy.Table{
 			{
@@ -40,7 +40,7 @@ func New() extension.Extension {
 				Links:     []privacy.Link{{Column: "activity_id", Record: privacy.Activity}},
 				Personal:  []string{"body"},
 				Retention: jurisdiction.CommercialCorrespondence,
-				AgeColumn: "received_at",
+				AgeColumn: "updated_at",
 			},
 			{
 				Name:      "ext_openchannel_archived_before_landing",

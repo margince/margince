@@ -158,11 +158,11 @@ func TestParseRetentionScopeRefusesAnUnservableScope(t *testing.T) {
 }
 
 // TestAuthorableScopesIsTheSelectorTableInWireSpelling derives the expectation
-// from the selector table itself: adding a selector widens the vocabulary with
-// no second list to remember, and this test keeps passing only because it
-// re-derives rather than restates.
+// from the selector table and the extension stage's key. Adding a selector
+// widens the vocabulary with no second list to remember. This test keeps
+// passing only because it re-derives rather than restates.
 func TestAuthorableScopesIsTheSelectorTableInWireSpelling(t *testing.T) {
-	want := []string{"extension"}
+	want := []string{strings.TrimSuffix(extensionScopeKey, "/")}
 	for key := range retentionSelectors {
 		want = append(want, strings.TrimSuffix(key, "/"))
 	}

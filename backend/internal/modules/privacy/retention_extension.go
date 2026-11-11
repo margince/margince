@@ -37,42 +37,62 @@ const extensionRetentionStages = 1
 // extension row has no archived state the core could set.
 var extensionActions = []string{actionAnonymize, actionErase}
 
-// evaluateExtensionPolicy runs the extension stage: one batch, shared by every
-// swept table, so the stage costs what any other stage costs.
+// evaluateExtensionPolicy runs the extension stage: one batch, so the stage
+// costs what any other stage costs. Each table first gets an equal share of it.
+// What a table leaves unused goes to the others in a second round. So a table
+// with a long backlog never keeps the next one from its turn.
 func (s *RetentionService) evaluateExtensionPolicy(ctx context.Context, pol retentionPolicy, ref time.Time) error {
-	budget := retentionBatch
+	var tables []extdecl.Table
 	for _, t := range s.eraser.extensions.SweptTables() {
-		if budget == 0 {
-			return nil
+		if pol.Action != actionAnonymize || len(t.Personal) > 0 {
+			tables = append(tables, t)
 		}
-		clears := pol.Action == actionAnonymize
-		if clears && len(t.Personal) == 0 {
-			continue
-		}
-		var due []ids.UUID
-		err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-			w, err := s.extensionWindow(ctx, tx, t, pol, ref)
-			if err != nil {
-				return err
-			}
-			due, err = s.eraser.extensions.Due(ctx, tx, t, w, clears, budget)
-			return err
-		})
-		if err != nil {
-			return fmt.Errorf("retention extension %s: select: %w", t.Name, err)
-		}
-		budget -= len(due)
-		for _, id := range due {
-			stop, err := s.postureStops(ctx, pol, extensionScopeKey)
+	}
+	if len(tables) == 0 {
+		return nil
+	}
+	budget := retentionBatch
+	for _, share := range []int{max(1, retentionBatch/len(tables)), retentionBatch} {
+		for _, t := range tables {
+			taken, stop, err := s.sweepExtensionTable(ctx, pol, t, ref, min(share, budget))
 			if err != nil || stop {
 				return err
 			}
-			if err := s.expireExtensionRow(ctx, pol, t, id, ref); err != nil {
-				return fmt.Errorf("retention extension %s on %s: %w", t.Name, id, err)
+			if budget -= taken; budget == 0 {
+				return nil
 			}
 		}
 	}
 	return nil
+}
+
+// sweepExtensionTable expires up to limit due rows of one table. It reports how
+// many it selected, and whether the retain-only posture stopped the pass.
+func (s *RetentionService) sweepExtensionTable(
+	ctx context.Context, pol retentionPolicy, t extdecl.Table, ref time.Time, limit int,
+) (int, bool, error) {
+	var due []ids.UUID
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		w, err := s.extensionWindow(ctx, tx, t, pol, ref)
+		if err != nil {
+			return err
+		}
+		due, err = s.eraser.extensions.Due(ctx, tx, t, w, pol.Action == actionAnonymize, limit)
+		return err
+	})
+	if err != nil {
+		return 0, false, fmt.Errorf("retention extension %s: select: %w", t.Name, err)
+	}
+	for _, id := range due {
+		stop, err := s.postureStops(ctx, pol, extensionScopeKey)
+		if err != nil || stop {
+			return len(due), stop, err
+		}
+		if err := s.expireExtensionRow(ctx, pol, t, id, ref); err != nil {
+			return len(due), false, fmt.Errorf("retention extension %s on %s: %w", t.Name, id, err)
+		}
+	}
+	return len(due), false, nil
 }
 
 // expireExtensionRow acts on one row in one audited transaction. The window and
@@ -98,7 +118,6 @@ func (s *RetentionService) expireExtensionRow(ctx context.Context, pol retention
 
 // extensionWindow is what a sweep of one table may take at ref. A row must be
 // older than the policy's window and outside the floor of the table's class.
-// A carried correspondence floor keeps its rows too.
 func (s *RetentionService) extensionWindow(
 	ctx context.Context, tx pgx.Tx, t extdecl.Table, pol retentionPolicy, ref time.Time,
 ) (extprivacy.Window, error) {
@@ -107,21 +126,23 @@ func (s *RetentionService) extensionWindow(
 		return extprivacy.Window{}, err
 	}
 	w := extprivacy.Window{OlderThan: ref.AddDate(0, 0, -pol.RetainDays)}
-	floor := strictestClass(t.Retention, ref)
-	if pack, ok := jurisdiction.For(policy.Selected); ok {
-		floor = classOf(pack, t.Retention)
-	}
-	if t.Retention == jurisdiction.CommercialCorrespondence {
-		floor = policy.Current
-		if carried := policy.Carried; carried != nil {
-			before, since := carried.Before, carried.Class.ProtectedSince(ref)
-			w.CarriedBefore, w.CarriedSince = &before, &since
-		}
-	}
-	if protected := floor.ProtectedSince(ref); protected.Before(w.OlderThan) {
+	if protected := extensionFloor(t, policy, ref).ProtectedSince(ref); protected.Before(w.OlderThan) {
 		w.OlderThan = protected
 	}
 	return w, nil
+}
+
+// extensionFloor is the class that keeps a table's rows at ref. Correspondence
+// takes the strictest floor in force: the current one, a carried one and every
+// legal entity's. A unit row is not tied to one entity's mail or to one date.
+func extensionFloor(t extdecl.Table, policy FloorPolicy, ref time.Time) jurisdiction.RetentionClass {
+	if t.Retention == jurisdiction.CommercialCorrespondence {
+		return policy.StrictestClass(ref)
+	}
+	if pack, ok := jurisdiction.For(policy.Selected); ok {
+		return classOf(pack, t.Retention)
+	}
+	return strictestClass(t.Retention, ref)
 }
 
 // supportsExtensionAction reports whether the extension policy can run action.

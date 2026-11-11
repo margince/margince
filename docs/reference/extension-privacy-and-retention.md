@@ -34,11 +34,15 @@ does the work itself:
 A row whose link is still empty names no record, so no erasure or export can find it. A message that reached
 `openchannel` and has not yet landed as an activity is such a row. The retention sweep is what removes it.
 
-An erasure leaves a row alone while another record it links to is under legal hold.
+An erasure leaves a row alone while another record it links to is under legal hold. Its certificate does not
+count such a row, the same as for an activity a hold keeps out of an erasure.
 
-At start-up core refuses a declaration it could not carry out. A link column must be a `uuid`. A required
-personal column must have no `CHECK`, `UNIQUE`, `FOREIGN KEY` or `EXCLUDE` rule. It must also not be read by a
-`UNIQUE INDEX`. The empty value core writes could break any of them.
+At start-up core refuses a declaration it could not carry out. A link column must be a `uuid`. Core audits
+each row it clears or sweeps by its `id`. So that `id` must be a `uuid` primary key, or a `NOT NULL` `uuid` with
+a `UNIQUE INDEX` on it alone.
+
+A required personal column must have no `CHECK`, `UNIQUE`, `FOREIGN KEY` or `EXCLUDE` rule. It must also not be
+read by a `UNIQUE INDEX`. The empty value core writes could break any of them.
 
 A row that is already empty is not cleared again. So two erase paths that reach one row write one audit entry for it.
 
@@ -56,15 +60,25 @@ Each row gets one audit entry under the policy's action and one `retention.appli
 images from the row's earlier audit entries, as for a cleared row.
 
 A row is past its window when its age column is older than the policy's `retain_days`. The retention class of
-its table must also no longer require it to be kept. For `commercial_correspondence` that is the floor in force, carried
-floor included. A row already cleared is not picked again.
+its table must also no longer require it to be kept. For `commercial_correspondence` that is the strictest floor
+in force: the current one, a carried one and the floor of each legal entity. A unit row is not tied to the mail of
+one entity.
+A row already cleared is not picked again.
+
+One pass takes one batch across all tables. Each table first gets the same share. What a table does not use goes
+to the others, so a long backlog in one table does not hold up the next.
 
 A row has no legal hold of its own. It is kept while a contact, lead or company it links to is held. A row linked
 to an activity is kept while that activity is held through any record it is linked to. Both the sweep and erasure
 ask again in the statement that acts on the row.
 
-At start-up core refuses a table with personal columns and no `AgeColumn`, and an `AgeColumn` that is not a
-`timestamptz`, `timestamp` or `date` column.
+At start-up core refuses a table with personal columns and no `AgeColumn`. The `AgeColumn` must be a `NOT NULL`
+`timestamptz` or `date` column: a row with no age would never be due. A swept table must not be named by a
+foreign key without `ON DELETE CASCADE` or `ON DELETE SET NULL`, or an `erase` policy could not delete its rows.
+
+`openchannel` counts a message's age from `updated_at`, when it was last decided about, as its own sweep does. Its
+own sweep deletes a decided message after 30 days, and never one that still waits to land. The core sweep reaches
+a waiting message too, but only once the policy's window and the floor of its retention class have passed.
 
 ## How to read this page
 
