@@ -11,6 +11,7 @@ import {
 } from "react";
 import { useT } from "../i18n";
 import { Callout } from "./callout";
+import "./clipboardcopy.css";
 import { IconAction } from "./iconaction";
 
 type CopySource =
