@@ -72,6 +72,12 @@ type Table struct {
 	// Retention is the class the rows are kept under, chosen from the core's
 	// closed set; a unit cannot add one.
 	Retention jurisdiction.RetentionClassName
+
+	// AgeColumn is the timestamp or date column a retention sweep counts a
+	// row's age from. A table with personal columns must name one, or its rows
+	// would outlive every retention policy. The tag keeps the digest of a
+	// declaration without it unchanged.
+	AgeColumn string `json:"age_column,omitempty"`
 }
 
 var identifier = regexp.MustCompile(`^[a-z][a-z0-9_]*$`)
@@ -104,8 +110,25 @@ func (t Table) Validate(namespace string) error {
 	if err := t.validatePersonal(columns); err != nil {
 		return err
 	}
+	if err := t.validateAgeColumn(); err != nil {
+		return err
+	}
 	if err := t.Retention.Validate(); err != nil {
 		return fmt.Errorf("privacy table %q: %w", t.Name, err)
+	}
+	return nil
+}
+
+// validateAgeColumn requires an age column for personal rows. The column must
+// not be one the core clears, or a cleared row would leave the sweep's sight.
+func (t Table) validateAgeColumn() error {
+	switch {
+	case t.AgeColumn == "" && len(t.Personal) > 0:
+		return fmt.Errorf("privacy table %q declares personal columns and no age column, so no retention policy could expire its rows", t.Name)
+	case t.AgeColumn == "":
+		return nil
+	case !identifier.MatchString(t.AgeColumn) || slices.Contains(t.Personal, t.AgeColumn):
+		return fmt.Errorf("privacy table %q: age column %q is not an identifier, or is a personal column the core clears", t.Name, t.AgeColumn)
 	}
 	return nil
 }

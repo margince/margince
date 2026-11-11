@@ -112,7 +112,7 @@ func (r Registry) forEachLink(subjects map[privacy.RecordKind][]ids.UUID, visit 
 }
 
 // Clear overwrites the personal columns of every row that names one of the
-// records, and returns the rows it cleared. A nullable column becomes NULL; a
+// records, and returns the rows it cleared. A row linked to a held record stays. A nullable column becomes NULL; a
 // required one takes the empty value of its type. A row already blank is left
 // alone, so paths that reach one row twice certify it once.
 func (r Registry) Clear(ctx context.Context, tx pgx.Tx, subjects map[privacy.RecordKind][]ids.UUID) ([]Cleared, error) {
@@ -150,8 +150,9 @@ func (r Registry) Clear(ctx context.Context, tx pgx.Tx, subjects map[privacy.Rec
 // clearLinked runs the clearing UPDATE for one link column and returns the rows
 // it touched.
 func clearLinked(ctx context.Context, tx pgx.Tx, lc linkedColumn, set clearing, records []ids.UUID) ([]Cleared, error) {
-	rows, err := tx.Query(ctx, "UPDATE "+qualified(lc.table.Name)+" SET "+set.assignments+
-		" WHERE "+pgx.Identifier{lc.column}.Sanitize()+" = ANY($1) AND ("+set.notBlank+") RETURNING id", records)
+	rows, err := tx.Query(ctx, "UPDATE "+qualified(lc.table.Name)+" t SET "+set.assignments+
+		" WHERE t."+pgx.Identifier{lc.column}.Sanitize()+" = ANY($1) AND ("+set.notBlank+") AND NOT "+heldSQL(lc.table)+
+		" RETURNING t.id", records)
 	if err != nil {
 		return nil, fmt.Errorf("extprivacy: clearing %s: %w", lc.table.Name, err)
 	}

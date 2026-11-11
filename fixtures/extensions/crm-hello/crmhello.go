@@ -64,6 +64,7 @@ func New() extension.Extension {
 			Links:     []privacy.Link{{Column: "company_id", Record: privacy.Company}, {Column: "contact_id", Record: privacy.Contact}},
 			Personal:  []string{"body"},
 			Retention: jurisdiction.CommercialCorrespondence,
+			AgeColumn: "noted_at",
 		}},
 	}
 }

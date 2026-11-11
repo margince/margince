@@ -11131,6 +11131,7 @@ export const en = {
 
   "retention.scopeRawCapture": "Stored message originals",
   "retention.scopeDealRiskDay": "Daily record of material deals at risk",
+  "retention.scopeExtension": "Records kept by extensions",
   "pipeline.new": "New pipeline",
   "pipeline.createRefused": "Your role cannot create pipelines. Ask an admin.",
   "pipeline.name": "Name",

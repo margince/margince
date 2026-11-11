@@ -2,9 +2,9 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { ReactNode } from "react";
-import type { components } from "../../api/schema";
-import { useMemberNames } from "../../lib/membernames";
-import { MeetingRow } from "./contactmeetings.rows";
+import type { components } from "../api/schema";
+import { useMemberNames } from "../lib/membernames";
+import { MeetingRow } from "./meetingrows";
 
 type Activity = components["schemas"]["Activity"];
 
