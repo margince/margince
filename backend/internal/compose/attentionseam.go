@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/briefs"
 	"github.com/margince/margince/backend/internal/compose/dealstatus"
 	"github.com/margince/margince/backend/internal/compose/magic"
+	"github.com/margince/margince/backend/internal/compose/suggestionlanes"
 	"github.com/margince/margince/backend/internal/compose/worklistsnap"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
@@ -209,7 +210,7 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attenti
 		among:  quietDealsAmong(pool, deals.QuietThresholdDays), pool: pool, now: now,
 	}
 	// Each suggestion lane and its scroll tail read one store.
-	dealSuggestions, tagSuggestions := attentionDealSuggestions{store: deals.NewStore(db, DealsInstallation())}, attentionTagSuggestions{store: collections.NewStore(db)}
+	dealSuggestions, tagSuggestions := suggestionlanes.Deals{Store: deals.NewStore(db, DealsInstallation())}, suggestionlanes.Tags{Store: collections.NewStore(db)}
 	return attention.NewService(
 		attentionApprovals{svc: svc},
 		attentionDuplicates{store: newContactsStore(db)},

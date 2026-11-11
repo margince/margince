@@ -79,9 +79,9 @@ func TestACutApprovalSourceContinuesFromTheLanesResumePoint(t *testing.T) {
 	}
 	backlog := &recordedApprovals{}
 	svc := (&Service{view: viewDecisions}).WithApprovalBacklog(backlog)
+	resumeAt := map[crmcontracts.WorklistItemSource]string{crmcontracts.WorklistItemSourceApproval: from}
 	reading := svc.readingBacklog(t.Context(), crmcontracts.Attention{AsOf: rankInstant},
-		besideDay{until: rankInstant.Add(time.Hour), zone: time.UTC,
-			resumeAt: map[crmcontracts.WorklistItemSource]string{crmcontracts.WorklistItemSourceApproval: from}}, false)
+		besideDay{until: rankInstant.Add(time.Hour), zone: time.UTC, resumeAt: resumeAt}, false)
 	bounded := map[crmcontracts.WorklistItemSource]bool{crmcontracts.WorklistItemSourceApproval: true}
 
 	rest := reading.startTail(tailPage{scope: scopeMine, day: crmcontracts.Attention{AsOf: rankInstant}, bounded: bounded, first: true})

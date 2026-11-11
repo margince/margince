@@ -20,6 +20,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/suggestionlanes"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -664,7 +665,7 @@ func TestOwnerScopeNarrowsTheSuggestionCountWithTheList(t *testing.T) {
 		if open != len(got) || len(got) != len(tc.want) {
 			t.Errorf("%s: listed %d and counted %d, want %d", name, len(got), open, len(tc.want))
 		}
-		seam := attentionDealSuggestions{store: e.Deals}
+		seam := suggestionlanes.Deals{Store: e.Deals}
 		page, err := seam.OpenSuggestions(e.signalReader(), tc.owners, 100)
 		if err != nil {
 			t.Fatalf("the Worklist listing for %s: %v", name, err)

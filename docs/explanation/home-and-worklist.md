@@ -176,7 +176,7 @@ These sources are read on in the tail today:
   just after the last approval the ranked rows hold (`approvalTailStart` in `attention/backlogapproval.go`), so no
   approval is skipped or served twice.
 - Deal and tag suggestions (`WithDealSuggestionBacklog` and `WithTagSuggestionBacklog`,
-  `compose/attentionsuggestionseam.go`). Each goes on with its store's own list, newest first, under the lane's
+  `compose/suggestionlanes/seam.go`). Each goes on with its store's own list, newest first, under the lane's
   owners and visibility rule. Each starts just after the last suggestion of its kind the ranked rows hold
   (`decisionTailStarts` in `attention/backlogsuggestion.go`).
 

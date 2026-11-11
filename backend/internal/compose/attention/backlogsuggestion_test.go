@@ -176,3 +176,45 @@ func TestAReadersOwnPageContinuesNoTagSuggestions(t *testing.T) {
 		t.Errorf("the reader's own tail read %d tag suggestions (more %v, err %v), want none", len(batch.rows), batch.more, err)
 	}
 }
+
+// Walked to its end past the census, the Decisions view serves every
+// suggestion of both kinds once, and its decisions total is the number walked.
+func TestTheDecisionsWalkReachesEverySuggestionItsTotalNames(t *testing.T) {
+	const each = batchScanDepth + 30
+	dealRows, tagRows := newestFirstSuggestions(each)
+	svc := decisionsService(stubApprovals{}, stubDuplicates{}).
+		WithDealSuggestions(&stubSuggestions{rows: dealRows}).WithTagSuggestions(&stubTagSuggestions{rows: tagRows}).
+		WithDealSuggestionBacklog(keysetDealSuggestions{t, dealRows}).WithTagSuggestionBacklog(keysetTagSuggestions{t, tagRows})
+
+	served := map[string]int{}
+	var total *int
+	cursor := ""
+	for page := 0; ; page++ {
+		if page > 2*each/25+2 {
+			t.Fatal("the Decisions walk did not end")
+		}
+		day, err := svc.WorklistView(pageReader(), viewDecisions, scopeAll, "", ids.UUID{}, 25, cursor)
+		if err != nil {
+			t.Fatalf("page %d: %v", page, err)
+		}
+		if page == 0 {
+			total = countFor(t, day, "decisions").Total
+		}
+		for _, row := range day.Queue {
+			served[string(row.Source)+"/"+row.Id]++
+		}
+		if day.NextCursor == nil {
+			break
+		}
+		cursor = *day.NextCursor
+	}
+
+	if total == nil || *total != len(served) || len(served) != 2*each {
+		t.Errorf("decisions total = %v; the walk served %d of %d suggestions", total, len(served), 2*each)
+	}
+	for row, times := range served {
+		if times != 1 {
+			t.Errorf("%s was served %d times, want once", row, times)
+		}
+	}
+}
