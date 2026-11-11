@@ -406,6 +406,26 @@ export const CompanyDeals: Story = {
   },
 };
 
+// The Meetings tab inside the page, so the strip shows where it sits: after
+// Deals & projects, before Tasks. The tab's own states are in
+// companymeetings.stories.tsx.
+export const CompanyMeetings: Story = {
+  render: () => {
+    globalThis.location.hash = "#/companies/o-1/meetings";
+    installFetchStub({
+      "GET /me": meRoute({ company: ["read"], activity: ["read"] }),
+      ...overviewRoutes,
+      "GET /companies/o-1/profile-fields": () => jsonResponse({ data: [] }),
+      "GET /companies/o-1/facts": () => jsonResponse({ data: [] }),
+    });
+    return (
+      <StoryProviders>
+        <CompanyScreen id="o-1" />
+      </StoryProviders>
+    );
+  },
+};
+
 // The Contacts tab: the roster a rep works from, and beneath it the billing
 // panel. Who the invoices are addressed to is a fact about the account's
 // contacts, so it is nameable here as well as under Finance — the same panel, fed

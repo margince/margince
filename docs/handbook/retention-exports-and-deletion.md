@@ -139,7 +139,7 @@ A new company starts with these retention rules already in place. You can edit a
 
 Margince does not destroy a record just because it is old. Each starting rule archives, which keeps the record so you can restore it. Or it erases only a second copy, or data made from your records. Those are the stored message originals, the AI call payloads and the daily deal-risk record.
 
-**Won deals**, **Saved report editions**, **Call transcripts** and **Contacts with no consent and no deal** can also have a rule, but start with none. Margince does not say when your company should stop keeping a won deal; that is your choice. A rule that erases call transcripts or anonymizes contacts destroys data for good, so only an admin who wants one adds it. To destroy one contact's data, an admin fulfills an erasure request (see "How do I delete a contact permanently?").
+**Won deals**, **Saved report editions**, **Call transcripts** and **Contacts with no consent and no deal** can also have a rule, but start with none. So can **Records kept by extensions**. Margince does not say when your company should stop keeping a won deal; that is your choice. A rule that erases call transcripts or anonymizes contacts destroys data for good, so only an admin who wants one adds it. To destroy one contact's data, an admin fulfills an erasure request (see "How do I delete a contact permanently?").
 
 **Stored message originals** are the copies that capture keeps of every message it filed, apart from the timeline entry made from each one. On a large mailbox they take the most storage. An original is never destroyed while the law still says its mail must be kept. The timeline entry stays, so the same message cannot be captured again.
 
@@ -155,6 +155,10 @@ Most records have two clocks, and a rule acts only once both are past its window
 | Deals | When the deal was closed | When it entered Margince |
 
 **Stored message originals** have one clock: when capture imported the message. **AI call payloads** count from the call, and the **daily deal-risk record** from the day it describes.
+
+**Records kept by extensions** have one clock too, the date the extension names for each kind of record that holds personal data. The rule does not touch the other kinds. Anonymize clears every column the extension marks as personal, which can be the whole text of a message. Erase deletes the record.
+
+The rule keeps a record while the law still says it must be kept. It also keeps a record the extension links to a contact, lead or company on legal hold. The same goes for a link to an activity that one of those holds. A record the extension has not linked yet, such as a message that has not arrived on a timeline, can still be anonymized or erased. An extension can also delete its own records sooner, on its own clock, and that does not wait for the law or a legal hold.
 
 ### The three retention actions
 
@@ -194,7 +198,8 @@ Not every mix is allowed: there is no way to archive an AI call payload, or to a
 - archive a deal;
 - archive or anonymize a lead;
 - erase an AI call payload, a stored message original, a daily record of
-  material deals at risk, or a saved report edition.
+  material deals at risk, or a saved report edition;
+- anonymize or erase a record kept by an extension.
 
 A rule can hold a **Lawful basis** if you like (the Article 6 reason for the time limit). It is recorded for whoever checks the rule later. The rules a new company starts with all say "storage limitation".
 
