@@ -302,7 +302,8 @@ it("frees Send once a switch leaves the reply whose Cc held refused text", async
   await pick(user, /Re: Delivery/);
   await screen.findByDisplayValue("Re: Delivery");
 
-  expect(send().disabled).toBe(false);
+  // The new thread is checked first; its answer frees Send.
+  await waitFor(() => expect(send().disabled).toBe(false));
   expect(screen.queryByText(/Not an email address/)).toBeNull();
 });
 

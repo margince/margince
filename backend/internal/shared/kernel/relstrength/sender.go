@@ -12,11 +12,11 @@ import "fmt"
 // nothing about authorship. Reading it that way put another sender's title,
 // employer and address onto a contact.
 //
-// The address decides whenever the row carries one. The backfill for historical
-// mail takes contact_id from the first activity_link and the address from
-// counterparty_email. One row can then name one contact and carry another's
-// address. contact_id is read only for a row with no address, the shape live
-// capture writes when it resolved a party by channel account alone.
+// The stored contact decides when the row has no address, or when that contact
+// holds or once held the row's address. So mail stays with its author after the
+// address moves on. Otherwise the address's current owner decides. The backfill
+// took contact_id from the first link and the address from counterparty_email,
+// so one row can name one contact and carry another's address.
 //
 // A message with no from participant is not admitted through
 // activity.counterparty_email. Those rows are machine notifications, and a
@@ -40,11 +40,13 @@ func ParticipantNamesSQL(contact, participant string) string {
 	return fmt.Sprintf(participantNamesSQL, contact, participant)
 }
 
-const participantNamesSQL = `CASE WHEN %[2]s.address IS NOT NULL
-		            THEN EXISTS (SELECT 1 FROM contact_email pe
+const participantNamesSQL = `CASE WHEN %[2]s.address IS NULL
+		              OR EXISTS (SELECT 1 FROM contact_email se
+		                          WHERE se.contact_id = %[2]s.contact_id AND se.email = %[2]s.address)
+		            THEN %[2]s.contact_id = %[1]s
+		            ELSE EXISTS (SELECT 1 FROM contact_email pe
 		                          WHERE pe.contact_id = %[1]s AND pe.archived_at IS NULL
-		                            AND pe.email = %[2]s.address)
-		            ELSE %[2]s.contact_id = %[1]s END`
+		                            AND pe.email = %[2]s.address) END`
 
 // ContactExchangeSQL admits an activity to the contact's last-touch clock: an
 // exchange that has happened, and, when inbound, one the contact wrote. A

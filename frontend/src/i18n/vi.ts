@@ -7602,10 +7602,17 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "sendPermission.missingPermission": "Cần được phép gửi thư này",
   "sendPermission.reason.chooseDeal": "Chọn giao dịch cho lần liên hệ lại này.",
   "sendPermission.appliesTo": "Điều này áp dụng cho {address}.",
-  "sendPermission.appliesToAndMore_one":
-    "Điều này áp dụng cho {address} và {count} người nhận khác.",
-  "sendPermission.appliesToAndMore_other":
-    "Điều này áp dụng cho {address} và {count} người nhận khác.",
+  "sendPermission.recipientLine": "{address}: {reason}",
+  "sendPermission.unansweredHeld":
+    "Bước kiểm tra gửi chưa hoàn tất. Nút Gửi chờ đến khi kiểm tra xong.",
+  "sendPermission.recheck": "Kiểm tra lại",
+  "compose.sendWithReason": "Gửi kèm lý do…",
+  "compose.scheduleWithReason": "Lên lịch kèm lý do…",
+  "compose.holdForCheck": "Nút Gửi chờ bước kiểm tra gửi.",
+  "compose.holdRefused":
+    "Không thể gửi. Hãy sửa điều bước kiểm tra ở trên nêu ra, hoặc bỏ người nhận đó.",
+  "compose.holdWithReason":
+    "Bước kiểm tra đã từ chối tin nhắn này. Nút Gửi sẽ hỏi lý do của bạn, và lý do chỉ áp dụng cho riêng tin nhắn này.",
   "sendPermission.appliesToSome_one":
     "Điều này áp dụng cho {count} trên {total} người nhận.",
   "sendPermission.appliesToSome_other":
@@ -7719,15 +7726,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "directSend.reason.legal_obligation": "Nghĩa vụ pháp lý",
   "directSend.reason.other": "Khác",
   "compose.reviewReference": "Phê duyệt",
-  "compose.overrule.open": "Cho phép kèm lý do",
-  "compose.overrule.reasonLabel": "Vì sao tin nhắn này được gửi?",
-  "compose.overrule.hint":
-    "Lý do của bạn được lưu trên từng liên hệ và áp dụng cho loại tin nhắn này cho đến khi bị thu hồi.",
-  "compose.overrule.confirm": "Lưu lý do cho phép",
-  "compose.overrule.recording": "Đang lưu…",
-  "compose.overrule.recorded": "Đã lưu. Hãy bấm Gửi lại.",
-  "compose.overrule.failed":
-    "Chưa lưu được. Hãy thử lại, hoặc mở mục duyệt từ thông báo từ chối ở trên.",
   "compose.draftUnavailable":
     "Không thể soạn nháp bằng AI vì chưa cấu hình mô hình. Vẫn có thể tự viết email.",
   "compose.draftUnsupportedHere":
