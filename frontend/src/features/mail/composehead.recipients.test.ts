@@ -8,7 +8,21 @@ import { UTC_ZONE } from "../../format/timezone";
 import { view } from "../../testing/contactpage.testkit";
 import { recipientSuggestions } from "./composehead";
 
+type Contact = components["schemas"]["Contact"];
 type User = components["schemas"]["User"];
+
+function aroundContact(
+  overrides: Partial<Contact> & Pick<Contact, "id">,
+): Contact {
+  return {
+    full_name: "Cole League",
+    source: "manual",
+    captured_by: "human:u-1",
+    created_at: "2026-08-15T09:00:00Z",
+    updated_at: "2026-08-15T09:00:00Z",
+    ...overrides,
+  };
+}
 
 function member(overrides: Partial<User>): User {
   return {
@@ -39,14 +53,17 @@ describe("recipientSuggestions", () => {
     const offered = recipientSuggestions({
       contact: view,
       related: [
-        {
+        aroundContact({
           id: "p-2",
-          full_name: "Cole League",
           title: "Head of IT",
           primary_email: "cole@nordwand.example",
           employer: { company_id: "co-1", company_name: "Nordwand" },
-        },
-        { id: "p-3", full_name: "No Address", primary_email: null },
+        }),
+        aroundContact({
+          id: "p-3",
+          full_name: "No Address",
+          primary_email: null,
+        }),
       ],
       colleagues: [member({})],
     });

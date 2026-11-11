@@ -61,7 +61,7 @@ func anchorColleaguesSQL(ctx context.Context, anchorPos int, arg func(any) int) 
 	return CompanyRosterSQL(ctx, employers, arg)
 }
 
-// anchorDealPeersSQL is every contact holding a current seat on a deal the anchor
+// anchorDealPeersSQL selects the contacts holding a current seat on a deal the anchor
 // holds a current seat on. A caller who may not read deals gets no clause, so
 // the colleagues alone answer rather than the whole list refusing.
 func anchorDealPeersSQL(ctx context.Context, anchorPos int, arg func(any) int) (string, error) {
