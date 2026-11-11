@@ -5,9 +5,9 @@
 Four questions go together here. Who here already knows a contact, from mail or from your LinkedIn network? How do you get a warm introduction to someone you do not know? What can Margince read about a company from its own website? And what does the company publicly run?
 
 ### Who here knows this contact?
-To see who in your company knows a contact in Margince, open the contact's page and choose the **Network** tab. **Routes** lists the colleagues who write with them, best route first.
+To see who in your company knows a contact in Margince, open the contact's page and choose the **Relationships** tab. **Routes** lists the colleagues who write with them, best route first.
 1. Open the contact.
-2. Choose the **Network** tab.
+2. Choose the **Relationships** tab.
 3. Read the top route, such as "Ask {name}. They already correspond with this contact.", with its **Evidence**: exchanges in 90 days and **Last contact**.
 4. **Other routes** lists the rest, "Ranked by two-way correspondence."
 When nobody does: "No one in the company has corresponded with this contact."
@@ -15,7 +15,7 @@ Also called: who knows this client, warm path, relationship map, colleague conne
 
 ## Who here knows a contact
 
-A contact's **Network** tab shows which colleagues have written with them, best first, with the number of exchanges behind each. When nobody has: "No one in the company has corresponded with this contact."
+A contact's **Relationships** tab shows which colleagues have written with them, best first, with the number of exchanges behind each. When nobody has: "No one in the company has corresponded with this contact."
 
 When you write with the contact yourself, the tab names you **You**: in the top card, on the map and in the card under it. Your own place on the map offers **Write email**, not **Use this route**, because you need no introduction to a contact you already write with. The top card's badge gives the best route's own strength, such as "Barely in contact", in the same words as the map.
 
@@ -63,7 +63,7 @@ So do not read "Weak" on one screen as the same thing as "barely in contact" on 
 
 ### The network map
 
-The contact's **Network** tab also shows who can reach them, in four groups: **Your team**, **Their company**, **Their contacts**, and **Target**.
+The contact's **Relationships** tab also shows who can reach them, in four groups: **Your team**, **Their company**, **Their contacts**, and **Target**.
 
 It counts and never shows the messages: "{total} interactions in 90 days · {inbound} in, {outbound} out", with "Counts only. The messages stay on the timeline."
 
@@ -189,8 +189,8 @@ A row with no usable name is counted under **Rows skipped (no usable name)**. A 
 When your seat is turned off, your imported connections are deleted with it.
 
 ### How do I ask for a warm introduction?
-To ask a colleague for a warm introduction in Margince, open the contact's **Network** tab. Press **Ask {name} to introduce you** (or **Use this route** on the map), fill in the request, and press **Request introduction**.
-1. Open the contact and choose **Network**.
+To ask a colleague for a warm introduction in Margince, open the contact's **Relationships** tab. Press **Ask {name} to introduce you** (or **Use this route** on the map), fill in the request, and press **Request introduction**.
+1. Open the contact and choose **Relationships**.
 2. Press **Ask {name} to introduce you** on the route you want.
 3. Fill **Reason for request** (required), **Value for the contact** and **Forwardable note**.
 4. If you like, tick **Ask permission to mention their name**, and choose **If they say no**.
@@ -222,13 +222,13 @@ The introduction request has three parts, and the form says who reads which:
 
 You can also **Ask permission to mention their name**. And you can say what should happen **If they say no**: **Nothing further**, **Ask to use their name instead**, or **Try the next route**.
 
-Nothing on the contact's Network tab writes the ask for you.
+Nothing on the contact's Relationships tab writes the ask for you.
 
 A company's **Contacts** tab has a path of its own with fewer steps. **Request introduction** on its contact map opens a box whose **Draft message** writes a note to your colleague. You **Copy** it or use **Open in mail app**, and send it yourself. That draft is not recorded as an ask, and nothing follows its answer.
 
 ### How do I answer an introduction request?
-To answer an introduction request in Margince, open it from your Worklist or from the contact's **Network** tab. Press **Answer**, choose your answer, and press **Record answer**.
-1. Open the request ("Introduction requested by colleague" in your Worklist, or under **Introductions** on the contact's Network tab).
+To answer an introduction request in Margince, open it from your Worklist or from the contact's **Relationships** tab. Press **Answer**, choose your answer, and press **Record answer**.
+1. Open the request ("Introduction requested by colleague" in your Worklist, or under **Introductions** on the contact's Relationships tab).
 2. Press **Answer**.
 3. Choose **Make introduction**, **Let them mention you**, **Suggest someone else** or **Decline**, and add a **Comment** if it helps.
 4. Press **Record answer**.
@@ -236,7 +236,7 @@ Your colleague sees your comment as written.
 Also called: respond to an intro, accept or decline an introduction.
 
 ### What your colleague sees, and the four answers
-The ask reaches your colleague in two places: on that contact's Network tab, and as an item in their own Worklist.
+The ask reaches your colleague in two places: on that contact's Relationships tab, and as an item in their own Worklist.
 
 There are four answers:
 
