@@ -326,6 +326,12 @@ func selectSystemTasks(
 // the caller's transaction. It takes the update a user's tick takes, so each
 // keeps its audit row and event. A task somebody wrote by hand is left alone.
 func (s *Store) CompleteSystemTasksTx(ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID) (int, error) {
+	return s.flipNamedSystemTasksTx(ctx, tx, activityIDs, false)
+}
+
+// flipNamedSystemTasksTx moves the named system-minted tasks whose done state
+// is `done` to the other state, inside the caller's transaction.
+func (s *Store) flipNamedSystemTasksTx(ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID, done bool) (int, error) {
 	if err := auth.Require(ctx, "activity", principal.ActionUpdate); err != nil {
 		return 0, err
 	}
@@ -334,20 +340,20 @@ func (s *Store) CompleteSystemTasksTx(ctx context.Context, tx pgx.Tx, activityID
 	}
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	open, err := selectSystemTasks(ctx, tx, storekit.SQLf("a.id = ANY($%d)", arg(activityIDs)), arg, &args, false)
+	found, err := selectSystemTasks(ctx, tx, storekit.SQLf("a.id = ANY($%d)", arg(activityIDs)), arg, &args, done)
 	if err != nil {
 		return 0, err
 	}
-	done := true
-	for _, task := range open {
+	target := !done
+	for _, task := range found {
 		at := s.now()
-		in := UpdateActivityInput{IsDone: &done, IfVersion: &task.version}
+		in := UpdateActivityInput{IsDone: &target, IfVersion: &task.version}
 		in.recordedAt, in.recordZone = &at, s.recordZone
 		if _, err := updateActivityInTx(ctx, tx, task.id, in); err != nil {
-			return 0, fmt.Errorf("completing system task %s: %w", task.id, err)
+			return 0, fmt.Errorf("moving system task %s: %w", task.id, err)
 		}
 	}
-	return len(open), nil
+	return len(found), nil
 }
 
 // The two activity_link columns this file resolves follow-ups through, named
