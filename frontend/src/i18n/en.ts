@@ -5975,6 +5975,26 @@ export const en = {
   "deal.winProbability.source.colleague": "set by {name}",
   "deal.winProbability.source.margince": "lowered by Margince",
   "deal.winProbability.stageValue": "stage {percent}",
+  "deal.winProbability.why": "Why this probability",
+  "deal.winProbability.reason.stage": "This is the figure {stage} gives.",
+  "deal.winProbability.reason.closed":
+    "The deal is closed, so {stage} fixes the figure.",
+  "deal.winProbability.reason.you": "You set this by hand.",
+  "deal.winProbability.reason.colleague": "{name} set this by hand.",
+  "deal.winProbability.reason.human": "A colleague set this by hand.",
+  "deal.winProbability.reason.stageGives":
+    "Without it, {stage} gives {percent}.",
+  "deal.winProbability.reason.margince":
+    "Margince lowered this from the {percent} that {stage} gives.",
+  "deal.winProbability.reason.marginceBare":
+    "Margince lowered this from the stage’s figure.",
+  "deal.winProbability.reason.marginceRule":
+    "Margince lowers a deal nobody set by hand once it goes quiet or its emails point lower.",
+  "deal.winProbability.reason.override": "Type your own figure to override it.",
+  "deal.winProbability.reason.clear":
+    "Clear the figure to follow the stage again.",
+  "deal.winProbability.reason.stageNamed": "the stage {name}",
+  "deal.winProbability.reason.stageUnnamed": "the deal’s stage",
   "deal.winProbability.setByStage":
     "Probability set to {percent} by the stage {stage}",
   "deal.winProbability.band.90_plus": "90% or more",

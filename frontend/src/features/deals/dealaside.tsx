@@ -13,6 +13,7 @@ import { type RailEdit, RailField } from "../../components/railfield";
 import { AppLink } from "../../design-system/applink";
 import { Badge } from "../../design-system/atoms";
 import { OffsiteLink } from "../../design-system/offsitelink";
+import { ProbabilityRing } from "../../design-system/probabilityring";
 import { provenanceLabel } from "../../design-system/provenance";
 import { provenanceOf, withCreator } from "../../design-system/provenanceof";
 import { FieldGuard } from "../../design-system/rbac";
@@ -41,7 +42,7 @@ import {
   PRIORITY_OPTIONS,
 } from "./deal360/dealcommercialfields";
 import { useDealEdit } from "./dealedit";
-import { probabilityWords } from "./dealprobability";
+import { ProbabilityHint } from "./dealprobabilityhint";
 import type { Deal, Stage } from "./deals";
 import "./deal360/deal360.css";
 
@@ -87,7 +88,6 @@ function DealAsideBody({
     locale,
     zone: useViewerZone(),
     row: rowMaker(deal.masked_fields ?? [], t, edit),
-    viewerId,
   };
   const owner = useMemberName(deal.owner_id).data;
   const cf = useObjectCustomFields("deal");
@@ -151,8 +151,13 @@ function DealAsideBody({
   );
 }
 
-// The fields a row changes, and its value as text when it is edited alone.
-type RowChange = Readonly<{ keys: readonly string[]; text?: string }>;
+// The fields a row changes, its value as text when it is edited alone, and a
+// mark drawn after the value that the edit's press does not cover.
+type RowChange = Readonly<{
+  keys: readonly string[];
+  text?: string;
+  beside?: ReactNode;
+}>;
 
 type RowMaker = (
   key: string,
@@ -168,7 +173,6 @@ type Facts = Readonly<{
   locale: Locale;
   zone: string;
   row: RowMaker;
-  viewerId: string | undefined;
 }>;
 
 // A field the reader may not see says so; one nobody filled folds away. A row
@@ -194,6 +198,7 @@ function rowMaker(
           label={t(term)}
           reading={reading}
           text={change.text}
+          beside={change.beside}
         />
       ) : (
         reading
@@ -213,12 +218,12 @@ function money(
     : formatMoneyWhole(amountMinor, currency, locale);
 }
 
-function probabilityReading(facts: Facts): string | null {
-  const { deal, t, locale, viewerId } = facts;
-  const words = probabilityWords(deal, t, locale, viewerId);
-  return words
-    ? [words.value, words.source, words.stage].filter(Boolean).join(" · ")
-    : null;
+// The figure as a ring. Where it comes from and the stage's own figure are in
+// the reason beside it, so the row stays on one line in the narrow column.
+function probabilityReading(deal: Deal): ReactNode {
+  return deal.win_probability == null ? null : (
+    <ProbabilityRing percent={deal.win_probability} value />
+  );
 }
 
 function day(value: string | null | undefined, facts: Facts) {
@@ -234,6 +239,13 @@ function aboutRows(facts: Facts, stages: readonly Stage[]): DetailRow[] {
   // An offer sets the ARR and currency, so the amount then changes alone.
   const valueKeys = deal.arr_source_offer_id ? ["amount"] : moneyKeys;
   const dayText = (value: string | null | undefined) => day(value, facts) ?? "";
+  const stageName = stages.find((stage) => stage.id === deal.stage_id)?.name;
+  const closed = deal.status === "won" || deal.status === "lost";
+  const probabilityHint = (
+    <span className="deal-aside-why">
+      <ProbabilityHint deal={deal} stageName={stageName} />
+    </span>
+  );
   const account: DetailRow =
     deal.company_id && !deal.masked_fields?.includes("company_id")
       ? {
@@ -259,30 +271,24 @@ function aboutRows(facts: Facts, stages: readonly Stage[]): DetailRow[] {
       "expected_arr_minor",
       { keys: moneyKeys },
     ),
-    row(
-      "stage",
-      "deals.stage",
-      stages.find((stage) => stage.id === deal.stage_id)?.name,
-    ),
+    row("stage", "deals.stage", stageName),
     row(
       "close",
       "deal.standing.close",
       day(closeDayOf(deal), facts),
       "expected_close_date",
       // A closed deal shows the day it closed, which is not the forecast field.
-      deal.status === "won" || deal.status === "lost"
+      closed
         ? undefined
         : { keys: ["expected_close_date"], text: dayText(closeDayOf(deal)) },
     ),
     row(
       "probability",
       "deal.winProbability",
-      probabilityReading(facts),
+      probabilityReading(deal),
       "win_probability",
-      // A closed deal's stage fixes its probability.
-      deal.status === "won" || deal.status === "lost"
-        ? undefined
-        : { keys: ["win_probability"] },
+      // A closed deal's stage fixes its probability, so it offers no edit.
+      { keys: closed ? [] : ["win_probability"], beside: probabilityHint },
     ),
     row(
       "wait_until",

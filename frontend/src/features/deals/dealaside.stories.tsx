@@ -100,3 +100,72 @@ export const RecordedByGerman: Story = {
     );
   },
 };
+
+const lowered: Deal = {
+  ...deal,
+  stage_id: "s2",
+  writable: true,
+  version: 3,
+  win_probability: 35,
+  win_probability_source: "margince",
+  stage_win_probability: 50,
+};
+
+const proposal: Stage[] = [
+  {
+    id: "s2",
+    pipeline_id: "pl",
+    name: "Proposal",
+    position: 2,
+    semantic: "open",
+    win_probability: 50,
+  },
+];
+
+function LoweredColumn() {
+  installFetchStub({
+    "GET /me": () =>
+      jsonResponse(meFixture({ allow: { deal: ["read", "update"] } })),
+    "GET /deals/d1/margince-changes": () =>
+      jsonResponse({
+        changes: [
+          {
+            id: "r1",
+            kind: "deal_probability",
+            summary: "Lowered the probability to 35%",
+            reason: "No reply from Dana Ruiz since 2 October.",
+            occurred_at: "2026-11-01T02:00:00Z",
+            changes: [
+              { field: "win_probability_override", before: 50, after: 35 },
+            ],
+          },
+        ],
+      }),
+  });
+  return (
+    <StoryProviders locale="en">
+      <DealAside deal={lowered} stages={proposal} />
+    </StoryProviders>
+  );
+}
+
+// The ring and its source on one line, and the reason Margince recorded in
+// the tip beside them.
+export const ProbabilityReason: Story = {
+  name: "Probability says why",
+  render: () => <LoweredColumn />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await canvas.findByRole("button", { name: /^Change Probability/ });
+    canvas.getByRole("button", { name: "Why this probability" }).focus();
+    await expect(
+      await within(document.body).findByText(/No reply from Dana Ruiz/),
+    ).toBeTruthy();
+  },
+};
+
+export const ProbabilityReasonDark: Story = {
+  ...ProbabilityReason,
+  name: "Probability says why, dark",
+  globals: { theme: "dark" },
+};

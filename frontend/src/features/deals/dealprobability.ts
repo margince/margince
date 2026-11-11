@@ -82,6 +82,88 @@ function sourceWords(
     : t(labelFor(SOURCE_LABEL, source));
 }
 
+type ReasonDeal = Pick<
+  Deal,
+  | "status"
+  | "win_probability"
+  | "win_probability_source"
+  | "stage_win_probability"
+  | "win_probability_set_by_user_id"
+  | "win_probability_set_by_name"
+>;
+
+/**
+ * Why an open or closed deal has its probability, in sentences: who or what
+ * set it, the stage's own figure beside an override, and how to change it.
+ * `recorded` is Margince's own reason for lowering it, where the reader may
+ * read one; without it the general rule stands in.
+ */
+export function probabilityReason(
+  deal: ReasonDeal,
+  stageName: string | undefined,
+  t: Translator,
+  locale: Locale,
+  viewerId?: string,
+  recorded?: string | null,
+): string | undefined {
+  if (deal.win_probability == null) {
+    return undefined;
+  }
+  const stage = stageName
+    ? t("deal.winProbability.reason.stageNamed", { name: stageName })
+    : t("deal.winProbability.reason.stageUnnamed");
+  if (deal.status === "won" || deal.status === "lost") {
+    return t("deal.winProbability.reason.closed", { stage });
+  }
+  const stagePercent =
+    deal.stage_win_probability == null
+      ? undefined
+      : formatPercent(deal.stage_win_probability / 100, locale);
+  const source = deal.win_probability_source ?? "stage";
+  const sentences =
+    source === "margince"
+      ? [
+          stagePercent
+            ? t("deal.winProbability.reason.margince", {
+                percent: stagePercent,
+                stage,
+              })
+            : t("deal.winProbability.reason.marginceBare"),
+          recorded || t("deal.winProbability.reason.marginceRule"),
+          t("deal.winProbability.reason.override"),
+        ]
+      : source === "human"
+        ? [
+            setterSentence(deal, t, viewerId),
+            stagePercent &&
+              t("deal.winProbability.reason.stageGives", {
+                percent: stagePercent,
+                stage,
+              }),
+            t("deal.winProbability.reason.clear"),
+          ]
+        : [
+            t("deal.winProbability.reason.stage", { stage }),
+            t("deal.winProbability.reason.override"),
+          ];
+  return sentences.filter(Boolean).join(" ");
+}
+
+function setterSentence(
+  deal: ReasonDeal,
+  t: Translator,
+  viewerId: string | undefined,
+): string {
+  const setter = deal.win_probability_set_by_user_id;
+  if (viewerId && setter === viewerId) {
+    return t("deal.winProbability.reason.you");
+  }
+  const name = setter ? deal.win_probability_set_by_name : undefined;
+  return name
+    ? t("deal.winProbability.reason.colleague", { name })
+    : t("deal.winProbability.reason.human");
+}
+
 type Advanced = Pick<components["schemas"]["DealAdvanced"], "probability_set">;
 
 /**
