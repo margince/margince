@@ -99,7 +99,7 @@ func TestAHeldDraftNeedsTheGrantsItsCardDiscloses(t *testing.T) {
 
 	createOnly := holding(map[string]principal.ObjectGrant{objectActivity: {Create: true}})
 	if err := requireDecisionGrants(createOnly, staged); err == nil {
-		t.Error("a decider holding only activity.create was offered a card carrying a person's address and a draft derived from a conversation they cannot read")
+		t.Error("a decider holding only activity.create was offered a card carrying a contact's address and a draft derived from a conversation they cannot read")
 	}
 
 	all := holding(map[string]principal.ObjectGrant{
@@ -107,6 +107,6 @@ func TestAHeldDraftNeedsTheGrantsItsCardDiscloses(t *testing.T) {
 		tableContact:   {Read: true},
 	})
 	if err := requireDecisionGrants(all, staged); err != nil {
-		t.Errorf("a decider holding activity.create, activity.read and person read was refused: %v", err)
+		t.Errorf("a decider holding activity.create, activity.read and contact read was refused: %v", err)
 	}
 }

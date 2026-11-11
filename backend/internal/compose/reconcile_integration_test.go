@@ -51,6 +51,7 @@ var reconcilePerms = principal.Permissions{
 	RoleKeys: []string{"rep"},
 	Objects: map[string]principal.ObjectGrant{
 		"activity":              {Create: true, Read: true},
+		"contact":               {Read: true},
 		"deal":                  {Read: true, Update: true},
 		"pipeline":              {Read: true},
 		"installation_settings": {Read: true},
