@@ -1,7 +1,8 @@
 # Back up an installation
 
-Margince ships no backup tool. Whoever runs the installation takes the backups: the company itself, or the hosting
-partner that runs it for them.
+Margince ships a reference backup and restore pair for an installation that keeps its object store on disk
+(`scripts/deploy/backup.sh`, `scripts/deploy/restore.sh`). Whoever runs the installation takes the backups: the company
+itself, or the hosting partner that runs it for them. Another tool is fine if it meets the cadence below.
 
 The cadence below meets the two recovery targets that [run-a-restore-drill.md](run-a-restore-drill.md) names.
 
@@ -46,6 +47,17 @@ record of completed erasure requests too, because the replay cannot cover an era
 steps are in [run-a-restore-drill.md](run-a-restore-drill.md).
 
 Say in your privacy documents how long backups are kept. Erased data stays in a backup until that backup expires.
+
+## The reference scripts
+
+`backup.sh` writes the database dump and a copy of the object store into one folder named for the UTC time, and
+writes a `DONE` marker last. Run it every hour with cron or a systemd timer, and point `BACKUP_DIR` at storage that is
+neither the database nor the live object store. It deletes folders older than `RETAIN_DAYS` (14 by default).
+
+`restore.sh <folder>` restores into a spare database and object store, takes the newest erasure journal from the live
+store, runs `margince-migrate up`, then `worker replay-erasures`. It stops on the first error, so a failed replay never
+reads as a finished restore. It appends the restore time to `restores.log` in `BACKUP_DIR`, which a restore does not
+roll back. Record the drill itself as [run-a-restore-drill.md](run-a-restore-drill.md) says.
 
 ## Show that a restore works
 
