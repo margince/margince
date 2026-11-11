@@ -85,7 +85,7 @@ func hasAnyPrefix(op string, prefixes []string) bool {
 
 // promisesApproval is written guidance that tells a caller a human will
 // approve the call. A publish step a human takes later is not that promise.
-var promisesApproval = regexp.MustCompile(`(?i)waits? for (?:a human|approval)|staged for (?:approval|confirmation)|needs? (?:a )?human'?s? (?:approval|decision)|a human approves`)
+var promisesApproval = regexp.MustCompile(`(?i)waits? for (?:a human|approval)|stage[sd]? for (?:approval|confirmation)|needs? (?:a )?human'?s? (?:approval|decision)|a human approves`)
 
 // publishStep is the one promise that stays true for an agent acting as its
 // user. The draft is the agent's, and publishing is a later human act.
@@ -121,6 +121,22 @@ func TestNoToolPromisesAnApprovalItsUserSkips(t *testing.T) {
 	}
 	if checked < 20 {
 		t.Fatalf("only %d tools were checked; the census is short and this gate proves nothing", checked)
+	}
+}
+
+// The present tense is the form the census missed before: a copy saying a call
+// "stages for approval" read as safe where "staged for approval" was caught,
+// though both make a promise an own-user agent never meets. The gate above sees
+// it in either tense now.
+func TestPromisesApprovalCatchesEveryTense(t *testing.T) {
+	for _, made := range []string{
+		"the call stages for approval",
+		"the call staged for approval",
+		"this call stages for confirmation",
+	} {
+		if !promisesApproval.MatchString(made) {
+			t.Errorf("promisesApproval missed %q, a promise an own-user agent never meets", made)
+		}
 	}
 }
 
