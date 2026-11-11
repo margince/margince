@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import type { MessageKey } from "../../i18n/en";
-import { labelFor } from "../../lib/labelfor";
-import type { WorklistItem } from "./worklist.queries";
+import type { MessageKey } from "../i18n/en";
+import { labelFor } from "./labelfor";
+import type { WorklistItem } from "./worklisttypes";
 
 // What a row asks of its reader, one sentence per source. A row's reasons say
 // why it ranks where it does, and none of them says what to do about it.
@@ -47,5 +47,10 @@ const ASK_BY_SOURCE: Readonly<Record<WorklistItem["source"], MessageKey>> = {
 export function askKey(item: WorklistItem): MessageKey {
   // An invitation waits on an RSVP, not on a written answer.
   if (item.email_summary?.calendar_invitation) return "worklist.ask.invitation";
+  if (
+    item.source === "capture_health" &&
+    item.connection?.medium === "calendar"
+  )
+    return "worklist.ask.capture_health.calendar";
   return labelFor(ASK_BY_SOURCE, item.source);
 }

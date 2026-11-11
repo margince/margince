@@ -106,7 +106,7 @@ describe("what the selected row is about", () => {
     renderWorklist();
 
     // The row drew — this is not a test that the page failed to render.
-    await screen.findByText("Northstar renewal");
+    await screen.findByText("Northstar renewal has gone quiet");
     expect(
       screen.queryByRole("button", { name: /^Show details for/ }),
     ).toBeNull();
@@ -223,7 +223,7 @@ describe("what the selected row is about", () => {
     );
     const { container } = renderWorklist();
 
-    await screen.findByText("Northstar renewal");
+    await screen.findByText("Northstar renewal has gone quiet");
     // A deal row has no pane. An empty <aside> would still be announced as a
     // landmark and still take its third of the grid, which reads as a pane
     // that failed rather than as one that was never meant to be there.
