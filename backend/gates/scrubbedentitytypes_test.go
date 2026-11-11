@@ -116,6 +116,10 @@ var scrubbedEntityTypes = map[string]bool{
 	// keep a corrected kind and evidence, are withheld. The weekly review
 	// rebuilds a DEAL from its own audit images and never reads a signal's.
 	"signal": true,
+	// An extension's own table. Core has no restore or undo for a unit's row.
+	// The weekly review reads deals. The compliance log is the one reader, and it
+	// hides these images.
+	extensionScrubbedTypes: true,
 }
 
 func TestEveryScrubbedRecordTypeIsOneAReaderOfTheBoundaryExpects(t *testing.T) {
@@ -197,6 +201,9 @@ func scrubbedTypesInPrivacy(t *testing.T) (map[string]bool, []string) {
 				opaque = append(opaque, fset.Position(call.Pos()).String())
 			}
 			for _, arg := range call.Args {
+				if isExtensionTableArgument(arg) {
+					found[extensionScrubbedTypes] = true
+				}
 				lit, ok := arg.(*ast.BasicLit)
 				if !ok || lit.Kind != token.STRING {
 					continue
@@ -220,6 +227,9 @@ func scrubbedTypesInPrivacy(t *testing.T) (map[string]bool, []string) {
 // type as a string literal — the only shape this walk can read.
 func hasLiteralEntityArgument(call *ast.CallExpr) bool {
 	for _, arg := range call.Args {
+		if isExtensionTableArgument(arg) {
+			return true
+		}
 		lit, ok := arg.(*ast.BasicLit)
 		if !ok || lit.Kind != token.STRING {
 			continue
@@ -229,6 +239,17 @@ func hasLiteralEntityArgument(call *ast.CallExpr) bool {
 		}
 	}
 	return false
+}
+
+// extensionScrubbedTypes stands for the record types an extension declares
+// (`ext_<unit>_<table>`). Their names are data, not literals. The one site that
+// scrubs them names the entity as the Table of a cleared row, and this walk
+// reads that shape as this class.
+const extensionScrubbedTypes = "ext_*"
+
+func isExtensionTableArgument(arg ast.Expr) bool {
+	sel, ok := arg.(*ast.SelectorExpr)
+	return ok && sel.Sel.Name == "Table" && isIdentNamed(sel.X, "row")
 }
 
 // scrubVerbConstants are privacy's own names for the three verbs that certify a

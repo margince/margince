@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "name": "finance-demo",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "risk_tiers": [],
   "finance_sources": [
     {

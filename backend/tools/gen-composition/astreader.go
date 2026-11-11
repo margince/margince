@@ -345,7 +345,7 @@ func (r *unitReader) readExtensionField(elt ast.Expr, file *ast.File, m *unitMan
 		// behavior for a job the contract does not declare is a defect,
 		// reported at its own line.
 		err = r.readJobsField(kv.Value, file)
-	case "Jurisdictions", "Messaging", "SubjectRights", "Documents":
+	case "Jurisdictions", "Messaging", "SubjectRights", "Documents", "Privacy":
 		// Recognized and skipped. All four are policy or content the core
 		// consults: retention floors, messaging rules, request deadlines and
 		// compliance documents. None is an operation an operator resolves, so

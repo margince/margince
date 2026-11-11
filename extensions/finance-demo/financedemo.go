@@ -22,6 +22,8 @@ import (
 
 	"github.com/margince/margince/backend/pkg/extension"
 	"github.com/margince/margince/backend/pkg/extension/accounting"
+	"github.com/margince/margince/backend/pkg/extension/jurisdiction"
+	"github.com/margince/margince/backend/pkg/extension/privacy"
 )
 
 //go:embed migrations
@@ -35,8 +37,11 @@ const directorySize = 50
 func New() extension.Extension {
 	return extension.Extension{
 		Name:        "finance-demo",
-		Version:     "1.0.0",
+		Version:     "1.1.0",
 		Description: "Demonstration accounting data for the finance card, generated rather than read from a real system.",
+		// A ledger account is a chart-of-accounts row: a code and a name, no
+		// personal data, and no column naming a core record.
+		Privacy: []privacy.Table{{Name: "ext_finance_demo_ledger_account", Retention: jurisdiction.AccountingRecords}},
 		// The reference for a company type: an account whose invoices this
 		// source's ledger holds.
 		CompanyTypes: []extension.CompanyType{{Type: "ledger_customer", Label: "Ledger customer"}},

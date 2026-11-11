@@ -76,6 +76,7 @@ const (
 	filterSourceID            = "source_id"
 	filterRelationshipMark    = "relationship_mark"
 	filterPartnerAccepted     = "partner_accepted"
+	filterRelatedTo           = "related_to"
 )
 
 var contactListFilters = storekit.FilterSet[ListContactsInput]{
@@ -88,6 +89,7 @@ var contactListFilters = storekit.FilterSet[ListContactsInput]{
 	filterUnassigned:       storekit.FilterFlag(func(in *ListContactsInput, v *bool) { in.Unassigned = v }),
 	filterSharedWithMe:     storekit.FilterFlag(func(in *ListContactsInput, v *bool) { in.SharedWithMe = v }),
 	filterCompanyID:        storekit.FilterID(func(in *ListContactsInput, id *ids.CompanyID) { in.CompanyID = id }),
+	filterRelatedTo:        storekit.FilterID(func(in *ListContactsInput, id *ids.ContactID) { in.RelatedTo = id }),
 	filterIncludeArchived:  storekit.FilterFlag(func(in *ListContactsInput, v *bool) { in.IncludeArchived = *v }),
 	filterSort:             storekit.FilterWord(func(in *ListContactsInput, v *string) { in.Sort = v }),
 	filterCapturedByKind:   storekit.FilterWord(func(in *ListContactsInput, v *string) { in.CapturedByKind = v }),

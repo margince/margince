@@ -327,6 +327,8 @@ The eight shapes, what each is for, and how each one silently passes:
 | `exactseatmatch_test.go` | H2 | TestEveryExactSeatMatchFoldsTheDomain holds every SQL comparison of a seat's login to storekit.SeatLoginIsSQL. |
 | `extensioncapabilitycensus_test.go` | H2 | Every capability the extension tier publishes must have a live unit declaring it. |
 | `extensioninboundverifiesgate_test.go` | H2 | Every inbound endpoint a unit declares must check the signature. |
+| `extensionprivacycensus_test.go` | H2 | Every table an extension's migrations create must carry a privacy declaration, and every declaration must name a table the migrations create. |
+| `extensionregistrywiring_test.go` | H2 | Every place that erases, exports or merges is handed the extension registry. |
 | `extensionsignored_test.go` | H3 | The enabled set must be a set git actually has. |
 | `extinboundnonce_test.go` | H1 | A unit that takes an anonymous inbound webhook refuses a replay of one. |
 | `fiscalperiodsingle_test.go` | H2 | Which fiscal period holds a day is computed in one place. |

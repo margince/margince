@@ -61189,6 +61189,15 @@ export interface operations {
                  *     list answers the first.
                  */
                 company_id?: string;
+                /**
+                 * @description The contacts around this one: those who work at one of its current employers, and
+                 *     those who hold a seat on a deal it holds a seat on. The named contact itself is not
+                 *     in the list. The composer offers this list as recipients. Each link counts only when
+                 *     the caller may read it: the employment edge, the deal and the named contact itself.
+                 *     A contact the caller may not read relates to nobody, so the answer is an empty page
+                 *     and does not say whether the contact exists.
+                 */
+                related_to?: string;
             };
             header?: never;
             path?: never;

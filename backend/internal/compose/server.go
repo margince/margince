@@ -176,7 +176,7 @@ func New(pool *pgxpool.Pool, log *slog.Logger, opts ...Option) http.Handler {
 // newPrivacyHandlers wires every seam the privacy surface needs at construction.
 func newPrivacyHandlers(pool *pgxpool.Pool) privacy.Handlers {
 	return privacy.NewHandlers(InstallationDB(pool), StoredConfig(pool)).WithLocks(loadedLocks).
-		WithCountry(identity.CountryForDecision).
+		WithCountry(identity.CountryForDecision).WithExtensions(ExtensionData()).
 		WithRawCapturePurger(RawCapturePurgerFor(InstallationDB(pool))).
 		WithLegalHoldWriter(NewLegalHoldSeam(pool)).
 		WithRecordLabeler(newAttentionNames(InstallationDB(pool)))

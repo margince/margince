@@ -17,7 +17,7 @@ input and output schema in folds below it. What a tool may do and whether a huma
 | Resources | 14 |
 | Tool catalog | 229.2 KB |
 | Resource catalog | 5.5 KB |
-| Approx. wire tokens | 60079 |
+| Approx. wire tokens | 60082 |
 | Largest tool | `read_context` (11.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -36,7 +36,7 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 | Descriptions (incl. governance clause) | 54.0 KB | 23% | Yes, every step |
 | Input schemas | 112.7 KB | 49% | Yes, every step |
 | _Names, annotations, punctuation_ | 11.8 KB | 5% | Partly |
-| **Description + input schema** | **166.7 KB** | **72%** | **the recurring cost** |
+| **Description + input schema** | **166.8 KB** | **72%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -87,7 +87,7 @@ descriptions and input schemas are what each step pays for.
 | [`decide_approvals`](#decide_approvals) | Approve or reject staged actions |  |  | 429 |
 | [`draft_outbound`](#draft_outbound) | Draft an email or follow-ups |  |  | 517 |
 | [`enrich`](#enrich) | Enrich a company from its website |  |  | 395 |
-| [`find_records`](#find_records) | Find records | yes |  | 2021 |
+| [`find_records`](#find_records) | Find records | yes |  | 2024 |
 | [`list_approvals`](#list_approvals) | List what is waiting for a decision | yes | [`ui://margince/approval-queue.html`](#approval_queue_view) | 474 |
 | [`list_documents`](#list_documents) | List a record's documents or read one | yes |  | 331 |
 | [`preview_import`](#preview_import) | Preview an import |  |  | 1012 |
@@ -4723,7 +4723,7 @@ next_cursor to read on.
       "type": "boolean"
     },
     "cursor": {
-      "description": "list, search only: Keyset cursor from a previous page's next_cursor",
+      "description": "list, search only: The previous page's next_cursor",
       "type": "string"
     },
     "engine": {
@@ -4906,6 +4906,9 @@ next_cursor to read on.
           "type": "string"
         },
         "project_id": {
+          "type": "string"
+        },
+        "related_to": {
           "type": "string"
         },
         "relationship_mark": {
