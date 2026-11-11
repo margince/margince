@@ -303,9 +303,7 @@ time of a PR. And `deterministic-gates` itself still catches a broken build.
 The lane **compiles once**: a part picked per test reaches nearly every package. The `integration build`
 job links each package's test binary with the shards' flags, and each shard runs its part from them in
 the package directory. A compile error fails the build job, so no shard starts. Each shard still pays
-start-up, the fetch and its own template, so size the matrix from the measured test times. The build
-uses every core, and runs on the label in the repository's Actions value `INTEGRATION_BUILD_RUNNER`,
-or `ubuntu-latest` when it is not set. A label that no runner has keeps the job queued for up to 24 hours.
+start-up, the fetch and its own template, so size the matrix from the measured test times.
 
 The shards **share one queue**, so they end close together. Runner speed differs by up to 1.9 times,
 and with a fixed split the fast shards waited for the slow ones. Parts of about 120 seconds of test time
