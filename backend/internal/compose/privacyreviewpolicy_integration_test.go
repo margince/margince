@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/compose/privacyreview"
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/privacy"
@@ -28,7 +29,7 @@ func TestErasureExplainsMissingReviewerAndRollsBack(t *testing.T) {
 	company := e.SeedCompany(t, "Review company", nil)
 	e.WsExec(t, `UPDATE company SET description='Anna Berg is mentioned here' WHERE id=$1`, company)
 	err := eraserWithGraph(e.DB()).WithRawCapturePurger(RawCapturePurgerFor(e.DB())).EraseContact(e.Admin(), subject, "Subject requested erasure")
-	var refusal *privacyReviewUnavailableError
+	var refusal *privacyreview.UnavailableError
 	if !errors.As(err, &refusal) || !errors.Is(err, apperrors.ErrConflict) {
 		t.Fatalf("missing reviewer must explain a conflict: %v", err)
 	}

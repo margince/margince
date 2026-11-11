@@ -1,3 +1,5 @@
+defacl ext objtype=S acl=ext_runtime=rU/margince_owner
+defacl ext objtype=r acl=ext_runtime=arwd/margince_owner
 defacl public objtype=r acl=margince_app=arwd/margince_owner
 public.activity acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.activity.activity_assignee_id_fkey FOREIGN KEY (assignee_id) REFERENCES app_user(id) ON DELETE SET NULL (assignee_id)
@@ -5574,6 +5576,7 @@ public.idx_aparticipant_address CREATE INDEX idx_aparticipant_address ON public.
 public.idx_aparticipant_contact CREATE INDEX idx_aparticipant_contact ON public.activity_participant USING btree (contact_id, activity_id) WHERE (contact_id IS NOT NULL)
 public.idx_aparticipant_sender_domain_reversed CREATE INDEX idx_aparticipant_sender_domain_reversed ON public.activity_participant USING btree (reverse(address_domain_folded) COLLATE "C") WHERE ((role = 'from'::text) AND (address_domain_folded IS NOT NULL))
 public.idx_aparticipant_user CREATE INDEX idx_aparticipant_user ON public.activity_participant USING btree (user_id, activity_id) WHERE (user_id IS NOT NULL)
+public.idx_aparticipant_waiting_address_time CREATE INDEX idx_aparticipant_waiting_address_time ON public.activity_participant USING btree (lower(address), domain_evidence_at DESC) WHERE ((role = 'to'::text) AND (address IS NOT NULL))
 public.idx_app_user_live CREATE INDEX idx_app_user_live ON public.app_user USING btree (created_at, id) WHERE (archived_at IS NULL)
 public.idx_app_user_login_folded CREATE INDEX idx_app_user_login_folded ON public.app_user USING btree (email_domain_folded, lower(regexp_replace(email, '@[^@]*$'::text, ''::text)))
 public.idx_app_user_merge_target CREATE INDEX idx_app_user_merge_target ON public.app_user USING btree (merged_into_user_id) WHERE (merged_into_user_id IS NOT NULL)
@@ -10355,5 +10358,5 @@ public.workspace_email_domain.workspace_email_domain_pkey PRIMARY KEY (domain)
 public.workspace_email_domain.workspace_email_domain_source_check CHECK ((source = ANY (ARRAY['admin'::text, 'mailbox'::text])))
 public.workspace_email_domain_pkey CREATE UNIQUE INDEX workspace_email_domain_pkey ON public.workspace_email_domain USING btree (domain)
 public.workspace_pkey CREATE UNIQUE INDEX workspace_pkey ON public.workspace USING btree (id)
-schema ext acl=margince_owner=UC/margince_owner,margince_app=U/margince_owner
+schema ext acl=margince_owner=UC/margince_owner,margince_app=U/margince_owner,ext_runtime=U/margince_owner
 schema public acl=margince_owner=UC/margince_owner,margince_app=U/margince_owner

@@ -50,6 +50,7 @@ const settled = (preview: ReturnType<typeof refusedPreview>) => ({
   refusal: null,
   asking: false,
   unanswered: false,
+  recheck: () => {},
 });
 
 describe("who a reason to write is recorded on", () => {

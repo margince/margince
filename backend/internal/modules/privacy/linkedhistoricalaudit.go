@@ -88,6 +88,12 @@ func redactLinkedHistoricalEntry(ctx context.Context, tx pgx.Tx, entry legacyAud
 	if err != nil || !found {
 		return false, err
 	}
+	return correctLinkedHistoricalEntry(ctx, tx, entry, match, floor)
+}
+
+// correctLinkedHistoricalEntry redacts one entry whose erased subject is proved,
+// unless that subject is held.
+func correctLinkedHistoricalEntry(ctx context.Context, tx pgx.Tx, entry legacyAuditEntry, match legacyAuditMatch, floor FloorPolicy) (bool, error) {
 	held, err := historicalAuditUnderHold(ctx, tx, entry.id, match.kind, match.entity, floor)
 	if err != nil || held {
 		return false, err

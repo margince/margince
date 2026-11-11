@@ -244,9 +244,19 @@ func finalizeRelinkedActivity(ctx context.Context, tx pgx.Tx, id ids.ActivityID,
 			return err
 		}
 	}
-	auditID, err := storekit.AuditWithEvidence(ctx, tx, "activity_relink", "activity", id.UUID, relinkBefore(in.EntityType, removed), map[string]any{
-		"entity_type": in.EntityType, "entity_id": in.EntityID, "replaced": in.ReplaceExistingOfType,
-	}, in.evidence)
+	after := map[string]any{"entity_type": in.EntityType, "entity_id": in.EntityID, "replaced": in.ReplaceExistingOfType}
+	// A contact linked later is the sender only when the message's stated
+	// address proves it.
+	if in.EntityType == linkEntityContact {
+		proven, err := stampProvenSender(ctx, tx, id.UUID, in.EntityID)
+		if err != nil {
+			return err
+		}
+		if proven {
+			after[auditFieldProvenSender] = in.EntityID
+		}
+	}
+	auditID, err := storekit.AuditWithEvidence(ctx, tx, "activity_relink", "activity", id.UUID, relinkBefore(in.EntityType, removed), after, in.evidence)
 	if err != nil {
 		return err
 	}

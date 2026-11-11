@@ -31,6 +31,8 @@ const markerHoldLockSQL = `LOCK TABLE company,contact,deal,lead,project,data_sub
 type HistoricalAuditPage struct {
 	Scanned []ids.UUID
 	Changed int
+	// Review names records whose kept copies a reviewer must check by hand.
+	Review []ErasureReviewSource
 }
 
 // RedactHistoricalAuditPageTx advances over the audit primary key, including

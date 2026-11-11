@@ -360,3 +360,46 @@ func TestSomebodyWithNoMeetingIsStillRefused(t *testing.T) {
 			"default-deny is the whole posture", got.State, got.Reason)
 	}
 }
+
+// Capture stores a received mail's sender by bare address. The derived arm reads
+// it through the shared author rule. The message is then a request from the
+// recipient at that address, and from no other address on the contact.
+func TestASenderAddressOnAFiledMessageIsTheRecipientsRequest(t *testing.T) {
+	e := setupQualifying(t)
+	const sender = "pat.quinn@orchardline.example"
+	id, now := ids.NewV7(), clocktest.Now(t)
+	if err := e.store.db.Tx(e.ctx, func(tx pgx.Tx) error {
+		if _, err := tx.Exec(context.Background(), `
+			INSERT INTO activity (id, kind, direction, source, occurred_at, captured_by)
+			VALUES ($1, 'email', 'inbound', 'gmail', $2, 'connector:gmail:x')`, id, now.Add(-time.Hour)); err != nil {
+			return err
+		}
+		if _, err := tx.Exec(context.Background(), `
+			INSERT INTO activity_link (activity_id, entity_type, contact_id) VALUES ($1, 'contact', $2)`, id, e.contact); err != nil {
+			return err
+		}
+		_, err := tx.Exec(context.Background(), `
+			INSERT INTO activity_participant (activity_id, address, role) VALUES ($1, $2, 'from')`, id, sender)
+		return err
+	}); err != nil {
+		t.Fatalf("planting a captured mail filed under the contact: %v", err)
+	}
+	derivedFor := func(address string) eventSource {
+		var source eventSource
+		if err := e.store.db.Tx(e.ctx, func(tx pgx.Tx) error {
+			var err error
+			_, source, err = latestQualifyingEvent(e.ctx, tx, e.contact.String(),
+				now.Add(-defaultReplyWindow), now, &address, ids.Nil)
+			return err
+		}); err != nil {
+			t.Fatalf("reading the qualifying event for %s: %v", address, err)
+		}
+		return source
+	}
+	if got := derivedFor(sender); got != sourceDerived {
+		t.Errorf("the mail from %s is source %d for that address, want derived", sender, got)
+	}
+	if got := derivedFor("pat.private@orchardline.example"); got != sourceNone {
+		t.Errorf("the mail from %s counts for another address of the contact (source %d)", sender, got)
+	}
+}

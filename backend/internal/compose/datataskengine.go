@@ -14,6 +14,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/credentialrepair"
 	"github.com/margince/margince/backend/internal/compose/erasedseattraces"
+	"github.com/margince/margince/backend/internal/compose/provensenders"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/notices"
@@ -115,11 +116,12 @@ func dataTaskCatalog(pool *pgxpool.Pool, now func() time.Time) []datatask.Task {
 		gmailDedupeScanDataTask(),
 		retiredReviewsDataTask(pool),
 		auditRedactionDataTask(),
-		linkedAuditRedactionDataTask(),
+		linkedAuditRedactionDataTask(pool),
 		markedAuditRedactionDataTask(),
 		keyedIdentifiersDataTask(),
 		mailCopiesDataTask(pool),
 		falseMeetingCancelsDataTask(now),
+		provensenders.DataTask(),
 		credentialrepair.DataTask(capture.NewPendingStore(InstallationDB(pool)).PurgeRawCaptureTx),
 		erasedseattraces.DataTask(),
 	}

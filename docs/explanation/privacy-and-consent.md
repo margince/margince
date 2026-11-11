@@ -229,7 +229,7 @@ counts either. So a seat cannot make this ground by copying the contact.
 
 The rule reads the thread key and records its basis against that thread. So it never becomes
 standing permission for the contact. It never supports a message the sender calls marketing.
-`copiedOnThisMatter` holds the whole rule.
+`copiedOnThisMatter` holds the whole rule. A follow-up the contact asked for rests on a message they wrote; [who sent a received message](relationship-graph.md#who-sent-a-received-message) says how the record names that author.
 
 An open deal the contact is a stakeholder on supports a follow-up only when the record shows them
 asking about that deal (`requestedNegotiation`). That is mail they wrote or a meeting they joined,

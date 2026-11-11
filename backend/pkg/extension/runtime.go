@@ -30,6 +30,12 @@ var ErrRuntimeExpired = errors.New("extension: this runtime belongs to a call th
 // is an errors.Is check rather than a sentinel the extension has to guess.
 var ErrNoRows = errors.New("extension: the query matched no rows")
 
+// ErrCoreTableRefused reports that a statement on Tx reached for a table the
+// unit does not own. A unit's SQL runs as a database role that holds only unit
+// tables. Core records are reached through Tx.Core() and the read doors, which
+// carry the authorization, the audit row and the event that raw SQL cannot.
+var ErrCoreTableRefused = errors.New("extension: Tx runs SQL on the unit's own tables only; reach core records through Tx.Core()")
+
 // Runtime is the capability handle a governed tool is invoked with. It is the
 // only way an extension reaches anything the core OFFERS at run time: the
 // Extension value a unit's New() returns is inert declaration and holds no
@@ -74,13 +80,14 @@ type Runtime interface {
 
 	// Tx runs fn inside ONE database transaction on the workspace the
 	// invocation belongs to. The core takes that workspace from the
-	// INVOCATION, not from the ctx passed here: everything else this ctx
-	// carries is honoured — a shorter deadline, a cancellation, the values a
-	// handler put on it — but the workspace comes from the call the Runtime
-	// was minted for, so a handler cannot name a different one by building a
-	// context. What bounds the SQL inside is convention plus a static scan of
-	// the unit's own source (extensionsqlscope_test.go), not a policy or a
-	// grant; see Tx for what that leaves unwalled.
+	// invocation, not from the ctx passed here. Everything else this ctx
+	// carries is honoured: a shorter deadline, a cancellation, the values a
+	// handler put on it. The workspace comes from the call the Runtime was
+	// minted for, so a handler cannot name a different one by building a
+	// context.
+	//
+	// Each statement inside runs as the ext_runtime role, which holds no core
+	// table. Tx says what that guards and what it does not.
 	//
 	// fn returning an error rolls the transaction back; returning nil
 	// commits it. The Tx handed to fn is valid only for that call — it is
@@ -247,31 +254,31 @@ type Caller struct {
 // it. If the product ever becomes multi-tenant the column returns to CORE first
 // and the tier follows it, in that order.
 //
-// WHAT IS NOT WALLED, therefore:
-//   - the CORE's tables. This runs on the shared application role, so a unit's
-//     SQL can address any table that role can.
-//   - OTHER UNITS' tables. Every unit's migration grants the same application
-//     role DML on its own ext_<name>_* tables, so unit A can read, rewrite or
-//     delete unit B's rows.
-//   - extension_secret. The wall around it is structural in Go — every read and
-//     write goes through platform/extsecrets, which closes over the invoking
-//     unit's namespace — so the namespacing Secrets enforces at the PORT is
-//     reachable around it through these three verbs. And because a unit runs
-//     in-process it can also read the keyvault root key from the environment and
-//     decrypt the ciphertext directly. "Sovereign inside its namespace,
-//     powerless outside it" is a property of polite units, not of this
-//     transaction.
+// Verbs only on the core's tables. Each statement runs as one shared database
+// role, ext_runtime, that holds DML on schema ext and nothing on public. A
+// statement naming a core table (extension_secret included) is refused by the
+// database with ErrCoreTableRefused. Core records are reached through Tx.Core()
+// and the read doors, the verbs that authorize, audit and announce. The role is
+// the same for every unit. Core and Record run as the application role,
+// outside the switch.
 //
-// All three are the same missing thing — a per-unit database ROLE, which would
-// bound a unit by grant rather than by convention — and all three are inside the
-// trusted-unit threat model above. That role is grant containment on its own
-// argument; the tenant isolation it was once expected to also carry is not a
-// property this schema has to lose. A static gate does
-// refuse the first two where it can SEE them —
-// backend/gates/extensionsqlscope_test.go reads the SQL a unit's source spells
-// out and holds it to that unit's own ext_<name>_* tables — but a scanner is
-// defence against mistakes by construction: it reads text, and this seam takes
-// whatever string a unit assembles.
+// ext_runtime is a guard against mistakes by trusted first-party units. It is
+// not a wall against a unit that means harm:
+//   - the restricted role can always switch back to the session's login role.
+//     One statement can do that and then run a query string (a DO block,
+//     set_config('role', ...), query_to_xml(...)), and the check after the
+//     statement does not see it. A statement that ends in another role is
+//     caught and its transaction rolled back.
+//   - other units' tables live in schema ext, which ext_runtime holds whole,
+//     so unit A can read, rewrite or delete unit B's rows.
+//   - a unit runs in-process, so it can read the keyvault root key from the
+//     environment and decrypt the ciphertext directly.
+//
+// A separate database login per unit, or per pool, would make it a wall. That
+// is #628, closed until a unit from outside the first-party set is planned.
+// Until then backend/gates/extensionsqlscope_test.go holds the rest. It keeps
+// the SQL a unit's source spells out to the unit's own ext_<name>_* tables. It
+// also refuses role changes, dynamic SQL and new functions.
 //
 // args is ...any because SQL arguments are genuinely heterogeneous — a
 // statement's parameters are whatever its placeholders are — and every

@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SEARCH_DEBOUNCE_MS } from "../../components/listquery";
 import { pickOption } from "../../design-system/select-testing";
 import { en } from "../../i18n/en";
+import { auditHistoryHref } from "../../lib/auditloglink";
 import { meFixture } from "../../testing/mefixture";
 import {
   auditEntry,
@@ -27,6 +28,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  window.location.hash = "";
   vi.useRealTimers();
   vi.unstubAllGlobals();
   globalThis.localStorage.clear();
@@ -131,6 +133,34 @@ describe("AuditLogCard", () => {
     const latest = auditLogUrls(backend).at(-1) ?? "";
     expect(latest).toContain("limit=20");
     expect(latest).not.toContain("cursor=");
+  });
+
+  it("opens on the record a link names, with both dials filled", async () => {
+    const backend = auditLogBackend();
+    vi.stubGlobal("fetch", backend);
+    window.location.hash = auditHistoryHref("approval", RECORD_ID);
+    render(<AuditLogCard />);
+    await screen.findByText("Updated");
+
+    expect(screen.getByLabelText("Entity type")).toHaveValue("approval");
+    const first = auditLogUrls(backend)[0] ?? "";
+    expect(first).toContain("entity_type=approval");
+    expect(first).toContain(`entity_id=${RECORD_ID}`);
+  });
+
+  it("follows a second link while the log is open", async () => {
+    const backend = auditLogBackend();
+    vi.stubGlobal("fetch", backend);
+    window.location.hash = auditHistoryHref("approval", RECORD_ID);
+    render(<AuditLogCard />);
+    await screen.findByText("Updated");
+
+    const second = "01890000-0000-7000-8000-000000000002";
+    window.location.hash = auditHistoryHref("approval", second);
+    window.dispatchEvent(new HashChangeEvent("hashchange"));
+    await waitFor(() => {
+      expect(auditLogUrls(backend).at(-1)).toContain(`entity_id=${second}`);
+    });
   });
 
   it("says the log is empty before any filter, and that nothing matches after one", async () => {
