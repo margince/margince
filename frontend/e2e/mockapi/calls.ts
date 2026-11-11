@@ -88,6 +88,7 @@ export const taskFromCall = {
   }),
   due_at: "2026-07-06T13:00:00Z",
   source_activity_id: loggedCall.id,
+  task_type: "call",
 };
 
 export const typedTask = {
@@ -118,7 +119,7 @@ export const activityById: Handler = ({ params, json }) => {
   return row ? json(row) : Promise.resolve(PASS);
 };
 
-function taskRow(task: typeof typedTask) {
+function taskRow(task: { id: string; subject: string; due_at: string }) {
   return {
     id: task.id,
     source: "task",
