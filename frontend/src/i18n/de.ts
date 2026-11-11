@@ -21807,7 +21807,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "progress.year": "Jahr",
   "progress.scope": "Mitglied oder Team",
   "progress.reading": "Fortschritt wird gelesen",
-  "progress.myTitle": "Mein Fortschritt",
+  "progress.myTitle": "Fortschritt",
   "progress.teamTitle": "Team-Fortschritt",
   "progress.heading": "{whose} · {scope} · {period} · Zahlen bis {cutoff}",
   "progress.closedRevenue": "Abgeschlossener Umsatz",
@@ -21842,7 +21842,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "progress.plannedAt": "Offene Deals, Stand {at}",
   "progress.unclassified": "Nicht zugeordnet",
   "progress.unclassifiedDetail":
-    "Keine Produktposition ordnet diesen Umsatz zu.",
+    "Dieser Umsatz ist keinem Produkt und keiner Dienstleistung zugeordnet.",
   "progress.invalidDeals_one":
     "{count} Deal hat Positionen, die mehr wert sind als der Deal.",
   "progress.invalidDeals_other":
@@ -21886,7 +21886,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "goals.state.withdrawn": "Zurückgezogen",
   "goals.state.changed_outside_plan": "Außerhalb des Plans geändert",
   "goals.readOnly":
-    "Nur lesen. Ziele werden gemeinsam vereinbart. Nur deine Führungskraft kann Umsatzziele anlegen, ändern oder veröffentlichen.",
+    "Nur lesen. Ziele werden gemeinsam vereinbart. Nur wer Umsatzziele verwaltet, kann sie anlegen, ändern oder veröffentlichen.",
   "goals.months": "Monatsziele",
   "goals.yearTotal": "Jahressumme",
   "goals.notSet": "Nicht gesetzt",

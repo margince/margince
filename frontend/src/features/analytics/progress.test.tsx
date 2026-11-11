@@ -18,6 +18,7 @@ import { ProgressWork } from "./progress.work";
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  window.location.hash = "";
 });
 
 describe("equalMonths", () => {

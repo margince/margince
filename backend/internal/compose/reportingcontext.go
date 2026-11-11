@@ -54,18 +54,6 @@ func errUnsupportedCloseWindow() error {
 	return fmt.Errorf("choose a supported expected-close window, all_open, fiscal_quarter or custom: %w", apperrors.ErrInvalidArgument)
 }
 
-// customCloseWindow checks the window close_window=custom names. Unlike the
-// reporting interval it may lie in the future: it bounds expected close dates.
-func customCloseWindow(window *crmcontracts.ReportingWindow) (crmcontracts.ReportingWindow, error) {
-	if window == nil {
-		return crmcontracts.ReportingWindow{}, fmt.Errorf("choose the expected-close window close_window=custom names: %w", apperrors.ErrInvalidArgument)
-	}
-	if !window.EndAt.After(window.StartAt) || window.EndAt.After(window.StartAt.AddDate(1, 0, 0)) {
-		return crmcontracts.ReportingWindow{}, fmt.Errorf("choose an expected-close window of up to twelve months that ends after it starts: %w", apperrors.ErrInvalidArgument)
-	}
-	return *window, nil
-}
-
 func reportingContext(ctx context.Context, tx pgx.Tx, selection crmcontracts.ReportingSelection, framework crmcontracts.ReportingFramework, owners reporting.MeasurableOwners, at time.Time) (crmcontracts.ReportingContext, error) {
 	out := crmcontracts.ReportingContext{EvaluatedAt: at, StateAt: at, FrameworkRevision: framework.Revision, DefinitionVersion: "1", PeriodKind: string(selection.Period), PipelineId: selection.PipelineId}
 	calendar, err := reportingCalendar(ctx, tx)
@@ -116,7 +104,7 @@ func reportingContext(ctx context.Context, tx pgx.Tx, selection crmcontracts.Rep
 		}
 		out.CloseInterval = &closeWindow
 	case crmcontracts.ReportingSelectionCloseWindowCustom:
-		closeWindow, err := customCloseWindow(selection.CloseInterval)
+		closeWindow, err := reporting.CustomCloseWindow(selection.CloseInterval)
 		if err != nil {
 			return out, err
 		}

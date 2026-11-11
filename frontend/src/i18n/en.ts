@@ -21545,7 +21545,7 @@ export const en = {
   "progress.year": "Year",
   "progress.scope": "Seller or team",
   "progress.reading": "Reading progress",
-  "progress.myTitle": "My progress",
+  "progress.myTitle": "Progress",
   "progress.teamTitle": "Team progress",
   "progress.heading": "{whose} · {scope} · {period} · Figures up to {cutoff}",
   "progress.closedRevenue": "Closed revenue",
@@ -21579,7 +21579,8 @@ export const en = {
   "progress.planned": "Planned revenue",
   "progress.plannedAt": "Open deals as of {at}",
   "progress.unclassified": "Unclassified",
-  "progress.unclassifiedDetail": "No product line places this revenue.",
+  "progress.unclassifiedDetail":
+    "This revenue has no product or service classification.",
   "progress.invalidDeals_one":
     "{count} deal has lines worth more than the deal.",
   "progress.invalidDeals_other":
@@ -21623,7 +21624,7 @@ export const en = {
   "goals.state.withdrawn": "Withdrawn",
   "goals.state.changed_outside_plan": "Changed outside the plan",
   "goals.readOnly":
-    "Read-only. Goals are agreed together. Only your manager can create, edit or publish sales goals.",
+    "Read-only. Goals are agreed together. Only a colleague who manages sales goals can create, edit or publish them.",
   "goals.months": "Monthly goals",
   "goals.yearTotal": "Year total",
   "goals.notSet": "Not set",

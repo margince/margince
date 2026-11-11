@@ -81,6 +81,12 @@ func (h Reading) frame(ctx context.Context, tx pgx.Tx, period progressPeriod) (p
 	if !period.yearly() && period.month == nil {
 		return progressFrame{}, httperr.Validation("month", "required", "choose the month to read")
 	}
+	if period.year < 2000 || period.year > 2200 {
+		return progressFrame{}, httperr.Validation("year", "out_of_range", "choose a year from 2000 to 2200")
+	}
+	if period.month != nil && (*period.month < 1 || *period.month > 12) {
+		return progressFrame{}, httperr.Validation("month", "out_of_range", "choose a month from 1 to 12")
+	}
 	calendar, err := h.Reports.Calendar(ctx, tx)
 	if err != nil {
 		return progressFrame{}, err

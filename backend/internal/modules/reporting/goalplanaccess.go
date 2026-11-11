@@ -59,7 +59,7 @@ func (s *Service) goalAccess(ctx context.Context, tx pgx.Tx, owner ids.UUID) (go
 		return goalAccess{}, err
 	}
 	access.edit = edit
-	access.drafts = access.self || edit || auth.Unbounded(actor) || actor.Permissions.RowScope == principal.RowScopeAll
+	access.drafts = access.self || edit
 	return access, nil
 }
 

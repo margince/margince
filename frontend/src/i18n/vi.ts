@@ -21236,7 +21236,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "progress.year": "Năm",
   "progress.scope": "Nhân viên kinh doanh hoặc nhóm",
   "progress.reading": "Đang đọc tiến độ",
-  "progress.myTitle": "Tiến độ của tôi",
+  "progress.myTitle": "Tiến độ",
   "progress.teamTitle": "Tiến độ nhóm",
   "progress.heading": "{whose} · {scope} · {period} · Số liệu đến {cutoff}",
   "progress.closedRevenue": "Doanh thu đã chốt",
@@ -21254,7 +21254,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "progress.goal.other_currency": "Bằng tiền tệ khác",
   "progress.goal.changed_outside_plan": "Đã đổi ngoài kế hoạch",
   "progress.goalChanged":
-    "Một tháng của mục tiêu này đã được đổi ngoài mục tiêu doanh số. Quản lý nên xem lại kế hoạch.",
+    "Một tháng của mục tiêu này đã được đổi ngoài kế hoạch. Quản lý nên xem lại kế hoạch.",
   "progress.completion": "{percent}% mục tiêu",
   "progress.partial":
     "Một số deal trong số liệu này chưa có giá trị quy đổi, nên không tính mức hoàn thành.",
@@ -21271,7 +21271,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "progress.plannedAt": "Deal đang mở tính đến {at}",
   "progress.unclassified": "Chưa phân loại",
   "progress.unclassifiedDetail":
-    "Không dòng sản phẩm nào xếp loại doanh thu này.",
+    "Doanh thu này chưa được phân loại theo sản phẩm hay dịch vụ.",
   "progress.invalidDeals_one": "{count} deal có các dòng lớn hơn giá trị deal.",
   "progress.invalidDeals_other":
     "{count} deal có các dòng lớn hơn giá trị deal.",
@@ -21314,7 +21314,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "goals.state.withdrawn": "Đã rút lại",
   "goals.state.changed_outside_plan": "Đã đổi ngoài kế hoạch",
   "goals.readOnly":
-    "Chỉ xem. Mục tiêu được thống nhất cùng nhau. Chỉ quản lý của bạn mới có thể tạo, sửa hoặc công bố mục tiêu doanh số.",
+    "Chỉ xem. Mục tiêu được thống nhất cùng nhau. Chỉ đồng nghiệp quản lý mục tiêu doanh số mới có thể tạo, sửa hoặc công bố chúng.",
   "goals.months": "Mục tiêu theo tháng",
   "goals.yearTotal": "Cả năm",
   "goals.notSet": "Chưa đặt",
@@ -21328,7 +21328,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "goals.event.withdrawn": "{name} đã rút lại mục tiêu",
   "goals.roster": "Nhân viên kinh doanh",
   "goals.status": "Trạng thái",
-  "goals.yearly": "Mục tiêu năm bằng {currency}",
+  "goals.yearly": "Mục tiêu năm ({currency})",
   "goals.spread": "Chia đều",
   "goals.monthsSum": "Các tháng cộng lại là {total}.",
   "goals.monthsMissing_one": "{count} tháng chưa đặt.",
