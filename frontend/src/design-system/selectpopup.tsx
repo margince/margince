@@ -40,8 +40,8 @@ export function SelectPopup({
   filter,
 }: Readonly<{
   options: readonly SelectOption[];
-  // Membership, not a value: the single select asks "is this THE value", the
-  // multi asks "is this IN the set", and the popup draws both the same way.
+  // Membership, not a value. The single select asks "is this the value" and
+  // the multi asks "is this in the set"; the popup draws both the same way.
   selected: (option: SelectOption) => boolean;
   multiselectable?: boolean;
   frame: PopupFrame;
@@ -71,12 +71,11 @@ export function SelectPopup({
       id={listbox.listboxId}
       role="listbox"
       aria-multiselectable={multiselectable}
-      // Reduced motion resolves in one place — the hook, not a second media
-      // query in the stylesheet — so the decision is assertable by the suite
-      // rather than only visible in a browser.
+      // Reduced motion resolves in the hook, not a second media query in the
+      // stylesheet. So the suite can assert the decision, not only a browser.
       data-motion={animate ? "in" : "none"}
       data-above={frame.above ? "true" : undefined}
-      // The trigger's width is the list's FLOOR, not its width — see
+      // The trigger's width is the list's floor, not its width. See
       // `contentSizedPopupBox` and the cap in select.css.
       style={contentSizedPopupBox(frame)}
     >
@@ -116,11 +115,10 @@ function OptionRows({
             .filter(Boolean)
             .join(" ")}
           onClick={option.disabled ? undefined : () => listbox.pick(index)}
-          // A press on an option must not steal focus from the combobox: in
-          // the multi list, which stays open after a toggle, Escape and the
-          // arrow keys have to keep reaching the trigger's own handler. On
-          // the rows rather than the container, so the list's scrollbar
-          // still drags.
+          // A press on an option must not steal focus from the combobox. The
+          // multi list stays open after a toggle, so Escape and the arrows must
+          // still reach the trigger's handler. On the rows, not the container,
+          // so the list's scrollbar still drags.
           onMouseDown={(event) => event.preventDefault()}
           onMouseEnter={
             option.disabled ? undefined : () => listbox.hover(index)
@@ -147,8 +145,8 @@ function OptionRows({
 // keys stay the box's, so a reader can type and correct a name.
 const LIST_KEYS = new Set(["ArrowDown", "ArrowUp", "Enter", "Escape", "Tab"]);
 
-// A long list: a box on top narrows it while focus sits in the box, and the
-// box drives the list through aria-activedescendant, as the trigger does.
+// A long list: a box on top narrows it while focus sits in the box. The box
+// drives the list through aria-activedescendant, as the trigger does.
 function FilteredPopup({
   popupRef,
   options,
@@ -184,7 +182,7 @@ function FilteredPopup({
   return (
     <div
       ref={popupRef}
-      className="select-popup select-popup-filtered"
+      className="select-popup"
       data-motion={animate ? "in" : "none"}
       data-above={frame.above ? "true" : undefined}
       style={contentSizedPopupBox(frame)}
@@ -207,8 +205,10 @@ function FilteredPopup({
         onChange={(event) => filter.onQuery(event.target.value)}
         onKeyDown={onKeyDown}
       />
-      <div className="select-list" id={listbox.listboxId} role="listbox">
-        <OptionRows options={options} selected={selected} listbox={listbox} />
+      <div className="select-list">
+        <div id={listbox.listboxId} role="listbox">
+          <OptionRows options={options} selected={selected} listbox={listbox} />
+        </div>
       </div>
       {options.length === 0 && (
         <p className="select-empty" role="status">

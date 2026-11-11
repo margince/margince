@@ -12,10 +12,10 @@ import { FILTER_FROM } from "./selectpopup";
 
 afterEach(cleanup);
 
-// A list long enough to scroll opens with a box that narrows it, so a reader
-// finds a colleague among hundreds by any part of the name or email.
+// A list long enough to scroll opens with a box that narrows it. A reader finds
+// a colleague among hundreds by any part of the name or email.
 describe("a long list", () => {
-  const PEOPLE: readonly SelectOption[] = Array.from(
+  const COLLEAGUES: readonly SelectOption[] = Array.from(
     { length: 14 },
     (_, i) => ({
       value: `u-${i}`,
@@ -35,7 +35,7 @@ describe("a long list", () => {
       <LocaleProvider initial="en">
         <Select
           aria-label="Owner"
-          options={PEOPLE}
+          options={COLLEAGUES}
           value=""
           onChange={onChange}
         />
@@ -51,7 +51,7 @@ describe("a long list", () => {
     expect(
       screen.getByRole("combobox", { name: "Filter the list" }),
     ).toHaveFocus();
-    expect(screen.getAllByRole("option")).toHaveLength(PEOPLE.length);
+    expect(screen.getAllByRole("option")).toHaveLength(COLLEAGUES.length);
   });
 
   it("narrows by a part of the name, ignoring case and accents", async () => {
@@ -106,7 +106,7 @@ describe("a long list", () => {
     expect(
       screen.getByRole("combobox", { name: "Filter the list" }),
     ).toHaveValue("");
-    expect(screen.getAllByRole("option")).toHaveLength(PEOPLE.length);
+    expect(screen.getAllByRole("option")).toHaveLength(COLLEAGUES.length);
   });
 
   it("keeps a short list free of a box", async () => {
@@ -115,7 +115,7 @@ describe("a long list", () => {
       <LocaleProvider initial="en">
         <Select
           aria-label="Owner"
-          options={PEOPLE.slice(0, FILTER_FROM - 1)}
+          options={COLLEAGUES.slice(0, FILTER_FROM - 1)}
           value=""
           onChange={() => {}}
         />
