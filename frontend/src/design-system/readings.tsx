@@ -393,9 +393,8 @@ export type BarListRow = Readonly<{
 // most to least certain, so their colour steps down ONE hue rather than cycling
 // through several, and three is the most a single hue tells apart.
 //
-// The track is aria-hidden and the legend carries every label and figure as
-// text, which also makes colour a second channel rather than the only one.
-// Amounts arrive formatted, for the reason `BarList`'s do.
+// The track is aria-hidden: the legend carries every label and figure as text,
+// so colour is a second channel. Amounts arrive formatted, as `BarList`'s do.
 export function SegmentBar({
   parts,
   marker,
@@ -426,7 +425,7 @@ export function SegmentBar({
             <Button
               key={part.key}
               variant="link"
-              className={`segbar-part segbar-action segbar-step-${step}`}
+              className={segmentActionClass(step)}
               style={{ width: `${percentOf(part.value, scale)}%` }}
               aria-label={`${part.label}: ${part.amount}`}
               onClick={() => onSelect(part.key)}
@@ -495,3 +494,7 @@ export type SegmentBarParts =
   | readonly [SegmentBarPart]
   | readonly [SegmentBarPart, SegmentBarPart]
   | readonly [SegmentBarPart, SegmentBarPart, SegmentBarPart];
+
+function segmentActionClass(step: number): string {
+  return `segbar-part segbar-action segbar-step-${step}`;
+}
