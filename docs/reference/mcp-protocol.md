@@ -44,8 +44,13 @@ The headers let a server in the middle route without reading the body.
 
 The server compares each header with the body value the handler will act on, read the way the handler reads it. That
 matters because `encoding/json` matches struct members no matter the case. A map lookup does not. Both take the last of
-two members with the same name. Margince never sends `-32021 MissingRequiredClientCapability`: no tool here needs
-sampling, elicitation or roots.
+two members with the same name.
+
+Margince sends `-32021 MissingRequiredClientCapability` for one case only. A modern
+`tasks/get`, `tasks/update` or `tasks/cancel` whose `_meta` passes the modern checks but does not declare the
+`io.modelcontextprotocol/tasks` extension gets it. A `_meta` with no `clientCapabilities` object fails those checks
+first and gets `-32602`. `data.requiredCapabilities` names the extension to declare. No tool here needs sampling, elicitation
+or roots.
 
 **A warning for a gateway.** Before `/mcp`, `Mcp-Name` may come as Base64 sentinel text (`=?base64?…?=`). The protocol
 lets a client write *any* value that way, plain ASCII included. This server reads the value back before it compares.

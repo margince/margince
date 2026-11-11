@@ -491,6 +491,14 @@ func (stubs) GetReportingMetrics(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetReportingMetrics")
 }
 
+func (stubs) GetSalesProgress(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.GetSalesProgressParams) {
+	httperr.NotImplemented(w, r, "GetSalesProgress")
+}
+
+func (stubs) ListSalesProgressDeals(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListSalesProgressDealsParams) {
+	httperr.NotImplemented(w, r, "ListSalesProgressDeals")
+}
+
 func (stubs) RunAnalyticsQuery(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "RunAnalyticsQuery")
 }
@@ -597,6 +605,30 @@ func (stubs) ExplainReportRunCell(w nethttp.ResponseWriter, r *nethttp.Request, 
 
 func (stubs) SearchReportEvidence(w nethttp.ResponseWriter, r *nethttp.Request, runId openapi_types.UUID) {
 	httperr.NotImplemented(w, r, "SearchReportEvidence")
+}
+
+func (stubs) ListSalesGoalSellers(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListSalesGoalSellersParams) {
+	httperr.NotImplemented(w, r, "ListSalesGoalSellers")
+}
+
+func (stubs) GetSalesGoalPlan(w nethttp.ResponseWriter, r *nethttp.Request, ownerId openapi_types.UUID, year int) {
+	httperr.NotImplemented(w, r, "GetSalesGoalPlan")
+}
+
+func (stubs) DiscardSalesGoalDraft(w nethttp.ResponseWriter, r *nethttp.Request, ownerId openapi_types.UUID, year int, params crmcontracts.DiscardSalesGoalDraftParams) {
+	httperr.NotImplemented(w, r, "DiscardSalesGoalDraft")
+}
+
+func (stubs) SaveSalesGoalDraft(w nethttp.ResponseWriter, r *nethttp.Request, ownerId openapi_types.UUID, year int, params crmcontracts.SaveSalesGoalDraftParams) {
+	httperr.NotImplemented(w, r, "SaveSalesGoalDraft")
+}
+
+func (stubs) PublishSalesGoalPlan(w nethttp.ResponseWriter, r *nethttp.Request, ownerId openapi_types.UUID, year int, params crmcontracts.PublishSalesGoalPlanParams) {
+	httperr.NotImplemented(w, r, "PublishSalesGoalPlan")
+}
+
+func (stubs) WithdrawSalesGoalPlan(w nethttp.ResponseWriter, r *nethttp.Request, ownerId openapi_types.UUID, year int, params crmcontracts.WithdrawSalesGoalPlanParams) {
+	httperr.NotImplemented(w, r, "WithdrawSalesGoalPlan")
 }
 
 func (stubs) UpdateReportingSchedule(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.UpdateReportingScheduleParams) {

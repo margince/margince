@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package compose
+// Package dealclosetasks answers the open tasks a closing deal leaves behind,
+// for the surface that closes it.
+package dealclosetasks
 
-// The open tasks a closing deal leaves behind, for the surface that closes it.
-//
 // A task on a closed deal can still be real work, so the close asks. The web
 // asked by judging "open" in the client, which left the tool unable to ask.
 //
@@ -25,19 +25,20 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// dealCloseTasks answers and settles a closing deal's open tasks.
-type dealCloseTasks struct {
+// Settler answers and settles a closing deal's open tasks.
+type Settler struct {
 	tasks *activities.Store
 	db    *database.DB
 }
 
-func newDealCloseTasks(tasks *activities.Store, db *database.DB) dealCloseTasks {
-	return dealCloseTasks{tasks: tasks, db: db}
+// New settles through the activities store and reads under db.
+func New(tasks *activities.Store, db *database.DB) Settler {
+	return Settler{tasks: tasks, db: db}
 }
 
 // openTasksOf lists the deal's open tasks through the activities reader. The
 // caller's row scope and field masks are then the reader's own.
-func (d dealCloseTasks) openTasksOf(ctx context.Context, dealID ids.UUID) ([]crmcontracts.Activity, error) {
+func (d Settler) openTasksOf(ctx context.Context, dealID ids.UUID) ([]crmcontracts.Activity, error) {
 	// The contract's own vocabulary for both: the kind an activity carries, and
 	// the entity type an activity_link names. A constant from elsewhere that
 	// happens to spell "deal" belongs to a different vocabulary.
@@ -61,7 +62,7 @@ func (d dealCloseTasks) openTasksOf(ctx context.Context, dealID ids.UUID) ([]crm
 }
 
 // OpenTasksOnDeal reports the deal's open tasks for a close result.
-func (d dealCloseTasks) OpenTasksOnDeal(ctx context.Context, dealID ids.UUID) ([]crmcontracts.DealOpenTask, error) {
+func (d Settler) OpenTasksOnDeal(ctx context.Context, dealID ids.UUID) ([]crmcontracts.DealOpenTask, error) {
 	rows, err := d.openTasksOf(ctx, dealID)
 	if err != nil {
 		return nil, err
@@ -83,7 +84,7 @@ func (d dealCloseTasks) OpenTasksOnDeal(ctx context.Context, dealID ids.UUID) ([
 // One transaction, so a caller never learns a settle half happened. A task
 // whose version moved between the read and the write is left alone rather than
 // forced, the answer the bulk change gives it.
-func (d dealCloseTasks) CompleteOpenTasksOnDeal(ctx context.Context, dealID ids.UUID) ([]ids.UUID, error) {
+func (d Settler) CompleteOpenTasksOnDeal(ctx context.Context, dealID ids.UUID) ([]ids.UUID, error) {
 	var settled []ids.UUID
 	err := d.db.Tx(ctx, func(tx pgx.Tx) error {
 		rows, err := d.openTasksOf(ctx, dealID)

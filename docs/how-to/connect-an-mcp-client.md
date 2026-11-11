@@ -72,6 +72,15 @@ The same token is a REST Bearer credential, with the same rules:
 - 🟡 tools wait for a human to approve them first;
 - the live seat and RBAC of the human who gave the grant cap them all. See [mint-a-passport.md](mint-a-passport.md) to issue one by hand.
 
+**How each credential ends.** A connection a client made through OAuth ends at `/oauth/revoke`. A client that
+registered with a secret must sign in with that secret on the call. A call that names that client with a wrong or
+missing secret is refused with `401`. A call with the token alone answers `200`, and the connection stays.
+
+A passport made in Settings or by `POST /passports` ends only in Settings under **AI assistants**, or
+by `DELETE /passports/{id}` from your signed-in session. That route refuses a passport, so a tool cannot end its own.
+`/oauth/revoke` answers `200` for such a passport and leaves it working, as RFC 7009 allows for a token it does not
+own.
+
 **What a passport can do without asking you.** Most actions that change real things run at once: to import a file,
 send mail, book, merge or archive. A passport works as *you*. It carries your seat, your grants and your row
 scope. So it can only reach what you could already reach in the app, and a second confirm from you would

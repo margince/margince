@@ -2221,5 +2221,9 @@
   "analytics.outlook.dealCount_one": "Số deal: {count}",
   "analytics.outlook.dealCount_other": "Số deal: {count}",
   "analytics.team.qualificationUnattributed_one": "{count} lần đủ điều kiện đầu tiên chưa ghi nhận người phụ trách. Số của thành viên chỉ tính sự kiện đã phân bổ.",
-  "analytics.team.qualificationUnattributed_other": "{count} lần đủ điều kiện đầu tiên chưa ghi nhận người phụ trách. Số của thành viên chỉ tính sự kiện đã phân bổ."
+  "analytics.team.qualificationUnattributed_other": "{count} lần đủ điều kiện đầu tiên chưa ghi nhận người phụ trách. Số của thành viên chỉ tính sự kiện đã phân bổ.",
+  "nav.progress": "Tiến độ",
+  "nav.myProgress": "Tiến độ của tôi",
+  "nav.salesGoals": "Mục tiêu doanh số",
+  "progress.teamTitle": "Tiến độ nhóm"
 }
