@@ -233,6 +233,8 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     // The same refusal as the two above, for a colleague's queue.
     "worklist.owner.refused",
     "lists.audience.ownerTeams",
+    "lists.audience.ownerOnly",
+    "lists.audience.stewardOnly",
     "lists.team.allOwners",
     "ob.conv.team.body",
     "ob.conv.voice.speakerContinue",
@@ -647,6 +649,8 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "bulk.refusal.required",
     "bulk.titleReassign",
     "lists.audience.ownerTeams",
+    "lists.audience.ownerOnly",
+    "lists.audience.stewardOnly",
     "lists.team.allOwners",
     "client.sender",
     "client.unknownDetail",

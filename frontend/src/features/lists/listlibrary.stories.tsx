@@ -8,6 +8,7 @@ import {
   listsMe,
   liveList,
   OTHER_OWNER_ID,
+  READER_ID,
   shortlist,
   TEAM_ID,
   teamsPage,
@@ -23,8 +24,8 @@ import { DEFAULT_AUDIENCE } from "./listsharing";
 
 // The one table every library group draws: a saved view and a list read alike,
 // the name a link stretched over its row, and only a list counted. A kind is
-// neutral except a Live List's, which wears info's tint and the live dot.
-// Shared adds who can find each row; a phone folds the facts under the name.
+// neutral except a Live List's, which wears info's tint and the live dot. Both
+// list groups say who can find each list; a phone folds the facts under the name.
 const meta: Meta = { title: "Patterns/Filters and views/Library table" };
 export default meta;
 
@@ -32,7 +33,7 @@ type Story = StoryObj;
 
 const BERLIN: SavedView = {
   id: "v1",
-  owner_id: "00000000-0000-4000-8000-000000000001",
+  owner_id: READER_ID,
   shared_scope: "private",
   resource: "contacts",
   name: "Berlin contacts",
@@ -42,14 +43,30 @@ const BERLIN: SavedView = {
 
 const mine = libraryItems(
   [BERLIN],
-  [{ ...shortlist, id: "L-dinner", name: "Dinner guests", sharing: "private" }],
+  [
+    {
+      ...shortlist,
+      id: "L-dinner",
+      name: "Dinner guests",
+      sharing: "private",
+      owner_id: READER_ID,
+    },
+    { ...liveList, id: "L-de", name: "German accounts", team_id: TEAM_ID },
+    liveList,
+  ],
 );
 const shared = libraryItems(
   [],
   [
-    { ...liveList, id: "L-de", name: "German accounts", team_id: TEAM_ID },
-    liveList,
     { ...liveList, id: "L-theirs", name: "Theirs", owner_id: OTHER_OWNER_ID },
+    {
+      ...shortlist,
+      id: "L-board",
+      name: "Board introductions",
+      sharing: "private",
+      owner_id: OTHER_OWNER_ID,
+      steward_id: READER_ID,
+    },
     shortlist,
   ],
 );
@@ -80,7 +97,7 @@ function table(
   );
 }
 
-export const OnlyMeRows: Story = {
+export const MineRowsWithWho: Story = {
   render: () => table(mine, "mine"),
 };
 
@@ -101,6 +118,12 @@ export const FoldedAtPhoneWidth: Story = {
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
   render: () => table(shared, "shared", true),
+};
+
+export const MineFoldedAtPhoneWidth: Story = {
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  render: () => table(mine, "mine", true),
 };
 
 export const ArchivedRow: Story = {

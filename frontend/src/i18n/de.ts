@@ -18494,6 +18494,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lists.team.allOwners": "Alle Teams der verantwortlichen Person",
   "lists.audience.yourTeams": "Deine Teams",
   "lists.audience.ownerTeams": "Die Teams der verantwortlichen Person",
+  "lists.audience.ownerOnly": "Die verantwortliche Person",
+  "lists.audience.stewardOnly": "Die verantwortliche Person",
   "lists.audience.unknownTeam": "Ein Team, das du nicht sehen kannst",
   "lists.health.ownerless": "Niemand verantwortlich",
   "lists.health.invalid": "Filter funktioniert nicht mehr",
@@ -18589,9 +18591,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lists.record.empty": "Auf keiner Liste, die du finden kannst.",
   "lists.record.check": "Live-Liste pr\u00fcfen",
   "lists.record.checkHint":
-    "Eine Live-Liste aktualisiert sich selbst nach ihren Filtern. Wähle eine, um zu sehen, ob dieser Datensatz passt und warum.",
+    "Nur Live-Listen lassen sich prüfen. Wähle eine, um zu sehen, ob dieser Eintrag passt und warum.",
+  "lists.record.checkHintAdd":
+    "Nur Live-Listen lassen sich prüfen. Für eine Shortlist wähle „Zur Shortlist hinzufügen“.",
   "lists.record.checkPick": "Live-Liste ausw\u00e4hlen",
   "lists.record.truncated": "Und weitere Listen, die hier nicht stehen.",
+  "lists.record.allLists": "Alle Listen",
   "lists.record.takenOff": "Von {name} entfernt",
   "lists.record.putBack": "Wieder auf {name}",
   "lists.addToShortlist": "Zur Shortlist hinzuf\u00fcgen",
@@ -18670,8 +18675,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "filters.new.deals": "Neuer Deal-Filter",
   "filters.new.leads": "Neuer Lead-Filter",
   "filters.library.whichRecords": "Welche Datensätze filtern?",
-  "filters.library.mine": "Privat",
-  "filters.library.shared": "Geteilt",
+  "filters.library.mine": "Meine",
+  "filters.library.shared": "Mit mir geteilt",
   "filters.library.views": "Gespeicherte Ansichten",
   "filters.library.kindView": "Gespeicherte Ansicht",
   "filters.library.rowMore": "Weitere Aktionen für {name}",
@@ -18686,9 +18691,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "filters.library.records.project_one": "{count} Projekt",
   "filters.library.records.project_other": "{count} Projekte",
   "filters.library.recordsSeen": "{records}, die du sehen kannst",
-  "filters.library.mineEmpty": "Hier stehen die Ansichten, die du speicherst.",
-  "filters.library.sharedEmpty":
-    "Noch keine geteilten Listen. Hier steht jede Liste, die mit einem Team oder allen geteilt ist.",
+  "filters.library.mineEmpty":
+    "Hier stehen die Ansichten, die du speicherst, und die Listen, die dir gehören.",
+  "filters.library.sharedEmpty": "Noch hat niemand eine Liste mit dir geteilt.",
   "filters.library.noHits": "Keine Ansicht und keine Liste passt zu „{q}“.",
   "filters.library.clearSearch": "Suche leeren",
   "filters.library.noTypeHits.contacts":

@@ -6,10 +6,13 @@
 // membership writer, the same one the list page and a bulk change use.
 
 import { useState } from "react";
+import { ActionRow } from "../design-system/actionrow";
+import { AppLink } from "../design-system/applink";
 import { Button, Field, Textarea, TextInput } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
+import { useCanWrite } from "../lib/capability";
 import {
   type ListRecordType,
   useChangeMember,
@@ -18,9 +21,12 @@ import {
   useListsAvailable,
 } from "../lib/lists.queries";
 import { problemMessageOf } from "../lib/problem";
+import { routeHash } from "../lib/router";
 
 /** The Select value that means "a Shortlist named in the box below". */
 const NEW_LIST = "__new__";
+
+const ALL_LISTS_HREF = routeHash({ screen: "filters", id: "lists" });
 
 type AddInput = Readonly<{
   choice: string;
@@ -28,9 +34,15 @@ type AddInput = Readonly<{
   note: string;
 }>;
 
+export function useMayAddToShortlist(): boolean {
+  const available = useListsAvailable();
+  const granted = useCanWrite("list", "update");
+  return available && granted;
+}
+
 /**
- * The verb, in the record page's overflow menu. Draws nothing while lists are
- * switched off, so the menu never offers a door that answers 404.
+ * The verb, in a record page's header and in `RecordListsWays`. Draws nothing
+ * unless `useMayAddToShortlist`, so no page offers a door the server refuses.
  */
 export function AddToShortlistAction({
   entityType,
@@ -43,9 +55,9 @@ export function AddToShortlistAction({
   reasonId?: string;
 }>) {
   const t = useT();
-  const available = useListsAvailable();
+  const mayAdd = useMayAddToShortlist();
   const [open, setOpen] = useState(false);
-  if (!available) {
+  if (!mayAdd) {
     return null;
   }
   return (
@@ -61,6 +73,25 @@ export function AddToShortlistAction({
         />
       )}
     </>
+  );
+}
+
+/**
+ * The verbs of a record page's Lists section, wherever the page draws it: the
+ * header's Add to Shortlist, and the way to every list the reader can find.
+ */
+export function RecordListsWays({
+  entityType,
+  entityId,
+}: Readonly<{ entityType: ListRecordType; entityId: string }>) {
+  const t = useT();
+  return (
+    <ActionRow>
+      <AddToShortlistAction entityType={entityType} entityId={entityId} />
+      <AppLink className="link-button" href={ALL_LISTS_HREF}>
+        {t("lists.record.allLists")}
+      </AppLink>
+    </ActionRow>
   );
 }
 

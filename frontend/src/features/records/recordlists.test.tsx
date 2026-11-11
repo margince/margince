@@ -18,6 +18,7 @@ import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
 import { recordWriteKeys } from "../../lib/recordwritekeys";
+import { useMe } from "../../lib/session";
 import {
   LIVE_ID,
   listsMe,
@@ -28,7 +29,7 @@ import {
   SHORTLIST_ID,
   shortlist,
 } from "../../testing/lists.fixtures";
-import { meFixture } from "../../testing/mefixture";
+import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import {
   installFetchStub,
   jsonResponse,
@@ -507,5 +508,193 @@ describe("taking a record off a Shortlist", () => {
     expect(
       screen.getByRole("status").querySelector(".toast-dot-danger"),
     ).not.toBeNull();
+  });
+});
+
+describe("putting a record on a Shortlist from its lists", () => {
+  const ADD = `POST /lists/${SHORTLIST_ID}/members`;
+  const otherTeams = {
+    ...shortlist,
+    id: "s2",
+    name: "Trade fair",
+    can_edit: false,
+  };
+
+  // The route map keys by path alone, and the two pickers ask /lists for one
+  // kind each, so this answers each kind with its own lists.
+  function answerListsByKind() {
+    const routed = globalThis.fetch;
+    globalThis.fetch = (async (
+      input: RequestInfo | URL,
+      init?: RequestInit,
+    ) => {
+      const url = new URL(
+        input instanceof Request ? input.url : String(input),
+        "https://test.local",
+      );
+      if (url.pathname.replace(/^\/v1/, "") !== "/lists") {
+        return routed(input, init);
+      }
+      const shortlists = url.searchParams.get("list_type") === "static";
+      return jsonResponse({
+        data: shortlists ? [editableShortlist, otherTeams] : [liveList],
+        page: { has_more: false },
+      });
+    }) as typeof fetch;
+  }
+
+  function seat(allow: GrantSpec, kind: "full" | "read" = "full") {
+    return () =>
+      jsonResponse({
+        ...meFixture({
+          seat: kind,
+          allow,
+          settingsAvailability: { lists: true },
+        }),
+        teams: [],
+      });
+  }
+
+  // Shows once /me has answered, so an absent panel is a decision, not a wait.
+  function MeAnswered() {
+    return useMe().data ? <p>me answered</p> : null;
+  }
+
+  function serve(
+    me: () => Response = listsMe(true),
+    panel: Partial<Parameters<typeof RecordListsPanel>[0]> = {},
+  ) {
+    let onList = false;
+    const added: unknown[] = [];
+    installFetchStub({
+      "GET /me": me,
+      [`GET /records/company/${MEMBER_ID}/lists`]: () =>
+        jsonResponse({ data: onList ? [editableShortlist] : [] }),
+      "GET /filters/vocabulary": () =>
+        jsonResponse({ resource: "company", fields: [] }),
+      [ADD]: (body) => {
+        added.push(body);
+        onList = true;
+        return jsonResponse(
+          { id: "m", list_id: SHORTLIST_ID, entity_type: "company" },
+          201,
+        );
+      },
+    });
+    answerListsByKind();
+    render(
+      <StoryProviders>
+        <MeAnswered />
+        <RecordListsPanel
+          entityType="company"
+          entityId={MEMBER_ID}
+          {...panel}
+        />
+      </StoryProviders>,
+    );
+    return added;
+  }
+
+  const addButton = () =>
+    screen.findByRole("button", { name: en["lists.addToShortlist"] });
+
+  it("offers the header's dialog, listing the Shortlists the reader may change", async () => {
+    serve();
+    const user = userEvent.setup();
+
+    await user.click(await addButton());
+
+    const dialog = await screen.findByRole("dialog", {
+      name: en["lists.addToShortlist"],
+    });
+    await user.click(
+      within(dialog).getByRole("combobox", { name: en["lists.shortlist"] }),
+    );
+    const offered = (await screen.findAllByRole("option")).map(
+      (option) => option.textContent,
+    );
+    expect(offered).toEqual([shortlist.name, en["lists.newShortlistOption"]]);
+  });
+
+  it("shows the new membership in the section once it is added", async () => {
+    const added = serve();
+    const user = userEvent.setup();
+    expect(
+      await screen.findByText(en["lists.record.empty"]),
+    ).toBeInTheDocument();
+
+    await user.click(await addButton());
+    await user.click(
+      await screen.findByRole("combobox", { name: en["lists.shortlist"] }),
+    );
+    await user.click(
+      await screen.findByRole("option", { name: shortlist.name }),
+    );
+    await user.click(screen.getByRole("button", { name: en["lists.add"] }));
+
+    expect(
+      await screen.findByRole("button", { name: shortlist.name }),
+    ).toBeInTheDocument();
+    expect(added).toEqual([{ entity_type: "company", entity_id: MEMBER_ID }]);
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("closes on Escape and hands focus back to the button", async () => {
+    serve();
+    const user = userEvent.setup();
+    const opener = await addButton();
+
+    await user.click(opener);
+    await screen.findByRole("dialog");
+    await user.keyboard("{Escape}");
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(document.activeElement).toBe(opener);
+  });
+
+  it("points the Live List check at the button that adds to a Shortlist", async () => {
+    serve();
+    const check = await screen.findByRole("combobox", {
+      name: en["lists.record.check"],
+    });
+    expect(check).toHaveAccessibleDescription(en["lists.record.checkHintAdd"]);
+  });
+
+  it.each([
+    [
+      "holds no grant to change lists",
+      seat({ list: ["read"], company: ["read"] }),
+    ],
+    [
+      "is a read seat",
+      seat({ list: ["read", "update"], company: ["read"] }, "read"),
+    ],
+  ])("offers no button to a reader who %s", async (_, me) => {
+    serve(me);
+    const check = await screen.findByRole("combobox", {
+      name: en["lists.record.check"],
+    });
+    expect(
+      screen.queryByRole("button", { name: en["lists.addToShortlist"] }),
+    ).toBeNull();
+    expect(check).toHaveAccessibleDescription(en["lists.record.checkHint"]);
+  });
+
+  it("links to every list the reader can find", async () => {
+    serve(seat({ list: ["read"], company: ["read"] }));
+    const link = await screen.findByRole("link", {
+      name: en["lists.record.allLists"],
+    });
+    expect(link).toHaveAttribute("href", "/#/filters/lists");
+  });
+
+  it.each([
+    ["the record is archived", listsMe(true), { archived: true }],
+    ["lists are switched off", listsMe(false), {}],
+  ])("draws nothing when %s", async (_, me, panel) => {
+    serve(me, panel);
+    await screen.findByText("me answered");
+    expect(screen.queryByRole("heading")).toBeNull();
+    expect(screen.queryByRole("button")).toBeNull();
   });
 });

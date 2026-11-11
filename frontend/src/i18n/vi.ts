@@ -18014,6 +18014,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "lists.team.allOwners": "Mọi nhóm của người chịu trách nhiệm",
   "lists.audience.yourTeams": "Nhóm của bạn",
   "lists.audience.ownerTeams": "Nhóm của người chịu trách nhiệm",
+  "lists.audience.ownerOnly": "Người chịu trách nhiệm",
+  "lists.audience.stewardOnly": "Người chịu trách nhiệm",
   "lists.audience.unknownTeam":
     "M\u1ed9t nh\u00f3m b\u1ea1n kh\u00f4ng xem \u0111\u01b0\u1ee3c",
   "lists.health.ownerless": "Chưa ai chịu trách nhiệm",
@@ -18116,9 +18118,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "lists.record.empty": "Hồ sơ này chưa nằm trong danh sách nào bạn xem được.",
   "lists.record.check": "Kiểm tra với danh sách tự cập nhật",
   "lists.record.checkHint":
-    "Danh sách tự cập nhật thay đổi theo bộ lọc của nó. Chọn một danh sách để xem hồ sơ này có khớp không và vì sao.",
+    "Chỉ kiểm tra được danh sách tự cập nhật. Chọn một danh sách để xem hồ sơ này có khớp không và vì sao.",
+  "lists.record.checkHintAdd":
+    "Chỉ kiểm tra được danh sách tự cập nhật. Dùng “Thêm vào danh sách chọn tay” cho danh sách chọn tay.",
   "lists.record.checkPick": "Chọn danh sách tự cập nhật",
   "lists.record.truncated": "Còn các danh sách khác không hiển thị ở đây.",
+  "lists.record.allLists": "Tất cả danh sách",
   "lists.record.takenOff": "Đã gỡ khỏi {name}",
   "lists.record.putBack": "Đã thêm lại vào {name}",
   "lists.addToShortlist": "Thêm vào danh sách chọn tay",
@@ -18196,7 +18201,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "filters.new.leads": "Bộ lọc lead mới",
   "filters.library.whichRecords": "Lọc loại hồ sơ nào?",
   "filters.library.mine": "Của riêng tôi",
-  "filters.library.shared": "Được chia sẻ",
+  "filters.library.shared": "Được chia sẻ với tôi",
   "filters.library.views": "Chế độ xem đã lưu",
   "filters.library.kindView": "Chế độ xem đã lưu",
   "filters.library.rowMore": "Thao tác khác cho {name}",
@@ -18211,9 +18216,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "filters.library.records.project_one": "{count} dự án",
   "filters.library.records.project_other": "{count} dự án",
   "filters.library.recordsSeen": "{records} bạn xem được",
-  "filters.library.mineEmpty": "Các chế độ xem đã lưu sẽ hiển thị ở đây.",
-  "filters.library.sharedEmpty":
-    "Chưa có danh sách được chia sẻ. Danh sách chia sẻ với một nhóm hoặc cả công ty sẽ hiển thị ở đây.",
+  "filters.library.mineEmpty":
+    "Các chế độ xem bạn lưu và danh sách của bạn sẽ hiển thị ở đây.",
+  "filters.library.sharedEmpty": "Chưa có ai chia sẻ danh sách với bạn.",
   "filters.library.noHits":
     "Không có chế độ xem hay danh sách nào khớp với “{q}”.",
   "filters.library.clearSearch": "Xóa tìm kiếm",

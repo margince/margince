@@ -7,6 +7,10 @@
 // why this record is NOT on a Live List, clause by clause.
 
 import { useCallback, useRef, useState } from "react";
+import {
+  RecordListsWays,
+  useMayAddToShortlist,
+} from "../../components/addtoshortlist";
 import { Button, Field } from "../../design-system/atoms";
 import { useFocusHandoff } from "../../design-system/focushandoff";
 import { Panel, PanelBody } from "../../design-system/panel";
@@ -94,6 +98,7 @@ export function RecordListsBody({ entityType, entityId }: RecordRef) {
           <p className="t-caption">{t("lists.record.truncated")}</p>
         )}
       </SurfaceState>
+      <RecordListsWays entityType={entityType} entityId={entityId} />
       <CheckAList entityType={entityType} entityId={entityId} />
     </div>
   );
@@ -103,6 +108,7 @@ export function RecordListsBody({ entityType, entityId }: RecordRef) {
 function CheckAList({ entityType, entityId }: RecordRef) {
   const t = useT();
   const live = useLists({ entityType, listType: "dynamic" });
+  const mayAdd = useMayAddToShortlist();
   const [picked, setPicked] = useState("");
   const options = (live.data?.data ?? []).map((list) => ({
     value: list.id,
@@ -113,7 +119,12 @@ function CheckAList({ entityType, entityId }: RecordRef) {
   }
   return (
     <div className="lists-record-check">
-      <Field label={t("lists.record.check")} hint={t("lists.record.checkHint")}>
+      <Field
+        label={t("lists.record.check")}
+        hint={t(
+          mayAdd ? "lists.record.checkHintAdd" : "lists.record.checkHint",
+        )}
+      >
         {(control) => (
           <Select
             {...control}

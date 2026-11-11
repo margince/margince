@@ -9,12 +9,14 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { en } from "../i18n/en";
+import { useListsAvailable } from "../lib/lists.queries";
 import {
   listsMe,
   MEMBER_ID,
   SHORTLIST_ID,
   shortlist,
 } from "../testing/lists.fixtures";
+import { meFixture } from "../testing/mefixture";
 import {
   installFetchStub,
   jsonResponse,
@@ -35,6 +37,11 @@ function action() {
   );
 }
 
+// Shows once /me has answered, so an absent button is a decision, not a wait.
+function ListsOn() {
+  return useListsAvailable() ? <p>lists on</p> : null;
+}
+
 describe("Add to Shortlist on a record page", () => {
   it("is not offered while lists are switched off", async () => {
     let probed = 0;
@@ -47,6 +54,29 @@ describe("Add to Shortlist on a record page", () => {
     });
     action();
     await vi.waitFor(() => expect(probed).toBeGreaterThan(0));
+    expect(
+      screen.queryByRole("button", { name: en["lists.addToShortlist"] }),
+    ).toBeNull();
+  });
+
+  it("is not offered to a seat that may not change a Shortlist", async () => {
+    installFetchStub({
+      "GET /me": () =>
+        jsonResponse({
+          ...meFixture({
+            allow: { list: ["read"], company: ["read"] },
+            settingsAvailability: { lists: true },
+          }),
+          teams: [],
+        }),
+    });
+    render(
+      <StoryProviders>
+        <ListsOn />
+        <AddToShortlistAction entityType="company" entityId={MEMBER_ID} />
+      </StoryProviders>,
+    );
+    await screen.findByText("lists on");
     expect(
       screen.queryByRole("button", { name: en["lists.addToShortlist"] }),
     ).toBeNull();

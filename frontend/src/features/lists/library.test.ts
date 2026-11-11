@@ -4,7 +4,12 @@
 import { describe, expect, it } from "vitest";
 import type { List } from "../../lib/lists.queries";
 import { isGroup } from "../../lib/segmentpredicate";
-import { liveList, shortlist } from "../../testing/lists.fixtures";
+import {
+  liveList,
+  OTHER_OWNER_ID,
+  READER_ID,
+  shortlist,
+} from "../../testing/lists.fixtures";
 import { filterView } from "./filters.testkit";
 import {
   cutLibrary,
@@ -13,6 +18,7 @@ import {
   type LibraryCut,
   type LibraryItem,
   libraryItems,
+  listsLanding,
   nameOf,
   pillCounts,
   sortForReader,
@@ -33,6 +39,7 @@ const mineList: List = {
   id: "L-mine",
   name: "Dinner guests",
   sharing: "private",
+  owner_id: READER_ID,
   purpose: "Invited to the October dinner",
 };
 const archivedList: List = {
@@ -77,12 +84,29 @@ describe("the merged library", () => {
     expect(item.kind === "view" && isGroup(item.tree)).toBe(true);
   });
 
-  it("files views and private lists under Only me, and team or workspace lists under Shared", () => {
-    const items = libraryItems(
-      [view],
-      [mineList, liveList, { ...shortlist, sharing: "workspace" }],
-    );
-    expect(items.map(groupOf)).toEqual(["mine", "mine", "shared", "shared"]);
+  it("files views and the reader's own lists as theirs, whoever can find them, and every other list as shared", () => {
+    const theirs = { ...liveList, owner_id: OTHER_OWNER_ID };
+    const filed = (list: List) =>
+      groupOf(libraryItems([], [list])[0], READER_ID);
+    expect(groupOf(libraryItems([view], [])[0], READER_ID)).toBe("mine");
+    expect(filed(mineList)).toBe("mine");
+    expect(filed({ ...liveList, sharing: "team" })).toBe("mine");
+    expect(filed({ ...liveList, sharing: "workspace" })).toBe("mine");
+    expect(filed(theirs)).toBe("shared");
+    expect(
+      filed({ ...theirs, sharing: "private", steward_id: READER_ID }),
+    ).toBe("shared");
+    expect(filed({ ...shortlist, owner_id: null })).toBe("shared");
+    expect(filed(shortlist)).toBe("shared");
+  });
+
+  it("files no list as the reader's while the reader is unknown", () => {
+    const items = libraryItems([view], [mineList, shortlist]);
+    expect(items.map((item) => groupOf(item, undefined))).toEqual([
+      "mine",
+      "shared",
+      "shared",
+    ]);
   });
 
   it("orders by name the way the reader reads an alphabet", () => {
@@ -184,26 +208,38 @@ describe("the first run", () => {
 describe("the groups drawn", () => {
   const both = ["mine", "shared"] as const;
   const nothingOutstanding = () => false;
-  const items = libraryItems([view], [liveList]);
+  const theirs = libraryItems([], [{ ...liveList, owner_id: OTHER_OWNER_ID }]);
+  const drawn = (shown: readonly LibraryItem[], cut: boolean) =>
+    visibleGroups(both, shown, READER_ID, cut, nothingOutstanding);
 
   it("are both, with no cut, so an empty one can say what goes there", () => {
-    const onlyMine = libraryItems([view], []);
-    expect(visibleGroups(both, onlyMine, false, nothingOutstanding)).toEqual([
-      "mine",
-      "shared",
-    ]);
+    expect(drawn(libraryItems([view], []), false)).toEqual(["mine", "shared"]);
   });
 
   it("are only those holding rows under a cut", () => {
-    expect(visibleGroups(both, [items[0]], true, nothingOutstanding)).toEqual([
-      "mine",
-    ]);
-    expect(visibleGroups(both, [], true, nothingOutstanding)).toEqual([]);
+    expect(drawn(libraryItems([], [liveList]), true)).toEqual(["mine"]);
+    expect(drawn(theirs, true)).toEqual(["shared"]);
+    expect(drawn([], true)).toEqual([]);
   });
 
   it("include one whose read is still out or failed", () => {
     expect(
-      visibleGroups(both, [], true, (group) => group === "shared"),
+      visibleGroups(both, [], READER_ID, true, (group) => group === "shared"),
     ).toEqual(["shared"]);
+  });
+});
+
+describe("a list address", () => {
+  const theirs = libraryItems([], [{ ...liveList, owner_id: OTHER_OWNER_ID }]);
+
+  it("lands on the reader's own group when it shows one of their lists", () => {
+    const shown = libraryItems([view], [liveList]);
+    expect(listsLanding([...shown, ...theirs], READER_ID)).toBe("mine");
+  });
+
+  it("lands on the shared group when the reader's own shows no list", () => {
+    expect(listsLanding(libraryItems([view], []), READER_ID)).toBe("shared");
+    expect(listsLanding(theirs, READER_ID)).toBe("shared");
+    expect(listsLanding([], READER_ID)).toBe("shared");
   });
 });

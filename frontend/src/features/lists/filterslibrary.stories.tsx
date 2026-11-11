@@ -9,6 +9,8 @@ import type { SavedView } from "../../lib/savedviews.queries";
 import {
   listsMe,
   liveList,
+  OTHER_OWNER_ID,
+  READER_ID,
   shortlist,
   TEAM_ID,
   teamsPage,
@@ -22,9 +24,9 @@ import { FiltersScreen } from "./filters";
 
 // `#/filters`: every saved view and list the reader can use, in one library.
 // The states are the ones a reader can be in: the populated library, a first
-// run, lists switched off, a cut, a read that failed or stopped at its cap, a
-// search past the cap still out, archived lists shown, a row's ⋯ and the type
-// question open, and the wait for the session.
+// run, nothing shared with the reader, lists switched off, a cut, a read that
+// failed or stopped at its cap, a search past the cap still out, archived lists
+// shown, a row's ⋯ and the type question open, and the wait for the session.
 const meta: Meta<typeof FiltersScreen> = {
   title: "Patterns/Filters and views/Library",
   component: FiltersScreen,
@@ -48,7 +50,7 @@ const view = (
   filter: unknown,
 ): SavedView => ({
   id,
-  owner_id: "00000000-0000-4000-8000-000000000001",
+  owner_id: READER_ID,
   shared_scope: "private",
   resource,
   name,
@@ -68,12 +70,13 @@ const VIEWS: SavedView[] = [
   }),
 ];
 
-const LISTS: List[] = [
+const OWN_LISTS: List[] = [
   {
     ...shortlist,
     id: "L-dinner",
     name: "Dinner guests",
     sharing: "private",
+    owner_id: READER_ID,
     purpose: "Invited to the October dinner",
     health: "ok",
   },
@@ -90,6 +93,27 @@ const LISTS: List[] = [
   },
   { ...liveList, id: "L-de", name: "German accounts", team_id: TEAM_ID },
   liveList,
+];
+
+const LISTS: List[] = [
+  ...OWN_LISTS,
+  {
+    ...liveList,
+    id: "L-partners",
+    name: "Partner referrals",
+    owner_id: OTHER_OWNER_ID,
+    purpose: "Companies our partners sent us this year",
+    since_last_visit: undefined,
+  },
+  {
+    ...shortlist,
+    id: "L-board",
+    name: "Board introductions",
+    sharing: "private",
+    owner_id: OTHER_OWNER_ID,
+    steward_id: READER_ID,
+    health: "ok",
+  },
   shortlist,
 ];
 
@@ -161,8 +185,8 @@ function routes(
   });
 }
 
-// Both groups, every kind of row: saved views and private lists under Only me,
-// team and workspace lists under Shared with who can find each.
+// Both groups: saved views and every list the reader owns, team ones too, in
+// their own; lists someone else or nobody owns in the shared one.
 export const Populated: Story = {
   render: () => {
     routes();
@@ -173,6 +197,15 @@ export const Populated: Story = {
 export const PopulatedDark: Story = {
   ...Populated,
   globals: { theme: "dark" },
+};
+
+// The reader owns every list: their own group holds them all, and the shared
+// one says no one has shared a list with them.
+export const NothingSharedWithMe: Story = {
+  render: () => {
+    routes({ lists: OWN_LISTS });
+    return <FiltersScreen />;
+  },
 };
 
 // Nothing saved yet: one plate, and no search or pills to narrow nothing.
@@ -213,8 +246,8 @@ export const NoHits: Story = {
   },
 };
 
-// The lists did not load: Only me keeps its saved views and says what is
-// missing; Shared says the same with a retry.
+// The lists did not load: the reader's own group keeps its saved views and says
+// what is missing; the shared one says the same with a retry.
 export const PartialFailureListsDown: Story = {
   render: () => {
     routes({ listsFail: true });

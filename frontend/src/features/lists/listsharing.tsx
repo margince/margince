@@ -128,8 +128,8 @@ export function ListAudienceFields({
 }
 
 /**
- * Who can find a list, named: a team by its name, the owner's teams as the
- * reader's own when they are the owner.
+ * Who can find a list, named: a team by its name, and the owner's teams or a
+ * private list's owner as the reader when they are the owner.
  *
  * Returned as a function so a table reads the roster and the session once for
  * all of its rows.
@@ -141,6 +141,15 @@ export function useListAudienceLabel(): (
   const me = useMe();
   const teamName = useTeamName();
   return (list) => {
+    const readerId = me.data?.user.id;
+    const ownerIsReader = readerId !== undefined && list.owner_id === readerId;
+    if (list.sharing === "private" && !ownerIsReader) {
+      return t(
+        list.owner_id
+          ? "lists.audience.ownerOnly"
+          : "lists.audience.stewardOnly",
+      );
+    }
     if (list.sharing !== "team") {
       return t(labelFor(SHARING_LABEL, list.sharing));
     }
@@ -152,7 +161,7 @@ export function useListAudienceLabel(): (
     if (!list.owner_id) {
       return t("lists.sharing.workspace");
     }
-    return list.owner_id === me.data?.user.id
+    return ownerIsReader
       ? t("lists.audience.yourTeams")
       : t("lists.audience.ownerTeams");
   };

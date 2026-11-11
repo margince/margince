@@ -2,8 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 // The Filters and views library as data: every saved view and list the reader
-// can use, merged into one set of rows, grouped by who can find them and cut
-// by what the reader typed and pressed. Pure, so the rules the page draws by
+// can use, merged into one set of rows, grouped by who owns them and cut by
+// what the reader typed and pressed. Pure, so the rules the page draws by
 // are proved here without a page.
 
 import {
@@ -29,7 +29,7 @@ export type LibraryItem =
   | Readonly<{ kind: "view"; view: SavedView; tree: Node; tab: ObjectTab }>
   | Readonly<{ kind: "list"; list: List }>;
 
-/** Only me holds what the reader alone can find; Shared, what others can. */
+/** `mine`: what the reader owns. `shared`: what someone else or nobody owns. */
 export type LibraryGroup = "mine" | "shared";
 
 /** The cut the address holds: the search, the pressed pill, the archived toggle. */
@@ -106,11 +106,33 @@ export function isArchived(item: LibraryItem): boolean {
   return item.kind === "list" && Boolean(item.list.archived_at);
 }
 
-/** A saved view is private in V1, so it is always the reader's own. */
-export function groupOf(item: LibraryItem): LibraryGroup {
-  return item.kind === "list" && item.list.sharing !== "private"
-    ? "shared"
-    : "mine";
+/**
+ * A saved view is private in V1, so it is always the reader's own. A list
+ * goes by its owner, not its audience, so a list the reader shares stays theirs.
+ */
+export function groupOf(
+  item: LibraryItem,
+  readerId: string | undefined,
+): LibraryGroup {
+  if (item.kind === "view") {
+    return "mine";
+  }
+  // Not a bare `===`: an ownerless list would match an unknown reader.
+  return readerId !== undefined && item.list.owner_id === readerId
+    ? "mine"
+    : "shared";
+}
+
+/** The group `#/filters/lists` lands on. */
+export function listsLanding(
+  shown: readonly LibraryItem[],
+  readerId: string | undefined,
+): LibraryGroup {
+  return shown.some(
+    (item) => item.kind === "list" && groupOf(item, readerId) === "mine",
+  )
+    ? "mine"
+    : "shared";
 }
 
 /**
@@ -198,13 +220,14 @@ export function isFirstRun(items: readonly LibraryItem[]): boolean {
 export function visibleGroups(
   groups: readonly LibraryGroup[],
   shown: readonly LibraryItem[],
+  readerId: string | undefined,
   cut: boolean,
   unsettled: (group: LibraryGroup) => boolean,
 ): LibraryGroup[] {
   return groups.filter(
     (group) =>
       unsettled(group) ||
-      shown.some((item) => groupOf(item) === group) ||
+      shown.some((item) => groupOf(item, readerId) === group) ||
       (!cut && shown.length > 0),
   );
 }
