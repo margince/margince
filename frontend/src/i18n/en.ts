@@ -9631,6 +9631,21 @@ export const en = {
   "setup.action.ai": "Connect",
   "setup.step.aiDone": "{name} is connected.",
   "setup.step.aiDoneUnnamed": "An AI tool is connected.",
+  "firstRun.ai.skip": "Not now",
+  "ob.gate.noModelSub":
+    "No AI provider is set up yet, so Margince cannot read your website. Enter your company details yourself, or add a key now.",
+  "ob.gate.addModel": "Add an AI key",
+  "aiSetup.title": "Set up AI",
+  "aiSetup.intro":
+    "Margince needs an AI provider to read websites, draft replies and research. Add a key and choose the models it uses.",
+  "aiSetup.connect": "Connect provider",
+  "aiSetup.connected":
+    "{vendor} is connected. Margince can now read, draft and research.",
+  "setup.step.model": "Set up AI",
+  "setup.caption.model":
+    "Add an AI provider key so Margince can read websites, draft replies and research.",
+  "setup.action.model": "Add key",
+  "setup.step.modelDone": "An AI provider is connected.",
   "ob.conv.connect.aiRow": "Your AI tool",
   "ob.conv.connect.aiBody":
     "Ask Claude, ChatGPT, Copilot or your editor about your deals, and let it update Margince for you.",
@@ -15788,7 +15803,7 @@ export const en = {
   "firstRun.continue": "Continue",
   "firstRun.ai.title": "Choose a model provider",
   "firstRun.ai.sub":
-    "Margince uses your AI provider account. All of this can be changed later in Settings under AI.",
+    "Margince uses your AI provider account. No key at hand? You can add it later in Settings under AI.",
   "firstRun.ai.provider": "Provider",
   "firstRun.ai.key": "API key",
   "firstRun.ai.keyHint": "Stored in the key vault and never shown again.",

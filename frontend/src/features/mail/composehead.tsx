@@ -27,6 +27,7 @@ import { routeHash } from "../../lib/router";
 import { readAddressList } from "./composeaddresslist";
 import "./composehead.css";
 
+type Contact = components["schemas"]["Contact"];
 type Contact360 = components["schemas"]["Contact360"];
 type Company360 = components["schemas"]["Company360"];
 type User = components["schemas"]["User"];
@@ -53,26 +54,22 @@ export function FieldNeed({
 }
 
 /**
- * The addresses this message can be built out of.
- *
- * Read off the two 360s the composer ALREADY holds — the contact it was opened
- * on, and the account behind it — so the offer costs no request of its own and
- * cannot disagree with what the page behind the drawer is showing. A reader
- * remembers a colleague's NAME and not their address, which is why the contact is
- * the label; the address is the value AND the hint beside it, because one contact
- * can have several and a row that showed only the name would be a choice between
- * two identical-looking options.
- *
- * The record's own contact leads, because a message written from a contact's page
- * is overwhelmingly to that contact; the account's roster follows in the order
- * the 360 already put it in. A contact with no address on file is not offered —
- * a row that commits an empty recipient is help that refuses at the send.
+ * The addresses this message can be built out of, from reads the composer already holds.
+ * The label is the name a reader remembers; the address is the value and the hint.
+ * Order: the contact, the contacts around it, the account's roster, then members.
+ * A contact with no address is left out, because it would refuse at the send.
  */
-export function recipientSuggestions(
-  contact: Contact360 | undefined,
-  company: Company360 | undefined,
-  colleagues: readonly (User | Team)[] = [],
-): readonly TokenSuggestion[] {
+export function recipientSuggestions({
+  contact,
+  related = [],
+  company,
+  colleagues = [],
+}: Readonly<{
+  contact?: Contact360;
+  related?: readonly Contact[];
+  company?: Company360;
+  colleagues?: readonly (User | Team)[];
+}>): readonly TokenSuggestion[] {
   const seen = new Set<string>();
   const out: TokenSuggestion[] = [];
   const offer = (
@@ -88,24 +85,35 @@ export function recipientSuggestions(
     out.push({ value: address, label, hint: address, card });
   };
   const account = company?.company?.display_name;
-  const contactCard = (id: string, title: string | null | undefined) => ({
+  const contactCard = (
+    id: string,
+    title: string | null | undefined,
+    employer: string | undefined,
+  ) => ({
     identity: id,
     href: routeHash(ENTITY.contact.route(id)),
-    about: [title, account].filter(Boolean).join(" · ") || undefined,
+    about: [title, employer].filter(Boolean).join(" · ") || undefined,
   });
   const subject = contact?.contact;
   for (const address of subject?.emails ?? []) {
     offer(
       address.email,
       subject?.full_name ?? address.email,
-      subject && contactCard(subject.id, subject.title),
+      subject && contactCard(subject.id, subject.title, account),
     );
   }
-  for (const contact of company?.contacts?.data ?? []) {
+  for (const around of related) {
     offer(
-      contact.primary_email,
-      contact.full_name,
-      contactCard(contact.contact_id, contact.title),
+      around.primary_email,
+      around.full_name,
+      contactCard(around.id, around.title, around.employer?.company_name),
+    );
+  }
+  for (const rostered of company?.contacts?.data ?? []) {
+    offer(
+      rostered.primary_email,
+      rostered.full_name,
+      contactCard(rostered.contact_id, rostered.title, account),
     );
   }
   for (const member of colleagues) {

@@ -42,7 +42,7 @@ review on its own.
    ```text
    module github.com/margince/margince/extensions/<name>
 
-   go 1.27.3
+   go 1.27.4
 
    replace github.com/margince/margince/backend => ../../backend
 

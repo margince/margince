@@ -949,7 +949,7 @@ under [Certification by provider and model](#certification-by-provider-and-model
 
 🟡 Mostly: Ready for 41 of the 56 features we tested; 14 more work if someone looks over the result; 1 not reliable yet.
 
-6 of these results were measured on an older version of the product and are re-check pending.
+7 of these results were measured on an older version of the product and are re-check pending.
 
 | Model | Where it ran | Features tested | ✅ | ⚠️ | ❌ | Tries right |
 |---|---|---:|---:|---:|---:|---|
@@ -962,7 +962,7 @@ under [Certification by provider and model](#certification-by-provider-and-model
 | Feature | Best model in the family | Grade | Right in |
 |---|---|---|---|
 | [`account_scan/company_scan`](#account_scancompany_scan) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | ✅ Ready | 9 of 9 tries |
-| [`agent_loop/morning_brief`](#agent_loopmorning_brief) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | ✅ Ready | 9 of 9 tries |
+| [`agent_loop/morning_brief`](#agent_loopmorning_brief) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | ✅ Ready · re-check pending | 9 of 9 tries |
 | [`agent_loop/overnight_at_risk_sweep`](#agent_loopovernight_at_risk_sweep) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | ✅ Ready · re-check pending | 9 of 9 tries |
 | [`brief_ranking/rank`](#brief_rankingrank) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | ✅ Ready | 9 of 9 tries |
 | [`capture_classify/classify`](#capture_classifyclassify) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | ✅ Ready | 18 of 18 tries |
@@ -1024,7 +1024,7 @@ under [Certification by provider and model](#certification-by-provider-and-model
 
 🟡 Mostly: Ready for 35 of the 52 features we tested; 14 more work if someone looks over the result; 3 not reliable yet.
 
-22 of these results were measured on an older version of the product and are re-check pending.
+23 of these results were measured on an older version of the product and are re-check pending.
 
 | Model | Where it ran | Features tested | ✅ | ⚠️ | ❌ | Tries right |
 |---|---|---:|---:|---:|---:|---|
@@ -1038,7 +1038,7 @@ under [Certification by provider and model](#certification-by-provider-and-model
 | Feature | Best model in the family | Grade | Right in |
 |---|---|---|---|
 | [`account_scan/company_scan`](#account_scancompany_scan) | `openai_compatible · openai/gpt-6-luna · cloud_frontier` | ✅ Ready · re-check pending | 12 of 12 tries |
-| [`agent_loop/morning_brief`](#agent_loopmorning_brief) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | ✅ Ready | 9 of 9 tries |
+| [`agent_loop/morning_brief`](#agent_loopmorning_brief) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | ✅ Ready · re-check pending | 9 of 9 tries |
 | [`agent_loop/overnight_at_risk_sweep`](#agent_loopovernight_at_risk_sweep) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | ✅ Ready · re-check pending | 9 of 9 tries |
 | [`brief_ranking/rank`](#brief_rankingrank) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | ✅ Ready | 9 of 9 tries |
 | [`capture_classify/classify`](#capture_classifyclassify) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | ⚠️ Usable with care | 23 of 24 tries |
@@ -1191,9 +1191,9 @@ under [Certification by provider and model](#certification-by-provider-and-model
 | | |
 |---|---:|
 | Shipped invocation sites | 56 |
-| … best state `current` | 50 |
+| … best state `current` | 49 |
 | … best state `partial` | 0 |
-| … best state `stale` | 6 |
+| … best state `stale` | 7 |
 | … `absent` on every binding | 0 |
 | Scenarios in the corpus | 312 |
 | Committed records | 355 |
@@ -1201,7 +1201,7 @@ under [Certification by provider and model](#certification-by-provider-and-model
 
 #### Why the stale records went stale
 
-Counted per record (one task and binding pair) over the 177 stale record(s) this build can attribute. A record covers every site its task ships, so the JSON beside this page carries it once per site: its 266 `stale_cause` entries are these 177 records. A record appears on more than one row below when a change moved a case and the prompt built from it together.
+Counted per record (one task and binding pair) over the 177 stale record(s) this build can attribute. A record covers every site its task ships, so the JSON beside this page carries it once per site: its 271 `stale_cause` entries are these 177 records. A record appears on more than one row below when a change moved a case and the prompt built from it together.
 
 | What moved | Records | What it means |
 |---|---:|---|
@@ -1266,7 +1266,7 @@ Which model to run each site on, and what that choice rests on.
 | Site | Best model tested | Band | Reliability | State | Scenarios | Records |
 |---|---|---|---:|---|---:|---:|
 | [`account_scan/company_scan`](#account_scancompany_scan) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 3 | 12 |
-| [`agent_loop/morning_brief`](#agent_loopmorning_brief) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `certified` | 1.00 | `current` | 3 | 12 |
+| [`agent_loop/morning_brief`](#agent_loopmorning_brief) | - | - | - | `stale` | 3 | 12 |
 | [`agent_loop/overnight_at_risk_sweep`](#agent_loopovernight_at_risk_sweep) | - | - | - | `stale` | 3 | 12 |
 | [`brief_ranking/rank`](#brief_rankingrank) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 1 | 13 |
 | [`capture_classify/classify`](#capture_classifyclassify) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 5 | 9 |
@@ -1347,13 +1347,13 @@ record's own p50 and p95 are in the site tables.
 
 | Provider | Model | Env | Sites | `current` | `partial` | `stale` | Runs | Passed | Reliability | Slowest p95 | `certified` | `supported_degraded` | `not_supported` |
 |---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini` | `gemini-3.1-flash-lite` | `cloud_frontier` | 52 | 43 | 0 | 9 | 1320 | 1282 | 0.97 | 24754ms | 29 | 19 | 4 |
+| `gemini` | `gemini-3.1-flash-lite` | `cloud_frontier` | 52 | 42 | 0 | 10 | 1320 | 1282 | 0.97 | 24754ms | 29 | 19 | 4 |
 | `gemini` | `gemini-3.1-pro-preview` | `cloud_frontier` | 6 | 0 | 0 | 6 | 216 | 207 | 0.96 | 14416ms | 3 | 3 | 0 |
 | `gemini` | `gemini-3.5-flash` | `cloud_frontier` | 40 | 9 | 0 | 31 | 468 | 468 | 1.00 | 16000ms | 31 | 8 | 1 |
 | `gemini` | `gemini-3.5-flash-lite` | `cloud_frontier` | 40 | 9 | 0 | 31 | 684 | 661 | 0.97 | 4403ms | 22 | 14 | 4 |
-| `gemini` | `gemini-3.6-flash` | `cloud_frontier` | 47 | 43 | 0 | 4 | 843 | 838 | 0.99 | 10422ms | 31 | 15 | 1 |
+| `gemini` | `gemini-3.6-flash` | `cloud_frontier` | 47 | 42 | 0 | 5 | 843 | 838 | 0.99 | 10422ms | 31 | 15 | 1 |
 | `openai_compatible` | `google/gemma-4-26b-a4b-it` | `cloud_frontier` | 6 | 0 | 0 | 6 | 189 | 166 | 0.88 | 15788ms | 1 | 1 | 4 |
-| `openai_compatible` | `google/gemma-4-31b-it` | `cloud_frontier` | 53 | 47 | 0 | 6 | 1398 | 1373 | 0.98 | 28492ms | 37 | 14 | 2 |
+| `openai_compatible` | `google/gemma-4-31b-it` | `cloud_frontier` | 53 | 46 | 0 | 7 | 1398 | 1373 | 0.98 | 28492ms | 37 | 14 | 2 |
 | `openai_compatible` | `mistralai/ministral-14b-2512` | `eu_hosted` | 41 | 10 | 0 | 31 | 615 | 488 | 0.79 | 83052ms | 11 | 10 | 20 |
 | `openai_compatible` | `mistralai/ministral-8b-2512` | `eu_hosted` | 6 | 0 | 0 | 6 | 174 | 156 | 0.90 | 5038ms | 4 | 0 | 2 |
 | `openai_compatible` | `mistralai/mistral-medium-3-5` | `cloud_frontier` | 39 | 10 | 0 | 29 | 585 | 555 | 0.95 | 13541ms | 21 | 12 | 6 |
@@ -1361,8 +1361,8 @@ record's own p50 and p95 are in the site tables.
 | `openai_compatible` | `mistralai/mistral-small-2603` | `eu_hosted` | 5 | 1 | 0 | 4 | 93 | 77 | 0.83 | 4105ms | 3 | 1 | 1 |
 | `openai_compatible` | `openai/gpt-6-luna` | `cloud_frontier` | 43 | 10 | 0 | 33 | 645 | 616 | 0.96 | 26943ms | 26 | 13 | 4 |
 | `openai_compatible` | `openai/gpt-6-sol` | `cloud_frontier` | 39 | 10 | 0 | 29 | 495 | 474 | 0.96 | 21274ms | 25 | 12 | 2 |
-| `openai_compatible` | `openai/gpt-oss-120b` | `cloud_frontier` | 53 | 47 | 0 | 6 | 1665 | 1548 | 0.93 | 9507ms | 22 | 22 | 9 |
-| `openai_compatible` | `qwen/qwen3.8-27b` | `cloud_frontier` | 53 | 47 | 0 | 6 | 1380 | 1370 | 0.99 | 291372ms | 37 | 15 | 1 |
+| `openai_compatible` | `openai/gpt-oss-120b` | `cloud_frontier` | 53 | 46 | 0 | 7 | 1665 | 1548 | 0.93 | 9507ms | 22 | 22 | 9 |
+| `openai_compatible` | `qwen/qwen3.8-27b` | `cloud_frontier` | 53 | 46 | 0 | 7 | 1380 | 1370 | 0.99 | 291372ms | 37 | 15 | 1 |
 
 </details>
 
@@ -1394,13 +1394,18 @@ model, real network).
 | `account_scan/company_scan` | `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | 2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): scan_finds_the_promise_we_did_not_keep, scan_finds_the_question_nobody_answered |
 | `account_scan/company_scan` | `openai_compatible · openai/gpt-6-luna · cloud_frontier` | 2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): scan_finds_the_promise_we_did_not_keep, scan_finds_the_question_nobody_answered |
 | `account_scan/company_scan` | `openai_compatible · openai/gpt-6-sol · cloud_frontier` | 2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): scan_finds_the_promise_we_did_not_keep, scan_finds_the_question_nobody_answered |
+| `agent_loop/morning_brief` | `gemini · gemini-3.1-flash-lite · cloud_frontier` | 3 scenarios it scored have changed since (the prompt this build sends): morning_brief_a_retrieved_deal_is_not_the_queue, morning_brief_reads_its_queue_first, morning_brief_retrieved_text_is_not_an_instruction |
 | `agent_loop/morning_brief` | `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | 3 scenarios it scored have changed since (the prompt this build sends): morning_brief_a_retrieved_deal_is_not_the_queue, morning_brief_reads_its_queue_first, morning_brief_retrieved_text_is_not_an_instruction |
 | `agent_loop/morning_brief` | `gemini · gemini-3.5-flash-lite · cloud_frontier` | 3 scenarios it scored have changed since (the prompt this build sends): morning_brief_a_retrieved_deal_is_not_the_queue, morning_brief_reads_its_queue_first, morning_brief_retrieved_text_is_not_an_instruction |
+| `agent_loop/morning_brief` | `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | 3 scenarios it scored have changed since (the prompt this build sends): morning_brief_a_retrieved_deal_is_not_the_queue, morning_brief_reads_its_queue_first, morning_brief_retrieved_text_is_not_an_instruction |
+| `agent_loop/morning_brief` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | 3 scenarios it scored have changed since (the prompt this build sends): morning_brief_a_retrieved_deal_is_not_the_queue, morning_brief_reads_its_queue_first, morning_brief_retrieved_text_is_not_an_instruction |
 | `agent_loop/morning_brief` | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | 3 scenarios it scored have changed since (the prompt this build sends): morning_brief_a_retrieved_deal_is_not_the_queue, morning_brief_reads_its_queue_first, morning_brief_retrieved_text_is_not_an_instruction |
 | `agent_loop/morning_brief` | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | 3 scenarios it scored have changed since (the prompt this build sends): morning_brief_a_retrieved_deal_is_not_the_queue, morning_brief_reads_its_queue_first, morning_brief_retrieved_text_is_not_an_instruction |
 | `agent_loop/morning_brief` | `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | 3 scenarios it scored have changed since (the prompt this build sends): morning_brief_a_retrieved_deal_is_not_the_queue, morning_brief_reads_its_queue_first, morning_brief_retrieved_text_is_not_an_instruction |
 | `agent_loop/morning_brief` | `openai_compatible · openai/gpt-6-luna · cloud_frontier` | 3 scenarios it scored have changed since (the prompt this build sends): morning_brief_a_retrieved_deal_is_not_the_queue, morning_brief_reads_its_queue_first, morning_brief_retrieved_text_is_not_an_instruction |
 | `agent_loop/morning_brief` | `openai_compatible · openai/gpt-6-sol · cloud_frontier` | 3 scenarios it scored have changed since (the prompt this build sends): morning_brief_a_retrieved_deal_is_not_the_queue, morning_brief_reads_its_queue_first, morning_brief_retrieved_text_is_not_an_instruction |
+| `agent_loop/morning_brief` | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | 3 scenarios it scored have changed since (the prompt this build sends): morning_brief_a_retrieved_deal_is_not_the_queue, morning_brief_reads_its_queue_first, morning_brief_retrieved_text_is_not_an_instruction |
+| `agent_loop/morning_brief` | `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | 3 scenarios it scored have changed since (the prompt this build sends): morning_brief_a_retrieved_deal_is_not_the_queue, morning_brief_reads_its_queue_first, morning_brief_retrieved_text_is_not_an_instruction |
 | `agent_loop/overnight_at_risk_sweep` | `gemini · gemini-3.1-flash-lite · cloud_frontier` | 3 scenarios it scored have changed since (the prompt this build sends): overnight_sweep_one_quiet_deal_is_not_the_book, overnight_sweep_reads_what_is_slipping_before_it_logs, overnight_sweep_retrieved_text_is_not_an_instruction |
 | `agent_loop/overnight_at_risk_sweep` | `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | 3 scenarios it scored have changed since (the prompt this build sends): overnight_sweep_one_quiet_deal_is_not_the_book, overnight_sweep_reads_what_is_slipping_before_it_logs, overnight_sweep_retrieved_text_is_not_an_instruction |
 | `agent_loop/overnight_at_risk_sweep` | `gemini · gemini-3.5-flash-lite · cloud_frontier` | 3 scenarios it scored have changed since (the prompt this build sends): overnight_sweep_one_quiet_deal_is_not_the_book, overnight_sweep_reads_what_is_slipping_before_it_logs, overnight_sweep_retrieved_text_is_not_an_instruction |
@@ -1727,7 +1732,7 @@ Records (12):
 Certified without the company context production prepends (`identity`, `positioning`, `sales`, `offer`): this lane runs with no database to assemble it from.
 
 <details>
-<summary><code>agent_loop/morning_brief</code>: 3 scenario(s), 12 record(s), best state current</summary>
+<summary><code>agent_loop/morning_brief</code>: 3 scenario(s), 12 record(s), best state stale</summary>
 
 ##### `agent_loop/morning_brief`
 
@@ -1745,18 +1750,18 @@ Records (12):
 
 | Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 | 1312ms | 1967ms | 9 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 | 1312ms | 1967ms | 9 | 0 | 0 | 0 |
 | `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 | 1950ms | 2502ms | 9 | 0 | 0 | 0 |
 | `gemini · gemini-3.5-flash-lite · cloud_frontier` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 | 1167ms | 2194ms | 9 | 0 | 0 | 0 |
-| `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 | 1653ms | 2610ms | 9 | 0 | 0 | 0 |
-| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 | 1982ms | 2244ms | 9 | 0 | 0 | 0 |
+| `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 | 1653ms | 2610ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 | 1982ms | 2244ms | 9 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 | 1045ms | 2204ms | 9 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 | 1238ms | 4595ms | 9 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/mistral-medium-3-5 · eu_hosted` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 | 955ms | 1708ms | 9 | 0 | 0 | 0 |
 | `openai_compatible · openai/gpt-6-luna · cloud_frontier` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 | 1645ms | 2943ms | 9 | 0 | 0 | 0 |
 | `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 | 2047ms | 4446ms | 9 | 0 | 0 | 0 |
-| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 | 1084ms | 1914ms | 9 | 0 | 0 | 0 |
-| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 | 8039ms | 69567ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 | 1084ms | 1914ms | 9 | 0 | 0 | 0 |
+| `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | `stale` | 0/3 | `certified` | 9 | 9 | 1.00 | 8039ms | 69567ms | 9 | 0 | 0 | 0 |
 
 </details>
 
