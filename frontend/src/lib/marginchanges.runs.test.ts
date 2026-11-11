@@ -3,6 +3,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { jsonResponse, stubApi } from "../testing/brief.testkit";
 import {
+  beginUndoManifest,
   keepUndoManifest,
   readUndoRuns,
   resumeUndoRuns,
@@ -101,4 +102,21 @@ it("resumes an unfinished batch with exactly its original request and run id", a
   expect(
     calls.find((call) => call.path === "/deal-corrections/undo")?.body,
   ).toEqual({ run_id: manifest.batches[0].id, items: [item] });
+});
+
+it("keeps an unfinished earlier attempt reachable when another bulk Undo starts", async () => {
+  const first = keepUndoManifest([
+    { deal_id: "old", version: 7, audit_log_ids: ["old-change"] },
+  ]);
+  stubApi({
+    "POST /deal-corrections/undo/results": () => jsonResponse({ runs: [] }),
+  });
+  const latest = await beginUndoManifest([
+    { deal_id: "new", version: 9, audit_log_ids: ["new-change"] },
+  ]);
+  expect(latest.batches).toHaveLength(1);
+  expect(latest.batches[0]?.items[0]?.deal_id).toBe("new");
+  expect(JSON.parse(readStored(STORAGE_KEYS.lastBulkUndo) ?? "null")).toEqual({
+    batches: [...first.batches, ...latest.batches],
+  });
 });

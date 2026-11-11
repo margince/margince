@@ -47,6 +47,8 @@ type marginceChangeHandlers struct {
 		LiveTeammatesOfCaller(ctx context.Context) ([]attention.TeamMember, bool, error)
 	}
 	seatNames *identity.Service
+	details   attention.ReceiptDetails
+	names     attention.Names
 	now       func() time.Time
 }
 
@@ -56,6 +58,8 @@ func newMarginceChangeHandlers(pool *pgxpool.Pool) marginceChangeHandlers {
 		deals:     deals.NewStore(InstallationDB(pool), DealsInstallation()),
 		teammates: newTeammatesSeam(pool),
 		seatNames: identity.NewService(pool),
+		details:   newAttentionReceiptDetails(pool, func() time.Time { return time.Now().UTC() }),
+		names:     newAttentionNames(InstallationDB(pool)),
 		now:       func() time.Time { return time.Now().UTC() },
 	}
 }
@@ -230,15 +234,15 @@ func (h marginceChangeHandlers) changeReceipts(ctx context.Context, rows []deals
 	if err != nil {
 		return nil, err
 	}
-	out := make([]crmcontracts.Receipt, 0, len(rows))
+	out := make([]attention.Receipt, 0, len(rows))
 	for _, row := range rows {
 		receipt := correctionReceipt(row)
 		if review, ok := reviews[deals.AppliedChangeKey{DealID: row.DealID, ChangeID: row.AuditLogID}]; ok {
 			receipt.Review = &review
 		}
-		out = append(out, attention.WireReceipt(receipt))
+		out = append(out, receipt)
 	}
-	return out, nil
+	return attention.DescribeReceipts(ctx, out, h.details, h.names)
 }
 
 // UndoMarginceChanges takes back the named changes, deal by deal.

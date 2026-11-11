@@ -74,7 +74,7 @@ func validateCorrectionUndoRun(id ids.UUID, items []crmcontracts.UndoMarginceCha
 func (h marginceChangeHandlers) advanceCorrectionUndoRun(ctx context.Context, id ids.UUID) (correctionUndoRun, error) {
 	var run correctionUndoRun
 	err := storekit.RetryLockCycles(ctx, func() error {
-		return database.WithWorkspaceSnapshot(ctx, h.pool, func(bound context.Context) error {
+		return database.WithWorkspaceWrite(ctx, h.pool, func(bound context.Context) error {
 			return database.WithWorkspaceTx(bound, h.pool, func(tx pgx.Tx) error {
 				var err error
 				run, err = lockedCorrectionUndoRun(bound, tx, id)

@@ -78,20 +78,23 @@ export function OverviewRow({
   sub,
   right,
   figure,
+  detail,
 }: Readonly<{
   lead?: ReactNode;
   title: ReactNode;
   sub?: ReactNode;
   right?: ReactNode;
   figure?: boolean;
+  detail?: ReactNode;
 }>) {
   return (
     <li className="overviewrow">
       {lead && <span className="overviewrow-lead">{lead}</span>}
-      <span className="overviewrow-body">
+      <div className="overviewrow-body">
         <span className="overviewrow-title">{title}</span>
         {sub && <span className="overviewrow-sub">{sub}</span>}
-      </span>
+        {detail}
+      </div>
       {right && (
         <span
           className={

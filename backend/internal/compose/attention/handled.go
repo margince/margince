@@ -164,11 +164,21 @@ func (s *Service) handledSince(ctx context.Context, asOf time.Time) (time.Time, 
 // drawReceipts renders one page, then names its records and sources under the
 // reader's own grants.
 func (s *Service) drawReceipts(ctx context.Context, page []Receipt, out *crmcontracts.HandledForYou) error {
+	rows, err := DescribeReceipts(ctx, page, s.receiptDetails, s.names)
+	if err != nil {
+		return err
+	}
+	out.Receipts = append(out.Receipts, rows...)
+	return nil
+}
+
+func DescribeReceipts(ctx context.Context, page []Receipt, reader ReceiptDetails, names Names) ([]crmcontracts.Receipt, error) {
+	var out crmcontracts.HandledForYou
 	var details []ReceiptDetail
-	if s.receiptDetails != nil && len(page) > 0 {
+	if reader != nil && len(page) > 0 {
 		var err error
-		if details, err = s.receiptDetails.Describe(ctx, page); err != nil {
-			return err
+		if details, err = reader.Describe(ctx, page); err != nil {
+			return nil, err
 		}
 	}
 	subjects := make([]*crmcontracts.AttentionSubject, 0, 2*len(page))
@@ -184,8 +194,8 @@ func (s *Service) drawReceipts(ctx context.Context, page []Receipt, out *crmcont
 	}
 	// The same label pass the feed runs, so a receipt names its record here
 	// exactly as it does in the feed's done lane.
-	if err := s.labelSubjects(ctx, subjects); err != nil {
-		return err
+	if err := labelSubjects(ctx, names, subjects); err != nil {
+		return nil, err
 	}
 	// A source the reader may not open is left out rather than named. The record
 	// the act was about is the receipt's claim; its source is not.
@@ -196,7 +206,7 @@ func (s *Service) drawReceipts(ctx context.Context, page []Receipt, out *crmcont
 			out.Receipts[i].SourceOccurredPrecision = nil
 		}
 	}
-	return nil
+	return out.Receipts, nil
 }
 
 // WireReceipt is one completed act on the wire.

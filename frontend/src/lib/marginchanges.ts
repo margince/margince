@@ -13,7 +13,7 @@ import {
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import {
-  keepUndoManifest,
+  beginUndoManifest,
   resumeUndoRuns,
   type UndoManifest,
 } from "./marginchanges.runs";
@@ -128,9 +128,9 @@ export function useUndoMarginceChanges() {
       if (resume || bundles.length > 1) {
         const manifest =
           resume ??
-          keepUndoManifest(
+          (await beginUndoManifest(
             bundles.map((bundle) => bundleItem(bundle, archiveConfirmedFor)),
-          );
+          ));
         const answer = await resumeUndoRuns(manifest);
         const names = new Map(
           bundles.map((bundle) => [bundle.deal_id, bundle]),

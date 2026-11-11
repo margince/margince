@@ -15,6 +15,7 @@ import (
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/margince/margince/backend/internal/compose/attention"
 	"github.com/margince/margince/backend/internal/compose/magic"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -27,6 +28,11 @@ import (
 type attentionReceiptDetails struct {
 	magic *magic.Service
 	names attentionNames
+}
+
+func newAttentionReceiptDetails(pool *pgxpool.Pool, now func() time.Time) attentionReceiptDetails {
+	names := newAttentionNames(InstallationDB(pool))
+	return attentionReceiptDetails{magic: magic.NewService(pool, nil, now).WithReferenceNames(names), names: names}
 }
 
 var _ attention.ReceiptDetails = attentionReceiptDetails{}

@@ -144,3 +144,13 @@ func TestADecidedCorrectionOffersTheUndoItsReviewAllows(t *testing.T) {
 		t.Fatal("an approval must carry no Undo on the done lane")
 	}
 }
+
+func TestAWithheldCorrectionReasonAlsoWithholdsItsClassification(t *testing.T) {
+	receipt := correctionReceipt(deals.CorrectionReceipt{
+		Correction: deals.CloseLostCorrection,
+		Evidence:   []byte(`{"reason_kind":"inference"}`),
+	})
+	if receipt.ReasonKind != "" {
+		t.Fatalf("withheld reason still has kind %q", receipt.ReasonKind)
+	}
+}

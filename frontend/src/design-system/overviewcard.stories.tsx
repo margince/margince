@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Badge, Button } from "./atoms";
 import { CallAction } from "./callaction";
+import { Disclosure } from "./disclosure";
 import { Checkbox } from "./field";
 import {
   OverviewCard,
@@ -179,6 +180,24 @@ export const LongLinkTitle: Story = {
             </Button>
           }
           sub="Email · 26 Oct"
+        />
+      </OverviewList>
+    </OverviewCard>
+  ),
+};
+
+export const ExpandableRow: Story = {
+  render: () => (
+    <OverviewCard title="Recent changes">
+      <OverviewList>
+        <OverviewRow
+          title="Close date changed"
+          sub="Customer follow-up"
+          detail={
+            <Disclosure summary="Details">
+              <p>The date follows the customer’s stated timing.</p>
+            </Disclosure>
+          }
         />
       </OverviewList>
     </OverviewCard>

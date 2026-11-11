@@ -86,7 +86,6 @@ it("withholds a source date when the source has no readable label", () => {
 it.each<{ kind?: Receipt["reason_kind"]; label: string }>([
   { kind: "system_rule", label: "System rule" },
   { kind: "inference", label: "AI assessment" },
-  { label: "Not recorded" },
 ])(
   "shows the recorded reason kind $kind without guessing from its words",
   ({ kind, label }) => {
@@ -105,3 +104,15 @@ it.each<{ kind?: Receipt["reason_kind"]; label: string }>([
     expect(screen.getByText(label)).toBeTruthy();
   },
 );
+
+it("keeps ordinary receipt reasons free of a missing correction classification", () => {
+  render(
+    <LocaleProvider initial="en">
+      <ReceiptDetail
+        receipt={{ ...automaticDateReceipt, reason: "Task completed." }}
+      />
+    </LocaleProvider>,
+  );
+  expect(screen.queryByText("Reason type")).toBeNull();
+  expect(screen.queryByText("Not recorded")).toBeNull();
+});

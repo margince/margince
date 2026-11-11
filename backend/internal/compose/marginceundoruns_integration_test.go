@@ -12,6 +12,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/integration"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -94,7 +95,7 @@ func TestSavingABulkUndoResultAndItsReversalRollBackTogether(t *testing.T) {
 	if err := h.startCorrectionUndoRun(ctx, id, items); err != nil {
 		t.Fatal(err)
 	}
-	_, err := v.Owner.Exec(ctx, `CREATE FUNCTION refuse_undo_result() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'result unavailable'; END $$;
+	_, err := integration.SchemaPool(t).Exec(ctx, `CREATE FUNCTION refuse_undo_result() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'result unavailable'; END $$;
 		CREATE TRIGGER refuse_undo_result BEFORE UPDATE ON bulk_operation FOR EACH ROW EXECUTE FUNCTION refuse_undo_result()`)
 	if err != nil {
 		t.Fatal(err)
@@ -108,7 +109,7 @@ func TestSavingABulkUndoResultAndItsReversalRollBackTogether(t *testing.T) {
 	if got := v.WsScalar(t, "SELECT count(*) FROM audit_log WHERE batch_id=$1", id); got != "0" {
 		t.Fatalf("Undo audit rows after failed result = %s", got)
 	}
-	if _, err := v.Owner.Exec(ctx, "DROP TRIGGER refuse_undo_result ON bulk_operation; DROP FUNCTION refuse_undo_result()"); err != nil {
+	if _, err := integration.SchemaPool(t).Exec(ctx, "DROP TRIGGER refuse_undo_result ON bulk_operation; DROP FUNCTION refuse_undo_result()"); err != nil {
 		t.Fatal(err)
 	}
 	answer, err := h.undoRun(ctx, id, items)
@@ -138,5 +139,35 @@ func TestADurableUndoRefusedForALaterStageKeepsTheWholeDeal(t *testing.T) {
 	}
 	if got := v.WsScalar(t, "SELECT count(*) FROM deal_correction WHERE deal_id=$1 AND reversed_at IS NOT NULL", v.deal); got != "0" {
 		t.Fatalf("refused bundle reversed %s corrections", got)
+	}
+}
+
+func TestConcurrentBulkCorrectionUndoRequestsShareTheirCommittedResult(t *testing.T) {
+	v, h, items := correctionUndoFixture(t)
+	id, ctx := ids.NewV7(), v.owner(t)
+	expected := v.WsScalar(t, "SELECT count(*) FROM deal_correction WHERE deal_id=$1", v.deal)
+	if err := h.startCorrectionUndoRun(ctx, id, items); err != nil {
+		t.Fatal(err)
+	}
+	type answer struct {
+		result crmcontracts.UndoMarginceChangesResult
+		err    error
+	}
+	answers := make(chan answer, 2)
+	start := make(chan struct{})
+	for range 2 {
+		go func() {
+			<-start
+			result, err := h.undoRun(ctx, id, items)
+			answers <- answer{result, err}
+		}()
+	}
+	close(start)
+	first, second := <-answers, <-answers
+	if first.err != nil || second.err != nil || !reflect.DeepEqual(first.result, second.result) {
+		t.Fatalf("concurrent results = %+v / %+v", first, second)
+	}
+	if got := v.WsScalar(t, "SELECT count(*) FROM deal_correction WHERE deal_id=$1 AND reversed_at IS NOT NULL", v.deal); got != expected || expected == "0" {
+		t.Fatalf("concurrent Undo reversed %s corrections, want %s", got, expected)
 	}
 }

@@ -8637,7 +8637,10 @@ paths:
         keeps every change of that item and leaves the deal as it was. Like the single Undo,
         it is for a signed-in human only. Items are independent: one refused deal does not
         stop the next. The answer reports each deal as `undone`, `partly_undone` (some changes
-        kept, each with its reason) or `refused`.
+        kept, each with its reason) or `refused`. With `run_id`, each completed item
+        and its result commit together. A replay returns those results without repeating
+        the reversal. Results for deals the reader can no longer see are omitted. A
+        stopped request may leave earlier items committed; read the saved results before retrying.
       requestBody:
         required: true
         content:
@@ -8645,13 +8648,20 @@ paths:
             schema: { $ref: '#/components/schemas/UndoMarginceChangesRequest' }
       responses:
         '200':
-          description: One result per item, in the order asked.
+          description: Results in request order. A durable replay includes only deals the reader can still see.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/UndoMarginceChangesResult' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/ValidationError' }
+        '503':
+          description: The write could not finish. Earlier durable results remain available.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
 
   /deal-corrections/undo/results:
     post:

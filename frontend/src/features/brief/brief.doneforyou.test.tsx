@@ -6,6 +6,7 @@ import type { components } from "../../api/schema";
 import { en } from "../../i18n/en";
 import { handledForYouOptions, type Receipt } from "../../lib/handled";
 import { pendingChangesQuery } from "../../lib/marginchanges";
+import { forgetSeat } from "../../lib/storage";
 import {
   jsonResponse,
   render,
@@ -24,6 +25,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  forgetSeat();
   vi.unstubAllGlobals();
 });
 
@@ -87,6 +89,7 @@ function routes(
         bundles,
         truncated: false,
       }),
+    "POST /deal-corrections/undo/results": () => jsonResponse({ runs: [] }),
     ...(undo ? { "POST /deal-corrections/undo": undo } : {}),
   });
 }
@@ -129,28 +132,28 @@ it("shows five deals with their reasons, and every one in the review drawer", as
   ).toBeTruthy();
 });
 
-it("undoes only the deals selected in the review drawer", async () => {
-  const calls = routes(
-    [change(1), change(2)],
-    [bundle(1, [auditId(1)]), bundle(2, [auditId(2)])],
-    () =>
-      jsonResponse({
-        results: [
-          {
-            deal_id: dealId(1),
-            outcome: "undone",
-            undone: ["close_lost"],
-            kept: [],
-          },
-        ],
-      }),
+it("undoes the frozen selection using the current deal version", async () => {
+  const selectedBundles = [bundle(1, [auditId(1)]), bundle(2, [auditId(2)])];
+  const calls = routes([change(1), change(2)], selectedBundles, () =>
+    jsonResponse({
+      results: [
+        {
+          deal_id: dealId(1),
+          outcome: "undone",
+          undone: ["close_lost"],
+          kept: [],
+        },
+      ],
+    }),
   );
   const user = userEvent.setup();
-  render(<DoneForYou completed={null} />);
+  const { client } = render(<DoneForYou completed={null} />);
   await user.click(
     await screen.findByRole("button", { name: "Review all 2 deals" }),
   );
   const drawer = await screen.findByRole("dialog");
+  selectedBundles[0].version = 8;
+  await client.invalidateQueries({ queryKey: pendingChangesQuery().queryKey });
   await user.click(
     within(drawer).getByRole("checkbox", { name: "Select Deal 2 for Undo" }),
   );
@@ -162,7 +165,7 @@ it("undoes only the deals selected in the review drawer", async () => {
     (call) => call.path === "/deal-corrections/undo",
   );
   expect(posted?.body).toEqual({
-    items: [{ deal_id: dealId(1), version: 7, audit_log_ids: [auditId(1)] }],
+    items: [{ deal_id: dealId(1), version: 8, audit_log_ids: [auditId(1)] }],
   });
 });
 
@@ -359,6 +362,7 @@ it("reviews all by sending only the shown changes the server still allows", asyn
   await screen.findAllByRole("status");
   const posted = writes(calls).find((c) => c.path === "/deal-corrections/undo");
   expect(posted?.body).toEqual({
+    run_id: expect.any(String),
     items: [
       { deal_id: dealId(1), version: 7, audit_log_ids: [auditId(1, 0)] },
       { deal_id: dealId(2), version: 7, audit_log_ids: [auditId(2, 0)] },
@@ -430,7 +434,7 @@ it("names each deal a review-all left partly undone, linked to it", async () => 
   await user.click(
     within(drawer).getByRole("button", { name: "Undo changes on 2 deals" }),
   );
-  const list = await screen.findByRole("list", {
+  const list = await within(drawer).findByRole("list", {
     name: "Deals not fully undone",
   });
   const links = within(list).getAllByRole("link");

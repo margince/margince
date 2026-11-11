@@ -148,3 +148,35 @@ func TestASavepointThatCannotOpenOrCloseSaysSo(t *testing.T) {
 		})
 	}
 }
+
+func TestAJoinedWriteUsesReadCommittedAndKeepsNestedWritesTogether(t *testing.T) {
+	ctx, pool := laneEnv(t)
+	err := database.WithWorkspaceWrite(ctx, pool, func(bound context.Context) error {
+		return database.WithWorkspaceTx(bound, pool, func(tx pgx.Tx) error {
+			var isolation string
+			if err := tx.QueryRow(bound, "SHOW transaction_isolation").Scan(&isolation); err != nil {
+				return err
+			}
+			if isolation != "read committed" {
+				t.Fatalf("write isolation = %q", isolation)
+			}
+			keyedTable(bound, t, tx)
+			if _, err := tx.Exec(bound, "INSERT INTO savepoint_keys VALUES (1)"); err != nil {
+				return err
+			}
+			if err := database.WithWorkspaceTx(bound, pool, func(nested pgx.Tx) error {
+				_, err := nested.Exec(bound, "INSERT INTO savepoint_keys VALUES (2)")
+				return err
+			}); err != nil {
+				return err
+			}
+			if count := keyCount(bound, t, tx); count != 2 {
+				t.Fatalf("joined writes = %d, want 2", count)
+			}
+			return nil
+		})
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+}

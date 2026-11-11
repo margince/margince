@@ -57,19 +57,38 @@ function decodeManifest(raw: string | null): UndoManifest | null {
   return batches.length > 0 ? { batches } : null;
 }
 
-export function keepUndoManifest(items: UndoItem[]): UndoManifest {
+export function keepUndoManifest(
+  items: UndoItem[],
+  previous: UndoManifest | null = decodeManifest(readStored(key)),
+): UndoManifest {
   const batches: UndoManifest["batches"] = [];
   for (let at = 0; at < items.length; at += 200) {
     batches.push({ id: crypto.randomUUID(), items: items.slice(at, at + 200) });
   }
   const manifest = { batches };
-  const encoded = JSON.stringify(manifest);
+  const encoded = JSON.stringify({
+    batches: [...(previous?.batches ?? []), ...batches],
+  });
   writeStored(key, encoded);
   if (readStored(key) !== encoded)
     throw new BulkUndoStorageError(
       "Bulk Undo could not be saved. Allow site storage and try again.",
     );
   return manifest;
+}
+
+export async function beginUndoManifest(
+  items: UndoItem[],
+): Promise<UndoManifest> {
+  const previous = decodeManifest(readStored(key));
+  if (!previous) return keepUndoManifest(items, null);
+  const saved = await readUndoRuns(previous);
+  const complete = new Set(
+    saved.filter((run) => run.complete).map((run) => run.run_id),
+  );
+  return keepUndoManifest(items, {
+    batches: previous.batches.filter((batch) => !complete.has(batch.id)),
+  });
 }
 
 export function useUndoManifest() {

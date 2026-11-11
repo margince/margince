@@ -247,15 +247,7 @@ func InWorkspaceTransaction(ctx context.Context) bool {
 // Nesting JOINS rather than opening a second transaction, so a composed read
 // that calls another composed read still costs one.
 func WithWorkspaceSnapshot(ctx context.Context, pool *pgxpool.Pool, fn func(context.Context) error) error {
-	if _, ok := principal.WorkspaceID(ctx); !ok {
-		return ErrNoWorkspace
-	}
-	if _, joined := snapshotOf(ctx); joined {
-		return fn(ctx)
-	}
-	return runTxWith(ctx, pool, pgx.TxOptions{IsoLevel: pgx.RepeatableRead}, func(tx pgx.Tx) error {
-		return fn(context.WithValue(ctx, snapshotKey{}, tx))
-	})
+	return withWorkspaceTransaction(ctx, pool, pgx.TxOptions{IsoLevel: pgx.RepeatableRead}, fn)
 }
 
 // Detached returns ctx with no ambient snapshot on it, so a call made with it

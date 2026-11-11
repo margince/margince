@@ -61,6 +61,7 @@ func newSilentDealCloser(pool *pgxpool.Pool, log *slog.Logger) silentDealCloser 
 // closeDecision is one deal the check would close, and why.
 type closeDecision struct {
 	reasonCode string
+	reasonKind crmcontracts.ReceiptReasonKind
 	reasonDays int
 	deal       ids.DealID
 	owner      ids.UUID
@@ -102,7 +103,7 @@ func (c silentDealCloser) CloseWorkspace(ctx context.Context) (int, error) {
 // owner's switch must be on and the deal still due.
 func (c silentDealCloser) closeOne(ctx context.Context, decision closeDecision, now time.Time) (bool, error) {
 	return c.deals.CloseAsLost(ctx, deals.CloseLostInput{
-		DealID: decision.deal, Owner: decision.owner, ReasonCode: decision.code, Reason: decision.reason,
+		DealID: decision.deal, Owner: decision.owner, ReasonCode: decision.code, Reason: decision.reason, ReasonKind: decision.reasonKind,
 		StillDue: func(ctx context.Context, tx pgx.Tx) (bool, error) {
 			mode, err := approvals.AutoApplyModeTx(ctx, tx, decision.owner, deals.DealCloseLostKind)
 			if err != nil || mode != approvals.ModeAuto {
@@ -225,9 +226,11 @@ func decideClose(
 		after(facts.refusalAt, keptOpen) && after(facts.refusalAt, facts.anyProgressAt):
 		decision.code, decision.reason = deals.LossReasonOther, systemtext.Literal("deal.customer_declined")
 		decision.reasonCode = "deal.customer_declined"
+		decision.reasonKind = crmcontracts.ReceiptReasonKindInference
 		return decision, true
 	case silentReason(assessed.Reasons) && silentDays > threshold && daysSince(keptOpen, now, zone) > threshold:
 		decision.code = deals.LossReasonWentSilent
+		decision.reasonKind = crmcontracts.ReceiptReasonKindSystemRule
 		decision.reason = silenceReason(silentDays, assessed.SilentDays, threshold)
 		decision.reasonCode, decision.reasonDays = silenceReasonParts(silentDays, assessed.SilentDays, threshold)
 		return decision, true

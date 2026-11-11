@@ -33,7 +33,7 @@ func lockCycleFault(err error) (Fault, bool) {
 	return Fault{
 		Status: http.StatusServiceUnavailable, Code: writeContentionCode,
 		Detail: "this write met a concurrent write to the same records and was rolled back to let the " +
-			"other finish. Nothing in the request is wrong and nothing was written; send it again.",
+			"other finish. Nothing in the request is wrong; retry the write.",
 		RetryAfterSeconds: lockCycleRetryAfter,
 		InfraCause:        err,
 	}, true

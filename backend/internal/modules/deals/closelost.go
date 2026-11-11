@@ -49,7 +49,8 @@ type CloseLostInput struct {
 	Owner      ids.UUID
 	ReasonCode string
 	// Reason is the one line the deal's lost_reason and the owner's receipt show.
-	Reason string
+	Reason     string
+	ReasonKind crmcontracts.ReceiptReasonKind
 	// StillDue asks again, under the deal row lock, whether the deal should
 	// close. The evidence it reads is not this module's.
 	StillDue func(ctx context.Context, tx pgx.Tx) (bool, error)
@@ -98,7 +99,7 @@ func (s *Store) closeAsLostTx(ctx context.Context, tx pgx.Tx, in CloseLostInput,
 		ToStageID: lost, LostReason: &reason, LostReasonCode: code, WonWithoutContractReason: nil,
 		auditEvidence: correctionReasonEvidence(map[string]any{
 			basisKey: in.Reason, basisOwnerKey: in.Owner.String(), CorrectionKindEvidenceKey: CloseLostCorrection,
-		}, crmcontracts.ReceiptReasonKindSystemRule),
+		}, in.ReasonKind),
 	}, active)
 	if err != nil {
 		return false, err

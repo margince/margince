@@ -30,6 +30,7 @@ import { useHandledForYou } from "../../lib/handled";
 import { useMagic } from "../../lib/magic.queries";
 import {
   type MarginceChangeSummary,
+  stillPending,
   usePendingMarginceChanges,
 } from "../../lib/marginchanges";
 import { useHash } from "../../lib/router";
@@ -178,7 +179,7 @@ function ReviewAll({
     reviewedDeals(groups, bundles, pending?.bundles ?? [], loaded);
   const shown = reviewGroups(snapshot, groups, handled.data?.receipts ?? []);
   const readable = new Set(shown.map((group) => group.dealId));
-  const chosen = snapshot.bundles
+  const chosen = stillPending(snapshot.bundles, pending)
     .filter((bundle) => readable.has(bundle.deal_id))
     .map((bundle) => ({
       ...bundle,

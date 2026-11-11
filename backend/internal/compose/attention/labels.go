@@ -115,7 +115,11 @@ func (s *Service) fillSubjectLabels(ctx context.Context, out *crmcontracts.Atten
 // label pass behind the feed and the handled-for-you page; nil entries and
 // subjects already named are left alone.
 func (s *Service) labelSubjects(ctx context.Context, subjects []*crmcontracts.AttentionSubject) error {
-	if s.names == nil {
+	return labelSubjects(ctx, s.names, subjects)
+}
+
+func labelSubjects(ctx context.Context, names Names, subjects []*crmcontracts.AttentionSubject) error {
+	if names == nil {
 		return nil
 	}
 	// Gathered before anything is asked, so each type is one question. The
@@ -142,7 +146,7 @@ func (s *Service) labelSubjects(ctx context.Context, subjects []*crmcontracts.At
 
 	resolved := map[crmcontracts.AttentionSubjectType]map[ids.UUID]string{}
 	for kind, batch := range wanted {
-		labels, err := s.names.Labels(ctx, string(kind), batch)
+		labels, err := names.Labels(ctx, string(kind), batch)
 		if err != nil {
 			return err
 		}

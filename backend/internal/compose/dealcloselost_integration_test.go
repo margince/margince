@@ -277,6 +277,9 @@ func TestARefusalClosesTheDealAtOnce(t *testing.T) {
 	if got := c.WsScalar(t, `SELECT lost_reason_code FROM deal WHERE id = $1`, c.supported); got != deals.LossReasonOther {
 		t.Errorf("lost reason code = %q, want %q", got, deals.LossReasonOther)
 	}
+	if got := c.WsScalar(t, `SELECT evidence->>'reason_kind' FROM audit_log WHERE entity_type='deal' AND entity_id=$1 AND evidence->>'margince_change'='close_lost' ORDER BY occurred_at DESC LIMIT 1`, c.supported); got != "inference" {
+		t.Fatalf("model-read refusal reason kind = %q, want inference", got)
+	}
 }
 
 func TestARefusalWithAWaitAheadIsNotClosed(t *testing.T) {

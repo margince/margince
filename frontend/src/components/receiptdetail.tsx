@@ -7,11 +7,20 @@ import { type Fact, FactList } from "../design-system/factlist";
 import { formatActivityWhen } from "../format/activitywhen";
 import { formatDateTime } from "../format/format";
 import { useLocale, useT } from "../i18n";
+import type { MessageKey } from "../i18n/en";
 import type { Receipt } from "../lib/handled";
+import { labelFor } from "../lib/labelfor";
 import { magicByKey } from "../lib/magickeys";
 import { useOpenSource } from "../lib/opensource";
 import { useViewerZone } from "../lib/viewerzone";
 import { ChangeList } from "./changelist";
+
+const REASON_KIND_LABELS: Readonly<
+  Record<NonNullable<Receipt["reason_kind"]>, MessageKey>
+> = {
+  system_rule: "receipt.detail.systemRule",
+  inference: "receipt.detail.inference",
+};
 
 /**
  * One receipt opened: who acted, when, what it was read from, and every value
@@ -49,16 +58,11 @@ export function ReceiptDetail({ receipt }: Readonly<{ receipt: Receipt }>) {
     term: t("receipt.detail.when"),
     value: formatDateTime(receipt.occurred_at, locale, readerZone),
   });
-  if (receipt.reason) {
+  if (receipt.reason && receipt.reason_kind) {
     facts.push({
       key: "reason-kind",
       term: t("receipt.detail.reasonKind"),
-      value:
-        receipt.reason_kind === "system_rule"
-          ? t("receipt.detail.systemRule")
-          : receipt.reason_kind === "inference"
-            ? t("receipt.detail.inference")
-            : t("receipt.detail.reasonUnknown"),
+      value: t(labelFor(REASON_KIND_LABELS, receipt.reason_kind)),
     });
   }
   if (source !== null && receipt.source_occurred_at) {
