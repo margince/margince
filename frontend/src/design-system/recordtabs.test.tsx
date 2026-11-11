@@ -239,7 +239,7 @@ describe("RecordTabs folds to one stable row", () => {
         disconnect() {}
       },
     );
-    const base: Record<string, number> = { a: 80, b: 100, c: 200 };
+    const base: Record<string, number> = { a: 92, b: 100, c: 200 };
     const first = (el: Element) => el.parentElement?.firstElementChild === el;
     vi.spyOn(HTMLElement.prototype, "offsetWidth", "get").mockImplementation(
       function (this: HTMLElement) {
@@ -277,8 +277,8 @@ describe("RecordTabs folds to one stable row", () => {
       );
 
     act(() => resized());
-    expect(shown()).toEqual(["a", "b"]);
+    expect(shown()).toEqual(["b"]);
     act(() => resized());
-    expect(shown()).toEqual(["a", "b"]);
+    expect(shown()).toEqual(["b"]);
   });
 });
