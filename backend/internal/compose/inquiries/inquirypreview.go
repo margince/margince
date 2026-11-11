@@ -24,6 +24,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
 )
 
+var errLegacyInquiryOwned = errors.New("the earlier lead handling still owns this inquiry")
+
 func (s Settings) Preview(ctx context.Context, id ids.UUID, in crmcontracts.WebsiteInquiryPreviewRequest, now time.Time) (crmcontracts.WebsiteInquiryHandlingPreview, error) {
 	if err := auth.Require(ctx, "automation", principal.ActionRead); err != nil {
 		return crmcontracts.WebsiteInquiryHandlingPreview{}, err
@@ -131,6 +133,11 @@ func previewItemError(item crmcontracts.WebsiteInquiryPreviewItem, err error) cr
 		item.Status = crmcontracts.WebsiteInquiryPreviewItemStatusChanged
 		return item
 	}
+	if errors.Is(err, errLegacyInquiryOwned) {
+		reason := "legacy_handling_owned"
+		item.Reason = &reason
+		return item
+	}
 	var declined *workflow.DeclinedError
 	if errors.Is(err, apperrors.ErrPermissionDenied) || errors.Is(err, apperrors.ErrNotFound) || errors.As(err, &declined) {
 		return item
@@ -162,6 +169,13 @@ func (s Settings) planSelectedInquiry(ctx context.Context, policyID, owner ids.U
 	}
 	if _, err := ex.Provider.Read(ctx, target); err != nil {
 		return automation.InquiryPreview{}, err
+	}
+	owned, err := s.policies.LegacyLeadTaskOwned(ctx, *note.SourceId)
+	if err != nil {
+		return automation.InquiryPreview{}, err
+	}
+	if owned {
+		return automation.InquiryPreview{}, errLegacyInquiryOwned
 	}
 	payload, err := json.Marshal(crmcontracts.PublicEventActivityCaptured{Kind: "note", SourceSystem: note.SourceSystem, WebsiteSubmissionKey: note.SourceId})
 	if err != nil {

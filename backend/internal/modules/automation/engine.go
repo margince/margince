@@ -201,7 +201,8 @@ func (e *WorkflowEngine) HandleEvent(ctx context.Context, env kevents.Envelope) 
 // dispatch runs one instance's firing. A list rule's event stands for every
 // record one check saw change, so it fans out first.
 func (e *WorkflowEngine) dispatch(ctx context.Context, h workflow.Handler, ev workflow.Event, version int64) error {
-	if !ev.EnabledFrom.IsZero() && ev.OccurredAt.Before(ev.EnabledFrom) {
+	// Accepted website notes already name the policy that owes their handling.
+	if h.Spec().Name != inquiryRecipeName && !ev.EnabledFrom.IsZero() && ev.OccurredAt.Before(ev.EnabledFrom) {
 		return nil
 	}
 	if rule, ok := h.(listRule); ok {

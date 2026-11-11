@@ -16785,6 +16785,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Für eine Anfrage vom {received} ist die Aufgabe am {due} fällig ({zone}).",
   "inquiry.record": "CRM-Eintrag",
   "inquiry.assignmentReason": "Grund für die Zuweisung",
+  "inquiry.reason.legacyHandling":
+    "Die bisherige Lead-Bearbeitung ist für diese Anfrage zuständig. Prüfen Sie das Ergebnis, bevor Sie eine weitere Aufgabe erstellen.",
   "inquiry.reason.owner": "Bleibt bei der zuständigen Person",
   "inquiry.reason.ownerReview": "Zuständigkeit muss geprüft werden",
   "inquiry.reason.recipientChanged": "Ausgewählte Person nicht mehr geeignet",
@@ -16845,6 +16847,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Bearbeitung fehlgeschlagen. Vor dem Wiederholen den Lauf prüfen.",
   "inquiry.handling": "Anfragen bearbeiten",
   "inquiry.review": "Bearbeitung prüfen",
+  "inquiry.pausedConversionWarning":
+    "Wenn Sie diesen Plan speichern, ersetzt er die bisherige Lead-Bearbeitung dieses Formulars. Mit „Pausiert speichern“ bleibt der Plan aus: Neue Anfragen erhalten erst nach dem Einschalten automatisch eine Aufgabe.",
   "inquiry.savePaused": "Pausiert speichern",
   "inquiry.enable": "Diese Bearbeitung einschalten",
   "inquiry.futureOnly":

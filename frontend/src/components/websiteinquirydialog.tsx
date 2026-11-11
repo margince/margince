@@ -253,6 +253,7 @@ function InquiryPolicyEditor({
           )}
           {reviewing ? (
             <>
+              <p className="t-body">{t("inquiry.pausedConversionWarning")}</p>
               <InquiryPolicyReview
                 policy={policy}
                 form={opening.form}

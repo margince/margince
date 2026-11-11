@@ -16350,6 +16350,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Yêu cầu nhận lúc {received} có nhiệm vụ đến hạn lúc {due} ({zone}).",
   "inquiry.record": "Bản ghi CRM",
   "inquiry.assignmentReason": "Lý do chọn người này",
+  "inquiry.reason.legacyHandling":
+    "Quy trình xử lý khách hàng tiềm năng trước đó vẫn phụ trách yêu cầu này. Hãy xem kết quả trước khi tạo nhiệm vụ khác.",
   "inquiry.reason.owner": "Giữ người phụ trách hiện tại",
   "inquiry.reason.ownerReview": "Cần xem lại người phụ trách",
   "inquiry.reason.recipientChanged": "Người nhận không còn phù hợp",
@@ -16408,6 +16410,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "inquiry.result.failed": "Xử lý thất bại. Xem lần chạy trước khi thử lại.",
   "inquiry.handling": "Xử lý yêu cầu",
   "inquiry.review": "Xem lại cách xử lý",
+  "inquiry.pausedConversionWarning":
+    "Lưu kế hoạch này sẽ thay thế cách xử lý khách hàng tiềm năng trước đây của biểu mẫu. Nếu lưu ở trạng thái tạm dừng, yêu cầu mới sẽ chưa có nhiệm vụ tự động cho đến khi bạn bật kế hoạch.",
   "inquiry.savePaused": "Lưu và tạm dừng",
   "inquiry.enable": "Bật cách xử lý này",
   "inquiry.futureOnly":

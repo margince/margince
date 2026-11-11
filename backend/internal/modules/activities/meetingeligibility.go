@@ -5,10 +5,14 @@ package activities
 
 import (
 	"context"
+	"strings"
 	"time"
+
+	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
@@ -120,7 +124,19 @@ func (s *Store) ReadyForRecap(ctx context.Context, id ids.ActivityID, asOf time.
 	if meeting.SourceSystem != nil && provenance.ImporterNamespace(*meeting.SourceSystem) {
 		return false, nil
 	}
-	return meetingReadyForRecap(meeting), nil
+	if !meetingReadyForRecap(meeting) {
+		return false, nil
+	}
+	capturedBody := meeting.CapturedBy != nil && strings.HasPrefix(*meeting.CapturedBy, "connector:")
+	if !capturedBody && !(meeting.CapturedBy == nil && meeting.SourceSystem != nil) {
+		return true, nil
+	}
+	var notes bool
+	err = database.WithWorkspaceTx(ctx, s.db.Pool(), func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM audit_log edit
+ WHERE edit.entity_type='activity' AND edit.entity_id=@id AND `+meetingBodyAuthoredSQL+`)`, pgx.NamedArgs{"id": id}).Scan(&notes)
+	})
+	return notes, err
 }
 
 func meetingReadyForRecap(meeting crmcontracts.Activity) bool {

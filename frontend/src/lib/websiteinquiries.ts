@@ -37,6 +37,8 @@ export function inquiryReasonKey(reason: string | undefined): MessageKey {
       return "inquiry.reason.coordinator";
     case "round_robin":
       return "inquiry.reason.rotation";
+    case "legacy_handling_owned":
+      return "inquiry.reason.legacyHandling";
     case "inquiry_task_exists":
       return "inquiry.result.alreadyHandled";
     case undefined:

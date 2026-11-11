@@ -16657,6 +16657,8 @@ export const en = {
     "A question received at {received} has a task due at {due} ({zone}).",
   "inquiry.record": "CRM record",
   "inquiry.assignmentReason": "Why this colleague",
+  "inquiry.reason.legacyHandling":
+    "The earlier lead handling still owns this submission. Review its result before creating another task.",
   "inquiry.reason.owner": "Keeps the current owner",
   "inquiry.reason.ownerReview": "Current owner needs review",
   "inquiry.reason.recipientChanged": "Recipient no longer eligible",
@@ -16716,6 +16718,8 @@ export const en = {
   "inquiry.result.failed": "Handling failed. Review the run before retrying.",
   "inquiry.handling": "Inquiry handling",
   "inquiry.review": "Review handling",
+  "inquiry.pausedConversionWarning":
+    "Saving this plan replaces the old lead handling for this form. Save paused keeps the plan off: new submissions get no automatic task until you turn it on.",
   "inquiry.savePaused": "Save paused",
   "inquiry.enable": "Turn on this handling",
   "inquiry.futureOnly":

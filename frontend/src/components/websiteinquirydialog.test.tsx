@@ -89,6 +89,9 @@ it("reviews the shared policy before saving it and keeps authority separate from
   expect(write).not.toHaveBeenCalled();
   await user.click(screen.getByRole("button", { name: "Review handling" }));
   expect(screen.getByText("Authorized by")).toBeVisible();
+  expect(
+    screen.getByText(/Saving this plan replaces the old lead handling/),
+  ).toBeVisible();
   await waitFor(() =>
     expect(
       screen.getByText("Authorized by").nextElementSibling,
