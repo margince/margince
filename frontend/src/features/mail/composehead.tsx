@@ -54,20 +54,10 @@ export function FieldNeed({
 }
 
 /**
- * The addresses this message can be built out of.
- *
- * Read off what the composer already holds: the contact it writes to, the contacts
- * around it (colleagues and the others on its deals), the account
- * behind the record, and the workspace's members. A reader remembers a
- * colleague's NAME and not their address, which is why the contact is the label;
- * the address is the value AND the hint beside it, because one contact can have
- * several and a row that showed only the name would be a choice between two
- * identical-looking options.
- *
- * The contact leads, because a message written from a contact's page is
- * overwhelmingly to that contact. The contacts around it follow, then the
- * account's roster, then the members. A contact with no address on file is not
- * offered: a row that commits an empty recipient is help that refuses at the send.
+ * The addresses this message can be built out of, from reads the composer already holds.
+ * The label is the name a reader remembers; the address is the value and the hint.
+ * Order: the contact, the contacts around it, the account's roster, then members.
+ * A contact with no address is left out, because it would refuse at the send.
  */
 export function recipientSuggestions({
   contact,

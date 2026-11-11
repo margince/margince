@@ -16,8 +16,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// relatedGraph is one buyer with a current colleague, a former one, a contact
-// seated beside them on a deal, and a stranger at that contact's company.
+// relatedGraph is one buyer with a current colleague and a former one. A deal
+// peer sits beside the buyer on a deal, and a stranger works at the peer's company.
 type relatedGraph struct {
 	buyer, colleague, former, dealPeer, stranger ids.ContactID
 }
