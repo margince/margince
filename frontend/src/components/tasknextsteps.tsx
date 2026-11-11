@@ -49,9 +49,10 @@ export function TaskCallAction({
 }
 
 /**
- * The step the task's type asks for: a mail drafted for a reply or a mail to
- * write, the number and Call for a call, Book a meeting for a meeting, the
- * record to review, the choice to decide. A task to do has none: Done is it.
+ * The step the task's type asks for. A reply or a mail to write drafts a mail,
+ * a call shows the number and Call, and a meeting offers Book a meeting.
+ * A review opens the record and a decision shows the choice. A task to do has
+ * none: Done is it.
  * `className` wraps the step in a row of its own, which is left out when
  * there is nothing to act on.
  */

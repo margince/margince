@@ -46,8 +46,8 @@ export function asksWhichDeal(task: Activity): boolean {
 }
 
 /**
- * The deal question as a choice: each deal the mail may be about as a card
- * with its value and close date, then Link mail to deal. Filing the mail on a
+ * The deal question as a choice. Each deal the mail may be about is a card
+ * with its value and close date, then comes Link mail to deal. Filing the mail on a
  * deal answers the question, so the task leaves the list.
  */
 export function WhichDealChoice({ task }: Readonly<{ task: Activity }>) {

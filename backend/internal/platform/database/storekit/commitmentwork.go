@@ -110,8 +110,8 @@ var taskSourceFamilies = map[string]taskSourcePolicy{
 func TaskSourceFamilies() []string { return automaticTaskSources() }
 
 // TaskTypeSQL is the type a task reads: the one it was given, else its
-// source's, else write for a task a human or an agent made and do for the
-// rest. alias is a compile-time activity alias, never request input.
+// source's. Without either, a task a human or an agent made reads write, and
+// the rest read do. alias is a compile-time activity alias, never request input.
 func TaskTypeSQL(alias string) string {
 	alias = pgx.Identifier{alias}.Sanitize()
 	sources := make([]string, 0, len(taskSourceFamilies))

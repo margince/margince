@@ -31,8 +31,9 @@ const TASK_TYPE_LABELS: Readonly<Record<TaskType, MessageKey>> = {
 
 /**
  * The type a task's one step follows. A server too old to send one still
- * names a mail target where a mail is the work; anything else, or a type this
- * build does not know, reads as `do`: Done is the step every task has.
+ * names a mail target where a mail is the work, so that reads as `write`.
+ * Anything else, or a type this build does not know, reads as `do`, since
+ * Done is the step every task has.
  */
 export function taskTypeOf(
   task: Pick<Activity, "task_type" | "email_target">,
