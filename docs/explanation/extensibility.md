@@ -121,6 +121,7 @@ already exists:
 | `Secrets` | The secret keys the unit will use, by name and scope. It is a request; it grants nothing |
 | `OAuthApps` | Vendors whose sign-in the core runs for an admin. The core keeps the tokens and gives the unit a live access token through `Runtime.OAuthAccessToken` |
 | `Migrations` | The SQL schema layer the unit owns, built into the binary instead of read from the tree |
+| `Reach` | The unit's own tables whose columns hold a core company, contact or lead id. The core's merge moves those columns onto the survivor, and its erasure clears the columns a table lists. Core never names the unit's tables in its own SQL |
 | `Entries` | Buttons on core screens that open the unit's screen. The unit names a slot, a label key, an icon and an RBAC object, and the core draws and places the button |
 | `Instrumentation` | Watches the whole process: the root log handler, every request, each job and extension delivery, and each panic the core catches. In the browser it sees errors and screen changes. It may serve an edge with no sign-in at `/v1/public/instrument/<unit>/`. It names no vendor. The core logs and skips a `Start` that fails or panics, and a hook that panics. A `Start` that never returns still holds up boot, and an `HTTP` wrapper that panics fails that request |
 

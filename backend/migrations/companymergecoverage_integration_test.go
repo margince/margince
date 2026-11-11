@@ -26,7 +26,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/compose/corereach"
 	"github.com/margince/margince/backend/internal/shared/gatekit"
+	"github.com/margince/margince/backend/pkg/extension/reach"
 )
 
 // theCompanyFKFloor is the count below which the census has broken rather than
@@ -63,7 +65,7 @@ var companyFKsTheMergeLeaves = gatekit.Waive(map[string]string{
 	"tag_suggestion.company_id":                       "a tag suggestion is the tag scout's reading of ONE record's evidence, held to one open suggestion per tag and record, so a moved row could collide with the survivor's own. The merge archives the retired company, which the next scout pass reads as a suggestion that no longer stands (superseded); the activities the merge relinks raise the survivor's own suggestion",
 	"suggestion_dismissal.company_id":                 "a dismissal is keyed by a fingerprint computed over the company's OWN id, so a row moved onto the survivor would hash differently from anything the survivor is ever offered and could never match again. The merge retires them with the company instead of moving rows that cannot work; a reader may be offered the equivalent suggestion about the survivor once, and dismissing it again sticks. Re-deriving the fingerprints belongs to the suggestion engine that defines them",
 	"signal.entity_company_id":                        "a trigger fills it from entity_type and entity_id, and moveKindIDSingles moves that pair, so the key follows it to the survivor",
-	"weekly_plan_commitment.linked_company_id":        "a trigger fills it from linked_record_type and linked_record_id, and moveKindIDSingles moves that pair, so the key follows it to the survivor",
+	"weekly_plan_commitment.linked_company_id":        "a trigger fills it from linked_record_type and linked_record_id, and the weekly plan's sweep reach declaration moves that pair, so the key follows it to the survivor",
 	"user_record_view.entity_company_id":              "a trigger fills it from the pair, which the merge leaves on the retired record for the reason kindIDPairsTheMergeLeaves gives user_record_view.entity_id",
 	"company_domain_disposition.candidate_company_id": "a suggestion for one open company question, never a link. The suggestion read keeps only live companies, so a merged-away candidate is never offered, and the reader still chooses the survivor by search; the question is answered or re-asked with no candidate",
 })
@@ -258,7 +260,33 @@ func tablesTheMergeWrites(t *testing.T) map[string]bool {
 			}
 		}
 	}
+	for column := range declaredCompanyLinks(t) {
+		written[column] = true
+	}
 	return written
+}
+
+// declaredCompanyLinks returns the "table.column" pairs core modules declare
+// for the merge to move (sweepreach). They count only while the merge path
+// still calls the registry, so dropping that call fails here too.
+func declaredCompanyLinks(t *testing.T) map[string]bool {
+	t.Helper()
+	body, err := os.ReadFile(filepath.Join("..", "internal/modules/contacts/mergekindid.go"))
+	if err != nil {
+		t.Fatalf("reading the merge's call into the declared tables: %v", err)
+	}
+	if !strings.Contains(string(body), "sweepreach.Relink(") {
+		return nil
+	}
+	declared := map[string]bool{}
+	for _, o := range corereach.Tables() {
+		for _, l := range o.Table.Links {
+			if l.Record == reach.Company || l.KindColumn != "" {
+				declared[o.Table.Name+"."+l.Column] = true
+			}
+		}
+	}
+	return declared
 }
 
 // splitSQLStatements cuts a Go source file into the individual SQL statements

@@ -49,11 +49,11 @@
 // The COMPANY merge relinks further still (mergerelink_company.go), for the
 // same reason and under the same ratification: every table carrying a
 // company_id names a record the merge is retiring, so a row left behind points
-// at something no read returns. That reaches money (contract, finance_invoice,
-// finance_payment, finance_customer_link), responsibility (record_assignment),
+// at something no read returns. That reaches money (contract), responsibility (record_assignment),
 // the per-reader rows (company_brief, company_dossier, company_growth_fit,
 // company_scan, suggestion_dismissal) and the resolution caches (signal,
-// signal_resolution, signal_thread_scan, offer, commission_entry). Which
+// signal_resolution, signal_thread_scan, offer). A table its owner declares
+// (internal/platform/sweepreach) moves through that declaration instead. Which
 // tables those ARE is not this comment's to keep current: the company-merge
 // coverage gate enumerates every foreign key pointing at company and fails on
 // one the merge neither moves nor declares out of scope.
