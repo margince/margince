@@ -57,7 +57,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "users.retirement.lists":
     "Listen dieses Mitglieds neu zuweisen oder archivieren.",
   "users.retirement.stewarded_lists":
-    "Betreute Listen dieses Mitglieds neu zuweisen oder archivieren.",
+    "Listen, für die dieses Mitglied zuständig ist, neu zuweisen oder archivieren.",
   "users.retirement.mail_drafts":
     "Gespeicherte E-Mail-Entwürfe dieses Mitglieds senden oder verwerfen.",
   "users.retirement.meeting_invitations":
@@ -13394,7 +13394,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "cf.retire.body":
     "Das Feld verschwindet aus neuen Datensätzen und Filtern. Gespeicherte Werte bleiben erhalten. Das Archivieren lässt sich nicht rückgängig machen.",
   "cf.retire.lists":
-    "Diese Live-Listen filtern danach. Mit den gespeicherten Werten funktionieren sie weiter und bitten ihre Verantwortlichen, die Bedingung zu ersetzen:",
+    "Diese Live-Listen filtern danach. Mit den gespeicherten Werten funktionieren sie weiter und bitten ihre Zuständigen, die Bedingung zu ersetzen:",
   "cf.retire.unseen_one":
     "{count} weitere Live-Liste, die du nicht öffnen kannst, filtert ebenfalls danach.",
   "cf.retire.unseen_other":
@@ -17124,7 +17124,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Jemand erstellt eine Live-Liste oder eine Shortlist.",
   "webhooks.event.list.updated.label": "Listeneinstellungen geändert",
   "webhooks.event.list.updated.when":
-    "Name, Zweck, Filter, Teilen, Team oder Verantwortung einer Liste ändern sich.",
+    "Name, Zweck, Filter, Teilen, Team oder Zuständigkeit einer Liste ändern sich.",
   "webhooks.event.list.archived.label": "Liste archiviert",
   "webhooks.event.list.archived.when": "Eine Liste wird archiviert.",
   "webhooks.event.list.restored.label": "Liste wiederhergestellt",
@@ -18511,11 +18511,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lists.audience.yourTeams": "Deine Teams",
   "lists.audience.ownerTeams": "Die Teams der verantwortlichen Person",
   "lists.audience.ownerOnly": "Die verantwortliche Person",
-  "lists.audience.stewardOnly": "Die verantwortliche Person",
-  "lists.audience.youAndSteward": "Du und eine weitere verantwortliche Person",
-  "lists.audience.ownerAndSteward": "Zwei verantwortliche Personen",
+  "lists.audience.stewardOnly": "Die zuständige Person",
+  "lists.audience.youAndSteward": "Du und die zuständige Person",
+  "lists.audience.ownerAndSteward":
+    "Die verantwortliche und die zuständige Person",
   "lists.audience.unknownTeam": "Ein Team, das du nicht sehen kannst",
-  "lists.health.ownerless": "Niemand verantwortlich",
+  "lists.health.ownerless": "Niemand zuständig",
   "lists.health.invalid": "Filter funktioniert nicht mehr",
   "lists.health.retiredField": "Nutzt ein stillgelegtes Feld",
   "lists.col.name": "Name",
@@ -18541,23 +18542,23 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lists.filterLine": "Filter: {sentence}",
   "lists.head.exported_one": "{count}-mal, zuletzt am {when}",
   "lists.head.exported_other": "{count}-mal, zuletzt am {when}",
-  "lists.fact.steward": "Verantwortlich",
+  "lists.fact.steward": "Zuständig",
   "lists.fact.exported": "Exportiert",
   "lists.archived.title": "Diese Liste ist archiviert",
   "lists.archived.body":
     "Bis zur Wiederherstellung ist die Liste schreibgesch\u00fctzt. Mitglieder und Verlauf bleiben erhalten.",
   "lists.invalid.title": "Dieser Filter funktioniert nicht mehr",
   "lists.invalid.body":
-    "Ein Feld im Filter hat sich geändert. Wer für die Liste verantwortlich ist, kann den Filter im Editor korrigieren.",
-  "lists.ownerless.title": "Niemand ist für diese Liste verantwortlich",
+    "Ein Feld im Filter hat sich geändert. Wer für die Liste zuständig ist, kann den Filter im Editor korrigieren.",
+  "lists.ownerless.title": "Niemand ist für diese Liste zuständig",
   "lists.ownerless.body":
-    "Für diese Liste ist niemand mehr verantwortlich, oder es wurde nie jemand festgelegt. Wer die Liste ändern darf, sollte sie übernehmen.",
+    "Für diese Liste ist niemand mehr zuständig, oder es wurde nie jemand festgelegt. Wer die Liste ändern darf, sollte sie übernehmen.",
   "lists.ownerless.takeOver": "\u00dcbernehmen",
   "lists.retiredField.title": "Dieser Filter nutzt ein stillgelegtes Feld",
   "lists.retiredField.body_one":
-    "{fields} wurde stillgelegt. Die Liste arbeitet weiter mit den bereits gespeicherten Werten. Neue Werte werden dort nicht mehr erfasst. Wer die Liste verantwortet, sollte diese Bedingung im Editor ersetzen.",
+    "{fields} wurde stillgelegt. Die Liste arbeitet weiter mit den bereits gespeicherten Werten. Neue Werte werden dort nicht mehr erfasst. Wer für die Liste zuständig ist, sollte diese Bedingung im Editor ersetzen.",
   "lists.retiredField.body_other":
-    "{fields} wurden stillgelegt. Die Liste arbeitet weiter mit den bereits gespeicherten Werten. Neue Werte werden dort nicht mehr erfasst. Wer die Liste verantwortet, sollte diese Bedingungen im Editor ersetzen.",
+    "{fields} wurden stillgelegt. Die Liste arbeitet weiter mit den bereits gespeicherten Werten. Neue Werte werden dort nicht mehr erfasst. Wer für die Liste zuständig ist, sollte diese Bedingungen im Editor ersetzen.",
   "lists.members.title": "Mitglieder",
   "lists.members.loading": "Mitglieder werden geladen",
   "lists.members.emptyLive":
