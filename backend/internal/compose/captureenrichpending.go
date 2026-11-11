@@ -40,7 +40,7 @@ func (e *CaptureEnricher) RunPendingWorkspace(ctx context.Context) (bool, error)
 	for _, request := range work {
 		var readErr error
 		if candidate, ok := byContact[request.ContactID]; ok {
-			readErr = e.enrichOne(ctx, candidate, enabled)
+			_, readErr = e.enrichOne(ctx, candidate, enabled)
 			request.Snapshot = candidate.Snapshot
 		}
 		retryAfter := time.Duration(0)

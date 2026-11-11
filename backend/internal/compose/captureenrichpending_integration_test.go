@@ -119,7 +119,7 @@ func TestDeletingAnUnreadSignatureSourceKeepsTheContactPending(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	if err := store.MarkSignatureRead(ctx, ids.From[ids.ContactKind](h.contact), newest, 3, work[0]); err != nil {
+	if err := store.MarkSignatureRead(ctx, ids.From[ids.ContactKind](h.contact), newest, 3, contacts.SignatureRead{}, work[0]); err != nil {
 		t.Fatal(err)
 	}
 	if err := store.SettleSignatureWork(ctx, work[0], 0); err != nil {

@@ -26,8 +26,8 @@ const (
 	// amortized across ten messages.
 	classifyBatchSize = 10
 	// signatureLineCount mirrors compose/captureenrich.go's §2.9 input pin: the
-	// trailing non-quoted signature lines fed to the per-contact enrich prompt.
-	signatureLineCount = 15
+	// signature window lines fed to the per-contact enrich prompt.
+	signatureLineCount = 25
 
 	// charsPerToken is the ~4-chars-per-token rule of thumb for the GPT/Gemini
 	// family tokenizers this repo's cloud tiers run on — the labeled

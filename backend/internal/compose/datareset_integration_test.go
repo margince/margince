@@ -63,7 +63,7 @@ func TestSweepWorkspaceDataClearsDomainKeepsIdentity(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := e.Contacts.MarkSignatureRead(ctx, ids.From[ids.ContactKind](contact), ids.UUID(mail.Id), 1, contacts.SignatureWork{}); err != nil {
+	if err := e.Contacts.MarkSignatureRead(ctx, ids.From[ids.ContactKind](contact), ids.UUID(mail.Id), 1, contacts.SignatureRead{}, contacts.SignatureWork{}); err != nil {
 		t.Fatal(err)
 	}
 	if got := e.WsCount(t, "SELECT count(*) FROM contact_signature_enrich_state WHERE activity_id IS NOT NULL"); got != 1 {

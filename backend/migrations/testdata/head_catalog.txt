@@ -3951,15 +3951,23 @@ public.contact_signature_enrich_state.contact_id uuid NOT NULL gen=- def=-
 public.contact_signature_enrich_state.contact_signature_enrich_state_activity_id_fkey FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE SET NULL
 public.contact_signature_enrich_state.contact_signature_enrich_state_contact_id_fkey FOREIGN KEY (contact_id) REFERENCES contact(id) ON DELETE CASCADE
 public.contact_signature_enrich_state.contact_signature_enrich_state_deferred_run_id_fkey FOREIGN KEY (deferred_run_id) REFERENCES capture_backfill(id) ON DELETE SET NULL
+public.contact_signature_enrich_state.contact_signature_enrich_state_last_outcome_check CHECK ((last_outcome = ANY (ARRAY['applied'::text, 'nothing_to_apply'::text, 'skipped'::text])))
+public.contact_signature_enrich_state.contact_signature_enrich_state_last_skip_reason_check CHECK ((last_skip_reason = ANY (ARRAY['name_gate'::text, 'evidence_gate'::text, 'confidence'::text, 'narrowed'::text])))
 public.contact_signature_enrich_state.contact_signature_enrich_state_pkey PRIMARY KEY (contact_id)
+public.contact_signature_enrich_state.contact_signature_enrich_state_retry_activity_id_fkey FOREIGN KEY (retry_activity_id) REFERENCES activity(id) ON DELETE SET NULL
+public.contact_signature_enrich_state.contact_signature_enrich_state_retry_count_check CHECK ((retry_count >= 0))
 public.contact_signature_enrich_state.deferred_run_id uuid gen=- def=-
 public.contact_signature_enrich_state.due_at timestamp with time zone NOT NULL gen=- def=now()
 public.contact_signature_enrich_state.history_depth smallint gen=- def=-
 public.contact_signature_enrich_state.last_activity_at timestamp with time zone gen=- def=-
+public.contact_signature_enrich_state.last_outcome text gen=- def=-
+public.contact_signature_enrich_state.last_skip_reason text gen=- def=-
 public.contact_signature_enrich_state.live_generation bigint NOT NULL gen=- def=0
 public.contact_signature_enrich_state.processed_generation bigint NOT NULL gen=- def=0
 public.contact_signature_enrich_state.read_snapshot pg_snapshot gen=- def=-
 public.contact_signature_enrich_state.requested_generation bigint NOT NULL gen=- def=0
+public.contact_signature_enrich_state.retry_activity_id uuid gen=- def=-
+public.contact_signature_enrich_state.retry_count smallint NOT NULL gen=- def=0
 public.contact_signature_enrich_state.signature_work_generations CHECK (((processed_generation >= 0) AND (requested_generation >= processed_generation) AND (live_generation >= 0) AND (live_generation <= requested_generation)))
 public.contact_signature_enrich_state_pkey CREATE UNIQUE INDEX contact_signature_enrich_state_pkey ON public.contact_signature_enrich_state USING btree (contact_id)
 public.contact_social acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
@@ -5700,6 +5708,7 @@ public.idx_contact_phone_contact CREATE INDEX idx_contact_phone_contact ON publi
 public.idx_contact_phone_dedupe_scan CREATE INDEX idx_contact_phone_dedupe_scan ON public.contact_phone USING btree (updated_at, id)
 public.idx_contact_search CREATE INDEX idx_contact_search ON public.contact USING gin (search_tsv)
 public.idx_contact_signature_enrich_state_activity CREATE INDEX idx_contact_signature_enrich_state_activity ON public.contact_signature_enrich_state USING btree (activity_id)
+public.idx_contact_signature_enrich_state_retry_activity CREATE INDEX idx_contact_signature_enrich_state_retry_activity ON public.contact_signature_enrich_state USING btree (retry_activity_id) WHERE (retry_activity_id IS NOT NULL)
 public.idx_contact_social_linkedin_profile CREATE INDEX idx_contact_social_linkedin_profile ON public.contact_social USING btree ("substring"(lower(handle), '^(?:https?://)?(?:[a-z0-9-]+\.)*linkedin\.com/in/([^/?#]+)'::text)) WHERE (platform = 'linkedin'::text)
 public.idx_contact_unkeyed_address_hashes CREATE INDEX idx_contact_unkeyed_address_hashes ON public.contact USING btree (id) WHERE ((anonymized_address_hashes IS NOT NULL) AND (anonymized_address_key_id IS NULL))
 public.idx_contact_updated_keyset CREATE INDEX idx_contact_updated_keyset ON public.contact USING btree (updated_at DESC NULLS LAST, created_at DESC, id DESC) WHERE (archived_at IS NULL)

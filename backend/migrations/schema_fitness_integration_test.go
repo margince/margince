@@ -432,8 +432,9 @@ var rowScopedFKDecisions = gatekit.Waive(map[string]string{
 	// The signature pass's read cursor (PO-F-2a): both ids come from the
 	// pass's own SignatureCandidates query — the contact it just read for and
 	// the activity whose body it just read — never from a request body.
-	"contact_signature_enrich_state.contact_id":  "server-derived: stamped by the enrich pass from its own candidate query, as the system principal — no caller, so no scope clause to apply",
-	"contact_signature_enrich_state.activity_id": "server-derived: stamped by the enrich pass from the activity that candidate query returned",
+	"contact_signature_enrich_state.contact_id":        "server-derived: stamped by the enrich pass from its own candidate query, as the system principal — no caller, so no scope clause to apply",
+	"contact_signature_enrich_state.activity_id":       "server-derived: stamped by the enrich pass from the activity that candidate query returned",
+	"contact_signature_enrich_state.retry_activity_id": "server-derived: stamped by the enrich pass from the activity that candidate query returned, when the pass rejected its read",
 	// The interaction participants (ACT-DDL-3): neither id is ever carried on
 	// a request body. Capture mints the activity in the same transaction and
 	// resolves the counterparty through the ensure chokepoint's own lookup — which
