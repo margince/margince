@@ -29,6 +29,11 @@ defaults:
 # backend/gates/buildinputfetch_test.go, which holds this line.
 env:
   GOPROXY: https://proxy.golang.org|direct
+  # How the build packs the test binaries and the shards unpack them. The
+  # binaries share most of their code, and a 1 GB window finds it in an earlier
+  # binary: the pack is about 0.6 GB in place of 1.05 GB at the default window.
+  # The unpack needs the same window, so both sides read this one value.
+  LANE_BIN_ZSTD: zstd -T0 --long=30
 
 jobs:
   # The lane's one compile. A shard's slice is per-TEST, so every shard runs
@@ -101,11 +106,11 @@ jobs:
           printf 'mode=%s\nattempt=%s\n' "$mode" "$GITHUB_RUN_ATTEMPT" > "$RUNNER_TEMP/integration-bin/shard-queue.txt"
           echo "The shards share the lane by: $mode"
       # A tarball because an artifact keeps no file mode, and a binary without
-      # its execute bit fails every slot. zstd because the binaries come to
-      # about 2.8 GB and pack to about a third of that; the upload then stores
-      # the tarball as it is, since a second compression buys nothing.
+      # its execute bit fails every slot. The binaries come to about 3.2 GB;
+      # the upload stores the pack as it is, since a second compression buys
+      # nothing.
       - name: Pack the test binaries
-        run: tar -I 'zstd -T0' -cf "$RUNNER_TEMP/integration-bin.tar.zst" -C "$RUNNER_TEMP/integration-bin" .
+        run: tar -I "$LANE_BIN_ZSTD" -cf "$RUNNER_TEMP/integration-bin.tar.zst" -C "$RUNNER_TEMP/integration-bin" .
       # Not named `integration-*`: the fan-in downloads that pattern and has no
       # use for the binaries. The attempt is in the name because a run lists
       # the artifacts of all its attempts, and a shard runs only its own
@@ -230,7 +235,7 @@ jobs:
       - name: Unpack the test binaries
         run: |
           mkdir -p "$RUNNER_TEMP/integration-bin"
-          tar -I zstd -xf "$RUNNER_TEMP/integration-bin.tar.zst" -C "$RUNNER_TEMP/integration-bin"
+          tar -I "$LANE_BIN_ZSTD" -xf "$RUNNER_TEMP/integration-bin.tar.zst" -C "$RUNNER_TEMP/integration-bin"
       # The claims of each attempt are their own, so `Re-run failed jobs` gets a
       # fresh queue. When the build did not run again, the green shards of the
       # earlier attempt keep their groups, and the shards that run again skip
