@@ -12,9 +12,11 @@ import "fmt"
 // nothing about authorship. Reading it that way put another sender's title,
 // employer and address onto a contact.
 //
-// The stored contact decides when the row has no address, or when that contact
-// holds or once held the row's address. So mail stays with its author after the
-// address moves on. Otherwise the address's current owner decides. The backfill
+// The stored contact decides in three cases. The row has no address. The
+// contact holds the row's address. Or they once held it, and another contact
+// holds it now. So mail stays with its author after the address moves on, but an
+// address removed from a contact no longer speaks for them. Otherwise the
+// address's current owner decides. The backfill
 // took contact_id from the first link and the address from counterparty_email,
 // so one row can name one contact and carry another's address.
 //
@@ -42,7 +44,11 @@ func ParticipantNamesSQL(contact, participant string) string {
 
 const participantNamesSQL = `CASE WHEN %[2]s.address IS NULL
 		              OR EXISTS (SELECT 1 FROM contact_email se
-		                          WHERE se.contact_id = %[2]s.contact_id AND se.email = %[2]s.address)
+		                          WHERE se.contact_id = %[2]s.contact_id AND se.email = %[2]s.address
+		                            AND (se.archived_at IS NULL OR EXISTS (
+		                                 SELECT 1 FROM contact_email ne
+		                                  WHERE ne.email = %[2]s.address AND ne.archived_at IS NULL
+		                                    AND ne.contact_id <> %[2]s.contact_id)))
 		            THEN %[2]s.contact_id = %[1]s
 		            ELSE EXISTS (SELECT 1 FROM contact_email pe
 		                          WHERE pe.contact_id = %[1]s AND pe.archived_at IS NULL
