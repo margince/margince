@@ -7,11 +7,11 @@ import {
   automaticDateReceipt,
   automaticStageReceipt,
 } from "../testing/worklist.receiptreview.fixtures";
-import { ReceiptReview } from "./receiptreview";
+import { ReceiptVerbs } from "./receiptverbs";
 
-const meta: Meta<typeof ReceiptReview> = {
-  title: "Records/Worklist/Review applied changes",
-  component: ReceiptReview,
+const meta: Meta<typeof ReceiptVerbs> = {
+  title: "Records/Worklist/Applied change verbs",
+  component: ReceiptVerbs,
   decorators: [
     (Story) => {
       stubWithSession({}, { deal: ["read", "update"] });
@@ -24,7 +24,7 @@ const meta: Meta<typeof ReceiptReview> = {
   ],
 };
 export default meta;
-type Story = StoryObj<typeof ReceiptReview>;
+type Story = StoryObj<typeof ReceiptVerbs>;
 export const AutomaticStage: Story = {
   args: { receipt: automaticStageReceipt },
 };

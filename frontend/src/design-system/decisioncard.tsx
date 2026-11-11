@@ -361,6 +361,41 @@ export function DecisionCard({
   );
 }
 
+/**
+ * What a proposal would do, without the decision around it: the card's body on
+ * the staged ground. For a surface that asks the question and answers it in
+ * the card. Nothing when the payload says nothing.
+ */
+export function DecisionProposal({
+  approval,
+  labels,
+  display = [],
+  className,
+}: Readonly<{
+  approval: DecisionApproval;
+  labels: DecisionCardLabels;
+  display?: readonly DecisionDisplay[];
+  className?: string;
+}>) {
+  const payload = readPayload(approval, "row", display);
+  if (!payload.hasContent) return null;
+  return (
+    <div
+      className={["staging-card dcard-proposal", className ?? ""]
+        .filter(Boolean)
+        .join(" ")}
+    >
+      <DecisionContent
+        draft={payload.draft}
+        diffs={payload.diffs}
+        lead={payload.lead}
+        rest={payload.rest}
+        labels={labels}
+      />
+    </div>
+  );
+}
+
 // The payload vocabulary is re-exported rather than moved out of reach. A
 // caller resolving a kind's display policy is talking to the card. A second
 // import path for the type it hands over would say the two were separate tiers.
