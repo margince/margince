@@ -151,8 +151,8 @@ export const QuietDayNextMeeting: Story = {
   ),
 };
 
-// A title longer than the rail and a crowded invite: the title wraps beside its
-// stop and the attendees wrap as one sentence, never over the date gutter.
+// A title longer than the rail, and a crowded invite. The title wraps beside its
+// stop, and the attendees wrap as one sentence clear of the date gutter.
 const LONG_TITLE =
   "Gradion – | 2nd demo for Document Management with the procurement team";
 
