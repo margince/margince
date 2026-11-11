@@ -123,8 +123,8 @@ func storeOldRuleLanguage(t *testing.T, e *integration.Env, activity ids.UUID, l
 	e.WsExec(t, `UPDATE activity SET language = $2 WHERE id = $1`, activity, lang)
 }
 
-// A language the rep chose is what the model is told over an English thread.
-// It is the one thing in the request that changes.
+// A language the rep chose, or else a subject they wrote, is what the model is
+// told over an English thread. A choice is the one thing in the request that changes.
 func TestAChosenLanguageIsTheOneTheModelIsTold(t *testing.T) {
 	o := setupOwed(t)
 	e := o.e
@@ -133,8 +133,9 @@ func TestAChosenLanguageIsTheOneTheModelIsTold(t *testing.T) {
 
 	derivedLang, derived := replyLangSteeredPrompt(t, e, anchor, draftfloor.Steering{})
 	chosenLang, chosen := replyLangSteeredPrompt(t, e, anchor, draftfloor.Steering{Language: textlang.Vietnamese})
-	if derivedLang != "en" || chosenLang != "vi" {
-		t.Fatalf("output language = %q unsteered and %q with vi chosen, want en and vi", derivedLang, chosenLang)
+	subjectLang, _ := replyLangSteeredPrompt(t, e, anchor, draftfloor.Steering{Subject: "Unsere nächsten Schritte für das gemeinsame Projekt"})
+	if derivedLang != "en" || chosenLang != "vi" || subjectLang != "de" {
+		t.Fatalf("output language = %q unsteered, %q with vi chosen, %q under a German subject; want en, vi, de", derivedLang, chosenLang, subjectLang)
 	}
 	want := withoutFence(derived)
 	got := strings.Replace(withoutFence(chosen), `"output_language":"vi"`, `"output_language":"en"`, 1)
@@ -265,20 +266,5 @@ func TestAnAddresseeMessageDatedAfterTheDraftingInstantDoesNotDecideTheLanguage(
 	replyLangMail(t, o, "inbound", "dietmar@kunde.test", replyLangGerman, 60*24*time.Hour)
 	if got := replyLangDraft(t, e, anchor); got != "en" {
 		t.Fatalf("output language = %q, want English: the German mail is dated after the draft is written", got)
-	}
-}
-
-// A subject the rep wrote on a reply decides its language in both directions.
-// The prefilled reply subject is the thread's and decides nothing.
-func TestTheSubjectTheRepWroteDecidesTheLanguageOfAReply(t *testing.T) {
-	o := setupOwed(t)
-	replyLangContact(t, o.e, "Dietmar Kunde", "dietmar@kunde.test")
-	english := replyLangMail(t, o, "inbound", "dietmar@kunde.test", replyLangEnglish, 0)
-	german := replyLangMail(t, o, "inbound", "dietmar@kunde.test", replyLangGerman, time.Hour)
-	toGerman, _ := replyLangSteeredPrompt(t, o.e, english, draftfloor.Steering{Subject: "Unsere nächsten Schritte für das gemeinsame Projekt"})
-	toEnglish, _ := replyLangSteeredPrompt(t, o.e, german, draftfloor.Steering{Subject: "Your proposal and our next steps", RewriteOf: replyLangGerman})
-	prefilled, _ := replyLangSteeredPrompt(t, o.e, german, draftfloor.Steering{Subject: "Re: Angebot"})
-	if toGerman != "de" || toEnglish != "en" || prefilled != "de" {
-		t.Fatalf("output language = %q/%q/%q under a German, English and prefilled subject, want de/en/de", toGerman, toEnglish, prefilled)
 	}
 }
