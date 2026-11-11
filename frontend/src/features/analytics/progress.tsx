@@ -1,14 +1,17 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import "./analytics.board.css";
 import "./progress.css";
 import { useState } from "react";
 import { Button, Field, SegmentedControl } from "../../design-system/atoms";
 import { FilterBar } from "../../design-system/filterbar";
+import { Panel, PanelBody } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
 import { Select } from "../../design-system/select";
 import {
   formatDateTime,
+  formatNumber,
   identifierNumber,
   monthName,
 } from "../../format/format";
@@ -27,7 +30,7 @@ import {
   type SalesProgress,
   useSalesProgress,
 } from "./progress.queries";
-import { ProgressReadings, ProgressResult } from "./progress.result";
+import { goalText, ProgressReadings, ProgressResult } from "./progress.result";
 import { ProgressMembers, ProgressMonths } from "./progress.tables";
 import { ProgressWork } from "./progress.work";
 import { ReportingEvidenceDrawer } from "./reporting.evidence";
@@ -214,15 +217,24 @@ function ProgressBody({ progress }: Readonly<{ progress: SalesProgress }>) {
   const open = progress.evaluation ? setEvidence : undefined;
   const team = progress.scope.kind === "team";
   return (
-    <div className="progress-body">
-      <ProgressResult progress={progress} onEvidence={open} />
-      <ProgressReadings progress={progress} onEvidence={open} />
-      {team && <ProgressMembers progress={progress} />}
-      <ProgressWork progress={progress} />
-      <ProgressMonths progress={progress} />
-      <p className="t-caption progress-definition">
-        {t("progress.definition")}
-      </p>
+    <div className="analytics-board">
+      <div className="analytics-board-main">
+        <div className="analytics-sheet">
+          <ProgressResult progress={progress} onEvidence={open} />
+          <ProgressReadings progress={progress} onEvidence={open} />
+          {team && <ProgressMembers progress={progress} />}
+          <ProgressWork progress={progress} />
+          <ProgressMonths progress={progress} />
+        </div>
+      </div>
+      <aside className="analytics-board-rail" aria-label={t("progress.rail")}>
+        <ProgressGoalBasis progress={progress} />
+        <Panel title={t("progress.definitionTitle")} flatHead>
+          <PanelBody>
+            <p className="progress-definition">{t("progress.definition")}</p>
+          </PanelBody>
+        </Panel>
+      </aside>
       {evidence && progress.evaluation && (
         <ReportingEvidenceDrawer
           evaluation={progress.evaluation}
@@ -231,5 +243,60 @@ function ProgressBody({ progress }: Readonly<{ progress: SalesProgress }>) {
         />
       )}
     </div>
+  );
+}
+
+// Where the goal comes from: the published sales goals, one door away.
+function ProgressGoalBasis({
+  progress,
+}: Readonly<{ progress: SalesProgress }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const { goal, currency } = progress;
+  const ask: ProgressAsk = {
+    period: progress.period.kind === "year" ? "year" : "month",
+    year: progress.period.year,
+    month: progress.period.month ?? 1,
+    scope:
+      progress.scope.kind === "owner" && progress.scope.id
+        ? { kind: "owner", id: progress.scope.id }
+        : undefined,
+  };
+  return (
+    <Panel
+      title={t("progress.goalBasis")}
+      flatHead
+      footer={
+        <Button
+          variant="link"
+          onClick={() => navigate({ screen: "goals" }, goalDials(ask))}
+        >
+          {t("progress.viewGoals")}
+        </Button>
+      }
+    >
+      <PanelBody>
+        <dl className="progress-basis">
+          <div>
+            <dt>
+              {t("progress.goalFor", {
+                period: periodLabel(progress.period, locale),
+              })}
+            </dt>
+            <dd className="t-num">{goalText(goal, currency, locale, t)}</dd>
+          </div>
+          <div>
+            <dt>{t("progress.goalMonths")}</dt>
+            <dd className="t-num">
+              {t("progress.goalMonthsSet", {
+                set: formatNumber(goal.months_set, locale),
+                needed: formatNumber(goal.months_needed, locale),
+              })}
+            </dd>
+          </div>
+        </dl>
+        <p className="t-caption">{t("progress.goalBasisNote")}</p>
+      </PanelBody>
+    </Panel>
   );
 }

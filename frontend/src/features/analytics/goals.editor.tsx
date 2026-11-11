@@ -16,6 +16,7 @@ import {
 } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { problemMessageOf } from "../../lib/problem";
+import { GoalBars } from "./goals.bars";
 import {
   equalMonths,
   monthsTotal,
@@ -96,6 +97,7 @@ export function GoalEditor({ plan }: Readonly<{ plan: SalesGoalPlan }>) {
           {t("goals.spread")}
         </Button>
       </div>
+      <GoalBars months={months} />
       <div className="goal-editor-months">
         {months.map((month, index) => (
           <Field
@@ -157,6 +159,10 @@ export function GoalEditor({ plan }: Readonly<{ plan: SalesGoalPlan }>) {
           />
         )}
       </Field>
+      <Callout
+        tone="info"
+        title={t("goals.sellerReads", { name: plan.owner_name })}
+      />
       {failed && <ErrorLine error={failed} />}
       <div className="card-actions">
         {plan.published && (

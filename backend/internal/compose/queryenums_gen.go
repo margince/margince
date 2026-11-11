@@ -84,6 +84,9 @@ var queryEnumTable = map[string][]queryEnum{
 		{Name: "period", Values: []string{"month", "year"}, Array: false, Explode: true},
 		{Name: "scope_kind", Values: []string{"owner", "team"}, Array: false, Explode: true},
 	},
+	"GET /v1/analytics/progress/deals": {
+		{Name: "scope_kind", Values: []string{"owner", "team"}, Array: false, Explode: true},
+	},
 	"GET /v1/analytics/sdr-summary": {
 		{Name: "scope_kind", Values: []string{"owner", "team", "workspace"}, Array: false, Explode: true},
 	},
@@ -340,6 +343,9 @@ var queryMinimumTable = map[string][]queryMinimum{
 	"GET /v1/analytics/progress": {
 		{Name: "month", Minimum: 1},
 		{Name: "year", Minimum: 2000},
+	},
+	"GET /v1/analytics/progress/deals": {
+		{Name: "limit", Minimum: 1},
 	},
 	"GET /v1/analytics/reports": {
 		{Name: "limit", Minimum: 1},

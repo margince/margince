@@ -495,6 +495,10 @@ func (stubs) GetSalesProgress(w nethttp.ResponseWriter, r *nethttp.Request, para
 	httperr.NotImplemented(w, r, "GetSalesProgress")
 }
 
+func (stubs) ListSalesProgressDeals(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListSalesProgressDealsParams) {
+	httperr.NotImplemented(w, r, "ListSalesProgressDeals")
+}
+
 func (stubs) RunAnalyticsQuery(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "RunAnalyticsQuery")
 }

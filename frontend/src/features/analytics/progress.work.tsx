@@ -6,6 +6,7 @@ import {
   type QueryKey,
   type UseInfiniteQueryResult,
   useInfiniteQuery,
+  useQueries,
 } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../../api/client";
@@ -20,17 +21,17 @@ import {
 import { DataTable, type DataTableColumn } from "../../design-system/datatable";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
-import { formatAnalyticsMoney, formatDate } from "../../format/format";
+import { formatDate } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { labelFor } from "../../lib/labelfor";
-import { usePipelines } from "../../lib/pipelines.queries";
+import { useMemberNames } from "../../lib/membernames";
 import { unwrap } from "../../lib/problem";
 import { routeHash } from "../../lib/router";
+import { useDealColumns, useWorkDeals } from "./progress.deals";
 import type { SalesProgress } from "./progress.queries";
 
 type Lead = components["schemas"]["Lead"];
-type Deal = components["schemas"]["Deal"];
 type Tab = "leads" | "deals";
 type OpenLeadStatus = "new" | "contacted" | "engaged";
 const TABS: readonly Tab[] = ["leads", "deals"];
@@ -48,12 +49,44 @@ const LEAD_STATUS_LABEL = {
   disqualified: "lead.statusDisqualified",
 } as const satisfies Record<Lead["status"], MessageKey>;
 
-// The owner filter the list routes take for the population being read.
+type Paged<Row> = Readonly<{
+  data: Row[];
+  page: components["schemas"]["PageInfo"];
+}>;
+
+// The owner filter the lead list takes for the population being read.
 function ownerFilter(progress: SalesProgress) {
   const id = progress.scope.id;
   return progress.scope.kind === "team"
     ? { owner_team_id: id }
     : { owner_id: id };
+}
+
+// How many leads sit in each open status. A list that does not count leaves
+// its status unknown, never zero.
+function useLeadCounts(progress: SalesProgress) {
+  const reads = useQueries({
+    queries: LEAD_STATUSES.map((status) => ({
+      queryKey: ["progress-work", "lead-count", progress.scope, status],
+      queryFn: async ({ signal }: { signal: AbortSignal }) =>
+        unwrap(
+          await api.GET("/leads", {
+            params: { query: { ...ownerFilter(progress), status, limit: 1 } },
+            signal,
+          }),
+        ).page.total,
+    })),
+  });
+  const counts: Partial<Record<OpenLeadStatus, number>> = {};
+  LEAD_STATUSES.forEach((status, index) => {
+    const total = reads[index]?.data;
+    if (total != null) counts[status] = total;
+  });
+  const known = LEAD_STATUSES.every((status) => counts[status] != null);
+  const all = known
+    ? LEAD_STATUSES.reduce((sum, status) => sum + (counts[status] ?? 0), 0)
+    : undefined;
+  return { counts, all };
 }
 
 /**
@@ -65,6 +98,13 @@ export function ProgressWork({
 }: Readonly<{ progress: SalesProgress }>) {
   const t = useT();
   const [tab, setTab] = useState<Tab>("leads");
+  const leads = useLeadCounts(progress);
+  const deals = useWorkDeals(progress);
+  const dealPages = deals.data?.pages;
+  const dealCount =
+    dealPages && !deals.hasNextPage
+      ? dealPages.reduce((sum, page) => sum + page.data.length, 0)
+      : undefined;
   return (
     <Panel
       title={t("progress.work")}
@@ -77,32 +117,38 @@ export function ProgressWork({
             leads: t("progress.work.leads"),
             deals: t("progress.work.deals"),
           }}
+          counts={{
+            ...(leads.all != null ? { leads: leads.all } : {}),
+            ...(dealCount != null ? { deals: dealCount } : {}),
+          }}
           onChange={setTab}
         />
       }
     >
       <PanelBody>
+        <p className="t-caption progress-work-note">
+          {t("progress.work.note")}
+        </p>
         {tab === "leads" ? (
-          <OpenLeads progress={progress} />
+          <OpenLeads progress={progress} counts={leads.counts} />
         ) : (
-          <OpenDeals progress={progress} />
+          <OpenDeals progress={progress} query={deals} />
         )}
       </PanelBody>
     </Panel>
   );
 }
 
-function ownerNames(progress: SalesProgress): Map<string, string> {
-  return new Map(
-    progress.members.map((member) => [member.owner_id, member.name]),
-  );
-}
-
-function OpenLeads({ progress }: Readonly<{ progress: SalesProgress }>) {
+function OpenLeads({
+  progress,
+  counts,
+}: Readonly<{
+  progress: SalesProgress;
+  counts: Partial<Record<OpenLeadStatus, number>>;
+}>) {
   const t = useT();
   const { locale } = useLocale();
   const [status, setStatus] = useState<OpenLeadStatus>("new");
-  const owners = ownerNames(progress);
   const query = useInfiniteQuery<
     Paged<Lead>,
     Error,
@@ -129,6 +175,12 @@ function OpenLeads({ progress }: Readonly<{ progress: SalesProgress }>) {
         }),
       ),
   });
+  const rows = query.data?.pages.flatMap((page) => page.data) ?? [];
+  const owners = useMemberNames(
+    progress.scope.kind === "team"
+      ? rows.flatMap((lead) => (lead.owner_id ? [lead.owner_id] : []))
+      : [],
+  );
   const columns: DataTableColumn<Lead>[] = [
     {
       key: "lead",
@@ -136,9 +188,14 @@ function OpenLeads({ progress }: Readonly<{ progress: SalesProgress }>) {
       grow: true,
       fold: "title",
       render: (lead) => (
-        <AppLink href={routeHash({ screen: "leads", id: lead.id })}>
-          {lead.full_name || lead.company_name || t("progress.work.unnamed")}
-        </AppLink>
+        <span className="progress-work-stack">
+          <AppLink href={routeHash({ screen: "leads", id: lead.id })}>
+            {lead.full_name || lead.company_name || t("progress.work.unnamed")}
+          </AppLink>
+          {lead.full_name && lead.company_name && (
+            <span className="t-caption">{lead.company_name}</span>
+          )}
+        </span>
       ),
     },
     {
@@ -152,9 +209,20 @@ function OpenLeads({ progress }: Readonly<{ progress: SalesProgress }>) {
       key: "next",
       header: t("progress.work.nextTask"),
       render: (lead) =>
-        lead.next_task_subject
-          ? `${lead.next_task_subject}${lead.next_task_due_at ? ` · ${formatDate(lead.next_task_due_at, locale, progress.timezone)}` : ""}`
-          : t("progress.work.noNextTask"),
+        lead.next_task_subject ? (
+          <span className="progress-work-stack">
+            <span>{lead.next_task_subject}</span>
+            {lead.next_task_due_at && (
+              <span className="t-caption">
+                {formatDate(lead.next_task_due_at, locale, progress.timezone)}
+              </span>
+            )}
+          </span>
+        ) : (
+          <span className="progress-work-none">
+            {t("progress.work.noNextTask")}
+          </span>
+        ),
     },
   ];
   if (progress.scope.kind === "team")
@@ -175,118 +243,49 @@ function OpenLeads({ progress }: Readonly<{ progress: SalesProgress }>) {
           contacted: t(LEAD_STATUS_LABEL.contacted),
           engaged: t(LEAD_STATUS_LABEL.engaged),
         }}
+        counts={counts}
         onChange={setStatus}
       />
       <WorkPages
         query={query}
         columns={columns}
         label={t("progress.work.leads")}
+        rowKey={(lead) => lead.id}
       />
     </div>
   );
 }
 
-function OpenDeals({ progress }: Readonly<{ progress: SalesProgress }>) {
+function OpenDeals({
+  progress,
+  query,
+}: Readonly<{
+  progress: SalesProgress;
+  query: ReturnType<typeof useWorkDeals>;
+}>) {
   const t = useT();
-  const { locale } = useLocale();
-  const owners = ownerNames(progress);
-  const pipelines = usePipelines();
-  const stages = new Map(
-    (pipelines.data ?? []).flatMap((pipeline) =>
-      (pipeline.stages ?? []).map((stage) => [stage.id, stage.name] as const),
-    ),
-  );
-  const query = useInfiniteQuery<
-    Paged<Deal>,
-    Error,
-    InfiniteData<Paged<Deal>>,
-    QueryKey,
-    string | undefined
-  >({
-    queryKey: ["progress-work", "deals", progress.scope],
-    initialPageParam: undefined,
-    getNextPageParam: (last) =>
-      last.page.has_more ? (last.page.next_cursor ?? undefined) : undefined,
-    queryFn: async ({ pageParam, signal }) =>
-      unwrap(
-        await api.GET("/deals", {
-          params: {
-            query: {
-              ...ownerFilter(progress),
-              status: "open",
-              limit: PAGE,
-              cursor: pageParam,
-            },
-          },
-          signal,
-        }),
-      ),
-  });
-  const columns: DataTableColumn<Deal>[] = [
-    {
-      key: "deal",
-      header: t("progress.work.deal"),
-      grow: true,
-      fold: "title",
-      render: (deal) => (
-        <AppLink href={routeHash({ screen: "deals", id: deal.id })}>
-          {deal.name}
-        </AppLink>
-      ),
-    },
-    {
-      key: "stage",
-      header: t("progress.work.stage"),
-      render: (deal) =>
-        deal.stage_id ? (stages.get(deal.stage_id) ?? "") : "",
-    },
-    {
-      key: "amount",
-      header: t("progress.work.amount"),
-      align: "end",
-      render: (deal) =>
-        deal.amount_minor != null && deal.currency
-          ? formatAnalyticsMoney(deal.amount_minor, deal.currency, locale)
-          : t("progress.work.noAmount"),
-    },
-    {
-      key: "close",
-      header: t("progress.work.expectedClose"),
-      render: (deal) =>
-        deal.expected_close_date
-          ? formatDate(deal.expected_close_date, locale, progress.timezone)
-          : t("progress.work.noClose"),
-    },
-  ];
-  if (progress.scope.kind === "team")
-    columns.push({
-      key: "owner",
-      header: t("progress.work.owner"),
-      render: (deal) =>
-        deal.owner_id ? (owners.get(deal.owner_id) ?? "") : "",
-    });
+  const rows = query.data?.pages.flatMap((page) => page.data) ?? [];
+  const columns = useDealColumns(progress, rows);
   return (
     <WorkPages
       query={query}
       columns={columns}
       label={t("progress.work.deals")}
+      rowKey={(row) => row.deal.id}
     />
   );
 }
 
-type Paged<Row> = Readonly<{
-  data: Row[];
-  page: components["schemas"]["PageInfo"];
-}>;
-
-function WorkPages<Row extends { id: string }>({
+function WorkPages<Row>({
   query,
   columns,
   label,
+  rowKey,
 }: Readonly<{
   query: UseInfiniteQueryResult<InfiniteData<Paged<Row>>>;
   columns: DataTableColumn<Row>[];
   label: string;
+  rowKey: (row: Row) => string;
 }>) {
   const t = useT();
   return (
@@ -301,7 +300,7 @@ function WorkPages<Row extends { id: string }>({
               label={label}
               fold
               rows={rows}
-              rowKey={(row) => row.id}
+              rowKey={rowKey}
               columns={columns}
             />
             {query.hasNextPage && (

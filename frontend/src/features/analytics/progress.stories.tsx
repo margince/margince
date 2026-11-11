@@ -3,15 +3,24 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../../api/schema";
-import { deals } from "../../testing/brief.fixtures";
 import {
   installFetchStub,
   jsonResponse,
   StoryProviders,
 } from "../../testing/story-utils";
-import { MonthsTable } from "./goals";
+import { CONTEXTS } from "./analytics.overview.fixtures";
+import { SalesGoalsScreen } from "./goals";
+import { GoalMonths } from "./goals.bars";
 import { GoalEditor } from "./goals.editor";
-import { draftPlan, sellerMarch, teamMarch } from "./progress.fixtures";
+import { ProgressScreen } from "./progress";
+import {
+  draftPlan,
+  goalRoster,
+  publishedPlan,
+  sellerMarch,
+  teamMarch,
+  workDeals,
+} from "./progress.fixtures";
 import { ProgressReadings, ProgressResult } from "./progress.result";
 import { ProgressMembers, ProgressMonths } from "./progress.tables";
 import { ProgressWork } from "./progress.work";
@@ -61,7 +70,7 @@ export const GoalDraft: Story = {
 export const PublishedMonths: Story = {
   render: () => (
     <StoryProviders>
-      <MonthsTable months={draftPlan.draft?.months ?? []} currency="EUR" />
+      <GoalMonths months={publishedPlan.live_months} currency="EUR" />
     </StoryProviders>
   ),
 };
@@ -81,18 +90,35 @@ const lead: components["schemas"]["Lead"] = {
   next_task_due_at: "2026-08-26T09:00:00Z",
 };
 
+const WORK_ROUTES = {
+  "GET /leads": () =>
+    jsonResponse({
+      data: [lead],
+      page: { next_cursor: "more", has_more: true, total: 4 },
+    }),
+  "GET /analytics/progress/deals": () =>
+    jsonResponse({ data: workDeals, page: { has_more: false } }),
+  "GET /companies": () =>
+    jsonResponse({
+      data: [
+        { id: "company-nordwind", display_name: "Nordwind Logistik" },
+        { id: "company-acme", display_name: "Acme Fördertechnik" },
+      ],
+      page: { has_more: false },
+    }),
+  "GET /users/names": () =>
+    jsonResponse({
+      data: [
+        { id: teamMarch.members[0]?.owner_id, display_name: "Alex Brandt" },
+        { id: teamMarch.members[1]?.owner_id, display_name: "Sam Okafor" },
+      ],
+    }),
+};
+
 // Open work of a team: leads by status, with the seller who owns each.
 export const TeamWork: Story = {
   render: () => {
-    installFetchStub({
-      "GET /leads": () =>
-        jsonResponse({
-          data: [lead],
-          page: { next_cursor: "more", has_more: true },
-        }),
-      "GET /deals": () =>
-        jsonResponse({ data: deals, page: { has_more: false } }),
-    });
+    installFetchStub(WORK_ROUTES);
     return (
       <StoryProviders>
         <ProgressWork progress={teamMarch} />
@@ -101,8 +127,77 @@ export const TeamWork: Story = {
   },
 };
 
+// The whole page as a seller opens it on their own March.
+export const SellerPage: Story = {
+  render: () => {
+    installFetchStub({
+      ...WORK_ROUTES,
+      "GET /analytics/context": () => jsonResponse(CONTEXTS.sdr),
+      "GET /analytics/progress": () => jsonResponse(sellerMarch),
+    });
+    window.location.hash = "#/progress?year=2026&month=3";
+    return (
+      <StoryProviders>
+        <ProgressScreen />
+      </StoryProviders>
+    );
+  },
+};
+
+// The whole page as a manager opens it on the team.
+export const TeamPage: Story = {
+  render: () => {
+    installFetchStub({
+      ...WORK_ROUTES,
+      "GET /analytics/context": () => jsonResponse(CONTEXTS.leader),
+      "GET /analytics/progress": () => jsonResponse(teamMarch),
+    });
+    window.location.hash = "#/progress?year=2026&month=3";
+    return (
+      <StoryProviders>
+        <ProgressScreen />
+      </StoryProviders>
+    );
+  },
+};
+
+// A manager's Sales goals: the sellers beside the draft in hand.
+export const GoalsManager: Story = {
+  render: () => {
+    installFetchStub({
+      "GET /analytics/sales-goals": () => jsonResponse(goalRoster),
+      [`GET /analytics/sales-goals/${draftPlan.owner_id}/2026`]: () =>
+        jsonResponse(draftPlan),
+    });
+    window.location.hash = "#/goals?year=2026";
+    return (
+      <StoryProviders>
+        <SalesGoalsScreen />
+      </StoryProviders>
+    );
+  },
+};
+
+// A seller's Sales goals: their published year, to read and not to change.
+export const GoalsSeller: Story = {
+  render: () => {
+    installFetchStub({
+      "GET /analytics/sales-goals": () =>
+        jsonResponse({ ...goalRoster, data: goalRoster.data.slice(0, 1) }),
+      [`GET /analytics/sales-goals/${draftPlan.owner_id}/2026`]: () =>
+        jsonResponse(publishedPlan),
+    });
+    window.location.hash = "#/goals?year=2026";
+    return (
+      <StoryProviders>
+        <SalesGoalsScreen />
+      </StoryProviders>
+    );
+  },
+};
+
 export const Phone: Story = {
-  ...SellerMonth,
+  ...TeamPage,
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
 };

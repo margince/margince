@@ -91,7 +91,7 @@ const CANONICAL_ORDER = [
   "Projects",
   "Filters and views",
   "Analytics",
-  "Progress",
+  "My progress",
   "Sales goals",
 ];
 
@@ -117,7 +117,7 @@ const OFF_BAR = [
   "Projects",
   "Filters and views",
   "Analytics",
-  "Progress",
+  "My progress",
   "Sales goals",
 ];
 
