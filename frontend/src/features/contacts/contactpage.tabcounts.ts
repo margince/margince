@@ -10,6 +10,7 @@ type Contact360 = components["schemas"]["Contact360"];
  * server cut (`has_more`) or withheld knows a floor at best. A floor
  * printed beside a tab name reads as the total, so those tabs carry none.
  * History, Meetings and Network have no whole list on the page to count.
+ * Companies counts companies, not roles: two jobs at one firm are one row.
  *
  * A zero is left off: an empty tab reads as an empty tab without a figure.
  *
@@ -24,6 +25,16 @@ export function contactTabCounts(
   const roles = view.deal_roles;
   if (roles && !omitted(view, "deal_roles") && !roles.page.has_more) {
     counts.deals = dealCards(view).length;
+  }
+  const employments = view.employments;
+  if (
+    employments &&
+    !omitted(view, "employments") &&
+    !employments.page.has_more
+  ) {
+    counts.companies = new Set(
+      employments.data.map((role) => role.company_id),
+    ).size;
   }
   if (files !== undefined) {
     counts.documents = files;

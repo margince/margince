@@ -3759,13 +3759,14 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "timeline.filters.searchOmitsLimited":
     "Kết quả tìm kiếm bỏ qua các chuỗi thư có nội dung bạn không thể mở.",
   "tab.contacts": "Liên hệ",
+  "tab.companies": "Công ty",
   "tab.deals": "Deal",
   "tab.dealRoom": "Deal Room",
   "tab.dealsProjects": "Deal và dự án",
   "tab.tasks": "Việc cần làm",
   "tab.timeline": "Lịch sử",
   "tab.finance": "Tài chính",
-  "tab.network": "Mạng lưới",
+  "tab.network": "Mọi người",
   "tab.documents": "Tài liệu",
   "tab.profile": "Thông tin",
   "tab.meetings": "Cuộc họp",
@@ -17332,8 +17333,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Bạn không có quyền sửa liên hệ này. Đề nghị người chịu trách nhiệm chuyển giao hoặc chia sẻ, hoặc liên hệ quản trị viên.",
   "contact.rail.employmentVersionUnresolved":
     "Không thể tải phiên bản hiện tại của dòng này. Tải lại trang rồi thử lại.",
-  "contact.rail.employmentTitle": "Công ty",
-  "contact.rail.noEmployment": "Chưa ghi nhận nơi làm việc.",
+  "contact.rail.employmentTitle": "Quá trình làm việc",
+  "contact.rail.noEmployment": "Chưa liên kết với công ty nào.",
   "contact.rail.noPrimaryEmployer":
     "Chưa có nơi làm việc chính. Chọn nơi làm việc chính.",
   "contact.rail.addEmployment": "Thêm công ty",
