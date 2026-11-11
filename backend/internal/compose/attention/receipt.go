@@ -7,6 +7,7 @@ import (
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -62,6 +63,9 @@ type Receipt struct {
 	// CitedActivities are the messages a change rests on. The newest the
 	// reader may open becomes the receipt's source.
 	CitedActivities []ids.UUID
+	// CitedMoments are when the cited messages happened as the change was
+	// written. A message missing here is dated by its live row.
+	CitedMoments map[ids.UUID]deals.CitedMoment
 }
 
 // ReceiptUndo is what a receipt needs to offer a way back.

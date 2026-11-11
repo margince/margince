@@ -11,7 +11,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"maps"
 
 	"github.com/jackc/pgx/v5"
 
@@ -84,8 +83,7 @@ func (s *Store) applyVerdictStageMove(
 	if err != nil || admitted != VerdictApplied {
 		return admitted, current, err
 	}
-	evidence := map[string]any{CorrectionKindEvidenceKey: VerdictStageMoveCorrection, basisOwnerKey: in.Owner.String()}
-	maps.Copy(evidence, change.Evidence)
+	evidence := verdictEvidence(in, change)
 	moved, refused, err := s.advanceInSavepoint(ctx, tx, in.DealID, AdvanceDealInput{
 		ToStageID: change.ToStageID, auditEvidence: evidence,
 		// The target is an open stage, so the move claims no win.

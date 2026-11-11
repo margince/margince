@@ -2619,7 +2619,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "history.field.body": "Ghi chú",
   "history.field.emails": "Địa chỉ email",
   "history.field.nudge_dismissal": "Đã bỏ qua lời nhắc",
-  "history.field.override_category": "Loại ghi đè",
   "history.field.overrides_carried": "Ghi đè đã chuyển",
   "history.field.phone": "Số điện thoại",
   "history.field.phones": "S\u1ed1 \u0111i\u1ec7n tho\u1ea1i",
@@ -16826,7 +16825,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Ai đó có thẩm quyền gỡ một lệnh chặn.",
   "webhooks.event.consent.override_recorded.label": "Đã ghi nhận ghi đè",
   "webhooks.event.consent.override_recorded.when":
-    "Nhân viên kinh doanh xác nhận có thể bỏ qua lệnh từ chối tự động cho một loại liên lạc.",
+    "Khi gộp liên hệ, một ngoại lệ đang có được sao chép sang liên hệ còn lại.",
   "webhooks.event.consent.override_lifted.label": "Đã gỡ ghi đè",
   "webhooks.event.consent.override_lifted.when":
     "Ai đó có thẩm quyền gỡ một ghi đè.",

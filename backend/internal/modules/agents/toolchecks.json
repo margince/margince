@@ -114,11 +114,6 @@
         "relationship.read"
       ]
     },
-    "allow_contact": {
-      "checks": [
-        "contact.update"
-      ]
-    },
     "annotate_brief": {
       "checks": [
         "deal.read"

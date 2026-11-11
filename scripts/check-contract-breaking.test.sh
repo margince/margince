@@ -7,6 +7,7 @@ trap 'rm -rf "$fixture"' EXIT
 mkdir -p "$fixture/scripts" "$fixture/backend/api" "$fixture/bin"
 cp "$root/scripts/check-contract-breaking.sh" "$fixture/scripts/"
 cd "$fixture"
+unset CONTRACT_RATIFIED_REMOVALS
 export NOTICE_FIXTURE="$fixture"
 cat > bin/go <<'GO'
 #!/usr/bin/env bash
@@ -26,6 +27,7 @@ case "$1" in
       case "$1" in
         -base) cp "$2" "$NOTICE_FIXTURE/checked-base"; shift 2 ;;
         -release) echo "$2" > "$NOTICE_FIXTURE/checked-release"; shift 2 ;;
+        -ratified-removals) cp "$2" "$NOTICE_FIXTURE/checked-ratified"; shift 2 ;;
         *) shift ;;
       esac
     done
@@ -72,6 +74,14 @@ if NOTICE_FAILURE=1 bash scripts/check-contract-breaking.sh comparison > /dev/nu
   echo 'An exact compatibility exception bypassed the notice check' >&2
   exit 1
 fi
+printf 'POST /v1/fixture fixture-reason\n' > scripts/contract-ratified-removals.txt
+bash scripts/check-contract-breaking.sh comparison > /dev/null
+[[ "$(cat checked-ratified)" == 'POST /v1/fixture fixture-reason' ]] || { echo 'The ratified removals did not reach the notice check' >&2; exit 1; }
+if NOTICE_FAILURE=1 bash scripts/check-contract-breaking.sh comparison > /dev/null 2>&1; then
+  echo 'A ratified removal file bypassed the notice check itself' >&2
+  exit 1
+fi
+rm scripts/contract-ratified-removals.txt
 [[ -f checked-enums ]] || { echo 'The enum rule was not checked' >&2; exit 1; }
 if ENUM_FAILURE=1 CONTRACT_STABILITY=pre-live bash scripts/check-contract-breaking.sh comparison > /dev/null 2>&1; then
   echo 'A closed response enum passed the breaking check' >&2

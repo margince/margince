@@ -204,7 +204,7 @@ When Margince will not send an email to a contact, the warning bar above **Send*
 
 The lead stays a lead when you record an exchange. When you make it a contact later, that exchange keeps its original addresses and sending company.
 
-The composer never makes a standing exception. One that exists covers its named sending company and purpose until it is taken back. It records a staff decision and grants no consent. A recorded request is a fact that Margince checks for the message you are writing. A one-message exception covers only the message you read and approved.
+Margince no longer makes a standing exception. One that already exists covers its named sending company and purpose until someone takes it back on the contact's page. It records a staff decision and grants no consent. A recorded request is a fact that Margince checks for the message you are writing. A one-message exception covers only the message you read and approved.
 
 ## What a send refuses, and what it only warns about
 

@@ -3,7 +3,7 @@
 
 //go:build integration
 
-package compose
+package integration_test
 
 // Auto-filling a site contact onto an employee the workspace already has
 // (ADR-0072 phase 4B): who counts as unmistakably the same contact, what is

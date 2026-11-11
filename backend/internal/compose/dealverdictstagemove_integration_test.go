@@ -18,6 +18,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/margince/margince/backend/internal/compose/attention"
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -134,7 +135,7 @@ func TestMarginceMovesADealForwardAndUndoMovesItBack(t *testing.T) {
 	if len(changes) != 1 {
 		t.Fatalf("changes = %d, want the one move", len(changes))
 	}
-	summary := stageMoveReceipt(changes[0]).Summary
+	summary := attention.StageMoveReceipt(changes[0]).Summary
 	if !strings.Contains(summary, "They asked for the contract draft") || !strings.Contains(summary, "Probability now") {
 		t.Fatalf("receipt = %q, want the reason and the stage's probability", summary)
 	}

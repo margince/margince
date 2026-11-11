@@ -2599,7 +2599,6 @@ export const en = {
   "history.field.body": "Notes",
   "history.field.emails": "Email addresses",
   "history.field.nudge_dismissal": "Nudge dismissed",
-  "history.field.override_category": "Override category",
   "history.field.overrides_carried": "Overrides carried",
   "history.field.phone": "Phone",
   "history.field.phones": "Phone numbers",
@@ -17113,7 +17112,7 @@ export const en = {
     "Someone with the authority takes back one stop.",
   "webhooks.event.consent.override_recorded.label": "Override recorded",
   "webhooks.event.consent.override_recorded.when":
-    "A rep vouches that a machine-level refusal may be overruled for one category.",
+    "Merging contacts copies a standing exception to the contact that remains.",
   "webhooks.event.consent.override_lifted.label": "Override lifted",
   "webhooks.event.consent.override_lifted.when":
     "Someone with the authority takes back one override.",

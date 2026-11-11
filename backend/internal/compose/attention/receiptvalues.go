@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package compose
+package attention
 
 import (
 	"slices"
@@ -17,7 +17,9 @@ func correctionMovedForecast(c deals.CorrectionReceipt) bool {
 	return slices.Contains(c.Fields, "win_probability_override") || slices.Contains(c.Fields, "forecast_category")
 }
 
-func correctionValues(c deals.CorrectionReceipt) *crmcontracts.CloseDateChange {
+// CorrectionValues is the before and after of a close-date correction. A card
+// says a date moved only when the correction wrote the date.
+func CorrectionValues(c deals.CorrectionReceipt) *crmcontracts.CloseDateChange {
 	change := &crmcontracts.CloseDateChange{DateChanged: slices.Contains(c.Fields, "expected_close_date"), ForecastChanged: correctionMovedForecast(c)}
 	if c.BeforeClose != nil {
 		change.Before = c.BeforeClose

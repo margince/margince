@@ -3,7 +3,7 @@
 
 //go:build integration
 
-package compose
+package integration_test
 
 // The company page's "who here has been in touch" group, over the interaction
 // projection (ADR-0078).

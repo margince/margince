@@ -17650,32 +17650,16 @@ export interface paths {
          *     company. These records grant no marketing consent. Every message is checked separately.
          *     An older record with no sending company is shown without inferring one.
          *
+         *     No route records a new standing exception. A rep lets one refused message go with
+         *     `directCommunicationSend`. An exception already on file still lets matching sends through
+         *     until it is revoked, and a merge carries it to the surviving contact.
+         *
          *     `may_revoke` uses the same authority and record-access checks as `revokeOverride`.
          *     Revocation takes back that recorded exception and its carried copies, with a reason.
          */
         get: operations["listContactOverrides"];
         put?: never;
-        /**
-         * Record a standing vouch that a machine-level refusal for one category may be overruled.
-         * @description Writes a `communication_override`: a rep's standing statement that a future send in the
-         *     named category may go out even though the engine, on its own, would refuse it for lack of
-         *     evidence. **It is not consent and not a lawful basis** — it sits beside the refusal and
-         *     outranks only a MACHINE-level, non-absolute one. A subject-level stop (a suppression, an
-         *     Art. 21 objection) still wins at the gate; this door cannot touch one.
-         *
-         *     **The authority is the seat's own, always.** There is no field for it: the level recorded
-         *     is read from the authenticated session (`user` for a rep, `admin` for an admin), never
-         *     from the body — a caller naming its own level would let any seat write a row that outranks
-         *     every future refusal in that category.
-         *
-         *     **The reason is required**, unlike `suppress`: a vouch that flips a refusal is the write
-         *     most worth being able to explain later, and there is no phone call it merely relays.
-         *
-         *     The override is a standing fact for the contact and category named, not a one-time
-         *     instruction for a single message: it remains live, and is read by every future send
-         *     evaluation for that pair, until it is revoked.
-         */
-        post: operations["allowContact"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -54263,14 +54247,6 @@ export interface components {
             data: components["schemas"]["StandingOverride"][];
             page: components["schemas"]["PageInfo"];
         };
-        /** @description The standing override just recorded, by id. The category and reason are what the caller sent and the authority is their own session's, so the id is the one fact the caller could not have known — and the handle a later revoke takes. */
-        RecordedOverride: {
-            /**
-             * Format: uuid
-             * @description The standing override that now stands. A contact can hold several at once — one per category, and more than one for a single category after a merge — so this names which of them this call created.
-             */
-            override_id: string;
-        };
         /**
          * @description What the consent screen renders. The client name is resolved from the database, never
          *     from the request URL, so no caller can put words on a consent screen. `scopes` is the
@@ -86582,53 +86558,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["StandingOverridesPage"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            422: components["responses"]["ValidationError"];
-        };
-    };
-    allowContact: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
-                id: components["parameters"]["Id"];
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    /**
-                     * @description Which category of send this vouch covers. The engine resolves every send to
-                     *     exactly one category, and the override applies to that one only — a vouch for
-                     *     `marketing` says nothing about `customer_service`. The five categories that
-                     *     serve the subject are absent on purpose: they are never refused for lack of
-                     *     evidence, so a vouch for one would be a row nothing could ever read.
-                     * @enum {string}
-                     */
-                    category: "reply_to_inbound" | "requested_followup" | "precontract_quote" | "active_deal_followup" | "customer_service" | "account_notice" | "contract_notice" | "invoice_or_payment" | "marketing";
-                    /**
-                     * @description Why the rep is vouching for this send, in their own words. Required: unlike a
-                     *     suppression, which may only relay what the subject said, this write is the
-                     *     rep's own judgement call and the record must say why it was made.
-                     */
-                    reason: string;
-                };
-            };
-        };
-        responses: {
-            /** @description Recorded. The body names the row, which is what the revoke door takes. */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["RecordedOverride"];
                 };
             };
             401: components["responses"]["Unauthorized"];

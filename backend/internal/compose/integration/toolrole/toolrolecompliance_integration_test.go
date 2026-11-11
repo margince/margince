@@ -195,12 +195,12 @@ func complianceSeeders(s sweepSeed) map[string]func() string {
 		},
 		"consent_override": func() string {
 			contact := s.create["contact"]()
-			var vouch struct {
-				ID string `json:"override_id"`
-			}
-			s.call("POST", "/v1/contacts/"+contact+"/consent/allow", integration.AnyMap{"category": "marketing", "reason": "They asked at the fair."}, nil, &vouch)
-			s.pool.note(vouch.ID, "contact", contact)
-			return vouch.ID
+			vouch := s.ownerScalar(`INSERT INTO communication_override
+				(contact_id, category, reason, decided_by_level, captured_by, legal_entity_id, recorded_directly)
+				VALUES ($1, 'marketing', 'They asked at the fair.', 'admin', 'human:x',
+				        (SELECT id FROM legal_entity WHERE is_default), true) RETURNING id::text`, contact)
+			s.pool.note(vouch, "contact", contact)
+			return vouch
 		},
 		"contact_note": func() string {
 			return s.post("/v1/activities", integration.AnyMap{

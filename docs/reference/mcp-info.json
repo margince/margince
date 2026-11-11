@@ -10,16 +10,16 @@
   "totals": {
     "tools": 48,
     "resources": 14,
-    "tool_catalog_bytes": 234503,
+    "tool_catalog_bytes": 234419,
     "resource_catalog_bytes": 5622,
-    "approx_wire_tokens_total": 60031,
+    "approx_wire_tokens_total": 60010,
     "largest_tool_bytes": 11810,
     "largest_tool": "read_context",
     "tool_catalog_composition": {
-      "description_bytes": 55315,
-      "input_schema_bytes": 115242,
+      "description_bytes": 55291,
+      "input_schema_bytes": 115182,
       "output_schema_bytes": 51838,
-      "description_plus_input_schema_bytes": 170557
+      "description_plus_input_schema_bytes": 170473
     }
   },
   "tools": {
@@ -1409,13 +1409,12 @@
           "readOnlyHint": false,
           "title": "Record consent, stops, holds and privacy work"
         },
-        "description": "Do the user's privacy work on a contact or record: record consent, record that a contact asked to stop, allow a refused category, record an exchange with a lead or contact, answer a refused send, open or update a data subject request, assign a disclosure duty, confirm a source, accept or decline what a subject proposed, place a legal hold and pin an activity to the retention floor. record_consent, allow_contact, revoke_override, lift_suppression, record_qualifying_event, retract_qualifying_event, record_lead_qualifying_event, retract_lead_qualifying_event, retract_acquisition_request and record_communication_context have legal weight: tell the user what you will record and call only after they say yes. The proof names you as its author. Record only what the user or the contact said, never your reading of their tone. Fulfilling an erasure request, lifting a legal hold, releasing a restricted record, restoring a change and retention policy are done in the app. Use send_outbound double_opt_in, privacy_notice or details_confirmation to mail the contact, read_details contact_consent, contact_consent_guard or contact_stops to check a contact before you record, read_workspace topics data_subject_requests, notice_cases, audit_log, legal_holds and restricted_records to read the queues, and read_workspace topic record_history for one record's trail. (Runs immediately; the user's yes is needed for the actions allow_contact, confirm_notice_source, lift_lead_suppression, lift_suppression, open_data_subject_request, pin_activity_to_floor, place_legal_hold, record_communication_context, record_consent, record_lead_qualifying_event, record_qualifying_event, resolve_confirm_submission, retract_acquisition_request, retract_lead_qualifying_event, retract_qualifying_event, revoke_override, suppress_contact, update_data_subject_request, so tell them what the call will change and get it before calling, unless they asked for this call themselves; requires passport scope \"write\".)",
+        "description": "Do the user's privacy work on a contact or record: record consent, record that a contact asked to stop, take back a standing exception, record an exchange with a lead or contact, answer a refused send, open or update a data subject request, assign a disclosure duty, confirm a source, accept or decline what a subject proposed, place a legal hold and pin an activity to the retention floor. record_consent, revoke_override, lift_suppression, record_qualifying_event, retract_qualifying_event, record_lead_qualifying_event, retract_lead_qualifying_event, retract_acquisition_request and record_communication_context have legal weight: tell the user what you will record and call only after they say yes. The proof names you as its author. Record only what the user or the contact said, never your reading of their tone. Fulfilling an erasure request, lifting a legal hold, releasing a restricted record, restoring a change and retention policy are done in the app. Use send_outbound double_opt_in, privacy_notice or details_confirmation to mail the contact, read_details contact_consent, contact_consent_guard or contact_stops to check a contact before you record, read_workspace topics data_subject_requests, notice_cases, audit_log, legal_holds and restricted_records to read the queues, and read_workspace topic record_history for one record's trail. (Runs immediately; the user's yes is needed for the actions confirm_notice_source, lift_lead_suppression, lift_suppression, open_data_subject_request, pin_activity_to_floor, place_legal_hold, record_communication_context, record_consent, record_lead_qualifying_event, record_qualifying_event, resolve_confirm_submission, retract_acquisition_request, retract_lead_qualifying_event, retract_qualifying_event, revoke_override, suppress_contact, update_data_subject_request, so tell them what the call will change and get it before calling, unless they asked for this call themselves; requires passport scope \"write\".)",
         "inputSchema": {
           "properties": {
             "action": {
               "description": "Which act to run; read_workspace topic actions lists each action's body",
               "enum": [
-                "allow_contact",
                 "assign_notice_case",
                 "assign_notice_case_review",
                 "confirm_notice_source",
@@ -1451,7 +1450,7 @@
               "type": "string"
             },
             "id": {
-              "description": "allow_contact, assign_notice_case, assign_notice_case_review, confirm_notice_source, lift_lead_suppression, lift_suppression, record_communication_context, record_consent, record_lead_qualifying_event, record_qualifying_event, resolve_confirm_submission, retract_acquisition_request, retract_lead_qualifying_event, retract_qualifying_event, revoke_override, suppress_contact, update_data_subject_request only",
+              "description": "assign_notice_case, assign_notice_case_review, confirm_notice_source, lift_lead_suppression, lift_suppression, record_communication_context, record_consent, record_lead_qualifying_event, record_qualifying_event, resolve_confirm_submission, retract_acquisition_request, retract_lead_qualifying_event, retract_qualifying_event, revoke_override, suppress_contact, update_data_subject_request only",
               "type": "string"
             },
             "idempotency_key": {
@@ -1468,7 +1467,7 @@
               "type": "string"
             },
             "request_body": {
-              "description": "allow_contact, assign_notice_case, assign_notice_case_review, confirm_notice_source, lift_lead_suppression, lift_suppression, open_data_subject_request, pin_activity_to_floor, place_legal_hold, record_communication_context, record_consent, record_lead_qualifying_event, record_qualifying_event, resolve_confirm_submission, revoke_override, suppress_contact, update_data_subject_request only: The chosen action's request body; read_workspace topic actions lists its shape",
+              "description": "assign_notice_case, assign_notice_case_review, confirm_notice_source, lift_lead_suppression, lift_suppression, open_data_subject_request, pin_activity_to_floor, place_legal_hold, record_communication_context, record_consent, record_lead_qualifying_event, record_qualifying_event, resolve_confirm_submission, revoke_override, suppress_contact, update_data_subject_request only: The chosen action's request body; read_workspace topic actions lists its shape",
               "type": "object"
             },
             "suppressionId": {
@@ -4017,7 +4016,7 @@
               "type": "boolean"
             },
             "cursor": {
-              "description": "list, search only: The previous page's next_cursor",
+              "description": "list, search only: Keyset cursor from a previous page's next_cursor",
               "type": "string"
             },
             "engine": {
@@ -4185,9 +4184,6 @@
                   "type": "string"
                 },
                 "project_id": {
-                  "type": "string"
-                },
-                "related_to": {
                   "type": "string"
                 },
                 "relationship_mark": {

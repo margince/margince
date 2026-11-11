@@ -73,6 +73,9 @@ type CorrectionReceipt struct {
 	// CitedActivities are the activities the evidence names, none where the
 	// reader may not read the evidence.
 	CitedActivities []ids.UUID
+	// CitedMoments are when those activities happened as the change was
+	// written; empty for a change written before they were recorded.
+	CitedMoments map[ids.UUID]CitedMoment
 }
 
 // heldCorrections stay on Home until their owner accepts or undoes them.
@@ -163,6 +166,7 @@ func scanCorrectionReceipt(rows pgx.CollectableRow) (CorrectionReceipt, error) {
 	row.EstimateBasis = correctionEstimateBasis(row.Evidence)
 	row.ReasonKind = CorrectionReasonKind(row.Correction, lostCode)
 	row.CitedActivities = citedActivities(row.Evidence)
+	row.CitedMoments = citedMoments(row.Evidence)
 	return row, nil
 }
 

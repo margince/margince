@@ -280,9 +280,7 @@ describe("recording a fact where the refusal is read", () => {
     expect(
       sent.some(
         (call) =>
-          call.key.endsWith("/consent/allow") ||
-          call.key.endsWith("/send-email") ||
-          call.key === "POST /emails",
+          call.key.endsWith("/send-email") || call.key === "POST /emails",
       ),
     ).toBe(false);
   });
@@ -387,11 +385,7 @@ describe("recording a fact where the refusal is read", () => {
     );
     await screen.findByRole("button", { name: "Record what happened" });
     expect(
-      sent.some(
-        (call) =>
-          call.key.endsWith("/consent/allow") ||
-          call.key.endsWith("/consent/qualifying-events"),
-      ),
+      sent.some((call) => call.key.endsWith("/consent/qualifying-events")),
     ).toBe(false);
   });
 
@@ -423,9 +417,7 @@ describe("recording a fact where the refusal is read", () => {
     ).toBeNull();
     expect(
       sent.some(
-        (call) =>
-          call.key === "POST /contacts/c-1/consent/allow" ||
-          call.key === "POST /contacts/c-1/consent/qualifying-events",
+        (call) => call.key === "POST /contacts/c-1/consent/qualifying-events",
       ),
     ).toBe(false);
   });

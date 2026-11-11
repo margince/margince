@@ -240,7 +240,7 @@ func (h marginceChangeHandlers) changeReceipts(ctx context.Context, rows []deals
 	}
 	receipts := make([]attention.Receipt, 0, len(rows))
 	for _, row := range rows {
-		receipt := correctionReceipt(row)
+		receipt := attention.CorrectionReceipt(row)
 		if review, ok := reviews[deals.AppliedChangeKey{DealID: row.DealID, ChangeID: row.AuditLogID}]; ok {
 			receipt.Review = &review
 		}

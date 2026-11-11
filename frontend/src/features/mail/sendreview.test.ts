@@ -22,19 +22,6 @@ describe("sendReviewOf", () => {
     });
   });
 
-  // A standing per-contact overrule would let the next message to the same
-  // contact through as well. This build offers only the one-message send.
-  it("draws no standing overrule", () => {
-    const review = sendReviewOf(
-      refusal({
-        review_id: "r-9",
-        available_actions: ["overrule"],
-        overrulable: [{ contact_id: "c-1", category: "marketing" }],
-      }),
-    );
-    expect(review?.actions).toEqual([]);
-  });
-
   // Each refused address keeps its own reason, so a missing deal link on one
   // recipient never reads as another recipient's objection.
   it("reads each refused recipient with its own reason", () => {

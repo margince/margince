@@ -167,7 +167,6 @@ The eight shapes, what each is for, and how each one silently passes:
 | `outboundfilesnapshot_test.go` | H2 | What a message carried is written by one module and read back by another, so the two spellings of the snapshot must stay one spelling. |
 | `outboundidentity_test.go` | H1 | A remote operator sees one name for this product and decides about it: blocks it, rate-limits it, allow-lists it, or writes a robots.txt group naming it. |
 | `overdueboundary_test.go` | H1 | "Is this late?" is one question about one record, and a reader can ask it of a list, a card, a brief or an agent tool. |
-| `overridecategory_test.go` | H3 | A rep's override names a category from the same closed vocabulary the send engine resolves against — commsauthz.Categories() — and the communication\_override\_category CHECK constraint restates that vocabulary by hand, because SQL cannot call the Go package. |
 | `partialindexinference_test.go` | H1 | An upsert onto a partial unique index repeats that index's predicate. |
 | `partnervocabulary_test.go` | H3 | Every copy of the partner kinds and stage meanings matches the contract. |
 | `personalpurgewindow_test.go` | H3 | The page that names a deletion date and the sweep that carries it out must read the same window, or the product promises a date it does not keep. |
@@ -648,6 +647,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `seenaddressrule_test.go` | H2 | SPDX-License-Identifier: BUSL-1.1 SPDX-FileCopyrightText: 2026 Gradion |
 | `sharedtreereads_test.go` | H2 | A gate reads the tree through gatekit's shared view, never from the disk on its own. |
 | `stagemoveorigin_test.go` | H2 | A stage reader names the moves another system made through the stagemove kernel, so a new provenance value reaches every reader at once. |
+| `standingexceptionwriter_test.go` | H2 | No door records a new standing exception. |
 | `storedoriginal_test.go` | H2 | An activity is correlated to its stored original in one place. |
 | `subjectphotobytes_test.go` | H2 | A subject's photo may not be stored until erasure can destroy the bytes. |
 | `sweepreachnamed_test.go` | H1 | TestNoCoreCodeWritesADeclaredColumnByName fails when code outside a table's owner writes a column the owner declared for the merge or the erasure to reach (sweepreach). |

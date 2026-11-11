@@ -47,7 +47,7 @@ internal/compose/commitmentsettle_integration_test.go 1
 internal/compose/company360/workattentionrefusal_test.go 1
 internal/compose/company_integration_test.go 1
 internal/compose/companyautoenrich_test.go 2
-internal/compose/companyconnections_integration_test.go 2
+internal/compose/integration/companyconnections_integration_test.go 2
 internal/compose/companyrollup_handlers_test.go 1
 internal/compose/confidentialityverdict_integration_test.go 1
 internal/compose/connectors_authority_test.go 1

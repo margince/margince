@@ -47,9 +47,9 @@ its **proof**, and records a **decision** per recipient:
   proof may carry no purpose key to match. `communication_suppression` records the other stops: an
   Article 21 objection, a legal limit on use, a subject's request to stop, a hard bounce. No stop
   ends by itself, and no mode turns either one off.
-- **A user may override a refused send.** The override stands separate from consent.
-  `communication_override` (`consent.Allow`) records a statement for one contact, category and
-  sending company. It grants no consent. Each message gets its own check.
+- A `communication_override` row lets a refused send through for one contact, category and
+  sending company. No route records a new one, and the rows on file count until revoked. A row
+  grants no consent, and each message gets its own check.
 
   It turns nothing absolute. `Decision.CanBeOverruledByCategory` asks the question only for a
   reading by the machine that is not absolute and that has a category. The `absoluteDenials` below

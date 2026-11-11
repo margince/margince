@@ -4657,7 +4657,7 @@
     },
     {
       "name": "change_compliance",
-      "tokens": 893,
+      "tokens": 879,
       "agents": [],
       "required_by_cases": [
         "case77_record_her_yes",

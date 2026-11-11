@@ -57,23 +57,11 @@ func (d attentionReceiptDetails) Describe(ctx context.Context, receipts []attent
 		if moved, read := changes[receipt.ID]; read {
 			out[i].Changes = &moved
 		}
-		source, moment := newestSource(receiptSources(receipt), happened)
+		source, moment := receipt.NewestSource(happened)
 		out[i].Source, out[i].SourceAt = source, moment.At
 		out[i].SourcePrecision = crmcontracts.OccurredPrecision(moment.Precision)
 	}
 	return out, nil
-}
-
-// receiptSources lists the messages a receipt rests on: those its change
-// cites, or the one its approval cites.
-func receiptSources(receipt attention.Receipt) []ids.UUID {
-	if len(receipt.CitedActivities) > 0 {
-		return receipt.CitedActivities
-	}
-	if receipt.SourceActivityID.IsZero() {
-		return nil
-	}
-	return []ids.UUID{receipt.SourceActivityID}
 }
 
 // sourcesHappened reads when every source on the page happened, in one read
@@ -81,7 +69,7 @@ func receiptSources(receipt attention.Receipt) []ids.UUID {
 func (d attentionReceiptDetails) sourcesHappened(ctx context.Context, receipts []attention.Receipt) (map[ids.UUID]activities.ActivityMoment, error) {
 	var want []ids.UUID
 	for _, receipt := range receipts {
-		want = append(want, receiptSources(receipt)...)
+		want = append(want, receipt.Sources()...)
 	}
 	if len(want) == 0 || d.names.activities == nil {
 		return map[ids.UUID]activities.ActivityMoment{}, nil
@@ -91,19 +79,6 @@ func (d attentionReceiptDetails) sourcesHappened(ctx context.Context, receipts [
 		return map[ids.UUID]activities.ActivityMoment{}, nil
 	}
 	return happened, err
-}
-
-// newestSource is the latest of the sources this reader may open, the one a
-// change most rests on; zero when the reader may open none.
-func newestSource(sources []ids.UUID, happened map[ids.UUID]activities.ActivityMoment) (ids.UUID, activities.ActivityMoment) {
-	var newest ids.UUID
-	var at activities.ActivityMoment
-	for _, source := range sources {
-		if when, ok := happened[source]; ok && (newest.IsZero() || when.At.After(at.At)) {
-			newest, at = source, when
-		}
-	}
-	return newest, at
 }
 
 // membersNamed reads the name of every member who acted on the page, in one
