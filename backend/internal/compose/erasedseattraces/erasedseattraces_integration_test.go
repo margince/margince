@@ -167,10 +167,10 @@ func threadsBy(t *testing.T, e *integration.Env, seat ids.UUID) int {
 	return e.WsCount(t, `SELECT count(*) FROM deal_room_thread WHERE author_participant_id = $1`, seat)
 }
 
-func erasures(t *testing.T, e *integration.Env, entity string, id ids.UUID) int {
+func threadErasures(t *testing.T, e *integration.Env, id ids.UUID) int {
 	t.Helper()
-	return e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type = $1 AND entity_id = $2
-		AND action = 'erase'`, entity, id)
+	return e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type = 'deal_room_thread' AND entity_id = $1
+		AND action = 'erase'`, id)
 }
 
 func systemCtx(e *integration.Env) context.Context {
@@ -241,7 +241,7 @@ func TestTheTaskDeletesWhatAnErasedSeatWroteAndReplaysAsANoOp(t *testing.T) {
 		AND (before IS NOT NULL OR after IS NOT NULL)`, theirs); n != 0 {
 		t.Errorf("%d audit row(s) still carry the erased seat's thread", n)
 	}
-	if n := erasures(t, e, "deal_room_thread", keptThread) + erasures(t, e, "deal_room_thread", lookalikeThread); n != 0 {
+	if n := threadErasures(t, e, keptThread) + threadErasures(t, e, lookalikeThread); n != 0 {
 		t.Errorf("threads of seats never erased got %d tombstone(s)", n)
 	}
 
@@ -332,7 +332,7 @@ func TestASeatOnAHeldDealIsLeftForALaterRun(t *testing.T) {
 	if n := threadsBy(t, e, erased.seat); n != 1 {
 		t.Errorf("the held seat has %d thread(s), want its 1", n)
 	}
-	if n := erasures(t, e, "deal_room_thread", thread); n != 0 {
+	if n := threadErasures(t, e, thread); n != 0 {
 		t.Errorf("the held thread got %d erase tombstone(s)", n)
 	}
 	if _, scanned, changed, _, status := ledger(t, e); scanned != 1 || changed != 0 || status != "done" {
@@ -367,7 +367,7 @@ func TestTheTaskRollsBackWithItsBatchAndRefusesAMalformedCursor(t *testing.T) {
 	if n := threadsBy(t, e, erased.seat); n != 1 {
 		t.Errorf("the rolled-back batch left %d thread(s) of the erased seat, want 1", n)
 	}
-	if n := erasures(t, e, "deal_room_thread", thread); n != 0 {
+	if n := threadErasures(t, e, thread); n != 0 {
 		t.Errorf("the rolled-back batch left %d erase tombstone(s)", n)
 	}
 	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {

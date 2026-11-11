@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/compose/erasuremanualreview.go frontend/src/features/privacy frontend/src/features/lists/filterexport.tsx frontend/src/features/import/import.result.tsx backend/internal/modules/privacy backend/internal/modules/consent backend/internal/modules/collections/exportsource.go backend/internal/compose/export.go -->
+<!-- describes: backend/internal/compose/erasuremanualreview.go backend/internal/compose/privacyreview frontend/src/features/privacy frontend/src/features/lists/filterexport.tsx frontend/src/features/import/import.result.tsx backend/internal/modules/privacy backend/internal/modules/consent backend/internal/modules/collections/exportsource.go backend/internal/compose/export.go -->
 # What is kept, what is destroyed
 
 What Margince keeps, for how long, what a delete destroys, and how you get data in and out. Read it before you promise anything to a customer or to someone who checks your records.
@@ -71,6 +71,15 @@ Matching full names and email addresses are removed from notes without contact o
 Other note text stays. Reviewers need a full seat, rights to read and delete all contacts without hidden fields,
 and read access to the retained content. If no active Admin or Ops member qualifies, erasure stops
 and says how to restore review access and retry.
+
+Some older decided proposals had their text removed by an erasure but no longer say which contact
+they were about. Margince keeps their old history, because it cannot prove whose details it holds.
+After an upgrade, each such proposal gets one **Manual privacy review needed** notification.
+
+The link opens **Settings → Audit log** filtered to that proposal, so you can read its history and
+decide. Reviewers also need to read the audit log. A proposal about a record under legal hold gets
+no notification. If no one can review it, the update stops in **Settings → System health** until
+review access is restored.
 
 The same review access is needed to receive alerts about an opt-out receipt that could not be sent. If no one has it when a receipt is
 missed, the alert arrives within 15 minutes of access being restored. This works only when
