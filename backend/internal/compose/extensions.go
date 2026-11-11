@@ -37,9 +37,7 @@ func RegisterExtensions(exts []extension.Extension, verbs []extension.Verb, jobD
 	if err := validateVerbSet(verbs); err != nil {
 		return err
 	}
-	for _, preflight := range []func([]extension.Extension) error{
-		preflightCompanyTypes, preflightRecordKinds, preflightReports, preflightSignalTypes,
-	} {
+	for _, preflight := range []func([]extension.Extension) error{preflightCompanyTypes, preflightRecordKinds, preflightReports, preflightSignalTypes} {
 		if err := preflight(exts); err != nil {
 			return err
 		}
@@ -95,10 +93,9 @@ func RegisterExtensions(exts []extension.Extension, verbs []extension.Verb, jobD
 		}
 		compliancedocs.Register(e.Documents)
 	}
-	registerCompanyTypes(exts)
-	registerRecordKinds(exts)
-	registerReports(exts)
-	registerSignalTypes(exts)
+	for _, register := range []func([]extension.Extension){registerCompanyTypes, registerRecordKinds, registerReports, registerSignalTypes} {
+		register(exts)
+	}
 	// After the jurisdiction packs, and still in the apply phase: the RBAC
 	// vocabulary is validate-then-apply inside RegisterRbacObjects itself (a set
 	// with one bad name registers none), so it cannot half-widen what a role
