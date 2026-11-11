@@ -7799,10 +7799,17 @@ export const en = {
   "sendPermission.missingPermission": "Permission needed for this message",
   "sendPermission.reason.chooseDeal": "Choose the deal for this follow-up.",
   "sendPermission.appliesTo": "This applies to {address}.",
-  "sendPermission.appliesToAndMore_one":
-    "This applies to {address} and {count} other recipient.",
-  "sendPermission.appliesToAndMore_other":
-    "This applies to {address} and {count} other recipients.",
+  "sendPermission.recipientLine": "{address}: {reason}",
+  "sendPermission.unansweredHeld":
+    "The send check did not complete. Send waits until it does.",
+  "sendPermission.recheck": "Check again",
+  "compose.sendWithReason": "Send with a reason…",
+  "compose.scheduleWithReason": "Schedule with a reason…",
+  "compose.holdForCheck": "Send waits for the send check.",
+  "compose.holdRefused":
+    "Send is off. Fix what the check above names, or remove that recipient.",
+  "compose.holdWithReason":
+    "The check refused this message. Send asks for your reason, and the reason covers this one message only.",
   "sendPermission.appliesToSome_one":
     "This applies to {count} of {total} recipients.",
   "sendPermission.appliesToSome_other":
@@ -7926,15 +7933,6 @@ export const en = {
   "directSend.reason.legal_obligation": "Legal obligation",
   "directSend.reason.other": "Other",
   "compose.reviewReference": "Review",
-  "compose.overrule.open": "Overrule with a reason",
-  "compose.overrule.reasonLabel": "Why may this message go?",
-  "compose.overrule.hint":
-    "Your reason is recorded on each contact. It covers this kind of message to them until someone revokes it.",
-  "compose.overrule.confirm": "Record the overrule",
-  "compose.overrule.recording": "Recording…",
-  "compose.overrule.recorded": "Overrule recorded. Press Send again.",
-  "compose.overrule.failed":
-    "The overrule was not recorded. Retry, or open the review from the refusal above.",
   "compose.draftUnavailable":
     "AI drafting is unavailable because no model is configured. The email can still be written manually.",
   "compose.draftUnsupportedHere":

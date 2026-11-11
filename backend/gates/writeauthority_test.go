@@ -212,7 +212,7 @@ var readAuthorityOnAWritePath = gatekit.Waive(map[string]string{
 	// imported connection — and probes the record only to decide which ones may
 	// be touched or named.
 	"internal/modules/activities:visibleRelinkPredicate": "clears an activity's links to records the caller can see, so a relink cannot silently drop an edge to a record they cannot; what it deletes is the LINK row, and its own comment already states the one bit that escapes",
-	"internal/modules/activities:participantRelinkQuery": "moves activity_participant rows from the displaced contacts to the relink target; the row written is the participant edge, never the contact",
+	"internal/modules/activities:displacedRowsSQL":       "moves activity_participant rows from the displaced contacts to the relink target; the row written is the participant edge, never the contact",
 	// The one waiver here that is a LIMIT OF THE EXTRACTOR rather than a claim
 	// about what the probe decides, and it is spelled that way on purpose.
 	//

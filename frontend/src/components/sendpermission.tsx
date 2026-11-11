@@ -4,9 +4,11 @@ import type { components } from "../api/schema";
 import { Button } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { CommunicationStatus } from "../design-system/communicationstatus";
+import { Row } from "../design-system/stack";
 import { formatNumber } from "../format/format";
 import {
   type RefusalKind,
+  type RefusalSurface,
   sendPermissionReasonKey,
 } from "../format/sendpermissionreason";
 import { useLocale, usePlural, useT } from "../i18n";
@@ -156,6 +158,7 @@ export function SendPermission({
   override,
   picksReason = false,
   namesRecipients = false,
+  onRecheck,
 }: Readonly<{
   preview: Preview | undefined;
   /**
@@ -186,11 +189,16 @@ export function SendPermission({
   picksReason?: boolean;
   /** The viewer wrote every address, so the refused one may be named. */
   namesRecipients?: boolean;
+  /**
+   * Given where Send waits for the answer, so a failed check is asked again
+   * here rather than by a press that cannot be made.
+   */
+  onRecheck?: () => void;
 }>) {
   const t = useT();
   const status = sendStatus({ preview, asking, unanswered, refusal });
   if (status.kind === "unavailable") {
-    return <p role="status">{t("sendPermission.unanswered")}</p>;
+    return <UncheckedNotice onRecheck={onRecheck} />;
   }
   if (status.kind === "checking") {
     return <p role="status">{t("sendPermission.checking")}</p>;
@@ -208,7 +216,6 @@ export function SendPermission({
       ) : undefined))
     : undefined;
   const surface = { recordable: Boolean(control), picksReason };
-  const deciding = status.deciding;
   return (
     <Callout
       tone={status.kind === "restricted" ? "danger" : "warning"}
@@ -220,25 +227,74 @@ export function SendPermission({
       title={t(TITLE[status.kind])}
       actions={control ?? refusal?.remedies}
     >
-      {/* The hint says what the rep can DO, so it changes with what is on
-          offer: with the control, how to answer; without it, what happens if
-          the message goes as it stands. */}
-      <p>
-        {t(
-          sendPermissionReasonKey(
-            deciding?.reasonCode,
-            surface,
-            deciding && remedyCategoryOf(deciding),
-          ),
-        )}
-      </p>
-      <AffectedRecipients status={status} named={namesRecipients} />
+      <RefusalDetail
+        status={status}
+        named={namesRecipients}
+        surface={surface}
+      />
     </Callout>
   );
 }
 
-// Which recipients the explanation is about. A message to several recipients
-// must not read as if one recipient's refusal were everybody's.
+// A check that did not complete. Where Send waits on it, it is asked again here.
+function UncheckedNotice({ onRecheck }: Readonly<{ onRecheck?: () => void }>) {
+  const t = useT();
+  if (!onRecheck) {
+    return <p role="status">{t("sendPermission.unanswered")}</p>;
+  }
+  return (
+    <Row>
+      <p role="status">{t("sendPermission.unansweredHeld")}</p>
+      <Button onClick={onRecheck}>{t("sendPermission.recheck")}</Button>
+    </Row>
+  );
+}
+
+// What the refusal means and whom it is about. The hint names the rep's next
+// step, so it follows what is on offer. With the control it says how to answer.
+// Without it, it says what happens if the message goes as it stands.
+// When several recipients the viewer wrote are refused, each gets its own line,
+// so one refusal never reads as everybody's.
+function RefusalDetail({
+  status,
+  named,
+  surface,
+}: Readonly<{
+  status: SendStatus;
+  named: boolean;
+  surface: RefusalSurface;
+}>) {
+  const t = useT();
+  const hintFor = (refused: RefusedRecipient | undefined) =>
+    t(
+      sendPermissionReasonKey(
+        refused?.reasonCode,
+        surface,
+        refused && remedyCategoryOf(refused),
+      ),
+    );
+  if (named && status.refused.length > 1) {
+    return (
+      <ul className="t-caption">
+        {status.refused.map((refused) => (
+          <li key={refused.address}>
+            {t("sendPermission.recipientLine", {
+              address: refused.address,
+              reason: hintFor(refused),
+            })}
+          </li>
+        ))}
+      </ul>
+    );
+  }
+  return (
+    <>
+      <p>{hintFor(status.deciding)}</p>
+      <AffectedRecipients status={status} named={named} />
+    </>
+  );
+}
+
 function AffectedRecipients({
   status,
   named,
@@ -246,17 +302,10 @@ function AffectedRecipients({
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  const others = status.refusing - 1;
   if (named && status.deciding) {
-    const address = status.deciding.address;
     return (
       <p className="t-caption">
-        {others > 0
-          ? plural("sendPermission.appliesToAndMore", others, {
-              address,
-              count: formatNumber(others, locale),
-            })
-          : t("sendPermission.appliesTo", { address })}
+        {t("sendPermission.appliesTo", { address: status.deciding.address })}
       </p>
     );
   }

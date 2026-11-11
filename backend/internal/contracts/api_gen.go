@@ -43835,7 +43835,10 @@ type CreateActivityRequest struct {
 
 	// RfcMessageId This message's RFC 5322 Message-ID, angle brackets optional. Email only. It is the identity a later capture of the same message resolves against, so an import that supplies it is recognised rather than duplicated.
 	RfcMessageId *string `json:"rfc_message_id,omitempty"`
-	Source       string  `json:"source"`
+
+	// SenderContactId Inbound message, call, meeting or email only: the linked contact who wrote or said it. Set it whenever one contact sent the message, for example the one member of a group chat who asked for a follow-up. Only that contact counts as its author, so only they asked to hear from us. Without it, an inbound activity linked to one contact names that contact as the sender. One linked to two or more contacts names no sender, and each contact is kept as copied. The stated `participants` of an email win over this field. A contact that is not in `links` returns `422 code: sender_not_linked`. Any other kind, or a direction other than `inbound`, returns `422 code: field_not_valid_for_kind`.
+	SenderContactId *openapi_types.UUID `json:"sender_contact_id,omitempty"`
+	Source          string              `json:"source"`
 
 	// SourceActivityId For a task, the conversation or note it follows from. The caller and assignee need access to that source. The task preserves its audience and inherits its visible links when no links are supplied. For a logged note, call or meeting, the task whose outcome is being recorded. This reference alone does not complete that task or accept a request.
 	SourceActivityId *openapi_types.UUID `json:"source_activity_id,omitempty"`
@@ -81845,6 +81848,14 @@ func (a *CreateActivityRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "rfc_message_id")
 	}
 
+	if raw, found := object["sender_contact_id"]; found {
+		err = json.Unmarshal(raw, &a.SenderContactId)
+		if err != nil {
+			return fmt.Errorf("error reading 'sender_contact_id': %w", err)
+		}
+		delete(object, "sender_contact_id")
+	}
+
 	if raw, found := object["source"]; found {
 		err = json.Unmarshal(raw, &a.Source)
 		if err != nil {
@@ -82105,6 +82116,13 @@ func (a CreateActivityRequest) MarshalJSON() ([]byte, error) {
 		object["rfc_message_id"], err = json.Marshal(a.RfcMessageId)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'rfc_message_id': %w", err)
+		}
+	}
+
+	if a.SenderContactId != nil {
+		object["sender_contact_id"], err = json.Marshal(a.SenderContactId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'sender_contact_id': %w", err)
 		}
 	}
 

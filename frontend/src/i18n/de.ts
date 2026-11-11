@@ -7797,10 +7797,17 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "sendPermission.missingPermission": "Für diese Nachricht fehlt die Erlaubnis",
   "sendPermission.reason.chooseDeal": "Wähle den Deal für dieses Follow-up.",
   "sendPermission.appliesTo": "Das betrifft {address}.",
-  "sendPermission.appliesToAndMore_one":
-    "Das betrifft {address} und {count} weitere Empfangsadresse.",
-  "sendPermission.appliesToAndMore_other":
-    "Das betrifft {address} und {count} weitere Empfangsadressen.",
+  "sendPermission.recipientLine": "{address}: {reason}",
+  "sendPermission.unansweredHeld":
+    "Die Versandprüfung ist nicht fertig geworden. Senden wartet, bis sie es ist.",
+  "sendPermission.recheck": "Erneut prüfen",
+  "compose.sendWithReason": "Mit Begründung senden…",
+  "compose.scheduleWithReason": "Mit Begründung planen…",
+  "compose.holdForCheck": "Senden wartet auf die Versandprüfung.",
+  "compose.holdRefused":
+    "Senden ist gesperrt. Behebe, was die Prüfung oben nennt, oder entferne diese Empfangsadresse.",
+  "compose.holdWithReason":
+    "Die Prüfung hat diese Nachricht abgelehnt. Senden fragt nach deiner Begründung, und sie gilt nur für diese eine Nachricht.",
   "sendPermission.appliesToSome_one":
     "Das betrifft {count} von {total} Empfangsadressen.",
   "sendPermission.appliesToSome_other":
@@ -7924,16 +7931,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "directSend.reason.legal_obligation": "Rechtliche Verpflichtung",
   "directSend.reason.other": "Sonstiges",
   "compose.reviewReference": "Prüfung",
-  "compose.overrule.open": "Mit Begründung freigeben",
-  "compose.overrule.reasonLabel": "Warum darf diese Nachricht raus?",
-  "compose.overrule.hint":
-    "Deine Begründung wird bei jedem Kontakt gespeichert und gilt für diese Art Nachricht, bis jemand sie widerruft.",
-  "compose.overrule.confirm": "Freigabe speichern",
-  "compose.overrule.recording": "Wird gespeichert…",
-  "compose.overrule.recorded":
-    "Freigabe gespeichert. Drücke erneut auf Senden.",
-  "compose.overrule.failed":
-    "Die Freigabe wurde nicht gespeichert. Versuche es erneut oder öffne die Prüfung über die Ablehnung oben.",
   "compose.draftUnavailable":
     "KI-Entwürfe sind nicht verfügbar, da kein Modell konfiguriert ist. Die E-Mail lässt sich weiterhin selbst schreiben.",
   "compose.draftUnsupportedHere":
