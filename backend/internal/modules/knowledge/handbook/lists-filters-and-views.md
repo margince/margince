@@ -289,7 +289,7 @@ Also called: bulk task, follow up with many, mass follow-up.
 
 A list in Margince is a named set of one kind of record (contacts, companies, deals or leads) that you and your colleagues work from. There are two kinds. A **Live List** is a saved filter: its members are whatever matches the filter now. So records join it and leave it on their own as they change. A **Shortlist** is picked by hand: a record is on it because someone put it there, and it stays until someone takes it off.
 
-Lists live on **Filters and views**. A list you own is under **Mine**, also when you share it. A list someone else owns is under **Shared with me**. It shows its kind, record type, how many members you can see and who can find it. On a private list that someone else owns, that reads **Its owner**. On a private list with no owner, it reads **Its steward**.
+Lists live on **Filters and views**. A list you own is under **Mine**, also when you share it. A list someone else owns is under **Shared with me**. It shows its kind, record type, how many members you can see and who can find it. A private list can be found by its owner and its steward. So its row reads **Only me**, **You and its steward**, **Its owner**, **Its steward** or **Its owner and steward**.
 
 ### How do I make a Live List?
 To make a Live List in Margince, build its filter on **Filters and views** → **New filter**. Press **Save** and choose **Live List** under **Keep it as**.
@@ -322,9 +322,9 @@ Also called: list owner, who manages this list.
 A Margince list's page shows why each member is there, in its own columns.
 - On a Live List, each field the filter uses is a column with the member's value of today, such as "52 days ago". The first four are shown; **View** → **Columns** offers the rest. A value you may not see shows as **Hidden**.
 - On a Shortlist, **Added by**, **Added on** and **Note** say who picked the record, when, and why.
-To see why a contact or deal is not on a Live List, open its page. Under **Lists**, pick the list in **Check a Live List**. It shows each clause of the filter as **Met**, **Not met** or **No value to judge**, with the record's value of today. A value you may not see shows as "Value hidden from you".
+To see why a contact or deal is not on a Live List, open its page. On a contact, open the **Research** tab; on a deal, press **Edit details**. In the **Lists** card there, pick the list in **Check a Live List**. It shows each clause of the filter as **Met**, **Not met** or **No value to judge**, with the record's value of today. A value you may not see shows as "Value hidden from you".
 
-To take a contact or deal off a Shortlist, go to **Lists** on its page and press **Take off the Shortlist** next to it. It comes off at once. The toast "Taken off {name}" offers **Undo**. **Undo** puts the record back with its **Added by**, **Added on** and **Note**. To take many off, tick them on the list's page and use the bar for many rows.
+To take a contact or deal off a Shortlist, open the same **Lists** card and press **Take off the Shortlist** next to the list. It comes off at once. The toast "Taken off {name}" offers **Undo**. **Undo** puts the record back with its **Added by**, **Added on** and **Note**. To take many off, tick them on the list's page and use the bar for many rows.
 Also called: why is this contact here, why is this record missing, list membership reason.
 
 ### How often does a Live List update?

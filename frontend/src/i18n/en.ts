@@ -18347,6 +18347,8 @@ export const en = {
   "lists.audience.ownerTeams": "The owner’s teams",
   "lists.audience.ownerOnly": "Its owner",
   "lists.audience.stewardOnly": "Its steward",
+  "lists.audience.youAndSteward": "You and its steward",
+  "lists.audience.ownerAndSteward": "Its owner and steward",
   "lists.audience.unknownTeam": "A team you cannot see",
   "lists.health.ownerless": "Needs a steward",
   "lists.health.invalid": "Filter no longer works",

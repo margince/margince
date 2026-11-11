@@ -18504,6 +18504,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lists.audience.ownerTeams": "Die Teams der verantwortlichen Person",
   "lists.audience.ownerOnly": "Die verantwortliche Person",
   "lists.audience.stewardOnly": "Die verantwortliche Person",
+  "lists.audience.youAndSteward": "Du und eine weitere verantwortliche Person",
+  "lists.audience.ownerAndSteward": "Zwei verantwortliche Personen",
   "lists.audience.unknownTeam": "Ein Team, das du nicht sehen kannst",
   "lists.health.ownerless": "Niemand verantwortlich",
   "lists.health.invalid": "Filter funktioniert nicht mehr",

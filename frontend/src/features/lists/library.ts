@@ -104,6 +104,14 @@ export function isArchived(item: LibraryItem): boolean {
   return item.kind === "list" && Boolean(item.list.archived_at);
 }
 
+export function ownedByReader(
+  list: Pick<List, "owner_id">,
+  readerId: string | undefined,
+): boolean {
+  // Not a bare `===`: an ownerless list would match an unknown reader.
+  return readerId !== undefined && list.owner_id === readerId;
+}
+
 /**
  * A saved view is private in V1, so it is always the reader's own. A list
  * goes by its owner, not its audience, so a list the reader shares stays theirs.
@@ -115,13 +123,9 @@ export function groupOf(
   if (item.kind === "view") {
     return "mine";
   }
-  // Not a bare `===`: an ownerless list would match an unknown reader.
-  return readerId !== undefined && item.list.owner_id === readerId
-    ? "mine"
-    : "shared";
+  return ownedByReader(item.list, readerId) ? "mine" : "shared";
 }
 
-/** The group `#/filters/lists` lands on. */
 export function listsLanding(
   shown: readonly LibraryItem[],
   readerId: string | undefined,

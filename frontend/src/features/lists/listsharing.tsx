@@ -14,6 +14,7 @@ import type { MessageKey } from "../../i18n/en";
 import { labelFor } from "../../lib/labelfor";
 import type { List } from "../../lib/lists.queries";
 import { useMe } from "../../lib/session";
+import { ownedByReader } from "./library";
 
 const SHARINGS = ["private", "team", "workspace"] as const;
 
@@ -135,20 +136,15 @@ export function ListAudienceFields({
  * all of its rows.
  */
 export function useListAudienceLabel(): (
-  list: Pick<List, "sharing" | "team_id" | "owner_id">,
+  list: Pick<List, "sharing" | "team_id" | "owner_id" | "steward_id">,
 ) => string {
   const t = useT();
   const me = useMe();
   const teamName = useTeamName();
   return (list) => {
-    const readerId = me.data?.user.id;
-    const ownerIsReader = readerId !== undefined && list.owner_id === readerId;
-    if (list.sharing === "private" && !ownerIsReader) {
-      return t(
-        list.owner_id
-          ? "lists.audience.ownerOnly"
-          : "lists.audience.stewardOnly",
-      );
+    const ownerIsReader = ownedByReader(list, me.data?.user.id);
+    if (list.sharing === "private") {
+      return t(privateAudienceOf(list, ownerIsReader));
     }
     if (list.sharing !== "team") {
       return t(labelFor(SHARING_LABEL, list.sharing));
@@ -165,4 +161,24 @@ export function useListAudienceLabel(): (
       ? t("lists.audience.yourTeams")
       : t("lists.audience.ownerTeams");
   };
+}
+
+/** Who finds a private list: its owner and its steward, and nobody else. */
+function privateAudienceOf(
+  list: Pick<List, "owner_id" | "steward_id">,
+  ownerIsReader: boolean,
+): MessageKey {
+  const otherSteward =
+    Boolean(list.steward_id) && list.steward_id !== list.owner_id;
+  if (!list.owner_id) {
+    return "lists.audience.stewardOnly";
+  }
+  if (ownerIsReader) {
+    return otherSteward
+      ? "lists.audience.youAndSteward"
+      : "lists.sharing.private";
+  }
+  return otherSteward
+    ? "lists.audience.ownerAndSteward"
+    : "lists.audience.ownerOnly";
 }

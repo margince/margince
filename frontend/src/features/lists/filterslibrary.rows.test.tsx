@@ -149,7 +149,7 @@ describe("a row", () => {
     ).toBeInTheDocument();
   });
 
-  it("says who can find each list in either group: a named team, the owner's teams, everyone, its owner or steward alone", async () => {
+  it("says who can find each list in either group: a named team, the owner's teams, everyone, its owner, its steward or both", async () => {
     const { wrapper } = mountFilters({
       listsOn: true,
       teams: { [TEAM_ID]: "Team Germany" },
@@ -181,6 +181,22 @@ describe("a row", () => {
           owner_id: null,
           steward_id: READER_ID,
         },
+        {
+          ...shortlist,
+          id: "cared",
+          name: "Cared for together",
+          sharing: "private",
+          owner_id: READER_ID,
+          steward_id: OTHER_OWNER_ID,
+        },
+        {
+          ...shortlist,
+          id: "theirs-alone",
+          name: "Their own picks",
+          sharing: "private",
+          owner_id: OTHER_OWNER_ID,
+          steward_id: OTHER_OWNER_ID,
+        },
       ],
     });
     render(<FiltersScreen />, { wrapper });
@@ -190,14 +206,38 @@ describe("a row", () => {
     await vi.waitFor(() => expect(said("Named")).toContain("Team Germany"));
     expect(said("Kept to myself")).toContain(en["lists.sharing.private"]);
     const stewarded = said("Board introductions");
-    expect(stewarded).toContain(en["lists.audience.ownerOnly"]);
+    expect(stewarded).toContain(en["lists.audience.ownerAndSteward"]);
     expect(stewarded).not.toContain(en["lists.sharing.private"]);
+    expect(said("Their own picks")).toContain(en["lists.audience.ownerOnly"]);
+    expect(said("Cared for together")).toContain(
+      en["lists.audience.youAndSteward"],
+    );
     const ownerless = said("Left behind");
     expect(ownerless).toContain(en["lists.audience.stewardOnly"]);
     expect(ownerless).not.toContain(en["lists.audience.ownerOnly"]);
     expect(said("Our accounts")).toContain(en["lists.audience.yourTeams"]);
     expect(said("Theirs")).toContain(en["lists.audience.ownerTeams"]);
     expect(said("Launch deck")).toContain(en["lists.sharing.workspace"]);
+  });
+
+  it("asks who can find a row only in a group that holds a list", async () => {
+    const { wrapper } = mountFilters({
+      listsOn: true,
+      views: [BERLIN],
+      lists: [{ ...liveList, owner_id: OTHER_OWNER_ID }],
+    });
+    render(<FiltersScreen />, { wrapper });
+    await screen.findByText(liveList.name);
+    const who = { name: en["lists.sharingLabel"] };
+    const mine = screen.getByRole("region", {
+      name: en["filters.library.mine"],
+    });
+    const shared = screen.getByRole("region", {
+      name: en["filters.library.shared"],
+    });
+    expect(within(mine).getByText(BERLIN.name)).toBeInTheDocument();
+    expect(within(mine).queryByRole("columnheader", who)).toBeNull();
+    expect(within(shared).getByRole("columnheader", who)).toBeInTheDocument();
   });
 
   it("says, folded, who can find a list the reader shares from their own group", async () => {

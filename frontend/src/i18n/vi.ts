@@ -18023,6 +18023,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "lists.audience.ownerTeams": "Nhóm của người chịu trách nhiệm",
   "lists.audience.ownerOnly": "Người chịu trách nhiệm",
   "lists.audience.stewardOnly": "Người chịu trách nhiệm",
+  "lists.audience.youAndSteward": "Bạn và một người chịu trách nhiệm khác",
+  "lists.audience.ownerAndSteward": "Hai người chịu trách nhiệm",
   "lists.audience.unknownTeam":
     "M\u1ed9t nh\u00f3m b\u1ea1n kh\u00f4ng xem \u0111\u01b0\u1ee3c",
   "lists.health.ownerless": "Chưa ai chịu trách nhiệm",

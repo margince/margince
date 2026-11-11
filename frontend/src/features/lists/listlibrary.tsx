@@ -168,13 +168,14 @@ export function LibraryTable({
     render: (item) => (item.kind === "list" ? audienceOf(item.list) : null),
   };
   const listsHere = group !== "views";
+  const anyList = items.some((item) => item.kind === "list");
   const columns = folded
     ? [name, more]
     : [
         name,
         ...(listsHere ? [kind] : []),
         records,
-        ...(listsHere ? [who] : []),
+        ...(listsHere && anyList ? [who] : []),
         more,
       ];
   return (

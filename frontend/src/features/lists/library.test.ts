@@ -20,6 +20,7 @@ import {
   libraryItems,
   listsLanding,
   nameOf,
+  ownedByReader,
   pillCounts,
   sortForReader,
   visibleGroups,
@@ -98,6 +99,14 @@ describe("the merged library", () => {
     ).toBe("shared");
     expect(filed({ ...shortlist, owner_id: null })).toBe("shared");
     expect(filed(shortlist)).toBe("shared");
+  });
+
+  it("counts a list as the reader's only when its owner is the known reader", () => {
+    expect(ownedByReader({ owner_id: READER_ID }, READER_ID)).toBe(true);
+    expect(ownedByReader({ owner_id: OTHER_OWNER_ID }, READER_ID)).toBe(false);
+    expect(ownedByReader({ owner_id: null }, READER_ID)).toBe(false);
+    expect(ownedByReader({}, undefined)).toBe(false);
+    expect(ownedByReader({ owner_id: null }, undefined)).toBe(false);
   });
 
   it("files no list as the reader's while the reader is unknown", () => {

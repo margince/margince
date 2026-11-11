@@ -77,6 +77,16 @@ const OWN_LISTS: List[] = [
     health: "ok",
   },
   {
+    ...shortlist,
+    id: "L-renewals",
+    name: "Renewal watch",
+    sharing: "private",
+    owner_id: READER_ID,
+    steward_id: OTHER_OWNER_ID,
+    purpose: "Contracts up for renewal before March",
+    health: "ok",
+  },
+  {
     ...liveList,
     id: "L-hot",
     name: "Hot leads this quarter",
