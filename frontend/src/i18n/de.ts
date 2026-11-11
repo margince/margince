@@ -15464,7 +15464,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Eine App für das ganze Unternehmen. Sobald sie gespeichert ist, können alle bei {company} Outlook-E-Mail und -Kalender verbinden, und „Weiter mit Microsoft“ kann auf der Anmeldeseite erscheinen.",
   "oauthApp.drawer.microsoft.step1Title": "App in Microsoft Entra registrieren",
   "oauthApp.drawer.microsoft.step1Body":
-    "Öffne „App-Registrierungen“ und wähle „Neue Registrierung“. Nenne sie Margince und wähle unter „Unterstützte Kontotypen“ die Option „Nur Konten in diesem Organisationsverzeichnis“; die Verzeichnis-ID trägst du im letzten Schritt ein. Nur wenn auch Postfächer anderer Unternehmen verbunden werden, wähle „Konten in einem beliebigen Organisationsverzeichnis“ und lass das Verzeichnis in den Einstellungen leer.",
+    "Öffne „App-Registrierungen“ und wähle „Neue Registrierung“. Nenne sie Margince und wähle unter „Unterstützte Kontotypen“ die erste Option, nur Konten in diesem Verzeichnis; die Verzeichnis-ID trägst du im letzten Schritt ein. Nur wenn auch Postfächer anderer Unternehmen verbunden werden, wähle die zweite Option, Konten in einem beliebigen Verzeichnis, und lass das Verzeichnis in den Einstellungen leer.",
   "oauthApp.drawer.microsoft.step1Link": "Microsoft Entra Admin Center öffnen",
   "oauthApp.drawer.microsoft.step2Body":
     "Öffne in der App-Registrierung „Authentifizierung“, wähle „Plattform hinzufügen“, dann „Web“, und füge jede Adresse unten ein. Margince listet eine Adresse für alles, wofür diese Installation Microsoft nutzt. Füge sie genau so ein; fehlt eine, bricht Microsoft die Verbindung mit „AADSTS50011“ ab und nennt die Adresse nicht.",
