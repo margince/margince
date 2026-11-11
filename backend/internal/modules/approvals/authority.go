@@ -108,18 +108,6 @@ const kindCommunicationReview = "communication_review"
 // spelled here as identity's policy spells it.
 const objectCommunicationException = "communication_exception"
 
-// sendShapedGrants is what deciding any kind that SENDS a message takes: the
-// write the send performs, plus read of the conversation the draft was derived
-// from and of the counterparty whose address it goes to. The composer of a
-// staged payload runs as the system principal, so the card can disclose both;
-// the human's own grants, not the composer's, decide who may be shown it. A
-// class rather than a kind, so a new send-shaped kind adds itself here.
-var sendShapedGrants = []DecisionGrant{
-	{objectActivity, principal.ActionCreate},
-	{objectActivity, principal.ActionRead},
-	{tableContact, principal.ActionRead},
-}
-
 // decisionGrants maps each stageable kind onto the RBAC its effect needs given
 // the KIND ALONE; approving requires every one of them. A kind whose grant also
 // depends on what the staging points at carries that half in
