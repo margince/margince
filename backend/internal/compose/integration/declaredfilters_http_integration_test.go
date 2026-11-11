@@ -129,6 +129,21 @@ func TestTheCompanyListNarrowsByDomainOnTheWire(t *testing.T) {
 	onlyRecord(t, e, "/v1/companies?domain=ACME.example", held, "the same account, asked for in another case")
 }
 
+func TestTheContactListNarrowsToTheContactsAroundOneOnTheWire(t *testing.T) {
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+
+	employer := createdRecord(t, e, "/v1/companies", AnyMap{"source": "manual", "display_name": "Buyer GmbH"})
+	buyer := createdRecord(t, e, "/v1/contacts", AnyMap{"source": "manual", "full_name": "Bea Buyer"})
+	colleague := createdRecord(t, e, "/v1/contacts", AnyMap{"source": "manual", "full_name": "Cole League"})
+	createdRecord(t, e, "/v1/contacts", AnyMap{"source": "manual", "full_name": "Stan Stranger"})
+	for _, member := range []string{buyer, colleague} {
+		createdRecord(t, e, "/v1/relationships", AnyMap{"kind": "employment", "contact_id": member, "company_id": employer, "source": "manual"})
+	}
+
+	onlyRecord(t, e, "/v1/contacts?related_to="+buyer, colleague, "the buyer's colleague, without the buyer")
+}
+
 func TestTheActivityListNarrowsByAssigneeOnTheWire(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
