@@ -1,14 +1,17 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { useQuery } from "@tanstack/react-query";
+import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { Popover } from "../../design-system/popover";
 import { provenanceLabel } from "../../design-system/provenance";
 import { provenanceOf, withCreator } from "../../design-system/provenanceof";
 import type { DetailRow } from "../../design-system/recorddetails";
-import { formatDateAbbrev } from "../../format/format";
-import { useLocale, useT } from "../../i18n";
+import { formatDateAbbrev, formatNumber } from "../../format/format";
+import { useLocale, usePlural, useT } from "../../i18n";
 import { useMemberName } from "../../lib/membernames";
+import { unwrap } from "../../lib/problem";
 import { useViewerId } from "../../lib/session";
 import { useViewerZone } from "../../lib/viewerzone";
 import { CompanyOwnerControl } from "./companyheader";
@@ -38,16 +41,45 @@ export function useOwnershipRows(company: Company): DetailRow[] {
 
 // The audience the head's Shared pill switches, as the row's one word. Not
 // RecordAccess's sentence: that one explains the setting in a popover, this
-// row names who, so the two read the same `visibility` and `owner_id` apart.
+// row names who. On a closed record the shares widen that audience, so they
+// count here too. A refused grants read leaves the owner alone, not a guess.
 function VisibleTo({ company }: Readonly<{ company: Company }>) {
   const t = useT();
+  const plural = usePlural();
+  const { locale } = useLocale();
   const viewerId = useViewerId();
   const owner = company.owner_id ?? undefined;
   const yours = viewerId !== undefined && owner === viewerId;
   const closed = company.visibility === "owner";
   const name = useMemberName(closed && !yours ? owner : null);
+  const shares = useQuery({
+    // Under the share dialog's key, so a new share refreshes it. The last part
+    // keeps this count apart from the dialog's list of grants.
+    queryKey: ["record-grants", "company", company.id, "count"],
+    queryFn: () => fetchShareCount(company.id),
+    enabled: closed,
+    retry: false,
+  });
   if (!closed) {
     return <>{t("co.aside.visibleEveryone")}</>;
+  }
+  const shared = shares.data?.count ?? 0;
+  if (shared > 0) {
+    const formatted = formatNumber(shared, locale);
+    const count = shares.data?.more ? `${formatted}+` : formatted;
+    if (yours) {
+      return <>{plural("co.aside.visibleYouAndShared", shared, { count })}</>;
+    }
+    return (
+      <>
+        {name.data
+          ? plural("co.aside.visibleOwnerAndShared", shared, {
+              owner: name.data,
+              count,
+            })
+          : plural("co.aside.visibleTheOwnerAndShared", shared, { count })}
+      </>
+    );
   }
   if (yours) {
     return <>{t("co.aside.visibleOnlyYou")}</>;
@@ -59,6 +91,21 @@ function VisibleTo({ company }: Readonly<{ company: Company }>) {
         : t("co.aside.visibleOnlyOwner")}
     </>
   );
+}
+
+// One page of grants is the count. A page the server cut says so, and the row
+// shows "100+" instead of a smaller number that reads as the whole audience.
+async function fetchShareCount(
+  companyId: string,
+): Promise<{ count: number; more: boolean }> {
+  const data = unwrap(
+    await api.GET("/record-grants", {
+      params: {
+        query: { record_type: "company", record_id: companyId, limit: 100 },
+      },
+    }),
+  );
+  return { count: data.data.length, more: data.page.has_more };
 }
 
 /** The register's facts about the account and how its own row was written. */

@@ -902,8 +902,8 @@ fi
 
 # A shard saw a slice of the statements, so it hands its seen senders to the
 # fan-in, which judges staleness over every shard. A whole lane judges it here.
-# A queue shard that claimed no group ran no process, so it wrote no census.
-if [[ -n "$SHARD_OUT" && ! -s "$ASSIGNED" ]]; then
+# A queue shard that claimed no group ran no statement, so it hands in an empty list.
+if (( SHARD_TOTAL > 0 )) && [[ ! -s "$ASSIGNED" ]]; then
   : > "$OUTDIR/repeated-gates.txt"
 else
   check_repeated_gates "$MARGINCE_SQL_CENSUS_DIR" "$OUTDIR/repeated-gates.txt"

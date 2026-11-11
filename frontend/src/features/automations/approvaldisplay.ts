@@ -194,10 +194,12 @@ export const DISPLAY_FIELDS: Readonly<Record<string, readonly DisplayField[]>> =
       // so there is nothing to compare it against and nothing to fill.
       { field: "Email", label: "approval.field.email", as: "text" },
     ],
-    // A follow-up the overnight pass drafted. Its subject and body already
-    // render as a draft on the card, so only the date it proposes is left.
+    // The task the overnight pass would add. Its subject and body are a task's
+    // title and note, not a message, so they are captioned as such.
     deal_follow_up: [
+      textRow("subject", "approval.field.task"),
       { field: "due_date", label: "approval.field.due_date", as: "date" },
+      { field: "body", label: "approval.field.note", as: "prose" },
     ],
     // A rename read off the company's own site. The old and new names render as
     // an old→new comparison already; the normalization key is internal.
