@@ -25,7 +25,7 @@ internal/compose/assurancejob_integration_test.go 1
 internal/compose/assurancesubjects_integration_test.go 2
 internal/compose/attention/dayboundary_test.go 2
 internal/compose/attentionboardsources_test.go 1
-internal/compose/attentiondegradelane_integration_test.go 5
+internal/compose/attentiondegradelane_integration_test.go 4
 internal/compose/attentionfeed_integration_test.go 8
 internal/compose/attentionleads_integration_test.go 5
 internal/compose/auditimagenull_integration_test.go 1

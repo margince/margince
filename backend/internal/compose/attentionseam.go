@@ -200,7 +200,6 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attenti
 			ownDomainReader{store: capture.NewOwnDomainStore(db)}),
 		deals:    deals.NewStore(db, DealsInstallation()),
 		contacts: newContactsStore(db),
-		now:      now,
 	}
 	// The lane's sweeps and the scroll tail read one candidate set.
 	atRisk := attentionAtRisk{
