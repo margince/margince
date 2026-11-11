@@ -18,6 +18,7 @@ here: put it in the area's word list instead. A name that no plain page uses mus
 | Beschäftigteninformation | The German notice each employee gets before their mailbox is read (Art. 13 GDPR). |
 | breakdown | A count of one population split by one field, which an extension can add. |
 | BUSL | The Business Source License 1.1, the license Margince uses. |
+| challenge | A check a WAF puts to the browser in the app's place, which only a page load can pass. |
 | changelog | A file listing the changes of each release, which this repository does not keep. |
 | CI | Continuous integration: the checks GitHub runs on every pull request. |
 | CIMD | Client ID Metadata Document: an AI tool's ID that is the URL of a file describing it. |
@@ -104,6 +105,7 @@ here: put it in the area's word list instead. A name that no plain page uses mus
 | Visual | Part of the name Visual Studio, Microsoft's code editor, which can connect to Margince. |
 | Vite | The build and dev server tool for the web app. |
 | vLLM | A server that runs language models on your own machines. |
+| WAF | A web application firewall: a filter at the edge that can answer a request in the app's place. |
 | Webflow | A website builder whose forms can send each entry to a webhook address. |
 | webhook | A message one tool sends to another tool's address when a chosen event happens. |
 | WebP | A modern image file format, saved as .webp. |

@@ -372,6 +372,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `meetingoverspelling_test.go` | H2 | When a meeting ENDS is spelled once, in occurredday.EndSQL. |
 | `meetingresponsibility_test.go` | H3 | Every reader of "whose meeting is this" asks storekit.MeetingResponsibilitySQL or UnclaimedMeetingSQL, or the meeting credit rule built on it. |
 | `memberretirementreferences_test.go` | H3 | PostgreSQL deparses `IN` as `ANY` arrays and adds casts and parentheses. |
+| `mergequeuereach_test.go` | H3 | Every workflow that reports a check on a pull request also runs on the merge queue, unless it is waived as one no ruleset requires. |
 | `messagevoice_test.go` | H1 | Who wrote a message has one answer: Activity.voice. |
 | `messagingruleapplied_test.go` | H2 | Every obligation a messaging pack declares is one the engine applies, or one this file records as not yet applied and says why. |
 | `metricsuffix_test.go` | H2 | A `\_total` suffix means counter, in both directions. |
@@ -706,11 +707,13 @@ The eight shapes, what each is for, and how each one silently passes:
 | `audiencebinding_test.go` | H2 | _(no doc comment)_ |
 | `bookingdisplay_test.go` | H2 | A projection may append display values, but cannot pass addresses to another call or retain them in another assignment for a later send. |
 | `deallinewritersplanted_test.go` | H2 | A census must reject new writers and misleading guard paths, even when they sit outside the files that introduced the line-value engine. |
+| `declinedwritehelpers_test.go` | H2 | _(no doc comment)_ |
 | `extensionsqlscopecases_test.go` | H2 | The SQL-scope gate's own test, driven with synthetic unit sources rather than the tree, because the real units are supposed to pass. |
 | `historyfieldlabelsfalsify_test.go` | H3 | The label census, falsified. |
 | `jobfleetwideshapes_test.go` | H2 | The FleetWide gate's own falsification: every dispatch shape the tree uses is proven accepted, and the shapes it exists to reject (a dispatcher doing a tenant's work, and a fan-out built around the chokepoints) are proven rejected. |
 | `jobkindgate_test.go` | H2 | Registration probes compile the real generated constraint through a source overlay. |
 | `magicfieldcensusfalsify_test.go` | H3 | The receipt field census, falsified: each finding it reports, planted. |
+| `migrationreadguard_test.go` | H2 | A downgrade guard may inspect rows and raise; calls and procedural writes still need review. |
 | `piicolumnreading_test.go` | H3 | Which way the PII census fails when it cannot read a statement. |
 | `piisqlreader_test.go` | H2 | Reading the SQL the PII census judges: where one statement ends and the next begins, which table a write lands on, which columns its SET clause names, and which of those the reader could not read at all. |
 | `rbacbaselineerafixture_test.go` | H3 | The pre-state the RBAC composition gate replays over must not be hand-editable. |
@@ -725,6 +728,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `triggerwrittencolumncases_test.go` | H2 | The trigger-written-column reader driven with synthetic statements, for the reason retainedcolumncases\_test.go gives for its own: the tree is supposed to pass, so a reader proven only by "nothing in the tree trips it" is one that keeps passing after it stops working. |
 | `txseamreach_test.go` | H2 | Following a call one hop further than the name it is spelled with. |
 | `updateguardcases_test.go` | H2 | What the concurrency-guard census judges a function on, driven with synthetic source rather than the tree, for the reason retainedcolumncases\_test.go gives for its own cases. |
+| `writeauthorityactions_test.go` | H2 | _(no doc comment)_ |
 | `writeauthorityplanted_test.go` | H2 | The defect the reach census exists for, planted and run. |
 | `writeauthoritypreview_test.go` | H2 | Preview admissions ask for the eventual write grant while leaving every row unchanged. |
 | `writelivenesscases_test.go` | H2 | What the liveness census judges, and what it credits, driven with synthetic source rather than the tree, for the reason updateguardcases\_test.go gives for its own. |

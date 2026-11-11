@@ -31,9 +31,9 @@
   "catalog": {
     "tools": 48,
     "system_frame_tokens": 592,
-    "tokens": 39873,
+    "tokens": 39992,
     "median_tool_tokens": 620,
-    "mean_tool_tokens": 830
+    "mean_tool_tokens": 832
   },
   "agents": [
     {
@@ -93,7 +93,7 @@
     },
     {
       "name": "read_details",
-      "tokens": 2186
+      "tokens": 2200
     },
     {
       "name": "find_records",
@@ -201,7 +201,11 @@
     },
     {
       "name": "change_relationships",
-      "tokens": 472
+      "tokens": 503
+    },
+    {
+      "name": "list_approvals",
+      "tokens": 474
     },
     {
       "name": "decide_approvals",
@@ -218,10 +222,6 @@
     {
       "name": "read_context",
       "tokens": 413
-    },
-    {
-      "name": "list_approvals",
-      "tokens": 401
     },
     {
       "name": "enrich",

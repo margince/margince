@@ -1499,6 +1499,23 @@ if [[ "$(status_of GET "/mail-drafts?anchor_type=contact&anchor_id=$greta")" = "
   [[ "$code" = "200" ]] || { echo "saving the user's own draft to Greta Lindqvist answered HTTP $code" >&2; exit 1; }
 fi
 
+# --- CASE 117: the contacts its setup step needs ------------------------------
+#
+# Only the records. The card reviews and the post-meeting recap are staged by
+# the case's own `setup:` step (e2e/llm/casesetup.py), because a pending review or a
+# recap draft would show in every other case's queue and brief. Nobody else reads
+# these four names.
+husum="$(company_id_by_name "Husumer Windservice GmbH")"
+if [[ -z "$husum" ]]; then
+  body="$(printf '{"display_name":"Husumer Windservice GmbH","owner_id":"%s","industry":"Windenergie"}' "$me")"
+  husum="$(create_or_die "/companies" "$body" "Husumer Windservice GmbH")"
+fi
+feddersen="$(seed_contact "Jannik Feddersen" "jannik.feddersen@husumer-windservice.test" "$me")"
+link_employment "$feddersen" "$husum" "Jannik Feddersen at Husumer Windservice"
+seed_contact "Wiebke Brandstätter" "wiebke.brandstaetter@ostfriesen-kaelte.test" "$me" >/dev/null
+seed_contact "Okko Rademacher" "okko.rademacher@emder-werftbedarf.test" "$me" >/dev/null
+seed_contact "Theda Uphoff" "theda.uphoff@leeraner-moorbau.test" "$me" >/dev/null
+
 # --- THE ROSTER IS VERIFIED, not assumed ---------------------------------
 #
 # The seats above are the fixture's most silent failure mode. A seat that stays

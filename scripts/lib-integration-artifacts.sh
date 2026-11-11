@@ -31,7 +31,9 @@ part_names() {
   local work="$1" regex_dir="$2" slot=0 line first
   while IFS= read -r line; do
     slot=$((slot + 1))
-    first="$(part_tests "$regex_dir/$slot" | LC_ALL=C sort | head -n1)" || return 1
+    # awk reads to the end. head would close the pipe after one line, and
+    # under pipefail the sort it cut off fails the part on a long list.
+    first="$(part_tests "$regex_dir/$slot" | LC_ALL=C sort | awk 'NR == 1')" || return 1
     printf '%s|%s|%s\n' "$line" "$first" "$slot"
   done < "$work" \
     | LC_ALL=C sort -t'|' -k1,1 -k2,2 -k3,3 \
@@ -55,10 +57,12 @@ part_names() {
     | LC_ALL=C sort -t'|' -k1,1n
 }
 
-# keep_shard_evidence OUT WORK REGEX_DIR LOG_DIR FAILED — write each part's
-# lists under OUT/parts, copy each failed part's log to OUT/failed-logs under
-# its part name, and gather OUT/rerun.txt: every test a continuation owes.
-# FAILED holds `dir|package|slot.log` for each part that did not exit 0.
+# keep_shard_evidence OUT WORK REGEX_DIR LOG_DIR FAILED [SLOT...] — write each
+# part's lists under OUT/parts, copy each failed part's log to OUT/failed-logs
+# under its part name, and gather OUT/rerun.txt: every test a continuation owes.
+# FAILED holds `dir|package|slot.log` for each part that did not exit 0. With
+# SLOTs, only those parts: a queue shard's WORK holds the whole lane, so the
+# names stay those of the whole lane while the lists cover what it claimed.
 #
 # Every step returns its own failure. A caller guards this with `||` so the
 # lane still prints its verdict, and bash turns errexit off inside a function
@@ -66,11 +70,15 @@ part_names() {
 keep_shard_evidence() {
   local out="$1" work="$2" regex_dir="$3" log_dir="$4" failed="$5"
   local slot name line dir pkg log prefix names
+  local -a only=()
+  shift 5
+  for slot in "$@"; do only[$slot]=1; done
   mkdir -p "$out/parts" || return 1
   : > "$out/rerun.txt" || return 1
   names="$(part_names "$work" "$regex_dir")" || return 1
   while IFS='|' read -r slot name; do
     [[ -n "$slot" ]] || continue
+    (( $# == 0 )) || [[ -n "${only[$slot]:-}" ]] || continue
     line="$(sed -n "${slot}p" "$work")" || return 1
     dir="${line%%|*}" pkg="${line#*|}" prefix="$out/parts/$name"
     part_tests "$regex_dir/$slot" | awk -v p="$dir|$pkg|" '{ print p $0 }' | LC_ALL=C sort > "$prefix.assigned.txt" || return 1

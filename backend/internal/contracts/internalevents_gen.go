@@ -159,6 +159,9 @@ type InternalEventExistingCustomerNoticeCreated struct {
 // InternalEventExistingCustomerNoticeWithdrawn An administrator withdrew a collection-notice declaration.
 type InternalEventExistingCustomerNoticeWithdrawn struct{}
 
+// InternalEventInstructionWordingCorrected The original approver attested that a wording correction preserves meaning.
+type InternalEventInstructionWordingCorrected struct{}
+
 // InternalEventInternalMailHistoryCreated A mailbox owner explicitly authorized an internal history import within the administrator's current source policy.
 type InternalEventInternalMailHistoryCreated struct {
 	BackfillId     openapi_types.UUID `json:"backfill_id"`
@@ -229,11 +232,31 @@ type InternalEventMeetingProposalUpdated struct {
 	Status string `json:"status"`
 }
 
+// InternalEventRecordAssignmentArchived A record responsibility ended and remains in history.
+type InternalEventRecordAssignmentArchived struct{}
+
+// InternalEventRecordAssignmentCreated A record responsibility was assigned.
+type InternalEventRecordAssignmentCreated struct{}
+
+// InternalEventRecordAssignmentUpdated A record responsibility changed.
+type InternalEventRecordAssignmentUpdated struct{}
+
 // InternalEventReportingChanged Reporting configuration or publication changed; consumers re-read authorized state.
 type InternalEventReportingChanged struct {
 	Action string `json:"action"`
 	Object string `json:"object"`
 }
+
+// InternalEventScheduledWordingCorrected A held message retained its approval after an attested spelling or punctuation correction.
+type InternalEventScheduledWordingCorrected struct {
+	Version int64 `json:"version"`
+}
+
+// InternalEventSdrHandoffCreated A prospect handoff was recorded.
+type InternalEventSdrHandoffCreated struct{}
+
+// InternalEventSdrHandoffUpdated A prospect handoff changed without changing its original authorship.
+type InternalEventSdrHandoffUpdated struct{}
 
 // InternalEventTagSuggestionAccepted A user accepted a tag suggestion. The tagging itself is audited on the tag; this records the decision.
 type InternalEventTagSuggestionAccepted struct{}
@@ -302,6 +325,14 @@ func (InternalEventExistingCustomerNoticeWithdrawn) EntityType() string {
 	return "existing_customer_notice"
 }
 
+func (InternalEventInstructionWordingCorrected) EventType() string {
+	return "communication_instruction.updated"
+}
+
+func (InternalEventInstructionWordingCorrected) EntityType() string {
+	return "communication_instruction"
+}
+
 func (InternalEventInternalMailHistoryCreated) EventType() string {
 	return "internal_mail_history.created"
 }
@@ -352,9 +383,33 @@ func (InternalEventMeetingProposalUpdated) EventType() string { return "meeting_
 
 func (InternalEventMeetingProposalUpdated) EntityType() string { return "activity" }
 
+func (InternalEventRecordAssignmentArchived) EventType() string { return "record_assignment.archived" }
+
+func (InternalEventRecordAssignmentArchived) EntityType() string { return "record_assignment" }
+
+func (InternalEventRecordAssignmentCreated) EventType() string { return "record_assignment.created" }
+
+func (InternalEventRecordAssignmentCreated) EntityType() string { return "record_assignment" }
+
+func (InternalEventRecordAssignmentUpdated) EventType() string { return "record_assignment.updated" }
+
+func (InternalEventRecordAssignmentUpdated) EntityType() string { return "record_assignment" }
+
 func (InternalEventReportingChanged) EventType() string { return "reporting.changed" }
 
 func (InternalEventReportingChanged) EntityType() string { return "dynamic" }
+
+func (InternalEventScheduledWordingCorrected) EventType() string { return "scheduled_send.updated" }
+
+func (InternalEventScheduledWordingCorrected) EntityType() string { return "scheduled_send" }
+
+func (InternalEventSdrHandoffCreated) EventType() string { return "sdr_handoff.created" }
+
+func (InternalEventSdrHandoffCreated) EntityType() string { return "sdr_handoff" }
+
+func (InternalEventSdrHandoffUpdated) EventType() string { return "sdr_handoff.updated" }
+
+func (InternalEventSdrHandoffUpdated) EntityType() string { return "sdr_handoff" }
 
 func (InternalEventTagSuggestionAccepted) EventType() string { return "tag_suggestion.accepted" }
 

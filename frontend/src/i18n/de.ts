@@ -2878,6 +2878,21 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "shell.shortcuts.paragraphSave": "Mehrzeiliges Feld speichern",
   "shell.shortcuts.deckHint":
     "Auf Home merken die Pfeiltasten eine Entscheidung vor. Enter sendet, was vorgemerkt ist.",
+  "shell.shortcuts.create": "Datensatz erstellen",
+  "shell.shortcuts.list": "Tastenkürzel anzeigen",
+  "shell.shortcuts.goto": "Wechseln zu",
+  "shell.shortcuts.gotoHint": "Drücke G, dann den Buchstaben.",
+  "shell.shortcuts.record": "In einem Datensatz",
+  "shell.shortcuts.logActivity": "Aktivität erfassen",
+  "shell.shortcuts.addTask": "Aufgabe hinzufügen",
+  "shell.shortcuts.writeEmail": "Nachricht schreiben",
+  "shell.shortcuts.sendEmail": "E-Mail senden",
+  "shell.shortcuts.submitDialog": "Dialog absenden",
+  "shell.shortcuts.then": "dann",
+  "shell.shortcuts.or": "oder",
+  "shell.shortcuts.singleKeyOff": "Einzeltasten-Kürzel sind deaktiviert",
+  "shell.shortcuts.singleKeyOffHint":
+    "Aktiviere sie unter Einstellungen → Nutzerkonto.",
   "shell.more": "Mehr",
   "shell.unknownPage": "Nicht gefunden",
   "shell.closeMenu": "Schließen",
@@ -7872,6 +7887,24 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.sendMessageConfirmTitle": "Nachricht senden",
   "compose.sendMessageBody":
     "Die Nachricht wird sofort gesendet. Das lässt sich nicht rückgängig machen.",
+  "directSend.existingApproval":
+    "Deine Freigabe für diese Nachricht gilt weiterhin. Der ursprüngliche Grund bleibt dokumentiert.",
+  "directSend.correctWording":
+    "Rechtschreibung oder Zeichensetzung korrigieren",
+  "directSend.correctionTitle": "Text korrigieren und Freigabe behalten",
+  "directSend.correctionSave": "Korrektur speichern",
+  "directSend.correctionScope":
+    "Korrigiere nur Rechtschreibung oder Zeichensetzung. Empfangende, Absendeadresse, Zweck und Anhänge bleiben gleich. Inhaltliche Änderungen brauchen eine neue Freigabe.",
+  "directSend.correctionAcknowledge":
+    "Ich bestätige, dass nur Rechtschreibung oder Zeichensetzung geändert wurden. Bedeutung und Fakten sind unverändert.",
+  "directSend.correctionNeedsEdit":
+    "Korrigiere zuerst Rechtschreibung oder Zeichensetzung.",
+  "directSend.correctionNeedsConfirmation":
+    "Bestätige, dass Bedeutung und Fakten unverändert sind.",
+  "directSend.correctionNeedsText":
+    "Betreff und Nachrichtentext dürfen nicht leer sein.",
+  "directSend.correctionFailed":
+    "Die Korrektur wurde nicht gespeichert. Öffne die Prüfung erneut, um die aktuelle Nachricht und Freigabe zu prüfen.",
   "directSend.open": "Mit erfasster Ausnahme senden",
   "directSend.queued": "Zum Senden als festgehaltene Ausnahme vorgemerkt.",
   "directSend.opening": "Wird geöffnet…",
@@ -8513,6 +8546,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.sdrReading.leads_awaiting_response":
     "Leads, die noch auf eine erste Antwort warten",
   "analytics.sdrQualifiedOf": "{qualified} von {arrived}",
+  "analytics.handoffReassign": "Übergabe neu zuweisen",
+  "analytics.handoffReassignHint":
+    "Wähle ein aktives Teammitglied, das diesen Interessenten bearbeiten darf. Angenommene Übergaben behalten ihre ursprüngliche Zuordnung.",
+  "analytics.handoffReassignUnavailable":
+    "Wähle ein Teammitglied, sobald die aktuelle Zuweisung geladen ist. Die Übergabe muss noch auf eine Antwort warten und du brauchst Schreibzugriff.",
   "analytics.sdrWaiting": "Übergaben, die auf andere warten",
   "analytics.sdrWaitingIntro":
     "Übergaben, die du eingereicht hast und über die noch niemand entschieden hat. Eine zurückgegebene und neu eingereichte Übergabe wartet ab der neuen Einreichung.",
@@ -10043,8 +10081,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Ein verlorener Deal braucht den Grund, warum er verloren ging.",
   "import.reason.deal_pipeline_fixed":
     "Dieser Deal liegt in einer anderen Pipeline als in der Datei angegeben. Ein Import verschiebt keinen Deal zwischen Pipelines, daher wird die Zeile übersprungen.",
+  "companies.contractMergeBlocked":
+    "Ein Deal hat Verträge, die zu einem anderen Unternehmen gehören. Archivierte Verträge zählen ebenfalls. Bitte wende dich vor dem Zusammenführen an einen Admin, um die Vertragsverknüpfungen zu korrigieren.",
+  "deals.contractCompanyBlocked":
+    "Dieser Deal hat Verträge, die zu einem anderen Unternehmen gehören. Auch archivierte Verträge zählen. Bitte wende dich vor dem Unternehmenswechsel an einen Admin, um die Vertragsverknüpfungen zu korrigieren.",
   "import.reason.deal_company_has_contracts":
-    "Für diesen Deal sind Verträge hinterlegt, die ein anderes Unternehmen als das in dieser Zeile nennen, daher wird die Zeile übersprungen. Löse die Verträge vom Deal oder ordne jeden einem Deal seines eigenen Unternehmens zu und importiere erneut.",
+    "Für diesen Deal sind Verträge hinterlegt, die ein anderes Unternehmen als das in dieser Zeile nennen, daher wird die Zeile übersprungen. Auch archivierte Verträge zählen. Bitte wende dich an einen Admin, um die Vertragsverknüpfungen zu korrigieren. Importiere danach erneut.",
   "import.reason.deal_already_closed":
     "Dieser Deal ist bereits abgeschlossen, daher wird die Zeile übersprungen. Ein Import öffnet keinen abgeschlossenen Deal wieder.",
   "import.reason.fx_rate_missing":
@@ -11653,6 +11695,29 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "senders.waiting.moreAddresses_other": "+{count} weitere",
   "senders.waiting.openNamed": "{name} öffnen",
   "senders.waiting.openUnnamed": "Kontakt öffnen",
+  "senders.waiting.onMargince": "Wartet auf Margince:",
+  "senders.waiting.onYou": "Wartet auf dich:",
+  "senders.waiting.why.decided":
+    "Die Entscheidung wird bei der nächsten Absenderprüfung übernommen.",
+  "senders.waiting.why.classifying":
+    "Die Absenderprüfung hat diese Absendeadresse noch nicht bewertet.",
+  "senders.waiting.why.unsure":
+    "Die Absenderprüfung konnte es nicht erkennen, daher entscheidet deine Antwort.",
+  "senders.waiting.why.queued":
+    "Die Absenderprüfung sieht sich die E-Mails noch an.",
+  "senders.waiting.why.unjudgeable":
+    "Margince kann diese Absendeadresse nicht selbst prüfen, daher entscheidest nur du.",
+  "senders.waiting.businessFor": "{address} als geschäftlich markieren",
+  "senders.waiting.keepOutFor": "{address} ausschließen",
+  "senders.waiting.businessTitle":
+    "Diese Absendeadresse als geschäftlich markieren?",
+  "senders.waiting.businessBody":
+    "Die E-Mails bleiben als geschäftliche E-Mails erhalten, und der Kontakt wird für dein Unternehmen freigegeben. Jede E-Mail und jeder Termin behält die eigene Freigabe.",
+  "senders.waiting.remove": "Aus Kontakten entfernen",
+  "senders.waiting.removeTitle": "Diesen Kontakt entfernen?",
+  "senders.waiting.removeBody":
+    "Der Kontakt wird archiviert und verschwindet aus dieser Liste. Die E-Mails bleiben, und keine Entscheidung zu den Absendeadressen ändert sich. Du kannst den Kontakt aus den archivierten Kontakten wiederherstellen.",
+  "senders.waiting.removeConfirm": "Kontakt entfernen",
   "connectionOutcomes.title": "Was deine Verbindungen ergeben haben",
   "connectionOutcomes.view": "Ansehen",
   "connectionOutcomes.viewNamed": "{name} ansehen",
@@ -13996,6 +14061,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Alles funktioniert weiter, und nichts ist begrenzt. Konfiguriere ein Lizenz-Token für diese Installation, damit die Plätze mit dem Lizenzumfang abgeglichen werden.",
   "license.refused.title": "Die Lizenz dieser Installation wurde abgelehnt",
   "license.refused.body":
+    "Das für diese Installation konfigurierte Lizenz-Token wurde vorgelegt und abgelehnt. Belegte volle Plätze funktionieren weiter, und bis das Token ersetzt wird, kommt kein voller Platz über das hinzu, was die letzte gültige Lizenz gewährt hat. Prüfe das Token und die Uhr der Installation.",
+  "license.refused.bodyUncapped":
     "Das für diese Installation konfigurierte Lizenz-Token wurde vorgelegt und abgelehnt. Alles funktioniert ohne Begrenzung weiter, bis das Token ersetzt wird. Prüfe das Token und die Uhr der Installation.",
   "license.seats.capacityOnly":
     "Deine Rolle darf den Lizenzumfang nicht sehen.",
@@ -14709,6 +14776,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "users.handover.tasks_other": "{count} offene Aufgaben",
   "users.handover.webhooks_one": "{count} Webhook",
   "users.handover.webhooks_other": "{count} Webhooks",
+  "users.handover.handoffs_one": "{count} offene Übergabe",
+  "users.handover.handoffs_other": "{count} offene Übergaben",
+  "users.handover.responsibilities_one": "{count} Datensatzverantwortung",
+  "users.handover.responsibilities_other": "{count} Datensatzverantwortungen",
   "users.handover.lists_one": "{count} Liste",
   "users.handover.lists_other": "{count} Listen",
   "users.removeMfa": "Zweistufige Anmeldung entfernen",
@@ -15791,6 +15862,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Die Sprache von Menüs, Seiten und Nachrichten aus Margince. In deinem Konto gespeichert, sie gilt also auf jedem Gerät, auf dem du dich anmeldest.",
   "account.appearanceHelp":
     "Hell, dunkel oder wie dieser Computer eingestellt ist. Gilt nur in diesem Browser. Das Kontomenü ändert dieselbe Einstellung.",
+  "account.singleKeyShortcuts": "Einzeltasten-Kürzel",
+  "account.singleKeyShortcutsHelp":
+    "Buchstaben- und Symboltasten wirken allein als Kürzel. Gilt nur in diesem Browser.",
   "reviewTemplates.questionCount_one": "{count} Frage",
   "reviewTemplates.questionCount_other": "{count} Fragen",
   "reviewTemplates.summary": "{questions}, {required} Pflicht",
@@ -17600,6 +17674,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.intro.whenYesterday": "letzter Kontakt gestern",
   "contact.intro.whenDays": "letzter Kontakt vor {days} Tagen",
   "contact.intro.whenNever": "kein Kontakt in letzter Zeit",
+  "contact.intro.replaceAction": "Anderes Teammitglied auswählen",
+  "contact.intro.replaceHint":
+    "Prüfe einen neuen Weg und eine neue Anfrage. Die bisherige Anfrage bleibt offen, bis die neue gespeichert ist. Das neue Teammitglied entscheidet selbst; eine frühere Zustimmung wird nicht übernommen.",
+  "contact.intro.replaceReasonHint":
+    "Das Teammitglied aus der bisherigen Anfrage kann diese Begründung lesen.",
+  "contact.intro.replaceReason": "Warum ersetzt du diese Anfrage?",
   "contact.intro.askTitle": "Vorstellung bei {name} anfragen",
   "contact.intro.recordAction": "Eine Vorstellung erfassen",
   "contact.intro.recordTitle": "Vorstellung bei {name} erfassen",
@@ -17628,8 +17708,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.intro.recordedIntroduced": "hat vorgestellt",
   "contact.intro.cancel": "Abbrechen",
   "contact.intro.askAction": "Vorstellung anfragen",
-  "contact.intro.askFailed":
-    "Die Anfrage konnte nicht gespeichert werden. Bitte versuche es erneut.",
   "contact.intro.reasonLabel": "Grund der Anfrage",
   "contact.intro.reasonHint":
     "Das liest dein Teammitglied, nicht der Kontakt. Beschreibe, warum sich die Vorstellung lohnt.",

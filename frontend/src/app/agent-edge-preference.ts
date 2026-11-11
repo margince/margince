@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useSyncExternalStore } from "react";
-import { readStored, STORAGE_KEYS, writeStored } from "../lib/storage";
+import { deviceSwitch, useDeviceSwitch } from "../lib/devicepreference";
+import { STORAGE_KEYS } from "../lib/storage";
 
 /**
  * Whether this reader wants the margins lit at all.
@@ -25,61 +25,14 @@ import { readStored, STORAGE_KEYS, writeStored } from "../lib/storage";
  * place in the workspace, and it has to hold before any read of `/me` answers.
  */
 
-/** The two words storage carries. Anything else is an install that never chose. */
-const OFF = "off";
-const ON = "on";
-
-const listeners = new Set<() => void>();
-
-/**
- * What this page is showing, resolved on first read.
- *
- * Held rather than re-read per render for the reason the theme holds its own:
- * the answer is asked for on every render of the margins, and a store that went
- * to storage each time would also have nowhere to keep a flip a browser refused
- * to persist — the reader would press the switch and watch nothing happen.
- */
-let shown: boolean | null = null;
-
-function ensureLoaded(): boolean {
-  if (shown === null) {
-    shown = readStored(STORAGE_KEYS.edgeLight) !== OFF;
-  }
-  return shown;
-}
+const edgeLight = deviceSwitch(STORAGE_KEYS.edgeLight);
 
 /** The current answer, for a consumer that is not a component. */
-export function edgeLightShown(): boolean {
-  return ensureLoaded();
-}
+export const edgeLightShown = edgeLight.read;
 
-/**
- * Say whether the margins may light, and tell everything already drawn.
- *
- * The write is best-effort and the flip is not: a browser refusing storage
- * costs the reader their choice on the NEXT page, not on this one.
- */
-export function setEdgeLightShown(next: boolean): void {
-  shown = next;
-  writeStored(STORAGE_KEYS.edgeLight, next ? ON : OFF);
-  for (const listener of listeners) {
-    listener();
-  }
-}
+/** Say whether the margins may light, and tell everything already drawn. */
+export const setEdgeLightShown = edgeLight.write;
 
-function subscribe(listener: () => void): () => void {
-  listeners.add(listener);
-  return () => {
-    listeners.delete(listener);
-  };
-}
-
-/**
- * The preference, as a component sees it.
- *
- * A boolean snapshot, so `useSyncExternalStore` compares it by value and no
- * identity has to be kept stable between reads.
- */
 export function useEdgeLightShown(): boolean {
-  return useSyncExternalStore(subscribe, edgeLightShown, edgeLightShown);
+  return useDeviceSwitch(edgeLight);
 }

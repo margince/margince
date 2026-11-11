@@ -552,3 +552,9 @@ run_integration_packages() {
       | xargs -P "$jobs" -I{} bash -c 'line="$1"; idx="${line%%|*}"; rest="${line#*|}"; run_one "$rest" "$idx" "$2"' _ {} "$outdir" || return
   done
 }
+
+# The migrator holds the composed set; test packages receive that exact source manifest.
+prepare_test_extension_manifest() {
+  export MARGINCE_TEST_EXTENSION_MANIFEST="$1/extension-migrations.json"
+  (cd backend && go run ./cmd/migrate extension-manifest) > "$MARGINCE_TEST_EXTENSION_MANIFEST"
+}

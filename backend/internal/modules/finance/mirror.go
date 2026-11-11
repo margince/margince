@@ -66,7 +66,7 @@ func (s *Store) mirrorLedger(
 			creditedAgainst: credited[invoice.ExternalID], baseCurrency: base,
 		})
 		if err != nil {
-			return err
+			return fmt.Errorf("source invoice %s: %w", invoice.ExternalID, err)
 		}
 		rowIDs[invoice.ExternalID] = id
 		countOutcome(outcome, &out.InvoicesInsert, &out.InvoicesUpdate, &out.Unchanged)
@@ -286,10 +286,9 @@ func deriveValues(
 		// Overpaid. Nothing owed rather than a negative balance, which would
 		// read as us owing them.
 		0)
-	if inv.CreditsExternalID != "" {
-		// A credit note is money going the other way. Left with its gross as
-		// an open balance it would inflate receivables by the amount it was
-		// supposed to reduce them by.
+	if inv.CreditsExternalID != "" || inv.FullyPaidAt != nil {
+		// A credit note is money going the other way, and an invoice the
+		// source settled owes nothing, even by a discount the ledger omits.
 		open = 0
 	}
 	out := invoiceValues{openMinor: open, credited: creditedAgainst}
@@ -454,6 +453,8 @@ func deriveStatus(inv SourceInvoice, open int64, now time.Time) string {
 		return statusVoid
 	case inv.CreditsExternalID != "":
 		return statusCredited
+	case inv.FullyPaidAt != nil: // settled outranks a dispute it settled
+		return statusPaid
 	case inv.Disputed:
 		return statusDisputed
 	default:

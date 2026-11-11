@@ -126,3 +126,37 @@ func TestAFailedSendCheckBacksOffWithoutPosting(t *testing.T) {
 		t.Fatalf("failed check did not back off: status=%s attempts=%d reason=%q next=%v", status, attempts, reason, next)
 	}
 }
+
+func TestAnAbandonedPendingDeliveryCanBeClaimedOnlyAfterItsLeaseWindow(t *testing.T) {
+	e := setupContractVis(t)
+	ctx := e.asHolding(map[string]principal.ObjectGrant{rbacObject: {Read: true, Update: true}})
+	receiver, posts := countingReceiver(t)
+	target := sendableTarget(ctx, t, e, "pending", receiver)
+	now := time.Unix(1700000000, 0).UTC()
+	if _, err := e.owner.Exec(ctx, `UPDATE webhook_delivery SET created_at=@now, attempts=0 WHERE id=@id`,
+		pgx.StrictNamedArgs{"now": now, "id": target.deliveryID}); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, found, err := e.store.claimDueRetry(ctx, now); err != nil || found {
+		t.Fatalf("fresh pending claimed: %v %v", found, err)
+	}
+	id, claim, found, err := e.store.claimDueRetry(ctx, now.Add(claimLease+time.Second))
+	if err != nil || !found || id != target.deliveryID {
+		t.Fatalf("abandoned pending not recovered: %v %v %v", id, found, err)
+	}
+	if _, _, found, err := e.store.claimDueRetry(ctx, now.Add(claimLease+time.Second)); err != nil || found {
+		t.Fatalf("leased pending claimed twice: %v %v", found, err)
+	}
+	target.claim = &claim
+	target.priorAttempts = 0
+	d := NewDeliverer(e.store, loopbackClient(transportTLS(t, receiver)), func() time.Time { return now }, nil,
+		slog.New(slog.NewTextHandler(io.Discard, nil)))
+	d.deliverOnce(ctx, target)
+	delivery, err := e.store.getDelivery(ctx, id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if posts.Load() != 1 || delivery.Status != "delivered" || delivery.Attempts != 1 {
+		t.Fatalf("recovery failed: posts=%d delivery=%+v", posts.Load(), delivery)
+	}
+}

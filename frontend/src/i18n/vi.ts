@@ -2791,6 +2791,20 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "shell.shortcuts.paragraphSave": "Lưu trường nhiều dòng",
   "shell.shortcuts.deckHint":
     "Trên Trang chủ, phím mũi tên chọn một quyết định. Enter gửi các quyết định đã chọn.",
+  "shell.shortcuts.create": "Tạo hồ sơ",
+  "shell.shortcuts.list": "Hiển thị phím tắt",
+  "shell.shortcuts.goto": "Đi tới",
+  "shell.shortcuts.gotoHint": "Nhấn G, rồi nhấn chữ cái.",
+  "shell.shortcuts.record": "Trong hồ sơ",
+  "shell.shortcuts.logActivity": "Ghi nhận hoạt động",
+  "shell.shortcuts.addTask": "Thêm việc cần làm",
+  "shell.shortcuts.writeEmail": "Viết tin nhắn",
+  "shell.shortcuts.sendEmail": "Gửi email",
+  "shell.shortcuts.submitDialog": "Gửi biểu mẫu hộp thoại",
+  "shell.shortcuts.then": "rồi",
+  "shell.shortcuts.or": "hoặc",
+  "shell.shortcuts.singleKeyOff": "Đã tắt phím tắt một phím",
+  "shell.shortcuts.singleKeyOffHint": "Bật lại trong Cài đặt, mục Tài khoản.",
   "shell.more": "Thêm",
   "shell.unknownPage": "Không tìm thấy",
   "shell.closeMenu": "Đóng",
@@ -7682,6 +7696,21 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Email được gửi vào thời điểm đã chọn, và các bước kiểm tra sự đồng ý và hộp thư sẽ chạy lại lúc đó. Trước đó, có thể dời hoặc hủy email trong Tin nhắn đã lên lịch.",
   "compose.sendMessageConfirmTitle": "Gửi tin nhắn",
   "compose.sendMessageBody": "Tin nhắn được gửi ngay. Không thể hoàn tác.",
+  "directSend.existingApproval":
+    "Phê duyệt của bạn cho tin nhắn này vẫn có hiệu lực. Lý do ban đầu vẫn được lưu lại.",
+  "directSend.correctWording": "Sửa chính tả hoặc dấu câu",
+  "directSend.correctionTitle": "Sửa nội dung và giữ nguyên phê duyệt",
+  "directSend.correctionSave": "Lưu bản sửa",
+  "directSend.correctionScope":
+    "Chỉ sửa chính tả hoặc dấu câu. Người nhận, người gửi, mục đích và tệp đính kèm giữ nguyên. Thay đổi ý nghĩa cần phê duyệt lại tin nhắn.",
+  "directSend.correctionAcknowledge":
+    "Tôi xác nhận chỉ sửa chính tả hoặc dấu câu. Ý nghĩa và các thông tin thực tế không thay đổi.",
+  "directSend.correctionNeedsEdit": "Hãy sửa chính tả hoặc dấu câu trước.",
+  "directSend.correctionNeedsConfirmation":
+    "Xác nhận ý nghĩa và thông tin thực tế không thay đổi.",
+  "directSend.correctionNeedsText": "Giữ lại tiêu đề và nội dung tin nhắn.",
+  "directSend.correctionFailed":
+    "Chưa lưu được bản sửa. Mở lại phần kiểm tra để xem tin nhắn và phê duyệt hiện tại.",
   "directSend.open": "Gửi và ghi nhận ngoại lệ",
   "directSend.queued": "Đã xếp hàng gửi theo ngoại lệ đã ghi nhận.",
   "directSend.opening": "Đang mở…",
@@ -8297,6 +8326,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "analytics.sdrReading.leads_awaiting_response":
     "Lead vẫn đang chờ phản hồi đầu tiên",
   "analytics.sdrQualifiedOf": "{qualified} trên {arrived}",
+  "analytics.handoffReassign": "Chuyển giao cho đồng nghiệp khác",
+  "analytics.handoffReassignHint":
+    "Chọn đồng nghiệp đang hoạt động có quyền chỉnh sửa bản ghi này. Đồng nghiệp đã nhận bàn giao vẫn được ghi nhận như cũ.",
+  "analytics.handoffReassignUnavailable":
+    "Chọn đồng nghiệp sau khi tải xong phân công hiện tại. Bạn cần quyền chỉnh sửa và bàn giao vẫn đang chờ trả lời.",
   "analytics.sdrWaiting": "Bàn giao đang chờ bên khác xử lý",
   "analytics.sdrWaitingIntro":
     "Các bàn giao bạn đã gửi mà chưa ai quyết định. Bàn giao bị trả lại rồi gửi lại được tính thời gian chờ từ lần gửi mới.",
@@ -9766,8 +9800,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "import.reason.lost_reason_missing": "Deal đã thua cần có lý do thua.",
   "import.reason.deal_pipeline_fixed":
     "Deal này nằm trong quy trình khác với quy trình trong tệp. Nhập không chuyển deal giữa các quy trình nên hàng bị bỏ qua.",
+  "companies.contractMergeBlocked":
+    "Một deal có hợp đồng thuộc công ty khác. Hợp đồng trong kho lưu trữ cũng được tính. Liên hệ quản trị viên để sửa liên kết hợp đồng trước khi hợp nhất.",
+  "deals.contractCompanyBlocked":
+    "Deal này có hợp đồng thuộc công ty khác. Hợp đồng trong kho lưu trữ cũng được tính. Liên hệ quản trị viên để sửa liên kết hợp đồng trước khi đổi công ty.",
   "import.reason.deal_company_has_contracts":
-    "Deal này có hợp đồng thuộc một công ty khác với công ty trong hàng này nên hàng bị bỏ qua. Hãy tách các hợp đồng khỏi deal hoặc chuyển từng hợp đồng sang một deal của chính công ty mà hợp đồng đó thuộc về rồi nhập lại.",
+    "Deal này có hợp đồng thuộc một công ty khác với công ty trong hàng này nên hàng bị bỏ qua. Hợp đồng trong kho lưu trữ cũng được tính. Liên hệ quản trị viên để sửa liên kết hợp đồng rồi nhập lại.",
   "import.reason.deal_already_closed":
     "Deal này đã đóng nên hàng bị bỏ qua. Nhập không mở lại deal đã đóng.",
   "import.reason.fx_rate_missing":
@@ -11351,6 +11389,27 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "senders.waiting.moreAddresses_other": "+{count} địa chỉ khác",
   "senders.waiting.openNamed": "Mở {name}",
   "senders.waiting.openUnnamed": "Mở liên hệ",
+  "senders.waiting.onMargince": "Đang chờ Margince:",
+  "senders.waiting.onYou": "Đang chờ bạn:",
+  "senders.waiting.why.decided":
+    "quyết định sẽ được áp dụng ở lần kiểm tra người gửi tiếp theo.",
+  "senders.waiting.why.classifying":
+    "bước kiểm tra người gửi chưa đánh giá người gửi này.",
+  "senders.waiting.why.unsure":
+    "bước kiểm tra người gửi không xác định được, nên câu trả lời của bạn quyết định.",
+  "senders.waiting.why.queued": "bước kiểm tra người gửi sẽ xem thư của họ.",
+  "senders.waiting.why.unjudgeable":
+    "Margince không thể tự kiểm tra người gửi này, nên chỉ bạn có thể quyết định.",
+  "senders.waiting.businessFor": "Đánh dấu {address} là công việc",
+  "senders.waiting.keepOutFor": "Loại trừ {address}",
+  "senders.waiting.businessTitle": "Đánh dấu người gửi này là công việc?",
+  "senders.waiting.businessBody":
+    "Thư của họ được giữ như thư công việc, và liên hệ này được chia sẻ với công ty của bạn. Mỗi thư và cuộc họp vẫn giữ cách chia sẻ riêng.",
+  "senders.waiting.remove": "Xóa khỏi danh bạ",
+  "senders.waiting.removeTitle": "Xóa liên hệ này?",
+  "senders.waiting.removeBody":
+    "Liên hệ được lưu trữ và rời khỏi danh sách này. Thư vẫn được giữ, và không quyết định nào về người gửi thay đổi. Bạn có thể khôi phục từ các liên hệ đã lưu trữ.",
+  "senders.waiting.removeConfirm": "Xóa liên hệ",
   "connectionOutcomes.title": "Kết quả từ các kết nối của bạn",
   "connectionOutcomes.view": "Xem",
   "connectionOutcomes.viewNamed": "Xem {name}",
@@ -13625,6 +13684,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Mọi thứ vẫn hoạt động và không bị giới hạn. Cấu hình token giấy phép cho bản cài đặt này để tính số tài khoản theo mức được cấp.",
   "license.refused.title": "Giấy phép của bản cài đặt này bị từ chối",
   "license.refused.body":
+    "Token giấy phép cấu hình cho bản cài đặt này đã được xuất trình và bị từ chối. Các tài khoản đầy đủ quyền đang dùng vẫn hoạt động, và cho đến khi token được thay, không thêm tài khoản đầy đủ quyền nào vượt quá số tài khoản đầy đủ quyền mà giấy phép hợp lệ gần nhất đã cấp. Kiểm tra token và đồng hồ của bản cài đặt.",
+  "license.refused.bodyUncapped":
     "Token giấy phép cấu hình cho bản cài đặt này đã được xuất trình và bị từ chối. Mọi thứ vẫn hoạt động, không giới hạn, cho đến khi token được thay. Kiểm tra token và đồng hồ của bản cài đặt.",
   "license.seats.capacityOnly":
     "Vai trò hiện tại không có quyền xem số tài khoản được cấp phép.",
@@ -14326,6 +14387,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "users.handover.tasks_other": "{count} việc cần làm đang mở",
   "users.handover.webhooks_one": "{count} đăng ký webhook",
   "users.handover.webhooks_other": "{count} đăng ký webhook",
+  "users.handover.handoffs_one": "{count} lượt bàn giao đang chờ",
+  "users.handover.handoffs_other": "{count} lượt bàn giao đang chờ",
+  "users.handover.responsibilities_one": "{count} trách nhiệm đối với hồ sơ",
+  "users.handover.responsibilities_other": "{count} trách nhiệm đối với hồ sơ",
   "users.handover.lists_one": "{count} danh sách",
   "users.handover.lists_other": "{count} danh sách",
   "users.removeMfa": "Gỡ đăng nhập hai bước",
@@ -15388,6 +15453,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Ngôn ngữ của menu, trang và tin nhắn từ Margince. Được lưu vào tài khoản của bạn, nên áp dụng trên mọi thiết bị bạn đăng nhập.",
   "account.appearanceHelp":
     "Sáng, tối hoặc theo cài đặt của máy tính này. Chỉ áp dụng trên trình duyệt này. Menu tài khoản đổi cùng cài đặt này.",
+  "account.singleKeyShortcuts": "Phím tắt một phím",
+  "account.singleKeyShortcutsHelp":
+    "Các phím chữ và ký hiệu dùng riêng làm phím tắt, không cần phím bổ trợ. Chỉ áp dụng trên trình duyệt này.",
   "reviewTemplates.questionCount_one": "{count} câu hỏi",
   "reviewTemplates.questionCount_other": "{count} câu hỏi",
   "reviewTemplates.summary": "{questions}, {required} bắt buộc",
@@ -17144,6 +17212,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contact.intro.whenYesterday": "liên lạc gần nhất hôm qua",
   "contact.intro.whenDays": "liên lạc gần nhất {days} ngày trước",
   "contact.intro.whenNever": "chưa có liên lạc gần đây",
+  "contact.intro.replaceAction": "Chọn đồng nghiệp khác",
+  "contact.intro.replaceHint":
+    "Xem lại một lộ trình và yêu cầu mới. Yêu cầu cũ vẫn mở cho đến khi yêu cầu thay thế được lưu thành công. Đồng nghiệp mới phải tự quyết định; phê duyệt trước đó không được chuyển sang.",
+  "contact.intro.replaceReasonHint":
+    "Đồng nghiệp trong yêu cầu ban đầu có thể đọc lý do này.",
+  "contact.intro.replaceReason": "Vì sao bạn thay thế yêu cầu này?",
   "contact.intro.askTitle": "Nhờ giới thiệu với {name}",
   "contact.intro.recordAction": "Ghi nhận một lần giới thiệu",
   "contact.intro.recordTitle": "Ghi nhận lần giới thiệu với {name}",
@@ -17172,7 +17246,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contact.intro.recordedIntroduced": "đã giới thiệu",
   "contact.intro.cancel": "Hủy",
   "contact.intro.askAction": "Yêu cầu giới thiệu",
-  "contact.intro.askFailed": "Không thể ghi nhận yêu cầu. Thử lại.",
   "contact.intro.reasonLabel": "Lý do yêu cầu",
   "contact.intro.reasonHint":
     "Đồng nghiệp sẽ đọc phần này, người liên hệ thì không. Nêu lý do nên có lời giới thiệu này.",

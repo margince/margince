@@ -100,6 +100,7 @@ const (
 // the probe is actually deciding, because that is always the answer: the probe
 // is not this mutation's own row gate.
 var readAuthorityOnAWritePath = gatekit.Waive(map[string]string{
+	"internal/modules/introductions:prepareAskRouteTx":     "the introduction writer names the contact and intermediary but changes neither. Create and Replace both write intro_request; the contact probes enforce disclosure, not authority to change either contact",
 	"internal/modules/activities:DeclineDeal":              "a decline changes the activity, behind its own write probe in lockForFilingChange. The deal only names what the message is not about and nothing on it changes; the visibility probe hides a deal the caller cannot see",
 	"internal/modules/activities:offeredDeals":             "reads which deals a deal question offered, to decline them on the message. Nothing on a deal changes; the scope only leaves out a deal the caller cannot see",
 	"internal/modules/activities:RecentTaskCompletions":    "Reads completion receipts and visible contact names; it changes no record. WritableTasks separately controls the offered Undo.",
@@ -181,7 +182,6 @@ var readAuthorityOnAWritePath = gatekit.Waive(map[string]string{
 	"internal/modules/weeklyplan:ensureLinkVisible": "the record a commitment is ABOUT. That row is written NOTHING — the mutation is a new weekly_plan_commitment, gated by weekly_plan:update and resolved from the caller so it can only ever be their own week — and the probe decides one thing: whether this rep may NAME that record on their plan. Naming is a read, the same ruling introductions:Create makes above: requiring write authority over a contact before a rep may commit to CALLING them would mean a rep could only promise things about records they own, which is the opposite of what a plan is for. The liveness half is load-bearing and tested: a commitment must not go on naming a contact erasure anonymized in place",
 	"internal/modules/introductions:Record":         "the contact a recorded introduction is ABOUT. The row is not written — the mutation is a new intro_request, gated by introduction:create and by the caller being one of the two colleagues — and the probe decides one thing: whether this rep may NAME that contact. Naming is a read, the same ruling introductions:Create makes. The liveness half is load-bearing and tested: a recorded introduction must not name a contact that is archived",
 	"internal/modules/introductions:load":           "the contact of a RECORDED introduction read by a colleague who is not one of its two parties. Nothing about the contact changes; the writers load feeds (Decide, Complete, Cancel) refuse a recorded row with a conflict and write nothing. Anyone who can read the contact can read the recorded fact, so the read probe is the right one",
-	"internal/modules/introductions:Create":         "the contact an ask is ABOUT, and the intermediary it routes through. Neither row is written — the mutation is a new intro_request, gated by introduction:create — and both probes decide one thing: whether this rep may NAME that contact to a colleague. Naming is a read, so the read probe is the right one; requiring write authority over a contact before you may ask a colleague about them would mean a rep could only request introductions to contacts they own, which is the opposite of what the surface is for. The liveness half is load-bearing and tested: an ask must not name a contact erasure anonymized in place",
 
 	"internal/modules/consent:ensureWithdrawalCredentialForSendTx": "the recipient of a marketing send, probed for the one thing this door is for: may this caller be given a link that STOPS that contact's mail. It names nobody — bindWithdrawalSubject resolves the subject from the ADDRESS the message is going to — and the send is already authorized against that recipient by the consent gate and by the activity it creates, so the probe asserts no new authority over a record the mail is reaching anyway. Requiring write authority here refused the mint for every sender without contact:update, an agent holding activity:create + contact:read among them, and refusing it does not stop the message: it ships with no working List-Unsubscribe URL, which is worse for the subject than the share this admits. The authority is also strictly less than the SIBLING mint on this same path takes: PreferenceTokenForEmail asks contact:read and this same visible probe for a credential that reads a consent state, withdraws AND grants, where this one can only stop mail. The door that lets a caller NAME a subject is EnsureWithdrawalCredentialTx beside it, and that one keeps contact:update and the writable probe — a read share is not authority to mint somebody's opt-out. Unexported, so the weaker probe cannot be reached by naming a subject. The liveness half is load-bearing and tested: LockSubjectLive holds the row so a mint racing an Art. 17 erasure cannot write a fresh capability, carrying the plaintext address, for a subject just certified erased",
 	"internal/modules/capture:findLeadCollision":                   "the captured lead's incumbent probe, and its answer is to SKIP: an incumbent the granting human cannot see is neither merged into nor written around, so the record is refused and the address left for someone with the scope to act. Nothing is written to that lead on this path — the merge a human may later confirm goes through the approvals engine, which takes its own authority. Widening to write authority would turn a colleague's read share into a reason to capture a SECOND lead for the same address, forking the record across scopes, which is the outcome the skip exists to prevent",
@@ -288,10 +288,6 @@ var mutationMarkers = map[string]bool{
 	"ApplyWithVersion": true, "ApplyGuarded": true, "ApplyLocked": true,
 	"LockRow": true, "LockPair": true,
 }
-
-// mutatingActions are the grants whose holder is asking to CHANGE the record.
-// ActionCreate is absent: a create has no row yet for a grant to widen.
-var mutatingActions = map[string]bool{"ActionUpdate": true, "ActionDelete": true}
 
 // probeSite is one record-authority probe: where it is, what it names, and
 // which spelling it used.
@@ -606,7 +602,8 @@ func recordAuthCall(spelling string, call *ast.CallExpr, info *writeAuthorityFn,
 ) {
 	if spelling == "Require" && len(call.Args) == 3 {
 		object, _ := resolveTableArg(call.Args[1], consts)
-		if action, ok := call.Args[2].(*ast.SelectorExpr); ok && mutatingActions[action.Sel.Name] {
+		action, literal := call.Args[2].(*ast.SelectorExpr)
+		if !literal || (action.Sel.Name != "ActionRead" && action.Sel.Name != "ActionCreate") {
 			info.requires[object] = true
 		}
 		return
@@ -695,8 +692,7 @@ func patchTargetTable(spelling string, call *ast.CallExpr, consts map[string]str
 // "add a row that hangs off the record" paths that are deliberately outside it.
 //
 // INSERT is deliberately absent. A create has no row yet for a grant to widen
-// or an owner to hold, which is the same reason mutatingActions omits
-// ActionCreate; a create is gated by its object grant alone.
+// or an owner to hold. A create is gated by its object grant alone.
 //
 // The scan runs over the WHOLE literal rather than its first word, because a
 // statement in this tree routinely starts on the line after the backtick.

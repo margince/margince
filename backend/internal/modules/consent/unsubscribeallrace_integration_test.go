@@ -151,27 +151,7 @@ func waitUntilNBlockedBy(t *testing.T, holder *pgx.Conn, want int) {
 // anyone waiting" this file's header warns about.
 func waitUntilBlockedByPID(t *testing.T, prober *pgx.Conn, holderPID, want int) {
 	t.Helper()
-	ctx := context.Background()
-	deadline := time.Now().Add(30 * time.Second)
-	for {
-		waiting, err := testdb.QueuedBehind(ctx, prober, int32(holderPID))
-		if err != nil {
-			t.Fatalf("probing the lock queue: %v", err)
-		}
-		if waiting >= want {
-			return
-		}
-		if waiting >= want {
-			return
-		}
-		if time.Now().After(deadline) {
-			t.Fatalf("%d backend(s) ever waited on the lock this connection holds, want %d: the "+
-				"press did not reach it, so this case interleaved nothing and would pass over "+
-				"the defect it is named for", waiting, want)
-		}
-		//craft:ignore test-sleep the wait IS on the condition — pg_blocking_pids, asked in the loop above. This paces the asking so the poll does not compete with the press for a pool connection, which CodeRabbit raised on #4631; removing it makes the test flakier, not less.
-		time.Sleep(20 * time.Millisecond)
-	}
+	testdb.AwaitQueuedBehind(t, prober, int32(holderPID), want, nil, "the press")
 }
 
 // Two multi-purpose consent transactions for one contact do not interleave.

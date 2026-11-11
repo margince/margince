@@ -596,6 +596,18 @@ has a right to.
 | Job schedules and time limits | `backend/api/jobs.yaml` |
 | A connector to learn from | `extensions/openchannel/` |
 
+In a classified mailbox, captured image files also require a thread verdict. A file name cannot tell whether an image
+holds private details. The text reader cannot read images, so an image it cannot judge stays
+held for its owner to review. Capture does not record whether a stored image was inline.
+
+A reopened thread keeps the message that caused the new question, even while its mailbox is shared
+or held. It stays pending without a model call until the mailbox is classified again.
+
+Capture counts invited members and members who cannot sign in, so imported mail still belongs to the company.
+It does not match new mail to retired members. A revoked invite still counts as a member who cannot sign in.
+That state cannot be told apart from an imported member.
+
+
 ### Other pages
 
 - [capture-connectors.md](capture-connectors.md)

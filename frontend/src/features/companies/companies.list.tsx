@@ -90,7 +90,9 @@ async function fetchCompaniesPage(
   };
 }
 
-export function CompaniesScreen() {
+export function CompaniesScreen({
+  startCreating = false,
+}: Readonly<{ startCreating?: boolean }>) {
   const t = useT();
   const queryClient = useQueryClient();
   const pageName = usePageName("companies");
@@ -190,6 +192,7 @@ export function CompaniesScreen() {
               label={t("create.company")}
               invalidate="companies"
               screen="companies"
+              listCreate={{ open: startCreating }}
               create={(values, rows, key) =>
                 createCompany(values, rows, cf.toBody(values), t, key)
               }

@@ -12,7 +12,8 @@
 #      reached included, and none that passed;
 #   4. the fan-in check refuses a missing part, a test in two parts and a part
 #      without its lists, and accepts a shard that was dealt no tests;
-#   5. a step that cannot be written makes the function fail, not the shell exit.
+#   5. a step that cannot be written makes the function fail, not the shell exit;
+#   6. a part with more tests than a pipe buffer holds keeps its evidence.
 set -euo pipefail
 
 root_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -127,6 +128,19 @@ reconcile_parts "$empty/out" > /dev/null || fail "a shard dealt no tests did not
 printf 'backend|./internal/deals|TestX\n' > "$empty/out/assigned.txt"
 reconcile_parts "$empty/out" > /dev/null && fail "a shard assigned tests but holding no parts reconciled"
 
+# A queue shard that claimed slots 2 and 3 keeps those parts alone, under the
+# names they have in the whole lane.
+queue="$work/queue"
+cp -R "$forward" "$queue"
+rm -rf "$queue/out/parts" "$queue/out/failed-logs"
+printf 'backend|./internal/compose|TestA\nbackend|./internal/compose|TestB\nbackend|./internal/deals|TestX\n' > "$queue/out/assigned.txt"
+keep_shard_evidence "$queue/out" "$queue/work" "$queue/regex" "$queue/logs" "$queue/failed" 2 3 \
+  || fail "a queue shard could not keep the evidence of the parts it claimed"
+kept="$(cd "$queue/out/parts" && ls ./*.assigned.txt | LC_ALL=C sort | tr '\n' ' ')"
+[[ "$kept" == "./backend@internal%2Fcompose@part1of2.assigned.txt ./backend@internal%2Fdeals.assigned.txt " ]] \
+  || fail "a queue shard that claimed slots 2 and 3 kept [$kept]"
+reconcile_parts "$queue/out" > /dev/null || fail "a queue shard's claimed parts did not reconcile with its slice"
+
 # 5. A part whose selector is gone fails the function, and the shell runs on.
 lost="$work/lost"
 cp -R "$forward" "$lost"
@@ -135,5 +149,16 @@ rm -rf "$lost/out/parts" "$lost/out/failed-logs"
 if keep_shard_evidence "$lost/out" "$lost/work" "$lost/regex" "$lost/logs" "$lost/failed" 2> /dev/null; then
   fail "a part with no selector was kept as if complete"
 fi
+
+# 6. A part whose sorted tests outgrow a pipe buffer is still named and kept.
+long="$work/long"
+mkdir -p "$long/regex" "$long/logs" "$long/out"
+printf 'backend|./internal/long\n' > "$long/work"
+: > "$long/failed"
+printf '^(%s)$' "$(seq 1 50000 | sed 's/^/TestLong/' | paste -sd'|' -)" > "$long/regex/1"
+printf -- '--- PASS: TestLong1 (0.01s)\nok\nEXIT 0\n' > "$long/logs/1.log"
+seq 1 50000 | sed 's/^/backend|.\/internal\/long|TestLong/' | LC_ALL=C sort > "$long/out/assigned.txt"
+keep_shard_evidence "$long/out" "$long/work" "$long/regex" "$long/logs" "$long/failed" \
+  || fail "a part holding 50000 tests could not keep its evidence"
 
 echo "OK: each failing part keeps its own log and lists, and the rerun list holds what is owed"

@@ -126,61 +126,10 @@ func (s *Store) Create(ctx context.Context, req NewRequest) (ids.UUID, error) {
 
 	id := ids.NewV7()
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
-		if err := auth.EnsureVisibleLive(ctx, tx, "contact", req.ContactID); err != nil {
+		if err := prepareAskRouteTx(ctx, tx, req); err != nil {
 			return err
 		}
-		// The intermediary is named by the caller too, and naming a record is
-		// reading it: without this a rep could learn that a contact exists by
-		// routing an ask through them and reading which error came back.
-		if req.ThroughContactID != nil {
-			if err := auth.EnsureVisibleLive(ctx, tx, "contact", *req.ThroughContactID); err != nil {
-				return err
-			}
-		}
-		if err := lockNamedContacts(ctx, tx, req.ContactID, req.ThroughContactID); err != nil {
-			return err
-		}
-		_, err := tx.Exec(ctx, `
-			INSERT INTO intro_request (
-				id, contact_id, requester_user_id, introducer_user_id,
-				route_type, through_contact_id,
-				internal_reason, value_for_target, forwardable_note,
-				note_generated_by, note_ai_generated,
-				fallback_policy, name_drop_allowed, due_at, captured_by)
-			VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)`,
-			id, req.ContactID, actor.UserID, req.IntroducerUser,
-			req.RouteType, req.ThroughContactID,
-			req.InternalReason, req.ValueForTarget, req.ForwardableNote,
-			req.NoteGeneratedBy, req.NoteAIGenerated,
-			req.FallbackPolicy, req.NameDropAllowed,
-			req.DueAt, capturedBy)
-		if err != nil {
-			// The partial unique index is the duplicate guard, not a
-			// read-then-write check: two tabs pressing send at once both pass
-			// a check and only one may pass the index.
-			if storekit.IsUniqueViolation(err) {
-				return fmt.Errorf(
-					"introductions: this colleague has already been asked about this contact: %w",
-					apperrors.ErrConflict)
-			}
-			return fmt.Errorf("introductions: recording the ask: %w", err)
-		}
-		auditID, err := storekit.AuditEvent(ctx, tx, "create", "intro_request", id,
-			map[string]any{
-				"contact_id":          req.ContactID.String(),
-				fieldIntroducerUserID: req.IntroducerUser.String(),
-				"route_type":          req.RouteType,
-			})
-		if err != nil {
-			return err
-		}
-		return storekit.EmitEvent(ctx, tx, auditID, req.ContactID,
-			crmcontracts.PublicEventIntroRequestCreated{
-				IntroRequestId:   openapi_types.UUID(id),
-				ContactId:        openapi_types.UUID(req.ContactID),
-				RequesterUserId:  openapi_types.UUID(actor.UserID),
-				IntroducerUserId: openapi_types.UUID(req.IntroducerUser),
-			})
+		return s.createTx(ctx, tx, id, actor, req, capturedBy)
 	})
 	if err != nil {
 		return ids.UUID{}, err
@@ -212,7 +161,7 @@ func requesterOf(ctx context.Context, req NewRequest) (principal.Principal, erro
 	}
 	if strings.TrimSpace(req.InternalReason) == "" {
 		return principal.Principal{}, &values.ParseError{
-			Field: "internal_reason", Code: codeRequired,
+			Field: fieldInternalReason, Code: codeRequired,
 			Message: "an ask says why it is worth making; give the colleague a reason",
 		}
 	}
@@ -354,32 +303,13 @@ func (s *Store) Cancel(ctx context.Context, id ids.UUID, reason string, version 
 	if err := tooLong("reason", reason, reasonBound); err != nil {
 		return err
 	}
-	return s.move(ctx, id, func() Status { return StatusCancelled }, version, func(cur *Request) error {
-		return May(cur.Status, StatusCancelled, s.roleOf(ctx, cur))
-	}, func(ctx context.Context, tx pgx.Tx, cur *Request) (pgconn.CommandTag, error) {
-		return tx.Exec(ctx, `
-			UPDATE intro_request
-			   SET status = 'cancelled', decision_reason = $2, closed_at = $3,
-			       version = version + 1, updated_at = now()
-			 WHERE id = $1 AND version = $4`,
-			id, nullIfEmpty(reason), s.now(), version)
-	}, func(cur *Request) events.Payload {
-		return crmcontracts.PublicEventIntroRequestClosed{
-			IntroRequestId: openapi_types.UUID(id),
-			ContactId:      openapi_types.UUID(cur.ContactID),
-			Reason:         crmcontracts.IntroRequestClosedCancelled,
-		}
-	})
+	if err := auth.Require(ctx, "introduction", principal.ActionUpdate); err != nil {
+		return err
+	}
+	return s.db.Tx(ctx, func(tx pgx.Tx) error { return s.cancelTx(ctx, tx, id, reason, version) })
 }
 
-// move is the one write path every transition takes.
-//
-// Read the row, check the caller's version, ask the lifecycle whether this
-// actor may make this move, write it, then audit and emit — all in one
-// transaction, so an ask cannot change state without the trail that explains
-// it. The event is built by the caller and emitted HERE rather than through a
-// callback: the audit-and-emit pair is the write shape, and a pair split
-// across an injected function is a pair a reader has to go looking for.
+// Each transition commits its state, audit and event together.
 func (s *Store) move(
 	ctx context.Context,
 	id ids.UUID,
@@ -393,46 +323,48 @@ func (s *Store) move(
 		return err
 	}
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
-		cur, err := s.load(ctx, tx, id)
-		if err != nil {
-			return err
-		}
-		// Version BEFORE the transition rules. A tab that read the ask while it
-		// was open and pressed decline after somebody accepted is looking at a
-		// stale record, not attempting an illegal move — telling it the move
-		// was impossible sends the reader to check the state machine when what
-		// they need to do is reload.
-		if cur.Version != version {
-			return fmt.Errorf(
-				"introductions: this ask moved since you read it: %w", apperrors.ErrVersionSkew)
-		}
-		if err := permit(cur); err != nil {
-			return err
-		}
-		tag, err := write(ctx, tx, cur)
-		if err != nil {
-			return fmt.Errorf("introductions: recording the answer: %w", err)
-		}
-		// The read above took no row lock, so the version check can pass in two
-		// transactions at once. Only `AND version = $N` inside the UPDATE is
-		// atomic, and it reports a loss by matching zero rows. Without this the
-		// loser writes an audit row and emits an event for a move it never made.
-		if tag.RowsAffected() == 0 {
-			return fmt.Errorf(
-				"introductions: this ask moved since you read it: %w", apperrors.ErrVersionSkew)
-		}
-		// The before-image is the status this ask was in, which is exactly what
-		// a dispute about an introduction asks: an accepted ask that ended up
-		// declined and one that was declined outright are different stories,
-		// and only the pair tells them apart.
-		auditID, err := storekit.Audit(ctx, tx, "update", "intro_request", id,
-			map[string]any{auditedField: string(cur.Status)},
-			map[string]any{auditedField: string(to())})
-		if err != nil {
-			return err
-		}
-		return storekit.EmitEvent(ctx, tx, auditID, cur.ContactID, event(cur))
+		return s.moveTx(ctx, tx, id, to, version, permit, write, event)
 	})
+}
+
+func (s *Store) moveTx(
+	ctx context.Context, tx pgx.Tx, id ids.UUID, to func() Status, version int,
+	permit func(*Request) error,
+	write func(context.Context, pgx.Tx, *Request) (pgconn.CommandTag, error),
+	event func(*Request) events.Payload,
+) error {
+	cur, err := s.load(ctx, tx, id)
+	if err != nil {
+		return err
+	}
+	// A stale answer needs a reload before the transition rules can be judged.
+	if cur.Version != version {
+		return fmt.Errorf(
+			"introductions: this ask moved since you read it: %w", apperrors.ErrVersionSkew)
+	}
+	if err := permit(cur); err != nil {
+		return err
+	}
+	tag, err := write(ctx, tx, cur)
+	if err != nil {
+		return fmt.Errorf("introductions: recording the answer: %w", err)
+	}
+	// The read above took no row lock, so the version check can pass in two
+	// transactions at once. Only `AND version = $N` inside the UPDATE is
+	// atomic, and it reports a loss by matching zero rows. Without this the
+	// loser writes an audit row and emits an event for a move it never made.
+	if tag.RowsAffected() == 0 {
+		return fmt.Errorf(
+			"introductions: this ask moved since you read it: %w", apperrors.ErrVersionSkew)
+	}
+	// Preserve both states so the audit distinguishes a reversal from an initial refusal.
+	auditID, err := storekit.Audit(ctx, tx, "update", "intro_request", id,
+		map[string]any{auditedField: string(cur.Status)},
+		map[string]any{auditedField: string(to())})
+	if err != nil {
+		return err
+	}
+	return storekit.EmitEvent(ctx, tx, auditID, cur.ContactID, event(cur))
 }
 
 // tooLong refuses text past the contract's limit. It counts runes because

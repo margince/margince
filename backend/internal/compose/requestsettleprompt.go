@@ -52,6 +52,7 @@ still_owed and unsure are not the same answer. still_owed is for a reply whose w
 
 Our reply may settle the request. Our messages keep the quoted history, so an answer written inline beneath a quoted line counts as our answer; quoted earlier words alone answer nothing. A later message from the same correspondent may also explicitly confirm that the requested action is complete.
 For a signature request, completion must refer to the same document or envelope identifier stated in the request and confirm completion of our required signing step. Another document, another signer's progress, or a merely sent/viewed document does not settle our request. Matching subjects alone prove nothing, and a request that names no identifier can match no completion. If the identity or completion is unclear, answer unsure. Judge each request independently even when several requests share one conversation.
+Our messages list the files actually attached. Saying "attached" with no attached file does not deliver a requested file; it remains still_owed unless other evidence shows it was delivered. A filename alone does not prove the file answers the request.
 A reply that DEFERS — "thanks, I will check", "let me come back to you", "I will clarify with the team and get back" — is still_owed: it names a next move of ours and does not make it.
 A reply too bare to defer OR deliver is unsure, not still_owed. "Ok." to "please send the documents" might mean they went in the same breath and might mean the ask was merely seen; a deferral says which, and a bare token does not. The line is whether OUR words name a next move of ours: if they do, still_owed; if they are too thin to say, unsure.
 A calendar acceptance settles a scheduling request: agreeing a time IS the answer to "when can we talk".
@@ -120,6 +121,13 @@ func settleRequest(batch []settleCandidate) model.Request {
 		for _, message := range candidate.Messages {
 			fmt.Fprintf(&conversation, "%s | %s\n%s\n\n",
 				settleSourceWord(message), message.Subject, settleMessageBody(message))
+			if message.Direction == string(crmcontracts.ActivityDirectionOutbound) {
+				fmt.Fprintf(&conversation, "Attachments: %d", len(message.Attachments))
+				for _, name := range message.Attachments {
+					fmt.Fprintf(&conversation, " | %s", name)
+				}
+				conversation.WriteString("\n\n")
+			}
 		}
 		prompt.WriteString(fence.WrapAttr("source_id",
 			refs.For(candidate.Request.RequestID.String()), conversation.String()) + "\n")

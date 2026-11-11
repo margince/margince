@@ -1589,6 +1589,87 @@ paths:
         '404': {$ref: '#/components/responses/NotFound'}
         '409': {$ref: '#/components/responses/Conflict'}
         '422': {$ref: '#/components/responses/ValidationError'}
+  /sdr-handoffs/{id}/assignee:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Leads]
+      operationId: getHandoffAssignee
+      security: [{bearerAuth: []}]
+      summary: Read the current receiver and reassignment version of a prospect handoff.
+      responses:
+        '200':
+          description: Current assignment, scoped through the prospect.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/HandoffAssignee'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+      description: Read the current receiver and reassignment version of a prospect handoff.
+    patch:
+      tags: [Leads]
+      operationId: reassignHandoff
+      security: [{bearerAuth: []}]
+      summary: Choose a colleague who can work a waiting prospect handoff.
+      description: |-
+        Requires write access to the prospect and an active colleague with the same
+        access. Accepted handoffs retain their original decision and attribution.
+
+        Needs the passport permission Change records.
+
+        Runs at once.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/HandoffAssigneeInput'}
+      responses:
+        '200':
+          description: Current assignment after reassignment.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/HandoffAssignee'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /intro-requests/{id}/replace:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Contacts]
+      operationId: replaceIntroRequest
+      security: [{bearerAuth: []}]
+      summary: Withdraw your ask and make a fresh ask through another route.
+      description: |-
+        Only the original requester may replace an open ask. The replacement concerns the
+        same contact and starts with no decision or approval. Both changes commit together;
+        an invalid replacement leaves the original ask open. The old ask remains private
+        to its original parties. Choosing another introducer does not transfer a personal
+        relationship or permission to name-drop.
+
+        Needs the passport permission Change records.
+
+        Runs at once.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/IntroRequestReplaceInput'}
+      responses:
+        '201':
+          description: The fresh ask; the original ask is withdrawn.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/IntroRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /contacts/{id}/profile-fields:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -7434,8 +7515,8 @@ paths:
       security: [{bearerAuth: []}]
       summary: Move a scheduled message to a different moment.
       description: |-
-        Time only. The content is what the approval bound to, so changing it is
-        cancel-and-recompose, which re-enters every gate from the top.
+        Time only. An attested spelling or punctuation correction uses the communication review's
+        wording-correction route. Other content changes need cancel-and-recompose and fresh checks.
 
         Needs the passport permission Change records.
 
@@ -16330,6 +16411,19 @@ paths:
           in: query
           schema: {type: string, format: uuid}
           description: The record the staged actions act on. Requires `target_entity_type`.
+        - name: target
+          in: query
+          schema:
+            type: array
+            maxItems: 25
+            items: {type: string}
+          style: form
+          explode: true
+          description: |-
+            Filter to the approvals staged against ANY of these records, each written
+            `<entity_type>:<uuid>` (`contact:…`, `activity:…`). Repeat the parameter for several,
+            up to 25. It answers "what is waiting on the records I touched" without the rest of
+            the queue.
         - name: bundle_id
           in: query
           schema: {type: string, format: uuid}
@@ -23736,6 +23830,15 @@ paths:
       summary: Which accounts your imported network reaches.
       parameters:
         - $ref: '#/components/parameters/Limit'
+        - name: cursor
+          in: query
+          schema: {type: string, maxLength: 2048}
+          description: |-
+            Opaque position from a prior answer's `next_cursor`, which resumes the ranking after
+            the last account returned. A cursor that names no position in this ranking, such
+            as one from another route, is refused with 422.
+            The ranking is by live connection counts, so an import between two pages can move
+            an account across the cut: re-read from the top to see the network as it is now.
       description: |-
         The account-level payoff of importing an export, and the one answer the ghosts
         exist to give: for each company on file, how many of your connections work
@@ -27338,7 +27441,7 @@ components:
       type: object
       additionalProperties: false
       description: One of your captured contacts waiting on a sender decision.
-      required: [contact_id, emails, captured_at]
+      required: [contact_id, emails, addresses, captured_at]
       properties:
         contact_id: {type: string, format: uuid}
         display_name: {type: string, description: Absent when the contact has no name.}
@@ -27346,10 +27449,33 @@ components:
           type: array
           items: {type: string}
           description: The contact's live addresses. The decision is made about these senders.
+        addresses:
+          type: array
+          items: {$ref: '#/components/schemas/CaptureAwaitingAddress'}
+          description: Each of `emails`, in the same order, with what it waits on.
         captured_at:
           type: string
           format: date-time
           description: When the contact was created, which is how long it has been waiting.
+    CaptureAwaitingAddress:
+      type: object
+      additionalProperties: false
+      description: One address of a waiting contact, and what it waits on.
+      required: [email, state]
+      properties:
+        email: {type: string}
+        state:
+          type: string
+          enum: [decided, classifying, unsure, queued, unjudgeable]
+          description: |-
+            `decided`: a decision about this sender is recorded, and a pass that applies it is due.
+            `classifying`: the sender classifier has an open question about this sender.
+            `unsure`: the classifier could not tell, so your answer decides.
+            `queued`: nothing was asked yet; a sweep will ask over a message from this address.
+            `unjudgeable`: no pass will settle this address, because no captured message from it
+            remains or someone already worked on the contact. Only you can settle it.
+            `decided`, `classifying` and `queued` wait on the product; `unsure` and `unjudgeable`
+            wait on you.
     CaptureSenderListResponse:
       type: object
       required: [data]
@@ -34220,6 +34346,30 @@ components:
           description: >-
             The message this claim rests on. Must be linked to the contact being introduced, so a completion cannot cite a conversation that is not about them.
         version: {type: integer}
+    HandoffAssignee:
+      type: object
+      additionalProperties: false
+      required: [id, version, status, can_reassign]
+      properties:
+        id: {type: string, format: uuid}
+        version: {type: integer, format: int64}
+        status: {type: string, enum: [submitted, accepted, rejected, recycled]}
+        assigned_to: {type: string, format: uuid}
+        can_reassign: {type: boolean}
+    HandoffAssigneeInput:
+      type: object
+      additionalProperties: false
+      required: [assigned_to, version]
+      properties:
+        assigned_to: {type: string, format: uuid}
+        version: {type: integer, format: int64, minimum: 1}
+    IntroRequestReplaceInput:
+      type: object
+      required: [version, reason, request]
+      properties:
+        version: {type: integer}
+        reason: {type: string, minLength: 1, maxLength: 2000}
+        request: {$ref: '#/components/schemas/IntroRequestInput'}
     IntroRequestCancelInput:
       type: object
       required: [version]
@@ -35891,6 +36041,11 @@ components:
       required: [accounts, accounts_total, unresolved_connections]
       properties:
         accounts: {type: array, items: {$ref: '#/components/schemas/LinkedInReachAccount'}}
+        next_cursor:
+          type: string
+          description: |-
+            Send this back as `cursor` to continue past the last account of this page.
+            Absent on the last page, so a client walking until it disappears stops.
         accounts_total:
           type: integer
           minimum: 0
@@ -37020,7 +37175,7 @@ components:
         amount_minor: {type: [integer, 'null'], format: int64, minimum: 0, description: 'The deal''s one-off price in minor units of `currency`. Below zero is refused with 422 `amount_negative`.'}
         currency: {type: [string, 'null'], pattern: '^[A-Z]{3}$'}
         expected_arr_minor: {type: [integer, 'null'], format: int64, description: 'Expected annual recurring revenue in minor units of `currency`. Null means no recurring component, which is not zero.'}
-        company_id: {type: [string, 'null'], format: uuid, description: 'The company this deal is for. Changing it is refused 422 (`deal_contracts_cross_company`) while contracts filed against the deal name another company, because a contract on a deal is visible through that deal alone. Detach those contracts (`deal_id: null` on the contract) or file each against a deal of its own company first; an edit never changes a contract''s company, only a company merge does. Null clears the company and is not refused.'}
+        company_id: {type: [string, 'null'], format: uuid, description: 'The company this deal is for. Changing it is refused 422 (`deal_contracts_cross_company`) while contracts filed against the deal name another company, because a contract on a deal is visible through that deal alone. Archived contracts also count. Ask an administrator to correct the contract links before changing the company. An edit never changes a contract''s company; only a company merge does. Null clears the company and is not refused.'}
         partner_company_id: {type: [string, 'null'], format: uuid, description: 'The partner who brought this deal. The company must have a live `partner` row (else 422 `not_a_partner`), and the caller must be able to read it. Null clears the attribution.'}
         partner_attribution:
           type: [string, 'null']
@@ -37823,7 +37978,7 @@ components:
     HandoverCounts:
       type: object
       description: Live records per kind.
-      required: [lead, contact, company, deal, project, task, webhook, list]
+      required: [lead, contact, company, deal, project, task, webhook, list, sdr_handoff, record_assignment]
       properties:
         lead: {type: integer, minimum: 0}
         contact: {type: integer, minimum: 0}
@@ -37833,6 +37988,8 @@ components:
         task: {type: integer, minimum: 0, description: Open tasks assigned to the member.}
         webhook: {type: integer, minimum: 0, description: 'Live webhook subscriptions the member owns. Each delivers only while its owner is active.'}
         list: {type: integer, minimum: 0, description: Live lists owned by the member.}
+        sdr_handoff: {type: integer, minimum: 0, description: Waiting prospect handoffs assigned to the member.}
+        record_assignment: {type: integer, minimum: 0, description: Current user responsibilities on records.}
     UserHandover:
       type: object
       required: [owned]
@@ -49853,6 +50010,8 @@ components:
           type: array
           description: What was refused, per recipient. Empty once an erasure has cleared the subject from it.
           items: {$ref: '#/components/schemas/RefusedRecipient'}
+        wording_correction:
+          $ref: '#/components/schemas/WordingCorrectionContext'
         warning:
           $ref: '#/components/schemas/OverrideWarning'
           description: |-
@@ -49879,6 +50038,23 @@ components:
           description: |-
             Shown verbatim. A surface that paraphrased it would record somebody as having read the
             server's words while showing them its own.
+    WordingCorrectionContext:
+      type: object
+      description: |-
+        The current approved wording, visible only to its original human approver while the
+        decision is unspent. The original reason remains on the instruction.
+      required: [instruction_id, version, subject, body, html_body, wording_digest, reason_code, explanation, warning_version]
+      properties:
+        instruction_id: {type: string, format: uuid}
+        version: {type: integer, format: int64}
+        subject: {type: string}
+        body: {type: string}
+        html_body: {type: string}
+        wording_digest: {type: string, pattern: '^[a-f0-9]{64}$'}
+        reason_code: {type: string}
+        explanation: {type: string}
+        warning_version: {type: string}
+      additionalProperties: false
     DirectCommunicationSendRequest:
       type: object
       description: |-

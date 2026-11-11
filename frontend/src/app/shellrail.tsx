@@ -20,6 +20,7 @@ import { useDisabledCoreFeatures } from "../lib/corefeatures";
 import { entryDepth } from "../lib/historydepth";
 import { type Route, routeHash, useHash } from "../lib/router";
 import { useMe } from "../lib/session";
+import { useGoToShortcuts } from "../lib/shortcuts";
 import { usePhoneViewport } from "../lib/viewport";
 import "./agentrail.css";
 import {
@@ -235,6 +236,7 @@ export function WorkspaceRail({
   // it without moving focus. The tooltip is never the accessible name:
   // aria-label carries that in both states.
   const navTip = useNavTip(collapsed, nav);
+  useGoToShortcuts();
   // At phone width the same markup is a bottom bar; More opens a menu over it
   // with the rest. One nav element keeps one navigation
   // landmark and no second item list to keep in sync.

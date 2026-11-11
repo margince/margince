@@ -39,7 +39,9 @@ live("the contact page on live data", () => {
     page.on("pageerror", (e) => crashes.push(e.stack ?? e.message));
 
     await signIn(page);
-    await page.goto(`/#/contacts/${CONTACT}`, { waitUntil: "networkidle" });
+    await page.goto(`/r/contacts/${CONTACT}#/contacts/${CONTACT}`, {
+      waitUntil: "networkidle",
+    });
 
     // The error boundary's own words, in the three catalogs it can render in.
     // Asserting the boundary is ABSENT is the whole test: it is what the
@@ -57,14 +59,15 @@ live("the contact page on live data", () => {
     await expect(page.locator("main")).not.toBeEmpty();
   });
 
-  test("draws its retained email as the canonical row", async ({ page }) => {
+  test("offers its retained email from the conversation card", async ({
+    page,
+  }) => {
     await signIn(page);
-    await page.goto(`/#/contacts/${CONTACT}`, { waitUntil: "networkidle" });
+    await page.goto(`/r/contacts/${CONTACT}#/contacts/${CONTACT}`, {
+      waitUntil: "networkidle",
+    });
 
-    // The row the whole unification arc is about. One is enough: this asserts
-    // the canonical component is MOUNTED on real data, which is the half the
-    // unit tests cannot see.
-    await expect(page.locator(".emailentry").first()).toBeVisible();
+    await expect(page.locator(".pe-card-open").first()).toBeVisible();
   });
 
   // Opening the message, which is where it actually broke.
@@ -81,32 +84,20 @@ live("the contact page on live data", () => {
   // are what has to be absent.
   test("opens the message in a drawer over the record", async ({ page }) => {
     await signIn(page);
-    await page.goto(`/#/contacts/${CONTACT}`, { waitUntil: "networkidle" });
+    await page.goto(`/r/contacts/${CONTACT}#/contacts/${CONTACT}`, {
+      waitUntil: "networkidle",
+    });
     const address = page.url();
 
-    // The OPENABLE row, which is a button; a row the reader may not open is a
-    // div of the same class. Clicking `.emailentry` first-of-any picks
-    // whichever came back first, and on a contact whose newest message is
-    // withheld that is a div — the click does nothing, no drawer opens, no
-    // crash happens, and the test passes having exercised none of this. It
-    // did exactly that against a live null-cc build before this locator was
-    // narrowed.
-    const openable = page.locator("button.emailentry--open").first();
+    const openable = page.locator("button.pe-card-open").first();
     await expect(openable).toBeVisible();
     await openable.click();
 
     await expect(page.getByRole("dialog")).toBeVisible();
 
-    // The MESSAGE, not merely the dialog around it. The crash was inside
-    // PartyLine, so the error boundary replaced the drawer's body while the
-    // modal shell — title, close button — kept rendering perfectly: a test
-    // that stopped at `dialog` is visible reported success over a reader
-    // staring at "This view stopped working".
-    //
-    // The recipient line is the assertion because it is what broke: it is
-    // drawn from the four party lists the server sends, and a null in any of
-    // them takes it down.
-    await expect(page.locator(".emaildetail__parties")).toBeVisible();
+    const message = page.getByRole("dialog").getByRole("article").first();
+    await expect(message).toBeVisible();
+    await expect(message.getByRole("button", { name: /^an / })).toBeVisible();
     await expect(
       page.getByText(
         /stopped working|funktioniert nicht mehr|ngừng hoạt động/i,
@@ -169,19 +160,21 @@ live("the other surfaces that draw a message", () => {
       "set E2E_COMPANY to an account on this stack",
     );
     await signIn(page);
-    await page.goto(`/#/companies/${process.env.E2E_COMPANY}`, {
-      waitUntil: "networkidle",
-    });
+    await page.goto(
+      `/r/companies/${process.env.E2E_COMPANY}#/companies/${process.env.E2E_COMPANY}`,
+      {
+        waitUntil: "networkidle",
+      },
+    );
     await expect(
       page.getByText(/stopped working|nicht mehr|ngừng hoạt động/i),
     ).toHaveCount(0);
 
-    const row = page.locator(".emailentry").first();
-    // An account with no retained mail says nothing about the drawer, and
-    // failing here would be reporting on the seed rather than on the code.
-    if ((await row.count()) === 0) {
-      return;
-    }
+    const row = page
+      .getByRole("region", { name: "Zuletzt", exact: true })
+      .locator("button.co-rowlink")
+      .first();
+    await expect(row).toBeVisible();
     const address = page.url();
     await row.click();
     await expect(page.getByRole("dialog")).toBeVisible();

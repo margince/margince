@@ -278,6 +278,9 @@ func companyListSpec(in ListCompaniesInput) listPageSpec[crmcontracts.Company] {
 			}
 			// One sample for the page, for the reason the single read binds
 			// one: every row on it is counted against the same day.
+			if err := stampCompanyCapabilities(ctx, tx, companies); err != nil {
+				return err
+			}
 			return attachCompanyCounts(ctx, tx, companies, rollupAsOf())
 		},
 		cursorKey: func(last crmcontracts.Company) (time.Time, ids.UUID) {

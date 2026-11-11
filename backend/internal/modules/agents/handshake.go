@@ -113,10 +113,15 @@ const surfaceInstructions = "A governed CRM tool surface. Every call re-authenti
 // No write envelope can carry that — the row did not exist when the write
 // answered — so the only thing that prevents the false report is the model
 // knowing to look before it makes one.
+//
+// It names the task's own records, because the queue holds colleagues' work too.
 const queueInstruction = "A write can also leave a question for a human WITHOUT saying so in its " +
 	"answer — an automation reacting to what you just wrote may draft a reply or stage a change " +
 	"of its own, after your call returned. Before telling anyone the work is finished, call " +
-	"list_approvals and report what is waiting; it needs no approval of its own."
+	"list_approvals with targets naming every record this task created or changed, the " +
+	"activities and tasks it logged included, and report what it returns as what the work left " +
+	"waiting; it needs no approval of its own. The rest of the queue is not part of the task: " +
+	"do not list it unless the user asks."
 
 // identity is the serverInfo both framings report: the handshake era in its
 // initialize result, the modern era in every result's _meta.

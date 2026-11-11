@@ -8,18 +8,24 @@ package compose
 import (
 	"context"
 	"slices"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/integration"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/capture/mailmap"
+	"github.com/margince/margince/backend/internal/modules/comms"
+	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 // judge is the settlement pass's own principal.
@@ -350,4 +356,75 @@ func TestAVerdictOverAnEditedTiedMailIsDropped(t *testing.T) {
 	if !o.owed(t, request) {
 		t.Fatal("a verdict over a tied mail edited after the model read it settled the request")
 	}
+}
+
+func TestSettlementReadsTheFilesOnTheActualAnswer(t *testing.T) {
+	o := setupOwed(t)
+	o.contact(t, "Pat Buyer", "pat@customer.example")
+	request := o.askOf(t, "Send the report", o.now.Add(-3*time.Hour))
+	reply := o.weWrite(t, owedMail{to: "pat@customer.example", subject: "Re: Send the report", body: "The report is attached.", at: o.now.Add(-2 * time.Hour)})
+	candidate, ok := o.offered(t, request)
+	if !ok {
+		t.Fatal("answer not offered")
+	}
+	assertFiles := func(want int) {
+		t.Helper()
+		messages := o.evidence(t, candidate)
+		found := false
+		for _, message := range messages {
+			if message.ID == reply {
+				found = true
+				if len(message.Attachments) != want {
+					t.Fatalf("answer files=%v want %d", message.Attachments, want)
+				}
+			}
+		}
+		if !found {
+			t.Fatal("answer absent from evidence")
+		}
+	}
+	assertFiles(0)
+	fileStore := activities.NewStore(o.e.DB()).WithBlobstore(blobstore.NewMemory())
+	file, err := fileStore.UploadAttachment(o.e.Admin(), activities.AttachmentInput{
+		EntityType: "activity", EntityID: reply, Filename: "report.txt", ContentType: "text/plain", Content: strings.NewReader("Synthetic report"),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertFiles(0)
+	actor := o.e.As(o.owner, []ids.UUID{o.e.Team1}, integration.AdminPerms)
+	store := comms.NewStore(o.e.DB(), func() time.Time { return o.now }, o.e.Activities)
+	var delivery ids.UUID
+	if err := database.WithWorkspaceTx(actor, o.e.Pool, func(tx pgx.Tx) error {
+		var err error
+		delivery, err = store.StageTx(actor, tx, comms.StageInput{ActivityID: ids.From[ids.ActivityKind](reply), Provider: "gmail", MessageID: ids.NewV7().String() + "@ws.example", Recipients: []string{"pat@customer.example"}, Attachments: []comms.OutboundFile{{AttachmentID: ids.UUID(file.Id), Filename: "report.txt"}}})
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	assertFiles(0)
+	if err := store.RecordSent(sendWorkerScope(actor), delivery, connector.SendReceipt{ProviderMessageID: "report-delivery"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := fileStore.ArchiveAttachment(o.e.Admin(), ids.UUID(file.Id)); err != nil {
+		t.Fatal(err)
+	}
+	assertFiles(1)
+	mail := owedMail{from: o.seat, to: "pat@customer.example", subject: "Re: Send the report", at: o.now.Add(-time.Hour), messageID: ids.NewV7().String() + "@ws.example"}
+	raw := strings.Replace(string(mail.raw()), "Content-Type: text/plain; charset=utf-8\r\n\r\nText.\r\n",
+		"Content-Type: multipart/mixed; boundary=REPORT\r\n\r\n--REPORT\r\nContent-Type: text/plain\r\n\r\nThe report is attached.\r\n--REPORT\r\nContent-Type: text/plain\r\nContent-Disposition: attachment; filename=report.txt\r\n\r\nSynthetic report\r\n--REPORT--\r\n", 1)
+	parsed, err := mailmap.Parse([]byte(raw), o.seat)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ref, err := newCaptureSink(o.e.Pool, CaptureConfig{Blob: blobstore.NewMemory()}).Upsert(threadConnectorCtx(o.e, o.owner), parsed.AttestSentByOwner(true).ToRecord("gmail", []byte(raw)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	reply = ref.ID
+	candidate, ok = o.offered(t, request)
+	if !ok {
+		t.Fatal("file answer not offered")
+	}
+	assertFiles(1)
 }

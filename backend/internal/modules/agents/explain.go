@@ -113,7 +113,7 @@ func (s *Dispatcher) explain(tool string, err error) string {
 		// There is no proposal to point at, so the answer says what it can.
 		return "This is a confirm-first (🟡) action: a contact answers it before it runs, and not the " +
 			"credential that proposed it. Nothing was changed. Tell the user it is waiting — list_approvals " +
-			"shows it, read_approval shows what it would do, and they release it in the CRM. (" + err.Error() + ")"
+			"with targets naming this record shows it, and they release it in the CRM. (" + err.Error() + ")"
 	case errors.As(err, &areaOff):
 		// Its words name the area and where the user turns it on, for the agent to
 		// relay. The scope sentence below would send it elsewhere.
@@ -409,12 +409,16 @@ func stagedExplanation(staged *workflow.StagedApprovalError) string {
 // stagedReleasePath says who answers a staged call. It offers decide_approvals
 // only to a credential that can use it. A relay the engine would refuse is a
 // dead end the caller finds out about one call later.
+//
+// It points at this one proposal by id: a bare list_approvals reads the whole
+// queue, colleagues' work included.
 func stagedReleasePath(staged *workflow.StagedApprovalError) string {
+	readIt := "read_approval with \"staged_action_id\": \"" + staged.ApprovalID.String() + "\" shows it"
 	if staged.ReleasableByCaller {
 		return "This change can be undone, so once the user says yes you can release it yourself with " +
-			"decide_approvals (list_approvals is the same queue), or they can release it in the CRM."
+			"decide_approvals (" + readIt + "), or they can release it in the CRM."
 	}
-	return "It is not yours to answer: the contact releases it in the CRM (list_approvals shows the same queue)."
+	return "It is not yours to answer: the contact releases it in the CRM (" + readIt + ")."
 }
 
 // faultReferenceSuffix names what a refusal left behind, in the one place an

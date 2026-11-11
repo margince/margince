@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import { ScreenView } from "./App.views";
+import { CREATE_ID } from "./app/nav";
 import { LocaleProvider } from "./i18n";
 import { en } from "./i18n/en";
 import type { CoreFeature } from "./lib/corefeatures";
@@ -45,3 +46,28 @@ it.each<CoreFeature>([
   expect(await screen.findByText(en["shell.unknownPage"])).toBeTruthy();
   expect(fetcher).not.toHaveBeenCalled();
 });
+
+it.each<CoreFeature>(["contacts", "companies", "leads", "deals", "projects"])(
+  "a %s create address never mounts the form of a disabled page",
+  async (feature) => {
+    const fetcher = vi.fn();
+    vi.stubGlobal("fetch", fetcher);
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    client.setQueryData(
+      ["me"],
+      meFixture({ settingsAvailability: { disabled_features: [feature] } }),
+    );
+    render(
+      <QueryClientProvider client={client}>
+        <LocaleProvider initial="en">
+          <ScreenView screen={feature} id={CREATE_ID} />
+        </LocaleProvider>
+      </QueryClientProvider>,
+    );
+    expect(await screen.findByText(en["shell.unknownPage"])).toBeTruthy();
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(fetcher).not.toHaveBeenCalled();
+  },
+);

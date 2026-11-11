@@ -43,7 +43,7 @@ func (s *Server) wireSystemOfRecordReads(pool *pgxpool.Pool) {
 	s.threadAudience = NewThreadAudienceSetter(pool)
 	s.captureSenderHandlers = captureSenderHandlers{
 		db:         InstallationDB(pool),
-		store:      capture.NewSenderOverrideStore(InstallationDB(pool)),
+		store:      newSenderOverrideStore(pool),
 		threadPass: verdictPass(pool, ConfidentialityVerdictArgs{}.Kind()),
 	}
 	s.captureOwnerIdentityHandlers = captureOwnerIdentityHandlers{store: capture.NewOwnerIdentityStore(InstallationDB(pool))}

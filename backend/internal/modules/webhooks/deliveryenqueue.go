@@ -71,7 +71,7 @@ func (s *Store) enqueueForSubscriptions(ctx context.Context, rows []enqueueRow, 
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		res, err := tx.Query(ctx, `
 			WITH wanted AS (
-				SELECT * FROM unnest($1::uuid[], $2::text[], $3::text[], $4::text[], $9::uuid[])
+				SELECT * FROM unnest(@subscriptions::uuid[], @payloads::text[], @content_types::text[], @render_errors::text[], @owners::uuid[])
 				  AS w(subscription_id, payload, content_type, render_error, owner_id)
 			), matched AS (
 				SELECT s.id, s.target_url, s.signing_secret_ref, s.custom_headers,
@@ -81,19 +81,22 @@ func (s *Store) enqueueForSubscriptions(ctx context.Context, rows []enqueueRow, 
 			), created AS (
 				INSERT INTO webhook_delivery
 				  (subscription_id, event_id, event_type, payload, content_type, status,
-				   last_error, dead_lettered_at, entity_type, entity_id)
-				SELECT m.id, $6, $5, m.payload, m.content_type,
+				   last_error, dead_lettered_at, entity_type, entity_id, claimed_until)
+				SELECT m.id, @event, @event_type, m.payload, m.content_type,
 				       CASE WHEN m.render_error IS NULL THEN 'pending' ELSE 'dead_lettered' END,
 				       m.render_error, CASE WHEN m.render_error IS NULL THEN NULL ELSE now() END,
-				       $7, $8
+				       @entity_type, @entity, CASE WHEN m.render_error IS NULL THEN now() + make_interval(secs => @lease_seconds) ELSE NULL END
 				FROM matched m
 				ON CONFLICT (subscription_id, event_id) DO NOTHING
-				RETURNING id, subscription_id, status, content_type
+				RETURNING id, subscription_id, status, content_type, claimed_until
 			)
-			SELECT c.id, c.subscription_id, m.target_url, m.signing_secret_ref, m.custom_headers, c.content_type
+			SELECT c.id, c.subscription_id, m.target_url, m.signing_secret_ref, m.custom_headers, c.content_type, c.claimed_until
 			FROM created c JOIN matched m ON m.id = c.subscription_id
 			WHERE c.status = 'pending'`,
-			subIDs, payloads, contentTypes, renderErrors, eventType, eventID, entityType, entityID, owners)
+			pgx.StrictNamedArgs{
+				"subscriptions": subIDs, "payloads": payloads, "content_types": contentTypes, "render_errors": renderErrors,
+				"event_type": eventType, "event": eventID, "entity_type": entityType, "entity": entityID, "owners": owners, "lease_seconds": claimLease.Seconds(),
+			})
 		if err != nil {
 			return err
 		}
@@ -101,7 +104,7 @@ func (s *Store) enqueueForSubscriptions(ctx context.Context, rows []enqueueRow, 
 		for res.Next() {
 			t := attemptTarget{eventType: eventType, eventID: eventID}
 			var contentType *string
-			if err := res.Scan(&t.deliveryID, &t.subID, &t.targetURL, &t.sealedSecret, &t.headers, &contentType); err != nil {
+			if err := res.Scan(&t.deliveryID, &t.subID, &t.targetURL, &t.sealedSecret, &t.headers, &contentType, &t.claim); err != nil {
 				return err
 			}
 			t.payload, t.contentType = bodies[t.subID], deref(contentType)

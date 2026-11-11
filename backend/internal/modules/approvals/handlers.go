@@ -7,7 +7,9 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -98,10 +100,9 @@ func pageInfo(p storekit.Page) crmcontracts.PageInfo {
 	return info
 }
 
-// listInput binds the inbox query parameters, or answers the one validation
-// error this surface has: the target pair is a discriminated reference, so
-// half of it filters nothing a client could have meant — a type alone matches
-// every record of that type, an id alone every type carrying that id.
+// listInput binds the inbox query parameters. It refuses a record filter that
+// names nothing a client could have meant. That is half of the target pair (a
+// type alone matches every record of that type), a malformed target, or both.
 func listInput(params crmcontracts.ListApprovalsParams) (ListInput, *httperr.DetailedError) {
 	in := ListInput{Kind: params.Kind}
 	if params.IncludeMuted != nil {
@@ -123,11 +124,46 @@ func listInput(params crmcontracts.ListApprovalsParams) (ListInput, *httperr.Det
 		targetID := ids.UUID(*params.TargetEntityId)
 		in.TargetType, in.TargetID = params.TargetEntityType, &targetID
 	}
+	if params.Target != nil {
+		if in.TargetID != nil {
+			return ListInput{}, httperr.Validation("target", "conflicts_with_target_entity",
+				"target names records on its own: drop target_entity_type and target_entity_id, or drop target")
+		}
+		targets, invalid := parseTargets(*params.Target)
+		if invalid != nil {
+			return ListInput{}, invalid
+		}
+		in.Targets = targets
+	}
 	if params.BundleId != nil {
 		bundleID := ids.UUID(*params.BundleId)
 		in.BundleID = &bundleID
 	}
 	return in, nil
+}
+
+// maxTargets bounds one read's target list, as the contract's maxItems does.
+const maxTargets = 25
+
+// parseTargets reads each `<entity_type>:<uuid>` item. A malformed item is
+// refused rather than skipped, because a skipped record is one whose waiting
+// work the caller would then report as absent.
+func parseTargets(items []string) ([]ids.Ref, *httperr.DetailedError) {
+	if len(items) > maxTargets {
+		return nil, httperr.Validation("target", "too_many",
+			fmt.Sprintf("name at most %d records per request", maxTargets))
+	}
+	targets := make([]ids.Ref, 0, len(items))
+	for _, item := range items {
+		entityType, rawID, found := strings.Cut(item, ":")
+		recordID, err := ids.Parse(rawID)
+		if !found || entityType == "" || err != nil {
+			return nil, httperr.Validation("target", "malformed",
+				fmt.Sprintf("target %q is not <entity_type>:<uuid>, e.g. contact:0190f6c2-0000-7000-8000-000000000000", item))
+		}
+		targets = append(targets, ids.Ref{Type: entityType, ID: recordID})
+	}
+	return targets, nil
 }
 
 func (h Handlers) GetApproval(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {

@@ -29,6 +29,7 @@ import { openAsk, type UrlParams } from "../lib/urlstate";
 import { PaletteAnswer, usePaletteAsk } from "./paletteanswer";
 import { useBuiltinCommands } from "./palettecommands";
 import { useConfigurationCommand } from "./paletteconfiguration";
+import type { PaletteMode } from "./palettehotkey";
 import { usePaletteRecents } from "./paletterecents";
 import { type RecentEntry, recentIdentity } from "./paletterecents.storage";
 import { PaletteRow } from "./paletterow";
@@ -93,14 +94,23 @@ export function matchingCommands(
 
 export { useBuiltinCommands } from "./palettecommands";
 
+const CREATE_COMMAND_PREFIX = "action:new-";
+
+/** A command that makes a new record, which `C` lists where a screen has no form of its own. */
+export function isCreateCommand(command: Command): boolean {
+  return command.id.startsWith(CREATE_COMMAND_PREFIX);
+}
+
 export function CommandPalette({
   open,
   onClose,
-  commands,
+  commands: offered,
+  mode = "all",
 }: Readonly<{
   open: boolean;
   onClose: () => void;
   commands: Command[];
+  mode?: PaletteMode;
 }>) {
   const t = useT();
   const [query, setQuery] = useState("");
@@ -135,19 +145,27 @@ export function CommandPalette({
     }
   }, [open]);
 
+  const creates = mode === "create";
+  const commands = useMemo(
+    () => (creates ? offered.filter(isCreateCommand) : offered),
+    [creates, offered],
+  );
+  // Create mode answers "make a record", so a typed word narrows those and asks nothing else.
+  const searched = creates ? "" : query;
   const matched = useMemo(
     () => matchingCommands(commands, query),
     [commands, query],
   );
-  const setting = useConfigurationCommand(query, commands, matched);
+  const setting = useConfigurationCommand(searched, commands, matched);
   const filtered = setting ? [...matched, setting] : matched;
 
   // RS-1: live record hits from /search, plus a "see all" row that lands
   // on the full results screen. Row order: builtin matches, then see-all,
   // then records, so the row Enter takes on a half-typed name is one arrow
   // above the hits it summarises.
-  const search = useSearchCommands(query);
-  const recents = usePaletteRecents(open, !query.trim());
+  const search = useSearchCommands(searched);
+  const listsRecents = !creates && !query.trim();
+  const recents = usePaletteRecents(open, listsRecents);
   const recentCommands: Command[] = recents.entries.map((entry) => ({
     id: `recent:${recentIdentity(entry)}`,
     label: entry.kind === "query" ? entry.text : entry.label,
@@ -168,17 +186,17 @@ export function CommandPalette({
         ? { identity: entry.id, name: entry.label, logo: entry.logo }
         : undefined,
   }));
-  const seeAll: Command | null = query.trim()
+  const seeAll: Command | null = searched.trim()
     ? {
         id: "search:all",
-        executedQuery: query.trim(),
-        label: t("palette.seeAll", { query: query.trim() }),
+        executedQuery: searched.trim(),
+        label: t("palette.seeAll", { query: searched.trim() }),
         type: "action",
-        route: { screen: "search", id: encodeURIComponent(query.trim()) },
+        route: { screen: "search", id: encodeURIComponent(searched.trim()) },
       }
     : null;
 
-  const handbook = usePaletteAsk(query, open, filtered.length);
+  const handbook = usePaletteAsk(searched, open, filtered.length);
   const rows = [
     ...recentCommands,
     ...(handbook.row ? [handbook.row] : []),
@@ -193,7 +211,7 @@ export function CommandPalette({
     filtered.length,
     query,
     picked,
-    recents.pending,
+    listsRecents && recents.pending,
   );
   const focusSearch = () => {
     setPicked(null);
@@ -328,18 +346,20 @@ export function CommandPalette({
               rows so Enter on a screen name never opens it. It carries what is
               typed into the box rather than asking it. A question the box can
               read as one gets its own "Ask Margince" row below instead. */}
-          <button
-            type="button"
-            className="palette-ask t-body"
-            onClick={() => {
-              onClose();
-              openAsk(query.trim());
-            }}
-          >
-            <Sparkles aria-hidden />
-            <span className="label">{t("corpusAsk.title")}</span>
-            <Badge tone="ai">{t("palette.typeAction")}</Badge>
-          </button>
+          {!creates && (
+            <button
+              type="button"
+              className="palette-ask t-body"
+              onClick={() => {
+                onClose();
+                openAsk(query.trim());
+              }}
+            >
+              <Sparkles aria-hidden />
+              <span className="label">{t("corpusAsk.title")}</span>
+              <Badge tone="ai">{t("palette.typeAction")}</Badge>
+            </button>
+          )}
           {search.pending && (
             <PendingBody
               label={t("palette.searching")}
@@ -350,7 +370,7 @@ export function CommandPalette({
           {rows.length === 0 && !search.pending && !search.failed && (
             <EmptyState>{t("palette.empty")}</EmptyState>
           )}
-          {!query.trim() && recents.hasStored && (
+          {listsRecents && recents.hasStored && (
             <Eyebrow
               as="h2"
               size="xxsmall"
@@ -370,7 +390,7 @@ export function CommandPalette({
               {t("palette.recent")}
             </Eyebrow>
           )}
-          {!query.trim() && recents.pending && (
+          {listsRecents && recents.pending && (
             <PendingBody label={t("common.loading")} lines={1} />
           )}
           {rows.map((command, index) => (
@@ -408,8 +428,6 @@ function paletteSelection(
   );
   return Math.max(named, 0);
 }
-
-export { paletteHotkeyCaps, usePaletteHotkey } from "./palettehotkey";
 
 export function BuiltinCommandPalette(
   props: Omit<ComponentProps<typeof CommandPalette>, "commands">,

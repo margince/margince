@@ -14,6 +14,7 @@ import { useT } from "../i18n";
 import { EXTENSION_SCREEN, findExtension } from "../lib/extensions";
 import { routeHash, useRoute } from "../lib/router";
 import { useScrollMemory } from "../lib/scrollmemory";
+import { useShortcutDispatcher, useShortcutHandler } from "../lib/shortcuts";
 import { readStored, STORAGE_KEYS, writeStored } from "../lib/storage";
 import { AgentEdge } from "./agent-edge";
 import { CaptureChip } from "./capture-chip";
@@ -21,7 +22,6 @@ import { CaptureHealthBanner } from "./capturehealthbanner";
 import { ConnectivityBanner } from "./connectivitybanner";
 import { EconomyBanner } from "./economybanner";
 import { EmbedReindexBanner } from "./embedreindexbanner";
-import { isSidebarChord } from "./hotkeys";
 import { LicenseBanner } from "./licensebanner";
 import { type NavCounts, RAIL_LESS_SCREENS } from "./nav";
 import { NavWalkProvider, useNavWalk } from "./navlevel";
@@ -162,32 +162,8 @@ export function Shell({
     });
   }, []);
 
-  // ⌘B / Ctrl B, the shortcut the toggle's own tooltip has advertised since the
-  // sidebar had a toggle — and which nothing bound, so the tooltip named a key
-  // that did nothing. Registered here because this is where the state lives.
-  // Ignored while a text field has focus: the same chord is bold in every editor
-  // on the platform, and a composer is exactly where a reader would reach for it.
-  useEffect(() => {
-    function onKeyDown(event: globalThis.KeyboardEvent) {
-      if (!isSidebarChord(event)) {
-        return;
-      }
-      // `instanceof` rather than an assertion: an event target is an
-      // `EventTarget`, and focus genuinely can sit on an SVGElement, which has
-      // no `isContentEditable` at all.
-      const target = event.target;
-      if (
-        target instanceof HTMLElement &&
-        (target.isContentEditable || /^(INPUT|TEXTAREA)$/.test(target.tagName))
-      ) {
-        return;
-      }
-      event.preventDefault();
-      toggle();
-    }
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [toggle]);
+  useShortcutHandler("sidebar", toggle);
+  useShortcutDispatcher();
 
   useEffect(() => {
     document.body.dataset.screen = route.screen;
