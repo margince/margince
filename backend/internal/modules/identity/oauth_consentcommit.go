@@ -8,8 +8,8 @@ package identity
 // code the audit trail cannot explain is a state this flow cannot reach.
 //
 // The ticks race nothing. The session that ticked them can end mid-consent, so
-// the commit holds the member's row and re-reads that session first
-// (holdConsentAgainstRevocation).
+// the commit waits out any revocation of the member's credentials and re-reads
+// that session first (holdConsentAgainstRevocation).
 //
 // The grant and passport are written at TOKEN EXCHANGE (oauth_token.go), not
 // here. This function writes ONLY the authorization code row and its audit
@@ -148,12 +148,17 @@ func (s *Service) mintConsentedAuthorizationCode(
 // code could commit, so no code outlives the credentials a revocation ended.
 var errConsentingSessionEnded = errors.New("oauth: the consenting session has ended")
 
-// holdConsentAgainstRevocation orders this consent against endCredentialAuthority,
-// which holds the member's row while it ends their credentials. A revocation
-// that went first has already revoked the session read below. One that waits
-// here sees the code after it commits. The session read is its own statement:
-// under `READ COMMITTED` only a fresh snapshot sees the revocation waited on.
-// The client row goes first, in issueGrant's client → app_user order.
+// credentialAuthorityLock is the advisory key a consent shares and
+// endCredentialAuthority takes alone. A row lock on app_user would invert
+// redemption's auth_token → app_user order (tokenlockorder_test.go).
+const credentialAuthorityLock = `hashtextextended('credential_authority:' || $1::text, 0)`
+
+// holdConsentAgainstRevocation orders this consent against endCredentialAuthority.
+// A revocation that went first has already revoked the session read below. One
+// that waits here sees the code after it commits. The session read is its own
+// statement: under `READ COMMITTED` only a fresh snapshot sees the revocation
+// waited on. The client and member rows are taken before the advisory lock, the
+// order issueGrant and a deactivation already hold them in.
 func holdConsentAgainstRevocation(ctx context.Context, tx pgx.Tx, clientID string, userID ids.UserID, sessionHash string) error {
 	if _, err := tx.Exec(ctx,
 		`SELECT 1 FROM oauth_client WHERE client_id = $1 FOR KEY SHARE`, clientID); err != nil {
@@ -161,11 +166,14 @@ func holdConsentAgainstRevocation(ctx context.Context, tx pgx.Tx, clientID strin
 	}
 	var held ids.UserID
 	err := tx.QueryRow(ctx,
-		`SELECT id FROM app_user WHERE id = $1 AND `+LiveMemberSQL("")+` FOR SHARE`, userID).Scan(&held)
+		`SELECT id FROM app_user WHERE id = $1 AND `+LiveMemberSQL("")+` FOR KEY SHARE`, userID).Scan(&held)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return errConsentingSessionEnded
 	}
 	if err != nil {
+		return err
+	}
+	if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock_shared(`+credentialAuthorityLock+`)`, userID.String()); err != nil {
 		return err
 	}
 	var live bool

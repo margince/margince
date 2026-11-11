@@ -83,7 +83,7 @@ func TestAConsentWaitingOnARevocationMintsNoCode(t *testing.T) {
 				consentChoice{scopes: "read"}, consentRequestFor(clientID))
 			minted <- err
 		}()
-		waitForALockWaiter(t, e)
+		waitForABlockedBackend(t, tx, "locktype = 'advisory'")
 		return nil
 	})
 	if err != nil {
@@ -113,7 +113,7 @@ func TestARevocationWaitingOnAConsentEndsItsCode(t *testing.T) {
 				return endCredentialAuthority(selfActorCtx(ctx, id.UserID), rtx, id.UserID, passwordChangeRevokeReason)
 			})
 		}()
-		waitForALockWaiter(t, e)
+		waitForABlockedBackend(t, tx, "locktype = 'advisory'")
 		// The code row the consent commits, written while the revocation waits.
 		_, err := tx.Exec(ctx, `INSERT INTO oauth_authorization_code
 			(client_id, code_hash, code_challenge, redirect_uri, scopes, user_id, expires_at)
