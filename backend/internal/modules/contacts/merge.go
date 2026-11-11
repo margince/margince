@@ -23,6 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/authz"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
+	extdecl "github.com/margince/margince/backend/pkg/extension/privacy"
 )
 
 // The §1.3 two-record merge (features/01, data-model §3.2): A→B relinks
@@ -189,6 +190,9 @@ func (s *Store) mergeContactCarryingTx(ctx context.Context, tx pgx.Tx, sourceID,
 		return crmcontracts.Contact{}, nil, err
 	}
 	if ctx, err = admitDuplicatePairMerge(ctx, tx, contactEntity, sourceID.UUID, targetID.UUID); err != nil {
+		return crmcontracts.Contact{}, nil, err
+	}
+	if err := s.refuseMergeWithDependents(ctx, tx, extdecl.Contact, sourceID.UUID); err != nil {
 		return crmcontracts.Contact{}, nil, err
 	}
 	src, tgt, err := mergePair(ctx, tx, contactEntity, sourceID, targetID, ifVersion, readContactMergeState)
