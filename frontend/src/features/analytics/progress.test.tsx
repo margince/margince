@@ -237,4 +237,27 @@ describe("ProgressScreen", () => {
       0,
     );
   });
+
+  it("opens the seller's sales goals for the year being read", async () => {
+    const seller = "00000000-0000-4000-8000-0000000000b2";
+    window.location.hash = `#/progress?period=year&year=2026&scope=owner:${seller}`;
+    installFetchStub({
+      "GET /analytics/context": () => jsonResponse(CONTEXTS.leader),
+      "GET /analytics/progress": () =>
+        jsonResponse({
+          ...sellerMarch,
+          period: { kind: "year", year: 2026 },
+          scope: { kind: "owner", id: seller, label: "Alex Brandt" },
+        }),
+    });
+    const user = userEvent.setup();
+    render(<ProgressScreen />);
+    const links = await screen.findAllByRole("button", {
+      name: "View sales goals",
+    });
+    await user.click(links[links.length - 1] as HTMLElement);
+    expect(window.location.hash).toMatch(/^#\/goals\?/);
+    expect(window.location.hash).toContain("year=2026");
+    expect(window.location.hash).toContain(`seller=${seller}`);
+  });
 });

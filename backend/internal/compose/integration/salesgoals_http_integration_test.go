@@ -224,3 +224,60 @@ func dealWorkOf(page crmcontracts.SalesProgressDealPage, deal string) *crmcontra
 	}
 	return nil
 }
+
+func TestASellerReadsTheirOwnPublishedGoalsButCannotChangeThem(t *testing.T) {
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+	e.DescribeCompany(t)
+	manager := signedInUser(t, e)
+	year := clocktest.Now(t).Year()
+	const email, password = "seller@sales-goals.test", "sales-goals-seller-password"
+	var user struct {
+		ID string `json:"id"`
+	}
+	mustCall(t, e, http.MethodPost, "/v1/users", AnyMap{"email": email, "display_name": "Sam Seller", "role": "rep"}, http.StatusCreated, &user)
+	apptest.SetPasswordByLink(t, e, user.ID, password)
+	plan := fmt.Sprintf("/v1/analytics/sales-goals/%s/%d", user.ID, year)
+
+	origin := crmcontracts.SalesGoalDraftInputOrigin("manual")
+	draft := crmcontracts.SalesGoalDraftInput{Months: evenMonths(), Reason: "Agreed in the yearly review", Origin: &origin}
+	_, saved := planWrite(t, e, "PUT", plan+"/draft", 0, draft)
+	status, published := planWrite(t, e, "POST", plan+"/publish", saved.Version,
+		crmcontracts.SalesGoalPublishInput{Reason: "Agreed in the yearly review", ConfirmAgreed: true})
+	if status != http.StatusOK {
+		t.Fatalf("publishing the seller's goals → %d", status)
+	}
+
+	january := fmt.Sprintf("%d-01-01", year)
+	target := AnyMap{
+		"metric": "bookings_won", "scope": AnyMap{"kind": "owner", "id": user.ID},
+		"period_kind": "month", "period_start": january, "value": 1, "reason": "Bypass the plan",
+	}
+	if status := e.Call(t, http.MethodPost, "/v1/analytics/targets", target, nil, nil); status != http.StatusUnprocessableEntity {
+		t.Errorf("a target written over a published plan's month → %d, want 422", status)
+	}
+
+	seller := e.AsSecondSeat(t, email, password)
+	var own crmcontracts.SalesGoalPlan
+	mustCall(t, seller, "GET", plan, nil, http.StatusOK, &own)
+	if own.Capabilities.Edit || own.Published == nil || monthsTotal(own.LiveMonths) != yearlyGoal {
+		t.Errorf("the seller's own plan = %+v, want the published goals, read-only", own)
+	}
+	if status, _ := planWrite(t, seller, "PUT", plan+"/draft", published.Version, draft); status < http.StatusBadRequest {
+		t.Errorf("the seller saving their own draft → %d, want a refusal", status)
+	}
+	if status := seller.Call(t, "GET", fmt.Sprintf("/v1/analytics/sales-goals/%s/%d", manager, year), nil, nil, nil); status < http.StatusBadRequest {
+		t.Errorf("the seller reading the manager's plan → %d, want a refusal", status)
+	}
+	var roster crmcontracts.SalesGoalRoster
+	mustCall(t, seller, "GET", fmt.Sprintf("/v1/analytics/sales-goals?year=%d", year), nil, http.StatusOK, &roster)
+	for _, row := range roster.Data {
+		if row.CanEdit {
+			t.Errorf("the seller's roster offers to edit %s", row.Name)
+		}
+	}
+	progress := readProgress(t, seller, fmt.Sprintf("period=year&year=%d", year))
+	if progress.Capabilities.WriteGoals || progress.Goal.AmountMinor == nil || *progress.Goal.AmountMinor != yearlyGoal {
+		t.Errorf("the seller's Progress = goal %+v, write %v; want their published goal, read-only", progress.Goal, progress.Capabilities.WriteGoals)
+	}
+}
