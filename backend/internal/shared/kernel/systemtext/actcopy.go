@@ -70,6 +70,8 @@ var actDefinitions = map[string]Definition{
 	"act.verbs.cancel_connector_backfill":          {Words: langcopy.Phrase{En: "Cancel connector backfill", De: "Nachladen alter E-Mails abbrechen", Vi: "Hủy việc nhập thư cũ"}},
 	"act.verbs.cancel_contract":                    {Words: langcopy.Phrase{En: "Cancel contract", De: "Kündigung eines Vertrags erfassen", Vi: "Ghi nhận hủy hợp đồng"}},
 	"act.verbs.cancel_import_run":                  {Words: langcopy.Phrase{En: "Cancel import run", De: "Import abbrechen", Vi: "Hủy lần nhập"}},
+	"act.verbs.reassign_handoff":                   {Words: langcopy.Phrase{En: "Reassign handoff", De: "Übergabe neu zuweisen", Vi: "Chuyển giao cho đồng nghiệp khác"}},
+	"act.verbs.replace_intro_request":              {Words: langcopy.Phrase{En: "Replace introduction request", De: "Eine neue Bitte um Vorstellung stellen", Vi: "Thay thế yêu cầu giới thiệu"}},
 	"act.verbs.cancel_intro_request":               {Words: langcopy.Phrase{En: "Cancel intro request", De: "Bitte um Vorstellung zurückziehen", Vi: "Rút lại yêu cầu giới thiệu"}},
 	"act.verbs.cancel_scheduled_send":              {Words: langcopy.Phrase{En: "Cancel scheduled send", De: "Geplanten Versand zurückziehen", Vi: "Hủy gửi đã lên lịch"}},
 	"act.verbs.change_contract_status":             {Words: langcopy.Phrase{En: "Change contract status", De: "Vertragsstatus ändern", Vi: "Đổi trạng thái hợp đồng"}},

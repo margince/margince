@@ -37,8 +37,9 @@ Other transports and older rows without proof cannot end a request through inbou
 
 The settle pass asks whether the evidence completes the exact request: `settled`, `still_owed`, or
 `unsure` below the confidence floor. A signature notice must name the requested document; matching
-subjects alone prove nothing. The model receives the request and eligible later evidence, marked as
-from them or from us. With no eligible evidence or no model, the request stays owed until someone
+subjects alone prove nothing. The model receives the request and eligible later evidence, marked as from them or from us.
+It also receives the names and count of files attached to our replies. A reply saying
+"attached" without a file does not prove delivery. With no eligible evidence or no model, the request stays owed until someone
 completes its reminder.
 
 A `settled` verdict completes the reminder linked to the evidence, through the ordinary activity writer.

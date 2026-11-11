@@ -297,6 +297,7 @@ export MARGINCE_SQL_CENSUS_DIR="$OUTDIR/sql-census"
 # A green run still cleans up: nobody wants a temp dir per passing run.
 KEEP_LOGS=""
 trap 'rm -f "$LANE_PKGS" "$WORK" "$DISCOVERY" "$ASSIGNED" "$RAN" "$UNTAGGED" "$TIMING" "$TEST_TIMING" "$WALLCLOCK" "$FAILED_PKGS" ${GROUPED:+"$GROUPED"} ${PART_GROUPS:+"$PART_GROUPS" "$CLAIMED" "$DONE_GROUPS"}; [[ -n "$KEEP_LOGS" ]] || rm -rf "$OUTDIR"; rm -rf ${REGEX_DIR:+"$REGEX_DIR"}' EXIT
+prepare_test_extension_manifest "$OUTDIR"
 
 # Static discovery of every top-level Test function of every integration-TAGGED
 # file, as "module_dir|rel|TestName"; the rules are in scripts/lib-laneorder.sh.

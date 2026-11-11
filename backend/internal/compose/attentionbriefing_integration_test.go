@@ -22,8 +22,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/compose/briefs"
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -55,7 +58,6 @@ func setupBriefingLane(t *testing.T) *briefingLaneEnv {
 	b.reader = attentionBriefing{
 		engine:  b.engine,
 		figures: attentionDealFacts{store: b.deals},
-		now:     b.nowFunc,
 	}
 	b.repCtx = e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
 	return b
@@ -67,7 +69,7 @@ func TestAMorningWithNoRunReadsAsAnEmptyLaneNotARefusal(t *testing.T) {
 	// The rep has never had a brief. The engine answers not-found, and this
 	// lane must turn that into "nothing this morning" — reporting it as a
 	// refusal would tell her something was hidden when nothing was.
-	entries, ran, _, err := b.reader.Queue(b.repCtx)
+	entries, ran, _, err := b.reader.Queue(b.repCtx, b.now)
 	if err != nil {
 		t.Fatalf("a rep with no run got an error rather than an empty morning: %v", err)
 	}
@@ -104,7 +106,7 @@ func TestTheLaneCarriesTheRunsDataCutoff(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, ran, cutoff, err := b.reader.Queue(b.repCtx)
+	_, ran, cutoff, err := b.reader.Queue(b.repCtx, b.now)
 	if err != nil {
 		t.Fatalf("reading the lane: %v", err)
 	}
@@ -133,7 +135,7 @@ func TestAnAnsweredBriefingItemLeavesTheLane(t *testing.T) {
 		t.Fatalf("the fixture queued %d items, and this test needs 2 to tell removal from emptiness", len(run.Items))
 	}
 
-	before, ran, _, err := b.reader.Queue(b.repCtx)
+	before, ran, _, err := b.reader.Queue(b.repCtx, b.now)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -149,7 +151,7 @@ func TestAnAnsweredBriefingItemLeavesTheLane(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	after, _, _, err := b.reader.Queue(b.repCtx)
+	after, _, _, err := b.reader.Queue(b.repCtx, b.now)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -180,7 +182,7 @@ func TestASetAsideBriefingItemComesBackWhenItsWindowPasses(t *testing.T) {
 
 	// While the window runs, the item is out of the lane.
 	b.now = b.now.Add(time.Hour)
-	during, _, _, err := b.reader.Queue(b.repCtx)
+	during, _, _, err := b.reader.Queue(b.repCtx, b.now)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -191,10 +193,10 @@ func TestASetAsideBriefingItemComesBackWhenItsWindowPasses(t *testing.T) {
 	}
 
 	// Once it passes, it is back — and nothing in this lane knows that rule.
-	// The engine's own read resurfaces it, which is why the lane asks the
+	// The engine's own read judges the snooze, which is why the lane asks the
 	// engine rather than deciding what a state means for itself.
 	b.now = until.Add(time.Minute)
-	after, _, _, err := b.reader.Queue(b.repCtx)
+	after, _, _, err := b.reader.Queue(b.repCtx, b.now)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -227,7 +229,7 @@ func TestADeletedDealTakesItsBriefingRowWithIt(t *testing.T) {
 		t.Fatalf("the fixture queued %d items, and this test needs 2 to tell removal from emptiness", len(run.Items))
 	}
 
-	before, ran, _, err := b.reader.Queue(b.repCtx)
+	before, ran, _, err := b.reader.Queue(b.repCtx, b.now)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -243,7 +245,7 @@ func TestADeletedDealTakesItsBriefingRowWithIt(t *testing.T) {
 		t.Fatalf("deleting the deal: %v", err)
 	}
 
-	after, ran, _, err := b.reader.Queue(b.repCtx)
+	after, ran, _, err := b.reader.Queue(b.repCtx, b.now)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -285,5 +287,69 @@ func seedBriefingLaneDeals(t *testing.T, b *briefingLaneEnv) {
 			pipeline, stage, name, b.Rep1, b.now.AddDate(0, 0, 5)); err != nil {
 			t.Fatalf("seeding %s: %v", name, err)
 		}
+	}
+}
+
+func TestAnEarlierDaysSnoozeStillHoldsTheWorklistRiskAndUndoRestoresIt(t *testing.T) {
+	b := setupBriefingLane(t)
+	seedBriefingLaneDeals(t, b)
+	run, err := b.engine.SnapshotRun(b.repCtx, b.now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	item := run.Items[0]
+	b.WsExec(t, `UPDATE deal SET created_at=@created, expected_close_date=@close WHERE id=@deal`, pgx.StrictNamedArgs{"deal": item.DealID, "created": b.now.Add(-60 * 24 * time.Hour), "close": b.now.Add(-24 * time.Hour)})
+	until := b.now.Add(48 * time.Hour)
+	if _, err := b.engine.MarkSnoozed(b.repCtx, item.ID, values.ReopenOnTime, &until, nil, b.now.Add(time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	b.now = b.now.Add(24 * time.Hour)
+	entries, ran, _, err := b.reader.Queue(b.repCtx, b.now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if ran {
+		t.Fatal("yesterday's run reported as today's")
+	}
+	found := false
+	for _, entry := range entries {
+		found = found || (entry.DealID == item.DealID && entry.Snoozed)
+	}
+	if !found {
+		t.Fatal("yesterday's snooze was lost")
+	}
+	svc := newAttentionService(b.Pool, approvals.NewService(b.DB()), b.nowFunc)
+	page, err := svc.Worklist(b.repCtx, "mine", "all", ids.Nil, 100, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, row := range page.Queue {
+		if row.Subject != nil && ids.UUID(row.Subject.Id) == item.DealID {
+			t.Fatal("snoozed risk is still work")
+		}
+	}
+	if _, err := b.engine.MarkUnsnoozed(b.repCtx, item.ID); err != nil {
+		t.Fatal(err)
+	}
+	entries, _, _, err = b.reader.Queue(b.repCtx, b.now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, entry := range entries {
+		if entry.DealID == item.DealID && entry.Snoozed {
+			t.Fatal("undo left the snooze holding")
+		}
+	}
+
+	page, err = svc.Worklist(b.repCtx, "mine", "all", ids.Nil, 100, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	restored := false
+	for _, row := range page.Queue {
+		restored = restored || (row.Subject != nil && ids.UUID(row.Subject.Id) == item.DealID)
+	}
+	if !restored {
+		t.Fatal("undo did not restore the at-risk deal")
 	}
 }

@@ -13,6 +13,8 @@ package identity
 
 import (
 	"bytes"
+	"crypto/sha256"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -20,6 +22,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -32,20 +36,49 @@ import (
 // database, and a fixed nonce would make two tests one replay.
 type stubMFASigner struct{}
 
-func (stubMFASigner) Sign(userID string, _ time.Duration) (string, error) {
-	return "stub." + userID + "." + ids.NewV7().String(), nil
+func (stubMFASigner) Sign(c MFAChallenge, _ time.Duration) (string, error) {
+	c.Jti = ids.NewV7().String()
+	payload, err := json.Marshal(c)
+	if err != nil {
+		return "", err
+	}
+	return "stub." + base64.RawURLEncoding.EncodeToString(payload), nil
 }
 
-func (stubMFASigner) Verify(token string) (string, string, error) {
+func (stubMFASigner) Verify(token string) (MFAChallenge, error) {
 	rest, ok := strings.CutPrefix(token, "stub.")
 	if !ok {
-		return "", "", errors.New("stub: bad challenge")
+		return MFAChallenge{}, errors.New("stub: bad challenge")
 	}
-	sub, jti, ok := strings.Cut(rest, ".")
-	if !ok || jti == "" {
-		return "", "", errors.New("stub: bad challenge")
+	payload, err := base64.RawURLEncoding.DecodeString(rest)
+	if err != nil {
+		return MFAChallenge{}, err
 	}
-	return sub, jti, nil
+	var c MFAChallenge
+	if err := json.Unmarshal(payload, &c); err != nil || c.Jti == "" {
+		return MFAChallenge{}, errors.New("stub: bad challenge")
+	}
+	return c, nil
+}
+
+func (stubMFASigner) KeyEpoch(material string) string {
+	sum := sha256.Sum256([]byte("stub-epoch." + material))
+	return base64.RawURLEncoding.EncodeToString(sum[:])
+}
+
+// memberEpoch is the credential epoch a challenge issued to the member now
+// would carry.
+func (e *revocationEnv) memberEpoch(t *testing.T) string {
+	t.Helper()
+	var epoch string
+	if err := e.svc.db.Tx(e.wsOnlyCtx(), func(tx pgx.Tx) error {
+		var err error
+		epoch, err = e.svc.credentialEpoch(e.wsOnlyCtx(), tx, e.member.UserID)
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	return epoch
 }
 
 // freshJti mints a challenge nonce for the tests that drive the service
@@ -93,7 +126,7 @@ func TestLoginWithAConfirmedFactorRequiresTheSecondStep(t *testing.T) {
 	// resolved in the SAME transaction, so it is already the signed-in shape.
 	e.atInstant(base.Add(totpStep))
 	fresh, _ := totpCodeAt(secret, e.svc.now(), totpDigits)
-	signedIn, sessionToken, err := e.svc.CompleteMFAChallenge(e.wsOnlyCtx(), e.member.UserID, freshJti(), fresh)
+	signedIn, sessionToken, err := e.svc.CompleteMFAChallenge(e.wsOnlyCtx(), e.member.UserID, MFAChallenge{Jti: freshJti(), Epoch: e.memberEpoch(t)}, fresh)
 	if err != nil {
 		t.Fatalf("CompleteMFAChallenge: %v", err)
 	}
@@ -105,7 +138,7 @@ func TestLoginWithAConfirmedFactorRequiresTheSecondStep(t *testing.T) {
 	}
 
 	// A wrong code is refused.
-	if _, _, err := e.svc.CompleteMFAChallenge(e.wsOnlyCtx(), e.member.UserID, freshJti(), "000000"); !errors.Is(err, errBadMFACode) {
+	if _, _, err := e.svc.CompleteMFAChallenge(e.wsOnlyCtx(), e.member.UserID, MFAChallenge{Jti: freshJti(), Epoch: e.memberEpoch(t)}, "000000"); !errors.Is(err, errBadMFACode) {
 		t.Fatalf("wrong second-factor code: err=%v, want errBadMFACode", err)
 	}
 }
@@ -120,7 +153,7 @@ func TestACompletedChallengeCannotBeSpentTwice(t *testing.T) {
 
 	e.atInstant(base.Add(totpStep))
 	code, _ := totpCodeAt(secret, e.svc.now(), totpDigits)
-	if _, _, err := e.svc.CompleteMFAChallenge(e.wsOnlyCtx(), e.member.UserID, jti, code); err != nil {
+	if _, _, err := e.svc.CompleteMFAChallenge(e.wsOnlyCtx(), e.member.UserID, MFAChallenge{Jti: jti, Epoch: e.memberEpoch(t)}, code); err != nil {
 		t.Fatalf("first completion: %v", err)
 	}
 
@@ -129,7 +162,7 @@ func TestACompletedChallengeCannotBeSpentTwice(t *testing.T) {
 	// error, disclosing nothing about which half failed.
 	e.atInstant(base.Add(2 * totpStep))
 	next, _ := totpCodeAt(secret, e.svc.now(), totpDigits)
-	if _, _, err := e.svc.CompleteMFAChallenge(e.wsOnlyCtx(), e.member.UserID, jti, next); !errors.Is(err, errBadMFACode) {
+	if _, _, err := e.svc.CompleteMFAChallenge(e.wsOnlyCtx(), e.member.UserID, MFAChallenge{Jti: jti, Epoch: e.memberEpoch(t)}, next); !errors.Is(err, errBadMFACode) {
 		t.Fatalf("replayed challenge: err=%v, want errBadMFACode", err)
 	}
 
@@ -137,7 +170,7 @@ func TestACompletedChallengeCannotBeSpentTwice(t *testing.T) {
 	// never be made single-use.
 	e.atInstant(base.Add(3 * totpStep))
 	last, _ := totpCodeAt(secret, e.svc.now(), totpDigits)
-	if _, _, err := e.svc.CompleteMFAChallenge(e.wsOnlyCtx(), e.member.UserID, "", last); !errors.Is(err, errBadMFACode) {
+	if _, _, err := e.svc.CompleteMFAChallenge(e.wsOnlyCtx(), e.member.UserID, MFAChallenge{Jti: "", Epoch: e.memberEpoch(t)}, last); !errors.Is(err, errBadMFACode) {
 		t.Fatalf("nonce-less challenge: err=%v, want errBadMFACode", err)
 	}
 }
@@ -216,7 +249,7 @@ func TestMfaCompletionFailuresAreRateLimitedPerAccount(t *testing.T) {
 	// Ten attempts spend the per-account attempt budget (the login pair's
 	// number). Past the fifth the account lockout refuses them, with the same 401.
 	for range 10 {
-		challenge, err := signer.Sign(e.member.UserID.String(), mfaChallengeTTL)
+		challenge, err := signer.Sign(MFAChallenge{UserID: e.member.UserID.String(), Epoch: e.memberEpoch(t)}, mfaChallengeTTL)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -230,7 +263,7 @@ func TestMfaCompletionFailuresAreRateLimitedPerAccount(t *testing.T) {
 	// code no longer reaches the factor until the window passes.
 	e.atInstant(base.Add(totpStep))
 	fresh, _ := totpCodeAt(secret, e.svc.now(), totpDigits)
-	challenge, err := signer.Sign(e.member.UserID.String(), mfaChallengeTTL)
+	challenge, err := signer.Sign(MFAChallenge{UserID: e.member.UserID.String(), Epoch: e.memberEpoch(t)}, mfaChallengeTTL)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -304,6 +304,7 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "health.setup.recovery.todo",
   ],
   vi: [
+    "directSend.correctionScope",
     // These messages name actual readers and participants, not contact records.
     "internalMail.historyImportNote",
     "internalMail.scope",
@@ -708,6 +709,14 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "senders.keepOutBody",
     "senders.keepOutTitle",
     "senders.title",
+    // "người gửi" in the waiting drawer is the SENDER of the mail, as above.
+    "senders.waiting.businessTitle",
+    "senders.waiting.removeBody",
+    "senders.waiting.why.classifying",
+    "senders.waiting.why.decided",
+    "senders.waiting.why.queued",
+    "senders.waiting.why.unjudgeable",
+    "senders.waiting.why.unsure",
     "signal.kind.champion_left",
     "timeline.withheld",
     "visibility.participants",

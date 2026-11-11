@@ -53,6 +53,30 @@ export const ContactsList: Story = {
   },
 };
 
+/** `#/contacts/new`: the list with its create form open, as `C` opens it. */
+export const CreateFormOpen: Story = {
+  render: () => {
+    installFetchStub({
+      "GET /me": meRoute({ contact: ["read", "create"] }),
+      "GET /contacts": () =>
+        jsonResponse({
+          data: [anna],
+          page: { next_cursor: null, has_more: false },
+        }),
+    });
+    return (
+      <StoryProviders>
+        <ContactsScreen startCreating />
+      </StoryProviders>
+    );
+  },
+  play: async () => {
+    await expect(
+      await screen.findByRole("dialog", { name: "New contact" }),
+    ).toBeInTheDocument();
+  },
+};
+
 /** Each address carries its copy glyph, which copies and opens nothing. */
 export const ContactsListCopyAddress: Story = {
   render: () => {

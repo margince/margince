@@ -15,7 +15,7 @@ import (
 // and the rates, and sets the change in the deal's own currency. The amount
 // written is the one the quote states, to the minor unit.
 func decideAmount(in Input, state State, action Action, rates Rates, change *deals.VerdictChange) (string, error) {
-	if !quoteFound(in, action.Cited, action.QuotedWords) {
+	if !buyerQuoteFound(in, action.Cited, action.QuotedWords) {
 		return DroppedQuoteNotFound, nil
 	}
 	quotedMinor, currency, ok := QuotedPrice(action.QuotedWords)

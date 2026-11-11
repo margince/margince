@@ -2769,6 +2769,20 @@ export const en = {
   "shell.shortcuts.paragraphSave": "Save multi-line field",
   "shell.shortcuts.deckHint":
     "On Home, arrow keys stage a decision. Enter sends what is staged.",
+  "shell.shortcuts.create": "Create record",
+  "shell.shortcuts.list": "Show keyboard shortcuts",
+  "shell.shortcuts.goto": "Go to",
+  "shell.shortcuts.gotoHint": "Press G, then the letter.",
+  "shell.shortcuts.record": "On a record",
+  "shell.shortcuts.logActivity": "Log activity",
+  "shell.shortcuts.addTask": "Add task",
+  "shell.shortcuts.writeEmail": "Write message",
+  "shell.shortcuts.sendEmail": "Send email",
+  "shell.shortcuts.submitDialog": "Submit dialog",
+  "shell.shortcuts.then": "then",
+  "shell.shortcuts.or": "or",
+  "shell.shortcuts.singleKeyOff": "Single-key shortcuts are off",
+  "shell.shortcuts.singleKeyOffHint": "Turn them on in Settings → Account.",
   "shell.more": "More",
   "shell.unknownPage": "Not found",
   "shell.closeMenu": "Close",
@@ -7864,6 +7878,22 @@ export const en = {
   "compose.sendMessageConfirmTitle": "Send message",
   "compose.sendMessageBody":
     "The message is sent immediately. This cannot be undone.",
+  "directSend.existingApproval":
+    "Your one-message approval still stands. Its original reason stays on record.",
+  "directSend.correctWording": "Correct spelling or punctuation",
+  "directSend.correctionTitle": "Correct wording and keep your approval",
+  "directSend.correctionSave": "Save correction",
+  "directSend.correctionScope":
+    "Correct spelling or punctuation only. Recipients, sender, purpose and attachments stay the same. Changes in meaning need a new message approval.",
+  "directSend.correctionAcknowledge":
+    "I confirm that only spelling or punctuation changed. The meaning and facts are unchanged.",
+  "directSend.correctionNeedsEdit":
+    "Make a spelling or punctuation correction first.",
+  "directSend.correctionNeedsConfirmation":
+    "Confirm that the meaning and facts are unchanged.",
+  "directSend.correctionNeedsText": "Keep a subject and a message body.",
+  "directSend.correctionFailed":
+    "The correction was not saved. Reopen the review to check the current message and approval.",
   "directSend.open": "Send with a recorded exception",
   "directSend.queued": "Queued as a recorded exception.",
   "directSend.opening": "Opening…",
@@ -8475,6 +8505,11 @@ export const en = {
   "analytics.sdrReading.leads_awaiting_response":
     "Leads still waiting for a first reply",
   "analytics.sdrQualifiedOf": "{qualified} of {arrived}",
+  "analytics.handoffReassign": "Reassign handoff",
+  "analytics.handoffReassignHint":
+    "Choose an active colleague who can work this prospect. Accepted handoffs keep their original attribution.",
+  "analytics.handoffReassignUnavailable":
+    "Choose a colleague after the current assignment loads. Reassignment requires write access and a handoff still waiting for an answer.",
   "analytics.sdrWaiting": "Handoffs waiting on others",
   "analytics.sdrWaitingIntro":
     "Handoffs you submitted that nobody has decided yet. A handoff that was sent back and submitted again waits from the new submission.",
@@ -10021,8 +10056,12 @@ export const en = {
     "A lost deal needs the reason it was lost.",
   "import.reason.deal_pipeline_fixed":
     "This deal is in another pipeline than the file names. An import does not move a deal between pipelines, so the row is skipped.",
+  "companies.contractMergeBlocked":
+    "A deal has contracts belonging to another company. Archived contracts also count. Ask an administrator to correct the contract links before merging.",
+  "deals.contractCompanyBlocked":
+    "This deal has contracts belonging to another company. Archived contracts also count. Ask an administrator to correct the contract links before changing the company.",
   "import.reason.deal_company_has_contracts":
-    "This deal has contracts that name a company other than the one in this row, so the row is skipped. Detach the contracts from the deal, or file each against a deal of its own company, then import again.",
+    "This deal has contracts that name a company other than the one in this row, so the row is skipped. Archived contracts also count. Ask an administrator to correct the contract links, then import again.",
   "import.reason.deal_already_closed":
     "This deal is already closed, so the row is skipped. An import does not reopen a closed deal.",
   "import.reason.fx_rate_missing":
@@ -11606,6 +11645,27 @@ export const en = {
   "senders.waiting.moreAddresses_other": "+{count} more",
   "senders.waiting.openNamed": "Open {name}",
   "senders.waiting.openUnnamed": "Open contact",
+  "senders.waiting.onMargince": "Waiting on Margince:",
+  "senders.waiting.onYou": "Waiting on you:",
+  "senders.waiting.why.decided":
+    "the decision is applied at the next sender check.",
+  "senders.waiting.why.classifying":
+    "the sender check has not judged this sender yet.",
+  "senders.waiting.why.unsure":
+    "the sender check could not tell, so your answer decides.",
+  "senders.waiting.why.queued": "the sender check will look at their mail.",
+  "senders.waiting.why.unjudgeable":
+    "Margince cannot check this sender on its own, so only you can decide.",
+  "senders.waiting.businessFor": "Mark {address} as business",
+  "senders.waiting.keepOutFor": "Exclude {address}",
+  "senders.waiting.businessTitle": "Mark this sender as business?",
+  "senders.waiting.businessBody":
+    "Their mail is kept as business mail, and this contact is shared with your company. Each email and meeting keeps its own sharing.",
+  "senders.waiting.remove": "Remove from contacts",
+  "senders.waiting.removeTitle": "Remove this contact?",
+  "senders.waiting.removeBody":
+    "The contact is archived and leaves this list. Its mail stays, and no sender decision changes. You can restore it from archived contacts.",
+  "senders.waiting.removeConfirm": "Remove contact",
   "connectionOutcomes.title": "What your connections found",
   "connectionOutcomes.view": "View",
   "connectionOutcomes.viewNamed": "View {name}",
@@ -13927,6 +13987,8 @@ export const en = {
     "Everything keeps working and nothing is capped. Configure a license token for this installation to count seats against a grant.",
   "license.refused.title": "This installation’s license was refused",
   "license.refused.body":
+    "The license token configured for this installation was presented and rejected. Full seats in use keep working, and no full seat is added beyond what the last valid license granted, until it is replaced. Check the token and the installation’s clock.",
+  "license.refused.bodyUncapped":
     "The license token configured for this installation was presented and rejected. Everything keeps working, uncapped, until it is replaced. Check the token and the installation’s clock.",
   "license.seats.capacityOnly": "Your role cannot see the license entitlement.",
   "license.seats.title": "Seats",
@@ -13951,6 +14013,12 @@ export const en = {
   "license.renewal.title": "License needs renewal",
   "license.renewal.body":
     "The license expires on {expiry}. Nothing changes before that date.",
+  "license.check.button": "Check now",
+  "license.check.hint":
+    "Reads the license token file on the server again now, instead of at the next daily check. Replace the file first. A token set in an environment variable applies only after a restart.",
+  "license.check.done": "License token read again. This card shows the result.",
+  "license.check.failed":
+    "The license token could not be read again. The last result stands, and the server log says why.",
   "license.counting":
     "Full seats that are not deactivated or suspended, agents included. Read-only seats are unlimited and not counted.",
   "settings.rates.fxTitle": "Currency rates",
@@ -14623,6 +14691,10 @@ export const en = {
   "users.handover.tasks_other": "{count} open tasks",
   "users.handover.webhooks_one": "{count} webhook",
   "users.handover.webhooks_other": "{count} webhooks",
+  "users.handover.handoffs_one": "{count} pending handoff",
+  "users.handover.handoffs_other": "{count} pending handoffs",
+  "users.handover.responsibilities_one": "{count} record responsibility",
+  "users.handover.responsibilities_other": "{count} record responsibilities",
   "users.handover.lists_one": "{count} list",
   "users.handover.lists_other": "{count} lists",
   "users.removeMfa": "Remove two-step sign-in",
@@ -15673,6 +15745,9 @@ export const en = {
     "The language of menus, pages and messages from Margince. Saved to your account, so it follows you to every device you sign in on.",
   "account.appearanceHelp":
     "Light, dark or follow this computer’s setting. Applies in this browser only. The account menu changes the same setting.",
+  "account.singleKeyShortcuts": "Single-key shortcuts",
+  "account.singleKeyShortcutsHelp":
+    "Letter and symbol keys work as shortcuts on their own. Applies in this browser only.",
   "reviewTemplates.questionCount_one": "{count} question",
   "reviewTemplates.questionCount_other": "{count} questions",
   "reviewTemplates.summary": "{questions}, {required} required",
@@ -17392,6 +17467,12 @@ export const en = {
   "contact.intro.whenYesterday": "last contact yesterday",
   "contact.intro.whenDays": "last contact {days} days ago",
   "contact.intro.whenNever": "no recent contact",
+  "contact.intro.replaceAction": "Choose another colleague",
+  "contact.intro.replaceHint":
+    "Review a fresh route and ask. The old ask stays open until the replacement succeeds. The new colleague must decide for themselves; earlier approval does not carry over.",
+  "contact.intro.replaceReasonHint":
+    "The colleague on the original ask can read this reason.",
+  "contact.intro.replaceReason": "Why are you replacing this ask?",
   "contact.intro.askTitle": "Ask for an introduction to {name}",
   "contact.intro.recordAction": "Record an introduction",
   "contact.intro.recordTitle": "Record an introduction to {name}",
@@ -17420,7 +17501,6 @@ export const en = {
   "contact.intro.recordedIntroduced": "introduced",
   "contact.intro.cancel": "Cancel",
   "contact.intro.askAction": "Request introduction",
-  "contact.intro.askFailed": "The request was not recorded. Retry.",
   "contact.intro.reasonLabel": "Reason for request",
   "contact.intro.reasonHint":
     "Your colleague reads this, not the contact. State why the introduction is worth making.",

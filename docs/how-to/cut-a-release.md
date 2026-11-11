@@ -79,7 +79,9 @@ git push origin v1.0.0
 
 1. It pushes the three images to `ghcr.io/margince`, tagged with the version.
 2. It packs one server bundle for each Linux platform, with
-   [`scripts/release-bundle.sh`](../../scripts/release-bundle.sh).
+   [`scripts/release-bundle.sh`](../../scripts/release-bundle.sh). Each bundle and the api and worker images carry
+   `THIRD-PARTY-NOTICES.txt`, the license texts of the Go modules the programs link. It is written by
+   [`scripts/backend-notices.sh`](../../scripts/backend-notices.sh). The pack refuses a bundle without it.
 3. It writes the SBOMs, `images.txt` (each image pinned by its hash) and `SHA256SUMS` over the bundles, the SBOMs and `images.txt`.
 4. It signs each image and `SHA256SUMS` with cosign.
 5. It uploads those files with your notes, the changes and the install steps, then publishes the release.
@@ -113,12 +115,21 @@ Two kinds of release live here, and they carry different versions:
 
 | | `release-tag.yml` | `release.yml` |
 |---|---|---|
-| Trigger | a `v*` tag | started by hand |
-| Version | `v1.0.0` (semver) | `YYYY.edition.bugfix`: today `1970.<run>`, a stand-in pinned to the year 1970 |
+| Trigger | a `v*` tag | the same `v*` tag, or started by hand to test the lane |
+| Version | `v1.0.0` (semver) | `YYYY.edition.bugfix`, from the tag; a run by hand is `1970.<run>` |
 | Publishes to | the GitHub release page | the dist service at `dist.test.margince.com` |
 | Carries | the notes, the images on `ghcr.io`, a server bundle for each Linux platform, SBOMs, a signed `SHA256SUMS` | the patch of changes, SBOMs, role images |
 
 The version form of the dist service does not accept a `v` prefix, so the two lanes use different names.
+`scripts/release-dist-version.sh` derives one from the other by a fixed rule, so the dist version can be
+worked out again from the tag:
+
+- `YYYY` is the year, in UTC, that `vX.Y.0` was tagged.
+- The edition is the place of `vX.Y.0` in that year's `.0` tags, in version order, counting from 1.
+- The last part is the patch, `Z`.
+
+A patch keeps the year and edition of its `vX.Y.0`, so `v1.1.3` comes after `v1.1.0` in any year. A tag
+with an added part, such as `v1.0.0-rc.1`, makes no dist release.
 
 ### Where the patch of changes starts
 

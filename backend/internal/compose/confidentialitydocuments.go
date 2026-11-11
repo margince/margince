@@ -181,7 +181,7 @@ func (d *threadDocuments) read(
 // readOne fills one document's excerpt, or marks it unreadable. It answers an
 // error only for a cause the thread is not to blame for.
 func (d *threadDocuments) readOne(ctx context.Context, doc *capture.ThreadDocument, pass *documentPass) error {
-	if doc.ByteSize > confidentialityDocumentBytes {
+	if doc.ByteSize > confidentialityDocumentBytes || capture.IsThreadImage(doc.Filename, doc.ContentType) {
 		doc.Unreadable = true
 		return nil
 	}
@@ -241,6 +241,10 @@ func (d *threadDocuments) fetch(ctx context.Context, id ids.UUID) ([]byte, strin
 // the file's and marks it unreadable; the caller's own cancellation is not, and
 // defers the thread.
 func (d *threadDocuments) excerpt(ctx context.Context, doc *capture.ThreadDocument, raw []byte, mediaType string) error {
+	if capture.IsThreadImage(doc.Filename, mediaType) {
+		doc.Unreadable = true
+		return nil
+	}
 	fileCtx, cancel := context.WithTimeout(ctx, confidentialityDocumentTimeout)
 	defer cancel()
 	text, truncated, err := d.parse(fileCtx, raw, mediaType, confidentialityCVChars)

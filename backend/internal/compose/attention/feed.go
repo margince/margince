@@ -195,7 +195,8 @@ type Service struct {
 	// briefScores is one read's answer, on the per-request copy readingScores
 	// makes. The classifier reads it to stamp `opportunity`, which is why it
 	// cannot travel as an argument the way the findings do.
-	briefScores map[ids.UUID]float64
+	briefScores  map[ids.UUID]float64
+	briefSnoozed map[ids.UUID]bool
 	// briefCutoff is the same read's brief run data cutoff, on the same copy and
 	// for the same reason.
 	briefCutoff time.Time
@@ -321,7 +322,7 @@ func (s *Service) assembleDay(ctx context.Context) (crmcontracts.Attention, besi
 	}
 	var omitted []crmcontracts.AttentionLanesOmitted
 
-	night, err := s.thisMorning(ctx)
+	night, err := s.thisMorning(ctx, asOf)
 	omitted, err = fill(omitted, "this_morning", err, func() {
 		out.ThisMorning = night.items
 		out.Counts.ThisMorning = len(night.items)
@@ -493,8 +494,4 @@ func (s *Service) done(ctx context.Context, asOf time.Time) ([]crmcontracts.Atte
 		items = append(items, receiptItem(receipt))
 	}
 	return items, nil
-}
-
-func overdue(item crmcontracts.AttentionItem) bool {
-	return item.Overdue != nil && *item.Overdue
 }

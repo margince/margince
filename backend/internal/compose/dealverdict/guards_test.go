@@ -57,7 +57,7 @@ func amountAction(amount int64, currency, quote string) Action {
 }
 
 func probabilityAction(pct int) Action {
-	return Action{Kind: KindSetProbability, Probability: pct, Cited: []string{"mail"}, Confidence: 0.9, Reason: "r"}
+	return Action{Kind: KindSetProbability, Probability: pct, QuotedWords: "We can sign", Cited: []string{"mail"}, Confidence: 0.9, Reason: "r"}
 }
 
 func TestEachGuardDropsWhatItGuards(t *testing.T) {

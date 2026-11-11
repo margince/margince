@@ -551,6 +551,44 @@ nobody. The log then warns with the key and the source of the setting.
 A boot-set `deals.legal_review_enabled` wins over `seeds.legal_review`, and a boot-set
 `privacy.retain_only` wins over `seeds.retention.default_policy`.
 
+## Time-zone data
+
+Which day a moment falls on is answered twice. Go answers it for the runs that
+sweep by date, and SQL answers it for the reports that bucket by date. Each
+answer comes from its own copy of the IANA time-zone database, and the two
+copies update separately.
+
+The `api` and `worker` binaries embed a copy, because both import
+`time/tzdata`. Postgres carries its own, which comes with its image.
+`cmd/migrate` embeds none.
+
+Go reads `ZONEINFO` first, then the zone files of the host, then its embedded
+copy. So the embedded copy answers only where the host has no zone files. It is
+fixed at the version the binary was built with. Two ways to serve a newer
+version without building again:
+
+- set `ZONEINFO` to a zone file archive, or
+- give the host current zone files, which the binaries then read first.
+
+An image built `FROM scratch` holds no zone files of its own. It reads the
+embedded copy, and stays at its build version until it is built again.
+
+The pair that matters is Go against Postgres. A country changes when its clocks
+move, and one copy learns of it before the other. From then on one
+moment falls on two different days. The sweep and the report disagree about
+which day it is, and neither reports a fault.
+
+`TestGoAndPostgresBucketAnInstantAlike` in
+`backend/internal/compose/tzdataskew_integration_test.go` holds the pair. It
+asks both engines for every 15 minutes of the next 14 months, in zones
+whose rules have moved. It fails naming the first moment they place
+differently.
+
+What a browser holds is its own third copy. It decides what a reader is shown,
+and it reaches what is stored in two ways. Setting up an account and the zone setting
+store the zone name the browser reports. A scheduled send stores the moment the
+browser works out from the time a rep picked, by the browser's own rules.
+
 ## The files of a dev stack
 
 The **deployment config** (`--config`, default `margince.yaml`) is set up the same way for local

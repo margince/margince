@@ -325,3 +325,133 @@ func TestAMailFiledUnderALeadIsRefusedToAnAddressTheLeadDoesNotHold(t *testing.T
 		}
 	}
 }
+
+func TestAQueuedLeadReceiptFollowsItsPromotedSubject(t *testing.T) {
+	l := receiptLane(t, receiptOwed)
+	lead := l.refusingLead(t, new(leadReceiptAddress))
+	l.pressLeadLink(t, lead, leadReceiptAddress)
+	store := withContactMergeCarriers(l.e.DB(), newContactsStore(l.e.DB()))
+	contact, _, err := store.PromoteLead(l.e.Admin(), ids.From[ids.LeadKind](lead), contacts.PromoteLeadInput{Trigger: "human_qualify"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	l.e.WsExec(t, `UPDATE contact SET address_country=@country WHERE id=@id`, pgx.StrictNamedArgs{"country": strings.ToUpper(string(receiptOwed)), "id": contact.Id})
+
+	if ticket := l.transmitLeadReceipt(t); !ticket.Allowed {
+		t.Fatalf("promoted receipt refused: %s", ticket.Reason)
+	}
+	if n := l.e.WsCount(t, `SELECT count(*) FROM communication_decision WHERE phase='transmit' AND @code=ANY(ruleset_codes)`, pgx.StrictNamedArgs{"code": string(receiptOwed)}); n != 1 {
+		t.Fatal("the promoted subject's rules were not recorded")
+	}
+	want := "contact:" + contact.Id.String() + ":allow"
+	if got := l.receiptDecisions(t, "transmit"); len(got) != 1 || got[0] != want {
+		t.Fatalf("receipt decided on %q, want %s", got, want)
+	}
+}
+
+func TestAQueuedLeadReceiptFollowsItsMergedSubject(t *testing.T) {
+	l := receiptLane(t, receiptOwed)
+	lead := l.refusingLead(t, new(leadReceiptAddress))
+	survivor := l.refusingLead(t, new("surviving-lead@example.test"))
+	l.pressLeadLink(t, lead, leadReceiptAddress)
+	store := withContactMergeCarriers(l.e.DB(), newContactsStore(l.e.DB()))
+	if _, err := store.MergeLead(l.e.Admin(), ids.From[ids.LeadKind](lead), ids.From[ids.LeadKind](survivor)); err != nil {
+		t.Fatal(err)
+	}
+	if ticket := l.transmitLeadReceipt(t); !ticket.Allowed {
+		t.Fatalf("merged receipt refused: %s", ticket.Reason)
+	}
+	want := "lead:" + survivor.String() + ":allow"
+	if got := l.receiptDecisions(t, "transmit"); len(got) != 1 || got[0] != want {
+		t.Fatalf("receipt decided on %q, want %s", got, want)
+	}
+}
+
+func TestLeadAnonymizationPreservesTheAlreadySentCorrespondence(t *testing.T) {
+	l := receiptLane(t, receiptOwed)
+	lead := l.refusingLead(t, new(leadReceiptAddress))
+	l.pressLeadLink(t, lead, leadReceiptAddress)
+	l.recordReceiptSent(t)
+	const correspondence = `SELECT json_build_object('recipients',o.recipients,'subject',a.subject,'body',a.body,'status',o.status)::text
+ FROM comms_outbound o JOIN activity a ON a.id=o.activity_id WHERE o.template_key='optout_acknowledgement'`
+	before := l.e.WsScalar(t, correspondence)
+	if !strings.Contains(before, leadReceiptAddress) {
+		t.Fatal("sent receipt did not name the recipient")
+	}
+	l.e.WsExec(t, `INSERT INTO retention_policy (object_type,category,retain_days,action) VALUES ('lead','unconverted',365,'anonymize')`)
+	l.e.WsExec(t, `UPDATE lead SET created_at=now()-interval '400 days',entered_at=now()-interval '400 days' WHERE id=@lead`, pgx.StrictNamedArgs{"lead": lead})
+	svc := NewRetentionServiceFor(l.e.DB(), nil, slog.Default())
+	integration.SettleIntoInstall(t, l.e)
+	if err := svc.EvaluateInstallation(integration.RetentionPassCtx(l.e.WS)); err != nil {
+		t.Fatal(err)
+	}
+	if n := l.e.WsCount(t, `SELECT count(*) FROM lead WHERE id=@lead AND full_name='Anonymized Lead' AND email IS NULL`, pgx.StrictNamedArgs{"lead": lead}); n != 1 {
+		t.Fatal("lead was not anonymized")
+	}
+	if after := l.e.WsScalar(t, correspondence); after != before {
+		t.Fatalf("sent correspondence changed: before=%s after=%s", before, after)
+	}
+}
+
+func TestALegacySharedMailboxKeepsThePinnedLeadsCountry(t *testing.T) {
+	l := receiptLane(t, receiptOwed)
+	lead := l.refusingLead(t, new(leadReceiptAddress))
+	contact, err := l.e.Contacts.CreateContact(l.e.Admin(), contacts.CreateContactInput{
+		FullName: "Legacy contact", Source: "manual", Emails: []contacts.ContactEmailInput{{Email: "legacy-contact@example.test", EmailType: "work", IsPrimary: true}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Legacy imports can leave a contact and lead holding the same mailbox.
+	l.e.WsExec(t, `UPDATE contact_email SET email=@address WHERE contact_id=@contact`, pgx.StrictNamedArgs{"address": leadReceiptAddress, "contact": contact.Id})
+	l.pressLeadLink(t, lead, leadReceiptAddress)
+	if ticket := l.transmitLeadReceipt(t); !ticket.Allowed {
+		t.Fatalf("lead receipt refused: %s", ticket.Reason)
+	}
+	if n := l.e.WsCount(t, `SELECT count(*) FROM communication_decision WHERE @code=ANY(ruleset_codes)`, pgx.StrictNamedArgs{"code": string(receiptOwed)}); n != 2 {
+		t.Fatalf("%d decisions used the filed lead's country, want staging and transmit", n)
+	}
+}
+
+func TestAReceiptStagedAfterPromotionKeepsItsLeadPin(t *testing.T) {
+	l := receiptLane(t, receiptOwed)
+	lead := l.refusingLead(t, new(leadReceiptAddress))
+	l.pressLeadLink(t, lead, leadReceiptAddress)
+	store := withContactMergeCarriers(l.e.DB(), newContactsStore(l.e.DB()))
+	contact, _, err := store.PromoteLead(l.e.Admin(), ids.From[ids.LeadKind](lead), contacts.PromoteLeadInput{Trigger: "human_qualify"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var delivery ids.UUID
+	var subject, body, html string
+	if err := l.e.Pool.QueryRow(l.ctx, `SELECT id,subject,body,coalesce(html_body,'') FROM comms_outbound WHERE template_key='optout_acknowledgement'`).Scan(&delivery, &subject, &body, &html); err != nil {
+		t.Fatal(err)
+	}
+	_, category, err := consent.RenderControllerTemplate(consent.TemplateOptOutAcknowledgement, time.Time{}, "en")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := InstallationDB(l.e.Pool).Tx(l.ctx, func(tx pgx.Tx) error {
+		set, err := consentGateFor(l.e.Pool).AuthorizeStagingTx(l.ctx, tx, delivery, commsauthz.Request{
+			Recipients: []connector.Recipient{{Email: leadReceiptAddress}}, Context: category,
+			Evidence: commsauthz.Evidence{LeadID: lead}, Subject: subject, Body: body, HTMLBody: html,
+		})
+		if err != nil {
+			return err
+		}
+		return refuseAtStaging(set)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if n := l.e.WsCount(t, `SELECT count(*) FROM communication_decision WHERE phase='staging' AND evidence->>'lead_id'=@lead`, pgx.StrictNamedArgs{"lead": lead.String()}); n != 2 {
+		t.Fatal("staging after promotion dropped the lead pin")
+	}
+	if ticket := l.transmitLeadReceipt(t); !ticket.Allowed {
+		t.Fatalf("promoted receipt refused: %s", ticket.Reason)
+	}
+	want := "contact:" + contact.Id.String() + ":allow"
+	got := l.receiptDecisions(t, "transmit")
+	if len(got) != 1 || got[0] != want {
+		t.Fatalf("transmit decided on %v, want %s", got, want)
+	}
+}

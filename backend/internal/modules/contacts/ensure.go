@@ -390,8 +390,8 @@ func (s *Store) ensureContact(ctx context.Context, tx pgx.Tx, in EnsureCounterpa
 		// vocabulary's strongest claim on a cold prospect's file.
 		//
 		// The TIME comes from the earliest message this counterparty is a party
-		// to, not from this write: the sink runs after the capture commits and
-		// the verdict path can run days later. See acquiredwhen.go.
+		// to, not from this write. A later message, or the verdict path days
+		// later, can be what creates the record. See acquiredwhen.go.
 		Acquisition: acquisitionFromCapture(ctx, tx, acquired, in.Email, in.ActivityID),
 	})
 	if err != nil {

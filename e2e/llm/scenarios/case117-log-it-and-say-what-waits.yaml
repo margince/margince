@@ -1,0 +1,71 @@
+# CASE 117 — Log the meeting, add the task, and say what the work left waiting.
+#
+# THE FAILURE IT EXISTS FOR: the finish-time approval check used to hand back the
+# whole queue, and the answer read colleagues' work out as if this task had raised
+# it. The setup stages three contact-card reviews (Wiebke Brandstätter, Okko
+# Rademacher, Theda Uphoff) that have nothing to do with this task. An answer
+# that lists or describes them fails. A bare count of other waiting items is
+# allowed; what they are is not.
+#
+# The setup also turns on the post-meeting recap, so the meeting stages a held
+# draft to Jannik Feddersen. That draft lands a few seconds after the write
+# returns, so an answer may not have seen it yet; it is not judged. The draft
+# waits in the queue, and asking again lists it.
+name: case117_log_it_and_say_what_waits
+criteria: [2]
+
+# Both belong to this case alone: a pending review or a recap draft would show in
+# every other case's queue and brief. The restore before the next run undoes it.
+setup: card_reviews_and_recap
+
+# WRITES: the author's own statement that this case changes the world. It is not
+# what decides the reset — the runner rebuilds whenever the LAST run dirtied the
+# world, because the assistant is offered the whole server and any run can write
+# regardless of what its file says. TestEveryWritingScenarioDeclaresThatItWrites
+# holds this line against the tools the case names.
+writes: true
+
+prompt: |
+  Had coffee with Jannik Feddersen from Husumer Windservice this morning at
+  9:30 at their office. They want a quote for the gearbox inspection on their six
+  turbines in Q1. Please log the meeting in the CRM and add a follow-up task for
+  me to send him the quote by Friday.
+
+# The finish-time check is the behaviour under test, so the run must make it.
+# The prompt gives a start time: a held meeting with only today's date is
+# refused as not over yet, and a run that stops there never reads the queue.
+must_call:
+  - list_approvals
+
+# The meeting is what the recap answers, so it is pinned the way case 1 pins
+# it. The end-state reader finds an activity only on a project, and this one is
+# on a contact.
+must_call_with:
+  - log_activity.kind=meeting|create_record.record_type=activity
+may_call:
+  - log_activity
+  - create_task
+  - create_record
+  - resolve_entities
+  - search_records
+  - read_record
+  - list_approvals
+  - whoami
+
+# Found, not created a second time.
+must_end_with:
+  - contact "Jannik Feddersen" records=1
+
+must_mention:
+  - "Feddersen"
+
+# The unrelated reviews by the names their cards carry. Describing them without
+# a name is criterion 2's to catch.
+must_not_mention:
+  - "(?i)brandst(?:ä|ae)tter|rademacher|uphoff"
+
+judge:
+  - "Criterion 2. The answer keeps to what this task left waiting. It does not list, name or describe any waiting item that has nothing to do with this task, such as contact-card reviews for other people; a bare count of other waiting items that says nothing about what they are or whom they concern is a yes. Answer no if the answer lists, names or summarises an unrelated waiting item, for example by saying what kind of item it is or whom it is about."
+
+runs: 3
+pass_at: 2

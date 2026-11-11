@@ -18,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
 // directedSendService carries out a decision to send a refused message.
@@ -62,6 +63,17 @@ func (s directedSendService) DirectAndSend(
 			"the decision was recorded and the message could not be sent on it: %w", err)
 	}
 	return sent, nil
+}
+
+func (s directedSendService) CorrectWording(ctx context.Context, reviewID ids.UUID, in commsauthz.WordingCorrection) (int64, error) {
+	intent, err := s.consent.HeldMessageForReview(ctx, reviewID)
+	if err != nil {
+		return 0, err
+	}
+	if intent.IsZero() {
+		return 0, apperrors.ErrNotFound
+	}
+	return s.sends.CorrectHeldWording(ctx, intent, in, consent.WordingCorrectorForReview(reviewID))
 }
 
 // newDirectedSendService wires the two modules and the machinery between them.

@@ -266,7 +266,7 @@ describe("WorkspaceRail (AC-shell-1/2)", () => {
 
     deals.focus();
     const tip = await screen.findByRole("tooltip");
-    expect(tip.textContent).toBe("Deals");
+    expect(tip.textContent).toBe("Deals · G then D");
 
     await user.keyboard("{Escape}");
     expect(screen.queryByRole("tooltip")).toBeNull();
@@ -288,7 +288,7 @@ describe("WorkspaceRail (AC-shell-1/2)", () => {
     act(() => {
       vi.advanceTimersByTime(500);
     });
-    expect(screen.getByRole("tooltip").textContent).toBe("Deals");
+    expect(screen.getByRole("tooltip").textContent).toBe("Deals · G then D");
     const heard = vi.fn();
     globalThis.addEventListener("keydown", heard);
 

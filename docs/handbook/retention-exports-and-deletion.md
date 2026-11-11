@@ -70,8 +70,11 @@ See [Review a retained signature](email-signatures.md#review-a-retained-signatur
 Matching full names and email addresses are removed from notes without contact or lead links.
 Other note text stays. Reviewers need a full seat, rights to read and delete all contacts without hidden fields,
 and read access to the retained content. If no active Admin or Ops member qualifies, erasure stops
-and says how to restore review access and retry. The same review access is needed to receive
-alerts about an opt-out receipt that could not be sent.
+and says how to restore review access and retry.
+
+The same review access is needed to receive alerts about an opt-out receipt that could not be sent. If no one has it when a receipt is
+missed, the alert arrives within 15 minutes of access being restored. This works only when
+access is restored within 30 days of the missed receipt.
 
 ### How do I answer a data access request?
 To log a GDPR access request, an admin opens **Settings → Privacy and retention → Requests → Privacy** and chooses **New request**. Set **Kind** to **Access**, fill **Subject reference** and **Due**, and choose **Open request**. The app says: "An access request is fulfilled manually: record what you sent in the resolution. This system does not assemble or export the data for you." Bring the data together (or have the package made, see below) and send it. Then write the **Resolution**, fill **How the identity was checked** and choose **Fulfill**.
@@ -167,7 +170,10 @@ messages the requester may share. It excludes other recipients' addresses and
 private folder names.
 
 ### What anonymize and erase do
-**Anonymizing a lead** puts "Anonymized Lead" in place of the name, clears the email, title and company, and deletes the lead's score history.
+**Anonymizing a lead** puts "Anonymized Lead" in place of the name, clears the email, title and company, and deletes the lead's score history. Queued opt-out receipts are stopped and lose the name and address.
+Already-sent receipts keep their recipient, subject and message as correspondence under the separate
+correspondence-retention rules and any legal hold. This does not erase sent correspondence.
+An erase request follows the erasure rules described above.
 
 **Anonymizing a contact** clears the names, title and address, sets the name to "Erased Subject", and clears every custom field. It deletes their email addresses, phone numbers, and their names on other sites and services. No block entry is written: the law allows the contact to come back.
 

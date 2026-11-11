@@ -138,6 +138,39 @@ type Posture struct {
 	// what it verified, and a projection here would have to change every time
 	// upstream proves one more thing.
 	License License
+	// HeldCeiling is the seat ceiling a posture that is not valid still holds:
+	// the grant of the last valid license this process resolved. Nil when it
+	// saw none, which caps nothing.
+	HeldCeiling *Ceiling
+}
+
+// Ceiling is a seat ceiling. Capped false is a license that caps no seats.
+type Ceiling struct {
+	Seats  int
+	Capped bool
+}
+
+// SeatCeiling reports the ceiling a new seat is held to. A valid license
+// answers its own grant. A refused or removed one keeps the last valid grant,
+// so seats in use keep working and none is added beyond it.
+func (p Posture) SeatCeiling() (int, bool) {
+	if p.State == StateValid {
+		return p.Seats()
+	}
+	if p.HeldCeiling == nil {
+		return 0, false
+	}
+	return p.HeldCeiling.Seats, p.HeldCeiling.Capped
+}
+
+// carryCeiling hands a posture that is not valid the ceiling its predecessor
+// held, so a lapse never lifts the seat limit.
+func carryCeiling(before Posture, after *Posture) {
+	if after.State == StateValid || (before.State != StateValid && before.HeldCeiling == nil) {
+		return
+	}
+	seats, capped := before.SeatCeiling()
+	after.HeldCeiling = &Ceiling{Seats: seats, Capped: capped}
 }
 
 // Seats reports the full-seat count the license grants. ok is false when there

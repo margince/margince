@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/workforce"
 )
 
 // MemberAddresses holds the addresses proven to belong to the workspace's
@@ -21,11 +22,10 @@ type MemberAddresses struct{ known SelfSet }
 
 // MemberAddressesTx reads the set inside the workspace's transaction: each
 // seat's login and each mailbox address a provider attested (provedAddressesTx,
-// the rule SeatProvedAddressTx trusts). An archived seat no longer counts. An
-// invited or departed one does, as in colleagueTx: their mail was still the
-// workspace's mail.
+// the rule SeatProvedAddressTx trusts). Archived and retired seats no longer count. Invited and imported
+// inactive seats still count, because their addresses can identify colleagues.
 func MemberAddressesTx(ctx context.Context, tx pgx.Tx) (MemberAddresses, error) {
-	rows, err := tx.Query(ctx, `SELECT id, email FROM app_user WHERE archived_at IS NULL`)
+	rows, err := tx.Query(ctx, `SELECT u.id, u.email FROM app_user u WHERE `+workforce.CaptureSeatSQL("u"))
 	if err != nil {
 		return MemberAddresses{}, fmt.Errorf("capture: reading the members' logins: %w", err)
 	}

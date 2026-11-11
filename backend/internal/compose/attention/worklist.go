@@ -139,6 +139,7 @@ func (s *Service) worklistIn(
 	// must not sit on the shared service, for the reason feed.go's assembleDay
 	// gives about the findings.
 	withPins = withPins.readingScores(beside.night.scores, beside.night.cutoff)
+	withPins.briefSnoozed = beside.night.snoozed
 	withPins = withPins.readingBacklog(ctx, day, beside, token == "")
 	withPins, planErr := withPins.readingPlan(ctx, resolved, day.AsOf)
 	withPins, awaitingErrs := withPins.readingAwaiting(ctx, day.AsOf, beside.zone)
@@ -222,6 +223,7 @@ func (s *Service) worklistFrom(
 	// This runs after the drops above, because they may remove the row that
 	// took the brief's id. It runs after the scope, because the brief is the
 	// acting reader's. A named owner's page drops every brief row first.
+	rows = s.withoutSnoozedRisk(rows)
 	rows = foldBriefIntoRisk(rows)
 	// Before anything is counted, so a row the reader marked done is gone from
 	// the figures as well as from the list.

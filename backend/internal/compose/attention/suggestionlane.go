@@ -95,7 +95,7 @@ func readSuggestionLane[T any](
 ) ([]crmcontracts.AttentionItem, *int, *crmcontracts.WorklistSourceUnavailable) {
 	var page []T
 	var open int
-	err := s.degradable(ctx, laneBudget, func(ctx context.Context) error {
+	err := s.degradable(ctx, source, laneBudget, func(ctx context.Context) error {
 		var err error
 		if page, err = list(ctx); err != nil {
 			return err

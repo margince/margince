@@ -6,7 +6,7 @@ import { useEscapeDismisses } from "../design-system/tooltip";
 
 type TipRaise = "pointer" | "focus";
 
-/** The collapsed rail's one tip at a time, which Escape hides as any tip. */
+/** The rail's one tip at a time, which Escape hides as any tip. */
 export function useNavTip(
   collapsed: boolean,
   nav: RefObject<HTMLElement | null>,
@@ -20,6 +20,6 @@ export function useNavTip(
     setTip(key);
   }, []);
   const hide = useCallback(() => setTip(null), []);
-  useEscapeDismisses(collapsed && tip !== null, nav, raisedBy, hide);
+  useEscapeDismisses(tip !== null, nav, raisedBy, hide);
   return { collapsed, tip, onTip };
 }

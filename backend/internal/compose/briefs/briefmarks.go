@@ -99,15 +99,11 @@ func (e *BriefEngine) MarkSnoozed(
 	return e.markItem(ctx, itemID, briefStateSnoozed, held, now)
 }
 
-// markItem is the one acted/dismissed/snoozed transition: only the run's
-// owner may mark, only an actionable item transitions (a second mark is a
-// conflict, not a silent overwrite), and the write is audited in the
-// same transaction. An expired snooze counts as actionable — a rep who
-// marks straight from a stale screen must not read differently from one
-// who re-opened the brief and had the item re-surfaced first. The brief
-// is per-rep personal queue state — the object gate is the deal-read
-// grant the brief itself rides on, and the real authority is run
-// ownership.
+// markItem is the one acted/dismissed/snoozed transition. Only the run's
+// owner may mark, and only an actionable item transitions: a second mark is
+// a conflict. The write is audited in the same transaction. An expired
+// snooze is actionable, because the run read shows it as a fresh item. The
+// object gate is deal-read; the real authority is run ownership.
 func (e *BriefEngine) markItem(ctx context.Context, itemID ids.UUID, state string, held snooze, now time.Time) (BriefRunItem, error) {
 	if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
 		return BriefRunItem{}, err
@@ -187,13 +183,9 @@ func (e *BriefEngine) markItem(ctx context.Context, itemID ids.UUID, state strin
 // Unanswered says whether this item is still waiting on the rep, as a run READ
 // hands it back.
 //
-// It takes no instant, unlike briefItemActionable below, and the difference is
-// which question is being asked. That one guards a MARK against a stale screen,
-// so it must admit a snooze whose window has passed but whose row a read has
-// not yet flipped. This one describes an item LatestRun has already returned,
-// and that read resurfaces expired snoozes inside its own transaction — so a
-// still-snoozed item here is genuinely still set aside, and re-deciding that
-// against a second clock could only disagree with the read that produced it.
+// It takes no instant, unlike briefItemActionable below. LatestRun has already
+// judged each snooze against the read's own instant. A second clock here could
+// only disagree with it.
 //
 // Exported because the worklist lane asks it. What a brief state means belongs
 // to this package; a lane spelling `state == "new"` for itself would be a
@@ -203,13 +195,13 @@ func Unanswered(item BriefRunItem) bool {
 }
 
 // briefItemActionable says whether a rep may still mark this item: fresh, or
-// snoozed past whatever it was waiting for (the re-surface may not have been
-// materialized by a read yet, but the item is already actionable again).
+// snoozed past whatever it was waiting for. No read rewrites an expired snooze,
+// so its row still says snoozed while the item is actionable again.
 //
 // It reads the database because two of the three conditions are answered by
 // rows rather than by the clock — a reply that arrived, a meeting that ended —
 // and asking here is what keeps ONE answer to "is this snooze over". The
-// re-surface read calls the same SQL through briefSnoozeLiftedSQL.
+// run read asks the same SQL through briefSnoozedSQL.
 func briefItemActionable(ctx context.Context, tx pgx.Tx, item BriefRunItem, now time.Time) (bool, error) {
 	if item.State == briefStateNew {
 		return true, nil

@@ -2990,6 +2990,83 @@ paths:
         '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /sdr-handoffs/{id}/assignee:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Leads]
+      operationId: getHandoffAssignee
+      x-mcp-tool: { verb: get_handoff_assignee, router: read_details, action: handoff_assignee, tier: auto_execute, scope: read, served_by: route }
+      security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
+      summary: Read the current receiver and reassignment version of a prospect handoff.
+      responses:
+        '200':
+          description: Current assignment, scoped through the prospect.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/HandoffAssignee' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    patch:
+      tags: [Leads]
+      operationId: reassignHandoff
+      x-mcp-tool: { verb: reassign_handoff, router: change_relationships, action: reassign_handoff, tier: auto_execute, scope: write, served_by: route }
+      security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
+      summary: Choose a colleague who can work a waiting prospect handoff.
+      description: |
+        Requires write access to the prospect and an active colleague with the same
+        access. Accepted handoffs retain their original decision and attribution.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/HandoffAssigneeInput' }
+      responses:
+        '200':
+          description: Current assignment after reassignment.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/HandoffAssignee' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /intro-requests/{id}/replace:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Contacts]
+      operationId: replaceIntroRequest
+      x-mcp-tool: { verb: replace_intro_request, router: change_relationships, action: replace_intro_request, tier: auto_execute, scope: write, served_by: route }
+      security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
+      summary: Withdraw your ask and make a fresh ask through another route.
+      description: |
+        Only the original requester may replace an open ask. The replacement concerns the
+        same contact and starts with no decision or approval. Both changes commit together;
+        an invalid replacement leaves the original ask open. The old ask remains private
+        to its original parties. Choosing another introducer does not transfer a personal
+        relationship or permission to name-drop.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/IntroRequestReplaceInput' }
+      responses:
+        '201':
+          description: The fresh ask; the original ask is withdrawn.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/IntroRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /contacts/{id}/profile-fields:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -10267,8 +10344,8 @@ paths:
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       summary: Move a scheduled message to a different moment.
       description: |
-        Time only. The content is what the approval bound to, so changing it is
-        cancel-and-recompose, which re-enters every gate from the top (ADR-0104 §5).
+        Time only. An attested spelling or punctuation correction uses the communication review's
+        wording-correction route. Other content changes need cancel-and-recompose and fresh checks.
       x-mcp-tool: { verb: reschedule_scheduled_send, router: change_activities, action: reschedule_send, tier: auto_execute, scope: write, served_by: route }
       parameters:
         - $ref: '#/components/parameters/IfMatch'
@@ -19912,7 +19989,8 @@ paths:
         `as_of` stamps this request's RepeatableRead snapshot. It does not span separate
         `/digest`, `/brief` or `/magic` requests, or a multi-page Worklist walk.
         Frozen walk membership and freshness metadata do not share a database snapshot
-        across pages. Brief opening and snooze resurfacing use their own write transaction.
+        across pages. The read writes nothing: a snoozed brief item whose time has come is
+        judged at `as_of`, and only `GET /v1/brief` records the brief as opened.
         A lane the caller may not read is OMITTED and named in `lanes_omitted` rather
         than returned empty — "you may not see this" and "there is none" are different
         answers, and a queue that conflated them would tell a rep their day is clear.
@@ -21426,6 +21504,51 @@ paths:
               schema: { $ref: '#/components/schemas/LicenseEntitlement' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+
+  /installation/license/check:
+    post:
+      tags: [Identity]
+      operationId: checkLicenseNow
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
+      x-agent-access: human-only
+      x-human-only-reason: security
+      summary: Re-read the installation's license token now (admin/ops).
+      description: |
+        Runs the api's license re-check at once, instead of waiting for the daily one.
+        It re-reads the token where the deployment declares it and checks it OFFLINE
+        against the bundled validation module, the same path the daily re-check takes.
+        An operator who has swapped the token on the server presses this to see the new
+        license without waiting up to a day. A token file is read again; a token from the
+        environment (`MARGINCE_LICENSE`) is fixed when the process starts and changes
+        only with a restart.
+
+        It writes nothing and takes no token. Entering or replacing the token stays the
+        operator's job on the server. Only the api process that serves
+        this request re-checks; the worker and any other api replica keep their own
+        daily re-check.
+
+        The answer is the same body as `GET /installation/license`, read after the
+        re-check. A re-check that reached a verdict answers `200`, a refused license
+        included: `state` then says `rejected`. A token that could not be read, or a
+        module that could not run, is no verdict. The posture the process last resolved
+        stands, the fault goes to the server log, and the answer is `503`.
+
+        Gated on `installation_settings` update (admin and ops), the grant that guards
+        installation settings, and on `license` read, which the entitlement in the
+        answer needs. Human-only, like the entitlement read.
+      responses:
+        '200':
+          description: The entitlement as the re-check resolved it.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LicenseEntitlement' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '503':
+          description: The token could not be re-read, or the module could not run; the last posture stands.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
 
   /installation/seat-usage:
     get:
@@ -23463,6 +23586,23 @@ paths:
           in: query
           schema: { type: string, format: uuid }
           description: The record the staged actions act on. Requires `target_entity_type`.
+        - name: target
+          in: query
+          schema:
+            type: array
+            maxItems: 25
+            items: { type: string }
+          style: form
+          explode: true
+          description: |
+            Filter to the approvals staged against ANY of these records, each written
+            `<entity_type>:<uuid>` (`contact:…`, `activity:…`). Repeat the parameter for several,
+            up to 25. It answers "what is waiting on the records I touched" without the rest of
+            the queue.
+
+            A record outside the caller's row scope adds nothing to the page, never a 403. A
+            malformed item, more than 25, or `target` together with `target_entity_type` or
+            `target_entity_id` is a 422.
         - name: bundle_id
           in: query
           schema: { type: string, format: uuid }
@@ -24324,6 +24464,42 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Activity' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /communication-reviews/{id}/correct-wording:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+    post:
+      tags: [Communication]
+      operationId: correctCommunicationWording
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      x-human-only-reason: security
+      summary: Keep the original approval for a spelling or punctuation correction.
+      description: |
+        The original human approver confirms that meaning is unchanged. The same instruction
+        remains attached to the held message. Recipients, sender, purpose, attachments and other
+        scope fields cannot be edited here. A change in meaning needs a new message approval.
+        The message remains held; its normal send path checks current permission and stops again.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CorrectCommunicationWordingRequest' }
+      responses:
+        '200':
+          description: Wording saved under the same approval.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WordingCorrectionResult' }
+        '400':
+          description: The correction confirmation or input is invalid.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
@@ -30841,9 +31017,15 @@ paths:
     get:
       tags: [Brief]
       operationId: getTeamWeeklyReview
+      # No screen reads the team week any more. The operation stays for
+      # clients built against it until its notice window ends.
+      deprecated: true
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       summary: A team's week, frozen — what each member's week came to, and the one thing to raise.
       description: |
+        Deprecated: no screen reads the team week. The operation stays callable through
+        the notice window in the API compatibility policy.
+
         The team half of the weekly. `/worklist/team` answers what the team is carrying NOW,
         live and recomputed on every open; this answers what last week WAS, written once when
         the week closed, so two weeks can be compared and neither moves under the comparison.
@@ -33468,13 +33650,24 @@ paths:
       summary: Which accounts your imported network reaches.
       parameters:
         - $ref: '#/components/parameters/Limit'
+        - name: cursor
+          in: query
+          schema: { type: string, maxLength: 2048 }
+          description: |
+            Opaque position from a prior answer's `next_cursor`, which resumes the ranking after
+            the last account returned. A cursor that names no position in this ranking, such
+            as one from another route, is refused with 422.
+            The ranking is by live connection counts, so an import between two pages can move
+            an account across the cut: re-read from the top to see the network as it is now.
       description: |
         The account-level payoff of importing an export, and the one answer the ghosts
         exist to give: for each company on file, how many of your connections work
         there, and how many of those are already contacts.
 
-        Ranked by connection count, then by name, so two reads of an unchanged network
-        return the same order.
+        Ranked by connection count, then by name, then by company id, so two reads of an
+        unchanged network return the same order. The ranking pages: `next_cursor`
+        resumes after the last account returned, and a cursor that names no position in
+        this ranking is refused with 422.
 
         Only companies the caller can READ appear, under the ordinary company
         row scope. A connection whose employer resolved to no account is not reported
@@ -38807,8 +39000,10 @@ components:
           type: integer
           minimum: 0
           description: |
-            Full seats the license admits. ABSENT when nothing caps them — no license, or a
-            grant carrying no seat count — which is not a grant of zero.
+            Full seats a new seat is held to. A valid license answers its own grant; a refused
+            one keeps the last valid grant this process resolved. ABSENT when nothing caps them
+            — no license, no valid one before a refusal, or a grant carrying no seat count —
+            which is not a grant of zero.
         seats_used:
           type: integer
           minimum: 0
@@ -40982,7 +41177,7 @@ components:
       type: object
       additionalProperties: false
       description: One of your captured contacts waiting on a sender decision.
-      required: [contact_id, emails, captured_at]
+      required: [contact_id, emails, addresses, captured_at]
       properties:
         contact_id: { type: string, format: uuid }
         display_name: { type: string, description: Absent when the contact has no name. }
@@ -40990,10 +41185,35 @@ components:
           type: array
           items: { type: string }
           description: The contact's live addresses. The decision is made about these senders.
+        addresses:
+          type: array
+          items: { $ref: '#/components/schemas/CaptureAwaitingAddress' }
+          description: Each of `emails`, in the same order, with what it waits on.
         captured_at:
           type: string
           format: date-time
           description: When the contact was created, which is how long it has been waiting.
+
+    CaptureAwaitingAddress:
+      type: object
+      additionalProperties: false
+      description: One address of a waiting contact, and what it waits on.
+      required: [email, state]
+      properties:
+        email: { type: string }
+        state:
+          type: string
+          enum: [decided, classifying, unsure, queued, unjudgeable]
+          x-extensible-enum: true
+          description: |
+            `decided`: a decision about this sender is recorded, and a pass that applies it is due.
+            `classifying`: the sender classifier has an open question about this sender.
+            `unsure`: the classifier could not tell, so your answer decides.
+            `queued`: nothing was asked yet; a sweep will ask over a message from this address.
+            `unjudgeable`: no pass will settle this address, because no captured message from it
+            remains or someone already worked on the contact. Only you can settle it.
+            `decided`, `classifying` and `queued` wait on the product; `unsure` and `unjudgeable`
+            wait on you.
 
     CaptureSenderListResponse:
       type: object
@@ -50178,6 +50398,33 @@ components:
             so a completion cannot cite a conversation that is not about them.
         version: { type: integer }
 
+    HandoffAssignee:
+      type: object
+      additionalProperties: false
+      required: [id, version, status, can_reassign]
+      properties:
+        id: { type: string, format: uuid }
+        version: { type: integer, format: int64 }
+        status: { type: string, enum: [submitted, accepted, rejected, recycled], x-extensible-enum: true }
+        assigned_to: { type: string, format: uuid }
+        can_reassign: { type: boolean }
+
+    HandoffAssigneeInput:
+      type: object
+      additionalProperties: false
+      required: [assigned_to, version]
+      properties:
+        assigned_to: { type: string, format: uuid }
+        version: { type: integer, format: int64, minimum: 1 }
+
+    IntroRequestReplaceInput:
+      type: object
+      required: [version, reason, request]
+      properties:
+        version: { type: integer }
+        reason: { type: string, minLength: 1, maxLength: 2000 }
+        request: { $ref: '#/components/schemas/IntroRequestInput' }
+
     IntroRequestCancelInput:
       type: object
       required: [version]
@@ -52156,6 +52403,11 @@ components:
       required: [accounts, accounts_total, unresolved_connections]
       properties:
         accounts: { type: array, items: { $ref: '#/components/schemas/LinkedInReachAccount' } }
+        next_cursor:
+          type: string
+          description: |
+            Send this back as `cursor` to continue past the last account of this page.
+            Absent on the last page, so a client walking until it disappears stops.
         accounts_total:
           type: integer
           minimum: 0
@@ -53538,7 +53790,7 @@ components:
         amount_minor: { type: [integer, 'null'], format: int64, minimum: 0, description: 'The deal''s one-off price in minor units of `currency`. Below zero is refused with 422 `amount_negative`.' }
         currency: { type: [string, 'null'], pattern: '^[A-Z]{3}$' }
         expected_arr_minor: { type: [integer, 'null'], format: int64, description: 'Expected annual recurring revenue in minor units of `currency`. Null means no recurring component, which is not zero.' }
-        company_id: { type: [string, 'null'], format: uuid, description: 'The company this deal is for. Changing it is refused 422 (`deal_contracts_cross_company`) while contracts filed against the deal name another company, because a contract on a deal is visible through that deal alone. Detach those contracts (`deal_id: null` on the contract) or file each against a deal of its own company first; an edit never changes a contract''s company, only a company merge does. Null clears the company and is not refused.' }
+        company_id: { type: [string, 'null'], format: uuid, description: 'The company this deal is for. Changing it is refused 422 (`deal_contracts_cross_company`) while contracts filed against the deal name another company, because a contract on a deal is visible through that deal alone. Archived contracts also count. Ask an administrator to correct the contract links before changing the company. An edit never changes a contract''s company; only a company merge does. Null clears the company and is not refused.' }
         partner_company_id: { type: [string, 'null'], format: uuid, description: 'The partner who brought this deal. The company must have a live `partner` row (else 422 `not_a_partner`), and the caller must be able to read it. Null clears the attribution.' }
         partner_attribution:
           type: [string, 'null']
@@ -54502,7 +54754,7 @@ components:
     HandoverCounts:
       type: object
       description: Live records per kind.
-      required: [lead, contact, company, deal, project, task, webhook, list]
+      required: [lead, contact, company, deal, project, task, webhook, list, sdr_handoff, record_assignment]
       properties:
         lead: { type: integer, minimum: 0 }
         contact: { type: integer, minimum: 0 }
@@ -54512,6 +54764,8 @@ components:
         task: { type: integer, minimum: 0, description: Open tasks assigned to the member. }
         webhook: { type: integer, minimum: 0, description: 'Live webhook subscriptions the member owns. Each delivers only while its owner is active.' }
         list: { type: integer, minimum: 0, description: Live lists owned by the member. }
+        sdr_handoff: { type: integer, minimum: 0, description: Waiting prospect handoffs assigned to the member. }
+        record_assignment: { type: integer, minimum: 0, description: Current user responsibilities on records. }
 
     UserHandover:
       type: object
@@ -70569,6 +70823,8 @@ components:
           type: array
           description: What was refused, per recipient. Empty once an erasure has cleared the subject from it.
           items: { $ref: '#/components/schemas/RefusedRecipient' }
+        wording_correction:
+          $ref: '#/components/schemas/WordingCorrectionContext'
         warning:
           $ref: '#/components/schemas/OverrideWarning'
           description: |
@@ -70596,6 +70852,45 @@ components:
           description: |
             Shown verbatim. A surface that paraphrased it would record somebody as having read the
             server's words while showing them its own.
+
+    WordingCorrectionContext:
+      type: object
+      description: |
+        The current approved wording, visible only to its original human approver while the
+        decision is unspent. The original reason remains on the instruction.
+      required: [instruction_id, version, subject, body, html_body, wording_digest, reason_code, explanation, warning_version]
+      properties:
+        instruction_id: { type: string, format: uuid }
+        version: { type: integer, format: int64 }
+        subject: { type: string }
+        body: { type: string }
+        html_body: { type: string }
+        wording_digest: { type: string, pattern: '^[a-f0-9]{64}$' }
+        reason_code: { type: string }
+        explanation: { type: string }
+        warning_version: { type: string }
+      additionalProperties: false
+
+    CorrectCommunicationWordingRequest:
+      type: object
+      required: [version, expected_wording, subject, body, html_body, meaning_unchanged]
+      properties:
+        version: { type: integer, format: int64, minimum: 1 }
+        expected_wording: { type: string, pattern: '^[a-f0-9]{64}$' }
+        subject: { type: string, minLength: 1, maxLength: 998 }
+        body: { type: string, minLength: 1, maxLength: 1000000 }
+        html_body: { type: string, maxLength: 1000000 }
+        meaning_unchanged:
+          type: boolean
+          description: The original approver attests that only spelling or punctuation changed and meaning is unchanged.
+      additionalProperties: false
+
+    WordingCorrectionResult:
+      type: object
+      required: [version]
+      properties:
+        version: { type: integer, format: int64 }
+      additionalProperties: false
 
     DirectCommunicationSendRequest:
       type: object
@@ -75970,7 +76265,12 @@ components:
             The scopes this reader may ask for, narrowest first — derived from their own
             row scope. A client draws a control only when there is more than one, so a
             rep who can only see their own work is never offered a switch that would 403.
-        team_week: { $ref: '#/components/schemas/TeamWeekReach' }
+        team_week:
+          $ref: '#/components/schemas/TeamWeekReach'
+          deprecated: true
+          description: |
+            Deprecated: no screen opens the team week, and the operation it describes,
+            `GET /weekly-reviews/team`, is deprecated too. `GET /me` carries the same answer.
         filter: { type: string, enum: [all, urgent, customer_waiting, leads, prospecting, deals_at_risk, meetings, tasks, decisions, relationships, system, except_decisions, changed_since_brief, upcoming], x-extensible-enum: true, description: 'The narrowing this read applied. The same vocabulary the query parameter takes.' }
         view: { type: string, enum: [today, decisions, system], x-extensible-enum: true, description: 'The view this read answered, after a `filter` alias was read as its view. Absent when the read named no view.' }
         summary: { $ref: '#/components/schemas/WorklistSummary' }

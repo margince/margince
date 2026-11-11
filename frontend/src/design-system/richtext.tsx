@@ -12,6 +12,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { escapeHtml } from "../format/html";
+import { isChordOf } from "../lib/chord";
 import { isImeCommit } from "../lib/imecommit";
 import { AiPending } from "./aipending";
 import { useAiReveal } from "./aireveal";
@@ -346,10 +347,7 @@ export function RichText({
     if (isImeCommit(event)) {
       return;
     }
-    if (
-      (event.metaKey || event.ctrlKey) &&
-      event.key.toLowerCase() === LINK_KEY
-    ) {
+    if (isChordOf(event, LINK_KEY)) {
       // Stopped here, the palette's listener on the window never hears it.
       event.preventDefault();
       event.stopPropagation();

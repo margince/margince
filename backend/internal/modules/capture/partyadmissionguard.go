@@ -203,7 +203,7 @@ func partyAdmissionHasRoomTx(ctx context.Context, tx pgx.Tx, activity ids.Activi
 		return false, err
 	}
 	// The primary ensure has run; project and deal attribution still need their reserved links.
-	return count+needed <= maxDerivedMeetingLinks-(postCommitLinkReservation-1), nil
+	return count+needed <= maxDerivedMeetingLinks-(laterLinkReservation-1), nil
 }
 
 // holdPartyAuthorityTx takes the user's authority locks before the ensure locks

@@ -79,6 +79,9 @@ func (i approvalInbox) ListApprovals(ctx context.Context, q agents.ApprovalQuery
 	if !q.TargetEntityID.IsZero() {
 		in.TargetType, in.TargetID = &q.TargetEntityType, &q.TargetEntityID
 	}
+	for _, target := range q.Targets {
+		in.Targets = append(in.Targets, ids.Ref{Type: target.Type, ID: target.ID})
+	}
 	if !q.BundleID.IsZero() {
 		in.BundleID = &q.BundleID
 	}

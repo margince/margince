@@ -94,7 +94,11 @@ func (e *sendEnv) asSendWorker() context.Context {
 // that honoured it.
 func (e *sendEnv) reconcile(t *testing.T, id ids.ActivityID, stamped string) {
 	t.Helper()
-	ctx := e.asSendWorker()
+	e.reconcileAs(e.asSendWorker(), t, id, stamped)
+}
+
+func (e *sendEnv) reconcileAs(ctx context.Context, t *testing.T, id ids.ActivityID, stamped string) {
+	t.Helper()
 	store := NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws)))
 	if err := database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
 		return store.ReconcileMessageIdentityTx(ctx, tx, id, mintedIdentity, stamped)

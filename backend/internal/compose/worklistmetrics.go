@@ -26,6 +26,7 @@ const (
 	worklistStageWaitFamily  = "margince_worklist_stage_pool_wait_seconds"
 	worklistAppFamily        = "margince_worklist_stage_app_seconds"
 	worklistPoolWaitFamily   = "margince_worklist_pool_wait_seconds"
+	worklistLaneDropFamily   = "margince_worklist_lane_dropped_total"
 )
 
 // worklistStageReadings is one read of the stage collector.
@@ -33,10 +34,12 @@ type worklistStageReadings struct {
 	durations map[attention.StageKey]httpserver.Histogram
 	costs     map[attention.StageKey]attention.StageCost
 	poolWait  map[string]httpserver.Histogram
+	dropped   map[attention.LaneKey]int64
 }
 
 func writeWorklistStageMetrics(w io.Writer, r worklistStageReadings) {
 	writeStageHistograms(w, worklistStageFamily, "How long each stage of a composed worklist read took, since process start.", r.durations)
+	writeLaneDrops(w, r.dropped)
 	if len(r.costs) == 0 {
 		return
 	}
@@ -78,6 +81,23 @@ func writeWorklistStageMetrics(w io.Writer, r worklistStageReadings) {
 	}
 }
 
+// writeLaneDrops writes the lanes a page lost, which the page names to its
+// reader and nothing else counts.
+func writeLaneDrops(w io.Writer, dropped map[attention.LaneKey]int64) {
+	if len(dropped) == 0 {
+		return
+	}
+	httpserver.WriteLine(w, "# HELP %s Degradable worklist lanes dropped by a failure or a spent budget, since process start.\n", worklistLaneDropFamily)
+	httpserver.WriteLine(w, "# TYPE %s counter\n", worklistLaneDropFamily)
+	keys := slices.SortedFunc(maps.Keys(dropped), func(a, b attention.LaneKey) int {
+		return cmp.Or(cmp.Compare(a.Lane, b.Lane), cmp.Compare(a.Reason, b.Reason))
+	})
+	for _, key := range keys {
+		httpserver.WriteLine(w, "%s{lane=%s,reason=%s} %d\n",
+			worklistLaneDropFamily, httpserver.Label(key.Lane), httpserver.Label(key.Reason), dropped[key])
+	}
+}
+
 func sortedStageKeys[V any](byKey map[attention.StageKey]V) []attention.StageKey {
 	return slices.SortedFunc(maps.Keys(byKey), func(a, b attention.StageKey) int {
 		return cmp.Or(cmp.Compare(a.Read, b.Read), cmp.Compare(a.Stage, b.Stage))
@@ -102,5 +122,6 @@ func writeStageHistograms(w io.Writer, family, help string, byKey map[attention.
 func (Server) writeWorklistStageSection(w io.Writer) {
 	writeWorklistStageMetrics(w, worklistStageReadings{
 		durations: attention.StageTimings(), costs: attention.StageCosts(), poolWait: attention.PoolWaits(),
+		dropped: attention.LaneFailures(),
 	})
 }
