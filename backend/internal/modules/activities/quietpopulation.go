@@ -19,6 +19,7 @@ type QuietPopulation struct {
 	EntityType string
 	PipelineID ids.UUID
 	Members    storekit.ListMemberFilter
+	Readers    []principal.Principal
 }
 
 type quietQueryScope struct{ eligibility, reminder string }
@@ -50,7 +51,7 @@ func scopedQuietQuery(ctx context.Context, population *QuietPopulation, args *[]
 			return nil, apperrors.ErrInvalidArgument
 		}
 	}
-	if err := auth.Require(ctx, table, principal.ActionRead); err != nil {
+	if err := auth.RequireReadForReaders(ctx, table, population.Readers...); err != nil {
 		return nil, err
 	}
 	arg := func(value any) int { *args = append(*args, value); return len(*args) }
@@ -64,7 +65,7 @@ func scopedQuietQuery(ctx context.Context, population *QuietPopulation, args *[]
 		}
 		clause += " AND (" + members + ")"
 	}
-	visibility, err := auth.ScopeClauseFor(ctx, table, "r", arg)
+	visibility, err := auth.ScopeClauseForReaders(ctx, table, "r", arg, population.Readers...)
 	if err != nil {
 		return nil, err
 	}

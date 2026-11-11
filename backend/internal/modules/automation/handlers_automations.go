@@ -445,6 +445,9 @@ func WireAutomation(a Automation) (crmcontracts.Automation, error) {
 // which is the honest reply from an installation where no run can exist.
 func (h Handlers) WithRetryEngine(engine *WorkflowEngine) Handlers {
 	h.retries = engine
+	if engine != nil {
+		h.automations.WithPreviewAuthority(engine.resolver)
+	}
 	return h
 }
 

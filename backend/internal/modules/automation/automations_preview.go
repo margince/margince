@@ -73,6 +73,7 @@ type AutomationPreviewResult struct {
 // a DOCUMENTED gap instead (see its own doc) — exactly one of
 // (table+fields+match+firedCount) or unsupported is set.
 type previewDef struct {
+	readers   []principal.Principal
 	eventOnly bool
 	table     string
 	baseWhere string
@@ -146,7 +147,11 @@ func (s *AutomationStore) Preview(ctx context.Context, id ids.AutomationID, in A
 	if err != nil {
 		return AutomationPreviewResult{}, err
 	}
-	if result, handled, err := s.quietPreview(ctx, stored, in); handled || err != nil {
+	readers, err := s.previewReaders(ctx, stored, in)
+	if err != nil {
+		return AutomationPreviewResult{}, err
+	}
+	if result, handled, err := s.quietPreview(ctx, stored, in, readers...); handled || err != nil {
 		return result, err
 	}
 	now := s.now().UTC()
@@ -161,9 +166,10 @@ func (s *AutomationStore) Preview(ctx context.Context, id ids.AutomationID, in A
 		res.HistoricalPreviewAvailable = false
 		return res, nil
 	}
+	def.readers = readers
 	// The dry-run reads the target records, so it carries their read
 	// gate — the same admission a list over the same table demands.
-	if err := auth.Require(ctx, def.table, principal.ActionRead); err != nil {
+	if err := auth.RequireReadForReaders(ctx, def.table, readers...); err != nil {
 		return AutomationPreviewResult{}, err
 	}
 
@@ -240,81 +246,80 @@ func previewWindow(days *int) (int, error) {
 	return *days, nil
 }
 
-// scopeClause resolves the RIGHT row-visibility clause for def.table:
-// activity carries no owner_id (auth.ScopeClauseFor's ownerScopedTables
-// does not — and must not — include it), its visibility instead
-// inheriting from whatever it links to (auth.ActivityContentClause's own
-// doc) — the SAME link-walk rule the activities timeline and contacts's
-// promotion-evidence check both enforce (ADR-0054 §8: one spelling).
-// Every other previewed table is a plain owner-scoped resource.
 func (def previewDef) scopeClause(ctx context.Context, alias string, arg func(any) int) (string, error) {
-	if def.table == "activity" {
-		return auth.ActivityContentClause(ctx, alias, arg)
-	}
-	return auth.ScopeClauseFor(ctx, def.table, alias, arg)
+	return auth.ScopeClauseForReaders(ctx, def.table, alias, arg, def.readers...)
 }
 
-// measure computes the blast radius inside the caller's workspace-bound
-// read transaction: total matches, visible matches + sample under the
-// caller's row scope, and the trailing-window firing count.
-func (def previewDef) measure(ctx context.Context, tx pgx.Tx, since time.Time, res *AutomationPreviewResult) error {
-	// Workspace-wide matches: the honest denominator behind
-	// excluded_by_permission — there is nothing further to scope it to,
-	// since an installation holds exactly one workspace (ADR-0061).
-	var totalArgs []any
-	matchSQL, err := storekit.CompilePredicate(def.match, def.fields, registerArg(&totalArgs))
-	if err != nil {
-		return err
-	}
-	var total int
-	if err := tx.QueryRow(ctx, storekit.SQLf(
-		`SELECT count(*) FROM %s t WHERE %s AND %s`, def.table, def.baseWhere, matchSQL,
-	),
-		totalArgs...).Scan(&total); err != nil {
-		return err
-	}
-
-	// Visible matches + sample: the same predicate AND the caller's row
-	// scope — a preview never widens what its caller may see.
+func (def previewDef) matchWhere() (string, []any, error) {
 	var args []any
-	visibleSQL, err := storekit.CompilePredicate(def.match, def.fields, registerArg(&args))
+	match, err := storekit.CompilePredicate(def.match, def.fields, registerArg(&args))
+	return def.baseWhere + " AND " + match, args, err
+}
+
+func (def previewDef) visibleWhere(ctx context.Context) (string, []any, error) {
+	where, args, err := def.matchWhere()
 	if err != nil {
-		return err
+		return "", nil, err
 	}
 	scope, err := def.scopeClause(ctx, "t", registerArg(&args))
 	if err != nil {
+		return "", nil, err
+	}
+	if scope != "" {
+		where += " AND " + scope
+	}
+	return where, args, nil
+}
+
+func (def previewDef) countRows(ctx context.Context, tx pgx.Tx, where string, args []any) (int, error) {
+	var count int
+	err := tx.QueryRow(ctx, storekit.SQLf(`SELECT count(*) FROM %s t WHERE %s`, def.table, where), args...).Scan(&count)
+	return count, err
+}
+
+func (def previewDef) measure(ctx context.Context, tx pgx.Tx, since time.Time, res *AutomationPreviewResult) error {
+	totalWhere, totalArgs, err := def.matchWhere()
+	if len(def.readers) > 0 {
+		authorizer := def
+		authorizer.readers = def.readers[1:]
+		totalWhere, totalArgs, err = authorizer.visibleWhere(principal.WithActor(ctx, def.readers[0]))
+	}
+	if err != nil {
 		return err
 	}
-	visibleWhere := def.baseWhere + " AND " + visibleSQL
-	if scope != "" {
-		visibleWhere += " AND " + scope
+	total, err := def.countRows(ctx, tx, totalWhere, totalArgs)
+	if err != nil {
+		return err
 	}
-	if err := tx.QueryRow(ctx, storekit.SQLf(
-		`SELECT count(*) FROM %s t WHERE %s`, def.table, visibleWhere,
-	), args...).Scan(&res.MatchesNow); err != nil {
+	where, args, err := def.visibleWhere(ctx)
+	if err != nil {
+		return err
+	}
+	res.MatchesNow, err = def.countRows(ctx, tx, where, args)
+	if err != nil {
 		return err
 	}
 	res.ExcludedByPermission = total - res.MatchesNow
-
-	rows, err := tx.Query(ctx, storekit.SQLf(
-		`SELECT t.id FROM %s t WHERE %s ORDER BY t.id LIMIT %d`,
-		def.table, visibleWhere, previewSampleLimit,
-	), args...)
+	rows, err := tx.Query(ctx, storekit.SQLf(`SELECT t.id FROM %s t WHERE %s ORDER BY t.id LIMIT %d`,
+		def.table, where, previewSampleLimit), args...)
 	if err != nil {
 		return err
 	}
 	defer rows.Close()
 	for rows.Next() {
-		var sid ids.UUID
-		if err := rows.Scan(&sid); err != nil {
+		var id ids.UUID
+		if err := rows.Scan(&id); err != nil {
 			return err
 		}
-		res.Sample = append(res.Sample, sid)
+		res.Sample = append(res.Sample, id)
 	}
 	if err := rows.Err(); err != nil {
 		return err
 	}
-
+	if len(def.readers) > 0 {
+		res.HistoricalPreviewAvailable = false
+		return nil
+	}
 	fired, err := def.firedCount(ctx, tx, since)
 	if err != nil {
 		return err

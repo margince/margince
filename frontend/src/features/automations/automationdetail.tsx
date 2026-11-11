@@ -303,7 +303,7 @@ export function AutomationPreview({
 
   return (
     <Inspector title={t("auto.preview.title")} titled={titled ?? false}>
-      {!eventPreview && (
+      {!eventPreview && result?.historical_preview_available !== false && (
         <div className="auto-preview-window">
           <span className="t-label">{t("auto.preview.window")}</span>
           <SegmentedControl

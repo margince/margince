@@ -13,12 +13,14 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
 )
 
 type QuietPopulation struct {
-	PipelineID ids.UUID `json:"pipeline_id"`
-	ListID     ids.UUID `json:"customer_list_id"`
+	PipelineID ids.UUID              `json:"pipeline_id"`
+	ListID     ids.UUID              `json:"customer_list_id"`
+	Readers    []principal.Principal `json:"-"`
 }
 
 type QuietCandidates struct {
@@ -52,7 +54,7 @@ func (h Handlers) WithQuietPopulationScan(scan QuietPopulationScan) Handlers {
 	return h
 }
 
-func (s *AutomationStore) quietPreview(ctx context.Context, stored Automation, in AutomationPreviewInput) (AutomationPreviewResult, bool, error) {
+func (s *AutomationStore) quietPreview(ctx context.Context, stored Automation, in AutomationPreviewInput, readers ...principal.Principal) (AutomationPreviewResult, bool, error) {
 	key, raw := stored.Key, stored.Params
 	if in.Key != nil {
 		key = *in.Key
@@ -72,6 +74,7 @@ func (s *AutomationStore) quietPreview(ctx context.Context, stored Automation, i
 	if err != nil || !population.configured() {
 		return AutomationPreviewResult{}, err != nil, err
 	}
+	population.Readers = readers
 	entry, ok := CatalogEntryByKey(key)
 	if !ok {
 		return AutomationPreviewResult{}, true, apperrors.ErrNotFound

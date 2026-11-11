@@ -25,6 +25,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/authz"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
@@ -36,10 +37,11 @@ type AutomationStore struct {
 	now     func() time.Time
 	catalog fieldcatalog.Reader
 	// lists answers whether the lists a list rule names exist for its author.
-	lists     Lists
-	inquiries InquiryRouting
-	stages    StageLookup
-	quiet     QuietPopulationScan
+	lists            Lists
+	inquiries        InquiryRouting
+	stages           StageLookup
+	quiet            QuietPopulationScan
+	previewAuthority authz.Resolver
 }
 
 // NewAutomationStore binds the automation tables to the pool it is given.

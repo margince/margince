@@ -125,7 +125,7 @@ func quietTestTouch(t *testing.T, e *integration.Env, kind string, id ids.UUID, 
 
 func quietTestMailbox(t *testing.T, e *integration.Env) {
 	t.Helper()
-	for _, user := range []ids.UUID{e.AdminUser, e.Rep2} {
+	for _, user := range []ids.UUID{e.AdminUser, e.Rep1, e.Rep2} {
 		e.WsExec(t, `WITH connection AS (
  INSERT INTO capture_connection(user_id,provider,status,credential_ref) VALUES($1,'gmail','connected','vault:test') RETURNING id)
  INSERT INTO capture_backfill(connection_id,window_months,after_date,status)

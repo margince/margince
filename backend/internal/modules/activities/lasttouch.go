@@ -333,7 +333,11 @@ func (s *Store) LastTouchBefore(ctx context.Context, cutoff time.Time, limit int
 }
 
 func (s *Store) lastTouchBefore(ctx context.Context, cutoff time.Time, limit int, reminder string, population *QuietPopulation) ([]LastTouchCandidate, error) {
-	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
+	var readers []principal.Principal
+	if population != nil {
+		readers = population.Readers
+	}
+	if err := auth.RequireReadForReaders(ctx, "activity", readers...); err != nil {
 		return nil, err
 	}
 	if limit < 1 {
