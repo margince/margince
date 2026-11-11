@@ -92,9 +92,7 @@ func (w *Watcher) Posture() Posture { return *w.posture.Load() }
 // degrading on one would tell an operator their license had been refused when
 // what actually broke was the machinery for asking.
 //
-// The error is that same fault, already logged. The daily loop has nothing to
-// add to it. An admin who pressed "Check now" in Settings needs to hear that
-// nothing was re-read.
+// The returned error is that fault, already logged, for a caller that waits.
 func (w *Watcher) Recheck(ctx context.Context) (err error) {
 	defer w.surviveFault(ctx, &err)
 	before := w.Posture()

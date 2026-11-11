@@ -38,11 +38,8 @@ type licenseHandlers struct {
 // withPosture adds the license half to a handler that already carries the seat
 // count, and is the ONLY way the entitlement surface is completed.
 //
-// It adds to the receiver rather than rebuilding it: the count comes from the
-// assembly and the posture from the option, and a literal restating both could
-// drop either silently.
-//
-// Held by: TestWithLicensePostureKeepsTheSeatCountItWasGiven, which fails when
+// It adds to the receiver rather than rebuilding it. A literal restating the
+// count and the posture could drop either silently. Held by: TestWithLicensePostureKeepsTheSeatCountItWasGiven, which fails when
 // this rebuilds the struct instead of adding to it.
 func (h licenseHandlers) withPosture(posture func() licensecheck.Posture) licenseHandlers {
 	h.posture = posture

@@ -251,19 +251,23 @@ to run with no license.
 
 **An ended license never stops a running process.** A license that ends while the process
 runs leaves it serving. The api checks again daily, and its `/metrics` posture gets worse; nothing
-goes offline mid-month without a human there. Each daily check reads the token file again: the
-file a `token: ${file:…}` reference names, or the `token_file` path. So a token replaced in that
-file applies within a day, without starting the process again. A token from the environment
-(`MARGINCE_LICENSE`, or `token: ${env:…}`) cannot change while the process runs, because a
-process's environment is fixed when it starts. A token changed there applies at the next start.
+goes offline mid-month without a human there.
+
+Each daily check reads the token file again: the file a `token: ${file:…}` reference names, or the
+`token_file` path. So a token replaced in that file applies within a day, without starting the
+process again. A token from the environment (`MARGINCE_LICENSE`, or `token: ${env:…}`) cannot
+change while the process runs, because a process's environment is fixed when it starts. A token
+changed there applies at the next start.
 
 **Check now.** Settings → Seats has a **Check now** button for admin and ops. It runs the same
 check at once, through `POST /installation/license/check`, and shows the result. It needs
-`installation_settings` update and `license` read. It reads what the daily check reads, so it
-picks up a token replaced in the token file, and not a changed environment variable. It checks only the api process that answers
-the request. The worker and any other api process keep their daily check. It writes nothing, and
-nobody can enter a token in the app. A token that cannot be read, or a module that cannot run,
-answers `503`. The process then keeps its last result, and the server log says why.
+`installation_settings` update and `license` read. It reads what the daily check reads: a token
+replaced in the token file, and not a changed environment variable. It writes nothing, and nobody
+can type a token into the app.
+
+Check now checks only the api process that answers the request. The worker and any other api
+process keep their daily check. A token that cannot be read, or a module that cannot run, answers
+`503`. The process then keeps its last result, and the server log says why.
 
 Some results are not a result about the license: a token it cannot read, or a module that failed to
 run. Those keep the posture the process last worked out, and are logged as what they are. None of
@@ -280,7 +284,7 @@ them is evidence about the license.
   so an admin at the limit can make room.
 - A license that carries no seat count limits nothing, and the same goes for a dev installation with
   no license.
-- Margince reads the limit live, so a license replaced in place raises it on the next daily check,
+- Margince reads the limit live. A license replaced in place raises it on the next daily check,
   or at once on **Check now**, without starting the process again. The number an admin is refused against is the number the
   license screen and `margince_license_seats` report.
 

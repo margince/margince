@@ -34,11 +34,8 @@ const licenseTokenOriginNone = "none"
 // unlicensed installation. A named source that yields nothing is an error. In
 // production, "no licence" and "an empty file" would otherwise refuse the boot
 // with the wrong remedy.
-//
-// A source rather than a value because a file is read again at each check,
-// so a licence renewed there takes effect without a restart. That holds for
-// token_file and for a license.token declared as ${file:}. A token in the
-// environment is fixed for the life of the process.
+// A source rather than a value: a token file (token_file or ${file:}) is read
+// again at each check. A token from the environment is fixed at start.
 func declaredLicenseToken(c *config.Config) func() (string, error) {
 	_, origin := config.ValWithSource(c, LicenseToken)
 	path, pathOrigin := config.ValWithSource(c, LicenseTokenFile)

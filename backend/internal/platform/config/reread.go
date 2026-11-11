@@ -17,11 +17,10 @@ func secretFileOf(s Any, declared string, origin Origin) string {
 	return origin.File
 }
 
-// RereadSecret answers a secret setting as it stands now. A value declared as
-// ${file:path} is read from that file again, through the same resolver and
-// checks Load used, so a file replaced on disk is seen without a restart. Any
-// other declaration is fixed when the process starts and is answered as Load
-// resolved it: a process's environment cannot change while it runs.
+// RereadSecret answers a secret setting as it stands now. A ${file:path} value
+// is read from that file again, with the resolver and checks Load used. Any
+// other declaration is answered as Load resolved it, because a process's
+// environment cannot change while it runs.
 func RereadSecret[T any](c *Config, s *Setting[T]) (T, Origin, error) {
 	value, origin := ValWithSource(c, s)
 	path := c.values[s.Key()].secretFile

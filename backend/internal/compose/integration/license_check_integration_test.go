@@ -5,10 +5,9 @@
 
 package integration
 
-// "Check now" on Settings → Seats: POST /installation/license/check
-// runs the api's license re-check at once. These tests drive a real
-// licensecheck.Watcher over a token source the test swaps, through the HTTP
-// route, so the gate, the re-read and the answer are the ones production runs.
+// "Check now" on Settings → Seats: POST /installation/license/check runs the
+// api's license re-check at once. These tests drive a real licensecheck.Watcher
+// through the HTTP route. The gate, the re-read and the answer are production's.
 
 import (
 	"context"
@@ -43,8 +42,8 @@ func (s *swappableToken) source() (string, error) {
 	return s.token, s.err
 }
 
-// licenseCheckApp boots the api with a real watcher over source, wired the way
-// cmd/api wires it: the posture for the reads, the re-check for "Check now".
+// licenseCheckApp boots the api with a real watcher over source. It is wired
+// as cmd/api wires it: the posture for reads, the re-check for "Check now".
 func licenseCheckApp(t *testing.T, source licensecheck.TokenSource) *apptest.AppEnv {
 	t.Helper()
 	clock := func() time.Time { return clocktest.Now(t) }
@@ -60,10 +59,9 @@ func licenseCheckApp(t *testing.T, source licensecheck.TokenSource) *apptest.App
 	return e
 }
 
-// The swapped token applies on the press, not a day later. No token this
-// repository can mint is honored by the bundled keyset, so the swap goes from
-// no token to one the module refuses: the posture still has to move from
-// absent to rejected, which only a fresh read of the source can do.
+// The swapped token applies on the press, not a day later. The bundled keyset
+// honors no token this repository can mint. So the swap goes from no token to
+// one the module refuses, and only a fresh read moves absent to rejected.
 func TestCheckNowAppliesASwappedToken(t *testing.T) {
 	source := &swappableToken{}
 	e := licenseCheckApp(t, source.source)

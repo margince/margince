@@ -194,8 +194,8 @@ export function SeatUsageReading({
 /**
  * "Check now": the api reads the deployment's license token again at once.
  *
- * The answer is the entitlement itself, so it replaces the shared query's data
- * and the banner, the agent rail and this card all show the new posture.
+ * The answer is the entitlement itself, so it replaces the shared query's data.
+ * The banner, the agent rail and this card then all show the new posture.
  */
 export function LicenseCheck() {
   const t = useT();
