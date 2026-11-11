@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { ListPlus, Mail, MailPlus, Send, Sparkles } from "lucide-react";
-import { type ReactNode, useRef } from "react";
+import { type ReactNode, type RefObject, useRef } from "react";
 import { type ActivityMoment, activityAgo } from "../format/activitywhen";
 import { calendarDay } from "../format/calendarday";
 import {
@@ -15,13 +15,14 @@ import { formatMoneyOrWord } from "../format/moneyword";
 import { type Locale, useLocale, useT } from "../i18n";
 import { AppLink } from "./applink";
 import { Avatar, Badge } from "./atoms";
-import { DealOwner } from "./dealowner";
+import { DealOwner, handOnTo } from "./dealowner";
 import { IconAction } from "./iconaction";
 import type { BoardDeal } from "./pipelineboard";
 import { Popover } from "./popover";
 import { ProbabilityRing } from "./probabilityring";
 import { FieldGuard } from "./rbac";
 import { Chip } from "./readings";
+import { useTooltip } from "./tooltip";
 
 // One deal, as a card on the pipeline board (pipelineboard.tsx draws the board).
 // The card's vocabulary — `BoardDeal` — stays with the board, because a column
@@ -306,6 +307,33 @@ function DealCardVerbs({
 }
 
 /**
+ * The deal's probability ring, and on hover why the deal has that figure. It
+ * takes no tab stop: the card's link holds the one tab stop, and the deal's
+ * details say the same reason beside the figure.
+ */
+function DealProbability({
+  percent,
+  reason,
+  dealLink,
+}: Readonly<{
+  percent: number;
+  reason?: string;
+  dealLink: RefObject<HTMLAnchorElement | null>;
+}>) {
+  const { ref, trigger, tip } = useTooltip<HTMLSpanElement>(reason ?? "");
+  const press = handOnTo(dealLink);
+  if (!reason) {
+    return <ProbabilityRing percent={percent} />;
+  }
+  return (
+    <span className="deal-probability" ref={ref} {...trigger} {...press}>
+      <ProbabilityRing percent={percent} />
+      {tip}
+    </span>
+  );
+}
+
+/**
  * One deal, as a card on the board.
  *
  * NO TAG STRIP. How a deal is filed is a fact about the record, not about the
@@ -422,7 +450,11 @@ export function DealCard({
             )}
           </span>
           {deal.probabilityPct != null && (
-            <ProbabilityRing percent={deal.probabilityPct} />
+            <DealProbability
+              percent={deal.probabilityPct}
+              reason={deal.probabilityReason}
+              dealLink={dealLink}
+            />
           )}
         </span>
         {closed !== undefined ? (

@@ -5859,6 +5859,23 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deal.winProbability.source.colleague": "do {name} đặt",
   "deal.winProbability.source.margince": "do Margince hạ xuống",
   "deal.winProbability.stageValue": "giai đoạn {percent}",
+  "deal.winProbability.why": "Vì sao có xác suất này",
+  "deal.winProbability.reason.stage": "Đây là con số {stage} đưa ra.",
+  "deal.winProbability.reason.closed":
+    "Deal đã đóng, nên {stage} cố định con số này.",
+  "deal.winProbability.reason.you": "Bạn đã đặt con số này thủ công.",
+  "deal.winProbability.reason.colleague": "{name} đã đặt con số này thủ công.",
+  "deal.winProbability.reason.human":
+    "Một đồng nghiệp đã đặt con số này thủ công.",
+  "deal.winProbability.reason.stageGives":
+    "Nếu không, {stage} đưa ra {percent}.",
+  "deal.winProbability.reason.margince": "Margince đã đặt con số này.",
+  "deal.winProbability.reason.marginceRule":
+    "Margince có thể hạ xác suất không ai đặt thủ công khi deal im lặng hoặc email cho thấy khả năng thấp hơn.",
+  "deal.winProbability.reason.override": "Nhập con số của riêng bạn để ghi đè.",
+  "deal.winProbability.reason.clear": "Xóa con số để theo lại giai đoạn.",
+  "deal.winProbability.reason.stageNamed": "giai đoạn {name}",
+  "deal.winProbability.reason.stageUnnamed": "giai đoạn của deal",
   "deal.winProbability.setByStage":
     "Giai đoạn {stage} đã đặt xác suất thành {percent}",
   "deal.winProbability.band.90_plus": "Từ 90% trở lên",

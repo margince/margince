@@ -82,6 +82,101 @@ function sourceWords(
     : t(labelFor(SOURCE_LABEL, source));
 }
 
+type ReasonDeal = Pick<
+  Deal,
+  | "status"
+  | "win_probability"
+  | "win_probability_source"
+  | "stage_win_probability"
+  | "win_probability_set_by_user_id"
+  | "win_probability_set_by_name"
+>;
+
+type ReasonContext = Readonly<{
+  stageName: string | undefined;
+  t: Translator;
+  locale: Locale;
+  viewerId?: string;
+  // Margince's own reason for lowering the figure, where the reader may read
+  // one; without it the general rule stands in.
+  recorded?: string | null;
+  // Whether the reader may change the figure, so the reason says how.
+  editable: boolean;
+}>;
+
+/**
+ * Why a deal has its probability, in sentences. They name who or what set it,
+ * the stage's own figure beside an override, and how to change it.
+ */
+export function probabilityReason(
+  deal: ReasonDeal,
+  context: ReasonContext,
+): string | undefined {
+  const { stageName, t } = context;
+  if (deal.win_probability == null) {
+    return undefined;
+  }
+  const stage = stageName
+    ? t("deal.winProbability.reason.stageNamed", { name: stageName })
+    : t("deal.winProbability.reason.stageUnnamed");
+  if (deal.status === "won" || deal.status === "lost") {
+    return t("deal.winProbability.reason.closed", { stage });
+  }
+  return openReason(deal, stage, context).filter(Boolean).join(" ");
+}
+
+// The sentences for an open deal, by where its figure comes from. A falsy
+// entry is a sentence that does not apply.
+function openReason(
+  deal: ReasonDeal,
+  stage: string,
+  { t, locale, viewerId, recorded, editable }: ReasonContext,
+): (string | false | undefined)[] {
+  const stagePercent =
+    deal.stage_win_probability == null
+      ? undefined
+      : formatPercent(deal.stage_win_probability / 100, locale);
+  const override = editable && t("deal.winProbability.reason.override");
+  const stageGives =
+    stagePercent &&
+    t("deal.winProbability.reason.stageGives", {
+      percent: stagePercent,
+      stage,
+    });
+  switch (deal.win_probability_source) {
+    case "margince":
+      return [
+        t("deal.winProbability.reason.margince"),
+        recorded || t("deal.winProbability.reason.marginceRule"),
+        stageGives,
+        override,
+      ];
+    case "human":
+      return [
+        setterSentence(deal, t, viewerId),
+        stageGives,
+        editable && t("deal.winProbability.reason.clear"),
+      ];
+    default:
+      return [t("deal.winProbability.reason.stage", { stage }), override];
+  }
+}
+
+function setterSentence(
+  deal: ReasonDeal,
+  t: Translator,
+  viewerId: string | undefined,
+): string {
+  const setter = deal.win_probability_set_by_user_id;
+  if (viewerId && setter === viewerId) {
+    return t("deal.winProbability.reason.you");
+  }
+  const name = setter ? deal.win_probability_set_by_name : undefined;
+  return name
+    ? t("deal.winProbability.reason.colleague", { name })
+    : t("deal.winProbability.reason.human");
+}
+
 type Advanced = Pick<components["schemas"]["DealAdvanced"], "probability_set">;
 
 /**

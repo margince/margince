@@ -357,6 +357,13 @@
   z-index: 1;
   text-decoration: none;
 }
+/* The probability ring sits above the link too, so its reason can show. */
+.deal-card .deal-probability {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  cursor: help;
+}
 .deal-company-link:hover {
   text-decoration: underline;
 }
