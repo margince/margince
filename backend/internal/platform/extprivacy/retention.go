@@ -85,6 +85,34 @@ func (s *statement) dueSQL(t privacy.Table, w Window) string {
 		` AND NOT ` + heldSQL(t)
 }
 
+// holdBearers are the records that carry a legal hold an activity can be held
+// through, in the order their locks are taken.
+var holdBearers = []string{"company", "contact", "deal", "lead", "project"}
+
+// lockHolders takes FOR SHARE on every record whose hold keeps the row. A hold
+// being placed is waited for, and the acting statement then sees it.
+func lockHolders(ctx context.Context, tx pgx.Tx, t privacy.Table, id ids.UUID) error {
+	for _, l := range t.Links {
+		linked := `(SELECT ` + pgx.Identifier{l.Column}.Sanitize() + ` FROM ` + qualified(t.Name) + ` WHERE id = $1)`
+		reach := map[string]string{string(l.Record): linked}
+		bearers := []string{string(l.Record)}
+		if l.Record == privacy.Activity {
+			bearers = holdBearers
+			for _, bearer := range bearers {
+				reach[bearer] = `(SELECT h.` + pgx.Identifier{bearer + "_id"}.Sanitize() +
+					` FROM activity_link h WHERE h.activity_id IN ` + linked + `)`
+			}
+		}
+		for _, bearer := range bearers {
+			if _, err := tx.Exec(ctx, `SELECT 1 FROM `+pgx.Identifier{bearer}.Sanitize()+` k WHERE k.id IN `+reach[bearer]+
+				` ORDER BY k.id FOR SHARE OF k`, id); err != nil {
+				return fmt.Errorf("extprivacy: holding the %s records a row of %s links to: %w", bearer, t.Name, err)
+			}
+		}
+	}
+	return nil
+}
+
 // Due returns up to limit rows of a table the window lets a sweep take, oldest
 // first. For a sweep that clears, a row already blank is not due, so the sweep
 // never picks one row twice.
@@ -108,9 +136,12 @@ func (r Registry) Due(ctx context.Context, tx pgx.Tx, t privacy.Table, w Window,
 }
 
 // ClearDue clears the personal columns of one row, asking the window and the
-// holds again in the same statement. It reports whether the row changed: a row
+// holds again once the records that carry them are locked. It reports whether the row changed: a row
 // held, cleared or gone since the selection is left alone.
 func (r Registry) ClearDue(ctx context.Context, tx pgx.Tx, t privacy.Table, w Window, id ids.UUID) (bool, error) {
+	if err := lockHolders(ctx, tx, t, id); err != nil {
+		return false, err
+	}
 	set, err := clearAssignments(ctx, tx, t)
 	if err != nil {
 		return false, err
@@ -127,6 +158,9 @@ func (r Registry) ClearDue(ctx context.Context, tx pgx.Tx, t privacy.Table, w Wi
 
 // DeleteDue deletes one row on the same terms as ClearDue.
 func (r Registry) DeleteDue(ctx context.Context, tx pgx.Tx, t privacy.Table, w Window, id ids.UUID) (bool, error) {
+	if err := lockHolders(ctx, tx, t, id); err != nil {
+		return false, err
+	}
 	var s statement
 	query := `DELETE FROM ` + qualified(t.Name) + ` t WHERE t.id = ` + s.arg(id) + ` AND ` + s.dueSQL(t, w)
 	tag, err := tx.Exec(ctx, query, s.args...)

@@ -63,18 +63,22 @@ A row is past its window when its age column is older than the policy's `retain_
 its table must also no longer require it to be kept. For `commercial_correspondence` that is the strictest floor
 in force: the current one or that of any legal entity. A unit row is not tied to the mail of one entity. A carried
 floor keeps only the rows whose age column is before the change that made it shorter, as it does for mail.
-A row already cleared is not picked again.
+
+A pass under an `anonymize` policy does not pick a row it already cleared. A pass under an `erase` policy can
+still delete that row.
 
 One pass takes one batch across all tables. Each table first gets the same share. What a table does not use goes
-to the others, so a long backlog in one table does not hold up the next.
+to the others, so a long backlog in one table does not hold up the next. The table that goes first changes each day.
 
 A row has no legal hold of its own. It is kept while a contact, lead or company it links to is held. A row linked
 to an activity is kept while that activity is held through any record it is linked to. Both the sweep and erasure
-ask again in the statement that acts on the row.
+ask again in the statement that acts on the row. The sweep first locks the records whose hold keeps the row, so a
+hold being placed at that moment is waited for and then counts.
 
 At start-up core refuses a table with personal columns and no `AgeColumn`. The `AgeColumn` must be a `NOT NULL`
 `timestamptz` or `date` column: a row with no age would never be due. A foreign key must not name a swept
-table with `ON DELETE` `NO ACTION` or `RESTRICT`. An `erase` policy could not delete its rows.
+table with `ON DELETE` `NO ACTION` or `RESTRICT`. Nor may it use `SET NULL` on a `NOT NULL` column, or
+`SET DEFAULT` on a `NOT NULL` column with no default. An `erase` policy could not delete its rows.
 
 `openchannel` counts a message's age from `updated_at`, when it was last decided about, as its own sweep does. Its
 own sweep deletes a decided message after 30 days, and never one that still waits to land. The core sweep reaches

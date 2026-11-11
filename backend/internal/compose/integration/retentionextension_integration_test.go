@@ -342,3 +342,52 @@ func TestACarriedFloorKeepsOnlyTheExtensionRowsFromBeforeItsChange(t *testing.T)
 			due, afterTheChange, pastTheWindow, beforeInWindow)
 	}
 }
+
+// A hold placed while the pass decides about a row cannot slip past it. The pass
+// holds the linked records FOR SHARE, so it waits for the hold and keeps the row.
+func TestARetentionPassWaitsForAHoldBeingPlacedOnALinkedRecord(t *testing.T) {
+	for name, link := range map[string]func(f keptFixture, record ids.UUID) keptRow{
+		"a linked contact": func(_ keptFixture, record ids.UUID) keptRow {
+			return keptRow{contact: &record, age: twentyYears}
+		},
+		"a company the linked activity names": func(f keptFixture, record ids.UUID) keptRow {
+			activity := SeedIDRow(t, f.owner, `INSERT INTO activity (id, kind, subject, occurred_at, source, captured_by)
+				VALUES ($1, 'email', 'thread', now(), 'manual', 'human:x')`)
+			LinkActivity(t, f.owner, activity, "company", record)
+			return keptRow{activity: &activity, age: twentyYears}
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			f := setupKeptTable(t)
+			table, record := "contact", f.e.SeedContact(t, "Soon Held", nil)
+			if name != "a linked contact" {
+				table, record = "company", f.e.SeedCompany(t, "Soon Held GmbH", nil)
+			}
+			row := f.seed(t, link(f, record))
+			f.policy(t, "erase")
+
+			placing, err := FreshOwnerConn(t).Begin(t.Context())
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err := placing.Exec(t.Context(), `UPDATE `+table+` SET legal_hold = true WHERE id = $1`, record); err != nil {
+				t.Fatal(err)
+			}
+			finished := make(chan error, 1)
+			go func() {
+				service := compose.NewRetentionServiceFor(f.e.DB(), nil, slog.Default()).WithExtensions(f.registry)
+				finished <- service.EvaluateInstallation(RetentionPassCtx(f.e.WS))
+			}()
+			waitUntilBlockedBy(t, placing)
+			if err := placing.Commit(t.Context()); err != nil {
+				t.Fatal(err)
+			}
+			if err := <-finished; err != nil {
+				t.Fatal(err)
+			}
+			if got := f.body(t, row); got != "what they said" {
+				t.Errorf("the pass expired a row whose linked record was being held: %q", got)
+			}
+		})
+	}
+}

@@ -67,21 +67,25 @@ func VerifySchema(ctx context.Context, q Querier, namespace string, others []str
 		}
 		if constraint, ok := pinned[t.Name]; ok && Swept(t) {
 			return fmt.Errorf("extprivacy: %s is swept by age, but foreign key %s refuses the delete of a row it names; "+
-				"declare it ON DELETE CASCADE, SET NULL or SET DEFAULT", t.Name, constraint)
+				"declare it ON DELETE CASCADE, or SET NULL or SET DEFAULT on a column that can take it", t.Name, constraint)
 		}
 	}
 	return nil
 }
 
 // readPinningReferences names, per ext table under the prefix, a foreign key
-// that would refuse the delete of one of its rows.
+// that would refuse the delete of one of its rows. SET NULL refuses it when a
+// column it nulls is NOT NULL, and SET DEFAULT when that column has no default.
 func readPinningReferences(ctx context.Context, q Querier, prefix string) (map[string]string, error) {
 	rows, err := q.Query(ctx, `
 		SELECT DISTINCT ON (target.relname) target.relname, k.conname
 		  FROM pg_constraint k
 		  JOIN pg_class target ON target.oid = k.confrelid
 		  JOIN pg_namespace n ON n.oid = target.relnamespace
-		 WHERE k.contype = 'f' AND k.confdeltype IN ('a', 'r')
+		 WHERE k.contype = 'f' AND (k.confdeltype IN ('a', 'r') OR EXISTS (
+		       SELECT 1 FROM pg_attribute a
+		        WHERE a.attrelid = k.conrelid AND a.attnum = ANY(coalesce(k.confdelsetcols, k.conkey)) AND a.attnotnull
+		          AND (k.confdeltype = 'n' OR (k.confdeltype = 'd' AND NOT a.atthasdef))))
 		   AND n.nspname = $1 AND left(target.relname, length($2::text)) = $2::text
 		 ORDER BY target.relname, k.conname`, Schema, prefix)
 	if err != nil {

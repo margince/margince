@@ -41,3 +41,18 @@ func TestACarriedFloorBindsOnlyExtensionRowsFromBeforeTheChange(t *testing.T) {
 		t.Errorf("carried window = %v..%v, want rows before %v kept since %v", w.CarriedSince, w.CarriedBefore, changed, long.ProtectedSince(ref))
 	}
 }
+
+func TestEveryExtensionTableLeadsAPassInTurn(t *testing.T) {
+	tables := make([]extdecl.Table, 3)
+	for i := range tables {
+		tables[i] = extdecl.Table{Name: "ext_probe_" + string(rune('a'+i))}
+	}
+	ref := time.Date(2030, 6, 1, 3, 0, 0, 0, time.UTC)
+	led := map[string]bool{}
+	for day := range len(tables) {
+		led[inTurn(tables, ref.AddDate(0, 0, day))[0].Name] = true
+	}
+	if len(led) != len(tables) {
+		t.Errorf("over %d nightly passes only %v led, want every table first once: with more tables than the batch, the ones never first are never reached", len(tables), led)
+	}
+}

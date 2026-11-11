@@ -41,7 +41,7 @@ var extensionActions = []string{actionAnonymize, actionErase}
 // costs what any other stage costs. Each table first gets an equal share of it.
 // What a table leaves unused goes to the others in a second round, which skips a
 // table that ran dry. So a table with a long backlog never keeps the next one
-// from its turn.
+// from its turn, and the tables take turns at going first.
 func (s *RetentionService) evaluateExtensionPolicy(ctx context.Context, pol retentionPolicy, ref time.Time) error {
 	var tables []extdecl.Table
 	for _, t := range s.eraser.extensions.SweptTables() {
@@ -52,6 +52,7 @@ func (s *RetentionService) evaluateExtensionPolicy(ctx context.Context, pol rete
 	if len(tables) == 0 {
 		return nil
 	}
+	tables = inTurn(tables, ref)
 	budget, drained := retentionBatch, make([]bool, len(tables))
 	for _, share := range []int{max(1, retentionBatch/len(tables)), retentionBatch} {
 		for i, t := range tables {
@@ -70,6 +71,13 @@ func (s *RetentionService) evaluateExtensionPolicy(ctx context.Context, pol rete
 		}
 	}
 	return nil
+}
+
+// inTurn starts the tables at the one whose turn the pass's day is. With more
+// tables than the batch has rows, a fixed order would never reach the last ones.
+func inTurn(tables []extdecl.Table, ref time.Time) []extdecl.Table {
+	first := int(ref.Unix()/int64(24*time.Hour/time.Second)) % len(tables)
+	return append(slices.Clone(tables[first:]), tables[:first]...)
 }
 
 // sweepExtensionTable expires up to limit due rows of one table. It reports how

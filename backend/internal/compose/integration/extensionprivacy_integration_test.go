@@ -352,8 +352,13 @@ func TestBootHoldsASweptTableToReferencesThatLetItsRowsBeDeleted(t *testing.T) {
 	for clause, refused := range map[string]bool{
 		"": true, "ON DELETE RESTRICT": true,
 		"ON DELETE CASCADE": false, "ON DELETE SET NULL": false, "ON DELETE SET DEFAULT": false,
+		"NOT NULL ON DELETE SET NULL": true, "NOT NULL ON DELETE SET DEFAULT": true,
 	} {
 		t.Run(clause, func(t *testing.T) {
+			column := "note_id uuid REFERENCES ext.ext_probe_note (id) " + clause
+			if rest, ok := strings.CutPrefix(clause, "NOT NULL "); ok {
+				column = "note_id uuid NOT NULL REFERENCES ext.ext_probe_note (id) " + rest
+			}
 			env := Setup(t)
 			unit := probeUnit(t, "1.0.0", "body")
 			unit.Privacy[0].AgeColumn = "noted_at"
@@ -362,7 +367,7 @@ func TestBootHoldsASweptTableToReferencesThatLetItsRowsBeDeleted(t *testing.T) {
 					t.Errorf("removing the referencing table: %v", err)
 				}
 			})
-			probeExec(t, `CREATE TABLE ext.ext_probe_reply (id uuid PRIMARY KEY, note_id uuid REFERENCES ext.ext_probe_note (id) `+clause+`)`,
+			probeExec(t, `CREATE TABLE ext.ext_probe_reply (id uuid PRIMARY KEY, `+column+`)`,
 				`GRANT SELECT, INSERT, UPDATE, DELETE ON ext.ext_probe_reply TO margince_app`)
 			unit.Privacy = append(unit.Privacy, privacy.Table{Name: "ext_probe_reply", Retention: jurisdiction.CommercialCorrespondence})
 

@@ -156,7 +156,7 @@ Most records have two clocks, and a rule acts only once both are past its window
 
 **Stored message originals** have one clock: when capture imported the message. **AI call payloads** count from the call, and the **daily deal-risk record** from the day it describes.
 
-**Records kept by extensions** have one clock too, the date the extension names for each kind of record. Anonymize clears what names someone, and erase deletes the record. A record is kept while the law still says it must be kept. It is also kept while a contact, lead or company it belongs to is on legal hold.
+**Records kept by extensions** have one clock too, the date the extension names for each kind of record. Anonymize clears every column the extension marks as personal, which can be the whole text of a message. Erase deletes the record. A record is kept while the law still says it must be kept. It is also kept while a contact, lead or company it belongs to is on legal hold.
 
 ### The three retention actions
 
@@ -196,7 +196,8 @@ Not every mix is allowed: there is no way to archive an AI call payload, or to a
 - archive a deal;
 - archive or anonymize a lead;
 - erase an AI call payload, a stored message original, a daily record of
-  material deals at risk, or a saved report edition.
+  material deals at risk, or a saved report edition;
+- anonymize or erase a record kept by an extension.
 
 A rule can hold a **Lawful basis** if you like (the Article 6 reason for the time limit). It is recorded for whoever checks the rule later. The rules a new company starts with all say "storage limitation".
 
