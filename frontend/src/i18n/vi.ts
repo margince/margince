@@ -3766,7 +3766,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "tab.tasks": "Việc cần làm",
   "tab.timeline": "Lịch sử",
   "tab.finance": "Tài chính",
-  "tab.network": "Mọi người",
+  "tab.network": "Quan hệ",
   "tab.documents": "Tài liệu",
   "tab.profile": "Thông tin",
   "tab.meetings": "Cuộc họp",

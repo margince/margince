@@ -3834,7 +3834,7 @@ export const en = {
   "tab.tasks": "Tasks",
   "tab.timeline": "History",
   "tab.finance": "Finance",
-  "tab.network": "People",
+  "tab.network": "Relationships",
   "tab.documents": "Documents",
   "tab.profile": "Profile",
   "tab.meetings": "Meetings",

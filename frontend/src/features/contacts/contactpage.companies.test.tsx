@@ -90,7 +90,7 @@ describe("the contact's Companies tab", () => {
     ).toBeTruthy();
   });
 
-  it("leaves the work history off the People tab", async () => {
+  it("leaves the work history off the Relationships tab", async () => {
     mount("network", employed, [], peopleRoutes);
 
     const tab = await screen.findByRole("button", { name: en["tab.network"] });

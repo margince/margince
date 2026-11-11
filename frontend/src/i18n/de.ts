@@ -3881,7 +3881,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "tab.tasks": "Aufgaben",
   "tab.timeline": "Verlauf",
   "tab.finance": "Finanzen",
-  "tab.network": "Personen",
+  "tab.network": "Beziehungen",
   "tab.documents": "Dokumente",
   "tab.profile": "Profil",
   "tab.meetings": "Termine",

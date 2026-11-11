@@ -19,7 +19,7 @@ import type { Route } from "./router";
  * contact reading them, and the filter above the list is what separates them.
  *
  * Companies is where they work and worked, the mirror of the account's
- * Contacts tab. Network, drawn as "People", follows: who else this contact
+ * Contacts tab. Network, drawn as "Relationships", follows: who else this contact
  * reaches. It is a tab rather than an overview card because its
  * answer is a working surface — a reader interrogates the routes and the
  * seats — and the overview stack is a glance.
