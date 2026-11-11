@@ -59,8 +59,8 @@ func TestAnUpdateSaysWhatMovedAndFromWhere(t *testing.T) {
 	}
 }
 
-// With no earlier send in the mailbox, a raised revision is still an update,
-// and one moved meeting of a series is read against its original start.
+// With no earlier send in the mailbox, a raised revision is still an update.
+// One moved meeting of a series is read against its original start.
 func TestAnUpdateWithoutAnEarlierSend(t *testing.T) {
 	t.Parallel()
 	got := (calendarSend{method: "REQUEST", event: sentMeeting(2)}).change()

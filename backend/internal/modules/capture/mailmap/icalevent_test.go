@@ -167,8 +167,8 @@ func TestACancellationAndAnAllDayEventAreRead(t *testing.T) {
 	}
 }
 
-// One meeting of a series is named by its original start, in UTC, however the
-// calendar spelled it, so two sends about it meet on the same key.
+// One meeting of a series is named by its original start in UTC. So two sends
+// about it meet on the same key, however the calendar spelled it.
 func TestAnOccurrenceIsNamedByItsOriginalStart(t *testing.T) {
 	t.Parallel()
 	event := calendarEventOf(t, declineFrom(

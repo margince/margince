@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// What a calendar mail says happened to its meeting, in words: the badge it
-// wears, the one line a card has room for, and how its times read. The box
-// (design-system/meetingchange.tsx) and the Home card both read these.
+// What a calendar mail says happened to its meeting, in words. That is its
+// badge, the one line a card has room for, and how its times read. The box
+// and the Home card both read these.
 
 import type { components } from "../api/schema";
 import {

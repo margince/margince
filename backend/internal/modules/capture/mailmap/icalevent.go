@@ -111,8 +111,8 @@ func addAttendee(event *calendarevent.Event, line icalLine) {
 	})
 }
 
-// recurrenceKey names one occurrence of a series the same way however the
-// calendar spelled it: the instant in UTC, or the date of an all-day series.
+// recurrenceKey names one occurrence of a series as the instant in UTC, or the
+// date of an all-day series. The calendar's own spelling does not matter.
 func recurrenceKey(line icalLine) string {
 	at, allDay, ok := icalTime(line, nil)
 	switch {

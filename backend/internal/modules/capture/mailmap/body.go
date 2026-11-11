@@ -80,11 +80,8 @@ func bodyText(plain, html string) (text string, cut bool) {
 // A calendar payload arrives by three routes: an unnamed inline part (the shape
 // Google sends), a named inline part, and a declared attachment. All three are
 // the same evidence — an invitation — so all three set the flag AND hand their
-// bytes to the collector. The unnamed route did neither for the file until the
-// order in readInlinePart put the collector ahead of the body read.
-//
-// application/ics is the same payload under the type some webmail and
-// Outlook's "add to calendar" attachments declare.
+// bytes to the collector. application/ics is the same payload under another
+// declared type.
 func isCalendarType(contentType string) bool {
 	declared := strings.ToLower(strings.TrimSpace(contentType))
 	return strings.HasPrefix(declared, "text/calendar") || strings.HasPrefix(declared, "application/ics")

@@ -5,9 +5,9 @@
 
 package compose
 
-// A calendar mail after the first invitation, captured through the production
-// parser and sink, reads as its meeting and what changed since the send
-// before it. A colleague whose mailbox never received it reads a plain mail.
+// A later calendar mail goes through the production parser and sink. It reads
+// as its meeting and what changed since the send before it. A colleague whose
+// mailbox never received it reads a plain mail.
 
 import (
 	"strconv"

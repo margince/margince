@@ -248,6 +248,12 @@ An email that invites you to a meeting shows **Accept**, **Maybe** and **Decline
 - **Reply** stays in the email reader, for proposing another time.
 Also called: meeting invite, accept an invite, decline a meeting.
 
+### What does a meeting update show?
+An email that moves, renames or calls off a meeting, or changes its guests, shows the meeting in place of the email text: the day, time and place, then what it was before (**Was 13 Nov, 13:00–14:00**, **Added Ben Ito**).
+- The tag says what happened: **Meeting changed**, **Canceled**, **New time proposed** or the guest's answer. An update to an invitation you have not answered still shows **Accept**, **Maybe** and **Decline**; other updates you mark done.
+- The "before" comes from the earlier email about the same meeting in your own mailbox.
+Also called: updated invitation, rescheduled meeting, canceled meeting.
+
 ## The Worklist
 
 A lead record does not come into the Worklist because someone created it, imported it or set its owner. A planned task linked to a lead, or a request that came in, can come in through the list of tasks or of waiting messages. Choose prospects in **Leads**, then plan when to reach out.

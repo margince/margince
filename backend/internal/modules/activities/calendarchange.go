@@ -3,14 +3,12 @@
 
 package activities
 
-// A calendar mail after the first invitation tells the reader something about
-// a meeting: the organizer moved it or called it off, or a guest proposed
-// another time or answered. The row says so (EmailSummary.calendar_change), so
-// a client draws the meeting and what changed instead of a mail to put down.
+// A later calendar mail says what happened to a meeting: moved, called off, a
+// new time proposed or an answer. EmailSummary.calendar_change carries it, so a
+// client draws the meeting and what changed, not a mail to put down.
 //
-// What changed is read against the send of the same event before it, which
-// the reader's own mailbox received. Capture stores what each send said of its
-// event (activity.calendar_event); nothing here re-reads a message.
+// The comparison is with the earlier send of the same event in the reader's
+// own mailbox. Capture stores each send's event (activity.calendar_event).
 
 import (
 	"context"
@@ -31,9 +29,8 @@ type calendarSend struct {
 	before *calendarevent.Event
 }
 
-// calendarSendsTx reads the stored events of these messages that the reader's
-// own mailbox received, each with the latest earlier send that stated the
-// event: a REQUEST or ADD of the same UID and occurrence.
+// calendarSendsTx reads the stored events of the reader's own messages. Each
+// comes with the latest earlier REQUEST or ADD of the same UID and occurrence.
 func calendarSendsTx(ctx context.Context, tx pgx.Tx, messages []ids.UUID, reader ids.UUID) (map[ids.UUID]calendarSend, error) {
 	out := map[ids.UUID]calendarSend{}
 	if len(messages) == 0 || reader.IsZero() {
