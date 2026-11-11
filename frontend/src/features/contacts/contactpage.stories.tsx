@@ -22,6 +22,8 @@ import {
 } from "../../testing/story-utils";
 import {
   chatConversation,
+  foldedHandles,
+  manyHandles,
   meetingPrepMoment,
   page,
   populated,
@@ -421,6 +423,16 @@ function Page({
 }
 
 export const PageStory: Story = { name: "Page", render: () => <Page /> };
+
+export const PageManyHandles: Story = {
+  name: "Page · two addresses and numbers",
+  render: () => <Page view={manyHandles} />,
+};
+
+export const PageFoldedHandles: Story = {
+  name: "Page · four addresses fold",
+  render: () => <Page view={foldedHandles} />,
+};
 
 // Dana wrote two hours ago and nobody has answered. The Overview leads with
 // her mail, and every other tab keeps it in one line under the pills.
