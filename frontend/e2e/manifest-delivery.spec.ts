@@ -1,4 +1,13 @@
-import { type APIResponse, expect, test } from "@playwright/test";
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import {
+  type APIRequestContext,
+  type APIResponse,
+  expect,
+  test,
+} from "@playwright/test";
+import { parse } from "node-html-parser";
 
 // What the built app serves at its manifest link, read from the preview server
 // over HTTP. A file that parses on disk proves nothing about the answer a
@@ -6,27 +15,44 @@ import { type APIResponse, expect, test } from "@playwright/test";
 
 type Delivery = "manifest" | "not-modified" | "fallback-html" | "unreadable";
 
+// The name the shipped manifest carries, read from the file the build copies.
+const shippedName: string = JSON.parse(
+  readFileSync(
+    join(
+      dirname(fileURLToPath(import.meta.url)),
+      "..",
+      "public",
+      "manifest.webmanifest",
+    ),
+    "utf8",
+  ),
+).name;
+
 // classify names what a manifest request actually got. A 304 carries no body
-// and is a valid revalidation; anything else must be JSON naming the app.
+// and is a valid revalidation. Anything else must be JSON naming this app.
 async function classify(response: APIResponse): Promise<Delivery> {
   if (response.status() === 304) return "not-modified";
   const type = response.headers()["content-type"] ?? "";
   if (type.includes("text/html")) return "fallback-html";
   try {
     const body: unknown = JSON.parse(await response.text());
-    const named = typeof body === "object" && body !== null && "name" in body;
-    return named ? "manifest" : "unreadable";
+    const name =
+      typeof body === "object" && body !== null && "name" in body
+        ? body.name
+        : undefined;
+    return name === shippedName ? "manifest" : "unreadable";
   } catch {
     return "unreadable";
   }
 }
 
-// The href the served index.html names, so the test follows the page's own link.
-async function manifestHref(
-  request: import("@playwright/test").APIRequestContext,
-) {
-  const page = await (await request.get("/")).text();
-  const href = /<link[^>]+rel="manifest"[^>]+href="([^"]+)"/.exec(page)?.[1];
+// The href the served index.html names, read from its parsed head. The test
+// follows the page's own link, never a match inside a comment.
+async function manifestHref(request: APIRequestContext): Promise<string> {
+  const page = parse(await (await request.get("/")).text());
+  const href = page
+    .querySelector('head link[rel~="manifest"]')
+    ?.getAttribute("href");
   expect(href, "the served index.html names no manifest").toBeTruthy();
   return href as string;
 }
