@@ -49,6 +49,14 @@ jobs:
     permissions:
       contents: read
     steps:
+      # The shards run these binaries on x64 `ubuntu-latest`, so a label that
+      # names another platform must fail here and not in every shard.
+      - name: The runner is the shards' platform
+        working-directory: .
+        run: |
+          [[ "$RUNNER_OS/$RUNNER_ARCH" == Linux/X64 ]] && exit 0
+          echo "INTEGRATION_BUILD_RUNNER must name a Linux x64 runner; this one is $RUNNER_OS/$RUNNER_ARCH."
+          exit 1
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
