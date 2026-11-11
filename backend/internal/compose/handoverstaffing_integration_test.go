@@ -105,7 +105,16 @@ func TestMemberHandoverMovesPendingStaffingAndRetainsAcceptedCredit(t *testing.T
 		t.Fatal(err)
 	}
 	owner := integration.FreshOwnerConn(t)
-	_, err = dbmigrate.Down(t.Context(), owner, core, 1)
+	// The migration that refuses is the one that made accepted credit
+	// permanent. Newer migrations sit above it, so step back over them too.
+	const retainsReceiver = "1794326428"
+	back := 0
+	for _, m := range core.Migrations {
+		if m.Version >= retainsReceiver {
+			back++
+		}
+	}
+	_, err = dbmigrate.Down(t.Context(), owner, core, back)
 	fault, ok := errors.AsType[*pgconn.PgError](err)
 	if !ok || fault.Code != "23514" {
 		t.Fatalf("unsafe downgrade was not refused: %v", err)
