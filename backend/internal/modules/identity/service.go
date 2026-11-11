@@ -129,8 +129,16 @@ type Identity struct {
 	UserID        ids.UserID
 	WorkspaceID   ids.WorkspaceID
 	WorkspaceName string
-	Email         string
-	DisplayName   string
+	// SessionID is the browser session this request authenticated with, kept so
+	// a flow whose effect outlives its own admission check can re-confirm the
+	// session was not revoked in the gap. The OAuth consent is the one such flow:
+	// its code is minted in a later transaction, and a password change committing
+	// in between revokes the session without this value being re-read anywhere
+	// else. Zero for an Identity built without a session (never a real consent,
+	// which admission admits only with one).
+	SessionID   ids.UUID
+	Email       string
+	DisplayName string
 	// GreetingName is the name colleagues greet this member by, nil when
 	// nobody has said and greetings use the first word of DisplayName.
 	GreetingName *string
@@ -382,6 +390,7 @@ func (s *Service) Authenticate(ctx context.Context, rawToken string) (Identity, 
 			id.WorkspaceName = name
 		}
 		id.UserID = userID
+		id.SessionID = sessionID
 		// NULL stays empty: somebody who never chose a language is not somebody
 		// who chose English, and only the reader's own browser can answer for
 		// the first case.

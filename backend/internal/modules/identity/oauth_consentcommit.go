@@ -21,6 +21,7 @@ package identity
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -78,6 +79,46 @@ type consentChoice struct {
 	areas  principal.WorkAreas
 }
 
+// errConsentAuthorityEnded is a consent whose authority died between admission
+// and this mint: the member was deactivated, or the session that authorized it
+// was revoked by a password change, a reset or an email change committing in the
+// gap. The consent mints nothing — minting would hand a stolen session an OAuth
+// code the owner's password change was meant to have already cut off.
+var errConsentAuthorityEnded = errors.New("identity: the consent's authority ended before the code was minted")
+
+// reconfirmConsentAuthority refuses a consent whose authority ended after the
+// request was admitted but before the code is written here. The revocation
+// cascade (endCredentialAuthority) and every caller of it hold the member's
+// app_user row FOR UPDATE for the whole of the revoke, so taking it FOR SHARE
+// makes this mint and that revoke SERIALIZE rather than interleave: a revoke in
+// flight blocks this read until it commits, and a later revoke blocks on this
+// read until the code commits where the revoke's own sweep then ends it. With
+// the two ordered, re-reading the session under a fresh snapshot sees the
+// revocation that a password change made to it. Run inside the mint's
+// transaction, before the code row is written.
+func reconfirmConsentAuthority(ctx context.Context, tx pgx.Tx, id Identity) error {
+	var ok bool
+	switch err := tx.QueryRow(ctx,
+		`SELECT true FROM app_user WHERE id = $1 AND `+LiveMemberSQL("")+` FOR SHARE`,
+		id.UserID).Scan(&ok); {
+	case errors.Is(err, pgx.ErrNoRows):
+		return errConsentAuthorityEnded
+	case err != nil:
+		return err
+	}
+	switch err := tx.QueryRow(ctx,
+		`SELECT true FROM session
+		  WHERE id = $1 AND revoked_at IS NULL
+		    AND now() < idle_expires_at AND now() < expires_at`,
+		id.SessionID).Scan(&ok); {
+	case errors.Is(err, pgx.ErrNoRows):
+		return errConsentAuthorityEnded
+	case err != nil:
+		return err
+	}
+	return nil
+}
+
 // mintConsentedAuthorizationCode writes the single-use code the client will
 // redeem, and the audit row naming the code — all in ONE transaction, so a
 // code the audit trail cannot explain is a state this flow cannot reach.
@@ -106,6 +147,12 @@ func (s *Service) mintConsentedAuthorizationCode(
 		storedScopes = append(append([]string{}, scopes...), scopeOfflineAccess)
 	}
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
+		// First, before anything is written: refuse a consent whose authority a
+		// concurrent revocation ended. This orders the mint against that revoke, so
+		// a code minted in its window is either caught by it or never written.
+		if err := reconfirmConsentAuthority(ctx, tx, id); err != nil {
+			return err
+		}
 		// The AUTHORIZATION CODE: a single-use password the client posts at the
 		// token endpoint. The code row is the contract: if the code does not name
 		// the scopes, client, and user, the redemption has no authority to mint
