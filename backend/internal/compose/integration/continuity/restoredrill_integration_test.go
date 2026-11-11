@@ -3,7 +3,7 @@
 
 //go:build integration
 
-package compose
+package continuity_test
 
 // A drill that is not written down proves nothing afterwards, which is exactly
 // when somebody asks.
@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/continuity"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -22,7 +23,7 @@ import (
 // come out of it.
 func TestADrillLeavesTheTwoNumbersItWasRunToProduce(t *testing.T) {
 	e := integration.Setup(t)
-	store := continuity.NewStore(InstallationDB(e.Pool))
+	store := continuity.NewStore(compose.InstallationDB(e.Pool))
 
 	// A backup taken half an hour before the failure it stands in for.
 	restoredTo := time.Now().Add(-30 * time.Minute)
@@ -60,7 +61,7 @@ func TestADrillLeavesTheTwoNumbersItWasRunToProduce(t *testing.T) {
 func TestAnInstallationThatHasNeverDrilledSaysSo(t *testing.T) {
 	e := integration.Setup(t)
 
-	_, ever, err := continuity.NewStore(InstallationDB(e.Pool)).Latest(e.Admin())
+	_, ever, err := continuity.NewStore(compose.InstallationDB(e.Pool)).Latest(e.Admin())
 	if err != nil {
 		t.Fatalf("Latest: %v", err)
 	}
@@ -74,7 +75,7 @@ func TestAnInstallationThatHasNeverDrilledSaysSo(t *testing.T) {
 // needs before relying on the procedure.
 func TestAFailedDrillIsRecorded(t *testing.T) {
 	e := integration.Setup(t)
-	store := continuity.NewStore(InstallationDB(e.Pool))
+	store := continuity.NewStore(compose.InstallationDB(e.Pool))
 
 	id, err := store.Begin(e.Admin(), time.Now().Add(-time.Hour), "Dana Ops", "")
 	if err != nil {
@@ -100,7 +101,7 @@ func TestAFailedDrillIsRecorded(t *testing.T) {
 // window of zero, and different again from never having drilled.
 func TestARunningDrillReportsNoRecoveryWindowYet(t *testing.T) {
 	e := integration.Setup(t)
-	store := continuity.NewStore(InstallationDB(e.Pool))
+	store := continuity.NewStore(compose.InstallationDB(e.Pool))
 
 	if _, err := store.Begin(e.Admin(), time.Now().Add(-time.Minute), "Dana Ops", ""); err != nil {
 		t.Fatalf("Begin: %v", err)
@@ -121,7 +122,7 @@ func TestARunningDrillReportsNoRecoveryWindowYet(t *testing.T) {
 // it would make the ledger whatever its last writer preferred.
 func TestADrillCannotBeClosedTwice(t *testing.T) {
 	e := integration.Setup(t)
-	store := continuity.NewStore(InstallationDB(e.Pool))
+	store := continuity.NewStore(compose.InstallationDB(e.Pool))
 
 	id, err := store.Begin(e.Admin(), time.Now().Add(-time.Minute), "Dana Ops", "")
 	if err != nil {
@@ -146,7 +147,7 @@ func TestADrillCannotBeClosedTwice(t *testing.T) {
 // Recording a rehearsal is an operator's act, not a reader's.
 func TestRecordingADrillNeedsTheSettingsGrant(t *testing.T) {
 	e := integration.Setup(t)
-	store := continuity.NewStore(InstallationDB(e.Pool))
+	store := continuity.NewStore(compose.InstallationDB(e.Pool))
 
 	_, err := store.Begin(e.As(e.Rep1, nil, integration.AccountRepPerms), time.Now(), "Dana Ops", "")
 	if err == nil {
@@ -159,7 +160,7 @@ func TestRecordingADrillNeedsTheSettingsGrant(t *testing.T) {
 // vocabulary nobody agreed to is one nothing can read back.
 func TestADrillRefusesAnOutcomeItDoesNotDefine(t *testing.T) {
 	e := integration.Setup(t)
-	store := continuity.NewStore(InstallationDB(e.Pool))
+	store := continuity.NewStore(compose.InstallationDB(e.Pool))
 
 	id, err := store.Begin(e.Admin(), time.Now().Add(-time.Minute), "Dana Ops", "")
 	if err != nil {
@@ -173,7 +174,7 @@ func TestADrillRefusesAnOutcomeItDoesNotDefine(t *testing.T) {
 // A drill nobody is named on is evidence of nothing, so the ledger refuses it.
 func TestADrillWithNoOperatorIsRefused(t *testing.T) {
 	e := integration.Setup(t)
-	store := continuity.NewStore(InstallationDB(e.Pool))
+	store := continuity.NewStore(compose.InstallationDB(e.Pool))
 
 	_, err := store.Begin(e.Admin(), time.Now().Add(-time.Minute), "  ", "")
 	if !errors.Is(err, apperrors.ErrInvalidArgument) {

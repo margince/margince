@@ -238,3 +238,97 @@ func assertSystemLogRow(t *testing.T, e *apptest.AppEnv, id string) {
 		t.Errorf("the ledger row's action is %q, want brief.opened", action)
 	}
 }
+
+// Only the brief's own read is an open. The Worklist and the attention day
+// draw the brief lane under their own scope, view and page. So the open is
+// recorded where the rep reads the brief itself.
+func TestOnlyTheBriefsOwnReadRecordsTheOpen(t *testing.T) {
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+	stages := apptest.DiscoverSeededPipeline(t, e)
+	apptest.CreateDealClosingThisWeek(t, e, stages, "Closing this week")
+	apptest.CreateDealClosingThisWeek(t, e, stages, "Also closing")
+
+	var generated briefResponse
+	if status := e.Call(t, "POST", "/v1/brief", nil, nil, &generated); status != http.StatusCreated {
+		t.Fatalf("POST /v1/brief = %d, want 201", status)
+	}
+	if status := e.Call(t, "POST", "/v1/brief/items/"+generated.Items[0].ID+"/act", nil, nil, nil); status != http.StatusOK {
+		t.Fatalf("acting on an item = %d, want 200", status)
+	}
+	for _, path := range []string{"/v1/worklist", "/v1/attention"} {
+		if status := e.Call(t, "GET", path, nil, nil, nil); status != http.StatusOK {
+			t.Fatalf("GET %s = %d, want 200", path, status)
+		}
+	}
+	if staged := openEvents(t, e); len(staged) != 0 {
+		t.Fatalf("the Worklist and attention reads staged %d open(s), want none", len(staged))
+	}
+
+	var read briefResponse
+	if status := e.Call(t, "GET", "/v1/brief", nil, nil, &read); status != http.StatusOK {
+		t.Fatalf("GET /v1/brief = %d, want 200", status)
+	}
+	staged := openEvents(t, e)
+	if len(staged) != 1 {
+		t.Fatalf("one brief read staged %d open(s), want 1", len(staged))
+	}
+	unread := 0
+	for _, item := range read.Items {
+		if item.State == "new" {
+			unread++
+		}
+	}
+	if got := staged[0].Payload; got.Items != len(read.Items) || got.Unread != unread || unread == len(read.Items) {
+		t.Fatalf("the open says items=%d unread=%d; the response showed %d items, %d unread",
+			got.Items, got.Unread, len(read.Items), unread)
+	}
+}
+
+// The reader has the brief before its open is written, so an open that cannot
+// be written still answers the brief. The refusal is the database's own.
+func TestABriefWhoseOpenCannotBeWrittenIsStillRead(t *testing.T) {
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+	stages := apptest.DiscoverSeededPipeline(t, e)
+	apptest.CreateDealClosingThisWeek(t, e, stages, "Closing this week")
+	if status := e.Call(t, "POST", "/v1/brief", nil, nil, nil); status != http.StatusCreated {
+		t.Fatalf("POST /v1/brief = %d, want 201", status)
+	}
+	refuseBriefOpens(t)
+
+	var read briefResponse
+	if status := e.Call(t, "GET", "/v1/brief", nil, nil, &read); status != http.StatusOK {
+		t.Fatalf("GET /v1/brief with the open refused = %d, want 200", status)
+	}
+	if len(read.Items) == 0 {
+		t.Fatal("the brief came back empty; the refused open must not change the answer")
+	}
+	if staged := openEvents(t, e); len(staged) != 0 {
+		t.Fatalf("%d open(s) staged past the refusal; the fixture did not refuse the write", len(staged))
+	}
+}
+
+// refuseBriefOpens makes the database refuse every brief.opened ledger row
+// until the test ends.
+func refuseBriefOpens(t *testing.T) {
+	t.Helper()
+	owner := OwnerConn(t)
+	ctx := context.Background()
+	if _, err := owner.Exec(ctx, `
+		CREATE FUNCTION refuse_brief_open() RETURNS trigger LANGUAGE plpgsql AS $$
+		BEGIN
+			IF NEW.action = 'brief.opened' THEN RAISE EXCEPTION 'brief opens refused by the test'; END IF;
+			RETURN NEW;
+		END $$;
+		CREATE TRIGGER refuse_brief_open BEFORE INSERT ON system_log
+			FOR EACH ROW EXECUTE FUNCTION refuse_brief_open();`); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if _, err := owner.Exec(context.Background(), `
+			DROP TRIGGER refuse_brief_open ON system_log; DROP FUNCTION refuse_brief_open();`); err != nil {
+			t.Errorf("removing the refusal: %v", err)
+		}
+	})
+}

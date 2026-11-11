@@ -28,17 +28,11 @@ type attentionBriefing struct {
 	// be a second answer to "can this reader resolve this deal", and a row one
 	// of them keeps and the other blanks is the defect this closes.
 	figures attention.DealFacts
-	now     attention.Clock
 }
 
 // Queue returns the reader's unanswered entries and the stored run's cutoff.
 // Closed, archived and unreadable deals leave this lane; the run remains reviewable.
-func (a attentionBriefing) Queue(ctx context.Context) ([]attention.BriefEntry, bool, time.Time, error) {
-	// This read WRITES — it resurfaces expired snoozes and records the open —
-	// and under a composed read those now ride the page's own transaction. That
-	// is the right fate for both: a brief whose page never rendered was not
-	// opened. Its errors already fail the page, so it needs no detachment.
-	now := a.now()
+func (a attentionBriefing) Queue(ctx context.Context, now time.Time) ([]attention.BriefEntry, bool, time.Time, error) {
 	held, err := a.engine.SnoozedDeals(ctx, now)
 	if err != nil {
 		return nil, false, time.Time{}, err

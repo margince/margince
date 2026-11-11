@@ -28,6 +28,7 @@ type captureAttempt struct {
 	duplicateFields json.RawMessage
 	dropped         string
 	admission       admissionNote
+	ensured         mailEnsure
 }
 
 func (s *Sink) landActivityTx(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord, fields ActivityFields, owner ids.UUID) (activityLanding, error) {

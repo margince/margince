@@ -103,7 +103,7 @@ func (s *Service) readingTeamPlans(ctx context.Context, now time.Time) (*Service
 // rather than aborting the snapshot every other source shares.
 func (s *Service) duePlan(ctx context.Context, budget time.Duration, owner ids.UUID, now time.Time) ([]PlanWork, *crmcontracts.WorklistSourceUnavailable) {
 	var entries []PlanWork
-	err := s.degradable(ctx, budget, func(ctx context.Context) error {
+	err := s.degradable(ctx, sourceWeeklyCommitment, budget, func(ctx context.Context) error {
 		var err error
 		entries, err = s.weeklyPlans.DuePlan(ctx, owner, now)
 		return err

@@ -79,6 +79,22 @@ func briefSnoozeLiftedSQL(deal, condition, ref, setDown, asOf string) string {
 	END)`, condition, deal, setDown, occurredday.HappenedSQL("a", asOf), ref, activities.KindMeeting, storekit.MeetingIsOverSQL("m", asOf))
 }
 
+// briefSnoozedSQL is whether the brief_item aliased bi is set aside at asOf.
+// It is judged at read like overdue: a snooze that no longer holds reads as not
+// snoozed, and no read rewrites the row.
+func briefSnoozedSQL(asOf string) string {
+	return "(bi.state = 'snoozed' AND " + briefSnoozeHoldsSQL("bi", asOf) + ")"
+}
+
+// NextSnoozeEndSQL is the earliest instant after asOf at which one of user's
+// time snoozes ends, or NULL. Nothing is written when a snooze runs out, so an
+// answer that hid a snoozed item must not be served past it.
+func NextSnoozeEndSQL(user, asOf string) string {
+	return fmt.Sprintf(`(SELECT min(bi.snoozed_until) FROM brief_item bi
+		JOIN brief_run br ON br.id = bi.brief_run_id
+		WHERE br.user_id = %s AND bi.reopen_on = 'time' AND %s)`, user, briefSnoozedSQL(asOf))
+}
+
 func briefSnoozeHoldsSQL(item, asOf string) string {
 	return fmt.Sprintf("(CASE WHEN %s.reopen_on = 'time' THEN %s.snoozed_until > %s ELSE NOT %s END)",
 		item, item, asOf, briefSnoozeLiftedSQL(item+".deal_id", item+".reopen_on", item+".reopen_ref", item+".state_at", asOf))
