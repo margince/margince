@@ -29,7 +29,7 @@ const relationshipRoutes = {
   "GET /contacts/p-1/intro-requests": () => jsonResponse({ data: [] }),
 };
 
-// Two roles at one company and one at another: two companies on the tab.
+// Two roles at one company and one each at two others: three companies.
 const employed = {
   ...view,
   employments: {
@@ -61,6 +61,15 @@ const employed = {
         started_at: "2018-01-01T00:00:00Z",
         ended_at: "2019-12-01T00:00:00Z",
       },
+      {
+        relationship_id: "e-4",
+        company_id: "o-0",
+        company_name: "Alder Freight",
+        role: "Dispatcher",
+        is_current_primary: false,
+        started_at: "2014-01-01T00:00:00Z",
+        ended_at: "2017-12-01T00:00:00Z",
+      },
     ],
     page: { has_more: false },
   },
@@ -74,7 +83,7 @@ describe("the contact's Companies tab", () => {
       name: new RegExp(`^${en["tab.companies"]}`),
     });
     expect(tab.getAttribute("aria-pressed")).toBe("true");
-    expect(within(tab).getByText("2")).toBeTruthy();
+    expect(within(tab).getByText("3")).toBeTruthy();
   });
 
   it("draws the work history with the verb to add a company", async () => {
@@ -88,6 +97,19 @@ describe("the contact's Companies tab", () => {
     expect(
       screen.getByRole("button", { name: en["contact.rail.addEmployment"] }),
     ).toBeTruthy();
+  });
+
+  it("lists the employers newest first, as a career reads", async () => {
+    mount("companies", employed);
+
+    await screen.findByText("Alder Freight");
+    const names = ["Brandt Automotive GmbH", "Voss Logistics", "Alder Freight"];
+    const [brandt, voss, alder] = names.map(
+      (name) => screen.getAllByText(name)[0],
+    );
+    const follows = Node.DOCUMENT_POSITION_FOLLOWING;
+    expect(brandt.compareDocumentPosition(voss) & follows).toBeTruthy();
+    expect(voss.compareDocumentPosition(alder) & follows).toBeTruthy();
   });
 
   it("leaves the work history off the Relationships tab", async () => {

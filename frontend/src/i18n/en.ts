@@ -17637,7 +17637,7 @@ export const en = {
   // The employers section: every employment edge this contact holds, current
   // one first — a contact can work at more than one company at once.
   "contact.rail.employmentTitle": "Work history",
-  "contact.rail.noEmployment": "Not linked to a company yet.",
+  "contact.rail.noEmployment": "No work history recorded yet.",
   "contact.rail.noPrimaryEmployer": "No primary employer. Select one.",
   "contact.rail.addEmployment": "Add company",
   "contact.employer.contacts_one": "{count} contact",

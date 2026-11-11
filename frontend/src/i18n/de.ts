@@ -17809,7 +17809,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.rail.employmentVersionUnresolved":
     "Die aktuelle Version dieser Zeile konnte nicht geladen werden. Bitte lade die Seite neu und versuche es erneut.",
   "contact.rail.employmentTitle": "Werdegang",
-  "contact.rail.noEmployment": "Noch mit keinem Unternehmen verknüpft.",
+  "contact.rail.noEmployment": "Noch kein Werdegang erfasst.",
   "contact.rail.noPrimaryEmployer": "Kein Hauptarbeitgeber. Wähle einen aus.",
   "contact.rail.addEmployment": "Unternehmen hinzufügen",
   "contact.employer.contacts_one": "{count} Kontakt",

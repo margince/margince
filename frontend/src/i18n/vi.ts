@@ -17335,7 +17335,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contact.rail.employmentVersionUnresolved":
     "Không thể tải phiên bản hiện tại của dòng này. Tải lại trang rồi thử lại.",
   "contact.rail.employmentTitle": "Quá trình làm việc",
-  "contact.rail.noEmployment": "Chưa liên kết với công ty nào.",
+  "contact.rail.noEmployment": "Chưa ghi nhận quá trình làm việc.",
   "contact.rail.noPrimaryEmployer":
     "Chưa có nơi làm việc chính. Chọn nơi làm việc chính.",
   "contact.rail.addEmployment": "Thêm công ty",
