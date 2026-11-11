@@ -85,8 +85,13 @@ Yes. Before a change to many records, or an undo of one, your AI tool asks you t
 Also called: confirm a bulk change, undo a bulk update, can I undo what the assistant did, which requests cannot be undone.
 
 ### What happens when I name a record and several match?
-When you name a record to your AI tool and more than one record matches that name, the tool asks which one you want. It shows a form to pick from when it can. When it cannot, it lists the matches and asks you to name one. An admin can test whether their own AI tool shows forms: turn on **Tool support check** on **Settings → MCP**.
+When you name a record to your AI tool and more than one record matches that name, the tool asks which one you want. It shows a form to pick from when it can. When it cannot, it lists the matches and asks you to name one. An admin can test whether their own AI tool shows forms: turn on **Tool support check** on **Settings → AI tool access**, under **Experiments**.
 Also called: two contacts with the same name, name that matches twice, pick the right record, client check.
+
+### How do I turn on the tool support check for my AI tool?
+<!-- opens: settings/mcp -->
+To check whether your AI tool can show forms, an admin turns on **Tool support check** in **Settings → AI tool access**, under **Experiments**. The check then tests the admin's own AI tool.
+Also called: tool support check, check my AI app, can my AI tool show forms.
 
 ### How do I choose where an agent may work?
 A passport or connection also says where an agent may work, such as **Sales work** or **Admin settings**. You choose it under **Where it may work** on **Authorize access** or in **New passport**. **All areas**, the default, covers each area your role reaches and areas added later. **Choose areas** covers only the areas you tick, and an area added later starts off. You see only the areas your role reaches: a sales rep sees all but **Admin settings**, and a role with one area sees no choice. Running the installation counts as **Admin settings**, and approvals are in no area, so every passport keeps them.

@@ -109,6 +109,19 @@ To record consent, or to mark a contact as do-not-contact for a purpose, open th
 
 Also called: opt-in, opt-out, do not contact, unsubscribe someone, marketing permission, GDPR consent.
 
+### How do I unblock a contact, or remove a stop recorded by mistake?
+To unblock a contact in Margince, open its **Research** tab and find **Stops** in **Communication permissions**. Choose **Correct this stop** if it was recorded by mistake, or **Take back this stop**. Give a reason under **Why (kept in the record history)**. Only the contact can lift a stop they set.
+Also called: unblock a contact, undo do-not-contact, lift an opt-out, contact blocked by mistake.
+
+### How do I take back a recorded request to be contacted?
+To take back or stop a recorded request to be contacted, open the contact's **Research** tab. In **Communication permissions**, choose **Take back this request**, and confirm **Take back this request?**.
+Also called: stop a contact request, withdraw a contact request, undo "asked to be contacted".
+
+### How do I send newsletters to existing customers without consent?
+<!-- opens: settings/privacy -->
+To let existing customers receive newsletters, open **Settings → Privacy and retention**, tab **Existing customers**, and choose **Declare a notice**. The newsletters must be for products like the ones they have. Say where and when the customers were told they can object. This follows German law. Customers of that entity in that period then get your newsletters with an opt-out link.
+Also called: newsletter to customers, opt-in for customers, existing customer exception.
+
 ## Archive is not delete
 
 Across the whole product, removing a record keeps it. An archived record leaves the live lists, but you can still open it.

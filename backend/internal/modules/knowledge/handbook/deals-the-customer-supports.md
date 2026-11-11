@@ -45,6 +45,10 @@ closes the deal again at the next check.
 To stop it for your own deals, turn off **Close silent deals as lost** among
 the automatic changes. [Approvals](approvals.md) says where the switches are.
 
+### Why did Margince close my deal as lost, and how do I undo it?
+Margince closes an open deal as lost, with the reason **Stopped responding**, after 120 days with no word from the customer. To undo it, open **Home**, find the deal under **Done for you** and choose **Undo** within 7 days. To stop it for your own deals, turn off **Close silent deals as lost** among the automatic changes.
+Also called: deal closed automatically, auto-lost, reopen a deal Margince closed, why is my deal lost.
+
 ## When the customer names a date, a price or a decision
 
 Each night Margince also reads the mail, meetings, calls, notes and offers on

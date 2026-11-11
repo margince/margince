@@ -60,6 +60,10 @@ Press **Did not happen** on the row for a meeting that did not take place; it is
 A meeting with a Margince invitation takes only **It happened** or **No-show**, because its notes and date follow the invitation.
 Also called: mark a meeting held, meeting outcome, no-show, meeting happened.
 
+### Where do my Google Meet notes and transcripts go?
+Margince links the notes and transcript that Google Meet adds to a calendar event to that meeting in Margince. Google adds them after the call, so they appear after the next calendar sync. A file someone attached to the event by hand is not linked. The history of the meeting shows **Meeting notes linked from the calendar**.
+Also called: Gemini notes, meeting recording, Meet transcript, call notes.
+
 ### How do I see every meeting with a company?
 To see a company's meetings in Margince, open the company's **Meetings** tab. It lists every meeting filed under the company, its deals or the contacts who work there.
 The next meeting leads, with who is in it and **Prepare brief**. **Upcoming** lists the meetings after it, and **Held** the ones already past, newest first. To book a meeting, open the contact on the **Contacts** tab and use their **Meetings** tab.

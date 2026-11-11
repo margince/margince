@@ -119,6 +119,14 @@ Each Margince screen sits in one place in the sidebar, and you reach a few anoth
 - Settings: the account menu at the top right, not the sidebar.
 - Scheduled messages, offers and search results: no sidebar row. Open them from the command palette (⌘K).
 
+### Why is a part of Margince, such as Leads or Deals, missing?
+A part of Margince missing from the sidebar for everyone was turned off by whoever runs your Margince. They can turn off **Home**, **Contacts**, **Companies**, **Leads**, **Deals**, **Projects**, **Filters** or **Analytics** in the configuration file. A part that is off leaves the sidebar, the API and your AI tools. Its records and role grants stay, and come back when it is turned on again.
+Also called: leads page gone, deals menu missing, feature turned off.
+
+### How do I see the last message on a contact, company or deal?
+To see the last word on a record in Margince, open it and look under the verdict on its **How it stands** card. **Latest** shows the newest note, call, meeting notes or message, who wrote it and when. **Open in History** opens it on the timeline.
+Also called: last message, most recent note, last update, last contact.
+
 ### How do I search for something?
 To search Margince, click the search field **Search or ask Margince** in the top bar, or press ⌘K (Ctrl+K), and start typing.
 1. Type a name, company, deal or any other word. Matches appear as you type, a few of each kind, under headings such as **Companies**, **Contacts** and **Emails**.

@@ -261,10 +261,10 @@ judges it ordinary business. The same holds for contacts the import creates. A
 contact from a thread that nothing has judged yet is yours alone until
 Margince has sorted the thread.
 
-Once an import finishes, check two places:
-**Senders**, for what was decided about each address it found, and **Held
-threads**, for the threads still held. Both are under Settings → Capture
-activity.
+Once an import finishes, check two places.
+**Sender decisions** shows what was decided about each address it found. **Mail
+not shared with the team** shows the threads still held. Both are under Settings →
+Connections → Activity.
 
 ## Why is there a warning about my mailbox?
 
