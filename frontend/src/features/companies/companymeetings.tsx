@@ -29,7 +29,7 @@ function nextMeetingOf(
 /**
  * CompanyMeetingsTab is the account's Meetings tab: every meeting filed
  * against the account, its deals or the contacts who work there. It has no
- * booking verb of its own, because a meeting is booked with a person; the
+ * booking verb of its own, because a meeting is booked with one contact. The
  * Contacts tab leads to each of them.
  */
 export function CompanyMeetingsTab({

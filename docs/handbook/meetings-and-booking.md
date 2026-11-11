@@ -46,7 +46,7 @@ Also called: reschedule, change the time, postpone a meeting.
 ### How do I record what came of a meeting?
 A meeting that took place takes one press: **It happened** on its Worklist row, under
 **How did it go?**. A customer meeting that has started with no outcome also shows **It happened**
-and **Add notes** on the **Meetings** tab of the contact or company, and on the timeline. To say more, or to record a
+and **Add notes** on the timeline. The **Meetings** tab of the contact or company shows them too. To say more, or to record a
 no-show, press **Add notes**:
 1. Pick **It happened** or **No-show** and write what was said. Change any of your company's own fields
    for meetings here too.
