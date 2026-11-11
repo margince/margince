@@ -28,6 +28,7 @@ import {
   KINDS_WITH_A_CONTACT,
   type MeetingAttendees,
   NO_ATTENDEES,
+  subjectIsRequired,
   todayDay,
 } from "../lib/activitybody";
 import { useCanWrite } from "../lib/capability";
@@ -42,6 +43,7 @@ import "./logactivity.css";
 import { useViewerZone } from "../lib/viewerzone";
 import { FollowUpTaskFields, TaskTimeField } from "./followuptaskfields";
 import { CallOutcomeField } from "./logactivity.calloutcome";
+import { MessageChannelField, useMessageChannel } from "./logactivity.channel";
 import { useActivityCustomFields } from "./logactivity.custom";
 import {
   activityDealFilingKey,
@@ -65,6 +67,23 @@ import { MeetingAttendeeFields } from "./meetingattendees";
 import { useUnsavedGuard } from "./unsaved";
 
 export type OpeningKind = "note" | "task" | "call";
+
+// A message is offered only where a transport is registered to name.
+function kindOptions(
+  t: ReturnType<typeof useT>,
+  offerTask: boolean,
+  offerMessage: boolean,
+) {
+  return [
+    { value: "note", label: t("log.kindNote") },
+    ...(offerTask ? [{ value: "task", label: t("log.kindTask") }] : []),
+    { value: "call", label: t("log.kindCall") },
+    { value: "meeting", label: t("log.kindMeeting") },
+    ...(offerMessage
+      ? [{ value: "message", label: t("log.kindMessage") }]
+      : []),
+  ];
+}
 
 function latestDayOf(
   kind: ActivityDraft["kind"],
@@ -118,6 +137,7 @@ export function LogActivityForm({
   }
   const [files, setFiles] = useState<readonly PickedFile[]>([]);
   const custom = useActivityCustomFields(draft.kind);
+  const messageChannel = useMessageChannel(draft);
   const [attendees, setAttendees] = useState<MeetingAttendees>(NO_ATTENDEES);
   const asksAttendees = KINDS_WITH_A_CONTACT.has(draft.kind);
   const needsAttendee = entityType === "company" && asksAttendees;
@@ -279,7 +299,8 @@ export function LogActivityForm({
           (draft.kind !== "task" &&
             draft.followUp !== undefined &&
             !draft.followUp.subject.trim()) ||
-          (needsAttendee && attendees.contacts.length === 0))
+          (needsAttendee && attendees.contacts.length === 0) ||
+          messageChannel.missing)
       }
       reason={dealFiling.reason}
       pending={log.isPending}
@@ -309,6 +330,7 @@ export function LogActivityForm({
           draft: {
             ...draft,
             dealFiling: dealFiling.request,
+            channelProvider: messageChannel.channel,
             sourceActivityId,
             custom: custom.body(),
           },
@@ -328,14 +350,11 @@ export function LogActivityForm({
             {(control) => (
               <Select
                 {...control}
-                options={[
-                  { value: "note", label: t("log.kindNote") },
-                  ...(!taskToComplete
-                    ? [{ value: "task", label: t("log.kindTask") }]
-                    : []),
-                  { value: "call", label: t("log.kindCall") },
-                  { value: "meeting", label: t("log.kindMeeting") },
-                ]}
+                options={kindOptions(
+                  t,
+                  taskToComplete === undefined,
+                  messageChannel.options.length > 0,
+                )}
                 value={draft.kind}
                 // The clamp narrows the type and validates nothing. The Select
                 // only hands back the values above; anything else falls back
@@ -393,13 +412,19 @@ export function LogActivityForm({
         />
       )}
       {dealFiling.field}
+      <MessageChannelField
+        active={draft.kind === "message"}
+        options={messageChannel.options}
+        value={messageChannel.channel}
+        onChange={(channelProvider) => setField({ channelProvider })}
+      />
       {draft.kind === "call" && (
         <CallOutcomeField
           value={draft.callOutcome}
           onChange={(callOutcome) => setField({ callOutcome })}
         />
       )}
-      <Field label={t("log.subject")} required={draft.kind !== "call"}>
+      <Field label={t("log.subject")} required={subjectIsRequired(draft.kind)}>
         {(control) => (
           <TextInput
             {...control}

@@ -7391,6 +7391,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "log.kindTask": "Aufgabe",
   "log.kindMeeting": "Termin",
   "log.kindCall": "Anruf",
+  "log.kindMessage": "Nachricht",
+  "log.channel": "Chat-App",
+  "log.channelPlaceholder": "Chat-App wählen",
   "log.transcriptLabel": "Transkript",
   "log.transcriptHint":
     "Füge ein Transkript eines Anrufs oder Termins ein. Vorhandene Sprecherangaben bleiben erhalten.",
