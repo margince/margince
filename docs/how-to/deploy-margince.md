@@ -232,9 +232,9 @@ are the only things the api serves under `/.well-known`, and a prefix rule takes
 from whatever answers your certificate challenges. The webhook row is the api's because the caller is the provider.
 Each handler verifies its own push, so the SPA cannot stand in for it.
 
-Set [`MARGINCE_TRUSTED_PROXIES`](../reference/configuration.md) on the api to the address ranges of your proxy. Left
-unset, the api sees the proxy's address on every request. Every per-client limit, the sign-in and `/mcp` ones
-included, is then one limit that all callers share.
+Set [`MARGINCE_TRUSTED_PROXIES`](../reference/configuration.md) on the api to your proxy's address ranges. Left unset,
+every per-client limit, sign-in and `/mcp` included, is one limit all callers share. Each such proxy must add its peer
+to `X-Forwarded-For` (nginx `$proxy_add_x_forwarded_for`). The api reads it from the right, to the first non-proxy.
 
 Why a split host breaks the app, MCP discovery and the consent flow is in
 [One host](../explanation/self-hosting.md#one-host).

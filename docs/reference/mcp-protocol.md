@@ -47,8 +47,9 @@ matters because `encoding/json` matches struct members no matter the case. A map
 two members with the same name.
 
 Margince sends `-32021 MissingRequiredClientCapability` for one case only. A modern
-`tasks/get`, `tasks/update` or `tasks/cancel` whose `_meta` does not declare the `io.modelcontextprotocol/tasks`
-extension gets it. `data.requiredCapabilities` names the extension to declare. No tool here needs sampling, elicitation
+`tasks/get`, `tasks/update` or `tasks/cancel` whose `_meta` passes the modern checks but does not declare the
+`io.modelcontextprotocol/tasks` extension gets it. A `_meta` with no `clientCapabilities` object fails those checks
+first and gets `-32602`. `data.requiredCapabilities` names the extension to declare. No tool here needs sampling, elicitation
 or roots.
 
 **A warning for a gateway.** Before `/mcp`, `Mcp-Name` may come as Base64 sentinel text (`=?base64?…?=`). The protocol
