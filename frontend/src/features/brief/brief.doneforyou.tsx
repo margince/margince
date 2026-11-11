@@ -2,10 +2,10 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 // What Margince finished for the reader, as one section on Home. The deals it
-// changed come first, each change with what moved, when and why, and the verbs
-// that review or take it back. Other updates follow in `completed`.
+// changed come first, each change with what moved, when and why, and its
+// Undo. Other updates follow in `completed`.
 //
-// The first five deals show here and every one shows in the review drawer.
+// The first five deals show here and every one shows in the drawer of all.
 // Both draw the same rows, so a sixth deal loses nothing a third one had.
 
 import { type ReactNode, useId, useState } from "react";
@@ -41,7 +41,7 @@ import {
   undoableShown,
 } from "./brief.doneforyou.groups";
 
-/** How many changed deals Home shows before "Review all". */
+/** How many changed deals Home shows before "See all". */
 export const DONE_PREVIEW_DEALS = 5;
 
 export function DoneForYou({ completed }: Readonly<{ completed: ReactNode }>) {
@@ -57,7 +57,7 @@ export function DoneForYou({ completed }: Readonly<{ completed: ReactNode }>) {
   const settle = (id: string) => setSettled((last) => new Set([...last, id]));
   const receipts = handled.data?.receipts;
   const groups = dealChanges(receipts, settled, pending?.bundles);
-  // The server's summary decides what waits, so its own read is the panel's
+  // The server's summary decides what shows, so its own read is the panel's
   // state: a failed summary is a failed panel, never a quieter list.
   const state = listReadState(summary, pending ? groups : undefined);
   const doneLines = rowsOf(magic.data?.done).length > 0;
@@ -67,7 +67,7 @@ export function DoneForYou({ completed }: Readonly<{ completed: ReactNode }>) {
   ) {
     return null;
   }
-  const waiting = pending?.deals;
+  const changed = pending?.deals;
   return (
     <section className="brief-section brief-done" aria-labelledby={titleId}>
       {/* Headed like Needs you, so Home's two lists read as one system. */}
@@ -75,12 +75,12 @@ export function DoneForYou({ completed }: Readonly<{ completed: ReactNode }>) {
         <Eyebrow as="h2" id={titleId} className="brief-section-label">
           {t("brief.done.title")}
         </Eyebrow>
-        {waiting !== undefined && waiting > 0 && (
+        {changed !== undefined && changed > 0 && (
           <span className="t-caption t-num brief-first-count">
-            <span aria-hidden="true">{formatNumber(waiting, locale)}</span>
+            <span aria-hidden="true">{formatNumber(changed, locale)}</span>
             <span className="sr-only">
-              {plural("brief.done.waiting", waiting, {
-                count: formatNumber(waiting, locale),
+              {plural("brief.done.drawerTitle", changed, {
+                count: formatNumber(changed, locale),
               })}
             </span>
           </span>
@@ -108,8 +108,8 @@ export function DoneForYou({ completed }: Readonly<{ completed: ReactNode }>) {
             onSettled={settle}
           />
           <div className="brief-done-foot">
-            <ReviewAll
-              count={waiting ?? groups.length}
+            <AllChanges
+              count={changed ?? groups.length}
               groups={groups}
               pending={pending}
               asOf={handled.data?.as_of}
@@ -124,8 +124,8 @@ export function DoneForYou({ completed }: Readonly<{ completed: ReactNode }>) {
   );
 }
 
-/** The drawer with every waiting deal, and the Undo of all of them. */
-function ReviewAll({
+/** The drawer with every changed deal, and the Undo of all of them. */
+function AllChanges({
   count,
   groups,
   pending,
@@ -173,7 +173,7 @@ function ReviewAll({
           setOpen(true);
         }}
       >
-        {plural("brief.done.reviewAll", count, { count: n })}
+        {plural("brief.done.seeAll", count, { count: n })}
       </Button>
       {open && (
         <Modal
