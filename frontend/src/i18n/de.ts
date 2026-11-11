@@ -2403,6 +2403,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "systemJob.erasure_replay": "Erneute Löschung nach einer Wiederherstellung",
   "systemJob.privacy_review": "Datenschutzprüfung nach einer Löschung",
   "systemJob.extension_inventory": "Bestandsaufnahme der Erweiterungen",
+  "systemJob.extension_privacy": "Datenschutzprüfung der Erweiterungen",
   "systemJob.extraction_activity_reannounce":
     "Reparatur extrahierter Aktivitäten",
   "systemJob.forecast_snapshot": "Täglicher Prognose-Snapshot",
@@ -3972,6 +3973,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "standing.title": "Wie es steht · {date}",
   "standing.noteMore": "Mehr anzeigen",
   "standing.noteLess": "Weniger anzeigen",
+  "standing.latest.title": "Zuletzt",
+  "standing.latest.open": "Im Verlauf öffnen",
   "standing.sources.records": "Aus den CRM-Daten",
   "standing.sources.model_one": "Margince · {count} Quelle",
   "standing.sources.model_other": "Margince · {count} Quellen",
