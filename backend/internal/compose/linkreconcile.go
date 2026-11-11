@@ -373,20 +373,16 @@ func (w *linkReconcileWorker) systemContext(ctx context.Context, ws ids.UUID) co
 const linkReconcileActor = "link-reconcile"
 
 // NewLinkReconcileWorkspaceWorkerForTest builds the workspace pass for an
-// integration test that drives it the way River does.
-//
-// It exists because the store-level tests build their OWN context, so they
-// prove the repair's SQL and nothing about the context this job runs under —
-// and that is exactly where a defect hid: a missing correlation id made every
-// publish refuse, so the sweep repaired nothing while looking like a job that
-// had simply not run yet. It takes the job's own store for the same reason.
+// integration test that drives it the way River does. The store-level tests
+// build their own context, so they say nothing about the one this job runs
+// under. This worker runs under the job's context and with the job's own store.
 func NewLinkReconcileWorkspaceWorkerForTest(pool *pgxpool.Pool) *linkReconcileWorker {
 	return newLinkReconcileWorker(pool, linkReconcileStore(pool), CaptureConfig{}, slog.Default())
 }
 
 // linkReconcileStore is the contacts store the sweep repairs through. It runs
 // the cohort repair the capture paths run, so it carries their audience
-// derivation: a meeting it files no longer holds as naming no record.
+// derivation. A meeting it files then no longer counts as naming no record.
 func linkReconcileStore(pool *pgxpool.Pool) *contacts.Store {
 	return newContactsStore(InstallationDB(pool)).WithAudienceRecompute(activities.RecomputeAudienceTx)
 }
