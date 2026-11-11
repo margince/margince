@@ -212,7 +212,7 @@ jobs:
               echo "open security and reliability findings in new code on main:"
               curl -fsS --connect-timeout 10 --max-time 60 \
                 -H "Authorization: Bearer $SONAR_TOKEN" \
-                "https://sonarcloud.io/api/issues/search?componentKeys=$PROJECT_KEY&branch=main&inNewPeriod=true&issueStatuses=OPEN,CONFIRMED&impactSoftwareQualities=SECURITY,RELIABILITY&ps=100" \
+                "https://sonarcloud.io/api/issues/search?componentKeys=$PROJECT_KEY&branch=main&inNewCodePeriod=true&issueStatuses=OPEN,CONFIRMED&impactSoftwareQualities=SECURITY,RELIABILITY&ps=100" \
                 | jq -r '.issues[]
                   | "  \([.impacts[]? | "\(.softwareQuality)/\(.severity)"] | join(",")) \(.rule) \(.component | sub("^[^:]*:"; "")):\(.line // "-") \(.message)"' \
                 || echo "  could not list the findings; open the project's issues on SonarCloud" >&2

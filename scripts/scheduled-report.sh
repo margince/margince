@@ -162,8 +162,9 @@ reads the gate, so this job reads it and files here when it goes red.
 A \`NONE\` status is reported as a failure on purpose: it means no analysis is
 attached to \`main\` at all, which looks identical to green on every dashboard.
 
-The failing conditions, and the security and reliability findings behind them,
-are printed in the \`quality-gate\` job log of the run above."\
+On \`ERROR\` or \`WARN\`, the \`quality-gate\` job log of the run above prints the
+failing conditions and the security and reliability findings behind them, or a
+warning where the findings could not be listed."\
     || unreported=1
 elif [[ "${GATE_RESULT:-}" = "success" ]]; then
   resolve "SonarCloud quality gate is not green on main"
