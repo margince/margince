@@ -85,7 +85,7 @@ export function meetingWhen(
 /**
  * The one sentence a change comes to, for a surface with room for a line and
  * not the whole box: a card's subtitle on Home. Each names this meeting's own
- * times, places and people.
+ * times, places and guests.
  */
 export function changeSentence(
   change: CalendarChange,

@@ -249,7 +249,7 @@ An email that invites you to a meeting shows **Accept**, **Maybe** and **Decline
 Also called: meeting invite, accept an invite, decline a meeting.
 
 ### What does a meeting update show?
-An email that moves, renames or calls off a meeting, or changes its guests, shows the meeting in place of the email text: the day, time and place, then what it was before (**Was 13 Nov, 13:00–14:00**, **Added Ben Ito**).
+An email that moves, renames or calls off a meeting, or changes its guests, shows the meeting in place of the email text. You see the day, time and place, then what it was before, such as **Was 13 Nov, 13:00–14:00** or **Added Ben Ito**.
 - The tag says what happened: **Meeting changed**, **Canceled**, **New time proposed** or the guest's answer. An update to an invitation you have not answered still shows **Accept**, **Maybe** and **Decline**; other updates you mark done.
 - The "before" comes from the earlier email about the same meeting in your own mailbox.
 Also called: updated invitation, rescheduled meeting, canceled meeting.

@@ -108,7 +108,7 @@ func Compare(before, after Event) Difference {
 	return out
 }
 
-// missingFrom is every guest of from whose address other does not hold.
+// missingFrom lists the guests of from whose address other does not hold.
 func missingFrom(from, other []Attendee) []Attendee {
 	var out []Attendee
 	for _, guest := range from {

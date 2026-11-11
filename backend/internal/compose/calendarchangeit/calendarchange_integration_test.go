@@ -3,27 +3,86 @@
 
 //go:build integration
 
-package compose
-
+// Package calendarchangeit_test holds the end-to-end proof for meeting updates.
 // A later calendar mail goes through the production parser and sink. It reads
 // as its meeting and what changed since the send before it. A colleague whose
 // mailbox never received it reads a plain mail.
+package calendarchangeit_test
 
 import (
+	"context"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/capture/mailmap"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// meetingSend is one send of an event as Outlook writes it: a Windows zone
-// stated in a VTIMEZONE, and the full event at its revision.
+// mailbox is one rep's connected, shared Gmail mailbox.
+type mailbox struct {
+	e     *integration.Env
+	owner ids.UUID
+	seat  string
+}
+
+// setupMailbox connects a shared mailbox for a rep. Capture files a message
+// against a seat only when that seat's own connected mailbox is on it.
+func setupMailbox(t *testing.T) mailbox {
+	t.Helper()
+	e := integration.Setup(t)
+	e.GrantRole(t, e.Rep1, "rep")
+	m := mailbox{e: e, owner: e.Rep1, seat: "seat-" + e.Rep1.String() + "@ws.example"}
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(), `
+			INSERT INTO capture_connection (user_id, provider, status, credential_ref, account_label, mail_posture)
+			VALUES ($1, 'gmail', 'connected', 'vault:test', $2, 'shared')
+			ON CONFLICT (user_id, provider) DO UPDATE SET account_label = $2, archived_at = NULL, mail_posture = 'shared'`,
+			m.owner, m.seat)
+		return err
+	}); err != nil {
+		t.Fatalf("connecting the seat's mailbox: %v", err)
+	}
+	return m
+}
+
+// capture files raw through the production parser and sink, as the Gmail
+// connector does for the seat.
+func (m mailbox) capture(t *testing.T, raw []byte) ids.UUID {
+	t.Helper()
+	parsed, err := mailmap.Parse(raw, m.seat)
+	if err != nil {
+		t.Fatalf("parsing the mail: %v", err)
+	}
+	ctx := principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), m.e.WS), ids.NewV7())
+	ctx = principal.WithActor(ctx, principal.Principal{
+		Type: principal.PrincipalConnector, ID: "connector:gmail", UserID: m.owner, OnBehalfOf: m.owner,
+		Permissions: principal.Permissions{
+			Objects: map[string]principal.ObjectGrant{
+				"activity": {Create: true, Read: true, Update: true},
+				"contact":  {Create: true, Read: true, Update: true},
+				"company":  {Create: true, Read: true, Update: true},
+			},
+			RowScope: principal.RowScopeAll,
+		},
+	})
+	ref, err := compose.NewCaptureSink(m.e.Pool, compose.CaptureConfig{}).Upsert(ctx, parsed.ToRecord("gmail", raw))
+	if err != nil {
+		t.Fatalf("capturing the mail: %v", err)
+	}
+	return ref.ID
+}
+
 type meetingSend struct {
 	method, start, location string
 	sequence                int
@@ -64,9 +123,9 @@ func (s meetingSend) mail(from, to, uid string) []byte {
 	return []byte(strings.Join(lines, "\r\n"))
 }
 
-func (o *owedEnv) calendarChange(t *testing.T, message ids.UUID, reader ids.UUID) *crmcontracts.EmailCalendarChange {
+func (m mailbox) calendarChange(t *testing.T, message ids.UUID, reader ids.UUID) *crmcontracts.EmailCalendarChange {
 	t.Helper()
-	summaries, err := activities.NewStore(o.e.DB()).EmailSummariesByID(o.e.As(reader, nil, integration.AdminPerms), []ids.UUID{message})
+	summaries, err := activities.NewStore(m.e.DB()).EmailSummariesByID(m.e.As(reader, nil, integration.AdminPerms), []ids.UUID{message})
 	if err != nil {
 		t.Fatalf("reading the row: %v", err)
 	}
@@ -78,7 +137,7 @@ func (o *owedEnv) calendarChange(t *testing.T, message ids.UUID, reader ids.UUID
 }
 
 func TestAMeetingUpdateSaysWhatChangedSinceTheInvitation(t *testing.T) {
-	o := setupOwed(t)
+	o := setupMailbox(t)
 	now := clocktest.Now(t)
 	uid := "040000008200E00074C5B7101A82E008" + ids.NewV7().String()
 	guests := []string{o.seat}
@@ -88,9 +147,9 @@ func TestAMeetingUpdateSaysWhatChangedSinceTheInvitation(t *testing.T) {
 	cancel := update
 	cancel.method, cancel.sequence, cancel.sentAt = "CANCEL", 2, now.Add(-time.Hour)
 
-	invited := o.captureAs(t, invite.mail("pat@customer.example", o.seat, uid), false)
-	updated := o.captureAs(t, update.mail("pat@customer.example", o.seat, uid), false)
-	canceled := o.captureAs(t, cancel.mail("pat@customer.example", o.seat, uid), false)
+	invited := o.capture(t, invite.mail("pat@customer.example", o.seat, uid))
+	updated := o.capture(t, update.mail("pat@customer.example", o.seat, uid))
+	canceled := o.capture(t, cancel.mail("pat@customer.example", o.seat, uid))
 
 	if got := o.calendarChange(t, invited, o.owner); got != nil {
 		t.Errorf("the first invitation reads %+v, want no change: it asks for an answer", got)
