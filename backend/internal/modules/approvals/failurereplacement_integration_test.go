@@ -32,7 +32,7 @@ func TestOnlyAnIdenticalCompletedAbsoluteMoveReplacesItsOlderFailure(t *testing.
 			e := setupStaging(t)
 			target := newDealSeeder(t, e).deal(t)
 			ctx := e.asHumanWith(grantsFor(map[string]principal.ObjectGrant{
-				tableDeal: {Read: true, Update: true}, objectActivity: {Read: true, Create: true},
+				tableDeal: {Read: true, Update: true}, objectActivity: {Read: true, Create: true}, tableContact: {Read: true},
 			}))
 			stage := func(hash, body string) ids.ApprovalID {
 				t.Helper()

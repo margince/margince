@@ -79,7 +79,7 @@ func TestPendingCountAgreesWithEveryPageOfTheInboxForEachReader(t *testing.T) {
 	repDeal := seeder.dealOwnedBy(t, &e.rep)
 	colleagueDeal := seeder.dealOwnedBy(t, &colleague)
 	staging := principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.ws), "background-review")
-	allSeat := seatFor(e.ws, e.rep, tableDeal, objectActivity)
+	allSeat := seatFor(e.ws, e.rep, tableDeal, objectActivity, tableContact)
 	short := time.Hour
 	for i := range 3*inboxBatch + 17 {
 		in := StageInput{
@@ -162,7 +162,7 @@ func TestPendingCountEndpointAnswersTheEngineCount(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	reader := seatFor(e.ws, e.rep, tableDeal, objectActivity)
+	reader := seatFor(e.ws, e.rep, tableDeal, objectActivity, tableContact)
 	request := httptest.NewRequest(http.MethodGet, "/approvals/pending-count", nil).WithContext(reader)
 	recorder := httptest.NewRecorder()
 	NewHandlers(e.svc).CountPendingApprovals(recorder, request)
@@ -203,7 +203,7 @@ func TestPendingCountReadsTheSnapshotItIsCalledIn(t *testing.T) {
 	deal := newDealSeeder(t, e).dealOwnedBy(t, &e.rep)
 	e.stageAdvance(t, deal, "snapshot-0", nil)
 	e.stageAdvance(t, deal, "snapshot-1", nil)
-	reader := seatFor(e.ws, e.rep, tableDeal, objectActivity)
+	reader := seatFor(e.ws, e.rep, tableDeal, objectActivity, tableContact)
 	err := database.WithWorkspaceSnapshot(reader, e.pool, func(ctx context.Context) error {
 		before, err := e.svc.CountPending(ctx, ListInput{})
 		if err != nil {
@@ -243,7 +243,7 @@ func TestPendingCountJudgesExpiryAtTheInstantItReports(t *testing.T) {
 		reads++
 		return at
 	}
-	got, err := e.svc.CountPending(seatFor(e.ws, e.rep, tableDeal, objectActivity), ListInput{})
+	got, err := e.svc.CountPending(seatFor(e.ws, e.rep, tableDeal, objectActivity, tableContact), ListInput{})
 	if err != nil {
 		t.Fatal(err)
 	}
