@@ -29,19 +29,21 @@ var writtenAboutKinds = []crmcontracts.ActivityKind{
 }
 
 // eligibleRowsSQL keeps the live written-about rows. A task the product filed
-// has nobody to write to. The kinds are literals, so a generic plan keeps the
+// offers email only when it asks its owner to write to someone, as an answer
+// owed to a request does. The kinds are literals, so a generic plan keeps the
 // partial indexes keyed on kind.
 var eligibleRowsSQL = `
 	SELECT a.id, a.kind
 	  FROM activity a
-	 WHERE a.id = ANY($1) AND a.kind IN (` + writtenAboutKindsSQL() + `) AND a.archived_at IS NULL
-	   AND (a.kind <> '` + string(crmcontracts.ActivityKindTask) + `' OR ` + relstrength.OriginIsEngagementSQL("a") + `)`
+	 WHERE a.id = ANY($1) AND a.kind IN (` + sqlLiterals(writtenAboutKinds) + `) AND a.archived_at IS NULL
+	   AND (a.kind <> '` + string(crmcontracts.ActivityKindTask) + `' OR ` + relstrength.OriginIsEngagementSQL("a") + `
+	        OR (a.origin = '` + OriginSystemRemediation + `' AND a.source_system IN (` + sqlLiterals(storekit.OutreachTaskSources()) + `)))`
 
-// writtenAboutKindsSQL spells writtenAboutKinds as a list of SQL literals.
-func writtenAboutKindsSQL() string {
-	quoted := make([]string, 0, len(writtenAboutKinds))
-	for _, kind := range writtenAboutKinds {
-		quoted = append(quoted, "'"+string(kind)+"'")
+// sqlLiterals spells compile-time values as a list of SQL literals.
+func sqlLiterals[T ~string](values []T) string {
+	quoted := make([]string, 0, len(values))
+	for _, value := range values {
+		quoted = append(quoted, "'"+string(value)+"'")
 	}
 	return strings.Join(quoted, ", ")
 }
@@ -73,15 +75,7 @@ func emailTargets(ctx context.Context, tx pgx.Tx, rows []ids.UUID) (map[ids.UUID
 			tasks = append(tasks, row)
 		}
 	}
-	contacts, err := linkedCandidates(ctx, tx, "contact", "p", contactCandidatesSQL, eligible)
-	if err != nil {
-		return nil, err
-	}
-	leads, err := linkedCandidates(ctx, tx, "lead", "ld", leadCandidatesSQL, tasks)
-	if err != nil {
-		return nil, err
-	}
-	companies, err := linkedCandidates(ctx, tx, "company", "co", companyCandidatesSQL, tasks)
+	read, err := readCandidates(ctx, tx, eligible, tasks)
 	if err != nil {
 		return nil, err
 	}
@@ -92,13 +86,55 @@ func emailTargets(ctx context.Context, tx pgx.Tx, rows []ids.UUID) (map[ids.UUID
 	out := map[ids.UUID]EmailTarget{}
 	for row, kind := range kinds {
 		found := emailCandidates{
-			contacts:  liveFirst(reachable(contacts[row])),
-			leads:     reachable(leads[row]),
-			companies: companies[row],
+			contacts:      liveFirst(reachable(read[candidateContact][row])),
+			leads:         reachable(read[candidateLead][row]),
+			companies:     read[candidateCompany][row],
+			dealContacts:  reachable(read[candidateDealContact][row]),
+			dealCompanies: read[candidateDealCompany][row],
+			employers:     read[candidateEmployer][row],
 		}
 		if target, named := pickEmailTarget(kind, found); named {
 			out[row] = target
 		}
+	}
+	return out, nil
+}
+
+// candidateRead names one kind of record a row may be written to.
+type candidateRead int
+
+const (
+	candidateContact candidateRead = iota
+	candidateLead
+	candidateCompany
+	candidateDealContact
+	candidateDealCompany
+	candidateEmployer
+)
+
+// readCandidates reads every kind of candidate. Only a contact is weighed for
+// a call, meeting or note; a task weighs them all.
+func readCandidates(ctx context.Context, tx pgx.Tx, eligible, tasks []ids.UUID) (map[candidateRead]map[ids.UUID][]emailCandidate, error) {
+	contact, company, deal := scopedTable{"contact", "p"}, scopedTable{"company", "co"}, scopedTable{"deal", "d"}
+	reads := []struct {
+		kind candidateRead
+		candidateQuery
+		rows []ids.UUID
+	}{
+		{candidateContact, candidateQuery{contactCandidatesSQL, []scopedTable{contact}, ""}, eligible},
+		{candidateLead, candidateQuery{leadCandidatesSQL, []scopedTable{{"lead", "ld"}}, ""}, tasks},
+		{candidateCompany, candidateQuery{companyCandidatesSQL, []scopedTable{company}, ""}, tasks},
+		{candidateDealContact, candidateQuery{dealContactCandidatesSQL, []scopedTable{contact, deal}, "r"}, tasks},
+		{candidateDealCompany, candidateQuery{dealCompanyCandidatesSQL, []scopedTable{company, deal}, ""}, tasks},
+		{candidateEmployer, candidateQuery{employerCandidatesSQL, []scopedTable{company}, "job"}, tasks},
+	}
+	out := map[candidateRead]map[ids.UUID][]emailCandidate{}
+	for _, read := range reads {
+		found, err := linkedCandidates(ctx, tx, read.candidateQuery, read.rows)
+		if err != nil {
+			return nil, err
+		}
+		out[read.kind] = found
 	}
 	return out, nil
 }

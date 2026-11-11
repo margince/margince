@@ -275,8 +275,8 @@ export function eventLine(
   return keys.bare ? t(keys.bare, { when }) : null;
 }
 
-// A capture row's sentence follows what the connection carries, and a silent
-// one still syncs: it only brings nothing in, so it is not called broken.
+// A capture row's sentence follows what the connection carries. A silent one
+// still syncs and only brings nothing in, so it is not called broken.
 function captureEventKeys(item: WorklistItem) {
   // A failed history import is dated by the import, not by the last sync.
   if (item.kind === "backfill_failed") return CAPTURE_EVENT.backfill;
