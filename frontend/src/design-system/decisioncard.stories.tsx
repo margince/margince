@@ -10,6 +10,7 @@ import {
   DecisionCard,
   type DecisionCardLabels,
   type DecisionCardProps,
+  DecisionProposal,
   DecisionStatusChip,
   type DecisionStatusLabels,
   DecisionToolChip,
@@ -574,5 +575,56 @@ export const DecidedRejected: Story = {
         />
       </>
     ),
+  },
+};
+
+// A follow-up task an overnight pass would add, without the card around it: the
+// body a Home task card shows under its own question. Its fields are declared,
+// so none of them is read as a drafted message.
+const FOLLOW_UP = approval({
+  kind: "deal_follow_up",
+  summary:
+    'Draft a follow-up on "Helvetia Rail pilot" — the email on 9 Nov 2026 left no next step planned',
+  proposed_change: {
+    subject: "Follow up on Helvetia Rail pilot",
+    due_date: "2026-11-12",
+    body: "Follow up on the email “Re: kickoff” from 9 Nov 2026. No next step is on the timeline yet.",
+    deal_id: "0198c4f1-2b6a-7c3d-9e0f-000000000001",
+  },
+});
+
+const FOLLOW_UP_DISPLAY = [
+  {
+    field: "subject",
+    label: "Task",
+    value: "Follow up on Helvetia Rail pilot",
+  },
+  { field: "due_date", label: "Due", value: "12 Nov 2026" },
+  {
+    field: "body",
+    label: "Note",
+    value:
+      "Follow up on the email “Re: kickoff” from 9 Nov 2026. No next step is on the timeline yet.",
+  },
+];
+
+export const ProposalWithoutCard: Story = {
+  render: () => (
+    <DecisionProposal
+      approval={FOLLOW_UP}
+      labels={LABELS}
+      display={FOLLOW_UP_DISPLAY}
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByText("Task")).toBeVisible();
+    await expect(
+      canvas.getByText("Follow up on Helvetia Rail pilot"),
+    ).toBeVisible();
+    await expect(canvas.getByText("12 Nov 2026")).toBeVisible();
+    await expect(
+      canvas.queryByRole("button", { name: "Accept" }),
+    ).not.toBeInTheDocument();
   },
 };

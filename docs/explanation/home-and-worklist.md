@@ -285,10 +285,11 @@ provisional; a future date a human set stays theirs.
 `setCloseDate` in `closedatecorrect.go` and `setWinProbability` in `winprobability.go` write only a real change. The sweep sees a quiet deal again every night. Without that guard, the audit log would show a forecast that moves each night while it stands
 still.
 
-**Accept** (`acceptAppliedDealChange`, `changeacceptance.go`) records an audited review of a close date
-fix or an automatic stage move, and keeps the values the change applied. It is not another write of the
-change. It needs the deal version the reader saw, and refuses a change that was undone or replaced. Undo
-goes through the guarded stage undo for a stage move, and through the record history for a date.
+No screen asks the reader to sign off a change Margince made, because each change carries its Undo.
+`PendingChangesOwnedBy` in `changereport.go` lists a change for 7 days. Undo goes through the guarded
+stage undo for a stage move, and through the record history for a date. **Accept**
+(`acceptAppliedDealChange`, `changeacceptance.go`) stays in the API for older clients, marked to be
+removed. It records an audited review and takes the change off the list, but writes nothing to the deal.
 
 ## Promises read from a conversation
 

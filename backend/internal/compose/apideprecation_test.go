@@ -47,8 +47,15 @@ func TestEveryDeprecatedOperationAnnouncesThePolicyThroughTheGeneratedRouter(t *
 			if len(query) > 0 {
 				requestPath += "?" + query.Encode()
 			}
+			request := httptest.NewRequest(method, requestPath, nil)
+			// A required header is a parameter too, and its refusal comes before the operation.
+			for _, param := range op.Parameters {
+				if p := param.Value; p != nil && p.In == "header" && p.Required {
+					request.Header.Set(p.Name, `"1"`)
+				}
+			}
 			response := httptest.NewRecorder()
-			router.ServeHTTP(response, httptest.NewRequest(method, requestPath, nil))
+			router.ServeHTTP(response, request)
 			if response.Code != http.StatusNoContent {
 				t.Errorf("%s did not reach operation middleware: %d", route, response.Code)
 			}
