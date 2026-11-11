@@ -107,6 +107,13 @@ GOWORK_ROOT := GOWORK=$(abspath ../go.work)
 # them from the cached wildcard and re-runs them, from this one list, so the
 # two cannot drift apart.
 UNCACHED_TEST_PKGS := ./gates ./internal/modules/ai/
+
+# The packages that get a CI runner to themselves, through the test-solo leg.
+# The compose tests run almost one at a time, about 50 s on a laptop. Beside
+# every other package on one 4-core runner they took 87 to 185 s, and their
+# budget cannot tell that spread from a slower change. Alone, the time is
+# their own. test-cached leaves them out, from this one list.
+SOLO_TEST_PKGS := ./internal/compose
 GATES_GOMEMLIMIT ?= 4GiB
 
 # TEST_EXEC=<wrapper> runs every cached test binary through a `go test -exec`
@@ -154,7 +161,7 @@ help: ## List targets with their descriptions (the default goal)
 # lint and the unit tests each get a whole runner: `deterministic-gates` passes
 # CHECK_LEGS="$(TEST_LEGS)", and `backend-lint` runs `check-static`.
 # gates/checklegsplit_test.go fails if the two stop covering every leg.
-TEST_LEGS   := test-uncached test-cached test-extensions
+TEST_LEGS   := test-uncached test-cached test-solo test-extensions
 STATIC_LEGS := lint-base lint-strict lint-modules vet arch-lint
 CHECK_LEGS  := $(TEST_LEGS) $(STATIC_LEGS)
 
@@ -267,23 +274,26 @@ test-cached: composition
 	# reads identically to a correct run and costs the 316 s back. `go list`
 	# on a name that no longer exists fails under `set -e` from the other side.
 	@set -e; \
-	  uncached="$$($(GOWORK_COMPOSED) $(GO) list $(UNCACHED_TEST_PKGS))"; \
+	  uncached="$$($(GOWORK_COMPOSED) $(GO) list $(UNCACHED_TEST_PKGS) $(SOLO_TEST_PKGS))"; \
 	  every="$$($(GOWORK_COMPOSED) $(GO) list ./...)"; \
 	  cached="$$(printf '%s\n' "$$every" | grep -Fxv "$$uncached")"; \
 	  want=$$(printf '%s\n' "$$uncached" | wc -l | tr -d ' '); \
 	  got=$$(( $$(printf '%s\n' "$$every" | wc -l) - $$(printf '%s\n' "$$cached" | wc -l) )); \
 	  if [ "$$got" -ne "$$want" ]; then \
-	    echo "test: excluding UNCACHED_TEST_PKGS dropped $$got of ./... but names $$want packages —" >&2; \
-	    echo "      the exclusion no longer matches what the uncached pass re-runs, so some package" >&2; \
-	    echo "      is about to run twice or not at all. Reconcile UNCACHED_TEST_PKGS with ./...." >&2; \
+	    echo "test: excluding UNCACHED_TEST_PKGS and SOLO_TEST_PKGS dropped $$got of ./... but names $$want packages —" >&2; \
+	    echo "      the exclusion no longer matches what the other passes run, so some package" >&2; \
+	    echo "      is about to run twice or not at all. Reconcile both lists with ./...." >&2; \
 	    exit 1; \
 	  fi; \
-	  echo "go test: $$(printf '%s\n' "$$cached" | wc -l | tr -d ' ') cached packages + $$want uncached"; \
+	  echo "go test: $$(printf '%s\n' "$$cached" | wc -l | tr -d ' ') cached packages + $$want run by test-uncached and test-solo"; \
 	  $(GOWORK_COMPOSED) $(GO) test $(TEST_EXEC_FLAGS) $$cached
 	# The tool chain is its own module, so ./... above never reaches it —
 	# its tests (generator determinism, scaffold behavior) run here or
 	# nowhere.
 	$(GOWORK_COMPOSED) $(GO) test $(TEST_EXEC_FLAGS) ./tools/...
+
+test-solo: composition
+	$(GOWORK_COMPOSED) $(GO) test $(TEST_EXEC_FLAGS) $(SOLO_TEST_PKGS)
 
 test-uncached: composition
 	# Uncached, for the reason UNCACHED_TEST_PKGS is declared: their subjects

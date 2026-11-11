@@ -1488,7 +1488,7 @@ test-budget:
 ## time; a failing test does not decide it. cache-warm runs it.
 test-input-census:
 	@set -e; logs="$$(mktemp -d)"; trap 'rm -rf "$$logs"' EXIT; \
-	if ! TESTLOG_DIR="$$logs" $(MAKE) -C backend -k test-cached test-extensions TEST_EXEC="$(CURDIR)/scripts/testlog-exec.sh"; then \
+	if ! TESTLOG_DIR="$$logs" $(MAKE) -C backend -k test-cached test-solo test-extensions TEST_EXEC="$(CURDIR)/scripts/testlog-exec.sh"; then \
 	  echo "test-input-census: a test failed under the census; its inputs are judged all the same" >&2; \
 	fi; \
 	TESTLOG_DIR="$$logs" $(MAKE) --no-print-directory test-input-census-judge

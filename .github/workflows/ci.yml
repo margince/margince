@@ -447,8 +447,9 @@ jobs:
     permissions:
       contents: read
     # The uncached root fitness packages were most of the test leg, so they get
-    # a runner. Both legs run the build; only the unit leg runs the gates that
-    # read the tree the same way on either (CHECK_TREE_GATES).
+    # a runner, and so does SOLO_TEST_PKGS. Every leg runs the build; only the
+    # unit leg runs the gates that read the tree the same way on each
+    # (CHECK_TREE_GATES).
     # TestTheTwoBackendJobsRunEveryCheckLeg reads the legs from these entries.
     strategy:
       fail-fast: false
@@ -459,6 +460,11 @@ jobs:
             tree-gates: "on"
           - part: gates
             legs: test-uncached
+            tree-gates: "off"
+          # SOLO_TEST_PKGS in backend/Makefile: a package whose time beside the
+          # rest was the runner's load, not its own.
+          - part: solo
+            legs: test-solo
             tree-gates: "off"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -533,7 +539,7 @@ jobs:
         run: |
           set -o pipefail
           census=()
-          if [ "${{ matrix.part }}" = unit ] && [ "${{ needs.changes.outputs.full_lane }}" = true ]; then
+          if [ "${{ matrix.part }}" != gates ] && [ "${{ needs.changes.outputs.full_lane }}" = true ]; then
             export TESTLOG_DIR="$RUNNER_TEMP/testlogs"
             mkdir -p "$TESTLOG_DIR"
             census=(TEST_EXEC="$PWD/scripts/testlog-exec.sh")
@@ -546,7 +552,7 @@ jobs:
       # pass: a failed test stops make before the rest log their reads, and a
       # verdict over part of the tree is not one.
       - name: Census the test cache's inputs (make test-input-census-judge)
-        if: ${{ success() && matrix.part == 'unit' && needs.changes.outputs.full_lane == 'true' }}
+        if: ${{ success() && matrix.part != 'gates' && needs.changes.outputs.full_lane == 'true' }}
         working-directory: .
         run: make test-input-census-judge TESTLOG_DIR="$RUNNER_TEMP/testlogs"
       # crm-hello declares capabilities no shipped unit does, so this is the one
