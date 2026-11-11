@@ -19034,9 +19034,196 @@ export const en = {
   "worklist.pane.conversation": "Thread",
   "worklist.pane.openEmail": "Open email",
   "worklist.pane.deal": "Deal",
-  "worklist.why.title": "Why this needs attention",
+  "worklist.why.title": "Why this is on your list",
   "worklist.why.reasons": "Reasons",
   "worklist.why.detail": "Detail",
+  "worklist.why.happened": "What happened",
+  "worklist.why.now": "Why now",
+  "worklist.why.consequence": "If nothing is done",
+  "worklist.why.todo": "What to do",
+  "worklist.title.deal_at_risk": "{name} has gone quiet",
+  "worklist.title.deal_at_risk.close_overdue": "{name} is past its close date",
+  "worklist.title.relationship_decay": "No recent contact with {name}",
+  "worklist.title.automation_run": "{name} did not finish",
+  "worklist.title.automation_run.failed": "{name} failed",
+  "worklist.title.automation_run.blocked": "{name} was blocked",
+  "worklist.title.meeting_outcome": "Record the outcome of {name}",
+  "worklist.title.meeting_follow_up": "Follow up on {name}",
+  "worklist.title.awaiting_reply": "No reply yet: {name}",
+  "worklist.title.bounce": "Bounced: {name}",
+  "worklist.title.lead_response": "Get back to new lead {name}",
+  "worklist.title.customer_waiting": "{name} is waiting for your reply",
+  "worklist.todo.task.named":
+    "Finish the task with {name} and mark it done, or move it to another day.",
+  "worklist.todo.deal_at_risk.named": "Open {name} and plan the next step.",
+  "worklist.todo.customer_waiting.named": "Reply to {name}.",
+  "worklist.todo.awaiting_reply.named": "Send {name} a follow-up.",
+  "worklist.todo.lead_response.named":
+    "Get in touch with {name} now; a new lead cools fast.",
+  "worklist.todo.meeting.named": "Open the meeting to prepare for {name}.",
+  "worklist.todo.meeting_follow_up.named": "Send {name} a follow-up.",
+  "worklist.todo.relationship_decay.named":
+    "Get in touch with {name}, or set this aside for a month.",
+  "worklist.todo.conversation_claim.named":
+    "Do what you told {name}, then mark it done.",
+  "worklist.todo.bounce.named":
+    "Check the address you have for {name}, then send it again.",
+  "worklist.todo.undelivered.named":
+    "Open the email to {name} to see why, then send it again.",
+  "worklist.todo.automation_run.named":
+    "Open {name}, see why it stopped and fix the cause.",
+  "worklist.todo.capture_health.named":
+    "Check the connection of {name} so its mail is captured again.",
+  "worklist.todo.capture_health.backfill":
+    "Open the mailbox in Settings and continue or restart its history import.",
+  "worklist.todo.capture_health.backfill.named":
+    "Open {name} in Settings and continue or restart its history import.",
+  "worklist.todo.capture_health.calendar":
+    "Check the calendar connection so its meetings are captured again.",
+  "worklist.todo.capture_health.calendar.named":
+    "Check the connection of {name} so its meetings are captured again.",
+  "worklist.consequence.task_slips.named": "The task with {name} stays undone.",
+  "worklist.happened.customer_waiting":
+    "{name} wrote on {when}, and nobody has answered yet.",
+  "worklist.happened.customer_waiting.bare":
+    "A message came in on {when}, and nobody has answered yet.",
+  "worklist.happened.awaiting_reply":
+    "You wrote to {name} on {when}, and no reply has come in since.",
+  "worklist.happened.awaiting_reply.bare":
+    "You wrote on {when}, and no reply has come in since.",
+  "worklist.happened.lead_response":
+    "{name} came in as a lead on {when} and has had no first answer.",
+  "worklist.happened.lead_response.bare":
+    "This lead came in on {when} and has had no first answer.",
+  "worklist.happened.meeting_outcome":
+    "The meeting with {name} was on {when}, and nothing records how it went.",
+  "worklist.happened.meeting_outcome.bare":
+    "The meeting was on {when}, and nothing records how it went.",
+  "worklist.happened.meeting_follow_up":
+    "You met {name} on {when}, and nothing was sent to them afterward.",
+  "worklist.happened.meeting_follow_up.bare":
+    "The meeting was on {when}, and nothing was sent to the attendees afterward.",
+  "worklist.happened.relationship_decay":
+    "The last recorded contact with {name} was on {when}.",
+  "worklist.happened.conversation_claim":
+    "You committed to this with {name} on {when}.",
+  "worklist.happened.conversation_claim.bare":
+    "You committed to this in a conversation on {when}.",
+  "worklist.happened.bounce": "An email to {name} bounced on {when}.",
+  "worklist.happened.bounce.bare": "An email bounced on {when}.",
+  "worklist.happened.undelivered": "An email to {name} was not sent on {when}.",
+  "worklist.happened.undelivered.bare": "An email was not sent on {when}.",
+  "worklist.happened.automation_run":
+    "The automation {name} stopped on {when}.",
+  "worklist.happened.automation_run.bare": "An automation stopped on {when}.",
+  "worklist.happened.capture_health":
+    "The mailbox {name} has not synced since {when}.",
+  "worklist.happened.capture_health.bare":
+    "A mailbox has not synced since {when}.",
+  "worklist.happened.capture_health.backfill":
+    "The mail history import for {name} failed on {when}.",
+  "worklist.happened.capture_health.backfill.bare":
+    "A mail history import failed on {when}.",
+  "worklist.happened.capture_health.silent":
+    "The mailbox {name} has captured no mail since {when}.",
+  "worklist.happened.capture_health.silent.bare":
+    "A mailbox has captured no mail since {when}.",
+  "worklist.happened.capture_health.calendar":
+    "The calendar {name} has not synced since {when}.",
+  "worklist.happened.capture_health.calendar.bare":
+    "A calendar has not synced since {when}.",
+  "worklist.happened.capture_health.calendar_silent":
+    "The calendar {name} has captured no meetings since {when}.",
+  "worklist.happened.capture_health.calendar_silent.bare":
+    "A calendar has captured no meetings since {when}.",
+  "worklist.happened.ai_work_health": "The AI task {name} failed on {when}.",
+  "worklist.happened.ai_work_health.bare": "An AI task failed on {when}.",
+  "worklist.happened.ai_work_health.stalled":
+    "The AI task {name} has not finished since {when}.",
+  "worklist.happened.ai_work_health.stalled.bare":
+    "An AI task has not finished since {when}.",
+  "worklist.happened.failed_approval":
+    "An action you approved on {name} did not run on {when}.",
+  "worklist.happened.failed_approval.bare":
+    "An action you approved did not run on {when}.",
+  "worklist.happened.deal_suggestion":
+    "On {when}, activity with {name} looked like a new deal.",
+  "worklist.happened.deal_suggestion.bare":
+    "On {when}, recorded activity looked like a new deal.",
+  "worklist.happened.tag_suggestion":
+    "On {when}, Margince suggested a tag for {name}.",
+  "worklist.happened.tag_suggestion.bare":
+    "On {when}, Margince suggested a tag for this record.",
+  "worklist.happened.domain_question":
+    "On {when}, Margince could not tell which company {name} works for.",
+  "worklist.happened.domain_question.bare":
+    "On {when}, Margince could not match this contact to a company.",
+  "worklist.happened.meeting": "You meet {name} on {when}.",
+  "worklist.happened.meeting.bare": "This meeting is on {when}.",
+  "worklist.happened.task": "It is due on {due}.",
+  "worklist.happened.task.overdue": "It was due on {due} and is still open.",
+  "worklist.happened.task.undated": "It has no due date.",
+  "worklist.happened.deal": "{deal}: {figures}.",
+  "worklist.happened.lastFrom": "Last contact from {name}: {when}.",
+  "worklist.happened.lastTo": "Last contact to {name}: {when}.",
+  "worklist.happened.noneFrom": "Last contact from {name}: none you can open.",
+  "worklist.happened.noneTo": "Last contact to {name}: none you can open.",
+  "worklist.happened.neverFrom": "Last contact from {name}: never.",
+  "worklist.happened.neverTo": "Last contact to {name}: never.",
+  "worklist.consequence.buyer_waits": "They keep waiting for an answer.",
+  "worklist.consequence.buyer_waits.named":
+    "{name} keeps waiting for an answer.",
+  "worklist.consequence.promise_breaks": "A commitment you made is broken.",
+  "worklist.consequence.promise_breaks.named":
+    "A commitment you made to {name} is broken.",
+  "worklist.consequence.deal_drifts": "The deal keeps drifting.",
+  "worklist.consequence.deal_drifts.named": "{name} keeps drifting.",
+  "worklist.consequence.deal_slips_past_close":
+    "The deal slips past its expected close date.",
+  "worklist.consequence.deal_slips_past_close.named":
+    "{name} slips past its expected close date.",
+  "worklist.consequence.meeting_unprepared":
+    "You go into the meeting unprepared.",
+  "worklist.consequence.task_slips": "The task stays undone.",
+  "worklist.consequence.work_blocked":
+    "Work that depends on this decision stays blocked.",
+  "worklist.consequence.customer_never_received":
+    "The message never reaches them.",
+  "worklist.consequence.customer_never_received.named":
+    "{name} never gets the message.",
+  "worklist.consequence.you_believe_it_happened":
+    "The step looks done, but it did not happen.",
+  "worklist.consequence.legal_deadline_missed":
+    "The legal deadline passes without an answer.",
+  "worklist.consequence.mailbox_blind":
+    "Mail on this mailbox stays out of Margince.",
+  "worklist.consequence.data_drifts": "The records drift further apart.",
+  "worklist.todo.deal_at_risk": "Open the deal and plan the next step.",
+  "worklist.todo.task":
+    "Do the work and mark it done, or move it to another day.",
+  "worklist.todo.customer_waiting": "Reply to the message.",
+  "worklist.todo.awaiting_reply": "Send a follow-up.",
+  "worklist.todo.lead_response": "Get in touch now; a new lead cools fast.",
+  "worklist.todo.meeting": "Open the meeting to prepare.",
+  "worklist.todo.meeting_outcome":
+    "Record what came of it. If it did not take place, choose “Did not happen”, or cancel it through its calendar invitation.",
+  "worklist.todo.meeting_follow_up": "Send the attendees a follow-up.",
+  "worklist.todo.relationship_decay":
+    "Get in touch, or set it aside for a month.",
+  "worklist.todo.conversation_claim": "Do it, then mark it done.",
+  "worklist.todo.bounce": "Check the address, then send it again.",
+  "worklist.todo.undelivered": "Open the email to see why, then send it again.",
+  "worklist.todo.automation_run":
+    "Open the run, see why it stopped and fix the cause.",
+  "worklist.todo.capture_health":
+    "Check the mailbox connection so its mail is captured again.",
+  "worklist.todo.ai_work_health": "Check its AI provider in Settings.",
+  "worklist.todo.failed_approval": "Check what happened, then acknowledge it.",
+  "worklist.todo.deal_suggestion":
+    "Create the deal, or dismiss the suggestion.",
+  "worklist.todo.tag_suggestion": "Apply the tag, or dismiss the suggestion.",
+  "worklist.todo.domain_question":
+    "Confirm a company, choose one, or stop capturing the domain.",
   "worklist.ask.approval":
     "An agent proposed a change and is waiting for a decision. Approve it or turn it down.",
   "worklist.ask.dedupe_candidate":
@@ -19056,7 +19243,7 @@ export const en = {
   "worklist.ask.customer_waiting":
     "A customer wrote and nobody has answered yet. Reply to them.",
   "worklist.ask.lead_response":
-    "This lead is waiting for a first answer. Get in touch before its response time runs out.",
+    "This lead is waiting for a first answer. Get in touch now; a new lead cools fast.",
   "worklist.ask.deal_at_risk":
     "This deal shows signs of slipping. Open it and plan the next step.",
   "worklist.ask.meeting": "This meeting is coming up. Open it to prepare.",
@@ -19070,6 +19257,8 @@ export const en = {
     "A privacy notice is owed to this contact. Send it, ask them to confirm their details, or end the duty.",
   "worklist.ask.booking_health":
     "Your booking page is paused, so guests cannot book. Open booking settings and connect a calendar Margince can add meetings to.",
+  "worklist.ask.capture_health.calendar":
+    "A calendar stopped capturing meetings. Reconnect it so its meetings are captured again.",
   "worklist.ask.capture_health":
     "A mailbox stopped capturing mail. Reconnect it so its mail is captured again.",
   "worklist.ask.domain_question":
@@ -19087,7 +19276,7 @@ export const en = {
   "worklist.ask.introduction_request":
     "A colleague asks you to introduce them to a contact. Accept or decline the request.",
   "worklist.ask.meeting_outcome":
-    "This meeting is over and nothing records how it went. Record what came of it, or mark it canceled if it did not take place.",
+    "This meeting is over and nothing records how it went. Record what came of it. If it did not take place, choose “Did not happen”, or cancel it through its calendar invitation.",
   "worklist.ask.weekly_commitment":
     "You planned this for the week. Do the work, or move it in your weekly plan.",
   "worklist.ask.awaiting_reply":

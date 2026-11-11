@@ -211,7 +211,7 @@ A contact, company, lead, deal or project can have one **owner**. When it has on
 
 The owner also decides who else may change it. Row scope reads the owner: a User changes the records they own, and a Team lead changes the records of their team. The owner can share the record with a colleague or a team. Someone who holds it through a share cannot change its owner or its sharing.
 
-A **responsibility role** is a label for what someone looks after on a company, deal or project, such as **Account manager** or **Technical contact**. You set them on a record under **Responsibilities**. Admin and Ops keep the list in **Settings → Responsibility roles**.
+A **responsibility role** is a label for what someone looks after on a company, deal or project, such as **Account manager** or **Technical contact**. You set them on a record under **Responsibilities**. Admin and Ops keep the list in **Settings → Records and fields → Responsibility roles**.
 
 A responsibility role controls nothing:
 

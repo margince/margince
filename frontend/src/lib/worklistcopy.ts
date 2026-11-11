@@ -1,4 +1,3 @@
-import { displayedTitle } from "./systemdisplay";
 import { taskHref } from "./taskreminders";
 import { sourceName } from "./worklistsources";
 
@@ -25,6 +24,10 @@ import {
   connectionTitleKey,
 } from "./worklistconnection";
 import { nonBuyerRequest } from "./worklisteyebrow";
+import { ownTitle } from "./worklisttitles";
+
+export { briefContextTitle, briefSubjectLabel } from "./worklisttitles";
+
 import type { Worklist, WorklistItem } from "./worklisttypes";
 
 export {
@@ -33,6 +36,7 @@ export {
   partyName,
   phrasedReasons,
   reasonText,
+  saidByTheWhenLine,
   whenText,
 } from "./worklistcopyreasons";
 
@@ -303,23 +307,6 @@ function batchCause(item: WorklistItem, t: T): string {
 // at staging time, a deal's own name, a message's subject. Where it has none
 // the sentence would have to be invented, and the client writes it from the
 // source instead.
-export function briefSubjectLabel(item: WorklistItem): string | undefined {
-  return item.source === "brief_item"
-    ? item.subject?.label || undefined
-    : undefined;
-}
-
-export function briefContextTitle(item: WorklistItem): string | undefined {
-  const subject = briefSubjectLabel(item);
-  const title = item.title?.trim();
-  return subject &&
-    title &&
-    title !== subject &&
-    title !== item.verdict?.line.trim()
-    ? title
-    : undefined;
-}
-
 export function itemTitle(
   item: WorklistItem,
   t: T,
@@ -354,7 +341,7 @@ export function itemTitle(
     return translatePlural(locale, base, item.batch.count, { count, cause });
   }
   const named = subjectNamed ? undefined : item.subject?.label;
-  const own = displayedTitle(item);
+  const own = ownTitle(item, t);
   if (own) {
     // A title that names no record, on a row that HAS one, gets the record's
     // name beside it. Eight rows reading "Follow up with the new lead" cannot

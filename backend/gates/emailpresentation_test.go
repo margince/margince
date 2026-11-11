@@ -122,7 +122,7 @@ var emailPassthroughs = gatekit.Waive(map[string]string{
 	"features/mail/compose.reply.tsx":              "reads an email summary's calendar_invitation to offer an RSVP in place of the reply button; it draws no part of the message",
 	"features/records/timelineactions.tsx":         "hands a timeline row's calendar_invitation to the reply action, which offers an RSVP; it draws no part of the message",
 	"features/worklist/worklist.reply.tsx":         "hands a worklist row's calendar_invitation to the reply action, which offers an RSVP; it draws no part of the message",
-	"features/worklist/worklist.ask.ts":            "reads whether a row is an invitation to pick the sentence asking for an RSVP; it draws no part of the message",
+	"lib/worklistask.ts":                           "reads whether a row is an invitation to pick the sentence asking for an RSVP; it draws no part of the message",
 	"lib/worklisteyebrow.ts":                       "reads whether a row is an invitation to name it one; it draws no part of the message",
 	"lib/openemail.ts":                             "the drawer controller: it reads emailSummary only to decide an entry HAS a message to open, and holds no part of one",
 	"features/records/recordchronology.tsx":        "wires onOpenEmail onto the entries it hands to the timeline; the rendering is timeline.tsx's",

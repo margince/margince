@@ -60,6 +60,11 @@ then open a message to see who can read it and change sharing. Another owner's h
 **Sender decisions** works the same way: find an address, name or domain, then correct the decision.
 **My overrides** shows your own choices. Removing an override does not restore mail already destroyed.
 
+### How do I keep email between colleagues in Margince?
+<!-- opens: settings/capture -->
+To keep email between colleagues in Margince, an admin turns on **Internal operational mail** in **Settings → Mail capture**, chooses the mail connections, and presses **Save**. Mail between colleagues is not kept until then.
+Also called: internal mail, colleague email, capture internal threads.
+
 ## Mail between colleagues
 
 Mail between colleagues is not kept by default. An admin can turn on
@@ -248,22 +253,26 @@ It holds mail from then on, and lifting it opens nothing again: "Lifting applies
 to new mail. Mail already held stays held."
 
 ### How do I share an email thread with my team?
-To share an email thread in Margince, open the captured message from a timeline and choose **Share with the company** beside its visibility mark. Or use **Share with the team** in **Settings → Connections → Activity → Held threads**.
+To share an email thread in Margince, open the captured message from a timeline and choose **Share with the company** beside its visibility mark. Or open Settings → **Connections** → **Activity**, find it under **Mail not shared with the team**, and choose **Preview and change sharing**.
 1. On a contact, company or deal timeline, open the email.
 2. Beside the mark under the subject, press **Share with the company**. It "Applies to the whole thread."
 3. To go back, press **Make private**.
 
-Or press **Share with the team** on the thread under **Settings → Connections → Activity → Held threads**.
+Or choose **Preview and change sharing** on the thread under **Mail not shared with the team**, in Settings → **Connections** → **Activity**. It opens the email.
 Only the mailbox owner can share. If a colleague also holds it, you see how many other seats still do.
 Also called: release an email, unhide a thread, make an email public.
+
+### How do I find a contact's mail that is not shared with the team?
+To find mail with one contact that your mailbox holds back, open the contact's timeline. On a held email, choose **Show held mail with this contact**. It opens **Mail not shared with the team** with only that contact's threads; **Show all threads** drops the filter.
+Also called: hidden mail with a contact, private threads, held email.
 
 ## Sharing a thread
 
 You change who can read a captured message by **sharing its thread**.
 
 Sharing lets go of **your own hold only**. If a colleague still holds the same
-message, Margince tells you how many other seats do, but never who. The **Held
-threads** card says the same: "A thread opens only when every recipient agrees."
+message, Margince tells you how many other seats do, but never who. A thread opens
+to the team only when every mailbox that holds it lets go.
 
 That is the rule when a message reached two mailboxes. Each owner adds what
 their own mailbox asks for, and the message ends at the **strictest** of those.
@@ -308,6 +317,6 @@ never shows mail from another seat's own mailbox.
 | This mailbox's posture | Settings → Connections → Mail visibility |
 | The company-wide floor | Settings → Mail capture → Sharing and sync |
 | Hold mail with one contact or company | Private correspondence, on the contact's or company's page |
-| Share one thread | The message itself, or Settings → Connections → Activity → Held threads |
+| Share one thread | The message itself, or Settings → Connections → Activity → Mail not shared with the team |
 | One logged message's audience | Change visibility, under More actions on its row |
 | Who can see the *record* | The contact or company header |

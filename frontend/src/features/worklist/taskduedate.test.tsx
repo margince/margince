@@ -14,7 +14,11 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { TaskQuickActions, useTaskUpdate } from "../../components/taskactions";
+import {
+  TaskDueDatePick,
+  TaskQuickActions,
+  useTaskUpdate,
+} from "../../components/taskactions";
 import { LocaleProvider } from "../../i18n";
 import { ViewerZoneProvider } from "../../lib/viewerzone";
 
@@ -68,15 +72,18 @@ const TASK_VERSION = 3;
 function renderVerbs(dueAt?: string | null, dueHasTime = false) {
   function Harness() {
     const update = useTaskUpdate([["tasks"]]);
+    const task = {
+      activityId: TASK,
+      version: TASK_VERSION,
+      dueAt,
+      dueHasTime,
+      update,
+    };
     return (
-      <TaskQuickActions
-        activityId={TASK}
-        version={TASK_VERSION}
-        dueAt={dueAt}
-        dueHasTime={dueHasTime}
-        update={update}
-        showDuePicker
-      />
+      <>
+        <TaskQuickActions {...task} />
+        <TaskDueDatePick {...task} />
+      </>
     );
   }
   const client = new QueryClient({
