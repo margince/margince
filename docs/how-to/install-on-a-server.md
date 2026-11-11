@@ -166,3 +166,16 @@ sudo nginx -t && sudo systemctl reload nginx
 The api applies the new release's migrations when it starts. Keep the folder of the release before
 until the new one is serving. The order, and what a worker at the wrong release does, is in
 [Roll out in this order](deploy-margince.md#roll-out-in-this-order).
+
+### Add `ext_runtime` to an older database
+
+A database that ran `db-bootstrap.sql` before the `ext_runtime` role existed needs the role once, before the
+api of the new release starts. The owner role may not create roles, so run this as a superuser:
+
+```sql
+CREATE ROLE ext_runtime NOLOGIN NOINHERIT;
+GRANT ext_runtime TO margince_app;
+```
+
+If you skip it, the migrations stop with an error that prints these two statements, and the api does not
+start. Run them, then start the api again. A container install needs the same step.

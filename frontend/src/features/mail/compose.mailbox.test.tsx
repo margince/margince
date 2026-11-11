@@ -12,6 +12,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
 import { draftButton } from "../../testing/composedraft.testkit";
+import { allowedPreview } from "../../testing/sendpermission.testkit";
 import { ComposeModal } from "./compose";
 import { findThreadChoice } from "./compose.testkit";
 
@@ -125,6 +126,8 @@ describe("whose mailbox the composer is answering from", () => {
           page: { next_cursor: null, has_more: false },
         }),
       "GET /activities/act-charlotte": () => jsonResponse(colleaguesMail),
+      "POST /activities/act-charlotte/send-email:preview": () =>
+        jsonResponse(allowedPreview(["accounts@vendor.test"])),
       "GET /activities/act-charlotte/reply-recipient": () =>
         jsonResponse({
           full_name: "Accounts Singapore",
@@ -404,7 +407,7 @@ describe("whose mailbox the composer is answering from", () => {
       });
       await screen.findByText(/You are not on this thread/);
       const send = screen.getByRole("button", { name: /^Send$/ });
-      expect(send.hasAttribute("disabled")).toBe(false);
+      await waitFor(() => expect(send.hasAttribute("disabled")).toBe(false));
       expect(send.getAttribute("aria-disabled")).not.toBe("true");
     });
   });

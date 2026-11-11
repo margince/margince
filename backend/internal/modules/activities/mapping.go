@@ -454,6 +454,10 @@ func optionalFieldsFrom(req crmcontracts.CreateActivityRequest, in *LogActivityI
 			in.AttendeeUserIDs = append(in.AttendeeUserIDs, ids.From[ids.UserKind](ids.UUID(attendee)))
 		}
 	}
+	if req.SenderContactId != nil {
+		sender := ids.UUID(*req.SenderContactId)
+		in.SenderContactID = &sender
+	}
 	if req.Links != nil {
 		for _, link := range *req.Links {
 			in.Links = append(in.Links, ActivityLinkInput{

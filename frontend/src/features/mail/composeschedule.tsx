@@ -100,11 +100,19 @@ export function momentLabel(at: Date, locale: Locale, zone: string): string {
 // datetime field between the consent purpose and the recipient warnings, which
 // is where a rep reads the message rather than where they decide to release
 // it.
-export function ScheduleMenu({ onOpen }: Readonly<{ onOpen: () => void }>) {
+export function ScheduleMenu({
+  onOpen,
+  reasonId,
+}: Readonly<{
+  onOpen: () => void;
+  /** The sentence that holds Send holds this menu too. */
+  reasonId?: string;
+}>) {
   const t = useT();
   return (
     <Popover
       variant="primary"
+      reasonId={reasonId}
       className="compose-sendmenu"
       label={
         <>

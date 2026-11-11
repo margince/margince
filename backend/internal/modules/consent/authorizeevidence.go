@@ -309,7 +309,8 @@ func wroteToUsWithin(ctx context.Context, tx pgx.Tx, subject subjectRef, since t
 }
 
 // authorIsTheSubject is the ONE spelling of "this recipient wrote this
-// message", shared by the thread arm and the window arm.
+// message", shared by the thread arm, the window arm and the derived
+// qualifying event (inboundQualifyingEvent).
 //
 // Held by: TestBeingCopiedOnAThreadIsNotWritingIntoIt (authorizeresolve_integration_test.go)
 // and TestAFiledActivityIsNotSomethingTheContactWrote (authorizevalidators_integration_test.go)

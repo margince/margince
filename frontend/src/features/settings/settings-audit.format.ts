@@ -5,6 +5,11 @@ import type { components } from "../../api/schema";
 import type { BADGE_TONES } from "../../design-system/atoms";
 import { stable } from "../../format/collate";
 import type { MessageKey } from "../../i18n/en";
+import {
+  AUDIT_ENTITY_ID_PARAM,
+  AUDIT_ENTITY_TYPE_PARAM,
+} from "../../lib/auditloglink";
+import type { UrlParams } from "../../lib/urlstate";
 
 export type AuditLogEntry = components["schemas"]["AuditLogEntry"];
 
@@ -27,6 +32,15 @@ export const UNFILTERED_AUDIT_LOG: AuditLogFilters = {
   from: "",
   to: "",
 };
+
+/** The filters a link opens the audit log with; the reader may change them. */
+export function linkedAuditLogFilters(params: UrlParams): AuditLogFilters {
+  return {
+    ...UNFILTERED_AUDIT_LOG,
+    entityType: params.get(AUDIT_ENTITY_TYPE_PARAM) ?? "",
+    entityId: params.get(AUDIT_ENTITY_ID_PARAM) ?? "",
+  };
+}
 
 export const AUDIT_LOG_PAGE_SIZE = 20;
 

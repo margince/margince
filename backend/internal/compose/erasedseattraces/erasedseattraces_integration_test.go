@@ -9,13 +9,11 @@ import (
 	"context"
 	"errors"
 	"testing"
-	"time"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/dealrooms"
-	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/datatask"
@@ -131,24 +129,6 @@ func wipe(t *testing.T, e *integration.Env, seat ids.UUID, tombstone bool) {
 	}
 }
 
-func runTask(ctx context.Context, t *testing.T, e *integration.Env, task datatask.Task) {
-	t.Helper()
-	now := clocktest.Now(t)
-	engine, err := datatask.New(e.Pool, []datatask.Task{task}, "test", func() time.Time { return now },
-		func(context.Context, pgx.Tx, datatask.Progress) error { return nil })
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := engine.Seed(ctx); err != nil {
-		t.Fatal(err)
-	}
-	for range 40 {
-		if _, err := engine.Execute(ctx); err != nil {
-			t.Fatal(err)
-		}
-	}
-}
-
 // ledger reads the task's run id and counters from the executor's own row.
 func ledger(t *testing.T, e *integration.Env) (run ids.UUID, scanned, changed, batches int64, status string) {
 	t.Helper()
@@ -167,10 +147,10 @@ func threadsBy(t *testing.T, e *integration.Env, seat ids.UUID) int {
 	return e.WsCount(t, `SELECT count(*) FROM deal_room_thread WHERE author_participant_id = $1`, seat)
 }
 
-func erasures(t *testing.T, e *integration.Env, entity string, id ids.UUID) int {
+func threadErasures(t *testing.T, e *integration.Env, id ids.UUID) int {
 	t.Helper()
-	return e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type = $1 AND entity_id = $2
-		AND action = 'erase'`, entity, id)
+	return e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type = 'deal_room_thread' AND entity_id = $1
+		AND action = 'erase'`, id)
 }
 
 func systemCtx(e *integration.Env) context.Context {
@@ -203,7 +183,7 @@ func TestTheTaskDeletesWhatAnErasedSeatWroteAndReplaysAsANoOp(t *testing.T) {
 	if n, _, err := DataTask().Steps[0].Estimate(ctx, e.Pool, 100); err != nil || n != 1 {
 		t.Fatalf("the estimate counts %d seat(s) (%v), want the one tombstoned seat", n, err)
 	}
-	runTask(ctx, t, e, DataTask())
+	e.RunDataTask(ctx, t, DataTask())
 
 	if n := threadsBy(t, e, erased.seat); n != 0 {
 		t.Errorf("%d thread(s) still name the erased seat", n)
@@ -241,7 +221,7 @@ func TestTheTaskDeletesWhatAnErasedSeatWroteAndReplaysAsANoOp(t *testing.T) {
 		AND (before IS NOT NULL OR after IS NOT NULL)`, theirs); n != 0 {
 		t.Errorf("%d audit row(s) still carry the erased seat's thread", n)
 	}
-	if n := erasures(t, e, "deal_room_thread", keptThread) + erasures(t, e, "deal_room_thread", lookalikeThread); n != 0 {
+	if n := threadErasures(t, e, keptThread) + threadErasures(t, e, lookalikeThread); n != 0 {
 		t.Errorf("threads of seats never erased got %d tombstone(s)", n)
 	}
 
@@ -277,7 +257,7 @@ func TestTheTaskPagesPastCleanSeatsToEveryDirtyOne(t *testing.T) {
 	}
 	task := DataTask()
 	task.Steps[0].Limit = 2
-	runTask(systemCtx(e), t, e, task)
+	e.RunDataTask(systemCtx(e), t, task)
 
 	for _, seat := range dirty {
 		if n := threadsBy(t, e, seat); n != 0 {
@@ -307,7 +287,7 @@ func TestASeatLargerThanTheBatchBoundIsPurgedOverSeveralBatches(t *testing.T) {
 		+ (SELECT count(*) FROM deal_room_engagement WHERE participant_id = $1)
 		+ (SELECT count(*) FROM deal_room_comment WHERE thread_id = $2) + 1`, erased.seat, thread)
 
-	runTask(systemCtx(e), t, e, task)
+	e.RunDataTask(systemCtx(e), t, task)
 
 	if n := threadsBy(t, e, erased.seat); n != 0 {
 		t.Errorf("%d thread(s) of the erased seat survived", n)
@@ -327,12 +307,12 @@ func TestASeatOnAHeldDealIsLeftForALaterRun(t *testing.T) {
 	wipe(t, e, erased.seat, true)
 	e.WsExec(t, `UPDATE deal SET legal_hold = true WHERE id = $1`, r.deal)
 
-	runTask(systemCtx(e), t, e, DataTask())
+	e.RunDataTask(systemCtx(e), t, DataTask())
 
 	if n := threadsBy(t, e, erased.seat); n != 1 {
 		t.Errorf("the held seat has %d thread(s), want its 1", n)
 	}
-	if n := erasures(t, e, "deal_room_thread", thread); n != 0 {
+	if n := threadErasures(t, e, thread); n != 0 {
 		t.Errorf("the held thread got %d erase tombstone(s)", n)
 	}
 	if _, scanned, changed, _, status := ledger(t, e); scanned != 1 || changed != 0 || status != "done" {
@@ -360,14 +340,14 @@ func TestTheTaskRollsBackWithItsBatchAndRefusesAMalformedCursor(t *testing.T) {
 		interrupted = out.Changed == 1
 		return out, errors.New("interrupt after the purge")
 	}
-	runTask(ctx, t, e, task)
+	e.RunDataTask(ctx, t, task)
 	if !interrupted {
 		t.Fatal("the batch failed before its purge, so no rollback was tested")
 	}
 	if n := threadsBy(t, e, erased.seat); n != 1 {
 		t.Errorf("the rolled-back batch left %d thread(s) of the erased seat, want 1", n)
 	}
-	if n := erasures(t, e, "deal_room_thread", thread); n != 0 {
+	if n := threadErasures(t, e, thread); n != 0 {
 		t.Errorf("the rolled-back batch left %d erase tombstone(s)", n)
 	}
 	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {

@@ -28,7 +28,8 @@ import { useDraftRestore, useSavedDraft } from "./composesaveddraft";
 import { savedFieldsOf } from "./composesaveddraftfields";
 
 import { ScheduleDialog } from "./composeschedule";
-import { sendWording, useComposeSend } from "./composesend";
+import { useComposeSend } from "./composesend";
+import { sendWording } from "./composesendhold";
 import {
   useAnswerTarget,
   useConversationSwitch,
@@ -291,7 +292,12 @@ export function ComposeWindow({
   const busy = sendPending || voice.rejectionInFlight;
   const held = voice.rejectionInFlight || savedDraft.saving;
   // Every hold on the Send button, so Cmd/Ctrl+Enter waits for the same ones.
-  const sendBlocked = [held, sendPending, fields.addressRefused].includes(true);
+  const sendBlocked = [
+    held,
+    sendPending,
+    fields.addressRefused,
+    send.hold.blocks,
+  ].includes(true);
   useKeptDraft(savedDraft.keeper, sendPending);
   const selectMessage = useConversationSwitch({
     answering,
@@ -430,6 +436,8 @@ export function ComposeWindow({
                         <SendRefusalRemedies
                           review={send.sendReview}
                           onDirectSent={send.directSent}
+                          directOpen={send.directOpen}
+                          onDirectOpenChange={send.setDirectOpen}
                         />
                       ),
                     }
@@ -437,12 +445,13 @@ export function ComposeWindow({
                   override={override}
                   picksReason={picksReason}
                   namesRecipients
+                  onRecheck={send.permission.recheck}
                 />
               )}
             />
           </div>
           <ComposeFoot
-            confirmLabel={t(scheduling ? "compose.schedule" : "compose.send")}
+            scheduling={scheduling}
             send={send}
             isChannelReply={isChannelReply}
             // The button stays live with fields outstanding, so a press can

@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/pkg/extension backend/internal/compose/extensions.go backend/internal/compose/extingress.go backend/internal/compose/extensiontools.go backend/internal/compose/channelprovider.go backend/internal/compose/extledger.go backend/tools/gen-composition scripts/check-pkg-freeze.sh -->
+<!-- describes: backend/pkg/extension backend/internal/compose/extensions.go backend/internal/compose/extingress.go backend/internal/compose/extensiontools.go backend/internal/compose/channelprovider.go backend/internal/compose/extledger.go backend/internal/compose/unitsql backend/tools/gen-composition scripts/check-pkg-freeze.sh -->
 # Extensibility: the extension tier
 
 The *extension tier* is how a small, closed add-on comes into this product without a change to any file
@@ -349,10 +349,8 @@ checked against the full budget for names, so a name a unit takes today stays go
   `make check-ext-migrations` proves it. It applies the migrations of the unit as a new role with limited
   rights, against a database it drops after, and reads the catalog again.
 
-  At run time there is no such role. `cmd/migrate` runs one owner connection with no `SET ROLE`, and
-  every unit shares the one app role in production. So what keeps the tables of one unit apart from
-  another is the gate on SQL scope, which reads the AST (`extensionsqlscope_test.go`). No database right
-  separates them.
+  At run time a unit's SQL runs as one shared role, `ext_runtime`, with no role per unit. So only the gate
+  on SQL scope (`extensionsqlscope_test.go`) keeps the tables of one unit apart from another.
 - **Its own HTTP surface**: `/v1/ext/<name>/…`, declared as operations in an `api/` contract fragment.
   `build/composition/api/crm.yaml` merges the core contract and the fragment of every unit.
 - **Its own governed tools**: an `x-mcp-tool` verb on a declared operation. It is served through the same
@@ -509,16 +507,17 @@ or trusted in some other way**, compiled into the same process. Every check on t
 guard against *errors*. It turns a query that reads the wrong tenant, or a missing scope, into a failure
 that nobody can miss. None of it is a sandbox against a unit that means harm:
 
-- Go code in the same process can read the root key of the keyvault from the settings the process starts
-  with;
+- Go code in the same process can read the root key of the keyvault from the settings the process starts with;
 - nothing in the database limits the SQL of a unit to one workspace;
-- every handler runs as the shared `margince_app` role. That role holds DML on core tables, on the tables
-  of every *other* unit, and on `extension_secret`.
+- the SQL of every handler runs as one shared role, `ext_runtime`, which reaches the tables of every unit;
+- `ext_runtime` guards against errors by trusted first-party units, not against unit code that means harm.
+  One statement can switch back to the login role and run a query string, and the check after it does not see
+  that. The gate on SQL scope refuses such statements in the source.
 
-A database role for each unit is the one change that would make any of this enforced instead of agreed.
-Even then, the reach from inside the process stays. It is not planned while every unit is first-party;
-[issue 628](https://github.com/margince/margince/issues/628) records that decision.
-`backend/pkg/extension/runtime.go` carries the same statement at the seam itself.
+The database refuses a unit's SQL on core tables, `extension_secret` included. A unit reaches core records
+through `Tx.Core()`, the read calls and `Ingest`. That is verbs only, the direction for a unit from outside
+the first-party set too. A separate database login for each unit would make the role a wall
+([issue 628](https://github.com/margince/margince/issues/628), closed until an outside unit is planned).
 
 ## The guards, read from the tree
 
@@ -535,6 +534,7 @@ The fitness tests and `scripts/` checks guard the tier, so the promises cannot d
 | No unit table carries a workspace column, row-level security or a policy, and none touches anything in `public` | `make check-ext-migrations` (applies the migrations of each unit as a new role with limited rights) |
 | Every unit table grants the runtime role `SELECT, INSERT, UPDATE, DELETE` and no other set; a table that grants *nothing* would answer `permission denied` at the first call | `make check-ext-migrations` |
 | The SQL of a unit names only the `ext.ext_<name>_…` tables of that unit. This is the half of the shared role reach above that guards against errors. It reads through the string constants a table name is written with | `backend/gates/extensionsqlscope_test.go` |
+| The SQL of a unit reaches no core table. Each statement of `Tx` runs as `ext_runtime`, and the database refuses a core table with `ErrCoreTableRefused`; the core's records are reached through `Tx.Core()` | `internal/compose/unitsql`, `unitsql_integration_test.go` |
 | A write by a unit to a core record goes through the write path of the product: the live RBAC of the caller, the row-scope check on the subject, the audit row, the outbox event. It carries the name of the unit under an evidence member the core sets and no caller may supply | `extension.Tx.Core()` (`internal/compose/extcore.go`), `storekit.withExtensionAttribution` |
 | A scheduled run and a bus delivery write no core record at all: both run with no caller, and a core write is checked against the permissions of the caller | `internal/compose/extcore.go` (`refuseUnattended`), `extsubscribe_test.go`, `extledger_integration_test.go` |
 | The ledger row of a unit names a table in the namespace of that unit, and its event a verb in that namespace. The namespace comes from the call, so neither is a string a unit can write | `internal/compose/extledger.go`, `extledger_test.go` |

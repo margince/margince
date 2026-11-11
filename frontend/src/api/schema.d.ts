@@ -5984,6 +5984,9 @@ export interface paths {
          *     the installation's timezone): `422 code: in_future` on `meeting_status`. A meeting with no
          *     `occurred_at` starts now, so it has taken place. A re-run with the same `source_system` and
          *     `source_id` that moves the meeting's status is judged the same way, at its stored start.
+         *     When you log an inbound message that one contact wrote, set `sender_contact_id` to that
+         *     contact, above all for a group chat linked to several contacts: only the sender counts as
+         *     having asked us to follow up.
          */
         post: operations["logActivity"];
         delete?: never;
@@ -31524,8 +31527,9 @@ export interface components {
                  *     `knowledge_document` (download the retained file), `email_signature` (the
                  *     recipient's own account settings), `retained_email_signature` (the departed member's
                  *     signature in the controller review), `activity` (open the retained note in its
-                 *     drawer), `legal_entity` (Company settings), or `signature_template` (Company
-                 *     settings; `id` identifies the erasure whose review flagged the workspace template).
+                 *     drawer), `legal_entity` (Company settings), `signature_template` (Company
+                 *     settings; `id` identifies the erasure whose review flagged the workspace template),
+                 *     or `approval_history` (the audit log narrowed to the approval `id`).
                  */
                 type: string;
                 /** Format: uuid */
@@ -41052,6 +41056,11 @@ export interface components {
             host_user_id?: string;
             /** @description Meeting or call only: the colleagues who attended besides the caller. Each one is recorded as a participant, so the meeting counts toward their relationship with every linked contact, the same as a meeting captured from a calendar. Any other kind returns `422 code: field_not_valid_for_kind`. An id that is not an active member of this workspace returns `422 code: not_a_colleague`, and more than 25 ids return `422 code: too_many_attendees`. */
             attendee_user_ids?: string[];
+            /**
+             * Format: uuid
+             * @description Inbound message, call, meeting or email only: the linked contact who wrote or said it. Set it whenever one contact sent the message, for example the one member of a group chat who asked for a follow-up. Only that contact counts as its author, so only they asked to hear from us. Without it, an inbound activity linked to one contact names that contact as the sender. One linked to two or more contacts names no sender, and each contact is kept as copied. The stated `participants` of an email win over this field. A contact that is not in `links` returns `422 code: sender_not_linked`. Any other kind, or a direction other than `inbound`, returns `422 code: field_not_valid_for_kind`.
+             */
+            sender_contact_id?: string;
             duration_seconds?: number | null;
             /** @enum {string|null} */
             direction?: null | "inbound" | "outbound";

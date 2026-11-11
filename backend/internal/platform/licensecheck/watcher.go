@@ -26,12 +26,9 @@ const recheckInterval = 24 * time.Hour
 // for a loaded host.
 const recheckBudget = time.Minute
 
-// TokenSource answers the installation's license token, freshly. A source rather
-// than a string because a re-check has to see a token the operator REPLACED: a
-// watcher holding the boot-time value could only ever watch a license lapse,
-// never one renewed in place, and would keep reporting a refusal after the
-// operator had already fixed it.
-type TokenSource func() (string, error)
+// TokenSource reads the installation's license token under the current read's
+// context. Reading it afresh lets a renewed token take effect without a restart.
+type TokenSource func(context.Context) (string, error)
 
 // Watcher holds this installation's license posture and re-resolves it while the
 // process runs, so a license crossing expiry-plus-grace — or one renewed in
@@ -71,7 +68,7 @@ type recheckRun struct {
 // license, so that decision is the composition root's (compose.EnsureLicense)
 // and this package reports what it found.
 func NewWatcher(ctx context.Context, source TokenSource, now func() time.Time, log *slog.Logger, env runtimeenv.Environment) (*Watcher, error) {
-	token, err := source()
+	token, err := source(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -145,7 +142,7 @@ func (w *Watcher) Recheck(ctx context.Context) error {
 func (w *Watcher) recheckOnce(ctx context.Context) (err error) {
 	defer w.surviveFault(ctx, &err)
 	before := w.Posture()
-	token, err := w.source()
+	token, err := w.source(ctx)
 	if err != nil {
 		w.log.ErrorContext(ctx, "re-reading the license failed; keeping the posture this process last resolved",
 			"err", err, "posture", string(before.State))
