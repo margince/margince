@@ -343,14 +343,14 @@ describe("the sibling sections governed by their own grants", () => {
     mount(withheld);
 
     expect(
-      within(section("Companies")).getByText(WITHHELD_SENTENCE),
+      within(section("Work history")).getByText(WITHHELD_SENTENCE),
     ).toBeTruthy();
   });
 
   it("lists the employer a reader may see", () => {
     mount(granted);
 
-    const companies = section("Companies");
+    const companies = section("Work history");
     expect(within(companies).getByText("Brandt Automotive GmbH")).toBeTruthy();
     expect(within(companies).queryByText(WITHHELD_SENTENCE)).toBeNull();
   });
@@ -358,7 +358,7 @@ describe("the sibling sections governed by their own grants", () => {
   it("shows the employer's contact and open-deal counts once its record answers", async () => {
     mount(granted);
 
-    const companies = section("Companies");
+    const companies = section("Work history");
     await within(companies).findByText("2 contacts · no open deals");
   });
 });
@@ -598,7 +598,7 @@ describe("which employer is the current one", () => {
 
   function employerOrder(): string[] {
     return Array.from(
-      section("Companies").querySelectorAll(".company-card-name"),
+      section("Work history").querySelectorAll(".company-card-name"),
     ).map((node) => node.textContent ?? "");
   }
 

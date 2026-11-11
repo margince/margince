@@ -235,8 +235,9 @@ export const ChangedDeals: Story = {
       await canvas.findByRole("link", { name: "Straight X platform rollout" })
     ).closest("li");
     if (!(card instanceof HTMLElement)) throw new Error("no card");
+    // The deal's verbs wait on the session's grants, which land after the list.
     await expect(
-      within(card).getAllByRole("button", { name: /Undo/ }).length,
+      (await within(card).findAllByRole("button", { name: /Undo/ })).length,
     ).toBeGreaterThan(0);
     await expect(canvas.queryByText(/review/i)).toBeNull();
   },
