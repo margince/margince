@@ -246,7 +246,12 @@ export const OnTrackWithMarginceChange: Story = {
           }}
           inputs={{
             ...drifting,
-            card: { ...drifting.card, generated_by: "deterministic" },
+            card: {
+              deal_id: DEAL_ID,
+              story: { sentences: [] },
+              generated_at: AS_OF,
+              generated_by: "deterministic",
+            },
             activities: [
               ...ACTIVITIES,
               activity({
