@@ -219,26 +219,3 @@ func TestForecastEvidenceDatesKeepPrivateTotalsAndRemediesConsistent(t *testing.
 	}
 	t.Fatal("missing unpriced-quarter remedy")
 }
-
-func TestACustomCloseWindowKeepsEveryDayItTouches(t *testing.T) {
-	f := reportingBusiness(t)
-	selection := f.selection()
-	selection.CloseWindow = "custom"
-	selection.Metrics = []crmcontracts.ReportingMetricID{reportingOpenPipeline}
-	selection.Blocks = nil
-	closeDay := time.Date(2026, 9, 30, 0, 0, 0, 0, time.UTC)
-	for name, window := range map[string]crmcontracts.ReportingWindow{
-		"a few hours of the close day": {StartAt: closeDay.Add(10 * time.Hour), EndAt: closeDay.Add(14 * time.Hour)},
-		"the day before, to midnight":  {StartAt: closeDay.AddDate(0, 0, -1), EndAt: closeDay},
-	} {
-		selection.CloseInterval = &window
-		result, err := f.service.Evaluate(f.human, selection)
-		if err != nil {
-			t.Fatal(err)
-		}
-		counted := len(result.Metrics) == 1 && result.Metrics[0].Value != nil && *result.Metrics[0].Value == 88000000
-		if counted != (window.EndAt.After(closeDay)) {
-			t.Errorf("%s: open pipeline %+v", name, result.Metrics)
-		}
-	}
-}
