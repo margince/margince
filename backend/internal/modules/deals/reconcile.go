@@ -268,9 +268,9 @@ func (r *FollowUpReconciler) reconcileWorkspace(ctx context.Context) error {
 	}
 	// One settings read per pass, not per deal: every proposal in it is written
 	// in the same installation's language.
-	said := summaryIn(ctx, r.language)
+	words := followUpWordsIn(ctx, r.language)
 	for _, cand := range candidates {
-		if err := r.stage(ctx, cand, now, said); err != nil {
+		if err := r.stage(ctx, cand, now, words); err != nil {
 			return fmt.Errorf("follow-up reconcile on %s: %w", cand.dealID, err)
 		}
 	}
@@ -279,7 +279,7 @@ func (r *FollowUpReconciler) reconcileWorkspace(ctx context.Context) error {
 
 // stage records one deal's follow-up proposal unless one is already
 // pending — the pass proposes, it never writes the follow-up itself.
-func (r *FollowUpReconciler) stage(ctx context.Context, cand followUpCandidate, now time.Time, said summaryCopy) error {
+func (r *FollowUpReconciler) stage(ctx context.Context, cand followUpCandidate, now time.Time, words followUpWords) error {
 	pending, err := r.stager.HasPendingFollowUp(ctx, cand.dealID.UUID)
 	if err != nil {
 		return err
@@ -291,32 +291,32 @@ func (r *FollowUpReconciler) stage(ctx context.Context, cand followUpCandidate, 
 	proposal := FollowUpProposal{
 		DealID:             cand.dealID,
 		DueDate:            dueDate.Format(time.DateOnly),
-		Subject:            fmt.Sprintf(said.followUpSubject, cand.dealName),
-		Body:               followUpBody(cand, said),
+		Subject:            fmt.Sprintf(words.said.followUpSubject, cand.dealName),
+		Body:               followUpBody(cand, words),
 		EvidenceActivityID: cand.activityID,
 		EvidenceKind:       cand.activityKind,
 		EvidenceDirection:  cand.activityDirection,
 		EvidenceOccurredAt: cand.occurredAt,
 	}
-	proposal.SystemText = &systemtext.Message{Subject: systemtext.Sentence("deals.followUpSubject", systemtext.Label(cand.dealName)), Body: followUpBodyComponent(cand)}
-	proposal.SummaryText = systemtext.Sentence("deals.draftFollowUp", systemtext.Label(cand.dealName), systemtext.ActivityKindArgument(cand.activityKind), systemtext.Text(cand.occurredAt.Format(time.DateOnly)))
-	summary := fmt.Sprintf(said.draftFollowUp,
-		cand.dealName, cand.activityKind, cand.occurredAt.Format(time.DateOnly))
+	day := words.day(cand.occurredAt)
+	proposal.SystemText = &systemtext.Message{Subject: systemtext.Sentence("deals.followUpSubject", systemtext.Label(cand.dealName)), Body: followUpBodyComponent(cand, day)}
+	proposal.SummaryText = systemtext.Sentence("deals.draftFollowUp", systemtext.Label(cand.dealName), systemtext.ActivityKindArgument(cand.activityKind), systemtext.Text(day))
+	summary := fmt.Sprintf(words.said.draftFollowUp, cand.dealName, cand.activityKind, day)
 	return r.stager.StageFollowUp(ctx, cand.dealID.UUID, summary, proposal)
 }
 
 // followUpBody grounds the drafted follow-up in the real last exchange
 // (P5) — the human sees what it is answering before they approve.
-func followUpBody(cand followUpCandidate, said summaryCopy) string {
-	when := cand.occurredAt.Format(time.DateOnly)
+func followUpBody(cand followUpCandidate, words followUpWords) string {
+	when := words.day(cand.occurredAt)
 	if cand.subject != nil && *cand.subject != "" {
-		return fmt.Sprintf(said.followUpBodyQuoted, cand.activityKind, *cand.subject, when)
+		return fmt.Sprintf(words.said.followUpBodyQuoted, cand.activityKind, *cand.subject, when)
 	}
-	return fmt.Sprintf(said.followUpBody, cand.activityKind, when)
+	return fmt.Sprintf(words.said.followUpBody, cand.activityKind, when)
 }
 
-func followUpBodyComponent(cand followUpCandidate) *systemtext.Component {
-	kind, when := systemtext.ActivityKindArgument(cand.activityKind), systemtext.Text(cand.occurredAt.Format(time.DateOnly))
+func followUpBodyComponent(cand followUpCandidate, day string) *systemtext.Component {
+	kind, when := systemtext.ActivityKindArgument(cand.activityKind), systemtext.Text(day)
 	if cand.subject != nil && *cand.subject != "" {
 		return systemtext.Sentence("deals.followUpBodyQuoted", kind, systemtext.Label(*cand.subject), when)
 	}

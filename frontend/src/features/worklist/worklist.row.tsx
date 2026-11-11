@@ -57,7 +57,7 @@ import { RowActs } from "./worklist.rowverbs";
 import "./worklist.row.css";
 import { useViewerZone } from "../../lib/viewerzone";
 import { PreparationNote } from "./worklist.ready";
-import { rowAnswer } from "./worklist.row.answer";
+import { RowProposal, rowAnswer } from "./worklist.row.answer";
 import { Rank, RowLead, RowText, titleLinks } from "./worklist.row.cells";
 
 // Preserve server order while naming each group member once.
@@ -397,8 +397,11 @@ function RowAsk({
   const clock = useHappenedClock();
   if (!framed) return null;
   return (
-    <p className="t-body worklist-row-ask">
-      {cardLine(item, t, clock) ?? t(askKey(item))}
-    </p>
+    <>
+      <p className="t-body worklist-row-ask">
+        {cardLine(item, t, clock) ?? t(askKey(item))}
+      </p>
+      <RowProposal item={item} />
+    </>
   );
 }

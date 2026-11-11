@@ -14,7 +14,7 @@ import { useId, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { ChangeList } from "../../components/changelist";
-import { ReceiptReview } from "../../components/receiptreview";
+import { ReceiptVerbs } from "../../components/receiptverbs";
 import { AppLink } from "../../design-system/applink";
 import { Button } from "../../design-system/atoms";
 import { DrawerBody, DrawerHead } from "../../design-system/drawerbands";
@@ -28,7 +28,7 @@ import { ENTITY, isEntityKind } from "../../lib/entity";
 import { type Receipt, useHandledForYou } from "../../lib/handled";
 import { type MagicLine, magicKey } from "../../lib/magic.queries";
 import { unwrap } from "../../lib/problem";
-import { receiptAuditId } from "../../lib/receiptreview";
+import { receiptAuditId } from "../../lib/receiptstate";
 import { routeHash } from "../../lib/router";
 import { MagicUndoButton } from "./magic.undo";
 import "../brief/brief.css";
@@ -167,12 +167,12 @@ function RecordRow({ record }: Readonly<{ record: MagicLineRecord }>) {
   );
 }
 
-// A grouped change keeps the verbs its receipt has on its own: Mark reviewed
-// and Undo on a deal change, its restore on any other.
+// A grouped change keeps the verb its receipt has on its own: the deal
+// change's Undo, or the restore of any other.
 function RecordActions({ record }: Readonly<{ record: MagicLineRecord }>) {
-  const reviewed = useReviewedReceipt(record.receipt_id);
-  if (reviewed) {
-    return <ReceiptReview receipt={reviewed} />;
+  const change = useDealChangeReceipt(record.receipt_id);
+  if (change) {
+    return <ReceiptVerbs receipt={change} />;
   }
   return (
     <MagicUndoButton
@@ -184,8 +184,8 @@ function RecordActions({ record }: Readonly<{ record: MagicLineRecord }>) {
 }
 
 // Only off a read that answered now. A refetch that failed keeps the old list
-// cached, and its review verbs may no longer be this reader's to press.
-function useReviewedReceipt(id: string | undefined): Receipt | undefined {
+// cached, and its Undo may no longer be this reader's to press.
+function useDealChangeReceipt(id: string | undefined): Receipt | undefined {
   const handled = useHandledForYou();
   if (!id || !handled.isSuccess) {
     return undefined;
