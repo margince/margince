@@ -152,7 +152,11 @@ func (s *Service) AssembleScoped(ctx context.Context, companyID ids.CompanyID, o
 			if err != nil {
 				return err
 			}
-			return s.sections(prepared, tx, companyID, now, opts, activityColumns, &out)
+			// Each section's statement is tens of kilobytes of row scope, planned
+			// longer than it runs, so the sections keep their generic plans.
+			return database.ReuseGenericPlansTx(prepared, tx, func() error {
+				return s.sections(prepared, tx, companyID, now, opts, activityColumns, &out)
+			})
 		})
 	})
 	if err != nil {
