@@ -83,6 +83,9 @@ func forecastToolReader(pool *pgxpool.Pool) agents.ForecastReader {
 				}
 				limited := reason != ""
 				out.ContributionsLimited = &limited
+				if limited {
+					out.ContributionsLimitedReason = &reason
+				}
 				if out.Contributions, err = forecastContributionsToTool(visible); err != nil {
 					return err
 				}

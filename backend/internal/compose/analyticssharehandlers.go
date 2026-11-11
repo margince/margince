@@ -138,11 +138,13 @@ func (h analyticsShareHandlers) OpenForecastShare(
 
 // frozenForReader is what one reader may take from a frozen share: the rows
 // listed to them, and the range over every row the headline sums. Limited says
-// the rows are the reader's own while the headline covers the whole team.
+// the rows are the reader's own while the headline covers the whole team, and
+// Reason says why.
 type frozenForReader struct {
 	Rows    []SharedContribution
 	Range   *forecasting.Range
 	Limited bool
+	Reason  string
 }
 
 // resolveForReader resolves a share for the signed-in reader. Both the frozen
@@ -163,6 +165,9 @@ func (h analyticsShareHandlers) resolveForReader(
 	out := frozenForReader{Range: sharedRange(rows)}
 	if out.Rows, out.Limited, err = requireFrozenShareMeasurable(ctx, tx, share.Scope, rows); err != nil {
 		return Share{}, frozenForReader{}, err
+	}
+	if out.Limited {
+		out.Reason = ownRowsReason(ctx, tx)
 	}
 	return share, out, nil
 }
@@ -198,8 +203,7 @@ func (h analyticsShareHandlers) serveSnapshot(
 	out.Readings.SelfCorrecting = frame.SelfCorrecting
 	out.Readings.ContributionsLimited = &frozen.Limited
 	if frozen.Limited {
-		reason := readerCoverageCopy(ctx, tx).Say(reportingCoverageWords.IndividualOff)
-		out.Readings.ContributionsLimitedReason = &reason
+		out.Readings.ContributionsLimitedReason = &frozen.Reason
 	}
 	out.Withheld = shared.Withheld
 	// A snapshot frozen before the landing was kept states none.
@@ -381,14 +385,14 @@ var shareExportColumns = []string{
 	"in_won", "in_open", "exclusion_reason",
 	"weighted_minor", "typed_probability", "chance_in_use", "evidence_n", "risk_signals", "risk_effect",
 	"self_correcting", "risk_signal_facts", "range_low_minor", "range_high_minor",
-	"contributions_limited",
+	"contributions_limited", "contributions_limited_reason",
 }
 
 // shareRowsCSV renders the rows, neutralising formula leads through the same
 // csvCell every other export in this package uses.
 // selfCorrecting is the snapshot's own, repeated on each row so a sheet filtered
 // to some rows still says which definition they were frozen under. The range and
-// the contributions_limited flag are the shared headline's, repeated the same way.
+// the contributions_limited flag and its reason are the shared headline's, repeated the same way.
 func shareRowsCSV(frozen frozenForReader, selfCorrecting *bool) ([]byte, error) {
 	var low, high *int64
 	if frozen.Range != nil {
@@ -409,14 +413,14 @@ func shareRowsCSV(frozen frozenForReader, selfCorrecting *bool) ([]byte, error) 
 			csvCellPtr(row.WeightedMinor), csvCellPtr(row.TypedProbability), csvCellPtr(row.ChanceInUse),
 			csvCellPtr(row.EvidenceN), csvCell(strings.Join(row.Signals, ";")), csvCellPtr(row.Effect),
 			csvCellPtr(selfCorrecting), csvCellPtr(row.SignalFacts), csvCellPtr(low), csvCellPtr(high),
-			csvCell(frozen.Limited),
+			csvCell(frozen.Limited), csvCell(frozen.Reason),
 		}
 		if err := out.Write(record); err != nil {
 			return nil, fmt.Errorf("compose: writing an export row: %w", err)
 		}
 	}
 	if frozen.Limited && len(frozen.Rows) == 0 {
-		if err := out.Write(shareSummaryRecord(selfCorrecting, low, high)); err != nil {
+		if err := out.Write(shareSummaryRecord(selfCorrecting, low, high, frozen.Reason)); err != nil {
 			return nil, fmt.Errorf("compose: writing the export's summary row: %w", err)
 		}
 	}
@@ -430,7 +434,7 @@ func shareRowsCSV(frozen frozenForReader, selfCorrecting *bool) ([]byte, error) 
 // shareSummaryRecord is the one row a file gets when every row was withheld
 // from its reader. A header alone would not say the headline counts deals.
 // Its deal cells are empty, and only the headline's own cells are filled.
-func shareSummaryRecord(selfCorrecting *bool, low, high *int64) []string {
+func shareSummaryRecord(selfCorrecting *bool, low, high *int64, limitedReason string) []string {
 	record := make([]string, len(shareExportColumns))
 	for index, column := range shareExportColumns {
 		switch column {
@@ -442,6 +446,8 @@ func shareSummaryRecord(selfCorrecting *bool, low, high *int64) []string {
 			record[index] = csvCellPtr(high)
 		case "contributions_limited":
 			record[index] = csvCell(true)
+		case "contributions_limited_reason":
+			record[index] = csvCell(limitedReason)
 		}
 	}
 	return record

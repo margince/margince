@@ -16,8 +16,10 @@ package compose
 
 import (
 	"context"
+	"encoding/csv"
 	"errors"
 	"maps"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -536,9 +538,29 @@ func TestAShareExportSaysWhetherItsChancesCorrectedThemselves(t *testing.T) {
 		t.Fatal(err)
 	}
 	lines := strings.Split(strings.TrimSpace(string(body)), "\n")
-	if len(lines) != 2 || !strings.HasSuffix(lines[0], ",self_correcting,risk_signal_facts,range_low_minor,range_high_minor,contributions_limited") ||
-		!strings.HasSuffix(lines[1], ",true,,1200,3400,false") {
+	if len(lines) != 2 || !strings.HasSuffix(lines[0], ",self_correcting,risk_signal_facts,range_low_minor,range_high_minor,contributions_limited,contributions_limited_reason") ||
+		!strings.HasSuffix(lines[1], ",true,,1200,3400,false,") {
 		t.Errorf("the export does not carry the snapshot's self_correcting and the reader's range:\n%s", body)
+	}
+}
+
+// A file limited to the reader's own rows says why on every row, and on the
+// one summary row a reader who owns none of its deals gets.
+func TestAShareExportSaysWhyItsRowsAreTheReadersOwn(t *testing.T) {
+	reason := reportingCoverageWords.IndividualOff.En
+	for name, rows := range map[string][]SharedContribution{"own rows": {{DealName: "Mine"}}, "summary row": nil} {
+		body, err := shareRowsCSV(frozenForReader{Rows: rows, Limited: true, Reason: reason}, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		records, err := csv.NewReader(strings.NewReader(string(body))).ReadAll()
+		if err != nil {
+			t.Fatal(err)
+		}
+		column := slices.Index(records[0], "contributions_limited_reason")
+		if len(records) != 2 || column < 0 || records[1][column] != reason {
+			t.Errorf("%s: the export does not say why its rows are limited:\n%s", name, body)
+		}
 	}
 }
 

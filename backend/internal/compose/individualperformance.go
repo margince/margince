@@ -273,6 +273,12 @@ func readerCoverageCopy(ctx context.Context, tx pgx.Tx) langcopy.Spoken {
 	return langcopy.For(string(identity.ReaderLanguageForRecord(ctx, tx)))
 }
 
+// ownRowsReason says why per-deal rows hold only the reader's own deals: the
+// sentence an owner chart limited by the same switch carries.
+func ownRowsReason(ctx context.Context, tx pgx.Tx) string {
+	return readerCoverageCopy(ctx, tx).Say(reportingCoverageWords.IndividualOff)
+}
+
 // requireFrozenShareMeasurable asks a frozen reading what a live one is asked
 // on every read, while the switch is off. A snapshot of a colleague's forecast
 // is that colleague's number, however old. It answers only the reader's own
@@ -336,5 +342,5 @@ func ForecastReaderContributions(ctx context.Context, tx pgx.Tx, rows []forecast
 	if len(out) == len(rows) {
 		return out, "", nil
 	}
-	return out, readerCoverageCopy(ctx, tx).Say(reportingCoverageWords.IndividualOff), nil
+	return out, ownRowsReason(ctx, tx), nil
 }
