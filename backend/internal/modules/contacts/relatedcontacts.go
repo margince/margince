@@ -24,6 +24,12 @@ func contactRelatedClause(ctx context.Context, anchor *ids.ContactID, arg func(a
 	if anchor == nil {
 		return "", nil
 	}
+	// Every link is an edge, so a caller who may read none is related to nobody.
+	if err := auth.EdgeReadAdmitted(ctx); errors.Is(err, apperrors.ErrPermissionDenied) {
+		return "FALSE", nil
+	} else if err != nil {
+		return "", err
+	}
 	anchorPos := arg(*anchor)
 	anchorScope, err := scopeOrAllRows(ctx, "contact", "anchor", arg)
 	if err != nil {

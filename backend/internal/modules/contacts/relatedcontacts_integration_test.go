@@ -63,16 +63,21 @@ func (e *privacyEnv) seedRelatedGraph(t *testing.T) relatedGraph {
 	return g
 }
 
-// relatedReader reads contacts and edges, and deals only when asked to.
-func (e *privacyEnv) relatedReader(t *testing.T, user ids.UUID, scope principal.RowScope, deals bool) context.Context {
+// readerGrants names the object reads a related_to reader holds beside contacts.
+type readerGrants struct{ edges, deals bool }
+
+// relatedReader reads every contact row, plus the edges and deals its grants name.
+func (e *privacyEnv) relatedReader(t *testing.T, user ids.UUID, grants readerGrants) context.Context {
 	t.Helper()
-	ctx := e.as(user, scope)
+	ctx := e.as(user, principal.RowScopeAll)
 	actor, ok := principal.Actor(ctx)
 	if !ok {
 		t.Fatal("no actor bound")
 	}
-	actor.Permissions.Objects["relationship"] = principal.ObjectGrant{Read: true}
-	if deals {
+	if grants.edges {
+		actor.Permissions.Objects["relationship"] = principal.ObjectGrant{Read: true}
+	}
+	if grants.deals {
 		actor.Permissions.Objects["deal"] = principal.ObjectGrant{Read: true}
 	}
 	return principal.WithActor(ctx, actor)
@@ -95,7 +100,7 @@ func relatedNames(ctx context.Context, t *testing.T, e *privacyEnv, anchor ids.C
 func TestRelatedToListsCurrentColleaguesAndDealPeers(t *testing.T) {
 	e := setupCapturePrivacy(t)
 	g := e.seedRelatedGraph(t)
-	got := relatedNames(e.relatedReader(t, e.owner, principal.RowScopeAll, true), t, e, g.buyer)
+	got := relatedNames(e.relatedReader(t, e.owner, readerGrants{edges: true, deals: true}), t, e, g.buyer)
 	if want := []string{"Cole League", "Dana Peer"}; !slices.Equal(got, want) {
 		t.Errorf("related to the buyer: %v, want %v (no former colleague, no stranger, not the buyer)", got, want)
 	}
@@ -104,7 +109,7 @@ func TestRelatedToListsCurrentColleaguesAndDealPeers(t *testing.T) {
 func TestRelatedToLeavesDealPeersOutForAReaderWithoutDeals(t *testing.T) {
 	e := setupCapturePrivacy(t)
 	g := e.seedRelatedGraph(t)
-	got := relatedNames(e.relatedReader(t, e.owner, principal.RowScopeAll, false), t, e, g.buyer)
+	got := relatedNames(e.relatedReader(t, e.owner, readerGrants{edges: true}), t, e, g.buyer)
 	if want := []string{"Cole League"}; !slices.Equal(got, want) {
 		t.Errorf("related to the buyer without deal read: %v, want %v", got, want)
 	}
@@ -121,10 +126,18 @@ func TestRelatedToAContactTheReaderCannotOpenIsEmpty(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("moving the buyer's edges to a private contact: %v", err)
 	}
-	if got := relatedNames(e.relatedReader(t, e.admin, principal.RowScopeAll, true), t, e, hidden); len(got) != 0 {
+	if got := relatedNames(e.relatedReader(t, e.admin, readerGrants{edges: true, deals: true}), t, e, hidden); len(got) != 0 {
 		t.Errorf("an admin listed %v around a contact they cannot open, want nobody", got)
 	}
-	if got := relatedNames(e.relatedReader(t, e.owner, principal.RowScopeAll, true), t, e, hidden); len(got) != 2 {
+	if got := relatedNames(e.relatedReader(t, e.owner, readerGrants{edges: true, deals: true}), t, e, hidden); len(got) != 2 {
 		t.Errorf("the owner listed %v around their own contact, want the colleague and the deal peer", got)
+	}
+}
+
+func TestRelatedToIsEmptyForAReaderWithoutEdges(t *testing.T) {
+	e := setupCapturePrivacy(t)
+	g := e.seedRelatedGraph(t)
+	if got := relatedNames(e.relatedReader(t, e.owner, readerGrants{deals: true}), t, e, g.buyer); len(got) != 0 {
+		t.Errorf("a reader without relationship read listed %v, want nobody", got)
 	}
 }
