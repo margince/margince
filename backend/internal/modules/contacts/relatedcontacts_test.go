@@ -4,6 +4,7 @@
 package contacts
 
 import (
+	"context"
 	"strings"
 	"testing"
 
@@ -44,5 +45,30 @@ func TestTheRelatedFilterReachesDealSeatsOnlyWithDealRead(t *testing.T) {
 	withDeals := map[string]principal.ObjectGrant{"contact": {Read: true}, "relationship": {Read: true}, "deal": {Read: true}}
 	if clause := relatedClauseFor(t, withDeals, &anchor); !strings.Contains(clause, "JOIN deal") {
 		t.Errorf("a reader with deal read was not matched through deals:\n%s", clause)
+	}
+}
+
+// A caller with no actor bound is a wiring fault, so every part refuses rather
+// than handing back a clause that would read as "all rows".
+func TestTheRelatedFilterRefusesACallerWithNoActor(t *testing.T) {
+	anchor := ids.New[ids.ContactKind]()
+	arg := func(any) int { return 1 }
+	if clause, err := contactRelatedClause(context.Background(), &anchor, arg); err == nil {
+		t.Errorf("contactRelatedClause(no actor) = %q, want an error", clause)
+	}
+	if clause, err := anchorColleaguesSQL(context.Background(), 1, arg); err == nil {
+		t.Errorf("anchorColleaguesSQL(no actor) = %q, want an error", clause)
+	}
+	if clause, err := anchorDealPeersSQL(context.Background(), 1, arg); err == nil {
+		t.Errorf("anchorDealPeersSQL(no actor) = %q, want an error", clause)
+	}
+}
+
+func TestAnEmptyEdgeScopeReadsAsEveryRow(t *testing.T) {
+	if got := allRowsIfEmpty(""); got != scopeAllRows {
+		t.Errorf("allRowsIfEmpty(\"\") = %q, want %q", got, scopeAllRows)
+	}
+	if got := allRowsIfEmpty("mine.owner_id = $1"); got != "mine.owner_id = $1" {
+		t.Errorf("allRowsIfEmpty kept %q, want the scope itself", got)
 	}
 }
