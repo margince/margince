@@ -64,20 +64,8 @@ func genuineEngagement(alias string, sourcePos, capturedByPos, patternPos int) s
 		alias, sourcePos, capturedByPos, patternPos)
 }
 
-// lastTouchCandidateQuery is LastTouchBefore's read: every linked entity's most
-// recent genuine engagement, narrowed to the ones carrying live work. It is a
-// function rather than a constant because two of its fragments are built —
-// the link-id coalesce, and the company walk — and it sits apart from the
-// scan so the scan reads as what it does with the rows.
-//
-// $1/$4/$5 are the source and captured_by the automation engine stamps —
-// excluded only TOGETHER, since source alone is a client's to spell. $5 is
-// the namespaced form: captured_by carries the principal's ID and every job
-// binds its own ("system:time-scan"), so matching the bare "system" alone
-// missed the engine's own writes and let a reminder reset the clock it
-// reads. $2 the cutoff, $3 the cap, $6 the asking handler; providersPos is
-// where the mail providers are bound when the store asks about the owner's
-// mailbox.
+// Genuine contact, account folding and mailbox protection stay shared between
+// legacy eligibility and an explicitly selected population.
 func lastTouchCandidateQuery(mailbox *OwnerMailbox, providersPos int, scope *quietQueryScope) string {
 	eligibility, reminder, count := lastTouchEligibility(), openReminderHoldsEntity(), ""
 	if scope != nil {
@@ -357,7 +345,10 @@ func (s *Store) lastTouchBefore(ctx context.Context, cutoff time.Time, limit int
 		// vocabulary (linktarget.go), the same source the coalesce
 		// expression is built from, so a renamed record type cannot leave a
 		// stale string behind in this query.
-		args := []any{systemSource, cutoff, limit, systemCapturedBy, systemCapturedByPattern, reminder}
+		args := []any{systemSource, cutoff, limit, systemCapturedBy, systemCapturedByPattern}
+		if population == nil {
+			args = append(args, reminder)
+		}
 		providersPos := 0
 		if s.ownerMailbox != nil {
 			args = append(args, s.ownerMailbox.Providers)

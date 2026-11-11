@@ -67,7 +67,6 @@ func TestQuietCustomerListNeedsNoOpenDealAndSharesReminderSuppression(t *testing
 	for _, id := range []ids.UUID{visible, private, outside} {
 		quietTestTouch(t, e, "contact", id, time.Date(2026, 7, 1, 12, 0, 0, 0, time.UTC))
 	}
-	e.MakeCapturePrivate(t, "contact", private, e.Rep2)
 	lists := compose.NewCollectionsStore(e.Pool)
 	list, err := lists.CreateList(e.Admin(), collections.CreateListInput{Name: "Chosen customers", EntityType: "contact", ListType: "static", Sharing: "workspace"})
 	if err != nil {
@@ -78,6 +77,8 @@ func TestQuietCustomerListNeedsNoOpenDealAndSharesReminderSuppression(t *testing
 			t.Fatal(err)
 		}
 	}
+	e.MakeCapturePrivate(t, "contact", private, e.Rep2)
+	e.GrantRole(t, e.Rep1, "admin")
 	rbac, err := identity.NewService(e.Pool).EffectiveRBAC(e.Admin(), e.WS, e.Rep1)
 	if err != nil {
 		t.Fatal(err)
@@ -93,7 +94,7 @@ func TestQuietCustomerListNeedsNoOpenDealAndSharesReminderSuppression(t *testing
 	if page.Total != 1 || len(page.Records) != 1 || page.Records[0].Ref.ID != visible {
 		t.Fatalf("visible customer page=%+v", page)
 	}
-	_, err = activities.NewProvider(e.DB()).Create(principal.SystemActing(e.Admin(), "time-scan"), datasource.CreateInput{
+	_, err = activities.NewProvider(e.DB()).Create(principal.SystemActing(e.Admin(), "system:time-scan"), datasource.CreateInput{
 		EntityType: datasource.EntityActivity, Source: "system", Fields: map[string]any{
 			"kind": "task", "subject": "Check in", "source_system": provenance.NoActivityReminderSource, "source_id": "selected-customer-reminder",
 			"links": []map[string]any{{"entity_type": "contact", "entity_id": visible}},
@@ -113,10 +114,9 @@ func TestQuietCustomerListNeedsNoOpenDealAndSharesReminderSuppression(t *testing
 
 func quietTestTouch(t *testing.T, e *integration.Env, kind string, id ids.UUID, at time.Time) {
 	t.Helper()
-	host := ids.From[ids.UserKind](e.AdminUser)
 	if _, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
 		Kind: "call", Source: "manual",
-		Subject: new("Customer conversation"), OccurredAt: &at, CallOutcome: new("reached"), HostUserID: &host,
+		Subject: new("Customer conversation"), OccurredAt: &at, CallOutcome: new("reached"),
 		Links: []activities.ActivityLinkInput{{EntityType: kind, EntityID: id}},
 	}); err != nil {
 		t.Fatal(err)
