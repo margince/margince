@@ -12,6 +12,7 @@
 #   7. A waiver for a package the log never ran FAILS.
 #   8. A waived package the log replayed from cache passes.
 #   9. A log with no timed line FAILS.               (the short census)
+#  10. A waived package whose tests failed FAILS, and is not called stale.
 #
 # Usage: bash scripts/check-test-budget.test.sh
 set -uo pipefail
@@ -78,6 +79,15 @@ if ! run "50 example.com/slow"; then fail "a waived package replayed from cache 
 
 printf '?   \texample.com/empty\t[no test files]\n' >"$LOG"
 if run; then fail "a log with no timed package line passed"; fi
+
+# A failed package prints no `ok` line. Telling its author to drop the waiver
+# would send them to delete a ceiling the next green run still needs.
+log example.com/fast 3.200s
+printf 'FAIL\texample.com/slow\t97.377s\n' >>"$LOG"
+if run "50 example.com/slow"; then fail "a waived package whose tests failed passed"; fi
+if TEST_PACKAGE_BUDGET=10 TEST_BUDGET_WAIVERS="$WAIVERS" bash "$GATE" "$LOG" 2>&1 | grep -q 'never ran'; then
+  fail "a waived package whose tests failed was reported as never run"
+fi
 
 if [[ "$FAILURES" -gt 0 ]]; then
   echo "FAIL: check-test-budget.test.sh — $FAILURES case(s)" >&2

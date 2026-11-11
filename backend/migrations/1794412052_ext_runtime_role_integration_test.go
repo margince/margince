@@ -19,7 +19,7 @@ import (
 	"github.com/margince/margince/backend/migrations"
 )
 
-const extRuntimeVersion = "1794364497"
+const extRuntimeVersion = "1794412052"
 
 // The migration that grants ext_runtime its schema does not trust a role that
 // already exists. Each case runs the migration's own text in a transaction

@@ -2212,5 +2212,9 @@
   "analytics.outlook.dealCount_one": "{count} Deal",
   "analytics.outlook.dealCount_other": "{count} Deals",
   "analytics.team.qualificationUnattributed_one": "Für {count} erste Qualifizierung ist keine Verantwortung gespeichert. Die Mitgliederzahlen enthalten nur zugeordnete Ereignisse.",
-  "analytics.team.qualificationUnattributed_other": "Für {count} erste Qualifizierungen ist keine Verantwortung gespeichert. Die Mitgliederzahlen enthalten nur zugeordnete Ereignisse."
+  "analytics.team.qualificationUnattributed_other": "Für {count} erste Qualifizierungen ist keine Verantwortung gespeichert. Die Mitgliederzahlen enthalten nur zugeordnete Ereignisse.",
+  "nav.progress": "Fortschritt",
+  "nav.myProgress": "Mein Fortschritt",
+  "nav.salesGoals": "Umsatzziele",
+  "progress.teamTitle": "Team-Fortschritt"
 }

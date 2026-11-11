@@ -5,7 +5,7 @@
 
 package migrations_test
 
-// A deal holds one open room at a time. Since 1794363873 that rule compares
+// A deal holds one open room at a time. Since 1794412051 that rule compares
 // access windows, so an expired room can sit beside a newer open one. Rolling
 // back must store the older one as expired, or the old unique index cannot
 // come back.
@@ -61,7 +61,7 @@ func TestRollingTheOpenRoomWindowBackStoresTheOlderRoomAsExpired(t *testing.T) {
 		t.Fatalf("a new room beside an expired one was refused: %v", err)
 	}
 
-	if _, err := dbmigrate.Down(ctx, conn, namespaceThroughVersion(t, core, "1794363873"), 1); err != nil {
+	if _, err := dbmigrate.Down(ctx, conn, namespaceThroughVersion(t, core, "1794412051"), 1); err != nil {
 		t.Fatalf("down: %v", err)
 	}
 

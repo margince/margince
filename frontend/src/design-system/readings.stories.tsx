@@ -330,6 +330,36 @@ export const SegmentBars: Story = {
           amount: "€180K",
         }}
       />
+      <SegmentBar
+        label="Closed revenue against the goal"
+        parts={[
+          {
+            key: "product",
+            label: "Product sales",
+            value: 91_000,
+            amount: "€91K",
+          },
+          {
+            key: "service",
+            label: "Services / projects",
+            value: 88_000,
+            amount: "€88K",
+          },
+          {
+            key: "unresolved",
+            label: "Unclassified",
+            value: 4_000,
+            amount: "€4K",
+          },
+        ]}
+        ahead={{
+          key: "planned",
+          label: "Planned, not counted",
+          value: 85_000,
+          amount: "€85K",
+        }}
+        marker={{ key: "goal", label: "Goal", value: 250_000, amount: "€250K" }}
+      />
     </>
   ),
 };

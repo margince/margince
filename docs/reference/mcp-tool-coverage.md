@@ -133,7 +133,7 @@ Everything below is the detail behind the two tables above: which tools each job
 | … some case requires as one of a set | 2 |
 | … **no case requires** | 9 |
 | … of those, permitted somewhere but never required | 4 |
-| Prompt tokens spent on tools no case requires | 4860 |
+| Prompt tokens spent on tools no case requires | 4990 |
 | Use cases | 71 |
 | Acceptance criteria the cases declare, each with a statement | 118 |
 
@@ -582,8 +582,8 @@ Every run of every case requiring this tool passed, for the model named.
 
 | Tool | Reliability | Runs | Required by |
 |---|---:|---:|---|
-| `read_workspace` | 1.00 | 6 | `case111_how_is_the_workspace_doing`, `case33_two_cards_for_one_company`, `case42_can_i_answer_on_whatsapp` |
 | `read_reports` | 1.00 | 4 | `case49_who_can_introduce_us`, `case62_held_meetings_to_opportunities` |
+| `read_workspace` | 1.00 | 6 | `case111_how_is_the_workspace_doing`, `case33_two_cards_for_one_company`, `case42_can_i_answer_on_whatsapp` |
 | `read_details` | 1.00 | 4 | `case112_my_plan_and_the_dossier`, `case88_send_it_anyway` |
 | `change_activities` | 1.00 | 12 | `case42_can_i_answer_on_whatsapp`, `case46_get_us_in_a_room`, `case48_that_whole_thread_is_filed_wrong`, `case59_file_it_on_the_meeting_and_the_contract`, `case74_read_the_file_back`, `case9_filed_in_the_wrong_place` |
 | `change_state` | 1.00 | 10 | `case40_sort_the_queue`, `case41_close_the_project`, `case45_move_the_deal_on`, `case47_tidy_the_fair_list`, `case85_the_pilot_slipped` |
@@ -733,9 +733,9 @@ A tool in the `Permitted in` column is worse than one with nothing: a case is al
 
 | Tool | Tokens | Graded by | Permitted in | Attached to |
 |---|---:|---|---|---|
-| `read_analytics` | 927 | - | `case20_put_it_in_the_board_pack`, `case49_who_can_introduce_us`, `case62_held_meetings_to_opportunities` | - |
+| `read_analytics` | 1020 | - | `case20_put_it_in_the_board_pack`, `case49_who_can_introduce_us`, `case62_held_meetings_to_opportunities` | - |
 | `run_research` | 776 | - | `case108_ask_sofia_for_an_intro` | - |
-| `read_view` | 638 | - | `case102_shorter_in_my_voice`, `case106_turn_that_rule_off`, `case76_she_said_yes_at_the_fair`, `case77_record_her_yes`, `case91_add_a_review_stage`, `case94_a_field_for_the_region` | - |
+| `read_view` | 675 | - | `case102_shorter_in_my_voice`, `case106_turn_that_rule_off`, `case76_she_said_yes_at_the_fair`, `case77_record_her_yes`, `case91_add_a_review_stage`, `case94_a_field_for_the_region` | - |
 | `change_record_parts` | 621 | - | - | - |
 | `change_relationships` | 503 | - | - | - |
 | `decide_approvals` | 429 | - | - | - |

@@ -514,6 +514,10 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `POST /analytics/targets` | createReportingTarget | Create reporting target | Change records | at once |
 | `GET /analytics/targets/{id}` | getReportingTarget | Get reporting target | Read records | at once |
 | `PATCH /analytics/targets/{id}` | updateReportingTarget | Update reporting target | Change records | at once |
+| `GET /analytics/progress` | getSalesProgress | Closed revenue against the sales goal for one seller or team, by month or calendar year. | Read records | at once |
+| `GET /analytics/progress/deals` | listSalesProgressDeals | The open deals of one seller or team as Progress lists them, each with its sale type and next task. | Read records | at once |
+| `GET /analytics/sales-goals` | listSalesGoalSellers | The sellers whose sales goals the caller may read for one calendar year. | Read records | at once |
+| `GET /analytics/sales-goals/{owner_id}/{year}` | getSalesGoalPlan | One seller's sales goal plan for a calendar year. | Read records | at once |
 | `GET /analytics/framework` | getReportingFramework | Get reporting framework | Read records | at once |
 | `PUT /analytics/framework` | publishReportingFramework | Publish reporting framework | Change records | at once |
 | `GET /analytics/reports/{id}/schedules` | listReportingSchedules | List reporting schedules | Read records | at once |
