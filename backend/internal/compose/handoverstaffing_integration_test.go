@@ -106,6 +106,10 @@ func TestMemberHandoverMovesPendingStaffingAndRetainsAcceptedCredit(t *testing.T
 	}
 	owner := integration.FreshOwnerConn(t)
 	_, err = dbmigrate.Down(t.Context(), owner, core, stepsDownTo(t, core, "accepted_handoffs_retain_their_receiver"))
+	// The refusal comes after every newer migration was reverted; later tests need them back.
+	if _, upErr := dbmigrate.Up(t.Context(), owner, core); upErr != nil {
+		t.Fatal(upErr)
+	}
 	fault, ok := errors.AsType[*pgconn.PgError](err)
 	if !ok || fault.Code != "23514" {
 		t.Fatalf("unsafe downgrade was not refused: %v", err)
