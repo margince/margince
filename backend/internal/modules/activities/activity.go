@@ -56,6 +56,9 @@ type LogActivityInput struct {
 	recordedAt           *time.Time
 	// Internal creation policy; public activity input cannot set an audience.
 	audienceMembers []AudienceMember
+	// audienceOf gives the new activity the audience, members and parties of
+	// the activity it records. Nil leaves the audience it is born with.
+	audienceOf *ids.ActivityID
 	// invitedAssignee admits an invited colleague as the task's assignee. The
 	// HTTP create handler sets it for an assignee the caller NAMED, and
 	// AdmitInvitedAssignee for a promiser's own task. Every other automatic

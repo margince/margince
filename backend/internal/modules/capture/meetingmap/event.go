@@ -45,6 +45,9 @@ type Event struct {
 	GoogleMeet bool
 	// Documents are the files the provider lists as attached to the event.
 	Documents []Document
+	// ListsDocuments says the provider lists every attachment, so an empty
+	// Documents means the event carries none.
+	ListsDocuments bool
 }
 
 // Actor is one organizer or attendee. Room marks a booked room or device.

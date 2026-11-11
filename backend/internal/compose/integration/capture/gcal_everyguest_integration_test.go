@@ -79,7 +79,13 @@ func (f *calendarFeed) serve(t *testing.T, owner string) *httptest.Server {
 // answers a sync of it.
 func connectFeed(t *testing.T, env captureEnv, feed *calendarFeed) func() {
 	t.Helper()
-	stub := feed.serve(t, captureOwner)
+	return connectFeedAs(t, env, feed, captureOwner)
+}
+
+// connectFeedAs is connectFeed for a calendar on the account owner.
+func connectFeedAs(t *testing.T, env captureEnv, feed *calendarFeed, owner string) func() {
+	t.Helper()
+	stub := feed.serve(t, owner)
 	oauth := gmail.NewOAuth(gmail.OAuthConfig{ClientID: "cid", ClientSecret: "sec", TokenURL: stub.URL + "/token"})
 	api := gcal.NewAPI(stub.Client(), stub.URL)
 	env.registry.Register(gcal.New(oauth, api))
