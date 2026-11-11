@@ -171,7 +171,7 @@ describe("a record an agent created", () => {
 // A share widens a closed record's audience, so the Visible to row counts it.
 // Without that the row says "Only Mira Voss" to a colleague who just opened it.
 describe("who may read a closed company", () => {
-  function stubShares(grants: number, grantsStatus = 200) {
+  function stubShares(grants: number, grantsStatus = 200, hasMore = false) {
     vi.stubGlobal(
       "fetch",
       vi.fn(async (request: Request) => {
@@ -187,7 +187,7 @@ describe("who may read a closed company", () => {
           status = grantsStatus;
           body = {
             data: Array.from({ length: grants }, (_, i) => ({ id: `g-${i}` })),
-            page: { has_more: false, next_cursor: null },
+            page: { has_more: hasMore, next_cursor: hasMore ? "c-2" : null },
           };
         } else if (
           pathname.endsWith("/profile-fields") ||
@@ -214,7 +214,16 @@ describe("who may read a closed company", () => {
     stubShares(2);
     renderRail({ ...COMPANY, visibility: "owner" });
 
-    await waitFor(() => expect(visibleText()).toBe("Mira Voss and 2 more"));
+    await waitFor(() => expect(visibleText()).toBe("Mira Voss and 2 shares"));
+  });
+
+  it("marks a count the server cut as a floor", async () => {
+    stubShares(100, 200, true);
+    renderRail({ ...COMPANY, visibility: "owner" });
+
+    await waitFor(() =>
+      expect(visibleText()).toBe("Mira Voss and 100+ shares"),
+    );
   });
 
   it("names the owner alone while nobody holds a share", async () => {

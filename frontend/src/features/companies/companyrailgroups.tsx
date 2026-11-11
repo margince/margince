@@ -2,8 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useQuery } from "@tanstack/react-query";
+import { api } from "../../api/client";
 import type { components } from "../../api/schema";
-import { fetchGrants } from "../../components/share.parts";
 import { Popover } from "../../design-system/popover";
 import { provenanceLabel } from "../../design-system/provenance";
 import { provenanceOf, withCreator } from "../../design-system/provenanceof";
@@ -11,6 +11,7 @@ import type { DetailRow } from "../../design-system/recorddetails";
 import { formatDateAbbrev, formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { useMemberName } from "../../lib/membernames";
+import { unwrap } from "../../lib/problem";
 import { useViewerId } from "../../lib/session";
 import { useViewerZone } from "../../lib/viewerzone";
 import { CompanyOwnerControl } from "./companyheader";
@@ -51,18 +52,19 @@ function VisibleTo({ company }: Readonly<{ company: Company }>) {
   const yours = viewerId !== undefined && owner === viewerId;
   const closed = company.visibility === "owner";
   const name = useMemberName(closed && !yours ? owner : null);
-  const grants = useQuery({
+  const shares = useQuery({
     queryKey: ["record-grants", "company", company.id],
-    queryFn: () => fetchGrants("company", company.id),
+    queryFn: () => fetchShareCount(company.id),
     enabled: closed,
     retry: false,
   });
   if (!closed) {
     return <>{t("co.aside.visibleEveryone")}</>;
   }
-  const shared = grants.data?.length ?? 0;
+  const shared = shares.data?.count ?? 0;
   if (shared > 0) {
-    const count = formatNumber(shared, locale);
+    const formatted = formatNumber(shared, locale);
+    const count = shares.data?.more ? `${formatted}+` : formatted;
     if (yours) {
       return <>{plural("co.aside.visibleYouAndShared", shared, { count })}</>;
     }
@@ -87,6 +89,21 @@ function VisibleTo({ company }: Readonly<{ company: Company }>) {
         : t("co.aside.visibleOnlyOwner")}
     </>
   );
+}
+
+// One page of grants is the count. A page the server cut says so, and the row
+// shows "100+" instead of a smaller number that reads as the whole audience.
+async function fetchShareCount(
+  companyId: string,
+): Promise<{ count: number; more: boolean }> {
+  const data = unwrap(
+    await api.GET("/record-grants", {
+      params: {
+        query: { record_type: "company", record_id: companyId, limit: 100 },
+      },
+    }),
+  );
+  return { count: data.data.length, more: data.page.has_more };
 }
 
 /** The register's facts about the account and how its own row was written. */
