@@ -12,9 +12,13 @@ import { assertIanaZone, DAY_MS } from "./timezone";
 export { assertIanaZone, isRenderableZone } from "./timezone";
 
 /** A month number has no viewer timezone. UTC keeps Intl's scaffolding in the same month. */
-export function monthName(month: number, locale: Locale): string {
+export function monthName(
+  month: number,
+  locale: Locale,
+  width: "long" | "short" | "narrow" = "long",
+): string {
   return new Intl.DateTimeFormat(INTL_LOCALE[locale], {
-    month: "long",
+    month: width,
     timeZone: "UTC",
   }).format(new Date(Date.UTC(2026, month - 1, 1)));
 }

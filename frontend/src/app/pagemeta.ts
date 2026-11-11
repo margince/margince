@@ -3,11 +3,13 @@ import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { EXTENSION_SCREEN, findExtension, unitTitle } from "../lib/extensions";
 import { opensAFocusedFiltersPage } from "../lib/filtersaddress";
+import { useReadsTeamProgress } from "../lib/progressreader";
 import type { Route, Screen } from "../lib/router";
 import {
   NAV,
   type NavLevelEntry,
   type NavSection,
+  navLabelKey,
   recordKindOf,
   reservedPageTitle,
 } from "./nav";
@@ -139,9 +141,13 @@ export function resolveTitle(
  */
 export function usePageName(screen: Screen): string {
   const t = useT();
+  const readsTeam = useReadsTeamProgress();
   return resolveTitle(
     screen,
-    NAV.find((item) => item.screen === screen)?.labelKey,
+    navLabelKey(
+      NAV.find((item) => item.screen === screen),
+      readsTeam,
+    ),
     t,
   );
 }
@@ -191,6 +197,7 @@ export function useRouteSubject(route: Route): string {
   const t = useT();
   const { locale } = useLocale();
   const navItem = NAV.find((item) => item.screen === route.screen);
+  const readsTeam = useReadsTeamProgress();
   // A composed unit's page is named by the UNIT, which is not in `NAV` and has
   // no title key: without this the subject fell through to `shell.unknownPage`
   // while the trail two inches above it printed the unit's name, and the agent
@@ -215,5 +222,5 @@ export function useRouteSubject(route: Route): string {
   const reserved = reservedPageTitle(route);
   return reserved
     ? t(reserved)
-    : resolveTitle(route.screen, navItem?.labelKey, t);
+    : resolveTitle(route.screen, navLabelKey(navItem, readsTeam), t);
 }

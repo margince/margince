@@ -198,6 +198,7 @@ When Margince will not send an email to a contact, the warning bar above **Send*
 - **Send with a recorded exception**: where the check allows it and you hold the exception right, this queues only this message. Your name and original reason stay on record. It grants no consent or permission for later mail. The composer closes once the email is queued. A retry checks current support and stops, without asking again for facts that still hold.
 
   If that approved send fails, open its review and choose **Correct spelling or punctuation**. You must own the message, have approved it yourself and still hold permission to edit and approve mail. Confirm that its meaning and facts stay the same, then choose **Save correction**. The original approval stays on record; the message stays held until you retry. A change in meaning, recipients, sender, purpose or attachments needs a new message and approval. Later stops still block it.
+- **Overrule with a reason**: you may lift some refusals for a contact. When you may, the review offers this choice; your agent never gets it. Answer **Why may this message go?** and press **Record the overrule**. Your reason is recorded on each contact. It covers this kind of message to them until someone revokes it. Then press **Send** again.
 - **Message cannot be sent**: a reason nobody can lift, such as "The recipient objected to marketing", or an address that does not take mail.
 - A mailbox connected only to read mail: press **Reconnect your mailbox** and allow sending.
 

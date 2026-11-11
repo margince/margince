@@ -19,6 +19,8 @@ const SCREEN_FEATURE: Partial<Record<Screen, CoreFeature>> = {
   tags: "filters",
   offers: "deals",
   "legal-reviews": "deals",
+  progress: "analytics",
+  goals: "analytics",
 };
 
 export function screenEnabled(
