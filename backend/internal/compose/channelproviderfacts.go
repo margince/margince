@@ -54,16 +54,11 @@ type channelProviderFacts struct {
 	carriage connector.Carriage
 }
 
-// coreProviderLabels names the transports this binary compiles in, for the
-// cases where title-casing the id gets the name wrong.
-//
-// A map rather than an optional interface on the connector port: exactly one
-// provider needs it today (WhatsApp, whose title-cased id reads "Whatsapp"),
-// and a port method with one implementer is an abstraction ahead of its second
-// caller. When a unit declares its own channel in the slice that gives it one,
-// the label arrives with the declaration and this map stays what it says it is
-// — the CORE names.
+// coreProviderLabels names the core transports whose title-cased id reads
+// wrong ("Whatsapp", "Linkedin"). Neither has a connector to declare its own
+// label, so the core keeps the names here.
 var coreProviderLabels = map[string]string{
+	"linkedin": "LinkedIn",
 	"whatsapp": "WhatsApp",
 }
 

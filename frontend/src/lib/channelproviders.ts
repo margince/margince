@@ -29,6 +29,18 @@ export function useChannelProviders(enabled = true) {
   });
 }
 
+// useChannelProviderOptions lists every registered transport as a choice a
+// member can pick, for a form that records which one carried a conversation.
+export function useChannelProviderOptions(
+  enabled = true,
+): { value: string; label: string }[] {
+  const directory = useChannelProviders(enabled);
+  return (directory.data?.data ?? []).map((entry) => ({
+    value: entry.provider,
+    label: entry.label,
+  }));
+}
+
 // useProviderLabel returns a function that names a transport for a human.
 //
 // It resolves against BOTH halves of the directory, because a row's connector is

@@ -81,6 +81,58 @@ export const CallTranscriptDark: Story = {
   globals: { theme: "dark" },
 };
 
+// A conversation held on a chat app, logged by hand: the Message kind asks which
+// registered chat app carried it before Log is enabled.
+export const LoggedMessage: Story = {
+  render: () => {
+    installFetchStub({
+      "GET /me": admin(),
+      "GET /channel-providers": () =>
+        jsonResponse({
+          data: [
+            {
+              provider: "linkedin",
+              label: "LinkedIn",
+              credential_model: "workspace_bot",
+              supplies_transport: false,
+              attachments: { max_bytes: 0, max_count: 0 },
+            },
+            {
+              provider: "whatsapp",
+              label: "WhatsApp",
+              credential_model: "workspace_bot",
+              supplies_transport: false,
+              attachments: { max_bytes: 0, max_count: 0 },
+            },
+          ],
+        }),
+    });
+    return (
+      <StoryProviders>
+        <LogActivity entityType="contact" entityId="p1" />
+      </StoryProviders>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(canvas.getByLabelText(en["log.kind"]));
+    await userEvent.click(
+      await within(document.body).findByRole("option", {
+        name: en["log.kindMessage"],
+      }),
+    );
+    await pickOption(
+      userEvent.setup(),
+      canvas.getByLabelText(`${en["log.channel"]} *`),
+      "WhatsApp",
+    );
+  },
+};
+export const LoggedMessageDark: Story = {
+  ...LoggedMessage,
+  globals: { theme: "dark" },
+};
+
 // A task is the one kind held by a colleague, so it is the only one that draws
 // the assignee picker — beside the due date, defaulting to Unassigned. The
 // roster it offers is the workspace's contacts less agent seats: the walk stubbed

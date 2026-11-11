@@ -7217,6 +7217,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "log.kindTask": "Việc cần làm",
   "log.kindMeeting": "Cuộc họp",
   "log.kindCall": "Cuộc gọi",
+  "log.kindMessage": "Tin nhắn",
+  "log.channel": "Ứng dụng chat",
+  "log.channelPlaceholder": "Chọn ứng dụng chat",
   "log.transcriptLabel": "Bản chép lời",
   "log.transcriptHint":
     "Dán bản chép lời cuộc gọi hoặc cuộc họp. Nhãn người nói được giữ nguyên nếu có.",
