@@ -12,7 +12,7 @@ import { authorName, correspondenceSide } from "./messagevoice";
 
 type Activity = components["schemas"]["Activity"];
 
-const KIND_WORD: Readonly<Record<Activity["kind"], MessageKey>> = {
+export const KIND_WORD: Readonly<Record<Activity["kind"], MessageKey>> = {
   email: "timeline.kind.email",
   call: "timeline.kind.call",
   meeting: "timeline.kind.meeting",
@@ -22,7 +22,7 @@ const KIND_WORD: Readonly<Record<Activity["kind"], MessageKey>> = {
 };
 
 // A meeting that never took place, or has not yet, is no logged item.
-const NOT_HELD = new Set(["booked", "canceled", "no_show"]);
+export const NOT_HELD = new Set(["booked", "canceled", "no_show"]);
 
 /**
  * The logged items and messages a record's page already loaded, as the marks
