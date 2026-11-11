@@ -1485,13 +1485,19 @@ test-budget:
 ## test-input-census — every cached unit-test package that reads a file outside
 ## its module also reads that file's tree digest, or a replayed pass outlives an
 ## edit to it. Judged on a real run, since such paths are mostly built at run
-## time; a failing test does not decide it. cache-warm runs it.
+## time; a failing test does not decide it. cache-warm runs it. The solo
+## packages log apart and are judged against their own floor, which the tree's
+## logs cannot make up for.
 test-input-census:
-	@set -e; logs="$$(mktemp -d)"; trap 'rm -rf "$$logs"' EXIT; \
-	if ! TESTLOG_DIR="$$logs" $(MAKE) -C backend -k test-cached test-solo test-extensions TEST_EXEC="$(CURDIR)/scripts/testlog-exec.sh"; then \
+	@set -e; logs="$$(mktemp -d)"; trap 'rm -rf "$$logs"' EXIT; mkdir "$$logs/tree" "$$logs/solo"; \
+	if ! TESTLOG_DIR="$$logs/tree" $(MAKE) -C backend -k test-cached test-extensions TEST_EXEC="$(CURDIR)/scripts/testlog-exec.sh"; then \
 	  echo "test-input-census: a test failed under the census; its inputs are judged all the same" >&2; \
 	fi; \
-	TESTLOG_DIR="$$logs" $(MAKE) --no-print-directory test-input-census-judge
+	if ! TESTLOG_DIR="$$logs/solo" $(MAKE) -C backend test-solo TEST_EXEC="$(CURDIR)/scripts/testlog-exec.sh"; then \
+	  echo "test-input-census: a solo test failed under the census; its inputs are judged all the same" >&2; \
+	fi; \
+	TESTLOG_DIR="$$logs/tree" TESTLOG_MINIMUM=100 $(MAKE) --no-print-directory test-input-census-judge; \
+	TESTLOG_DIR="$$logs/solo" TESTLOG_MINIMUM=1 $(MAKE) --no-print-directory test-input-census-judge
 
 ## test-input-census-judge — the judging half of test-input-census, over logs a
 ## pass run with TEST_EXEC=scripts/testlog-exec.sh left in TESTLOG_DIR. CI's

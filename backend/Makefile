@@ -256,10 +256,10 @@ vet: composition ## Run go vet over every package, untagged (composed workspace)
 	# is excluded there and read here and nowhere else.
 	$(GOWORK_COMPOSED) $(GO) vet ./...
 
-# The two passes are separate targets so `-j4` runs them side by side: the
+# The passes are separate targets so `-j4` runs them side by side: the
 # uncached gates package is the longest single leg of the gate, and queued
 # behind the cached pass it put that pass's whole wall time on the critical path.
-test: test-uncached test-cached ## Unit tests — every package exactly once, UNCACHED_TEST_PKGS uncached
+test: test-uncached test-cached test-solo ## Unit tests — every package exactly once, UNCACHED_TEST_PKGS uncached
 
 test-cached: composition
 	# ./... covers UNCACHED_TEST_PKGS too, and the result it computes for them
