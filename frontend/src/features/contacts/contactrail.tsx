@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
+import { RecordListsActions } from "../../components/addtoshortlist";
 import { ConversationSuggestionsCard } from "../../components/conversationsuggestions";
 import { CounterpartyHoldRow } from "../../components/counterparty-hold";
 import { Badge } from "../../design-system/atoms";
@@ -148,31 +149,32 @@ function ContactRailWithLists({
 }>) {
   const t = useT();
   const lists = useRecordLists("contact", contactId).data?.data ?? [];
-  // No memberships, no group: the design draws no empty state for it.
-  const withLists =
-    lists.length === 0
-      ? sections
-      : [
-          ...sections,
-          {
-            key: "lists",
-            label: t("lists.record.title"),
-            children: (
-              <div className="pe-list-chips">
-                {lists.map((list) => (
-                  <button
-                    key={list.id}
-                    type="button"
-                    className="link-button"
-                    onClick={() => navigate({ screen: "lists", id: list.id })}
-                  >
-                    <Badge>{list.name}</Badge>
-                  </button>
-                ))}
-              </div>
-            ),
-          },
-        ];
+  const withLists = [
+    ...sections,
+    {
+      key: "lists",
+      label: t("lists.record.title"),
+      children: (
+        <>
+          {lists.length > 0 && (
+            <div className="pe-list-chips">
+              {lists.map((list) => (
+                <button
+                  key={list.id}
+                  type="button"
+                  className="link-button"
+                  onClick={() => navigate({ screen: "lists", id: list.id })}
+                >
+                  <Badge>{list.name}</Badge>
+                </button>
+              ))}
+            </div>
+          )}
+          <RecordListsActions entityType="contact" entityId={contactId} />
+        </>
+      ),
+    },
+  ];
   return <RecordDetails sections={withLists} footnote={footnote} />;
 }
 

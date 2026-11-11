@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/components/listquery.tsx frontend/src/design-system/listviewmenu.tsx frontend/src/design-system/listtoolbar.tsx frontend/src/design-system/listsearch.tsx frontend/src/components/listqueryviews.ts frontend/src/components/bulkverbs.tsx frontend/src/features/lists backend/internal/modules/collections backend/internal/modules/search/queryvocab.go backend/internal/compose/datatask_machineaddress.go frontend/src/features/contacts/contacts.tsx backend/internal/platform/auth/sharedwith.go -->
+<!-- describes: frontend/src/components/listquery.tsx frontend/src/design-system/listviewmenu.tsx frontend/src/design-system/listtoolbar.tsx frontend/src/design-system/listsearch.tsx frontend/src/components/listqueryviews.ts frontend/src/components/bulkverbs.tsx frontend/src/features/lists backend/internal/modules/collections backend/internal/modules/search/queryvocab.go backend/internal/compose/datatask_machineaddress.go frontend/src/features/contacts/contacts.tsx backend/internal/platform/auth/sharedwith.go frontend/src/features/records/recordlists.tsx frontend/src/components/addtoshortlist.tsx frontend/src/features/companies/companyrail.tsx frontend/src/features/contacts/contactrail.tsx frontend/src/features/deals/dealaside.tsx frontend/src/features/leads/leaddetails.tsx -->
 # Lists, filters and views
 
 The list screens in Margince are **Contacts**, **Companies**, **Leads**, **Deals** and **Projects** in the sidebar. How to create and edit a single record is in [Contacts, companies, leads, deals and projects](records.md) and [Leads, deals and projects](leads-deals-and-projects.md).
@@ -197,7 +197,7 @@ Also called: remove a saved view, edit a view, change a view's name.
 Not the view itself: a saved view in Margince stays private to whoever saved it. To share the same filter, save it as a Live List.
 1. On **Filters and views**, open your saved view and choose **Save as Live List** under **⋯** next to its name. For a new filter, press **Save** and choose **Live List** under **Keep it as**.
 2. Give it a **Name**, and under **Who can find it** pick **A team** or **Everyone**.
-3. Press **Save list**. Your colleagues find it in the library under **Shared**.
+3. Press **Save list**. Your colleagues find it in the library under **Shared with me**.
 Each colleague sees only the records they could already see. Sharing a single record is not the same: see [Seats, roles and who can see what](seats-roles-and-access.md).
 Also called: team view, shared list, share a filter, share a segment.
 
@@ -205,7 +205,7 @@ Also called: team view, shared list, share a filter, share a segment.
 
 **Filters and views** in the sidebar (under **Work**) is the Margince screen for a filter that a list's toolbar cannot build. That means many rules, "any of" instead of "all of", groups inside groups, custom fields, and a colleague other than you. It covers **Contacts**, **Companies**, **Deals** and **Leads**. A filter runs again every time you look, so it always shows the matches of today.
 
-The screen opens on the library of every saved view and list you can use. You can narrow it by search and by record type. **Only me** holds your saved views and the lists only you can find. **Shared** holds the lists shared with a team or with everyone. With Lists off, one group, **Saved views**, holds your views.
+The screen opens on the library of every saved view and list you can use. You can narrow it by search and by record type. **Mine** holds your saved views and every list you own, whoever can find it. **Shared with me** holds the lists that someone else owns or that have no owner. With Lists off, one group, **Saved views**, holds your views.
 
 ### How do I build a filter?
 To build a detailed filter in Margince, open **Filters and views** in the sidebar. Press **New filter** and pick **Contacts**, **Companies**, **Deals** or **Leads**.
@@ -289,7 +289,7 @@ Also called: bulk task, follow up with many, mass follow-up.
 
 A list in Margince is a named set of one kind of record (contacts, companies, deals or leads) that you and your colleagues work from. There are two kinds. A **Live List** is a saved filter: its members are whatever matches the filter now. So records join it and leave it on their own as they change. A **Shortlist** is picked by hand: a record is on it because someone put it there, and it stays until someone takes it off.
 
-Lists live on **Filters and views**. A list only you can find is under **Only me**. A shared list is under **Shared**. It shows its kind, record type, how many members you can see and who can find it.
+Lists live on **Filters and views**. A list you own is under **Mine**, also when you share it. A list someone else owns is under **Shared with me**. It shows its kind, record type, how many members you can see and who can find it. A private list can be found by its owner and its steward. So its row reads **Only me**, **You and its steward**, **Its owner**, **Its steward** or **Its owner and steward**.
 
 ### How do I make a Live List?
 To make a Live List in Margince, build its filter on **Filters and views** → **New filter**. Press **Save** and choose **Live List** under **Keep it as**.
@@ -303,7 +303,7 @@ To start a Shortlist in Margince, open **Filters and views** and press **New Sho
 1. Type a **Name**, pick the **Record type**, and if you like say **What it is for**. **Who can find it** starts on **A team**; pick **Only me** to keep it to yourself.
 2. Press **Create list**.
 3. Add records from a record's page: press **Add to Shortlist** and pick the Shortlist (or **A new Shortlist…**).
-Add a note under **Why (optional)** and press **Add**. To add many records at once, tick them on the list screen. Pick the Shortlist under **Add to Shortlist** in the bar for many rows.
+Add a note under **Why (optional)** and press **Add**. To add many records at once, tick them on the list screen. Pick the Shortlist under **Add to Shortlist** in the bar for many rows. On a contact, company, deal or lead page, **Lists** also holds **Add to Shortlist** and **All lists**.
 Also called: static list, hand-picked list, target list, account list.
 
 ### Who can find a list?
@@ -322,9 +322,9 @@ Also called: list owner, who manages this list.
 A Margince list's page shows why each member is there, in its own columns.
 - On a Live List, each field the filter uses is a column with the member's value of today, such as "52 days ago". The first four are shown; **View** → **Columns** offers the rest. A value you may not see shows as **Hidden**.
 - On a Shortlist, **Added by**, **Added on** and **Note** say who picked the record, when, and why.
-To see why a record is not on a Live List, open the record's page. Under **Lists**, pick the list in **Check a Live List**. It shows each clause of the filter as **Met**, **Not met** or **No value to judge**, with the record's value of today. A value you may not see shows as "Value hidden from you".
+To see why a contact or deal is not on a Live List, open its page. On a contact, open the **Research** tab; on a deal, press **Edit details**. In the **Lists** card there, pick the list in **Check a Live List**. It shows each clause of the filter as **Met**, **Not met** or **No value to judge**, with the record's value of today. A value you may not see shows as "Value hidden from you".
 
-To take one record off a Shortlist, go to **Lists** on the record's page and press **Take off the Shortlist** next to it. It comes off at once. The toast "Taken off {name}" offers **Undo**. **Undo** puts the record back with its **Added by**, **Added on** and **Note**. To take many off, tick them on the list's page and use the bar for many rows.
+To take a contact or deal off a Shortlist, open the same **Lists** card and press **Take off the Shortlist** next to the list. It comes off at once. The toast "Taken off {name}" offers **Undo**. **Undo** puts the record back with its **Added by**, **Added on** and **Note**. To take many off, tick them on the list's page and use the bar for many rows.
 Also called: why is this contact here, why is this record missing, list membership reason.
 
 ### How often does a Live List update?

@@ -3,6 +3,7 @@
 
 import { useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
+import { RecordListsActions } from "../../components/addtoshortlist";
 import { ConversationSuggestionsCard } from "../../components/conversationsuggestions";
 import { EntityRef } from "../../components/entityref";
 import { useEntityName } from "../../components/entityref.queries";
@@ -376,15 +377,18 @@ function ListedLeadDetails(props: DetailsProps) {
     <LeadDetailsBody
       {...props}
       lists={
-        found.length > 0 && (
-          <ul className="lead-aside-chips">
-            {found.map((list) => (
-              <li key={list.id}>
-                <Badge>{list.name}</Badge>
-              </li>
-            ))}
-          </ul>
-        )
+        <>
+          {found.length > 0 && (
+            <ul className="lead-aside-chips">
+              {found.map((list) => (
+                <li key={list.id}>
+                  <Badge>{list.name}</Badge>
+                </li>
+              ))}
+            </ul>
+          )}
+          <RecordListsActions entityType="lead" entityId={props.lead.id} />
+        </>
       }
     />
   );
@@ -436,8 +440,7 @@ function LeadDetailsBody({
         },
       ],
     },
-    // No chips, no group: the empty state is the absence of the label.
-    { key: "lists", label: t("lists.record.title"), children: lists || null },
+    { key: "lists", label: t("lists.record.title"), children: lists },
   ];
   return (
     <>
