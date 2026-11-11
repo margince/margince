@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package compose
+package inquiries
 
 import (
 	"context"
@@ -16,18 +16,18 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
-type inquiryWork struct {
+type Work struct {
 	db          *database.DB
 	contacts    *contacts.Store
 	store       *activities.Store
 	assignments *automation.InquiryService
 }
 
-func newInquiryWork(db *database.DB) *inquiryWork {
-	return &inquiryWork{db: db, contacts: contacts.NewStore(db), store: activities.NewStore(db), assignments: automation.NewInquiryService(db, newInquiryRouting(db))}
+func NewWork(db *database.DB, routing Routing) *Work {
+	return &Work{db: db, contacts: contacts.NewStore(db), store: activities.NewStore(db), assignments: automation.NewInquiryService(db, routing)}
 }
 
-func (w *inquiryWork) forTasks(ctx context.Context, tasks []crmcontracts.Activity) (map[ids.UUID]*crmcontracts.WebsiteInquiryWork, error) {
+func (w *Work) ForTasks(ctx context.Context, tasks []crmcontracts.Activity) (map[ids.UUID]*crmcontracts.WebsiteInquiryWork, error) {
 	out := map[ids.UUID]*crmcontracts.WebsiteInquiryWork{}
 	taskIDs := make([]ids.ActivityID, 0, len(tasks))
 	submissions := map[ids.UUID]string{}

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package compose
+package inquiries
 
 import (
 	"context"
@@ -21,23 +21,23 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
 )
 
-type inquiryFiringFence struct {
+type FiringFence struct {
 	forms  *webforms.Store
 	leads  *contacts.Store
 	notes  *activities.Store
-	fence  *webFormFence
+	fence  webforms.HandlingFence
 	legacy map[string]bool
 }
 
-func newInquiryFiringFence(db *database.DB) *inquiryFiringFence {
+func NewFiringFence(db *database.DB, fence webforms.HandlingFence) *FiringFence {
 	legacy := map[string]bool{}
 	for _, name := range automation.LegacyLeadHandlerNames() {
 		legacy[name] = true
 	}
-	return &inquiryFiringFence{forms: webforms.NewStore(db, slog.Default()), leads: contacts.NewStore(db), notes: activities.NewStore(db), fence: newWebFormFence(db), legacy: legacy}
+	return &FiringFence{forms: webforms.NewStore(db, slog.Default()), leads: contacts.NewStore(db), notes: activities.NewStore(db), fence: fence, legacy: legacy}
 }
 
-func (f *inquiryFiringFence) Within(ctx context.Context, spec workflow.Spec, ev workflow.Event, run func(context.Context) error) error {
+func (f *FiringFence) Within(ctx context.Context, spec workflow.Spec, ev workflow.Event, run func(context.Context) error) error {
 	if spec.Name == provenance.WebsiteInquirySource {
 		policy, err := automation.ParseInquiryPolicy(ev.Params)
 		if err != nil {

@@ -117,7 +117,7 @@ func assertBootstrapSeededStarters(t *testing.T, e *apptest.AppEnv) {
 	}
 	for _, a := range listed.Data {
 		want := "enabled"
-		if a.Key == "post_meeting_recap" || a.Key == "stage_change_notify" {
+		if a.Key == "post_meeting_recap" || a.Key == "stage_change_notify" || a.Key == "no_activity_reminder" || a.Key == "check_in_cadence" {
 			want = "paused"
 		}
 		if a.Status != want {

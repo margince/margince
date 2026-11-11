@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package compose
+package inquiries
 
 import (
 	"context"
@@ -21,18 +21,18 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
-type inquiryAssignment struct {
+type Assignment struct {
 	db       *database.DB
 	tasks    *activities.Store
 	contacts *contacts.Store
-	routing  inquiryRouting
+	routing  Routing
 }
 
-func newInquiryAssignment(db *database.DB) inquiryAssignment {
-	return inquiryAssignment{db: db, tasks: activities.NewStore(db), contacts: newContactsStore(db), routing: newInquiryRouting(db)}
+func NewAssignment(db *database.DB, records *contacts.Store, routing Routing) Assignment {
+	return Assignment{db: db, tasks: activities.NewStore(db), contacts: records, routing: routing}
 }
 
-func (s inquiryAssignment) Preview(ctx context.Context, id ids.ActivityID, in crmcontracts.WebsiteInquiryAssignmentRequest) (crmcontracts.WebsiteInquiryAssignment, error) {
+func (s Assignment) Preview(ctx context.Context, id ids.ActivityID, in crmcontracts.WebsiteInquiryAssignmentRequest) (crmcontracts.WebsiteInquiryAssignment, error) {
 	var out crmcontracts.WebsiteInquiryAssignment
 	err := database.WithWorkspaceSnapshot(ctx, s.db.Pool(), func(ctx context.Context) error {
 		var err error
@@ -42,7 +42,7 @@ func (s inquiryAssignment) Preview(ctx context.Context, id ids.ActivityID, in cr
 	return out, err
 }
 
-func (s inquiryAssignment) Apply(ctx context.Context, id ids.ActivityID, version int64, in crmcontracts.WebsiteInquiryAssignmentRequest) (crmcontracts.WebsiteInquiryAssignment, error) {
+func (s Assignment) Apply(ctx context.Context, id ids.ActivityID, version int64, in crmcontracts.WebsiteInquiryAssignmentRequest) (crmcontracts.WebsiteInquiryAssignment, error) {
 	var out crmcontracts.WebsiteInquiryAssignment
 	run := func() error {
 		return database.WithWorkspaceSnapshot(ctx, s.db.Pool(), func(ctx context.Context) error {
@@ -67,7 +67,7 @@ func (s inquiryAssignment) Apply(ctx context.Context, id ids.ActivityID, version
 	return out, err
 }
 
-func (s inquiryAssignment) plan(ctx context.Context, id ids.ActivityID, in crmcontracts.WebsiteInquiryAssignmentRequest) (crmcontracts.WebsiteInquiryAssignment, error) {
+func (s Assignment) plan(ctx context.Context, id ids.ActivityID, in crmcontracts.WebsiteInquiryAssignmentRequest) (crmcontracts.WebsiteInquiryAssignment, error) {
 	var out crmcontracts.WebsiteInquiryAssignment
 	task, source, err := s.acceptedTask(ctx, id)
 	if err != nil {
@@ -110,7 +110,7 @@ func (s inquiryAssignment) plan(ctx context.Context, id ids.ActivityID, in crmco
 	return out, err
 }
 
-func (s inquiryAssignment) acceptedTask(ctx context.Context, id ids.ActivityID) (crmcontracts.Activity, ids.UUID, error) {
+func (s Assignment) acceptedTask(ctx context.Context, id ids.ActivityID) (crmcontracts.Activity, ids.UUID, error) {
 	task, err := s.tasks.GetActivityContent(ctx, id, storekit.LiveOnly)
 	if err != nil {
 		return task, ids.Nil, err
@@ -168,7 +168,7 @@ func inquiryAssignmentTarget(row crmcontracts.Activity) (datasource.EntityRef, e
 	return target, nil
 }
 
-func (s inquiryAssignment) recordOwner(ctx context.Context, target datasource.EntityRef, out *crmcontracts.WebsiteInquiryAssignment) error {
+func (s Assignment) recordOwner(ctx context.Context, target datasource.EntityRef, out *crmcontracts.WebsiteInquiryAssignment) error {
 	owners, err := s.contacts.WorkOwners(ctx, string(target.Type), []ids.UUID{target.ID})
 	if err != nil {
 		return err
@@ -186,7 +186,7 @@ func (s inquiryAssignment) recordOwner(ctx context.Context, target datasource.En
 	return nil
 }
 
-func (s inquiryAssignment) assign(ctx context.Context, id ids.ActivityID, version int64, in crmcontracts.WebsiteInquiryAssignmentRequest, out crmcontracts.WebsiteInquiryAssignment) (crmcontracts.WebsiteInquiryAssignment, error) {
+func (s Assignment) assign(ctx context.Context, id ids.ActivityID, version int64, in crmcontracts.WebsiteInquiryAssignmentRequest, out crmcontracts.WebsiteInquiryAssignment) (crmcontracts.WebsiteInquiryAssignment, error) {
 	recordVersion := int64(*out.RecordVersion)
 	if out.ChangesRecordOwner && in.Mode == "take" {
 		claimed, err := s.contacts.ClaimRecord(ctx, "lead", ids.UUID(out.RecordId), &recordVersion)

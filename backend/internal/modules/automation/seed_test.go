@@ -19,11 +19,11 @@ import (
 // gatekit:fixture the pinned name each seeded entry is compared against —
 // expected data, not an exception granted to a template.
 var pinnedSeededNames = map[string]string{
-	noActivityReminderName: "No-activity reminder",
+	noActivityReminderName: "Remind me when an active deal goes quiet",
 	renewalReminderName:    "Renewal reminder",
 	stageChangeNotifyName:  "Tell the owner when someone moves their deal",
 	routeLeadName:          "Route new lead to a task",
-	checkInCadenceName:     "Check-in cadence",
+	checkInCadenceName:     "Keep in touch with selected customers",
 	postMeetingRecapName:   "Draft a follow-up after a meeting",
 }
 

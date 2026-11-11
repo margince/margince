@@ -119,7 +119,7 @@ func (t attentionTasks) taskRows(
 	var inquiryFacts map[ids.UUID]*crmcontracts.WebsiteInquiryWork
 	if t.work != nil {
 		var err error
-		inquiryFacts, err = t.work.forTasks(ctx, rows)
+		inquiryFacts, err = t.work.ForTasks(ctx, rows)
 		if err != nil {
 			return nil, err
 		}

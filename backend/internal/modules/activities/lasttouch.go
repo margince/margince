@@ -41,6 +41,7 @@ type LastTouchCandidate struct {
 	EntityType string
 	EntityID   ids.UUID
 	LastTouch  time.Time
+	Total      int
 }
 
 // genuineEngagement is what counts as a real touch for the quiet reminders. It
@@ -77,7 +78,11 @@ func genuineEngagement(alias string, sourcePos, capturedByPos, patternPos int) s
 // reads. $2 the cutoff, $3 the cap, $6 the asking handler; providersPos is
 // where the mail providers are bound when the store asks about the owner's
 // mailbox.
-func lastTouchCandidateQuery(mailbox *OwnerMailbox, providersPos int) string {
+func lastTouchCandidateQuery(mailbox *OwnerMailbox, providersPos int, scope *quietQueryScope) string {
+	eligibility, reminder, count := lastTouchEligibility(), openReminderHoldsEntity(), ""
+	if scope != nil {
+		eligibility, reminder, count = scope.eligibility, scope.reminder, ", count(*) OVER()"
+	}
 	return storekit.SQLf(`
 			WITH genuine AS (
 				SELECT a.id, a.occurred_at
@@ -115,7 +120,7 @@ func lastTouchCandidateQuery(mailbox *OwnerMailbox, providersPos int) string {
 				JOIN accounts a ON a.entity_id = la.id
 				WHERE a.last_touch < $2%[6]s
 			)
-			SELECT q.entity_type, q.entity_id, q.last_touch
+			SELECT q.entity_type, q.entity_id, q.last_touch%[8]s
 			FROM quiet q
 			WHERE q.last_touch < $2
 			  AND (%[4]s)
@@ -125,10 +130,10 @@ func lastTouchCandidateQuery(mailbox *OwnerMailbox, providersPos int) string {
 		linkIDCoalesceQualified("al"),
 		datasource.RecordCompany,
 		CompanyReachSet(),
-		lastTouchEligibility(),
-		openReminderHoldsEntity(),
+		eligibility,
+		reminder,
 		mailbox.ownerMailboxUnseen("la.owner_id", providersPos),
-		mailbox.ownerMailboxUnseen(quietRecordOwner(), providersPos))
+		mailbox.ownerMailboxUnseen(quietRecordOwner(), providersPos), count)
 }
 
 // lastTouchEligibility is the per-type live-work test, and the collapse that
@@ -249,13 +254,17 @@ func contactCollapsesIntoAccount() string {
 // draw entirely. The source/captured_by pair rides along because source alone
 // is a client's to spell, exactly as the genuine CTE reads it.
 func openReminderHoldsEntity() string {
+	return openReminderHoldsEntityFrom("t.source_system = $6")
+}
+
+func openReminderHoldsEntityFrom(sourcePredicate string) string {
 	return `SELECT 1 FROM activity t
 		         JOIN activity_link tl ON tl.activity_id = t.id
 		         WHERE tl.entity_type = q.entity_type
 		           AND ` + linkIDCoalesceQualified("tl") + ` = q.entity_id
 		           AND t.kind = 'task'
 		           AND t.is_done = false AND t.archived_at IS NULL
-		           AND t.source_system = $6
+		           AND ` + sourcePredicate + `
 		           AND t.source = $1
 		           AND (t.captured_by = $4 OR t.captured_by LIKE $5)`
 }
@@ -332,6 +341,10 @@ func openReminderHoldsEntity() string {
 // reminder from THAT handler is still open. Each clock handler passes its own
 // Spec().Name, which is also the source_system its task carries.
 func (s *Store) LastTouchBefore(ctx context.Context, cutoff time.Time, limit int, reminder string) ([]LastTouchCandidate, error) {
+	return s.lastTouchBefore(ctx, cutoff, limit, reminder, nil)
+}
+
+func (s *Store) lastTouchBefore(ctx context.Context, cutoff time.Time, limit int, reminder string, population *QuietPopulation) ([]LastTouchCandidate, error) {
 	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
 		return nil, err
 	}
@@ -350,14 +363,22 @@ func (s *Store) LastTouchBefore(ctx context.Context, cutoff time.Time, limit int
 			args = append(args, s.ownerMailbox.Providers)
 			providersPos = len(args)
 		}
-		rows, err := tx.Query(ctx, lastTouchCandidateQuery(s.ownerMailbox, providersPos), args...)
+		scope, err := scopedQuietQuery(ctx, population, &args)
+		if err != nil {
+			return err
+		}
+		rows, err := tx.Query(ctx, lastTouchCandidateQuery(s.ownerMailbox, providersPos, scope), args...)
 		if err != nil {
 			return err
 		}
 		defer rows.Close()
 		for rows.Next() {
 			var c LastTouchCandidate
-			if err := rows.Scan(&c.EntityType, &c.EntityID, &c.LastTouch); err != nil {
+			columns := []any{&c.EntityType, &c.EntityID, &c.LastTouch}
+			if scope != nil {
+				columns = append(columns, &c.Total)
+			}
+			if err := rows.Scan(columns...); err != nil {
 				return err
 			}
 			out = append(out, c)

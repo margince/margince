@@ -31,7 +31,7 @@ func (s *AutomationStore) revalidate(ctx context.Context, before Automation, in 
 	}
 
 	resuming := in.Enabled != nil && *in.Enabled && !before.Enabled
-	if in.Params == nil && !resuming {
+	if !resuming && (in.Params == nil || sameParams(before.Params, in.Params)) {
 		return nil
 	}
 	entry, ok := CatalogEntryByKey(before.Key)
@@ -56,6 +56,20 @@ func (s *AutomationStore) revalidate(ctx context.Context, before Automation, in 
 
 // validateRefs asks the entry's reference check, when it has one.
 func (s *AutomationStore) validateRefs(ctx context.Context, entry CatalogEntry, params map[string]any) error {
+	if _, quiet := activityScanHandlers[entry.Key]; quiet {
+		if s.quiet == nil {
+			return &ParamError{Field: "key", Reason: "quiet reminders are not available"}
+		}
+		raw, err := json.Marshal(params)
+		if err != nil {
+			return err
+		}
+		population, err := quietPopulation(raw)
+		if err != nil {
+			return err
+		}
+		return s.quiet.ValidateQuietPopulation(ctx, population)
+	}
 	if entry.Key == stageChangeCreateTaskName || entry.Key == stageChangeNotifyName {
 		return validateStageScope(ctx, s.stages, params)
 	}

@@ -167,24 +167,22 @@ func validateDueInDays(params map[string]any) error {
 // params, so the editor's schema and the handler's reader can never
 // drift onto two different knob names for the same automation.
 func noActivityReminderSchema() map[string]any {
-	return singleIntParamSchema("no_activity_days", defaultNoActivityDays, 365,
-		"How many quiet days (no genuine activity) before the reminder fires.")
+	return quietReminderSchema("no_activity_days", defaultNoActivityDays, "pipeline_id", "pipeline")
 }
 
 // validateNoActivityReminderParams is noActivityReminderSchema's validator.
-var validateNoActivityReminderParams = validateSingleIntParam("no_activity_days", 365)
+var validateNoActivityReminderParams = validateQuietReminderParams("no_activity_days", "pipeline_id")
 
 // checkInCadenceSchema is check_in_cadence's own one-knob shape, keyed
 // "check_in_days" — checkInCadenceDays' (handlers_clock.go)
 // own reader, distinct from no_activity_reminder's key so a workspace
 // may enable both with independent cadences.
 func checkInCadenceSchema() map[string]any {
-	return singleIntParamSchema("check_in_days", defaultCheckInDays, 365,
-		"How many quiet days (no genuine activity) before the check-in reminder fires.")
+	return quietReminderSchema("check_in_days", defaultCheckInDays, "customer_list_id", "record_list")
 }
 
 // validateCheckInCadenceParams is checkInCadenceSchema's validator.
-var validateCheckInCadenceParams = validateSingleIntParam("check_in_days", 365)
+var validateCheckInCadenceParams = validateQuietReminderParams("check_in_days", "customer_list_id")
 
 // noParamsSchema is the empty-knob schema for a starter with nothing to
 // parameterize (stage_change_notify, post_meeting_recap): both fire
@@ -247,8 +245,8 @@ func seededCatalogEntries() []CatalogEntry {
 		{
 			Key:          noActivityReminderName,
 			Group:        crmcontracts.AutomationCatalogEntryGroupDeals,
-			Name:         "No-activity reminder",
-			Description:  "Reminds an entity's owner once its most recent captured activity has gone quiet for N days.",
+			Name:         "Remind me when an active deal goes quiet",
+			Description:  "Create a task for the owner of a quiet open deal in the selected pipeline. Genuine contact resets its clock.",
 			Trigger:      noActivityScheduleMarker,
 			Action:       string(ActionTypeCreateTask),
 			Tier:         tierAutoExecute,
@@ -295,8 +293,8 @@ func seededCatalogEntries() []CatalogEntry {
 		{
 			Key:          checkInCadenceName,
 			Group:        crmcontracts.AutomationCatalogEntryGroupCustomers,
-			Name:         "Check-in cadence",
-			Description:  "Reminds an entity's owner to re-engage once it has gone quiet for the automation's own (typically longer) cadence.",
+			Name:         "Keep in touch with selected customers",
+			Description:  "Create a task for a customer list member's owner after the chosen period without genuine contact. An open equivalent reminder prevents another task.",
 			Trigger:      checkInCadenceScheduleMarker,
 			Action:       string(ActionTypeCreateTask),
 			Tier:         tierAutoExecute,

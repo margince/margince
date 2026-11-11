@@ -6,6 +6,7 @@ package automation
 import (
 	"context"
 	"encoding/json"
+
 	"github.com/jackc/pgx/v5"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/workforce"
@@ -19,7 +20,11 @@ func configurationOf(a Automation, authorizerActive bool) configurationState {
 	if !known || json.Unmarshal(a.Params, &params) != nil || entry.Validate(params) != nil {
 		return configurationState{"needs_setup", "configuration_incomplete"}
 	}
-	if entry.Action == string(ActionTypeDraftEmail) && a.OwnerID == nil {
+	needsAuthorizer, err := starterNeedsAuthorizer(entry, a.Params)
+	if err != nil {
+		return configurationState{"needs_setup", "configuration_incomplete"}
+	}
+	if needsAuthorizer && a.OwnerID == nil {
 		return configurationState{"needs_setup", "authorizer_missing"}
 	}
 	if a.OwnerID != nil && !authorizerActive {

@@ -13154,6 +13154,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "auto.stages.loadError": "Vertriebspipelines konnten nicht geladen werden.",
   "auto.stages.choosePipeline": "Pipeline wählen",
   "auto.stages.chooseStages": "Phasen wählen",
+  "auto.quiet.customerList": "Kundenliste",
+  "auto.quiet.days": "Tage ohne Kontakt",
+  "auto.lists.noCustomers":
+    "Noch keine Kontakt- oder Firmenlisten. Speichern Sie zuerst eine Liste.",
   "auto.stages.taskTitle": "Aufgabentitel",
   "auto.stages.pipeline": "Pipeline",
   "auto.stages.destinations": "Zielphasen",

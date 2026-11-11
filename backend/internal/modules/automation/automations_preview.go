@@ -147,6 +147,9 @@ func (s *AutomationStore) Preview(ctx context.Context, id ids.AutomationID, in A
 	if err != nil {
 		return AutomationPreviewResult{}, err
 	}
+	if result, handled, err := s.quietPreview(ctx, stored, in); handled || err != nil {
+		return result, err
+	}
 	now := s.now().UTC()
 	def, window, err := resolvePreviewRecipe(ctx, s.catalog, stored, in, now)
 	if err != nil {
@@ -204,15 +207,9 @@ func resolvePreviewRecipe(ctx context.Context, catalog fieldcatalog.Reader, stor
 			return previewDef{}, 0, err
 		}
 	}
-	window := previewDefaultWindowDays
-	if in.WindowDays != nil {
-		window = *in.WindowDays
-		if window < 1 || window > previewMaxWindowDays {
-			return previewDef{}, 0, &ParamError{
-				Field:  "window_days",
-				Reason: fmt.Sprintf("must be between 1 and %d days", previewMaxWindowDays),
-			}
-		}
+	window, err := previewWindow(in.WindowDays)
+	if err != nil {
+		return previewDef{}, 0, err
 	}
 	if key == renewalReminderName {
 		p, err := renewalPreviewParams(ctx, catalog, stored, in)
@@ -232,6 +229,16 @@ func resolvePreviewRecipe(ctx context.Context, catalog fieldcatalog.Reader, stor
 		return previewDef{}, 0, &ParamError{Field: "key", Reason: def.unsupported}
 	}
 	return def, window, nil
+}
+
+func previewWindow(days *int) (int, error) {
+	if days == nil {
+		return previewDefaultWindowDays, nil
+	}
+	if *days < 1 || *days > previewMaxWindowDays {
+		return 0, &ParamError{Field: "window_days", Reason: fmt.Sprintf("must be between 1 and %d days", previewMaxWindowDays)}
+	}
+	return *days, nil
 }
 
 // scopeClause resolves the RIGHT row-visibility clause for def.table:

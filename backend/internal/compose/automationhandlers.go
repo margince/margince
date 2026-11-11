@@ -13,6 +13,7 @@ import (
 func newAutomationHandlers(pool *pgxpool.Pool) automation.Handlers {
 	db := InstallationDB(pool)
 	return automation.NewHandlers(db).
+		WithQuietPopulationScan(newQuietPopulationReader(db)).
 		WithStageLookup(NewProviderFor(db)).
 		WithInquiryRouting(newInquiryRouting(db)).
 		WithFieldCatalog(customfields.NewService(pool, nil)).

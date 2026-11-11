@@ -14,6 +14,7 @@ export type ParamField = {
     | "date_field"
     | "enum"
     | "live_list"
+    | "record_list"
     | "shortlist"
     | "timezone"
     | "pipeline"
@@ -26,6 +27,7 @@ export type ParamField = {
   // a free-text box so a typo can't silently name a value the backend
   // would refuse.
   options?: string[];
+  entityTypes?: string[];
 };
 
 // Catalog defaults and stored params are JSON scalars; anything non-scalar
@@ -56,8 +58,16 @@ function paramKind(type: unknown): ParamField["kind"] | null {
 // The format selects a shared picker without tying it to a parameter name.
 function formattedKind(
   format: unknown,
-): "live_list" | "shortlist" | "timezone" | "pipeline" | "stages" | null {
+):
+  | "live_list"
+  | "record_list"
+  | "shortlist"
+  | "timezone"
+  | "pipeline"
+  | "stages"
+  | null {
   return format === "live_list" ||
+    format === "record_list" ||
     format === "shortlist" ||
     format === "timezone" ||
     format === "pipeline" ||
@@ -66,15 +76,11 @@ function formattedKind(
     : null;
 }
 
-// enumOptions reads a schema property's own closed value list, when it
-// has one — a string-typed "enum" array is the schema's way of saying
-// "pick one of these", which renders as a picker rather than free text
-// so a typo can't silently name a value the backend would refuse.
-function enumOptions(raw: Record<string, unknown>): string[] | undefined {
-  if (!Array.isArray(raw.enum)) {
+function stringOptions(value: unknown): string[] | undefined {
+  if (!Array.isArray(value)) {
     return undefined;
   }
-  const values = raw.enum.filter((v): v is string => typeof v === "string");
+  const values = value.filter((v): v is string => typeof v === "string");
   return values.length > 0 ? values : undefined;
 }
 
@@ -94,7 +100,7 @@ export function paramFields(schema: Record<string, unknown>): ParamField[] {
     if (!isRecord(raw)) {
       return [];
     }
-    const options = enumOptions(raw);
+    const options = stringOptions(raw.enum);
     const kind: ParamField["kind"] | null =
       key === "date_field" && isDateFieldPicker
         ? "date_field"
@@ -111,6 +117,7 @@ export function paramFields(schema: Record<string, unknown>): ParamField[] {
         max: typeof raw.maximum === "number" ? raw.maximum : undefined,
         initial: scalarText(raw.default),
         options,
+        entityTypes: stringOptions(raw["x-entity-types"]),
       },
     ];
   });

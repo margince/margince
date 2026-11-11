@@ -12798,6 +12798,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "auto.stages.loadError": "Không thể tải quy trình bán hàng.",
   "auto.stages.choosePipeline": "Chọn quy trình bán hàng",
   "auto.stages.chooseStages": "Chọn giai đoạn",
+  "auto.quiet.customerList": "Danh sách khách hàng",
+  "auto.quiet.days": "Số ngày không liên lạc",
+  "auto.lists.noCustomers":
+    "Chưa có danh sách liên hệ hoặc công ty. Hãy lưu một danh sách trước.",
   "auto.stages.taskTitle": "Tiêu đề công việc",
   "auto.stages.pipeline": "Quy trình bán hàng",
   "auto.stages.destinations": "Giai đoạn đích",

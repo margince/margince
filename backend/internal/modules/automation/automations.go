@@ -45,6 +45,7 @@ type AutomationStore struct {
 	lists     Lists
 	inquiries InquiryRouting
 	stages    StageLookup
+	quiet     QuietPopulationScan
 }
 
 // NewAutomationStore binds the automation tables to the pool it is given.

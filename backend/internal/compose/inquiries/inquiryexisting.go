@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package compose
+package inquiries
 
 import (
 	"context"
@@ -37,7 +37,7 @@ func validateInquirySelections(selected []crmcontracts.WebsiteInquirySelection, 
 	return nil
 }
 
-func (s inquirySettings) existingPolicy(ctx context.Context, formID ids.UUID, in crmcontracts.WebsiteInquiryExistingRequest) (automation.Automation, crmcontracts.WebsiteInquiryPolicy, error) {
+func (s Settings) existingPolicy(ctx context.Context, formID ids.UUID, in crmcontracts.WebsiteInquiryExistingRequest) (automation.Automation, crmcontracts.WebsiteInquiryPolicy, error) {
 	form, err := s.forms.GetForm(ctx, formID)
 	if err != nil {
 		return automation.Automation{}, crmcontracts.WebsiteInquiryPolicy{}, err
@@ -65,7 +65,7 @@ func (s inquirySettings) existingPolicy(ctx context.Context, formID ids.UUID, in
 	return saved, policy, nil
 }
 
-func (s inquirySettings) HandleExisting(ctx context.Context, formID ids.UUID, in crmcontracts.WebsiteInquiryExistingRequest) (crmcontracts.WebsiteInquiryHandlingResults, error) {
+func (s Settings) HandleExisting(ctx context.Context, formID ids.UUID, in crmcontracts.WebsiteInquiryExistingRequest) (crmcontracts.WebsiteInquiryHandlingResults, error) {
 	if err := auth.Require(ctx, "automation", principal.ActionUpdate); err != nil {
 		return crmcontracts.WebsiteInquiryHandlingResults{}, err
 	}
@@ -79,7 +79,7 @@ func (s inquirySettings) HandleExisting(ctx context.Context, formID ids.UUID, in
 	if err != nil {
 		return crmcontracts.WebsiteInquiryHandlingResults{}, err
 	}
-	routing := newInquiryRouting(s.db)
+	routing := s.routing
 	if err := routing.validate(ctx, policy, false); err != nil {
 		return crmcontracts.WebsiteInquiryHandlingResults{}, err
 	}
@@ -90,7 +90,7 @@ func (s inquirySettings) HandleExisting(ctx context.Context, formID ids.UUID, in
 	if err := routing.validate(authorizer, policy, false); err != nil {
 		return crmcontracts.WebsiteInquiryHandlingResults{}, err
 	}
-	engine := NewWorkflowEngine(s.db)
+	engine := s.engine()
 	out := crmcontracts.WebsiteInquiryHandlingResults{Items: make([]crmcontracts.WebsiteInquiryHandlingItem, 0, len(in.Selected))}
 	for _, selected := range in.Selected {
 		item := crmcontracts.WebsiteInquiryHandlingItem{Id: selected.Id, Version: selected.Version, Status: crmcontracts.WebsiteInquiryHandlingItemStatusFailed}
@@ -107,7 +107,7 @@ func (s inquirySettings) HandleExisting(ctx context.Context, formID ids.UUID, in
 	return out, nil
 }
 
-func (s inquirySettings) handleExistingOne(ctx context.Context, engine *automation.WorkflowEngine, formID ids.UUID, in crmcontracts.WebsiteInquiryExistingRequest, selected crmcontracts.WebsiteInquirySelection) (crmcontracts.WebsiteInquiryHandlingItem, error) {
+func (s Settings) handleExistingOne(ctx context.Context, engine *automation.WorkflowEngine, formID ids.UUID, in crmcontracts.WebsiteInquiryExistingRequest, selected crmcontracts.WebsiteInquirySelection) (crmcontracts.WebsiteInquiryHandlingItem, error) {
 	item := crmcontracts.WebsiteInquiryHandlingItem{Id: selected.Id, Version: selected.Version}
 	saved, _, err := s.existingPolicy(ctx, formID, in)
 	if err != nil {
@@ -154,7 +154,7 @@ func (s inquirySettings) handleExistingOne(ctx context.Context, engine *automati
 	return item, nil
 }
 
-func (s inquirySettings) taskForSelected(ctx context.Context, saved automation.Automation, note crmcontracts.Activity) (crmcontracts.Activity, error) {
+func (s Settings) taskForSelected(ctx context.Context, saved automation.Automation, note crmcontracts.Activity) (crmcontracts.Activity, error) {
 	if note.Version == nil {
 		return crmcontracts.Activity{}, apperrors.ErrVersionSkew
 	}

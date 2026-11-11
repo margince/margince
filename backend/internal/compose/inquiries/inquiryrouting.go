@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package compose
+package inquiries
 
 import (
 	"context"
@@ -30,18 +30,19 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
-type inquiryRouting struct {
-	db    *database.DB
-	fence *webFormFence
+type Routing struct {
+	db       *database.DB
+	fence    webforms.HandlingFence
+	provider datasource.SystemOfRecordProvider
 }
 
-func newInquiryRouting(db *database.DB) inquiryRouting {
-	return inquiryRouting{db: db, fence: newWebFormFence(db)}
+func NewRouting(db *database.DB, fence webforms.HandlingFence, provider datasource.SystemOfRecordProvider) Routing {
+	return Routing{db: db, fence: fence, provider: provider}
 }
 
-var _ automation.InquiryRouting = inquiryRouting{}
+var _ automation.InquiryRouting = Routing{}
 
-func (r inquiryRouting) Within(ctx context.Context, form ids.UUID, run func(context.Context) error) error {
+func (r Routing) Within(ctx context.Context, form ids.UUID, run func(context.Context) error) error {
 	err := r.fence.Within(ctx, form, run)
 	if errors.Is(err, webforms.ErrHandlingBusy) {
 		return webforms.HandlingUnavailable()
@@ -49,11 +50,11 @@ func (r inquiryRouting) Within(ctx context.Context, form ids.UUID, run func(cont
 	return err
 }
 
-func (r inquiryRouting) Validate(ctx context.Context, policy crmcontracts.WebsiteInquiryPolicy) error {
+func (r Routing) Validate(ctx context.Context, policy crmcontracts.WebsiteInquiryPolicy) error {
 	return r.validate(ctx, policy, true)
 }
 
-func (r inquiryRouting) validate(ctx context.Context, policy crmcontracts.WebsiteInquiryPolicy, requirePool bool) error {
+func (r Routing) validate(ctx context.Context, policy crmcontracts.WebsiteInquiryPolicy, requirePool bool) error {
 	if _, err := webforms.NewStore(r.db, slog.Default()).GetForm(ctx, ids.UUID(policy.FormId)); err != nil {
 		return err
 	}
@@ -102,15 +103,15 @@ func (r inquiryRouting) validate(ctx context.Context, policy crmcontracts.Websit
 	return r.checkRequestType(ctx, policy)
 }
 
-func (r inquiryRouting) Choose(ctx, admit context.Context, policy crmcontracts.WebsiteInquiryPolicy, target datasource.EntityRef, source ids.UUID) (ids.UUID, string, error) {
+func (r Routing) Choose(ctx, admit context.Context, policy crmcontracts.WebsiteInquiryPolicy, target datasource.EntityRef, source ids.UUID) (ids.UUID, string, error) {
 	return r.choose(ctx, admit, policy, target, source, true)
 }
 
-func (r inquiryRouting) Preview(ctx, admit context.Context, policy crmcontracts.WebsiteInquiryPolicy, target datasource.EntityRef, source ids.UUID) (ids.UUID, string, error) {
+func (r Routing) Preview(ctx, admit context.Context, policy crmcontracts.WebsiteInquiryPolicy, target datasource.EntityRef, source ids.UUID) (ids.UUID, string, error) {
 	return r.choose(ctx, admit, policy, target, source, false)
 }
 
-func (r inquiryRouting) choose(ctx, admit context.Context, policy crmcontracts.WebsiteInquiryPolicy, target datasource.EntityRef, source ids.UUID, apply bool) (ids.UUID, string, error) {
+func (r Routing) choose(ctx, admit context.Context, policy crmcontracts.WebsiteInquiryPolicy, target datasource.EntityRef, source ids.UUID, apply bool) (ids.UUID, string, error) {
 	owner, err := r.owner(admit, target)
 	if err != nil {
 		return ids.Nil, "", err
@@ -165,7 +166,7 @@ func (r inquiryRouting) choose(ctx, admit context.Context, policy crmcontracts.W
 	return ids.UUID(policy.CoordinatorId), "coordinator_review", nil
 }
 
-func (r inquiryRouting) existingOwner(ctx context.Context, owner, coordinator ids.UUID, target datasource.EntityRef, source ids.UUID) (ids.UUID, string, error) {
+func (r Routing) existingOwner(ctx context.Context, owner, coordinator ids.UUID, target datasource.EntityRef, source ids.UUID) (ids.UUID, string, error) {
 	if err := r.CheckRecipient(ctx, owner, target, source); err == nil {
 		return owner, "existing_owner", nil
 	} else if inquiryRecipientDenied(err) {
@@ -175,7 +176,7 @@ func (r inquiryRouting) existingOwner(ctx context.Context, owner, coordinator id
 	}
 }
 
-func (r inquiryRouting) CheckRecipient(ctx context.Context, id ids.UUID, target datasource.EntityRef, source ids.UUID) error {
+func (r Routing) CheckRecipient(ctx context.Context, id ids.UUID, target datasource.EntityRef, source ids.UUID) error {
 	human, err := r.recipient(ctx, id, target)
 	if err != nil {
 		return err
@@ -184,7 +185,7 @@ func (r inquiryRouting) CheckRecipient(ctx context.Context, id ids.UUID, target 
 	return err
 }
 
-func (r inquiryRouting) recipient(ctx context.Context, id ids.UUID, target datasource.EntityRef) (context.Context, error) {
+func (r Routing) recipient(ctx context.Context, id ids.UUID, target datasource.EntityRef) (context.Context, error) {
 	err := r.db.Tx(ctx, func(tx pgx.Tx) error { return auth.EnsureAssignee(ctx, tx, id) })
 	if err != nil {
 		return nil, err
@@ -193,11 +194,11 @@ func (r inquiryRouting) recipient(ctx context.Context, id ids.UUID, target datas
 	if err != nil {
 		return nil, err
 	}
-	_, err = NewProviderFor(r.db).Read(human, target)
+	_, err = r.provider.Read(human, target)
 	return human, err
 }
 
-func (r inquiryRouting) human(ctx context.Context, id ids.UUID) (context.Context, error) {
+func (r Routing) human(ctx context.Context, id ids.UUID) (context.Context, error) {
 	workspace, err := r.db.Workspace(ctx)
 	if err != nil {
 		return nil, err
@@ -209,8 +210,8 @@ func (r inquiryRouting) human(ctx context.Context, id ids.UUID) (context.Context
 	return principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalHuman, ID: principal.HumanIDPrefix + id.String(), UserID: id, TeamIDs: rbac.TeamIDs, Permissions: rbac.Permissions}), nil
 }
 
-func (r inquiryRouting) owner(ctx context.Context, target datasource.EntityRef) (*ids.UUID, error) {
-	record, err := NewProviderFor(r.db).Read(ctx, target)
+func (r Routing) owner(ctx context.Context, target datasource.EntityRef) (*ids.UUID, error) {
+	record, err := r.provider.Read(ctx, target)
 	if err != nil {
 		return nil, err
 	}
@@ -228,11 +229,11 @@ func inquiryRecipientDenied(err error) bool {
 	return ineligible || errors.Is(err, apperrors.ErrNotFound) || errors.Is(err, apperrors.ErrPermissionDenied)
 }
 
-func (r inquiryRouting) ReuseArrivalTask(ctx, admit context.Context, key string, source, recipient ids.UUID, due time.Time) (bool, error) {
+func (r Routing) ReuseArrivalTask(ctx, admit context.Context, key string, source, recipient ids.UUID, due time.Time) (bool, error) {
 	return activities.NewStore(r.db).ReuseWebsiteArrivalTask(ctx, admit, key, source, recipient, due)
 }
 
-func (r inquiryRouting) checkRequestType(ctx context.Context, policy crmcontracts.WebsiteInquiryPolicy) error {
+func (r Routing) checkRequestType(ctx context.Context, policy crmcontracts.WebsiteInquiryPolicy) error {
 	if policy.RequestTypeField == nil {
 		return nil
 	}
@@ -253,7 +254,7 @@ func (r inquiryRouting) checkRequestType(ctx context.Context, policy crmcontract
 	return &automation.ParamError{Field: "params.request_type_field", Reason: "choose an active lead picklist field mapped on the form"}
 }
 
-func (r inquiryRouting) ExistingTask(ctx, admit context.Context, key string) (crmcontracts.Activity, bool, error) {
+func (r Routing) ExistingTask(ctx, admit context.Context, key string) (crmcontracts.Activity, bool, error) {
 	store := activities.NewStore(r.db)
 	task, found, err := store.WebsiteInquiryTask(admit, key)
 	if err != nil || !found {
@@ -265,7 +266,7 @@ func (r inquiryRouting) ExistingTask(ctx, admit context.Context, key string) (cr
 	return task, true, nil
 }
 
-func (r inquiryRouting) TaskSubmissions(ctx context.Context, idsToRead []ids.ActivityID) (map[ids.UUID]string, error) {
+func (r Routing) TaskSubmissions(ctx context.Context, idsToRead []ids.ActivityID) (map[ids.UUID]string, error) {
 	out := map[ids.UUID]string{}
 	if len(idsToRead) == 0 {
 		return out, nil

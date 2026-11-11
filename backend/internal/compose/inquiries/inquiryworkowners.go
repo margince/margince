@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package compose
+package inquiries
 
 import (
 	"context"
@@ -19,7 +19,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
-func (w *inquiryWork) owners(ctx context.Context, tasks []crmcontracts.Activity, notes map[string]crmcontracts.Activity, facts map[ids.UUID]*crmcontracts.WebsiteInquiryWork) error {
+func (w *Work) owners(ctx context.Context, tasks []crmcontracts.Activity, notes map[string]crmcontracts.Activity, facts map[ids.UUID]*crmcontracts.WebsiteInquiryWork) error {
 	targets := map[ids.UUID]datasource.EntityRef{}
 	grouped := map[string][]ids.UUID{}
 	for _, task := range tasks {
@@ -99,7 +99,7 @@ func (w *inquiryWork) owners(ctx context.Context, tasks []crmcontracts.Activity,
 	return nil
 }
 
-func (w *inquiryWork) readerCanTake(ctx context.Context) (bool, error) {
+func (w *Work) readerCanTake(ctx context.Context) (bool, error) {
 	for _, check := range []func(context.Context) error{auth.RequireHumanOrItsAgent, func(ctx context.Context) error { return auth.Require(ctx, "activity", principal.ActionUpdate) }} {
 		if err := check(ctx); err != nil {
 			if errors.Is(err, apperrors.ErrPermissionDenied) {

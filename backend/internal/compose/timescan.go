@@ -23,32 +23,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
-// activityScanAdapter maps automation.ActivityScan onto
-// activities.Store.LastTouchBefore — the one place this module's own
-// activity_link entity-type strings become the generic (EntityRef,
-// anchor) shape the automation module's seam declares (ids/datasource/
-// stdlib only, seams.go).
-type activityScanAdapter struct {
-	store *activities.Store
-}
-
-var _ automation.ActivityScan = activityScanAdapter{}
-
-func (a activityScanAdapter) LastTouchBefore(ctx context.Context, cutoff time.Time, limit int, reminder string) ([]automation.EntityAnchor, error) {
-	candidates, err := a.store.LastTouchBefore(ctx, cutoff, limit, reminder)
-	if err != nil {
-		return nil, err
-	}
-	out := make([]automation.EntityAnchor, len(candidates))
-	for i, c := range candidates {
-		out[i] = automation.EntityAnchor{
-			Ref:    datasource.EntityRef{Type: datasource.EntityType(c.EntityType), ID: c.EntityID},
-			Anchor: c.LastTouch,
-		}
-	}
-	return out, nil
-}
-
 // dateFieldScanAdapter maps automation.DateFieldScan onto
 // customfields.Service.DateFieldCandidates — the one place this module's
 // (EntityID, StoredValue, OccurrenceDate) row shape becomes the generic
@@ -120,7 +94,7 @@ func NewTimeScannerWithClock(db *database.DB, now func() time.Time, log *slog.Lo
 	engine := NewWorkflowEngine(db)
 	pool := db.Pool()
 	return automation.NewTimeScannerWithClock(engine,
-		activityScanAdapter{store: quietScanStore(db)},
+		newQuietPopulationReader(db),
 		dateFieldScanAdapter{svc: customfields.NewService(pool, nil)},
 		now, log)
 }

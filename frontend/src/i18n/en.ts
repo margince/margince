@@ -13125,6 +13125,10 @@ export const en = {
   "auto.stages.loadError": "Could not load pipelines.",
   "auto.stages.choosePipeline": "Choose a pipeline",
   "auto.stages.chooseStages": "Choose stages",
+  "auto.quiet.customerList": "Customer list",
+  "auto.quiet.days": "Days without contact",
+  "auto.lists.noCustomers":
+    "No contact or company lists yet. Save a list first.",
   "auto.stages.taskTitle": "Task title",
   "auto.stages.pipeline": "Pipeline",
   "auto.stages.destinations": "Destination stages",

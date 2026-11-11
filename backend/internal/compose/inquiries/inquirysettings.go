@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package compose
+package inquiries
 
 import (
 	"context"
@@ -20,18 +20,21 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
-type inquirySettings struct {
-	db       *database.DB
-	forms    *webforms.Store
-	policies *automation.AutomationStore
-	fence    *webFormFence
+type Settings struct {
+	routing   Routing
+	executors automation.Executors
+	engine    func() *automation.WorkflowEngine
+	db        *database.DB
+	forms     *webforms.Store
+	policies  *automation.AutomationStore
+	fence     webforms.HandlingFence
 }
 
-func newInquirySettings(db *database.DB, forms *webforms.Store) inquirySettings {
-	return inquirySettings{db: db, forms: forms, policies: automation.NewAutomationStore(db).WithInquiryRouting(newInquiryRouting(db)), fence: newWebFormFence(db)}
+func NewSettings(db *database.DB, forms *webforms.Store, routing Routing, executors automation.Executors, engine func() *automation.WorkflowEngine) Settings {
+	return Settings{db: db, forms: forms, policies: automation.NewAutomationStore(db).WithInquiryRouting(routing), fence: routing.fence, routing: routing, executors: executors, engine: engine}
 }
 
-func (s inquirySettings) Save(ctx context.Context, id ids.UUID, version int64, in crmcontracts.WebsiteInquiryHandlingRequest) (crmcontracts.WebsiteInquiryHandling, error) {
+func (s Settings) Save(ctx context.Context, id ids.UUID, version int64, in crmcontracts.WebsiteInquiryHandlingRequest) (crmcontracts.WebsiteInquiryHandling, error) {
 	if err := auth.Require(ctx, "automation", principal.ActionRead); err != nil {
 		return crmcontracts.WebsiteInquiryHandling{}, err
 	}
@@ -49,7 +52,7 @@ func (s inquirySettings) Save(ctx context.Context, id ids.UUID, version int64, i
 	return out, err
 }
 
-func (s inquirySettings) save(ctx context.Context, id ids.UUID, version int64, in crmcontracts.WebsiteInquiryHandlingRequest) (crmcontracts.WebsiteInquiryHandling, error) {
+func (s Settings) save(ctx context.Context, id ids.UUID, version int64, in crmcontracts.WebsiteInquiryHandlingRequest) (crmcontracts.WebsiteInquiryHandling, error) {
 	form, err := s.forms.GetForm(ctx, id)
 	if err != nil {
 		return crmcontracts.WebsiteInquiryHandling{}, err
@@ -76,7 +79,7 @@ func (s inquirySettings) save(ctx context.Context, id ids.UUID, version int64, i
 	return crmcontracts.WebsiteInquiryHandling{Form: webforms.WireForm(form), Automation: wire}, nil
 }
 
-func (s inquirySettings) savePolicy(ctx context.Context, form webforms.Form, in crmcontracts.WebsiteInquiryHandlingRequest) (automation.Automation, error) {
+func (s Settings) savePolicy(ctx context.Context, form webforms.Form, in crmcontracts.WebsiteInquiryHandlingRequest) (automation.Automation, error) {
 	raw, err := json.Marshal(in.Policy)
 	if err != nil {
 		return automation.Automation{}, err

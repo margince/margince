@@ -20,6 +20,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
 )
@@ -96,6 +97,18 @@ func anchorReminderTaskEffect(
 	ctx context.Context, ex Executors, ev workflow.Event, subject string, h workflow.Handler,
 ) (workflow.Effect, error) {
 	key := taskNaturalKey{System: h.Spec().Name, ID: h.IdempotencyKey(ev)}
+	population, err := quietPopulation(ev.Params)
+	if err != nil {
+		return workflow.Effect{}, err
+	}
+	if population.configured() {
+		anchor, err := touchAnchor(ev)
+		if err != nil {
+			return workflow.Effect{}, err
+		}
+		// Reviewed quiet rules share the unique task key, including concurrent scans.
+		key = taskNaturalKey{System: provenance.NoActivityReminderSource, ID: anchorIdempotencyKey(provenance.NoActivityReminderSource, ev.Entity, anchor, nil)}
+	}
 	return ownedTaskEffect(ctx, ex, ev, subject, ev.OccurredAt.AddDate(0, 0, reminderDueInDays), &key)
 }
 

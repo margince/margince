@@ -6,6 +6,7 @@ import { RecordFormDialog } from "../../design-system/recordformdialog";
 import { Select } from "../../design-system/select";
 import { TimezoneSelect } from "../../design-system/timezoneselect";
 import { useT } from "../../i18n";
+import type { MessageKey } from "../../i18n/en";
 import { DateFieldSelect } from "./automations.datefield";
 import { ListParamSelect } from "./automations.lists";
 import {
@@ -19,6 +20,16 @@ import { StageParamSelect } from "./automations.stageparams";
 
 type CatalogEntry = components["schemas"]["AutomationCatalogEntry"];
 type Automation = components["schemas"]["Automation"];
+
+const PARAM_LABELS: Record<string, MessageKey> = {
+  task_title: "auto.stages.taskTitle",
+  pipeline_id: "auto.stages.pipeline",
+  stage_ids: "auto.stages.destinations",
+  task_timezone: "auto.deadlineTimezone",
+  customer_list_id: "auto.quiet.customerList",
+  no_activity_days: "auto.quiet.days",
+  check_in_days: "auto.quiet.days",
+};
 
 // The dialog an automation is named and parameterised through, and the one
 // control that draws a single declared parameter. Create in the admin panel and
@@ -41,8 +52,8 @@ function ParamFieldControl({
   onChange: (value: string) => void;
 }>) {
   const t = useT();
-  const label =
-    field.key === "task_title" ? t("auto.stages.taskTitle") : field.key;
+  const labelKey = PARAM_LABELS[field.key];
+  const label = labelKey ? t(labelKey) : field.key;
   if (field.kind === "pipeline" || field.kind === "stages") {
     const kind = field.kind;
     return (
@@ -87,7 +98,11 @@ function ParamFieldControl({
       </div>
     );
   }
-  if (field.kind === "live_list" || field.kind === "shortlist") {
+  if (
+    field.kind === "live_list" ||
+    field.kind === "shortlist" ||
+    field.kind === "record_list"
+  ) {
     const kind = field.kind;
     return (
       <Field label={label}>
@@ -98,6 +113,7 @@ function ParamFieldControl({
             watchedList={watchedList}
             onChange={onChange}
             control={control}
+            allowedTypes={field.entityTypes}
           />
         )}
       </Field>

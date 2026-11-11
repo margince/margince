@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package compose
+package inquiries
 
 import (
 	"context"
@@ -13,7 +13,6 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/automation"
-	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -25,7 +24,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
 )
 
-func (s inquirySettings) Preview(ctx context.Context, id ids.UUID, in crmcontracts.WebsiteInquiryPreviewRequest, now time.Time) (crmcontracts.WebsiteInquiryHandlingPreview, error) {
+func (s Settings) Preview(ctx context.Context, id ids.UUID, in crmcontracts.WebsiteInquiryPreviewRequest, now time.Time) (crmcontracts.WebsiteInquiryHandlingPreview, error) {
 	if err := auth.Require(ctx, "automation", principal.ActionRead); err != nil {
 		return crmcontracts.WebsiteInquiryHandlingPreview{}, err
 	}
@@ -75,11 +74,11 @@ func (s inquirySettings) Preview(ctx context.Context, id ids.UUID, in crmcontrac
 			}
 			owner, policyID = saved.OwnerID.UUID, saved.ID.UUID
 		}
-		admit, err := newInquiryRouting(s.db).human(bound, owner)
+		admit, err := s.routing.human(bound, owner)
 		if err != nil {
 			return err
 		}
-		if err := newInquiryRouting(s.db).validate(admit, policy, false); err != nil {
+		if err := s.routing.validate(admit, policy, false); err != nil {
 			return err
 		}
 		due, err := automation.InquiryDueAt(policy, now)
@@ -95,7 +94,7 @@ func (s inquirySettings) Preview(ctx context.Context, id ids.UUID, in crmcontrac
 	return out, err
 }
 
-func (s inquirySettings) previewSelected(ctx context.Context, policyID, owner ids.UUID, raw json.RawMessage, selected crmcontracts.WebsiteInquirySelection) crmcontracts.WebsiteInquiryPreviewItem {
+func (s Settings) previewSelected(ctx context.Context, policyID, owner ids.UUID, raw json.RawMessage, selected crmcontracts.WebsiteInquirySelection) crmcontracts.WebsiteInquiryPreviewItem {
 	item := crmcontracts.WebsiteInquiryPreviewItem{Id: selected.Id, Version: selected.Version, Status: crmcontracts.WebsiteInquiryPreviewItemStatusUnavailable}
 	plan, err := s.planSelectedInquiry(ctx, policyID, owner, raw, selected)
 	if err != nil {
@@ -141,7 +140,7 @@ func previewItemError(item crmcontracts.WebsiteInquiryPreviewItem, err error) cr
 	return item
 }
 
-func (s inquirySettings) planSelectedInquiry(ctx context.Context, policyID, owner ids.UUID, raw json.RawMessage, selected crmcontracts.WebsiteInquirySelection) (automation.InquiryPreview, error) {
+func (s Settings) planSelectedInquiry(ctx context.Context, policyID, owner ids.UUID, raw json.RawMessage, selected crmcontracts.WebsiteInquirySelection) (automation.InquiryPreview, error) {
 	if selected.Version == nil {
 		return automation.InquiryPreview{}, apperrors.ErrVersionSkew
 	}
@@ -156,7 +155,7 @@ func (s inquirySettings) planSelectedInquiry(ctx context.Context, policyID, owne
 	if note.Kind != crmcontracts.ActivityKindNote || note.SourceSystem == nil || *note.SourceSystem != provenance.WebFormSource || note.SourceId == nil {
 		return automation.InquiryPreview{}, apperrors.ErrNotFound
 	}
-	ex := automation.Executors{Provider: NewProviderFor(s.db), Authority: identity.NewService(s.db.Pool())}
+	ex := s.executors
 	target, err := automation.InquiryTarget(note)
 	if err != nil {
 		return automation.InquiryPreview{}, err
@@ -173,7 +172,7 @@ func (s inquirySettings) planSelectedInquiry(ctx context.Context, policyID, owne
 		return automation.InquiryPreview{}, err
 	}
 	ev := workflow.Event{WorkspaceID: workspace.UUID, OwnerID: owner, AutomationID: policyID, Params: raw, Payload: payload, Entity: datasource.EntityRef{Type: datasource.EntityActivity, ID: ids.UUID(selected.Id)}}
-	plan, err := automation.NewInquiryService(s.db, newInquiryRouting(s.db)).Preview(ctx, ex, ev)
+	plan, err := automation.NewInquiryService(s.db, s.routing).Preview(ctx, ex, ev)
 	if err != nil {
 		return automation.InquiryPreview{}, err
 	}
