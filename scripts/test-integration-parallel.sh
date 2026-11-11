@@ -826,17 +826,17 @@ if [[ -n "$SHARD_OUT" ]]; then
   printf 'shard=%s\ntotal=%s\ntiming=%s\n' "$SHARD_IDX" "$SHARD_TOTAL" "$timing_digest" > "$SHARD_OUT/meta.txt"
   # The groups a queue shard claimed, and the digest of the parts they number,
   # so the fan-in can name them and a later attempt can skip them.
-  claimed_parts=()
+  evidence_scope=()
   if [[ -n "$QUEUE" ]]; then
     cp "$CLAIMED" "$SHARD_OUT/claimed.txt"
     printf 'queue=%s\n' "$PARTS_DIGEST" >> "$SHARD_OUT/meta.txt"
-    read -r -a claimed_parts <<< "$(awk '{ for (i = 2; i <= NF; i++) printf "%s ", $i }' "$CLAIMED")"
+    read -r -a evidence_scope <<< "--only $(awk '{ for (i = 2; i <= NF; i++) printf "%s ", $i }' "$CLAIMED")"
   fi
   # Each part's lists and its failed log, under the part's own name, and the
   # tests a continuation owes (scripts/lib-integration-artifacts.sh). A queue
-  # shard keeps only the parts it claimed.
+  # shard keeps only the parts it claimed, and none when it claimed none.
   # Guarded, so the verdict below still prints: the shard is red and says why.
-  if ! keep_shard_evidence "$SHARD_OUT" "$WORK" "$REGEX_DIR" "$OUTDIR" "$FAILED_PKGS" "${claimed_parts[@]}"; then
+  if ! keep_shard_evidence "$SHARD_OUT" "$WORK" "$REGEX_DIR" "$OUTDIR" "$FAILED_PKGS" "${evidence_scope[@]}"; then
     echo "FAIL: the shard could not keep its part evidence in $SHARD_OUT"
     fail=1
   fi
