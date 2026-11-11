@@ -287,6 +287,7 @@ the environment the container gets:
 | `MARGINCE_OWNER_DSN` | api entrypoint | yes | owner-role DSN. The entrypoint runs `margince-migrate up` under it, and passes it on as `MARGINCE_SCHEMA_DSN` unless that is set |
 | `MARGINCE_DSN` | api and worker entrypoint | yes | app-role DSN the process serves under, through the `--dsn` fallback |
 | `MARGINCE_ADMIN_PASSWORD` | api entrypoint | first boot only | first-boot admin password. The entrypoint writes it to `/app/secrets/admin-password`, which the `password_file` in `margince.yaml` must name. Once a company exists it writes nothing, and warns if the value is still set |
+| `MARGINCE_BLOBSTORE_PATH` | `backup.sh` | yes, for a backup | object store folder `backup.sh` copies next to the database dump. The api and worker read it too, as [Every setting](configuration.md#every-setting) lists |
 
 ## Other environment variables
 
