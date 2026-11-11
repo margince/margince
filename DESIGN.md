@@ -918,7 +918,8 @@ The current times and curves stay (`--dur-tap` 90ms, `--dur-state` 140ms, `--dur
 where motion is *spent*:
 
 - A page's sections come in with the stagger, from a resting state you can see (an 8px move up and a
-  fade), never from `opacity: 0`.
+  fade), never from `opacity: 0`. Home's sections rise without fading, and its first decision
+  paints without moving when its data arrives.
 - A row lights up on hover in `--dur-state`; nothing else on a row moves.
 - The agent's card, when it arrives, draws its dashed edge in over `--dur-enter`. That is the one
   show of motion, and it reports a fact: a proposal just landed.

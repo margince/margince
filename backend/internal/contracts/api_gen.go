@@ -4597,6 +4597,7 @@ func (e CaptureConnectionMailPosture) Valid() bool {
 // Defines values for CaptureConnectionProvider.
 const (
 	CaptureConnectionProviderGcal        CaptureConnectionProvider = "gcal"
+	CaptureConnectionProviderGdocs       CaptureConnectionProvider = "gdocs"
 	CaptureConnectionProviderGmail       CaptureConnectionProvider = "gmail"
 	CaptureConnectionProviderGraph       CaptureConnectionProvider = "graph"
 	CaptureConnectionProviderGraphcal    CaptureConnectionProvider = "graphcal"
@@ -4608,6 +4609,8 @@ const (
 func (e CaptureConnectionProvider) Valid() bool {
 	switch e {
 	case CaptureConnectionProviderGcal:
+		return true
+	case CaptureConnectionProviderGdocs:
 		return true
 	case CaptureConnectionProviderGmail:
 		return true
@@ -7465,6 +7468,7 @@ func (e ConnectorAppSource) Valid() bool {
 // Defines values for ConnectorAppRedirectUriPurpose.
 const (
 	ConnectorAppRedirectUriPurposeCalendarConnect  ConnectorAppRedirectUriPurpose = "calendar_connect"
+	ConnectorAppRedirectUriPurposeDocumentsConnect ConnectorAppRedirectUriPurpose = "documents_connect"
 	ConnectorAppRedirectUriPurposeExtensionConnect ConnectorAppRedirectUriPurpose = "extension_connect"
 	ConnectorAppRedirectUriPurposeMailboxConnect   ConnectorAppRedirectUriPurpose = "mailbox_connect"
 	ConnectorAppRedirectUriPurposeSignIn           ConnectorAppRedirectUriPurpose = "sign_in"
@@ -7474,6 +7478,8 @@ const (
 func (e ConnectorAppRedirectUriPurpose) Valid() bool {
 	switch e {
 	case ConnectorAppRedirectUriPurposeCalendarConnect:
+		return true
+	case ConnectorAppRedirectUriPurposeDocumentsConnect:
 		return true
 	case ConnectorAppRedirectUriPurposeExtensionConnect:
 		return true
@@ -17374,6 +17380,7 @@ func (e MorningBriefItemState) Valid() bool {
 // Defines values for MorningDigestConnectorsProvider.
 const (
 	MorningDigestConnectorsProviderGcal        MorningDigestConnectorsProvider = "gcal"
+	MorningDigestConnectorsProviderGdocs       MorningDigestConnectorsProvider = "gdocs"
 	MorningDigestConnectorsProviderGmail       MorningDigestConnectorsProvider = "gmail"
 	MorningDigestConnectorsProviderGraph       MorningDigestConnectorsProvider = "graph"
 	MorningDigestConnectorsProviderGraphcal    MorningDigestConnectorsProvider = "graphcal"
@@ -17385,6 +17392,8 @@ const (
 func (e MorningDigestConnectorsProvider) Valid() bool {
 	switch e {
 	case MorningDigestConnectorsProviderGcal:
+		return true
+	case MorningDigestConnectorsProviderGdocs:
 		return true
 	case MorningDigestConnectorsProviderGmail:
 		return true
@@ -27511,6 +27520,7 @@ func (e AnchorRecordType) Valid() bool {
 // Defines values for CaptureProvider.
 const (
 	CaptureProviderGcal        CaptureProvider = "gcal"
+	CaptureProviderGdocs       CaptureProvider = "gdocs"
 	CaptureProviderGmail       CaptureProvider = "gmail"
 	CaptureProviderGraph       CaptureProvider = "graph"
 	CaptureProviderGraphcal    CaptureProvider = "graphcal"
@@ -27522,6 +27532,8 @@ const (
 func (e CaptureProvider) Valid() bool {
 	switch e {
 	case CaptureProviderGcal:
+		return true
+	case CaptureProviderGdocs:
 		return true
 	case CaptureProviderGmail:
 		return true
@@ -37638,7 +37650,7 @@ type CaptureConnection struct {
 	// NextSyncDueAt When the sweep will next pick this connection up (backoff-aware).
 	NextSyncDueAt *time.Time `json:"next_sync_due_at,omitempty"`
 
-	// Provider The mail/calendar provider (A51 email+calendar parity).
+	// Provider The mail/calendar/meeting-notes provider (A51 email+calendar parity).
 	Provider CaptureConnectionProvider `json:"provider"`
 
 	// Scopes The granted provider scopes.
@@ -37684,7 +37696,7 @@ type CaptureConnection struct {
 // for `apply_to_history`.
 type CaptureConnectionMailPosture string
 
-// CaptureConnectionProvider The mail/calendar provider (A51 email+calendar parity).
+// CaptureConnectionProvider The mail/calendar/meeting-notes provider (A51 email+calendar parity).
 type CaptureConnectionProvider string
 
 // CaptureConnectionStatus Connection state; `reauth_required` when the stored token expired/was revoked upstream.
@@ -41948,7 +41960,7 @@ type ConnectorAppList struct {
 
 // ConnectorAppRedirectUri One callback URL that must be registered as a redirect URI on the vendor's OAuth client. The `url` is the exact value this deployment sends the vendor, byte for byte — paste it as given rather than reconstructing it.
 type ConnectorAppRedirectUri struct {
-	// Purpose Which flow uses this URL. `sign_in` is the login callback. `mailbox_connect` and `calendar_connect` are the per-user mail and calendar consent callbacks, which are SEPARATE connectors served on different paths. `extension_connect` is the consent callback of an extension unit's OAuth app, and the only purpose such an app lists. ONE app backs all three on either vendor, and registering only some of them fails the others at the consent screen — Google says `redirect_uri_mismatch`, Microsoft says `AADSTS50011`, and neither names the URL that was missing.
+	// Purpose Which flow uses this URL. `sign_in` is the login callback. `mailbox_connect` and `calendar_connect` are the per-user mail and calendar consent callbacks, which are SEPARATE connectors served on different paths. `documents_connect` is Google's meeting-notes consent callback, a third connector on its own path. `extension_connect` is the consent callback of an extension unit's OAuth app, and the only purpose such an app lists. ONE app backs all three on either vendor, and registering only some of them fails the others at the consent screen — Google says `redirect_uri_mismatch`, Microsoft says `AADSTS50011`, and neither names the URL that was missing.
 	// None is derivable from another: the sign-in callback rides a base that already carries `/v1`, while the connector callbacks prefer the API's own origin over the SPA's, and on a split deployment those are different hosts. Only the purposes this deployment actually serves are listed.
 	Purpose ConnectorAppRedirectUriPurpose `json:"purpose"`
 
@@ -41956,7 +41968,7 @@ type ConnectorAppRedirectUri struct {
 	Url string `json:"url"`
 }
 
-// ConnectorAppRedirectUriPurpose Which flow uses this URL. `sign_in` is the login callback. `mailbox_connect` and `calendar_connect` are the per-user mail and calendar consent callbacks, which are SEPARATE connectors served on different paths. `extension_connect` is the consent callback of an extension unit's OAuth app, and the only purpose such an app lists. ONE app backs all three on either vendor, and registering only some of them fails the others at the consent screen — Google says `redirect_uri_mismatch`, Microsoft says `AADSTS50011`, and neither names the URL that was missing.
+// ConnectorAppRedirectUriPurpose Which flow uses this URL. `sign_in` is the login callback. `mailbox_connect` and `calendar_connect` are the per-user mail and calendar consent callbacks, which are SEPARATE connectors served on different paths. `documents_connect` is Google's meeting-notes consent callback, a third connector on its own path. `extension_connect` is the consent callback of an extension unit's OAuth app, and the only purpose such an app lists. ONE app backs all three on either vendor, and registering only some of them fails the others at the consent screen — Google says `redirect_uri_mismatch`, Microsoft says `AADSTS50011`, and neither names the URL that was missing.
 // None is derivable from another: the sign-in callback rides a base that already carries `/v1`, while the connector callbacks prefer the API's own origin over the SPA's, and on a split deployment those are different hosts. Only the purposes this deployment actually serves are listed.
 type ConnectorAppRedirectUriPurpose string
 

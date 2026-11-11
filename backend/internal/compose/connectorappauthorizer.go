@@ -27,6 +27,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/capture/gcal"
+	"github.com/margince/margince/backend/internal/modules/capture/gdocs"
 	"github.com/margince/margince/backend/internal/modules/capture/gmail"
 	"github.com/margince/margince/backend/internal/modules/capture/googleconn"
 	"github.com/margince/margince/backend/internal/modules/capture/graph"
@@ -191,6 +192,21 @@ func newGcalAuthorizer(resolve appResolver, c GmailConfig) googleAppAuthorizer {
 		env:     env,
 		build: func(app capture.ConnectorApp) googleconn.Authorizer {
 			return gcal.NewOAuth(gcal.OAuthConfig{ClientID: app.ClientID, ClientSecret: app.ClientSecretRef})
+		},
+	}
+}
+
+// newGdocsAuthorizer is the Google Docs half of the same Google app.
+func newGdocsAuthorizer(resolve appResolver, c GmailConfig) googleAppAuthorizer {
+	var env googleconn.Authorizer
+	if c.canSync() {
+		env = newGdocsOAuth(c)
+	}
+	return googleAppAuthorizer{
+		resolve: resolve,
+		env:     env,
+		build: func(app capture.ConnectorApp) googleconn.Authorizer {
+			return gdocs.NewOAuth(gdocs.OAuthConfig{ClientID: app.ClientID, ClientSecret: app.ClientSecretRef})
 		},
 	}
 }

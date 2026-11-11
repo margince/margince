@@ -11435,6 +11435,21 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Kết nối tài khoản bạn dùng để làm việc. Email của bạn tự được xếp vào đúng liên hệ và deal, còn lịch đưa các cuộc họp lên hồ sơ và cho liên kết đặt lịch biết giờ rảnh của bạn.",
   "connectors.provGmail": "Gmail",
   "connectors.provGcal": "Google Calendar",
+  "connectors.provGdocs": "Google Docs",
+  "connectors.cannotReadNotes": "Không đọc được ghi chú cuộc họp",
+  "connectors.reconnectToReadNotes":
+    "Kết nối lại để đọc ghi chú cuộc họp. Google chưa được cấp quyền truy cập các tài liệu ghi chú.",
+  "connectors.bringsNotes": "Ghi chú cuộc họp",
+  "connectors.notes.name": "Ghi chú cuộc họp",
+  "connectors.notes.desc":
+    "Ghi chú và bản chép lời mà Google Meet viết được đọc từ Google Docs và lưu vào cuộc họp.",
+  "connectors.notes.connect": "Kết nối ghi chú cuộc họp",
+  "connectors.notes.stop": "Ngừng đọc ghi chú cuộc họp",
+  "connectors.notes.stopTitle": "Ngừng đọc ghi chú cuộc họp?",
+  "connectors.notes.stopBody":
+    "Margince ngừng đọc ghi chú do Google Meet viết. Email và lịch vẫn chạy, và ghi chú đã có trên cuộc họp vẫn được giữ.",
+  "connectors.notes.otherAccount":
+    "Ghi chú cuộc họp được kết nối bằng {notes}, còn lịch bằng {calendar}. Ghi chú chỉ được đọc cho các cuộc họp trong lịch của cùng tài khoản, vì vậy hãy kết nối ghi chú cuộc họp bằng {calendar}.",
   "connectors.provGraph": "Outlook",
   "connectors.provGraphCal": "Lịch Outlook",
   "connectors.provImap": "Hộp thư IMAP",
@@ -15045,6 +15060,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "oauthApp.redirectCopiedFor": "Đã sao chép URI {purpose}",
   "oauthApp.redirect.mailbox_connect": "Hộp thư",
   "oauthApp.redirect.calendar_connect": "Lịch",
+  "oauthApp.redirect.documents_connect": "Ghi chú cuộc họp",
   "oauthApp.redirect.sign_in": "Đăng nhập",
   "oauthApp.redirect.extension_connect": "Kết nối",
   "oauthApp.redirectTitle": "URI chuyển hướng được ủy quyền",

@@ -108,3 +108,4 @@
 
 1794387685_a_website_form_names_its_reviewed_inquiry_policy.down.sql | * | read-only existence check refuses rollback after a cutover; no row is rewritten
 1794387686_an_inquiry_effect_keeps_its_planned_assignment.down.sql | * | read-only existence check refuses rollback after an assignment; no row is rewritten
+1794379079_a_google_docs_connection_reads_meeting_notes.down.sql | *, capture_connection | runs only on a rollback; the DO block only counts and refuses, and the DELETE reaches withdrawn gdocs connections, at most one row per seat

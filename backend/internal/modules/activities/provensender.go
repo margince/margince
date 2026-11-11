@@ -27,6 +27,10 @@ import (
 // sender, in the audit images.
 const auditFieldProvenSender = "proven_sender"
 
+// evidenceDataTaskRun names the data task run that made a repair, in the audit
+// evidence of every activity repair a data task writes.
+const evidenceDataTaskRun = "data_task_run"
+
 // provenSenderSQL holds when contact (a SQL expression) is the proven author of
 // the received, live, unheld activity a, linked to it and naming no sender. The
 // stated address is the bare `from` address, else the counterparty. The contact
@@ -136,7 +140,7 @@ func StampProvenSenderTx(ctx context.Context, tx pgx.Tx, activityID, runID ids.U
 	}
 	auditID, err := storekit.AuditWithEvidence(ctx, tx, "update", "activity", activityID,
 		map[string]any{auditFieldProvenSender: nil}, map[string]any{auditFieldProvenSender: contact},
-		map[string]any{"data_task_run": runID.String()})
+		map[string]any{evidenceDataTaskRun: runID.String()})
 	if err != nil {
 		return false, err
 	}

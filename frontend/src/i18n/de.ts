@@ -11742,6 +11742,21 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Verbinde das Konto, mit dem du arbeitest. Deine E-Mails landen bei den richtigen Kontakten und Deals, und dein Kalender bringt Termine auf die Datensätze und gibt deinem Buchungslink deine freien Zeiten.",
   "connectors.provGmail": "Gmail",
   "connectors.provGcal": "Google Kalender",
+  "connectors.provGdocs": "Google Docs",
+  "connectors.cannotReadNotes": "Kann Besprechungsnotizen nicht lesen",
+  "connectors.reconnectToReadNotes":
+    "Neu verbinden, um Besprechungsnotizen zu lesen. Google hat keinen Zugriff auf die Notizdokumente erhalten.",
+  "connectors.bringsNotes": "Besprechungsnotizen",
+  "connectors.notes.name": "Besprechungsnotizen",
+  "connectors.notes.desc":
+    "Die Notizen und Transkripte, die Google Meet schreibt, werden aus Google Docs gelesen und am Termin abgelegt.",
+  "connectors.notes.connect": "Besprechungsnotizen verbinden",
+  "connectors.notes.stop": "Besprechungsnotizen nicht mehr lesen",
+  "connectors.notes.stopTitle": "Besprechungsnotizen nicht mehr lesen?",
+  "connectors.notes.stopBody":
+    "Margince liest die Notizen von Google Meet nicht mehr. E-Mail und Kalender laufen weiter, und Notizen an Terminen bleiben erhalten.",
+  "connectors.notes.otherAccount":
+    "Die Besprechungsnotizen sind mit {notes} verbunden, der Kalender mit {calendar}. Notizen werden nur für Termine im Kalender desselben Kontos gelesen. Verbinde die Besprechungsnotizen daher mit {calendar}.",
   "connectors.provGraph": "Outlook",
   "connectors.provGraphCal": "Outlook-Kalender",
   "connectors.provImap": "IMAP-Postfach",
@@ -15455,6 +15470,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "oauthApp.redirectCopiedFor": "URI für {purpose} kopiert",
   "oauthApp.redirect.mailbox_connect": "Postfach",
   "oauthApp.redirect.calendar_connect": "Kalender",
+  "oauthApp.redirect.documents_connect": "Besprechungsnotizen",
   "oauthApp.redirect.sign_in": "Anmeldung",
   "oauthApp.redirect.extension_connect": "Verbinden",
   "oauthApp.redirectTitle": "Autorisierte Weiterleitungs-URIs",

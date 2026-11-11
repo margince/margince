@@ -36,6 +36,7 @@ func (c *Connector) pullFolder(
 		if err := reportRemovals(ctx, sink, page.Removed); err != nil {
 			return err
 		}
+		state.cancelPurges(page.Messages)
 		if err := c.captureMessages(ctx, access, folder, page.Messages, sink, owner, sentByOwner); err != nil {
 			return err
 		}

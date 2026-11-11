@@ -70,7 +70,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `emaildesign_test.go` | H1 | Mail cannot read CSS variables, so emailview writes each design token in as its value. |
 | `emailsplitterparity_test.go` | H3 | The server composes a row's preview and the browser folds the quoted tail in the drawer, from two copies of one vocabulary. |
 | `entitymodel_test.go` | H3 | The entity model pages say what the schema says. |
-| `enumsync_test.go` | H3 | Where domain logic branches on a typed Go enum, its constant set equals the schema's CHECK (col IN (...)) set for the column it mirrors. |
+| `enumsync_test.go` | H3 | Where domain logic branches on a typed Go enum, its constant set equals the schema's CHECK set for the column it mirrors. |
 | `exportedreferences_test.go` | H2 | Every reference an exported row carries to a row-scoped record is one the export withholds from a reader who could not open it. |
 | `extensionrefusalvocabulary_test.go` | H3 | The refusal vocabulary is spelled on both sides of the wire, so it is held as one item. |
 | `figuremaximaparity_test.go` | H2 | The deals module refuses a minor-unit price above values.MaxExactInteger. |
@@ -474,6 +474,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `validatedreplypath_test.go` | H2 | A model reply this tree can refuse must be asked for through the validated lane, so the refusal reaches the model that can act on it. |
 | `vaultwriters_test.go` | H2 | Every writer of the installation's ciphertext store records its act somewhere. |
 | `versionbumptriggercolumn_test.go` | H2 | Every table the bump trigger is attached to has a NOT NULL version column for it to bump. |
+| `vocabularycensus_test.go` | H3 | Every closed text vocabulary that a Go constant set mirrors is held to that set by a gate. |
 | `winevidencedoors_test.go` | H3 | Every door that moves a deal carries the caller's win-evidence claim. |
 | `wordingdigest_test.go` | H3 | One way to reduce a subject line and a body to a digest. |
 | `worklistdestination_test.go` | H2 | Every source the worklist can emit has one screen it belongs on. |
@@ -646,6 +647,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `stagemoveorigin_test.go` | H2 | A stage reader names the moves another system made through the stagemove kernel, so a new provenance value reaches every reader at once. |
 | `storedoriginal_test.go` | H2 | An activity is correlated to its stored original in one place. |
 | `subjectphotobytes_test.go` | H2 | A subject's photo may not be stored until erasure can destroy the bytes. |
+| `sweepreachnamed_test.go` | H1 | TestNoCoreCodeWritesADeclaredColumnByName fails when code outside a table's owner writes a column the owner declared for the merge or the erasure to reach (sweepreach). |
 | `systemprovenance_test.go` | H2 | A scheduled pass binds its provenance through one helper. |
 | `technicaldomain_test.go` | H2 | The technical lookup reads the domain the record holds, and nothing else. |
 | `textcut_test.go` | H2 | Outside the waived files, no hand-written loop, rune slice or ToValidUTF8 cuts a string to a length; kernel/textcut does it. |
