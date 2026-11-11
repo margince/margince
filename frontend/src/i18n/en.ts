@@ -21536,11 +21536,12 @@ export const en = {
     "{count} deal needs your confirmation. Undo it on its own row.",
   "changes.bulk.confirm_other":
     "{count} deals need your confirmation. Undo each on its own row.",
-  "changes.bulk.unsent_one": "{count} deal was not sent.",
-  "changes.bulk.unsent_other": "{count} deals were not sent.",
+  "changes.bulk.unsent_one": "No result yet for {count} deal.",
+  "changes.bulk.unsent_other": "No result yet for {count} deals.",
   "changes.bulk.confirmOnDeal": "Open the deal to confirm its Undo.",
   "changes.bulk.retry": "Send again",
   "changes.bulk.results": "Show per-deal results",
+  "changes.bulk.storage": "Bulk Undo could not be saved. Allow site storage and try again.",
   "changes.bulk.last": "Last bulk Undo",
   "changes.bulk.unfinished": "Deals not fully undone",
 } as const;

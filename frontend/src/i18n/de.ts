@@ -21795,12 +21795,13 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "{count} Deal braucht deine Bestätigung. Mach ihn in seiner eigenen Zeile rückgängig.",
   "changes.bulk.confirm_other":
     "{count} Deals brauchen deine Bestätigung. Mach jeden in seiner eigenen Zeile rückgängig.",
-  "changes.bulk.unsent_one": "{count} Deal wurde nicht gesendet.",
-  "changes.bulk.unsent_other": "{count} Deals wurden nicht gesendet.",
+  "changes.bulk.unsent_one": "Für {count} Deal liegt noch kein Ergebnis vor.",
+  "changes.bulk.unsent_other": "Für {count} Deals liegt noch kein Ergebnis vor.",
   "changes.bulk.confirmOnDeal":
     "Öffne den Deal, um das Rückgängigmachen zu bestätigen.",
   "changes.bulk.retry": "Erneut senden",
   "changes.bulk.results": "Ergebnisse pro Deal anzeigen",
+  "changes.bulk.storage": "Das Sammel-Rückgängigmachen konnte nicht gespeichert werden. Erlaube das Speichern von Websitedaten und versuche es erneut.",
   "changes.bulk.last": "Letztes Sammel-Rückgängigmachen",
   "changes.bulk.unfinished": "Nicht ganz rückgängig gemachte Deals",
 };

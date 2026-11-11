@@ -21226,11 +21226,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "{count} giao dịch cần bạn xác nhận. Hãy hoàn tác từng giao dịch trên dòng của nó.",
   "changes.bulk.confirm_other":
     "{count} giao dịch cần bạn xác nhận. Hãy hoàn tác từng giao dịch trên dòng của nó.",
-  "changes.bulk.unsent_one": "{count} giao dịch chưa được gửi.",
-  "changes.bulk.unsent_other": "{count} giao dịch chưa được gửi.",
+  "changes.bulk.unsent_one": "Chưa có kết quả cho {count} giao dịch.",
+  "changes.bulk.unsent_other": "Chưa có kết quả cho {count} giao dịch.",
   "changes.bulk.confirmOnDeal": "Mở giao dịch để xác nhận hoàn tác.",
   "changes.bulk.retry": "Gửi lại",
   "changes.bulk.results": "Xem kết quả từng giao dịch",
+  "changes.bulk.storage": "Không lưu được lần hoàn tác hàng loạt. Cho phép trang web lưu dữ liệu rồi thử lại.",
   "changes.bulk.last": "Lần hoàn tác hàng loạt gần nhất",
   "changes.bulk.unfinished": "Giao dịch chưa hoàn tác hết",
 };

@@ -22,7 +22,11 @@ import {
   stillPending,
   useUndoMarginceChanges,
 } from "../lib/marginchanges";
-import { useSavedUndoRuns, useUndoManifest } from "../lib/marginchanges.runs";
+import {
+  BulkUndoStorageError,
+  summarizeUndoRuns,
+  useSavedUndoRuns,
+} from "../lib/marginchanges.runs";
 import { EntityRef } from "./entityref";
 
 const KIND_LABEL: Readonly<Record<string, MessageKey>> = {
@@ -68,7 +72,6 @@ export function BundleUndo({
   const client = useQueryClient();
   const writable = useCanWrite("deal", "update");
   const undo = useUndoMarginceChanges();
-  const manifest = useUndoManifest();
   const [run, setRun] = useState<BundleUndoRun | null>(null);
   const [asking, setAsking] = useState<ArchiveQuestion | null>(null);
   const [rereading, setRereading] = useState(false);
@@ -102,8 +105,8 @@ export function BundleUndo({
   // A batch that failed may still have landed, so the deals are read again and
   // only what still waits goes back.
   const retry = async (unsent: readonly MarginceChangeBundle[]) => {
-    if (bundles.length > 1 && manifest) {
-      undo.mutate({ bundles, resume: manifest }, { onSuccess: setRun });
+    if (run?.manifest) {
+      undo.mutate({ bundles, resume: run.manifest }, { onSuccess: setRun });
       return;
     }
     setRereading(true);
@@ -151,7 +154,7 @@ export function BundleUndo({
       >
         {label}
       </Button>
-      {undo.isError && <ErrorLine error={undo.error} />}
+      {undo.isError && <UndoFailure error={undo.error} />}
     </>
   );
 }
@@ -190,20 +193,15 @@ export function LastBulkUndo() {
   const [resultsOpen, setResultsOpen] = useState(false);
   const [shown, setShown] = useState(50);
   if (!saved.manifest) return null;
-  const completed = new Set(
-    saved.data?.filter((run) => run.complete).map((run) => run.run_id),
-  );
-  const answered = new Set(
-    saved.data?.flatMap((run) => run.results.map((result) => result.deal_id)),
-  );
-  const unsent: MarginceChangeBundle[] = saved.manifest.batches
-    .filter((batch) => !completed.has(batch.id))
-    .flatMap((batch) =>
-      batch.items.filter((item) => !answered.has(item.deal_id)),
-    )
-    .map((item) => ({ ...item, deal_name: "", kinds: [], latest_at: "" }));
+  const summary = summarizeUndoRuns(saved.manifest, saved.data ?? []);
+  const unsent: MarginceChangeBundle[] = summary.unanswered.map((item) => ({
+    ...item,
+    deal_name: "",
+    kinds: [],
+    latest_at: "",
+  }));
   const run: BundleUndoRun = {
-    results: saved.data?.flatMap((batch) => batch.results) ?? [],
+    results: summary.results,
     unsent,
   };
   return (
@@ -232,7 +230,7 @@ export function LastBulkUndo() {
           }
         />
       )}
-      {undo.isError && <ErrorLine error={undo.error} />}
+      {undo.isError && <UndoFailure error={undo.error} />}
       {saved.data && saved.data.some((batch) => batch.results.length > 0) && (
         <Disclosure
           summary={t("changes.bulk.results")}
@@ -263,6 +261,15 @@ export function LastBulkUndo() {
         </Disclosure>
       )}
     </section>
+  );
+}
+
+function UndoFailure({ error }: Readonly<{ error: unknown }>) {
+  const t = useT();
+  return error instanceof BulkUndoStorageError ? (
+    <ErrorLine>{t("changes.bulk.storage")}</ErrorLine>
+  ) : (
+    <ErrorLine error={error} />
   );
 }
 

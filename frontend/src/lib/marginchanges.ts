@@ -106,6 +106,7 @@ const UNDO_BATCH = 200;
  * reads the deals again before it sends them.
  */
 export type BundleUndoRun = {
+  manifest?: UndoManifest;
   results: UndoMarginceChangeResult[];
   unsent: MarginceChangeBundle[];
   error?: unknown;
@@ -135,6 +136,7 @@ export function useUndoMarginceChanges() {
           bundles.map((bundle) => [bundle.deal_id, bundle]),
         );
         return {
+          manifest,
           results: answer.results,
           error: answer.error,
           unsent: answer.unanswered.map((item) => ({

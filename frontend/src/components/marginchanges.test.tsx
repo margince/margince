@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { en } from "../i18n/en";
+import { keepUndoManifest } from "../lib/marginchanges.runs";
 import { isRecord } from "../lib/problembody";
 import { forgetSeat } from "../lib/storage";
 import {
@@ -35,6 +36,27 @@ const bundle = (n: number, version = 7): Bundle => ({
 
 // One more deal than a batch holds, so the Undo takes two requests.
 const chosen = Array.from({ length: 201 }, (_, i) => bundle(i));
+
+it("refuses to start a bulk Undo whose recovery request cannot be saved", async () => {
+  const calls = stubApi({
+    "GET /me": () =>
+      jsonResponse(meFixture({ allow: { deal: ["read", "update"] } })),
+  });
+  vi.stubGlobal("localStorage", undefined);
+  const user = userEvent.setup();
+  render(<BundleUndo bundles={chosen.slice(0, 2)} label="Undo two deals" />);
+  await user.click(
+    await screen.findByRole("button", { name: "Undo two deals" }),
+  );
+  expect(
+    await screen.findByText(
+      "Bulk Undo could not be saved. Allow site storage and try again.",
+    ),
+  ).toBeTruthy();
+  expect(calls.some((call) => call.path === "/deal-corrections/undo")).toBe(
+    false,
+  );
+});
 
 it("keeps the first batch's saved answers and resumes the failed batch with its original items", async () => {
   let posts = 0;
@@ -93,8 +115,17 @@ it("keeps the first batch's saved answers and resumes the failed batch with its 
     await screen.findByRole("button", { name: "Undo changes on 201 deals" }),
   );
   expect(
-    await screen.findByText("Undone on 200 deals. 1 deal was not sent."),
+    await screen.findByText("Undone on 200 deals. No result yet for 1 deal."),
   ).toBeTruthy();
+
+  const failed = calls.filter(
+    (call) => call.path === "/deal-corrections/undo",
+  )[1]?.body;
+  if (!isRecord(failed) || typeof failed.run_id !== "string")
+    throw new Error("missing failed run");
+  keepUndoManifest([
+    { deal_id: "another-deal", version: 1, audit_log_ids: ["another-change"] },
+  ]);
 
   await user.click(screen.getByRole("button", { name: "Send again" }));
   expect(await screen.findByText("Undone on 201 deals.")).toBeTruthy();
@@ -105,6 +136,9 @@ it("keeps the first batch's saved answers and resumes the failed batch with its 
   expect(sent[2]).toEqual([
     { deal_id: "deal-200", version: 7, audit_log_ids: ["change-200"] },
   ]);
+  expect(
+    calls.filter((call) => call.path === "/deal-corrections/undo")[2]?.body,
+  ).toMatchObject({ run_id: failed.run_id });
 });
 
 it("counts each outcome apart and never calls a partial result done", async () => {

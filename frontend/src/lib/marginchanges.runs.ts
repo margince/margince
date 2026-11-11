@@ -12,6 +12,7 @@ import { readStored, STORAGE_KEYS, watchStored, writeStored } from "./storage";
 type UndoItem = components["schemas"]["UndoMarginceChangeItem"];
 type UndoRun = components["schemas"]["MarginceUndoRun"];
 export type UndoManifest = { batches: { id: string; items: UndoItem[] }[] };
+export class BulkUndoStorageError extends Error {}
 const key = STORAGE_KEYS.lastBulkUndo;
 const subscribe = (changed: () => void) => watchStored(key, changed);
 const snapshot = () => readStored(key);
@@ -65,7 +66,7 @@ export function keepUndoManifest(items: UndoItem[]): UndoManifest {
   const encoded = JSON.stringify(manifest);
   writeStored(key, encoded);
   if (readStored(key) !== encoded)
-    throw new Error(
+    throw new BulkUndoStorageError(
       "Bulk Undo could not be saved. Allow site storage and try again.",
     );
   return manifest;
@@ -104,6 +105,25 @@ export function useSavedUndoRuns() {
   };
 }
 
+export function summarizeUndoRuns(
+  manifest: UndoManifest,
+  saved: readonly UndoRun[],
+) {
+  const completed = new Set(
+    saved.filter((run) => run.complete).map((run) => run.run_id),
+  );
+  const results = saved.flatMap((run) => run.results);
+  const answered = new Set(results.map((result) => result.deal_id));
+  return {
+    results,
+    unanswered: manifest.batches
+      .filter((batch) => !completed.has(batch.id))
+      .flatMap((batch) =>
+        batch.items.filter((item) => !answered.has(item.deal_id)),
+      ),
+  };
+}
+
 export async function resumeUndoRuns(manifest: UndoManifest) {
   const saved = await readUndoRuns(manifest);
   const completed = new Map(
@@ -126,13 +146,27 @@ export async function resumeUndoRuns(manifest: UndoManifest) {
       const kept = results.filter((result) => !replaced.has(result.deal_id));
       results.splice(0, results.length, ...kept, ...answer.results);
     } catch (error) {
-      return {
-        results,
-        unanswered: manifest.batches
-          .slice(at)
-          .flatMap((pending) => pending.items),
-        error,
-      };
+      try {
+        const recovered = summarizeUndoRuns(
+          manifest,
+          await readUndoRuns(manifest),
+        );
+        return {
+          ...recovered,
+          error: recovered.unanswered.length > 0 ? error : undefined,
+        };
+      } catch (recoveryError) {
+        return {
+          results,
+          unanswered: manifest.batches
+            .slice(at)
+            .flatMap((pending) => pending.items),
+          error: new AggregateError(
+            [error, recoveryError],
+            "Undo delivery and result recovery both failed",
+          ),
+        };
+      }
     }
   }
   return { results, unanswered: [] };

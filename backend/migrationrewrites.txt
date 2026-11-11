@@ -107,3 +107,4 @@
 1794364497_a_unit_sql_runs_as_the_ext_runtime_role.down.sql | * | the procedural body only grants and revokes privileges on the ext schema; it reads and writes no row
 
 1794386734_bulk_correction_undo_keeps_its_results.down.sql | * | read-only existence check prevents discarding saved results and rewrites no row
+1794386735_the_bulk_correction_undo_check_is_validated.down.sql | * | the down migration retains validation and changes no row

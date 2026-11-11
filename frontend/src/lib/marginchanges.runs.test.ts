@@ -54,9 +54,9 @@ it("recovers the original results of every batch after the last response is lost
   });
   const manifest = keepUndoManifest(items);
   const first = await resumeUndoRuns(manifest);
-  expect(first.results).toHaveLength(200);
-  expect(first.unanswered).toHaveLength(1);
-  expect(first.error).toBeTruthy();
+  expect(first.results).toHaveLength(201);
+  expect(first.unanswered).toHaveLength(0);
+  expect(first.error).toBeUndefined();
   const recovered = await readUndoRuns(manifest);
   expect(recovered.flatMap((run) => run.results)).toHaveLength(201);
   const retried = await resumeUndoRuns(manifest);
