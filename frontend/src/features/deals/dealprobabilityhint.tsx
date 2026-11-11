@@ -31,9 +31,9 @@ type HintProps = Readonly<{
 }>;
 
 /**
- * The ⓘ beside a deal's probability that says why it has that figure. Only the
- * owner of a figure Margince set asks for the deal's changes, to quote its own
- * reason, because the server writes that reason for the owner alone.
+ * The ⓘ beside a deal's probability that says why it has that figure. When
+ * Margince set it, only the owner asks for the deal's changes to quote its
+ * reason. The server writes that reason for the owner alone.
  */
 export function ProbabilityHint(props: HintProps) {
   const viewerId = useViewerId();
