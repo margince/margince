@@ -12,8 +12,17 @@ import { type GrantSpec, meFixture } from "../testing/mefixture";
 import { LicenseBanner } from "./licensebanner";
 
 type LicenseState = components["schemas"]["LicenseEntitlement"]["state"];
+type LicenseHolder = components["schemas"]["LicenseHolder"];
 
 const LICENSE_READER: GrantSpec = { license: ["read"] };
+
+const IN_GRACE: LicenseHolder = {
+  id: "lic-1",
+  subject: "acme-prod",
+  expiry: "2026-07-01T00:00:00Z",
+  in_grace: true,
+  renewal_due: true,
+};
 
 // Rendered beside the banner, off the same hooks, so an absent banner is asserted
 // against a render that has provably seen the answer rather than one that ran
@@ -31,7 +40,11 @@ function ReadProbe() {
   );
 }
 
-function mount(allow: GrantSpec, state: LicenseState) {
+function mount(
+  allow: GrantSpec,
+  state: LicenseState,
+  license?: LicenseHolder,
+) {
   const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
     const path = new URL(
       input instanceof Request ? input.url : String(input),
@@ -41,6 +54,7 @@ function mount(allow: GrantSpec, state: LicenseState) {
       ? meFixture({ allow })
       : {
           state,
+          license,
           seats_used: 3,
           over_limit: false,
           checked_at: "2026-08-01T09:00:00Z",
@@ -103,6 +117,27 @@ it("offers no way to dismiss a refused licence", async () => {
   mount(LICENSE_READER, "rejected");
   await screen.findByText("License refused");
   expect(screen.queryByRole("button")).toBeNull();
+});
+
+it("warns that a licence in grace stops at the next start", async () => {
+  mount(LICENSE_READER, "valid", IN_GRACE);
+  expect(await screen.findByText(en["licensebanner.grace.title"])).toBeTruthy();
+  expect(screen.getByText(en["licensebanner.grace.body"])).toBeTruthy();
+  const link = screen.getByRole("link", {
+    name: `Open ${en["settings.tab.seats"]}`,
+  });
+  expect(link.getAttribute("href")).toBe("/#/settings/seats");
+  expect(screen.queryByRole("button")).toBeNull();
+});
+
+it("renders nothing for a licence in grace without license:read", async () => {
+  const { fetchMock, client } = mount({}, "valid", IN_GRACE);
+  await waitFor(() => {
+    expect(settled(client, "me")).toBe(true);
+    expect(probe().getAttribute("data-may-read")).toBe("false");
+  });
+  expect(askedForLicense(fetchMock)).toBe(false);
+  expect(document.querySelector(".appbanner")).toBeNull();
 });
 
 it.each<[LicenseState, string]>([

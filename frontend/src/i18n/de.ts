@@ -15067,6 +15067,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "licensebanner.body":
     "Das Lizenz-Token dieser Installation wurde geprüft und abgelehnt.",
   "licensebanner.link": "{tab} öffnen",
+  "licensebanner.grace.title": "Lizenz abgelaufen",
+  "licensebanner.grace.body":
+    "Die Lizenz dieser Installation ist abgelaufen und in der Übergangsfrist. Margince läuft weiter, startet nach dem Ende der Übergangsfrist aber nicht mehr. Erneuere die Lizenz vorher.",
 
   "aicalls.title": "KI-Aufrufprotokoll",
   "aicalls.withheld":

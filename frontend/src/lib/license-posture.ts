@@ -26,14 +26,12 @@ type LicenseEntitlement = components["schemas"]["LicenseEntitlement"];
  * agent with a footnote, it is a standing fault, and the rail used to state it
  * as a grey row at the very bottom that nobody read.
  *
- * There is no rung between `ok` and `refused`. Over the seat cap, in grace and
- * renewal due are real states and this is the wrong surface for them: the
- * chrome's whole question is whether to get out of the way, and the settings
- * card answers the softer one from the entitlement itself, where it has the
- * numbers to say WHICH and by how much. A posture that carried them told both
- * readers something neither branched on.
+ * `grace` is a valid licence past its expiry. It works today, but a restart
+ * after the module's grace period ends refuses to boot, so the chrome warns
+ * until it is renewed. Over the seat cap and renewal due stay off this type:
+ * nothing stops on either, and the settings card says WHICH and by how much.
  */
-export type LicensePosture = "ok" | "refused" | "none";
+export type LicensePosture = "ok" | "grace" | "refused" | "none";
 
 /**
  * What the license grants and how much of it is used.
@@ -76,8 +74,18 @@ export function useLicensePosture(): LicensePosture | undefined {
   if (!mayRead || !entitlement) {
     return undefined;
   }
+  return licensePostureOf(entitlement);
+}
+
+export function licensePostureOf(
+  entitlement: LicenseEntitlement,
+): LicensePosture {
+  // The state decides first, so a refused entitlement never reads as grace.
   if (entitlement.state === "rejected") {
     return "refused";
   }
-  return entitlement.state === "valid" ? "ok" : "none";
+  if (entitlement.state !== "valid") {
+    return "none";
+  }
+  return entitlement.license?.in_grace ? "grace" : "ok";
 }

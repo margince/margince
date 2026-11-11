@@ -14982,6 +14982,9 @@ export const en = {
   "licensebanner.body":
     "This installation’s license token was checked and refused.",
   "licensebanner.link": "Open {tab}",
+  "licensebanner.grace.title": "License expired",
+  "licensebanner.grace.body":
+    "This installation’s license expired and is in its grace period. Margince keeps running, but it does not start again after the grace period ends. Renew the license before then.",
 
   "aicalls.title": "AI call trace",
   "aicalls.withheld":

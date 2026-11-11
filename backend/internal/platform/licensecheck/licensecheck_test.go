@@ -27,7 +27,7 @@ var checkedAt = time.Date(2026, 8, 13, 9, 0, 0, 0, time.UTC)
 // behaviour available to this side: the published module trusts only the
 // production keyset, so no token this repository can produce is ever accepted,
 // and the accepted path stays unproven here until upstream also publishes the
-// test-authority build (issue #1190).
+// test-authority build.
 func TestResolveRejectsAnythingTheBundledModuleWillNotHonor(t *testing.T) {
 	t.Parallel()
 	for _, tc := range []struct {

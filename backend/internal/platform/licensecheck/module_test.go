@@ -25,8 +25,8 @@ var recordedDigest string
 // What this does NOT hold is module/VERSION. The pin is not in the comparison, so
 // a refresh that replaced the blob and its digest while leaving the pin behind
 // passes — and every posture this process reports would then name the wrong
-// module. Binding the three is tracked on issue #1190; until then the pin is
-// only as good as the review of the commit that moved it.
+// module. Nothing binds the three, so the pin is only as good as the review of
+// the commit that moved it.
 func TestBundledModuleMatchesItsRecordedDigest(t *testing.T) {
 	t.Parallel()
 	want, name, ok := strings.Cut(strings.TrimSpace(recordedDigest), " ")
