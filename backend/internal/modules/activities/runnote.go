@@ -8,12 +8,14 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -24,10 +26,15 @@ import (
 // drops from in the deal links that already carry such a note. When it drops
 // every deal link, it answers that earlier note and nothing is written. The
 // member is the one the audit row names, so a new passport is no way around it.
+// A note with no body is refused, since nobody watched the run that wrote it.
 func scheduledRunNoteLanding(ctx context.Context, tx pgx.Tx, in *LogActivityInput) (crmcontracts.Activity, bool, error) {
 	actor, ok := principal.Actor(ctx)
 	if in.Origin != OriginAgent || in.Kind != string(crmcontracts.ActivityKindNote) || !ok || actor.UserID == ids.Nil {
 		return crmcontracts.Activity{}, false, nil
+	}
+	if in.Body == nil || strings.TrimSpace(*in.Body) == "" {
+		return crmcontracts.Activity{}, false, httperr.Validation(fieldBody, codeRequired,
+			"A scheduled run's note states its finding in the body: what the risk is and which records show it.")
 	}
 	asOf := orWallClock(in.recordedAt)
 	// The limit counts UTC days, so its window does not move with a zone setting.

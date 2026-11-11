@@ -31598,9 +31598,14 @@ type Activity struct {
 	OffersEmail bool                    `json:"offers_email"`
 	Raw         *map[string]interface{} `json:"raw,omitempty"`
 
+	// RecordedByAgent True when an assistant or an agent run wrote this activity: `captured_by` names an agent, or a scheduled agent run filed it. A reader labels such a row as the assistant's whatever `source` says.
+	RecordedByAgent *bool `json:"recorded_by_agent,omitempty"`
+
 	// RemindAt Task only. When the reminder comes due. From that instant, for up to 30 days, the task leads its assignee's own Worklist with the reason `reminder_due`, and `GET /v1/activities?reminder_due=true` lists it for them. Nobody else is reminded, and a task with no assignee reminds nobody. Moving `due_at` on a task whose reminder has passed clears this field, unless the same patch names it.
 	RemindAt *time.Time `json:"remind_at,omitempty"`
-	Source   string     `json:"source"`
+
+	// Source Where the row came from. `manual` is anything typed, by a member or by an assistant working for one, so it never says who typed it: `captured_by` and `recorded_by_agent` do.
+	Source string `json:"source"`
 
 	// SourceActivityId The conversation or note this task follows from, whether added by a human or read from a conversation. Opening the source requires current source access. A task cannot grant access to its source or disclose content from a withheld source.
 	SourceActivityId *openapi_types.UUID `json:"source_activity_id,omitempty"`
@@ -79898,6 +79903,14 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 		delete(object, "raw")
 	}
 
+	if raw, found := object["recorded_by_agent"]; found {
+		err = json.Unmarshal(raw, &a.RecordedByAgent)
+		if err != nil {
+			return fmt.Errorf("error reading 'recorded_by_agent': %w", err)
+		}
+		delete(object, "recorded_by_agent")
+	}
+
 	if raw, found := object["remind_at"]; found {
 		err = json.Unmarshal(raw, &a.RemindAt)
 		if err != nil {
@@ -80333,6 +80346,13 @@ func (a Activity) MarshalJSON() ([]byte, error) {
 		object["raw"], err = json.Marshal(a.Raw)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'raw': %w", err)
+		}
+	}
+
+	if a.RecordedByAgent != nil {
+		object["recorded_by_agent"], err = json.Marshal(a.RecordedByAgent)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'recorded_by_agent': %w", err)
 		}
 	}
 

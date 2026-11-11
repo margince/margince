@@ -110,6 +110,43 @@ export const ContactsListCopyAddress: Story = {
   },
 };
 
+/** Each address's copy glyph waits for its row: only the hovered row shows one. */
+export const ContactsListCopyOnRowHover: Story = {
+  render: () => {
+    installFetchStub({
+      "GET /me": meRoute({ contact: ["read", "update"] }),
+      "GET /contacts": () =>
+        jsonResponse({
+          data: [
+            { ...anna, primary_email: "anna.weber@brandt.example" },
+            {
+              ...anna,
+              id: "p-2",
+              full_name: "Jonas Keller",
+              primary_email: "jonas.keller@brandt.example",
+            },
+            {
+              ...anna,
+              id: "p-3",
+              full_name: "Mira Hoang",
+              primary_email: "mira.hoang@brandt.example",
+            },
+          ],
+          page: { next_cursor: null, has_more: false },
+        }),
+    });
+    return (
+      <StoryProviders>
+        <ContactsScreen />
+      </StoryProviders>
+    );
+  },
+  play: async () => {
+    const address = await screen.findByText("jonas.keller@brandt.example");
+    await userEvent.hover(address);
+  },
+};
+
 /** The phone card keeps the address and its copy glyph on one line. */
 export const ContactsListCopyAddressPhone: Story = {
   ...ContactsListCopyAddress,
