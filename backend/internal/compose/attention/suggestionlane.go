@@ -65,21 +65,26 @@ func (s *Service) openSuggestionItems(
 	if s.suggestions == nil {
 		return nil, nil, nil
 	}
-	scoped := s
-	if s.suggestionsOfReader {
-		scoped = s.forReader()
-	}
 	var owners *storekit.OwnerSet
 	return readSuggestionLane(ctx, s, sourceDealSuggestion,
 		func(ctx context.Context) ([]crmcontracts.DealSuggestion, error) {
 			var err error
-			if owners, err = scoped.recordOwners(ctx); err != nil {
+			if owners, err = s.suggestionScope().recordOwners(ctx); err != nil {
 				return nil, err
 			}
 			return s.suggestions.OpenSuggestions(ctx, owners, depth)
 		}, func(ctx context.Context) (int, error) {
 			return s.suggestions.CountOpen(ctx, owners)
 		}, suggestionItem)
+}
+
+// suggestionScope is the service whose owners narrow the deal suggestions:
+// the reader's own when the page answers for the reader alone.
+func (s *Service) suggestionScope() *Service {
+	if s.suggestionsOfReader {
+		return s.forReader()
+	}
+	return s
 }
 
 // readSuggestionLane reads one suggestion producer's page and total.

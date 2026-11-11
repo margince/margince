@@ -97,9 +97,12 @@ type backlogState struct {
 	waiting   WaitingBacklog
 	risk      RiskBacklog
 	approvals ApprovalBacklog
-	// approvalsFrom is where the approval tail starts: after the last
-	// approval the ranked rows hold.
-	approvalsFrom string
+	// The suggestion continuations, one per producer.
+	dealSuggestions DealSuggestionBacklog
+	tagSuggestions  TagSuggestionBacklog
+	// resumeAt is where each decision source's tail starts: after the last
+	// row of it the ranked rows hold. A source absent starts at its beginning.
+	resumeAt map[crmcontracts.WorklistItemSource]string
 	// exact is each source's whole count per category, for this request only.
 	exact map[totalKey]int
 	// whole names the windows read short of their cap, whose rows on the page
@@ -126,7 +129,7 @@ func (s *Service) readingBacklog(ctx context.Context, day crmcontracts.Attention
 	reading := *s
 	reading.backlog.exact, reading.backlog.whole = map[totalKey]int{}, map[totalKey]bool{}
 	reading.backlog.until, reading.backlog.zone = beside.until, beside.zone
-	reading.backlog.approvalsFrom = beside.approvalsFrom
+	reading.backlog.resumeAt = beside.resumeAt
 	if !first || s.marked.probe != nil || s.backlog.tasks == nil {
 		return &reading
 	}

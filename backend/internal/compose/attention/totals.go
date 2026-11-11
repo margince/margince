@@ -32,7 +32,27 @@ func (s *Service) exactSources(day crmcontracts.Attention, scope string, conside
 		approval := crmcontracts.WorklistItemSourceApproval
 		exact[totalKey{approval, crmcontracts.WorklistCountCategory(categoryOfSource(approval))}] = *day.Counts.ApprovalsOpen
 	}
+	// A suggestion count is offered only where the tail reaches every row it
+	// counts. Its store narrows to the owners the scope keeps. Its rows offer no
+	// Done and are never folded, so the count is of the rows the page admits.
+	for source, counted := range map[crmcontracts.WorklistItemSource]*int{
+		sourceDealSuggestion: suggestionCount(day.Counts.DealSuggestionsOpen, s.backlog.dealSuggestions != nil),
+		sourceTagSuggestion:  suggestionCount(day.Counts.TagSuggestionsOpen, s.backlog.tagSuggestions != nil),
+	} {
+		if counted != nil {
+			exact[totalKey{source, crmcontracts.WorklistCountCategory(categoryOfSource(source))}] = *counted
+		}
+	}
 	return exact
+}
+
+// suggestionCount is a suggestion store's count when scrolling can reach every
+// suggestion it counts, else nil.
+func suggestionCount(open *int, continued bool) *int {
+	if !continued {
+		return nil
+	}
+	return open
 }
 
 // withTotals states each category's exact total where every source behind it

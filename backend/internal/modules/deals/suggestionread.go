@@ -188,6 +188,12 @@ type suggestionCursor struct {
 	ID        ids.UUID  `json:"id"`
 }
 
+// SuggestionPositionAfter is the list position just past the suggestion with
+// this creation time and id. A read with it as Cursor resumes after that row.
+func SuggestionPositionAfter(createdAt time.Time, id ids.UUID) (string, error) {
+	return storekit.EncodeOpaque(suggestionCursor{CreatedAt: createdAt, ID: id})
+}
+
 const suggestionColumns = `s.id, s.kind, s.state, s.company_id, c.display_name, s.pipeline_id,
 	       s.proposed_stage_id, s.name_hint, s.proposed_amount_minor, s.currency,
 	       s.proposed_close_date, s.confidence::float8, s.created_at, c.owner_id, s.version`
@@ -246,7 +252,7 @@ func (s *Store) ListSuggestions(ctx context.Context, in SuggestionQuery) ([]Sugg
 	if len(out) > in.Limit {
 		out = out[:in.Limit]
 		last := out[len(out)-1]
-		if next, err = storekit.EncodeOpaque(suggestionCursor{CreatedAt: last.CreatedAt, ID: last.ID}); err != nil {
+		if next, err = SuggestionPositionAfter(last.CreatedAt, last.ID); err != nil {
 			return nil, "", fmt.Errorf("deals: encoding the suggestion cursor: %w", err)
 		}
 	}

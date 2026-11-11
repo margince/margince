@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/briefs"
 	"github.com/margince/margince/backend/internal/compose/contact360"
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/compose/suggestionlanes"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/agents"
@@ -210,14 +211,14 @@ func readPlannedOnceLanes(ctx context.Context, lanes plannedOnceLanes, deal, tas
 // readSuggestionLanes runs the needs_you lane's four suggestion reads through
 // the seams that reuse their plans.
 func readSuggestionLanes(ctx context.Context, db *database.DB) error {
-	dealSuggestions := attentionDealSuggestions{store: deals.NewStore(db, DealsInstallation())}
+	dealSuggestions := suggestionlanes.Deals{Store: deals.NewStore(db, DealsInstallation())}
 	if _, err := dealSuggestions.OpenSuggestions(ctx, nil, 10); err != nil {
 		return err
 	}
 	if _, err := dealSuggestions.CountOpen(ctx, nil); err != nil {
 		return err
 	}
-	tagSuggestions := attentionTagSuggestions{store: collections.NewStore(db)}
+	tagSuggestions := suggestionlanes.Tags{Store: collections.NewStore(db)}
 	if _, err := tagSuggestions.OpenTagSuggestions(ctx, 10); err != nil {
 		return err
 	}

@@ -51,6 +51,6 @@ type besideDay struct {
 	// zone is the installation calendar this response was assembled in, so a
 	// lane that counts days uses the same one as the lanes before it.
 	zone *time.Location
-	// approvalsFrom is the inbox position after the last approval the day holds.
-	approvalsFrom string
+	// resumeAt is each decision source's store position after the last row the day holds.
+	resumeAt map[crmcontracts.WorklistItemSource]string
 }

@@ -50,6 +50,8 @@ var tailSources = map[string][]crmcontracts.WorklistItemCategory{
 	string(sourceWaiting):                           {categoryOfSource(sourceWaiting)},
 	string(sourceAtRisk):                            {categoryOfSource(sourceAtRisk)},
 	string(crmcontracts.WorklistItemSourceApproval): {categoryOfSource(crmcontracts.WorklistItemSourceApproval)},
+	sourceDealSuggestion:                            {categoryOfSource(sourceDealSuggestion)},
+	sourceTagSuggestion:                             {categoryOfSource(sourceTagSuggestion)},
 }
 
 // valid says whether a client-held tail is one this binary could have minted.
@@ -101,13 +103,11 @@ func (s *Service) startTail(page tailPage) *backlogCursor {
 	}
 }
 
-// tailStart is where a source's tail begins. Approvals resume after the last
-// one the ranked rows hold; every other source starts at its beginning.
+// tailStart is where a source's tail begins. A decision source resumes after
+// the last row of it the ranked rows hold; every other source starts at its
+// beginning.
 func (s *Service) tailStart(source crmcontracts.WorklistItemSource) string {
-	if source == crmcontracts.WorklistItemSourceApproval {
-		return s.backlog.approvalsFrom
-	}
-	return ""
+	return s.backlog.resumeAt[source]
 }
 
 // withTail fills what the ranked rows left of a page from the backlog, once
@@ -234,6 +234,10 @@ func (s *Service) tailReader(source crmcontracts.WorklistItemSource) func(
 		return s.moreRisk
 	case source == crmcontracts.WorklistItemSourceApproval && s.backlog.approvals != nil:
 		return s.moreApprovals
+	case source == sourceDealSuggestion && s.backlog.dealSuggestions != nil:
+		return s.moreDealSuggestions
+	case source == sourceTagSuggestion && s.backlog.tagSuggestions != nil:
+		return s.moreTagSuggestions
 	}
 	return nil
 }
