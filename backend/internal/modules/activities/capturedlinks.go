@@ -7,13 +7,17 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"fmt"
 	"net/url"
 	"strings"
 	"unicode"
 
 	"github.com/jackc/pgx/v5"
+	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -21,6 +25,9 @@ import (
 // categoryLink is the attachment category of a document link sent by mail: a
 // row that points at a document and holds no bytes.
 const categoryLink = "link"
+
+// linkNoLongerListed is the archive reason of a link its source stopped listing.
+const linkNoLongerListed = "no_longer_listed"
 
 // linkPartPrefix starts the part identity of a link row, so a link's identity
 // cannot equal a file's "part:N".
@@ -74,6 +81,44 @@ func (s *Store) RecordCapturedLinks(
 		}
 	}
 	return added, nil
+}
+
+// RetireCapturedLinks archives the live link rows one source recorded on an
+// activity that are not at a kept address, inside the capture transaction. It
+// answers how many it archived; each is audited as an archive.
+func (s *Store) RetireCapturedLinks(
+	ctx context.Context, tx pgx.Tx, activityID ids.ActivityID,
+	from CapturedFileSource, kept []string,
+) (int, error) {
+	if err := auth.Require(ctx, "activity", principal.ActionUpdate); err != nil {
+		return 0, err
+	}
+	rows, err := tx.Query(ctx, `
+		UPDATE attachment SET archived_at = now()
+		 WHERE entity_type = 'activity' AND entity_id = $1 AND category = '`+categoryLink+`'
+		   AND external_source_id = $2 AND archived_at IS NULL AND NOT (url = ANY($3::text[]))
+		RETURNING id`, activityID, providerMessageKey(from), kept)
+	if err != nil {
+		return 0, fmt.Errorf("activities: archiving the links a source no longer lists: %w", err)
+	}
+	retired, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+	if err != nil {
+		return 0, fmt.Errorf("activities: archiving the links a source no longer lists: %w", err)
+	}
+	for _, id := range retired {
+		auditID, err := storekit.Audit(ctx, tx, "archive", "attachment", id, nil, map[string]any{
+			fieldEntityType: linkEntityActivity, evidenceReasonKey: linkNoLongerListed,
+		})
+		if err != nil {
+			return 0, fmt.Errorf("activities: auditing an archived link: %w", err)
+		}
+		if err := storekit.EmitEvent(ctx, tx, auditID, id, crmcontracts.PublicEventAttachmentArchived{
+			ParentType: linkEntityActivity, ParentId: openapi_types.UUID(activityID.UUID),
+		}); err != nil {
+			return 0, fmt.Errorf("activities: announcing an archived link: %w", err)
+		}
+	}
+	return len(retired), nil
 }
 
 // linkFilename is the name a link row shows: the sender's anchor text cleaned of

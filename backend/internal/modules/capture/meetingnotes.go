@@ -15,6 +15,13 @@ var meetingNotesScopes = map[string][]string{
 	"gdocs": {"https://www.googleapis.com/auth/documents.readonly"},
 }
 
+// meetingNotesCalendars are the calendar providers whose meetings a notes
+// connection reads, keyed by the notes provider. Notes are read only while
+// both connections are on one account.
+var meetingNotesCalendars = map[string]string{
+	"gdocs": "gcal",
+}
+
 // MeetingNotesGranted says whether a connection's granted scopes let it read
 // meeting notes. A Docs connection whose owner unticked the scope on Google's
 // screen holds none, and reads nothing until it is reconnected.

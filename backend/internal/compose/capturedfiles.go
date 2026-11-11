@@ -171,6 +171,18 @@ func (k capturedFileKeeper) RecordWithheld(
 	}, withheld)
 }
 
+func (k capturedFileKeeper) RetireLinks(
+	ctx context.Context, tx pgx.Tx, activityID ids.ActivityID,
+	from capture.FileSource, kept []string,
+) (int, error) {
+	return k.store.RetireCapturedLinks(ctx, tx, activityID, activities.CapturedFileSource{
+		System:     from.System,
+		MessageID:  from.MessageID,
+		CapturedBy: from.CapturedBy,
+		Category:   from.Category,
+	}, kept)
+}
+
 func (k capturedFileKeeper) RecordLinks(
 	ctx context.Context, tx pgx.Tx, activityID ids.ActivityID,
 	from capture.FileSource, links []capture.MailLink,

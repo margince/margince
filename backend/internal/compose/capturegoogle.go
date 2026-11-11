@@ -147,7 +147,7 @@ func newCaptureRegistryWithGoogle(
 		reg.Register(gmail.New(newGmailAuthorizer(resolve, c), gmail.NewAPIWithQuota(nil, "", cfg.GmailMailboxQuota, cfg.GmailProjectQuota)).
 			WithBounceSink(newBounceSink(pool)))
 		reg.Register(gcal.New(newGcalAuthorizer(resolve, c), gcal.NewAPI(nil, "")))
-		reg.Register(gdocs.New(newGdocsAuthorizer(resolve, c), gdocs.NewOwner(nil, "")))
+		reg.Register(gdocs.New(newGdocsAuthorizer(resolve, c), gdocs.NewOwner(nil, "")).WithDocs(gdocs.NewDocsAPI(nil, "")))
 	}
 	return reg
 }

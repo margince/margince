@@ -75,6 +75,10 @@ type FileKeeper interface {
 	// It answers how many rows are new; a link already recorded is not.
 	RecordLinks(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID,
 		from FileSource, links []MailLink) (int, error)
+	// RetireLinks archives the live link rows from source that are not at
+	// one of the kept addresses, and answers how many it archived.
+	RetireLinks(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID,
+		from FileSource, kept []string) (int, error)
 	// Stored names where each staged file's bytes now live, so the stored
 	// original can point at the objects instead of carrying the bytes.
 	Stored(staged []StagedFile) ([]StoredFile, error)

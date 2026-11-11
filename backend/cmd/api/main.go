@@ -123,6 +123,11 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	}
 
 	captureCfg := captureConfig(cfg, logger)
+	// A sync this role runs, such as the first one after a connect, may land
+	// meeting notes, so their reading is queued here too.
+	if captureCfg.TranscriptEnqueue, err = compose.MeetingNotesReading(logger); err != nil {
+		return err
+	}
 	opts, schemaPool, closeSchemaPool, err := baseComposeOptions(ctx, cfg, captureCfg, pool, vault, logger, stdout, license)
 	if err != nil {
 		return err
