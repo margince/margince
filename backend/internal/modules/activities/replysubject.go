@@ -39,7 +39,7 @@ func IsReplySubjectOf(subject, topic string) bool {
 
 // untagged drops every [...] group and evens the spacing. The composer sends a
 // subject with its project tags cut, so the answered subject is compared the
-// same way; a comparison needs no rule for which group is a key.
+// same way. A comparison needs no rule for which group is a key.
 func untagged(subject string) string {
 	var kept strings.Builder
 	depth := 0
