@@ -30,7 +30,7 @@ before the next read.
 
 The stage metrics count database calls as well as statements, with a batch counted as one exchange.
 Internal plan lookups can cost another protocol round trip. The Worklist integration read holds a
-limit of 107 exchanges for a seeded open-task day. The snapshot sets its plan mode once and
+limit of 106 exchanges for a seeded open-task day. The snapshot sets its plan mode once and
 the task windows share the same mail identities in that read.
 
 ## How a row is ranked
