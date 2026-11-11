@@ -89,8 +89,8 @@ var changeActivitiesCopy = toolCopy{
 var scheduleMeetingCopy = toolCopy{
 	Purpose: "Put a meeting on the host's calendar. invite creates the calendar event and the " +
 		"provider sends the invitation to every attendee: the contact, and any further addresses.",
-	Limits: "invite reaches attendees outside the workspace, so name them and the time and get " +
-		"the user's yes first; the call stages for approval. Read check_availability before " +
+	Limits: "invite reaches attendees outside the workspace and goes out when this call runs, so " +
+		"name them and the time and get the user's yes first. Read check_availability before " +
 		"choosing a time.",
 	Instead: "Use change_activities with log to record a meeting without inviting anyone, or one " +
 		"that already happened.",
