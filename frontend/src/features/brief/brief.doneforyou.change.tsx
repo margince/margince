@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { ReceiptDetail } from "../../components/receiptdetail";
-import { ReceiptReview } from "../../components/receiptreview";
+import { ReceiptVerbs } from "../../components/receiptverbs";
 import { sameCalendarDay } from "../../format/calendarday";
 import {
   formatDateTime,
@@ -12,7 +12,7 @@ import {
 import { type Locale, useLocale, useT } from "../../i18n";
 import type { Receipt } from "../../lib/handled";
 import { headlineUnder, receiptReason } from "../../lib/receiptcopy";
-import { isReviewableReceipt } from "../../lib/receiptreview";
+import { isOpenReceipt } from "../../lib/receiptstate";
 import { useViewerZone } from "../../lib/viewerzone";
 
 // The automatic change that closes a deal; the one whose reason is expected.
@@ -62,11 +62,7 @@ export function ChangeRow({
         </figure>
       )}
       <div className="brief-done-controls">
-        <ReceiptReview
-          receipt={receipt}
-          onDone={onSettled}
-          offerAccept={false}
-        />
+        <ReceiptVerbs receipt={receipt} onDone={onSettled} />
         <ReceiptDetail receipt={receipt} />
       </div>
     </li>
@@ -83,13 +79,11 @@ export function ChangeWhat({ receipt }: Readonly<{ receipt: Receipt }>) {
     : headlineUnder(receipt, t, locale, zone);
 }
 
-// The dot a change wears on the deal's line. It is open, settled either way,
-// or replaced by a later change before anyone looked.
+// The dot a change wears on the deal's line: it stands, was undone, or a
+// later change replaced it.
 function changeState(receipt: Receipt): string {
-  const review = receipt.review;
-  if (review?.reversed || receipt.undo?.reversed) return "undone";
-  if (review?.accepted) return "reviewed";
-  return isReviewableReceipt(receipt) ? "open" : "replaced";
+  if (receipt.review?.reversed || receipt.undo?.reversed) return "undone";
+  return isOpenReceipt(receipt) ? "open" : "replaced";
 }
 
 // The hour for a change from today, the day for an older one: the list spans

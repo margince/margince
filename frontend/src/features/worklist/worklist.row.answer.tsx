@@ -11,7 +11,11 @@ import {
 import { Button } from "../../design-system/atoms";
 import { useToast } from "../../design-system/toast";
 import { useT } from "../../i18n";
-import { ApprovalDecisionDrawer } from "../automations/approvaldrawer";
+import {
+  ApprovalDecision,
+  ApprovalDecisionDrawer,
+  ApprovalProposalPreview,
+} from "../automations/approvaldrawer";
 import { hasMoveControl, MoveButton } from "../records/movebutton";
 import {
   FailedApprovalAnswer,
@@ -275,6 +279,26 @@ function NudgeDismiss({
 // answerable where it was ranked, not on a second screen.
 function decidable(item: WorklistItem): boolean {
   return item.actions.includes("decide") && item.source === "approval";
+}
+
+/** What a decision row's proposal would do, for a card read on its own. */
+export function RowProposal({ item }: Readonly<{ item: WorklistItem }>) {
+  return decidable(item) ? (
+    <ApprovalProposalPreview
+      approvalId={item.id}
+      className="worklist-row-proposal"
+    />
+  ) : null;
+}
+
+/**
+ * The decision itself where a surface has the room for it, as the drawer
+ * draws it. Undefined for a row that is not one.
+ */
+export function inlineDecision(item: WorklistItem): ReactNode {
+  return decidable(item) ? (
+    <ApprovalDecision approvalId={item.id} />
+  ) : undefined;
 }
 
 // The decision itself, fetched whole because a row cannot carry it, and
