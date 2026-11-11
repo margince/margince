@@ -42,8 +42,8 @@ export function DealOwner({
 }
 
 /**
- * A mark that sits above a card's stretched link, so its tip can open, hands a
- * press on to that link with the button and keys held: the card stays one door.
+ * A mark above a card's stretched link hands a press on to that link. The
+ * button and keys held go with it, so the card stays one door.
  */
 export function handOnTo(dealLink: RefObject<HTMLAnchorElement | null>) {
   return {

@@ -105,8 +105,8 @@ type ReasonContext = Readonly<{
 }>;
 
 /**
- * Why an open or closed deal has its probability, in sentences: who or what
- * set it, the stage's own figure beside an override, and how to change it.
+ * Why a deal has its probability, in sentences. They name who or what set it,
+ * the stage's own figure beside an override, and how to change it.
  */
 export function probabilityReason(
   deal: ReasonDeal,

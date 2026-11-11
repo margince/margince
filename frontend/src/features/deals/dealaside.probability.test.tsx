@@ -12,8 +12,8 @@ import {
 import { DealAside } from "./dealaside";
 import { probabilityReason } from "./dealprobability";
 
-// The probability row draws the figure as a ring and says why the deal has
-// it in a tip beside it, without taking the row's own edit away.
+// The probability row draws the figure as a ring. A tip beside it says why the
+// deal has that figure, and the row keeps its edit.
 
 const deal: components["schemas"]["Deal"] = {
   id: "d1",

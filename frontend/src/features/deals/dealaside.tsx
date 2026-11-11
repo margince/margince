@@ -152,8 +152,8 @@ function DealAsideBody({
   );
 }
 
-// The fields a row changes, its value as text when it is edited alone, and a
-// mark drawn after the value that the edit's press does not cover.
+// The fields a row changes and its value as text when edited alone. `beside`
+// is a mark after the value that the edit's press does not cover.
 type RowChange = Readonly<{
   keys: readonly string[];
   text?: string;
@@ -220,8 +220,8 @@ function money(
     : formatMoneyWhole(amountMinor, currency, locale);
 }
 
-// The figure as a ring. Where it comes from and the stage's own figure are in
-// the reason beside it, so the row stays on one line in the narrow column.
+// The figure as a ring. Its source and the stage's figure live in the reason
+// beside it, so the row fits one line.
 function probabilityReading(deal: Deal): ReactNode {
   return deal.win_probability == null ? null : (
     <ProbabilityRing percent={deal.win_probability} value />
