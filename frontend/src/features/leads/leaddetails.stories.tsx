@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, screen, userEvent, within } from "storybook/test";
+import { expect, screen, userEvent, waitFor, within } from "storybook/test";
 import type { components } from "../../api/schema";
 import type { Locale } from "../../i18n";
 import { meFixture } from "../../testing/mefixture";
@@ -160,9 +160,9 @@ export const Lists: Story = {
   render: page(base, "en", undefined, true),
   play: async () => {
     const lists = within(await screen.findByRole("region", { name: "Lists" }));
-    await expect(
-      await lists.findByRole("button", { name: "Add to Shortlist" }),
-    ).toBeVisible();
+    const add = await lists.findByRole("button", { name: "Add to Shortlist" });
+    // The record page arrives with a fade from opacity 0.
+    await waitFor(() => expect(add).toBeVisible());
   },
 };
 
