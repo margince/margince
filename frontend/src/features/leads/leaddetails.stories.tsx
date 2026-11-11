@@ -5,7 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, screen, userEvent, waitFor, within } from "storybook/test";
 import type { components } from "../../api/schema";
 import type { Locale } from "../../i18n";
-import { meFixture } from "../../testing/mefixture";
+import { listsMe } from "../../testing/lists.fixtures";
 import {
   installFetchStub,
   jsonResponse,
@@ -79,19 +79,14 @@ function page(
           display_name: companyName ?? "Nordwind Holding SE",
         }),
       "GET /me": listsOn
-        ? () =>
-            jsonResponse({
-              ...meFixture({
-                roles: ["rep"],
-                allow: {
-                  lead: ["read", "update"],
-                  company: ["read"],
-                  list: ["read", "create", "update"],
-                },
-                settingsAvailability: { lists: true },
-              }),
-              teams: [],
-            })
+        ? listsMe(true, [], {
+            roles: ["rep"],
+            allow: {
+              lead: ["read", "update"],
+              company: ["read"],
+              list: ["read", "create", "update"],
+            },
+          })
         : meRoute(
             { lead: ["read", "update"], company: ["read"] },
             { roles: ["rep"] },

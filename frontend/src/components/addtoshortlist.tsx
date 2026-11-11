@@ -41,8 +41,8 @@ export function useMayAddToShortlist(): boolean {
 }
 
 /**
- * The verb, in a record page's header and in `RecordListsWays`. Draws nothing
- * unless `useMayAddToShortlist`, so no page offers a door the server refuses.
+ * The verb, in a record page's header and in `RecordListsActions`. Draws
+ * nothing unless lists are on and a full seat holds the `list:update` grant.
  */
 export function AddToShortlistAction({
   entityType,
@@ -76,8 +76,7 @@ export function AddToShortlistAction({
   );
 }
 
-/** One spelling of the Lists section's verbs for every record page that draws it. */
-export function RecordListsWays({
+export function RecordListsActions({
   entityType,
   entityId,
 }: Readonly<{ entityType: ListRecordType; entityId: string }>) {
@@ -108,6 +107,7 @@ export function AddToShortlistDialog({
   newName?: string;
 }>) {
   const t = useT();
+  const mayCreate = useCanWrite("list", "create");
   const shortlists = useLists({ entityType, listType: "static" });
   const create = useCreateList();
   const change = useChangeMember();
@@ -166,7 +166,9 @@ export function AddToShortlistDialog({
             placeholder={t("lists.pickShortlist")}
             options={[
               ...editable.map((list) => ({ value: list.id, label: list.name })),
-              { value: NEW_LIST, label: t("lists.newShortlistOption") },
+              ...(mayCreate
+                ? [{ value: NEW_LIST, label: t("lists.newShortlistOption") }]
+                : []),
             ]}
           />
         )}

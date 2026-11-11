@@ -4,19 +4,18 @@
 
 import "@testing-library/jest-dom/vitest";
 
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { en } from "../i18n/en";
-import { useListsAvailable } from "../lib/lists.queries";
 import {
   listsMe,
   MEMBER_ID,
   SHORTLIST_ID,
   shortlist,
 } from "../testing/lists.fixtures";
-import { meFixture } from "../testing/mefixture";
+import { ME_ANSWERED, MeAnswered } from "../testing/sessionprobe";
 import {
   installFetchStub,
   jsonResponse,
@@ -35,11 +34,6 @@ function action() {
       <AddToShortlistAction entityType="company" entityId={MEMBER_ID} />
     </StoryProviders>,
   );
-}
-
-// Shows once /me has answered, so an absent button is a decision, not a wait.
-function ListsOn() {
-  return useListsAvailable() ? <p>lists on</p> : null;
 }
 
 describe("Add to Shortlist on a record page", () => {
@@ -61,25 +55,66 @@ describe("Add to Shortlist on a record page", () => {
 
   it("is not offered to a seat that may not change a Shortlist", async () => {
     installFetchStub({
-      "GET /me": () =>
-        jsonResponse({
-          ...meFixture({
-            allow: { list: ["read"], company: ["read"] },
-            settingsAvailability: { lists: true },
-          }),
-          teams: [],
-        }),
+      "GET /me": listsMe(true, [], {
+        allow: { list: ["read"], company: ["read"] },
+      }),
     });
     render(
       <StoryProviders>
-        <ListsOn />
+        <MeAnswered />
         <AddToShortlistAction entityType="company" entityId={MEMBER_ID} />
       </StoryProviders>,
     );
-    await screen.findByText("lists on");
+    await screen.findByText(ME_ANSWERED);
     expect(
       screen.queryByRole("button", { name: en["lists.addToShortlist"] }),
     ).toBeNull();
+  });
+
+  async function offeredShortlists(me: () => Response) {
+    installFetchStub({
+      "GET /me": me,
+      "GET /lists": () =>
+        jsonResponse({
+          data: [
+            shortlist,
+            { ...shortlist, id: "s2", name: "Trade fair", can_edit: false },
+            {
+              ...shortlist,
+              id: "s3",
+              name: "Last year",
+              archived_at: "2026-01-12T09:00:00Z",
+            },
+          ],
+          page: { has_more: false },
+        }),
+    });
+    const user = userEvent.setup();
+    action();
+    await user.click(
+      await screen.findByRole("button", { name: en["lists.addToShortlist"] }),
+    );
+    const dialog = await screen.findByRole("dialog");
+    await user.click(
+      within(dialog).getByRole("combobox", { name: en["lists.shortlist"] }),
+    );
+    return (await screen.findAllByRole("option")).map(
+      (option) => option.textContent,
+    );
+  }
+
+  it("offers only the live Shortlists the reader may change, and a new one", async () => {
+    expect(await offeredShortlists(listsMe(true))).toEqual([
+      shortlist.name,
+      en["lists.newShortlistOption"],
+    ]);
+  });
+
+  it("offers no new Shortlist to a seat that may not create one", async () => {
+    const mayOnlyAdd = listsMe(true, [], {
+      allow: { list: ["read", "update"], company: ["read"] },
+    });
+    expect(await offeredShortlists(mayOnlyAdd)).toEqual([shortlist.name]);
   });
 
   it("adds the record to the chosen Shortlist with its note", async () => {

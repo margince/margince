@@ -4,8 +4,8 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../../api/schema";
 import { company360 } from "../../testing/company.fixtures";
-import { shortlist } from "../../testing/lists.fixtures";
-import { type GrantSpec, meFixture } from "../../testing/mefixture";
+import { listsMe, shortlist } from "../../testing/lists.fixtures";
+import type { GrantSpec } from "../../testing/mefixture";
 import {
   installFetchStub,
   jsonResponse,
@@ -129,14 +129,7 @@ const withheld: View = {
 };
 
 function listsOn(list: GrantSpec["list"]) {
-  return () =>
-    jsonResponse({
-      ...meFixture({
-        allow: { company: ["read", "update"], list },
-        settingsAvailability: { lists: true },
-      }),
-      teams: [],
-    });
+  return listsMe(true, [], { allow: { company: ["read", "update"], list } });
 }
 
 function Rail({

@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, within } from "storybook/test";
 import type { Locale } from "../../i18n";
+import { listsMe } from "../../testing/lists.fixtures";
 import { meFixture } from "../../testing/mefixture";
 import {
   installFetchStub,
@@ -53,16 +54,11 @@ function Column({
   listsOn = false,
 }: Readonly<{ locale: Locale; listsOn?: boolean }>) {
   installFetchStub({
-    "GET /me": () =>
-      jsonResponse({
-        ...meFixture({
-          allow: listsOn
-            ? { deal: ["read"], list: ["read", "create", "update"] }
-            : { deal: ["read"] },
-          settingsAvailability: { lists: listsOn },
-        }),
-        teams: [],
-      }),
+    "GET /me": listsOn
+      ? listsMe(true, [], {
+          allow: { deal: ["read"], list: ["read", "create", "update"] },
+        })
+      : () => jsonResponse(meFixture({ allow: { deal: ["read"] } })),
     "GET /records/deal/d1/lists": () =>
       jsonResponse({ data: [{ id: "s-1", name: "Launch references" }] }),
   });

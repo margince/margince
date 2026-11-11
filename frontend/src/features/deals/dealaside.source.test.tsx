@@ -6,7 +6,7 @@ import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import type { components } from "../../api/schema";
 import { en } from "../../i18n/en";
-import { meFixture } from "../../testing/mefixture";
+import { listsMe } from "../../testing/lists.fixtures";
 import {
   installFetchStub,
   jsonResponse,
@@ -74,19 +74,11 @@ describe("the left column's Recorded by row on a deal an agent created", () => {
 });
 
 describe("the left column's Lists group", () => {
-  function serve(
-    list: readonly ("read" | "update")[],
-    onLists: unknown[] = [],
-  ) {
+  function serve(onLists: unknown[] = []) {
     installFetchStub({
-      "GET /me": () =>
-        jsonResponse({
-          ...meFixture({
-            allow: { deal: ["read"], list },
-            settingsAvailability: { lists: true },
-          }),
-          teams: [],
-        }),
+      "GET /me": listsMe(true, [], {
+        allow: { deal: ["read"], list: ["read", "update"] },
+      }),
       [`GET /records/deal/${deal.id}/lists`]: () =>
         jsonResponse({ data: onLists }),
     });
@@ -103,7 +95,7 @@ describe("the left column's Lists group", () => {
     );
 
   it("offers Add to Shortlist and every list while the deal is on none", async () => {
-    serve(["read", "update"]);
+    serve();
     const lists = await group();
     expect(
       await lists.findByRole("button", { name: en["lists.addToShortlist"] }),
@@ -116,7 +108,7 @@ describe("the left column's Lists group", () => {
   });
 
   it("keeps the lists it is on beside the verbs", async () => {
-    serve(["read", "update"], [{ id: "s-1", name: "Launch references" }]);
+    serve([{ id: "s-1", name: "Launch references" }]);
     const lists = await group();
     expect(
       await lists.findByRole("link", { name: "Launch references" }),
@@ -124,16 +116,5 @@ describe("the left column's Lists group", () => {
     expect(
       lists.getByRole("button", { name: en["lists.addToShortlist"] }),
     ).toBeTruthy();
-  });
-
-  it("offers no Add to Shortlist to a seat that may not change lists", async () => {
-    serve(["read"]);
-    const lists = await group();
-    expect(
-      lists.getByRole("link", { name: en["lists.record.allLists"] }),
-    ).toBeTruthy();
-    expect(
-      lists.queryByRole("button", { name: en["lists.addToShortlist"] }),
-    ).toBeNull();
   });
 });

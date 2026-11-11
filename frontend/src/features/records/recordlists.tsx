@@ -8,7 +8,7 @@
 
 import { useCallback, useRef, useState } from "react";
 import {
-  RecordListsWays,
+  RecordListsActions,
   useMayAddToShortlist,
 } from "../../components/addtoshortlist";
 import { Button, Field } from "../../design-system/atoms";
@@ -36,8 +36,8 @@ import { useUndoableRemoval } from "../../lib/undoableremoval";
 
 type RecordRef = Readonly<{ entityType: ListedRecordType; entityId: string }>;
 
-// A page whose rail beside the block already draws `RecordListsWays` passes false.
-type Ways = Readonly<{ ways?: boolean }>;
+// A page whose rail beside the block already draws `RecordListsActions` passes false.
+type WithActions = Readonly<{ actions?: boolean }>;
 
 /**
  * The block as a card of its own, for a record page's column. The server
@@ -48,8 +48,8 @@ export function RecordListsPanel({
   entityType,
   entityId,
   archived = false,
-  ways = true,
-}: RecordRef & Ways & Readonly<{ archived?: boolean }>) {
+  actions = true,
+}: RecordRef & WithActions & Readonly<{ archived?: boolean }>) {
   const t = useT();
   const available = useListsAvailable();
   if (!available || archived) {
@@ -61,7 +61,7 @@ export function RecordListsPanel({
         <RecordListsBody
           entityType={entityType}
           entityId={entityId}
-          ways={ways}
+          actions={actions}
         />
       </PanelBody>
     </Panel>
@@ -72,8 +72,8 @@ export function RecordListsPanel({
 export function RecordListsBody({
   entityType,
   entityId,
-  ways = true,
-}: RecordRef & Ways) {
+  actions = true,
+}: RecordRef & WithActions) {
   const t = useT();
   const lists = useRecordLists(entityType, entityId);
   const found = lists.data?.data ?? [];
@@ -110,7 +110,9 @@ export function RecordListsBody({
           <p className="t-caption">{t("lists.record.truncated")}</p>
         )}
       </SurfaceState>
-      {ways && <RecordListsWays entityType={entityType} entityId={entityId} />}
+      {actions && (
+        <RecordListsActions entityType={entityType} entityId={entityId} />
+      )}
       <CheckAList entityType={entityType} entityId={entityId} />
     </div>
   );

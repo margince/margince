@@ -18,7 +18,6 @@ import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
 import { recordWriteKeys } from "../../lib/recordwritekeys";
-import { useMe } from "../../lib/session";
 import {
   LIVE_ID,
   listsMe,
@@ -29,7 +28,7 @@ import {
   SHORTLIST_ID,
   shortlist,
 } from "../../testing/lists.fixtures";
-import { type GrantSpec, meFixture } from "../../testing/mefixture";
+import { ME_ANSWERED, MeAnswered } from "../../testing/sessionprobe";
 import {
   installFetchStub,
   jsonResponse,
@@ -222,14 +221,9 @@ describe("a record page's lists", () => {
     const live = "01a0f000-0000-7000-8000-000000000050";
     const archived = "01a0f000-0000-7000-8000-000000000051";
     stub({
-      "GET /me": () =>
-        jsonResponse({
-          ...meFixture({
-            allow: { list: ["read"], company: ["read"], tag: ["read"] },
-            settingsAvailability: { lists: true },
-          }),
-          teams: [],
-        }),
+      "GET /me": listsMe(true, [], {
+        allow: { list: ["read"], company: ["read"], tag: ["read"] },
+      }),
       "GET /tags": () =>
         jsonResponse({
           data: [
@@ -513,12 +507,6 @@ describe("taking a record off a Shortlist", () => {
 
 describe("putting a record on a Shortlist from its lists", () => {
   const ADD = `POST /lists/${SHORTLIST_ID}/members`;
-  const otherTeams = {
-    ...shortlist,
-    id: "s2",
-    name: "Trade fair",
-    can_edit: false,
-  };
 
   // The route map keys by path alone; the two pickers each ask /lists for one kind.
   function answerListsByKind() {
@@ -536,27 +524,10 @@ describe("putting a record on a Shortlist from its lists", () => {
       }
       const shortlists = url.searchParams.get("list_type") === "static";
       return jsonResponse({
-        data: shortlists ? [editableShortlist, otherTeams] : [liveList],
+        data: shortlists ? [editableShortlist] : [liveList],
         page: { has_more: false },
       });
     }) as typeof fetch;
-  }
-
-  function seat(allow: GrantSpec, kind: "full" | "read" = "full") {
-    return () =>
-      jsonResponse({
-        ...meFixture({
-          seat: kind,
-          allow,
-          settingsAvailability: { lists: true },
-        }),
-        teams: [],
-      });
-  }
-
-  // Shows once /me has answered, so an absent panel is a decision, not a wait.
-  function MeAnswered() {
-    return useMe().data ? <p>me answered</p> : null;
   }
 
   function serve(
@@ -597,24 +568,6 @@ describe("putting a record on a Shortlist from its lists", () => {
   const addButton = () =>
     screen.findByRole("button", { name: en["lists.addToShortlist"] });
 
-  it("offers the header's dialog, listing the Shortlists the reader may change", async () => {
-    serve();
-    const user = userEvent.setup();
-
-    await user.click(await addButton());
-
-    const dialog = await screen.findByRole("dialog", {
-      name: en["lists.addToShortlist"],
-    });
-    await user.click(
-      within(dialog).getByRole("combobox", { name: en["lists.shortlist"] }),
-    );
-    const offered = (await screen.findAllByRole("option")).map(
-      (option) => option.textContent,
-    );
-    expect(offered).toEqual([shortlist.name, en["lists.newShortlistOption"]]);
-  });
-
   it("shows the new membership in the section once it is added", async () => {
     const added = serve();
     const user = userEvent.setup();
@@ -638,19 +591,6 @@ describe("putting a record on a Shortlist from its lists", () => {
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 
-  it("closes on Escape and hands focus back to the button", async () => {
-    serve();
-    const user = userEvent.setup();
-    const opener = await addButton();
-
-    await user.click(opener);
-    await screen.findByRole("dialog");
-    await user.keyboard("{Escape}");
-
-    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
-    expect(document.activeElement).toBe(opener);
-  });
-
   it("points the Live List check at the button that adds to a Shortlist", async () => {
     serve();
     const check = await screen.findByRole("combobox", {
@@ -662,11 +602,14 @@ describe("putting a record on a Shortlist from its lists", () => {
   it.each([
     [
       "holds no grant to change lists",
-      seat({ list: ["read"], company: ["read"] }),
+      listsMe(true, [], { allow: { list: ["read"], company: ["read"] } }),
     ],
     [
       "is a read seat",
-      seat({ list: ["read", "update"], company: ["read"] }, "read"),
+      listsMe(true, [], {
+        allow: { list: ["read", "update"], company: ["read"] },
+        seat: "read",
+      }),
     ],
   ])("offers no button to a reader who %s", async (_, me) => {
     serve(me);
@@ -680,7 +623,7 @@ describe("putting a record on a Shortlist from its lists", () => {
   });
 
   it("leaves the verbs to the rail beside it and keeps the Live List check", async () => {
-    serve(listsMe(true), { ways: false });
+    serve(listsMe(true), { actions: false });
     expect(
       await screen.findByRole("combobox", { name: en["lists.record.check"] }),
     ).toBeInTheDocument();
@@ -693,7 +636,7 @@ describe("putting a record on a Shortlist from its lists", () => {
   });
 
   it("links to every list the reader can find", async () => {
-    serve(seat({ list: ["read"], company: ["read"] }));
+    serve(listsMe(true, [], { allow: { list: ["read"], company: ["read"] } }));
     const link = await screen.findByRole("link", {
       name: en["lists.record.allLists"],
     });
@@ -705,7 +648,7 @@ describe("putting a record on a Shortlist from its lists", () => {
     ["lists are switched off", listsMe(false), {}],
   ])("draws nothing when %s", async (_, me, panel) => {
     serve(me, panel);
-    await screen.findByText("me answered");
+    await screen.findByText(ME_ANSWERED);
     expect(screen.queryByRole("heading")).toBeNull();
     expect(screen.queryByRole("button")).toBeNull();
   });

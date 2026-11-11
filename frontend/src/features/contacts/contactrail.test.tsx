@@ -834,15 +834,6 @@ describe("the Lists group", () => {
     );
   }
 
-  const readsLists = () =>
-    jsonResponse({
-      ...meFixture({
-        allow: { list: ["read"], contact: ["read"] },
-        settingsAvailability: { lists: true },
-      }),
-      teams: [],
-    });
-
   const group = async () =>
     within(
       await screen.findByRole("region", { name: en["lists.record.title"] }),
@@ -870,16 +861,5 @@ describe("the Lists group", () => {
     expect(
       lists.getByRole("button", { name: en["lists.addToShortlist"] }),
     ).toBeTruthy();
-  });
-
-  it("offers no Add to Shortlist to a seat that may not change lists", async () => {
-    serve(readsLists);
-    const lists = await group();
-    expect(
-      lists.getByRole("link", { name: en["lists.record.allLists"] }),
-    ).toBeTruthy();
-    expect(
-      lists.queryByRole("button", { name: en["lists.addToShortlist"] }),
-    ).toBeNull();
   });
 });

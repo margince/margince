@@ -14,7 +14,6 @@ import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
 import { listsMe, shortlist } from "../../testing/lists.fixtures";
-import { meFixture } from "../../testing/mefixture";
 import {
   installFetchStub,
   jsonResponse,
@@ -220,24 +219,5 @@ describe("the Lists group", () => {
     expect(
       lists.getByRole("button", { name: en["lists.addToShortlist"] }),
     ).toBeInTheDocument();
-  });
-
-  it("offers no Add to Shortlist to a seat that may not change lists", async () => {
-    serve(() =>
-      jsonResponse({
-        ...meFixture({
-          allow: { list: ["read"], company: ["read"] },
-          settingsAvailability: { lists: true },
-        }),
-        teams: [],
-      }),
-    );
-    const lists = within(await group());
-    expect(
-      lists.getByRole("link", { name: en["lists.record.allLists"] }),
-    ).toBeInTheDocument();
-    expect(
-      lists.queryByRole("button", { name: en["lists.addToShortlist"] }),
-    ).toBeNull();
   });
 });

@@ -14,7 +14,6 @@ import {
   SHORTLIST_ID,
   shortlist,
 } from "../../testing/lists.fixtures";
-import { meFixture } from "../../testing/mefixture";
 import {
   installFetchStub,
   jsonResponse,
@@ -66,14 +65,9 @@ export const OnTwoListsOnAPhone: Story = {
 // check's hint does not point at it.
 export const WithoutListGrant: Story = {
   render: () => {
-    stub([liveList], () =>
-      jsonResponse({
-        ...meFixture({
-          allow: { list: ["read"], company: ["read"] },
-          settingsAvailability: { lists: true },
-        }),
-        teams: [],
-      }),
+    stub(
+      [liveList],
+      listsMe(true, [], { allow: { list: ["read"], company: ["read"] } }),
     );
     return (
       <StoryProviders>
@@ -101,7 +95,7 @@ export const BesideARail: Story = {
         <RecordListsPanel
           entityType="company"
           entityId={MEMBER_ID}
-          ways={false}
+          actions={false}
         />
       </StoryProviders>
     );

@@ -6,8 +6,7 @@ import { expect, within } from "storybook/test";
 import type { components } from "../../api/schema";
 import { ContactRail } from "./contactrail";
 import "./contact360.css";
-import { shortlist } from "../../testing/lists.fixtures";
-import { meFixture } from "../../testing/mefixture";
+import { listsMe, shortlist } from "../../testing/lists.fixtures";
 import {
   callMessengersRoute,
   installFetchStub,
@@ -297,16 +296,14 @@ export const EverySectionGranted: Story = {
 export const Lists: Story = {
   name: "Lists, with Add to Shortlist",
   render: () =>
-    rail(granted, guard.entries, () =>
-      jsonResponse({
-        ...meFixture({
-          allow: {
-            contact: ["read", "update"],
-            list: ["read", "create", "update"],
-          },
-          settingsAvailability: { lists: true },
-        }),
-        teams: [],
+    rail(
+      granted,
+      guard.entries,
+      listsMe(true, [], {
+        allow: {
+          contact: ["read", "update"],
+          list: ["read", "create", "update"],
+        },
       }),
     ),
   play: async ({ canvasElement }) => {

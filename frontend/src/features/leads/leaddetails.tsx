@@ -3,7 +3,7 @@
 
 import { useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
-import { RecordListsWays } from "../../components/addtoshortlist";
+import { RecordListsActions } from "../../components/addtoshortlist";
 import { ConversationSuggestionsCard } from "../../components/conversationsuggestions";
 import { EntityRef } from "../../components/entityref";
 import { useEntityName } from "../../components/entityref.queries";
@@ -387,7 +387,7 @@ function ListedLeadDetails(props: DetailsProps) {
               ))}
             </ul>
           )}
-          <RecordListsWays entityType="lead" entityId={props.lead.id} />
+          <RecordListsActions entityType="lead" entityId={props.lead.id} />
         </>
       }
     />

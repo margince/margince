@@ -133,7 +133,7 @@ function ContactRecordKeepingStack({ view }: Readonly<{ view: Contact360 }>) {
       <RecordListsPanel
         entityType="contact"
         entityId={view.contact.id}
-        ways={false}
+        actions={false}
       />
     </>
   );

@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { ReactNode } from "react";
-import { RecordListsWays } from "../../components/addtoshortlist";
+import { RecordListsActions } from "../../components/addtoshortlist";
 import { useEmployerSummary } from "../../components/contactemployersummary";
 import {
   customFieldHref,
@@ -428,7 +428,7 @@ function listSection(
             ))}
           </span>
         )}
-        <RecordListsWays entityType="deal" entityId={dealId} />
+        <RecordListsActions entityType="deal" entityId={dealId} />
       </>
     ),
   };

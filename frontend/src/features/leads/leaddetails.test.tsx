@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { en } from "../../i18n/en";
 import { changeChoice } from "../../testing/choicedialog.testkit";
 import { companyNamesAnswer } from "../../testing/companynames.testkit";
-import { meFixture } from "../../testing/mefixture";
+import { listsMe } from "../../testing/lists.fixtures";
 import { installFetchStub } from "../../testing/story-utils";
 import { LeadDetails } from "./leaddetails";
 import { LeadScreen } from "./leads";
@@ -183,16 +183,11 @@ describe("a lead's Lists group", () => {
     );
   }
 
-  function show(list: readonly ("read" | "update")[], onLists: unknown[] = []) {
+  function show(onLists: unknown[] = []) {
     installFetchStub({
-      "GET /me": () =>
-        jsonResponse({
-          ...meFixture({
-            allow: { lead: ["read", "update"], list },
-            settingsAvailability: { lists: true },
-          }),
-          teams: [],
-        }),
+      "GET /me": listsMe(true, [], {
+        allow: { lead: ["read", "update"], list: ["read", "update"] },
+      }),
       [`GET /records/lead/${lead.id}/lists`]: () =>
         jsonResponse({ data: onLists }),
     });
@@ -205,7 +200,7 @@ describe("a lead's Lists group", () => {
     );
 
   it("offers Add to Shortlist and every list while the lead is on none", async () => {
-    show(["read", "update"]);
+    show();
     const lists = await group();
     expect(
       await lists.findByRole("button", { name: en["lists.addToShortlist"] }),
@@ -218,22 +213,11 @@ describe("a lead's Lists group", () => {
   });
 
   it("keeps the lists it is on beside the verbs", async () => {
-    show(["read", "update"], [{ id: "s-1", name: "Launch references" }]);
+    show([{ id: "s-1", name: "Launch references" }]);
     const lists = await group();
     expect(await lists.findByText("Launch references")).toBeTruthy();
     expect(
       lists.getByRole("button", { name: en["lists.addToShortlist"] }),
     ).toBeTruthy();
-  });
-
-  it("offers no Add to Shortlist to a seat that may not change lists", async () => {
-    show(["read"]);
-    const lists = await group();
-    expect(
-      lists.getByRole("link", { name: en["lists.record.allLists"] }),
-    ).toBeTruthy();
-    expect(
-      lists.queryByRole("button", { name: en["lists.addToShortlist"] }),
-    ).toBeNull();
   });
 });

@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
-import { RecordListsWays } from "../../components/addtoshortlist";
+import { RecordListsActions } from "../../components/addtoshortlist";
 import { ConversationSuggestionsCard } from "../../components/conversationsuggestions";
 import { CounterpartyHoldRow } from "../../components/counterparty-hold";
 import { Badge } from "../../design-system/atoms";
@@ -170,7 +170,7 @@ function ContactRailWithLists({
               ))}
             </div>
           )}
-          <RecordListsWays entityType="contact" entityId={contactId} />
+          <RecordListsActions entityType="contact" entityId={contactId} />
         </>
       ),
     },

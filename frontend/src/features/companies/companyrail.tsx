@@ -4,7 +4,7 @@
 import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
 import { AddressCountryMismatchBadge } from "../../components/addresscountrymismatch";
-import { RecordListsWays } from "../../components/addtoshortlist";
+import { RecordListsActions } from "../../components/addtoshortlist";
 import { mapCompanyUpdate } from "../../components/companyform";
 import {
   formatSizeBand,
@@ -86,7 +86,10 @@ function ListedRail(props: RailProps) {
               ))}
             </ul>
           )}
-          <RecordListsWays entityType="company" entityId={props.company.id} />
+          <RecordListsActions
+            entityType="company"
+            entityId={props.company.id}
+          />
         </>
       }
     />
