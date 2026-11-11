@@ -12,8 +12,10 @@ import (
 	"encoding/json"
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 )
 
 func TestAutomaticWorkOverwritesCreateTimeHumanValuesAndNothingWaits(t *testing.T) {
@@ -42,20 +44,23 @@ func TestAutomaticWorkOverwritesCreateTimeHumanValuesAndNothingWaits(t *testing.
 	}
 
 	// The human creates the deal exactly as the shipped form does: every
-	// field in ONE post.
+	// field in one post. Both dates come from the clock, since a close date
+	// already past is refused.
+	humanClose := clocktest.Now(t).AddDate(0, 1, 0).Format(time.DateOnly)
+	automaticClose := clocktest.Now(t).AddDate(0, 7, 0).Format(time.DateOnly)
 	var deal struct {
 		ID string `json:"id"`
 	}
 	if status := e.Call(t, "POST", "/v1/deals", AnyMap{
 		"name": "Acme renewal", "pipeline_id": pipelineID, "stage_id": stageID,
 		"amount_minor": 25000000, "currency": "EUR",
-		"expected_close_date": "2026-12-31", "source": "manual",
+		"expected_close_date": humanClose, "source": "manual",
 	}, nil, &deal); status != http.StatusCreated {
 		t.Fatalf("human deal create → %d", status)
 	}
 
 	automaticPatch(t, e, "deal", deal.ID, AnyMap{
-		"amount_minor": 100, "expected_close_date": "2027-06-30",
+		"amount_minor": 100, "expected_close_date": automaticClose,
 	})
 
 	var current struct {
@@ -68,8 +73,8 @@ func TestAutomaticWorkOverwritesCreateTimeHumanValuesAndNothingWaits(t *testing.
 	if current.AmountMinor != 100 {
 		t.Errorf("amount_minor = %d, want the automatic edit's 100", current.AmountMinor)
 	}
-	if current.ExpectedCloseDate != "2027-06-30" {
-		t.Errorf("expected_close_date = %q, want the automatic edit's 2027-06-30", current.ExpectedCloseDate)
+	if current.ExpectedCloseDate != automaticClose {
+		t.Errorf("expected_close_date = %q, want the automatic edit's %s", current.ExpectedCloseDate, automaticClose)
 	}
 	if n := countApprovals(t, e); n != 0 {
 		t.Errorf("%d approvals staged, want none", n)

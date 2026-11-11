@@ -19,7 +19,9 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/extprivacy"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	extdecl "github.com/margince/margince/backend/pkg/extension/privacy"
 )
 
 func (s *RetentionService) anonymizeLead(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
@@ -97,13 +99,18 @@ func (s *RetentionService) anonymizeLead(ctx context.Context, tx pgx.Tx, id ids.
 	// it, and the notices saying such a receipt is missing. Both name the lead
 	// the UPDATE above has just made nameless.
 	var payloads PayloadPurger
+	var extensions extprivacy.Registry
 	if s.eraser != nil {
-		payloads = s.eraser.payloads
+		payloads, extensions = s.eraser.payloads, s.eraser.extensions
 	}
 	if err := redactLeadDeliveries(ctx, tx, []ids.UUID{id}, payloads); err != nil {
 		return err
 	}
 	if err := retractReceiptNotices(ctx, tx, ids.UUID{}, []ids.UUID{id}, theClockRanOut.collateralReason, theClockRanOut.cause); err != nil {
+		return err
+	}
+	if err := clearExtensionRows(ctx, tx, extensions, theClockRanOut.collateralReason, theClockRanOut.cause,
+		map[extdecl.RecordKind][]ids.UUID{extdecl.Lead: {id}}); err != nil {
 		return err
 	}
 	return clearLeadCommunicationRecord(ctx, tx, id, address)

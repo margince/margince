@@ -66,6 +66,9 @@ type ListContactsInput struct {
 	// an edge, not a column on contact, so this is a link predicate too — see
 	// contactEmployerClause.
 	CompanyID *ids.CompanyID
+	// RelatedTo narrows to the contacts around one contact; see
+	// contactRelatedClause.
+	RelatedTo *ids.ContactID
 	// Membership narrows to one list's members (list_id).
 	Membership storekit.ListMemberFilter
 	// MemberOf is the list a seam caller narrowed to; the provider resolves it
@@ -208,6 +211,13 @@ func (s *Store) ListContacts(ctx context.Context, in ListContactsInput) ([]crmco
 			}
 			if employer != "" {
 				where = append(where, employer)
+			}
+			related, err := contactRelatedClause(ctx, in.RelatedTo, arg)
+			if err != nil {
+				return nil, err
+			}
+			if related != "" {
+				where = append(where, related)
 			}
 			return where, nil
 		},

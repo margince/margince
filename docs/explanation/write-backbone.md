@@ -137,6 +137,20 @@ payload erasure on that proof, so later allowed edits keep their values and hist
 A task for linked copies names one audit row. Its proof keeps the domain boundary fixed.
 It removes the first request audit entry's private values last, after that entry has guided the other changes.
 
+**The credential repair.** A password that reached a mail before the masking rules sits in the
+audit images of every edit to that mail. No live writer reaches it.
+`storekit.MaskRecordAuditImagesTx` masks it there.
+
+The trigger admits that change only while `margince.audit_credential_mask` is set. The same
+transaction must first write a system `update` row for that record. That row has no images and
+carries the flag `audit_credentials_masked`.
+
+The trigger also limits the change to the record types the masking
+rules reach. Nothing outside `before` and `after` may move, and an image keeps its keys and shape.
+Each string it changes must be the old string with spans replaced by the mask marker. A mail under a
+statutory hold keeps its trail.
+The trigger is in [the repair's migration](../../backend/migrations/core/1794348833_the_credential_repair_may_rewrite_an_audit_image.up.sql).
+
 The actor columns mirror the envelope's `Actor` (see *The envelope*): the same kinds of actor. A
 fitness test keeps the two in step, so a new kind cannot reach the bus and break the mirror.
 
@@ -380,15 +394,10 @@ It gives two things, and the second one counts more:
   that closed between lane 3 and lane 11 shows in one and not the other, and nothing on the response
   says so.
 
-**The snapshot is read-write, because these reads write.** The brief lane shows again what a user
-put off, once its time comes, and it records the open as it reads. Under a read-only snapshot each
-such write would have to open its own transaction, which it can only do *while the snapshot is
-still held*. Every request would then hold two connections from the pool at once.
-
-At `MaxConns` 16, that many readers at once wait on each other for one more connection, which
-breaks one transaction per request. Joined, those
-writes go with the page: committed with the built day, or not at all. That is also the right
-reading of them, because a brief whose page never showed is not opened.
+**The brief lane writes nothing.** A snooze whose time has come is judged at the time of the
+read, and no row is changed. The open is recorded only by `GET /v1/brief` and the
+`read_brief` tool, in a transaction of their own once the brief is handed over. The snapshot is
+still opened read-write, because one lane locks the base-currency row inside it.
 
 **`Detached` keeps a failing call off the page.** It is for a call that must not take
 the page down with it when it fails. A joined statement that fails puts the shared transaction in an error state. A caller that

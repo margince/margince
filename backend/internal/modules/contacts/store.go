@@ -14,6 +14,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/extprivacy"
 	"github.com/margince/margince/backend/internal/platform/freemail"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
@@ -96,6 +97,9 @@ type Store struct {
 	leadArrivals LeadArrivals
 	// leadQualifyTasks files the durable follow-up when captured work lands on a lead.
 	leadQualifyTasks LeadQualifyTasks
+	// extensions declares the extension tables whose rows depend on a record; a
+	// merge of a record they name is refused (mergedependents.go).
+	extensions extprivacy.Registry
 	// renameInstallation keeps the installation's name on the anchor's display
 	// name (anchorname.go); nil refuses an anchor rename.
 	renameInstallation InstallationRenamer
@@ -226,6 +230,9 @@ func (s *Store) txSnapshot(ctx context.Context, fn func(pgx.Tx) error) error {
 // its own, so every caller that embeds a scope in a larger WHERE needs this
 // substitute. The site read's system worker is one such actor.
 const scopeAllRows = "TRUE"
+
+// scopeNoRows is the predicate for a read the caller may make of no row at all.
+const scopeNoRows = "FALSE"
 
 // scopeOrAllRows renders one table's row-scope clause as a predicate that
 // always composes into a larger WHERE.

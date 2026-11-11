@@ -2403,6 +2403,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "systemJob.erasure_replay": "Erneute Löschung nach einer Wiederherstellung",
   "systemJob.privacy_review": "Datenschutzprüfung nach einer Löschung",
   "systemJob.extension_inventory": "Bestandsaufnahme der Erweiterungen",
+  "systemJob.extension_privacy": "Datenschutzprüfung der Erweiterungen",
   "systemJob.extraction_activity_reannounce":
     "Reparatur extrahierter Aktivitäten",
   "systemJob.forecast_snapshot": "Täglicher Prognose-Snapshot",
@@ -3820,7 +3821,15 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "co.aside.visibleEveryone": "Alle",
   "co.aside.visibleOnlyYou": "Nur dich",
   "co.aside.visibleOnly": "Nur {owner}",
-  "co.aside.visibleOnlyOwner": "Nur die zuständige Person",
+  "co.aside.visibleOnlyOwner": "Nur die verantwortliche Person",
+  "co.aside.visibleYouAndShared_one": "Dich · {count} Freigabe",
+  "co.aside.visibleYouAndShared_other": "Dich · {count} Freigaben",
+  "co.aside.visibleOwnerAndShared_one": "{owner} · {count} Freigabe",
+  "co.aside.visibleOwnerAndShared_other": "{owner} · {count} Freigaben",
+  "co.aside.visibleTheOwnerAndShared_one":
+    "Die verantwortliche Person · {count} Freigabe",
+  "co.aside.visibleTheOwnerAndShared_other":
+    "Die verantwortliche Person · {count} Freigaben",
   "co.aside.vatId": "USt-IdNr.",
   "co.aside.add": "Hinzufügen…",
   "co.strip.unanswered": "Unbeantwortet",
@@ -3964,6 +3973,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "standing.title": "Wie es steht · {date}",
   "standing.noteMore": "Mehr anzeigen",
   "standing.noteLess": "Weniger anzeigen",
+  "standing.latest.title": "Zuletzt",
+  "standing.latest.open": "Im Verlauf öffnen",
   "standing.sources.records": "Aus den CRM-Daten",
   "standing.sources.model_one": "Margince · {count} Quelle",
   "standing.sources.model_other": "Margince · {count} Quellen",
@@ -4596,6 +4607,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "approval.field.because": "Grund",
   "approval.field.lost_reason": "Warum er verloren ging",
   "approval.field.note": "Notiz",
+  "approval.field.task": "Aufgabe",
   "approval.kind.transcript_proposal":
     "Nächsten Schritt aus Transkript erstellen",
   "approval.kind.stage_progression": "Deal-Phase voranbringen",
@@ -14068,6 +14080,13 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "license.renewal.title": "Lizenz muss erneuert werden",
   "license.renewal.body":
     "Die Lizenz läuft am {expiry} ab. Vor diesem Datum ändert sich nichts.",
+  "license.check.button": "Jetzt prüfen",
+  "license.check.hint":
+    "Liest die Lizenz-Token-Datei auf dem Server sofort neu ein, statt bei der nächsten täglichen Prüfung. Tausche die Datei vorher aus. Ein Token aus einer Umgebungsvariable gilt erst nach einem Neustart.",
+  "license.check.done":
+    "Lizenz-Token neu eingelesen. Diese Karte zeigt das Ergebnis.",
+  "license.check.failed":
+    "Das Lizenz-Token ließ sich nicht neu einlesen. Das letzte Ergebnis gilt weiter, und das Server-Log nennt den Grund.",
   "license.counting":
     "Volle Plätze, die nicht deaktiviert oder gesperrt sind, Agenten eingeschlossen. Leseplätze sind unbegrenzt und zählen nicht mit.",
   "settings.rates.fxTitle": "Wechselkurse",
@@ -21120,6 +21139,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "scheduling.pause": "Buchungen pausieren",
   "record.details.showEmpty_one": "{count} leeres Feld zeigen",
   "record.details.showEmpty_other": "{count} leere Felder zeigen",
+  "contact.handles.more_one": "+{count} weitere",
+  "contact.handles.more_other": "+{count} weitere",
+  "contact.handles.fewer": "Weniger anzeigen",
   "record.details.hideEmpty": "Leere Felder ausblenden",
   "record.verb.email": "E-Mail",
   "record.verb.call": "Anruf",
@@ -21751,10 +21773,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.done.changeCount_other": "{count} Änderungen",
   "brief.done.steps": "Änderungen an diesem Deal, neueste zuerst",
   "brief.done.title": "Für dich erledigt",
-  "brief.done.waiting_one": "{count} Deal wartet auf deine Prüfung",
-  "brief.done.waiting_other": "{count} Deals warten auf deine Prüfung",
-  "brief.done.reviewAll_one": "{count} Deal prüfen",
-  "brief.done.reviewAll_other": "Alle {count} Deals prüfen",
+  "brief.done.seeAll_one": "{count} Deal ansehen",
+  "brief.done.seeAll_other": "Alle {count} Deals ansehen",
   "brief.done.drawerTitle_one": "{count} Deal, den Margince geändert hat",
   "brief.done.drawerTitle_other": "{count} Deals, die Margince geändert hat",
   "changes.undoDeals_one": "Änderungen an {count} Deal rückgängig machen",
@@ -21769,8 +21789,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.done.noReason": "Grund nicht verfügbar",
   "brief.done.markedLost": "Als verloren markiert",
   "brief.done.customerWrote": "Der Kunde schrieb:",
-  "brief.changes.markReviewed": "Als geprüft markieren",
-  "brief.changes.reviewed": "Geprüft",
   "magic.lane.doneOther": "Weitere Änderungen",
   "changes.bulk.undone_one": "Auf {count} Deal rückgängig gemacht.",
   "changes.bulk.undone_other": "Auf {count} Deals rückgängig gemacht.",

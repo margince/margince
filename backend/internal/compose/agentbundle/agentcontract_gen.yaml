@@ -44,6 +44,9 @@ info:
     GET /v1/stage-automation/report:
       release: ""
       announced_at: ""
+    GET /v1/weekly-reviews/team:
+      release: ""
+      announced_at: ""
     PATCH /v1/lead-sources/{id}:
       release: ""
       announced_at: ""
@@ -51,6 +54,9 @@ info:
       release: ""
       announced_at: ""
     POST /v1/companies/{id}/brief:
+      release: ""
+      announced_at: ""
+    POST /v1/deals/{id}/applied-changes/{changeId}/accept:
       release: ""
       announced_at: ""
     POST /v1/deals/{id}/stage-progressions/{approvalId}/revert:
@@ -613,6 +619,16 @@ paths:
             Contacts who work at this account, by a current employment edge, whether primary or secondary. A past employer does not match:
             "who works there" and "who has ever worked there" are different questions, and the
             list answers the first.
+        - name: related_to
+          in: query
+          schema: {type: string, format: uuid}
+          description: |-
+            The contacts around this one: those who work at one of its current employers, and
+            those who hold a seat on a deal it holds a seat on. The named contact itself is not
+            in the list. The composer offers this list as recipients. Each link counts only when
+            the caller may read it: the employment edge, the deal and the named contact itself.
+            A contact the caller may not read relates to nobody, so the answer is an empty page
+            and does not say whether the contact exists.
       responses:
         '200':
           description: A page of contacts.
@@ -6197,6 +6213,7 @@ paths:
     post:
       tags: [Deals]
       operationId: acceptAppliedDealChange
+      deprecated: true
       security: [{bearerAuth: []}]
       summary: Accept a recorded automatic deal change.
       description: |-
@@ -6204,6 +6221,8 @@ paths:
         audit id). It keeps the applied values;
         acceptance is an audited review decision, not another application of the change.
         Requires the displayed deal version. A reversed or superseded change is refused.
+        An accepted change leaves the pending list and keeps its Undo. Margince itself no
+        longer asks for this; undo a change instead of accepting the ones you keep.
 
         Needs the passport permission Change records.
 
@@ -6255,10 +6274,12 @@ paths:
       tags: [Deals]
       operationId: getPendingMarginceChanges
       security: [{bearerAuth: []}]
-      summary: The changes Margince made to your deals that you have not accepted or undone.
+      summary: The changes Margince made to your deals in the last 7 days that you have not undone.
       description: |-
-        One bundle per deal: every open change Margince made to one of the caller's own deals,
-        newest first inside the bundle. The counts are deals, counted in SQL over every open
+        One bundle per deal: every open change Margince made to one of the caller's own deals
+        in the last 7 days, newest first inside the bundle. An older change stays in the
+        deal's own list with its Undo. A change accepted through the deprecated accept
+        route is left out. The counts are deals, counted in SQL over every open
         change, so a deal changed twice counts once and a cut list never shrinks a count.
         Bundles are ordered by the deal's value in the base currency, the largest first. At
         most 500 bundles; `truncated` says when more exist.
@@ -21816,12 +21837,12 @@ paths:
     get:
       tags: [Brief]
       operationId: getTeamWeeklyReview
+      deprecated: true
       security: [{bearerAuth: []}]
       summary: A team's week, frozen — what each member's week came to, and the one thing to raise.
       description: |-
-        The team half of the weekly. `/worklist/team` answers what the team is carrying NOW,
-        live and recomputed on every open; this answers what last week WAS, written once when
-        the week closed, so two weeks can be compared and neither moves under the comparison.
+        Deprecated: no screen reads the team week. The operation stays callable through
+        the notice window in the API compatibility policy.
       parameters:
         - name: team
           in: query
@@ -38977,8 +38998,16 @@ components:
             Whether Write email on this row opens with a recipient filled in: true exactly when `GET /activities/{id}/reply-recipient` answers a non-empty `address` for a call, meeting, note or task. Both are computed by one rule, the one `email_target` states. Always false for an email or a message, which are answered with Reply instead, for an archived row, for a task the product filed itself (`automatic_kind` product), and for a row whose content is withheld from the caller. False for a company target too, which has no single address: the composer asks which of the company's contacts the mail is for.
         email_target:
           $ref: '#/components/schemas/ActivityEmailTarget'
-        source: {type: string}
+        source:
+          type: string
+          description: >-
+            Where the row came from. `manual` is anything typed, by a member or by an assistant working for one, so it never says who typed it: `captured_by` and `recorded_by_agent` do.
         captured_by: {type: string, readOnly: true, description: 'Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied.'}
+        recorded_by_agent:
+          type: boolean
+          readOnly: true
+          description: >-
+            True when an assistant or an agent run wrote this activity: `captured_by` names an agent, or a scheduled agent run filed it. A reader labels such a row as the assistant's whatever `source` says.
         imported_from:
           type: [string, 'null']
           readOnly: true
@@ -53121,7 +53150,12 @@ components:
             The scopes this reader may ask for, narrowest first — derived from their own
             row scope. A client draws a control only when there is more than one, so a
             rep who can only see their own work is never offered a switch that would 403.
-        team_week: {$ref: '#/components/schemas/TeamWeekReach'}
+        team_week:
+          $ref: '#/components/schemas/TeamWeekReach'
+          deprecated: true
+          description: |-
+            Deprecated: no screen opens the team week, and the operation it describes,
+            `GET /weekly-reviews/team`, is deprecated too. `GET /me` carries the same answer.
         filter: {type: string, enum: [all, urgent, customer_waiting, leads, prospecting, deals_at_risk, meetings, tasks, decisions, relationships, system, except_decisions, changed_since_brief, upcoming], description: 'The narrowing this read applied. The same vocabulary the query parameter takes.'}
         view: {type: string, enum: [today, decisions, system], description: 'The view this read answered, after a `filter` alias was read as its view. Absent when the read named no view.'}
         summary: {$ref: '#/components/schemas/WorklistSummary'}
@@ -53341,11 +53375,11 @@ components:
       required: [kind, accepted, reversed, version, can_undo, can_accept, writable]
       properties:
         kind: {type: string, enum: [close_date, close_lost, amount, probability, stage, deal_open, deal_revive]}
-        accepted: {type: boolean}
+        accepted: {type: boolean, deprecated: true, description: Whether the change was accepted through the deprecated accept route.}
         reversed: {type: boolean}
         version: {type: integer, format: int64}
         can_undo: {type: boolean}
-        can_accept: {type: boolean}
+        can_accept: {type: boolean, deprecated: true, description: Whether the deprecated accept route would take this change.}
         writable: {type: boolean, description: Whether this reader may write this deal.}
     CloseDateEstimateBasis:
       type: object

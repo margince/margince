@@ -180,10 +180,9 @@ type ActIn struct {
 	// onboarding sequence, anything answered in place — subjects alone carry no
 	// information at all, so the model fills the gap with plausible invention.
 	//
-	// It is what the message SAYS, not a claim about who wrote it. An activity
-	// reaches an account through activity_link and the employment walk, both of
-	// which record what a message concerns rather than who authored it, and the
-	// 360 carries no participants — so authorship is not knowable here.
+	// ViewOptions keeps only rows the recipient is a party to, so a colleague's
+	// mail is never here. The recipient may only have been copied, so the
+	// prompt answers a snippet without attributing it.
 	Snippet string `json:"snippet,omitempty"`
 }
 

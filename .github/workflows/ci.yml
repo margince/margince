@@ -447,8 +447,9 @@ jobs:
     permissions:
       contents: read
     # The uncached root fitness packages were most of the test leg, so they get
-    # a runner. Both legs run the build; only the unit leg runs the gates that
-    # read the tree the same way on either (CHECK_TREE_GATES).
+    # a runner, and so does SOLO_TEST_PKGS. Every leg runs the build; only the
+    # unit leg runs the gates that read the tree the same way on each
+    # (CHECK_TREE_GATES).
     # TestTheTwoBackendJobsRunEveryCheckLeg reads the legs from these entries.
     strategy:
       fail-fast: false
@@ -457,9 +458,16 @@ jobs:
           - part: unit
             legs: test-cached test-extensions
             tree-gates: "on"
+            census-minimum: "100"
           - part: gates
             legs: test-uncached
             tree-gates: "off"
+          # SOLO_TEST_PKGS in backend/Makefile: a package whose time beside the
+          # rest was the runner's load, not its own.
+          - part: solo
+            legs: test-solo
+            tree-gates: "off"
+            census-minimum: "1"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -533,7 +541,7 @@ jobs:
         run: |
           set -o pipefail
           census=()
-          if [ "${{ matrix.part }}" = unit ] && [ "${{ needs.changes.outputs.full_lane }}" = true ]; then
+          if [ "${{ matrix.part }}" != gates ] && [ "${{ needs.changes.outputs.full_lane }}" = true ]; then
             export TESTLOG_DIR="$RUNNER_TEMP/testlogs"
             mkdir -p "$TESTLOG_DIR"
             census=(TEST_EXEC="$PWD/scripts/testlog-exec.sh")
@@ -546,9 +554,9 @@ jobs:
       # pass: a failed test stops make before the rest log their reads, and a
       # verdict over part of the tree is not one.
       - name: Census the test cache's inputs (make test-input-census-judge)
-        if: ${{ success() && matrix.part == 'unit' && needs.changes.outputs.full_lane == 'true' }}
+        if: ${{ success() && matrix.part != 'gates' && needs.changes.outputs.full_lane == 'true' }}
         working-directory: .
-        run: make test-input-census-judge TESTLOG_DIR="$RUNNER_TEMP/testlogs"
+        run: make test-input-census-judge TESTLOG_DIR="$RUNNER_TEMP/testlogs" TESTLOG_MINIMUM="${{ matrix.census-minimum }}"
       # crm-hello declares capabilities no shipped unit does, so this is the one
       # walk of them; TestEveryPublishedCapabilityHasALiveDeclaringUnit reads the
       # require below. It runs after the merge gate, which must see only the committed
@@ -1231,13 +1239,15 @@ jobs:
 
   # Home's per-PR budget (scripts/home-budget.sh): the API p95 of Home's reads,
   # cold and warm, on a small corpus of its own, then the day paint and CLS of a
-  # production bundle against an api booted the way live-boot boots it.
+  # production bundle against an api booted the way live-boot boots it. While
+  # advisory, it measures the base commit on the same runner too and fails only
+  # when the change is slower past a margin, so runner speed cannot redden it.
   # ADVISORY: it is not in the `ci` fan-in, and a red run stops no merge. The
   # scope step skips the rest when the diff cannot reach Home
   # (scripts/home-budget-scope.sh); a push or a merge group always runs.
   home-budget:
     name: home-budget (advisory)
-    timeout-minutes: 30
+    timeout-minutes: 60
     needs: [changes]
     if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     runs-on: ubuntu-latest
@@ -1332,8 +1342,33 @@ jobs:
         uses: ./.github/actions/install-playwright-chromium
       # Writes the wall time of each half, the API rows and the vitals line to
       # the job summary, pass or fail.
+      # The commit this change is judged against: a pull request's merge base,
+      # a push's previous tip, a merge group's base. A new branch has none, and
+      # then the fixed budgets judge it.
+      - name: Choose the base to compare with
+        id: base
+        if: steps.scope.outputs.run == 'true'
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref }}
+          BEFORE: ${{ github.event.before }}
+          GROUP_BASE: ${{ github.event.merge_group.base_sha }}
+        run: |
+          case "$EVENT" in
+            pull_request) base="$(git merge-base "origin/$BASE_REF" HEAD)" ;;
+            merge_group) base="$GROUP_BASE" ;;
+            push) base="$BEFORE" ;;
+            *) base="" ;;
+          esac
+          if [ -n "$base" ] && ! git cat-file -e "$base^{commit}" 2>/dev/null; then
+            echo "home-budget: base $base is not in this clone, so the fixed budgets judge"
+            base=""
+          fi
+          echo "sha=$base" >> "$GITHUB_OUTPUT"
       - name: Home budget
         if: steps.scope.outputs.run == 'true'
+        env:
+          HOME_BUDGET_BASE: ${{ steps.base.outputs.sha }}
         run: make home-budget BENCH_API_PORT=8080
       - name: API log (on failure)
         if: failure()

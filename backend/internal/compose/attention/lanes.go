@@ -311,7 +311,10 @@ type Briefing interface {
 	// reply, and judging freshness by generated_at would hide exactly the replies
 	// a rep most wants to see. Zero when no run exists, which is why `ran` is a
 	// separate answer: absent is not the same as false.
-	Queue(ctx context.Context) (entries []BriefEntry, ran bool, asOf time.Time, err error)
+	//
+	// now is the read's own instant, so snoozes are judged at the as_of the
+	// rest of the page carries.
+	Queue(ctx context.Context, now time.Time) (entries []BriefEntry, ran bool, asOf time.Time, err error)
 }
 
 // BriefEntry is one UNANSWERED queue entry: what it is about, and where it

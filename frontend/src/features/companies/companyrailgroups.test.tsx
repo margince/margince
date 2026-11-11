@@ -61,7 +61,7 @@ function stub(roster: ReadonlyArray<{ id: string; display_name: string }>) {
   );
 }
 
-function renderRail(company: Company) {
+function renderRail(company: Company): QueryClient {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
@@ -72,6 +72,7 @@ function renderRail(company: Company) {
       </LocaleProvider>
     </QueryClientProvider>,
   );
+  return client;
 }
 
 // The Source row's value, read the way a reader does: the whole text of the
@@ -165,5 +166,91 @@ describe("a record an agent created", () => {
     renderRail({ ...COMPANY, captured_by: AGENT });
 
     await waitFor(() => expect(sourceText()).toBe("Automated by an agent"));
+  });
+});
+
+// A share widens a closed record's audience, so the Visible to row counts it.
+// Without that the row says "Only Mira Voss" to a colleague who just opened it.
+describe("who may read a closed company", () => {
+  function stubShares(grants: number, grantsStatus = 200, hasMore = false) {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (request: Request) => {
+        const { pathname } = new URL(request.url);
+        let status = 200;
+        let body: unknown = {
+          data: [{ id: "u-owner", display_name: "Mira Voss" }],
+          page: { has_more: false, next_cursor: null },
+        };
+        if (pathname.endsWith("/me")) {
+          body = { user: { id: "u-reader", display_name: "The Reader" } };
+        } else if (pathname.endsWith("/record-grants")) {
+          status = grantsStatus;
+          body = {
+            data: Array.from({ length: grants }, (_, i) => ({ id: `g-${i}` })),
+            page: { has_more: hasMore, next_cursor: hasMore ? "c-2" : null },
+          };
+        } else if (
+          pathname.endsWith("/profile-fields") ||
+          pathname.endsWith("/tags")
+        ) {
+          body = { data: [] };
+        }
+        return new Response(JSON.stringify(body), {
+          status,
+          headers: { "content-type": "application/json" },
+        });
+      }),
+    );
+  }
+
+  function visibleText(): string {
+    const term = screen.getByText("Visible to");
+    return (
+      term.nextElementSibling?.textContent?.replace(/\s+/g, " ").trim() ?? ""
+    );
+  }
+
+  it("counts the colleagues it is shared with beside the owner", async () => {
+    stubShares(2);
+    renderRail({ ...COMPANY, visibility: "owner" });
+
+    await waitFor(() => expect(visibleText()).toBe("Mira Voss · 2 shares"));
+  });
+
+  it("leaves the share dialog's grants list alone and refreshes on its invalidation", async () => {
+    stubShares(1);
+    const client = renderRail({ ...COMPANY, visibility: "owner" });
+    await waitFor(() => expect(visibleText()).toBe("Mira Voss · 1 share"));
+    expect(client.getQueryData(["record-grants", "company", "o-1"])).toBe(
+      undefined,
+    );
+
+    stubShares(3);
+    await client.invalidateQueries({
+      queryKey: ["record-grants", "company", "o-1"],
+    });
+    await waitFor(() => expect(visibleText()).toBe("Mira Voss · 3 shares"));
+  });
+
+  it("marks a count the server cut as a floor", async () => {
+    stubShares(100, 200, true);
+    renderRail({ ...COMPANY, visibility: "owner" });
+
+    await waitFor(() => expect(visibleText()).toBe("Mira Voss · 100+ shares"));
+  });
+
+  it("names the owner alone while nobody holds a share", async () => {
+    stubShares(0);
+    renderRail({ ...COMPANY, visibility: "owner" });
+
+    await waitFor(() => expect(visibleText()).toBe("Only Mira Voss"));
+  });
+
+  it("names the owner alone when the shares cannot be read", async () => {
+    stubShares(0, 403);
+    renderRail({ ...COMPANY, visibility: "owner" });
+
+    await waitFor(() => expect(visibleText()).toBe("Only Mira Voss"));
   });
 });
