@@ -45,10 +45,17 @@ type cancelWorkflow struct {
 // sameCommitTriggers lists the triggers of wf that start a run on an unchanged
 // pull request head.
 func (wf cancelWorkflow) sameCommitTriggers() []string {
-	if wf.On.Kind != yaml.MappingNode {
-		return nil
-	}
 	var found []string
+	// A bare event or a list of events carries no `types:`, so pull_request
+	// there has only its default, new-commit types.
+	if wf.On.Kind != yaml.MappingNode {
+		for _, event := range (queueWorkflow{On: wf.On}).triggers() {
+			if slices.Contains(sameCommitEvents, event) {
+				found = append(found, event)
+			}
+		}
+		return found
+	}
 	for i := 0; i+1 < len(wf.On.Content); i += 2 {
 		event, settings := wf.On.Content[i].Value, wf.On.Content[i+1]
 		switch {
@@ -98,6 +105,8 @@ func (wf cancelWorkflow) cancellingScopes() []string {
 	return scopes
 }
 
+// TestNoSameCommitPullRequestRunCancelsAnother judges every workflow that can
+// start on a pull request head that has not moved.
 func TestNoSameCommitPullRequestRunCancelsAnother(t *testing.T) {
 	t.Parallel()
 	judged := 0
