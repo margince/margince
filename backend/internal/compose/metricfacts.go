@@ -162,7 +162,7 @@ func reportingClosePredicate(frame crmcontracts.ReportingContext, b *reportingBi
 	}
 	// Close dates are whole days: every local day the window touches is in it,
 	// so a window ending mid-day keeps that day.
-	return " AND t.expected_close_date >= (timezone(" + b.add(frame.Timezone) + "," + b.add(frame.CloseInterval.StartAt) + "::timestamptz))::date AND t.expected_close_date <= (timezone(" + b.add(frame.Timezone) + "," + b.add(frame.CloseInterval.EndAt) + "::timestamptz) - interval '1 microsecond')::date"
+	return " AND t.expected_close_date >= (timezone(" + b.add(frame.Timezone) + "," + b.add(frame.CloseInterval.StartAt) + "::timestamptz))::date AND t.expected_close_date <= (timezone(" + b.add(frame.Timezone) + "," + b.add(frame.CloseInterval.EndAt) + "::timestamptz - interval '1 microsecond'))::date"
 }
 
 func readReportingOpen(ctx context.Context, tx pgx.Tx, frame crmcontracts.ReportingContext, _ crmcontracts.ReportingFramework, _ metricEvaluator) ([]reporting.Fact, crmcontracts.ReportingCoverage, error) {
