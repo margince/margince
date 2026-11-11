@@ -201,3 +201,62 @@ describe("RecordTabs keeps focus when the folded tabs come back", () => {
     expect(screen.getByRole("button", { name: "Overview" })).toHaveFocus();
   });
 });
+
+// Widths here depend on where a tab stands: the first one drops its start
+// padding. The fold must settle on one row, not flip between two.
+describe("RecordTabs folds to one stable row", () => {
+  it("keeps the same tabs when the first tab's padding moves", () => {
+    let resized: () => void = () => undefined;
+    vi.stubGlobal(
+      "ResizeObserver",
+      class {
+        constructor(changed: () => void) {
+          resized = changed;
+        }
+        observe() {}
+        disconnect() {}
+      },
+    );
+    const base: Record<string, number> = { a: 80, b: 100, c: 200 };
+    const first = (el: Element) => el.parentElement?.firstElementChild === el;
+    vi.spyOn(HTMLElement.prototype, "offsetWidth", "get").mockImplementation(
+      function (this: HTMLElement) {
+        const tab = this.dataset.tab;
+        if (tab === undefined) return 80;
+        return (base[tab] ?? 0) - (first(this) ? 12 : 0);
+      },
+    );
+    vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(254);
+    const computed = window.getComputedStyle.bind(window);
+    vi.spyOn(window, "getComputedStyle").mockImplementation((el) => {
+      const style = computed(el);
+      if (!(el instanceof HTMLElement) || el.dataset.tab === undefined) {
+        return style;
+      }
+      return {
+        ...style,
+        paddingInlineStart: first(el) ? "0px" : "12px",
+        paddingInlineEnd: "12px",
+      };
+    });
+    render(
+      <LocaleProvider initial="en">
+        <RecordTabs
+          options={["a", "b", "c"]}
+          value="b"
+          onChange={() => undefined}
+          labels={{ a: "Alpha", b: "Beta", c: "Gamma" }}
+        />
+      </LocaleProvider>,
+    );
+    const shown = () =>
+      [...document.querySelectorAll<HTMLElement>("[data-tab]")].map(
+        (tab) => tab.dataset.tab,
+      );
+
+    act(() => resized());
+    expect(shown()).toEqual(["a", "b"]);
+    act(() => resized());
+    expect(shown()).toEqual(["a", "b"]);
+  });
+});
