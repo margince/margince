@@ -1,6 +1,6 @@
 module github.com/margince/margince/extensions/finance-demo
 
-go 1.27.3
+go 1.27.4
 
 // The backend this unit compiles against is the one IN THIS TREE, not a published
 // snapshot of it. pkg/extension has no module version — it resolves through the
