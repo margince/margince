@@ -20,6 +20,11 @@ Style the form as you like, but keep each field's `name`. A post from a website 
 To check that the code works, send one test message from your page. Once Margince accepts it, the form's row shows **Last post** and the date. Until then it shows **No post recorded yet**.
 Also called: contact form, request form, lead form, web form, embed a form.
 
+### How do I make a form's leads ask about one product?
+<!-- opens: settings/web-forms -->
+To tie a form to one product, open the form under **Settings → Website forms** and pick a **Product**. Every new lead the form captures asks about that product, and a lead that already exists keeps its own. **Capture leads with no product** clears it.
+Also called: form product, product on a web form, lead source product.
+
 ### Can I keep the form I already have?
 Yes. Point the form at the **Form address** with `method="post"`, and give its fields the names Margince reads:
 
