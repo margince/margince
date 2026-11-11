@@ -215,13 +215,13 @@ describe("who may read a closed company", () => {
     stubShares(2);
     renderRail({ ...COMPANY, visibility: "owner" });
 
-    await waitFor(() => expect(visibleText()).toBe("Mira Voss and 2 shares"));
+    await waitFor(() => expect(visibleText()).toBe("Mira Voss · 2 shares"));
   });
 
   it("leaves the share dialog's grants list alone and refreshes on its invalidation", async () => {
     stubShares(1);
     const client = renderRail({ ...COMPANY, visibility: "owner" });
-    await waitFor(() => expect(visibleText()).toBe("Mira Voss and 1 share"));
+    await waitFor(() => expect(visibleText()).toBe("Mira Voss · 1 share"));
     expect(client.getQueryData(["record-grants", "company", "o-1"])).toBe(
       undefined,
     );
@@ -230,16 +230,14 @@ describe("who may read a closed company", () => {
     await client.invalidateQueries({
       queryKey: ["record-grants", "company", "o-1"],
     });
-    await waitFor(() => expect(visibleText()).toBe("Mira Voss and 3 shares"));
+    await waitFor(() => expect(visibleText()).toBe("Mira Voss · 3 shares"));
   });
 
   it("marks a count the server cut as a floor", async () => {
     stubShares(100, 200, true);
     renderRail({ ...COMPANY, visibility: "owner" });
 
-    await waitFor(() =>
-      expect(visibleText()).toBe("Mira Voss and 100+ shares"),
-    );
+    await waitFor(() => expect(visibleText()).toBe("Mira Voss · 100+ shares"));
   });
 
   it("names the owner alone while nobody holds a share", async () => {
