@@ -16,6 +16,7 @@ import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 import { useSourceOpener } from "../../lib/opensource";
 import { useViewerZone } from "../../lib/viewerzone";
 import { saysOpen } from "../../lib/worklistask";
+import { consequenceLine } from "../../lib/worklistconsequence";
 import {
   factReasons,
   partyName,
@@ -23,7 +24,6 @@ import {
   saidByTheWhenLine,
 } from "../../lib/worklistcopy";
 import {
-  consequenceLine,
   happenedLines,
   todoLine,
   useHappenedClock,
