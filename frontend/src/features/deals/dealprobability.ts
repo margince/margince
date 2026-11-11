@@ -92,20 +92,27 @@ type ReasonDeal = Pick<
   | "win_probability_set_by_name"
 >;
 
+type ReasonContext = Readonly<{
+  stageName: string | undefined;
+  t: Translator;
+  locale: Locale;
+  viewerId?: string;
+  // Margince's own reason for lowering the figure, where the reader may read
+  // one; without it the general rule stands in.
+  recorded?: string | null;
+  // Whether the reader may change the figure, so the reason says how.
+  editable: boolean;
+}>;
+
 /**
  * Why an open or closed deal has its probability, in sentences: who or what
  * set it, the stage's own figure beside an override, and how to change it.
- * `recorded` is Margince's own reason for lowering it, where the reader may
- * read one; without it the general rule stands in.
  */
 export function probabilityReason(
   deal: ReasonDeal,
-  stageName: string | undefined,
-  t: Translator,
-  locale: Locale,
-  viewerId?: string,
-  recorded?: string | null,
+  context: ReasonContext,
 ): string | undefined {
+  const { stageName, t } = context;
   if (deal.win_probability == null) {
     return undefined;
   }
@@ -115,38 +122,46 @@ export function probabilityReason(
   if (deal.status === "won" || deal.status === "lost") {
     return t("deal.winProbability.reason.closed", { stage });
   }
+  return openReason(deal, stage, context).filter(Boolean).join(" ");
+}
+
+// The sentences for an open deal, by where its figure comes from. A falsy
+// entry is a sentence that does not apply.
+function openReason(
+  deal: ReasonDeal,
+  stage: string,
+  { t, locale, viewerId, recorded, editable }: ReasonContext,
+): (string | false | undefined)[] {
   const stagePercent =
     deal.stage_win_probability == null
       ? undefined
       : formatPercent(deal.stage_win_probability / 100, locale);
-  const source = deal.win_probability_source ?? "stage";
-  const sentences =
-    source === "margince"
-      ? [
-          stagePercent
-            ? t("deal.winProbability.reason.margince", {
-                percent: stagePercent,
-                stage,
-              })
-            : t("deal.winProbability.reason.marginceBare"),
-          recorded || t("deal.winProbability.reason.marginceRule"),
-          t("deal.winProbability.reason.override"),
-        ]
-      : source === "human"
-        ? [
-            setterSentence(deal, t, viewerId),
-            stagePercent &&
-              t("deal.winProbability.reason.stageGives", {
-                percent: stagePercent,
-                stage,
-              }),
-            t("deal.winProbability.reason.clear"),
-          ]
-        : [
-            t("deal.winProbability.reason.stage", { stage }),
-            t("deal.winProbability.reason.override"),
-          ];
-  return sentences.filter(Boolean).join(" ");
+  const override = editable && t("deal.winProbability.reason.override");
+  switch (deal.win_probability_source) {
+    case "margince":
+      return [
+        stagePercent
+          ? t("deal.winProbability.reason.margince", {
+              percent: stagePercent,
+              stage,
+            })
+          : t("deal.winProbability.reason.marginceBare"),
+        recorded || t("deal.winProbability.reason.marginceRule"),
+        override,
+      ];
+    case "human":
+      return [
+        setterSentence(deal, t, viewerId),
+        stagePercent &&
+          t("deal.winProbability.reason.stageGives", {
+            percent: stagePercent,
+            stage,
+          }),
+        editable && t("deal.winProbability.reason.clear"),
+      ];
+    default:
+      return [t("deal.winProbability.reason.stage", { stage }), override];
+  }
 }
 
 function setterSentence(

@@ -120,15 +120,20 @@ describe("probabilityReason", () => {
     expect(
       probabilityReason(
         { ...deal, status: "won", win_probability: 100 },
-        "Won",
-        t,
-        "en",
+        { stageName: "Won", t, locale: "en", editable: false },
       ),
     ).toBe("The deal is closed, so the stage Won fixes the figure.");
   });
 
   it("gives Margince's rule where no reason may be read", () => {
-    expect(probabilityReason(deal, undefined, t, "en")).toBe(
+    expect(
+      probabilityReason(deal, {
+        stageName: undefined,
+        t,
+        locale: "en",
+        editable: true,
+      }),
+    ).toBe(
       "Margince lowered this from the 50% that the deal’s stage gives. Margince lowers a deal nobody set by hand once it goes quiet or its emails point lower. Type your own figure to override it.",
     );
   });
@@ -137,10 +142,17 @@ describe("probabilityReason", () => {
     expect(
       probabilityReason(
         { ...deal, win_probability: undefined },
-        "Proposal",
-        t,
-        "en",
+        { stageName: "Proposal", t, locale: "en", editable: true },
       ),
     ).toBeUndefined();
+  });
+
+  it("offers no change to a reader who may not make one", () => {
+    expect(
+      probabilityReason(
+        { ...deal, win_probability_source: "stage", win_probability: 50 },
+        { stageName: "Proposal", t, locale: "en", editable: false },
+      ),
+    ).toBe("This is the figure the stage Proposal gives.");
   });
 });

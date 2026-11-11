@@ -88,6 +88,7 @@ function DealAsideBody({
     locale,
     zone: useViewerZone(),
     row: rowMaker(deal.masked_fields ?? [], t, edit),
+    canEdit: edit.canEdit,
   };
   const owner = useMemberName(deal.owner_id).data;
   const cf = useObjectCustomFields("deal");
@@ -173,6 +174,7 @@ type Facts = Readonly<{
   locale: Locale;
   zone: string;
   row: RowMaker;
+  canEdit: boolean;
 }>;
 
 // A field the reader may not see says so; one nobody filled folds away. A row
@@ -243,7 +245,11 @@ function aboutRows(facts: Facts, stages: readonly Stage[]): DetailRow[] {
   const closed = deal.status === "won" || deal.status === "lost";
   const probabilityHint = (
     <span className="deal-aside-why">
-      <ProbabilityHint deal={deal} stageName={stageName} />
+      <ProbabilityHint
+        deal={deal}
+        stageName={stageName}
+        editable={facts.canEdit && !closed}
+      />
     </span>
   );
   const account: DetailRow =

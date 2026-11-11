@@ -13,7 +13,11 @@ import type { Deal } from "./deals";
 // names the field.
 const PROBABILITY_FIELD = "win_probability_override";
 
-type HintProps = Readonly<{ deal: Deal; stageName: string | undefined }>;
+type HintProps = Readonly<{
+  deal: Deal;
+  stageName: string | undefined;
+  editable: boolean;
+}>;
 
 /**
  * The ⓘ beside a deal's probability that says why it has that figure. Only a
@@ -50,19 +54,20 @@ function MarginceProbabilityHint(props: HintProps) {
 function ReasonTip({
   deal,
   stageName,
+  editable,
   recorded,
 }: HintProps & Readonly<{ recorded: string | null }>) {
   const t = useT();
   const { locale } = useLocale();
   const viewerId = useViewerId();
-  const reason = probabilityReason(
-    deal,
+  const reason = probabilityReason(deal, {
     stageName,
     t,
     locale,
     viewerId,
     recorded,
-  );
+    editable,
+  });
   return reason ? (
     <InfoTip label={t("deal.winProbability.why")} text={reason} />
   ) : null;
