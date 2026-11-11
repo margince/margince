@@ -4,6 +4,7 @@
 import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
 import { AddressCountryMismatchBadge } from "../../components/addresscountrymismatch";
+import { RecordListsActions } from "../../components/addtoshortlist";
 import { mapCompanyUpdate } from "../../components/companyform";
 import {
   formatSizeBand,
@@ -75,15 +76,21 @@ function ListedRail(props: RailProps) {
     <RailBody
       {...props}
       lists={
-        found.length > 0 && (
-          <ul className="co-aside-chips">
-            {found.map((list) => (
-              <li key={list.id}>
-                <Badge>{list.name}</Badge>
-              </li>
-            ))}
-          </ul>
-        )
+        <>
+          {found.length > 0 && (
+            <ul className="co-aside-chips">
+              {found.map((list) => (
+                <li key={list.id}>
+                  <Badge>{list.name}</Badge>
+                </li>
+              ))}
+            </ul>
+          )}
+          <RecordListsActions
+            entityType="company"
+            entityId={props.company.id}
+          />
+        </>
       }
     />
   );
