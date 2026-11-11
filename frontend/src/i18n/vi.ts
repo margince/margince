@@ -3704,7 +3704,15 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "co.aside.visibleEveryone": "Mọi người",
   "co.aside.visibleOnlyYou": "Chỉ bạn",
   "co.aside.visibleOnly": "Chỉ {owner}",
-  "co.aside.visibleOnlyOwner": "Chỉ người phụ trách",
+  "co.aside.visibleOnlyOwner": "Chỉ người chịu trách nhiệm",
+  "co.aside.visibleYouAndShared_one": "Bạn · {count} lượt chia sẻ",
+  "co.aside.visibleYouAndShared_other": "Bạn · {count} lượt chia sẻ",
+  "co.aside.visibleOwnerAndShared_one": "{owner} · {count} lượt chia sẻ",
+  "co.aside.visibleOwnerAndShared_other": "{owner} · {count} lượt chia sẻ",
+  "co.aside.visibleTheOwnerAndShared_one":
+    "Người chịu trách nhiệm · {count} lượt chia sẻ",
+  "co.aside.visibleTheOwnerAndShared_other":
+    "Người chịu trách nhiệm · {count} lượt chia sẻ",
   "co.aside.vatId": "Mã số thuế",
   "co.aside.add": "Thêm…",
   "co.strip.unanswered": "Chưa trả lời",

@@ -96,6 +96,10 @@ func assertBoundedDealFollowUpPlan(t *testing.T, stats string, plan planNode) {
 				if recipient.NodeType == "Aggregate" && recipient.Strategy == "Plain" {
 					attendeeReads += recipient.ActualLoops
 				}
+				if recipient.RelationName == "activity" {
+					t.Errorf("%s: recipient set reads activity by %s %s on %q, not only its links and participants",
+						stats, recipient.NodeType, recipient.IndexName, recipient.IndexCond)
+				}
 			})
 		}
 		read := (n.ActualRows + n.RemovedByFilter) * n.ActualLoops
