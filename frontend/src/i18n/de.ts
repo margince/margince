@@ -19999,7 +19999,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "E-Mail, Kalender und Anmeldung über eine eigene Entra-App.",
   "firstRun.platform.imap": "IMAP",
   "firstRun.platform.imapWhat":
-    "Jedes Postfach verbindet sich mit einem eigenen IMAP-App-Passwort. Angemeldet wird mit E-Mail-Adresse und Passwort.",
+    "Jedes Postfach verbindet sich über IMAP mit dem Passwort, das sein Maildienst dafür vergibt, oft einem App-Passwort. Angemeldet wird mit E-Mail-Adresse und Passwort.",
   "oauthApp.steps.google.apisTitle": "Gmail und Google Kalender aktivieren",
   "oauthApp.steps.google.apisBody":
     "Aktiviere in der API-Bibliothek die Gmail API und die Google Calendar API. Füge dann auf dem Zustimmungsbildschirm unter „Datenzugriff“ die Bereiche gmail.readonly, gmail.send, calendar.readonly, calendar.events.owned und userinfo.profile hinzu. Diese werden beim Verbinden von Postfach und Kalender bestätigt.",
@@ -20016,15 +20016,15 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "oauthApp.steps.microsoft.pasteTitle": "IDs und Clientschlüssel einfügen",
   "oauthApp.steps.microsoft.pasteBody":
     "Die Übersicht der App zeigt die Anwendungs-ID und die Verzeichnis-ID.",
-  "firstRun.imap.passwordTitle": "App-Passwort erstellen",
+  "firstRun.imap.passwordTitle": "IMAP-Passwort besorgen",
   "firstRun.imap.passwordBody":
-    "Gmail und iCloud erstellen es, sobald die Bestätigung in zwei Schritten aktiv ist; das normale Passwort wird abgelehnt. Gmail: Google-Konto, Sicherheit, App-Passwörter. iCloud: Apple-Konto, Anmeldung und Sicherheit, App-spezifische Passwörter. Jeder andere Maildienst sagt auf seiner Hilfeseite, welches Passwort IMAP braucht. Postfächer von Outlook.com und Microsoft 365 nehmen über IMAP kein Passwort mehr an: Wähle oben Microsoft 365.",
+    "Gmail und iCloud brauchen ein App-Passwort, das du erstellst, sobald die Bestätigung in zwei Schritten aktiv ist; das normale Passwort wird abgelehnt. Gmail: Google-Konto, Sicherheit, App-Passwörter. iCloud: Apple-Konto, Anmeldung und Sicherheit, App-spezifische Passwörter. Jeder andere Maildienst sagt auf seiner Hilfeseite, welches Passwort IMAP braucht. Postfächer von Microsoft 365 nehmen über IMAP kein Passwort mehr an: Wähle oben Microsoft 365. Private Postfächer von Outlook.com lassen sich hier nicht verbinden.",
   "firstRun.imap.serverTitle": "IMAP-Server nachschlagen",
   "firstRun.imap.serverBody":
     "Gmail nutzt imap.gmail.com und iCloud nutzt imap.mail.me.com, jeweils auf Port 993. Jeder andere Maildienst nennt seinen Server auf seiner Hilfeseite zu den IMAP-Einstellungen.",
   "firstRun.imap.connectTitle": "Dein Postfach verbinden",
   "firstRun.platform.imapNote":
-    "Für die ganze Installation wird nichts konfiguriert. Verbinde dein eigenes Postfach jetzt oder später. Weitere Postfächer werden in den Einstellungen unter Verbindungen verbunden, jedes mit eigenem App-Passwort.",
+    "Für die ganze Installation wird nichts konfiguriert. Verbinde dein eigenes Postfach jetzt oder später. Weitere Postfächer werden in den Einstellungen unter Verbindungen verbunden, jedes mit eigenem IMAP-Passwort.",
   "firstRun.platform.skip": "Nicht jetzt",
   "firstRun.needed": "Zum Fortfahren nötig",
   "firstRun.stillNeeded": "Noch erforderlich: {fields}",

@@ -337,7 +337,7 @@ export const OnMicrosoft: Story = {
   },
 };
 
-// IMAP: no company app, so the steps are the app password and the server each
+// IMAP: no company app, so the steps are the IMAP password and the server each
 // mailbox owner looks up, then the mailbox form itself.
 export const OnImap: Story = {
   ...ChoosingThePlatform,

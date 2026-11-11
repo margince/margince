@@ -19785,7 +19785,7 @@ export const en = {
     "Mail, calendar and sign-in through one Entra app you own.",
   "firstRun.platform.imap": "IMAP",
   "firstRun.platform.imapWhat":
-    "Each mailbox connects with its own IMAP app password. Sign-in uses email and password.",
+    "Each mailbox connects over IMAP with the password its mail service gives for it, often an app password. Sign-in uses email and password.",
   "oauthApp.steps.google.apisTitle": "Turn on Gmail and Google Calendar",
   "oauthApp.steps.google.apisBody":
     "In the API library, enable the Gmail API and the Google Calendar API. Then, on the consent screen under Data access, add the scopes gmail.readonly, gmail.send, calendar.readonly, calendar.events.owned and userinfo.profile. Each user approves them when connecting a mailbox and calendar.",
@@ -19801,15 +19801,15 @@ export const en = {
   "oauthApp.steps.microsoft.pasteTitle": "Paste the IDs and the secret",
   "oauthApp.steps.microsoft.pasteBody":
     "The app’s Overview page shows the Application (client) ID and the Directory (tenant) ID.",
-  "firstRun.imap.passwordTitle": "Create an app password",
+  "firstRun.imap.passwordTitle": "Get the password IMAP takes",
   "firstRun.imap.passwordBody":
-    "Gmail and iCloud make one once two-step sign-in is on; the normal password is refused. Gmail: Google Account, Security, App passwords. iCloud: Apple Account, Sign-In and Security, App-Specific Passwords. Any other mail service says on its help page which password IMAP takes. Outlook.com and Microsoft 365 mailboxes no longer accept a password over IMAP: choose Microsoft 365 above.",
+    "Gmail and iCloud take an app password, made once two-step sign-in is on; the normal password is refused. Gmail: Google Account, Security, App passwords. iCloud: Apple Account, Sign-In and Security, App-Specific Passwords. Any other mail service says on its help page which password IMAP takes. Microsoft 365 mailboxes no longer accept a password over IMAP: choose Microsoft 365 above. Personal Outlook.com mailboxes cannot connect here.",
   "firstRun.imap.serverTitle": "Look up the IMAP server",
   "firstRun.imap.serverBody":
     "Gmail uses imap.gmail.com and iCloud uses imap.mail.me.com, each on port 993. Any other mail service lists its server on its help page about IMAP settings.",
   "firstRun.imap.connectTitle": "Connect your mailbox",
   "firstRun.platform.imapNote":
-    "Nothing is configured for the whole installation. Connect your own mailbox now or later; other mailboxes connect in Settings under Connections, each with its own app password.",
+    "Nothing is configured for the whole installation. Connect your own mailbox now or later; other mailboxes connect in Settings under Connections, each with its own IMAP password.",
   "firstRun.platform.skip": "Not now",
   "firstRun.needed": "Needed to continue",
   "firstRun.stillNeeded": "Still needed: {fields}",

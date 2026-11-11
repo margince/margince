@@ -19488,7 +19488,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Thư, lịch và đăng nhập qua một ứng dụng Entra do bạn sở hữu.",
   "firstRun.platform.imap": "IMAP",
   "firstRun.platform.imapWhat":
-    "Mỗi hộp thư kết nối bằng mật khẩu ứng dụng IMAP riêng. Đăng nhập bằng email và mật khẩu.",
+    "Mỗi hộp thư kết nối qua IMAP bằng mật khẩu do dịch vụ thư cấp, thường là mật khẩu ứng dụng. Đăng nhập bằng email và mật khẩu.",
   "oauthApp.steps.google.apisTitle": "Bật Gmail và Google Calendar",
   "oauthApp.steps.google.apisBody":
     "Trong API library, bật Gmail API và Google Calendar API. Sau đó, trên màn hình đồng ý ở mục Data access, thêm các scope gmail.readonly, gmail.send, calendar.readonly, calendar.events.owned và userinfo.profile; các scope này được duyệt khi kết nối hộp thư và lịch.",
@@ -19504,15 +19504,15 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "oauthApp.steps.microsoft.pasteTitle": "Dán các ID và secret",
   "oauthApp.steps.microsoft.pasteBody":
     "Trang Overview của ứng dụng hiển thị Application (client) ID và Directory (tenant) ID.",
-  "firstRun.imap.passwordTitle": "Tạo mật khẩu ứng dụng",
+  "firstRun.imap.passwordTitle": "Lấy mật khẩu IMAP",
   "firstRun.imap.passwordBody":
-    "Gmail và iCloud tạo mật khẩu này khi đã bật xác minh hai bước; mật khẩu thường bị từ chối. Gmail: Google Account, Security, App passwords. iCloud: Apple Account, Sign-In and Security, App-Specific Passwords. Dịch vụ thư khác ghi trên trang trợ giúp loại mật khẩu IMAP cần. Hộp thư Outlook.com và Microsoft 365 không còn nhận mật khẩu qua IMAP: chọn Microsoft 365 ở trên.",
+    "Gmail và iCloud cần mật khẩu ứng dụng, tạo được khi đã bật xác minh hai bước; mật khẩu thường bị từ chối. Gmail: Google Account, Security, App passwords. iCloud: Apple Account, Sign-In and Security, App-Specific Passwords. Dịch vụ thư khác ghi trên trang trợ giúp loại mật khẩu IMAP cần. Hộp thư Microsoft 365 không còn nhận mật khẩu qua IMAP: chọn Microsoft 365 ở trên. Hộp thư Outlook.com cá nhân không kết nối được ở đây.",
   "firstRun.imap.serverTitle": "Tra máy chủ IMAP",
   "firstRun.imap.serverBody":
     "Gmail dùng imap.gmail.com và iCloud dùng imap.mail.me.com, đều ở cổng 993. Dịch vụ thư khác ghi máy chủ trên trang trợ giúp về cài đặt IMAP.",
   "firstRun.imap.connectTitle": "Kết nối hộp thư của bạn",
   "firstRun.platform.imapNote":
-    "Bản cài đặt không có cấu hình chung nào. Kết nối hộp thư của bạn ngay hoặc để sau; các hộp thư khác kết nối trong Cài đặt, mục Kết nối, mỗi hộp thư có mật khẩu ứng dụng riêng.",
+    "Bản cài đặt không có cấu hình chung nào. Kết nối hộp thư của bạn ngay hoặc để sau; các hộp thư khác kết nối trong Cài đặt, mục Kết nối, mỗi hộp thư có mật khẩu IMAP riêng.",
   "firstRun.platform.skip": "Để sau",
   "firstRun.needed": "Cần có để tiếp tục",
   "firstRun.stillNeeded": "Còn thiếu: {fields}",
