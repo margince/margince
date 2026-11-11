@@ -928,6 +928,8 @@
   "roster.failedTeams": "Teams did not load.",
   "owner.rosterFailed": "Colleagues did not load. Reload the page to pick one.",
   "ref.notInRoster": "Currently assigned (no longer in the user list)",
+  "picker.noMatch": "No match",
+  "select.filter": "Filter the list",
   "app.errorTitle": "This view stopped working",
   "app.errorBody": "Retry. If it fails again, reload the page.",
   "app.errorRetry": "Retry",

@@ -128,7 +128,7 @@ function keyDownHandler(
   actions: IntentActions,
   typing: (at: number) => boolean,
 ) {
-  return (event: ReactKeyboardEvent<HTMLButtonElement>) => {
+  return (event: ReactKeyboardEvent<HTMLElement>) => {
     // A modified press belongs to the browser or the OS (Alt+Arrow is history
     // navigation, Cmd+F is find) — never to a typeahead buffer.
     if (event.altKey || event.ctrlKey || event.metaKey) {
@@ -198,7 +198,7 @@ export type Listbox = Readonly<{
   popup: RefObject<HTMLDivElement | null>;
   listboxId: string;
   optionDomId: (index: number) => string;
-  onKeyDown: (event: ReactKeyboardEvent<HTMLButtonElement>) => void;
+  onKeyDown: (event: ReactKeyboardEvent<HTMLElement>) => void;
   onTriggerClick: () => void;
   pick: (index: number) => void;
   hover: (index: number) => void;

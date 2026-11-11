@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { type CSSProperties, useState } from "react";
+import { expect, userEvent, within } from "storybook/test";
 import { Field } from "./atoms";
 import { MultiSelect, Select, type SelectOption } from "./select";
 import { TAG_TONES } from "./tagpill";
@@ -202,6 +203,28 @@ export const LongList: Story = {
       <Demo label="Time zone" options={ZONES} start="Europe/Berlin" />
     </div>
   ),
+};
+
+/**
+ * A list of twelve or more opens with a box on top. Typing part of a name or
+ * email narrows the rows; arrows and Enter still pick from what is left.
+ */
+export const FilteredLongList: Story = {
+  render: () => (
+    <div style={column}>
+      <Demo label="Time zone" options={ZONES} start="Europe/Berlin" />
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(canvas.getByRole("combobox", { name: "Time zone" }));
+    const page = within(canvasElement.ownerDocument.body);
+    await userEvent.keyboard("buda");
+    await expect(page.getAllByRole("option")).toHaveLength(1);
+    await expect(
+      page.getByRole("option", { name: "Europe/Budapest" }),
+    ).toBeVisible();
+  },
 };
 
 export const Disabled: Story = {

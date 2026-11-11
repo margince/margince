@@ -3309,6 +3309,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "ref.notInRoster":
     "Hiện đang được giao (không còn trong danh sách thành viên)",
   "picker.noMatch": "Không có kết quả phù hợp",
+  "select.filter": "Lọc danh sách",
   "picker.results_one": "{count} kết quả",
   "picker.results_other": "{count} kết quả",
 

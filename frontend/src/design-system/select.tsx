@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { Check, ChevronDown } from "lucide-react";
-import type { ReactNode } from "react";
+import { ChevronDown } from "lucide-react";
+import { type ReactNode, useCallback, useState } from "react";
 import { createPortal } from "react-dom";
-import { contentSizedPopupBox, type PopupFrame } from "./anchoredpopup";
 import { Button } from "./atoms";
 import { usePrefersReducedMotion } from "./motion";
-import { type Listbox, useSelectListbox } from "./selectlistbox";
+import { type Listbox, stepEnabled, useSelectListbox } from "./selectlistbox";
+import { FILTER_FROM, filtered, SelectPopup } from "./selectpopup";
 import "./select.css";
 
 /**
@@ -62,6 +62,8 @@ export type SelectOption = Readonly<{
    * wrong is worse than one that is absent.
    */
   lang?: string;
+  /** More words the list's filter matches, such as a colleague's email. */
+  keywords?: readonly string[];
 }>;
 
 export type SelectProps = Readonly<{
@@ -127,18 +129,35 @@ export function Select(props: SelectProps) {
     onCancel,
     onLeave,
   } = props;
+  const filterable = options.length >= FILTER_FROM;
+  const [query, setQuery] = useState("");
+  const shown = filtered(options, query);
+  // Every way the list closes clears the filter, so the next open shows all.
+  const cancel = useCallback(() => {
+    setQuery("");
+    onCancel?.();
+  }, [onCancel]);
+  const leave = useCallback(() => {
+    setQuery("");
+    onLeave?.();
+  }, [onLeave]);
   const listbox = useSelectListbox(
-    options,
-    options.findIndex((option) => option.value === value),
+    shown,
+    shown.findIndex((option) => option.value === value),
     (option) => {
+      setQuery("");
       onChange(option.value);
       return "close";
     },
     openOnMount ?? false,
-    onCancel,
-    onLeave,
+    cancel,
+    leave,
   );
   const reduced = usePrefersReducedMotion();
+  const narrow = (next: string) => {
+    setQuery(next);
+    listbox.hover(stepEnabled(filtered(options, next), 0, 1));
+  };
 
   return (
     <>
@@ -156,11 +175,12 @@ export function Select(props: SelectProps) {
       {listbox.open && listbox.frame
         ? createPortal(
             <SelectPopup
-              options={options}
+              options={shown}
               selected={(option) => option.value === value}
               frame={listbox.frame}
               listbox={listbox}
               animate={!reduced}
+              filter={filterable ? { query, onQuery: narrow } : undefined}
             />,
             document.body,
           )
@@ -402,86 +422,5 @@ function TriggerButton({
       {content}
       <ChevronDown className="select-chevron" size={16} aria-hidden="true" />
     </button>
-  );
-}
-
-function SelectPopup({
-  options,
-  selected,
-  multiselectable,
-  frame,
-  listbox,
-  animate,
-}: Readonly<{
-  options: readonly SelectOption[];
-  // Membership, not a value: the single select asks "is this THE value", the
-  // multi asks "is this IN the set", and the popup draws both the same way.
-  selected: (option: SelectOption) => boolean;
-  multiselectable?: boolean;
-  frame: PopupFrame;
-  listbox: Listbox;
-  animate: boolean;
-}>) {
-  return (
-    // The scroller is the listbox, so it takes no tab stop. Divs, as ul/li
-    // would announce twice; no name, as the combobox is named.
-    <div
-      ref={listbox.popup}
-      className="select-popup"
-      id={listbox.listboxId}
-      role="listbox"
-      aria-multiselectable={multiselectable}
-      // Reduced motion resolves in one place — the hook, not a second media
-      // query in the stylesheet — so the decision is assertable by the suite
-      // rather than only visible in a browser.
-      data-motion={animate ? "in" : "none"}
-      data-above={frame.above ? "true" : undefined}
-      // The trigger's width is the list's FLOOR, not its width — see
-      // `contentSizedPopupBox` and the cap in select.css.
-      style={contentSizedPopupBox(frame)}
-    >
-      <div className="select-list">
-        {options.map((option, index) => (
-          // biome-ignore lint/a11y/useKeyWithClickEvents: the keyboard path is the combobox trigger's own keydown handling
-          // biome-ignore lint/a11y/useFocusableInteractive: an option in an aria-activedescendant listbox must NOT be focusable — focus stays on the combobox, which is what makes typeahead and Escape work
-          <div // NOSONAR: keyboard path is the combobox's own keydown; an activedescendant option must not be focusable
-            key={option.value}
-            id={listbox.optionDomId(index)}
-            role="option"
-            aria-selected={selected(option)}
-            aria-disabled={option.disabled}
-            className={[
-              "select-option",
-              index === listbox.active ? "is-active" : "",
-              option.disabled ? "is-disabled" : "",
-            ]
-              .filter(Boolean)
-              .join(" ")}
-            onClick={option.disabled ? undefined : () => listbox.pick(index)}
-            // A press on an option must not steal focus from the combobox: in
-            // the multi list, which stays open after a toggle, Escape and the
-            // arrow keys have to keep reaching the trigger's own handler. On
-            // the rows rather than the container, so the list's scrollbar
-            // still drags.
-            onMouseDown={(event) => event.preventDefault()}
-            onMouseEnter={
-              option.disabled ? undefined : () => listbox.hover(index)
-            }
-          >
-            {option.adornment && (
-              <span className="select-option-adornment" aria-hidden="true">
-                {option.adornment}
-              </span>
-            )}
-            <span className="select-option-label" lang={option.lang}>
-              {option.label}
-            </span>
-            {selected(option) && (
-              <Check className="select-option-check" size={14} aria-hidden />
-            )}
-          </div>
-        ))}
-      </div>
-    </div>
   );
 }

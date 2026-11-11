@@ -13,8 +13,12 @@ import {
 } from "./entityref";
 import { useEveryMember } from "./roster";
 
-/** A workspace user as a picker option. */
-export type UserOption = { value: string; label: string };
+/** A workspace user as a picker option; a long list's filter also reads the email. */
+export type UserOption = {
+  value: string;
+  label: string;
+  keywords?: readonly string[];
+};
 
 /**
  * Picker options with the roster read behind them, so a picker can say when
@@ -44,10 +48,15 @@ function ownerOptions(
   roster: ReturnType<typeof useRoster>,
   admits: (entry: RosterEntry) => boolean,
 ): UserOptions {
-  const options = (roster.data ?? []).filter(admits).map((entry) => ({
-    value: entry.id,
-    label: "display_name" in entry ? entry.display_name : entry.id,
-  }));
+  const options = (roster.data ?? []).filter(admits).map((entry) =>
+    "display_name" in entry
+      ? {
+          value: entry.id,
+          label: entry.display_name,
+          keywords: [entry.email],
+        }
+      : { value: entry.id, label: entry.id },
+  );
   return { options, roster };
 }
 

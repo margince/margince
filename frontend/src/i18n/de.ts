@@ -3404,6 +3404,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "ref.notInRoster":
     "Aktuell zugewiesen (nicht mehr in der Liste der Nutzenden)",
   "picker.noMatch": "Kein Treffer",
+  "select.filter": "Liste filtern",
   "picker.results_one": "{count} Treffer",
   "picker.results_other": "{count} Treffer",
 

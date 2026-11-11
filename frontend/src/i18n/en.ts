@@ -3332,6 +3332,7 @@ export const en = {
   // that has not run: both drew the same empty space before, and a reader
   // could not tell "nobody here" from a field still thinking.
   "picker.noMatch": "No match",
+  "select.filter": "Filter the list",
   "picker.results_one": "{count} result",
   "picker.results_other": "{count} results",
 

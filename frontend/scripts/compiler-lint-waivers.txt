@@ -36,8 +36,8 @@
 1 react-hooks/set-state-in-effect src/design-system/relationshipmap.tsx
 3 react-hooks/refs src/design-system/rowtags.tsx
 1 react-hooks/set-state-in-effect src/design-system/scrollregion.ts
-3 react-hooks/refs src/design-system/select.tsx
 2 react-hooks/refs src/design-system/selectlistbox.ts
+3 react-hooks/refs src/design-system/selectpopup.tsx
 12 react-hooks/refs src/design-system/suggestlist.tsx
 1 react-hooks/set-state-in-effect src/design-system/toast.tsx
 1 react-hooks/set-state-in-effect src/design-system/tokenspecimen.ts
