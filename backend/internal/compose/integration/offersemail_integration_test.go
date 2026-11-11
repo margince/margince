@@ -177,6 +177,11 @@ func TestOffersEmailAndTheFilledToAreOneAnswer(t *testing.T) {
 			s.WsExec(t, `UPDATE activity SET origin = 'system_remediation', source_system = 'assurance', source_id = id::text WHERE id = $1`, row)
 			return row
 		}},
+		{"a lead's qualification for its owner to review", func(t *testing.T) ids.UUID {
+			row := s.writtenAbout(t, "task", s.contactAt(t, "Jonas Weber", "jonas@buyer.test"))
+			s.WsExec(t, `UPDATE activity SET origin = 'system_remediation', source_system = 'lead_replied', source_id = id::text WHERE id = $1`, row)
+			return row
+		}},
 		{"a notice the product filed", func(t *testing.T) ids.UUID {
 			row := s.writtenAbout(t, "task", s.contactAt(t, "Dana Vogt", "dana@buyer.test"))
 			s.WsExec(t, `UPDATE activity SET origin = 'system_notice' WHERE id = $1`, row)
