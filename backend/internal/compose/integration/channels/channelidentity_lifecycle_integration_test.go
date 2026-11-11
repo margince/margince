@@ -29,6 +29,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/privacy"
+	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -105,7 +106,7 @@ func TestErasurePurgesTheChannelIdentityAndSuppressesTheAccount(t *testing.T) {
 		t.Fatal("a live account already reads as suppressed — the probe cannot detect an erasure")
 	}
 
-	if err := privacy.NewEraser(e.DB()).EraseContact(admin, contact, "test"); err != nil {
+	if err := privacy.NewEraser(e.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities).EraseContact(admin, contact, "test"); err != nil {
 		t.Fatalf("EraseContact: %v", err)
 	}
 
@@ -297,7 +298,7 @@ func TestErasureOfAChannelOnlySubjectPurgesRawCaptureWithoutOverreaching(t *test
 	// typed path match must not.
 	seedTelegramMessageRaw(t, e, "decoy-message", 10101, "30303", "reach me at 10101 anytime")
 
-	if err := privacy.NewEraser(e.DB()).EraseContact(admin, subject, "test"); err != nil {
+	if err := privacy.NewEraser(e.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities).EraseContact(admin, subject, "test"); err != nil {
 		t.Fatalf("EraseContact: %v", err)
 	}
 
@@ -408,7 +409,7 @@ func TestErasureRefusesWhenAnotherLiveContactHoldsTheSameChannelAccount(t *testi
 	archived, live := archiveAndRebindTheAccount(t, e, "60601", "ada")
 	seedTelegramMessageRaw(t, e, "rival-account-message", 11, "60601", "written to the surviving record")
 
-	err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), archived, "test")
+	err := privacy.NewEraser(e.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities).EraseContact(e.Admin(), archived, "test")
 	if !errors.Is(err, apperrors.ErrConflict) {
 		t.Fatalf("EraseContact = %v, want a conflict — the erasure cannot cover an account a second live record holds", err)
 	}
@@ -440,7 +441,7 @@ func TestErasureRefusesWhenAnotherLiveContactHoldsTheSameEmail(t *testing.T) {
 	live := e.SeedContact(t, "Bruno Captured Again", nil)
 	seedContactEmail(t, e, live, "bruno@rival.test")
 
-	err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), archived, "test")
+	err := privacy.NewEraser(e.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities).EraseContact(e.Admin(), archived, "test")
 	if !errors.Is(err, apperrors.ErrConflict) {
 		t.Fatalf("EraseContact = %v, want a conflict — the erasure cannot cover an address a second live record holds", err)
 	}
@@ -464,7 +465,7 @@ func TestErasingTheLiveRecordAlsoClearsAnArchivedDuplicatesBinding(t *testing.T)
 		`SELECT count(*) FROM contact_channel_identity WHERE channel_user_id = $1`, "60701"); n != 2 {
 		t.Fatalf("%d bindings hold the account before the erasure, want the archived one and the live one", n)
 	}
-	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), live, "test"); err != nil {
+	if err := privacy.NewEraser(e.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities).EraseContact(e.Admin(), live, "test"); err != nil {
 		t.Fatalf("EraseContact: %v", err)
 	}
 	if n := e.WsCount(t,

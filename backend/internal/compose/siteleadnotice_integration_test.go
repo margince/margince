@@ -501,7 +501,7 @@ func TestErasingTheContactAWebsiteLeadBecameRemovesTheNoticeLink(t *testing.T) {
 	e.WsExec(t, `
 		INSERT INTO contact_email (contact_id, email, is_primary, source, captured_by)
 		VALUES ($1, $2, true, 'manual', 'human:test')`, contact, annasAddress)
-	eraser := privacy.NewEraser(e.DB()).WithPayloadVault(l.vault)
+	eraser := eraserWithGraph(e.DB()).WithPayloadVault(l.vault)
 	if err := eraser.EraseContact(e.Admin(), contact, "subject request"); err != nil {
 		t.Fatalf("erasing the contact: %v", err)
 	}

@@ -55,9 +55,7 @@ func NewRetentionServiceFor(db *database.DB, blob blobstore.Store, log *slog.Log
 		WithOutboxReaders(storekit.OutboxReaders{
 			UnreadTypes: assurance.MarkingEventTypes(), NeededBy: []func(string) string{automation.RetryableTriggerSQL},
 		}).
-		WithEdgeInvalidator(func(ctx context.Context, tx pgx.Tx, activityID ids.UUID) error {
-			return search.RecomputeEdgesForActivities(ctx, tx, []ids.UUID{activityID})
-		})
+		WithEdgeInvalidator(search.RecomputeEdgesForActivities)
 }
 
 // RawCapturePurgerFor is capture's purge, as the seam privacy erases through.
@@ -126,13 +124,17 @@ func privacyPayloads(vault keyvault.Vault) privacy.PayloadPurger {
 	return controllerPayloads{v: vault}
 }
 
+func eraserWithGraph(db *database.DB) *privacy.Eraser {
+	return privacy.NewEraser(db).WithEdgeInvalidator(search.RecomputeEdgesForActivities)
+}
+
 // ComposedEraser is the eraser an Art. 17 erasure runs through, with every
 // seam it needs to destroy the bytes behind the rows: the object store, the
 // payload vault and capture's raw-capture purge. blob and vault may be nil in a
 // deployment that configured neither.
 func ComposedEraser(pool *pgxpool.Pool, blob blobstore.Store, vault keyvault.Vault) *privacy.Eraser {
 	db := InstallationDB(pool)
-	return privacy.NewEraser(db).WithCountry(identity.CountryForDecision).WithBlobstore(blob).WithRawCapturePurger(RawCapturePurgerFor(db)).
+	return eraserWithGraph(db).WithCountry(identity.CountryForDecision).WithBlobstore(blob).WithRawCapturePurger(RawCapturePurgerFor(db)).
 		WithPayloadVault(privacyPayloads(vault))
 }
 

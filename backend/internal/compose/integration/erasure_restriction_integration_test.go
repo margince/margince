@@ -27,6 +27,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/privacy"
+	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -104,7 +105,7 @@ func TestErasureRestrictsAHandelsbriefInsteadOfDestroyingIt(t *testing.T) {
 	e := Setup(t)
 	f := seedRestrictionFixture(t, e)
 
-	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), f.contact, "test"); err != nil {
+	if err := privacy.NewEraser(e.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities).EraseContact(e.Admin(), f.contact, "test"); err != nil {
 		t.Fatalf("erasing the subject → %v", err)
 	}
 
@@ -264,7 +265,7 @@ func assertRestrictedListOverTheWire(t *testing.T, e *Env, f restrictionFixture)
 func TestExpiredRestrictionCompletesTheSuspendedErasureUnderRetainOnly(t *testing.T) {
 	e := Setup(t)
 	f := seedRestrictionFixture(t, e)
-	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), f.contact, "test"); err != nil {
+	if err := privacy.NewEraser(e.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities).EraseContact(e.Admin(), f.contact, "test"); err != nil {
 		t.Fatalf("erasing the subject → %v", err)
 	}
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
@@ -358,7 +359,7 @@ func TestExpiredRestrictionCompletesTheSuspendedErasureUnderRetainOnly(t *testin
 func TestARestrictedRowRefusesEveryOrdinaryWrite(t *testing.T) {
 	e := Setup(t)
 	f := seedRestrictionFixture(t, e)
-	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), f.contact, "test"); err != nil {
+	if err := privacy.NewEraser(e.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities).EraseContact(e.Admin(), f.contact, "test"); err != nil {
 		t.Fatalf("erasing the subject → %v", err)
 	}
 	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
@@ -372,7 +373,7 @@ func TestARestrictedRowRefusesEveryOrdinaryWrite(t *testing.T) {
 	// Erasing the subject again is idempotent over the held row: the restrict
 	// step selects only unrestricted rows, so nothing is written twice and
 	// nothing fails on the guard.
-	if err := privacy.NewEraser(e.DB()).EraseContact(e.Admin(), f.contact, "test"); err != nil && !errors.Is(err, apperrors.ErrNotFound) {
+	if err := privacy.NewEraser(e.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities).EraseContact(e.Admin(), f.contact, "test"); err != nil && !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("a second erasure over a held record failed: %v", err)
 	}
 }
@@ -392,7 +393,7 @@ func TestARestrictedRowLeavesEveryOrdinaryReadPath(t *testing.T) {
 	e := Setup(t)
 	f := seedRestrictionFixture(t, e)
 	admin := e.Admin()
-	if err := privacy.NewEraser(e.DB()).EraseContact(admin, f.contact, "test"); err != nil {
+	if err := privacy.NewEraser(e.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities).EraseContact(admin, f.contact, "test"); err != nil {
 		t.Fatalf("erasing the subject → %v", err)
 	}
 	held := ids.From[ids.ActivityKind](f.email)
@@ -473,7 +474,7 @@ func controllerCtx(e *Env, grant principal.ObjectGrant) context.Context {
 func TestAControllerReleasesAHeldRecordByErasingIt(t *testing.T) {
 	e := Setup(t)
 	f := seedRestrictionFixture(t, e)
-	eraser := privacy.NewEraser(e.DB()).WithRawCapturePurger(compose.RawCapturePurgerFor(e.DB()))
+	eraser := privacy.NewEraser(e.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities).WithRawCapturePurger(compose.RawCapturePurgerFor(e.DB()))
 	if err := eraser.EraseContact(e.Admin(), f.contact, "test"); err != nil {
 		t.Fatalf("erasing the subject → %v", err)
 	}
@@ -558,7 +559,7 @@ func TestAControllerReleasesAHeldRecordByErasingIt(t *testing.T) {
 func TestALegalHoldOutranksAControllerRelease(t *testing.T) {
 	e := Setup(t)
 	f := seedRestrictionFixture(t, e)
-	eraser := privacy.NewEraser(e.DB()).WithRawCapturePurger(compose.RawCapturePurgerFor(e.DB()))
+	eraser := privacy.NewEraser(e.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities).WithRawCapturePurger(compose.RawCapturePurgerFor(e.DB()))
 	if err := eraser.EraseContact(e.Admin(), f.contact, "test"); err != nil {
 		t.Fatalf("erasing the subject → %v", err)
 	}
@@ -619,7 +620,7 @@ func TestAControllerPinsCorrespondenceTheDerivationCannotSee(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	eraser := privacy.NewEraser(e.DB())
+	eraser := privacy.NewEraser(e.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities)
 	reason, err := privacy.ParseStatedReason("supplier correspondence: §257 HGB, no deal in the CRM")
 	if err != nil {
 		t.Fatal(err)
@@ -721,7 +722,7 @@ func pinnedMailWithAnOriginal(t *testing.T, e *Env) (activity ids.UUID, sourceID
 	}); err != nil {
 		t.Fatal(err)
 	}
-	eraser := privacy.NewEraser(e.DB()).WithRawCapturePurger(compose.RawCapturePurgerFor(e.DB()))
+	eraser := privacy.NewEraser(e.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities).WithRawCapturePurger(compose.RawCapturePurgerFor(e.DB()))
 	reason, err := privacy.ParseStatedReason("supplier correspondence: §257 HGB, no deal in the CRM")
 	if err != nil {
 		t.Fatal(err)
@@ -808,7 +809,7 @@ func TestAControllerReleaseDestroysTheProviderOriginalToo(t *testing.T) {
 	e := Setup(t)
 	activity, sourceID := pinnedMailWithAnOriginal(t, e)
 
-	eraser := privacy.NewEraser(e.DB()).WithRawCapturePurger(compose.RawCapturePurgerFor(e.DB()))
+	eraser := privacy.NewEraser(e.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities).WithRawCapturePurger(compose.RawCapturePurgerFor(e.DB()))
 	reason, err := privacy.ParseStatedReason("the supplier obligation ended: contract closed out")
 	if err != nil {
 		t.Fatal(err)
@@ -833,7 +834,7 @@ func TestAnEraserWithNoPurgerRefusesRatherThanErasingHalf(t *testing.T) {
 	e := Setup(t)
 	activity, sourceID := pinnedMailWithAnOriginal(t, e)
 
-	unwired := privacy.NewEraser(e.DB())
+	unwired := privacy.NewEraser(e.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities)
 	reason, err := privacy.ParseStatedReason("the supplier obligation ended: contract closed out")
 	if err != nil {
 		t.Fatal(err)
@@ -897,7 +898,7 @@ func TestARestrictionCannotBeLiftedWithTheBylineIntact(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("seeding the byline: %v", err)
 	}
-	if err := privacy.NewEraser(e.DB()).EraseContact(admin, f.contact, "test"); err != nil {
+	if err := privacy.NewEraser(e.DB()).WithEdgeInvalidator(search.RecomputeEdgesForActivities).EraseContact(admin, f.contact, "test"); err != nil {
 		t.Fatalf("erasing the subject → %v", err)
 	}
 	// The floor holds the row back rather than redacting it, so the byline is

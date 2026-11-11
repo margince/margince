@@ -277,5 +277,5 @@ func sarPartySourceSection(pkg *SARPackage, emails []string) sarSection {
  ARRAY(SELECT address FROM unnest(ps.recipients) address WHERE lower(address)=ANY(ARRAY(SELECT lower(btrim(subject_address)) FROM unnest($1::text[]) subject_address))) AS recipients,
  ARRAY(SELECT address FROM unnest(ps.policy_addresses) address WHERE lower(address)=ANY(ARRAY(SELECT lower(btrim(subject_address)) FROM unnest($1::text[]) subject_address))) AS policy_addresses
  FROM capture_party_source ps JOIN activity a ON a.id=ps.activity_id
- WHERE (ps.recipients && ARRAY(SELECT lower(btrim(subject_address)) FROM unnest($1::text[]) subject_address) OR ps.policy_addresses && ARRAY(SELECT lower(btrim(subject_address)) FROM unnest($1::text[]) subject_address)) AND a.restricted_at IS NULL AND ` + sarContentDisclosed, []any{emails}}
+ WHERE (ps.recipients && ARRAY(SELECT lower(btrim(subject_address)) FROM unnest($1::text[]) subject_address) OR ps.policy_addresses && ARRAY(SELECT lower(btrim(subject_address)) FROM unnest($1::text[]) subject_address)) AND ` + sarContentDisclosed, []any{emails}}
 }
