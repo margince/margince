@@ -74,8 +74,10 @@ func (s *Store) MarkSignatureRead(ctx context.Context, contactID ids.ContactID, 
 		consume := !read.Retried() || retries >= SignatureReadAttempts
 		// occurred_at is read from the activity rather than taken from the
 		// caller: the watermark and the candidate query must compare one number.
-		args := []any{contactID, activityID, historyDepth, version.Generation, version.Snapshot,
-			consume, read.outcome(), string(read.Skip), retries}
+		args := []any{
+			contactID, activityID, historyDepth, version.Generation, version.Snapshot,
+			consume, read.outcome(), string(read.Skip), retries,
+		}
 		_, err = tx.Exec(ctx, fmt.Sprintf(`
             INSERT INTO contact_signature_enrich_state AS st (contact_id, activity_id, last_activity_at, history_depth, read_snapshot,
                    last_outcome, last_skip_reason, retry_activity_id, retry_count)
