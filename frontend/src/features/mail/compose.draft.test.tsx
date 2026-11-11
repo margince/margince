@@ -185,6 +185,32 @@ describe("ComposeModal draft binding", () => {
     );
   });
 
+  it("sends the subject on screen with a reply draft, so it can set the language", async () => {
+    const sent = stubRoutes({
+      "GET /voice-profiles": () => jsonResponse(PROVISIONAL_VOICE_PROFILE),
+      "POST /activities/act-1/draft-email": draftsInTurn(
+        voiceDraft("vd-a", "Re: Q3", "Draft A body."),
+        voiceDraft("vd-b", "Unsere nächsten Schritte", "Entwurf B."),
+      ),
+      "PUT /mail-drafts": () => emptyResponse(204),
+    });
+    renderComposer();
+    await screen.findByRole("combobox", { name: WHY_ASK });
+
+    await userEvent.click(draftButton());
+    const subjectField = await screen.findByDisplayValue("Re: Q3");
+    await userEvent.clear(subjectField);
+    await userEvent.type(subjectField, "Unsere nächsten Schritte");
+    await askAgain();
+
+    await waitFor(() =>
+      expect(
+        sent.filter((r) => r.key === "POST /activities/act-1/draft-email")[1]
+          ?.body,
+      ).toMatchObject({ subject: "Unsere nächsten Schritte" }),
+    );
+  });
+
   it("puts the second reply draft on screen and sends the first as rewrite_of", async () => {
     const sent = stubRoutes({
       "GET /voice-profiles": () => jsonResponse(PROVISIONAL_VOICE_PROFILE),

@@ -85,6 +85,8 @@ export type BoardDeal = BoardRecord & {
    * fixes it at 100 or 0, and on one the server named none for.
    */
   probabilityPct?: number | null;
+  /** Why the deal has that figure, shown on hover over the ring. */
+  probabilityReason?: string;
   idleSince: string;
   measuredAt: number;
   /**

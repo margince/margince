@@ -154,3 +154,10 @@
   display: grid;
   gap: var(--space-2);
 }
+
+/* The reason mark keeps clear of the edit pencil that shows on hover. */
+.deal-aside-why {
+  display: inline-flex;
+  vertical-align: middle;
+  margin-inline-start: var(--space-1);
+}

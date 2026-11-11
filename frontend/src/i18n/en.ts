@@ -6000,6 +6000,23 @@ export const en = {
   "deal.winProbability.source.colleague": "set by {name}",
   "deal.winProbability.source.margince": "lowered by Margince",
   "deal.winProbability.stageValue": "stage {percent}",
+  "deal.winProbability.why": "Why this probability",
+  "deal.winProbability.reason.stage": "This is the figure {stage} gives.",
+  "deal.winProbability.reason.closed":
+    "The deal is closed, so {stage} fixes the figure.",
+  "deal.winProbability.reason.you": "You set this by hand.",
+  "deal.winProbability.reason.colleague": "{name} set this by hand.",
+  "deal.winProbability.reason.human": "A colleague set this by hand.",
+  "deal.winProbability.reason.stageGives":
+    "Without it, {stage} gives {percent}.",
+  "deal.winProbability.reason.margince": "Margince set this.",
+  "deal.winProbability.reason.marginceRule":
+    "Margince may lower a figure nobody set by hand when the deal goes quiet or its emails point lower.",
+  "deal.winProbability.reason.override": "Type your own figure to override it.",
+  "deal.winProbability.reason.clear":
+    "Clear the figure to follow the stage again.",
+  "deal.winProbability.reason.stageNamed": "the stage {name}",
+  "deal.winProbability.reason.stageUnnamed": "the deal’s stage",
   "deal.winProbability.setByStage":
     "Probability set to {percent} by the stage {stage}",
   "deal.winProbability.band.90_plus": "90% or more",
@@ -9658,6 +9675,21 @@ export const en = {
   "setup.action.ai": "Connect",
   "setup.step.aiDone": "{name} is connected.",
   "setup.step.aiDoneUnnamed": "An AI tool is connected.",
+  "firstRun.ai.skip": "Not now",
+  "ob.gate.noModelSub":
+    "No AI provider is set up yet, so Margince cannot read your website. Enter your company details yourself, or add a key now.",
+  "ob.gate.addModel": "Add an AI key",
+  "aiSetup.title": "Set up AI",
+  "aiSetup.intro":
+    "Margince needs an AI provider to read websites, draft replies and research. Add a key and choose the models it uses.",
+  "aiSetup.connect": "Connect provider",
+  "aiSetup.connected":
+    "{vendor} is connected. Margince can now read, draft and research.",
+  "setup.step.model": "Set up AI",
+  "setup.caption.model":
+    "Add an AI provider key so Margince can read websites, draft replies and research.",
+  "setup.action.model": "Add key",
+  "setup.step.modelDone": "An AI provider is connected.",
   "ob.conv.connect.aiRow": "Your AI tool",
   "ob.conv.connect.aiBody":
     "Ask Claude, ChatGPT, Copilot or your editor about your deals, and let it update Margince for you.",
@@ -15367,30 +15399,28 @@ export const en = {
   "oauthApp.microsoft.save": "Save Microsoft app",
   "oauthApp.drawer.google.title": "Set up the Google app",
   "oauthApp.drawer.google.intro":
-    "Two steps in Google Cloud console, then paste the result here. You need access to your company’s Google Cloud project.",
+    "A few steps in Google Cloud console, then paste the result here. You need access to your company’s Google Cloud project.",
   "oauthApp.drawer.google.value":
     "One app for the whole company. Once it is saved, everyone at {company} can connect Gmail and Google Calendar, and Continue with Google can appear on the sign-in screen.",
   "oauthApp.drawer.google.step1Title": "Create an OAuth client in Google Cloud",
   "oauthApp.drawer.google.step1Body":
-    "Open APIs and services, then Credentials, and create an OAuth client ID of the type Web application.",
+    "Choose or create a project for Margince, open APIs and services, then Credentials, and create an OAuth client ID of the type Web application. On the consent screen, under Audience, choose Internal when all sign-ins use your company’s Google accounts: only those accounts can use the app, and Google needs no app review. Choose External only if personal Gmail accounts connect too.",
   "oauthApp.drawer.google.step1Link": "Open Google Cloud console",
   "oauthApp.drawer.google.step2Body":
     "In the client, under Authorized redirect URIs. Margince lists one for each thing this installation uses Google for. Paste them exactly; if one is missing, Google stops the connection with “redirect_uri_mismatch” and does not say which address.",
   "oauthApp.drawer.microsoft.title": "Set up the Microsoft app",
   "oauthApp.drawer.microsoft.intro":
-    "Two steps in the Microsoft Entra admin center, then paste the result here. You need access to your company’s Entra directory.",
+    "A few steps in the Microsoft Entra admin center, then paste the result here. You need access to your company’s Entra directory.",
   "oauthApp.drawer.microsoft.value":
     "One app for the whole company. Once it is saved, everyone at {company} can connect Outlook mail and calendar, and Continue with Microsoft can appear on the sign-in screen.",
   "oauthApp.drawer.microsoft.step1Title": "Register an app in Microsoft Entra",
   "oauthApp.drawer.microsoft.step1Body":
-    "Open App registrations, register a new app, then add a client secret under Certificates and secrets.",
+    "Open App registrations and select New registration. Name it Margince and, under Supported account types, choose Accounts in this organizational directory only; its Directory (tenant) ID goes in the last step. Only if mailboxes of other companies connect too, choose Accounts in any organizational directory and leave the directory empty in Settings.",
   "oauthApp.drawer.microsoft.step1Link": "Open Microsoft Entra admin center",
   "oauthApp.drawer.microsoft.step2Body":
-    "In the app registration, under Authentication, as redirect URIs of the Web platform. Margince lists one for each thing this installation uses Microsoft for. Paste them exactly; if one is missing, Microsoft stops the connection with “AADSTS50011” and does not say which address.",
+    "In the app registration, open Authentication, select Add a platform, choose Web, and paste each address below. Margince lists one for each thing this installation uses Microsoft for. Paste them exactly; if one is missing, Microsoft stops the connection with “AADSTS50011” and does not say which address.",
   "oauthApp.drawer.step2Title": "Add these redirect addresses",
   "oauthApp.drawer.step3Title": "Paste the client ID and secret",
-  "oauthApp.drawer.step3Body":
-    "{vendor} shows both once the client is created.",
   "oauthApp.drawer.secretHint":
     "Stored encrypted and never shown again. To change it later, replace the app.",
   "oauthApp.drawer.foot": "Takes effect for everyone as soon as it is saved.",
@@ -15817,7 +15847,7 @@ export const en = {
   "firstRun.continue": "Continue",
   "firstRun.ai.title": "Choose a model provider",
   "firstRun.ai.sub":
-    "Margince uses your AI provider account. All of this can be changed later in Settings under AI.",
+    "Margince uses your AI provider account. No key at hand? You can add it later in Settings under AI.",
   "firstRun.ai.provider": "Provider",
   "firstRun.ai.key": "API key",
   "firstRun.ai.keyHint": "Stored in the key vault and never shown again.",
@@ -19842,31 +19872,36 @@ export const en = {
     "Mail, calendar and sign-in through one Entra app you own.",
   "firstRun.platform.imap": "IMAP",
   "firstRun.platform.imapWhat":
-    "Each mailbox connects with its own IMAP app password. Sign-in uses email and password.",
-  "firstRun.platform.redirectTitle": "Register these redirect URIs in the app",
-  "firstRun.platform.redirectHint":
-    "Add each URI to the app before saving here. Sign-in adds the sign-in button to the login page; the mail and calendar connectors let people connect theirs. A missing URI fails at the provider’s consent screen.",
-  "firstRun.google.helpToggle": "Where to find these",
-  "firstRun.google.helpStep1":
-    "In the Google Cloud console, open a project and go to “APIs & Services”, then “Credentials”. Select “Create credentials”, then “OAuth client ID”, and choose “Web application”.",
-  "firstRun.google.helpStep2":
-    "Enable the Gmail API and add the gmail.readonly, gmail.send and userinfo.profile scopes to the consent screen (userinfo.profile supplies the Google account picture). They share one consent because Google does not add a scope to an issued refresh token; requesting one later means connecting the mailbox again.",
-  "firstRun.google.helpStep3":
-    "Under Authorized redirect URIs, add the URIs listed above. Mailbox is required for mail; Calendar and Sign-in enable those features.",
-  "firstRun.google.helpStep4":
-    "Copy the client ID and client secret into the 2 fields below. The secret is sent once, stored in the key vault and never readable again.",
-  "firstRun.google.helpConsole": "Google Cloud credentials console",
-  "firstRun.google.helpDocs":
-    "Full prerequisites, including Microsoft and IMAP: docs/how-to/connect-a-mailbox.md",
+    "Each mailbox connects over IMAP with the password its mail service gives for it, often an app password. Sign-in uses email and password.",
+  "oauthApp.steps.google.apisTitle": "Turn on Gmail and Google Calendar",
+  "oauthApp.steps.google.apisBody":
+    "In the API library, enable the Gmail API and the Google Calendar API. Then, on the consent screen under Data access, add the scopes gmail.readonly, gmail.send, calendar.readonly, calendar.events.owned and userinfo.profile. Each user approves them when connecting a mailbox and calendar.",
+  "oauthApp.steps.google.apisLink": "Open API library",
+  "oauthApp.steps.google.pasteBody":
+    "Google shows both in a dialog after you select Create. If you closed it, open the client under Credentials: the client ID is at the top, and Add secret makes a new secret.",
+  "oauthApp.steps.microsoft.permissionsTitle": "Allow mail and calendar access",
+  "oauthApp.steps.microsoft.permissionsBody":
+    "Open API permissions, select Add a permission, then Microsoft Graph, then Delegated permissions. Add openid, email, profile, offline_access, User.Read, Mail.Read, Mail.Send and Calendars.ReadWrite. Then select Grant admin consent, so nobody at your company has to approve them one by one.",
+  "oauthApp.steps.microsoft.secretTitle": "Create a client secret",
+  "oauthApp.steps.microsoft.secretBody":
+    "Open Certificates and secrets and select New client secret. Copy its Value straight away, not the Secret ID: Entra shows the value only once. Note the expiry date; when the secret expires, mailboxes stop syncing until a new one is saved here.",
+  "oauthApp.steps.microsoft.pasteTitle": "Paste the IDs and the secret",
+  "oauthApp.steps.microsoft.pasteBody":
+    "The app’s Overview page shows the Application (client) ID and the Directory (tenant) ID.",
+  "firstRun.imap.passwordTitle": "Get the password IMAP takes",
+  "firstRun.imap.passwordBody":
+    "Gmail and iCloud take an app password, made once two-step sign-in is on; the normal password is refused. Gmail: Google Account, Security, App passwords. iCloud: Apple Account, Sign-In and Security, App-Specific Passwords. Any other mail service says on its help page which password IMAP takes. Microsoft 365 mailboxes no longer accept a password over IMAP: choose Microsoft 365 above. Personal Outlook.com mailboxes cannot connect here.",
+  "firstRun.imap.serverTitle": "Look up the IMAP server",
+  "firstRun.imap.serverBody":
+    "Gmail uses imap.gmail.com and iCloud uses imap.mail.me.com, each on port 993. Any other mail service lists its server on its help page about IMAP settings.",
+  "firstRun.imap.connectTitle": "Connect your mailbox",
   "firstRun.platform.imapNote":
-    "Nothing is configured for the whole installation. Connect your own mailbox now or later; other mailboxes connect in Settings under Connections, each with its own app password.",
+    "Nothing is configured for the whole installation. Connect your own mailbox now or later; other mailboxes connect in Settings under Connections, each with its own IMAP password.",
   "firstRun.platform.skip": "Not now",
   "firstRun.needed": "Needed to continue",
   "firstRun.stillNeeded": "Still needed: {fields}",
   "firstRun.platform.foot":
     "All answers here can be changed later in Settings.",
-  "firstRun.microsoft.note":
-    "Register an app in Microsoft Entra with the redirect URIs above, then paste its client ID and secret here. Pin it to your directory: that directory’s mailboxes connect through it and its people sign in with it.",
   "firstRun.microsoft.helpSignIn":
     "The directory puts Microsoft on the login page, so it is required here. To register an app without one (any company can connect a mailbox, no one signs in with Microsoft), use Settings instead.",
   "firstRun.microsoft.tenantHint":
