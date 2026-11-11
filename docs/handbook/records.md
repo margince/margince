@@ -256,7 +256,7 @@ Also called: timeline, activity log, customer history, interaction history, newe
 
 ### How do I log a note, call or meeting on a record?
 To log an activity in Margince, open the contact, company, lead or deal and choose **Log activity** in its header.
-1. Pick the **Type**: Note, Task, Call, Meeting or Message. **Message** records a conversation held on a chat app, such as WhatsApp or LinkedIn: pick the **Chat app** it took place on. It shows only when your installation knows at least one chat app.
+1. Pick the **Type**: Note, Task, Call, Meeting or Message. **Message** records a chat, such as a WhatsApp conversation. Pick its **Chat app** too. **Message** shows only when your installation knows a chat app.
 2. Set the **Date** (or **Due date** for a task), and the **Assignee** for a task. A task can also take a **Time (optional)**, such as the hour you agreed to call back. Its reminder comes due at that hour. Without a time, a task is due at the end of its day.
 3. For a call or meeting, add the contacts who took part under **Other attendees**, or **Attendees** on a company. Add colleagues who took part under **Colleagues who attended**. A call also takes an **Outcome**, such as **Reached** or **Not reached**, and then needs no subject. Only **Reached** and **Put through** count as contact.
 4. Enter a **Subject** (optional for calls and messages) and the **Details**. **Details** keeps its format, such as lists, headings and links. You can paste it from a document or as markdown. If you enter a call or meeting transcript, tick **This text is a transcript**. The text then stays plain, and you can paste it or use **Or upload a file** (`.txt` only).

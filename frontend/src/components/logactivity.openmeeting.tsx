@@ -440,6 +440,7 @@ export async function recordOnMeeting(
       kind: "task",
       asTranscript: false,
       callOutcome: "",
+      channelProvider: "",
       sourceActivityId: meeting.id,
     });
     record.followUp = true;

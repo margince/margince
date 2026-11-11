@@ -30,8 +30,8 @@ function pickedChannel(
   picked: string,
   options: readonly ChannelOption[],
 ): string {
-  if (picked !== "") return picked;
-  return options.length === 1 ? options[0].value : "";
+  if (picked !== "" || options.length !== 1) return picked;
+  return options[0]?.value ?? "";
 }
 
 /** Which registered chat app carried the message. */

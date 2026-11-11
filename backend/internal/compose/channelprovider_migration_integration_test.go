@@ -67,11 +67,12 @@ func TestActivityKindAndChannelProviderAreSeededByMigration(t *testing.T) {
 		providers = append(providers, p)
 	}
 	provRows.Close()
-	// linkedin and whatsapp are registered but compose no connector: transports
-	// with no sender. Registration is what lets a hand-logged LinkedIn or
+	// whatsapp is registered but composes no connector: a transport with no
+	// sender yet, which is the honest description while A103's WhatsApp
+	// connector is still coming. Registration is what lets a hand-logged
 	// WhatsApp message name its transport; sendability is a separate question
 	// the send pre-flight answers.
-	wantProviders := []string{"linkedin/core", "telegram/core", "whatsapp/core"}
+	wantProviders := []string{"telegram/core", "whatsapp/core"}
 	if len(providers) != len(wantProviders) {
 		t.Fatalf("channel_provider seeded %v, want %v", providers, wantProviders)
 	}
