@@ -14,7 +14,6 @@ import { ErrorLine } from "../design-system/errorline";
 import { refuseUnreadableField } from "../design-system/formvalidity";
 import { Panel, PanelBody } from "../design-system/panel";
 import { useSinglePress } from "../design-system/presslatch";
-import { Select } from "../design-system/select";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
 import {
@@ -24,7 +23,6 @@ import {
   draftHoldsWork,
   draftSaysSomething,
   freshDraft,
-  isActivityKind,
   KINDS_WITH_A_CONTACT,
   type MeetingAttendees,
   NO_ATTENDEES,
@@ -50,6 +48,7 @@ import {
   useLogDealFiling,
 } from "./logactivity.dealfiling";
 import { activityLogKeys } from "./logactivity.keys";
+import { LogKindField } from "./logactivity.kind";
 import {
   type MeetingRecord,
   openMeetingKey,
@@ -67,23 +66,6 @@ import { MeetingAttendeeFields } from "./meetingattendees";
 import { useUnsavedGuard } from "./unsaved";
 
 export type OpeningKind = "note" | "task" | "call";
-
-// A message is offered only where a transport is registered to name.
-function kindOptions(
-  t: ReturnType<typeof useT>,
-  offerTask: boolean,
-  offerMessage: boolean,
-) {
-  return [
-    { value: "note", label: t("log.kindNote") },
-    ...(offerTask ? [{ value: "task", label: t("log.kindTask") }] : []),
-    { value: "call", label: t("log.kindCall") },
-    { value: "meeting", label: t("log.kindMeeting") },
-    ...(offerMessage
-      ? [{ value: "message", label: t("log.kindMessage") }]
-      : []),
-  ];
-}
 
 function latestDayOf(
   kind: ActivityDraft["kind"],
@@ -346,27 +328,12 @@ export function LogActivityForm({
     >
       <div className="form-row">
         {!onlyTasks && (
-          <Field label={t("log.kind")}>
-            {(control) => (
-              <Select
-                {...control}
-                options={kindOptions(
-                  t,
-                  taskToComplete === undefined,
-                  messageChannel.options.length > 0,
-                )}
-                value={draft.kind}
-                // The clamp narrows the type and validates nothing. The Select
-                // only hands back the values above; anything else falls back
-                // to the ordinary kind rather than a refusal.
-                onChange={(value) =>
-                  setField({
-                    kind: isActivityKind(value) ? value : "note",
-                  })
-                }
-              />
-            )}
-          </Field>
+          <LogKindField
+            value={draft.kind}
+            offerTask={taskToComplete === undefined}
+            offerMessage={messageChannel.options.length > 0}
+            onChange={(kind) => setField({ kind })}
+          />
         )}
         {/* One date box, prefilled with today: a task's due date, otherwise the
             day it happened (occurredFields), whose hint explains the cap. */}
