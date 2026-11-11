@@ -22,9 +22,9 @@ import (
 // erasedSeatSQL picks the seats an erasure wiped. The address alone is not
 // proof: it was ordinary input before values reserved it. The seat's erase
 // tombstone, written by eraseDealRoomSeats, is.
-const erasedSeatSQL = `p.email = @erased AND EXISTS (SELECT 1 FROM audit_log erasure
+const erasedSeatSQL = `p.email = @erased_email AND EXISTS (SELECT 1 FROM audit_log erasure
 	WHERE erasure.entity_type = 'deal_room_participant' AND erasure.entity_id = p.id
-	AND erasure.action = @erase)`
+	AND erasure.action = @erase_action)`
 
 // ErasedSeatCursor is where a purge stopped. After is the last seat left clean
 // or held. Removed counts the traces already deleted from the seat after it,
@@ -105,7 +105,7 @@ func lockErasedSeats(ctx context.Context, tx pgx.Tx, after ids.UUID, limit int) 
 		WHERE `+erasedSeatSQL+` AND p.id > @after
 		ORDER BY p.id LIMIT @limit
 		FOR UPDATE OF p FOR SHARE OF a`,
-		pgx.StrictNamedArgs{"erased": erasedEmail, "erase": actionErase, rekeyAfterParameter: after, "limit": limit})
+		pgx.StrictNamedArgs{"erased_email": erasedEmail, "erase_action": actionErase, rekeyAfterParameter: after, "limit": limit})
 	if err != nil {
 		return nil, fmt.Errorf("read erased deal room seats: %w", err)
 	}
@@ -126,6 +126,6 @@ func CountErasedSeats(ctx context.Context, q datatask.Querier, maximum int64) (i
 	var count int64
 	err := q.QueryRow(ctx, `SELECT count(*) FROM (SELECT 1 FROM deal_room_participant p
 		WHERE `+erasedSeatSQL+` LIMIT @maximum) bounded`,
-		pgx.StrictNamedArgs{"erased": erasedEmail, "erase": actionErase, "maximum": maximum + 1}).Scan(&count)
+		pgx.StrictNamedArgs{"erased_email": erasedEmail, "erase_action": actionErase, "maximum": maximum + 1}).Scan(&count)
 	return count, err
 }

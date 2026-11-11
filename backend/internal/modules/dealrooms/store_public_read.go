@@ -76,8 +76,7 @@ func readStanding(ctx context.Context, tx pgx.Tx, roomID ids.DealRoomID) (roomSt
 
 // access maps the room's lifecycle onto what the buyer may do. Expiry is
 // decided by roomStateSQL on every read, rather than by a sweep that flips the
-// state later: a room whose expires_at has passed stops serving the moment it
-// passes. Staff read the same state, so both sides see one answer.
+// state later. So a room stops serving the moment its expires_at passes. Staff read the same state, so both sides see one answer.
 func (st roomStanding) access() string {
 	switch st.state {
 	case statePaused:
