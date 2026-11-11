@@ -25,12 +25,9 @@ import (
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/platform/extprivacy"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
-	"github.com/margince/margince/backend/pkg/extension/jurisdiction"
-	extdecl "github.com/margince/margince/backend/pkg/extension/privacy"
 )
 
 type renewalPrivacyFixture struct {
@@ -570,39 +567,14 @@ func TestDirectTaskErasureCompletesItsSuspendedEvidenceCleanup(t *testing.T) {
 	}
 }
 
-// One erasure reaches a promise's task twice. It is work derived from the erased
-// message, and an activity only the subject is on. Its extension row is still
-// certified once.
+// One erasure reaches a promise's task by two paths; its extension row is certified once.
 func TestErasureCertifiesAnExtensionRowOfAPromisedTaskOnce(t *testing.T) {
 	f := setupRenewalPrivacy(t, 0.95)
 	owner := integration.OwnerConn(t)
 	integration.LinkActivity(t, owner, f.messages[0], "contact", f.contact.UUID)
 	integration.LinkActivity(t, owner, f.messages[1], "contact", f.contact.UUID)
 	integration.LinkActivity(t, owner, f.work, "contact", f.contact.UUID)
-	for _, stmt := range []string{
-		`CREATE SCHEMA IF NOT EXISTS ext`,
-		`GRANT USAGE ON SCHEMA ext TO margince_app`,
-		`CREATE TABLE ext.ext_probe_task_note (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), activity_id uuid, body text NOT NULL)`,
-		`GRANT SELECT, INSERT, UPDATE, DELETE ON ext.ext_probe_task_note TO margince_app`,
-	} {
-		if _, err := owner.Exec(t.Context(), stmt); err != nil {
-			t.Fatalf("preparing the probe table (%s): %v", stmt, err)
-		}
-	}
-	t.Cleanup(func() {
-		if _, err := owner.Exec(context.Background(), `DROP TABLE IF EXISTS ext.ext_probe_task_note`); err != nil {
-			t.Errorf("removing the probe table: %v", err)
-		}
-	})
-	row := ids.NewV7()
-	if _, err := owner.Exec(t.Context(), `INSERT INTO ext.ext_probe_task_note (id, activity_id, body) VALUES ($1, $2, 'the promise')`, row, f.work); err != nil {
-		t.Fatal(err)
-	}
-	registry := extprivacy.Declared([]extdecl.Table{{
-		Name: "ext_probe_task_note", Links: []extdecl.Link{{Column: "activity_id", Record: extdecl.Activity}},
-		Personal: []string{"body"}, Retention: jurisdiction.CommercialCorrespondence,
-	}})
-
+	registry, row := integration.ProbeExtensionTable(t, owner, "ext_probe_task_note", f.work)
 	eraser := privacy.NewEraser(f.e.DB()).WithRawCapturePurger(RawCapturePurgerFor(f.e.DB())).WithExtensions(registry)
 	if err := eraser.EraseContact(f.e.Admin(), f.contact.UUID, "Subject requested erasure"); err != nil {
 		t.Fatal(err)
