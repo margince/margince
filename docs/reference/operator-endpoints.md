@@ -82,6 +82,7 @@ Served next to `/v1`:
   | `margince_worklist_stage_app_seconds` | histogram | `read`, `stage` |
   | `margince_worklist_stage_app_clipped_total` | counter | `read`, `stage` |
   | `margince_worklist_pool_wait_seconds` | histogram | `read` |
+  | `margince_worklist_lane_dropped_total` | counter | `lane`, `reason` |
 
   **Both labels are fixed names from the code**, never a request value. `read` names the call that
   opened the snapshot:
@@ -104,6 +105,19 @@ Served next to `/v1`:
   ```
 
   A slow `/v1/worklist` in the HTTP section shows here as the stage that grew.
+
+  The scroll tail of `/v1/worklist` is timed as the stage `tail`, and each source it reads as
+  `tail_<source>` inside it.
+
+  `margince_worklist_lane_dropped_total` counts each optional lane the page lost and named as
+  failed. `lane` is the name each `degradable` call in `backend/internal/compose/attention`
+  passes. `reason` is `timeout` when a statement ran past the lane's budget, `caller_left` when the
+  caller left, and `failed` for any other error. A refusal is the caller's access, not a fault,
+  so it is not counted. A lane that drops often is a lane whose rows readers do not see:
+
+  ```promql
+  sum by (lane, reason) (rate(margince_worklist_lane_dropped_total[1h]))
+  ```
 
   The other families split each stage's time by where the process waited. A tracer on every pool
   sees each pgx call. A statement in an inner stage counts in that stage only, never in the stage
@@ -145,6 +159,17 @@ Served next to `/v1`:
   The `read` label and the `0.75s` bucket also changed the series of
   `margince_worklist_stage_duration_seconds`. A query that adds up `by (stage)` reads the same totals
   as before. A saved query that names each `le` value needs the new one.
+
+  The Home cache section counts the Home reads a member waited on, in the counter
+  `margince_home_cache_reads_total`. Its `read` label is `worklist` or `magic`. Its `outcome` label
+  is `hit` when a kept answer served the read and `miss` when Home was read fresh.
+  A refresh in the background counts as neither. The share of reads a kept answer served, over 5
+  minutes:
+
+  ```promql
+  sum(rate(margince_home_cache_reads_total{outcome="hit"}[5m]))
+    / sum(rate(margince_home_cache_reads_total[5m]))
+  ```
 
   The connection pool section reports the own pool of this process. It publishes every value pgx
   works out, as gauges and counters:
@@ -235,7 +260,7 @@ preview guess. Every family below is sent for a Gmail import. A Microsoft 365 im
 | `margince_connector_request_duration_seconds` | `provider`, `op` | histogram of the clock time of the same calls |
 | `margince_connector_rate_limited_total` | `provider`, `op`, `reason` | the `result="rate_limited"` calls again, by which Google limit was reached: `userRateLimitExceeded` (per user), `rateLimitExceeded`, `quotaExceeded` (project quota), `dailyLimitExceeded`, `limitExceeded`, `concurrent` (the Google `Too many concurrent requests for user`), `other` for a code outside that set, or `unspecified` when the body named none. The same reason and the HTTP `status` show on the `capture backfill page deferred` and `capture connection sync failed` WARN lines |
 | `margince_capture_backfill_messages_total` | `provider`, `outcome` | one per message handled: the outcome of the capture trace (`captured`, `internal`, `suppressed`, `deferred`, `fault`), or else `skipped`; `refused` when the capture refused it and the page moved on, `failed` when its failure ended the page |
-| `margince_capture_backfill_stage_seconds` | `provider`, `stage` | histogram per fetch or per message: `fetch_headers` (the headers read every listed message gets first), `fetch` (the RAW download, only for messages the headers did not handle), `parse`, `sink` (the capture transaction), `ensure` (other party, project and merge staging work after it) |
+| `margince_capture_backfill_stage_seconds` | `provider`, `stage` | histogram per fetch or per message: `fetch_headers` (the headers read every listed message gets first), `fetch` (the RAW download, only for messages the headers did not handle), `parse`, `sink` (the capture transaction, which also files the mail under its counterparty), `ensure` (other party, project and merge staging work after it) |
 | `margince_capture_backfill_pages_total` | `provider`, `result` | pages by `ok`, `rate_limited`, `unreachable`, `token_rejected` (Gmail refused the page token; the run walks its window again once) or `failed` |
 | `margince_capture_backfill_snooze_seconds_total` | `provider`, `reason` | seconds the import picked to wait: `pacing` between good pages; after a failed page `rate_limited`, `unreachable`, `token_rejected` or `internal`; `rate_limited_in_page` for a short limit a page waited out inside itself; `resumed` when a run was opened again while its job was ending |
 | `margince_capture_backfill_retry_after_seconds_total` | `provider` | the Retry-After the provider asked for on the fault and in-page waits; the gap to their snooze total is the wait our own ladder added |

@@ -217,7 +217,7 @@ type stubBriefing struct {
 	err  error
 }
 
-func (s stubBriefing) Queue(context.Context) ([]BriefEntry, bool, time.Time, error) {
+func (s stubBriefing) Queue(context.Context, time.Time) ([]BriefEntry, bool, time.Time, error) {
 	return s.rows, s.ran || len(s.rows) > 0, s.asOf, s.err
 }
 

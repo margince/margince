@@ -38,7 +38,7 @@ const (
 
 // holdToSend re-checks the row and, if it still allows sending t's body,
 // keeps it locked until release. The row must be pending or retrying, with the
-// same uncleared body, and still carry t's claim (none for a first attempt).
+// same uncleared body, and still carry t's unexpired claim.
 //
 // FOR SHARE waits for an erasure that wrote the row but has not committed, and
 // makes a later erasure wait until release. The transaction runs in its own
@@ -52,10 +52,11 @@ func (s *Store) holdToSend(ctx context.Context, t attemptTarget) (func() error, 
 			var ok bool
 			err := tx.QueryRow(ctx, `
 				SELECT status IN ('pending', 'retrying') AND payload_pruned_at IS NULL
-				       AND sha256(convert_to(payload, 'UTF8')) = $2
-				       AND claimed_until IS NOT DISTINCT FROM $3
-				FROM webhook_delivery WHERE id = $1
-				FOR SHARE`, t.deliveryID, digest[:], t.claim).Scan(&ok)
+				       AND sha256(convert_to(payload, 'UTF8')) = @digest
+				       AND claimed_until IS NOT DISTINCT FROM @claim
+				       AND (claimed_until IS NULL OR claimed_until > now() + make_interval(secs => @request_seconds))
+				FROM webhook_delivery WHERE id = @send_id
+				FOR SHARE`, pgx.StrictNamedArgs{"send_id": t.deliveryID, "digest": digest[:], "claim": t.claim, "request_seconds": deliveryTimeout.Seconds()}).Scan(&ok)
 			if errors.Is(err, pgx.ErrNoRows) || (err == nil && !ok) {
 				err = errSendWithdrawn
 			}

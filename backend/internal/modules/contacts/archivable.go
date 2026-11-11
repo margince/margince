@@ -48,11 +48,13 @@ func lockThenEnsureArchivable(ctx context.Context, tx pgx.Tx, table string, rule
 	return auth.EnsureArchivable(ctx, tx, rule, id)
 }
 
-// stampCompaniesArchivable is stampArchivable for companies, narrowed by the
-// refusals the archive itself answers. Those are the anchor, the only company
-// on a live project, and one others' records still name. So the header never
-// offers an Archive the store then refuses.
-func stampCompaniesArchivable(ctx context.Context, tx pgx.Tx, companies []crmcontracts.Company) error {
+// Lists, record reads and mutation echoes show the same write and archive actions.
+func stampCompanyCapabilities(ctx context.Context, tx pgx.Tx, companies []crmcontracts.Company) error {
+	if _, err := auth.StampWritable(ctx, tx, companyEntity, companies,
+		func(o crmcontracts.Company) ids.UUID { return ids.UUID(o.Id) },
+		func(o *crmcontracts.Company, may bool) { o.Writable = &may }); err != nil {
+		return err
+	}
 	if err := stampArchivable(ctx, tx, auth.CompanyArchive, companies,
 		func(o crmcontracts.Company) ids.UUID { return ids.UUID(o.Id) },
 		func(o *crmcontracts.Company, may bool) { o.Archivable = &may }); err != nil {

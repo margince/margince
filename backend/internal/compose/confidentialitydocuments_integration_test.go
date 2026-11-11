@@ -10,6 +10,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"image"
+	"image/png"
 	"log/slog"
 	"os"
 	"strings"
@@ -331,5 +333,35 @@ func TestAnEarlierReplyCarryingASalarySheetIsNotOpenedWithItsThread(t *testing.T
 	}
 	if got := threadStatus(t, e, thread); got != capture.VerdictHeld {
 		t.Fatalf("thread status = %q, want held once the sheet is read", got)
+	}
+}
+
+func TestAnUnreadableImageCannotBeOpenedByAConfidentAnswer(t *testing.T) {
+	var picture bytes.Buffer
+	if err := png.Encode(&picture, image.NewRGBA(image.Rect(0, 0, 2, 2))); err != nil {
+		t.Fatal(err)
+	}
+	for _, file := range []struct {
+		name, media string
+		raw         []byte
+	}{
+		{"image001.png", "image/png", picture.Bytes()},
+		{"diagram.svg", "image/svg+xml", []byte(`<svg xmlns="http://www.w3.org/2000/svg"><text>Demo picture</text></svg>`)},
+	} {
+		t.Run(file.name, func(t *testing.T) {
+			e := integration.Setup(t)
+			blob := blobstore.NewMemory()
+			mail := seedHeldThreadMail(t, e, "thread-unreadable-image", "buyer@example.test", "Documents")
+			captureMailDocument(t, e, blob, mail, file.name, file.media, file.raw)
+			thread := seedThreadQuestion(t, e, "thread-unreadable-image", mail)
+			brain := &alwaysOrdinaryBrain{}
+			engine := NewConfidentialityVerdictEngine(e.Pool, brain, slog.Default()).WithObjectStore(blob)
+			if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
+				t.Fatal(err)
+			}
+			if brain.asked != 1 || threadStatus(t, e, thread) != capture.VerdictUnsure || activityAudience(t, e, mail) != "participants" {
+				t.Fatalf("unreadable image: calls=%d status=%s audience=%s", brain.asked, threadStatus(t, e, thread), activityAudience(t, e, mail))
+			}
+		})
 	}
 }

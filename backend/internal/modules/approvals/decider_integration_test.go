@@ -116,7 +116,7 @@ func TestOnlyTheNamedColleagueIsAskedToDecide(t *testing.T) {
 	askedOf := func(seat ids.UUID) bool {
 		t.Helper()
 		var asked bool
-		ctx := seatFor(e.ws, seat, tableDeal, objectActivity)
+		ctx := seatFor(e.ws, seat, tableDeal, objectActivity, tableContact)
 		if err := e.svc.db.Tx(ctx, func(tx pgx.Tx) error {
 			var err error
 			asked, err = e.svc.PendingAskedOfInTx(ctx, tx, id)

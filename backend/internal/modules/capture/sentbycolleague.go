@@ -16,6 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/mailidentity"
 	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/workforce"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -94,8 +95,7 @@ func colleagueSenderTx(ctx context.Context, tx pgx.Tx, rec connector.NormalizedR
 
 // colleagueTx is the seat, other than the acting one, whose login address is
 // address; zero when there is none. Invited and deactivated seats count. Most
-// colleagues are invited and never sign in. A departed one's mail was still
-// the workspace's mail. An archived seat does not count.
+// colleagues are invited and never sign in. Retired and archived seats do not count.
 //
 // The address must be at one of the workspace's own trusted domains. A seat can
 // be invited at any address, and the stamp lets that seat open the copy. A seat
@@ -108,7 +108,7 @@ func colleagueTx(ctx context.Context, tx pgx.Tx, address string) (ids.UUID, erro
 	_, seat := capturePrincipal(ctx)
 	var colleague ids.UUID
 	err = tx.QueryRow(ctx, `SELECT u.id FROM app_user u
-		 WHERE `+storekit.SeatLoginIsSQL("u", "$1", "$3")+` AND u.id <> $2 AND u.archived_at IS NULL`,
+		 WHERE `+storekit.SeatLoginIsSQL("u", "$1", "$3")+` AND u.id <> $2 AND `+workforce.CaptureSeatSQL("u"),
 		foldAddress(address), seat, owndomain.OfAddress(address)).Scan(&colleague)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return ids.Nil, nil
@@ -205,11 +205,11 @@ func insertCounterpartyParticipant(
 // recipientColleagueTx is the seat, other than the owner, whose login is
 // address or whose connected mailbox it is; zero when there is none. A mailbox
 // counts only when the provider attested it and no other seat did. An archived
-// seat does not count.
+// or retired seat does not count.
 func recipientColleagueTx(ctx context.Context, tx pgx.Tx, address string, owner ids.UUID) (ids.UUID, error) {
 	var seat ids.UUID
 	err := tx.QueryRow(ctx, `SELECT u.id FROM app_user u
-		 WHERE `+storekit.SeatLoginIsSQL("u", "$1", "$3")+` AND u.id <> $2 AND u.archived_at IS NULL`,
+		 WHERE `+storekit.SeatLoginIsSQL("u", "$1", "$3")+` AND u.id <> $2 AND `+workforce.CaptureSeatSQL("u"),
 		address, owner, owndomain.OfAddress(address)).Scan(&seat)
 	if err == nil {
 		return seat, nil
@@ -226,7 +226,7 @@ func recipientColleagueTx(ctx context.Context, tx pgx.Tx, address string, owner 
 		if p.Address != folded || p.Seat == owner {
 			continue
 		}
-		err := tx.QueryRow(ctx, `SELECT id FROM app_user WHERE id = $1 AND archived_at IS NULL`, p.Seat).Scan(&seat)
+		err := tx.QueryRow(ctx, `SELECT u.id FROM app_user u WHERE u.id = $1 AND `+workforce.CaptureSeatSQL("u"), p.Seat).Scan(&seat)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return ids.Nil, nil
 		}

@@ -62,16 +62,20 @@ func chooseAnchor(held *time.Time, window, now time.Time) anchorStart {
 }
 
 func (r *Registry) syncStart(
-	ctx context.Context, connectionID ids.UUID, generation int,
-	d connector.Descriptor, cursor connector.Cursor, now time.Time,
+	ctx context.Context, snapshot *syncSnapshot, held *time.Time,
+	d connector.Descriptor, now time.Time,
 ) (time.Time, error) {
 	// An anchor answers where a first sync starts. Once a watermark stands, the
 	// cursor says where to read from. Holding one past that costs two writes a
 	// sync and hands the bounded re-anchor a point months old.
-	if d.FirstSyncWindow <= 0 || len(cursor) > 0 {
+	if d.FirstSyncWindow <= 0 || (len(snapshot.prior) > 0 && held == nil) {
 		return time.Time{}, nil
 	}
 	window := now.Add(-d.FirstSyncWindow)
+	if len(snapshot.prior) > 0 {
+		return r.resumeAnchor(ctx, snapshot, *held, window, now)
+	}
+	connectionID, generation := snapshot.id, snapshot.generation
 
 	var from time.Time
 	err := r.db.Tx(ctx, func(tx pgx.Tx) error {

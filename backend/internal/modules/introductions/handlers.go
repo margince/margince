@@ -61,42 +61,12 @@ func (h Handlers) CreateIntroRequest(w http.ResponseWriter, r *http.Request, id 
 	if !httperr.Decode(w, r, &body) {
 		return
 	}
-	// A route through somebody names them and a direct one does not. Either
-	// half alone describes a route nobody can act on, and the table refuses it
-	// too — this is here so the caller is told which half is wrong.
-	throughGiven := body.ThroughContactId != nil
-	wantsThrough := body.RouteType == crmcontracts.ContactGraphRouteTypeContactGraphRouteTypeThroughContact
-	if throughGiven != wantsThrough {
-		httperr.Write(w, r, httperr.Validation(
-			"through_contact_id", "route_shape",
-			"a route through a contact names them, and a direct route does not"))
-		return
-	}
-
-	origin, err := enumOf(body.NoteGeneratedBy, "note_generated_by", "human, model or deterministic")
+	req, err := h.requestInput(body, ids.UUID(id))
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
 	}
-	fallback, err := enumOf(body.FallbackPolicy, "fallback_policy", "none, name_drop or next_route")
-	if err != nil {
-		httperr.Write(w, r, err)
-		return
-	}
-	newID, err := h.store.Create(r.Context(), NewRequest{
-		ContactID:        ids.UUID(id),
-		IntroducerUser:   ids.UUID(body.IntroducerUserId),
-		RouteType:        string(body.RouteType),
-		ThroughContactID: optionalID(body.ThroughContactId),
-		InternalReason:   body.InternalReason,
-		ValueForTarget:   deref(body.ValueForTarget),
-		ForwardableNote:  deref(body.ForwardableNote),
-		NoteGeneratedBy:  origin,
-		NoteAIGenerated:  body.NoteAiGenerated != nil && *body.NoteAiGenerated,
-		FallbackPolicy:   fallback,
-		NameDropAllowed:  body.NameDropAllowed != nil && *body.NameDropAllowed,
-		DueAt:            h.now().Add(askWindow),
-	})
+	newID, err := h.store.Create(r.Context(), req)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -254,4 +224,57 @@ func enumOf[T ~string](v *T, field, allowed string) (string, error) {
 		return "", notAllowed(field, allowed)
 	}
 	return string(*v), nil
+}
+
+func (h Handlers) requestInput(body crmcontracts.IntroRequestInput, contactID ids.UUID) (NewRequest, error) {
+	// Check both route arms so the caller gets a field refusal before the table constraint.
+	throughGiven := body.ThroughContactId != nil
+	wantsThrough := body.RouteType == crmcontracts.ContactGraphRouteTypeContactGraphRouteTypeThroughContact
+	if throughGiven != wantsThrough {
+		return NewRequest{}, httperr.Validation(
+			"through_contact_id", "route_shape",
+			"a route through a contact names them, and a direct route does not")
+	}
+
+	origin, err := enumOf(body.NoteGeneratedBy, "note_generated_by", "human, model or deterministic")
+	if err != nil {
+		return NewRequest{}, err
+	}
+	fallback, err := enumOf(body.FallbackPolicy, "fallback_policy", "none, name_drop or next_route")
+	if err != nil {
+		return NewRequest{}, err
+	}
+	return NewRequest{
+		ContactID:        contactID,
+		IntroducerUser:   ids.UUID(body.IntroducerUserId),
+		RouteType:        string(body.RouteType),
+		ThroughContactID: optionalID(body.ThroughContactId),
+		InternalReason:   body.InternalReason,
+		ValueForTarget:   deref(body.ValueForTarget),
+		ForwardableNote:  deref(body.ForwardableNote),
+		NoteGeneratedBy:  origin,
+		NoteAIGenerated:  body.NoteAiGenerated != nil && *body.NoteAiGenerated,
+		FallbackPolicy:   fallback,
+		NameDropAllowed:  body.NameDropAllowed != nil && *body.NameDropAllowed,
+		DueAt:            h.now().Add(askWindow),
+	}, nil
+}
+
+// ReplaceIntroRequest keeps withdrawal and a fresh ask atomic.
+func (h Handlers) ReplaceIntroRequest(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+	var body crmcontracts.IntroRequestReplaceInput
+	if !httperr.Decode(w, r, &body) {
+		return
+	}
+	req, err := h.requestInput(body.Request, ids.UUID{})
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	replacement, err := h.store.Replace(r.Context(), ids.UUID(id), body.Reason, body.Version, req)
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	h.writeAsk(w, r, replacement, http.StatusCreated)
 }

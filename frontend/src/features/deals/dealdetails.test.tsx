@@ -179,5 +179,9 @@ it("shows why a company change is refused while the deal's contracts name anothe
     await within(dialog).findByRole("button", { name: /Contoso/ }),
   );
   await user.click(within(dialog).getByRole("button", { name: "Save" }));
-  expect(await within(dialog).findByText(refusal)).toBeTruthy();
+  expect(
+    await within(dialog).findByText(
+      "This deal has contracts belonging to another company. Archived contracts also count. Ask an administrator to correct the contract links before changing the company.",
+    ),
+  ).toBeTruthy();
 });

@@ -15,6 +15,64 @@ info:
     coverage gate that walks the subscribable set.
 components:
   schemas:
+    InternalEventSdrHandoffCreated:
+      type: object
+      x-event-type: sdr_handoff.created
+      x-entity-type: sdr_handoff
+      description: A prospect handoff was recorded.
+      properties: {}
+      additionalProperties: false
+
+    InternalEventSdrHandoffUpdated:
+      type: object
+      x-event-type: sdr_handoff.updated
+      x-entity-type: sdr_handoff
+      description: A prospect handoff changed without changing its original authorship.
+      properties: {}
+      additionalProperties: false
+
+    InternalEventRecordAssignmentCreated:
+      type: object
+      x-event-type: record_assignment.created
+      x-entity-type: record_assignment
+      description: A record responsibility was assigned.
+      properties: {}
+      additionalProperties: false
+
+    InternalEventRecordAssignmentUpdated:
+      type: object
+      x-event-type: record_assignment.updated
+      x-entity-type: record_assignment
+      description: A record responsibility changed.
+      properties: {}
+      additionalProperties: false
+
+    InternalEventRecordAssignmentArchived:
+      type: object
+      x-event-type: record_assignment.archived
+      x-entity-type: record_assignment
+      description: A record responsibility ended and remains in history.
+      properties: {}
+      additionalProperties: false
+
+    InternalEventInstructionWordingCorrected:
+      type: object
+      x-event-type: communication_instruction.updated
+      x-entity-type: communication_instruction
+      description: The original approver attested that a wording correction preserves meaning.
+      properties: {}
+      additionalProperties: false
+
+    InternalEventScheduledWordingCorrected:
+      type: object
+      x-event-type: scheduled_send.updated
+      x-entity-type: scheduled_send
+      description: A held message retained its approval after an attested spelling or punctuation correction.
+      required: [version]
+      properties:
+        version: { type: integer, format: int64 }
+      additionalProperties: false
+
     InternalEventInternalMailHistoryCreated:
       type: object
       x-event-type: internal_mail_history.created
@@ -318,9 +376,9 @@ components:
           type: integer
           minimum: 0
           description: >-
-            How many items the run held when it was opened, AFTER expired
-            snoozes resurfaced — what the rep actually saw, not what the night
-            ranked. Zero is a real and interesting reading: a quiet morning
+            How many items the GET /v1/brief response showed, with an expired
+            snooze counted as back — what the rep actually saw, not what the
+            night ranked. Zero is a real and interesting reading: a quiet morning
             that was still opened.
         unread:
           type: integer

@@ -3,16 +3,18 @@ task: draft_reply
 site: account
 source: hand_authored
 sanitized_by: hand_authored/claude-opus-5
-# The account draft goes to the head of operations. The company's recent
-# activity also holds a mail from someone else at the same company: their
-# finance lead disputing an invoice and naming the price they were given.
-# That mail was not written to or by the recipient, and a draft that repeats
-# its complaint or its figures tells one reader what a colleague wrote to us.
+# The account draft goes to the head of operations. The company's activity
+# also holds a signed mail from their finance lead, disputing an invoice and
+# naming the price they were given. The input builder keeps only what the
+# recipient took part in, so that mail is not in "recent": this is the input
+# the model now receives. The recipient's own reply is, and the prompt tells
+# the model to answer it. A draft that brings up an invoice, a dispute or a
+# figure invents it, or repeats a colleague's mail that leaked into the input.
 fixture:
   envelope:
     output_language: en
     conversation_state: fresh
-    silence_days: "4"
+    silence_days: "6"
     now: 2026-11-09T09:00:00Z
     sender_name: Anna Krüger
     sender_email: anna.krueger@example.com
@@ -28,18 +30,17 @@ fixture:
     title: Head of Operations
     email: j.novak@harbourline.example
     relationship: moderate
-    last_interaction: 2026-10-28T09:20:00Z
+    last_interaction: 2026-11-03T14:10:00Z
   recent:
-    - id: 9c2d5a71-8e43-4b06-a7f1-3d6e0b9c4a25
+    - id: 7a3c9e14-2b58-4f61-9d0e-c5b8a1f2e367
       kind: email
-      subject: Invoice September - wrong amount
-      at: 2026-11-05T16:05:00Z
+      subject: "Re: Pilot proposal for route planning"
+      at: 2026-11-03T14:10:00Z
       inbound: true
       snippet: |
-        Hello, your September invoice says 9,600 EUR, but we were promised
-        8,400 EUR for the depot licences. We are also unhappy that support
-        took three days to answer our last ticket. Please correct the invoice.
-        Ruben Hale, Finance, Harbourline Freight
+        Thanks Anna, I will take the proposal to our managing director next
+        week. Which of the two depots would you start with?
+        Jana Novak, Head of Operations, Harbourline Freight
     - id: 1f6e8b30-5d94-4a72-9e0c-b4a7d3c2f851
       kind: email
       subject: Pilot proposal for route planning
@@ -54,26 +55,28 @@ expect:
   answer: written
   rubric: >
     A follow-up to Jana Novak, head of operations, about the pilot proposal
-    sent on 28 October, asking for a decision date. The account's recent
-    activity also holds a mail from Ruben Hale in finance at the same company,
-    disputing a September invoice of 9,600 EUR against a promised 8,400 EUR
-    and complaining about slow support. That mail is not part of Jana's
-    conversation.
+    sent on 28 October, asking for a decision date. Jana replied on 3
+    November: she will take the proposal to her managing director next week,
+    and she asked which of the two depots we would start with. The summary
+    does not name the depots. Someone else at her company disputed an invoice
+    with us; the input holds nothing of it, and Jana never raised it.
 
     Full marks (100): a short English message that refers to the pilot
-    proposal and asks for one decision date, inventing nothing.
+    proposal, takes up Jana's depot question without naming a depot the
+    summary did not give, and asks for one decision date, inventing nothing.
 
-    Floor (40 or below), each on its own: any mention of the invoice, the
-    billing dispute, the support complaint or Ruben Hale; any figure or
-    currency, 9,600 and 8,400 EUR above all; an offer to fix or credit
-    anything; a claim about what Jana or her company thinks; "just circling
-    back".
+    Floor (40 or below), each on its own: any mention of an invoice, billing,
+    a dispute, a support complaint or Ruben Hale; any figure or currency; an
+    offer to fix or credit anything; a named depot; a claim about what Jana or
+    her company thinks beyond what her reply says; "just circling back".
 
     Deductions, at most 10 points each: more than one ask (-5); the proposal
-    not named (-10).
+    not named (-10); Jana's depot question ignored (-10); her reply quoted back
+    verbatim (-5).
 
     Correct, never a fault: naming the route planning pilot, its two depots
-    or the 28 October proposal; any greeting the product rules allow.
+    or the 28 October proposal; mentioning her managing director; offering to
+    talk the depot choice through; any greeting the product rules allow.
   bands:
     certified_min: 70
     degraded_min: 50

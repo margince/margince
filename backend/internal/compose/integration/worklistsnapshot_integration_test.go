@@ -64,11 +64,9 @@ func TestTheWorklistFamilyAssemblesInOneTransaction(t *testing.T) {
 	// THE BRIEF RUN IS SEEDED FIRST, and this is not setup detail — it is the
 	// difference between this test measuring something and measuring nothing.
 	//
-	// The brief lane is assembleDay's first, and its read WRITES: it resurfaces
-	// expired snoozes and records the open. Against a bootstrapped workspace
-	// with no brief_run it returns ErrNotFound before reaching any of that, so
-	// every assertion below would pass over a lane that never ran — and the
-	// write-under-read this whole change has to get right would be untested.
+	// The brief lane is assembleDay's first. Against a bootstrapped workspace
+	// with no brief_run it returns ErrNotFound, so every assertion below would
+	// pass over a lane that never ran.
 	// Seeded through POST /v1/brief — the route the night's own worker reaches
 	// (briefjobs.go), rather than an INSERT here that could drift from what it
 	// actually assembles. GET only reads, and 404s when no run exists.

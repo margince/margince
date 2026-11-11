@@ -60,6 +60,7 @@ type Server struct {
 	bulkHandlers
 	companyContactShareHandlers
 	handoverHandlers
+	handoffHandlers
 	searchHandlers
 	consentHandlers
 	directedSendHandlers

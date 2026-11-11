@@ -26,7 +26,7 @@ func TestAnAdoptedMessageCarryingADocumentDoesNotInheritAnOpeningVerdict(t *test
 		{"a cleared thread, no file", VerdictCleared, "", "", VerdictCleared},
 		{"a cleared thread, a spreadsheet", VerdictCleared, "Cost+.xlsx", "application/zip", ""},
 		{"an owner-shared thread, a spreadsheet", VerdictSharedByOwner, "Cost+.xlsx", "application/zip", ""},
-		{"a cleared thread, a logo", VerdictCleared, "logo.png", "image/png", VerdictCleared},
+		{"a cleared thread, a logo", VerdictCleared, "logo.png", "image/png", ""},
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			if err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {

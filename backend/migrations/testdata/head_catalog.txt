@@ -1663,6 +1663,46 @@ public.attachment_supersedes_ix CREATE INDEX attachment_supersedes_ix ON public.
 public.audit_evidence_after_erasure(verb text, before_image jsonb, after_image jsonb, payload jsonb) secdef=false cfg=- acl=- SELECT audit_redacted_evidence(
  (verb=ANY(audit_redaction_actions()) OR verb IN ('pin','restrict'))
  AND before_image IS NULL AND after_image IS NULL,payload,verb)
+public.audit_image_only_masked(was jsonb, rewritten jsonb) secdef=false cfg=- acl=- 
+DECLARE
+  field text;
+  item integer;
+BEGIN
+  IF was IS NULL OR rewritten IS NULL THEN
+    RETURN was IS NOT DISTINCT FROM rewritten;
+  END IF;
+  IF jsonb_typeof(was) <> jsonb_typeof(rewritten) THEN
+    RETURN false;
+  END IF;
+  CASE jsonb_typeof(was)
+  WHEN 'object' THEN
+    IF ARRAY(SELECT jsonb_object_keys(was) ORDER BY 1)
+       IS DISTINCT FROM ARRAY(SELECT jsonb_object_keys(rewritten) ORDER BY 1) THEN
+      RETURN false;
+    END IF;
+    FOR field IN SELECT jsonb_object_keys(was) LOOP
+      IF NOT audit_image_only_masked(was -> field, rewritten -> field) THEN
+        RETURN false;
+      END IF;
+    END LOOP;
+    RETURN true;
+  WHEN 'array' THEN
+    IF jsonb_array_length(was) <> jsonb_array_length(rewritten) THEN
+      RETURN false;
+    END IF;
+    FOR item IN 0 .. jsonb_array_length(was) - 1 LOOP
+      IF NOT audit_image_only_masked(was -> item, rewritten -> item) THEN
+        RETURN false;
+      END IF;
+    END LOOP;
+    RETURN true;
+  WHEN 'string' THEN
+    RETURN was = rewritten OR audit_text_only_masked(was #>> '{}', rewritten #>> '{}');
+  ELSE
+    RETURN was = rewritten;
+  END CASE;
+END;
+
 public.audit_log acl=margince_owner=arwdDxt/margince_owner,margince_app=ar/margince_owner rls=false force=false
 public.audit_log.action text NOT NULL gen=- def=-
 public.audit_log.actor_id text NOT NULL gen=- def=-
@@ -1719,6 +1759,23 @@ BEGIN
                    AND boundary.before IS NULL AND boundary.after IS NULL
                    AND (OLD.occurred_at, OLD.id) <= (boundary.occurred_at, boundary.id))))
      ) THEN
+    RETURN NEW;
+  ELSIF TG_OP = 'UPDATE'
+     AND current_setting('margince.audit_credential_mask', true) = 'on'
+     AND OLD.entity_type IN ('activity', 'mail_draft', 'scheduled_send')
+     AND NOT EXISTS (SELECT 1 FROM activity held
+                      WHERE OLD.entity_type = 'activity' AND held.id = OLD.entity_id
+                        AND held.restricted_at IS NOT NULL)
+     AND (to_jsonb(NEW) - ARRAY['before','after']) = (to_jsonb(OLD) - ARRAY['before','after'])
+     AND audit_image_only_masked(OLD.before, NEW.before)
+     AND audit_image_only_masked(OLD.after, NEW.after)
+     AND EXISTS (
+       SELECT 1 FROM audit_log certificate
+       WHERE certificate.source_xid = pg_current_xact_id()
+         AND certificate.entity_type = OLD.entity_type AND certificate.entity_id = OLD.entity_id
+         AND certificate.action = 'update' AND certificate.actor_type = 'system'
+         AND certificate.before IS NULL AND certificate.after IS NULL
+         AND certificate.evidence -> 'audit_credentials_masked' = 'true'::jsonb) THEN
     RETURN NEW;
   END IF;
   RAISE EXCEPTION 'audit metadata is immutable; payload redaction needs a current privacy certificate'
@@ -1801,6 +1858,30 @@ public.audit_redaction_actions() secdef=false cfg=- acl=- SELECT ARRAY['erase','
 public.audit_redaction_boundary(payload jsonb) secdef=false cfg=- acl=- SELECT CASE WHEN jsonb_typeof(payload->'boundary')='string'
  AND payload->>'boundary' ~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
  THEN (payload->>'boundary')::uuid END
+public.audit_text_only_masked(was text, rewritten text) secdef=false cfg=- acl=- 
+DECLARE
+  pieces text[] := string_to_array(rewritten, '[masked]');
+  piece text;
+  piece_count integer := array_length(pieces, 1);
+  next_at integer;
+  match_at integer;
+BEGIN
+  IF piece_count IS NULL OR piece_count < 2 OR left(was, length(pieces[1])) <> pieces[1] THEN
+    RETURN false;
+  END IF;
+  next_at := length(pieces[1]) + 1;
+  FOR item IN 2 .. piece_count - 1 LOOP
+    piece := pieces[item];
+    match_at := strpos(substr(was, next_at), piece);
+    IF match_at = 0 THEN
+      RETURN false;
+    END IF;
+    next_at := next_at + match_at - 1 + length(piece);
+  END LOOP;
+  RETURN length(was) - length(pieces[piece_count]) + 1 >= next_at
+     AND right(was, length(pieces[piece_count])) = pieces[piece_count];
+END;
+
 public.auth_token acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.auth_token.auth_token_expires_after_creation CHECK ((expires_at > created_at))
 public.auth_token.auth_token_pkey PRIMARY KEY (id)
@@ -2720,6 +2801,7 @@ public.communication_decision_one_per_decision CREATE UNIQUE INDEX communication
 public.communication_decision_pkey CREATE UNIQUE INDEX communication_decision_pkey ON public.communication_decision USING btree (id)
 public.communication_instruction acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.communication_instruction.acknowledged_at timestamp with time zone NOT NULL gen=- def=-
+public.communication_instruction.acknowledged_scope character varying(64) gen=- def=-
 public.communication_instruction.acknowledged_wording bytea gen=- def=-
 public.communication_instruction.communication_instruction_consumption_shape CHECK (((status = 'consumed'::text) = (consumed_at IS NOT NULL)))
 public.communication_instruction.communication_instruction_directed_by_fkey FOREIGN KEY (directed_by) REFERENCES app_user(id) ON DELETE RESTRICT
@@ -2735,7 +2817,9 @@ public.communication_instruction.communication_instruction_revoked_by_fkey FOREI
 public.communication_instruction.communication_instruction_spent_on_shape CHECK (((status = 'consumed'::text) = (delivery_id IS NOT NULL)))
 public.communication_instruction.communication_instruction_status CHECK ((status = ANY (ARRAY['directed'::text, 'consumed'::text, 'revoked'::text, 'expired'::text])))
 public.communication_instruction.communication_instruction_window CHECK ((valid_until > facts_as_of))
+public.communication_instruction.communication_instruction_wording_correction CREATE TRIGGER communication_instruction_wording_correction BEFORE INSERT OR UPDATE ON public.communication_instruction FOR EACH ROW EXECUTE FUNCTION guard_instruction_wording_correction()
 public.communication_instruction.consumed_at timestamp with time zone gen=- def=-
+public.communication_instruction.corrected_wording bytea gen=- def=-
 public.communication_instruction.delivery_id uuid gen=- def=-
 public.communication_instruction.directed_at timestamp with time zone NOT NULL gen=- def=now()
 public.communication_instruction.directed_by uuid NOT NULL gen=- def=-
@@ -5368,6 +5452,31 @@ public.graph_interaction_edge.requested_generation bigint NOT NULL gen=- def=0
 public.graph_interaction_edge.sent_count_90d integer gen=- def=-
 public.graph_interaction_edge.user_id uuid NOT NULL gen=- def=-
 public.graph_interaction_edge_pkey CREATE UNIQUE INDEX graph_interaction_edge_pkey ON public.graph_interaction_edge USING btree (user_id, contact_id)
+public.guard_instruction_wording_correction() secdef=false cfg=- acl=- BEGIN
+  IF NEW.acknowledged_scope IS NOT NULL AND NEW.acknowledged_scope !~ '^[a-f0-9]{64}$' THEN
+    RAISE EXCEPTION 'an instruction scope must be a complete fingerprint' USING ERRCODE='check_violation';
+  END IF;
+  IF NEW.corrected_wording IS NOT NULL AND octet_length(NEW.corrected_wording) <> 32 THEN
+    RAISE EXCEPTION 'a wording correction must be a complete fingerprint' USING ERRCODE='check_violation';
+  END IF;
+  IF TG_OP = 'INSERT' THEN
+    IF NEW.corrected_wording IS NOT NULL THEN
+      RAISE EXCEPTION 'a correction needs an existing decision' USING ERRCODE='check_violation';
+    END IF;
+  ELSE
+    IF NEW.acknowledged_scope IS DISTINCT FROM OLD.acknowledged_scope THEN
+      RAISE EXCEPTION 'an instruction scope is immutable' USING ERRCODE='check_violation';
+    END IF;
+    IF NEW.corrected_wording IS DISTINCT FROM OLD.corrected_wording AND
+       (OLD.status <> 'directed' OR NEW.status <> 'directed' OR OLD.delivery_id IS NOT NULL
+        OR OLD.acknowledged_scope IS NULL OR OLD.acknowledged_wording IS NULL
+        OR NEW.corrected_wording IS NULL) THEN
+      RAISE EXCEPTION 'only an unspent decision with a frozen message can retain a correction'
+        USING ERRCODE='check_violation';
+    END IF;
+  END IF;
+  RETURN NEW;
+END;
 public.home_read_cache acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.home_read_cache.computed_at timestamp with time zone NOT NULL gen=- def=-
 public.home_read_cache.fence bigint NOT NULL gen=- def=-
@@ -8407,7 +8516,7 @@ public.sdr_handoff.note text gen=- def=-
 public.sdr_handoff.reason_applies_to text gen=- def=-
 public.sdr_handoff.reason_id uuid gen=- def=-
 public.sdr_handoff.sdr_handoff_assigned_to_fkey FOREIGN KEY (assigned_to) REFERENCES app_user(id)
-public.sdr_handoff.sdr_handoff_assigned_to_retirement_guard CREATE TRIGGER sdr_handoff_assigned_to_retirement_guard BEFORE INSERT OR UPDATE ON public.sdr_handoff FOR EACH ROW WHEN (((new.assigned_to IS NOT NULL) AND (new.status = ANY (ARRAY['submitted'::text, 'accepted'::text])))) EXECUTE FUNCTION refuse_retired_member_work('assigned_to')
+public.sdr_handoff.sdr_handoff_assigned_to_retirement_guard CREATE TRIGGER sdr_handoff_assigned_to_retirement_guard BEFORE INSERT OR UPDATE ON public.sdr_handoff FOR EACH ROW WHEN (((new.assigned_to IS NOT NULL) AND (new.status = 'submitted'::text))) EXECUTE FUNCTION refuse_retired_member_work('assigned_to')
 public.sdr_handoff.sdr_handoff_company_id_fkey FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE SET NULL
 public.sdr_handoff.sdr_handoff_contact_id_fkey FOREIGN KEY (contact_id) REFERENCES contact(id) ON DELETE CASCADE
 public.sdr_handoff.sdr_handoff_deal_id_fkey FOREIGN KEY (deal_id) REFERENCES deal(id) ON DELETE RESTRICT

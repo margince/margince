@@ -108,6 +108,7 @@ export function DirectSendAction({
       )}
       {open && opened.data && !settled && (
         <DirectSendModal
+          key={`${opened.data.id}:${opened.data.wording_correction?.version ?? "new"}`}
           open
           onClose={() => setOpen(false)}
           review={opened.data}

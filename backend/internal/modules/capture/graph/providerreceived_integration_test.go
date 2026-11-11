@@ -20,7 +20,7 @@ func TestDeltaThenBackfillKeepsTheFirstKnownArrival(t *testing.T) {
 	ctx := mailbox.Context
 	sink := capture.NewSink(mailbox.DB)
 	connection := pinnedConn(api)
-	if _, err := connection.pullFolder(ctx, "access", folderInbox, "https://graph/delta?token=prior", time.Time{}, sink, owner, false); err != nil {
+	if _, err := connection.pullFolder(ctx, "access", folderInbox, &cursorState{DeltaLink: "https://graph/delta?token=prior"}, time.Time{}, sink, owner); err != nil {
 		t.Fatal(err)
 	}
 	api.receivedAt["dated"] = received.Add(time.Hour)

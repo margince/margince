@@ -59,6 +59,7 @@ var dealGate = objectGate{
 // the gated set: removing the deal condition could only WIDEN the result the
 // caller already sees.
 var predicateDealReads = gatekit.Waive(map[string]string{
+	"internal/modules/contacts/mergecontractguard.go:refuseCrossCompanyContracts":    "Checks whether merging two authorized companies would preserve contract filing. Only a boolean reaches a generic refusal; no deal reference, amount or stage leaves the query. A viewer filter would miss an inaccessible deal and permit the merge to expose its contract through another company.",
 	"internal/modules/privacy/notementionlocks.go:lockNoteMentions":                  "the contact-delete-authorized eraser locks records linked to candidate notes so their legal-hold flags cannot change during erasure. IDs are consumed inside the transaction and no record content is disclosed",
 	"internal/modules/privacy/historicalaudit.go:markerHoldSQL":                      "system-only marker correction reads existence of a legal hold to refuse destruction. No record field leaves the transaction; SHARE locks keep the hold decision stable",
 	"internal/modules/privacy/entityfloor.go:activityRecordOwnersSQL":                "the owner_id, a USER id, of the deals a message is filed under, so the retention floor follows that user's legal entity. Nothing of the deal leaves the statement; it only picks which floor keeps the message",
@@ -126,6 +127,7 @@ var predicateDealReads = gatekit.Waive(map[string]string{
 // gate would admit them anyway and the entry records why asking was never the
 // point.
 var lifecycleDealReads = gatekit.Waive(map[string]string{
+	"internal/modules/assignments/memberwork.go:memberAssignmentParents":        memberStaffingMetadataReadVerdict,
 	"internal/modules/privacy/erasure_manualreview.go:manualMentionSourcesSQL":  "the contact-delete-authorized eraser selects only identifiers of retained text requiring manual review. The compose flagger selects live controllers with unrestricted row scope, no field masks and current object read permission before issuing any notification; no matched text is copied",
 	"internal/modules/privacy/heldrecords.go:heldRecordRule":                    "the system-only audit cleanup and copy retention read a deal's legal-hold flag (the cleanup under a row lock). The flag prevents destruction and no commercial field leaves the transaction",
 	"internal/compose/dealverdictpass.go:dueVerdictCandidates":                  "the open, owned deals the nightly verdict may read, with their checksum. Only ids, owners and checksums leave. The close-date pass reads them under its system principal, and every change runs as the owner's agent through deals.ApplyVerdict, which asks auth.Require for deal update",

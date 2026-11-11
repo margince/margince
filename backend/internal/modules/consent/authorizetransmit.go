@@ -210,7 +210,9 @@ func (g *Gate) decideRecipients(ctx context.Context, tx pgx.Tx, req commsauthz.T
 	//
 	// Each recipient's country is resolved once, here, and the lock, the
 	// verdict, the count and the recorded stamp all read it.
-	countries, err := recipientCountries(ctx, tx, req.Recipients)
+	countries, err := recipientCountries(ctx, tx, req.Recipients, func(r connector.Recipient) commsauthz.Request {
+		return stagedRequestFor(req, r, claims, threadKey, links)
+	})
 	if err != nil {
 		return commsauthz.DecisionSet{}, nil, err
 	}
@@ -249,7 +251,7 @@ func (g *Gate) decideRecipients(ctx context.Context, tx pgx.Tx, req commsauthz.T
 // read off the caller's label. The purpose key is still in there and still
 // consulted, as the weakest of the four grounds.
 func (g *Gate) decideOne(ctx context.Context, tx pgx.Tx, r connector.Recipient, req commsauthz.Request, phase commsauthz.Phase) (commsauthz.Decision, error) {
-	country, err := recipientCountryOf(ctx, tx, r)
+	country, err := recipientRequestCountry(ctx, tx, r, req)
 	if err != nil {
 		return commsauthz.Decision{}, err
 	}
@@ -272,7 +274,7 @@ func (g *Gate) decideOneIn(ctx context.Context, tx pgx.Tx, r connector.Recipient
 		if err != nil {
 			return commsauthz.Decision{}, err
 		}
-		return requireConsentWhereNothingStandsIn(d, country), nil
+		return d, nil
 	}
 	contactID, found, err := resolveContact(ctx, tx, r)
 	if err != nil {
@@ -298,6 +300,13 @@ func (g *Gate) decideOneIn(ctx context.Context, tx pgx.Tx, r connector.Recipient
 		}
 		return requireConsentWhereNothingStandsIn(d, country), nil
 	}
+	return g.decideContactAt(ctx, tx, r, req, d, phase, country, contactID)
+}
+
+func (g *Gate) decideContactAt(
+	ctx context.Context, tx pgx.Tx, r connector.Recipient, req commsauthz.Request,
+	d commsauthz.Decision, phase commsauthz.Phase, country RecipientCountry, contactID string,
+) (commsauthz.Decision, error) {
 	parsed, err := ids.Parse(contactID)
 	if err != nil {
 		return commsauthz.Decision{}, fmt.Errorf("consent: the resolved subject is not an id: %w", err)

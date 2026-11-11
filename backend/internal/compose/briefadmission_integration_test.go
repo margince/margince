@@ -149,15 +149,15 @@ func TestStoredBriefDoesNotReviveAClosedDeal(t *testing.T) {
 	if err != nil || len(run.Items) != 1 {
 		t.Fatalf("native snapshot: items=%d err=%v", len(run.Items), err)
 	}
-	lane := attentionBriefing{engine: engine, figures: attentionDealFacts{store: store}, now: clock}
-	before, _, _, err := lane.Queue(ctx)
+	lane := attentionBriefing{engine: engine, figures: attentionDealFacts{store: store}}
+	before, _, _, err := lane.Queue(ctx, now)
 	if err != nil || len(before) != 1 {
 		t.Fatalf("open brief entry: items=%d err=%v", len(before), err)
 	}
 	if _, err := store.AdvanceDeal(ctx, ids.From[ids.DealKind](ids.UUID(deal.Id)), deals.AdvanceDealInput{ToStageID: won, WonWithoutContractReason: new("verbal")}); err != nil {
 		t.Fatal(err)
 	}
-	after, _, _, err := lane.Queue(ctx)
+	after, _, _, err := lane.Queue(ctx, now)
 	if err != nil || len(after) != 0 {
 		t.Fatalf("closed brief entry: items=%d err=%v", len(after), err)
 	}

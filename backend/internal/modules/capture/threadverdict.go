@@ -105,6 +105,12 @@ func NewThreadVerdictStore(db *database.DB) *ThreadVerdictStore {
 func (s *ThreadVerdictStore) EnsureTx(
 	ctx context.Context, tx pgx.Tx, threadKey string, user ids.UUID, firstActivity ids.UUID, due time.Time,
 ) error {
+	return s.bindTriggerTx(ctx, tx, threadKey, user, firstActivity, due, true)
+}
+
+func (s *ThreadVerdictStore) bindTriggerTx(
+	ctx context.Context, tx pgx.Tx, threadKey string, user, firstActivity ids.UUID, due time.Time, create bool,
+) error {
 	if threadKey == "" || user == ids.Nil {
 		// A message with no thread key is judged by its own posture; there is
 		// no conversation for a verdict to be about.
@@ -122,14 +128,16 @@ func (s *ThreadVerdictStore) EnsureTx(
 	}
 	_, err = tx.Exec(ctx, `
 		INSERT INTO capture_thread_verdict (thread_key, user_id, first_activity_id, status, next_attempt_at)
-		VALUES ($1, $2, $3, 'pending', $4)
+		SELECT @thread, @user, @activity, 'pending', @due
+ WHERE @create OR EXISTS (SELECT 1 FROM capture_thread_verdict
+ WHERE thread_key = @thread AND user_id = @user AND status = 'pending')
 		ON CONFLICT (thread_key, user_id) DO UPDATE
 		   SET first_activity_id = EXCLUDED.first_activity_id,
 		       next_attempt_at = EXCLUDED.next_attempt_at,
 		       updated_at = now()
 		 WHERE capture_thread_verdict.status = 'pending'
 		   AND capture_thread_verdict.first_activity_id IS NULL`,
-		threadKey, user, firstActivity, due)
+		pgx.StrictNamedArgs{"thread": threadKey, "user": user, "activity": firstActivity, "due": due, "create": create})
 	if err != nil {
 		return fmt.Errorf("capture: opening the confidentiality question for a thread: %w", err)
 	}
@@ -438,7 +446,7 @@ func openConfidentialityQuestionTx(
 	// and `classified` collapse to the same audience and only the posture can
 	// tell them apart.
 	if posture != PostureClassified {
-		return nil
+		return (&ThreadVerdictStore{}).bindTriggerTx(ctx, tx, rec.ThreadKey, owner, id.UUID, time.Now(), false)
 	}
 	// A message that inherited a PENDING verdict is the one the re-open is
 	// waiting for. The re-open cleared first_activity_id so the classifier is

@@ -297,6 +297,18 @@ var routeVerbFixtures = map[string]func(p *recordPool) map[string]any{
 	"answer_weekly_plan_commitment": func(p *recordPool) map[string]any {
 		return map[string]any{"id": p.take("teammate_commitment"), "request_body": map[string]any{"manager_response": "Role sweep"}}
 	},
+	"get_handoff_assignee": byID("sdr_handoff"),
+	"reassign_handoff": func(p *recordPool) map[string]any {
+		id := p.take("sdr_handoff")
+		return map[string]any{"id": id, "request_body": map[string]any{"assigned_to": p.fact(id, "receiver"), "version": 1}}
+	},
+	"replace_intro_request": func(p *recordPool) map[string]any {
+		return map[string]any{"id": p.take("intro_request"), "request_body": map[string]any{
+			"version": 1, "reason": "Choose a different colleague.", "request": map[string]any{
+				"introducer_user_id": p.take("user"), "route_type": "direct", "internal_reason": "Please review this fresh ask.",
+			},
+		}}
+	},
 	"decide_intro_request": byID("intro_ask"),
 	"complete_intro_request": func(p *recordPool) map[string]any {
 		return map[string]any{"id": p.take("accepted_intro_ask"), "request_body": map[string]any{"version": 2}}

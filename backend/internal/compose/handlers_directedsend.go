@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
 // directedSendHandlers is the transport for a recorded decision being carried
@@ -30,6 +31,26 @@ type directedSendHandlers struct {
 	// route answers not-implemented like every other unwired surface rather
 	// than panicking on a message nobody can send.
 	directed *directedSendService
+}
+
+func (h directedSendHandlers) CorrectCommunicationWording(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+	if h.directed == nil {
+		httperr.NotImplemented(w, r, "CorrectCommunicationWording")
+		return
+	}
+	var body crmcontracts.CorrectCommunicationWordingRequest
+	if !httperr.Decode(w, r, &body) {
+		return
+	}
+	version, err := h.directed.CorrectWording(r.Context(), ids.UUID(id), commsauthz.WordingCorrection{
+		Subject: body.Subject, Body: body.Body, HTMLBody: body.HtmlBody,
+		ExpectedWording: body.ExpectedWording, Version: body.Version, MeaningUnchanged: body.MeaningUnchanged,
+	})
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, crmcontracts.WordingCorrectionResult{Version: version})
 }
 
 // DirectCommunicationSend records the decision and sends the message it was

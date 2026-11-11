@@ -353,3 +353,7 @@ func appendReadOnly(row crmcontracts.WorklistItem, verb crmcontracts.WorklistIte
 	}
 	return append(row.Because, reason("read_only", nil))
 }
+
+func overdue(item crmcontracts.AttentionItem) bool {
+	return item.Overdue != nil && *item.Overdue
+}

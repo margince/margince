@@ -136,7 +136,14 @@ func ledgerAtHead(ctx context.Context, owner *pgx.Conn) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("loading the embedded custom migrations: %w", err)
 	}
-	for _, ns := range []dbmigrate.Namespace{core, custom} {
+	extra, err := testExtensionNamespaces()
+	if err != nil {
+		return "", err
+	}
+	if reason, err := unlistedExtensionLedger(ctx, owner, extra); err != nil || reason != "" {
+		return reason, err
+	}
+	for _, ns := range append([]dbmigrate.Namespace{core, custom}, extra...) {
 		recorded, err := recordedMigrations(ctx, owner, "schema_migrations_"+ns.Name)
 		if err != nil {
 			return "", err
@@ -152,7 +159,7 @@ func recordedMigrations(ctx context.Context, owner *pgx.Conn, table string) (map
 	// The table name is this package's own constant prefix plus a namespace
 	// from the embedded migrations, never caller input, and dbmigrate.Up
 	// interpolates the identical string.
-	rows, err := owner.Query(ctx, `SELECT version, name, content_digest FROM `+table)
+	rows, err := owner.Query(ctx, `SELECT version, name, content_digest FROM `+pgx.Identifier{table}.Sanitize())
 	if err != nil {
 		return nil, fmt.Errorf("reading %s: %w", table, err)
 	}

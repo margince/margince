@@ -38,7 +38,9 @@ func briefReader(pool *pgxpool.Pool) agents.BriefReader {
 		if err != nil {
 			return agents.ReadBriefResult{}, err
 		}
-		return briefRunToTool(run), nil
+		result := briefRunToTool(run)
+		engine.RecordShown(ctx, run)
+		return result, nil
 	}
 }
 
