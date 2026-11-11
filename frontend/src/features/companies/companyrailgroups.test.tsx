@@ -61,7 +61,7 @@ function stub(roster: ReadonlyArray<{ id: string; display_name: string }>) {
   );
 }
 
-function renderRail(company: Company) {
+function renderRail(company: Company): QueryClient {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
@@ -72,6 +72,7 @@ function renderRail(company: Company) {
       </LocaleProvider>
     </QueryClientProvider>,
   );
+  return client;
 }
 
 // The Source row's value, read the way a reader does: the whole text of the
@@ -215,6 +216,21 @@ describe("who may read a closed company", () => {
     renderRail({ ...COMPANY, visibility: "owner" });
 
     await waitFor(() => expect(visibleText()).toBe("Mira Voss and 2 shares"));
+  });
+
+  it("leaves the share dialog's grants list alone and refreshes on its invalidation", async () => {
+    stubShares(1);
+    const client = renderRail({ ...COMPANY, visibility: "owner" });
+    await waitFor(() => expect(visibleText()).toBe("Mira Voss and 1 share"));
+    expect(client.getQueryData(["record-grants", "company", "o-1"])).toBe(
+      undefined,
+    );
+
+    stubShares(3);
+    await client.invalidateQueries({
+      queryKey: ["record-grants", "company", "o-1"],
+    });
+    await waitFor(() => expect(visibleText()).toBe("Mira Voss and 3 shares"));
   });
 
   it("marks a count the server cut as a floor", async () => {

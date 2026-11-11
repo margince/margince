@@ -53,7 +53,9 @@ function VisibleTo({ company }: Readonly<{ company: Company }>) {
   const closed = company.visibility === "owner";
   const name = useMemberName(closed && !yours ? owner : null);
   const shares = useQuery({
-    queryKey: ["record-grants", "company", company.id],
+    // Under the share dialog's key, so a new share refreshes it. The last part
+    // keeps this count apart from the dialog's list of grants.
+    queryKey: ["record-grants", "company", company.id, "count"],
     queryFn: () => fetchShareCount(company.id),
     enabled: closed,
     retry: false,
