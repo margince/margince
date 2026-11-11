@@ -26,8 +26,8 @@ func TestRelatedAuditHistoryProvesEachImageBelongsToTheSubject(t *testing.T) {
 	}
 	for _, change := range [][2]map[string]any{
 		{nil, {"plan_id": ids.NewV7(), "label": "Unproven earlier label"}},
-		{image(other, "Earlier other person's label"), image(subject, "Subject's new label")},
-		{image(subject, "Subject's previous label"), image(other, "Later other person's label")},
+		{image(other, "Earlier other contact's label"), image(subject, "Subject's new label")},
+		{image(subject, "Subject's previous label"), image(other, "Later other contact's label")},
 	} {
 		action := "update"
 		if change[0] == nil {
@@ -51,7 +51,7 @@ func TestRelatedAuditHistoryProvesEachImageBelongsToTheSubject(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, withheld := range []string{"Unproven earlier label", "other person's label", "Other private evidence"} {
+	for _, withheld := range []string{"Unproven earlier label", "other contact's label", "Other private evidence"} {
 		if strings.Contains(string(encoded), withheld) {
 			t.Fatalf("export disclosed %q: %s", withheld, encoded)
 		}

@@ -100,6 +100,7 @@ func sqlLiterals(t *testing.T, path string, constants ...map[string]string) []st
 // privacy package: retention.go also writes subject tables, and a retention sweep
 // must not satisfy "Art. 17 reaches this table".
 var erasureCascadeFiles = []string{
+	"internal/modules/privacy/erasurependingedges.go",
 	"internal/modules/privacy/originalobjects.go",
 	"internal/modules/privacy/raworiginalsubjects.go",
 	"internal/platform/database/storekit/auditredaction.go",

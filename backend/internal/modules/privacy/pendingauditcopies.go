@@ -21,7 +21,7 @@ const historicalAuditPendingSQL = `EXISTS(
  AND ` + storekit.AuditRedactionNeededSQL + `)
  OR EXISTS(
  SELECT 1 FROM event_outbox retained
- WHERE retained.created_at<=certificate.occurred_at
+ WHERE retained.created_at<=certificate.occurred_at -- occurred_at raw: an audit timestamp bounds historical copies
  AND retained.envelope->'entity'->>'type'=certificate.entity_type
  AND retained.envelope->'entity'->>'id'=certificate.entity_id::text
  AND retained.envelope->'trace'->>'audit_log_id'<>certificate.id::text)`
