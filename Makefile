@@ -1495,13 +1495,15 @@ test-input-census:
 
 ## test-input-census-judge — the judging half of test-input-census, over logs a
 ## pass run with TEST_EXEC=scripts/testlog-exec.sh left in TESTLOG_DIR. CI's
-## deterministic-gates (unit) leg logs its own test pass and judges it here, so
-## the census costs no second run of the tests.
+## deterministic-gates legs log their own test pass and judge it here, so the
+## census costs no second run of the tests. TESTLOG_MINIMUM is the fewest logs
+## that pass can leave: 100 for a leg over the tree, the count for a named few.
+TESTLOG_MINIMUM ?= 100
 test-input-census-judge:
 	@set -e; logs="$(TESTLOG_DIR)"; \
 	[ -d "$$logs" ] || { echo "test-input-census-judge: TESTLOG_DIR must name the logs a testlog-exec.sh pass wrote" >&2; exit 2; }; \
 	./scripts/ci-stable-mtimes.sh --names > "$$logs/names.tsv"; \
-	cd backend && GOWORK="$(CURDIR)/go.work" go run ./tools/check-test-inputs -logs "$$logs" -names "$$logs/names.tsv"
+	cd backend && GOWORK="$(CURDIR)/go.work" go run ./tools/check-test-inputs -logs "$$logs" -names "$$logs/names.tsv" -minimum "$(TESTLOG_MINIMUM)"
 
 ## test-test-budget — the budget gate's own test, run by check-backend because
 ## the gate itself runs only on CI, where a refusal that stopped firing reads green.

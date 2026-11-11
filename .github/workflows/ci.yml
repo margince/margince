@@ -458,6 +458,7 @@ jobs:
           - part: unit
             legs: test-cached test-extensions
             tree-gates: "on"
+            census-minimum: "100"
           - part: gates
             legs: test-uncached
             tree-gates: "off"
@@ -466,6 +467,7 @@ jobs:
           - part: solo
             legs: test-solo
             tree-gates: "off"
+            census-minimum: "1"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -554,7 +556,7 @@ jobs:
       - name: Census the test cache's inputs (make test-input-census-judge)
         if: ${{ success() && matrix.part != 'gates' && needs.changes.outputs.full_lane == 'true' }}
         working-directory: .
-        run: make test-input-census-judge TESTLOG_DIR="$RUNNER_TEMP/testlogs"
+        run: make test-input-census-judge TESTLOG_DIR="$RUNNER_TEMP/testlogs" TESTLOG_MINIMUM="${{ matrix.census-minimum }}"
       # crm-hello declares capabilities no shipped unit does, so this is the one
       # walk of them; TestEveryPublishedCapabilityHasALiveDeclaringUnit reads the
       # require below. It runs after the merge gate, which must see only the committed
