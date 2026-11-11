@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { ChevronDown } from "lucide-react";
-import { type ReactNode, useEffect, useState } from "react";
+import { type ReactNode, useCallback, useState } from "react";
 import { createPortal } from "react-dom";
 import { Button } from "./atoms";
 import { usePrefersReducedMotion } from "./motion";
@@ -132,23 +132,27 @@ export function Select(props: SelectProps) {
   const filterable = options.length >= FILTER_FROM;
   const [query, setQuery] = useState("");
   const shown = filtered(options, query);
+  // Every way the list closes clears the filter, so the next open shows all.
+  const cancel = useCallback(() => {
+    setQuery("");
+    onCancel?.();
+  }, [onCancel]);
+  const leave = useCallback(() => {
+    setQuery("");
+    onLeave?.();
+  }, [onLeave]);
   const listbox = useSelectListbox(
     shown,
     shown.findIndex((option) => option.value === value),
     (option) => {
+      setQuery("");
       onChange(option.value);
       return "close";
     },
     openOnMount ?? false,
-    onCancel,
-    onLeave,
+    cancel,
+    leave,
   );
-  // Every close starts the next open on the whole list.
-  useEffect(() => {
-    if (!listbox.open) {
-      setQuery("");
-    }
-  }, [listbox.open]);
   const reduced = usePrefersReducedMotion();
   const narrow = (next: string) => {
     setQuery(next);

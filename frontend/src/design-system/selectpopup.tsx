@@ -52,6 +52,7 @@ export function SelectPopup({
   if (filter) {
     return (
       <FilteredPopup
+        popupRef={listbox.popup}
         options={options}
         selected={selected}
         frame={frame}
@@ -149,6 +150,7 @@ const LIST_KEYS = new Set(["ArrowDown", "ArrowUp", "Enter", "Escape", "Tab"]);
 // A long list: a box on top narrows it while focus sits in the box, and the
 // box drives the list through aria-activedescendant, as the trigger does.
 function FilteredPopup({
+  popupRef,
   options,
   selected,
   frame,
@@ -156,6 +158,7 @@ function FilteredPopup({
   animate,
   filter,
 }: Readonly<{
+  popupRef: Listbox["popup"];
   options: readonly SelectOption[];
   selected: (option: SelectOption) => boolean;
   frame: PopupFrame;
@@ -180,7 +183,7 @@ function FilteredPopup({
   const { active } = listbox;
   return (
     <div
-      ref={listbox.popup}
+      ref={popupRef}
       className="select-popup select-popup-filtered"
       data-motion={animate ? "in" : "none"}
       data-above={frame.above ? "true" : undefined}
