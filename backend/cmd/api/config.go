@@ -18,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/dbsettings"
 	"github.com/margince/margince/backend/internal/platform/deployconfig"
 	"github.com/margince/margince/backend/internal/platform/httpserver"
+	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/shared/runtimeenv"
 )
 
@@ -142,7 +143,7 @@ func fromRegistry(loaded *config.Config, posture runtimeenv.Environment) (apiCon
 		gmailPushSA: config.Val(loaded, ps.GmailPushServiceAccount), gmailJWKSURL: config.Val(loaded, ps.GmailJWKSURL),
 		graphPushToken: config.Val(loaded, ps.GraphPushToken), graphClientID: config.Val(loaded, ps.GraphClientID),
 		graphClientSecret: config.Val(loaded, ps.GraphClientSecret), graphTenant: config.Val(loaded, ps.GraphTenant),
-		microsoftSignInTenant: config.Val(loaded, ps.MicrosoftSignInTenant), connectorStateKey: config.Val(loaded, ps.ConnectorStateKey),
+		microsoftSignInTenant: config.Val(loaded, ps.MicrosoftSignInTenant), connectorStateKey: connectorStateKey(loaded),
 		webhookKey: config.Val(loaded, ps.WebhookKey), metricsToken: config.Val(loaded, ps.MetricsToken), metricsAccess: config.Val(loaded, ps.MetricsAccess),
 		vatCheckBaseURL: config.Val(loaded, ps.VATCheckBaseURL), geocodeBaseURL: config.Val(loaded, ps.GeocodeBaseURL),
 		passwordLogin: config.Val(loaded, ps.PasswordLogin), settings: loaded,
@@ -159,6 +160,20 @@ func fromRegistry(loaded *config.Config, posture runtimeenv.Environment) (apiCon
 	}
 	cfg.trustedProxies = trusted
 	return cfg, nil
+}
+
+// connectorStateKeyLabel names the connector state key among the keys derived
+// from the vault root key.
+const connectorStateKeyLabel = "margince connector state v1"
+
+// connectorStateKey is the configured key, or else one derived from the vault
+// root key. Every replica derives the same key, so a sign-in started on one
+// finishes on another, and an operator keeps one secret instead of two.
+func connectorStateKey(loaded *config.Config) string {
+	if configured := config.Val(loaded, ps.ConnectorStateKey); configured != "" {
+		return configured
+	}
+	return string(keyvault.DerivedKey(loaded, connectorStateKeyLabel))
 }
 
 // bootError renders one fault as a sentence and several as a list.
