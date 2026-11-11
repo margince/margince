@@ -246,7 +246,7 @@ var plainPools = []struct{ prefix, list string }{
 var plainCaps = map[string]int{
 	plainWordsFile:                     plainWordCap,
 	"docs/how-to/plain-words.txt":      1366,
-	"docs/explanation/plain-words.txt": 1640,
+	"docs/explanation/plain-words.txt": 1639,
 	"docs/handbook/plain-words.txt":    1385,
 	"docs/reference/plain-words.txt":   1714,
 	plainProjectFile:                   1777,
