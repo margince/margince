@@ -177,15 +177,17 @@ func TestAnOlderSignatureFillsTheTitleWhenTheNewestMailHasNone(t *testing.T) {
 	if got := h.title(t); got != "Head of Procurement" {
 		t.Fatalf("title = %q, want the one the older signature states", got)
 	}
-	if got := h.watermark(t); got != newest.String()+":3" {
-		t.Fatalf("watermark = %s, want the newest mail read with the walk", got)
-	}
 	if got := h.brain.askedAbout(); !sameMails(got, []ids.UUID{older}) {
 		t.Fatalf("the model was asked about %v, want only the older signed mail", got)
 	}
-	h.pass(t)
+	for range contacts.SignatureReadAttempts - 1 {
+		h.pass(t)
+	}
+	if got := h.watermark(t); got != newest.String()+":3" {
+		t.Fatalf("watermark = %s, want the unsigned newest mail consumed once its retries ran out", got)
+	}
 	if got := len(h.brain.askedAbout()); got != 1 {
-		t.Fatalf("a second pass with no new mail asked the model %d times in all, want 1", got)
+		t.Fatalf("passes with no new mail asked the model %d times in all, want 1", got)
 	}
 }
 

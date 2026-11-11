@@ -153,7 +153,7 @@ func TestSignatureBlockIgnoresAnUnmarkedQuotedReply(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 			block := signatureBlock(envelope + "Thanks, works for me.\n\nBest\nAlex\n\n" + header + quoted)
-			if block != "Thanks, works for me.\nBest\nAlex" {
+			if block != "Best\nAlex" {
 				t.Fatalf("window = %q, want only what Alex wrote", block)
 			}
 			if signatureNamesContact(block, alex) {

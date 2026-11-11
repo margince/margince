@@ -38,9 +38,13 @@ func signatureStart(runes []rune) int {
 // so this needs no heuristic. The line is matched exactly: "-- Lars" is a
 // contact writing a dash, and "---" is a horizontal rule somebody put in prose.
 func sigDashStart(runes []rune) int {
-	return firstLineWhere(runes, func(line string) bool {
-		return strings.TrimRight(line, " \t") == "--"
-	})
+	return firstLineWhere(runes, IsSigDash)
+}
+
+// IsSigDash reports the sig-dash line, with or without the trailing space the
+// standard asks for.
+func IsSigDash(line string) bool {
+	return strings.TrimSpace(line) == "--"
 }
 
 // footerLeads are the phrases a legal footer opens with. Matched at the start of

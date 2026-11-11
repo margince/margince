@@ -14,10 +14,11 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 // signatureWindowDataTask takes back signature fields the writer would refuse
-// today. Evidence outside signatureBlock came from a quoted or forwarded mail.
+// today. Evidence outside the sender's own lines came from a quoted or forwarded mail.
 // A number contacts.IsMemberNumber names is a colleague's. A field whose mail
 // is gone, archived or restricted has no source left to stand on.
 func signatureWindowDataTask() datatask.Task {
@@ -99,9 +100,10 @@ func memberNumbersOf(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, se
 }
 
 // evidenceInSignatureWindow is the evidence gate's own test (gateEvidence),
-// asked of the window the pass would show the model today.
+// asked of every line the sender typed. The pass's window moved over time, and a
+// field read inside an older window is still the sender's own statement.
 func evidenceInSignatureWindow(body, evidence string) bool {
-	window := signatureBlock(body)
+	window := textlang.SenderText(body)
 	return evidenceOnPage(window, normalizeEvidence(window), evidence)
 }
 

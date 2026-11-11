@@ -26,17 +26,17 @@ func TestSignatureWatermarkOrdersEqualTimeMailAndRejectsAnOlderCompletion(t *tes
 	ctx := principal.SystemActing(principal.WithWorkspaceID(context.Background(), h.e.WS), "agent:enrich")
 	store := newContactsStore(InstallationDB(h.e.Pool))
 	contact := ids.From[ids.ContactKind](h.contact)
-	if err := store.MarkSignatureRead(ctx, contact, low, 3, contacts.SignatureWork{}); err != nil {
+	if err := store.MarkSignatureRead(ctx, contact, low, 3, contacts.SignatureRead{}, contacts.SignatureWork{}); err != nil {
 		t.Fatal(err)
 	}
 	candidates, err := store.SignatureCandidatesForContacts(ctx, []ids.ContactID{contact}, 100, true)
 	if err != nil || len(candidates) != 1 || candidates[0].ActivityID != high {
 		t.Fatalf("equal-time candidates=%+v err=%v", candidates, err)
 	}
-	if err := store.MarkSignatureRead(ctx, contact, high, 3, contacts.SignatureWork{}); err != nil {
+	if err := store.MarkSignatureRead(ctx, contact, high, 3, contacts.SignatureRead{}, contacts.SignatureWork{}); err != nil {
 		t.Fatal(err)
 	}
-	if err := store.MarkSignatureRead(ctx, contact, low, 3, contacts.SignatureWork{}); err != nil {
+	if err := store.MarkSignatureRead(ctx, contact, low, 3, contacts.SignatureRead{}, contacts.SignatureWork{}); err != nil {
 		t.Fatal(err)
 	}
 	candidates, err = store.SignatureCandidatesForContacts(ctx, []ids.ContactID{contact}, 100, true)

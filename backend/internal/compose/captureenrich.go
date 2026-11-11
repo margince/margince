@@ -42,9 +42,9 @@ import (
 const companyNameField = "company_name"
 
 const (
-	// signatureLineCount is the §2.9 input pin: the trailing non-quoted
-	// lines of the one inbound mail being read.
-	signatureLineCount = 15
+	// signatureLineCount bounds the signature window of the one inbound mail
+	// being read. A legal footer under a long company block still fits.
+	signatureLineCount = 25
 	// enrichConfidenceFloor is the §2.9 acceptance floor.
 	enrichConfidenceFloor = 0.6
 	// enrichPassLimit bounds one pass's candidate set. A pass that fills it
@@ -218,7 +218,8 @@ func (e *CaptureEnricher) RunWorkspace(ctx context.Context) (filled bool, err er
 	// candidate set to re-reach the same contact.
 	var advanced int
 	for _, cand := range candidates {
-		if err := e.enrichOne(wsCtx, cand, defaultEnrich); err != nil {
+		progressed, err := e.enrichOne(wsCtx, cand, defaultEnrich)
+		if err != nil {
 			if ai.IsDeferral(err) {
 				e.log.InfoContext(wsCtx, "signature enrich: work deferred, stopping the pass")
 				// No continuation: the deferral is what stopped this pass, and a
@@ -230,7 +231,9 @@ func (e *CaptureEnricher) RunWorkspace(ctx context.Context) (filled bool, err er
 				"contact", cand.ContactID.String(), "err", err)
 			continue
 		}
-		advanced++
+		if progressed {
+			advanced++
+		}
 	}
 	// A continuation needs BOTH a full set and somebody moved off it.
 	//
@@ -243,6 +246,7 @@ func (e *CaptureEnricher) RunWorkspace(ctx context.Context) (filled bool, err er
 	// contact behind them. River's attempt cap cannot stop it, because no job
 	// in the chain ever fails.
 	//
+	// A rejected read leaves the watermark too, so it is no progress either.
 	// Requiring progress bounds the chain by the work actually done. A pass
 	// that moved nobody is the end of it, and the nightly cycle owns the
 	// candidates it could not read — which is where they lived before this
@@ -268,29 +272,30 @@ func unparseableReply(dropped []droppedFinding) bool {
 const signatureHistoryDepth = 3
 
 // enrichOne reads the candidate's newest mail and, while no title is stated or
-// held, up to signatureHistoryDepth-1 older ones. Only the newest mail moves
-// the watermark. A model error anywhere returns before it, so the contact stays
-// a candidate.
-func (e *CaptureEnricher) enrichOne(ctx context.Context, cand contacts.SignatureCandidate, defaultEnrich bool) error {
-	titled, err := e.readSignature(ctx, cand, cand.ActivityID, signatureReadOptions{DefaultEnrich: defaultEnrich})
+// held, up to signatureHistoryDepth-1 older ones. Only the newest mail's read is
+// recorded, and it is progress unless the pass rejected it. A model error
+// anywhere returns before the record, so the contact stays a candidate.
+func (e *CaptureEnricher) enrichOne(ctx context.Context, cand contacts.SignatureCandidate, defaultEnrich bool) (bool, error) {
+	read, titled, err := e.readSignature(ctx, cand, cand.ActivityID, signatureReadOptions{DefaultEnrich: defaultEnrich})
 	if err != nil {
-		return err
+		return false, err
 	}
 	if !titled && cand.OlderMailMayFillTitle {
 		older, err := e.store.OlderSignatureSources(ctx, cand.ContactID, cand.ActivityID, signatureHistoryDepth-1, defaultEnrich)
 		if err != nil {
-			return err
+			return false, err
 		}
 		for _, source := range older {
-			if titled, err = e.readSignature(ctx, cand, source, signatureReadOptions{TitleOnly: true, DefaultEnrich: defaultEnrich}); err != nil || titled {
+			if _, titled, err = e.readSignature(ctx, cand, source, signatureReadOptions{TitleOnly: true, DefaultEnrich: defaultEnrich}); err != nil || titled {
 				break
 			}
 		}
 		if err != nil {
-			return err
+			return false, err
 		}
 	}
-	return e.store.MarkSignatureRead(ctx, cand.ContactID, cand.ActivityID, signatureHistoryDepth, contacts.SignatureWork{ContactID: cand.ContactID, Generation: cand.Generation, Snapshot: cand.Snapshot})
+	version := contacts.SignatureWork{ContactID: cand.ContactID, Generation: cand.Generation, Snapshot: cand.Snapshot}
+	return !read.Retried(), e.store.MarkSignatureRead(ctx, cand.ContactID, cand.ActivityID, signatureHistoryDepth, read, version)
 }
 
 type signatureReadOptions struct {
@@ -298,12 +303,14 @@ type signatureReadOptions struct {
 	DefaultEnrich bool
 }
 
-// Older mail may fill only an unclaimed title. Readability is checked before
-// the model call and again when applying fields, because access may change.
-func (e *CaptureEnricher) readSignature(ctx context.Context, cand contacts.SignatureCandidate, source ids.UUID, options signatureReadOptions) (bool, error) {
+// readSignature reads one mail, reporting what the store records for it as the
+// newest mail and whether it stated a title. Older mail may fill only an
+// unclaimed title. Readability is checked before the model call and again when
+// applying fields, because access may change.
+func (e *CaptureEnricher) readSignature(ctx context.Context, cand contacts.SignatureCandidate, source ids.UUID, options signatureReadOptions) (contacts.SignatureRead, bool, error) {
 	body, readable, err := e.store.ReadableSignatureBody(ctx, cand.ContactID, source, options.DefaultEnrich)
 	if err != nil || !readable {
-		return false, err
+		return contacts.SignatureRead{Skip: contacts.SignatureSkipNarrowed}, false, err
 	}
 	// A copy of the candidate naming this mail, so the fenced source_id and the
 	// evidence gate name the mail being read.
@@ -315,7 +322,7 @@ func (e *CaptureEnricher) readSignature(ctx context.Context, cand contacts.Signa
 		// text with the wrong owner, so nothing is read from it.
 		e.log.DebugContext(ctx, "signature enrich: the block does not identify this contact, so nothing is read from it",
 			"contact", mail.ContactID.String(), "reason", dropSignatureNotThisContact)
-		return false, nil
+		return contacts.SignatureRead{Skip: contacts.SignatureSkipNameGate}, false, nil
 	}
 	// The request carries this contact's own signature block, so the call is
 	// about the contact rather than about the message it was cut from.
@@ -323,18 +330,38 @@ func (e *CaptureEnricher) readSignature(ctx context.Context, cand contacts.Signa
 	about := ai.WithSubject(ctx, mail.ContactID.Ref(), mail.FullName)
 	resp, err := ai.Ask(about, e.brain, req, signatureShapeValid)
 	if err != nil {
-		return false, err
+		return contacts.SignatureRead{}, false, err
 	}
+	fields, skip, err := e.acceptedSignatureFields(ctx, mail, resp.Text, lines, options)
+	if err != nil || len(fields) == 0 {
+		return contacts.SignatureRead{Skip: skip}, false, err
+	}
+	titled := slices.ContainsFunc(fields, func(f contacts.SignatureField) bool {
+		return f.Name == fieldTitle && strings.TrimSpace(f.Value) != ""
+	})
+	if options.TitleOnly {
+		_, err = e.store.FillSignatureTitle(ctx, mail.ContactID, mail.ActivityID, fields[0], options.DefaultEnrich)
+		return contacts.SignatureRead{}, titled, err
+	}
+	res, err := e.store.ApplySignatureFields(ctx, mail.ContactID, mail.ActivityID, fields, options.DefaultEnrich)
+	read := contacts.SignatureRead{Applied: res.Applied > 0}
+	if res.SourceLimited {
+		read.Skip = contacts.SignatureSkipNarrowed
+	}
+	return read, titled, err
+}
 
-	// The code-side gate: verbatim-snippet-or-drop against the exact lines
-	// the model was shown, then the confidence floor.
-	gated, dropped := gateEvidence(resp.Text, lines, "activity:"+mail.ActivityID.String(),
+// acceptedSignatureFields gates one reply: verbatim-snippet-or-drop against the
+// exact lines the model was shown, then the confidence floor. With no field
+// accepted it names the gate that refused them, or none when the reply was empty.
+func (e *CaptureEnricher) acceptedSignatureFields(ctx context.Context, mail contacts.SignatureCandidate, reply, lines string, options signatureReadOptions) ([]contacts.SignatureField, contacts.SignatureSkipReason, error) {
+	gated, dropped := gateEvidence(reply, lines, "activity:"+mail.ActivityID.String(),
 		func(name string) bool { return enrichFieldNames[name] }, signatureRepeatedFields)
 	if unparseableReply(dropped) {
 		// A reply no reader can parse is a fault in the ANSWER, not evidence
 		// that the signature states nothing — so the read goes unrecorded and
 		// this contact is asked again next pass.
-		return false, fmt.Errorf("compose: unparseable signature reply for contact %s", mail.ContactID)
+		return nil, "", fmt.Errorf("compose: unparseable signature reply for contact %s", mail.ContactID)
 	}
 	if len(dropped) > 0 {
 		e.log.DebugContext(ctx, "signature enrich: fields dropped by the evidence gate",
@@ -342,15 +369,20 @@ func (e *CaptureEnricher) readSignature(ctx context.Context, cand contacts.Signa
 	}
 	fields := make([]contacts.SignatureField, 0, len(gated)+2)
 	if !options.TitleOnly {
-		nameFields, nameDropped := gateSignatureName(resp.Text, lines)
+		nameFields, nameDropped := gateSignatureName(reply, lines)
 		if len(nameDropped) > 0 {
 			e.log.DebugContext(ctx, "signature enrich: the name was not written",
 				"contact", mail.ContactID.String(), "reason", nameDropped[0].Reason)
 		}
 		fields = append(fields, nameFields...)
+		dropped = append(dropped, nameDropped...)
 	}
 	for _, f := range gated {
-		if float64(f.Confidence) < enrichConfidenceFloor || (options.TitleOnly && f.Field != fieldTitle) {
+		if options.TitleOnly && f.Field != fieldTitle {
+			continue
+		}
+		if float64(f.Confidence) < enrichConfidenceFloor {
+			dropped = append(dropped, droppedFinding{Lane: laneFields, Field: f.Field, Reason: dropBelowFloor})
 			continue
 		}
 		fields = append(fields, contacts.SignatureField{
@@ -362,18 +394,23 @@ func (e *CaptureEnricher) readSignature(ctx context.Context, cand contacts.Signa
 			ClaimKey: ai.ClaimKey(ai.ProfileFieldClaimPath(f.Field)),
 		})
 	}
-	titled := slices.ContainsFunc(fields, func(f contacts.SignatureField) bool {
-		return f.Name == fieldTitle && strings.TrimSpace(f.Value) != ""
-	})
-	switch {
-	case len(fields) == 0:
-		return false, nil
-	case options.TitleOnly:
-		_, err = e.store.FillSignatureTitle(ctx, mail.ContactID, mail.ActivityID, fields[0], options.DefaultEnrich)
-	default:
-		_, err = e.store.ApplySignatureFields(ctx, mail.ContactID, mail.ActivityID, fields, options.DefaultEnrich)
+	return fields, refusingGate(dropped), nil
+}
+
+// refusingGate names the gate behind a read that accepted nothing. Only a
+// misquote or a low confidence counts. A field outside the vocabulary answers
+// a question nobody asked, and asking again changes nothing.
+func refusingGate(dropped []droppedFinding) contacts.SignatureSkipReason {
+	reason := contacts.SignatureSkipReason("")
+	for _, d := range dropped {
+		switch d.Reason {
+		case dropBelowFloor:
+			return contacts.SignatureSkipConfidence
+		case dropEvidenceNotOnPage, dropEmptyEvidence:
+			reason = contacts.SignatureSkipEvidenceGate
+		}
 	}
-	return titled, err
+	return reason
 }
 
 // enrichPassLock names the lock the pass holds, as text rather than as a
