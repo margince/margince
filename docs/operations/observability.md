@@ -8,6 +8,7 @@ A process can answer while its jobs wait or its AI calls fail. Start with the pr
 The [endpoint reference](../reference/operator-endpoints.md) owns the probe and metric definitions.
 The [job reference](../reference/job-surfaces.md) owns queue states and their limits.
 The [worker reference](../reference/worker-diagnostics.md) owns process settings, profiles and stop rules.
+[watch-a-running-installation.md](../how-to/watch-a-running-installation.md) shows how to scrape each program.
 
 ## Set up the checks
 
