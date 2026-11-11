@@ -14,9 +14,9 @@ import type { Route } from "./router";
  * tab survives a reload and can be linked to — the same promise the contact
  * page has had, on the record a rep opens most.
  *
- * The order is the order a rep reads an account in: what is true of it now,
- * what has happened, who is on it, what is open commercially, what is owed,
- * and the reference material last.
+ * The order is the order a rep reads an account in. What is true now comes
+ * first, then what happened, who is on it, what is open, who it meets and
+ * what is owed. The reference material comes last.
  *
  * Partner and Finance are in the list but not always on the strip: one renders
  * a commercial arrangement most accounts do not have, the other money on an
@@ -29,6 +29,7 @@ export const COMPANY_TABS = [
   "timeline",
   "contacts",
   "deals",
+  "meetings",
   "tasks",
   "finance",
   "documents",

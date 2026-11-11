@@ -4,10 +4,11 @@ import { navigateReplacing } from "../../lib/router";
 import { keptWorklistReturn } from "../worklist/worklist.return";
 
 // The tabs an archived account cannot answer: the server refuses its roster,
-// deals, tasks and money.
+// deals, tasks and money, and the account read its meetings stand on.
 export const REFUSED_WHEN_ARCHIVED: readonly CompanyTab[] = [
   "contacts",
   "deals",
+  "meetings",
   "tasks",
   "finance",
 ];
