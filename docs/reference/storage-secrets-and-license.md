@@ -247,8 +247,8 @@ error. To read it as no license would lower the installation without a word.
 
 A `token_file` that is
 set but cannot be read, or is empty, is also a boot error. So a wrong path does not count as a wish
-to run with no license. Margince reads a `token_file` with the same rules as a `${file:…}`
-reference.
+to run with no license. Margince reads a `token_file` with the same size limit as a `${file:…}`
+reference, and drops the spaces and empty lines around the token.
 
 **An ended license never stops a running process.** A license that ends while the process
 runs leaves it serving. The api checks again daily, and its `/metrics` posture gets worse; nothing

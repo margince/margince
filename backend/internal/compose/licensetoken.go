@@ -56,8 +56,6 @@ func declaredLicenseToken(c *config.Config) func() (string, error) {
 		if err != nil {
 			return "", err
 		}
-		// Trimmed as license.token is above: a token has no meaningful whitespace.
-		raw = strings.TrimSpace(raw)
 		if raw == "" {
 			return "", fmt.Errorf("compose: %s %s is empty — remove the setting to run unlicensed, "+
 				"or write the license token into the file", pathOrigin.Name, path)
@@ -78,12 +76,13 @@ func licenseTokenDeclaredAt(c *config.Config) string {
 	return licenseTokenOriginNone
 }
 
-// readDeclaredFile reads a credential a setting names by path, with the rules
-// of a ${file:} reference, so both spellings of one credential read alike.
+// readDeclaredFile reads a credential a legacy *_file setting names, through
+// the ${file:} reader. It still trims all surrounding whitespace, as these
+// settings always have: a password file with CRLF must keep authenticating.
 func readDeclaredFile(setting, path string) (string, error) {
 	value, err := config.ReadSecretFile(path)
 	if err != nil {
 		return "", fmt.Errorf("compose: %s: %w", setting, err)
 	}
-	return value, nil
+	return strings.TrimSpace(value), nil
 }
