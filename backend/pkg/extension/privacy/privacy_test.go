@@ -30,6 +30,10 @@ func TestTableValidate(t *testing.T) {
 		"personal column is a link":   func(x *privacy.Table) { x.Personal = []string{"activity_id"} },
 		"personal column is id":       func(x *privacy.Table) { x.Personal = []string{"id"} },
 		"retention class invented":    func(x *privacy.Table) { x.Retention = "forever" },
+		"link column twice": func(x *privacy.Table) {
+			x.Links = append(x.Links, privacy.Link{Column: "activity_id", Record: privacy.Contact})
+		},
+		"personal column not an ident": func(x *privacy.Table) { x.Personal = []string{"body; drop"} },
 	}
 	if err := valid().Validate("ext_demo"); err != nil {
 		t.Fatalf("a well-formed declaration was refused: %v", err)

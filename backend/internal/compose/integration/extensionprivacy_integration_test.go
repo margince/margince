@@ -11,6 +11,7 @@ package integration
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose"
@@ -261,5 +262,45 @@ func TestBootLeavesAUnitTheTablesOfALongerNamedUnit(t *testing.T) {
 
 	if err := compose.VerifyExtensionPrivacy(t.Context(), env.Pool, []extension.Extension{probe, extra}); err != nil {
 		t.Errorf("unit probe was held to the tables of unit probe-extra: %v", err)
+	}
+}
+
+func TestBootRefusesAPersonalTableWhoseRowsTheCoreCannotAuditByID(t *testing.T) {
+	for name, table := range map[string]string{
+		"no id column": `CREATE TABLE ext.ext_probe_log (contact_id uuid, body text)`,
+		"id not uuid":  `CREATE TABLE ext.ext_probe_log (id bigint PRIMARY KEY, contact_id uuid, body text)`,
+	} {
+		t.Run(name, func(t *testing.T) {
+			env := Setup(t)
+			unit := probeUnit(t, "1.0.0")
+			t.Cleanup(func() {
+				if _, err := OwnerConn(t).Exec(context.Background(), `DROP TABLE IF EXISTS ext.ext_probe_log`); err != nil {
+					t.Errorf("removing the probe log: %v", err)
+				}
+			})
+			probeExec(t, table, `GRANT SELECT, INSERT, UPDATE, DELETE ON ext.ext_probe_log TO margince_app`)
+			unit.Privacy = append(unit.Privacy, privacy.Table{
+				Name:      "ext_probe_log",
+				Links:     []privacy.Link{{Column: "contact_id", Record: privacy.Contact}},
+				Personal:  []string{"body"},
+				Retention: jurisdiction.CommercialCorrespondence,
+			})
+
+			err := compose.VerifyExtensionPrivacy(t.Context(), env.Pool, []extension.Extension{unit})
+			if err == nil || !strings.Contains(err.Error(), "ext_probe_log.id") {
+				t.Errorf("boot answered %v; want a refusal naming ext_probe_log.id", err)
+			}
+		})
+	}
+}
+
+func TestBootRefusesALinkColumnTheTableLacks(t *testing.T) {
+	env := Setup(t)
+	unit := probeUnit(t, "1.0.0")
+	unit.Privacy[0].Links = []privacy.Link{{Column: "deal_ref", Record: privacy.Contact}}
+
+	err := compose.VerifyExtensionPrivacy(t.Context(), env.Pool, []extension.Extension{unit})
+	if err == nil || !strings.Contains(err.Error(), "ext_probe_note.deal_ref") {
+		t.Errorf("boot answered %v; want a refusal naming the missing link column", err)
 	}
 }
