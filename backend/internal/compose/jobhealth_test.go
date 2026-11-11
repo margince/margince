@@ -12,8 +12,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgxpool"
-
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -75,7 +73,7 @@ func TestTheJobHealthHandlerIsConstructedWithAPoolNotJustEmbedded(t *testing.T) 
 
 	// The real assertion: the composed server threads ITS pool through, so
 	// a handler constructed from a live pool holds that same pool.
-	live := &pgxpool.Pool{}
+	live := configuredTestPool(t)
 	withPool := newServer(live, quietTestLogger(), authHandlers{}, dealsHandlers{})
 	if withPool.jobHealthHandlers.pool != live {
 		t.Error("newServer embedded jobHealthHandlers without constructing it; every " +

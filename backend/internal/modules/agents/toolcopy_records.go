@@ -24,11 +24,10 @@ var searchRecordsCopy = toolCopy{
 }
 
 var listRecordsCopy = toolCopy{
-	Purpose: "List one page of matching records: deals in a pipeline, a rep's leads, or a contact's timeline.",
-	Limits:  "Only declared record_type filters apply. Further pages may exist.",
-	Instead: "Use search_records to find a record by what it is called, and run_report for a count " +
-		"or a total.",
-	Retain: "Pass next_cursor for the next page; omit it for the first. `owner` names the holder. " + sayWhoseItIs,
+	Purpose: "List one page of records matching record_type and filters.",
+	Limits:  "Only declared filters apply. Further pages may exist.",
+	Instead: "Use search_records for names, run_report for counts or totals.",
+	Retain:  "Pass next_cursor for the next page; omit it for the first. `owner` names the holder. " + sayWhoseItIs,
 }
 
 var readViewCopy = toolCopy{

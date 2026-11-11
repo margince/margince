@@ -315,6 +315,13 @@
         "privacy_request.update"
       ]
     },
+    "assign_website_inquiry": {
+      "checks": [
+        "activity.read",
+        "activity.update",
+        "lead.read"
+      ]
+    },
     "at_risk_relationships": {
       "checks": [
         "company.read",
@@ -1750,6 +1757,19 @@
         "webhook_subscription.update"
       ]
     },
+    "handle_website_inquiries": {
+      "checks": [
+        "activity.create",
+        "activity.read",
+        "activity.update",
+        "automation.read",
+        "automation.update",
+        "contact.read",
+        "integrations.read",
+        "integrations.update",
+        "lead.read"
+      ]
+    },
     "hide_deal_document": {
       "checks": [
         "activity.read",
@@ -2178,14 +2198,14 @@
     },
     "list_records": {
       "checks": [
-        "activity.read,commission.read,company.read,deal_room.read,offer_template.read,product.read",
-        "activity.read,commission.read,company.read,deal_room.update,offer_template.read,product.read",
+        "activity.read,commission.read,company.read,deal_room.read,lead.read,offer_template.read,product.read",
+        "activity.read,commission.read,company.read,deal_room.update,lead.read,offer_template.read,product.read",
         "activity.read,commission.read,contact.read,deal_room.read,lead.read,offer_template.read,partner.read,product.read,project.read",
         "activity.read,commission.read,contact.read,deal_room.update,lead.read,offer_template.read,partner.read,product.read,project.read",
         "activity.read,commission.read,deal_room.read,lead.read,offer_template.read,partner.read,product.read,project.read,relationship.read",
         "activity.read,commission.read,deal_room.update,lead.read,offer_template.read,partner.read,product.read,project.read,relationship.read",
-        "activity.read,company.read,deal.read,deal_room.read,offer_template.read,product.read",
-        "activity.read,company.read,deal.read,deal_room.update,offer_template.read,product.read",
+        "activity.read,company.read,deal.read,deal_room.read,lead.read,offer_template.read,product.read",
+        "activity.read,company.read,deal.read,deal_room.update,lead.read,offer_template.read,product.read",
         "activity.read,contact.read,deal.read,deal_room.read,lead.read,offer_template.read,partner.read,product.read,project.read",
         "activity.read,contact.read,deal.read,deal_room.update,lead.read,offer_template.read,partner.read,product.read,project.read",
         "activity.read,deal.read,deal_room.read,lead.read,offer_template.read,partner.read,product.read,project.read,relationship.read",
@@ -2468,8 +2488,7 @@
     },
     "preview_automation": {
       "checks": [
-        "automation.read",
-        "lead.read"
+        "automation.read"
       ]
     },
     "preview_connector_backfill": {
@@ -2557,6 +2576,19 @@
     "preview_voice_source": {
       "checks": [
         "voice_profile.update"
+      ]
+    },
+    "preview_website_inquiries": {
+      "checks": [
+        "automation.read",
+        "integrations.read"
+      ]
+    },
+    "preview_website_inquiry_assignment": {
+      "checks": [
+        "activity.read",
+        "activity.update",
+        "lead.read"
       ]
     },
     "progress_deal": {

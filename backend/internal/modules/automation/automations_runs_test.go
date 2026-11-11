@@ -77,7 +77,7 @@ func TestEveryCatalogKeyHasAPreviewDefinition(t *testing.T) {
 			if def.unsupported != "" {
 				t.Errorf("renewal_reminder's dynamic previewDef is unsupported (%q) for a fully configured instance", def.unsupported)
 			}
-			if def.table == "" || def.firedCount == nil || len(def.fields) == 0 {
+			if def.table == "" || def.firedCount == nil || def.dateWindow == nil || def.dateWindow.column != `t."cf_renewal_date"` {
 				t.Errorf("renewal_reminder's dynamic previewDef is incomplete: table=%q fields=%d firedCount set=%v",
 					def.table, len(def.fields), def.firedCount != nil)
 			}

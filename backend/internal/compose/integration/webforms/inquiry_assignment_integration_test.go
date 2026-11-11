@@ -36,7 +36,7 @@ func TestInquiryAssignmentAndItsDurableChoiceCommitTogether(t *testing.T) {
 	ctx := t.Context()
 	var colleague, lead, note ids.UUID
 	var key string
-	colleague = apptest.SessionUserID(t, e)
+	colleague = ids.MustParse(apptest.SessionUserID(t, e))
 	if err := e.Owner.QueryRow(ctx, `SELECT id FROM lead WHERE email='inquiry@visitor.example'`).Scan(&lead); err != nil {
 		t.Fatal(err)
 	}

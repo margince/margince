@@ -63,6 +63,8 @@ func TestTaskDeadlineConfigurationRefusesHostDependentZones(t *testing.T) {
 			}
 			if key == listTaskName {
 				params[paramListID] = ids.NewV7().String()
+				params["recipient"] = "record_owner"
+				params["task_title"] = "Follow up"
 			}
 			if err := entry.Validate(params); err != nil {
 				t.Fatal(err)

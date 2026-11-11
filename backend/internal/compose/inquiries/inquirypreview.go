@@ -81,6 +81,9 @@ func (s Settings) Preview(ctx context.Context, id ids.UUID, in crmcontracts.Webs
 			return err
 		}
 		if err := s.routing.validate(admit, policy, false); err != nil {
+			if errors.Is(err, apperrors.ErrPermissionDenied) {
+				return auth.RefuseRow(bound, "automation", err)
+			}
 			return err
 		}
 		due, err := automation.InquiryDueAt(policy, now)

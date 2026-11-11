@@ -106,5 +106,5 @@
 1794364497_a_unit_sql_runs_as_the_ext_runtime_role.up.sql | * | the procedural body creates one role where it may and grants privileges on the ext schema; it reads and writes no row
 1794364497_a_unit_sql_runs_as_the_ext_runtime_role.down.sql | * | the procedural body only grants and revokes privileges on the ext schema; it reads and writes no row
 
-1794375256_a_website_form_names_its_reviewed_inquiry_policy.down.sql | * | read-only existence check refuses rollback after a cutover; no row is rewritten
-1794375257_an_inquiry_effect_keeps_its_planned_assignment.down.sql | * | read-only existence check refuses rollback after an assignment; no row is rewritten
+1794387685_a_website_form_names_its_reviewed_inquiry_policy.down.sql | * | read-only existence check refuses rollback after a cutover; no row is rewritten
+1794387686_an_inquiry_effect_keeps_its_planned_assignment.down.sql | * | read-only existence check refuses rollback after an assignment; no row is rewritten

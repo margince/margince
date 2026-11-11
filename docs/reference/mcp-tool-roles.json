@@ -503,6 +503,21 @@
     },
     {
       "tool": "change_activities",
+      "action": "assign_inquiry",
+      "verb": "assign_website_inquiry",
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "rep"
+      ],
+      "refused_for": [
+        "read_only"
+      ]
+    },
+    {
+      "tool": "change_activities",
       "action": "attach",
       "verb": "attach_document",
       "allowed_for": [
@@ -640,6 +655,21 @@
       "tool": "change_activities",
       "action": "log",
       "verb": "log_activity",
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "rep"
+      ],
+      "refused_for": [
+        "read_only"
+      ]
+    },
+    {
+      "tool": "change_activities",
+      "action": "preview_inquiry_assignment",
+      "verb": "preview_website_inquiry_assignment",
       "allowed_for": [
         "admin",
         "management",
@@ -4109,6 +4139,21 @@
     },
     {
       "tool": "change_settings",
+      "action": "handle_website_inquiries",
+      "verb": "handle_website_inquiries",
+      "allowed_for": [
+        "admin",
+        "ops"
+      ],
+      "refused_for": [
+        "management",
+        "manager",
+        "read_only",
+        "rep"
+      ]
+    },
+    {
+      "tool": "change_settings",
       "action": "link_finance_customer",
       "verb": "link_finance_customer",
       "allowed_for": [
@@ -7226,6 +7271,21 @@
       "tool": "read_details",
       "action": "voice_source_preview",
       "verb": "preview_voice_source",
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "rep"
+      ],
+      "refused_for": [
+        "read_only"
+      ]
+    },
+    {
+      "tool": "read_details",
+      "action": "website_inquiry_preview",
+      "verb": "preview_website_inquiries",
       "allowed_for": [
         "admin",
         "management",

@@ -1,11 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// The verbs one row of the day offers, on one line: Done where the row offers
-// it, then the lane's answer, then the row's menu. So the answer and the menu
-// stand at one x down the queue; in a card the answer leads.
-// The menu holds the rest, most used first: the snooze, a way to the record,
-// the pin, the hand-off, then the hand-backs.
+// The main answer and menu align across rows.
+// Less common actions stay in the menu.
 
 import { Sparkles } from "lucide-react";
 import { type ReactNode, useState } from "react";

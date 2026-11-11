@@ -79,10 +79,7 @@ func TestExtensionRoutesAreBehindTheSessionMiddleware(t *testing.T) {
 	verbs := composedFixture()
 	withComposedVerbs(t, verbs, verbs...)
 
-	// A zero pool: nothing on the path this test takes dereferences it. The
-	// readiness and metrics closures capture it lazily and are never called, and
-	// mux.Handler RESOLVES without serving.
-	pool := &pgxpool.Pool{}
+	pool := configuredTestPool(t)
 	srv := newServer(pool, discardLog(), authHandlers{}, dealsHandlers{})
 	srv.toolRegistry = agents.NewRegistry(nil, auth.NewGate(fullSeat{}))
 	var coreHit string
@@ -115,6 +112,17 @@ func TestExtensionRoutesAreBehindTheSessionMiddleware(t *testing.T) {
 	// that — it is the same property stated where it is decidable: the request
 	// enters the chain authH.Middleware wraps, and no pattern exists that could
 	// route around it.
+}
+
+func configuredTestPool(t *testing.T) *pgxpool.Pool {
+	t.Helper()
+	// Construction reads pool settings; routing assertions never acquire a connection.
+	pool, err := pgxpool.New(t.Context(), "postgres://test@localhost/test?sslmode=disable")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(pool.Close)
+	return pool
 }
 
 // TestExtensionEdgeFallsThroughToTheCoreRouter is property 2. It is also what
