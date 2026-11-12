@@ -1,4 +1,5 @@
 import {
+  queryOptions,
   skipToken,
   useMutation,
   useQueries,
@@ -76,7 +77,7 @@ function recordAssignmentsQuery(
   recordType: AssignmentRecordType,
   recordId: string | undefined,
 ) {
-  return {
+  return queryOptions({
     queryKey: recordAssignmentsKey(recordType, recordId ?? ""),
     queryFn: recordId
       ? async () => {
@@ -94,7 +95,7 @@ function recordAssignmentsQuery(
           return data.data;
         }
       : skipToken,
-  };
+  });
 }
 
 export function useRecordAssignments(
