@@ -3,8 +3,8 @@
 # since its patch base.
 #
 # The dist service publishes no release without a changelog. The patch of a
-# release starts at its patch base, so the changelog lists the commit subjects
-# since that base: it describes what the patch carries. A base that was skipped
+# release starts at its patch base, so the changelog is built from the commit
+# subjects since that base: it describes what the patch carries. A base that was skipped
 # leaves its changes to the next patch, and to the next changelog too. Merge
 # commits are left out, so a change that reached main through another branch
 # is listed by its own subject.

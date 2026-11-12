@@ -53,8 +53,9 @@ name: Release
 # --patch-base. With no release that went out, the release is the first one and
 # its patch is the whole tree.
 #
-# The changelog lists every non-merge commit subject since that same revision,
-# through scripts/release-changelog.sh, so it describes what the patch carries.
+# The changelog is built from every non-merge commit subject since that same
+# revision, through scripts/release-changelog.sh, so it describes what the patch
+# carries.
 # The first release gets one fixed sentence.
 on:
   push:
@@ -185,8 +186,8 @@ jobs:
             -e GIT_CONFIG_VALUE_0='*' \
             "$RELEASE_MANAGEMENT_IMAGE" \
             create-patch "${patch_from[@]}" --to "$AFTER" --repo . --out "$patch_file"
-          # The changelog sits beside the patch, inside the CLI's mount. It lists
-          # every non-merge commit subject since the patch base, so a change that
+          # The changelog sits beside the patch, inside the CLI's mount. It is built
+          # from every non-merge commit subject since the patch base, so a change that
           # came through another branch keeps its own subject. The script drops
           # invalid UTF-8 bytes and refuses a base with no subject since it; the
           # CLI refuses an empty or too large file before any request.
