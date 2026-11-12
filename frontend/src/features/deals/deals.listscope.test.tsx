@@ -67,12 +67,12 @@ describe("the deals list asks only once it knows its pipeline", () => {
   });
 
   it("reads the table two rendered pages at a time, at the reader's page size", async () => {
-    window.location.hash = "#/deals?view=table&per=50";
+    window.location.hash = "#/deals?view=table&per=100";
     const { dealReads } = recordReads();
     render(<DealsScreen />);
     expect(await screen.findByText("Fleet retrofit")).toBeTruthy();
     expect(dealReads.map((url) => url.searchParams.get("limit"))).toEqual([
-      String(listFetchLimit(50)),
+      String(listFetchLimit(100)),
     ]);
   });
 

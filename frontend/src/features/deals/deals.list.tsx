@@ -56,7 +56,7 @@ import {
   resolveDealProject,
   useProjectsOfCompany,
 } from "./dealproject";
-import type { Deal, Pipeline } from "./deals";
+import type { Deal, Pipeline, Stage } from "./deals";
 import {
   BoardHeadCount,
   DealBoardBody,
