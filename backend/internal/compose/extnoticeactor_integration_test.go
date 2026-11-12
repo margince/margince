@@ -89,3 +89,11 @@ func TestASendWithACallerCannotNameAnotherActor(t *testing.T) {
 		t.Errorf("ActAs on a send with a caller = %v, want ErrInvalid", err)
 	}
 }
+
+func TestANoticeCannotBeSentForAMemberWhoHasLeft(t *testing.T) {
+	w := setupNotices(t)
+	w.connect(t, w.departed.String())
+	if _, err := w.sendUnattended(t, w.aboutTheDeal(w.reader.String(), extension.UserID(w.departed.String()))); !errors.Is(err, extension.ErrForbidden) {
+		t.Errorf("ActAs a member who has left = %v, want ErrForbidden", err)
+	}
+}

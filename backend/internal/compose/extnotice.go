@@ -128,12 +128,18 @@ func (d extensionNoticeDoor) actingMemberCanOpen(ctx context.Context, in extensi
 	if err != nil {
 		return err
 	}
+	var live bool
+	if err := d.core.tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM app_user u WHERE u.id = $1 AND `+workforce.LiveMemberSQL("u")+`)`, member).Scan(&live); err != nil {
+		return portRefusal(err)
+	}
 	consented, err := memberConsentedTx(ctx, d.core.tx, d.core.unit, member)
 	if err != nil {
 		return portRefusal(err)
 	}
-	if !consented {
-		return fmt.Errorf("%w: ActAs names a member who has not connected this unit", extension.ErrForbidden)
+	// A member who has left keeps the credential they deposited, so the deposit
+	// alone must not let a unit act as them.
+	if !live || !consented {
+		return fmt.Errorf("%w: ActAs names a member who has not connected this unit or who has left", extension.ErrForbidden)
 	}
 	seat, err := identity.SeatActor(ctx, d.core.tx, member)
 	if err != nil {
