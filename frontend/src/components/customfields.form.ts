@@ -37,12 +37,12 @@ export function customFieldToFormField(
 ): CreateField {
   const base = {
     key: field.column_name,
-    labelText: translatedLabel(field.label, field.label_translations, locale),
+    labelText: customFieldLabel(field, locale),
   };
   // The option stays the stored value; only the label the reader sees moves.
   const optionChoices = (field.options ?? []).map((option) => ({
     value: option,
-    label: translatedLabel(option, field.option_translations?.[option], locale),
+    label: optionLabel(field, option, locale),
   }));
   switch (field.type) {
     case "number":
@@ -250,12 +250,28 @@ export function customFieldDisplay(
         ? opts.boolLabels.yes
         : opts.boolLabels.no;
     case "multiselect":
-      return Array.isArray(raw) && raw.length ? raw.join(", ") : null;
+      return Array.isArray(raw) && raw.length
+        ? raw
+            .map((one) => optionLabel(field, String(one), opts.locale))
+            .join(", ")
+        : null;
     case "date":
       return formatDateAbbrev(String(raw), opts.locale, browserZone());
+    case "picklist":
+      return optionLabel(field, String(raw), opts.locale);
     default:
       return String(raw);
   }
+}
+
+/** A stored option as the reader sees it. The record keeps the stored value. */
+function optionLabel(field: CustomField, option: string, locale: string) {
+  return translatedLabel(option, field.option_translations?.[option], locale);
+}
+
+/** A field's label as the reader sees it. */
+export function customFieldLabel(field: CustomField, locale: string): string {
+  return translatedLabel(field.label, field.label_translations, locale);
 }
 
 // customFieldDisplay in this reader's locale and Yes/No words, for either record
@@ -266,6 +282,12 @@ export function useCustomFieldDisplay() {
   const boolLabels = { yes: t("field.yes"), no: t("field.no") };
   return (field: CustomField, raw: unknown) =>
     customFieldDisplay(field, raw, { locale, boolLabels });
+}
+
+// customFieldLabel in this reader's language, for a record surface.
+export function useCustomFieldLabel() {
+  const { locale } = useLocale();
+  return (field: CustomField) => customFieldLabel(field, locale);
 }
 
 // Where a displayed value may be followed to, or null when it is only text.

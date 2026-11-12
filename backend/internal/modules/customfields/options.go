@@ -14,6 +14,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/labeltranslation"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -71,9 +72,9 @@ func (s *Service) SetOptions(ctx context.Context, id ids.UUID, options []string)
 func lockPicklistField(ctx context.Context, tx pgx.Tx, id ids.UUID) (lockedField, error) {
 	var f lockedField
 	err := tx.QueryRow(ctx,
-		`SELECT object, column_name, type, status, label, options, version
+		`SELECT object, column_name, type, status, label, options, version, option_translations
 		   FROM custom_field WHERE id = $1 FOR UPDATE`,
-		id).Scan(&f.Object, &f.ColumnName, &f.Type, &f.Status, &f.Label, &f.OptionsRaw, &f.Version)
+		id).Scan(&f.Object, &f.ColumnName, &f.Type, &f.Status, &f.Label, &f.OptionsRaw, &f.Version, &f.OptionTranslations)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return lockedField{}, apperrors.ErrNotFound
 	}
@@ -146,7 +147,8 @@ func (s *Service) setOptionsInTx(ctx context.Context, tx pgx.Tx, id ids.UUID, op
 		}
 	}
 	if _, err := storekit.Audit(ctx, tx, "update", rbacObject, id,
-		map[string]any{fieldOptions: oldOptions}, map[string]any{fieldOptions: options}); err != nil {
+		map[string]any{fieldOptions: oldOptions, fieldOptionTranslations: f.OptionTranslations},
+		map[string]any{fieldOptions: options, fieldOptionTranslations: labeltranslation.OptionsFromWire(out.OptionTranslations)}); err != nil {
 		return crmcontracts.CustomField{}, fmt.Errorf("customfields: audit write: %w", err)
 	}
 	return out, nil

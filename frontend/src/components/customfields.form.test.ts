@@ -132,6 +132,11 @@ describe("customFieldToFormField", () => {
       { value: "Consulting", label: "Tư vấn" },
       { value: "Support", label: "Support" },
     ]);
+    const viReading = customFieldDisplay(services, "Consulting", {
+      locale: "vi",
+      boolLabels: BOOL_LABELS,
+    });
+    expect(viReading).toBe("Tư vấn");
     const en = customFieldToFormField(services, BOOL_LABELS, TOO_PRECISE, "en");
     expect(en.labelText).toBe("Services");
     expect(en.options?.[0]).toEqual({

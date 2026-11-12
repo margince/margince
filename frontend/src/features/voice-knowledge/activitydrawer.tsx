@@ -7,6 +7,7 @@ import { Fragment, type ReactNode, useId, useState } from "react";
 import type { components } from "../../api/schema";
 import {
   useCustomFieldDisplay,
+  useCustomFieldLabel,
   useObjectCustomFields,
 } from "../../components/customfields.form";
 import { EntityRef } from "../../components/entityref";
@@ -295,10 +296,11 @@ function ActivityBody({
 function CustomFieldLines({ activity }: Readonly<{ activity: Activity }>) {
   const { fields } = useObjectCustomFields("activity", "record");
   const display = useCustomFieldDisplay();
+  const fieldLabel = useCustomFieldLabel();
   return fields.map((field) => {
     const shown = display(field, activity[field.column_name]);
     return shown === null ? null : (
-      <PartyLine key={field.column_name} label={field.label}>
+      <PartyLine key={field.column_name} label={fieldLabel(field)}>
         {shown}
       </PartyLine>
     );

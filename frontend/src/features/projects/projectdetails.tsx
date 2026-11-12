@@ -8,6 +8,7 @@ import { useEmployerSummary } from "../../components/contactemployersummary";
 import {
   type ObjectCustomFields,
   useCustomFieldDisplay,
+  useCustomFieldLabel,
   useObjectCustomFields,
 } from "../../components/customfields.form";
 import { EntityRef, OwnerName } from "../../components/entityref";
@@ -183,6 +184,7 @@ export function ProjectDetails({ view }: Readonly<{ view: Project360 }>) {
   const { locale } = useLocale();
   const zone = useViewerZone();
   const display = useCustomFieldDisplay();
+  const fieldLabel = useCustomFieldLabel();
   const grants = useProjectGrants(view.project.id);
   const project = view.project;
   const unset = t("field.unset");
@@ -254,7 +256,7 @@ export function ProjectDetails({ view }: Readonly<{ view: Project360 }>) {
       ),
       empty: true,
     },
-    ...customFieldRows(cf, project, display, unset),
+    ...customFieldRows(cf, project, display, unset, fieldLabel),
   ];
   const ownership: DetailRow[] = [
     {
@@ -306,13 +308,14 @@ function customFieldRows(
   project: Project,
   display: ReturnType<typeof useCustomFieldDisplay>,
   unset: string,
+  fieldLabel: ReturnType<typeof useCustomFieldLabel>,
 ): DetailRow[] {
   const record: Record<string, unknown> = project;
   return cf.fields.map((field) => {
     const value = display(field, record[field.column_name]);
     return {
       key: field.column_name,
-      term: field.label,
+      term: fieldLabel(field),
       value: value || unset,
       empty: !value,
     };
