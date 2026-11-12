@@ -1,0 +1,15 @@
+{
+  "tool": "change_settings",
+  "action": "archive_web_form",
+  "verb": "archive_web_form",
+  "allowed_for": [
+    "admin",
+    "ops"
+  ],
+  "refused_for": [
+    "management",
+    "manager",
+    "read_only",
+    "rep"
+  ]
+}

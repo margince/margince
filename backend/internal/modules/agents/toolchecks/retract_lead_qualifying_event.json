@@ -1,0 +1,10 @@
+{
+  "verb": "retract_lead_qualifying_event",
+  "checks": [
+    "lead.update"
+  ],
+  "takes": [
+    "lead",
+    "lead_qualifying_event"
+  ]
+}

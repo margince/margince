@@ -1,0 +1,6 @@
+{
+  "verb": "check_availability",
+  "checks": [
+    "activity.read"
+  ]
+}

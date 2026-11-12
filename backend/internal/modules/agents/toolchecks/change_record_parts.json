@@ -1,0 +1,9 @@
+{
+  "verb": "change_record_parts",
+  "checks": [
+    "company.update"
+  ],
+  "takes": [
+    "company"
+  ]
+}

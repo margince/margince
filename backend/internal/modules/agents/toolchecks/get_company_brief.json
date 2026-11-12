@@ -1,0 +1,16 @@
+{
+  "verb": "get_company_brief",
+  "checks": [
+    "activity.read",
+    "company.read",
+    "contact.read",
+    "deal.read",
+    "list.read",
+    "project.read",
+    "relationship.read",
+    "tag.read"
+  ],
+  "takes": [
+    "company"
+  ]
+}

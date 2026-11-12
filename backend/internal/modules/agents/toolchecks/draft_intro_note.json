@@ -1,0 +1,13 @@
+{
+  "verb": "draft_intro_note",
+  "checks": [
+    "activity.read",
+    "contact.read",
+    "relationship.read"
+  ],
+  "takes": [
+    "contact",
+    "routed_contact",
+    "user"
+  ]
+}

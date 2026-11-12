@@ -1,0 +1,15 @@
+{
+  "tool": "change_activities",
+  "action": "read_transcript",
+  "verb": "read_transcript_for_next_steps",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "rep"
+  ],
+  "refused_for": [
+    "read_only"
+  ]
+}

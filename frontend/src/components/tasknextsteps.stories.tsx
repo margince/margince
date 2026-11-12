@@ -14,8 +14,8 @@ import {
 } from "../testing/story-utils";
 import { TaskNextSteps } from "./tasknextsteps";
 
-// Check: Call only on a task from a call, and a refused Email says why
-// beside it. A task with no single contact drafts to its lead or company.
+// Check: each type shows its one step. A call shows the number to copy and a
+// filled Call; a mail task drafts, and a refused Email says why beside it.
 
 const meta: Meta = {
   title: "Patterns/Task next steps",
@@ -30,9 +30,10 @@ const TASK: components["schemas"]["Activity"] = {
   offers_email: false,
   id: "task-1",
   kind: "task",
-  subject: "Call back Alice about the renewal",
+  subject: "Send Alice the renewal terms",
   occurred_at: "2026-09-08T09:00:00Z",
   is_done: false,
+  task_type: "reach_out",
   source_activity_id: "call-1",
   links: [{ entity_type: "contact", entity_id: "c-1" }],
   email_target: { entity_type: "contact", entity_id: "c-1" },
@@ -93,14 +94,64 @@ const offers = (name: string) => async () => {
   await within(document.body).findByRole("link", { name });
 };
 
-export const FromCall: Story = {
-  render: () => <Steps />,
-  play: offers(en["record.verb.call"]),
+const CALL: components["schemas"]["Activity"] = {
+  ...TASK,
+  subject: "Call back Alice about the renewal",
+  task_type: "reply",
+  reply_channel: "call",
+  email_target: undefined,
 };
 
-export const TypedByHand: Story = {
-  render: () => <Steps task={{ ...TASK, source_activity_id: null }} />,
-  play: offers(en["record.verb.call"]),
+/** Email first and filled, then the number and an outlined Call. */
+export const ReachOut: Story = {
+  render: () => <Steps />,
+  play: async () => {
+    await offers(en["record.verb.email"])();
+    await within(document.body).findByRole("button", {
+      name: en["task.next.copyNumber"],
+    });
+  },
+};
+
+/** A reply to a call answers by phone: the number and a filled Call. */
+export const ReplyByCall: Story = {
+  render: () => <Steps task={CALL} />,
+  play: async () => {
+    await within(document.body).findByRole("button", {
+      name: en["task.next.copyNumber"],
+    });
+  },
+};
+
+export const Meet: Story = {
+  render: () => (
+    <Steps
+      task={{ ...CALL, subject: "Book the site visit", task_type: "meet" }}
+    />
+  ),
+  play: async () => {
+    await within(document.body).findByRole("button", {
+      name: en["scheduling.bookContact"],
+    });
+  },
+};
+
+export const Review: Story = {
+  render: () => (
+    <Steps
+      task={{
+        ...CALL,
+        subject: "Check the new lead from Nordwind",
+        task_type: "review",
+        links: [{ entity_type: "lead", entity_id: "l-1" }],
+      }}
+    />
+  ),
+  play: async () => {
+    await within(document.body).findByRole("button", {
+      name: en["task.next.reviewLead"],
+    });
+  },
 };
 
 export const NoAddress: Story = {
@@ -110,12 +161,9 @@ export const NoAddress: Story = {
       task={{ ...TASK, email_target: { ...TARGET, refusal: "no_address" } }}
     />
   ),
-  play: offers(en["record.verb.call"]),
-};
-
-export const NoPhone: Story = {
-  render: () => <Steps contact={{ phones: [] }} />,
-  play: offers(en["record.verb.email"]),
+  play: async () => {
+    await within(document.body).findByText(en["task.next.noAddress"]);
+  },
 };
 
 export const ArchivedContact: Story = {

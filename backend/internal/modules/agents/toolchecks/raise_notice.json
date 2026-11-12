@@ -1,0 +1,10 @@
+{
+  "verb": "raise_notice",
+  "checks": [
+    "team_lead.create"
+  ],
+  "takes": [
+    "teammate",
+    "user"
+  ]
+}

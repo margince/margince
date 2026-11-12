@@ -1,0 +1,10 @@
+{
+  "verb": "lift_lead_suppression",
+  "checks": [
+    "lead.update"
+  ],
+  "takes": [
+    "lead",
+    "lead_suppression"
+  ]
+}

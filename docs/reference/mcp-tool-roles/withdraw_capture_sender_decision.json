@@ -1,0 +1,14 @@
+{
+  "tool": "change_capture",
+  "action": "withdraw_sender_decision",
+  "verb": "withdraw_capture_sender_decision",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": []
+}

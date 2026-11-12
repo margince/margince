@@ -1,0 +1,15 @@
+{
+  "tool": "change_settings",
+  "action": "reorder_stages",
+  "verb": "reorder_stages",
+  "allowed_for": [
+    "admin",
+    "ops"
+  ],
+  "refused_for": [
+    "management",
+    "manager",
+    "read_only",
+    "rep"
+  ]
+}

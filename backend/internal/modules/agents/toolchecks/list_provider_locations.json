@@ -1,0 +1,6 @@
+{
+  "verb": "list_provider_locations",
+  "checks": [
+    "ai_routing.read"
+  ]
+}

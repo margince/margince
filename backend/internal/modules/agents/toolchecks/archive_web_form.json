@@ -1,0 +1,9 @@
+{
+  "verb": "archive_web_form",
+  "checks": [
+    "integrations.delete"
+  ],
+  "takes": [
+    "web_form"
+  ]
+}

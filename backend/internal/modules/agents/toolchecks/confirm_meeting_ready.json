@@ -1,0 +1,10 @@
+{
+  "verb": "confirm_meeting_ready",
+  "checks": [
+    "activity.read"
+  ],
+  "takes": [
+    "activity",
+    "meeting"
+  ]
+}

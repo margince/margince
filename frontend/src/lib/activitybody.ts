@@ -10,6 +10,7 @@ import {
 } from "../format/activitywhen";
 import { calendarDay, dueInstant } from "../format/calendarday";
 import type { EntityKind } from "./entity";
+import type { TaskType } from "./tasktype";
 
 // One drafted entry and the wire body it becomes: the shape the composer holds
 // and the `POST /activities` payload it projects to. The React form that edits
@@ -66,6 +67,9 @@ export type ActivityDraft = {
   // note or meeting is not held by a colleague — so it only reaches the wire on
   // a task, the same way `day` only becomes a due date there.
   assigneeId: string;
+  // The kind of work a task asks for, which decides its one button. Reaches
+  // the wire on a task only; a follow-up keeps the type its maker reads.
+  taskType: TaskType;
   // How a call ended, "" for no outcome. Reaches the wire on a call only, so a
   // draft switched from Call to Note sends none.
   callOutcome: CallOutcome | "";
@@ -177,6 +181,7 @@ export function activityRequestBody(
     ...(input.kind === "task"
       ? {
           ...taskRequestFields(input, recordZone),
+          task_type: input.taskType,
         }
       : {
           subject: input.subject.trim(),
@@ -251,6 +256,8 @@ const EMPTY_DRAFT: ActivityDraft = {
   time: "",
   asTranscript: false,
   assigneeId: "",
+  // A task a rep files on a record most often asks them to reach out.
+  taskType: "reach_out",
   callOutcome: "",
 };
 

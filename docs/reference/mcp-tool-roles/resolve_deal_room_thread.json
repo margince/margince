@@ -1,0 +1,15 @@
+{
+  "tool": "change_offers",
+  "action": "resolve_room_thread",
+  "verb": "resolve_deal_room_thread",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "rep"
+  ],
+  "refused_for": [
+    "read_only"
+  ]
+}

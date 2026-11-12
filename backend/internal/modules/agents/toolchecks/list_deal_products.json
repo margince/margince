@@ -1,0 +1,10 @@
+{
+  "verb": "list_deal_products",
+  "checks": [
+    "deal.read",
+    "product.read"
+  ],
+  "takes": [
+    "deal"
+  ]
+}

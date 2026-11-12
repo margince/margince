@@ -28552,10 +28552,71 @@ export interface components {
              */
             calendar_invitation?: components["schemas"]["EmailCalendarInvitation"];
             /**
+             * @description Present when this message tells the reader something about a meeting rather than asking
+             *     for words: the organizer changed or cancelled it, or a guest proposed another time or
+             *     answered. It came into the reader's own mailbox. A client draws it as the meeting,
+             *     saying what changed. Absent on a first invitation, on every other message, and on a
+             *     withheld one.
+             */
+            calendar_change?: components["schemas"]["EmailCalendarChange"];
+            /**
              * @description The activity's version, carried so a row can open an editor that writes with
              *     If-Match. A row without it can only read.
              */
             version: components["schemas"]["RowVersion"];
+        };
+        /**
+         * @description What a calendar message says happened to its meeting, read against the earlier send of the
+         *     same event in the reader's mailbox. The event fields are the meeting as this message states
+         *     it; `before` holds what the earlier send said of each field in `changed`.
+         */
+        EmailCalendarChange: {
+            /**
+             * @description `updated`: the organizer sent the meeting again with changes. `canceled`: the organizer
+             *     called it off. `proposed`: a guest proposed the time in `starts_at`. `answered`: a guest
+             *     answered, in `answer`.
+             * @enum {string}
+             */
+            kind: "updated" | "canceled" | "proposed" | "answered";
+            title?: string;
+            /** @description Where the meeting is, as the calendar wrote it. Absent when it names no place. */
+            location?: string;
+            /**
+             * Format: date-time
+             * @description When the meeting starts. Absent when the message names no time it can be read in.
+             */
+            starts_at?: string;
+            /** Format: date-time */
+            ends_at?: string;
+            /** @description How to read `starts_at`, present beside it. `day` is an all-day meeting. */
+            starts_precision?: components["schemas"]["OccurredPrecision"];
+            /** @description What differs from the earlier send. Empty when no earlier send is known or nothing a reader sees changed. */
+            changed: ("time" | "location" | "title")[];
+            /** @description The earlier send's value of each field in `changed`. */
+            before?: components["schemas"]["EmailCalendarBefore"];
+            guests_added?: components["schemas"]["EmailCalendarGuest"][];
+            guests_removed?: components["schemas"]["EmailCalendarGuest"][];
+            /** @description The guest who proposed or answered. Absent on `updated` and `canceled`. */
+            by?: components["schemas"]["EmailCalendarGuest"];
+            /**
+             * @description The guest's answer, on `answered`.
+             * @enum {string}
+             */
+            answer?: "accepted" | "tentative" | "declined";
+        };
+        EmailCalendarBefore: {
+            title?: string;
+            location?: string;
+            /** Format: date-time */
+            starts_at?: string;
+            /** Format: date-time */
+            ends_at?: string;
+            starts_precision?: components["schemas"]["OccurredPrecision"];
+        };
+        EmailCalendarGuest: {
+            email: string;
+            /** @description The name the calendar gave. Absent when it gave none. */
+            name?: string;
         };
         /** @description The reader's own answer to the event an invitation names. */
         EmailCalendarInvitation: {
@@ -40675,6 +40736,13 @@ export interface components {
             links?: components["schemas"]["ActivityLink"][];
             /** @description Whether Write email on this row opens with a recipient filled in: true exactly when `GET /activities/{id}/reply-recipient` answers a non-empty `address` for a call, meeting, note or task. Both are computed by one rule, the one `email_target` states. Always false for an email or a message, which are answered with Reply instead, for an archived row, for a task the product filed itself (`automatic_kind` product), and for a row whose content is withheld from the caller. False for a company target too, which has no single address: the composer asks which of the company's contacts the mail is for. */
             offers_email: boolean;
+            /** @description Task only, absent on every other kind. The type a human, an agent or the AI gave the task when it was made. A task made before types existed, or by a product rule that sets none, reads the type of its rule: an answer owed to a request is `reply`, a lead to qualify is `review`, a mail to file is `decide`. A task with neither reads `reach_out` when a human or an agent made it, else `do`. `offers_email` is false for every type but `reply` and `reach_out`. */
+            readonly task_type?: components["schemas"]["TaskType"];
+            /**
+             * @description Task only. For a `reply` task, the kind of the activity it answers (`source_activity_id`), so the answer goes back the way the message came in. Null for every other type, and for a reply with no source of one of these kinds.
+             * @enum {string|null}
+             */
+            readonly reply_channel?: "email" | "call" | "message" | null;
             email_target?: components["schemas"]["ActivityEmailTarget"];
             /** @description Where the row came from. `manual` is anything typed, by a member or by an assistant working for one, so it never says who typed it: `captured_by` and `recorded_by_agent` do. */
             source: string;
@@ -40869,6 +40937,8 @@ export interface components {
              * @description Who owes it. Defaults to the caller.
              */
             assignee_id?: string | null;
+            /** @description The kind of work, which decides its one button. */
+            task_type?: components["schemas"]["TaskType"];
             /** @description The records the task is about. With a source activity, omitted or empty links inherit its visible links. Otherwise the task appears on no timeline. */
             links?: {
                 /** @enum {string} */
@@ -40905,6 +40975,8 @@ export interface components {
         };
         /** @description The workspace's active activity custom fields travel as extra top-level `cf_` keys. A key that is not `cf_`-prefixed, names no active activity field, or carries a value of the wrong shape for its field returns `422`. A value for a field that does not apply to the activity's kind returns `422 field_not_valid_for_kind`. */
         CreateActivityRequest: {
+            /** @description Task only: the kind of work, which decides its one button. */
+            task_type?: components["schemas"]["TaskType"];
             /**
              * @description Call and meeting only. The contact or company the logging form started on.
              *     One open deal of its current company is added automatically. With this field,
@@ -41025,6 +41097,11 @@ export interface components {
          * @enum {string}
          */
         ActivityAudience: "workspace" | "participants" | "selected";
+        /**
+         * @description What kind of work a task asks for, which decides the one step a screen offers for it. `reply` answers a message someone sent, the way it came in (`reply_channel`); `reach_out` contacts someone by email or phone; `meet` books a meeting; `review` checks a record; `decide` picks the deal an email is about, from the deals the task offers, and without such a question its only step is ticking it off; `do` is work outside Margince that is finished by ticking it off. A client that meets a value it does not know treats it as `do`.
+         * @enum {string}
+         */
+        TaskType: "reply" | "reach_out" | "meet" | "review" | "decide" | "do";
         /**
          * @description How much of an activity's time is known. `instant` is a real moment. `day` is a date with no time of day: the stored instant is noon UTC of that date, so its date is the UTC date, whatever the installation's zone. A meeting of this precision never holds its host's calendar slot.
          * @enum {string}
@@ -41185,6 +41262,8 @@ export interface components {
         };
         /** @description A sparse patch. The workspace's active activity custom fields travel as extra top-level `cf_` keys, and an explicit `null` clears one. A key that is not `cf_`-prefixed, names no active activity field, or carries a value of the wrong shape for its field returns `422`. A value for a field that does not apply to the stored kind returns `422 field_not_valid_for_kind`; a `null` clears it all the same. */
         UpdateActivityRequest: {
+            /** @description Task only: the kind of work, which decides its one button. */
+            task_type?: components["schemas"]["TaskType"];
             /** @description Optional filing choice when recording a call or meeting outcome. Existing deal links remain. */
             deal_filing?: components["schemas"]["ActivityDealFiling"];
             subject?: string | null;

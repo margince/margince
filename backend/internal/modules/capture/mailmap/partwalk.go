@@ -119,7 +119,11 @@ func (w *partWalker) attachment(part *mail.AttachmentHeader, mediaType string, b
 	if mediaType == forwardedType {
 		w.holdForwarded(w.files.justAdmitted())
 	}
-	if params, declared := declaresCalendar(part); declared {
+	params, declared := declaresCalendar(part)
+	if name, err := part.Filename(); !declared && err == nil {
+		declared = isOctetCalendar(mediaType, name, w.files.justAdmitted())
+	}
+	if declared {
 		w.calendar.see(params, w.files.justAdmitted())
 	}
 }

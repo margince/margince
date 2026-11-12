@@ -1,0 +1,19 @@
+{
+  "tool": "change_relationships",
+  "action": "check_vat",
+  "verb": "request_company_vat_check",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "rep"
+  ],
+  "refused_for": [
+    "read_only"
+  ],
+  "colleague_record": {
+    "manager": "refused",
+    "rep": "refused"
+  }
+}

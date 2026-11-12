@@ -1,0 +1,19 @@
+{
+  "tool": "change_activities",
+  "action": "show_document",
+  "verb": "unhide_deal_document",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "rep"
+  ],
+  "refused_for": [
+    "read_only"
+  ],
+  "colleague_record": {
+    "manager": "refused",
+    "rep": "refused"
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "tool": "change_capture",
+  "action": "validate_import_run",
+  "verb": "validate_import_run",
+  "allowed_for": [
+    "admin",
+    "ops"
+  ],
+  "refused_for": [
+    "management",
+    "manager",
+    "read_only",
+    "rep"
+  ]
+}

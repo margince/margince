@@ -1,0 +1,12 @@
+{
+  "verb": "create_record_assignment",
+  "checks": [
+    "company.read",
+    "company.update"
+  ],
+  "takes": [
+    "company",
+    "record_role",
+    "user"
+  ]
+}
