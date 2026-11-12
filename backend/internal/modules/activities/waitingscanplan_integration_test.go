@@ -212,8 +212,8 @@ func TestThePageScanJudgesNoMoreYoungMailThanItsCap(t *testing.T) {
 		})
 		return loops
 	}
-	if arms := strings.Count(waitingCappedArmsSQL, waitingEligibleFromSQL); arms != 2 {
-		t.Fatalf("the page carries the eligibility %d times, want once per arm", arms)
+	if carried := strings.Count(waitingCappedArmsSQL, waitingEligibleFromSQL); carried != 1 {
+		t.Fatalf("the page carries the eligibility %d times, want once for both arms", carried)
 	}
 	whole := probed(`SELECT a.id ` + eligible + ` ORDER BY a.occurred_at DESC, a.id DESC LIMIT %[4]s`)
 	if whole <= 4*pageCap {

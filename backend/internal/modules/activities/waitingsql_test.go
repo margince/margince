@@ -16,15 +16,15 @@ import (
 // Every rule, the live-contact one included, sits inside that bound.
 func TestTheWaitingScanCapsTheMessagesBeforeJoiningTheirLinks(t *testing.T) {
 	sql := waitingRepliesSQL
-	candidates := strings.Index(sql, "a.id = ANY (ARRAY(SELECT capped.id FROM (")
+	candidates := strings.Index(sql, "a.id = ANY (ARRAY(WITH eligible AS NOT MATERIALIZED (")
 	limit := strings.Index(sql, "LIMIT %[4]s))")
 	group := strings.Index(sql, "GROUP BY a.id")
 	if candidates < 0 || limit < candidates || group < limit {
 		t.Fatalf("the cap is not taken over the messages ahead of the grouping: candidates at %d, cap at %d, grouping at %d",
 			candidates, limit, group)
 	}
-	if arms := strings.Count(sql[candidates:limit], filedUnderALiveContactSQL); arms != 2 {
-		t.Errorf("the live-contact rule is in %d of the two capped arms, so a page can come back short of WaitingScanCap while eligible messages remain", arms)
+	if !strings.Contains(sql[candidates:limit], filedUnderALiveContactSQL) {
+		t.Error("the live-contact rule is applied after the cap, so a page can come back short of WaitingScanCap while eligible messages remain")
 	}
 	if strings.Contains(sql, "HAVING") {
 		t.Error("a HAVING over grouped links runs after every message in the horizon is joined, which is the scan the cap exists to stop")
