@@ -203,7 +203,7 @@ The root `make check` runs the backend gate above and these deterministic root s
 - `MIGRATION_VERSIONS_REQUIRE_BASE=1` (CI) treats a missing base ref as a broken checkout instead of a skip. A base ref can be passed as `$1`.
 - A baseline consolidation is the one legitimate exception and must declare itself with `MIGRATION_VERSIONS_BASELINE_RESET=1`. The declaration is honoured only where the namespace both collapses (fewer migrations than the base) and shares no `(version, name)` pair with it. So it goes inert once the consolidation merges.
 
-`test-migration-versions` checks each of the four defects the gate names (collision, sorts-below, duplicate-in-tree, undeclared consolidation). It also exercises every branch of the baseline-reset declaration: admitted for a real consolidation, and refused for a survivor at the base's version and name, for a one-for-one rename that does not collapse, and for a real collision.
+`test-migration-versions` checks each of the four defects the gate names (collision, sorts-below, duplicate-in-tree, undeclared consolidation). It also exercises every branch of the baseline-reset declaration. It is admitted for a real consolidation. It is refused for a survivor at the base's version and name, for a one-for-one rename that does not collapse, and for a real collision.
 
 Each case asserts a string the gate's own output must contain. So a gate that exits non-zero for an unrelated reason cannot pass for a detection. Setup and mutation failures fail the case. The harness unsets the gate's own switch and the git environment, because CI sets the reset declaration on the same step.
 
