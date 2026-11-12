@@ -21,6 +21,10 @@ import {
   useRosterPartial,
 } from "../../components/entityref";
 import {
+  type AssignedRecord,
+  assignedRecord,
+} from "../../components/recordassignments.queries";
+import {
   Button,
   Field,
   SegmentedControl,
@@ -113,9 +117,13 @@ export function OwnerPicker({
 }
 
 // Who the reader may hand work to: the contacts, less whoever holds the task
-// already. Why the holder is excluded is the caller's own note below.
-function useAssigneeOptions(exclude: string | undefined) {
-  const { options, roster } = useAssignableUserOptions();
+// already, with those named on the task's record first. Why the holder is
+// excluded is the caller's own note below.
+function useAssigneeOptions(
+  exclude: string | undefined,
+  records: readonly AssignedRecord[],
+) {
+  const { options, roster } = useAssignableUserOptions(true, records);
   return {
     options: options.filter((option) => option.value !== exclude),
     roster,
@@ -151,7 +159,10 @@ export function ReassignForm({
   // the contact already holding the task. An empty list is the honest state of a
   // question not yet answered; a self-reassignment is a write that changes
   // nothing and looks on screen exactly like one that did.
-  const { options, roster } = useAssigneeOptions(holder);
+  const { options, roster } = useAssigneeOptions(
+    holder,
+    assignedRecord(item.subject?.type, item.subject?.id),
+  );
   const settled = holder !== undefined;
   const reassign = useReassignTask();
 

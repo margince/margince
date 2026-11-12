@@ -7,6 +7,7 @@ import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { useAssignableUserOptions } from "../../components/assigneepicker";
 import { EntityRef } from "../../components/entityref";
+import { assignedRecord } from "../../components/recordassignments.queries";
 import {
   Badge,
   Button,
@@ -277,7 +278,10 @@ export function RecordDecisionDialog({
     expected: "",
     ...initial,
   });
-  const owners = useAssignableUserOptions();
+  const owners = useAssignableUserOptions(
+    true,
+    assignedRecord("deal", draft.dealId),
+  );
   const deals = useQuery({
     queryKey: ["decision-deals"],
     queryFn: async () =>
