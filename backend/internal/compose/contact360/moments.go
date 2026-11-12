@@ -95,10 +95,11 @@ func (s *Service) momentsSection(ctx context.Context, tx pgx.Tx, contactID ids.C
 	if err != nil {
 		return err
 	}
-	dismissed := func(moment crmcontracts.ContactMoment) bool {
-		stored, ok := putAway[moment.ClaimKey]
-		return ok && stored == moment.EvidenceFingerprint
+	ourLast, err := s.ourLastMessageDone(ctx, tx, now, out)
+	if err != nil {
+		return err
 	}
+	dismissed := cardsPutAway(putAway, ourLast)
 	zone, err := recordZone(ctx, tx)
 	if err != nil {
 		return err
@@ -113,6 +114,7 @@ func (s *Service) momentsSection(ctx context.Context, tx pgx.Tx, contactID ids.C
 	}
 	moment := said.deriveMomentPast(ctx, now, out, dismissed, said.proposer(ctx, out, followUps, dismissed))
 	momentaction.WithholdContact(ctx, string(said.Lang()), &moment, out.Contact.Attachable != nil && *out.Contact.Attachable)
+	offerDone(&moment, ourLast, out)
 	out.Moment = &moment
 	return nil
 }

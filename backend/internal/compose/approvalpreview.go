@@ -56,10 +56,12 @@ type approvalPreviewReader struct {
 	activities *activities.Store
 	// touched collects the records a build read but names only as text.
 	touched *previewTouched
+	// signatureImages draws the sign-off's https images for the card.
+	signatureImages *signaturePreviewImages
 }
 
 func newApprovalPreviewReader(db *database.DB) approvalPreviewReader {
-	return approvalPreviewReader{db: db, now: time.Now, names: newAttentionNames(db), records: NewProviderFor(db), deals: deals.NewStore(db, DealsInstallation()).WithOwnDomains(ownDomainReader{store: capture.NewOwnDomainStore(db)}), signals: signals.NewStore(db, nil), activities: activities.NewStore(db).WithChannelReachability(channelReachability{}).WithDisclosures(newDisclosureAdapter(db)).WithSchedulingCalendar(newSchedulingCalendar(db.Pool(), nil))}
+	return approvalPreviewReader{db: db, now: time.Now, names: newAttentionNames(db), records: NewProviderFor(db), deals: deals.NewStore(db, DealsInstallation()).WithOwnDomains(ownDomainReader{store: capture.NewOwnDomainStore(db)}), signals: signals.NewStore(db, nil), activities: activities.NewStore(db).WithChannelReachability(channelReachability{}).WithDisclosures(newDisclosureAdapter(db)).WithSchedulingCalendar(newSchedulingCalendar(db.Pool(), nil)), signatureImages: sharedSignaturePreviewImages()}
 }
 
 // buildPreview dispatches to each kind's preview, reading as whichever principal ctx carries.

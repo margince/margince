@@ -4,9 +4,7 @@
 package contacts
 
 import (
-	"fmt"
 	"net/http"
-	"unicode/utf8"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
@@ -71,9 +69,8 @@ const maxAddressQuery = 320
 
 // GetCompanyForAddress serves GET /companies/for-address.
 func (h Handlers) GetCompanyForAddress(w http.ResponseWriter, r *http.Request, params crmcontracts.GetCompanyForAddressParams) {
-	if length := utf8.RuneCountInString(params.Email); length > maxAddressQuery {
-		httperr.Write(w, r, httperr.Validation("email", "too_long",
-			fmt.Sprintf("an address is at most %d characters; this one is %d", maxAddressQuery, length)))
+	if err := httperr.RequireWithin("email", params.Email, maxAddressQuery); err != nil {
+		httperr.Write(w, r, err)
 		return
 	}
 	company, found, err := h.store.CompanyForAddress(r.Context(), params.Email)

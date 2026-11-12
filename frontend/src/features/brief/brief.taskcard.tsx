@@ -18,6 +18,7 @@ import {
   TrendingDown,
   UserPlus,
 } from "lucide-react";
+import { MayBeDone } from "../../components/maybedone";
 import { RECORD_CHIP_ICONS } from "../../components/recordlinks";
 import { useTaskDone } from "../../components/taskactions";
 import { TaskTypeChip } from "../../components/tasktype";
@@ -44,6 +45,7 @@ import { useCompanyZone } from "../../lib/companyzone";
 import { useMe } from "../../lib/session";
 import type { TaskType } from "../../lib/tasktype";
 import { useViewerZone } from "../../lib/viewerzone";
+import { worklistKey } from "../../lib/workkeys";
 import {
   briefContextTitle,
   briefSubjectLabel,
@@ -192,6 +194,19 @@ export function TaskCard({
         {line && <span className="brief-task-line">{line}</span>}
         <TaskMeta item={item} />
       </button>
+      {item.may_be_done && (
+        <div className="brief-task-ask">
+          <MayBeDone
+            question={item.may_be_done}
+            task={{
+              id: item.id,
+              version: item.version,
+              canComplete: item.actions.includes("complete"),
+            }}
+            refresh={[worklistKey]}
+          />
+        </div>
+      )}
     </Card>
   );
 }

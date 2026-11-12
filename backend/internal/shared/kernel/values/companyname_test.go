@@ -19,8 +19,19 @@ func TestCompanyNameFaultNamesTheCodeAClientMaps(t *testing.T) {
 		strings.Repeat("組", 200):        "",
 	}
 	for name, want := range cases {
-		if code, _ := CompanyNameFault(name); code != want {
+		code := ""
+		if refused := CompanyNameFault("display_name", name); refused != nil {
+			code = refused.Code
+		}
+		if code != want {
 			t.Errorf("CompanyNameFault(%d runes) = %q, want %q", len([]rune(name)), code, want)
 		}
+	}
+}
+
+func TestCompanyNameFaultStatesTheLimitItRefusedAt(t *testing.T) {
+	refused := CompanyNameFault("display_name", strings.Repeat("a", MaxCompanyNameRunes+1))
+	if refused == nil || refused.FieldMax() != MaxCompanyNameRunes || refused.Field != "display_name" {
+		t.Errorf("CompanyNameFault = %+v, want display_name refused at %d", refused, MaxCompanyNameRunes)
 	}
 }

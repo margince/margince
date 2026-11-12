@@ -56,6 +56,9 @@ type Service struct {
 	// activities reads the activity custom-field catalog. Nil leaves the
 	// timeline rows without their custom-field values.
 	activities *activities.Store
+	// messages answers whether this reader may mark our last message done.
+	// Nil offers no Done and hides no card for it.
+	messages *activities.Store
 }
 
 // NewService binds the composite read to its module stores. now is the
@@ -94,6 +97,13 @@ func (s *Service) WithProviders(reg providerDescriptors) *Service {
 // field values.
 func (s *Service) WithActivityFields(store *activities.Store) *Service {
 	s.activities = store
+	return s
+}
+
+// WithMessageDone lets the waiting cards offer Done and honour one, through the
+// store whose writer takes it.
+func (s *Service) WithMessageDone(store *activities.Store) *Service {
+	s.messages = store
 	return s
 }
 

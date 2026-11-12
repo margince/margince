@@ -102,6 +102,7 @@ func base(
 		NoticeOrigin:      item.NoticeOrigin,
 		PromiseRecipients: item.PromiseRecipients,
 		MayBeDone:         item.MayBeDone,
+		RequestCheck:      item.RequestCheck,
 		DomainReasonCode:  item.DomainReasonCode,
 		DomainNote:        item.DomainNote,
 		RunReasonCode:     item.RunReasonCode,
@@ -281,18 +282,21 @@ func nearTaskCutoff(asOf time.Time) time.Time { return asOf.AddDate(0, 0, nearTa
 // without a date stays actionable without claiming an invented deadline.
 func classifyTask(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 	level := levelAgreed
+	late := taskLateAt(item.DueAt, asOf, item.MayBeDone)
 	// A due customer obligation needs attention even if its deal is small.
 	// Prospecting follow-ups retain their dates without claiming an external
 	// response deadline; that clock belongs to the lead-response lane.
-	if item.DueAt != nil && (overdueAt(item.DueAt, asOf) || (item.DueGroup != nil && *item.DueGroup == crmcontracts.AttentionItemDueGroupToday)) &&
+	if item.DueAt != nil && (late || (item.DueGroup != nil && *item.DueGroup == crmcontracts.AttentionItemDueGroupToday)) &&
 		(item.Subject == nil || item.Subject.Type != subjectLead) {
 		level = levelPromise
 	}
 	row := base(item, level, "tasks", "task_slips")
-	stampDeadline(&row, item.DueAt, asOf)
-	if overdueAt(item.DueAt, asOf) {
+	if item.DueAt != nil {
+		row.Overdue = &late
+	}
+	if late {
 		row.Because = append(row.Because, reason("overdue", nil))
-	} else if item.DueAt != nil && !isUpcoming(item.DueGroup) {
+	} else if item.DueAt != nil && !overdueAt(item.DueAt, asOf) && !isUpcoming(item.DueGroup) {
 		// Only work that IS due today says so. The lane now also carries what
 		// is coming, and a task due next week telling the reader it is due
 		// today contradicts the group on the same row.
@@ -308,7 +312,7 @@ func classifyTask(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 	out := ranked{
 		item:       row,
 		deadlineAt: deadlineOf(item.DueAt),
-		overdue:    overdueAt(item.DueAt, asOf),
+		overdue:    late,
 		occurredAt: occurredOf(item, asOf),
 		// The assignee the lane read, which is the same fact the reason above
 		// states in words. Absent means nobody has taken it — the state the

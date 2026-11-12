@@ -116,6 +116,8 @@ fi
 
 # Adding a value to an open response enum is the routine change the rule above
 # allows, so oasdiff reports it as information rather than a warning.
+# A response bound that grows breaks only a client enforcing the old bound, and
+# every client is generated from this contract, so it warns; shrinking one fails.
 SEVERITY_LEVELS="$ROOT/scripts/contract-breaking-severity.txt"
 
 notice_base="$(mktemp)"

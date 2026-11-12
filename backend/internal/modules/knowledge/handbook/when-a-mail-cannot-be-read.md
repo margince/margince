@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/design-system/emailthread.tsx backend/internal/shared/kernel/provenance/mailbody.go backend/internal/modules/capture/mailmap/body.go backend/internal/modules/capture/mailmap/partwalk.go backend/internal/modules/activities/mailbodycompleteness.go backend/internal/modules/activities/mailbodyrestore.go backend/internal/modules/activities/commitmentadmission.go -->
+<!-- describes: frontend/src/design-system/emailthread.tsx backend/internal/shared/kernel/provenance/mailbody.go backend/internal/modules/capture/mailmap/body.go backend/internal/modules/capture/mailmap/partwalk.go backend/internal/modules/activities/mailbodycompleteness.go backend/internal/modules/activities/mailbodyrestore.go backend/internal/modules/activities/commitmentadmission.go backend/internal/platform/database/storekit/requestintent.go -->
 # When a mail cannot be read
 
 Margince stores every captured mail with the text it could read. That is not
@@ -23,6 +23,11 @@ act on the mail by itself.
   mail is missing or cannot be read, so Margince cannot tell whether it read all of the text. It
   cannot find requests or commitments in this mail. Read the original in your
   mail program and add any task by hand.
+
+  The deal does not offer such a mail as a reply still owed. A to-do someone
+  already took from it stays open, and says that Margince cannot check whether
+  it was answered. It names the last reply sent, when you may read it. Mark
+  the to-do done once the request is handled.
 
 If text is missing, open the mail in your mail program to read all of it.
 

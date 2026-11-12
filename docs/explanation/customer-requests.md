@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/platform/database/storekit/answered.go backend/internal/modules/activities/answered.go backend/internal/modules/activities/requeststate.go backend/internal/compose/dealstatus/requestbasis.go backend/internal/compose/dealstatus/service.go backend/internal/modules/activities/requestsettlement.go backend/internal/modules/activities/owedverdict.go backend/internal/modules/activities/emailrequesttasks.go backend/internal/modules/activities/requesttask.go -->
+<!-- describes: backend/internal/platform/database/storekit/answered.go backend/internal/modules/activities/answered.go backend/internal/modules/activities/requeststate.go backend/internal/compose/dealstatus/requestbasis.go backend/internal/compose/dealstatus/service.go backend/internal/modules/activities/requestsettlement.go backend/internal/modules/activities/owedverdict.go backend/internal/modules/activities/emailrequesttasks.go backend/internal/modules/activities/requesttask.go backend/internal/platform/database/storekit/requestintent.go backend/internal/modules/activities/requestcheck.go -->
 # Customer requests last longer than pipeline stages
 
 A captured request and a sales deal have different lives. When a deal closes, Margince stops telling
@@ -58,6 +58,13 @@ An open reminder always wins over the machine's verdict. Someone who takes the w
 answer, and the request counts as open again while their task stands. `unsure` records that the pass
 asked and would not commit. That leaves the request owed and stops the pass from reading the same
 conversation again until someone writes on it again.
+
+The settle pass judges a request only when the request and every mail it would read were read in
+full (`settlementEvidenceCompleteSQL`). A request whose text cannot be checked is never judged, and its
+reminder stays open until someone completes it. The Home row and the task view then say that Margince
+cannot check whether it was answered (`request_check` on the row). They name the newest mail we sent among
+the answers the pass would have read, when the reader may read it. A call, a meeting or the
+customer's own mail is never named there.
 
 Any user who completes the reminder linked to the evidence settles its source request. Marking a conversation as not sales removes it from request review. When a reader chooses
 snooze, `not_mine` or `handled`, that changes their own queue, not what is owed for every user.
@@ -142,6 +149,10 @@ decision and the time of the check. Time since contact exchange, activity filed 
 request arrival are separate figures. No one links mail to another record to make those dates match.
 Cache readers share a version check; a card from an older projection is a miss. The move's dismissal
 identity still names its action and source, so a new decision does not undo a reader's choice.
+
+Review admits a machine's verdict by the same rule as the reminders the pass files on its own
+(`OwedVerdictStandsClause`). The verdict counts only on a mail read in full, or when a human checked
+the verdict. A request a human already took stays open for review, so its holder can take it again.
 
 The deal offers **Create task** for a request that waits to be accepted. Both task and activity create
 calls accept `request_activity_id`. The server checks that the caller may read the source evidence, and

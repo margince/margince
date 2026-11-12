@@ -433,21 +433,23 @@ func (s *Store) linkActivityToContact(ctx context.Context, tx pgx.Tx, activityID
 	// An archived survivor is still the right subject: the message happened,
 	// and this call's caller logs faults rather than failing the capture, so
 	// refusing here would drop the link silently rather than loudly.
+	// One statement resolves the redirect under its lock and writes the link,
+	// so a capture pays one round trip for both.
 	var canonical ids.ContactID
-	if err := tx.QueryRow(ctx,
-		`SELECT coalesce(merged_into_id, id) FROM contact WHERE id = $1 FOR UPDATE`,
-		contactID).Scan(&canonical); err != nil {
-		return fmt.Errorf("contacts: resolving the contact this activity belongs to: %w", err)
+	if err := tx.QueryRow(ctx, `
+		WITH canonical AS (
+		  SELECT coalesce(merged_into_id, id) AS id FROM contact WHERE id = $2 FOR UPDATE),
+		linked AS (
+		  INSERT INTO activity_link (activity_id, entity_type, contact_id)
+		  SELECT $1, 'contact', canonical.id FROM canonical
+		   WHERE NOT EXISTS (
+		     SELECT 1 FROM activity_link l
+		      WHERE l.activity_id = $1 AND l.entity_type = 'contact' AND l.contact_id = canonical.id))
+		SELECT id FROM canonical`,
+		activityID, contactID).Scan(&canonical); err != nil {
+		return fmt.Errorf("contacts: linking activity to its contact: %w", err)
 	}
 	contactID = canonical
-	if _, err := tx.Exec(ctx, `
-		INSERT INTO activity_link (activity_id, entity_type, contact_id)
-		SELECT $1, 'contact', $2
-		WHERE NOT EXISTS (
-			SELECT 1 FROM activity_link WHERE activity_id = $1 AND entity_type = 'contact' AND contact_id = $2)`,
-		activityID, contactID); err != nil {
-		return fmt.Errorf("contacts: linking activity to contact: %w", err)
-	}
 	if err := nameContactAmongParticipants(ctx, tx, activityID, contactID); err != nil {
 		return err
 	}

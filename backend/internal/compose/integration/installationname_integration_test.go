@@ -303,6 +303,10 @@ func wantNameFault(t *testing.T, problem companyProblem, code string) {
 	if len(problem.Details.Errors) != 1 || problem.Details.Errors[0].Field != "display_name" ||
 		problem.Details.Errors[0].Code != code {
 		t.Errorf("refusal = %+v, want one %s error on display_name", problem.Details.Errors, code)
+		return
+	}
+	if wantMax := map[string]int{"too_long": 200}[code]; problem.Details.Errors[0].Max != wantMax {
+		t.Errorf("refusal max = %d, want %d", problem.Details.Errors[0].Max, wantMax)
 	}
 }
 

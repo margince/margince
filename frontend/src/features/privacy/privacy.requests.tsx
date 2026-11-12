@@ -42,12 +42,13 @@ import {
   nextStatuses,
 } from "../../lib/privacy.logic";
 import { ProblemError, problemMessageOf, unwrap } from "../../lib/problem";
+import { dsrsKey } from "../../lib/workkeys";
 import { RequestProof } from "./privacy.proofreading";
 import "./privacy.css";
 import { labelFor } from "../../lib/labelfor";
-import { isUuid } from "../../lib/uuid";
 import { useViewerZone } from "../../lib/viewerzone";
 import { DsrDispute, DsrProofFields } from "./privacy.requestproof";
+import { DsrSubjectActions, namesRecord } from "./privacy.subject";
 
 export type DataSubjectRequest = components["schemas"]["DataSubjectRequest"];
 type UpdateDataSubjectRequest =
@@ -60,9 +61,7 @@ export function subjectName(dsr: DataSubjectRequest, t: Translator): string {
   if (dsr.subject_label) {
     return dsr.subject_label;
   }
-  return isUuid(dsr.subject_ref)
-    ? t("notice.recordUnavailable")
-    : dsr.subject_ref;
+  return namesRecord(dsr) ? t("notice.recordUnavailable") : dsr.subject_ref;
 }
 
 // Linked only to the record the label resolved to, so a lead never opens as a contact.
@@ -240,11 +239,11 @@ export function DsrDetail({
         }),
       );
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["dsrs"] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: dsrsKey }),
     // Only the moved-on race re-reads; a 403 or a 500 stays explained.
     onError: (error) => {
       if (error instanceof ProblemError && isIllegalTransition(error.problem)) {
-        void queryClient.invalidateQueries({ queryKey: ["dsrs"] });
+        void queryClient.invalidateQueries({ queryKey: dsrsKey });
       }
     },
   });
@@ -282,6 +281,7 @@ export function DsrDetail({
       <DrawerBody>
         <div className="form-stack">
           <DsrFacts dsr={dsr} nowMs={nowMs} canWork={canWork} />
+          <DsrSubjectActions dsr={dsr} canWork={canWork} />
           {canWork && (
             <DsrAssignee
               dsr={dsr}

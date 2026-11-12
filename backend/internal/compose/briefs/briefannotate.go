@@ -291,8 +291,7 @@ func (a Annotation) validate() error {
 // umlauts would otherwise be refused by the database after passing here.
 func boundProse(field, text string) error {
 	if n := len([]rune(text)); n > MaxAnnotationRunes {
-		return httperr.Validation(field, "too_long",
-			fmt.Sprintf("%s is %d characters, over the %d allowed", field, n, MaxAnnotationRunes))
+		return httperr.TooLong(field, MaxAnnotationRunes, n)
 	}
 	return nil
 }
