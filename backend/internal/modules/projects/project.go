@@ -133,13 +133,13 @@ func createProjectTx(
 	if _, err := tx.Exec(ctx,
 		`INSERT INTO project_phase_history (project_id, from_phase, to_phase, changed_by, audit_log_id)
 		 VALUES ($1, NULL, $2, $3, $4)`,
-		id, in.startPhase(), by, auditID); err != nil {
+		id, in.StartPhase(), by, auditID); err != nil {
 		return crmcontracts.Project{}, fmt.Errorf("record project phase history: %w", err)
 	}
 	created := crmcontracts.PublicEventProjectCreated{
 		Name:      in.Name,
 		CompanyId: openapi_types.UUID(in.CompanyID.UUID),
-		Phase:     in.startPhase(),
+		Phase:     in.StartPhase(),
 	}
 	if in.Key != nil {
 		created.Key = in.Key

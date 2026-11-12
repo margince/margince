@@ -42,8 +42,8 @@ func admitProjectCreation(ctx context.Context, tx pgx.Tx, in CreateProjectInput,
 	return in, nil
 }
 
-// startPhase is the phase the project is born in.
-func (in CreateProjectInput) startPhase() string {
+// StartPhase is the phase the project is born in.
+func (in CreateProjectInput) StartPhase() string {
 	if in.Phase == "" {
 		return PhaseInitiative
 	}

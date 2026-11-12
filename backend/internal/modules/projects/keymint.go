@@ -311,7 +311,7 @@ func insertOnce(
 	provenanceCols, provenanceHolders, base := storekit.ProvenanceInsertFragments(in.SourceID, in.Author, []any{
 		id, in.Name, key, in.CompanyID, in.OwnerID,
 		in.Description, in.StartedAt, in.TargetEndDate, in.Source, by,
-		in.SourceSystem, in.startPhase(),
+		in.SourceSystem, in.StartPhase(),
 	})
 	cfCols, cfHolders, args, cfErr := storekit.InsertFragments(active, in.CustomFields, base)
 	if cfErr != nil {

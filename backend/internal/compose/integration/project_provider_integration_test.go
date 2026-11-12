@@ -45,44 +45,35 @@ func dealProvider(e *Env) *deals.Provider {
 	return deals.NewProvider(e.DB(), installseam.Deals())
 }
 
-// An agent that names a key is refused and told the key is not its to set. A
-// key an agent could choose is a key it could point at every bracketed mention
-// of a common word.
-func TestTheAgentSeamCannotChooseAProjectsKey(t *testing.T) {
+// The agent seam takes a key the way the New project form does: a chosen one
+// is held to the same refusal, and none sent means one minted from the name.
+func TestTheAgentSeamChoosesAKeyUnderTheSameRefusal(t *testing.T) {
 	e := Setup(t)
 	p := projectProvider(e)
 	ctx := e.Admin()
 	company := e.SeedCompany(t, "Minted GmbH", nil)
+	create := func(fields map[string]any) (string, error) {
+		created, err := p.Create(ctx, datasource.CreateInput{
+			EntityType: datasource.EntityProject, Fields: fields, Source: "agent",
+		})
+		if err != nil {
+			return "", err
+		}
+		got, err := e.Projects.GetProject(ctx, projectIDOf(created.ID), storekit.LiveOnly)
+		if err != nil || got.Key == nil {
+			t.Fatalf("read the created project back: %v", err)
+		}
+		return *got.Key, nil
+	}
 
-	_, err := p.Create(ctx, datasource.CreateInput{
-		EntityType: datasource.EntityProject,
-		Fields: map[string]any{
-			"name": "Warehouse rollout", "company_id": company.String(), "key": "MINE",
-		},
-		Source: "agent",
-	})
-	if err == nil {
-		t.Fatal("the seam accepted a key the caller named; the agent would believe it chose the matcher")
+	if key, err := create(map[string]any{"name": "Warehouse rollout", "company_id": company.String(), "key": "mine"}); err != nil || key != "MINE" {
+		t.Fatalf("chosen key through the seam = %q (%v), want MINE", key, err)
 	}
-	if !strings.Contains(err.Error(), "cannot be set") {
-		t.Errorf("the refusal does not say the key is not the caller's to set: %v", err)
+	if _, err := create(map[string]any{"name": "Status call", "company_id": company.String(), "key": "STATUS"}); err == nil {
+		t.Error("the seam took a key the REST create refuses")
 	}
-
-	// And the ordinary create still mints one from the NAME.
-	created, err := p.Create(ctx, datasource.CreateInput{
-		EntityType: datasource.EntityProject,
-		Fields:     map[string]any{"name": "Warehouse rollout", "company_id": company.String()},
-		Source:     "agent",
-	})
-	if err != nil {
-		t.Fatalf("create through the seam: %v", err)
-	}
-	got, err := e.Projects.GetProject(ctx, projectIDOf(created.ID), storekit.LiveOnly)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got.Key == nil || !strings.HasPrefix(*got.Key, "WR-") {
-		t.Errorf("minted key %v does not carry the stem the name gives", got.Key)
+	if key, err := create(map[string]any{"name": "Warehouse rollout", "company_id": company.String()}); err != nil || key != "WR" {
+		t.Errorf("minted key through the seam = %q (%v), want WR", key, err)
 	}
 }
 
