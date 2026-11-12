@@ -156,7 +156,7 @@ type schemaProp struct {
 	// Extensible is a flag beside an enum, or the closed part of an open set.
 	// A saved view's core lists sit beside the extension kinds its pattern
 	// admits. Only the list form names a value.
-	Extensible json.RawMessage            `json:"x-extensible-enum"`
+	Extensible json.RawMessage            `json:"x-extensible-enum"` //nolint:tagliatelle // OpenAPI extension keyword, fixed by the contract
 	Default    any                        `json:"default"`
 	Examples   []any                      `json:"examples"`
 	MinItems   int                        `json:"minItems"` //nolint:tagliatelle // JSON Schema spec keyword, must be camelCase
