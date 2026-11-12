@@ -8,16 +8,24 @@ import { useLicensePosture } from "../lib/license-posture";
 import { routeHash } from "../lib/router";
 import { settingsHref } from "../lib/settingsrouting";
 
-// A refused licence is a standing installation condition, not something the
-// agent is doing, so it stands in the shell's chrome rather than on the rail's
-// live line. Only `refused`: every dev and demo stack has no licence at all,
-// and a notice drawn on all of them would stop being a signal.
+const COPY = {
+  refused: { title: "shell.license.refused", body: "licensebanner.body" },
+  grace: {
+    title: "licensebanner.grace.title",
+    body: "licensebanner.grace.body",
+  },
+} as const;
+
+// A refused or expired licence is a standing condition, not agent work. So it
+// stands in the shell's chrome and not on the rail's live line. Not `none`:
+// every dev and demo stack has no licence, and a notice on all of them is noise.
 export function LicenseBanner() {
   const t = useT();
   const posture = useLicensePosture();
-  if (posture !== "refused") {
+  if (posture !== "refused" && posture !== "grace") {
     return null;
   }
+  const copy = COPY[posture];
   return (
     // `warning` rather than `danger`, and no dismiss: escalating would make the
     // chrome a sales surface, and the repair behind it stays until it is made.
@@ -25,14 +33,14 @@ export function LicenseBanner() {
       <Callout
         tone="warning"
         kind="standing"
-        title={t("shell.license.refused")}
+        title={t(copy.title)}
         actions={
           <AppLink href={routeHash(settingsHref("seats"))}>
             {t("licensebanner.link", { tab: t("settings.tab.seats") })}
           </AppLink>
         }
       >
-        {t("licensebanner.body")}
+        {t(copy.body)}
       </Callout>
     </div>
   );
