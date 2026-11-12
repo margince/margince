@@ -5851,7 +5851,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deal.ownerMe": "Giao cho tôi",
   "deal.ownerUnassign": "Hủy giao",
   "deal.partnerCompany": "Đối tác giới thiệu",
-  "deal.partnerNoneYet": "Chưa có đối tác. Nhờ quản trị viên thêm.",
+  "deal.partnerNoneYet":
+    "Chưa có đối tác. Liên hệ quản trị viên để thêm đối tác.",
   "deal.referredBy": "Đối tác giới thiệu:",
   "deal.referral.sourced": "(mang về)",
   "deal.referral.influenced": "(có hỗ trợ)",
