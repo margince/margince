@@ -1,28 +1,27 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package compose_test
+//gate:kind census H2
 
-// Every site a request names is one api/ai-tasks.yaml declares. The router
-// refuses an undeclared one at call time, so a typo in Request.Site is a
-// feature that fails on its first call rather than a test that fails here.
+package gates
+
+// Every site a model request names is one api/ai-tasks.yaml declares.
+//
+// The router refuses an undeclared one at call time, so a typo in Request.Site is a
+// feature that fails on its first call rather than a gate that fails here.
 
 import (
 	"go/ast"
 	"go/parser"
 	"go/token"
 	"io/fs"
-	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
-
-const modelPortPath = "github.com/margince/margince/backend/internal/shared/ports/model"
 
 // declaredSites maps the site names the task contract declares, read from the
 // table generated from it.
@@ -41,19 +40,19 @@ func declaredSites() map[string]bool {
 // the literal, not an assignment to a field of one.
 func requestSites(t *testing.T, path string, src []byte, constsOf func() map[string]string) []string {
 	t.Helper()
-	file, err := parser.ParseFile(token.NewFileSet(), path, src, 0)
+	file, err := parser.ParseFile(token.NewFileSet(), path, src, parser.SkipObjectResolution)
 	if err != nil {
 		t.Fatalf("parse %s: %v", path, err)
 	}
-	port := modelPortName(file)
-	if port == "" {
+	local, ok := localNameFor(file, "shared/ports/model")
+	if !ok {
 		return nil
 	}
 	consts := constsOf()
 	var sites []string
 	ast.Inspect(file, func(node ast.Node) bool {
 		literal, ok := node.(*ast.CompositeLit)
-		if !ok || !namesType(literal.Type, port, "Request") {
+		if !ok || !isRequestLiteral(literal, local) {
 			return true
 		}
 		for _, element := range literal.Elts {
@@ -68,30 +67,8 @@ func requestSites(t *testing.T, path string, src []byte, constsOf func() map[str
 	return sites
 }
 
-// modelPortName is the name file imports the model port under, "" for none.
-func modelPortName(file *ast.File) string {
-	for _, spec := range file.Imports {
-		if path, err := strconv.Unquote(spec.Path.Value); err != nil || path != modelPortPath {
-			continue
-		}
-		if spec.Name != nil {
-			return spec.Name.Name
-		}
-		return "model"
-	}
-	return ""
-}
-
-func namesType(expr ast.Expr, pkg, name string) bool {
-	selector, ok := expr.(*ast.SelectorExpr)
-	if !ok {
-		return false
-	}
-	qualifier, ok := selector.X.(*ast.Ident)
-	return ok && qualifier.Name == pkg && selector.Sel.Name == name
-}
-
 func TestEveryRequestSiteIsDeclaredInTheTaskContract(t *testing.T) {
+	t.Parallel()
 	declared := declaredSites()
 	constsByDir := map[string]map[string]string{}
 	constsOf := func(dir string) map[string]string {
@@ -101,11 +78,11 @@ func TestEveryRequestSiteIsDeclaredInTheTaskContract(t *testing.T) {
 		return constsByDir[dir]
 	}
 	named := 0
-	err := filepath.WalkDir("..", func(path string, entry fs.DirEntry, err error) error {
+	err := gatekit.WalkDir("internal", func(path string, entry fs.DirEntry, err error) error {
 		if err != nil || entry.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
 			return err
 		}
-		src, err := os.ReadFile(path)
+		src, err := gatekit.ReadFile(path)
 		if err != nil {
 			return err
 		}
@@ -131,8 +108,9 @@ func TestEveryRequestSiteIsDeclaredInTheTaskContract(t *testing.T) {
 // The census recognises each shape a site may be spelled in, and reports the
 // one it cannot read rather than passing over it.
 func TestTheRequestSiteCensusSeesEveryShape(t *testing.T) {
+	t.Parallel()
 	src := []byte(`package p
-import port "` + modelPortPath + `"
+import port "github.com/margince/margince/backend/internal/shared/ports/model"
 const named = "from_a_constant"
 var _ = port.Request{Site: "literal"}
 var _ = port.Request{Site: named}
