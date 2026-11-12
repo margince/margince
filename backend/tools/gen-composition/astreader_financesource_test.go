@@ -45,6 +45,19 @@ func TestFinanceSourcesDeriveIntoManifestSorted(t *testing.T) {
 	}
 }
 
+// The optional document function is declared in the manifest, and a source
+// without one says nothing.
+func TestAFinanceSourceServingDocumentsSaysSoInTheManifest(t *testing.T) {
+	withDocuments := "\t\t\t{Provider: \"abooks\", Check: check, Customers: customers, InvoicesFor: invoices, InvoiceDocument: document},\n"
+	derived, err := deriveSynthetic(t, "x", financeUnitSource(withDocuments+financeEntry("zbooks")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := strings.Count(string(derived), `"documents": true`); got != 1 {
+		t.Fatalf("documents is declared %d times, want once (abooks only):\n%s", got, derived)
+	}
+}
+
 func TestAFinanceSourceDeclaredTwiceIsRefused(t *testing.T) {
 	_, err := deriveSynthetic(t, "x", financeUnitSource(financeEntry("abooks")+financeEntry("abooks")))
 	if err == nil || !strings.Contains(err.Error(), "declared twice") {

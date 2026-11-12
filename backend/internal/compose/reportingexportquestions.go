@@ -5,6 +5,7 @@ package compose
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -32,7 +33,7 @@ func questionCSVRows(edition crmcontracts.ReportingEdition) [][]string {
 	rows := [][]string{}
 	for _, card := range reporting.QuestionCards(edition.Evaluation.Selection) {
 		cell := func(c questionCell) []string {
-			return []string{formulacell.Guard(card.Question.Entity), "question:" + card.Id, formulacell.Guard(c.label), c.value, "", "", "", c.unit, c.currency, formulacell.Guard(c.context), c.coverage, captured}
+			return []string{formulacell.Guard(card.Question.Entity), "question:" + card.Id, formulacell.Guard(c.label), c.value, "", "", "", c.unit, c.currency, formulacell.Guard(c.context), c.coverage, strconv.FormatBool(c.withheld), "", captured}
 		}
 		question, found := kept[card.Id]
 		switch {
@@ -58,6 +59,7 @@ func questionCoverage(question crmcontracts.ReportingEditionQuestion) string {
 // questionCell is one row of a question card in the file.
 type questionCell struct {
 	label, value, unit, currency, context, coverage string
+	withheld                                        bool
 }
 
 func keptAnswerRows(question crmcontracts.ReportingCardQuestion, answer crmcontracts.AnalyticsAnswer, money answerMoney, cell func(questionCell) []string) [][]string {
@@ -69,7 +71,7 @@ func keptAnswerRows(question crmcontracts.ReportingCardQuestion, answer crmcontr
 	rows := [][]string{}
 	for _, row := range answer.Rows {
 		if row[withheldColumn] == true {
-			rows = append(rows, cell(questionCell{coverage: "withheld"}))
+			rows = append(rows, cell(questionCell{coverage: reportingWithheld, withheld: true}))
 			continue
 		}
 		label := groupLabel(asked.GroupBy, row, answer.Labels)

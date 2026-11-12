@@ -18,6 +18,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/comms"
+	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 )
@@ -41,6 +42,7 @@ func DriveControllerPayloadSweepForTest(
 		comms.NewStore(db, time.Now, activities.NewStore(db), opts...),
 		controllerPayloads{v: vault},
 		receiptAlarm{db: db},
+		consent.NewStore(db),
 		slog.New(slog.DiscardHandler))
 	worker.clock = func() time.Time { return now }
 	return worker.Work(ctx, &river.Job[ControllerPayloadSweepArgs]{

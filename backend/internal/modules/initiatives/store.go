@@ -32,12 +32,17 @@ const (
 	// A rule read answers at most this many records, the predicate engine's
 	// own row bound. Past it a membership is an export and not a list.
 	ruleReadLimit = storekit.PredicateRowLimit
+	// unscoped is the clause a read carries when the reader has no row scope.
+	unscoped = "TRUE"
 )
 
 // RuleMatcher evaluates a rule in a record type's list vocabulary under the
 // caller's row scope. The composition root binds the list filter engine.
 type RuleMatcher interface {
 	Match(ctx context.Context, tx pgx.Tx, recordType string, rule storekit.Predicate, limit int) (matched []ids.UUID, count int, err error)
+	// Page answers up to limit matches after after (nil for the first page),
+	// id-ordered, and whether more follow.
+	Page(ctx context.Context, tx pgx.Tx, recordType string, rule storekit.Predicate, after *ids.UUID, limit int) (matched []ids.UUID, more bool, err error)
 }
 
 // Store owns the initiative tables.
@@ -170,7 +175,11 @@ func (s *Store) Update(ctx context.Context, id ids.UUID, in Definition, ifVersio
 		if err != nil {
 			return err
 		}
-		return recordChange(ctx, tx, out, &before, []string{"definition"})
+		if err := recordChange(ctx, tx, out, &before, []string{"definition"}); err != nil {
+			return err
+		}
+		_, err = s.observeEnrolmentTx(ctx, tx, out)
+		return err
 	})
 	return out, err
 }
@@ -197,7 +206,7 @@ func (s *Store) Launch(ctx context.Context, id ids.UUID, ifVersion *int64) (crmc
 		if before.Status != crmcontracts.SalesInitiativeStatusDraft {
 			return fmt.Errorf("the initiative is already launched: %w", apperrors.ErrConflict)
 		}
-		members, err := s.membersTx(ctx, tx, before)
+		members, err := s.membersTx(ctx, tx, before, boundedRead)
 		if err != nil {
 			return err
 		}
@@ -224,7 +233,11 @@ func (s *Store) Launch(ctx context.Context, id ids.UUID, ifVersion *int64) (crmc
 		if err != nil {
 			return err
 		}
-		return recordChange(ctx, tx, out, &before, []string{"status", "baseline"})
+		if err := recordChange(ctx, tx, out, &before, []string{"status", "baseline"}); err != nil {
+			return err
+		}
+		_, err = s.observeEnrolmentTx(ctx, tx, out)
+		return err
 	})
 	return out, err
 }
@@ -281,7 +294,7 @@ func initiativeScope(ctx context.Context, args *[]any) (string, error) {
 		return "", err
 	}
 	if scope == "" {
-		return "TRUE", nil
+		return unscoped, nil
 	}
 	return scope, nil
 }

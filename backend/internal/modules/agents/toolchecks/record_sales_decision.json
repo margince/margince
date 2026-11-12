@@ -3,8 +3,7 @@
   "checks": [
     "activity.create",
     "activity.read",
-    "installation_settings.read",
-    "relationship.read"
+    "installation_settings.read"
   ],
   "takes": [
     "deal",

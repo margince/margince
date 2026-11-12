@@ -8,6 +8,7 @@ import { KeyedName } from "../../design-system/keyedname";
 import type { ScrollRegionName } from "../../design-system/scrollregion";
 import { Switch } from "../../design-system/switch";
 import { useT } from "../../i18n";
+import { valueFor } from "../../lib/labelfor";
 import type { ObjectGrant, Role } from "../../lib/roles.queries";
 import "./grantmatrix.css";
 
@@ -178,7 +179,7 @@ function GrantRow({
       {CRUD.map((action) => {
         const refusal = !canManage
           ? readOnlyReason
-          : row.grant[action]
+          : valueFor(row.grant, action, false)
             ? undefined
             : turnOnReason;
         return (
@@ -186,7 +187,7 @@ function GrantRow({
             <Switch
               labelHidden
               label={row.cellLabel(action)}
-              checked={row.grant[action]}
+              checked={valueFor(row.grant, action, false)}
               // The row being written keeps focus through `pending`;
               // every other switch waits for it.
               disabled={busy && !row.pending}

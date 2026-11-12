@@ -23,6 +23,11 @@ import (
 
 // emailWithFile is email() carrying one attached file.
 func emailWithFile(from, to, msgID, refs, filename string, file []byte) []byte {
+	return emailWithFiles(from, to, msgID, refs, filename, file)
+}
+
+// emailWithFiles is email() carrying each file as its own attachment part.
+func emailWithFiles(from, to, msgID, refs, filename string, files ...[]byte) []byte {
 	lines := []string{
 		"From: " + from,
 		"To: " + to,
@@ -36,15 +41,17 @@ func emailWithFile(from, to, msgID, refs, filename string, file []byte) []byte {
 		"Content-Type: text/plain",
 		"",
 		"please find attached",
-		"--part",
-		`Content-Type: application/octet-stream; name="` + filename + `"`,
-		`Content-Disposition: attachment; filename="` + filename + `"`,
-		"Content-Transfer-Encoding: base64",
-		"",
-		base64.StdEncoding.EncodeToString(file),
-		"--part--",
-		"",
 	}
+	for _, file := range files {
+		lines = append(lines,
+			"--part",
+			`Content-Type: application/octet-stream; name="`+filename+`"`,
+			`Content-Disposition: attachment; filename="`+filename+`"`,
+			"Content-Transfer-Encoding: base64",
+			"",
+			base64.StdEncoding.EncodeToString(file))
+	}
+	lines = append(lines, "--part--", "")
 	if refs != "" {
 		lines = append([]string{"References: <" + refs + ">"}, lines...)
 	}

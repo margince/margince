@@ -101,7 +101,7 @@ type CustomField struct {
 	// Name is the key the field's value carries on the record and in a query's
 	// CustomFields.
 	Name string
-	// Type is text, number, date, currency, picklist, multiselect or boolean.
+	// Type is text, number, date, currency, picklist, multiselect, boolean or record.
 	Type    string
 	Options []string
 }
@@ -118,12 +118,24 @@ type DealRepo interface {
 type CompanyRepo interface {
 	Get(ctx context.Context, id string) (crm.Company, error)
 	List(ctx context.Context, q CompanyQuery) (Page[crm.Company], error)
+
+	// SetExtensionTypes replaces the types the unit holds on the company, by the
+	// short names in Extension.CompanyTypes. Other units' types stay, and an empty
+	// list clears the unit's own. An undeclared name is ErrInvalid. A scheduled
+	// job gets ErrForbidden, as for any core write.
+	SetExtensionTypes(ctx context.Context, id string, types []string) (crm.Company, error)
 }
 
-// SignalRepo reads signals.
+// SignalRepo reads signals and files the unit's own kinds.
 type SignalRepo interface {
 	Get(ctx context.Context, id string) (crm.Signal, error)
 	List(ctx context.Context, q SignalQuery) (Page[crm.Signal], error)
+	// Create files a signal of one of this unit's declared kinds about a deal,
+	// company, contact or project, under the caller's own rights. The same
+	// fingerprint records one signal: a repeat answers the signal already
+	// filed, with created false, whichever caller repeats it. An empty
+	// fingerprint is refused. Core stamps the provenance member.
+	Create(ctx context.Context, kind string, subject SignalSubject, evidence SignalEvidence, fingerprint string) (signal crm.Signal, created bool, err error)
 }
 
 // CustomFieldRepo reads which custom fields exist.

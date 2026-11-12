@@ -13,7 +13,7 @@ export type WebhookEventGroup = Readonly<{
 // for them. The types come from the generated catalog, so this names prefixes
 // only; webhookevents.test.ts fails when a new prefix has no group.
 const PREFIX_GROUPS: ReadonlyArray<readonly [string, readonly string[]]> = [
-  ["deals", ["deal"]],
+  ["deals", ["deal", "record_link"]],
   ["offers", ["offer"]],
   ["pipelines_stages", ["pipeline", "stage"]],
   ["contacts", ["contact", "conversation_claim", "relationship_nudge"]],

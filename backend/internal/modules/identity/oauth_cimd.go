@@ -251,9 +251,7 @@ var cimdClient = func() *http.Client {
 			MaxIdleConns:        16,
 			MaxIdleConnsPerHost: 2,
 		},
-		CheckRedirect: func(*http.Request, []*http.Request) error {
-			return http.ErrUseLastResponse
-		},
+		CheckRedirect: netguard.RefuseRedirect,
 	}
 }()
 

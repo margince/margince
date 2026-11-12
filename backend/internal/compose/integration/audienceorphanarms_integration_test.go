@@ -243,6 +243,17 @@ func audienceArmCases(teamOne ids.UUID) []armCase {
 				return ids.Nil
 			},
 		},
+		sharedMailboxArm("a shared mailbox's import admits a member of its reader team", "", true),
+		sharedMailboxArm("a shared mailbox whose reader team is archived admits nobody",
+			`UPDATE team SET archived_at = now() WHERE id = $1 AND $2::uuid IS NOT NULL`, false),
+		sharedMailboxArm("a shared mailbox whose reader team is empty admits nobody",
+			`DELETE FROM team_membership WHERE team_id = $1 AND $2::uuid IS NOT NULL`, false),
+		sharedMailboxArm("a shared mailbox admits no member who was removed from its reader team",
+			`DELETE FROM team_membership WHERE team_id = $1 AND user_id = $2`, false),
+		sharedMailboxArm("a shared mailbox admits no invited member of its reader team",
+			`UPDATE app_user SET status = 'invited' WHERE id = $2 AND $1::uuid IS NOT NULL`, false),
+		sharedMailboxArm("a shared mailbox admits no suspended member of its reader team",
+			`UPDATE app_user SET status = 'suspended' WHERE id = $2 AND $1::uuid IS NOT NULL`, false),
 		{
 			name:     "no arm at all admits nobody",
 			audience: "participants",
@@ -323,5 +334,40 @@ func TestTheOrphanRefusalAgreesWithTheAudienceGateArmForArm(t *testing.T) {
 					"so every agreement above is vacuous")
 			}
 		})
+	}
+}
+
+// sharedMailboxArm is a row a shared mailbox read by Team2 imported, Rep3 its
+// only member. change, when set, then alters that team ($1) or member ($2).
+func sharedMailboxArm(name, change string, admits bool) armCase {
+	return armCase{
+		name:     name,
+		audience: "participants",
+		arrange: func(t *testing.T, e *Env, tx pgx.Tx, id ids.UUID) ids.UUID {
+			t.Helper()
+			// The cases share one env, and an earlier one may have emptied Team2.
+			if _, err := tx.Exec(context.Background(), `
+				WITH live AS (UPDATE app_user SET status = 'active' WHERE id = $2),
+				     open AS (UPDATE team SET archived_at = NULL WHERE id = $1)
+				INSERT INTO team_membership (team_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`, e.Team2, e.Rep3); err != nil {
+				t.Fatalf("restoring the reader team: %v", err)
+			}
+			box := ConnectSharedMailbox(t, tx, SharedMailbox{
+				Provider: "imap", Address: "ops-" + id.String() + "@fable.test", ReaderTeam: e.Team2, ConnectedBy: e.AdminUser, Posture: "held",
+			})
+			if _, err := tx.Exec(context.Background(),
+				`INSERT INTO capture_import (activity_id, connection_id) VALUES ($1, $2)`, id, box); err != nil {
+				t.Fatalf("seeding the shared import row: %v", err)
+			}
+			if change != "" {
+				if _, err := tx.Exec(context.Background(), change, e.Team2, e.Rep3); err != nil {
+					t.Fatalf("changing the reader team: %v", err)
+				}
+			}
+			if !admits {
+				return ids.Nil
+			}
+			return e.Rep3
+		},
 	}
 }

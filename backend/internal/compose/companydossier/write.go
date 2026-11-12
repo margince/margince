@@ -64,6 +64,7 @@ func DossierRequest(in Input, lang string) model.Request {
 		MaxTokens:      ai.ReasoningOutputMaxTokens,
 		ResponseSchema: dossierSchema(),
 		SecretStripper: ai.NewSecretStripper(),
+		Subjects:       model.AboutNoContact("the company's own recorded facts"),
 	}
 }
 

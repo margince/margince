@@ -151,18 +151,19 @@ type Copy struct {
 	MailReasonOnBehalf  string
 	MailReasonAuthority string
 
-	Language              Language
-	MorningPreview        string
-	WeeklyPreview         string
-	DigestPreview         string
-	NotificationPreview   string
-	ResetPreview          string
-	InvitePreview         string
-	RoomPreview           string
-	NoticePreview         string
-	ConfirmRecordPreview  string
-	ConfirmConsentPreview string
-	OptOutAckPreview      string
+	Language               Language
+	MorningPreview         string
+	WeeklyPreview          string
+	DigestPreview          string
+	NotificationPreview    string
+	ResetPreview           string
+	InvitePreview          string
+	RoomPreview            string
+	NoticePreview          string
+	ConfirmRecordPreview   string
+	ConfirmConsentPreview  string
+	OptOutAckPreview       string
+	RestrictionLiftPreview string
 
 	MailPersonal    string
 	MailTeam        string
@@ -203,6 +204,15 @@ type Copy struct {
 	ResetIntro   string
 	ResetAction  string
 	ResetIgnore  string
+
+	// The link an erased subject asked for to be stored again.
+	ReturnSubject string
+	ReturnIntro   string
+	ReturnAction  string
+	ReturnIgnore  string
+	// ReturnConsentWording is what the subject agrees to by confirming the
+	// link. The consent proof records it with ReturnConsentVersion.
+	ReturnConsentWording string
 
 	// The invitation an administrator sent on somebody's behalf.
 	InviteSubject string
@@ -345,6 +355,11 @@ type Copy struct {
 	OptOutAckSubject string
 	OptOutAckBody    string
 	OptOutAckIgnore  string
+
+	// The notice GDPR Art. 18(3) owes a contact before their restriction of
+	// processing is lifted. It carries no link: it tells, and asks nothing.
+	RestrictionLiftSubject string
+	RestrictionLiftBody    string
 
 	// The morning brief. Shorter than the weekly on purpose: it arrives every
 	// working day, so it names the top of the queue and links to the rest

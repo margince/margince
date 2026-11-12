@@ -126,6 +126,10 @@ func previewLines(line writeLine) {
 		"No reply or further confirmation is needed.",
 		"Sie müssen weder antworten noch erneut bestätigen.",
 		"Quý khách không cần trả lời hay xác nhận thêm.")
+	line(func(c *Copy) *string { return &c.RestrictionLiftPreview },
+		"We tell you before the restriction ends.",
+		"Wir informieren Sie, bevor die Einschränkung endet.",
+		"Chúng tôi thông báo trước khi việc hạn chế kết thúc.")
 }
 
 func weeklyPresentationLines(line writeLine) {

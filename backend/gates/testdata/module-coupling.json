@@ -78,6 +78,7 @@
     "notification_preference.notification_preference_user_id_fkey": "FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE"
   },
   "privacy": {},
+  "recordlinks": {},
   "reporting": {
     "report_definition.report_definition_audience_team_id_fkey": "FOREIGN KEY (audience_team_id) REFERENCES team(id)",
     "report_definition.report_definition_owner_id_fkey": "FOREIGN KEY (owner_id) REFERENCES app_user(id)",

@@ -98,12 +98,11 @@ func revertColumn(ctx context.Context, tx pgx.Tx, f appliedField) (bool, error) 
 // revertSocialHandle removes the profile link while it is still the row this
 // installation's purchase wrote.
 //
-// By ROW ID, not by value. contact_social carries no source column, and the
-// ordinary save path replaces every one of a contact's social rows — so a rep
-// who opened the record and pressed save owns a NEW row carrying the same
-// handle string. A value test cannot tell that row from ours and would delete
-// somebody's own work on the next "delete bought data". An id survives only
-// while nobody has saved.
+// By ROW ID, not by value. contact_social carries no source column. A save
+// replaces each social row it names. So a rep who saved the LinkedIn field
+// owns a new row carrying the same handle string. A value test
+// cannot tell that row from ours and would delete somebody's own work on the
+// next "delete bought data". An id survives only while nobody has saved.
 func revertSocialHandle(ctx context.Context, tx pgx.Tx, f appliedField) (bool, error) {
 	if err := auth.EnsureWritable(ctx, tx, entityContact, f.subject); err != nil {
 		return false, err

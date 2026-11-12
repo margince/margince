@@ -114,9 +114,9 @@ func TestAnEmailThreadWithNoNextStepStagesADraftedReply(t *testing.T) {
 		t.Errorf("consent purpose = %q, want %q — a send with no lawful basis is refused at the gate",
 			draft.ConsentPurpose, followUpDraftPurpose)
 	}
-	// And NOT the task proposal beside it: one conversation, one question.
-	if got := e.pendingFollowUps(t, deal); got != 0 {
-		t.Errorf("the pass staged %d task proposals beside the draft, want 0 — "+
+	// And no task beside it: one conversation, one question.
+	if got := e.followUps(t, deal); got != 0 {
+		t.Errorf("the pass filed %d follow-up tasks beside the draft, want 0 — "+
 			"a rep asked twice about one conversation answers neither", got)
 	}
 }
@@ -206,8 +206,8 @@ func TestOurOwnOutboundEmailIsNotAThreadToAnswer(t *testing.T) {
 			"deal proposes a reply every night from then on", n)
 	}
 	// The deal still has no next step, so the rep is still told.
-	if got := e.pendingFollowUps(t, deal); got != 1 {
-		t.Errorf("task proposals = %d, want 1", got)
+	if got := e.followUps(t, deal); got != 1 {
+		t.Errorf("follow-up tasks = %d, want 1", got)
 	}
 }
 
@@ -248,8 +248,8 @@ func TestACallWithNoNextStepStillStagesTheTaskProposal(t *testing.T) {
 	if err := e.reconcile(); err != nil {
 		t.Fatal(err)
 	}
-	if got := e.pendingFollowUps(t, deal); got != 1 {
-		t.Errorf("task proposals on a call-evidenced deal = %d, want 1", got)
+	if got := e.followUps(t, deal); got != 1 {
+		t.Errorf("follow-up tasks on a call-evidenced deal = %d, want 1", got)
 	}
 	if n := e.WsCount(t, `SELECT count(*) FROM approval
 		WHERE kind = 'held_draft' AND target_entity_id = $1`, deal); n != 0 {
@@ -272,13 +272,35 @@ func TestAThreadWithNoReplyAddressFallsBackToTheTaskProposal(t *testing.T) {
 	if err := e.reconcile(); err != nil {
 		t.Fatal(err)
 	}
-	if got := e.pendingFollowUps(t, deal); got != 1 {
-		t.Errorf("task proposals = %d, want 1 — an unanswerable thread must still "+
+	if got := e.followUps(t, deal); got != 1 {
+		t.Errorf("follow-up tasks = %d, want 1 — an unanswerable thread must still "+
 			"tell the rep the deal has no next step", got)
 	}
 	if n := e.WsCount(t, `SELECT count(*) FROM approval
 		WHERE kind = 'held_draft' AND target_entity_id = $1`, deal); n != 0 {
 		t.Errorf("the pass staged %d drafts with no address to send to, want 0", n)
+	}
+}
+
+// A thread that already has its task gets no drafted reply once an address
+// shows up: the rep has the follow-up, done or not.
+func TestAThreadThatGotItsTaskIsNotDraftedLater(t *testing.T) {
+	e := setupReconcile(t)
+	deal := e.SeedDeal(t, "Address found later", e.pipeline, e.open, &e.Rep1)
+	anchor := e.seedInteraction(t, deal, "email", "From a stranger", 1)
+	e.WsExec(t, `UPDATE activity SET direction = 'inbound' WHERE id = $1`, anchor)
+	if err := e.reconcile(); err != nil {
+		t.Fatal(err)
+	}
+	e.WsExec(t, `UPDATE activity SET is_done = true, done_at = now() WHERE source_system = 'overnight-reconcile'`)
+	e.attachReachableCounterparty(t, anchor, "found.later@example.test")
+
+	if err := e.reconcile(); err != nil {
+		t.Fatal(err)
+	}
+	if n := e.WsCount(t, `SELECT count(*) FROM approval
+		WHERE kind = 'held_draft' AND target_entity_id = $1`, deal); n != 0 {
+		t.Errorf("the pass drafted %d replies for a thread whose task the rep finished, want 0", n)
 	}
 }
 
@@ -438,8 +460,8 @@ func TestADraftIsNotComposedForAnOwnerWhoMayNotReadContacts(t *testing.T) {
 		t.Errorf("staged %d drafts for an owner without contact:read, want 0 — "+
 			"the address on that card is one they may not look up", n)
 	}
-	if got := e.pendingFollowUps(t, deal); got != 1 {
-		t.Errorf("task proposals = %d, want 1 — the rep is still told the deal "+
+	if got := e.followUps(t, deal); got != 1 {
+		t.Errorf("follow-up tasks = %d, want 1 — the rep is still told the deal "+
 			"has no next step, they simply get no draft", got)
 	}
 }
@@ -462,8 +484,8 @@ func TestAnUnownedDealGetsNoFollowUp(t *testing.T) {
 		t.Errorf("staged %d drafts on an unowned deal, want 0 — there is no "+
 			"authority under which a reply may be composed", n)
 	}
-	if got := e.pendingFollowUps(t, deal); got != 0 {
-		t.Errorf("task proposals = %d on a deal nobody owns, want 0", got)
+	if got := e.followUps(t, deal); got != 0 {
+		t.Errorf("follow-up tasks = %d on a deal nobody owns, want 0", got)
 	}
 }
 

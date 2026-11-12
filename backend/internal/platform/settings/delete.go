@@ -11,6 +11,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 )
 
@@ -61,6 +62,7 @@ func (s *Store) DeleteRawTx(ctx context.Context, tx pgx.Tx, key string) (bool, e
 	if _, err := tx.Exec(ctx, `DELETE FROM setting WHERE key = $1`, key); err != nil {
 		return false, fmt.Errorf("settings: removing %s: %w", key, err)
 	}
+	database.Forget(tx, ValueMemoKey(key))
 	auditID, err := storekit.Audit(ctx, tx, def.AuditVerb(), def.Object(), storekit.MustWorkspace(ctx),
 		map[string]any{key: def.AuditImage(before)},
 		map[string]any{key: def.AuditImage(after)})

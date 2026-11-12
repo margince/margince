@@ -21,6 +21,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptref"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
@@ -142,7 +143,20 @@ func settleRequest(batch []settleCandidate) model.Request {
 		MaxTokens:      ai.ReasoningOutputMaxTokens,
 		ResponseSchema: settleSchema(refs.All()),
 		SecretStripper: ai.NewSecretStripper(),
+		Subjects:       model.AboutActivities(settleActivityIDs(batch)...),
 	}
+}
+
+// settleActivityIDs are the requests and every message of their conversations.
+func settleActivityIDs(batch []settleCandidate) []ids.UUID {
+	var out []ids.UUID
+	for _, candidate := range batch {
+		out = append(out, candidate.Request.RequestID)
+		for _, message := range candidate.Messages {
+			out = append(out, message.ID)
+		}
+	}
+	return out
 }
 
 // settleMessageBody is what the model reads of one message. Their message

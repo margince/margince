@@ -16,6 +16,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/corereach"
+	"github.com/margince/margince/backend/internal/compose/installseam"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/contracts"
@@ -181,7 +182,8 @@ func Setup(t *testing.T) *Env {
 // this store that legitimately varies between them.
 func ProjectsStore(db *database.DB) *projects.Store {
 	return projects.NewStore(db).
-		WithCompanyEdges(contacts.AttachCompanyToProjectTx, projects.CompaniesFrom(contacts.CompaniesOnProjectTx))
+		WithCompanyEdges(contacts.AttachCompanyToProjectTx, projects.CompaniesFrom(contacts.CompaniesOnProjectTx)).
+		WithDealLink(installseam.ProjectDealLink(deals.NewStore(db, installseam.Deals())))
 }
 
 // ContractsStore builds the contract store the way compose builds it.

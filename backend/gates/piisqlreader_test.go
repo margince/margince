@@ -104,6 +104,7 @@ var erasureCascadeFiles = []string{
 	"internal/modules/privacy/originalobjects.go",
 	"internal/modules/privacy/raworiginalsubjects.go",
 	"internal/platform/database/storekit/auditredaction.go",
+	"internal/modules/privacy/erasure_links.go",
 	// Capture owns the projection purge reached through privacy.RawCapturePurger.
 	"internal/modules/capture/partysourceerase.go",
 	// ai owns the voice samples copied from sent mail, emptied through the
@@ -116,6 +117,8 @@ var erasureCascadeFiles = []string{
 	"internal/modules/privacy/activityerase.go",
 	"internal/modules/privacy/commitmenterasure.go",
 	"internal/modules/privacy/activitycontenterasure.go",
+	// armSuppression, the erasure list writer every erasure calls.
+	"internal/modules/privacy/suppressionlift.go",
 	"internal/modules/privacy/reportingredaction.go",
 	"internal/modules/privacy/reportingquestions.go",
 	"internal/modules/privacy/reportingbindings.go",
@@ -214,6 +217,9 @@ var erasureCascadeFiles = []string{
 	// its own.
 	"internal/modules/privacy/subjectcolumns.go",
 	"internal/modules/privacy/erasurestrings.go",
+	// The audit history of the signals about the subject, which keeps the old
+	// kind and evidence of a corrected signal. Same Art. 17 transaction.
+	"internal/modules/privacy/erasure_signals.go",
 }
 
 // reachedButNotCascade are files EraseContact's call graph reaches which are NOT

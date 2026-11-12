@@ -9,6 +9,20 @@
     "rep"
   ],
   "verbs": {
+    "download_finance_invoice_pdf": {
+      "allowed_for": [
+        "admin",
+        "management",
+        "manager",
+        "ops",
+        "read_only",
+        "rep"
+      ],
+      "refused_for": null,
+      "checks": [
+        "finance.read"
+      ]
+    },
     "download_jurisdiction_document": {
       "allowed_for": [
         "admin",

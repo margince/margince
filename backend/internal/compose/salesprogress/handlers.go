@@ -27,10 +27,6 @@ import (
 type Reading struct {
 	DB      *database.DB
 	Reports *reporting.Service
-	// Members lists a scope's sellers, and Measurable the owners the reader
-	// may measure one by one: the rules Analytics reads its population with.
-	Members    func(ctx context.Context, tx pgx.Tx, scope crmcontracts.ReportingScope) ([]ids.UUID, error)
-	Measurable func(ctx context.Context, tx pgx.Tx) (reporting.MeasurableOwners, error)
 	// Deals lists the open work, under the deal list's own row scope and masks.
 	Deals *deals.Store
 }
@@ -110,7 +106,7 @@ func (h Reading) frame(ctx context.Context, tx pgx.Tx, period progressPeriod) (p
 }
 
 // progressScope is the population asked about: the caller's own figures when
-// the request names none. The evaluation checks the caller may read it.
+// the request names none.
 func progressScope(ctx context.Context, kind *crmcontracts.GetSalesProgressParamsScopeKind, id *openapi_types.UUID) (crmcontracts.ReportingScope, error) {
 	if kind != nil {
 		if id == nil {
@@ -142,6 +138,13 @@ func (h Reading) read(ctx context.Context, tx pgx.Tx, params crmcontracts.GetSal
 	if err != nil {
 		return crmcontracts.SalesProgress{}, err
 	}
+	// A named scope must be inside the reader's own lens. Analytics offers
+	// every seat a team's totals, which in a small team is a colleague's figure.
+	if params.ScopeKind != nil {
+		if scope, err = h.Reports.GoalScope(ctx, tx, scope); err != nil {
+			return crmcontracts.SalesProgress{}, err
+		}
+	}
 	headline, err := h.Reports.EvaluateFactsTx(ctx, tx, headlineSelection(scope, frame))
 	if err != nil {
 		return crmcontracts.SalesProgress{}, err
@@ -152,11 +155,11 @@ func (h Reading) read(ctx context.Context, tx pgx.Tx, params crmcontracts.GetSal
 			return crmcontracts.SalesProgress{}, err
 		}
 	}
-	sellers, err := h.sellers(ctx, tx, headline.Result.Context)
+	sellers, err := h.Reports.GoalSellers(ctx, tx, headline.Result.Context.Scope)
 	if err != nil {
 		return crmcontracts.SalesProgress{}, err
 	}
-	goals, err := h.goals(ctx, tx, frame, sellers)
+	goals, err := h.Reports.ReadOwnerGoals(ctx, tx, sellers, frame.period.year, frame.currency)
 	if err != nil {
 		return crmcontracts.SalesProgress{}, err
 	}

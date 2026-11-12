@@ -144,6 +144,18 @@ What a guest writes in **What would you like to discuss?** on your booking page 
 
 A guest gives consent to the meeting separately from any marketing consent, and does not have to give marketing consent to book.
 
+### Someone whose data was erased wants to come back
+Send them the return page of a booking page. No other page in Margince links to it, so they need the address from you.
+1. Copy the code from a booking link: the part after `/book/`. A short address works too.
+2. Send them `https://<your Margince address>/#/book/<code>/return`.
+3. They enter their name and the email address that was erased, and choose **Send me the link**.
+4. The page always says "Check your inbox", whatever address they typed. It never tells anyone whether an address was erased.
+5. If the address was erased, Margince mails it a link that works for one day. They open it and choose **Store my details again**. Only then is the address stored again.
+
+One address gets at most one link a day. A second request on the same day gets the same answer and sends nothing. A link that was used already or has expired asks them to request a new one on the same return page.
+
+Also called: undo an erasure, unblock an erased address, store a contact again.
+
 ## When the calendar adds no video call
 
 Your booking link can use Google Meet or Microsoft Teams as its **Video call**. Then Margince asks your calendar for the link when the meeting is created. You pick it under **Edit link**. Google Meet needs bookings to land in a Google calendar, and Microsoft Teams in a Microsoft 365 calendar.

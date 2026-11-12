@@ -19,6 +19,8 @@ import (
 // declaredFinanceSource is one accounting system a unit reads.
 type declaredFinanceSource struct {
 	Provider string `json:"provider"`
+	// Documents says the unit also serves each invoice's own document.
+	Documents bool `json:"documents,omitempty"`
 }
 
 // readFinanceSources reads the FinanceSources slice literal.
@@ -84,6 +86,8 @@ func (r *unitReader) readFinanceSource(elt ast.Expr, ext string) (declaredFinanc
 			if present {
 				probe.InvoicesFor = presentFinanceInvoices
 			}
+		case "InvoiceDocument":
+			source.Documents = present
 		default:
 			err = r.errAt(kv, "FinanceSource field %s is not derivable by this generator", k.Name)
 		}

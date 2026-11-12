@@ -80,7 +80,7 @@ func (x *SignalExtractor) convertLegacyCommitments(ctx context.Context) (int, er
 			// Anything else costs only its own signal. These are read oldest first,
 			// so ending the loop leaves the backlog behind one bad record for as
 			// long as it is broken; the fault is reported after the rest have run.
-			if refused == nil {
+			if refused == nil && !errors.Is(err, ai.ErrSubjectRestricted) {
 				refused = err
 			}
 			continue

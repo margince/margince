@@ -43,8 +43,14 @@ function useRequestKey() {
   };
 }
 
-/** A manager's editor for one seller's twelve months, from draft to publication. */
-export function GoalEditor({ plan }: Readonly<{ plan: SalesGoalPlan }>) {
+/**
+ * A manager's editor for one team member's twelve months, from draft to
+ * publication. `onCancel` goes back to the published plan it was opened from.
+ */
+export function GoalEditor({
+  plan,
+  onCancel,
+}: Readonly<{ plan: SalesGoalPlan; onCancel?: () => void }>) {
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
@@ -71,14 +77,19 @@ export function GoalEditor({ plan }: Readonly<{ plan: SalesGoalPlan }>) {
     reason: reason.trim(),
     origin: "manual" as const,
   };
-  // Publishing sends the saved draft, so the yearly goal on screen must be saved too.
+  // Publishing sends the saved draft, so the yearly goal and the reason on
+  // screen must be saved too.
   const unchangedDraft =
     plan.draft !== undefined &&
+    plan.draft.reason.trim() === reason.trim() &&
     JSON.stringify(plan.draft.months) === JSON.stringify(months) &&
     (plan.draft.declared_total_minor ?? monthsTotal(plan.draft.months)) ===
       yearly;
   return (
     <div className="goal-editor">
+      {plan.state === "no_goal" && (
+        <p className="t-caption goal-note">{t("goals.start")}</p>
+      )}
       <div className="goal-editor-yearly">
         <Field label={t("goals.yearly", { currency: plan.currency })}>
           {(field) => (
@@ -87,6 +98,7 @@ export function GoalEditor({ plan }: Readonly<{ plan: SalesGoalPlan }>) {
               valueMinor={yearly ?? 0}
               blankWhenZero={yearly === null}
               currency={plan.currency}
+              display={money}
               onChangeMinor={setYearly}
               onClear={() => setYearly(null)}
             />
@@ -113,6 +125,7 @@ export function GoalEditor({ plan }: Readonly<{ plan: SalesGoalPlan }>) {
                 valueMinor={month ?? 0}
                 blankWhenZero={month === null}
                 currency={plan.currency}
+                display={money}
                 onChangeMinor={(next) =>
                   setMonths((current) =>
                     current.map((each, at) => (at === index ? next : each)),
@@ -128,7 +141,7 @@ export function GoalEditor({ plan }: Readonly<{ plan: SalesGoalPlan }>) {
           </Field>
         ))}
       </div>
-      <p className="goal-editor-sum">
+      <p className="goal-editor-sum t-caption">
         {total === null
           ? plural(
               "goals.monthsMissing",
@@ -151,7 +164,10 @@ export function GoalEditor({ plan }: Readonly<{ plan: SalesGoalPlan }>) {
           })}
         />
       )}
-      <Field label={t("goals.reason")} hint={t("goals.reasonHint")}>
+      <Field
+        label={t("goals.reason")}
+        hint={`${t("goals.reasonHint")} ${t("goals.sellerReads", { name: plan.owner_name })}`}
+      >
         {(field) => (
           <Textarea
             {...field}
@@ -162,12 +178,13 @@ export function GoalEditor({ plan }: Readonly<{ plan: SalesGoalPlan }>) {
           />
         )}
       </Field>
-      <Callout
-        tone="info"
-        title={t("goals.sellerReads", { name: plan.owner_name })}
-      />
       {failed && <ErrorLine error={failed} />}
-      <div className="card-actions">
+      <div className="goal-actions">
+        {onCancel && (
+          <Button variant="link" onClick={onCancel}>
+            {t("reporting.cancel")}
+          </Button>
+        )}
         {plan.published && (
           <Button variant="ghost" onClick={() => setConfirming("withdraw")}>
             {t("goals.withdraw")}
@@ -236,6 +253,8 @@ function publishRefusal(
   return undefined;
 }
 
+// The draft already carries its reason, so publishing shows it and asks
+// only for the agreement.
 function PublishConfirm({
   plan,
   total,
@@ -244,9 +263,8 @@ function PublishConfirm({
   const t = useT();
   const { publish } = useSalesGoalWrites();
   const requestKey = useRequestKey();
-  const [reason, setReason] = useState(plan.draft?.reason ?? "");
   const [agreed, setAgreed] = useState(false);
-  const body = { reason: reason.trim() };
+  const body = { reason: plan.draft?.reason.trim() ?? "" };
   return (
     <ConfirmModal
       open
@@ -256,13 +274,7 @@ function PublishConfirm({
         year: identifierNumber(plan.year),
       })}
       confirmLabel={t("goals.publish")}
-      confirmReason={
-        !agreed
-          ? t("goals.agreeFirst")
-          : body.reason === ""
-            ? t("goals.reasonNeeded")
-            : undefined
-      }
+      confirmReason={agreed ? undefined : t("goals.agreeFirst")}
       pending={publish.isPending}
       error={publish.error ? problemMessageOf(publish.error, t) : null}
       onConfirm={() =>
@@ -279,17 +291,9 @@ function PublishConfirm({
       }
     >
       <p>{t("goals.publishBody", { total })}</p>
-      <Field label={t("goals.reason")}>
-        {(field) => (
-          <Textarea
-            {...field}
-            grow
-            value={reason}
-            maxLength={1000}
-            onChange={(event) => setReason(event.target.value)}
-          />
-        )}
-      </Field>
+      <p className="t-caption">
+        {t("goals.publishReason", { reason: body.reason })}
+      </p>
       <Checkbox
         label={t("goals.agreed")}
         checked={agreed}
@@ -299,7 +303,8 @@ function PublishConfirm({
   );
 }
 
-function WithdrawConfirm({
+/** Asks for the reason a published plan is withdrawn, then withdraws it. */
+export function WithdrawConfirm({
   plan,
   onClose,
 }: Readonly<{ plan: SalesGoalPlan; onClose: () => void }>) {

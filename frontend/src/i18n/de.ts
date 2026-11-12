@@ -850,6 +850,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "approval.preview.unsignedSend":
     "Versand ohne menschlichen Anzeigenamen oder persönliche Signatur. Die Freigabe macht die prüfende Person nicht zur absendenden Person.",
   "approval.preview.senderSignature": "Signatur der absendenden Person",
+  "approval.preview.showImages": "Bilder anzeigen",
   "approval.preview.signaturePrivate":
     "Die private Signatur der absendenden Person darf dieser prüfenden Person nicht angezeigt werden. Lass die absendende Person diese Nachricht prüfen.",
   "approval.preview.recordMeeting":
@@ -935,6 +936,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "reporting.pinnedSettings": "Zuvor gespeicherte Einstellungen",
   "reporting.unallocated": "Nicht zugewiesen",
   "reporting.overallocated": "Zu viel zugewiesen",
+  "reporting.goalsRow": "Umsatzziele {year} · 12 Monate",
+  "reporting.openGoals": "Umsatzziele öffnen",
+  "reporting.allocatedCover": "Ziele der Mitglieder decken {amount}",
   "reporting.targetFor": "Ziel für",
   "reporting.targetStatus": "Zielstatus",
   "reporting.activeTargets": "Aktive Ziele",
@@ -1014,8 +1018,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "forecast.signal.quiet": "Kunde schweigt",
   "forecast.signal.stuck": "Lange in der Phase",
   "forecast.deals.limitedTitle": "Nur deine eigenen Deals",
-  "forecast.deals.limited":
-    "Die Summe enthält Deals anderer Teammitglieder. Diese sind hier ausgeblendet, weil individuelle Leistung aus ist. Jedes Mitglied sieht weiter seine eigenen.",
   "forecast.signal.closesNoStep_other":
     "Schließt in {count} Tagen, kein nächster Schritt geplant",
   "forecast.signal.closesNoStep_one":
@@ -1570,7 +1572,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "reporting.compare.ratio": "{ratio}×",
   "reporting.compare.no_target": "Kein Umsatzziel für dieses Quartal",
   "reporting.compare.no_targetBody":
-    "Leg unter Ziele ein Ziel für gewonnenen Umsatz für diesen Bereich und dieses Quartal fest, um Abstand und Deckung zu sehen. Kein Ziel ist kein Ziel von null.",
+    "Veröffentliche Umsatzziele für diesen Bereich und dieses Quartal oder leg unter Ziele ein Ziel für gewonnenen Umsatz fest, um Abstand und Deckung zu sehen. Kein Ziel ist kein Ziel von null.",
   "reporting.compare.fx_missing":
     "Für einige Deal-Beträge fehlt ein Wechselkurs",
   "reporting.compare.fx_missingBody":
@@ -1609,7 +1611,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "reporting.end": "Enddatum (nicht eingeschlossen)",
   "reporting.bookings_trend": "Gewonnener Umsatz im Verlauf",
   "reporting.stage_distribution": "Offene Pipeline nach Phase",
-  "reporting.owner_attainment": "Gewonnener Umsatz nach Verantwortung",
+  "reporting.owner_attainment": "Gewonnener Umsatz nach Mitglied",
   "reporting.stage_age": "Zeit in der aktuellen Phase",
   "reporting.sdr_outcomes": "Termine und angenommene Übergaben",
   "reporting.target_progress": "Fortschritt zum Ziel",
@@ -2418,6 +2420,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "systemJob.graph_edge_reconcile": "Aktualisierung der Beziehungsstärke",
   "systemJob.handbook_corpus": "Indexierung des Handbuchs",
   "systemJob.import_run_sweep": "Prüfung abgebrochener Importe",
+  "systemJob.initiative_enrolment": "Mitgliedschaftsdaten der Initiativen",
   "systemJob.import_worker": "Import-Verarbeitung",
   "systemJob.installation_setup_read": "Einrichtungsprüfung",
   "systemJob.intro_advance": "Weiterführung von Vorstellungen",
@@ -2684,6 +2687,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "history.field.cohort_promoted": "Zugeordnete Nachrichten",
   "history.field.corrected": "Ergebnis korrigiert",
   "history.field.disposition": "Einstufung",
+  "history.field.link_suggestion": "Verknüpfungsvorschlag",
+  "history.field.record_link": "Verknüpfung",
   "history.field.domain": "Domain",
   "history.field.merged_from_id": "Zusammengeführt aus",
   "history.field.merged_into_id": "Zusammengeführt in",
@@ -2725,6 +2730,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "history.field.display_name": "Name",
   "history.field.domains": "Domains",
   "history.field.due_at": "Fällig",
+  "history.field.extension_relationship_types": "Erweiterungs-Beziehungstypen",
   "history.field.email": "E-Mail",
   "history.field.ended_at": "Beendet",
   "history.field.expected_close_date": "Voraussichtlicher Abschluss",
@@ -2745,6 +2751,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "history.field.lifted_by": "Aufgehoben von",
   "history.field.lifted_by_level": "Aufgehoben auf Ebene",
   "history.field.lifted_suppression": "Aufgehobene Sperre",
+  "history.field.restriction_lift_requested":
+    "Aufhebung der Einschränkung angefragt",
   "history.field.linkedin_url": "LinkedIn-URL",
   "history.field.lost_reason": "Verlustgrund",
   "history.field.name": "Name",
@@ -3616,7 +3624,21 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "consent.stopBlocked.address":
     "Die Sperre endet, sobald Mails an die Adresse wieder ankommen.",
   "consent.stopBlocked.restriction":
-    "Wer eine Einschränkung aufhebt, muss den Kontakt vorher informieren. Margince kann diese Nachricht noch nicht senden, daher bleibt die Einschränkung.",
+    "Wer eine Einschränkung aufhebt, muss den Kontakt vorher informieren. Nur ein Admin hebt sie auf, und Margince sendet diese Nachricht.",
+  "consent.restrictionLift": "Einschränkung aufheben",
+  "consent.restrictionLiftTitle": "Diese Einschränkung aufheben?",
+  "consent.restrictionLiftBody":
+    "Margince schickt dem Kontakt zuerst eine Nachricht, dass die Einschränkung endet. Die Einschränkung endet, sobald diese Nachricht gesendet ist. Danach liest Margince seine E-Mails wieder, auch die, die während der Einschränkung eingegangen sind.",
+  "consent.restrictionLiftQueued":
+    "Die Nachricht wartet auf den Versand. Bis dahin bleibt die Einschränkung.",
+  "consent.restrictionLiftSent":
+    "Die Nachricht wurde gesendet. Die Einschränkung endet.",
+  "consent.restrictionLiftRetrying":
+    "Die Nachricht wurde noch nicht gesendet, Margince versucht es erneut. Bis sie gesendet ist, bleibt die Einschränkung: {reason}",
+  "consent.restrictionLiftFailed":
+    "Die Nachricht wurde nicht gesendet, daher bleibt die Einschränkung: {reason}",
+  "consent.restrictionLiftFailedNoReason":
+    "Die Nachricht wurde nicht gesendet, daher bleibt die Einschränkung. Hebe sie erneut auf, um eine neue Nachricht zu senden.",
   "consent.stopBlocked.subject_decision":
     "Der Kontakt hat diese Sperre selbst gesetzt. Nur er kann sie ändern.",
   "consent.stopCorrect": "Sperre korrigieren",
@@ -3861,6 +3883,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "timeline.automatic.bulk": "An einen Verteiler gesendet",
   "timeline.group.bulk_other": "an {count} Personen gesendet",
   "timeline.group.bulk_one": "an {count} Person gesendet",
+  "timeline.copies_other": "Auch in {count} weiteren Postfächern",
+  "timeline.copies_one": "Auch in {count} weiteren Postfach",
   "timeline.group.expand": "Öffnen",
   "timeline.group.collapse": "Schließen",
   "timeline.group.openThread": "Vollständigen Thread anzeigen",
@@ -4236,6 +4260,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "finance.col.amount": "Betrag",
   "finance.col.status": "Status",
   "finance.unnumbered": "Ohne Nummer",
+  "finance.openInvoicePdf": "Rechnung {number} als PDF öffnen",
   "finance.moreInvoices": "Weitere Rechnungen im Buchhaltungssystem",
   "finance.syncedFrom": "Aus {provider} · synchronisiert {when}",
   "finance.fromNeverSynced": "Aus {provider} · noch nicht synchronisiert",
@@ -4846,6 +4871,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "timeline.kind.task": "Aufgabe",
   "timeline.kind.message": "Nachricht",
   "timeline.kind.change": "Datensatz",
+  "timeline.kind.extension": "Erweiterung",
+  "timeline.kind.signal": "Signal",
   "timeline.withheld": "Inhalt nur für Teilnehmende",
   "compose.deadRecipients":
     "E-Mails an {addresses} kommen nicht an: Die letzte Zustellung wurde abgelehnt, und seitdem war keine erfolgreich. Sende trotzdem oder verwende eine andere Adresse.",
@@ -4857,6 +4884,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.threadStillHeld_other":
     "{count} weitere Nutzerkonten haben diesen Thread nicht geteilt",
   "compose.reason.posture": "Durch deine Einstellung zurückgehalten",
+  "compose.reason.sharedMailbox": "In einem gemeinsamen Postfach",
   "compose.reason.workspaceFloor": "Durch das Unternehmen zurückgehalten",
   "compose.reason.noRecord": "Zurückgehalten: kein Datensatz",
   "compose.reason.pendingVerdict": "Bis zur Prüfung zurückgehalten",
@@ -6439,6 +6467,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deals.filterAcquisitionAll": "Alle Quellen",
   "deals.filterProbability": "Abschlusschance",
   "deals.filterProbabilityAll": "Jede Abschlusschance",
+  "deals.filterLinkType": "Verknüpft als",
+  "deals.filterLinkTypeAll": "Jede Verknüpfungsart",
   "deals.filterStatus": "Status",
   "deals.filterStatusAll": "Jeder Status",
   "deals.statusOpen": "Offen",
@@ -6982,6 +7012,15 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.readings.leadsDue": "Nächste Fälligkeit {value}",
   "brief.rail": "Kontext",
   "brief.rail.numbers": "Kennzahlen",
+  "extensionReports.withheld":
+    "Zurückgehalten: zu wenige Datensätze für eine Anzeige",
+  "extensionReports.noValue": "Kein Wert",
+  "extensionReports.excluded_one":
+    "{count} Datensatz ist für dich durch eine Feldberechtigung ausgeblendet.",
+  "extensionReports.excluded_other":
+    "{count} Datensätze sind für dich durch eine Feldberechtigung ausgeblendet.",
+  "extensionReports.failed":
+    "Die Berichte deiner Erweiterungen konnten nicht geladen werden.",
   "brief.deck.later": "Später",
   "brief.deck.showMore": "Ganze Nachricht anzeigen",
   "brief.deck.showLess": "Weniger anzeigen",
@@ -7833,6 +7872,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.scheduleAfternoon": "Morgen Nachmittag",
   "compose.draftLanguage": "Sprache des Entwurfs",
   "compose.rewrite": "Umschreiben",
+  "compose.rewritePolish": "Glätten",
+  "compose.rewritePolishAsk":
+    "Wortwahl und Lesefluss verbessern. Bedeutung, Fakten und Länge beibehalten.",
+  "compose.rewriteFormatted":
+    "Umschreiben geht nur bei reinem Text. Entferne Formatierung und Links.",
+  "compose.rewriteTooLong": "Diese Mail ist zu lang zum Umschreiben.",
   "compose.rewriteShorter": "Kürzer",
   "compose.rewriteShorterAsk":
     "Die Bedeutung beibehalten und weniger Wörter verwenden.",
@@ -8077,7 +8122,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "tasks.origin.analytics_decision":
     "Aus einer Vertriebsbesprechung festgehalten: eine Entscheidung mit Verantwortlichem und Prüftermin. Halte das Ergebnis unter Entscheidungen aus der letzten Besprechung fest.",
   "tasks.origin.overnight_reconcile":
-    "Erstellt aus einem Follow-up, das die nächtliche Prüfung vorgeschlagen und jemand freigegeben hat.",
+    "Erstellt aus einem Follow-up, das die nächtliche Prüfung vorgeschlagen hat.",
   "tasks.origin.commitment":
     "Erstellt aus einer Zusage, die aus einem Gespräch gelesen wurde.",
   "tasks.origin.email_request": "Erstellt aus einer Anfrage in einer E-Mail.",
@@ -8127,7 +8172,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.overview.pipelineAll": "Alle Pipelines nutzen",
   "analytics.overview.setTarget": "Ziele setzen",
   "analytics.overview.targetWho":
-    "Wer Ziele verwalten darf, meist Admins oder die Vertriebsleitung, kann eines setzen.",
+    "Wer Umsatzziele verwaltet, meist Admins oder die Vertriebsleitung, kann sie festlegen.",
   "analytics.overview.targetWhoShort":
     "Das können meist Admins oder die Vertriebsleitung.",
   "analytics.overview.sinceTitle": "Seit der letzten Erfassung",
@@ -8217,8 +8262,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Die Team-Akquise zeigt ein Team oder das ganze Unternehmen. Wähle eines oben im Bereich; die Arbeit eines Mitglieds steht unter Meine Akquise.",
   "analytics.team.todaysMembers":
     "Diese Zahlen folgen dem heutigen Team. Wer gegangen ist, nimmt die frühere Arbeit mit, und wer neu dazukam, bringt die eigene mit.",
-  "analytics.team.withheld":
-    "Die Einzelleistung ist ausgeschaltet. Eine Zahl wird zurückgehalten, wenn weniger als zwei andere Mitglieder zu ihr beitragen oder wenn nach Abzug der Summe eines anderen Teams weniger als zwei übrig blieben.",
   "analytics.team.submitted": "Übergeben",
   "analytics.team.accepted": "Angenommen",
   "analytics.team.returned": "Zurückgegeben",
@@ -8434,6 +8477,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.field.host_user_id": "Organisiert von",
   "analytics.field.kind": "Aktivitätstyp",
   "analytics.field.last_activity_at": "Letzte Aktivität",
+  "analytics.field.link_type": "Verknüpft als",
   "analytics.field.lost_reason": "Verlustgrund",
   "analytics.field.loss_reason": "Verlustgrund aus der Liste",
   "analytics.field.loss_reason_state": "Wie der Verlustgrund gesetzt wurde",
@@ -8643,7 +8687,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.myTargets": "Meine Ziele",
   "analytics.targetOf": "{actual} von {target}",
   "analytics.noTargetSet": "Kein Ziel festgelegt",
-  "analytics.noTargetSetActual": "{actual} bisher in diesem Monat",
+  "analytics.noTargetSetMonth": "Kein Ziel für diesen Monat festgelegt",
   "analytics.meetingsAsTheyStand":
     "Von dir organisierte Termine nach aktuellem Status. Ohne Datumsfilter.",
   "analytics.meetingsBooked": "Gebucht",
@@ -10369,6 +10413,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "jobs.kind.import_commit": "Ausführung des Imports",
   "jobs.kind.import_undo": "Rücknahme des Imports",
   "jobs.kind.import_validate": "Import-Testlauf",
+  "jobs.kind.initiative_enrolment_sweep":
+    "Mitgliedschaftsdaten der Initiativen",
   "jobs.kind.intro_expiry": "Ablauf von Vorstellungen",
   "jobs.kind.knowledge_ingest": "Indexierung von Dokumenten",
   "jobs.kind.list_evaluate": "Prüfung der Live-Listen",
@@ -11055,6 +11101,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "privacy.kindAccess": "Auskunft",
   "privacy.kindRectify": "Berichtigung",
   "privacy.kindErasure": "Löschung",
+  "privacy.kindRestriction": "Einschränkung",
   "privacy.purpose": "Zweck",
   "privacy.purposeDoiBadge": "Double-Opt-in",
   "privacy.purposesLoading": "Zwecke werden geladen…",
@@ -11100,6 +11147,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "privacy.openRequest": "Anfrage erstellen",
   "privacy.erasureNeedsContact":
     "Eine Löschanfrage muss einen Kontakt in diesem Unternehmen nennen, da beim Erfüllen der Anfrage genau dieser Datensatz gelöscht wird. Betroffene, die nur als Freitext erfasst sind, lassen sich nicht löschen.",
+  "privacy.restrictionNeedsContact":
+    "Eine Anfrage auf Einschränkung muss einen Kontakt in diesem Unternehmen nennen, da beim Erfüllen der Anfrage die Verarbeitung genau dieses Datensatzes eingeschränkt wird. Betroffene, die nur als Freitext erfasst sind, lassen sich nicht einschränken.",
   "privacy.accessPicksContact":
     "Wähle den Kontakt, um den es in dieser Anfrage geht. In der Anfrage kannst du dann alles herunterladen, was über ihn gespeichert ist.",
   "privacy.downloadPackage": "Datenpaket herunterladen",
@@ -12975,6 +13024,20 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "book.pageTitle": "Termin mit {host} buchen",
   "book.pageTitleGeneric": "Termin buchen",
   "book.meetingTitle": "Dein Termin",
+  "book.returnTitle": "Deine Daten wieder speichern",
+  "book.returnBody":
+    "Du hast darum gebeten, deine Daten nach der Löschung wieder zu speichern. Es wird nichts gespeichert, bevor du bestätigst.",
+  "book.returnStoredAs":
+    "Du wirst als {name} gespeichert, mit dieser Einwilligung:",
+  "book.returnAction": "Meine Daten wieder speichern",
+  "book.returnDone": "Deine Daten sind wieder gespeichert.",
+  "book.returnSpent":
+    "Dieser Link wurde schon benutzt oder ist abgelaufen. Fordere dort einen neuen an, wo du diesen angefordert hast.",
+  "book.returnRequestBody":
+    "Deine Daten wurden auf deinen Wunsch gelöscht. Damit sie wieder gespeichert werden, gib deinen Namen und die gelöschte E-Mail-Adresse ein. An diese Adresse geht ein Link, und gespeichert wird erst, wenn du dort bestätigst.",
+  "book.returnRequestAction": "Link senden",
+  "book.returnRequestSent":
+    "Schau in dein Postfach. Wenn diese Adresse wieder gespeichert werden kann, ist ein Link zum Bestätigen unterwegs.",
   "book.attendee": "E-Mail des Gasts",
   "book.subject": "Termin über Margince",
   "book.name": "Name",
@@ -13439,6 +13502,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "cf.type.multiselect": "Mehrfachauswahl",
   "cf.type.picklist": "Auswahlliste",
   "cf.type.boolean": "Ja/Nein",
+  "cf.type.record": "Datensatz wählen",
+  "cf.recordKind": "Art des Datensatzes",
+  "cf.recordKindPlaceholder": "Art wählen",
   "cf.builder.addTo": "Feld zu {object} hinzufügen",
   "cf.builder.open": "Neues Feld",
   "cf.builder.noCode": "Ohne Code",
@@ -17177,6 +17243,26 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Worklist-Eintrag als erledigt markiert",
   "webhooks.event.activity.marked_handled.when":
     "Jemand markiert einen Worklist-Eintrag als erledigt, da er auf anderem Weg bearbeitet wurde.",
+  "webhooks.event.activity.link_suggestion_changed.label":
+    "Verknüpfungsvorschlag gemacht oder entschieden",
+  "webhooks.event.activity.link_suggestion_changed.when":
+    "Eine Erweiterung schlägt vor, zu welchem Datensatz eine Nachricht gehört, oder jemand nimmt einen Vorschlag an oder lehnt ihn ab.",
+  "webhooks.event.record_link.changed.label":
+    "Verknüpfung hinzugefügt oder entfernt",
+  "webhooks.event.record_link.changed.when":
+    "Jemand verknüpft einen Deal, ein Unternehmen oder einen Kontakt mit einem anderen Datensatz oder entfernt eine Verknüpfung.",
+  "linkSuggestions.title": "Verknüpfungsvorschläge",
+  "linkSuggestions.reason": "{unit}: {reason}",
+  "linkSuggestions.target": "{subject} zu {record} ({kind})",
+  "linkSuggestions.noSubject": "Eine Nachricht ohne Betreff",
+  "linkSuggestions.kind.contact": "Kontakt",
+  "linkSuggestions.kind.company": "Unternehmen",
+  "linkSuggestions.kind.deal": "Deal",
+  "linkSuggestions.kind.project": "Projekt",
+  "linkSuggestions.accept": "Dort ablegen",
+  "linkSuggestions.reject": "Nicht dort",
+  "linkSuggestions.unavailable":
+    "Die Verknüpfungsvorschläge konnten nicht gelesen werden. Versuche es später erneut.",
   "webhooks.event.activity.readiness_recorded.label":
     "Bereitschaft für einen Termin geändert",
   "webhooks.event.activity.readiness_recorded.when":
@@ -18563,6 +18649,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "filters.tab.leads": "Leads",
   "filters.matchLeads_one": "Passender Lead: {count}",
   "filters.matchLeads_other": "Passende Leads: {count}",
+  "filters.matchExtension_one": "Passender Datensatz ({kind}): {count}",
+  "filters.matchExtension_other": "Passende Datensätze ({kind}): {count}",
+  "filters.new.extension": "Neuer Filter: {kind}",
+  "filters.switch.body.extension":
+    "Die Bedingungen werden gelöscht, da sie Felder einer Datensatzart nennen.",
+  "unit.extension": "Datensätze ({kind})",
   "filters.date.on": "An einem Datum",
   "filters.date.daysAgo": "Vor Tagen",
   "filters.date.mode": "Wie das Datum angegeben wird",
@@ -19027,6 +19119,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "projectHealth.saveCorrection": "Korrektur speichern",
   "project.keyMinted":
     "Jedes Projekt erhält ein Kürzel. Setze [{key}] in den Betreff einer E-Mail, um sie unter diesem Projekt abzulegen.",
+  "project.key": "Kürzel",
+  "project.keySuggested":
+    "Leer lassen, um {key} zu verwenden. Das Kürzel steht im Betreff von E-Mails und lässt sich später nicht ändern.",
+  "project.keyHint":
+    "Leer lassen, dann bildet Margince es aus dem Namen. Das Kürzel steht im Betreff von E-Mails und lässt sich später nicht ändern.",
+  "project.startPhase": "Startphase",
+  "project.deal": "Deal",
+  "project.noDeal": "Kein Deal",
   "project.company": "Unternehmen",
   "project.owner": "Verantwortlich",
   "project.ownerMe": "Selbst",
@@ -19222,6 +19322,17 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Dieser Deal hat noch kein Unternehmen. Trage es unter „Details bearbeiten“ ein, um einen Termin zu buchen.",
   "deal.committee.card": "Gremium",
   "deal.committee.change": "Stakeholder ändern oder entfernen",
+  "deal.links.card": "Verknüpfungen",
+  "deal.links.add": "Verknüpfung hinzufügen",
+  "deal.links.none": "Dieser Deal ist mit keinem anderen Datensatz verknüpft.",
+  "deal.links.unavailable": "Die Verknüpfungen konnten nicht geladen werden.",
+  "deal.links.outgoing": "Von diesem Deal: {type}",
+  "deal.links.incoming": "Zu diesem Deal: {type}",
+  "deal.links.remove": "Entfernen",
+  "deal.links.type": "Verknüpfungsart",
+  "deal.links.typePlaceholder": "Art wählen",
+  "deal.links.search": "Datensatz zum Verknüpfen suchen",
+  "deal.links.cancel": "Abbrechen",
 
   // The Worklist's own words: the ranked queue, its dials, and the phrase
   // for every fact the server sends as a closed vocabulary.
@@ -19516,7 +19627,21 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Margince kann nicht prüfen, ob dies beantwortet wurde: Der Text der Mail lässt sich nicht mehr lesen. Markiere die Aufgabe als erledigt, sobald sie es ist.",
   "worklist.ask.task_unchecked_reply": "Zuletzt gesendete Antwort: {date}",
   "worklist.ask.brief_item":
-    "Die nächtliche Prüfung hat diesen Deal markiert. Reagiere darauf, stelle ihn zurück oder verwirf ihn.",
+    "Margince hat diesen Deal heute zur Prüfung ausgewählt. Sieh ihn dir an und plane den nächsten Schritt.",
+  "worklist.ask.brief.closing_soon":
+    "Dieser Deal soll in den nächsten 2 Wochen abgeschlossen werden. Prüfe ihn und sorge dafür, dass der nächste Schritt geplant ist.",
+  "worklist.ask.brief.no_next_step":
+    "Für diesen Deal ist kein nächster Schritt erfasst. Prüfe ihn und vereinbare den nächsten Schritt.",
+  "worklist.ask.brief.no_champion":
+    "Beim Kunden setzt sich niemand aktiv für diesen Deal ein. Prüfe ihn und finde jemanden, der es tut.",
+  "worklist.ask.brief.signal.closing_soon":
+    "Das Abschlussdatum dieses Deals rückt näher. Prüfe ihn und sorge dafür, dass der nächste Schritt geplant ist.",
+  "worklist.ask.brief.signal.stalled":
+    "Bei diesem Deal ist es still geworden, er könnte sich verzögern. Prüfe ihn und plane den nächsten Schritt.",
+  "worklist.ask.brief.signal.opportunity":
+    "Dieser Deal lohnt sich jetzt. Prüfe ihn und plane den nächsten Schritt.",
+  "worklist.ask.brief.signal.moved":
+    "Bei diesem Deal gibt es neue Aktivität. Sieh dir an, was passiert ist.",
   "worklist.ask.conversation_claim":
     "Du hast das in einem Gespräch zugesagt. Erledige es und markiere es dann als erledigt.",
   "worklist.ask.invitation":
@@ -20836,6 +20961,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "captureConcern.connections": "Verbindungen mit Handlungsbedarf",
   "captureConcern.sinceLabel": "Seit",
   "captureConcern.member": "Mitglied",
+  "captureConcern.sharedMailbox": "Gemeinsames Postfach",
   "captureConcern.provider": "Anbieter",
   "captureConcern.mailbox": "Postfach",
   "captureConcern.condition": "Zustand",
@@ -22191,10 +22317,17 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "progress.reading": "Fortschritt wird gelesen",
   "progress.myTitle": "Fortschritt",
   "progress.teamTitle": "Team-Fortschritt",
-  "progress.heading": "{whose} · {scope} · {period} · Zahlen bis {cutoff}",
-  "progress.closedRevenue": "Abgeschlossener Umsatz",
+  "progress.closedRevenue": "Gewonnener Umsatz",
   "progress.goal": "Ziel",
   "progress.goalLine": "Ziel für den Zeitraum: {goal}",
+  "progress.figuresUpTo": "Zahlen bis {cutoff}",
+  "progress.ofGoalLine": "Ziel von {goal}",
+  "progress.toGo": "Noch {amount} offen",
+  "progress.noGoalFor": "Für {period} ist kein Umsatzziel veröffentlicht.",
+  "progress.whoSetsGoals":
+    "Wer Umsatzziele verwaltet, kann eines veröffentlichen.",
+  "progress.setGoals": "Umsatzziele festlegen",
+  "progress.openInAnalytics": "In Analytics öffnen",
   "progress.goalIncompleteTeamLine":
     "Ziele unvollständig: Mindestens einem Teammitglied fehlt ein Monatsziel, bisher {subtotal}",
   "progress.goalIncompleteLine":
@@ -22216,11 +22349,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "progress.goalMet": "Ziel erreicht",
   "progress.aboveGoal": "{amount} über dem Ziel",
   "progress.belowGoal": "{amount} unter dem Ziel",
-  "progress.viewClosedDeals": "Abgeschlossene Deals ansehen",
+  "progress.viewClosedDeals": "Gewonnene Deals ansehen",
   "progress.readings": "Umsatzwerte",
   "progress.productSales": "Produktverkäufe",
   "progress.serviceSales": "Services und Projekte",
-  "progress.planned": "Geplanter Umsatz",
+  "progress.planned": "Offene Pipeline",
   "progress.plannedAt": "Offene Deals, Stand {at}",
   "progress.unclassified": "Nicht zugeordnet",
   "progress.unclassifiedDetail":
@@ -22238,7 +22371,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Einige Mitglieder sind ausgeblendet, darum ist auch das Teamziel ausgeblendet.",
   "progress.months": "Monate {year}",
   "progress.definition":
-    "Abgeschlossener Umsatz ist der Wert der im Zeitraum gewonnenen Deals, dieselbe Zahl wie in Analytics. Das Ziel ist die Summe der monatlichen Umsatzziele im Zeitraum. Ein Jahresziel braucht alle zwölf Monate.",
+    "Gewonnener Umsatz ist der Wert der im Zeitraum gewonnenen Deals, dieselbe Zahl wie in Analytics. Das Ziel ist die Summe der veröffentlichten monatlichen Umsatzziele im Zeitraum. Ein Jahresziel braucht alle zwölf Monate.",
   "progress.work": "Aktuelle Arbeit",
   "progress.work.leads": "Leads",
   "progress.work.deals": "Deals",
@@ -22255,16 +22388,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "progress.work.unnamed": "Lead ohne Namen",
   "progress.work.empty": "In dieser Liste ist nichts offen.",
   "progress.work.more": "Mehr anzeigen",
-  "progress.plannedAhead": "Geplant, noch nicht abgeschlossen",
+  "progress.plannedAhead": "Offene Pipeline, noch nicht gewonnen",
   "progress.rail": "Ziel und Definition",
-  "progress.definitionTitle": "Was zählt",
-  "progress.goalBasis": "Woher das Ziel kommt",
   "progress.goalFor": "Ziel für {period}",
   "progress.goalMonths": "Monate mit Ziel",
   "progress.goalMonthsSet": "{set} von {needed}",
-  "progress.goalBasisNote":
-    "Das Ziel ist die Summe der veröffentlichten Monatsziele.",
-  "progress.ofGoal": "Abgeschlossener Umsatz von {name} gegenüber dem Ziel",
+  "progress.ofGoal": "Gewonnener Umsatz von {name} gegenüber dem Ziel",
   "progress.yearLine": "{year} bisher: {closed} von {goal} ({percent} %)",
   "progress.work.note": "Jetzt offen, unabhängig vom Zeitraum.",
   "progress.work.saleProduct": "Produkt",
@@ -22274,8 +22403,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "progress.work.saleNone": "Nicht zugeordnet",
   "progress.work.overdue": "Überfällig",
   "progress.work.outside": "Außerhalb des Zeitraums",
-  "goals.controls": "Jahr und Mitglied",
   "goals.viewProgress": "Fortschritt ansehen",
+  "goals.draftTotal": "{amount} im Entwurf",
+  "goals.change": "Ziele ändern",
+  "goals.start":
+    "Gib ein Jahresziel ein und verteile es, oder leg jeden Monat einzeln fest. Erst die Veröffentlichung zählt.",
+  "goals.publishReason": "Grund: {reason}",
   "goals.seller": "Mitglied",
   "goals.reading": "Umsatzziele werden gelesen",
   "goals.planTitle": "Umsatzziele von {name} für {year}",

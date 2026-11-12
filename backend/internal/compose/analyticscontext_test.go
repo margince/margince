@@ -38,15 +38,16 @@ func TestMarkAssertableNeedsTheForecastGrants(t *testing.T) {
 				Kind: crmcontracts.AnalyticsScopeKindOwner, Id: ptrUUID(actor.UserID),
 			}
 			markAssertable(ctx, actor, &scope)
-			if scope.Assertable == nil || *scope.Assertable != tc.want {
-				t.Fatalf("assertable = %v, want %v", scope.Assertable, tc.want)
+			if scope.Assertable == nil || scope.Measurable == nil || *scope.Assertable != tc.want || !*scope.Measurable {
+				t.Fatalf("assertable, measurable = %v, %v; want %v, true", scope.Assertable, scope.Measurable, tc.want)
 			}
 		})
 	}
 }
 
 func TestMarkAssertableFollowsTheWriteRoutesRule(t *testing.T) {
-	mine, foreign := ids.NewV7(), ids.NewV7()
+	self := actorWithScope(principal.RowScopeOwn)
+	mine, foreign := self.UserID, ids.NewV7()
 	scope := func(kind crmcontracts.AnalyticsScopeKind, id *ids.UUID) crmcontracts.AnalyticsScope {
 		out := crmcontracts.AnalyticsScope{Kind: kind}
 		if id != nil {
@@ -67,7 +68,7 @@ func TestMarkAssertableFollowsTheWriteRoutesRule(t *testing.T) {
 		{"team seat, unrelated team", actorWithScope(principal.RowScopeTeam, mine), scope(crmcontracts.AnalyticsScopeKindTeam, &foreign), false},
 		{"team seat, managed teams", actorWithScope(principal.RowScopeTeam, mine), scope(crmcontracts.AnalyticsScopeKindManagedTeams, nil), false},
 		{"own seat, a team", actorWithScope(principal.RowScopeOwn), scope(crmcontracts.AnalyticsScopeKindTeam, &mine), false},
-		{"own seat, themselves", actorWithScope(principal.RowScopeOwn), scope(crmcontracts.AnalyticsScopeKindOwner, &mine), true},
+		{"own seat, themselves", self, scope(crmcontracts.AnalyticsScopeKindOwner, &mine), true},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -75,8 +76,8 @@ func TestMarkAssertableFollowsTheWriteRoutesRule(t *testing.T) {
 			tc.actor.Permissions.Objects = forecastGrant(principal.ObjectGrant{Read: true, Create: true})
 			ctx := principal.WithActor(context.Background(), tc.actor)
 			markAssertable(ctx, tc.actor, &tc.scope)
-			if tc.scope.Assertable == nil || *tc.scope.Assertable != tc.want {
-				t.Fatalf("assertable = %v, want %v", tc.scope.Assertable, tc.want)
+			if measurable := tc.want || tc.scope.Kind == crmcontracts.AnalyticsScopeKindManagedTeams; tc.scope.Assertable == nil || tc.scope.Measurable == nil || *tc.scope.Assertable != tc.want || *tc.scope.Measurable != measurable {
+				t.Fatalf("assertable, measurable = %v, %v; want %v, %v", tc.scope.Assertable, tc.scope.Measurable, tc.want, measurable)
 			}
 		})
 	}

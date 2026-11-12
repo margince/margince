@@ -49,7 +49,7 @@ func (h Handlers) ListProjects(w http.ResponseWriter, r *http.Request, params cr
 // CreateProject opens a body of work on a company.
 func (h Handlers) CreateProject(w http.ResponseWriter, r *http.Request, _ crmcontracts.CreateProjectParams) {
 	var req crmcontracts.CreateProjectRequest
-	if !httperr.DecodeClaiming(w, r, &req, claimCallerChosenKey) {
+	if !httperr.Decode(w, r, &req) {
 		return
 	}
 	// A declared importer (a HUMAN holding import_run:create) may stamp the
@@ -209,9 +209,6 @@ func projectCreateInputAdmitting(req crmcontracts.CreateProjectRequest, importer
 	if err := requireBodyID("company_id", req.CompanyId); err != nil {
 		return CreateProjectInput{}, err
 	}
-	if err := refuseCallerChosenKey(req.AdditionalProperties); err != nil {
-		return CreateProjectInput{}, err
-	}
 	// The other three record wires have refused a forged provenance since the
 	// namespace existed; this one never did, so a caller could spell the
 	// importer's namespace on a project and have the trust ladder read it back
@@ -235,6 +232,8 @@ func projectCreateInputAdmitting(req crmcontracts.CreateProjectRequest, importer
 		Name:         name,
 		CompanyID:    pathID[ids.CompanyKind](req.CompanyId),
 		OwnerID:      idArg[ids.UserKind](req.OwnerId),
+		Key:          req.Key,
+		DealID:       idArg[ids.DealKind](req.DealId),
 		Description:  req.Description,
 		Source:       req.Source,
 		SourceSystem: req.SourceSystem,
@@ -248,7 +247,25 @@ func projectCreateInputAdmitting(req crmcontracts.CreateProjectRequest, importer
 	if req.TargetEndDate != nil {
 		in.TargetEndDate = &req.TargetEndDate.Time
 	}
+	if req.Phase != nil {
+		in.Phase = string(*req.Phase)
+	}
 	return in, nil
+}
+
+// GetProjectKeyPreview answers the key a create of this name would mint.
+func (h Handlers) GetProjectKeyPreview(w http.ResponseWriter, r *http.Request, params crmcontracts.GetProjectKeyPreviewParams) {
+	name, err := projectName(params.Name)
+	if err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	key, err := h.store.PreviewProjectKey(r.Context(), name)
+	if err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, crmcontracts.ProjectKeyPreview{Key: key})
 }
 
 // projectName is the rule both write paths carry: a name of spaces is not a
@@ -296,19 +313,19 @@ func projectUpdateInput(req crmcontracts.UpdateProjectRequest, ifVersion *int64)
 	return in, nil
 }
 
-// claimCallerChosenKey answers 422 read_only to a `key`, in place of the
-// unknown-field refusal any other stranger to the contract gets. A client that
-// still sends it needs to hear the key is not theirs to set.
+// claimCallerChosenKey answers 422 read_only to a `key` on update, in place of
+// the unknown-field refusal any other stranger to the contract gets. The key is
+// chosen on create only, so mail already sent with it keeps filing.
 func claimCallerChosenKey(key string) error {
 	if key != projectKeyField {
 		return nil
 	}
 	return httperr.Validation(projectKeyField, "read_only",
-		"a project's key is assigned by the server from its name and cannot be set or changed")
+		"a project's key is set when the project is created and cannot be changed")
 }
 
-// refuseCallerChosenKey is claimCallerChosenKey for the approval preview, which
-// maps a staged body that was decoded without the claim.
+// refuseCallerChosenKey is claimCallerChosenKey for an update body that was
+// decoded without the claim.
 func refuseCallerChosenKey(extra map[string]any) error {
 	if _, sent := extra[projectKeyField]; !sent {
 		return nil

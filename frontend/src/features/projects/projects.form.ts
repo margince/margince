@@ -8,6 +8,7 @@ import {
   type ProjectOwnerPicker,
   projectOwnerField,
 } from "../../components/projectownerfield";
+import { PHASE_LABEL } from "../../format/projectphase";
 import type { MessageKey } from "../../i18n/en";
 
 // The project form's vocabulary and transport, with no React in it: what the
@@ -61,6 +62,49 @@ export function projectFields(
   ];
 }
 
+/** The phases a project may start in; closing needs a project that exists. */
+const START_PHASES = ["initiative", "pursuing", "delivering"] as const;
+
+/**
+ * The create-only fields: the key the server suggests, the starting phase and
+ * the deal the project comes from. `suggestedKey` is the server's preview
+ * (getProjectKeyPreview), so the form never works a key out for itself.
+ */
+export function projectCreateFields(
+  t: (key: MessageKey, vars?: Record<string, string>) => string,
+  opts: Readonly<{
+    suggestedKey: string | undefined;
+    deals: readonly { value: string; label: string }[];
+  }>,
+): CreateField[] {
+  return [
+    {
+      key: "key",
+      label: "project.key",
+      maxLength: 24,
+      placeholder: opts.suggestedKey,
+      hint: opts.suggestedKey
+        ? t("project.keySuggested", { key: opts.suggestedKey })
+        : t("project.keyHint"),
+    },
+    {
+      key: "phase",
+      label: "project.startPhase",
+      type: "select",
+      options: START_PHASES.map((phase) => ({
+        value: phase,
+        label: t(PHASE_LABEL[phase]),
+      })),
+    },
+    {
+      key: "deal_id",
+      label: "project.deal",
+      type: "select",
+      options: [{ value: "", label: t("project.noDeal") }, ...opts.deals],
+    },
+  ];
+}
+
 function str(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
 }
@@ -74,6 +118,9 @@ export function mapProjectCreate(
     owner_id: str(values.owner_id) || null,
     description: str(values.description) || null,
     target_end_date: str(values.target_end_date) || null,
+    key: str(values.key) || null,
+    phase: (str(values.phase) || null) as CreateProjectRequest["phase"],
+    deal_id: str(values.deal_id) || null,
     source: "manual",
   };
 }

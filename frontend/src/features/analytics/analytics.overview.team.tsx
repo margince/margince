@@ -258,7 +258,7 @@ function TeamBody({
                   state="withheld"
                   emptyLabel={t("common.empty")}
                   loadingLabel={t("analytics.team.standing")}
-                  detail={{ withheldReason: t("analytics.team.withheld") }}
+                  detail={{ withheldReason: data.withheld_reason }}
                 >
                   {null}
                 </SurfaceState>

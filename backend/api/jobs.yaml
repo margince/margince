@@ -931,6 +931,21 @@ kinds:
       the sooner the first one exists the sooner the second is worth taking.
 
 
+  initiative_enrolment_sweep:
+    role: worker
+    fleet: true
+    go_type: InitiativeEnrolmentSweepArgs
+    queue: default
+    timeout: 5m
+    opts_owner: caller
+    cadence: 15m
+    reason: >-
+      Dates the membership of every live sales initiative. A record that starts
+      matching a rule gets a joined row and one that stops matching gets its
+      left date. Picks, exclusions and rule edits write their rows at the save,
+      so the tick only catches records whose own fields changed. Fifteen
+      minutes bounds how late a left date can be.
+
   report_schedule_sweep:
     role: worker
     fleet: true

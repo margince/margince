@@ -13,6 +13,7 @@ import (
 	"sort"
 
 	"github.com/margince/margince/backend/internal/modules/finance"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/pkg/extension"
 	"github.com/margince/margince/backend/pkg/extension/accounting"
 )
@@ -27,7 +28,10 @@ func (composedFinanceSources) Providers() []finance.SourceOption {
 	var out []finance.SourceOption
 	for _, ext := range ComposedExtensions() {
 		for _, source := range ext.FinanceSources {
-			out = append(out, finance.SourceOption{Provider: source.Provider, Description: string(ext.Description)})
+			out = append(out, finance.SourceOption{
+				Provider: source.Provider, Description: string(ext.Description),
+				Documents: source.InvoiceDocument != nil,
+			})
 		}
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Provider < out[j].Provider })
@@ -89,6 +93,19 @@ func (p unitFinanceProvider) InvoicesFor(ctx context.Context, externalCustomerID
 		return accounting.Ledger{}, fmt.Errorf("extension %q: ledger of %s: %w", p.unit, p.source.Provider, err)
 	}
 	return ledger, nil
+}
+
+func (p unitFinanceProvider) InvoiceDocument(ctx context.Context, externalInvoiceID string) (accounting.Document, error) {
+	if p.source.InvoiceDocument == nil {
+		return accounting.Document{}, fmt.Errorf("%w: %s serves no invoice documents", apperrors.ErrUnsupportedBySoR, p.source.Provider)
+	}
+	rt := financeRuntimeFor(ctx, p.unit, p.version, p.via(), p.deps)
+	defer rt.release()
+	document, err := p.source.InvoiceDocument(ctx, rt, p.conn, externalInvoiceID)
+	if err != nil {
+		return accounting.Document{}, fmt.Errorf("extension %q: document of %s: %w", p.unit, p.source.Provider, err)
+	}
+	return document, nil
 }
 
 func (p unitFinanceProvider) via() string { return "finance/" + p.source.Provider }

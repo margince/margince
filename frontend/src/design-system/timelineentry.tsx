@@ -1,12 +1,3 @@
-import {
-  CalendarClock,
-  CheckSquare,
-  Mail,
-  MessageCircle,
-  PencilLine,
-  Phone,
-  StickyNote,
-} from "lucide-react";
 import type { ReactNode } from "react";
 import type { components } from "../api/schema";
 import type { OccurredPrecision } from "../format/activitywhen";
@@ -63,7 +54,20 @@ export type TimelineEntry = {
   // what was changed about it are one chronology to the reader. Kept apart, a
   // rep comparing "we told them X" against "someone set stage to Y" had to
   // hold two orderings in their head.
-  kind: "email" | "meeting" | "note" | "call" | "task" | "message" | "change";
+  //
+  // `extension` and `signal` are a row of an installed extension's own kind and
+  // one of its signals. Core builds them from a declaration, so the extension
+  // draws no entry of its own.
+  kind:
+    | "email"
+    | "meeting"
+    | "note"
+    | "call"
+    | "task"
+    | "message"
+    | "change"
+    | "extension"
+    | "signal";
   title: string;
   isDone?: boolean;
   atIso: string;
@@ -148,6 +152,12 @@ export type TimelineEntry = {
    */
   bulkAttested?: boolean;
   /**
+   * How many colleagues' mailboxes hold a copy of this email that the reader
+   * may open, this row included. The server shows the copies as one row, so
+   * they count as one message and one recipient here too.
+   */
+  copies?: number;
+  /**
    * What sent a message no human wrote, as the server judged it: a calendar
    * invitation, a sending system or the product. Such a row counts on neither
    * side of a conversation.
@@ -218,6 +228,8 @@ export const TIMELINE_KIND_LABEL = {
   task: "timeline.kind.task",
   message: "timeline.kind.message",
   change: "timeline.kind.change",
+  extension: "timeline.kind.extension",
+  signal: "timeline.kind.signal",
 } as const satisfies Record<TimelineEntry["kind"], MessageKey>;
 
 /**
@@ -239,15 +251,7 @@ export function dotClass(entry: TimelineEntry): string {
     : "tl-dot tl-dot-quiet";
 }
 
-export const TIMELINE_ICON = {
-  email: Mail,
-  meeting: CalendarClock,
-  note: StickyNote,
-  call: Phone,
-  task: CheckSquare,
-  message: MessageCircle,
-  change: PencilLine,
-} as const;
+export { TIMELINE_ICON } from "./timelineicons";
 
 // A link inside a captured message, rendered as an element rather than as
 // markup: the body is escaped text and stays that way. The visible label is
@@ -412,6 +416,21 @@ export function CommitmentReviewFlag({
     <Badge tone="ai">
       {plural("commitment.review.count", count, {
         count: formatNumber(count, locale),
+      })}
+    </Badge>
+  ) : null;
+}
+
+// CopiesFlag says the row stands for the same mail in other colleagues'
+// mailboxes, so a reader knows why only one row shows.
+export function CopiesFlag({ entry }: Readonly<{ entry: TimelineEntry }>) {
+  const plural = usePlural();
+  const { locale } = useLocale();
+  const others = (entry.copies ?? 1) - 1;
+  return others > 0 ? (
+    <Badge>
+      {plural("timeline.copies", others, {
+        count: formatNumber(others, locale),
       })}
     </Badge>
   ) : null;

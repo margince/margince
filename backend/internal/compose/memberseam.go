@@ -33,6 +33,10 @@ func (mailCaptureSeam) RecheckSeatsTx(ctx context.Context, tx pgx.Tx, userIDs []
 	return capture.RecheckMembersTx(ctx, tx, userIDs)
 }
 
+func (mailCaptureSeam) SharedMailboxesReadByTx(ctx context.Context, tx pgx.Tx, team ids.UUID) ([]string, error) {
+	return capture.SharedMailboxesReadByTx(ctx, tx, team)
+}
+
 type memberManager struct{ service *identity.Service }
 
 func newMemberManager(db *database.DB) memberManager {

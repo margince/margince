@@ -1,8 +1,12 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { Badge, Button, StatCard } from "../../design-system/atoms";
-import { SegmentBar, type SegmentBarParts } from "../../design-system/readings";
+import { Button, StatCard } from "../../design-system/atoms";
+import {
+  SegmentBar,
+  type SegmentBarParts,
+  SegmentSwatch,
+} from "../../design-system/segmentbar";
 import { StatStrip } from "../../design-system/statstrip";
 import {
   formatAnalyticsMoney,
@@ -17,10 +21,11 @@ import {
   usePlural,
   useT,
 } from "../../i18n";
-import type {
-  SalesProgress,
-  SalesProgressAmount,
-  SalesProgressGoal,
+import {
+  periodLabel,
+  type SalesProgress,
+  type SalesProgressAmount,
+  type SalesProgressGoal,
 } from "./progress.queries";
 import type { ReportingEvidenceRef } from "./reporting.model";
 
@@ -59,20 +64,35 @@ export function goalText(
   }
 }
 
-/** The signed difference to the goal, in the tone of what it means. */
-export function DeltaBadge({
+/**
+ * The difference to the goal as plain text. A period still running has an
+ * amount to go, never a miss; only a figure above the goal takes a colour.
+ */
+export function ProgressDelta({
   delta,
   currency,
-}: Readonly<{ delta: number | undefined; currency: string }>) {
+  open,
+}: Readonly<{ delta: number | undefined; currency: string; open: boolean }>) {
   const t = useT();
   const { locale } = useLocale();
   if (delta == null) return null;
-  if (delta === 0) return <Badge>{t("progress.goalMet")}</Badge>;
   const amount = formatAnalyticsMoney(Math.abs(delta), currency, locale);
-  return delta > 0 ? (
-    <Badge tone="success">{t("progress.aboveGoal", { amount })}</Badge>
-  ) : (
-    <Badge tone="danger">{t("progress.belowGoal", { amount })}</Badge>
+  let tone = "below";
+  let text = t("progress.belowGoal", { amount });
+  if (delta === 0) {
+    tone = "above";
+    text = t("progress.goalMet");
+  } else if (delta > 0) {
+    tone = "above";
+    text = t("progress.aboveGoal", { amount });
+  } else if (open) {
+    tone = "open";
+    text = t("progress.toGo", { amount });
+  }
+  return (
+    <span className="progress-delta t-num" data-tone={tone}>
+      {text}
+    </span>
   );
 }
 
@@ -94,14 +114,23 @@ function goalLine(
       subtotal,
     });
   }
+  if (goal.amount_minor != null)
+    return t("progress.ofGoalLine", {
+      goal: formatAnalyticsMoney(goal.amount_minor, currency, locale),
+    });
   return t("progress.goalLine", { goal: goalText(goal, currency, locale, t) });
 }
 
-/** The closed revenue of the period against its goal. */
+/** The sales won in the period against its goal, over the bar that shows why. */
 export function ProgressResult({
   progress,
   onEvidence,
-}: Readonly<{ progress: SalesProgress; onEvidence: OpenEvidence }>) {
+  onGoals,
+}: Readonly<{
+  progress: SalesProgress;
+  onEvidence: OpenEvidence;
+  onGoals: () => void;
+}>) {
   const t = useT();
   const { locale } = useLocale();
   const { closed, goal, completion, currency } = progress;
@@ -115,12 +144,27 @@ export function ProgressResult({
         <p className="progress-result-figure">
           {amountText(closed, currency, locale, t)}
         </p>
-        <p className="progress-result-goal">{goalLine(progress, locale, t)}</p>
-        {completion != null && (
-          <p className="progress-result-completion">
-            {t("progress.completion", {
-              percent: formatNumber(Math.round(completion * 100), locale),
-            })}
+        {goal.status === "missing" ? (
+          <NoGoal progress={progress} onGoals={onGoals} />
+        ) : (
+          <p className="progress-result-goal">
+            {goalLine(progress, locale, t)}
+          </p>
+        )}
+        {(completion != null || progress.delta_minor != null) && (
+          <p className="progress-result-line">
+            {completion != null && (
+              <span className="progress-result-completion">
+                {t("progress.completion", {
+                  percent: formatNumber(Math.round(completion * 100), locale),
+                })}
+              </span>
+            )}
+            <ProgressDelta
+              delta={progress.delta_minor}
+              currency={currency}
+              open={progress.state !== "ended"}
+            />
           </p>
         )}
         {closed.status === "partial" && (
@@ -129,22 +173,48 @@ export function ProgressResult({
         {goal.status === "changed_outside_plan" && (
           <p className="t-caption">{t("progress.goalChanged")}</p>
         )}
-        <div className="progress-result-actions">
-          <DeltaBadge delta={progress.delta_minor} currency={currency} />
-          {started && onEvidence && (
-            <Button
-              variant="link"
-              onClick={() =>
-                onEvidence({ metric: "bookings_won", context_id: "interval" })
-              }
-            >
-              {t("progress.viewClosedDeals")}
-            </Button>
-          )}
-        </div>
       </div>
       <ResultBar progress={progress} onEvidence={onEvidence} />
+      {started && onEvidence && (
+        <div className="progress-result-actions">
+          <Button
+            variant="link"
+            onClick={() =>
+              onEvidence({ metric: "bookings_won", context_id: "interval" })
+            }
+          >
+            {t("progress.viewClosedDeals")}
+          </Button>
+        </div>
+      )}
     </section>
+  );
+}
+
+// The one place a reading with no goal says so. A reader who may set one gets
+// the way to; any other reader is told who sets it.
+function NoGoal({
+  progress,
+  onGoals,
+}: Readonly<{ progress: SalesProgress; onGoals: () => void }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const own = progress.scope.kind === "owner";
+  const sets = progress.capabilities.write_goals || !own;
+  return (
+    <div className="progress-nogoal">
+      <p className="progress-result-goal">
+        {t("progress.noGoalFor", {
+          period: periodLabel(progress.period, locale),
+        })}{" "}
+        {!sets && t("progress.whoSetsGoals")}
+      </p>
+      {sets && (
+        <Button variant="ghost" onClick={onGoals}>
+          {t(own ? "progress.setGoals" : "progress.viewGoals")}
+        </Button>
+      )}
+    </div>
   );
 }
 
@@ -203,6 +273,7 @@ function ResultBar({
     <div className="progress-result-bar">
       <SegmentBar
         label={t("progress.readings")}
+        legend="hidden"
         parts={parts}
         marker={
           goal.amount_minor != null && goal.status !== "incomplete"
@@ -263,6 +334,7 @@ export function ProgressReadings({
     <StatStrip label={t("progress.readings")} density="plate">
       <StatCard
         label={t("progress.productSales")}
+        source={known && <SegmentSwatch step={0} />}
         value={money(categories.product_minor)}
         detail={itemsLine(categories.product_items, plural, locale)}
         onOpen={mix(CATEGORY_GROUP.product)}
@@ -270,6 +342,7 @@ export function ProgressReadings({
       />
       <StatCard
         label={t("progress.serviceSales")}
+        source={known && <SegmentSwatch step={1} />}
         value={money(categories.service_minor)}
         detail={itemsLine(categories.service_items, plural, locale)}
         onOpen={mix(CATEGORY_GROUP.service)}
@@ -277,6 +350,10 @@ export function ProgressReadings({
       />
       <StatCard
         label={t("progress.planned")}
+        source={
+          planned.amount_minor != null &&
+          planned.amount_minor > 0 && <SegmentSwatch step="ahead" />
+        }
         value={amountText(planned, currency, locale, t)}
         detail={t("progress.plannedAt", {
           at: formatDateTime(
@@ -295,6 +372,7 @@ export function ProgressReadings({
       {known && categories.unresolved_minor > 0 && (
         <StatCard
           label={t("progress.unclassified")}
+          source={<SegmentSwatch step={2} />}
           value={money(categories.unresolved_minor)}
           detail={
             categories.invalid_deals > 0

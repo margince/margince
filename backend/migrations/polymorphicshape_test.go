@@ -109,8 +109,11 @@ func shapeAnswers(f shapeFacts) bool {
 // excused by a marker, by an absent id, or by both, in that order.
 func shapeCheck(pair polymorphicPair, def string) (marker, keys string, ok bool) {
 	id := regexp.QuoteMeta(pair.id)
+	// One key per row for a core value. An extension value has no core row to
+	// key, so the same CHECK may count none for it.
+	one := `(?:1|CASE\s+WHEN \(` + regexp.QuoteMeta(pair.discriminator) + ` ~ '[^']*'::text\) THEN 0\s+ELSE 1\s+END)`
 	shape := regexp.MustCompile(`^CHECK \(\((?:(?:(\w+) OR )?(?:\(` + id + ` IS NULL\) OR )?` +
-		`\(num_nonnulls\(([^()]*)\) = 1\)|num_nonnulls\(([^()]*)\) = 1)\)\)$`)
+		`\(num_nonnulls\(([^()]*)\)\s*=\s*` + one + `\)|num_nonnulls\(([^()]*)\)\s*=\s*` + one + `)\)\)$`)
 	m := shape.FindStringSubmatch(def)
 	if m == nil {
 		return "", "", false
@@ -132,12 +135,19 @@ func owedValues(f shapeFacts) []string {
 	// The discriminator may be NULL where the id is: a row that names no record.
 	vocabulary := regexp.MustCompile(`^CHECK \(\((?:\(` + disc + ` IS NULL\) OR \()?` +
 		disc + ` = ANY \(ARRAY\[(.*)\]\)\)\)\)?$`)
+	// The list may carry an extension arm beside the core words. That arm names
+	// rows with no core table behind them, so it owes no key column.
+	vocabularyAndExtensions := regexp.MustCompile(`^CHECK \(\((?:\(` + disc + ` IS NULL\) OR )?\(` + disc + ` = ANY \(ARRAY\[(.*)\]\)\) OR \(` + disc + ` ~ '[^']*'::text\)\)\)$`)
 	// A value whose rows carry no id, stated by the schema: (kind = 'v') = (id IS NULL).
 	idless := regexp.MustCompile(`^CHECK \(\(\(` + disc + ` = '([^']*)'::text\) = \(` + id + ` IS NULL\)\)\)$`)
 
 	var admitted, withoutID []string
 	for _, def := range f.checks {
-		if m := vocabulary.FindStringSubmatch(def); m != nil {
+		m := vocabulary.FindStringSubmatch(def)
+		if m == nil {
+			m = vocabularyAndExtensions.FindStringSubmatch(def)
+		}
+		if m != nil {
 			for _, v := range quotedValue.FindAllStringSubmatch(m[1], -1) {
 				admitted = append(admitted, v[1])
 			}

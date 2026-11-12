@@ -11,7 +11,7 @@ import "time"
 // would believe. It says nothing about the file on disk — a pair
 // regenerated TOGETHER from a stale contract matches here, and the drift
 // gate is what catches that.
-const JobContractHash = "aac56b7aa7ef4d934093f925b1903301788d3b932e85536cd6fbae74279f385c"
+const JobContractHash = "518ca95b473074f36c4d7cd353d4aafb27dc3498377ee258e5dee5321d8975fc"
 
 // specs is every declared kind. A kind absent from this table is a kind
 // nobody declared, and MustBeTotal is what names them: the runner calls it
@@ -680,6 +680,16 @@ var specs = map[string]Spec{
 		OptsOwner: OptsCaller,
 		Fault:     FaultPolicy{NilAfterLogging: "the import_run row owns the outcome: a refusal, an over-budget stop and a lost fence are written to the run, or are a superseded attempt's quiet exit; a River retry would test again a run whose state already says what happened."},
 		Args:      []ArgField{{Name: "Attempt", Scalar: true, Reason: "the fence the run row holds; a new attempt is a new job"}, {Name: "RunID"}, {Name: "Workspace"}},
+	},
+	"initiative_enrolment_sweep": {
+		Kind:      "initiative_enrolment_sweep",
+		GoType:    "InitiativeEnrolmentSweepArgs",
+		Role:      Worker,
+		Fleet:     true,
+		Queue:     "default",
+		Timeout:   TimeoutPolicy{Fixed: 5 * time.Minute},
+		OptsOwner: OptsCaller,
+		Cadence:   Cadence{Fixed: 15 * time.Minute},
 	},
 	"intro_expiry": {
 		Kind:        "intro_expiry",

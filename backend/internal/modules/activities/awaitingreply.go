@@ -194,8 +194,13 @@ func followUpGatesFor(ctx context.Context, arg func(any) int, need string) (foll
 	return g, err
 }
 
-func followUpReadableSQL(alias string) string {
-	return alias + ".id IN (SELECT id FROM " + followUpReadable + ")"
+func followUpReadableSQL(alias string) string { return inGatedSetSQL(followUpReadable, alias) }
+
+// inGatedSetSQL tests the activity under alias against set, a statement's one
+// gated set of readable ids. Postgres plans each copy of the content gate, and
+// a pooled connection keeps that memory, so an alias tests membership instead.
+func inGatedSetSQL(set, alias string) string {
+	return alias + ".id IN (SELECT id FROM " + set + ")"
 }
 
 // followUpStatement puts the candidates and the one gated set before body.

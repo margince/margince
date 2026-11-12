@@ -17,9 +17,10 @@ import (
 
 // FinanceSource is one accounting system a unit can read.
 //
-// All three functions are required and all three only read. Each gets a fresh
-// Runtime for the call. A credential the unit keeps in Secrets is read where it
-// is spent, and a refreshed token is stored back the same way.
+// Check, Customers and InvoicesFor are required, and every function only
+// reads. Each gets a fresh Runtime for the call. A credential the unit keeps in
+// Secrets is read where it is spent, and a refreshed token is stored back the
+// same way.
 type FinanceSource struct {
 	// Provider is the source's key, stored on the workspace's connection and
 	// on every row the mirror writes. It follows Channel.Provider's grammar
@@ -36,6 +37,11 @@ type FinanceSource struct {
 
 	// InvoicesFor answers one customer's invoices and payments.
 	InvoicesFor FinanceInvoices
+
+	// InvoiceDocument returns one invoice's own document, named by the
+	// ExternalID the unit gave it in a Ledger. Optional: a source without
+	// documents leaves it nil, and the finance card offers none.
+	InvoiceDocument FinanceInvoiceDocument
 }
 
 // FinanceCheck answers whether the source can be read now.
@@ -47,7 +53,12 @@ type FinanceCustomers func(ctx context.Context, rt Runtime, conn accounting.Conn
 // FinanceInvoices answers one customer's ledger.
 type FinanceInvoices func(ctx context.Context, rt Runtime, conn accounting.Connection, externalCustomerID string) (accounting.Ledger, error)
 
-// Validate enforces the provider grammar and that every function is present.
+// FinanceInvoiceDocument returns one invoice's document. The core serves only a
+// PDF of at most 20 MiB. A unit reads the vendor's answer through that limit.
+type FinanceInvoiceDocument func(ctx context.Context, rt Runtime, conn accounting.Connection, externalInvoiceID string) (accounting.Document, error)
+
+// Validate enforces the provider grammar and that Check, Customers and
+// InvoicesFor are present.
 // A provider claimed by two units is a rule about the composed set, which the
 // boot resolves.
 func (s FinanceSource) Validate() error {
