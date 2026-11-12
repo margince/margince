@@ -86,6 +86,7 @@ var taskSourceWriters = map[string][]string{
 	"modules/activities/emailrequesttasks.go:captureEmailRequest":         {provenance.EmailRequestSource},
 	"modules/activities/requesttask.go:takeEmailRequest":                  {provenance.EmailRequestSource},
 	"compose/bulkrecordverbs.go:applyTask":                                {writesHumanTask},
+	"compose/partnernextsteps.go:WriteTx":                                 {writesHumanTask},
 	"modules/activities/handlers_activity.go:LogActivity":                 {writesHumanTask},
 	"modules/activities/handlers_task.go:CreateTask":                      {writesHumanTask},
 	"modules/activities/handlers_task.go:TaskInputFrom":                   {writesHumanTask},

@@ -31,9 +31,9 @@
   "catalog": {
     "tools": 48,
     "system_frame_tokens": 592,
-    "tokens": 40544,
+    "tokens": 40583,
     "median_tool_tokens": 623,
-    "mean_tool_tokens": 844
+    "mean_tool_tokens": 845
   },
   "agents": [
     {
@@ -100,12 +100,12 @@
       "tokens": 2005
     },
     {
-      "name": "find_records",
-      "tokens": 1961
+      "name": "change_state",
+      "tokens": 1969
     },
     {
-      "name": "change_state",
-      "tokens": 1930
+      "name": "find_records",
+      "tokens": 1961
     },
     {
       "name": "change_settings",

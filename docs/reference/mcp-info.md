@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 48 |
 | Resources | 14 |
-| Tool catalog | 232.0 KB |
+| Tool catalog | 232.2 KB |
 | Resource catalog | 5.5 KB |
-| Approx. wire tokens | 60797 |
+| Approx. wire tokens | 60836 |
 | Largest tool | `read_context` (11.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -34,9 +34,9 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 |---|---:|---:|---|
 | Output schemas | 51.2 KB | 22% | **No**: a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 54.1 KB | 23% | Yes, every step |
-| Input schemas | 114.9 KB | 49% | Yes, every step |
+| Input schemas | 115.0 KB | 49% | Yes, every step |
 | _Names, annotations, punctuation_ | 11.8 KB | 5% | Partly |
-| **Description + input schema** | **169.0 KB** | **72%** | **the recurring cost** |
+| **Description + input schema** | **169.1 KB** | **72%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -79,7 +79,7 @@ descriptions and input schemas are what each step pays for.
 | [`change_relationships`](#change_relationships) | Work a company's relationships and briefs |  |  | 503 |
 | [`change_reports`](#change_reports) | Work saved reports and the forecast |  |  | 1357 |
 | [`change_settings`](#change_settings) | Change how the workspace is set up |  |  | 1730 |
-| [`change_state`](#change_state) | Move a lead, deal, project or partner |  |  | 1930 |
+| [`change_state`](#change_state) | Move a lead, deal, project or partner |  |  | 1969 |
 | [`change_tags`](#change_tags) | Change tags |  |  | 562 |
 | [`check_availability`](#check_availability) | Check calendar availability | yes |  | 342 |
 | [`commit_import`](#commit_import) | Commit an import |  |  | 275 |
@@ -3436,11 +3436,11 @@ requires passport scope "write".)
       "type": "string"
     },
     "next_step": {
-      "description": "set_up_partner only",
+      "description": "set_up_partner only: The one next thing to do with the partner. Written as a task on the company, held by the human you act for",
       "type": "string"
     },
     "next_step_due_at": {
-      "description": "set_up_partner only",
+      "description": "set_up_partner only: The day the next step is due. Needs next_step",
       "format": "date",
       "type": "string"
     },
