@@ -18,6 +18,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/socialplatform"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
@@ -181,6 +182,8 @@ func TestThePerWriteNotesGiveEachToolOnlyAdviceItCanAct(t *testing.T) {
 			"advice against a field the tool takes"},
 		{"employer is NOT a field here", false, "the pairing rule already says it on create; here it is the whole " +
 			"answer, because an endpoint cannot be patched"},
+		{"`social` is merged on update", false, "a create has no stored links to merge into, so on create this " +
+			"describes a write the tool does not make"},
 	} {
 		t.Run(tc.claim, func(t *testing.T) {
 			stated, withheld, tool := patch, create, "update_record"
@@ -280,6 +283,24 @@ func TestTheWriteVocabularyIsAdvertisedBehindTheWriteScope(t *testing.T) {
 	for _, tool := range []string{"create_record", "update_record"} {
 		if !strings.Contains(r.Description, tool) {
 			t.Errorf("the advertisement does not say it is the vocabulary for %s: %q", tool, r.Description)
+		}
+	}
+}
+
+// Both writes name every social key the contacts module takes, and the profile
+// rule of the linkedin key. The keys are read off the same list the write
+// refuses against, so a key added there reaches the document unbidden.
+func TestBothWritesNameEverySocialKeyAndTheProfileRule(t *testing.T) {
+	doc := readRecordFields(t)
+	for name, section := range map[string]recordFieldsWrite{"create_record": doc.Create, "update_record": doc.Update} {
+		notes := noteText(section)
+		for _, key := range socialplatform.Keys() {
+			if !strings.Contains(notes, key) {
+				t.Errorf("%s's notes never name the social key %q:\n%s", name, key, notes)
+			}
+		}
+		if !strings.Contains(notes, socialplatform.LinkedInProfileExample) {
+			t.Errorf("%s's notes never state the LinkedIn profile-link rule:\n%s", name, notes)
 		}
 	}
 }

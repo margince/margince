@@ -32246,7 +32246,9 @@ export interface components {
             readonly writable?: boolean;
             /** @description Whether THIS caller may archive THIS contact: the row write gate `writable` asks, plus the `contact:delete` grant or being the contact's owner with `contact:update`. An owner who named themselves owner (an edit or a claim) needs the delete grant. Server-computed per row, per caller. A UX signal, never the enforcement, exactly like `writable`; absent means NOT archivable. */
             readonly archivable?: boolean;
-            /** @description { linkedin, twitter, github, ... } */
+            /** @description The contact's LinkedIn profile link. The same stored value as `social.linkedin`, not a second copy. */
+            linkedin_url?: string | null;
+            /** @description The contact's links by platform: github, linkedin, twitter. linkedin is a LinkedIn profile link. */
             social?: {
                 [key: string]: unknown;
             };
@@ -32368,6 +32370,9 @@ export interface components {
             title?: string | null;
             /** Format: uuid */
             owner_id?: string | null;
+            /** @description The contact's LinkedIn profile link (https://www.linkedin.com/in/<name>). Writes the same stored value as `social.linkedin`; a request naming both with different profiles is refused with 422 `linkedin_url_conflicts_with_social`. */
+            linkedin_url?: string | null;
+            /** @description Links by platform. Only github, linkedin and twitter are taken; any other key is refused with 422 `social_platform_unknown`. linkedin takes only a LinkedIn profile link (https://www.linkedin.com/in/<name>). */
             social?: {
                 [key: string]: unknown;
             };
@@ -32422,7 +32427,7 @@ export interface components {
             company_name?: string | null;
             /** @description What they do at that employer, when it differs from `title`. */
             role?: string | null;
-            /** @description The public profile this was read from. Stored, never fetched. A LinkedIn URL must be a profile (`/in/<name>`); a company page is refused with 422 `linkedin_url_not_profile` on this field. */
+            /** @description The LinkedIn profile this was read from. Stored, never fetched. It must be a LinkedIn profile (`/in/<name>`): a page off LinkedIn is refused with 422 `linkedin_url_not_linkedin` on this field, and a company page with `linkedin_url_not_profile`. */
             profile_url?: string | null;
             /**
              * Format: email
@@ -32652,6 +32657,9 @@ export interface components {
              * @enum {string}
              */
             visibility?: "workspace" | "owner";
+            /** @description The contact's LinkedIn profile link (https://www.linkedin.com/in/<name>). Writes the same stored value as `social.linkedin`; null or "" removes it. A request naming both with different profiles is refused with 422 `linkedin_url_conflicts_with_social`. */
+            linkedin_url?: string | null;
+            /** @description Merged into the stored links: a key not sent keeps its link, and a key sent as "" or null removes it. Only github, linkedin and twitter are taken; any other key is refused with 422 `social_platform_unknown`. linkedin takes only a LinkedIn profile link (https://www.linkedin.com/in/<name>). */
             social?: {
                 [key: string]: unknown;
             };
@@ -32880,6 +32888,8 @@ export interface components {
         };
         CreateCompanyRequest: {
             display_name: string;
+            /** @description Canonical LinkedIn company URL, held to the rule the update holds it to. website_url is derived and refused here. */
+            linkedin_url?: string | null;
             legal_name?: string | null;
             /** @description The company's main number. A formatted number is accepted and stored in E.164 form (for example +49301234567). It is never a contact's own number. */
             phone?: string | null;

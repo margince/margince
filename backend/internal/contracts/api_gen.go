@@ -42302,6 +42302,9 @@ type Contact struct {
 	// LegalHold True while a litigation or investigation hold is preserving this record. A held record is never acted on by a retention sweep and an Art. 17 erasure against it is refused, so a screen that offers either action has to know. Placed and lifted through /retention/legal-holds, never by an ordinary edit.
 	LegalHold *bool `json:"legal_hold,omitempty"`
 
+	// LinkedinUrl The contact's LinkedIn profile link. The same stored value as `social.linkedin`, not a second copy.
+	LinkedinUrl *string `json:"linkedin_url,omitempty"`
+
 	// MergedIntoId Set when this row was merged away.
 	MergedIntoId *openapi_types.UUID `json:"merged_into_id,omitempty"`
 	OwnerId      *openapi_types.UUID `json:"owner_id,omitempty"`
@@ -42323,7 +42326,7 @@ type Contact struct {
 	// RelationshipMark Set when the workspace's relationship to this contact is not an ordinary one. `vendor_marketing` is a named sender who only pitches something to this business and whom nobody here has answered. The default contact lists leave a marked contact out; a text search and a read by id still find it. Null is not marked. Written through `PATCH /contacts/{id}` or by the sender check, never by the request body of a create.
 	RelationshipMark *ContactRelationshipMark `json:"relationship_mark,omitempty"`
 
-	// Social { linkedin, twitter, github, ... }
+	// Social The contact's links by platform: github, linkedin, twitter. linkedin is a LinkedIn profile link.
 	Social *map[string]interface{} `json:"social,omitempty"`
 	Source string                  `json:"source"`
 
@@ -44394,8 +44397,11 @@ type CreateCompanyRequest struct {
 	Email *openapi_types.Email `json:"email,omitempty"`
 
 	// Industry An industry code, or text the server can map to one. Text that names no code stores no code and is kept in the description.
-	Industry        *string             `json:"industry,omitempty"`
-	LegalName       *string             `json:"legal_name,omitempty"`
+	Industry  *string `json:"industry,omitempty"`
+	LegalName *string `json:"legal_name,omitempty"`
+
+	// LinkedinUrl Canonical LinkedIn company URL, held to the rule the update holds it to. website_url is derived and refused here.
+	LinkedinUrl     *string             `json:"linkedin_url,omitempty"`
 	OwnerId         *openapi_types.UUID `json:"owner_id,omitempty"`
 	ParentCompanyId *openapi_types.UUID `json:"parent_company_id,omitempty"`
 
@@ -44463,15 +44469,20 @@ type CreateContactRequest struct {
 	ConvertLeadIds *[]openapi_types.UUID `json:"convert_lead_ids,omitempty"`
 
 	// CreatedFromActivityId The note, mail or quick capture this contact was read out of. An agent that creates a contact from a record names it here, so a reader can check where the name and title came from. The caller must be able to read it (404 `not_found` otherwise, never 403).
-	CreatedFromActivityId *openapi_types.UUID     `json:"created_from_activity_id,omitempty"`
-	Emails                *[]ContactEmailInput    `json:"emails,omitempty"`
-	FirstName             *string                 `json:"first_name,omitempty"`
-	FullName              string                  `json:"full_name"`
-	LastName              *string                 `json:"last_name,omitempty"`
-	OwnerId               *openapi_types.UUID     `json:"owner_id,omitempty"`
-	Phones                *[]ContactPhoneInput    `json:"phones,omitempty"`
-	Social                *map[string]interface{} `json:"social,omitempty"`
-	Source                string                  `json:"source"`
+	CreatedFromActivityId *openapi_types.UUID  `json:"created_from_activity_id,omitempty"`
+	Emails                *[]ContactEmailInput `json:"emails,omitempty"`
+	FirstName             *string              `json:"first_name,omitempty"`
+	FullName              string               `json:"full_name"`
+	LastName              *string              `json:"last_name,omitempty"`
+
+	// LinkedinUrl The contact's LinkedIn profile link (https://www.linkedin.com/in/<name>). Writes the same stored value as `social.linkedin`; a request naming both with different profiles is refused with 422 `linkedin_url_conflicts_with_social`.
+	LinkedinUrl *string              `json:"linkedin_url,omitempty"`
+	OwnerId     *openapi_types.UUID  `json:"owner_id,omitempty"`
+	Phones      *[]ContactPhoneInput `json:"phones,omitempty"`
+
+	// Social Links by platform. Only github, linkedin and twitter are taken; any other key is refused with 422 `social_platform_unknown`. linkedin takes only a LinkedIn profile link (https://www.linkedin.com/in/<name>).
+	Social *map[string]interface{} `json:"social,omitempty"`
+	Source string                  `json:"source"`
 
 	// SourceAuthorId Who wrote this record in the system it came from, when the author holds a seat here. Written only by a declared importer (a signed-in human holding import_run:create), only beside a source_system; either author field or both may be sent, and the seat's current name wins on read. captured_by still names the caller.
 	SourceAuthorId *openapi_types.UUID `json:"source_author_id,omitempty"`
@@ -58204,7 +58215,7 @@ type QuickCaptureContactRequest struct {
 	FullName string               `json:"full_name"`
 	Phone    *string              `json:"phone,omitempty"`
 
-	// ProfileUrl The public profile this was read from. Stored, never fetched. A LinkedIn URL must be a profile (`/in/<name>`); a company page is refused with 422 `linkedin_url_not_profile` on this field.
+	// ProfileUrl The LinkedIn profile this was read from. Stored, never fetched. It must be a LinkedIn profile (`/in/<name>`): a page off LinkedIn is refused with 422 `linkedin_url_not_linkedin` on this field, and a company page with `linkedin_url_not_profile`.
 	ProfileUrl *string `json:"profile_url,omitempty"`
 
 	// Role What they do at that employer, when it differs from `title`.
@@ -65463,7 +65474,10 @@ type UpdateContactRequest struct {
 	FirstName *string              `json:"first_name,omitempty"`
 	FullName  *string              `json:"full_name,omitempty"`
 	LastName  *string              `json:"last_name,omitempty"`
-	OwnerId   *openapi_types.UUID  `json:"owner_id,omitempty"`
+
+	// LinkedinUrl The contact's LinkedIn profile link (https://www.linkedin.com/in/<name>). Writes the same stored value as `social.linkedin`; null or "" removes it. A request naming both with different profiles is refused with 422 `linkedin_url_conflicts_with_social`.
+	LinkedinUrl *string             `json:"linkedin_url,omitempty"`
+	OwnerId     *openapi_types.UUID `json:"owner_id,omitempty"`
 
 	// Phones REPLACES the contact's numbers with exactly this list, the same way `emails`
 	// replaces addresses. A number that has been reassigned is corrected by sending
@@ -65480,8 +65494,10 @@ type UpdateContactRequest struct {
 
 	// RelationshipMark Marks the contact (`vendor_marketing`) or clears the mark (null). The mark records who set it, so a mark set by hand is never lifted by the automatic check that lifts the mark the sender check set.
 	RelationshipMark *UpdateContactRequestRelationshipMark `json:"relationship_mark,omitempty"`
-	Social           *map[string]interface{}               `json:"social,omitempty"`
-	Title            *string                               `json:"title,omitempty"`
+
+	// Social Merged into the stored links: a key not sent keeps its link, and a key sent as "" or null removes it. Only github, linkedin and twitter are taken; any other key is refused with 422 `social_platform_unknown`. linkedin takes only a LinkedIn profile link (https://www.linkedin.com/in/<name>).
+	Social *map[string]interface{} `json:"social,omitempty"`
+	Title  *string                 `json:"title,omitempty"`
 
 	// Visibility Who may see this contact: `workspace` for everyone in the company,
 	// `owner` for the contact named by `owner_id` alone.
@@ -81725,6 +81741,14 @@ func (a *Contact) UnmarshalJSON(b []byte) error {
 		delete(object, "legal_hold")
 	}
 
+	if raw, found := object["linkedin_url"]; found {
+		err = json.Unmarshal(raw, &a.LinkedinUrl)
+		if err != nil {
+			return fmt.Errorf("error reading 'linkedin_url': %w", err)
+		}
+		delete(object, "linkedin_url")
+	}
+
 	if raw, found := object["merged_into_id"]; found {
 		err = json.Unmarshal(raw, &a.MergedIntoId)
 		if err != nil {
@@ -82022,6 +82046,13 @@ func (a Contact) MarshalJSON() ([]byte, error) {
 		object["legal_hold"], err = json.Marshal(a.LegalHold)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'legal_hold': %w", err)
+		}
+	}
+
+	if a.LinkedinUrl != nil {
+		object["linkedin_url"], err = json.Marshal(a.LinkedinUrl)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'linkedin_url': %w", err)
 		}
 	}
 
@@ -83308,6 +83339,14 @@ func (a *CreateCompanyRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "legal_name")
 	}
 
+	if raw, found := object["linkedin_url"]; found {
+		err = json.Unmarshal(raw, &a.LinkedinUrl)
+		if err != nil {
+			return fmt.Errorf("error reading 'linkedin_url': %w", err)
+		}
+		delete(object, "linkedin_url")
+	}
+
 	if raw, found := object["owner_id"]; found {
 		err = json.Unmarshal(raw, &a.OwnerId)
 		if err != nil {
@@ -83443,6 +83482,13 @@ func (a CreateCompanyRequest) MarshalJSON() ([]byte, error) {
 		object["legal_name"], err = json.Marshal(a.LegalName)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'legal_name': %w", err)
+		}
+	}
+
+	if a.LinkedinUrl != nil {
+		object["linkedin_url"], err = json.Marshal(a.LinkedinUrl)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'linkedin_url': %w", err)
 		}
 	}
 
@@ -83613,6 +83659,14 @@ func (a *CreateContactRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "last_name")
 	}
 
+	if raw, found := object["linkedin_url"]; found {
+		err = json.Unmarshal(raw, &a.LinkedinUrl)
+		if err != nil {
+			return fmt.Errorf("error reading 'linkedin_url': %w", err)
+		}
+		delete(object, "linkedin_url")
+	}
+
 	if raw, found := object["owner_id"]; found {
 		err = json.Unmarshal(raw, &a.OwnerId)
 		if err != nil {
@@ -83762,6 +83816,13 @@ func (a CreateContactRequest) MarshalJSON() ([]byte, error) {
 		object["last_name"], err = json.Marshal(a.LastName)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'last_name': %w", err)
+		}
+	}
+
+	if a.LinkedinUrl != nil {
+		object["linkedin_url"], err = json.Marshal(a.LinkedinUrl)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'linkedin_url': %w", err)
 		}
 	}
 
@@ -90712,6 +90773,14 @@ func (a *UpdateContactRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "last_name")
 	}
 
+	if raw, found := object["linkedin_url"]; found {
+		err = json.Unmarshal(raw, &a.LinkedinUrl)
+		if err != nil {
+			return fmt.Errorf("error reading 'linkedin_url': %w", err)
+		}
+		delete(object, "linkedin_url")
+	}
+
 	if raw, found := object["owner_id"]; found {
 		err = json.Unmarshal(raw, &a.OwnerId)
 		if err != nil {
@@ -90818,6 +90887,13 @@ func (a UpdateContactRequest) MarshalJSON() ([]byte, error) {
 		object["last_name"], err = json.Marshal(a.LastName)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'last_name': %w", err)
+		}
+	}
+
+	if a.LinkedinUrl != nil {
+		object["linkedin_url"], err = json.Marshal(a.LinkedinUrl)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'linkedin_url': %w", err)
 		}
 	}
 

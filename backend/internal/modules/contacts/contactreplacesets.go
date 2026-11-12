@@ -16,14 +16,16 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
-// replaceSetsChange is what a save's replace-sets changed: anything at all,
-// which bumps the version, and the identifiers, which re-run the duplicate check.
+// replaceSetsChange is what a save's replace-sets changed. Any change bumps the
+// version. A changed identifier re-runs the duplicate check. social is the
+// links as they now stand, which the audit row compares.
 type replaceSetsChange struct {
 	any, emails, phones bool
+	social              *map[string]any
 }
 
-// applyContactReplaceSets lands the social, email and phone replace-sets in a
-// savepoint and reports what they changed in what the contact holds.
+// applyContactReplaceSets lands the social merge and the email and phone
+// replace-sets in a savepoint and reports what they changed in what the contact holds.
 //
 // The forms send every set on every save, so a save of an untouched contact
 // carries them all. A set equal to the stored rows is rolled back and leaves
@@ -63,7 +65,7 @@ func replaceContactSetsAndCompare(
 	_, differs := storekit.ChangedColumns(contactSetsImage(current), contactSetsImage(after))
 	_, emails := differs["emails"]
 	_, phones := differs["phones"]
-	return replaceSetsChange{any: len(differs) > 0, emails: emails, phones: phones}, nil
+	return replaceSetsChange{any: len(differs) > 0, emails: emails, phones: phones, social: after.Social}, nil
 }
 
 // replaceContactSets writes each set the update carries. It takes the write
@@ -78,7 +80,7 @@ func replaceContactSets(ctx context.Context, tx pgx.Tx, id ids.ContactID, in Upd
 		return err
 	}
 	if in.Social != nil {
-		if err := replaceContactSocial(ctx, tx, workspaceID(ctx), id, in.Social, in.converting); err != nil {
+		if err := writeContactSocial(ctx, tx, workspaceID(ctx), id, in.Social, in.converting); err != nil {
 			return err
 		}
 	}

@@ -4,6 +4,8 @@
 package activities
 
 import (
+	"reflect"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 )
@@ -61,4 +63,31 @@ func (in UpdateActivityInput) clearsAValue(current crmcontracts.Activity) bool {
 		(in.clears("remind_at") && current.RemindAt != nil) ||
 		(in.clears("assignee_id") && current.AssigneeId != nil) ||
 		(in.clearsDeclared(fieldCallOutcome, current) && current.CallOutcome != nil)
+}
+
+// asksOnlyForTheDoneItHolds is true when the patch sets is_done to true and
+// nothing else, on a task that is already done. The state the caller asked for
+// holds, so its version no longer matters: a background write that moved the
+// version must not make Done fail.
+func (in UpdateActivityInput) asksOnlyForTheDoneItHolds(current crmcontracts.Activity) bool {
+	if !in.doneAtAnyVersion || in.IsDone == nil || !*in.IsDone || current.IsDone == nil || !*current.IsDone {
+		return false
+	}
+	// Every exported field is read, so a field added later cannot ride along
+	// on a stale version.
+	patch := reflect.ValueOf(in)
+	for i := range patch.NumField() {
+		field := patch.Type().Field(i)
+		switch {
+		case !field.IsExported(), field.Name == "IsDone", field.Name == "IfVersion", field.Name == "Trail":
+			continue
+		case patch.Field(i).Kind() == reflect.Map || patch.Field(i).Kind() == reflect.Slice:
+			if patch.Field(i).Len() > 0 {
+				return false
+			}
+		case !patch.Field(i).IsZero():
+			return false
+		}
+	}
+	return true
 }

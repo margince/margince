@@ -53,6 +53,9 @@ type UpdateActivityInput struct {
 	// are the active fields they are checked and written against.
 	CustomFields  map[string]any
 	customColumns []fieldcatalog.Column
+	// doneAtAnyVersion lets a caller's Done land on a task already done at any
+	// version. A machine completion leaves it off: its skew says it did not flip the task.
+	doneAtAnyVersion bool
 }
 
 // UpdateActivity keeps an authorized edit and its audit in one transaction.

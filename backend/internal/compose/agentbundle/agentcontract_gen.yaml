@@ -30902,10 +30902,13 @@ components:
           readOnly: true
           description: >-
             Whether THIS caller may archive THIS contact: the row write gate `writable` asks, plus the `contact:delete` grant or being the contact's owner with `contact:update`. An owner who named themselves owner (an edit or a claim) needs the delete grant. Server-computed per row, per caller. A UX signal, never the enforcement, exactly like `writable`; absent means NOT archivable.
+        linkedin_url:
+          type: [string, 'null']
+          description: 'The contact''s LinkedIn profile link. The same stored value as `social.linkedin`, not a second copy.'
         social:
           type: object
           additionalProperties: true
-          description: '{ linkedin, twitter, github, ... }'
+          description: 'The contact''s links by platform: github, linkedin, twitter. linkedin is a LinkedIn profile link.'
         address: {$ref: '#/components/schemas/Address'}
         address_country_mismatch:
           readOnly: true
@@ -31033,7 +31036,13 @@ components:
         last_name: {type: [string, 'null']}
         title: {type: [string, 'null']}
         owner_id: {type: [string, 'null'], format: uuid}
-        social: {type: object, additionalProperties: true}
+        linkedin_url:
+          type: [string, 'null']
+          description: 'The contact''s LinkedIn profile link (https://www.linkedin.com/in/<name>). Writes the same stored value as `social.linkedin`; a request naming both with different profiles is refused with 422 `linkedin_url_conflicts_with_social`.'
+        social:
+          type: object
+          additionalProperties: true
+          description: 'Links by platform. Only github, linkedin and twitter are taken; any other key is refused with 422 `social_platform_unknown`. linkedin takes only a LinkedIn profile link (https://www.linkedin.com/in/<name>).'
         address: {$ref: '#/components/schemas/Address'}
         emails:
           type: array
@@ -31233,7 +31242,13 @@ components:
           description: |-
             Who may see this contact: `workspace` for everyone in the company,
             `owner` for the contact named by `owner_id` alone.
-        social: {type: object, additionalProperties: true}
+        linkedin_url:
+          type: [string, 'null']
+          description: 'The contact''s LinkedIn profile link (https://www.linkedin.com/in/<name>). Writes the same stored value as `social.linkedin`; null or "" removes it. A request naming both with different profiles is refused with 422 `linkedin_url_conflicts_with_social`.'
+        social:
+          type: object
+          additionalProperties: true
+          description: 'Merged into the stored links: a key not sent keeps its link, and a key sent as "" or null removes it. Only github, linkedin and twitter are taken; any other key is refused with 422 `social_platform_unknown`. linkedin takes only a LinkedIn profile link (https://www.linkedin.com/in/<name>).'
         address: {$ref: '#/components/schemas/Address'}
         emails:
           type: array
@@ -31481,6 +31496,10 @@ components:
       required: [display_name, source]
       properties:
         display_name: {type: string}
+        linkedin_url:
+          type: [string, 'null']
+          description: Canonical LinkedIn company URL, held to the rule the update holds it to. website_url is derived and refused here.
+          pattern: '^https://([a-z]{2,3}\.)?linkedin\.com/company/[^/?#]+/?$'
         legal_name: {type: [string, 'null']}
         phone: {type: [string, 'null'], description: "The company's main number. A formatted number is accepted and stored in E.164 form (for example +49301234567). It is never a contact's own number."}
         email: {type: [string, 'null'], format: email, description: "The company's general address, for example info@example.com. It never creates or matches a contact."}
