@@ -15,11 +15,13 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/modules/automation"
 )
 
 func TestAutomationCatalogAndCRUD(t *testing.T) {
-	e := apptest.SetupApp(t)
+	e := apptest.SetupAppWithOptions(t, compose.WithListsEnabled(true))
 	e.BootstrapWorkspace(t)
 
 	assertAutomationCatalogIsClosed(t, e)
@@ -64,10 +66,7 @@ func TestAutomationCatalogAndCRUD(t *testing.T) {
 	}
 }
 
-// assertAutomationCatalogIsClosed checks the catalog is the closed
-// authorable library — the six seeded templates plus assign_lead_owner
-// and stage_change_create_task (authorable, never seeded) — every
-// entry auto_execute and shipping a params schema for the editor form.
+// The served catalog must include every registered recipe exactly once.
 func assertAutomationCatalogIsClosed(t *testing.T, e *apptest.AppEnv) {
 	t.Helper()
 	// The catalog is the closed authorable library.
@@ -81,26 +80,31 @@ func assertAutomationCatalogIsClosed(t *testing.T, e *apptest.AppEnv) {
 	if status := e.Call(t, "GET", "/v1/automations/catalog", nil, nil, &catalog); status != http.StatusOK {
 		t.Fatalf("catalog → %d", status)
 	}
-	if len(catalog.Data) != 8 {
-		t.Fatalf("catalog carries %d types, want the closed set of 8", len(catalog.Data))
+	expected := map[string]automation.CatalogEntry{}
+	for _, entry := range automation.Catalog() {
+		expected[entry.Key] = entry
+	}
+	if len(expected) == 0 || len(catalog.Data) != len(expected) {
+		t.Fatalf("catalog carries %d types, registry has %d", len(catalog.Data), len(expected))
 	}
 	for _, entry := range catalog.Data {
-		if entry.Tier != "auto_execute" {
-			t.Fatalf("starter %s tier = %q, want auto_execute", entry.Key, entry.Tier)
+		registered, ok := expected[entry.Key]
+		if !ok {
+			t.Fatalf("unexpected or repeated recipe %q", entry.Key)
+		}
+		if entry.Tier != registered.Tier {
+			t.Fatalf("recipe %s tier = %q, want %q", entry.Key, entry.Tier, registered.Tier)
 		}
 		if entry.ParamsSchema == nil {
 			t.Fatalf("starter %s ships no params_schema — the editor form has nothing to render", entry.Key)
 		}
+		delete(expected, entry.Key)
 	}
 }
 
-// assertBootstrapSeededStarters checks the workspace bootstrap
-// seeded EXACTLY the six starter templates already enabled (UAT.md:72)
-// — the recorded deviation from the API path's created-paused rule.
+// Starters that need configuration or draft mail wait for human review.
 func assertBootstrapSeededStarters(t *testing.T, e *apptest.AppEnv) {
 	t.Helper()
-	// Bootstrap seeded the six starters ENABLED (system floor, recorded
-	// deviation from created-paused which governs the API path).
 	var listed struct {
 		Data []struct {
 			ID      string `json:"id"`
@@ -112,17 +116,28 @@ func assertBootstrapSeededStarters(t *testing.T, e *apptest.AppEnv) {
 	if status := e.Call(t, "GET", "/v1/automations", nil, nil, &listed); status != http.StatusOK {
 		t.Fatalf("list → %d", status)
 	}
-	if len(listed.Data) != 6 {
-		t.Fatalf("bootstrap seeded %d automations, want exactly 6", len(listed.Data))
+	expected := map[string]automation.CatalogEntry{}
+	for _, entry := range automation.Catalog() {
+		if entry.Seeded {
+			expected[entry.Key] = entry
+		}
+	}
+	if len(expected) == 0 || len(listed.Data) != len(expected) {
+		t.Fatalf("bootstrap seeded %d automations, want %d", len(listed.Data), len(expected))
 	}
 	for _, a := range listed.Data {
+		entry, ok := expected[a.Key]
+		if !ok {
+			t.Fatalf("unexpected or repeated starter %q", a.Key)
+		}
 		want := "enabled"
-		if a.Key == "post_meeting_recap" || a.Key == "stage_change_notify" || a.Key == "no_activity_reminder" || a.Key == "check_in_cadence" {
+		if entry.Validate(nil) != nil || entry.Action == string(automation.ActionTypeDraftEmail) {
 			want = "paused"
 		}
 		if a.Status != want {
 			t.Fatalf("seeded %s is %s, want %s", a.Key, a.Status, want)
 		}
+		delete(expected, a.Key)
 	}
 }
 
@@ -162,7 +177,7 @@ func createPausedAutomation(t *testing.T, e *apptest.AppEnv) string {
 	}
 	if status := e.Call(t, "POST", "/v1/automations", AnyMap{
 		"key": "assign_lead_owner", "name": "Slow-lane routing",
-		"params": AnyMap{"owners": []string{"0198c0de-0000-7000-8000-000000000001"}, "cap_per_owner": 3},
+		"params": AnyMap{"owners": []string{apptest.SessionUserID(t, e)}, "cap_per_owner": 3},
 	}, nil, &created); status != http.StatusCreated {
 		t.Fatalf("create → %d", status)
 	}
