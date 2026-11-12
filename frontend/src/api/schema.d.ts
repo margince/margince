@@ -48285,7 +48285,7 @@ export interface components {
         AnalyticsCustomField: {
             /** @description The field as `group_by` and a filter name it. */
             name: string;
-            /** @description The name an administrator gave the field. */
+            /** @description The name an administrator gave the field, in the caller's UI language when one was given. */
             label: string;
             /**
              * @description The record the field belongs to. A company field is read through the deal's company,
@@ -48312,6 +48312,14 @@ export interface components {
              *     choice an administrator has since removed.
              */
             options: string[];
+            /**
+             * @description Each choice as the caller reads it: its name in the caller's UI language when an
+             *     administrator gave one. A choice not named here reads as itself. Filters and groups
+             *     still carry the choice as `options` lists it.
+             */
+            option_labels?: {
+                [key: string]: string;
+            };
         };
         /** @description One question, in the vocabulary the schema returned. */
         AnalyticsQuery: {

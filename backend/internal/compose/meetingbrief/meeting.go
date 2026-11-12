@@ -20,6 +20,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/labeltranslation"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
@@ -152,8 +153,9 @@ func (s *Service) readMeeting(ctx context.Context, tx pgx.Tx, activityID ids.UUI
 	var attendees []byte
 	var project projectRow
 	var projectID *ids.UUID
+	stageName := labeltranslation.SQL(ctx, "s.name", "s.name_translations", arg)
 	err = tx.QueryRow(ctx, fmt.Sprintf(meetingQuery, clauses.deal, clauses.contact, idPos, clauses.touch, clauses.seat, clauses.project, requestedPos,
-		clauses.amount, happened), args...).
+		clauses.amount, happened, stageName), args...).
 		Scan(&out.ID, &out.StartsAt, &out.DateOnly, &subject,
 			&dealID, &deal.Name, &stage, &deal.AmountMinor, &currency, &deal.CloseDate,
 			&projectID, &project.Name, &project.Key, &project.Phase, &project.TargetEndDate,
@@ -271,7 +273,7 @@ var meetingQuery = `
 	  -- an unaliased expression as a placeholder name. The outer select reads the
 	  -- amount from this derived table, so without the alias a masked caller gets a
 	  -- column-not-found error rather than a withheld figure.
-	  SELECT dd.id, dd.name, s.name AS stage_name, %[8]s AS amount_minor, dd.currency, dd.expected_close_date
+	  SELECT dd.id, dd.name, %[10]s AS stage_name, %[8]s AS amount_minor, dd.currency, dd.expected_close_date
 	  FROM activity_link dl
 	  JOIN deal dd ON dd.id = dl.deal_id AND dd.archived_at IS NULL
 	  LEFT JOIN stage s ON s.id = dd.stage_id

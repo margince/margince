@@ -113,7 +113,10 @@ type FilterableReader interface {
 // anyone who may read that object, without `custom_field:read`.
 type ReportableColumn struct {
 	Column
-	Label string
+	// Label and OptionLabels are in the reader's UI language where an
+	// administrator gave names in it.
+	Label        string
+	OptionLabels map[string]string
 }
 
 // Target is what a custom field may be ATTACHED to.
