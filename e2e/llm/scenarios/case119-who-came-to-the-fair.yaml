@@ -31,10 +31,38 @@ may_call:
 
 must_mention:
   - "30|thirty"
-  # The first, the last and one past the first page, as the setup step writes them.
+  # Every name the setup step writes, so an answer that fills the count with
+  # invented names fails here; the judge sees only the answer.
   - "Anke Petersen"
-  - "Hella Momsen"
+  - "Bjarne Hansen"
+  - "Carla Jessen"
+  - "Dirk Matthiesen"
+  - "Elke Nissen"
+  - "Frerk Andresen"
+  - "Gesa Lorenzen"
+  - "Hauke Clausen"
+  - "Inken Sönksen"
+  - "Jens Paulsen"
+  - "Kirsten Thomsen"
+  - "Lars Bahnsen"
+  - "Maren Feddersen"
+  - "Nils Ketelsen"
+  - "Ocke Jürgensen"
+  - "Pia Carstensen"
+  - "Rasmus Boysen"
+  - "Silke Hinrichsen"
+  - "Thore Lassen"
+  - "Ute Martensen"
+  - "Volker Brodersen"
+  - "Wiebke Nommensen"
+  - "Arne Dethlefsen"
+  - "Britta Ingwersen"
+  - "Claas Volquardsen"
   - "Dörte Rickmers"
+  - "Eike Jacobsen"
+  - "Finja Christiansen"
+  - "Gunnar Asmussen"
+  - "Hella Momsen"
 
 judge:
   - "Criterion 1. The answer lists thirty contacts tagged Husum Wind 2026 by name and presents them as the whole list. Answer no if it names fewer than thirty contacts, or says it shows only a sample or a first page."
