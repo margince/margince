@@ -39255,6 +39255,31 @@ components:
           description: When this posture was resolved, so a stale answer is recognizable as one.
         license:
           $ref: '#/components/schemas/LicenseHolder'
+        trial:
+          $ref: '#/components/schemas/LicenseTrial'
+    LicenseTrial:
+      type: object
+      description: |
+        The free period of a production installation that has no license. Present only while
+        `state` is `absent` on a production installation that has been set up; a development or
+        test installation runs unlicensed with no trial.
+
+        The trial starts when the installation's workspace is created and lasts 14 days, with no
+        grace period. Once `ended` is true the installation stops working: every change, agent
+        tool call and background job is refused with `trial_ended` until a license is entered.
+      required: [started_at, ends_at, ended]
+      properties:
+        started_at:
+          type: string
+          format: date-time
+          description: When the installation's workspace was created.
+        ends_at:
+          type: string
+          format: date-time
+          description: The first instant the trial no longer covers.
+        ended:
+          type: boolean
+          description: Whether `ends_at` has passed, as the server decides it, so a client with a wrong clock shows the state the installation acts on.
     LicenseHolder:
       type: object
       description: |
@@ -64181,6 +64206,14 @@ components:
       type: object
       required: [user, roles, teams, workspace_name, non_production, admin_password_link]
       properties:
+        trial_ended:
+          type: boolean
+          description: >
+            True when this installation runs with no license and its 14-day trial is over. Every
+            seat gets it, not only those who may read the license, because every seat is locked:
+            changes, agent tool calls and background work are refused with `trial_ended` until an
+            admin enters a license. Absent while the installation is licensed or still on its
+            trial.
         reader_rendering_available:
           type: boolean
           description: Whether this human caller may use the configured activity reader-rendering lane. Absent or false keeps generated text original until an explicit request.

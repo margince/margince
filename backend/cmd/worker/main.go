@@ -39,6 +39,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/deployconfig"
 	"github.com/margince/margince/backend/internal/platform/events"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
+	"github.com/margince/margince/backend/internal/platform/licensecheck"
 	"github.com/margince/margince/backend/internal/platform/netguard"
 	"github.com/margince/margince/backend/internal/shared/buildinfo"
 	kevents "github.com/margince/margince/backend/internal/shared/kernel/events"
@@ -102,9 +103,9 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	defer stopForReleaseSkew()
 
 	// Before this role does any work, so an operator mistake never leaves a
-	// worker running on a license the api refuses to boot on. The RUNNING
-	// posture is the api's to watch: it is the role that serves it, and two
-	// roles re-resolving one calendar answer would report the same lapse twice.
+	// worker running on a license the api refuses to boot on. The daily re-check
+	// is the api's; this role re-reads the license only while an ended trial
+	// pauses it (trialpause.go), so a key entered through the api resumes it.
 	//
 	// After the pool rather than before it, which it used to be: an installation
 	// that has sealed its token holds it in the key vault, and the vault is a
@@ -123,10 +124,13 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	// the pool and after the release assertion, for the same reasons the license
 	// does. A nil vault IS an unconfigured deployment; keyvault.ForRole carries
 	// why nothing downstream is handed a flag beside it.
-	vault, err := admitBoot(ctx, logger, pool, resolveVault, cfg)
+	vault, license, err := admitBoot(ctx, logger, pool, resolveVault, cfg)
 	if err != nil {
 		return err
 	}
+	// Every lane and job below runs on this context, and pauses once the
+	// trial of an unlicensed installation has ended.
+	ctx = pauseAfterTrial(ctx, pool, license, cfg.posture, logger)
 
 	// What this binary composed (ADR-0120 §5); pre-bootstrap the inventory half
 	// skips — the api records the first observation once it has bootstrapped
@@ -333,7 +337,7 @@ func runCoalescingSubscriber(ctx context.Context, rdb *redis.Client, groupName s
 		return
 	}
 	sub := events.NewSubscriber(rdb, g, events.Dedupe(rdb, g.Name, handler), log).
-		WithBatch(events.DedupeBatch(rdb, g.Name, batch))
+		WithBatch(events.DedupeBatch(rdb, g.Name, batch)).WithPause(workPause(ctx))
 	if err := sub.Run(ctx); err != nil && !errors.Is(err, context.Canceled) {
 		log.Error("subscriber "+g.Name, "err", err)
 	}
@@ -359,7 +363,8 @@ func catalogGroup(groupName string, log *slog.Logger) (kevents.Group, bool) {
 // after the group is identical for both, which is the point: a unit's listener
 // is an ordinary consumer, not a second delivery mechanism.
 func runGroupSubscriber(ctx context.Context, rdb *redis.Client, group kevents.Group, handler events.Handler, log *slog.Logger, minIdle time.Duration) {
-	sub := events.NewSubscriber(rdb, group, events.Dedupe(rdb, group.Name, handler), log).WithMinIdle(minIdle)
+	sub := events.NewSubscriber(rdb, group, events.Dedupe(rdb, group.Name, handler), log).WithMinIdle(minIdle).
+		WithPause(workPause(ctx))
 	if err := sub.Run(ctx); err != nil && !errors.Is(err, context.Canceled) {
 		log.Error("subscriber "+group.Name, "err", err)
 	}
@@ -374,34 +379,28 @@ func workerVault(ctx context.Context, pool *pgxpool.Pool, settings *config.Confi
 	})
 }
 
-// ensureLicense resolves this worker's entitlement, reading the token out of
-// the boot's key vault when the installation has sealed it there.
-//
-// A vault that is configured but malformed already failed the boot before this
-// is reached, which is the posture every role takes: an installation whose root
-// key no longer opens its own secrets has a problem that outlives the license
-// question.
 // admitBoot holds every precondition this worker must meet before it works:
 // a license, a jurisdiction with a pack, and links a recipient can open. It
 // hands back the vault it resolved.
 func admitBoot(
 	ctx context.Context, logger *slog.Logger, pool *pgxpool.Pool,
 	resolveVault func() (keyvault.Vault, error), cfg workerConfig,
-) (keyvault.Vault, error) {
+) (keyvault.Vault, *licensecheck.Watcher, error) {
 	if err := compose.RequireCompiledInCountry(ctx, pool); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	vault, err := resolveVault()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	if err := compose.RemoveDeclaredAbsentCredentials(ctx, pool, vault, cfg.settings, logger); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	if err := ensureLicense(ctx, logger, pool, vault, cfg); err != nil {
-		return nil, err
+	license, err := compose.EnsureLicense(ctx, logger, pool, vault, cfg.settings, cfg.posture)
+	if err != nil {
+		return nil, nil, err
 	}
-	return vault, requireUsablePublicOrigin(cfg)
+	return vault, license, requireUsablePublicOrigin(cfg)
 }
 
 // requireUsablePublicOrigin refuses to start a sending worker whose
@@ -428,11 +427,6 @@ func requireUsablePublicOrigin(cfg workerConfig) error {
 		return fmt.Errorf("worker: %w", err)
 	}
 	return nil
-}
-
-func ensureLicense(ctx context.Context, logger *slog.Logger, pool *pgxpool.Pool, vault keyvault.Vault, cfg workerConfig) error {
-	_, err := compose.EnsureLicense(ctx, logger, pool, vault, cfg.settings, cfg.posture)
-	return err
 }
 
 // watchReleaseSkew starts the periodic half of the release guard and hands run

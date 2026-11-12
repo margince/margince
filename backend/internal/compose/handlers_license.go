@@ -33,6 +33,9 @@ type licenseHandlers struct {
 	posture func() licensecheck.Posture
 	// recheck is the watcher's re-check, set by WithLicenseRecheck.
 	recheck func(context.Context) error
+	// trial is the installation's trial, set by WithInstallationTrial. Nil
+	// reports none.
+	trial *InstallationTrial
 }
 
 // withPosture adds the license half to a handler that already carries the seat
@@ -69,7 +72,26 @@ func (h licenseHandlers) GetLicenseEntitlement(w http.ResponseWriter, r *http.Re
 		httperr.Write(w, r, err)
 		return
 	}
-	httperr.WriteJSON(w, http.StatusOK, toContractLicenseEntitlement(h.posture(), used))
+	h.writeEntitlement(w, r, used)
+}
+
+// writeEntitlement answers the posture as it stands now, with the trial it
+// runs on, if any.
+func (h licenseHandlers) writeEntitlement(w http.ResponseWriter, r *http.Request, used int) {
+	trial, onTrial, err := h.trial.Current(r.Context())
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	out := toContractLicenseEntitlement(h.posture(), used)
+	if onTrial {
+		out.Trial = &crmcontracts.LicenseTrial{
+			StartedAt: trial.StartedAt,
+			EndsAt:    trial.EndsAt(),
+			Ended:     trial.Ended(h.trial.now()),
+		}
+	}
+	httperr.WriteJSON(w, http.StatusOK, out)
 }
 
 // CheckLicenseNow runs the watcher's daily re-check at once and answers the
@@ -100,7 +122,7 @@ func (h licenseHandlers) CheckLicenseNow(w http.ResponseWriter, r *http.Request)
 		httperr.ServiceUnavailable(w, r, "the license could not be re-read; the last result stands — see the server log")
 		return
 	}
-	httperr.WriteJSON(w, http.StatusOK, toContractLicenseEntitlement(h.posture(), used))
+	h.writeEntitlement(w, r, used)
 }
 
 // licenseCheckObject is the grant "Check now" asks for (update; admin and ops).

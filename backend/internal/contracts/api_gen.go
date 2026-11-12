@@ -53220,6 +53220,15 @@ type LicenseEntitlement struct {
 	// State Whether a license was verified, none was configured, or one was refused. A client
 	// that cannot read a value it recognizes MUST NOT assume entitlement.
 	State LicenseEntitlementState `json:"state"`
+
+	// Trial The free period of a production installation that has no license. Present only while
+	// `state` is `absent` on a production installation that has been set up; a development or
+	// test installation runs unlicensed with no trial.
+	//
+	// The trial starts when the installation's workspace is created and lasts 14 days, with no
+	// grace period. Once `ended` is true the installation stops working: every change, agent
+	// tool call and background job is refused with `trial_ended` until a license is entered.
+	Trial *LicenseTrial `json:"trial,omitempty"`
 }
 
 // LicenseEntitlementState Whether a license was verified, none was configured, or one was refused. A client
@@ -53272,6 +53281,24 @@ type LicenseHolder struct {
 	// Subject The operator-chosen handle the license was issued against, for example
 	// `acme-prod`. It tells two installations of one customer apart.
 	Subject string `json:"subject"`
+}
+
+// LicenseTrial The free period of a production installation that has no license. Present only while
+// `state` is `absent` on a production installation that has been set up; a development or
+// test installation runs unlicensed with no trial.
+//
+// The trial starts when the installation's workspace is created and lasts 14 days, with no
+// grace period. Once `ended` is true the installation stops working: every change, agent
+// tool call and background job is refused with `trial_ended` until a license is entered.
+type LicenseTrial struct {
+	// Ended Whether `ends_at` has passed, as the server decides it, so a client with a wrong clock shows the state the installation acts on.
+	Ended bool `json:"ended"`
+
+	// EndsAt The first instant the trial no longer covers.
+	EndsAt time.Time `json:"ends_at"`
+
+	// StartedAt When the installation's workspace was created.
+	StartedAt time.Time `json:"started_at"`
 }
 
 // LifecyclePreviewEvidence Current readable source and scope supporting a company lifecycle review.
@@ -54427,6 +54454,9 @@ type MeResponse struct {
 	// `none`.
 	TeamWeek *TeamWeekReach       `json:"team_week,omitempty"`
 	Teams    []openapi_types.UUID `json:"teams"`
+
+	// TrialEnded True when this installation runs with no license and its 14-day trial is over. Every seat gets it, not only those who may read the license, because every seat is locked: changes, agent tool calls and background work are refused with `trial_ended` until an admin enters a license. Absent while the installation is licensed or still on its trial.
+	TrialEnded *bool `json:"trial_ended,omitempty"`
 
 	// User A seat — human or first-party agent. Mirrors `app_user`.
 	User User `json:"user"`

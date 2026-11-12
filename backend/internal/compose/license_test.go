@@ -31,27 +31,22 @@ import (
 // dereferencing the pool — which is the failure to want, because a worker
 // resolves its entitlement before it will serve anything.
 
-// A production installation serves on a license or it does not serve. The whole
-// point of the gate is that this is the DEFAULT: MARGINCE_ENV is fail-closed, so
-// an installation that names no posture is held to a license.
-func TestEnsureLicenseRefusesAProductionBootWithNoLicense(t *testing.T) {
-	_, err := EnsureLicense(context.Background(), slog.New(slog.DiscardHandler), nil, nil, licenseSettings(t, ""),
-		runtimeenv.Parse(""))
-	if err == nil {
-		t.Fatal("EnsureLicense booted a production installation that configured no license")
+// A production installation with no license boots on its trial, and the boot
+// log says it stops when the trial ends. MARGINCE_ENV is fail-closed, so an
+// installation that names no posture is the production one.
+func TestEnsureLicenseBootsAProductionInstallationWithNoLicenseOnItsTrial(t *testing.T) {
+	var log bytes.Buffer
+	logger := slog.New(slog.NewTextHandler(&log, &slog.HandlerOptions{Level: slog.LevelInfo}))
+
+	watcher, err := EnsureLicense(context.Background(), logger, nil, nil, licenseSettings(t, ""), runtimeenv.Parse(""))
+	if err != nil {
+		t.Fatalf("EnsureLicense refused a production installation with no license: %v", err)
 	}
-	// Both ways out are named, because the operator reading this is either
-	// licensed and missing the reference, or running a development installation
-	// that never said so — and the message that names one of the two sends the
-	// other operator after a problem they do not have.
-	//
-	// The key it points at is `license.token`, the reference form, not the
-	// legacy `license.token_file`: nothing is configured here, so this is the
-	// one message that gets to recommend rather than describe.
-	for _, want := range []string{"license.token", LicenseToken.Env(), runtimeenv.EnvVar, string(runtimeenv.Development)} {
-		if !strings.Contains(err.Error(), want) {
-			t.Errorf("boot refusal %q does not name %q", err, want)
-		}
+	if got := watcher.Posture().State; got != licensecheck.StateAbsent {
+		t.Errorf("posture = %q, want %q", got, licensecheck.StateAbsent)
+	}
+	if line := log.String(); !strings.Contains(line, "runs on its trial") || !strings.Contains(line, "trial_days=14") {
+		t.Errorf("boot log %q does not say the installation runs on its 14-day trial", line)
 	}
 }
 

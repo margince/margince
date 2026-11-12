@@ -57,6 +57,7 @@ import (
 type jobRegistry struct {
 	sessionSlots chan struct{}
 	withContext  func(context.Context) context.Context
+	paused       func(context.Context) bool
 	workers      *river.Workers
 	kinds        []string
 	// wired is what this build put in, keyed by kind. MustBeTotal needs only
@@ -152,5 +153,5 @@ func addGovernedWorker[T river.JobArgs](reg *jobRegistry, w jobs.WorkOnly[T]) {
 	// River's one-minute default — away from a running job.
 	spec, _ := jobs.SpecFor(kind)
 	//nolint:forbidigo // the ONE sanctioned registration: every kind reaches River through this line, already wrapped in jobs.Govern and already recorded for MustBeTotal
-	river.AddWorker(reg.workers, jobs.Govern[T](sessionBudgetWorker[T]{work: w, slots: reg.sessionSlots, withContext: reg.withContext}, spec))
+	river.AddWorker(reg.workers, jobs.Govern[T](sessionBudgetWorker[T]{work: w, slots: reg.sessionSlots, withContext: reg.withContext, paused: reg.paused}, spec))
 }

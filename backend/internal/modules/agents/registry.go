@@ -86,6 +86,7 @@ type Registry struct {
 	// toolGate decides which callers a Gated tool exists for. Nil offers it to no one.
 	toolGate         ToolGate
 	callAvailability CallAvailability
+	trialEnded       func(context.Context) (bool, error)
 	// volume budget is the MCP-SESS-* meter this surface CHARGES. The gate holds the
 	// same meter and does the refusing; the split is deliberate — a bound is
 	// enforced where admission is decided and paid where records and effects
@@ -204,6 +205,9 @@ func (r *Registry) InvokeServed(ctx context.Context, name string, in json.RawMes
 // It serves name as given and resolves no router. Callers holding a name a
 // client chose go through InvokeServed; taskexecute holds the stored target.
 func (r *Registry) InvokeServing(ctx context.Context, name string, in json.RawMessage) (json.RawMessage, int, error) {
+	if err := r.refuseAfterTrial(ctx); err != nil {
+		return nil, 0, err
+	}
 	if r.callAvailability != nil {
 		ctx = r.callAvailability.Context(ctx)
 	}

@@ -421,6 +421,9 @@ type Server struct {
 	// calendar, not on a deploy — and nil means a role that resolved none
 	// reports no license section at all.
 	licensePosture func() licensecheck.Posture
+	// installationTrial locks the tool surface once the trial ends, set by
+	// WithInstallationTrial. Nil on a role that wired none.
+	installationTrial *InstallationTrial
 
 	// volumeMeter holds the MCP-SESS-* counters. The admission gate refuses on them
 	// and both registries charge them. The approvals service widens one when a lender
