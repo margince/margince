@@ -366,20 +366,21 @@ func followUpPrecheck() approvals.ReleasePrecheck {
 	}
 }
 
-// followUpDoer is who does an approved follow-up: the human who approved it.
-// Approvals lets only the seat the card was staged for decide it, so that is
-// the deal owner, or anyone on a deal nobody owns. A decider who cannot hold
-// work leaves the task unassigned rather than refusing the approval.
-func followUpDoer(ctx context.Context, tx pgx.Tx, decider ids.UUID) (*ids.UserID, error) {
-	if decider.IsZero() {
-		return nil, nil
-	}
-	seat := ids.From[ids.UserKind](decider)
-	can, err := activities.SeatCanHoldAutomaticWork(ctx, tx, seat)
-	if err != nil || !can {
+// followUpDoer is who does an approved follow-up: the deal's owner as the
+// effect writes, so a handover after the decision still reaches the new owner.
+// A deal with no owner falls back to the human who approved the card.
+func followUpDoer(ctx context.Context, tx pgx.Tx, deal ids.DealID, decider ids.UUID) (*ids.UserID, error) {
+	owner, err := lockedDealOwner(ctx, tx, deal.UUID)
+	if err != nil {
 		return nil, err
 	}
-	return &seat, nil
+	if owner.IsZero() {
+		owner = decider
+	}
+	if owner.IsZero() {
+		return nil, nil
+	}
+	return new(ids.From[ids.UserKind](owner)), nil
 }
 
 // followUpConfirmEffect executes an approved follow-up: redeem-then-
@@ -434,11 +435,11 @@ func followUpConfirmEffect(svc *approvals.Service, store *activities.Store) appr
 		// (approvals.effectIsStillOwed).
 		return svc.RedeemAndApply(ctx, approvalID, deals.FollowUpReconcileKind, diffHash,
 			func(tx pgx.Tx) error {
-				doer, err := followUpDoer(ctx, tx, decider.UserID)
+				doer, err := followUpDoer(ctx, tx, proposal.DealID, decider.UserID)
 				if err != nil {
 					return err
 				}
-				_, _, err = store.LogActivityTx(execCtx, tx, activities.LogActivityInput{
+				return logTaskOrUnassignedTx(execCtx, tx, store, activities.LogActivityInput{
 					Kind:         "task",
 					AssigneeID:   doer,
 					SystemText:   metadata,
@@ -450,7 +451,6 @@ func followUpConfirmEffect(svc *approvals.Service, store *activities.Store) appr
 					Source:       "overnight-reconcile",
 					Links:        []activities.ActivityLinkInput{{EntityType: "deal", EntityID: proposal.DealID.UUID}},
 				})
-				return err
 			})
 	}
 }
