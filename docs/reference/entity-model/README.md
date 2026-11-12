@@ -31,7 +31,7 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 363 |
-| Columns | 4405 |
+| Columns | 4408 |
 | Foreign keys | 610 |
 | Owning areas | 38 |
 
@@ -310,7 +310,7 @@ erDiagram
 | [`email_signature`](contacts.md#email_signature) | contacts | 10 | 0 |
 | [`embed_store_binding`](search.md#embed_store_binding) | search | 6 | 0 |
 | [`embedding`](search.md#embedding) | search | 7 | 0 |
-| [`erasure_suppression`](privacy.md#erasure_suppression) | privacy | 4 | 0 |
+| [`erasure_suppression`](privacy.md#erasure_suppression) | privacy | 7 | 0 |
 | [`event_outbox`](platform.md#event_outbox) | platform | 7 | 0 |
 | [`existing_customer_notice`](consent.md#existing_customer_notice) | consent | 14 | 1 |
 | [`existing_customer_notice_purpose`](consent.md#existing_customer_notice_purpose) | consent | 2 | 0 |
