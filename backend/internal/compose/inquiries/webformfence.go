@@ -60,6 +60,8 @@ func (f *WebFormFence) sessionSlots() chan struct{} {
 	return slots
 }
 
+// Within runs work while this caller holds the form's lease. A lease or session
+// slot held elsewhere answers webforms.ErrHandlingBusy.
 func (f *WebFormFence) Within(ctx context.Context, id ids.UUID, work func(context.Context) error) error {
 	// Unwired compositions must reach the store's normal access and database refusals.
 	if f.db.Pool() == nil {

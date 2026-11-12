@@ -16,6 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
+// Work adds website inquiry facts to Worklist tasks.
 type Work struct {
 	db          *database.DB
 	contacts    *contacts.Store
@@ -23,10 +24,13 @@ type Work struct {
 	assignments *automation.InquiryService
 }
 
+// NewWork reads assignments through routing's inquiry service.
 func NewWork(db *database.DB, routing Routing) *Work {
 	return &Work{db: db, contacts: contacts.NewStore(db), store: activities.NewStore(db), assignments: automation.NewInquiryService(db, routing)}
 }
 
+// ForTasks gives the inquiry facts of each task filed from a website
+// submission. Other tasks have no entry.
 func (w *Work) ForTasks(ctx context.Context, tasks []crmcontracts.Activity) (map[ids.UUID]*crmcontracts.WebsiteInquiryWork, error) {
 	out := map[ids.UUID]*crmcontracts.WebsiteInquiryWork{}
 	taskIDs := make([]ids.ActivityID, 0, len(tasks))

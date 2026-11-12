@@ -26,6 +26,8 @@ import (
 
 var errLegacyInquiryOwned = errors.New("the earlier lead handling still owns this inquiry")
 
+// Preview shows who a policy would hand each selected submission to, and when
+// the task would be due. It writes nothing.
 func (s Settings) Preview(ctx context.Context, id ids.UUID, in crmcontracts.WebsiteInquiryPreviewRequest, now time.Time) (crmcontracts.WebsiteInquiryHandlingPreview, error) {
 	if err := auth.Require(ctx, "activity", principal.ActionCreate); err != nil {
 		return crmcontracts.WebsiteInquiryHandlingPreview{}, err
@@ -46,44 +48,15 @@ func (s Settings) Preview(ctx context.Context, id ids.UUID, in crmcontracts.Webs
 	}
 	var out crmcontracts.WebsiteInquiryHandlingPreview
 	err = database.WithWorkspaceSnapshot(ctx, s.db.Pool(), func(bound context.Context) error {
-		form, err := s.forms.GetForm(bound, id)
+		owner, policyID, err := s.previewOwner(bound, id, in, policy)
 		if err != nil {
 			return err
-		}
-		if form.HandlingAutomationID != nil && (in.AutomationId == nil || *form.HandlingAutomationID != ids.UUID(*in.AutomationId)) {
-			return apperrors.ErrConflict
-		}
-		actor, ok := principal.Actor(bound)
-		if !ok || (actor.Type != principal.PrincipalHuman && actor.Type != principal.PrincipalAgent) || (in.AutomationId == nil && actor.UserID == ids.Nil) {
-			return apperrors.ErrPermissionDenied
-		}
-		owner := actor.UserID
-		policyID := ids.Nil
-		if in.AutomationId != nil {
-			saved, err := s.policies.Get(bound, ids.From[ids.AutomationKind](ids.UUID(*in.AutomationId)))
-			if err != nil {
-				return err
-			}
-			if saved.Key != provenance.WebsiteInquirySource || in.AutomationVersion == nil || saved.Version != int64(*in.AutomationVersion) {
-				return apperrors.ErrVersionSkew
-			}
-			savedPolicy, err := automation.ParseInquiryPolicy(saved.Params)
-			if err != nil {
-				return err
-			}
-			if savedPolicy.FormId != policy.FormId {
-				return apperrors.ErrConflict
-			}
-			if saved.OwnerID == nil {
-				return apperrors.ErrPermissionDenied
-			}
-			owner, policyID = saved.OwnerID.UUID, saved.ID.UUID
 		}
 		admit, err := s.routing.human(bound, owner)
 		if err != nil {
 			return err
 		}
-		if err := s.routing.validate(admit, policy, false); err != nil {
+		if err := s.routing.validatePolicy(admit, policy, false); err != nil {
 			if errors.Is(err, apperrors.ErrPermissionDenied) {
 				return auth.RefuseRow(bound, "automation", err)
 			}
@@ -100,6 +73,49 @@ func (s Settings) Preview(ctx context.Context, id ids.UUID, in crmcontracts.Webs
 		return nil
 	})
 	return out, err
+}
+
+// previewOwner is whose grants a preview runs under: the saved policy's owner,
+// or the caller for a policy that is not saved yet.
+func (s Settings) previewOwner(ctx context.Context, formID ids.UUID, in crmcontracts.WebsiteInquiryPreviewRequest, policy crmcontracts.WebsiteInquiryPolicy) (ids.UUID, ids.UUID, error) {
+	form, err := s.forms.GetForm(ctx, formID)
+	if err != nil {
+		return ids.Nil, ids.Nil, err
+	}
+	if form.HandlingAutomationID != nil && (in.AutomationId == nil || *form.HandlingAutomationID != ids.UUID(*in.AutomationId)) {
+		return ids.Nil, ids.Nil, apperrors.ErrConflict
+	}
+	actor, ok := principal.Actor(ctx)
+	if !ok || (actor.Type != principal.PrincipalHuman && actor.Type != principal.PrincipalAgent) || (in.AutomationId == nil && actor.UserID == ids.Nil) {
+		return ids.Nil, ids.Nil, apperrors.ErrPermissionDenied
+	}
+	if in.AutomationId == nil {
+		return actor.UserID, ids.Nil, nil
+	}
+	return s.savedPolicyOwner(ctx, in, policy)
+}
+
+// savedPolicyOwner is the owner and id of the saved policy a preview names. It
+// must still be the version the caller saw, for the same form.
+func (s Settings) savedPolicyOwner(ctx context.Context, in crmcontracts.WebsiteInquiryPreviewRequest, policy crmcontracts.WebsiteInquiryPolicy) (ids.UUID, ids.UUID, error) {
+	saved, err := s.policies.Get(ctx, ids.From[ids.AutomationKind](ids.UUID(*in.AutomationId)))
+	if err != nil {
+		return ids.Nil, ids.Nil, err
+	}
+	if saved.Key != provenance.WebsiteInquirySource || in.AutomationVersion == nil || saved.Version != int64(*in.AutomationVersion) {
+		return ids.Nil, ids.Nil, apperrors.ErrVersionSkew
+	}
+	savedPolicy, err := automation.ParseInquiryPolicy(saved.Params)
+	if err != nil {
+		return ids.Nil, ids.Nil, err
+	}
+	if savedPolicy.FormId != policy.FormId {
+		return ids.Nil, ids.Nil, apperrors.ErrConflict
+	}
+	if saved.OwnerID == nil {
+		return ids.Nil, ids.Nil, apperrors.ErrPermissionDenied
+	}
+	return saved.OwnerID.UUID, saved.ID.UUID, nil
 }
 
 func (s Settings) previewSelected(ctx context.Context, policyID, owner ids.UUID, raw json.RawMessage, selected crmcontracts.WebsiteInquirySelection) crmcontracts.WebsiteInquiryPreviewItem {
@@ -154,19 +170,9 @@ func previewItemError(item crmcontracts.WebsiteInquiryPreviewItem, err error) cr
 }
 
 func (s Settings) planSelectedInquiry(ctx context.Context, policyID, owner ids.UUID, raw json.RawMessage, selected crmcontracts.WebsiteInquirySelection) (automation.InquiryPreview, error) {
-	if selected.Version == nil {
-		return automation.InquiryPreview{}, apperrors.ErrVersionSkew
-	}
-	note, err := activities.NewStore(s.db).GetActivityContent(ctx, ids.From[ids.ActivityKind](ids.UUID(selected.Id)), storekit.LiveOnly)
+	note, err := s.selectedNote(ctx, selected)
 	if err != nil {
 		return automation.InquiryPreview{}, err
-	}
-	if note.Version == nil || *note.Version != *selected.Version {
-		return automation.InquiryPreview{}, apperrors.ErrVersionSkew
-	}
-
-	if note.Kind != crmcontracts.ActivityKindNote || note.SourceSystem == nil || *note.SourceSystem != provenance.WebFormSource || note.SourceId == nil {
-		return automation.InquiryPreview{}, apperrors.ErrNotFound
 	}
 	ex := s.executors
 	target, err := automation.InquiryTarget(note)
@@ -197,6 +203,25 @@ func (s Settings) planSelectedInquiry(ctx context.Context, policyID, owner ids.U
 		return automation.InquiryPreview{}, err
 	}
 	return plan, nil
+}
+
+// selectedNote is the submission note a caller selected, at the version the
+// caller saw.
+func (s Settings) selectedNote(ctx context.Context, selected crmcontracts.WebsiteInquirySelection) (crmcontracts.Activity, error) {
+	if selected.Version == nil {
+		return crmcontracts.Activity{}, apperrors.ErrVersionSkew
+	}
+	note, err := activities.NewStore(s.db).GetActivityContent(ctx, ids.From[ids.ActivityKind](ids.UUID(selected.Id)), storekit.LiveOnly)
+	if err != nil {
+		return note, err
+	}
+	if note.Version == nil || *note.Version != *selected.Version {
+		return note, apperrors.ErrVersionSkew
+	}
+	if note.Kind != crmcontracts.ActivityKindNote || note.SourceSystem == nil || *note.SourceSystem != provenance.WebFormSource || note.SourceId == nil {
+		return note, apperrors.ErrNotFound
+	}
+	return note, nil
 }
 
 func inquiryTaskSource(plan automation.InquiryPreview) (string, string, error) {
