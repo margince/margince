@@ -18,7 +18,7 @@ A salesperson's target is for the month or the fiscal quarter that holds the end
 
 The monthly targets of a seller can come from a published plan on **Sales goals**. Those months change only there; see [Progress and sales goals](progress-and-sales-goals.md).
 
-With no target typed for a month or quarter, sales won are held against the published goals. A quarter adds up its three months, and a team adds up its members. Analytics calls a figure for sales won a goal, and a figure for anything else a target.
+With no target typed for a month or quarter, sales won are held against the published goals. A quarter adds up its three months, and a team adds up its members. When a month has no published goal for one of them, the figure gets no goal. Analytics calls a figure for sales won a goal, and a figure for anything else a target.
 
 “This week”, “This month” and “This quarter” follow the calendar of your Margince and start again when that time span starts.
 

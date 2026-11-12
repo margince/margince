@@ -40,13 +40,15 @@ type Row =
 
 function rowsOf(
   targets: readonly Target[],
-  roster: SalesGoalRoster | undefined,
+  rosters: readonly (SalesGoalRoster | undefined)[],
 ): Row[] {
-  const goals = roster
-    ? roster.data
-        .filter((seller) => seller.total_minor != null)
-        .map((seller): Row => ({ kind: "goals", seller, roster }))
-    : [];
+  const goals = rosters.flatMap((roster) =>
+    roster
+      ? roster.data
+          .filter((seller) => seller.total_minor != null)
+          .map((seller): Row => ({ kind: "goals", seller, roster }))
+      : [],
+  );
   return [
     ...targets.map((target): Row => ({ kind: "target", target })),
     ...goals,
@@ -91,8 +93,19 @@ export function ReportingTargets() {
   const goalYear = periodFilter
     ? Number(periodFilter.slice(0, 4))
     : now.getFullYear();
-  // Published goals are live targets, listed once on the first page.
-  const roster = useSalesGoalRoster(goalYear, status !== "retired" && !cursor);
+  // Published goals are live targets, listed once on the first page. A disabled
+  // read keeps its cached rows, so the list takes them only while it is on.
+  const rosterOn = status !== "retired" && !cursor;
+  const roster = useSalesGoalRoster(goalYear, rosterOn);
+  // With no month picked, next year's plans are live targets too.
+  const nextRoster = useSalesGoalRoster(
+    goalYear + 1,
+    rosterOn && !periodFilter,
+  );
+  const rosters = [
+    rosterOn ? roster.data : undefined,
+    rosterOn && !periodFilter ? nextRoster.data : undefined,
+  ];
   return (
     <Panel
       title={t("reporting.targets")}
@@ -135,14 +148,23 @@ export function ReportingTargets() {
         </div>
         <QueryGate query={query} pendingLabel={t("reporting.targets")}>
           {(result) => {
-            const rows = rowsOf(result.data, roster.data);
+            const rows = rowsOf(result.data, rosters);
+            // An empty list is only empty once the goals have answered.
+            if (!rows.length && rosterOn && !roster.data)
+              return (
+                <QueryGate query={roster} pendingLabel={t("reporting.targets")}>
+                  {() => null}
+                </QueryGate>
+              );
             return rows.length ? (
               <>
                 <DataTable
                   label={t("reporting.targets")}
                   rows={rows}
                   rowKey={(row) =>
-                    row.kind === "target" ? row.target.id : row.seller.owner_id
+                    row.kind === "target"
+                      ? row.target.id
+                      : `${row.seller.owner_id}:${row.roster.year}`
                   }
                   columns={[
                     {

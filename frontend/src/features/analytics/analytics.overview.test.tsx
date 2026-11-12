@@ -180,9 +180,7 @@ describe("Sales review", () => {
     expect(
       await screen.findByText(/A colleague who manages sales goals/),
     ).toBeVisible();
-    expect(
-      screen.queryByRole("button", { name: "Set sales goals" }),
-    ).toBeNull();
+    expect(screen.queryByRole("link", { name: "Set sales goals" })).toBeNull();
   });
 
   it("offers one click to the quarter on another period", async () => {

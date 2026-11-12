@@ -416,6 +416,7 @@ describe("ProgressScreen", () => {
     expect(window.location.hash).toMatch(/^#\/analytics\/performance\?/);
     expect(window.location.hash).toContain("from=2026-03-01");
     expect(window.location.hash).toContain("through=2026-03-31");
+    expect(window.location.hash).toContain("pipeline=all");
   });
 
   it("opens the seller's sales goals for the year being read", async () => {

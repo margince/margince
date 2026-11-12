@@ -77,9 +77,11 @@ export function GoalEditor({
     reason: reason.trim(),
     origin: "manual" as const,
   };
-  // Publishing sends the saved draft, so the yearly goal on screen must be saved too.
+  // Publishing sends the saved draft, so the yearly goal and the reason on
+  // screen must be saved too.
   const unchangedDraft =
     plan.draft !== undefined &&
+    plan.draft.reason.trim() === reason.trim() &&
     JSON.stringify(plan.draft.months) === JSON.stringify(months) &&
     (plan.draft.declared_total_minor ?? monthsTotal(plan.draft.months)) ===
       yearly;

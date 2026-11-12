@@ -155,11 +155,16 @@ function SellerPlan({
   const plan = useSalesGoalPlan(owner, year);
   // A published plan reads as a plan until the manager asks to change it.
   const [changing, setChanging] = useState<string | null>(null);
+  // A pending draft opens in the editor; this is the plan the manager left it on.
+  const [left, setLeft] = useState<string | null>(null);
   return (
     <QueryGate query={plan} pendingLabel={t("goals.reading")}>
       {(answer) => {
+        const key = planKey(answer);
         const settled =
-          answer.state === "published" && changing !== planKey(answer);
+          answer.state === "published"
+            ? changing !== key
+            : answer.state === "published_with_draft" && left === key;
         const edits = answer.capabilities.edit && !settled;
         return (
           <>
@@ -191,8 +196,11 @@ function SellerPlan({
                     key={`${answer.owner_id}:${answer.version}`}
                     plan={answer}
                     onCancel={
-                      changing === planKey(answer)
-                        ? () => setChanging(null)
+                      answer.published
+                        ? () => {
+                            setChanging(null);
+                            setLeft(key);
+                          }
                         : undefined
                     }
                   />
@@ -201,7 +209,10 @@ function SellerPlan({
                     plan={answer}
                     onChange={
                       answer.capabilities.edit
-                        ? () => setChanging(planKey(answer))
+                        ? () => {
+                            setChanging(key);
+                            setLeft(null);
+                          }
                         : undefined
                     }
                   />

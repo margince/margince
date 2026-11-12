@@ -58,6 +58,8 @@ func TestMarkAssertableFollowsTheWriteRoutesRule(t *testing.T) {
 		}
 		return out
 	}
+	self := actorWithScope(principal.RowScopeOwn)
+	self.UserID = mine
 	cases := []struct {
 		name  string
 		actor principal.Principal
@@ -71,7 +73,7 @@ func TestMarkAssertableFollowsTheWriteRoutesRule(t *testing.T) {
 		{"team seat, unrelated team", actorWithScope(principal.RowScopeTeam, mine), scope(crmcontracts.AnalyticsScopeKindTeam, &foreign), false},
 		{"team seat, managed teams", actorWithScope(principal.RowScopeTeam, mine), scope(crmcontracts.AnalyticsScopeKindManagedTeams, nil), false},
 		{"own seat, a team", actorWithScope(principal.RowScopeOwn), scope(crmcontracts.AnalyticsScopeKindTeam, &mine), false},
-		{"own seat, themselves", actorWithScope(principal.RowScopeOwn), scope(crmcontracts.AnalyticsScopeKindOwner, &mine), true},
+		{"own seat, themselves", self, scope(crmcontracts.AnalyticsScopeKindOwner, &mine), true},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

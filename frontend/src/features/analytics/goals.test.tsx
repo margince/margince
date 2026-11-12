@@ -129,6 +129,27 @@ describe("SalesGoalsScreen", () => {
     expect(screen.queryByRole("button", { name: "Publish" })).toBeNull();
   });
 
+  it("lets a manager leave a pending draft for the published plan", async () => {
+    window.location.hash = "#/goals?year=2026";
+    installFetchStub({
+      "GET /analytics/sales-goals": () => jsonResponse(goalRoster),
+      [`GET ${PLAN}`]: () =>
+        jsonResponse({
+          ...editablePublished,
+          state: "published_with_draft",
+          draft: draftPlan.draft,
+        }),
+      "GET /analytics/progress": () => jsonResponse(sellerMarch),
+    });
+    const user = userEvent.setup();
+    render(<SalesGoalsScreen />);
+    expect(await screen.findByRole("button", { name: "Publish" })).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(screen.queryByRole("button", { name: "Publish" })).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Change goals" }));
+    expect(screen.getByRole("button", { name: "Publish" })).toBeTruthy();
+  });
+
   it("shows a seller their own year as text they cannot change", async () => {
     window.location.hash = "#/goals?year=2026";
     installFetchStub({
@@ -223,6 +244,16 @@ describe("GoalEditor", () => {
         }),
       ]),
     );
+  });
+
+  it("refuses to publish while the reason on screen is not the saved one", async () => {
+    stubWrites(draftPlan);
+    const user = userEvent.setup();
+    render(<GoalEditor plan={draftPlan} />);
+    const publish = () => screen.getByRole("button", { name: "Publish" });
+    expect(publish().hasAttribute("disabled")).toBe(false);
+    await user.type(screen.getByLabelText(/^Reason/), " and the pipeline");
+    expect(publish().hasAttribute("disabled")).toBe(true);
   });
 
   it("withdraws published goals with the reason written", async () => {

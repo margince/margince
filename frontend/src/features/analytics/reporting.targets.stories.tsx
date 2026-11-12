@@ -5,7 +5,11 @@ import {
   jsonResponse,
   StoryProviders,
 } from "../../testing/story-utils";
-import { goalRoster } from "./progress.fixtures";
+import {
+  answerGoalRosters,
+  goalRoster,
+  nextGoalRoster,
+} from "./progress.fixtures";
 import { reportingTargets } from "./reporting.scenarios";
 import { reportingStoryRoutes } from "./reporting.story-fixtures";
 import { ReportingTargets } from "./reporting.targets";
@@ -27,14 +31,14 @@ export const Default: Story = {
   },
 };
 
-// A team member's published sales goals read as one row that opens the plan.
+// A team member's published sales goals read as one row a year that opens the plan.
 export const WithSalesGoals: Story = {
   render: () => {
     installFetchStub({
       ...reportingStoryRoutes(),
       "GET /analytics/targets": () => jsonResponse({ data: reportingTargets }),
-      "GET /analytics/sales-goals": () => jsonResponse(goalRoster),
     });
+    answerGoalRosters(goalRoster, nextGoalRoster);
     return (
       <StoryProviders>
         <ReportingTargets />

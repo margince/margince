@@ -1547,7 +1547,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "reporting.compare.ratio": "{ratio} lần",
   "reporting.compare.no_target": "Chưa có mục tiêu doanh số cho quý này",
   "reporting.compare.no_targetBody":
-    "Công bố mục tiêu doanh số cho phạm vi và quý này, hoặc đặt mục tiêu doanh số đã thắng trong Mục tiêu, để xem khoảng cách và mức bao phủ. Không có mục tiêu không phải là mục tiêu bằng không.",
+    "Công bố mục tiêu doanh số cho phạm vi và quý này, hoặc đặt mục tiêu doanh số đã chốt trong Mục tiêu, để xem khoảng cách và mức bao phủ. Không có mục tiêu không phải là mục tiêu bằng không.",
   "reporting.compare.fx_missing": "Một số số tiền deal chưa có tỷ giá",
   "reporting.compare.fx_missingBody":
     "Tổng sẽ bị thấp hơn thực tế, nên không hiển thị khoảng cách hay mức bao phủ. Thêm tỷ giá còn thiếu để xem.",

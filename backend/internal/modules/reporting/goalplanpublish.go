@@ -143,7 +143,7 @@ func (s *Service) ListGoalSellers(ctx context.Context, year int) (crmcontracts.S
 
 func (s *Service) goalSellers(ctx context.Context, tx pgx.Tx, self ids.UUID, measured []ids.UUID, year int) ([]crmcontracts.SalesGoalSeller, error) {
 	sellers := append([]ids.UUID{self}, measured...)
-	rows, err := tx.Query(ctx, `SELECT u.id, COALESCE(u.display_name,''), p.version IS NOT NULL, p.draft_revision IS NOT NULL, p.published_revision IS NOT NULL, p.withdrawn_revision IS NOT NULL, d.months
+	rows, err := tx.Query(ctx, `SELECT u.id, COALESCE(u.display_name,''), p.version IS NOT NULL, p.draft_revision IS NOT NULL, p.published_revision IS NOT NULL, p.withdrawn_revision IS NOT NULL, d.months, COALESCE(p.currency,'')
 		FROM app_user u LEFT JOIN sales_goal_plan p ON p.owner_id=u.id AND p.year=$2
 		LEFT JOIN sales_goal_plan_revision d ON d.plan_id=p.id AND d.revision=p.draft_revision
 		WHERE u.id=ANY($1) ORDER BY u.id=$3 DESC, u.display_name, u.id`, sellers, year, self)
@@ -155,10 +155,11 @@ func (s *Service) goalSellers(ctx context.Context, tx pgx.Tx, self ids.UUID, mea
 		name                                string
 		exists, draft, published, withdrawn bool
 		drafted                             []*int64
+		currency                            string
 	}
 	found, err := pgx.CollectRows(rows, func(r pgx.CollectableRow) (row, error) {
 		var out row
-		return out, r.Scan(&out.id, &out.name, &out.exists, &out.draft, &out.published, &out.withdrawn, &out.drafted)
+		return out, r.Scan(&out.id, &out.name, &out.exists, &out.draft, &out.published, &out.withdrawn, &out.drafted, &out.currency)
 	})
 	if err != nil {
 		return nil, err
@@ -197,7 +198,8 @@ func (s *Service) goalSellers(ctx context.Context, tx pgx.Tx, self ids.UUID, mea
 			entry.TotalMinor = &total
 		}
 		// A draft is read by the seller it is for and by whoever may edit it.
-		if total, complete, err := monthTotal(seller.drafted); err == nil && complete && (edit || seller.id == self) {
+		// Its months are kept in the plan currency, so only that one is totalled.
+		if total, complete, err := monthTotal(seller.drafted); err == nil && complete && (edit || seller.id == self) && seller.currency == calendar.Currency {
 			entry.DraftTotalMinor = &total
 		}
 		out = append(out, entry)

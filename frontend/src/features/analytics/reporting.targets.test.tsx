@@ -2,12 +2,16 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 /** @vitest-environment happy-dom */
-import { cleanup, screen, within } from "@testing-library/react";
+import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { installFetchStub, jsonResponse } from "../../testing/story-utils";
 import { render } from "./analytics.testkit";
-import { goalRoster } from "./progress.fixtures";
+import {
+  answerGoalRosters,
+  goalRoster,
+  nextGoalRoster,
+} from "./progress.fixtures";
 import { reportingTargets } from "./reporting.scenarios";
 import { reportingStoryRoutes } from "./reporting.story-fixtures";
 import { ReportingTargets } from "./reporting.targets";
@@ -19,12 +23,12 @@ afterEach(() => {
 });
 
 describe("ReportingTargets", () => {
-  it("reads a team member's published sales goals as one row that opens the plan", async () => {
+  it("reads a team member's published sales goals as one row a year that opens the plan", async () => {
     installFetchStub({
       ...reportingStoryRoutes(),
       "GET /analytics/targets": () => jsonResponse({ data: reportingTargets }),
-      "GET /analytics/sales-goals": () => jsonResponse(goalRoster),
     });
+    answerGoalRosters(goalRoster, nextGoalRoster);
     const stubbed = globalThis.fetch;
     const asked: string[] = [];
     vi.stubGlobal("fetch", (input: RequestInfo | URL, init?: RequestInit) => {
@@ -32,8 +36,15 @@ describe("ReportingTargets", () => {
       return stubbed(input, init);
     });
     render(<ReportingTargets />);
-    const row = (await screen.findByText("Sam Okafor")).closest("tr");
+    const [thisYear, nextYear] = await screen.findAllByText("Sam Okafor");
+    const row = thisYear?.closest("tr");
     if (!(row instanceof HTMLElement)) throw new Error("no row for the goals");
+    // With no month picked, the plan already published for next year is listed too.
+    expect(
+      within(nextYear?.closest("tr") ?? row).getByText(
+        "Sales goals 2027 · 12 months",
+      ),
+    ).toBeTruthy();
     expect(within(row).getByText("€1,140,000")).toBeTruthy();
     expect(within(row).getByText("Sales goals 2026 · 12 months")).toBeTruthy();
     await userEvent
@@ -47,5 +58,18 @@ describe("ReportingTargets", () => {
     expect(asked.find((url) => url.includes("/analytics/targets"))).toContain(
       "plan_owned=false",
     );
+  });
+
+  it("lists no published goals among the retired targets", async () => {
+    installFetchStub({
+      ...reportingStoryRoutes(),
+      "GET /analytics/targets": () => jsonResponse({ data: reportingTargets }),
+    });
+    answerGoalRosters(goalRoster, nextGoalRoster);
+    const user = userEvent.setup();
+    render(<ReportingTargets />);
+    await screen.findAllByText("Sam Okafor");
+    await user.click(screen.getByRole("button", { name: "Target retired" }));
+    await waitFor(() => expect(screen.queryByText("Sam Okafor")).toBeNull());
   });
 });

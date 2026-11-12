@@ -256,11 +256,13 @@ function askOf(progress: SalesProgress): ProgressAsk {
 }
 
 // Analytics Performance on the same team member or team and the same days.
+// Progress counts every pipeline, so the door asks for all of them.
 function analyticsDials(ask: ProgressAsk): Map<string, string> {
   const month = ask.period === "year" ? 1 : ask.month;
   const months = ask.period === "year" ? 12 : 1;
   const dials = new Map<string, string>([
     ["period", "custom"],
+    ["pipeline", "all"],
     ["from", isoDay(new Date(ask.year, month - 1, 1))],
     ["through", isoDay(new Date(ask.year, month - 1 + months, 0))],
   ]);
