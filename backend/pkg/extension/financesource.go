@@ -54,8 +54,7 @@ type FinanceCustomers func(ctx context.Context, rt Runtime, conn accounting.Conn
 type FinanceInvoices func(ctx context.Context, rt Runtime, conn accounting.Connection, externalCustomerID string) (accounting.Ledger, error)
 
 // FinanceInvoiceDocument returns one invoice's document. The core serves only a
-// PDF of at most 20 MiB, so a unit reads the vendor's answer through a limit of
-// that size rather than holding whatever the vendor sends.
+// PDF of at most 20 MiB. A unit reads the vendor's answer through that limit.
 type FinanceInvoiceDocument func(ctx context.Context, rt Runtime, conn accounting.Connection, externalInvoiceID string) (accounting.Document, error)
 
 // Validate enforces the provider grammar and that Check, Customers and

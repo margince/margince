@@ -69,7 +69,7 @@ func documentLines(invoice accounting.Invoice) []string {
 		lines = append(lines, "Due "+invoice.DueOn.Format("2006-01-02"))
 	}
 	return append(lines,
-		fmt.Sprintf("Total %s %d.%02d", invoice.Currency, invoice.GrossMinor/100, abs(invoice.GrossMinor%100)),
+		fmt.Sprintf("Total %s %d.%02d", invoice.Currency, invoice.GrossMinor/100, abs(invoice.GrossMinor%100)), // money-scale-exempt: the demo ledger issues only EUR, which has two decimals
 		"Generated demonstration data, not a real invoice.",
 	)
 }

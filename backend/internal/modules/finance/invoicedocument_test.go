@@ -11,8 +11,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
-// Only a PDF within the size bound leaves the core: the source's claimed media
-// type, the file's own leading bytes and its size are each checked.
+// Only a PDF within the size bound leaves the core. The claimed media type,
+// the file's leading bytes and its size are each checked.
 func TestOnlyABoundedPDFIsServed(t *testing.T) {
 	pdf := []byte("%PDF-1.7 body")
 	for name, document := range map[string]SourceDocument{

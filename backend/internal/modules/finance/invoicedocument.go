@@ -51,8 +51,8 @@ type documentTarget struct {
 }
 
 // InvoiceDocumentFor fetches one mirrored invoice's document from the source.
-// It answers 404 for an invoice the caller cannot see exactly as for one that
-// does not exist, and only ever hands back a PDF.
+// An invoice the caller cannot see answers the same 404 as a missing one. Only
+// a PDF is ever handed back.
 func (s *Store) InvoiceDocumentFor(ctx context.Context, invoiceID ids.UUID) (InvoiceDocument, error) {
 	if err := auth.Require(ctx, "finance", principal.ActionRead); err != nil {
 		return InvoiceDocument{}, err
@@ -61,10 +61,7 @@ func (s *Store) InvoiceDocumentFor(ctx context.Context, invoiceID ids.UUID) (Inv
 	err := s.tx(ctx, func(tx pgx.Tx) error {
 		var readErr error
 		target, readErr = readDocumentTarget(ctx, tx, invoiceID)
-		if readErr != nil {
-			return readErr
-		}
-		return auth.EnsureVisible(ctx, tx, "company", target.companyID)
+		return readErr
 	})
 	if err != nil {
 		return InvoiceDocument{}, err
@@ -102,9 +99,9 @@ func (s *Store) servesDocuments(provider string) bool {
 	return false
 }
 
-// readDocumentTarget reads the invoice on the workspace's live connection. An
-// invoice left behind by an earlier connection is not found: the source that
-// issued it is no longer the one this installation reads.
+// readDocumentTarget reads the invoice on the workspace's live connection, and
+// only for a caller who can see its company. An invoice left behind by an
+// earlier connection is not found: its source is no longer the one read.
 func readDocumentTarget(ctx context.Context, tx pgx.Tx, invoiceID ids.UUID) (documentTarget, error) {
 	conn, connected, err := readConnection(ctx, tx)
 	if err != nil {
@@ -127,6 +124,9 @@ func readDocumentTarget(ctx context.Context, tx pgx.Tx, invoiceID ids.UUID) (doc
 	}
 	if err != nil {
 		return documentTarget{}, fmt.Errorf("read the invoice: %w", err)
+	}
+	if err := auth.EnsureVisible(ctx, tx, "company", target.companyID); err != nil {
+		return documentTarget{}, err
 	}
 	return target, nil
 }
