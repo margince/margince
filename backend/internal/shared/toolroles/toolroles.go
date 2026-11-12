@@ -170,10 +170,14 @@ func Compare(dir string, want map[string][]byte) (Drift, error) {
 }
 
 // Write makes dir hold want and no other JSON file. A verb no longer served
-// then leaves no file behind.
+// then leaves no file behind. dir must already hold a head, and so must want.
+// A wrong working directory then fails instead of making or emptying a folder.
 func Write(dir string, want map[string][]byte) error {
-	if err := os.MkdirAll(dir, 0o750); err != nil {
-		return err
+	if _, ok := want[HeadFile]; !ok {
+		return fmt.Errorf("toolroles: writing %s without its %s", dir, HeadFile)
+	}
+	if _, err := os.Stat(filepath.Join(dir, HeadFile)); err != nil {
+		return fmt.Errorf("toolroles: %s is not a sweep folder (no %s): %w", dir, HeadFile, err)
 	}
 	have, err := onDisk(dir)
 	if err != nil {

@@ -11,8 +11,18 @@ import (
 	"testing/fstest"
 )
 
-func TestAFolderWrittenReadsBackTheSameVerbs(t *testing.T) {
+// sweepFolder is a folder the sweep has written before: it holds a head.
+func sweepFolder(t *testing.T) string {
+	t.Helper()
 	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, HeadFile), []byte("{}\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	return dir
+}
+
+func TestAFolderWrittenReadsBackTheSameVerbs(t *testing.T) {
+	dir := sweepFolder(t)
 	want := map[string]Checks{"get_deal": {Verb: "get_deal", Checks: []string{"deal.read"}}, "list_tags": {Verb: "list_tags", Checks: []string{}}}
 	files, err := Render(Head{Note: "n"}, want)
 	if err != nil {
@@ -47,7 +57,10 @@ func TestDriftNamesEachMissingExtraAndChangedFile(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	want := map[string][]byte{"kept.json": []byte("a\n"), "changed.json": []byte("new\n"), "added.json": []byte("y\n")}
+	want := map[string][]byte{"kept.json": []byte("a\n"), "changed.json": []byte("new\n"), "added.json": []byte("y\n"), HeadFile: []byte("{}\n")}
+	if err := os.WriteFile(filepath.Join(dir, HeadFile), []byte("{}\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
 	drift, err := Compare(dir, want)
 	if err != nil {
 		t.Fatal(err)
@@ -61,5 +74,25 @@ func TestDriftNamesEachMissingExtraAndChangedFile(t *testing.T) {
 	}
 	if after, err := Compare(dir, want); err != nil || !after.Empty() {
 		t.Errorf("after a write the folder still drifts: %v, %v", after, err)
+	}
+}
+
+func TestWriteRefusesAFolderTheSweepDidNotMake(t *testing.T) {
+	stray := filepath.Join(t.TempDir(), "elsewhere")
+	if err := Write(stray, map[string][]byte{HeadFile: []byte("{}\n")}); err == nil {
+		t.Error("a folder with no head was written")
+	}
+	if _, err := os.Stat(stray); err == nil {
+		t.Error("the refused write made the folder anyway")
+	}
+	dir := sweepFolder(t)
+	if err := os.WriteFile(filepath.Join(dir, "get_deal.json"), []byte("{}\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := Write(dir, map[string][]byte{}); err == nil {
+		t.Error("an empty want was written, emptying the folder")
+	}
+	if _, err := os.Stat(filepath.Join(dir, "get_deal.json")); err != nil {
+		t.Error("the refused write removed a file")
 	}
 }

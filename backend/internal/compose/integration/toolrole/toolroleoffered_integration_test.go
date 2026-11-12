@@ -131,18 +131,15 @@ func publishedMatrix(t *testing.T) toolRolesFileShape {
 	if err != nil {
 		t.Fatalf("%s does not read: %v", toolRolesDir, err)
 	}
-	doc := toolRolesFileShape{Note: head.Note, Reasons: head.Reasons, Roles: head.Roles}
+	doc := toolRolesFileShape{Head: head}
 	for _, verb := range slices.Sorted(maps.Keys(rows)) {
-		row := rows[verb]
-		published := toolRoleRow{Tool: row.Tool, Action: row.Action, Verb: row.Verb, ColleagueRecord: row.ColleagueRecord}
-		published.Allowed, published.Refused = row.Allowed, row.Refused
-		doc.Rows = append(doc.Rows, published)
+		doc.Rows = append(doc.Rows, rows[verb])
 	}
 	return doc
 }
 
 // publishedRow is a published row's name as the sweep's calls name it.
-func publishedRow(row toolRoleRow) string {
+func publishedRow(row toolroles.Row) string {
 	return strings.TrimSuffix(row.Tool+"."+row.Action, ".")
 }
 
@@ -183,7 +180,7 @@ func holdCellsAreOffered(t *testing.T, d *apptest.TwoDoors, email string) {
 // the matrix refuses it, or hides while the matrix allows it. A router that
 // picks its action by the arguments named has no enum to narrow. It is held as
 // one tool, allowed where any of its rows is.
-func cellDisagreements(role string, rows []toolRoleRow, specs []mcp.ToolSpec, offered map[string]bool) []string {
+func cellDisagreements(role string, rows []toolroles.Row, specs []mcp.ToolSpec, offered map[string]bool) []string {
 	byArguments := map[string]bool{}
 	for _, spec := range specs {
 		byArguments[spec.Name] = len(spec.Actions) > 0 && spec.ActionField == ""

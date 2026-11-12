@@ -29,13 +29,38 @@ const seedMapFile = "seedmap.md"
 // counting pool is asked for when the call's arguments are filled.
 func verbTakes(t *testing.T) map[string][]string {
 	t.Helper()
-	out := map[string][]string{}
-	for _, call := range toolRoleCalls(compose.NewRegistry(nil, compose.SendPath{}).Specs(), routeShapes()) {
-		pool := countingPool(t)
+	takes, err := takesOf(toolRoleCalls(compose.NewRegistry(nil, compose.SendPath{}).Specs(), routeShapes()), func() *recordPool { return countingPool(t) })
+	if err != nil {
+		t.Fatal(err)
+	}
+	return takes
+}
+
+func takesOf(calls []toolRoleCall, counting func() *recordPool) (map[string][]string, error) {
+	out, by := map[string][]string{}, map[string]string{}
+	for _, call := range calls {
+		if first, taken := by[call.verb]; taken {
+			return nil, sharedVerb(call.verb, first, call.row)
+		}
+		by[call.verb] = call.row
+		pool := counting()
 		call.args(pool)
 		out[call.verb] = slices.Sorted(maps.Keys(pool.wanted))
 	}
-	return out
+	return out, nil
+}
+
+// Two calls of one verb would share a file, so both writers refuse them. The
+// refusal says the verb is shared, not that the sweep is stale.
+func TestAVerbTwoCallsServeIsRefused(t *testing.T) {
+	calls := []toolRoleCall{{row: "deals.get", tool: "deals", action: "get", verb: "get_deal"}, {row: "records.get", tool: "records", action: "get", verb: "get_deal"}}
+	if _, err := takesOf(calls, func() *recordPool { return countingPool(t) }); err == nil || !strings.Contains(err.Error(), "shared by deals.get and records.get") {
+		t.Errorf("takes of a shared verb: %v", err)
+	}
+	doc := toolRolesFileShape{Rows: []toolroles.Row{{Tool: "deals", Action: "get", Verb: "get_deal"}, {Tool: "records", Action: "get", Verb: "get_deal"}}}
+	if _, err := doc.published(); err == nil || !strings.Contains(err.Error(), "shared by deals.get and records.get") {
+		t.Errorf("rows of a shared verb: %v", err)
+	}
 }
 
 // seedEntry is one kind's seed as this package's source writes it.
