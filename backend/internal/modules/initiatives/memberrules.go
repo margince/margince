@@ -117,7 +117,7 @@ func visibleRecords(ctx context.Context, tx pgx.Tx, recordType string, picked []
 		return nil, err
 	}
 	if scope == "" {
-		scope = "TRUE"
+		scope = unscoped
 	}
 	rows, err := tx.Query(ctx, `SELECT t.id FROM `+recordType+` t WHERE t.id = ANY($1) AND t.archived_at IS NULL AND `+scope, args...)
 	if err != nil {
@@ -153,7 +153,7 @@ func carriedDeals(ctx context.Context, tx pgx.Tx, id ids.UUID, launch time.Time,
 		return nil, err
 	}
 	if dealScope == "" {
-		dealScope = "TRUE"
+		dealScope = unscoped
 	}
 	rows, err := tx.Query(ctx, `SELECT d.id FROM deal d WHERE (d.id IN (`+promotedFromEnrolledSQL+`) OR d.id IN (SELECT l.qualified_deal_id FROM lead l WHERE l.id = ANY($3)))
 		AND d.archived_at IS NULL AND `+dealScope, args...)

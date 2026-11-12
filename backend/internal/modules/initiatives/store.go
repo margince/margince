@@ -32,6 +32,8 @@ const (
 	// A rule read answers at most this many records, the predicate engine's
 	// own row bound. Past it a membership is an export and not a list.
 	ruleReadLimit = storekit.PredicateRowLimit
+	// unscoped is the clause a read carries when the reader has no row scope.
+	unscoped = "TRUE"
 )
 
 // RuleMatcher evaluates a rule in a record type's list vocabulary under the
@@ -176,7 +178,7 @@ func (s *Store) Update(ctx context.Context, id ids.UUID, in Definition, ifVersio
 		if err := recordChange(ctx, tx, out, &before, []string{"definition"}); err != nil {
 			return err
 		}
-		_, err = s.syncEnrolmentTx(ctx, tx, out)
+		_, err = s.observeEnrolmentTx(ctx, tx, out)
 		return err
 	})
 	return out, err
@@ -234,7 +236,7 @@ func (s *Store) Launch(ctx context.Context, id ids.UUID, ifVersion *int64) (crmc
 		if err := recordChange(ctx, tx, out, &before, []string{"status", "baseline"}); err != nil {
 			return err
 		}
-		_, err = s.syncEnrolmentTx(ctx, tx, out)
+		_, err = s.observeEnrolmentTx(ctx, tx, out)
 		return err
 	})
 	return out, err
@@ -292,7 +294,7 @@ func initiativeScope(ctx context.Context, args *[]any) (string, error) {
 		return "", err
 	}
 	if scope == "" {
-		return "TRUE", nil
+		return unscoped, nil
 	}
 	return scope, nil
 }

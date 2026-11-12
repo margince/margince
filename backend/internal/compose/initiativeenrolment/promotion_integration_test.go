@@ -62,8 +62,10 @@ func TestALeadEnrolledAtItsPromotionSourcedItsDeal(t *testing.T) {
 	early := w.manufacturingLead(t, "early@linden.test")
 	leaver := w.manufacturingLead(t, "leaver@linden.test")
 	rule, future := storekit.Predicate{Field: "industry", Op: "eq", Value: "manufacturing"}, true
-	draft, err := w.store.Create(ctx, initiatives.Definition{Name: "Lead push", Objective: "qualified_opportunities_created",
-		Deadline: clocktest.Now(t).UTC().AddDate(0, 3, 0), LeadRule: &rule, IncludeFuture: &future})
+	draft, err := w.store.Create(ctx, initiatives.Definition{
+		Name: "Lead push", Objective: "qualified_opportunities_created",
+		Deadline: clocktest.Now(t).UTC().AddDate(0, 3, 0), LeadRule: &rule, IncludeFuture: &future,
+	})
 	if err != nil {
 		t.Fatalf("defining the initiative: %v", err)
 	}
@@ -84,7 +86,7 @@ func TestALeadEnrolledAtItsPromotionSourcedItsDeal(t *testing.T) {
 	}
 
 	now := clocktest.Now(t).UTC()
-	service := compose.NewReportingService(w.e.Pool, func() time.Time { return now })
+	service := compose.ReportingServiceFor(w.e.Pool, func() time.Time { return now })
 	interval := crmcontracts.ReportingWindow{StartAt: now.AddDate(0, 0, -3), EndAt: now.AddDate(0, 0, 3)}
 	wire := openapi_types.UUID(id)
 	result, err := service.Evaluate(ctx, crmcontracts.ReportingSelection{

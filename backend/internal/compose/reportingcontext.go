@@ -157,8 +157,8 @@ func newReportingService(pool *pgxpool.Pool, now func() time.Time) *reporting.Se
 		WithQuestions(reportingQuestions{floor: analyticsquery.DefaultFloor, names: newAttentionNames(db)})
 }
 
-// NewReportingService is the engine the report routes run, for compose subpackage tests.
-func NewReportingService(pool *pgxpool.Pool, now func() time.Time) *reporting.Service {
+// ReportingServiceFor is the engine the report routes run, for compose subpackage tests.
+func ReportingServiceFor(pool *pgxpool.Pool, now func() time.Time) *reporting.Service {
 	return newReportingService(pool, now)
 }
 

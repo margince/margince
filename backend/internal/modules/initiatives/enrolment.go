@@ -78,7 +78,7 @@ func SourcedDealsTx(ctx context.Context, tx pgx.Tx, id ids.UUID, membership Memb
 		return nil, err
 	}
 	if scope == "" {
-		scope = "TRUE"
+		scope = unscoped
 	}
 	rows, err := tx.Query(ctx, promotedFromEnrolledSQL+` AND l.qualified_deal_id = ANY($3) AND `+scope, args...)
 	if err != nil {
@@ -155,8 +155,8 @@ func (s *Store) WitnessLeadPromotionTx(ctx context.Context, tx pgx.Tx, lead ids.
 // fact about the initiative, so no reader's row scope narrows them.
 const enrolmentActor = "system:initiative-enrolment"
 
-// syncEnrolmentTx dates the rows of a definition, launch or members save, now.
-func (s *Store) syncEnrolmentTx(ctx context.Context, tx pgx.Tx, initiative crmcontracts.SalesInitiative) (EnrolmentChange, error) {
+// observeEnrolmentTx dates the rows of a definition, launch or members save, now.
+func (s *Store) observeEnrolmentTx(ctx context.Context, tx pgx.Tx, initiative crmcontracts.SalesInitiative) (EnrolmentChange, error) {
 	return s.reconcileEnrolmentTx(ctx, tx, initiative, observedJoin, s.now().UTC())
 }
 

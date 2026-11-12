@@ -57,43 +57,13 @@ func (s *Store) membersTx(ctx context.Context, tx pgx.Tx, initiative crmcontract
 		out.Launch = *initiative.LaunchAt
 	}
 	id := ids.UUID(initiative.Id)
-	rows, err := tx.Query(ctx, `SELECT record_type, record_id, reason FROM sales_initiative_member WHERE initiative_id = $1`, id)
-	if err != nil {
-		return out, fmt.Errorf("read initiative members: %w", err)
-	}
-	picked := map[string][]ids.UUID{}
-	for rows.Next() {
-		var recordType, reason string
-		var recordID ids.UUID
-		if err := rows.Scan(&recordType, &recordID, &reason); err != nil {
-			rows.Close()
-			return out, err
-		}
-		if reason == "excluded" {
-			out.Excluded[recordType][recordID] = true
-		} else {
-			picked[recordType] = append(picked[recordType], recordID)
-		}
-	}
-	rows.Close()
-	if err := rows.Err(); err != nil {
-		return out, err
-	}
-	leads, err := s.ruleMatches(ctx, tx, recordLead, initiative.LeadRule, read, &out)
+	picked, err := storedMembers(ctx, tx, id, &out)
 	if err != nil {
 		return out, err
 	}
-	deals, err := s.ruleMatches(ctx, tx, recordDeal, initiative.DealRule, read, &out)
+	leads, deals, err := s.ruleMembers(ctx, tx, initiative, read, &out)
 	if err != nil {
 		return out, err
-	}
-	if initiative.LaunchAt != nil && !initiative.IncludeFuture {
-		if leads, err = createdBefore(ctx, tx, recordLead, leads, out.Launch); err != nil {
-			return out, err
-		}
-		if deals, err = createdBefore(ctx, tx, recordDeal, deals, out.Launch); err != nil {
-			return out, err
-		}
 	}
 	if out.Leads, err = s.include(ctx, tx, &out, leads, picked[recordLead], recordLead); err != nil {
 		return out, err
@@ -118,6 +88,49 @@ func (s *Store) membersTx(ctx context.Context, tx pgx.Tx, initiative crmcontract
 		out.Reasons[recordDeal][deal] = "carried"
 	}
 	return out, nil
+}
+
+// storedMembers reads the picks, by record type, and records the exclusions
+// on out.
+func storedMembers(ctx context.Context, tx pgx.Tx, id ids.UUID, out *Membership) (map[string][]ids.UUID, error) {
+	rows, err := tx.Query(ctx, `SELECT record_type, record_id, reason FROM sales_initiative_member WHERE initiative_id = $1`, id)
+	if err != nil {
+		return nil, fmt.Errorf("read initiative members: %w", err)
+	}
+	defer rows.Close()
+	picked := map[string][]ids.UUID{}
+	for rows.Next() {
+		var recordType, reason string
+		var recordID ids.UUID
+		if err := rows.Scan(&recordType, &recordID, &reason); err != nil {
+			return nil, err
+		}
+		if reason == "excluded" {
+			out.Excluded[recordType][recordID] = true
+		} else {
+			picked[recordType] = append(picked[recordType], recordID)
+		}
+	}
+	return picked, rows.Err()
+}
+
+// ruleMembers is the lead and deal rule matches, less the ones created after
+// the launch of an initiative that closed its doors to later matches.
+func (s *Store) ruleMembers(ctx context.Context, tx pgx.Tx, initiative crmcontracts.SalesInitiative, read ruleRead, out *Membership) (leads, deals []ids.UUID, err error) {
+	if leads, err = s.ruleMatches(ctx, tx, recordLead, initiative.LeadRule, read, out); err != nil {
+		return nil, nil, err
+	}
+	if deals, err = s.ruleMatches(ctx, tx, recordDeal, initiative.DealRule, read, out); err != nil {
+		return nil, nil, err
+	}
+	if initiative.LaunchAt == nil || initiative.IncludeFuture {
+		return leads, deals, nil
+	}
+	if leads, err = createdBefore(ctx, tx, recordLead, leads, out.Launch); err != nil {
+		return nil, nil, err
+	}
+	deals, err = createdBefore(ctx, tx, recordDeal, deals, out.Launch)
+	return leads, deals, err
 }
 
 // Members lists the membership with labels, for the editor and the review.
@@ -167,7 +180,7 @@ func memberRead(ctx context.Context, recordType, alias string, wanted []ids.UUID
 		return "", "", nil, err
 	}
 	if scope == "" {
-		scope = "TRUE"
+		scope = unscoped
 	}
 	companyLabel = "NULL::text"
 	if auth.ReadGranted(ctx, "company") {
@@ -313,7 +326,7 @@ func (s *Store) ReplaceMembers(ctx context.Context, id ids.UUID, picked, exclude
 		if err := recordChange(ctx, tx, after, &before, []string{"members"}); err != nil {
 			return err
 		}
-		_, err = s.syncEnrolmentTx(ctx, tx, after)
+		_, err = s.observeEnrolmentTx(ctx, tx, after)
 		return err
 	})
 	if err != nil {
