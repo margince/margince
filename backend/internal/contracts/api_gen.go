@@ -44354,7 +44354,7 @@ type CreateCompanyRequest struct {
 	// Address Structured postal address.
 	Address *Address `json:"address,omitempty"`
 
-	// Description One human-written line saying what the company does.
+	// Description A description of what the company does.
 	Description *string               `json:"description,omitempty"`
 	DisplayName string                `json:"display_name"`
 	Domains     *[]CompanyDomainInput `json:"domains,omitempty"`
@@ -65320,7 +65320,7 @@ type UpdateCompanyRequest struct {
 	// archived answers 422 naming this field. Absent leaves it untouched.
 	AssessAgainstEntityId *openapi_types.UUID `json:"assess_against_entity_id,omitempty"`
 
-	// Description One human-written line saying what the company does. Absent leaves it untouched; an empty string clears it, the same spelling every other nullable text field on this record uses.
+	// Description A description of what the company does. Absent leaves it untouched; an empty string clears it, the same spelling every other nullable text field on this record uses.
 	Description *string `json:"description,omitempty"`
 	DisplayName *string `json:"display_name,omitempty"`
 

@@ -6128,7 +6128,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Zwei Buchstaben, zum Beispiel de. Leer lassen, um die Sprache der Vorlage zu nutzen.",
   "legalEntities.imprint": "Impressum",
   "legalEntities.imprintHint":
-    "Der rechtliche Hinweis, den dieser Rechtsträger druckt, bis zu 4.000 Zeichen.",
+    "Der rechtliche Hinweis, den dieser Rechtsträger druckt, bis zu {max} Zeichen.",
   "legalEntities.signatureTemplate": "E-Mail-Signaturvorlage (HTML)",
   "legalEntities.signatureTemplateHint":
     "Mails von Mitgliedern, die für diesen Rechtsträger arbeiten, tragen diese Vorlage. Nutze {name}, {title}, {phone}, {logo} und {imprint}. Leer nutzt die Vorlage des Unternehmens.",

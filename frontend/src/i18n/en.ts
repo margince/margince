@@ -6095,7 +6095,7 @@ export const en = {
     "Two letters, for example de. Leave it empty to use the template’s language.",
   "legalEntities.imprint": "Imprint",
   "legalEntities.imprintHint":
-    "The legal notice this entity prints, up to 4,000 characters.",
+    "The legal notice this entity prints, up to {max} characters.",
   "legalEntities.signatureTemplate": "Email signature template (HTML)",
   "legalEntities.signatureTemplateHint":
     "Mail from colleagues who work for this entity signs with this template. Use {name}, {title}, {phone}, {logo} and {imprint}. Empty uses the company’s template.",

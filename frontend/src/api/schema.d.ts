@@ -32792,7 +32792,7 @@ export interface components {
              * @description The company's general address, for example info@example.com. It never creates or matches a contact.
              */
             email?: string | null;
-            /** @description One human-written line saying what the company does. */
+            /** @description A description of what the company does. */
             description?: string | null;
             /** @description An industry code, or text the server can map to one. Text that names no code stores no code and is kept in the description. */
             industry?: string | null;
@@ -32831,7 +32831,7 @@ export interface components {
              * @description The company's general address, for example info@example.com. It never creates or matches a contact.
              */
             email?: string | null;
-            /** @description One human-written line saying what the company does. Absent leaves it untouched; an empty string clears it, the same spelling every other nullable text field on this record uses. */
+            /** @description A description of what the company does. Absent leaves it untouched; an empty string clears it, the same spelling every other nullable text field on this record uses. */
             description?: string | null;
             /** @description An industry code, or text the server can map to one. Text that names no code stores no code and is kept in the description. */
             industry?: string | null;

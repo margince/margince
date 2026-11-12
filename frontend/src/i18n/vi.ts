@@ -5970,7 +5970,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Hai chữ cái, ví dụ de. Để trống để dùng ngôn ngữ của mẫu.",
   "legalEntities.imprint": "Thông tin pháp lý",
   "legalEntities.imprintHint":
-    "Thông tin pháp lý pháp nhân này in ra, tối đa 4.000 ký tự.",
+    "Thông tin pháp lý pháp nhân này in ra, tối đa {max} ký tự.",
   "legalEntities.signatureTemplate": "Mẫu chữ ký email (HTML)",
   "legalEntities.signatureTemplateHint":
     "Thư của đồng nghiệp làm việc cho pháp nhân này dùng mẫu này. Dùng {name}, {title}, {phone}, {logo} và {imprint}. Để trống sẽ dùng mẫu của công ty.",

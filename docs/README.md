@@ -268,6 +268,7 @@ A generated page, and each `perfbench/` record, says so in its first line. Do no
 ### Explanation: understand the why
 
 - [shared-record-language.md](explanation/shared-record-language.md): text on shared records.
+- [text-length-limits.md](explanation/text-length-limits.md): why text fields share length rules.
 
 #### The shape of the system
 

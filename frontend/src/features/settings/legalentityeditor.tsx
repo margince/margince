@@ -246,7 +246,7 @@ export function EditEntityDialog({
           />
           <AreaField
             label={t("legalEntities.imprint")}
-            hint={t("legalEntities.imprintHint")}
+            hint={t("legalEntities.imprintHint", { max: TEXT_LIMITS.document })}
             {...text("imprint")}
           />
           {/* The default entity signs with the workspace template, which has
