@@ -60,9 +60,10 @@ export function useSalesProgress(ask: ProgressAsk) {
   });
 }
 
-export function useSalesGoalRoster(year: number) {
+export function useSalesGoalRoster(year: number, enabled = true) {
   return useQuery({
     queryKey: [...GOALS_KEY, "sellers", year],
+    enabled,
     queryFn: async ({ signal }) =>
       unwrap(
         await api.GET("/analytics/sales-goals", {

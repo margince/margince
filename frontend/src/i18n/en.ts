@@ -887,6 +887,9 @@ export const en = {
   "reporting.pinnedSettings": "Previously saved settings",
   "reporting.unallocated": "Unallocated",
   "reporting.overallocated": "Overallocated",
+  "reporting.goalsRow": "Sales goals {year} · 12 months",
+  "reporting.openGoals": "Open sales goals",
+  "reporting.allocatedCover": "Team members’ goals cover {amount}",
   "reporting.targetFor": "Target for",
   "reporting.targetStatus": "Target status",
   "reporting.activeTargets": "Active targets",
@@ -1404,7 +1407,7 @@ export const en = {
   "reporting.writtenNoneWon": "No sales won in {period}.",
   "reporting.writtenWon": "Won in {period}: {amount}.",
   "reporting.writtenTarget":
-    "Target for {targetPeriod}: {target}, {percent}% reached with {actual}.",
+    "Goal for {targetPeriod}: {target}, {percent}% reached with {actual}.",
   "reporting.writtenLanding":
     "Forecast for the end of the fiscal quarter, as of {date}: {amount}.",
   "reporting.writtenOpen_one": "Open on {date}: {amount} in {count} deal.",
@@ -1412,16 +1415,16 @@ export const en = {
   "reporting.writtenSomeFailed":
     "Some figures could not be read just now, so this summary leaves them out.",
   "reporting.writtenTargetReached":
-    "Sales won in {quarter} have reached the {target} target.",
+    "Sales won in {quarter} have reached the {target} goal.",
   "reporting.writtenNoTarget":
-    "No sales target is set for {quarter}, so there is no gap to show.",
+    "No sales goal is set for {quarter}, so there is no gap to show.",
   "reporting.writtenFinish": "Expected finish for {quarter}: {amount}.",
   "reporting.writtenFinishShort":
-    "Expected finish for {quarter}: {amount}, {gap} short of the {target} target.",
+    "Expected finish for {quarter}: {amount}, {gap} short of the {target} goal.",
   "reporting.writtenFinishAhead":
     "Expected finish for {quarter}: {amount}, {gap} above the {target} target.",
   "reporting.writtenFinishOnTarget":
-    "Expected finish for {quarter}: {amount}, exactly the {target} target.",
+    "Expected finish for {quarter}: {amount}, exactly the {target} goal.",
   "reporting.writtenCoverage":
     "Open deals expected to close this quarter cover {ratio}× of the {remaining} still to win.",
   "reporting.writtenAccepted_one": "{count} handoff accepted in {period}.",
@@ -1478,7 +1481,7 @@ export const en = {
   "reporting.openPipelineBasis_other": "Open deals: {count} · as of {at}",
   "reporting.forecastLandingBasis":
     "This fiscal quarter, from the deal forecast",
-  "reporting.compare.atTarget": "At the {target} target",
+  "reporting.compare.atTarget": "At the {target} goal",
   "reporting.compare.colleague_withheld":
     "This would show one colleague’s own results",
   "reporting.compare.colleague_withheldBody":
@@ -1491,24 +1494,24 @@ export const en = {
   "reporting.compare.apply.scope": "Show one team",
   "reporting.compare.apply.pipeline": "Show all pipelines",
   "reporting.compare.apply.manager_call_pipeline": "Show all pipelines",
-  "reporting.compare.title": "This quarter against its target",
-  "reporting.compare.gap": "Gap to target",
-  "reporting.compare.short": "Short of the {target} target",
-  "reporting.compare.ahead": "Ahead of the {target} target",
+  "reporting.compare.title": "This quarter against its goal",
+  "reporting.compare.gap": "Gap to goal",
+  "reporting.compare.short": "Short of the {target} goal",
+  "reporting.compare.ahead": "Ahead of the {target} goal",
   "reporting.compare.gapBasis": "Expected landing {landing}, from {basis}",
   "reporting.compare.basis.likely": "the Likely deals",
   "reporting.compare.basis.weighted": "the weighted pipeline",
   "reporting.compare.basis.manager_call": "the manager’s call",
   "reporting.compare.remaining": "Left to win",
   "reporting.compare.remainingBasis": "{won} won of {target}",
-  "reporting.compare.reached": "Target reached",
+  "reporting.compare.reached": "Goal reached",
   "reporting.compare.coverageAll": "Coverage, deals closing this quarter",
   "reporting.compare.coverageBasis":
     "{open} eligible to close this quarter / {remaining} still to win",
   "reporting.compare.ratio": "{ratio}×",
-  "reporting.compare.no_target": "No sales target for this quarter",
+  "reporting.compare.no_target": "No sales goal for this quarter",
   "reporting.compare.no_targetBody":
-    "Set a sales won target for this scope and quarter under Targets to see the gap and coverage. No target is not a target of zero.",
+    "Publish sales goals for this scope and quarter, or set a sales won target under Targets, to see the gap and coverage. No goal is not a goal of zero.",
   "reporting.compare.fx_missing": "Some deal amounts have no exchange rate",
   "reporting.compare.fx_missingBody":
     "The totals would be too low, so no gap or coverage is shown. Add the missing exchange rate to see them.",
@@ -1517,25 +1520,23 @@ export const en = {
   "reporting.compare.partial_visibilityBody":
     "Some deals or deal amounts in this scope are hidden from you, so your figures are not held against the target for the whole scope.",
   "reporting.compare.incompatible.period":
-    "Pick this fiscal quarter to compare with a target",
+    "Pick this fiscal quarter to compare with a goal",
   "reporting.compare.incompatible.periodBody":
     "The comparison covers the current fiscal quarter only.",
   "reporting.compare.incompatible.scope":
-    "Pick one team to compare with a target",
+    "Pick one team to compare with a goal",
   "reporting.compare.incompatible.scopeBody":
     "The forecast reads one team or the whole company, not several teams together.",
-  "reporting.compare.incompatible.pipeline":
-    "No target is set for this pipeline",
+  "reporting.compare.incompatible.pipeline": "No goal is set for this pipeline",
   "reporting.compare.incompatible.pipelineBody":
-    "The target covers all pipelines and is not split across them. Pick All pipelines to compare.",
+    "The goal covers all pipelines and is not split across them. Pick All pipelines to compare.",
   "reporting.compare.incompatible.manager_call_pipeline":
     "Pick All pipelines to compare the manager’s call",
   "reporting.compare.incompatible.manager_call_pipelineBody":
     "The expected landing is the manager’s call, and a call covers all pipelines.",
-  "reporting.compare.incompatible.currency":
-    "The target is in another currency",
+  "reporting.compare.incompatible.currency": "The goal is in another currency",
   "reporting.compare.incompatible.currencyBody":
-    "It was set in a currency that is no longer the base currency. Set the target again to compare.",
+    "It was set in a currency that is no longer the base currency. Set the goal again to compare.",
   "reporting.this_week": "This week",
   "reporting.this_month": "This month",
   "reporting.last_month": "Last month",
@@ -1546,7 +1547,7 @@ export const en = {
   "reporting.end": "End date (exclusive)",
   "reporting.bookings_trend": "Sales won over time",
   "reporting.stage_distribution": "Open pipeline by stage",
-  "reporting.owner_attainment": "Sales won by salesperson",
+  "reporting.owner_attainment": "Sales won by team member",
   "reporting.stage_age": "Time in current stage",
   "reporting.sdr_outcomes": "Meetings and accepted handoffs",
   "reporting.target_progress": "Progress against target",
@@ -8122,7 +8123,7 @@ export const en = {
   "analytics.overview.pipelineAll": "Use all pipelines",
   "analytics.overview.setTarget": "Set targets",
   "analytics.overview.targetWho":
-    "A colleague who manages targets, most often an admin or a sales manager, can set one.",
+    "A colleague who manages sales goals, most often an admin or a sales manager, can set them.",
   "analytics.overview.targetWhoShort":
     "An admin or a sales manager can usually set one.",
   "analytics.overview.sinceTitle": "Since the last capture",
@@ -8614,7 +8615,7 @@ export const en = {
   "analytics.myTargets": "My targets",
   "analytics.targetOf": "{actual} of {target}",
   "analytics.noTargetSet": "No target set",
-  "analytics.noTargetSetActual": "{actual} so far this month",
+  "analytics.noTargetSetMonth": "No target set for this month",
   "analytics.meetingsAsTheyStand":
     "Meetings you host, by current status. No date filter.",
   "analytics.meetingsBooked": "Booked",
@@ -21443,19 +21444,19 @@ export const en = {
   "review.onlyType": "Showing only: {finding}.",
   "review.showAll": "Show every finding",
   "review.readOnly": "Read only",
-  "analytics.hero.attainment": "Sales won against the quarter’s target",
-  "analytics.hero.attained": "{percent}% of the {target} target",
+  "analytics.hero.attainment": "Sales won against the quarter’s goal",
+  "analytics.hero.attained": "{percent}% of the {target} goal",
   "analytics.hero.remaining": "{amount} still to win",
   "analytics.hero.shortfall": "Projected shortfall {amount}",
   "analytics.hero.surplus": "Projected surplus {amount}",
   "analytics.hero.prior": "Same point of the previous period: {amount}",
-  "analytics.hero.ofTarget": "of {target} target",
-  "analytics.hero.short": "{amount} short of target",
-  "analytics.hero.over": "{amount} over target",
+  "analytics.hero.ofTarget": "of {target} goal",
+  "analytics.hero.short": "{amount} short of goal",
+  "analytics.hero.over": "{amount} over goal",
   "analytics.trajectory.label": "Sales won through the period",
   "analytics.trajectory.today": "Today · {date}",
   "analytics.trajectory.through": "Through {date}",
-  "analytics.trajectory.target": "Target {amount}",
+  "analytics.trajectory.target": "Goal {amount}",
   "analytics.trajectory.projection": "{amount} projected",
   "analytics.trajectory.range": "Modelled finish",
   "analytics.overview.more": "More",
@@ -21898,16 +21899,23 @@ export const en = {
   "progress.yearly": "Yearly",
   "progress.month": "Month",
   "progress.year": "Year",
-  "progress.scope": "Seller or team",
+  "progress.scope": "Team member or team",
   "progress.reading": "Reading progress",
   "progress.myTitle": "Progress",
   "progress.teamTitle": "Team progress",
-  "progress.heading": "{whose} · {scope} · {period} · Figures up to {cutoff}",
-  "progress.closedRevenue": "Closed revenue",
+  "progress.closedRevenue": "Sales won",
   "progress.goal": "Goal",
   "progress.goalLine": "Goal for the period: {goal}",
+  "progress.figuresUpTo": "Figures up to {cutoff}",
+  "progress.ofGoalLine": "of {goal} goal",
+  "progress.toGo": "{amount} to go",
+  "progress.noGoalFor": "No sales goal is published for {period}.",
+  "progress.whoSetsGoals":
+    "A colleague who manages sales goals can publish one.",
+  "progress.setGoals": "Set sales goals",
+  "progress.openInAnalytics": "Open in Analytics",
   "progress.goalIncompleteTeamLine":
-    "Goals incomplete: at least one seller has no monthly goal yet, {subtotal} so far",
+    "Goals incomplete: at least one team member has no monthly goal yet, {subtotal} so far",
   "progress.goalIncompleteLine":
     "Goals incomplete: {set} of {needed} months set, {subtotal} so far",
   "progress.goal.set": "Set",
@@ -21927,11 +21935,11 @@ export const en = {
   "progress.goalMet": "Goal met",
   "progress.aboveGoal": "{amount} above goal",
   "progress.belowGoal": "{amount} below goal",
-  "progress.viewClosedDeals": "View closed deals",
+  "progress.viewClosedDeals": "View won deals",
   "progress.readings": "Revenue readings",
   "progress.productSales": "Product sales",
   "progress.serviceSales": "Services and projects",
-  "progress.planned": "Planned revenue",
+  "progress.planned": "Open pipeline",
   "progress.plannedAt": "Open deals as of {at}",
   "progress.unclassified": "Unclassified",
   "progress.unclassifiedDetail":
@@ -21949,7 +21957,7 @@ export const en = {
     "Some members are hidden, so the team goal is hidden too.",
   "progress.months": "Months of {year}",
   "progress.definition":
-    "Closed revenue is the value of deals won in the period, the same figure Analytics shows. The goal is the sum of the monthly sales goals for the period. A yearly goal needs all twelve months.",
+    "Sales won is the value of deals won in the period, the same figure Analytics shows. The goal is the sum of the published monthly sales goals for the period. A yearly goal needs all twelve months.",
   "progress.work": "Work in progress now",
   "progress.work.leads": "Leads",
   "progress.work.deals": "Deals",
@@ -21966,16 +21974,12 @@ export const en = {
   "progress.work.unnamed": "Unnamed lead",
   "progress.work.empty": "Nothing open in this list.",
   "progress.work.more": "Show more",
-  "progress.plannedAhead": "Planned, not closed yet",
+  "progress.plannedAhead": "Open pipeline, not won yet",
   "progress.rail": "Goal and definition",
-  "progress.definitionTitle": "What counts",
-  "progress.goalBasis": "Where the goal comes from",
   "progress.goalFor": "Goal for {period}",
   "progress.goalMonths": "Months with a goal",
   "progress.goalMonthsSet": "{set} of {needed}",
-  "progress.goalBasisNote":
-    "The goal adds up the published monthly sales goals.",
-  "progress.ofGoal": "Closed revenue of {name} against the goal",
+  "progress.ofGoal": "Sales won by {name} against the goal",
   "progress.yearLine": "{year} so far: {closed} of {goal} ({percent}%)",
   "progress.work.note": "Open now, whatever the period.",
   "progress.work.saleProduct": "Product",
@@ -21985,9 +21989,13 @@ export const en = {
   "progress.work.saleNone": "Unclassified",
   "progress.work.overdue": "Overdue",
   "progress.work.outside": "Outside the period",
-  "goals.controls": "Sales goal year and seller",
   "goals.viewProgress": "View progress",
-  "goals.seller": "Seller",
+  "goals.draftTotal": "{amount} draft",
+  "goals.change": "Change goals",
+  "goals.start":
+    "Enter a yearly goal and spread it, or set each month. Nothing counts until you publish.",
+  "goals.publishReason": "Reason: {reason}",
+  "goals.seller": "Team member",
   "goals.reading": "Reading sales goals",
   "goals.planTitle": "Sales goals of {name} for {year}",
   "goals.state.no_goal": "No plan",
@@ -22009,7 +22017,7 @@ export const en = {
   "goals.event.published": "{name} published the goals",
   "goals.event.discarded": "{name} discarded the draft",
   "goals.event.withdrawn": "{name} withdrew the goals",
-  "goals.roster": "Sellers",
+  "goals.roster": "Team members",
   "goals.status": "Status",
   "goals.yearly": "Yearly goal in {currency}",
   "goals.spread": "Spread equally",

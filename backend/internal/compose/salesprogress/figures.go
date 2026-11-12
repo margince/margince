@@ -39,8 +39,8 @@ func metricAmount(evaluation reporting.Evaluation, metric crmcontracts.Reporting
 	return crmcontracts.SalesProgressAmount{Status: crmcontracts.SalesProgressAmountStatusWithheld}
 }
 
-func fillFigures(frame progressFrame, headline reporting.Evaluation, goals progressGoals, sellers progressSellers, out *crmcontracts.SalesProgress) {
-	out.Goal = goals.over(sellers.owners, frame.months(), frame.period.yearly())
+func fillFigures(frame progressFrame, headline reporting.Evaluation, goals reporting.OwnerGoals, sellers reporting.GoalSellers, out *crmcontracts.SalesProgress) {
+	out.Goal = goals.Over(sellers.Owners, frame.months(), frame.period.yearly())
 	out.Planned = metricAmount(headline, crmcontracts.ReportingMetricIDOpenPipeline)
 	out.Closed = crmcontracts.SalesProgressAmount{Status: crmcontracts.SalesProgressAmountStatusNotStarted}
 	out.Categories = crmcontracts.SalesProgressCategories{Status: crmcontracts.SalesProgressCategoriesStatusNotStarted, ProductItems: []string{}, ServiceItems: []string{}}
@@ -75,7 +75,7 @@ func fillFigures(frame progressFrame, headline reporting.Evaluation, goals progr
 
 // fillMonths adds the twelve months of the selected year from the year's
 // reading, each month's actuals placed by the close date's local month.
-func fillMonths(frame progressFrame, year reporting.Evaluation, goals progressGoals, sellers progressSellers, out *crmcontracts.SalesProgress) {
+func fillMonths(frame progressFrame, year reporting.Evaluation, goals reporting.OwnerGoals, sellers reporting.GoalSellers, out *crmcontracts.SalesProgress) {
 	closed := map[int]int64{}
 	status := metricAmount(year, crmcontracts.ReportingMetricIDBookingsWon).Status
 	for _, fact := range year.Facts {
@@ -87,7 +87,7 @@ func fillMonths(frame progressFrame, year reporting.Evaluation, goals progressGo
 		start := frame.year.StartAt.AddDate(0, month-1, 0)
 		row := crmcontracts.SalesProgressMonth{
 			Month: month, Window: crmcontracts.ReportingWindow{StartAt: start, EndAt: start.AddDate(0, 1, 0)},
-			State: crmcontracts.SalesProgressMonthStateEnded, Goal: goals.over(sellers.owners, []int{month}, false),
+			State: crmcontracts.SalesProgressMonthStateEnded, Goal: goals.Over(sellers.Owners, []int{month}, false),
 			Closed: crmcontracts.SalesProgressAmount{Status: crmcontracts.SalesProgressAmountStatusNotStarted},
 		}
 		switch {
@@ -110,12 +110,12 @@ func fillMonths(frame progressFrame, year reporting.Evaluation, goals progressGo
 
 // fillMembers lists a team's members one by one, each with the facts the
 // headline counted for them, in name order.
-func (h Reading) fillMembers(ctx context.Context, tx pgx.Tx, frame progressFrame, headline reporting.Evaluation, goals progressGoals, sellers progressSellers, out *crmcontracts.SalesProgress) error {
-	out.MembersWithheld = sellers.team && sellers.withheld
-	if !sellers.team || len(sellers.owners) == 0 {
+func (h Reading) fillMembers(ctx context.Context, tx pgx.Tx, frame progressFrame, headline reporting.Evaluation, goals reporting.OwnerGoals, sellers reporting.GoalSellers, out *crmcontracts.SalesProgress) error {
+	out.MembersWithheld = sellers.Team && sellers.Withheld
+	if !sellers.Team || len(sellers.Owners) == 0 {
 		return nil
 	}
-	names, err := seatNames(ctx, tx, sellers.owners)
+	names, err := seatNames(ctx, tx, sellers.Owners)
 	if err != nil {
 		return err
 	}
@@ -131,10 +131,10 @@ func (h Reading) fillMembers(ctx context.Context, tx pgx.Tx, frame progressFrame
 			planned[fact.OwnerID] += *fact.Money
 		}
 	}
-	for _, owner := range sellers.owners {
+	for _, owner := range sellers.Owners {
 		member := crmcontracts.SalesProgressMember{
 			OwnerId: openapi_types.UUID(owner), Name: names[owner],
-			Goal:   goals.over([]ids.UUID{owner}, frame.months(), frame.period.yearly()),
+			Goal:   goals.Over([]ids.UUID{owner}, frame.months(), frame.period.yearly()),
 			Closed: memberAmount(out.Closed.Status, closed[owner]), Planned: memberAmount(out.Planned.Status, planned[owner]),
 		}
 		_, member.DeltaMinor = compared(member.Closed, member.Goal)

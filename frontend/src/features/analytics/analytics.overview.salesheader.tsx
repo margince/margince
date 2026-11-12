@@ -3,7 +3,7 @@
 
 import { type ReactNode, Suspense, useState } from "react";
 import type { components } from "../../api/schema";
-import { Badge, Button } from "../../design-system/atoms";
+import { Button } from "../../design-system/atoms";
 import { ExpanderChevron } from "../../design-system/disclosure";
 import { FilterBar } from "../../design-system/filterbar";
 import { OverflowMenu } from "../../design-system/overflowmenu";
@@ -70,17 +70,19 @@ export function SalesHeader({
             initiativeLabel={evaluation?.context.initiative_label}
             onChange={onChange}
           />
-          <Badge>
+          {/* What the figures cover reads as one line; only a filter the
+              reader can take off is a chip. */}
+          <span>
             {t("analytics.overview.chipPipeline", {
               name: pipeline?.name ?? t("reporting.allPipelines"),
             })}
-          </Badge>
-          <Badge>
+            {" · "}
             {t("analytics.overview.chipClose", {
               window: t(`reporting.${selection.close_window}`),
             })}
-          </Badge>
-          <span>{caption}</span>
+            {" · "}
+            {caption}
+          </span>
         </span>
       }
     >

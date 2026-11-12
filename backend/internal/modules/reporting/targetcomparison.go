@@ -138,7 +138,9 @@ func withStatus(out *crmcontracts.ReportingTargetComparison, status crmcontracts
 func measure(out *crmcontracts.ReportingTargetComparison, ops ForecastOperands, target crmcontracts.ReportingTarget) {
 	value := target.Definition.Value
 	remaining := max(value-ops.WonMinor, 0)
-	out.TargetId, out.TargetRevision = &target.Id, &target.Revision
+	if !fromGoals(target) {
+		out.TargetId, out.TargetRevision = &target.Id, &target.Revision
+	}
 	out.Target, out.Landing, out.Won = money(value), money(ops.LandingMinor), money(ops.WonMinor)
 	out.Gap, out.Remaining, out.OpenPipeline = money(value-ops.LandingMinor), money(remaining), money(ops.OpenMinor)
 	out.Status = crmcontracts.ReportingTargetComparisonStatusTargetReached
