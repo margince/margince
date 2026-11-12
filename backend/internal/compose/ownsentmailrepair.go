@@ -122,7 +122,7 @@ func selectOwnSentMailCandidates(ctx context.Context, tx pgx.Tx, limit int) ([]o
 		   AND (split_part(a.captured_by, ':', 3) = ci.user_id::text
 		     OR (split_part(a.captured_by, ':', 3) = '' AND NOT EXISTS (
 		         SELECT 1 FROM capture_import other
-		          WHERE other.activity_id = a.id AND other.user_id <> ci.user_id)))
+		          WHERE other.activity_id = a.id AND other.user_id IS DISTINCT FROM ci.user_id)))
 		   AND (r.activity_id IS NULL OR r.outcome = $3)
 		 ORDER BY a.id
 		 LIMIT $1`, limit, capture.ProviderFiledMailTransports(), capture.OwnSentMailNotTheSeats, seats, addresses)

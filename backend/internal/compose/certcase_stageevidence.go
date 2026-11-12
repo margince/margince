@@ -210,6 +210,7 @@ type stageEvidenceCase struct {
 // that changed its mind.
 func (c *stageEvidenceCase) Run(ctx context.Context, completer aitasks.Completer) (aitasks.Trace, error) {
 	req := stageEvidenceRequest(c.fixture.Criteria, c.fixture.Spans, string(textlang.English))
+	req.Subjects = model.AboutNoContact("certification corpus")
 	trace := aitasks.Trace{Requests: []model.Request{req}}
 	resp, err := completer.Complete(ctx, req)
 	if err != nil {

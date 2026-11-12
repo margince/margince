@@ -155,7 +155,7 @@ var unguardedByIDUpdates = gatekit.Waive(map[string]string{
 	"internal/modules/consent:ExcuseNoticeCase":              "the excuse path takes the same lockNoticeCase FOR UPDATE before deciding, so the state it validated is the state it writes",
 	"internal/modules/consent:closeOwedCasesTx":              "closes the cases a subject's own reply settles, under the notice case lock the caller took; the statement names the reply as the cause rather than carrying a state it read",
 	"internal/modules/consent:markResolvedTx":                "the submission is held FOR UPDATE by the review that decides it, so the resolution it writes is the one it read",
-	"internal/modules/consent:UpdateDSR":                     "every column coalesces onto the row's own value, so a field this caller did not set keeps what the row holds rather than what this caller last read",
+	"internal/modules/consent:applyDSRUpdateTx":              "every column coalesces onto the row's own value, so a field this caller did not set keeps what the row holds rather than what this caller last read",
 	"internal/modules/contacts:recordSiteReadConfirmation":   "the confirmation rides the company lock the scan took before reading what to confirm",
 	"internal/modules/contacts:collapseGroup":                "the re-normalizer locks its grouping FOR UPDATE before deciding which rows collapse (holdsItsGrouping), which is the lock an interleaved import waits on; that lock is why a sweep can no longer delete a row that stopped being a duplicate",
 	"internal/modules/dealrooms:revokeTx":                    "revoked_at = now() on a seat the caller holds, and a seat revoked twice is revoked; the stamp carries no state read beforehand",

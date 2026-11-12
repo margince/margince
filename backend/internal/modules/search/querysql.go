@@ -277,6 +277,15 @@ func (c *planCompiler) predicates(
 			}
 			continue
 		}
+		if child, held := columns.child(clause.Field); held {
+			fragment, refusal := c.childClause(alias, vocab, at, child, clause)
+			if refusal != nil {
+				refusals = append(refusals, *refusal)
+				continue
+			}
+			fragments = append(fragments, fragment)
+			continue
+		}
 		field, expr, refusal := c.resolve(alias, columns, vocab, at, clause)
 		if refusal != nil {
 			refusals = append(refusals, *refusal)
@@ -315,10 +324,7 @@ func (c *planCompiler) resolve(
 ) (Field, string, *apperrors.FieldRefusal) {
 	field, ok := vocab.Field(clause.Field)
 	if !ok {
-		return Field{}, "", &apperrors.FieldRefusal{
-			Field: at + ".field", Code: CodeUnknownField,
-			Message: "the query plan cannot name " + quote(clause.Field) + " on " + quote(vocab.Target),
-		}
+		return Field{}, "", unnamedFieldRefusal(at, vocab, clause)
 	}
 	expr, ok := columns.expr(alias, field)
 	if !ok {
@@ -328,6 +334,14 @@ func (c *planCompiler) resolve(
 		}
 	}
 	return field, expr, nil
+}
+
+// unnamedFieldRefusal answers a clause naming a field the vocabulary lacks.
+func unnamedFieldRefusal(at string, vocab TargetVocabulary, clause Predicate) *apperrors.FieldRefusal {
+	return &apperrors.FieldRefusal{
+		Field: at + ".field", Code: CodeUnknownField,
+		Message: "the query plan cannot name " + quote(clause.Field) + " on " + quote(vocab.Target),
+	}
 }
 
 // clause renders one `field op value`.
@@ -363,13 +377,25 @@ func (c *planCompiler) clause(expr, at string, field Field, clause Predicate) (s
 	return expr + " " + comparator + " " + operand, nil
 }
 
-// inClause renders a membership test as an explicit parameter list. Each
-// element binds under the field's own kind, so a list carrying one operand of
-// the wrong shape is refused naming that element rather than the clause.
+// inClause renders a membership test as an explicit parameter list.
 func (c *planCompiler) inClause(expr, at string, field Field, clause Predicate) (string, *apperrors.FieldRefusal) {
+	operands, refusal := c.listOperands(at, field, clause)
+	if refusal != nil {
+		return "", refusal
+	}
+	if field.Kind == KindMultiselect {
+		return expr + " && ARRAY[" + strings.Join(operands, ", ") + "]::text[]", nil
+	}
+	return expr + " IN (" + strings.Join(operands, ", ") + ")", nil
+}
+
+// listOperands binds the elements of an `in` list, each under the field's own
+// kind. A list carrying one operand of the wrong shape is refused naming that
+// element rather than the clause.
+func (c *planCompiler) listOperands(at string, field Field, clause Predicate) ([]string, *apperrors.FieldRefusal) {
 	var values []json.RawMessage
 	if err := json.Unmarshal(clause.Values, &values); err != nil {
-		return "", &apperrors.FieldRefusal{
+		return nil, &apperrors.FieldRefusal{
 			Field: at + "." + memberValues, Code: CodeValueMissing,
 			Message: quote(OpIn) + " needs a non-empty " + quote(memberValues) + " list",
 		}
@@ -378,14 +404,45 @@ func (c *planCompiler) inClause(expr, at string, field Field, clause Predicate) 
 	for i, raw := range values {
 		value, cast, refusal := c.bind(at+"."+memberValues+"["+strconv.Itoa(i)+"]", field, raw)
 		if refusal != nil {
-			return "", refusal
+			return nil, refusal
 		}
 		operands[i] = fmt.Sprintf("$%d%s", c.arg(value), cast)
 	}
-	if field.Kind == KindMultiselect {
-		return expr + " && ARRAY[" + strings.Join(operands, ", ") + "]::text[]", nil
+	return operands, nil
+}
+
+// childClause renders a predicate on a field held in a child table. eq and in
+// ask for a child row holding an operand, and neq for none. So a record with
+// no child row is distinct from every value, as an unset column is.
+func (c *planCompiler) childClause(
+	alias string, vocab TargetVocabulary, at string, child childField, clause Predicate,
+) (string, *apperrors.FieldRefusal) {
+	field, ok := vocab.Field(clause.Field)
+	if !ok {
+		return "", unnamedFieldRefusal(at, vocab, clause)
 	}
-	return expr + " IN (" + strings.Join(operands, ", ") + ")", nil
+	if clause.Op == OpIn {
+		operands, refusal := c.listOperands(at, field, clause)
+		if refusal != nil {
+			return "", refusal
+		}
+		return child.match(alias, operands), nil
+	}
+	value, cast, refusal := c.bind(at+"."+memberValue, field, clause.Value)
+	if refusal != nil {
+		return "", refusal
+	}
+	match := child.match(alias, []string{fmt.Sprintf("$%d%s", c.arg(value), cast)})
+	switch clause.Op {
+	case OpEq:
+		return match, nil
+	case OpNeq:
+		return "NOT " + match, nil
+	}
+	return "", &apperrors.FieldRefusal{
+		Field: at + ".op", Code: CodeUnknownOperator,
+		Message: quote(clause.Op) + " is not an operator this workspace can answer",
+	}
 }
 
 // sqlComparators maps the ordered and equality operators onto their SQL

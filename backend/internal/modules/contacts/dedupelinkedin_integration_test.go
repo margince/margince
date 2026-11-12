@@ -16,6 +16,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -39,7 +40,7 @@ func TestTheLinkedInProfileKeyAgreesInGoAndSQL(t *testing.T) {
 		want, ok := linkedInProfileKey(handle)
 		var got *string
 		if err := e.store.tx(ctx, func(tx pgx.Tx) error {
-			return tx.QueryRow(ctx, `SELECT `+linkedInProfileKeySQL("$1::text"), handle).Scan(&got)
+			return tx.QueryRow(ctx, `SELECT `+storekit.LinkedInProfileKeySQL("$1::text"), handle).Scan(&got)
 		}); err != nil {
 			t.Fatalf("ask SQL about %q: %v", handle, err)
 		}

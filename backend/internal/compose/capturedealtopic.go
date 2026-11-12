@@ -128,8 +128,8 @@ func (c dealTopicChecker) Check(ctx context.Context, mail ids.ActivityID, deals 
 		return capture.DealTopic{}, errors.Join(capture.ErrTopicAbstained, err)
 	}
 	about := ai.WithSubject(ctx, mail.Ref(), in.Subject)
-	resp, err := ai.Ask(about, c.brain, dealTopicRequest(in), dealTopicShapeValid(in))
-	if sweepPaused(err) || declinedByTheModels(err) {
+	resp, err := ai.Ask(about, c.brain, dealTopicRequest(in, model.AboutActivities(mail.UUID)), dealTopicShapeValid(in))
+	if sweepPaused(err) || declinedByTheModels(err) || errors.Is(err, ai.ErrSubjectRestricted) {
 		return capture.DealTopic{}, fmt.Errorf("%w: %w", capture.ErrTopicAbstained, err)
 	}
 	if err != nil {
@@ -176,7 +176,7 @@ func dealTopicOf(results []dealTopicResult) (capture.DealTopic, error) {
 //
 //promptlang:exempt the reply is a closed set of verdict enum values keyed by deal id, never a sentence — validateDealTopicPayload refuses anything outside dealTopicSchema's vocabulary.
 //promptvoice:exempt the reply is a closed set of verdict enum values keyed by deal id, never a sentence.
-func dealTopicRequest(in dealTopicInput) model.Request {
+func dealTopicRequest(in dealTopicInput, about *model.Subjects) model.Request {
 	fence := promptfence.New()
 	return model.Request{
 		System:         dealtopicprompt.SystemFor(fence),
@@ -184,6 +184,7 @@ func dealTopicRequest(in dealTopicInput) model.Request {
 		MaxTokens:      ai.ReasoningOutputMaxTokens,
 		ResponseSchema: dealTopicSchema(dealtopicprompt.Refs(in).All()),
 		SecretStripper: ai.NewSecretStripper(),
+		Subjects:       about,
 	}
 }
 

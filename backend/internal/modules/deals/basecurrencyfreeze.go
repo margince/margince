@@ -76,12 +76,12 @@ func BaseCurrencyLock(settingKey string) func(context.Context, pgx.Tx) (currency
 // Runs inside the caller's write transaction, so the answer cannot go stale
 // between the check and the write it guards.
 func lockFacts(ctx context.Context, tx pgx.Tx, settingKey string) (currencylock.Lock, bool, error) {
-	converted, err := frozenRateCount(ctx, tx)
+	frozen, converted, err := frozenRateCount(ctx, tx)
 	if err != nil {
 		return currencylock.Lock{}, false, err
 	}
 	if converted > 0 {
-		return currencylock.Lock{Reason: currencylock.RatesFrozen, Count: converted}, true, nil
+		return currencylock.Lock{Reason: currencylock.RatesFrozen, Count: converted, Frozen: frozen}, true, nil
 	}
 	priced, base, err := ratesPricedAgainstBase(ctx, tx, settingKey)
 	if err != nil {
@@ -94,20 +94,23 @@ func lockFacts(ctx context.Context, tx pgx.Tx, settingKey string) (currencylock.
 }
 
 // frozenRateCount counts the records whose worth is already expressed against
-// the current base. One is enough to freeze it; the count exists for the reason.
-func frozenRateCount(ctx context.Context, tx pgx.Tx) (int, error) {
+// the current base, per table and in total. One is enough to freeze it; the
+// counts exist for the reason, which names each table that counted.
+func frozenRateCount(ctx context.Context, tx pgx.Tx) ([]currencylock.Counted, int, error) {
 	total := 0
+	counted := make([]currencylock.Counted, 0, len(frozenRateTables))
 	for _, table := range frozenRateTables {
 		var n int
 		// The table name comes from the package-level list above, never from a
 		// caller, so the interpolation carries nothing a request chose.
 		if err := tx.QueryRow(ctx,
 			`SELECT count(*) FROM `+table+` WHERE fx_rate_to_base IS NOT NULL`).Scan(&n); err != nil {
-			return 0, fmt.Errorf("counting %s rows with a frozen conversion rate: %w", table, err)
+			return nil, 0, fmt.Errorf("counting %s rows with a frozen conversion rate: %w", table, err)
 		}
+		counted = append(counted, currencylock.Counted{Table: table, Count: n})
 		total += n
 	}
-	return total, nil
+	return counted, total, nil
 }
 
 // ratesPricedAgainstBase counts the sheet rows converting into the base the

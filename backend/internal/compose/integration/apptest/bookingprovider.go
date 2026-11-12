@@ -16,6 +16,8 @@ import (
 	"strings"
 	"sync"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/platform/netguard"
 )
 
 // BookingProvider stands in for Google's OAuth and calendar hosts in front of
@@ -92,7 +94,7 @@ func EnableGoogleBookingPage(t *testing.T, e *AppEnv) {
 		t.Fatal(err)
 	}
 	redirect := e.Client.CheckRedirect
-	e.Client.CheckRedirect = func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }
+	e.Client.CheckRedirect = netguard.RefuseRedirect
 	status := e.Call(t, "GET", "/v1/connectors/gcal/callback?code=fixture&state="+url.QueryEscape(auth.Query().Get("state")), nil, nil, nil)
 	e.Client.CheckRedirect = redirect
 	if status != http.StatusFound && status != http.StatusSeeOther {

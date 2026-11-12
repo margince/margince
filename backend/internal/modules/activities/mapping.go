@@ -205,10 +205,11 @@ func activityUpdateInput(req crmcontracts.UpdateActivityRequest, ifVersion *int6
 		// Carried, not checked here: the kind this must pair with belongs to the
 		// stored row, and only the store has read it. UpdateActivity refuses the
 		// mismatch with the same MeetingStatusKindError create raises.
-		MeetingStatus: meetingStatusArg(req.MeetingStatus),
-		CallOutcome:   callOutcomeArg(req.CallOutcome),
-		IfVersion:     ifVersion,
-		CustomFields:  req.AdditionalProperties,
+		MeetingStatus:    meetingStatusArg(req.MeetingStatus),
+		CallOutcome:      callOutcomeArg(req.CallOutcome),
+		IfVersion:        ifVersion,
+		CustomFields:     req.AdditionalProperties,
+		doneAtAnyVersion: true,
 	}
 }
 

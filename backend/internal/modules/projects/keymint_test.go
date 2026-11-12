@@ -69,7 +69,7 @@ func TestABodyStillCarryingAKeyIsRefused(t *testing.T) {
 	if err == nil {
 		t.Fatal("a body naming a key was accepted; the caller would believe it set one")
 	}
-	if !strings.Contains(err.Error(), "cannot be set") {
+	if !strings.Contains(err.Error(), "cannot be changed") {
 		t.Errorf("the refusal does not say the key is not the caller's to set: %v", err)
 	}
 }

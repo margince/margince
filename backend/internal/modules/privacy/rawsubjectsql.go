@@ -19,6 +19,8 @@ const (
 	sqlArgEmails  = "emails"
 	sqlArgLead    = "lead"
 	sqlArgKey     = "key"
+	sqlArgContact = "contact"
+	sqlArgKind    = "kind"
 )
 
 func rawEmailMatchSQL(payload, email string) string {

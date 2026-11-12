@@ -182,6 +182,12 @@ func newAttentionHandlers(pool *pgxpool.Pool, svc *approvals.Service) attention.
 	return attention.NewHandlers(newAttentionService(pool, svc, func() time.Time { return time.Now().UTC() }))
 }
 
+// NewAttentionService is the production attention binding, for a test outside
+// this package.
+func NewAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attention.Clock) *attention.Service {
+	return newAttentionService(pool, svc, now)
+}
+
 // newAttentionService binds every lane to the module that owns what it shows.
 //
 // Separate from the handler above so a test can assemble the day through the

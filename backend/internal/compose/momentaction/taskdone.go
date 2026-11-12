@@ -3,8 +3,9 @@
 
 package momentaction
 
-// Whether our later mail kept a promise task, asked the same way on every
-// surface that lists such tasks: the Worklist and the company page.
+// Whether our later mail kept a promise task. Every surface that lists such
+// tasks asks it the same way: the Worklist, the company page and the contact
+// page.
 
 import (
 	"context"
@@ -16,6 +17,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -38,17 +40,46 @@ type DoneCandidate struct {
 }
 
 // AskTasksDone answers, per task, the question its newest unanswered follow-up
-// asks. It reads the follow-up rule the contact page reads
-// (activities.PromiseFollowUpsTx). A Not yet the reader gave, on any surface,
-// keeps the plain row. Only a reader who may complete a task is asked.
+// asks, in the shape the Worklist and the company page's rows carry.
 func AskTasksDone(ctx context.Context, tx pgx.Tx, candidates []DoneCandidate, asOf time.Time) (map[ids.UUID]crmcontracts.WorklistMayBeDone, error) {
+	asked, err := TasksDoneTx(ctx, tx, candidates, asOf)
+	if err != nil {
+		return nil, err
+	}
+	out := make(map[ids.UUID]crmcontracts.WorklistMayBeDone, len(asked))
+	for task, q := range asked {
+		out[task] = crmcontracts.WorklistMayBeDone{
+			ContactId: openapi_types.UUID(q.Contact), EmailActivityId: openapi_types.UUID(q.Sent.EmailID),
+			WroteAt: q.Sent.At, WrotePrecision: crmcontracts.OccurredPrecision(q.Sent.Precision),
+			ClaimKey: q.Key, EvidenceFingerprint: q.Fingerprint,
+		}
+	}
+	return out, nil
+}
+
+// TaskAsked is the question one promise task asks. It names the recipient our
+// mail reached, that mail, and the key and fingerprint a Not yet is tied to.
+// The recipient's contact page keeps the Not yet.
+type TaskAsked struct {
+	Contact     ids.UUID
+	Sent        activities.PromiseFollowUp
+	Key         string
+	Fingerprint string
+}
+
+// TasksDoneTx is, per task, the question its newest unanswered follow-up asks.
+// Every surface that lists a promise task asks through it. It reads the
+// follow-up rule claims are asked by (activities.PromiseFollowUpsTx). A Not
+// yet the reader gave, on any surface, keeps the plain row. Only a reader who
+// may complete a task is asked.
+func TasksDoneTx(ctx context.Context, tx pgx.Tx, candidates []DoneCandidate, asOf time.Time) (map[ids.UUID]TaskAsked, error) {
 	candidates, err := completable(ctx, tx, candidates)
 	if err != nil {
 		return nil, err
 	}
 	bases, byBasis, keys := promiseBases(candidates)
 	if len(bases) == 0 {
-		return map[ids.UUID]crmcontracts.WorklistMayBeDone{}, nil
+		return map[ids.UUID]TaskAsked{}, nil
 	}
 	followUps, err := activities.PromiseFollowUpsTx(ctx, tx, bases, asOf)
 	if err != nil {
@@ -118,7 +149,7 @@ type doneAsked struct {
 func askTasks(
 	ctx context.Context, candidates []DoneCandidate, byBasis map[ids.UUID]promiseBasisOwner,
 	followUps map[ids.UUID]activities.PromiseFollowUp, setAside map[DoneSetAside]bool,
-) map[ids.UUID]crmcontracts.WorklistMayBeDone {
+) map[ids.UUID]TaskAsked {
 	holders := map[ids.UUID]string{}
 	for _, task := range candidates {
 		holders[task.TaskID] = HeldMarker(ctx, task.Assignee)
@@ -129,7 +160,7 @@ func askTasks(
 		fingerprint := DoneFingerprint(openapi_types.UUID(owner.task), sent, holders[owner.task])
 		byTask[owner.task] = append(byTask[owner.task], doneAsked{contact: owner.contact, sent: sent, fingerprint: fingerprint})
 	}
-	out := map[ids.UUID]crmcontracts.WorklistMayBeDone{}
+	out := map[ids.UUID]TaskAsked{}
 	for _, task := range candidates {
 		key := DoneKey(openapi_types.UUID(task.TaskID))
 		found, ok := newestUnanswered(byTask[task.TaskID], func(a doneAsked) bool {
@@ -138,11 +169,7 @@ func askTasks(
 		if !ok {
 			continue
 		}
-		out[task.TaskID] = crmcontracts.WorklistMayBeDone{
-			ContactId: openapi_types.UUID(found.contact), EmailActivityId: openapi_types.UUID(found.sent.EmailID),
-			WroteAt: found.sent.At, WrotePrecision: crmcontracts.OccurredPrecision(found.sent.Precision),
-			ClaimKey: key, EvidenceFingerprint: found.fingerprint,
-		}
+		out[task.TaskID] = TaskAsked{Contact: found.contact, Sent: found.sent, Key: key, Fingerprint: found.fingerprint}
 	}
 	return out
 }
@@ -176,4 +203,56 @@ func newestUnanswered(candidates []doneAsked, answered func(doneAsked) bool) (do
 		return doneAsked{}, false
 	}
 	return newest, true
+}
+
+// TaskClaims reads the recipient claims filed on tasks.
+type TaskClaims interface {
+	ClaimsOnTasks(ctx context.Context, tasks []ids.UUID) ([]contacts.TaskClaim, error)
+}
+
+// PromiseTask is a task a surface lists: the system that wrote it, the message
+// it was read out of, and who holds it.
+type PromiseTask struct {
+	ID       ids.UUID
+	System   string
+	Source   *ids.UUID
+	Assignee *ids.UUID
+}
+
+// DoneCandidates are the listed tasks written for a promise read out of a
+// message, each with the recipients whose claim on it is still open. A reply
+// reminder has its own judge, and a hand task names no promise.
+func DoneCandidates(ctx context.Context, claims TaskClaims, tasks []PromiseTask) ([]DoneCandidate, error) {
+	byTask := map[ids.UUID]*DoneCandidate{}
+	var named []ids.UUID
+	for _, task := range tasks {
+		if task.System != activities.CommitmentTaskSource || task.Source == nil {
+			continue
+		}
+		byTask[task.ID] = &DoneCandidate{TaskID: task.ID, SourceActivityID: *task.Source, Assignee: task.Assignee}
+		named = append(named, task.ID)
+	}
+	if len(named) == 0 {
+		return nil, nil
+	}
+	recipients, err := claims.ClaimsOnTasks(ctx, named)
+	if errors.Is(err, apperrors.ErrPermissionDenied) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	for _, claim := range recipients {
+		if claim.Task == nil || !OpenRecipient(claim.Status) {
+			continue
+		}
+		if candidate, ok := byTask[*claim.Task]; ok {
+			candidate.Recipients = append(candidate.Recipients, claim.Contact)
+		}
+	}
+	out := make([]DoneCandidate, 0, len(named))
+	for _, id := range named {
+		out = append(out, *byTask[id])
+	}
+	return out, nil
 }

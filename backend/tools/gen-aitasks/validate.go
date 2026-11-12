@@ -13,6 +13,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"strings"
 )
 
 // validate enforces the contract's own invariants: every tier a ladder
@@ -130,8 +131,33 @@ func validateTask(name string, def taskDef, tierSet map[string]bool) error {
 	if err := validateDecision(name, def); err != nil {
 		return err
 	}
+	if err := validateSubjectRestriction(name, def); err != nil {
+		return err
+	}
 	return def.CompanyContext.validate(name)
 }
+
+// validateSubjectRestriction holds the restriction posture: honour, or none
+// with the reason the task reads no contact's data.
+func validateSubjectRestriction(name string, def taskDef) error {
+	switch {
+	case def.SubjectRestriction == restrictionHonour && def.SubjectRestrictionReason == "":
+		return nil
+	case def.SubjectRestriction == restrictionHonour:
+		return fmt.Errorf("task %q: subject_restriction honour takes no subject_restriction_reason", name)
+	case def.SubjectRestriction == restrictionNone && strings.TrimSpace(def.SubjectRestrictionReason) == "":
+		return fmt.Errorf("task %q: subject_restriction none needs a subject_restriction_reason saying why it reads no contact's data", name)
+	case def.SubjectRestriction == restrictionNone:
+		return nil
+	}
+	return fmt.Errorf("task %q: subject_restriction must be %q or %q, got %q", name, restrictionHonour, restrictionNone, def.SubjectRestriction)
+}
+
+// The two restriction postures a task declares.
+const (
+	restrictionHonour = "honour"
+	restrictionNone   = "none"
+)
 
 // validateDecision refuses a decision form on a task that cannot carry one.
 // A decision attempt is a network call ahead of the ladder, and only a

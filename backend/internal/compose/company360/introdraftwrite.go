@@ -117,6 +117,7 @@ func introRequest(facts introFacts) model.Request {
 		MaxTokens:      ai.ReasoningOutputMaxTokens,
 		ResponseSchema: introSchema(),
 		SecretStripper: ai.NewSecretStripper(),
+		Subjects:       model.AboutContacts(facts.subjects...),
 	}
 }
 

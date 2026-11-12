@@ -60,6 +60,9 @@ func ClassifyBacklogPredicate(rulesetParam string) string {
 	  -- path (A165/ADR-0114 §2), and the label pass is a model call over its
 	  -- text — precisely the further processing the hold bars.
 	  AND restricted_at IS NULL
+	  -- Nor is mail on which a contact restricted under GDPR Art. 18 writes or
+	  -- reads: it rejoins the backlog once the restriction is lifted.
+	  AND NOT ` + auth.ActivityRestrictedSQL("activity.id") + `
 	  -- Every rung declined to label it under THIS prompt
 	  -- (MarkCaptureLabelDeclined): asking again would be refused again, and
 	  -- paid for on every tick. A decline under an older prompt is re-offered.

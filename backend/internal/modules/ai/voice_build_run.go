@@ -171,7 +171,8 @@ func loadVoiceSamples(ctx context.Context, tx pgx.Tx, profileID ids.UUID) ([]Voi
 		FROM voice_corpus_source
 		WHERE voice_profile_id = $1 AND NOT excluded AND archived_at IS NULL
 		  AND content_erased_at IS NULL
-		ORDER BY occurred_at, id`, profileID)
+		  AND NOT (starts_with(source_ref, $2) AND `+auth.ActivityRestrictedSQL("substr(voice_corpus_source.source_ref, length($2) + 1)::uuid")+`)
+		ORDER BY occurred_at, id`, profileID, sentMailRefPrefix)
 	if err != nil {
 		return nil, err
 	}

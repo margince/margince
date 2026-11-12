@@ -23,6 +23,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -178,6 +179,8 @@ func (s *ThreadVerdictStore) ClaimDue(ctx context.Context, limit int) ([]Pending
 			   SELECT id FROM capture_thread_verdict
 			    WHERE `+threadOwedAnswerSQL+`
 			      AND next_attempt_at <= now()
+			      AND (capture_thread_verdict.first_activity_id IS NULL
+			           OR NOT `+auth.ActivityRestrictedSQL("capture_thread_verdict.first_activity_id")+`)
 			      AND (claimed_until IS NULL OR claimed_until <= now())
 			    ORDER BY next_attempt_at
 			    LIMIT `+p(limit)+`

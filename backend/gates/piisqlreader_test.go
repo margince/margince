@@ -117,6 +117,8 @@ var erasureCascadeFiles = []string{
 	"internal/modules/privacy/activityerase.go",
 	"internal/modules/privacy/commitmenterasure.go",
 	"internal/modules/privacy/activitycontenterasure.go",
+	// armSuppression, the erasure list writer every erasure calls.
+	"internal/modules/privacy/suppressionlift.go",
 	"internal/modules/privacy/reportingredaction.go",
 	"internal/modules/privacy/reportingquestions.go",
 	"internal/modules/privacy/reportingbindings.go",

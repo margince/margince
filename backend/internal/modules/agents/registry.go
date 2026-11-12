@@ -108,6 +108,8 @@ type Registry struct {
 	// A registry composed without one closes deals without asking, which is
 	// the behaviour this field exists to end.
 	closeTasks DealTaskSettler
+	// recordSidecars reads what read_record adds beside a record's own fields.
+	recordSidecars RecordSidecarsFor
 	// seats names the owner every served record row carries (queryowner.go).
 	// Nil leaves owners unnamed but still disclosed.
 	seats SeatNamer

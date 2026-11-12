@@ -40,15 +40,16 @@ func (a *assembly) readTimeline() error {
 		conversationAsOf = &a.now
 	}
 	data, page, err := activities.ListActivitiesTx(a.ctx, a.tx, activities.ListActivitiesInput{
-		EntityType:       &entityType,
-		EntityID:         &companyUUID,
-		Limit:            &limit,
-		WithinProjectID:  a.opts.ProjectID,
-		WrittenByHuman:   a.opts.WrittenByHumanOnly,
-		PartyContactID:   a.opts.PartyContactID,
-		ConversationAsOf: conversationAsOf,
-		AsOf:             &a.now,
-		Columns:          a.activityColumns,
+		EntityType:         &entityType,
+		EntityID:           &companyUUID,
+		Limit:              &limit,
+		WithinProjectID:    a.opts.ProjectID,
+		WrittenByHuman:     a.opts.WrittenByHumanOnly,
+		PartyContactID:     a.opts.PartyContactID,
+		ConversationAsOf:   conversationAsOf,
+		AsOf:               &a.now,
+		Columns:            a.activityColumns,
+		CollapseSeatCopies: true,
 	})
 	if err != nil {
 		return err

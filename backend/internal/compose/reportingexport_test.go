@@ -115,3 +115,31 @@ func TestReportingCSVCarriesTheLandingsBasisAndRange(t *testing.T) {
 		}
 	}
 }
+
+// An owner chart the switch limits to the reader's own row says so on that
+// row, with the sentence the page draws under the chart.
+func TestReportingCSVCarriesAWithheldChartsFlagAndReason(t *testing.T) {
+	sold := float64(4)
+	reason := reportingCoverageWords.IndividualOff.En
+	var evaluation crmcontracts.ReportingEvaluation
+	evaluation.Metrics = []crmcontracts.ReportingMetric{{Id: reportingLeadsCreated, Unit: reportingCountUnit, Value: &sold, Coverage: crmcontracts.ReportingCoverage{Status: "ok"}}}
+	evaluation.Charts = []crmcontracts.ReportingChart{{
+		Metric: reportingLeadsCreated, Kind: reportingOwnerAttainment, Unit: reportingCountUnit,
+		Coverage: crmcontracts.ReportingCoverage{Status: "ok", Withheld: true, Reason: &reason},
+		Points:   []crmcontracts.ReportingPoint{{Key: "owner:me", Label: "Me", Value: &sold, Status: "ok"}},
+	}}
+	rows := reportingCSVRows(evaluation)
+	block, withheld, why := slices.Index(rows[0], "block"), slices.Index(rows[0], "withheld"), slices.Index(rows[0], "coverage_reason")
+	if withheld < 0 || why < 0 {
+		t.Fatalf("header %v has no withheld or coverage_reason column", rows[0])
+	}
+	for _, row := range rows[1:] {
+		want := [2]string{"false", ""}
+		if row[block] == string(reportingOwnerAttainment) {
+			want = [2]string{"true", reason}
+		}
+		if got := [2]string{row[withheld], row[why]}; got != want {
+			t.Fatalf("row %v says %v, want %v", row, got, want)
+		}
+	}
+}
