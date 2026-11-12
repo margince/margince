@@ -184,6 +184,7 @@ func newCollectionsHandlers(pool *pgxpool.Pool) collectionsHandlers {
 // dependency the literal had to build first.
 func (s *Server) wireSurfaces(pool *pgxpool.Pool, log *slog.Logger) {
 	s.dataTaskHandlers = dataTaskHandlers{pool: pool}
+	s.erasureReturnHandlers = newErasureReturnHandlers(pool)
 	s.wireStagedSurfaces(pool)
 	s.wireAnalyticsSurface(pool)
 	s.wireCaptureSettingsSurface(pool, log)

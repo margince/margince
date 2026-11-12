@@ -154,11 +154,13 @@ func callsName(fn *ast.FuncDecl, name string) bool {
 // selfBookingAdmissionSites are the only files that may name the one exemption
 // from the erasure check. Storekit declares it, the contact address writer
 // honours it, and the public booking page passes it. A refusal there would
-// tell an anonymous caller that an address was erased.
+// tell an anonymous caller that an address was erased. The page's return door
+// passes it too, inside the transaction that lifts the erasure.
 var selfBookingAdmissionSites = map[string]int{
 	"internal/platform/database/storekit/suppression.go": 1,
 	"internal/modules/contacts/contact_children.go":      1,
 	"internal/modules/activities/scheduling_public.go":   1,
+	"internal/compose/erasurereturn.go":                  1,
 }
 
 func TestOnlyThePublicBookingPagePassesTheSelfBookingAdmission(t *testing.T) {

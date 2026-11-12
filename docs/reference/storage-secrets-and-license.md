@@ -60,14 +60,16 @@ command line, where any user on the machine can read argv.
 
 ### Keys derived from the root key
 
-Two more keys are derived from the root key with `HKDF-SHA256`, each under its own label. Neither is
-stored anywhere, and neither needs a setting of its own.
+Three more keys are derived from the root key with `HKDF-SHA256`, each under its own label. None is
+stored anywhere, and none needs a setting of its own.
 
 - **The erasure list key.** The erasure list, the address hashes the `anonymize` action keeps, and
   the address hash of a failed login are each an HMAC under it. Each row records the key's id
   (`key_id`, `address_key_id`, `anonymized_address_key_id`, `email_key_id`).
 - **The preference link key.** A preference link names its row and carries an HMAC under it, so
   the database holds no link that works.
+- **The return link key.** The link an erased subject confirms to be stored again carries the
+  request and an HMAC under it. Without a root key, no such link is mailed or accepted.
 
 The data task `core/1794125373_keyed_privacy_identifiers` moves rows written before the key to the
 keyed form, and hashes the preference links stored before it. Until it reaches a row, the row's

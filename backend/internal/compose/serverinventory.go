@@ -149,6 +149,7 @@ type Server struct {
 	dataResetHandlers
 	jobHealthHandlers
 	dataTaskHandlers
+	erasureReturnHandlers
 	captureHealthHandlers
 	extensionIngestHealthHandlers
 	recoveryHealthHandlers

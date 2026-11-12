@@ -35,6 +35,7 @@ func buildCatalog() map[Language]Copy {
 	unsubscribeLines(line)
 	resetLines(line)
 	inviteLines(line)
+	returnLines(line)
 	weeklyLines(line)
 	morningLines(line)
 	notificationLines(line)
@@ -105,6 +106,34 @@ func inviteLines(line writeLine) {
 		"This invitation is valid for seven days. If you did not expect it, you can ignore this email.",
 		"Diese Einladung ist sieben Tage gültig. Wenn du sie nicht erwartet hast, kannst du diese E-Mail ignorieren.",
 		"Lời mời có hiệu lực trong bảy ngày. Nếu không chờ lời mời này, bạn có thể bỏ qua email.")
+}
+
+// ReturnConsentVersion names the wording ReturnConsentWording holds. Change it
+// with the wording.
+const ReturnConsentVersion = "erasure-return-2026-11"
+
+// returnLines is the link an erased subject asked for, to be stored again.
+func returnLines(line writeLine) {
+	line(func(c *Copy) *string { return &c.ReturnSubject },
+		"Confirm that we may store your details again",
+		"Bestätigen Sie, dass wir Ihre Daten wieder speichern dürfen",
+		"Xác nhận cho phép chúng tôi lưu lại thông tin của quý khách")
+	line(func(c *Copy) *string { return &c.ReturnIntro },
+		"You asked us to store your details again after they were erased. We store them only once you confirm. The link is valid for 24 hours and works once.",
+		"Sie haben uns gebeten, Ihre Daten nach der Löschung wieder zu speichern. Wir speichern sie erst, wenn Sie bestätigen. Der Link ist 24 Stunden gültig und funktioniert einmal.",
+		"Quý khách đã yêu cầu chúng tôi lưu lại thông tin sau khi đã xóa. Chúng tôi chỉ lưu khi quý khách xác nhận. Liên kết có hiệu lực trong 24 giờ và chỉ dùng được một lần.")
+	line(func(c *Copy) *string { return &c.ReturnAction },
+		"Store my details again",
+		"Meine Daten wieder speichern",
+		"Lưu lại thông tin của tôi")
+	line(func(c *Copy) *string { return &c.ReturnConsentWording },
+		"You agree that we store your name and email address again and contact you about your meetings.",
+		"Sie stimmen zu, dass wir Ihren Namen und Ihre E-Mail-Adresse wieder speichern und Sie zu Ihren Terminen kontaktieren.",
+		"Quý khách đồng ý để chúng tôi lưu lại tên và địa chỉ email, và liên hệ với quý khách về các cuộc hẹn.")
+	line(func(c *Copy) *string { return &c.ReturnIgnore },
+		"If you did not ask for this, ignore this email. Nothing is stored.",
+		"Wenn Sie das nicht angefragt haben, ignorieren Sie diese E-Mail. Es wird nichts gespeichert.",
+		"Nếu quý khách không yêu cầu, hãy bỏ qua email này. Sẽ không có gì được lưu.")
 }
 
 // morningLines is the daily brief.

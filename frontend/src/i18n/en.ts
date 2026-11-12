@@ -12921,6 +12921,14 @@ export const en = {
   "book.pageTitle": "Book a meeting with {host}",
   "book.pageTitleGeneric": "Book a meeting",
   "book.meetingTitle": "Your meeting",
+  "book.returnTitle": "Store your details again",
+  "book.returnBody":
+    "You asked for your details to be stored again after they were erased. Nothing is stored until you confirm.",
+  "book.returnStoredAs": "You will be stored as {name}, with this consent:",
+  "book.returnAction": "Store my details again",
+  "book.returnDone": "Your details are stored again.",
+  "book.returnSpent":
+    "This link was used already or has expired. Ask for a new one on the booking page.",
   "book.attendee": "Attendee email",
   "book.subject": "Meeting via Margince",
   "book.name": "Your name",
