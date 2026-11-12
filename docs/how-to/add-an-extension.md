@@ -1254,20 +1254,21 @@ mail, err := rt.Activities().Mail(ctx, member, d.Entity.ID, extension.MailQuery{
   teams on it. It leaves out agents, members who cannot sign in, users taken off the deal, and archived teams. It stops at
   `extension.MaxResponsible` colleagues.
 - **`Emails` takes at most `extension.MaxResponsible` users**, so the list `Responsible` gave always fits.
-- **`Mail` answers the emails of one deal for one member.** It is answered under that member's own rights, so a deal they cannot open answers `ErrNotFound`. It tells a unit if a mail is sent and if a reply is in. Each
+- **`Mail` answers the emails of one deal.** It tells a unit if a mail is sent and if a reply is in. Each
   `MailSummary` holds the id, the direction, the time, what kind of sender wrote it (empty for a human) and the
   deal id. It holds no subject, body, address or file. It leaves out mail kept private to its senders and
   receivers, archived mail unless you set `IncludeArchived`, and mail held back from reading. It gives pages,
   newest first, of at most `extension.MaxReadPage`.
+
+  You name the member it answers for. A deal that member cannot open answers `ErrNotFound`.
 - **`SetAside` reads who put a contact aside.** A colleague can put a contact aside for up to 90 days, or for
   good. `SetAside().Contact(ctx, user, contact)` answers `none`, `until` with a date, or `permanent`. A contact
   whose time ran out answers `none`. `Contacts` takes up to `extension.MaxResponsible` contacts for one colleague
   in one call, so a nightly job does not ask once per contact.
 
-  It answers only for a colleague who connected your unit, which means they hold one of its user secrets. Any other
-  colleague answers `ErrForbidden`. It gives that colleague's own answer, never another's, and nothing else about the contact. A contact or a
-  colleague that is not there answers `none`. It only reads: the colleague changes it through the product's own
-  routes.
+  It answers only for a colleague who connected your unit and has not left. Any other colleague answers `ErrForbidden`.
+  It gives that colleague's own answer, never another's, and nothing else about the contact. A contact that is not
+  there answers `none`. It only reads: the colleague changes it through the product's own routes.
 - **A private reply is not seen.** A reply that sits only in a private mailbox is not in `Mail`. So "no reply
   yet" is a reminder for a colleague to check, not a fact. Never act on it alone, for example by sending a
   message.

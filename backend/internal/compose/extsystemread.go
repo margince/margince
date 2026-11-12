@@ -102,6 +102,9 @@ func declaredSystemReads(unit string) []extension.SystemRead {
 // systemReadTraced is the action a system read leaves in system_log.
 const systemReadTraced = "extension_system_read"
 
+// traceReadKey names which read the trace row is about.
+const traceReadKey = "read"
+
 // traceSystemRead writes one system_log row for a read: the unit, which read,
 // the record it named and the time. It commits on its own, before the answer
 // goes back, so a unit cannot read and then roll the trace away. A read whose
@@ -115,7 +118,7 @@ func (r *callRuntime) traceSystemRead(ctx context.Context, read extension.System
 	}
 	err := database.WithWorkspaceTx(ctx, r.deps.pool, func(tx pgx.Tx) error {
 		_, err := storekit.LogSystem(ctx, tx, systemReadTraced, map[string]any{
-			"extension": r.unit, "read": string(read), "record_type": recordType, "record_id": recordID,
+			"extension": r.unit, traceReadKey: string(read), "record_type": recordType, "record_id": recordID,
 		})
 		return err
 	})
@@ -415,6 +418,9 @@ func (d systemDirectory) Emails(ctx context.Context, users []extension.UserID) (
 			return nil, err
 		}
 		wanted = append(wanted, id)
+	}
+	if len(wanted) == 0 {
+		return map[extension.UserID]string{}, nil
 	}
 	if err := d.rt.traceSystemRead(ctx, extension.SystemReadDirectory, "user", fmt.Sprintf("%d users", len(wanted))); err != nil {
 		return nil, err

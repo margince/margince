@@ -106,6 +106,9 @@ func extensionMemberConsented(ctx context.Context, pool *pgxpool.Pool, unit stri
 	if pool == nil {
 		return false, errExtensionRuntimeUnwired
 	}
+	if len(declaredUserSecretKeys(unit)) == 0 {
+		return false, nil
+	}
 	var consented bool
 	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
 		var err error
