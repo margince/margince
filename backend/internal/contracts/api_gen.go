@@ -42581,6 +42581,9 @@ type ConnectSharedMailboxRequest struct {
 	// Address The mailbox address. Reconnecting the same address reuses its mailbox.
 	Address openapi_types.Email `json:"address"`
 
+	// BackupOwnerId The backup owner. It must be an active member of the reader team who can hold work (else `422` `backup_owner_not_in_reader_team`). Absent names none on a new mailbox and keeps a reconnected one's.
+	BackupOwnerId *openapi_types.UUID `json:"backup_owner_id,omitempty"`
+
 	// Gmail A Google Workspace service account the admin delegated `gmail.readonly` to.
 	Gmail *SharedGmailCredentials `json:"gmail,omitempty"`
 
@@ -64449,8 +64452,11 @@ type SharedGraphCredentials struct {
 // SharedMailbox A mailbox no one owns. One team reads what it captures.
 type SharedMailbox struct {
 	// Address The mailbox address.
-	Address     string    `json:"address"`
-	ConnectedAt time.Time `json:"connected_at"`
+	Address string `json:"address"`
+
+	// BackupOwnerId The reader-team member who gets the follow-up work of mail whose sender no reader owns, and owns the contacts that mail creates. Null when none is named: mail whose sender no reader owns then creates no work and no contact.
+	BackupOwnerId *openapi_types.UUID `json:"backup_owner_id,omitempty"`
+	ConnectedAt   time.Time           `json:"connected_at"`
 
 	// ConnectedBy The admin who last connected it.
 	ConnectedBy *openapi_types.UUID `json:"connected_by,omitempty"`
@@ -67669,7 +67675,10 @@ type UpdateSharedMailboxRequest struct {
 	// ApplyToHistory Also narrow mail already captured when the visibility moves to `held`. Absent or false leaves it as it is.
 	ApplyToHistory *bool `json:"apply_to_history,omitempty"`
 
-	// Confirm Must be true: the change moves every message the mailbox captured to other readers.
+	// BackupOwnerId The backup owner from now on. It must be an active member of the reader team who can hold work (else `422` `backup_owner_not_in_reader_team`). Null removes it; absent leaves it as it is.
+	BackupOwnerId *openapi_types.UUID `json:"backup_owner_id,omitempty"`
+
+	// Confirm Must be true when the readers or the visibility change: such a change moves every message the mailbox captured to other readers.
 	Confirm bool `json:"confirm"`
 
 	// MailVisibility `classified` is refused with `422`.

@@ -18,6 +18,11 @@ func CurrentTaskClause(alias string, asOf time.Time, identities string, arg func
 	return storekit.CurrentTaskClause(alias, asOf, identities, arg)
 }
 
+// CurrentTaskClauseToLineOnly is storekit.CurrentTaskClauseToLineOnly.
+func CurrentTaskClauseToLineOnly(alias string, asOf time.Time, identities string, arg func(any) int) string {
+	return storekit.CurrentTaskClauseToLineOnly(alias, asOf, identities, arg)
+}
+
 // listMailSeatIdentities reads the seat map a list's clauses need, and only
 // for a list whose clauses read it.
 func listMailSeatIdentities(ctx context.Context, tx pgx.Tx, in ListActivitiesInput) (map[string][]string, error) {

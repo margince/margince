@@ -43791,6 +43791,7 @@ components:
         status: { type: string, enum: [connected, disconnected, error, reauth_required], x-extensible-enum: true }
         connected_by: { type: [string, 'null'], format: uuid, description: The admin who last connected it. }
         connected_at: { type: string, format: date-time }
+        backup_owner_id: { type: [string, 'null'], format: uuid, description: 'The reader-team member who gets the follow-up work of mail whose sender no reader owns, and owns the contacts that mail creates. Null when none is named: mail whose sender no reader owns then creates no work and no contact.' }
     SharedMailboxList:
       type: object
       required: [items]
@@ -43809,6 +43810,7 @@ components:
         address: { type: string, format: email, maxLength: 320, description: The mailbox address. Reconnecting the same address reuses its mailbox. }
         reader_team_id: { type: string, format: uuid }
         mail_visibility: { type: string, enum: [held, shared, classified], description: 'Absent starts a new mailbox `held` and keeps a reconnected one as it is. `classified` is refused with `422`.' }
+        backup_owner_id: { type: [string, 'null'], format: uuid, description: 'The backup owner. It must be an active member of the reader team who can hold work (else `422` `backup_owner_not_in_reader_team`). Absent names none on a new mailbox and keeps a reconnected one''s.' }
         imap: { $ref: '#/components/schemas/ImapCredentials' }
         graph: { $ref: '#/components/schemas/SharedGraphCredentials' }
         gmail: { $ref: '#/components/schemas/SharedGmailCredentials' }
@@ -43833,7 +43835,8 @@ components:
         reader_team_id: { type: string, format: uuid, description: 'The team that reads the mailbox from now on, its whole history included.' }
         mail_visibility: { type: string, enum: [held, shared, classified], description: '`classified` is refused with `422`.' }
         apply_to_history: { type: boolean, description: 'Also narrow mail already captured when the visibility moves to `held`. Absent or false leaves it as it is.' }
-        confirm: { type: boolean, description: 'Must be true: the change moves every message the mailbox captured to other readers.' }
+        backup_owner_id: { type: [string, 'null'], format: uuid, description: 'The backup owner from now on. It must be an active member of the reader team who can hold work (else `422` `backup_owner_not_in_reader_team`). Null removes it; absent leaves it as it is.' }
+        confirm: { type: boolean, description: 'Must be true when the readers or the visibility change: such a change moves every message the mailbox captured to other readers.' }
     SharedMailboxHistoryImportRequest:
       type: object
       required: [window]

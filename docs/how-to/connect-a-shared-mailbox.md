@@ -18,7 +18,8 @@ one credentials member named after the provider. The contract is in `backend/api
 `ConnectSharedMailboxRequest`. A second connect of the same provider and address reconnects the stored mailbox and
 keeps its mail and readers.
 
-Margince checks the credentials before it stores anything. A refused check answers `422` with a code that names
+The body may also name a `backup_owner_id`, the next section says what it does. Margince checks the credentials
+before it stores anything. A refused check answers `422` with a code that names
 what to fix:
 
 | Code | What to check |
@@ -31,6 +32,41 @@ what to fix:
 
 A provider that does not answer gives `502 shared_mailbox_unreachable`. No answer repeats the provider's own message
 or the secret.
+
+## Who gets the work from shared mail
+
+Mail that only a shared mailbox captured can still make work: a reply reminder, a row on the waiting list, a
+promise, or the question which deal a mail is about. `SharedMailWorkOwnerSQL` in
+`backend/internal/platform/database/storekit/sharedmailowner.go` picks the one colleague who gets it, in this order:
+
+1. The owner of the sender's contact. For mail the mailbox sent, the owner of the contact it went to.
+2. The owner of that contact's current company.
+3. The mailbox's backup owner.
+
+A shared mailbox's own address never counts as the sender or a recipient. When a step names two different
+colleagues, for example mail the mailbox sent to two contacts with different owners, that step gives no answer and
+the backup owner is asked. When the mail sits in two shared mailboxes with different backup owners, nobody gets the
+work.
+
+When the answer changes, for example the contact gets a new owner, the next run of the reply reminder pass moves an
+untouched reminder to the new colleague. It retires the reminder when nobody answers the mail any more. A reminder a
+colleague edited, completed or archived stays as it is.
+
+A colleague is passed over when they cannot hold work, for example an agent or a read-only seat. A colleague is also
+passed over when they cannot already read the mail. Held mail is read by the reader team and the mail's own
+participants, so a contact owner outside the reader team is skipped. When nobody is left, the mail makes no work.
+
+The backup owner must be an active member of the reader team who can hold work. Anyone else answers
+`422 backup_owner_not_in_reader_team`. Set or change it with `PATCH /v1/shared-mailboxes/{id}` and
+`backup_owner_id`, and send `null` to remove it. That change alone needs no `confirm: true`, because it moves no
+mail. A backup owner who leaves the reader team, or leaves the company, gets no more work: the order above checks
+membership each time it runs. Moving the mailbox to another reader team removes a backup owner that team does not
+hold.
+
+A reply reminder needs mail open to the workspace. Held mail is never sent to a model to judge whether it asks
+for an answer, so held mail gets no reply reminder from anyone.
+
+A sender with no contact is filed under nothing and gets no contact, with or without a backup owner.
 
 ## IMAP
 

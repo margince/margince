@@ -197,6 +197,7 @@ func TestErasingTheContactErasesTheFiledScreenshot(t *testing.T) {
 	if err := eraserWithGraph(f.env.DB()).WithBlobstore(f.blob).EraseContact(ctx, f.contact, "test-erasure"); err != nil {
 		t.Fatalf("EraseContact: %v", err)
 	}
+	reapPastGrace(t, f.env, f.blob)
 	if _, _, err := f.blob.Get(ctx, key); !errors.Is(err, blobstore.ErrNotFound) {
 		t.Fatalf("the screenshot's bytes survived the erasure: %v", err)
 	}

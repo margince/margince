@@ -31,8 +31,8 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 365 |
-| Columns | 4456 |
-| Foreign keys | 617 |
+| Columns | 4457 |
+| Foreign keys | 618 |
 | Owning areas | 39 |
 
 ## The 12 records everything else hangs off
@@ -41,7 +41,7 @@ Ranked by how many foreign keys point at them.
 
 | Record | Lives in | Columns | Foreign keys pointing at it |
 |---|---|--:|--:|
-| [`app_user`](identity.md#app_user) | [identity](identity.md) | 39 | 156 |
+| [`app_user`](identity.md#app_user) | [identity](identity.md) | 39 | 157 |
 | [`company`](contacts.md#company) | [contacts](contacts.md) | 47 | 51 |
 | [`contact`](contacts.md#contact) | [contacts](contacts.md) | 38 | 49 |
 | [`activity`](activities.md#activity) | [activities](activities.md) | 86 | 46 |
@@ -175,7 +175,7 @@ erDiagram
 | [`ai_task_run`](aiactivity.md#ai_task_run) | aiactivity | 25 | 0 |
 | [`ai_usage`](ai.md#ai_usage) | ai | 10 | 0 |
 | [`analytics_share`](compose.md#analytics_share) | compose | 16 | 0 |
-| [`app_user`](identity.md#app_user) | identity | 39 | 156 |
+| [`app_user`](identity.md#app_user) | identity | 39 | 157 |
 | [`approval`](approvals.md#approval) | approvals | 38 | 4 |
 | [`approval_autonomy_policy`](approvals.md#approval_autonomy_policy) | approvals | 12 | 0 |
 | [`approval_preference`](approvals.md#approval_preference) | approvals | 3 | 0 |
@@ -207,7 +207,7 @@ erDiagram
 | [`capture_auto_enrich_state`](capture.md#capture_auto_enrich_state) | capture | 7 | 0 |
 | [`capture_backfill`](capture.md#capture_backfill) | capture | 31 | 5 |
 | [`capture_backfill_creation`](capture.md#capture_backfill_creation) | capture | 4 | 0 |
-| [`capture_connection`](capture.md#capture_connection) | capture | 33 | 3 |
+| [`capture_connection`](capture.md#capture_connection) | capture | 34 | 3 |
 | [`capture_counterparty_hold`](capture.md#capture_counterparty_hold) | capture | 6 | 0 |
 | [`capture_digest`](capture.md#capture_digest) | capture | 5 | 0 |
 | [`capture_exclusion`](capture.md#capture_exclusion) | capture | 7 | 0 |

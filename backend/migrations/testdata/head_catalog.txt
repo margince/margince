@@ -2359,6 +2359,9 @@ public.capture_connection.account_bound_at timestamp with time zone gen=- def=-
 public.capture_connection.account_label text gen=- def=-
 public.capture_connection.archived_at timestamp with time zone gen=- def=-
 public.capture_connection.auth bytea gen=- def=-
+public.capture_connection.backup_owner_id uuid gen=- def=-
+public.capture_connection.capture_connection_backup_owner_id_fkey FOREIGN KEY (backup_owner_id) REFERENCES app_user(id) ON DELETE SET NULL
+public.capture_connection.capture_connection_backup_owner_is_shared CHECK (((backup_owner_id IS NULL) OR (user_id IS NULL)))
 public.capture_connection.capture_connection_connected_by_fkey FOREIGN KEY (connected_by) REFERENCES app_user(id) ON DELETE SET NULL
 public.capture_connection.capture_connection_context_tag_id_fkey FOREIGN KEY (context_tag_id) REFERENCES tag(id) ON DELETE SET NULL
 public.capture_connection.capture_connection_history_baseline_check CHECK ((((history_baseline_date IS NULL) = (history_baseline_tz IS NULL)) AND ((history_baseline_date IS NULL) = (history_baseline_set_by IS NULL)) AND ((history_baseline_date IS NULL) = (history_baseline_set_at IS NULL))))

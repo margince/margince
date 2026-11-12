@@ -9,6 +9,7 @@ package sharedmailboxhttp
 import (
 	"context"
 	"net/http"
+	"slices"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
@@ -82,6 +83,10 @@ func (h Handlers) Connect(w http.ResponseWriter, r *http.Request) {
 	if req.MailVisibility != nil {
 		in.Posture = string(*req.MailVisibility)
 	}
+	if req.BackupOwnerId != nil {
+		backup := ids.UUID(*req.BackupOwnerId)
+		in.BackupOwner = &backup
+	}
 	id, err := h.Registry.ConnectShared(ctx, in)
 	if err != nil {
 		writeConnectError(w, r, provider, err)
@@ -109,7 +114,8 @@ func (h Handlers) sharedCredential(w http.ResponseWriter, r *http.Request, req c
 	return nil, false
 }
 
-// Update moves a shared mailbox to other readers or another visibility.
+// Update moves a shared mailbox to other readers or another visibility, or
+// names its backup owner.
 func (h Handlers) Update(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
 	if h.Registry == nil {
 		httperr.NotImplemented(w, r, "UpdateSharedMailbox")
@@ -127,6 +133,12 @@ func (h Handlers) Update(w http.ResponseWriter, r *http.Request, id openapi_type
 	if req.MailVisibility != nil {
 		posture := string(*req.MailVisibility)
 		change.Posture = &posture
+	}
+	if req.BackupOwnerId != nil {
+		backup := ids.UUID(*req.BackupOwnerId)
+		change.BackupOwner = &backup
+	} else {
+		change.ClearBackupOwner = slices.Contains(httperr.ClearedFields(r), "backup_owner_id")
 	}
 	box, err := h.Registry.ChangeSharedMailbox(r.Context(), ids.UUID(id), change)
 	if err != nil {
@@ -167,6 +179,10 @@ func sharedMailboxOnWire(v capture.SharedMailboxView) crmcontracts.SharedMailbox
 	if v.ConnectedBy != nil {
 		by := openapi_types.UUID(*v.ConnectedBy)
 		out.ConnectedBy = &by
+	}
+	if v.BackupOwner != nil {
+		backup := openapi_types.UUID(*v.BackupOwner)
+		out.BackupOwnerId = &backup
 	}
 	return out
 }

@@ -149,9 +149,9 @@ use up rows that a store connected later must still work on. `parts_slimmed_at` 
   sweeps never read attachment parts back out of `raw_capture`. Art. 15 access and the private-thread
   files path (`capture/privatethreadfiles.go`) do, and both build the parts again first.
 - **Art. 17 erasure.** The `ILIKE` over `payload::text` never looks inside a `base64` part, since
-  the text itself is not there to match. `privacy/erasure_attachments.go` removes the objects by
-  `storage_key`. One object holds the bytes of every row with an identical file. Erasure keeps an
-  object while a row outside the erased set still names it.
+  the text itself is not there to match. `privacy/erasure_attachments.go` queues the objects by
+  `storage_key` for the `stored_object_reap` job. One object holds the bytes of every row with an
+  identical file. Erasure keeps an object while a row outside the erased set still names it.
 - **Art. 15 access.** `compose/sarrestore.go` restores before it shows the data. A missing object
   holds back that one payload and keeps the row listed.
 - **The retention sweep.** It erases the whole payload when the activity's window ends, block and
@@ -185,8 +185,8 @@ A bounded hash filter rules out absent email windows before reading the object. 
 still use the same SQL content test. Unknown formats read the original. Repairs pass over missing
 or broken evidence, but retry when the object store cannot be reached.
 
-Subject erasure and retention delete the current object before they commit the row change.
-A failed delete fails the transaction.
+Subject erasure and retention delete no object. The row delete queues its key in the same
+transaction, and the hourly `stored_object_reap` job deletes the bytes after the commit.
 
 Erasure first records a matched subject in trusted metadata.
 A retry can then find its original if the object is gone and the database change failed.

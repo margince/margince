@@ -30221,6 +30221,11 @@ export interface components {
             connected_by?: string | null;
             /** Format: date-time */
             connected_at: string;
+            /**
+             * Format: uuid
+             * @description The reader-team member who gets the follow-up work of mail whose sender no reader owns, and owns the contacts that mail creates. Null when none is named: mail whose sender no reader owns then creates no work and no contact.
+             */
+            backup_owner_id?: string | null;
         };
         SharedMailboxList: {
             items: components["schemas"]["SharedMailbox"][];
@@ -30244,6 +30249,11 @@ export interface components {
              * @enum {string}
              */
             mail_visibility?: "held" | "shared" | "classified";
+            /**
+             * Format: uuid
+             * @description The backup owner. It must be an active member of the reader team who can hold work (else `422` `backup_owner_not_in_reader_team`). Absent names none on a new mailbox and keeps a reconnected one's.
+             */
+            backup_owner_id?: string | null;
             imap?: components["schemas"]["ImapCredentials"];
             graph?: components["schemas"]["SharedGraphCredentials"];
             gmail?: components["schemas"]["SharedGmailCredentials"];
@@ -30275,7 +30285,12 @@ export interface components {
             mail_visibility?: "held" | "shared" | "classified";
             /** @description Also narrow mail already captured when the visibility moves to `held`. Absent or false leaves it as it is. */
             apply_to_history?: boolean;
-            /** @description Must be true: the change moves every message the mailbox captured to other readers. */
+            /**
+             * Format: uuid
+             * @description The backup owner from now on. It must be an active member of the reader team who can hold work (else `422` `backup_owner_not_in_reader_team`). Null removes it; absent leaves it as it is.
+             */
+            backup_owner_id?: string | null;
+            /** @description Must be true when the readers or the visibility change: such a change moves every message the mailbox captured to other readers. */
             confirm: boolean;
         };
         SharedMailboxHistoryImportRequest: {

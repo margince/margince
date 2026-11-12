@@ -84,7 +84,7 @@ func storeSubjectOriginal(t *testing.T, e *integration.Env, blob blobstore.Store
 	return row
 }
 
-func TestOriginalErasureRetriesAfterDeletionAndTransactionRollback(t *testing.T) {
+func TestARolledBackOriginalErasureKeepsTheObjectAndTheRetryQueuesIt(t *testing.T) {
 	e := integration.Setup(t)
 	email := "original-subject@example.test"
 	contact := seedContactWithAddress(t, e, "Original subject", email)
@@ -96,8 +96,8 @@ func TestOriginalErasureRetriesAfterDeletionAndTransactionRollback(t *testing.T)
 	if err := eraser.EraseContact(e.Admin(), contact, "subject request"); err == nil {
 		t.Fatal("the final transaction failure was hidden")
 	}
-	if _, _, err := blob.Get(e.Admin(), row.object.Key); !errors.Is(err, blobstore.ErrNotFound) {
-		t.Fatalf("object was not destroyed before rollback: %v", err)
+	if _, _, err := blob.Get(e.Admin(), row.object.Key); err != nil {
+		t.Fatalf("a rolled-back erasure deleted the object its row still names: %v", err)
 	}
 	if got := e.WsCount(t, `SELECT count(*) FROM raw_capture WHERE id = $1`, row.id); got != 1 {
 		t.Fatal("rollback did not preserve the reference")
@@ -117,6 +117,10 @@ func TestOriginalErasureRetriesAfterDeletionAndTransactionRollback(t *testing.T)
 	if got := e.WsCount(t, `SELECT count(*) FROM raw_capture WHERE id = $1`, row.id); got != 0 {
 		t.Fatal("retry retained the original")
 	}
+	reapPastGrace(t, e, blob)
+	if _, _, err := blob.Get(e.Admin(), row.object.Key); !errors.Is(err, blobstore.ErrNotFound) {
+		t.Fatalf("the reap after the retry left the erased original's object: %v", err)
+	}
 	body, _, err := blob.Get(e.Admin(), other.object.Key)
 	if err != nil {
 		t.Fatal("erasure destroyed another subject's object", err)
@@ -126,26 +130,29 @@ func TestOriginalErasureRetriesAfterDeletionAndTransactionRollback(t *testing.T)
 	}
 }
 
-func TestFailedOriginalDeletionKeepsErasureRetryable(t *testing.T) {
+// The erasure commits without touching the store. A delete the store refuses
+// leaves the key queued, and the next pass deletes the bytes.
+func TestARefusedDeleteOfAnErasedOriginalIsRetriedByTheNextReap(t *testing.T) {
 	e := integration.Setup(t)
 	email := "delete-subject@example.test"
 	contact := seedContactWithAddress(t, e, "Delete subject", email)
 	blob := &failingOriginalBlob{Store: blobstore.NewMemory()}
 	row := storeSubjectOriginal(t, e, blob, "delete", email)
 	blob.failDelete = true
-	eraser := eraserWithGraph(e.DB()).WithBlobstore(blob)
-	if err := eraser.EraseContact(e.Admin(), contact, "subject request"); err == nil {
-		t.Fatal("failed object deletion certified erasure")
-	}
-	if got := e.WsCount(t, `SELECT count(*) FROM raw_capture WHERE id = $1`, row.id); got != 1 {
-		t.Fatal("failed deletion lost its reference")
-	}
-	blob.failDelete = false
-	if err := eraser.EraseContact(e.Admin(), contact, "subject request"); err != nil {
+	if err := eraserWithGraph(e.DB()).WithBlobstore(blob).EraseContact(e.Admin(), contact, "subject request"); err != nil {
 		t.Fatal(err)
 	}
+	if got := e.WsCount(t, `SELECT count(*) FROM raw_capture WHERE id = $1`, row.id); got != 0 {
+		t.Fatal("the erasure kept the original's row")
+	}
+	reapPastGrace(t, e, blob)
+	if got := e.WsCount(t, `SELECT count(*) FROM stored_object_intent WHERE storage_key = $1 AND reaped_at IS NULL`, row.object.Key); got != 1 {
+		t.Fatal("a refused delete dropped the key, so no later pass deletes the bytes")
+	}
+	blob.failDelete = false
+	reapPastGrace(t, e, blob)
 	if _, _, err := blob.Get(e.Admin(), row.object.Key); !errors.Is(err, blobstore.ErrNotFound) {
-		t.Fatal("retry did not destroy object", err)
+		t.Fatal("the retried reap did not delete the object", err)
 	}
 }
 

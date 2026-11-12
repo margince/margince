@@ -77,8 +77,8 @@ func (p *Provider) SearchEntity(ctx context.Context, t datasource.EntityType, te
 	if err := httperr.RequirePair(filterEntityType, in.EntityType, filterEntityID, in.EntityID); err != nil {
 		return nil, "", false, err
 	}
-	// A record's timeline reads as the 360 pages show it: one row per email.
-	in.CollapseSeatCopies = in.EntityID != nil
+	// A record's timeline and a thread read as the app shows them: one row per email.
+	in.CollapseSeatCopies = in.EntityID != nil || in.ThreadKey != nil
 	rows, page, err := p.store.ListActivities(ctx, in)
 	if err != nil {
 		return nil, "", false, err
