@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 48 |
 | Resources | 14 |
-| Tool catalog | 231.9 KB |
+| Tool catalog | 232.1 KB |
 | Resource catalog | 5.5 KB |
-| Approx. wire tokens | 60779 |
+| Approx. wire tokens | 60830 |
 | Largest tool | `read_context` (11.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -34,9 +34,9 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 |---|---:|---:|---|
 | Output schemas | 51.2 KB | 22% | **No**: a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 54.0 KB | 23% | Yes, every step |
-| Input schemas | 114.9 KB | 49% | Yes, every step |
+| Input schemas | 115.1 KB | 49% | Yes, every step |
 | _Names, annotations, punctuation_ | 11.8 KB | 5% | Partly |
-| **Description + input schema** | **168.9 KB** | **72%** | **the recurring cost** |
+| **Description + input schema** | **169.1 KB** | **72%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -87,7 +87,7 @@ descriptions and input schemas are what each step pays for.
 | [`decide_approvals`](#decide_approvals) | Approve or reject staged actions |  |  | 429 |
 | [`draft_outbound`](#draft_outbound) | Draft an email or follow-ups |  |  | 517 |
 | [`enrich`](#enrich) | Enrich a company from its website |  |  | 395 |
-| [`find_records`](#find_records) | Find records | yes |  | 1952 |
+| [`find_records`](#find_records) | Find records | yes |  | 2024 |
 | [`list_approvals`](#list_approvals) | List what is waiting for a decision | yes | [`ui://margince/approval-queue.html`](#approval_queue_view) | 474 |
 | [`list_documents`](#list_documents) | List a record's documents or read one | yes |  | 331 |
 | [`preview_import`](#preview_import) | Preview an import |  |  | 1012 |
@@ -105,7 +105,7 @@ descriptions and input schemas are what each step pays for.
 | [`read_reports`](#read_reports) | Read sales reports | yes |  | 2784 |
 | [`read_tags`](#read_tags) | Read tags | yes |  | 358 |
 | [`read_view`](#read_view) | Read a view | yes |  | 683 |
-| [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 2771 |
+| [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 2750 |
 | [`resolve_duplicates`](#resolve_duplicates) | Merge two records or dismiss a flagged pair |  |  | 618 |
 | [`run_research`](#run_research) | Run AI work for your user |  |  | 776 |
 | [`schedule_meeting`](#schedule_meeting) | Invite to a meeting |  |  | 420 |
@@ -4815,6 +4815,15 @@ next_cursor to read on.
       ],
       "type": "string"
     },
+    "exclude_ids": {
+      "description": "search only: Record ids, of any type, to leave out. They are dropped before ranking, so a page stays full.",
+      "items": {
+        "format": "uuid",
+        "type": "string"
+      },
+      "maxItems": 100,
+      "type": "array"
+    },
     "filters": {
       "additionalProperties": false,
       "description": "list only: String operands. read_workspace with topic=list_filters lists each record_type's filters and values. A pipeline_id or stage_id comes from the workspace's pipeline list; nothing else on this surface yields one.",
@@ -4887,6 +4896,9 @@ next_cursor to read on.
         "entity_type": {
           "type": "string"
         },
+        "extension_relationship_type": {
+          "type": "string"
+        },
         "from_contact_id": {
           "type": "string"
         },
@@ -4906,6 +4918,9 @@ next_cursor to read on.
           "type": "string"
         },
         "lifecycle": {
+          "type": "string"
+        },
+        "link_type": {
           "type": "string"
         },
         "list_id": {
@@ -11936,15 +11951,6 @@ deal. Take every name verbatim; a custom field is spelled cf_<slug>.
     },
     "resource": {
       "description": "saved_views only",
-      "enum": [
-        "contacts",
-        "companies",
-        "deals",
-        "activities",
-        "leads",
-        "partners",
-        "projects"
-      ],
       "type": "string"
     },
     "router": {

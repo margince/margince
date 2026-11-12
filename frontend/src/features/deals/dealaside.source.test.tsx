@@ -108,7 +108,7 @@ describe("the left column's Lists group", () => {
   });
 
   it("keeps the lists it is on beside the verbs", async () => {
-    serve([{ id: "s-1", name: "Launch references" }]);
+    serve([{ id: "s-1", name: "Launch references", entity_type: "deal" }]);
     const lists = await group();
     expect(
       await lists.findByRole("link", { name: "Launch references" }),

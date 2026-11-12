@@ -18,8 +18,40 @@ import { throwProblem, unwrap } from "./problem";
 import { useMe } from "./session";
 import type { MutationOutcome } from "./undoableremoval";
 
-export type List = components["schemas"]["List"];
-export type ListRecordType = List["entity_type"];
+/** The core record types the list screens draw. */
+export type ListRecordType =
+  | "contact"
+  | "company"
+  | "deal"
+  | "lead"
+  | "project";
+type WireList = components["schemas"]["List"];
+export type List = Omit<WireList, "entity_type"> & {
+  entity_type: ListRecordType;
+};
+
+const CORE_LIST_TYPES: readonly string[] = [
+  "contact",
+  "company",
+  "deal",
+  "lead",
+  "project",
+] satisfies readonly ListRecordType[];
+
+export function isCoreListType(type: string): type is ListRecordType {
+  return CORE_LIST_TYPES.includes(type);
+}
+
+/**
+ * A list as the list screens draw it. A list over an extension kind has no
+ * member screen. Reads of many leave it out, and a read of one refuses it.
+ */
+function coreList(list: WireList): List {
+  if (!isCoreListType(list.entity_type)) {
+    throw new Error(`no screen draws a list of ${list.entity_type}`);
+  }
+  return { ...list, entity_type: list.entity_type };
+}
 export type ListHistoryEntry = components["schemas"]["ListHistoryEntry"];
 export type ListExplanation = components["schemas"]["ListMemberExplanation"];
 export type ListLinkedValue = components["schemas"]["ListLinkedValue"];
@@ -57,7 +89,7 @@ export function useLists(query: ListQuery, enabled = true, keepRows = false) {
     enabled,
     placeholderData: keepRows ? keepPreviousData : undefined,
     queryFn: async () => {
-      return unwrap(
+      const page = unwrap(
         await api.GET("/lists", {
           params: {
             query: {
@@ -69,6 +101,12 @@ export function useLists(query: ListQuery, enabled = true, keepRows = false) {
           },
         }),
       );
+      return {
+        ...page,
+        data: page.data
+          .filter((list) => isCoreListType(list.entity_type))
+          .map(coreList),
+      };
     },
   });
 }
@@ -78,10 +116,12 @@ export function useList(id: string, enabled = true) {
     enabled,
     queryKey: [LISTS_KEY, "one", id],
     queryFn: async () => {
-      return unwrap(
-        await api.GET("/lists/{id}", {
-          params: { path: { id } },
-        }),
+      return coreList(
+        unwrap(
+          await api.GET("/lists/{id}", {
+            params: { path: { id } },
+          }),
+        ),
       );
     },
   });
@@ -172,11 +212,17 @@ export function useRecordLists(entityType: ListedRecordType, recordId: string) {
   return useQuery({
     queryKey: recordListsKey(entityType, recordId),
     queryFn: async () => {
-      return unwrap(
+      const found = unwrap(
         await api.GET("/records/{entity_type}/{entity_id}/lists", {
           params: { path: { entity_type: entityType, entity_id: recordId } },
         }),
       );
+      return {
+        ...found,
+        data: found.data
+          .filter((list) => isCoreListType(list.entity_type))
+          .map(coreList),
+      };
     },
   });
 }

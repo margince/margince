@@ -141,6 +141,8 @@ tags:
     description: The typed relationship edge (employment + deal stakeholder).
   - name: Deals
     description: Deals, including stage advancement.
+  - name: Links
+    description: Typed links between a deal, a company and a contact, and the link types.
   - name: Pipelines
     description: Pipelines and their ordered stages.
   - name: Projects
@@ -3483,6 +3485,15 @@ paths:
           description: >-
             Accounts carrying this relationship type. Multi-valued per account, so this selects
             accounts that are AT LEAST this — a partner that is also a customer matches both.
+        - name: extension_relationship_type
+          in: query
+          schema:
+            type: string
+            pattern: '^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z0-9]+(_[a-z0-9]+)*$'
+          description: >-
+            Accounts carrying this extension type (`ext:<unit>:<type>`, from `extension_relationship_types`).
+            It is a separate parameter so the closed `relationship_type` list stays as it is. A value
+            no installed extension declares answers 422. Both parameters together select accounts that carry both.
         - name: owner_team_id
           in: query
           schema: { type: string, format: uuid }
@@ -6503,6 +6514,13 @@ paths:
             An acquisition-source key, or `unset` for unclassified deals. A retired key still
             filters, so history stays reachable after the source leaves the picker.
           schema: { type: string }
+        - name: link_type
+          in: query
+          description: >-
+            A link type, core's or an extension's `ext:<unit>:<type>`. Keeps the deals that hold at
+            least one link of that type to another live deal, from either end. Links to a company or
+            a contact are not read by this filter.
+          schema: { type: string, maxLength: 68 }
         - name: tag_id
           in: query
           schema:
@@ -8942,6 +8960,119 @@ paths:
               schema: { $ref: '#/components/schemas/ChannelProviderDirectory' }
         '401': { $ref: '#/components/responses/Unauthorized' }
 
+  /company-types:
+    get:
+      tags: [Companies]
+      operationId: listCompanyTypes
+      security: [ { cookieAuth: [] } ]   # screens read it; an agent learns the values from the 422 that names them
+      x-agent-access: human-only
+      x-human-only-reason: covered
+      summary: Which company types installed extensions add beside core's own.
+      description: |
+        The values a company can carry in `extension_relationship_types`, and the label a
+        screen shows for each. Which extensions are installed is a fact of the binary, so the
+        contract cannot list the values; this operation does.
+
+        Readable by any signed-in seat, because the company list shows these types and filters
+        on them. Each value and label is declared in extension code, never typed by an
+        administrator. Empty when no installed extension declares a type.
+      responses:
+        '200':
+          description: Every declared type, ordered by value.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CompanyTypeDirectory' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /record-kinds:
+    get:
+      tags: [Extensions]
+      operationId: listRecordKinds
+      security: [ { cookieAuth: [] } ]   # screens read it; an agent meets a kind through the record that carries it
+      x-agent-access: human-only
+      x-human-only-reason: covered
+      x-settings-audience: member
+      summary: Which kinds of record installed extensions add beside core's own.
+      description: |
+        The record kinds this caller may read, each named `ext:<unit>:<kind>`, with the label a
+        screen shows, its fields, its natural key, its delete policy and the actions this caller
+        holds on it. Which extensions are installed is a fact of the binary, so the contract
+        cannot list the kinds; this operation does.
+
+        A kind the caller holds no read right on is left out, because every right on an extension
+        kind is denied until a role is granted it. Empty when no installed extension declares a
+        kind, or none is readable by this caller.
+      responses:
+        '200':
+          description: Every readable kind, ordered by name.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RecordKindDirectory' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /extension-history:
+    get:
+      tags: [Extensions]
+      operationId: listExtensionHistory
+      security: [ { cookieAuth: [] } ]   # the record page's History reads it; an agent reads the signal and the record kinds themselves
+      x-agent-access: human-only
+      x-human-only-reason: covered
+      x-settings-audience: member
+      summary: What installed extensions add to one core record's History.
+      description: |
+        Two kinds of entry, newest first, for one contact, company or deal. A `record` entry is a
+        row of an extension's own table that references the record, as far as the extension declared
+        a timeline for its kind. A `signal` entry is a signal of an extension kind (`ext:<unit>:<kind>`)
+        that is about the record. Core builds both, so an extension writes no timeline entry.
+
+        A kind the caller holds no read right on is left out, and a signal outside the caller's row
+        scope is left out. A record outside the caller's row scope answers 404, like every
+        single-record read. Each source is capped at 50 entries. Empty when nothing applies.
+      parameters:
+        - name: entity_type
+          in: query
+          required: true
+          schema: { type: string, enum: [contact, company, deal] }
+        - name: entity_id
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: The entries, newest first.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ExtensionHistoryResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /extension-reports:
+    get:
+      tags: [Extensions]
+      operationId: listExtensionReports
+      security: [ { cookieAuth: [] } ]   # Reports and Home draw it; an agent asks the report tools
+      x-agent-access: human-only
+      x-human-only-reason: covered
+      x-settings-audience: member
+      summary: The counts and breakdowns installed extensions add to Reports and Home, answered for this caller.
+      description: |
+        Each count and breakdown an installed extension declares, run through the report engine for
+        this caller. Row scope, field masks and the group floor apply as they do to a core report.
+        Which extensions are installed is a fact of the binary, so the contract cannot list them;
+        this operation does.
+
+        A report the caller may not read, or whose custom field this installation does not define,
+        is left out. A breakdown over a multi-select custom field splits by the combination of
+        values a record holds. Empty when no installed extension declares one.
+      responses:
+        '200':
+          description: Every report this caller may read, ordered by name.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ExtensionReportDirectory' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
   # ---------------------------- /activities ---------------------------------
   /tasks:
     post:
@@ -9765,6 +9896,179 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Activity' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/VersionConflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /link-types:
+    get:
+      tags: [Links]
+      operationId: listLinkTypes
+      x-agent-access: human-only
+      x-human-only-reason: security   # a reader decides which records are linked
+      security: [{ cookieAuth: [] }]
+      summary: The types a link between two records may have.
+      description: |
+        Core's types, then each extension's, with the records each may start and end on. An
+        extension's type is named `ext:<unit>:<type>`.
+      responses:
+        '200':
+          description: Every link type.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LinkTypeList' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /record-links:
+    get:
+      tags: [Links]
+      operationId: listRecordLinks
+      x-agent-access: human-only
+      x-human-only-reason: security   # a reader decides which records are linked
+      security: [{ cookieAuth: [] }]
+      summary: The links of one deal, company or contact, in both directions.
+      description: |
+        Every link that starts or ends on the record, newest first. A link is left out when the
+        caller may not read the record on its other end, or when that record is archived, so the
+        list never names a record the caller could not open. Archiving the other end hides the link
+        and unarchiving brings it back.
+      parameters:
+        - { name: record_type, in: query, required: true, schema: { type: string, enum: [deal, company, contact] } }
+        - { name: record_id, in: query, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: The links of the record the caller may see.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RecordLinkList' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    post:
+      tags: [Links]
+      operationId: createRecordLink
+      x-agent-access: human-only
+      x-human-only-reason: security   # a reader decides which records are linked
+      security: [{ cookieAuth: [] }]
+      summary: Link one record to another with a type.
+      description: |
+        The caller needs the right to update the record the link starts on, and to read the record
+        it ends on. A record the caller cannot read answers `404`. The type must allow both
+        records, so `follow_up_of` joins any two, and an extension's type may be narrower.
+        Linking a pair that already holds the type is the same success, and linking a record to
+        itself is refused.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/NewRecordLink' }
+      responses:
+        '200':
+          description: The link, new or already there.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RecordLink' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /record-links/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    delete:
+      tags: [Links]
+      operationId: deleteRecordLink
+      x-agent-access: human-only
+      x-human-only-reason: security   # a reader decides which records are linked
+      security: [{ cookieAuth: [] }]
+      summary: Remove a link.
+      description: |
+        The caller needs the right to update the record the link starts on and must be able to read
+        the record it ends on. The link row is deleted and the audit log keeps what it joined.
+      responses:
+        '204': { description: The link is gone. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /link-suggestions:
+    get:
+      tags: [Activities]
+      operationId: listLinkSuggestions
+      x-agent-access: human-only
+      x-human-only-reason: security   # a reader decides what a message attaches to
+      security: [{ cookieAuth: [] }]
+      summary: The records an extension suggests messages belong to, waiting for a reader to decide.
+      description: |
+        An extension may suggest which deal, company, contact or project a message belongs to. A
+        suggestion attaches nothing. It waits here until a reader accepts or rejects it. Core makes
+        none of its own: this queue holds only what an extension proposed.
+
+        Oldest first, at most 50. A decided suggestion leaves the queue, so asking again shows the
+        next ones. A suggestion is left out when the caller may not read its message or its target,
+        so the queue never names a record the caller could not open.
+      responses:
+        '200':
+          description: The pending suggestions the caller may see.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LinkSuggestionList' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /link-suggestions/{id}/accept:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Activities]
+      operationId: acceptLinkSuggestion
+      x-agent-access: human-only
+      x-human-only-reason: security   # a reader decides what a message attaches to
+      security: [{ cookieAuth: [] }]
+      summary: Accept a suggestion, which files the message under the record it names.
+      description: |
+        Files the message under the suggested record through the same relink as any other filing,
+        and closes the suggestion in the same transaction. The caller needs the right to update the
+        message and to attach to the target. Accepting a suggestion that is already accepted is the
+        same success. A rejected one answers `409`.
+      responses:
+        '200':
+          description: The suggestion, now accepted.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LinkSuggestion' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/VersionConflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /link-suggestions/{id}/reject:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Activities]
+      operationId: rejectLinkSuggestion
+      x-agent-access: human-only
+      x-human-only-reason: security   # a reader decides what a message attaches to
+      security: [{ cookieAuth: [] }]
+      summary: Reject a suggestion. The message stays where it is, and the suggestion is not offered again.
+      description: |
+        Closes the suggestion and attaches nothing. The same target is not proposed for the same
+        message a second time. Rejecting a suggestion that is already rejected is the same success.
+        An accepted one answers `409`.
+      responses:
+        '200':
+          description: The suggestion, now rejected.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LinkSuggestion' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/VersionConflict' }
         '422': { $ref: '#/components/responses/ValidationError' }
@@ -14637,8 +14941,8 @@ paths:
         - name: resource
           in: query
           required: true
-          description: The record type whose vocabulary to read.
-          schema: { type: string, enum: [contact, company, deal, lead, project] }
+          description: The record type whose vocabulary to read, or `ext:<unit>:<kind>` for a kind an extension declared.
+          schema: { $ref: '#/components/schemas/FilterResource' }
       responses:
         '200':
           description: The vocabulary for this resource.
@@ -16408,7 +16712,7 @@ paths:
       parameters:
         - name: resource
           in: query
-          schema: { $ref: '#/components/schemas/SavedViewResource' }
+          schema: { $ref: '#/components/schemas/SavedViewTarget' }
         - $ref: '#/components/parameters/IncludeArchived'
       responses:
         '200':
@@ -17953,10 +18257,24 @@ paths:
           in: query
           schema:
             type: array
-            items: { type: string, enum: [contact, company, deal, activity, lead, project, product, offer_template, tag] }
+            items: { type: string, x-extensible-enum: [contact, company, deal, activity, lead, project, product, offer_template, tag], pattern: '^(contact|company|deal|activity|lead|project|product|offer_template|tag)$|^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z][a-z0-9_]{0,31}$' }
           style: form
           explode: false
-          description: Restrict to these object types (default all).
+          description: >
+            Restrict to these object types (default all). Besides the core types, a kind an
+            extension declared is a type, spelled `ext:<unit>:<kind>`. It answers only a caller
+            who may read that kind.
+        - name: exclude_ids
+          in: query
+          schema:
+            type: array
+            items: { type: string, format: uuid }
+            maxItems: 100
+          style: form
+          description: >
+            Record ids, of any type, to leave out of the answer. They are dropped before ranking,
+            so a page is full and `types_with_more` counts only the records that remain. Use it to
+            keep a record's own author out of the matches suggested for that record.
         - name: per_type
           in: query
           schema: { type: integer, minimum: 1, maximum: 20 }
@@ -27913,7 +28231,8 @@ paths:
         It has no login: there is no password and nobody can sign in as it. It has a full seat
         type but is free of the licence seat limit: it is not counted, and declaring one never
         fails on the seat limit. It holds one role, `service_ingest`,
-        which can create and update activities, contacts and companies and nothing else.
+        which can create and update activities, contacts, companies and deals, and file a task for a
+        colleague, and nothing else.
 
         The member serves the one extension named in `extension`. Any other extension asking
         to act as it is refused, so a member declared for one feed cannot be borrowed by
@@ -46926,6 +47245,13 @@ components:
             legitimately several things at once — the partner program is built on companies that are
             simultaneously partners and customers. A company IS a partner iff it carries `partner` here AND
             has a `partner` row; removing the type while that row lives is refused (422).
+        extension_relationship_types:
+          type: array
+          items: { type: string, pattern: '^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z0-9]+(_[a-z0-9]+)*$' }
+          description: >-
+            The types an installed extension adds, as `ext:<unit>:<type>`. Kept apart from
+            `relationship_types`, whose list stays the closed set above. Each value is declared by the
+            extension it names; a value no extension declares is refused (422, `invalid_enum`).
         logo_url:
           type: [string, 'null']
           readOnly: true
@@ -47137,6 +47463,13 @@ components:
             the company still has a `partner` extension row is refused with 422 — the invariant binds both
             ways, and an invariant nothing enforces is a comment.
           items: { type: string, enum: [customer, partner, supplier, investor, portfolio_company, competitor, other] }
+        extension_relationship_types:
+          type: array
+          description: >-
+            Replace-set of the types an installed extension adds (`ext:<unit>:<type>`), applied like
+            `relationship_types`. Absent = untouched; an empty array clears them. A value no extension
+            declares is refused with 422.
+          items: { type: string, pattern: '^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z0-9]+(_[a-z0-9]+)*$' }
       additionalProperties: true
       x-extension: true
 
@@ -56872,6 +57205,148 @@ components:
         the legal set is identical in every installation, which is false. The contract
         states the invariant; `GET /v1/channel-providers` resolves the live set.
 
+    CompanyTypeDirectory:
+      type: object
+      description: The company types installed extensions add, ordered by value.
+      required: [data]
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/CompanyTypeOption' }
+    CompanyTypeOption:
+      type: object
+      required: [value, label, unit]
+      properties:
+        value:
+          type: string
+          description: The value a company carries, `ext:<unit>:<type>`.
+        label:
+          type: string
+          description: What a screen shows, in English, as the extension declared it.
+        unit:
+          type: string
+          description: The extension that declared the type.
+    ExtensionHistoryResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/ExtensionHistoryEntry' }
+    ExtensionHistoryEntry:
+      type: object
+      required: [id, source, kind, title, at]
+      properties:
+        id: { type: string, format: uuid, description: "The row's own id in the extension's table, or the signal's id." }
+        source: { type: string, enum: [record, signal], x-extensible-enum: true }
+        kind:
+          type: string
+          pattern: '^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z][a-z0-9_]{0,31}$'
+          description: The record kind of a `record` entry, or the signal kind of a `signal` entry.
+        title: { type: string, description: "The declared label field of the row, or the signal's summary." }
+        at: { type: string, format: date-time, description: "The declared time column of the row, or the signal's detection time." }
+    ExtensionReportDirectory:
+      type: object
+      description: The counts and breakdowns installed extensions add that this caller may read, ordered by name.
+      required: [data]
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/ExtensionReport' }
+    ExtensionReport:
+      type: object
+      required: [name, unit, label, kind, population, groups, withheld, total, excluded_by_permission]
+      properties:
+        name:
+          type: string
+          description: The report as `ext:<unit>:<name>`.
+        unit:
+          type: string
+          description: The extension that declared it.
+        label:
+          type: string
+          description: What a screen shows, in English.
+        kind:
+          type: string
+          enum: [count, breakdown]
+          x-extensible-enum: true
+        population:
+          type: string
+          description: What is counted, a record kind (`ext:<unit>:<kind>`) or a core report population.
+        by:
+          type: string
+          description: The field a breakdown splits by. Absent on a count.
+        groups:
+          type: array
+          description: |
+            One entry per group of a breakdown, or one for a count. A group the floor withheld
+            carries no key and no count.
+          items: { $ref: '#/components/schemas/ExtensionReportGroup' }
+        withheld:
+          type: boolean
+          description: The group floor kept a group back, and with it the total.
+        total:
+          type: [integer, 'null']
+          description: The whole count. Null once anything is withheld, because total minus the shown groups would be the withheld one.
+        excluded_by_permission:
+          type: [integer, 'null']
+          description: Visible rows a field mask withheld from this run. Null when no mask applied.
+    ExtensionReportGroup:
+      type: object
+      required: [key, count, withheld]
+      properties:
+        key: { type: [string, 'null'], description: "The value of the field. Null for records with no value, and for a withheld group." }
+        count: { type: [integer, 'null'], description: "Null for a withheld group." }
+        withheld: { type: boolean }
+    RecordKindDirectory:
+      type: object
+      description: The record kinds installed extensions add that this caller may read, ordered by name.
+      required: [data]
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/RecordKindOption' }
+    RecordKindOption:
+      type: object
+      required: [name, unit, kind, display_name, fields, natural_key, delete_policy, actions]
+      properties:
+        name:
+          type: string
+          description: |
+            The kind as every table that names a kind stores it, `ext:<unit>:<kind>`. The unit is a
+            unit name and the kind is a lower-case letter followed by up to 31 lower-case letters,
+            digits or underscores.
+        unit:
+          type: string
+          description: The extension that declared the kind.
+        kind:
+          type: string
+          description: The short name inside the unit.
+        display_name:
+          type: string
+          description: What a screen calls one record of the kind, in English.
+        fields:
+          type: array
+          items: { $ref: '#/components/schemas/RecordKindField' }
+        natural_key:
+          type: array
+          description: The fields that together identify one record. The unit's table holds them unique.
+          items: { type: string }
+        delete_policy:
+          type: string
+          enum: [archive_only, erasable]
+          x-extensible-enum: true
+          description: What removing a record of the kind means. `archive_only` keeps the row.
+        actions:
+          type: array
+          description: The actions this caller holds on the kind. Every other action is denied.
+          items: { type: string, enum: [create, read, update, delete], x-extensible-enum: true }
+    RecordKindField:
+      type: object
+      required: [name, label]
+      properties:
+        name: { type: string, description: "The column the unit's table keeps the value in." }
+        label: { type: string, description: "What a screen shows, in English." }
     ChannelProviderDirectory:
       type: object
       description: Every messaging transport this installation has registered (ADR-0107).
@@ -57452,6 +57927,107 @@ components:
             Stop following this contact for good, for this reader only. It has no end
             date; the reader resumes it with the DELETE verb. A colleague, or a later
             owner, keeps their own choice.
+
+    LinkedRecordType:
+      type: string
+      enum: [deal, company, contact]
+      x-extensible-enum: true
+
+    LinkType:
+      type: object
+      additionalProperties: false
+      required: [name, label, from, to]
+      properties:
+        name: { type: string, description: 'A core word, or `ext:<unit>:<type>` for an extension''s.' }
+        label: { type: string }
+        unit:
+          type: [string, 'null']
+          description: The extension that declared it. Absent for core's own.
+        from: { type: array, items: { $ref: '#/components/schemas/LinkedRecordType' } }
+        to: { type: array, items: { $ref: '#/components/schemas/LinkedRecordType' } }
+
+    LinkTypeList:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/LinkType' }
+
+    NewRecordLink:
+      type: object
+      additionalProperties: false
+      required: [from_type, from_id, to_type, to_id, link_type]
+      properties:
+        from_type: { $ref: '#/components/schemas/LinkedRecordType' }
+        from_id: { type: string, format: uuid }
+        to_type: { $ref: '#/components/schemas/LinkedRecordType' }
+        to_id: { type: string, format: uuid }
+        link_type: { type: string, maxLength: 68 }
+
+    RecordLink:
+      type: object
+      additionalProperties: false
+      required: [id, from_type, from_id, to_type, to_id, link_type, created_at]
+      properties:
+        id: { type: string, format: uuid }
+        from_type: { $ref: '#/components/schemas/LinkedRecordType' }
+        from_id: { type: string, format: uuid }
+        from_name:
+          type: [string, 'null']
+          description: The name of the record the link starts on, for the screen. Absent on a write's answer.
+        to_type: { $ref: '#/components/schemas/LinkedRecordType' }
+        to_id: { type: string, format: uuid }
+        to_name:
+          type: [string, 'null']
+          description: The name of the record the link ends on, for the screen. Absent on a write's answer.
+        link_type: { type: string }
+        created_at: { type: string, format: date-time }
+
+    RecordLinkList:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/RecordLink' }
+
+    LinkSuggestion:
+      type: object
+      additionalProperties: false
+      required: [id, activity_id, entity_type, entity_id, unit, reason, score, status, created_at]
+      properties:
+        id: { type: string, format: uuid }
+        activity_id: { type: string, format: uuid }
+        activity_subject:
+          type: [string, 'null']
+          description: The subject of the message. Empty when the message has none.
+        entity_type: { type: string, enum: [contact, company, deal, project], x-extensible-enum: true }
+        entity_id: { type: string, format: uuid }
+        entity_name:
+          type: [string, 'null']
+          description: The name of the suggested record, for the screen. Absent on a decision's answer.
+        unit:
+          type: string
+          description: The extension that proposed it.
+        reason:
+          type: string
+          maxLength: 200
+          description: One short sentence from the extension on why.
+        score: { type: number, minimum: 0, maximum: 1 }
+        status: { type: string, enum: [pending, accepted, rejected], x-extensible-enum: true }
+        created_at: { type: string, format: date-time }
+
+    LinkSuggestionList:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/LinkSuggestion' }
 
     DeclineActivityDealRequest:
       type: object
@@ -60553,13 +61129,16 @@ components:
         id: { type: string, format: uuid }
         kind:
           type: string
-          enum: [stalled_deal, champion_left, reengagement, buying_intent, risk, other,
-                 contract_ended, new_opportunity, commitment_made, ghosted_thread,
-                 project_gone_quiet, funding, leadership_change, expansion, product_launch,
-                 technical_change]
-          x-extensible-enum: true
+          pattern: '^([a-z_]+|ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z][a-z0-9_]{0,31})$'
           description: |
-            The first six are what a human files by hand. The rest are what the producers
+            One of core's sixteen kinds, or `ext:<unit>:<kind>` for a kind an extension declares.
+            A client must treat a value it does not know as a kind of its own, never as an error.
+            Core's kinds are `stalled_deal`, `champion_left`, `reengagement`, `buying_intent`,
+            `risk`, `other`, `contract_ended`, `new_opportunity`, `commitment_made`,
+            `ghosted_thread`, `project_gone_quiet`, `funding`, `leadership_change`, `expansion`,
+            `product_launch` and `technical_change`.
+
+            Among core's, the first six are what a human files by hand. The rest are what the producers
             raise (SIG-F-3): `contract_ended`, `new_opportunity` and `commitment_made` are read
             out of a settled conversation by the `signal_extract` site, each citing the message
             it is stated in; `ghosted_thread` is a comparison rather than a judgment — the newest
@@ -60676,6 +61255,22 @@ components:
         workstream:
           type: string
           description: The engagement named in the cited words, when present. Never inferred from the company name.
+        fields:
+          type: object
+          additionalProperties: true
+          description: |
+            The members of an extension signal type's evidence layout. Only core writes it, when an
+            extension files a signal. A request that carries it is refused.
+        provenance:
+          $ref: '#/components/schemas/SignalProvenance'
+
+    SignalProvenance:
+      type: object
+      required: [unit, captured_by]
+      description: Where an extension signal came from. Core stamps it from the filing extension and the signed-in seat. A request that carries it is refused.
+      properties:
+        unit: { type: string, description: The extension that filed the signal. }
+        captured_by: { type: string, description: The user or agent whose invocation filed it. }
 
     RecordCommunicationContextRequest:
       type: object
@@ -60788,13 +61383,21 @@ components:
     UpdateSignalRequest:
       type: object
       description: |
-        Triage. A `status` move to acknowledged/resolved/dismissed appends the human-outcome
+        Triage and correction. A `status` move to acknowledged/resolved/dismissed appends the human-outcome
         `signal_resolution` row; `note` travels with that outcome. `resolution_state` and the
         resolved ids are resolver-owned and not writable here.
       properties:
         status: { type: string, enum: [open, acknowledged, resolved, dismissed] }
         note: { type: [string, 'null'], description: Optional outcome note recorded with a status change. }
         severity: { type: string, enum: [info, warn, urgent] }
+        kind:
+          type: string
+          enum: [stalled_deal, champion_left, reengagement, buying_intent, risk, other]
+          description: Corrects the signal's type. Only the kinds a human files by hand are accepted. The audit row keeps the old kind.
+        evidence:
+          type: array
+          items: { $ref: '#/components/schemas/SignalEvidence' }
+          description: Replaces the signal's evidence. The audit row keeps the old evidence.
 
     SignalListResponse:
       type: object
@@ -60884,7 +61487,7 @@ components:
         id: { type: string, format: uuid }
         name: { type: string }
         purpose: { type: [string, 'null'], description: 'What the list is for, in the words of its steward.' }
-        entity_type: { type: string, enum: [contact, company, deal, lead, project], x-extensible-enum: true }
+        entity_type: { $ref: '#/components/schemas/FilterResource' }
         list_type: { type: string, enum: [static, dynamic], x-extensible-enum: true, default: static }
         definition: { type: [object, 'null'], additionalProperties: true, description: 'A Live List''s filter tree; null for a Shortlist.' }
         sharing:
@@ -61042,7 +61645,7 @@ components:
       properties:
         id: { type: string, format: uuid }
         list_id: { type: string, format: uuid }
-        entity_type: { type: string, enum: [contact, company, deal, lead, project], x-extensible-enum: true }
+        entity_type: { $ref: '#/components/schemas/FilterResource' }
         entity_id: { type: string, format: uuid }
         added_by: { type: string, description: 'The principal that added a Shortlist member; `dynamic` for a Live List member.' }
         added_by_name: { type: [string, 'null'], description: 'For a Shortlist member, the display name of the user who added it; null for any other principal.' }
@@ -61082,7 +61685,7 @@ components:
       required: [name, entity_type]
       properties:
         name: { type: string, minLength: 1 }
-        entity_type: { type: string, enum: [contact, company, deal, lead, project] }
+        entity_type: { $ref: '#/components/schemas/FilterResource' }
         list_type: { type: string, enum: [static, dynamic], default: static }
         definition: { type: [object, 'null'], additionalProperties: true }
         purpose: { type: [string, 'null'] }
@@ -61106,7 +61709,7 @@ components:
       type: object
       required: [entity_type, entity_id]
       properties:
-        entity_type: { type: string, enum: [contact, company, deal, lead, project] }
+        entity_type: { $ref: '#/components/schemas/FilterResource' }
         entity_id: { type: string, format: uuid }
         note: { type: [string, 'null'], maxLength: 500, description: 'Why, in the words of whoever made the change.' }
 
@@ -61206,14 +61809,21 @@ components:
         data: { type: array, items: { $ref: '#/components/schemas/ListHistoryEntry' } }
         page: { $ref: '#/components/schemas/PageInfo' }
 
+    FilterResource:
+      type: string
+      description: >-
+        A record type a filter may be built over: one of core's five, or `ext:<unit>:<kind>` for a
+        kind an extension declared. A kind no installed extension declares answers 404 on the
+        vocabulary and 422 on a preview.
+      x-extensible-enum: [contact, company, deal, lead, project]
+      pattern: '^(contact|company|deal|lead|project)$|^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z][a-z0-9_]{0,31}$'
+
     FilterPreviewRequest:
       type: object
       description: A candidate filter to evaluate without saving it.
       required: [resource, filter]
       properties:
-        resource:
-          type: string
-          enum: [contact, company, deal, lead, project]
+        resource: { $ref: '#/components/schemas/FilterResource' }
         filter:
           type: object
           additionalProperties: true
@@ -61247,10 +61857,7 @@ components:
         What a candidate filter would select for this caller (LVS-EXT-9).
       required: [resource, match_count, columns, rows, truncated]
       properties:
-        resource:
-          type: string
-          enum: [contact, company, deal, lead, project]
-          x-extensible-enum: true
+        resource: { $ref: '#/components/schemas/FilterResource' }
         match_count:
           type: integer
           description: |
@@ -61426,10 +62033,7 @@ components:
         accepts are the same set.
       required: [resource, fields]
       properties:
-        resource:
-          type: string
-          enum: [contact, company, deal, lead, project]
-          x-extensible-enum: true
+        resource: { $ref: '#/components/schemas/FilterResource' }
         fields:
           type: array
           description: |
@@ -61454,7 +62058,7 @@ components:
             since the catalog owns labels and this vocabulary does not.
         type:
           type: string
-          enum: [text, number, date, currency, picklist, multiselect, boolean, id, domain, distance]
+          enum: [text, number, date, currency, picklist, multiselect, boolean, record, id, domain, distance]
           x-extensible-enum: true
           description: |
             The six custom-field types, plus `id` for a reference to another record,
@@ -61794,17 +62398,14 @@ components:
         data: { type: array, items: { $ref: '#/components/schemas/Tag' } }
         page: { $ref: '#/components/schemas/PageInfo' }
 
-    SavedViewResource:
+    SavedViewTarget:
       type: string
-      description: The list a saved view is over. One schema for the record, the create and update bodies and the list filter, so the four cannot drift.
-      enum: [contacts, companies, deals, activities, leads, partners, projects]
-      x-extensible-enum: true
-      # Pinned: the generator prefixes a constant only to break a collision, so
-      # these names move when an UNRELATED schema gains or loses a value that
-      # collides with one of them. Adding `commitments` to the attention feed's
-      # lanes_omitted did exactly that once, silently unprefixing all seven and
-      # breaking every caller.
-      x-enum-varnames: [SavedViewResourceContacts, SavedViewResourceCompanies, SavedViewResourceDeals, SavedViewResourceActivities, SavedViewResourceLeads, SavedViewResourcePartners, SavedViewResourceProjects]
+      description: >-
+        The list a saved view is over: one of core's lists, or `ext:<unit>:<kind>` for a kind an
+        extension declared. One schema for the record, the create body and the list filter, so
+        the three cannot drift.
+      x-extensible-enum: [contacts, companies, deals, activities, leads, partners, projects]
+      pattern: '^(contacts|companies|deals|activities|leads|partners|projects)$|^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z][a-z0-9_]{0,31}$'
 
     ReportingMetricID:
       type: string
@@ -63822,7 +64423,7 @@ components:
         id: { type: string, format: uuid }
         owner_id: { type: string, format: uuid }
         shared_scope: { type: string, enum: [private, team, workspace], x-extensible-enum: true, default: private, description: V1 enforces private. }
-        resource: { $ref: '#/components/schemas/SavedViewResource' }
+        resource: { $ref: '#/components/schemas/SavedViewTarget' }
         name: { type: string }
         query:
           type: object
@@ -63837,7 +64438,7 @@ components:
       type: object
       required: [resource, name, query]
       properties:
-        resource: { $ref: '#/components/schemas/SavedViewResource' }
+        resource: { $ref: '#/components/schemas/SavedViewTarget' }
         name: { type: string }
         query: { type: object, additionalProperties: true }
 
@@ -67880,9 +68481,9 @@ components:
         slug: { type: string, description: Admin-facing key the column_name derives from. }
         type:
           type: string
-          enum: [text, number, date, currency, picklist, multiselect, boolean]
+          enum: [text, number, date, currency, picklist, multiselect, boolean, record]
           x-extensible-enum: true
-          description: The supported field types. Multiselect values are JSON string arrays; empty arrays clear the selection. Immutable once created.
+          description: The supported field types. Multiselect values are JSON string arrays; empty arrays clear the selection. A record field holds the id of one record of the kind named by its single option, and that option must be a record kind a unit declared. Immutable once created.
         status:
           type: string
           enum: [active, retired]
@@ -67977,7 +68578,7 @@ components:
         label: { type: string }
         type:
           type: string
-          enum: [text, number, date, currency, picklist, multiselect, boolean]
+          enum: [text, number, date, currency, picklist, multiselect, boolean, record]
         currency: { type: [string, 'null'], pattern: '^[A-Z]{3}$' }
         options: { type: [array, 'null'], items: { type: string } }
         source: { type: string }
@@ -68381,7 +68982,7 @@ components:
         # `tag` is a WORD, not a record: finding it is the step before finding
         # the records that carry it, and without it a reader has to know the
         # vocabulary already.
-        type: { type: string, enum: [contact, company, deal, activity, lead, project, product, offer_template, tag], x-extensible-enum: true }
+        type: { type: string, x-extensible-enum: [contact, company, deal, activity, lead, project, product, offer_template, tag], pattern: '^(contact|company|deal|activity|lead|project|product|offer_template|tag)$|^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z][a-z0-9_]{0,31}$' }
         id: { type: string, format: uuid }
         title: { type: [string, 'null'], description: Display label (name/subject). }
         snippet: { type: [string, 'null'] }
@@ -68469,7 +69070,7 @@ components:
         page: { $ref: '#/components/schemas/PageInfo' }
         types_with_more:
           type: array
-          items: { type: string, enum: [contact, company, deal, activity, lead, project, product, offer_template, tag], x-extensible-enum: true }
+          items: { type: string, x-extensible-enum: [contact, company, deal, activity, lead, project, product, offer_template, tag], pattern: '^(contact|company|deal|activity|lead|project|product|offer_template|tag)$|^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z][a-z0-9_]{0,31}$' }
           description: >
             On a `per_type` answer only: the types that matched more hits than the page carries
             for them. Absent on a ranked answer, whose `page.has_more` says the same thing for

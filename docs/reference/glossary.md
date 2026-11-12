@@ -16,6 +16,7 @@ here: put it in the area's word list instead. A name that no plain page uses mus
 | API | The HTTP interface the server offers, defined in `backend/api/crm.yaml`. |
 | backend | The Go server code under `backend/`. |
 | Beschäftigteninformation | The German notice each employee gets before their mailbox is read (Art. 13 GDPR). |
+| breakdown | A count of one population split by one field, which an extension can add. |
 | BUSL | The Business Source License 1.1, the license Margince uses. |
 | challenge | A check a WAF puts to the browser in the app's place, which only a page load can pass. |
 | changelog | A file listing the changes of each release, which this repository does not keep. |
@@ -67,11 +68,13 @@ here: put it in the area's word list instead. A name that no plain page uses mus
 | locale | The date or time format of the reader's language, as a setting value. |
 | macOS | Apple's desktop operating system. |
 | Margince | The CRM this repository builds. |
+| mask | A field permission that hides one field of a record from a role. |
 | Material | Google's Material Symbols icon set, the source of the web app's filled status marks. |
 | MCP | Model Context Protocol: how an AI agent connects to Margince's tools. |
 | mdy | The date order month, day, year, as a setting value. |
 | Microsoft | The company behind Microsoft 365 mail and calendars. |
 | milestone | A GitHub group of issues planned for one month, named `YYYY-MM`. |
+| multi-select | A custom field type that holds several choices at once. |
 | Node | Node.js, the JavaScript runtime the web app's tools run on. |
 | Ollama | A tool that runs language models on your own machine. |
 | OpenDocument | The open file format for text, tables and slides. |

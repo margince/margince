@@ -17,11 +17,17 @@ package financedemo
 
 import (
 	"context"
+	"embed"
 	"fmt"
 
 	"github.com/margince/margince/backend/pkg/extension"
 	"github.com/margince/margince/backend/pkg/extension/accounting"
+	"github.com/margince/margince/backend/pkg/extension/jurisdiction"
+	"github.com/margince/margince/backend/pkg/extension/privacy"
 )
+
+//go:embed migrations
+var migrations embed.FS
 
 // directorySize is how many demo customers the source lists, enough to link
 // every customer company the demo seed creates.
@@ -31,8 +37,50 @@ const directorySize = 50
 func New() extension.Extension {
 	return extension.Extension{
 		Name:        "finance-demo",
-		Version:     "1.0.0",
+		Version:     "1.1.0",
 		Description: "Demonstration accounting data for the finance card, generated rather than read from a real system.",
+		// A ledger account is a chart-of-accounts row: a code and a name, no
+		// personal data, and no column naming a core record.
+		Privacy: []privacy.Table{{Name: "ext_finance_demo_ledger_account", Retention: jurisdiction.AccountingRecords}},
+		// The reference for a company type: an account whose invoices this
+		// source's ledger holds.
+		CompanyTypes: []extension.CompanyType{{Type: "ledger_customer", Label: "Ledger customer"}},
+		// The reference for a link type: a deal that carries on an earlier one,
+		// stored as ext:finance-demo:follow_up_of.
+		LinkTypes: []extension.LinkType{{Type: "follow_up_of", Label: "Follow-up of", From: []string{"deal"}, To: []string{"deal"}}},
+		// The reference for a record kind: a ledger account, kept in the unit's
+		// own table. No role holds a right on it until an admin grants one,
+		// except the starting grants named here.
+		RecordKinds: []extension.RecordKindDeclaration{{
+			Kind:        "ledger_account",
+			DisplayName: "Ledger account",
+			Table:       "ext_finance_demo_ledger_account",
+			Fields: []extension.RecordKindField{
+				{Name: "account_code", Label: "Account code"},
+				{Name: "name", Label: "Name"},
+			},
+			NaturalKey: []string{"account_code"},
+			Defaults: []extension.RbacDefault{
+				{Role: "admin", Actions: []extension.RbacAction{extension.RbacRead, extension.RbacCreate, extension.RbacUpdate, extension.RbacDelete}},
+				{Role: "manager", Actions: []extension.RbacAction{extension.RbacRead}},
+			},
+		}},
+		// The reference for a report: how many ledger accounts exist, drawn on
+		// Reports and Home for a seat that may read the kind.
+		ReportCounts:     []extension.ReportCount{{Name: "ledger_accounts", Label: "Ledger accounts", Population: "ledger_account"}},
+		ReportBreakdowns: []extension.ReportBreakdown{{Name: "accounts_by_name", Label: "Ledger accounts by name", Population: "ledger_account", By: "name"}},
+		// A signal type the unit can file about a company, deal, contact or
+		// project, with the evidence core checks it against. The reporter's name
+		// is personal data and leaves the signal when its contact is erased.
+		SignalTypes: []extension.SignalTypeDeclaration{{
+			Kind:  "ledger_loss",
+			Label: "Loss reported on a ledger account",
+			Evidence: []extension.SignalEvidenceField{
+				{Name: "amount", Label: "Amount", Type: extension.SignalFieldNumber, Required: true},
+				{Name: "reporter", Label: "Reporter", Type: extension.SignalFieldText, Personal: true},
+			},
+		}},
+		Migrations: migrations,
 		FinanceSources: []extension.FinanceSource{{
 			Provider:        "offline_demo",
 			Check:           check,

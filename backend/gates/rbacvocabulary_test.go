@@ -141,11 +141,25 @@ func missing(have, want []string) []string {
 	return out
 }
 
+// extensibleEnum is the spelling of an open enum that lists its core values:
+// `x-extensible-enum: [..]`. The plain marker, `x-extensible-enum: true`, lists
+// none, so it decodes to no values rather than a parse failure.
+type extensibleEnum []string
+
+func (e *extensibleEnum) UnmarshalYAML(node *yaml.Node) error {
+	if node.Kind != yaml.SequenceNode {
+		return nil
+	}
+	return node.Decode((*[]string)(e))
+}
+
 // contractSchemaFields is the slice of one components.schemas entry these
 // gates read. Decoding a narrow struct rather than a free-form map keeps a
 // malformed contract a parse failure instead of a silently empty enum.
 type contractSchemaFields struct {
 	Enum       []string             `yaml:"enum"`
+	Extensible extensibleEnum       `yaml:"x-extensible-enum"` //nolint:tagliatelle // the contract spells this key with hyphens
+	Pattern    string               `yaml:"pattern"`
 	Required   []string             `yaml:"required"`
 	Properties map[string]yaml.Node `yaml:"properties"`
 }

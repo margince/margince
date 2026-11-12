@@ -6,11 +6,11 @@ import { useT } from "../i18n";
 import {
   type FiltersAddress,
   filtersAddressOf,
-  NEW_FILTER_LABEL,
   opensAFocusedFiltersPage,
+  tabWords,
 } from "../lib/filtersaddress";
-import { labelFor } from "../lib/labelfor";
 import { useList } from "../lib/lists.queries";
+import { useRecordKindDirectory } from "../lib/recordkinds";
 import { type Route, routeHash } from "../lib/router";
 import { openableTree, useSavedView } from "../lib/savedviews.queries";
 
@@ -40,6 +40,8 @@ function listIdOf(
  */
 export function useFiltersCrumbs(route: Route): readonly Crumb[] | null {
   const t = useT();
+  const directory =
+    useRecordKindDirectory(route.screen === "filters").data?.data ?? [];
   const address = route.screen === "filters" ? filtersAddressOf(route) : null;
   const viewId = address?.kind === "view" ? address.viewId : undefined;
   const view = useSavedView(viewId ?? "", false);
@@ -61,7 +63,10 @@ export function useFiltersCrumbs(route: Route): readonly Crumb[] | null {
     case "library":
       return null;
     case "new":
-      return [library, { label: t(labelFor(NEW_FILTER_LABEL, address.tab)) }];
+      return [
+        library,
+        { label: tabWords(address.tab, t, directory).newFilter },
+      ];
     case "view": {
       // A view the page cannot open reads as gone there, so it is unnamed here.
       const opened = view.data;

@@ -38,6 +38,9 @@ func RegisterExtensions(exts []extension.Extension, verbs []extension.Verb, jobD
 	if err := validateVerbSet(verbs); err != nil {
 		return err
 	}
+	if err := preflightExtensionKinds(exts); err != nil {
+		return err
+	}
 	if err := preflightEntryObjects(exts, verbs); err != nil {
 		return err
 	}
@@ -56,6 +59,9 @@ func RegisterExtensions(exts []extension.Extension, verbs []extension.Verb, jobD
 	}
 	rbacDefaults, err := extensionRbacDefaults(verbs)
 	if err != nil {
+		return err
+	}
+	if rbacObjects, rbacDefaults, err = withRecordKindRbac(exts, rbacObjects, rbacDefaults); err != nil {
 		return err
 	}
 	// Still the validate phase: joining a unit's Go job behavior to its
@@ -90,6 +96,7 @@ func RegisterExtensions(exts []extension.Extension, verbs []extension.Verb, jobD
 		}
 		compliancedocs.Register(e.Documents)
 	}
+	registerExtensionKinds(exts)
 	// After the jurisdiction packs, and still in the apply phase: the RBAC
 	// vocabulary is validate-then-apply inside RegisterRbacObjects itself (a set
 	// with one bad name registers none), so it cannot half-widen what a role

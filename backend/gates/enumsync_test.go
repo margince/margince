@@ -78,6 +78,15 @@ var enumBindings = map[string]struct{ pkgDir, typeName string }{
 	"taggable.entity_type":      {"internal/shared/ports/datasource", "RecordType"},
 	"record_grant.record_type":  {"internal/shared/ports/datasource", "RecordType"},
 
+	// A suggested link names a record kind and a state a reader can act on. A
+	// value the contract admits and the CHECK refuses is a 500 on a valid answer.
+	"activity_link_suggestion.entity_type": {"internal/contracts", "LinkSuggestionEntityType"},
+	"activity_link_suggestion.status":      {"internal/contracts", "LinkSuggestionStatus"},
+	"signal.entity_type":                   {"internal/contracts", "SignalEntityType"},
+	"signal.kind":                          {"internal/contracts", "ListSignalsParamsKind"},
+	"record_link.from_type":                {"internal/contracts", "LinkedRecordType"},
+	"record_link.to_type":                  {"internal/contracts", "LinkedRecordType"},
+
 	"attachment.entity_type":       {"internal/shared/ports/datasource", "EntityType"},
 	"embedding.entity_type":        {"internal/shared/ports/datasource", "EntityType"},
 	"field_provenance.object_type": {"internal/shared/ports/datasource", "EntityType"},
@@ -128,7 +137,6 @@ var enumBindings = map[string]struct{ pkgDir, typeName string }{
 	"provider_connection.mode":                {"internal/contracts", "ProviderConnectionMode"},
 	"provider_connection.status":              {"internal/contracts", "ProviderConnectionStatus"},
 	"retention_policy.action":                 {"internal/contracts", "RetentionAction"},
-	"saved_view.resource":                     {"internal/contracts", "SavedViewResource"},
 
 	// One vocabulary, six columns. Every derived narrative row records whether a
 	// human template or a model wrote it, and WrittenBy is the word the contract
@@ -439,6 +447,29 @@ func goConstSet(t *testing.T, pkgDir, typeName string) []string {
 	}
 	sort.Strings(vals)
 	return vals
+}
+
+// A saved view's resource is the CHECK's closed list plus the `ext:` spelling.
+// The contract lists the closed part as an x-extensible-enum beside a pattern.
+// The list must equal the CHECK's, and the pattern must admit it and an
+// extension kind.
+func TestSavedViewTargetIsTheResourceCheck(t *testing.T) {
+	t.Parallel()
+	want, ok := tableCheckSets(t)["saved_view.resource"]
+	if !ok {
+		t.Fatal("no CHECK (resource IN (…)) found for saved_view in the migrations — broken derivation")
+	}
+	spelling := spellingOf(contractSchema(t, "SavedViewTarget"))
+	sort.Strings(spelling.Enum)
+	if fmt.Sprint(spelling.Enum) != fmt.Sprint(want) {
+		t.Errorf("SavedViewTarget lists %v but the schema CHECK stores %v — change both together", spelling.Enum, want)
+	}
+	pattern := regexp.MustCompile(spelling.Pattern)
+	for _, resource := range append(spelling.Enum, "ext:finance-demo:invoice") {
+		if !pattern.MatchString(resource) {
+			t.Errorf("SavedViewTarget's pattern refuses %q", resource)
+		}
+	}
 }
 
 func TestEveryDomainEnumMatchesItsSchemaCheck(t *testing.T) {

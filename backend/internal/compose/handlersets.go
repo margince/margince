@@ -50,6 +50,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/notices"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/modules/projects"
+	"github.com/margince/margince/backend/internal/modules/recordlinks"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/modules/signals"
 	"github.com/margince/margince/backend/internal/modules/webforms"
@@ -101,6 +102,7 @@ type (
 	aiActivityHandlers      = aiactivity.Handlers
 	noticesHandlers         = notices.Handlers
 	weeklyPlanHandlers      = weeklyplan.Handlers
+	recordLinksHandlers     = recordlinks.Handlers
 	forecastHandlers        = forecasting.Handlers
 	assuranceHandlers       = assurance.Handlers
 	introductionHandlers    = introductions.Handlers

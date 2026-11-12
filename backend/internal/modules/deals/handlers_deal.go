@@ -89,6 +89,7 @@ func (h Handlers) ListDeals(w http.ResponseWriter, r *http.Request, params crmco
 		WinProbabilityMin: params.WinProbabilityMin, WinProbabilityMax: params.WinProbabilityMax,
 		Currency: params.Currency, Country: params.Country,
 	}
+	in.LinkType = params.LinkType
 	in.SourceSystem, in.SourceID = params.SourceSystem, params.SourceId
 	if params.ListId != nil {
 		member := ids.UUID(*params.ListId)
